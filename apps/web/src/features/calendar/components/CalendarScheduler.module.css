@@ -1,0 +1,188 @@
+/* Resource timeline: cột xe sticky bên trái, lưới ngày cuộn ngang. */
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-radius-md);
+  background: var(--xp-color-bg-container);
+  overflow: hidden;
+}
+
+.scrollArea {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  /* Cuộn theo cả hai chiều trong khung này, không để cả trang cuộn ngang. */
+  overscroll-behavior: contain;
+}
+
+.grid {
+  position: relative;
+  display: grid;
+  /* Cột đầu là danh sách xe; phần còn lại do inline custom property quyết định vì chiều
+     rộng phụ thuộc số ngày đang xem — giá trị chỉ biết lúc runtime (ADR 0003). */
+  grid-template-columns: var(--xp-resource-col-width) 1fr;
+  min-width: max-content;
+}
+
+.headerRow {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: contents;
+}
+
+.resourceHeader {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--xp-space-md);
+  height: var(--xp-calendar-header-height);
+  background: var(--xp-color-bg-elevated);
+  border-right: 1px solid var(--xp-color-border);
+  border-bottom: 1px solid var(--xp-color-border);
+  font-weight: 600;
+}
+
+.dayHeaderTrack {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  height: var(--xp-calendar-header-height);
+  background: var(--xp-color-bg-elevated);
+  border-bottom: 1px solid var(--xp-color-border);
+}
+
+.dayHeaderCell {
+  flex: 0 0 var(--xp-day-width);
+  width: var(--xp-day-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-right: 1px solid var(--xp-color-split);
+  font-size: var(--xp-font-size-sm);
+  line-height: 1.2;
+}
+
+.dayHeaderCell.weekend {
+  background: var(--xp-color-fill-quaternary);
+}
+
+.dayHeaderCell.today {
+  background: var(--xp-color-primary-bg);
+  font-weight: 700;
+  color: var(--xp-color-primary);
+}
+
+.weekdayLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: 11px;
+}
+
+.resourceCell {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 var(--xp-space-md);
+  background: var(--xp-color-bg-container);
+  border-right: 1px solid var(--xp-color-border);
+  border-bottom: 1px solid var(--xp-color-split);
+}
+
+.resourceName {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resourcePlate {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.rowTrack {
+  position: relative;
+  border-bottom: 1px solid var(--xp-color-split);
+}
+
+/* Vạch ngày vẽ bằng gradient thay vì N phần tử DOM — với 30 ngày × 1.000 xe thì
+   30.000 div trống là lý do chính khiến lịch giật. */
+.rowTrack::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--xp-color-split) 0,
+    var(--xp-color-split) 1px,
+    transparent 1px,
+    transparent var(--xp-day-width)
+  );
+  pointer-events: none;
+}
+
+.eventBar {
+  position: absolute;
+  left: var(--xp-bar-left);
+  width: var(--xp-bar-width);
+  height: var(--xp-calendar-bar-height);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--xp-space-sm);
+  border-radius: var(--xp-radius-sm);
+  font-size: var(--xp-font-size-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: filter 0.15s ease;
+}
+
+.eventBar:hover {
+  filter: brightness(0.95);
+}
+
+.eventBar:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 1px;
+}
+
+/* Bo góc phẳng ở đầu bị cắt để người dùng thấy event còn kéo dài ra ngoài khoảng. */
+.clippedStart {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left-style: dashed;
+}
+
+.clippedEnd {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right-style: dashed;
+}
+
+.emptyState {
+  padding: var(--xp-space-xl);
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: var(--xp-resource-col-width-mobile) 1fr;
+  }
+}

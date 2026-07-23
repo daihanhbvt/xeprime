@@ -1,0 +1,16 @@
+{
+  "name": "@xeprime/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": ["tsconfig", "eslint"],
+  "exports": {
+    "./eslint/base": "./eslint/base.mjs",
+    "./eslint/react": "./eslint/react.mjs",
+    "./tsconfig/*": "./tsconfig/*"
+  },
+  "scripts": {
+    "lint": "echo \"@xeprime/config: config-only package, nothing to lint\"",
+    "typecheck": "echo \"@xeprime/config: config-only package, nothing to typecheck\""
+  }
+}

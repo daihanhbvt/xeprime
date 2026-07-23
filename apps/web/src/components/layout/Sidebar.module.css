@@ -1,0 +1,17 @@
+.sider {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: auto;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+}

@@ -1,0 +1,29 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding: 0 var(--xp-space-lg);
+  background: var(--xp-color-bg-container);
+  border-bottom: 1px solid var(--xp-color-border);
+  line-height: normal;
+}
+
+.scope {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.user {
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0 var(--xp-space-sm);
+  }
+
+  .userName {
+    display: none;
+  }
+}

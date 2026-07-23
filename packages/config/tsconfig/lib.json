@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "XePrime shared package (framework-agnostic)",
+  "extends": "./base.json",
+  "compilerOptions": {
+    /* CommonJS chứ không phải ESM: apps/api build bằng tsc (không bundler) và chạy thẳng
+       trên Node, nên các package dùng chung phải emit JS mà `require` đọc được.
+       apps/web dùng bundler nên tiêu thụ CommonJS không vấn đề gì. */
+    "module": "CommonJS",
+    "moduleResolution": "Node"
+    /* rootDir/outDir cố ý KHÔNG đặt ở đây: TypeScript resolve chúng tương đối với file
+       tsconfig chứa chúng, nên phải khai báo ở tsconfig.build.json của từng package. */
+  }
+}

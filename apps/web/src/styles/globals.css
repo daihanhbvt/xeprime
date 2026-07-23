@@ -1,0 +1,79 @@
+/**
+ * Reset tối thiểu + nền chung. Mọi giá trị lấy từ `tokens.css` (ADR 0003).
+ *
+ * Không import `antd/dist/reset.css`: antd v5+ tự inject style component qua CSS-in-JS,
+ * phần còn lại chỉ là normalize trình duyệt và nằm ngay dưới đây.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--xp-font-family);
+  font-size: var(--xp-font-size);
+  line-height: var(--xp-line-height);
+  color: var(--xp-color-text);
+  background: var(--xp-color-bg-layout);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "XePrime NestJS app",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    /* rootDir/outDir đặt ở tsconfig.build.json của app — chúng resolve tương đối với file
+       khai báo, nên không thể để ở config dùng chung này. */
+
+    /* NestJS dependency injection resolves constructor params from the metadata
+       emitted here. Both flags are required — without emitDecoratorMetadata,
+       @Injectable() providers fail to resolve at runtime, not at compile time. */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    /* class-validator/class-transformer are CommonJS with default exports. */
+    "allowSyntheticDefaultImports": true,
+
+    /* Nest's own codebase and several decorators trip these; disabling keeps the
+       strictness where it matters (our code) without fighting the framework. */
+    "strictPropertyInitialization": false,
+    "exactOptionalPropertyTypes": false,
+
+    /* Tắt incremental: `nest build` có deleteOutDir=true nhưng không xoá .tsbuildinfo,
+       khiến lần build sau chỉ emit file "đã đổi" và thiếu phần còn lại của dist. */
+    "incremental": false
+  }
+}

@@ -1,0 +1,969 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/auth/session": {
+      "post": {
+        "operationId": "AuthController_createSession",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đăng nhập: đổi ID token lấy session cookie httpOnly",
+        "tags": [
+          "auth"
+        ]
+      },
+      "delete": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Đăng xuất: xoá session cookie",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thông tin user hiện tại kèm tenant scope và quyền",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/rbac/my-permissions": {
+      "get": {
+        "description": "Frontend dùng để ẩn/hiện menu. KHÔNG phải nguồn bảo vệ — backend guard mới là nguồn.",
+        "operationId": "RbacController_myPermissions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyPermissionsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Quyền của user hiện tại theo từng scope",
+        "tags": [
+          "rbac"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The Health Check is successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {},
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The Health Check is not successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "error"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up"
+                        },
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect"
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Liveness + readiness (có ping PostgreSQL)",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/users/me": {
+      "get": {
+        "operationId": "UsersController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hồ sơ của user hiện tại",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "operationId": "UsersController_updateMe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cập nhật hồ sơ của chính mình",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/tenants/current": {
+      "get": {
+        "operationId": "TenantsController_current",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentTenantDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gian hàng của user hiện tại (scope lấy từ membership)",
+        "tags": [
+          "tenants"
+        ]
+      }
+    },
+    "/calendar/resources": {
+      "get": {
+        "operationId": "CalendarController_resources",
+        "parameters": [
+          {
+            "name": "startAt",
+            "required": true,
+            "in": "query",
+            "description": "Đầu khoảng, ISO-8601 UTC",
+            "schema": {
+              "format": "date-time",
+              "example": "2026-07-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endAt",
+            "required": true,
+            "in": "query",
+            "description": "Cuối khoảng, ISO-8601 UTC",
+            "schema": {
+              "format": "date-time",
+              "example": "2026-08-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên xe hoặc biển số",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarResourceDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách xe làm hàng của resource timeline",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/calendar/events": {
+      "get": {
+        "operationId": "CalendarController_events",
+        "parameters": [
+          {
+            "name": "startAt",
+            "required": true,
+            "in": "query",
+            "description": "Đầu khoảng, ISO-8601 UTC",
+            "schema": {
+              "format": "date-time",
+              "example": "2026-07-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endAt",
+            "required": true,
+            "in": "query",
+            "description": "Cuối khoảng, ISO-8601 UTC",
+            "schema": {
+              "format": "date-time",
+              "example": "2026-08-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên xe hoặc biển số",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarEventDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sự kiện chiếm lịch trong khoảng thời gian",
+        "tags": [
+          "calendar"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "XePrime API",
+    "description": "Convention: success `{ data, meta }`, error `{ error: { code, message, details } }`. Xác thực bằng httpOnly session cookie (ADR 0002) — không dùng Bearer token. Tiền trả về dạng string, thời gian ISO-8601 UTC (ADR 0007).",
+    "version": "0.1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "health",
+      "description": ""
+    },
+    {
+      "name": "auth",
+      "description": ""
+    },
+    {
+      "name": "users",
+      "description": ""
+    },
+    {
+      "name": "rbac",
+      "description": ""
+    },
+    {
+      "name": "tenants",
+      "description": ""
+    },
+    {
+      "name": "calendar",
+      "description": ""
+    },
+    {
+      "name": "vehicles",
+      "description": ""
+    },
+    {
+      "name": "bookings",
+      "description": ""
+    },
+    {
+      "name": "chat",
+      "description": ""
+    },
+    {
+      "name": "platform-admin",
+      "description": ""
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "xp_session"
+      }
+    },
+    "schemas": {
+      "CreateSessionDto": {
+        "type": "object",
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "description": "ID token từ Firebase Auth (hoặc `mock:<uid>:<email>:<tên>` khi AUTH_MODE=mock). Chỉ gửi đúng một lần lúc đăng nhập — sau đó dùng session cookie.",
+            "example": "mock:demo-owner:owner@xeprime.test:Chủ shop demo"
+          }
+        },
+        "required": [
+          "idToken"
+        ]
+      },
+      "CurrentTenantSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "Xem TenantStatus trong @xeprime/types"
+          },
+          "roleKey": {
+            "type": "string",
+            "description": "Xem TenantRole trong @xeprime/types"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "status",
+          "roleKey"
+        ]
+      },
+      "MeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          },
+          "avatarUrl": {
+            "type": "object",
+            "nullable": true
+          },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop"
+          },
+          "tenant": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CurrentTenantSummaryDto"
+              }
+            ]
+          },
+          "platformRole": {
+            "type": "object",
+            "nullable": true,
+            "description": "Xem PlatformRole trong @xeprime/types"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "phoneVerified",
+          "permissions"
+        ]
+      },
+      "MyPermissionsDto": {
+        "type": "object",
+        "properties": {
+          "tenantRole": {
+            "type": "string",
+            "enum": [
+              "shop_owner",
+              "shop_manager",
+              "shop_staff",
+              "shop_viewer"
+            ],
+            "nullable": true
+          },
+          "platformRole": {
+            "type": "string",
+            "enum": [
+              "platform_admin",
+              "platform_staff",
+              "reviewer",
+              "support",
+              "finance_admin"
+            ],
+            "nullable": true
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "tenant.view",
+                "tenant.update",
+                "tenant.submit_review",
+                "members.view",
+                "members.invite",
+                "members.update_role",
+                "members.remove",
+                "vehicles.view",
+                "vehicles.create",
+                "vehicles.update",
+                "vehicles.delete",
+                "vehicles.submit_public",
+                "vehicles.block_schedule",
+                "booking_requests.view",
+                "booking_requests.approve",
+                "bookings.view",
+                "bookings.create",
+                "bookings.update",
+                "bookings.cancel",
+                "calendar.view",
+                "finance.view",
+                "receipts.create",
+                "receipts.approve",
+                "platform.dashboard.view",
+                "platform.tenants.manage",
+                "platform.approvals.review",
+                "platform.audit.view",
+                "platform.staff.manage"
+              ]
+            }
+          }
+        },
+        "required": [
+          "permissions"
+        ]
+      },
+      "UserProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          },
+          "phone": {
+            "type": "object",
+            "nullable": true
+          },
+          "avatarUrl": {
+            "type": "object",
+            "nullable": true
+          },
+          "phoneVerified": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "phoneVerified"
+        ]
+      },
+      "UpdateMeDto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "avatarUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "CurrentTenantDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tenantType": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "business"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "needs_revision",
+              "active",
+              "suspended",
+              "rejected",
+              "expired"
+            ]
+          },
+          "phone": {
+            "type": "object",
+            "nullable": true
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          },
+          "ratingAvg": {
+            "type": "string",
+            "description": "Decimal trả về dạng string — ADR 0007",
+            "example": "4.75"
+          },
+          "ratingCount": {
+            "type": "number"
+          },
+          "vehicleCount": {
+            "type": "number"
+          },
+          "memberCount": {
+            "type": "number"
+          },
+          "myRoleKey": {
+            "type": "string",
+            "enum": [
+              "shop_owner",
+              "shop_manager",
+              "shop_staff",
+              "shop_viewer"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "slug",
+          "name",
+          "tenantType",
+          "status",
+          "ratingAvg",
+          "ratingCount",
+          "vehicleCount",
+          "memberCount",
+          "myRoleKey"
+        ]
+      },
+      "CalendarResourceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "object",
+            "nullable": true
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "operationStatus": {
+            "type": "string",
+            "enum": [
+              "available",
+              "renting",
+              "maintenance",
+              "inactive"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "vehicleId",
+          "name",
+          "vehicleType",
+          "operationStatus"
+        ]
+      },
+      "CalendarEventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string",
+            "description": "vehicleId — khớp CalendarResourceDto.id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "booking",
+              "blocked_range",
+              "maintenance"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "object",
+            "nullable": true
+          },
+          "startAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC",
+            "example": "2026-07-12T02:00:00.000Z"
+          },
+          "endAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC",
+            "example": "2026-07-15T04:00:00.000Z"
+          },
+          "status": {
+            "type": "object",
+            "nullable": true,
+            "description": "BookingStatus khi type=booking"
+          },
+          "sourceId": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "resourceId",
+          "type",
+          "title",
+          "startAt",
+          "endAt"
+        ]
+      },
+      "ApiErrorBodyDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "BOOKING_SCHEDULE_CONFLICT"
+          },
+          "message": {
+            "type": "string",
+            "example": "Xe đã có đơn khác trong khoảng thời gian này"
+          },
+          "details": {
+            "type": "object",
+            "description": "Chi tiết bổ sung, ví dụ danh sách lỗi validate"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "ApiErrorDto": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiErrorBodyDto"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20
+          },
+          "total": {
+            "type": "number",
+            "example": 137
+          },
+          "hasNext": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "hasNext"
+        ]
+      }
+    }
+  }
+}

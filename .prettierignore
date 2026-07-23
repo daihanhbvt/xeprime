@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+.next
+.turbo
+coverage
+pnpm-lock.yaml
+prisma/generated
+prisma/migrations
+packages/types/openapi.json
+packages/types/src/api.generated.ts
+docs/_archive_2026_07_22

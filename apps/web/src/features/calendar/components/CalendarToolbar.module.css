@@ -1,0 +1,24 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  flex-wrap: wrap;
+  padding: var(--xp-space-md);
+  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+}
+
+.search {
+  width: 240px;
+}
+
+@media (max-width: 768px) {
+  .search {
+    width: 100%;
+  }
+
+  .toolbar {
+    padding: var(--xp-space-sm);
+  }
+}

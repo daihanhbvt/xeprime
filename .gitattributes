@@ -1,0 +1,17 @@
+# Chuẩn hoá line-ending: repo luôn lưu LF, tránh churn giữa Windows và Linux/CI.
+* text=auto eol=lf
+
+# File nhị phân — không đụng vào.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.wasm binary
+
+# File sinh tự động / lock: đánh dấu để diff gọn và không tính là "code viết tay".
+pnpm-lock.yaml linguist-generated=true -diff
+packages/types/openapi.json linguist-generated=true
+packages/types/src/api.generated.ts linguist-generated=true

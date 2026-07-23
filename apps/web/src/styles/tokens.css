@@ -1,0 +1,56 @@
+/**
+ * CSS custom property của XePrime — ADR 0003.
+ *
+ * Phải khớp 1-1 với `XP_TOKENS` trong `theme.ts` (cả tên lẫn giá trị).
+ * `theme.test.ts` là thứ giữ hai file không trôi khỏi nhau.
+ */
+:root {
+  --xp-color-primary: #1677ff;
+  --xp-color-success: #52c41a;
+  --xp-color-warning: #faad14;
+  --xp-color-error: #ff4d4f;
+  --xp-color-info: #1677ff;
+
+  --xp-color-text: rgba(0, 0, 0, 0.88);
+  --xp-color-text-secondary: rgba(0, 0, 0, 0.65);
+  --xp-color-text-tertiary: rgba(0, 0, 0, 0.45);
+  --xp-color-border: #d9d9d9;
+  --xp-color-border-secondary: #f0f0f0;
+  --xp-color-bg-layout: #f5f5f5;
+  --xp-color-bg-container: #ffffff;
+  --xp-color-bg-elevated: #ffffff;
+  --xp-color-bg-hover: rgba(0, 0, 0, 0.04);
+
+  --xp-color-event-booking: #1677ff;
+  --xp-color-event-request: #faad14;
+  --xp-color-event-blocked: #8c8c8c;
+  --xp-color-event-maintenance: #722ed1;
+
+  --xp-font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif;
+  --xp-font-size: 14px;
+  --xp-font-size-sm: 12px;
+  --xp-line-height: 1.5714;
+
+  --xp-border-radius: 8px;
+  --xp-border-radius-sm: 4px;
+
+  --xp-space-xs: 4px;
+  --xp-space-sm: 8px;
+  --xp-space-md: 16px;
+  --xp-space-lg: 24px;
+  --xp-space-xl: 32px;
+
+  --xp-shell-topbar-height: 56px;
+  --xp-shell-sidebar-width: 232px;
+  --xp-shell-sidebar-collapsed-width: 64px;
+
+  --xp-calendar-resource-col-width: 220px;
+  --xp-calendar-day-col-width: 56px;
+  --xp-calendar-row-height: 44px;
+  --xp-calendar-header-height: 56px;
+
+  --xp-z-sidebar: 110;
+  --xp-z-topbar: 100;
+  --xp-z-calendar-header: 30;
+  --xp-z-calendar-sticky-col: 20;
+}

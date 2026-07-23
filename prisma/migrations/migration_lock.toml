@@ -1,0 +1,3 @@
+# Prisma migration lock. Đừng sửa tay.
+# Ghi provider để migrate deploy biết dialect — ADR 0001 (PostgreSQL).
+provider = "postgresql"

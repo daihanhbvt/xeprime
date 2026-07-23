@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: xeprime-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: xeprime
+      POSTGRES_PASSWORD: xeprime_dev_pw
+      POSTGRES_DB: xeprime
+      # Container locale only. Application data is always stored as UTC timestamptz;
+      # Asia/Ho_Chi_Minh formatting happens in the browser. See ADR 0001.
+      TZ: UTC
+      PGTZ: UTC
+    ports:
+      - '5432:5432'
+    volumes:
+      - xeprime_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U xeprime -d xeprime']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Enabled from Phase 5 when apps/worker starts running BullMQ jobs.
+  # Kept here so `docker compose --profile worker up` works without editing this file.
+  redis:
+    image: redis:7-alpine
+    container_name: xeprime-redis
+    restart: unless-stopped
+    profiles: ['worker']
+    ports:
+      - '6379:6379'
+    volumes:
+      - xeprime_redisdata:/data
+
+volumes:
+  xeprime_pgdata:
+  xeprime_redisdata:

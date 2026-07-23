@@ -1,0 +1,375 @@
+// XePrime — Prisma schema (Phase 0)
+//
+// ADR 0001: PostgreSQL 16, không phải MySQL 8.
+// ADR 0005: status lưu String; union type nằm ở @xeprime/types.
+// ADR 0006: chống trùng lịch bằng exclusion constraint trên vehicle_occupancies.
+//
+// Quy ước (xeprime_database_design.md §2.2, đã điều chỉnh cho Postgres ở ADR 0001):
+//   - table snake_case số nhiều qua @@map, column snake_case qua @map
+//   - id: char(26) ULID, sinh ở tầng app bằng gói `ulid`
+//   - tiền: Decimal(14,2)
+//   - thời gian: timestamptz(3) — lưu UTC, hiển thị Asia/Ho_Chi_Minh ở FE
+//   - JSON: jsonb
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "./generated/client"
+  // Cần để dùng `extensions` trong datasource (btree_gist cho exclusion constraint — ADR 0006).
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [btree_gist, pg_trgm, unaccent]
+}
+
+// Prisma 7: connection URL không còn nằm trong schema. CLI (migrate/generate) đọc từ
+// prisma.config.ts; PrismaClient runtime dùng driver adapter @prisma/adapter-pg
+// (xem prisma/src/index.ts → createPrismaClient). ADR 0001.
+
+// ---------------------------------------------------------------------------
+// Auth & User
+// ---------------------------------------------------------------------------
+
+model User {
+  id              String    @id @db.Char(26)
+  firebaseUid     String?   @unique @map("firebase_uid") @db.VarChar(128)
+  email           String?   @unique @db.VarChar(255)
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  phone           String?   @unique @db.VarChar(30)
+  phoneVerifiedAt DateTime? @map("phone_verified_at") @db.Timestamptz(3)
+  displayName     String    @map("display_name") @db.VarChar(255)
+  avatarUrl       String?   @map("avatar_url") @db.Text
+  /// @xeprime/types → UserStatus
+  status          String    @default("active") @db.VarChar(50)
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  identities          UserIdentity[]
+  tenantMemberships   TenantMembership[]  @relation("membership_user")
+  invitedMemberships  TenantMembership[]  @relation("membership_inviter")
+  platformMemberships PlatformMembership[] @relation("platform_membership_user")
+  ownedTenants        Tenant[]            @relation("tenant_owner")
+  auditLogs           AuditLog[]
+  createdVehicles     Vehicle[]           @relation("vehicle_creator")
+  createdBookings     Booking[]           @relation("booking_creator")
+
+  @@index([status])
+  @@map("users")
+}
+
+model UserIdentity {
+  id             String   @id @db.Char(26)
+  userId         String   @map("user_id") @db.Char(26)
+  /// google | facebook | firebase_phone | password | custom_token
+  provider       String   @db.VarChar(50)
+  providerUserId String   @map("provider_user_id") @db.VarChar(255)
+  providerEmail  String?  @map("provider_email") @db.VarChar(255)
+  providerPhone  String?  @map("provider_phone") @db.VarChar(30)
+  /// Chỉ lưu field cần thiết. KHÔNG dump nguyên payload provider (PII).
+  rawProfile     Json?    @map("raw_profile_json") @db.JsonB
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@map("user_identities")
+}
+
+// ---------------------------------------------------------------------------
+// Tenant / Shop
+// ---------------------------------------------------------------------------
+
+model Tenant {
+  id          String    @id @db.Char(26)
+  code        String    @unique @db.VarChar(50)
+  slug        String    @unique @db.VarChar(120)
+  name        String    @db.VarChar(255)
+  /// individual | business
+  tenantType  String    @default("individual") @map("tenant_type") @db.VarChar(50)
+  /// @xeprime/types → TenantStatus. Client KHÔNG được set trực tiếp (CLAUDE.md mục 5).
+  status      String    @default("draft") @db.VarChar(50)
+  ownerUserId String    @map("owner_user_id") @db.Char(26)
+  phone       String?   @db.VarChar(30)
+  email       String?   @db.VarChar(255)
+  ratingAvg   Decimal   @default(0) @map("rating_avg") @db.Decimal(3, 2)
+  ratingCount Int       @default(0) @map("rating_count")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  owner       User               @relation("tenant_owner", fields: [ownerUserId], references: [id])
+  memberships TenantMembership[]
+  roles       Role[]
+  vehicles    Vehicle[]
+  bookings    Booking[]
+  occupancies VehicleOccupancy[]
+  auditLogs   AuditLog[]
+
+  @@index([status])
+  @@index([ownerUserId])
+  @@index([tenantType])
+  @@map("tenants")
+}
+
+model TenantMembership {
+  id                   String    @id @db.Char(26)
+  tenantId             String    @map("tenant_id") @db.Char(26)
+  userId               String    @map("user_id") @db.Char(26)
+  /// @xeprime/types → TenantRole
+  roleKey              String    @map("role_key") @db.VarChar(50)
+  /// Custom role của tenant, nếu shop tự tạo role riêng.
+  roleId               String?   @map("role_id") @db.Char(26)
+  /// @xeprime/types → MembershipStatus
+  status               String    @default("active") @db.VarChar(50)
+  displayNameInTenant  String?   @map("display_name_in_tenant") @db.VarChar(255)
+  invitedBy            String?   @map("invited_by") @db.Char(26)
+  joinedAt             DateTime? @map("joined_at") @db.Timestamptz(3)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user    User   @relation("membership_user", fields: [userId], references: [id], onDelete: Cascade)
+  inviter User?  @relation("membership_inviter", fields: [invitedBy], references: [id])
+  role    Role?  @relation(fields: [roleId], references: [id])
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@index([tenantId, roleKey])
+  @@map("tenant_memberships")
+}
+
+// ---------------------------------------------------------------------------
+// RBAC
+// ---------------------------------------------------------------------------
+
+model Role {
+  id        String   @id @db.Char(26)
+  /// tenant | platform
+  scope     String   @db.VarChar(50)
+  /// Null với role hệ thống/platform; có giá trị với custom role của một tenant.
+  tenantId  String?  @map("tenant_id") @db.Char(26)
+  key       String   @db.VarChar(80)
+  name      String   @db.VarChar(255)
+  /// Role hệ thống không cho xoá/sửa key.
+  isSystem  Boolean  @default(false) @map("is_system")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant              Tenant?              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  permissions         RolePermission[]
+  tenantMemberships   TenantMembership[]
+  platformMemberships PlatformMembership[]
+
+  /// Role hệ thống (tenantId null) unique theo scope+key; custom role unique trong tenant.
+  @@unique([scope, tenantId, key])
+  @@index([tenantId])
+  @@map("roles")
+}
+
+model Permission {
+  id        String   @id @db.Char(26)
+  /// @xeprime/types → Permission, dạng `<module>.<action>`
+  key       String   @unique @db.VarChar(120)
+  name      String   @db.VarChar(255)
+  module    String   @db.VarChar(80)
+  /// tenant | platform | both
+  scope     String   @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  roles RolePermission[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Char(26)
+  permissionId String @map("permission_id") @db.Char(26)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model PlatformMembership {
+  id        String   @id @db.Char(26)
+  userId    String   @map("user_id") @db.Char(26)
+  /// @xeprime/types → PlatformRole
+  roleKey   String   @map("role_key") @db.VarChar(50)
+  roleId    String?  @map("role_id") @db.Char(26)
+  /// @xeprime/types → MembershipStatus
+  status    String   @default("active") @db.VarChar(50)
+  createdBy String?  @map("created_by") @db.Char(26)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User  @relation("platform_membership_user", fields: [userId], references: [id], onDelete: Cascade)
+  role Role? @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, roleKey])
+  @@index([status])
+  @@map("platform_memberships")
+}
+
+// ---------------------------------------------------------------------------
+// Vehicle
+// ---------------------------------------------------------------------------
+
+model Vehicle {
+  id               String    @id @db.Char(26)
+  tenantId         String    @map("tenant_id") @db.Char(26)
+  code             String    @db.VarChar(80)
+  name             String    @db.VarChar(255)
+  plateNumber      String?   @map("plate_number") @db.VarChar(50)
+  /// @xeprime/types → VehicleType
+  vehicleType      String    @map("vehicle_type") @db.VarChar(50)
+  /// @xeprime/types → ServiceType
+  serviceType      String    @default("self_drive") @map("service_type") @db.VarChar(50)
+  brand            String?   @db.VarChar(100)
+  model            String?   @db.VarChar(100)
+  manufactureYear  Int?      @map("manufacture_year")
+  color            String?   @db.VarChar(80)
+  seatCount        Int?      @map("seat_count")
+  fuelType         String?   @map("fuel_type") @db.VarChar(50)
+  /// @xeprime/types → VehicleOperationStatus
+  operationStatus  String    @default("available") @map("operation_status") @db.VarChar(50)
+  /// @xeprime/types → VehiclePublicStatus.
+  /// CLAUDE.md mục 5: chỉ ApprovalService đổi được sang `approved_public`.
+  publicStatus     String    @default("draft") @map("public_status") @db.VarChar(50)
+  description      String?   @db.Text
+  mainImageUrl     String?   @map("main_image_url") @db.Text
+  /// Giá tham chiếu Phase 0. Phase 2 tách sang bảng vehicle_pricing.
+  weekdayPrice     Decimal?  @map("weekday_price") @db.Decimal(14, 2)
+  weekendPrice     Decimal?  @map("weekend_price") @db.Decimal(14, 2)
+  createdBy        String?   @map("created_by") @db.Char(26)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator     User?              @relation("vehicle_creator", fields: [createdBy], references: [id])
+  bookings    Booking[]
+  occupancies VehicleOccupancy[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, publicStatus])
+  @@index([tenantId, operationStatus])
+  @@index([vehicleType, serviceType])
+  @@index([brand, model])
+  @@map("vehicles")
+}
+
+// ---------------------------------------------------------------------------
+// Booking
+// ---------------------------------------------------------------------------
+
+model Booking {
+  id             String    @id @db.Char(26)
+  tenantId       String    @map("tenant_id") @db.Char(26)
+  vehicleId      String    @map("vehicle_id") @db.Char(26)
+  code           String    @db.VarChar(50)
+  customerName   String    @map("customer_name") @db.VarChar(255)
+  customerPhone  String?   @map("customer_phone") @db.VarChar(30)
+  /// @xeprime/types → BookingStatus. Chuyển trạng thái validate bằng
+  /// canTransitionBooking(), không cho client set tự do.
+  status         String    @default("reserved") @db.VarChar(50)
+  serviceType    String    @default("self_drive") @map("service_type") @db.VarChar(50)
+  pickupAt       DateTime  @map("pickup_at") @db.Timestamptz(3)
+  returnAt       DateTime  @map("return_at") @db.Timestamptz(3)
+  actualPickupAt DateTime? @map("actual_pickup_at") @db.Timestamptz(3)
+  actualReturnAt DateTime? @map("actual_return_at") @db.Timestamptz(3)
+  baseAmount     Decimal   @default(0) @map("base_amount") @db.Decimal(14, 2)
+  deliveryFee    Decimal   @default(0) @map("delivery_fee") @db.Decimal(14, 2)
+  discountAmount Decimal   @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  totalAmount    Decimal   @default(0) @map("total_amount") @db.Decimal(14, 2)
+  paidAmount     Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
+  depositAmount  Decimal   @default(0) @map("deposit_amount") @db.Decimal(14, 2)
+  note           String?   @db.Text
+  createdBy      String?   @map("created_by") @db.Char(26)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  creator User?   @relation("booking_creator", fields: [createdBy], references: [id])
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+  @@index([vehicleId, pickupAt, returnAt])
+  @@index([createdAt])
+  @@map("bookings")
+}
+
+/// Bảng chiếm dụng lịch xe — ADR 0006.
+///
+/// MỌI thứ chiếm chỗ trên lịch của một xe (đơn thuê, khoá xe, bảo dưỡng) đều ghi vào đây.
+/// Lý do gộp: exclusion constraint chỉ chặn được xung đột TRONG một bảng; để riêng thì
+/// một đơn thuê và một lịch bảo dưỡng vẫn chồng nhau được.
+///
+/// Ràng buộc thật nằm ở migration SQL tay, Prisma không mô tả được:
+///   EXCLUDE USING gist (vehicle_id WITH =, period WITH &&)
+///
+/// `period` do trigger tự sinh từ pickup/return + buffer — KHÔNG ghi tay.
+/// Mọi ghi/xoá đi qua OccupancyService (CLAUDE.md mục 5).
+model VehicleOccupancy {
+  id         String   @id @db.Char(26)
+  tenantId   String   @map("tenant_id") @db.Char(26)
+  vehicleId  String   @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → OccupancySourceType
+  sourceType String   @map("source_type") @db.VarChar(30)
+  sourceId   String   @map("source_id") @db.Char(26)
+  /// Mốc thật của nghiệp vụ, chưa cộng buffer time.
+  startAt    DateTime @map("start_at") @db.Timestamptz(3)
+  endAt      DateTime @map("end_at") @db.Timestamptz(3)
+  /// Buffer chuẩn bị giữa 2 đơn, lấy từ tenant_settings lúc ghi (ADR 0006).
+  bufferMinutes Int   @default(0) @map("buffer_minutes")
+  /// Cột dẫn xuất, trigger ghi. Default rỗng để Prisma create không đòi giá trị.
+  period     Unsupported("tstzrange") @default(dbgenerated("'empty'::tstzrange"))
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceType, sourceId])
+  @@index([vehicleId, startAt, endAt])
+  @@index([tenantId])
+  @@map("vehicle_occupancies")
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+/// CLAUDE.md mục 6, lằn ranh 3: mọi action admin/platform quan trọng phải ghi vào đây.
+model AuditLog {
+  id           String   @id @db.Char(26)
+  tenantId     String?  @map("tenant_id") @db.Char(26)
+  actorUserId  String?  @map("actor_user_id") @db.Char(26)
+  /// tenant | platform | system
+  actorScope   String   @map("actor_scope") @db.VarChar(50)
+  action       String   @db.VarChar(120)
+  targetType   String   @map("target_type") @db.VarChar(80)
+  targetId     String?  @map("target_id") @db.Char(26)
+  beforeJson   Json?    @map("before_json") @db.JsonB
+  afterJson    Json?    @map("after_json") @db.JsonB
+  ipAddress    String?  @map("ip_address") @db.VarChar(80)
+  userAgent    String?  @map("user_agent") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  actor  User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([targetType, targetId])
+  @@index([actorUserId, createdAt])
+  @@map("audit_logs")
+}

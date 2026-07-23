@@ -1,0 +1,24 @@
+packages:
+  - apps/*
+  - packages/*
+  - prisma
+
+# Tắt kiểm tra deps trước mỗi `pnpm run/exec`. Mặc định pnpm 11 chạy lại `pnpm install`
+# ngầm trước mỗi lệnh; ở đây nó fail vì vài build script bị chặn (không sinh binary cần
+# thiết) và làm hỏng mọi lệnh con. Deps đã cài đủ nên tắt là an toàn.
+verifyDepsBeforeRun: false
+
+# Cho phép postinstall của các gói tin cậy chạy (Prisma tải query engine; esbuild/sharp/
+# unrs-resolver cần native binary). Đã chạy `pnpm rebuild` cho nhóm này.
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - esbuild
+  - prisma
+  - sharp
+  - unrs-resolver
+
+minimumReleaseAgeExclude:
+  - '@vitejs/plugin-react@6.0.4'
+  - lint-staged@17.1.1
+  - ts-jest@29.4.12

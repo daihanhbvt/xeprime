@@ -1,0 +1,45 @@
+{
+  "name": "@xeprime/prisma",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "generated"
+  ],
+  "scripts": {
+    "build": "prisma generate --schema ./schema.prisma && tsc -p tsconfig.build.json",
+    "generate": "prisma generate --schema ./schema.prisma",
+    "migrate:dev": "dotenv -e ../.env -- prisma migrate dev --schema ./schema.prisma",
+    "migrate:deploy": "dotenv -e ../.env -- prisma migrate deploy --schema ./schema.prisma",
+    "migrate:reset": "dotenv -e ../.env -- prisma migrate reset --force --schema ./schema.prisma",
+    "validate": "prisma validate --schema ./schema.prisma",
+    "studio": "dotenv -e ../.env -- prisma studio --schema ./schema.prisma",
+    "seed": "dotenv -e ../.env -- tsx ./src/seed.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.9.0",
+    "@prisma/client": "7.9.0",
+    "@prisma/client-runtime-utils": "7.9.0",
+    "dotenv": "17.4.2",
+    "pg": "8.22.0",
+    "ulid": "3.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@xeprime/types": "workspace:*",
+    "dotenv-cli": "11.0.0",
+    "prisma": "7.9.0",
+    "tsx": "4.23.1",
+    "typescript": "5.9.3"
+  }
+}

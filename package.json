@@ -1,0 +1,51 @@
+{
+  "name": "xeprime",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.1.3",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,css,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,css,yaml,yml}\"",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f db",
+    "db:generate": "pnpm --filter @xeprime/prisma run generate",
+    "db:migrate": "pnpm --filter @xeprime/prisma run migrate:dev",
+    "db:deploy": "pnpm --filter @xeprime/prisma run migrate:deploy",
+    "db:seed": "pnpm --filter @xeprime/prisma run seed",
+    "db:studio": "pnpm --filter @xeprime/prisma run studio",
+    "db:reset": "pnpm --filter @xeprime/prisma run migrate:reset",
+    "api:openapi": "pnpm --filter @xeprime/api run openapi",
+    "types:gen": "pnpm --filter @xeprime/types run generate",
+    "contract": "pnpm run api:openapi && pnpm run types:gen",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "husky": "9.1.7",
+    "lint-staged": "17.1.1",
+    "prettier": "3.9.6",
+    "turbo": "2.10.5",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.65.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,yaml,yml}": [
+      "prettier --write"
+    ]
+  }
+}
