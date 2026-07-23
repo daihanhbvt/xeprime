@@ -17,6 +17,10 @@ Table and column names are snake_case via `@@map`/`@map`; ids are `char(26)` ULI
 
 The strongest guarantee is one the database enforces regardless of what any code does. When a rule must never be violated, express it as a constraint — a unique index, a check, an exclusion constraint — not as an application check that two concurrent requests can both pass. The booking calendar is the reference: overlap is prevented by `EXCLUDE USING gist` on a range column, so no code path, transaction interleaving, or forgotten guard can create a double-booking (ADR 0006). Before adding an app-level "make sure there isn't already…", ask whether it should be a constraint instead. Usually it should.
 
+## Index for the queries the product will actually run
+
+Every list the app shows is a paginated, filtered, sorted query — and every one of those needs an index that matches its shape, or it becomes a full scan the moment the table grows past the seed. When you add a table or a field that a screen will filter or sort by (a tenant's bookings by date, a history by customer, a marketplace search by province and price), add the composite index that serves it in the same migration. Designing the access pattern and its index together is not premature optimization; it is the difference between a query that stays fast at ten thousand rows and one that quietly degrades until it pages someone at 2am. Partial indexes (`WHERE status = 'active'`) keep the hot path small when most rows are irrelevant to it.
+
 ## Prisma cannot express everything, so some migrations are written by hand
 
 Triggers, exclusion constraints, generated ranges, extensions — Prisma's schema language does not model these. When a change needs them, hand-write the migration SQL so the guarantee exists from the first `migrate` and does not depend on a later manual step, and keep `migration_lock.toml` honest. Prisma 7 reads its connection from `prisma.config.ts` and the client uses a driver adapter — the schema has no `url`. After any schema change, regenerate the client, and if the API surface shifts, regenerate the contract.

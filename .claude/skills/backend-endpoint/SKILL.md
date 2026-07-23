@@ -25,6 +25,14 @@ Input is a DTO with `class-validator` decorators; the global pipe rejects anythi
 
 The frontend's types are generated from this API's OpenAPI spec (ADR 0007). That only works if the shape is declared: DTO return types with `@ApiProperty`, wrapped in the `{ data, meta }` envelope, errors as `{ error: { code, message } }` with a code from the shared error set. Money crosses the wire as a string, never a `number` — `Decimal` in, string out, and the interceptor already handles the conversion; do not defeat it. After changing any DTO, regenerate the contract so the frontend sees the change as a type error, not a runtime surprise.
 
+## A list endpoint is paginated, filtered, and bounded — always
+
+Any endpoint that returns a collection returns a *page* of it, never the whole table. It accepts `page`/`limit` (with a sane default and a hard maximum the client cannot exceed), applies the filters and sort the UI actually needs, and returns the `{ data, meta }` envelope with `page`, `limit`, `total`, `hasNext`. There is no such thing as "it's fine, there won't be many rows" — a bookings or history list is tens of thousands of rows within the year, and an unbounded query is a latent outage plus a memory spike. Design the pagination and the indexes that back it together: a paged query without a matching index is a full scan wearing a `LIMIT`. Filtering and scope happen in the database query, not by fetching wide and trimming in Node.
+
+## Build the whole endpoint, not the happy path
+
+A product endpoint handles the inputs that will occur, not only the tidy one from the demo: the not-found, the forbidden, the already-in-that-state, the empty result, the concurrent write. Each maps to the right status and a stable error code from `@xeprime/types`, so the frontend can react precisely. An operation that can partially fail runs in a transaction so it either fully happens or fully does not — a booking that gets created but whose occupancy write fails must roll back both, never leave a half-state. Finishing the success path and leaving the failure paths as "TODO" is shipping a bug with a delay timer on it.
+
 ## Invariants belong in the database, services own the writes
 
 Business invariants that must never be violated live as database constraints, not as app-level checks that race. The booking calendar is the canonical case: overlapping occupancy is impossible because of an exclusion constraint, and every schedule write goes through `OccupancyService` inside a transaction (ADR 0006). Likewise the public listing snapshot is written only by `ListingsService` (ADR 0008). When you need to write to one of these tables, call its owning service — a second writer is a second way to corrupt the invariant. A `check-conflict` style endpoint is a UX preview only; it never stands in for the constraint.

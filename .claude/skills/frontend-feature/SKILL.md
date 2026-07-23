@@ -26,6 +26,14 @@ Using a library against its grain "works" right up until it doesn't. The seam is
 
 Design tokens through Ant Design's `ConfigProvider`, and CSS Modules for everything else (ADR 0003). No styled-components, no inline style — the single allowed exception is a CSS custom property carrying a value only known at runtime (an event bar's position on the calendar). Colours, spacing, and radii come from tokens, never a hardcoded hex.
 
+## Build the complete feature, at real scale — not the happy path
+
+A feature is not done when it renders correct data in the demo. It is done when it behaves like a product under real use. Before writing a list, page, or form, picture the actual data: a rental-history or bookings view will hold tens, then thousands, then tens of thousands of rows — so it is paginated (or virtualized) from the first commit, with server-side paging, filtering, and sorting wired to the URL, never a client that fetches everything and slices it. A senior does not ship an unbounded list and wait for it to fall over in production; the scale is a given, so design for it up front. If the base lacks a capability the correct solution needs — a pagination primitive, a data-table, a virtualizer — add the dependency; do not hand-roll a worse version or quietly cap the data to dodge the problem.
+
+Every surface handles all of its states, not just the one with data: loading, empty, error, and the partial/permission-limited views. An empty list says something useful; an error is caught and shown, not a blank screen; a slow request shows progress. Forms handle submit failure, validation, and the disabled/in-flight state, not only the successful path. These are not extras bolted on later — they are what separates a product from a task marked done, and leaving them out is shipping a known bug for someone else to hit.
+
+Think through the edge cases the domain guarantees will occur: the very long name, the missing optional field, the record with no related rows, the concurrent edit, the number that overflows the column. Handle them now, while the code is in front of you, because "we'll fix it when a user reports it" is the most expensive way to build.
+
 ## Server versus client components
 
 Default to Server Components; reach for `'use client'` only when a boundary genuinely needs state, effects, events, or browser APIs. Push the client boundary as far down the tree as it will go — a page can be a Server Component with a small client island inside it. The `(public)` marketplace is where this matters most for SEO; the `(manage)` portal is mostly client by nature, but that is a reason to keep its client components small and focused, not an excuse to mark everything.
@@ -36,4 +44,4 @@ Statuses, roles, permissions, and business labels come from `@xeprime/types` and
 
 ## Before you call it done
 
-Read the feature back as the next engineer: is every repeated thing extracted, every library used at its intended seam, every domain string imported, every displayed value going through a helper? Run typecheck and lint. If you extracted something into a shared place, that is a good sign, not scope creep.
+Read the feature back as the next engineer *and* as a user hitting it in production. Is every repeated thing extracted, every library used at its intended seam, every domain string imported, every displayed value going through a helper? Does every list scale — paginated, filtered, sorted server-side — and does every surface handle loading, empty, and error? Are the edge cases the domain guarantees actually handled, not deferred? Run typecheck, lint, and the tests. A feature that "works on the seed data" but folds at real volume, or shows a blank screen on error, is not done — it is a bug you have chosen not to see yet. Finish it now.

@@ -21,6 +21,8 @@ You are not running a linter — the linter already ran. You check the things a 
 
 **No hidden hardcoding.** Status/role/permission/business text must resolve from `packages/types` and constants, never a bare string literal (ADR 0005). Money is `Decimal`/string end to end, never `number` (ADR 0007). Styling is CSS Modules + design token, never styled-components or inline style except a runtime-only CSS custom property (ADR 0003).
 
+**Completeness — is this a product or a task marked done?** This is where "it works" and "it's finished" diverge, and it is a High finding when it fails. A list or query that is unbounded — no pagination, no limit, fetch-everything-and-slice — is a latent outage; flag it and name the paging + index it needs. A surface that handles only the happy path — no empty, loading, or error state; a not-found or forbidden or concurrent case left untended; a form with no submit-failure handling — is a bug shipped with a delay timer. An operation that can partially fail but does not run in a transaction can leave a half-state. Judge the change against the data volume and inputs the domain *guarantees* will occur (tens of thousands of rows, the missing field, the concurrent edit), not against the seed data it was tested on. "We'll fix it when a user reports it" is the thing you are here to prevent.
+
 **Clarity.** Would the next engineer understand *why*, not just *what*? Comments should explain intent and the non-obvious; naming should match the surrounding code. Flag `any` without a stated reason. Flag cleverness that costs readability.
 
 ## How you report
