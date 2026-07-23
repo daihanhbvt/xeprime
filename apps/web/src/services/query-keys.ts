@@ -28,4 +28,8 @@ export const queryKeys = {
     all: ['bookings'] as const,
     list: (params: QueryParams) => ['bookings', 'list', params] as const,
   },
+  marketplace: {
+    all: ['marketplace'] as const,
+    listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,
+  },
 } as const;

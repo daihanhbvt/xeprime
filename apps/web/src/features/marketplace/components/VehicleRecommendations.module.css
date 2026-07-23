@@ -1,0 +1,120 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+}
+
+.count {
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+  margin-top: 2px;
+}
+
+.chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.13s,
+    color 0.13s;
+}
+.chip:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-text);
+}
+.chipActive {
+  background: var(--xp-color-primary);
+  border-color: var(--xp-color-primary);
+  color: #fff;
+}
+.chipActive:hover {
+  color: #fff;
+}
+
+.chipDivider {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  background: var(--xp-color-border);
+  margin: 0 2px;
+}
+
+/* Mobile-first: 1 cột trên điện thoại, dày dần lên desktop. */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 760px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (min-width: 1040px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.skeleton {
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  padding: 12px;
+  background: var(--xp-color-bg-container);
+}
+.skeletonImg {
+  width: 100% !important;
+  aspect-ratio: 16 / 10;
+  margin-bottom: 10px;
+}
+.skeletonImg :global(.ant-skeleton-image) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.empty {
+  padding: 40px 0;
+}
+
+.pager {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}

@@ -1,0 +1,90 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+}
+
+.sub {
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+  margin-top: 2px;
+}
+
+/* Mobile-first: 1 cột; desktop: lưới 2 cột với 2 ô rộng chiếm cả hàng. */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.tile,
+.tileWide {
+  position: relative;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  height: 150px;
+  border-radius: var(--xp-border-radius);
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--xp-color-bg-sand), #cbb589);
+  text-align: left;
+  transition: transform 0.14s ease;
+}
+.tile:hover,
+.tileWide:hover {
+  transform: translateY(-2px);
+}
+@media (min-width: 640px) {
+  .tileWide {
+    grid-column: 1 / -1;
+  }
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  color: rgba(120, 90, 30, 0.35);
+  background: linear-gradient(180deg, transparent 40%, rgba(20, 16, 10, 0.55));
+}
+
+.meta {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+}
+
+.name {
+  font-size: 18px;
+  font-weight: 700;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+}
+
+.count {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.88);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}

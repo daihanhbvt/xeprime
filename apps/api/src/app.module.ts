@@ -15,6 +15,7 @@ import { TenantsModule } from './modules/tenants/tenants.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
+import { PublicListingsModule } from './modules/public-listings/public-listings.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { ChatModule } from './modules/chat/chat.module';
@@ -51,6 +52,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     UsersModule,
     TenantsModule,
     CalendarModule,
+    PublicListingsModule,
     VehiclesModule,
     BookingsModule,
     ChatModule,

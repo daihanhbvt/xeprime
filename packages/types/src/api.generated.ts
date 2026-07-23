@@ -145,6 +145,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/listings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tìm xe trên Marketplace (phân trang, filter, sort) */
+        get: operations["PublicListingsController_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -249,6 +266,36 @@ export interface components {
             /** @description BookingStatus khi type=booking */
             status?: Record<string, never> | null;
             sourceId?: Record<string, never> | null;
+        };
+        PublicListingDto: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            vehicleType: "car" | "motorbike";
+            /** @enum {string} */
+            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            brand?: Record<string, never> | null;
+            model?: Record<string, never> | null;
+            seatCount?: Record<string, never> | null;
+            fuelType?: Record<string, never> | null;
+            mainImageUrl?: Record<string, never> | null;
+            /** @description Tiền dạng string — ADR 0007 */
+            weekdayPrice?: Record<string, never> | null;
+            weekendPrice?: Record<string, never> | null;
+            /** @description Tên gian hàng */
+            shopName: string;
+            /** @description Slug gian hàng cho route /shops/[slug] */
+            shopSlug: string;
+        };
+        PublicListingPageMetaDto: {
+            page: number;
+            limit: number;
+            total: number;
+            hasNext: boolean;
+        };
+        PublicListingPageDto: {
+            data: components["schemas"]["PublicListingDto"][];
+            meta: components["schemas"]["PublicListingPageMetaDto"];
         };
         ApiErrorBodyDto: {
             /** @example BOOKING_SCHEDULE_CONFLICT */
@@ -587,6 +634,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CalendarEventDto"][];
+                };
+            };
+        };
+    };
+    PublicListingsController_search: {
+        parameters: {
+            query?: {
+                /** @description car | motorbike */
+                vehicleType?: "car" | "motorbike";
+                serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+                /** @description Hãng xe */
+                brand?: string;
+                /** @description Số chỗ tối thiểu */
+                minSeats?: number;
+                /** @description Tìm theo tên/hãng/model */
+                q?: string;
+                sort?: "newest" | "price_asc" | "price_desc";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicListingPageDto"];
                 };
             };
         };

@@ -144,15 +144,18 @@ async function upsertUser(input: {
   return userId;
 }
 
+// `approved: true` = mô phỏng xe đã qua duyệt public (luồng duyệt thật ở Phase 2) để
+// Marketplace có dữ liệu lúc dev. Để lẫn vài xe draft cho giống thực tế (không phải xe nào
+// cũng đã lên chợ).
 const DEMO_VEHICLES = [
-  { code: 'XE-001', name: 'Toyota Vios 2022', plate: '51H-123.45', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Toyota', model: 'Vios', weekday: 650_000, weekend: 800_000 },
-  { code: 'XE-002', name: 'Honda City 2021', plate: '51H-234.56', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Honda', model: 'City', weekday: 700_000, weekend: 850_000 },
-  { code: 'XE-003', name: 'Mazda CX-5 2023', plate: '51H-345.67', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Mazda', model: 'CX-5', weekday: 1_100_000, weekend: 1_300_000 },
-  { code: 'XE-004', name: 'Kia Carnival 2022', plate: '51H-456.78', type: VEHICLE_TYPE.CAR, seats: 7, brand: 'Kia', model: 'Carnival', weekday: 1_600_000, weekend: 1_900_000 },
-  { code: 'XE-005', name: 'Ford Ranger 2021', plate: '51C-567.89', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Ford', model: 'Ranger', weekday: 1_200_000, weekend: 1_400_000 },
-  { code: 'XM-001', name: 'Honda Vision 2023', plate: '59X1-111.22', type: VEHICLE_TYPE.MOTORBIKE, seats: 2, brand: 'Honda', model: 'Vision', weekday: 130_000, weekend: 160_000 },
-  { code: 'XM-002', name: 'Yamaha Janus 2022', plate: '59X1-222.33', type: VEHICLE_TYPE.MOTORBIKE, seats: 2, brand: 'Yamaha', model: 'Janus', weekday: 120_000, weekend: 150_000 },
-  { code: 'XM-003', name: 'Honda SH 150i 2023', plate: '59X1-333.44', type: VEHICLE_TYPE.MOTORBIKE, seats: 2, brand: 'Honda', model: 'SH 150i', weekday: 300_000, weekend: 350_000 },
+  { code: 'XE-001', name: 'Toyota Vios 2022', plate: '51H-123.45', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Toyota', model: 'Vios', weekday: 650_000, weekend: 800_000, approved: true },
+  { code: 'XE-002', name: 'Honda City 2021', plate: '51H-234.56', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Honda', model: 'City', weekday: 700_000, weekend: 850_000, approved: true },
+  { code: 'XE-003', name: 'Mazda CX-5 2023', plate: '51H-345.67', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Mazda', model: 'CX-5', weekday: 1_100_000, weekend: 1_300_000, approved: true },
+  { code: 'XE-004', name: 'Kia Carnival 2022', plate: '51H-456.78', type: VEHICLE_TYPE.CAR, seats: 7, brand: 'Kia', model: 'Carnival', weekday: 1_600_000, weekend: 1_900_000, approved: false },
+  { code: 'XE-005', name: 'Ford Ranger 2021', plate: '51C-567.89', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Ford', model: 'Ranger', weekday: 1_200_000, weekend: 1_400_000, approved: true },
+  { code: 'XM-001', name: 'Honda Vision 2023', plate: '59X1-111.22', type: VEHICLE_TYPE.MOTORBIKE, seats: 2, brand: 'Honda', model: 'Vision', weekday: 130_000, weekend: 160_000, approved: true },
+  { code: 'XM-002', name: 'Yamaha Janus 2022', plate: '59X1-222.33', type: VEHICLE_TYPE.MOTORBIKE, seats: 2, brand: 'Yamaha', model: 'Janus', weekday: 120_000, weekend: 150_000, approved: false },
+  { code: 'XM-003', name: 'Honda SH 150i 2023', plate: '59X1-333.44', type: VEHICLE_TYPE.MOTORBIKE, seats: 2, brand: 'Honda', model: 'SH 150i', weekday: 300_000, weekend: 350_000, approved: true },
 ] as const;
 
 /** Đơn demo: đủ để màn lịch có event ngắn, event dài và event vắt qua hôm nay. */
@@ -267,7 +270,12 @@ async function main(): Promise<void> {
   for (const v of DEMO_VEHICLES) {
     const row = await prisma.vehicle.upsert({
       where: { tenantId_code: { tenantId: tenant.id, code: v.code } },
-      update: {},
+      // Đồng bộ trạng thái duyệt demo khi chạy lại seed (idempotent nhưng cập nhật được).
+      update: {
+        publicStatus: v.approved
+          ? VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC
+          : VEHICLE_PUBLIC_STATUS.DRAFT,
+      },
       create: {
         id: ulid(),
         tenantId: tenant.id,
@@ -280,9 +288,11 @@ async function main(): Promise<void> {
         model: v.model,
         seatCount: v.seats,
         operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE,
-        // Cố ý KHÔNG seed `approved_public`: chỉ ApprovalService mới được đặt trạng thái
-        // đó (CLAUDE.md mục 5). Seed ra xe đã duyệt sẽ che mất luồng duyệt khi test.
-        publicStatus: VEHICLE_PUBLIC_STATUS.DRAFT,
+        // Demo: `approved` mô phỏng kết quả duyệt public (luồng thật ở Phase 2 qua
+        // ApprovalService). Xe draft vẫn để nguyên để test được luồng duyệt sau này.
+        publicStatus: v.approved
+          ? VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC
+          : VEHICLE_PUBLIC_STATUS.DRAFT,
         weekdayPrice: v.weekday,
         weekendPrice: v.weekend,
         createdBy: ownerUserId,

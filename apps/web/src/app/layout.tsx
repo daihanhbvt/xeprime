@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Be_Vietnam_Pro } from 'next/font/google';
+import { Be_Vietnam_Pro, Playfair_Display } from 'next/font/google';
 import { Providers } from './providers';
 import '@/styles/tokens.css';
 import '@/styles/globals.css';
@@ -13,6 +13,15 @@ const beVietnam = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
   weight: ['300', '400', '500', '600', '700'],
   variable: '--font-be-vietnam',
+  display: 'swap',
+});
+
+/** Playfair Display — chỉ dùng cho nhấn nghiêng ở hero marketplace (giống xeprime.vn). */
+const playfair = Playfair_Display({
+  subsets: ['latin', 'vietnamese'],
+  weight: ['500', '600'],
+  style: ['italic', 'normal'],
+  variable: '--font-playfair',
   display: 'swap',
 });
 
@@ -33,7 +42,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" className={beVietnam.variable}>
+    <html lang="vi" className={`${beVietnam.variable} ${playfair.variable}`}>
       <body>
         <Providers>{children}</Providers>
       </body>

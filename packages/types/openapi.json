@@ -471,6 +471,118 @@
           "calendar"
         ]
       }
+    },
+    "/public/listings": {
+      "get": {
+        "operationId": "PublicListingsController_search",
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "description": "car | motorbike",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
+            "name": "serviceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "both",
+                "long_term"
+              ]
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "Hãng xe",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minSeats",
+            "required": false,
+            "in": "query",
+            "description": "Số chỗ tối thiểu",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên/hãng/model",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "price_asc",
+                "price_desc"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 48,
+              "default": 12,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicListingPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tìm xe trên Marketplace (phân trang, filter, sort)",
+        "tags": [
+          "public-listings"
+        ]
+      }
     }
   },
   "info": {
@@ -903,6 +1015,119 @@
           "title",
           "startAt",
           "endAt"
+        ]
+      },
+      "PublicListingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "both",
+              "long_term"
+            ]
+          },
+          "brand": {
+            "type": "object",
+            "nullable": true
+          },
+          "model": {
+            "type": "object",
+            "nullable": true
+          },
+          "seatCount": {
+            "type": "object",
+            "nullable": true
+          },
+          "fuelType": {
+            "type": "object",
+            "nullable": true
+          },
+          "mainImageUrl": {
+            "type": "object",
+            "nullable": true
+          },
+          "weekdayPrice": {
+            "type": "object",
+            "nullable": true,
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "weekendPrice": {
+            "type": "object",
+            "nullable": true
+          },
+          "shopName": {
+            "type": "string",
+            "description": "Tên gian hàng"
+          },
+          "shopSlug": {
+            "type": "string",
+            "description": "Slug gian hàng cho route /shops/[slug]"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "vehicleType",
+          "serviceType",
+          "shopName",
+          "shopSlug"
+        ]
+      },
+      "PublicListingPageMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "hasNext": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "hasNext"
+        ]
+      },
+      "PublicListingPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicListingDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicListingPageMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "ApiErrorBodyDto": {
