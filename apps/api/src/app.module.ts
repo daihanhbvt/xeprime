@@ -6,6 +6,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { validateEnv } from './config/env.schema';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
+import { TenantScopeGuard } from './common/guards/tenant-scope.guard';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -59,10 +60,14 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     PlatformAdminModule,
   ],
   providers: [
-    // Thứ tự quan trọng: Throttler chặn trước khi chạm DB; AuthGuard gắn req.user;
-    // PermissionGuard đọc quyền mà hai guard trước đã nạp.
+    // Thứ tự quan trọng (guard global chạy theo đúng thứ tự khai báo): Throttler chặn trước
+    // khi chạm DB; AuthGuard gắn req.user; TenantScopeGuard nạp req.tenant cho endpoint có
+    // @TenantScoped; PermissionGuard đọc quyền mà các guard trước đã nạp. TenantScopeGuard
+    // PHẢI đứng trước PermissionGuard — guard controller chạy sau guard global nên không thể
+    // nạp scope kịp cho PermissionGuard.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: TenantScopeGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],

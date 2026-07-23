@@ -230,6 +230,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách xe của gian hàng (phân trang, filter, sort) */
+        get: operations["VehiclesController_list"];
+        put?: never;
+        /** Thêm xe mới (mặc định trạng thái public = nháp) */
+        post: operations["VehiclesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chi tiết một xe */
+        get: operations["VehiclesController_getOne"];
+        put?: never;
+        post?: never;
+        /** Xoá mềm xe (chặn nếu còn lịch hiện tại/tương lai) */
+        delete: operations["VehiclesController_remove"];
+        options?: never;
+        head?: never;
+        /** Sửa thông tin xe */
+        patch: operations["VehiclesController_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -388,16 +425,29 @@ export interface components {
             data: components["schemas"]["PublicListingDto"][];
             meta: components["schemas"]["PublicListingPageMetaDto"];
         };
-        ApiErrorBodyDto: {
-            /** @example BOOKING_SCHEDULE_CONFLICT */
+        VehicleListItemDto: {
+            id: string;
             code: string;
-            /** @example Xe đã có đơn khác trong khoảng thời gian này */
-            message: string;
-            /** @description Chi tiết bổ sung, ví dụ danh sách lỗi validate */
-            details?: Record<string, never>;
-        };
-        ApiErrorDto: {
-            error: components["schemas"]["ApiErrorBodyDto"];
+            name: string;
+            plateNumber?: string | null;
+            /** @enum {string} */
+            vehicleType: "car" | "motorbike";
+            /** @enum {string} */
+            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            brand?: string | null;
+            model?: string | null;
+            manufactureYear?: number | null;
+            seatCount?: number | null;
+            /** @enum {string} */
+            operationStatus: "available" | "renting" | "maintenance" | "inactive";
+            /** @enum {string} */
+            publicStatus: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
+            mainImageUrl?: string | null;
+            /** @description Tiền dạng string — ADR 0007 */
+            weekdayPrice?: string | null;
+            weekendPrice?: string | null;
+            /** @description ISO-8601 UTC */
+            updatedAt: string;
         };
         PaginationMetaDto: {
             /** @example 1 */
@@ -408,6 +458,137 @@ export interface components {
             total: number;
             /** @example true */
             hasNext: boolean;
+        };
+        VehiclePageDto: {
+            data: components["schemas"]["VehicleListItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        VehicleDetailDto: {
+            id: string;
+            code: string;
+            name: string;
+            plateNumber?: string | null;
+            /** @enum {string} */
+            vehicleType: "car" | "motorbike";
+            /** @enum {string} */
+            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            brand?: string | null;
+            model?: string | null;
+            manufactureYear?: number | null;
+            seatCount?: number | null;
+            /** @enum {string} */
+            operationStatus: "available" | "renting" | "maintenance" | "inactive";
+            /** @enum {string} */
+            publicStatus: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
+            mainImageUrl?: string | null;
+            /** @description Tiền dạng string — ADR 0007 */
+            weekdayPrice?: string | null;
+            weekendPrice?: string | null;
+            /** @description ISO-8601 UTC */
+            updatedAt: string;
+            color?: string | null;
+            /** @enum {string|null} */
+            fuelType?: "gasoline" | "diesel" | "electric" | "hybrid" | null;
+            description?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        CreateVehicleDto: {
+            /**
+             * @description Mã xe nội bộ, duy nhất trong gian hàng
+             * @example XE-001
+             */
+            code: string;
+            /** @example Toyota Vios 2022 */
+            name: string;
+            /** @enum {string} */
+            vehicleType: "car" | "motorbike";
+            /**
+             * @default self_drive
+             * @enum {string}
+             */
+            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @example 51K-123.45 */
+            plateNumber?: string;
+            brand?: string;
+            model?: string;
+            manufactureYear?: number;
+            color?: string;
+            seatCount?: number;
+            /** @enum {string} */
+            fuelType?: "gasoline" | "diesel" | "electric" | "hybrid";
+            /**
+             * @default available
+             * @enum {string}
+             */
+            operationStatus: "available" | "renting" | "maintenance" | "inactive";
+            description?: string;
+            /** @description URL ảnh đại diện xe */
+            mainImageUrl?: string;
+            /**
+             * @description Giá ngày thường, string thập phân — ADR 0007
+             * @example 600000
+             */
+            weekdayPrice?: string;
+            /**
+             * @description Giá cuối tuần
+             * @example 750000
+             */
+            weekendPrice?: string;
+        };
+        UpdateVehicleDto: {
+            /**
+             * @description Mã xe nội bộ, duy nhất trong gian hàng
+             * @example XE-001
+             */
+            code?: string;
+            /** @example Toyota Vios 2022 */
+            name?: string;
+            /** @enum {string} */
+            vehicleType?: "car" | "motorbike";
+            /**
+             * @default self_drive
+             * @enum {string}
+             */
+            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @example 51K-123.45 */
+            plateNumber?: string;
+            brand?: string;
+            model?: string;
+            manufactureYear?: number;
+            color?: string;
+            seatCount?: number;
+            /** @enum {string} */
+            fuelType?: "gasoline" | "diesel" | "electric" | "hybrid";
+            /**
+             * @default available
+             * @enum {string}
+             */
+            operationStatus: "available" | "renting" | "maintenance" | "inactive";
+            description?: string;
+            /** @description URL ảnh đại diện xe */
+            mainImageUrl?: string;
+            /**
+             * @description Giá ngày thường, string thập phân — ADR 0007
+             * @example 600000
+             */
+            weekdayPrice?: string;
+            /**
+             * @description Giá cuối tuần
+             * @example 750000
+             */
+            weekendPrice?: string;
+        };
+        ApiErrorBodyDto: {
+            /** @example BOOKING_SCHEDULE_CONFLICT */
+            code: string;
+            /** @example Xe đã có đơn khác trong khoảng thời gian này */
+            message: string;
+            /** @description Chi tiết bổ sung, ví dụ danh sách lỗi validate */
+            details?: Record<string, never>;
+        };
+        ApiErrorDto: {
+            error: components["schemas"]["ApiErrorBodyDto"];
         };
     };
     responses: never;
@@ -845,6 +1026,127 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicListingPageDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_list: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo tên/mã/biển số/hãng/model */
+                q?: string;
+                vehicleType?: "car" | "motorbike";
+                serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+                operationStatus?: "available" | "renting" | "maintenance" | "inactive";
+                publicStatus?: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
+                sort?: "newest" | "name_asc" | "code_asc" | "price_asc" | "price_desc";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehiclePageDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateVehicleDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDetailDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDetailDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id?: string;
+                    };
+                };
+            };
+        };
+    };
+    VehiclesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateVehicleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDetailDto"];
                 };
             };
         };

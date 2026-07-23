@@ -1,0 +1,37 @@
+.form {
+  max-width: 960px;
+}
+
+.section {
+  margin-bottom: 16px;
+}
+
+.alert {
+  margin-bottom: 16px;
+}
+
+.descBlock {
+  margin-top: 12px;
+}
+
+.preview {
+  margin-top: 8px;
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--xp-border, rgba(0, 0, 0, 0.08));
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 576px) {
+  .actions {
+    flex-direction: column-reverse;
+  }
+}

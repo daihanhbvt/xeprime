@@ -1,0 +1,24 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.search {
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+
+.select {
+  min-width: 150px;
+  flex: 0 1 auto;
+}
+
+@media (max-width: 576px) {
+  .select {
+    flex: 1 1 45%;
+    min-width: 0;
+  }
+}

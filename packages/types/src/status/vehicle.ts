@@ -98,3 +98,24 @@ export const SERVICE_TYPE_LABEL: Readonly<Record<ServiceType, string>> = {
   [SERVICE_TYPE.BOTH]: 'Tự lái & có tài xế',
   [SERVICE_TYPE.LONG_TERM]: 'Thuê dài hạn',
 };
+
+/**
+ * Nhiên liệu — thuộc tính dữ liệu của xe (không phải trạng thái), nên chỉ có nhãn, không màu.
+ * DB lưu String; đây là bộ giá trị chốt để form là select thay vì text trần (ADR 0005).
+ */
+export const FUEL_TYPE = {
+  GASOLINE: 'gasoline',
+  DIESEL: 'diesel',
+  ELECTRIC: 'electric',
+  HYBRID: 'hybrid',
+} as const;
+
+export type FuelType = (typeof FUEL_TYPE)[keyof typeof FUEL_TYPE];
+export const FUEL_TYPE_VALUES = Object.values(FUEL_TYPE) as FuelType[];
+
+export const FUEL_TYPE_LABEL: Readonly<Record<FuelType, string>> = {
+  [FUEL_TYPE.GASOLINE]: 'Xăng',
+  [FUEL_TYPE.DIESEL]: 'Dầu (Diesel)',
+  [FUEL_TYPE.ELECTRIC]: 'Điện',
+  [FUEL_TYPE.HYBRID]: 'Hybrid',
+};

@@ -6,7 +6,12 @@
  * lớp chặn thật. Bỏ lớp backend vì "frontend đã validate rồi" là lỗ bảo mật.
  */
 import * as yup from 'yup';
-import { VEHICLE_TYPE_VALUES, SERVICE_TYPE_VALUES } from '@xeprime/types';
+import {
+  FUEL_TYPE_VALUES,
+  SERVICE_TYPE_VALUES,
+  VEHICLE_OPERATION_STATUS_VALUES,
+  VEHICLE_TYPE_VALUES,
+} from '@xeprime/types';
 
 /** SĐT Việt Nam: 0xxxxxxxxx hoặc +84xxxxxxxxx. */
 export const phoneSchema = yup
@@ -25,15 +30,62 @@ export const moneySchema = yup
   .integer('Số tiền phải là số nguyên')
   .min(0, 'Số tiền không được âm');
 
+/** Đời xe hợp lệ: 1980 → sang năm (xe đời mới ra trước lịch). */
+const MIN_VEHICLE_YEAR = 1980;
+const MAX_VEHICLE_YEAR = new Date().getFullYear() + 1;
+
+/** Text tuỳ chọn: chuỗi trim, rỗng coi như bỏ trống (map sang undefined khi gửi API). */
+const optionalText = (max: number) => yup.string().trim().max(max).default('');
+
 export const vehicleFormSchema = yup.object({
   code: yup.string().trim().required('Mã xe là bắt buộc').max(80),
   name: yup.string().trim().required('Tên xe là bắt buộc').max(255),
-  plateNumber: yup.string().trim().max(50).nullable(),
   vehicleType: yup.string().oneOf(VEHICLE_TYPE_VALUES).required('Chọn loại xe'),
   serviceType: yup.string().oneOf(SERVICE_TYPE_VALUES).required('Chọn loại dịch vụ'),
-  seatCount: yup.number().integer().min(1).max(64).nullable(),
-  weekdayPrice: moneySchema.nullable(),
-  weekendPrice: moneySchema.nullable(),
+  operationStatus: yup
+    .string()
+    .oneOf(VEHICLE_OPERATION_STATUS_VALUES)
+    .required('Chọn trạng thái vận hành'),
+  plateNumber: optionalText(50),
+  brand: optionalText(100),
+  model: optionalText(100),
+  color: optionalText(80),
+  fuelType: yup.string().oneOf(FUEL_TYPE_VALUES).nullable().default(null),
+  manufactureYear: yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .typeError('Đời xe phải là số')
+    .integer('Đời xe phải là số nguyên')
+    .min(MIN_VEHICLE_YEAR, `Đời xe từ ${MIN_VEHICLE_YEAR}`)
+    .max(MAX_VEHICLE_YEAR, `Đời xe tối đa ${MAX_VEHICLE_YEAR}`)
+    .nullable()
+    .default(null),
+  seatCount: yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .typeError('Số chỗ phải là số')
+    .integer('Số chỗ phải là số nguyên')
+    .min(1, 'Ít nhất 1 chỗ')
+    .max(64, 'Tối đa 64 chỗ')
+    .nullable()
+    .default(null),
+  weekdayPrice: moneySchema
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .nullable()
+    .default(null),
+  weekendPrice: moneySchema
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .nullable()
+    .default(null),
+  description: optionalText(4000),
+  mainImageUrl: yup
+    .string()
+    .trim()
+    .transform((v) => (v === '' ? null : v))
+    .url('Đường dẫn ảnh không hợp lệ')
+    .max(2000)
+    .nullable()
+    .default(null),
 });
 
 export type VehicleFormValues = yup.InferType<typeof vehicleFormSchema>;

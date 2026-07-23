@@ -1,15 +1,14 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { OCCUPANCY_SOURCE_TYPE, PERMISSION } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions } from '../../common/decorators';
-import { TenantScopeGuard } from '../../common/guards/tenant-scope.guard';
+import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CalendarEventDto, CalendarRangeQueryDto, CalendarResourceDto } from './dto/calendar.dto';
 
 @ApiTags('calendar')
 @Controller('calendar')
-@UseGuards(TenantScopeGuard)
+@TenantScoped()
 export class CalendarController {
   constructor(private readonly prisma: PrismaService) {}
 

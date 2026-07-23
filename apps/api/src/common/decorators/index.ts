@@ -21,6 +21,17 @@ export const RequirePermissions = (...permissions: Permission[]) =>
 export const PLATFORM_ONLY_KEY = 'xeprime:platformOnly';
 export const PlatformOnly = () => SetMetadata(PLATFORM_ONLY_KEY, true);
 
+/**
+ * Đánh dấu controller/route cần tenant scope.
+ *
+ * `TenantScopeGuard` là guard GLOBAL (chạy trước PermissionGuard để `req.tenant` có sẵn khi
+ * kiểm tra quyền). Nó chỉ giải scope cho endpoint có marker này — endpoint không gắn thì bỏ
+ * qua. Thay cho `@UseGuards(TenantScopeGuard)` ở tầng controller: guard controller chạy SAU
+ * guard global nên `req.tenant` sẽ đến quá muộn cho PermissionGuard.
+ */
+export const TENANT_SCOPED_KEY = 'xeprime:tenantScoped';
+export const TenantScoped = () => SetMetadata(TENANT_SCOPED_KEY, true);
+
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthenticatedUser => {
     const req = ctx.switchToHttp().getRequest<RequestContext>();

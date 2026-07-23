@@ -697,6 +697,265 @@
           "public-listings"
         ]
       }
+    },
+    "/vehicles": {
+      "get": {
+        "operationId": "VehiclesController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên/mã/biển số/hãng/model",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
+            "name": "serviceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "both",
+                "long_term"
+              ]
+            }
+          },
+          {
+            "name": "operationStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "available",
+                "renting",
+                "maintenance",
+                "inactive"
+              ]
+            }
+          },
+          {
+            "name": "publicStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending_public_review",
+                "approved_public",
+                "needs_revision",
+                "rejected",
+                "hidden",
+                "archived"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "name_asc",
+                "code_asc",
+                "price_asc",
+                "price_desc"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehiclePageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách xe của gian hàng (phân trang, filter, sort)",
+        "tags": [
+          "vehicles"
+        ]
+      },
+      "post": {
+        "operationId": "VehiclesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVehicleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thêm xe mới (mặc định trạng thái public = nháp)",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
+    "/vehicles/{id}": {
+      "get": {
+        "operationId": "VehiclesController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết một xe",
+        "tags": [
+          "vehicles"
+        ]
+      },
+      "patch": {
+        "operationId": "VehiclesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVehicleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa thông tin xe",
+        "tags": [
+          "vehicles"
+        ]
+      },
+      "delete": {
+        "operationId": "VehiclesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xoá mềm xe (chặn nếu còn lịch hiện tại/tương lai)",
+        "tags": [
+          "vehicles"
+        ]
+      }
     }
   },
   "info": {
@@ -1313,6 +1572,455 @@
           "meta"
         ]
       },
+      "VehicleListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "both",
+              "long_term"
+            ]
+          },
+          "brand": {
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "manufactureYear": {
+            "type": "number",
+            "nullable": true
+          },
+          "seatCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "operationStatus": {
+            "type": "string",
+            "enum": [
+              "available",
+              "renting",
+              "maintenance",
+              "inactive"
+            ]
+          },
+          "publicStatus": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_public_review",
+              "approved_public",
+              "needs_revision",
+              "rejected",
+              "hidden",
+              "archived"
+            ]
+          },
+          "mainImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "weekendPrice": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "vehicleType",
+          "serviceType",
+          "operationStatus",
+          "publicStatus",
+          "updatedAt"
+        ]
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20
+          },
+          "total": {
+            "type": "number",
+            "example": 137
+          },
+          "hasNext": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "hasNext"
+        ]
+      },
+      "VehiclePageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleListItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "VehicleDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "both",
+              "long_term"
+            ]
+          },
+          "brand": {
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "manufactureYear": {
+            "type": "number",
+            "nullable": true
+          },
+          "seatCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "operationStatus": {
+            "type": "string",
+            "enum": [
+              "available",
+              "renting",
+              "maintenance",
+              "inactive"
+            ]
+          },
+          "publicStatus": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_public_review",
+              "approved_public",
+              "needs_revision",
+              "rejected",
+              "hidden",
+              "archived"
+            ]
+          },
+          "mainImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "weekendPrice": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "color": {
+            "type": "string",
+            "nullable": true
+          },
+          "fuelType": {
+            "type": "string",
+            "enum": [
+              "gasoline",
+              "diesel",
+              "electric",
+              "hybrid"
+            ],
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "vehicleType",
+          "serviceType",
+          "operationStatus",
+          "publicStatus",
+          "updatedAt",
+          "createdAt"
+        ]
+      },
+      "CreateVehicleDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Mã xe nội bộ, duy nhất trong gian hàng",
+            "example": "XE-001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Toyota Vios 2022"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "both",
+              "long_term"
+            ],
+            "default": "self_drive"
+          },
+          "plateNumber": {
+            "type": "string",
+            "example": "51K-123.45"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "manufactureYear": {
+            "type": "number",
+            "minimum": 1980,
+            "maximum": 2027
+          },
+          "color": {
+            "type": "string"
+          },
+          "seatCount": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 64
+          },
+          "fuelType": {
+            "type": "string",
+            "enum": [
+              "gasoline",
+              "diesel",
+              "electric",
+              "hybrid"
+            ]
+          },
+          "operationStatus": {
+            "type": "string",
+            "enum": [
+              "available",
+              "renting",
+              "maintenance",
+              "inactive"
+            ],
+            "default": "available"
+          },
+          "description": {
+            "type": "string"
+          },
+          "mainImageUrl": {
+            "type": "string",
+            "description": "URL ảnh đại diện xe"
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "description": "Giá ngày thường, string thập phân — ADR 0007",
+            "example": "600000"
+          },
+          "weekendPrice": {
+            "type": "string",
+            "description": "Giá cuối tuần",
+            "example": "750000"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "vehicleType"
+        ]
+      },
+      "UpdateVehicleDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Mã xe nội bộ, duy nhất trong gian hàng",
+            "example": "XE-001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Toyota Vios 2022"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "both",
+              "long_term"
+            ],
+            "default": "self_drive"
+          },
+          "plateNumber": {
+            "type": "string",
+            "example": "51K-123.45"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "manufactureYear": {
+            "type": "number",
+            "minimum": 1980,
+            "maximum": 2027
+          },
+          "color": {
+            "type": "string"
+          },
+          "seatCount": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 64
+          },
+          "fuelType": {
+            "type": "string",
+            "enum": [
+              "gasoline",
+              "diesel",
+              "electric",
+              "hybrid"
+            ]
+          },
+          "operationStatus": {
+            "type": "string",
+            "enum": [
+              "available",
+              "renting",
+              "maintenance",
+              "inactive"
+            ],
+            "default": "available"
+          },
+          "description": {
+            "type": "string"
+          },
+          "mainImageUrl": {
+            "type": "string",
+            "description": "URL ảnh đại diện xe"
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "description": "Giá ngày thường, string thập phân — ADR 0007",
+            "example": "600000"
+          },
+          "weekendPrice": {
+            "type": "string",
+            "description": "Giá cuối tuần",
+            "example": "750000"
+          }
+        }
+      },
       "ApiErrorBodyDto": {
         "type": "object",
         "properties": {
@@ -1343,33 +2051,6 @@
         },
         "required": [
           "error"
-        ]
-      },
-      "PaginationMetaDto": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "number",
-            "example": 1
-          },
-          "limit": {
-            "type": "number",
-            "example": 20
-          },
-          "total": {
-            "type": "number",
-            "example": 137
-          },
-          "hasNext": {
-            "type": "boolean",
-            "example": true
-          }
-        },
-        "required": [
-          "page",
-          "limit",
-          "total",
-          "hasNext"
         ]
       }
     }

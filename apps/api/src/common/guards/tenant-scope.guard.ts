@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import {
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
@@ -7,6 +8,7 @@ import {
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../../modules/rbac/rbac.service';
+import { TENANT_SCOPED_KEY } from '../decorators';
 import type { RequestContext } from '../types/request-context';
 
 /**
@@ -22,11 +24,19 @@ import type { RequestContext } from '../types/request-context';
 @Injectable()
 export class TenantScopeGuard implements CanActivate {
   constructor(
+    private readonly reflector: Reflector,
     private readonly prisma: PrismaService,
     private readonly rbac: RbacService,
   ) {}
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
+    // Guard chạy global cho mọi request; chỉ giải scope khi endpoint được đánh dấu.
+    const isTenantScoped = this.reflector.getAllAndOverride<boolean>(TENANT_SCOPED_KEY, [
+      ctx.getHandler(),
+      ctx.getClass(),
+    ]);
+    if (!isTenantScoped) return true;
+
     const req = ctx.switchToHttp().getRequest<RequestContext>();
 
     if (!req.user) {

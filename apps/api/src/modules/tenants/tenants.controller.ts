@@ -1,15 +1,14 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions } from '../../common/decorators';
-import { TenantScopeGuard } from '../../common/guards/tenant-scope.guard';
+import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CurrentTenantDto } from './dto/current-tenant.dto';
 
 @ApiTags('tenants')
 @Controller('tenants')
-@UseGuards(TenantScopeGuard)
+@TenantScoped()
 export class TenantsController {
   constructor(private readonly prisma: PrismaService) {}
 

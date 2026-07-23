@@ -23,6 +23,7 @@ export const queryKeys = {
   vehicles: {
     all: ['vehicles'] as const,
     list: (params: QueryParams) => ['vehicles', 'list', params] as const,
+    detail: (id: string) => ['vehicles', 'detail', id] as const,
   },
   bookings: {
     all: ['bookings'] as const,

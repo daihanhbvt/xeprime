@@ -14,9 +14,16 @@ export const ROUTES = {
     ROOT: '/manage',
     CALENDAR: '/manage/calendar',
     VEHICLES: '/manage/vehicles',
+    VEHICLE_NEW: '/manage/vehicles/new',
     BOOKINGS: '/manage/bookings',
     ADMIN: '/manage/admin',
   },
 } as const;
 
 export type ManageRoute = (typeof ROUTES.MANAGE)[keyof typeof ROUTES.MANAGE];
+
+/** Đường dẫn động của xe — hàm để không rải template `/manage/vehicles/${id}` khắp component. */
+export const vehiclePath = {
+  detail: (id: string): string => `/manage/vehicles/${id}`,
+  edit: (id: string): string => `/manage/vehicles/${id}/edit`,
+};
