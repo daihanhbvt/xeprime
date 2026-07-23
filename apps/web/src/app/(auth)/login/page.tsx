@@ -1,60 +1,91 @@
 'use client';
 
 import { Alert, Button, Divider, Typography } from 'antd';
-import { GoogleOutlined, FacebookFilled } from '@ant-design/icons';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { FacebookFilled, GoogleOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { Suspense, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
+import { loginSchema, type LoginValues } from '@xeprime/validators';
 import { Logo } from '@/components/brand/Logo';
+import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
 import {
   AUTH_PROVIDER,
   AUTH_PROVIDER_LABEL,
   createSession,
   getProviderIdToken,
+  loginWithPassword,
   type AuthProvider,
 } from '@/services/auth.service';
 import { getErrorMessage } from '@/services/api-client';
 import styles from './login.module.css';
 
-/**
- * Đăng nhập — ADR 0002.
- *
- * Luồng thật: lấy ID token từ provider (Google/Facebook) → `POST /auth/session` → backend
- * set httpOnly cookie. Trang này KHÔNG lưu token vào localStorage; sau lời gọi đó session
- * sống trong cookie mà JS không đọc được.
- *
- * Firebase Web SDK chưa cấu hình (chưa có credential) nên hai nút social báo rõ điều đó;
- * đường chạy được lúc dev là các tài khoản demo bên dưới (chỉ khi API `AUTH_MODE=mock`).
- */
 export default function LoginPage() {
+  // useSearchParams (đọc ?next=) cần Suspense trong route tĩnh (Next).
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const search = useSearchParams();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
 
-  async function signIn(idToken: string, key: string) {
-    setPending(key);
+  const { control, handleSubmit } = useForm<LoginValues>({
+    resolver: yupResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
+  /** Đích quay lại sau đăng nhập (proxy đặt `?next=`), mặc định vào khu quản lý. */
+  function nextUrl(): string {
+    const next = search.get('next');
+    return next && next.startsWith('/') ? next : ROUTES.MANAGE.ROOT;
+  }
+
+  async function afterAuth() {
+    await queryClient.invalidateQueries();
+    router.replace(nextUrl());
+  }
+
+  const onSubmit = handleSubmit(async (values) => {
+    setPending('password');
     setError(null);
     try {
-      await createSession(idToken);
-      // Xoá cache của phiên trước để dữ liệu người cũ không hiện cho người vừa đăng nhập.
-      await queryClient.invalidateQueries();
-      // Điều hướng theo scope do khung /manage + middleware xử lý (chủ shop / nền tảng /
-      // chưa có gian hàng đều vào đây rồi rẽ nhánh).
-      router.replace(ROUTES.MANAGE.ROOT);
+      await loginWithPassword(values.email, values.password);
+      await afterAuth();
     } catch (err) {
       setError(getErrorMessage(err));
       setPending(null);
     }
-  }
+  });
 
   async function signInWithProvider(provider: AuthProvider) {
     setPending(provider);
     setError(null);
     try {
       const idToken = await getProviderIdToken(provider);
-      await signIn(idToken, provider);
+      await createSession(idToken);
+      await afterAuth();
+    } catch (err) {
+      setError(getErrorMessage(err));
+      setPending(null);
+    }
+  }
+
+  async function signInDemo(token: string) {
+    setPending(token);
+    setError(null);
+    try {
+      await createSession(token);
+      await afterAuth();
     } catch (err) {
       setError(getErrorMessage(err));
       setPending(null);
@@ -68,14 +99,60 @@ export default function LoginPage() {
       <div className={styles.head}>
         <Logo size="lg" />
         <div>
-          <div className={styles.title}>Chào mừng đến XePrime</div>
-          <div className={styles.sub}>Đăng nhập để quản lý gian hàng cho thuê xe</div>
+          <div className={styles.title}>Đăng nhập XePrime</div>
+          <div className={styles.sub}>Quản lý gian hàng cho thuê xe</div>
         </div>
       </div>
 
       {error ? (
         <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />
       ) : null}
+
+      <form onSubmit={onSubmit} noValidate>
+        <TextField
+          control={control}
+          name="email"
+          label="Email"
+          type="email"
+          placeholder="ban@congty.vn"
+          autoComplete="email"
+          prefix={<MailOutlined />}
+          autoFocus
+        />
+        <TextField
+          control={control}
+          name="password"
+          label="Mật khẩu"
+          type="password"
+          placeholder="Mật khẩu"
+          autoComplete="current-password"
+          prefix={<LockOutlined />}
+        />
+        <div className={styles.rowBetween}>
+          <Link href={ROUTES.FORGOT_PASSWORD} className={styles.link}>
+            Quên mật khẩu?
+          </Link>
+        </div>
+        <Button
+          type="primary"
+          htmlType="submit"
+          block
+          size="large"
+          className={styles.submit}
+          loading={pending === 'password'}
+          disabled={busy && pending !== 'password'}
+        >
+          Đăng nhập
+        </Button>
+      </form>
+
+      <div className={styles.registerHint}>
+        Chưa có tài khoản? <Link href={ROUTES.REGISTER}>Đăng ký</Link>
+      </div>
+
+      <Divider className={styles.divider} plain>
+        hoặc
+      </Divider>
 
       <div className={styles.oauth}>
         <Button
@@ -101,7 +178,9 @@ export default function LoginPage() {
       </div>
 
       <Divider className={styles.divider} plain>
-        Tài khoản demo (AUTH_MODE=mock)
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          Tài khoản demo (AUTH_MODE=mock)
+        </Typography.Text>
       </Divider>
 
       <div className={styles.demo}>
@@ -112,17 +191,12 @@ export default function LoginPage() {
             block
             loading={pending === account.token}
             disabled={busy && pending !== account.token}
-            onClick={() => void signIn(account.token, account.token)}
+            onClick={() => void signInDemo(account.token)}
           >
             {account.label}
           </Button>
         ))}
       </div>
-
-      <Typography.Paragraph className={styles.legal}>
-        Bằng việc tiếp tục, bạn đồng ý với <a href="#">Điều khoản</a> và{' '}
-        <a href="#">Chính sách bảo mật</a> của XePrime.
-      </Typography.Paragraph>
     </div>
   );
 }
@@ -130,5 +204,4 @@ export default function LoginPage() {
 const DEMO_ACCOUNTS = [
   { label: 'Chủ shop demo', token: 'mock:demo-owner:owner@xeprime.test:Chủ shop demo' },
   { label: 'Platform admin demo', token: 'mock:demo-admin:admin@xeprime.test:Platform Admin Demo' },
-  { label: 'Khách thuê demo', token: 'mock:demo-customer:customer@xeprime.test:Khách thuê demo' },
 ] as const;

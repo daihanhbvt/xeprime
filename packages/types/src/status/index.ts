@@ -16,3 +16,4 @@ export * from './vehicle';
 export * from './booking';
 export * from './booking-request';
 export * from './misc';
+export * from './onboarding';

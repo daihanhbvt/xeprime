@@ -1,10 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { newId } from '@xeprime/prisma';
-import { MEMBERSHIP_STATUS, USER_STATUS, type Permission } from '@xeprime/types';
+import { API_ERROR_CODE, MEMBERSHIP_STATUS, USER_STATUS, type Permission } from '@xeprime/types';
+import bcrypt from 'bcryptjs';
+import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
+import { EmailService } from './email.service';
 import { IdTokenVerifier } from './token-verifier';
 import type { MeDto } from './dto/auth.dto';
+
+const BCRYPT_ROUNDS = 12;
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 giờ
 
 @Injectable()
 export class AuthService {
@@ -12,7 +24,162 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly verifier: IdTokenVerifier,
     private readonly rbac: RbacService,
+    private readonly email: EmailService,
+    private readonly config: ConfigService,
   ) {}
+
+  // ---- Đăng ký / đăng nhập email-mật khẩu -----------------------------------
+
+  /**
+   * Đăng ký bằng email + mật khẩu. Email lưu chữ thường để tra cứu nhất quán.
+   * Tạo user + identity(provider='password') trong một transaction.
+   */
+  async register(input: {
+    email: string;
+    password: string;
+    displayName: string;
+  }): Promise<{ userId: string }> {
+    const email = input.email.trim().toLowerCase();
+
+    const existing = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.EMAIL_TAKEN,
+        message: 'Email này đã được đăng ký',
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
+    const userId = newId();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.create({
+        data: {
+          id: userId,
+          email,
+          displayName: input.displayName.trim(),
+          passwordHash,
+          status: USER_STATUS.ACTIVE,
+          lastLoginAt: new Date(),
+        },
+      });
+      await tx.userIdentity.create({
+        data: {
+          id: newId(),
+          userId,
+          provider: 'password',
+          providerUserId: email,
+          providerEmail: email,
+        },
+      });
+    });
+
+    return { userId };
+  }
+
+  /**
+   * Đăng nhập email + mật khẩu.
+   *
+   * Lỗi luôn chung chung (INVALID_CREDENTIALS) dù sai email hay sai mật khẩu — không tiết lộ
+   * email nào tồn tại. So khớp bcrypt kể cả khi không có user (giảm timing attack).
+   */
+  async loginWithPassword(rawEmail: string, password: string): Promise<{ userId: string }> {
+    const email = rawEmail.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null },
+      select: { id: true, passwordHash: true, status: true },
+    });
+
+    const hash = user?.passwordHash ?? '$2a$12$0000000000000000000000000000000000000000000000000000';
+    const ok = await bcrypt.compare(password, hash);
+
+    if (!user || !user.passwordHash || !ok) {
+      throw new UnauthorizedException({
+        code: API_ERROR_CODE.INVALID_CREDENTIALS,
+        message: 'Email hoặc mật khẩu không đúng',
+      });
+    }
+    if (user.status !== USER_STATUS.ACTIVE) {
+      throw new UnauthorizedException({
+        code: API_ERROR_CODE.ACCOUNT_LOCKED,
+        message: 'Tài khoản đã bị khoá',
+      });
+    }
+
+    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    return { userId: user.id };
+  }
+
+  // ---- Quên / đặt lại mật khẩu ----------------------------------------------
+
+  private hashToken(token: string): string {
+    // Token là ngẫu nhiên entropy cao nên sha256 đủ; bcrypt dành cho mật khẩu entropy thấp.
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  /**
+   * Yêu cầu đặt lại mật khẩu. LUÔN trả về như nhau dù email có tồn tại hay không — không để
+   * kẻ tấn công dò email nào đã đăng ký.
+   */
+  async requestPasswordReset(rawEmail: string): Promise<void> {
+    const email = rawEmail.trim().toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null, status: USER_STATUS.ACTIVE },
+      select: { id: true, displayName: true, email: true },
+    });
+    if (!user || !user.email) return;
+
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(token);
+
+    await this.prisma.$transaction(async (tx) => {
+      // Huỷ mọi token chưa dùng trước đó của user — một link mới vô hiệu link cũ.
+      await tx.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      await tx.passwordResetToken.create({
+        data: {
+          id: newId(),
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+        },
+      });
+    });
+
+    const webUrl = this.config.getOrThrow<string>('APP_WEB_URL').replace(/\/+$/, '');
+    const resetUrl = `${webUrl}/reset-password?token=${token}`;
+    await this.email.sendPasswordReset(user.email, user.displayName, resetUrl);
+  }
+
+  /** Đặt mật khẩu mới từ token. Token dùng một lần và phải còn hạn. */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const tokenHash = this.hashToken(token);
+    const record = await this.prisma.passwordResetToken.findFirst({
+      where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } },
+      select: { id: true, userId: true },
+    });
+    if (!record) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.INVALID_RESET_TOKEN,
+        message: 'Liên kết đặt lại không hợp lệ hoặc đã hết hạn',
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: record.userId }, data: { passwordHash } });
+      // Đánh dấu dùng + huỷ mọi token khác của user.
+      await tx.passwordResetToken.updateMany({
+        where: { userId: record.userId, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+    });
+  }
 
   /**
    * Đổi ID token của provider lấy user trong DB — ADR 0002 bước 2.

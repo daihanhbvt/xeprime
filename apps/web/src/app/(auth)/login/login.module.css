@@ -73,6 +73,36 @@
   color: var(--xp-gold-deep);
 }
 
+.rowBetween {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 14px;
+}
+
+.link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-gold-deep);
+}
+
+.submit {
+  height: 48px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.registerHint {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--xp-color-text-secondary);
+}
+
+.registerHint a {
+  font-weight: 600;
+  color: var(--xp-gold-deep);
+}
+
 @media (max-width: 420px) {
   .box {
     padding: 24px 18px 20px;

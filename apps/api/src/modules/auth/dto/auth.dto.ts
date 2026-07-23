@@ -1,5 +1,58 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, MinLength } from 'class-validator';
+import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+
+const PASSWORD_MIN = 8;
+
+/** Mật khẩu: ≥8 ký tự, có cả chữ và số — khớp yup `passwordSchema` ở @xeprime/validators. */
+class PasswordField {
+  @ApiProperty({ minLength: PASSWORD_MIN, example: 'matkhau123' })
+  @IsString()
+  @MinLength(PASSWORD_MIN, { message: `Mật khẩu tối thiểu ${PASSWORD_MIN} ký tự` })
+  @Matches(/[A-Za-z]/, { message: 'Mật khẩu cần có chữ' })
+  @Matches(/\d/, { message: 'Mật khẩu cần có số' })
+  password!: string;
+}
+
+export class RegisterDto extends PasswordField {
+  @ApiProperty({ example: 'Nguyễn Văn A' })
+  @IsString()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @MinLength(1, { message: 'Vui lòng nhập họ tên' })
+  @MaxLength(255)
+  displayName!: string;
+
+  @ApiProperty({ example: 'ban@congty.vn' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  email!: string;
+}
+
+export class LoginDto {
+  @ApiProperty({ example: 'ban@congty.vn' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  email!: string;
+
+  @ApiProperty()
+  @IsString()
+  @MinLength(1, { message: 'Vui lòng nhập mật khẩu' })
+  password!: string;
+}
+
+export class ForgotPasswordDto {
+  @ApiProperty({ example: 'ban@congty.vn' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  email!: string;
+}
+
+export class ResetPasswordDto extends PasswordField {
+  @ApiProperty({ description: 'Token từ link trong email' })
+  @IsString()
+  @MinLength(1)
+  token!: string;
+}
 
 export class CreateSessionDto {
   @ApiProperty({

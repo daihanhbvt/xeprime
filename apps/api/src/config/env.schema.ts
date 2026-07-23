@@ -39,6 +39,15 @@ export const envSchema = z
     FIREBASE_PROJECT_ID: z.string().optional(),
     FIREBASE_CLIENT_EMAIL: z.string().optional(),
     FIREBASE_PRIVATE_KEY: z.string().optional(),
+
+    // --- Web + Email (cho link đặt lại mật khẩu) ---
+    APP_WEB_URL: z.string().default('http://localhost:3000'),
+    // SMTP tuỳ chọn: chưa cấu hình thì EmailService in link ra log (dev), không gửi thật.
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: z.coerce.number().int().positive().optional(),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASS: z.string().optional(),
+    SMTP_FROM: z.string().default('XePrime <no-reply@xeprime.local>'),
   })
   .superRefine((env, ctx) => {
     if (env.AUTH_MODE === 'firebase') {

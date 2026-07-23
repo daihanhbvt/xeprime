@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { EmailService } from './email.service';
 import { SessionService } from './session.service';
 import { FirebaseIdTokenVerifier, IdTokenVerifier, MockIdTokenVerifier } from './token-verifier';
 
@@ -15,6 +16,7 @@ import { FirebaseIdTokenVerifier, IdTokenVerifier, MockIdTokenVerifier } from '.
   providers: [
     AuthService,
     SessionService,
+    EmailService,
     {
       provide: IdTokenVerifier,
       inject: [ConfigService],

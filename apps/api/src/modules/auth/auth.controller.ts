@@ -1,11 +1,18 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Post, Res } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { CurrentUser, Public } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { AuthService } from './auth.service';
 import { SessionService } from './session.service';
-import { CreateSessionDto, MeDto } from './dto/auth.dto';
+import {
+  CreateSessionDto,
+  ForgotPasswordDto,
+  LoginDto,
+  MeDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -37,11 +44,60 @@ export class AuthController {
   }
 
   @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Đăng ký bằng email + mật khẩu' })
+  @ApiOkResponse({ type: MeDto })
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<MeDto> {
+    const { userId } = await this.auth.register(dto);
+    this.issueSession(res, userId);
+    return this.auth.me(userId);
+  }
+
+  @Public()
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Đăng nhập bằng email + mật khẩu' })
+  @ApiOkResponse({ type: MeDto })
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<MeDto> {
+    const { userId } = await this.auth.loginWithPassword(dto.email, dto.password);
+    this.issueSession(res, userId);
+    return this.auth.me(userId);
+  }
+
+  @Public()
+  @Post('password/forgot')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Quên mật khẩu: gửi link đặt lại qua email' })
+  @ApiNoContentResponse()
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<void> {
+    // Luôn 204 dù email có tồn tại hay không (không rò rỉ email đã đăng ký).
+    await this.auth.requestPasswordReset(dto.email);
+  }
+
+  @Public()
+  @Post('password/reset')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Đặt lại mật khẩu từ token trong email' })
+  @ApiNoContentResponse()
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
+    await this.auth.resetPassword(dto.token, dto.password);
+  }
+
+  @Public()
   @Delete('session')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Đăng xuất: xoá session cookie' })
   logout(@Res({ passthrough: true }) res: Response): void {
     this.sessions.clear(res);
+  }
+
+  private issueSession(res: Response, userId: string): void {
+    const { token } = this.sessions.issue(userId);
+    this.sessions.attach(res, token);
   }
 
   @Get('me')

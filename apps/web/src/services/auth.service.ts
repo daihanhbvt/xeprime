@@ -2,6 +2,12 @@ import type { TenantStatus, TenantRole, Ulid } from '@xeprime/types';
 
 import { apiDelete, apiGet, apiPost } from './api-client';
 
+export interface RegisterInput {
+  displayName: string;
+  email: string;
+  password: string;
+}
+
 /**
  * ADR 0007 nói type FE sinh từ OpenAPI (`@xeprime/types/api.generated`). Spec chưa tồn tại ở
  * Phase 0, nên các shape dưới đây là bản tạm — TODO: thay bằng type sinh ra sau khi chạy
@@ -65,4 +71,26 @@ export function destroySession(): Promise<void> {
 
 export function fetchCurrentUser(): Promise<CurrentUser> {
   return apiGet<CurrentUser>('/auth/me');
+}
+
+// --- Đăng nhập/đăng ký email-mật khẩu (độc lập Firebase) ---
+
+/** POST /auth/register — tạo tài khoản rồi backend set cookie luôn (đăng nhập ngay). */
+export function registerWithPassword(input: RegisterInput): Promise<CurrentUser> {
+  return apiPost<CurrentUser>('/auth/register', input);
+}
+
+/** POST /auth/login — đăng nhập email/mật khẩu, backend set cookie httpOnly. */
+export function loginWithPassword(email: string, password: string): Promise<CurrentUser> {
+  return apiPost<CurrentUser>('/auth/login', { email, password });
+}
+
+/** POST /auth/password/forgot — gửi link đặt lại qua email. Luôn thành công (không rò rỉ email). */
+export function forgotPassword(email: string): Promise<void> {
+  return apiPost<void>('/auth/password/forgot', { email });
+}
+
+/** POST /auth/password/reset — đặt mật khẩu mới từ token trong email. */
+export function resetPassword(token: string, password: string): Promise<void> {
+  return apiPost<void>('/auth/password/reset', { token, password });
 }

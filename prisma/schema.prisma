@@ -40,6 +40,8 @@ model User {
   phoneVerifiedAt DateTime? @map("phone_verified_at") @db.Timestamptz(3)
   displayName     String    @map("display_name") @db.VarChar(255)
   avatarUrl       String?   @map("avatar_url") @db.Text
+  /// Bcrypt hash cho đăng nhập email/mật khẩu. Null với user chỉ đăng nhập Google/Facebook.
+  passwordHash    String?   @map("password_hash") @db.VarChar(255)
   /// @xeprime/types → UserStatus
   status          String    @default("active") @db.VarChar(50)
   lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(3)
@@ -48,13 +50,23 @@ model User {
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   identities          UserIdentity[]
-  tenantMemberships   TenantMembership[]  @relation("membership_user")
-  invitedMemberships  TenantMembership[]  @relation("membership_inviter")
+  phoneVerifications  PhoneVerification[]
+  passwordResets      PasswordResetToken[]
+  tenantMemberships   TenantMembership[]   @relation("membership_user")
+  invitedMemberships  TenantMembership[]   @relation("membership_inviter")
   platformMemberships PlatformMembership[] @relation("platform_membership_user")
-  ownedTenants        Tenant[]            @relation("tenant_owner")
+  ownedTenants        Tenant[]             @relation("tenant_owner")
   auditLogs           AuditLog[]
-  createdVehicles     Vehicle[]           @relation("vehicle_creator")
-  createdBookings     Booking[]           @relation("booking_creator")
+  createdVehicles     Vehicle[]            @relation("vehicle_creator")
+  createdBookings     Booking[]            @relation("booking_creator")
+  uploadedDocuments   TenantDocument[]     @relation("document_uploader")
+  reviewedDocuments   TenantDocument[]     @relation("document_reviewer")
+  createdInvites      TenantInvite[]       @relation("invite_creator")
+  acceptedInvites     TenantInvite[]       @relation("invite_acceptor")
+  submittedApprovals  ApprovalTask[]       @relation("approval_submitter")
+  reviewedApprovals   ApprovalTask[]       @relation("approval_reviewer")
+  approvalLogs        ApprovalLog[]
+  adminNotes          AdminNote[]
 
   @@index([status])
   @@map("users")
@@ -102,13 +114,18 @@ model Tenant {
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  owner       User               @relation("tenant_owner", fields: [ownerUserId], references: [id])
-  memberships TenantMembership[]
-  roles       Role[]
-  vehicles    Vehicle[]
-  bookings    Booking[]
-  occupancies VehicleOccupancy[]
-  auditLogs   AuditLog[]
+  owner         User               @relation("tenant_owner", fields: [ownerUserId], references: [id])
+  profile       TenantProfile?
+  memberships   TenantMembership[]
+  documents     TenantDocument[]
+  invites       TenantInvite[]
+  roles         Role[]
+  vehicles      Vehicle[]
+  bookings      Booking[]
+  occupancies   VehicleOccupancy[]
+  approvalTasks ApprovalTask[]
+  adminNotes    AdminNote[]
+  auditLogs     AuditLog[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -217,6 +234,210 @@ model PlatformMembership {
   @@unique([userId, roleKey])
   @@index([status])
   @@map("platform_memberships")
+}
+
+// ---------------------------------------------------------------------------
+// Xác thực SĐT — database_design §4.3
+// ---------------------------------------------------------------------------
+
+/// Luồng xác thực SĐT. user_flow: chỉ bắt khi đặt xe / mở shop / public xe, KHÔNG bắt lúc
+/// login Google/Facebook. `otp_hash` chỉ dùng khi tự gửi OTP (provider=esms/manual).
+model PhoneVerification {
+  id         String    @id @db.Char(26)
+  userId     String?   @map("user_id") @db.Char(26)
+  phone      String    @db.VarChar(30)
+  /// @xeprime/types → PhoneVerificationPurpose
+  purpose    String    @db.VarChar(50)
+  /// firebase | esms | manual
+  provider   String    @db.VarChar(50)
+  otpHash    String?   @map("otp_hash") @db.VarChar(255)
+  /// @xeprime/types → PhoneVerificationStatus
+  status     String    @default("pending") @db.VarChar(50)
+  sentCount  Int       @default(0) @map("sent_count")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([phone])
+  @@index([userId])
+  @@index([status, expiresAt])
+  @@map("phone_verifications")
+}
+
+/// Token đặt lại mật khẩu gửi qua email.
+///
+/// Lưu HASH của token (không lưu token trần) — DB rò rỉ cũng không đặt lại được mật khẩu ai.
+/// Dùng một lần (`used_at`), hết hạn ngắn. Không có trong doc gốc nhưng cần cho luồng quên
+/// mật khẩu email/password (Firebase-code cũ chỉ có reset qua SĐT).
+model PasswordResetToken {
+  id        String    @id @db.Char(26)
+  userId    String    @map("user_id") @db.Char(26)
+  tokenHash String    @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenHash])
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Hồ sơ & giấy tờ gian hàng — database_design §5.2, §5.3, §5.5
+// ---------------------------------------------------------------------------
+
+/// Hồ sơ public + cấu hình gian hàng. 1-1 với tenant (PK = tenant_id).
+/// Tách khỏi `tenants` vì đây là dữ liệu ít query, nhiều field, đổi thường xuyên hơn.
+model TenantProfile {
+  tenantId          String   @id @map("tenant_id") @db.Char(26)
+  displayName       String?  @map("display_name") @db.VarChar(255)
+  bio               String?  @db.Text
+  logoUrl           String?  @map("logo_url") @db.Text
+  coverUrl          String?  @map("cover_url") @db.Text
+  address           String?  @db.Text
+  provinceCode      String?  @map("province_code") @db.VarChar(50)
+  provinceName      String?  @map("province_name") @db.VarChar(100)
+  taxCode           String?  @map("tax_code") @db.VarChar(50)
+  businessLicenseNo String?  @map("business_license_no") @db.VarChar(100)
+  bankName          String?  @map("bank_name") @db.VarChar(100)
+  bankAccountNo     String?  @map("bank_account_no") @db.VarChar(100)
+  bankAccountName   String?  @map("bank_account_name") @db.VarChar(255)
+  qrUrl             String?  @map("qr_url") @db.Text
+  settings          Json?    @map("settings_json") @db.JsonB
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([provinceCode])
+  @@map("tenant_profiles")
+}
+
+/// Giấy tờ mở gian hàng (CCCD, GPKD, hợp đồng). Duyệt qua approval_tasks (target_type=tenant_document).
+model TenantDocument {
+  id           String    @id @db.Char(26)
+  tenantId     String    @map("tenant_id") @db.Char(26)
+  /// @xeprime/types → TenantDocumentType
+  documentType String    @map("document_type") @db.VarChar(50)
+  fileUrl      String    @map("file_url") @db.Text
+  /// @xeprime/types → DocumentStatus
+  status       String    @default("pending") @db.VarChar(50)
+  rejectReason String?   @map("reject_reason") @db.Text
+  uploadedBy   String?   @map("uploaded_by") @db.Char(26)
+  reviewedBy   String?   @map("reviewed_by") @db.Char(26)
+  reviewedAt   DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  uploader User?  @relation("document_uploader", fields: [uploadedBy], references: [id], onDelete: SetNull)
+  reviewer User?  @relation("document_reviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@map("tenant_documents")
+}
+
+/// Mời nhân viên vào gian hàng. `token_hash` = hash của token gửi qua email/SĐT, không lưu token trần.
+model TenantInvite {
+  id         String    @id @db.Char(26)
+  tenantId   String    @map("tenant_id") @db.Char(26)
+  email      String?   @db.VarChar(255)
+  phone      String?   @db.VarChar(30)
+  /// @xeprime/types → TenantRole
+  roleKey    String    @map("role_key") @db.VarChar(50)
+  tokenHash  String    @map("token_hash") @db.VarChar(255)
+  /// @xeprime/types → InviteStatus
+  status     String    @default("pending") @db.VarChar(50)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  createdBy  String    @map("created_by") @db.Char(26)
+  acceptedBy String?   @map("accepted_by") @db.Char(26)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator  User   @relation("invite_creator", fields: [createdBy], references: [id])
+  acceptor User?  @relation("invite_acceptor", fields: [acceptedBy], references: [id], onDelete: SetNull)
+
+  @@unique([tokenHash])
+  @@index([tenantId, status])
+  @@map("tenant_invites")
+}
+
+// ---------------------------------------------------------------------------
+// Duyệt (shop / xe / giấy tờ) — database_design §7
+// ---------------------------------------------------------------------------
+
+/// Task duyệt dùng chung cho mở gian hàng, public xe, duyệt giấy tờ (target_type).
+/// CLAUDE.md mục 6, lằn ranh 2: public xe / active shop PHẢI đi qua đây.
+model ApprovalTask {
+  id          String    @id @db.Char(26)
+  tenantId    String?   @map("tenant_id") @db.Char(26)
+  /// @xeprime/types → ApprovalTargetType (tenant | vehicle | tenant_document | vehicle_document)
+  targetType  String    @map("target_type") @db.VarChar(50)
+  targetId    String    @map("target_id") @db.Char(26)
+  /// @xeprime/types → ApprovalStatus
+  status      String    @default("pending") @db.VarChar(50)
+  submittedBy String    @map("submitted_by") @db.Char(26)
+  submittedAt DateTime  @default(now()) @map("submitted_at") @db.Timestamptz(3)
+  reviewedBy  String?   @map("reviewed_by") @db.Char(26)
+  reviewedAt  DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  reason      String?   @db.Text
+  /// Snapshot lúc gửi duyệt — để reviewer thấy đúng thứ shop đã gửi kể cả khi shop sửa sau.
+  snapshot    Json?     @map("snapshot_json") @db.JsonB
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant    Tenant?       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  submitter User          @relation("approval_submitter", fields: [submittedBy], references: [id])
+  reviewer  User?         @relation("approval_reviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  logs      ApprovalLog[]
+
+  @@index([status, targetType])
+  @@index([tenantId, status])
+  @@index([targetType, targetId])
+  @@map("approval_tasks")
+}
+
+/// Lịch sử từng bước duyệt — audit của luồng approval.
+model ApprovalLog {
+  id             String   @id @db.Char(26)
+  approvalTaskId String   @map("approval_task_id") @db.Char(26)
+  /// @xeprime/types → ApprovalAction
+  action         String   @db.VarChar(50)
+  fromStatus     String?  @map("from_status") @db.VarChar(50)
+  toStatus       String   @map("to_status") @db.VarChar(50)
+  note           String?  @db.Text
+  actorUserId    String   @map("actor_user_id") @db.Char(26)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  task  ApprovalTask @relation(fields: [approvalTaskId], references: [id], onDelete: Cascade)
+  actor User         @relation(fields: [actorUserId], references: [id])
+
+  @@index([approvalTaskId])
+  @@map("approval_logs")
+}
+
+/// Ghi chú nội bộ của admin/support gắn vào tenant/xe/đơn/khách.
+model AdminNote {
+  id         String   @id @db.Char(26)
+  /// tenant | vehicle | booking | customer | conversation
+  targetType String   @map("target_type") @db.VarChar(50)
+  targetId   String   @map("target_id") @db.Char(26)
+  tenantId   String?  @map("tenant_id") @db.Char(26)
+  note       String   @db.Text
+  /// @xeprime/types → AdminNoteVisibility
+  visibility String   @default("platform_only") @db.VarChar(50)
+  createdBy  String   @map("created_by") @db.Char(26)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  creator User    @relation(fields: [createdBy], references: [id])
+
+  @@index([targetType, targetId])
+  @@index([tenantId])
+  @@map("admin_notes")
 }
 
 // ---------------------------------------------------------------------------

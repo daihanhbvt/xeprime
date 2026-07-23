@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, INestApplication, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
@@ -36,15 +36,17 @@ export async function createApp(): Promise<INestApplication> {
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: false },
-      // Giữ nguyên convention lỗi thay vì để Nest trả message mảng trần.
-      exceptionFactory: (errors) => ({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Dữ liệu gửi lên không hợp lệ',
-        details: errors.map((e) => ({
-          field: e.property,
-          constraints: Object.values(e.constraints ?? {}),
-        })),
-      }),
+      // Giữ nguyên convention lỗi. PHẢI throw một HttpException, không trả plain object —
+      // trả object khiến exception filter không nhận ra và rơi vào INTERNAL_ERROR.
+      exceptionFactory: (errors) =>
+        new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Dữ liệu gửi lên không hợp lệ',
+          details: errors.map((e) => ({
+            field: e.property,
+            constraints: Object.values(e.constraints ?? {}),
+          })),
+        }),
     }),
   );
 
