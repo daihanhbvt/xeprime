@@ -3,47 +3,49 @@ import type { ThemeConfig } from 'antd';
 /**
  * Nguồn chốt cho design token của XePrime — ADR 0003.
  *
+ * Bảng màu thương hiệu: gold trên nền kem, chữ đen ấm — bám UI Firebase-code đang chạy
+ * (`Vietrent/css/style.css`), đẩy accent sang gold tươi hơn theo logo mới.
+ *
  * Mỗi key ở đây tương ứng đúng một CSS custom property `--xp-<key>` trong `tokens.css`.
  * `theme.test.ts` so sánh hai file: lệch một token là test đỏ, không phải đợi phát hiện
- * bằng mắt trên UI.
- *
- * Giá trị luôn là chuỗi CSS. Chỗ nào antd cần number (fontSize, borderRadius) thì đi qua
- * `toPx()`, để không phải khai báo cùng một con số ở hai dạng.
+ * bằng mắt trên UI. Giá trị luôn là chuỗi CSS; chỗ AntD cần number thì đi qua `toPx()`.
  */
 export const XP_TOKENS = {
   // --- Màu thương hiệu ---
-  'color-primary': '#1677ff',
-  'color-success': '#52c41a',
-  'color-warning': '#faad14',
-  'color-error': '#ff4d4f',
-  'color-info': '#1677ff',
+  'color-primary': '#d6a02c', // gold — logo XePrime
+  'color-success': '#16a34a',
+  'color-warning': '#e07b26', // cam, tách khỏi gold để "cảnh báo" đọc được ngay
+  'color-error': '#dc2626',
+  'color-info': '#2563eb',
 
-  // --- Màu chữ / nền / viền ---
-  'color-text': 'rgba(0, 0, 0, 0.88)',
-  'color-text-secondary': 'rgba(0, 0, 0, 0.65)',
-  'color-text-tertiary': 'rgba(0, 0, 0, 0.45)',
-  'color-border': '#d9d9d9',
-  'color-border-secondary': '#f0f0f0',
-  'color-bg-layout': '#f5f5f5',
+  // --- Màu chữ / nền / viền (nền ấm, không phải xám trung tính) ---
+  'color-text': '#2a2318',
+  'color-text-secondary': '#6f6450',
+  'color-text-tertiary': '#9a8d74',
+  'color-border': '#ebddbf',
+  'color-border-secondary': '#f4ecd9',
+  'color-bg-layout': '#fbf1dc', // kem — nền trang
   'color-bg-container': '#ffffff',
   'color-bg-elevated': '#ffffff',
-  'color-bg-hover': 'rgba(0, 0, 0, 0.04)',
+  'color-bg-hover': 'rgba(120, 90, 20, 0.05)',
 
   // --- Màu riêng của thanh event trên lịch ---
-  'color-event-booking': '#1677ff',
-  'color-event-request': '#faad14',
-  'color-event-blocked': '#8c8c8c',
-  'color-event-maintenance': '#722ed1',
+  'color-event-booking': '#2563eb',
+  'color-event-request': '#d6a02c',
+  'color-event-blocked': '#8c8069',
+  'color-event-maintenance': '#7c3aed',
 
   // --- Typography ---
-  'font-family': 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif',
+  // Be Vietnam Pro tự host qua next/font (biến --font-be-vietnam đặt trên <html>).
+  'font-family':
+    "var(--font-be-vietnam), 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif",
   'font-size': '14px',
   'font-size-sm': '12px',
   'line-height': '1.5714',
 
   // --- Hình khối ---
-  'border-radius': '8px',
-  'border-radius-sm': '4px',
+  'border-radius': '10px',
+  'border-radius-sm': '6px',
 
   // --- Khoảng cách ---
   'space-xs': '4px',
@@ -68,6 +70,14 @@ export const XP_TOKENS = {
   'z-topbar': '100',
   'z-calendar-header': '30',
   'z-calendar-sticky-col': '20',
+
+  // --- Dẫn xuất: dùng trong CSS Modules, KHÔNG feed vào antdTheme ---
+  'gold-deep': '#a9761a',
+  'gold-soft': '#f1dba4',
+  'color-bg-sand': '#f5ead2',
+  'shadow-sm': '0 1px 2px rgba(120, 88, 20, 0.06), 0 1px 3px rgba(120, 88, 20, 0.08)',
+  'shadow-md': '0 6px 16px -6px rgba(120, 88, 20, 0.18), 0 2px 6px rgba(120, 88, 20, 0.1)',
+  'shadow-lg': '0 24px 50px -16px rgba(120, 88, 20, 0.28)',
 } as const;
 
 export type XpTokenName = keyof typeof XP_TOKENS;
@@ -108,6 +118,7 @@ export const antdTheme: ThemeConfig = {
     colorText: XP_TOKENS['color-text'],
     colorTextSecondary: XP_TOKENS['color-text-secondary'],
     colorBorder: XP_TOKENS['color-border'],
+    colorBorderSecondary: XP_TOKENS['color-border-secondary'],
     colorBgLayout: XP_TOKENS['color-bg-layout'],
     colorBgContainer: XP_TOKENS['color-bg-container'],
     colorBgElevated: XP_TOKENS['color-bg-elevated'],

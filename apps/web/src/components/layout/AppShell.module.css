@@ -12,16 +12,19 @@
 
 .centered {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: var(--xp-space-md);
   min-height: 100dvh;
   padding: var(--xp-space-lg);
+  text-align: center;
 }
 
 .pendingBanner {
   padding: var(--xp-space-md);
-  background: var(--xp-color-warning-bg);
-  border-radius: var(--xp-radius-md);
+  background: color-mix(in srgb, var(--xp-color-warning) 12%, var(--xp-color-bg-container));
+  border-radius: var(--xp-border-radius);
 }
 
 @media (max-width: 768px) {

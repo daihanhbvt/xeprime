@@ -1,0 +1,67 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
+  box-shadow: var(--xp-shadow-sm);
+  flex: none;
+}
+
+.mark svg {
+  width: 62%;
+  height: 62%;
+}
+
+.word {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--xp-color-text);
+  white-space: nowrap;
+}
+
+.word b {
+  color: var(--xp-gold-deep);
+  font-weight: 600;
+}
+
+.word span {
+  font-weight: 300;
+  color: var(--xp-color-text-secondary);
+}
+
+/* --- Kích thước: áp lên .mark (khi variant=mark) hoặc .logo (khi full) --- */
+.sm.mark,
+.sm .mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+.sm .word {
+  font-size: 17px;
+}
+
+.md.mark,
+.md .mark {
+  width: 38px;
+  height: 38px;
+}
+.md .word {
+  font-size: 20px;
+}
+
+.lg.mark,
+.lg .mark {
+  width: 60px;
+  height: 60px;
+  border-radius: 17px;
+}
+.lg .word {
+  font-size: 26px;
+}

@@ -1,8 +1,12 @@
 .wrapper {
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100dvh;
-  padding: var(--xp-space-lg);
-  background: var(--xp-color-bg-layout);
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  /* Nền kem ấm + vệt gold nhẹ góc trên — bám brand, mobile-first (căn giữa mọi cỡ màn). */
+  background:
+    radial-gradient(900px 500px at 100% -20%, var(--xp-gold-soft), transparent 60%),
+    var(--xp-color-bg-layout);
 }
