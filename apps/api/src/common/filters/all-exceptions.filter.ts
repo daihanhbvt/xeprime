@@ -145,13 +145,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
 }
 
 /**
- * `$queryRaw` không bọc lỗi thành PrismaClientKnownRequestError — mã Postgres nằm thẳng
- * trên object lỗi. OccupancyService ghi bằng raw SQL nên nhánh này mới là nhánh chạy thật.
+ * Nhận diện vi phạm exclusion constraint (23P01) — cơ chế chống trùng lịch (ADR 0006).
+ *
+ * Ba đường lỗi phải bắt hết:
+ *  - `$queryRaw`: mã Postgres nằm thẳng trên `code`/`meta.code`.
+ *  - Prisma ORM `.create()` (OccupancyService.reserve dùng đường này): Prisma KHÔNG mô hình hoá
+ *    exclusion constraint nên bọc thành Unknown error — mã `23P01` chỉ còn trong `message`.
  */
 function isRawExclusionViolation(exception: unknown): boolean {
   if (typeof exception !== 'object' || exception === null) return false;
-  const e = exception as { code?: unknown; meta?: { code?: unknown } };
-  return e.code === '23P01' || e.meta?.code === '23P01';
+  const e = exception as { code?: unknown; meta?: { code?: unknown }; message?: unknown };
+  if (e.code === '23P01' || e.meta?.code === '23P01') return true;
+  return typeof e.message === 'string' && e.message.includes('23P01');
 }
 
 function defaultCodeForStatus(status: number): ApiErrorCode {
