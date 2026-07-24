@@ -28,6 +28,7 @@ export function useMarketplaceFilters() {
       brand: searchParams.get('brand') ?? undefined,
       minSeats: num('minSeats'),
       q: searchParams.get('q') ?? undefined,
+      province: searchParams.get('province') ?? undefined,
       sort: (searchParams.get('sort') as MarketplaceFilters['sort']) ?? undefined,
       page: num('page'),
     };

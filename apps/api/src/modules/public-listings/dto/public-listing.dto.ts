@@ -40,6 +40,11 @@ export class PublicListingQueryDto {
   @IsString()
   q?: string;
 
+  @ApiPropertyOptional({ description: 'Lọc theo tỉnh/thành của gian hàng' })
+  @IsOptional()
+  @IsString()
+  province?: string;
+
   @ApiPropertyOptional({ enum: LISTING_SORT, default: 'newest' })
   @IsOptional()
   @IsIn(LISTING_SORT)
@@ -66,20 +71,34 @@ export class PublicListingDto {
   @ApiProperty() name!: string;
   @ApiProperty({ enum: VEHICLE_TYPE_VALUES }) vehicleType!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
-  @ApiPropertyOptional({ nullable: true }) brand!: string | null;
-  @ApiPropertyOptional({ nullable: true }) model!: string | null;
-  @ApiPropertyOptional({ nullable: true }) seatCount!: number | null;
-  @ApiPropertyOptional({ nullable: true }) fuelType!: string | null;
-  @ApiPropertyOptional({ nullable: true }) mainImageUrl!: string | null;
+  // `type` tường minh cho field nullable, nếu không openapi-typescript sinh `Record<string,never>`.
+  @ApiPropertyOptional({ type: String, nullable: true }) brand!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) model!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) seatCount!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) fuelType!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
 
-  @ApiPropertyOptional({ nullable: true, description: 'Tiền dạng string — ADR 0007' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền dạng string — ADR 0007' })
   weekdayPrice!: string | null;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   weekendPrice!: string | null;
 
   @ApiProperty({ description: 'Tên gian hàng' }) shopName!: string;
   @ApiProperty({ description: 'Slug gian hàng cho route /shops/[slug]' }) shopSlug!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tỉnh/thành gian hàng' })
+  shopProvince!: string | null;
+}
+
+/** Chi tiết một xe trên marketplace — cho trang `/listings/[id]`. */
+export class PublicListingDetailDto extends PublicListingDto {
+  @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) color!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) manufactureYear!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Logo gian hàng' })
+  shopLogoUrl!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giới thiệu gian hàng' })
+  shopBio!: string | null;
 }
 
 export class PublicListingPageMetaDto {

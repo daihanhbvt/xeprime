@@ -785,6 +785,15 @@
             }
           },
           {
+            "name": "province",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo tỉnh/thành của gian hàng",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "sort",
             "required": false,
             "in": "query",
@@ -833,6 +842,37 @@
           }
         },
         "summary": "Tìm xe trên Marketplace (phân trang, filter, sort)",
+        "tags": [
+          "public-listings"
+        ]
+      }
+    },
+    "/public/listings/{id}": {
+      "get": {
+        "operationId": "PublicListingsController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicListingDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết một xe trên Marketplace",
         "tags": [
           "public-listings"
         ]
@@ -1549,6 +1589,177 @@
         "summary": "Khách gửi yêu cầu thuê một xe trên Marketplace",
         "tags": [
           "public-booking-requests"
+        ]
+      }
+    },
+    "/members": {
+      "get": {
+        "operationId": "MembersController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên hoặc email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleKey",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "shop_owner",
+                "shop_manager",
+                "shop_staff",
+                "shop_viewer"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách thành viên gian hàng (phân trang, filter)",
+        "tags": [
+          "members"
+        ]
+      },
+      "post": {
+        "operationId": "MembersController_add",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thêm thành viên theo email (user phải đã có tài khoản)",
+        "tags": [
+          "members"
+        ]
+      }
+    },
+    "/members/{userId}": {
+      "patch": {
+        "operationId": "MembersController_updateRole",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemberRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đổi vai trò thành viên",
+        "tags": [
+          "members"
+        ]
+      },
+      "delete": {
+        "operationId": "MembersController_remove",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "userId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gỡ thành viên khỏi gian hàng",
+        "tags": [
+          "members"
         ]
       }
     },
@@ -2598,32 +2809,32 @@
             ]
           },
           "brand": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "model": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "seatCount": {
-            "type": "object",
+            "type": "number",
             "nullable": true
           },
           "fuelType": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "mainImageUrl": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "weekdayPrice": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
             "description": "Tiền dạng string — ADR 0007"
           },
           "weekendPrice": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "shopName": {
@@ -2633,6 +2844,11 @@
           "shopSlug": {
             "type": "string",
             "description": "Slug gian hàng cho route /shops/[slug]"
+          },
+          "shopProvince": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tỉnh/thành gian hàng"
           }
         },
         "required": [
@@ -2683,6 +2899,105 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "PublicListingDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "both",
+              "long_term"
+            ]
+          },
+          "brand": {
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "seatCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "fuelType": {
+            "type": "string",
+            "nullable": true
+          },
+          "mainImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "weekendPrice": {
+            "type": "string",
+            "nullable": true
+          },
+          "shopName": {
+            "type": "string",
+            "description": "Tên gian hàng"
+          },
+          "shopSlug": {
+            "type": "string",
+            "description": "Slug gian hàng cho route /shops/[slug]"
+          },
+          "shopProvince": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tỉnh/thành gian hàng"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "color": {
+            "type": "string",
+            "nullable": true
+          },
+          "manufactureYear": {
+            "type": "number",
+            "nullable": true
+          },
+          "shopLogoUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Logo gian hàng"
+          },
+          "shopBio": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giới thiệu gian hàng"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "vehicleType",
+          "serviceType",
+          "shopName",
+          "shopSlug"
         ]
       },
       "VehicleListItemDto": {
@@ -3654,6 +3969,118 @@
         "required": [
           "id",
           "status"
+        ]
+      },
+      "MemberDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "ID user — dùng cho PATCH/DELETE /members/:userId"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "roleKey": {
+            "type": "string",
+            "enum": [
+              "shop_owner",
+              "shop_manager",
+              "shop_staff",
+              "shop_viewer"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "invited",
+              "locked",
+              "removed"
+            ]
+          },
+          "joinedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "userId",
+          "displayName",
+          "roleKey",
+          "status",
+          "createdAt"
+        ]
+      },
+      "MemberPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "AddMemberDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "nhanvien@congty.vn"
+          },
+          "roleKey": {
+            "type": "string",
+            "enum": [
+              "shop_owner",
+              "shop_manager",
+              "shop_staff",
+              "shop_viewer"
+            ],
+            "description": "Không nhận shop_owner (chủ shop là người tạo)"
+          }
+        },
+        "required": [
+          "email",
+          "roleKey"
+        ]
+      },
+      "UpdateMemberRoleDto": {
+        "type": "object",
+        "properties": {
+          "roleKey": {
+            "type": "string",
+            "enum": [
+              "shop_owner",
+              "shop_manager",
+              "shop_staff",
+              "shop_viewer"
+            ]
+          }
+        },
+        "required": [
+          "roleKey"
         ]
       },
       "ApprovalTaskListItemDto": {

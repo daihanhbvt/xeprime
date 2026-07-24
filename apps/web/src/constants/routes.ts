@@ -47,3 +47,8 @@ export const vehiclePath = {
   detail: (id: string): string => `/manage/vehicles/${id}`,
   edit: (id: string): string => `/manage/vehicles/${id}/edit`,
 };
+
+/** Đường dẫn xe công khai trên Marketplace. */
+export const listingPath = {
+  detail: (id: string): string => `/listings/${id}`,
+};

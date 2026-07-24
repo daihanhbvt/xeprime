@@ -1,0 +1,44 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.search {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+
+.roleFilter {
+  width: 200px;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.name {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.you {
+  font-weight: 400;
+  color: var(--xp-color-text-tertiary);
+}
+
+.meta {
+  font-size: 12.5px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.roleSelect {
+  min-width: 160px;
+}
+
+.state {
+  margin-top: 48px;
+}

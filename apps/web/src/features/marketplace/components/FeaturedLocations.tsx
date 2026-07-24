@@ -12,11 +12,10 @@ import styles from './FeaturedLocations.module.css';
 export function FeaturedLocations() {
   const { setFilters } = useMarketplaceFilters();
 
-  function pick(province: string) {
-    // TODO(Phase 3): backend lọc theo `province` khi public_listings có cột đó. Hiện chỉ cuộn.
-    setFilters({});
+  function pick(provinceName: string) {
+    // Lọc theo tên tỉnh (khớp `TenantProfile.provinceName`, contains-insensitive ở backend).
+    setFilters({ province: provinceName });
     document.getElementById('recommendations')?.scrollIntoView({ behavior: 'smooth' });
-    void province;
   }
 
   return (
@@ -36,7 +35,7 @@ export function FeaturedLocations() {
             key={loc.province}
             type="button"
             className={i === 0 || i === 4 ? styles.tileWide : styles.tile}
-            onClick={() => pick(loc.province)}
+            onClick={() => pick(loc.name)}
           >
             <span className={styles.overlay} aria-hidden="true">
               <PictureOutlined />

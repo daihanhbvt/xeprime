@@ -1,15 +1,15 @@
 'use client';
 
 import { HeartOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
-import { useState } from 'react';
+import Link from 'next/link';
 import {
   SERVICE_TYPE_LABEL,
   VEHICLE_TYPE,
   type ServiceType,
   type VehicleType,
 } from '@xeprime/types';
-import { RequestBookingModal } from '@/features/booking-requests/components/RequestBookingModal';
+import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
+import { listingPath } from '@/constants/routes';
 import { formatMoneyVnd } from '@/lib/money';
 import type { PublicListing } from '../types';
 import styles from './VehicleCard.module.css';
@@ -23,7 +23,6 @@ const FUEL_LABEL: Record<string, string> = {
 
 /** Một thẻ xe trên marketplace — bám card của xeprime.vn. */
 export function VehicleCard({ listing }: { listing: PublicListing }) {
-  const [requestOpen, setRequestOpen] = useState(false);
   const seats = listing.seatCount ? `${listing.seatCount} chỗ` : null;
   const fuel = listing.fuelType ? (FUEL_LABEL[listing.fuelType] ?? listing.fuelType) : null;
   const specs = [seats, fuel, listing.brand].filter(Boolean).join(' · ');
@@ -31,6 +30,12 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
 
   return (
     <article className={styles.card}>
+      {/* Stretched-link: cả thẻ dẫn tới trang chi tiết, trừ các nút z-index cao hơn. */}
+      <Link
+        href={listingPath.detail(listing.id)}
+        className={styles.stretch}
+        aria-label={`Xem chi tiết ${listing.name}`}
+      />
       <div className={styles.media}>
         {listing.mainImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- ảnh xe từ storage ngoài, chưa qua next/image
@@ -56,22 +61,13 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
             {listing.shopName}
           </span>
         </div>
-        <Button
-          type="primary"
+        <RequestBookingButton
+          vehicleId={listing.id}
+          vehicleName={listing.name}
           block
           className={styles.requestBtn}
-          onClick={() => setRequestOpen(true)}
-        >
-          Yêu cầu thuê
-        </Button>
+        />
       </div>
-
-      <RequestBookingModal
-        vehicleId={listing.id}
-        vehicleName={listing.name}
-        open={requestOpen}
-        onClose={() => setRequestOpen(false)}
-      />
     </article>
   );
 }

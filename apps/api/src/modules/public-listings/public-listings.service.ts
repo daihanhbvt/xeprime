@@ -1,12 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
+  API_ERROR_CODE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type PaginationMeta,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
-import type { PublicListingDto, PublicListingQueryDto } from './dto/public-listing.dto';
+import type {
+  PublicListingDetailDto,
+  PublicListingDto,
+  PublicListingQueryDto,
+} from './dto/public-listing.dto';
 
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 48;
@@ -35,7 +40,13 @@ export class PublicListingsService {
       deletedAt: null,
       publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
       // Khoá shop là ẩn listing tức thì — lọc qua quan hệ, không denormalize (ADR 0008).
-      tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
+      tenant: {
+        status: TENANT_STATUS.ACTIVE,
+        deletedAt: null,
+        ...(query.province
+          ? { profile: { provinceName: { contains: query.province, mode: 'insensitive' } } }
+          : {}),
+      },
       ...(query.vehicleType ? { vehicleType: query.vehicleType } : {}),
       ...(query.serviceType ? { serviceType: query.serviceType } : {}),
       ...(query.brand ? { brand: query.brand } : {}),
@@ -78,7 +89,7 @@ export class PublicListingsService {
           mainImageUrl: true,
           weekdayPrice: true,
           weekendPrice: true,
-          tenant: { select: { name: true, slug: true } },
+          tenant: { select: { name: true, slug: true, profile: { select: { provinceName: true } } } },
         },
       }),
     ]);
@@ -98,11 +109,78 @@ export class PublicListingsService {
       weekendPrice: v.weekendPrice as unknown as string | null,
       shopName: v.tenant.name,
       shopSlug: v.tenant.slug,
+      shopProvince: v.tenant.profile?.provinceName ?? null,
     }));
 
     return {
       data,
       meta: { page, limit, total, hasNext: page * limit < total },
+    };
+  }
+
+  /**
+   * Chi tiết một xe trên marketplace — chỉ trả xe đã duyệt của shop đang hoạt động (cùng điều
+   * kiện scope với danh sách). Không lộ dữ liệu nội bộ (biển số, tenantId…).
+   */
+  async getById(id: string): Promise<PublicListingDetailDto> {
+    const v = await this.prisma.vehicle.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+        tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
+      },
+      select: {
+        id: true,
+        name: true,
+        vehicleType: true,
+        serviceType: true,
+        brand: true,
+        model: true,
+        seatCount: true,
+        fuelType: true,
+        mainImageUrl: true,
+        weekdayPrice: true,
+        weekendPrice: true,
+        description: true,
+        color: true,
+        manufactureYear: true,
+        tenant: {
+          select: {
+            name: true,
+            slug: true,
+            profile: { select: { provinceName: true, logoUrl: true, bio: true } },
+          },
+        },
+      },
+    });
+    if (!v) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy xe hoặc xe không còn hiển thị công khai',
+      });
+    }
+
+    return {
+      id: v.id,
+      name: v.name,
+      vehicleType: v.vehicleType,
+      serviceType: v.serviceType,
+      brand: v.brand,
+      model: v.model,
+      seatCount: v.seatCount,
+      fuelType: v.fuelType,
+      mainImageUrl: v.mainImageUrl,
+      weekdayPrice: v.weekdayPrice as unknown as string | null,
+      weekendPrice: v.weekendPrice as unknown as string | null,
+      shopName: v.tenant.name,
+      shopSlug: v.tenant.slug,
+      shopProvince: v.tenant.profile?.provinceName ?? null,
+      description: v.description,
+      color: v.color,
+      manufactureYear: v.manufactureYear,
+      shopLogoUrl: v.tenant.profile?.logoUrl ?? null,
+      shopBio: v.tenant.profile?.bio ?? null,
     };
   }
 }

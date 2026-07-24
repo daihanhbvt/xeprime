@@ -1,0 +1,144 @@
+.wrap {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 28px;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.media {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+}
+
+.photo,
+.placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 1px solid var(--xp-color-border);
+}
+
+.placeholder {
+  background: linear-gradient(135deg, var(--xp-gold-wash), var(--xp-color-bg-sand));
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--xp-color-text);
+  letter-spacing: -0.01em;
+}
+
+.price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.price b {
+  font-size: 24px;
+  color: var(--xp-gold-deep);
+}
+
+.price span {
+  color: var(--xp-color-text-secondary);
+}
+
+.weekend {
+  margin-left: auto;
+  font-size: 13px;
+}
+
+.specs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+  padding: 16px;
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 12px;
+}
+
+.specRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.specRow dt {
+  color: var(--xp-color-text-tertiary);
+}
+
+.specRow dd {
+  font-weight: 600;
+  color: var(--xp-color-text);
+  text-align: right;
+}
+
+.shop {
+  padding: 14px 16px;
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 12px;
+}
+
+.shopName {
+  font-weight: 700;
+  color: var(--xp-color-text);
+}
+
+.shopMeta {
+  font-size: 13px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.shopBio {
+  margin-top: 8px;
+  font-size: 13.5px;
+  color: var(--xp-color-text-secondary);
+}
+
+.cta {
+  height: 48px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.description {
+  color: var(--xp-color-text-secondary);
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.descTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+  margin-bottom: 6px;
+}
+
+@media (max-width: 840px) {
+  .wrap {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .media {
+    position: static;
+  }
+
+  .specs {
+    grid-template-columns: 1fr;
+  }
+}

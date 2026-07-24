@@ -20,6 +20,7 @@ function toParams(filters: MarketplaceFilters): QueryParams {
     brand: filters.brand ?? null,
     minSeats: filters.minSeats ?? null,
     q: filters.q ?? null,
+    province: filters.province ?? null,
     sort: filters.sort ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? DEFAULT_LIMIT,

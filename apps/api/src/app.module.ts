@@ -21,6 +21,7 @@ import { PublicListingsModule } from './modules/public-listings/public-listings.
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { BookingRequestsModule } from './modules/booking-requests/booking-requests.module';
+import { MembersModule } from './modules/members/members.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
 
@@ -59,6 +60,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     VehiclesModule,
     BookingsModule,
     BookingRequestsModule,
+    MembersModule,
     ChatModule,
     PlatformAdminModule,
   ],

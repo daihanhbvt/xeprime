@@ -315,6 +315,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/listings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chi tiết một xe trên Marketplace */
+        get: operations["PublicListingsController_getById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vehicles": {
         parameters: {
             query?: never;
@@ -488,6 +505,42 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách thành viên gian hàng (phân trang, filter) */
+        get: operations["MembersController_list"];
+        put?: never;
+        /** Thêm thành viên theo email (user phải đã có tài khoản) */
+        post: operations["MembersController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/members/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Gỡ thành viên khỏi gian hàng */
+        delete: operations["MembersController_remove"];
+        options?: never;
+        head?: never;
+        /** Đổi vai trò thành viên */
+        patch: operations["MembersController_updateRole"];
         trace?: never;
     };
     "/platform/approvals": {
@@ -800,18 +853,20 @@ export interface components {
             vehicleType: "car" | "motorbike";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "both" | "long_term";
-            brand?: Record<string, never> | null;
-            model?: Record<string, never> | null;
-            seatCount?: Record<string, never> | null;
-            fuelType?: Record<string, never> | null;
-            mainImageUrl?: Record<string, never> | null;
+            brand?: string | null;
+            model?: string | null;
+            seatCount?: number | null;
+            fuelType?: string | null;
+            mainImageUrl?: string | null;
             /** @description Tiền dạng string — ADR 0007 */
-            weekdayPrice?: Record<string, never> | null;
-            weekendPrice?: Record<string, never> | null;
+            weekdayPrice?: string | null;
+            weekendPrice?: string | null;
             /** @description Tên gian hàng */
             shopName: string;
             /** @description Slug gian hàng cho route /shops/[slug] */
             shopSlug: string;
+            /** @description Tỉnh/thành gian hàng */
+            shopProvince?: string | null;
         };
         PublicListingPageMetaDto: {
             page: number;
@@ -822,6 +877,35 @@ export interface components {
         PublicListingPageDto: {
             data: components["schemas"]["PublicListingDto"][];
             meta: components["schemas"]["PublicListingPageMetaDto"];
+        };
+        PublicListingDetailDto: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            vehicleType: "car" | "motorbike";
+            /** @enum {string} */
+            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            brand?: string | null;
+            model?: string | null;
+            seatCount?: number | null;
+            fuelType?: string | null;
+            mainImageUrl?: string | null;
+            /** @description Tiền dạng string — ADR 0007 */
+            weekdayPrice?: string | null;
+            weekendPrice?: string | null;
+            /** @description Tên gian hàng */
+            shopName: string;
+            /** @description Slug gian hàng cho route /shops/[slug] */
+            shopSlug: string;
+            /** @description Tỉnh/thành gian hàng */
+            shopProvince?: string | null;
+            description?: string | null;
+            color?: string | null;
+            manufactureYear?: number | null;
+            /** @description Logo gian hàng */
+            shopLogoUrl?: string | null;
+            /** @description Giới thiệu gian hàng */
+            shopBio?: string | null;
         };
         VehicleListItemDto: {
             id: string;
@@ -1145,6 +1229,38 @@ export interface components {
             id: string;
             /** @enum {string} */
             status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking";
+        };
+        MemberDto: {
+            /** @description ID user — dùng cho PATCH/DELETE /members/:userId */
+            userId: string;
+            displayName: string;
+            email?: string | null;
+            avatarUrl?: string | null;
+            /** @enum {string} */
+            roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
+            /** @enum {string} */
+            status: "active" | "invited" | "locked" | "removed";
+            /** @description ISO-8601 UTC */
+            joinedAt?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        MemberPageDto: {
+            data: components["schemas"]["MemberDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        AddMemberDto: {
+            /** @example nhanvien@congty.vn */
+            email: string;
+            /**
+             * @description Không nhận shop_owner (chủ shop là người tạo)
+             * @enum {string}
+             */
+            roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
+        };
+        UpdateMemberRoleDto: {
+            /** @enum {string} */
+            roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
         };
         ApprovalTaskListItemDto: {
             id: string;
@@ -1749,6 +1865,8 @@ export interface operations {
                 minSeats?: number;
                 /** @description Tìm theo tên/hãng/model */
                 q?: string;
+                /** @description Lọc theo tỉnh/thành của gian hàng */
+                province?: string;
                 sort?: "newest" | "price_asc" | "price_desc";
                 page?: number;
                 limit?: number;
@@ -1765,6 +1883,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicListingPageDto"];
+                };
+            };
+        };
+    };
+    PublicListingsController_getById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicListingDetailDto"];
                 };
             };
         };
@@ -2126,6 +2265,102 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookingRequestReceiptDto"];
+                };
+            };
+        };
+    };
+    MembersController_list: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo tên hoặc email */
+                q?: string;
+                roleKey?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberPageDto"];
+                };
+            };
+        };
+    };
+    MembersController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMemberDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberDto"];
+                };
+            };
+        };
+    };
+    MembersController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        userId?: string;
+                    };
+                };
+            };
+        };
+    };
+    MembersController_updateRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMemberRoleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberDto"];
                 };
             };
         };
