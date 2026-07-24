@@ -1,10 +1,9 @@
 'use client';
 
 import { Button, Layout, Result, Spin } from 'antd';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -23,6 +22,7 @@ import styles from './AppShell.module.css';
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { data: user, isLoading, isError } = useCurrentUser();
   const { hasNoTenant, isPendingApproval, tenant } = useTenantScope();
@@ -33,6 +33,29 @@ export function AppShell({ children }: { children: ReactNode }) {
     router.replace(ROUTES.LOGIN);
   }
 
+  const notAuthenticated = !isLoading && (isError || !user);
+
+  // Cookie phiên hỏng/hết hạn: proxy chỉ kiểm tra CÓ cookie chứ không verify, nên vẫn cho vào
+  // /manage rồi /auth/me trả 401. Ở đây xoá cookie hỏng (DELETE /auth/session) rồi ra thẳng
+  // /login — không xoá thì proxy cứ đá /login ngược lại /manage (loop).
+  useEffect(() => {
+    if (!notAuthenticated) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await destroySession();
+      } catch {
+        // Lỗi mạng khi xoá phiên vẫn không cản việc điều hướng ra login.
+      }
+      if (cancelled) return;
+      queryClient.clear();
+      router.replace(`${ROUTES.LOGIN}?next=${encodeURIComponent(pathname)}`);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [notAuthenticated, pathname, router, queryClient]);
+
   if (isLoading) {
     return (
       <div className={styles.centered}>
@@ -42,19 +65,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   if (isError || !user) {
+    // Đang xoá phiên hỏng và điều hướng ra /login (effect ở trên) — chỉ hiện spinner.
     return (
       <div className={styles.centered}>
-        <Logo size="lg" />
-        <Result
-          status="403"
-          title="Chưa đăng nhập"
-          subTitle="Phiên làm việc đã hết hạn hoặc bạn chưa đăng nhập."
-          extra={
-            <Link href={ROUTES.LOGIN}>
-              <Button type="primary">Đăng nhập</Button>
-            </Link>
-          }
-        />
+        <Spin size="large" />
       </div>
     );
   }

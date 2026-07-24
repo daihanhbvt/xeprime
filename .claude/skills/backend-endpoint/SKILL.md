@@ -43,4 +43,4 @@ Anything an admin or platform user does that changes another party's data — ap
 
 ## Before you call it done
 
-Trace the request once as an attacker (can I pass a scope I do not own? a status I should not set? skip a permission?) and once as the next engineer (is the contract declared, the money a string, the invariant enforced by the DB and not by hope?). Regenerate the contract, run typecheck, lint, and the tests. For anything touching the schedule, a passing concurrency test is not optional.
+Trace the request once as an attacker (can I pass a scope I do not own? a status I should not set? skip a permission?) and once as the next engineer (is the contract declared, the money a string, the invariant enforced by the DB and not by hope?). Regenerate the contract when the DTO changed, then verify with a scoped `pnpm --filter @xeprime/api typecheck` plus the affected Jest spec by path — not a full-workspace lint/build/test (see `verify-changes`). For anything touching the schedule, a passing concurrency test is not optional.

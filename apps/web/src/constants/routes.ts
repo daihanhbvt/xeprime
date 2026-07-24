@@ -12,12 +12,31 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   MANAGE: {
     ROOT: '/manage',
+
+    // Quản lý gian hàng
     CALENDAR: '/manage/calendar',
     VEHICLES: '/manage/vehicles',
     VEHICLE_NEW: '/manage/vehicles/new',
     BOOKINGS: '/manage/bookings',
+    BOOKING_REQUESTS: '/manage/booking-requests',
+    CUSTOMERS: '/manage/customers',
+    FINANCE: '/manage/finance',
+    RECEIPTS: '/manage/receipts',
+    DEBTS: '/manage/debts',
+
+    // Cài đặt gian hàng
     SHOP: '/manage/shop',
+    MEMBERS: '/manage/members',
+    PICKUP_AREAS: '/manage/pickup-areas',
+    DRIVERS: '/manage/drivers',
+    CHAT: '/manage/chat',
+    TRASH: '/manage/trash',
+
+    // Quản trị nền tảng
     ADMIN: '/manage/admin',
+    ADMIN_TENANTS: '/manage/admin/tenants',
+    ADMIN_AUDIT: '/manage/admin/audit',
+    ADMIN_STAFF: '/manage/admin/staff',
   },
 } as const;
 
