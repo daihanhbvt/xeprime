@@ -36,3 +36,24 @@ export const TENANT_STATUS_META: Readonly<Record<TenantStatus, StatusMeta>> = {
   [TENANT_STATUS.REJECTED]: { label: 'Bị từ chối', color: 'red' },
   [TENANT_STATUS.EXPIRED]: { label: 'Hết hạn gói', color: 'default' },
 };
+
+/** Trạng thái tenant cho phép gửi (lại) duyệt: chưa gửi hoặc bị yêu cầu bổ sung. */
+export const TENANT_STATUS_SUBMITTABLE: readonly TenantStatus[] = [
+  TENANT_STATUS.DRAFT,
+  TENANT_STATUS.NEEDS_REVISION,
+  TENANT_STATUS.REJECTED,
+];
+
+/** Loại hình gian hàng. */
+export const TENANT_TYPE = {
+  INDIVIDUAL: 'individual',
+  BUSINESS: 'business',
+} as const;
+
+export type TenantType = (typeof TENANT_TYPE)[keyof typeof TENANT_TYPE];
+export const TENANT_TYPE_VALUES = Object.values(TENANT_TYPE) as TenantType[];
+
+export const TENANT_TYPE_LABEL: Readonly<Record<TenantType, string>> = {
+  [TENANT_TYPE.INDIVIDUAL]: 'Cá nhân',
+  [TENANT_TYPE.BUSINESS]: 'Doanh nghiệp',
+};

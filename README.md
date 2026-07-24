@@ -31,19 +31,18 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 pnpm db:up          # PostgreSQL 16 qua Docker
 pnpm db:migrate     # tạo bảng + trigger + exclusion constraint
-pnpm db:seed        # 3 tài khoản demo, 8 xe, 6 đơn, 1 lịch bảo dưỡng
+pnpm db:seed        # admin + shop owner demo (8 xe, 6 đơn, 1 lịch bảo dưỡng)
 pnpm dev            # web :3000 · api :4000 · swagger :4000/docs
 ```
 
-Đăng nhập demo (chỉ hoạt động khi `AUTH_MODE=mock`): mở http://localhost:3000/login và bấm một trong ba nút tài khoản demo.
+Đăng nhập bằng **email + mật khẩu** tại http://localhost:3000/login (tài khoản do `pnpm db:seed` tạo, đọc từ `.env`):
 
-Hoặc bằng curl:
+| Vai trò | Email | Mật khẩu (mặc định) |
+| --- | --- | --- |
+| Platform admin | `PLATFORM_ADMIN_EMAIL` (mặc định `admin@xeprime.vn`) | `PLATFORM_ADMIN_PASSWORD` |
+| Chủ shop demo | `owner@xeprime.test` | `DEMO_OWNER_PASSWORD` (mặc định `Abcd1234`) |
 
-```bash
-curl -i -X POST localhost:4000/auth/session \
-  -H 'content-type: application/json' \
-  -d '{"idToken":"mock:demo-owner:owner@xeprime.test:Chủ shop demo"}'
-```
+Đặt mật khẩu trong `.env` trước khi seed. Google/Facebook sẽ hoạt động sau khi cấu hình Firebase (`AUTH_MODE=firebase`).
 
 ---
 

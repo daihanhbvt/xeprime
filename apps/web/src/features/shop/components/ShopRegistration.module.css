@@ -1,0 +1,29 @@
+.card {
+  width: 100%;
+  max-width: 480px;
+}
+
+.head {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.icon {
+  font-size: 32px;
+  color: var(--xp-gold, #d6a02c);
+  flex-shrink: 0;
+}
+
+.title {
+  margin: 0 0 4px !important;
+}
+
+.alert {
+  margin-bottom: 16px;
+}
+
+.submit {
+  margin-top: 8px;
+}

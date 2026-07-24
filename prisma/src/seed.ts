@@ -26,12 +26,19 @@ import {
   VEHICLE_TYPE,
   type Permission,
 } from '@xeprime/types';
+import bcrypt from 'bcryptjs';
 import { ulid } from 'ulid';
 import { createPrismaClient } from './index';
 
 // Prisma 7: client cần driver adapter (ADR 0001). Chạy qua `dotenv -e ../.env` nên
 // DATABASE_URL đã có trong env.
 const prisma = createPrismaClient();
+
+const BCRYPT_ROUNDS = 12;
+// Tài khoản đăng nhập lấy từ env (mật khẩu KHÔNG hard-code trong seed). Có default cho dev local.
+const PLATFORM_ADMIN_EMAIL = (process.env.PLATFORM_ADMIN_EMAIL ?? 'admin@xeprime.vn').trim().toLowerCase();
+const PLATFORM_ADMIN_PASSWORD = process.env.PLATFORM_ADMIN_PASSWORD ?? 'Abcd1234';
+const DEMO_OWNER_PASSWORD = process.env.DEMO_OWNER_PASSWORD ?? 'Abcd1234';
 
 /** Mốc thời gian cố định để seed cho ra lịch giống nhau mỗi lần chạy. */
 const TODAY = new Date();
@@ -103,40 +110,53 @@ async function seedSystemRole(
   return roleId;
 }
 
-async function upsertUser(input: {
-  providerUserId: string;
+/**
+ * Tạo/cập nhật user đăng nhập bằng email + mật khẩu (bcrypt). Idempotent theo email.
+ *
+ * Đặt cả `passwordHash` (loginWithPassword đọc field này) lẫn identity `provider='password'`
+ * cho nhất quán với `AuthService.register()`. Nếu email đã tồn tại (VD owner tạo từ seed cũ
+ * bằng provider 'mock') thì chỉ set thêm mật khẩu, giữ nguyên dữ liệu shop đã gắn.
+ */
+async function upsertPasswordUser(input: {
   email: string;
+  password: string;
   displayName: string;
   phoneVerified: boolean;
 }): Promise<string> {
-  const identity = await prisma.userIdentity.findUnique({
-    where: {
-      provider_providerUserId: { provider: 'mock', providerUserId: input.providerUserId },
-    },
-    select: { userId: true },
-  });
+  const email = input.email.trim().toLowerCase();
+  const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
 
-  if (identity) return identity.userId;
+  const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  const userId = existing?.id ?? ulid();
 
-  const userId = ulid();
   await prisma.$transaction(async (tx) => {
-    await tx.user.create({
-      data: {
-        id: userId,
-        email: input.email,
-        emailVerifiedAt: new Date(),
-        displayName: input.displayName,
-        phoneVerifiedAt: input.phoneVerified ? new Date() : null,
-        status: USER_STATUS.ACTIVE,
-      },
-    });
-    await tx.userIdentity.create({
-      data: {
+    if (existing) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { passwordHash, displayName: input.displayName, status: USER_STATUS.ACTIVE },
+      });
+    } else {
+      await tx.user.create({
+        data: {
+          id: userId,
+          email,
+          emailVerifiedAt: new Date(),
+          displayName: input.displayName,
+          phoneVerifiedAt: input.phoneVerified ? new Date() : null,
+          passwordHash,
+          status: USER_STATUS.ACTIVE,
+        },
+      });
+    }
+    await tx.userIdentity.upsert({
+      where: { provider_providerUserId: { provider: 'password', providerUserId: email } },
+      update: {},
+      create: {
         id: ulid(),
         userId,
-        provider: 'mock',
-        providerUserId: input.providerUserId,
-        providerEmail: input.email,
+        provider: 'password',
+        providerUserId: email,
+        providerEmail: email,
       },
     });
   });
@@ -200,27 +220,26 @@ async function main(): Promise<void> {
   }
   console.log('  roles hệ thống: xong');
 
-  const adminUserId = await upsertUser({
-    providerUserId: 'demo-admin',
-    email: 'admin@xeprime.test',
-    displayName: 'Platform Admin Demo',
+  // Dọn tài khoản demo mock cũ (không mật khẩu) — đã chuyển sang đăng nhập email/mật khẩu.
+  // Giữ owner@xeprime.test (chủ shop demo, được đặt mật khẩu ngay dưới đây).
+  await prisma.user.deleteMany({
+    where: { email: { in: ['admin@xeprime.test', 'customer@xeprime.test'] } },
+  });
+
+  const adminUserId = await upsertPasswordUser({
+    email: PLATFORM_ADMIN_EMAIL,
+    password: PLATFORM_ADMIN_PASSWORD,
+    displayName: 'Platform Admin',
     phoneVerified: true,
   });
-  const ownerUserId = await upsertUser({
-    providerUserId: 'demo-owner',
+  // Chủ shop demo: đăng nhập bằng email/mật khẩu, giữ nguyên gian hàng + xe + đơn demo.
+  const ownerUserId = await upsertPasswordUser({
     email: 'owner@xeprime.test',
+    password: DEMO_OWNER_PASSWORD,
     displayName: 'Chủ shop demo',
     phoneVerified: true,
   });
-  // Khách thuê demo: tạo user để đăng nhập được, chưa gắn membership nào (đúng luồng —
-  // khách không thuộc tenant). Không giữ id vì Phase 0 chưa có booking gắn customer_user.
-  await upsertUser({
-    providerUserId: 'demo-customer',
-    email: 'customer@xeprime.test',
-    displayName: 'Khách thuê demo',
-    phoneVerified: false,
-  });
-  console.log('  users: 3');
+  console.log('  users: admin + shop owner');
 
   await prisma.platformMembership.upsert({
     where: {
@@ -387,13 +406,9 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log('\nSeed xong. Đăng nhập bằng mock token (AUTH_MODE=mock):');
-  console.log('  platform admin : mock:demo-admin:admin@xeprime.test:Platform Admin Demo');
-  console.log('  shop owner     : mock:demo-owner:owner@xeprime.test:Chủ shop demo');
-  console.log('  customer       : mock:demo-customer:customer@xeprime.test:Khách thuê demo');
-  console.log('\n  curl -i -X POST localhost:4000/auth/session \\');
-  console.log('    -H "content-type: application/json" \\');
-  console.log('    -d \'{"idToken":"mock:demo-owner:owner@xeprime.test:Chủ shop demo"}\'');
+  console.log('\nSeed xong. Đăng nhập bằng email + mật khẩu tại /login:');
+  console.log(`  platform admin : ${PLATFORM_ADMIN_EMAIL} / ${PLATFORM_ADMIN_PASSWORD}`);
+  console.log(`  shop owner     : owner@xeprime.test / ${DEMO_OWNER_PASSWORD}`);
 }
 
 main()

@@ -162,6 +162,23 @@ export interface paths {
         patch: operations["UsersController_updateMe"];
         trace?: never;
     };
+    "/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Đăng ký gian hàng mới (tạo ở trạng thái nháp) */
+        post: operations["TenantsController_register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tenants/current": {
         parameters: {
             query?: never;
@@ -173,6 +190,57 @@ export interface paths {
         get: operations["TenantsController_current"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenants/current/shop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hồ sơ gian hàng của tôi + trạng thái duyệt */
+        get: operations["TenantsController_myShop"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenants/current/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cập nhật hồ sơ gian hàng */
+        patch: operations["TenantsController_updateProfile"];
+        trace?: never;
+    };
+    "/tenants/current/submit-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Gửi hồ sơ gian hàng cho nền tảng duyệt */
+        post: operations["TenantsController_submitReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -267,6 +335,91 @@ export interface paths {
         patch: operations["VehiclesController_update"];
         trace?: never;
     };
+    "/platform/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hàng đợi phiếu duyệt (phân trang, lọc theo trạng thái/loại) */
+        get: operations["PlatformAdminController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/approvals/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chi tiết phiếu duyệt (hồ sơ snapshot + lịch sử) */
+        get: operations["PlatformAdminController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/approvals/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duyệt phiếu (gian hàng → hoạt động) */
+        post: operations["PlatformAdminController_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/approvals/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Từ chối phiếu (cần lý do) */
+        post: operations["PlatformAdminController_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/approvals/{id}/request-revision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Yêu cầu bổ sung (cần lý do) */
+        post: operations["PlatformAdminController_requestRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -341,6 +494,55 @@ export interface components {
             displayName?: string;
             avatarUrl?: string;
         };
+        RegisterShopDto: {
+            /** @example Cho thuê xe Bình Minh */
+            name: string;
+            /**
+             * @default individual
+             * @enum {string}
+             */
+            tenantType: "individual" | "business";
+            /** @example 0901234567 */
+            phone?: string;
+            email?: string;
+        };
+        TenantProfileDto: {
+            displayName?: string | null;
+            bio?: string | null;
+            logoUrl?: string | null;
+            coverUrl?: string | null;
+            address?: string | null;
+            provinceCode?: string | null;
+            provinceName?: string | null;
+            taxCode?: string | null;
+            businessLicenseNo?: string | null;
+            bankName?: string | null;
+            bankAccountNo?: string | null;
+            bankAccountName?: string | null;
+            qrUrl?: string | null;
+        };
+        LatestApprovalDto: {
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected" | "needs_revision" | "cancelled";
+            reason?: string | null;
+            /** @description ISO-8601 UTC */
+            submittedAt: string;
+            reviewedAt?: string | null;
+        };
+        MyShopDto: {
+            id: string;
+            code: string;
+            slug: string;
+            name: string;
+            /** @enum {string} */
+            tenantType: "individual" | "business";
+            /** @enum {string} */
+            status: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
+            phone?: string | null;
+            email?: string | null;
+            profile: components["schemas"]["TenantProfileDto"];
+            latestApproval?: components["schemas"]["LatestApprovalDto"] | null;
+        };
         CurrentTenantDto: {
             id: string;
             code: string;
@@ -362,6 +564,21 @@ export interface components {
             memberCount: number;
             /** @enum {string} */
             myRoleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
+        };
+        UpdateTenantProfileDto: {
+            displayName?: string;
+            bio?: string;
+            logoUrl?: string;
+            coverUrl?: string;
+            address?: string;
+            provinceCode?: string;
+            provinceName?: string;
+            taxCode?: string;
+            businessLicenseNo?: string;
+            bankName?: string;
+            bankAccountNo?: string;
+            bankAccountName?: string;
+            qrUrl?: string;
         };
         CalendarResourceDto: {
             id: string;
@@ -578,6 +795,71 @@ export interface components {
              * @example 750000
              */
             weekendPrice?: string;
+        };
+        ApprovalTaskListItemDto: {
+            id: string;
+            tenantId?: string | null;
+            tenantName?: string | null;
+            /** @enum {string} */
+            targetType: "tenant" | "vehicle" | "tenant_document" | "vehicle_document";
+            targetId: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected" | "needs_revision" | "cancelled";
+            submittedBy: string;
+            submittedByName?: string | null;
+            /** @description ISO-8601 UTC */
+            submittedAt: string;
+            reviewedAt?: string | null;
+            reason?: string | null;
+        };
+        ApprovalTaskPageDto: {
+            data: components["schemas"]["ApprovalTaskListItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        ApprovalTenantSummaryDto: {
+            id: string;
+            code: string;
+            name: string;
+            tenantType: string;
+            status: string;
+            phone?: string | null;
+            email?: string | null;
+        };
+        ApprovalLogEntryDto: {
+            /** @enum {string} */
+            action: "submit" | "approve" | "reject" | "request_revision" | "cancel" | "resubmit";
+            fromStatus?: string | null;
+            toStatus: string;
+            note?: string | null;
+            actorName?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        ApprovalTaskDetailDto: {
+            id: string;
+            tenantId?: string | null;
+            tenantName?: string | null;
+            /** @enum {string} */
+            targetType: "tenant" | "vehicle" | "tenant_document" | "vehicle_document";
+            targetId: string;
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected" | "needs_revision" | "cancelled";
+            submittedBy: string;
+            submittedByName?: string | null;
+            /** @description ISO-8601 UTC */
+            submittedAt: string;
+            reviewedAt?: string | null;
+            reason?: string | null;
+            /** @description Snapshot hồ sơ lúc gửi duyệt */
+            snapshot?: {
+                [key: string]: unknown;
+            } | null;
+            tenant?: components["schemas"]["ApprovalTenantSummaryDto"] | null;
+            logs: components["schemas"]["ApprovalLogEntryDto"][];
+        };
+        ReviewActionDto: {
+            /** @description Lý do / ghi chú gửi cho chủ shop */
+            reason?: string;
         };
         ApiErrorBodyDto: {
             /** @example BOOKING_SCHEDULE_CONFLICT */
@@ -925,6 +1207,29 @@ export interface operations {
             };
         };
     };
+    TenantsController_register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterShopDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyShopDto"];
+                };
+            };
+        };
+    };
     TenantsController_current: {
         parameters: {
             query?: never;
@@ -940,6 +1245,67 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CurrentTenantDto"];
+                };
+            };
+        };
+    };
+    TenantsController_myShop: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyShopDto"];
+                };
+            };
+        };
+    };
+    TenantsController_updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTenantProfileDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyShopDto"];
+                };
+            };
+        };
+    };
+    TenantsController_submitReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyShopDto"];
                 };
             };
         };
@@ -1147,6 +1513,126 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VehicleDetailDto"];
+                };
+            };
+        };
+    };
+    PlatformAdminController_list: {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "rejected" | "needs_revision" | "cancelled";
+                targetType?: "tenant" | "vehicle" | "tenant_document" | "vehicle_document";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalTaskPageDto"];
+                };
+            };
+        };
+    };
+    PlatformAdminController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalTaskDetailDto"];
+                };
+            };
+        };
+    };
+    PlatformAdminController_approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewActionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalTaskDetailDto"];
+                };
+            };
+        };
+    };
+    PlatformAdminController_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewActionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalTaskDetailDto"];
+                };
+            };
+        };
+    };
+    PlatformAdminController_requestRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewActionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalTaskDetailDto"];
                 };
             };
         };

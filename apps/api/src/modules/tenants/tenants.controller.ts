@@ -1,22 +1,51 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
-import type { TenantContext } from '../../common/types/request-context';
+import {
+  CurrentTenant,
+  CurrentUser,
+  RequirePermissions,
+  TenantScoped,
+} from '../../common/decorators';
+import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CurrentTenantDto } from './dto/current-tenant.dto';
+import {
+  MyShopDto,
+  RegisterShopDto,
+  UpdateTenantProfileDto,
+} from './dto/tenant-onboarding.dto';
+import { TenantsService } from './tenants.service';
 
 @ApiTags('tenants')
 @Controller('tenants')
-@TenantScoped()
 export class TenantsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tenants: TenantsService,
+  ) {}
+
+  /**
+   * Đăng ký gian hàng — dành cho user CHƯA thuộc tenant nào, nên KHÔNG `@TenantScoped`
+   * (marker đó sẽ đòi tenant scope và chặn mất). Ai cũng đăng ký được; service từ chối nếu
+   * đã có gian hàng.
+   */
+  @Post()
+  @ApiOperation({ summary: 'Đăng ký gian hàng mới (tạo ở trạng thái nháp)' })
+  @ApiCreatedResponse({ type: MyShopDto })
+  register(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RegisterShopDto,
+  ): Promise<MyShopDto> {
+    return this.tenants.registerShop(user.id, dto);
+  }
 
   /**
    * Không có tham số `tenantId` — đó là chủ ý, không phải thiếu sót.
    * CLAUDE.md mục 5: API tenant-sensitive không nhận `tenant_id` từ client.
    */
   @Get('current')
+  @TenantScoped()
   @RequirePermissions(PERMISSION.TENANT_VIEW)
   @ApiOperation({ summary: 'Gian hàng của user hiện tại (scope lấy từ membership)' })
   @ApiOkResponse({ type: CurrentTenantDto })
@@ -53,5 +82,39 @@ export class TenantsController {
       memberCount: row._count.memberships,
       myRoleKey: tenant.roleKey,
     };
+  }
+
+  @Get('current/shop')
+  @TenantScoped()
+  @RequirePermissions(PERMISSION.TENANT_VIEW)
+  @ApiOperation({ summary: 'Hồ sơ gian hàng của tôi + trạng thái duyệt' })
+  @ApiOkResponse({ type: MyShopDto })
+  myShop(@CurrentTenant() tenant: TenantContext): Promise<MyShopDto> {
+    return this.tenants.getMyShop(tenant.tenantId);
+  }
+
+  @Patch('current/profile')
+  @TenantScoped()
+  @RequirePermissions(PERMISSION.TENANT_UPDATE)
+  @ApiOperation({ summary: 'Cập nhật hồ sơ gian hàng' })
+  @ApiOkResponse({ type: MyShopDto })
+  updateProfile(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() dto: UpdateTenantProfileDto,
+  ): Promise<MyShopDto> {
+    return this.tenants.updateProfile(tenant.tenantId, dto);
+  }
+
+  @Post('current/submit-review')
+  @HttpCode(HttpStatus.OK)
+  @TenantScoped()
+  @RequirePermissions(PERMISSION.TENANT_SUBMIT_REVIEW)
+  @ApiOperation({ summary: 'Gửi hồ sơ gian hàng cho nền tảng duyệt' })
+  @ApiOkResponse({ type: MyShopDto })
+  submitReview(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<MyShopDto> {
+    return this.tenants.submitForReview(tenant.tenantId, user.id);
   }
 }

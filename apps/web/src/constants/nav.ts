@@ -4,6 +4,7 @@ import {
   DashboardOutlined,
   FileTextOutlined,
   SafetyCertificateOutlined,
+  ShopOutlined,
 } from '@ant-design/icons';
 import type { ComponentType } from 'react';
 
@@ -55,10 +56,17 @@ export const MANAGE_NAV: readonly NavItem[] = [
     icon: FileTextOutlined,
   },
   {
+    key: 'shop',
+    label: 'Gian hàng',
+    href: ROUTES.MANAGE.SHOP,
+    permission: PERMISSION.TENANT_VIEW,
+    icon: ShopOutlined,
+  },
+  {
     key: 'admin',
-    label: 'Quản trị nền tảng',
+    label: 'Duyệt gian hàng',
     href: ROUTES.MANAGE.ADMIN,
-    permission: PERMISSION.PLATFORM_DASHBOARD_VIEW,
+    permission: PERMISSION.PLATFORM_APPROVAL_REVIEW,
     icon: SafetyCertificateOutlined,
   },
 ];

@@ -49,18 +49,6 @@
   font-size: 12px;
 }
 
-.demo {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.demoBtn {
-  height: 46px;
-  border-radius: 10px;
-  text-align: left;
-}
-
 .legal {
   margin-top: 18px;
   font-size: 11.5px;

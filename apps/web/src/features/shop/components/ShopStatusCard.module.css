@@ -1,0 +1,19 @@
+.card {
+  margin-bottom: 16px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.label {
+  font-weight: 600;
+}
+
+.alert {
+  margin-top: 16px;
+}

@@ -426,6 +426,38 @@
         ]
       }
     },
+    "/tenants": {
+      "post": {
+        "operationId": "TenantsController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterShopDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyShopDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đăng ký gian hàng mới (tạo ở trạng thái nháp)",
+        "tags": [
+          "tenants"
+        ]
+      }
+    },
     "/tenants/current": {
       "get": {
         "operationId": "TenantsController_current",
@@ -443,6 +475,82 @@
           }
         },
         "summary": "Gian hàng của user hiện tại (scope lấy từ membership)",
+        "tags": [
+          "tenants"
+        ]
+      }
+    },
+    "/tenants/current/shop": {
+      "get": {
+        "operationId": "TenantsController_myShop",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyShopDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hồ sơ gian hàng của tôi + trạng thái duyệt",
+        "tags": [
+          "tenants"
+        ]
+      }
+    },
+    "/tenants/current/profile": {
+      "patch": {
+        "operationId": "TenantsController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyShopDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cập nhật hồ sơ gian hàng",
+        "tags": [
+          "tenants"
+        ]
+      }
+    },
+    "/tenants/current/submit-review": {
+      "post": {
+        "operationId": "TenantsController_submitReview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyShopDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gửi hồ sơ gian hàng cho nền tảng duyệt",
         "tags": [
           "tenants"
         ]
@@ -956,6 +1064,234 @@
           "vehicles"
         ]
       }
+    },
+    "/platform/approvals": {
+      "get": {
+        "operationId": "PlatformAdminController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "pending",
+              "type": "string",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "needs_revision",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "targetType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tenant",
+                "vehicle",
+                "tenant_document",
+                "vehicle_document"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalTaskPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hàng đợi phiếu duyệt (phân trang, lọc theo trạng thái/loại)",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/platform/approvals/{id}": {
+      "get": {
+        "operationId": "PlatformAdminController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalTaskDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết phiếu duyệt (hồ sơ snapshot + lịch sử)",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/platform/approvals/{id}/approve": {
+      "post": {
+        "operationId": "PlatformAdminController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalTaskDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Duyệt phiếu (gian hàng → hoạt động)",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/platform/approvals/{id}/reject": {
+      "post": {
+        "operationId": "PlatformAdminController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalTaskDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Từ chối phiếu (cần lý do)",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/platform/approvals/{id}/request-revision": {
+      "post": {
+        "operationId": "PlatformAdminController_requestRevision",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalTaskDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Yêu cầu bổ sung (cần lý do)",
+        "tags": [
+          "platform-admin"
+        ]
+      }
     }
   },
   "info": {
@@ -1284,6 +1620,186 @@
           }
         }
       },
+      "RegisterShopDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Cho thuê xe Bình Minh"
+          },
+          "tenantType": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "business"
+            ],
+            "default": "individual"
+          },
+          "phone": {
+            "type": "string",
+            "example": "0901234567"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "TenantProfileDto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "coverUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "provinceCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "taxCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "businessLicenseNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "bankName": {
+            "type": "string",
+            "nullable": true
+          },
+          "bankAccountNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "bankAccountName": {
+            "type": "string",
+            "nullable": true
+          },
+          "qrUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "LatestApprovalDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "needs_revision",
+              "cancelled"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "submittedAt"
+        ]
+      },
+      "MyShopDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tenantType": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "business"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "needs_revision",
+              "active",
+              "suspended",
+              "rejected",
+              "expired"
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "profile": {
+            "$ref": "#/components/schemas/TenantProfileDto"
+          },
+          "latestApproval": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LatestApprovalDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "slug",
+          "name",
+          "tenantType",
+          "status",
+          "profile"
+        ]
+      },
       "CurrentTenantDto": {
         "type": "object",
         "properties": {
@@ -1363,6 +1879,50 @@
           "memberCount",
           "myRoleKey"
         ]
+      },
+      "UpdateTenantProfileDto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string"
+          },
+          "coverUrl": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "provinceCode": {
+            "type": "string"
+          },
+          "provinceName": {
+            "type": "string"
+          },
+          "taxCode": {
+            "type": "string"
+          },
+          "businessLicenseNo": {
+            "type": "string"
+          },
+          "bankName": {
+            "type": "string"
+          },
+          "bankAccountNo": {
+            "type": "string"
+          },
+          "bankAccountName": {
+            "type": "string"
+          },
+          "qrUrl": {
+            "type": "string"
+          }
+        }
       },
       "CalendarResourceDto": {
         "type": "object",
@@ -2018,6 +2578,260 @@
             "type": "string",
             "description": "Giá cuối tuần",
             "example": "750000"
+          }
+        }
+      },
+      "ApprovalTaskListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantName": {
+            "type": "string",
+            "nullable": true
+          },
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "tenant",
+              "vehicle",
+              "tenant_document",
+              "vehicle_document"
+            ]
+          },
+          "targetId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "needs_revision",
+              "cancelled"
+            ]
+          },
+          "submittedBy": {
+            "type": "string"
+          },
+          "submittedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "targetType",
+          "targetId",
+          "status",
+          "submittedBy",
+          "submittedAt"
+        ]
+      },
+      "ApprovalTaskPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApprovalTaskListItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "ApprovalTenantSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tenantType": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "tenantType",
+          "status"
+        ]
+      },
+      "ApprovalLogEntryDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "submit",
+              "approve",
+              "reject",
+              "request_revision",
+              "cancel",
+              "resubmit"
+            ]
+          },
+          "fromStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "toStatus": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "actorName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "action",
+          "toStatus",
+          "createdAt"
+        ]
+      },
+      "ApprovalTaskDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantName": {
+            "type": "string",
+            "nullable": true
+          },
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "tenant",
+              "vehicle",
+              "tenant_document",
+              "vehicle_document"
+            ]
+          },
+          "targetId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "needs_revision",
+              "cancelled"
+            ]
+          },
+          "submittedBy": {
+            "type": "string"
+          },
+          "submittedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "snapshot": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Snapshot hồ sơ lúc gửi duyệt"
+          },
+          "tenant": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalTenantSummaryDto"
+              }
+            ]
+          },
+          "logs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApprovalLogEntryDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "targetType",
+          "targetId",
+          "status",
+          "submittedBy",
+          "submittedAt",
+          "logs"
+        ]
+      },
+      "ReviewActionDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Lý do / ghi chú gửi cho chủ shop"
           }
         }
       },

@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
+import { PlatformAdminController } from './platform-admin.controller';
+import { PlatformApprovalService } from './platform-approval.service';
 
 /**
- * Skeleton — Phase 7.
- *
- * Ràng buộc: endpoint ở đây gắn `@PlatformOnly()`, KHÔNG dùng chung `TenantScopeGuard`
- * với API gian hàng (security rule: platform API không dùng chung guard với tenant API).
- * Mọi thao tác phải ghi `audit_logs`, và xem PII phải audit riêng.
+ * Nền tảng — duyệt gian hàng (Phase 2). Endpoint gắn `@PlatformOnly()` (PlatformScopeGuard nạp
+ * scope) + `@RequirePermissions(platform.approvals.review)`; mọi thao tác ghi `audit_logs`.
+ * Xe/giấy tờ và dashboard đầy đủ mở ở Phase 7.
  */
-@Module({})
+@Module({
+  controllers: [PlatformAdminController],
+  providers: [PlatformApprovalService],
+})
 export class PlatformAdminModule {}

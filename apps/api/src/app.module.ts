@@ -7,6 +7,7 @@ import { validateEnv } from './config/env.schema';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
 import { TenantScopeGuard } from './common/guards/tenant-scope.guard';
+import { PlatformScopeGuard } from './common/guards/platform-scope.guard';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -68,6 +69,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: TenantScopeGuard },
+    { provide: APP_GUARD, useClass: PlatformScopeGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
   ],

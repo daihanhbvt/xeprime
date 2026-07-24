@@ -1,0 +1,23 @@
+.form {
+  max-width: 860px;
+}
+
+.fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.section {
+  margin-bottom: 16px;
+}
+
+.alert {
+  margin-bottom: 16px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}

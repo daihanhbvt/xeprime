@@ -9,6 +9,7 @@ import * as yup from 'yup';
 import {
   FUEL_TYPE_VALUES,
   SERVICE_TYPE_VALUES,
+  TENANT_TYPE_VALUES,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
@@ -108,5 +109,50 @@ export const bookingPeriodSchema = yup.object({
 });
 
 export type BookingPeriodValues = yup.InferType<typeof bookingPeriodSchema>;
+
+// ---------------------------------------------------------------------------
+// Gian hàng (đăng ký + hồ sơ) — Phase 2 duyệt shop
+// ---------------------------------------------------------------------------
+
+export const registerShopSchema = yup.object({
+  name: yup.string().trim().required('Tên gian hàng là bắt buộc').min(2, 'Tối thiểu 2 ký tự').max(255),
+  tenantType: yup.string().oneOf(TENANT_TYPE_VALUES).required('Chọn loại hình'),
+  // default('') + excludeEmptyString: bỏ trống là hợp lệ, chỉ validate khi có nhập.
+  phone: yup
+    .string()
+    .trim()
+    .default('')
+    .matches(/^(0|\+84)\d{9}$/, {
+      message: 'Số điện thoại không hợp lệ',
+      excludeEmptyString: true,
+    }),
+  email: yup.string().trim().default('').email('Email không hợp lệ'),
+});
+
+export type RegisterShopValues = yup.InferType<typeof registerShopSchema>;
+
+const profileText = (max: number) => yup.string().trim().max(max).default('');
+
+export const shopProfileSchema = yup.object({
+  displayName: profileText(255),
+  bio: profileText(2000),
+  address: profileText(500),
+  provinceName: profileText(100),
+  taxCode: profileText(50),
+  businessLicenseNo: profileText(100),
+  bankName: profileText(100),
+  bankAccountNo: profileText(100),
+  bankAccountName: profileText(255),
+  logoUrl: yup
+    .string()
+    .trim()
+    .transform((v) => (v === '' ? null : v))
+    .url('Đường dẫn logo không hợp lệ')
+    .max(2000)
+    .nullable()
+    .default(null),
+});
+
+export type ShopProfileValues = yup.InferType<typeof shopProfileSchema>;
 
 export * from './auth';

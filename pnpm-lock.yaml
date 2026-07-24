@@ -336,6 +336,9 @@ importers:
       '@prisma/client-runtime-utils':
         specifier: 7.9.0
         version: 7.9.0
+      bcryptjs:
+        specifier: 3.0.3
+        version: 3.0.3
       dotenv:
         specifier: 17.4.2
         version: 17.4.2

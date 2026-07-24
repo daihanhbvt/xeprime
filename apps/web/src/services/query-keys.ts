@@ -15,6 +15,15 @@ export const queryKeys = {
     all: ['tenants'] as const,
     current: () => ['tenants', 'current'] as const,
   },
+  shop: {
+    all: ['shop'] as const,
+    current: () => ['shop', 'current'] as const,
+  },
+  approvals: {
+    all: ['approvals'] as const,
+    list: (params: QueryParams) => ['approvals', 'list', params] as const,
+    detail: (id: string) => ['approvals', 'detail', id] as const,
+  },
   calendar: {
     all: ['calendar'] as const,
     resources: (params: QueryParams) => ['calendar', 'resources', params] as const,

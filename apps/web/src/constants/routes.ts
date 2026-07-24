@@ -16,6 +16,7 @@ export const ROUTES = {
     VEHICLES: '/manage/vehicles',
     VEHICLE_NEW: '/manage/vehicles/new',
     BOOKINGS: '/manage/bookings',
+    SHOP: '/manage/shop',
     ADMIN: '/manage/admin',
   },
 } as const;

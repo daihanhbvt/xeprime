@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Divider, Typography } from 'antd';
+import { Alert, Button, Divider } from 'antd';
 import { FacebookFilled, GoogleOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -73,18 +73,6 @@ function LoginForm() {
     try {
       const idToken = await getProviderIdToken(provider);
       await createSession(idToken);
-      await afterAuth();
-    } catch (err) {
-      setError(getErrorMessage(err));
-      setPending(null);
-    }
-  }
-
-  async function signInDemo(token: string) {
-    setPending(token);
-    setError(null);
-    try {
-      await createSession(token);
       await afterAuth();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -176,32 +164,6 @@ function LoginForm() {
           {AUTH_PROVIDER_LABEL[AUTH_PROVIDER.FACEBOOK]}
         </Button>
       </div>
-
-      <Divider className={styles.divider} plain>
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          Tài khoản demo (AUTH_MODE=mock)
-        </Typography.Text>
-      </Divider>
-
-      <div className={styles.demo}>
-        {DEMO_ACCOUNTS.map((account) => (
-          <Button
-            key={account.token}
-            className={styles.demoBtn}
-            block
-            loading={pending === account.token}
-            disabled={busy && pending !== account.token}
-            onClick={() => void signInDemo(account.token)}
-          >
-            {account.label}
-          </Button>
-        ))}
-      </div>
     </div>
   );
 }
-
-const DEMO_ACCOUNTS = [
-  { label: 'Chủ shop demo', token: 'mock:demo-owner:owner@xeprime.test:Chủ shop demo' },
-  { label: 'Platform admin demo', token: 'mock:demo-admin:admin@xeprime.test:Platform Admin Demo' },
-] as const;

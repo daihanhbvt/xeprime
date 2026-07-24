@@ -9,6 +9,7 @@ import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
+import { ShopRegistration } from '@/features/shop/components/ShopRegistration';
 import { destroySession } from '@/services/auth.service';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
@@ -58,18 +59,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  // screen_spec §10.2: user đăng nhập nhưng chưa thuộc gian hàng nào cần màn riêng,
-  // không đẩy thẳng vào dashboard rỗng. (Đăng ký gian hàng sẽ mở ở Slice 2.)
+  // screen_spec §10.2: user đăng nhập nhưng chưa thuộc gian hàng nào → cho đăng ký gian hàng
+  // ngay tại đây, không đẩy vào dashboard rỗng. Đăng ký xong /auth/me có tenant → vào portal.
   if (hasNoTenant && !user.platformRole) {
     return (
       <div className={styles.centered}>
         <Logo size="lg" />
-        <Result
-          status="info"
-          title="Bạn chưa thuộc gian hàng nào"
-          subTitle="Tạo hồ sơ gian hàng để bắt đầu cho thuê xe, hoặc nhờ chủ shop mời bạn vào."
-          extra={<Button onClick={() => void handleLogout()}>Đăng xuất</Button>}
-        />
+        <ShopRegistration />
+        <Button type="text" onClick={() => void handleLogout()}>
+          Đăng xuất
+        </Button>
       </div>
     );
   }
