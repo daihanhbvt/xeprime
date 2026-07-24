@@ -14,5 +14,7 @@ import { BookingsService } from './bookings.service';
   imports: [CalendarModule],
   controllers: [BookingsController],
   providers: [BookingsService],
+  // Xuất để BookingRequestsModule dùng `createWithinTx` khi duyệt yêu cầu đặt xe.
+  exports: [BookingsService],
 })
 export class BookingsModule {}

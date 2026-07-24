@@ -1,12 +1,15 @@
 'use client';
 
 import { HeartOutlined } from '@ant-design/icons';
+import { Button } from 'antd';
+import { useState } from 'react';
 import {
   SERVICE_TYPE_LABEL,
   VEHICLE_TYPE,
   type ServiceType,
   type VehicleType,
 } from '@xeprime/types';
+import { RequestBookingModal } from '@/features/booking-requests/components/RequestBookingModal';
 import { formatMoneyVnd } from '@/lib/money';
 import type { PublicListing } from '../types';
 import styles from './VehicleCard.module.css';
@@ -20,6 +23,7 @@ const FUEL_LABEL: Record<string, string> = {
 
 /** Một thẻ xe trên marketplace — bám card của xeprime.vn. */
 export function VehicleCard({ listing }: { listing: PublicListing }) {
+  const [requestOpen, setRequestOpen] = useState(false);
   const seats = listing.seatCount ? `${listing.seatCount} chỗ` : null;
   const fuel = listing.fuelType ? (FUEL_LABEL[listing.fuelType] ?? listing.fuelType) : null;
   const specs = [seats, fuel, listing.brand].filter(Boolean).join(' · ');
@@ -52,7 +56,22 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
             {listing.shopName}
           </span>
         </div>
+        <Button
+          type="primary"
+          block
+          className={styles.requestBtn}
+          onClick={() => setRequestOpen(true)}
+        >
+          Yêu cầu thuê
+        </Button>
       </div>
+
+      <RequestBookingModal
+        vehicleId={listing.id}
+        vehicleName={listing.name}
+        open={requestOpen}
+        onClose={() => setRequestOpen(false)}
+      />
     </article>
   );
 }

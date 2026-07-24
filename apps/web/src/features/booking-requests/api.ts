@@ -1,0 +1,52 @@
+import type { PaginationMeta } from '@xeprime/types';
+import { apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import type {
+  BookingRequestFilters,
+  BookingRequestItem,
+  BookingRequestReceipt,
+  CreateBookingRequestInput,
+} from './types';
+
+export const BOOKING_REQUESTS_DEFAULT_LIMIT = 20;
+
+export interface BookingRequestListResult {
+  items: BookingRequestItem[];
+  meta: PaginationMeta;
+}
+
+export function filtersToParams(filters: BookingRequestFilters): QueryParams {
+  return {
+    status: filters.status ?? null,
+    vehicleId: filters.vehicleId ?? null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? BOOKING_REQUESTS_DEFAULT_LIMIT,
+  };
+}
+
+export async function fetchBookingRequests(
+  filters: BookingRequestFilters,
+): Promise<BookingRequestListResult> {
+  const res = await apiRequest<BookingRequestItem[]>('/booking-requests', {
+    query: filtersToParams(filters),
+  });
+  return {
+    items: res.data,
+    meta: (res.meta as PaginationMeta | undefined) ?? {
+      page: 1,
+      limit: BOOKING_REQUESTS_DEFAULT_LIMIT,
+      total: res.data.length,
+      hasNext: false,
+    },
+  };
+}
+
+export const approveBookingRequest = (id: string): Promise<BookingRequestItem> =>
+  apiPost<BookingRequestItem>(`/booking-requests/${id}/approve`);
+
+export const rejectBookingRequest = (id: string, reason?: string): Promise<BookingRequestItem> =>
+  apiPost<BookingRequestItem>(`/booking-requests/${id}/reject`, { reason });
+
+/** Công khai — khách gửi yêu cầu thuê từ marketplace (không cần đăng nhập). */
+export const submitBookingRequest = (
+  body: CreateBookingRequestInput,
+): Promise<BookingRequestReceipt> => apiPost<BookingRequestReceipt>('/public/booking-requests', body);

@@ -405,6 +405,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/booking-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách yêu cầu đặt xe (phân trang, filter trạng thái) */
+        get: operations["BookingRequestsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/booking-requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chi tiết một yêu cầu */
+        get: operations["BookingRequestsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/booking-requests/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch) */
+        post: operations["BookingRequestsController_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/booking-requests/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Từ chối yêu cầu */
+        post: operations["BookingRequestsController_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/booking-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Khách gửi yêu cầu thuê một xe trên Marketplace */
+        post: operations["PublicBookingRequestsController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/approvals": {
         parameters: {
             query?: never;
@@ -1012,6 +1097,54 @@ export interface components {
             actualPickupAt?: string;
             /** @description Thời điểm trả xe thực tế (khi → completed) */
             actualReturnAt?: string;
+        };
+        BookingRequestDto: {
+            id: string;
+            vehicleId: string;
+            vehicleName: string;
+            vehiclePlate?: string | null;
+            /** @enum {string} */
+            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking";
+            customerName: string;
+            customerPhone: string;
+            customerEmail?: string | null;
+            /** @description ISO-8601 UTC */
+            pickupAt: string;
+            /** @description ISO-8601 UTC */
+            returnAt: string;
+            note?: string | null;
+            rejectReason?: string | null;
+            /** @description Booking đã tạo khi duyệt */
+            bookingId?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        BookingRequestPageDto: {
+            data: components["schemas"]["BookingRequestDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        RejectBookingRequestDto: {
+            reason?: string;
+        };
+        CreateBookingRequestDto: {
+            /** @description ID xe (ULID) trên marketplace */
+            vehicleId: string;
+            /** @example Nguyễn Văn A */
+            customerName: string;
+            /** @example 0901234567 */
+            customerPhone: string;
+            /** @example a@example.com */
+            customerEmail?: string;
+            /** @description Nhận xe (ISO-8601) */
+            pickupAt: string;
+            /** @description Trả xe (ISO-8601), phải sau nhận xe */
+            returnAt: string;
+            note?: string;
+        };
+        BookingRequestReceiptDto: {
+            id: string;
+            /** @enum {string} */
+            status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking";
         };
         ApprovalTaskListItemDto: {
             id: string;
@@ -1879,6 +2012,120 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookingDetailDto"];
+                };
+            };
+        };
+    };
+    BookingRequestsController_list: {
+        parameters: {
+            query?: {
+                status?: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking";
+                vehicleId?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestPageDto"];
+                };
+            };
+        };
+    };
+    BookingRequestsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestDto"];
+                };
+            };
+        };
+    };
+    BookingRequestsController_approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestDto"];
+                };
+            };
+        };
+    };
+    BookingRequestsController_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectBookingRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestDto"];
+                };
+            };
+        };
+    };
+    PublicBookingRequestsController_submit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBookingRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingRequestReceiptDto"];
                 };
             };
         };

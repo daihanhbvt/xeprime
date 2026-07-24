@@ -114,6 +114,20 @@ export class BookingsService {
    * exclusion constraint ném `23P01`, `AllExceptionsFilter` dịch thành BOOKING_SCHEDULE_CONFLICT.
    */
   async create(tenantId: string, userId: string, dto: CreateBookingDto): Promise<BookingDetailDto> {
+    return this.prisma.$transaction((tx) => this.createWithinTx(tx, tenantId, userId, dto));
+  }
+
+  /**
+   * Lõi tạo đơn dùng chung — chạy TRONG một transaction do bên gọi mở. Cho phép luồng khác
+   * (duyệt yêu cầu đặt xe) tạo đơn cùng transaction với thay đổi của nó, không nhân đôi
+   * logic giữ chỗ. Trùng lịch → constraint ném `23P01` → 409.
+   */
+  async createWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    userId: string,
+    dto: CreateBookingDto,
+  ): Promise<BookingDetailDto> {
     const pickupAt = new Date(dto.pickupAt);
     const returnAt = new Date(dto.returnAt);
     assertRange(pickupAt, returnAt);
@@ -126,56 +140,52 @@ export class BookingsService {
     const id = newId();
     const code = `DH${id.slice(-6).toUpperCase()}`;
 
-    const row = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.booking.create({
-        data: {
-          id,
-          tenantId,
-          vehicleId: dto.vehicleId,
-          code,
-          customerName: dto.customerName,
-          customerPhone: dto.customerPhone ?? null,
-          status: BOOKING_STATUS.RESERVED,
-          serviceType: dto.serviceType ?? undefined,
-          pickupAt,
-          returnAt,
-          baseAmount: base,
-          deliveryFee: delivery,
-          discountAmount: discount,
-          depositAmount: money(dto.depositAmount),
-          totalAmount: total,
-          note: dto.note ?? null,
-          createdBy: userId,
-        },
-        select: DETAIL_SELECT,
-      });
-
-      await this.occupancy.reserve(tx, {
+    const created = await tx.booking.create({
+      data: {
+        id,
         tenantId,
         vehicleId: dto.vehicleId,
-        sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING,
-        sourceId: id,
-        startAt: pickupAt,
-        endAt: returnAt,
-      });
-
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId: userId,
-          actorScope: 'tenant',
-          action: 'booking.create',
-          targetType: 'booking',
-          targetId: id,
-          after: { code, vehicleId: dto.vehicleId, pickupAt, returnAt },
-        },
-        tx,
-      );
-
-      return created;
+        code,
+        customerName: dto.customerName,
+        customerPhone: dto.customerPhone ?? null,
+        status: BOOKING_STATUS.RESERVED,
+        serviceType: dto.serviceType ?? undefined,
+        pickupAt,
+        returnAt,
+        baseAmount: base,
+        deliveryFee: delivery,
+        discountAmount: discount,
+        depositAmount: money(dto.depositAmount),
+        totalAmount: total,
+        note: dto.note ?? null,
+        createdBy: userId,
+      },
+      select: DETAIL_SELECT,
     });
 
-    return toDetail(row);
+    await this.occupancy.reserve(tx, {
+      tenantId,
+      vehicleId: dto.vehicleId,
+      sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING,
+      sourceId: id,
+      startAt: pickupAt,
+      endAt: returnAt,
+    });
+
+    await this.audit.record(
+      {
+        tenantId,
+        actorUserId: userId,
+        actorScope: 'tenant',
+        action: 'booking.create',
+        targetType: 'booking',
+        targetId: id,
+        after: { code, vehicleId: dto.vehicleId, pickupAt, returnAt },
+      },
+      tx,
+    );
+
+    return toDetail(created);
   }
 
   /**

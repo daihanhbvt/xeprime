@@ -122,6 +122,7 @@ model Tenant {
   roles         Role[]
   vehicles      Vehicle[]
   bookings      Booking[]
+  bookingRequests BookingRequest[]
   occupancies   VehicleOccupancy[]
   approvalTasks ApprovalTask[]
   adminNotes    AdminNote[]
@@ -478,6 +479,7 @@ model Vehicle {
   tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   creator     User?              @relation("vehicle_creator", fields: [createdBy], references: [id])
   bookings    Booking[]
+  bookingRequests BookingRequest[]
   occupancies VehicleOccupancy[]
 
   @@unique([tenantId, code])
@@ -522,12 +524,50 @@ model Booking {
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
   creator User?   @relation("booking_creator", fields: [createdBy], references: [id])
+  bookingRequest BookingRequest? @relation("request_booking")
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
   @@index([vehicleId, pickupAt, returnAt])
   @@index([createdAt])
   @@map("bookings")
+}
+
+/// Yêu cầu đặt xe từ Marketplace (xeprime_database_design.md §11.1).
+///
+/// KHÔNG giữ chỗ lịch khi còn `pending_host_approval`: nhiều khách được phép cùng hỏi một xe
+/// cùng khung giờ (status/booking-request.ts). Chỉ khi shop DUYỆT mới tạo `Booking` (giữ chỗ
+/// qua OccupancyService — ADR 0006) rồi set `converted_to_booking`. Mọi ghi đi qua
+/// BookingRequestsService; `tenant_id` suy từ xe ở server, không nhận từ client.
+model BookingRequest {
+  id            String    @id @db.Char(26)
+  tenantId      String    @map("tenant_id") @db.Char(26)
+  vehicleId     String    @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → BookingRequestStatus
+  status        String    @default("pending_host_approval") @db.VarChar(50)
+  customerName  String    @map("customer_name") @db.VarChar(255)
+  customerPhone String    @map("customer_phone") @db.VarChar(30)
+  customerEmail String?   @map("customer_email") @db.VarChar(255)
+  pickupAt      DateTime  @map("pickup_at") @db.Timestamptz(3)
+  returnAt      DateTime  @map("return_at") @db.Timestamptz(3)
+  note          String?   @db.Text
+  rejectReason  String?   @map("reject_reason") @db.Text
+  /// Set khi duyệt → trỏ tới Booking đã tạo (1-1). Postgres cho nhiều NULL nên yêu cầu
+  /// chưa duyệt không đụng ràng buộc unique.
+  bookingId     String?   @unique @map("booking_id") @db.Char(26)
+  decidedBy     String?   @map("decided_by") @db.Char(26)
+  decidedAt     DateTime? @map("decided_at") @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle  @relation(fields: [vehicleId], references: [id])
+  booking Booking? @relation("request_booking", fields: [bookingId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([vehicleId])
+  @@index([createdAt])
+  @@map("booking_requests")
 }
 
 /// Bảng chiếm dụng lịch xe — ADR 0006.
