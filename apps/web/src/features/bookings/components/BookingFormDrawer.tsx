@@ -14,25 +14,33 @@ import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import { dayjs } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
+import type { Dayjs } from 'dayjs';
 import { SERVICE_TYPE_OPTIONS } from '../constants';
 import { useCreateBooking, useUpdateBooking } from '../hooks/use-booking-mutations';
 import { bookingFormSchema, type BookingFormValues } from '../schema';
 import type { BookingDetail, CreateBookingInput, UpdateBookingInput } from '../types';
 import styles from './BookingFormDrawer.module.css';
 
+/** Giá trị điền sẵn khi tạo đơn từ lịch: click ô trống biết trước xe + khung giờ. */
+export interface BookingPrefill {
+  vehicleId: string;
+  pickupAt: Dayjs;
+  returnAt: Dayjs;
+}
+
 function numOrNull(value: string | null | undefined): number | null {
   return value === null || value === undefined || value === '' ? null : Number(value);
 }
 
-function toDefaults(editing: BookingDetail | null): BookingFormValues {
+function toDefaults(editing: BookingDetail | null, prefill: BookingPrefill | null): BookingFormValues {
   if (!editing) {
     return {
-      vehicleId: '',
+      vehicleId: prefill?.vehicleId ?? '',
       customerName: '',
       customerPhone: '',
       serviceType: SERVICE_TYPE.SELF_DRIVE,
-      pickupAt: null,
-      returnAt: null,
+      pickupAt: prefill?.pickupAt ?? null,
+      returnAt: prefill?.returnAt ?? null,
       baseAmount: null,
       deliveryFee: null,
       discountAmount: null,
@@ -59,12 +67,17 @@ function toDefaults(editing: BookingDetail | null): BookingFormValues {
 export function BookingFormDrawer({
   open,
   editing,
+  prefill = null,
   onClose,
 }: {
   open: boolean;
   editing: BookingDetail | null;
+  /** Điền sẵn khi tạo từ lịch (chỉ dùng khi `editing` null). */
+  prefill?: BookingPrefill | null;
   onClose: () => void;
 }) {
+  // key gồm prefill để click ô lịch khác nhau thì form re-init đúng xe/giờ.
+  const formKey = editing?.id ?? (prefill ? `new-${prefill.vehicleId}-${prefill.pickupAt.valueOf()}` : 'new');
   return (
     <Drawer
       title={editing ? `Sửa đơn ${editing.code}` : 'Tạo đơn thuê'}
@@ -73,12 +86,20 @@ export function BookingFormDrawer({
       onClose={onClose}
       destroyOnClose
     >
-      {open ? <BookingForm key={editing?.id ?? 'new'} editing={editing} onDone={onClose} /> : null}
+      {open ? <BookingForm key={formKey} editing={editing} prefill={prefill} onDone={onClose} /> : null}
     </Drawer>
   );
 }
 
-function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDone: () => void }) {
+function BookingForm({
+  editing,
+  prefill,
+  onDone,
+}: {
+  editing: BookingDetail | null;
+  prefill: BookingPrefill | null;
+  onDone: () => void;
+}) {
   const { message } = App.useApp();
   const [conflict, setConflict] = useState(false);
   const { data: vehiclesData } = useVehicles({ limit: 100 });
@@ -87,7 +108,7 @@ function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDon
 
   const { control, handleSubmit } = useForm<BookingFormValues>({
     resolver: yupResolver(bookingFormSchema),
-    defaultValues: toDefaults(editing),
+    defaultValues: toDefaults(editing, prefill),
   });
 
   const [base, delivery, discount] = useWatch({

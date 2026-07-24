@@ -120,6 +120,15 @@
   border-bottom: 1px solid var(--xp-color-split);
 }
 
+/* Ô trống bấm được để tạo đơn (Phase 4). Highlight nhẹ, nằm dưới thanh event. */
+.rowTrackClickable {
+  cursor: pointer;
+}
+
+.rowTrackClickable:hover {
+  background: var(--xp-color-bg-hover);
+}
+
 /* Vạch ngày vẽ bằng gradient thay vì N phần tử DOM — với 30 ngày × 1.000 xe thì
    30.000 div trống là lý do chính khiến lịch giật. */
 .rowTrack::before {
@@ -156,6 +165,34 @@
 
 .eventBar:hover {
   filter: brightness(0.95);
+}
+
+/* Kéo/resize đổi lịch (Phase 4). touch-action none để pointer drag chạy cả trên cảm ứng. */
+.eventDraggable {
+  touch-action: none;
+}
+
+.eventDragging {
+  z-index: 5;
+  filter: brightness(0.92);
+  user-select: none;
+  box-shadow: var(--xp-shadow-md);
+}
+
+.eventLabel {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resizeHandle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  cursor: ew-resize;
 }
 
 .eventBar:focus-visible {

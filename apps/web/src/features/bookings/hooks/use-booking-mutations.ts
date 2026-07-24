@@ -44,3 +44,17 @@ export function useTransitionBooking(id: string) {
     },
   });
 }
+
+/**
+ * Đổi khung giờ đơn từ lịch (kéo/resize). `id` truyền lúc gọi (không cố định theo hook) vì
+ * mỗi thanh event trên lịch là một đơn khác nhau. Backend reschedule occupancy trong
+ * transaction; trùng lịch → 409 (ADR 0006), người gọi tự bắt lỗi.
+ */
+export function useRescheduleBooking() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, pickupAt, returnAt }: { id: string; pickupAt: string; returnAt: string }) =>
+      updateBooking(id, { pickupAt, returnAt }),
+    onSuccess: () => invalidateAfterBookingChange(queryClient),
+  });
+}
