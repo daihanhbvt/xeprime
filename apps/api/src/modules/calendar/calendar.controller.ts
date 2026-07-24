@@ -1,16 +1,26 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { OCCUPANCY_SOURCE_TYPE, PERMISSION } from '@xeprime/types';
 import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CalendarEventDto, CalendarRangeQueryDto, CalendarResourceDto } from './dto/calendar.dto';
+import { OccupancyService } from './occupancy.service';
+import {
+  CalendarEventDto,
+  CalendarRangeQueryDto,
+  CalendarResourceDto,
+  CheckConflictDto,
+  CheckConflictResultDto,
+} from './dto/calendar.dto';
 
 @ApiTags('calendar')
 @Controller('calendar')
 @TenantScoped()
 export class CalendarController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly occupancy: OccupancyService,
+  ) {}
 
   @Get('resources')
   @RequirePermissions(PERMISSION.CALENDAR_VIEW)
@@ -115,6 +125,34 @@ export class CalendarController {
         sourceId: o.sourceId,
       };
     });
+  }
+
+  /**
+   * Preview trùng lịch cho UX — ADR 0006: KHÔNG bảo vệ gì. Kết quả có thể cũ ngay khi vừa
+   * trả về; chốt chặn thật là exclusion constraint lúc tạo/sửa đơn. Chỉ để cảnh báo sớm.
+   */
+  @Post('check-conflict')
+  @RequirePermissions(PERMISSION.CALENDAR_VIEW)
+  @ApiOperation({ summary: 'Xem trước trùng lịch (preview, không phải lớp bảo vệ)' })
+  @ApiOkResponse({ type: CheckConflictResultDto })
+  async checkConflict(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() dto: CheckConflictDto,
+  ): Promise<CheckConflictResultDto> {
+    // Xe phải thuộc gian hàng — không cho dò lịch xe của shop khác qua vehicleId đoán được.
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: { id: dto.vehicleId, tenantId: tenant.tenantId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!vehicle) return { hasConflict: false, conflicts: [] };
+
+    const conflicts = await this.occupancy.findOverlapping(
+      dto.vehicleId,
+      dto.startAt,
+      dto.endAt,
+      dto.excludeSourceId,
+    );
+    return { hasConflict: conflicts.length > 0, conflicts };
   }
 }
 

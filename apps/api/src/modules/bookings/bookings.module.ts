@@ -1,12 +1,18 @@
 import { Module } from '@nestjs/common';
+import { CalendarModule } from '../calendar/calendar.module';
+import { BookingsController } from './bookings.controller';
+import { BookingsService } from './bookings.service';
 
 /**
- * Skeleton — Phase 4 implement đơn thuê và chuyển trạng thái.
+ * Đơn thuê (Phase 4).
  *
- * Ràng buộc khi implement:
- *  - Đổi trạng thái phải qua `canTransitionBooking()` của @xeprime/types.
- *  - Tạo/sửa/huỷ đơn phải gọi `OccupancyService` trong cùng transaction (ADR 0006).
- *  - Không tự kiểm tra trùng lịch bằng SELECT: để exclusion constraint từ chối.
+ * Ràng buộc (ADR 0006): tạo/sửa/huỷ đơn gọi `OccupancyService` (từ CalendarModule) trong CÙNG
+ * transaction; đổi trạng thái qua `canTransitionBooking()`; không tự SELECT check trùng —
+ * để exclusion constraint từ chối. AuditService là @Global nên không cần import.
  */
-@Module({})
+@Module({
+  imports: [CalendarModule],
+  controllers: [BookingsController],
+  providers: [BookingsService],
+})
 export class BookingsModule {}

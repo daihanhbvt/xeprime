@@ -37,6 +37,10 @@ export const queryKeys = {
   bookings: {
     all: ['bookings'] as const,
     list: (params: QueryParams) => ['bookings', 'list', params] as const,
+    detail: (id: string) => ['bookings', 'detail', id] as const,
+  },
+  dashboard: {
+    all: ['dashboard'] as const,
   },
   marketplace: {
     all: ['marketplace'] as const,

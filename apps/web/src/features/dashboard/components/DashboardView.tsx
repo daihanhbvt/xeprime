@@ -11,8 +11,12 @@ import {
   SwapOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
+import { ROUTES } from '@/constants/routes';
+import { dayjs } from '@/lib/datetime';
 import { useVehicleStats } from '../hooks/use-vehicle-stats';
+import { useDashboardBookings } from '../hooks/use-dashboard-bookings';
+import { BookingMiniList } from './BookingMiniList';
 import { DashboardPanel } from './DashboardPanel';
 import { StatCard } from './StatCard';
 import styles from './DashboardView.module.css';
@@ -24,7 +28,11 @@ function todayLabel(): string {
 }
 
 export function DashboardView() {
+  const router = useRouter();
   const { data: stats, isLoading } = useVehicleStats();
+  const { recent, dueToday, upcoming, activeCount, overdueCount } = useDashboardBookings();
+
+  const goBookings = () => router.push(ROUTES.MANAGE.BOOKINGS);
 
   return (
     <div className={styles.wrap}>
@@ -43,38 +51,46 @@ export function DashboardView() {
         />
         <StatCard
           label="Đang cho thuê"
-          value={stats ? `${stats.renting} xe` : '—'}
+          value={activeCount === undefined ? '—' : `${activeCount} xe`}
           icon={KeyOutlined}
           tone="blue"
-          loading={isLoading}
         />
         <StatCard label="Doanh thu" value="—" icon={DollarOutlined} tone="gold" />
         <StatCard
           label="Quá hạn trả"
-          value="—"
+          value={overdueCount === undefined ? '—' : `${overdueCount} đơn`}
           icon={ExclamationCircleOutlined}
           tone="red"
-          danger
+          danger={Boolean(overdueCount)}
         />
         <StatCard label="Tiền cọc đang giữ" value="—" icon={LockOutlined} tone="gold" />
       </div>
 
       <div className={styles.panels}>
-        <DashboardPanel
-          title="Đơn gần đây"
-          icon={<FileTextOutlined />}
-          empty="Chưa có đơn nào"
-        />
-        <DashboardPanel
-          title="Quá hạn / Trả hôm nay"
-          icon={<WarningOutlined />}
-          empty="Không có xe quá hạn 🎉"
-        />
-        <DashboardPanel
-          title="Trả xe trong 3 ngày tới"
-          icon={<ClockCircleOutlined />}
-          empty="Không có xe nào sắp trả 🎉"
-        />
+        <DashboardPanel title="Đơn gần đây" icon={<FileTextOutlined />}>
+          <BookingMiniList
+            items={recent.data?.items ?? []}
+            loading={recent.isLoading}
+            empty="Chưa có đơn nào"
+            onSelect={goBookings}
+          />
+        </DashboardPanel>
+        <DashboardPanel title="Quá hạn / Trả hôm nay" icon={<WarningOutlined />}>
+          <BookingMiniList
+            items={dueToday.data?.items ?? []}
+            loading={dueToday.isLoading}
+            empty="Không có xe quá hạn 🎉"
+            onSelect={goBookings}
+          />
+        </DashboardPanel>
+        <DashboardPanel title="Trả xe trong 3 ngày tới" icon={<ClockCircleOutlined />}>
+          <BookingMiniList
+            items={upcoming.data?.items ?? []}
+            loading={upcoming.isLoading}
+            empty="Không có xe nào sắp trả 🎉"
+            onSelect={goBookings}
+          />
+        </DashboardPanel>
         <DashboardPanel
           title="Thu Chi hôm nay"
           icon={<SwapOutlined />}

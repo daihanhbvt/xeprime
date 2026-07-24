@@ -281,6 +281,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/calendar/check-conflict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Xem trước trùng lịch (preview, không phải lớp bảo vệ) */
+        post: operations["CalendarController_checkConflict"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/listings": {
         parameters: {
             query?: never;
@@ -333,6 +350,59 @@ export interface paths {
         head?: never;
         /** Sửa thông tin xe */
         patch: operations["VehiclesController_update"];
+        trace?: never;
+    };
+    "/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách đơn thuê (phân trang, filter, sort) */
+        get: operations["BookingsController_list"];
+        put?: never;
+        /** Tạo đơn thuê (giữ chỗ lịch, chặn trùng bằng constraint DB) */
+        post: operations["BookingsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chi tiết một đơn thuê */
+        get: operations["BookingsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Sửa đơn (đổi khung giờ sẽ reschedule lịch) */
+        patch: operations["BookingsController_update"];
+        trace?: never;
+    };
+    "/bookings/{id}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Chuyển trạng thái đơn (validate canTransitionBooking) */
+        post: operations["BookingsController_transition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/platform/approvals": {
@@ -612,6 +682,32 @@ export interface components {
             status?: Record<string, never> | null;
             sourceId?: Record<string, never> | null;
         };
+        CheckConflictDto: {
+            /** @description ID xe (ULID) */
+            vehicleId: string;
+            /**
+             * Format: date-time
+             * @description Nhận xe, ISO-8601 UTC
+             */
+            startAt: string;
+            /**
+             * Format: date-time
+             * @description Trả xe, ISO-8601 UTC
+             */
+            endAt: string;
+            /** @description Bỏ qua nguồn này (khi sửa chính đơn đang xét) */
+            excludeSourceId?: string;
+        };
+        ConflictItemDto: {
+            id: string;
+            sourceType: string;
+            sourceId: string;
+        };
+        CheckConflictResultDto: {
+            /** @description Có trùng lịch hay không */
+            hasConflict: boolean;
+            conflicts: components["schemas"]["ConflictItemDto"][];
+        };
         PublicListingDto: {
             id: string;
             name: string;
@@ -795,6 +891,127 @@ export interface components {
              * @example 750000
              */
             weekendPrice?: string;
+        };
+        BookingListItemDto: {
+            id: string;
+            code: string;
+            vehicleId: string;
+            vehicleName: string;
+            vehiclePlate?: string | null;
+            customerName: string;
+            customerPhone?: string | null;
+            /** @enum {string} */
+            status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+            /** @enum {string} */
+            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @description ISO-8601 UTC */
+            pickupAt: string;
+            /** @description ISO-8601 UTC */
+            returnAt: string;
+            /** @description Tiền dạng string — ADR 0007 */
+            totalAmount: string;
+            paidAmount: string;
+            depositAmount: string;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        BookingPageDto: {
+            data: components["schemas"]["BookingListItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        BookingDetailDto: {
+            id: string;
+            code: string;
+            vehicleId: string;
+            vehicleName: string;
+            vehiclePlate?: string | null;
+            customerName: string;
+            customerPhone?: string | null;
+            /** @enum {string} */
+            status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+            /** @enum {string} */
+            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @description ISO-8601 UTC */
+            pickupAt: string;
+            /** @description ISO-8601 UTC */
+            returnAt: string;
+            /** @description Tiền dạng string — ADR 0007 */
+            totalAmount: string;
+            paidAmount: string;
+            depositAmount: string;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+            baseAmount: string;
+            deliveryFee: string;
+            discountAmount: string;
+            actualPickupAt?: string | null;
+            actualReturnAt?: string | null;
+            note?: string | null;
+            /** @description ISO-8601 UTC */
+            updatedAt: string;
+        };
+        CreateBookingDto: {
+            /** @description ID xe (ULID) */
+            vehicleId: string;
+            /** @example Nguyễn Văn A */
+            customerName: string;
+            /** @example 0901234567 */
+            customerPhone?: string;
+            /**
+             * @default self_drive
+             * @enum {string}
+             */
+            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @description Nhận xe (ISO-8601) */
+            pickupAt: string;
+            /** @description Trả xe (ISO-8601), phải sau nhận xe */
+            returnAt: string;
+            /**
+             * @description Tiền thuê gốc, string thập phân — ADR 0007
+             * @example 600000
+             */
+            baseAmount?: string;
+            /** @example 0 */
+            deliveryFee?: string;
+            /** @example 0 */
+            discountAmount?: string;
+            /** @example 0 */
+            depositAmount?: string;
+            note?: string;
+        };
+        UpdateBookingDto: {
+            /** @example Nguyễn Văn A */
+            customerName?: string;
+            /** @example 0901234567 */
+            customerPhone?: string;
+            /** @enum {string} */
+            serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @description Nhận xe (ISO-8601) */
+            pickupAt?: string;
+            /** @description Trả xe (ISO-8601) */
+            returnAt?: string;
+            /** @example 600000 */
+            baseAmount?: string;
+            /** @example 0 */
+            deliveryFee?: string;
+            /** @example 0 */
+            discountAmount?: string;
+            /** @example 0 */
+            depositAmount?: string;
+            /** @example 0 */
+            paidAmount?: string;
+            note?: string;
+        };
+        TransitionBookingDto: {
+            /**
+             * @description Trạng thái đích
+             * @enum {string}
+             */
+            status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+            /** @description Thời điểm nhận xe thực tế (khi → active) */
+            actualPickupAt?: string;
+            /** @description Thời điểm trả xe thực tế (khi → completed) */
+            actualReturnAt?: string;
         };
         ApprovalTaskListItemDto: {
             id: string;
@@ -1364,6 +1581,29 @@ export interface operations {
             };
         };
     };
+    CalendarController_checkConflict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckConflictDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckConflictResultDto"];
+                };
+            };
+        };
+    };
     PublicListingsController_search: {
         parameters: {
             query?: {
@@ -1513,6 +1753,132 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VehicleDetailDto"];
+                };
+            };
+        };
+    };
+    BookingsController_list: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo tên khách/SĐT/mã đơn */
+                q?: string;
+                status?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+                /** @description Lọc theo xe */
+                vehicleId?: string;
+                /** @description Trả xe từ (ISO) — lọc cho panel quá hạn/sắp trả */
+                returnFrom?: string;
+                /** @description Trả xe đến (ISO) */
+                returnTo?: string;
+                sort?: "newest" | "pickup_asc" | "pickup_desc" | "return_asc";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingPageDto"];
+                };
+            };
+        };
+    };
+    BookingsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBookingDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetailDto"];
+                };
+            };
+        };
+    };
+    BookingsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetailDto"];
+                };
+            };
+        };
+    };
+    BookingsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBookingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetailDto"];
+                };
+            };
+        };
+    };
+    BookingsController_transition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionBookingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetailDto"];
                 };
             };
         };

@@ -1,0 +1,375 @@
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { newId, Prisma } from '@xeprime/prisma';
+import {
+  API_ERROR_CODE,
+  BOOKING_STATUS,
+  OCCUPANCY_SOURCE_TYPE,
+  canTransitionBooking,
+  occupiesSchedule,
+  type BookingStatus,
+  type PaginationMeta,
+} from '@xeprime/types';
+import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { OccupancyService } from '../calendar/occupancy.service';
+import {
+  BOOKING_DEFAULT_LIMIT,
+  BOOKING_MAX_LIMIT,
+  BookingDetailDto,
+  BookingListItemDto,
+  BookingListQueryDto,
+  CreateBookingDto,
+  TransitionBookingDto,
+  UpdateBookingDto,
+} from './dto/booking.dto';
+
+const LIST_SELECT = {
+  id: true,
+  code: true,
+  vehicleId: true,
+  customerName: true,
+  customerPhone: true,
+  status: true,
+  serviceType: true,
+  pickupAt: true,
+  returnAt: true,
+  totalAmount: true,
+  paidAmount: true,
+  depositAmount: true,
+  createdAt: true,
+  vehicle: { select: { name: true, plateNumber: true } },
+} satisfies Prisma.BookingSelect;
+
+const DETAIL_SELECT = {
+  ...LIST_SELECT,
+  baseAmount: true,
+  deliveryFee: true,
+  discountAmount: true,
+  actualPickupAt: true,
+  actualReturnAt: true,
+  note: true,
+  updatedAt: true,
+} satisfies Prisma.BookingSelect;
+
+@Injectable()
+export class BookingsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly occupancy: OccupancyService,
+    private readonly audit: AuditService,
+  ) {}
+
+  async list(
+    tenantId: string,
+    query: BookingListQueryDto,
+  ): Promise<{ data: BookingListItemDto[]; meta: PaginationMeta }> {
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(BOOKING_MAX_LIMIT, Math.max(1, query.limit ?? BOOKING_DEFAULT_LIMIT));
+
+    const where: Prisma.BookingWhereInput = {
+      tenantId,
+      deletedAt: null,
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
+      ...(query.returnFrom || query.returnTo
+        ? {
+            returnAt: {
+              ...(query.returnFrom ? { gte: new Date(query.returnFrom) } : {}),
+              ...(query.returnTo ? { lte: new Date(query.returnTo) } : {}),
+            },
+          }
+        : {}),
+      ...(query.q ? { OR: searchOr(query.q) } : {}),
+    };
+
+    // Đếm và lấy trang trong một transaction: total khớp data cùng thời điểm.
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.booking.count({ where }),
+      this.prisma.booking.findMany({
+        where,
+        orderBy: orderByOf(query.sort),
+        skip: (page - 1) * limit,
+        take: limit,
+        select: LIST_SELECT,
+      }),
+    ]);
+
+    return {
+      data: rows.map(toListItem),
+      meta: { page, limit, total, hasNext: page * limit < total },
+    };
+  }
+
+  async getOne(tenantId: string, id: string): Promise<BookingDetailDto> {
+    const row = await this.prisma.booking.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: DETAIL_SELECT,
+    });
+    if (!row) throw notFound();
+    return toDetail(row);
+  }
+
+  /**
+   * Tạo đơn + giữ chỗ lịch trong CÙNG transaction (ADR 0006). Không SELECT check trùng —
+   * exclusion constraint ném `23P01`, `AllExceptionsFilter` dịch thành BOOKING_SCHEDULE_CONFLICT.
+   */
+  async create(tenantId: string, userId: string, dto: CreateBookingDto): Promise<BookingDetailDto> {
+    const pickupAt = new Date(dto.pickupAt);
+    const returnAt = new Date(dto.returnAt);
+    assertRange(pickupAt, returnAt);
+
+    const base = money(dto.baseAmount);
+    const delivery = money(dto.deliveryFee);
+    const discount = money(dto.discountAmount);
+    const total = base.plus(delivery).minus(discount);
+
+    const id = newId();
+    const code = `DH${id.slice(-6).toUpperCase()}`;
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.booking.create({
+        data: {
+          id,
+          tenantId,
+          vehicleId: dto.vehicleId,
+          code,
+          customerName: dto.customerName,
+          customerPhone: dto.customerPhone ?? null,
+          status: BOOKING_STATUS.RESERVED,
+          serviceType: dto.serviceType ?? undefined,
+          pickupAt,
+          returnAt,
+          baseAmount: base,
+          deliveryFee: delivery,
+          discountAmount: discount,
+          depositAmount: money(dto.depositAmount),
+          totalAmount: total,
+          note: dto.note ?? null,
+          createdBy: userId,
+        },
+        select: DETAIL_SELECT,
+      });
+
+      await this.occupancy.reserve(tx, {
+        tenantId,
+        vehicleId: dto.vehicleId,
+        sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING,
+        sourceId: id,
+        startAt: pickupAt,
+        endAt: returnAt,
+      });
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'booking.create',
+          targetType: 'booking',
+          targetId: id,
+          after: { code, vehicleId: dto.vehicleId, pickupAt, returnAt },
+        },
+        tx,
+      );
+
+      return created;
+    });
+
+    return toDetail(row);
+  }
+
+  /**
+   * Sửa đơn. Đổi khung giờ thì reschedule lịch (chỉ khi đơn còn chiếm lịch); constraint vẫn
+   * là chốt chặn nếu khung mới trùng đơn khác.
+   */
+  async update(tenantId: string, id: string, dto: UpdateBookingDto): Promise<BookingDetailDto> {
+    const current = await this.prisma.booking.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true, status: true, pickupAt: true, returnAt: true, baseAmount: true, deliveryFee: true, discountAmount: true },
+    });
+    if (!current) throw notFound();
+
+    const pickupAt = dto.pickupAt ? new Date(dto.pickupAt) : current.pickupAt;
+    const returnAt = dto.returnAt ? new Date(dto.returnAt) : current.returnAt;
+    if (dto.pickupAt || dto.returnAt) assertRange(pickupAt, returnAt);
+
+    // Tính lại total nếu bất kỳ khoản cấu thành đổi.
+    const base = dto.baseAmount !== undefined ? money(dto.baseAmount) : current.baseAmount;
+    const delivery = dto.deliveryFee !== undefined ? money(dto.deliveryFee) : current.deliveryFee;
+    const discount = dto.discountAmount !== undefined ? money(dto.discountAmount) : current.discountAmount;
+    const total = new Prisma.Decimal(base).plus(delivery).minus(discount);
+
+    const rescheduled = Boolean(dto.pickupAt || dto.returnAt) && occupiesSchedule(current.status as BookingStatus);
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.booking.update({
+        where: { id: current.id },
+        data: {
+          ...(dto.customerName !== undefined ? { customerName: dto.customerName } : {}),
+          ...(dto.customerPhone !== undefined ? { customerPhone: dto.customerPhone } : {}),
+          ...(dto.serviceType !== undefined ? { serviceType: dto.serviceType } : {}),
+          ...(dto.pickupAt ? { pickupAt } : {}),
+          ...(dto.returnAt ? { returnAt } : {}),
+          ...(dto.baseAmount !== undefined ? { baseAmount: base } : {}),
+          ...(dto.deliveryFee !== undefined ? { deliveryFee: delivery } : {}),
+          ...(dto.discountAmount !== undefined ? { discountAmount: discount } : {}),
+          ...(dto.depositAmount !== undefined ? { depositAmount: money(dto.depositAmount) } : {}),
+          ...(dto.paidAmount !== undefined ? { paidAmount: money(dto.paidAmount) } : {}),
+          ...(dto.baseAmount !== undefined || dto.deliveryFee !== undefined || dto.discountAmount !== undefined
+            ? { totalAmount: total }
+            : {}),
+          ...(dto.note !== undefined ? { note: dto.note } : {}),
+        },
+        select: DETAIL_SELECT,
+      });
+
+      if (rescheduled) {
+        await this.occupancy.reschedule(tx, OCCUPANCY_SOURCE_TYPE.BOOKING, id, pickupAt, returnAt);
+      }
+
+      return updated;
+    });
+
+    return toDetail(row);
+  }
+
+  /**
+   * Chuyển trạng thái đơn. Hợp lệ hoá bằng `canTransitionBooking` (không tin client). Khi đơn
+   * rời tập trạng thái "chiếm lịch" (huỷ/không đến/hoàn thành) thì nhả lịch qua OccupancyService.
+   */
+  async transition(
+    tenantId: string,
+    id: string,
+    userId: string,
+    dto: TransitionBookingDto,
+  ): Promise<BookingDetailDto> {
+    const current = await this.prisma.booking.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true, status: true },
+    });
+    if (!current) throw notFound();
+
+    const from = current.status as BookingStatus;
+    const to = dto.status as BookingStatus;
+    if (from === to || !canTransitionBooking(from, to)) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+        message: `Không thể chuyển đơn từ "${from}" sang "${to}"`,
+      });
+    }
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.booking.update({
+        where: { id: current.id },
+        data: {
+          status: to,
+          ...(to === BOOKING_STATUS.ACTIVE
+            ? { actualPickupAt: dto.actualPickupAt ? new Date(dto.actualPickupAt) : new Date() }
+            : {}),
+          ...(to === BOOKING_STATUS.COMPLETED
+            ? { actualReturnAt: dto.actualReturnAt ? new Date(dto.actualReturnAt) : new Date() }
+            : {}),
+        },
+        select: DETAIL_SELECT,
+      });
+
+      // Trạng thái đích không còn chiếm lịch → nhả occupancy để xe trống cho đơn khác.
+      if (!occupiesSchedule(to)) {
+        await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BOOKING, id);
+      }
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'booking.transition',
+          targetType: 'booking',
+          targetId: id,
+          before: { status: from },
+          after: { status: to },
+        },
+        tx,
+      );
+
+      return updated;
+    });
+
+    return toDetail(row);
+  }
+}
+
+function money(v: string | undefined): Prisma.Decimal {
+  return new Prisma.Decimal(v ?? '0');
+}
+
+function assertRange(pickupAt: Date, returnAt: Date): void {
+  if (!(returnAt.getTime() > pickupAt.getTime())) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Thời điểm trả xe phải sau thời điểm nhận xe',
+    });
+  }
+}
+
+function searchOr(q: string): Prisma.BookingWhereInput[] {
+  const contains = { contains: q, mode: 'insensitive' } as const;
+  return [{ customerName: contains }, { code: contains }, { customerPhone: contains }];
+}
+
+function orderByOf(sort: BookingListQueryDto['sort']): Prisma.BookingOrderByWithRelationInput {
+  switch (sort) {
+    case 'pickup_asc':
+      return { pickupAt: 'asc' };
+    case 'pickup_desc':
+      return { pickupAt: 'desc' };
+    case 'return_asc':
+      return { returnAt: 'asc' };
+    default:
+      return { createdAt: 'desc' };
+  }
+}
+
+/** Decimal → string do ResponseInterceptor lo (ADR 0007); ở đây giữ nguyên kiểu. */
+type BookingListRow = Prisma.BookingGetPayload<{ select: typeof LIST_SELECT }>;
+type BookingDetailRow = Prisma.BookingGetPayload<{ select: typeof DETAIL_SELECT }>;
+
+function toListItem(b: BookingListRow): BookingListItemDto {
+  return {
+    id: b.id,
+    code: b.code,
+    vehicleId: b.vehicleId,
+    vehicleName: b.vehicle.name,
+    vehiclePlate: b.vehicle.plateNumber,
+    customerName: b.customerName,
+    customerPhone: b.customerPhone,
+    status: b.status,
+    serviceType: b.serviceType,
+    pickupAt: b.pickupAt as unknown as string,
+    returnAt: b.returnAt as unknown as string,
+    totalAmount: b.totalAmount as unknown as string,
+    paidAmount: b.paidAmount as unknown as string,
+    depositAmount: b.depositAmount as unknown as string,
+    createdAt: b.createdAt as unknown as string,
+  };
+}
+
+function toDetail(b: BookingDetailRow): BookingDetailDto {
+  return {
+    ...toListItem(b),
+    baseAmount: b.baseAmount as unknown as string,
+    deliveryFee: b.deliveryFee as unknown as string,
+    discountAmount: b.discountAmount as unknown as string,
+    actualPickupAt: b.actualPickupAt as unknown as string | null,
+    actualReturnAt: b.actualReturnAt as unknown as string | null,
+    note: b.note,
+    updatedAt: b.updatedAt as unknown as string,
+  };
+}
+
+function notFound(): NotFoundException {
+  return new NotFoundException({
+    code: API_ERROR_CODE.NOT_FOUND,
+    message: 'Không tìm thấy đơn thuê',
+  });
+}
