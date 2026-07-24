@@ -1,0 +1,44 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 12px;
+  box-shadow: var(--xp-shadow-sm);
+  min-height: 128px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+.headIcon {
+  color: var(--xp-gold-deep);
+  font-size: 15px;
+  display: inline-flex;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--xp-color-text);
+}
+
+.body {
+  flex: 1;
+  padding: 14px 16px;
+}
+
+.empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 80px;
+  color: var(--xp-color-text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}

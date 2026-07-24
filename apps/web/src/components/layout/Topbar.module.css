@@ -1,29 +1,76 @@
 .header {
+  position: sticky;
+  top: 0;
+  z-index: var(--xp-z-topbar);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-md);
+  height: var(--xp-shell-topbar-height);
   padding: 0 var(--xp-space-lg);
   background: var(--xp-color-bg-container);
   border-bottom: 1px solid var(--xp-color-border);
-  line-height: normal;
 }
 
-.scope {
+.left,
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
   min-width: 0;
-  overflow: hidden;
 }
 
-.user {
+/* Hamburger chỉ hiện trên mobile (desktop đã có sidebar cố định). */
+.hamburger {
+  display: none;
+}
+
+/* Nút chọn chi nhánh — viền bo tròn, nền trắng. */
+.branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 999px;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-weight: 600;
+  font-size: 13.5px;
   cursor: pointer;
+  transition: border-color 0.15s;
 }
 
-@media (max-width: 768px) {
+.branch:hover {
+  border-color: var(--xp-color-primary);
+}
+
+.branchCaret {
+  font-size: 11px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.avatar {
+  cursor: pointer;
+  background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
+  color: #fff;
+  font-weight: 700;
+}
+
+@media (max-width: 992px) {
   .header {
     padding: 0 var(--xp-space-sm);
   }
 
-  .userName {
-    display: none;
+  .hamburger {
+    display: inline-flex;
+  }
+
+  .branchLabel {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

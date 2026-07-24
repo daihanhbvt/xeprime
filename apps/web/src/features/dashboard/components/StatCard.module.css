@@ -1,0 +1,68 @@
+.card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 12px;
+  box-shadow: var(--xp-shadow-sm);
+}
+
+.iconTile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.icon {
+  font-size: 18px;
+}
+
+.body {
+  min-width: 0;
+}
+
+.label {
+  font-size: 12.5px;
+  color: var(--xp-color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.value {
+  margin-top: 1px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+  line-height: 1.25;
+}
+
+.danger {
+  color: var(--xp-color-error);
+}
+
+/* Ô icon pastel theo tông. */
+.green {
+  background: #e7f6ec;
+  color: var(--xp-color-success);
+}
+
+.blue {
+  background: #e6effd;
+  color: var(--xp-color-info);
+}
+
+.gold {
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+}
+
+.red {
+  background: #fdeaea;
+  color: var(--xp-color-error);
+}

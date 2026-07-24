@@ -255,6 +255,36 @@ export function navForScope(isPlatform: boolean): readonly NavNode[] {
   return isPlatform ? PLATFORM_NAV : SHOP_NAV;
 }
 
+/** Tab trên thanh điều hướng dưới đáy (mobile). Tab "Thêm" mở Drawer, thêm ở component. */
+export interface MobileTab {
+  readonly key: string;
+  readonly label: string;
+  readonly href: string;
+  readonly icon: ComponentType<{ className?: string }>;
+}
+
+const SHOP_MOBILE_TABS: readonly MobileTab[] = [
+  { key: 'dashboard', label: 'Tổng quan', href: ROUTES.MANAGE.ROOT, icon: DashboardOutlined },
+  { key: 'calendar', label: 'Lịch xe', href: ROUTES.MANAGE.CALENDAR, icon: CalendarOutlined },
+  {
+    key: 'booking-requests',
+    label: 'Đơn đặt xe',
+    href: ROUTES.MANAGE.BOOKING_REQUESTS,
+    icon: ScheduleOutlined,
+  },
+  { key: 'bookings', label: 'Đơn thuê', href: ROUTES.MANAGE.BOOKINGS, icon: FileTextOutlined },
+];
+
+const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
+  { key: 'dashboard', label: 'Tổng quan', href: ROUTES.MANAGE.ROOT, icon: DashboardOutlined },
+  { key: 'approvals', label: 'Duyệt shop', href: ROUTES.MANAGE.ADMIN, icon: AuditOutlined },
+];
+
+/** 4 tab chính của bottom nav theo scope (tab "Thêm" do MobileNav tự thêm). */
+export function mobileTabsForScope(isPlatform: boolean): readonly MobileTab[] {
+  return isPlatform ? PLATFORM_MOBILE_TABS : SHOP_MOBILE_TABS;
+}
+
 /** Trải phẳng mọi mục lá của một cây menu. */
 export function flattenLeaves(nodes: readonly NavNode[]): NavLeaf[] {
   return nodes.flatMap((node) => (isNavGroup(node) ? [...node.children] : [node]));

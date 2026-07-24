@@ -24,7 +24,7 @@ export const XP_TOKENS = {
   'color-text-tertiary': '#9a8d74',
   'color-border': '#ebddbf',
   'color-border-secondary': '#f4ecd9',
-  'color-bg-layout': '#fbf1dc', // kem — nền trang
+  'color-bg-layout': '#f6f5f1', // trắng ấm nhẹ — nền trang (bám reference, không vàng đậm)
   'color-bg-container': '#ffffff',
   'color-bg-elevated': '#ffffff',
   'color-bg-hover': 'rgba(120, 90, 20, 0.05)',
@@ -73,7 +73,8 @@ export const XP_TOKENS = {
 
   // --- Dẫn xuất: dùng trong CSS Modules, KHÔNG feed vào antdTheme ---
   'gold-deep': '#a9761a',
-  'gold-soft': '#f1dba4',
+  'gold-soft': '#f1dba4', // gold nhạt cho scrollbar (đủ đậm để thấy)
+  'gold-wash': '#f7f1de', // cream rất nhạt cho active menu / ô icon gold
   'color-bg-sand': '#f5ead2',
   'shadow-sm': '0 1px 2px rgba(120, 88, 20, 0.06), 0 1px 3px rgba(120, 88, 20, 0.08)',
   'shadow-md': '0 6px 16px -6px rgba(120, 88, 20, 0.18), 0 2px 6px rgba(120, 88, 20, 0.1)',

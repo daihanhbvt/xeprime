@@ -1,0 +1,57 @@
+.bar {
+  display: none;
+}
+
+.drawer :global(.ant-drawer-body) {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawerMenu {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+@media (max-width: 992px) {
+  .bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: var(--xp-z-topbar);
+    display: flex;
+    align-items: stretch;
+    background: var(--xp-color-bg-container);
+    border-top: 1px solid var(--xp-color-border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -2px 10px rgba(120, 88, 20, 0.06);
+  }
+
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 0;
+    border: none;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--xp-color-text-tertiary);
+    cursor: pointer;
+  }
+
+  .icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .active {
+    color: var(--xp-gold-deep);
+  }
+}

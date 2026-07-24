@@ -1,12 +1,19 @@
 'use client';
 
-import { Avatar, Dropdown, Layout, Space, Tag, Typography } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
+import {
+  BellOutlined,
+  DownOutlined,
+  MenuOutlined,
+  MessageOutlined,
+  ShopOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { Avatar, Badge, Button, Dropdown } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { TENANT_STATUS_META, type TenantStatus } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
-import { StatusTag } from '@/components/data-display/StatusTag';
+import { useAppDispatch } from '@/store/hooks';
+import { setMobileNavOpen } from '@/store/slices/app.slice';
 import { destroySession } from '@/services/auth.service';
 import type { CurrentUser } from '@/hooks/use-current-user';
 import styles from './Topbar.module.css';
@@ -14,41 +21,60 @@ import styles from './Topbar.module.css';
 export function Topbar({ user }: { user: CurrentUser }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const dispatch = useAppDispatch();
 
   const handleLogout = async () => {
     await destroySession();
-    // Xoá sạch cache: dữ liệu của người vừa đăng xuất không được hiện lại cho người
-    // đăng nhập sau trên cùng máy.
+    // Xoá cache: dữ liệu người vừa thoát không hiện lại cho người đăng nhập kế trên cùng máy.
     queryClient.clear();
     router.replace(ROUTES.LOGIN);
   };
 
-  return (
-    <Layout.Header className={styles.header}>
-      <Space size="small" className={styles.scope}>
-        {user.tenant ? (
-          <>
-            <Typography.Text strong>{user.tenant.name}</Typography.Text>
-            <StatusTag value={user.tenant.status as TenantStatus} meta={TENANT_STATUS_META} />
-          </>
-        ) : null}
-        {user.platformRole ? <Tag color="magenta">Nền tảng</Tag> : null}
-      </Space>
+  const initial = (user.displayName || user.email || '?').trim().charAt(0).toUpperCase();
 
-      <Dropdown
-        menu={{
-          items: [
-            { key: 'name', label: user.displayName, disabled: true },
-            { type: 'divider' },
-            { key: 'logout', label: 'Đăng xuất', onClick: () => void handleLogout() },
-          ],
-        }}
-      >
-        <Space className={styles.user}>
-          <Avatar size="small" src={user.avatarUrl ?? undefined} icon={<UserOutlined />} />
-          <span className={styles.userName}>{user.displayName}</span>
-        </Space>
-      </Dropdown>
-    </Layout.Header>
+  return (
+    <header className={styles.header}>
+      <div className={styles.left}>
+        <Button
+          type="text"
+          className={styles.hamburger}
+          icon={<MenuOutlined />}
+          aria-label="Mở menu"
+          onClick={() => dispatch(setMobileNavOpen(true))}
+        />
+        {/* Chọn chi nhánh — hiện là placeholder, đa chi nhánh mở ở phase sau. */}
+        <Dropdown
+          trigger={['click']}
+          menu={{ items: [{ key: 'all', label: 'Tất cả chi nhánh' }], selectable: true, selectedKeys: ['all'] }}
+        >
+          <button type="button" className={styles.branch}>
+            <ShopOutlined />
+            <span className={styles.branchLabel}>Tất cả chi nhánh</span>
+            <DownOutlined className={styles.branchCaret} />
+          </button>
+        </Dropdown>
+      </div>
+
+      <div className={styles.right}>
+        <Button type="text" shape="circle" icon={<MessageOutlined />} aria-label="Trò chuyện" />
+        <Badge dot={false}>
+          <Button type="text" shape="circle" icon={<BellOutlined />} aria-label="Thông báo" />
+        </Badge>
+        <Dropdown
+          trigger={['click']}
+          menu={{
+            items: [
+              { key: 'name', label: user.displayName, disabled: true },
+              { type: 'divider' },
+              { key: 'logout', label: 'Đăng xuất', onClick: () => void handleLogout() },
+            ],
+          }}
+        >
+          <Avatar className={styles.avatar} src={user.avatarUrl ?? undefined} icon={<UserOutlined />}>
+            {user.avatarUrl ? null : initial}
+          </Avatar>
+        </Dropdown>
+      </div>
+    </header>
   );
 }

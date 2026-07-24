@@ -68,6 +68,38 @@ textarea {
   outline-offset: 2px;
 }
 
+/* --- Thanh cuộn chung: mảnh, bo tròn, vàng nhẹ (dùng cho mọi vùng scroll) --- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--xp-gold-soft) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--xp-gold-soft);
+  border-radius: 999px;
+  /* Viền trong suốt tạo khoảng đệm → thanh trông mảnh ~4px, gọn. */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #e6cf8f;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

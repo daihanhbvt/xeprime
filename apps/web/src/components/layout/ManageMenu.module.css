@@ -1,0 +1,43 @@
+.wrap :global(.ant-menu) {
+  border-inline-end: none;
+  background: transparent;
+}
+
+/* Nhãn nhóm: chữ nhỏ, in hoa, thưa — như "TỔNG QUAN / QUẢN LÝ / CÀI ĐẶT" bản cũ. */
+.wrap :global(.ant-menu-item-group-title) {
+  padding: 10px 10px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--xp-color-text-tertiary);
+}
+
+.wrap :global(.ant-menu-item) {
+  height: 36px;
+  line-height: 36px;
+  margin-block: 1px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--xp-color-text-secondary);
+}
+
+.wrap :global(.ant-menu-item .anticon) {
+  font-size: 16px;
+}
+
+.wrap :global(.ant-menu-item:hover) {
+  color: var(--xp-color-text);
+  background: var(--xp-color-bg-hover);
+}
+
+/* Mục đang chọn: nền cream rất nhạt, chữ + icon gold đậm — giống highlight "Dashboard". */
+.wrap :global(.ant-menu-item-selected) {
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+  font-weight: 600;
+}
+
+.wrap :global(.ant-menu-item-selected a) {
+  color: var(--xp-gold-deep);
+}

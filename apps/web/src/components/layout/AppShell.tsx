@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Layout, Result, Spin } from 'antd';
+import { Button, Result, Spin } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
@@ -12,6 +12,7 @@ import { ShopRegistration } from '@/features/shop/components/ShopRegistration';
 import { destroySession } from '@/services/auth.service';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
+import { MobileNav } from './MobileNav';
 import styles from './AppShell.module.css';
 
 /**
@@ -88,11 +89,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <Layout className={styles.shell}>
+    <div className={styles.shell}>
       <Sidebar />
-      <Layout>
+      <div className={styles.main}>
         <Topbar user={user} />
-        <Layout.Content className={styles.content}>
+        <main className={styles.content}>
           {isPendingApproval && tenant ? (
             <Result
               status="warning"
@@ -102,8 +103,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             />
           ) : null}
           {children}
-        </Layout.Content>
-      </Layout>
-    </Layout>
+        </main>
+        <MobileNav />
+      </div>
+    </div>
   );
 }
