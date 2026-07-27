@@ -127,6 +127,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách thông báo của tôi (phân trang, lọc chưa đọc) */
+        get: operations["NotificationController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Số thông báo chưa đọc (cho badge chuông) */
+        get: operations["NotificationController_unreadCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Đánh dấu một thông báo đã đọc */
+        patch: operations["NotificationController_markRead"];
+        trace?: never;
+    };
+    "/notifications/mark-all-read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Đánh dấu tất cả đã đọc */
+        post: operations["NotificationController_markAllRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -543,6 +611,57 @@ export interface paths {
         patch: operations["MembersController_updateRole"];
         trace?: never;
     };
+    "/reviews/my-trips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Các chuyến của tôi + trạng thái đánh giá (màn "Đơn thuê của tôi") */
+        get: operations["ReviewController_myTrips"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Đánh giá một chuyến thuê đã hoàn thành */
+        post: operations["ReviewController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/listings/{id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Đánh giá công khai của một xe (phân trang) */
+        get: operations["PublicReviewController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/approvals": {
         parameters: {
             query?: never;
@@ -689,6 +808,47 @@ export interface components {
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
             permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage")[];
+        };
+        NotificationDto: {
+            id: string;
+            /** @enum {string} */
+            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "shop_approved" | "shop_rejected" | "review_received";
+            title: string;
+            body?: string | null;
+            /** @description Loại đối tượng để dựng link */
+            targetType?: string | null;
+            targetId?: string | null;
+            /** @description ISO-8601 UTC; null = chưa đọc */
+            readAt?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        PaginationMetaDto: {
+            /** @example 1 */
+            page: number;
+            /** @example 20 */
+            limit: number;
+            /** @example 137 */
+            total: number;
+            /** @example true */
+            hasNext: boolean;
+        };
+        NotificationPageDto: {
+            data: components["schemas"]["NotificationDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        NotificationUnreadCountDto: {
+            /** @example 3 */
+            count: number;
+        };
+        NotificationReadResultDto: {
+            id: string;
+            /** @description ISO-8601 UTC */
+            readAt: string;
+        };
+        NotificationMarkAllResultDto: {
+            /** @description Số thông báo vừa được đánh dấu đã đọc */
+            updated: number;
         };
         UserProfileDto: {
             id: string;
@@ -930,16 +1090,6 @@ export interface components {
             weekendPrice?: string | null;
             /** @description ISO-8601 UTC */
             updatedAt: string;
-        };
-        PaginationMetaDto: {
-            /** @example 1 */
-            page: number;
-            /** @example 20 */
-            limit: number;
-            /** @example 137 */
-            total: number;
-            /** @example true */
-            hasNext: boolean;
         };
         VehiclePageDto: {
             data: components["schemas"]["VehicleListItemDto"][];
@@ -1262,6 +1412,63 @@ export interface components {
             /** @enum {string} */
             roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
         };
+        TripReviewDto: {
+            id: string;
+            rating: number;
+            comment?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        MyTripDto: {
+            bookingId: string;
+            code: string;
+            vehicleId: string;
+            vehicleName: string;
+            shopName: string;
+            /** @enum {string} */
+            status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+            /** @description ISO-8601 UTC */
+            pickupAt: string;
+            /** @description ISO-8601 UTC */
+            returnAt: string;
+            /** @description Đủ điều kiện đánh giá (đã hoàn thành + chưa đánh giá) */
+            canReview: boolean;
+            review?: components["schemas"]["TripReviewDto"] | null;
+        };
+        MyTripPageDto: {
+            data: components["schemas"]["MyTripDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        CreateReviewDto: {
+            /** @description ID đơn thuê đã COMPLETED của khách */
+            bookingId: string;
+            /** @example 5 */
+            rating: number;
+            comment?: string;
+        };
+        ReviewSummaryDto: {
+            /**
+             * @description Điểm trung bình (0 nếu chưa có)
+             * @example 4.6
+             */
+            ratingAvg: number;
+            /** @example 12 */
+            ratingCount: number;
+        };
+        ReviewDto: {
+            id: string;
+            rating: number;
+            comment?: string | null;
+            /** @description Tên khách (đã rút gọn) */
+            customerName: string;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        ReviewPageDto: {
+            summary: components["schemas"]["ReviewSummaryDto"];
+            data: components["schemas"]["ReviewDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
         ApprovalTaskListItemDto: {
             id: string;
             tenantId?: string | null;
@@ -1509,6 +1716,89 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyPermissionsDto"];
+                };
+            };
+        };
+    };
+    NotificationController_list: {
+        parameters: {
+            query?: {
+                /** @description Chỉ lấy thông báo chưa đọc */
+                unreadOnly?: boolean;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPageDto"];
+                };
+            };
+        };
+    };
+    NotificationController_unreadCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationUnreadCountDto"];
+                };
+            };
+        };
+    };
+    NotificationController_markRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationReadResultDto"];
+                };
+            };
+        };
+    };
+    NotificationController_markAllRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationMarkAllResultDto"];
                 };
             };
         };
@@ -2361,6 +2651,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MemberDto"];
+                };
+            };
+        };
+    };
+    ReviewController_myTrips: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyTripPageDto"];
+                };
+            };
+        };
+    };
+    ReviewController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateReviewDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id?: string;
+                    };
+                };
+            };
+        };
+    };
+    PublicReviewController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewPageDto"];
                 };
             };
         };

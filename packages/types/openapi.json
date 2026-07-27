@@ -205,6 +205,134 @@
         ]
       }
     },
+    "/notifications": {
+      "get": {
+        "operationId": "NotificationController_list",
+        "parameters": [
+          {
+            "name": "unreadOnly",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ lấy thông báo chưa đọc",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách thông báo của tôi (phân trang, lọc chưa đọc)",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/notifications/unread-count": {
+      "get": {
+        "operationId": "NotificationController_unreadCount",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationUnreadCountDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Số thông báo chưa đọc (cho badge chuông)",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/notifications/{id}/read": {
+      "patch": {
+        "operationId": "NotificationController_markRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationReadResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đánh dấu một thông báo đã đọc",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
+    "/notifications/mark-all-read": {
+      "post": {
+        "operationId": "NotificationController_markAllRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationMarkAllResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đánh dấu tất cả đã đọc",
+        "tags": [
+          "notifications"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "HealthController_check",
@@ -1763,6 +1891,138 @@
         ]
       }
     },
+    "/reviews/my-trips": {
+      "get": {
+        "operationId": "ReviewController_myTrips",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyTripPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Các chuyến của tôi + trạng thái đánh giá (màn \"Đơn thuê của tôi\")",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/reviews": {
+      "post": {
+        "operationId": "ReviewController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đánh giá một chuyến thuê đã hoàn thành",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/public/listings/{id}/reviews": {
+      "get": {
+        "operationId": "PublicReviewController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đánh giá công khai của một xe (phân trang)",
+        "tags": [
+          "public-reviews"
+        ]
+      }
+    },
     "/platform/approvals": {
       "get": {
         "operationId": "PlatformAdminController_list",
@@ -2273,6 +2533,143 @@
         },
         "required": [
           "permissions"
+        ]
+      },
+      "NotificationDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "booking_created",
+              "booking_status_changed",
+              "booking_request_submitted",
+              "booking_request_approved",
+              "booking_request_rejected",
+              "shop_approved",
+              "shop_rejected",
+              "review_received"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string",
+            "nullable": true
+          },
+          "targetType": {
+            "type": "string",
+            "nullable": true,
+            "description": "Loại đối tượng để dựng link"
+          },
+          "targetId": {
+            "type": "string",
+            "nullable": true
+          },
+          "readAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC; null = chưa đọc"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "createdAt"
+        ]
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20
+          },
+          "total": {
+            "type": "number",
+            "example": 137
+          },
+          "hasNext": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "hasNext"
+        ]
+      },
+      "NotificationPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "NotificationUnreadCountDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "example": 3
+          }
+        },
+        "required": [
+          "count"
+        ]
+      },
+      "NotificationReadResultDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "readAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "readAt"
+        ]
+      },
+      "NotificationMarkAllResultDto": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "number",
+            "description": "Số thông báo vừa được đánh dấu đã đọc"
+          }
+        },
+        "required": [
+          "updated"
         ]
       },
       "UserProfileDto": {
@@ -3096,33 +3493,6 @@
           "operationStatus",
           "publicStatus",
           "updatedAt"
-        ]
-      },
-      "PaginationMetaDto": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "number",
-            "example": 1
-          },
-          "limit": {
-            "type": "number",
-            "example": 20
-          },
-          "total": {
-            "type": "number",
-            "example": 137
-          },
-          "hasNext": {
-            "type": "boolean",
-            "example": true
-          }
-        },
-        "required": [
-          "page",
-          "limit",
-          "total",
-          "hasNext"
         ]
       },
       "VehiclePageDto": {
@@ -4081,6 +4451,205 @@
         },
         "required": [
           "roleKey"
+        ]
+      },
+      "TripReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number"
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "rating",
+          "createdAt"
+        ]
+      },
+      "MyTripDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "shopName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "confirmed",
+              "active",
+              "completed",
+              "cancelled",
+              "no_show"
+            ]
+          },
+          "pickupAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "returnAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "canReview": {
+            "type": "boolean",
+            "description": "Đủ điều kiện đánh giá (đã hoàn thành + chưa đánh giá)"
+          },
+          "review": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TripReviewDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "bookingId",
+          "code",
+          "vehicleId",
+          "vehicleName",
+          "shopName",
+          "status",
+          "pickupAt",
+          "returnAt",
+          "canReview"
+        ]
+      },
+      "MyTripPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyTripDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "CreateReviewDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string",
+            "description": "ID đơn thuê đã COMPLETED của khách"
+          },
+          "rating": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "example": 5
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "bookingId",
+          "rating"
+        ]
+      },
+      "ReviewSummaryDto": {
+        "type": "object",
+        "properties": {
+          "ratingAvg": {
+            "type": "number",
+            "description": "Điểm trung bình (0 nếu chưa có)",
+            "example": 4.6
+          },
+          "ratingCount": {
+            "type": "number",
+            "example": 12
+          }
+        },
+        "required": [
+          "ratingAvg",
+          "ratingCount"
+        ]
+      },
+      "ReviewDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "comment": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerName": {
+            "type": "string",
+            "description": "Tên khách (đã rút gọn)"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "rating",
+          "customerName",
+          "createdAt"
+        ]
+      },
+      "ReviewPageDto": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/ReviewSummaryDto"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "summary",
+          "data",
+          "meta"
         ]
       },
       "ApprovalTaskListItemDto": {

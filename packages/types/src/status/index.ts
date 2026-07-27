@@ -15,5 +15,6 @@ export * from './tenant';
 export * from './vehicle';
 export * from './booking';
 export * from './booking-request';
+export * from './review';
 export * from './misc';
 export * from './onboarding';

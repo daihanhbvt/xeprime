@@ -439,13 +439,15 @@ Mục tiêu: giữ chat realtime hoạt động nhưng không tốn chi phí vô
 
 ### 9.3 Chat cost rules
 
+> ⚠️ **Ghi đè bởi ADR 0009** (`docs/decisions/0009-chat-firestore-projection.md`) — chốt kiến trúc realtime cuối cùng. Bảng dưới giữ nguyên tinh thần "không listen toàn bộ", nhưng chi tiết đúng hiện tại: **PostgreSQL là source of truth** (không phải MySQL), Firestore chỉ là **projection realtime ~30–50 tin gần nhất**; lịch sử cũ phân trang **cursor từ Postgres**; đồng bộ PG→Firestore bằng **outbox/retry**; **chỉ backend Node ghi**, kèm **Firestore Security Rules + emulator test**; đính kèm ở **Cloudflare R2** (metadata ở PG + Firestore). Notification + Review của Phase 5 đã làm; Chat để đợt sau.
+
 | Rule | Cách làm |
 | --- | --- |
-| Không listen toàn bộ message | Chỉ listen conversation list và thread đang mở |
-| Message recent | Firestore giữ 30-100 tin mới nhất |
-| Metadata | MySQL giữ `conversations` |
-| Archive | Job chuyển tin cũ sang `message_archive` |
-| File chat | Storage, Firestore chỉ lưu URL |
+| Không listen toàn bộ message | Chỉ listen conversation list và thread đang mở (~30–50 tin) |
+| Message recent | Firestore giữ ~30–50 tin mới nhất (projection realtime, rebuildable) |
+| Metadata & source of truth | **PostgreSQL** giữ `conversations` + toàn bộ tin/thành viên/đã đọc (ADR 0009) |
+| Archive/retention | Job định kỳ theo retention cấu hình; lịch sử phân trang cursor từ Postgres |
+| File chat | **Cloudflare R2**; PG + Firestore chỉ lưu metadata (URL…) |
 
 ### 9.4 Done khi
 

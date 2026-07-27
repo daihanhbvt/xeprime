@@ -3,6 +3,9 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BOOKING_STATUS,
+  BOOKING_STATUS_META,
+  NOTIFICATION_TARGET_TYPE,
+  NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
   canTransitionBooking,
   occupiesSchedule,
@@ -11,6 +14,7 @@ import {
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationService } from '../notification/notification.service';
 import { OccupancyService } from '../calendar/occupancy.service';
 import {
   BOOKING_DEFAULT_LIMIT,
@@ -51,12 +55,16 @@ const DETAIL_SELECT = {
   updatedAt: true,
 } satisfies Prisma.BookingSelect;
 
+/** Nguồn tạo đơn: trực tiếp (shop lập) hay từ duyệt yêu cầu Marketplace. Quyết định có thông báo. */
+export type BookingCreateSource = 'direct' | 'from_request';
+
 @Injectable()
 export class BookingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly occupancy: OccupancyService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationService,
   ) {}
 
   async list(
@@ -114,7 +122,7 @@ export class BookingsService {
    * exclusion constraint ném `23P01`, `AllExceptionsFilter` dịch thành BOOKING_SCHEDULE_CONFLICT.
    */
   async create(tenantId: string, userId: string, dto: CreateBookingDto): Promise<BookingDetailDto> {
-    return this.prisma.$transaction((tx) => this.createWithinTx(tx, tenantId, userId, dto));
+    return this.prisma.$transaction((tx) => this.createWithinTx(tx, tenantId, userId, dto, 'direct'));
   }
 
   /**
@@ -127,6 +135,7 @@ export class BookingsService {
     tenantId: string,
     userId: string,
     dto: CreateBookingDto,
+    source: BookingCreateSource = 'direct',
   ): Promise<BookingDetailDto> {
     const pickupAt = new Date(dto.pickupAt);
     const returnAt = new Date(dto.returnAt);
@@ -184,6 +193,23 @@ export class BookingsService {
       },
       tx,
     );
+
+    // Đơn shop tự lập → báo các thành viên khác. Đơn từ duyệt yêu cầu thì shop vừa thao tác
+    // rồi (đã có thông báo yêu cầu) nên không báo trùng.
+    if (source === 'direct') {
+      await this.notifications.emitToTenantMembers(
+        tenantId,
+        {
+          type: NOTIFICATION_TYPE.BOOKING_CREATED,
+          title: `Đơn thuê mới ${code}`,
+          body: `${created.vehicle.name} · ${created.customerName}`,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+          targetId: id,
+        },
+        tx,
+        { excludeUserId: userId },
+      );
+    }
 
     return toDetail(created);
   }
@@ -300,6 +326,20 @@ export class BookingsService {
           after: { status: to },
         },
         tx,
+      );
+
+      // Báo các thành viên khác của shop biết đơn đổi trạng thái (nhận biết nội bộ).
+      await this.notifications.emitToTenantMembers(
+        tenantId,
+        {
+          type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
+          title: `Đơn ${updated.code}: ${BOOKING_STATUS_META[to].label}`,
+          body: updated.vehicle.name,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+          targetId: id,
+        },
+        tx,
+        { excludeUserId: userId },
       );
 
       return updated;

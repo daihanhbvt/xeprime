@@ -67,6 +67,9 @@ model User {
   reviewedApprovals   ApprovalTask[]       @relation("approval_reviewer")
   approvalLogs        ApprovalLog[]
   adminNotes          AdminNote[]
+  notifications       Notification[]       @relation("notification_recipient")
+  reviews             Review[]             @relation("review_customer")
+  customerBookingRequests BookingRequest[] @relation("request_customer")
 
   @@index([status])
   @@map("users")
@@ -127,6 +130,8 @@ model Tenant {
   approvalTasks ApprovalTask[]
   adminNotes    AdminNote[]
   auditLogs     AuditLog[]
+  notifications Notification[]
+  reviews       Review[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -481,6 +486,7 @@ model Vehicle {
   bookings    Booking[]
   bookingRequests BookingRequest[]
   occupancies VehicleOccupancy[]
+  reviews     Review[]
 
   @@unique([tenantId, code])
   @@index([tenantId, publicStatus])
@@ -525,6 +531,7 @@ model Booking {
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
   creator User?   @relation("booking_creator", fields: [createdBy], references: [id])
   bookingRequest BookingRequest? @relation("request_booking")
+  review         Review?         @relation("booking_review")
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -548,6 +555,9 @@ model BookingRequest {
   customerName  String    @map("customer_name") @db.VarChar(255)
   customerPhone String    @map("customer_phone") @db.VarChar(30)
   customerEmail String?   @map("customer_email") @db.VarChar(255)
+  /// Gắn yêu cầu vào tài khoản khách NẾU khách đang đăng nhập lúc gửi (best-effort). Null với
+  /// khách vãng lai. Là móc để gửi thông báo duyệt/từ chối và cho khách đánh giá sau chuyến.
+  customerUserId String?  @map("customer_user_id") @db.Char(26)
   pickupAt      DateTime  @map("pickup_at") @db.Timestamptz(3)
   returnAt      DateTime  @map("return_at") @db.Timestamptz(3)
   note          String?   @db.Text
@@ -560,13 +570,15 @@ model BookingRequest {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicle Vehicle  @relation(fields: [vehicleId], references: [id])
-  booking Booking? @relation("request_booking", fields: [bookingId], references: [id])
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle  Vehicle  @relation(fields: [vehicleId], references: [id])
+  booking  Booking? @relation("request_booking", fields: [bookingId], references: [id])
+  customer User?    @relation("request_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, status])
   @@index([vehicleId])
   @@index([createdAt])
+  @@index([customerUserId])
   @@map("booking_requests")
 }
 
@@ -633,4 +645,80 @@ model AuditLog {
   @@index([targetType, targetId])
   @@index([actorUserId, createdAt])
   @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Notification — database_design §16.1 (Phase 5)
+// ---------------------------------------------------------------------------
+
+/// Thông báo in-app. MVP fan-out PER-USER: mỗi người nhận là một dòng riêng nên trạng thái
+/// đã đọc (`read_at`) đúng theo từng người. Sự kiện của shop được resolve thành các thành
+/// viên tenant có quyền liên quan rồi tạo nhiều dòng (NotificationService.emitToTenantMembers).
+///
+/// `title`/`body` đã địa phương hoá lúc emit; `type` (@xeprime/types → NotificationType) để FE
+/// chọn icon; `target_type`/`target_id` để dựng link click-through (polymorphic, không FK).
+/// `notification_preferences`/`push_tokens` (§16.2, §16.3) hoãn sang đợt sau.
+model Notification {
+  id         String    @id @db.Char(26)
+  /// Scope tenant của thông báo (nếu là sự kiện thuộc một gian hàng). Null với sự kiện cá nhân.
+  tenantId   String?   @map("tenant_id") @db.Char(26)
+  /// Người nhận. Null chỉ dùng cho thông báo broadcast toàn hệ thống (chưa dùng ở MVP).
+  userId     String?   @map("user_id") @db.Char(26)
+  /// @xeprime/types → NotificationType
+  type       String    @db.VarChar(80)
+  /// @xeprime/types → NotificationChannel
+  channel    String    @default("in_app") @db.VarChar(50)
+  title      String    @db.VarChar(255)
+  body       String?   @db.Text
+  /// @xeprime/types → NotificationTargetType (polymorphic, không FK)
+  targetType String?   @map("target_type") @db.VarChar(50)
+  targetId   String?   @map("target_id") @db.Char(26)
+  dataJson   Json?     @map("data_json") @db.JsonB
+  readAt     DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  recipient User?   @relation("notification_recipient", fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Phục vụ list "thông báo của tôi" (order createdAt desc) và đếm chưa đọc (read_at null).
+  @@index([userId, readAt, createdAt])
+  @@index([tenantId, createdAt])
+  @@map("notifications")
+}
+
+// ---------------------------------------------------------------------------
+// Review — database_design §17.1 (Phase 5)
+// ---------------------------------------------------------------------------
+
+/// Đánh giá của khách sau chuyến thuê. Chỉ tạo được cho `Booking` đã COMPLETED, một đơn một
+/// review (`booking_id` unique). Mọi ghi đi qua ReviewService; service recompute
+/// `tenants.rating_avg`/`rating_count` trong cùng transaction (một writer cho số liệu dẫn xuất).
+/// Ràng buộc thật ở migration tay: CHECK rating 1..5, CHECK status ∈ {published,hidden}.
+model Review {
+  id               String    @id @db.Char(26)
+  tenantId         String    @map("tenant_id") @db.Char(26)
+  vehicleId        String    @map("vehicle_id") @db.Char(26)
+  /// 1-1 với đơn thuê — chống review trùng. Null cho phép (đề phòng nguồn review khác sau này).
+  bookingId        String?   @unique @map("booking_id") @db.Char(26)
+  /// Tham chiếu mềm tới yêu cầu gốc (nếu đơn đến từ Marketplace). Không FK để tránh vòng phụ thuộc.
+  bookingRequestId String?   @map("booking_request_id") @db.Char(26)
+  customerId       String    @map("customer_id") @db.Char(26)
+  rating           Int
+  comment          String?   @db.Text
+  /// @xeprime/types → ReviewStatus
+  status           String    @default("published") @db.VarChar(50)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle  Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  booking  Booking? @relation("booking_review", fields: [bookingId], references: [id], onDelete: SetNull)
+  customer User     @relation("review_customer", fields: [customerId], references: [id], onDelete: Cascade)
+
+  /// List review public của một xe (chỉ published, mới nhất trước).
+  @@index([vehicleId, status, createdAt])
+  @@index([tenantId, status])
+  @@index([customerId])
+  @@map("reviews")
 }

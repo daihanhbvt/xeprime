@@ -1,16 +1,16 @@
 'use client';
 
 import {
-  BellOutlined,
   DownOutlined,
   MenuOutlined,
   MessageOutlined,
   ShopOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Avatar, Badge, Button, Dropdown } from 'antd';
+import { Avatar, Button, Dropdown } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { ROUTES } from '@/constants/routes';
 import { useAppDispatch } from '@/store/hooks';
 import { setMobileNavOpen } from '@/store/slices/app.slice';
@@ -57,9 +57,7 @@ export function Topbar({ user }: { user: CurrentUser }) {
 
       <div className={styles.right}>
         <Button type="text" shape="circle" icon={<MessageOutlined />} aria-label="Trò chuyện" />
-        <Badge dot={false}>
-          <Button type="text" shape="circle" icon={<BellOutlined />} aria-label="Thông báo" />
-        </Badge>
+        <NotificationBell context="manage" />
         <Dropdown
           trigger={['click']}
           menu={{

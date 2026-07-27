@@ -3,12 +3,15 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
+  NOTIFICATION_TARGET_TYPE,
+  NOTIFICATION_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type PaginationMeta,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationService } from '../notification/notification.service';
 import { BookingsService } from '../bookings/bookings.service';
 import {
   BOOKING_REQUEST_DEFAULT_LIMIT,
@@ -41,13 +44,18 @@ export class BookingRequestsService {
     private readonly prisma: PrismaService,
     private readonly bookings: BookingsService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationService,
   ) {}
 
   /**
    * Khách gửi yêu cầu từ Marketplace (công khai). `tenantId` suy từ xe — chỉ nhận nếu xe đã
    * `approved_public` thuộc shop `active`. KHÔNG giữ chỗ lịch (còn pending), chỉ ghi yêu cầu.
+   * `customerUserId` do controller resolve best-effort từ session (null nếu khách vãng lai).
    */
-  async submitPublic(dto: CreateBookingRequestDto): Promise<BookingRequestReceiptDto> {
+  async submitPublic(
+    dto: CreateBookingRequestDto,
+    customerUserId?: string | null,
+  ): Promise<BookingRequestReceiptDto> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: {
         id: dto.vehicleId,
@@ -55,7 +63,7 @@ export class BookingRequestsService {
         publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
         tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
       },
-      select: { id: true, tenantId: true },
+      select: { id: true, tenantId: true, name: true },
     });
     if (!vehicle) {
       throw new NotFoundException({
@@ -74,20 +82,37 @@ export class BookingRequestsService {
     }
 
     const id = newId();
-    await this.prisma.bookingRequest.create({
-      data: {
-        id,
-        tenantId: vehicle.tenantId,
-        vehicleId: vehicle.id,
-        status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-        customerName: dto.customerName,
-        customerPhone: dto.customerPhone,
-        customerEmail: dto.customerEmail ?? null,
-        pickupAt,
-        returnAt,
-        note: dto.note ?? null,
-      },
+    // Ghi yêu cầu + báo cả shop trong một transaction: yêu cầu mới luôn có thông báo đi kèm.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.bookingRequest.create({
+        data: {
+          id,
+          tenantId: vehicle.tenantId,
+          vehicleId: vehicle.id,
+          status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+          customerName: dto.customerName,
+          customerPhone: dto.customerPhone,
+          customerEmail: dto.customerEmail ?? null,
+          customerUserId: customerUserId ?? null,
+          pickupAt,
+          returnAt,
+          note: dto.note ?? null,
+        },
+      });
+
+      await this.notifications.emitToTenantMembers(
+        vehicle.tenantId,
+        {
+          type: NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED,
+          title: `Yêu cầu thuê mới: ${dto.customerName}`,
+          body: vehicle.name,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+          targetId: id,
+        },
+        tx,
+      );
     });
+
     return { id, status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL };
   }
 
@@ -141,13 +166,19 @@ export class BookingRequestsService {
     const req = await this.loadPending(tenantId, id);
 
     const row = await this.prisma.$transaction(async (tx) => {
-      const booking = await this.bookings.createWithinTx(tx, tenantId, userId, {
-        vehicleId: req.vehicleId,
-        customerName: req.customerName,
-        customerPhone: req.customerPhone,
-        pickupAt: req.pickupAt.toISOString(),
-        returnAt: req.returnAt.toISOString(),
-      });
+      const booking = await this.bookings.createWithinTx(
+        tx,
+        tenantId,
+        userId,
+        {
+          vehicleId: req.vehicleId,
+          customerName: req.customerName,
+          customerPhone: req.customerPhone,
+          pickupAt: req.pickupAt.toISOString(),
+          returnAt: req.returnAt.toISOString(),
+        },
+        'from_request',
+      );
 
       const updated = await tx.bookingRequest.update({
         where: { id },
@@ -173,6 +204,23 @@ export class BookingRequestsService {
         tx,
       );
 
+      // Báo khách nếu yêu cầu gắn với một tài khoản (khách đăng nhập lúc gửi). Khách vãng lai
+      // (customerUserId null) sẽ nhận qua email/SMS ở giai đoạn sau.
+      if (req.customerUserId) {
+        await this.notifications.emitToUser(
+          req.customerUserId,
+          {
+            type: NOTIFICATION_TYPE.BOOKING_REQUEST_APPROVED,
+            title: 'Yêu cầu thuê đã được duyệt',
+            body: `${req.vehicle.name} · đã tạo đơn thuê`,
+            tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+            targetId: booking.id,
+          },
+          tx,
+        );
+      }
+
       return updated;
     });
 
@@ -185,7 +233,7 @@ export class BookingRequestsService {
     id: string,
     reason?: string,
   ): Promise<BookingRequestDto> {
-    await this.loadPending(tenantId, id);
+    const req = await this.loadPending(tenantId, id);
 
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.bookingRequest.update({
@@ -211,6 +259,21 @@ export class BookingRequestsService {
         tx,
       );
 
+      if (req.customerUserId) {
+        await this.notifications.emitToUser(
+          req.customerUserId,
+          {
+            type: NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED,
+            title: 'Yêu cầu thuê bị từ chối',
+            body: reason ? `${req.vehicle.name} · ${reason}` : req.vehicle.name,
+            tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+            targetId: id,
+          },
+          tx,
+        );
+      }
+
       return updated;
     });
 
@@ -227,8 +290,10 @@ export class BookingRequestsService {
         vehicleId: true,
         customerName: true,
         customerPhone: true,
+        customerUserId: true,
         pickupAt: true,
         returnAt: true,
+        vehicle: { select: { name: true } },
       },
     });
     if (!req) throw notFound();

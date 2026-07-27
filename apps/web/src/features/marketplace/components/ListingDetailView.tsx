@@ -2,6 +2,7 @@ import { SERVICE_TYPE_LABEL, VEHICLE_TYPE, type ServiceType } from '@xeprime/typ
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { formatMoneyVnd } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
+import { ListingReviews } from './ListingReviews';
 import styles from './ListingDetailView.module.css';
 
 const FUEL_LABEL: Record<string, string> = {
@@ -77,6 +78,8 @@ export function ListingDetailView({ listing }: { listing: PublicListingDetail })
             <p>{listing.description}</p>
           </section>
         ) : null}
+
+        <ListingReviews vehicleId={listing.id} />
       </div>
     </div>
   );

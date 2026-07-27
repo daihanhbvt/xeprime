@@ -1,17 +1,18 @@
 'use client';
 
-import { BellOutlined, UserOutlined } from '@ant-design/icons';
-import { Avatar, Badge, Button } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
+import { Avatar, Button } from 'antd';
 import Link from 'next/link';
 import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import styles from './MarketHeader.module.css';
 
 const NAV = [
   { key: 'explore', label: 'Khám phá', href: ROUTES.HOME },
   { key: 'about', label: 'Về Prime', href: ROUTES.HOME },
-  { key: 'trips', label: 'Chuyến của tôi', href: ROUTES.HOME },
+  { key: 'trips', label: 'Chuyến của tôi', href: ROUTES.TRIPS },
 ];
 
 export function MarketHeader() {
@@ -39,14 +40,12 @@ export function MarketHeader() {
         <div className={styles.right}>
           {user ? (
             <>
-              <Badge dot>
-                <button className={styles.iconBtn} type="button" aria-label="Thông báo">
-                  <BellOutlined />
-                </button>
-              </Badge>
-              <Avatar className={styles.avatar} size={34}>
-                {initial(user.displayName)}
-              </Avatar>
+              <NotificationBell context="customer" />
+              <Link href={ROUTES.TRIPS} aria-label="Đơn thuê của tôi">
+                <Avatar className={styles.avatar} size={34}>
+                  {initial(user.displayName)}
+                </Avatar>
+              </Link>
             </>
           ) : (
             <Link href={ROUTES.LOGIN}>

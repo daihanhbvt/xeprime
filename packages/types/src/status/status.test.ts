@@ -11,6 +11,8 @@ import {
 import { VEHICLE_PUBLIC_STATUS, VEHICLE_PUBLIC_STATUS_META } from './vehicle';
 import { TENANT_STATUS, TENANT_STATUS_META } from './tenant';
 import { BOOKING_REQUEST_STATUS, BOOKING_REQUEST_STATUS_META } from './booking-request';
+import { REVIEW_STATUS, REVIEW_STATUS_META, isReviewStatus } from './review';
+import { NOTIFICATION_TYPE, NOTIFICATION_TYPE_META, isNotificationType } from '../notifications';
 
 /**
  * Các test này bảo vệ ADR 0005: thêm một status mới mà quên khai báo nhãn hiển thị sẽ
@@ -23,6 +25,8 @@ describe('status metadata completeness', () => {
     ['booking_request', Object.values(BOOKING_REQUEST_STATUS), BOOKING_REQUEST_STATUS_META],
     ['vehicle public', Object.values(VEHICLE_PUBLIC_STATUS), VEHICLE_PUBLIC_STATUS_META],
     ['tenant', Object.values(TENANT_STATUS), TENANT_STATUS_META],
+    ['review', Object.values(REVIEW_STATUS), REVIEW_STATUS_META],
+    ['notification type', Object.values(NOTIFICATION_TYPE), NOTIFICATION_TYPE_META],
   ])('%s: mọi status đều có label và color', (_name, values, meta) => {
     for (const status of values) {
       const entry = (meta as Record<string, { label: string; color: string }>)[status];
@@ -56,6 +60,18 @@ describe('ADR 0005 — bộ giá trị chốt', () => {
     expect(isBookingStatus('active')).toBe(true);
     expect(isBookingStatus('aproved')).toBe(false);
     expect(isBookingStatus(null)).toBe(false);
+  });
+
+  it('review dùng "published"/"hidden"; guard từ chối giá trị lạ', () => {
+    expect(Object.values(REVIEW_STATUS)).toEqual(['published', 'hidden']);
+    expect(isReviewStatus('published')).toBe(true);
+    expect(isReviewStatus('deleted')).toBe(false);
+  });
+
+  it('notification type là snake_case hợp lệ; guard từ chối giá trị lạ', () => {
+    expect(isNotificationType(NOTIFICATION_TYPE.REVIEW_RECEIVED)).toBe(true);
+    expect(isNotificationType('booking_created')).toBe(true);
+    expect(isNotificationType('unknown_event')).toBe(false);
   });
 });
 

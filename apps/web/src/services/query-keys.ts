@@ -53,5 +53,16 @@ export const queryKeys = {
   marketplace: {
     all: ['marketplace'] as const,
     listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,
+    reviews: (vehicleId: string, params: QueryParams) =>
+      ['marketplace', 'reviews', vehicleId, params] as const,
+  },
+  notifications: {
+    all: ['notifications'] as const,
+    list: (params: QueryParams) => ['notifications', 'list', params] as const,
+    unreadCount: () => ['notifications', 'unread-count'] as const,
+  },
+  reviews: {
+    all: ['reviews'] as const,
+    myTrips: (params: QueryParams) => ['reviews', 'my-trips', params] as const,
   },
 } as const;

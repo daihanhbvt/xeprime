@@ -5,13 +5,17 @@ import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   API_ERROR_CODE,
+  NOTIFICATION_TARGET_TYPE,
+  NOTIFICATION_TYPE,
   TENANT_STATUS,
   type ApprovalAction,
   type ApprovalStatus,
+  type NotificationType,
   type PaginationMeta,
   type TenantStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
+import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   APPROVAL_DEFAULT_LIMIT,
@@ -21,28 +25,38 @@ import {
   ApprovalTaskListItemDto,
 } from './dto/approval.dto';
 
-/** Kết cục mỗi hành động duyệt: status phiếu, status tenant, và action ghi log. */
+/** Kết cục mỗi hành động duyệt: status phiếu, status tenant, action ghi log, loại thông báo. */
 const OUTCOMES: Record<
   'approve' | 'reject' | 'request_revision',
-  { approval: ApprovalStatus; tenant: TenantStatus; logAction: ApprovalAction; needsReason: boolean }
+  {
+    approval: ApprovalStatus;
+    tenant: TenantStatus;
+    logAction: ApprovalAction;
+    needsReason: boolean;
+    notifyType: NotificationType | null;
+  }
 > = {
   approve: {
     approval: APPROVAL_STATUS.APPROVED,
     tenant: TENANT_STATUS.ACTIVE,
     logAction: APPROVAL_ACTION.APPROVE,
     needsReason: false,
+    notifyType: NOTIFICATION_TYPE.SHOP_APPROVED,
   },
   reject: {
     approval: APPROVAL_STATUS.REJECTED,
     tenant: TENANT_STATUS.REJECTED,
     logAction: APPROVAL_ACTION.REJECT,
     needsReason: true,
+    notifyType: NOTIFICATION_TYPE.SHOP_REJECTED,
   },
   request_revision: {
     approval: APPROVAL_STATUS.NEEDS_REVISION,
     tenant: TENANT_STATUS.NEEDS_REVISION,
     logAction: APPROVAL_ACTION.REQUEST_REVISION,
     needsReason: true,
+    // Chưa có loại thông báo riêng cho "cần bổ sung" — mở sau.
+    notifyType: null,
   },
 };
 
@@ -51,6 +65,7 @@ export class PlatformApprovalService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationService,
   ) {}
 
   async list(
@@ -238,7 +253,7 @@ export class PlatformApprovalService {
     await this.prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.findUniqueOrThrow({
         where: { id: tenantId },
-        select: { status: true },
+        select: { status: true, name: true, ownerUserId: true },
       });
 
       await tx.approvalTask.update({
@@ -278,6 +293,25 @@ export class PlatformApprovalService {
         },
         tx,
       );
+
+      // Báo chủ gian hàng kết quả duyệt (duyệt/từ chối). request_revision chưa có loại riêng.
+      if (outcome.notifyType) {
+        await this.notifications.emitToUser(
+          tenant.ownerUserId,
+          {
+            type: outcome.notifyType,
+            title:
+              outcome.notifyType === NOTIFICATION_TYPE.SHOP_APPROVED
+                ? 'Gian hàng đã được duyệt'
+                : 'Gian hàng bị từ chối',
+            body: trimmedReason ? `${tenant.name} · ${trimmedReason}` : tenant.name,
+            tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.TENANT,
+            targetId: tenantId,
+          },
+          tx,
+        );
+      }
     });
 
     return this.getTask(id);

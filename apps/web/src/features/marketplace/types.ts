@@ -6,6 +6,10 @@ type Schemas = components['schemas'];
 export type PublicListing = Schemas['PublicListingDto'];
 export type PublicListingDetail = Schemas['PublicListingDetailDto'];
 
+export type ReviewItem = Schemas['ReviewDto'];
+export type ReviewSummary = Schemas['ReviewSummaryDto'];
+export type ReviewPage = Schemas['ReviewPageDto'];
+
 export type ListingSort = 'newest' | 'price_asc' | 'price_desc';
 
 export interface MarketplaceFilters {

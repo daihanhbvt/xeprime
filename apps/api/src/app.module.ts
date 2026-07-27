@@ -16,12 +16,14 @@ import { HealthModule } from './modules/health/health.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { NotificationModule } from './modules/notification/notification.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { PublicListingsModule } from './modules/public-listings/public-listings.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { BookingRequestsModule } from './modules/booking-requests/booking-requests.module';
 import { MembersModule } from './modules/members/members.module';
+import { ReviewModule } from './modules/review/review.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
 
@@ -51,6 +53,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     AuthModule,
     RbacModule,
     AuditModule,
+    NotificationModule,
 
     HealthModule,
     UsersModule,
@@ -61,6 +64,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     BookingsModule,
     BookingRequestsModule,
     MembersModule,
+    ReviewModule,
     ChatModule,
     PlatformAdminModule,
   ],
