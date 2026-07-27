@@ -26,12 +26,16 @@
     "api:openapi": "pnpm --filter @xeprime/api run openapi",
     "types:gen": "pnpm --filter @xeprime/types run generate",
     "contract": "pnpm run api:openapi && pnpm run types:gen",
+    "test:rules": "firebase emulators:exec --only firestore \"node --test firebase/rules.test.mjs\"",
     "prepare": "husky"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@firebase/rules-unit-testing": "4.0.1",
     "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
+    "firebase": "11.1.0",
+    "firebase-tools": "13.29.1",
     "husky": "9.1.7",
     "lint-staged": "17.1.1",
     "prettier": "3.9.6",

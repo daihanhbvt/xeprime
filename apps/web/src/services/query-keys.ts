@@ -65,4 +65,8 @@ export const queryKeys = {
     all: ['reviews'] as const,
     myTrips: (params: QueryParams) => ['reviews', 'my-trips', params] as const,
   },
+  chat: {
+    all: ['chat'] as const,
+    conversations: () => ['chat', 'conversations'] as const,
+  },
 } as const;

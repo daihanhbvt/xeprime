@@ -12,6 +12,8 @@ import { VEHICLE_PUBLIC_STATUS, VEHICLE_PUBLIC_STATUS_META } from './vehicle';
 import { TENANT_STATUS, TENANT_STATUS_META } from './tenant';
 import { BOOKING_REQUEST_STATUS, BOOKING_REQUEST_STATUS_META } from './booking-request';
 import { REVIEW_STATUS, REVIEW_STATUS_META, isReviewStatus } from './review';
+import { CONVERSATION_STATUS, CONVERSATION_STATUS_META } from './misc';
+import { isParticipantType } from './chat';
 import { NOTIFICATION_TYPE, NOTIFICATION_TYPE_META, isNotificationType } from '../notifications';
 
 /**
@@ -26,6 +28,7 @@ describe('status metadata completeness', () => {
     ['vehicle public', Object.values(VEHICLE_PUBLIC_STATUS), VEHICLE_PUBLIC_STATUS_META],
     ['tenant', Object.values(TENANT_STATUS), TENANT_STATUS_META],
     ['review', Object.values(REVIEW_STATUS), REVIEW_STATUS_META],
+    ['conversation', Object.values(CONVERSATION_STATUS), CONVERSATION_STATUS_META],
     ['notification type', Object.values(NOTIFICATION_TYPE), NOTIFICATION_TYPE_META],
   ])('%s: mọi status đều có label và color', (_name, values, meta) => {
     for (const status of values) {
@@ -72,6 +75,12 @@ describe('ADR 0005 — bộ giá trị chốt', () => {
     expect(isNotificationType(NOTIFICATION_TYPE.REVIEW_RECEIVED)).toBe(true);
     expect(isNotificationType('booking_created')).toBe(true);
     expect(isNotificationType('unknown_event')).toBe(false);
+  });
+
+  it('participant type guard từ chối giá trị lạ', () => {
+    expect(isParticipantType('customer')).toBe(true);
+    expect(isParticipantType('shop_member')).toBe(true);
+    expect(isParticipantType('robot')).toBe(false);
   });
 });
 

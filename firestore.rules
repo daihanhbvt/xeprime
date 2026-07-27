@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// Chat projection (ADR 0009). Firestore CHỈ để đọc realtime; MỌI ghi đi qua backend (Admin SDK,
+// bypass rules). Client không bao giờ ghi. Quyền đọc = thành viên hội thoại (memberUids do backend
+// mirror từ conversation_participants + membership shop).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // memberUids của một hội thoại (đọc từ doc cha để check quyền cho subcollection messages).
+    function convMembers(conversationId) {
+      return get(/databases/$(database)/documents/conversations/$(conversationId)).data.memberUids;
+    }
+
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.memberUids;
+      allow write: if false;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && request.auth.uid in convMembers(conversationId);
+        allow write: if false;
+      }
+    }
+
+    // Mặc định: từ chối mọi thứ khác.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

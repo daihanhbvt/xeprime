@@ -40,6 +40,20 @@ export const envSchema = z
     FIREBASE_CLIENT_EMAIL: z.string().optional(),
     FIREBASE_PRIVATE_KEY: z.string().optional(),
 
+    // --- Chat realtime (ADR 0009) ---
+    // Bật Firestore projection cho chat. Độc lập với AUTH_MODE: có thể AUTH_MODE=mock mà vẫn
+    // dùng Firestore cho chat (dùng chung 3 FIREBASE_* ở trên). Tắt (mặc định) thì chat chỉ
+    // chạy trên Postgres, không đẩy realtime.
+    FIRESTORE_ENABLED: booleanish.default(false),
+
+    // --- Chat attachments: Cloudflare R2 (S3-compatible) ---
+    R2_ACCOUNT_ID: z.string().optional(),
+    R2_ACCESS_KEY_ID: z.string().optional(),
+    R2_SECRET_ACCESS_KEY: z.string().optional(),
+    R2_BUCKET: z.string().optional(),
+    R2_ENDPOINT: z.string().optional(),
+    R2_PUBLIC_BASE_URL: z.string().optional(),
+
     // --- Web + Email (cho link đặt lại mật khẩu) ---
     APP_WEB_URL: z.string().default('http://localhost:3000'),
     // SMTP tuỳ chọn: chưa cấu hình thì EmailService in link ra log (dev), không gửi thật.
@@ -57,6 +71,30 @@ export const envSchema = z
             code: 'custom',
             path: [key],
             message: `${key} là bắt buộc khi AUTH_MODE=firebase`,
+          });
+        }
+      }
+    }
+
+    // Bật chat realtime → cần credential Firebase Admin (đẩy Firestore) + R2 (đính kèm).
+    if (env.FIRESTORE_ENABLED) {
+      const required = [
+        'FIREBASE_PROJECT_ID',
+        'FIREBASE_CLIENT_EMAIL',
+        'FIREBASE_PRIVATE_KEY',
+        'R2_ACCOUNT_ID',
+        'R2_ACCESS_KEY_ID',
+        'R2_SECRET_ACCESS_KEY',
+        'R2_BUCKET',
+        'R2_ENDPOINT',
+        'R2_PUBLIC_BASE_URL',
+      ] as const;
+      for (const key of required) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} là bắt buộc khi FIRESTORE_ENABLED=true`,
           });
         }
       }

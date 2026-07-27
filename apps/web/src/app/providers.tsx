@@ -10,6 +10,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import { useState, type ReactNode } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
+import { ChatRealtimeProvider } from '@/features/chat/context/ChatRealtimeContext';
 import { makeStore } from '@/store/make-store';
 import { antdTheme } from '@/styles/theme';
 
@@ -54,7 +55,9 @@ export function Providers({ children }: { children: ReactNode }) {
       <ConfigProvider theme={antdTheme} locale={viVN}>
         <ReduxProvider store={store}>
           <QueryClientProvider client={queryClient}>
-            <AntdApp>{children}</AntdApp>
+            <AntdApp>
+              <ChatRealtimeProvider>{children}</ChatRealtimeProvider>
+            </AntdApp>
           </QueryClientProvider>
         </ReduxProvider>
       </ConfigProvider>

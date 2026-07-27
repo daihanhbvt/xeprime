@@ -56,7 +56,13 @@ export function Topbar({ user }: { user: CurrentUser }) {
       </div>
 
       <div className={styles.right}>
-        <Button type="text" shape="circle" icon={<MessageOutlined />} aria-label="Trò chuyện" />
+        <Button
+          type="text"
+          shape="circle"
+          icon={<MessageOutlined />}
+          aria-label="Trò chuyện"
+          onClick={() => router.push(ROUTES.MANAGE.CHAT)}
+        />
         <NotificationBell context="manage" />
         <Dropdown
           trigger={['click']}

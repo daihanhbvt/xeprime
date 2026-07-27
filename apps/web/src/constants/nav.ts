@@ -183,7 +183,6 @@ export const SHOP_NAV: readonly NavNode[] = [
         href: ROUTES.MANAGE.CHAT,
         permission: PERMISSION.TENANT_VIEW,
         icon: MessageOutlined,
-        comingSoon: true,
       },
       {
         key: 'trash',

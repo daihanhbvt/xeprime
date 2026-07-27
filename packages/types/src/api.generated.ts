@@ -662,6 +662,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách hội thoại của tôi (phân trang) */
+        get: operations["ConversationsController_list"];
+        put?: never;
+        /** Mở/lấy hội thoại với shop về một xe (khách) */
+        post: operations["ConversationsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/conversations/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lịch sử tin nhắn (cursor, mới nhất trước) */
+        get: operations["ConversationsController_messages"];
+        put?: never;
+        /** Gửi một tin nhắn */
+        post: operations["ConversationsController_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/conversations/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Đánh dấu đã đọc hội thoại */
+        post: operations["ConversationsController_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/firebase-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Custom token để signInWithCustomToken (uid = user id) */
+        post: operations["ChatController_firebaseToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/attachments/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Xin presigned URL để upload đính kèm chat lên R2 */
+        post: operations["ChatController_presign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/approvals": {
         parameters: {
             query?: never;
@@ -1468,6 +1555,94 @@ export interface components {
             summary: components["schemas"]["ReviewSummaryDto"];
             data: components["schemas"]["ReviewDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+        };
+        ConversationSummaryDto: {
+            id: string;
+            vehicleId?: string | null;
+            vehicleName?: string | null;
+            /** @description Tên phía bên kia (khách thấy tên shop, shop thấy tên khách) */
+            partyName: string;
+            /** @description side của người xem: customer | shop */
+            side: string;
+            lastMessageText?: string | null;
+            /** @description ISO-8601 UTC */
+            lastMessageAt?: string | null;
+            lastSenderType?: string | null;
+            /** @description Số tin chưa đọc của phía người xem */
+            unread: number;
+            status: string;
+        };
+        ConversationPageMetaDto: {
+            page: number;
+            limit: number;
+            total: number;
+            hasNext: boolean;
+        };
+        ConversationPageDto: {
+            data: components["schemas"]["ConversationSummaryDto"][];
+            meta: components["schemas"]["ConversationPageMetaDto"];
+        };
+        CreateConversationDto: {
+            /** @description ID xe (listing) muốn nhắn shop */
+            vehicleId: string;
+        };
+        MessageAttachmentDto: {
+            url: string;
+            fileType?: string | null;
+            fileName?: string | null;
+            fileSize?: number | null;
+        };
+        MessageDto: {
+            id: string;
+            conversationId: string;
+            senderUserId?: string | null;
+            senderType: string;
+            messageType: string;
+            text?: string | null;
+            attachments: components["schemas"]["MessageAttachmentDto"][];
+            /** @description ISO-8601 UTC */
+            sentAt: string;
+        };
+        MessagePageDto: {
+            /** @description Mới nhất trước */
+            data: components["schemas"]["MessageDto"][];
+            /** @description Cursor cho lần tải cũ hơn */
+            nextBefore?: string | null;
+        };
+        AttachmentInputDto: {
+            /** @description URL công khai R2 (phải thuộc R2_PUBLIC_BASE_URL) */
+            url: string;
+            fileType?: string | null;
+            fileName?: string | null;
+            fileSize?: number | null;
+        };
+        SendMessageDto: {
+            text?: string | null;
+            /** @enum {string} */
+            messageType?: "text" | "image" | "file" | "system";
+            attachments?: components["schemas"]["AttachmentInputDto"][];
+        };
+        MarkReadResultDto: {
+            conversationId: string;
+            /** @example 0 */
+            unread: number;
+        };
+        FirebaseTokenDto: {
+            /** @description Bật realtime chat không */
+            enabled: boolean;
+            /** @description Custom token để signInWithCustomToken */
+            token?: string | null;
+        };
+        PresignAttachmentDto: {
+            fileName: string;
+            /** @description MIME type */
+            contentType: string;
+        };
+        PresignResultDto: {
+            key: string;
+            uploadUrl: string;
+            publicUrl: string;
+            expiresIn: number;
         };
         ApprovalTaskListItemDto: {
             id: string;
@@ -2722,6 +2897,164 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewPageDto"];
+                };
+            };
+        };
+    };
+    ConversationsController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationPageDto"];
+                };
+            };
+        };
+    };
+    ConversationsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateConversationDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSummaryDto"];
+                };
+            };
+        };
+    };
+    ConversationsController_messages: {
+        parameters: {
+            query?: {
+                /** @description Cursor: lấy tin CŨ hơn mốc ISO này (phân trang lịch sử) */
+                before?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagePageDto"];
+                };
+            };
+        };
+    };
+    ConversationsController_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDto"];
+                };
+            };
+        };
+    };
+    ConversationsController_read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkReadResultDto"];
+                };
+            };
+        };
+    };
+    ChatController_firebaseToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FirebaseTokenDto"];
+                };
+            };
+        };
+    };
+    ChatController_presign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignAttachmentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PresignResultDto"];
                 };
             };
         };

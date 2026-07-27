@@ -22,3 +22,6 @@ minimumReleaseAgeExclude:
   - '@vitejs/plugin-react@6.0.4'
   - lint-staged@17.1.1
   - ts-jest@29.4.12
+
+allowBuilds:
+  re2: set this to true or false

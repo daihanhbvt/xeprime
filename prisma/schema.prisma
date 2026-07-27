@@ -70,6 +70,9 @@ model User {
   notifications       Notification[]       @relation("notification_recipient")
   reviews             Review[]             @relation("review_customer")
   customerBookingRequests BookingRequest[] @relation("request_customer")
+  customerConversations   Conversation[]   @relation("conversation_customer")
+  conversationParticipations ConversationParticipant[] @relation("participant_user")
+  sentMessages            Message[]        @relation("message_sender")
 
   @@index([status])
   @@map("users")
@@ -132,6 +135,7 @@ model Tenant {
   auditLogs     AuditLog[]
   notifications Notification[]
   reviews       Review[]
+  conversations Conversation[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -487,6 +491,7 @@ model Vehicle {
   bookingRequests BookingRequest[]
   occupancies VehicleOccupancy[]
   reviews     Review[]
+  conversations Conversation[]
 
   @@unique([tenantId, code])
   @@index([tenantId, publicStatus])
@@ -721,4 +726,128 @@ model Review {
   @@index([tenantId, status])
   @@index([customerId])
   @@map("reviews")
+}
+
+// ---------------------------------------------------------------------------
+// Chat — database_design §15 (Phase 5, ADR 0009)
+//
+// PostgreSQL là SOURCE OF TRUTH cho toàn bộ hội thoại/thành viên/tin/đính kèm/đã đọc.
+// Firestore chỉ là projection realtime ~30–50 tin gần nhất. Chỉ backend Node ghi
+// (ChatService + worker). Đồng bộ PG→Firestore qua message_outbox + retry.
+// ---------------------------------------------------------------------------
+
+/// Hội thoại shop ↔ khách. Chỉ backend tạo; `tenant_id` suy từ xe/booking ở server.
+/// Denorm last message + unread để list không phải join messages.
+model Conversation {
+  id                     String    @id @db.Char(26)
+  /// ID doc Firestore (thường = id). Unique để đẩy projection idempotent.
+  firebaseConversationId String?   @unique @map("firebase_conversation_id") @db.VarChar(160)
+  tenantId               String    @map("tenant_id") @db.Char(26)
+  customerUserId         String?   @map("customer_user_id") @db.Char(26)
+  vehicleId              String?   @map("vehicle_id") @db.Char(26)
+  /// Liên kết ngữ cảnh (tham chiếu mềm, không FK để tránh vòng phụ thuộc).
+  bookingId              String?   @map("booking_id") @db.Char(26)
+  bookingRequestId       String?   @map("booking_request_id") @db.Char(26)
+  /// @xeprime/types → ConversationStatus (misc.ts: open/closed/flagged/archived)
+  status                 String    @default("open") @db.VarChar(50)
+  lastMessageText        String?   @map("last_message_text") @db.Text
+  lastMessageAt          DateTime? @map("last_message_at") @db.Timestamptz(3)
+  /// @xeprime/types → SenderType
+  lastSenderType         String?   @map("last_sender_type") @db.VarChar(50)
+  unreadCustomerCount    Int       @default(0) @map("unread_customer_count")
+  unreadTenantCount      Int       @default(0) @map("unread_tenant_count")
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  archivedAt             DateTime? @map("archived_at") @db.Timestamptz(3)
+
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer     User?                     @relation("conversation_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
+  vehicle      Vehicle?                  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([tenantId, lastMessageAt])
+  @@index([customerUserId, lastMessageAt])
+  @@index([bookingId])
+  @@map("conversations")
+}
+
+/// Thành viên một hội thoại + mốc đã đọc. Mirror sang Firestore `memberUids[]` cho Security Rules.
+model ConversationParticipant {
+  id              String    @id @db.Char(26)
+  conversationId  String    @map("conversation_id") @db.Char(26)
+  userId          String?   @map("user_id") @db.Char(26)
+  /// @xeprime/types → ParticipantType
+  participantType String    @map("participant_type") @db.VarChar(50)
+  tenantId        String?   @map("tenant_id") @db.Char(26)
+  lastReadAt      DateTime? @map("last_read_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User?        @relation("participant_user", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+/// TẤT CẢ tin nhắn (source of truth). Firestore chỉ giữ bản projection gần nhất.
+model Message {
+  id                String   @id @db.Char(26)
+  conversationId    String   @map("conversation_id") @db.Char(26)
+  firebaseMessageId String?  @map("firebase_message_id") @db.VarChar(160)
+  senderUserId      String?  @map("sender_user_id") @db.Char(26)
+  /// @xeprime/types → SenderType
+  senderType        String   @map("sender_type") @db.VarChar(50)
+  /// @xeprime/types → MessageType
+  messageType       String   @default("text") @map("message_type") @db.VarChar(50)
+  text              String?  @db.Text
+  metadataJson      Json?    @map("metadata_json") @db.JsonB
+  sentAt            DateTime @default(now()) @map("sent_at") @db.Timestamptz(3)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User?            @relation("message_sender", fields: [senderUserId], references: [id], onDelete: SetNull)
+  attachments  ChatAttachment[]
+  outbox       MessageOutbox?
+
+  /// Phân trang lịch sử theo cursor (sentAt) trong một hội thoại.
+  @@index([conversationId, sentAt])
+  @@map("messages")
+}
+
+/// Hàng đợi đẩy tin sang Firestore (ADR 0009 §3). Ghi cùng transaction với Message; worker đẩy + retry.
+model MessageOutbox {
+  id            String   @id @db.Char(26)
+  messageId     String   @unique @map("message_id") @db.Char(26)
+  /// @xeprime/types → OutboxStatus
+  status        String   @default("pending") @db.VarChar(50)
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(3)
+  lastError     String?  @map("last_error") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  /// Worker quét pending tới hạn, cũ nhất trước.
+  @@index([status, nextAttemptAt])
+  @@map("message_outbox")
+}
+
+/// Metadata đính kèm chat — file thật ở Cloudflare R2 (ADR 0009 §5), đây chỉ giữ URL + info.
+model ChatAttachment {
+  id           String   @id @db.Char(26)
+  messageId    String   @map("message_id") @db.Char(26)
+  fileUrl      String   @map("file_url") @db.Text
+  fileType     String?  @map("file_type") @db.VarChar(100)
+  fileName     String?  @map("file_name") @db.VarChar(255)
+  fileSize     Int?     @map("file_size")
+  metadataJson Json?    @map("metadata_json") @db.JsonB
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("chat_attachments")
 }

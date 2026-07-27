@@ -109,7 +109,14 @@
   color: var(--xp-color-text-secondary);
 }
 
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
 .cta {
+  flex: 1;
   height: 48px;
   border-radius: 10px;
   font-weight: 700;

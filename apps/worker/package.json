@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@xeprime/prisma": "workspace:*",
-    "@xeprime/types": "workspace:*"
+    "@xeprime/types": "workspace:*",
+    "firebase-admin": "14.2.0"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

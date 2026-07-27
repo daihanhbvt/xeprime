@@ -1,6 +1,6 @@
 'use client';
 
-import { UserOutlined } from '@ant-design/icons';
+import { MessageOutlined, UserOutlined } from '@ant-design/icons';
 import { Avatar, Button } from 'antd';
 import Link from 'next/link';
 import { Logo } from '@/components/brand/Logo';
@@ -40,6 +40,9 @@ export function MarketHeader() {
         <div className={styles.right}>
           {user ? (
             <>
+              <Link href={ROUTES.CHAT} aria-label="Tin nhắn">
+                <Button type="text" shape="circle" icon={<MessageOutlined />} />
+              </Link>
               <NotificationBell context="customer" />
               <Link href={ROUTES.TRIPS} aria-label="Đơn thuê của tôi">
                 <Avatar className={styles.avatar} size={34}>

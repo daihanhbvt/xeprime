@@ -1,31 +1,72 @@
-import { PrismaClient } from '@xeprime/prisma';
+import { createPrismaClient } from '@xeprime/prisma';
+import { FIRESTORE_ENABLED } from './lib/env';
+import { withAdvisoryLock } from './lib/advisory-lock';
+import { pumpOutbox } from './jobs/outbox-pump';
+import { runRetention } from './jobs/retention';
 
 /**
- * Worker skeleton — chưa chạy job nào ở Phase 0.
+ * Worker XePrime (Phase 5) — đồng bộ chat Postgres → Firestore (ADR 0009).
  *
- * Job đã biết là sẽ cần (từ thiết kế hiện tại, không phải phỏng đoán):
- *   - booking_requests quá hạn phản hồi → chuyển `expired`
- *   - archive tin nhắn Firestore cũ sang Postgres (Phase 5)
- *   - tính lại rating_aggregates (Phase 5)
- *   - cảnh báo hết hạn gói/đăng kiểm/bảo hiểm (Phase 7)
- *
- * Ràng buộc BẮT BUỘC khi implement, ghi ở đây vì đây là lúc rẻ nhất để nhớ:
- *
- * 1. **Idempotent.** Mọi job phải chạy lại được mà không nhân đôi hậu quả. Job gửi thông
- *    báo phải kiểm tra đã gửi chưa, không phải "chắc là chưa gửi".
- * 2. **Khoá chống chạy song song.** Trên 1 VPS thì hôm nay chỉ có một process, nhưng deploy
- *    kiểu rolling sẽ có hai process cùng sống vài giây. Dùng `pg_try_advisory_lock` để
- *    đúng một instance chạy một job tại một thời điểm.
- * 3. **Ghi lịch qua OccupancyService.** Job nào đụng tới lịch xe cũng không được INSERT
- *    thẳng vào `vehicle_occupancies` (ADR 0006).
- * 4. **Audit.** Job đổi dữ liệu nghiệp vụ ghi `audit_logs` với `actor_scope = 'system'`.
+ * Ràng buộc (xem ghi chú lịch sử): idempotent + `pg_try_advisory_lock` chống chạy song song.
+ * Chạy polling loop (không kéo cả Nest runtime vào worker): pump outbox nhịp nhanh, retention
+ * nhịp giờ. FIRESTORE_ENABLED=false → chat chạy Postgres-only, worker không có việc.
  */
-const prisma = new PrismaClient();
+const PUMP_INTERVAL_MS = 2_000;
+const RETENTION_INTERVAL_MS = 60 * 60 * 1_000;
+const LOCK_PUMP = 4_201;
+const LOCK_RETENTION = 4_202;
+
+const prisma = createPrismaClient();
+let stopping = false;
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function pumpLoop(): Promise<void> {
+  while (!stopping) {
+    try {
+      await withAdvisoryLock(prisma, LOCK_PUMP, async () => {
+        await pumpOutbox(prisma);
+      });
+    } catch (err) {
+      console.error('outbox pump lỗi:', err);
+    }
+    await sleep(PUMP_INTERVAL_MS);
+  }
+}
+
+async function retentionLoop(): Promise<void> {
+  while (!stopping) {
+    try {
+      await withAdvisoryLock(prisma, LOCK_RETENTION, async () => {
+        await runRetention(prisma);
+      });
+    } catch (err) {
+      console.error('retention lỗi:', err);
+    }
+    await sleep(RETENTION_INTERVAL_MS);
+  }
+}
 
 async function main(): Promise<void> {
   await prisma.$connect();
-  console.log('XePrime worker: kết nối DB xong. Chưa đăng ký job nào (Phase 0).');
+
+  if (!FIRESTORE_ENABLED) {
+    console.log(
+      'XePrime worker: FIRESTORE_ENABLED=false → chat chạy Postgres-only, không đẩy Firestore. Kết thúc.',
+    );
+    await prisma.$disconnect();
+    return;
+  }
+
+  console.log('XePrime worker: outbox pump + retention đang chạy.');
+  await Promise.all([pumpLoop(), retentionLoop()]);
   await prisma.$disconnect();
+}
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    stopping = true;
+  });
 }
 
 main().catch(async (err: unknown) => {

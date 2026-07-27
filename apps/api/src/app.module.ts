@@ -17,6 +17,7 @@ import { TenantsModule } from './modules/tenants/tenants.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { FirebaseModule } from './modules/firebase/firebase.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { PublicListingsModule } from './modules/public-listings/public-listings.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
@@ -54,6 +55,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     RbacModule,
     AuditModule,
     NotificationModule,
+    FirebaseModule,
 
     HealthModule,
     UsersModule,

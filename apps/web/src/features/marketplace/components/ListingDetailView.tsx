@@ -1,5 +1,6 @@
 import { SERVICE_TYPE_LABEL, VEHICLE_TYPE, type ServiceType } from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
+import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { formatMoneyVnd } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
 import { ListingReviews } from './ListingReviews';
@@ -65,12 +66,15 @@ export function ListingDetailView({ listing }: { listing: PublicListingDetail })
           {listing.shopBio ? <p className={styles.shopBio}>{listing.shopBio}</p> : null}
         </div>
 
-        <RequestBookingButton
-          vehicleId={listing.id}
-          vehicleName={listing.name}
-          size="large"
-          className={styles.cta}
-        />
+        <div className={styles.actions}>
+          <RequestBookingButton
+            vehicleId={listing.id}
+            vehicleName={listing.name}
+            size="large"
+            className={styles.cta}
+          />
+          <ChatWithShopButton vehicleId={listing.id} size="large" />
+        </div>
 
         {listing.description ? (
           <section className={styles.description}>

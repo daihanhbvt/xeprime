@@ -12,6 +12,8 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   /** Khu khách hàng: các chuyến thuê + đánh giá sau chuyến (cần đăng nhập, ngoài khu /manage). */
   TRIPS: '/trips',
+  /** Khu tin nhắn của khách (chat với shop). Shop dùng /manage/chat. */
+  CHAT: '/chat',
   MANAGE: {
     ROOT: '/manage',
 
