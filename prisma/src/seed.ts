@@ -10,6 +10,7 @@ import {
   BOOKING_STATUS,
   DEFAULT_PLATFORM_ROLE_PERMISSIONS,
   DEFAULT_TENANT_ROLE_PERMISSIONS,
+  LISTING_STATUS,
   MEMBERSHIP_STATUS,
   OCCUPANCY_SOURCE_TYPE,
   PERMISSION_VALUES,
@@ -195,6 +196,64 @@ const OCCUPYING: readonly string[] = [
   BOOKING_STATUS.ACTIVE,
 ];
 
+/**
+ * Mirror `ListingsService.syncFromVehicle` cho seed (ADR 0008). Xe approved_public & chưa xoá →
+ * listing `active` (upsert theo vehicle_id); còn lại chỉ hạ status nếu đã có row (không tạo listing
+ * ma). Trả true khi upsert active. Trong app, writer DUY NHẤT vẫn là ListingsService.
+ */
+async function syncSeedListing(vehicleId: string): Promise<boolean> {
+  const v = await prisma.vehicle.findUnique({
+    where: { id: vehicleId },
+    select: {
+      id: true,
+      tenantId: true,
+      name: true,
+      vehicleType: true,
+      serviceType: true,
+      brand: true,
+      model: true,
+      seatCount: true,
+      fuelType: true,
+      mainImageUrl: true,
+      weekdayPrice: true,
+      weekendPrice: true,
+      publicStatus: true,
+      deletedAt: true,
+      tenant: { select: { slug: true, profile: { select: { provinceName: true } } } },
+    },
+  });
+  if (!v) return false;
+
+  const active = !v.deletedAt && v.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
+  if (!active) {
+    const status = v.deletedAt ? LISTING_STATUS.ARCHIVED : LISTING_STATUS.HIDDEN;
+    await prisma.publicListing.updateMany({ where: { vehicleId }, data: { status } });
+    return false;
+  }
+
+  const snapshot = {
+    shopSlug: v.tenant.slug,
+    title: v.name,
+    status: LISTING_STATUS.ACTIVE,
+    vehicleType: v.vehicleType,
+    serviceType: v.serviceType,
+    brand: v.brand,
+    model: v.model,
+    seatCount: v.seatCount,
+    fuelType: v.fuelType,
+    provinceName: v.tenant.profile?.provinceName ?? null,
+    mainImageUrl: v.mainImageUrl,
+    weekdayPrice: v.weekdayPrice,
+    weekendPrice: v.weekendPrice,
+  };
+  await prisma.publicListing.upsert({
+    where: { vehicleId },
+    create: { id: ulid(), tenantId: v.tenantId, vehicleId, ...snapshot },
+    update: snapshot,
+  });
+  return true;
+}
+
 async function main(): Promise<void> {
   console.log('Seeding XePrime...');
 
@@ -322,6 +381,20 @@ async function main(): Promise<void> {
   }
   console.log(`  vehicles: ${vehicleIdByCode.size}`);
 
+  // Snapshot public_listings cho xe đã duyệt (ADR 0008). Trong app, ListingsService là writer
+  // DUY NHẤT; ở seed dùng cùng logic (đọc xe+tenant, suy status) để marketplace có dữ liệu demo.
+  let listingCount = 0;
+  for (const vehicleId of vehicleIdByCode.values()) {
+    if (await syncSeedListing(vehicleId)) listingCount += 1;
+  }
+  console.log(`  public_listings: ${listingCount}`);
+
+  // Occupancy được tính lại từ TODAY mỗi lần seed. Nếu giữ occupancy từ lần seed NGÀY KHÁC,
+  // ngày mới có thể chồng ngày cũ và đụng exclusion constraint (ADR 0006). Xoá sạch occupancy
+  // demo của tenant rồi tạo lại → seed idempotent kể cả chạy khác ngày. Seed sở hữu dữ liệu
+  // demo của tenant này; booking dùng upsert (không xoá) để không đụng FK.
+  await prisma.vehicleOccupancy.deleteMany({ where: { tenantId: tenant.id } });
+
   let bookingCount = 0;
   for (const [i, b] of DEMO_BOOKINGS.entries()) {
     const vehicleId = vehicleIdByCode.get(b.vehicleCode);
@@ -330,22 +403,17 @@ async function main(): Promise<void> {
     const code = `DH${String(i + 1).padStart(4, '0')}`;
     const pickupAt = daysFromToday(b.from, 3);
     const returnAt = daysFromToday(b.to, 5);
-
-    const existing = await prisma.booking.findUnique({
-      where: { tenantId_code: { tenantId: tenant.id, code } },
-      select: { id: true },
-    });
-    if (existing) continue;
-
     const bookingId = ulid();
     const days = Math.max(1, b.to - b.from);
     const vehicle = DEMO_VEHICLES.find((v) => v.code === b.vehicleCode);
     const total = (vehicle?.weekday ?? 0) * days;
+    const paidAmount = b.status === BOOKING_STATUS.COMPLETED ? total : 0;
 
     // Booking và occupancy phải cùng transaction — ADR 0006.
     await prisma.$transaction(async (tx) => {
-      await tx.booking.create({
-        data: {
+      const booking = await tx.booking.upsert({
+        where: { tenantId_code: { tenantId: tenant.id, code } },
+        create: {
           id: bookingId,
           tenantId: tenant.id,
           vehicleId,
@@ -358,9 +426,20 @@ async function main(): Promise<void> {
           returnAt,
           baseAmount: total,
           totalAmount: total,
-          paidAmount: b.status === BOOKING_STATUS.COMPLETED ? total : 0,
+          paidAmount,
           createdBy: ownerUserId,
         },
+        update: {
+          customerName: b.customer,
+          customerPhone: b.phone,
+          status: b.status,
+          pickupAt,
+          returnAt,
+          baseAmount: total,
+          totalAmount: total,
+          paidAmount,
+        },
+        select: { id: true },
       });
 
       if (OCCUPYING.includes(b.status)) {
@@ -370,7 +449,7 @@ async function main(): Promise<void> {
             tenantId: tenant.id,
             vehicleId,
             sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING,
-            sourceId: bookingId,
+            sourceId: booking.id,
             startAt: pickupAt,
             endAt: returnAt,
           },

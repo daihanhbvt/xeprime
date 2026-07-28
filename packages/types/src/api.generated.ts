@@ -400,6 +400,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/shops/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hồ sơ công khai của một gian hàng theo slug */
+        get: operations["PublicShopsController_getShop"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/shops/{slug}/listings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách xe công khai của một gian hàng (phân trang) */
+        get: operations["PublicShopsController_getShopListings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vehicles": {
         parameters: {
             query?: never;
@@ -1187,6 +1221,25 @@ export interface components {
             shopLogoUrl?: string | null;
             /** @description Giới thiệu gian hàng */
             shopBio?: string | null;
+            /** @description URL ảnh gallery theo thứ tự */
+            images: string[];
+            /** @description Key tiện ích (VEHICLE_FEATURE_LABEL) */
+            features: string[];
+        };
+        PublicShopDto: {
+            name: string;
+            /** @description Slug gian hàng */
+            slug: string;
+            provinceName?: string | null;
+            logoUrl?: string | null;
+            coverUrl?: string | null;
+            bio?: string | null;
+            address?: string | null;
+            /** @description Số điện thoại liên hệ */
+            phone?: string | null;
+            /** @description Điểm đánh giá trung bình, string — ADR 0007 */
+            ratingAvg: string;
+            ratingCount: number;
         };
         VehicleListItemDto: {
             id: string;
@@ -1253,6 +1306,10 @@ export interface components {
             description?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
+            /** @description URL ảnh gallery theo thứ tự */
+            images: string[];
+            /** @description Key tiện ích (VEHICLE_FEATURE_LABEL) */
+            features: string[];
             latestPublicReview?: components["schemas"]["VehiclePublicReviewDto"] | null;
         };
         CreateVehicleDto: {
@@ -1297,6 +1354,10 @@ export interface components {
              * @example 750000
              */
             weekendPrice?: string;
+            /** @description URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi) */
+            images?: string[];
+            /** @description Tiện ích xe (thay toàn bộ khi gửi) */
+            features?: ("bluetooth" | "gps" | "backup_camera" | "camera_360" | "dash_camera" | "reverse_sensor" | "sunroof" | "etc" | "spare_tire" | "airbag" | "usb" | "screen" | "map" | "child_seat")[];
         };
         UpdateVehicleDto: {
             /**
@@ -1340,6 +1401,10 @@ export interface components {
              * @example 750000
              */
             weekendPrice?: string;
+            /** @description URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi) */
+            images?: string[];
+            /** @description Tiện ích xe (thay toàn bộ khi gửi) */
+            features?: ("bluetooth" | "gps" | "backup_camera" | "camera_360" | "dash_camera" | "reverse_sensor" | "sunroof" | "etc" | "spare_tire" | "airbag" | "usb" | "screen" | "map" | "child_seat")[];
         };
         BookingListItemDto: {
             id: string;
@@ -2382,6 +2447,14 @@ export interface operations {
                 q?: string;
                 /** @description Lọc theo tỉnh/thành của gian hàng */
                 province?: string;
+                /** @description Giá thuê/ngày tối thiểu (VND) */
+                priceMin?: number;
+                /** @description Giá thuê/ngày tối đa (VND) */
+                priceMax?: number;
+                /** @description Nhận xe (ISO-8601) — lọc xe rảnh trong khoảng */
+                pickupAt?: string;
+                /** @description Trả xe (ISO-8601) — dùng cùng pickupAt */
+                returnAt?: string;
                 sort?: "newest" | "price_asc" | "price_desc";
                 page?: number;
                 limit?: number;
@@ -2419,6 +2492,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicListingDetailDto"];
+                };
+            };
+        };
+    };
+    PublicShopsController_getShop: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicShopDto"];
+                };
+            };
+        };
+    };
+    PublicShopsController_getShopListings: {
+        parameters: {
+            query?: {
+                sort?: "newest" | "price_asc" | "price_desc";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicListingPageDto"];
                 };
             };
         };

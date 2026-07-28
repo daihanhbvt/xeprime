@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PublicListingsModule } from '../public-listings/public-listings.module';
 import { PlatformAdminController } from './platform-admin.controller';
 import { PlatformApprovalService } from './platform-approval.service';
 
@@ -8,6 +9,7 @@ import { PlatformApprovalService } from './platform-approval.service';
  * Xe/giấy tờ và dashboard đầy đủ mở ở Phase 7.
  */
 @Module({
+  imports: [PublicListingsModule],
   controllers: [PlatformAdminController],
   providers: [PlatformApprovalService],
 })

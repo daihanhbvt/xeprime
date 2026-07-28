@@ -29,6 +29,10 @@ export function useMarketplaceFilters() {
       minSeats: num('minSeats'),
       q: searchParams.get('q') ?? undefined,
       province: searchParams.get('province') ?? undefined,
+      priceMin: num('priceMin'),
+      priceMax: num('priceMax'),
+      pickupAt: searchParams.get('pickupAt') ?? undefined,
+      returnAt: searchParams.get('returnAt') ?? undefined,
       sort: (searchParams.get('sort') as MarketplaceFilters['sort']) ?? undefined,
       page: num('page'),
     };

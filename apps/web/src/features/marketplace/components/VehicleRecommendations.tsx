@@ -1,10 +1,10 @@
 'use client';
 
-import { Alert, Empty, Pagination, Skeleton } from 'antd';
+import { Alert, Empty, Pagination, Select, Skeleton } from 'antd';
 import { VEHICLE_TYPE_LABEL, VEHICLE_TYPE_VALUES } from '@xeprime/types';
 import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
-import { SORT_CHIPS } from '../constants';
+import { PRICE_RANGES, SORT_CHIPS } from '../constants';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { usePublicListings } from '../hooks/use-public-listings';
 import { VehicleCard } from './VehicleCard';
@@ -24,6 +24,8 @@ export function VehicleRecommendations() {
   const activeType = filters.vehicleType ?? 'all';
   const activeSort = filters.sort ?? 'newest';
   const total = data?.meta.total ?? 0;
+  const priceKey =
+    PRICE_RANGES.find((r) => r.min === filters.priceMin && r.max === filters.priceMax)?.key ?? 'all';
 
   return (
     <section className={styles.section} aria-labelledby="rec-title">
@@ -58,6 +60,16 @@ export function VehicleRecommendations() {
             {s.label}
           </Chip>
         ))}
+        <Select
+          size="small"
+          className={styles.priceSelect}
+          value={priceKey}
+          options={PRICE_RANGES.map((r) => ({ value: r.key, label: r.label }))}
+          onChange={(key) => {
+            const range = PRICE_RANGES.find((r) => r.key === key);
+            setFilters({ priceMin: range?.min, priceMax: range?.max });
+          }}
+        />
       </div>
 
       {isError ? (

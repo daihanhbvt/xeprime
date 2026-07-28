@@ -1,0 +1,214 @@
+import { createPrismaClient, newId } from '@xeprime/prisma';
+import {
+  APPROVAL_STATUS,
+  APPROVAL_TARGET_TYPE,
+  LISTING_STATUS,
+  MEMBERSHIP_STATUS,
+  TENANT_ROLE,
+  TENANT_STATUS,
+  VEHICLE_TYPE,
+} from '@xeprime/types';
+import { AuditService } from '../src/modules/audit/audit.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
+import { NotificationService } from '../src/modules/notification/notification.service';
+import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
+import { PublicListingsService } from '../src/modules/public-listings/public-listings.service';
+import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
+import type { PrismaService } from '../src/prisma/prisma.service';
+
+/**
+ * Gap 3 — 4 test bắt buộc ADR 0008 (§Test), chạy qua các service THẬT trên PostgreSQL:
+ * (1) khoá tenant → biến khỏi search ngay; (2) sửa giá xe approved → listing hidden + vào hàng chờ;
+ * (3) xoá mềm xe → archived + getById cũ 404; (4) duyệt xe → listing active đúng snapshot.
+ * Cô lập bằng provinceName duy nhất. Không có DB thì tự skip.
+ */
+const prisma = createPrismaClient();
+const asService = prisma as unknown as PrismaService;
+const audit = new AuditService(asService);
+const notifications = new NotificationService(asService);
+const listings = new ListingsService(asService);
+const vehicles = new VehiclesService(asService, audit, listings);
+const approvals = new PlatformApprovalService(asService, audit, notifications, listings);
+const publicListings = new PublicListingsService(asService);
+
+const PROV = `ZZ-Sync-${newId().slice(-6)}`;
+
+let dbAvailable = false;
+let ownerId: string;
+let reviewerId: string;
+let tenantId: string;
+let vApprove: string; // xe cho test duyệt/khoá/sửa
+let vDelete: string; // xe cho test xoá mềm
+
+async function seedVehicle(): Promise<string> {
+  const id = newId();
+  await prisma.vehicle.create({
+    data: {
+      id,
+      tenantId,
+      code: `V-${id.slice(-6)}`,
+      name: 'Toyota Vios',
+      vehicleType: VEHICLE_TYPE.CAR,
+      plateNumber: '51K-123.45',
+      description: 'Xe 5 chỗ máy xăng.',
+      mainImageUrl: 'https://img.example/vios.jpg',
+      weekdayPrice: '600000',
+    },
+  });
+  return id;
+}
+
+async function approve(vehicleId: string): Promise<void> {
+  await vehicles.submitForPublicReview(tenantId, vehicleId, ownerId);
+  const task = await prisma.approvalTask.findFirstOrThrow({
+    where: {
+      targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+      targetId: vehicleId,
+      status: APPROVAL_STATUS.PENDING,
+    },
+    select: { id: true },
+  });
+  await approvals.approve(task.id, reviewerId);
+}
+
+const inSearch = async (vehicleId: string): Promise<boolean> => {
+  const res = await publicListings.search({ province: PROV, limit: 48 } as never);
+  return res.data.some((v) => v.id === vehicleId);
+};
+
+beforeAll(async () => {
+  try {
+    await prisma.$connect();
+    await prisma.$queryRaw`SELECT 1`;
+    dbAvailable = true;
+  } catch {
+    console.warn('\n[skip] Không kết nối được PostgreSQL. Chạy `pnpm db:up` trước.\n');
+    return;
+  }
+
+  ownerId = newId();
+  reviewerId = newId();
+  tenantId = newId();
+
+  await prisma.user.createMany({
+    data: [
+      { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
+      { id: reviewerId, displayName: 'Reviewer', email: `rev-${reviewerId}@xeprime.test` },
+    ],
+  });
+  await prisma.tenant.create({
+    data: {
+      id: tenantId,
+      code: `T-${tenantId.slice(-8)}`,
+      slug: `t-${tenantId.toLowerCase().slice(-10)}`,
+      name: 'Shop Sync',
+      status: TENANT_STATUS.ACTIVE,
+      ownerUserId: ownerId,
+    },
+  });
+  await prisma.tenantProfile.create({
+    data: { tenantId, displayName: 'Shop Sync', provinceName: PROV },
+  });
+  await prisma.tenantMembership.create({
+    data: {
+      id: newId(),
+      tenantId,
+      userId: ownerId,
+      roleKey: TENANT_ROLE.SHOP_OWNER,
+      status: MEMBERSHIP_STATUS.ACTIVE,
+    },
+  });
+
+  vApprove = await seedVehicle();
+  vDelete = await seedVehicle();
+  await approve(vDelete); // arrange sẵn cho test xoá mềm
+});
+
+afterAll(async () => {
+  if (dbAvailable) {
+    // Xoá tenant cascade → vehicles + public_listings + approval_tasks (FK onDelete cascade).
+    const tasks = await prisma.approvalTask.findMany({
+      where: { tenantId },
+      select: { id: true },
+    });
+    await prisma.approvalLog.deleteMany({
+      where: { approvalTaskId: { in: tasks.map((t) => t.id) } },
+    });
+    await prisma.approvalTask.deleteMany({ where: { tenantId } });
+    await prisma.notification.deleteMany({ where: { userId: { in: [ownerId, reviewerId] } } });
+    await prisma.auditLog.deleteMany({ where: { tenantId } });
+    await prisma.publicListing.deleteMany({ where: { tenantId } });
+    await prisma.vehicle.deleteMany({ where: { tenantId } });
+    await prisma.tenantProfile.deleteMany({ where: { tenantId } });
+    await prisma.tenantMembership.deleteMany({ where: { tenantId } });
+    await prisma.tenant.deleteMany({ where: { id: tenantId } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, reviewerId] } } });
+  }
+  await prisma.$disconnect();
+});
+
+const maybe = (name: string, fn: () => Promise<void>) =>
+  it(name, async () => {
+    if (!dbAvailable) return;
+    await fn();
+  });
+
+describe('public_listings sync (ADR 0008)', () => {
+  maybe('duyệt xe → listing active đúng snapshot + hiện trên search', async () => {
+    await approve(vApprove);
+
+    const listing = await prisma.publicListing.findUniqueOrThrow({
+      where: { vehicleId: vApprove },
+      select: { status: true, title: true, weekdayPrice: true, provinceName: true },
+    });
+    expect(listing.status).toBe(LISTING_STATUS.ACTIVE);
+    expect(listing.title).toBe('Toyota Vios');
+    expect(String(listing.weekdayPrice)).toBe('600000');
+    expect(listing.provinceName).toBe(PROV);
+    expect(await inSearch(vApprove)).toBe(true);
+  });
+
+  maybe('khoá tenant → listing biến khỏi search ngay (không cần job)', async () => {
+    await prisma.tenant.update({
+      where: { id: tenantId },
+      data: { status: TENANT_STATUS.SUSPENDED },
+    });
+    expect(await inSearch(vApprove)).toBe(false);
+    // Khôi phục để các test sau chạy tiếp.
+    await prisma.tenant.update({ where: { id: tenantId }, data: { status: TENANT_STATUS.ACTIVE } });
+    expect(await inSearch(vApprove)).toBe(true);
+  });
+
+  maybe('sửa giá xe approved → listing hidden + xe vào hàng chờ duyệt', async () => {
+    await vehicles.update(tenantId, vApprove, ownerId, { weekdayPrice: '999000' });
+
+    const listing = await prisma.publicListing.findUniqueOrThrow({
+      where: { vehicleId: vApprove },
+      select: { status: true },
+    });
+    expect(listing.status).toBe(LISTING_STATUS.HIDDEN);
+    expect(await inSearch(vApprove)).toBe(false);
+    await expect(publicListings.getById(vApprove)).rejects.toThrow();
+
+    const pending = await prisma.approvalTask.count({
+      where: {
+        targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+        targetId: vApprove,
+        status: APPROVAL_STATUS.PENDING,
+      },
+    });
+    expect(pending).toBe(1);
+  });
+
+  maybe('xoá mềm xe → listing archived, getById cũ trả 404, không search ra', async () => {
+    await vehicles.remove(tenantId, vDelete);
+
+    const listing = await prisma.publicListing.findUniqueOrThrow({
+      where: { vehicleId: vDelete },
+      select: { status: true },
+    });
+    expect(listing.status).toBe(LISTING_STATUS.ARCHIVED);
+    expect(await inSearch(vDelete)).toBe(false);
+    await expect(publicListings.getById(vDelete)).rejects.toThrow();
+  });
+});

@@ -9,34 +9,42 @@ import { cx } from '@/lib/cx';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import styles from './HeroSearch.module.css';
 
+// Value = `provinceName` khớp `TenantProfile.provinceName` (backend lọc contains-insensitive).
 const PROVINCES = [
   { value: '', label: 'Toàn quốc' },
-  { value: 'HN', label: 'Hà Nội' },
-  { value: 'HCM', label: 'TP. Hồ Chí Minh' },
-  { value: 'DN', label: 'Đà Nẵng' },
-  { value: 'HUE', label: 'Huế' },
-  { value: 'DL', label: 'Đà Lạt' },
-  { value: 'NT', label: 'Nha Trang' },
+  { value: 'Hà Nội', label: 'Hà Nội' },
+  { value: 'TP. Hồ Chí Minh', label: 'TP. Hồ Chí Minh' },
+  { value: 'Đà Nẵng', label: 'Đà Nẵng' },
+  { value: 'Huế', label: 'Huế' },
+  { value: 'Đà Lạt', label: 'Đà Lạt' },
+  { value: 'Nha Trang', label: 'Nha Trang' },
 ];
 
 /**
  * Hero + thẻ tìm kiếm — bám xeprime.vn.
  *
- * Tab loại xe đẩy vào URL (đồng bộ với chip ở phần gợi ý — ADR 0004). Địa điểm và ngày là
- * state cục bộ: backend chưa lọc theo tỉnh (vehicle chưa có `province`) và theo lịch trống
- * (Phase 4), nên chúng được thu thập cho bước sau, còn "Tìm xe khả dụng" lọc theo loại xe và
- * cuộn xuống danh sách.
+ * "Tìm xe khả dụng" đẩy loại xe + tỉnh + khoảng ngày vào URL searchParams (ADR 0004); backend lọc
+ * theo tỉnh (`provinceName`) và loại xe rảnh trong khoảng ngày (`vehicle_occupancies`, ADR 0006).
  */
 export function HeroSearch() {
   const { filters, setFilters } = useMarketplaceFilters();
   const vehicleType = filters.vehicleType ?? VEHICLE_TYPE.CAR;
 
-  const [province, setProvince] = useState('');
-  const [pickup, setPickup] = useState(() => dayjs().add(1, 'day'));
-  const [dropoff, setDropoff] = useState(() => dayjs().add(4, 'day'));
+  const [province, setProvince] = useState(filters.province ?? '');
+  const [pickup, setPickup] = useState(() =>
+    filters.pickupAt ? dayjs(filters.pickupAt) : dayjs().add(1, 'day'),
+  );
+  const [dropoff, setDropoff] = useState(() =>
+    filters.returnAt ? dayjs(filters.returnAt) : dayjs().add(4, 'day'),
+  );
 
   function submit() {
-    setFilters({ vehicleType });
+    setFilters({
+      vehicleType,
+      province: province || undefined,
+      pickupAt: pickup.toISOString(),
+      returnAt: dropoff.toISOString(),
+    });
     document.getElementById('recommendations')?.scrollIntoView({ behavior: 'smooth' });
   }
 

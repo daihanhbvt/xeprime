@@ -10,6 +10,7 @@ import {
   FUEL_TYPE_VALUES,
   SERVICE_TYPE_VALUES,
   TENANT_TYPE_VALUES,
+  VEHICLE_FEATURE_KEYS,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
@@ -87,6 +88,15 @@ export const vehicleFormSchema = yup.object({
     .max(2000)
     .nullable()
     .default(null),
+  images: yup
+    .array()
+    .of(yup.string().trim().url('Đường dẫn ảnh không hợp lệ').max(2000).required())
+    .max(20, 'Tối đa 20 ảnh')
+    .default([]),
+  features: yup
+    .array()
+    .of(yup.string().oneOf(VEHICLE_FEATURE_KEYS).required())
+    .default([]),
 });
 
 export type VehicleFormValues = yup.InferType<typeof vehicleFormSchema>;

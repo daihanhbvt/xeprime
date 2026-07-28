@@ -136,6 +136,7 @@ model Tenant {
   notifications Notification[]
   reviews       Review[]
   conversations Conversation[]
+  publicListings PublicListing[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -492,6 +493,9 @@ model Vehicle {
   occupancies VehicleOccupancy[]
   reviews     Review[]
   conversations Conversation[]
+  publicListing PublicListing?
+  images      VehicleImage[]
+  features    VehicleFeature[]
 
   @@unique([tenantId, code])
   @@index([tenantId, publicStatus])
@@ -499,6 +503,78 @@ model Vehicle {
   @@index([vehicleType, serviceType])
   @@index([brand, model])
   @@map("vehicles")
+}
+
+// ---------------------------------------------------------------------------
+// Ảnh & tiện ích xe — database_design §9.3, §9.5
+// ---------------------------------------------------------------------------
+
+/// Gallery ảnh của xe (ngoài `main_image_url`). Sắp theo `sort_order`.
+model VehicleImage {
+  id        String   @id @db.Char(26)
+  vehicleId String   @map("vehicle_id") @db.Char(26)
+  tenantId  String   @map("tenant_id") @db.Char(26)
+  imageUrl  String   @map("image_url") @db.Text
+  /// gallery | interior | exterior | document (mở rộng sau)
+  imageType String?  @map("image_type") @db.VarChar(50)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, sortOrder])
+  @@map("vehicle_images")
+}
+
+/// Tiện ích xe (bluetooth, camera lùi…). Key thuộc `@xeprime/types` VEHICLE_FEATURE_LABEL.
+model VehicleFeature {
+  id         String @id @db.Char(26)
+  vehicleId  String @map("vehicle_id") @db.Char(26)
+  featureKey String @map("feature_key") @db.VarChar(80)
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, featureKey])
+  @@map("vehicle_features")
+}
+
+// ---------------------------------------------------------------------------
+// Public listing snapshot — ADR 0008 / database_design §9.9
+// ---------------------------------------------------------------------------
+
+/// Snapshot public của xe đã duyệt, để Marketplace query nhanh trên một bảng phẳng.
+/// GHI qua DUY NHẤT `ListingsService.syncFromVehicle` (ADR 0008 §1) — không module nào khác
+/// INSERT/UPDATE bảng này. Trạng thái tenant KHÔNG denormalize ở đây (ADR 0008 §3): marketplace
+/// luôn join `tenants` lọc `status='active'`, nên khoá tenant có hiệu lực tức thì.
+model PublicListing {
+  id           String    @id @db.Char(26)
+  tenantId     String    @map("tenant_id") @db.Char(26)
+  vehicleId    String    @unique @map("vehicle_id") @db.Char(26)
+  shopSlug     String    @map("shop_slug") @db.VarChar(120)
+  title        String    @db.VarChar(255)
+  /// @xeprime/types → ListingStatus (active | hidden | suspended | archived)
+  status       String    @default("active") @db.VarChar(50)
+  vehicleType  String    @map("vehicle_type") @db.VarChar(50)
+  serviceType  String    @map("service_type") @db.VarChar(50)
+  brand        String?   @db.VarChar(100)
+  model        String?   @db.VarChar(100)
+  seatCount    Int?      @map("seat_count")
+  fuelType     String?   @map("fuel_type") @db.VarChar(50)
+  provinceName String?   @map("province_name") @db.VarChar(100)
+  mainImageUrl String?   @map("main_image_url") @db.Text
+  weekdayPrice Decimal?  @map("weekday_price") @db.Decimal(14, 2)
+  weekendPrice Decimal?  @map("weekend_price") @db.Decimal(14, 2)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([status, vehicleType, serviceType])
+  @@index([provinceName])
+  @@index([tenantId, status])
+  @@index([weekdayPrice])
+  @@map("public_listings")
 }
 
 // ---------------------------------------------------------------------------

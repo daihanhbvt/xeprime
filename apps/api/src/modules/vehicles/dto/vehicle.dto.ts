@@ -4,6 +4,7 @@ import {
   FUEL_TYPE_VALUES,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
+  VEHICLE_FEATURE_KEYS,
   VEHICLE_OPERATION_STATUS,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_PUBLIC_STATUS_VALUES,
@@ -11,6 +12,8 @@ import {
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsIn,
   IsInt,
   IsOptional,
@@ -137,6 +140,12 @@ export class VehicleDetailDto extends VehicleListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 
+  @ApiProperty({ type: [String], description: 'URL ảnh gallery theo thứ tự' })
+  images!: string[];
+
+  @ApiProperty({ type: [String], description: 'Key tiện ích (VEHICLE_FEATURE_LABEL)' })
+  features!: string[];
+
   @ApiPropertyOptional({ type: VehiclePublicReviewDto, nullable: true })
   latestPublicReview!: VehiclePublicReviewDto | null;
 }
@@ -242,6 +251,28 @@ export class CreateVehicleDto {
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'weekendPrice phải là số tiền hợp lệ' })
   weekendPrice?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(2000, { each: true })
+  images?: string[];
+
+  @ApiPropertyOptional({
+    isArray: true,
+    enum: VEHICLE_FEATURE_KEYS,
+    description: 'Tiện ích xe (thay toàn bộ khi gửi)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(VEHICLE_FEATURE_KEYS.length)
+  @IsIn(VEHICLE_FEATURE_KEYS, { each: true })
+  features?: string[];
 }
 
 /**

@@ -26,6 +26,36 @@
   background: linear-gradient(135deg, var(--xp-gold-wash), var(--xp-color-bg-sand));
 }
 
+.gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.thumb {
+  width: 84px;
+  height: 63px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--xp-color-border);
+}
+
+.features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.featureChip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--xp-color-bg-sand);
+  border: 1px solid var(--xp-color-border-secondary);
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+}
+
 .info {
   display: flex;
   flex-direction: column;
@@ -94,8 +124,14 @@
 }
 
 .shopName {
+  display: inline-block;
   font-weight: 700;
   color: var(--xp-color-text);
+}
+
+.shopName:hover {
+  color: var(--xp-color-primary);
+  text-decoration: underline;
 }
 
 .shopMeta {

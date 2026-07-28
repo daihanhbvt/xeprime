@@ -9,7 +9,7 @@ import {
   type VehicleType,
 } from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
-import { listingPath } from '@/constants/routes';
+import { listingPath, shopPath } from '@/constants/routes';
 import { formatMoneyVnd } from '@/lib/money';
 import type { PublicListing } from '../types';
 import styles from './VehicleCard.module.css';
@@ -57,9 +57,13 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
             <b>{formatMoneyVnd(listing.weekdayPrice)}</b>
             <span>/ngày</span>
           </div>
-          <span className={styles.shop} title={listing.shopName}>
+          <Link
+            href={shopPath.detail(listing.shopSlug)}
+            className={styles.shop}
+            title={listing.shopName}
+          >
             {listing.shopName}
-          </span>
+          </Link>
         </div>
         <RequestBookingButton
           vehicleId={listing.id}

@@ -25,6 +25,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | DTO envelope + `@ApiProperty` | `common/dto/api-response.dto.ts` | ADR 0007 |
 | Prisma client (adapter) | `prisma/prisma.service.ts` · factory ở `@xeprime/prisma` | ADR 0001 |
 | **Ghi lịch xe — đường DUY NHẤT** | `modules/calendar/occupancy.service.ts` | ADR 0006 |
+| Marketplace công khai + trang gian hàng `/public/shops/:slug` | `modules/public-listings/` (`public-listings.controller.ts`, `public-shops.controller.ts`) | ADR 0008 (đọc thẳng `vehicles`, chưa có snapshot) |
 | Env validate (zod) | `config/env.schema.ts` | — |
 | Module mẫu chuẩn (controller+guard+dto) | `modules/tenants/` | — |
 | Sinh OpenAPI spec | `openapi.ts` (`nest build && node dist`) | ADR 0007 |
@@ -43,6 +44,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Provider (AntD/Redux/Query) | `app/providers.tsx` | — |
 | Design token · CSS Modules · token.css↔theme.ts | `styles/theme.ts` · `styles/tokens.css` | ADR 0003 |
 | Lịch (resource timeline) | `features/calendar/` | ADR 0006 |
+| Marketplace + trang gian hàng `/shops/[slug]` (thẻ xe, chi tiết, hồ sơ shop) | `features/marketplace/` · `app/(public)/shops/[slug]/` | ADR 0008 |
 
 ## Database
 

@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SERVICE_TYPE_VALUES, VEHICLE_TYPE_VALUES } from '@xeprime/types';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsISO8601, IsOptional, IsString, Max, Min } from 'class-validator';
 
 /** Cách sắp xếp kết quả marketplace. */
 export const LISTING_SORT = ['newest', 'price_asc', 'price_desc'] as const;
@@ -44,6 +44,30 @@ export class PublicListingQueryDto {
   @IsOptional()
   @IsString()
   province?: string;
+
+  @ApiPropertyOptional({ description: 'Giá thuê/ngày tối thiểu (VND)', minimum: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  priceMin?: number;
+
+  @ApiPropertyOptional({ description: 'Giá thuê/ngày tối đa (VND)', minimum: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  priceMax?: number;
+
+  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) — lọc xe rảnh trong khoảng' })
+  @IsOptional()
+  @IsISO8601()
+  pickupAt?: string;
+
+  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) — dùng cùng pickupAt' })
+  @IsOptional()
+  @IsISO8601()
+  returnAt?: string;
 
   @ApiPropertyOptional({ enum: LISTING_SORT, default: 'newest' })
   @IsOptional()
@@ -99,6 +123,12 @@ export class PublicListingDetailDto extends PublicListingDto {
   shopLogoUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Giới thiệu gian hàng' })
   shopBio!: string | null;
+
+  @ApiProperty({ type: [String], description: 'URL ảnh gallery theo thứ tự' })
+  images!: string[];
+
+  @ApiProperty({ type: [String], description: 'Key tiện ích (VEHICLE_FEATURE_LABEL)' })
+  features!: string[];
 }
 
 export class PublicListingPageMetaDto {
@@ -111,4 +141,45 @@ export class PublicListingPageMetaDto {
 export class PublicListingPageDto {
   @ApiProperty({ type: [PublicListingDto] }) data!: PublicListingDto[];
   @ApiProperty({ type: PublicListingPageMetaDto }) meta!: PublicListingPageMetaDto;
+}
+
+/** Hồ sơ công khai của một gian hàng — cho trang `/shops/[slug]`. Chỉ dữ liệu công khai. */
+export class PublicShopDto {
+  @ApiProperty() name!: string;
+  @ApiProperty({ description: 'Slug gian hàng' }) slug!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) logoUrl!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) coverUrl!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) bio!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) address!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Số điện thoại liên hệ' })
+  phone!: string | null;
+
+  @ApiProperty({ description: 'Điểm đánh giá trung bình, string — ADR 0007' })
+  ratingAvg!: string;
+
+  @ApiProperty() ratingCount!: number;
+}
+
+/** Query danh sách xe của một gian hàng — phân trang + sort (không nhận slug qua body). */
+export class ShopListingQueryDto {
+  @ApiPropertyOptional({ enum: LISTING_SORT, default: 'newest' })
+  @IsOptional()
+  @IsIn(LISTING_SORT)
+  sort?: ListingSort;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 12, minimum: 1, maximum: 48 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(48)
+  limit?: number;
 }

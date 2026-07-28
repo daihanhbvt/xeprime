@@ -41,6 +41,34 @@ export const VEHICLE_PUBLIC_STATUS_SUBMITTABLE: readonly VehiclePublicStatus[] =
  * Trường "nhạy cảm": sửa khi xe đang `approved_public` sẽ tự hạ xe về `pending_public_review`
  * và tạo lại phiếu duyệt (ADR 0008 — không để thông tin đã đổi hiển thị mà chưa qua kiểm duyệt).
  */
+/**
+ * Danh mục tiện ích xe (feature) — key lưu DB, label hiển thị. Chốt ở đây để FE (multi-select)
+ * và BE (validate `@IsIn`) dùng chung, không hard-code string rời (ADR 0005).
+ */
+export const VEHICLE_FEATURE_LABEL = {
+  bluetooth: 'Bluetooth',
+  gps: 'Định vị GPS',
+  backup_camera: 'Camera lùi',
+  camera_360: 'Camera 360',
+  dash_camera: 'Camera hành trình',
+  reverse_sensor: 'Cảm biến lùi',
+  sunroof: 'Cửa sổ trời',
+  etc: 'ETC thu phí',
+  spare_tire: 'Lốp dự phòng',
+  airbag: 'Túi khí an toàn',
+  usb: 'Cổng USB',
+  screen: 'Màn hình giải trí',
+  map: 'Bản đồ',
+  child_seat: 'Ghế trẻ em',
+} as const;
+
+export type VehicleFeatureKey = keyof typeof VEHICLE_FEATURE_LABEL;
+export const VEHICLE_FEATURE_KEYS = Object.keys(VEHICLE_FEATURE_LABEL) as VehicleFeatureKey[];
+
+export function vehicleFeatureLabel(key: string): string {
+  return (VEHICLE_FEATURE_LABEL as Record<string, string>)[key] ?? key;
+}
+
 export const VEHICLE_PUBLIC_SENSITIVE_FIELDS = [
   'weekdayPrice',
   'weekendPrice',

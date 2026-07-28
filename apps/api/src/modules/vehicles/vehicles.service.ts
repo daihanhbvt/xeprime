@@ -18,6 +18,7 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
+import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateVehicleDto,
@@ -76,6 +77,7 @@ export class VehiclesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly listings: ListingsService,
   ) {}
 
   async list(
@@ -120,12 +122,23 @@ export class VehiclesService {
     });
     if (!row) throw notFound();
 
-    // Kèm lần gửi duyệt gần nhất để shop thấy lý do bị từ chối/bổ sung (mẫu getMyShop.latestApproval).
-    const latest = await this.prisma.approvalTask.findFirst({
-      where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: id },
-      orderBy: { submittedAt: 'desc' },
-      select: { status: true, reason: true, submittedAt: true, reviewedAt: true },
-    });
+    // Kèm lần gửi duyệt gần nhất + gallery ảnh + tiện ích.
+    const [latest, images, features] = await Promise.all([
+      this.prisma.approvalTask.findFirst({
+        where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: id },
+        orderBy: { submittedAt: 'desc' },
+        select: { status: true, reason: true, submittedAt: true, reviewedAt: true },
+      }),
+      this.prisma.vehicleImage.findMany({
+        where: { vehicleId: id },
+        orderBy: { sortOrder: 'asc' },
+        select: { imageUrl: true },
+      }),
+      this.prisma.vehicleFeature.findMany({
+        where: { vehicleId: id },
+        select: { featureKey: true },
+      }),
+    ]);
     const review: VehiclePublicReviewDto | null = latest
       ? {
           status: latest.status,
@@ -135,7 +148,12 @@ export class VehiclesService {
         }
       : null;
 
-    return toDetail(row, review);
+    return toDetail(
+      row,
+      review,
+      images.map((i) => i.imageUrl),
+      features.map((f) => f.featureKey),
+    );
   }
 
   async create(
@@ -145,19 +163,22 @@ export class VehiclesService {
   ): Promise<VehicleDetailDto> {
     await this.assertCodeFree(tenantId, dto.code);
 
-    const row = await this.prisma.vehicle.create({
-      data: {
-        id: newId(),
-        tenantId,
-        createdBy: userId,
-        code: dto.code,
-        name: dto.name,
-        vehicleType: dto.vehicleType,
-        ...writableFields(dto),
-      },
-      select: DETAIL_SELECT,
+    const id = newId();
+    await this.prisma.$transaction(async (tx) => {
+      await tx.vehicle.create({
+        data: {
+          id,
+          tenantId,
+          createdBy: userId,
+          code: dto.code,
+          name: dto.name,
+          vehicleType: dto.vehicleType,
+          ...writableFields(dto),
+        },
+      });
+      await this.replaceMedia(tx, id, tenantId, dto);
     });
-    return toDetail(row);
+    return this.getOne(tenantId, id);
   }
 
   async update(
@@ -192,20 +213,22 @@ export class VehiclesService {
     };
 
     if (!knockBack) {
-      const row = await this.prisma.vehicle.update({
-        where: { id: current.id },
-        data,
-        select: DETAIL_SELECT,
+      // Sửa xe (kể cả sửa tại chỗ xe đang công khai) → đồng bộ snapshot public_listings (ADR 0008).
+      await this.prisma.$transaction(async (tx) => {
+        await tx.vehicle.update({ where: { id: current.id }, data });
+        await this.replaceMedia(tx, current.id, tenantId, dto);
+        await this.listings.syncFromVehicle(current.id, tx);
       });
-      return toDetail(row);
+      return this.getOne(tenantId, current.id);
     }
 
-    const row = await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       const updated = await tx.vehicle.update({
         where: { id: current.id },
         data,
         select: DETAIL_SELECT,
       });
+      await this.replaceMedia(tx, current.id, tenantId, dto);
       await this.createVehicleApprovalTask(tx, {
         vehicleId: current.id,
         tenantId,
@@ -214,9 +237,45 @@ export class VehiclesService {
         snapshot: updated,
         action: 'resubmit',
       });
-      return updated;
+      // Trường nhạy cảm đổi → xe về pending → listing ẩn (ADR 0008 §2).
+      await this.listings.syncFromVehicle(current.id, tx);
     });
-    return toDetail(row);
+    return this.getOne(tenantId, current.id);
+  }
+
+  /**
+   * Thay TOÀN BỘ ảnh gallery + tiện ích khi client gửi (undefined = không đụng). Chạy trong tx
+   * của caller. Ảnh giữ thứ tự qua `sortOrder`; feature khử trùng trước khi ghi (unique DB chốt cuối).
+   */
+  private async replaceMedia(
+    tx: Prisma.TransactionClient,
+    vehicleId: string,
+    tenantId: string,
+    dto: CreateVehicleDto | UpdateVehicleDto,
+  ): Promise<void> {
+    if (dto.images !== undefined) {
+      await tx.vehicleImage.deleteMany({ where: { vehicleId } });
+      if (dto.images.length > 0) {
+        await tx.vehicleImage.createMany({
+          data: dto.images.map((imageUrl, index) => ({
+            id: newId(),
+            vehicleId,
+            tenantId,
+            imageUrl,
+            sortOrder: index,
+          })),
+        });
+      }
+    }
+    if (dto.features !== undefined) {
+      await tx.vehicleFeature.deleteMany({ where: { vehicleId } });
+      const unique = [...new Set(dto.features)];
+      if (unique.length > 0) {
+        await tx.vehicleFeature.createMany({
+          data: unique.map((featureKey) => ({ id: newId(), vehicleId, featureKey })),
+        });
+      }
+    }
   }
 
   /**
@@ -281,6 +340,8 @@ export class VehiclesService {
         snapshot: vehicle,
         action: isResubmit ? 'resubmit' : 'submit',
       });
+      // Gửi lại duyệt: nếu xe từng công khai thì listing về ẩn cho tới khi duyệt lại (ADR 0008).
+      await this.listings.syncFromVehicle(id, tx);
     });
 
     return this.getOne(tenantId, id);
@@ -358,9 +419,10 @@ export class VehiclesService {
       });
     }
 
-    await this.prisma.vehicle.update({
-      where: { id: current.id },
-      data: { deletedAt: new Date() },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.vehicle.update({ where: { id: current.id }, data: { deletedAt: new Date() } });
+      // Xoá mềm xe → listing archived, biến khỏi marketplace (ADR 0008 §2).
+      await this.listings.syncFromVehicle(current.id, tx);
     });
     return { id: current.id };
   }
@@ -471,6 +533,8 @@ function toListItem(v: Prisma.VehicleGetPayload<{ select: typeof LIST_SELECT }>)
 function toDetail(
   v: VehicleRow,
   latestPublicReview: VehiclePublicReviewDto | null = null,
+  images: string[] = [],
+  features: string[] = [],
 ): VehicleDetailDto {
   return {
     ...toListItem(v),
@@ -478,6 +542,8 @@ function toDetail(
     fuelType: v.fuelType,
     description: v.description,
     createdAt: v.createdAt as unknown as string,
+    images,
+    features,
     latestPublicReview,
   };
 }

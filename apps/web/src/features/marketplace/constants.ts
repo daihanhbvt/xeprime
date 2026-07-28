@@ -21,6 +21,20 @@ export const SORT_CHIPS: ReadonlyArray<{ key: ListingSort; label: string }> = [
   { key: 'price_desc', label: 'Giá cao' },
 ];
 
+/** Khoảng giá thuê/ngày (VND) cho bộ lọc nhanh. `all` = không lọc; min/max để trống = không chặn đầu đó. */
+export const PRICE_RANGES: ReadonlyArray<{
+  key: string;
+  label: string;
+  min?: number;
+  max?: number;
+}> = [
+  { key: 'all', label: 'Mọi mức giá' },
+  { key: 'lt500', label: 'Dưới 500k', max: 500000 },
+  { key: '500_800', label: '500k – 800k', min: 500000, max: 800000 },
+  { key: '800_1200', label: '800k – 1.2tr', min: 800000, max: 1200000 },
+  { key: 'gt1200', label: 'Trên 1.2tr', min: 1200000 },
+];
+
 /**
  * Địa điểm nổi bật — bám xeprime.vn. Số xe là gợi ý biên tập (curated), sẽ thay bằng đếm
  * thật khi `public_listings` có `province` (Phase 3). Ảnh dùng gradient placeholder cho tới

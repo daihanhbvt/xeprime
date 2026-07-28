@@ -30,6 +30,9 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     weekendPrice: values.weekendPrice == null ? undefined : String(values.weekendPrice),
     description: textOrUndefined(values.description),
     mainImageUrl: values.mainImageUrl ?? undefined,
+    // Gửi mảng để backend replace-set; lọc URL rỗng phòng người dùng thêm dòng trống.
+    images: (values.images ?? []).map((u) => u.trim()).filter(Boolean),
+    features: values.features ?? [],
   };
 }
 
@@ -55,5 +58,8 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     weekendPrice: v.weekendPrice == null ? null : Number(v.weekendPrice),
     description: v.description ?? '',
     mainImageUrl: v.mainImageUrl ?? null,
+    images: v.images ?? [],
+    // Key tiện ích do backend bảo đảm hợp lệ (contract) → ép về union của form là trung thực.
+    features: (v.features ?? []) as VehicleFormValues['features'],
   };
 }

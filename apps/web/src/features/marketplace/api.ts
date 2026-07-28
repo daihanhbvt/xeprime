@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from '@/services/api-client';
-import type { PublicListingDetail, ReviewPage } from './types';
+import type { PublicListingDetail, PublicShop, ReviewPage } from './types';
 
 /**
  * Lấy chi tiết một xe public — gọi server-side cho trang `/listings/[id]` (SEO).
@@ -26,4 +26,17 @@ export async function fetchListingReviews(vehicleId: string): Promise<ReviewPage
   );
   if (!res.ok) return null;
   return (await res.json()) as ReviewPage;
+}
+
+/**
+ * Hồ sơ gian hàng công khai — gọi server-side cho trang `/shops/[slug]` (SEO).
+ * Trả `null` khi shop không tồn tại / không active (404) → trang gọi `notFound()`.
+ */
+export async function fetchPublicShop(slug: string): Promise<PublicShop | null> {
+  const res = await fetch(`${getApiBaseUrl()}/public/shops/${encodeURIComponent(slug)}`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) return null;
+  const body = (await res.json()) as { data: PublicShop };
+  return body.data;
 }

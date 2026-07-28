@@ -55,6 +55,8 @@ export const queryKeys = {
     listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,
     reviews: (vehicleId: string, params: QueryParams) =>
       ['marketplace', 'reviews', vehicleId, params] as const,
+    shopListings: (slug: string, params: QueryParams) =>
+      ['marketplace', 'shop-listings', slug, params] as const,
   },
   notifications: {
     all: ['notifications'] as const,

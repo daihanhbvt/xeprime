@@ -1,6 +1,13 @@
-import { SERVICE_TYPE_LABEL, VEHICLE_TYPE, type ServiceType } from '@xeprime/types';
+import Link from 'next/link';
+import {
+  SERVICE_TYPE_LABEL,
+  VEHICLE_TYPE,
+  vehicleFeatureLabel,
+  type ServiceType,
+} from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
+import { shopPath } from '@/constants/routes';
 import { formatMoneyVnd } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
 import { ListingReviews } from './ListingReviews';
@@ -38,6 +45,14 @@ export function ListingDetailView({ listing }: { listing: PublicListingDetail })
         ) : (
           <div className={styles.placeholder} aria-hidden="true" />
         )}
+        {listing.images.length > 0 ? (
+          <div className={styles.gallery}>
+            {listing.images.map((url) => (
+              // eslint-disable-next-line @next/next/no-img-element -- ảnh xe từ storage ngoài
+              <img key={url} src={url} alt={listing.name} className={styles.thumb} />
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className={styles.info}>
@@ -60,8 +75,20 @@ export function ListingDetailView({ listing }: { listing: PublicListingDetail })
           ))}
         </dl>
 
+        {listing.features.length > 0 ? (
+          <div className={styles.features}>
+            {listing.features.map((key) => (
+              <span key={key} className={styles.featureChip}>
+                {vehicleFeatureLabel(key)}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <div className={styles.shop}>
-          <div className={styles.shopName}>{listing.shopName}</div>
+          <Link href={shopPath.detail(listing.shopSlug)} className={styles.shopName}>
+            {listing.shopName}
+          </Link>
           {listing.shopProvince ? <div className={styles.shopMeta}>{listing.shopProvince}</div> : null}
           {listing.shopBio ? <p className={styles.shopBio}>{listing.shopBio}</p> : null}
         </div>

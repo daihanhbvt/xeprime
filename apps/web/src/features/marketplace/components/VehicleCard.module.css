@@ -138,4 +138,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Nổi trên link phủ thẻ (z-index 1) để bấm được vào trang gian hàng. */
+  position: relative;
+  z-index: 2;
+}
+
+.shop:hover {
+  color: var(--xp-color-primary);
+  text-decoration: underline;
 }

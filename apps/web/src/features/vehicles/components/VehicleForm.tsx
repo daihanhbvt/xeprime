@@ -1,10 +1,13 @@
 'use client';
 
-import { Alert, Button, Card, Col, Row } from 'antd';
+import { ArrowDownOutlined, ArrowUpOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Col, Input, Row, Select } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import {
   SERVICE_TYPE,
+  VEHICLE_FEATURE_KEYS,
+  VEHICLE_FEATURE_LABEL,
   VEHICLE_OPERATION_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
@@ -41,7 +44,24 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   weekendPrice: null,
   description: '',
   mainImageUrl: null,
+  images: [],
+  features: [],
 };
+
+const FEATURE_OPTIONS = VEHICLE_FEATURE_KEYS.map((key) => ({
+  value: key,
+  label: VEHICLE_FEATURE_LABEL[key],
+}));
+
+/** Chuyển phần tử trong mảng từ `from` sang `to` (giữ thứ tự gallery). */
+function moveItem<T>(arr: readonly T[], from: number, to: number): T[] {
+  const next = [...arr];
+  const item = next[from];
+  if (item === undefined) return next;
+  next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
 
 interface VehicleFormProps {
   initialValues?: VehicleFormValues;
@@ -192,7 +212,7 @@ export function VehicleForm({
         </Row>
       </Card>
 
-      <Card title="Hình ảnh & mô tả" className={styles.section}>
+      <Card title="Hình ảnh, tiện ích & mô tả" className={styles.section}>
         <TextField
           control={control}
           name="mainImageUrl"
@@ -203,6 +223,80 @@ export function VehicleForm({
           // eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài từ URL người dùng nhập, không tối ưu qua next/image
           <img src={imageUrl} alt="Xem trước ảnh xe" className={styles.preview} />
         ) : null}
+
+        <div className={styles.galleryBlock}>
+          <div className={styles.fieldLabel}>Ảnh gallery (URL, theo thứ tự hiển thị)</div>
+          <Controller
+            control={control}
+            name="images"
+            render={({ field }) => {
+              const items = field.value ?? [];
+              return (
+                <div className={styles.gallery}>
+                  {items.map((url, idx) => (
+                    <div key={idx} className={styles.galleryRow}>
+                      <Input
+                        value={url}
+                        placeholder="https://..."
+                        onChange={(e) => {
+                          const next = [...items];
+                          next[idx] = e.target.value;
+                          field.onChange(next);
+                        }}
+                      />
+                      <Button
+                        aria-label="Lên"
+                        icon={<ArrowUpOutlined />}
+                        disabled={idx === 0}
+                        onClick={() => field.onChange(moveItem(items, idx, idx - 1))}
+                      />
+                      <Button
+                        aria-label="Xuống"
+                        icon={<ArrowDownOutlined />}
+                        disabled={idx === items.length - 1}
+                        onClick={() => field.onChange(moveItem(items, idx, idx + 1))}
+                      />
+                      <Button
+                        aria-label="Xoá ảnh"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => field.onChange(items.filter((_, i) => i !== idx))}
+                      />
+                    </div>
+                  ))}
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => field.onChange([...items, ''])}
+                    disabled={items.length >= 20}
+                  >
+                    Thêm ảnh
+                  </Button>
+                </div>
+              );
+            }}
+          />
+        </div>
+
+        <div className={styles.galleryBlock}>
+          <div className={styles.fieldLabel}>Tiện ích</div>
+          <Controller
+            control={control}
+            name="features"
+            render={({ field }) => (
+              <Select
+                mode="multiple"
+                className={styles.fullWidth}
+                value={field.value ?? []}
+                onChange={field.onChange}
+                options={FEATURE_OPTIONS}
+                placeholder="Chọn tiện ích (Bluetooth, camera lùi…)"
+                allowClear
+              />
+            )}
+          />
+        </div>
+
         <div className={styles.descBlock}>
           <TextAreaField
             control={control}

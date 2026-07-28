@@ -17,6 +17,7 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
+import { ListingsService } from '../public-listings/listings.service';
 import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -74,6 +75,7 @@ export class PlatformApprovalService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    private readonly listings: ListingsService,
   ) {}
 
   async list(
@@ -371,6 +373,8 @@ export class PlatformApprovalService {
 
       await this.finalizeTask(tx, task, kind, reviewerId, reason);
       await tx.vehicle.update({ where: { id: vehicle.id }, data: { publicStatus } });
+      // Đồng bộ snapshot: duyệt → listing active; từ chối/bổ sung → ẩn (ADR 0008).
+      await this.listings.syncFromVehicle(vehicle.id, tx);
 
       await this.audit.record(
         {

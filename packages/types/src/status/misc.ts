@@ -34,6 +34,24 @@ export const APPROVAL_TARGET_TYPE_VALUES = Object.values(
   APPROVAL_TARGET_TYPE,
 ) as ApprovalTargetType[];
 
+/** Trạng thái listing công khai trên Marketplace (ADR 0008 / database_design §9.9). */
+export const LISTING_STATUS = {
+  ACTIVE: 'active',
+  HIDDEN: 'hidden',
+  SUSPENDED: 'suspended',
+  ARCHIVED: 'archived',
+} as const;
+
+export type ListingStatus = (typeof LISTING_STATUS)[keyof typeof LISTING_STATUS];
+export const LISTING_STATUS_VALUES = Object.values(LISTING_STATUS) as ListingStatus[];
+
+export const LISTING_STATUS_META: Readonly<Record<ListingStatus, StatusMeta>> = {
+  [LISTING_STATUS.ACTIVE]: { label: 'Đang hiển thị', color: 'green' },
+  [LISTING_STATUS.HIDDEN]: { label: 'Đã ẩn', color: 'default' },
+  [LISTING_STATUS.SUSPENDED]: { label: 'Tạm ngưng', color: 'orange' },
+  [LISTING_STATUS.ARCHIVED]: { label: 'Đã lưu trữ', color: 'default' },
+};
+
 /** Trạng thái phiếu thu/chi. */
 export const RECEIPT_STATUS = {
   DRAFT: 'draft',

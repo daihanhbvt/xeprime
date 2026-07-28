@@ -922,6 +922,44 @@
             }
           },
           {
+            "name": "priceMin",
+            "required": false,
+            "in": "query",
+            "description": "Giá thuê/ngày tối thiểu (VND)",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "priceMax",
+            "required": false,
+            "in": "query",
+            "description": "Giá thuê/ngày tối đa (VND)",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pickupAt",
+            "required": false,
+            "in": "query",
+            "description": "Nhận xe (ISO-8601) — lọc xe rảnh trong khoảng",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnAt",
+            "required": false,
+            "in": "query",
+            "description": "Trả xe (ISO-8601) — dùng cùng pickupAt",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "sort",
             "required": false,
             "in": "query",
@@ -1001,6 +1039,103 @@
           }
         },
         "summary": "Chi tiết một xe trên Marketplace",
+        "tags": [
+          "public-listings"
+        ]
+      }
+    },
+    "/public/shops/{slug}": {
+      "get": {
+        "operationId": "PublicShopsController_getShop",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicShopDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hồ sơ công khai của một gian hàng theo slug",
+        "tags": [
+          "public-listings"
+        ]
+      }
+    },
+    "/public/shops/{slug}/listings": {
+      "get": {
+        "operationId": "PublicShopsController_getShopListings",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "newest",
+              "type": "string",
+              "enum": [
+                "newest",
+                "price_asc",
+                "price_desc"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 48,
+              "default": 12,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicListingPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách xe công khai của một gian hàng (phân trang)",
         "tags": [
           "public-listings"
         ]
@@ -3690,6 +3825,20 @@
             "type": "string",
             "nullable": true,
             "description": "Giới thiệu gian hàng"
+          },
+          "images": {
+            "description": "URL ảnh gallery theo thứ tự",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "features": {
+            "description": "Key tiện ích (VEHICLE_FEATURE_LABEL)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
@@ -3698,7 +3847,59 @@
           "vehicleType",
           "serviceType",
           "shopName",
-          "shopSlug"
+          "shopSlug",
+          "images",
+          "features"
+        ]
+      },
+      "PublicShopDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Slug gian hàng"
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "coverUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "Số điện thoại liên hệ"
+          },
+          "ratingAvg": {
+            "type": "string",
+            "description": "Điểm đánh giá trung bình, string — ADR 0007"
+          },
+          "ratingCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "ratingAvg",
+          "ratingCount"
         ]
       },
       "VehicleListItemDto": {
@@ -3956,6 +4157,20 @@
             "type": "string",
             "description": "ISO-8601 UTC"
           },
+          "images": {
+            "description": "URL ảnh gallery theo thứ tự",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "features": {
+            "description": "Key tiện ích (VEHICLE_FEATURE_LABEL)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "latestPublicReview": {
             "nullable": true,
             "type": "object",
@@ -3975,7 +4190,9 @@
           "operationStatus",
           "publicStatus",
           "updatedAt",
-          "createdAt"
+          "createdAt",
+          "images",
+          "features"
         ]
       },
       "CreateVehicleDto": {
@@ -4065,6 +4282,36 @@
             "type": "string",
             "description": "Giá cuối tuần",
             "example": "750000"
+          },
+          "images": {
+            "description": "URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "features": {
+            "type": "array",
+            "description": "Tiện ích xe (thay toàn bộ khi gửi)",
+            "items": {
+              "type": "string",
+              "enum": [
+                "bluetooth",
+                "gps",
+                "backup_camera",
+                "camera_360",
+                "dash_camera",
+                "reverse_sensor",
+                "sunroof",
+                "etc",
+                "spare_tire",
+                "airbag",
+                "usb",
+                "screen",
+                "map",
+                "child_seat"
+              ]
+            }
           }
         },
         "required": [
@@ -4160,6 +4407,36 @@
             "type": "string",
             "description": "Giá cuối tuần",
             "example": "750000"
+          },
+          "images": {
+            "description": "URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "features": {
+            "type": "array",
+            "description": "Tiện ích xe (thay toàn bộ khi gửi)",
+            "items": {
+              "type": "string",
+              "enum": [
+                "bluetooth",
+                "gps",
+                "backup_camera",
+                "camera_360",
+                "dash_camera",
+                "reverse_sensor",
+                "sunroof",
+                "etc",
+                "spare_tire",
+                "airbag",
+                "usb",
+                "screen",
+                "map",
+                "child_seat"
+              ]
+            }
           }
         }
       },

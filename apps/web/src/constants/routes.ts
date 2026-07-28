@@ -56,3 +56,8 @@ export const vehiclePath = {
 export const listingPath = {
   detail: (id: string): string => `/listings/${id}`,
 };
+
+/** Đường dẫn trang gian hàng công khai `/shops/[slug]`. */
+export const shopPath = {
+  detail: (slug: string): string => `/shops/${slug}`,
+};
