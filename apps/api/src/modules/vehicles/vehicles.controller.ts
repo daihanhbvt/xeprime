@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
 import { CurrentTenant, CurrentUser, RequirePermissions, TenantScoped } from '../../common/decorators';
@@ -61,14 +72,28 @@ export class VehiclesController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
-  @ApiOperation({ summary: 'Sửa thông tin xe' })
+  @ApiOperation({ summary: 'Sửa thông tin xe (sửa trường nhạy cảm khi đang công khai → chờ duyệt lại)' })
   @ApiOkResponse({ type: VehicleDetailDto })
   update(
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateVehicleDto,
   ): Promise<VehicleDetailDto> {
-    return this.vehicles.update(tenant.tenantId, id, dto);
+    return this.vehicles.update(tenant.tenantId, id, user.id, dto);
+  }
+
+  @Post(':id/submit-public')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.VEHICLE_SUBMIT_PUBLIC)
+  @ApiOperation({ summary: 'Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng — ADR 0008)' })
+  @ApiOkResponse({ type: VehicleDetailDto })
+  submitPublic(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<VehicleDetailDto> {
+    return this.vehicles.submitForPublicReview(tenant.tenantId, id, user.id);
   }
 
   @Delete(':id')

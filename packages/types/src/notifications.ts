@@ -13,6 +13,8 @@ export const NOTIFICATION_TYPE = {
   BOOKING_REQUEST_REJECTED: 'booking_request_rejected',
   SHOP_APPROVED: 'shop_approved',
   SHOP_REJECTED: 'shop_rejected',
+  VEHICLE_APPROVED: 'vehicle_approved',
+  VEHICLE_REJECTED: 'vehicle_rejected',
   REVIEW_RECEIVED: 'review_received',
 } as const;
 
@@ -42,6 +44,7 @@ export const NOTIFICATION_TARGET_TYPE = {
   BOOKING_REQUEST: 'booking_request',
   REVIEW: 'review',
   TENANT: 'tenant',
+  VEHICLE: 'vehicle',
 } as const;
 
 export type NotificationTargetType =
@@ -66,5 +69,7 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   [NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED]: { label: 'Yêu cầu bị từ chối', color: 'red' },
   [NOTIFICATION_TYPE.SHOP_APPROVED]: { label: 'Gian hàng được duyệt', color: 'green' },
   [NOTIFICATION_TYPE.SHOP_REJECTED]: { label: 'Gian hàng bị từ chối', color: 'red' },
+  [NOTIFICATION_TYPE.VEHICLE_APPROVED]: { label: 'Xe được duyệt công khai', color: 'green' },
+  [NOTIFICATION_TYPE.VEHICLE_REJECTED]: { label: 'Xe bị từ chối', color: 'red' },
   [NOTIFICATION_TYPE.REVIEW_RECEIVED]: { label: 'Đánh giá mới', color: 'purple' },
 };

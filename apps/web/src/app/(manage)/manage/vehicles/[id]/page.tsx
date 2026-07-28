@@ -9,6 +9,7 @@ import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { VehicleDetailView } from '@/features/vehicles/components/VehicleDetailView';
+import { VehiclePublicReviewPanel } from '@/features/vehicles/components/VehiclePublicReviewPanel';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useDeleteVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 
@@ -95,6 +96,7 @@ export default function VehicleDetailPage() {
           </>
         }
       />
+      <VehiclePublicReviewPanel vehicle={vehicle} />
       <VehicleDetailView vehicle={vehicle} />
     </div>
   );

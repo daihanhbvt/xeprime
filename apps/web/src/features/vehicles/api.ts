@@ -54,3 +54,7 @@ export const updateVehicle = (id: string, body: UpdateVehicleInput): Promise<Veh
 
 export const deleteVehicle = (id: string): Promise<{ id: string }> =>
   apiDelete<{ id: string }>(`/vehicles/${id}`);
+
+/** Gửi xe đi duyệt công khai (ADR 0008) — backend tạo phiếu duyệt, không tự set approved_public. */
+export const submitVehiclePublic = (id: string): Promise<VehicleDetail> =>
+  apiPost<VehicleDetail>(`/vehicles/${id}/submit-public`, {});

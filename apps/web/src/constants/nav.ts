@@ -216,7 +216,7 @@ export const PLATFORM_NAV: readonly NavNode[] = [
     children: [
       {
         key: 'approvals',
-        label: 'Duyệt gian hàng',
+        label: 'Duyệt hồ sơ',
         href: ROUTES.MANAGE.ADMIN,
         permission: PERMISSION.PLATFORM_APPROVAL_REVIEW,
         icon: AuditOutlined,
@@ -276,7 +276,7 @@ const SHOP_MOBILE_TABS: readonly MobileTab[] = [
 
 const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
   { key: 'dashboard', label: 'Tổng quan', href: ROUTES.MANAGE.ROOT, icon: DashboardOutlined },
-  { key: 'approvals', label: 'Duyệt shop', href: ROUTES.MANAGE.ADMIN, icon: AuditOutlined },
+  { key: 'approvals', label: 'Duyệt hồ sơ', href: ROUTES.MANAGE.ADMIN, icon: AuditOutlined },
 ];
 
 /** 4 tab chính của bottom nav theo scope (tab "Thêm" do MobileNav tự thêm). */

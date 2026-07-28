@@ -5,8 +5,10 @@ import { VehiclesService } from './vehicles.service';
 /**
  * Quản lý xe của gian hàng (Phase 2): CRUD + list phân trang/filter/sort tenant-scoped.
  *
+ * Gửi duyệt public (`submitForPublicReview`) tạo phiếu duyệt để platform xử lý — client KHÔNG
+ * tự set `approved_public` (ADR 0008); sửa trường nhạy cảm khi đang công khai tự hạ về chờ duyệt.
  * Follow-up có nhãn (chưa làm ở đây): upload ảnh/gallery, giá theo mùa (bảng `vehicle_pricing`),
- * đăng kiểm/bảo hiểm, gửi duyệt public (đi qua ApprovalService — ADR 0008).
+ * đăng kiểm/bảo hiểm.
  * Khi thêm khoá xe/bảo dưỡng: ghi lịch qua `OccupancyService`, KHÔNG tự INSERT
  * vào `vehicle_occupancies` (ADR 0006).
  */

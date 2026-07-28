@@ -1226,7 +1226,7 @@
             }
           }
         },
-        "summary": "Sửa thông tin xe",
+        "summary": "Sửa thông tin xe (sửa trường nhạy cảm khi đang công khai → chờ duyệt lại)",
         "tags": [
           "vehicles"
         ]
@@ -1260,6 +1260,37 @@
           }
         },
         "summary": "Xoá mềm xe (chặn nếu còn lịch hiện tại/tương lai)",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
+    "/vehicles/{id}/submit-public": {
+      "post": {
+        "operationId": "VehiclesController_submitPublic",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng — ADR 0008)",
         "tags": [
           "vehicles"
         ]
@@ -2822,6 +2853,8 @@
               "booking_request_rejected",
               "shop_approved",
               "shop_rejected",
+              "vehicle_approved",
+              "vehicle_rejected",
               "review_received"
             ]
           },
@@ -3784,6 +3817,37 @@
           "meta"
         ]
       },
+      "VehiclePublicReviewDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "needs_revision",
+              "cancelled"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "reviewedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "status",
+          "submittedAt"
+        ]
+      },
       "VehicleDetailDto": {
         "type": "object",
         "properties": {
@@ -3891,6 +3955,15 @@
           "createdAt": {
             "type": "string",
             "description": "ISO-8601 UTC"
+          },
+          "latestPublicReview": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VehiclePublicReviewDto"
+              }
+            ]
           }
         },
         "required": [

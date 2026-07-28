@@ -6,14 +6,21 @@ import { CheckOutlined, CloseOutlined, EditOutlined } from '@ant-design/icons';
 import {
   APPROVAL_STATUS,
   APPROVAL_STATUS_META,
+  APPROVAL_TARGET_TYPE,
   type ApprovalStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { formatDateTime } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
-import { SHOP_SNAPSHOT_FIELDS, targetTypeLabel } from '../constants';
+import {
+  SHOP_SNAPSHOT_FIELDS,
+  VEHICLE_SNAPSHOT_FIELDS,
+  targetTypeLabel,
+  type SnapshotField,
+} from '../constants';
 import { useApproval, useReviewActions } from '../hooks/use-approvals';
 import type { ApprovalDetail } from '../types';
+import styles from './ApprovalDetailDrawer.module.css';
 
 const EMPTY = '—';
 type ReviewKind = 'approve' | 'reject' | 'request_revision';
@@ -38,11 +45,7 @@ export function ApprovalDetailDrawer({ taskId, onClose }: ApprovalDetailDrawerPr
       {
         onSuccess: () => {
           message.success(
-            kind === 'approve'
-              ? 'Đã duyệt gian hàng'
-              : kind === 'reject'
-                ? 'Đã từ chối'
-                : 'Đã yêu cầu bổ sung',
+            kind === 'approve' ? 'Đã duyệt' : kind === 'reject' ? 'Đã từ chối' : 'Đã yêu cầu bổ sung',
           );
           setReasonModal(null);
           setReason('');
@@ -124,6 +127,9 @@ export function ApprovalDetailDrawer({ taskId, onClose }: ApprovalDetailDrawerPr
 
 function DetailBody({ task }: { task: ApprovalDetail }) {
   const snapshot = task.snapshot ?? {};
+  const isVehicle = task.targetType === APPROVAL_TARGET_TYPE.VEHICLE;
+  const fields = isVehicle ? VEHICLE_SNAPSHOT_FIELDS : SHOP_SNAPSHOT_FIELDS;
+  const image = isVehicle && typeof snapshot.mainImageUrl === 'string' ? snapshot.mainImageUrl : null;
 
   return (
     <div>
@@ -148,12 +154,16 @@ function DetailBody({ task }: { task: ApprovalDetail }) {
         />
       ) : null}
 
-      <Divider>Hồ sơ đã gửi</Divider>
-      {hasSnapshot(snapshot) ? (
-        <Descriptions bordered size="small" column={1} items={snapshotItems(snapshot)} />
-      ) : (
+      <Divider>{isVehicle ? 'Xe gửi duyệt' : 'Hồ sơ đã gửi'}</Divider>
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài từ URL người dùng nhập
+        <img src={image} alt="Ảnh xe" className={styles.snapshotImage} />
+      ) : null}
+      {hasSnapshot(fields, snapshot) ? (
+        <Descriptions bordered size="small" column={1} items={snapshotItems(fields, snapshot)} />
+      ) : !image ? (
         <Empty description="Không có hồ sơ đính kèm" />
-      )}
+      ) : null}
 
       <Divider>Lịch sử</Divider>
       <Timeline
@@ -175,14 +185,16 @@ function DetailBody({ task }: { task: ApprovalDetail }) {
   );
 }
 
-function hasSnapshot(snapshot: Record<string, unknown>): boolean {
-  return SHOP_SNAPSHOT_FIELDS.some((f) => Boolean(snapshot[f.key]));
+function hasSnapshot(fields: readonly SnapshotField[], snapshot: Record<string, unknown>): boolean {
+  return fields.some((f) => snapshot[f.key] != null && snapshot[f.key] !== '');
 }
 
-function snapshotItems(snapshot: Record<string, unknown>) {
-  return SHOP_SNAPSHOT_FIELDS.filter((f) => Boolean(snapshot[f.key])).map((f) => ({
-    key: f.key,
-    label: f.label,
-    children: String(snapshot[f.key]),
-  }));
+function snapshotItems(fields: readonly SnapshotField[], snapshot: Record<string, unknown>) {
+  return fields
+    .filter((f) => snapshot[f.key] != null && snapshot[f.key] !== '')
+    .map((f) => ({
+      key: f.key,
+      label: f.label,
+      children: f.format ? f.format(snapshot[f.key]) : String(snapshot[f.key]),
+    }));
 }

@@ -26,6 +26,8 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED]: <CloseCircleOutlined />,
   [NOTIFICATION_TYPE.SHOP_APPROVED]: <ShopOutlined />,
   [NOTIFICATION_TYPE.SHOP_REJECTED]: <ShopOutlined />,
+  [NOTIFICATION_TYPE.VEHICLE_APPROVED]: <CarOutlined />,
+  [NOTIFICATION_TYPE.VEHICLE_REJECTED]: <CarOutlined />,
   [NOTIFICATION_TYPE.REVIEW_RECEIVED]: <StarOutlined />,
 };
 
@@ -59,6 +61,8 @@ export function notificationHref(
       return ROUTES.MANAGE.BOOKING_REQUESTS;
     case NOTIFICATION_TARGET_TYPE.TENANT:
       return ROUTES.MANAGE.SHOP;
+    case NOTIFICATION_TARGET_TYPE.VEHICLE:
+      return ROUTES.MANAGE.VEHICLES;
     default:
       return null;
   }

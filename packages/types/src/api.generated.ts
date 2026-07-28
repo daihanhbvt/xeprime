@@ -433,8 +433,25 @@ export interface paths {
         delete: operations["VehiclesController_remove"];
         options?: never;
         head?: never;
-        /** Sửa thông tin xe */
+        /** Sửa thông tin xe (sửa trường nhạy cảm khi đang công khai → chờ duyệt lại) */
         patch: operations["VehiclesController_update"];
+        trace?: never;
+    };
+    "/vehicles/{id}/submit-public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Gửi xe đi duyệt công khai (đi qua luồng duyệt nền tảng — ADR 0008) */
+        post: operations["VehiclesController_submitPublic"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/bookings": {
@@ -916,7 +933,7 @@ export interface components {
         NotificationDto: {
             id: string;
             /** @enum {string} */
-            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "shop_approved" | "shop_rejected" | "review_received";
+            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "shop_approved" | "shop_rejected" | "vehicle_approved" | "vehicle_rejected" | "review_received";
             title: string;
             body?: string | null;
             /** @description Loại đối tượng để dựng link */
@@ -1199,6 +1216,14 @@ export interface components {
             data: components["schemas"]["VehicleListItemDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
         };
+        VehiclePublicReviewDto: {
+            /** @enum {string} */
+            status: "pending" | "approved" | "rejected" | "needs_revision" | "cancelled";
+            reason?: string | null;
+            /** @description ISO-8601 UTC */
+            submittedAt: string;
+            reviewedAt?: string | null;
+        };
         VehicleDetailDto: {
             id: string;
             code: string;
@@ -1228,6 +1253,7 @@ export interface components {
             description?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
+            latestPublicReview?: components["schemas"]["VehiclePublicReviewDto"] | null;
         };
         CreateVehicleDto: {
             /**
@@ -2507,6 +2533,27 @@ export interface operations {
                 "application/json": components["schemas"]["UpdateVehicleDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDetailDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_submitPublic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

@@ -26,6 +26,31 @@ export const VEHICLE_PUBLIC_STATUS_VALUES = Object.values(
   VEHICLE_PUBLIC_STATUS,
 ) as VehiclePublicStatus[];
 
+/**
+ * Các trạng thái mà từ đó chủ shop được (lại) gửi xe đi duyệt công khai. Không gồm
+ * `pending_public_review` (đang chờ) và `approved_public` (đã lên chợ) — chặn gửi trùng.
+ */
+export const VEHICLE_PUBLIC_STATUS_SUBMITTABLE: readonly VehiclePublicStatus[] = [
+  VEHICLE_PUBLIC_STATUS.DRAFT,
+  VEHICLE_PUBLIC_STATUS.NEEDS_REVISION,
+  VEHICLE_PUBLIC_STATUS.REJECTED,
+  VEHICLE_PUBLIC_STATUS.HIDDEN,
+];
+
+/**
+ * Trường "nhạy cảm": sửa khi xe đang `approved_public` sẽ tự hạ xe về `pending_public_review`
+ * và tạo lại phiếu duyệt (ADR 0008 — không để thông tin đã đổi hiển thị mà chưa qua kiểm duyệt).
+ */
+export const VEHICLE_PUBLIC_SENSITIVE_FIELDS = [
+  'weekdayPrice',
+  'weekendPrice',
+  'plateNumber',
+  'vehicleType',
+  'serviceType',
+  'mainImageUrl',
+] as const;
+export type VehicleSensitiveField = (typeof VEHICLE_PUBLIC_SENSITIVE_FIELDS)[number];
+
 export function isVehiclePublicStatus(value: unknown): value is VehiclePublicStatus {
   return typeof value === 'string' && (VEHICLE_PUBLIC_STATUS_VALUES as string[]).includes(value);
 }

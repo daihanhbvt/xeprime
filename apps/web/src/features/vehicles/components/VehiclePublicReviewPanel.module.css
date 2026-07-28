@@ -1,0 +1,15 @@
+.panel {
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.missing {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}

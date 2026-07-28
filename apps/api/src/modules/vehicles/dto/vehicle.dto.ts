@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
+  APPROVAL_STATUS_VALUES,
   FUEL_TYPE_VALUES,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
@@ -121,12 +122,23 @@ export class VehicleListItemDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) updatedAt!: string;
 }
 
+/** Tóm tắt lần gửi duyệt công khai gần nhất — để shop thấy lý do bị từ chối/bổ sung. */
+export class VehiclePublicReviewDto {
+  @ApiProperty({ enum: APPROVAL_STATUS_VALUES }) status!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) reason!: string | null;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) submittedAt!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) reviewedAt!: string | null;
+}
+
 /** Chi tiết một xe — dùng cho trang xem/sửa. */
 export class VehicleDetailDto extends VehicleListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) color!: string | null;
   @ApiPropertyOptional({ enum: FUEL_TYPE_VALUES, nullable: true }) fuelType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+
+  @ApiPropertyOptional({ type: VehiclePublicReviewDto, nullable: true })
+  latestPublicReview!: VehiclePublicReviewDto | null;
 }
 
 /** Bọc phân trang cho danh sách xe (ADR 0007 — shape phải khai báo để FE sinh đúng type). */

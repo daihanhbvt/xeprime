@@ -2,7 +2,14 @@ import {
   APPROVAL_STATUS_META,
   APPROVAL_STATUS_VALUES,
   APPROVAL_TARGET_TYPE,
+  FUEL_TYPE_LABEL,
+  SERVICE_TYPE_LABEL,
+  VEHICLE_TYPE_LABEL,
+  type FuelType,
+  type ServiceType,
+  type VehicleType,
 } from '@xeprime/types';
+import { formatMoneyVnd } from '@/lib/money';
 
 export const APPROVAL_STATUS_OPTIONS = APPROVAL_STATUS_VALUES.map((value) => ({
   value,
@@ -18,8 +25,15 @@ const TARGET_LABELS: Record<string, string> = {
 
 export const targetTypeLabel = (value: string): string => TARGET_LABELS[value] ?? value;
 
+export interface SnapshotField {
+  key: string;
+  label: string;
+  /** Định dạng giá trị hiển thị (mã enum → nhãn, tiền → VND). Mặc định String(value). */
+  format?: (value: unknown) => string;
+}
+
 /** Nhãn các trường trong snapshot hồ sơ gian hàng, theo thứ tự hiển thị. */
-export const SHOP_SNAPSHOT_FIELDS: readonly { key: string; label: string }[] = [
+export const SHOP_SNAPSHOT_FIELDS: readonly SnapshotField[] = [
   { key: 'displayName', label: 'Tên hiển thị' },
   { key: 'bio', label: 'Giới thiệu' },
   { key: 'address', label: 'Địa chỉ' },
@@ -30,4 +44,22 @@ export const SHOP_SNAPSHOT_FIELDS: readonly { key: string; label: string }[] = [
   { key: 'bankAccountNo', label: 'Số tài khoản' },
   { key: 'bankAccountName', label: 'Chủ tài khoản' },
   { key: 'logoUrl', label: 'Logo' },
+];
+
+/** Nhãn + định dạng các trường snapshot xe (không gồm `mainImageUrl` — hiển thị dạng ảnh riêng). */
+export const VEHICLE_SNAPSHOT_FIELDS: readonly SnapshotField[] = [
+  { key: 'name', label: 'Tên xe' },
+  { key: 'code', label: 'Mã xe' },
+  { key: 'plateNumber', label: 'Biển số' },
+  { key: 'vehicleType', label: 'Loại xe', format: (v) => VEHICLE_TYPE_LABEL[v as VehicleType] ?? String(v) },
+  { key: 'serviceType', label: 'Dịch vụ', format: (v) => SERVICE_TYPE_LABEL[v as ServiceType] ?? String(v) },
+  { key: 'brand', label: 'Hãng' },
+  { key: 'model', label: 'Dòng xe' },
+  { key: 'manufactureYear', label: 'Đời xe' },
+  { key: 'seatCount', label: 'Số chỗ' },
+  { key: 'fuelType', label: 'Nhiên liệu', format: (v) => FUEL_TYPE_LABEL[v as FuelType] ?? String(v) },
+  { key: 'color', label: 'Màu sắc' },
+  { key: 'weekdayPrice', label: 'Giá ngày thường', format: (v) => formatMoneyVnd(String(v)) },
+  { key: 'weekendPrice', label: 'Giá cuối tuần', format: (v) => formatMoneyVnd(String(v)) },
+  { key: 'description', label: 'Mô tả' },
 ];

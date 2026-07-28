@@ -1,6 +1,23 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
-import { API_ERROR_CODE, type PaginationMeta } from '@xeprime/types';
+import {
+  APPROVAL_ACTION,
+  APPROVAL_STATUS,
+  APPROVAL_TARGET_TYPE,
+  API_ERROR_CODE,
+  TENANT_STATUS,
+  VEHICLE_PUBLIC_SENSITIVE_FIELDS,
+  VEHICLE_PUBLIC_STATUS,
+  VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
+  type PaginationMeta,
+  type VehiclePublicStatus,
+} from '@xeprime/types';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateVehicleDto,
@@ -10,6 +27,7 @@ import {
   VehicleDetailDto,
   VehicleListItemDto,
   VehicleListQueryDto,
+  VehiclePublicReviewDto,
 } from './dto/vehicle.dto';
 
 /** Cột dùng cho một dòng bảng — không kéo `description` dài. */
@@ -40,9 +58,25 @@ const DETAIL_SELECT = {
   createdAt: true,
 } satisfies Prisma.VehicleSelect;
 
+/** Đủ để kiểm tra đổi mã + phát hiện thay đổi trường nhạy cảm khi update (ADR 0008). */
+const SENSITIVE_SELECT = {
+  id: true,
+  code: true,
+  publicStatus: true,
+  weekdayPrice: true,
+  weekendPrice: true,
+  plateNumber: true,
+  vehicleType: true,
+  serviceType: true,
+  mainImageUrl: true,
+} satisfies Prisma.VehicleSelect;
+
 @Injectable()
 export class VehiclesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(
     tenantId: string,
@@ -85,7 +119,23 @@ export class VehiclesService {
       select: DETAIL_SELECT,
     });
     if (!row) throw notFound();
-    return toDetail(row);
+
+    // Kèm lần gửi duyệt gần nhất để shop thấy lý do bị từ chối/bổ sung (mẫu getMyShop.latestApproval).
+    const latest = await this.prisma.approvalTask.findFirst({
+      where: { targetType: APPROVAL_TARGET_TYPE.VEHICLE, targetId: id },
+      orderBy: { submittedAt: 'desc' },
+      select: { status: true, reason: true, submittedAt: true, reviewedAt: true },
+    });
+    const review: VehiclePublicReviewDto | null = latest
+      ? {
+          status: latest.status,
+          reason: latest.reason,
+          submittedAt: latest.submittedAt.toISOString(),
+          reviewedAt: latest.reviewedAt?.toISOString() ?? null,
+        }
+      : null;
+
+    return toDetail(row, review);
   }
 
   async create(
@@ -110,10 +160,15 @@ export class VehiclesService {
     return toDetail(row);
   }
 
-  async update(tenantId: string, id: string, dto: UpdateVehicleDto): Promise<VehicleDetailDto> {
+  async update(
+    tenantId: string,
+    id: string,
+    userId: string,
+    dto: UpdateVehicleDto,
+  ): Promise<VehicleDetailDto> {
     const current = await this.prisma.vehicle.findFirst({
       where: { id, tenantId, deletedAt: null },
-      select: { id: true, code: true },
+      select: SENSITIVE_SELECT,
     });
     if (!current) throw notFound();
 
@@ -122,17 +177,164 @@ export class VehiclesService {
       await this.assertCodeFree(tenantId, dto.code);
     }
 
-    const row = await this.prisma.vehicle.update({
-      where: { id: current.id },
-      data: {
-        ...(dto.code !== undefined ? { code: dto.code } : {}),
-        ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.vehicleType !== undefined ? { vehicleType: dto.vehicleType } : {}),
-        ...writableFields(dto),
-      },
-      select: DETAIL_SELECT,
+    // ADR 0008: xe đang công khai mà sửa trường nhạy cảm (giá/biển số/loại/ảnh…) phải hạ về
+    // chờ duyệt lại, không để thông tin đã đổi hiển thị ngoài chợ khi chưa qua kiểm duyệt.
+    const knockBack =
+      current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC &&
+      hasSensitiveChange(current, dto);
+
+    const data: Prisma.VehicleUpdateInput = {
+      ...(dto.code !== undefined ? { code: dto.code } : {}),
+      ...(dto.name !== undefined ? { name: dto.name } : {}),
+      ...(dto.vehicleType !== undefined ? { vehicleType: dto.vehicleType } : {}),
+      ...writableFields(dto),
+      ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
+    };
+
+    if (!knockBack) {
+      const row = await this.prisma.vehicle.update({
+        where: { id: current.id },
+        data,
+        select: DETAIL_SELECT,
+      });
+      return toDetail(row);
+    }
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.vehicle.update({
+        where: { id: current.id },
+        data,
+        select: DETAIL_SELECT,
+      });
+      await this.createVehicleApprovalTask(tx, {
+        vehicleId: current.id,
+        tenantId,
+        actorUserId: userId,
+        fromStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+        snapshot: updated,
+        action: 'resubmit',
+      });
+      return updated;
     });
     return toDetail(row);
+  }
+
+  /**
+   * Gửi (lại) xe đi duyệt công khai. Chỉ cho phép khi xe đang draft/needs_revision/rejected/hidden
+   * và gian hàng đang active; bắt buộc đủ giá + ảnh + biển số + mô tả. Tạo phiếu duyệt + log +
+   * audit trong một transaction — client KHÔNG tự set `approved_public` (CLAUDE.md mục 5).
+   */
+  async submitForPublicReview(
+    tenantId: string,
+    id: string,
+    userId: string,
+  ): Promise<VehicleDetailDto> {
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: DETAIL_SELECT,
+    });
+    if (!vehicle) throw notFound();
+
+    const status = vehicle.publicStatus as VehiclePublicStatus;
+    if (!VEHICLE_PUBLIC_STATUS_SUBMITTABLE.includes(status)) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+        message:
+          status === VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW
+            ? 'Xe đang chờ duyệt công khai.'
+            : 'Xe đã ở trạng thái công khai.',
+      });
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { status: true },
+    });
+    if (tenant?.status !== TENANT_STATUS.ACTIVE) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Gian hàng phải được duyệt hoạt động trước khi đăng xe lên chợ.',
+      });
+    }
+
+    const missing = missingPublicFields(vehicle);
+    if (missing.length > 0) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: `Cần bổ sung trước khi gửi duyệt: ${missing.join(', ')}.`,
+        details: { missing },
+      });
+    }
+
+    const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.vehicle.update({
+        where: { id },
+        data: { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW },
+      });
+      await this.createVehicleApprovalTask(tx, {
+        vehicleId: id,
+        tenantId,
+        actorUserId: userId,
+        fromStatus: status,
+        snapshot: vehicle,
+        action: isResubmit ? 'resubmit' : 'submit',
+      });
+    });
+
+    return this.getOne(tenantId, id);
+  }
+
+  /**
+   * Tạo phiếu duyệt xe + approval_log + audit (dùng chung cho submit thủ công và knock-back
+   * khi sửa trường nhạy cảm). Luôn chạy trong transaction của caller.
+   */
+  private async createVehicleApprovalTask(
+    tx: Prisma.TransactionClient,
+    args: {
+      vehicleId: string;
+      tenantId: string;
+      actorUserId: string;
+      fromStatus: VehiclePublicStatus;
+      snapshot: VehicleRow;
+      action: 'submit' | 'resubmit';
+    },
+  ): Promise<void> {
+    const task = await tx.approvalTask.create({
+      data: {
+        id: newId(),
+        tenantId: args.tenantId,
+        targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+        targetId: args.vehicleId,
+        status: APPROVAL_STATUS.PENDING,
+        submittedBy: args.actorUserId,
+        snapshot: vehicleSnapshot(args.snapshot) as Prisma.InputJsonValue,
+      },
+    });
+    await tx.approvalLog.create({
+      data: {
+        id: newId(),
+        approvalTaskId: task.id,
+        action: args.action === 'resubmit' ? APPROVAL_ACTION.RESUBMIT : APPROVAL_ACTION.SUBMIT,
+        fromStatus: args.fromStatus,
+        toStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW,
+        actorUserId: args.actorUserId,
+      },
+    });
+    await this.audit.record(
+      {
+        tenantId: args.tenantId,
+        actorUserId: args.actorUserId,
+        actorScope: 'tenant',
+        action: 'vehicle.submit_public',
+        targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+        targetId: args.vehicleId,
+        before: { publicStatus: args.fromStatus },
+        after: { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW },
+      },
+      tx,
+    );
   }
 
   /**
@@ -266,13 +468,62 @@ function toListItem(v: Prisma.VehicleGetPayload<{ select: typeof LIST_SELECT }>)
   };
 }
 
-function toDetail(v: VehicleRow): VehicleDetailDto {
+function toDetail(
+  v: VehicleRow,
+  latestPublicReview: VehiclePublicReviewDto | null = null,
+): VehicleDetailDto {
   return {
     ...toListItem(v),
     color: v.color,
     fuelType: v.fuelType,
     description: v.description,
     createdAt: v.createdAt as unknown as string,
+    latestPublicReview,
+  };
+}
+
+type SensitiveRow = Prisma.VehicleGetPayload<{ select: typeof SENSITIVE_SELECT }>;
+
+/** Có trường nhạy cảm nào được sửa sang giá trị khác hiện tại không (ADR 0008). */
+function hasSensitiveChange(current: SensitiveRow, dto: UpdateVehicleDto): boolean {
+  return VEHICLE_PUBLIC_SENSITIVE_FIELDS.some((field) => {
+    const next = dto[field];
+    if (next === undefined) return false; // không đụng tới trường này
+    const curVal = current[field];
+    const curStr = curVal == null ? null : String(curVal);
+    const nextStr = next == null ? null : String(next);
+    return curStr !== nextStr;
+  });
+}
+
+/** Điều kiện tối thiểu để xe được lên chợ; trả danh sách còn thiếu (rỗng = đủ). */
+function missingPublicFields(v: VehicleRow): string[] {
+  const missing: string[] = [];
+  if (v.weekdayPrice == null) missing.push('giá thuê');
+  if (!v.mainImageUrl) missing.push('ảnh đại diện');
+  if (!v.plateNumber) missing.push('biển số');
+  if (!v.description) missing.push('mô tả xe');
+  return missing;
+}
+
+/** Ảnh chụp hồ sơ xe lúc gửi duyệt — reviewer thấy đúng thứ đã gửi (Decimal → string). */
+function vehicleSnapshot(v: VehicleRow): Record<string, unknown> {
+  return {
+    name: v.name,
+    code: v.code,
+    plateNumber: v.plateNumber,
+    vehicleType: v.vehicleType,
+    serviceType: v.serviceType,
+    brand: v.brand,
+    model: v.model,
+    manufactureYear: v.manufactureYear,
+    seatCount: v.seatCount,
+    fuelType: v.fuelType,
+    color: v.color,
+    mainImageUrl: v.mainImageUrl,
+    description: v.description,
+    weekdayPrice: v.weekdayPrice == null ? null : String(v.weekdayPrice),
+    weekendPrice: v.weekendPrice == null ? null : String(v.weekendPrice),
   };
 }
 
