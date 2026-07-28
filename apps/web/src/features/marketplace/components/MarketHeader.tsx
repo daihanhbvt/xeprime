@@ -1,11 +1,12 @@
 'use client';
 
 import { MessageOutlined, UserOutlined } from '@ant-design/icons';
-import { Avatar, Button } from 'antd';
+import { Avatar, Badge, Button } from 'antd';
 import Link from 'next/link';
 import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
+import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import styles from './MarketHeader.module.css';
 
@@ -17,6 +18,7 @@ const NAV = [
 
 export function MarketHeader() {
   const { data: user } = useCurrentUser();
+  const { data: chatUnread } = useChatUnreadCount(!!user);
 
   return (
     <header className={styles.header}>
@@ -40,9 +42,11 @@ export function MarketHeader() {
         <div className={styles.right}>
           {user ? (
             <>
-              <Link href={ROUTES.CHAT} aria-label="Tin nhắn">
-                <Button type="text" shape="circle" icon={<MessageOutlined />} />
-              </Link>
+              <Badge count={chatUnread?.count ?? 0} size="small" overflowCount={99}>
+                <Link href={ROUTES.CHAT} aria-label="Tin nhắn">
+                  <Button type="text" shape="circle" icon={<MessageOutlined />} />
+                </Link>
+              </Badge>
               <NotificationBell context="customer" />
               <Link href={ROUTES.TRIPS} aria-label="Đơn thuê của tôi">
                 <Avatar className={styles.avatar} size={34}>

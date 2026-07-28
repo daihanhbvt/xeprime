@@ -1,16 +1,20 @@
 import type { PrismaClient } from '@xeprime/prisma';
 import { MEMBERSHIP_STATUS, OUTBOX_STATUS } from '@xeprime/types';
-import { upsertConversation, writeMessage } from '../lib/firestore';
+import { firestoreWriter, type OutboxWriter } from '../lib/firestore';
 
 const BATCH = 50;
-const MAX_ATTEMPTS = 8;
+export const MAX_ATTEMPTS = 8;
 
 /**
  * Đẩy các tin trong outbox sang Firestore (ADR 0009 §3). Idempotent: doc id = messageId nên
  * đẩy lại chỉ ghi đè, không nhân đôi. Lỗi thì tăng attempts + lùi nextAttemptAt (backoff),
  * quá ngưỡng thì đánh `failed` để soi tay. Trả số tin đẩy thành công.
+ * `writer` chèn được để test bằng fake, mặc định là Firestore thật.
  */
-export async function pumpOutbox(prisma: PrismaClient): Promise<number> {
+export async function pumpOutbox(
+  prisma: PrismaClient,
+  writer: OutboxWriter = firestoreWriter,
+): Promise<number> {
   const pending = await prisma.messageOutbox.findMany({
     where: { status: OUTBOX_STATUS.PENDING, nextAttemptAt: { lte: new Date() } },
     orderBy: { nextAttemptAt: 'asc' },
@@ -21,7 +25,7 @@ export async function pumpOutbox(prisma: PrismaClient): Promise<number> {
   let done = 0;
   for (const row of pending) {
     try {
-      await pushMessage(prisma, row.messageId);
+      await pushMessage(prisma, writer, row.messageId);
       await prisma.messageOutbox.update({
         where: { id: row.id },
         data: { status: OUTBOX_STATUS.DONE, lastError: null },
@@ -48,7 +52,11 @@ export async function pumpOutbox(prisma: PrismaClient): Promise<number> {
   return done;
 }
 
-async function pushMessage(prisma: PrismaClient, messageId: string): Promise<void> {
+async function pushMessage(
+  prisma: PrismaClient,
+  writer: OutboxWriter,
+  messageId: string,
+): Promise<void> {
   const msg = await prisma.message.findUnique({
     where: { id: messageId },
     select: {
@@ -88,7 +96,7 @@ async function pushMessage(prisma: PrismaClient, messageId: string): Promise<voi
     ]),
   ];
 
-  await upsertConversation(conv.id, {
+  await writer.upsertConversation(conv.id, {
     tenantId: conv.tenantId,
     memberUids,
     status: conv.status,
@@ -98,7 +106,7 @@ async function pushMessage(prisma: PrismaClient, messageId: string): Promise<voi
     updatedAt: Date.now(),
   });
 
-  await writeMessage(conv.id, msg.id, {
+  await writer.writeMessage(conv.id, msg.id, {
     senderUserId: msg.senderUserId,
     senderType: msg.senderType,
     messageType: msg.messageType,

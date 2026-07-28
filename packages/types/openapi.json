@@ -2097,6 +2097,28 @@
         ]
       }
     },
+    "/conversations/unread-count": {
+      "get": {
+        "operationId": "ConversationsController_unreadCount",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatUnreadCountDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tổng tin chưa đọc mọi hội thoại (cho badge icon chat)",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
     "/conversations/{id}/messages": {
       "get": {
         "operationId": "ConversationsController_messages",
@@ -5003,6 +5025,19 @@
         },
         "required": [
           "vehicleId"
+        ]
+      },
+      "ChatUnreadCountDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "example": 3,
+            "description": "Tổng tin chưa đọc mọi hội thoại (phía người xem)"
+          }
+        },
+        "required": [
+          "count"
         ]
       },
       "MessageAttachmentDto": {

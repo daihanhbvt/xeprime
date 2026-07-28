@@ -7,10 +7,11 @@ import {
   ShopOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Avatar, Button, Dropdown } from 'antd';
+import { Avatar, Badge, Button, Dropdown } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
+import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
 import { ROUTES } from '@/constants/routes';
 import { useAppDispatch } from '@/store/hooks';
 import { setMobileNavOpen } from '@/store/slices/app.slice';
@@ -22,6 +23,7 @@ export function Topbar({ user }: { user: CurrentUser }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
+  const { data: chatUnread } = useChatUnreadCount();
 
   const handleLogout = async () => {
     await destroySession();
@@ -56,13 +58,15 @@ export function Topbar({ user }: { user: CurrentUser }) {
       </div>
 
       <div className={styles.right}>
-        <Button
-          type="text"
-          shape="circle"
-          icon={<MessageOutlined />}
-          aria-label="Trò chuyện"
-          onClick={() => router.push(ROUTES.MANAGE.CHAT)}
-        />
+        <Badge count={chatUnread?.count ?? 0} size="small" overflowCount={99}>
+          <Button
+            type="text"
+            shape="circle"
+            icon={<MessageOutlined />}
+            aria-label="Trò chuyện"
+            onClick={() => router.push(ROUTES.MANAGE.CHAT)}
+          />
+        </Badge>
         <NotificationBell context="manage" />
         <Dropdown
           trigger={['click']}

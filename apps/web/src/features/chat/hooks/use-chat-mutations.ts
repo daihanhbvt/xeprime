@@ -12,6 +12,7 @@ export function useSendMessage(conversationId: string) {
     mutationFn: (body: SendMessageInput) => sendChatMessage(conversationId, body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCount() });
     },
   });
 }

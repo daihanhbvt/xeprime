@@ -183,6 +183,11 @@ export class MarkReadResultDto {
   @ApiProperty({ example: 0 }) unread!: number;
 }
 
+export class ChatUnreadCountDto {
+  @ApiProperty({ example: 3, description: 'Tổng tin chưa đọc mọi hội thoại (phía người xem)' })
+  count!: number;
+}
+
 export class FirebaseTokenDto {
   @ApiProperty({ description: 'Bật realtime chat không' }) enabled!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Custom token để signInWithCustomToken' })

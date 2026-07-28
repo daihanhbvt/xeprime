@@ -295,6 +295,27 @@ export class ChatService {
     return { conversationId, unread: 0 };
   }
 
+  /** Tổng tin chưa đọc phía người xem, gộp mọi hội thoại — cho badge icon chat. */
+  async unreadCount(userId: string): Promise<{ count: number }> {
+    const tenantIds = await this.activeTenantIds(userId);
+
+    const asCustomer = await this.prisma.conversation.aggregate({
+      where: { customerUserId: userId },
+      _sum: { unreadCustomerCount: true },
+    });
+
+    let shopUnread = 0;
+    if (tenantIds.length > 0) {
+      const asShop = await this.prisma.conversation.aggregate({
+        where: { tenantId: { in: tenantIds } },
+        _sum: { unreadTenantCount: true },
+      });
+      shopUnread = asShop._sum.unreadTenantCount ?? 0;
+    }
+
+    return { count: (asCustomer._sum.unreadCustomerCount ?? 0) + shopUnread };
+  }
+
   // --- helpers -------------------------------------------------------------
 
   /** Tenant mà user đang là thành viên active — dùng để scope hội thoại phía shop. */

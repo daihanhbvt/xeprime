@@ -37,7 +37,10 @@ export function useThread(conversationId: string | null): ThreadState {
   const markRead = useCallback(
     (id: string) => {
       markConversationRead(id)
-        .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations() }))
+        .then(() => {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations() });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCount() });
+        })
         .catch(() => undefined);
     },
     [queryClient],

@@ -680,6 +680,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/conversations/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tổng tin chưa đọc mọi hội thoại (cho badge icon chat) */
+        get: operations["ConversationsController_unreadCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/conversations/{id}/messages": {
         parameters: {
             query?: never;
@@ -1585,6 +1602,13 @@ export interface components {
         CreateConversationDto: {
             /** @description ID xe (listing) muốn nhắn shop */
             vehicleId: string;
+        };
+        ChatUnreadCountDto: {
+            /**
+             * @description Tổng tin chưa đọc mọi hội thoại (phía người xem)
+             * @example 3
+             */
+            count: number;
         };
         MessageAttachmentDto: {
             url: string;
@@ -2942,6 +2966,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConversationSummaryDto"];
+                };
+            };
+        };
+    };
+    ConversationsController_unreadCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatUnreadCountDto"];
                 };
             };
         };

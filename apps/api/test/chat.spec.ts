@@ -173,4 +173,13 @@ describe('ChatService', () => {
   maybe('gửi tin rỗng (không text, không đính kèm) bị chặn', async () => {
     await expect(chat.sendMessage(customerId, conversationId, {})).rejects.toThrow(/nội dung/);
   });
+
+  maybe('unread-count tổng khớp counter phía mình', async () => {
+    const conv = await prisma.conversation.findUniqueOrThrow({ where: { id: conversationId } });
+    // Khách chỉ có đúng một hội thoại này → tổng = unreadCustomerCount; shop = unreadTenantCount.
+    const customer = await chat.unreadCount(customerId);
+    const shop = await chat.unreadCount(ownerId);
+    expect(customer.count).toBe(conv.unreadCustomerCount);
+    expect(shop.count).toBe(conv.unreadTenantCount);
+  });
 });

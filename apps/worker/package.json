@@ -8,7 +8,7 @@
     "start": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"@xeprime/worker: skeleton, chưa có test cho tới Phase 5\""
+    "test": "dotenv -e ../../.env -- node --import tsx --test \"test/**/*.test.ts\""
   },
   "dependencies": {
     "@xeprime/prisma": "workspace:*",

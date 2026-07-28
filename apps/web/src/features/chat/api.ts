@@ -1,5 +1,5 @@
 import type { PaginationMeta } from '@xeprime/types';
-import { apiPost, apiRequest } from '@/services/api-client';
+import { apiGet, apiPost, apiRequest } from '@/services/api-client';
 import type {
   ChatMessage,
   ConversationSummary,
@@ -32,6 +32,9 @@ export async function fetchConversations(page = 1): Promise<ConversationListResu
 
 export const startConversation = (vehicleId: string): Promise<ConversationSummary> =>
   apiPost<ConversationSummary>('/conversations', { vehicleId });
+
+export const fetchChatUnreadCount = (): Promise<{ count: number }> =>
+  apiGet<{ count: number }>('/conversations/unread-count');
 
 export interface MessagePage {
   data: ChatMessage[];

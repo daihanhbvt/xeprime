@@ -3,6 +3,7 @@ import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestj
 import { CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import {
+  ChatUnreadCountDto,
   ConversationListQueryDto,
   ConversationPageDto,
   ConversationSummaryDto,
@@ -42,6 +43,13 @@ export class ConversationsController {
     @Body() dto: CreateConversationDto,
   ): Promise<ConversationSummaryDto> {
     return this.chat.getOrCreateConversation(user.id, dto);
+  }
+
+  @Get('unread-count')
+  @ApiOperation({ summary: 'Tổng tin chưa đọc mọi hội thoại (cho badge icon chat)' })
+  @ApiOkResponse({ type: ChatUnreadCountDto })
+  unreadCount(@CurrentUser() user: AuthenticatedUser): Promise<ChatUnreadCountDto> {
+    return this.chat.unreadCount(user.id);
   }
 
   @Get(':id/messages')

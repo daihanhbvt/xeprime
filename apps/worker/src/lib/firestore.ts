@@ -59,6 +59,18 @@ export async function writeMessage(convId: string, msgId: string, doc: MessageDo
   await db.collection('conversations').doc(convId).collection('messages').doc(msgId).set(doc);
 }
 
+/**
+ * Phần ghi projection mà outbox pump cần — tách interface để test pump bằng fake writer,
+ * không cần Firestore thật.
+ */
+export interface OutboxWriter {
+  upsertConversation(id: string, doc: ConversationDoc): Promise<void>;
+  writeMessage(convId: string, msgId: string, doc: MessageDoc): Promise<void>;
+}
+
+/** Writer thật (Firestore Admin) — mặc định của pump ở production. */
+export const firestoreWriter: OutboxWriter = { upsertConversation, writeMessage };
+
 /** Xoá tin cũ, giữ `keep` tin mới nhất. Trả số tin đã xoá. */
 export async function trimMessages(convId: string, keep: number): Promise<number> {
   const db = await getDb();
