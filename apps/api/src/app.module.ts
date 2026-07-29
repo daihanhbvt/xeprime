@@ -24,6 +24,7 @@ import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { BookingRequestsModule } from './modules/booking-requests/booking-requests.module';
 import { PhoneVerificationModule } from './modules/phone-verification/phone-verification.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { MembersModule } from './modules/members/members.module';
 import { ReviewModule } from './modules/review/review.module';
 import { ChatModule } from './modules/chat/chat.module';
@@ -67,6 +68,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     BookingsModule,
     BookingRequestsModule,
     PhoneVerificationModule,
+    FinanceModule,
     MembersModule,
     ReviewModule,
     ChatModule,

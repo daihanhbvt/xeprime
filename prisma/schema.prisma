@@ -137,6 +137,8 @@ model Tenant {
   reviews       Review[]
   conversations Conversation[]
   publicListings PublicListing[]
+  financeCategories FinanceCategory[]
+  receipts      Receipt[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -496,6 +498,7 @@ model Vehicle {
   publicListing PublicListing?
   images      VehicleImage[]
   features    VehicleFeature[]
+  receipts    Receipt[]
 
   @@unique([tenantId, code])
   @@index([tenantId, publicStatus])
@@ -613,6 +616,7 @@ model Booking {
   creator User?   @relation("booking_creator", fields: [createdBy], references: [id])
   bookingRequest BookingRequest? @relation("request_booking")
   review         Review?         @relation("booking_review")
+  receipts       Receipt[]
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -926,4 +930,81 @@ model ChatAttachment {
 
   @@index([messageId])
   @@map("chat_attachments")
+}
+
+// ---------------------------------------------------------------------------
+// Tài chính — Thu/Chi (database_design §12.1–12.3, Phase 6)
+// ---------------------------------------------------------------------------
+
+/// Danh mục thu/chi. `tenant_id` null + `is_system` = danh mục hệ thống dùng chung mọi shop
+/// (seed sẵn); tenant tự tạo danh mục riêng (is_system=false). Không xoá danh mục hệ thống.
+model FinanceCategory {
+  id        String   @id @db.Char(26)
+  tenantId  String?  @map("tenant_id") @db.Char(26)
+  /// @xeprime/types → FinanceCategoryType (income | expense)
+  type      String   @db.VarChar(20)
+  name      String   @db.VarChar(255)
+  isSystem  Boolean  @default(false) @map("is_system")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant   Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  receipts Receipt[]
+
+  @@index([tenantId, type])
+  @@map("finance_categories")
+}
+
+/// Phiếu thu/chi (thay `thuChi` legacy). Workflow: draft → pending_approval → approved | cancelled.
+/// Mọi ghi qua ReceiptsService; `tenant_id` từ scope, không nhận từ client. `tenant_customer_id`
+/// để trần (bảng customers làm sau) — chưa FK.
+model Receipt {
+  id               String    @id @db.Char(26)
+  tenantId         String    @map("tenant_id") @db.Char(26)
+  receiptNo        String?   @map("receipt_no") @db.VarChar(100)
+  /// @xeprime/types → ReceiptType (income | expense)
+  type             String    @db.VarChar(20)
+  categoryId       String?   @map("category_id") @db.Char(26)
+  bookingId        String?   @map("booking_id") @db.Char(26)
+  vehicleId        String?   @map("vehicle_id") @db.Char(26)
+  tenantCustomerId String?   @map("tenant_customer_id") @db.Char(26)
+  amount           Decimal   @db.Decimal(14, 2)
+  /// @xeprime/types → PaymentMethod
+  paymentMethod    String    @map("payment_method") @db.VarChar(50)
+  referenceCode    String?   @map("reference_code") @db.VarChar(255)
+  description      String?   @db.Text
+  /// @xeprime/types → ReceiptStatus
+  status           String    @default("draft") @db.VarChar(50)
+  requestedBy      String?   @map("requested_by") @db.Char(26)
+  approvedBy       String?   @map("approved_by") @db.Char(26)
+  approvedAt       DateTime? @map("approved_at") @db.Timestamptz(3)
+  cancelledBy      String?   @map("cancelled_by") @db.Char(26)
+  cancelledAt      DateTime? @map("cancelled_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category    FinanceCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  booking     Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  vehicle     Vehicle?            @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  attachments ReceiptAttachment[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([bookingId])
+  @@index([categoryId])
+  @@map("receipts")
+}
+
+model ReceiptAttachment {
+  id        String   @id @db.Char(26)
+  receiptId String   @map("receipt_id") @db.Char(26)
+  fileUrl   String   @map("file_url") @db.Text
+  fileType  String?  @map("file_type") @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  receipt Receipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  @@index([receiptId])
+  @@map("receipt_attachments")
 }

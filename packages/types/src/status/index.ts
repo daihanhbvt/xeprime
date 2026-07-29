@@ -18,4 +18,5 @@ export * from './booking-request';
 export * from './review';
 export * from './chat';
 export * from './misc';
+export * from './finance';
 export * from './onboarding';

@@ -10,6 +10,7 @@ import {
   BOOKING_STATUS,
   DEFAULT_PLATFORM_ROLE_PERMISSIONS,
   DEFAULT_TENANT_ROLE_PERMISSIONS,
+  FINANCE_CATEGORY_TYPE,
   LISTING_STATUS,
   MEMBERSHIP_STATUS,
   OCCUPANCY_SOURCE_TYPE,
@@ -254,6 +255,34 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
   return true;
 }
 
+/** Danh mục thu/chi hệ thống (tenant_id null) — dùng chung mọi shop. Theo Vietrent legacy. */
+const SYSTEM_FINANCE_CATEGORIES: ReadonlyArray<{ type: string; name: string }> = [
+  ...['Tiền thuê xe', 'Tiền cọc', 'Thanh toán đơn', 'Phí quá giờ', 'Phí đền bù va quẹt', 'Phí phạt nguội', 'Thu khác'].map(
+    (name) => ({ type: FINANCE_CATEGORY_TYPE.INCOME, name }),
+  ),
+  ...['Hoàn cọc', 'Bảo dưỡng/Thay nhớt', 'Sửa chữa sự cố', 'Mua bảo hiểm', 'Rửa xe', 'Giao/nhận xe', 'Đổ xăng', 'Chi phí vận hành', 'Chi phí marketing', 'Chi phí văn phòng', 'Chi khác'].map(
+    (name) => ({ type: FINANCE_CATEGORY_TYPE.EXPENSE, name }),
+  ),
+];
+
+async function seedFinanceCategories(): Promise<void> {
+  let created = 0;
+  for (const cat of SYSTEM_FINANCE_CATEGORIES) {
+    const existing = await prisma.financeCategory.findFirst({
+      where: { tenantId: null, type: cat.type, name: cat.name },
+      select: { id: true },
+    });
+    if (!existing) {
+      await prisma.financeCategory.create({
+        data: { id: ulid(), tenantId: null, type: cat.type, name: cat.name, isSystem: true },
+      });
+      created++;
+    }
+  }
+  const total = await prisma.financeCategory.count({ where: { tenantId: null, isSystem: true } });
+  console.log(`  danh mục thu/chi hệ thống: ${total} (mới ${created})`);
+}
+
 async function main(): Promise<void> {
   console.log('Seeding XePrime...');
 
@@ -278,6 +307,8 @@ async function main(): Promise<void> {
     );
   }
   console.log('  roles hệ thống: xong');
+
+  await seedFinanceCategories();
 
   // Dọn tài khoản demo mock cũ (không mật khẩu) — đã chuyển sang đăng nhập email/mật khẩu.
   // Giữ owner@xeprime.test (chủ shop demo, được đặt mật khẩu ngay dưới đây).

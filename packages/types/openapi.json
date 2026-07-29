@@ -1950,6 +1950,376 @@
         ]
       }
     },
+    "/finance/categories": {
+      "get": {
+        "operationId": "FinanceCategoriesController_list",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "income",
+                "expense"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FinanceCategoryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh mục thu/chi (hệ thống + của tenant)",
+        "tags": [
+          "finance-categories"
+        ]
+      },
+      "post": {
+        "operationId": "FinanceCategoriesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinanceCategoryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo danh mục riêng của tenant",
+        "tags": [
+          "finance-categories"
+        ]
+      }
+    },
+    "/finance/categories/{id}": {
+      "patch": {
+        "operationId": "FinanceCategoriesController_rename",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinanceCategoryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đổi tên danh mục (chỉ danh mục riêng)",
+        "tags": [
+          "finance-categories"
+        ]
+      },
+      "delete": {
+        "operationId": "FinanceCategoriesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Xoá danh mục (chỉ danh mục riêng)",
+        "tags": [
+          "finance-categories"
+        ]
+      }
+    },
+    "/receipts": {
+      "get": {
+        "operationId": "ReceiptsController_list",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "income",
+                "expense"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending_approval",
+                "approved",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo danh mục",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bookingId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo đơn thuê",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Từ ngày (ISO) — theo created_at",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Đến ngày (ISO)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách phiếu thu/chi (phân trang, filter)",
+        "tags": [
+          "receipts"
+        ]
+      },
+      "post": {
+        "operationId": "ReceiptsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReceiptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo phiếu thu/chi (chờ duyệt)",
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
+    "/receipts/{id}": {
+      "get": {
+        "operationId": "ReceiptsController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết phiếu",
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
+    "/receipts/{id}/approve": {
+      "post": {
+        "operationId": "ReceiptsController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Duyệt phiếu",
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
+    "/receipts/{id}/cancel": {
+      "post": {
+        "operationId": "ReceiptsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelReceiptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Huỷ phiếu",
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
     "/members": {
       "get": {
         "operationId": "MembersController_list",
@@ -3023,6 +3393,9 @@
                 "finance.view",
                 "receipts.create",
                 "receipts.approve",
+                "payments.record",
+                "payments.void",
+                "contracts.manage",
                 "platform.dashboard.view",
                 "platform.tenants.manage",
                 "platform.approvals.review",
@@ -5106,6 +5479,306 @@
         "required": [
           "verified"
         ]
+      },
+      "FinanceCategoryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "isSystem": {
+            "type": "boolean",
+            "description": "Danh mục hệ thống — không sửa/xoá được"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name",
+          "isSystem"
+        ]
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "example": "Phí vệ sinh xe"
+          }
+        },
+        "required": [
+          "type",
+          "name"
+        ]
+      },
+      "UpdateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Phí vệ sinh xe"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ReceiptListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "receiptNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_approval",
+              "approved",
+              "cancelled"
+            ]
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "bookingId": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "amount",
+          "paymentMethod",
+          "createdAt"
+        ]
+      },
+      "ReceiptPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceiptListItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "ReceiptDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "receiptNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_approval",
+              "approved",
+              "cancelled"
+            ]
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "bookingId": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "vehicleId": {
+            "type": "string",
+            "nullable": true
+          },
+          "referenceCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "approvedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "attachments": {
+            "description": "URL ảnh minh chứng",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "amount",
+          "paymentMethod",
+          "createdAt",
+          "attachments",
+          "updatedAt"
+        ]
+      },
+      "CreateReceiptDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ],
+            "description": "income = phiếu thu, expense = phiếu chi"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tiền, string thập phân — ADR 0007",
+            "example": "500000"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "bank_transfer",
+              "qr",
+              "card",
+              "other"
+            ]
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Danh mục (ULID)"
+          },
+          "bookingId": {
+            "type": "string",
+            "description": "Đơn thuê liên quan (ULID)"
+          },
+          "vehicleId": {
+            "type": "string",
+            "description": "Xe liên quan (ULID)"
+          },
+          "referenceCode": {
+            "type": "string",
+            "description": "Mã tra soát/tham chiếu (CK…)"
+          },
+          "description": {
+            "type": "string"
+          },
+          "attachments": {
+            "description": "URL ảnh minh chứng (tối đa 10)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "amount",
+          "paymentMethod"
+        ]
+      },
+      "CancelReceiptDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
       },
       "MemberDto": {
         "type": "object",

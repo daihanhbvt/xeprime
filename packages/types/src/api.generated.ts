@@ -660,6 +660,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/finance/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh mục thu/chi (hệ thống + của tenant) */
+        get: operations["FinanceCategoriesController_list"];
+        put?: never;
+        /** Tạo danh mục riêng của tenant */
+        post: operations["FinanceCategoriesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Xoá danh mục (chỉ danh mục riêng) */
+        delete: operations["FinanceCategoriesController_remove"];
+        options?: never;
+        head?: never;
+        /** Đổi tên danh mục (chỉ danh mục riêng) */
+        patch: operations["FinanceCategoriesController_rename"];
+        trace?: never;
+    };
+    "/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách phiếu thu/chi (phân trang, filter) */
+        get: operations["ReceiptsController_list"];
+        put?: never;
+        /** Tạo phiếu thu/chi (chờ duyệt) */
+        post: operations["ReceiptsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/receipts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chi tiết phiếu */
+        get: operations["ReceiptsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/receipts/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duyệt phiếu */
+        post: operations["ReceiptsController_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/receipts/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Huỷ phiếu */
+        post: operations["ReceiptsController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/members": {
         parameters: {
             query?: never;
@@ -996,7 +1101,7 @@ export interface components {
             tenantRole?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer" | null;
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage")[];
         };
         NotificationDto: {
             id: string;
@@ -1637,6 +1742,98 @@ export interface components {
         };
         VerifyOtpResultDto: {
             verified: boolean;
+        };
+        FinanceCategoryDto: {
+            id: string;
+            /** @enum {string} */
+            type: "income" | "expense";
+            name: string;
+            /** @description Danh mục hệ thống — không sửa/xoá được */
+            isSystem: boolean;
+        };
+        CreateCategoryDto: {
+            /** @enum {string} */
+            type: "income" | "expense";
+            /** @example Phí vệ sinh xe */
+            name: string;
+        };
+        UpdateCategoryDto: {
+            /** @example Phí vệ sinh xe */
+            name: string;
+        };
+        ReceiptListItemDto: {
+            id: string;
+            receiptNo?: string | null;
+            /** @enum {string} */
+            type: "income" | "expense";
+            /** @enum {string} */
+            status: "draft" | "pending_approval" | "approved" | "cancelled";
+            /** @description Tiền dạng string — ADR 0007 */
+            amount: string;
+            paymentMethod: string;
+            categoryId?: string | null;
+            categoryName?: string | null;
+            bookingId?: string | null;
+            description?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        ReceiptPageDto: {
+            data: components["schemas"]["ReceiptListItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        ReceiptDetailDto: {
+            id: string;
+            receiptNo?: string | null;
+            /** @enum {string} */
+            type: "income" | "expense";
+            /** @enum {string} */
+            status: "draft" | "pending_approval" | "approved" | "cancelled";
+            /** @description Tiền dạng string — ADR 0007 */
+            amount: string;
+            paymentMethod: string;
+            categoryId?: string | null;
+            categoryName?: string | null;
+            bookingId?: string | null;
+            description?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+            vehicleId?: string | null;
+            referenceCode?: string | null;
+            approvedAt?: string | null;
+            cancelledAt?: string | null;
+            /** @description URL ảnh minh chứng */
+            attachments: string[];
+            /** @description ISO-8601 UTC */
+            updatedAt: string;
+        };
+        CreateReceiptDto: {
+            /**
+             * @description income = phiếu thu, expense = phiếu chi
+             * @enum {string}
+             */
+            type: "income" | "expense";
+            /**
+             * @description Tiền, string thập phân — ADR 0007
+             * @example 500000
+             */
+            amount: string;
+            /** @enum {string} */
+            paymentMethod: "cash" | "bank_transfer" | "qr" | "card" | "other";
+            /** @description Danh mục (ULID) */
+            categoryId?: string;
+            /** @description Đơn thuê liên quan (ULID) */
+            bookingId?: string;
+            /** @description Xe liên quan (ULID) */
+            vehicleId?: string;
+            /** @description Mã tra soát/tham chiếu (CK…) */
+            referenceCode?: string;
+            description?: string;
+            /** @description URL ảnh minh chứng (tối đa 10) */
+            attachments?: string[];
+        };
+        CancelReceiptDto: {
+            reason?: string;
         };
         MemberDto: {
             /** @description ID user — dùng cho PATCH/DELETE /members/:userId */
@@ -3029,6 +3226,216 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VerifyOtpResultDto"];
+                };
+            };
+        };
+    };
+    FinanceCategoriesController_list: {
+        parameters: {
+            query?: {
+                type?: "income" | "expense";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceCategoryDto"][];
+                };
+            };
+        };
+    };
+    FinanceCategoriesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCategoryDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceCategoryDto"];
+                };
+            };
+        };
+    };
+    FinanceCategoriesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FinanceCategoriesController_rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCategoryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceCategoryDto"];
+                };
+            };
+        };
+    };
+    ReceiptsController_list: {
+        parameters: {
+            query?: {
+                type?: "income" | "expense";
+                status?: "draft" | "pending_approval" | "approved" | "cancelled";
+                /** @description Lọc theo danh mục */
+                categoryId?: string;
+                /** @description Lọc theo đơn thuê */
+                bookingId?: string;
+                /** @description Từ ngày (ISO) — theo created_at */
+                from?: string;
+                /** @description Đến ngày (ISO) */
+                to?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptPageDto"];
+                };
+            };
+        };
+    };
+    ReceiptsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateReceiptDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptDetailDto"];
+                };
+            };
+        };
+    };
+    ReceiptsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptDetailDto"];
+                };
+            };
+        };
+    };
+    ReceiptsController_approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptDetailDto"];
+                };
+            };
+        };
+    };
+    ReceiptsController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelReceiptDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptDetailDto"];
                 };
             };
         };

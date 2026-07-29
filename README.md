@@ -10,7 +10,8 @@ Next.js 16 · NestJS 11 · PostgreSQL 16 · Prisma 7 · pnpm workspace · Turbor
 
 | Thứ tự | Tài liệu | Vì sao |
 | --- | --- | --- |
-| 1 | [`../CLAUDE.md`](../CLAUDE.md) | Bản đồ workspace, kiến trúc đã chốt, điều cấm |
+| 1 | [`CLAUDE.md`](CLAUDE.md) | Bản đồ repo, kiến trúc đã chốt, điều cấm |
+| 1b | [`docs/completion-roadmap.md`](docs/completion-roadmap.md) | **Đang ở đâu / làm gì tiếp** (tiến độ thực tế + milestone) |
 | 2 | [`docs/decisions/`](docs/decisions/) | **Quyết định kỹ thuật kèm lý do. Thắng mọi tài liệu khác khi mâu thuẫn.** |
 | 3 | [`docs/`](docs/) | Đặc tả nghiệp vụ: màn hình theo role, user flow, thiết kế DB |
 
@@ -113,8 +114,4 @@ Sau khi đổi DTO ở backend, **phải** chạy `pnpm contract` — nếu khô
 
 ## Trạng thái
 
-Phase 0 (base source). Nghiệp vụ thuê xe chưa implement — lộ trình 9 phase ở `CLAUDE.md` mục 11.
-
-API đã có: `GET /health` · `POST|DELETE /auth/session` · `GET /auth/me` · `GET /users/me` · `PATCH /users/me` · `GET /rbac/my-permissions` · `GET /tenants/current` · `GET /calendar/resources` · `GET /calendar/events`
-
-Màn đã có: `/` · `/login` · `/manage` · `/manage/calendar` (chạy thật với dữ liệu seed) · `/manage/vehicles` · `/manage/bookings` · `/manage/admin` (placeholder)
+**Tiến độ thực tế + milestone + việc kế tiếp: [`docs/completion-roadmap.md`](docs/completion-roadmap.md)** (cập nhật mỗi khi đóng một phase). Lộ trình 9 phase ở `CLAUDE.md` mục 11.

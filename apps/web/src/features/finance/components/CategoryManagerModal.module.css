@@ -1,0 +1,26 @@
+.addRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+.empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--xp-color-text-tertiary);
+}

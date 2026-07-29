@@ -1,0 +1,14 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.select {
+  min-width: 180px;
+}
+
+.state {
+  margin-top: 48px;
+}

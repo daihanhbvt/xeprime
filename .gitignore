@@ -36,6 +36,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
+# claude: settings.json (plansDirectory…) commit; settings.local.json là allowlist cá nhân
+.claude/settings.local.json
+
 # secrets — never commit service account keys
 *serviceAccount*.json
 firebase-adminsdk-*.json

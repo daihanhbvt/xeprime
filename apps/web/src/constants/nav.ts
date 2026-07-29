@@ -128,7 +128,6 @@ export const SHOP_NAV: readonly NavNode[] = [
         href: ROUTES.MANAGE.RECEIPTS,
         permission: PERMISSION.FINANCE_VIEW,
         icon: TransactionOutlined,
-        comingSoon: true,
       },
       {
         key: 'debts',

@@ -101,6 +101,9 @@ export const PERMISSION = {
   FINANCE_VIEW: 'finance.view',
   RECEIPT_CREATE: 'receipts.create',
   RECEIPT_APPROVE: 'receipts.approve',
+  PAYMENT_RECORD: 'payments.record',
+  PAYMENT_VOID: 'payments.void',
+  CONTRACT_MANAGE: 'contracts.manage',
 
   // Nền tảng
   PLATFORM_DASHBOARD_VIEW: 'platform.dashboard.view',
@@ -141,6 +144,9 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.FINANCE_VIEW,
       PERMISSION.RECEIPT_CREATE,
       PERMISSION.RECEIPT_APPROVE,
+      PERMISSION.PAYMENT_RECORD,
+      PERMISSION.PAYMENT_VOID,
+      PERMISSION.CONTRACT_MANAGE,
     ],
     [TENANT_ROLE.SHOP_STAFF]: [
       PERMISSION.TENANT_VIEW,
@@ -151,6 +157,7 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.BOOKING_UPDATE,
       PERMISSION.CALENDAR_VIEW,
       PERMISSION.RECEIPT_CREATE,
+      PERMISSION.PAYMENT_RECORD,
     ],
     [TENANT_ROLE.SHOP_VIEWER]: [
       PERMISSION.TENANT_VIEW,
