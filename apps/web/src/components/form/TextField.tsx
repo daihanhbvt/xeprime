@@ -13,6 +13,7 @@ interface TextFieldProps<T extends FieldValues> {
   autoComplete?: string;
   prefix?: ReactNode;
   autoFocus?: boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -30,6 +31,7 @@ export function TextField<T extends FieldValues>({
   autoComplete,
   prefix,
   autoFocus,
+  disabled,
 }: TextFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   const shared = {
@@ -39,6 +41,7 @@ export function TextField<T extends FieldValues>({
     autoComplete,
     autoFocus,
     prefix,
+    disabled,
     status: fieldState.error ? ('error' as const) : undefined,
   };
 

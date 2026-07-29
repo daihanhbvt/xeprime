@@ -13,6 +13,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
 import {
   BOOKING_REQUEST_DEFAULT_LIMIT,
   BOOKING_REQUEST_MAX_LIMIT,
@@ -45,6 +46,7 @@ export class BookingRequestsService {
     private readonly bookings: BookingsService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    private readonly phoneVerification: PhoneVerificationService,
   ) {}
 
   /**
@@ -71,6 +73,9 @@ export class BookingRequestsService {
         message: 'Xe không khả dụng để đặt',
       });
     }
+
+    // §8: khách chưa xác thực SĐT không gửi được yêu cầu thuê.
+    await this.phoneVerification.assertPhoneVerifiedForBooking(dto.customerPhone);
 
     const pickupAt = new Date(dto.pickupAt);
     const returnAt = new Date(dto.returnAt);

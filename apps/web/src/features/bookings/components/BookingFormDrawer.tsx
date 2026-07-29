@@ -3,6 +3,7 @@
 import { Alert, App, Button, Drawer } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useForm, useWatch } from 'react-hook-form';
 import { API_ERROR_CODE, SERVICE_TYPE } from '@xeprime/types';
 import { SelectField } from '@/components/form/SelectField';
@@ -16,6 +17,7 @@ import { formatMoneyVnd } from '@/lib/money';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import type { Dayjs } from 'dayjs';
 import { SERVICE_TYPE_OPTIONS } from '../constants';
+import { checkConflict } from '../api';
 import { useCreateBooking, useUpdateBooking } from '../hooks/use-booking-mutations';
 import { bookingFormSchema, type BookingFormValues } from '../schema';
 import type { BookingDetail, CreateBookingInput, UpdateBookingInput } from '../types';
@@ -117,6 +119,33 @@ function BookingForm({
   });
   const total = (base ?? 0) + (delivery ?? 0) - (discount ?? 0);
 
+  // Preview trùng lịch (ADR 0006: chỉ cảnh báo sớm cho UX, KHÔNG chặn submit — chốt thật là
+  // exclusion constraint ở DB). useQuery tự dedupe/cache theo khoá; khi sửa thì bỏ qua chính đơn.
+  const [vehicleId, pickupAt, returnAt] = useWatch({
+    control,
+    name: ['vehicleId', 'pickupAt', 'returnAt'],
+  });
+  const canCheck = Boolean(vehicleId && pickupAt && returnAt && returnAt.isAfter(pickupAt));
+  const conflictPreview = useQuery({
+    queryKey: [
+      'check-conflict',
+      vehicleId,
+      pickupAt?.toISOString(),
+      returnAt?.toISOString(),
+      editing?.id ?? null,
+    ],
+    queryFn: () =>
+      checkConflict({
+        vehicleId,
+        startAt: pickupAt!.toISOString(),
+        endAt: returnAt!.toISOString(),
+        ...(editing?.id ? { excludeSourceId: editing.id } : {}),
+      }),
+    enabled: canCheck,
+    staleTime: 10_000,
+  });
+  const previewConflict = canCheck && conflictPreview.data?.hasConflict === true;
+
   const vehicleOptions = (vehiclesData?.items ?? []).map((v) => ({
     value: v.id,
     label: v.plateNumber ? `${v.name} · ${v.plateNumber}` : v.name,
@@ -175,6 +204,14 @@ function BookingForm({
           className={styles.alert}
           message="Xe đã bận trong khung giờ này"
           description="Chọn xe khác hoặc đổi thời gian nhận/trả."
+        />
+      ) : previewConflict ? (
+        <Alert
+          type="warning"
+          showIcon
+          className={styles.alert}
+          message="Xe có thể đã bận khung giờ này"
+          description="Cảnh báo sớm — hệ thống vẫn kiểm tra lại khi lưu."
         />
       ) : null}
 

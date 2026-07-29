@@ -1886,6 +1886,70 @@
         ]
       }
     },
+    "/auth/phone/send-otp": {
+      "post": {
+        "operationId": "PhoneVerificationController_sendOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendOtpResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gửi mã OTP tới số điện thoại",
+        "tags": [
+          "phone-verification"
+        ]
+      }
+    },
+    "/auth/phone/verify-otp": {
+      "post": {
+        "operationId": "PhoneVerificationController_verifyOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyOtpResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xác nhận mã OTP",
+        "tags": [
+          "phone-verification"
+        ]
+      }
+    },
     "/members": {
       "get": {
         "operationId": "MembersController_list",
@@ -4960,6 +5024,87 @@
         "required": [
           "id",
           "status"
+        ]
+      },
+      "SendOtpDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "0901234567"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "booking",
+              "shop_register",
+              "vehicle_public",
+              "password_reset"
+            ],
+            "example": "booking"
+          }
+        },
+        "required": [
+          "phone",
+          "purpose"
+        ]
+      },
+      "SendOtpResultDto": {
+        "type": "object",
+        "properties": {
+          "expiresAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC — thời điểm mã hết hạn"
+          },
+          "devCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "CHỈ ở dev (OTP_MODE=mock): mã để tự điền/test. Production luôn null."
+          }
+        },
+        "required": [
+          "expiresAt"
+        ]
+      },
+      "VerifyOtpDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "0901234567"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "booking",
+              "shop_register",
+              "vehicle_public",
+              "password_reset"
+            ],
+            "example": "booking"
+          },
+          "code": {
+            "type": "string",
+            "example": "123456",
+            "minLength": 6,
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "phone",
+          "purpose",
+          "code"
+        ]
+      },
+      "VerifyOtpResultDto": {
+        "type": "object",
+        "properties": {
+          "verified": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "verified"
         ]
       },
       "MemberDto": {

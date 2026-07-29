@@ -626,6 +626,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/phone/send-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Gửi mã OTP tới số điện thoại */
+        post: operations["PhoneVerificationController_sendOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/phone/verify-otp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Xác nhận mã OTP */
+        post: operations["PhoneVerificationController_verifyOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/members": {
         parameters: {
             query?: never;
@@ -1574,6 +1608,35 @@ export interface components {
             id: string;
             /** @enum {string} */
             status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking";
+        };
+        SendOtpDto: {
+            /** @example 0901234567 */
+            phone: string;
+            /**
+             * @example booking
+             * @enum {string}
+             */
+            purpose: "booking" | "shop_register" | "vehicle_public" | "password_reset";
+        };
+        SendOtpResultDto: {
+            /** @description ISO-8601 UTC — thời điểm mã hết hạn */
+            expiresAt: string;
+            /** @description CHỈ ở dev (OTP_MODE=mock): mã để tự điền/test. Production luôn null. */
+            devCode?: string | null;
+        };
+        VerifyOtpDto: {
+            /** @example 0901234567 */
+            phone: string;
+            /**
+             * @example booking
+             * @enum {string}
+             */
+            purpose: "booking" | "shop_register" | "vehicle_public" | "password_reset";
+            /** @example 123456 */
+            code: string;
+        };
+        VerifyOtpResultDto: {
+            verified: boolean;
         };
         MemberDto: {
             /** @description ID user — dùng cho PATCH/DELETE /members/:userId */
@@ -2920,6 +2983,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookingRequestReceiptDto"];
+                };
+            };
+        };
+    };
+    PhoneVerificationController_sendOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendOtpDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SendOtpResultDto"];
+                };
+            };
+        };
+    };
+    PhoneVerificationController_verifyOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyOtpDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifyOtpResultDto"];
                 };
             };
         };

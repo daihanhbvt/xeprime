@@ -3,10 +3,13 @@
 import { App, Button, Modal } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import { DateTimeField } from '@/components/form/DateTimeField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
+import { PhoneVerifyControl } from '@/features/phone-verification/components/PhoneVerifyControl';
 import { getErrorMessage } from '@/services/api-client';
 import { submitBookingRequest } from '../api';
 import { requestFormSchema, type RequestFormValues } from '../schema';
@@ -37,6 +40,7 @@ export function RequestBookingModal({
   onClose: () => void;
 }) {
   const { message } = App.useApp();
+  const [phoneVerified, setPhoneVerified] = useState(false);
   const { control, handleSubmit, reset } = useForm<RequestFormValues>({
     resolver: yupResolver(requestFormSchema),
     defaultValues: DEFAULTS,
@@ -74,7 +78,12 @@ export function RequestBookingModal({
     >
       <form onSubmit={onSubmit} noValidate>
         <TextField control={control} name="customerName" label="Họ tên" placeholder="Nguyễn Văn A" />
-        <TextField control={control} name="customerPhone" label="Số điện thoại" placeholder="0901234567" />
+        <PhoneVerifyControl
+          control={control}
+          name="customerPhone"
+          purpose={PHONE_VERIFICATION_PURPOSE.BOOKING}
+          onVerifiedChange={setPhoneVerified}
+        />
         <TextField control={control} name="customerEmail" label="Email (tuỳ chọn)" placeholder="ban@email.com" />
         <div className={styles.row}>
           <DateTimeField control={control} name="pickupAt" label="Nhận xe" placeholder="Chọn giờ nhận" />
@@ -84,7 +93,13 @@ export function RequestBookingModal({
 
         <div className={styles.actions}>
           <Button onClick={onClose}>Huỷ</Button>
-          <Button type="primary" htmlType="submit" loading={submit.isPending}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={submit.isPending}
+            disabled={!phoneVerified}
+            title={phoneVerified ? undefined : 'Xác thực số điện thoại trước khi gửi'}
+          >
             Gửi yêu cầu
           </Button>
         </div>

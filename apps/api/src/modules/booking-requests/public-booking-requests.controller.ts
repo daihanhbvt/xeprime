@@ -1,8 +1,8 @@
 import { Body, Controller, Post, Req } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { USER_STATUS } from '@xeprime/types';
 import type { Request } from 'express';
 import { Public } from '../../common/decorators';
+import { resolveOptionalUserId } from '../../common/optional-user';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SessionService } from '../auth/session.service';
 import { BookingRequestReceiptDto, CreateBookingRequestDto } from './dto/booking-request.dto';
@@ -35,26 +35,7 @@ export class PublicBookingRequestsController {
     @Body() dto: CreateBookingRequestDto,
     @Req() req: Request,
   ): Promise<BookingRequestReceiptDto> {
-    const customerUserId = await this.resolveOptionalUserId(req);
+    const customerUserId = await resolveOptionalUserId(req, this.sessions, this.prisma);
     return this.requests.submitPublic(dto, customerUserId);
-  }
-
-  /** Trả userId nếu cookie session hợp lệ và user còn active; null với mọi trường hợp khác. */
-  private async resolveOptionalUserId(req: Request): Promise<string | null> {
-    const token = (req.cookies as Record<string, string> | undefined)?.[this.sessions.cookieName];
-    if (!token) return null;
-
-    let sub: string;
-    try {
-      sub = this.sessions.verify(token).sub;
-    } catch {
-      return null; // token hết hạn / không hợp lệ → coi như khách vãng lai
-    }
-
-    const user = await this.prisma.user.findFirst({
-      where: { id: sub, status: USER_STATUS.ACTIVE, deletedAt: null },
-      select: { id: true },
-    });
-    return user?.id ?? null;
   }
 }

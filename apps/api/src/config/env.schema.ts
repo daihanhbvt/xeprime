@@ -40,6 +40,21 @@ export const envSchema = z
     FIREBASE_CLIENT_EMAIL: z.string().optional(),
     FIREBASE_PRIVATE_KEY: z.string().optional(),
 
+    // --- Xác thực SĐT / OTP (Phase 4) ---
+    // mock -> sinh mã 6 số, KHÔNG gửi SMS: in ra log + trả `devCode` ở dev (tự động điền/test).
+    // esms -> gửi thật qua eSMS.vn, cần 3 ESMS_* dưới. Firebase-code cũ dùng eSMS (không phải
+    // Firebase Phone Auth); key prod nằm trong Secret Manager, không tái dùng local được.
+    OTP_MODE: z.enum(['mock', 'esms']).default('mock'),
+    ESMS_API_KEY: z.string().optional(),
+    ESMS_SECRET_KEY: z.string().optional(),
+    ESMS_BRANDNAME: z.string().optional(),
+    OTP_TTL_MINUTES: z.coerce.number().int().positive().default(5),
+    OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
+    OTP_MAX_SENDS_PER_HOUR: z.coerce.number().int().positive().default(5),
+    // Pepper để hash mã OTP (schema phone_verifications không có cột salt). Có default dev để
+    // không phá `.env` sẵn có; production bắt buộc đổi (kiểm ở superRefine dưới).
+    OTP_PEPPER: z.string().min(16).default('xeprime-dev-otp-pepper-change-me'),
+
     // --- Chat realtime (ADR 0009) ---
     // Bật Firestore projection cho chat. Độc lập với AUTH_MODE: có thể AUTH_MODE=mock mà vẫn
     // dùng Firestore cho chat (dùng chung 3 FIREBASE_* ở trên). Tắt (mặc định) thì chat chỉ
@@ -114,6 +129,27 @@ export const envSchema = z
         code: 'custom',
         path: ['SESSION_JWT_SECRET'],
         message: 'SESSION_JWT_SECRET vẫn là giá trị mẫu — phải đổi trước khi lên production',
+      });
+    }
+
+    // Gửi SMS thật → cần credential eSMS.vn (API key + secret + brandname đã duyệt).
+    if (env.OTP_MODE === 'esms') {
+      for (const key of ['ESMS_API_KEY', 'ESMS_SECRET_KEY', 'ESMS_BRANDNAME'] as const) {
+        if (!env[key]) {
+          ctx.addIssue({
+            code: 'custom',
+            path: [key],
+            message: `${key} là bắt buộc khi OTP_MODE=esms`,
+          });
+        }
+      }
+    }
+
+    if (env.NODE_ENV === 'production' && env.OTP_PEPPER.includes('change-me')) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OTP_PEPPER'],
+        message: 'OTP_PEPPER vẫn là giá trị mẫu — phải đổi trước khi lên production',
       });
     }
   });
