@@ -120,7 +120,6 @@ export const SHOP_NAV: readonly NavNode[] = [
         href: ROUTES.MANAGE.FINANCE,
         permission: PERMISSION.FINANCE_VIEW,
         icon: WalletOutlined,
-        comingSoon: true,
       },
       {
         key: 'receipts',
@@ -135,7 +134,6 @@ export const SHOP_NAV: readonly NavNode[] = [
         href: ROUTES.MANAGE.DEBTS,
         permission: PERMISSION.FINANCE_VIEW,
         icon: CreditCardOutlined,
-        comingSoon: true,
       },
     ],
   },

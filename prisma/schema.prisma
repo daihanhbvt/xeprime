@@ -139,6 +139,7 @@ model Tenant {
   publicListings PublicListing[]
   financeCategories FinanceCategory[]
   receipts      Receipt[]
+  payments      Payment[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -617,6 +618,7 @@ model Booking {
   bookingRequest BookingRequest? @relation("request_booking")
   review         Review?         @relation("booking_review")
   receipts       Receipt[]
+  payments       Payment[]
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -988,6 +990,7 @@ model Receipt {
   booking     Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   vehicle     Vehicle?            @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   attachments ReceiptAttachment[]
+  payments    Payment[]
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
@@ -1007,4 +1010,42 @@ model ReceiptAttachment {
 
   @@index([receiptId])
   @@map("receipt_attachments")
+}
+
+/// Giao dịch thanh toán gắn với đơn thuê (database_design §12.4, Phase 6).
+///
+/// XePrime KHÔNG làm trung gian thu tiền — đây là BẢN GHI THỦ CÔNG để shop quản lý (số hoá cuốn
+/// sổ): shop ghi "đã nhận X tiền mặt/CK cho đơn Y". Cột `provider`/`provider_transaction_id`
+/// chừa cho cổng thanh toán tương lai, MVP để trống.
+///
+/// `PaymentsService` là ĐƯỜNG GHI DUY NHẤT của `booking.paid_amount`: mỗi payment cập nhật
+/// paid_amount trong cùng transaction bằng increment/decrement (khoá ở DB, chống lost-update).
+/// `subscription_id`/`payer_user_id` để trần (bảng subscriptions chưa có; payer có thể là khách
+/// vãng lai) — chưa FK.
+model Payment {
+  id                    String    @id @db.Char(26)
+  tenantId              String?   @map("tenant_id") @db.Char(26)
+  bookingId             String?   @map("booking_id") @db.Char(26)
+  subscriptionId        String?   @map("subscription_id") @db.Char(26)
+  receiptId             String?   @map("receipt_id") @db.Char(26)
+  payerUserId           String?   @map("payer_user_id") @db.Char(26)
+  amount                Decimal   @db.Decimal(14, 2)
+  currency              String    @default("VND") @db.VarChar(10)
+  /// @xeprime/types → PaymentMethod
+  method                String    @db.VarChar(50)
+  /// @xeprime/types → PaymentStatus
+  status                String    @default("succeeded") @db.VarChar(50)
+  provider              String?   @db.VarChar(50)
+  providerTransactionId String?   @map("provider_transaction_id") @db.VarChar(255)
+  paidAt                DateTime? @map("paid_at") @db.Timestamptz(3)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  receipt Receipt? @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, bookingId])
+  @@index([bookingId])
+  @@index([createdAt])
+  @@map("payments")
 }

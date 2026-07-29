@@ -2320,6 +2320,210 @@
         ]
       }
     },
+    "/debts": {
+      "get": {
+        "operationId": "FinanceOverviewController_debts",
+        "parameters": [
+          {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "all",
+                "overdue",
+                "upcoming",
+                "unpaid"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebtPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách đơn còn công nợ (lọc quá hạn/sắp đến/chưa thu)",
+        "tags": [
+          "finance-overview"
+        ]
+      }
+    },
+    "/finance/summary": {
+      "get": {
+        "operationId": "FinanceOverviewController_summary",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Từ ngày (ISO)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Đến ngày (ISO)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinanceSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tổng quan tài chính: thu/chi/cân đối/công nợ theo kỳ",
+        "tags": [
+          "finance-overview"
+        ]
+      }
+    },
+    "/bookings/{id}/payments": {
+      "post": {
+        "operationId": "PaymentsController_record",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordPaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ghi nhận một lần thu tiền cho đơn (cập nhật đã trả/còn nợ)",
+        "tags": [
+          "payments"
+        ]
+      },
+      "get": {
+        "operationId": "PaymentsController_history",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lịch sử thu tiền của một đơn",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/payments/{id}/void": {
+      "post": {
+        "operationId": "PaymentsController_void",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Huỷ/hoàn một lần thu (trừ lại đã trả)",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/members": {
       "get": {
         "operationId": "MembersController_list",
@@ -4938,6 +5142,10 @@
           "paidAmount": {
             "type": "string"
           },
+          "debtAmount": {
+            "type": "string",
+            "description": "Công nợ = max(0, total − paid), string — ADR 0007"
+          },
           "depositAmount": {
             "type": "string"
           },
@@ -4958,6 +5166,7 @@
           "returnAt",
           "totalAmount",
           "paidAmount",
+          "debtAmount",
           "depositAmount",
           "createdAt"
         ]
@@ -5041,6 +5250,10 @@
           "paidAmount": {
             "type": "string"
           },
+          "debtAmount": {
+            "type": "string",
+            "description": "Công nợ = max(0, total − paid), string — ADR 0007"
+          },
           "depositAmount": {
             "type": "string"
           },
@@ -5086,6 +5299,7 @@
           "returnAt",
           "totalAmount",
           "paidAmount",
+          "debtAmount",
           "depositAmount",
           "createdAt",
           "baseAmount",
@@ -5196,10 +5410,6 @@
             "example": "0"
           },
           "depositAmount": {
-            "type": "string",
-            "example": "0"
-          },
-          "paidAmount": {
             "type": "string",
             "example": "0"
           },
@@ -5779,6 +5989,187 @@
             "type": "string"
           }
         }
+      },
+      "DebtItemDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerPhone": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "returnAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "totalAmount": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "paidAmount": {
+            "type": "string"
+          },
+          "debtAmount": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "bookingId",
+          "code",
+          "customerName",
+          "vehicleName",
+          "returnAt",
+          "totalAmount",
+          "paidAmount",
+          "debtAmount"
+        ]
+      },
+      "DebtPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DebtItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "FinanceSummaryDto": {
+        "type": "object",
+        "properties": {
+          "totalIncome": {
+            "type": "string",
+            "description": "Tổng thu (phiếu income đã duyệt), string"
+          },
+          "totalExpense": {
+            "type": "string",
+            "description": "Tổng chi (phiếu expense đã duyệt), string"
+          },
+          "balance": {
+            "type": "string",
+            "description": "Cân đối = thu − chi, string"
+          },
+          "totalDebt": {
+            "type": "string",
+            "description": "Tổng công nợ các đơn còn nợ, string"
+          },
+          "debtBookings": {
+            "type": "number",
+            "description": "Số đơn còn nợ"
+          }
+        },
+        "required": [
+          "totalIncome",
+          "totalExpense",
+          "balance",
+          "totalDebt",
+          "debtBookings"
+        ]
+      },
+      "RecordPaymentDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Số tiền nhận, string thập phân — ADR 0007",
+            "example": "500000"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "bank_transfer",
+              "qr",
+              "card",
+              "other"
+            ]
+          },
+          "referenceCode": {
+            "type": "string",
+            "description": "Mã tra soát/tham chiếu (CK…)"
+          },
+          "description": {
+            "type": "string"
+          },
+          "paidAt": {
+            "type": "string",
+            "description": "Thời điểm nhận tiền (ISO); mặc định = bây giờ"
+          }
+        },
+        "required": [
+          "amount",
+          "method"
+        ]
+      },
+      "PaymentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "bank_transfer",
+              "qr",
+              "card",
+              "other"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "succeeded",
+              "failed",
+              "refunded"
+            ]
+          },
+          "receiptId": {
+            "type": "string",
+            "nullable": true
+          },
+          "paidAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "method",
+          "status",
+          "createdAt"
+        ]
       },
       "MemberDto": {
         "type": "object",

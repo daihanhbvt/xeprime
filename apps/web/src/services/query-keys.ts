@@ -53,6 +53,18 @@ export const queryKeys = {
     detail: (id: string) => ['receipts', 'detail', id] as const,
     categories: (params: QueryParams) => ['receipts', 'categories', params] as const,
   },
+  payments: {
+    all: ['payments'] as const,
+    history: (bookingId: string) => ['payments', 'history', bookingId] as const,
+  },
+  debts: {
+    all: ['debts'] as const,
+    list: (params: QueryParams) => ['debts', 'list', params] as const,
+  },
+  finance: {
+    all: ['finance'] as const,
+    summary: (params: QueryParams) => ['finance', 'summary', params] as const,
+  },
   dashboard: {
     all: ['dashboard'] as const,
   },

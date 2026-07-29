@@ -1,7 +1,8 @@
 'use client';
 
-import { EditOutlined } from '@ant-design/icons';
-import { App, Button, Descriptions, Drawer, Popconfirm, Space, Spin } from 'antd';
+import { DollarOutlined, EditOutlined } from '@ant-design/icons';
+import { App, Button, Descriptions, Divider, Drawer, Popconfirm, Space, Spin } from 'antd';
+import { useState } from 'react';
 import {
   BOOKING_STATUS_META,
   BOOKING_STATUS_TRANSITIONS,
@@ -13,6 +14,8 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { formatDateTime } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
+import { PaymentHistory } from '@/features/payments/components/PaymentHistory';
+import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
 import { BOOKING_TRANSITION_LABEL, DESTRUCTIVE_TRANSITIONS, serviceTypeLabel } from '../constants';
 import { useBooking } from '../hooks/use-booking';
 import { useTransitionBooking } from '../hooks/use-booking-mutations';
@@ -63,8 +66,11 @@ function BookingDetailBody({
   const { message } = App.useApp();
   const { has } = usePermissions();
   const transition = useTransitionBooking(booking.id);
+  const [payOpen, setPayOpen] = useState(false);
 
   const canManage = has(PERMISSION.BOOKING_UPDATE);
+  const canRecordPayment = has(PERMISSION.PAYMENT_RECORD);
+  const hasDebt = Number(booking.debtAmount) > 0;
   const nextStatuses = BOOKING_STATUS_TRANSITIONS[booking.status as BookingStatus] ?? [];
 
   function runTransition(to: BookingStatus) {
@@ -117,6 +123,30 @@ function BookingDetailBody({
           </Space>
         </div>
       ) : null}
+
+      <Divider titlePlacement="start" className={styles.paymentDivider}>
+        Thanh toán
+      </Divider>
+      {canRecordPayment ? (
+        <Button
+          icon={<DollarOutlined />}
+          type="primary"
+          ghost
+          block
+          disabled={!hasDebt}
+          onClick={() => setPayOpen(true)}
+        >
+          {hasDebt ? `Thu tiền (còn nợ ${formatMoneyVnd(booking.debtAmount)})` : 'Đã thu đủ'}
+        </Button>
+      ) : null}
+      <PaymentHistory bookingId={booking.id} />
+
+      <RecordPaymentModal
+        bookingId={booking.id}
+        debtAmount={booking.debtAmount}
+        open={payOpen}
+        onClose={() => setPayOpen(false)}
+      />
     </div>
   );
 }
@@ -135,6 +165,7 @@ function detailItems(b: BookingDetail) {
     { key: 'total', label: 'Tổng tiền', children: formatMoneyVnd(b.totalAmount) },
     { key: 'deposit', label: 'Tiền cọc', children: formatMoneyVnd(b.depositAmount) },
     { key: 'paid', label: 'Đã thanh toán', children: formatMoneyVnd(b.paidAmount) },
+    { key: 'debt', label: 'Còn nợ', children: formatMoneyVnd(b.debtAmount) },
     ...(b.note ? [{ key: 'note', label: 'Ghi chú', children: b.note }] : []),
   ];
 }

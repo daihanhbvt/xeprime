@@ -5,7 +5,10 @@ import { RECEIPTS_DEFAULT_LIMIT } from './constants';
 import type {
   CreateCategoryInput,
   CreateReceiptInput,
+  DebtFilters,
+  DebtItem,
   FinanceCategory,
+  FinanceSummary,
   Receipt,
   ReceiptDetail,
   ReceiptFilters,
@@ -61,3 +64,34 @@ export const createCategory = (body: CreateCategoryInput): Promise<FinanceCatego
 
 export const deleteCategory = (id: string): Promise<void> =>
   apiDelete<void>(`/finance/categories/${id}`);
+
+// --- Công nợ + dashboard ---------------------------------------------------
+
+export interface DebtListResult {
+  items: DebtItem[];
+  meta: PaginationMeta;
+}
+
+export function debtFiltersToParams(filters: DebtFilters): QueryParams {
+  return {
+    filter: filters.filter ?? null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? RECEIPTS_DEFAULT_LIMIT,
+  };
+}
+
+export async function fetchDebts(filters: DebtFilters): Promise<DebtListResult> {
+  const res = await apiRequest<DebtItem[]>('/debts', { query: debtFiltersToParams(filters) });
+  return {
+    items: res.data,
+    meta: (res.meta as PaginationMeta | undefined) ?? {
+      page: 1,
+      limit: RECEIPTS_DEFAULT_LIMIT,
+      total: res.data.length,
+      hasNext: false,
+    },
+  };
+}
+
+export const fetchFinanceSummary = (from?: string, to?: string): Promise<FinanceSummary> =>
+  apiGet<FinanceSummary>('/finance/summary', { from: from ?? null, to: to ?? null });

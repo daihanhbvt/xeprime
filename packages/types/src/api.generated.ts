@@ -765,6 +765,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/debts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách đơn còn công nợ (lọc quá hạn/sắp đến/chưa thu) */
+        get: operations["FinanceOverviewController_debts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tổng quan tài chính: thu/chi/cân đối/công nợ theo kỳ */
+        get: operations["FinanceOverviewController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lịch sử thu tiền của một đơn */
+        get: operations["PaymentsController_history"];
+        put?: never;
+        /** Ghi nhận một lần thu tiền cho đơn (cập nhật đã trả/còn nợ) */
+        post: operations["PaymentsController_record"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/{id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Huỷ/hoàn một lần thu (trừ lại đã trả) */
+        post: operations["PaymentsController_void"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/members": {
         parameters: {
             query?: never;
@@ -1564,6 +1633,8 @@ export interface components {
             /** @description Tiền dạng string — ADR 0007 */
             totalAmount: string;
             paidAmount: string;
+            /** @description Công nợ = max(0, total − paid), string — ADR 0007 */
+            debtAmount: string;
             depositAmount: string;
             /** @description ISO-8601 UTC */
             createdAt: string;
@@ -1591,6 +1662,8 @@ export interface components {
             /** @description Tiền dạng string — ADR 0007 */
             totalAmount: string;
             paidAmount: string;
+            /** @description Công nợ = max(0, total − paid), string — ADR 0007 */
+            debtAmount: string;
             depositAmount: string;
             /** @description ISO-8601 UTC */
             createdAt: string;
@@ -1651,8 +1724,6 @@ export interface components {
             discountAmount?: string;
             /** @example 0 */
             depositAmount?: string;
-            /** @example 0 */
-            paidAmount?: string;
             note?: string;
         };
         TransitionBookingDto: {
@@ -1834,6 +1905,63 @@ export interface components {
         };
         CancelReceiptDto: {
             reason?: string;
+        };
+        DebtItemDto: {
+            bookingId: string;
+            code: string;
+            customerName: string;
+            customerPhone?: string | null;
+            vehicleName: string;
+            /** @description ISO-8601 UTC */
+            returnAt: string;
+            /** @description Tiền dạng string — ADR 0007 */
+            totalAmount: string;
+            paidAmount: string;
+            debtAmount: string;
+        };
+        DebtPageDto: {
+            data: components["schemas"]["DebtItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        FinanceSummaryDto: {
+            /** @description Tổng thu (phiếu income đã duyệt), string */
+            totalIncome: string;
+            /** @description Tổng chi (phiếu expense đã duyệt), string */
+            totalExpense: string;
+            /** @description Cân đối = thu − chi, string */
+            balance: string;
+            /** @description Tổng công nợ các đơn còn nợ, string */
+            totalDebt: string;
+            /** @description Số đơn còn nợ */
+            debtBookings: number;
+        };
+        RecordPaymentDto: {
+            /**
+             * @description Số tiền nhận, string thập phân — ADR 0007
+             * @example 500000
+             */
+            amount: string;
+            /** @enum {string} */
+            method: "cash" | "bank_transfer" | "qr" | "card" | "other";
+            /** @description Mã tra soát/tham chiếu (CK…) */
+            referenceCode?: string;
+            description?: string;
+            /** @description Thời điểm nhận tiền (ISO); mặc định = bây giờ */
+            paidAt?: string;
+        };
+        PaymentDto: {
+            id: string;
+            /** @description Tiền dạng string — ADR 0007 */
+            amount: string;
+            /** @enum {string} */
+            method: "cash" | "bank_transfer" | "qr" | "card" | "other";
+            /** @enum {string} */
+            status: "pending" | "succeeded" | "failed" | "refunded";
+            receiptId?: string | null;
+            /** @description ISO-8601 UTC */
+            paidAt?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
         };
         MemberDto: {
             /** @description ID user — dùng cho PATCH/DELETE /members/:userId */
@@ -3436,6 +3564,120 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReceiptDetailDto"];
+                };
+            };
+        };
+    };
+    FinanceOverviewController_debts: {
+        parameters: {
+            query?: {
+                filter?: "all" | "overdue" | "upcoming" | "unpaid";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DebtPageDto"];
+                };
+            };
+        };
+    };
+    FinanceOverviewController_summary: {
+        parameters: {
+            query?: {
+                /** @description Từ ngày (ISO) */
+                from?: string;
+                /** @description Đến ngày (ISO) */
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinanceSummaryDto"];
+                };
+            };
+        };
+    };
+    PaymentsController_history: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentDto"][];
+                };
+            };
+        };
+    };
+    PaymentsController_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordPaymentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetailDto"];
+                };
+            };
+        };
+    };
+    PaymentsController_void: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentDto"];
                 };
             };
         };

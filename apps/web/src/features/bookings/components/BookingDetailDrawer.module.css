@@ -12,3 +12,8 @@
   gap: 12px;
   margin-top: 20px;
 }
+
+.paymentDivider {
+  margin-top: 24px;
+  font-size: 14px;
+}

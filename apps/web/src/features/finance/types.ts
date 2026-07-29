@@ -8,6 +8,15 @@ export type ReceiptDetail = Schemas['ReceiptDetailDto'];
 export type CreateReceiptInput = Schemas['CreateReceiptDto'];
 export type FinanceCategory = Schemas['FinanceCategoryDto'];
 export type CreateCategoryInput = Schemas['CreateCategoryDto'];
+export type DebtItem = Schemas['DebtItemDto'];
+export type FinanceSummary = Schemas['FinanceSummaryDto'];
+
+/** Filter công nợ ở URL searchParams (ADR 0004). */
+export interface DebtFilters {
+  filter?: string;
+  page?: number;
+  limit?: number;
+}
 
 /** Filter danh sách phiếu — ở URL searchParams (ADR 0004). */
 export interface ReceiptFilters {

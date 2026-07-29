@@ -1,0 +1,11 @@
+.center {
+  display: grid;
+  place-items: center;
+  padding: 64px;
+}
+
+.note {
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--xp-color-text-tertiary);
+}

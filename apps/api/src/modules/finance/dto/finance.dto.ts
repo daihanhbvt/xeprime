@@ -200,3 +200,66 @@ export class ReceiptPageDto {
   @ApiProperty({ type: [ReceiptListItemDto] }) data!: ReceiptListItemDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
 }
+
+// --- Công nợ + dashboard ---------------------------------------------------
+
+export const DEBT_FILTER = ['all', 'overdue', 'upcoming', 'unpaid'] as const;
+
+export class DebtListQueryDto {
+  @ApiPropertyOptional({ enum: DEBT_FILTER, default: 'all' })
+  @IsOptional()
+  @IsIn(DEBT_FILTER)
+  filter?: string;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: DEFAULT_LIMIT, minimum: 1, maximum: MAX_LIMIT })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_LIMIT)
+  limit?: number;
+}
+
+export class DebtItemDto {
+  @ApiProperty() bookingId!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() customerName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
+  @ApiProperty() vehicleName!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
+  @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) totalAmount!: string;
+  @ApiProperty() paidAmount!: string;
+  @ApiProperty() debtAmount!: string;
+}
+
+export class DebtPageDto {
+  @ApiProperty({ type: [DebtItemDto] }) data!: DebtItemDto[];
+  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+}
+
+export class FinanceSummaryQueryDto {
+  @ApiPropertyOptional({ description: 'Từ ngày (ISO)' })
+  @IsOptional()
+  @IsDateString()
+  from?: string;
+
+  @ApiPropertyOptional({ description: 'Đến ngày (ISO)' })
+  @IsOptional()
+  @IsDateString()
+  to?: string;
+}
+
+export class FinanceSummaryDto {
+  @ApiProperty({ description: 'Tổng thu (phiếu income đã duyệt), string' }) totalIncome!: string;
+  @ApiProperty({ description: 'Tổng chi (phiếu expense đã duyệt), string' }) totalExpense!: string;
+  @ApiProperty({ description: 'Cân đối = thu − chi, string' }) balance!: string;
+  @ApiProperty({ description: 'Tổng công nợ các đơn còn nợ, string' }) totalDebt!: string;
+  @ApiProperty({ description: 'Số đơn còn nợ' }) debtBookings!: number;
+}

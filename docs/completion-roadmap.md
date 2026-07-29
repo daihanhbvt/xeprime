@@ -31,7 +31,7 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 | 3 | Public listing (snapshot ADR 0008) + Marketplace + gallery/tiện ích xe | ✅ Xong |
 | 4 | Booking request + Booking + Calendar + **gate verify SĐT** + check-conflict preview | ✅ **Xong 29/07 — CHƯA commit** |
 | 5 | Notification ✅ · Review ✅ · Chat (ADR 0009) | ✅ Notification/Review xong · Chat dựng đáng kể (realtime sau cờ `FIRESTORE_ENABLED`) |
-| **6** | **Finance / Thu-Chi / Công nợ / Hợp đồng** | 🟡 **Slice D Thu-Chi (receipts + danh mục + workflow duyệt) XONG** · còn Payments/Công nợ/Dashboard (S2) + Contracts (S3) |
+| **6** | **Finance / Thu-Chi / Công nợ / Hợp đồng** | 🟡 **S1 Thu-Chi + S2 Payments/Công nợ/Dashboard XONG** · còn **S3 Contracts** |
 | 7 | Admin platform đầy đủ | 🟡 Một phần (approval + platform-admin có; dashboard/khoá tenant/gói-hạn chưa đủ) |
 | 8 | Migration từ Firestore + chạy song song | ❌ Sau |
 | 9 | QA / hardening / production | ❌ Sau |

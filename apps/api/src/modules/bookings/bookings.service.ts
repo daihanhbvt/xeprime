@@ -250,7 +250,6 @@ export class BookingsService {
           ...(dto.deliveryFee !== undefined ? { deliveryFee: delivery } : {}),
           ...(dto.discountAmount !== undefined ? { discountAmount: discount } : {}),
           ...(dto.depositAmount !== undefined ? { depositAmount: money(dto.depositAmount) } : {}),
-          ...(dto.paidAmount !== undefined ? { paidAmount: money(dto.paidAmount) } : {}),
           ...(dto.baseAmount !== undefined || dto.deliveryFee !== undefined || dto.discountAmount !== undefined
             ? { totalAmount: total }
             : {}),
@@ -399,6 +398,11 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     returnAt: b.returnAt as unknown as string,
     totalAmount: b.totalAmount as unknown as string,
     paidAmount: b.paidAmount as unknown as string,
+    // Công nợ tính động = max(0, total − paid); không denormalize để khỏi drift (Phase 6).
+    debtAmount: Prisma.Decimal.max(
+      0,
+      new Prisma.Decimal(b.totalAmount).minus(b.paidAmount),
+    ) as unknown as string,
     depositAmount: b.depositAmount as unknown as string,
     createdAt: b.createdAt as unknown as string,
   };

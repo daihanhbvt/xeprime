@@ -100,6 +100,7 @@ export class BookingListItemDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
   @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) totalAmount!: string;
   @ApiProperty() paidAmount!: string;
+  @ApiProperty({ description: 'Công nợ = max(0, total − paid), string — ADR 0007' }) debtAmount!: string;
   @ApiProperty() depositAmount!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
@@ -234,10 +235,8 @@ export class UpdateBookingDto {
   @Matches(MONEY_PATTERN, { message: 'depositAmount phải là số tiền hợp lệ' })
   depositAmount?: string;
 
-  @ApiPropertyOptional({ example: '0' })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'paidAmount phải là số tiền hợp lệ' })
-  paidAmount?: string;
+  // KHÔNG có `paidAmount`: số đã trả chỉ đổi qua PaymentsService (ghi payment) để giữ 1-writer
+  // và tránh lost-update. Client không set trực tiếp (ADR chống trùng số liệu tiền — Phase 6).
 
   @ApiPropertyOptional()
   @IsOptional()
