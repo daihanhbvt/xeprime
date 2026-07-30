@@ -32,7 +32,7 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 | 4 | Booking request + Booking + Calendar + **gate verify SĐT** + check-conflict preview | ✅ **Xong 29/07 — CHƯA commit** |
 | 5 | Notification ✅ · Review ✅ · Chat (ADR 0009) | ✅ Notification/Review xong · Chat dựng đáng kể (realtime sau cờ `FIRESTORE_ENABLED`) |
 | **6** | **Finance / Thu-Chi / Công nợ / Hợp đồng** | ✅ **S1 + S2 + S3 Contracts XONG** — migration đã áp, jest 89/89, verify sạch → **đóng milestone "vận hành đủ tiền"** |
-| 7 | Admin platform đầy đủ | 🟡 Một phần (approval + platform-admin có; dashboard/khoá tenant/gói-hạn chưa đủ) |
+| 7 | Admin platform đầy đủ | 🟡 approval ✅ · **quản lý gian hàng (khoá/mở khoá) ✅ (30/07, jest 94)** · còn dashboard nền tảng · nhân sự · audit-view · gói/hạn |
 | 8 | Migration từ Firestore + chạy song song | ❌ Sau |
 | 9 | QA / hardening / production | ❌ Sau |
 
@@ -124,7 +124,7 @@ chính khớp dữ liệu · in/xuất hợp đồng tối thiểu chạy.
 
 | Việc | Ghi chú |
 | --- | --- |
-| **Commit cả khối chưa commit** ⚠️ | Xếp lớp CHƯA commit: Phase 4 · Phase 6 S1 (Thu-Chi) · S2 (Payments/Công nợ/Dashboard) · **S3 Contracts (30/07, migration đã áp + jest 89/89)** · passwordless + đăng nhập SĐT (29/07) · điều chỉnh UX + đăng xuất (30/07). Nên commit theo lớp (user tự commit) để có mốc git, hết cảm giác "xây đè". |
+| **Commit cả khối chưa commit** ⚠️ | Xếp lớp CHƯA commit: Phase 4 · Phase 6 S1 (Thu-Chi) · S2 (Payments/Công nợ/Dashboard) · **S3 Contracts (30/07, migration đã áp + jest 89/89)** · **Phase 7: quản lý gian hàng khoá/mở (30/07, jest 94)** · passwordless + đăng nhập SĐT (29/07) · điều chỉnh UX + đăng xuất (30/07). Nên commit theo lớp (user tự commit) để có mốc git, hết cảm giác "xây đè". |
 | Retrofit gate SĐT cho **mở shop** + **public xe** | Dùng lại `phone-verification` (purpose `shop_register`/`vehicle_public`), ngắn |
 | SMS OTP thật | Hiện `OTP_MODE=mock`. eSMS thật cần tài khoản riêng (key prod `vf3zone` ở Secret Manager, **không lấy về local được**) → set `OTP_MODE=esms` + `ESMS_*` |
 | Chat realtime | Bật sau cờ `FIRESTORE_ENABLED` + Firestore Security Rules + emulator test (ADR 0009) |

@@ -1196,6 +1196,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách gian hàng (phân trang, lọc trạng thái, tìm kiếm) */
+        get: operations["PlatformTenantsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/tenants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chi tiết một gian hàng */
+        get: operations["PlatformTenantsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/tenants/{id}/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Khoá gian hàng (đang hoạt động → bị khoá) */
+        post: operations["PlatformTenantsController_lock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/tenants/{id}/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mở khoá gian hàng (bị khoá → hoạt động) */
+        post: operations["PlatformTenantsController_unlock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2397,6 +2465,54 @@ export interface components {
         };
         ReviewActionDto: {
             /** @description Lý do / ghi chú gửi cho chủ shop */
+            reason?: string;
+        };
+        PlatformTenantDto: {
+            id: string;
+            code: string;
+            name: string;
+            slug: string;
+            /** @description individual | business */
+            tenantType: string;
+            /** @enum {string} */
+            status: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
+            phone?: string | null;
+            email?: string | null;
+            ownerName?: string | null;
+            provinceName?: string | null;
+            vehicleCount: number;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        PlatformTenantPageDto: {
+            data: components["schemas"]["PlatformTenantDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        PlatformTenantDetailDto: {
+            id: string;
+            code: string;
+            name: string;
+            slug: string;
+            /** @description individual | business */
+            tenantType: string;
+            /** @enum {string} */
+            status: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
+            phone?: string | null;
+            email?: string | null;
+            ownerName?: string | null;
+            provinceName?: string | null;
+            vehicleCount: number;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+            ownerEmail?: string | null;
+            ownerPhone?: string | null;
+            address?: string | null;
+            taxCode?: string | null;
+            businessLicenseNo?: string | null;
+            bookingCount: number;
+        };
+        LockTenantDto: {
+            /** @description Lý do khoá gian hàng */
             reason?: string;
         };
         ApiErrorBodyDto: {
@@ -4459,6 +4575,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalTaskDetailDto"];
+                };
+            };
+        };
+    };
+    PlatformTenantsController_list: {
+        parameters: {
+            query?: {
+                status?: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
+                /** @description Tìm theo tên / mã / slug / SĐT */
+                q?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformTenantPageDto"];
+                };
+            };
+        };
+    };
+    PlatformTenantsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformTenantDetailDto"];
+                };
+            };
+        };
+    };
+    PlatformTenantsController_lock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LockTenantDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformTenantDetailDto"];
+                };
+            };
+        };
+    };
+    PlatformTenantsController_unlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformTenantDetailDto"];
                 };
             };
         };

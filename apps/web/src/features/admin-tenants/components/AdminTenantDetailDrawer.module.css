@@ -1,0 +1,21 @@
+.center {
+  display: grid;
+  place-items: center;
+  padding: 48px;
+}
+
+.actions {
+  margin-top: 20px;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--xp-color-text-tertiary);
+  text-align: center;
+}
+
+.lockNote {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  color: var(--xp-color-text-secondary);
+}

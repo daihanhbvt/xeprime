@@ -222,7 +222,6 @@ export const PLATFORM_NAV: readonly NavNode[] = [
         href: ROUTES.MANAGE.ADMIN_TENANTS,
         permission: PERMISSION.PLATFORM_TENANT_MANAGE,
         icon: ShopOutlined,
-        comingSoon: true,
       },
       {
         key: 'admin-staff',

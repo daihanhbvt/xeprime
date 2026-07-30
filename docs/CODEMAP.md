@@ -40,7 +40,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | **Hợp đồng** (snapshot từ booking, số HĐ cố định, idempotent theo booking) | `modules/contracts/` | Phase 6 §11.7 |
 | Thành viên gian hàng (mời + đổi role) | `modules/members/` · RBAC `modules/rbac/` | — |
 | Người dùng | `modules/users/` | — |
-| Duyệt hồ sơ nền tảng (approval task) | `modules/platform-admin/` (`platform-approval.service.ts`) | CLAUDE §6 |
+| Duyệt hồ sơ nền tảng (approval task) + **quản lý gian hàng (list + khoá/mở khoá)** | `modules/platform-admin/` (`platform-approval.service.ts`, `platform-tenants.service.ts`) | CLAUDE §6; khoá đổi `Tenant.status` (ADR 0008) |
 | **Audit — GHI** (`AuditService.record(entry, tx)`) · **chưa có endpoint ĐỌC** | `modules/audit/` | CLAUDE §6.3; read endpoint là việc Phase 7 |
 | Upload R2 (presign) · Firebase admin | `modules/storage/` · `modules/firebase/` | ADR 0009 |
 | Env validate (zod) | `config/env.schema.ts` | OTP_MODE/AUTH_MODE/OTP_MAX_ATTEMPTS… |
@@ -68,6 +68,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Thu-Chi · Payments · Công nợ · Dashboard tài chính | `features/finance/` · `features/payments/` | Phase 6 |
 | Hợp đồng thuê (xem/in `window.print`, print CSS toàn cục `[data-print-root]`) | `features/contracts/` · `app/(manage)/manage/contracts/[id]/` | Phase 6 §11.7 |
 | Thông báo · Đánh giá · Chat · Thành viên · Duyệt hồ sơ · Xe · Tổng quan | `features/{notifications,reviews,chat,members,approvals,vehicles,dashboard}/` | Phase 2–6 |
+| Quản lý gian hàng nền tảng (list + khoá/mở khoá) | `features/admin-tenants/` · `app/(manage)/manage/admin/tenants/` | Phase 7 |
 | Đăng xuất/menu ở marketplace | `features/marketplace/components/MarketHeader.tsx` | dropdown `destroySession` |
 | Hook: mobile breakpoint · user hiện tại · quyền · tenant scope | `hooks/{use-media-query,use-current-user,use-permissions,use-tenant-scope}.ts` | `useIsMobile` ≤640px |
 
