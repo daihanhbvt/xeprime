@@ -7,6 +7,7 @@
  */
 import * as yup from 'yup';
 import {
+  BODY_TYPE_VALUES,
   FUEL_TYPE_VALUES,
   SERVICE_TYPE_VALUES,
   TENANT_TYPE_VALUES,
@@ -53,6 +54,8 @@ export const vehicleFormSchema = yup.object({
   model: optionalText(100),
   color: optionalText(80),
   fuelType: yup.string().oneOf(FUEL_TYPE_VALUES).nullable().default(null),
+  /** Kiểu dáng thân xe — chỉ có nghĩa với ô tô; đổi sang xe máy thì form tự xoá. */
+  bodyType: yup.string().oneOf(BODY_TYPE_VALUES).nullable().default(null),
   manufactureYear: yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
@@ -77,6 +80,23 @@ export const vehicleFormSchema = yup.object({
     .default(null),
   weekendPrice: moneySchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .nullable()
+    .default(null),
+  /** Giá thuê theo giờ — bỏ trống = xe không cho thuê giờ (tiện ích "Thuê theo giờ"). */
+  hourlyPrice: moneySchema
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .nullable()
+    .default(null),
+  deliveryEnabled: yup.boolean().default(false),
+  noCollateral: yup.boolean().default(false),
+  /** % giảm giá marketing — bỏ trống = không giảm. */
+  discountPercent: yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .typeError('% giảm giá phải là số')
+    .integer('% giảm giá phải là số nguyên')
+    .min(0, 'Tối thiểu 0%')
+    .max(100, 'Tối đa 100%')
     .nullable()
     .default(null),
   description: optionalText(4000),
@@ -158,6 +178,15 @@ export const shopProfileSchema = yup.object({
     .trim()
     .transform((v) => (v === '' ? null : v))
     .url('Đường dẫn logo không hợp lệ')
+    .max(2000)
+    .nullable()
+    .default(null),
+  /** Ảnh bìa trang gian hàng công khai — backend đã nhận sẵn, giờ có UI upload. */
+  coverUrl: yup
+    .string()
+    .trim()
+    .transform((v) => (v === '' ? null : v))
+    .url('Đường dẫn ảnh bìa không hợp lệ')
     .max(2000)
     .nullable()
     .default(null),

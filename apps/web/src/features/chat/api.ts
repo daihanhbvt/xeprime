@@ -69,12 +69,5 @@ export const presignChatAttachment = (
 ): Promise<PresignResult> =>
   apiPost<PresignResult>('/chat/attachments/presign', { fileName, contentType });
 
-/** Upload thẳng lên R2 qua presigned PUT (không đi qua API của mình). */
-export async function uploadToR2(uploadUrl: string, file: File): Promise<void> {
-  const res = await fetch(uploadUrl, {
-    method: 'PUT',
-    body: file,
-    headers: { 'Content-Type': file.type || 'application/octet-stream' },
-  });
-  if (!res.ok) throw new Error('Tải tệp lên thất bại');
-}
+/** Upload R2 dùng chung toàn app — chuyển về services/upload (skill shared-code). */
+export { uploadToR2 } from '@/services/upload';

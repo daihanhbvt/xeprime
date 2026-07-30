@@ -400,6 +400,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/listings/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Facet counts cho panel Bộ lọc (đếm theo từng chiều filter) */
+        get: operations["PublicListingsController_facets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/listings/{id}": {
         parameters: {
             query?: never;
@@ -1145,6 +1162,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/uploads/vehicle-images/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Presign upload ảnh xe (đại diện/gallery) lên R2 */
+        post: operations["StorageController_presignVehicleImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/uploads/shop-media/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Presign upload logo/ảnh bìa gian hàng lên R2 */
+        post: operations["StorageController_presignShopMedia"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/approvals": {
         parameters: {
             query?: never;
@@ -1577,10 +1628,20 @@ export interface components {
             model?: string | null;
             seatCount?: number | null;
             fuelType?: string | null;
+            /** @description Kiểu dáng (BODY_TYPE) */
+            bodyType?: string | null;
             mainImageUrl?: string | null;
             /** @description Tiền dạng string — ADR 0007 */
             weekdayPrice?: string | null;
             weekendPrice?: string | null;
+            /** @description Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ. */
+            hourlyPrice?: string | null;
+            /** @description Chủ xe hỗ trợ giao xe tận nơi */
+            deliveryEnabled: boolean;
+            /** @description Miễn thế chấp (không cần cọc tài sản) */
+            noCollateral: boolean;
+            /** @description % giảm giá marketing (0–100). Giá chốt thật do shop quyết khi duyệt yêu cầu. */
+            discountPercent?: number | null;
             /** @description Tên gian hàng */
             shopName: string;
             /** @description Slug gian hàng cho route /shops/[slug] */
@@ -1602,6 +1663,44 @@ export interface components {
             data: components["schemas"]["PublicListingDto"][];
             meta: components["schemas"]["PublicListingPageMetaDto"];
         };
+        PriceBoundsDto: {
+            /** @description Giá thấp nhất — string tiền (ADR 0007) */
+            min?: string | null;
+            /** @description Giá cao nhất — string tiền (ADR 0007) */
+            max?: string | null;
+        };
+        FacetBucketDto: {
+            /** @description Giá trị của option (body type key, tên hãng, bucket số chỗ…) */
+            key: string;
+            /** @description Số listing khớp nếu chọn option này */
+            count: number;
+        };
+        AmenityFacetsDto: {
+            /** @description Xe có giá thuê giờ */
+            hourly: number;
+            /** @description Xe giao tận nơi */
+            delivery: number;
+            /** @description Xe miễn thế chấp */
+            noCollateral: number;
+            /** @description Xe đang giảm giá */
+            discount: number;
+        };
+        ListingFacetsDto: {
+            /** @description Số xe khớp toàn bộ filter — nút "Áp dụng (N xe)" */
+            total: number;
+            price: components["schemas"]["PriceBoundsDto"];
+            /** @description Theo kiểu dáng (BODY_TYPE key) */
+            bodyType: components["schemas"]["FacetBucketDto"][];
+            /** @description Theo hãng xe (tên hãng như đã lưu) */
+            brand: components["schemas"]["FacetBucketDto"][];
+            /** @description Theo bucket số chỗ (SEAT_BUCKET key) */
+            seats: components["schemas"]["FacetBucketDto"][];
+            /** @description Theo nhiên liệu (FUEL_TYPE key) */
+            fuelType: components["schemas"]["FacetBucketDto"][];
+            /** @description Theo tiện ích xe (VEHICLE_FEATURE key) */
+            features: components["schemas"]["FacetBucketDto"][];
+            amenities: components["schemas"]["AmenityFacetsDto"];
+        };
         PublicListingDetailDto: {
             id: string;
             name: string;
@@ -1613,10 +1712,20 @@ export interface components {
             model?: string | null;
             seatCount?: number | null;
             fuelType?: string | null;
+            /** @description Kiểu dáng (BODY_TYPE) */
+            bodyType?: string | null;
             mainImageUrl?: string | null;
             /** @description Tiền dạng string — ADR 0007 */
             weekdayPrice?: string | null;
             weekendPrice?: string | null;
+            /** @description Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ. */
+            hourlyPrice?: string | null;
+            /** @description Chủ xe hỗ trợ giao xe tận nơi */
+            deliveryEnabled: boolean;
+            /** @description Miễn thế chấp (không cần cọc tài sản) */
+            noCollateral: boolean;
+            /** @description % giảm giá marketing (0–100). Giá chốt thật do shop quyết khi duyệt yêu cầu. */
+            discountPercent?: number | null;
             /** @description Tên gian hàng */
             shopName: string;
             /** @description Slug gian hàng cho route /shops/[slug] */
@@ -1690,6 +1799,10 @@ export interface components {
             model?: string | null;
             manufactureYear?: number | null;
             seatCount?: number | null;
+            /** @description Kiểu dáng (BODY_TYPE) */
+            bodyType?: string | null;
+            /** @description % giảm giá marketing (0–100) */
+            discountPercent?: number | null;
             /** @enum {string} */
             operationStatus: "available" | "renting" | "maintenance" | "inactive";
             /** @enum {string} */
@@ -1726,6 +1839,10 @@ export interface components {
             model?: string | null;
             manufactureYear?: number | null;
             seatCount?: number | null;
+            /** @description Kiểu dáng (BODY_TYPE) */
+            bodyType?: string | null;
+            /** @description % giảm giá marketing (0–100) */
+            discountPercent?: number | null;
             /** @enum {string} */
             operationStatus: "available" | "renting" | "maintenance" | "inactive";
             /** @enum {string} */
@@ -1740,6 +1857,12 @@ export interface components {
             /** @enum {string|null} */
             fuelType?: "gasoline" | "diesel" | "electric" | "hybrid" | null;
             description?: string | null;
+            /** @description Giá thuê giờ — string tiền (ADR 0007) */
+            hourlyPrice?: string | null;
+            /** @description Chủ xe hỗ trợ giao xe tận nơi */
+            deliveryEnabled: boolean;
+            /** @description Miễn thế chấp (không cần cọc tài sản) */
+            noCollateral: boolean;
             /** @description ISO-8601 UTC */
             createdAt: string;
             /** @description URL ảnh gallery theo thứ tự */
@@ -1773,6 +1896,11 @@ export interface components {
             /** @enum {string} */
             fuelType?: "gasoline" | "diesel" | "electric" | "hybrid";
             /**
+             * @description Kiểu dáng thân xe — chỉ với ô tô. Gửi null để xoá.
+             * @enum {string|null}
+             */
+            bodyType?: "mini" | "sedan" | "cuv" | "suv" | "mpv" | "pickup" | "van" | "minibus" | "cargo" | null;
+            /**
              * @default available
              * @enum {string}
              */
@@ -1790,6 +1918,17 @@ export interface components {
              * @example 750000
              */
             weekendPrice?: string;
+            /**
+             * @description Giá thuê theo giờ, string thập phân — ADR 0007. Gửi null = không cho thuê giờ.
+             * @example 120000
+             */
+            hourlyPrice?: string | null;
+            /** @description Chủ xe hỗ trợ giao xe tận nơi */
+            deliveryEnabled?: boolean;
+            /** @description Miễn thế chấp (không cần cọc tài sản) */
+            noCollateral?: boolean;
+            /** @description % giảm giá marketing. Gửi null = ngừng giảm giá. */
+            discountPercent?: number | null;
             /** @description URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi) */
             images?: string[];
             /** @description Tiện ích xe (thay toàn bộ khi gửi) */
@@ -1820,6 +1959,11 @@ export interface components {
             /** @enum {string} */
             fuelType?: "gasoline" | "diesel" | "electric" | "hybrid";
             /**
+             * @description Kiểu dáng thân xe — chỉ với ô tô. Gửi null để xoá.
+             * @enum {string|null}
+             */
+            bodyType?: "mini" | "sedan" | "cuv" | "suv" | "mpv" | "pickup" | "van" | "minibus" | "cargo" | null;
+            /**
              * @default available
              * @enum {string}
              */
@@ -1837,6 +1981,17 @@ export interface components {
              * @example 750000
              */
             weekendPrice?: string;
+            /**
+             * @description Giá thuê theo giờ, string thập phân — ADR 0007. Gửi null = không cho thuê giờ.
+             * @example 120000
+             */
+            hourlyPrice?: string | null;
+            /** @description Chủ xe hỗ trợ giao xe tận nơi */
+            deliveryEnabled?: boolean;
+            /** @description Miễn thế chấp (không cần cọc tài sản) */
+            noCollateral?: boolean;
+            /** @description % giảm giá marketing. Gửi null = ngừng giảm giá. */
+            discountPercent?: number | null;
             /** @description URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi) */
             images?: string[];
             /** @description Tiện ích xe (thay toàn bộ khi gửi) */
@@ -2465,6 +2620,27 @@ export interface components {
             key: string;
             uploadUrl: string;
             publicUrl: string;
+            expiresIn: number;
+        };
+        PresignImageDto: {
+            /**
+             * @description Tên file gốc (chỉ để đặt key, đã sanitize)
+             * @example xe-01.jpg
+             */
+            fileName: string;
+            /** @enum {string} */
+            contentType: "image/jpeg" | "image/png" | "image/webp";
+            /** @description Dung lượng file (byte), tối đa 10485760 */
+            fileSize: number;
+        };
+        UploadPresignDto: {
+            /** @description Key trong bucket */
+            key: string;
+            /** @description URL để PUT file (hết hạn ngắn) */
+            uploadUrl: string;
+            /** @description URL công khai của file sau khi upload */
+            publicUrl: string;
+            /** @description Giây còn hiệu lực của uploadUrl */
             expiresIn: number;
         };
         ApprovalTaskListItemDto: {
@@ -3216,9 +3392,25 @@ export interface operations {
                 /** @description car | motorbike */
                 vehicleType?: "car" | "motorbike";
                 serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
-                /** @description Hãng xe */
+                /** @description Hãng xe — CSV, multi-select (vd: Toyota,Kia) */
                 brand?: string;
-                /** @description Số chỗ tối thiểu */
+                /** @description Kiểu dáng thân xe — CSV (BODY_TYPE) */
+                bodyType?: string;
+                /** @description Bucket số chỗ — CSV (4,5,7,8plus) */
+                seats?: string;
+                /** @description Nhiên liệu — CSV (FUEL_TYPE) */
+                fuelType?: string;
+                /** @description Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn */
+                features?: string;
+                /** @description Chỉ xe có giá thuê giờ */
+                hourly?: boolean;
+                /** @description Chỉ xe giao tận nơi */
+                delivery?: boolean;
+                /** @description Chỉ xe miễn thế chấp */
+                noCollateral?: boolean;
+                /** @description Chỉ xe đang giảm giá */
+                discount?: boolean;
+                /** @description Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`) */
                 minSeats?: number;
                 /** @description Tìm theo tên/hãng/model */
                 q?: string;
@@ -3232,7 +3424,7 @@ export interface operations {
                 pickupAt?: string;
                 /** @description Trả xe (ISO-8601) — dùng cùng pickupAt */
                 returnAt?: string;
-                sort?: "newest" | "price_asc" | "price_desc";
+                sort?: "recommended" | "newest" | "price_asc" | "price_desc";
                 page?: number;
                 limit?: number;
             };
@@ -3248,6 +3440,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicListingPageDto"];
+                };
+            };
+        };
+    };
+    PublicListingsController_facets: {
+        parameters: {
+            query?: {
+                /** @description car | motorbike */
+                vehicleType?: "car" | "motorbike";
+                serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+                /** @description Hãng xe — CSV, multi-select (vd: Toyota,Kia) */
+                brand?: string;
+                /** @description Kiểu dáng thân xe — CSV (BODY_TYPE) */
+                bodyType?: string;
+                /** @description Bucket số chỗ — CSV (4,5,7,8plus) */
+                seats?: string;
+                /** @description Nhiên liệu — CSV (FUEL_TYPE) */
+                fuelType?: string;
+                /** @description Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn */
+                features?: string;
+                /** @description Chỉ xe có giá thuê giờ */
+                hourly?: boolean;
+                /** @description Chỉ xe giao tận nơi */
+                delivery?: boolean;
+                /** @description Chỉ xe miễn thế chấp */
+                noCollateral?: boolean;
+                /** @description Chỉ xe đang giảm giá */
+                discount?: boolean;
+                /** @description Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`) */
+                minSeats?: number;
+                /** @description Tìm theo tên/hãng/model */
+                q?: string;
+                /** @description Lọc theo tỉnh/thành của gian hàng */
+                province?: string;
+                /** @description Giá thuê/ngày tối thiểu (VND) */
+                priceMin?: number;
+                /** @description Giá thuê/ngày tối đa (VND) */
+                priceMax?: number;
+                /** @description Nhận xe (ISO-8601) — lọc xe rảnh trong khoảng */
+                pickupAt?: string;
+                /** @description Trả xe (ISO-8601) — dùng cùng pickupAt */
+                returnAt?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingFacetsDto"];
                 };
             };
         };
@@ -3340,7 +3587,7 @@ export interface operations {
     PublicShopsController_getShopListings: {
         parameters: {
             query?: {
-                sort?: "newest" | "price_asc" | "price_desc";
+                sort?: "recommended" | "newest" | "price_asc" | "price_desc";
                 page?: number;
                 limit?: number;
             };
@@ -4563,6 +4810,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresignResultDto"];
+                };
+            };
+        };
+    };
+    StorageController_presignVehicleImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignImageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadPresignDto"];
+                };
+            };
+        };
+    };
+    StorageController_presignShopMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignImageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadPresignDto"];
                 };
             };
         };

@@ -30,6 +30,7 @@ import { ContractsModule } from './modules/contracts/contracts.module';
 import { MembersModule } from './modules/members/members.module';
 import { ReviewModule } from './modules/review/review.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { StorageModule } from './modules/storage/storage.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
 
 @Module({
@@ -76,6 +77,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     MembersModule,
     ReviewModule,
     ChatModule,
+    StorageModule,
     PlatformAdminModule,
   ],
   providers: [

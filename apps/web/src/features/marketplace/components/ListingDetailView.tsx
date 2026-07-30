@@ -2,23 +2,18 @@ import Link from 'next/link';
 import {
   SERVICE_TYPE_LABEL,
   VEHICLE_TYPE,
+  bodyTypeLabel,
   vehicleFeatureLabel,
   type ServiceType,
 } from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { shopPath } from '@/constants/routes';
-import { formatMoneyVnd } from '@/lib/money';
+import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
+import { fuelLabel } from '@/lib/vehicle-labels';
 import type { PublicListingDetail } from '../types';
 import { ListingReviews } from './ListingReviews';
 import styles from './ListingDetailView.module.css';
-
-const FUEL_LABEL: Record<string, string> = {
-  gasoline: 'Xăng',
-  diesel: 'Dầu',
-  electric: 'Điện',
-  hybrid: 'Hybrid',
-};
 
 function vehicleTypeLabel(type: string): string {
   return type === VEHICLE_TYPE.MOTORBIKE ? 'Xe máy' : 'Ô tô';
@@ -37,12 +32,18 @@ export function ListingDetailView({
   const specs: Array<{ label: string; value: string }> = [
     { label: 'Loại xe', value: vehicleTypeLabel(listing.vehicleType) },
     { label: 'Dịch vụ', value: SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType },
+    ...(listing.bodyType ? [{ label: 'Kiểu dáng', value: bodyTypeLabel(listing.bodyType) }] : []),
     ...(listing.seatCount ? [{ label: 'Số chỗ', value: `${listing.seatCount} chỗ` }] : []),
-    ...(listing.fuelType ? [{ label: 'Nhiên liệu', value: FUEL_LABEL[listing.fuelType] ?? listing.fuelType }] : []),
+    ...(listing.fuelType ? [{ label: 'Nhiên liệu', value: fuelLabel(listing.fuelType) ?? listing.fuelType }] : []),
     ...(listing.manufactureYear ? [{ label: 'Đời xe', value: String(listing.manufactureYear) }] : []),
     ...(listing.color ? [{ label: 'Màu', value: listing.color }] : []),
     ...(listing.brand ? [{ label: 'Hãng', value: [listing.brand, listing.model].filter(Boolean).join(' ') }] : []),
   ];
+
+  // Giá sau giảm chỉ để HIỂN THỊ (marketing) — giá chốt thật do shop quyết khi duyệt yêu cầu.
+  const discount = listing.discountPercent ?? 0;
+  const displayPrice =
+    discount > 0 ? applyDiscountPercent(listing.weekdayPrice, discount) : listing.weekdayPrice;
 
   return (
     <div className={styles.wrap}>
@@ -67,12 +68,32 @@ export function ListingDetailView({
         <h1 className={styles.title}>{listing.name}</h1>
 
         <div className={styles.price}>
-          <b>{formatMoneyVnd(listing.weekdayPrice)}</b>
+          {discount > 0 && listing.weekdayPrice ? (
+            <>
+              <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
+              <span className={styles.discountTag}>-{discount}%</span>
+            </>
+          ) : null}
+          <b>{formatMoneyVnd(displayPrice)}</b>
           <span>/ngày</span>
           {listing.weekendPrice ? (
             <span className={styles.weekend}>Cuối tuần {formatMoneyVnd(listing.weekendPrice)}</span>
           ) : null}
+          {listing.hourlyPrice ? (
+            <span className={styles.weekend}>Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ</span>
+          ) : null}
         </div>
+
+        {listing.deliveryEnabled || listing.noCollateral ? (
+          <div className={styles.amenities}>
+            {listing.deliveryEnabled ? (
+              <span className={styles.amenityBadge}>Giao xe tận nơi</span>
+            ) : null}
+            {listing.noCollateral ? (
+              <span className={styles.amenityBadge}>Miễn thế chấp</span>
+            ) : null}
+          </div>
+        ) : null}
 
         <dl className={styles.specs}>
           {specs.map((s) => (
@@ -106,7 +127,7 @@ export function ListingDetailView({
             vehicleId={listing.id}
             vehicleName={listing.name}
             vehicleImageUrl={listing.mainImageUrl}
-            pricePerDay={listing.weekdayPrice}
+            pricePerDay={displayPrice}
             pickupAt={pickupAt}
             returnAt={returnAt}
             size="large"

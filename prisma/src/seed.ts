@@ -7,16 +7,19 @@
  * Chạy: pnpm db:seed
  */
 import {
+  BODY_TYPE,
   BOOKING_STATUS,
   DEFAULT_PLATFORM_ROLE_PERMISSIONS,
   DEFAULT_TENANT_ROLE_PERMISSIONS,
   FINANCE_CATEGORY_TYPE,
+  FUEL_TYPE,
   LISTING_STATUS,
   MEMBERSHIP_STATUS,
   OCCUPANCY_SOURCE_TYPE,
   PERMISSION_VALUES,
   PLATFORM_ROLE,
   PLATFORM_ROLE_LABEL,
+  REVIEW_STATUS,
   SCOPE,
   SERVICE_TYPE,
   TENANT_ROLE,
@@ -166,18 +169,217 @@ async function upsertPasswordUser(input: {
   return userId;
 }
 
+/** URL ảnh Unsplash pinned theo photo id — demo card/gallery có ảnh thật, ổn định giữa các lần seed. */
+const photo = (id: string): string =>
+  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=1200&q=70`;
+
+interface DemoVehicle {
+  code: string;
+  name: string;
+  plate: string;
+  type: string;
+  seats: number;
+  brand: string;
+  model: string;
+  /** Kiểu dáng thân xe — chỉ ô tô; xe máy để undefined. */
+  body?: string;
+  fuel: string;
+  year: number;
+  color: string;
+  weekday: number;
+  weekend: number;
+  /** Giá thuê giờ — có = xe lên tiện ích "Thuê theo giờ". */
+  hourly?: number;
+  delivery?: boolean;
+  noCollateral?: boolean;
+  /** % giảm giá marketing. */
+  discount?: number;
+  features?: readonly string[];
+  img?: string;
+  gallery?: readonly string[];
+  desc: string;
+  approved: boolean;
+}
+
 // `approved: true` = mô phỏng xe đã qua duyệt public (luồng duyệt thật ở Phase 2) để
-// Marketplace có dữ liệu lúc dev. Để lẫn vài xe draft cho giống thực tế (không phải xe nào
-// cũng đã lên chợ).
-const DEMO_VEHICLES = [
-  { code: 'XE-001', name: 'Toyota Vios 2022', plate: '51H-123.45', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Toyota', model: 'Vios', weekday: 650_000, weekend: 800_000, approved: true },
-  { code: 'XE-002', name: 'Honda City 2021', plate: '51H-234.56', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Honda', model: 'City', weekday: 700_000, weekend: 850_000, approved: true },
-  { code: 'XE-003', name: 'Mazda CX-5 2023', plate: '51H-345.67', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Mazda', model: 'CX-5', weekday: 1_100_000, weekend: 1_300_000, approved: true },
-  { code: 'XE-004', name: 'Kia Carnival 2022', plate: '51H-456.78', type: VEHICLE_TYPE.CAR, seats: 7, brand: 'Kia', model: 'Carnival', weekday: 1_600_000, weekend: 1_900_000, approved: false },
-  { code: 'XE-005', name: 'Ford Ranger 2021', plate: '51C-567.89', type: VEHICLE_TYPE.CAR, seats: 5, brand: 'Ford', model: 'Ranger', weekday: 1_200_000, weekend: 1_400_000, approved: true },
-  { code: 'XM-001', name: 'Honda Vision 2023', plate: '59X1-111.22', type: VEHICLE_TYPE.MOTORBIKE, seats: 2, brand: 'Honda', model: 'Vision', weekday: 130_000, weekend: 160_000, approved: true },
-  { code: 'XM-002', name: 'Yamaha Janus 2022', plate: '59X1-222.33', type: VEHICLE_TYPE.MOTORBIKE, seats: 2, brand: 'Yamaha', model: 'Janus', weekday: 120_000, weekend: 150_000, approved: false },
-  { code: 'XM-003', name: 'Honda SH 150i 2023', plate: '59X1-333.44', type: VEHICLE_TYPE.MOTORBIKE, seats: 2, brand: 'Honda', model: 'SH 150i', weekday: 300_000, weekend: 350_000, approved: true },
+// Marketplace có dữ liệu lúc dev. Để lẫn vài xe draft cho giống thực tế. Dữ liệu phủ đủ các
+// chiều của bộ lọc facet: kiểu dáng / hãng / số chỗ / nhiên liệu / tính năng / tiện ích.
+const DEMO_VEHICLES: readonly DemoVehicle[] = [
+  {
+    code: 'XE-001', name: 'Toyota Vios 2022', plate: '51H-123.45', type: VEHICLE_TYPE.CAR,
+    seats: 5, brand: 'Toyota', model: 'Vios', body: BODY_TYPE.SEDAN, fuel: FUEL_TYPE.GASOLINE,
+    year: 2022, color: 'Trắng', weekday: 650_000, weekend: 800_000, hourly: 90_000,
+    delivery: true, discount: 10,
+    features: ['bluetooth', 'backup_camera', 'usb', 'map', 'airbag'],
+    img: photo('1550355291-bbee04a92027'), gallery: [photo('1502877338535-766e1452684a'), photo('1533473359331-0135ef1b58bf')],
+    desc: 'Sedan quốc dân tiết kiệm xăng, phù hợp đi phố lẫn về quê. Xe bảo dưỡng định kỳ tại hãng.',
+    approved: true,
+  },
+  {
+    code: 'XE-002', name: 'Honda City 2021', plate: '51H-234.56', type: VEHICLE_TYPE.CAR,
+    seats: 5, brand: 'Honda', model: 'City', body: BODY_TYPE.SEDAN, fuel: FUEL_TYPE.GASOLINE,
+    year: 2021, color: 'Đỏ', weekday: 700_000, weekend: 850_000,
+    delivery: true, noCollateral: true,
+    features: ['bluetooth', 'gps', 'reverse_sensor', 'screen', 'airbag'],
+    img: photo('1549317661-bd32c8ce0db2'), gallery: [photo('1542362567-b07e54358753')],
+    desc: 'Sedan lái đầm, cách âm tốt. Hỗ trợ giao xe tận nơi nội thành, thủ tục nhanh gọn.',
+    approved: true,
+  },
+  {
+    code: 'XE-003', name: 'Mazda3 2023', plate: '51H-987.65', type: VEHICLE_TYPE.CAR,
+    seats: 5, brand: 'Mazda', model: 'Mazda3', body: BODY_TYPE.SEDAN, fuel: FUEL_TYPE.GASOLINE,
+    year: 2023, color: 'Xám', weekday: 800_000, weekend: 950_000, hourly: 110_000,
+    features: ['bluetooth', 'camera_360', 'screen', 'airbag', 'etc'],
+    img: photo('1542362567-b07e54358753'), gallery: [photo('1511919884226-fd3cad34687c')],
+    desc: 'Thiết kế Kodo sang trọng, nội thất da, màn hình lớn. Xe gia đình giữ kỹ.',
+    approved: true,
+  },
+  {
+    code: 'XE-004', name: 'Kia Carnival 2022', plate: '51H-456.78', type: VEHICLE_TYPE.CAR,
+    seats: 7, brand: 'Kia', model: 'Carnival', body: BODY_TYPE.MPV, fuel: FUEL_TYPE.DIESEL,
+    year: 2022, color: 'Đen', weekday: 1_600_000, weekend: 1_900_000,
+    features: ['camera_360', 'sunroof', 'screen', 'child_seat', 'airbag'],
+    img: photo('1519641471654-76ce0107ad1b'),
+    desc: 'MPV 7 chỗ rộng rãi cho gia đình đông người, khoang hành lý lớn.',
+    approved: false,
+  },
+  {
+    code: 'XE-005', name: 'Ford Ranger 2021', plate: '51C-567.89', type: VEHICLE_TYPE.CAR,
+    seats: 5, brand: 'Ford', model: 'Ranger', body: BODY_TYPE.PICKUP, fuel: FUEL_TYPE.DIESEL,
+    year: 2021, color: 'Xanh dương', weekday: 1_200_000, weekend: 1_400_000,
+    delivery: true,
+    features: ['dash_camera', 'gps', 'spare_tire', 'etc'],
+    img: photo('1571068316344-75bc76f77890'), gallery: [photo('1533473359331-0135ef1b58bf')],
+    desc: 'Bán tải mạnh mẽ, gầm cao, chở đồ thoải mái — hợp đi công trình, phượt xa.',
+    approved: true,
+  },
+  {
+    code: 'XE-006', name: 'VinFast Fadil 2022', plate: '51K-135.79', type: VEHICLE_TYPE.CAR,
+    seats: 5, brand: 'VinFast', model: 'Fadil', body: BODY_TYPE.MINI, fuel: FUEL_TYPE.GASOLINE,
+    year: 2022, color: 'Trắng', weekday: 480_000, weekend: 550_000, hourly: 70_000,
+    noCollateral: true, discount: 15,
+    features: ['bluetooth', 'usb', 'airbag'],
+    img: photo('1502877338535-766e1452684a'),
+    desc: 'Hatchback nhỏ gọn dễ lái, dễ đỗ trong phố. Giá mềm cho người mới lấy bằng.',
+    approved: true,
+  },
+  {
+    code: 'XE-007', name: 'Kia Morning 2021', plate: '51K-246.80', type: VEHICLE_TYPE.CAR,
+    seats: 4, brand: 'Kia', model: 'Morning', body: BODY_TYPE.MINI, fuel: FUEL_TYPE.GASOLINE,
+    year: 2021, color: 'Vàng', weekday: 450_000, weekend: 520_000,
+    delivery: true,
+    features: ['usb', 'bluetooth'],
+    img: photo('1533473359331-0135ef1b58bf'),
+    desc: 'Xe nhỏ tiết kiệm, chạy phố cực linh hoạt. Phù hợp cặp đôi đi chơi cuối tuần.',
+    approved: true,
+  },
+  {
+    code: 'XE-008', name: 'Hyundai Grand i10 2023', plate: '51K-357.91', type: VEHICLE_TYPE.CAR,
+    seats: 5, brand: 'Hyundai', model: 'Grand i10', body: BODY_TYPE.MINI, fuel: FUEL_TYPE.GASOLINE,
+    year: 2023, color: 'Bạc', weekday: 500_000, weekend: 580_000, hourly: 75_000,
+    discount: 5,
+    features: ['bluetooth', 'map', 'usb'],
+    img: photo('1511919884226-fd3cad34687c'),
+    desc: 'Đời mới, màn hình giải trí kết nối điện thoại, điều hoà mát sâu.',
+    approved: true,
+  },
+  {
+    code: 'XE-009', name: 'VinFast VF e34 2023', plate: '51K-468.02', type: VEHICLE_TYPE.CAR,
+    seats: 5, brand: 'VinFast', model: 'VF e34', body: BODY_TYPE.CUV, fuel: FUEL_TYPE.ELECTRIC,
+    year: 2023, color: 'Xanh rêu', weekday: 900_000, weekend: 1_050_000,
+    delivery: true, noCollateral: true,
+    features: ['screen', 'camera_360', 'gps', 'map', 'airbag'],
+    img: photo('1617788138017-80ad40651399'), gallery: [photo('1502877338535-766e1452684a')],
+    desc: 'CUV điện êm ru, không tốn xăng — thuê kèm hướng dẫn trạm sạc miễn phí.',
+    approved: true,
+  },
+  {
+    code: 'XE-010', name: 'Kia Seltos 2022', plate: '51K-579.13', type: VEHICLE_TYPE.CAR,
+    seats: 5, brand: 'Kia', model: 'Seltos', body: BODY_TYPE.CUV, fuel: FUEL_TYPE.GASOLINE,
+    year: 2022, color: 'Cam', weekday: 850_000, weekend: 1_000_000, hourly: 120_000,
+    features: ['sunroof', 'backup_camera', 'bluetooth', 'screen'],
+    img: photo('1503376780353-7e6692767b70'),
+    desc: 'CUV cỡ nhỏ trẻ trung, cửa sổ trời, ghế da thể thao.',
+    approved: true,
+  },
+  {
+    code: 'XE-011', name: 'Mazda CX-5 2023', plate: '51H-345.67', type: VEHICLE_TYPE.CAR,
+    seats: 5, brand: 'Mazda', model: 'CX-5', body: BODY_TYPE.SUV, fuel: FUEL_TYPE.GASOLINE,
+    year: 2023, color: 'Đỏ mận', weekday: 1_100_000, weekend: 1_300_000, hourly: 150_000,
+    features: ['camera_360', 'sunroof', 'etc', 'spare_tire', 'airbag', 'screen'],
+    img: photo('1494976388531-d1058494cdd8'), gallery: [photo('1542362567-b07e54358753'), photo('1549317661-bd32c8ce0db2')],
+    desc: 'SUV 5 chỗ rộng rãi, cách âm tốt, đầy đủ an toàn — hợp cả gia đình lẫn công tác.',
+    approved: true,
+  },
+  {
+    code: 'XE-012', name: 'Hyundai SantaFe 2022', plate: '51H-680.24', type: VEHICLE_TYPE.CAR,
+    seats: 7, brand: 'Hyundai', model: 'SantaFe', body: BODY_TYPE.SUV, fuel: FUEL_TYPE.DIESEL,
+    year: 2022, color: 'Đen', weekday: 1_500_000, weekend: 1_750_000,
+    delivery: true,
+    features: ['camera_360', 'sunroof', 'etc', 'child_seat', 'airbag', 'screen'],
+    img: photo('1568605117036-5fe5e7bab0b7'),
+    desc: 'SUV 7 chỗ máy dầu mạnh mẽ, đi đường dài cực sướng.',
+    approved: true,
+  },
+  {
+    code: 'XE-013', name: 'Mitsubishi Xpander 2023', plate: '51H-791.35', type: VEHICLE_TYPE.CAR,
+    seats: 7, brand: 'Mitsubishi', model: 'Xpander', body: BODY_TYPE.MPV, fuel: FUEL_TYPE.GASOLINE,
+    year: 2023, color: 'Trắng', weekday: 800_000, weekend: 950_000,
+    delivery: true, discount: 10,
+    features: ['backup_camera', 'bluetooth', 'usb', 'child_seat'],
+    img: photo('1519641471654-76ce0107ad1b'),
+    desc: 'MPV 7 chỗ bán chạy nhất phân khúc — rộng rãi, tiết kiệm xăng.',
+    approved: true,
+  },
+  {
+    code: 'XE-014', name: 'Ford Transit 2021', plate: '51B-802.46', type: VEHICLE_TYPE.CAR,
+    seats: 16, brand: 'Ford', model: 'Transit', body: BODY_TYPE.MINIBUS, fuel: FUEL_TYPE.DIESEL,
+    year: 2021, color: 'Bạc', weekday: 1_800_000, weekend: 2_100_000,
+    features: ['dash_camera', 'gps'],
+    img: photo('1570125909232-eb263c188f7e'),
+    desc: 'Xe 16 chỗ chuyên tour, đưa đón sân bay, đi lễ — tài xế thuê thêm theo yêu cầu.',
+    approved: true,
+  },
+  {
+    code: 'XM-001', name: 'Honda Vision 2023', plate: '59X1-111.22', type: VEHICLE_TYPE.MOTORBIKE,
+    seats: 2, brand: 'Honda', model: 'Vision', fuel: FUEL_TYPE.GASOLINE,
+    year: 2023, color: 'Đỏ', weekday: 130_000, weekend: 160_000, hourly: 30_000,
+    noCollateral: true,
+    img: photo('1558981403-c5f9899a28bc'),
+    desc: 'Tay ga quốc dân, nhẹ nhàng dễ chạy, cốp rộng — kèm 2 mũ bảo hiểm.',
+    approved: true,
+  },
+  {
+    code: 'XM-002', name: 'Yamaha Janus 2022', plate: '59X1-222.33', type: VEHICLE_TYPE.MOTORBIKE,
+    seats: 2, brand: 'Yamaha', model: 'Janus', fuel: FUEL_TYPE.GASOLINE,
+    year: 2022, color: 'Xanh mint', weekday: 120_000, weekend: 150_000,
+    desc: 'Tay ga nhỏ gọn cho bạn nữ, chạy phố tiết kiệm.',
+    approved: false,
+  },
+  {
+    code: 'XM-003', name: 'Honda SH 150i 2023', plate: '59X1-333.44', type: VEHICLE_TYPE.MOTORBIKE,
+    seats: 2, brand: 'Honda', model: 'SH 150i', fuel: FUEL_TYPE.GASOLINE,
+    year: 2023, color: 'Đen mờ', weekday: 300_000, weekend: 350_000, hourly: 50_000,
+    discount: 5,
+    img: photo('1558981403-c5f9899a28bc'),
+    desc: 'SH sang chảnh, khoá smartkey, phanh ABS — dành cho ai thích đẳng cấp.',
+    approved: true,
+  },
+] as const;
+
+/**
+ * Review demo (khách đã hoàn thành chuyến) — nuôi sort "Gợi ý" (rating denormalize trên
+ * public_listings) + rating gian hàng. Booking COMPLETED không giữ chỗ trên lịch (ADR 0006)
+ * nên seed quá khứ thoải mái, không đụng exclusion constraint.
+ */
+const DEMO_REVIEWS = [
+  { vehicleCode: 'XE-001', bookingCode: 'RV0001', from: -30, to: -28, rating: 5, comment: 'Xe sạch sẽ, chủ xe giao đúng giờ. Sẽ thuê lại!' },
+  { vehicleCode: 'XE-001', bookingCode: 'RV0002', from: -20, to: -18, rating: 4, comment: 'Xe chạy êm, tốn xăng hơn mình nghĩ chút.' },
+  { vehicleCode: 'XE-011', bookingCode: 'RV0003', from: -25, to: -21, rating: 5, comment: 'CX-5 quá ngon, đi Đà Lạt cả nhà thoải mái.' },
+  { vehicleCode: 'XE-011', bookingCode: 'RV0004', from: -14, to: -12, rating: 5, comment: 'Nội thất mới, camera 360 tiện.' },
+  { vehicleCode: 'XE-009', bookingCode: 'RV0005', from: -16, to: -15, rating: 5, comment: 'Lần đầu chạy xe điện, êm không tưởng.' },
+  { vehicleCode: 'XE-006', bookingCode: 'RV0006', from: -10, to: -9, rating: 4, comment: 'Xe nhỏ dễ lái, được miễn cọc rất tiện.' },
+  { vehicleCode: 'XM-003', bookingCode: 'RV0007', from: -7, to: -6, rating: 4, comment: 'SH mới, chạy bốc. Giá hơi cao nhưng đáng.' },
 ] as const;
 
 /** Đơn demo: đủ để màn lịch có event ngắn, event dài và event vắt qua hôm nay. */
@@ -215,12 +417,18 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
       model: true,
       seatCount: true,
       fuelType: true,
+      bodyType: true,
       mainImageUrl: true,
       weekdayPrice: true,
       weekendPrice: true,
+      hourlyPrice: true,
+      deliveryEnabled: true,
+      noCollateral: true,
+      discountPercent: true,
       publicStatus: true,
       deletedAt: true,
       tenant: { select: { slug: true, profile: { select: { provinceName: true } } } },
+      features: { select: { featureKey: true } },
     },
   });
   if (!v) return false;
@@ -232,6 +440,13 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
     return false;
   }
 
+  // Rating denormalize như ListingsService.refreshRating (review published, chưa xoá).
+  const agg = await prisma.review.aggregate({
+    where: { vehicleId, status: REVIEW_STATUS.PUBLISHED, deletedAt: null },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+
   const snapshot = {
     shopSlug: v.tenant.slug,
     title: v.name,
@@ -242,10 +457,18 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
     model: v.model,
     seatCount: v.seatCount,
     fuelType: v.fuelType,
+    bodyType: v.bodyType,
     provinceName: v.tenant.profile?.provinceName ?? null,
     mainImageUrl: v.mainImageUrl,
     weekdayPrice: v.weekdayPrice,
     weekendPrice: v.weekendPrice,
+    hourlyPrice: v.hourlyPrice,
+    deliveryEnabled: v.deliveryEnabled,
+    noCollateral: v.noCollateral,
+    discountPercent: v.discountPercent,
+    features: v.features.map((f) => f.featureKey).sort(),
+    ratingAvg: agg._avg.rating != null ? agg._avg.rating.toFixed(2) : null,
+    ratingCount: agg._count._all,
   };
   await prisma.publicListing.upsert({
     where: { vehicleId },
@@ -311,9 +534,9 @@ async function main(): Promise<void> {
   await seedFinanceCategories();
 
   // Dọn tài khoản demo mock cũ (không mật khẩu) — đã chuyển sang đăng nhập email/mật khẩu.
-  // Giữ owner@xeprime.test (chủ shop demo, được đặt mật khẩu ngay dưới đây).
+  // Giữ owner@xeprime.test và customer@xeprime.test (đều được đặt mật khẩu ngay dưới đây).
   await prisma.user.deleteMany({
-    where: { email: { in: ['admin@xeprime.test', 'customer@xeprime.test'] } },
+    where: { email: { in: ['admin@xeprime.test'] } },
   });
 
   const adminUserId = await upsertPasswordUser({
@@ -329,7 +552,14 @@ async function main(): Promise<void> {
     displayName: 'Chủ shop demo',
     phoneVerified: true,
   });
-  console.log('  users: admin + shop owner');
+  // Khách demo: chủ nhân các review (nuôi sort "Gợi ý") + để thử luồng khách trên marketplace.
+  const customerUserId = await upsertPasswordUser({
+    email: 'customer@xeprime.test',
+    password: DEMO_OWNER_PASSWORD,
+    displayName: 'Nguyễn Văn Khách',
+    phoneVerified: true,
+  });
+  console.log('  users: admin + shop owner + customer');
 
   await prisma.platformMembership.upsert({
     where: {
@@ -373,47 +603,163 @@ async function main(): Promise<void> {
       joinedAt: new Date(),
     },
   });
-  console.log('  tenant active + membership owner: xong');
+
+  // Hồ sơ gian hàng: cần provinceName để listing có địa điểm (facet/điểm nổi bật đọc từ đây).
+  // Chỉ bổ sung khi chưa có — không ghi đè dữ liệu chủ shop đã tự sửa trong app.
+  const existingProfile = await prisma.tenantProfile.findUnique({
+    where: { tenantId: tenant.id },
+    select: { provinceName: true },
+  });
+  if (!existingProfile) {
+    await prisma.tenantProfile.create({
+      data: {
+        tenantId: tenant.id,
+        displayName: 'Gian hàng Demo XePrime',
+        provinceName: 'TP. Hồ Chí Minh',
+        bio: 'Gian hàng demo của XePrime — đủ loại xe từ mini tới 16 chỗ, giao xe tận nơi nội thành.',
+        address: '123 Nguyễn Văn Cừ, Quận 5',
+      },
+    });
+  } else if (!existingProfile.provinceName) {
+    await prisma.tenantProfile.update({
+      where: { tenantId: tenant.id },
+      data: { provinceName: 'TP. Hồ Chí Minh' },
+    });
+  }
+  console.log('  tenant active + membership owner + profile: xong');
 
   const vehicleIdByCode = new Map<string, string>();
   for (const v of DEMO_VEHICLES) {
+    // Toàn bộ thuộc tính demo nằm ở CẢ create lẫn update: sửa DEMO_VEHICLES rồi re-seed là
+    // dữ liệu refresh theo (idempotent nhưng không đóng băng ở lần seed đầu).
+    const demoFields = {
+      name: v.name,
+      plateNumber: v.plate,
+      vehicleType: v.type,
+      serviceType: SERVICE_TYPE.SELF_DRIVE,
+      brand: v.brand,
+      model: v.model,
+      manufactureYear: v.year,
+      color: v.color,
+      seatCount: v.seats,
+      fuelType: v.fuel,
+      bodyType: v.body ?? null,
+      description: v.desc,
+      mainImageUrl: v.img ?? null,
+      weekdayPrice: v.weekday,
+      weekendPrice: v.weekend,
+      hourlyPrice: v.hourly ?? null,
+      deliveryEnabled: v.delivery ?? false,
+      noCollateral: v.noCollateral ?? false,
+      discountPercent: v.discount ?? null,
+      // Demo: `approved` mô phỏng kết quả duyệt public (luồng thật ở Phase 2 qua
+      // ApprovalService). Xe draft vẫn để nguyên để test được luồng duyệt sau này.
+      publicStatus: v.approved
+        ? VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC
+        : VEHICLE_PUBLIC_STATUS.DRAFT,
+    };
     const row = await prisma.vehicle.upsert({
       where: { tenantId_code: { tenantId: tenant.id, code: v.code } },
-      // Đồng bộ trạng thái duyệt demo khi chạy lại seed (idempotent nhưng cập nhật được).
-      update: {
-        publicStatus: v.approved
-          ? VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC
-          : VEHICLE_PUBLIC_STATUS.DRAFT,
-      },
+      update: demoFields,
       create: {
         id: ulid(),
         tenantId: tenant.id,
         code: v.code,
-        name: v.name,
-        plateNumber: v.plate,
-        vehicleType: v.type,
-        serviceType: SERVICE_TYPE.SELF_DRIVE,
-        brand: v.brand,
-        model: v.model,
-        seatCount: v.seats,
         operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE,
-        // Demo: `approved` mô phỏng kết quả duyệt public (luồng thật ở Phase 2 qua
-        // ApprovalService). Xe draft vẫn để nguyên để test được luồng duyệt sau này.
-        publicStatus: v.approved
-          ? VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC
-          : VEHICLE_PUBLIC_STATUS.DRAFT,
-        weekdayPrice: v.weekday,
-        weekendPrice: v.weekend,
         createdBy: ownerUserId,
+        ...demoFields,
       },
       select: { id: true },
     });
     vehicleIdByCode.set(v.code, row.id);
+
+    // Gallery + tính năng: replace-set như VehiclesService.replaceMedia — chạy lại không nhân bản.
+    await prisma.vehicleImage.deleteMany({ where: { vehicleId: row.id } });
+    if (v.gallery?.length) {
+      await prisma.vehicleImage.createMany({
+        data: v.gallery.map((imageUrl, index) => ({
+          id: ulid(),
+          vehicleId: row.id,
+          tenantId: tenant.id,
+          imageUrl,
+          sortOrder: index,
+        })),
+      });
+    }
+    await prisma.vehicleFeature.deleteMany({ where: { vehicleId: row.id } });
+    if (v.features?.length) {
+      await prisma.vehicleFeature.createMany({
+        data: v.features.map((featureKey) => ({ id: ulid(), vehicleId: row.id, featureKey })),
+      });
+    }
   }
   console.log(`  vehicles: ${vehicleIdByCode.size}`);
 
+  // Review demo TRƯỚC khi sync listing để rating denormalize vào snapshot ngay lượt này.
+  // Booking COMPLETED không giữ chỗ trên lịch (ADR 0006) nên seed quá khứ vô tư; review chốt
+  // 1-1 với booking bằng unique booking_id → upsert theo bookingId là idempotent.
+  let reviewCount = 0;
+  for (const r of DEMO_REVIEWS) {
+    const vehicleId = vehicleIdByCode.get(r.vehicleCode);
+    if (!vehicleId) continue;
+
+    const booking = await prisma.booking.upsert({
+      where: { tenantId_code: { tenantId: tenant.id, code: r.bookingCode } },
+      update: { status: BOOKING_STATUS.COMPLETED },
+      create: {
+        id: ulid(),
+        tenantId: tenant.id,
+        vehicleId,
+        code: r.bookingCode,
+        customerName: 'Nguyễn Văn Khách',
+        customerPhone: '0987654321',
+        status: BOOKING_STATUS.COMPLETED,
+        serviceType: SERVICE_TYPE.SELF_DRIVE,
+        pickupAt: daysFromToday(r.from, 3),
+        returnAt: daysFromToday(r.to, 5),
+        baseAmount: 0,
+        totalAmount: 0,
+        paidAmount: 0,
+        createdBy: ownerUserId,
+      },
+      select: { id: true },
+    });
+
+    await prisma.review.upsert({
+      where: { bookingId: booking.id },
+      update: { rating: r.rating, comment: r.comment, status: REVIEW_STATUS.PUBLISHED },
+      create: {
+        id: ulid(),
+        tenantId: tenant.id,
+        vehicleId,
+        bookingId: booking.id,
+        customerId: customerUserId,
+        rating: r.rating,
+        comment: r.comment,
+        status: REVIEW_STATUS.PUBLISHED,
+      },
+    });
+    reviewCount += 1;
+  }
+
+  // Rating gian hàng — cùng quy tắc ReviewService.recomputeTenantRating.
+  const tenantAgg = await prisma.review.aggregate({
+    where: { tenantId: tenant.id, status: REVIEW_STATUS.PUBLISHED, deletedAt: null },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+  await prisma.tenant.update({
+    where: { id: tenant.id },
+    data: {
+      ratingAvg: Math.round((tenantAgg._avg.rating ?? 0) * 100) / 100,
+      ratingCount: tenantAgg._count._all,
+    },
+  });
+  console.log(`  reviews: ${reviewCount}`);
+
   // Snapshot public_listings cho xe đã duyệt (ADR 0008). Trong app, ListingsService là writer
-  // DUY NHẤT; ở seed dùng cùng logic (đọc xe+tenant, suy status) để marketplace có dữ liệu demo.
+  // DUY NHẤT; ở seed dùng cùng logic (đọc xe+tenant+features+rating, suy status) để marketplace
+  // có dữ liệu demo đầy đủ cho bộ lọc facet.
   let listingCount = 0;
   for (const vehicleId of vehicleIdByCode.values()) {
     if (await syncSeedListing(vehicleId)) listingCount += 1;
@@ -519,6 +865,7 @@ async function main(): Promise<void> {
   console.log('\nSeed xong. Đăng nhập bằng email + mật khẩu tại /login:');
   console.log(`  platform admin : ${PLATFORM_ADMIN_EMAIL} / ${PLATFORM_ADMIN_PASSWORD}`);
   console.log(`  shop owner     : owner@xeprime.test / ${DEMO_OWNER_PASSWORD}`);
+  console.log(`  customer       : customer@xeprime.test / ${DEMO_OWNER_PASSWORD}`);
 }
 
 main()

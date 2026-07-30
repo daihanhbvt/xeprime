@@ -1,8 +1,8 @@
 'use client';
 
-import { ArrowDownOutlined, ArrowUpOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Col, Input, Row, Select } from 'antd';
+import { Alert, Button, Card, Col, Row, Select } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { useEffect } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import {
   SERVICE_TYPE,
@@ -12,11 +12,18 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
+import { AutoCompleteField } from '@/components/form/AutoCompleteField';
+import { ImageGalleryField } from '@/components/form/ImageGalleryField';
+import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
+import { SwitchField } from '@/components/form/SwitchField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
+import { presignVehicleImage } from '@/services/upload';
 import {
+  BODY_TYPE_OPTIONS,
+  BRAND_OPTIONS,
   FUEL_TYPE_OPTIONS,
   OPERATION_STATUS_OPTIONS,
   SERVICE_TYPE_OPTIONS,
@@ -38,10 +45,15 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   model: '',
   color: '',
   fuelType: null,
+  bodyType: null,
   manufactureYear: null,
   seatCount: null,
   weekdayPrice: null,
   weekendPrice: null,
+  hourlyPrice: null,
+  deliveryEnabled: false,
+  noCollateral: false,
+  discountPercent: null,
   description: '',
   mainImageUrl: null,
   images: [],
@@ -52,16 +64,6 @@ const FEATURE_OPTIONS = VEHICLE_FEATURE_KEYS.map((key) => ({
   value: key,
   label: VEHICLE_FEATURE_LABEL[key],
 }));
-
-/** Chuyển phần tử trong mảng từ `from` sang `to` (giữ thứ tự gallery). */
-function moveItem<T>(arr: readonly T[], from: number, to: number): T[] {
-  const next = [...arr];
-  const item = next[from];
-  if (item === undefined) return next;
-  next.splice(from, 1);
-  next.splice(to, 0, item);
-  return next;
-}
 
 interface VehicleFormProps {
   initialValues?: VehicleFormValues;
@@ -80,12 +82,17 @@ export function VehicleForm({
   onSubmit,
   onCancel,
 }: VehicleFormProps) {
-  const { control, handleSubmit } = useForm<VehicleFormValues>({
+  const { control, handleSubmit, setValue } = useForm<VehicleFormValues>({
     resolver: yupResolver(vehicleFormSchema),
     defaultValues: initialValues ?? EMPTY_DEFAULTS,
   });
 
-  const imageUrl = useWatch({ control, name: 'mainImageUrl' });
+  // Kiểu dáng thân xe chỉ có nghĩa với ô tô — đổi sang xe máy thì ẩn field và xoá giá trị.
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
+  const isCar = vehicleType === VEHICLE_TYPE.CAR;
+  useEffect(() => {
+    if (!isCar) setValue('bodyType', null);
+  }, [isCar, setValue]);
 
   const submit = handleSubmit((values) => onSubmit(values));
 
@@ -156,11 +163,29 @@ export function VehicleForm({
             />
           </Col>
           <Col xs={24} sm={12}>
-            <TextField control={control} name="brand" label="Hãng" placeholder="VD: Toyota" />
+            <AutoCompleteField
+              control={control}
+              name="brand"
+              label="Hãng"
+              options={BRAND_OPTIONS}
+              placeholder="VD: Toyota"
+            />
           </Col>
           <Col xs={24} sm={12}>
             <TextField control={control} name="model" label="Dòng xe" placeholder="VD: Vios" />
           </Col>
+          {isCar ? (
+            <Col xs={24} sm={8}>
+              <SelectField
+                control={control}
+                name="bodyType"
+                label="Kiểu dáng"
+                options={BODY_TYPE_OPTIONS}
+                placeholder="Sedan, SUV…"
+                allowClear
+              />
+            </Col>
+          ) : null}
           <Col xs={24} sm={8}>
             <NumberField
               control={control}
@@ -187,9 +212,9 @@ export function VehicleForm({
         </Row>
       </Card>
 
-      <Card title="Giá thuê" className={styles.section}>
+      <Card title="Giá thuê & chính sách" className={styles.section}>
         <Row gutter={16}>
-          <Col xs={24} sm={12}>
+          <Col xs={24} sm={8}>
             <NumberField
               control={control}
               name="weekdayPrice"
@@ -199,7 +224,7 @@ export function VehicleForm({
               money
             />
           </Col>
-          <Col xs={24} sm={12}>
+          <Col xs={24} sm={8}>
             <NumberField
               control={control}
               name="weekendPrice"
@@ -209,74 +234,59 @@ export function VehicleForm({
               money
             />
           </Col>
+          <Col xs={24} sm={8}>
+            <NumberField
+              control={control}
+              name="hourlyPrice"
+              label="Giá thuê theo giờ"
+              placeholder="Bỏ trống nếu không cho thuê giờ"
+              min={0}
+              money
+            />
+          </Col>
+          <Col xs={24} sm={8}>
+            <NumberField
+              control={control}
+              name="discountPercent"
+              label="Giảm giá đang chạy"
+              placeholder="VD: 10"
+              min={0}
+              max={100}
+              addonAfter="%"
+            />
+          </Col>
         </Row>
+        <div className={styles.policyBlock}>
+          <SwitchField
+            control={control}
+            name="deliveryEnabled"
+            label="Giao xe tận nơi"
+            description="Khách trên marketplace lọc được xe có hỗ trợ giao nhận"
+          />
+          <SwitchField
+            control={control}
+            name="noCollateral"
+            label="Miễn thế chấp"
+            description="Không yêu cầu khách cọc tài sản khi nhận xe"
+          />
+        </div>
       </Card>
 
       <Card title="Hình ảnh, tiện ích & mô tả" className={styles.section}>
-        <TextField
+        <ImageUploadField
           control={control}
           name="mainImageUrl"
-          label="Ảnh đại diện (URL)"
-          placeholder="https://..."
+          label="Ảnh đại diện"
+          presign={presignVehicleImage}
         />
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài từ URL người dùng nhập, không tối ưu qua next/image
-          <img src={imageUrl} alt="Xem trước ảnh xe" className={styles.preview} />
-        ) : null}
 
-        <div className={styles.galleryBlock}>
-          <div className={styles.fieldLabel}>Ảnh gallery (URL, theo thứ tự hiển thị)</div>
-          <Controller
-            control={control}
-            name="images"
-            render={({ field }) => {
-              const items = field.value ?? [];
-              return (
-                <div className={styles.gallery}>
-                  {items.map((url, idx) => (
-                    <div key={idx} className={styles.galleryRow}>
-                      <Input
-                        value={url}
-                        placeholder="https://..."
-                        onChange={(e) => {
-                          const next = [...items];
-                          next[idx] = e.target.value;
-                          field.onChange(next);
-                        }}
-                      />
-                      <Button
-                        aria-label="Lên"
-                        icon={<ArrowUpOutlined />}
-                        disabled={idx === 0}
-                        onClick={() => field.onChange(moveItem(items, idx, idx - 1))}
-                      />
-                      <Button
-                        aria-label="Xuống"
-                        icon={<ArrowDownOutlined />}
-                        disabled={idx === items.length - 1}
-                        onClick={() => field.onChange(moveItem(items, idx, idx + 1))}
-                      />
-                      <Button
-                        aria-label="Xoá ảnh"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => field.onChange(items.filter((_, i) => i !== idx))}
-                      />
-                    </div>
-                  ))}
-                  <Button
-                    type="dashed"
-                    icon={<PlusOutlined />}
-                    onClick={() => field.onChange([...items, ''])}
-                    disabled={items.length >= 20}
-                  >
-                    Thêm ảnh
-                  </Button>
-                </div>
-              );
-            }}
-          />
-        </div>
+        <ImageGalleryField
+          control={control}
+          name="images"
+          label="Ảnh gallery"
+          presign={presignVehicleImage}
+          max={20}
+        />
 
         <div className={styles.galleryBlock}>
           <div className={styles.fieldLabel}>Tiện ích</div>

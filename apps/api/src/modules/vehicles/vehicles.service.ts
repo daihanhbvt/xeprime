@@ -43,6 +43,8 @@ const LIST_SELECT = {
   model: true,
   manufactureYear: true,
   seatCount: true,
+  bodyType: true,
+  discountPercent: true,
   operationStatus: true,
   publicStatus: true,
   mainImageUrl: true,
@@ -55,6 +57,9 @@ const DETAIL_SELECT = {
   ...LIST_SELECT,
   color: true,
   fuelType: true,
+  hourlyPrice: true,
+  deliveryEnabled: true,
+  noCollateral: true,
   description: true,
   createdAt: true,
 } satisfies Prisma.VehicleSelect;
@@ -66,6 +71,8 @@ const SENSITIVE_SELECT = {
   publicStatus: true,
   weekdayPrice: true,
   weekendPrice: true,
+  hourlyPrice: true,
+  discountPercent: true,
   plateNumber: true,
   vehicleType: true,
   serviceType: true,
@@ -477,16 +484,22 @@ interface VehicleWritableFields {
   color?: string;
   seatCount?: number;
   fuelType?: string;
+  bodyType?: string | null;
   operationStatus?: string;
   description?: string;
   mainImageUrl?: string;
   weekdayPrice?: string;
   weekendPrice?: string;
+  hourlyPrice?: string | null;
+  deliveryEnabled?: boolean;
+  noCollateral?: boolean;
+  discountPercent?: number | null;
 }
 
 /**
  * Các trường tuỳ chọn cho phép ghi khi create/update — gom một chỗ để hai đường không lệch nhau.
  * KHÔNG gồm `code`/`name`/`vehicleType` (create bắt buộc) và tuyệt đối không `publicStatus`/`tenantId`.
+ * Các trường nullable (bodyType/hourlyPrice/discountPercent) nhận null để XOÁ giá trị.
  */
 function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritableFields {
   return {
@@ -498,11 +511,16 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
     ...(dto.color !== undefined ? { color: dto.color } : {}),
     ...(dto.seatCount !== undefined ? { seatCount: dto.seatCount } : {}),
     ...(dto.fuelType !== undefined ? { fuelType: dto.fuelType } : {}),
+    ...(dto.bodyType !== undefined ? { bodyType: dto.bodyType } : {}),
     ...(dto.operationStatus !== undefined ? { operationStatus: dto.operationStatus } : {}),
     ...(dto.description !== undefined ? { description: dto.description } : {}),
     ...(dto.mainImageUrl !== undefined ? { mainImageUrl: dto.mainImageUrl } : {}),
     ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
     ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
+    ...(dto.hourlyPrice !== undefined ? { hourlyPrice: dto.hourlyPrice } : {}),
+    ...(dto.deliveryEnabled !== undefined ? { deliveryEnabled: dto.deliveryEnabled } : {}),
+    ...(dto.noCollateral !== undefined ? { noCollateral: dto.noCollateral } : {}),
+    ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
   };
 }
 
@@ -521,6 +539,8 @@ function toListItem(v: Prisma.VehicleGetPayload<{ select: typeof LIST_SELECT }>)
     model: v.model,
     manufactureYear: v.manufactureYear,
     seatCount: v.seatCount,
+    bodyType: v.bodyType,
+    discountPercent: v.discountPercent,
     operationStatus: v.operationStatus,
     publicStatus: v.publicStatus,
     mainImageUrl: v.mainImageUrl,
@@ -540,6 +560,9 @@ function toDetail(
     ...toListItem(v),
     color: v.color,
     fuelType: v.fuelType,
+    hourlyPrice: v.hourlyPrice as unknown as string | null,
+    deliveryEnabled: v.deliveryEnabled,
+    noCollateral: v.noCollateral,
     description: v.description,
     createdAt: v.createdAt as unknown as string,
     images,
@@ -585,11 +608,16 @@ function vehicleSnapshot(v: VehicleRow): Record<string, unknown> {
     manufactureYear: v.manufactureYear,
     seatCount: v.seatCount,
     fuelType: v.fuelType,
+    bodyType: v.bodyType,
     color: v.color,
     mainImageUrl: v.mainImageUrl,
     description: v.description,
     weekdayPrice: v.weekdayPrice == null ? null : String(v.weekdayPrice),
     weekendPrice: v.weekendPrice == null ? null : String(v.weekendPrice),
+    hourlyPrice: v.hourlyPrice == null ? null : String(v.hourlyPrice),
+    deliveryEnabled: v.deliveryEnabled,
+    noCollateral: v.noCollateral,
+    discountPercent: v.discountPercent,
   };
 }
 

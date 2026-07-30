@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   APPROVAL_STATUS_VALUES,
+  BODY_TYPE_VALUES,
   FUEL_TYPE_VALUES,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
@@ -14,6 +15,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -112,6 +114,10 @@ export class VehicleListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) model!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) manufactureYear!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) seatCount!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Kiểu dáng (BODY_TYPE)' })
+  bodyType!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true, description: '% giảm giá marketing (0–100)' })
+  discountPercent!: number | null;
   @ApiProperty({ enum: VEHICLE_OPERATION_STATUS_VALUES }) operationStatus!: string;
   @ApiProperty({ enum: VEHICLE_PUBLIC_STATUS_VALUES }) publicStatus!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
@@ -138,6 +144,13 @@ export class VehicleDetailDto extends VehicleListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) color!: string | null;
   @ApiPropertyOptional({ enum: FUEL_TYPE_VALUES, nullable: true }) fuelType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giá thuê giờ — string tiền (ADR 0007)' })
+  hourlyPrice!: string | null;
+
+  @ApiProperty({ description: 'Chủ xe hỗ trợ giao xe tận nơi' }) deliveryEnabled!: boolean;
+  @ApiProperty({ description: 'Miễn thế chấp (không cần cọc tài sản)' }) noCollateral!: boolean;
+
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 
   @ApiProperty({ type: [String], description: 'URL ảnh gallery theo thứ tự' })
@@ -225,6 +238,17 @@ export class CreateVehicleDto {
   @IsIn(FUEL_TYPE_VALUES)
   fuelType?: string;
 
+  // Các trường có thể GỠ giá trị (gửi null) — @IsOptional bỏ qua validate khi null,
+  // service ghi null xuống DB để xoá (vd đổi ô tô → xe máy thì bỏ kiểu dáng).
+  @ApiPropertyOptional({
+    enum: BODY_TYPE_VALUES,
+    nullable: true,
+    description: 'Kiểu dáng thân xe — chỉ với ô tô. Gửi null để xoá.',
+  })
+  @IsOptional()
+  @IsIn(BODY_TYPE_VALUES)
+  bodyType?: string | null;
+
   @ApiPropertyOptional({ enum: VEHICLE_OPERATION_STATUS_VALUES, default: VEHICLE_OPERATION_STATUS.AVAILABLE })
   @IsOptional()
   @IsIn(VEHICLE_OPERATION_STATUS_VALUES)
@@ -251,6 +275,39 @@ export class CreateVehicleDto {
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'weekendPrice phải là số tiền hợp lệ' })
   weekendPrice?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá thuê theo giờ, string thập phân — ADR 0007. Gửi null = không cho thuê giờ.',
+    example: '120000',
+  })
+  @IsOptional()
+  @Matches(MONEY_PATTERN, { message: 'hourlyPrice phải là số tiền hợp lệ' })
+  hourlyPrice?: string | null;
+
+  @ApiPropertyOptional({ description: 'Chủ xe hỗ trợ giao xe tận nơi' })
+  @IsOptional()
+  @IsBoolean()
+  deliveryEnabled?: boolean;
+
+  @ApiPropertyOptional({ description: 'Miễn thế chấp (không cần cọc tài sản)' })
+  @IsOptional()
+  @IsBoolean()
+  noCollateral?: boolean;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 0,
+    maximum: 100,
+    description: '% giảm giá marketing. Gửi null = ngừng giảm giá.',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  discountPercent?: number | null;
 
   @ApiPropertyOptional({
     type: [String],

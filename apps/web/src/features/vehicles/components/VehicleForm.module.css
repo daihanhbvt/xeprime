@@ -24,30 +24,18 @@
   color: var(--xp-color-text-secondary);
 }
 
-.gallery {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.galleryRow {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-
 .fullWidth {
   width: 100%;
 }
 
-.preview {
-  margin-top: 8px;
-  max-width: 100%;
-  max-height: 180px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1px solid var(--xp-border, rgba(0, 0, 0, 0.08));
+/* Hai toggle chính sách thuê (giao tận nơi / miễn thế chấp) dưới hàng giá. */
+.policyBlock {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--xp-color-border-secondary);
+  margin-top: 4px;
+  padding-top: 4px;
+  max-width: 480px;
 }
 
 .actions {

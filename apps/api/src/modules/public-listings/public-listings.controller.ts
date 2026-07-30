@@ -3,6 +3,8 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators';
 import { PublicListingsService } from './public-listings.service';
 import {
+  ListingFacetsDto,
+  ListingFacetsQueryDto,
   PublicListingDetailDto,
   PublicListingPageDto,
   PublicListingQueryDto,
@@ -25,6 +27,15 @@ export class PublicListingsController {
   @ApiOkResponse({ type: PublicListingPageDto })
   search(@Query() query: PublicListingQueryDto): Promise<PublicListingPageDto> {
     return this.listings.search(query) as Promise<PublicListingPageDto>;
+  }
+
+  // Route tĩnh PHẢI đứng trước `:id`, nếu không 'facets' bị bắt làm listing id → 404.
+  @Public()
+  @Get('facets')
+  @ApiOperation({ summary: 'Facet counts cho panel Bộ lọc (đếm theo từng chiều filter)' })
+  @ApiOkResponse({ type: ListingFacetsDto })
+  facets(@Query() query: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
+    return this.listings.facets(query);
   }
 
   @Public()

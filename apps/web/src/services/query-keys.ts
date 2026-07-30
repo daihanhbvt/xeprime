@@ -71,6 +71,7 @@ export const queryKeys = {
   marketplace: {
     all: ['marketplace'] as const,
     listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,
+    facets: (params: QueryParams) => ['marketplace', 'facets', params] as const,
     reviews: (vehicleId: string, params: QueryParams) =>
       ['marketplace', 'reviews', vehicleId, params] as const,
     shopListings: (slug: string, params: QueryParams) =>

@@ -4,12 +4,18 @@ import {
   API_ERROR_CODE,
   LISTING_STATUS,
   REVIEW_STATUS,
+  SEAT_BUCKET_RANGE,
+  SEAT_BUCKET_VALUES,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type PaginationMeta,
+  type SeatBucket,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
+  FacetBucketDto,
+  ListingFacetsDto,
+  ListingFacetsQueryDto,
   PublicDestinationDto,
   PublicDestinationQueryDto,
   PublicListingDetailDto,
@@ -34,9 +40,16 @@ const LISTING_CARD_SELECT = {
   model: true,
   seatCount: true,
   fuelType: true,
+  bodyType: true,
   mainImageUrl: true,
   weekdayPrice: true,
   weekendPrice: true,
+  hourlyPrice: true,
+  deliveryEnabled: true,
+  noCollateral: true,
+  discountPercent: true,
+  ratingAvg: true,
+  ratingCount: true,
   provinceName: true,
   shopSlug: true,
   tenant: { select: { name: true } },
@@ -52,10 +65,11 @@ interface VehicleRating {
 
 /**
  * Row listing → thẻ marketplace. `id` của thẻ là `vehicleId` (route `/listings/[id]` + đặt xe
- * dùng vehicle id). Decimal → string do ResponseInterceptor lo (ADR 0007). `rating` bơm từ
- * `ratingsByVehicle` (không có review → null/0, FE tự ẩn).
+ * dùng vehicle id). Decimal → string do ResponseInterceptor lo (ADR 0007). Rating đọc từ cột
+ * denormalize trên snapshot (ListingsService.refreshRating nuôi) — hiển thị 1 chữ số thập phân
+ * như UI (4.9).
  */
-function toListingCard(l: ListingCardRow, rating?: VehicleRating): PublicListingDto {
+function toListingCard(l: ListingCardRow): PublicListingDto {
   return {
     id: l.vehicleId,
     name: l.title,
@@ -65,21 +79,34 @@ function toListingCard(l: ListingCardRow, rating?: VehicleRating): PublicListing
     model: l.model,
     seatCount: l.seatCount,
     fuelType: l.fuelType,
+    bodyType: l.bodyType,
     mainImageUrl: l.mainImageUrl,
     weekdayPrice: l.weekdayPrice as unknown as string | null,
     weekendPrice: l.weekendPrice as unknown as string | null,
+    hourlyPrice: l.hourlyPrice as unknown as string | null,
+    deliveryEnabled: l.deliveryEnabled,
+    noCollateral: l.noCollateral,
+    discountPercent: l.discountPercent,
     shopName: l.tenant.name,
     shopSlug: l.shopSlug,
     shopProvince: l.provinceName,
-    ratingAvg: rating?.avg ?? null,
-    ratingCount: rating?.count ?? 0,
+    ratingAvg: l.ratingAvg != null ? l.ratingAvg.toFixed(1) : null,
+    ratingCount: l.ratingCount,
   };
 }
 
-function listingOrderBy(sort: string | undefined): Prisma.PublicListingOrderByWithRelationInput {
-  if (sort === 'price_asc') return { weekdayPrice: 'asc' };
-  if (sort === 'price_desc') return { weekdayPrice: 'desc' };
-  return { createdAt: 'desc' };
+/** `recommended` (mặc định): điểm cao trước (NULLS LAST) → nhiều đánh giá trước → mới trước. */
+function listingOrderBy(
+  sort: string | undefined,
+): Prisma.PublicListingOrderByWithRelationInput[] {
+  if (sort === 'price_asc') return [{ weekdayPrice: 'asc' }];
+  if (sort === 'price_desc') return [{ weekdayPrice: 'desc' }];
+  if (sort === 'newest') return [{ createdAt: 'desc' }];
+  return [
+    { ratingAvg: { sort: 'desc', nulls: 'last' } },
+    { ratingCount: 'desc' },
+    { createdAt: 'desc' },
+  ];
 }
 
 /** Lọc khoảng giá thuê/ngày. Listing chưa có giá không lọt khi có ràng buộc giá. */
@@ -90,6 +117,107 @@ function priceFilter(min?: number, max?: number): Prisma.PublicListingWhereInput
       ...(min != null ? { gte: min } : {}),
       ...(max != null ? { lte: max } : {}),
     },
+  };
+}
+
+/**
+ * Một chiều của bộ lọc facet. Khi đếm facet cho chiều nào thì bỏ chính filter của chiều đó
+ * (semantics chuẩn — chọn SUV vẫn thấy Sedan còn bao nhiêu xe nếu đổi lựa chọn).
+ */
+type FacetDimension =
+  | 'bodyType'
+  | 'brand'
+  | 'seats'
+  | 'fuelType'
+  | 'features'
+  | 'price'
+  | 'hourly'
+  | 'delivery'
+  | 'noCollateral'
+  | 'discount';
+
+/** Bộ filter dùng chung giữa search và facets (facets không có sort/paging). */
+type ListingFilterQuery = Omit<PublicListingQueryDto, 'sort' | 'page' | 'limit'>;
+
+/** Bucket số chỗ của một seatCount cụ thể (mỗi giá trị rơi vào đúng một bucket). */
+function seatBucketOf(seatCount: number | null): SeatBucket | null {
+  if (seatCount == null) return null;
+  for (const bucket of SEAT_BUCKET_VALUES) {
+    const { min, max } = SEAT_BUCKET_RANGE[bucket];
+    if ((min == null || seatCount >= min) && (max == null || seatCount <= max)) return bucket;
+  }
+  return null;
+}
+
+/**
+ * Where-clause marketplace duy nhất cho cả search lẫn facets. Mọi fragment đẩy vào `AND` để
+ * không giẫm key (cả `q` lẫn bucket số chỗ đều dùng `OR` — spread phẳng sẽ ghi đè nhau).
+ * `exclude` bỏ đúng một chiều khi đếm facet cho chiều đó.
+ */
+function buildListingWhere(
+  query: ListingFilterQuery,
+  exclude?: FacetDimension,
+): Prisma.PublicListingWhereInput {
+  const and: Prisma.PublicListingWhereInput[] = [];
+
+  if (query.province) {
+    and.push({ provinceName: { contains: query.province, mode: 'insensitive' } });
+  }
+  if (query.vehicleType) and.push({ vehicleType: query.vehicleType });
+  if (query.serviceType) and.push({ serviceType: query.serviceType });
+  if (query.minSeats) and.push({ seatCount: { gte: query.minSeats } });
+  const availability = availabilityFilter(query.pickupAt, query.returnAt);
+  if (Object.keys(availability).length > 0) and.push(availability);
+  if (query.q) {
+    and.push({
+      OR: [
+        { title: { contains: query.q, mode: 'insensitive' } },
+        { brand: { contains: query.q, mode: 'insensitive' } },
+        { model: { contains: query.q, mode: 'insensitive' } },
+      ],
+    });
+  }
+
+  if (exclude !== 'bodyType' && query.bodyType?.length) {
+    and.push({ bodyType: { in: query.bodyType } });
+  }
+  // Hãng khớp đúng tên đã lưu (facet trả về giá trị thật từ DB); insensitive đỡ lệch hoa thường.
+  if (exclude !== 'brand' && query.brand?.length) {
+    and.push({ brand: { in: query.brand, mode: 'insensitive' } });
+  }
+  if (exclude !== 'seats' && query.seats?.length) {
+    const ranges = query.seats
+      .map((b) => SEAT_BUCKET_RANGE[b as SeatBucket])
+      .filter((r): r is { min?: number; max?: number } => r != null)
+      .map(({ min, max }) => ({
+        seatCount: {
+          ...(min != null ? { gte: min } : {}),
+          ...(max != null ? { lte: max } : {}),
+        },
+      }));
+    if (ranges.length > 0) and.push({ OR: ranges });
+  }
+  if (exclude !== 'fuelType' && query.fuelType?.length) {
+    and.push({ fuelType: { in: query.fuelType } });
+  }
+  // Tính năng là AND (xe phải có ĐỦ các tiện ích đã chọn) — GIN index phục vụ hasEvery.
+  if (exclude !== 'features' && query.features?.length) {
+    and.push({ features: { hasEvery: query.features } });
+  }
+  if (exclude !== 'price') {
+    const price = priceFilter(query.priceMin, query.priceMax);
+    if (Object.keys(price).length > 0) and.push(price);
+  }
+  if (exclude !== 'hourly' && query.hourly) and.push({ hourlyPrice: { not: null } });
+  if (exclude !== 'delivery' && query.delivery) and.push({ deliveryEnabled: true });
+  if (exclude !== 'noCollateral' && query.noCollateral) and.push({ noCollateral: true });
+  if (exclude !== 'discount' && query.discount) and.push({ discountPercent: { gt: 0 } });
+
+  return {
+    status: LISTING_STATUS.ACTIVE,
+    // Khoá shop là ẩn listing tức thì — join tenant, KHÔNG denormalize (ADR 0008 §3).
+    tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
+    AND: and,
   };
 }
 
@@ -128,29 +256,7 @@ export class PublicListingsService {
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(MAX_LIMIT, Math.max(1, query.limit ?? DEFAULT_LIMIT));
 
-    const where: Prisma.PublicListingWhereInput = {
-      status: LISTING_STATUS.ACTIVE,
-      // Khoá shop là ẩn listing tức thì — join tenant, KHÔNG denormalize (ADR 0008 §3).
-      tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
-      ...(query.province
-        ? { provinceName: { contains: query.province, mode: 'insensitive' } }
-        : {}),
-      ...(query.vehicleType ? { vehicleType: query.vehicleType } : {}),
-      ...(query.serviceType ? { serviceType: query.serviceType } : {}),
-      ...(query.brand ? { brand: query.brand } : {}),
-      ...(query.minSeats ? { seatCount: { gte: query.minSeats } } : {}),
-      ...priceFilter(query.priceMin, query.priceMax),
-      ...availabilityFilter(query.pickupAt, query.returnAt),
-      ...(query.q
-        ? {
-            OR: [
-              { title: { contains: query.q, mode: 'insensitive' } },
-              { brand: { contains: query.q, mode: 'insensitive' } },
-              { model: { contains: query.q, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    };
+    const where = buildListingWhere(query);
 
     // Đếm và lấy trang trong một transaction để total khớp với data cùng thời điểm.
     const [total, rows] = await this.prisma.$transaction([
@@ -164,17 +270,140 @@ export class PublicListingsService {
       }),
     ]);
 
-    const ratings = await this.ratingsByVehicle(rows.map((r) => r.vehicleId));
     return {
-      data: rows.map((r) => toListingCard(r, ratings.get(r.vehicleId))),
+      data: rows.map(toListingCard),
       meta: { page, limit, total, hasNext: page * limit < total },
     };
   }
 
   /**
-   * Điểm đánh giá gộp theo xe cho ĐÚNG trang vừa lấy (một query `groupBy`, không N+1). Chỉ tính
-   * review `published` chưa xoá — cùng quy tắc với `tenants.rating_avg` (xem `review.ts`).
-   * Index `[vehicleId, status, createdAt]` phục vụ truy vấn này.
+   * Facet counts cho panel Bộ lọc: total (mọi filter), biên giá (bỏ filter giá → slider không
+   * tự co khi kéo), groupBy cho từng chiều scalar (bỏ chính chiều đó), 4 count tiện ích.
+   * Tính năng nằm trong mảng `features` nên đếm riêng bằng raw unnest (Prisma groupBy không
+   * bung được phần tử mảng). Dùng Promise.all thay vì `$transaction([...])` dạng mảng vì
+   * overload transaction-mảng của groupBy mất literal type (`_count` suy về union) — số đếm
+   * facet là dữ liệu hiển thị, lệch một nhịp giữa các query không sao.
+   */
+  async facets(query: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
+    const [
+      total,
+      priceAgg,
+      bodyTypeRows,
+      brandRows,
+      seatRows,
+      fuelRows,
+      hourlyCount,
+      deliveryCount,
+      noCollateralCount,
+      discountCount,
+    ] = await Promise.all([
+      this.prisma.publicListing.count({ where: buildListingWhere(query) }),
+      this.prisma.publicListing.aggregate({
+        where: buildListingWhere(query, 'price'),
+        _min: { weekdayPrice: true },
+        _max: { weekdayPrice: true },
+      }),
+      this.prisma.publicListing.groupBy({
+        by: ['bodyType'],
+        where: buildListingWhere(query, 'bodyType'),
+        _count: { _all: true },
+      }),
+      this.prisma.publicListing.groupBy({
+        by: ['brand'],
+        where: buildListingWhere(query, 'brand'),
+        _count: { _all: true },
+      }),
+      this.prisma.publicListing.groupBy({
+        by: ['seatCount'],
+        where: buildListingWhere(query, 'seats'),
+        _count: { _all: true },
+      }),
+      this.prisma.publicListing.groupBy({
+        by: ['fuelType'],
+        where: buildListingWhere(query, 'fuelType'),
+        _count: { _all: true },
+      }),
+      this.prisma.publicListing.count({
+        where: { AND: [buildListingWhere(query, 'hourly'), { hourlyPrice: { not: null } }] },
+      }),
+      this.prisma.publicListing.count({
+        where: { AND: [buildListingWhere(query, 'delivery'), { deliveryEnabled: true }] },
+      }),
+      this.prisma.publicListing.count({
+        where: { AND: [buildListingWhere(query, 'noCollateral'), { noCollateral: true }] },
+      }),
+      this.prisma.publicListing.count({
+        where: { AND: [buildListingWhere(query, 'discount'), { discountPercent: { gt: 0 } }] },
+      }),
+    ]);
+
+    // Gom seatCount thô về bucket (4 / 5 / 7 / 7+) ở JS — mỗi giá trị rơi đúng một bucket.
+    const seatCounts = new Map<SeatBucket, number>();
+    for (const row of seatRows) {
+      const bucket = seatBucketOf(row.seatCount);
+      if (!bucket) continue;
+      seatCounts.set(bucket, (seatCounts.get(bucket) ?? 0) + row._count._all);
+    }
+
+    return {
+      total,
+      price: {
+        min: priceAgg._min.weekdayPrice as unknown as string | null,
+        max: priceAgg._max.weekdayPrice as unknown as string | null,
+      },
+      bodyType: bodyTypeRows
+        .filter((r): r is typeof r & { bodyType: string } => r.bodyType != null)
+        .map((r) => ({ key: r.bodyType, count: r._count._all })),
+      brand: brandRows
+        .filter((r): r is typeof r & { brand: string } => r.brand != null)
+        .map((r) => ({ key: r.brand, count: r._count._all }))
+        .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key, 'vi')),
+      seats: SEAT_BUCKET_VALUES.filter((b) => seatCounts.has(b)).map((b) => ({
+        key: b,
+        count: seatCounts.get(b) ?? 0,
+      })),
+      fuelType: fuelRows
+        .filter((r): r is typeof r & { fuelType: string } => r.fuelType != null)
+        .map((r) => ({ key: r.fuelType, count: r._count._all })),
+      features: await this.featureFacets(query),
+      amenities: {
+        hourly: hourlyCount,
+        delivery: deliveryCount,
+        noCollateral: noCollateralCount,
+        discount: discountCount,
+      },
+    };
+  }
+
+  /**
+   * Đếm listing theo từng key tính năng: lấy id khớp filter (bỏ chiều features) rồi unnest mảng
+   * `features` bằng raw SQL — cách duy nhất groupBy theo phần tử mảng; GIN index không giúp
+   * unnest nhưng tập id đã được filter thu hẹp trước.
+   */
+  private async featureFacets(query: ListingFacetsQueryDto): Promise<FacetBucketDto[]> {
+    const rows = await this.prisma.publicListing.findMany({
+      where: buildListingWhere(query, 'features'),
+      select: { id: true },
+    });
+    if (rows.length === 0) return [];
+
+    const ids = rows.map((r) => r.id);
+    const counted = await this.prisma.$queryRaw<Array<{ key: string; count: number }>>`
+      SELECT f AS key, COUNT(*)::int AS count
+      FROM "public_listings" pl, LATERAL unnest(pl."features") AS f
+      WHERE pl."id" IN (${Prisma.join(ids)})
+      GROUP BY f
+    `;
+    return counted
+      .map((r) => ({ key: r.key, count: Number(r.count) }))
+      .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+  }
+
+  /**
+   * Điểm đánh giá gộp theo xe, tính live từ `reviews` — giờ chỉ còn `getById` dùng (chi tiết đọc
+   * thẳng `vehicles`, không có snapshot); danh sách đọc cột denormalize `rating_avg/rating_count`
+   * trên `public_listings`. Chỉ tính review `published` chưa xoá — cùng quy tắc với
+   * `tenants.rating_avg` (xem `review.ts`). Index `[vehicleId, status, createdAt]` phục vụ.
    */
   private async ratingsByVehicle(vehicleIds: string[]): Promise<Map<string, VehicleRating>> {
     if (vehicleIds.length === 0) return new Map();
@@ -370,9 +599,8 @@ export class PublicListingsService {
       }),
     ]);
 
-    const ratings = await this.ratingsByVehicle(rows.map((r) => r.vehicleId));
     return {
-      data: rows.map((r) => toListingCard(r, ratings.get(r.vehicleId))),
+      data: rows.map(toListingCard),
       meta: { page, limit, total, hasNext: page * limit < total },
     };
   }
@@ -398,9 +626,14 @@ export class PublicListingsService {
         model: true,
         seatCount: true,
         fuelType: true,
+        bodyType: true,
         mainImageUrl: true,
         weekdayPrice: true,
         weekendPrice: true,
+        hourlyPrice: true,
+        deliveryEnabled: true,
+        noCollateral: true,
+        discountPercent: true,
         description: true,
         color: true,
         manufactureYear: true,
@@ -433,9 +666,14 @@ export class PublicListingsService {
       model: v.model,
       seatCount: v.seatCount,
       fuelType: v.fuelType,
+      bodyType: v.bodyType,
       mainImageUrl: v.mainImageUrl,
       weekdayPrice: v.weekdayPrice as unknown as string | null,
       weekendPrice: v.weekendPrice as unknown as string | null,
+      hourlyPrice: v.hourlyPrice as unknown as string | null,
+      deliveryEnabled: v.deliveryEnabled,
+      noCollateral: v.noCollateral,
+      discountPercent: v.discountPercent,
       shopName: v.tenant.name,
       shopSlug: v.tenant.slug,
       shopProvince: v.tenant.profile?.provinceName ?? null,

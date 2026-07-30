@@ -1,14 +1,18 @@
 import {
+  BODY_TYPE_LABEL,
+  BODY_TYPE_VALUES,
   FUEL_TYPE_LABEL,
   FUEL_TYPE_VALUES,
   SERVICE_TYPE_LABEL,
   SERVICE_TYPE_VALUES,
+  VEHICLE_BRANDS,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_PUBLIC_STATUS_META,
   VEHICLE_PUBLIC_STATUS_VALUES,
   VEHICLE_TYPE_LABEL,
   VEHICLE_TYPE_VALUES,
+  type BodyType,
   type FuelType,
   type ServiceType,
   type VehicleType,
@@ -34,6 +38,11 @@ function fromMeta<T extends string>(
 export const VEHICLE_TYPE_OPTIONS = fromLabel(VEHICLE_TYPE_VALUES, VEHICLE_TYPE_LABEL);
 export const SERVICE_TYPE_OPTIONS = fromLabel(SERVICE_TYPE_VALUES, SERVICE_TYPE_LABEL);
 export const FUEL_TYPE_OPTIONS = fromLabel(FUEL_TYPE_VALUES, FUEL_TYPE_LABEL);
+export const BODY_TYPE_OPTIONS = fromLabel(BODY_TYPE_VALUES, BODY_TYPE_LABEL);
+/** Gợi ý hãng xe curated — AutoComplete vẫn cho nhập hãng lạ, nhưng chọn từ đây thì facet gom nhóm chuẩn. */
+export const BRAND_OPTIONS: readonly { value: string }[] = VEHICLE_BRANDS.map((b) => ({
+  value: b.label,
+}));
 export const OPERATION_STATUS_OPTIONS = fromMeta(
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_OPERATION_STATUS_META,
@@ -50,6 +59,8 @@ export const serviceTypeLabel = (value: string): string =>
   SERVICE_TYPE_LABEL[value as ServiceType] ?? value;
 export const fuelTypeLabel = (value: string | null | undefined): string =>
   value ? (FUEL_TYPE_LABEL[value as FuelType] ?? value) : '—';
+export const bodyTypeLabelOf = (value: string | null | undefined): string =>
+  value ? (BODY_TYPE_LABEL[value as BodyType] ?? value) : '—';
 
 export const VEHICLE_SORT_OPTIONS: readonly { value: VehicleSort; label: string }[] = [
   { value: 'newest', label: 'Mới nhất' },

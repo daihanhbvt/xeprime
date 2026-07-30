@@ -12,7 +12,7 @@ import {
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { formatDateTime } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
-import { fuelTypeLabel, serviceTypeLabel, vehicleTypeLabel } from '../constants';
+import { bodyTypeLabelOf, fuelTypeLabel, serviceTypeLabel, vehicleTypeLabel } from '../constants';
 import type { VehicleDetail } from '../types';
 import styles from './VehicleDetailView.module.css';
 
@@ -31,12 +31,33 @@ export function VehicleDetailView({ vehicle }: { vehicle: VehicleDetail }) {
     { key: 'seats', label: 'Số chỗ', children: vehicle.seatCount ?? EMPTY },
     { key: 'color', label: 'Màu sắc', children: vehicle.color || EMPTY },
     { key: 'fuel', label: 'Nhiên liệu', children: fuelTypeLabel(vehicle.fuelType) },
+    { key: 'body', label: 'Kiểu dáng', children: bodyTypeLabelOf(vehicle.bodyType) },
     {
       key: 'weekdayPrice',
       label: 'Giá ngày thường',
       children: formatMoneyVnd(vehicle.weekdayPrice),
     },
     { key: 'weekendPrice', label: 'Giá cuối tuần', children: formatMoneyVnd(vehicle.weekendPrice) },
+    {
+      key: 'hourlyPrice',
+      label: 'Giá thuê giờ',
+      children: vehicle.hourlyPrice ? `${formatMoneyVnd(vehicle.hourlyPrice)}/giờ` : EMPTY,
+    },
+    {
+      key: 'discount',
+      label: 'Giảm giá',
+      children: vehicle.discountPercent ? `${vehicle.discountPercent}%` : EMPTY,
+    },
+    {
+      key: 'delivery',
+      label: 'Giao xe tận nơi',
+      children: vehicle.deliveryEnabled ? 'Có' : 'Không',
+    },
+    {
+      key: 'noCollateral',
+      label: 'Miễn thế chấp',
+      children: vehicle.noCollateral ? 'Có' : 'Không',
+    },
     {
       key: 'operation',
       label: 'Trạng thái vận hành',

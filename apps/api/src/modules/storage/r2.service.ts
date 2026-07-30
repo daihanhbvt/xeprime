@@ -23,6 +23,17 @@ export class R2Service {
 
   constructor(private readonly config: ConfigService) {}
 
+  /** Đủ bộ env R2 chưa — endpoint presign check trước để trả 503 rõ ràng thay vì 500. */
+  get enabled(): boolean {
+    return [
+      'R2_ENDPOINT',
+      'R2_ACCESS_KEY_ID',
+      'R2_SECRET_ACCESS_KEY',
+      'R2_BUCKET',
+      'R2_PUBLIC_BASE_URL',
+    ].every((key) => Boolean(this.config.get<string>(key)));
+  }
+
   private async getClient(): Promise<import('@aws-sdk/client-s3').S3Client> {
     if (this.client) return this.client;
     const { S3Client } = await import('@aws-sdk/client-s3');
@@ -41,6 +52,8 @@ export class R2Service {
     prefix: string;
     fileName: string;
     contentType: string;
+    /** Nếu truyền, Content-Length được KÝ vào URL — file to hơn khai báo là R2 từ chối. */
+    contentLength?: number;
   }): Promise<PresignResult> {
     const { PutObjectCommand } = await import('@aws-sdk/client-s3');
     const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
@@ -52,7 +65,12 @@ export class R2Service {
 
     const uploadUrl = await getSignedUrl(
       await this.getClient(),
-      new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: params.contentType }),
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        ContentType: params.contentType,
+        ...(params.contentLength != null ? { ContentLength: params.contentLength } : {}),
+      }),
       { expiresIn },
     );
 

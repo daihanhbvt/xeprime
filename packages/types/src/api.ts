@@ -76,6 +76,8 @@ export const API_ERROR_CODE = {
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  /** Upload ảnh cần đủ bộ env R2 — thiếu thì endpoint presign trả 503 kèm mã này. */
+  UPLOADS_NOT_CONFIGURED: 'UPLOADS_NOT_CONFIGURED',
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODE)[keyof typeof API_ERROR_CODE];

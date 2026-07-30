@@ -1,5 +1,12 @@
 import type { VehicleFormValues } from '@xeprime/validators';
-import type { FuelType, ServiceType, VehicleOperationStatus, VehicleType } from '@xeprime/types';
+import {
+  VEHICLE_TYPE,
+  type BodyType,
+  type FuelType,
+  type ServiceType,
+  type VehicleOperationStatus,
+  type VehicleType,
+} from '@xeprime/types';
 import type { CreateVehicleInput, VehicleDetail } from './types';
 
 /** Text rỗng coi như bỏ trống — không gửi chuỗi rỗng lên API. */
@@ -24,13 +31,19 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     model: textOrUndefined(values.model),
     color: textOrUndefined(values.color),
     fuelType: values.fuelType ?? undefined,
+    // Các trường nullable mới gửi null tường minh để XOÁ được giá trị khi sửa (backend nhận null).
+    bodyType: values.vehicleType === VEHICLE_TYPE.CAR ? (values.bodyType ?? null) : null,
     manufactureYear: values.manufactureYear ?? undefined,
     seatCount: values.seatCount ?? undefined,
     weekdayPrice: values.weekdayPrice == null ? undefined : String(values.weekdayPrice),
     weekendPrice: values.weekendPrice == null ? undefined : String(values.weekendPrice),
+    hourlyPrice: values.hourlyPrice == null ? null : String(values.hourlyPrice),
+    deliveryEnabled: values.deliveryEnabled,
+    noCollateral: values.noCollateral,
+    discountPercent: values.discountPercent ?? null,
     description: textOrUndefined(values.description),
     mainImageUrl: values.mainImageUrl ?? undefined,
-    // Gửi mảng để backend replace-set; lọc URL rỗng phòng người dùng thêm dòng trống.
+    // Gửi mảng để backend replace-set; lọc URL rỗng phòng dữ liệu cũ có dòng trống.
     images: (values.images ?? []).map((u) => u.trim()).filter(Boolean),
     features: values.features ?? [],
   };
@@ -52,10 +65,15 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     model: v.model ?? '',
     color: v.color ?? '',
     fuelType: (v.fuelType ?? null) as FuelType | null,
+    bodyType: (v.bodyType ?? null) as BodyType | null,
     manufactureYear: v.manufactureYear ?? null,
     seatCount: v.seatCount ?? null,
     weekdayPrice: v.weekdayPrice == null ? null : Number(v.weekdayPrice),
     weekendPrice: v.weekendPrice == null ? null : Number(v.weekendPrice),
+    hourlyPrice: v.hourlyPrice == null ? null : Number(v.hourlyPrice),
+    deliveryEnabled: v.deliveryEnabled,
+    noCollateral: v.noCollateral,
+    discountPercent: v.discountPercent ?? null,
     description: v.description ?? '',
     mainImageUrl: v.mainImageUrl ?? null,
     images: v.images ?? [],

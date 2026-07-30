@@ -15,6 +15,7 @@ import {
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationService } from '../notification/notification.service';
+import { ListingsService } from '../public-listings/listings.service';
 import {
   CreateReviewDto,
   MyTripDto,
@@ -38,6 +39,7 @@ export class ReviewService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationService,
+    private readonly listings: ListingsService,
   ) {}
 
   /**
@@ -95,6 +97,9 @@ export class ReviewService {
       });
 
       await this.recomputeTenantRating(tx, booking.tenantId);
+      // Rating denormalize trên public_listings (nuôi sort "Gợi ý") — ghi qua ListingsService
+      // (ADR 0008). Flow ẩn/duyệt review tương lai PHẢI gọi cả 2 hàm recompute này.
+      await this.listings.refreshRating(booking.vehicleId, tx);
 
       await this.notifications.emitToTenantMembers(
         booking.tenantId,

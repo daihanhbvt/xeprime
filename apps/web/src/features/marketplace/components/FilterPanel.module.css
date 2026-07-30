@@ -1,0 +1,146 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Desktop: nội dung cuộn trong Modal, footer của Modal đứng yên. */
+.modalBody {
+  max-height: min(62vh, 640px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--xp-gold-deep);
+  text-transform: none;
+}
+
+.sortSelect {
+  width: 100%;
+}
+
+.sliderWrap {
+  padding: 0 6px;
+}
+
+.sliderCaption {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--xp-color-text-tertiary);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chipGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: var(--xp-border-radius-sm);
+  border: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+
+.chip:hover {
+  border-color: var(--xp-color-primary);
+}
+
+.chipActive {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+}
+
+/* Hết xe khớp (count 0) — mờ đi nhưng vẫn bấm được để chọn trước/bỏ chọn. */
+.chipDim {
+  opacity: 0.45;
+}
+
+.chipLabel {
+  white-space: nowrap;
+}
+
+.chipCount {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--xp-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chipActive .chipCount {
+  color: var(--xp-gold-deep);
+}
+
+.amenityList {
+  display: flex;
+  flex-direction: column;
+}
+
+.amenityRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+  cursor: pointer;
+}
+
+.amenityRow:last-child {
+  border-bottom: none;
+}
+
+.amenityInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.amenityLabel {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.amenityCount {
+  font-weight: 600;
+  color: var(--xp-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.amenityDesc {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.footer {
+  display: flex;
+  gap: 10px;
+}
+
+.applyBtn {
+  flex: 1;
+}

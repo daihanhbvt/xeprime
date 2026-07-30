@@ -7,9 +7,11 @@ import {
   REVIEW_STATUS,
   TENANT_ROLE,
   TENANT_STATUS,
+  VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { NotificationService } from '../src/modules/notification/notification.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { ReviewService } from '../src/modules/review/review.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -23,7 +25,8 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const notifications = new NotificationService(asService);
-const reviews = new ReviewService(asService, notifications);
+const listings = new ListingsService(asService);
+const reviews = new ReviewService(asService, notifications, listings);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -110,8 +113,17 @@ beforeAll(async () => {
     ],
   });
   await prisma.vehicle.create({
-    data: { id: vehicleId, tenantId, code: 'V1', name: 'Xe demo', vehicleType: VEHICLE_TYPE.CAR },
+    data: {
+      id: vehicleId,
+      tenantId,
+      code: 'V1',
+      name: 'Xe demo',
+      vehicleType: VEHICLE_TYPE.CAR,
+      // approved + sync để xe có listing — kiểm luôn rating denormalize trên snapshot.
+      publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+    },
   });
+  await listings.syncFromVehicle(vehicleId);
 
   bookingCompleted1 = await seedBooking(BOOKING_STATUS.COMPLETED);
   bookingCompleted2 = await seedBooking(BOOKING_STATUS.COMPLETED);
@@ -147,6 +159,15 @@ describe('ReviewService — tạo đánh giá + recompute rating', () => {
     const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
     expect(Number(tenant.ratingAvg)).toBe(5);
     expect(tenant.ratingCount).toBe(1);
+
+    // Rating denormalize trên public_listings (nuôi sort "Gợi ý") cập nhật trong CÙNG tx
+    // qua ListingsService.refreshRating (ADR 0008).
+    const listing = await prisma.publicListing.findUniqueOrThrow({
+      where: { vehicleId },
+      select: { ratingAvg: true, ratingCount: true },
+    });
+    expect(Number(listing.ratingAvg)).toBe(5);
+    expect(listing.ratingCount).toBe(1);
 
     // Fan-out per-user: cả owner lẫn staff đều nhận một dòng REVIEW_RECEIVED.
     const notifs = await prisma.notification.count({

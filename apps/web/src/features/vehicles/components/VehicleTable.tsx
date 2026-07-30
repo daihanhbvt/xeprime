@@ -1,7 +1,7 @@
 'use client';
 
 import { CarOutlined, DeleteOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
-import { Avatar, Button, Popconfirm, Space, Table, Tooltip } from 'antd';
+import { Avatar, Button, Popconfirm, Space, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
   VEHICLE_OPERATION_STATUS_META,
@@ -80,7 +80,12 @@ export function VehicleTable({
       title: 'Giá ngày thường',
       key: 'weekdayPrice',
       align: 'right',
-      render: (_, row) => <span className={styles.price}>{formatMoneyVnd(row.weekdayPrice)}</span>,
+      render: (_, row) => (
+        <span className={styles.price}>
+          {formatMoneyVnd(row.weekdayPrice)}
+          {row.discountPercent ? <Tag color="red">-{row.discountPercent}%</Tag> : null}
+        </span>
+      ),
     },
     {
       title: 'Vận hành',

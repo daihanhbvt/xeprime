@@ -1,0 +1,66 @@
+import { Body, Controller, Post, ServiceUnavailableException } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
+import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
+import type { TenantContext } from '../../common/types/request-context';
+import { PresignImageDto, UploadPresignDto } from './dto/storage.dto';
+import { R2Service } from './r2.service';
+
+/**
+ * Presign upload ảnh lên R2 cho portal quản lý — client PUT thẳng lên R2, nhị phân không đi
+ * qua API (cùng pattern chat, ADR 0009 §5) nhưng KHÔNG gate theo firebase: upload ảnh xe/shop
+ * độc lập với chat realtime.
+ *
+ * Prefix key luôn dựng server-side từ `@CurrentTenant` — client không tự chọn được chỗ ghi
+ * (CLAUDE.md mục 5). Mỗi route một permission đúng với tài nguyên mà ảnh phục vụ.
+ */
+@ApiTags('uploads')
+@Controller('uploads')
+@TenantScoped()
+export class StorageController {
+  constructor(private readonly r2: R2Service) {}
+
+  @Post('vehicle-images/presign')
+  @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
+  @ApiOperation({ summary: 'Presign upload ảnh xe (đại diện/gallery) lên R2' })
+  @ApiCreatedResponse({ type: UploadPresignDto })
+  presignVehicleImage(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() dto: PresignImageDto,
+  ): Promise<UploadPresignDto> {
+    this.assertConfigured();
+    return this.r2.presignUpload({
+      prefix: `tenants/${tenant.tenantId}/vehicles`,
+      fileName: dto.fileName,
+      contentType: dto.contentType,
+      contentLength: dto.fileSize,
+    });
+  }
+
+  @Post('shop-media/presign')
+  @RequirePermissions(PERMISSION.TENANT_UPDATE)
+  @ApiOperation({ summary: 'Presign upload logo/ảnh bìa gian hàng lên R2' })
+  @ApiCreatedResponse({ type: UploadPresignDto })
+  presignShopMedia(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() dto: PresignImageDto,
+  ): Promise<UploadPresignDto> {
+    this.assertConfigured();
+    return this.r2.presignUpload({
+      prefix: `tenants/${tenant.tenantId}/shop`,
+      fileName: dto.fileName,
+      contentType: dto.contentType,
+      contentLength: dto.fileSize,
+    });
+  }
+
+  /** Thiếu env R2 → 503 mã ổn định để FE hiện hướng dẫn, thay vì 500 khó hiểu từ getOrThrow. */
+  private assertConfigured(): void {
+    if (!this.r2.enabled) {
+      throw new ServiceUnavailableException({
+        code: API_ERROR_CODE.UPLOADS_NOT_CONFIGURED,
+        message: 'Upload ảnh chưa được cấu hình (thiếu R2_* trong môi trường)',
+      });
+    }
+  }
+}

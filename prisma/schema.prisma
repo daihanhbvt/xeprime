@@ -477,6 +477,8 @@ model Vehicle {
   color            String?   @db.VarChar(80)
   seatCount        Int?      @map("seat_count")
   fuelType         String?   @map("fuel_type") @db.VarChar(50)
+  /// @xeprime/types → BodyType. Kiểu dáng thân xe — chỉ có nghĩa khi vehicleType = car.
+  bodyType         String?   @map("body_type") @db.VarChar(50)
   /// @xeprime/types → VehicleOperationStatus
   operationStatus  String    @default("available") @map("operation_status") @db.VarChar(50)
   /// @xeprime/types → VehiclePublicStatus.
@@ -484,9 +486,19 @@ model Vehicle {
   publicStatus     String    @default("draft") @map("public_status") @db.VarChar(50)
   description      String?   @db.Text
   mainImageUrl     String?   @map("main_image_url") @db.Text
-  /// Giá tham chiếu Phase 0. Phase 2 tách sang bảng vehicle_pricing.
+  /// Giá tham chiếu Phase 0 (bảng vehicle_pricing riêng trong design §9.6 KHÔNG tách nữa —
+  /// giá + tiện ích thuê nằm luôn trên vehicles, mirror sang public_listings để filter).
   weekdayPrice     Decimal?  @map("weekday_price") @db.Decimal(14, 2)
   weekendPrice     Decimal?  @map("weekend_price") @db.Decimal(14, 2)
+  /// Giá thuê theo giờ — NULL = xe không cho thuê giờ (tiện ích "Thuê theo giờ").
+  hourlyPrice      Decimal?  @map("hourly_price") @db.Decimal(14, 2)
+  /// Chủ xe hỗ trợ giao xe tận nơi.
+  deliveryEnabled  Boolean   @default(false) @map("delivery_enabled")
+  /// Không yêu cầu cọc tài sản (miễn thế chấp).
+  noCollateral     Boolean   @default(false) @map("no_collateral")
+  /// % giảm giá đang chạy (0–100, CHECK ở migration) — NULL/0 = không giảm. Chỉ để hiển thị
+  /// marketing; giá chốt thật do shop quyết khi duyệt booking request.
+  discountPercent  Int?      @map("discount_percent")
   createdBy        String?   @map("created_by") @db.Char(26)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -567,10 +579,23 @@ model PublicListing {
   model        String?   @db.VarChar(100)
   seatCount    Int?      @map("seat_count")
   fuelType     String?   @map("fuel_type") @db.VarChar(50)
+  /// @xeprime/types → BodyType
+  bodyType     String?   @map("body_type") @db.VarChar(50)
   provinceName String?   @map("province_name") @db.VarChar(100)
   mainImageUrl String?   @map("main_image_url") @db.Text
   weekdayPrice Decimal?  @map("weekday_price") @db.Decimal(14, 2)
   weekendPrice Decimal?  @map("weekend_price") @db.Decimal(14, 2)
+  hourlyPrice  Decimal?  @map("hourly_price") @db.Decimal(14, 2)
+  deliveryEnabled Boolean @default(false) @map("delivery_enabled")
+  noCollateral Boolean   @default(false) @map("no_collateral")
+  discountPercent Int?   @map("discount_percent")
+  /// Denormalize từ vehicle_features (key thuộc VEHICLE_FEATURE_LABEL) — filter `hasEvery`
+  /// + facet count qua GIN index, khỏi join 2 bảng mỗi query marketplace.
+  features     String[]  @default([])
+  /// Denormalize điểm đánh giá (review published) — nuôi sort `recommended`. Chỉ
+  /// ListingsService.refreshRating được cập nhật (ADR 0008).
+  ratingAvg    Decimal?  @map("rating_avg") @db.Decimal(3, 2)
+  ratingCount  Int       @default(0) @map("rating_count")
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -581,6 +606,9 @@ model PublicListing {
   @@index([provinceName])
   @@index([tenantId, status])
   @@index([weekdayPrice])
+  @@index([status, bodyType])
+  @@index([status, fuelType])
+  @@index([features], type: Gin)
   @@map("public_listings")
 }
 

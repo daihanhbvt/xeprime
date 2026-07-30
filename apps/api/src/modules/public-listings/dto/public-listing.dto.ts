@@ -1,15 +1,52 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SERVICE_TYPE_VALUES, VEHICLE_TYPE_VALUES } from '@xeprime/types';
-import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsISO8601, IsOptional, IsString, Max, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import {
+  BODY_TYPE_VALUES,
+  DEFAULT_LISTING_SORT,
+  FUEL_TYPE_VALUES,
+  LISTING_SORT_VALUES,
+  SEAT_BUCKET_VALUES,
+  SERVICE_TYPE_VALUES,
+  VEHICLE_FEATURE_KEYS,
+  VEHICLE_TYPE_VALUES,
+  type ListingSort,
+} from '@xeprime/types';
+import { Transform, Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
-/** Cách sắp xếp kết quả marketplace. */
-export const LISTING_SORT = ['newest', 'price_asc', 'price_desc'] as const;
-export type ListingSort = (typeof LISTING_SORT)[number];
+/**
+ * Query param dạng CSV (`sedan,suv`) → mảng để validate `each` — URL searchParams thân thiện
+ * hơn repeated param, FE join(',') một chỗ.
+ */
+const splitCsv = ({ value }: { value: unknown }): unknown =>
+  typeof value === 'string'
+    ? value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : value;
+
+/** Query param boolean-ish (`1`/`true`) → boolean; giá trị lạ giữ nguyên để @IsBoolean chặn. */
+const toBool = ({ value }: { value: unknown }): unknown => {
+  if (value === true || value === 'true' || value === '1') return true;
+  if (value === false || value === 'false' || value === '0') return false;
+  return value;
+};
 
 /**
  * Query trang marketplace — luôn phân trang, filter và scope ở tầng DB (skill backend-endpoint).
- * `limit` có trần cứng để client không kéo cả bảng.
+ * `limit` có trần cứng để client không kéo cả bảng. Các chiều facet nhận CSV multi-select;
+ * wire type khai là String (CSV) để contract FE sinh ra đúng thứ đi trên URL.
  */
 export class PublicListingQueryDto {
   @ApiPropertyOptional({ enum: VEHICLE_TYPE_VALUES, description: 'car | motorbike' })
@@ -22,12 +59,70 @@ export class PublicListingQueryDto {
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
 
-  @ApiPropertyOptional({ description: 'Hãng xe' })
+  @ApiPropertyOptional({ type: String, description: 'Hãng xe — CSV, multi-select (vd: Toyota,Kia)' })
   @IsOptional()
-  @IsString()
-  brand?: string;
+  @Transform(splitCsv)
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  brand?: string[];
 
-  @ApiPropertyOptional({ description: 'Số chỗ tối thiểu' })
+  @ApiPropertyOptional({ type: String, description: 'Kiểu dáng thân xe — CSV (BODY_TYPE)' })
+  @IsOptional()
+  @Transform(splitCsv)
+  @IsArray()
+  @IsIn(BODY_TYPE_VALUES, { each: true })
+  bodyType?: string[];
+
+  @ApiPropertyOptional({ type: String, description: 'Bucket số chỗ — CSV (4,5,7,8plus)' })
+  @IsOptional()
+  @Transform(splitCsv)
+  @IsArray()
+  @IsIn(SEAT_BUCKET_VALUES, { each: true })
+  seats?: string[];
+
+  @ApiPropertyOptional({ type: String, description: 'Nhiên liệu — CSV (FUEL_TYPE)' })
+  @IsOptional()
+  @Transform(splitCsv)
+  @IsArray()
+  @IsIn(FUEL_TYPE_VALUES, { each: true })
+  fuelType?: string[];
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn',
+  })
+  @IsOptional()
+  @Transform(splitCsv)
+  @IsArray()
+  @IsIn(VEHICLE_FEATURE_KEYS, { each: true })
+  features?: string[];
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Chỉ xe có giá thuê giờ' })
+  @IsOptional()
+  @Transform(toBool)
+  @IsBoolean()
+  hourly?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Chỉ xe giao tận nơi' })
+  @IsOptional()
+  @Transform(toBool)
+  @IsBoolean()
+  delivery?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Chỉ xe miễn thế chấp' })
+  @IsOptional()
+  @Transform(toBool)
+  @IsBoolean()
+  noCollateral?: boolean;
+
+  @ApiPropertyOptional({ type: Boolean, description: 'Chỉ xe đang giảm giá' })
+  @IsOptional()
+  @Transform(toBool)
+  @IsBoolean()
+  discount?: boolean;
+
+  @ApiPropertyOptional({ description: 'Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`)' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -69,9 +164,9 @@ export class PublicListingQueryDto {
   @IsISO8601()
   returnAt?: string;
 
-  @ApiPropertyOptional({ enum: LISTING_SORT, default: 'newest' })
+  @ApiPropertyOptional({ enum: LISTING_SORT_VALUES, default: DEFAULT_LISTING_SORT })
   @IsOptional()
-  @IsIn(LISTING_SORT)
+  @IsIn(LISTING_SORT_VALUES)
   sort?: ListingSort;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })
@@ -90,6 +185,13 @@ export class PublicListingQueryDto {
   limit?: number;
 }
 
+/** Query facets — cùng bộ filter với search; sort/paging vô nghĩa với đếm nên bỏ. */
+export class ListingFacetsQueryDto extends OmitType(PublicListingQueryDto, [
+  'sort',
+  'page',
+  'limit',
+] as const) {}
+
 export class PublicListingDto {
   @ApiProperty() id!: string;
   @ApiProperty() name!: string;
@@ -100,6 +202,8 @@ export class PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true }) model!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) seatCount!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true }) fuelType!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Kiểu dáng (BODY_TYPE)' })
+  bodyType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tiền dạng string — ADR 0007' })
@@ -107,6 +211,23 @@ export class PublicListingDto {
 
   @ApiPropertyOptional({ type: String, nullable: true })
   weekendPrice!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ.',
+  })
+  hourlyPrice!: string | null;
+
+  @ApiProperty({ description: 'Chủ xe hỗ trợ giao xe tận nơi' }) deliveryEnabled!: boolean;
+  @ApiProperty({ description: 'Miễn thế chấp (không cần cọc tài sản)' }) noCollateral!: boolean;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: '% giảm giá marketing (0–100). Giá chốt thật do shop quyết khi duyệt yêu cầu.',
+  })
+  discountPercent!: number | null;
 
   @ApiProperty({ description: 'Tên gian hàng' }) shopName!: string;
   @ApiProperty({ description: 'Slug gian hàng cho route /shops/[slug]' }) shopSlug!: string;
@@ -145,6 +266,53 @@ export class PublicListingPageMetaDto {
   @ApiProperty() limit!: number;
   @ApiProperty() total!: number;
   @ApiProperty() hasNext!: boolean;
+}
+
+/** Một option trong một chiều facet — key giá trị + số listing khớp. */
+export class FacetBucketDto {
+  @ApiProperty({ description: 'Giá trị của option (body type key, tên hãng, bucket số chỗ…)' })
+  key!: string;
+
+  @ApiProperty({ description: 'Số listing khớp nếu chọn option này' })
+  count!: number;
+}
+
+/** Biên giá thuê/ngày của tập listing khớp filter (bỏ qua chính filter giá) — nuôi slider. */
+export class PriceBoundsDto {
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giá thấp nhất — string tiền (ADR 0007)' })
+  min!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giá cao nhất — string tiền (ADR 0007)' })
+  max!: string | null;
+}
+
+/** Số listing khớp cho từng toggle tiện ích (mỗi số đã bỏ qua chính toggle đó). */
+export class AmenityFacetsDto {
+  @ApiProperty({ description: 'Xe có giá thuê giờ' }) hourly!: number;
+  @ApiProperty({ description: 'Xe giao tận nơi' }) delivery!: number;
+  @ApiProperty({ description: 'Xe miễn thế chấp' }) noCollateral!: number;
+  @ApiProperty({ description: 'Xe đang giảm giá' }) discount!: number;
+}
+
+/**
+ * Facet counts cho panel Bộ lọc — semantics chuẩn faceted search: MỖI chiều được đếm với toàn
+ * bộ filter đang chọn TRỪ chính chiều đó (chọn SUV vẫn thấy Sedan còn bao nhiêu xe).
+ * `total` là số xe khớp TẤT CẢ filter — nuôi nút "Áp dụng (N xe)".
+ */
+export class ListingFacetsDto {
+  @ApiProperty({ description: 'Số xe khớp toàn bộ filter — nút "Áp dụng (N xe)"' }) total!: number;
+  @ApiProperty({ type: PriceBoundsDto }) price!: PriceBoundsDto;
+  @ApiProperty({ type: [FacetBucketDto], description: 'Theo kiểu dáng (BODY_TYPE key)' })
+  bodyType!: FacetBucketDto[];
+  @ApiProperty({ type: [FacetBucketDto], description: 'Theo hãng xe (tên hãng như đã lưu)' })
+  brand!: FacetBucketDto[];
+  @ApiProperty({ type: [FacetBucketDto], description: 'Theo bucket số chỗ (SEAT_BUCKET key)' })
+  seats!: FacetBucketDto[];
+  @ApiProperty({ type: [FacetBucketDto], description: 'Theo nhiên liệu (FUEL_TYPE key)' })
+  fuelType!: FacetBucketDto[];
+  @ApiProperty({ type: [FacetBucketDto], description: 'Theo tiện ích xe (VEHICLE_FEATURE key)' })
+  features!: FacetBucketDto[];
+  @ApiProperty({ type: AmenityFacetsDto }) amenities!: AmenityFacetsDto;
 }
 
 export class PublicListingPageDto {
@@ -235,9 +403,9 @@ export class PublicShopListQueryDto {
 
 /** Query danh sách xe của một gian hàng — phân trang + sort (không nhận slug qua body). */
 export class ShopListingQueryDto {
-  @ApiPropertyOptional({ enum: LISTING_SORT, default: 'newest' })
+  @ApiPropertyOptional({ enum: LISTING_SORT_VALUES, default: DEFAULT_LISTING_SORT })
   @IsOptional()
-  @IsIn(LISTING_SORT)
+  @IsIn(LISTING_SORT_VALUES)
   sort?: ListingSort;
 
   @ApiPropertyOptional({ default: 1, minimum: 1 })

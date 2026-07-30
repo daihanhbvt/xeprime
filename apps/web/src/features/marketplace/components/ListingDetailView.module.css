@@ -73,6 +73,7 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .price b {
@@ -84,9 +85,41 @@
   color: var(--xp-color-text-secondary);
 }
 
+.oldPrice {
+  font-size: 15px;
+  color: var(--xp-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.discountTag {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--xp-color-error);
+  /* Chữ trắng trên nền đỏ — token error là màu nền, không có biến chữ-trên-error riêng. */
+  color: #fff;
+}
+
 .weekend {
   margin-left: auto;
   font-size: 13px;
+}
+
+.amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.amenityBadge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--xp-gold-wash);
+  border: 1px solid var(--xp-color-border-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-gold-deep);
 }
 
 .specs {

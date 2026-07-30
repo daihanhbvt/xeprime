@@ -22,3 +22,19 @@ export function formatMoneyVnd(value: MoneyString | null | undefined): string {
     ? `${grouped},${fractionPart} ${CURRENCY_SUFFIX}`
     : `${grouped} ${CURRENCY_SUFFIX}`;
 }
+
+/**
+ * Giá SAU giảm để HIỂN THỊ marketing (thẻ xe/trang chi tiết) — không phải số tiền chốt của
+ * đơn (giá thật do shop quyết khi duyệt yêu cầu). Giá thuê VND là số nguyên ≤ 14 chữ số nên
+ * `Number` ở đây không mất chính xác; không dùng cho cộng dồn kế toán (ADR 0007).
+ */
+export function applyDiscountPercent(
+  value: MoneyString | null | undefined,
+  percent: number | null | undefined,
+): MoneyString | null {
+  if (value == null || value === '') return null;
+  if (!percent || percent <= 0 || percent > 100) return value;
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value;
+  return String(Math.round((n * (100 - percent)) / 100));
+}

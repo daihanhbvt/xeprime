@@ -53,7 +53,15 @@ async function seedVehicle(): Promise<string> {
       description: 'Xe 5 chỗ máy xăng.',
       mainImageUrl: 'https://img.example/vios.jpg',
       weekdayPrice: '600000',
+      // Field facet mới — snapshot phải mang đủ (assert ở test duyệt xe).
+      bodyType: 'sedan',
+      hourlyPrice: '90000',
+      deliveryEnabled: true,
+      discountPercent: 10,
     },
+  });
+  await prisma.vehicleFeature.create({
+    data: { id: newId(), vehicleId: id, featureKey: 'bluetooth' },
   });
   return id;
 }
@@ -154,17 +162,38 @@ const maybe = (name: string, fn: () => Promise<void>) =>
   });
 
 describe('public_listings sync (ADR 0008)', () => {
-  maybe('duyệt xe → listing active đúng snapshot + hiện trên search', async () => {
+  maybe('duyệt xe → listing active đúng snapshot (kèm field facet mới) + hiện trên search', async () => {
     await approve(vApprove);
 
     const listing = await prisma.publicListing.findUniqueOrThrow({
       where: { vehicleId: vApprove },
-      select: { status: true, title: true, weekdayPrice: true, provinceName: true },
+      select: {
+        status: true,
+        title: true,
+        weekdayPrice: true,
+        provinceName: true,
+        bodyType: true,
+        hourlyPrice: true,
+        deliveryEnabled: true,
+        noCollateral: true,
+        discountPercent: true,
+        features: true,
+        ratingAvg: true,
+        ratingCount: true,
+      },
     });
     expect(listing.status).toBe(LISTING_STATUS.ACTIVE);
     expect(listing.title).toBe('Toyota Vios');
     expect(String(listing.weekdayPrice)).toBe('600000');
     expect(listing.provinceName).toBe(PROV);
+    expect(listing.bodyType).toBe('sedan');
+    expect(String(listing.hourlyPrice)).toBe('90000');
+    expect(listing.deliveryEnabled).toBe(true);
+    expect(listing.noCollateral).toBe(false);
+    expect(listing.discountPercent).toBe(10);
+    expect(listing.features).toEqual(['bluetooth']);
+    expect(listing.ratingAvg).toBeNull();
+    expect(listing.ratingCount).toBe(0);
     expect(await inSearch(vApprove)).toBe(true);
   });
 
@@ -198,6 +227,52 @@ describe('public_listings sync (ADR 0008)', () => {
       },
     });
     expect(pending).toBe(1);
+  });
+
+  maybe('sửa hourlyPrice/discountPercent (nhạy cảm mới) → knock-back; sửa tiện ích thường thì không', async () => {
+    // vApprove đang pending từ test trước — duyệt lại cho active.
+    const task = await prisma.approvalTask.findFirstOrThrow({
+      where: {
+        targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+        targetId: vApprove,
+        status: APPROVAL_STATUS.PENDING,
+      },
+      select: { id: true },
+    });
+    await approvals.approve(task.id, reviewerId);
+    expect(await inSearch(vApprove)).toBe(true);
+
+    // Giá giờ / % giảm là trường nhạy cảm (VEHICLE_PUBLIC_SENSITIVE_FIELDS) → hạ về chờ duyệt.
+    await vehicles.update(tenantId, vApprove, ownerId, {
+      hourlyPrice: '150000',
+      discountPercent: 20,
+    });
+    let listing = await prisma.publicListing.findUniqueOrThrow({
+      where: { vehicleId: vApprove },
+      select: { status: true },
+    });
+    expect(listing.status).toBe(LISTING_STATUS.HIDDEN);
+
+    // Duyệt lại rồi sửa trường KHÔNG nhạy cảm (miễn thế chấp) → listing giữ active và snapshot
+    // cập nhật tại chỗ.
+    const task2 = await prisma.approvalTask.findFirstOrThrow({
+      where: {
+        targetType: APPROVAL_TARGET_TYPE.VEHICLE,
+        targetId: vApprove,
+        status: APPROVAL_STATUS.PENDING,
+      },
+      select: { id: true },
+    });
+    await approvals.approve(task2.id, reviewerId);
+
+    await vehicles.update(tenantId, vApprove, ownerId, { noCollateral: true });
+    listing = await prisma.publicListing.findUniqueOrThrow({
+      where: { vehicleId: vApprove },
+      select: { status: true, noCollateral: true, discountPercent: true },
+    });
+    expect(listing.status).toBe(LISTING_STATUS.ACTIVE);
+    expect(listing.noCollateral).toBe(true);
+    expect(listing.discountPercent).toBe(20);
   });
 
   maybe('xoá mềm xe → listing archived, getById cũ trả 404, không search ra', async () => {

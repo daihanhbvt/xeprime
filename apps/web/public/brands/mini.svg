@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <circle cx="24" cy="24" r="12.5" fill="none" stroke="#4a4a4a" stroke-width="2.2"/>
+  <path d="M4.5 20.5h7M4.5 24h7M4.5 27.5h7M36.5 20.5h7M36.5 24h7M36.5 27.5h7" stroke="#4a4a4a" stroke-width="2"/>
+  <text x="24" y="27" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="8" font-weight="800" letter-spacing="0.5" fill="#4a4a4a">MINI</text>
+</svg>

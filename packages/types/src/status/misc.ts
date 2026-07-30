@@ -52,6 +52,25 @@ export const LISTING_STATUS_META: Readonly<Record<ListingStatus, StatusMeta>> = 
   [LISTING_STATUS.ARCHIVED]: { label: 'Đã lưu trữ', color: 'default' },
 };
 
+/**
+ * Sắp xếp danh sách marketplace — dùng chung cho query DTO của `/public/listings` (BE) và
+ * chip/select sắp xếp (FE), tránh 2 bản chép tay lệch nhau.
+ *
+ * `recommended` (mặc định): rating cao trước (NULLS LAST) → nhiều đánh giá trước → mới trước.
+ */
+export const LISTING_SORT_VALUES = ['recommended', 'newest', 'price_asc', 'price_desc'] as const;
+
+export type ListingSort = (typeof LISTING_SORT_VALUES)[number];
+
+export const DEFAULT_LISTING_SORT: ListingSort = 'recommended';
+
+export const LISTING_SORT_LABEL: Readonly<Record<ListingSort, string>> = {
+  recommended: 'Gợi ý',
+  newest: 'Mới nhất',
+  price_asc: 'Giá thấp → cao',
+  price_desc: 'Giá cao → thấp',
+};
+
 /** Trạng thái phiếu thu/chi. */
 export const RECEIPT_STATUS = {
   DRAFT: 'draft',

@@ -914,16 +914,88 @@
             "name": "brand",
             "required": false,
             "in": "query",
-            "description": "Hãng xe",
+            "description": "Hãng xe — CSV, multi-select (vd: Toyota,Kia)",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "bodyType",
+            "required": false,
+            "in": "query",
+            "description": "Kiểu dáng thân xe — CSV (BODY_TYPE)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "seats",
+            "required": false,
+            "in": "query",
+            "description": "Bucket số chỗ — CSV (4,5,7,8plus)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fuelType",
+            "required": false,
+            "in": "query",
+            "description": "Nhiên liệu — CSV (FUEL_TYPE)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "features",
+            "required": false,
+            "in": "query",
+            "description": "Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hourly",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe có giá thuê giờ",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "delivery",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe giao tận nơi",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "noCollateral",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe miễn thế chấp",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "discount",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe đang giảm giá",
+            "schema": {
+              "type": "boolean"
             }
           },
           {
             "name": "minSeats",
             "required": false,
             "in": "query",
-            "description": "Số chỗ tối thiểu",
+            "description": "Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`)",
             "schema": {
               "type": "number"
             }
@@ -989,9 +1061,10 @@
             "required": false,
             "in": "query",
             "schema": {
-              "default": "newest",
+              "default": "recommended",
               "type": "string",
               "enum": [
+                "recommended",
                 "newest",
                 "price_asc",
                 "price_desc"
@@ -1033,6 +1106,202 @@
           }
         },
         "summary": "Tìm xe trên Marketplace (phân trang, filter, sort)",
+        "tags": [
+          "public-listings"
+        ]
+      }
+    },
+    "/public/listings/facets": {
+      "get": {
+        "operationId": "PublicListingsController_facets",
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "description": "car | motorbike",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
+            "name": "serviceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "both",
+                "long_term"
+              ]
+            }
+          },
+          {
+            "name": "brand",
+            "required": false,
+            "in": "query",
+            "description": "Hãng xe — CSV, multi-select (vd: Toyota,Kia)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bodyType",
+            "required": false,
+            "in": "query",
+            "description": "Kiểu dáng thân xe — CSV (BODY_TYPE)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "seats",
+            "required": false,
+            "in": "query",
+            "description": "Bucket số chỗ — CSV (4,5,7,8plus)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fuelType",
+            "required": false,
+            "in": "query",
+            "description": "Nhiên liệu — CSV (FUEL_TYPE)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "features",
+            "required": false,
+            "in": "query",
+            "description": "Tiện ích xe — CSV (VEHICLE_FEATURE_LABEL); xe phải có ĐỦ các key đã chọn",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hourly",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe có giá thuê giờ",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "delivery",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe giao tận nơi",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "noCollateral",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe miễn thế chấp",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "discount",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ xe đang giảm giá",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "minSeats",
+            "required": false,
+            "in": "query",
+            "description": "Số chỗ tối thiểu (giữ tương thích cũ — mới dùng `seats`)",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên/hãng/model",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "province",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo tỉnh/thành của gian hàng",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "priceMin",
+            "required": false,
+            "in": "query",
+            "description": "Giá thuê/ngày tối thiểu (VND)",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "priceMax",
+            "required": false,
+            "in": "query",
+            "description": "Giá thuê/ngày tối đa (VND)",
+            "schema": {
+              "minimum": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pickupAt",
+            "required": false,
+            "in": "query",
+            "description": "Nhận xe (ISO-8601) — lọc xe rảnh trong khoảng",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnAt",
+            "required": false,
+            "in": "query",
+            "description": "Trả xe (ISO-8601) — dùng cùng pickupAt",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingFacetsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Facet counts cho panel Bộ lọc (đếm theo từng chiều filter)",
         "tags": [
           "public-listings"
         ]
@@ -1198,9 +1467,10 @@
             "required": false,
             "in": "query",
             "schema": {
-              "default": "newest",
+              "default": "recommended",
               "type": "string",
               "enum": [
+                "recommended",
                 "newest",
                 "price_asc",
                 "price_desc"
@@ -3359,6 +3629,70 @@
         ]
       }
     },
+    "/uploads/vehicle-images/presign": {
+      "post": {
+        "operationId": "StorageController_presignVehicleImage",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Presign upload ảnh xe (đại diện/gallery) lên R2",
+        "tags": [
+          "uploads"
+        ]
+      }
+    },
+    "/uploads/shop-media/presign": {
+      "post": {
+        "operationId": "StorageController_presignShopMedia",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Presign upload logo/ảnh bìa gian hàng lên R2",
+        "tags": [
+          "uploads"
+        ]
+      }
+    },
     "/platform/approvals": {
       "get": {
         "operationId": "PlatformAdminController_list",
@@ -4754,6 +5088,11 @@
             "type": "string",
             "nullable": true
           },
+          "bodyType": {
+            "type": "string",
+            "nullable": true,
+            "description": "Kiểu dáng (BODY_TYPE)"
+          },
           "mainImageUrl": {
             "type": "string",
             "nullable": true
@@ -4766,6 +5105,24 @@
           "weekendPrice": {
             "type": "string",
             "nullable": true
+          },
+          "hourlyPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ."
+          },
+          "deliveryEnabled": {
+            "type": "boolean",
+            "description": "Chủ xe hỗ trợ giao xe tận nơi"
+          },
+          "noCollateral": {
+            "type": "boolean",
+            "description": "Miễn thế chấp (không cần cọc tài sản)"
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% giảm giá marketing (0–100). Giá chốt thật do shop quyết khi duyệt yêu cầu."
           },
           "shopName": {
             "type": "string",
@@ -4795,6 +5152,8 @@
           "name",
           "vehicleType",
           "serviceType",
+          "deliveryEnabled",
+          "noCollateral",
           "shopName",
           "shopSlug",
           "ratingCount"
@@ -4841,6 +5200,125 @@
           "meta"
         ]
       },
+      "PriceBoundsDto": {
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá thấp nhất — string tiền (ADR 0007)"
+          },
+          "max": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá cao nhất — string tiền (ADR 0007)"
+          }
+        }
+      },
+      "FacetBucketDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Giá trị của option (body type key, tên hãng, bucket số chỗ…)"
+          },
+          "count": {
+            "type": "number",
+            "description": "Số listing khớp nếu chọn option này"
+          }
+        },
+        "required": [
+          "key",
+          "count"
+        ]
+      },
+      "AmenityFacetsDto": {
+        "type": "object",
+        "properties": {
+          "hourly": {
+            "type": "number",
+            "description": "Xe có giá thuê giờ"
+          },
+          "delivery": {
+            "type": "number",
+            "description": "Xe giao tận nơi"
+          },
+          "noCollateral": {
+            "type": "number",
+            "description": "Xe miễn thế chấp"
+          },
+          "discount": {
+            "type": "number",
+            "description": "Xe đang giảm giá"
+          }
+        },
+        "required": [
+          "hourly",
+          "delivery",
+          "noCollateral",
+          "discount"
+        ]
+      },
+      "ListingFacetsDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Số xe khớp toàn bộ filter — nút \"Áp dụng (N xe)\""
+          },
+          "price": {
+            "$ref": "#/components/schemas/PriceBoundsDto"
+          },
+          "bodyType": {
+            "description": "Theo kiểu dáng (BODY_TYPE key)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacetBucketDto"
+            }
+          },
+          "brand": {
+            "description": "Theo hãng xe (tên hãng như đã lưu)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacetBucketDto"
+            }
+          },
+          "seats": {
+            "description": "Theo bucket số chỗ (SEAT_BUCKET key)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacetBucketDto"
+            }
+          },
+          "fuelType": {
+            "description": "Theo nhiên liệu (FUEL_TYPE key)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacetBucketDto"
+            }
+          },
+          "features": {
+            "description": "Theo tiện ích xe (VEHICLE_FEATURE key)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FacetBucketDto"
+            }
+          },
+          "amenities": {
+            "$ref": "#/components/schemas/AmenityFacetsDto"
+          }
+        },
+        "required": [
+          "total",
+          "price",
+          "bodyType",
+          "brand",
+          "seats",
+          "fuelType",
+          "features",
+          "amenities"
+        ]
+      },
       "PublicListingDetailDto": {
         "type": "object",
         "properties": {
@@ -4882,6 +5360,11 @@
             "type": "string",
             "nullable": true
           },
+          "bodyType": {
+            "type": "string",
+            "nullable": true,
+            "description": "Kiểu dáng (BODY_TYPE)"
+          },
           "mainImageUrl": {
             "type": "string",
             "nullable": true
@@ -4894,6 +5377,24 @@
           "weekendPrice": {
             "type": "string",
             "nullable": true
+          },
+          "hourlyPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ."
+          },
+          "deliveryEnabled": {
+            "type": "boolean",
+            "description": "Chủ xe hỗ trợ giao xe tận nơi"
+          },
+          "noCollateral": {
+            "type": "boolean",
+            "description": "Miễn thế chấp (không cần cọc tài sản)"
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% giảm giá marketing (0–100). Giá chốt thật do shop quyết khi duyệt yêu cầu."
           },
           "shopName": {
             "type": "string",
@@ -4959,6 +5460,8 @@
           "name",
           "vehicleType",
           "serviceType",
+          "deliveryEnabled",
+          "noCollateral",
           "shopName",
           "shopSlug",
           "ratingCount",
@@ -5141,6 +5644,16 @@
             "type": "number",
             "nullable": true
           },
+          "bodyType": {
+            "type": "string",
+            "nullable": true,
+            "description": "Kiểu dáng (BODY_TYPE)"
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% giảm giá marketing (0–100)"
+          },
           "operationStatus": {
             "type": "string",
             "enum": [
@@ -5288,6 +5801,16 @@
             "type": "number",
             "nullable": true
           },
+          "bodyType": {
+            "type": "string",
+            "nullable": true,
+            "description": "Kiểu dáng (BODY_TYPE)"
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% giảm giá marketing (0–100)"
+          },
           "operationStatus": {
             "type": "string",
             "enum": [
@@ -5344,6 +5867,19 @@
             "type": "string",
             "nullable": true
           },
+          "hourlyPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá thuê giờ — string tiền (ADR 0007)"
+          },
+          "deliveryEnabled": {
+            "type": "boolean",
+            "description": "Chủ xe hỗ trợ giao xe tận nơi"
+          },
+          "noCollateral": {
+            "type": "boolean",
+            "description": "Miễn thế chấp (không cần cọc tài sản)"
+          },
           "createdAt": {
             "type": "string",
             "description": "ISO-8601 UTC"
@@ -5381,6 +5917,8 @@
           "operationStatus",
           "publicStatus",
           "updatedAt",
+          "deliveryEnabled",
+          "noCollateral",
           "createdAt",
           "images",
           "features"
@@ -5447,6 +5985,22 @@
               "hybrid"
             ]
           },
+          "bodyType": {
+            "type": "string",
+            "enum": [
+              "mini",
+              "sedan",
+              "cuv",
+              "suv",
+              "mpv",
+              "pickup",
+              "van",
+              "minibus",
+              "cargo"
+            ],
+            "nullable": true,
+            "description": "Kiểu dáng thân xe — chỉ với ô tô. Gửi null để xoá."
+          },
           "operationStatus": {
             "type": "string",
             "enum": [
@@ -5473,6 +6027,27 @@
             "type": "string",
             "description": "Giá cuối tuần",
             "example": "750000"
+          },
+          "hourlyPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá thuê theo giờ, string thập phân — ADR 0007. Gửi null = không cho thuê giờ.",
+            "example": "120000"
+          },
+          "deliveryEnabled": {
+            "type": "boolean",
+            "description": "Chủ xe hỗ trợ giao xe tận nơi"
+          },
+          "noCollateral": {
+            "type": "boolean",
+            "description": "Miễn thế chấp (không cần cọc tài sản)"
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100,
+            "description": "% giảm giá marketing. Gửi null = ngừng giảm giá."
           },
           "images": {
             "description": "URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi)",
@@ -5572,6 +6147,22 @@
               "hybrid"
             ]
           },
+          "bodyType": {
+            "type": "string",
+            "enum": [
+              "mini",
+              "sedan",
+              "cuv",
+              "suv",
+              "mpv",
+              "pickup",
+              "van",
+              "minibus",
+              "cargo"
+            ],
+            "nullable": true,
+            "description": "Kiểu dáng thân xe — chỉ với ô tô. Gửi null để xoá."
+          },
           "operationStatus": {
             "type": "string",
             "enum": [
@@ -5598,6 +6189,27 @@
             "type": "string",
             "description": "Giá cuối tuần",
             "example": "750000"
+          },
+          "hourlyPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá thuê theo giờ, string thập phân — ADR 0007. Gửi null = không cho thuê giờ.",
+            "example": "120000"
+          },
+          "deliveryEnabled": {
+            "type": "boolean",
+            "description": "Chủ xe hỗ trợ giao xe tận nơi"
+          },
+          "noCollateral": {
+            "type": "boolean",
+            "description": "Miễn thế chấp (không cần cọc tài sản)"
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100,
+            "description": "% giảm giá marketing. Gửi null = ngừng giảm giá."
           },
           "images": {
             "description": "URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi)",
@@ -7656,6 +8268,60 @@
           },
           "expiresIn": {
             "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "uploadUrl",
+          "publicUrl",
+          "expiresIn"
+        ]
+      },
+      "PresignImageDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Tên file gốc (chỉ để đặt key, đã sanitize)",
+            "example": "xe-01.jpg"
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ]
+          },
+          "fileSize": {
+            "type": "number",
+            "description": "Dung lượng file (byte), tối đa 10485760"
+          }
+        },
+        "required": [
+          "fileName",
+          "contentType",
+          "fileSize"
+        ]
+      },
+      "UploadPresignDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key trong bucket"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "description": "URL để PUT file (hết hạn ngắn)"
+          },
+          "publicUrl": {
+            "type": "string",
+            "description": "URL công khai của file sau khi upload"
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Giây còn hiệu lực của uploadUrl"
           }
         },
         "required": [

@@ -13,6 +13,7 @@ export * from './status/index';
 export * from './rbac';
 export * from './notifications';
 export * from './api';
+export * from './upload';
 
 /**
  * Type sinh từ OpenAPI (ADR 0007) — nguồn sự thật cho shape request/response.

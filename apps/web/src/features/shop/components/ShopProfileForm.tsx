@@ -4,8 +4,10 @@ import { Alert, Button, Card, Col, Row } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import { shopProfileSchema, type ShopProfileValues } from '@xeprime/validators';
+import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
+import { presignShopMedia } from '@/services/upload';
 import type { MyShop, UpdateProfileInput } from '../types';
 import styles from './ShopProfileForm.module.css';
 
@@ -30,6 +32,7 @@ function toValues(shop: MyShop): ShopProfileValues {
     bankAccountNo: p.bankAccountNo ?? '',
     bankAccountName: p.bankAccountName ?? '',
     logoUrl: p.logoUrl ?? null,
+    coverUrl: p.coverUrl ?? null,
   };
 }
 
@@ -57,6 +60,7 @@ export function ShopProfileForm({
       bankAccountNo: v.bankAccountNo,
       bankAccountName: v.bankAccountName,
       logoUrl: v.logoUrl ?? '',
+      coverUrl: v.coverUrl ?? '',
     });
   });
 
@@ -89,7 +93,24 @@ export function ShopProfileForm({
             placeholder="Mô tả ngắn về gian hàng…"
             maxLength={2000}
           />
-          <TextField control={control} name="logoUrl" label="Logo (URL)" placeholder="https://..." />
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <ImageUploadField
+                control={control}
+                name="logoUrl"
+                label="Logo gian hàng"
+                presign={presignShopMedia}
+              />
+            </Col>
+            <Col xs={24} sm={12}>
+              <ImageUploadField
+                control={control}
+                name="coverUrl"
+                label="Ảnh bìa (trang gian hàng công khai)"
+                presign={presignShopMedia}
+              />
+            </Col>
+          </Row>
         </Card>
 
         <Card title="Địa chỉ & pháp lý" className={styles.section}>

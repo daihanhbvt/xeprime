@@ -17,8 +17,8 @@ import {
 } from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { listingPath, shopPath } from '@/constants/routes';
-import { formatMoneyVnd } from '@/lib/money';
-import { fuelLabel } from '../constants';
+import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
+import { fuelLabel } from '@/lib/vehicle-labels';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
 import styles from './VehicleCard.module.css';
@@ -38,6 +38,13 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   const fuel = fuelLabel(listing.fuelType);
   const rating = Number(listing.ratingAvg);
   const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
+
+  // Giá sau giảm chỉ để HIỂN THỊ (marketing) — giá chốt thật do shop quyết khi duyệt yêu cầu.
+  const discount = listing.discountPercent ?? 0;
+  const displayPrice =
+    discount > 0
+      ? applyDiscountPercent(listing.weekdayPrice, discount)
+      : listing.weekdayPrice;
 
   // Mang ngày giờ đã lọc sang trang chi tiết để prefill luồng đặt xe.
   const dateQs = new URLSearchParams();
@@ -60,6 +67,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
           <CarGlyph type={listing.vehicleType as VehicleType} />
         )}
         <span className={styles.serviceBadge}>{serviceLabel}</span>
+        {discount > 0 ? <span className={styles.discountBadge}>-{discount}%</span> : null}
         <button className={styles.fav} type="button" aria-label="Lưu xe">
           <HeartOutlined />
         </button>
@@ -96,11 +104,20 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
               <TeamOutlined /> {listing.seatCount} chỗ
             </span>
           ) : null}
+          {listing.deliveryEnabled ? (
+            <span className={styles.amenityTag}>Giao tận nơi</span>
+          ) : null}
+          {listing.noCollateral ? (
+            <span className={styles.amenityTag}>Miễn thế chấp</span>
+          ) : null}
         </div>
 
         <div className={styles.footer}>
           <div className={styles.price}>
-            <b>{formatMoneyVnd(listing.weekdayPrice)}</b>
+            {discount > 0 && listing.weekdayPrice ? (
+              <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
+            ) : null}
+            <b>{formatMoneyVnd(displayPrice)}</b>
             <span>/ngày</span>
           </div>
           <Link
@@ -116,7 +133,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
           vehicleId={listing.id}
           vehicleName={listing.name}
           vehicleImageUrl={listing.mainImageUrl}
-          pricePerDay={listing.weekdayPrice}
+          pricePerDay={displayPrice}
           pickupAt={filters.pickupAt}
           returnAt={filters.returnAt}
           block
