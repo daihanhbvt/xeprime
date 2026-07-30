@@ -268,6 +268,8 @@ model PhoneVerification {
   /// @xeprime/types → PhoneVerificationStatus
   status     String    @default("pending") @db.VarChar(50)
   sentCount  Int       @default(0) @map("sent_count")
+  /// Số lần nhập SAI mã. Chạm OTP_MAX_ATTEMPTS → status=failed (khoá mã, chống brute-force).
+  attemptCount Int     @default(0) @map("attempt_count")
   expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
   verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)

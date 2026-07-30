@@ -11,6 +11,7 @@ import {
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { listingPath, shopPath } from '@/constants/routes';
 import { formatMoneyVnd } from '@/lib/money';
+import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
 import styles from './VehicleCard.module.css';
 
@@ -23,16 +24,25 @@ const FUEL_LABEL: Record<string, string> = {
 
 /** Một thẻ xe trên marketplace — bám card của xeprime.vn. */
 export function VehicleCard({ listing }: { listing: PublicListing }) {
+  const { filters } = useMarketplaceFilters();
   const seats = listing.seatCount ? `${listing.seatCount} chỗ` : null;
   const fuel = listing.fuelType ? (FUEL_LABEL[listing.fuelType] ?? listing.fuelType) : null;
   const specs = [seats, fuel, listing.brand].filter(Boolean).join(' · ');
   const serviceLabel = SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType;
 
+  // Mang ngày giờ đã lọc sang trang chi tiết để prefill luồng đặt xe.
+  const dateQs = new URLSearchParams();
+  if (filters.pickupAt) dateQs.set('pickupAt', filters.pickupAt);
+  if (filters.returnAt) dateQs.set('returnAt', filters.returnAt);
+  const detailHref = dateQs.toString()
+    ? `${listingPath.detail(listing.id)}?${dateQs.toString()}`
+    : listingPath.detail(listing.id);
+
   return (
     <article className={styles.card}>
       {/* Stretched-link: cả thẻ dẫn tới trang chi tiết, trừ các nút z-index cao hơn. */}
       <Link
-        href={listingPath.detail(listing.id)}
+        href={detailHref}
         className={styles.stretch}
         aria-label={`Xem chi tiết ${listing.name}`}
       />
@@ -68,6 +78,10 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
         <RequestBookingButton
           vehicleId={listing.id}
           vehicleName={listing.name}
+          vehicleImageUrl={listing.mainImageUrl}
+          pricePerDay={listing.weekdayPrice}
+          pickupAt={filters.pickupAt}
+          returnAt={filters.returnAt}
           block
           className={styles.requestBtn}
         />

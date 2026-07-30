@@ -12,6 +12,7 @@ import {
   MeDto,
   RegisterDto,
   ResetPasswordDto,
+  SetPasswordDto,
 } from './dto/auth.dto';
 
 @ApiTags('auth')
@@ -60,12 +61,23 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Đăng nhập bằng email + mật khẩu' })
+  @ApiOperation({ summary: 'Đăng nhập bằng email hoặc số điện thoại + mật khẩu' })
   @ApiOkResponse({ type: MeDto })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response): Promise<MeDto> {
-    const { userId } = await this.auth.loginWithPassword(dto.email, dto.password);
+    const { userId } = await this.auth.loginWithPassword(dto.identifier, dto.password);
     this.issueSession(res, userId);
     return this.auth.me(userId);
+  }
+
+  @Post('password/set')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Đặt mật khẩu lần đầu cho tài khoản chưa có (vd tạo bằng SĐT/OTP)' })
+  @ApiNoContentResponse()
+  async setPassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SetPasswordDto,
+  ): Promise<void> {
+    await this.auth.setPassword(user.id, dto.password);
   }
 
   @Public()

@@ -4,6 +4,8 @@ import type {
   BookingRequestFilters,
   BookingRequestItem,
   BookingRequestReceipt,
+  CheckAvailabilityInput,
+  CheckAvailabilityResult,
   CreateBookingRequestInput,
 } from './types';
 
@@ -50,3 +52,9 @@ export const rejectBookingRequest = (id: string, reason?: string): Promise<Booki
 export const submitBookingRequest = (
   body: CreateBookingRequestInput,
 ): Promise<BookingRequestReceipt> => apiPost<BookingRequestReceipt>('/public/booking-requests', body);
+
+/** Công khai — kiểm tra nhanh khung giờ của một xe còn trống không (preview, ADR 0006). */
+export const checkAvailability = (
+  body: CheckAvailabilityInput,
+): Promise<CheckAvailabilityResult> =>
+  apiPost<CheckAvailabilityResult>('/public/booking-requests/check-availability', body);

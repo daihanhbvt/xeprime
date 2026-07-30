@@ -77,6 +77,12 @@
   color: var(--xp-color-primary);
 }
 
+.avatarTrigger {
+  display: inline-flex;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
 .avatar {
   background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
   color: #fff;

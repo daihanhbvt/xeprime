@@ -32,6 +32,19 @@ export class VerifyOtpDto {
   code!: string;
 }
 
+/** Đăng nhập passwordless bằng SĐT + OTP (purpose=login). Server tự chuẩn hoá SĐT. */
+export class PhoneLoginDto {
+  @ApiProperty({ example: '0901234567' })
+  @IsString()
+  @Matches(VN_PHONE, { message: 'Số điện thoại không hợp lệ' })
+  phone!: string;
+
+  @ApiProperty({ example: '123456', minLength: 6, maxLength: 6 })
+  @IsString()
+  @Length(6, 6)
+  code!: string;
+}
+
 export class SendOtpResultDto {
   @ApiProperty({ description: 'ISO-8601 UTC — thời điểm mã hết hạn' })
   expiresAt!: string;

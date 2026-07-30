@@ -1,0 +1,46 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  margin-bottom: 14px;
+}
+
+.err {
+  margin-bottom: 16px;
+}
+
+.submit {
+  height: 48px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.devHint {
+  margin: -4px 0 12px;
+  font-size: 12.5px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.footRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.linkBtn {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--xp-gold-deep);
+  cursor: pointer;
+}
+
+.linkBtn:disabled {
+  color: var(--xp-color-text-tertiary);
+  cursor: not-allowed;
+}

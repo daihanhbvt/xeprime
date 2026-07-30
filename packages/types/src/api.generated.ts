@@ -48,8 +48,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Đăng nhập bằng email + mật khẩu */
+        /** Đăng nhập bằng email hoặc số điện thoại + mật khẩu */
         post: operations["AuthController_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/password/set": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Đặt mật khẩu lần đầu cho tài khoản chưa có (vd tạo bằng SĐT/OTP) */
+        post: operations["AuthController_setPassword"];
         delete?: never;
         options?: never;
         head?: never;
@@ -626,6 +643,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/booking-requests/check-availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Khách kiểm tra nhanh khung giờ của một xe có trống không (preview) */
+        post: operations["PublicBookingRequestsController_checkAvailability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/phone/send-otp": {
         parameters: {
             query?: never;
@@ -654,6 +688,23 @@ export interface paths {
         put?: never;
         /** Xác nhận mã OTP */
         post: operations["PhoneVerificationController_verifyOtp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/phone/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Đăng nhập passwordless bằng SĐT + OTP (tự tạo tài khoản nếu chưa có) */
+        post: operations["PhoneVerificationController_login"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1137,6 +1188,8 @@ export interface components {
             avatarUrl?: Record<string, never> | null;
             /** @description Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop */
             phoneVerified: boolean;
+            /** @description Đã có mật khẩu chưa — false với tài khoản tạo bằng SĐT/OTP (gợi ý đặt mật khẩu) */
+            hasPassword: boolean;
             tenant?: components["schemas"]["CurrentTenantSummaryDto"] | null;
             /** @description Xem PlatformRole trong @xeprime/types */
             platformRole?: Record<string, never> | null;
@@ -1151,8 +1204,15 @@ export interface components {
             email: string;
         };
         LoginDto: {
-            /** @example ban@congty.vn */
-            email: string;
+            /**
+             * @description Email hoặc số điện thoại
+             * @example ban@congty.vn
+             */
+            identifier: string;
+            password: string;
+        };
+        SetPasswordDto: {
+            /** @example matkhau123 */
             password: string;
         };
         ForgotPasswordDto: {
@@ -1784,6 +1844,20 @@ export interface components {
             id: string;
             /** @enum {string} */
             status: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking";
+            /** @description Sau khi gửi, khách đã có phiên đăng nhập (passwordless qua SĐT) — FE chuyển tới /trips. */
+            authenticated: boolean;
+        };
+        CheckAvailabilityDto: {
+            /** @description ID xe (ULID) */
+            vehicleId: string;
+            /** @description Nhận xe (ISO-8601) */
+            pickupAt: string;
+            /** @description Trả xe (ISO-8601), phải sau nhận xe */
+            returnAt: string;
+        };
+        CheckAvailabilityResultDto: {
+            /** @description Khung giờ còn trống (preview, quyết định thật khi shop duyệt) */
+            available: boolean;
         };
         SendOtpDto: {
             /** @example 0901234567 */
@@ -1792,7 +1866,7 @@ export interface components {
              * @example booking
              * @enum {string}
              */
-            purpose: "booking" | "shop_register" | "vehicle_public" | "password_reset";
+            purpose: "booking" | "login" | "shop_register" | "vehicle_public" | "password_reset";
         };
         SendOtpResultDto: {
             /** @description ISO-8601 UTC — thời điểm mã hết hạn */
@@ -1807,12 +1881,18 @@ export interface components {
              * @example booking
              * @enum {string}
              */
-            purpose: "booking" | "shop_register" | "vehicle_public" | "password_reset";
+            purpose: "booking" | "login" | "shop_register" | "vehicle_public" | "password_reset";
             /** @example 123456 */
             code: string;
         };
         VerifyOtpResultDto: {
             verified: boolean;
+        };
+        PhoneLoginDto: {
+            /** @example 0901234567 */
+            phone: string;
+            /** @example 123456 */
+            code: string;
         };
         FinanceCategoryDto: {
             id: string;
@@ -2315,6 +2395,27 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MeDto"];
                 };
+            };
+        };
+    };
+    AuthController_setPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPasswordDto"];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3312,6 +3413,29 @@ export interface operations {
             };
         };
     };
+    PublicBookingRequestsController_checkAvailability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckAvailabilityDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckAvailabilityResultDto"];
+                };
+            };
+        };
+    };
     PhoneVerificationController_sendOtp: {
         parameters: {
             query?: never;
@@ -3354,6 +3478,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VerifyOtpResultDto"];
+                };
+            };
+        };
+    };
+    PhoneVerificationController_login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhoneLoginDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeDto"];
                 };
             };
         };

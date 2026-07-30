@@ -19,7 +19,6 @@ export const requestFormSchema = yup.object({
     .trim()
     .required('Nhập số điện thoại')
     .matches(/^(0|\+84)\d{9}$/, 'Số điện thoại không hợp lệ'),
-  customerEmail: yup.string().trim().default('').email('Email không hợp lệ'),
   pickupAt: requiredDate('Chọn thời gian nhận xe'),
   returnAt: requiredDate('Chọn thời gian trả xe').test(
     'after-pickup',
@@ -29,7 +28,6 @@ export const requestFormSchema = yup.object({
       return !value || !pickup || value.isAfter(pickup);
     },
   ),
-  note: yup.string().trim().max(2000).default(''),
 });
 
 export type RequestFormValues = yup.InferType<typeof requestFormSchema>;

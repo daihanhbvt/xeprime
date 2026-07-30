@@ -51,6 +51,9 @@ export const envSchema = z
     OTP_TTL_MINUTES: z.coerce.number().int().positive().default(5),
     OTP_RESEND_COOLDOWN_SECONDS: z.coerce.number().int().positive().default(60),
     OTP_MAX_SENDS_PER_HOUR: z.coerce.number().int().positive().default(5),
+    // Số lần nhập SAI mã tối đa cho một OTP trước khi khoá mã (phải gửi lại). Chống brute-force
+    // ngoài @Throttle controller + TTL ngắn.
+    OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
     // Pepper để hash mã OTP (schema phone_verifications không có cột salt). Có default dev để
     // không phá `.env` sẵn có; production bắt buộc đổi (kiểm ở superRefine dưới).
     OTP_PEPPER: z.string().min(16).default('xeprime-dev-otp-pepper-change-me'),

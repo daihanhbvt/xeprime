@@ -5,12 +5,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { newId } from '@xeprime/prisma';
+import { newId, Prisma } from '@xeprime/prisma';
 import { API_ERROR_CODE, MEMBERSHIP_STATUS, USER_STATUS, type Permission } from '@xeprime/types';
 import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
+import { normalizePhone } from '../phone-verification/phone-verification.service';
 import { EmailService } from './email.service';
 import { IdTokenVerifier } from './token-verifier';
 import type { MeDto } from './dto/auth.dto';
@@ -81,15 +82,20 @@ export class AuthService {
   }
 
   /**
-   * Đăng nhập email + mật khẩu.
+   * Đăng nhập bằng **email HOẶC số điện thoại** + mật khẩu. Có `@` → tra email (lowercase);
+   * ngược lại chuẩn hoá SĐT rồi tra `users.phone` (@unique, lưu dạng `84...`).
    *
-   * Lỗi luôn chung chung (INVALID_CREDENTIALS) dù sai email hay sai mật khẩu — không tiết lộ
-   * email nào tồn tại. So khớp bcrypt kể cả khi không có user (giảm timing attack).
+   * Lỗi luôn chung chung (INVALID_CREDENTIALS) dù sai định danh hay sai mật khẩu — không tiết lộ
+   * tài khoản nào tồn tại. So khớp bcrypt kể cả khi không có user (giảm timing attack). Tài khoản
+   * tạo bằng SĐT/OTP có `passwordHash` null → chưa đặt mật khẩu thì không đăng nhập kiểu này được.
    */
-  async loginWithPassword(rawEmail: string, password: string): Promise<{ userId: string }> {
-    const email = rawEmail.trim().toLowerCase();
+  async loginWithPassword(rawIdentifier: string, password: string): Promise<{ userId: string }> {
+    const identifier = rawIdentifier.trim();
+    const where = identifier.includes('@')
+      ? { email: identifier.toLowerCase(), deletedAt: null }
+      : { phone: normalizePhone(identifier), deletedAt: null };
     const user = await this.prisma.user.findFirst({
-      where: { email, deletedAt: null },
+      where,
       select: { id: true, passwordHash: true, status: true },
     });
 
@@ -99,7 +105,7 @@ export class AuthService {
     if (!user || !user.passwordHash || !ok) {
       throw new UnauthorizedException({
         code: API_ERROR_CODE.INVALID_CREDENTIALS,
-        message: 'Email hoặc mật khẩu không đúng',
+        message: 'Email/số điện thoại hoặc mật khẩu không đúng',
       });
     }
     if (user.status !== USER_STATUS.ACTIVE) {
@@ -111,6 +117,26 @@ export class AuthService {
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     return { userId: user.id };
+  }
+
+  /**
+   * Đặt mật khẩu cho tài khoản **chưa có mật khẩu** (tạo bằng SĐT/OTP). Cần đã đăng nhập.
+   * Nếu đã có mật khẩu → `CONFLICT` (đổi mật khẩu là luồng khác, cần mật khẩu cũ) — endpoint này
+   * chỉ để bổ sung mật khẩu lần đầu, không phải cửa hậu ghi đè.
+   */
+  async setPassword(userId: string, newPassword: string): Promise<void> {
+    const user = await this.prisma.user.findFirstOrThrow({
+      where: { id: userId, deletedAt: null },
+      select: { passwordHash: true },
+    });
+    if (user.passwordHash) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.CONFLICT,
+        message: 'Tài khoản đã có mật khẩu',
+      });
+    }
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
   }
 
   // ---- Quên / đặt lại mật khẩu ----------------------------------------------
@@ -253,6 +279,81 @@ export class AuthService {
     return { userId };
   }
 
+  /**
+   * Passwordless: tìm hoặc tạo user theo SĐT đã xác thực (OTP) — dùng cho đăng nhập bằng SĐT và
+   * cho luồng đặt xe của khách vãng lai. KHÔNG tự kiểm OTP: người gọi phải chứng minh sở hữu SĐT
+   * trước (verifyOtp cho login, assertPhoneVerifiedForBooking cho đặt xe).
+   *
+   * Idempotent theo `users.phone` (@unique). Chống đua khi nhiều request cùng SĐT vào cùng lúc:
+   * bắt P2002 rồi đọc lại. User tạo bằng SĐT có `passwordHash = null` (như tài khoản Google/FB) —
+   * sau này người dùng có thể tự đặt mật khẩu / liên kết Google mà không chặn luồng đặt xe.
+   */
+  async resolveOrCreateUserByPhone(
+    rawPhone: string,
+    displayNameFallback?: string | null,
+  ): Promise<{ userId: string; created: boolean }> {
+    const phone = normalizePhone(rawPhone);
+    const now = new Date();
+
+    const existing = await this.prisma.user.findFirst({
+      where: { phone, deletedAt: null },
+      select: { id: true, status: true, phoneVerifiedAt: true },
+    });
+    if (existing) {
+      if (existing.status !== USER_STATUS.ACTIVE) {
+        throw new UnauthorizedException({
+          code: API_ERROR_CODE.ACCOUNT_LOCKED,
+          message: 'Tài khoản đã bị khoá',
+        });
+      }
+      await this.prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          lastLoginAt: now,
+          ...(existing.phoneVerifiedAt ? {} : { phoneVerifiedAt: now }),
+        },
+      });
+      return { userId: existing.id, created: false };
+    }
+
+    const userId = newId();
+    const displayName = (displayNameFallback ?? '').trim() || defaultPhoneName(phone);
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.create({
+          data: {
+            id: userId,
+            phone,
+            phoneVerifiedAt: now,
+            displayName,
+            status: USER_STATUS.ACTIVE,
+            lastLoginAt: now,
+          },
+        });
+        await tx.userIdentity.create({
+          data: {
+            id: newId(),
+            userId,
+            provider: 'phone_otp',
+            providerUserId: phone,
+            providerPhone: phone,
+          },
+        });
+      });
+      return { userId, created: true };
+    } catch (err) {
+      // Đua unique(phone): một request khác vừa tạo user cùng SĐT — đọc lại và dùng chung.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const raced = await this.prisma.user.findFirst({
+          where: { phone, deletedAt: null },
+          select: { id: true },
+        });
+        if (raced) return { userId: raced.id, created: false };
+      }
+      throw err;
+    }
+  }
+
   async me(userId: string): Promise<MeDto> {
     const user = await this.prisma.user.findFirstOrThrow({
       where: { id: userId, deletedAt: null },
@@ -262,6 +363,7 @@ export class AuthService {
         email: true,
         avatarUrl: true,
         phoneVerifiedAt: true,
+        passwordHash: true,
       },
     });
 
@@ -302,6 +404,7 @@ export class AuthService {
       email: user.email,
       avatarUrl: user.avatarUrl,
       phoneVerified: user.phoneVerifiedAt !== null,
+      hasPassword: user.passwordHash !== null,
       tenant: membership
         ? {
             id: membership.tenant.id,
@@ -315,4 +418,10 @@ export class AuthService {
       permissions: [...new Set([...tenantPermissions, ...platformPermissions])],
     };
   }
+}
+
+/** Tên hiển thị mặc định cho tài khoản tạo bằng SĐT (chưa nhập tên): "Khách 4567". */
+function defaultPhoneName(normalizedPhone: string): string {
+  const last4 = normalizedPhone.slice(-4);
+  return `Khách ${last4}`;
 }

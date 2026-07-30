@@ -25,6 +25,8 @@ export interface CurrentUser {
   displayName: string;
   email: string | null;
   avatarUrl: string | null;
+  /** Đã có mật khẩu chưa — false với tài khoản tạo bằng SĐT/OTP (gợi ý đặt mật khẩu). */
+  hasPassword?: boolean;
   tenant: CurrentUserTenant | null;
   /**
    * Danh sách permission key. Để `string[]` đúng như API trả về thay vì ép sang `Permission` —
@@ -80,9 +82,22 @@ export function registerWithPassword(input: RegisterInput): Promise<CurrentUser>
   return apiPost<CurrentUser>('/auth/register', input);
 }
 
-/** POST /auth/login — đăng nhập email/mật khẩu, backend set cookie httpOnly. */
-export function loginWithPassword(email: string, password: string): Promise<CurrentUser> {
-  return apiPost<CurrentUser>('/auth/login', { email, password });
+/** POST /auth/login — đăng nhập bằng email HOẶC số điện thoại + mật khẩu, backend set cookie httpOnly. */
+export function loginWithPassword(identifier: string, password: string): Promise<CurrentUser> {
+  return apiPost<CurrentUser>('/auth/login', { identifier, password });
+}
+
+/** POST /auth/password/set — đặt mật khẩu lần đầu cho tài khoản chưa có (cần đã đăng nhập). */
+export function setPassword(password: string): Promise<void> {
+  return apiPost<void>('/auth/password/set', { password });
+}
+
+/**
+ * POST /auth/phone/login — đăng nhập passwordless bằng SĐT + OTP (purpose=login). BE tự tạo tài
+ * khoản nếu SĐT chưa có rồi set cookie httpOnly. Không cần mật khẩu.
+ */
+export function phoneLogin(phone: string, code: string): Promise<CurrentUser> {
+  return apiPost<CurrentUser>('/auth/phone/login', { phone, code });
 }
 
 /** POST /auth/password/forgot — gửi link đặt lại qua email. Luôn thành công (không rò rỉ email). */

@@ -20,9 +20,14 @@ export const PHONE_VERIFICATION_STATUS_VALUES = Object.values(
   PHONE_VERIFICATION_STATUS,
 ) as PhoneVerificationStatus[];
 
-/** Thời điểm bắt xác thực SĐT (user_flow: chỉ bắt khi đặt xe / mở shop / public xe). */
+/**
+ * Thời điểm bắt xác thực SĐT (user_flow: chỉ bắt khi đặt xe / mở shop / public xe).
+ * `login` = passwordless: OTP vừa xác thực SĐT vừa là phương thức đăng nhập (tạo/đăng nhập
+ * tài khoản theo SĐT). OTP của mục đích này KHÔNG dùng chéo cho mục đích khác.
+ */
 export const PHONE_VERIFICATION_PURPOSE = {
   BOOKING: 'booking',
+  LOGIN: 'login',
   SHOP_REGISTER: 'shop_register',
   VEHICLE_PUBLIC: 'vehicle_public',
   PASSWORD_RESET: 'password_reset',

@@ -11,6 +11,8 @@ import {
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { AuthService } from '../auth/auth.service';
+import { OccupancyService } from '../calendar/occupancy.service';
 import { NotificationService } from '../notification/notification.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
@@ -47,20 +49,18 @@ export class BookingRequestsService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
     private readonly phoneVerification: PhoneVerificationService,
+    private readonly auth: AuthService,
+    private readonly occupancy: OccupancyService,
   ) {}
 
   /**
-   * Khách gửi yêu cầu từ Marketplace (công khai). `tenantId` suy từ xe — chỉ nhận nếu xe đã
-   * `approved_public` thuộc shop `active`. KHÔNG giữ chỗ lịch (còn pending), chỉ ghi yêu cầu.
-   * `customerUserId` do controller resolve best-effort từ session (null nếu khách vãng lai).
+   * Xe khả dụng để đặt: đã `approved_public` và thuộc shop `active`. `tenantId` suy từ xe ở server
+   * (không tin client). Dùng chung cho submit + check-availability.
    */
-  async submitPublic(
-    dto: CreateBookingRequestDto,
-    customerUserId?: string | null,
-  ): Promise<BookingRequestReceiptDto> {
+  private async loadBookableVehicle(vehicleId: string): Promise<{ id: string; tenantId: string; name: string }> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: {
-        id: dto.vehicleId,
+        id: vehicleId,
         deletedAt: null,
         publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
         tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
@@ -73,8 +73,51 @@ export class BookingRequestsService {
         message: 'Xe không khả dụng để đặt',
       });
     }
+    return vehicle;
+  }
 
-    // §8: khách chưa xác thực SĐT không gửi được yêu cầu thuê.
+  /**
+   * Preview khung giờ trống cho khách (công khai) — tái dùng `OccupancyService.findOverlapping`.
+   * ADR 0006: KHÔNG phải bảo vệ (có thể cũ ngay khi trả về); quyết định thật khi shop duyệt
+   * (constraint chặn). Chỉ trả boolean, không lộ chi tiết đơn đang chiếm chỗ.
+   */
+  async checkPublicAvailability(
+    vehicleId: string,
+    pickupAt: string,
+    returnAt: string,
+  ): Promise<{ available: boolean }> {
+    const vehicle = await this.loadBookableVehicle(vehicleId);
+    const start = new Date(pickupAt);
+    const end = new Date(returnAt);
+    if (!(end.getTime() > start.getTime())) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Thời điểm trả xe phải sau thời điểm nhận xe',
+      });
+    }
+    const overlapping = await this.occupancy.findOverlapping(vehicle.id, start, end);
+    return { available: overlapping.length === 0 };
+  }
+
+  /**
+   * Khách gửi yêu cầu từ Marketplace (công khai). `tenantId` suy từ xe — chỉ nhận nếu xe đã
+   * `approved_public` thuộc shop `active`. KHÔNG giữ chỗ lịch (còn pending), chỉ ghi yêu cầu —
+   * chủ xe duyệt mới thành đơn (mô hình marketplace: hai bên tự thương lượng).
+   *
+   * Passwordless: khách vãng lai đã xác thực SĐT (OTP) được **tạo/đăng nhập tài khoản** theo SĐT
+   * và gắn vào yêu cầu — trả `loginUserId` để controller cấp session cookie. Khách đang đăng nhập
+   * (`customerUserId`) giữ nguyên phiên. Không bao giờ bắt nhập mật khẩu.
+   *
+   * `loginUserId` != null ⇔ cần cấp session mới cho phiên hiện tại.
+   */
+  async submitPublic(
+    dto: CreateBookingRequestDto,
+    customerUserId?: string | null,
+  ): Promise<{ receipt: BookingRequestReceiptDto; loginUserId: string | null }> {
+    const vehicle = await this.loadBookableVehicle(dto.vehicleId);
+
+    // §8: khách chưa xác thực SĐT không gửi được yêu cầu thuê — đây cũng là bằng chứng sở hữu
+    // SĐT để tạo/đăng nhập tài khoản passwordless ngay dưới.
     await this.phoneVerification.assertPhoneVerifiedForBooking(dto.customerPhone);
 
     const pickupAt = new Date(dto.pickupAt);
@@ -86,39 +129,65 @@ export class BookingRequestsService {
       });
     }
 
+    // Khách vãng lai đã verify SĐT → tạo/đăng nhập tài khoản theo SĐT, gắn yêu cầu vào đó.
+    let effectiveUserId = customerUserId ?? null;
+    let loginUserId: string | null = null;
+    if (!effectiveUserId) {
+      const { userId } = await this.auth.resolveOrCreateUserByPhone(
+        dto.customerPhone,
+        dto.customerName,
+      );
+      effectiveUserId = userId;
+      loginUserId = userId;
+    }
+
     const id = newId();
     // Ghi yêu cầu + báo cả shop trong một transaction: yêu cầu mới luôn có thông báo đi kèm.
-    await this.prisma.$transaction(async (tx) => {
-      await tx.bookingRequest.create({
-        data: {
-          id,
-          tenantId: vehicle.tenantId,
-          vehicleId: vehicle.id,
-          status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-          customerName: dto.customerName,
-          customerPhone: dto.customerPhone,
-          customerEmail: dto.customerEmail ?? null,
-          customerUserId: customerUserId ?? null,
-          pickupAt,
-          returnAt,
-          note: dto.note ?? null,
-        },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.bookingRequest.create({
+          data: {
+            id,
+            tenantId: vehicle.tenantId,
+            vehicleId: vehicle.id,
+            status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+            customerName: dto.customerName,
+            customerPhone: dto.customerPhone,
+            customerEmail: dto.customerEmail ?? null,
+            customerUserId: effectiveUserId,
+            pickupAt,
+            returnAt,
+            note: dto.note ?? null,
+          },
+        });
+
+        await this.notifications.emitToTenantMembers(
+          vehicle.tenantId,
+          {
+            type: NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED,
+            title: `Yêu cầu thuê mới: ${dto.customerName}`,
+            body: vehicle.name,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+            targetId: id,
+          },
+          tx,
+        );
       });
+    } catch (err) {
+      // Partial unique index chống double-submit: cùng (xe, SĐT, giờ nhận, giờ trả) đang pending.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException({
+          code: API_ERROR_CODE.CONFLICT,
+          message: 'Bạn vừa gửi một yêu cầu giống hệt cho xe này — vui lòng chờ shop phản hồi',
+        });
+      }
+      throw err;
+    }
 
-      await this.notifications.emitToTenantMembers(
-        vehicle.tenantId,
-        {
-          type: NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED,
-          title: `Yêu cầu thuê mới: ${dto.customerName}`,
-          body: vehicle.name,
-          targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
-          targetId: id,
-        },
-        tx,
-      );
-    });
-
-    return { id, status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL };
+    return {
+      receipt: { id, status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, authenticated: true },
+      loginUserId,
+    };
   }
 
   async list(

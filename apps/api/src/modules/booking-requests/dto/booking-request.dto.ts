@@ -59,6 +59,27 @@ export class CreateBookingRequestDto {
   note?: string;
 }
 
+/** Khách kiểm tra nhanh khung giờ của một xe có trống không (preview — ADR 0006). */
+export class CheckAvailabilityDto {
+  @ApiProperty({ description: 'ID xe (ULID)' })
+  @IsString()
+  @Length(26, 26)
+  vehicleId!: string;
+
+  @ApiProperty({ description: 'Nhận xe (ISO-8601)' })
+  @IsDateString()
+  pickupAt!: string;
+
+  @ApiProperty({ description: 'Trả xe (ISO-8601), phải sau nhận xe' })
+  @IsDateString()
+  returnAt!: string;
+}
+
+export class CheckAvailabilityResultDto {
+  @ApiProperty({ description: 'Khung giờ còn trống (preview, quyết định thật khi shop duyệt)' })
+  available!: boolean;
+}
+
 /** Từ chối yêu cầu — lý do tuỳ chọn để báo lại khách. */
 export class RejectBookingRequestDto {
   @ApiPropertyOptional()
@@ -124,4 +145,9 @@ export class BookingRequestPageDto {
 export class BookingRequestReceiptDto {
   @ApiProperty() id!: string;
   @ApiProperty({ enum: BOOKING_REQUEST_STATUS_VALUES }) status!: string;
+  @ApiProperty({
+    description:
+      'Sau khi gửi, khách đã có phiên đăng nhập (passwordless qua SĐT) — FE chuyển tới /trips.',
+  })
+  authenticated!: boolean;
 }

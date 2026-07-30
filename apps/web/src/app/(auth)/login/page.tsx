@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button, Divider } from 'antd';
+import { Alert, Button, Divider, Tabs } from 'antd';
 import { FacebookFilled, GoogleOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { loginSchema, type LoginValues } from '@xeprime/validators';
 import { Logo } from '@/components/brand/Logo';
 import { TextField } from '@/components/form/TextField';
+import { PhoneLoginForm } from '@/features/phone-verification/components/PhoneLoginForm';
 import { ROUTES } from '@/constants/routes';
 import {
   AUTH_PROVIDER,
@@ -19,8 +20,10 @@ import {
   getProviderIdToken,
   loginWithPassword,
   type AuthProvider,
+  type CurrentUser,
 } from '@/services/auth.service';
 import { getErrorMessage } from '@/services/api-client';
+import { SetPasswordStep } from './SetPasswordStep';
 import styles from './login.module.css';
 
 export default function LoginPage() {
@@ -38,10 +41,12 @@ function LoginForm() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  // Khi đăng nhập OTP mà tài khoản chưa có mật khẩu → hiện bước gợi ý đặt mật khẩu (có Bỏ qua).
+  const [promptSetPassword, setPromptSetPassword] = useState(false);
 
   const { control, handleSubmit } = useForm<LoginValues>({
     resolver: yupResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { identifier: '', password: '' },
   });
 
   /** Đích quay lại sau đăng nhập (proxy đặt `?next=`), mặc định vào khu quản lý. */
@@ -59,13 +64,19 @@ function LoginForm() {
     setPending('password');
     setError(null);
     try {
-      await loginWithPassword(values.email, values.password);
+      await loginWithPassword(values.identifier, values.password);
       await afterAuth();
     } catch (err) {
       setError(getErrorMessage(err));
       setPending(null);
     }
   });
+
+  /** Sau đăng nhập OTP: chưa có mật khẩu → gợi ý đặt (có Bỏ qua); có rồi → vào thẳng. */
+  async function afterPhoneLogin(user: CurrentUser) {
+    if (user.hasPassword === false) setPromptSetPassword(true);
+    else await afterAuth();
+  }
 
   async function signInWithProvider(provider: AuthProvider) {
     setPending(provider);
@@ -82,16 +93,8 @@ function LoginForm() {
 
   const busy = pending !== null;
 
-  return (
-    <div className={styles.box}>
-      <div className={styles.head}>
-        <Logo size="lg" />
-        <div>
-          <div className={styles.title}>Đăng nhập XePrime</div>
-          <div className={styles.sub}>Quản lý gian hàng cho thuê xe</div>
-        </div>
-      </div>
-
+  const emailPane = (
+    <>
       {error ? (
         <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />
       ) : null}
@@ -99,13 +102,11 @@ function LoginForm() {
       <form onSubmit={onSubmit} noValidate>
         <TextField
           control={control}
-          name="email"
-          label="Email"
-          type="email"
-          placeholder="ban@congty.vn"
-          autoComplete="email"
+          name="identifier"
+          label="Email hoặc số điện thoại"
+          placeholder="ban@congty.vn hoặc 0901234567"
+          autoComplete="username"
           prefix={<MailOutlined />}
-          autoFocus
         />
         <TextField
           control={control}
@@ -134,10 +135,6 @@ function LoginForm() {
         </Button>
       </form>
 
-      <div className={styles.registerHint}>
-        Chưa có tài khoản? <Link href={ROUTES.REGISTER}>Đăng ký</Link>
-      </div>
-
       <Divider className={styles.divider} plain>
         hoặc
       </Divider>
@@ -163,6 +160,48 @@ function LoginForm() {
         >
           {AUTH_PROVIDER_LABEL[AUTH_PROVIDER.FACEBOOK]}
         </Button>
+      </div>
+    </>
+  );
+
+  if (promptSetPassword) {
+    return (
+      <div className={styles.box}>
+        <SetPasswordStep onDone={afterAuth} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.box}>
+      <div className={styles.head}>
+        <Logo size="lg" />
+        <div>
+          <div className={styles.title}>Đăng nhập XePrime</div>
+          <div className={styles.sub}>Thuê xe & quản lý gian hàng</div>
+        </div>
+      </div>
+
+      <Tabs
+        defaultActiveKey="password"
+        centered
+        className={styles.tabs}
+        items={[
+          {
+            key: 'password',
+            label: 'Email / SĐT',
+            children: emailPane,
+          },
+          {
+            key: 'otp',
+            label: 'Đăng nhập OTP',
+            children: <PhoneLoginForm onSuccess={afterPhoneLogin} />,
+          },
+        ]}
+      />
+
+      <div className={styles.registerHint}>
+        Chưa có tài khoản? <Link href={ROUTES.REGISTER}>Đăng ký bằng email</Link>
       </div>
     </div>
   );

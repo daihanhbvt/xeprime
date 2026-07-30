@@ -1,13 +1,16 @@
 'use client';
 
-import { MessageOutlined, UserOutlined } from '@ant-design/icons';
-import { Avatar, Badge, Button } from 'antd';
+import { LogoutOutlined, MessageOutlined, UserOutlined } from '@ant-design/icons';
+import { Avatar, Badge, Button, Dropdown } from 'antd';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { destroySession } from '@/services/auth.service';
 import styles from './MarketHeader.module.css';
 
 const NAV = [
@@ -17,8 +20,21 @@ const NAV = [
 ];
 
 export function MarketHeader() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
   const { data: chatUnread } = useChatUnreadCount(!!user);
+
+  async function handleLogout() {
+    try {
+      await destroySession();
+    } catch {
+      // Cookie có thể đã hết hạn — vẫn dọn cache + về Home.
+    }
+    // Xoá cache: dữ liệu người vừa thoát không hiện lại cho người kế tiếp trên cùng máy.
+    queryClient.clear();
+    router.replace(ROUTES.HOME);
+  }
 
   return (
     <header className={styles.header}>
@@ -48,11 +64,33 @@ export function MarketHeader() {
                 </Link>
               </Badge>
               <NotificationBell context="customer" />
-              <Link href={ROUTES.TRIPS} aria-label="Đơn thuê của tôi">
-                <Avatar className={styles.avatar} size={34}>
-                  {initial(user.displayName)}
-                </Avatar>
-              </Link>
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: [
+                    { key: 'name', label: user.displayName, disabled: true },
+                    { type: 'divider' },
+                    {
+                      key: 'trips',
+                      label: <Link href={ROUTES.TRIPS}>Chuyến của tôi</Link>,
+                    },
+                    { key: 'chat', label: <Link href={ROUTES.CHAT}>Tin nhắn</Link> },
+                    { type: 'divider' },
+                    {
+                      key: 'logout',
+                      icon: <LogoutOutlined />,
+                      label: 'Đăng xuất',
+                      onClick: () => void handleLogout(),
+                    },
+                  ],
+                }}
+              >
+                <span className={styles.avatarTrigger} role="button" tabIndex={0} aria-label="Tài khoản">
+                  <Avatar className={styles.avatar} size={34}>
+                    {initial(user.displayName)}
+                  </Avatar>
+                </span>
+              </Dropdown>
             </>
           ) : (
             <Link href={ROUTES.LOGIN}>

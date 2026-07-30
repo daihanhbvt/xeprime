@@ -6,6 +6,8 @@ type Schemas = components['schemas'];
 export type BookingRequestItem = Schemas['BookingRequestDto'];
 export type CreateBookingRequestInput = Schemas['CreateBookingRequestDto'];
 export type BookingRequestReceipt = Schemas['BookingRequestReceiptDto'];
+export type CheckAvailabilityInput = Schemas['CheckAvailabilityDto'];
+export type CheckAvailabilityResult = Schemas['CheckAvailabilityResultDto'];
 
 /** Filter inbox yêu cầu — ở URL searchParams (ADR 0004). */
 export interface BookingRequestFilters {

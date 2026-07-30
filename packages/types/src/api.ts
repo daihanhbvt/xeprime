@@ -70,6 +70,8 @@ export const API_ERROR_CODE = {
   OTP_EXPIRED: 'OTP_EXPIRED',
   OTP_COOLDOWN: 'OTP_COOLDOWN',
   OTP_TOO_MANY: 'OTP_TOO_MANY',
+  /** Nhập sai mã quá số lần cho phép — mã bị khoá, phải gửi lại mã mới. */
+  OTP_LOCKED: 'OTP_LOCKED',
 
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',

@@ -29,16 +29,23 @@ export class RegisterDto extends PasswordField {
 }
 
 export class LoginDto {
-  @ApiProperty({ example: 'ban@congty.vn' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
-  @IsEmail({}, { message: 'Email không hợp lệ' })
-  email!: string;
+  @ApiProperty({
+    description: 'Email hoặc số điện thoại',
+    example: 'ban@congty.vn',
+  })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(1, { message: 'Vui lòng nhập email hoặc số điện thoại' })
+  identifier!: string;
 
   @ApiProperty()
   @IsString()
   @MinLength(1, { message: 'Vui lòng nhập mật khẩu' })
   password!: string;
 }
+
+/** Đặt mật khẩu cho tài khoản CHƯA có mật khẩu (vd tạo bằng SĐT/OTP). Cần đăng nhập. */
+export class SetPasswordDto extends PasswordField {}
 
 export class ForgotPasswordDto {
   @ApiProperty({ example: 'ban@congty.vn' })
@@ -82,6 +89,11 @@ export class MeDto {
 
   @ApiProperty({ description: 'Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop' })
   phoneVerified!: boolean;
+
+  @ApiProperty({
+    description: 'Đã có mật khẩu chưa — false với tài khoản tạo bằng SĐT/OTP (gợi ý đặt mật khẩu)',
+  })
+  hasPassword!: boolean;
 
   @ApiPropertyOptional({ type: CurrentTenantSummaryDto, nullable: true })
   tenant!: CurrentTenantSummaryDto | null;

@@ -104,7 +104,32 @@
             }
           }
         },
-        "summary": "Đăng nhập bằng email + mật khẩu",
+        "summary": "Đăng nhập bằng email hoặc số điện thoại + mật khẩu",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password/set": {
+      "post": {
+        "operationId": "AuthController_setPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Đặt mật khẩu lần đầu cho tài khoản chưa có (vd tạo bằng SĐT/OTP)",
         "tags": [
           "auth"
         ]
@@ -1886,6 +1911,38 @@
         ]
       }
     },
+    "/public/booking-requests/check-availability": {
+      "post": {
+        "operationId": "PublicBookingRequestsController_checkAvailability",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckAvailabilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckAvailabilityResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Khách kiểm tra nhanh khung giờ của một xe có trống không (preview)",
+        "tags": [
+          "public-booking-requests"
+        ]
+      }
+    },
     "/auth/phone/send-otp": {
       "post": {
         "operationId": "PhoneVerificationController_sendOtp",
@@ -1945,6 +2002,38 @@
           }
         },
         "summary": "Xác nhận mã OTP",
+        "tags": [
+          "phone-verification"
+        ]
+      }
+    },
+    "/auth/phone/login": {
+      "post": {
+        "operationId": "PhoneVerificationController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhoneLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đăng nhập passwordless bằng SĐT + OTP (tự tạo tài khoản nếu chưa có)",
         "tags": [
           "phone-verification"
         ]
@@ -3448,6 +3537,10 @@
             "type": "boolean",
             "description": "Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop"
           },
+          "hasPassword": {
+            "type": "boolean",
+            "description": "Đã có mật khẩu chưa — false với tài khoản tạo bằng SĐT/OTP (gợi ý đặt mật khẩu)"
+          },
           "tenant": {
             "nullable": true,
             "type": "object",
@@ -3473,6 +3566,7 @@
           "id",
           "displayName",
           "phoneVerified",
+          "hasPassword",
           "permissions"
         ]
       },
@@ -3502,8 +3596,9 @@
       "LoginDto": {
         "type": "object",
         "properties": {
-          "email": {
+          "identifier": {
             "type": "string",
+            "description": "Email hoặc số điện thoại",
             "example": "ban@congty.vn"
           },
           "password": {
@@ -3511,7 +3606,20 @@
           }
         },
         "required": [
-          "email",
+          "identifier",
+          "password"
+        ]
+      },
+      "SetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "example": "matkhau123"
+          }
+        },
+        "required": [
           "password"
         ]
       },
@@ -5602,11 +5710,50 @@
               "expired",
               "converted_to_booking"
             ]
+          },
+          "authenticated": {
+            "type": "boolean",
+            "description": "Sau khi gửi, khách đã có phiên đăng nhập (passwordless qua SĐT) — FE chuyển tới /trips."
           }
         },
         "required": [
           "id",
-          "status"
+          "status",
+          "authenticated"
+        ]
+      },
+      "CheckAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "vehicleId": {
+            "type": "string",
+            "description": "ID xe (ULID)"
+          },
+          "pickupAt": {
+            "type": "string",
+            "description": "Nhận xe (ISO-8601)"
+          },
+          "returnAt": {
+            "type": "string",
+            "description": "Trả xe (ISO-8601), phải sau nhận xe"
+          }
+        },
+        "required": [
+          "vehicleId",
+          "pickupAt",
+          "returnAt"
+        ]
+      },
+      "CheckAvailabilityResultDto": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Khung giờ còn trống (preview, quyết định thật khi shop duyệt)"
+          }
+        },
+        "required": [
+          "available"
         ]
       },
       "SendOtpDto": {
@@ -5620,6 +5767,7 @@
             "type": "string",
             "enum": [
               "booking",
+              "login",
               "shop_register",
               "vehicle_public",
               "password_reset"
@@ -5660,6 +5808,7 @@
             "type": "string",
             "enum": [
               "booking",
+              "login",
               "shop_register",
               "vehicle_public",
               "password_reset"
@@ -5688,6 +5837,25 @@
         },
         "required": [
           "verified"
+        ]
+      },
+      "PhoneLoginDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "0901234567"
+          },
+          "code": {
+            "type": "string",
+            "example": "123456",
+            "minLength": 6,
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "phone",
+          "code"
         ]
       },
       "FinanceCategoryDto": {

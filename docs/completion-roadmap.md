@@ -54,6 +54,14 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
   `OTP_MODE`, gate `submitPublic`), FE `features/phone-verification` (`PhoneVerifyControl` inline,
   không bắt đăng nhập), check-conflict preview trong `BookingFormDrawer`. Verify: jest 7/7,
   typecheck/eslint/contract sạch.
+  - **29/07 (mở rộng passwordless):** OTP thành công **tạo/đăng nhập tài khoản theo SĐT + cấp
+    session** (không mật khẩu). `POST /auth/phone/login` (purpose `login`) + tab SĐT ở `/login`;
+    `submitPublic` cấp session cho khách vãng lai + trả `authenticated`; `AuthService
+    .resolveOrCreateUserByPhone` (idempotent theo `phone @unique`, identity `phone_otp`). Bảo mật:
+    `phone_verifications.attempt_count` → `OTP_LOCKED` sau 5 lần sai; partial unique index chống
+    double-submit yêu cầu. FE: luồng đặt xe **2 bước bottom-sheet/modal** (`useIsMobile`,
+    `RequestBookingFlow`, `OtpCodeInput` auto-submit/paste/one-time-code, safe-area). Chi tiết:
+    `docs/guest-booking-passwordless.md`. Migration `20260729160000_add_phone_login`.
 - **Phase 5:** `modules/notification` + `modules/review` (+ public review) đầy đủ; `modules/chat`
   (+ `conversations.controller`) đã dựng — realtime Firestore projection bật sau cờ `FIRESTORE_ENABLED`.
 

@@ -11,12 +11,20 @@ import { RequestBookingModal } from './RequestBookingModal';
 export function RequestBookingButton({
   vehicleId,
   vehicleName,
+  vehicleImageUrl,
+  pricePerDay,
+  pickupAt,
+  returnAt,
   block,
   size,
   className,
 }: {
   vehicleId: string;
   vehicleName: string;
+  vehicleImageUrl?: string | null;
+  pricePerDay?: string | null;
+  pickupAt?: string | null;
+  returnAt?: string | null;
   block?: boolean;
   size?: 'small' | 'middle' | 'large';
   className?: string;
@@ -36,6 +44,10 @@ export function RequestBookingButton({
       <RequestBookingModal
         vehicleId={vehicleId}
         vehicleName={vehicleName}
+        vehicleImageUrl={vehicleImageUrl}
+        pricePerDay={pricePerDay}
+        pickupAt={pickupAt}
+        returnAt={returnAt}
         open={open}
         onClose={() => setOpen(false)}
       />

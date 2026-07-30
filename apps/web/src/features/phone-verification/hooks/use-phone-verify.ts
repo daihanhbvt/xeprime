@@ -62,6 +62,8 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
     sending: sendMutation.isPending,
     verifying: verifyMutation.isPending,
     send: (phone: string) => sendMutation.mutate(phone),
+    /** Gửi mã và chờ kết quả — để bước sau chỉ chuyển khi mã đã gửi thành công. */
+    sendAsync: (phone: string) => sendMutation.mutateAsync(phone),
     verify: (phone: string, code: string) => verifyMutation.mutate({ phone, code }),
     reset,
   };

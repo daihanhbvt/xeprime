@@ -25,7 +25,15 @@ function vehicleTypeLabel(type: string): string {
 }
 
 /** Trang chi tiết một xe trên Marketplace (server-render). Nút thuê là client island. */
-export function ListingDetailView({ listing }: { listing: PublicListingDetail }) {
+export function ListingDetailView({
+  listing,
+  pickupAt,
+  returnAt,
+}: {
+  listing: PublicListingDetail;
+  pickupAt?: string;
+  returnAt?: string;
+}) {
   const specs: Array<{ label: string; value: string }> = [
     { label: 'Loại xe', value: vehicleTypeLabel(listing.vehicleType) },
     { label: 'Dịch vụ', value: SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType },
@@ -97,6 +105,10 @@ export function ListingDetailView({ listing }: { listing: PublicListingDetail })
           <RequestBookingButton
             vehicleId={listing.id}
             vehicleName={listing.name}
+            vehicleImageUrl={listing.mainImageUrl}
+            pricePerDay={listing.weekdayPrice}
+            pickupAt={pickupAt}
+            returnAt={returnAt}
             size="large"
             className={styles.cta}
           />

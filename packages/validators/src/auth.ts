@@ -24,7 +24,10 @@ export const requiredEmailSchema = yup
   .required('Vui lòng nhập email');
 
 export const loginSchema = yup.object({
-  email: requiredEmailSchema,
+  identifier: yup
+    .string()
+    .trim()
+    .required('Vui lòng nhập email hoặc số điện thoại'),
   password: yup.string().required('Vui lòng nhập mật khẩu'),
 });
 export type LoginValues = yup.InferType<typeof loginSchema>;

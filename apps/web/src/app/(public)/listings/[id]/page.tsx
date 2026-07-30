@@ -5,6 +5,7 @@ import { ListingDetailView } from '@/features/marketplace/components/ListingDeta
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ pickupAt?: string; returnAt?: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -17,9 +18,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function ListingDetailPage({ params }: PageProps) {
+export default async function ListingDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { pickupAt, returnAt } = await searchParams;
   const listing = await fetchListingDetail(id);
   if (!listing) notFound();
-  return <ListingDetailView listing={listing} />;
+  return <ListingDetailView listing={listing} pickupAt={pickupAt} returnAt={returnAt} />;
 }

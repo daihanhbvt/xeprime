@@ -106,7 +106,8 @@ export class PhoneVerificationService {
   /**
    * Đối chiếu mã. Đúng → đánh dấu verified; nếu khách đang đăng nhập (`userId`) thì stamp luôn
    * `users.phone` + `phone_verified_at` để lần sau khỏi verify lại. Sai/hết hạn → lỗi typed.
-   * Không tiết lộ số lần thử; brute-force bị chặn bởi TTL ngắn + @Throttle ở controller.
+   * Nhập sai được đếm (`attempt_count`); chạm OTP_MAX_ATTEMPTS → khoá mã (status=failed) và trả
+   * OTP_LOCKED, buộc gửi mã mới. Kèm TTL ngắn + @Throttle ở controller để hãm brute-force.
    */
   async verifyOtp(
     rawPhone: string,
@@ -118,7 +119,7 @@ export class PhoneVerificationService {
     const row = await this.prisma.phoneVerification.findFirst({
       where: { phone, purpose, status: PHONE_VERIFICATION_STATUS.PENDING },
       orderBy: { createdAt: 'desc' },
-      select: { id: true, otpHash: true, expiresAt: true },
+      select: { id: true, otpHash: true, expiresAt: true, attemptCount: true },
     });
 
     if (!row) {
@@ -140,6 +141,24 @@ export class PhoneVerificationService {
     }
 
     if (row.otpHash !== this.hash(code, phone)) {
+      const maxAttempts = this.config.get<number>('OTP_MAX_ATTEMPTS') ?? 5;
+      const attemptCount = row.attemptCount + 1;
+      if (attemptCount >= maxAttempts) {
+        // Khoá mã: không cho thử tiếp mã này (updateMany với điều kiện PENDING để idempotent
+        // khi 2 request sai gần như đồng thời — chỉ một lần khoá có tác dụng).
+        await this.prisma.phoneVerification.update({
+          where: { id: row.id },
+          data: { status: PHONE_VERIFICATION_STATUS.FAILED, attemptCount },
+        });
+        throw new BadRequestException({
+          code: API_ERROR_CODE.OTP_LOCKED,
+          message: 'Bạn đã nhập sai quá nhiều lần — hãy gửi lại mã mới',
+        });
+      }
+      await this.prisma.phoneVerification.update({
+        where: { id: row.id },
+        data: { attemptCount },
+      });
       throw new BadRequestException({
         code: API_ERROR_CODE.OTP_INVALID,
         message: 'Mã xác thực không đúng',
