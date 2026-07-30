@@ -9,3 +9,10 @@
 .main {
   flex: 1;
 }
+
+/* Mobile: chừa chỗ cho thanh tab cố định dưới đáy (MobileTabBar). */
+@media (max-width: 760px) {
+  .wrapper {
+    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+  }
+}

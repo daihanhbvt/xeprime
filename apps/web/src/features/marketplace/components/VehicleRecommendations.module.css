@@ -35,10 +35,49 @@
   display: none;
 }
 
-.priceSelect {
+.seeAll {
   flex: none;
-  margin-left: auto;
-  min-width: 140px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--xp-gold-deep);
+  padding: 4px 0;
+}
+.seeAll:hover {
+  color: var(--xp-color-primary);
+}
+
+/* Nút mở bộ lọc nâng cao — nổi hơn chip thường bằng viền đậm. */
+.chipFilter {
+  gap: 6px;
+  display: inline-flex;
+  align-items: center;
+  border-color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-text);
+}
+
+.filterForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filterLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--xp-color-text-secondary);
 }
 
 .chip {

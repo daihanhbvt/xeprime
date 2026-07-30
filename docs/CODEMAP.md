@@ -28,6 +28,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Xác thực SĐT OTP (mock/eSMS) + gate booking | `modules/phone-verification/` (`otp-provider.ts`, `phone-verification.service.ts`) | Phase 4 §8; provider theo `OTP_MODE` |
 | Best-effort userId cho endpoint `@Public()` | `common/optional-user.ts` | dùng ở public-booking-requests + phone-verify |
 | Marketplace công khai + trang gian hàng `/public/shops/:slug` | `modules/public-listings/` (`public-listings.controller.ts`, `public-shops.controller.ts`) | ADR 0008 (đọc thẳng `vehicles`, chưa có snapshot) |
+| **Dữ liệu trang chủ**: `/public/destinations` (tỉnh + số xe), `/public/shops` (gian hàng nổi bật) | `modules/public-listings/` (`public-destinations.controller.ts`, `listDestinations`/`listShops`) | groupBy snapshot; KHÔNG hardcode tỉnh ở FE |
+| Điểm đánh giá theo XE trên thẻ marketplace (`ratingsByVehicle`) | `modules/public-listings/public-listings.service.ts` | groupBy `reviews` published, 1 query/trang |
 | **Đơn thuê** (create/update/transition, `createWithinTx` giữ lịch trong tx) | `modules/bookings/` | ADR 0006 |
 | **Yêu cầu thuê** (public submit + approve→booking + `check-availability` preview) | `modules/booking-requests/` (`public-booking-requests.controller.ts`) | Phase 4; approve tạo booking → 23P01→409 |
 | **Đăng nhập passwordless SĐT** (find-or-create theo phone, set-password) | `modules/auth/` (`resolveOrCreateUserByPhone`, `setPassword`) + `modules/phone-verification/` (purpose `login`) | ADR 0002; xem `docs/guest-booking-passwordless.md` |
@@ -62,6 +64,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Design token · CSS Modules · token.css↔theme.ts | `styles/theme.ts` · `styles/tokens.css` | ADR 0003 |
 | Lịch (resource timeline) | `features/calendar/` | ADR 0006 |
 | Marketplace + trang gian hàng `/shops/[slug]` (thẻ xe, chi tiết, hồ sơ shop) | `features/marketplace/` · `app/(public)/shops/[slug]/` | ADR 0008 |
+| Trang chủ: Hero · gợi ý xe · địa điểm · gian hàng nổi bật · 4 bước · CTA · tab bar mobile | `features/marketplace/components/{HeroSearch,VehicleRecommendations,FeaturedLocations,FeaturedHosts,RentalSteps,OwnerCta,MobileTabBar}.tsx` | Nội dung tĩnh ở `features/marketplace/constants.ts` |
 | Xác thực SĐT / OTP: `PhoneVerifyControl`, `PhoneLoginForm`, `OtpCodeInput`, `use-phone-verify` | `features/phone-verification/` | Phase 4 + passwordless |
 | Đặt xe khách (bottom-sheet/modal, từng bước) | `features/booking-requests/` (`RequestBookingFlow`, `RequestBookingModal`) | `guest-booking-passwordless.md` |
 | Đơn thuê (list/table/detail drawer, thu tiền) · Yêu cầu thuê inbox | `features/bookings/` · inbox ở `features/booking-requests/` | Phase 4/6 |

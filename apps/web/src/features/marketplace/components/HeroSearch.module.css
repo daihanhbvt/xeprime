@@ -8,10 +8,28 @@
   overflow: hidden;
 }
 
+/* Vệt sáng vàng phía phải — gợi đèn xe, thay cho ảnh nền (chưa có asset). */
+.glow {
+  position: absolute;
+  top: -20%;
+  right: -10%;
+  width: 60%;
+  height: 140%;
+  background: radial-gradient(
+    circle at 60% 50%,
+    rgba(214, 160, 44, 0.34),
+    rgba(214, 160, 44, 0.08) 45%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
 .inner {
+  position: relative;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 40px 16px 0;
+  /* Đáy rộng để chừa nền tối lộ ra phía trên chỗ thẻ tìm kiếm bắt đầu tràn vào (xem .cardOuter). */
+  padding: 40px 16px 64px;
 }
 
 .eyebrow {
@@ -63,10 +81,21 @@
   color: #fff;
 }
 
-/* Thẻ tìm kiếm nổi lên, mép dưới tràn khỏi hero (bù bằng margin âm ở page). */
+/*
+ * Bọc thẻ tìm kiếm — là SIBLING của .hero (không lồng bên trong), kéo lên bằng margin-top âm.
+ * Ổn định hơn transform+overflow: không đụng `.hero { overflow: hidden }` nên không bị cắt, và
+ * độ tràn vào hero (giá trị âm này) hoàn toàn tách biệt với khoảng cách xuống nội dung phía dưới
+ * (khoảng đó do padding-top của khối kế tiếp quyết định — xem `page.module.css`).
+ */
+.cardOuter {
+  position: relative;
+  z-index: 1;
+  max-width: 1120px;
+  margin: -40px auto 0;
+  padding: 0 16px;
+}
+
 .card {
-  margin-top: 22px;
-  transform: translateY(28px);
   background: var(--xp-color-bg-container);
   color: var(--xp-color-text);
   border-radius: var(--xp-border-radius);
@@ -100,6 +129,16 @@
   color: var(--xp-color-primary);
   font-size: 17px;
   flex: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Chấm tròn thay icon ở ô ngày — giữ 2 ô ngày thẳng hàng với ô địa điểm. */
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--xp-color-primary);
 }
 
 .fieldBody {

@@ -4,6 +4,9 @@ import { Spin } from 'antd';
 import { HeroSearch } from '@/features/marketplace/components/HeroSearch';
 import { VehicleRecommendations } from '@/features/marketplace/components/VehicleRecommendations';
 import { FeaturedLocations } from '@/features/marketplace/components/FeaturedLocations';
+import { FeaturedHosts } from '@/features/marketplace/components/FeaturedHosts';
+import { RentalSteps } from '@/features/marketplace/components/RentalSteps';
+import { OwnerCta } from '@/features/marketplace/components/OwnerCta';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -15,9 +18,11 @@ export const metadata: Metadata = {
 /**
  * Trang chủ Marketplace.
  *
- * Page là Server Component (SEO); các khối bên trong là client island. HeroSearch/
- * VehicleRecommendations/FeaturedLocations dùng `useSearchParams` (filter ở URL — ADR 0004),
- * nên Next yêu cầu bọc trong <Suspense>.
+ * Page là Server Component (SEO). HeroSearch/VehicleRecommendations/FeaturedLocations/
+ * FeaturedHosts là client island vì cần state/URL (ADR 0004) — Suspense bọc phần dùng
+ * `useSearchParams`. `RentalSteps`/`OwnerCta` có nội dung tĩnh nhưng vẫn là Client Component vì
+ * dùng `@ant-design/icons` (đòi hỏi cây Client — xem comment trong từng file); nội dung vẫn được
+ * render sẵn ra HTML ở server nên không mất SEO.
  */
 export default function MarketplacePage() {
   return (
@@ -28,6 +33,9 @@ export default function MarketplacePage() {
           <VehicleRecommendations />
         </div>
         <FeaturedLocations />
+        <FeaturedHosts />
+        <RentalSteps />
+        <OwnerCta />
       </div>
     </Suspense>
   );
@@ -35,7 +43,7 @@ export default function MarketplacePage() {
 
 function HomeFallback() {
   return (
-    <div style={{ minHeight: '60vh', display: 'grid', placeItems: 'center' }}>
+    <div className={styles.fallback}>
       <Spin size="large" />
     </div>
   );

@@ -6,6 +6,10 @@ type Schemas = components['schemas'];
 export type PublicListing = Schemas['PublicListingDto'];
 export type PublicListingDetail = Schemas['PublicListingDetailDto'];
 export type PublicShop = Schemas['PublicShopDto'];
+/** Tỉnh/thành có xe — "Địa điểm nổi bật" (số xe đếm thật ở backend). */
+export type PublicDestination = Schemas['PublicDestinationDto'];
+/** Gian hàng trong danh sách công khai — "Gian hàng nổi bật". */
+export type PublicShopSummary = Schemas['PublicShopSummaryDto'];
 
 export type ReviewItem = Schemas['ReviewDto'];
 export type ReviewSummary = Schemas['ReviewSummaryDto'];

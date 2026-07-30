@@ -1,34 +1,43 @@
 'use client';
 
-import { HeartOutlined } from '@ant-design/icons';
+import {
+  DashboardOutlined,
+  EnvironmentOutlined,
+  HeartOutlined,
+  StarFilled,
+  TeamOutlined,
+} from '@ant-design/icons';
 import Link from 'next/link';
 import {
   SERVICE_TYPE_LABEL,
   VEHICLE_TYPE,
+  VEHICLE_TYPE_LABEL,
   type ServiceType,
   type VehicleType,
 } from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { listingPath, shopPath } from '@/constants/routes';
 import { formatMoneyVnd } from '@/lib/money';
+import { fuelLabel } from '../constants';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
 import styles from './VehicleCard.module.css';
 
-const FUEL_LABEL: Record<string, string> = {
-  gasoline: 'Xăng',
-  diesel: 'Dầu',
-  electric: 'Điện',
-  hybrid: 'Hybrid',
-};
-
-/** Một thẻ xe trên marketplace — bám card của xeprime.vn. */
+/** Một thẻ xe trên marketplace. Chỉ hiển thị trường backend thật sự có — thiếu thì ẩn dòng đó. */
 export function VehicleCard({ listing }: { listing: PublicListing }) {
   const { filters } = useMarketplaceFilters();
-  const seats = listing.seatCount ? `${listing.seatCount} chỗ` : null;
-  const fuel = listing.fuelType ? (FUEL_LABEL[listing.fuelType] ?? listing.fuelType) : null;
-  const specs = [seats, fuel, listing.brand].filter(Boolean).join(' · ');
-  const serviceLabel = SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType;
+
+  const typeLabel = VEHICLE_TYPE_LABEL[listing.vehicleType as VehicleType] ?? listing.vehicleType;
+  const brandLine = [listing.brand, listing.model].filter(Boolean).join(' ');
+  const specs = [brandLine || typeLabel, listing.seatCount ? `${listing.seatCount} chỗ` : null]
+    .filter(Boolean)
+    .join(' · ');
+
+  const serviceLabel =
+    SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType;
+  const fuel = fuelLabel(listing.fuelType);
+  const rating = Number(listing.ratingAvg);
+  const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
 
   // Mang ngày giờ đã lọc sang trang chi tiết để prefill luồng đặt xe.
   const dateQs = new URLSearchParams();
@@ -41,11 +50,8 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   return (
     <article className={styles.card}>
       {/* Stretched-link: cả thẻ dẫn tới trang chi tiết, trừ các nút z-index cao hơn. */}
-      <Link
-        href={detailHref}
-        className={styles.stretch}
-        aria-label={`Xem chi tiết ${listing.name}`}
-      />
+      <Link href={detailHref} className={styles.stretch} aria-label={`Xem chi tiết ${listing.name}`} />
+
       <div className={styles.media}>
         {listing.mainImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- ảnh xe từ storage ngoài, chưa qua next/image
@@ -62,6 +68,36 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
       <div className={styles.body}>
         <h3 className={styles.title}>{listing.name}</h3>
         {specs ? <p className={styles.specs}>{specs}</p> : null}
+
+        <div className={styles.metaRow}>
+          {listing.shopProvince ? (
+            <span className={styles.metaItem}>
+              <EnvironmentOutlined /> {listing.shopProvince}
+            </span>
+          ) : null}
+          {hasRating ? (
+            <span className={styles.metaItem}>
+              <StarFilled className={styles.star} /> {rating.toFixed(1)}
+              <span className={styles.ratingCount}>({listing.ratingCount})</span>
+            </span>
+          ) : (
+            <span className={styles.newTag}>Xe mới</span>
+          )}
+        </div>
+
+        <div className={styles.featureRow}>
+          {fuel ? (
+            <span className={styles.metaItem}>
+              <DashboardOutlined /> {fuel}
+            </span>
+          ) : null}
+          {listing.seatCount ? (
+            <span className={styles.metaItem}>
+              <TeamOutlined /> {listing.seatCount} chỗ
+            </span>
+          ) : null}
+        </div>
+
         <div className={styles.footer}>
           <div className={styles.price}>
             <b>{formatMoneyVnd(listing.weekdayPrice)}</b>
@@ -75,6 +111,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
             {listing.shopName}
           </Link>
         </div>
+
         <RequestBookingButton
           vehicleId={listing.id}
           vehicleName={listing.name}

@@ -1069,6 +1069,87 @@
         ]
       }
     },
+    "/public/destinations": {
+      "get": {
+        "operationId": "PublicDestinationsController_list",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 63,
+              "default": 6,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicDestinationDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tỉnh/thành đang có xe cho thuê, kèm số xe và ảnh đại diện",
+        "tags": [
+          "public-listings"
+        ]
+      }
+    },
+    "/public/shops": {
+      "get": {
+        "operationId": "PublicShopsController_listShops",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 48,
+              "default": 12,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicShopPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách gian hàng công khai (phân trang, sắp theo đánh giá)",
+        "tags": [
+          "public-listings"
+        ]
+      }
+    },
     "/public/shops/{slug}": {
       "get": {
         "operationId": "PublicShopsController_getShop",
@@ -4698,6 +4779,15 @@
             "type": "string",
             "nullable": true,
             "description": "Tỉnh/thành gian hàng"
+          },
+          "ratingAvg": {
+            "type": "string",
+            "nullable": true,
+            "description": "Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá."
+          },
+          "ratingCount": {
+            "type": "number",
+            "description": "Số lượt đánh giá của xe"
           }
         },
         "required": [
@@ -4706,7 +4796,8 @@
           "vehicleType",
           "serviceType",
           "shopName",
-          "shopSlug"
+          "shopSlug",
+          "ratingCount"
         ]
       },
       "PublicListingPageMetaDto": {
@@ -4817,6 +4908,15 @@
             "nullable": true,
             "description": "Tỉnh/thành gian hàng"
           },
+          "ratingAvg": {
+            "type": "string",
+            "nullable": true,
+            "description": "Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá."
+          },
+          "ratingCount": {
+            "type": "number",
+            "description": "Số lượt đánh giá của xe"
+          },
           "description": {
             "type": "string",
             "nullable": true
@@ -4861,8 +4961,86 @@
           "serviceType",
           "shopName",
           "shopSlug",
+          "ratingCount",
           "images",
           "features"
+        ]
+      },
+      "PublicDestinationDto": {
+        "type": "object",
+        "properties": {
+          "provinceName": {
+            "type": "string",
+            "description": "Tên tỉnh/thành — dùng luôn làm giá trị lọc `province`"
+          },
+          "vehicleCount": {
+            "type": "number",
+            "description": "Số xe đang hiển thị công khai ở tỉnh/thành này"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh đại diện lấy từ một xe"
+          }
+        },
+        "required": [
+          "provinceName",
+          "vehicleCount"
+        ]
+      },
+      "PublicShopSummaryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleCount": {
+            "type": "number",
+            "description": "Số xe đang hiển thị công khai"
+          },
+          "ratingAvg": {
+            "type": "string",
+            "description": "Điểm đánh giá trung bình, string — ADR 0007"
+          },
+          "ratingCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "vehicleCount",
+          "ratingAvg",
+          "ratingCount"
+        ]
+      },
+      "PublicShopPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicShopSummaryDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PublicListingPageMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "PublicShopDto": {

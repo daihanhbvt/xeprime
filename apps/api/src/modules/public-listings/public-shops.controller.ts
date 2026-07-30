@@ -5,6 +5,8 @@ import { PublicListingsService } from './public-listings.service';
 import {
   PublicListingPageDto,
   PublicShopDto,
+  PublicShopListQueryDto,
+  PublicShopPageDto,
   ShopListingQueryDto,
 } from './dto/public-listing.dto';
 
@@ -18,6 +20,14 @@ import {
 @Controller('public/shops')
 export class PublicShopsController {
   constructor(private readonly listings: PublicListingsService) {}
+
+  @Public()
+  @Get()
+  @ApiOperation({ summary: 'Danh sách gian hàng công khai (phân trang, sắp theo đánh giá)' })
+  @ApiOkResponse({ type: PublicShopPageDto })
+  listShops(@Query() query: PublicShopListQueryDto): Promise<PublicShopPageDto> {
+    return this.listings.listShops(query) as Promise<PublicShopPageDto>;
+  }
 
   @Public()
   @Get(':slug')

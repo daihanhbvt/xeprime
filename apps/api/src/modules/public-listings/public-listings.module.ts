@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PublicListingsController } from './public-listings.controller';
+import { PublicDestinationsController } from './public-destinations.controller';
 import { PublicShopsController } from './public-shops.controller';
 import { ListingsService } from './listings.service';
 import { PublicListingsService } from './public-listings.service';
@@ -9,7 +10,7 @@ import { PublicListingsService } from './public-listings.service';
  * `ListingsService` (writer, ADR 0008) được export để `vehicles`/`platform-admin` gọi sync.
  */
 @Module({
-  controllers: [PublicListingsController, PublicShopsController],
+  controllers: [PublicListingsController, PublicDestinationsController, PublicShopsController],
   providers: [PublicListingsService, ListingsService],
   exports: [ListingsService],
 })

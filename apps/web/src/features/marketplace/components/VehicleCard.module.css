@@ -104,6 +104,42 @@
   color: var(--xp-color-text-secondary);
 }
 
+/* Dòng địa điểm + đánh giá, và dòng thông số — chỉ hiện mục có dữ liệu. */
+.metaRow,
+.featureRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12.5px;
+  color: var(--xp-color-text-secondary);
+  min-height: 18px;
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.star {
+  color: var(--xp-color-primary);
+}
+
+.ratingCount {
+  color: var(--xp-color-text-tertiary);
+}
+
+.newTag {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+}
+
 .footer {
   display: flex;
   align-items: baseline;

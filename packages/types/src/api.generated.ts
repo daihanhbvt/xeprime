@@ -417,6 +417,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/destinations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tỉnh/thành đang có xe cho thuê, kèm số xe và ảnh đại diện */
+        get: operations["PublicDestinationsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/shops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách gian hàng công khai (phân trang, sắp theo đánh giá) */
+        get: operations["PublicShopsController_listShops"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/shops/{slug}": {
         parameters: {
             query?: never;
@@ -1553,6 +1587,10 @@ export interface components {
             shopSlug: string;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
+            /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
+            ratingAvg?: string | null;
+            /** @description Số lượt đánh giá của xe */
+            ratingCount: number;
         };
         PublicListingPageMetaDto: {
             page: number;
@@ -1585,6 +1623,10 @@ export interface components {
             shopSlug: string;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
+            /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
+            ratingAvg?: string | null;
+            /** @description Số lượt đánh giá của xe */
+            ratingCount: number;
             description?: string | null;
             color?: string | null;
             manufactureYear?: number | null;
@@ -1596,6 +1638,29 @@ export interface components {
             images: string[];
             /** @description Key tiện ích (VEHICLE_FEATURE_LABEL) */
             features: string[];
+        };
+        PublicDestinationDto: {
+            /** @description Tên tỉnh/thành — dùng luôn làm giá trị lọc `province` */
+            provinceName: string;
+            /** @description Số xe đang hiển thị công khai ở tỉnh/thành này */
+            vehicleCount: number;
+            /** @description Ảnh đại diện lấy từ một xe */
+            imageUrl?: string | null;
+        };
+        PublicShopSummaryDto: {
+            name: string;
+            slug: string;
+            logoUrl?: string | null;
+            provinceName?: string | null;
+            /** @description Số xe đang hiển thị công khai */
+            vehicleCount: number;
+            /** @description Điểm đánh giá trung bình, string — ADR 0007 */
+            ratingAvg: string;
+            ratingCount: number;
+        };
+        PublicShopPageDto: {
+            data: components["schemas"]["PublicShopSummaryDto"][];
+            meta: components["schemas"]["PublicListingPageMetaDto"];
         };
         PublicShopDto: {
             name: string;
@@ -3204,6 +3269,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicListingDetailDto"];
+                };
+            };
+        };
+    };
+    PublicDestinationsController_list: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDestinationDto"][];
+                };
+            };
+        };
+    };
+    PublicShopsController_listShops: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicShopPageDto"];
                 };
             };
         };

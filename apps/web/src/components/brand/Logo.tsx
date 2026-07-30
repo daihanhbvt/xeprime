@@ -14,6 +14,8 @@ interface LogoProps {
   /** `full` = mark + chữ; `mark` = chỉ biểu tượng. */
   variant?: 'full' | 'mark';
   size?: LogoSize;
+  /** `light` = đảo chữ sang trắng để đặt trên nền tối (hero, CTA chủ xe). */
+  tone?: 'default' | 'light';
   className?: string;
 }
 
@@ -31,12 +33,15 @@ function Mark({ className }: { className?: string }) {
   );
 }
 
-export function Logo({ variant = 'full', size = 'md', className }: LogoProps) {
+export function Logo({ variant = 'full', size = 'md', tone = 'default', className }: LogoProps) {
   if (variant === 'mark') {
     return <Mark className={cx(styles[size], className)} />;
   }
   return (
-    <span className={cx(styles.logo, styles[size], className)} aria-label="XePrime">
+    <span
+      className={cx(styles.logo, styles[size], tone === 'light' && styles.light, className)}
+      aria-label="XePrime"
+    >
       <Mark />
       <span className={styles.word}>
         <b>xe</b> <span>prime</span>

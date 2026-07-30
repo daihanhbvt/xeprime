@@ -48,7 +48,7 @@ export function RequestBookingModal({
 
   if (isMobile) {
     return (
-      <Drawer title={TITLE} placement="bottom" height="88dvh" open={open} onClose={onClose}>
+      <Drawer title={TITLE} placement="bottom" size="88dvh" open={open} onClose={onClose}>
         {flow}
       </Drawer>
     );

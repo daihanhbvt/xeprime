@@ -3,16 +3,21 @@ import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   LISTING_STATUS,
+  REVIEW_STATUS,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type PaginationMeta,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
+  PublicDestinationDto,
+  PublicDestinationQueryDto,
   PublicListingDetailDto,
   PublicListingDto,
   PublicListingQueryDto,
   PublicShopDto,
+  PublicShopListQueryDto,
+  PublicShopSummaryDto,
   ShopListingQueryDto,
 } from './dto/public-listing.dto';
 
@@ -39,11 +44,18 @@ const LISTING_CARD_SELECT = {
 
 type ListingCardRow = Prisma.PublicListingGetPayload<{ select: typeof LISTING_CARD_SELECT }>;
 
+/** Điểm đánh giá gộp của MỘT xe (chỉ review `published`). */
+interface VehicleRating {
+  avg: string | null;
+  count: number;
+}
+
 /**
  * Row listing → thẻ marketplace. `id` của thẻ là `vehicleId` (route `/listings/[id]` + đặt xe
- * dùng vehicle id). Decimal → string do ResponseInterceptor lo (ADR 0007).
+ * dùng vehicle id). Decimal → string do ResponseInterceptor lo (ADR 0007). `rating` bơm từ
+ * `ratingsByVehicle` (không có review → null/0, FE tự ẩn).
  */
-function toListingCard(l: ListingCardRow): PublicListingDto {
+function toListingCard(l: ListingCardRow, rating?: VehicleRating): PublicListingDto {
   return {
     id: l.vehicleId,
     name: l.title,
@@ -59,6 +71,8 @@ function toListingCard(l: ListingCardRow): PublicListingDto {
     shopName: l.tenant.name,
     shopSlug: l.shopSlug,
     shopProvince: l.provinceName,
+    ratingAvg: rating?.avg ?? null,
+    ratingCount: rating?.count ?? 0,
   };
 }
 
@@ -150,8 +164,134 @@ export class PublicListingsService {
       }),
     ]);
 
+    const ratings = await this.ratingsByVehicle(rows.map((r) => r.vehicleId));
     return {
-      data: rows.map(toListingCard),
+      data: rows.map((r) => toListingCard(r, ratings.get(r.vehicleId))),
+      meta: { page, limit, total, hasNext: page * limit < total },
+    };
+  }
+
+  /**
+   * Điểm đánh giá gộp theo xe cho ĐÚNG trang vừa lấy (một query `groupBy`, không N+1). Chỉ tính
+   * review `published` chưa xoá — cùng quy tắc với `tenants.rating_avg` (xem `review.ts`).
+   * Index `[vehicleId, status, createdAt]` phục vụ truy vấn này.
+   */
+  private async ratingsByVehicle(vehicleIds: string[]): Promise<Map<string, VehicleRating>> {
+    if (vehicleIds.length === 0) return new Map();
+
+    const rows = await this.prisma.review.groupBy({
+      by: ['vehicleId'],
+      where: {
+        vehicleId: { in: vehicleIds },
+        status: REVIEW_STATUS.PUBLISHED,
+        deletedAt: null,
+      },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+
+    return new Map(
+      rows.map((r) => [
+        r.vehicleId,
+        {
+          // Một chữ số thập phân như UI hiển thị (4.9); string để nhất quán ADR 0007.
+          avg: r._avg.rating != null ? r._avg.rating.toFixed(1) : null,
+          count: r._count._all,
+        },
+      ]),
+    );
+  }
+
+  /**
+   * "Địa điểm nổi bật" — các tỉnh/thành đang có xe, kèm số xe và một ảnh đại diện. Gộp từ snapshot
+   * `public_listings` (index `[provinceName]`), KHÔNG hardcode danh sách tỉnh ở FE. `provinceName`
+   * trả về dùng luôn được làm giá trị lọc `province` của `/public/listings`.
+   *
+   * Bounded tự nhiên (63 tỉnh/thành) nên trả mảng có trần `limit` thay vì phân trang.
+   */
+  async listDestinations(query: PublicDestinationQueryDto): Promise<PublicDestinationDto[]> {
+    const limit = Math.min(63, Math.max(1, query.limit ?? 6));
+
+    const scope: Prisma.PublicListingWhereInput = {
+      status: LISTING_STATUS.ACTIVE,
+      tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
+      provinceName: { not: null },
+    };
+
+    const groups = await this.prisma.publicListing.groupBy({
+      by: ['provinceName'],
+      where: scope,
+      _count: { _all: true },
+      orderBy: { _count: { provinceName: 'desc' } },
+      take: limit,
+    });
+
+    const names = groups
+      .map((g) => g.provinceName)
+      .filter((n): n is string => n != null && n.length > 0);
+    if (names.length === 0) return [];
+
+    // Một ảnh đại diện cho mỗi tỉnh — `distinct` để DB trả đúng 1 dòng/tỉnh, không kéo cả bảng.
+    const covers = await this.prisma.publicListing.findMany({
+      where: { ...scope, provinceName: { in: names }, mainImageUrl: { not: null } },
+      distinct: ['provinceName'],
+      select: { provinceName: true, mainImageUrl: true },
+    });
+    const coverBy = new Map(covers.map((c) => [c.provinceName, c.mainImageUrl]));
+
+    return groups
+      .filter((g): g is typeof g & { provinceName: string } => Boolean(g.provinceName))
+      .map((g) => ({
+        provinceName: g.provinceName,
+        vehicleCount: g._count._all,
+        imageUrl: coverBy.get(g.provinceName) ?? null,
+      }));
+  }
+
+  /**
+   * "Gian hàng nổi bật" — shop đang `active` và CÓ ít nhất một xe hiển thị công khai, sắp theo
+   * điểm đánh giá. Số xe đếm ngay trong query (`_count` có điều kiện), không N+1.
+   */
+  async listShops(
+    query: PublicShopListQueryDto,
+  ): Promise<{ data: PublicShopSummaryDto[]; meta: PaginationMeta }> {
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(MAX_LIMIT, Math.max(1, query.limit ?? DEFAULT_LIMIT));
+
+    const where: Prisma.TenantWhereInput = {
+      status: TENANT_STATUS.ACTIVE,
+      deletedAt: null,
+      publicListings: { some: { status: LISTING_STATUS.ACTIVE } },
+    };
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.tenant.count({ where }),
+      this.prisma.tenant.findMany({
+        where,
+        orderBy: [{ ratingAvg: 'desc' }, { ratingCount: 'desc' }, { createdAt: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+        select: {
+          name: true,
+          slug: true,
+          ratingAvg: true,
+          ratingCount: true,
+          profile: { select: { provinceName: true, logoUrl: true } },
+          _count: { select: { publicListings: { where: { status: LISTING_STATUS.ACTIVE } } } },
+        },
+      }),
+    ]);
+
+    return {
+      data: rows.map((t) => ({
+        name: t.name,
+        slug: t.slug,
+        logoUrl: t.profile?.logoUrl ?? null,
+        provinceName: t.profile?.provinceName ?? null,
+        vehicleCount: t._count.publicListings,
+        ratingAvg: t.ratingAvg as unknown as string,
+        ratingCount: t.ratingCount,
+      })),
       meta: { page, limit, total, hasNext: page * limit < total },
     };
   }
@@ -230,8 +370,9 @@ export class PublicListingsService {
       }),
     ]);
 
+    const ratings = await this.ratingsByVehicle(rows.map((r) => r.vehicleId));
     return {
-      data: rows.map(toListingCard),
+      data: rows.map((r) => toListingCard(r, ratings.get(r.vehicleId))),
       meta: { page, limit, total, hasNext: page * limit < total },
     };
   }
@@ -281,6 +422,8 @@ export class PublicListingsService {
       });
     }
 
+    const rating = (await this.ratingsByVehicle([v.id])).get(v.id);
+
     return {
       id: v.id,
       name: v.name,
@@ -303,6 +446,8 @@ export class PublicListingsService {
       shopBio: v.tenant.profile?.bio ?? null,
       images: v.images.map((i) => i.imageUrl),
       features: v.features.map((f) => f.featureKey),
+      ratingAvg: rating?.avg ?? null,
+      ratingCount: rating?.count ?? 0,
     };
   }
 }

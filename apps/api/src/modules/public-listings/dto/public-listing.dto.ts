@@ -112,6 +112,15 @@ export class PublicListingDto {
   @ApiProperty({ description: 'Slug gian hàng cho route /shops/[slug]' }) shopSlug!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tỉnh/thành gian hàng' })
   shopProvince!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá.',
+  })
+  ratingAvg!: string | null;
+
+  @ApiProperty({ description: 'Số lượt đánh giá của xe' }) ratingCount!: number;
 }
 
 /** Chi tiết một xe trên marketplace — cho trang `/listings/[id]`. */
@@ -159,6 +168,69 @@ export class PublicShopDto {
   ratingAvg!: string;
 
   @ApiProperty() ratingCount!: number;
+}
+
+/**
+ * Một tỉnh/thành có xe đang cho thuê — "Địa điểm nổi bật" ở trang chủ. Số liệu tính từ snapshot
+ * `public_listings` (không hardcode danh sách tỉnh ở FE).
+ */
+export class PublicDestinationDto {
+  @ApiProperty({ description: 'Tên tỉnh/thành — dùng luôn làm giá trị lọc `province`' })
+  provinceName!: string;
+
+  @ApiProperty({ description: 'Số xe đang hiển thị công khai ở tỉnh/thành này' })
+  vehicleCount!: number;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện lấy từ một xe' })
+  imageUrl!: string | null;
+}
+
+/** Query "địa điểm nổi bật" — chỉ cần giới hạn số lượng (63 tỉnh/thành là trần tự nhiên). */
+export class PublicDestinationQueryDto {
+  @ApiPropertyOptional({ default: 6, minimum: 1, maximum: 63 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(63)
+  limit?: number;
+}
+
+/** Gian hàng trong danh sách công khai — "Gian hàng nổi bật" ở trang chủ. */
+export class PublicShopSummaryDto {
+  @ApiProperty() name!: string;
+  @ApiProperty() slug!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) logoUrl!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
+  @ApiProperty({ description: 'Số xe đang hiển thị công khai' }) vehicleCount!: number;
+
+  @ApiProperty({ description: 'Điểm đánh giá trung bình, string — ADR 0007' })
+  ratingAvg!: string;
+
+  @ApiProperty() ratingCount!: number;
+}
+
+export class PublicShopPageDto {
+  @ApiProperty({ type: [PublicShopSummaryDto] }) data!: PublicShopSummaryDto[];
+  @ApiProperty({ type: PublicListingPageMetaDto }) meta!: PublicListingPageMetaDto;
+}
+
+/** Query danh sách gian hàng công khai — phân trang, sắp theo điểm đánh giá. */
+export class PublicShopListQueryDto {
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 12, minimum: 1, maximum: 48 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(48)
+  limit?: number;
 }
 
 /** Query danh sách xe của một gian hàng — phân trang + sort (không nhận slug qua body). */

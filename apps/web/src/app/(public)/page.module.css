@@ -1,10 +1,14 @@
 .sections {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 16px;
-  /* Bù phần thẻ tìm kiếm tràn xuống khỏi hero (transform translateY ở HeroSearch). */
-  padding-top: 48px;
+  padding: 28px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 44px;
+}
+
+.fallback {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
 }
