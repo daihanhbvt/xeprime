@@ -885,6 +885,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bookings/{id}/contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hợp đồng của một đơn (nếu đã tạo) */
+        get: operations["ContractsController_byBooking"];
+        put?: never;
+        /** Tạo (hoặc lấy) hợp đồng từ một đơn thuê — idempotent */
+        post: operations["ContractsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contracts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chi tiết một hợp đồng (để xem/in) */
+        get: operations["ContractsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/members": {
         parameters: {
             query?: never;
@@ -2040,6 +2075,78 @@ export interface components {
             receiptId?: string | null;
             /** @description ISO-8601 UTC */
             paidAt?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        ContractPartyShopDto: {
+            name: string;
+            phone?: string | null;
+            email?: string | null;
+            address?: string | null;
+            province?: string | null;
+            taxCode?: string | null;
+            businessLicenseNo?: string | null;
+            bankName?: string | null;
+            bankAccountNo?: string | null;
+            bankAccountName?: string | null;
+        };
+        ContractPartyCustomerDto: {
+            name: string;
+            phone?: string | null;
+        };
+        ContractVehicleDto: {
+            name: string;
+            plateNumber?: string | null;
+            vehicleType: string;
+            serviceType: string;
+            brand?: string | null;
+            model?: string | null;
+            manufactureYear?: number | null;
+            color?: string | null;
+            seatCount?: number | null;
+        };
+        ContractRentalDto: {
+            bookingCode: string;
+            /** @description ISO-8601 UTC */
+            pickupAt: string;
+            /** @description ISO-8601 UTC */
+            returnAt: string;
+            /** @description Số ngày thuê (làm tròn lên) */
+            days: number;
+        };
+        ContractPricingDto: {
+            /** @description MoneyString */
+            baseAmount: string;
+            /** @description MoneyString */
+            deliveryFee: string;
+            /** @description MoneyString */
+            discountAmount: string;
+            /** @description MoneyString */
+            totalAmount: string;
+            /** @description MoneyString */
+            depositAmount: string;
+            /** @description MoneyString */
+            paidAmount: string;
+            /** @description MoneyString — còn phải trả = tổng − đã trả */
+            remainingAmount: string;
+        };
+        ContractSnapshotDto: {
+            shop: components["schemas"]["ContractPartyShopDto"];
+            customer: components["schemas"]["ContractPartyCustomerDto"];
+            vehicle: components["schemas"]["ContractVehicleDto"];
+            rental: components["schemas"]["ContractRentalDto"];
+            pricing: components["schemas"]["ContractPricingDto"];
+            /** @description Ghi chú đơn */
+            note?: string | null;
+        };
+        ContractDto: {
+            id: string;
+            bookingId: string;
+            contractNo: string;
+            templateVersion: string;
+            /** @enum {string} */
+            status: "draft" | "active" | "signed" | "void";
+            snapshot: components["schemas"]["ContractSnapshotDto"];
             /** @description ISO-8601 UTC */
             createdAt: string;
         };
@@ -3825,6 +3932,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaymentDto"];
+                };
+            };
+        };
+    };
+    ContractsController_byBooking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractDto"];
+                };
+            };
+        };
+    };
+    ContractsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractDto"];
+                };
+            };
+        };
+    };
+    ContractsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractDto"];
                 };
             };
         };

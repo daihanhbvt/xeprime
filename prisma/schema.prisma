@@ -140,6 +140,7 @@ model Tenant {
   financeCategories FinanceCategory[]
   receipts      Receipt[]
   payments      Payment[]
+  contracts     Contract[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -621,6 +622,7 @@ model Booking {
   review         Review?         @relation("booking_review")
   receipts       Receipt[]
   payments       Payment[]
+  contract       Contract?
 
   @@unique([tenantId, code])
   @@index([tenantId, status])
@@ -1050,4 +1052,30 @@ model Payment {
   @@index([bookingId])
   @@index([createdAt])
   @@map("payments")
+}
+
+/// Hợp đồng/phiếu thuê (Phase 6 §11.7). `snapshot_json` là bản ĐÔNG CỨNG khách/xe/thời gian/bảng
+/// giá/cọc lúc lập — booking sửa sau KHÔNG đổi hợp đồng đã in. Idempotent: mỗi booking đúng 1 hợp
+/// đồng (`@@unique(booking_id)`); số HĐ cố định, không đổi (`@@unique(tenant_id, contract_no)`).
+model Contract {
+  id              String    @id @db.Char(26)
+  tenantId        String    @map("tenant_id") @db.Char(26)
+  bookingId       String    @map("booking_id") @db.Char(26)
+  contractNo      String    @map("contract_no") @db.VarChar(100)
+  templateVersion String    @default("v1") @map("template_version") @db.VarChar(50)
+  snapshotJson    Json      @map("snapshot_json") @db.JsonB
+  /// @xeprime/types → ContractStatus
+  status          String    @default("active") @db.VarChar(50)
+  fileUrl         String?   @map("file_url") @db.Text
+  signedAt        DateTime? @map("signed_at") @db.Timestamptz(3)
+  createdBy       String?   @map("created_by") @db.Char(26)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId])
+  @@unique([tenantId, contractNo])
+  @@index([tenantId, createdAt])
+  @@map("contracts")
 }

@@ -104,7 +104,6 @@ export const SHOP_NAV: readonly NavNode[] = [
         href: ROUTES.MANAGE.BOOKING_REQUESTS,
         permission: PERMISSION.BOOKING_REQUEST_VIEW,
         icon: ScheduleOutlined,
-        comingSoon: true,
       },
       {
         key: 'customers',
@@ -156,7 +155,6 @@ export const SHOP_NAV: readonly NavNode[] = [
         href: ROUTES.MANAGE.MEMBERS,
         permission: PERMISSION.MEMBER_VIEW,
         icon: UsergroupAddOutlined,
-        comingSoon: true,
       },
       {
         key: 'pickup-areas',

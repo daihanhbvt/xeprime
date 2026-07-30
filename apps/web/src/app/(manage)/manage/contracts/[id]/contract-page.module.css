@@ -1,0 +1,19 @@
+.page {
+  padding: 8px 0 40px;
+}
+
+/* Thanh công cụ — ẩn khi in (nằm ngoài [data-print-root], print CSS toàn cục ẩn phần vỏ). */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 800px;
+  margin: 0 auto 16px;
+  flex-wrap: wrap;
+}
+
+.center {
+  display: grid;
+  place-items: center;
+  padding: 80px;
+}

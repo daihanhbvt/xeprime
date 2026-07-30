@@ -109,3 +109,26 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* In tài liệu (hợp đồng): ẩn toàn bộ vỏ app, chỉ chừa phần [data-print-root]. */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  [data-print-root],
+  [data-print-root] * {
+    visibility: visible !important;
+  }
+  [data-print-root] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  @page {
+    margin: 14mm;
+  }
+}

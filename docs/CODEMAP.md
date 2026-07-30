@@ -28,7 +28,22 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Xác thực SĐT OTP (mock/eSMS) + gate booking | `modules/phone-verification/` (`otp-provider.ts`, `phone-verification.service.ts`) | Phase 4 §8; provider theo `OTP_MODE` |
 | Best-effort userId cho endpoint `@Public()` | `common/optional-user.ts` | dùng ở public-booking-requests + phone-verify |
 | Marketplace công khai + trang gian hàng `/public/shops/:slug` | `modules/public-listings/` (`public-listings.controller.ts`, `public-shops.controller.ts`) | ADR 0008 (đọc thẳng `vehicles`, chưa có snapshot) |
-| Env validate (zod) | `config/env.schema.ts` | — |
+| **Đơn thuê** (create/update/transition, `createWithinTx` giữ lịch trong tx) | `modules/bookings/` | ADR 0006 |
+| **Yêu cầu thuê** (public submit + approve→booking + `check-availability` preview) | `modules/booking-requests/` (`public-booking-requests.controller.ts`) | Phase 4; approve tạo booking → 23P01→409 |
+| **Đăng nhập passwordless SĐT** (find-or-create theo phone, set-password) | `modules/auth/` (`resolveOrCreateUserByPhone`, `setPassword`) + `modules/phone-verification/` (purpose `login`) | ADR 0002; xem `docs/guest-booking-passwordless.md` |
+| Xe + ảnh + tiện ích (submit public review) | `modules/vehicles/` | Phase 2–3 |
+| Thông báo (in-app) | `modules/notification/` | Phase 5 |
+| Đánh giá sau chuyến (+ public review) | `modules/review/` | Phase 5 |
+| Chat (PG source of truth, Firestore projection sau cờ) | `modules/chat/` (+ `conversations.controller`) | ADR 0009 |
+| **Thu-Chi** (danh mục + phiếu thu/chi + workflow duyệt + dashboard) | `modules/finance/` (`finance-categories`, `receipts`, `finance-overview`) | Phase 6 §12 |
+| **Payments — writer DUY NHẤT của `booking.paid_amount`** (tx, increment/decrement) | `modules/payments/` | Phase 6; công nợ tính động = total−paid |
+| **Hợp đồng** (snapshot từ booking, số HĐ cố định, idempotent theo booking) | `modules/contracts/` | Phase 6 §11.7 |
+| Thành viên gian hàng (mời + đổi role) | `modules/members/` · RBAC `modules/rbac/` | — |
+| Người dùng | `modules/users/` | — |
+| Duyệt hồ sơ nền tảng (approval task) | `modules/platform-admin/` (`platform-approval.service.ts`) | CLAUDE §6 |
+| **Audit — GHI** (`AuditService.record(entry, tx)`) · **chưa có endpoint ĐỌC** | `modules/audit/` | CLAUDE §6.3; read endpoint là việc Phase 7 |
+| Upload R2 (presign) · Firebase admin | `modules/storage/` · `modules/firebase/` | ADR 0009 |
+| Env validate (zod) | `config/env.schema.ts` | OTP_MODE/AUTH_MODE/OTP_MAX_ATTEMPTS… |
 | Module mẫu chuẩn (controller+guard+dto) | `modules/tenants/` | — |
 | Sinh OpenAPI spec | `openapi.ts` (`nest build && node dist`) | ADR 0007 |
 
@@ -47,15 +62,23 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Design token · CSS Modules · token.css↔theme.ts | `styles/theme.ts` · `styles/tokens.css` | ADR 0003 |
 | Lịch (resource timeline) | `features/calendar/` | ADR 0006 |
 | Marketplace + trang gian hàng `/shops/[slug]` (thẻ xe, chi tiết, hồ sơ shop) | `features/marketplace/` · `app/(public)/shops/[slug]/` | ADR 0008 |
-| Xác thực SĐT inline (OTP) — nút Gửi mã/Xác nhận, gate submit | `features/phone-verification/` (`PhoneVerifyControl`, `use-phone-verify`) | Phase 4; dùng ở modal đặt xe |
+| Xác thực SĐT / OTP: `PhoneVerifyControl`, `PhoneLoginForm`, `OtpCodeInput`, `use-phone-verify` | `features/phone-verification/` | Phase 4 + passwordless |
+| Đặt xe khách (bottom-sheet/modal, từng bước) | `features/booking-requests/` (`RequestBookingFlow`, `RequestBookingModal`) | `guest-booking-passwordless.md` |
+| Đơn thuê (list/table/detail drawer, thu tiền) · Yêu cầu thuê inbox | `features/bookings/` · inbox ở `features/booking-requests/` | Phase 4/6 |
+| Thu-Chi · Payments · Công nợ · Dashboard tài chính | `features/finance/` · `features/payments/` | Phase 6 |
+| Hợp đồng thuê (xem/in `window.print`, print CSS toàn cục `[data-print-root]`) | `features/contracts/` · `app/(manage)/manage/contracts/[id]/` | Phase 6 §11.7 |
+| Thông báo · Đánh giá · Chat · Thành viên · Duyệt hồ sơ · Xe · Tổng quan | `features/{notifications,reviews,chat,members,approvals,vehicles,dashboard}/` | Phase 2–6 |
+| Đăng xuất/menu ở marketplace | `features/marketplace/components/MarketHeader.tsx` | dropdown `destroySession` |
+| Hook: mobile breakpoint · user hiện tại · quyền · tenant scope | `hooks/{use-media-query,use-current-user,use-permissions,use-tenant-scope}.ts` | `useIsMobile` ≤640px |
 
 ## Database
 
 | Cần gì | Ở đâu |
 | --- | --- |
-| Schema 12 bảng | `prisma/schema.prisma` |
+| Schema **35 model** (auth/tenant/vehicle/booking/finance/chat/…) | `prisma/schema.prisma` |
 | Migration init (trigger + `EXCLUDE USING gist`) | `prisma/migrations/*_init/migration.sql` |
-| Seed (idempotent, 3 scope) | `prisma/src/seed.ts` |
+| Migration viết tay từng phase (CHECK/constraint/partial index) | `prisma/migrations/<ts>_<name>/migration.sql` (booking_requests, finance, payments, phone_login…) |
+| Seed (idempotent, 3 scope + danh mục finance) | `prisma/src/seed.ts` |
 | Cấu hình CLI Prisma 7 | `prisma/prisma.config.ts` |
 
 ## Tham chiếu nghiệp vụ (đọc để hiểu "cái gì đang chạy", KHÔNG copy pattern)
@@ -68,4 +91,4 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 
 ## Vì sao (đọc khi cần lý do, đừng đoán)
 
-`docs/decisions/` — 8 ADR. Mỗi quyết định kèm lý do và cái nó ghi đè. ADR thắng mọi tài liệu cũ khi mâu thuẫn.
+`docs/decisions/` — **9 ADR (0001–0009)**. Mỗi quyết định kèm lý do và cái nó ghi đè. ADR thắng mọi tài liệu cũ khi mâu thuẫn.

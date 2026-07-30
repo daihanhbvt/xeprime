@@ -1,7 +1,8 @@
 'use client';
 
-import { DollarOutlined, EditOutlined } from '@ant-design/icons';
+import { DollarOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
 import { App, Button, Descriptions, Divider, Drawer, Popconfirm, Space, Spin } from 'antd';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   BOOKING_STATUS_META,
@@ -14,6 +15,8 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { formatDateTime } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
+import { contractPath } from '@/constants/routes';
+import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { PaymentHistory } from '@/features/payments/components/PaymentHistory';
 import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
 import { BOOKING_TRANSITION_LABEL, DESTRUCTIVE_TRANSITIONS, serviceTypeLabel } from '../constants';
@@ -65,13 +68,23 @@ function BookingDetailBody({
 }) {
   const { message } = App.useApp();
   const { has } = usePermissions();
+  const router = useRouter();
   const transition = useTransitionBooking(booking.id);
+  const createContract = useCreateContract();
   const [payOpen, setPayOpen] = useState(false);
 
   const canManage = has(PERMISSION.BOOKING_UPDATE);
   const canRecordPayment = has(PERMISSION.PAYMENT_RECORD);
+  const canContract = has(PERMISSION.CONTRACT_MANAGE);
   const hasDebt = Number(booking.debtAmount) > 0;
   const nextStatuses = BOOKING_STATUS_TRANSITIONS[booking.status as BookingStatus] ?? [];
+
+  function openContract() {
+    createContract.mutate(booking.id, {
+      onSuccess: (contract) => router.push(contractPath.detail(contract.id)),
+      onError: (err) => message.error(getErrorMessage(err)),
+    });
+  }
 
   function runTransition(to: BookingStatus) {
     transition.mutate(
@@ -140,6 +153,22 @@ function BookingDetailBody({
         </Button>
       ) : null}
       <PaymentHistory bookingId={booking.id} />
+
+      {canContract ? (
+        <>
+          <Divider titlePlacement="start" className={styles.paymentDivider}>
+            Hợp đồng
+          </Divider>
+          <Button
+            icon={<FileTextOutlined />}
+            block
+            loading={createContract.isPending}
+            onClick={openContract}
+          >
+            Tạo / Xem hợp đồng
+          </Button>
+        </>
+      ) : null}
 
       <RecordPaymentModal
         bookingId={booking.id}

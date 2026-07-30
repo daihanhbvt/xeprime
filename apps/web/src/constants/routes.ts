@@ -52,6 +52,11 @@ export const vehiclePath = {
   edit: (id: string): string => `/manage/vehicles/${id}/edit`,
 };
 
+/** Trang xem/in hợp đồng thuê. */
+export const contractPath = {
+  detail: (id: string): string => `/manage/contracts/${id}`,
+};
+
 /** Đường dẫn xe công khai trên Marketplace. */
 export const listingPath = {
   detail: (id: string): string => `/listings/${id}`,
