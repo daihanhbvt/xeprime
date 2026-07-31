@@ -1,6 +1,7 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import { MEMBERSHIP_STATUS, TENANT_ROLE, TENANT_STATUS, VEHICLE_TYPE } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { BillingService } from '../src/modules/billing/billing.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -16,6 +17,7 @@ const vehicles = new VehiclesService(
   asService,
   new AuditService(asService),
   new ListingsService(asService),
+  new BillingService(asService, new AuditService(asService)),
 );
 
 let dbAvailable = false;

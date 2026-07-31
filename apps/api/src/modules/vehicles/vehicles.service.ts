@@ -18,6 +18,7 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
+import { BillingService } from '../billing/billing.service';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -85,6 +86,7 @@ export class VehiclesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly listings: ListingsService,
+    private readonly billing: BillingService,
   ) {}
 
   async list(
@@ -168,6 +170,8 @@ export class VehiclesService {
     userId: string,
     dto: CreateVehicleDto,
   ): Promise<VehicleDetailDto> {
+    // Quota gói (ADR 0010): chạm max_vehicles của gói hiện hành → PLAN_LIMIT_REACHED.
+    await this.billing.assertVehicleQuota(tenantId);
     await this.assertCodeFree(tenantId, dto.code);
 
     const id = newId();

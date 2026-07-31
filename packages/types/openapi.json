@@ -1807,6 +1807,277 @@
         ]
       }
     },
+    "/platform/plans": {
+      "get": {
+        "operationId": "PlansController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Bỏ trống = chỉ gói đang bán",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "archived"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách gói (mặc định chỉ gói đang bán; status=all để xem hết)",
+        "tags": [
+          "platform-plans"
+        ]
+      },
+      "post": {
+        "operationId": "PlansController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo gói mới",
+        "tags": [
+          "platform-plans"
+        ]
+      }
+    },
+    "/platform/plans/{id}": {
+      "patch": {
+        "operationId": "PlansController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlanDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa gói (giá mới chỉ áp cho lượt gán sau — price snapshot)",
+        "tags": [
+          "platform-plans"
+        ]
+      }
+    },
+    "/platform/plans/{id}/archive": {
+      "post": {
+        "operationId": "PlansController_archive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ngừng bán gói (thuê bao đã gán giữ nguyên hiệu lực)",
+        "tags": [
+          "platform-plans"
+        ]
+      }
+    },
+    "/platform/tenants/{tenantId}/subscriptions": {
+      "get": {
+        "operationId": "SubscriptionsController_list",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lịch sử thuê bao của gian hàng (mới nhất trước)",
+        "tags": [
+          "platform-subscriptions"
+        ]
+      },
+      "post": {
+        "operationId": "SubscriptionsController_assign",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignSubscriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gán / gia hạn gói (chu kỳ mới nối đuôi gói còn hạn)",
+        "tags": [
+          "platform-subscriptions"
+        ]
+      }
+    },
+    "/platform/tenants/{tenantId}/subscriptions/{id}/cancel": {
+      "post": {
+        "operationId": "SubscriptionsController_cancel",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubscriptionDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Huỷ sớm một thuê bao đang hiệu lực",
+        "tags": [
+          "platform-subscriptions"
+        ]
+      }
+    },
     "/bookings": {
       "get": {
         "operationId": "BookingsController_list",
@@ -4093,6 +4364,347 @@
           "platform-tenants"
         ]
       }
+    },
+    "/platform/dashboard/summary": {
+      "get": {
+        "operationId": "PlatformDashboardController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformDashboardSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tổng quan nền tảng: gian hàng / listing / đơn thuê / chờ duyệt",
+        "tags": [
+          "platform-dashboard"
+        ]
+      }
+    },
+    "/platform/audit-logs": {
+      "get": {
+        "operationId": "PlatformAuditController_list",
+        "parameters": [
+          {
+            "name": "actorScope",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "tenant",
+                "platform",
+                "system"
+              ]
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "description": "Khớp chính xác, vd \"tenant.lock\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetType",
+            "required": false,
+            "in": "query",
+            "description": "Loại đối tượng, vd \"tenant\" / \"booking\"",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
+            "required": false,
+            "in": "query",
+            "description": "ID đối tượng (ULID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Giới hạn theo gian hàng (ULID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorUserId",
+            "required": false,
+            "in": "query",
+            "description": "Giới hạn theo người thao tác (ULID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Từ thời điểm (ISO-8601, inclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "Đến thời điểm (ISO-8601, inclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách nhật ký (phân trang, lọc scope/action/đối tượng/thời gian)",
+        "tags": [
+          "platform-audit"
+        ]
+      }
+    },
+    "/platform/audit-logs/{id}": {
+      "get": {
+        "operationId": "PlatformAuditController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết một dòng nhật ký (kèm snapshot before/after)",
+        "tags": [
+          "platform-audit"
+        ]
+      }
+    },
+    "/platform/staff": {
+      "get": {
+        "operationId": "PlatformStaffController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên hoặc email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleKey",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "platform_admin",
+                "platform_staff",
+                "reviewer",
+                "support",
+                "finance_admin"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách nhân sự nền tảng (phân trang, lọc vai trò, tìm kiếm)",
+        "tags": [
+          "platform-staff"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformStaffController_add",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddStaffDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thêm nhân sự theo email tài khoản đã có",
+        "tags": [
+          "platform-staff"
+        ]
+      }
+    },
+    "/platform/staff/{userId}": {
+      "patch": {
+        "operationId": "PlatformStaffController_updateRole",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStaffRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đổi vai trò nhân sự",
+        "tags": [
+          "platform-staff"
+        ]
+      },
+      "delete": {
+        "operationId": "PlatformStaffController_remove",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemoveStaffResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gỡ nhân sự khỏi nền tảng (status → removed)",
+        "tags": [
+          "platform-staff"
+        ]
+      }
     }
   },
   "info": {
@@ -4391,7 +5003,8 @@
                 "platform.tenants.manage",
                 "platform.approvals.review",
                 "platform.audit.view",
-                "platform.staff.manage"
+                "platform.staff.manage",
+                "platform.billing.manage"
               ]
             }
           }
@@ -6242,6 +6855,234 @@
             }
           }
         }
+      },
+      "PlanDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "price": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "durationDays": {
+            "type": "number"
+          },
+          "maxVehicles": {
+            "type": "number",
+            "nullable": true,
+            "description": "null = không giới hạn"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ]
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "subscriptionCount": {
+            "type": "number",
+            "description": "Số thuê bao đã gán từ gói này (mọi trạng thái)"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "price",
+          "currency",
+          "durationDays",
+          "status",
+          "sortOrder",
+          "subscriptionCount",
+          "createdAt"
+        ]
+      },
+      "CreatePlanDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "basic",
+            "description": "Mã gói — unique, không đổi sau khi tạo"
+          },
+          "name": {
+            "type": "string",
+            "example": "Gói Cơ bản"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string",
+            "description": "Giá một chu kỳ, string thập phân — ADR 0007",
+            "example": "500000"
+          },
+          "durationDays": {
+            "type": "number",
+            "description": "Số ngày một chu kỳ",
+            "example": 30
+          },
+          "maxVehicles": {
+            "type": "number",
+            "nullable": true,
+            "description": "Giới hạn số xe; null/bỏ trống = không giới hạn (ADR 0010)"
+          },
+          "sortOrder": {
+            "type": "number",
+            "default": 0
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "price",
+          "durationDays"
+        ]
+      },
+      "UpdatePlanDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "durationDays": {
+            "type": "number"
+          },
+          "maxVehicles": {
+            "type": "number",
+            "nullable": true,
+            "description": "null = bỏ giới hạn"
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        }
+      },
+      "SubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "planCode": {
+            "type": "string"
+          },
+          "planName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "trial",
+              "active",
+              "past_due",
+              "expired",
+              "cancelled"
+            ],
+            "description": "Lưu active|cancelled; expired suy ra từ endsAt (ADR 0010)"
+          },
+          "price": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "startsAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "planId",
+          "planCode",
+          "planName",
+          "status",
+          "price",
+          "startsAt",
+          "endsAt",
+          "createdAt"
+        ]
+      },
+      "SubscriptionPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubscriptionDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "AssignSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "description": "ID gói (ULID)"
+          },
+          "note": {
+            "type": "string",
+            "description": "Ghi chú (số chứng từ, lý do tặng…)"
+          }
+        },
+        "required": [
+          "planId"
+        ]
       },
       "BookingListItemDto": {
         "type": "object",
@@ -8669,6 +9510,38 @@
           "meta"
         ]
       },
+      "CurrentPlanDto": {
+        "type": "object",
+        "properties": {
+          "subscriptionId": {
+            "type": "string"
+          },
+          "planId": {
+            "type": "string"
+          },
+          "planCode": {
+            "type": "string"
+          },
+          "planName": {
+            "type": "string"
+          },
+          "maxVehicles": {
+            "type": "number",
+            "nullable": true
+          },
+          "endsAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "subscriptionId",
+          "planId",
+          "planCode",
+          "planName",
+          "endsAt"
+        ]
+      },
       "PlatformTenantDetailDto": {
         "type": "object",
         "properties": {
@@ -8745,6 +9618,16 @@
           },
           "bookingCount": {
             "type": "number"
+          },
+          "currentPlan": {
+            "nullable": true,
+            "description": "Gói hiện hành (ADR 0010) — null = chưa có gói (không giới hạn)",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CurrentPlanDto"
+              }
+            ]
           }
         },
         "required": [
@@ -8767,6 +9650,410 @@
             "description": "Lý do khoá gian hàng"
           }
         }
+      },
+      "PlatformTenantStatusCountsDto": {
+        "type": "object",
+        "properties": {
+          "draft": {
+            "type": "number"
+          },
+          "pending_review": {
+            "type": "number"
+          },
+          "needs_revision": {
+            "type": "number"
+          },
+          "active": {
+            "type": "number"
+          },
+          "suspended": {
+            "type": "number"
+          },
+          "rejected": {
+            "type": "number"
+          },
+          "expired": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "draft",
+          "pending_review",
+          "needs_revision",
+          "active",
+          "suspended",
+          "rejected",
+          "expired"
+        ]
+      },
+      "PlatformRecentTenantDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "needs_revision",
+              "active",
+              "suspended",
+              "rejected",
+              "expired"
+            ]
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "createdAt"
+        ]
+      },
+      "PlatformDashboardSummaryDto": {
+        "type": "object",
+        "properties": {
+          "tenantTotal": {
+            "type": "number",
+            "description": "Tổng gian hàng (chưa xoá)"
+          },
+          "tenantsByStatus": {
+            "$ref": "#/components/schemas/PlatformTenantStatusCountsDto"
+          },
+          "listingActive": {
+            "type": "number",
+            "description": "Listing đang hiển thị trên marketplace"
+          },
+          "listingTotal": {
+            "type": "number",
+            "description": "Tổng listing (mọi trạng thái)"
+          },
+          "bookingTotal": {
+            "type": "number",
+            "description": "Tổng đơn thuê toàn nền tảng (chưa xoá)"
+          },
+          "bookingThisMonth": {
+            "type": "number",
+            "description": "Đơn thuê tạo trong tháng này (giờ VN)"
+          },
+          "approvalPending": {
+            "type": "number",
+            "description": "Hồ sơ chờ duyệt (mọi loại)"
+          },
+          "approvalPendingTenant": {
+            "type": "number",
+            "description": "Chờ duyệt: gian hàng"
+          },
+          "approvalPendingVehicle": {
+            "type": "number",
+            "description": "Chờ duyệt: xe"
+          },
+          "recentTenants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformRecentTenantDto"
+            }
+          }
+        },
+        "required": [
+          "tenantTotal",
+          "tenantsByStatus",
+          "listingActive",
+          "listingTotal",
+          "bookingTotal",
+          "bookingThisMonth",
+          "approvalPending",
+          "approvalPendingTenant",
+          "approvalPendingVehicle",
+          "recentTenants"
+        ]
+      },
+      "AuditLogDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "actorScope": {
+            "type": "string",
+            "enum": [
+              "tenant",
+              "platform",
+              "system"
+            ]
+          },
+          "action": {
+            "type": "string"
+          },
+          "targetType": {
+            "type": "string"
+          },
+          "targetId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantName": {
+            "type": "string",
+            "nullable": true
+          },
+          "actorUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "actorName": {
+            "type": "string",
+            "nullable": true
+          },
+          "actorEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "ipAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "actorScope",
+          "action",
+          "targetType",
+          "createdAt"
+        ]
+      },
+      "AuditLogPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditLogDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "AuditLogDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "actorScope": {
+            "type": "string",
+            "enum": [
+              "tenant",
+              "platform",
+              "system"
+            ]
+          },
+          "action": {
+            "type": "string"
+          },
+          "targetType": {
+            "type": "string"
+          },
+          "targetId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantName": {
+            "type": "string",
+            "nullable": true
+          },
+          "actorUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "actorName": {
+            "type": "string",
+            "nullable": true
+          },
+          "actorEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "ipAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "beforeJson": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "afterJson": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "userAgent": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "actorScope",
+          "action",
+          "targetType",
+          "createdAt"
+        ]
+      },
+      "StaffDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "ID user — dùng cho PATCH/DELETE /platform/staff/:userId"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "roleKey": {
+            "type": "string",
+            "enum": [
+              "platform_admin",
+              "platform_staff",
+              "reviewer",
+              "support",
+              "finance_admin"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "invited",
+              "locked",
+              "removed"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "userId",
+          "displayName",
+          "roleKey",
+          "status",
+          "createdAt"
+        ]
+      },
+      "StaffPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StaffDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "AddStaffDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "nhanvien@xeprime.vn"
+          },
+          "roleKey": {
+            "type": "string",
+            "enum": [
+              "platform_admin",
+              "platform_staff",
+              "reviewer",
+              "support",
+              "finance_admin"
+            ]
+          }
+        },
+        "required": [
+          "email",
+          "roleKey"
+        ]
+      },
+      "UpdateStaffRoleDto": {
+        "type": "object",
+        "properties": {
+          "roleKey": {
+            "type": "string",
+            "enum": [
+              "platform_admin",
+              "platform_staff",
+              "reviewer",
+              "support",
+              "finance_admin"
+            ]
+          }
+        },
+        "required": [
+          "roleKey"
+        ]
+      },
+      "RemoveStaffResultDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "userId"
+        ]
       },
       "ApiErrorBodyDto": {
         "type": "object",

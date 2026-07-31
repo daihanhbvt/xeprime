@@ -68,6 +68,20 @@ export const queryKeys = {
   dashboard: {
     all: ['dashboard'] as const,
   },
+  platformDashboard: {
+    all: ['platform-dashboard'] as const,
+    summary: () => ['platform-dashboard', 'summary'] as const,
+  },
+  platformStaff: {
+    all: ['platform-staff'] as const,
+    list: (params: QueryParams) => ['platform-staff', 'list', params] as const,
+  },
+  billing: {
+    all: ['billing'] as const,
+    plans: (status: string) => ['billing', 'plans', status] as const,
+    subscriptions: (tenantId: string, page: number) =>
+      ['billing', 'subscriptions', tenantId, page] as const,
+  },
   marketplace: {
     all: ['marketplace'] as const,
     listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,

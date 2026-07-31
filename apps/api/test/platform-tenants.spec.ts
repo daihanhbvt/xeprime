@@ -1,6 +1,7 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import { API_ERROR_CODE, TENANT_STATUS, VEHICLE_TYPE } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { BillingService } from '../src/modules/billing/billing.service';
 import { PlatformTenantsService } from '../src/modules/platform-admin/platform-tenants.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -11,7 +12,11 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const service = new PlatformTenantsService(asService, new AuditService(asService));
+const service = new PlatformTenantsService(
+  asService,
+  new AuditService(asService),
+  new BillingService(asService, new AuditService(asService)),
+);
 
 let dbAvailable = false;
 let adminId: string;

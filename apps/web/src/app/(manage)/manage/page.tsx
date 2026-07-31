@@ -1,5 +1,5 @@
-import { DashboardView } from '@/features/dashboard/components/DashboardView';
+import { ManageHome } from '@/features/dashboard/components/ManageHome';
 
 export default function ManageDashboardPage() {
-  return <DashboardView />;
+  return <ManageHome />;
 }

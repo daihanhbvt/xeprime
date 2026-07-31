@@ -1,0 +1,25 @@
+.state {
+  display: block;
+  margin: 64px auto;
+  text-align: center;
+}
+
+.actionSelect {
+  width: 220px;
+}
+
+.targetSelect {
+  width: 190px;
+}
+
+.rangePicker {
+  width: 250px;
+}
+
+@media (max-width: 560px) {
+  .actionSelect,
+  .targetSelect,
+  .rangePicker {
+    width: 100%;
+  }
+}

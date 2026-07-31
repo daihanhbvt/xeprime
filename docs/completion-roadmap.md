@@ -4,7 +4,7 @@
 > `docs/decisions/`, `docs/CODEMAP.md`). Khi **đóng xong một phase**, cập nhật bảng §2 + mục phase
 > tương ứng ở đây — đừng để tiến độ chỉ nằm trong trí nhớ hay plan file global `~/.claude/plans/`.
 >
-> Cập nhật gần nhất: **30/07/2026**.
+> Cập nhật gần nhất: **31/07/2026**.
 
 ---
 
@@ -32,7 +32,7 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 | 4 | Booking request + Booking + Calendar + **gate verify SĐT** + check-conflict preview | ✅ **Xong 29/07 — CHƯA commit** |
 | 5 | Notification ✅ · Review ✅ · Chat (ADR 0009) | ✅ Notification/Review xong · Chat dựng đáng kể (realtime sau cờ `FIRESTORE_ENABLED`) |
 | **6** | **Finance / Thu-Chi / Công nợ / Hợp đồng** | ✅ **S1 + S2 + S3 Contracts XONG** — migration đã áp, jest 89/89, verify sạch → **đóng milestone "vận hành đủ tiền"** |
-| 7 | Admin platform đầy đủ | 🟡 approval ✅ · **quản lý gian hàng (khoá/mở khoá) ✅ (30/07, jest 94)** · còn dashboard nền tảng · nhân sự · audit-view · gói/hạn |
+| 7 | Admin platform đầy đủ | ✅ **Lõi XONG 31/07** — approval ✅ · gian hàng khoá/mở ✅ · **dashboard nền tảng ✅ · audit-view ✅ · nhân sự ✅ · gói/hạn (ADR 0010) ✅ (jest 128, CHƯA commit)**. Còn ngoài lõi (§11 build plan): all-vehicles/all-bookings/all-customers view · support tickets · invoice cho gói |
 | 8 | Migration từ Firestore + chạy song song | ❌ Sau |
 | 9 | QA / hardening / production | ❌ Sau |
 
@@ -44,9 +44,34 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 > đã gỡ cờ trong `constants/nav.ts`. Còn `customers`/`pickup-areas`/`drivers`/`trash`/`admin-*`
 > vẫn là stub thật (giữ cờ).
 >
-> ✅ **Milestone "vận hành đủ tiền" đã đạt (Phase 6 xong hết).** ➡️ Việc kế tiếp: **commit theo lớp**
-> (§5) rồi vào **Phase 7 — Admin platform** (dashboard nền tảng, khoá tenant, nhân sự, nhật ký
-> audit — bảng `audit_logs` đã ghi, chỉ thiếu endpoint ĐỌC).
+> ✅ **Milestone "vận hành đủ tiền" đã đạt (Phase 6 xong hết).**
+>
+> **31/07 — Phase 7 lõi đóng (CHƯA commit, user tự commit):** 4 slice end-to-end:
+> **(A) Dashboard nền tảng** — `GET /platform/dashboard/summary`
+> (`modules/platform-admin/platform-dashboard.*`), `/manage` switch theo `platformRole`
+> (`ManageHome` → `features/platform-dashboard`). **(B) Audit read** — migration
+> `20260731100000_add_audit_log_indexes` (index `created_at` + `action,created_at`),
+> `GET /platform/audit-logs[/:id]` (list KHÔNG kéo JSONB, detail mới có before/after),
+> `AUDIT_ACTOR_SCOPE` vào `@xeprime/types`, page thật `admin/audit` (`features/admin-audit`,
+> filter URL ADR 0004, drawer JSON Trước/Sau). **(C) Nhân sự nền tảng** — CRUD
+> `platform_memberships` (`platform-staff.*`, mirror `members`): add theo email, PATCH đổi role,
+> DELETE → removed; service enforce 1 membership/user (guard chỉ đọc row ACTIVE đầu), chặn tự
+> thao tác mình + chặn gỡ/hạ `platform_admin` ACTIVE cuối cùng (check trong tx); page thật
+> `admin/staff` (`features/admin-staff`). **(D) Gói/hạn** — **ADR 0010** + migration
+> `20260731120000_add_plans_subscriptions` (bảng `plans` + `tenant_subscriptions` append-only,
+> "expired" suy ra từ `ends_at`, không job); module `billing` (writer duy nhất), permission mới
+> `platform.billing.manage` (+ finance_admin), lỗi `PLAN_LIMIT_REACHED`;
+> `BillingService.assertVehicleQuota` gọi đầu `VehiclesService.create` (không gói = không giới
+> hạn); tenant detail thêm `currentPlan`; FE page `admin/plans` (`features/admin-plans`) + section
+> "Gói dịch vụ" trong drawer gian hàng (gán/gia hạn nối đuôi, lịch sử, huỷ sớm). Sửa kèm: 2 lỗi
+> có sẵn từ commit cab3b61 (`public-home.spec` thiếu `refreshRating`, `listings-sync.spec` sai
+> type) + `jest maxWorkers: 4` (không giới hạn worker thì cạn kết nối PG khi thêm suite).
+> Verify: jest 21 suite / 128 test xanh · typecheck/lint sạch · smoke HTTP thật (login admin →
+> dashboard/audit/staff/plans/gán+gia hạn gói → dọn dữ liệu smoke).
+>
+> ➡️ Việc kế tiếp: **commit theo lớp (§5)** rồi chọn: phần ngoài lõi Phase 7 (all-vehicles /
+> all-bookings / all-customers / support / invoice) · retrofit gate SĐT (§5) · Phase 8 (migration
+> Firestore) · Phase 9 (QA/hardening).
 
 ---
 
@@ -124,7 +149,7 @@ chính khớp dữ liệu · in/xuất hợp đồng tối thiểu chạy.
 
 | Việc | Ghi chú |
 | --- | --- |
-| **Commit cả khối chưa commit** ⚠️ | Xếp lớp CHƯA commit: Phase 4 · Phase 6 S1 (Thu-Chi) · S2 (Payments/Công nợ/Dashboard) · **S3 Contracts (30/07, migration đã áp + jest 89/89)** · **Phase 7: quản lý gian hàng khoá/mở (30/07, jest 94)** · passwordless + đăng nhập SĐT (29/07) · điều chỉnh UX + đăng xuất (30/07). Nên commit theo lớp (user tự commit) để có mốc git, hết cảm giác "xây đè". |
+| **Commit khối 31/07 (Phase 7 lõi)** ⚠️ | Các lớp cũ đã được commit (tới `cab3b61`). CHƯA commit: **Phase 7 lõi 31/07** — 2 migration đã áp (`add_audit_log_indexes`, `add_plans_subscriptions`) + ADR 0010 + toàn bộ code A/B/C/D + sửa 2 test có sẵn + `jest maxWorkers`. User tự commit (có thể tách: A+B+C / D+ADR / test-fix). |
 | Retrofit gate SĐT cho **mở shop** + **public xe** | Dùng lại `phone-verification` (purpose `shop_register`/`vehicle_public`), ngắn |
 | SMS OTP thật | Hiện `OTP_MODE=mock`. eSMS thật cần tài khoản riêng (key prod `vf3zone` ở Secret Manager, **không lấy về local được**) → set `OTP_MODE=esms` + `ESMS_*` |
 | Chat realtime | Bật sau cờ `FIRESTORE_ENABLED` + Firestore Security Rules + emulator test (ADR 0009) |

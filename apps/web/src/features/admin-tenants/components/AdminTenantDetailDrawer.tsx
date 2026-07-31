@@ -7,6 +7,7 @@ import { TENANT_STATUS, TENANT_STATUS_META, TENANT_TYPE_LABEL, type TenantStatus
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { formatDate } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
+import { TenantPlanSection } from '@/features/admin-plans/components/TenantPlanSection';
 import { useAdminTenant, useTenantActions } from '../hooks/use-admin-tenants';
 import type { AdminTenantDetail } from '../types';
 import styles from './AdminTenantDetailDrawer.module.css';
@@ -75,6 +76,8 @@ function Body({ tenant }: { tenant: AdminTenantDetail }) {
   return (
     <div>
       <Descriptions column={1} size="small" bordered items={detailItems(tenant)} />
+
+      <TenantPlanSection tenantId={tenant.id} currentPlan={tenant.currentPlan ?? null} />
 
       <div className={styles.actions}>
         {isActive ? (

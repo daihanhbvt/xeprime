@@ -3,6 +3,7 @@ import { TENANT_STATUS_VALUES } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { CurrentPlanDto } from '../../billing/dto/billing.dto';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -76,4 +77,10 @@ export class PlatformTenantDetailDto extends PlatformTenantDto {
   @ApiPropertyOptional({ type: String, nullable: true }) taxCode!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) businessLicenseNo!: string | null;
   @ApiProperty() bookingCount!: number;
+  @ApiPropertyOptional({
+    type: CurrentPlanDto,
+    nullable: true,
+    description: 'Gói hiện hành (ADR 0010) — null = chưa có gói (không giới hạn)',
+  })
+  currentPlan!: CurrentPlanDto | null;
 }

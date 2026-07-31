@@ -9,6 +9,7 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { BillingService } from '../src/modules/billing/billing.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
@@ -27,7 +28,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
 const listings = new ListingsService(asService);
-const vehicles = new VehiclesService(asService, audit, listings);
+const vehicles = new VehiclesService(asService, audit, listings, new BillingService(asService, audit));
 const approvals = new PlatformApprovalService(asService, audit, notifications, listings);
 const publicListings = new PublicListingsService(asService);
 
@@ -247,11 +248,11 @@ describe('public_listings sync (ADR 0008)', () => {
       hourlyPrice: '150000',
       discountPercent: 20,
     });
-    let listing = await prisma.publicListing.findUniqueOrThrow({
+    const hidden = await prisma.publicListing.findUniqueOrThrow({
       where: { vehicleId: vApprove },
       select: { status: true },
     });
-    expect(listing.status).toBe(LISTING_STATUS.HIDDEN);
+    expect(hidden.status).toBe(LISTING_STATUS.HIDDEN);
 
     // Duyệt lại rồi sửa trường KHÔNG nhạy cảm (miễn thế chấp) → listing giữ active và snapshot
     // cập nhật tại chỗ.
@@ -266,7 +267,7 @@ describe('public_listings sync (ADR 0008)', () => {
     await approvals.approve(task2.id, reviewerId);
 
     await vehicles.update(tenantId, vApprove, ownerId, { noCollateral: true });
-    listing = await prisma.publicListing.findUniqueOrThrow({
+    const listing = await prisma.publicListing.findUniqueOrThrow({
       where: { vehicleId: vApprove },
       select: { status: true, noCollateral: true, discountPercent: true },
     });

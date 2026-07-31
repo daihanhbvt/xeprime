@@ -556,6 +556,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách gói (mặc định chỉ gói đang bán; status=all để xem hết) */
+        get: operations["PlansController_list"];
+        put?: never;
+        /** Tạo gói mới */
+        post: operations["PlansController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Sửa gói (giá mới chỉ áp cho lượt gán sau — price snapshot) */
+        patch: operations["PlansController_update"];
+        trace?: never;
+    };
+    "/platform/plans/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ngừng bán gói (thuê bao đã gán giữ nguyên hiệu lực) */
+        post: operations["PlansController_archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/tenants/{tenantId}/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lịch sử thuê bao của gian hàng (mới nhất trước) */
+        get: operations["SubscriptionsController_list"];
+        put?: never;
+        /** Gán / gia hạn gói (chu kỳ mới nối đuôi gói còn hạn) */
+        post: operations["SubscriptionsController_assign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/tenants/{tenantId}/subscriptions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Huỷ sớm một thuê bao đang hiệu lực */
+        post: operations["SubscriptionsController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bookings": {
         parameters: {
             query?: never;
@@ -1349,6 +1436,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tổng quan nền tảng: gian hàng / listing / đơn thuê / chờ duyệt */
+        get: operations["PlatformDashboardController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/audit-logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách nhật ký (phân trang, lọc scope/action/đối tượng/thời gian) */
+        get: operations["PlatformAuditController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/audit-logs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chi tiết một dòng nhật ký (kèm snapshot before/after) */
+        get: operations["PlatformAuditController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/staff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách nhân sự nền tảng (phân trang, lọc vai trò, tìm kiếm) */
+        get: operations["PlatformStaffController_list"];
+        put?: never;
+        /** Thêm nhân sự theo email tài khoản đã có */
+        post: operations["PlatformStaffController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/staff/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Gỡ nhân sự khỏi nền tảng (status → removed) */
+        delete: operations["PlatformStaffController_remove"];
+        options?: never;
+        head?: never;
+        /** Đổi vai trò nhân sự */
+        patch: operations["PlatformStaffController_updateRole"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1418,7 +1592,7 @@ export interface components {
             tenantRole?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer" | null;
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage")[];
         };
         NotificationDto: {
             id: string;
@@ -1996,6 +2170,90 @@ export interface components {
             images?: string[];
             /** @description Tiện ích xe (thay toàn bộ khi gửi) */
             features?: ("bluetooth" | "gps" | "backup_camera" | "camera_360" | "dash_camera" | "reverse_sensor" | "sunroof" | "etc" | "spare_tire" | "airbag" | "usb" | "screen" | "map" | "child_seat")[];
+        };
+        PlanDto: {
+            id: string;
+            code: string;
+            name: string;
+            description?: string | null;
+            /** @description Tiền dạng string — ADR 0007 */
+            price: string;
+            currency: string;
+            durationDays: number;
+            /** @description null = không giới hạn */
+            maxVehicles?: number | null;
+            /** @enum {string} */
+            status: "active" | "archived";
+            sortOrder: number;
+            /** @description Số thuê bao đã gán từ gói này (mọi trạng thái) */
+            subscriptionCount: number;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        CreatePlanDto: {
+            /**
+             * @description Mã gói — unique, không đổi sau khi tạo
+             * @example basic
+             */
+            code: string;
+            /** @example Gói Cơ bản */
+            name: string;
+            description?: string;
+            /**
+             * @description Giá một chu kỳ, string thập phân — ADR 0007
+             * @example 500000
+             */
+            price: string;
+            /**
+             * @description Số ngày một chu kỳ
+             * @example 30
+             */
+            durationDays: number;
+            /** @description Giới hạn số xe; null/bỏ trống = không giới hạn (ADR 0010) */
+            maxVehicles?: number | null;
+            /** @default 0 */
+            sortOrder: number;
+        };
+        UpdatePlanDto: {
+            name?: string;
+            description?: string;
+            /** @description Tiền dạng string — ADR 0007 */
+            price?: string;
+            durationDays?: number;
+            /** @description null = bỏ giới hạn */
+            maxVehicles?: number | null;
+            sortOrder?: number;
+        };
+        SubscriptionDto: {
+            id: string;
+            tenantId: string;
+            planId: string;
+            planCode: string;
+            planName: string;
+            /**
+             * @description Lưu active|cancelled; expired suy ra từ endsAt (ADR 0010)
+             * @enum {string}
+             */
+            status: "trial" | "active" | "past_due" | "expired" | "cancelled";
+            /** @description Tiền dạng string — ADR 0007 */
+            price: string;
+            /** @description ISO-8601 UTC */
+            startsAt: string;
+            /** @description ISO-8601 UTC */
+            endsAt: string;
+            note?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        SubscriptionPageDto: {
+            data: components["schemas"]["SubscriptionDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        AssignSubscriptionDto: {
+            /** @description ID gói (ULID) */
+            planId: string;
+            /** @description Ghi chú (số chứng từ, lý do tặng…) */
+            note?: string;
         };
         BookingListItemDto: {
             id: string;
@@ -2729,6 +2987,15 @@ export interface components {
             data: components["schemas"]["PlatformTenantDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
         };
+        CurrentPlanDto: {
+            subscriptionId: string;
+            planId: string;
+            planCode: string;
+            planName: string;
+            maxVehicles?: number | null;
+            /** @description ISO-8601 UTC */
+            endsAt: string;
+        };
         PlatformTenantDetailDto: {
             id: string;
             code: string;
@@ -2751,10 +3018,123 @@ export interface components {
             taxCode?: string | null;
             businessLicenseNo?: string | null;
             bookingCount: number;
+            /** @description Gói hiện hành (ADR 0010) — null = chưa có gói (không giới hạn) */
+            currentPlan?: components["schemas"]["CurrentPlanDto"] | null;
         };
         LockTenantDto: {
             /** @description Lý do khoá gian hàng */
             reason?: string;
+        };
+        PlatformTenantStatusCountsDto: {
+            draft: number;
+            pending_review: number;
+            needs_revision: number;
+            active: number;
+            suspended: number;
+            rejected: number;
+            expired: number;
+        };
+        PlatformRecentTenantDto: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            status: "draft" | "pending_review" | "needs_revision" | "active" | "suspended" | "rejected" | "expired";
+            provinceName?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        PlatformDashboardSummaryDto: {
+            /** @description Tổng gian hàng (chưa xoá) */
+            tenantTotal: number;
+            tenantsByStatus: components["schemas"]["PlatformTenantStatusCountsDto"];
+            /** @description Listing đang hiển thị trên marketplace */
+            listingActive: number;
+            /** @description Tổng listing (mọi trạng thái) */
+            listingTotal: number;
+            /** @description Tổng đơn thuê toàn nền tảng (chưa xoá) */
+            bookingTotal: number;
+            /** @description Đơn thuê tạo trong tháng này (giờ VN) */
+            bookingThisMonth: number;
+            /** @description Hồ sơ chờ duyệt (mọi loại) */
+            approvalPending: number;
+            /** @description Chờ duyệt: gian hàng */
+            approvalPendingTenant: number;
+            /** @description Chờ duyệt: xe */
+            approvalPendingVehicle: number;
+            recentTenants: components["schemas"]["PlatformRecentTenantDto"][];
+        };
+        AuditLogDto: {
+            id: string;
+            /** @enum {string} */
+            actorScope: "tenant" | "platform" | "system";
+            action: string;
+            targetType: string;
+            targetId?: string | null;
+            tenantId?: string | null;
+            tenantName?: string | null;
+            actorUserId?: string | null;
+            actorName?: string | null;
+            actorEmail?: string | null;
+            ipAddress?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        AuditLogPageDto: {
+            data: components["schemas"]["AuditLogDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        AuditLogDetailDto: {
+            id: string;
+            /** @enum {string} */
+            actorScope: "tenant" | "platform" | "system";
+            action: string;
+            targetType: string;
+            targetId?: string | null;
+            tenantId?: string | null;
+            tenantName?: string | null;
+            actorUserId?: string | null;
+            actorName?: string | null;
+            actorEmail?: string | null;
+            ipAddress?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+            beforeJson?: {
+                [key: string]: unknown;
+            } | null;
+            afterJson?: {
+                [key: string]: unknown;
+            } | null;
+            userAgent?: string | null;
+        };
+        StaffDto: {
+            /** @description ID user — dùng cho PATCH/DELETE /platform/staff/:userId */
+            userId: string;
+            displayName: string;
+            email?: string | null;
+            avatarUrl?: string | null;
+            /** @enum {string} */
+            roleKey: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin";
+            /** @enum {string} */
+            status: "active" | "invited" | "locked" | "removed";
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        StaffPageDto: {
+            data: components["schemas"]["StaffDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        AddStaffDto: {
+            /** @example nhanvien@xeprime.vn */
+            email: string;
+            /** @enum {string} */
+            roleKey: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin";
+        };
+        UpdateStaffRoleDto: {
+            /** @enum {string} */
+            roleKey: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin";
+        };
+        RemoveStaffResultDto: {
+            userId: string;
         };
         ApiErrorBodyDto: {
             /** @example BOOKING_SCHEDULE_CONFLICT */
@@ -3747,6 +4127,168 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VehicleDetailDto"];
+                };
+            };
+        };
+    };
+    PlansController_list: {
+        parameters: {
+            query?: {
+                /** @description Bỏ trống = chỉ gói đang bán */
+                status?: "active" | "archived";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDto"][];
+                };
+            };
+        };
+    };
+    PlansController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlanDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDto"];
+                };
+            };
+        };
+    };
+    PlansController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePlanDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDto"];
+                };
+            };
+        };
+    };
+    PlansController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanDto"];
+                };
+            };
+        };
+    };
+    SubscriptionsController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionPageDto"];
+                };
+            };
+        };
+    };
+    SubscriptionsController_assign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignSubscriptionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionDto"];
+                };
+            };
+        };
+    };
+    SubscriptionsController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionDto"];
                 };
             };
         };
@@ -5068,6 +5610,177 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlatformTenantDetailDto"];
+                };
+            };
+        };
+    };
+    PlatformDashboardController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformDashboardSummaryDto"];
+                };
+            };
+        };
+    };
+    PlatformAuditController_list: {
+        parameters: {
+            query?: {
+                actorScope?: "tenant" | "platform" | "system";
+                /** @description Khớp chính xác, vd "tenant.lock" */
+                action?: string;
+                /** @description Loại đối tượng, vd "tenant" / "booking" */
+                targetType?: string;
+                /** @description ID đối tượng (ULID) */
+                targetId?: string;
+                /** @description Giới hạn theo gian hàng (ULID) */
+                tenantId?: string;
+                /** @description Giới hạn theo người thao tác (ULID) */
+                actorUserId?: string;
+                /** @description Từ thời điểm (ISO-8601, inclusive) */
+                dateFrom?: string;
+                /** @description Đến thời điểm (ISO-8601, inclusive) */
+                dateTo?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogPageDto"];
+                };
+            };
+        };
+    };
+    PlatformAuditController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditLogDetailDto"];
+                };
+            };
+        };
+    };
+    PlatformStaffController_list: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo tên hoặc email */
+                q?: string;
+                roleKey?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffPageDto"];
+                };
+            };
+        };
+    };
+    PlatformStaffController_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddStaffDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffDto"];
+                };
+            };
+        };
+    };
+    PlatformStaffController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemoveStaffResultDto"];
+                };
+            };
+        };
+    };
+    PlatformStaffController_updateRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStaffRoleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffDto"];
                 };
             };
         };

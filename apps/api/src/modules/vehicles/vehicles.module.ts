@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BillingModule } from '../billing/billing.module';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
 import { VehiclesController } from './vehicles.controller';
 import { VehiclesService } from './vehicles.service';
@@ -14,7 +15,7 @@ import { VehiclesService } from './vehicles.service';
  * vào `vehicle_occupancies` (ADR 0006).
  */
 @Module({
-  imports: [PublicListingsModule],
+  imports: [PublicListingsModule, BillingModule],
   controllers: [VehiclesController],
   providers: [VehiclesService],
   exports: [VehiclesService],

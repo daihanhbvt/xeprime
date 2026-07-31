@@ -111,6 +111,7 @@ export const PERMISSION = {
   PLATFORM_APPROVAL_REVIEW: 'platform.approvals.review',
   PLATFORM_AUDIT_VIEW: 'platform.audit.view',
   PLATFORM_STAFF_MANAGE: 'platform.staff.manage',
+  PLATFORM_BILLING_MANAGE: 'platform.billing.manage',
 } as const;
 
 export type Permission = (typeof PERMISSION)[keyof typeof PERMISSION];
@@ -194,5 +195,6 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_DASHBOARD_VIEW,
     PERMISSION.FINANCE_VIEW,
     PERMISSION.PLATFORM_TENANT_MANAGE,
+    PERMISSION.PLATFORM_BILLING_MANAGE,
   ],
 };

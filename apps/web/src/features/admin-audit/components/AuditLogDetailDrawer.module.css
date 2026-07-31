@@ -1,0 +1,48 @@
+.center {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.jsonGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.jsonCol {
+  min-width: 0;
+}
+
+.jsonTitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--xp-color-text);
+}
+
+.jsonBox {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--xp-color-border-secondary, rgba(0, 0, 0, 0.08));
+  border-radius: 8px;
+  background: var(--xp-color-fill-quaternary, rgba(0, 0, 0, 0.02));
+  font-size: 12px;
+  line-height: 1.55;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.jsonEmpty {
+  color: var(--xp-color-text-secondary);
+  font-size: 12px;
+}
+
+@media (max-width: 560px) {
+  .jsonGrid {
+    grid-template-columns: 1fr;
+  }
+}

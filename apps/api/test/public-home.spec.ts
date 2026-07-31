@@ -118,6 +118,9 @@ beforeAll(async () => {
       },
     });
   }
+  // Danh sách đọc cột rating denormalize trên public_listings — sync như production
+  // (ReviewService gọi refreshRating sau khi tạo review).
+  await listings.refreshRating(ratedVehicle);
 });
 
 afterAll(async () => {

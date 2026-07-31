@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { newId, type Prisma } from '@xeprime/prisma';
+import type { AuditActorScope } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 
 export interface AuditEntry {
   tenantId?: string | null;
   actorUserId?: string | null;
-  actorScope: 'tenant' | 'platform' | 'system';
+  actorScope: AuditActorScope;
   action: string;
   targetType: string;
   targetId?: string | null;

@@ -32,6 +32,7 @@ import { ReviewModule } from './modules/review/review.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
+import { BillingModule } from './modules/billing/billing.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     ChatModule,
     StorageModule,
     PlatformAdminModule,
+    BillingModule,
   ],
   providers: [
     // Thứ tự quan trọng (guard global chạy theo đúng thứ tự khai báo): Throttler chặn trước

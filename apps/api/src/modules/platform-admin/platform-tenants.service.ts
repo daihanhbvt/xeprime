@@ -3,6 +3,7 @@ import { Prisma } from '@xeprime/prisma';
 import { API_ERROR_CODE, TENANT_STATUS, type PaginationMeta } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { BillingService } from '../billing/billing.service';
 import {
   LockTenantDto,
   PLATFORM_TENANT_DEFAULT_LIMIT,
@@ -32,6 +33,7 @@ export class PlatformTenantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly billing: BillingService,
   ) {}
 
   /**
@@ -98,6 +100,7 @@ export class PlatformTenantsService {
       taxCode: row.profile?.taxCode ?? null,
       businessLicenseNo: row.profile?.businessLicenseNo ?? null,
       bookingCount: row._count.bookings,
+      currentPlan: await this.billing.currentPlan(id),
     };
   }
 

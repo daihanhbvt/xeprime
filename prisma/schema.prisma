@@ -141,6 +141,7 @@ model Tenant {
   receipts      Receipt[]
   payments      Payment[]
   contracts     Contract[]
+  subscriptions TenantSubscription[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -763,6 +764,8 @@ model AuditLog {
   @@index([tenantId, createdAt])
   @@index([targetType, targetId])
   @@index([actorUserId, createdAt])
+  @@index([createdAt])
+  @@index([action, createdAt])
   @@map("audit_logs")
 }
 
@@ -1106,4 +1109,59 @@ model Contract {
   @@unique([tenantId, contractNo])
   @@index([tenantId, createdAt])
   @@map("contracts")
+}
+
+// ---------------------------------------------------------------------------
+// Billing — plans + tenant_subscriptions (Phase 7 §11, ADR 0010)
+// ---------------------------------------------------------------------------
+
+/// Danh mục gói dịch vụ. BillingService là writer DUY NHẤT. Plan chỉ archive, không xoá
+/// (FK RESTRICT từ tenant_subscriptions).
+model Plan {
+  id           String   @id @db.Char(26)
+  code         String   @unique @db.VarChar(50)
+  name         String   @db.VarChar(255)
+  description  String?  @db.Text
+  price        Decimal  @default(0) @db.Decimal(14, 2)
+  currency     String   @default("VND") @db.VarChar(10)
+  durationDays Int      @map("duration_days")
+  /// NULL = không giới hạn số xe (ADR 0010).
+  maxVehicles  Int?     @map("max_vehicles")
+  /// Giới hạn tương lai — thêm key không cần migrate.
+  limitsJson   Json?    @map("limits_json") @db.JsonB
+  /// @xeprime/types → PlanStatus (active | archived)
+  status       String   @default("active") @db.VarChar(50)
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  subscriptions TenantSubscription[]
+
+  @@index([status, sortOrder])
+  @@map("plans")
+}
+
+/// Lịch sử thuê bao — append-only (ADR 0010): gán/gia hạn chèn dòng MỚI, không update dòng cũ
+/// (trừ huỷ sớm active → cancelled). "Gói hiện hành" = dòng active có starts_at <= now() < ends_at;
+/// "expired" suy ra từ ends_at, không có job lật status.
+model TenantSubscription {
+  id        String   @id @db.Char(26)
+  tenantId  String   @map("tenant_id") @db.Char(26)
+  planId    String   @map("plan_id") @db.Char(26)
+  /// @xeprime/types → SubscriptionStatus; chỉ ghi active | cancelled.
+  status    String   @default("active") @db.VarChar(50)
+  /// Snapshot giá lúc gán.
+  price     Decimal  @db.Decimal(14, 2)
+  startsAt  DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt    DateTime @map("ends_at") @db.Timestamptz(3)
+  note      String?  @db.Text
+  createdBy String?  @map("created_by") @db.Char(26)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, endsAt])
+  @@index([tenantId, createdAt])
+  @@map("tenant_subscriptions")
 }

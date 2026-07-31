@@ -41,6 +41,7 @@ export const ROUTES = {
     ADMIN_TENANTS: '/manage/admin/tenants',
     ADMIN_AUDIT: '/manage/admin/audit',
     ADMIN_STAFF: '/manage/admin/staff',
+    ADMIN_PLANS: '/manage/admin/plans',
   },
 } as const;
 

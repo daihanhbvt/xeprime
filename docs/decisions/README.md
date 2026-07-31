@@ -14,6 +14,8 @@ Quy tắc: ADR ở đây **thắng** mọi tài liệu khác trong `docs/` khi c
 | [0006](0006-booking-concurrency.md) | Cơ chế chống trùng lịch | Accepted 22/07/2026 |
 | [0007](0007-api-type-contract.md) | Hợp đồng type FE ↔ BE sinh từ OpenAPI | Accepted 22/07/2026 |
 | [0008](0008-public-listings-sync.md) | Quy tắc đồng bộ `public_listings` | Accepted 22/07/2026 |
+| [0009](0009-chat-firestore-projection.md) | Chat: Firestore là projection realtime, PostgreSQL là nguồn sự thật | Accepted 27/07/2026 |
+| [0010](0010-billing-plans-subscriptions.md) | Gói/thuê bao: history append-only, "hết hạn" suy ra, quota tối thiểu | Accepted 31/07/2026 |
 
 ## Khi nào viết ADR mới
 

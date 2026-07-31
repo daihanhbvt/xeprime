@@ -109,7 +109,26 @@ export const CONVERSATION_STATUS_META: Readonly<Record<ConversationStatus, Statu
   [CONVERSATION_STATUS.ARCHIVED]: { label: 'Đã lưu trữ', color: 'default' },
 };
 
-/** Trạng thái gói thuê bao của gian hàng. */
+/** Trạng thái gói dịch vụ trong danh mục (ADR 0010). Archived = ngừng bán, thuê bao cũ giữ nguyên. */
+export const PLAN_STATUS = {
+  ACTIVE: 'active',
+  ARCHIVED: 'archived',
+} as const;
+
+export type PlanStatus = (typeof PLAN_STATUS)[keyof typeof PLAN_STATUS];
+export const PLAN_STATUS_VALUES = Object.values(PLAN_STATUS) as PlanStatus[];
+
+export const PLAN_STATUS_META: Readonly<Record<PlanStatus, StatusMeta>> = {
+  [PLAN_STATUS.ACTIVE]: { label: 'Đang bán', color: 'green' },
+  [PLAN_STATUS.ARCHIVED]: { label: 'Ngừng bán', color: 'default' },
+};
+
+/**
+ * Trạng thái gói thuê bao của gian hàng.
+ *
+ * ADR 0010: dòng `tenant_subscriptions` chỉ LƯU `active | cancelled`; `expired` suy ra từ
+ * `ends_at < now()` lúc đọc (không job lật status). `trial`/`past_due` để dành cho sau.
+ */
 export const SUBSCRIPTION_STATUS = {
   TRIAL: 'trial',
   ACTIVE: 'active',
@@ -151,6 +170,22 @@ export const MEMBERSHIP_STATUS = {
 
 export type MembershipStatus = (typeof MEMBERSHIP_STATUS)[keyof typeof MEMBERSHIP_STATUS];
 export const MEMBERSHIP_STATUS_VALUES = Object.values(MEMBERSHIP_STATUS) as MembershipStatus[];
+
+/** Phạm vi người thao tác trong `audit_logs` (AuditEntry.actorScope). */
+export const AUDIT_ACTOR_SCOPE = {
+  TENANT: 'tenant',
+  PLATFORM: 'platform',
+  SYSTEM: 'system',
+} as const;
+
+export type AuditActorScope = (typeof AUDIT_ACTOR_SCOPE)[keyof typeof AUDIT_ACTOR_SCOPE];
+export const AUDIT_ACTOR_SCOPE_VALUES = Object.values(AUDIT_ACTOR_SCOPE) as AuditActorScope[];
+
+export const AUDIT_ACTOR_SCOPE_META: Readonly<Record<AuditActorScope, StatusMeta>> = {
+  [AUDIT_ACTOR_SCOPE.TENANT]: { label: 'Gian hàng', color: 'blue' },
+  [AUDIT_ACTOR_SCOPE.PLATFORM]: { label: 'Nền tảng', color: 'purple' },
+  [AUDIT_ACTOR_SCOPE.SYSTEM]: { label: 'Hệ thống', color: 'default' },
+};
 
 /**
  * Nguồn chiếm dụng lịch xe (ADR 0006).
