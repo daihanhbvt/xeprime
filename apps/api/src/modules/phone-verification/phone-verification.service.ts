@@ -15,6 +15,7 @@ import {
   PHONE_VERIFICATION_STATUS,
   type PhoneVerificationPurpose,
 } from '@xeprime/types';
+import { normalizePhone } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
 import { OTP_PROVIDER, type OtpProvider } from './otp-provider';
 
@@ -210,13 +211,4 @@ export class PhoneVerificationService {
     const pepper = this.config.getOrThrow<string>('OTP_PEPPER');
     return createHash('sha256').update(`${code}:${phone}:${pepper}`).digest('hex');
   }
-}
-
-/** `0xxxxxxxxx` / `+84xxxxxxxxx` → `84xxxxxxxxx` (như eSMS legacy). */
-export function normalizePhone(raw: string): string {
-  const trimmed = raw.trim();
-  if (trimmed.startsWith('+84')) return `84${trimmed.slice(3)}`;
-  if (trimmed.startsWith('84')) return trimmed;
-  if (trimmed.startsWith('0')) return `84${trimmed.slice(1)}`;
-  return trimmed;
 }

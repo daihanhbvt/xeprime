@@ -1,0 +1,35 @@
+.state {
+  display: block;
+  margin: 64px auto;
+  text-align: center;
+}
+
+.search {
+  width: 220px;
+}
+
+.exact {
+  width: 190px;
+}
+
+.statusSelect {
+  width: 180px;
+}
+
+.privacyNote {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-gold-wash);
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+}
+
+@media (max-width: 560px) {
+  .search,
+  .exact,
+  .statusSelect {
+    width: 100%;
+  }
+}

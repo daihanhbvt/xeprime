@@ -11,7 +11,7 @@ import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
-import { normalizePhone } from '../phone-verification/phone-verification.service';
+import { normalizePhone } from '../../common/phone';
 import { EmailService } from './email.service';
 import { IdTokenVerifier } from './token-verifier';
 import type { MeDto } from './dto/auth.dto';

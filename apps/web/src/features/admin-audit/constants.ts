@@ -12,6 +12,11 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   'approval.reject': 'Từ chối hồ sơ',
   'approval.request_revision': 'Yêu cầu bổ sung hồ sơ',
   'vehicle.submit_public': 'Gửi duyệt xe công khai',
+  'vehicle.platform_hide': 'Nền tảng ẩn xe',
+  'vehicle.platform_unhide': 'Nền tảng bỏ ẩn xe',
+  // Hai action dưới là lý do endpoint bỏ che PII tồn tại: phải lọc được "ai đã xem số của khách".
+  'booking.contact_reveal': 'Xem SĐT khách trên đơn',
+  'customer.contact_reveal': 'Xem liên hệ khách',
   'booking.create': 'Tạo đơn thuê',
   'booking.transition': 'Chuyển trạng thái đơn',
   'booking_request.approve': 'Duyệt yêu cầu đặt xe',
@@ -57,6 +62,7 @@ export const AUDIT_TARGET_TYPE_LABEL: Record<string, string> = {
   contract: 'Hợp đồng',
   tenant_membership: 'Thành viên gian hàng',
   platform_membership: 'Nhân sự nền tảng',
+  user: 'Người dùng',
 };
 
 export function auditTargetTypeLabel(targetType: string): string {

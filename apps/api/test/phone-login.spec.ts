@@ -2,7 +2,7 @@ import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import { API_ERROR_CODE, USER_STATUS } from '@xeprime/types';
 import { AuthService } from '../src/modules/auth/auth.service';
-import { normalizePhone } from '../src/modules/phone-verification/phone-verification.service';
+import { normalizePhone } from '../src/common/phone';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
 /**

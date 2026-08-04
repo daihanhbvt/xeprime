@@ -12,7 +12,7 @@ import { VEHICLE_PUBLIC_STATUS, VEHICLE_PUBLIC_STATUS_META } from './vehicle';
 import { TENANT_STATUS, TENANT_STATUS_META } from './tenant';
 import { BOOKING_REQUEST_STATUS, BOOKING_REQUEST_STATUS_META } from './booking-request';
 import { REVIEW_STATUS, REVIEW_STATUS_META, isReviewStatus } from './review';
-import { CONVERSATION_STATUS, CONVERSATION_STATUS_META } from './misc';
+import { CONVERSATION_STATUS, CONVERSATION_STATUS_META, USER_STATUS, USER_STATUS_META } from './misc';
 import { isParticipantType } from './chat';
 import { NOTIFICATION_TYPE, NOTIFICATION_TYPE_META, isNotificationType } from '../notifications';
 
@@ -29,6 +29,7 @@ describe('status metadata completeness', () => {
     ['tenant', Object.values(TENANT_STATUS), TENANT_STATUS_META],
     ['review', Object.values(REVIEW_STATUS), REVIEW_STATUS_META],
     ['conversation', Object.values(CONVERSATION_STATUS), CONVERSATION_STATUS_META],
+    ['user', Object.values(USER_STATUS), USER_STATUS_META],
     ['notification type', Object.values(NOTIFICATION_TYPE), NOTIFICATION_TYPE_META],
   ])('%s: mọi status đều có label và color', (_name, values, meta) => {
     for (const status of values) {

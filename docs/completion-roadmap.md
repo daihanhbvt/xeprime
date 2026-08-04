@@ -4,7 +4,7 @@
 > `docs/decisions/`, `docs/CODEMAP.md`). Khi **đóng xong một phase**, cập nhật bảng §2 + mục phase
 > tương ứng ở đây — đừng để tiến độ chỉ nằm trong trí nhớ hay plan file global `~/.claude/plans/`.
 >
-> Cập nhật gần nhất: **31/07/2026**.
+> Cập nhật gần nhất: **04/08/2026**.
 
 ---
 
@@ -29,10 +29,10 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 | 1 | Auth / RBAC / Tenant / Layout | ✅ Xong |
 | 2 | Shop approval + Vehicle core | ✅ Xong |
 | 3 | Public listing (snapshot ADR 0008) + Marketplace + gallery/tiện ích xe | ✅ Xong |
-| 4 | Booking request + Booking + Calendar + **gate verify SĐT** + check-conflict preview | ✅ **Xong 29/07 — CHƯA commit** |
+| 4 | Booking request + Booking + Calendar + **gate verify SĐT** + check-conflict preview | ✅ Xong 29/07, đã commit |
 | 5 | Notification ✅ · Review ✅ · Chat (ADR 0009) | ✅ Notification/Review xong · Chat dựng đáng kể (realtime sau cờ `FIRESTORE_ENABLED`) |
-| **6** | **Finance / Thu-Chi / Công nợ / Hợp đồng** | ✅ **S1 + S2 + S3 Contracts XONG** — migration đã áp, jest 89/89, verify sạch → **đóng milestone "vận hành đủ tiền"** |
-| 7 | Admin platform đầy đủ | ✅ **Lõi XONG 31/07** — approval ✅ · gian hàng khoá/mở ✅ · **dashboard nền tảng ✅ · audit-view ✅ · nhân sự ✅ · gói/hạn (ADR 0010) ✅ (jest 128, CHƯA commit)**. Còn ngoài lõi (§11 build plan): all-vehicles/all-bookings/all-customers view · support tickets · invoice cho gói |
+| **6** | **Finance / Thu-Chi / Công nợ / Hợp đồng** | ✅ **S1 + S2 + S3 Contracts XONG** — migration đã áp, verify sạch → **đóng milestone "vận hành đủ tiền"** |
+| 7 | Admin platform đầy đủ | ✅ **Lõi xong 31/07 (commit `262801b`)** — approval · gian hàng khoá/mở · dashboard · audit-view · nhân sự · gói-hạn (ADR 0010). ✅ **04/08: 3 màn giám sát** all-vehicles / all-bookings / all-customers (CHƯA commit). Còn lại §11.1: **support tickets · invoice cho gói** |
 | 8 | Migration từ Firestore + chạy song song | ❌ Sau |
 | 9 | QA / hardening / production | ❌ Sau |
 
@@ -69,9 +69,64 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 > Verify: jest 21 suite / 128 test xanh · typecheck/lint sạch · smoke HTTP thật (login admin →
 > dashboard/audit/staff/plans/gán+gia hạn gói → dọn dữ liệu smoke).
 >
-> ➡️ Việc kế tiếp: **commit theo lớp (§5)** rồi chọn: phần ngoài lõi Phase 7 (all-vehicles /
-> all-bookings / all-customers / support / invoice) · retrofit gate SĐT (§5) · Phase 8 (migration
-> Firestore) · Phase 9 (QA/hardening).
+> **04/08 — 3 màn giám sát nền tảng (CHƯA commit):** đóng gần hết §11.1 build plan.
+> **(A) Quyền** — 5 permission mới ở `packages/types/src/rbac.ts`: `platform.vehicles.view` ·
+> `platform.vehicles.moderate` · `platform.bookings.view` · `platform.customers.view` ·
+> `platform.customers.view_pii`. `PLATFORM_STAFF` bỏ 4 key tenant (`vehicles.view`…, vốn không
+> cấp được gì cho người không thuộc tenant) đổi sang key `platform.*`; `SUPPORT` là role duy
+> nhất ngoài admin có `view_pii`. Đã chạy seed (37 permission).
+> **(B) Index** — migration `20260804100000_add_platform_monitoring_indexes` đã áp: các list này
+> KHÔNG có `tenant_id` dẫn đường nên mọi index `(tenant_id, …)` cũ vô dụng. Thêm btree
+> `users(created_at)`, `vehicles(created_at)`, `vehicles(public_status, created_at)`,
+> `bookings(status, created_at)`, `bookings(customer_phone)` + **3 GIN trigram** cho ô tìm kiếm
+> `ILIKE '%q%'` (`users.display_name`, `vehicles.name+plate_number`, `bookings.code+customer_name`).
+> `migrate diff` sạch (schema ↔ DB khớp cả index trigram).
+> **(C) Xe toàn hệ thống** — `platform-vehicles.*`: list lọc trạng thái duyệt/vận hành/loại xe/
+> trạng thái gian hàng + tìm tên-biển-mã; **ẩn/bỏ ẩn xe vi phạm** đổi `publicStatus`
+> `approved_public ↔ hidden` rồi gọi `ListingsService.syncFromVehicle` trong CÙNG tx (ADR 0008 —
+> module này không tự ghi `public_listings`), `updateMany` theo trạng thái nguồn nên sai bước →
+> 409, lý do ẩn BẮT BUỘC và vào audit. FE `features/admin-vehicles` + `/manage/admin/vehicles`.
+> **(D) Đơn thuê toàn hệ thống** — `platform-bookings.*`, **CHỈ ĐỌC** (chuyển trạng thái vẫn của
+> shop — ADR 0006 giữ một đường ghi lịch duy nhất); lọc trạng thái/gian hàng/xe, khoảng ngày áp
+> lên `createdAt` **hoặc** `pickupAt`, tra SĐT khớp chính xác. FE `features/admin-bookings`.
+> **(E) Khách thuê** — `platform-customers.*`: "khách" = user **không** có membership ACTIVE ở
+> tenant lẫn platform (loại chủ shop/nhân sự; nhân viên đã nghỉ vẫn là khách). **Masking PII**
+> (`common/mask.ts`) ở mọi đường đọc; bỏ che là `POST /platform/{bookings,customers}/:id/contact`
+> — quyền riêng + ghi `audit_logs` từng lần, và log **không** chép lại giá trị PII. FE
+> `features/admin-customers` + component dùng chung `MaskedContact`.
+> **(F) Hai dạng SĐT — cái bẫy lớn nhất của slice này.** `users.phone` lưu `84…` (mọi đường ghi
+> đi qua `normalizePhone`), còn `bookings/booking_requests.customer_phone` lưu **thô như shop/khách
+> gõ** (`09…`). Ô "tra theo SĐT" so khớp một dạng là gần như luôn trả rỗng, và `maskPhone` che
+> thẳng `84…` sẽ lộ ra đúng mã quốc gia (`849****678`) — vô dụng để đối chiếu, lại hiện khác nhau
+> giữa hai màn. Đã gom về `common/phone.ts` (`normalizePhone` dời từ `phone-verification.service`,
+> thêm `toLocalPhone` + `phoneLookupVariants`): tra cứu so `{ in: [mọi dạng lưu] }` (vẫn khớp
+> CHÍNH XÁC, không cho dò tiền tố), che trên dạng nội địa. Test seed SĐT dạng `84…` **đúng như
+> production ghi** — seed `09…` sẽ làm test xanh trong khi màn thật không tìm ra ai.
+> **Dọn kèm:** `bookingDebt()` (`common/money.ts`) gom công thức công nợ lặp ở 3 nơi ·
+> `isZeroMoney()` (`lib/money.ts`) so sánh tiền trên chuỗi thay vì `Number()` (sửa luôn
+> `BookingDetailDrawer`) · `USER_STATUS_META` · `BOOKING_DATE_FIELD` về `@xeprime/types` (giá trị
+> đi trong query string, web↔api phải chung nguồn) · 4 action + targetType `user` mới vào
+> `admin-audit/constants.ts` (không có thì **không lọc được "ai đã xem PII"** — đúng lý do endpoint
+> đó tồn tại) · primitive dùng chung `common/pagination.ts` + `hooks/use-url-filters.ts` cho 3
+> slice mới.
+> **Sửa sau review (`reviewer` agent):** (F) ở trên · index trigram `vehicles` thiếu cột `code`
+> khiến CẢ vị từ OR rơi về seq scan (Postgres chỉ BitmapOr khi mọi nhánh có index) · handler-level
+> `@RequirePermissions` **ghi đè** cấp class (`getAllAndOverride`) nên 4 handler phải liệt kê lại
+> quyền đọc, nếu không role chỉ có `view_pii`/`moderate` thao tác được mà không có quyền xem ·
+> `CheckCircleTwoTone twoToneColor="#16a34a"` → token (ADR 0003).
+> Verify: **jest 25 suite / 166 test** xanh · types 21 · web vitest 38 · typecheck + lint (api &
+> web) sạch · `migrate status`/`migrate diff` sạch · **smoke HTTP thật**: login admin → 3 list →
+> ẩn/bỏ ẩn xe (snapshot sàn đi theo, sai bước 409) → reveal SĐT/email (audit ghi đúng, không chép
+> PII vào log) → tra SĐT cả 3 dạng `09…`/`84…`/`+84…` đều ra → chủ shop gọi 3 endpoint đều 403 →
+> dọn dữ liệu smoke.
+>
+> **Đã ghi nhận, CHƯA làm (không thuộc slice):** shop gửi duyệt lại xe bị nền tảng ẩn thì reviewer
+> **không thấy lý do ẩn** (chỉ nằm trong `audit_logs`) → nên hiện lý do trên phiếu duyệt ·
+> `use-url-filters`/`pagination` mới dùng ở 3 slice mới, 10 hook + 19 service cũ vẫn giữ bản copy
+> (dời dần khi chạm vào, đừng sửa hàng loạt trong diff không liên quan).
+>
+> ➡️ Việc kế tiếp: **commit khối 04/08** rồi chọn: nốt §11.1 (**support tickets** · **invoice cho
+> gói**) · retrofit gate SĐT (§5) · Phase 8 (migration Firestore) · Phase 9 (QA/hardening).
 
 ---
 
@@ -149,7 +204,8 @@ chính khớp dữ liệu · in/xuất hợp đồng tối thiểu chạy.
 
 | Việc | Ghi chú |
 | --- | --- |
-| **Commit khối 31/07 (Phase 7 lõi)** ⚠️ | Các lớp cũ đã được commit (tới `cab3b61`). CHƯA commit: **Phase 7 lõi 31/07** — 2 migration đã áp (`add_audit_log_indexes`, `add_plans_subscriptions`) + ADR 0010 + toàn bộ code A/B/C/D + sửa 2 test có sẵn + `jest maxWorkers`. User tự commit (có thể tách: A+B+C / D+ADR / test-fix). |
+| **Commit khối 04/08 (3 màn giám sát)** ⚠️ | Phase 7 lõi đã commit ở `262801b`. CHƯA commit: migration `add_platform_monitoring_indexes` (đã áp) + 5 permission + 3 module BE + 3 feature FE + `common/{mask,money}.ts` + `MaskedContact` + `USER_STATUS_META` + 4 spec mới. User tự commit (có thể tách: quyền+index / 3 slice / helper dùng chung). |
+| Trang khách hàng CỦA SHOP (`/manage/customers`) | Màn 04/08 là **của nền tảng** (`/manage/admin/customers`), không thay stub phía shop — shop cần danh sách khách RIÊNG của mình, làm ở phase liên quan |
 | Retrofit gate SĐT cho **mở shop** + **public xe** | Dùng lại `phone-verification` (purpose `shop_register`/`vehicle_public`), ngắn |
 | SMS OTP thật | Hiện `OTP_MODE=mock`. eSMS thật cần tài khoản riêng (key prod `vf3zone` ở Secret Manager, **không lấy về local được**) → set `OTP_MODE=esms` + `ESMS_*` |
 | Chat realtime | Bật sau cờ `FIRESTORE_ENABLED` + Firestore Security Rules + emulator test (ADR 0009) |

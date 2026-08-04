@@ -39,6 +39,9 @@ export const ROUTES = {
     // Quản trị nền tảng
     ADMIN: '/manage/admin',
     ADMIN_TENANTS: '/manage/admin/tenants',
+    ADMIN_VEHICLES: '/manage/admin/vehicles',
+    ADMIN_BOOKINGS: '/manage/admin/bookings',
+    ADMIN_CUSTOMERS: '/manage/admin/customers',
     ADMIN_AUDIT: '/manage/admin/audit',
     ADMIN_STAFF: '/manage/admin/staff',
     ADMIN_PLANS: '/manage/admin/plans',

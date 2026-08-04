@@ -1,0 +1,35 @@
+.state {
+  display: block;
+  margin: 64px auto;
+  text-align: center;
+}
+
+.search {
+  width: 230px;
+}
+
+.phone {
+  width: 190px;
+}
+
+.statusSelect {
+  width: 180px;
+}
+
+.dateFieldSelect {
+  width: 170px;
+}
+
+.rangePicker {
+  width: 250px;
+}
+
+@media (max-width: 560px) {
+  .search,
+  .phone,
+  .statusSelect,
+  .dateFieldSelect,
+  .rangePicker {
+    width: 100%;
+  }
+}

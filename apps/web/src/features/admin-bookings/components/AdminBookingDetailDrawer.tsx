@@ -1,0 +1,197 @@
+'use client';
+
+import { App, Button, Descriptions, Drawer, Result, Spin, Tag } from 'antd';
+import Link from 'next/link';
+import {
+  BOOKING_STATUS_META,
+  PERMISSION,
+  SERVICE_TYPE_LABEL,
+  TENANT_STATUS_META,
+  type BookingStatus,
+  type ServiceType,
+  type TenantStatus,
+} from '@xeprime/types';
+import { MaskedContact } from '@/components/data-display/MaskedContact';
+import { StatusTag } from '@/components/data-display/StatusTag';
+import { ROUTES } from '@/constants/routes';
+import { usePermissions } from '@/hooks/use-permissions';
+import { formatDateTime } from '@/lib/datetime';
+import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
+import { getErrorMessage } from '@/services/api-client';
+import { useAdminBooking, useRevealBookingContact } from '../hooks/use-admin-bookings';
+import type { AdminBookingDetail } from '../types';
+import styles from './AdminBookingDetailDrawer.module.css';
+
+export function AdminBookingDetailDrawer({
+  bookingId,
+  onClose,
+}: {
+  bookingId: string | null;
+  onClose: () => void;
+}) {
+  const { data, isLoading, isError, refetch } = useAdminBooking(bookingId);
+
+  return (
+    <Drawer
+      title={data ? `Đơn ${data.code}` : 'Đơn thuê'}
+      width={560}
+      open={Boolean(bookingId)}
+      onClose={onClose}
+      extra={
+        data ? <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} /> : null
+      }
+    >
+      {isError ? (
+        <Result
+          status="error"
+          title="Không tải được thông tin đơn"
+          extra={
+            <Button type="primary" onClick={() => void refetch()}>
+              Thử lại
+            </Button>
+          }
+        />
+      ) : isLoading || !data ? (
+        <div className={styles.center}>
+          <Spin />
+        </div>
+      ) : (
+        // `key` ép remount khi đổi đơn: SĐT đã bỏ che của đơn trước không được rớt sang đơn sau.
+        <Body key={data.id} booking={data} />
+      )}
+    </Drawer>
+  );
+}
+
+function Body({ booking }: { booking: AdminBookingDetail }) {
+  const { message } = App.useApp();
+  const { has } = usePermissions();
+  const reveal = useRevealBookingContact(booking.id);
+
+  return (
+    <div>
+      <Descriptions
+        column={1}
+        size="small"
+        bordered
+        items={[
+          { key: 'customer', label: 'Khách', children: booking.customerName },
+          {
+            key: 'phone',
+            label: 'SĐT khách',
+            children: (
+              <MaskedContact
+                masked={booking.customerPhoneMasked}
+                revealed={reveal.data?.customerPhone}
+                canReveal={has(PERMISSION.PLATFORM_CUSTOMER_PII_VIEW)}
+                loading={reveal.isPending}
+                onReveal={() =>
+                  reveal.mutate(undefined, {
+                    onError: (err) => message.error(getErrorMessage(err)),
+                  })
+                }
+              />
+            ),
+          },
+          {
+            key: 'tenant',
+            label: 'Gian hàng',
+            children: (
+              <span className={styles.inline}>
+                <Link href={`${ROUTES.MANAGE.ADMIN_TENANTS}?q=${encodeURIComponent(booking.tenantName)}`}>
+                  {booking.tenantName}
+                </Link>
+                <StatusTag value={booking.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} />
+              </span>
+            ),
+          },
+          {
+            key: 'vehicle',
+            label: 'Xe',
+            children: (
+              <Link href={`${ROUTES.MANAGE.ADMIN_VEHICLES}?q=${encodeURIComponent(booking.vehicleName)}`}>
+                {booking.vehicleName}
+                {booking.vehiclePlateNumber ? ` · ${booking.vehiclePlateNumber}` : ''}
+              </Link>
+            ),
+          },
+          {
+            key: 'service',
+            label: 'Dịch vụ',
+            children:
+              SERVICE_TYPE_LABEL[booking.serviceType as ServiceType] ?? booking.serviceType,
+          },
+          {
+            key: 'plan',
+            label: 'Kế hoạch',
+            children: `${formatDateTime(booking.pickupAt)} → ${formatDateTime(booking.returnAt)}`,
+          },
+          {
+            key: 'actual',
+            label: 'Thực tế',
+            children:
+              booking.actualPickupAt || booking.actualReturnAt
+                ? `${formatDateTime(booking.actualPickupAt)} → ${formatDateTime(booking.actualReturnAt)}`
+                : 'Chưa giao/nhận xe',
+          },
+        ]}
+      />
+
+      <div className={styles.sectionTitle}>Tiền</div>
+      <Descriptions
+        column={1}
+        size="small"
+        bordered
+        items={[
+          { key: 'base', label: 'Tiền thuê', children: formatMoneyVnd(booking.baseAmount) },
+          ...(isZeroMoney(booking.deliveryFee)
+            ? []
+            : [
+                {
+                  key: 'delivery',
+                  label: 'Phí giao xe',
+                  children: formatMoneyVnd(booking.deliveryFee),
+                },
+              ]),
+          ...(isZeroMoney(booking.discountAmount)
+            ? []
+            : [
+                {
+                  key: 'discount',
+                  label: 'Giảm giá',
+                  children: `− ${formatMoneyVnd(booking.discountAmount)}`,
+                },
+              ]),
+          { key: 'total', label: 'Tổng cộng', children: formatMoneyVnd(booking.totalAmount) },
+          { key: 'deposit', label: 'Đặt cọc', children: formatMoneyVnd(booking.depositAmount) },
+          { key: 'paid', label: 'Đã thu', children: formatMoneyVnd(booking.paidAmount) },
+          {
+            key: 'debt',
+            label: 'Còn nợ',
+            children: (
+              <span className={isZeroMoney(booking.debtAmount) ? undefined : styles.debt}>
+                {formatMoneyVnd(booking.debtAmount)}
+              </span>
+            ),
+          },
+        ]}
+      />
+
+      <div className={styles.sectionTitle}>Hồ sơ</div>
+      <div className={styles.tags}>
+        <Tag>{booking.receiptCount} phiếu thu/chi</Tag>
+        <Tag>{booking.paymentCount} lần thanh toán</Tag>
+        <Tag color={booking.hasContract ? 'green' : undefined}>
+          {booking.hasContract ? 'Đã lập hợp đồng' : 'Chưa có hợp đồng'}
+        </Tag>
+      </div>
+
+      {booking.note ? <div className={styles.note}>{booking.note}</div> : null}
+
+      <div className={styles.footer}>
+        Người tạo: {booking.createdByName ?? '—'} · Tạo {formatDateTime(booking.createdAt)} · Cập
+        nhật {formatDateTime(booking.updatedAt)}
+      </div>
+    </div>
+  );
+}

@@ -160,6 +160,12 @@ export const USER_STATUS = {
 export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
 export const USER_STATUS_VALUES = Object.values(USER_STATUS) as UserStatus[];
 
+export const USER_STATUS_META: Readonly<Record<UserStatus, StatusMeta>> = {
+  [USER_STATUS.ACTIVE]: { label: 'Đang hoạt động', color: 'green' },
+  [USER_STATUS.LOCKED]: { label: 'Bị khoá', color: 'red' },
+  [USER_STATUS.DELETED]: { label: 'Đã xoá', color: 'default' },
+};
+
 /** Trạng thái membership (tenant lẫn platform). */
 export const MEMBERSHIP_STATUS = {
   ACTIVE: 'active',

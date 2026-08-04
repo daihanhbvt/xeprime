@@ -43,7 +43,10 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Thành viên gian hàng (mời + đổi role) | `modules/members/` · RBAC `modules/rbac/` | — |
 | Người dùng | `modules/users/` | — |
 | Duyệt hồ sơ nền tảng (approval task) + **quản lý gian hàng (list + khoá/mở khoá)** | `modules/platform-admin/` (`platform-approval.service.ts`, `platform-tenants.service.ts`) | CLAUDE §6; khoá đổi `Tenant.status` (ADR 0008) |
-| **Audit — GHI** (`AuditService.record(entry, tx)`) · **chưa có endpoint ĐỌC** | `modules/audit/` | CLAUDE §6.3; read endpoint là việc Phase 7 |
+| **Giám sát toàn hệ thống** (xe / đơn thuê / khách thuê — không tenant-scope) | `modules/platform-admin/` (`platform-vehicles.*`, `platform-bookings.*`, `platform-customers.*`) | Phase 7 §11.1; xe: ẩn/bỏ ẩn gọi `ListingsService` (ADR 0008); đơn & khách CHỈ ĐỌC |
+| **Masking PII** (`maskPhone` / `maskEmail`) — endpoint giám sát luôn trả bản đã che | `common/mask.ts` | bỏ che qua `POST .../:id/contact`, quyền `platform.customers.view_pii`, ghi audit từng lần |
+| Công nợ đơn = `max(0, total − paid)` — một định nghĩa duy nhất | `common/money.ts` (`bookingDebt`) | Phase 6: không denormalize cột công nợ |
+| **Audit — GHI** (`AuditService.record(entry, tx)`) · **ĐỌC** ở `platform-audit.service.ts` | `modules/audit/` | CLAUDE §6.3 |
 | Upload R2 (presign) · Firebase admin | `modules/storage/` · `modules/firebase/` | ADR 0009 |
 | Env validate (zod) | `config/env.schema.ts` | OTP_MODE/AUTH_MODE/OTP_MAX_ATTEMPTS… |
 | Module mẫu chuẩn (controller+guard+dto) | `modules/tenants/` | — |
@@ -53,7 +56,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 
 | Cần gì | Ở đâu | Ghi chú |
 | --- | --- | --- |
-| Format tiền / ngày giờ / classNames | `lib/money.ts` · `lib/datetime.ts` · `lib/cx.ts` | điểm extend dayjs duy nhất |
+| Format tiền (`formatMoneyVnd`, `isZeroMoney`) / ngày giờ / classNames | `lib/money.ts` · `lib/datetime.ts` · `lib/cx.ts` | điểm extend dayjs duy nhất; so sánh tiền trên CHUỖI, không `Number()` (ADR 0007) |
 | Gọi API (`credentials:'include'`, bóc `data`) | `services/api-client.ts` | ADR 0002 |
 | Query keys | `services/query-keys.ts` | — |
 | Redux store + slices (chỉ client UI state) | `store/` | ADR 0004 |
@@ -72,6 +75,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Hợp đồng thuê (xem/in `window.print`, print CSS toàn cục `[data-print-root]`) | `features/contracts/` · `app/(manage)/manage/contracts/[id]/` | Phase 6 §11.7 |
 | Thông báo · Đánh giá · Chat · Thành viên · Duyệt hồ sơ · Xe · Tổng quan | `features/{notifications,reviews,chat,members,approvals,vehicles,dashboard}/` | Phase 2–6 |
 | Quản lý gian hàng nền tảng (list + khoá/mở khoá) | `features/admin-tenants/` · `app/(manage)/manage/admin/tenants/` | Phase 7 |
+| Giám sát nền tảng: xe · đơn thuê · khách thuê | `features/{admin-vehicles,admin-bookings,admin-customers}/` · `app/(manage)/manage/admin/{vehicles,bookings,customers}/` | Phase 7 §11.1; filter ở URL (ADR 0004) |
+| Ô liên hệ đã che + nút "xem đầy đủ" (dùng chung đơn/khách) | `components/data-display/MaskedContact.tsx` | bấm xem = 1 dòng audit ở BE |
 | Đăng xuất/menu ở marketplace | `features/marketplace/components/MarketHeader.tsx` | dropdown `destroySession` |
 | Hook: mobile breakpoint · user hiện tại · quyền · tenant scope | `hooks/{use-media-query,use-current-user,use-permissions,use-tenant-scope}.ts` | `useIsMobile` ≤640px |
 

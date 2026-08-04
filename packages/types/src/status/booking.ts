@@ -20,6 +20,27 @@ export type BookingStatus = (typeof BOOKING_STATUS)[keyof typeof BOOKING_STATUS]
 
 export const BOOKING_STATUS_VALUES = Object.values(BOOKING_STATUS) as BookingStatus[];
 
+/**
+ * Trường thời gian mà bộ lọc "khoảng ngày" của danh sách đơn áp lên.
+ *
+ * Ở đây chứ không ở DTO/constants riêng vì đây là giá trị đi trong query string, web và api
+ * PHẢI hiểu giống nhau — lệch một chữ là filter im lặng không có tác dụng.
+ */
+export const BOOKING_DATE_FIELD = {
+  CREATED_AT: 'createdAt',
+  PICKUP_AT: 'pickupAt',
+} as const;
+
+export type BookingDateField = (typeof BOOKING_DATE_FIELD)[keyof typeof BOOKING_DATE_FIELD];
+export const BOOKING_DATE_FIELD_VALUES = Object.values(
+  BOOKING_DATE_FIELD,
+) as BookingDateField[];
+
+export const BOOKING_DATE_FIELD_LABEL: Readonly<Record<BookingDateField, string>> = {
+  [BOOKING_DATE_FIELD.CREATED_AT]: 'Theo ngày tạo',
+  [BOOKING_DATE_FIELD.PICKUP_AT]: 'Theo ngày nhận xe',
+};
+
 export function isBookingStatus(value: unknown): value is BookingStatus {
   return typeof value === 'string' && (BOOKING_STATUS_VALUES as string[]).includes(value);
 }

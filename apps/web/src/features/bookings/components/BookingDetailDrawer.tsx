@@ -13,7 +13,7 @@ import {
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { usePermissions } from '@/hooks/use-permissions';
 import { formatDateTime } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
+import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { contractPath } from '@/constants/routes';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
@@ -76,7 +76,7 @@ function BookingDetailBody({
   const canManage = has(PERMISSION.BOOKING_UPDATE);
   const canRecordPayment = has(PERMISSION.PAYMENT_RECORD);
   const canContract = has(PERMISSION.CONTRACT_MANAGE);
-  const hasDebt = Number(booking.debtAmount) > 0;
+  const hasDebt = !isZeroMoney(booking.debtAmount);
   const nextStatuses = BOOKING_STATUS_TRANSITIONS[booking.status as BookingStatus] ?? [];
 
   function openContract() {

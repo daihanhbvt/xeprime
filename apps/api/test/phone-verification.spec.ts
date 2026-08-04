@@ -2,10 +2,8 @@ import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient } from '@xeprime/prisma';
 import { API_ERROR_CODE, PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import { MockOtpProvider } from '../src/modules/phone-verification/otp-provider';
-import {
-  normalizePhone,
-  PhoneVerificationService,
-} from '../src/modules/phone-verification/phone-verification.service';
+import { normalizePhone } from '../src/common/phone';
+import { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
 /**

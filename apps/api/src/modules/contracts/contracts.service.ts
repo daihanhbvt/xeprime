@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import { API_ERROR_CODE, CONTRACT_STATUS } from '@xeprime/types';
+import { bookingDebt } from '../../common/money';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { ContractDto, ContractSnapshotDto } from './dto/contract.dto';
@@ -91,7 +92,7 @@ export class ContractsService {
     const profile = booking.tenant.profile;
     const total = new Prisma.Decimal(booking.totalAmount);
     const paid = new Prisma.Decimal(booking.paidAmount);
-    const remaining = Prisma.Decimal.max(0, total.minus(paid));
+    const remaining = bookingDebt(total, paid);
     const days = Math.max(
       1,
       Math.ceil((booking.returnAt.getTime() - booking.pickupAt.getTime()) / MS_PER_DAY),

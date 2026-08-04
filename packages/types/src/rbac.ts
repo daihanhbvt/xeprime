@@ -112,6 +112,19 @@ export const PERMISSION = {
   PLATFORM_AUDIT_VIEW: 'platform.audit.view',
   PLATFORM_STAFF_MANAGE: 'platform.staff.manage',
   PLATFORM_BILLING_MANAGE: 'platform.billing.manage',
+
+  // Nền tảng — giám sát toàn hệ thống (build plan §11.1). Tách khỏi `vehicles.*`/`bookings.*`
+  // của gian hàng: quyền tenant chỉ có nghĩa TRONG một tenant, còn đây là đọc xuyên tenant.
+  PLATFORM_VEHICLE_VIEW: 'platform.vehicles.view',
+  /** Ẩn / bỏ ẩn xe vi phạm khỏi Marketplace (ghi qua ListingsService — ADR 0008). */
+  PLATFORM_VEHICLE_MODERATE: 'platform.vehicles.moderate',
+  PLATFORM_BOOKING_VIEW: 'platform.bookings.view',
+  PLATFORM_CUSTOMER_VIEW: 'platform.customers.view',
+  /**
+   * Xem SĐT/email khách ở dạng ĐẦY ĐỦ. Mặc định mọi endpoint giám sát trả bản đã masking;
+   * bỏ mask là hành động riêng, có quyền riêng và ghi `audit_logs` từng lần.
+   */
+  PLATFORM_CUSTOMER_PII_VIEW: 'platform.customers.view_pii',
 } as const;
 
 export type Permission = (typeof PERMISSION)[keyof typeof PERMISSION];
@@ -174,27 +187,33 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
 > = {
   [PLATFORM_ROLE.PLATFORM_ADMIN]: PERMISSION_VALUES,
   // Build plan §11.2: "Platform staff không có quyền super admin mặc định".
+  // Chỉ quyền `platform.*`: key tenant (`vehicles.view`…) không cấp được gì cho người không
+  // thuộc tenant nào, để lại chỉ gây hiểu nhầm là staff đọc được dữ liệu shop.
   [PLATFORM_ROLE.PLATFORM_STAFF]: [
     PERMISSION.PLATFORM_DASHBOARD_VIEW,
-    PERMISSION.VEHICLE_VIEW,
-    PERMISSION.BOOKING_VIEW,
-    PERMISSION.BOOKING_REQUEST_VIEW,
+    PERMISSION.PLATFORM_VEHICLE_VIEW,
+    PERMISSION.PLATFORM_BOOKING_VIEW,
+    PERMISSION.PLATFORM_CUSTOMER_VIEW,
   ],
   [PLATFORM_ROLE.REVIEWER]: [
     PERMISSION.PLATFORM_DASHBOARD_VIEW,
     PERMISSION.PLATFORM_APPROVAL_REVIEW,
-    PERMISSION.VEHICLE_VIEW,
+    PERMISSION.PLATFORM_VEHICLE_VIEW,
+    PERMISSION.PLATFORM_VEHICLE_MODERATE,
   ],
+  // Hỗ trợ cần liên hệ được khách → là role duy nhất ngoài admin được bỏ mask PII.
   [PLATFORM_ROLE.SUPPORT]: [
     PERMISSION.PLATFORM_DASHBOARD_VIEW,
-    PERMISSION.BOOKING_VIEW,
-    PERMISSION.BOOKING_REQUEST_VIEW,
-    PERMISSION.VEHICLE_VIEW,
+    PERMISSION.PLATFORM_VEHICLE_VIEW,
+    PERMISSION.PLATFORM_BOOKING_VIEW,
+    PERMISSION.PLATFORM_CUSTOMER_VIEW,
+    PERMISSION.PLATFORM_CUSTOMER_PII_VIEW,
   ],
   [PLATFORM_ROLE.FINANCE_ADMIN]: [
     PERMISSION.PLATFORM_DASHBOARD_VIEW,
     PERMISSION.FINANCE_VIEW,
     PERMISSION.PLATFORM_TENANT_MANAGE,
     PERMISSION.PLATFORM_BILLING_MANAGE,
+    PERMISSION.PLATFORM_BOOKING_VIEW,
   ],
 };

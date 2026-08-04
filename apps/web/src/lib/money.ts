@@ -24,6 +24,16 @@ export function formatMoneyVnd(value: MoneyString | null | undefined): string {
 }
 
 /**
+ * Số tiền có bằng 0 không, kiểm tra TRÊN CHUỖI — `Number(value) === 0` là đúng thứ ADR 0007
+ * cấm (mất chính xác với số lớn). Dùng để quyết định tô đậm "còn nợ", ẩn dòng phí bằng 0…
+ * Rỗng/null coi như 0.
+ */
+export function isZeroMoney(value: MoneyString | null | undefined): boolean {
+  if (value === null || value === undefined || value === '') return true;
+  return /^-?0*(\.0*)?$/.test(value.trim());
+}
+
+/**
  * Giá SAU giảm để HIỂN THỊ marketing (thẻ xe/trang chi tiết) — không phải số tiền chốt của
  * đơn (giá thật do shop quyết khi duyệt yêu cầu). Giá thuê VND là số nguyên ≤ 14 chữ số nên
  * `Number` ở đây không mất chính xác; không dùng cho cộng dồn kế toán (ADR 0007).

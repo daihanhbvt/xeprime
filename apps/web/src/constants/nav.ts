@@ -224,11 +224,32 @@ export const PLATFORM_NAV: readonly NavNode[] = [
         icon: ShopOutlined,
       },
       {
+        key: 'admin-vehicles',
+        label: 'Xe toàn hệ thống',
+        href: ROUTES.MANAGE.ADMIN_VEHICLES,
+        permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
+        icon: CarOutlined,
+      },
+      {
+        key: 'admin-bookings',
+        label: 'Đơn thuê toàn hệ thống',
+        href: ROUTES.MANAGE.ADMIN_BOOKINGS,
+        permission: PERMISSION.PLATFORM_BOOKING_VIEW,
+        icon: FileTextOutlined,
+      },
+      {
+        key: 'admin-customers',
+        label: 'Khách thuê',
+        href: ROUTES.MANAGE.ADMIN_CUSTOMERS,
+        permission: PERMISSION.PLATFORM_CUSTOMER_VIEW,
+        icon: TeamOutlined,
+      },
+      {
         key: 'admin-staff',
         label: 'Nhân sự nền tảng',
         href: ROUTES.MANAGE.ADMIN_STAFF,
         permission: PERMISSION.PLATFORM_STAFF_MANAGE,
-        icon: TeamOutlined,
+        icon: UsergroupAddOutlined,
       },
       {
         key: 'admin-plans',
@@ -276,6 +297,13 @@ const SHOP_MOBILE_TABS: readonly MobileTab[] = [
 const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
   { key: 'dashboard', label: 'Tổng quan', href: ROUTES.MANAGE.ROOT, icon: DashboardOutlined },
   { key: 'approvals', label: 'Duyệt hồ sơ', href: ROUTES.MANAGE.ADMIN, icon: AuditOutlined },
+  { key: 'admin-vehicles', label: 'Xe', href: ROUTES.MANAGE.ADMIN_VEHICLES, icon: CarOutlined },
+  {
+    key: 'admin-bookings',
+    label: 'Đơn thuê',
+    href: ROUTES.MANAGE.ADMIN_BOOKINGS,
+    icon: FileTextOutlined,
+  },
 ];
 
 /** 4 tab chính của bottom nav theo scope (tab "Thêm" do MobileNav tự thêm). */

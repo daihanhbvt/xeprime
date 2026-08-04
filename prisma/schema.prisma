@@ -75,6 +75,9 @@ model User {
   sentMessages            Message[]        @relation("message_sender")
 
   @@index([status])
+  @@index([createdAt])
+  /// Tìm khách theo tên ở màn giám sát nền tảng (ILIKE '%q%' — btree không dùng được).
+  @@index([displayName(ops: raw("gin_trgm_ops"))], map: "users_display_name_trgm_idx", type: Gin)
   @@map("users")
 }
 
@@ -522,6 +525,11 @@ model Vehicle {
   @@index([tenantId, operationStatus])
   @@index([vehicleType, serviceType])
   @@index([brand, model])
+  /// Ba index dưới phục vụ màn "Xe toàn hệ thống" của admin — query KHÔNG có tenant_id
+  /// nên mọi index (tenant_id, …) ở trên không dùng được.
+  @@index([createdAt])
+  @@index([publicStatus, createdAt])
+  @@index([name(ops: raw("gin_trgm_ops")), plateNumber(ops: raw("gin_trgm_ops")), code(ops: raw("gin_trgm_ops"))], map: "vehicles_search_trgm_idx", type: Gin)
   @@map("vehicles")
 }
 
@@ -657,6 +665,11 @@ model Booking {
   @@index([tenantId, status])
   @@index([vehicleId, pickupAt, returnAt])
   @@index([createdAt])
+  /// Ba index dưới phục vụ màn "Đơn thuê toàn hệ thống" của admin (không có tenant_id):
+  /// lọc trạng thái xuyên tenant, tra theo SĐT khách, tìm theo mã đơn/tên khách.
+  @@index([status, createdAt])
+  @@index([customerPhone])
+  @@index([code(ops: raw("gin_trgm_ops")), customerName(ops: raw("gin_trgm_ops"))], map: "bookings_search_trgm_idx", type: Gin)
   @@map("bookings")
 }
 

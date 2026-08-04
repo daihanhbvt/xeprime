@@ -12,6 +12,7 @@ import {
   type BookingStatus,
   type PaginationMeta,
 } from '@xeprime/types';
+import { bookingDebt } from '../../common/money';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -399,10 +400,7 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     totalAmount: b.totalAmount as unknown as string,
     paidAmount: b.paidAmount as unknown as string,
     // Công nợ tính động = max(0, total − paid); không denormalize để khỏi drift (Phase 6).
-    debtAmount: Prisma.Decimal.max(
-      0,
-      new Prisma.Decimal(b.totalAmount).minus(b.paidAmount),
-    ) as unknown as string,
+    debtAmount: bookingDebt(b.totalAmount, b.paidAmount) as unknown as string,
     depositAmount: b.depositAmount as unknown as string,
     createdAt: b.createdAt as unknown as string,
   };

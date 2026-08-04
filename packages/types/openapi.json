@@ -4705,6 +4705,577 @@
           "platform-staff"
         ]
       }
+    },
+    "/platform/vehicles": {
+      "get": {
+        "operationId": "PlatformVehiclesController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên xe / biển số / mã xe",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Giới hạn theo gian hàng (ULID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "publicStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending_public_review",
+                "approved_public",
+                "needs_revision",
+                "rejected",
+                "hidden",
+                "archived"
+              ]
+            }
+          },
+          {
+            "name": "operationStatus",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "available",
+                "renting",
+                "maintenance",
+                "inactive"
+              ]
+            }
+          },
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
+            "name": "tenantStatus",
+            "required": false,
+            "in": "query",
+            "description": "Trạng thái gian hàng chủ xe",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending_review",
+                "needs_revision",
+                "active",
+                "suspended",
+                "rejected",
+                "expired"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformVehiclePageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách xe toàn hệ thống (phân trang, lọc, tìm kiếm)",
+        "tags": [
+          "platform-vehicles"
+        ]
+      }
+    },
+    "/platform/vehicles/{id}": {
+      "get": {
+        "operationId": "PlatformVehiclesController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformVehicleDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết một xe (kèm gian hàng chủ quản, số đơn, số đánh giá)",
+        "tags": [
+          "platform-vehicles"
+        ]
+      }
+    },
+    "/platform/vehicles/{id}/hide": {
+      "post": {
+        "operationId": "PlatformVehiclesController_hide",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HideVehicleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformVehicleDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ẩn xe vi phạm khỏi Marketplace (đang hiển thị → đã ẩn)",
+        "tags": [
+          "platform-vehicles"
+        ]
+      }
+    },
+    "/platform/vehicles/{id}/unhide": {
+      "post": {
+        "operationId": "PlatformVehiclesController_unhide",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformVehicleDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Bỏ ẩn xe (đã ẩn → hiển thị lại trên Marketplace)",
+        "tags": [
+          "platform-vehicles"
+        ]
+      }
+    },
+    "/platform/bookings": {
+      "get": {
+        "operationId": "PlatformBookingsController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo mã đơn / tên khách",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "phone",
+            "required": false,
+            "in": "query",
+            "description": "Tra chính xác theo SĐT khách",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "description": "Giới hạn theo gian hàng (ULID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vehicleId",
+            "required": false,
+            "in": "query",
+            "description": "Giới hạn theo xe (ULID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "reserved",
+                "confirmed",
+                "active",
+                "completed",
+                "cancelled",
+                "no_show"
+              ]
+            }
+          },
+          {
+            "name": "dateField",
+            "required": false,
+            "in": "query",
+            "description": "Khoảng ngày áp lên trường nào: ngày tạo đơn hay ngày nhận xe",
+            "schema": {
+              "default": "createdAt",
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "pickupAt"
+              ]
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Từ thời điểm (ISO-8601, inclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "Đến thời điểm (ISO-8601, inclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformBookingPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách đơn thuê toàn hệ thống (phân trang, lọc, tìm kiếm)",
+        "tags": [
+          "platform-bookings"
+        ]
+      }
+    },
+    "/platform/bookings/{id}": {
+      "get": {
+        "operationId": "PlatformBookingsController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformBookingDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết một đơn thuê (SĐT khách ở dạng đã che)",
+        "tags": [
+          "platform-bookings"
+        ]
+      }
+    },
+    "/platform/bookings/{id}/contact": {
+      "post": {
+        "operationId": "PlatformBookingsController_revealContact",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingContactDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xem SĐT khách đầy đủ (ghi audit từng lần xem)",
+        "tags": [
+          "platform-bookings"
+        ]
+      }
+    },
+    "/platform/customers": {
+      "get": {
+        "operationId": "PlatformCustomersController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên hiển thị",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "phone",
+            "required": false,
+            "in": "query",
+            "description": "Tra CHÍNH XÁC theo SĐT",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "email",
+            "required": false,
+            "in": "query",
+            "description": "Tra CHÍNH XÁC theo email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "locked",
+                "deleted"
+              ]
+            }
+          },
+          {
+            "name": "hasRequests",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ khách đã từng gửi yêu cầu thuê",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformCustomerPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách khách thuê (phân trang, tra theo tên/SĐT/email)",
+        "tags": [
+          "platform-customers"
+        ]
+      }
+    },
+    "/platform/customers/{id}": {
+      "get": {
+        "operationId": "PlatformCustomersController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformCustomerDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết một khách (kèm 10 yêu cầu thuê gần nhất, PII đã che)",
+        "tags": [
+          "platform-customers"
+        ]
+      }
+    },
+    "/platform/customers/{id}/contact": {
+      "post": {
+        "operationId": "PlatformCustomersController_revealContact",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerContactDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xem SĐT/email khách đầy đủ (ghi audit từng lần xem)",
+        "tags": [
+          "platform-customers"
+        ]
+      }
     }
   },
   "info": {
@@ -5004,7 +5575,12 @@
                 "platform.approvals.review",
                 "platform.audit.view",
                 "platform.staff.manage",
-                "platform.billing.manage"
+                "platform.billing.manage",
+                "platform.vehicles.view",
+                "platform.vehicles.moderate",
+                "platform.bookings.view",
+                "platform.customers.view",
+                "platform.customers.view_pii"
               ]
             }
           }
@@ -10053,6 +10629,862 @@
         },
         "required": [
           "userId"
+        ]
+      },
+      "PlatformVehicleDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "both",
+              "long_term"
+            ]
+          },
+          "publicStatus": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_public_review",
+              "approved_public",
+              "needs_revision",
+              "rejected",
+              "hidden",
+              "archived"
+            ]
+          },
+          "operationStatus": {
+            "type": "string",
+            "enum": [
+              "available",
+              "renting",
+              "maintenance",
+              "inactive"
+            ]
+          },
+          "mainImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Số tiền dạng string (ADR 0007)"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "tenantName": {
+            "type": "string"
+          },
+          "tenantStatus": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "needs_revision",
+              "active",
+              "suspended",
+              "rejected",
+              "expired"
+            ]
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "listingStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "active",
+              "hidden",
+              "suspended",
+              "archived"
+            ],
+            "description": "Trạng thái snapshot trên Marketplace; null = xe chưa từng lên sàn"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "vehicleType",
+          "serviceType",
+          "publicStatus",
+          "operationStatus",
+          "tenantId",
+          "tenantName",
+          "tenantStatus",
+          "createdAt"
+        ]
+      },
+      "PlatformVehiclePageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformVehicleDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "PlatformVehicleDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "both",
+              "long_term"
+            ]
+          },
+          "publicStatus": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_public_review",
+              "approved_public",
+              "needs_revision",
+              "rejected",
+              "hidden",
+              "archived"
+            ]
+          },
+          "operationStatus": {
+            "type": "string",
+            "enum": [
+              "available",
+              "renting",
+              "maintenance",
+              "inactive"
+            ]
+          },
+          "mainImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Số tiền dạng string (ADR 0007)"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "tenantName": {
+            "type": "string"
+          },
+          "tenantStatus": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "needs_revision",
+              "active",
+              "suspended",
+              "rejected",
+              "expired"
+            ]
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "listingStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "active",
+              "hidden",
+              "suspended",
+              "archived"
+            ],
+            "description": "Trạng thái snapshot trên Marketplace; null = xe chưa từng lên sàn"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "brand": {
+            "type": "string",
+            "nullable": true
+          },
+          "model": {
+            "type": "string",
+            "nullable": true
+          },
+          "manufactureYear": {
+            "type": "number",
+            "nullable": true
+          },
+          "seatCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "fuelType": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "weekendPrice": {
+            "type": "string",
+            "nullable": true
+          },
+          "hourlyPrice": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantSlug": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "bookingCount": {
+            "type": "number",
+            "description": "Số đơn thuê đã phát sinh trên xe"
+          },
+          "reviewCount": {
+            "type": "number",
+            "description": "Số đánh giá của xe"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "vehicleType",
+          "serviceType",
+          "publicStatus",
+          "operationStatus",
+          "tenantId",
+          "tenantName",
+          "tenantStatus",
+          "createdAt",
+          "tenantSlug",
+          "bookingCount",
+          "reviewCount",
+          "updatedAt"
+        ]
+      },
+      "HideVehicleDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Lý do ẩn (ghi vào audit log)"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "PlatformBookingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "confirmed",
+              "active",
+              "completed",
+              "cancelled",
+              "no_show"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "both",
+              "long_term"
+            ]
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerPhoneMasked": {
+            "type": "string",
+            "nullable": true,
+            "description": "ĐÃ che, vd 091****678"
+          },
+          "pickupAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "returnAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "totalAmount": {
+            "type": "string",
+            "description": "Số tiền dạng string (ADR 0007)"
+          },
+          "paidAmount": {
+            "type": "string",
+            "description": "Số tiền dạng string (ADR 0007)"
+          },
+          "debtAmount": {
+            "type": "string",
+            "description": "Công nợ = max(0, total − paid), string — ADR 0007"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "tenantName": {
+            "type": "string"
+          },
+          "tenantStatus": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "needs_revision",
+              "active",
+              "suspended",
+              "rejected",
+              "expired"
+            ]
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "vehiclePlateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "status",
+          "serviceType",
+          "customerName",
+          "pickupAt",
+          "returnAt",
+          "totalAmount",
+          "paidAmount",
+          "debtAmount",
+          "tenantId",
+          "tenantName",
+          "tenantStatus",
+          "vehicleId",
+          "vehicleName",
+          "createdAt"
+        ]
+      },
+      "PlatformBookingPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformBookingDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "PlatformBookingDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "confirmed",
+              "active",
+              "completed",
+              "cancelled",
+              "no_show"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "both",
+              "long_term"
+            ]
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerPhoneMasked": {
+            "type": "string",
+            "nullable": true,
+            "description": "ĐÃ che, vd 091****678"
+          },
+          "pickupAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "returnAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "totalAmount": {
+            "type": "string",
+            "description": "Số tiền dạng string (ADR 0007)"
+          },
+          "paidAmount": {
+            "type": "string",
+            "description": "Số tiền dạng string (ADR 0007)"
+          },
+          "debtAmount": {
+            "type": "string",
+            "description": "Công nợ = max(0, total − paid), string — ADR 0007"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "tenantName": {
+            "type": "string"
+          },
+          "tenantStatus": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_review",
+              "needs_revision",
+              "active",
+              "suspended",
+              "rejected",
+              "expired"
+            ]
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "vehiclePlateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "baseAmount": {
+            "type": "string",
+            "description": "Số tiền dạng string (ADR 0007)"
+          },
+          "deliveryFee": {
+            "type": "string",
+            "description": "Số tiền dạng string (ADR 0007)"
+          },
+          "discountAmount": {
+            "type": "string",
+            "description": "Số tiền dạng string (ADR 0007)"
+          },
+          "depositAmount": {
+            "type": "string",
+            "description": "Số tiền dạng string (ADR 0007)"
+          },
+          "actualPickupAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "actualReturnAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "receiptCount": {
+            "type": "number",
+            "description": "Số phiếu thu/chi gắn đơn"
+          },
+          "paymentCount": {
+            "type": "number",
+            "description": "Số lần ghi nhận thanh toán"
+          },
+          "hasContract": {
+            "type": "boolean",
+            "description": "Đơn đã lập hợp đồng chưa"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "status",
+          "serviceType",
+          "customerName",
+          "pickupAt",
+          "returnAt",
+          "totalAmount",
+          "paidAmount",
+          "debtAmount",
+          "tenantId",
+          "tenantName",
+          "tenantStatus",
+          "vehicleId",
+          "vehicleName",
+          "createdAt",
+          "baseAmount",
+          "deliveryFee",
+          "discountAmount",
+          "depositAmount",
+          "receiptCount",
+          "paymentCount",
+          "hasContract",
+          "updatedAt"
+        ]
+      },
+      "BookingContactDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "customerPhone": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "bookingId"
+        ]
+      },
+      "PlatformCustomerDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "phoneMasked": {
+            "type": "string",
+            "nullable": true,
+            "description": "ĐÃ che, vd 091****678"
+          },
+          "emailMasked": {
+            "type": "string",
+            "nullable": true,
+            "description": "ĐÃ che, vd ng****@gmail.com"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "locked",
+              "deleted"
+            ]
+          },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "SĐT đã xác thực OTP"
+          },
+          "requestCount": {
+            "type": "number",
+            "description": "Số yêu cầu thuê đã gửi"
+          },
+          "bookedCount": {
+            "type": "number",
+            "description": "Số yêu cầu đã thành đơn thuê"
+          },
+          "reviewCount": {
+            "type": "number",
+            "description": "Số đánh giá đã viết"
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "status",
+          "phoneVerified",
+          "requestCount",
+          "bookedCount",
+          "reviewCount",
+          "createdAt"
+        ]
+      },
+      "PlatformCustomerPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformCustomerDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "PlatformCustomerRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "tenantName": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "pickupAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "returnAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "bookingId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Đơn thuê đã tạo, nếu có"
+          },
+          "bookingCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mã đơn để tra ở màn đơn thuê"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "tenantName",
+          "vehicleName",
+          "pickupAt",
+          "returnAt",
+          "createdAt"
+        ]
+      },
+      "PlatformCustomerDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "phoneMasked": {
+            "type": "string",
+            "nullable": true,
+            "description": "ĐÃ che, vd 091****678"
+          },
+          "emailMasked": {
+            "type": "string",
+            "nullable": true,
+            "description": "ĐÃ che, vd ng****@gmail.com"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "locked",
+              "deleted"
+            ]
+          },
+          "phoneVerified": {
+            "type": "boolean",
+            "description": "SĐT đã xác thực OTP"
+          },
+          "requestCount": {
+            "type": "number",
+            "description": "Số yêu cầu thuê đã gửi"
+          },
+          "bookedCount": {
+            "type": "number",
+            "description": "Số yêu cầu đã thành đơn thuê"
+          },
+          "reviewCount": {
+            "type": "number",
+            "description": "Số đánh giá đã viết"
+          },
+          "lastLoginAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "emailVerifiedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "conversationCount": {
+            "type": "number",
+            "description": "Số cuộc trò chuyện với shop"
+          },
+          "recentRequests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformCustomerRequestDto"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "status",
+          "phoneVerified",
+          "requestCount",
+          "bookedCount",
+          "reviewCount",
+          "createdAt",
+          "conversationCount",
+          "recentRequests",
+          "updatedAt"
+        ]
+      },
+      "CustomerContactDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "customerId"
         ]
       },
       "ApiErrorBodyDto": {
