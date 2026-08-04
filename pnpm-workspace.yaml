@@ -8,8 +8,7 @@ packages:
 # thiết) và làm hỏng mọi lệnh con. Deps đã cài đủ nên tắt là an toàn.
 verifyDepsBeforeRun: false
 
-# Cho phép postinstall của các gói tin cậy chạy (Prisma tải query engine; esbuild/sharp/
-# unrs-resolver cần native binary). Đã chạy `pnpm rebuild` cho nhóm này.
+# Giữ lại cho pnpm 10; pnpm 11 bỏ qua khóa này và đọc `allowBuilds` ở cuối file.
 onlyBuiltDependencies:
   - '@prisma/client'
   - '@prisma/engines'
@@ -23,5 +22,17 @@ minimumReleaseAgeExclude:
   - lint-staged@17.1.1
   - ts-jest@29.4.12
 
+# pnpm 11 thay `onlyBuiltDependencies` bằng map này. Thiếu nó thì postinstall bị chặn và
+# `pnpm install` fail bằng ERR_PNPM_IGNORED_BUILDS sau khi đã cài xong package.
+# Prisma tải engine; esbuild/sharp/unrs-resolver/re2 cần native binary. Nhóm false là
+# telemetry/tuỳ chọn, không cần chạy.
 allowBuilds:
-  re2: set this to true or false
+  '@firebase/util': false
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  esbuild: true
+  prisma: true
+  protobufjs: false
+  re2: true
+  sharp: true
+  unrs-resolver: true
