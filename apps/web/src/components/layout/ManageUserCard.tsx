@@ -39,7 +39,8 @@ export function ManageUserCard() {
     await destroySession();
     // Xoá cache: dữ liệu người vừa thoát không hiện lại cho người đăng nhập kế trên cùng máy.
     queryClient.clear();
-    router.replace(ROUTES.LOGIN);
+    // Đăng xuất TỪ cổng quản lý → về đăng nhập cổng quản lý, không phải marketplace.
+    router.replace(ROUTES.MANAGE.LOGIN);
   }
 
   if (!user) return null;

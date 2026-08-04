@@ -4,6 +4,11 @@ import { MessageOutlined } from '@ant-design/icons';
 import { App, Button } from 'antd';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@/constants/routes';
+import {
+  useAuthModal,
+  useNextFromCurrentPath,
+} from '@/features/auth/components/AuthModalProvider';
+import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { getErrorMessage, isUnauthenticated } from '@/services/api-client';
 import { useStartConversation } from '../hooks/use-chat-mutations';
 
@@ -22,19 +27,27 @@ export function ChatWithShopButton({
   const { message } = App.useApp();
   const router = useRouter();
   const start = useStartConversation();
+  const { open } = useAuthModal();
+  const nextFromHere = useNextFromCurrentPath();
 
-  const onClick = () => {
+  function startChat() {
     start.mutate(vehicleId, {
       onSuccess: (conversation) => router.push(`${ROUTES.CHAT}?c=${conversation.id}`),
       onError: (err) => {
         if (isUnauthenticated(err)) {
-          router.push(`${ROUTES.LOGIN}?next=${encodeURIComponent(ROUTES.CHAT)}`);
+          // Mở modal ngay trên trang xe và TỰ CHẠY LẠI hành động sau khi đăng nhập — khách
+          // không phải nhớ mình đang định nhắn shop nào. `next` là lưới an toàn nếu họ F5.
+          open({
+            mode: AUTH_MODE.LOGIN,
+            next: nextFromHere(),
+            onSuccess: () => startChat(),
+          });
           return;
         }
         message.error(getErrorMessage(err));
       },
     });
-  };
+  }
 
   return (
     <Button
@@ -43,7 +56,7 @@ export function ChatWithShopButton({
       size={size}
       className={className}
       loading={start.isPending}
-      onClick={onClick}
+      onClick={startChat}
     >
       Nhắn shop
     </Button>

@@ -1,7 +1,7 @@
 'use client';
 
 import { Form, Input } from 'antd';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 
 interface TextFieldProps<T extends FieldValues> {
@@ -34,8 +34,13 @@ export function TextField<T extends FieldValues>({
   disabled,
 }: TextFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
+  // `Form.Item` chỉ tự nối label ↔ input khi nằm trong `<Form>` của AntD. Các form ở đây dùng
+  // React Hook Form nên phải tự gán `id`/`htmlFor`: thiếu nó, bấm vào label không focus được ô
+  // nhập và trình đọc màn hình không đọc ra tên trường.
+  const inputId = `${String(name)}-${useId()}`;
   const shared = {
     ...field,
+    id: inputId,
     size: 'large' as const,
     placeholder,
     autoComplete,
@@ -48,6 +53,7 @@ export function TextField<T extends FieldValues>({
   return (
     <Form.Item
       label={label}
+      htmlFor={inputId}
       validateStatus={fieldState.error ? 'error' : ''}
       help={fieldState.error?.message}
       style={{ marginBottom: 14 }}

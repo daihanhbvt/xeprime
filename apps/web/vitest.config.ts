@@ -13,6 +13,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Polyfill hạ tầng cho jsdom (matchMedia của AntD) — xem vitest.setup.ts.
+    setupFiles: ['./vitest.setup.ts'],
     restoreMocks: true,
   },
 });

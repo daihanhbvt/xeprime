@@ -1716,15 +1716,15 @@ export interface components {
         MeDto: {
             id: string;
             displayName: string;
-            email?: Record<string, never> | null;
-            avatarUrl?: Record<string, never> | null;
+            email: string | null;
+            avatarUrl: string | null;
             /** @description Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop */
             phoneVerified: boolean;
             /** @description Đã có mật khẩu chưa — false với tài khoản tạo bằng SĐT/OTP (gợi ý đặt mật khẩu) */
             hasPassword: boolean;
-            tenant?: components["schemas"]["CurrentTenantSummaryDto"] | null;
+            tenant: components["schemas"]["CurrentTenantSummaryDto"] | null;
             /** @description Xem PlatformRole trong @xeprime/types */
-            platformRole?: Record<string, never> | null;
+            platformRole: string | null;
             permissions: string[];
         };
         RegisterDto: {
@@ -1808,9 +1808,9 @@ export interface components {
         UserProfileDto: {
             id: string;
             displayName: string;
-            email?: Record<string, never> | null;
-            phone?: Record<string, never> | null;
-            avatarUrl?: Record<string, never> | null;
+            email: string | null;
+            phone: string | null;
+            avatarUrl: string | null;
             phoneVerified: boolean;
         };
         UpdateMeDto: {

@@ -76,7 +76,9 @@ export const FOOTER_COLUMNS: ReadonlyArray<{
   {
     title: 'Dành cho chủ xe',
     links: [
-      { label: 'Đăng xe cho thuê', href: ROUTES.MANAGE.ROOT },
+      // Ý định làm chủ xe → onboarding (proxy sẽ chèn bước đăng nhập nếu cần), KHÔNG phải
+      // `/manage` — vào đó khi chưa có gian hàng chỉ gặp màn "Bạn chưa có gian hàng".
+      { label: 'Đăng xe cho thuê', href: ROUTES.MANAGE.ONBOARDING },
       { label: 'Quản lý xe', href: ROUTES.MANAGE.VEHICLES },
       { label: 'Bảng giá', href: ROUTES.HOME },
     ],

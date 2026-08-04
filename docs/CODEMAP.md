@@ -57,6 +57,14 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Cần gì | Ở đâu | Ghi chú |
 | --- | --- | --- |
 | Format tiền (`formatMoneyVnd`, `isZeroMoney`) / ngày giờ / classNames | `lib/money.ts` · `lib/datetime.ts` · `lib/cx.ts` | điểm extend dayjs duy nhất; so sánh tiền trên CHUỖI, không `Number()` (ADR 0007) |
+| **Auth core dùng chung** (form email/SĐT + OTP + social, gợi ý đặt mật khẩu) | `features/auth/components/AuthPanel.tsx` | một logic, hai presentation — KHÔNG copy thành 2 bộ |
+| **Đăng nhập KHÁCH** = modal ngay trên trang đang xem (`?auth=login\|register`) | `features/auth/components/{AuthModal,AuthModalProvider}.tsx` · mount ở `app/(public)/layout.tsx` | provider KHÔNG đọc `useSearchParams` (giữ static render); `AuthUrlSync` là leaf riêng |
+| **Đăng nhập CỔNG QUẢN LÝ** = trang đầy đủ | `app/(manage)/manage/login/` | route CÔNG KHAI (AppShell + proxy bỏ qua) |
+| "Sau khi đăng nhập đi đâu" + chống open redirect | `features/auth/post-auth-destination.ts` · `features/auth/safe-next.ts` | hàm thuần, có test; **không nơi nào mặc định `/manage`** |
+| Tạo gian hàng (ShopRegistration) — nơi DUY NHẤT | `app/(manage)/manage/onboarding/` | chỉ mở bằng owner intent; `AppShell` KHÔNG tự bật |
+| User không tenant ở `/manage` → màn lựa chọn | `features/shop/components/NoTenantState.tsx` | "chưa có shop" là trạng thái HỢP LỆ của khách |
+| 403 khu nền tảng (khác 401) | `app/(manage)/manage/admin/layout.tsx` | không đẩy sang onboarding shop |
+| Hồ sơ tài khoản KHÁCH (`/users/me`) | `features/account/` · `app/(public)/account/` | khác hồ sơ gian hàng `/manage/shop` |
 | Gọi API (`credentials:'include'`, bóc `data`) | `services/api-client.ts` | ADR 0002 |
 | Query keys | `services/query-keys.ts` | — |
 | Redux store + slices (chỉ client UI state) | `store/` | ADR 0004 |

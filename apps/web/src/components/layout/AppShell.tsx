@@ -1,19 +1,32 @@
 'use client';
 
-import { Button, Result, Spin } from 'antd';
+import { Result, Spin } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
-import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
+import { portalLoginWithNext } from '@/features/auth/post-auth-destination';
+import { NoTenantState } from '@/features/shop/components/NoTenantState';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
-import { ShopRegistration } from '@/features/shop/components/ShopRegistration';
 import { destroySession } from '@/services/auth.service';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
 import styles from './AppShell.module.css';
+
+/**
+ * Các route NẰM TRONG `/manage` nhưng không dùng khung portal.
+ *
+ * `/manage/login` phải công khai, nếu không thì chưa đăng nhập sẽ bị chính shell đá về
+ * `/manage/login` → vòng lặp. `/manage/onboarding` đã đăng nhập nhưng chưa có gian hàng, tức là
+ * đúng nhóm mà shell chặn — nên nó tự render lấy, không có sidebar (chưa có gì để điều hướng).
+ *
+ * Next.js không cho một route con "thoát" layout cha, nên danh sách này là cách khai báo điều
+ * đó ở đúng nơi quyết định — chính shell.
+ */
+const PUBLIC_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.LOGIN];
+const BARE_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.LOGIN, ROUTES.MANAGE.ONBOARDING];
 
 /**
  * Khung của Management Portal.
@@ -28,17 +41,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { data: user, isLoading, isError } = useCurrentUser();
   const { hasNoTenant, isPendingApproval, tenant } = useTenantScope();
 
-  async function handleLogout() {
-    await destroySession();
-    queryClient.clear();
-    router.replace(ROUTES.LOGIN);
-  }
-
-  const notAuthenticated = !isLoading && (isError || !user);
+  const isPublicPortalPath = PUBLIC_PORTAL_PATHS.includes(pathname);
+  const isBarePortalPath = BARE_PORTAL_PATHS.includes(pathname);
+  const notAuthenticated = !isPublicPortalPath && !isLoading && (isError || !user);
 
   // Cookie phiên hỏng/hết hạn: proxy chỉ kiểm tra CÓ cookie chứ không verify, nên vẫn cho vào
-  // /manage rồi /auth/me trả 401. Ở đây xoá cookie hỏng (DELETE /auth/session) rồi ra thẳng
-  // /login — không xoá thì proxy cứ đá /login ngược lại /manage (loop).
+  // /manage rồi /auth/me trả 401. Ở đây xoá cookie hỏng (DELETE /auth/session) rồi ra
+  // /manage/login — không xoá thì proxy cứ đá login ngược lại /manage (loop).
   useEffect(() => {
     if (!notAuthenticated) return;
     let cancelled = false;
@@ -50,14 +59,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       }
       if (cancelled) return;
       queryClient.clear();
-      router.replace(`${ROUTES.LOGIN}?next=${encodeURIComponent(pathname)}`);
+      router.replace(portalLoginWithNext(pathname));
     })();
     return () => {
       cancelled = true;
     };
   }, [notAuthenticated, pathname, router, queryClient]);
 
-  if (isLoading) {
+  // Trang đăng nhập cổng quản lý tự render lấy — không cần user, không có shell.
+  if (isPublicPortalPath) return <>{children}</>;
+
+  if (isLoading || isError || !user) {
+    // Hoặc đang nạp /auth/me, hoặc đang dọn phiên hỏng để ra login (effect ở trên).
     return (
       <div className={styles.centered}>
         <Spin size="large" />
@@ -65,28 +78,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  if (isError || !user) {
-    // Đang xoá phiên hỏng và điều hướng ra /login (effect ở trên) — chỉ hiện spinner.
-    return (
-      <div className={styles.centered}>
-        <Spin size="large" />
-      </div>
-    );
-  }
-
-  // screen_spec §10.2: user đăng nhập nhưng chưa thuộc gian hàng nào → cho đăng ký gian hàng
-  // ngay tại đây, không đẩy vào dashboard rỗng. Đăng ký xong /auth/me có tenant → vào portal.
+  // User đăng nhập nhưng chưa thuộc gian hàng nào và không phải nhân sự nền tảng.
+  // KHÔNG tự bật form tạo gian hàng ở đây (hành vi cũ): "chưa có shop" là trạng thái hợp lệ của
+  // một khách thuê xe. Form tạo shop chỉ sống ở `/manage/onboarding`, nơi người dùng chủ động vào.
   if (hasNoTenant && !user.platformRole) {
-    return (
-      <div className={styles.centered}>
-        <Logo size="lg" />
-        <ShopRegistration />
-        <Button type="text" onClick={() => void handleLogout()}>
-          Đăng xuất
-        </Button>
-      </div>
-    );
+    if (isBarePortalPath) return <>{children}</>;
+    return <NoTenantState />;
   }
+
+  if (isBarePortalPath) return <>{children}</>;
 
   return (
     <div className={styles.shell}>

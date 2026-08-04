@@ -29,7 +29,8 @@ export function Topbar({ user }: { user: CurrentUser }) {
     await destroySession();
     // Xoá cache: dữ liệu người vừa thoát không hiện lại cho người đăng nhập kế trên cùng máy.
     queryClient.clear();
-    router.replace(ROUTES.LOGIN);
+    // Đăng xuất TỪ cổng quản lý → về đăng nhập cổng quản lý, không phải marketplace.
+    router.replace(ROUTES.MANAGE.LOGIN);
   };
 
   const initial = (user.displayName || user.email || '?').trim().charAt(0).toUpperCase();

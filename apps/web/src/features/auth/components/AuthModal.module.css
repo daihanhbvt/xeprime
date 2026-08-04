@@ -1,0 +1,45 @@
+.body {
+  padding: 28px 28px 24px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.title {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--xp-color-text);
+}
+
+.sub {
+  margin-top: 3px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--xp-color-text-secondary);
+}
+
+/* Bottom sheet mobile: bo góc trên, chừa safe-area của máy có notch/thanh gesture. */
+.drawerRoot :global(.ant-drawer-content) {
+  border-radius: 18px 18px 0 0;
+}
+
+.drawerRoot .body {
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  max-height: 84vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .head {
+    margin-bottom: 18px;
+  }
+
+  .title {
+    font-size: 18px;
+  }
+}

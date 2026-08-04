@@ -1,12 +1,15 @@
 'use client';
 
 import { Alert, Button, Empty, Pagination, Spin } from 'antd';
-import Link from 'next/link';
 import { useState } from 'react';
 import { BOOKING_STATUS_META } from '@xeprime/types';
 import { Stars } from '@/components/data-display/Stars';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { ROUTES } from '@/constants/routes';
+import {
+  useAuthModal,
+  useNextFromCurrentPath,
+} from '@/features/auth/components/AuthModalProvider';
+import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { formatDateTimeRange } from '@/lib/datetime';
 import { getErrorMessage, isUnauthenticated } from '@/services/api-client';
 import { MY_TRIPS_DEFAULT_LIMIT } from '../api';
@@ -20,6 +23,8 @@ export function MyTripsView() {
   const [page, setPage] = useState(1);
   const [active, setActive] = useState<MyTrip | null>(null);
   const trips = useMyTrips(page);
+  const { open } = useAuthModal();
+  const nextFromHere = useNextFromCurrentPath();
 
   if (trips.isLoading) {
     return (
@@ -38,9 +43,14 @@ export function MyTripsView() {
             showIcon
             message="Vui lòng đăng nhập để xem các chuyến thuê của bạn."
           />
-          <Link href={ROUTES.LOGIN}>
-            <Button type="primary">Đăng nhập</Button>
-          </Link>
+          {/* Modal ngay tại đây, `next` trỏ về chính trang này — đăng nhập xong thấy luôn
+              danh sách chuyến, không bị ném sang khu quản lý. */}
+          <Button
+            type="primary"
+            onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
+          >
+            Đăng nhập
+          </Button>
         </div>
       );
     }

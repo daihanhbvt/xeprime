@@ -194,4 +194,29 @@ export const shopProfileSchema = yup.object({
 
 export type ShopProfileValues = yup.InferType<typeof shopProfileSchema>;
 
+/**
+ * Hồ sơ tài khoản KHÁCH (`PATCH /users/me`) — khác hoàn toàn `shopProfileSchema` ở trên.
+ *
+ * Chỉ hai trường vì backend chỉ nhận đúng hai: `email`/`phone` là khoá nhận diện, muốn đổi thì
+ * phải qua luồng xác thực riêng. Đưa chúng vào form ở đây sẽ là chức năng giả.
+ */
+export const accountProfileSchema = yup.object({
+  displayName: yup
+    .string()
+    .trim()
+    .required('Vui lòng nhập họ tên')
+    .max(255, 'Họ tên tối đa 255 ký tự')
+    .default(''),
+  avatarUrl: yup
+    .string()
+    .trim()
+    .transform((v) => (v === '' ? null : v))
+    .url('Đường dẫn ảnh không hợp lệ')
+    .max(2000)
+    .nullable()
+    .default(null),
+});
+
+export type AccountProfileValues = yup.InferType<typeof accountProfileSchema>;
+
 export * from './auth';

@@ -31,6 +31,14 @@
   min-width: 0;
 }
 
+/* Tab cần đăng nhập render bằng <button> (mở modal) — gỡ style mặc định của nút. */
+.tabButton {
+  border: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
 .icon {
   font-size: 19px;
   line-height: 1;

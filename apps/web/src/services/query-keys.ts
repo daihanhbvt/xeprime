@@ -11,6 +11,11 @@ export const queryKeys = {
     all: ['auth'] as const,
     me: () => ['auth', 'me'] as const,
   },
+  /** Hồ sơ tài khoản khách (`/users/me`) — khác `auth.me` (scope + quyền của phiên). */
+  account: {
+    all: ['account'] as const,
+    profile: () => ['account', 'profile'] as const,
+  },
   tenants: {
     all: ['tenants'] as const,
     current: () => ['tenants', 'current'] as const,

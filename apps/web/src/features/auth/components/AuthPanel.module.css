@@ -1,0 +1,68 @@
+.panel {
+  display: block;
+}
+
+.alert {
+  margin-bottom: 16px;
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 16px;
+}
+
+.rowEnd {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.link {
+  font-size: 13px;
+  color: var(--xp-color-primary);
+}
+
+.submit {
+  margin-top: 4px;
+}
+
+.divider {
+  margin: 20px 0 16px;
+  color: var(--xp-color-text-tertiary);
+  font-size: 13px;
+}
+
+.oauth {
+  display: grid;
+  gap: 10px;
+}
+
+.oauthBtn {
+  height: 44px;
+}
+
+.switch {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--xp-color-text-secondary);
+}
+
+.linkBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--xp-color-primary);
+  cursor: pointer;
+}
+
+.linkBtn:disabled {
+  color: var(--xp-color-text-tertiary);
+  cursor: not-allowed;
+}
+
+.linkBtn:hover:not(:disabled),
+.linkBtn:focus-visible {
+  text-decoration: underline;
+}

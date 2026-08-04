@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MarketplaceFilters, PublicListingFacets } from '../types';
 import { FilterPanel } from './FilterPanel';
 
@@ -43,22 +43,7 @@ vi.mock('../hooks/use-listing-facets', () => ({
 // Desktop (Modal) — tránh phụ thuộc matchMedia của hook thật trong jsdom.
 vi.mock('@/hooks/use-media-query', () => ({ useIsMobile: () => false }));
 
-beforeAll(() => {
-  // AntD đọc matchMedia ở vài component — jsdom không có sẵn.
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
-});
+// Polyfill matchMedia của AntD nằm ở `vitest.setup.ts` (dùng chung cho mọi test).
 
 beforeEach(() => {
   state.filters = {};

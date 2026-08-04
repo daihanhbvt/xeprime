@@ -1,6 +1,5 @@
-import type { TenantStatus, TenantRole, Ulid } from '@xeprime/types';
-
 import { apiDelete, apiGet, apiPost } from './api-client';
+import type { CurrentTenantSummary, CurrentUser } from '@/hooks/use-current-user';
 
 export interface RegisterInput {
   displayName: string;
@@ -9,32 +8,10 @@ export interface RegisterInput {
 }
 
 /**
- * ADR 0007 nói type FE sinh từ OpenAPI (`@xeprime/types/api.generated`). Spec chưa tồn tại ở
- * Phase 0, nên các shape dưới đây là bản tạm — TODO: thay bằng type sinh ra sau khi chạy
- * `pnpm contract`, và xoá interface viết tay đi.
+ * `CurrentUser` sinh từ contract OpenAPI (ADR 0007) và khai ở `hooks/use-current-user` — mọi
+ * endpoint auth đều trả đúng `MeDto` đó. Re-export để chỗ gọi cũ không phải đổi import.
  */
-export interface CurrentUserTenant {
-  id: Ulid;
-  name: string;
-  status: TenantStatus;
-  role: TenantRole | null;
-}
-
-export interface CurrentUser {
-  id: Ulid;
-  displayName: string;
-  email: string | null;
-  avatarUrl: string | null;
-  /** Đã có mật khẩu chưa — false với tài khoản tạo bằng SĐT/OTP (gợi ý đặt mật khẩu). */
-  hasPassword?: boolean;
-  tenant: CurrentUserTenant | null;
-  /**
-   * Danh sách permission key. Để `string[]` đúng như API trả về thay vì ép sang `Permission` —
-   * backend có thể thêm key mới trước khi `packages/types` kịp cập nhật, và ép kiểu ở đây chỉ
-   * giấu chuyện đó đi.
-   */
-  permissions: string[];
-}
+export type { CurrentTenantSummary, CurrentUser };
 
 export const AUTH_PROVIDER = {
   GOOGLE: 'google',

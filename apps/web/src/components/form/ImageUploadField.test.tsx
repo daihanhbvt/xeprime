@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from 'antd';
 import { useForm } from 'react-hook-form';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { UploadPresign } from '@/services/upload';
 import { ImageUploadField } from './ImageUploadField';
 
@@ -20,21 +20,7 @@ vi.mock('@/services/upload', () => ({
   validateImageFile: mocks.validateImageFile,
 }));
 
-beforeAll(() => {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  });
-});
+// Polyfill matchMedia của AntD nằm ở `vitest.setup.ts` (dùng chung cho mọi test).
 
 // Vitest không bật globals → RTL không tự cleanup giữa các test. `restoreMocks` của config chỉ
 // đụng spy (vi.spyOn), KHÔNG xoá lịch sử vi.fn → tự clear để test sau không thấy call của test trước.

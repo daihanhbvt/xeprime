@@ -1,0 +1,110 @@
+.page {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 100dvh;
+  background: var(--xp-color-bg-layout);
+}
+
+/* Cột trái chỉ là trang trí nhận diện "đây là khu quản lý" — ẩn hẳn ở màn hẹp. */
+.aside {
+  display: none;
+}
+
+.asideText {
+  margin: 20px 0 0;
+  max-width: 30ch;
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.formSide {
+  display: grid;
+  place-items: center;
+  padding: 32px 20px calc(32px + env(safe-area-inset-bottom));
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  padding: 28px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-sm);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--xp-color-text);
+}
+
+.sub {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--xp-color-text-secondary);
+}
+
+.intentNote {
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-gold-wash);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--xp-color-text-secondary);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--xp-color-text-secondary);
+}
+
+.backLink:hover {
+  color: var(--xp-color-primary);
+}
+
+.ownerCta {
+  padding: 0;
+  font-size: 13.5px;
+}
+
+@media (min-width: 900px) {
+  .page {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .aside {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 48px;
+    background: linear-gradient(150deg, var(--xp-gold-deep), var(--xp-color-primary));
+  }
+}

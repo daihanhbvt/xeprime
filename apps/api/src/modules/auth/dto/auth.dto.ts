@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
@@ -84,8 +84,12 @@ export class CurrentTenantSummaryDto {
 export class MeDto {
   @ApiProperty() id!: string;
   @ApiProperty() displayName!: string;
-  @ApiPropertyOptional({ nullable: true }) email!: string | null;
-  @ApiPropertyOptional({ nullable: true }) avatarUrl!: string | null;
+  // Các field dưới LUÔN có mặt trong response, chỉ có thể mang giá trị null → `@ApiProperty`
+  // + `nullable`, KHÔNG phải `@ApiPropertyOptional` (optional nghĩa là "có thể vắng mặt", và
+  // nó khiến frontend phải xử lý thêm nhánh `undefined` không bao giờ xảy ra).
+  // `type: String` cũng bắt buộc: thiếu nó openapi-typescript sinh ra `Record<string, never>`.
+  @ApiProperty({ type: String, nullable: true }) email!: string | null;
+  @ApiProperty({ type: String, nullable: true }) avatarUrl!: string | null;
 
   @ApiProperty({ description: 'Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop' })
   phoneVerified!: boolean;
@@ -95,10 +99,14 @@ export class MeDto {
   })
   hasPassword!: boolean;
 
-  @ApiPropertyOptional({ type: CurrentTenantSummaryDto, nullable: true })
+  @ApiProperty({ type: CurrentTenantSummaryDto, nullable: true })
   tenant!: CurrentTenantSummaryDto | null;
 
-  @ApiPropertyOptional({ nullable: true, description: 'Xem PlatformRole trong @xeprime/types' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Xem PlatformRole trong @xeprime/types',
+  })
   platformRole!: string | null;
 
   @ApiProperty({ isArray: true, type: String })

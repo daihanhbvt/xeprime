@@ -14,8 +14,14 @@ export const ROUTES = {
   TRIPS: '/trips',
   /** Khu tin nhắn của khách (chat với shop). Shop dùng /manage/chat. */
   CHAT: '/chat',
+  /** Hồ sơ tài khoản của KHÁCH — khác hoàn toàn hồ sơ gian hàng (`/manage/shop`). */
+  ACCOUNT: '/account',
   MANAGE: {
     ROOT: '/manage',
+    /** Đăng nhập cổng quản lý (chủ xe / nhân viên / quản trị nền tảng). Route CÔNG KHAI. */
+    LOGIN: '/manage/login',
+    /** Tạo gian hàng — chỉ mở khi user có owner intent tường minh, không tự bật. */
+    ONBOARDING: '/manage/onboarding',
 
     // Quản lý gian hàng
     CALENDAR: '/manage/calendar',
