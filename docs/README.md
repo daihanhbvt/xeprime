@@ -9,6 +9,7 @@ Tài liệu của dự án, dọn lại ngày 23/07/2026. Chỉ giữ thứ còn
 | 1 | [`decisions/`](decisions/) | **8 ADR — quyết định kỹ thuật kèm lý do. Thắng mọi tài liệu khác khi mâu thuẫn.** | Sống, cập nhật khi có quyết định mới |
 | 2 | [`CODEMAP.md`](CODEMAP.md) | Chỉ mục "cái gì nằm ở đâu" trong source | Sống |
 | 3 | [`../CLAUDE.md`](../CLAUDE.md) | Bản đồ workspace, kiến trúc chốt, điều cấm, tình trạng phase | Sống |
+| 3b | [`design/`](design/) | **Định hướng sản phẩm & thiết kế** (brand, tầm nhìn, gap, IA, UX, thứ tự thiết kế, ràng buộc) — 11 tài liệu, 04/08/2026 | Sống |
 | 4 | [`xeprime_screen_spec_by_role_before_db.md`](xeprime_screen_spec_by_role_before_db.md) | Đặc tả màn hình + chức năng theo role | Tham chiếu nghiệp vụ |
 | 5 | [`xeprime_overall_user_flow_next_node.md`](xeprime_overall_user_flow_next_node.md) | User flow customer / shop / platform | Tham chiếu nghiệp vụ |
 | 6 | [`xeprime_database_design.md`](xeprime_database_design.md) | Thiết kế đầy đủ các bảng (nhiều bảng làm ở phase sau) | Tham chiếu |

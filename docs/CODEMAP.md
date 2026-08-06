@@ -106,6 +106,10 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Marketplace khách thuê cũ | `../Firebase-code/Vietrent/market/index.html` |
 | Backend cũ (Cloud Functions: OTP, sync listing, notify) | `../Firebase-code/xeprime-functions/functions/index.js` |
 
+## Định hướng sản phẩm & thiết kế
+
+`docs/design/` — 11 tài liệu (04/08/2026): brand, tầm nhìn, gap analysis, creative brief, mobile-first, nguyên tắc thiết kế, IA, UX guidelines, thứ tự thiết kế màn, ràng buộc triển khai, Figma master prompt. Định nghĩa **sản phẩm lý tưởng**; ADR vẫn thắng khi mâu thuẫn. Bắt đầu ở `docs/design/README.md`.
+
 ## Vì sao (đọc khi cần lý do, đừng đoán)
 
 `docs/decisions/` — **9 ADR (0001–0009)**. Mỗi quyết định kèm lý do và cái nó ghi đè. ADR thắng mọi tài liệu cũ khi mâu thuẫn.
