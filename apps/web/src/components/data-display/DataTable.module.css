@@ -1,0 +1,66 @@
+/* Cuộn ngang phải nằm TRONG vùng bảng, không đẩy `<body>` cuộn theo
+   (Figma 127:2097 R3 · 07 §4.1 "không cuộn ngang ở body"). */
+.tableRoot {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.rowClickable {
+  cursor: pointer;
+}
+
+/*
+ * Cột hành động dính phải phải ĐỤC (Figma 127:2060 R3) — trong suốt thì cột dữ liệu chạy bên dưới
+ * sẽ lộ ra khi cuộn ngang. AntD có tô nền mặc định, nhưng hàng đang hover lấy màu khác, nên khai
+ * lại cả hai trạng thái để không có kẽ hở.
+ *
+ * ⚠️ Tên class là `-fix-end`, KHÔNG phải `-fix-right`: AntD 6 đổi sang thuật ngữ logical
+ * (start/end) để hợp hướng viết RTL. Đã xác minh bằng cách đọc DOM thật trong test — bản đầu của
+ * file này viết `-fix-right` và không khớp gì cả.
+ *
+ * Đây là một trong số ít chỗ được `:global` vào class của AntD: không token nào chạm tới ô fixed,
+ * và ADR 0003 chọn CSS Module làm lối thoát cho đúng loại việc này.
+ */
+.tableRoot :global(.ant-table-cell-fix-end) {
+  background: var(--xp-color-bg-container);
+}
+
+.tableRoot :global(.ant-table-row:hover) :global(.ant-table-cell-fix-end) {
+  background: var(--xp-color-bg-hover);
+}
+
+/* Padding trái tách cột hành động khỏi cột dữ liệu cuối (R5: 16px). */
+.actionsCell {
+  padding-left: var(--xp-space-md) !important;
+}
+
+/* ---------------------------------------------------------------- chế độ thẻ (≤640px) */
+
+.cardsRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* 12px giữa các thẻ (Figma 127:2257 R10). Bỏ bullet vì đây là danh sách bản ghi, không phải văn bản. */
+.cards {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-sm);
+  list-style: none;
+}
+
+.card {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.cardsPagination {
+  display: flex;
+  justify-content: center;
+}

@@ -1,8 +1,7 @@
 'use client';
 
-import { CarOutlined, DeleteOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
-import { Avatar, Button, Popconfirm, Space, Table, Tag, Tooltip } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { DeleteOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Tag } from 'antd';
 import {
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS_META,
@@ -10,6 +9,8 @@ import {
   type VehicleOperationStatus,
   type VehiclePublicStatus,
 } from '@xeprime/types';
+import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
+import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { formatMoneyVnd } from '@/lib/money';
 import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
@@ -23,6 +24,11 @@ interface VehicleTableProps {
   deletingId: string | null;
   canEdit: boolean;
   canDelete: boolean;
+  error?: { onRetry: () => void } | null;
+  filtered?: boolean;
+  onClearFilters?: () => void;
+  /** Nút "Thêm xe đầu tiên" — trang quyết theo quyền `VEHICLE_CREATE`. */
+  emptyAction?: React.ReactNode;
   onView: (id: string) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
@@ -31,6 +37,9 @@ interface VehicleTableProps {
 
 const EMPTY = '—';
 
+/** Figma `127:1725` ghi 730px cho Fleet Vehicles (7 cột) — khớp đúng số cột của bảng này. */
+const MIN_TABLE_WIDTH = 900;
+
 export function VehicleTable({
   items,
   meta,
@@ -38,41 +47,41 @@ export function VehicleTable({
   deletingId,
   canEdit,
   canDelete,
+  error = null,
+  filtered = false,
+  onClearFilters,
+  emptyAction,
   onView,
   onEdit,
   onDelete,
   onPageChange,
 }: VehicleTableProps) {
-  const columns: ColumnsType<VehicleListItem> = [
+  const columns: DataTableColumn<VehicleListItem>[] = [
     {
       title: 'Xe',
       key: 'vehicle',
       render: (_, row) => (
-        <div className={styles.cell}>
-          <Avatar
-            shape="square"
-            size={44}
-            src={row.mainImageUrl ?? undefined}
-            icon={<CarOutlined />}
-          />
-          <div>
-            <div className={styles.name}>{row.name}</div>
-            <div className={styles.meta}>
-              {row.code}
-              {row.plateNumber ? ` · ${row.plateNumber}` : ''}
-            </div>
-          </div>
-        </div>
+        <EntityIdentity
+          kind="vehicle"
+          size="md"
+          imageUrl={row.mainImageUrl}
+          initialSource={row.name}
+          name={row.name}
+          subtitle={`${row.code}${row.plateNumber ? ` · ${row.plateNumber}` : ''}`}
+        />
       ),
     },
     {
       title: 'Loại',
       key: 'type',
-      render: (_, row) => `${vehicleTypeLabel(row.vehicleType)} · ${serviceTypeLabel(row.serviceType)}`,
+      width: 170,
+      render: (_, row) =>
+        `${vehicleTypeLabel(row.vehicleType)} · ${serviceTypeLabel(row.serviceType)}`,
     },
     {
       title: 'Đời / Số chỗ',
       key: 'specs',
+      width: 130,
       render: (_, row) =>
         `${row.manufactureYear ?? EMPTY} · ${row.seatCount ? `${row.seatCount} chỗ` : EMPTY}`,
     },
@@ -80,9 +89,11 @@ export function VehicleTable({
       title: 'Giá ngày thường',
       key: 'weekdayPrice',
       align: 'right',
+      width: 160,
       render: (_, row) => (
         <span className={styles.price}>
           {formatMoneyVnd(row.weekdayPrice)}
+          {/* Nhãn khuyến mãi, KHÔNG phải trạng thái nghiệp vụ → giữ `Tag` trần, không `StatusTag`. */}
           {row.discountPercent ? <Tag color="red">-{row.discountPercent}%</Tag> : null}
         </span>
       ),
@@ -90,6 +101,7 @@ export function VehicleTable({
     {
       title: 'Vận hành',
       key: 'operationStatus',
+      width: 120,
       render: (_, row) => (
         <StatusTag
           value={row.operationStatus as VehicleOperationStatus}
@@ -100,6 +112,7 @@ export function VehicleTable({
     {
       title: 'Public',
       key: 'publicStatus',
+      width: 140,
       render: (_, row) => (
         <StatusTag
           value={row.publicStatus as VehiclePublicStatus}
@@ -107,60 +120,60 @@ export function VehicleTable({
         />
       ),
     },
-    {
-      title: '',
-      key: 'actions',
-      align: 'right',
-      fixed: 'right',
-      width: 130,
-      render: (_, row) => (
-        <Space size="small">
-          <Tooltip title="Xem">
-            <Button type="text" icon={<EyeOutlined />} onClick={() => onView(row.id)} />
-          </Tooltip>
-          {canEdit ? (
-            <Tooltip title="Sửa">
-              <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(row.id)} />
-            </Tooltip>
-          ) : null}
-          {canDelete ? (
-            <Popconfirm
-              title="Xoá xe này?"
-              description="Xe sẽ bị ẩn khỏi danh sách. Không xoá được nếu còn lịch."
-              okText="Xoá"
-              okButtonProps={{ danger: true }}
-              cancelText="Huỷ"
-              onConfirm={() => onDelete(row.id)}
-            >
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                loading={deletingId === row.id}
-              />
-            </Popconfirm>
-          ) : null}
-        </Space>
-      ),
-    },
+    actionColumn<VehicleListItem>(
+      (row) => [
+        { key: 'view', label: 'Xem', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+        {
+          key: 'edit',
+          label: 'Sửa',
+          icon: <EditOutlined />,
+          hidden: !canEdit,
+          onClick: () => onEdit(row.id),
+        },
+        {
+          key: 'delete',
+          label: 'Xoá',
+          icon: <DeleteOutlined />,
+          danger: true,
+          hidden: !canDelete,
+          loading: deletingId === row.id,
+          confirm: {
+            title: 'Xoá xe này?',
+            description: 'Xe sẽ bị ẩn khỏi danh sách. Không xoá được nếu còn lịch.',
+            okText: 'Xoá',
+            cancelText: 'Huỷ',
+          },
+          onClick: () => onDelete(row.id),
+        },
+      ],
+      { width: 130 },
+    ),
   ];
 
   return (
-    <Table<VehicleListItem>
-      rowKey="id"
+    <DataTable<VehicleListItem>
+      label="Danh sách xe"
       columns={columns}
-      dataSource={items}
+      items={items}
+      minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      scroll={{ x: 'max-content' }}
-      onRow={(row) => ({ onClick: () => onView(row.id), className: styles.rowClickable })}
-      pagination={{
-        current: meta.page,
-        pageSize: meta.limit,
-        total: meta.total,
-        showSizeChanger: true,
-        showTotal: (total) => `${total} xe`,
-        onChange: onPageChange,
+      error={
+        error
+          ? {
+              title: 'Không tải được danh sách xe',
+              description: 'Có lỗi khi lấy dữ liệu. Vui lòng thử lại.',
+              onRetry: error.onRetry,
+            }
+          : null
+      }
+      filtered={filtered}
+      empty={{ title: 'Gian hàng chưa có xe nào', action: emptyAction }}
+      noResults={{
+        title: 'Không tìm thấy xe khớp bộ lọc',
+        action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
       }}
+      onRowClick={(row) => onView(row.id)}
+      pagination={{ meta, onChange: onPageChange, totalLabel: (total) => `${total} xe` }}
     />
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Checkbox, Empty, Input, Result, Select, Space, Spin } from 'antd';
+import { Checkbox, Input, Select, Space, Spin } from 'antd';
 import { Suspense, useState } from 'react';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ADMIN_CUSTOMERS_DEFAULT_LIMIT } from '@/features/admin-customers/api';
@@ -42,10 +42,10 @@ function AdminCustomersView() {
   };
   const hasFilters = Boolean(
     filters.q ||
-      filters.phone ||
-      filters.email ||
-      (filters.status && filters.status !== 'all') ||
-      filters.hasRequests,
+    filters.phone ||
+    filters.email ||
+    (filters.status && filters.status !== 'all') ||
+    filters.hasRequests,
   );
 
   return (
@@ -96,36 +96,20 @@ function AdminCustomersView() {
       />
 
       <div className={styles.privacyNote}>
-        SĐT và email hiển thị ở dạng đã che. Mở drawer để xem đầy đủ nếu bạn có quyền — mỗi lần
-        xem được ghi vào nhật ký hệ thống.
+        SĐT và email hiển thị ở dạng đã che. Mở drawer để xem đầy đủ nếu bạn có quyền — mỗi lần xem
+        được ghi vào nhật ký hệ thống.
       </div>
 
-      {isError && !data ? (
-        <Result
-          status="error"
-          title="Không tải được danh sách khách"
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
-            </Button>
-          }
-        />
-      ) : !isFetching && items.length === 0 ? (
-        <Empty
-          className={styles.state}
-          description={hasFilters ? 'Không có khách khớp bộ lọc' : 'Chưa có khách thuê nào'}
-        >
-          {hasFilters ? <Button onClick={() => setFilters(CLEARED)}>Xoá bộ lọc</Button> : null}
-        </Empty>
-      ) : (
-        <AdminCustomerTable
-          items={items}
-          meta={meta}
-          loading={isFetching}
-          onView={(id) => setSelected(id)}
-          onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-        />
-      )}
+      <AdminCustomerTable
+        items={items}
+        meta={meta}
+        loading={isFetching}
+        error={isError && !data ? { onRetry: () => void refetch() } : null}
+        filtered={hasFilters}
+        onClearFilters={() => setFilters(CLEARED)}
+        onView={(id) => setSelected(id)}
+        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+      />
 
       <AdminCustomerDetailDrawer customerId={selected} onClose={() => setSelected(null)} />
     </div>

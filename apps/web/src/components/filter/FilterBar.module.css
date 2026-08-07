@@ -1,0 +1,95 @@
+.root {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  margin-bottom: var(--xp-space-md);
+}
+
+/* Filter được phép xuống dòng ở desktop hẹp; cụm hành động thì không (xem `.actions`). */
+.fields {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+/* Ô tìm kiếm ăn phần rộng còn lại, nhưng có sàn để không bị bóp thành ô vuông khi nhiều select. */
+.search {
+  min-width: 220px;
+  max-width: 420px;
+  flex: 1 1 220px;
+}
+
+.select {
+  min-width: 160px;
+  flex: 0 0 auto;
+}
+
+.range {
+  flex: 0 0 auto;
+}
+
+.segmented {
+  flex: 0 0 auto;
+}
+
+/* `flex: none` + `nowrap`: nút hành động của trang không bao giờ rơi xuống dòng lẫn vào filter,
+   và không tự co lại — vị trí của chúng phải đoán trước được. */
+.actions {
+  display: flex;
+  flex: none;
+  flex-wrap: nowrap;
+  gap: var(--xp-space-sm);
+}
+
+/* ---------------------------------------------------------------- mobile (≤640px) */
+
+.mobileRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-md);
+}
+
+/* `min-width: 0` trên con để ô tìm kiếm co được — không có nó, hàng này đẩy ngang cả trang. */
+.mobileTop {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.mobileTop > * {
+  min-width: 0;
+}
+
+.mobileTop .search {
+  min-width: 0;
+  max-width: none;
+  flex: 1 1 auto;
+}
+
+.mobileActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.sheetFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.sheetFields .select,
+.sheetFields .range {
+  width: 100%;
+  min-width: 0;
+}
+
+.sheetFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}

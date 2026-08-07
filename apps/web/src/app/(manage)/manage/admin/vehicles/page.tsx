@@ -1,7 +1,9 @@
 'use client';
 
-import { Button, Empty, Input, Result, Segmented, Select, Space, Spin } from 'antd';
+import { Segmented } from 'antd';
 import { Suspense, useState } from 'react';
+import { LoadingState } from '@/components/feedback/LoadingState';
+import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ADMIN_VEHICLES_DEFAULT_LIMIT } from '@/features/admin-vehicles/api';
 import {
@@ -26,9 +28,34 @@ const CLEARED: Partial<AdminVehicleFilters> = {
   tenantId: undefined,
 };
 
+const FILTER_FIELDS: FilterField[] = [
+  { kind: 'search', key: 'q', label: 'Tìm xe', placeholder: 'Tìm tên xe / biển số / mã' },
+  {
+    kind: 'select',
+    key: 'publicStatus',
+    label: 'Duyệt public',
+    options: ADMIN_VEHICLE_PUBLIC_STATUS_OPTIONS,
+    allowClear: false,
+  },
+  {
+    kind: 'select',
+    key: 'operationStatus',
+    label: 'Vận hành',
+    options: ADMIN_VEHICLE_OPERATION_STATUS_OPTIONS,
+    allowClear: false,
+  },
+  {
+    kind: 'select',
+    key: 'vehicleType',
+    label: 'Loại xe',
+    options: ADMIN_VEHICLE_TYPE_OPTIONS,
+    allowClear: false,
+  },
+];
+
 export default function AdminVehiclesPage() {
   return (
-    <Suspense fallback={<Spin size="large" className={styles.state} />}>
+    <Suspense fallback={<LoadingState variant="page" label="Đang tải xe toàn hệ thống…" />}>
       <AdminVehiclesView />
     </Suspense>
   );
@@ -50,14 +77,18 @@ function AdminVehiclesView() {
   const isSet = (value: string | undefined) => Boolean(value && value !== 'all');
   const hasFilters = Boolean(
     filters.q ||
-      filters.tenantId ||
-      isSet(filters.publicStatus) ||
-      isSet(filters.operationStatus) ||
-      isSet(filters.vehicleType) ||
-      isSet(filters.tenantStatus),
+    filters.tenantId ||
+    isSet(filters.publicStatus) ||
+    isSet(filters.operationStatus) ||
+    isSet(filters.vehicleType) ||
+    isSet(filters.tenantStatus),
   );
 
   // Lối tắt nào đang khớp chính xác bộ lọc hiện tại — không khớp thì không sáng cái nào.
+  //
+  // Cố ý KHÔNG đưa vào `FilterBar`: giá trị của nó SUY RA từ hai tham số (`publicStatus` +
+  // `tenantStatus`) chứ không phải một tham số, và chọn một lối tắt ghi một *patch* nhiều khoá.
+  // Đó là luật riêng của module giám sát xe — nhét vào component chung sẽ làm nó biết nghiệp vụ.
   const activeQuick =
     ADMIN_VEHICLE_QUICK_FILTERS.find(
       (f) =>
@@ -67,45 +98,22 @@ function AdminVehiclesView() {
 
   return (
     <div>
-      <ManagePageHeader
-        title="Xe toàn hệ thống"
-        extra={
-          <Space wrap>
-            <Input.Search
-              className={styles.search}
-              size="large"
-              allowClear
-              placeholder="Tìm tên xe / biển số / mã"
-              defaultValue={filters.q}
-              onSearch={(value) => setFilters({ q: value.trim() || undefined })}
-            />
-            <Select
-              className={styles.select}
-              size="large"
-              value={filters.publicStatus ?? 'all'}
-              options={ADMIN_VEHICLE_PUBLIC_STATUS_OPTIONS}
-              onChange={(value: string) => setFilters({ publicStatus: value })}
-            />
-            <Select
-              className={styles.select}
-              size="large"
-              value={filters.operationStatus ?? 'all'}
-              options={ADMIN_VEHICLE_OPERATION_STATUS_OPTIONS}
-              onChange={(value: string) => setFilters({ operationStatus: value })}
-            />
-            <Select
-              className={styles.typeSelect}
-              size="large"
-              value={filters.vehicleType ?? 'all'}
-              options={ADMIN_VEHICLE_TYPE_OPTIONS}
-              onChange={(value: string) => setFilters({ vehicleType: value })}
-            />
-          </Space>
-        }
+      <ManagePageHeader title="Xe toàn hệ thống" />
+
+      {/*
+        Cố ý KHÔNG truyền `onClear`: lối xoá lọc của trang này nằm trong màn "không có kết quả",
+        đúng như trước khi migrate và giống ba module còn lại của đợt 1C-D. Nút "Xoá tất cả" luôn
+        hiện là UI MỚI (Figma `127:2339` R5) — thuộc quyết định P24, chưa được chốt.
+      */}
+      <FilterBar
+        fields={FILTER_FIELDS}
+        values={filters as Record<string, string | undefined>}
+        onChange={(patch) => setFilters(patch)}
       />
 
       <div className={styles.quickRow}>
         <Segmented
+          aria-label="Lối tắt lọc xe"
           value={activeQuick}
           options={[
             { value: '', label: 'Tất cả' },
@@ -118,32 +126,16 @@ function AdminVehiclesView() {
         />
       </div>
 
-      {isError && !data ? (
-        <Result
-          status="error"
-          title="Không tải được danh sách xe"
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
-            </Button>
-          }
-        />
-      ) : !isFetching && items.length === 0 ? (
-        <Empty
-          className={styles.state}
-          description={hasFilters ? 'Không có xe khớp bộ lọc' : 'Chưa có xe nào trong hệ thống'}
-        >
-          {hasFilters ? <Button onClick={() => setFilters(CLEARED)}>Xoá bộ lọc</Button> : null}
-        </Empty>
-      ) : (
-        <AdminVehicleTable
-          items={items}
-          meta={meta}
-          loading={isFetching}
-          onView={(id) => setSelected(id)}
-          onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-        />
-      )}
+      <AdminVehicleTable
+        items={items}
+        meta={meta}
+        loading={isFetching}
+        error={isError && !data ? { onRetry: () => void refetch() } : null}
+        filtered={hasFilters}
+        onClearFilters={() => setFilters(CLEARED)}
+        onView={(id) => setSelected(id)}
+        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+      />
 
       <AdminVehicleDetailDrawer vehicleId={selected} onClose={() => setSelected(null)} />
     </div>

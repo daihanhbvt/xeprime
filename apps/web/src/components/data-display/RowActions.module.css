@@ -1,0 +1,28 @@
+/* `flex-end` để cụm nút bám mép phải của cột — cột hành động khai `align: 'right'`, giữ đúng
+   cách 14 bảng đang hiển thị hôm nay (Figma 127:1725 ghi Center — chênh lệch đã ghi backlog). */
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs);
+}
+
+/* Popconfirm cần một phần tử nhận ref; `span` này chỉ để bọc, không tạo hình. */
+.confirmWrap {
+  display: inline-flex;
+}
+
+/* Nút disabled không nhận sự kiện chuột, nên tooltip phải bám vào lớp bọc này mới hiện được. */
+.disabledWrap {
+  display: inline-flex;
+  cursor: not-allowed;
+}
+
+/* Vùng chạm tối thiểu trên mobile (WCAG 2.5.5 · Figma 130:1692 "44x44px"). Chỉ áp ở màn nhỏ để
+   không làm cao hàng bảng trên desktop. */
+@media (max-width: 640px) {
+  .root :global(.ant-btn) {
+    min-width: var(--xp-touch-target-min);
+    min-height: var(--xp-touch-target-min);
+  }
+}

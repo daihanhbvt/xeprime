@@ -1,7 +1,6 @@
 'use client';
 
-import { Button, Table } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Button } from 'antd';
 import {
   TENANT_STATUS_META,
   TENANT_TYPE_LABEL,
@@ -9,6 +8,7 @@ import {
   type TenantStatus,
   type TenantType,
 } from '@xeprime/types';
+import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { formatDate } from '@/lib/datetime';
 import type { AdminTenant } from '../types';
@@ -18,12 +18,27 @@ interface AdminTenantTableProps {
   items: AdminTenant[];
   meta: PaginationMeta;
   loading: boolean;
+  error?: { onRetry: () => void } | null;
+  filtered?: boolean;
+  onClearFilters?: () => void;
   onView: (id: string) => void;
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-export function AdminTenantTable({ items, meta, loading, onView, onPageChange }: AdminTenantTableProps) {
-  const columns: ColumnsType<AdminTenant> = [
+/** Suy từ tổng bề rộng cột (P25 — Figma `127:1725` không đặc tả cột cho bảng gian hàng). */
+const MIN_TABLE_WIDTH = 950;
+
+export function AdminTenantTable({
+  items,
+  meta,
+  loading,
+  error = null,
+  filtered = false,
+  onClearFilters,
+  onView,
+  onPageChange,
+}: AdminTenantTableProps) {
+  const columns: DataTableColumn<AdminTenant>[] = [
     {
       title: 'Gian hàng',
       key: 'name',
@@ -40,6 +55,7 @@ export function AdminTenantTable({ items, meta, loading, onView, onPageChange }:
     {
       title: 'Chủ shop',
       key: 'owner',
+      width: 180,
       render: (_, r) => (
         <div>
           <div>{r.ownerName ?? '—'}</div>
@@ -50,41 +66,41 @@ export function AdminTenantTable({ items, meta, loading, onView, onPageChange }:
     {
       title: 'Loại',
       key: 'type',
+      width: 120,
       render: (_, r) => TENANT_TYPE_LABEL[r.tenantType as TenantType] ?? r.tenantType,
     },
-    { title: 'Xe', key: 'vehicles', align: 'right', render: (_, r) => r.vehicleCount },
+    { title: 'Xe', key: 'vehicles', align: 'right', width: 80, render: (_, r) => r.vehicleCount },
     {
       title: 'Trạng thái',
       key: 'status',
+      width: 130,
       render: (_, r) => <StatusTag value={r.status as TenantStatus} meta={TENANT_STATUS_META} />,
     },
-    { title: 'Ngày tạo', key: 'createdAt', render: (_, r) => formatDate(r.createdAt) },
-    {
-      title: '',
-      key: 'actions',
-      align: 'right',
-      render: (_, r) => (
-        <Button type="link" onClick={() => onView(r.id)}>
-          Xem
-        </Button>
-      ),
-    },
+    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => formatDate(r.createdAt) },
+    actionColumn<AdminTenant>(
+      (row) => [{ key: 'view', label: 'Xem', showLabel: true, onClick: () => onView(row.id) }],
+      { width: 120 },
+    ),
   ];
 
   return (
-    <Table<AdminTenant>
-      rowKey="id"
+    <DataTable<AdminTenant>
+      label="Danh sách gian hàng"
       columns={columns}
-      dataSource={items}
+      items={items}
+      minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      scroll={{ x: 'max-content' }}
+      error={error ? { title: 'Không tải được danh sách gian hàng', onRetry: error.onRetry } : null}
+      filtered={filtered}
+      empty={{ title: 'Chưa có gian hàng nào' }}
+      noResults={{
+        title: 'Không có gian hàng khớp bộ lọc',
+        action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
+      }}
       pagination={{
-        current: meta.page,
-        pageSize: meta.limit,
-        total: meta.total,
-        showSizeChanger: true,
-        showTotal: (total) => `${total} gian hàng`,
+        meta,
         onChange: onPageChange,
+        totalLabel: (total) => `${total} gian hàng`,
       }}
     />
   );

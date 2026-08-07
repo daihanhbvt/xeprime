@@ -1,6 +1,6 @@
 'use client';
 
-import { App, Button, Empty, Result, Select, Spin } from 'antd';
+import { App, Select, Spin } from 'antd';
 import { Suspense } from 'react';
 import { API_ERROR_CODE } from '@xeprime/types';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -16,7 +16,10 @@ import {
 } from '@/features/booking-requests/hooks/use-booking-request-mutations';
 import styles from './booking-requests-page.module.css';
 
-const STATUS_OPTIONS = [{ value: 'all', label: 'Tất cả trạng thái' }, ...BOOKING_REQUEST_STATUS_OPTIONS];
+const STATUS_OPTIONS = [
+  { value: 'all', label: 'Tất cả trạng thái' },
+  ...BOOKING_REQUEST_STATUS_OPTIONS,
+];
 
 export default function BookingRequestsPage() {
   return (
@@ -34,7 +37,12 @@ function BookingRequestsView() {
   const reject = useRejectBookingRequest();
 
   const items = data?.items ?? [];
-  const meta = data?.meta ?? { page: 1, limit: BOOKING_REQUESTS_DEFAULT_LIMIT, total: 0, hasNext: false };
+  const meta = data?.meta ?? {
+    page: 1,
+    limit: BOOKING_REQUESTS_DEFAULT_LIMIT,
+    total: 0,
+    hasNext: false,
+  };
 
   const actingId = approve.isPending
     ? (approve.variables ?? null)
@@ -74,34 +82,23 @@ function BookingRequestsView() {
             size="large"
             value={filters.status ?? 'all'}
             options={STATUS_OPTIONS}
-            onChange={(value: string) => setFilters({ status: value === 'all' ? undefined : value })}
+            onChange={(value: string) =>
+              setFilters({ status: value === 'all' ? undefined : value })
+            }
           />
         }
       />
 
-      {isError && !data ? (
-        <Result
-          status="error"
-          title="Không tải được danh sách yêu cầu"
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
-            </Button>
-          }
-        />
-      ) : !isFetching && items.length === 0 ? (
-        <Empty className={styles.state} description="Không có yêu cầu nào" />
-      ) : (
-        <BookingRequestTable
-          items={items}
-          meta={meta}
-          loading={isFetching}
-          actingId={actingId}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-        />
-      )}
+      <BookingRequestTable
+        items={items}
+        meta={meta}
+        loading={isFetching}
+        actingId={actingId}
+        error={isError && !data ? { onRetry: () => void refetch() } : null}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+      />
     </div>
   );
 }

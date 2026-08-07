@@ -1,7 +1,7 @@
 'use client';
 
-import { Button, Popconfirm, Table } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Button } from 'antd';
+import type { ReactNode } from 'react';
 import {
   PAYMENT_METHOD_META,
   RECEIPT_STATUS,
@@ -13,6 +13,7 @@ import {
   type ReceiptStatus,
   type ReceiptType,
 } from '@xeprime/types';
+import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { formatDate } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
@@ -24,24 +25,37 @@ interface ReceiptTableProps {
   meta: PaginationMeta;
   loading: boolean;
   canApprove: boolean;
+  error?: { onRetry: () => void } | null;
+  filtered?: boolean;
+  onClearFilters?: () => void;
+  /** Nút tạo phiếu đầu tiên — trang quyết theo quyền `RECEIPT_CREATE`. */
+  emptyAction?: ReactNode;
   onApprove: (id: string) => void;
   onCancel: (id: string) => void;
   onPageChange: (page: number, pageSize: number) => void;
 }
+
+/** Suy từ tổng bề rộng cột (P25) — 8 cột, một cột tiền và hai cột trạng thái. */
+const MIN_TABLE_WIDTH = 1120;
 
 export function ReceiptTable({
   items,
   meta,
   loading,
   canApprove,
+  error = null,
+  filtered = false,
+  onClearFilters,
+  emptyAction,
   onApprove,
   onCancel,
   onPageChange,
 }: ReceiptTableProps) {
-  const columns: ColumnsType<Receipt> = [
+  const columns: DataTableColumn<Receipt>[] = [
     {
       title: 'Phiếu',
       key: 'receipt',
+      width: 150,
       render: (_, row) => (
         <div>
           <div className={styles.name}>{row.receiptNo ?? '—'}</div>
@@ -52,15 +66,10 @@ export function ReceiptTable({
     {
       title: 'Loại',
       key: 'type',
-      render: (_, row) => (
-        <StatusTag value={row.type as ReceiptType} meta={RECEIPT_TYPE_META} />
-      ),
+      width: 110,
+      render: (_, row) => <StatusTag value={row.type as ReceiptType} meta={RECEIPT_TYPE_META} />,
     },
-    {
-      title: 'Danh mục',
-      key: 'category',
-      render: (_, row) => row.categoryName ?? '—',
-    },
+    { title: 'Danh mục', key: 'category', width: 150, render: (_, row) => row.categoryName ?? '—' },
     {
       title: 'Diễn giải',
       key: 'description',
@@ -70,7 +79,9 @@ export function ReceiptTable({
       title: 'Số tiền',
       key: 'amount',
       align: 'right',
+      width: 150,
       render: (_, row) => (
+        // Dấu +/− là THÔNG TIN nghiệp vụ (thu vs chi), không phải trang trí — giữ nguyên.
         <span className={row.type === RECEIPT_TYPE.INCOME ? styles.income : styles.expense}>
           {row.type === RECEIPT_TYPE.INCOME ? '+' : '−'}
           {formatMoneyVnd(row.amount)}
@@ -80,56 +91,63 @@ export function ReceiptTable({
     {
       title: 'Hình thức',
       key: 'method',
-      render: (_, row) => PAYMENT_METHOD_META[row.paymentMethod as PaymentMethod]?.label ?? row.paymentMethod,
+      width: 130,
+      render: (_, row) =>
+        PAYMENT_METHOD_META[row.paymentMethod as PaymentMethod]?.label ?? row.paymentMethod,
     },
     {
       title: 'Trạng thái',
       key: 'status',
+      width: 130,
       render: (_, row) => (
         <StatusTag value={row.status as ReceiptStatus} meta={RECEIPT_STATUS_META} />
       ),
     },
-    {
-      title: '',
-      key: 'actions',
-      align: 'right',
-      render: (_, row) =>
-        canApprove ? (
-          <div className={styles.actions}>
-            {row.status === RECEIPT_STATUS.PENDING_APPROVAL || row.status === RECEIPT_STATUS.DRAFT ? (
-              <Popconfirm title="Duyệt phiếu này?" onConfirm={() => onApprove(row.id)} okText="Duyệt">
-                <Button type="link" size="small">
-                  Duyệt
-                </Button>
-              </Popconfirm>
-            ) : null}
-            {row.status !== RECEIPT_STATUS.CANCELLED ? (
-              <Popconfirm title="Huỷ phiếu này?" onConfirm={() => onCancel(row.id)} okText="Huỷ phiếu" okButtonProps={{ danger: true }}>
-                <Button type="link" size="small" danger>
-                  Huỷ
-                </Button>
-              </Popconfirm>
-            ) : null}
-          </div>
-        ) : null,
-    },
+    // Toàn bộ cột hành động biến mất khi thiếu `finance.receipt.approve` — quyền do trang truyền
+    // xuống, `RowActions` chỉ ẩn/hiện. Cả hai hành động đều đụng tiền nên đều phải xác nhận.
+    actionColumn<Receipt>(
+      (row) => [
+        {
+          key: 'approve',
+          label: 'Duyệt',
+          showLabel: true,
+          hidden:
+            !canApprove ||
+            !(
+              row.status === RECEIPT_STATUS.PENDING_APPROVAL || row.status === RECEIPT_STATUS.DRAFT
+            ),
+          confirm: { title: 'Duyệt phiếu này?', okText: 'Duyệt' },
+          onClick: () => onApprove(row.id),
+        },
+        {
+          key: 'cancel',
+          label: 'Huỷ',
+          showLabel: true,
+          danger: true,
+          hidden: !canApprove || row.status === RECEIPT_STATUS.CANCELLED,
+          confirm: { title: 'Huỷ phiếu này?', okText: 'Huỷ phiếu' },
+          onClick: () => onCancel(row.id),
+        },
+      ],
+      { width: 160 },
+    ),
   ];
 
   return (
-    <Table<Receipt>
-      rowKey="id"
+    <DataTable<Receipt>
+      label="Danh sách phiếu thu chi"
       columns={columns}
-      dataSource={items}
+      items={items}
+      minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      scroll={{ x: 'max-content' }}
-      pagination={{
-        current: meta.page,
-        pageSize: meta.limit,
-        total: meta.total,
-        showSizeChanger: true,
-        showTotal: (total) => `${total} phiếu`,
-        onChange: onPageChange,
+      error={error ? { title: 'Không tải được danh sách phiếu', onRetry: error.onRetry } : null}
+      filtered={filtered}
+      empty={{ title: 'Chưa có phiếu thu/chi nào', action: emptyAction }}
+      noResults={{
+        title: 'Không có phiếu khớp bộ lọc',
+        action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
       }}
+      pagination={{ meta, onChange: onPageChange, totalLabel: (total) => `${total} phiếu` }}
     />
   );
 }

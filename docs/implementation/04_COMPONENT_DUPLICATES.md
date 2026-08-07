@@ -20,6 +20,28 @@
 | **D11** | Bí danh token trùng vai trò | **9 token** | ✅ **Đã gom (Wave 1A)** | — | 1A ✔ |
 | **D12** | Hai hệ đổ bóng song song (XePrime vs AntD) | 2 hệ | ✅ **Đã gom (Wave 1A)** | — | 1A ✔ |
 
+### Đối chiếu số liệu — Batch 1C.0 (07/08/2026)
+
+Đo lại bằng `rg` trước khi gom. Bảng tổng ở trên giữ nguyên ID; cột "Số nơi" sửa như sau:
+
+| ID | Doc ghi | Đo được | Ghi chú |
+| --- | --- | --- | --- |
+| **D1** | 17 page + 8 component | **23 file có `<Result>`** (gồm 3 file không phải scaffold danh sách: `admin/layout.tsx` = 403, `AppShell.tsx`, `DetailDrawer.tsx` = primitive 1B) → **20 nơi thật** | `<Empty>` 23 file |
+| **D2** | 10/13 giữ bản copy | ✅ **đúng** — 3 dùng `useUrlFilters`, 10 giữ copy. Trừ `use-calendar-filters` → **9 ứng viên gom** | — |
+| **D3** | 10 bảng + 2 inline | **11 `*Table.tsx` + 3 inline = 14 bảng cấp trang** (`admin/plans` bị bỏ sót ở doc cũ) | +1 bảng lồng trong `AdminCustomerDetailDrawer`, ngoài phạm vi |
+| **D7** | ≥8 nơi | `<Avatar>` **7** · tính initial **9** | 2 `charAt(0)` khác là viết-hoa-chữ-đầu, không gom |
+| **D8** | 11 page | `<Spin>` **27 file** toàn repo; `Suspense fallback` + `.state` là tập con | Đếm chính xác từng nơi ở 1C.1 |
+| **D9** | 4 page | **3** — `members`, `admin/staff`, `admin/plans`. `receipts` **có** `ReceiptTable.tsx` riêng | Doc cũ tính nhầm `receipts` |
+
+**D3 — phát hiện quan trọng, ngược với doc cũ.** Doc ghi *"`fixed: 'right'` có ở đa số"*. Thực tế
+**đúng 1/14** bảng có (`VehicleTable`). Figma `127:2060` quy tắc 1 bắt buộc sticky cho 14/16 bảng
+và `127:2093`–`127:2096` tự khai "05/06/09–11 đã có sticky" — **không đúng với code**. Đây là
+khoảng cách lớn nhất của Wave 1C, không phải a11y.
+
+**D3 — lỗ a11y hẹp hơn doc mô tả.** Chỉ **5 nút icon ở 3 file** thiếu tên khả truy cập
+(`VehicleTable` ×3 dùng `Tooltip` thay `aria-label`, `members/page` ×1, `admin/staff/page` ×1).
+`BookingTable` đã có `aria-label`; 4 bảng khác dùng nút có chữ nên vốn đã có tên.
+
 ### Cập nhật sau Wave 1B — D5 và D6 ĐÃ GOM ✅
 
 **D5 (overlay tự chế responsive) và D6 (detail drawer) đóng.** 19 overlay nghiệp vụ giờ dùng
@@ -341,3 +363,22 @@ Theo module ──► D9
 | `use-calendar-filters` | Lịch không phân trang — quy tắc "reset page" không áp dụng |
 | `Logo` ↔ `BrandMark` | Logo XePrime vs logo hãng xe |
 | `packages/ui` | Chỉ một app tiêu thụ — xem [00_IMPLEMENTATION_OVERVIEW.md §4.1](00_IMPLEMENTATION_OVERVIEW.md) |
+
+---
+
+## Kết toán cuối Wave 1C (1C-E · 07/08/2026)
+
+| ID | Trước Wave 1C | Sau Wave 1C | Trạng thái |
+| --- | --- | --- | --- |
+| **D1** scaffold trạng thái | 20 nơi | **0 nơi ở danh sách quản lý** (`<Result>` còn 9: 5 trang chi tiết/dashboard ngoài phạm vi, 3 hạ tầng, 0 danh sách) | ✅ Đóng |
+| **D2** hook filter tự chế | 10/13 | **4/13** — 2 loại trừ vĩnh viễn (calendar, marketplace), 2 loại trừ ngữ nghĩa (approvals, booking-requests: mặc định `pending` ≠ `all`) | ✅ Đóng có loại trừ |
+| **D3** cột hành động | 14 bảng, **1** có `fixed:'right'` | **14/14** qua `actionColumn`; 13 dùng `RowActions` | ✅ Đóng |
+| **D4** `<Tag>` trần | 11 file | Còn 3 chỗ, **đều hợp lệ**: nhãn vai trò ×2 (không có `*_ROLE_META` — P5), nhãn khuyến mãi ×1 | ✅ Đóng có loại trừ |
+| **D5/D6** overlay | — | ✅ đã đóng ở Wave 1B |
+| **D7** khối định danh | ≥8 nơi | `EntityIdentity` ×3 (`VehicleTable`, `members`, `admin/staff`); `initialOf` gom 9 bản chép tay | ✅ Đóng phần bảng |
+| **D8** `Suspense` + `.state` | 11 page | `LoadingState` ở 6 trang đã migrate; còn ở các trang ngoài phạm vi | 🟡 Một phần |
+| **D9** bảng dựng trong `page.tsx` | 3 | **3** — tách file là việc cấu trúc, không phải hạ tầng Wave 1C | 🟡 Hoãn |
+| **D10** breakpoint | 21 giá trị | Dời dần theo file (brief 00 §9.4) | 🟡 Theo kế hoạch |
+
+**Nợ mới ghi nhận**: `StickyFormActions` có 0 consumer (5 form dài chờ wave form; `VehicleForm` bị
+chỉ thị 1C-E cấm đụng) · `renderCard` mobile 0/14 (chờ P26).

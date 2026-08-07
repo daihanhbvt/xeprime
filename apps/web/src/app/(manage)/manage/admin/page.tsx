@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Empty, Result, Segmented, Select, Space, Spin } from 'antd';
+import { Segmented, Select, Space, Spin } from 'antd';
 import { Suspense, useState } from 'react';
 import { APPROVAL_TARGET_TYPE } from '@xeprime/types';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -59,27 +59,14 @@ function AdminApprovalsView() {
         }
       />
 
-      {isError && !data ? (
-        <Result
-          status="error"
-          title="Không tải được hàng đợi duyệt"
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
-            </Button>
-          }
-        />
-      ) : !isFetching && items.length === 0 ? (
-        <Empty className={styles.state} description="Không có phiếu nào" />
-      ) : (
-        <ApprovalTable
-          items={items}
-          meta={meta}
-          loading={isFetching}
-          onView={(id) => setSelected(id)}
-          onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-        />
-      )}
+      <ApprovalTable
+        items={items}
+        meta={meta}
+        loading={isFetching}
+        error={isError && !data ? { onRetry: () => void refetch() } : null}
+        onView={(id) => setSelected(id)}
+        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+      />
 
       <ApprovalDetailDrawer taskId={selected} onClose={() => setSelected(null)} />
     </div>

@@ -1,0 +1,12 @@
+/*
+ * Dùng chung cho các field đã dời khỏi inline style (CLAUDE.md §5 cấm inline style).
+ * `NumberField`, `TextAreaField`, `DateTimeField` đã chuyển ở Wave 1C-C; `TextField`,
+ * `SelectField`, `AutoCompleteField` còn inline style — dời khi chạm vào file đó.
+ */
+.item {
+  margin-bottom: 14px;
+}
+
+.control {
+  width: 100%;
+}

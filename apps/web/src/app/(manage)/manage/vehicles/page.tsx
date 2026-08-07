@@ -1,13 +1,14 @@
 'use client';
 
 import { PlusOutlined } from '@ant-design/icons';
-import { App, Button, Empty, Result, Spin } from 'antd';
+import { App, Button } from 'antd';
 import { useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import { PERMISSION } from '@xeprime/types';
 import { ROUTES, vehiclePath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
+import { LoadingState } from '@/components/feedback/LoadingState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { VehicleFiltersBar } from '@/features/vehicles/components/VehicleFilters';
 import { VehicleTable } from '@/features/vehicles/components/VehicleTable';
@@ -15,12 +16,11 @@ import { useDeleteVehicle } from '@/features/vehicles/hooks/use-vehicle-mutation
 import { useVehicleFilters } from '@/features/vehicles/hooks/use-vehicle-filters';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import { VEHICLES_DEFAULT_LIMIT } from '@/features/vehicles/api';
-import styles from './vehicles-page.module.css';
 
 export default function VehiclesPage() {
   // useVehicleFilters đọc useSearchParams → cần Suspense trong route tĩnh (Next).
   return (
-    <Suspense fallback={<Spin size="large" className={styles.state} />}>
+    <Suspense fallback={<LoadingState variant="page" label="Đang tải danh sách xe…" />}>
       <VehiclesView />
     </Suspense>
   );
@@ -42,10 +42,10 @@ function VehiclesView() {
   const meta = data?.meta ?? { page: 1, limit: VEHICLES_DEFAULT_LIMIT, total: 0, hasNext: false };
   const hasFilters = Boolean(
     filters.q ||
-      filters.vehicleType ||
-      filters.serviceType ||
-      filters.operationStatus ||
-      filters.publicStatus,
+    filters.vehicleType ||
+    filters.serviceType ||
+    filters.operationStatus ||
+    filters.publicStatus,
   );
 
   function handleDelete(id: string) {
@@ -74,51 +74,41 @@ function VehiclesView() {
 
       <VehicleFiltersBar filters={filters} onChange={setFilters} />
 
-      {isError && !data ? (
-        <Result
-          status="error"
-          title="Không tải được danh sách xe"
-          subTitle="Có lỗi khi lấy dữ liệu. Vui lòng thử lại."
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
+      <VehicleTable
+        items={items}
+        meta={meta}
+        loading={isFetching}
+        deletingId={deleteVehicle.isPending ? (deleteVehicle.variables ?? null) : null}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        // Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ bảng đang đọc.
+        error={isError && !data ? { onRetry: () => void refetch() } : null}
+        filtered={hasFilters}
+        onClearFilters={() =>
+          setFilters({
+            q: undefined,
+            vehicleType: undefined,
+            serviceType: undefined,
+            operationStatus: undefined,
+            publicStatus: undefined,
+          })
+        }
+        emptyAction={
+          canCreate ? (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
+            >
+              Thêm xe đầu tiên
             </Button>
-          }
-        />
-      ) : !isFetching && items.length === 0 ? (
-        hasFilters ? (
-          <Empty className={styles.state} description="Không tìm thấy xe khớp bộ lọc">
-            <Button onClick={() => setFilters({ q: undefined, vehicleType: undefined, serviceType: undefined, operationStatus: undefined, publicStatus: undefined })}>
-              Xoá bộ lọc
-            </Button>
-          </Empty>
-        ) : (
-          <Empty className={styles.state} description="Gian hàng chưa có xe nào">
-            {canCreate ? (
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
-              >
-                Thêm xe đầu tiên
-              </Button>
-            ) : null}
-          </Empty>
-        )
-      ) : (
-        <VehicleTable
-          items={items}
-          meta={meta}
-          loading={isFetching}
-          deletingId={deleteVehicle.isPending ? (deleteVehicle.variables ?? null) : null}
-          canEdit={canEdit}
-          canDelete={canDelete}
-          onView={(id) => router.push(vehiclePath.detail(id))}
-          onEdit={(id) => router.push(vehiclePath.edit(id))}
-          onDelete={handleDelete}
-          onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-        />
-      )}
+          ) : undefined
+        }
+        onView={(id) => router.push(vehiclePath.detail(id))}
+        onEdit={(id) => router.push(vehiclePath.edit(id))}
+        onDelete={handleDelete}
+        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+      />
     </div>
   );
 }

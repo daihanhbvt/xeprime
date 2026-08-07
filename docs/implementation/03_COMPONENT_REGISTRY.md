@@ -2,6 +2,195 @@
 
 > Ngày lập: 06/08/2026 · Wave 0B · **cập nhật sau Wave 1A**. **Đây là hợp đồng tái dùng.** Trước khi viết bất kỳ component nào trong migration, tra bảng này. Component mới chỉ được tạo khi có **≥2 nơi tiêu thụ thật** — không tạo trước.
 
+## ⓪⁺⁺⁺⁺⁺⁺ WAVE 1C HOÀN THÀNH — Batch 1C-E (07/08/2026)
+
+**14/14 bảng quản lý dùng `DataTable`.** Không còn `<Table>` AntD trực tiếp ở danh sách nào.
+Bảng consumer cuối cùng + toàn bộ loại trừ có lý do: **[09 §0](09_LIST_PAGE_INVENTORY.md)**.
+
+| Quyết định Wave 0B | Kết quả thực tế |
+| --- | --- |
+| **CREATE** 10 component | ✅ 10/10 đã dựng. **9 có consumer**; `StickyFormActions` còn 0 (nợ, xem 09) |
+| **EXTEND** `NumberField`/`TextAreaField`/`DateTimeField` | ✅ — `money`+counter đã có sẵn từ trước, thêm `percent`, `precision`, `showCount`, `help`, `range` |
+| **EXTEND** `FilterPanel` giữ riêng marketplace | ✅ không đụng |
+| **REUSE** `StatusTag` | ✅ giữ preset AntD (P5 vẫn mở, không đổi màu nào) |
+| **KEEP-ANTD** Button · message · Pagination | ✅ |
+
+### API component chung đã đổi trong lúc rollout
+
+| Component | Thêm gì | Vì sao |
+| --- | --- | --- |
+| `DataTable` | `pagination` thành **tuỳ chọn** | `/manage/admin/plans` lấy cả danh sách một lần (Figma `130:1752` ghi nhận ngoại lệ) |
+| `FilterBar` | field `segmented`; `searchable` cho select | 3 consumer segmented; `searchable` giữ `showSearch` của nhật ký (~28 hành động) |
+| `FilterBar` | `countActiveFilters` bỏ qua `'all'` | `'all'` là sentinel không-lọc toàn repo |
+| `FilterBar` | khoảng ngày hiện `DD/MM/YYYY`, ghi `YYYY-MM-DD` | giữ đúng cách `/manage/admin/audit` đang hiển thị |
+| `useUrlFilters` | `SetFiltersOptions.resetPage` | tham số chỉ đổi giao diện không được đá về trang 1 |
+| `RowActions` | bọc icon `aria-hidden`; bọc nút disabled để tooltip hiện được | hai lỗi a11y đo được khi dựng |
+
+### Lỗi đã sửa nhờ migration
+
+| # | Lỗi | Sửa ở |
+| --- | --- | --- |
+| D15.2 | 5 nút icon không có tên khả truy cập | `RowActions` bắt buộc `label` |
+| D15.7 | Bấm nút trong cột hành động **cũng** kích hoạt click hàng → nút "Sửa" thực tế mở trang chi tiết | `RowActions` chặn nổi bọt |
+| D15.9 | CSS nhắm `.ant-table-cell-fix-right` — AntD 6 đổi thành `-fix-end`, nền đục **không có tác dụng** | `DataTable.module.css` |
+| D15.10 | Icon AntD làm bẩn accessible name (`"eye Thu tiền"`) | `RowActions` |
+| D15.11 | Tooltip trên nút disabled không bao giờ hiện | `RowActions` |
+| D15.12 | `?page=0` lọt xuống API | `positiveIntParam` |
+| D15.1 | 13/14 bảng thiếu `fixed: 'right'` | `actionColumn` — nay **14/14** |
+
+## ⓪⁺⁺⁺⁺⁺ Wave 1C — Batch 1C-C: nền tảng filter + form (07/08/2026)
+
+**108 test mới. 1 hook feature đã dời (bằng chứng), 13 trang danh sách CHƯA đụng.**
+
+| Việc | Kết quả |
+| --- | --- |
+| `FilterBar` mới | [components/filter/FilterBar.tsx](../../apps/web/src/components/filter/FilterBar.tsx) — 28 test |
+| `StickyFormActions` mới | [components/form/StickyFormActions.tsx](../../apps/web/src/components/form/StickyFormActions.tsx) — 19 test |
+| `useUrlFilters` mở rộng | thêm `SetFiltersOptions.resetPage` — 20 test (trước đây **không có test nào**) |
+| `NumberField` mở rộng | thêm `percent`, `precision`; `money` đã có sẵn — 17 test |
+| `TextAreaField` mở rộng | thêm `showCount` tường minh, `help`, `aria-describedby` — 11 test |
+| `DateTimeField` mở rộng | thêm biến thể `range` (union theo kiểu) — 13 test |
+
+### Bằng chứng của hợp đồng `useUrlFilters`: `use-receipt-filters`
+
+Chọn hook này **chứ không phải marketplace**. Lý do: hành vi trước/sau **giống hệt** (trang tự quy
+`'all'` → `undefined` trước khi gọi), nên **30 test đặc tả `/manage/receipts`** là cổng gác đủ chặt
+— và chúng vẫn xanh sau khi dời. Marketplace bị loại vì mã hoá mảng CSV + boolean `1` (ngữ nghĩa
+facet), kéo vào hook chung sẽ bẻ hợp đồng dùng cho 9 danh sách quản lý — đúng thứ chỉ thị 1C-C cấm.
+
+**Còn 8 hook** chờ dời ở đợt rollout (9 ứng viên − 1 đã xong). `use-calendar-filters` **loại trừ
+vĩnh viễn**, lý do ghi thẳng trong docblock của `useUrlFilters`.
+
+### `FilterBar` ≠ `FilterPanel` — giữ riêng, có chủ đích
+
+| | `FilterBar` (mới) | `FilterPanel` (marketplace, giữ nguyên) |
+| --- | --- | --- |
+| Dùng cho | 14 bảng quản lý | 3 màn marketplace |
+| Ngữ nghĩa | lọc bảng: search · select · khoảng ngày | facet: đếm kết quả sống, khoảng giá, mảng CSV |
+| Nút chính | "Xoá bộ lọc" | "Áp dụng (N xe)" |
+| Wire | 1 tham số / 1 filter | CSV + boolean `1` |
+
+Cả hai **đều dùng lại `ResponsiveDialog`** cho sheet mobile — không có lớp overlay thứ ba.
+
+### Ba field đã dời khỏi inline style
+
+`NumberField`, `TextAreaField`, `DateTimeField` nay dùng [field.module.css](../../apps/web/src/components/form/field.module.css)
+(CLAUDE.md §5). `TextField`, `SelectField`, `AutoCompleteField` **vẫn còn inline style** — dời khi
+chạm vào, không sửa hàng loạt (nợ D15.3 thu hẹp).
+
+**Nợ D14.4 đã đóng một phần**: cả ba field nay có `useId()` + `htmlFor`, nên ô nhập có tên khả
+truy cập và `getByLabelText` tìm được. `SelectField` chưa.
+
+## ⓪⁺⁺⁺⁺ Wave 1C — Batch 1C-B: 6 primitive ĐÃ TẠO (07/08/2026)
+
+**106 test mới, 0 consumer feature** — chưa migrate trang nào (đúng phạm vi 1C-B).
+
+| Component | Đường dẫn | Test |
+| --- | --- | --- |
+| `EmptyState` | [components/feedback/EmptyState.tsx](../../apps/web/src/components/feedback/EmptyState.tsx) | 12 |
+| `LoadingState` | [components/feedback/LoadingState.tsx](../../apps/web/src/components/feedback/LoadingState.tsx) | 11 |
+| `PermissionState` | [components/feedback/PermissionState.tsx](../../apps/web/src/components/feedback/PermissionState.tsx) | 9 |
+| `DataTable<T>` + `actionColumn()` | [components/data-display/DataTable.tsx](../../apps/web/src/components/data-display/DataTable.tsx) | 32 |
+| `RowActions` | [components/data-display/RowActions.tsx](../../apps/web/src/components/data-display/RowActions.tsx) | 21 |
+| `EntityIdentity` + `initialOf()` | [components/data-display/EntityIdentity.tsx](../../apps/web/src/components/data-display/EntityIdentity.tsx) · [lib/initials.ts](../../apps/web/src/lib/initials.ts) | 21 |
+
+**Không thêm barrel export**: `components/` hiện **không có** `index.ts` nào — thêm cho riêng hai
+thư mục mới sẽ tạo hai kiểu import song song. Giữ import theo đường dẫn đầy đủ như 20 component cũ.
+
+### Cố ý KHÔNG đưa vào `DataTable`
+
+| Bỏ qua | Vì sao |
+| --- | --- |
+| Sắp xếp theo cột (`sorter`) | 1C-A đo **0/14** bảng có. Sắp xếp chỉ tồn tại ở `vehicles`/`bookings` dạng `Select` trong thanh lọc → tham số `sort` của API |
+| Chọn hàng / hành động hàng loạt (`rowSelection`) | **0 nơi** trong repo (khớp brief 00 D5) |
+
+Quy tắc §0 của tài liệu này: component chung cần **≥2 nơi tiêu thụ thật**. Cả hai đang là 0 → thêm
+khi có consumer đầu tiên, không thêm trước.
+
+### Ba lỗi phát hiện khi dựng (test bắt được, đã sửa ngay trong batch)
+
+| # | Lỗi | Cách phát hiện |
+| --- | --- | --- |
+| 1 | CSS nhắm `.ant-table-cell-fix-right` — **AntD 6 đã đổi tên thành `-fix-end`** (thuật ngữ logical, hợp RTL). Nền đục của cột dính phải sẽ **không có tác dụng** | Test "render cột dính phải" đỏ → đọc DOM thật để lấy tên class |
+| 2 | Icon `@ant-design/icons` render `role="img" aria-label="eye"`, lọt vào accessible name của nút có chữ → `"eye Thu tiền"` | Test tên khả truy cập đỏ |
+| 3 | Tooltip gắn thẳng lên nút `disabled` **không bao giờ hiện** (`pointer-events: none`) → `disabledReason` mất tác dụng | Test tooltip đỏ |
+
+## ⓪⁺⁺⁺ Wave 1C — Batch 1C.0: kiểm kê (chưa sửa code)
+
+Đo bằng `rg`/`glob` trên source ngày 07/08/2026, **không lấy từ tài liệu**. Ba con số ở các mục
+dưới đây sai và đã sửa tại chỗ.
+
+### Bảng dữ liệu — 15 file, không phải 26
+
+| Nhóm | Số | Danh sách |
+| --- | --- | --- |
+| `*Table.tsx` (feature component) | **11** | `VehicleTable` · `BookingTable` · `BookingRequestTable` · `ReceiptTable` · `DebtTable` · `AdminVehicleTable` · `AdminTenantTable` · `AdminBookingTable` · `AdminCustomerTable` · `AuditLogTable` · `ApprovalTable` |
+| `<Table>` dựng thẳng trong `page.tsx` | **3** | `members` · `admin/staff` · `admin/plans` (D9) |
+| Bảng lồng trong drawer (không phải danh sách cấp trang) | **1** | `AdminCustomerDetailDrawer` (đơn của một khách) |
+
+**14 bảng cấp trang.** §3.2 ghi *“`<Table>` AntD ở 26 file — 10 component + 14 `page.tsx`”* —
+sai; con số đó đếm nhầm. Figma `127:1564` kiểm kê **16 bảng**; chênh 2 là `Calendar` (ngoại lệ
+scheduler, `130:1752`) và `Subscription History` — trong code **không phải `<Table>`**: nó là
+`<ul>` trong [TenantPlanSection](../../apps/web/src/features/admin-plans/components/TenantPlanSection.tsx#L83)
+và `<List>` trong [PaymentHistory](../../apps/web/src/features/payments/components/PaymentHistory.tsx#L42).
+
+### Khoảng cách so với hợp đồng bảng của Figma
+
+| Yêu cầu Figma | Node | Hiện trạng đo được |
+| --- | --- | --- |
+| Cột Actions sticky phải | `127:2060` R1 | **1/14** — chỉ [VehicleTable:114](../../apps/web/src/features/vehicles/components/VehicleTable.tsx#L114). 13 bảng còn lại **không** có `fixed: 'right'` dù bảng nào cũng bật cuộn ngang |
+| Width cột 100px (icon) / 120px (text) | `127:2060` R2 | 5/14 có width tường minh (130 · 190 · 60 · 70 · 70) — **không con số nào khớp thang Figma** |
+| Min/preferred width mọi cột | `127:1725` | Toàn repo chỉ **7** khai báo `width:` số. Không có `MIN_TABLE_WIDTH` ở đâu |
+| `MIN_TABLE_WIDTH` cố định, không nén cột | `127:2097` R1–R2 | 15/15 dùng `scroll={{ x: 'max-content' }}` — không nén, nhưng cũng **không** có sàn bề rộng |
+| Bóng gợi ý cuộn | `127:2097` R5 | **0** — không nơi nào |
+| Chuyển thẻ ở ≤640px | `127:2257` R1 | **0/14** |
+| Tiền canh phải | `127:1725` | ✅ **7/7 cột tiền đã canh phải** — đây là điểm code đã đúng sẵn |
+| Status badge, không cắt | `127:1725` | ✅ `StatusTag` không cắt |
+| `aria-label` nút icon | `130:1658` §2.4 | **5 nút thiếu tên khả truy cập, ở 3 file**: `VehicleTable` (3, chỉ có `Tooltip`) · `members/page` (1) · `admin/staff/page` (1). `BookingTable` đã đúng (`aria-label="Xem"`); 4 bảng khác dùng nút **có chữ** nên đã có tên |
+| `role="grid"` · `aria-sort` · điều hướng phím mũi tên · `caption` · `aria-live` số kết quả | `130:1658` | **0** — AntD `<Table>` render `role="table"`, không roving tabindex |
+
+> §1.2 ghi *“nút icon trong bảng hiện không có tên cho screen reader”* cho **10 bảng** — thực tế
+> chỉ **3 file / 5 nút**. Phần lớn cột hành động dùng `<Button type="link">` kèm chữ, đã có tên.
+
+### Ba mục "EXTEND" ở §6 đã có sẵn một phần
+
+| Mục | §6 nói | Thực tế |
+| --- | --- | --- |
+| `NumberField` variant `money` | "EXTEND: thêm" | ✅ **Đã có** — prop `money` + `groupThousands` + hậu tố `₫` ([NumberField.tsx:33](../../apps/web/src/components/form/NumberField.tsx#L33)). Chỉ còn thiếu `percent` |
+| `TextAreaField` character counter | "EXTEND: thêm" | ✅ **Đã có** — `showCount={Boolean(maxLength)}` ([TextAreaField.tsx:38](../../apps/web/src/components/form/TextAreaField.tsx#L38)) |
+| `DateTimeField` variant `range` | "EXTEND: thêm" | ❌ **Đúng là thiếu** — chỉ có `DatePicker` đơn |
+
+**Phát sinh**: cả 3 field dùng `style={{ marginBottom: 14 }}` / `style={{ width: '100%' }}` —
+**10 inline style** trong `components/form/`, vi phạm CLAUDE.md §5. Dời sang CSS Module khi chạm
+file ở 1C.10.
+
+### Filter — 13 hook, 3 dùng `useUrlFilters`
+
+Khớp [04 D2](04_COMPONENT_DUPLICATES.md). Ứng viên gom = **9** (13 − 3 đã gom − `use-calendar-filters`
+bị chỉ thị loại trừ). Thanh filter dùng chung: **2** (`VehicleFiltersBar`, `FilterPanel` marketplace);
+phần còn lại dựng inline trong `ManagePageHeader extra` của từng `page.tsx`.
+
+### Trạng thái — số đo
+
+`<Result>` 23 file · `<Empty>` 23 · `<Spin>` 27 · `<Skeleton>` 8 · `status="403"` **đúng 1 file**
+([admin/layout.tsx](<../../apps/web/src/app/(manage)/manage/admin/layout.tsx#L36>)). Khớp brief 00
+B1: ngoài nhánh admin **không có** nhánh 403 nào.
+
+### Định danh thực thể
+
+`<Avatar>` 7 nơi · tính chữ-cái-đầu lặp **9 nơi** (`Topbar`, `ManageUserCard`, `AccountView`,
+`MarketHeader`, `ShopHeader`, `BrandMark`, `FeaturedHosts`, `members/page`, `admin/staff/page`).
+`DashboardView`/`PlatformDashboardView` cũng có `charAt(0)` nhưng là **viết hoa chữ đầu**, không
+phải initial — không gom.
+
+### Thanh hành động form
+
+19 nơi dùng `styles.actions`; ứng viên `StickyFormActions` thật sự là **5 form dài**:
+`VehicleForm` · `ShopProfileForm` · `BookingFormDrawer` · `ReceiptFormDrawer` · `PlanFormModal`
+(khớp §6). 14 nơi còn lại là hàng nút trong dialog/drawer ngắn — **không** sticky.
+
+---
+
 ## ⓪⁺⁺ Wave 1B — HOÀN THÀNH (Stage A/B/C)
 
 **19/19 overlay nghiệp vụ đã dùng component chung.** Không còn `<Modal>`/`<Drawer>` trực tiếp

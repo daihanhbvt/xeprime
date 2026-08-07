@@ -1,7 +1,7 @@
 'use client';
 
 import { PlusOutlined, TagsOutlined } from '@ant-design/icons';
-import { App, Button, Empty, Result, Select, Space, Spin } from 'antd';
+import { App, Button, Select, Space, Spin } from 'antd';
 import { Suspense, useState } from 'react';
 import { PERMISSION } from '@xeprime/types';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -16,7 +16,10 @@ import { ReceiptFormDrawer } from '@/features/finance/components/ReceiptFormDraw
 import { ReceiptTable } from '@/features/finance/components/ReceiptTable';
 import { useReceiptFilters } from '@/features/finance/hooks/use-receipt-filters';
 import { useReceipts } from '@/features/finance/hooks/use-receipts';
-import { useApproveReceipt, useCancelReceipt } from '@/features/finance/hooks/use-receipt-mutations';
+import {
+  useApproveReceipt,
+  useCancelReceipt,
+} from '@/features/finance/hooks/use-receipt-mutations';
 import { getErrorMessage } from '@/services/api-client';
 import styles from './receipts-page.module.css';
 
@@ -100,44 +103,26 @@ function ReceiptsView() {
         />
       </div>
 
-      {isError && !data ? (
-        <Result
-          status="error"
-          title="Không tải được danh sách phiếu"
-          subTitle="Có lỗi khi lấy dữ liệu. Vui lòng thử lại."
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
+      <ReceiptTable
+        items={items}
+        meta={meta}
+        loading={isFetching}
+        canApprove={canApprove}
+        // Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ bảng đang đọc.
+        error={isError && !data ? { onRetry: () => void refetch() } : null}
+        filtered={hasFilters}
+        onClearFilters={() => setFilters({ type: undefined, status: undefined })}
+        emptyAction={
+          canCreate ? (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
+              Tạo phiếu đầu tiên
             </Button>
-          }
-        />
-      ) : !isFetching && items.length === 0 ? (
-        hasFilters ? (
-          <Empty className={styles.state} description="Không có phiếu khớp bộ lọc">
-            <Button onClick={() => setFilters({ type: undefined, status: undefined })}>
-              Xoá bộ lọc
-            </Button>
-          </Empty>
-        ) : (
-          <Empty className={styles.state} description="Chưa có phiếu thu/chi nào">
-            {canCreate ? (
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
-                Tạo phiếu đầu tiên
-              </Button>
-            ) : null}
-          </Empty>
-        )
-      ) : (
-        <ReceiptTable
-          items={items}
-          meta={meta}
-          loading={isFetching}
-          canApprove={canApprove}
-          onApprove={onApprove}
-          onCancel={onCancel}
-          onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-        />
-      )}
+          ) : undefined
+        }
+        onApprove={onApprove}
+        onCancel={onCancel}
+        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+      />
 
       <ReceiptFormDrawer open={formOpen} onClose={() => setFormOpen(false)} />
       <CategoryManagerModal open={categoriesOpen} onClose={() => setCategoriesOpen(false)} />

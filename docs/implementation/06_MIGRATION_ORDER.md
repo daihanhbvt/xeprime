@@ -194,6 +194,37 @@ Mỗi modal là một commit độc lập → revert được từng cái. Wrapp
 
 ## WAVE 1C — Forms, Feedback, Table
 
+> **Batch 1C.0 ✅ XONG (07/08/2026)** — kiểm kê + đọc 13 node Figma nền tảng. **0 file code đổi.**
+> Baseline xác nhận: 235/235 test xanh, 20 file test.
+>
+> **Sửa phạm vi file theo số đo thật** (khối `Phạm vi file` bên dưới ghi con số ước từ Wave 0B):
+> `*Table.tsx` = **11** (không phải 10) · `page.tsx` có bảng = **3** (`members`, `admin/staff`,
+> `admin/plans` — `admin/plans` bị bỏ sót) · hook filter phải chuyển = **9** (không phải 9 "trừ
+> calendar" mà là 10 bản copy − calendar). Tổng bảng cấp trang = **14**.
+>
+> **Khoảng cách lớn nhất không phải cái doc dự đoán**: 13/14 bảng thiếu `fixed: 'right'` trên cột
+> hành động (D15.1) trong khi bảng nào cũng bật cuộn ngang. Lỗ a11y **hẹp hơn** doc mô tả: 5 nút /
+> 3 file, không phải 10 bảng.
+>
+> **Đã có sẵn, không cần "EXTEND"**: `NumberField.money` ✅ · `TextAreaField` counter ✅.
+> Chỉ còn thiếu thật: `NumberField.percent`, `DateTimeField` range.
+>
+> Chi tiết: [03 §⓪⁺⁺⁺](03_COMPONENT_REGISTRY.md) · [04](04_COMPONENT_DUPLICATES.md) đối chiếu 1C.0 ·
+> [08 §I](08_DECISION_BACKLOG.md) (P23–P31, D15.1–D15.6).
+>
+> **Batch 1C-A ✅ XONG (07/08/2026)** — kiểm kê đầy đủ + **84 test đặc tả** cho 3 trang đại diện
+> (`vehicles` 28 · `admin/tenants` 26 · `receipts` 30). **0 file production đổi.** Bước **1C.2**
+> của bảng "Việc" bên dưới **đã đóng**.
+>
+> Hồ sơ từng bảng (filter · sắp xếp · hành động · trạng thái · rủi ro · đợt) →
+> **[09_LIST_PAGE_INVENTORY.md](09_LIST_PAGE_INVENTORY.md)**. Ba sửa số so với khối `Phạm vi file`
+> bên dưới: `*Table.tsx` = **11** (thiếu `ApprovalTable`) · bảng inline = **3** (không phải 4,
+> `receipts` có component riêng) · checkpoint filter đúng phải là **12/13** (không phải 9/13).
+>
+> **Phát hiện mới của 1C-A**: **0/14 bảng có sắp xếp theo cột** và **0 nơi có `rowSelection`/bulk**
+> — nên phần `aria-sort` của `130:1658` hiện không có đối tượng áp dụng. Bản copy hook filter khác
+> `useUrlFilters` ở chỗ **không xoá giá trị `'all'`** → gom sẽ đổi URL thấy được (§3.2 của 09).
+
 **Mục tiêu**: xoá scaffold trạng thái lặp; một `DataTable`; một `FilterBar`.
 
 ### Phụ thuộc
@@ -441,3 +472,25 @@ Bảng đối chiếu 39 route × 11 trạng thái, không ô nào "chưa kiểm
 ```
 
 **Ước lượng phạm vi file**: 1A ~40 file (phần lớn CSS) · 1B ~24 · 1C ~44 · 1D ~12 · 2 = **6** · 3A–3L ~120 · 5 = 0 (chỉ kiểm).
+
+---
+
+## ✅ WAVE 1C HOÀN THÀNH (07/08/2026)
+
+Sáu batch: **1C-A** kiểm kê + test đặc tả · **1C-B** 6 primitive · **1C-C** filter + form ·
+**1C-D** 4 module Thấp/TB · **1C-E** 10 module Cao + rà soát cuối.
+
+| Chỉ tiêu checkpoint gốc | Kết quả |
+| --- | --- |
+| 17 page không còn `<Result status="error">` viết tay | ✅ **0 danh sách quản lý** còn; 9 chỗ còn lại đều ngoài phạm vi hoặc hạ tầng |
+| 0 nơi lặp scaffold empty/no-results | ✅ qua `DataTable` |
+| Mọi bảng có `renderCard` hoặc lý do ghi rõ | 🟡 **0/14 có `renderCard`** — lý do đã ghi (P26 chưa chốt) |
+| 9/13 hook filter dùng `useUrlFilters` | ✅ **9/13** (4 loại trừ có lý do) |
+| Mọi nút icon trong bảng có `aria-label` | ✅ `RowActions` ép ở tầng kiểu |
+
+**Test**: 104 (sau 1A) → **623**. `pnpm --filter @xeprime/web test` xanh toàn bộ.
+
+**Chưa làm, chuyển tiếp**: `StickyFormActions` chưa có consumer (5 form dài — `VehicleForm` bị
+cấm đụng ở 1C-E) · `renderCard` mobile · D9 tách 3 bảng nội tuyến · `FilterBar` cho 8 trang còn lại.
+
+**Wave 1D vẫn CHẶN bởi P1** (sidebar sáng/tối) — không có phần nào của 1D được bắt đầu.

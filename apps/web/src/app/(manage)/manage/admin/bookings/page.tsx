@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, DatePicker, Empty, Input, Result, Select, Space, Spin } from 'antd';
+import { DatePicker, Input, Select, Space, Spin } from 'antd';
 import { Suspense, useState } from 'react';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ADMIN_BOOKINGS_DEFAULT_LIMIT } from '@/features/admin-bookings/api';
@@ -49,12 +49,12 @@ function AdminBookingsView() {
   };
   const hasFilters = Boolean(
     filters.q ||
-      filters.phone ||
-      filters.tenantId ||
-      filters.vehicleId ||
-      (filters.status && filters.status !== 'all') ||
-      filters.dateFrom ||
-      filters.dateTo,
+    filters.phone ||
+    filters.tenantId ||
+    filters.vehicleId ||
+    (filters.status && filters.status !== 'all') ||
+    filters.dateFrom ||
+    filters.dateTo,
   );
 
   const range: [Dayjs | null, Dayjs | null] = [
@@ -115,32 +115,16 @@ function AdminBookingsView() {
         }
       />
 
-      {isError && !data ? (
-        <Result
-          status="error"
-          title="Không tải được danh sách đơn thuê"
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
-            </Button>
-          }
-        />
-      ) : !isFetching && items.length === 0 ? (
-        <Empty
-          className={styles.state}
-          description={hasFilters ? 'Không có đơn khớp bộ lọc' : 'Chưa có đơn thuê nào'}
-        >
-          {hasFilters ? <Button onClick={() => setFilters(CLEARED)}>Xoá bộ lọc</Button> : null}
-        </Empty>
-      ) : (
-        <AdminBookingTable
-          items={items}
-          meta={meta}
-          loading={isFetching}
-          onView={(id) => setSelected(id)}
-          onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-        />
-      )}
+      <AdminBookingTable
+        items={items}
+        meta={meta}
+        loading={isFetching}
+        error={isError && !data ? { onRetry: () => void refetch() } : null}
+        filtered={hasFilters}
+        onClearFilters={() => setFilters(CLEARED)}
+        onView={(id) => setSelected(id)}
+        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+      />
 
       <AdminBookingDetailDrawer bookingId={selected} onClose={() => setSelected(null)} />
     </div>

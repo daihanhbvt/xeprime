@@ -3,6 +3,48 @@
 > Ngày lập: 06/08/2026 · Wave 0B. Quy trình kiểm thị giác thủ công cho mọi wave ở [06_MIGRATION_ORDER.md](06_MIGRATION_ORDER.md).
 > **Vì sao thủ công**: repo hiện **không có visual regression test, không có test a11y, không có test responsive**, và 14 trang danh sách không có test nào ([00_IMPLEMENTATION_OVERVIEW.md §8](00_IMPLEMENTATION_OVERVIEW.md)). Ma trận này là lớp bảo vệ duy nhất cho phần thị giác.
 
+## 0⁺⁺⁺. Batch 1C-D — 4 route đã đổi, QA thị giác CÒN NỢ ⚠️
+
+Bốn route `/manage/admin/{audit,plans,tenants,vehicles}` đã dùng nền tảng Wave 1C. Đã xác minh
+bằng 80 test đặc tả, **chưa QA thị giác**. Những thay đổi **nhìn thấy được** cần soi:
+
+| # | Thay đổi | Ở đâu |
+| --- | --- | --- |
+| 1 | Bộ lọc rời khỏi `ManagePageHeader extra`, xuống thành hàng `FilterBar` riêng | cả 4 route |
+| 2 | Nút hành động trong bảng: `type="link"` (xanh) → `type="text"` (chữ thường) | cả 4 route |
+| 3 | Tải lần đầu: spinner/bảng rỗng → **skeleton** | cả 4 route |
+| 4 | Cột hành động **dính phải** lần đầu tiên, có nền đục + bóng phân tách | cả 4 route |
+| 5 | Cột có bề rộng tường minh → tỉ lệ cột đổi so với auto-layout cũ | cả 4 route |
+| 6 | Cuộn ngang bắt đầu ở `minWidth` cố định thay vì `max-content` | audit 1110 · plans 980 · tenants 950 · admin/vehicles 1120 |
+| 7 | `/manage/admin/tenants`: ô tìm kiếm **debounce 400ms** thay vì nhấn Enter | tenants |
+| 8 | `/manage/admin/tenants`: URL không còn `?status=all` | tenants |
+| 9 | Ở ≤640px bộ lọc (trừ ô tìm) vào **bottom sheet** | cả 4 route |
+| 10 | `/manage/admin/audit`: khoảng ngày vẫn `DD/MM/YYYY` — **không được đổi** | audit |
+
+Chưa route nào có `renderCard`: bốn bảng này không nằm trong 7 bảng được Figma `127:2257` ánh xạ
+thẻ (P26). Ở mobile chúng vẫn là bảng cuộn ngang — **kiểm không tràn ngang ở 360px**.
+
+## 0⁺⁺. Wave 1C — QA thị giác sẽ nợ những gì
+
+Batch **1C.0 không đổi code** nên **không nợ QA**. Danh sách dưới đây là những gì các batch sau
+của 1C **sẽ** phải kiểm — ghi trước để không phát sinh bất ngờ ở cuối wave. Gói áp dụng: **LIST**
+(14 route × S1–S6, S8, S9, S10 × {1440, 1280, 390}).
+
+| # | Sẽ phải kiểm | Vì sao (nguồn) |
+| --- | --- | --- |
+| 1 | Cột hành động **dính phải** khi cuộn ngang ở 13 bảng lần đầu có nó | D15.1 — đây là thay đổi nhìn thấy rõ nhất của 1C |
+| 2 | Nền cột dính **đục** (không nhìn xuyên) + đường kẻ/bóng trái | `127:2060` R3–R4 |
+| 3 | Bảng → thẻ ở ≤640px ở các route có ánh xạ Figma | `127:2257` · P26 |
+| 4 | Không cuộn ngang `<body>` ở 360px sau khi chuyển thẻ | `127:2097` R8 |
+| 5 | Bóng gợi ý còn cột bên phải xuất/hiện đúng lúc | D15.4 · `127:2097` R5 |
+| 6 | Trạng thái rỗng: header cột còn hay mất (theo kết luận **P31**) | D15.5 |
+| 7 | Refetch nền **không** làm mất filter và không nháy loading toàn trang | `134:2011` R4–R5 |
+| 8 | Câu chữ empty ≠ no-results ở đủ 14 route | `134:2093` · §4.4 |
+| 9 | 403 hiện `PermissionState`, **không** đá về login | `134:2482` |
+| 10 | Tiền vẫn canh phải và không xuống dòng sau khi qua `DataTable` | `127:1725` · §7.2 |
+| 11 | Thanh hành động dính đáy ở 5 form dài, không đè `MobileNav` | `62:1623` · §4.9 |
+| 12 | Bộ lọc mobile mở bằng `ResponsiveDialog` sheet, không phải sheet tự chế | P28 |
+
 ## 0⁺. Wave 1B — QA thị giác CÒN NỢ ⚠️
 
 Wave 1B **không chạy được app** (cần Docker + Postgres + API), nên chưa có QA thị giác. Đã xác
@@ -307,3 +349,35 @@ Khác biệt so với Figma: <mô tả + node ID + đã ghi vào backlog chưa>
 ```
 
 **Quy tắc**: ô "chưa kiểm" **không** được để trống — ghi lý do. Wave có ô chưa kiểm không đạt định nghĩa "xong" ([06 §0.2](06_MIGRATION_ORDER.md)).
+
+---
+
+## 0⁺⁺⁺⁺. Wave 1C — QA thị giác CÒN NỢ TOÀN BỘ ⚠️
+
+Wave 1C **chưa chạy được app** (cần Docker + Postgres + API), nên **không ô nào** trong gói LIST
+được kiểm bằng mắt. Đã xác minh bằng 623 test + typecheck + lint + build.
+
+**14 route danh sách** cần gói **LIST** (S1–S6, S8, S9, S10 × {1440, 1280, 390}) + 360px.
+
+Thay đổi nhìn thấy được do Wave 1C tạo ra — soi đúng những chỗ này trước:
+
+| # | Thay đổi | Phạm vi |
+| --- | --- | --- |
+| 1 | Cột hành động **dính phải** lần đầu (trước chỉ 1/14 bảng có) | 14 bảng |
+| 2 | Nền cột dính phải đục + bóng phân tách khi cuộn | 14 bảng |
+| 3 | Cuộn ngang bắt đầu ở `minWidth` cố định thay vì `max-content` | 14 bảng (900–1180px) |
+| 4 | Cột có bề rộng tường minh → tỉ lệ cột đổi so với auto-layout | 14 bảng |
+| 5 | Tải lần đầu: spinner/bảng rỗng → **skeleton** | 14 bảng |
+| 6 | Nút hành động `type="link"` (xanh) → `type="text"` | 9 bảng |
+| 7 | Bộ lọc rời `ManagePageHeader extra` xuống hàng `FilterBar` | 6 trang |
+| 8 | ≤640px bộ lọc vào **bottom sheet** | 6 trang |
+| 9 | `/manage/admin/tenants`: tìm kiếm debounce 400ms thay vì Enter; URL bỏ `?status=all` | tenants |
+| 10 | `/manage/vehicles`: ô định danh dùng `EntityIdentity` (avatar 44px giữ nguyên) | vehicles |
+| 11 | `members` / `admin/staff`: avatar đổi sang thang `sm` (32px) | 2 trang |
+| 12 | 403 khu quản trị: `Result` → `PermissionState` (icon ổ khoá thay vì minh hoạ AntD) | admin/* |
+
+**Điểm rủi ro cao nhất**: `minWidth` là con số **suy diễn** cho 11/14 bảng (P25 chưa chốt) — nếu
+đặt quá rộng, bảng cuộn ngang sớm hơn cần thiết ở 1280px. Đây là ô QA số 1.
+
+**Không có `renderCard`**: ở ≤640px cả 14 bảng vẫn cuộn ngang. Phải kiểm **không tràn ngang
+`<body>` ở 360px** trên cả 14 route.

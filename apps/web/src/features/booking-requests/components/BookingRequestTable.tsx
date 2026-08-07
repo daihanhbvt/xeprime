@@ -1,14 +1,14 @@
 'use client';
 
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import { Button, Popconfirm, Space, Table } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Button, Popconfirm, Space } from 'antd';
 import {
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_META,
   type BookingRequestStatus,
   type PaginationMeta,
 } from '@xeprime/types';
+import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { formatDateTimeRange } from '@/lib/datetime';
 import type { BookingRequestItem } from '../types';
@@ -19,21 +19,26 @@ interface Props {
   meta: PaginationMeta;
   loading: boolean;
   actingId: string | null;
+  error?: { onRetry: () => void } | null;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onPageChange: (page: number, pageSize: number) => void;
 }
+
+/** Figma `127:1725` ghi 860px cho Booking Requests; code có 5 cột. */
+const MIN_TABLE_WIDTH = 940;
 
 export function BookingRequestTable({
   items,
   meta,
   loading,
   actingId,
+  error = null,
   onApprove,
   onReject,
   onPageChange,
 }: Props) {
-  const columns: ColumnsType<BookingRequestItem> = [
+  const columns: DataTableColumn<BookingRequestItem>[] = [
     {
       title: 'Khách hàng',
       key: 'customer',
@@ -50,6 +55,7 @@ export function BookingRequestTable({
     {
       title: 'Xe',
       key: 'vehicle',
+      width: 200,
       render: (_, row) => (
         <div>
           <div className={styles.name}>{row.vehicleName}</div>
@@ -60,6 +66,7 @@ export function BookingRequestTable({
     {
       title: 'Thời gian thuê',
       key: 'period',
+      width: 220,
       render: (_, row) => (
         <span className={styles.period}>{formatDateTimeRange(row.pickupAt, row.returnAt)}</span>
       ),
@@ -67,18 +74,24 @@ export function BookingRequestTable({
     {
       title: 'Trạng thái',
       key: 'status',
+      width: 150,
       render: (_, row) => (
         <StatusTag value={row.status as BookingRequestStatus} meta={BOOKING_REQUEST_STATUS_META} />
       ),
     },
     {
+      // CỐ Ý KHÔNG dùng `actionColumn`/`RowActions`: đây là cặp CTA duyệt/từ chối, không phải dải
+      // nút icon phụ. `RowActions` render `type="text"`, sẽ hạ nút "Duyệt" từ nút chính xuống
+      // chữ thường — mất hẳn thứ bậc thị giác của một quyết định tạo ra đơn thuê thật.
+      // Vẫn giữ `fixed: 'right'` + width cố định theo Figma `127:2060` R1–R2.
       title: '',
       key: 'actions',
       align: 'right',
+      fixed: 'right',
       width: 190,
       render: (_, row) =>
         row.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ? (
-          <Space size="small">
+          <Space size="small" onClick={(event) => event.stopPropagation()}>
             <Popconfirm
               title="Duyệt và tạo đơn thuê?"
               description="Sẽ giữ chỗ lịch cho khung giờ này."
@@ -86,7 +99,12 @@ export function BookingRequestTable({
               cancelText="Đóng"
               onConfirm={() => onApprove(row.id)}
             >
-              <Button type="primary" size="small" icon={<CheckOutlined />} loading={actingId === row.id}>
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckOutlined aria-hidden="true" />}
+                loading={actingId === row.id}
+              >
                 Duyệt
               </Button>
             </Popconfirm>
@@ -97,7 +115,12 @@ export function BookingRequestTable({
               cancelText="Đóng"
               onConfirm={() => onReject(row.id)}
             >
-              <Button danger size="small" icon={<CloseOutlined />} loading={actingId === row.id}>
+              <Button
+                danger
+                size="small"
+                icon={<CloseOutlined aria-hidden="true" />}
+                loading={actingId === row.id}
+              >
                 Từ chối
               </Button>
             </Popconfirm>
@@ -107,20 +130,15 @@ export function BookingRequestTable({
   ];
 
   return (
-    <Table<BookingRequestItem>
-      rowKey="id"
+    <DataTable<BookingRequestItem>
+      label="Danh sách yêu cầu thuê"
       columns={columns}
-      dataSource={items}
+      items={items}
+      minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      scroll={{ x: 'max-content' }}
-      pagination={{
-        current: meta.page,
-        pageSize: meta.limit,
-        total: meta.total,
-        showSizeChanger: true,
-        showTotal: (total) => `${total} yêu cầu`,
-        onChange: onPageChange,
-      }}
+      error={error ? { title: 'Không tải được danh sách yêu cầu', onRetry: error.onRetry } : null}
+      empty={{ title: 'Không có yêu cầu nào' }}
+      pagination={{ meta, onChange: onPageChange, totalLabel: (total) => `${total} yêu cầu` }}
     />
   );
 }

@@ -16,6 +16,7 @@
 | [06_MIGRATION_ORDER.md](06_MIGRATION_ORDER.md) | Làm theo thứ tự nào, rollback ra sao |
 | [07_VISUAL_QA_MATRIX.md](07_VISUAL_QA_MATRIX.md) | Kiểm tra gì ở mỗi breakpoint × mỗi state |
 | [08_DECISION_BACKLOG.md](08_DECISION_BACKLOG.md) | Câu hỏi phải có người trả lời trước khi code |
+| [09_LIST_PAGE_INVENTORY.md](09_LIST_PAGE_INVENTORY.md) | *(thêm ở Wave 1C-A)* Hồ sơ 14 bảng cấp trang: filter, sắp xếp, hành động, trạng thái, rủi ro, đợt rollout |
 
 Đầu vào Wave 0A: [FIGMA_SECTION_INDEX.md](FIGMA_SECTION_INDEX.md) · [FIGMA_NODE_CATALOG.md](FIGMA_NODE_CATALOG.md) (1057 node) · [FIGMA_AMBIGUITIES.md](FIGMA_AMBIGUITIES.md) (A1–A12).
 

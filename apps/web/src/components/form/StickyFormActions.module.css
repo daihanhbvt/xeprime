@@ -1,0 +1,61 @@
+.inline,
+.sticky {
+  display: flex;
+  min-height: 64px; /* Figma 62:1623 */
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-sm) 0;
+}
+
+/*
+ * `position: sticky` chứ KHÔNG `fixed`: sticky bám vào vùng cuộn gần nhất, nên thanh này ở lại
+ * trong form của nó. `fixed` sẽ neo vào viewport và nổi đè lên cả những trang khác khi form nằm
+ * trong drawer/modal đang cuộn.
+ */
+.sticky {
+  position: sticky;
+  z-index: 1;
+  bottom: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border);
+  /* Nền đục — nội dung form cuộn bên dưới không được nhìn xuyên qua thanh hành động. */
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-raised);
+}
+
+.left {
+  display: flex;
+  gap: var(--xp-space-sm);
+}
+
+.right {
+  display: flex;
+  margin-left: auto;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  /* Safe-area đáy iPhone: không có dòng này thì nút nằm dưới thanh gạt home. */
+  .sticky {
+    padding-bottom: calc(var(--xp-space-sm) + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Nút full-width ở mobile theo Figma (23:1872, 65:3069); hành động phá huỷ xuống hàng riêng
+     để không bấm nhầm khi ngón tay với qua. */
+  .inline,
+  .sticky {
+    flex-wrap: wrap;
+  }
+
+  .left,
+  .right {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .right :global(.ant-btn) {
+    flex: 1;
+    min-height: var(--xp-touch-target-min);
+  }
+}

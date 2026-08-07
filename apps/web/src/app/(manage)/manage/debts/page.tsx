@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Empty, Result, Segmented, Spin } from 'antd';
+import { Segmented, Spin } from 'antd';
 import { Suspense, useState } from 'react';
 import { PERMISSION } from '@xeprime/types';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -51,29 +51,15 @@ function DebtsView() {
         />
       </div>
 
-      {isError && !data ? (
-        <Result
-          status="error"
-          title="Không tải được công nợ"
-          subTitle="Có lỗi khi lấy dữ liệu. Vui lòng thử lại."
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
-            </Button>
-          }
-        />
-      ) : !isFetching && items.length === 0 ? (
-        <Empty className={styles.state} description="Không có đơn nào còn nợ" />
-      ) : (
-        <DebtTable
-          items={items}
-          meta={meta}
-          loading={isFetching}
-          canRecord={canRecord}
-          onCollect={setCollect}
-          onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-        />
-      )}
+      <DebtTable
+        items={items}
+        meta={meta}
+        loading={isFetching}
+        canRecord={canRecord}
+        error={isError && !data ? { onRetry: () => void refetch() } : null}
+        onCollect={setCollect}
+        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+      />
 
       {collect ? (
         <RecordPaymentModal

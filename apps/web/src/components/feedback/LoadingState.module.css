@@ -1,0 +1,53 @@
+.root {
+  width: 100%;
+}
+
+/* Chỉ đọc bằng trình đọc màn hình. Không dùng `display: none` — phần tử ẩn kiểu đó bị loại khỏi
+   cây khả truy cập, tức là nhãn sẽ không bao giờ được đọc. */
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Chưa biết bố cục → spinner ở giữa một khối cao cố định, để trang không co lại rồi bung ra. */
+.page {
+  display: flex;
+  min-height: 220px;
+  align-items: center;
+  justify-content: center;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-sm) 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-xs);
+}
+
+/* Chiều cao xấp xỉ một hàng bảng thật (Figma 134:2011 R3 — skeleton phải giữ kích thước gần đúng). */
+.row {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.card {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}

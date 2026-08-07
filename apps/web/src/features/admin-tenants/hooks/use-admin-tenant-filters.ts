@@ -1,37 +1,20 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { positiveIntParam, useUrlFilters } from '@/hooks/use-url-filters';
 import type { AdminTenantFilters } from '../types';
 
-/** Filter danh sách gian hàng ở URL searchParams (ADR 0004). Mặc định xem tất cả. */
+/**
+ * Filter danh sách gian hàng ở URL searchParams (ADR 0004). Mặc định xem tất cả.
+ *
+ * Dời sang `useUrlFilters` ở Wave 1C-D. **Một thay đổi thấy được**: bản copy cũ chỉ xoá
+ * `undefined`/`null`/`''`, nên chọn "Tất cả" để lại `?status=all` trong URL. Hook chung coi
+ * `'all'` là sentinel không-lọc và xoá hẳn — link sạch hơn, và đồng nhất với 12 danh sách còn
+ * lại. Đã nêu trong test đặc tả của trang.
+ */
 export function useAdminTenantFilters() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const filters = useMemo<AdminTenantFilters>(() => {
-    const page = Number(searchParams.get('page'));
-    return {
-      status: searchParams.get('status') ?? 'all',
-      q: searchParams.get('q') ?? undefined,
-      page: Number.isFinite(page) && page > 0 ? page : undefined,
-    };
-  }, [searchParams]);
-
-  const setFilters = useCallback(
-    (patch: Partial<AdminTenantFilters>) => {
-      const params = new URLSearchParams(searchParams.toString());
-      for (const [key, value] of Object.entries(patch)) {
-        if (value === undefined || value === null || value === '') params.delete(key);
-        else params.set(key, String(value));
-      }
-      if (!('page' in patch)) params.delete('page');
-      const qs = params.toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [router, pathname, searchParams],
-  );
-
-  return { filters, setFilters };
+  return useUrlFilters<AdminTenantFilters>((sp) => ({
+    status: sp.get('status') ?? 'all',
+    q: sp.get('q') ?? undefined,
+    page: positiveIntParam(sp, 'page'),
+  }));
 }

@@ -417,6 +417,225 @@ Cả ba tự biến mất khi file chuyển sang `ResponsiveDialog`/`DetailDrawe
 
 ---
 
+## I. Phát sinh từ Wave 1C — Batch 1C.0 (kiểm kê, 07/08/2026)
+
+### P23 — Frame `127:2339` khai sai hiện trạng URL-state 🟢 *(tự đóng)*
+
+`127:2339` (12.30 Global Filter Standard) ghi ở cột **URL STATE** giá trị `⚠ Design Target` cho
+**9/11 module** và kết luận: *"Đây là Design Targets — code hiện tại CHƯA implement URL state cho
+filters"*.
+
+**Sai.** Cả **13/13** hook filter đều ghi/đọc `searchParams` — đó là ADR 0004, đã chạy từ trước
+Wave 0B. `useUrlFilters` chỉ là bản dùng chung; 10 hook còn lại có **bản copy** của cùng hành vi,
+không phải thiếu hành vi.
+
+Đây là ca thứ ba frame section 12 sai về hiện trạng (sau `122:2305` ở [P13](#p13--độ-tin-cậy-frame-audit-section-12--đã-đóng)
+và `122:1837`). **Củng cố quy tắc [00 §9.1](00_IMPLEMENTATION_OVERVIEW.md)**: frame section 12 chỉ
+dùng lấy *quy chuẩn hành vi mong muốn*, **không** lấy *đánh giá hiện trạng*. Không cần hỏi ai.
+
+### P24 — Chip bộ lọc + "Xóa tất cả" + số kết quả: tính năng mới hay trong phạm vi 1C? 🟠
+
+`127:2339` quy tắc 3–5 và 9 yêu cầu: applied filters hiện dạng **chip** dưới ô tìm kiếm · mỗi chip
+có nút ✕ riêng · nút "Xóa tất cả bộ lọc" khi ≥2 filter active · **số kết quả luôn hiển thị**
+("Hiển thị 1-10 / 245").
+
+**Trong code hôm nay không có chip ở bất kỳ danh sách nào.** Nút xoá lọc có (một nút "Xoá bộ lọc"
+trong `Empty`), nhưng chỉ xuất hiện khi **0 kết quả** — không phải khi có kết quả. Số tổng hiện
+qua `showTotal` của AntD ("245 xe"), khác câu chữ Figma.
+
+**Đây là UI mới, không phải migration.** Nguyên tắc [06 §0.4](06_MIGRATION_ORDER.md) cấm code mục
+loại D/E/F, và rule 3 của Wave 1C cấm "implement unrelated missing features".
+
+**Ba lựa chọn**: (a) `FilterBar` **có** khe chip nhưng Wave 1C để trống, bật ở wave module ·
+(b) làm chip luôn trong 1C.9 (14 route đổi hình thức cùng lúc) · (c) bỏ, ghi nợ.
+
+**Khuyến nghị kỹ thuật**: (a). **Nếu không trả lời**: (a).
+
+### P25 — 11/14 bảng không có đặc tả cột 🟠
+
+`127:1725` cho min/preferred width, align, wrap, flex, sticky **đầy đủ cho đúng 3 bảng**: Fleet
+Vehicles, Booking Requests, Bookings. Bảng tổng `MIN_TABLE_WIDTH` phủ thêm 7 tên nữa (Calendar,
+Debts, Members, Approval Queue, Platform Bookings, Audit Log, Platform Staff) nhưng **chỉ có tổng**,
+không có từng cột. Còn lại (Receipts, Tenants, Platform Vehicles, Platform Customers, Plans) **không
+có gì**.
+
+**Cần chốt**: suy width cho 11 bảng còn lại theo quy tắc của 3 bảng có spec, hay chờ thiết kế?
+
+**Nếu không trả lời**: `DataTable` **không** áp width mặc định; mỗi bảng khai `minWidth` khi migrate
+ở wave module của nó, dùng thang từ 3 bảng có spec (identity 140–180 · tiền 100–120 · ngày 90–100 ·
+status 100–120 · actions 100). Ghi rõ giá trị nào là suy diễn.
+
+### P26 — 7/14 bảng không có ánh xạ thẻ mobile 🟠
+
+`127:2257` ánh xạ card cho **7 bảng** (Fleet, Booking Requests, Bookings, Debts, Members, Approval
+Queue, Platform Staff). `127:1725` lại ghi `MOBILE: Card` cho **10 bảng**. Không có ánh xạ nào cho
+Receipts, Tenants, Platform Vehicles, Platform Customers, Audit Log, Plans, Platform Bookings.
+
+Chuyển bảng sang thẻ là **đổi hành vi ở 14 route** ([06](06_MIGRATION_ORDER.md) rủi ro CAO).
+
+**Nếu không trả lời**: `DataTable` nhận `renderCard` **tuỳ chọn**; bảng nào Figma có ánh xạ thì
+migrate ở wave module của nó, bảng nào không có thì **giữ cuộn ngang** và ghi lý do — đúng
+checkpoint 1C ("mọi bảng có `renderCard` hoặc lý do ghi rõ tại sao không").
+
+### P27 — Mức tuân thủ a11y bảng: `role="grid"` tới đâu? 🟠
+
+`130:1658` yêu cầu `role="grid"`, `aria-sort`, **điều hướng Arrow Up/Down giữa hàng**, `Home/End`,
+`aria-live` số kết quả, `caption`/`aria-labelledby`, skip-link "Nhảy đến bảng dữ liệu".
+
+AntD `<Table>` render `role="table"`, **không** có roving tabindex và không nhận `caption`. Làm đủ
+`role="grid"` + phím mũi tên nghĩa là **tự quản lý focus trên thân bảng của AntD** — rủi ro cao,
+vượt xa "một tầng bọc".
+
+**Tách làm hai mức**:
+- **Mức 1 (làm được ở 1C, rẻ, không đụng nội thất AntD)**: `aria-label`/`aria-labelledby` cho bảng ·
+  `aria-label` mọi nút icon · `aria-live="polite"` cho số kết quả · `aria-sort` khi có cột sort.
+- **Mức 2 (không làm ở 1C)**: `role="grid"` + roving tabindex + Arrow/Home/End + skip-link.
+
+**Khuyến nghị**: mức 1 ở Wave 1C, mức 2 vào Wave 5 (`5.5 Audit a11y`) hoặc một PR riêng.
+**Nếu không trả lời**: mức 1.
+
+### P28 — `127:2463` mobile filter sheet dùng Hệ B 🟢 *(đóng theo P15/P20)*
+
+Sheet spec ghi gold **`#D4AF37`**, bo góc **16px**, backdrop `rgba(26,22,18,0.4)`, trần `85vh`,
+handle bar `#E8E4DD`, header 56px, nút Áp dụng 48px.
+
+`#D4AF37` và bo góc 16px thuộc **Hệ B** ([P15](#p15--hai-bộ-giá-trị-token-trong-cùng-file-figma)) →
+loại theo đúng lý do đã dùng ở [P20](#p20--đặc-tả-overlay-figma-mâu-thuẫn-với-token-wave-1a).
+Trần `85vh` ≈ `SHEET_MAX_HEIGHT = '85dvh'` đã có trong `ResponsiveDialog` (Wave 1B) — **khớp**.
+Nút 48px = `controlHeight` bậc 40 + padding, liên quan [P16](#p16--chiều-cao-control-mặc-định-32-hay-40).
+
+**Kết luận**: `FilterBar` mobile **tái dùng `ResponsiveDialog` size `sm` / `mobileMode="sheet"`**,
+không tự chế sheet mới (rule 10 của Wave 1C). Không cần hỏi ai.
+
+### P29 — Timeout 10 giây khi tải lâu 🟡
+
+`134:2011` quy tắc 8: sau **10s** hiển thị *"Tải lâu hơn bình thường. Bạn có thể thử lại."* kèm nút
+retry.
+
+Không có cơ chế timeout nào trong repo; TanStack Query không có timeout mặc định và `staleTime` 30s
+không liên quan. Đây là **hành vi mới**, cần một `useEffect` hẹn giờ trong `LoadingState`.
+
+**Nếu không trả lời**: **không làm** ở 1C — `LoadingState` chỉ hiển thị, không đếm giờ. Ghi nợ.
+
+### P30 — Câu chữ số kết quả lệch 🟢
+
+Figma `130:1682` yêu cầu caption *"Danh sách xe — 245 kết quả"*; `127:2354` yêu cầu *"Hiển thị 1-10
+/ 245"*. Code hiện dùng `showTotal: (total) => `${total} xe`` → **"245 xe"**, khác cả hai, và **khác
+nhau giữa các bảng** (`245 xe` / `245 đơn` / …).
+
+`DataTable` sẽ chuẩn hoá một khuôn. **Nếu không trả lời**: giữ khuôn hiện tại (`{total} {đơn vị}`)
+và cho `DataTable` nhận `totalLabel` — đổi câu chữ 14 bảng cùng lúc là thay đổi nhìn thấy được,
+không thuộc mục tiêu 1C.
+
+### D15 — Lỗi/khoảng cách phát hiện khi kiểm kê (KHÔNG sửa ở 1C.0)
+
+| # | Nội dung | Ở đâu | Xử ở bước |
+| --- | --- | --- | --- |
+| **D15.1** | **13/14 bảng thiếu `fixed: 'right'`** trên cột hành động dù bảng nào cũng bật `scroll={{x:'max-content'}}` — cuộn ngang là mất luôn nút thao tác. Vi phạm `127:2060` R1 | mọi `*Table.tsx` trừ `VehicleTable` | 1C.4 |
+| **D15.2** | 5 nút icon thiếu tên khả truy cập | `VehicleTable` ×3 (`Tooltip` không thay được `aria-label`) · `members/page` ×1 · `admin/staff/page` ×1 | 1C.4 |
+| **D15.3** | **10 inline style** trong `components/form/` (`marginBottom: 14`, `width: '100%'`) — vi phạm CLAUDE.md §5 | `NumberField`, `TextAreaField`, `DateTimeField`, `SelectField`, `TextField`, `AutoCompleteField` | 1C.10 (khi chạm file) |
+| **D15.4** | Không có bóng gợi ý còn cột bên phải (`127:2097` R5) ở bất kỳ bảng nào | 14 bảng | 1C.3 |
+| **D15.5** | Trạng thái rỗng **thay thế cả bảng** → mất header + mất luôn thanh phân trang; `134:2011` R3 cấm nhảy bố cục | 14 `page.tsx` | 1C.3 — quyết định: `DataTable` đặt empty **trong thân bảng** hay thay cả bảng? Xem P31 |
+| **D15.6** | `admin/plans` bị bỏ sót khỏi danh sách D9 và khỏi phạm vi file Wave 1C ở [06](06_MIGRATION_ORDER.md) | `admin/plans/page.tsx` | 1C.6 |
+
+### Bổ sung từ Batch 1C-A (kiểm kê + test đặc tả)
+
+**P23 mở rộng — `127:2339` sai thêm hai ô về hiện trạng.** Frame ghi Members = *"❌ không có
+search"* và 07 Finance = *"✅ có search"*. **Cả hai đều ngược**: `members/page.tsx` **có** ô tìm
+kiếm, `/manage/receipts` **không có**. Cùng loại lỗi với cột URL-STATE. Kết luận không đổi: frame
+section 12 chỉ dùng lấy *quy chuẩn mong muốn*, không lấy *đánh giá hiện trạng*.
+
+**P27 thu hẹp — `aria-sort` hiện không có đối tượng áp dụng.** Đo được **0/14 bảng có `sorter`**;
+không một header cột nào sắp xếp được. Sắp xếp chỉ tồn tại ở `vehicles` và `bookings` dưới dạng
+**một `Select` trong thanh lọc** (tham số `sort` gửi lên server). Vậy "mức 1" của P27 rút còn:
+tên khả truy cập cho bảng · `aria-label` nút icon · `aria-live` số kết quả.
+
+**D15.7 (MỚI) — bấm nút trong cột hành động cũng kích hoạt click của cả hàng.**
+`VehicleTable` đặt `onRow.onClick` trên `<tr>` nhưng cột hành động **không** `stopPropagation`.
+Đo bằng test: bấm "Sửa" sinh ra **hai** lần điều hướng theo thứ tự
+`/manage/vehicles/{id}/edit` → `/manage/vehicles/{id}`. Điều hướng cuối cùng thắng, nên **nút Sửa
+thực tế đưa người dùng tới trang chi tiết, không phải trang sửa**. Đây là lỗi đang chạy, không phải
+lỗi do migration. Sửa ở **1C.4** khi dựng `RowActions` (thêm `stopPropagation`), ghi rõ trong PR vì
+là **đổi hành vi thấy được**. Đã khoá hiện trạng bằng test đặc tả.
+
+**D15.8 (MỚI) — bẫy test: khẳng định phủ định đúng một cách vô nghĩa.**
+Bản đầu của ba bộ test đặc tả dùng `expect(url).not.toContain('page=')` **một mình** để kiểm đường
+ghi URL. `Select` của AntD 6 không chốt được lựa chọn dưới jsdom → `router.replace` không chạy →
+URL là chuỗi rỗng → phép phủ định đúng, **test xanh mà không kiểm gì**. Đã phát hiện và sửa trong
+cùng batch. **Quy tắc từ nay**: mọi test kiểm đường ghi URL phải kèm một khẳng định **khẳng định**
+(`toHaveBeenCalledTimes` / `toContain`). Ghi ở [09 §7](09_LIST_PAGE_INVENTORY.md).
+
+### Bổ sung từ Batch 1C-C (nền tảng filter + form)
+
+**P35 (MỚI) — `StickyFormActions` phải được nói cho biết mình nằm trong overlay 🟢**
+Không có cách nào tự phát hiện đang ở trong `ResponsiveDialog`/`DetailDrawer` mà không sửa hai
+overlay đó (ngoài phạm vi 1C-C). Giải pháp: prop `variant="inline"` **bắt buộc truyền tay** cho
+`BookingFormDrawer`, `ReceiptFormDrawer`, `PlanFormModal` khi migrate ở đợt rollout — quên thì ra
+**hai hàng nút dính cùng lúc**. Nếu muốn tự động: thêm một context nhỏ trong hai overlay, làm ở
+đợt sau.
+
+**P36 (MỚI) — `DateTimeField range` chưa có consumer 🟢**
+Đã dựng theo chỉ thị 1C-C, có 13 test, nhưng **0 form RHF nào cần khoảng ngày hôm nay**. Nhu cầu
+khoảng ngày có thật lại nằm ở **lọc** (`receipts` `from`/`to`, `admin/audit`) — chỗ đó dùng
+`FilterBar` field `dateRange`, không phải RHF. Ghi lại để đợt sau biết: nếu tới Wave 5 vẫn không
+consumer nào, cân nhắc bỏ thay vì nuôi code chết.
+
+**D15.12 (MỚI) — `page=0` / `page=-1` từng lọt qua ở `use-receipt-filters`.**
+Bản copy dùng `Number.isFinite` nên `?page=0` cho ra `page: 0` gửi lên API. `positiveIntParam` của
+hook chung trả `undefined`. Sửa kèm theo lần dời; **8 bản copy còn lại vẫn dính** cho tới khi được
+dời.
+
+### Bổ sung từ Batch 1C-B (dựng 6 primitive)
+
+**P32 (MỚI) — cố ý lệch `130:1683`: dùng `role="status"` thay vì `aria-live="assertive"` 🟢**
+Figma yêu cầu `aria-live="assertive"` cho trạng thái rỗng của bảng. `EmptyState` **dùng
+`role="status"`** (tương đương `polite`) cho `empty`/`no-results`, và `role="alert"` cho `error`.
+Lý do: `assertive` **ngắt lời** trình đọc màn hình, dành cho việc khẩn; một danh sách rỗng sau khi
+lọc không phải việc khẩn, và người dùng vừa tự tay bấm lọc nên đã biết mình gây ra nó. Ghi lại thay
+vì im lặng lệch chuẩn. **Nếu thiết kế muốn đúng Figma**: đổi một dòng trong `EmptyState`.
+
+**P33 (MỚI) — cột hành động canh phải (code) vs Center (Figma `127:1725`) 🟢**
+`actionColumn()` đặt `align: 'right'`, giữ đúng cách **14/14** bảng đang hiển thị hôm nay. Figma ghi
+`Center`. Đổi sang center là thay đổi thấy được ở mọi bảng cùng lúc — cùng loại với P22, để lại cho
+đợt QA thị giác quyết. **Nếu không trả lời**: giữ `right`.
+
+**P34 (MỚI) — bề rộng cột hành động mặc định 100px 🟢**
+Theo `127:2060` R2 (100 icon / 120 text). Các bảng hiện dùng 130 · 190 · 60 · 70 · 70 — **không giá
+trị nào khớp**. `actionColumn()` mặc định 100 và cho truyền `width`. Khi migrate ở 1C-C, bảng nào
+dùng nút có chữ (`BookingRequestTable` 190px cho "Duyệt"/"Từ chối") **phải truyền tay**, nếu không
+nút sẽ bị bó.
+
+**D15.9 (MỚI) — AntD 6 đổi tên class cột dính: `-fix-right` → `-fix-end`.**
+Bất kỳ CSS nào trong repo còn nhắm `ant-table-cell-fix-right` đều **đang không có tác dụng**. Đã
+sửa trong `DataTable.module.css`; cần rà lại các `.module.css` khác ở đợt sau.
+
+**D15.10 (MỚI) — icon AntD làm bẩn accessible name.**
+`@ant-design/icons` render `role="img"` kèm `aria-label` là tên icon ("eye", "delete"). Nút/menu
+item **có chữ** vì thế nhận tên `"eye Thu tiền"`. `RowActions` bọc `aria-hidden` để chữa. Mẫu này
+áp dụng cho **mọi** nút có cả icon lẫn chữ trong repo — chưa rà hết ngoài `RowActions`.
+
+**D15.11 (MỚI) — tooltip trên nút `disabled` không bao giờ hiện.**
+`pointer-events: none` của nút disabled nuốt sự kiện chuột, nên lời giải thích "vì sao không bấm
+được" không tới người dùng. `RowActions` bọc thêm một `span` để tooltip có chỗ bám. Chỗ nào khác
+trong repo đang bọc `Tooltip` quanh nút disabled cũng dính lỗi này.
+
+### P31 — Trạng thái rỗng: trong thân bảng hay thay cả bảng? 🟡
+
+Hôm nay 14 `page.tsx` render `<Empty>` **thay cho** `<Table>` khi `items.length === 0`. Hệ quả:
+mất header cột, mất phân trang, và bố cục nhảy khi dữ liệu về.
+
+AntD hỗ trợ sẵn `locale.emptyText` → empty nằm **trong** thân bảng, header và phân trang giữ nguyên.
+Đúng `134:2011` R3 (không nhảy bố cục) và `130:1683` (`aria-live` trên empty của bảng).
+
+Nhưng đây là **thay đổi nhìn thấy được ở 14 route**, và ở trạng thái rỗng-không-lọc thì header cột
+rỗng trông lạ.
+
+**Khuyến nghị**: `DataTable` phân biệt — **no-results** (có filter) → trong thân bảng, giữ header để
+người dùng thấy mình đang lọc cái gì; **empty** (chưa có dữ liệu) → thay cả bảng như hiện tại.
+**Nếu không trả lời**: theo khuyến nghị, ghi rõ trong PR.
+
+---
+
 ## Việc tiếp theo
 
 **Trước khi Wave 1A bắt đầu, cần:**
@@ -440,4 +659,56 @@ Cả ba tự biến mất khi file chuyển sang `ResponsiveDialog`/`DetailDrawe
 | **Kỹ thuật** | **P5** — 4 token `*-bg` đã đọc và khai báo (`#f0fdf4`/`#fff7ed`/`#fef2f2`/`#eff6ff`); còn phải quyết `StatusTag` có bỏ preset AntD không, trước Wave 1C |
 | **Kỹ thuật** | Inspect A2 để **P2** tự đóng nếu bộ 2 chỉ là nhãn nhóm |
 
-**Có thể hoãn tới đúng wave dùng đến**: P4 (→3I) · P9/P10 (→3L) · P11 (→3I/3J) · P12 (→4) · F1–F8, F10–F12 (→wave module tương ứng).
+**Sau Batch 1C.0 — cần trước khi viết component ở 1C.1:**
+
+| Ai | Việc | Mặc định nếu im lặng |
+| --- | --- | --- |
+| **Chủ dự án** | **P24** — chip bộ lọc là phạm vi 1C hay tính năng mới | `FilterBar` chừa khe, không làm chip |
+| **Thiết kế** | **P25** — width cột cho 11 bảng chưa có spec | Không áp width mặc định, suy theo thang 3 bảng có spec |
+| **Chủ dự án + Thiết kế** | **P26** — 7 bảng chưa có ánh xạ thẻ mobile | `renderCard` tuỳ chọn, bảng thiếu spec giữ cuộn ngang |
+| **Kỹ thuật** | **P27** — a11y bảng mức 1 hay mức 2 | Mức 1 |
+| **Kỹ thuật** | **P31** — empty trong thân bảng hay thay cả bảng | No-results trong thân, empty thay cả bảng |
+| **Kỹ thuật** | **P5** — vẫn còn mở, chặn 1C.7 (`<Tag>` trần → `StatusTag`) | Giữ preset AntD |
+| ~~Kỹ thuật~~ | ~~**P23**, **P28**~~ | ✅ tự đóng ở 1C.0 |
+
+**Có thể hoãn tới đúng wave dùng đến**: P4 (→3I) · P9/P10 (→3L) · P11 (→3I/3J) · P12 (→4) · P29/P30 (→wave module) · F1–F8, F10–F12 (→wave module tương ứng).
+
+---
+
+## J. Kết toán cuối Wave 1C (1C-E · 07/08/2026)
+
+### Quyết định VẪN MỞ, chặn wave sau
+
+| ID | Trạng thái sau Wave 1C |
+| --- | --- |
+| **P5** — `StatusTag` giữ preset AntD hay dùng token `*-bg` | 🟠 **VẪN MỞ.** Wave 1C **không đổi màu status nào**. Hệ quả trực tiếp: nhãn vai trò ở `members`/`admin/staff` vẫn là `<Tag>` trần vì `@xeprime/types` không có `TENANT_ROLE_META`/`PLATFORM_ROLE_META` — tạo meta = chọn màu = chạm đúng câu hỏi P5 |
+| **P25** — bề rộng cột cho bảng chưa có spec Figma | 🟠 **VẪN MỞ, nay có hệ quả thật.** 11/14 `minWidth` là **suy diễn** (900–1180px). Đặt sai thì bảng cuộn ngang sớm hơn cần ở 1280px → **ô QA thị giác số 1** |
+| **P26** — ánh xạ thẻ mobile | 🟠 **VẪN MỞ.** `renderCard` **0/14**; ở ≤640px cả 14 bảng vẫn cuộn ngang |
+| **P24** — chip bộ lọc | 🟢 giữ nguyên quyết định: `FilterBar` chừa khe, không dựng chip |
+| **P27** — mức a11y bảng | 🟢 mức 1 đã làm (tên vùng, `aria-label` nút, `role="region"`); mức 2 (`role="grid"`, phím mũi tên) chưa |
+| **P31** — rỗng trong thân bảng hay thay cả bảng | 🟢 đã chốt theo khuyến nghị: `EmptyState` **thay cả bảng** cho cả empty lẫn no-results |
+| **P32–P36** | 🟢 giữ nguyên như đã ghi ở 1C-B/1C-C |
+| **P1** (sidebar) · **P2** · **P3** · **P15** · **P18** | 🔴/🟠 **không đụng ở Wave 1C** — vẫn chặn 1D và các wave sau |
+
+### Loại trừ đã CHỐT ở Wave 1C (không mở lại nếu không có lý do mới)
+
+1. `use-calendar-filters` — lịch không phân trang.
+2. `use-marketplace-filters` + `FilterPanel` — ngữ nghĩa facet.
+3. `use-approval-filters`, `use-booking-request-filters` — `status` mặc định `pending`, không phải
+   `'all'`; `useUrlFilters` sẽ làm "Tất cả" âm thầm quay về `pending`.
+4. Cột hành động `BookingRequestTable` — cặp CTA chính, không phải dải nút phụ.
+5. `<Table>` trong `AdminCustomerDetailDrawer` — bảng con trong panel chi tiết.
+6. Nhãn vai trò + nhãn khuyến mãi — không phải trạng thái nghiệp vụ (liên quan P5).
+
+### Nợ chuyển tiếp
+
+| Nợ | Ghi chú |
+| --- | --- |
+| `StickyFormActions` 0 consumer | 5 form dài chờ; `VehicleForm` bị chỉ thị 1C-E cấm đụng → wave form |
+| `renderCard` 0/14 | chờ P26 |
+| D9 — 3 bảng dựng trong `page.tsx` | việc cấu trúc |
+| `FilterBar` cho 8 trang còn lại | bộ lọc vẫn nội tuyến, chạy đúng |
+| **T1** — 9 biến CSS chết ở `CalendarScheduler` | 🔴 **vẫn chưa sửa**, sang wave lịch |
+| D14.4 — `SelectField` chưa có `htmlFor` | 3 field kia đã sửa ở 1C-C |
+| D14.5 — xoá danh mục thu/chi không xác nhận | chưa sửa |
+| **QA thị giác Wave 1A + 1B + 1C** | **toàn bộ còn nợ** — chưa lần nào chạy được app |

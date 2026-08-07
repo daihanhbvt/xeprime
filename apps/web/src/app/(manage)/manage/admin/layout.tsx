@@ -1,8 +1,9 @@
 'use client';
 
-import { Button, Result, Spin } from 'antd';
+import { Button, Spin } from 'antd';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { PermissionState } from '@/components/feedback/PermissionState';
 import { ROUTES } from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import styles from './admin-layout.module.css';
@@ -32,11 +33,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   if (!user.platformRole) {
     return (
-      <Result
-        status="403"
+      // Wave 1C-E: dùng `PermissionState` dùng chung thay `Result status="403"` tự dựng.
+      // Câu chữ và hai lối thoát giữ nguyên; `134:2482` cấm 403 điều hướng về đăng nhập.
+      <PermissionState
+        kind="forbidden"
         title="Không có quyền truy cập"
-        subTitle="Khu quản trị nền tảng chỉ dành cho nhân sự XePrime. Tài khoản của bạn không có quyền này."
-        extra={
+        description="Khu quản trị nền tảng chỉ dành cho nhân sự XePrime. Tài khoản của bạn không có quyền này."
+        action={
           <div className={styles.actions}>
             <Link href={ROUTES.MANAGE.ROOT}>
               <Button type="primary">Về trang quản lý</Button>

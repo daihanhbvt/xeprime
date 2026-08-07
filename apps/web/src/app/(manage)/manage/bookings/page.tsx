@@ -1,7 +1,7 @@
 'use client';
 
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Empty, Input, Result, Select, Spin } from 'antd';
+import { Button, Input, Select, Spin } from 'antd';
 import { Suspense, useState } from 'react';
 import { PERMISSION } from '@xeprime/types';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -90,44 +90,29 @@ function BookingsView() {
         />
       </div>
 
-      {isError && !data ? (
-        <Result
-          status="error"
-          title="Không tải được danh sách đơn"
-          subTitle="Có lỗi khi lấy dữ liệu. Vui lòng thử lại."
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
+      <BookingTable
+        items={items}
+        meta={meta}
+        loading={isFetching}
+        error={isError && !data ? { onRetry: () => void refetch() } : null}
+        filtered={hasFilters}
+        onClearFilters={() => setFilters({ q: undefined, status: undefined })}
+        emptyAction={
+          canCreate ? (
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+              Tạo đơn đầu tiên
             </Button>
-          }
-        />
-      ) : !isFetching && items.length === 0 ? (
-        hasFilters ? (
-          <Empty className={styles.state} description="Không tìm thấy đơn khớp bộ lọc">
-            <Button onClick={() => setFilters({ q: undefined, status: undefined })}>
-              Xoá bộ lọc
-            </Button>
-          </Empty>
-        ) : (
-          <Empty className={styles.state} description="Gian hàng chưa có đơn thuê nào">
-            {canCreate ? (
-              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-                Tạo đơn đầu tiên
-              </Button>
-            ) : null}
-          </Empty>
-        )
-      ) : (
-        <BookingTable
-          items={items}
-          meta={meta}
-          loading={isFetching}
-          onView={(id) => setDetailId(id)}
-          onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-        />
-      )}
+          ) : undefined
+        }
+        onView={(id) => setDetailId(id)}
+        onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
+      />
 
-      <BookingDetailDrawer bookingId={detailId} onClose={() => setDetailId(null)} onEdit={openEdit} />
+      <BookingDetailDrawer
+        bookingId={detailId}
+        onClose={() => setDetailId(null)}
+        onEdit={openEdit}
+      />
       <BookingFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
     </div>
   );

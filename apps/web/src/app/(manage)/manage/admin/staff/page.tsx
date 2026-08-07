@@ -1,8 +1,7 @@
 'use client';
 
-import { DeleteOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons';
-import { App, Avatar, Button, Empty, Input, Popconfirm, Result, Select, Table, Tag } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { App, Button, Select, Tag } from 'antd';
 import { useState } from 'react';
 import {
   PLATFORM_ROLE,
@@ -10,7 +9,10 @@ import {
   type MembershipStatus,
   type PlatformRole,
 } from '@xeprime/types';
+import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
+import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { getErrorMessage } from '@/services/api-client';
@@ -26,7 +28,19 @@ import { MEMBERSHIP_STATUS_META } from '@/features/members/constants';
 import type { Staff, StaffFilters, UpdateStaffRoleInput } from '@/features/admin-staff/types';
 import styles from './staff-page.module.css';
 
-const ROLE_FILTER_OPTIONS = [{ value: 'all', label: 'Tất cả vai trò' }, ...PLATFORM_ROLE_OPTIONS];
+const FILTER_FIELDS: FilterField[] = [
+  { kind: 'search', key: 'q', label: 'Tìm nhân sự', placeholder: 'Tìm theo tên hoặc email' },
+  {
+    kind: 'select',
+    key: 'roleKey',
+    label: 'Vai trò',
+    options: [{ value: 'all', label: 'Tất cả vai trò' }, ...PLATFORM_ROLE_OPTIONS],
+    allowClear: false,
+  },
+];
+
+/** Figma `127:1725` ghi 680px cho bảng Platform Staff; code có 4 cột nên rộng hơn một chút. */
+const MIN_TABLE_WIDTH = 740;
 
 export default function AdminStaffPage() {
   const { message } = App.useApp();
@@ -63,23 +77,30 @@ export default function AdminStaffPage() {
     });
   }
 
-  const columns: ColumnsType<Staff> = [
+  const addButton = (
+    <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
+      Thêm nhân sự
+    </Button>
+  );
+
+  const columns: DataTableColumn<Staff>[] = [
     {
       title: 'Nhân sự',
       key: 'staff',
       render: (_, row) => (
-        <div className={styles.cell}>
-          <Avatar src={row.avatarUrl ?? undefined} icon={<UserOutlined />}>
-            {(row.displayName || '?').charAt(0).toUpperCase()}
-          </Avatar>
-          <div>
-            <div className={styles.name}>
+        <EntityIdentity
+          kind="person"
+          size="sm"
+          imageUrl={row.avatarUrl}
+          initialSource={row.displayName}
+          name={
+            <>
               {row.displayName}
               {row.userId === me?.id ? <span className={styles.you}> (bạn)</span> : null}
-            </div>
-            <div className={styles.meta}>{row.email ?? '—'}</div>
-          </div>
-        </div>
+            </>
+          }
+          subtitle={row.email ?? '—'}
+        />
       ),
     },
     {
@@ -93,12 +114,14 @@ export default function AdminStaffPage() {
           <Select
             size="small"
             className={styles.roleSelect}
+            aria-label={`Vai trò của ${row.displayName}`}
             value={row.roleKey}
             options={PLATFORM_ROLE_OPTIONS}
             loading={updateRole.isPending && updateRole.variables?.userId === row.userId}
             onChange={(value: string) => handleRoleChange(row.userId, value)}
           />
         ) : (
+          // Nhãn vai trò, KHÔNG phải trạng thái nghiệp vụ — không chuyển sang `StatusTag` (P5).
           <Tag color={row.roleKey === PLATFORM_ROLE.PLATFORM_ADMIN ? 'gold' : 'default'}>
             {PLATFORM_ROLE_LABEL[row.roleKey as PlatformRole] ?? row.roleKey}
           </Tag>
@@ -108,97 +131,57 @@ export default function AdminStaffPage() {
     {
       title: 'Trạng thái',
       key: 'status',
+      width: 130,
       render: (_, row) => (
         <StatusTag value={row.status as MembershipStatus} meta={MEMBERSHIP_STATUS_META} />
       ),
     },
-    {
-      title: '',
-      key: 'actions',
-      align: 'right',
-      width: 70,
-      render: (_, row) =>
-        row.userId !== me?.id ? (
-          <Popconfirm
-            title="Gỡ nhân sự này khỏi nền tảng?"
-            okText="Gỡ"
-            okButtonProps={{ danger: true }}
-            cancelText="Đóng"
-            onConfirm={() => handleRemove(row.userId)}
-          >
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              loading={removeStaff.isPending && removeStaff.variables === row.userId}
-            />
-          </Popconfirm>
-        ) : null,
-    },
+    actionColumn<Staff>((row) => [
+      {
+        key: 'remove',
+        label: `Gỡ ${row.displayName}`,
+        icon: <DeleteOutlined />,
+        danger: true,
+        hidden: row.userId === me?.id,
+        loading: removeStaff.isPending && removeStaff.variables === row.userId,
+        confirm: { title: 'Gỡ nhân sự này khỏi nền tảng?', okText: 'Gỡ', cancelText: 'Đóng' },
+        onClick: () => handleRemove(row.userId),
+      },
+    ]),
   ];
 
   return (
     <div>
-      <ManagePageHeader
-        title="Nhân sự nền tảng"
-        extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
-            Thêm nhân sự
-          </Button>
+      <ManagePageHeader title="Nhân sự nền tảng" />
+
+      <FilterBar
+        fields={FILTER_FIELDS}
+        values={{ q: filters.q, roleKey: filters.roleKey ?? 'all' }}
+        onChange={(next) =>
+          patch({ q: next.q, roleKey: next.roleKey === 'all' ? undefined : next.roleKey })
         }
+        actions={addButton}
       />
 
-      <div className={styles.filters}>
-        <Input.Search
-          className={styles.search}
-          allowClear
-          size="large"
-          placeholder="Tìm theo tên hoặc email"
-          defaultValue={filters.q}
-          onSearch={(value) => patch({ q: value || undefined })}
-        />
-        <Select
-          className={styles.roleFilter}
-          size="large"
-          value={filters.roleKey ?? 'all'}
-          options={ROLE_FILTER_OPTIONS}
-          onChange={(value: string) => patch({ roleKey: value === 'all' ? undefined : value })}
-        />
-      </div>
-
-      {isError && !data ? (
-        <Result
-          status="error"
-          title="Không tải được danh sách nhân sự"
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
-            </Button>
-          }
-        />
-      ) : !isFetching && items.length === 0 ? (
-        <Empty className={styles.state} description="Chưa có nhân sự nào">
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
-            Thêm nhân sự
-          </Button>
-        </Empty>
-      ) : (
-        <Table<Staff>
-          rowKey="userId"
-          columns={columns}
-          dataSource={items}
-          loading={isFetching}
-          scroll={{ x: 'max-content' }}
-          pagination={{
-            current: meta.page,
-            pageSize: meta.limit,
-            total: meta.total,
-            showSizeChanger: true,
-            showTotal: (total) => `${total} nhân sự`,
-            onChange: (page, pageSize) => patch({ page, limit: pageSize }),
-          }}
-        />
-      )}
+      <DataTable<Staff>
+        label="Danh sách nhân sự nền tảng"
+        columns={columns}
+        items={items}
+        rowKey={(row) => row.userId}
+        minWidth={MIN_TABLE_WIDTH}
+        loading={isFetching}
+        error={
+          isError && !data
+            ? { title: 'Không tải được danh sách nhân sự', onRetry: () => void refetch() }
+            : null
+        }
+        empty={{ title: 'Chưa có nhân sự nào', action: addButton }}
+        pagination={{
+          meta,
+          onChange: (page, pageSize) => patch({ page, limit: pageSize }),
+          totalLabel: (total) => `${total} nhân sự`,
+        }}
+      />
 
       <AddStaffModal open={addOpen} onClose={() => setAddOpen(false)} />
     </div>
