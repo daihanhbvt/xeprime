@@ -1,6 +1,6 @@
 'use client';
 
-import { createElement } from 'react';
+import { createElement, useRef } from 'react';
 import { EllipsisOutlined } from '@ant-design/icons';
 import { Drawer } from 'antd';
 import Link from 'next/link';
@@ -9,7 +9,9 @@ import { Logo } from '@/components/brand/Logo';
 import { mobileTabsForScope } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { usePermissions } from '@/hooks/use-permissions';
 import { cx } from '@/lib/cx';
+import { decorativeIcon } from '@/lib/decorative-icon';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setMobileNavOpen } from '@/store/slices/app.slice';
 import { ManageMenu } from './ManageMenu';
@@ -23,17 +25,29 @@ function isTabActive(pathname: string, href: string): boolean {
 }
 
 /**
- * Điều hướng mobile: thanh tab cố định dưới đáy (4 tab chính + "Thêm") và Drawer menu đầy đủ.
- * Tab "Thêm" mở Drawer; chọn mục trong Drawer thì đóng lại (onNavigate). Ẩn trên desktop (CSS).
+ * Điều hướng mobile của cổng quản lý: thanh tab cố định dưới đáy (Figma `14:1641`, 4 đích
+ * chính + "Thêm") và Drawer menu đầy đủ (`14:1661`).
+ *
+ * **Đây là Drawer ĐIỀU HƯỚNG, cố ý KHÔNG dùng `DetailDrawer`.** `DetailDrawer` của Wave 1B mang
+ * ngữ nghĩa "chi tiết một thực thể nghiệp vụ" — nó có tiêu đề thực thể, vùng hành động trên
+ * thực thể đó, và người dùng hiểu là đang xem một bản ghi. Nhét menu vào đó là nói dối về ngữ
+ * nghĩa và kéo theo cả bộ hành vi không liên quan. `Drawer` của AntD dùng thẳng vẫn là primitive
+ * đúng ở đây (ghi lại như một ngoại lệ có chủ ý — 04_COMPONENT_DUPLICATES §D17).
+ *
+ * Ẩn trên desktop bằng CSS ở ranh chính tắc 1024px.
  */
 export function MobileNav() {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const open = useAppSelector((s) => s.app.mobileNavOpen);
   const { data: user } = useCurrentUser();
+  const { has } = usePermissions();
+  // Trả tiêu điểm về đúng nút đã mở Drawer — nếu không, đóng xong tiêu điểm rơi về <body> và
+  // người dùng bàn phím phải Tab lại từ đầu trang.
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const close = () => dispatch(setMobileNavOpen(false));
-  const tabs = mobileTabsForScope(Boolean(user?.platformRole));
+  const tabs = mobileTabsForScope(Boolean(user?.platformRole)).filter((tab) => has(tab.permission));
   const { items, selectedKey } = useManageNav(close);
 
   // "Thêm" sáng khi trang hiện tại không thuộc tab chính nào (đang ở mục trong Drawer).
@@ -41,7 +55,7 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className={styles.bar}>
+      <nav className={styles.bar} aria-label="Điều hướng nhanh">
         {tabs.map((tab) => {
           const active = isTabActive(pathname, tab.href);
           return (
@@ -49,19 +63,23 @@ export function MobileNav() {
               key={tab.key}
               href={tab.href}
               className={cx(styles.tab, active && styles.active)}
+              aria-current={active ? 'page' : undefined}
             >
-              {createElement(tab.icon, { className: styles.icon })}
-              <span>{tab.label}</span>
+              {decorativeIcon(createElement(tab.icon, { className: styles.icon }))}
+              <span className={styles.label}>{tab.label}</span>
             </Link>
           );
         })}
         <button
+          ref={triggerRef}
           type="button"
           className={cx(styles.tab, !anyPrimaryActive && styles.active)}
+          aria-expanded={open}
+          aria-haspopup="dialog"
           onClick={() => dispatch(setMobileNavOpen(true))}
         >
-          <EllipsisOutlined className={styles.icon} />
-          <span>Thêm</span>
+          {decorativeIcon(<EllipsisOutlined className={styles.icon} />)}
+          <span className={styles.label}>Thêm</span>
         </button>
       </nav>
 
@@ -69,14 +87,23 @@ export function MobileNav() {
         placement="left"
         open={open}
         onClose={close}
-        width={288}
+        // Escape và bấm ra ngoài đều đóng (mặc định AntD) — navigation-audit `134:3825`.
+        keyboard
+        maskClosable
+        // Trả tiêu điểm về nút "Thêm" sau khi đóng.
+        afterOpenChange={(nowOpen) => {
+          if (!nowOpen) triggerRef.current?.focus();
+        }}
+        size="default"
         rootClassName={styles.drawer}
-        title={<Logo size="sm" />}
+        title={<Logo size="sm" tone="light" />}
+        aria-label="Menu cổng quản lý"
       >
-        <div className={styles.drawerMenu}>
-          <ManageMenu items={items} selectedKey={selectedKey} />
-        </div>
-        <ManageUserCard />
+        {/* Vùng landmark có tên riêng: trang mobile có hai <nav> (thanh tab + menu đầy đủ). */}
+        <nav className={styles.drawerMenu} aria-label="Menu đầy đủ">
+          <ManageMenu items={items} selectedKey={selectedKey} tone="dark" />
+        </nav>
+        <ManageUserCard tone="dark" />
       </Drawer>
     </>
   );

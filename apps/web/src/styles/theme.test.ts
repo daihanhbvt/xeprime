@@ -37,6 +37,22 @@ function contrastRatio(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+/**
+ * Chuẩn hoá giá trị token trước khi so sánh.
+ *
+ * So sánh chuỗi thô không dùng được: Prettier xuống dòng những giá trị dài (`color-mix(...)`
+ * của sidebar tối), tạo ra `color-mix( in srgb, …` trong CSS trong khi TS viết liền. Hai bên
+ * vẫn là CÙNG một giá trị CSS — cái cần khoá là giá trị, không phải cách xuống dòng.
+ */
+function normalize(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')')
+    .replace(/\s*,\s*/g, ', ');
+}
+
 function readCssTokens(): Map<string, string> {
   const css = readFileSync(CSS_PATH, 'utf8');
   const tokens = new Map<string, string>();
@@ -45,7 +61,7 @@ function readCssTokens(): Map<string, string> {
     const name = match[1];
     const value = match[2];
     if (name && value) {
-      tokens.set(name, value.trim().replace(/\s+/g, ' '));
+      tokens.set(name, normalize(value));
     }
   }
 
@@ -66,7 +82,7 @@ describe('design token', () => {
 
   it('giá trị của từng token khớp nhau', () => {
     for (const [key, value] of Object.entries(XP_TOKENS)) {
-      expect(cssTokens.get(`--xp-${key}`), `token --xp-${key}`).toBe(value.replace(/\s+/g, ' '));
+      expect(cssTokens.get(`--xp-${key}`), `token --xp-${key}`).toBe(normalize(value));
     }
   });
 
@@ -160,6 +176,104 @@ describe('design token', () => {
       const value = contrast(XP_TOKENS[bg], XP_TOKENS[fg]);
       expect(value).toBeGreaterThanOrEqual(floor);
       expect(value, 'nếu cặp này đã đạt AA thì chuyển sang nhóm trên').toBeLessThan(4.5);
+    });
+
+    /**
+     * Bốn bậc trạng thái của sidebar tối là giá trị DẪN XUẤT bằng `color-mix`, không phải màu
+     * đọc từ Figma — nên tỉ lệ trộn là một lựa chọn, và lựa chọn đó phải được ĐO chứ không
+     * ước lượng. Đây là chỗ đo.
+     *
+     * Có thật một cái bẫy ở đây: bộ token nền sáng KHÔNG dùng lại được trên nền tối.
+     * `--xp-color-text-secondary` chỉ đạt 2.99 và `--xp-gold-deep` 4.33 trên
+     * `--xp-shell-sidebar-bg` — cả hai từng là màu chữ menu trước Wave 1D-B.
+     */
+    describe('sidebar tối — bậc trạng thái dẫn xuất', () => {
+      /** Giải `color-mix(in srgb, <token> N%, <token>)` ra hex để đo được. */
+      function resolveMix(value: string): string {
+        const match = value.match(
+          /^color-mix\(in srgb, var\(--xp-([a-z0-9-]+)\) (\d+)%, var\(--xp-([a-z0-9-]+)\)\)$/,
+        );
+        if (!match) throw new Error(`Không giải được color-mix: ${value}`);
+        const [, fgKey, percent, bgKey] = match;
+        const ratio = Number(percent) / 100;
+        const fg = XP_TOKENS[fgKey as keyof typeof XP_TOKENS];
+        const bg = XP_TOKENS[bgKey as keyof typeof XP_TOKENS];
+        const channel = (hex: string, i: number) =>
+          Number.parseInt(hex.replace('#', '').slice(i * 2, i * 2 + 2), 16);
+        return `#${[0, 1, 2]
+          .map((i) => Math.round(channel(fg, i) * ratio + channel(bg, i) * (1 - ratio)))
+          .map((v) => v.toString(16).padStart(2, '0'))
+          .join('')}`;
+      }
+
+      const BG = XP_TOKENS['shell-sidebar-bg'];
+      const hover = resolveMix(XP_TOKENS['shell-sidebar-hover']);
+      const selected = resolveMix(XP_TOKENS['shell-sidebar-selected-bg']);
+      const muted = resolveMix(XP_TOKENS['shell-sidebar-muted']);
+
+      it.each([
+        ['nhãn nhóm (muted) trên nền sidebar', muted, BG],
+        ['chữ mục menu trên nền hover', XP_TOKENS['shell-sidebar-text'], hover],
+        ['chữ mục menu trên nền mục đang chọn', XP_TOKENS['shell-sidebar-text'], selected],
+        ['icon gold trên nền mục đang chọn', XP_TOKENS['shell-sidebar-active'], selected],
+        [
+          'chữ huy hiệu vai trò trên nền gold',
+          XP_TOKENS['color-primary-contrast'],
+          XP_TOKENS['shell-sidebar-active'],
+        ],
+      ] as const)('%s đạt AA', (_label, fg, bg) => {
+        expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('hai token nền SÁNG thật sự trượt trên nền tối — nên việc thay chúng là cần thiết', () => {
+        expect(contrast(XP_TOKENS['color-text-secondary'], BG)).toBeLessThan(4.5);
+        expect(contrast(XP_TOKENS['color-primary-active'], BG)).toBeLessThan(4.5);
+      });
+
+      it('nền hover và nền mục đang chọn phân biệt được với nhau', () => {
+        expect(hover).not.toBe(selected);
+        expect(contrast(selected, BG)).toBeGreaterThan(1);
+      });
+    });
+
+    /**
+     * Vỏ portal cũng có bề mặt SÁNG (topbar, thanh tab dưới đáy). Đo tương phản ở 1D-C phát
+     * hiện ba cặp trượt AA tại đây — không phải trên nền tối như dự đoán.
+     *
+     * Bài học ghi lại kèm số: **gold không dùng làm màu CHỮ nhỏ trên nền sáng được.**
+     * `--xp-gold-deep` chỉ đạt 3.97 trên trắng và 3.68 trên `--xp-gold-wash`. Nó hợp lệ khi
+     * là NỀN (chữ `--xp-color-primary-contrast` lên trên: 6.60) hoặc khi là thành phần đồ hoạ
+     * như vạch chỉ báo (ngưỡng 3:1).
+     */
+    describe('vỏ portal — bề mặt sáng', () => {
+      const WHITE = XP_TOKENS['color-bg-container'];
+
+      it.each([
+        ['chữ tab thường trên thanh tab', 'color-text-secondary', WHITE],
+        ['chữ tab đang chọn trên thanh tab', 'color-text', WHITE],
+        ['chữ ô gian hàng trên nền gold', 'color-primary-contrast', XP_TOKENS['color-primary']],
+        [
+          'chữ huy hiệu vai trò trên nền gold',
+          'color-primary-contrast',
+          XP_TOKENS['color-primary'],
+        ],
+      ] as const)('%s đạt AA', (_label, fgKey, bg) => {
+        expect(contrast(XP_TOKENS[fgKey], bg)).toBeGreaterThanOrEqual(4.5);
+      });
+
+      it('vạch chỉ báo tab đang chọn đạt ngưỡng 3:1 của thành phần đồ hoạ', () => {
+        expect(contrast(XP_TOKENS['color-primary-active'], WHITE)).toBeGreaterThanOrEqual(3);
+      });
+
+      it('ba cặp bị THAY ở 1D-C thật sự trượt — nên việc thay là cần thiết', () => {
+        // tab thường cũ: text-tertiary trên trắng
+        expect(contrast(XP_TOKENS['color-text-tertiary'], WHITE)).toBeLessThan(4.5);
+        // tab đang chọn cũ + ô gian hàng cũ: gold-deep trên trắng / trên gold-wash
+        expect(contrast(XP_TOKENS['color-primary-active'], WHITE)).toBeLessThan(4.5);
+        expect(
+          contrast(XP_TOKENS['color-primary-active'], XP_TOKENS['color-primary-light']),
+        ).toBeLessThan(4.5);
+      });
     });
   });
 

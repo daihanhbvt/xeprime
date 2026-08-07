@@ -5,35 +5,35 @@
 
 ## Tổng quan
 
-| ID | Pattern | Số nơi | Đích gom | Risk | Wave |
-| --- | --- | --- | --- | --- | --- |
-| **D1** | Scaffold trạng thái danh sách (error/empty/no-results/loading) | **17 page + 8 component** | `EmptyState` + `LoadingState` + `DataTable` | **CAO** | 1C |
-| **D2** | Hook filter URL tự chế | **10 / 13** | `useUrlFilters` | TB | 1C |
-| **D3** | Cột hành động của bảng (icon + tooltip + popconfirm) | **10 bảng** | `RowActions` | Thấp | 1C |
-| **D4** | `<Tag>` trần thay vì `StatusTag` | **11 file** | `StatusTag` + `*_STATUS_META` | TB | 1C |
-| **D5** | Modal↔Drawer responsive tự chế | **3 bản chế + 10 chưa responsive** | `ResponsiveDialog` | **CAO** | 1B |
-| **D6** | Detail drawer | **7 file** | `DetailDrawer` | TB | 1B |
-| **D7** | Khối "avatar + tên + phụ đề" | **≥8 nơi** | `EntityIdentity` | Thấp | 1C |
-| **D8** | `Suspense fallback={<Spin .../>}` + `.state` CSS | **11 page** | `LoadingState` | Thấp | 1C |
-| **D9** | Bảng dựng thẳng trong `page.tsx` (không có `*Table.tsx`) | **4 page** | tách ra `*Table.tsx` | Thấp | theo module |
-| **D10** | Điểm gãy breakpoint hard-code | **21 giá trị** | 3 token | **CAO** | ~~1A~~ → dời dần |
-| **D11** | Bí danh token trùng vai trò | **9 token** | ✅ **Đã gom (Wave 1A)** | — | 1A ✔ |
-| **D12** | Hai hệ đổ bóng song song (XePrime vs AntD) | 2 hệ | ✅ **Đã gom (Wave 1A)** | — | 1A ✔ |
+| ID      | Pattern                                                        | Số nơi                             | Đích gom                                    | Risk    | Wave             |
+| ------- | -------------------------------------------------------------- | ---------------------------------- | ------------------------------------------- | ------- | ---------------- |
+| **D1**  | Scaffold trạng thái danh sách (error/empty/no-results/loading) | **17 page + 8 component**          | `EmptyState` + `LoadingState` + `DataTable` | **CAO** | 1C               |
+| **D2**  | Hook filter URL tự chế                                         | **10 / 13**                        | `useUrlFilters`                             | TB      | 1C               |
+| **D3**  | Cột hành động của bảng (icon + tooltip + popconfirm)           | **10 bảng**                        | `RowActions`                                | Thấp    | 1C               |
+| **D4**  | `<Tag>` trần thay vì `StatusTag`                               | **11 file**                        | `StatusTag` + `*_STATUS_META`               | TB      | 1C               |
+| **D5**  | Modal↔Drawer responsive tự chế                                 | **3 bản chế + 10 chưa responsive** | `ResponsiveDialog`                          | **CAO** | 1B               |
+| **D6**  | Detail drawer                                                  | **7 file**                         | `DetailDrawer`                              | TB      | 1B               |
+| **D7**  | Khối "avatar + tên + phụ đề"                                   | **≥8 nơi**                         | `EntityIdentity`                            | Thấp    | 1C               |
+| **D8**  | `Suspense fallback={<Spin .../>}` + `.state` CSS               | **11 page**                        | `LoadingState`                              | Thấp    | 1C               |
+| **D9**  | Bảng dựng thẳng trong `page.tsx` (không có `*Table.tsx`)       | **4 page**                         | tách ra `*Table.tsx`                        | Thấp    | theo module      |
+| **D10** | Điểm gãy breakpoint hard-code                                  | **21 giá trị**                     | 3 token                                     | **CAO** | ~~1A~~ → dời dần |
+| **D11** | Bí danh token trùng vai trò                                    | **9 token**                        | ✅ **Đã gom (Wave 1A)**                     | —       | 1A ✔             |
+| **D12** | Hai hệ đổ bóng song song (XePrime vs AntD)                     | 2 hệ                               | ✅ **Đã gom (Wave 1A)**                     | —       | 1A ✔             |
 
 ### Đối chiếu số liệu — Batch 1C.0 (07/08/2026)
 
 Đo lại bằng `rg` trước khi gom. Bảng tổng ở trên giữ nguyên ID; cột "Số nơi" sửa như sau:
 
-| ID | Doc ghi | Đo được | Ghi chú |
-| --- | --- | --- | --- |
-| **D1** | 17 page + 8 component | **23 file có `<Result>`** (gồm 3 file không phải scaffold danh sách: `admin/layout.tsx` = 403, `AppShell.tsx`, `DetailDrawer.tsx` = primitive 1B) → **20 nơi thật** | `<Empty>` 23 file |
-| **D2** | 10/13 giữ bản copy | ✅ **đúng** — 3 dùng `useUrlFilters`, 10 giữ copy. Trừ `use-calendar-filters` → **9 ứng viên gom** | — |
-| **D3** | 10 bảng + 2 inline | **11 `*Table.tsx` + 3 inline = 14 bảng cấp trang** (`admin/plans` bị bỏ sót ở doc cũ) | +1 bảng lồng trong `AdminCustomerDetailDrawer`, ngoài phạm vi |
-| **D7** | ≥8 nơi | `<Avatar>` **7** · tính initial **9** | 2 `charAt(0)` khác là viết-hoa-chữ-đầu, không gom |
-| **D8** | 11 page | `<Spin>` **27 file** toàn repo; `Suspense fallback` + `.state` là tập con | Đếm chính xác từng nơi ở 1C.1 |
-| **D9** | 4 page | **3** — `members`, `admin/staff`, `admin/plans`. `receipts` **có** `ReceiptTable.tsx` riêng | Doc cũ tính nhầm `receipts` |
+| ID     | Doc ghi               | Đo được                                                                                                                                                             | Ghi chú                                                       |
+| ------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| **D1** | 17 page + 8 component | **23 file có `<Result>`** (gồm 3 file không phải scaffold danh sách: `admin/layout.tsx` = 403, `AppShell.tsx`, `DetailDrawer.tsx` = primitive 1B) → **20 nơi thật** | `<Empty>` 23 file                                             |
+| **D2** | 10/13 giữ bản copy    | ✅ **đúng** — 3 dùng `useUrlFilters`, 10 giữ copy. Trừ `use-calendar-filters` → **9 ứng viên gom**                                                                  | —                                                             |
+| **D3** | 10 bảng + 2 inline    | **11 `*Table.tsx` + 3 inline = 14 bảng cấp trang** (`admin/plans` bị bỏ sót ở doc cũ)                                                                               | +1 bảng lồng trong `AdminCustomerDetailDrawer`, ngoài phạm vi |
+| **D7** | ≥8 nơi                | `<Avatar>` **7** · tính initial **9**                                                                                                                               | 2 `charAt(0)` khác là viết-hoa-chữ-đầu, không gom             |
+| **D8** | 11 page               | `<Spin>` **27 file** toàn repo; `Suspense fallback` + `.state` là tập con                                                                                           | Đếm chính xác từng nơi ở 1C.1                                 |
+| **D9** | 4 page                | **3** — `members`, `admin/staff`, `admin/plans`. `receipts` **có** `ReceiptTable.tsx` riêng                                                                         | Doc cũ tính nhầm `receipts`                                   |
 
-**D3 — phát hiện quan trọng, ngược với doc cũ.** Doc ghi *"`fixed: 'right'` có ở đa số"*. Thực tế
+**D3 — phát hiện quan trọng, ngược với doc cũ.** Doc ghi _"`fixed: 'right'` có ở đa số"_. Thực tế
 **đúng 1/14** bảng có (`VehicleTable`). Figma `127:2060` quy tắc 1 bắt buộc sticky cho 14/16 bảng
 và `127:2093`–`127:2096` tự khai "05/06/09–11 đã có sticky" — **không đúng với code**. Đây là
 khoảng cách lớn nhất của Wave 1C, không phải a11y.
@@ -58,7 +58,7 @@ trạng thái tải, và gỡ `.drawerRoot` của `AuthModal` (bo góc 18px + `m
 
 **D12 — đổ bóng: ĐÃ GOM.** Trước Wave 1A, CSS Module dùng bóng nâu ấm còn AntD dùng bóng xám ba lớp — hai hệ hiển thị cạnh nhau. Giờ cả hai lấy từ Elevation 1/2/3 (`14:173`/`14:176`/`14:179`).
 
-**D10 — breakpoint: ĐỔI CÁCH LÀM, KHÔNG gom hàng loạt.** Design-brief 00 §9.4 (nguồn có thẩm quyền về responsive) chỉ định migrate *“as files are touched rather than in a bulk change”* — thắng kế hoạch Wave 0B. Wave 1A đã làm phần nền: 3 token + `XP_BREAKPOINTS` + `useIsMobile/useIsTablet/useIsDesktop`. ~21 điểm gãy trong `.module.css` dời dần theo wave module. Xem [02 §13](02_DESIGN_TOKEN_MAP.md).
+**D10 — breakpoint: ĐỔI CÁCH LÀM, KHÔNG gom hàng loạt.** Design-brief 00 §9.4 (nguồn có thẩm quyền về responsive) chỉ định migrate _“as files are touched rather than in a bulk change”_ — thắng kế hoạch Wave 0B. Wave 1A đã làm phần nền: 3 token + `XP_BREAKPOINTS` + `useIsMobile/useIsTablet/useIsDesktop`. ~21 điểm gãy trong `.module.css` dời dần theo wave module. Xem [02 §13](02_DESIGN_TOKEN_MAP.md).
 
 **D13 (MỚI) — 9 tham chiếu CSS chết trong `CalendarScheduler`.** Không phải trùng lặp mà là **lỗi đang chạy** phát hiện khi rà token: 9 `var(--xp-*)` chưa từng được khai báo, không fallback. Chi tiết + bảng ánh xạ sẵn: [02 §19](02_DESIGN_TOKEN_MAP.md) (nợ T1). Sửa ở wave lịch, không phải wave token.
 
@@ -87,6 +87,7 @@ trạng thái tải, và gỡ `.drawerRoot` của `AuthModal` (bo góc 18px + `m
 **Tổng: 25 nơi.**
 
 ### Consumer hiện tại
+
 Mọi route danh sách của cả ba context (customer/shop/platform).
 
 ### Khác biệt giữa các bản
@@ -107,14 +108,14 @@ Bản chuẩn nhất là [vehicles/page.tsx:77-121](<../../apps/web/src/app/(man
 
 Các bản khác lệch ở:
 
-| Chiều | Biến thể quan sát được |
-| --- | --- |
-| **Điều kiện lỗi** | `isError && !data` (vehicles) vs `isError` trần (một số admin page) — bản sau **nháy lỗi khi refetch nền** |
-| **Phân biệt empty vs no-results** | ✅ vehicles, bookings, receipts, debts · ❌ một số admin page chỉ có một `Empty` chung |
-| **Nút trong empty** | có/không tuỳ `canCreate`; không nhất quán ai kiểm quyền |
-| **Câu chữ** | 17 tiêu đề lỗi khác nhau ("Không tải được danh sách xe" / "…đơn thuê" / …) |
-| **Điều kiện loading** | `!isFetching && items.length === 0` vs chỉ dựa `loading` prop của `Table` |
-| **Permission-denied** | Chỉ vài trang có; đa số dựa `admin/layout.tsx` gác cả nhánh |
+| Chiều                             | Biến thể quan sát được                                                                                     |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Điều kiện lỗi**                 | `isError && !data` (vehicles) vs `isError` trần (một số admin page) — bản sau **nháy lỗi khi refetch nền** |
+| **Phân biệt empty vs no-results** | ✅ vehicles, bookings, receipts, debts · ❌ một số admin page chỉ có một `Empty` chung                     |
+| **Nút trong empty**               | có/không tuỳ `canCreate`; không nhất quán ai kiểm quyền                                                    |
+| **Câu chữ**                       | 17 tiêu đề lỗi khác nhau ("Không tải được danh sách xe" / "…đơn thuê" / …)                                 |
+| **Điều kiện loading**             | `!isFetching && items.length === 0` vs chỉ dựa `loading` prop của `Table`                                  |
+| **Permission-denied**             | Chỉ vài trang có; đa số dựa `admin/layout.tsx` gác cả nhánh                                                |
 
 ### Đích gom (canonical)
 
@@ -147,20 +148,20 @@ Hình dạng đề xuất, để `page.tsx` chỉ còn khai báo:
 
 ### Files
 
-[useUrlFilters](../../apps/web/src/hooks/use-url-filters.ts) đã tồn tại và docstring **tự khai**: *"Các feature cũ vẫn giữ bản copy của riêng chúng — dời dần sang đây khi chạm vào."*
+[useUrlFilters](../../apps/web/src/hooks/use-url-filters.ts) đã tồn tại và docstring **tự khai**: _"Các feature cũ vẫn giữ bản copy của riêng chúng — dời dần sang đây khi chạm vào."_
 
-| Dùng `useUrlFilters` ✅ (3) | Giữ bản copy ❌ (10) |
-| --- | --- |
-| `admin-bookings/hooks/use-admin-booking-filters.ts` | `admin-audit/hooks/use-audit-filters.ts` |
-| `admin-customers/hooks/use-admin-customer-filters.ts` | `admin-tenants/hooks/use-admin-tenant-filters.ts` |
-| `admin-vehicles/hooks/use-admin-vehicle-filters.ts` | `approvals/hooks/use-approval-filters.ts` |
-| | `booking-requests/hooks/use-booking-request-filters.ts` |
-| | `bookings/hooks/use-booking-filters.ts` |
-| | `calendar/hooks/use-calendar-filters.ts` |
-| | `finance/hooks/use-debt-filters.ts` |
-| | `finance/hooks/use-receipt-filters.ts` |
-| | `marketplace/hooks/use-marketplace-filters.ts` |
-| | `vehicles/hooks/use-vehicle-filters.ts` |
+| Dùng `useUrlFilters` ✅ (3)                           | Giữ bản copy ❌ (10)                                    |
+| ----------------------------------------------------- | ------------------------------------------------------- |
+| `admin-bookings/hooks/use-admin-booking-filters.ts`   | `admin-audit/hooks/use-audit-filters.ts`                |
+| `admin-customers/hooks/use-admin-customer-filters.ts` | `admin-tenants/hooks/use-admin-tenant-filters.ts`       |
+| `admin-vehicles/hooks/use-admin-vehicle-filters.ts`   | `approvals/hooks/use-approval-filters.ts`               |
+|                                                       | `booking-requests/hooks/use-booking-request-filters.ts` |
+|                                                       | `bookings/hooks/use-booking-filters.ts`                 |
+|                                                       | `calendar/hooks/use-calendar-filters.ts`                |
+|                                                       | `finance/hooks/use-debt-filters.ts`                     |
+|                                                       | `finance/hooks/use-receipt-filters.ts`                  |
+|                                                       | `marketplace/hooks/use-marketplace-filters.ts`          |
+|                                                       | `vehicles/hooks/use-vehicle-filters.ts`                 |
 
 Cả 10 bản copy đều gọi `router.replace` trực tiếp.
 
@@ -171,9 +172,11 @@ Cả 10 bản copy đều gọi `router.replace` trực tiếp.
 Bản copy **có thể** thiếu ① hoặc ②. Ca đáng ngờ nhất: `use-calendar-filters` (không phải danh sách phân trang — có thể **cố tình** khác) và `use-marketplace-filters` (đi cùng [filter-params.ts](../../apps/web/src/features/marketplace/filter-params.ts) đã có test riêng).
 
 ### Đích gom
+
 `useUrlFilters` + `positiveIntParam`, mỗi feature chỉ giữ hàm `parse`.
 
 ### Migration risk: **TRUNG BÌNH**
+
 - Nếu một bản copy **cố tình** không reset `page`, gom sẽ đổi hành vi phân trang.
 - `use-marketplace-filters` có [filter-params.test.ts](../../apps/web/src/features/marketplace/filter-params.test.ts) bảo vệ → an toàn nhất, làm trước.
 - `use-calendar-filters` — **loại trừ khỏi phạm vi gom** cho tới khi có lý do; lịch không phân trang.
@@ -191,6 +194,7 @@ Bản copy **có thể** thiếu ① hoặc ②. Ca đáng ngờ nhất: `use-ca
 ### Pattern lặp
 
 [VehicleTable.tsx:110-145](../../apps/web/src/features/vehicles/components/VehicleTable.tsx#L110-L145):
+
 ```tsx
 { title: '', key: 'actions', align: 'right', fixed: 'right', width: 130,
   render: (_, row) => (
@@ -203,12 +207,15 @@ Bản copy **có thể** thiếu ① hoặc ②. Ca đáng ngờ nhất: `use-ca
 ```
 
 ### Khác biệt
+
 `width` (130 / 120 / 90…) · thứ tự nút · có/không `Popconfirm` · `fixed: 'right'` có ở đa số nhưng **không phải tất cả**.
 
 ### Đích gom
+
 `RowActions` — `{actions: {key, icon, label, danger?, confirm?, loading?, hidden?, onClick}[]}` + helper sinh cột `actionColumn(actions)` chuẩn hoá `width`/`fixed`/`align`.
 
 ### Migration risk: **THẤP** — thuần trình bày.
+
 **Lợi ích phụ quan trọng**: sửa luôn lỗ a11y (`Tooltip` không thay được `aria-label`; nút icon trong bảng hiện **không có tên cho screen reader**).
 
 Figma có quy chuẩn riêng: `127:2060` `sticky-actions-standard` — **đọc trước khi gom**.
@@ -225,14 +232,15 @@ Figma có quy chuẩn riêng: `127:2060` `sticky-actions-standard` — **đọc 
 
 ### Phân loại — **không phải tất cả đều là vi phạm**
 
-| Loại | Ví dụ | Xử lý |
-| --- | --- | --- |
-| **Vi phạm thật** — hiển thị status nghiệp vụ bằng `<Tag>` trần, màu tự chọn | `members/page.tsx`, `admin/staff/page.tsx`, `AdminCustomerDetailDrawer` | **Chuyển sang `StatusTag`**; nếu thiếu `*_STATUS_META` thì bổ sung vào `@xeprime/types` (ADR 0005) |
-| **Hợp lệ** — `<Tag>` không mang status | `VehicleTable` `<Tag color="red">-{discountPercent}%</Tag>` (nhãn khuyến mãi) · `CategoryManagerModal` (nhãn danh mục hệ thống) | **Giữ nguyên** |
-| **Cần xác minh** | `AccountView`, `PaymentHistory`, `TenantPlanSection`, `VehicleDetailView` | Đọc từng chỗ ở Wave 1C |
+| Loại                                                                        | Ví dụ                                                                                                                           | Xử lý                                                                                              |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Vi phạm thật** — hiển thị status nghiệp vụ bằng `<Tag>` trần, màu tự chọn | `members/page.tsx`, `admin/staff/page.tsx`, `AdminCustomerDetailDrawer`                                                         | **Chuyển sang `StatusTag`**; nếu thiếu `*_STATUS_META` thì bổ sung vào `@xeprime/types` (ADR 0005) |
+| **Hợp lệ** — `<Tag>` không mang status                                      | `VehicleTable` `<Tag color="red">-{discountPercent}%</Tag>` (nhãn khuyến mãi) · `CategoryManagerModal` (nhãn danh mục hệ thống) | **Giữ nguyên**                                                                                     |
+| **Cần xác minh**                                                            | `AccountView`, `PaymentHistory`, `TenantPlanSection`, `VehicleDetailView`                                                       | Đọc từng chỗ ở Wave 1C                                                                             |
 
 ### Migration risk: **TRUNG BÌNH**
-Vi phạm CLAUDE.md §5 (*"String literal trần cho status — luôn `BOOKING_STATUS.ACTIVE`"*). Nhưng chuyển sang `StatusTag` **có thể đổi màu hiển thị** nếu `*_STATUS_META` khai màu khác màu đang hard-code → khác biệt thị giác cần chụp ảnh trước/sau.
+
+Vi phạm CLAUDE.md §5 (_"String literal trần cho status — luôn `BOOKING_STATUS.ACTIVE`"_). Nhưng chuyển sang `StatusTag` **có thể đổi màu hiển thị** nếu `*_STATUS_META` khai màu khác màu đang hard-code → khác biệt thị giác cần chụp ảnh trước/sau.
 
 ### Wave: **1C** (cùng đợt `DataTable`, vì phần lớn nằm trong cột bảng)
 
@@ -247,15 +255,19 @@ Vi phạm CLAUDE.md §5 (*"String literal trần cho status — luôn `BOOKING_S
 **Chưa responsive (10):** `PlanFormModal` · `AddStaffModal` · `AddMemberModal` · `RecordPaymentModal` · `ReviewModal` · `CategoryManagerModal` · `TenantPlanSection` (modal nội bộ) · 3 modal trong `AdminTenantDetailDrawer`/`AdminVehicleDetailDrawer`/`ApprovalDetailDrawer`.
 
 ### Khác biệt
+
 Ba bản tự chế **không** chia sẻ code — mỗi bản tự quyết `placement`, `height`, xử lý footer, và cách đóng. `AuthModal` có test ([AuthModal.test.tsx](../../apps/web/src/features/auth/components/AuthModal.test.tsx)), hai bản kia không.
 
 ### Bằng chứng đây là khiếm khuyết, không phải lựa chọn
+
 Figma đặc tả bottom sheet ở mobile cho **≥15 luồng**: `23:2086` auth · `66:1313` booking dates · `68:2726` approval · `79:6563` approve/cancel receipt · `88:3151` add member · `97:4377` approve · `114:3714` add staff · `115:4858` cancel subscription · `65:3069` submit review · `58:2517` fleet filter · `78:2582` record payment · …
 
 ### Đích gom
+
 `ResponsiveDialog` — [03_COMPONENT_REGISTRY.md §2.1](03_COMPONENT_REGISTRY.md).
 
 ### Migration risk: **CAO**
+
 - Gom 3 bản tự chế = đổi hành vi ở 3 luồng **quan trọng nhất** (đăng nhập, đặt xe, lọc marketplace). `AuthModal.test.tsx` và `FilterPanel.test.tsx` bảo vệ 2/3; `RequestBookingModal` **không có test** → viết test trước khi đụng.
 - Thêm responsive cho 10 modal còn lại = **thêm hành vi mới** trên mobile. Đây là mục tiêu, nhưng phải QA riêng từng cái ở 390/360px.
 
@@ -272,15 +284,19 @@ Figma đặc tả bottom sheet ở mobile cho **≥15 luồng**: `23:2086` auth 
 Mỗi cái kèm một `.module.css` riêng.
 
 ### Pattern lặp
+
 `<Drawer open width={…} onClose title={…}>` → `Skeleton` khi loading → `Result` khi lỗi → `Descriptions`/khối tự dựng khi có data. Vài cái còn chứa `Modal` lồng bên trong (hành động khoá/ẩn/duyệt).
 
 ### Khác biệt
+
 `width` (520 / 560 / 640 / 720…) · có/không `Table` lồng bên trong (`AdminCustomerDetailDrawer` có) · có/không modal hành động lồng · bố cục header.
 
 ### Đích gom
+
 `DetailDrawer` — `{open, onClose, title, width?, query: {isLoading, isError, refetch}, children}`, đảm nhiệm loading/error/close; nội dung vẫn của từng feature.
 
 ### Migration risk: **TRUNG BÌNH**
+
 Không đổi hành vi nếu chỉ nhấc phần khung. Rủi ro nằm ở modal lồng — `ResponsiveDialog` (D5) phải xong trước, nếu không sẽ gom hai lần.
 
 ### Wave: **1B**, ngay sau `ResponsiveDialog`.
@@ -290,15 +306,19 @@ Không đổi hành vi nếu chỉ nhấc phần khung. Rủi ro nằm ở modal
 ## D7 — Khối "avatar + tên + phụ đề"
 
 ### Files (≥8)
+
 `VehicleTable` ([:50-66](../../apps/web/src/features/vehicles/components/VehicleTable.tsx#L50-L66)) · `AdminVehicleTable` · `AdminCustomerTable` · `AdminTenantTable` · `members/page.tsx` · `admin/staff/page.tsx` · [ManageUserCard](../../apps/web/src/components/layout/ManageUserCard.tsx) · [ConversationList](../../apps/web/src/features/chat/components/ConversationList.tsx) · [ShopHeader](../../apps/web/src/features/marketplace/components/ShopHeader.tsx) · [Topbar](../../apps/web/src/components/layout/Topbar.tsx) (initial từ `displayName`)
 
 ### Khác biệt
+
 `shape` (`square` cho xe, tròn cho người) · `size` (44 / 40 / 32 / 24) · icon fallback (`CarOutlined` / `UserOutlined` / `ShopOutlined`) · cách tính chữ-cái-đầu (lặp ở `Topbar` và `ManageUserCard`).
 
 ### Đích gom
+
 `EntityIdentity` — `{avatarSrc?, shape?, fallbackIcon?, name, subtitle?, size?}` + hàm `initialOf(name)` dùng chung.
 
 ### Migration risk: **THẤP** — thuần trình bày, không có test nào phụ thuộc.
+
 Figma: `XePrime/Avatar` `125:1643` quy định 5 size (XS/SM/MD/LG/XL) — **ánh xạ 4 size hiện có vào 5 bậc đó khi gom**, đừng giữ số px trần.
 
 ### Wave: **1C**
@@ -308,11 +328,13 @@ Figma: `XePrime/Avatar` `125:1643` quy định 5 size (XS/SM/MD/LG/XL) — **án
 ## D8 — `Suspense fallback={<Spin/>}` + class `.state`
 
 ### Files (11 page)
+
 Mọi page đọc `useSearchParams` (bắt buộc bọc `Suspense` với route tĩnh của Next).
 
 Mỗi page tự khai `.state` trong `.module.css` riêng — **11 định nghĩa CSS gần giống nhau** cho cùng một khối căn giữa.
 
 ### Đích gom
+
 `LoadingState variant="block"`, và một class `.state` chung (hoặc bỏ hẳn, để `LoadingState` tự lo layout).
 
 ### Migration risk: **THẤP**
@@ -324,14 +346,17 @@ Mỗi page tự khai `.state` trong `.module.css` riêng — **11 định nghĩa
 ## D9 — Bảng dựng thẳng trong `page.tsx`
 
 ### Files (4)
+
 `members/page.tsx` · `admin/staff/page.tsx` · `receipts/page.tsx` (một phần) · `admin/plans/page.tsx`
 
 Bốn trang này **không có** `*Table.tsx` riêng — `ColumnsType` khai ngay trong page, khác với 10 trang còn lại.
 
 ### Đích gom
+
 Không phải "gom" mà là **đồng nhất cấu trúc**: tách thành `MemberTable.tsx`, `StaffTable.tsx`, `PlanTable.tsx` cho khớp pattern feature ([00_IMPLEMENTATION_OVERVIEW.md §5](00_IMPLEMENTATION_OVERVIEW.md)).
 
 ### Migration risk: **THẤP** — thuần di chuyển file.
+
 Làm ở **wave của chính module đó**, không gom vào 1C — nếu không sẽ đụng cùng file hai lần.
 
 ---
@@ -355,30 +380,65 @@ Theo module ──► D9
 
 ## Cái KHÔNG gom
 
-| Cặp | Vì sao giữ riêng |
-| --- | --- |
-| `members/` ↔ `admin-staff/` | Ranh giới bảo mật khác (tenant vs platform). Gom sẽ tạo component biết cả hai scope — CLAUDE.md §5 cấm |
-| `FilterPanel` (marketplace) ↔ `FilterBar` (danh sách quản lý) | Ngữ nghĩa khác: facet + khoảng giá vs lọc bảng |
-| `VehicleCard` (marketplace) ↔ `EntityCard` (thẻ mobile của bảng) | Một cái là sản phẩm bán hàng, một cái là hàng dữ liệu |
-| `use-calendar-filters` | Lịch không phân trang — quy tắc "reset page" không áp dụng |
-| `Logo` ↔ `BrandMark` | Logo XePrime vs logo hãng xe |
-| `packages/ui` | Chỉ một app tiêu thụ — xem [00_IMPLEMENTATION_OVERVIEW.md §4.1](00_IMPLEMENTATION_OVERVIEW.md) |
+| Cặp                                                              | Vì sao giữ riêng                                                                                       |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `members/` ↔ `admin-staff/`                                      | Ranh giới bảo mật khác (tenant vs platform). Gom sẽ tạo component biết cả hai scope — CLAUDE.md §5 cấm |
+| `FilterPanel` (marketplace) ↔ `FilterBar` (danh sách quản lý)    | Ngữ nghĩa khác: facet + khoảng giá vs lọc bảng                                                         |
+| `VehicleCard` (marketplace) ↔ `EntityCard` (thẻ mobile của bảng) | Một cái là sản phẩm bán hàng, một cái là hàng dữ liệu                                                  |
+| `use-calendar-filters`                                           | Lịch không phân trang — quy tắc "reset page" không áp dụng                                             |
+| `Logo` ↔ `BrandMark`                                             | Logo XePrime vs logo hãng xe                                                                           |
+| `packages/ui`                                                    | Chỉ một app tiêu thụ — xem [00_IMPLEMENTATION_OVERVIEW.md §4.1](00_IMPLEMENTATION_OVERVIEW.md)         |
 
 ---
 
 ## Kết toán cuối Wave 1C (1C-E · 07/08/2026)
 
-| ID | Trước Wave 1C | Sau Wave 1C | Trạng thái |
-| --- | --- | --- | --- |
-| **D1** scaffold trạng thái | 20 nơi | **0 nơi ở danh sách quản lý** (`<Result>` còn 9: 5 trang chi tiết/dashboard ngoài phạm vi, 3 hạ tầng, 0 danh sách) | ✅ Đóng |
-| **D2** hook filter tự chế | 10/13 | **4/13** — 2 loại trừ vĩnh viễn (calendar, marketplace), 2 loại trừ ngữ nghĩa (approvals, booking-requests: mặc định `pending` ≠ `all`) | ✅ Đóng có loại trừ |
-| **D3** cột hành động | 14 bảng, **1** có `fixed:'right'` | **14/14** qua `actionColumn`; 13 dùng `RowActions` | ✅ Đóng |
-| **D4** `<Tag>` trần | 11 file | Còn 3 chỗ, **đều hợp lệ**: nhãn vai trò ×2 (không có `*_ROLE_META` — P5), nhãn khuyến mãi ×1 | ✅ Đóng có loại trừ |
-| **D5/D6** overlay | — | ✅ đã đóng ở Wave 1B |
-| **D7** khối định danh | ≥8 nơi | `EntityIdentity` ×3 (`VehicleTable`, `members`, `admin/staff`); `initialOf` gom 9 bản chép tay | ✅ Đóng phần bảng |
-| **D8** `Suspense` + `.state` | 11 page | `LoadingState` ở 6 trang đã migrate; còn ở các trang ngoài phạm vi | 🟡 Một phần |
-| **D9** bảng dựng trong `page.tsx` | 3 | **3** — tách file là việc cấu trúc, không phải hạ tầng Wave 1C | 🟡 Hoãn |
-| **D10** breakpoint | 21 giá trị | Dời dần theo file (brief 00 §9.4) | 🟡 Theo kế hoạch |
+| ID                                | Trước Wave 1C                     | Sau Wave 1C                                                                                                                             | Trạng thái          |
+| --------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **D1** scaffold trạng thái        | 20 nơi                            | **0 nơi ở danh sách quản lý** (`<Result>` còn 9: 5 trang chi tiết/dashboard ngoài phạm vi, 3 hạ tầng, 0 danh sách)                      | ✅ Đóng             |
+| **D2** hook filter tự chế         | 10/13                             | **4/13** — 2 loại trừ vĩnh viễn (calendar, marketplace), 2 loại trừ ngữ nghĩa (approvals, booking-requests: mặc định `pending` ≠ `all`) | ✅ Đóng có loại trừ |
+| **D3** cột hành động              | 14 bảng, **1** có `fixed:'right'` | **14/14** qua `actionColumn`; 13 dùng `RowActions`                                                                                      | ✅ Đóng             |
+| **D4** `<Tag>` trần               | 11 file                           | Còn 3 chỗ, **đều hợp lệ**: nhãn vai trò ×2 (không có `*_ROLE_META` — P5), nhãn khuyến mãi ×1                                            | ✅ Đóng có loại trừ |
+| **D5/D6** overlay                 | —                                 | ✅ đã đóng ở Wave 1B                                                                                                                    |
+| **D7** khối định danh             | ≥8 nơi                            | `EntityIdentity` ×3 (`VehicleTable`, `members`, `admin/staff`); `initialOf` gom 9 bản chép tay                                          | ✅ Đóng phần bảng   |
+| **D8** `Suspense` + `.state`      | 11 page                           | `LoadingState` ở 6 trang đã migrate; còn ở các trang ngoài phạm vi                                                                      | 🟡 Một phần         |
+| **D9** bảng dựng trong `page.tsx` | 3                                 | **3** — tách file là việc cấu trúc, không phải hạ tầng Wave 1C                                                                          | 🟡 Hoãn             |
+| **D10** breakpoint                | 21 giá trị                        | Dời dần theo file (brief 00 §9.4)                                                                                                       | 🟡 Theo kế hoạch    |
 
 **Nợ mới ghi nhận**: `StickyFormActions` có 0 consumer (5 form dài chờ wave form; `VehicleForm` bị
 chỉ thị 1C-E cấm đụng) · `renderCard` mobile 0/14 (chờ P26).
+
+---
+
+## D17 — `MobileNav` dùng thẳng `Drawer` của AntD ✅ NGOẠI LỆ CÓ CHỦ Ý
+
+**Nhìn qua thì giống trùng lặp**: Wave 1B đã dựng `DetailDrawer` bọc `Drawer`, và `MobileNav`
+cũng mở một `Drawer`. Tại sao không gom?
+
+**Vì hai thứ khác NGỮ NGHĨA, không chỉ khác giao diện.** `DetailDrawer` nghĩa là _"chi tiết của
+một thực thể nghiệp vụ"_ — nó có tiêu đề là tên thực thể, vùng hành động tác động lên thực thể
+đó, và người dùng đọc nó như đang xem một bản ghi. Menu điều hướng không phải một bản ghi. Nhét
+menu vào `DetailDrawer` là nói dối về ngữ nghĩa và kéo theo cả bộ hành vi không liên quan
+(nút hành động trên thực thể, khoảng đệm cho nội dung chi tiết).
+
+`Drawer` của AntD **vẫn là primitive đúng** ở đây, nên `MobileNav` gọi thẳng nó. Đây KHÔNG phải
+"dựng primitive drawer thứ hai" — có test chốt cả hai điều: không import `DetailDrawer`, và
+không tự dựng `position: fixed` để giả làm drawer.
+
+**Kết luận: không gom. Không mở lại nếu không có lý do mới.**
+
+---
+
+## D18 — Hai thanh điều hướng dưới đáy ✅ ĐÚNG, KHÔNG GOM
+
+`MobileNav` (cổng quản lý) và `MobileTabBar` (marketplace) trông giống nhau nhưng phục vụ hai
+khu tách biệt và có hành vi khác nhau ở đúng chỗ quan trọng:
+
+|                       | `MobileNav`           | `MobileTabBar`                       |
+| --------------------- | --------------------- | ------------------------------------ |
+| Khu                   | `(manage)`            | `(public)`                           |
+| Lọc                   | quyền tenant/platform | trạng thái đăng nhập                 |
+| Tab chưa đủ điều kiện | **ẩn hẳn**            | hiện, bấm vào **mở modal đăng nhập** |
+| Ranh breakpoint       | 1024 (chính tắc)      | 760 _(chưa dời — xem nợ)_            |
+
+Gộp hai cái này là trộn ranh giới khách hàng ↔ gian hàng — điều CLAUDE.md mục 6 cấm.

@@ -61,10 +61,34 @@
   --xp-color-neutral: #6b6560;
   --xp-color-neutral-bg: #f5f3ef;
 
-  /* ─── Vỏ portal (sidebar tối: đã khai báo, CHƯA áp dụng — P1/Wave 1D) ─── */
+  /* ─── Vỏ portal (sidebar tối — P1 chốt "tối", áp dụng ở Wave 1D-B) ───── */
   --xp-shell-sidebar-bg: #1e1b16;
   --xp-shell-sidebar-text: #e8e4dd;
   --xp-shell-sidebar-active: #d6a02c;
+  /* Bốn bậc trạng thái dưới đây DẪN XUẤT từ ba token trên, không phải màu mới đọc
+     từ Figma: Foundations chỉ định nghĩa 3 màu sidebar, mà nền tối cần thêm hover /
+     nền mục đang chọn / chữ mờ / đường kẻ. Trộn bằng `color-mix` để đổi một trong ba
+     màu gốc là cả bộ đi theo. Tỉ lệ chọn theo tương phản đo được (xem theme.test). */
+  --xp-shell-sidebar-hover: color-mix(
+    in srgb,
+    var(--xp-shell-sidebar-text) 8%,
+    var(--xp-shell-sidebar-bg)
+  );
+  --xp-shell-sidebar-selected-bg: color-mix(
+    in srgb,
+    var(--xp-shell-sidebar-active) 14%,
+    var(--xp-shell-sidebar-bg)
+  );
+  --xp-shell-sidebar-muted: color-mix(
+    in srgb,
+    var(--xp-shell-sidebar-text) 62%,
+    var(--xp-shell-sidebar-bg)
+  );
+  --xp-shell-sidebar-border: color-mix(
+    in srgb,
+    var(--xp-shell-sidebar-text) 14%,
+    var(--xp-shell-sidebar-bg)
+  );
   --xp-shell-topbar-bg: #ffffff;
   --xp-shell-topbar-border: #e8e4dd;
 
@@ -161,6 +185,8 @@
   --xp-shell-topbar-height: 56px;
   --xp-shell-sidebar-width: 232px;
   --xp-shell-sidebar-collapsed-width: 64px;
+  --xp-shell-bottom-nav-height: 64px;
+  --xp-shell-drawer-width: 280px;
 
   /* ─── Lịch resource timeline ──────────────────────────────────────────── */
   --xp-calendar-resource-col-width: 220px;

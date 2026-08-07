@@ -1,16 +1,18 @@
 'use client';
 
-import { CompassOutlined, IdcardOutlined, MessageOutlined, ScheduleOutlined } from '@ant-design/icons';
+import {
+  CompassOutlined,
+  IdcardOutlined,
+  MessageOutlined,
+  ScheduleOutlined,
+} from '@ant-design/icons';
 import { Badge } from 'antd';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ComponentType } from 'react';
 import { cx } from '@/lib/cx';
 import { ROUTES } from '@/constants/routes';
-import {
-  useAuthModal,
-  useNextFromCurrentPath,
-} from '@/features/auth/components/AuthModalProvider';
+import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -70,8 +72,13 @@ export function MobileTabBar() {
   return (
     <nav className={styles.bar} aria-label="Điều hướng nhanh">
       {tabs.map((tab) => {
+        // Khớp tuyệt đối hoặc khớp tiền tố CÓ DẤU `/` — `startsWith(tab.href)` trần sẽ cho
+        // `/tripsomething` sáng tab `/trips`. Hôm nay chưa route nào đụng nhau, nhưng đây là
+        // cùng quy tắc mà `matchSelectedKey` và `proxy.ts` đã dùng; để lệch là đặt bẫy.
         const active =
-          tab.href === ROUTES.HOME ? pathname === tab.href : pathname.startsWith(tab.href);
+          tab.href === ROUTES.HOME
+            ? pathname === tab.href
+            : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
         const icon = <tab.Icon />;
         const gated = Boolean(tab.requiresAuth) && !user;
 

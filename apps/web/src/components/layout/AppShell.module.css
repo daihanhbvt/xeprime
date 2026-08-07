@@ -1,3 +1,10 @@
+/**
+ * Bố cục vỏ: sidebar là cột `flex: none` rộng theo token, phần còn lại là `flex: 1`.
+ *
+ * Nhờ vậy việc thu gọn sidebar KHÔNG cần tính toán offset ở JS — đổi bề rộng cột là vùng nội
+ * dung tự co giãn theo. `min-width: 0` ở `.main` là thứ giữ cho bảng rộng (`DataTable` có
+ * `minWidth` riêng) không đẩy cả trang tràn ngang.
+ */
 .shell {
   display: flex;
   min-height: 100dvh;
@@ -37,9 +44,14 @@
   border-radius: var(--xp-border-radius);
 }
 
-@media (max-width: 992px) {
+/* Ranh chính tắc 1024px (`--xp-bp-tablet`) — xem ghi chú ở MobileNav.module.css. */
+@media (max-width: 1024px) {
   .content {
-    /* Chừa chỗ cho thanh bottom nav cố định (MobileNav). */
-    padding: var(--xp-space-md) var(--xp-space-sm) calc(var(--xp-space-md) + 68px);
+    /* Chừa chỗ cho thanh bottom nav cố định (MobileNav) + vùng an toàn iOS. Trước Wave 1D-C
+       chỗ này là số 68 gõ tay; nay lấy từ token đọc từ Figma `14:1641`. */
+    padding: var(--xp-space-md) var(--xp-space-sm)
+      calc(
+        var(--xp-space-md) + var(--xp-shell-bottom-nav-height) + env(safe-area-inset-bottom, 0px)
+      );
   }
 }

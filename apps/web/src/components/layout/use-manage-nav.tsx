@@ -34,6 +34,7 @@ export function useManageNav(onNavigate?: () => void): {
   const { has } = usePermissions();
 
   const nodes = navForScope(Boolean(user?.platformRole));
+  const selectedKey = matchSelectedKey(pathname, flattenLeaves(nodes));
 
   function buildLeaf(leaf: NavLeaf): MenuItem | null {
     if (!has(leaf.permission)) return null;
@@ -41,7 +42,18 @@ export function useManageNav(onNavigate?: () => void): {
       key: leaf.href,
       icon: createElement(leaf.icon),
       label: (
-        <Link href={leaf.href} onClick={onNavigate}>
+        <Link
+          href={leaf.href}
+          onClick={onNavigate}
+          // Mục đang mở phải nói ra bằng ngữ nghĩa, không chỉ bằng màu: nền tối + chữ gold
+          // là tín hiệu thị giác, `aria-current` mới là tín hiệu cho trình đọc màn hình.
+          aria-current={leaf.href === selectedKey ? 'page' : undefined}
+          // Tên truy cập được PHẢI sống sót khi sidebar thu gọn. Lúc đó AntD ẩn phần chữ
+          // bằng CSS; nếu chỉ dựa vào text con thì mục thu gọn thành nút không tên.
+          aria-label={leaf.label}
+          // Nhãn dài bị cắt bằng ellipsis — `title` cho người dùng chuột đọc được đầy đủ.
+          title={leaf.label}
+        >
           {leaf.label}
         </Link>
       ),
@@ -61,7 +73,6 @@ export function useManageNav(onNavigate?: () => void): {
   }
 
   const items = nodes.map(buildNode).filter((item): item is MenuItem => item !== null);
-  const selectedKey = matchSelectedKey(pathname, flattenLeaves(nodes));
 
   return { items, selectedKey };
 }

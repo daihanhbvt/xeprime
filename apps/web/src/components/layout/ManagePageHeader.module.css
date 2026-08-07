@@ -2,24 +2,51 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: var(--xp-space-sm);
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: var(--xp-space-md);
 }
 
 .left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--xp-space-sm);
+  /* `min-width: 0` + `flex: 1` là thứ cho phép tiêu đề dài xuống dòng thay vì đẩy vùng hành
+     động ra khỏi màn hình ở 360px. */
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-.title {
-  margin: 0;
+.heading {
+  min-width: 0;
 }
 
+/*
+ * `Typography.Title level={1}` mang cỡ `fontSizeHeading1` (32px). Tiêu đề trang của Figma
+ * (`58:98`) là ~24px, tức `--xp-font-size-h2`. Ghi đè cỡ ở đây thay vì hạ cấp heading —
+ * ngữ nghĩa `<h1>` giữ nguyên, chỉ phần thị giác bám Figma.
+ */
+.title {
+  margin: 0 !important;
+  font-size: var(--xp-font-size-h2) !important;
+  line-height: var(--xp-line-height-h2) !important;
+  /* Tiêu đề dài XUỐNG DÒNG, không cắt cụt: tên gian hàng hay biển số bị cắt mất đuôi là
+     mất thông tin, còn xuống dòng chỉ tốn chỗ. */
+  overflow-wrap: anywhere;
+}
+
+.subtitle {
+  margin: var(--xp-space-xs) 0 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* Vùng hành động tự xuống dòng khi hết chỗ (không có nhánh JS theo breakpoint). Ở mobile nó
+   rơi xuống dòng dưới tiêu đề — thứ tự đọc vẫn là tiêu đề → mô tả → hành động. */
 .extra {
   display: flex;
-  gap: 8px;
+  gap: var(--xp-space-sm);
   flex-wrap: wrap;
 }

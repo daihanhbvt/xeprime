@@ -5,6 +5,8 @@ import { Button, Dropdown, Popconfirm, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
 import type { ReactNode } from 'react';
 
+import { decorativeIcon } from '@/lib/decorative-icon';
+
 import styles from './RowActions.module.css';
 
 export interface RowAction {
@@ -50,13 +52,10 @@ interface RowActionsProps {
 const DEFAULT_MAX_INLINE = 3;
 
 /**
- * Icon của `@ant-design/icons` tự render `role="img"` kèm `aria-label` là TÊN ICON ("eye",
- * "delete"). Với nút có chữ, tên đó lọt vào accessible name và cho ra "eye Thu tiền". Bọc
- * `aria-hidden` để icon trở lại đúng vai trò trang trí — chữ (hoặc `aria-label` của nút) mới là tên.
+ * Chuyển sang `lib/decorative-icon` ở Wave 1D-C: `MobileNav` mắc đúng lỗi này (D16.1) nên
+ * bản dùng chung mới là chỗ đúng để nó sống. Bí danh giữ lại để phần dưới không phải sửa.
  */
-function decorative(icon: ReactNode): ReactNode {
-  return icon ? <span aria-hidden="true">{icon}</span> : undefined;
-}
+const decorative = decorativeIcon;
 
 function ActionButton({ action }: { action: RowAction }) {
   const commonProps = {

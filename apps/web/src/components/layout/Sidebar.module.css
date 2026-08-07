@@ -6,29 +6,97 @@
   flex: none;
   display: flex;
   flex-direction: column;
-  background: var(--xp-color-bg-container);
-  border-right: 1px solid var(--xp-color-border);
+  /* P1: nền tối của Figma Foundations `14:1424`. */
+  background: var(--xp-shell-sidebar-bg);
+  color: var(--xp-shell-sidebar-text);
+  border-right: 1px solid var(--xp-shell-sidebar-border);
   z-index: var(--xp-z-sidebar);
 }
 
-.logo {
+/* Figma `14:1532` / `47:77`: cột thu gọn 64px — đúng bằng token đã có từ Wave 1A. */
+.siderCollapsed {
+  width: var(--xp-shell-sidebar-collapsed-width);
+}
+
+.brand {
   display: flex;
-  align-items: center;
-  height: 56px;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--xp-color-border-secondary);
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--xp-shell-topbar-height);
+  padding: var(--xp-space-sm) var(--xp-space-md);
   flex: none;
+  /* Không kẻ ngang dưới brand: Figma `14:1425` để brand liền mạch với vùng menu. */
+  overflow: hidden;
+}
+
+.siderCollapsed .brand {
+  align-items: center;
+  padding-inline: 0;
+}
+
+/* Tên gian hàng — dòng phụ, có thể rất dài nên cắt bằng ellipsis. */
+.tenant {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-shell-sidebar-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/**
+ * Nút thu gọn.
+ *
+ * Phải viết `.sider .toggle` chứ không phải `.toggle`: AntD đặt màu chữ của Button ở
+ * `:where(.css-<hash>).ant-btn` — `:where()` khiến phần hash có độ đặc hiệu 0, nên luật đó là
+ * (0,1,0), ĐÚNG BẰNG một class đơn của CSS Module. Hoà thì thứ tự chèn quyết định, mà AntD
+ * chèn `<style>` lúc chạy nên luôn đứng sau ⇒ nút hoá màu chữ nền sáng và tàng hình trên
+ * sidebar tối. Thêm `.sider` nâng lên (0,2,0) và thắng dứt điểm.
+ */
+.sider .toggle {
+  flex: none;
+  align-self: flex-end;
+  margin-inline: var(--xp-space-sm);
+  color: var(--xp-shell-sidebar-muted);
+}
+
+.sider .toggle:hover {
+  /* Luật hover của AntD là `.ant-btn-text:not(:disabled):not(.ant-btn-disabled):hover` =
+     (0,4,0) — cao hơn cả (0,2,0) ở trên, nên riêng hover vẫn cần `!important`. */
+  color: var(--xp-shell-sidebar-text) !important;
+  background: var(--xp-shell-sidebar-hover) !important;
+}
+
+.sider .toggle:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-shell-sidebar-active);
+  outline-offset: 2px;
+}
+
+/* Thu gọn: nút xuống dưới logo và căn giữa cột (Figma `47:82`). */
+.siderCollapsed .toggle {
+  align-self: center;
+  margin-inline: 0;
 }
 
 .menu {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 6px 8px 10px;
+  padding: var(--xp-space-sm);
 }
 
-/* Desktop-only: mobile dùng Drawer + bottom nav. */
-@media (max-width: 992px) {
+.siderCollapsed .menu {
+  padding-inline: 0;
+}
+
+/**
+ * Chỉ desktop (>1024px). Từ 1024px trở xuống dùng Drawer + thanh tab dưới đáy.
+ *
+ * Ranh là `--xp-bp-tablet` = 1024, KHÔNG phải 992 như trước Wave 1D-C: 992 là token `lg` của
+ * Ant Design, không thuộc thang XePrime, và nó khiến dải 993–1024px hiện sidebar desktop
+ * trong khi `useIsDesktop()` (≥1025) vẫn báo tablet — hai hệ gãy ở hai chỗ khác nhau.
+ */
+@media (max-width: 1024px) {
   .sider {
     display: none;
   }

@@ -274,34 +274,82 @@ export function navForScope(isPlatform: boolean): readonly NavNode[] {
   return isPlatform ? PLATFORM_NAV : SHOP_NAV;
 }
 
-/** Tab trên thanh điều hướng dưới đáy (mobile). Tab "Thêm" mở Drawer, thêm ở component. */
+/**
+ * Tab trên thanh điều hướng dưới đáy (mobile). Tab "Thêm" mở Drawer, thêm ở component.
+ *
+ * `permission` thêm ở Wave 1D-C. Trước đó thanh tab KHÔNG lọc quyền trong khi sidebar thì có,
+ * nên một vai trò tuỳ biến thiếu quyền vẫn thấy tab dẫn tới trang mà API sẽ trả 403. Đây chỉ
+ * là lớp trải nghiệm — chặn thật vẫn nằm ở guard backend (CLAUDE.md mục 6).
+ *
+ * Đây là **tập con** của cây menu, không phải bản sao: 4 đích chính, phần còn lại nằm trong
+ * Drawer "Thêm".
+ */
 export interface MobileTab {
   readonly key: string;
   readonly label: string;
   readonly href: string;
+  readonly permission: Permission;
   readonly icon: ComponentType<{ className?: string }>;
 }
 
 const SHOP_MOBILE_TABS: readonly MobileTab[] = [
-  { key: 'dashboard', label: 'Tổng quan', href: ROUTES.MANAGE.ROOT, icon: DashboardOutlined },
-  { key: 'calendar', label: 'Lịch xe', href: ROUTES.MANAGE.CALENDAR, icon: CalendarOutlined },
+  {
+    key: 'dashboard',
+    label: 'Tổng quan',
+    href: ROUTES.MANAGE.ROOT,
+    permission: PERMISSION.TENANT_VIEW,
+    icon: DashboardOutlined,
+  },
+  {
+    key: 'calendar',
+    label: 'Lịch xe',
+    href: ROUTES.MANAGE.CALENDAR,
+    permission: PERMISSION.CALENDAR_VIEW,
+    icon: CalendarOutlined,
+  },
   {
     key: 'booking-requests',
     label: 'Đơn đặt xe',
     href: ROUTES.MANAGE.BOOKING_REQUESTS,
+    permission: PERMISSION.BOOKING_REQUEST_VIEW,
     icon: ScheduleOutlined,
   },
-  { key: 'bookings', label: 'Đơn thuê', href: ROUTES.MANAGE.BOOKINGS, icon: FileTextOutlined },
+  {
+    key: 'bookings',
+    label: 'Đơn thuê',
+    href: ROUTES.MANAGE.BOOKINGS,
+    permission: PERMISSION.BOOKING_VIEW,
+    icon: FileTextOutlined,
+  },
 ];
 
 const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
-  { key: 'dashboard', label: 'Tổng quan', href: ROUTES.MANAGE.ROOT, icon: DashboardOutlined },
-  { key: 'approvals', label: 'Duyệt hồ sơ', href: ROUTES.MANAGE.ADMIN, icon: AuditOutlined },
-  { key: 'admin-vehicles', label: 'Xe', href: ROUTES.MANAGE.ADMIN_VEHICLES, icon: CarOutlined },
+  {
+    key: 'dashboard',
+    label: 'Tổng quan',
+    href: ROUTES.MANAGE.ROOT,
+    permission: PERMISSION.PLATFORM_DASHBOARD_VIEW,
+    icon: DashboardOutlined,
+  },
+  {
+    key: 'approvals',
+    label: 'Duyệt hồ sơ',
+    href: ROUTES.MANAGE.ADMIN,
+    permission: PERMISSION.PLATFORM_APPROVAL_REVIEW,
+    icon: AuditOutlined,
+  },
+  {
+    key: 'admin-vehicles',
+    label: 'Xe',
+    href: ROUTES.MANAGE.ADMIN_VEHICLES,
+    permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
+    icon: CarOutlined,
+  },
   {
     key: 'admin-bookings',
     label: 'Đơn thuê',
     href: ROUTES.MANAGE.ADMIN_BOOKINGS,
+    permission: PERMISSION.PLATFORM_BOOKING_VIEW,
     icon: FileTextOutlined,
   },
 ];

@@ -1,43 +1,142 @@
-.wrap :global(.ant-menu) {
+/**
+ * Ghi đè giao diện của AntD Menu.
+ *
+ * ⚠️ **Vì sao mọi selector dưới đây đều có `.ant-menu-root.ant-menu-light`** — đây là lỗi đã
+ * xảy ra thật (mục menu tàng hình trên sidebar tối), không phải phòng xa:
+ *
+ * AntD 6 sinh CSS dạng `:where(.css-<hash>).ant-menu-light .ant-menu-item { color: … }`.
+ * `:where()` làm phần hash có độ đặc hiệu **BẰNG 0**, nên luật đó chỉ là **(0,2,0)** — đúng
+ * bằng `.dark :global(.ant-menu-item)`. Hoà độ đặc hiệu thì **thứ tự trong tài liệu** quyết
+ * định, mà AntD chèn `<style>` vào `<head>` lúc chạy, tức là SAU file CSS Module. Kết quả:
+ * AntD luôn thắng, màu chữ rơi về `--ant-menu-item-color` ≈ `#1a1a1a` — gần như đen trên nền
+ * `#1e1b16`.
+ *
+ * Thêm `.ant-menu-root.ant-menu-light` nâng luật của ta lên **(0,4,0)**, thắng dứt điểm và
+ * KHÔNG phụ thuộc thứ tự chèn. Với `:hover`, AntD dùng chuỗi `:not()` lên tới (0,5,0) nên
+ * luật hover ở đây phải giữ đủ `:not(.ant-menu-item-selected)` để đạt (0,6,0).
+ *
+ * Hai lối khác đã cân nhắc và loại:
+ *  - `!important` cho từng khai báo màu: thắng nhưng rải rác và che mất lý do thật;
+ *  - `ConfigProvider` với `components.Menu`: bám tên token nội bộ của AntD — đúng thứ
+ *    CLAUDE.md mục 3 cấm ("vỡ qua mỗi lần nâng cấp").
+ */
+
+/* ─── Nền chung ─────────────────────────────────────────────────────────────── */
+.wrap :global(.ant-menu-root.ant-menu-light) {
   border-inline-end: none;
   background: transparent;
 }
 
 /* Nhãn nhóm: chữ nhỏ, in hoa, thưa — như "TỔNG QUAN / QUẢN LÝ / CÀI ĐẶT" bản cũ. */
-.wrap :global(.ant-menu-item-group-title) {
-  padding: 10px 10px 4px;
-  font-size: 10.5px;
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item-group-title) {
+  padding: var(--xp-space-sm) var(--xp-space-sm) var(--xp-space-xs);
+  font-size: var(--xp-font-size-overline);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--xp-color-text-tertiary);
 }
 
-.wrap :global(.ant-menu-item) {
-  height: 36px;
-  line-height: 36px;
+/* Figma `14:1434`: mục cao 34px, icon 18px, chữ 14px. */
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item) {
+  height: 34px;
+  line-height: 34px;
   margin-block: 1px;
-  border-radius: 8px;
-  font-size: 13.5px;
+  border-radius: var(--xp-border-radius-sm);
+  font-size: var(--xp-font-size-body);
   color: var(--xp-color-text-secondary);
 }
 
-.wrap :global(.ant-menu-item .anticon) {
-  font-size: 16px;
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item .anticon) {
+  font-size: var(--xp-font-size-h4);
 }
 
-.wrap :global(.ant-menu-item:hover) {
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item:not(.ant-menu-item-selected):hover) {
   color: var(--xp-color-text);
   background: var(--xp-color-bg-hover);
 }
 
-/* Mục đang chọn: nền cream rất nhạt, chữ + icon gold đậm — giống highlight "Dashboard". */
-.wrap :global(.ant-menu-item-selected) {
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item-selected) {
   background: var(--xp-gold-wash);
   color: var(--xp-gold-deep);
   font-weight: 600;
 }
 
-.wrap :global(.ant-menu-item-selected a) {
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item-selected a) {
   color: var(--xp-gold-deep);
+}
+
+/* Nhãn dài không được đẩy rộng sidebar — cắt bằng ellipsis, `title` giữ bản đầy đủ. */
+.wrap :global(.ant-menu-title-content) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item a) {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Màu chữ do <li> quyết định; thẻ <a> chỉ thừa kế, nếu không phải khai báo hai lần. */
+  color: inherit;
+}
+
+/* ─── Nền tối (Sidebar desktop + Drawer mobile) ──────────────────────────────
+   Tương phản đã ĐO trên `--xp-shell-sidebar-bg`: nhãn nhóm 5.96 · chữ mục 13.54 ·
+   chữ trên hover 11.12 · chữ mục đang chọn 10.54 · icon gold 5.67. Bộ token nền sáng ở
+   khối trên KHÔNG dùng lại được: `--xp-color-text-secondary` chỉ 2.99, `--xp-gold-deep` 4.33. */
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item-group-title) {
+  color: var(--xp-shell-sidebar-muted);
+}
+
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item) {
+  color: var(--xp-shell-sidebar-text);
+}
+
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item:not(.ant-menu-item-selected):hover) {
+  color: var(--xp-shell-sidebar-text);
+  background: var(--xp-shell-sidebar-hover);
+}
+
+/* Figma `14:1434` phóng to: nền ấm sáng hơn + ICON gold + chữ sáng hơn. Không có thanh
+   gạch trái — bản render nhỏ dễ nhìn nhầm icon gold thành thanh accent. */
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item-selected) {
+  background: var(--xp-shell-sidebar-selected-bg);
+  color: var(--xp-shell-sidebar-text);
+}
+
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item-selected a) {
+  color: var(--xp-shell-sidebar-text);
+}
+
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item-selected .anticon) {
+  color: var(--xp-shell-sidebar-active);
+}
+
+/* Viền focus phải nhìn thấy được TRÊN NỀN TỐI — mặc định của AntD tính cho nền sáng. */
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item a:focus-visible) {
+  outline: var(--xp-focus-outline-width) solid var(--xp-shell-sidebar-active);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/* ─── Thu gọn ────────────────────────────────────────────────────────────────
+   AntD ẩn phần chữ; icon phải ở đúng tâm cột 64px để không nhảy khi đóng/mở.        */
+.collapsed :global(.ant-menu-inline-collapsed) {
+  /* Mặc định AntD cố định 80px cho menu thu gọn; cột của XePrime là 64px (Figma
+     `14:1532` = `47:77`), nên phải để menu ăn theo bề rộng cột. */
+  width: 100%;
+}
+
+.collapsed :global(.ant-menu-root.ant-menu-light .ant-menu-item) {
+  /* `!important` là bắt buộc, không phải để cho tiện: AntD tính `padding-inline` của mục
+     thu gọn bằng `calc(50% - fontSize/2)` cho cột 80px của nó, và đặt qua style nội tuyến
+     trên chính phần tử. Với cột 64px, giá trị đó lệch tâm. */
+  padding-inline: 0 !important;
+  text-align: center;
+}
+
+.collapsed :global(.ant-menu-root.ant-menu-light .ant-menu-item .ant-menu-item-icon) {
+  margin-inline-end: 0;
 }

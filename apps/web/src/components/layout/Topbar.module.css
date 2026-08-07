@@ -6,10 +6,11 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-md);
+  /* Figma `14:1498`: cao 56px, nền trắng, kẻ dưới. */
   height: var(--xp-shell-topbar-height);
   padding: 0 var(--xp-space-lg);
-  background: var(--xp-color-bg-container);
-  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-shell-topbar-bg);
+  border-bottom: 1px solid var(--xp-shell-topbar-border);
 }
 
 .left,
@@ -20,57 +21,94 @@
   min-width: 0;
 }
 
-/* Hamburger chỉ hiện trên mobile (desktop đã có sidebar cố định). */
-.hamburger {
+/**
+ * Hamburger chỉ hiện trên mobile (desktop đã có sidebar cố định).
+ *
+ * `.header .hamburger` chứ không phải `.hamburger`: `display` của AntD Button nằm ở
+ * `:where(.css-<hash>).ant-btn` = (0,1,0) — bằng đúng một class đơn. Hoà thì AntD thắng vì
+ * `<style>` của nó chèn sau ⇒ hamburger hiện cả trên desktop, cạnh sidebar.
+ */
+.header .hamburger {
   display: none;
 }
 
-/* Nút chọn chi nhánh — viền bo tròn, nền trắng. */
-.branch {
+/* Vạch ngăn trước khối gian hàng — Figma `14:1518`. */
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--xp-color-border);
+  flex: none;
+}
+
+/* Ngữ cảnh gian hàng (Figma `14:1519`) — chữ, không phải nút. */
+.tenant {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 13px;
-  border: 1px solid var(--xp-color-border);
-  border-radius: 999px;
-  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+  min-width: 0;
   color: var(--xp-color-text);
   font-weight: 600;
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: border-color 0.15s;
+  font-size: var(--xp-font-size-body);
 }
 
-.branch:hover {
-  border-color: var(--xp-color-primary);
-}
-
-.branchCaret {
-  font-size: 11px;
-  color: var(--xp-color-text-tertiary);
-}
-
-.avatar {
-  cursor: pointer;
-  background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
-  color: #fff;
+.tenantMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: var(--xp-border-radius-sm);
+  /* ĐO ĐƯỢC: `--xp-gold-deep` trên `--xp-gold-wash` chỉ đạt **3.68** — trượt AA. Đây là lỗi
+     do chính Batch 1D-B tạo ra, phát hiện khi đo ở 1D-C. Ô gold đặc + chữ
+     `--xp-color-primary-contrast` đạt 6.60 và bám Figma `14:1520` hơn. */
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-body-sm);
   font-weight: 700;
 }
 
-@media (max-width: 992px) {
+/* Tên gian hàng dài không được đẩy các nút bên phải ra khỏi màn. */
+.tenantName {
+  min-width: 0;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatarButton {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: var(--xp-border-radius-pill);
+}
+
+.avatarButton:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* `.header .avatar`: nền của `.ant-avatar` cũng là (0,1,0) — xem ghi chú ở `.hamburger`. */
+.header .avatar {
+  background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
+  color: var(--xp-color-primary-contrast);
+  font-weight: 700;
+}
+
+/* Ranh chính tắc 1024px (`--xp-bp-tablet`) — hamburger xuất hiện đúng lúc sidebar biến mất. */
+@media (max-width: 1024px) {
   .header {
     padding: 0 var(--xp-space-sm);
   }
 
-  .hamburger {
+  .header .hamburger {
     display: inline-flex;
   }
 
-  .branchLabel {
-    max-width: 130px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .tenantName {
+    max-width: 100px;
   }
 }

@@ -80,11 +80,21 @@ export const XP_TOKENS = {
   'color-neutral-bg': '#f5f3ef',
 
   // ─── Vỏ portal ────────────────────────────────────────────────────────────
-  // ⚠️ Sidebar TỐI đã khai báo nhưng CHƯA áp dụng: `Sidebar.module.css` vẫn dùng
-  // `--xp-color-bg-container` (sáng). Bật lên là quyết định P1, thuộc Wave 1D.
+  // P1 đã chốt "TỐI" (07/08/2026) và Wave 1D-B đã áp dụng.
   'shell-sidebar-bg': '#1e1b16', // 14:92
   'shell-sidebar-text': '#e8e4dd', // 14:96
   'shell-sidebar-active': '#d6a02c', // 14:100
+  // Dẫn xuất, KHÔNG phải màu mới: Foundations chỉ cho 3 màu sidebar, nền tối còn cần
+  // hover / nền mục chọn / chữ mờ / đường kẻ. Giữ `color-mix` thay vì hex tính sẵn để
+  // ba màu gốc vẫn là nguồn duy nhất. Tương phản của cả bốn đã đo trong `theme.test.ts`.
+  'shell-sidebar-hover':
+    'color-mix(in srgb, var(--xp-shell-sidebar-text) 8%, var(--xp-shell-sidebar-bg))',
+  'shell-sidebar-selected-bg':
+    'color-mix(in srgb, var(--xp-shell-sidebar-active) 14%, var(--xp-shell-sidebar-bg))',
+  'shell-sidebar-muted':
+    'color-mix(in srgb, var(--xp-shell-sidebar-text) 62%, var(--xp-shell-sidebar-bg))',
+  'shell-sidebar-border':
+    'color-mix(in srgb, var(--xp-shell-sidebar-text) 14%, var(--xp-shell-sidebar-bg))',
   'shell-topbar-bg': '#ffffff', // 14:104
   'shell-topbar-border': '#e8e4dd', // 14:108
 
@@ -196,9 +206,11 @@ export const XP_TOKENS = {
   'container-max-width': '1200px', // 117:1203 (Pagination/Desktop) · 127:2060
 
   // ─── Khung app ────────────────────────────────────────────────────────────
-  'shell-topbar-height': '56px',
-  'shell-sidebar-width': '232px',
-  'shell-sidebar-collapsed-width': '64px',
+  'shell-topbar-height': '56px', // 14:1498
+  'shell-sidebar-width': '232px', // 14:1424 (Foundations sở hữu giá trị; 47:5 = 240 lệch nhịp)
+  'shell-sidebar-collapsed-width': '64px', // 14:1532 = 47:77
+  'shell-bottom-nav-height': '64px', // 14:1641
+  'shell-drawer-width': '280px', // 14:1662
 
   // ─── Lịch resource timeline ───────────────────────────────────────────────
   'calendar-resource-col-width': '220px',
