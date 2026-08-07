@@ -2,6 +2,7 @@
 
 import { PlusOutlined } from '@ant-design/icons';
 import { App, Button } from 'antd';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Suspense } from 'react';
 import { PERMISSION } from '@xeprime/types';
@@ -9,6 +10,7 @@ import { ROUTES, vehiclePath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { VehicleFiltersBar } from '@/features/vehicles/components/VehicleFilters';
 import { VehicleTable } from '@/features/vehicles/components/VehicleTable';
@@ -34,6 +36,7 @@ function VehiclesView() {
   const { data, isError, refetch, isFetching } = useVehicles(filters);
   const deleteVehicle = useDeleteVehicle();
 
+  const canView = has(PERMISSION.VEHICLE_VIEW);
   const canCreate = has(PERMISSION.VEHICLE_CREATE);
   const canEdit = has(PERMISSION.VEHICLE_UPDATE);
   const canDelete = has(PERMISSION.VEHICLE_DELETE);
@@ -48,11 +51,39 @@ function VehiclesView() {
     filters.publicStatus,
   );
 
+  function clearFilters() {
+    setFilters({
+      q: undefined,
+      vehicleType: undefined,
+      serviceType: undefined,
+      operationStatus: undefined,
+      publicStatus: undefined,
+    });
+  }
+
   function handleDelete(id: string) {
     deleteVehicle.mutate(id, {
       onSuccess: () => message.success('Đã xoá xe'),
       onError: (error) => message.error(getErrorMessage(error)),
     });
+  }
+
+  // Thiếu quyền xem → thay TOÀN BỘ nội dung, không dựng tiêu đề và bộ lọc cho một trang không
+  // xem được (Figma `58:2061`). Đây chỉ là lớp trải nghiệm; chặn thật là guard backend.
+  if (!canView) {
+    return (
+      <PermissionState
+        kind="forbidden"
+        title="Không có quyền truy cập"
+        description="Bạn cần quyền dưới đây để xem trang này. Liên hệ quản trị viên để được cấp quyền."
+        missingPermissions={[PERMISSION.VEHICLE_VIEW]}
+        action={
+          <Link href={ROUTES.MANAGE.ROOT}>
+            <Button type="primary">Về trang chủ</Button>
+          </Link>
+        }
+      />
+    );
   }
 
   return (
@@ -72,7 +103,7 @@ function VehiclesView() {
         }
       />
 
-      <VehicleFiltersBar filters={filters} onChange={setFilters} />
+      <VehicleFiltersBar filters={filters} onChange={setFilters} onClear={clearFilters} />
 
       <VehicleTable
         items={items}
@@ -84,15 +115,7 @@ function VehiclesView() {
         // Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ bảng đang đọc.
         error={isError && !data ? { onRetry: () => void refetch() } : null}
         filtered={hasFilters}
-        onClearFilters={() =>
-          setFilters({
-            q: undefined,
-            vehicleType: undefined,
-            serviceType: undefined,
-            operationStatus: undefined,
-            publicStatus: undefined,
-          })
-        }
+        onClearFilters={clearFilters}
         emptyAction={
           canCreate ? (
             <Button

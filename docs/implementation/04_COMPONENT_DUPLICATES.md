@@ -442,3 +442,30 @@ khu tách biệt và có hành vi khác nhau ở đúng chỗ quan trọng:
 | Ranh breakpoint       | 1024 (chính tắc)      | 760 _(chưa dời — xem nợ)_            |
 
 Gộp hai cái này là trộn ranh giới khách hàng ↔ gian hàng — điều CLAUDE.md mục 6 cấm.
+
+---
+
+## D20 — `VehicleFiltersBar` từng là bản sao của `FilterBar` ✅ ĐÃ GOM (Wave 2)
+
+Trước Pilot Wave 2, `VehicleFilters.tsx` tự dựng lại toàn bộ thanh lọc: hàng flex-wrap, bề rộng
+ô tìm kiếm, debounce 400ms viết tay, và một breakpoint `576px` **không thuộc thang XePrime**.
+Đó là bản sao của `FilterBar` (Wave 1C) — cùng bài toán, giải hai lần, gãy ở hai chỗ khác nhau.
+
+Nay `VehicleFiltersBar` chỉ còn **khai định nghĩa filter của Fleet** và truyền vào `FilterBar`.
+`VehicleFilters.module.css` từ 4 khối rớt còn **1** (bề rộng ô sắp xếp).
+
+**Cái được giữ lại có chủ ý**: ô "Sắp xếp" KHÔNG phải một `field` của `FilterBar` mà nằm ở slot
+`actions`. Nó không lọc dữ liệu; gộp vào sẽ khiến `countActiveFilters` luôn đếm ≥1 (mặc định
+`newest`), nút "Xoá bộ lọc" hiện vĩnh viễn, huy hiệu số trên nút "Bộ lọc" ở mobile luôn sai, và
+"Xoá bộ lọc" sẽ nuốt luôn sắp xếp — hành vi đã có test khoá từ Wave 1C. Figma đồng ý: `58:129`
+đặt nó ở lề phải cụm lọc, `58:2429` đặt cạnh nút "Bộ lọc".
+
+---
+
+## D21 — CSS chết ở Fleet List ✅ ĐÃ DỌN (Wave 2)
+
+- `VehicleTable.module.css`: 4 class chết (`.cell`, `.name`, `.meta`, `.rowClickable`) còn lại
+  sau khi Wave 1C chuyển sang `EntityIdentity`/`DataTable`. `.meta` còn tham chiếu
+  **`--xp-text-secondary`** — một token **không tồn tại** (tên đúng là `--xp-color-text-secondary`),
+  kèm fallback `rgba()` thô. Đã xoá cả bốn.
+- `vehicles-page.module.css`: **không file nào import** — đã xoá hẳn.

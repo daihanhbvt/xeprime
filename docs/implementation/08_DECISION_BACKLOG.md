@@ -972,3 +972,63 @@ Test mới chặn được **selector sai độ đặc hiệu**, nhưng **không
 render ra đúng — jsdom không áp CSS Module. Chỉ **QA thị giác trên trình duyệt thật** mới đóng
 được khoảng trống đó. Đây là bằng chứng cụ thể nhất từ đầu dự án cho việc QA thị giác đang nợ
 là rủi ro thật, không phải thủ tục.
+
+---
+
+## Wave 2 — Pilot Fleet List `/manage/vehicles` (07/08/2026)
+
+### Ma trận trạng thái đã xác minh (16 frame + 4 component)
+
+**Desktop 10/10 — đúng bằng con số tài liệu ghi**, mỗi trạng thái có một test riêng:
+
+| Node      | Trạng thái                   | Điều kiện trong code          | Đã có trước Pilot?   |
+| --------- | ---------------------------- | ----------------------------- | -------------------- |
+| `58:5`    | fleet-list-default           | `items.length > 0`            | ✅                   |
+| `58:432`  | fleet-list-search-active     | `filters.q`                   | ✅                   |
+| `58:675`  | fleet-list-filters-applied   | 1 trong 4 select              | ✅                   |
+| `58:966`  | fleet-list-view-only         | `!canEdit && !canDelete`      | ✅                   |
+| `58:1351` | fleet-list-empty-create      | rỗng + `VEHICLE_CREATE`       | ✅                   |
+| `58:1461` | fleet-list-empty-no-create   | rỗng, không quyền tạo         | ✅                   |
+| `58:1563` | fleet-list-no-results        | rỗng + `hasFilters`           | ✅                   |
+| `58:1725` | fleet-list-loading           | `isFetching && !items.length` | ✅                   |
+| `58:1956` | fleet-list-error             | `isError && !data`            | ✅                   |
+| `58:2061` | fleet-list-permission-denied | `!VEHICLE_VIEW`               | ❌ **thêm ở Wave 2** |
+
+**Mobile 5**: `58:2405` thẻ · `58:2517` bottom-sheet lọc · `58:2593` lọc đang áp · `58:2710`
+rỗng/không-kết-quả · `58:2767` tải/lỗi.
+**Component 4**: `58:2828` OperationStatusTag · `58:2841` PublicStatusTag · `58:2857` ActionMenu
+(3 biến thể Owner/Manager/Viewer — **khớp đúng** view/edit/delete của code) · `58:2891`
+StateDisplay (5 biến thể — khớp mô hình trạng thái của `DataTable`).
+
+### 🔴 Lỗ hổng chung do Pilot phát hiện: `RowActions` bỏ qua `confirm` trong menu ⋮
+
+Nhánh menu tràn gán thẳng `onClick: action.onClick`, tức **`confirm` bị bỏ lặng lẽ**: một hành
+động phá huỷ rơi xuống menu sẽ chạy NGAY khi bấm, không hỏi lại. Chưa consumer nào nổ ra vì cả
+13 bảng đều ≤3 hành động nên không có gì tràn. Thẻ mobile của Pilot (`maxInline={0}`) là nơi
+đầu tiên đẩy "Xoá" xuống menu — tức lỗi này sẽ ra sản phẩm ngay ở Wave 2 nếu không sửa.
+
+- **Sửa ở tầng chung**, không có gì thuộc Fleet: `Popconfirm` điều khiển bằng state, neo vào
+  chính nút ⋮ (mục menu đã biến mất khi menu đóng nên không còn chỗ khác để neo).
+- **Tương thích ngược tuyệt đối**: 0/13 consumer hiện tại có `confirm` tràn xuống menu ⇒ không
+  consumer nào đổi hành vi, **không cần QA lại**.
+- 4 test mới ở `RowActions.test.tsx` (có xác nhận · huỷ xác nhận · không-confirm vẫn chạy ngay
+  · `maxInline={0}`).
+
+### Khác biệt Figma ↔ code (đã ghi, không im lặng chọn)
+
+| #   | Figma                                                       | Đã làm                                                   | Lý do                                                                                                                |
+| --- | ----------------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1   | `58:1563`: EmptyState nằm TRONG thân bảng, giữ hàng tiêu đề | EmptyState **thay cả bảng**                              | **P31** đã chốt ở Wave 1C, là hợp đồng của `DataTable` — luật ưu tiên #4                                             |
+| 2   | `58:1563`: chỉ MỘT nút "Xoá bộ lọc" (trong state)           | **Hai** nút — thêm một ở `FilterBar`                     | `58:2588` (sheet mobile) bắt buộc phải có; `FilterBar` dựng ở cả hai chế độ. Phân biệt bằng landmark `role="search"` |
+| 3   | `58:107`: ô tìm kiếm nằm ở HÀNG RIÊNG phía trên cụm lọc     | Cùng một hàng, tự xuống dòng                             | Bố cục thuộc `FilterBar` (`127:2339`) — luật #4                                                                      |
+| 4   | `58:2439`: ảnh xe 80×80, trải hết chiều cao thẻ             | `EntityIdentity size="lg"` = 72, khối định danh nằm trên | Không fork scaffold avatar/tên. Bố cục "một ảnh cao + cột nội dung bên phải" đòi tách ảnh khỏi `EntityIdentity`      |
+| 5   | `58:2459`: nút ⋮ 32×32                                      | **44×44** (`--xp-touch-target-min`)                      | Ngưỡng chạm đã duyệt thắng                                                                                           |
+| 6   | OperationStatusTag: "Bảo trì", "Ngừng HĐ"                   | "Bảo dưỡng", "Ngừng hoạt động"                           | Nhãn nghiệp vụ lấy từ code — luật #1. **Không đổi**                                                                  |
+| 7   | PublicStatusTag: 6 biến thể                                 | Code có **7** (`archived`)                               | Figma thiếu một giá trị thật. Không bịa, không xoá                                                                   |
+| 8   | `58:2144` tablet                                            | **Frame RỖNG trong Figma**                               | Không có thiết kế tablet để bám. Tablet dùng bảng desktop (>640px)                                                   |
+
+### Ghi chú trạng thái
+
+Không đổi một giá trị, nhãn hay màu trạng thái nào. **P5 không bị đụng tới.** Bốn giá trị vận
+hành và bảy giá trị public giữ nguyên `VEHICLE_*_STATUS_META`. Thẻ mobile hiện **cả hai trục**
+trạng thái — đúng nguyên tắc "hai trục không được gộp" ghi ở `status/vehicle.ts`.

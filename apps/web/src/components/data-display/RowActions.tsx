@@ -3,7 +3,7 @@
 import { MoreOutlined } from '@ant-design/icons';
 import { Button, Dropdown, Popconfirm, Tooltip } from 'antd';
 import type { MenuProps } from 'antd';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { decorativeIcon } from '@/lib/decorative-icon';
 
@@ -136,11 +136,22 @@ export function RowActions({
   maxInline = DEFAULT_MAX_INLINE,
   overflowLabel = 'Thêm thao tác',
 }: RowActionsProps) {
+  /**
+   * Hành động trong menu ⋮ đang chờ xác nhận.
+   *
+   * Trước Wave 2, nhánh menu gán thẳng `onClick: action.onClick` — tức `confirm` bị **bỏ qua
+   * lặng lẽ**: một hành động phá huỷ rơi vào menu sẽ chạy NGAY khi bấm, không hỏi lại. Lỗ này
+   * chưa nổ ra vì cả 13 consumer hiện tại đều ≤3 hành động nên không có gì tràn xuống menu.
+   * Pilot Wave 2 (thẻ xe ở mobile, `maxInline={0}`) là nơi đầu tiên đẩy "Xoá" xuống menu.
+   */
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+
   const visible = actions.filter((action) => !action.hidden);
   if (visible.length === 0) return null;
 
   const inline = visible.slice(0, maxInline);
   const overflow = visible.slice(maxInline);
+  const pending = overflow.find((action) => action.key === pendingKey) ?? null;
 
   const menuItems: MenuProps['items'] = overflow.map((action) => ({
     key: action.key,
@@ -149,8 +160,19 @@ export function RowActions({
     icon: decorative(action.icon),
     danger: action.danger,
     disabled: action.disabled,
-    onClick: action.onClick,
+    onClick: action.confirm ? () => setPendingKey(action.key) : action.onClick,
   }));
+
+  const trigger = (
+    <Dropdown menu={{ items: menuItems }} trigger={['click']}>
+      <Button
+        type="text"
+        size="small"
+        icon={decorative(<MoreOutlined />)}
+        aria-label={overflowLabel}
+      />
+    </Dropdown>
+  );
 
   return (
     // Hành động của hàng không được kích hoạt luôn cả hàng — xem điểm (2) ở docblock.
@@ -159,14 +181,28 @@ export function RowActions({
         <ActionButton key={action.key} action={action} />
       ))}
       {overflow.length > 0 ? (
-        <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-          <Button
-            type="text"
-            size="small"
-            icon={decorative(<MoreOutlined />)}
-            aria-label={overflowLabel}
-          />
-        </Dropdown>
+        pending ? (
+          // Popconfirm điều khiển hoàn toàn bằng state (`trigger={[]}`) và neo vào chính nút ⋮:
+          // mục menu đã biến mất khi menu đóng, không còn chỗ nào khác để neo hộp xác nhận.
+          <Popconfirm
+            open
+            trigger={[]}
+            title={pending.confirm?.title ?? ''}
+            description={pending.confirm?.description}
+            okText={pending.confirm?.okText ?? 'Đồng ý'}
+            cancelText={pending.confirm?.cancelText ?? 'Huỷ'}
+            okButtonProps={pending.danger ? { danger: true } : undefined}
+            onConfirm={() => {
+              setPendingKey(null);
+              pending.onClick();
+            }}
+            onCancel={() => setPendingKey(null)}
+          >
+            {trigger}
+          </Popconfirm>
+        ) : (
+          trigger
+        )
       ) : null}
     </div>
   );

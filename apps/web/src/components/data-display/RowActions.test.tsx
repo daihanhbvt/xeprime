@@ -223,6 +223,91 @@ describe('RowActions — menu tràn', () => {
     await waitFor(() => expect(onOverflow).toHaveBeenCalledTimes(1));
   });
 
+  /**
+   * Lỗ hổng phát hiện ở Pilot Wave 2 (`/manage/vehicles`, thẻ mobile dùng `maxInline={0}`):
+   * nhánh menu ⋮ gán thẳng `onClick`, tức **`confirm` bị bỏ qua lặng lẽ** — hành động phá huỷ
+   * chạy ngay khi bấm. Chưa consumer nào nổ ra vì cả 13 bảng đều ≤3 hành động.
+   */
+  it('hành động có `confirm` trong menu ⋮ vẫn phải HỎI LẠI trước khi chạy', async () => {
+    const onDelete = vi.fn();
+    render(
+      <RowActions
+        maxInline={0}
+        actions={[
+          action({
+            key: 'delete',
+            label: 'Xoá',
+            danger: true,
+            onClick: onDelete,
+            confirm: { title: 'Xoá mục này?', okText: 'Xoá', cancelText: 'Huỷ' },
+          }),
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm thao tác' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Xoá' }));
+
+    // Bấm mục menu KHÔNG được chạy hành động ngay.
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(await screen.findByText('Xoá mục này?')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xoá' }));
+    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
+  });
+
+  it('huỷ hộp xác nhận trong menu ⋮ thì KHÔNG chạy hành động', async () => {
+    const onDelete = vi.fn();
+    render(
+      <RowActions
+        maxInline={0}
+        actions={[
+          action({
+            key: 'delete',
+            label: 'Xoá',
+            onClick: onDelete,
+            confirm: { title: 'Xoá mục này?', okText: 'Xoá', cancelText: 'Huỷ' },
+          }),
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm thao tác' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Xoá' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Huỷ' }));
+
+    await waitFor(() => expect(screen.queryByText('Xoá mục này?')).toBeNull());
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('hành động KHÔNG có `confirm` trong menu ⋮ vẫn chạy ngay (không hồi quy)', async () => {
+    const onView = vi.fn();
+    render(
+      <RowActions
+        maxInline={0}
+        actions={[action({ key: 'view', label: 'Xem', onClick: onView })]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm thao tác' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Xem' }));
+
+    await waitFor(() => expect(onView).toHaveBeenCalledTimes(1));
+  });
+
+  it('maxInline={0} đẩy TOÀN BỘ hành động vào menu — hình thái của thẻ mobile', () => {
+    render(
+      <RowActions
+        maxInline={0}
+        actions={[action({ key: 'a', label: 'Xem' }), action({ key: 'b', label: 'Sửa' })]}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Xem' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sửa' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Thêm thao tác' })).toBeTruthy();
+  });
+
   it('nút ⋮ có tên khả truy cập, đổi được theo ngữ cảnh', () => {
     render(
       <RowActions

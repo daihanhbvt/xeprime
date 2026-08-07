@@ -441,3 +441,34 @@ từ đầu dự án.
 5. **Drawer mobile nền tối** trên nền `mask` của AntD.
 6. **`DataTable` cuộn ngang** bên trong vỏ mới — vỏ không được tự tràn.
 7. **Modal/Drawer chồng lớp** trên thanh tab dưới đáy (z 100 vs popup base 1000).
+
+---
+
+## 0⁺⁺⁺⁺⁺⁺. Wave 2 Pilot — QA THỊ GIÁC CÒN NỢ ⚠️
+
+|                                 | Đã làm                                                                                               |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Kiểm tự động / cấu trúc**     | ✅ 45 test trang + 24 test `RowActions` · typecheck · ESLint · Prettier · `git diff --check` · build |
+| **QA thị giác (nhìn bằng mắt)** | ❌ **CHƯA**                                                                                          |
+
+**Phụ thuộc còn thiếu, chính xác**: `/manage/vehicles` gọi `GET /vehicles` (dữ liệu gian hàng)
+và `GET /auth/me`. Cần **Docker daemon + PostgreSQL 16 + `apps/api` chạy + phiên đăng nhập của
+một tài khoản có `vehicles.view`**. Môi trường này chưa dựng được ⇒ **không** khẳng định bất kỳ
+điều gì về pixel, mật độ bảng, hay hành vi cuộn.
+
+Đã đối chiếu Figma bằng cách đọc frame trực tiếp (`58:5`, `58:1563`, `58:2061`, `58:2405`,
+`58:2517`, `58:2144`) — đó là đối chiếu ĐẶC TẢ, không phải QA thị giác.
+
+### Ô phải chạy khi có môi trường — 7 bề rộng × 10 trạng thái desktop + 5 mobile
+
+**Ưu tiên cao nhất:**
+
+1. **640 ↔ 641px** — ranh bảng↔thẻ. Sai là mất hẳn một hình thái.
+2. **360px** — thẻ không được cắt nội dung; nút ⋮ 44px không được đè lên giá.
+3. **Cuộn ngang bảng ở 1024px** với `minWidth: 900` + cột hành động dính phải, nền đục.
+4. **Menu ⋮ trên thẻ** — hộp xác nhận "Xoá xe này?" phải hiện đúng chỗ, không bị cắt bởi mép thẻ.
+5. **Link phủ thẻ** — bấm vùng nút ⋮ KHÔNG được điều hướng sang trang chi tiết.
+6. **Bottom-sheet lọc ở mobile** (`58:2517`) chồng lớp đúng trên thanh tab dưới đáy.
+7. **Màn 403** (`58:2061`) — thay toàn bộ nội dung, sidebar/topbar vẫn còn.
+8. **Tablet 768px** — Figma `58:2144` RỖNG, không có gì để đối chiếu; xác nhận bảng desktop
+   dùng được ở bề rộng này.

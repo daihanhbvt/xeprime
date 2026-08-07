@@ -365,6 +365,12 @@ Revert token sidebar + `Sidebar.module.css` là đủ để về sidebar sáng. 
 
 ## WAVE 2 — PILOT: Fleet List (`/manage/vehicles`)
 
+> ✅ **HOÀN THÀNH 07/08/2026 — PASS WITH VISUAL QA OWED.**
+> 6 file Pilot + 1 sửa chung có lý do (`RowActions`: `confirm` bị bỏ trong menu ⋮ — lỗi generic).
+> 28 → **45 test trang**; `renderCard` **1/14**; `VehicleFilters` gom về `FilterBar` (04 §D20).
+> Ma trận 10 trạng thái desktop + 5 mobile và 8 khác biệt Figma↔code: [08 §Wave 2](08_DECISION_BACKLOG.md).
+> QA thị giác **còn nợ** — cần Docker + Postgres + `apps/api`.
+
 **Mục tiêu**: chứng minh nền tảng 1A–1D đủ dùng, trên **đúng một route**.
 
 ### Vì sao chọn route này

@@ -582,3 +582,27 @@ Bốn mục dưới đây **cùng một gốc**: hôm nay mỗi `page.tsx` tự 
 
 **Không thuộc vỏ manage**: `MarketHeader`, `MarketFooter`, `MobileTabBar` — khu khách hàng,
 route group `(public)`, **không** bọc `AppShell` (có test chốt).
+
+---
+
+## 11. Pilot Wave 2 — Fleet List (`/manage/vehicles`, 07/08/2026)
+
+Pilot chứng minh nền tảng Wave 1 đủ dùng: **không một workaround riêng cho trang nào**, và
+component chung duy nhất phải sửa là một lỗ hổng **generic** (xem 08 §Wave 2).
+
+| Nền tảng                      | Dùng ở Fleet List                               | Ghi chú                                   |
+| ----------------------------- | ----------------------------------------------- | ----------------------------------------- |
+| `DataTable`                   | bảng desktop **+ `renderCard` mobile**          | **Consumer `renderCard` đầu tiên** — 1/14 |
+| `FilterBar`                   | 5 field + slot `actions` cho "Sắp xếp"          | Gỡ bản sao cũ, xem 04 §D20                |
+| `RowActions`                  | bảng `maxInline` mặc định · thẻ `maxInline={0}` | Một định nghĩa hành động cho cả hai       |
+| `EntityIdentity`              | ô định danh bảng (`md`) · thẻ mobile (`lg`)     |                                           |
+| `StatusTag`                   | 2 trục trạng thái, cả bảng lẫn thẻ              | `VEHICLE_*_STATUS_META` không đổi         |
+| `PermissionState`             | màn 403 cấp trang                               | **Mới ở Wave 2** (`58:2061`)              |
+| `EmptyState` / `LoadingState` | qua `DataTable`                                 |                                           |
+| `ManagePageHeader`            | tiêu đề + nút "Thêm xe"                         |                                           |
+
+**Không dựng** `VehicleDataTable`, `VehicleEmptyState`, `VehicleFilterBar`, `VehicleRowActions`,
+wrapper bảng responsive thứ hai, hook breakpoint thứ hai, hay hệ status-tag thứ hai.
+
+**`renderCard` sau Pilot: 1/14.** Mười ba bảng còn lại vẫn cuộn ngang ở mobile — rollout theo
+module ở Wave 3, không mở rộng ở đây.

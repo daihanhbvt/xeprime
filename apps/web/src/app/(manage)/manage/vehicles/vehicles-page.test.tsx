@@ -110,8 +110,23 @@ function setQuery(over: Partial<typeof query> = {}) {
   Object.assign(query, over);
 }
 
+/**
+ * Cấp quyền cho lượt render kế tiếp — **luôn kèm `VEHICLE_VIEW`**.
+ *
+ * Từ Pilot Wave 2, trang thay toàn bộ nội dung bằng màn 403 khi thiếu `vehicles.view`
+ * (Figma `58:2061`). Không có quyền xem thì không có bảng, không có bộ lọc, không có gì để
+ * kiểm — nên "xem được" là tiền đề của mọi test khác, đúng như thực tế: mục menu dẫn tới
+ * trang này cũng đã gác bằng chính quyền đó.
+ *
+ * Test riêng cho màn 403 dùng `revokeAll()`.
+ */
 function grant(...permissions: Permission[]) {
-  perms.granted = new Set<string>(permissions);
+  perms.granted = new Set<string>([PERMISSION.VEHICLE_VIEW, ...permissions]);
+}
+
+/** Không có quyền nào — kể cả quyền xem. */
+function revokeAll() {
+  perms.granted = new Set<string>();
 }
 
 function renderPage() {
@@ -136,6 +151,23 @@ function renderPage() {
 function lastReplacedUrl(): string {
   const calls = nav.replace.mock.calls;
   return calls.length ? (calls[calls.length - 1]![0] as string) : '';
+}
+
+/**
+ * Nút "Xoá bộ lọc" nằm TRONG vùng trạng thái rỗng, không phải nút cùng tên của `FilterBar`.
+ *
+ * Từ Pilot Wave 2 có HAI lối xoá lọc trên cùng màn hình, và cả hai đều đến từ Figma:
+ * `FilterBar` dùng chung dựng một nút (bắt buộc cho bottom-sheet mobile — `58:2588`), còn
+ * trạng thái không-có-kết-quả dựng một nút nữa ngay trong nội dung (`58:1563`). Phân biệt
+ * bằng landmark `role="search"` của thanh lọc, không bằng thứ tự hay cấu trúc DOM.
+ */
+function stateClearButton(): HTMLElement {
+  const filterBar = screen.getByRole('search');
+  const outside = screen
+    .getAllByRole('button', { name: 'Xoá bộ lọc' })
+    .filter((button) => !filterBar.contains(button));
+  expect(outside).toHaveLength(1);
+  return outside[0]!;
 }
 
 /** Hàng dữ liệu của bảng — bỏ hàng tiêu đề, dùng vai trò chứ không dùng class AntD. */
@@ -249,7 +281,7 @@ describe('/manage/vehicles — rỗng và không có kết quả', () => {
 
     expect(screen.getByText('Không tìm thấy xe khớp bộ lọc')).toBeTruthy();
     expect(screen.queryByText('Gian hàng chưa có xe nào')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Xoá bộ lọc' })).toBeTruthy();
+    expect(stateClearButton()).toBeTruthy();
   });
 
   it('bất kỳ filter nào cũng đủ để chuyển sang trạng thái không-có-kết-quả', () => {
@@ -273,7 +305,7 @@ describe('/manage/vehicles — rỗng và không có kết quả', () => {
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xoá bộ lọc' }));
+    fireEvent.click(stateClearButton());
 
     expect(nav.replace).toHaveBeenCalledTimes(1);
     const url = lastReplacedUrl();
@@ -344,6 +376,57 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
 
     expect(labels.every(Boolean)).toBe(true);
     expect(labels).toEqual(['Xem', 'Sửa', 'Xoá']);
+  });
+});
+
+/* ------------------------------------------------------------------ hình học cột */
+
+/**
+ * Hồi quy cho lỗi "cột Xe rộng bất thường".
+ *
+ * `scroll={{ x }}` bật `table-layout: fixed`. Cột nào thiếu `width` trở thành cột `auto` duy
+ * nhất và nuốt trọn phần dư của bảng — ở màn rộng, cột "Xe" từng chiếm ~800/1650px. Khi mọi
+ * cột có `width`, phần dư chia theo tỷ lệ nên bố cục giữ đúng tỷ lệ của Figma `58:5`.
+ *
+ * Test đọc `<colgroup>` — hợp đồng bố cục thật của bảng — chứ không đọc class sinh tự động.
+ */
+describe('/manage/vehicles — hình học cột bảng', () => {
+  function cols(container: HTMLElement): HTMLTableColElement[] {
+    return Array.from(container.querySelectorAll('colgroup col'));
+  }
+
+  it('MỌI cột đều khai bề rộng — không còn cột `auto` nuốt phần dư', () => {
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    const { container } = renderPage();
+
+    const widths = cols(container).map((col) => col.style.width);
+
+    expect(widths).toHaveLength(7);
+    expect(widths.every((width) => width.endsWith('px'))).toBe(true);
+  });
+
+  it('cột định danh KHÔNG được rộng hơn nửa bảng', () => {
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    const { container } = renderPage();
+
+    const widths = cols(container).map((col) => Number.parseInt(col.style.width, 10));
+    const total = widths.reduce((sum, width) => sum + width, 0);
+
+    // Figma `58:5`: cột "Xe" chiếm 260/1136 ≈ 23%. Ngưỡng 40% chỉ để chặn hồi quy "nuốt phần dư".
+    expect(widths[0]! / total).toBeLessThan(0.4);
+  });
+
+  it('sàn bề rộng bảng = tổng bề rộng các cột (không có số cứng lệch nhau)', () => {
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    const { container } = renderPage();
+
+    const total = cols(container).reduce(
+      (sum, col) => sum + Number.parseInt(col.style.width, 10),
+      0,
+    );
+    const table = container.querySelector('table');
+
+    expect(table?.style.width).toBe(`${total}px`);
   });
 });
 
@@ -490,26 +573,229 @@ describe('/manage/vehicles — lọc, tìm kiếm, phân trang', () => {
   });
 });
 
-/* ------------------------------------------------------------------ mobile + quyền trang */
+/* ------------------------------------------------------------------ thanh lọc dùng chung */
 
-describe('/manage/vehicles — hành vi mobile và quyền cấp trang hiện có', () => {
-  it('HIỆN TRẠNG: ở mobile vẫn là bảng cuộn ngang, chưa có thẻ', () => {
-    // Figma `127:2257` yêu cầu chuyển sang thẻ ở ≤640px. Hôm nay KHÔNG có.
-    // Đây là mốc để Wave 1C chứng minh mình đã đổi đúng chỗ.
-    viewport.mobile = true;
+describe('/manage/vehicles — dùng FilterBar dùng chung', () => {
+  it('thanh lọc là landmark search dùng chung, không phải bản dựng riêng của Fleet', () => {
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
-    expect(screen.getByRole('table')).toBeTruthy();
+    expect(screen.getByRole('search', { name: 'Bộ lọc danh sách' })).toBeTruthy();
   });
 
-  it('HIỆN TRẠNG: thiếu quyền xem cũng KHÔNG có màn 403 riêng — trang vẫn dựng', () => {
-    // Bảo vệ thật nằm ở guard backend (CLAUDE.md §3). Ghi lại để Wave 1C thêm
-    // `PermissionState` một cách có chủ đích chứ không phải tình cờ.
+  it('đủ 5 điều khiển lọc của Fleet, mỗi cái có tên khả truy cập', () => {
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    const bar = within(screen.getByRole('search'));
+    expect(bar.getByRole('textbox', { name: 'Tìm xe' })).toBeTruthy();
+    for (const label of ['Loại xe', 'Dịch vụ', 'Vận hành', 'Trạng thái public']) {
+      expect(bar.getByRole('combobox', { name: label }), label).toBeTruthy();
+    }
+  });
+
+  it('sắp xếp nằm NGOÀI cụm lọc và hiện đúng giá trị từ URL', () => {
+    // `sort` không phải filter: nó không được đếm vào huy hiệu "Bộ lọc" và không bị "Xoá bộ lọc"
+    // đụng tới. Figma cũng đặt nó tách ra (`58:129` desktop, `58:2429` mobile).
+    nav.params = new URLSearchParams('sort=price_asc');
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(screen.getByRole('combobox', { name: 'Sắp xếp' })).toBeTruthy();
+    expect(screen.getByTitle('Giá thấp → cao')).toBeTruthy();
+  });
+
+  it('mặc định sắp xếp là "Mới nhất" khi URL không nói gì', () => {
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(screen.getByTitle('Mới nhất')).toBeTruthy();
+  });
+
+  it('ô tìm kiếm hiện lại từ khoá đang có trên URL', () => {
+    nav.params = new URLSearchParams('q=Honda');
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(screen.getByRole('textbox', { name: 'Tìm xe' })).toHaveProperty('value', 'Honda');
+  });
+});
+
+/* ------------------------------------------------------------------ mobile + quyền trang */
+
+describe('/manage/vehicles — thẻ mobile (Pilot renderCard)', () => {
+  /** Danh sách thẻ do `DataTable` dựng ở ≤640px — nhận diện bằng nhãn, không bằng class. */
+  function cardList(): HTMLElement {
+    return screen.getByRole('list', { name: 'Danh sách xe' });
+  }
+
+  function renderMobile(items = [vehicle()], meta = META) {
+    viewport.mobile = true;
+    setQuery({ data: { items, meta } });
+    return renderPage();
+  }
+
+  it('≤640px dựng THẺ thay bảng (Figma `58:2439`)', () => {
+    // Đảo có chủ ý ở Wave 2: trước Pilot, mobile vẫn là bảng cuộn ngang.
+    renderMobile();
+
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(cardList()).toBeTruthy();
+  });
+
+  it('desktop vẫn là bảng — cùng dữ liệu, khác cách trình bày', () => {
+    viewport.mobile = false;
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
     expect(screen.getByRole('table')).toBeTruthy();
-    expect(screen.queryByText(/không có quyền/i)).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Danh sách xe' })).toBeNull();
+  });
+
+  it('thẻ giữ định danh, thông số, giá và CẢ HAI trạng thái', () => {
+    renderMobile([
+      vehicle({
+        name: 'Toyota Vios',
+        code: 'XP-0001',
+        plateNumber: '51A-123.45',
+        vehicleType: 'car',
+        serviceType: 'self_drive',
+        manufactureYear: 2023,
+        seatCount: 4,
+        weekdayPrice: '850000',
+      }),
+    ]);
+
+    const card = within(cardList());
+    expect(card.getByText('Toyota Vios')).toBeTruthy();
+    expect(card.getByText('XP-0001 · 51A-123.45')).toBeTruthy();
+    expect(card.getByText('Ô tô · Tự lái · 2023 · 4 chỗ')).toBeTruthy();
+    expect(card.getByText(/850\.000/)).toBeTruthy();
+    // Hai trục trạng thái độc lập — thẻ không được nuốt mất trục nào.
+    expect(card.getByText('Sẵn sàng')).toBeTruthy();
+    expect(card.getByText('Đã duyệt public')).toBeTruthy();
+  });
+
+  it('tên xe là link dẫn tới đúng trang chi tiết', () => {
+    renderMobile([vehicle({ id: 'v-77', name: 'Kia Seltos' })]);
+
+    expect(within(cardList()).getByRole('link', { name: 'Kia Seltos' }).getAttribute('href')).toBe(
+      '/manage/vehicles/v-77',
+    );
+  });
+
+  it('mọi hành động gom vào MỘT menu có tên khả truy cập', () => {
+    grant(PERMISSION.VEHICLE_UPDATE, PERMISSION.VEHICLE_DELETE);
+    renderMobile([vehicle({ name: 'Toyota Vios' })]);
+
+    const card = within(cardList());
+    // Thẻ chỉ có một điều khiển hành động (Figma `58:2459`), không phải ba nút như bảng.
+    expect(card.getByRole('button', { name: 'Thao tác cho Toyota Vios' })).toBeTruthy();
+    expect(card.queryByRole('button', { name: 'Sửa' })).toBeNull();
+  });
+
+  it('menu thẻ mở đúng các hành động theo quyền', async () => {
+    grant(PERMISSION.VEHICLE_UPDATE);
+    renderMobile([vehicle({ name: 'Toyota Vios' })]);
+
+    fireEvent.click(within(cardList()).getByRole('button', { name: 'Thao tác cho Toyota Vios' }));
+
+    expect(await screen.findByRole('menuitem', { name: 'Xem' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'Sửa' })).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: 'Xoá' })).toBeNull();
+  });
+
+  it('xoá từ menu thẻ VẪN phải xác nhận trước khi gọi mutation', async () => {
+    grant(PERMISSION.VEHICLE_DELETE);
+    renderMobile([vehicle({ id: 'v-9', name: 'Toyota Vios' })]);
+
+    fireEvent.click(within(cardList()).getByRole('button', { name: 'Thao tác cho Toyota Vios' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Xoá' }));
+
+    expect(deleteVehicle.mutate).not.toHaveBeenCalled();
+    expect(await screen.findByText('Xoá xe này?')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xoá' }));
+    await waitFor(() => expect(deleteVehicle.mutate).toHaveBeenCalledTimes(1));
+    expect(deleteVehicle.mutate.mock.calls[0]![0]).toBe('v-9');
+  });
+
+  it('phân trang vẫn còn ở chế độ thẻ', () => {
+    renderMobile([vehicle()], { page: 1, limit: 20, total: 60, hasNext: true });
+
+    fireEvent.click(screen.getByTitle('2'));
+
+    expect(nav.replace).toHaveBeenCalledTimes(1);
+    expect(lastReplacedUrl()).toContain('page=2');
+  });
+
+  it('rỗng / không-kết-quả / lỗi ở mobile dùng chung một bộ trạng thái với desktop', () => {
+    viewport.mobile = true;
+    setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
+    renderPage();
+    expect(screen.getByText('Gian hàng chưa có xe nào')).toBeTruthy();
+    cleanup();
+
+    viewport.mobile = true;
+    nav.params = new URLSearchParams('q=abc');
+    setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
+    renderPage();
+    expect(screen.getByText('Không tìm thấy xe khớp bộ lọc')).toBeTruthy();
+    cleanup();
+
+    viewport.mobile = true;
+    nav.params = new URLSearchParams();
+    setQuery({ isError: true });
+    renderPage();
+    expect(screen.getByText('Không tải được danh sách xe')).toBeTruthy();
+  });
+
+  it('ô tìm kiếm vẫn hiện ở mobile, các lọc còn lại vào bộ lọc riêng', () => {
+    renderMobile();
+
+    expect(screen.getByRole('textbox', { name: 'Tìm xe' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Bộ lọc/ })).toBeTruthy();
+  });
+});
+
+/* ------------------------------------------------------------------ quyền cấp trang */
+
+describe('/manage/vehicles — thiếu quyền xem', () => {
+  it('không có `vehicles.view`: thay TOÀN BỘ nội dung bằng màn 403 (Figma `58:2061`)', () => {
+    revokeAll();
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(screen.getByText('Không có quyền truy cập')).toBeTruthy();
+    expect(screen.queryByRole('table')).toBeNull();
+    // Không dựng tiêu đề/bộ lọc cho một trang không xem được.
+    expect(screen.queryByRole('heading', { name: 'Danh sách xe' })).toBeNull();
+    expect(screen.queryByRole('search')).toBeNull();
+  });
+
+  it('màn 403 nói rõ quyền còn thiếu và có lối thoát an toàn', () => {
+    revokeAll();
+    renderPage();
+
+    expect(screen.getByText(/Cần quyền:\s*vehicles\.view/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: /Về trang chủ/ }).getAttribute('href')).toBe('/manage');
+  });
+
+  it('màn 403 KHÔNG đẩy người dùng về trang đăng nhập', () => {
+    // `134:2482`: 403 là "thiếu quyền", không phải "chưa đăng nhập".
+    revokeAll();
+    renderPage();
+
+    expect(nav.push).not.toHaveBeenCalled();
+    expect(nav.replace).not.toHaveBeenCalled();
+  });
+
+  it('có quyền xem nhưng không có quyền ghi: vẫn xem được bảng, không có nút tạo', () => {
+    grant();
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    renderPage();
+
+    expect(screen.getByRole('table')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Thêm xe/ })).toBeNull();
   });
 });
