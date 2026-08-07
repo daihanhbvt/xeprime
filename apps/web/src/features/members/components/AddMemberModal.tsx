@@ -1,12 +1,13 @@
 'use client';
 
-import { App, Button, Modal } from 'antd';
+import { App, Button } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { TENANT_ROLE, TENANT_ROLE_VALUES } from '@xeprime/types';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { ASSIGNABLE_ROLE_OPTIONS } from '../constants';
 import { useAddMember } from '../hooks/use-member-mutations';
@@ -48,7 +49,9 @@ export function AddMemberModal({ open, onClose }: { open: boolean; onClose: () =
   });
 
   return (
-    <Modal title="Thêm thành viên" open={open} onCancel={onClose} footer={null} destroyOnClose>
+    // `footer={null}`: nút gửi phải nằm TRONG `<form>` để `htmlType="submit"` còn tác dụng —
+    // đẩy nó lên footer của dialog sẽ tách khỏi form. Giữ nguyên bố cục hành động của feature.
+    <ResponsiveDialog title="Thêm thành viên" open={open} onClose={onClose} footer={null}>
       <form onSubmit={onSubmit} noValidate>
         <TextField control={control} name="email" label="Email" type="email" placeholder="nhanvien@congty.vn" />
         <SelectField control={control} name="roleKey" label="Vai trò" options={ASSIGNABLE_ROLE_OPTIONS} />
@@ -59,6 +62,6 @@ export function AddMemberModal({ open, onClose }: { open: boolean; onClose: () =
           </Button>
         </div>
       </form>
-    </Modal>
+    </ResponsiveDialog>
   );
 }

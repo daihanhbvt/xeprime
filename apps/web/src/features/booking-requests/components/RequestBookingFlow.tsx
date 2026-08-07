@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button } from 'antd';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
 import { DateTimeField } from '@/components/form/DateTimeField';
@@ -34,6 +34,11 @@ interface RequestBookingFlowProps {
   pickupAt?: string | null;
   returnAt?: string | null;
   onClose: () => void;
+  /**
+   * Báo cho vỏ biết đang có request "không được bỏ dở" (xác minh OTP / gửi yêu cầu) để nó
+   * khoá các đường đóng vô ý. Flow vẫn tự giữ state; đây chỉ là thông báo ra ngoài.
+   */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 /**
@@ -50,6 +55,7 @@ export function RequestBookingFlow({
   pickupAt,
   returnAt,
   onClose,
+  onBusyChange,
 }: RequestBookingFlowProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -116,6 +122,11 @@ export function RequestBookingFlow({
   });
 
   const submitting = verifyM.isPending || submitM.isPending;
+
+  // Đẩy trạng thái "đang gửi" ra vỏ để nó khoá Esc/bấm nền trong lúc request đang bay.
+  useEffect(() => {
+    onBusyChange?.(submitting);
+  }, [submitting, onBusyChange]);
 
   async function continueFromDates() {
     setStepError(null);

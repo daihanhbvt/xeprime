@@ -1,7 +1,7 @@
 'use client';
 
 import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons';
-import { App, Button, Descriptions, Drawer, Input, Modal, Popconfirm, Result, Spin } from 'antd';
+import { App, Button, Descriptions, Input, Popconfirm } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
 import {
@@ -23,6 +23,8 @@ import {
   type VehicleType,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { DetailDrawer } from '@/components/overlay/DetailDrawer';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { listingPath, shopPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { formatDate } from '@/lib/datetime';
@@ -42,11 +44,15 @@ export function AdminVehicleDetailDrawer({
   const { data, isLoading, isError, refetch } = useAdminVehicle(vehicleId);
 
   return (
-    <Drawer
+    <DetailDrawer
       title={data ? data.name : 'Xe'}
-      width={560}
+      size="md"
       open={Boolean(vehicleId)}
       onClose={onClose}
+      loading={!isError && (isLoading || !data)}
+      error={isError}
+      errorTitle="Không tải được thông tin xe"
+      onRetry={() => void refetch()}
       extra={
         data ? (
           <StatusTag
@@ -56,24 +62,8 @@ export function AdminVehicleDetailDrawer({
         ) : null
       }
     >
-      {isError ? (
-        <Result
-          status="error"
-          title="Không tải được thông tin xe"
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
-            </Button>
-          }
-        />
-      ) : isLoading || !data ? (
-        <div className={styles.center}>
-          <Spin />
-        </div>
-      ) : (
-        <Body vehicle={data} />
-      )}
-    </Drawer>
+      {data ? <Body vehicle={data} /> : null}
+    </DetailDrawer>
   );
 }
 
@@ -149,15 +139,17 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
         )}
       </div>
 
-      <Modal
+      <ResponsiveDialog
         title="Ẩn xe khỏi Marketplace"
         open={hideOpen}
+        size="sm"
         okText="Ẩn xe"
         cancelText="Huỷ"
-        okButtonProps={{ danger: true, disabled: !trimmedReason }}
+        destructive
+        okDisabled={!trimmedReason}
         confirmLoading={moderation.isPending}
         onOk={submitHide}
-        onCancel={() => setHideOpen(false)}
+        onClose={() => setHideOpen(false)}
       >
         <p className={styles.note}>
           Xe biến mất khỏi Marketplace ngay lập tức. Chủ shop có thể sửa rồi gửi duyệt lại. Lý do
@@ -171,7 +163,7 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
           placeholder="Lý do ẩn xe…"
           onChange={(e) => setReason(e.target.value)}
         />
-      </Modal>
+      </ResponsiveDialog>
     </div>
   );
 }

@@ -32,7 +32,30 @@ Không trộn wave. Không "tiện tay sửa". File nằm ngoài phạm vi khai 
 
 ---
 
-## WAVE 1A — Tokens
+## WAVE 1A — Tokens ✅ HOÀN THÀNH (06/08/2026)
+
+**Kết quả**: 5 file đổi, 0 file feature. Test 92 → **104 passed**, typecheck/lint/prettier xanh.
+
+| Việc đã làm | Ghi chú |
+| --- | --- |
+| Inspect Figma Foundations ở cấp node | ~35 node: màu, type, radius, shadow, breakpoint, focus + `125:1571`/`125:2691`/`125:1611` cho sizing |
+| Bộ token ngữ nghĩa đầy đủ | Brand · Surface · Text · Border · Interaction · Status · Typography · Spacing · Radius · Shadow · Focus · Breakpoint · Layer · Sizing |
+| Ánh xạ AntD | 40+ token, chỉ seed/alias, **không** `components: {}` |
+| Bí danh tương thích ngược | 9 token trỏ `var()` về canonical — 134 consumer không phải sửa |
+| Test mở rộng | +12 test: bí danh, breakpoint, gold-không-mang-nghĩa-status, dẫn xuất AntD, **tương phản WCAG** |
+
+| Cố ý KHÔNG làm | Lý do |
+| --- | --- |
+| Gom 21 breakpoint CSS | Brief 00 §9.4 yêu cầu dời **khi chạm file**, không hàng loạt |
+| Đổi `controlHeight` 32 → 40 | Cao lên mọi control ở 37 trang — việc của wave component (P16) |
+| Áp sidebar tối | Chờ **P1**; token đã khai báo sẵn |
+| Đổi `--xp-line-height` toàn cục | Lệch chiều cao mọi bảng/form, cần QA thị giác (nợ T2) |
+| Sửa 9 tham chiếu CSS chết ở `CalendarScheduler` | Feature component có wave + cổng QA riêng (nợ T1) |
+
+**Phát hiện quan trọng**: xem **P15** (hai bộ giá trị token trong cùng file Figma), **P18** (4 cặp màu trượt AA), **T1** (lỗi CSS đang chạy ở lịch) trong [08_DECISION_BACKLOG.md](08_DECISION_BACKLOG.md).
+
+<details>
+<summary>Kế hoạch gốc Wave 1A (Wave 0B) — giữ để đối chiếu</summary>
 
 **Mục tiêu**: `tokens.css` + `theme.ts` khớp Figma Foundations. Không sửa component nào.
 
@@ -83,7 +106,29 @@ apps/web/src/**/*.module.css            (chỉ thay số trần bằng var(); KH
 ### Rollback
 Revert một commit → mọi thứ về cũ. Đây là wave dễ rollback nhất (chỉ CSS/TS hằng số). **Không có state ngoài** để dọn.
 
+</details>
+
 ---
+
+## WAVE 1B — Actions & Overlays ✅ HOÀN THÀNH (06/08/2026)
+
+**Kết quả**: 19/19 overlay nghiệp vụ dùng `ResponsiveDialog`/`DetailDrawer`. Test 104 → **235**.
+Typecheck/lint/prettier xanh. **Chưa QA thị giác** (không chạy được app).
+
+| Stage | Việc |
+| --- | --- |
+| 1B.0 | Kiểm kê + xác minh 4 semantic Button + 4 loại toast; thêm ngoại lệ `components.Button.primaryColor` (chữ trắng trên gold chỉ 2.35:1) |
+| 1B.1 | `ResponsiveDialog` + `DetailDrawer` + 43 test |
+| 1B.2 | 5 dialog rủi ro thấp/trung + 48 test đặc tả |
+| A | `RequestBookingModal` (24 test) · `AuthModal` (+5 test) |
+| B | 7 `*DetailDrawer` + 2 `*FormDrawer` + 8 test |
+| C | Rà toàn repo → 6 overlay còn sót đã migrate |
+
+**Loại trừ có lý do**: `MobileNav` (drawer điều hướng) · 13 `Popconfirm` (primitive đúng cho xác
+nhận tại chỗ) · `App.useApp().message` (không bọc toast).
+
+**Thay đổi hành vi có chủ đích**: đóng vô ý (Esc/nền) bị khoá khi đang gửi ở `RequestBookingModal`
+— trước đó bỏ dở giữa chừng được.
 
 ## WAVE 1B — Actions & Overlays
 
@@ -96,9 +141,11 @@ Revert một commit → mọi thứ về cũ. Đây là wave dễ rollback nhấ
 ```
 apps/web/src/components/overlay/ResponsiveDialog.tsx  (mới + .module.css + .test.tsx)
 apps/web/src/components/overlay/DetailDrawer.tsx      (mới + .module.css + .test.tsx)
-apps/web/src/features/**/components/*Modal.tsx        (13 file — chuyển sang wrapper)
+apps/web/src/features/**/components/*Modal.tsx        (8 file — KHÔNG phải 13, xem đối chiếu 1B.0)
 apps/web/src/features/**/components/*DetailDrawer.tsx (7 file)
 apps/web/src/features/**/components/*FormDrawer.tsx   (2 file)
+apps/web/src/features/admin-plans/components/TenantPlanSection.tsx   (glob cũ bỏ sót)
+apps/web/src/features/marketplace/components/FilterPanel.tsx         (glob cũ bỏ sót)
 apps/web/src/styles/theme.ts                          (CHỈ nếu cần components.Button — xem 1B.1)
 ```
 
@@ -111,8 +158,16 @@ apps/web/src/styles/theme.ts                          (CHỈ nếu cần compone
 | 1B.3 | Viết `ResponsiveDialog` (D5) |
 | 1B.4 | Viết test cho `RequestBookingModal` **trước khi** đụng nó (hiện chưa có test) |
 | 1B.5 | Chuyển 3 bản tự chế sang `ResponsiveDialog` — từng cái một commit |
-| 1B.6 | Chuyển 10 modal chưa responsive — từng cái một commit |
-| 1B.7 | Viết `DetailDrawer` (D6), chuyển 7 drawer |
+| 1B.6 | Chuyển **7** modal chưa responsive (không phải 10) — từng cái một commit. **✅ 5/7 xong ở batch 1B.2**: `AddMemberModal`, `AddStaffModal`, `PlanFormModal`, `ReviewModal`, `CategoryManagerModal`. Còn `RecordPaymentModal` + `TenantPlanSection` (cả hai xếp rủi ro CAO ở 1B.0 — tiền và huỷ thuê bao, `TenantPlanSection` lại lồng trong drawer) |
+| 1B.7 | Viết `DetailDrawer` (D6), chuyển 7 detail drawer + 2 form drawer |
+
+> **Đối chiếu số liệu (batch 1B.0, đo bằng `rg`/glob — thay cho con số ước ở Wave 0B):**
+> `*Modal.tsx` = **8** (doc cũ ghi 13 — con số đó là số file *chứa* `<Modal`, gồm cả modal lồng
+> trong detail drawer). `*DetailDrawer.tsx` = 7 ✅ · `*FormDrawer.tsx` = 2 ✅.
+> Hai file **bị glob cũ bỏ sót**: `TenantPlanSection.tsx` (Modal + Popconfirm, lồng trong
+> `AdminTenantDetailDrawer`) và `FilterPanel.tsx` (tự chế responsive).
+> **Tổng overlay nghiệp vụ phải migrate = 19 file** (+ `MobileNav.tsx` là drawer điều hướng,
+> ngoài phạm vi). 23 file chứa `<Modal|<Drawer` = 19 + MobileNav + 2 primitive mới.
 
 ### Rủi ro
 | Rủi ro | Mức | Giảm thiểu |

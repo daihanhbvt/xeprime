@@ -1,9 +1,3 @@
-.center {
-  display: grid;
-  place-items: center;
-  padding: 48px;
-}
-
 .sectionTitle {
   margin: 20px 0 8px;
   font-size: 13px;

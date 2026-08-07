@@ -1,8 +1,9 @@
 'use client';
 
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Input, Modal, Select, Tag } from 'antd';
+import { App, Button, Input, Select, Tag } from 'antd';
 import { useState } from 'react';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { RECEIPT_TYPE, RECEIPT_TYPE_OPTIONS } from '../constants';
 import type { CreateCategoryInput } from '../types';
@@ -45,7 +46,15 @@ export function CategoryManagerModal({ open, onClose }: { open: boolean; onClose
   const list = categories ?? [];
 
   return (
-    <Modal title="Danh mục thu/chi" open={open} onCancel={onClose} footer={null}>
+    // `destroyOnClose={false}`: bản Modal cũ KHÔNG có `destroyOnClose`, nên nội dung được giữ
+    // qua lần đóng. Giữ đúng như vậy — dialog dùng chung mặc định là huỷ.
+    <ResponsiveDialog
+      title="Danh mục thu/chi"
+      open={open}
+      onClose={onClose}
+      footer={null}
+      destroyOnClose={false}
+    >
       <div className={styles.addRow}>
         <Select
           value={type}
@@ -98,6 +107,6 @@ export function CategoryManagerModal({ open, onClose }: { open: boolean; onClose
           ))
         )}
       </div>
-    </Modal>
+    </ResponsiveDialog>
   );
 }

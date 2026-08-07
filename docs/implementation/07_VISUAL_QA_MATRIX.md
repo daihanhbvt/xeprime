@@ -3,6 +3,50 @@
 > Ngày lập: 06/08/2026 · Wave 0B. Quy trình kiểm thị giác thủ công cho mọi wave ở [06_MIGRATION_ORDER.md](06_MIGRATION_ORDER.md).
 > **Vì sao thủ công**: repo hiện **không có visual regression test, không có test a11y, không có test responsive**, và 14 trang danh sách không có test nào ([00_IMPLEMENTATION_OVERVIEW.md §8](00_IMPLEMENTATION_OVERVIEW.md)). Ma trận này là lớp bảo vệ duy nhất cho phần thị giác.
 
+## 0⁺. Wave 1B — QA thị giác CÒN NỢ ⚠️
+
+Wave 1B **không chạy được app** (cần Docker + Postgres + API), nên chưa có QA thị giác. Đã xác
+minh bằng 235 test + typecheck + lint. Còn nợ, ưu tiên theo rủi ro:
+
+| # | Cần kiểm | Vì sao |
+| --- | --- | --- |
+| 1 | Luồng đặt xe đủ 4 bước ở 360/390px | Overlay đổi từ modal 460px sang full-screen mobile |
+| 2 | Đăng nhập/đăng ký ở 360px | Bottom sheet đổi bo góc + trần chiều cao sang token |
+| 3 | 7 panel chi tiết ở mobile | Lần đầu chuyển sang toàn màn hình (trước đây tràn ngang) |
+| 4 | Modal lồng trong drawer (khoá shop, ẩn xe, duyệt, thu tiền) | Thứ tự chồng lớp + trả focus |
+| 5 | Bề rộng panel 480/520/640 → 560/720 | 5 panel đổi bề rộng thấy được |
+| 6 | 5 dialog 520 → 560px | P22 |
+| 7 | Trạng thái tải: `Spin` → `Skeleton` ở 6 panel | Đổi hình thức chờ |
+| 8 | Đóng-mở lại `RequestBookingModal` reset về bước 1 | **Không kiểm được trong jsdom** — AntD giữ cây con cũ tới khi hoạt ảnh đóng xong |
+| 9 | Safe-area đáy trên iPhone | Padding mới trong `ResponsiveDialog` |
+
+## 0. Trạng thái Wave 1A — QA thị giác CÒN NỢ ⚠️
+
+Wave 1A đổi nền token nhưng **chưa chạy được gói SMOKE** (cần app chạy thật: Docker + Postgres + API). Thay vào đó đã xác minh bằng:
+
+- **Diff token tính toán của AntD (before/after)**: 18/27 token bề mặt đổi giá trị — danh sách ở báo cáo Wave 1A
+- **Đo tương phản WCAG**, chốt bằng test trong [theme.test.ts](../../apps/web/src/styles/theme.test.ts)
+- **104 test đơn vị** xanh, gồm `AppShell.test.tsx` (vỏ shop portal) và `AuthModal.test.tsx` (xác thực khách)
+
+**Còn nợ trước khi bắt đầu Wave 1B — chạy gói SMOKE và soi riêng những thay đổi nhìn thấy được sau:**
+
+| # | Thay đổi | Kiểm ở đâu |
+| --- | --- | --- |
+| 1 | Nền trang `#f6f5f1` → `#faf9f7` (sáng hơn) | Mọi trang |
+| 2 | Viền `#ebddbf` (ám vàng) → `#e8e4dd` (xám ấm) | Mọi bảng, input, card |
+| 3 | Chữ `#2a2318` → `#1a1a1a` | Mọi trang |
+| 4 | Bóng card/dropdown đổi sang Elevation 1/2 (nhẹ hơn, ấm hơn) | Card, dropdown, select |
+| 5 | **Bo góc card 12px → 10px** | Card, modal |
+| 6 | **Vòng focus 2px mờ → 3px gold 25%** | Mọi input, nút |
+| 7 | **Hover nút primary sáng → đậm** (`#e3ba54` → `#c4920f`) | Mọi nút primary |
+| 8 | **`Typography.Title level={3}` 24px → 20px** | `ManagePageHeader` (mọi trang `/manage`) |
+| 9 | **`level={4}` 20px → 16px** | `ShopRegistration` |
+| 10 | Nền header bảng / hover hàng ám ấm nhẹ | Mọi bảng |
+
+Không đổi (đã xác minh bằng diff): `colorPrimary`, `colorSuccess/Error/Warning`, `controlHeight`, `borderRadius`, `colorLink`, `colorBgContainer`, `zIndexPopupBase`.
+
+---
+
 ## 1. Breakpoint kiểm
 
 | Chiều rộng | Ứng với Figma | Vì sao có trong danh sách | Frame Figma đối chứng |

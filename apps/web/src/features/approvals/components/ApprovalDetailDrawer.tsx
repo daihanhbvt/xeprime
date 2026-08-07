@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { App, Button, Descriptions, Divider, Drawer, Empty, Input, Modal, Skeleton, Space, Timeline, Typography } from 'antd';
+import { App, Button, Descriptions, Divider, Empty, Input, Space, Timeline, Typography } from 'antd';
 import { CheckOutlined, CloseOutlined, EditOutlined } from '@ant-design/icons';
 import {
   APPROVAL_STATUS,
@@ -10,6 +10,8 @@ import {
   type ApprovalStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { DetailDrawer } from '@/components/overlay/DetailDrawer';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { formatDateTime } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import {
@@ -57,11 +59,12 @@ export function ApprovalDetailDrawer({ taskId, onClose }: ApprovalDetailDrawerPr
 
   return (
     <>
-      <Drawer
+      <DetailDrawer
         open={Boolean(taskId)}
         onClose={onClose}
-        width={560}
+        size="md"
         title="Phiếu duyệt"
+        loading={isLoading || !task}
         extra={task ? <StatusTag value={task.status as ApprovalStatus} meta={APPROVAL_STATUS_META} /> : null}
         footer={
           isPending ? (
@@ -97,17 +100,19 @@ export function ApprovalDetailDrawer({ taskId, onClose }: ApprovalDetailDrawerPr
           ) : null
         }
       >
-        {isLoading || !task ? <Skeleton active paragraph={{ rows: 8 }} /> : <DetailBody task={task} />}
-      </Drawer>
+        {task ? <DetailBody task={task} /> : null}
+      </DetailDrawer>
 
-      <Modal
+      <ResponsiveDialog
         open={Boolean(reasonModal)}
         title={reasonModal?.kind === 'reject' ? 'Từ chối hồ sơ' : 'Yêu cầu bổ sung'}
+        size="sm"
         okText="Gửi"
-        okButtonProps={{ danger: reasonModal?.kind === 'reject', disabled: !reason.trim() }}
+        destructive={reasonModal?.kind === 'reject'}
+        okDisabled={!reason.trim()}
         confirmLoading={review.isPending}
         onOk={() => reasonModal && runReview(reasonModal.kind, reason.trim())}
-        onCancel={() => setReasonModal(null)}
+        onClose={() => setReasonModal(null)}
       >
         <Typography.Paragraph type="secondary">
           Lý do sẽ được gửi cho chủ gian hàng.
@@ -120,7 +125,7 @@ export function ApprovalDetailDrawer({ taskId, onClose }: ApprovalDetailDrawerPr
           maxLength={2000}
           showCount
         />
-      </Modal>
+      </ResponsiveDialog>
     </>
   );
 }

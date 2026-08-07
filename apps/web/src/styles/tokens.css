@@ -4,66 +4,182 @@
  * Phải khớp 1-1 với `XP_TOKENS` trong `theme.ts` (cả tên lẫn giá trị).
  * `theme.test.ts` là thứ giữ hai file không trôi khỏi nhau.
  *
- * Bảng màu thương hiệu: gold trên nền kem — bám UI Firebase-code, recolor theo logo mới.
+ * Giá trị lấy từ Figma section 01 “XePrime Foundations” (`14:2`) — mã node ghi cạnh từng
+ * token. Lý do chọn Foundations thay vì bộ giá trị của các component `XePrime/*`:
+ * `docs/implementation/08_DECISION_BACKLOG.md` P15.
+ *
  * Light-first; dark theme sẽ thêm ở increment sau (kiến trúc token đã sẵn sàng).
  */
 :root {
+  /* ─── Thương hiệu ─────────────────────────────────────────────────────── */
   --xp-color-primary: #d6a02c;
-  --xp-color-success: #16a34a;
-  --xp-color-warning: #e07b26;
-  --xp-color-error: #dc2626;
-  --xp-color-info: #2563eb;
+  --xp-color-primary-hover: #c4920f;
+  --xp-color-primary-active: #a9761a;
+  --xp-color-primary-light: #fdf6e3;
+  --xp-color-primary-contrast: #2a2318;
 
-  --xp-color-text: #2a2318;
-  --xp-color-text-secondary: #6f6450;
-  --xp-color-text-tertiary: #9a8d74;
-  --xp-color-border: #ebddbf;
-  --xp-color-border-secondary: #f4ecd9;
-  --xp-color-bg-layout: #f6f5f1;
+  /* ─── Bề mặt ──────────────────────────────────────────────────────────── */
+  --xp-color-bg: #faf9f7;
   --xp-color-bg-container: #ffffff;
   --xp-color-bg-elevated: #ffffff;
-  --xp-color-bg-hover: rgba(120, 90, 20, 0.05);
+  --xp-color-bg-muted: #f5f3ef;
+  --xp-color-bg-selected: #fdf6e3;
+  --xp-color-bg-overlay: rgba(26, 26, 26, 0.45);
 
+  /* ─── Chữ ─────────────────────────────────────────────────────────────── */
+  --xp-color-text: #1a1a1a;
+  --xp-color-text-secondary: #6b6560;
+  --xp-color-text-tertiary: #9e9890;
+  --xp-color-text-disabled: rgba(26, 26, 26, 0.25);
+  --xp-color-text-inverse: #e8e4dd;
+  /* Figma chưa định nghĩa màu link — hai token này soi lại giá trị AntD dẫn xuất từ
+     `colorInfo` (hành vi hiện tại). Xem 08_DECISION_BACKLOG.md P19. */
+  --xp-color-link: #2563eb;
+  --xp-color-link-hover: #7aadff;
+
+  /* ─── Viền ────────────────────────────────────────────────────────────── */
+  --xp-color-border: #e8e4dd;
+  --xp-color-border-strong: #d4cfc6;
+  --xp-color-border-subtle: #f5f3ef;
+  --xp-color-border-focus: #d6a02c;
+  --xp-color-border-disabled: #e8e4dd;
+
+  /* ─── Tương tác ───────────────────────────────────────────────────────── */
+  --xp-color-bg-hover: rgba(120, 90, 20, 0.05);
+  --xp-color-bg-active: rgba(120, 90, 20, 0.1);
+  --xp-disabled-opacity: 0.6;
+
+  /* ─── Trạng thái nghiệp vụ (tách khỏi gold thương hiệu) ───────────────── */
+  --xp-color-success: #16a34a;
+  --xp-color-success-bg: #f0fdf4;
+  --xp-color-warning: #e07b26;
+  --xp-color-warning-bg: #fff7ed;
+  --xp-color-error: #dc2626;
+  --xp-color-error-bg: #fef2f2;
+  --xp-color-info: #2563eb;
+  --xp-color-info-bg: #eff6ff;
+  --xp-color-neutral: #6b6560;
+  --xp-color-neutral-bg: #f5f3ef;
+
+  /* ─── Vỏ portal (sidebar tối: đã khai báo, CHƯA áp dụng — P1/Wave 1D) ─── */
+  --xp-shell-sidebar-bg: #1e1b16;
+  --xp-shell-sidebar-text: #e8e4dd;
+  --xp-shell-sidebar-active: #d6a02c;
+  --xp-shell-topbar-bg: #ffffff;
+  --xp-shell-topbar-border: #e8e4dd;
+
+  /* ─── Màu riêng của thanh event trên lịch ─────────────────────────────── */
   --xp-color-event-booking: #2563eb;
   --xp-color-event-request: #d6a02c;
   --xp-color-event-blocked: #8c8069;
   --xp-color-event-maintenance: #7c3aed;
 
-  --xp-font-family: var(--font-be-vietnam), 'Segoe UI', system-ui, -apple-system,
-    'Helvetica Neue', Arial, sans-serif;
+  /* ─── Typography ──────────────────────────────────────────────────────── */
+  --xp-font-family:
+    var(--font-be-vietnam), 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial,
+    sans-serif;
+  --xp-font-family-display: var(--font-playfair), Georgia, 'Times New Roman', serif;
+
+  --xp-font-size-display: 48px;
+  --xp-line-height-display: 56px;
+  --xp-font-size-h1: 32px;
+  --xp-line-height-h1: 40px;
+  --xp-font-size-h2: 24px;
+  --xp-line-height-h2: 32px;
+  --xp-font-size-h3: 20px;
+  --xp-line-height-h3: 28px;
+  --xp-font-size-h4: 16px;
+  --xp-line-height-h4: 24px;
+  --xp-font-size-body-lg: 16px;
+  --xp-line-height-body-lg: 24px;
+  --xp-font-size-body: 14px;
+  --xp-line-height-body: 20px;
+  --xp-font-size-body-sm: 12px;
+  --xp-line-height-body-sm: 16px;
+  --xp-font-size-label: 12px;
+  --xp-line-height-label: 16px;
+  --xp-font-size-overline: 11px;
+  --xp-line-height-overline: 16px;
+
+  --xp-font-weight-regular: 400;
+  --xp-font-weight-medium: 500;
+  --xp-font-weight-semibold: 600;
+  --xp-font-weight-bold: 700;
+
   --xp-font-size: 14px;
   --xp-font-size-sm: 12px;
   --xp-line-height: 1.5714;
 
-  --xp-border-radius: 10px;
-  --xp-border-radius-sm: 6px;
-
+  /* ─── Khoảng cách (4 · 8 · 16 · 24 · 32 px only) ──────────────────────── */
   --xp-space-xs: 4px;
   --xp-space-sm: 8px;
   --xp-space-md: 16px;
   --xp-space-lg: 24px;
   --xp-space-xl: 32px;
 
+  /* ─── Bo góc ──────────────────────────────────────────────────────────── */
+  --xp-border-radius-sm: 6px;
+  --xp-border-radius: 10px;
+  --xp-border-radius-lg: 10px;
+  --xp-border-radius-pill: 999px;
+
+  /* ─── Đổ bóng (tông nâu ấm, không phải đen) ───────────────────────────── */
+  --xp-shadow-card: 0 2px 4px 0 rgba(41, 31, 15, 0.06);
+  --xp-shadow-raised: 0 4px 12px 0 rgba(41, 31, 15, 0.08);
+  --xp-shadow-overlay: 0 8px 24px 0 rgba(41, 31, 15, 0.12);
+
+  /* ─── Focus ───────────────────────────────────────────────────────────── */
+  --xp-focus-outline-width: 2px;
+  --xp-focus-ring-width: 3px;
+  --xp-color-focus-ring: rgba(214, 160, 44, 0.25);
+
+  /* ─── Breakpoint (KHÔNG dùng được trong @media — xem XP_BREAKPOINTS) ──── */
+  --xp-bp-mobile: 640px;
+  --xp-bp-tablet: 1024px;
+  --xp-bp-desktop: 1440px;
+
+  /* ─── Tầng z (overlay do AntD sở hữu qua zIndexPopupBase) ─────────────── */
+  --xp-z-sidebar: 110;
+  --xp-z-topbar: 100;
+  --xp-z-calendar-header: 30;
+  --xp-z-calendar-sticky-col: 20;
+  --xp-z-popup-base: 1000;
+
+  /* ─── Kích thước component dùng chung (khai báo, chưa áp) ─────────────── */
+  --xp-control-height-sm: 24px;
+  --xp-control-height: 32px;
+  --xp-control-height-lg: 40px;
+  --xp-touch-target-min: 44px;
+  --xp-modal-width-sm: 400px;
+  --xp-modal-width: 560px;
+  --xp-modal-width-lg: 720px;
+  --xp-drawer-width: 560px;
+  --xp-drawer-width-lg: 720px;
+  --xp-container-max-width: 1200px;
+
+  /* ─── Khung app ───────────────────────────────────────────────────────── */
   --xp-shell-topbar-height: 56px;
   --xp-shell-sidebar-width: 232px;
   --xp-shell-sidebar-collapsed-width: 64px;
 
+  /* ─── Lịch resource timeline ──────────────────────────────────────────── */
   --xp-calendar-resource-col-width: 220px;
   --xp-calendar-day-col-width: 56px;
   --xp-calendar-row-height: 44px;
   --xp-calendar-header-height: 56px;
 
-  --xp-z-sidebar: 110;
-  --xp-z-topbar: 100;
-  --xp-z-calendar-header: 30;
-  --xp-z-calendar-sticky-col: 20;
-
-  /* --- Dẫn xuất: có trong theme.ts để giữ parity, nhưng KHÔNG feed vào antdTheme --- */
-  --xp-gold-deep: #a9761a;
+  /* ─── DEPRECATED — bí danh giữ cho code cũ ────────────────────────────────
+   * Mỗi cái trỏ var() về token canonical: KHÔNG có giá trị nào bị nhân đôi.
+   * Số consumer còn lại + wave gỡ bỏ: docs/implementation/02_DESIGN_TOKEN_MAP.md §14.
+   * Không thêm consumer mới cho nhóm này.
+   */
+  --xp-color-bg-layout: var(--xp-color-bg);
+  --xp-color-border-secondary: var(--xp-color-border-subtle);
+  --xp-gold-deep: var(--xp-color-primary-active);
+  --xp-gold-wash: var(--xp-color-primary-light);
   --xp-gold-soft: #f1dba4;
-  --xp-gold-wash: #f7f1de;
-  --xp-color-bg-sand: #f5ead2;
-  --xp-shadow-sm: 0 1px 2px rgba(120, 88, 20, 0.06), 0 1px 3px rgba(120, 88, 20, 0.08);
-  --xp-shadow-md: 0 6px 16px -6px rgba(120, 88, 20, 0.18), 0 2px 6px rgba(120, 88, 20, 0.1);
-  --xp-shadow-lg: 0 24px 50px -16px rgba(120, 88, 20, 0.28);
+  --xp-color-bg-sand: var(--xp-color-primary-light);
+  --xp-shadow-sm: var(--xp-shadow-card);
+  --xp-shadow-md: var(--xp-shadow-raised);
+  --xp-shadow-lg: var(--xp-shadow-overlay);
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { App, Button, Descriptions, Drawer, Result, Spin, Tag } from 'antd';
+import { App, Descriptions, Tag } from 'antd';
 import Link from 'next/link';
 import {
   BOOKING_STATUS_META,
@@ -13,6 +13,7 @@ import {
 } from '@xeprime/types';
 import { MaskedContact } from '@/components/data-display/MaskedContact';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { formatDateTime } from '@/lib/datetime';
@@ -32,34 +33,22 @@ export function AdminBookingDetailDrawer({
   const { data, isLoading, isError, refetch } = useAdminBooking(bookingId);
 
   return (
-    <Drawer
+    <DetailDrawer
       title={data ? `Đơn ${data.code}` : 'Đơn thuê'}
-      width={560}
+      size="md"
       open={Boolean(bookingId)}
       onClose={onClose}
       extra={
         data ? <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} /> : null
       }
+      loading={!isError && (isLoading || !data)}
+      error={isError}
+      errorTitle="Không tải được thông tin đơn"
+      onRetry={() => void refetch()}
     >
-      {isError ? (
-        <Result
-          status="error"
-          title="Không tải được thông tin đơn"
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
-            </Button>
-          }
-        />
-      ) : isLoading || !data ? (
-        <div className={styles.center}>
-          <Spin />
-        </div>
-      ) : (
-        // `key` ép remount khi đổi đơn: SĐT đã bỏ che của đơn trước không được rớt sang đơn sau.
-        <Body key={data.id} booking={data} />
-      )}
-    </Drawer>
+      {/* `key` ép remount khi đổi đơn: SĐT đã bỏ che của đơn trước không được rớt sang đơn sau. */}
+      {data ? <Body key={data.id} booking={data} /> : null}
+    </DetailDrawer>
   );
 }
 

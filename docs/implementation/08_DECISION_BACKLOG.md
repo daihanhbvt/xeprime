@@ -22,6 +22,19 @@
 | **P12** | Bắt buộc lý do khi huỷ phiếu thu (C14) | Sản phẩm | Chủ dự án | Wave 4 | 🟡 TB |
 | **P13** | Độ tin cậy frame audit section 12 | Figma | *(đã tự giải)* | — | ✅ Đóng |
 | **P14** | 14 mục UNKNOWN cần inspect | Figma | Kỹ thuật *(tự giải)* | wave tương ứng | 🟡 TB |
+| **P15** | **Hai bộ giá trị token trong cùng file Figma** | Figma/Thiết kế | Chủ dự án + Thiết kế | Toàn bộ hệ token | 🔴 **CHẶN** |
+| **P16** | Chiều cao control mặc định 32 hay 40 | Thiết kế | Thiết kế | Wave component | 🟡 TB |
+| **P17** | Bậc viền “mảnh hơn” không có nguồn Figma | Thiết kế | Thiết kế | — *(đã dẫn xuất)* | 🟢 Thấp |
+| **P18** | 4 cặp màu trượt WCAG AA | A11y/Thiết kế | Chủ dự án + Thiết kế | — *(đã pin)* | 🟠 Cao |
+| **P19** | Figma chưa định nghĩa màu link | Thiết kế | Thiết kế | — *(giữ hành vi cũ)* | 🟢 Thấp |
+
+### Đã đóng trong Wave 1A
+
+| ID | Kết luận |
+| --- | --- |
+| **P7** ✅ | Hai hệ đổ bóng → gộp về Elevation 1/2/3 của Figma; `boxShadow`/`boxShadowSecondary`/`boxShadowTertiary` là **seed token** của AntD nên ánh xạ chúng không phá quy tắc “chỉ seed token” |
+| **P8** ✅ | Cơ chế breakpoint → **phương án (a)**: hằng số `XP_BREAKPOINTS` trong TS + 3 CSS token; **không** thêm PostCSS. Và theo brief 00 §9.4, **không** gom 21 breakpoint hàng loạt — dời khi chạm file |
+| **P6** 🟡 | Cấp heading: đã ánh xạ `fontSizeHeading1..5` = 32/24/20/16/14 nên `Typography.Title` khớp thang Figma. Nhưng `ManagePageHeader` vẫn dùng `level={3}` (giờ ra 20px). Đổi sang `level={1}` là việc của **Wave 1D** — vẫn mở |
 
 ---
 
@@ -274,15 +287,157 @@ Ba mục "chưa vẽ" cần thiết kế bổ sung (không chặn, chỉ ghi nh�
 
 ---
 
+## G. Phát sinh từ Wave 1A
+
+### P15 — Hai bộ giá trị token trong cùng file Figma 🔴 CHẶN
+
+**Phát hiện khi inspect cấp node.** File Figma chứa **hai hệ giá trị mạch lạc và mâu thuẫn nhau**, không phải sai lệch ngẫu nhiên:
+
+| | **Hệ A — Foundations `14:*`** | **Hệ B — `XePrime/*` + audit §12** |
+| --- | --- | --- |
+| Gold thương hiệu | **`#d6a02c`** (`14:9`) | `#d4af37` (`125:1571`, `125:1611`, `122:2305`) |
+| Chữ chính | **`#1a1a1a`** (`14:46`) | `#1a1612` |
+| Chữ phụ | **`#6b6560`** (`14:50`) | `#615c54` |
+| Error / Danger | **`#dc2626`** (`14:75`) | `#dc3545` |
+| Nền trang | **`#faf9f7`** (`14:26`) | `#faf8f5` |
+| Bo góc control | **10px** (`14:164`) | 8px |
+| Bo góc modal | **10px** | 12px |
+| Label form | **12px** (`14:137`) | 13px |
+| Viền | `#e8e4dd` (`14:38`) | `#e8e4dd` ✓ *(bằng nhau)* |
+
+**Wave 1A đã triển khai Hệ A.** Lý do:
+1. Hợp đồng nguồn sự thật ([00 §9](00_IMPLEMENTATION_OVERVIEW.md)): Foundations sở hữu **giá trị token**, component definition sở hữu **hợp đồng biến thể**.
+2. Swatch Foundations được đặt tên đúng bằng tên CSS variable (`--xp-color-primary`) — chúng **là** bề mặt khai báo token.
+3. Hệ A khớp **chính xác** code đang chạy ở 6 token (primary, success, warning, error, info, radius) → chọn A = **không có hồi quy thương hiệu**; chọn B đổi màu gold toàn app.
+4. Giá trị Hệ B là default phổ biến của web (`#d4af37` gold kim loại, `#dc3545` danger của Bootstrap) — giống default lúc dựng component hơn là quyết định thương hiệu.
+
+**Cần chốt**: xác nhận Hệ A là đúng, hoặc chỉ định Hệ B. Nếu chọn B thì đây là **một dòng đổi token** — nhưng kéo theo đổi màu thương hiệu, đỏ lỗi, bo góc trên toàn sản phẩm và phải QA lại từ đầu.
+
+**Nếu không trả lời**: giữ Hệ A (đang chạy, không hồi quy).
+
+---
+
+### P16 — Chiều cao control mặc định: 32 hay 40? 🟡
+
+Figma `125:1571` (button `padding: 10px 20px`, chữ 15px) và `125:2691` (input `padding: 10px 12px`) đều ra **~40px** = AntD `size="large"`. Code đang chạy `controlHeight: 32` (mặc định AntD), nhưng một số nơi đã tự dùng `size="large"` (ví dụ [VehicleFiltersBar](../../apps/web/src/features/vehicles/components/VehicleFilters.tsx)).
+
+Wave 1A **giữ 32** và khai báo cả 3 bậc (24/32/40) làm token. Đổi mặc định sang 40 làm cao lên mọi input/button/select ở 37 trang → thuộc wave component.
+
+**Nếu không trả lời**: giữ 32.
+
+---
+
+### P17 — Bậc viền “mảnh hơn” 🟢
+
+Foundations chỉ có 2 bậc viền: `border` `#e8e4dd` (`14:38`) và `border-strong` `#d4cfc6` (`14:42`). Code cần thêm một bậc **mảnh hơn** (`colorBorderSecondary` của AntD, 31 consumer). Giá trị cũ `#f4ecd9` ám vàng, không hợp bảng màu trung tính mới.
+
+Wave 1A **dẫn xuất**: `--xp-color-border-subtle` = `#f5f3ef`, tái dùng tông `color-bg-muted` (`14:34`) thay vì chế màu mới. Cần thiết kế xác nhận hoặc cấp một giá trị chính thức.
+
+---
+
+### P18 — Bốn cặp màu trượt WCAG AA 🟠
+
+Đã đo trong Wave 1A (brief 00 §16 ghi *“contrast ratios unverified”* — nay đã verified):
+
+| Cặp | Tỉ lệ | Ghi chú |
+| --- | --- | --- |
+| `text-tertiary` trên nền trang | **2.72** | **Trượt từ trước Wave 1A** (bản cũ 2.99). Dùng cho biển số xe, nhãn thứ, dòng meta — là chữ mang thông tin |
+| `warning` trên `warning-bg` | **2.81** | Trượt cả 3:1 |
+| `success` trên `success-bg` | **3.15** | Đạt 3:1, trượt 4.5:1 |
+| `error` trên `error-bg` | **4.41** | Sát ngưỡng |
+
+**Wave 1A không tự sửa** vì brief 00 §16 ghi mức tuân thủ WCAG là `Unknown` (câu hỏi mở **Q7**) — ép AA là quyết định thay thiết kế. Bốn cặp đã được **pin bằng test** để không tệ thêm.
+
+**Cần chốt**: (a) mức tuân thủ mục tiêu (A / AA / AAA) — chính là brief 00 Q7; (b) nếu AA thì làm đậm `text-tertiary` và 3 cặp status.
+
+**Nếu không trả lời**: giữ giá trị Figma, không dùng `text-tertiary` cho chữ bắt buộc đọc được.
+
+---
+
+### P19 — Figma chưa định nghĩa màu link 🟢
+
+Foundations không có token link. Đặt link = gold thương hiệu sẽ (a) là quyết định thiết kế không có nguồn, (b) làm `<Button type="link">` (ví dụ trong [MaskedContact](../../apps/web/src/components/data-display/MaskedContact.tsx)) tương phản rất kém trên nền trắng.
+
+Wave 1A **giữ hành vi cũ**: không set `colorLink` trong `antdTheme`, để AntD dẫn xuất từ `colorInfo`; token `--xp-color-link` `#2563eb` / `--xp-color-link-hover` `#7aadff` chỉ soi lại giá trị đó.
+
+⚠️ Hệ quả a11y: `#7aadff` trên trắng ≈ 2.4:1 — đây là hành vi **đang có sẵn**, không phải Wave 1A tạo ra. Gộp vào P18 khi chốt mức tuân thủ.
+
+---
+
+### T1 — 🔴 Lỗi đang chạy: 9 tham chiếu CSS chết ở `CalendarScheduler`
+
+Không phải quyết định mà là **defect** phát hiện khi rà token. `CalendarScheduler` tham chiếu 9 biến `--xp-*` chưa từng khai báo, không fallback → vạch lưới, nền cuối tuần, cột hôm nay, bo góc và màu event bảo dưỡng đều không render đúng.
+
+Bảng ánh xạ sẵn sàng ở [02 §19](02_DESIGN_TOKEN_MAP.md). Wave 1A **không sửa** vì (a) là feature component có wave + cổng QA riêng, (b) sửa đổi hình ảnh lịch mà wave token không QA được, (c) nhánh `maintenance` cần một bậc nền tím chưa có nguồn Figma.
+
+**Cần**: xếp vào wave lịch (3E) hoặc làm sớm như một bugfix riêng.
+
+---
+
+## H. Phát sinh từ Wave 1B — Batch 1 (overlay)
+
+### P20 — Đặc tả overlay Figma mâu thuẫn với token Wave 1A 🟡
+
+Ba node Figma nói ba kiểu về cùng một thứ:
+
+| Thuộc tính | `122:3705` (12.19 Shared Overlay) | `130:1563` (12.32 Responsive Mapping) | Token Wave 1A (đang dùng) |
+| --- | --- | --- | --- |
+| Bo góc modal | **12px** | — | `--xp-border-radius` **10px** (Foundations `14:164`) |
+| Nền mờ (scrim) | **`#000000` 50%** | **`rgba(26,22,18,0.4)`** | `--xp-color-bg-overlay` **`rgba(26,26,26,0.45)`** |
+| Bề rộng drawer | **400px** | — | `--xp-drawer-width` **560px** / `-lg` 720px |
+| Bề rộng modal | SM 400 · MD 560 · LG 720 | — | ✅ khớp |
+
+**Batch 1 giữ token Wave 1A** theo chỉ thị “không đổi hệ token, không chuyển sang bộ Figma phụ”. Bo góc 12px và scrim `#000000` thuộc **Hệ B** (xem P15) nên bị loại theo cùng một lý do. `rgba(26,22,18,0.4)` của `130:1563` rất gần token đang dùng — chênh lệch không đáng kể.
+
+Riêng **bề rộng drawer 400px** là mâu thuẫn thật và chưa thuộc P15: code hiện dùng 480/520/640/720, token nói 560/720, Figma nói 400. Batch 2 sẽ ép các panel về `md`/`lg` — **đây là thay đổi nhìn thấy được**, cần chốt trước khi migrate 7 panel.
+
+### P21 — Vị trí toast: Figma bottom-right, AntD top-center 🟢
+
+`122:3705` đặc tả toast **bottom-right, offset 24px, tự tắt sau 5 giây**. `App.useApp().message` của AntD mặc định **top-center, 3 giây**. Chỉ thị Wave 1B cấm bọc toast riêng, nên Batch 1 **không đụng**. Nếu sản phẩm muốn theo Figma thì cấu hình `message` ở `ConfigProvider` (một chỗ), không phải bọc component.
+
+### D14 — Lỗi tiềm ẩn phát hiện khi khảo sát (KHÔNG sửa ở Batch 1)
+
+Rule 12 cấm sửa lỗi không liên quan; ghi lại để Batch 2 xử đúng chỗ:
+
+| # | Lỗi | Ở đâu |
+| --- | --- | --- |
+| D14.1 | `<Drawer size="88dvh">` — `size` của AntD chỉ nhận `'default' \| 'large'`; chiều cao phải là `height`. Bottom sheet hiện **không** cao 88dvh như ý định. **Có ở HAI file** (batch 1B.0 xác nhận) | [RequestBookingModal.tsx:51](../../apps/web/src/features/booking-requests/components/RequestBookingModal.tsx#L51) · [FilterPanel.tsx:367](../../apps/web/src/features/marketplace/components/FilterPanel.tsx#L367) |
+| D14.2 | `title={null}` + `aria-label` → AntD **không** chuyển `aria-label` xuống phần tử `role="dialog"`, nên modal đăng nhập hiện **không có tên khả truy cập** | [AuthModal.tsx:143](../../apps/web/src/features/auth/components/AuthModal.tsx#L143) |
+| D14.3 | `destroyOnClose` (tên AntD 5) vẫn còn dùng; AntD 6 là `destroyOnHidden` | [ReceiptFormDrawer.tsx:60](../../apps/web/src/features/finance/components/ReceiptFormDrawer.tsx#L60) + mọi modal chưa migrate |
+| **D14.4** | `TextAreaField`, `NumberField`, `SelectField` dùng `Form.Item label` mà **không nối `htmlFor`** — khác `TextField` (brief 00 §16 ghi `TextField` có `useId()`). Hệ quả: ô nhập **không có tên khả truy cập**, và `getByLabelText` không tìm ra trong test | [TextAreaField.tsx](../../apps/web/src/components/form/TextAreaField.tsx) · phát hiện khi viết test batch 1B.2 |
+| **D14.5** | Xoá danh mục thu/chi **không có bước xác nhận** — bấm là gọi mutation ngay. Hành động phá huỷ không hoàn tác được mà không hỏi lại | [CategoryManagerModal.tsx](../../apps/web/src/features/finance/components/CategoryManagerModal.tsx) |
+
+### P22 — Bề rộng modal 520 → 560 sau khi migrate 🟢
+
+Năm dialog đã migrate ở batch 1B.2 trước đây dùng bề rộng **mặc định của AntD (520px)**; nay dùng `size="md"` = **560px** (`--xp-modal-width`, Figma `125:1611`). Chênh **+40px** trên desktop.
+
+Đây là hệ quả có chủ đích của quy tắc "không dùng bề rộng tuỳ tiện" — 520px không có trong thang token. Ghi lại để đợt QA thị giác không coi là hồi quy. Nếu sản phẩm muốn giữ 520 thì phải thêm một bậc token, không phải viết số trần trở lại.
+
+Cả ba tự biến mất khi file chuyển sang `ResponsiveDialog`/`DetailDrawer` ở Batch 2 — `ResponsiveDialog` đã xử lý D14.2 bằng tiêu đề ẩn cho trình đọc màn hình thay vì `aria-label`.
+
+---
+
 ## Việc tiếp theo
 
 **Trước khi Wave 1A bắt đầu, cần:**
 
+**Sau Wave 1A — cần trước khi bắt đầu Wave 1B:**
+
+| Ai | Việc |
+| --- | --- |
+| **Chủ dự án + Thiết kế** | **P15** — xác nhận Hệ A (Foundations) là bộ giá trị đúng. Đây là câu hỏi gating lớn nhất hiện tại: nếu là Hệ B thì toàn bộ Wave 1A phải làm lại giá trị |
+| **Chủ dự án** | **P18 / brief 00 Q7** — mức tuân thủ WCAG mục tiêu. Quyết định này mở khoá 4 cặp màu và màu link |
+| **Bất kỳ ai** | Chạy gói **SMOKE** ở [07 §0](07_VISUAL_QA_MATRIX.md) — Wave 1A chưa QA thị giác được (cần app chạy thật) |
+| **Kỹ thuật** | Xếp **T1** (lỗi CSS lịch) vào lịch làm |
+
+**Vẫn còn từ Wave 0B:**
+
 | Ai | Việc |
 | --- | --- |
 | **Chủ dự án** | Trả lời **P1** (sidebar) và **P3** (tablet). Hai câu này định hình phạm vi lớn nhất |
-| **Kỹ thuật** | Tự chốt **P8** (cơ chế breakpoint), **P7** (đổ bóng), **P6** (heading) — có khuyến nghị sẵn ở trên |
-| **Kỹ thuật** | Đọc `14:63/71/79/87` để **P5** tự đóng nếu giá trị gần preset AntD |
+| ~~Kỹ thuật~~ | ~~**P8** (cơ chế breakpoint), **P7** (đổ bóng)~~ — ✅ đã chốt trong Wave 1A |
+| **Kỹ thuật** | **P6** (heading) còn lại phần `ManagePageHeader` → Wave 1D |
+| **Kỹ thuật** | **P5** — 4 token `*-bg` đã đọc và khai báo (`#f0fdf4`/`#fff7ed`/`#fef2f2`/`#eff6ff`); còn phải quyết `StatusTag` có bỏ preset AntD không, trước Wave 1C |
 | **Kỹ thuật** | Inspect A2 để **P2** tự đóng nếu bộ 2 chỉ là nhãn nhóm |
 
 **Có thể hoãn tới đúng wave dùng đến**: P4 (→3I) · P9/P10 (→3L) · P11 (→3I/3J) · P12 (→4) · F1–F8, F10–F12 (→wave module tương ứng).

@@ -1,9 +1,10 @@
 'use client';
 
-import { App, Button, Modal, Rate } from 'antd';
+import { App, Button, Rate } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Controller, useForm } from 'react-hook-form';
 import { TextAreaField } from '@/components/form/TextAreaField';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { useCreateReview } from '../hooks/use-create-review';
 import { reviewFormSchema, type ReviewFormValues } from '../schema';
@@ -45,12 +46,11 @@ export function ReviewModal({
   });
 
   return (
-    <Modal
+    <ResponsiveDialog
       title={trip ? `Đánh giá · ${trip.vehicleName}` : 'Đánh giá'}
       open={open}
-      onCancel={onClose}
+      onClose={onClose}
       footer={null}
-      destroyOnClose
     >
       <form onSubmit={onSubmit} noValidate>
         <div className={styles.field}>
@@ -76,6 +76,6 @@ export function ReviewModal({
           </Button>
         </div>
       </form>
-    </Modal>
+    </ResponsiveDialog>
   );
 }

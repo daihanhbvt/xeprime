@@ -1,11 +1,12 @@
 'use client';
 
-import { Descriptions, Drawer, Spin } from 'antd';
+import { Descriptions } from 'antd';
 import {
   AUDIT_ACTOR_SCOPE_META,
   type AuditActorScope,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { formatDateTime } from '@/lib/datetime';
 import { auditActionLabel, auditTargetTypeLabel } from '../constants';
 import { useAuditLog } from '../hooks/use-audit-logs';
@@ -22,25 +23,21 @@ export function AuditLogDetailDrawer({
   const { data, isLoading } = useAuditLog(logId);
 
   return (
-    <Drawer
+    <DetailDrawer
       title={data ? auditActionLabel(data.action) : 'Nhật ký'}
-      width={640}
+      // 640px cũ → bậc `lg` (720px) của token. Panel này có bảng JSON before/after nên cần rộng.
+      size="lg"
       open={Boolean(logId)}
       onClose={onClose}
+      loading={isLoading || !data}
       extra={
         data ? (
           <StatusTag value={data.actorScope as AuditActorScope} meta={AUDIT_ACTOR_SCOPE_META} />
         ) : null
       }
     >
-      {isLoading || !data ? (
-        <div className={styles.center}>
-          <Spin />
-        </div>
-      ) : (
-        <Body log={data} />
-      )}
-    </Drawer>
+      {data ? <Body log={data} /> : null}
+    </DetailDrawer>
   );
 }
 

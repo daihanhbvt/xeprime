@@ -23,16 +23,10 @@
   color: var(--xp-color-text-secondary);
 }
 
-/* Bottom sheet mobile: bo góc trên, chừa safe-area của máy có notch/thanh gesture. */
-.drawerRoot :global(.ant-drawer-content) {
-  border-radius: 18px 18px 0 0;
-}
-
-.drawerRoot .body {
-  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
-  max-height: 84vh;
-  overflow-y: auto;
-}
+/*
+ * Bo góc trên, trần chiều cao và safe-area của bottom sheet đã chuyển sang `ResponsiveDialog`
+ * (Wave 1B) — dùng token thay cho 18px/84vh viết tay. Không lặp lại ở đây.
+ */
 
 @media (max-width: 640px) {
   .head {

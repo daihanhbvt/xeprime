@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, App, Button, Drawer } from 'antd';
+import { Alert, App, Button } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { API_ERROR_CODE, SERVICE_TYPE } from '@xeprime/types';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
+import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { NumberField } from '@/components/form/NumberField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { DateTimeField } from '@/components/form/DateTimeField';
@@ -81,15 +82,14 @@ export function BookingFormDrawer({
   // key gồm prefill để click ô lịch khác nhau thì form re-init đúng xe/giờ.
   const formKey = editing?.id ?? (prefill ? `new-${prefill.vehicleId}-${prefill.pickupAt.valueOf()}` : 'new');
   return (
-    <Drawer
+    <DetailDrawer
       title={editing ? `Sửa đơn ${editing.code}` : 'Tạo đơn thuê'}
-      width={520}
+      size="md"
       open={open}
       onClose={onClose}
-      destroyOnClose
     >
       {open ? <BookingForm key={formKey} editing={editing} prefill={prefill} onDone={onClose} /> : null}
-    </Drawer>
+    </DetailDrawer>
   );
 }
 

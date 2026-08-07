@@ -1,6 +1,55 @@
 # 03 — COMPONENT REGISTRY
 
-> Ngày lập: 06/08/2026 · Wave 0B. **Đây là hợp đồng tái dùng.** Trước khi viết bất kỳ component nào trong migration, tra bảng này. Component mới chỉ được tạo khi có **≥2 nơi tiêu thụ thật** — không tạo trước.
+> Ngày lập: 06/08/2026 · Wave 0B · **cập nhật sau Wave 1A**. **Đây là hợp đồng tái dùng.** Trước khi viết bất kỳ component nào trong migration, tra bảng này. Component mới chỉ được tạo khi có **≥2 nơi tiêu thụ thật** — không tạo trước.
+
+## ⓪⁺⁺ Wave 1B — HOÀN THÀNH (Stage A/B/C)
+
+**19/19 overlay nghiệp vụ đã dùng component chung.** Không còn `<Modal>`/`<Drawer>` trực tiếp
+trong `features/`.
+
+| Component chung | Nơi tiêu thụ |
+| --- | --- |
+| `ResponsiveDialog` | 12 — `AuthModal` · `RequestBookingModal` · `FilterPanel` · `AddMemberModal` · `AddStaffModal` · `PlanFormModal` · `ReviewModal` · `CategoryManagerModal` · `RecordPaymentModal` · `TenantPlanSection` · modal lồng trong `AdminTenantDetailDrawer`/`AdminVehicleDetailDrawer`/`ApprovalDetailDrawer` |
+| `DetailDrawer` | 9 — 7 `*DetailDrawer` + 2 `*FormDrawer` |
+
+**Cố ý loại trừ (1)**: [`MobileNav`](../../apps/web/src/components/layout/MobileNav.tsx) — Drawer
+điều hướng, không phải hộp thoại tác vụ hay panel chi tiết. Giữ `<Drawer>` trực tiếp.
+
+**Giữ nguyên primitive phù hợp**: 13 file dùng `Popconfirm` cho xác nhận tại chỗ · `App.useApp().message`
+cho toast · `Modal.confirm` không xuất hiện ở đâu.
+
+**Sửa lỗi kèm theo migration**: `size="88dvh"` sai prop ở 2 file (D14.1) · dialog đăng nhập
+không có tên khả truy cập (D14.2) · `destroyOnClose` tên AntD 5 ở các file đã chuyển (D14.3).
+
+## ⓪⁺ Wave 1B — Batch 1: hai primitive đã tạo
+
+| Component | Đường dẫn | Trạng thái |
+| --- | --- | --- |
+| **`ResponsiveDialog`** | [components/overlay/ResponsiveDialog.tsx](../../apps/web/src/components/overlay/ResponsiveDialog.tsx) | ✅ Đã tạo + 14 test. **Chưa có consumer** — migrate ở Batch 2 |
+| **`DetailDrawer`** | [components/overlay/DetailDrawer.tsx](../../apps/web/src/components/overlay/DetailDrawer.tsx) | ✅ Đã tạo + 11 test. **Chưa có consumer** — migrate ở Batch 2 |
+
+**Kiểm đếm thực tế (rg, không lấy từ tài liệu)**: 13 file dùng `<Modal>`, 13 file dùng `<Drawer>`, **6 file dùng cả hai** → **20 file overlay riêng biệt** phải migrate. Con số “13 modal” ở §2.1 và “7 detail drawer” ở §2.2 vẫn đúng nhưng không cộng lại được vì chồng lấn.
+
+Hợp đồng mobile lấy từ Figma `130:1563` (8 quy tắc chuyển đổi), không suy từ hình:
+- Modal `sm` (<480px) và mọi hộp xác nhận → **bottom sheet**, trần `85dvh`, có thanh nắm kéo
+- Modal `md`/`lg` (≥480px) và mọi overlay có form → **toàn màn hình**, nút đóng là mũi tên ←
+- Drawer chi tiết → **toàn màn hình luôn luôn** (quy tắc 3)
+
+## ⓪ Thay đổi sau Wave 1A (token)
+
+Wave 1A **không đụng component nào**, nhưng đổi nền token bên dưới chúng. Ảnh hưởng cần biết trước khi làm 1B/1C:
+
+| Component | Ảnh hưởng từ Wave 1A |
+| --- | --- |
+| **Button** | `colorPrimaryHover` giờ **đậm hơn** (`#c4920f`) thay vì sáng hơn (`#e3ba54`). Bốn variant Figma vẫn ánh xạ 1-1 vào `type`/`danger` — quyết định **KEEP-ANTD** không đổi. `controlHeight` vẫn 32 (Figma vẽ 40 — P16) |
+| **Modal / Drawer** | Token bề rộng đã có: `--xp-modal-width-sm/​/-lg` = 400/560/720 (`125:1611`), `--xp-drawer-width/-lg` = 560/720. `ResponsiveDialog` (1B) dùng thẳng, không tự chế số. `colorBgMask` + `boxShadowSecondary` đã theo Figma |
+| **Card** | `borderRadiusLG` 12 → **10** (Figma `14:164`). Bóng card giờ là Elevation 1 |
+| **Table** | `colorBorderSecondary` → `--xp-color-border-subtle`; `colorFillAlter`/`controlItemBgHover` giờ ám ấm theo `colorTextBase`. `DataTable` (1C) nên dùng `--xp-line-height-body` (20px) thay vì line-height toàn cục 1.5714 — xem nợ T2 |
+| **Form fields** | Vòng focus giờ là 3px 25% gold (`controlOutline`), trước gần như vô hình. `--xp-color-text-disabled` có sẵn cho CSS Module |
+| **StatusTag** | **Không đổi.** Vẫn dùng AntD preset qua `StatusMeta.color`. Bốn token `--xp-color-*-bg` đã có nhưng **chưa nối vào** — xem P5 trước khi đổi |
+| **EmptyState / Loading / Error / Permission** (1C) | Dùng `--xp-color-*-bg` + `--xp-color-text-tertiary`. ⚠️ `text-tertiary` trượt AA (2.72) — không dùng cho chữ mang thông tin, xem P18 |
+| **Navigation** | Token sidebar tối đã khai báo, **chưa áp** (P1/Wave 1D) |
+| **Tất cả** | Breakpoint dùng `useIsMobile()`/`useIsTablet()`/`useIsDesktop()` từ `XP_BREAKPOINTS`; **không gõ số** |
 
 ## 0. Bối cảnh hai phía
 

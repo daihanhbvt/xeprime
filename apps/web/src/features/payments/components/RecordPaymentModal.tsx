@@ -1,10 +1,11 @@
 'use client';
 
-import { App, Button, Modal } from 'antd';
+import { App, Button } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { TextField } from '@/components/form/TextField';
 import { PAYMENT_METHOD_OPTIONS } from '@/features/finance/constants';
 import { formatMoneyVnd } from '@/lib/money';
@@ -57,7 +58,7 @@ export function RecordPaymentModal({
   });
 
   return (
-    <Modal title="Thu tiền đơn" open={open} onCancel={onClose} footer={null} destroyOnClose>
+    <ResponsiveDialog title="Thu tiền đơn" open={open} onClose={onClose} footer={null}>
       <p style={{ marginBottom: 16 }}>
         Còn nợ: <b>{formatMoneyVnd(debtAmount)}</b>
       </p>
@@ -78,6 +79,6 @@ export function RecordPaymentModal({
           </Button>
         </div>
       </form>
-    </Modal>
+    </ResponsiveDialog>
   );
 }

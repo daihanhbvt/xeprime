@@ -1,12 +1,13 @@
 'use client';
 
-import { App, Button, Modal } from 'antd';
+import { App, Button } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { NumberField } from '@/components/form/NumberField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { useCreatePlan, useUpdatePlan } from '../hooks/use-plan-mutations';
 import type { Plan } from '../types';
@@ -109,12 +110,11 @@ export function PlanFormModal({
   });
 
   return (
-    <Modal
+    <ResponsiveDialog
       title={isEdit ? `Sửa gói: ${plan?.name}` : 'Tạo gói dịch vụ'}
       open={open}
-      onCancel={onClose}
+      onClose={onClose}
       footer={null}
-      destroyOnClose
     >
       <form onSubmit={onSubmit} noValidate>
         {!isEdit ? (
@@ -139,6 +139,6 @@ export function PlanFormModal({
           </Button>
         </div>
       </form>
-    </Modal>
+    </ResponsiveDialog>
   );
 }

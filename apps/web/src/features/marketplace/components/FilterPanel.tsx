@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Drawer, Modal, Select, Slider, Switch } from 'antd';
+import { Button, Select, Slider, Switch } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BODY_TYPE_LABEL,
@@ -20,8 +20,8 @@ import {
   vehicleFeatureLabel,
   type ListingAmenity,
 } from '@xeprime/types';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
 import { formatMoneyVnd } from '@/lib/money';
 import { useListingFacets } from '../hooks/use-listing-facets';
@@ -101,7 +101,6 @@ function toggle(list: string[], key: string): string[] {
  * Mobile = bottom-sheet Drawer, desktop = Modal — cùng một nội dung.
  */
 export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const isMobile = useIsMobile();
   const { filters, setFilters } = useMarketplaceFilters();
 
   const [draft, setDraft] = useState<FilterDraft>(() => draftFromFilters(filters));
@@ -359,25 +358,26 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <Drawer
-        title="Bộ lọc"
-        placement="bottom"
-        size="88dvh"
-        open={open}
-        onClose={onClose}
-        footer={footer}
-      >
-        {body}
-      </Drawer>
-    );
-  }
-
   return (
-    <Modal title="Bộ lọc" open={open} onCancel={onClose} footer={footer} width={560}>
-      <div className={styles.modalBody}>{body}</div>
-    </Modal>
+    /**
+     * Bộ lọc là hộp thoại tác vụ có nút "Áp dụng" ở footer — mobile dùng bottom sheet theo
+     * quy tắc 4 của Figma `130:1563` (hành động ngắn, quyết định nhanh), không phải toàn màn.
+     *
+     * Bản trước truyền `size="88dvh"` cho `Drawer`: `size` chỉ nhận `'default' | 'large'`
+     * nên chiều cao đó chưa bao giờ có tác dụng (backlog D14.1). Trần chiều cao giờ do
+     * `ResponsiveDialog` lo bằng token.
+     */
+    <ResponsiveDialog
+      title="Bộ lọc"
+      open={open}
+      onClose={onClose}
+      size="md"
+      mobileMode="sheet"
+      footer={footer}
+      bodyClassName={styles.modalBody}
+    >
+      {body}
+    </ResponsiveDialog>
   );
 }
 

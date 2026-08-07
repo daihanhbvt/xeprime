@@ -1,6 +1,6 @@
 'use client';
 
-import { App, Button, Descriptions, Drawer, Empty, Result, Spin, Table, Tag } from 'antd';
+import { App, Descriptions, Empty, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Link from 'next/link';
 import {
@@ -12,6 +12,7 @@ import {
 } from '@xeprime/types';
 import { MaskedContact } from '@/components/data-display/MaskedContact';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { formatDateTime } from '@/lib/datetime';
@@ -30,32 +31,21 @@ export function AdminCustomerDetailDrawer({
   const { data, isLoading, isError, refetch } = useAdminCustomer(customerId);
 
   return (
-    <Drawer
+    <DetailDrawer
       title={data ? data.displayName : 'Khách thuê'}
-      width={640}
+      // 640px cũ → bậc `lg` (720px): panel có bảng yêu cầu gần đây lồng bên trong.
+      size="lg"
       open={Boolean(customerId)}
       onClose={onClose}
       extra={data ? <StatusTag value={data.status as UserStatus} meta={USER_STATUS_META} /> : null}
+      loading={!isError && (isLoading || !data)}
+      error={isError}
+      errorTitle="Không tải được thông tin khách"
+      onRetry={() => void refetch()}
     >
-      {isError ? (
-        <Result
-          status="error"
-          title="Không tải được thông tin khách"
-          extra={
-            <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
-            </Button>
-          }
-        />
-      ) : isLoading || !data ? (
-        <div className={styles.center}>
-          <Spin />
-        </div>
-      ) : (
-        // `key` ép remount khi đổi khách: thông tin đã bỏ che của khách trước không rớt sang sau.
-        <Body key={data.id} customer={data} />
-      )}
-    </Drawer>
+      {/* `key` ép remount khi đổi khách: thông tin đã bỏ che của khách trước không rớt sang sau. */}
+      {data ? <Body key={data.id} customer={data} /> : null}
+    </DetailDrawer>
   );
 }
 

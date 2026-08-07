@@ -1,10 +1,12 @@
 'use client';
 
 import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
-import { App, Button, Descriptions, Drawer, Input, Modal, Popconfirm, Spin } from 'antd';
+import { App, Button, Descriptions, Input, Popconfirm } from 'antd';
 import { useState } from 'react';
 import { TENANT_STATUS, TENANT_STATUS_META, TENANT_TYPE_LABEL, type TenantStatus, type TenantType } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { DetailDrawer } from '@/components/overlay/DetailDrawer';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { formatDate } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { TenantPlanSection } from '@/features/admin-plans/components/TenantPlanSection';
@@ -22,21 +24,16 @@ export function AdminTenantDetailDrawer({
   const { data, isLoading } = useAdminTenant(tenantId);
 
   return (
-    <Drawer
+    <DetailDrawer
       title={data ? data.name : 'Gian hàng'}
-      width={520}
+      size="md"
       open={Boolean(tenantId)}
       onClose={onClose}
+      loading={isLoading || !data}
       extra={data ? <StatusTag value={data.status as TenantStatus} meta={TENANT_STATUS_META} /> : null}
     >
-      {isLoading || !data ? (
-        <div className={styles.center}>
-          <Spin />
-        </div>
-      ) : (
-        <Body tenant={data} />
-      )}
-    </Drawer>
+      {data ? <Body tenant={data} /> : null}
+    </DetailDrawer>
   );
 }
 
@@ -100,15 +97,16 @@ function Body({ tenant }: { tenant: AdminTenantDetail }) {
         )}
       </div>
 
-      <Modal
+      <ResponsiveDialog
         title="Khoá gian hàng"
         open={lockOpen}
+        size="sm"
         okText="Khoá"
         cancelText="Huỷ"
-        okButtonProps={{ danger: true }}
+        destructive
         confirmLoading={actions.isPending}
         onOk={submitLock}
-        onCancel={() => setLockOpen(false)}
+        onClose={() => setLockOpen(false)}
       >
         <p className={styles.lockNote}>
           Xe của gian hàng sẽ bị ẩn khỏi marketplace ngay lập tức. Nhập lý do (tuỳ chọn) để lưu vào
@@ -122,7 +120,7 @@ function Body({ tenant }: { tenant: AdminTenantDetail }) {
           placeholder="Lý do khoá…"
           onChange={(e) => setReason(e.target.value)}
         />
-      </Modal>
+      </ResponsiveDialog>
     </div>
   );
 }

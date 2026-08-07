@@ -63,9 +63,17 @@ textarea {
   font: inherit;
 }
 
+/**
+ * Focus theo Figma `14:196`/`14:197`: viền gold 2px + vòng gold 3px (25% α).
+ *
+ * Giữ `outline` làm lớp chính (không bị `overflow: hidden` của bảng cắt mất), và thêm
+ * `box-shadow` cho vòng ngoài. Các control của AntD tự vẽ vòng này qua `controlOutline`
+ * trong `theme.ts`, nên đây chủ yếu phục vụ phần tử thường (link, button HTML, thẻ tabindex).
+ */
 :focus-visible {
-  outline: 2px solid var(--xp-color-primary);
-  outline-offset: 2px;
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 var(--xp-focus-ring-width) var(--xp-color-focus-ring);
 }
 
 /* --- Thanh cuộn chung: mảnh, bo tròn, vàng nhẹ (dùng cho mọi vùng scroll) --- */

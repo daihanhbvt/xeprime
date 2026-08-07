@@ -1,7 +1,7 @@
 'use client';
 
-import { Drawer, Modal } from 'antd';
-import { useIsMobile } from '@/hooks/use-media-query';
+import { useState } from 'react';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { RequestBookingFlow } from './RequestBookingFlow';
 
 interface RequestBookingModalProps {
@@ -18,9 +18,17 @@ interface RequestBookingModalProps {
 const TITLE = 'Yêu cầu thuê xe';
 
 /**
- * Vỏ đựng luồng đặt xe theo thiết bị: bottom-sheet (mobile) / modal (desktop) — cùng một
- * `RequestBookingFlow` bên trong. Dùng padding + cuộn mặc định của AntD (không tự chế flex
- * fill/sticky footer — vốn vỡ layout trong Modal). Chỉ render flow khi mở để state mới mỗi lần.
+ * Vỏ đựng luồng đặt xe. Toàn bộ nghiệp vụ (kiểm tra khung giờ trống, OTP, gửi yêu cầu) nằm
+ * trong `RequestBookingFlow`; ở đây chỉ còn hình thái overlay.
+ *
+ * Chỉ render flow khi mở → mỗi lần mở là state mới (không mang theo bước dở của lần trước).
+ *
+ * `size="md"` → desktop 560px, mobile **toàn màn hình** theo Figma `130:1563` quy tắc 5
+ * ("Form overlays → Full-Screen (luôn — cần chỗ cho bàn phím)"). Đúng thứ luồng này cần:
+ * có ô nhập ngày, họ tên, SĐT và 6 ô OTP.
+ *
+ * Bản trước truyền `size="88dvh"` cho `Drawer` — `size` của AntD chỉ nhận `'default' | 'large'`,
+ * nên chiều cao đó chưa bao giờ có tác dụng (backlog D14.1). Migration này bỏ hẳn nó.
  */
 export function RequestBookingModal({
   vehicleId,
@@ -32,31 +40,34 @@ export function RequestBookingModal({
   open,
   onClose,
 }: RequestBookingModalProps) {
-  const isMobile = useIsMobile();
-
-  const flow = open ? (
-    <RequestBookingFlow
-      vehicleId={vehicleId}
-      vehicleName={vehicleName}
-      vehicleImageUrl={vehicleImageUrl}
-      pricePerDay={pricePerDay}
-      pickupAt={pickupAt}
-      returnAt={returnAt}
-      onClose={onClose}
-    />
-  ) : null;
-
-  if (isMobile) {
-    return (
-      <Drawer title={TITLE} placement="bottom" size="88dvh" open={open} onClose={onClose}>
-        {flow}
-      </Drawer>
-    );
-  }
+  /**
+   * Đang xác minh OTP / gửi yêu cầu. Nâng lên vỏ để khoá các đường đóng VÔ Ý (Esc, bấm nền):
+   * đóng giữa chừng sẽ gỡ flow trong khi request đang bay, khách không biết yêu cầu đã gửi hay
+   * chưa. Nút đóng tường minh vẫn dùng được.
+   */
+  const [busy, setBusy] = useState(false);
 
   return (
-    <Modal title={TITLE} open={open} onCancel={onClose} footer={null} width={460}>
-      {flow}
-    </Modal>
+    <ResponsiveDialog
+      title={TITLE}
+      open={open}
+      onClose={onClose}
+      size="md"
+      footer={null}
+      confirmLoading={busy}
+    >
+      {open ? (
+        <RequestBookingFlow
+          vehicleId={vehicleId}
+          vehicleName={vehicleName}
+          vehicleImageUrl={vehicleImageUrl}
+          pricePerDay={pricePerDay}
+          pickupAt={pickupAt}
+          returnAt={returnAt}
+          onClose={onClose}
+          onBusyChange={setBusy}
+        />
+      ) : null}
+    </ResponsiveDialog>
   );
 }

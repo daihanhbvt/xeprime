@@ -1,7 +1,7 @@
 'use client';
 
 import { DollarOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
-import { App, Button, Descriptions, Divider, Drawer, Popconfirm, Space, Spin } from 'antd';
+import { App, Button, Descriptions, Divider, Popconfirm, Space } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -11,6 +11,7 @@ import {
   type BookingStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { usePermissions } from '@/hooks/use-permissions';
 import { formatDateTime } from '@/lib/datetime';
 import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
@@ -37,25 +38,20 @@ export function BookingDetailDrawer({
   const { data, isLoading } = useBooking(bookingId);
 
   return (
-    <Drawer
+    <DetailDrawer
       title={data ? `Đơn ${data.code}` : 'Chi tiết đơn'}
-      width={520}
+      size="md"
       open={Boolean(bookingId)}
       onClose={onClose}
+      loading={isLoading || !data}
       extra={
         data ? (
           <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} />
         ) : null
       }
     >
-      {isLoading || !data ? (
-        <div className={styles.center}>
-          <Spin />
-        </div>
-      ) : (
-        <BookingDetailBody booking={data} onEdit={onEdit} />
-      )}
-    </Drawer>
+      {data ? <BookingDetailBody booking={data} onEdit={onEdit} /> : null}
+    </DetailDrawer>
   );
 }
 

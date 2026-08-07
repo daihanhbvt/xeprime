@@ -16,9 +16,29 @@
 | **D7** | Khối "avatar + tên + phụ đề" | **≥8 nơi** | `EntityIdentity` | Thấp | 1C |
 | **D8** | `Suspense fallback={<Spin .../>}` + `.state` CSS | **11 page** | `LoadingState` | Thấp | 1C |
 | **D9** | Bảng dựng thẳng trong `page.tsx` (không có `*Table.tsx`) | **4 page** | tách ra `*Table.tsx` | Thấp | theo module |
-| **D10** | Điểm gãy breakpoint hard-code | **21 giá trị** | 3 token | **CAO** | 1A |
+| **D10** | Điểm gãy breakpoint hard-code | **21 giá trị** | 3 token | **CAO** | ~~1A~~ → dời dần |
+| **D11** | Bí danh token trùng vai trò | **9 token** | ✅ **Đã gom (Wave 1A)** | — | 1A ✔ |
+| **D12** | Hai hệ đổ bóng song song (XePrime vs AntD) | 2 hệ | ✅ **Đã gom (Wave 1A)** | — | 1A ✔ |
 
-**D10 nằm trong [02_DESIGN_TOKEN_MAP.md §9](02_DESIGN_TOKEN_MAP.md)** — ghi lại ở đây để không sót khi rà duplicate.
+### Cập nhật sau Wave 1B — D5 và D6 ĐÃ GOM ✅
+
+**D5 (overlay tự chế responsive) và D6 (detail drawer) đóng.** 19 overlay nghiệp vụ giờ dùng
+`ResponsiveDialog`/`DetailDrawer`; 3 bản tự chế nhánh mobile (`AuthModal`, `RequestBookingModal`,
+`FilterPanel`) đã bỏ, kèm luôn lỗi `size="88dvh"` ở 2 trong 3 bản đó.
+
+Ngoài ra đã xoá 6 khối CSS `.center` mồ côi (khung căn giữa cho `Spin`) vì `DetailDrawer` lo
+trạng thái tải, và gỡ `.drawerRoot` của `AuthModal` (bo góc 18px + `max-height: 84vh` viết tay)
+— hai giá trị đó nay lấy từ token trong `ResponsiveDialog`.
+
+### Cập nhật sau Wave 1A
+
+**D11 — bí danh token: ĐÃ GOM.** 9 token trùng vai trò (`color-bg-layout`, `color-border-secondary`, `gold-deep`, `gold-wash`, `color-bg-sand`, `shadow-sm/md/lg`) giờ trỏ `var()` về token canonical thay vì mang giá trị riêng. Không còn hai nguồn giá trị; `theme.test.ts` có test chặn tái phát. 134 consumer **không phải sửa dòng nào**. Bảng đầy đủ: [02 §16](02_DESIGN_TOKEN_MAP.md).
+
+**D12 — đổ bóng: ĐÃ GOM.** Trước Wave 1A, CSS Module dùng bóng nâu ấm còn AntD dùng bóng xám ba lớp — hai hệ hiển thị cạnh nhau. Giờ cả hai lấy từ Elevation 1/2/3 (`14:173`/`14:176`/`14:179`).
+
+**D10 — breakpoint: ĐỔI CÁCH LÀM, KHÔNG gom hàng loạt.** Design-brief 00 §9.4 (nguồn có thẩm quyền về responsive) chỉ định migrate *“as files are touched rather than in a bulk change”* — thắng kế hoạch Wave 0B. Wave 1A đã làm phần nền: 3 token + `XP_BREAKPOINTS` + `useIsMobile/useIsTablet/useIsDesktop`. ~21 điểm gãy trong `.module.css` dời dần theo wave module. Xem [02 §13](02_DESIGN_TOKEN_MAP.md).
+
+**D13 (MỚI) — 9 tham chiếu CSS chết trong `CalendarScheduler`.** Không phải trùng lặp mà là **lỗi đang chạy** phát hiện khi rà token: 9 `var(--xp-*)` chưa từng được khai báo, không fallback. Chi tiết + bảng ánh xạ sẵn: [02 §19](02_DESIGN_TOKEN_MAP.md) (nợ T1). Sửa ở wave lịch, không phải wave token.
 
 ---
 

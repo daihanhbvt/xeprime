@@ -1,12 +1,13 @@
 'use client';
 
-import { App, Button, Modal } from 'antd';
+import { App, Button } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { PLATFORM_ROLE, PLATFORM_ROLE_VALUES } from '@xeprime/types';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { PLATFORM_ROLE_OPTIONS } from '../constants';
 import { useAddStaff } from '../hooks/use-staff-mutations';
@@ -45,7 +46,8 @@ export function AddStaffModal({ open, onClose }: { open: boolean; onClose: () =>
   });
 
   return (
-    <Modal title="Thêm nhân sự nền tảng" open={open} onCancel={onClose} footer={null} destroyOnClose>
+    // `footer={null}`: nút gửi phải nằm TRONG `<form>` để `htmlType="submit"` còn tác dụng.
+    <ResponsiveDialog title="Thêm nhân sự nền tảng" open={open} onClose={onClose} footer={null}>
       <form onSubmit={onSubmit} noValidate>
         <TextField
           control={control}
@@ -62,6 +64,6 @@ export function AddStaffModal({ open, onClose }: { open: boolean; onClose: () =>
           </Button>
         </div>
       </form>
-    </Modal>
+    </ResponsiveDialog>
   );
 }

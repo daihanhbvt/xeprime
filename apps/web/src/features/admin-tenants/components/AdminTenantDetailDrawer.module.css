@@ -1,9 +1,3 @@
-.center {
-  display: grid;
-  place-items: center;
-  padding: 48px;
-}
-
 .actions {
   margin-top: 20px;
 }

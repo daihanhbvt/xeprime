@@ -1,7 +1,7 @@
 'use client';
 
 import { CreditCardOutlined } from '@ant-design/icons';
-import { App, Button, Modal, Popconfirm, Select, Spin, Tag } from 'antd';
+import { App, Button, Popconfirm, Select, Spin, Tag } from 'antd';
 import { useMemo, useState } from 'react';
 import {
   SUBSCRIPTION_STATUS,
@@ -9,6 +9,7 @@ import {
   type SubscriptionStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { dayjs, formatDate } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
@@ -205,7 +206,7 @@ function AssignPlanModal({
   }
 
   return (
-    <Modal title="Gán / gia hạn gói" open={open} onCancel={onClose} footer={null} destroyOnClose>
+    <ResponsiveDialog title="Gán / gia hạn gói" open={open} onClose={onClose} footer={null}>
       {plans.isLoading ? (
         <div className={styles.center}>
           <Spin />
@@ -239,6 +240,6 @@ function AssignPlanModal({
           </div>
         </>
       )}
-    </Modal>
+    </ResponsiveDialog>
   );
 }

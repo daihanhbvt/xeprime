@@ -1,9 +1,9 @@
 'use client';
 
-import { Drawer, Modal } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Logo } from '@/components/brand/Logo';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { ROUTES } from '@/constants/routes';
 import { useIsMobile } from '@/hooks/use-media-query';
 import type { CurrentUser } from '@/hooks/use-current-user';
@@ -108,41 +108,31 @@ export function AuthModal() {
     </>
   );
 
-  // Drawer đáy trên mobile: form dài hơn một màn hình vẫn cuộn được trong drawer, và bàn phím
-  // ảo không đẩy nội dung ra khỏi viewport như Modal căn giữa.
-  if (isMobile) {
-    return (
-      <Drawer
-        open={isOpen}
-        placement="bottom"
-        height="auto"
-        onClose={handleClose}
-        title={null}
-        closable
-        destroyOnHidden
-        rootClassName={styles.drawerRoot}
-        classNames={{ body: styles.body }}
-        aria-label={copy.title}
-      >
-        {body}
-      </Drawer>
-    );
-  }
-
   return (
-    <Modal
+    <ResponsiveDialog
       open={isOpen}
-      onCancel={handleClose}
+      onClose={handleClose}
+      /**
+       * Modal tự dựng phần đầu có thương hiệu (logo + tiêu đề + phụ đề) trong thân, nên header
+       * mặc định bị ẩn — nhưng dialog VẪN phải có tên. Bản cũ truyền `aria-label` cho
+       * `Modal`/`Drawer`, mà AntD không chuyển tiếp nó xuống phần tử `role="dialog"` khi
+       * `title` rỗng: modal đăng nhập trước Wave 1B **không có tên khả truy cập** (backlog
+       * D14.2). `hideHeaderTitle` + `ariaLabel` dựng một tiêu đề chỉ-đọc-màn-hình, sửa đúng chỗ.
+       */
+      hideHeaderTitle
+      ariaLabel={copy.title}
+      /**
+       * `sm` + `sheet`: giữ nguyên hình thái đang chạy — desktop hộp hẹp, mobile bottom sheet
+       * cao theo nội dung. Cố ý KHÔNG dùng full-screen như quy tắc 5 của Figma `130:1563`:
+       * form auth ngắn, và bản hiện tại chọn drawer đáy chính vì bàn phím ảo không đẩy nội
+       * dung ra khỏi viewport. Đổi sang full-screen là redesign, không thuộc Wave 1B.
+       */
+      size="sm"
+      mobileMode="sheet"
       footer={null}
-      centered
-      width={420}
-      destroyOnHidden
-      maskClosable
-      title={null}
-      classNames={{ body: styles.body }}
-      aria-label={copy.title}
+      bodyClassName={styles.body}
     >
       {body}
-    </Modal>
+    </ResponsiveDialog>
   );
 }

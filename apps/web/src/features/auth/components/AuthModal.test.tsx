@@ -54,6 +54,17 @@ const CUSTOMER = {
   permissions: [],
 };
 
+/**
+ * Tiêu đề HIỂN THỊ trong thân modal.
+ *
+ * Từ Wave 1B, dialog còn mang một tiêu đề chỉ-đọc-màn-hình cùng nội dung để có tên khả truy
+ * cập (trước đó modal đăng nhập không có tên — backlog D14.2). Chữ này vì thế xuất hiện hai
+ * lần trong DOM; test lọc lấy bản nhìn thấy được.
+ */
+function visibleTitle(text: string): HTMLElement | undefined {
+  return screen.getAllByText(text).find((el) => !el.className.includes('srOnly'));
+}
+
 function renderModal(search: string) {
   nav.search = search;
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -98,16 +109,16 @@ describe('AuthModal — mở/đóng theo URL', () => {
 
   it('?auth=login mở chế độ đăng nhập; ?auth=register mở chế độ đăng ký', async () => {
     renderModal('auth=login');
-    await waitFor(() => expect(screen.getByText('Đăng nhập XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
     cleanup();
 
     renderModal('auth=register');
-    await waitFor(() => expect(screen.getByText('Tạo tài khoản XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
   });
 
   it('chuyển login → register ngay trong modal, không rời trang', async () => {
     renderModal('auth=login');
-    await waitFor(() => expect(screen.getByText('Đăng nhập XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: 'Tạo tài khoản' }));
 
@@ -120,7 +131,7 @@ describe('AuthModal — mở/đóng theo URL', () => {
 describe('AuthModal — sau khi đăng ký', () => {
   it('KHÔNG điều hướng /manage và KHÔNG hiện form tạo gian hàng', async () => {
     renderModal('auth=register');
-    await waitFor(() => expect(screen.getByText('Tạo tài khoản XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
 
     await submitRegister();
 
@@ -132,7 +143,7 @@ describe('AuthModal — sau khi đăng ký', () => {
 
   it('hiện đúng ba hành động', async () => {
     renderModal('auth=register');
-    await waitFor(() => expect(screen.getByText('Tạo tài khoản XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
     await submitRegister();
     await waitFor(() => expect(screen.getByText('Tạo tài khoản thành công')).toBeTruthy());
 
@@ -143,7 +154,7 @@ describe('AuthModal — sau khi đăng ký', () => {
 
   it('"Cập nhật tài khoản" mở /account, không phải hồ sơ gian hàng', async () => {
     renderModal('auth=register');
-    await waitFor(() => expect(screen.getByText('Tạo tài khoản XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
     await submitRegister();
     await waitFor(() => expect(screen.getByText('Tạo tài khoản thành công')).toBeTruthy());
 
@@ -154,7 +165,7 @@ describe('AuthModal — sau khi đăng ký', () => {
 
   it('"Trở thành chủ xe" mở owner onboarding (chỉ ở đó mới có form tạo shop)', async () => {
     renderModal('auth=register');
-    await waitFor(() => expect(screen.getByText('Tạo tài khoản XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
     await submitRegister();
     await waitFor(() => expect(screen.getByText('Tạo tài khoản thành công')).toBeTruthy());
 
@@ -164,7 +175,7 @@ describe('AuthModal — sau khi đăng ký', () => {
 
   it('"Đóng" khi không có next → ở lại trang, không điều hướng đi đâu', async () => {
     renderModal('auth=register');
-    await waitFor(() => expect(screen.getByText('Tạo tài khoản XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
     await submitRegister();
     await waitFor(() => expect(screen.getByText('Tạo tài khoản thành công')).toBeTruthy());
 
@@ -175,7 +186,7 @@ describe('AuthModal — sau khi đăng ký', () => {
 
   it('có next → nút đóng thành "Tiếp tục" và đi tới next (không mất intent của khách)', async () => {
     renderModal('auth=register&next=%2Ftrips');
-    await waitFor(() => expect(screen.getByText('Tạo tài khoản XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
     await submitRegister();
     await waitFor(() => expect(screen.getByText('Tạo tài khoản thành công')).toBeTruthy());
 
@@ -187,7 +198,7 @@ describe('AuthModal — sau khi đăng ký', () => {
 describe('AuthModal — sau khi đăng nhập', () => {
   it('không có next → đóng modal, ở lại marketplace (KHÔNG /manage)', async () => {
     renderModal('auth=login');
-    await waitFor(() => expect(screen.getByText('Đăng nhập XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
 
     fireEvent.change(screen.getByLabelText('Email hoặc số điện thoại'), {
       target: { value: 'khach@xeprime.test' },
@@ -202,7 +213,7 @@ describe('AuthModal — sau khi đăng nhập', () => {
 
   it('có next=/trips → quay lại đúng /trips', async () => {
     renderModal('auth=login&next=%2Ftrips');
-    await waitFor(() => expect(screen.getByText('Đăng nhập XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
 
     fireEvent.change(screen.getByLabelText('Email hoặc số điện thoại'), {
       target: { value: 'khach@xeprime.test' },
@@ -215,7 +226,7 @@ describe('AuthModal — sau khi đăng nhập', () => {
 
   it('next ra ngoài domain bị bỏ qua — không open redirect', async () => {
     renderModal('auth=login&next=https%3A%2F%2Fevil.example');
-    await waitFor(() => expect(screen.getByText('Đăng nhập XePrime')).toBeTruthy());
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
 
     fireEvent.change(screen.getByLabelText('Email hoặc số điện thoại'), {
       target: { value: 'khach@xeprime.test' },
@@ -225,5 +236,89 @@ describe('AuthModal — sau khi đăng nhập', () => {
 
     await waitFor(() => expect(api.login).toHaveBeenCalled());
     expect(nav.push).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Bổ sung ở Wave 1B: những thứ vỏ overlay chịu trách nhiệm (tên khả truy cập, hình thái
+ * mobile) và ranh giới sản phẩm mà việc thay vỏ tuyệt đối không được làm xê dịch.
+ */
+describe('AuthModal — vỏ overlay & ranh giới (Wave 1B)', () => {
+  function accessibleName(el: HTMLElement): string | null {
+    const label = el.getAttribute('aria-label');
+    if (label) return label;
+    const id = el.getAttribute('aria-labelledby');
+    if (!id) return null;
+    return id
+      .split(/\s+/)
+      .map((x) => document.getElementById(x)?.textContent ?? '')
+      .join(' ')
+      .trim();
+  }
+
+  it('dialog có tên khả truy cập theo chế độ đang mở', async () => {
+    renderModal('auth=login');
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
+    expect(accessibleName(screen.getByRole('dialog'))).toBe('Đăng nhập XePrime');
+  });
+
+  it('chế độ đăng ký đổi luôn tên khả truy cập', async () => {
+    renderModal('auth=register');
+    await waitFor(() => expect(visibleTitle('Tạo tài khoản XePrime')).toBeTruthy());
+    expect(accessibleName(screen.getByRole('dialog'))).toBe('Tạo tài khoản XePrime');
+  });
+
+  it('bấm "Đăng nhập" hai lần chỉ gọi API một lần (chặn gửi trùng)', async () => {
+    renderModal('auth=login');
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
+
+    // Giữ request treo để lần bấm thứ hai rơi đúng lúc đang gửi.
+    api.login.mockReturnValue(new Promise(() => {}));
+    fireEvent.change(screen.getByLabelText('Email hoặc số điện thoại'), {
+      target: { value: 'khach@xeprime.test' },
+    });
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'Abcd1234' } });
+
+    const submit = screen.getByRole('button', { name: 'Đăng nhập' });
+    fireEvent.click(submit);
+    await waitFor(() => expect(api.login).toHaveBeenCalledTimes(1));
+    fireEvent.click(submit);
+    expect(api.login).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Ranh giới sản phẩm: modal này CHỈ được mount ở `(public)/layout.tsx` (khu khách). Đăng
+   * nhập cổng quản lý là route riêng `/manage/login` dùng `AuthPanel` trực tiếp. Vì vậy dù
+   * người đăng nhập là chủ gian hàng hay nhân sự nền tảng, modal khách vẫn KHÔNG được đẩy họ
+   * vào `/manage` — đó là việc của `resolvePortalDestination`, không phải của modal này.
+   */
+  it('chủ gian hàng đăng nhập từ modal khách KHÔNG bị đẩy vào /manage', async () => {
+    api.login.mockResolvedValue({ ...CUSTOMER, tenant: { id: 'T1' } });
+    renderModal('auth=login');
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
+
+    fireEvent.change(screen.getByLabelText('Email hoặc số điện thoại'), {
+      target: { value: 'chu@xeprime.test' },
+    });
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'Abcd1234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+
+    await waitFor(() => expect(api.login).toHaveBeenCalled());
+    expect(nav.push).not.toHaveBeenCalledWith('/manage');
+  });
+
+  it('nhân sự nền tảng đăng nhập từ modal khách KHÔNG bị đẩy vào /manage/admin', async () => {
+    api.login.mockResolvedValue({ ...CUSTOMER, platformRole: 'platform_admin' });
+    renderModal('auth=login');
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
+
+    fireEvent.change(screen.getByLabelText('Email hoặc số điện thoại'), {
+      target: { value: 'admin@xeprime.test' },
+    });
+    fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'Abcd1234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập' }));
+
+    await waitFor(() => expect(api.login).toHaveBeenCalled());
+    expect(nav.push).not.toHaveBeenCalledWith('/manage/admin');
   });
 });

@@ -1,12 +1,13 @@
 'use client';
 
-import { App, Button, Drawer } from 'antd';
+import { App, Button } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
+import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { getErrorMessage } from '@/services/api-client';
 import { PAYMENT_METHOD_OPTIONS, RECEIPT_TYPE, RECEIPT_TYPE_OPTIONS } from '../constants';
 import { useFinanceCategories } from '../hooks/use-finance-categories';
@@ -57,7 +58,9 @@ export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: (
   });
 
   return (
-    <Drawer title="Tạo phiếu thu/chi" width={480} open={open} onClose={onClose} destroyOnClose>
+    // Form drawer: nút gửi phải nằm TRONG <form> nên không dùng footer của DetailDrawer.
+    // 480px cũ → bậc `md` (560px) của token.
+    <DetailDrawer title="Tạo phiếu thu/chi" size="md" open={open} onClose={onClose}>
       <form onSubmit={submit} noValidate>
         <SelectField control={control} name="type" label="Loại phiếu" options={RECEIPT_TYPE_OPTIONS} />
         <SelectField
@@ -96,6 +99,6 @@ export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: (
           </Button>
         </div>
       </form>
-    </Drawer>
+    </DetailDrawer>
   );
 }
