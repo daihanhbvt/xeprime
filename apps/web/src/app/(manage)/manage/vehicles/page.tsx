@@ -13,7 +13,8 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { VehicleFiltersBar } from '@/features/vehicles/components/VehicleFilters';
-import { VehicleTable } from '@/features/vehicles/components/VehicleTable';
+import { VehicleCardGrid } from '@/features/vehicles/components/VehicleCardGrid';
+import { vehicleRowActions } from '@/features/vehicles/row-actions';
 import { useDeleteVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 import { useVehicleFilters } from '@/features/vehicles/hooks/use-vehicle-filters';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
@@ -61,6 +62,30 @@ function VehiclesView() {
     });
   }
 
+  const deletingId = deleteVehicle.isPending ? (deleteVehicle.variables ?? null) : null;
+
+  const emptyAction = canCreate ? (
+    <Button
+      type="primary"
+      icon={<PlusOutlined />}
+      onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
+    >
+      Thêm xe đầu tiên
+    </Button>
+  ) : undefined;
+
+  /**
+   * "Xem lịch" của một xe.
+   *
+   * Chưa có route lịch riêng cho từng xe; màn lịch dùng chung nhận `q` lọc theo tên/biển số
+   * (`calendar.controller`). Nên ở đây lọc lịch về đúng xe đó thay vì bịa ra một route mới.
+   * Ưu tiên biển số vì nó phân biệt tốt hơn tên xe trùng lặp.
+   */
+  function openSchedule(row: { name: string; plateNumber?: string | null }) {
+    const query = new URLSearchParams({ q: row.plateNumber || row.name });
+    router.push(`${ROUTES.MANAGE.CALENDAR}?${query.toString()}`);
+  }
+
   function handleDelete(id: string) {
     deleteVehicle.mutate(id, {
       onSuccess: () => message.success('Đã xoá xe'),
@@ -69,7 +94,7 @@ function VehiclesView() {
   }
 
   // Thiếu quyền xem → thay TOÀN BỘ nội dung, không dựng tiêu đề và bộ lọc cho một trang không
-  // xem được (Figma `58:2061`). Đây chỉ là lớp trải nghiệm; chặn thật là guard backend.
+  // xem được (Figma `188:2290`). Đây chỉ là lớp trải nghiệm; chặn thật là guard backend.
   if (!canView) {
     return (
       <PermissionState
@@ -105,31 +130,27 @@ function VehiclesView() {
 
       <VehicleFiltersBar filters={filters} onChange={setFilters} onClear={clearFilters} />
 
-      <VehicleTable
+      <VehicleCardGrid
         items={items}
         meta={meta}
         loading={isFetching}
-        deletingId={deleteVehicle.isPending ? (deleteVehicle.variables ?? null) : null}
-        canEdit={canEdit}
-        canDelete={canDelete}
-        // Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ bảng đang đọc.
+        // Chỉ coi là lỗi khi KHÔNG còn dữ liệu cũ — refetch nền hỏng thì giữ danh sách đang đọc.
         error={isError && !data ? { onRetry: () => void refetch() } : null}
         filtered={hasFilters}
         onClearFilters={clearFilters}
-        emptyAction={
-          canCreate ? (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
-            >
-              Thêm xe đầu tiên
-            </Button>
-          ) : undefined
+        emptyAction={emptyAction}
+        rowActions={(row) =>
+          vehicleRowActions({
+            row,
+            canEdit,
+            canDelete,
+            deletingId,
+            onView: (id) => router.push(vehiclePath.detail(id)),
+            onEdit: (id) => router.push(vehiclePath.edit(id)),
+            onSchedule: openSchedule,
+            onDelete: handleDelete,
+          })
         }
-        onView={(id) => router.push(vehiclePath.detail(id))}
-        onEdit={(id) => router.push(vehiclePath.edit(id))}
-        onDelete={handleDelete}
         onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
       />
     </div>

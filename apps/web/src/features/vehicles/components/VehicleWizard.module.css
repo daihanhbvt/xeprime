@@ -1,0 +1,117 @@
+/*
+ * Vỏ wizard — số đo lấy từ Figma `193:1553` (khung nội dung 1116px, thẻ padding 32,
+ * thanh bước cao 60, hàng nút cao 74).
+ */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.stepperCard {
+  padding: 16px 24px;
+}
+
+/*
+ * Vòng tròn bước 28px (Figma `193:1592`) thay vì 24px mặc định của `size="small"`.
+ * Nhân đôi class vì AntD tiêm style vào `<head>` sau CSS Module (bẫy D19).
+ */
+.steps.steps :global(.ant-steps-item-icon) {
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  margin-inline-end: 12px;
+}
+
+.steps.steps :global(.ant-steps-item-title) {
+  font-size: var(--xp-font-size-body);
+  line-height: 28px;
+}
+
+/*
+ * Nhãn bước CUỐI bị cắt cụt.
+ *
+ * AntD chừa chỗ cho đường nối ở `.ant-steps-item-title::after` trên MỌI bước, kể cả bước cuối
+ * vốn không có đường nối nào. Chỗ trống thừa đó đẩy nhãn dài ("Xác nhận & gửi duyệt") tràn khỏi
+ * thẻ. Bỏ phần đệm và không cho bước cuối giãn nữa.
+ */
+.steps.steps :global(.ant-steps-item:last-child) {
+  flex: none;
+}
+
+.steps.steps :global(.ant-steps-item:last-child .ant-steps-item-title) {
+  padding-inline-end: 0;
+}
+
+.contentCard {
+  padding: 8px;
+}
+
+.heading {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+.description {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.body {
+  margin-top: var(--xp-space-lg);
+}
+
+/*
+ * Hàng nút nằm TRONG thẻ, ngăn bằng một đường kẻ (Figma `193:1654`).
+ * Huỷ/Quay lại bên trái, hành động chính dồn phải.
+ */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--xp-space-lg);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  margin-top: var(--xp-space-lg);
+  gap: var(--xp-space-sm);
+}
+
+/*
+ * Mobile: năm bước nằm gọn MỘT hàng ngang nhờ nhãn rút gọn + số đặt trên nhãn.
+ * Không cuộn ngang, không `min-width` — bản trước phải cuộn vì còn dùng nhãn dài của desktop.
+ */
+@media (max-width: 640px) {
+  .stepperCard {
+    padding: var(--xp-space-sm);
+  }
+
+  .steps.steps :global(.ant-steps-item-icon) {
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    margin-inline-end: 0;
+  }
+
+  .steps.steps :global(.ant-steps-item-title) {
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+
+  /* Bước cuối cũng phải giãn đều như bốn bước kia, nếu không cả hàng lệch sang trái. */
+  .steps.steps :global(.ant-steps-item:last-child) {
+    flex: 1;
+  }
+
+  .contentCard {
+    padding: 0;
+  }
+
+  /* Nút xếp dọc, hành động chính lên trên — ngón cái với tới trước. */
+  .footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}

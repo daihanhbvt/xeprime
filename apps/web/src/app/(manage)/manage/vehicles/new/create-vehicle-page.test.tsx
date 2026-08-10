@@ -6,7 +6,7 @@ import { PERMISSION, type Permission } from '@xeprime/types';
 import NewVehiclePage from './page';
 
 /**
- * `/manage/vehicles/new` — tạo xe, hình thái **wizard bốn bước** (Figma `60:7` → `60:490`).
+ * `/manage/vehicles/new` — tạo xe, hình thái **wizard năm bước** (Figma `60:7` → `60:490`).
  *
  * Khẳng định trên HỢP ĐỒNG NGHIỆP VỤ: quyền nào mở được trang, payload nào rời khỏi form, đi
  * đâu sau khi thành công. KHÔNG khẳng định trên cấu trúc DOM của AntD hay tên class sinh tự động.
@@ -77,24 +77,40 @@ function renderPage() {
 
 /** Điền các trường bắt buộc để lưu (cột "Save Req" của ma trận Figma `65:4844`) — đều ở bước 1. */
 function fillRequired({ code = 'XE-001', name = 'Toyota Vios 2023' } = {}) {
-  fireEvent.change(screen.getByLabelText(/Mã quản lý xe/), { target: { value: code } });
-  fireEvent.change(screen.getByLabelText(/Tên xe hiển thị/), { target: { value: name } });
+  fireEvent.change(screen.getByLabelText(/Mã xe/), { target: { value: code } });
+  fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: name } });
 }
 
 const next = () => fireEvent.click(screen.getByRole('button', { name: /Tiếp tục/ }));
 
-/** Đưa wizard tới bước cuối — nơi duy nhất có nút gửi thật. */
+/**
+ * Đưa wizard tới bước 5 (Xác nhận & gửi duyệt) — nơi duy nhất có nút gửi thật.
+ *
+ * Chờ **tiêu đề của bước kế tiếp**, không chờ nút "Tiếp tục": nút đó có mặt ở cả bốn bước đầu
+ * nên `findByRole` trả về ngay lập tức và vòng lặp chạy hết trước khi wizard kịp chuyển bước.
+ */
 async function goToLastStep() {
-  next();
-  await screen.findByRole('button', { name: /Tiếp tục/ });
-  next();
-  await screen.findByRole('button', { name: /Tiếp tục/ });
-  next();
-  await screen.findByRole('button', { name: /Lưu thông tin xe/ });
+  const headings = [
+    '2. Chi tiết kỹ thuật xe',
+    '3. Thiết lập giá thuê & chính sách',
+    '4. Hình ảnh, tiện ích & mô tả xe',
+    '5. Xác nhận thông tin hồ sơ xe',
+  ];
+  for (const heading of headings) {
+    next();
+     
+    await screen.findByText(heading);
+  }
 }
 
+/**
+ * Gửi qua "Lưu nháp".
+ *
+ * Nhánh "Lưu & Gửi duyệt" gọi TIẾP `submitVehiclePublic` (một lời gọi mạng thứ hai) nên nó có
+ * test riêng; các test payload dùng nhánh nháp để chỉ còn đúng một lời gọi cần soi.
+ */
 function submitForm() {
-  fireEvent.click(screen.getByRole('button', { name: /Lưu thông tin xe/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Lưu nháp/ }));
 }
 
 /** Điền bước 1 rồi đi thẳng tới bước cuối và gửi. */
@@ -130,7 +146,7 @@ describe('/manage/vehicles/new — quyền truy cập', () => {
     renderPage();
 
     expect(screen.getByText('Không có quyền thêm xe')).toBeTruthy();
-    expect(screen.queryByLabelText(/Mã quản lý xe/)).toBeNull();
+    expect(screen.queryByLabelText(/Mã xe/)).toBeNull();
     expect(screen.queryByRole('button', { name: /Tiếp tục/ })).toBeNull();
   });
 
@@ -145,29 +161,34 @@ describe('/manage/vehicles/new — quyền truy cập', () => {
 
 /* ------------------------------------------------------------------ wizard */
 
-describe('/manage/vehicles/new — wizard bốn bước', () => {
+describe('/manage/vehicles/new — wizard năm bước', () => {
   it('mở ra ở bước 1: chỉ phần "Thông tin cơ bản" có ô nhập', () => {
     renderPage();
 
-    expect(screen.getByLabelText(/Mã quản lý xe/)).toBeTruthy();
+    expect(screen.getByLabelText(/Mã xe/)).toBeTruthy();
     // Trường của các bước sau chưa được dựng.
     expect(screen.queryByLabelText(/Biển số xe/)).toBeNull();
     expect(screen.queryByLabelText(/Giá ngày thường/)).toBeNull();
   });
 
-  it('bốn phần luôn hiện tiêu đề — người dùng thấy còn mấy bước', () => {
+  it('thanh bước liệt kê đủ năm bước của Figma `193:1590`', () => {
     renderPage();
 
-    expect(screen.getByText('1. Thông tin cơ bản')).toBeTruthy();
-    expect(screen.getByText('2. Chi tiết kỹ thuật & phân loại')).toBeTruthy();
-    expect(screen.getByText('3. Giá thuê & chính sách')).toBeTruthy();
-    expect(screen.getByText('4. Hình ảnh, tiện ích & mô tả')).toBeTruthy();
+    for (const label of [
+      'Thông tin cơ bản',
+      'Chi tiết kỹ thuật',
+      'Giá thuê & chính sách',
+      'Hình ảnh & mô tả',
+      'Xác nhận & gửi duyệt',
+    ]) {
+      expect(screen.getByText(label), label).toBeTruthy();
+    }
   });
 
   it('bước cuối mới có nút gửi — không thể tạo xe từ bước 1', () => {
     renderPage();
 
-    expect(screen.queryByRole('button', { name: /Lưu thông tin xe/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Lưu nháp/ })).toBeNull();
     expect(screen.getByRole('button', { name: /Tiếp tục/ })).toBeTruthy();
   });
 
@@ -178,7 +199,7 @@ describe('/manage/vehicles/new — wizard bốn bước', () => {
     await waitFor(() => expect(screen.getByText('Mã xe là bắt buộc')).toBeTruthy());
     expect(await screen.findByText('Tên xe là bắt buộc')).toBeTruthy();
     // Vẫn đứng ở bước 1.
-    expect(screen.getByLabelText(/Mã quản lý xe/)).toBeTruthy();
+    expect(screen.getByLabelText(/Mã xe/)).toBeTruthy();
     expect(create.mutate).not.toHaveBeenCalled();
   });
 
@@ -186,29 +207,31 @@ describe('/manage/vehicles/new — wizard bốn bước', () => {
     renderPage();
     next();
 
-    const input = await screen.findByLabelText(/Mã quản lý xe/);
+    const input = await screen.findByLabelText(/Mã xe/);
     expect(input.getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('đi tiếp: bước 2 mở ra, bước 1 thu gọn thành tóm tắt', async () => {
+  it('đi tiếp: bước 2 mở ra, ô nhập của bước 1 đóng lại', async () => {
     renderPage();
     fillRequired();
+
     next();
 
+    // Wizard mới chỉ dựng bước ĐANG mở (Figma `193:1615`) — không còn hàng tóm tắt tích luỹ.
     expect(await screen.findByLabelText(/Biển số xe/)).toBeTruthy();
-    expect(screen.getByText('1. Thông tin cơ bản (Đã điền)')).toBeTruthy();
-    expect(screen.getByText(/Toyota Vios 2023 · Mã: XE-001/)).toBeTruthy();
+    expect(screen.queryByLabelText(/Mã xe/)).toBeNull();
+    expect(screen.getByText('2. Chi tiết kỹ thuật xe')).toBeTruthy();
   });
 
-  it('"Chỉnh sửa" quay lại đúng bước và GIỮ NGUYÊN giá trị đã nhập', async () => {
+  it('"Chỉnh sửa" ở bước xác nhận quay về đúng bước và GIỮ NGUYÊN giá trị', async () => {
     renderPage();
     fillRequired();
-    next();
-    await screen.findByLabelText(/Biển số xe/);
+    await goToLastStep();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Chỉnh sửa' }));
+    // Bước 5 tổng kết bốn phần, mỗi phần một lối "Chỉnh sửa" (Figma `193:2077`).
+    fireEvent.click(screen.getAllByRole('button', { name: 'Chỉnh sửa' })[0]!);
 
-    const code = (await screen.findByLabelText(/Mã quản lý xe/)) as HTMLInputElement;
+    const code = (await screen.findByLabelText(/Mã xe/)) as HTMLInputElement;
     expect(code.value).toBe('XE-001');
   });
 
@@ -220,7 +243,7 @@ describe('/manage/vehicles/new — wizard bốn bước', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Quay lại bước trước' }));
 
-    expect(await screen.findByLabelText(/Mã quản lý xe/)).toBeTruthy();
+    expect(await screen.findByLabelText(/Mã xe/)).toBeTruthy();
     expect(nav.push).not.toHaveBeenCalled();
   });
 
@@ -240,16 +263,21 @@ describe('/manage/vehicles/new — giá trị khởi tạo', () => {
   it('select bắt buộc có sẵn giá trị hợp lệ, không rỗng', () => {
     renderPage();
 
-    const carRadio = screen.getByRole('radio', { name: 'Ô tô' }) as HTMLInputElement;
-    expect(carRadio.checked).toBe(true);
+    // Loại xe chuyển từ radio sang dropdown ở Wave 3B-R2 (Figma `193:1636`) — vẫn phải có sẵn
+    // giá trị mặc định, nếu không "Tiếp tục" ở bước 1 sẽ chặn người dùng bằng lỗi bắt buộc.
+    expect(screen.getByTitle('Ô tô')).toBeTruthy();
+    expect(screen.getByTitle('Tự lái')).toBeTruthy();
+    expect(screen.getByTitle('Sẵn sàng')).toBeTruthy();
   });
 
-  it('chú giải hoàn thiện hai giai đoạn hiện ở đầu form (Figma `60:70`)', () => {
+  it('bước xác nhận tổng kết lại thông tin đã nhập', async () => {
     renderPage();
+    fillRequired();
+    await goToLastStep();
 
-    expect(screen.getByText('Mô hình hoàn thiện thông tin xe hai giai đoạn')).toBeTruthy();
-    expect(screen.getByText(/cần thiết để lưu xe nội bộ/)).toBeTruthy();
-    expect(screen.getByText('Cần bổ sung trước khi gửi duyệt công khai lên sàn')).toBeTruthy();
+    expect(screen.getByText('5. Xác nhận thông tin hồ sơ xe')).toBeTruthy();
+    expect(screen.getByText('Toyota Vios 2023')).toBeTruthy();
+    expect(screen.getByText('XE-001')).toBeTruthy();
   });
 
   it('trường cần cho duyệt công khai có ghi chú đọc được, không chỉ một dấu chấm', async () => {
@@ -304,7 +332,7 @@ describe('/manage/vehicles/new — payload gửi lên API', () => {
     expect(lastPayload().name).toBe('Kia Seltos');
   });
 
-  it('gọi API ĐÚNG MỘT LẦN cho cả bốn bước — wizard không lưu nháp giữa chừng', async () => {
+  it('gọi API ĐÚNG MỘT LẦN cho cả năm bước — wizard không lưu nháp giữa chừng', async () => {
     renderPage();
     await fillAndSubmit();
 
@@ -328,7 +356,7 @@ describe('/manage/vehicles/new — trạng thái gửi', () => {
       </App>,
     );
 
-    const button = screen.getByRole('button', { name: /Lưu thông tin xe/ });
+    const button = screen.getByRole('button', { name: /Lưu nháp/ });
     expect(button.className).toMatch(/loading/);
   });
 

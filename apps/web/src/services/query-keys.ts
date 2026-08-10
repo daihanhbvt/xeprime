@@ -38,6 +38,8 @@ export const queryKeys = {
     all: ['vehicles'] as const,
     list: (params: QueryParams) => ['vehicles', 'list', params] as const,
     detail: (id: string) => ['vehicles', 'detail', id] as const,
+    /** Chỉ số thẻ xe theo nhóm id — nằm dưới nhánh `vehicles` để mutation xe tự invalidate luôn. */
+    stats: (ids: readonly string[]) => ['vehicles', 'stats', ids] as const,
   },
   bookings: {
     all: ['bookings'] as const,

@@ -32,8 +32,8 @@ interface VehicleFiltersBarProps {
  *     (giá trị mặc định `newest` là chuỗi khác rỗng), nút "Xoá bộ lọc" hiện vĩnh viễn và huy
  *     hiệu số trên nút "Bộ lọc" ở mobile luôn sai;
  *  2. "Xoá bộ lọc" phải giữ nguyên sắp xếp — hành vi đã có test khoá từ Wave 1C;
- *  3. Figma đặt nó **tách khỏi cụm lọc**: `58:129` nằm lề phải của `58:107` trên desktop, và
- *     `58:2429` nằm cạnh nút "Bộ lọc" ở mobile — đúng vai của slot `actions`.
+ *  3. Figma đặt nó **tách khỏi cụm lọc**: `186:1665` nằm ở lề phải hàng filter `186:1643`, cách
+ *     bốn dropdown lọc một khoảng trống lớn — đúng vai của slot `actions`.
  */
 export function VehicleFiltersBar({ filters, onChange, onClear }: VehicleFiltersBarProps) {
   const fields: FilterField[] = useMemo(
@@ -42,7 +42,8 @@ export function VehicleFiltersBar({ filters, onChange, onClear }: VehicleFilters
         kind: 'search',
         key: 'q',
         label: 'Tìm xe',
-        placeholder: 'Tìm theo tên, mã, biển số, hãng…',
+        // Ô chỉ rộng 240px ở thanh gọn — Figma `197:1549` rút placeholder còn "Tìm kiếm xe...".
+        placeholder: 'Tìm kiếm xe...',
       },
       { kind: 'select', key: 'vehicleType', label: 'Loại xe', options: VEHICLE_TYPE_OPTIONS },
       { kind: 'select', key: 'serviceType', label: 'Dịch vụ', options: SERVICE_TYPE_OPTIONS },
@@ -55,7 +56,7 @@ export function VehicleFiltersBar({ filters, onChange, onClear }: VehicleFilters
       {
         kind: 'select',
         key: 'publicStatus',
-        label: 'Trạng thái public',
+        label: 'Công khai',
         options: PUBLIC_STATUS_OPTIONS,
       },
     ],
@@ -76,12 +77,17 @@ export function VehicleFiltersBar({ filters, onChange, onClear }: VehicleFilters
       values={values}
       onChange={(patch) => onChange(patch as Partial<VehicleFilters>)}
       onClear={onClear}
+      // Figma `188:4514`: filter đang bật hiện thành chip gỡ được từng cái.
+      showActiveChips
+      // Figma `186:1639`: một hàng — tìm kiếm 240px, gạch dọc, pill mang sẵn nhãn, sắp xếp dồn phải.
+      compactFields
       actions={
         <Select<VehicleSort>
           className={styles.sort}
-          size="large"
           aria-label="Sắp xếp"
           placeholder="Sắp xếp"
+          // Cùng hình thái "Nhãn: Giá trị" với cụm lọc — Figma `186:1665`.
+          labelRender={(item) => `Sắp xếp: ${item.label}`}
           options={VEHICLE_SORT_OPTIONS as { value: VehicleSort; label: string }[]}
           value={filters.sort ?? 'newest'}
           onChange={(value) => onChange({ sort: value })}

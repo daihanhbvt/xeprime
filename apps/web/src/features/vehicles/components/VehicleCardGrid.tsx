@@ -1,0 +1,168 @@
+'use client';
+
+import { Button, Pagination, Skeleton } from 'antd';
+import type { PaginationMeta } from '@xeprime/types';
+import type { ReactNode } from 'react';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import type { RowAction } from '@/components/data-display/RowActions';
+import { useIsMobile } from '@/hooks/use-media-query';
+import { useVehicleCardStats } from '../hooks/use-vehicle-card-stats';
+import type { VehicleListItem } from '../types';
+import { VehicleListRow } from './VehicleListRow';
+import { VehicleManagementCard } from './VehicleManagementCard';
+import styles from './VehicleCardGrid.module.css';
+
+interface VehicleCardGridProps {
+  items: VehicleListItem[];
+  meta: PaginationMeta;
+  loading: boolean;
+  error?: { onRetry: () => void } | null;
+  filtered?: boolean;
+  onClearFilters?: () => void;
+  emptyAction?: ReactNode;
+  rowActions: (row: VehicleListItem) => RowAction[];
+  onPageChange: (page: number, pageSize: number) => void;
+}
+
+/** Figma `188:1826` vẽ 5 khung chờ — đúng một hàng lưới. */
+const SKELETON_COUNT = 5;
+
+/**
+ * Danh sách xe của `/manage/vehicles` — hình thái DUY NHẤT của route này.
+ *
+ * Figma `186:1670` bọc lưới trong một **khung có viền**, và đặt dòng "Hiển thị x-y của N xe" cùng
+ * bộ phân trang vào chân khung đó thay vì thả trôi dưới trang. Mọi trạng thái (rỗng, không kết
+ * quả, lỗi, đang tải) đều nằm TRONG khung này — `188:1553`/`188:1685`/`188:2158` đều vẽ vậy —
+ * nên khối nội dung không nhảy kích thước khi đổi trạng thái.
+ *
+ * Ở ≤640px chuyển sang `VehicleListRow` theo Figma `186:2374`: hàng ngang, không phải thẻ bóp nhỏ.
+ */
+export function VehicleCardGrid({
+  items,
+  meta,
+  loading,
+  error = null,
+  filtered = false,
+  onClearFilters,
+  emptyAction,
+  rowActions,
+  onPageChange,
+}: VehicleCardGridProps) {
+  const isMobile = useIsMobile();
+  const ids = items.map((item) => item.id);
+  const stats = useVehicleCardStats(ids);
+
+  const from = (meta.page - 1) * meta.limit + 1;
+  const to = Math.min(meta.page * meta.limit, meta.total);
+
+  function renderBody() {
+    if (error) {
+      return (
+        <div className={styles.state}>
+          <EmptyState
+            variant="error"
+            title="Không tải được danh sách xe"
+            description="Có lỗi khi lấy dữ liệu. Vui lòng thử lại."
+            onRetry={error.onRetry}
+          />
+        </div>
+      );
+    }
+
+    if (loading && items.length === 0) {
+      return (
+        <div
+          className={isMobile ? styles.list : styles.grid}
+          role="status"
+          aria-busy="true"
+          aria-label="Đang tải danh sách xe"
+        >
+          {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+            <div key={index} className={isMobile ? styles.skeletonRow : styles.skeletonCard}>
+              <Skeleton active avatar={{ shape: 'square' }} paragraph={{ rows: 2 }} />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (items.length === 0) {
+      return (
+        <div className={styles.state}>
+          {filtered ? (
+            <EmptyState
+              variant="no-results"
+              title="Không tìm thấy kết quả"
+              description="Thử thay đổi bộ lọc hoặc từ khoá."
+              action={
+                onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined
+              }
+            />
+          ) : (
+            <EmptyState
+              variant="empty"
+              title="Chưa có xe nào"
+              description="Bắt đầu bằng cách thêm xe đầu tiên vào gian hàng của bạn."
+              action={emptyAction}
+            />
+          )}
+        </div>
+      );
+    }
+
+    const listProps = { 'aria-label': 'Danh sách xe', 'aria-busy': loading || undefined };
+
+    return isMobile ? (
+      <ul className={styles.list} {...listProps}>
+        {items.map((item) => (
+          <li key={item.id}>
+            <VehicleListRow
+              vehicle={item}
+              stats={stats.byId.get(item.id)}
+              statsLoading={stats.isLoading}
+              statsFailed={stats.isError}
+              actions={rowActions(item)}
+            />
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <ul className={styles.grid} {...listProps}>
+        {items.map((item) => (
+          <li key={item.id} className={styles.cell}>
+            <VehicleManagementCard
+              vehicle={item}
+              stats={stats.byId.get(item.id)}
+              statsLoading={stats.isLoading}
+              statsFailed={stats.isError}
+              actions={rowActions(item)}
+            />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <div className={styles.plate}>
+      <div className={styles.inner}>{renderBody()}</div>
+
+      {/* Chân khung chỉ có nghĩa khi đang có dữ liệu — trang rỗng không cần "Hiển thị 0-0". */}
+      {items.length > 0 ? (
+        <div className={styles.footer}>
+          <p className={styles.summary}>
+            Hiển thị {from}-{to} của {meta.total} xe
+          </p>
+          <Pagination
+            current={meta.page}
+            pageSize={meta.limit}
+            total={meta.total}
+            showSizeChanger={false}
+            size="small"
+            onChange={onPageChange}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}

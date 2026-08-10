@@ -10,6 +10,9 @@ import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
   API_ERROR_CODE,
+  BOOKING_STATUS,
+  RECEIPT_STATUS,
+  RECEIPT_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_SENSITIVE_FIELDS,
   VEHICLE_PUBLIC_STATUS,
@@ -29,6 +32,7 @@ import {
   VehicleDetailDto,
   VehicleListItemDto,
   VehicleListQueryDto,
+  VehicleStatsDto,
   VehiclePublicReviewDto,
 } from './dto/vehicle.dto';
 
@@ -88,6 +92,75 @@ export class VehiclesService {
     private readonly listings: ListingsService,
     private readonly billing: BillingService,
   ) {}
+
+  /**
+   * Chỉ số vận hành + tài chính cho một nhóm xe (thẻ xe ở `/manage/vehicles`).
+   *
+   * **Chỉ số LUỸ KẾ, không theo kỳ.** Backend chưa có hợp đồng khoảng thời gian cho thu/chi theo
+   * xe, nên ở đây chỉ trả tổng từ trước tới nay. Bịa ra "doanh thu tháng này" bằng cách cắt theo
+   * `createdAt` của phiếu sẽ sai nghiệp vụ: phiếu ghi nhận có thể lệch kỳ với lúc phát sinh.
+   *
+   * Gộp nhóm ở DB (`groupBy`) chứ không kéo bản ghi về đếm: một gian hàng vài nghìn phiếu vẫn
+   * chỉ trả về vài chục dòng.
+   *
+   * `tenantId` từ scope (CLAUDE.md mục 6) và lọc lại `vehicleId in ids` — id đoán được của shop
+   * khác sẽ rơi ra ngoài vì không khớp tenant.
+   */
+  async stats(
+    tenantId: string,
+    ids: string[],
+    canViewFinance: boolean,
+  ): Promise<VehicleStatsDto[]> {
+    if (ids.length === 0) return [];
+
+    const bookingScope = { tenantId, vehicleId: { in: ids }, deletedAt: null };
+
+    const [bookingGroups, receiptGroups] = await Promise.all([
+      this.prisma.booking.groupBy({
+        by: ['vehicleId', 'status'],
+        where: {
+          ...bookingScope,
+          status: { in: [BOOKING_STATUS.ACTIVE, BOOKING_STATUS.COMPLETED] },
+        },
+        _count: { _all: true },
+      }),
+      // Không có quyền tài chính thì KHÔNG chạy truy vấn — số liệu không được rời khỏi DB.
+      canViewFinance
+        ? this.prisma.receipt.groupBy({
+            by: ['vehicleId', 'type'],
+            where: {
+              tenantId,
+              vehicleId: { in: ids },
+              status: RECEIPT_STATUS.APPROVED,
+              deletedAt: null,
+            },
+            _sum: { amount: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    return ids.map((vehicleId) => {
+      const bookingsOf = (status: string) =>
+        bookingGroups.find((g) => g.vehicleId === vehicleId && g.status === status)?._count._all ??
+        0;
+      const sumOf = (type: string) =>
+        receiptGroups.find((g) => g.vehicleId === vehicleId && g.type === type)?._sum.amount ??
+        null;
+
+      const stats: VehicleStatsDto = {
+        vehicleId,
+        activeBookings: bookingsOf(BOOKING_STATUS.ACTIVE),
+        completedBookings: bookingsOf(BOOKING_STATUS.COMPLETED),
+      };
+
+      if (canViewFinance) {
+        stats.totalIncome = String(sumOf(RECEIPT_TYPE.INCOME) ?? 0);
+        stats.totalExpense = String(sumOf(RECEIPT_TYPE.EXPENSE) ?? 0);
+      }
+
+      return stats;
+    });
+  }
 
   async list(
     tenantId: string,
@@ -165,11 +238,7 @@ export class VehiclesService {
     );
   }
 
-  async create(
-    tenantId: string,
-    userId: string,
-    dto: CreateVehicleDto,
-  ): Promise<VehicleDetailDto> {
+  async create(tenantId: string, userId: string, dto: CreateVehicleDto): Promise<VehicleDetailDto> {
     // Quota gói (ADR 0010): chạm max_vehicles của gói hiện hành → PLAN_LIMIT_REACHED.
     await this.billing.assertVehicleQuota(tenantId);
     await this.assertCodeFree(tenantId, dto.code);
@@ -426,7 +495,8 @@ export class VehiclesService {
     if (activeSchedule > 0) {
       throw new ConflictException({
         code: API_ERROR_CODE.CONFLICT,
-        message: 'Xe đang có lịch hiện tại hoặc sắp tới, không thể xoá. Hãy huỷ/kết thúc lịch trước.',
+        message:
+          'Xe đang có lịch hiện tại hoặc sắp tới, không thể xoá. Hãy huỷ/kết thúc lịch trước.',
       });
     }
 
@@ -531,7 +601,9 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
 /** Decimal → string do ResponseInterceptor lo (ADR 0007); ở đây giữ nguyên kiểu. */
 type VehicleRow = Prisma.VehicleGetPayload<{ select: typeof DETAIL_SELECT }>;
 
-function toListItem(v: Prisma.VehicleGetPayload<{ select: typeof LIST_SELECT }>): VehicleListItemDto {
+function toListItem(
+  v: Prisma.VehicleGetPayload<{ select: typeof LIST_SELECT }>,
+): VehicleListItemDto {
   return {
     id: v.id,
     code: v.code,

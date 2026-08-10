@@ -1,0 +1,206 @@
+/*
+ * Thẻ xe — hình học lấy từ Figma `186:1673`. Dùng token XePrime; ảnh fleet tối màu do chủ dự án
+ * cung cấp chỉ là tham chiếu bố cục, KHÔNG phải nguồn màu.
+ *
+ * Số đo Figma (thẻ 209.6px): padding thân 12, khoảng cách giữa các khối 10, ảnh 209.6×122.
+ */
+.card {
+  display: flex;
+  overflow: hidden;
+  height: 100%;
+  flex-direction: column;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.card:hover {
+  border-color: var(--xp-color-border-strong);
+  box-shadow: var(--xp-shadow-card);
+}
+
+/* ─── Ảnh ─────────────────────────────────────────────────────────────────── */
+
+/*
+ * 209.6 × 122 ở Figma → tỉ lệ 1.718. `12 / 7` = 1.714 lệch 0.3px ở bề rộng thẻ chuẩn — dùng phân
+ * số thay số thập phân để tỉ lệ tự đúng ở mọi bề rộng cột.
+ */
+.media {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 12 / 7;
+  background: var(--xp-color-bg-muted);
+}
+
+/*
+ * Ảnh nằm NGOÀI luồng (`position: absolute`).
+ *
+ * Nếu để trong luồng, `height: 100%` phải giải theo chiều cao cha — mà chiều cao đó lại do nội
+ * dung quyết định → vòng lặp, trình duyệt rơi về chiều cao tự nhiên của ảnh. Kết quả đo được:
+ * khung ảnh mang tỉ lệ 1.500/0.750 của từng file thay vì 1.714 của thiết kế, và thẻ trong cùng
+ * một hàng cao thấp lệch nhau. Tách ra khỏi luồng thì `aspect-ratio` là thứ duy nhất định chiều
+ * cao khung.
+ */
+.image {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  inset: 0;
+}
+
+.mediaFallback {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-h2);
+}
+
+/* Góc ảnh: trục công khai không chen vào hàng specs vốn chỉ rộng ~185px. */
+.publicBadge {
+  position: absolute;
+  top: var(--xp-space-xs);
+  right: var(--xp-space-xs);
+}
+
+/* ─── Thân thẻ ────────────────────────────────────────────────────────────── */
+
+.body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  padding: var(--xp-space-sm);
+  gap: var(--xp-space-sm);
+}
+
+.identity {
+  min-width: 0;
+}
+
+.name {
+  display: block;
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.name:hover {
+  color: var(--xp-color-primary);
+}
+
+.name:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.meta {
+  overflow: hidden;
+  margin: 2px 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.specsStatus {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-xs);
+}
+
+/* Specs nhường chỗ cho thẻ trạng thái: chữ cắt bớt, thẻ không bao giờ bị bóp. */
+.specs {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Chỉ số ──────────────────────────────────────────────────────────────── */
+
+.metrics {
+  display: flex;
+  min-height: 76px;
+  flex-direction: column;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  gap: 6px;
+}
+
+.metricRow {
+  display: grid;
+  margin: 0;
+  gap: var(--xp-space-xs);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metricRow dt,
+.profitRow dt {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.metricRow dd,
+.profitRow dd {
+  overflow: hidden;
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.alignEnd {
+  text-align: end;
+}
+
+/* Lãi/lỗ là dòng tổng kết → nhãn trái, số phải, cùng một dòng (Figma `186:1703`). */
+.profitRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0;
+  gap: var(--xp-space-xs);
+}
+
+/* Xanh/đỏ là màu NGỮ NGHĨA của thu/chi. Gold thương hiệu tuyệt đối không dùng ở đây. */
+.income {
+  color: var(--xp-color-success);
+}
+
+.expense {
+  color: var(--xp-color-error);
+}
+
+.metricsUnavailable {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* ─── Hành động ───────────────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  margin-top: auto;
+}

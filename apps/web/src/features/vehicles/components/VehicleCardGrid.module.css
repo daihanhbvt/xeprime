@@ -1,0 +1,142 @@
+/*
+ * Khung danh sách xe — Figma `186:1670` `grid-outer-container`.
+ *
+ * Lưới, các trạng thái và chân phân trang đều sống trong MỘT khung có viền; đó là lý do khối
+ * nội dung giữ nguyên bề ngoài khi chuyển giữa "có dữ liệu", "đang tải" và "rỗng".
+ */
+.plate {
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+/* Padding 20px của `grid-inner` (`186:1671`). */
+.inner {
+  padding: var(--xp-space-lg);
+}
+
+/*
+ * Lưới thẻ — **tối đa 5 cột**, đúng Figma `186:1672` (5 thẻ 209.6px, gap 12px, hàng 1096).
+ *
+ * Sàn track là số LỚN HƠN giữa hai đại lượng:
+ *  - `--card-min` (200px) — dưới mức này thẻ vỡ chữ, nên màn hẹp phải bớt cột;
+ *  - một-phần-năm bề rộng khung — trên màn rộng, đây mới là số lớn hơn, và nó chặn cột thứ sáu
+ *    xuất hiện. Thẻ nở ra thay vì lưới thêm cột.
+ *
+ * Vì sao không để cột chạy tự do: ở 1920 lưới ra **7 cột**, mỗi thẻ ~210px nhưng khối chỉ số bên
+ * trong (hai cặp nhãn–số + dòng lãi/lỗ) bắt đầu xuống dòng — đúng hiện tượng "vỡ layout".
+ *
+ * `align-items: start` vì Figma để thẻ cao tự nhiên, không kéo bằng nhau.
+ */
+.grid {
+  --card-gap: 12px;
+  --card-min: 200px;
+  --card-max-cols: 5;
+
+  display: grid;
+  padding: 0;
+  margin: 0;
+  align-items: start;
+  gap: var(--xp-space-lg) var(--card-gap);
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(
+      max(
+        var(--card-min),
+        calc((100% - (var(--card-max-cols) - 1) * var(--card-gap)) / var(--card-max-cols))
+      ),
+      1fr
+    )
+  );
+  list-style: none;
+}
+
+/*
+ * `<li>` là ô lưới, thẻ bên trong phải chiếm trọn ô.
+ *
+ * Thiếu `flex: 1` thì thẻ là flex item cỡ theo nội dung: đo được chênh 6px giữa thẻ có ảnh và
+ * thẻ dùng ảnh dự phòng, tức các cột không còn bằng nhau dù `grid-template-columns` đã chia đều.
+ */
+.cell {
+  display: flex;
+  min-width: 0;
+}
+
+.cell > * {
+  min-width: 0;
+  flex: 1;
+}
+
+/* ─── Mobile: danh sách hàng ngang (Figma `186:2407`) ─────────────────────── */
+
+.list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.list > li:last-child > * {
+  border-bottom: none;
+}
+
+/* ─── Trạng thái ──────────────────────────────────────────────────────────── */
+
+/*
+ * Figma `188:1553` canh trạng thái vào giữa một vùng cao ~780px. Dùng `min-height` thay vì chiều
+ * cao cố định: nội dung dài hơn (danh sách quyền còn thiếu) vẫn nở ra được.
+ */
+.state {
+  display: flex;
+  min-height: 420px;
+  align-items: center;
+  justify-content: center;
+}
+
+.skeletonCard {
+  min-height: 300px;
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+}
+
+.skeletonRow {
+  padding: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+/* ─── Chân khung ──────────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  gap: var(--xp-space-md);
+}
+
+.summary {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+@media (max-width: 640px) {
+  /* Hàng tự có padding riêng — khung không thêm lề, đúng như Figma vẽ tràn viền. */
+  .inner {
+    padding: 0;
+  }
+
+  .state {
+    min-height: 320px;
+    padding: var(--xp-space-lg);
+  }
+
+  /* Đếm số trước, phân trang sau, cả hai vào giữa (Figma `186:2539`). */
+  .footer {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--xp-space-sm);
+  }
+}

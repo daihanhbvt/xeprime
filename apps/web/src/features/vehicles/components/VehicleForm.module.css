@@ -140,3 +140,33 @@
   color: var(--xp-color-text-secondary);
   font-weight: var(--xp-font-weight-semibold);
 }
+
+/* Hai hành động cuối wizard tạo: "Lưu nháp" + "Lưu & Gửi duyệt" (Figma `193:2135`). */
+.finalActions {
+  display: flex;
+  gap: var(--xp-space-sm);
+}
+
+/* Danh sách thay đổi trong hộp xác nhận (Figma `193:2568`). */
+.sensitiveList {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  margin: var(--xp-space-sm) 0;
+  background: var(--xp-color-bg-muted);
+  list-style: none;
+}
+
+.sensitiveList li + li {
+  margin-top: var(--xp-space-xs);
+}
+
+.before {
+  color: var(--xp-color-text-tertiary);
+  text-decoration: line-through;
+}
+
+@media (max-width: 640px) {
+  .finalActions {
+    flex-direction: column-reverse;
+  }
+}

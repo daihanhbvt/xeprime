@@ -136,8 +136,23 @@ function renderPage() {
   );
 }
 
-function saveForm() {
-  fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/ }));
+/**
+ * Sửa xe cũng là wizard từ Wave 3B-R2 (Figma `193:2297`) — đi hết bốn bước rồi mới tới nút lưu
+ * ở bước "Xác nhận lại". Chờ tiêu đề từng bước, xem lý do ở `create-vehicle-page.test.tsx`.
+ */
+async function saveForm() {
+  const headings = [
+    '2. Hình ảnh xe',
+    '3. Thiết lập giá thuê',
+    '4. Điều khoản thuê',
+    '5. Xác nhận & Hoàn tất chỉnh sửa',
+  ];
+  for (const heading of headings) {
+    fireEvent.click(screen.getByRole('button', { name: /Tiếp tục/ }));
+     
+    await screen.findByText(heading);
+  }
+  fireEvent.click(await screen.findByRole('button', { name: /Lưu thay đổi/ }));
 }
 
 function lastPayload(): Record<string, unknown> {
@@ -224,8 +239,8 @@ describe('/manage/vehicles/[id]/edit — nạp dữ liệu', () => {
   it('giá trị đang có được nạp đúng vào form', () => {
     renderPage();
 
-    expect((screen.getByLabelText(/Mã quản lý xe/) as HTMLInputElement).value).toBe('XE-014');
-    expect((screen.getByLabelText(/Tên xe hiển thị/) as HTMLInputElement).value).toBe(
+    expect((screen.getByLabelText(/Mã xe/) as HTMLInputElement).value).toBe('XE-014');
+    expect((screen.getByLabelText(/Tên xe/) as HTMLInputElement).value).toBe(
       'Ford Transit 2021',
     );
     expect((screen.getByLabelText(/Biển số xe/) as HTMLInputElement).value).toBe('51B-802.46');
@@ -242,7 +257,7 @@ describe('/manage/vehicles/[id]/edit — nạp dữ liệu', () => {
 describe('/manage/vehicles/[id]/edit — payload cập nhật', () => {
   it('lưu mà không đụng ảnh: media cũ được gửi lại NGUYÊN VẸN', async () => {
     renderPage();
-    saveForm();
+    await saveForm();
 
     await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
 
@@ -253,7 +268,7 @@ describe('/manage/vehicles/[id]/edit — payload cập nhật', () => {
 
   it('các giá trị không đổi giữ nguyên, không bị chuẩn hoá thành rỗng', async () => {
     renderPage();
-    saveForm();
+    await saveForm();
 
     await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
 
@@ -268,7 +283,7 @@ describe('/manage/vehicles/[id]/edit — payload cập nhật', () => {
 
   it('tiền vẫn là chuỗi trong payload (ADR 0007), không phải number', async () => {
     renderPage();
-    saveForm();
+    await saveForm();
 
     await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
     expect(lastPayload().weekdayPrice).toBe('1800000');
@@ -276,10 +291,10 @@ describe('/manage/vehicles/[id]/edit — payload cập nhật', () => {
 
   it('sửa một trường thì payload mang giá trị MỚI', async () => {
     renderPage();
-    fireEvent.change(screen.getByLabelText(/Tên xe hiển thị/), {
+    fireEvent.change(screen.getByLabelText(/Tên xe/), {
       target: { value: 'Ford Transit 2022' },
     });
-    saveForm();
+    await saveForm();
 
     await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
     expect(lastPayload().name).toBe('Ford Transit 2022');
@@ -287,7 +302,7 @@ describe('/manage/vehicles/[id]/edit — payload cập nhật', () => {
 
   it('KHÔNG gửi `publicStatus` — sửa xe không được tự đổi trạng thái duyệt', async () => {
     renderPage();
-    saveForm();
+    await saveForm();
 
     await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
     expect(lastPayload()).not.toHaveProperty('publicStatus');
@@ -299,7 +314,7 @@ describe('/manage/vehicles/[id]/edit — payload cập nhật', () => {
 describe('/manage/vehicles/[id]/edit — gửi và điều hướng', () => {
   it('đang lưu thì bấm lại KHÔNG tạo lời gọi thứ hai', async () => {
     const { rerender } = renderPage();
-    saveForm();
+    await saveForm();
     await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
 
     update.isPending = true;
@@ -308,7 +323,9 @@ describe('/manage/vehicles/[id]/edit — gửi và điều hướng', () => {
         <EditVehiclePage />
       </App>,
     );
-    saveForm();
+
+    // Wizard VẪN đang ở bước cuối sau `rerender`, nên bấm thẳng nút lưu — không đi lại bốn bước.
+    fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/ }));
 
     await Promise.resolve();
     expect(update.mutate).toHaveBeenCalledTimes(1);
@@ -320,12 +337,12 @@ describe('/manage/vehicles/[id]/edit — gửi và điều hướng', () => {
     renderPage();
 
     expect(screen.getByText('Biển số đã tồn tại')).toBeTruthy();
-    expect((screen.getByLabelText(/Mã quản lý xe/) as HTMLInputElement).value).toBe('XE-014');
+    expect((screen.getByLabelText(/Mã xe/) as HTMLInputElement).value).toBe('XE-014');
   });
 
   it('lưu xong: quay lại trang chi tiết bằng `replace`', async () => {
     renderPage();
-    saveForm();
+    await saveForm();
 
     await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
     const options = update.mutate.mock.calls[0]![1] as { onSuccess: (v: unknown) => void };

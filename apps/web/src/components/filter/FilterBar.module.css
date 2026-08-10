@@ -1,9 +1,42 @@
+/*
+ * Vỏ ngoài của thanh lọc desktop — nơi giữ khoảng cách xuống nội dung.
+ *
+ * Trước đây `margin-bottom` nằm trên `.root`; dời lên đây để hàng tìm kiếm (`searchPlacement`)
+ * và hàng chip xếp chồng bằng `gap` mà khoảng cách cuối cùng vẫn y như cũ.
+ */
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-md);
+}
+
 .root {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--xp-space-md);
-  margin-bottom: var(--xp-space-md);
+}
+
+/* Gạch dọc giữa ô tìm kiếm và cụm lọc — Figma `197:1550` (1×20). */
+.separator {
+  width: 1px;
+  height: 20px;
+  align-self: center;
+  background: var(--xp-color-border);
+}
+
+/* Hàng chip filter đang bật (Figma `188:4514`) — nằm dưới hàng điều khiển. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.searchRow .search {
+  max-width: none;
+  flex: 1;
 }
 
 /* Filter được phép xuống dòng ở desktop hẹp; cụm hành động thì không (xem `.actions`). */
@@ -15,6 +48,11 @@
   gap: var(--xp-space-sm);
 }
 
+/* Khoảng cách 12px giữa các điều khiển — Figma `186:1639` (pill cách nhau đúng 12). */
+.fieldsCompact {
+  gap: 12px;
+}
+
 /* Ô tìm kiếm ăn phần rộng còn lại, nhưng có sàn để không bị bóp thành ô vuông khi nhiều select. */
 .search {
   min-width: 220px;
@@ -22,9 +60,41 @@
   flex: 1 1 220px;
 }
 
+/*
+ * Ở thanh gọn, ô tìm kiếm **cố định 240px** (Figma `197:1547`) chứ không giãn.
+ *
+ * Đây là điểm khác hẳn hình thái mặc định: cụm lọc phải nằm ngay cạnh ô tìm kiếm chứ không bị
+ * đẩy sang phải, và ô sắp xếp mới là thứ dồn về mép phải.
+ */
+.searchCompact {
+  min-width: 0;
+  max-width: none;
+  flex: 0 0 240px;
+}
+
 .select {
   min-width: 160px;
   flex: 0 0 auto;
+}
+
+/*
+ * Pill lọc gọn (`compactFields`) — Figma `186:1645`: cao 32px, rộng vừa nội dung "Nhãn: Giá trị".
+ *
+ * Bỏ `min-width` cố định vì nhãn đã nằm trong ô: bốn pill co theo độ dài chữ đúng như thiết kế
+ * (144 · 145 · 157 · 162px) thay vì bị kéo bằng nhau ở 160px.
+ */
+.compact {
+  min-width: 0;
+}
+
+/*
+ * Nhân đôi class để thắng specificity của AntD.
+ *
+ * AntD tiêm `<style>` vào `<head>` lúc chạy, tức SAU stylesheet của CSS Module; hoà specificity
+ * thì AntD thắng. Đây là cùng cái bẫy đã ghi ở `field.module.css` (D19).
+ */
+.compact.compact :global(.ant-select-selector) {
+  border-radius: var(--xp-border-radius-sm);
 }
 
 .range {
@@ -62,6 +132,17 @@
 
 .mobileTop > * {
   min-width: 0;
+}
+
+/*
+ * Nút "Bộ lọc" KHÔNG co.
+ *
+ * Nó có bề rộng nội dung tối thiểu (~89px); để flex bóp lại thì nút tràn ra khỏi lớp `Badge`
+ * bọc ngoài và đẩy cả trang rộng thêm — đo được 4px tràn ngang ở 360px. Ô tìm kiếm mới là thứ
+ * nhường chỗ, nên chỉ nó được co.
+ */
+.mobileTop > :not(.search) {
+  flex: none;
 }
 
 .mobileTop .search {

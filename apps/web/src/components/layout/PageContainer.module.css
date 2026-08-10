@@ -1,0 +1,13 @@
+/*
+ * `width: 100%` là bắt buộc, không thừa.
+ *
+ * Vùng nội dung của `AppShell` là flex container, nên một `div` bên trong mặc định co theo nội
+ * dung chứ không giãn. Đo được: trang sửa "trông như" đã bị khống chế ở 1200px (vì nội dung dài
+ * hơn thế nên bị `max-width` cắt), còn trang thêm mới lại chỉ rộng 953px — hai màn cùng một
+ * container mà ra hai bề rộng khác nhau.
+ */
+.container {
+  width: 100%;
+  max-width: var(--xp-container-max-width);
+  margin-inline: auto;
+}

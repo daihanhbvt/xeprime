@@ -12,7 +12,12 @@ import {
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, CurrentUser, RequirePermissions, TenantScoped } from '../../common/decorators';
+import {
+  CurrentTenant,
+  CurrentUser,
+  RequirePermissions,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   CreateVehicleDto,
@@ -20,6 +25,8 @@ import {
   VehicleDetailDto,
   VehiclePageDto,
   VehicleListQueryDto,
+  VehicleStatsListDto,
+  VehicleStatsQueryDto,
 } from './dto/vehicle.dto';
 import { VehiclesService } from './vehicles.service';
 
@@ -47,6 +54,27 @@ export class VehiclesController {
     return this.vehicles.list(tenant.tenantId, query) as Promise<VehiclePageDto>;
   }
 
+  /**
+   * Chỉ số cho thẻ xe ở `/manage/vehicles`.
+   *
+   * **Phải khai TRƯỚC `@Get(':id')`** — Nest khớp route theo thứ tự khai báo, đặt sau thì `stats`
+   * bị nuốt thành một id và trả 404.
+   *
+   * Số liệu tài chính chỉ đi kèm khi người gọi có `finance.view`; kiểm ở đây chứ không ở FE,
+   * vì ẩn con số trong UI không ngăn được ai đọc thẳng response.
+   */
+  @Get('stats')
+  @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @ApiOperation({ summary: 'Chỉ số vận hành/tài chính luỹ kế theo xe' })
+  @ApiOkResponse({ type: VehicleStatsListDto })
+  async stats(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: VehicleStatsQueryDto,
+  ): Promise<VehicleStatsListDto> {
+    const canViewFinance = tenant.permissions.includes(PERMISSION.FINANCE_VIEW);
+    return { data: await this.vehicles.stats(tenant.tenantId, query.ids, canViewFinance) };
+  }
+
   @Get(':id')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Chi tiết một xe' })
@@ -72,7 +100,9 @@ export class VehiclesController {
 
   @Patch(':id')
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
-  @ApiOperation({ summary: 'Sửa thông tin xe (sửa trường nhạy cảm khi đang công khai → chờ duyệt lại)' })
+  @ApiOperation({
+    summary: 'Sửa thông tin xe (sửa trường nhạy cảm khi đang công khai → chờ duyệt lại)',
+  })
   @ApiOkResponse({ type: VehicleDetailDto })
   update(
     @CurrentTenant() tenant: TenantContext,
@@ -100,10 +130,7 @@ export class VehiclesController {
   @RequirePermissions(PERMISSION.VEHICLE_DELETE)
   @ApiOperation({ summary: 'Xoá mềm xe (chặn nếu còn lịch hiện tại/tương lai)' })
   @ApiOkResponse({ schema: { properties: { id: { type: 'string' } } } })
-  remove(
-    @CurrentTenant() tenant: TenantContext,
-    @Param('id') id: string,
-  ): Promise<{ id: string }> {
+  remove(@CurrentTenant() tenant: TenantContext, @Param('id') id: string): Promise<{ id: string }> {
     return this.vehicles.remove(tenant.tenantId, id);
   }
 }

@@ -520,6 +520,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vehicles/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chỉ số vận hành/tài chính luỹ kế theo xe */
+        get: operations["VehiclesController_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vehicles/{id}": {
         parameters: {
             query?: never;
@@ -2161,6 +2178,20 @@ export interface components {
         VehiclePageDto: {
             data: components["schemas"]["VehicleListItemDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+        };
+        VehicleStatsDto: {
+            vehicleId: string;
+            /** @description Đơn đang chạy — booking status = active */
+            activeBookings: number;
+            /** @description Đơn đã hoàn thành — booking status = completed */
+            completedBookings: number;
+            /** @description Tổng thu luỹ kế (phiếu thu đã duyệt), dạng string — ADR 0007. CHỈ trả khi người gọi có quyền `finance.view`; thiếu quyền thì trường vắng mặt. */
+            totalIncome?: string;
+            /** @description Tổng chi luỹ kế (phiếu chi đã duyệt), dạng string */
+            totalExpense?: string;
+        };
+        VehicleStatsListDto: {
+            data: components["schemas"]["VehicleStatsDto"][];
         };
         VehiclePublicReviewDto: {
             /** @enum {string} */
@@ -4453,6 +4484,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VehicleDetailDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_stats: {
+        parameters: {
+            query: {
+                /** @description Danh sách id xe, phân tách bằng dấu phẩy (tối đa 100) */
+                ids: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleStatsListDto"];
                 };
             };
         };

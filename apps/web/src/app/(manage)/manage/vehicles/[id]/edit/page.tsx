@@ -3,7 +3,7 @@
 import { App, Button } from 'antd';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
+import { API_ERROR_CODE, PERMISSION, VEHICLE_PUBLIC_STATUS } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { ROUTES, vehiclePath } from '@/constants/routes';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { VehicleForm } from '@/features/vehicles/components/VehicleForm';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useUpdateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
@@ -67,10 +68,10 @@ export default function EditVehiclePage() {
 
   if (isLoading) {
     return (
-      <div>
+      <PageContainer>
         <ManagePageHeader title="Sửa xe" onBack={backToDetail} />
         <LoadingState variant="page" label="Đang tải thông tin xe…" />
-      </div>
+      </PageContainer>
     );
   }
 
@@ -93,16 +94,18 @@ export default function EditVehiclePage() {
   }
 
   return (
-    <div>
+    <PageContainer>
       <ManagePageHeader title={`Sửa: ${vehicle.name}`} onBack={backToDetail} />
       <VehicleForm
         initialValues={vehicleToFormValues(vehicle)}
-        submitLabel="Lưu thay đổi"
+        mode="edit"
+        // Đang hiển thị công khai → cảnh báo trước, và hỏi lại nếu đụng trường nhạy cảm (ADR 0008).
+        isPublic={vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC}
         submitting={update.isPending}
         errorMessage={update.isError ? getErrorMessage(update.error) : null}
         onSubmit={handleSubmit}
         onCancel={backToDetail}
       />
-    </div>
+    </PageContainer>
   );
 }

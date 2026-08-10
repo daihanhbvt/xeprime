@@ -210,3 +210,34 @@
   --xp-shadow-md: var(--xp-shadow-raised);
   --xp-shadow-lg: var(--xp-shadow-overlay);
 }
+
+/*
+ * ─── Mật độ mobile (≤640px) ─────────────────────────────────────────────────
+ *
+ * Đặt ở TẦNG TOKEN thay vì sửa từng component: mọi chỗ đang dùng `--xp-space-*` và thang chữ
+ * đều gọn lại theo, nên một màn 390px chứa được nhiều thông tin hơn mà không nơi nào phải khai
+ * media query riêng.
+ *
+ * Chỉ hạ **khoảng cách và cỡ tiêu đề**. Cỡ chữ nội dung (`body` 14px, `body-sm` 12px) giữ
+ * nguyên: nhỏ hơn nữa là đánh đổi bằng khả năng đọc, và `--xp-touch-target-min` cũng không
+ * đụng tới — vùng chạm 44px là ràng buộc WCAG 2.5.5, không phải thứ để nén.
+ *
+ * `--xp-space-md: 12px` phá thang 4·8·16·24·32 của desktop. Đây là ngoại lệ có chủ đích: bước
+ * nhảy 16 → 8 quá gắt (bằng luôn `sm`), còn giữ 16 thì không gọn thêm được gì.
+ */
+@media (max-width: 640px) {
+  :root {
+    --xp-space-md: 12px;
+    --xp-space-lg: 16px;
+    --xp-space-xl: 24px;
+
+    --xp-font-size-display: 32px;
+    --xp-line-height-display: 40px;
+    --xp-font-size-h1: 24px;
+    --xp-line-height-h1: 32px;
+    --xp-font-size-h2: 20px;
+    --xp-line-height-h2: 28px;
+    --xp-font-size-h3: 18px;
+    --xp-line-height-h3: 24px;
+  }
+}

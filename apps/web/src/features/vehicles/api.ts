@@ -1,11 +1,19 @@
 import type { PaginationMeta } from '@xeprime/types';
-import { apiDelete, apiGet, apiPatch, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import {
+  apiDelete,
+  apiGet,
+  apiPatch,
+  apiPost,
+  apiRequest,
+  type QueryParams,
+} from '@/services/api-client';
 import type {
   CreateVehicleInput,
   UpdateVehicleInput,
   VehicleDetail,
   VehicleFilters,
   VehicleListItem,
+  VehicleStats,
 } from './types';
 
 export const VEHICLES_DEFAULT_LIMIT = 20;
@@ -58,3 +66,17 @@ export const deleteVehicle = (id: string): Promise<{ id: string }> =>
 /** Gửi xe đi duyệt công khai (ADR 0008) — backend tạo phiếu duyệt, không tự set approved_public. */
 export const submitVehiclePublic = (id: string): Promise<VehicleDetail> =>
   apiPost<VehicleDetail>(`/vehicles/${id}/submit-public`, {});
+
+/**
+ * Chỉ số cho thẻ xe — gọi RIÊNG, sau khi đã có trang danh sách.
+ *
+ * Tách khỏi `fetchVehicles` để danh sách hiện ngay: tổng hợp thu/chi chậm hơn truy vấn xe, gộp
+ * chung sẽ bắt cả trang chờ theo phần chậm nhất. Thống kê hỏng cũng không kéo sập danh sách.
+ */
+export async function fetchVehicleStats(ids: string[]): Promise<VehicleStats[]> {
+  if (ids.length === 0) return [];
+  const res = await apiRequest<VehicleStats[]>('/vehicles/stats', {
+    query: { ids: ids.join(',') },
+  });
+  return res.data;
+}

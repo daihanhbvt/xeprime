@@ -11,7 +11,7 @@ import {
   VEHICLE_PUBLIC_STATUS_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -29,13 +29,7 @@ import {
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 
 /** Cách sắp xếp danh sách xe của gian hàng. */
-export const VEHICLE_SORT = [
-  'newest',
-  'name_asc',
-  'code_asc',
-  'price_asc',
-  'price_desc',
-] as const;
+export const VEHICLE_SORT = ['newest', 'name_asc', 'code_asc', 'price_asc', 'price_desc'] as const;
 export type VehicleSort = (typeof VEHICLE_SORT)[number];
 
 const DEFAULT_LIMIT = 20;
@@ -116,7 +110,11 @@ export class VehicleListItemDto {
   @ApiPropertyOptional({ type: Number, nullable: true }) seatCount!: number | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Kiểu dáng (BODY_TYPE)' })
   bodyType!: string | null;
-  @ApiPropertyOptional({ type: Number, nullable: true, description: '% giảm giá marketing (0–100)' })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: '% giảm giá marketing (0–100)',
+  })
   discountPercent!: number | null;
   @ApiProperty({ enum: VEHICLE_OPERATION_STATUS_VALUES }) operationStatus!: string;
   @ApiProperty({ enum: VEHICLE_PUBLIC_STATUS_VALUES }) publicStatus!: string;
@@ -145,7 +143,11 @@ export class VehicleDetailDto extends VehicleListItemDto {
   @ApiPropertyOptional({ enum: FUEL_TYPE_VALUES, nullable: true }) fuelType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giá thuê giờ — string tiền (ADR 0007)' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá thuê giờ — string tiền (ADR 0007)',
+  })
   hourlyPrice!: string | null;
 
   @ApiProperty({ description: 'Chủ xe hỗ trợ giao xe tận nơi' }) deliveryEnabled!: boolean;
@@ -249,7 +251,10 @@ export class CreateVehicleDto {
   @IsIn(BODY_TYPE_VALUES)
   bodyType?: string | null;
 
-  @ApiPropertyOptional({ enum: VEHICLE_OPERATION_STATUS_VALUES, default: VEHICLE_OPERATION_STATUS.AVAILABLE })
+  @ApiPropertyOptional({
+    enum: VEHICLE_OPERATION_STATUS_VALUES,
+    default: VEHICLE_OPERATION_STATUS.AVAILABLE,
+  })
   @IsOptional()
   @IsIn(VEHICLE_OPERATION_STATUS_VALUES)
   operationStatus?: string;
@@ -266,7 +271,10 @@ export class CreateVehicleDto {
   @MaxLength(2000)
   mainImageUrl?: string;
 
-  @ApiPropertyOptional({ description: 'Giá ngày thường, string thập phân — ADR 0007', example: '600000' })
+  @ApiPropertyOptional({
+    description: 'Giá ngày thường, string thập phân — ADR 0007',
+    example: '600000',
+  })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'weekdayPrice phải là số tiền hợp lệ' })
   weekdayPrice?: string;
@@ -338,3 +346,52 @@ export class CreateVehicleDto {
  * của gian hàng nên cho sửa ở đây.
  */
 export class UpdateVehicleDto extends PartialType(CreateVehicleDto) {}
+
+/**
+ * Chỉ số vận hành + tài chính của MỘT xe, dùng cho thẻ xe ở `/manage/vehicles`.
+ *
+ * Tách khỏi `VehicleListItemDto` có chủ đích: danh sách xe được gọi ở nhiều nơi (dashboard,
+ * calendar resources, picker trong form đơn) và không nơi nào cần tổng hợp nặng này. Gộp vào
+ * sẽ bắt mọi consumer trả giá cho 3 truy vấn gộp nhóm mà họ không dùng.
+ */
+export class VehicleStatsDto {
+  @ApiProperty()
+  vehicleId!: string;
+
+  @ApiProperty({ description: 'Đơn đang chạy — booking status = active' })
+  activeBookings!: number;
+
+  @ApiProperty({ description: 'Đơn đã hoàn thành — booking status = completed' })
+  completedBookings!: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Tổng thu luỹ kế (phiếu thu đã duyệt), dạng string — ADR 0007. ' +
+      'CHỈ trả khi người gọi có quyền `finance.view`; thiếu quyền thì trường vắng mặt.',
+  })
+  totalIncome?: string;
+
+  @ApiPropertyOptional({ description: 'Tổng chi luỹ kế (phiếu chi đã duyệt), dạng string' })
+  totalExpense?: string;
+}
+
+export class VehicleStatsListDto {
+  @ApiProperty({ type: [VehicleStatsDto] })
+  data!: VehicleStatsDto[];
+}
+
+export class VehicleStatsQueryDto {
+  @ApiProperty({ description: 'Danh sách id xe, phân tách bằng dấu phẩy (tối đa 100)' })
+  @Transform(({ value }) =>
+    typeof value === 'string'
+      ? value
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean)
+          .slice(0, 100)
+      : [],
+  )
+  @IsArray()
+  @IsString({ each: true })
+  ids!: string[];
+}

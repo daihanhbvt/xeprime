@@ -54,7 +54,16 @@ function normalize(value: string): string {
 }
 
 function readCssTokens(): Map<string, string> {
-  const css = readFileSync(CSS_PATH, 'utf8');
+  /*
+   * Chỉ đọc khối `:root` GỐC, cắt tại `@media` đầu tiên.
+   *
+   * Từ Wave 3B-R2, `tokens.css` có một khối ghi đè mật độ ở ≤640px. Đọc cả file thì giá trị
+   * mobile (khai sau) đè lên giá trị desktop trong Map và test đỏ oan — trong khi hợp đồng mà
+   * test này khoá là "`theme.ts` khớp token DESKTOP".
+   */
+  // Cắt tại at-rule THẬT (`@media` đầu dòng) — có một comment nhắc tới chữ "@media" ở giữa
+  // dòng, cắt theo chuỗi trần sẽ nuốt luôn phần token khai sau comment đó.
+  const css = readFileSync(CSS_PATH, 'utf8').split(/^@media/m)[0]!;
   const tokens = new Map<string, string>();
 
   for (const match of css.matchAll(DECLARATION_RE)) {

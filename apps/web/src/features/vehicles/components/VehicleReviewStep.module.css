@@ -1,0 +1,91 @@
+/* Bước xác nhận — Figma `193:2073`: thẻ tổng kết 1052px, padding 16, cách nhau 20. */
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.group {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Bốn cặp nhãn–giá trị trên một hàng ở desktop, tự xuống dòng khi hẹp. */
+.items {
+  display: grid;
+  margin: var(--xp-space-md) 0 0;
+  gap: var(--xp-space-md);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.items dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.items dd {
+  margin: 4px 0 0;
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* ─── Luồng sửa: bảng thay đổi ────────────────────────────────────────────── */
+
+.lead {
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.changes {
+  display: flex;
+  padding: 0;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-sm);
+  list-style: none;
+}
+
+.change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius);
+  gap: var(--xp-space-sm);
+}
+
+.changeLabel {
+  flex: 1 1 180px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Trường nhạy cảm: nói thẳng hệ quả ngay tại dòng, không đợi tới hộp xác nhận. */
+.sensitiveMark {
+  color: var(--xp-color-warning);
+}
+
+.changeValues {
+  flex: 1 1 auto;
+}
+
+.before {
+  color: var(--xp-color-text-tertiary);
+  text-decoration: line-through;
+}

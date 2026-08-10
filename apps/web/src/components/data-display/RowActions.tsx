@@ -21,6 +21,11 @@ export interface RowAction {
   icon?: ReactNode;
   /** Hiện chữ cạnh icon. Mặc định `false` = nút chỉ-icon. */
   showLabel?: boolean;
+  /**
+   * Hành động chính của hàng/thẻ — nhận sắc thương hiệu ở `variant="filled"`.
+   * Chỉ có nghĩa khi cụm nút dùng nền màu; ở dạng chữ phẳng thì mọi nút trông như nhau.
+   */
+  primary?: boolean;
   danger?: boolean;
   disabled?: boolean;
   /** Vì sao không bấm được — hiện trong tooltip. Nút disabled không giải thích là ngõ cụt. */
@@ -47,6 +52,19 @@ interface RowActionsProps {
   maxInline?: number;
   /** Nhãn nút ⋮ — mặc định chung, feature có thể nói rõ hơn ("Thêm thao tác cho xe A"). */
   overflowLabel?: string;
+  /**
+   * `'end'` (mặc định) — bám mép phải, đúng cột hành động của bảng.
+   * `'start'` — bám mép trái; dùng khi cụm nút chiếm trọn một hàng riêng thay vì một ô cuối
+   * hàng (thẻ xe Figma `186:1713`).
+   */
+  align?: 'start' | 'end';
+  /**
+   * `'text'` (mặc định) — nút phẳng, đúng cột hành động của bảng nơi nền màu sẽ gây nhiễu.
+   * `'filled'` — nền màu nhạt, **không viền** (Figma `186:1713`, đo pixel: `#f9f5e7` cho hành
+   * động chính, `#efefee` cho hành động thường, `#fbe9e9` cho hành động phá huỷ). Dùng khi cụm
+   * nút đứng trên mặt thẻ và cần đọc ra ngay là bấm được.
+   */
+  variant?: 'text' | 'filled';
 }
 
 const DEFAULT_MAX_INLINE = 3;
@@ -57,11 +75,25 @@ const DEFAULT_MAX_INLINE = 3;
  */
 const decorative = decorativeIcon;
 
-function ActionButton({ action }: { action: RowAction }) {
+/**
+ * `variant="filled"` dùng cặp `color` + `variant` của AntD thay vì tự tô nền.
+ *
+ * Ba sắc thái của Figma trùng đúng ba token ngữ nghĩa AntD sinh từ theme XePrime — màu đỏ đo
+ * được (`#dc2626`) khớp `--xp-color-error` từng chữ số. Tự viết `background` sẽ phải nhân đôi
+ * class để thắng specificity của AntD (bẫy D19) và vẫn hỏng ở trạng thái hover/disabled/loading.
+ */
+function toneProps(action: RowAction, variant: 'text' | 'filled') {
+  if (variant !== 'filled') return { type: 'text' as const, danger: action.danger };
+  if (action.danger) return { variant: 'filled' as const, color: 'danger' as const };
+  return action.primary
+    ? { variant: 'filled' as const, color: 'primary' as const, className: styles.tonePrimary }
+    : { variant: 'filled' as const, color: 'default' as const, className: styles.toneNeutral };
+}
+
+function ActionButton({ action, variant }: { action: RowAction; variant: 'text' | 'filled' }) {
   const commonProps = {
-    type: 'text' as const,
+    ...toneProps(action, variant),
     size: 'small' as const,
-    danger: action.danger,
     loading: action.loading,
     icon: decorative(action.icon),
     // Nút chỉ-icon phải có tên; nút có chữ thì chữ đã là tên, thêm `aria-label` sẽ nhân đôi.
@@ -124,9 +156,9 @@ function ActionButton({ action }: { action: RowAction }) {
  *
  * Ba việc nó làm mà 14 bảng hiện đang tự làm mỗi nơi một kiểu:
  *  1. **Tên khả truy cập** cho nút chỉ-icon (lỗ a11y D15.2).
- *  2. **Chặn sự kiện nổi bọt** lên `<tr>`. Hôm nay `VehicleTable` đặt `onRow.onClick` trên hàng
- *     mà cột hành động không chặn, nên bấm "Sửa" sinh HAI lần điều hướng và trang chi tiết thắng
- *     — tức nút Sửa thực tế không dẫn tới trang sửa (D15.7). Chặn ở đây sửa cho mọi bảng cùng lúc.
+ *  2. **Chặn sự kiện nổi bọt** lên hàng/thẻ bao ngoài. Bảng đặt `onRow.onClick` mà cột hành động
+ *     không chặn thì bấm "Sửa" sinh HAI lần điều hướng và trang chi tiết thắng — tức nút Sửa
+ *     thực tế không dẫn tới trang sửa (D15.7). Chặn ở đây sửa cho mọi consumer cùng lúc.
  *  3. **Gom hành động phụ vào menu ⋮** thay vì kéo dài hàng nút.
  *
  * KHÔNG quyết định quyền: feature lọc trước bằng `hidden`, hoặc đơn giản là không truyền action.
@@ -135,6 +167,8 @@ export function RowActions({
   actions,
   maxInline = DEFAULT_MAX_INLINE,
   overflowLabel = 'Thêm thao tác',
+  align = 'end',
+  variant = 'text',
 }: RowActionsProps) {
   /**
    * Hành động trong menu ⋮ đang chờ xác nhận.
@@ -176,9 +210,19 @@ export function RowActions({
 
   return (
     // Hành động của hàng không được kích hoạt luôn cả hàng — xem điểm (2) ở docblock.
-    <div className={styles.root} onClick={(event) => event.stopPropagation()} role="presentation">
+    <div
+      className={[
+        styles.root,
+        align === 'start' && styles.alignStart,
+        variant === 'filled' && styles.filled,
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      onClick={(event) => event.stopPropagation()}
+      role="presentation"
+    >
       {inline.map((action) => (
-        <ActionButton key={action.key} action={action} />
+        <ActionButton key={action.key} action={action} variant={variant} />
       ))}
       {overflow.length > 0 ? (
         pending ? (

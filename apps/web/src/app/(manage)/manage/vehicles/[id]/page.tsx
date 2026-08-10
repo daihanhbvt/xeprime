@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
+import { PageContainer } from '@/components/layout/PageContainer';
 import { VehicleDetailView } from '@/features/vehicles/components/VehicleDetailView';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useDeleteVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
@@ -64,10 +65,10 @@ export default function VehicleDetailPage() {
 
   if (isLoading) {
     return (
-      <div>
+      <PageContainer>
         <ManagePageHeader title="Chi tiết xe" onBack={backToList} />
         <LoadingState variant="page" label="Đang tải thông tin xe…" />
-      </div>
+      </PageContainer>
     );
   }
 
@@ -89,7 +90,7 @@ export default function VehicleDetailPage() {
   }
 
   return (
-    <div>
+    <PageContainer>
       <ManagePageHeader
         title={vehicle.name}
         onBack={backToList}
@@ -125,6 +126,6 @@ export default function VehicleDetailPage() {
         }
       />
       <VehicleDetailView vehicle={vehicle} />
-    </div>
+    </PageContainer>
   );
 }

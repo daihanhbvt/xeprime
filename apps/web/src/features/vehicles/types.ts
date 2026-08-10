@@ -28,3 +28,5 @@ export interface VehicleFilters {
   page?: number;
   limit?: number;
 }
+
+export type VehicleStats = Schemas['VehicleStatsDto'];

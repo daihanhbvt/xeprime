@@ -7,6 +7,46 @@
   gap: var(--xp-space-xs);
 }
 
+/*
+ * `align="start"`: cụm nút chiếm trọn một hàng (thẻ xe) thay vì một ô cuối hàng bảng.
+ * `flex-wrap` là lưới an toàn — nhãn dài bất thường xuống dòng thay vì bị cắt cụt.
+ */
+.alignStart {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+/*
+ * `variant="filled"` — Figma `186:1713` đặt bốn nút cách nhau đúng 6px.
+ *
+ * Màu nền do AntD lo qua cặp `color`/`variant`, nên ở đây chỉ còn khoảng cách — không phải nhân
+ * đôi class để tranh specificity như khi tự viết `background` (bẫy D19).
+ */
+.filled {
+  gap: 6px;
+}
+
+/*
+ * Chỉ chỉnh MÀU CHỮ; nền vẫn để AntD lo (kể cả hover/disabled/loading).
+ *
+ * Hai chỗ AntD lệch khỏi Figma:
+ *  - hành động thường lấy màu chữ chính `#1a1a1a`, Figma dùng sắc phụ `#615c54`;
+ *  - hành động chính lấy gold `#d6a02c`, Figma dùng gold đậm `#a8871c` — và đây còn là vấn đề
+ *    tương phản: gold nhạt trên nền kem chỉ đạt ~2.2:1, không đọc nổi.
+ *
+ * Class nhân đôi để thắng specificity của AntD (bẫy D19); phải khai cả `:hover` vì nếu không,
+ * quy tắc nền của AntD lúc hover sẽ kéo màu chữ về mặc định.
+ */
+.tonePrimary.tonePrimary,
+.tonePrimary.tonePrimary:hover {
+  color: var(--xp-color-primary-active);
+}
+
+.toneNeutral.toneNeutral,
+.toneNeutral.toneNeutral:hover {
+  color: var(--xp-color-text-secondary);
+}
+
 /* Popconfirm cần một phần tử nhận ref; `span` này chỉ để bọc, không tạo hình. */
 .confirmWrap {
   display: inline-flex;

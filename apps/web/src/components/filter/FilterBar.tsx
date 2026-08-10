@@ -1,7 +1,7 @@
 'use client';
 
-import { FilterOutlined, SearchOutlined } from '@ant-design/icons';
-import { Badge, Button, DatePicker, Input, Segmented, Select } from 'antd';
+import { CloseOutlined, FilterOutlined, SearchOutlined } from '@ant-design/icons';
+import { Badge, Button, DatePicker, Input, Segmented, Select, Tag } from 'antd';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -57,6 +57,25 @@ interface FilterBarProps {
   /** Nút riêng của trang ("Tạo phiếu", "Danh mục"…) — luôn nằm cuối, không bị xuống dòng lẫn với filter. */
   actions?: ReactNode;
   searchDebounceMs?: number;
+  /**
+   * Hiện hàng chip liệt kê từng filter đang bật, mỗi chip gỡ được riêng (Figma `188:4514`).
+   *
+   * Opt-in vì hợp đồng "xoá một filter" chỉ đúng khi trang coi mọi filter là độc lập — đúng với
+   * Fleet, chưa chắc đúng với danh sách có filter phụ thuộc nhau. Bật thì nút "Xoá bộ lọc" dời
+   * xuống cuối hàng chip thay vì đứng cạnh ô sắp xếp.
+   */
+  showActiveChips?: boolean;
+  /**
+   * Thanh lọc **một hàng gọn** theo Figma `186:1639` (`search-filter-bar`, cao 34px):
+   * ô tìm kiếm 240px → gạch dọc phân cách → các pill `Nhãn: Giá trị` → sắp xếp dồn phải.
+   *
+   * Khác mặc định ở ba điểm: ô tìm kiếm **không** giãn chiếm chỗ trống, điều khiển cao 32px thay
+   * vì 40px, và nhãn trường vẫn hiện sau khi đã chọn.
+   *
+   * Opt-in vì 13 danh sách còn lại đang dùng hình thái cũ; đổi hàng loạt là việc của một đợt
+   * riêng, không phải hệ quả phụ của batch này.
+   */
+  compactFields?: boolean;
 }
 
 /** Cùng độ trễ với `VehicleFiltersBar` đang chạy — giữ nguyên cảm giác gõ đã quen. */
@@ -80,6 +99,27 @@ export function countActiveFilters(fields: readonly FilterField[], values: Filte
   return fields.filter((field) => fieldKeys(field).some(isActive)).length;
 }
 
+/**
+ * Các filter đang bật, đã đổi sang nhãn người đọc được.
+ *
+ * Bỏ qua `search` (từ khoá đã hiện nguyên văn trong ô tìm kiếm) và `dateRange` (một chip không
+ * diễn đạt nổi một khoảng, và gỡ nửa khoảng thì vô nghĩa).
+ */
+function activeChips(
+  fields: readonly FilterField[],
+  values: FilterValues,
+): { key: string; label: string }[] {
+  const chips: { key: string; label: string }[] = [];
+  for (const field of fields) {
+    if (field.kind !== 'select' && field.kind !== 'segmented') continue;
+    const value = values[field.key];
+    if (!value || value === 'all') continue;
+    const option = field.options.find((item) => item.value === value);
+    chips.push({ key: field.key, label: option?.label ?? value });
+  }
+  return chips;
+}
+
 function toDayjs(value: string | undefined): Dayjs | null {
   if (!value) return null;
   const parsed = dayjs(value, DAY_PARAM_FORMAT);
@@ -98,11 +138,13 @@ function SearchField({
   value,
   onChange,
   delayMs,
+  compact = false,
 }: {
   field: Extract<FilterField, { kind: 'search' }>;
   value: string | undefined;
   onChange: (patch: FilterValues) => void;
   delayMs: number;
+  compact?: boolean;
 }) {
   const [draft, setDraft] = useState(value ?? '');
 
@@ -123,8 +165,8 @@ function SearchField({
 
   return (
     <Input
-      className={styles.search}
-      size="large"
+      className={compact ? `${styles.search} ${styles.searchCompact}` : styles.search}
+      size={compact ? 'middle' : 'large'}
       allowClear
       prefix={<SearchOutlined aria-hidden="true" />}
       aria-label={field.label}
@@ -140,11 +182,13 @@ function FieldControl({
   values,
   onChange,
   searchDebounceMs,
+  compact,
 }: {
   field: FilterField;
   values: FilterValues;
   onChange: (patch: FilterValues) => void;
   searchDebounceMs: number;
+  compact: boolean;
 }) {
   if (field.kind === 'search') {
     return (
@@ -153,6 +197,7 @@ function FieldControl({
         value={values[field.key]}
         onChange={onChange}
         delayMs={searchDebounceMs}
+        compact={compact}
       />
     );
   }
@@ -160,13 +205,16 @@ function FieldControl({
   if (field.kind === 'select') {
     return (
       <Select
-        className={styles.select}
-        size="large"
+        className={compact ? `${styles.select} ${styles.compact}` : styles.select}
+        size={compact ? 'middle' : 'large'}
         allowClear={field.allowClear ?? true}
         showSearch={field.searchable}
         optionFilterProp="label"
         aria-label={field.label}
-        placeholder={field.label}
+        // Figma `186:1645` giữ nhãn ngay cả khi đã chọn: "Loại xe: Ô tô". Chọn xong mà chỉ còn
+        // "Ô tô" thì bốn dropdown cạnh nhau không còn phân biệt được cái nào lọc cái gì.
+        placeholder={compact ? `${field.label}: Tất cả` : field.label}
+        labelRender={compact ? (item) => `${field.label}: ${item.label}` : undefined}
         options={field.options as FilterOption[]}
         value={values[field.key] ?? undefined}
         onChange={(next: string | undefined) => onChange({ [field.key]: next })}
@@ -225,6 +273,8 @@ export function FilterBar({
   onClear,
   actions,
   searchDebounceMs = DEFAULT_SEARCH_DEBOUNCE_MS,
+  showActiveChips = false,
+  compactFields = false,
 }: FilterBarProps) {
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -245,6 +295,29 @@ export function FilterBar({
       </Button>
     ) : null;
 
+  const chips = showActiveChips ? activeChips(fields, values) : [];
+  const chipRow =
+    chips.length > 0 ? (
+      <div className={styles.chips}>
+        {chips.map((chip) => (
+          <Tag
+            key={chip.key}
+            closable
+            // `closeIcon` mặc định là dấu ×; nhãn cho trình đọc màn hình phải nói bỏ CÁI GÌ.
+            closeIcon={<CloseOutlined aria-label={`Bỏ lọc ${chip.label}`} />}
+            onClose={() => onChange({ [chip.key]: undefined })}
+          >
+            {chip.label}
+          </Tag>
+        ))}
+        {onClear ? (
+          <Button type="link" size="small" onClick={onClear}>
+            Xoá bộ lọc
+          </Button>
+        ) : null}
+      </div>
+    ) : null;
+
   if (isMobile) {
     return (
       <div className={styles.mobileRoot}>
@@ -256,6 +329,7 @@ export function FilterBar({
               values={values}
               onChange={onChange}
               searchDebounceMs={searchDebounceMs}
+              compact={compactFields}
             />
           ))}
           {sheetFields.length > 0 ? (
@@ -271,6 +345,7 @@ export function FilterBar({
           ) : null}
         </div>
         {actions ? <div className={styles.mobileActions}>{actions}</div> : null}
+        {chipRow}
 
         <ResponsiveDialog
           title="Bộ lọc"
@@ -295,6 +370,7 @@ export function FilterBar({
                 values={values}
                 onChange={onChange}
                 searchDebounceMs={searchDebounceMs}
+                compact={compactFields}
               />
             ))}
           </div>
@@ -303,26 +379,45 @@ export function FilterBar({
     );
   }
 
+  const control = (field: FilterField) => (
+    <FieldControl
+      key={field.kind === 'dateRange' ? field.fromKey : field.key}
+      field={field}
+      values={values}
+      onChange={onChange}
+      searchDebounceMs={searchDebounceMs}
+      compact={compactFields}
+    />
+  );
+
+  // Gạch dọc ngăn ô tìm kiếm với cụm lọc (Figma `197:1550`) — thuần trang trí nên `aria-hidden`.
+  const showSeparator = compactFields && searchFields.length > 0 && sheetFields.length > 0;
+
   return (
     // `search` là landmark đúng ngữ nghĩa cho một cụm điều khiển lọc/tìm.
-    <div className={styles.root} role="search" aria-label="Bộ lọc danh sách">
-      <div className={styles.fields}>
-        {fields.map((field) => (
-          <FieldControl
-            key={field.kind === 'dateRange' ? field.fromKey : field.key}
-            field={field}
-            values={values}
-            onChange={onChange}
-            searchDebounceMs={searchDebounceMs}
-          />
-        ))}
-      </div>
-      {clearButton || actions ? (
-        <div className={styles.actions}>
-          {clearButton}
-          {actions}
+    <div className={styles.wrapper} role="search" aria-label="Bộ lọc danh sách">
+      <div className={styles.root}>
+        <div className={compactFields ? `${styles.fields} ${styles.fieldsCompact}` : styles.fields}>
+          {showSeparator ? (
+            <>
+              {searchFields.map(control)}
+              <span className={styles.separator} aria-hidden="true" />
+              {sheetFields.map(control)}
+            </>
+          ) : (
+            fields.map(control)
+          )}
         </div>
-      ) : null}
+        {/* Bật chip thì "Xoá bộ lọc" thuộc về hàng chip — hai nút cùng tên trên một màn là thừa. */}
+        {(!showActiveChips && clearButton) || actions ? (
+          <div className={styles.actions}>
+            {showActiveChips ? null : clearButton}
+            {actions}
+          </div>
+        ) : null}
+      </div>
+
+      {chipRow}
     </div>
   );
 }

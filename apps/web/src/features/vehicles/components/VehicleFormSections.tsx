@@ -1,6 +1,6 @@
 'use client';
 
-import { Col, Radio, Row, Select } from 'antd';
+import { Col, Row, Select } from 'antd';
 import { Controller, type Control } from 'react-hook-form';
 import { VEHICLE_FEATURE_KEYS, VEHICLE_FEATURE_LABEL } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
@@ -84,6 +84,114 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
   },
 ];
 
+/** Một bước của wizard: nhãn trên thanh bước + tiêu đề trong thẻ + các trường phải validate. */
+export interface VehicleWizardStep {
+  key: string;
+  /** Nhãn thanh bước ở desktop — dùng ĐÚNG chữ Figma. */
+  title: string;
+  /** Nhãn rút gọn cho mobile: 390px không chứa nổi 5 nhãn dài trên một hàng. */
+  shortTitle: string;
+  /** Tiêu đề trong thẻ nội dung, đã đánh số. */
+  heading: string;
+  fields: ReadonlyArray<keyof VehicleFormValues>;
+}
+
+const FIELDS_OF = Object.fromEntries(
+  VEHICLE_SECTIONS.map((section) => [section.key, section.fields]),
+) as Record<VehicleSectionKey, ReadonlyArray<keyof VehicleFormValues>>;
+
+/**
+ * Wizard **tạo xe** — 5 bước, nhãn lấy nguyên văn Figma `193:1590`.
+ *
+ * Bước 5 không có trường nào để validate: nó chỉ tổng kết lại bốn bước trước rồi gửi.
+ */
+export const CREATE_WIZARD_STEPS: readonly VehicleWizardStep[] = [
+  {
+    key: 'basic',
+    title: 'Thông tin cơ bản',
+    shortTitle: 'Cơ bản',
+    heading: '1. Thông tin cơ bản của xe',
+    fields: FIELDS_OF.basic,
+  },
+  {
+    key: 'specs',
+    title: 'Chi tiết kỹ thuật',
+    shortTitle: 'Thông số',
+    heading: '2. Chi tiết kỹ thuật xe',
+    fields: FIELDS_OF.specs,
+  },
+  {
+    key: 'pricing',
+    title: 'Giá thuê & chính sách',
+    shortTitle: 'Giá cả',
+    heading: '3. Thiết lập giá thuê & chính sách',
+    fields: FIELDS_OF.pricing,
+  },
+  {
+    key: 'media',
+    title: 'Hình ảnh & mô tả',
+    shortTitle: 'Hình ảnh',
+    heading: '4. Hình ảnh, tiện ích & mô tả xe',
+    fields: FIELDS_OF.media,
+  },
+  {
+    key: 'review',
+    title: 'Xác nhận & gửi duyệt',
+    shortTitle: 'Xác nhận',
+    heading: '5. Xác nhận thông tin hồ sơ xe',
+    fields: [],
+  },
+];
+
+/**
+ * Wizard **sửa xe** — nhãn lấy nguyên văn Figma `193:2297` (`StepperBar`).
+ *
+ * Nhóm trường khác luồng tạo có chủ đích: người sửa nhảy thẳng tới thứ muốn đổi, nên ảnh, giá và
+ * điều khoản tách thành ba bước riêng thay vì gộp.
+ *
+ * ⚠️ Figma chỉ vẽ bước 1 và bước 3 của luồng sửa, và bước 1 chỉ có 5 trường cơ bản — tức **không
+ * frame nào chứa thông số kỹ thuật** (biển số, hãng, số chỗ…). Bỏ chúng đi thì `plateNumber` —
+ * một trường NHẠY CẢM — không còn sửa được ở đâu cả. Nên chúng nằm ở "Thông tin chung", nghĩa
+ * rộng của nhãn này cho phép. Ghi lại ở báo cáo Wave 3B.
+ */
+export const EDIT_WIZARD_STEPS: readonly VehicleWizardStep[] = [
+  {
+    key: 'general',
+    title: 'Thông tin chung',
+    shortTitle: 'Chung',
+    heading: '1. Thông tin chung',
+    fields: [...FIELDS_OF.basic, ...FIELDS_OF.specs],
+  },
+  {
+    key: 'images',
+    title: 'Hình ảnh xe',
+    shortTitle: 'Hình ảnh',
+    heading: '2. Hình ảnh xe',
+    fields: ['mainImageUrl', 'images'],
+  },
+  {
+    key: 'prices',
+    title: 'Thiết lập giá',
+    shortTitle: 'Giá',
+    heading: '3. Thiết lập giá thuê',
+    fields: ['weekdayPrice', 'weekendPrice', 'hourlyPrice', 'discountPercent'],
+  },
+  {
+    key: 'terms',
+    title: 'Điều khoản thuê',
+    shortTitle: 'Điều khoản',
+    heading: '4. Điều khoản thuê',
+    fields: ['deliveryEnabled', 'noCollateral', 'features', 'description'],
+  },
+  {
+    key: 'review',
+    title: 'Xác nhận lại',
+    shortTitle: 'Xác nhận',
+    heading: '5. Xác nhận & Hoàn tất chỉnh sửa',
+    fields: [],
+  },
+];
+
 interface SectionProps {
   control: Control<VehicleFormValues>;
   isCar: boolean;
@@ -91,53 +199,46 @@ interface SectionProps {
 
 export function BasicSection({ control, isCar: _isCar }: SectionProps) {
   return (
-    <Row gutter={16}>
-      <Col xs={24} sm={12}>
-        <TextField
-          control={control}
-          name="code"
-          label="Mã quản lý xe"
-          placeholder="VD: XE-001"
-          required
-          help="Mã nội bộ, không trùng trong gian hàng"
-        />
-      </Col>
+    <Row gutter={24}>
+      {/* Thứ tự và nhãn theo Figma `193:1617`: Tên xe TRÁI, Mã xe PHẢI. */}
       <Col xs={24} sm={12}>
         <TextField
           control={control}
           name="name"
-          label="Tên xe hiển thị"
-          placeholder="VD: Toyota Vios 2022"
+          label="Tên xe"
+          placeholder="Nhập tên xe (Ví dụ: Toyota Vios 2023)"
           required
         />
       </Col>
       <Col xs={24} sm={12}>
-        {/* Radio thay Select: chỉ hai lựa chọn, Figma `60:105` vẽ radio — bấm một lần là xong. */}
-        <Controller
+        <TextField
+          control={control}
+          name="code"
+          label="Mã xe"
+          placeholder="Ví dụ: XP-0001"
+          required
+          help="Mã nội bộ, duy nhất trong gian hàng"
+        />
+      </Col>
+      <Col xs={24} sm={12}>
+        {/*
+          Figma `193:1636` vẽ Loại xe là dropdown chứ không phải radio.
+          Hôm nay chỉ có hai lựa chọn nên radio cũng dùng được, nhưng danh sách loại xe là thứ
+          sẽ dài ra (xe tải, xe khách…) — dropdown chịu được điều đó mà radio thì không.
+        */}
+        <SelectField
           control={control}
           name="vehicleType"
-          render={({ field }) => (
-            <fieldset className={styles.fieldset}>
-              <legend className={styles.fieldsetLegend}>
-                Loại phương tiện
-                <span className={styles.requiredMark} aria-hidden="true">
-                  *
-                </span>
-              </legend>
-              <Radio.Group
-                value={field.value}
-                onChange={(event) => field.onChange(event.target.value)}
-                options={[...VEHICLE_TYPE_OPTIONS]}
-              />
-            </fieldset>
-          )}
+          label="Loại xe"
+          options={VEHICLE_TYPE_OPTIONS}
+          required
         />
       </Col>
       <Col xs={24} sm={12}>
         <SelectField
           control={control}
           name="serviceType"
-          label="Loại hình dịch vụ"
+          label="Loại dịch vụ"
           options={SERVICE_TYPE_OPTIONS}
           required
         />
@@ -234,7 +335,27 @@ export function SpecsSection({ control, isCar }: SectionProps) {
   );
 }
 
+/**
+ * Giá và chính sách tách làm hai khối rời.
+ *
+ * Wizard **tạo** gộp chúng vào một bước ("Giá thuê & chính sách", Figma `193:1779`), wizard
+ * **sửa** tách thành hai bước ("Thiết lập giá" `193:2441` và "Điều khoản thuê"). Cùng một khối
+ * dùng cho cả hai nên hai luồng không bao giờ lệch nhau về trường hay nhãn.
+ */
 export function PricingSection({
+  control,
+  isCar,
+  pricePreview,
+}: SectionProps & { pricePreview: React.ReactNode }) {
+  return (
+    <>
+      <PricesSection control={control} isCar={isCar} pricePreview={pricePreview} />
+      <PoliciesSection control={control} isCar={isCar} />
+    </>
+  );
+}
+
+export function PricesSection({
   control,
   pricePreview,
 }: SectionProps & { pricePreview: React.ReactNode }) {
@@ -286,26 +407,40 @@ export function PricingSection({
       </Row>
 
       {pricePreview}
-
-      <div className={styles.policyBlock}>
-        <SwitchField
-          control={control}
-          name="deliveryEnabled"
-          label="Giao xe tận nơi"
-          description="Khách trên marketplace lọc được xe có hỗ trợ giao nhận"
-        />
-        <SwitchField
-          control={control}
-          name="noCollateral"
-          label="Miễn thế chấp"
-          description="Không yêu cầu khách cọc tài sản khi nhận xe"
-        />
-      </div>
     </>
   );
 }
 
-export function MediaSection({ control }: SectionProps) {
+export function PoliciesSection({ control }: SectionProps) {
+  return (
+    <div className={styles.policyBlock}>
+      <SwitchField
+        control={control}
+        name="deliveryEnabled"
+        label="Giao xe tận nơi"
+        description="Khách trên marketplace lọc được xe có hỗ trợ giao nhận"
+      />
+      <SwitchField
+        control={control}
+        name="noCollateral"
+        label="Miễn thế chấp"
+        description="Không yêu cầu khách cọc tài sản khi nhận xe"
+      />
+    </div>
+  );
+}
+
+/** Ảnh + thư viện + tiện ích + mô tả — một bước ở luồng tạo, hai bước ở luồng sửa. */
+export function MediaSection({ control, isCar }: SectionProps) {
+  return (
+    <>
+      <ImagesSection control={control} isCar={isCar} />
+      <FeaturesDescriptionSection control={control} isCar={isCar} />
+    </>
+  );
+}
+
+export function ImagesSection({ control }: SectionProps) {
   return (
     <>
       <ImageUploadField
@@ -322,7 +457,13 @@ export function MediaSection({ control }: SectionProps) {
         presign={presignVehicleImage}
         max={20}
       />
+    </>
+  );
+}
 
+export function FeaturesDescriptionSection({ control }: SectionProps) {
+  return (
+    <>
       <div className={styles.galleryBlock}>
         <div className={styles.fieldLabel} id="vehicle-features-label">
           Tiện ích

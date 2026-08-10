@@ -1673,6 +1673,41 @@
         ]
       }
     },
+    "/vehicles/stats": {
+      "get": {
+        "operationId": "VehiclesController_stats",
+        "parameters": [
+          {
+            "name": "ids",
+            "required": true,
+            "in": "query",
+            "description": "Danh sách id xe, phân tách bằng dấu phẩy (tối đa 100)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleStatsListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chỉ số vận hành/tài chính luỹ kế theo xe",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
     "/vehicles/{id}": {
       "get": {
         "operationId": "VehiclesController_getOne",
@@ -6916,6 +6951,49 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "VehicleStatsDto": {
+        "type": "object",
+        "properties": {
+          "vehicleId": {
+            "type": "string"
+          },
+          "activeBookings": {
+            "type": "number",
+            "description": "Đơn đang chạy — booking status = active"
+          },
+          "completedBookings": {
+            "type": "number",
+            "description": "Đơn đã hoàn thành — booking status = completed"
+          },
+          "totalIncome": {
+            "type": "string",
+            "description": "Tổng thu luỹ kế (phiếu thu đã duyệt), dạng string — ADR 0007. CHỈ trả khi người gọi có quyền `finance.view`; thiếu quyền thì trường vắng mặt."
+          },
+          "totalExpense": {
+            "type": "string",
+            "description": "Tổng chi luỹ kế (phiếu chi đã duyệt), dạng string"
+          }
+        },
+        "required": [
+          "vehicleId",
+          "activeBookings",
+          "completedBookings"
+        ]
+      },
+      "VehicleStatsListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleStatsDto"
+            }
+          }
+        },
+        "required": [
+          "data"
         ]
       },
       "VehiclePublicReviewDto": {
