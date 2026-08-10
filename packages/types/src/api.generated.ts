@@ -3836,7 +3836,9 @@ export interface components {
             id: string;
             /** @description Ảnh desktop */
             imageUrl: string;
-            /** @description Ảnh mobile — null thì client dùng ảnh desktop */
+            /** @description Ảnh tablet (1024×320) — null thì client fallback ảnh desktop */
+            tabletImageUrl: string | null;
+            /** @description Ảnh mobile (780×390) — null thì client fallback tablet rồi desktop */
             mobileImageUrl: string | null;
             altText: string;
             /** @description Đích đến khi bấm — null = không bấm được */
@@ -3846,7 +3848,9 @@ export interface components {
             id: string;
             /** @description Ảnh desktop */
             imageUrl: string;
-            /** @description Ảnh mobile — null thì client dùng ảnh desktop */
+            /** @description Ảnh tablet (1024×320) — null thì client fallback ảnh desktop */
+            tabletImageUrl: string | null;
+            /** @description Ảnh mobile (780×390) — null thì client fallback tablet rồi desktop */
             mobileImageUrl: string | null;
             altText: string;
             /** @description Đích đến khi bấm — null = không bấm được */
@@ -3874,6 +3878,8 @@ export interface components {
             title: string;
             /** @description URL ảnh desktop (upload qua presign R2) */
             imageUrl: string;
+            /** @description URL ảnh tablet 1024×320 — bỏ trống dùng ảnh desktop */
+            tabletImageUrl?: string | null;
             /** @description URL ảnh mobile — bỏ trống dùng ảnh desktop */
             mobileImageUrl?: string | null;
             /** @description Mô tả ảnh cho screen reader — bắt buộc */
@@ -3896,6 +3902,7 @@ export interface components {
         UpdateBannerDto: {
             title?: string;
             imageUrl?: string;
+            tabletImageUrl?: string | null;
             mobileImageUrl?: string | null;
             altText?: string;
             linkUrl?: string | null;

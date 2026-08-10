@@ -12165,10 +12165,15 @@
             "type": "string",
             "description": "Ảnh desktop"
           },
+          "tabletImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh tablet (1024×320) — null thì client fallback ảnh desktop"
+          },
           "mobileImageUrl": {
             "type": "string",
             "nullable": true,
-            "description": "Ảnh mobile — null thì client dùng ảnh desktop"
+            "description": "Ảnh mobile (780×390) — null thì client fallback tablet rồi desktop"
           },
           "altText": {
             "type": "string"
@@ -12182,6 +12187,7 @@
         "required": [
           "id",
           "imageUrl",
+          "tabletImageUrl",
           "mobileImageUrl",
           "altText",
           "linkUrl"
@@ -12197,10 +12203,15 @@
             "type": "string",
             "description": "Ảnh desktop"
           },
+          "tabletImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh tablet (1024×320) — null thì client fallback ảnh desktop"
+          },
           "mobileImageUrl": {
             "type": "string",
             "nullable": true,
-            "description": "Ảnh mobile — null thì client dùng ảnh desktop"
+            "description": "Ảnh mobile (780×390) — null thì client fallback tablet rồi desktop"
           },
           "altText": {
             "type": "string"
@@ -12246,6 +12257,7 @@
         "required": [
           "id",
           "imageUrl",
+          "tabletImageUrl",
           "mobileImageUrl",
           "altText",
           "linkUrl",
@@ -12270,6 +12282,11 @@
           "imageUrl": {
             "type": "string",
             "description": "URL ảnh desktop (upload qua presign R2)"
+          },
+          "tabletImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL ảnh tablet 1024×320 — bỏ trống dùng ảnh desktop"
           },
           "mobileImageUrl": {
             "type": "string",
@@ -12333,6 +12350,10 @@
           },
           "imageUrl": {
             "type": "string"
+          },
+          "tabletImageUrl": {
+            "type": "string",
+            "nullable": true
           },
           "mobileImageUrl": {
             "type": "string",

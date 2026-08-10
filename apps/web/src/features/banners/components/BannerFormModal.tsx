@@ -13,6 +13,7 @@ import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { presignBannerImage } from '@/services/upload';
+import { bannerRatioValidator, BANNER_SLOTS } from '../banner-media';
 import { useCreateBanner, useUpdateBanner } from '../use-admin-banners';
 import type { AdminBanner } from '../types';
 import styles from './BannerFormModal.module.css';
@@ -24,6 +25,7 @@ const schema = yup.object({
     .nullable()
     .defined()
     .test('required', 'Tải lên ảnh desktop', (v) => Boolean(v)),
+  tabletImageUrl: yup.string().nullable().defined(),
   mobileImageUrl: yup.string().nullable().defined(),
   altText: yup.string().trim().required('Nhập mô tả ảnh (alt)').max(255),
   linkUrl: yup
@@ -73,6 +75,7 @@ export function BannerFormModal({
       ? {
           title: banner.title,
           imageUrl: banner.imageUrl,
+          tabletImageUrl: banner.tabletImageUrl,
           mobileImageUrl: banner.mobileImageUrl,
           altText: banner.altText,
           linkUrl: banner.linkUrl ?? '',
@@ -83,6 +86,7 @@ export function BannerFormModal({
       : {
           title: '',
           imageUrl: null,
+          tabletImageUrl: null,
           mobileImageUrl: null,
           altText: '',
           linkUrl: '',
@@ -97,6 +101,7 @@ export function BannerFormModal({
       title: values.title.trim(),
       // Schema đã chặn null (test 'required') — tới đây chắc chắn có URL.
       imageUrl: values.imageUrl as string,
+      tabletImageUrl: values.tabletImageUrl || null,
       mobileImageUrl: values.mobileImageUrl || null,
       altText: values.altText.trim(),
       linkUrl: values.linkUrl?.trim() || null,
@@ -130,17 +135,30 @@ export function BannerFormModal({
           placeholder="VD: Chiến dịch hè 2026"
           help="Chỉ admin nhìn thấy — dùng để nhận diện trong danh sách."
         />
+        {/* Mỗi slot MỘT tỉ lệ chuẩn, đo ảnh thật lúc chọn file — xem banner-media.ts. */}
         <ImageUploadField
           control={control}
           name="imageUrl"
-          label="Ảnh desktop"
+          label="Ảnh PC"
           presign={presignBannerImage}
+          validate={bannerRatioValidator('desktop')}
+          help={`Tỉ lệ ${BANNER_SLOTS.desktop.width}×${BANNER_SLOTS.desktop.height} (hoặc @2x cho màn retina)`}
+        />
+        <ImageUploadField
+          control={control}
+          name="tabletImageUrl"
+          label="Ảnh tablet (tuỳ chọn)"
+          presign={presignBannerImage}
+          validate={bannerRatioValidator('tablet')}
+          help={`Tỉ lệ ${BANNER_SLOTS.tablet.width}×${BANNER_SLOTS.tablet.height} — bỏ trống dùng ảnh PC`}
         />
         <ImageUploadField
           control={control}
           name="mobileImageUrl"
           label="Ảnh mobile (tuỳ chọn)"
           presign={presignBannerImage}
+          validate={bannerRatioValidator('mobile')}
+          help={`Tỉ lệ ${BANNER_SLOTS.mobile.width}×${BANNER_SLOTS.mobile.height} — bỏ trống dùng ảnh tablet/PC`}
         />
         <TextField
           control={control}

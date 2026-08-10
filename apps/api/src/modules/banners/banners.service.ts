@@ -18,6 +18,7 @@ const SELECT = {
   id: true,
   title: true,
   imageUrl: true,
+  tabletImageUrl: true,
   mobileImageUrl: true,
   altText: true,
   linkUrl: true,
@@ -33,6 +34,7 @@ type Row = {
   id: string;
   title: string;
   imageUrl: string;
+  tabletImageUrl: string | null;
   mobileImageUrl: string | null;
   altText: string;
   linkUrl: string | null;
@@ -69,7 +71,14 @@ export class BannersService {
       },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       take: MAX_PUBLIC_BANNERS,
-      select: { id: true, imageUrl: true, mobileImageUrl: true, altText: true, linkUrl: true },
+      select: {
+        id: true,
+        imageUrl: true,
+        tabletImageUrl: true,
+        mobileImageUrl: true,
+        altText: true,
+        linkUrl: true,
+      },
     });
     return rows;
   }
@@ -91,6 +100,7 @@ export class BannersService {
           id: newId(),
           title: dto.title.trim(),
           imageUrl: dto.imageUrl.trim(),
+          tabletImageUrl: dto.tabletImageUrl?.trim() || null,
           mobileImageUrl: dto.mobileImageUrl?.trim() || null,
           altText: dto.altText.trim(),
           linkUrl: dto.linkUrl?.trim() || null,
@@ -134,6 +144,9 @@ export class BannersService {
         data: {
           ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
           ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl.trim() } : {}),
+          ...('tabletImageUrl' in dto
+            ? { tabletImageUrl: dto.tabletImageUrl?.trim() || null }
+            : {}),
           ...('mobileImageUrl' in dto
             ? { mobileImageUrl: dto.mobileImageUrl?.trim() || null }
             : {}),
@@ -248,6 +261,7 @@ export class BannersService {
       id: row.id,
       title: row.title,
       imageUrl: row.imageUrl,
+      tabletImageUrl: row.tabletImageUrl,
       mobileImageUrl: row.mobileImageUrl,
       altText: row.altText,
       linkUrl: row.linkUrl,

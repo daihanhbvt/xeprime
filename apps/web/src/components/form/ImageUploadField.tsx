@@ -16,6 +16,13 @@ interface ImageUploadFieldProps<T extends FieldValues> {
   label: ReactNode;
   /** Endpoint presign theo loại ảnh (xe / gian hàng) — component không tự biết prefix. */
   presign: (file: File) => Promise<UploadPresign>;
+  /**
+   * Kiểm tra THÊM trước khi upload (ngoài MIME/dung lượng mặc định) — trả thông báo lỗi hoặc
+   * null. Async vì có nơi phải decode ảnh để đọc kích thước thật (vd banner ép đúng tỉ lệ).
+   */
+  validate?: (file: File) => Promise<string | null>;
+  /** Gợi ý dưới ô upload khi không có lỗi (vd cỡ ảnh chuẩn). */
+  help?: ReactNode;
 }
 
 /**
@@ -27,6 +34,8 @@ export function ImageUploadField<T extends FieldValues>({
   name,
   label,
   presign,
+  validate,
+  help,
 }: ImageUploadFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   const { message } = App.useApp();
@@ -41,7 +50,11 @@ export function ImageUploadField<T extends FieldValues>({
       return false;
     }
     setUploading(true);
-    uploadImage(file, presign)
+    (validate ? validate(file) : Promise.resolve(null))
+      .then((extraError) => {
+        if (extraError) throw new Error(extraError);
+        return uploadImage(file, presign);
+      })
       .then((publicUrl) => field.onChange(publicUrl))
       .catch((err: unknown) => message.error(getErrorMessage(err)))
       .finally(() => setUploading(false));
@@ -53,7 +66,7 @@ export function ImageUploadField<T extends FieldValues>({
     <Form.Item
       label={label}
       validateStatus={fieldState.error ? 'error' : ''}
-      help={fieldState.error?.message}
+      help={fieldState.error?.message ?? help}
       style={{ marginBottom: 14 }}
     >
       <div className={styles.wrap}>

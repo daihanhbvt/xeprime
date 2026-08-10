@@ -111,7 +111,7 @@ describe('Banner trang chủ', () => {
     expect(rows).toHaveLength(3);
     // Chỉ các trường render — tuyệt đối không lộ title nội bộ/lịch/metadata.
     expect(Object.keys(rows[0]!).sort()).toEqual(
-      ['altText', 'id', 'imageUrl', 'linkUrl', 'mobileImageUrl'].sort(),
+      ['altText', 'id', 'imageUrl', 'linkUrl', 'mobileImageUrl', 'tabletImageUrl'].sort(),
     );
     const alts = rows.map((r) => r.altText);
     expect(alts.some((a) => a.includes('Đã tắt'))).toBe(false);

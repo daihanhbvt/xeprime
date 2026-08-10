@@ -70,13 +70,19 @@ export function BannerCarousel({ banners }: { banners: PublicBanner[] }) {
       onTouchEnd={(e) => onTouchEnd(e.changedTouches[0]?.clientX ?? 0)}
     >
       {slides.map((banner, i) => {
+        /*
+         * Ba nguồn theo ba slot tỉ lệ chuẩn (xem `banner-media.ts`) — khung chứa cũng đặt
+         * `aspect-ratio` đúng các tỉ lệ đó nên ảnh ĐÚNG slot thì chỉ scale, không bao giờ crop.
+         * Fallback dần: mobile → tablet → PC (thiếu slot nào thì dùng ảnh gần nhất, chấp nhận
+         * crop có kiểm soát về mép trái).
+         */
+        const tabletSrc = banner.tabletImageUrl ?? banner.imageUrl;
+        const mobileSrc = banner.mobileImageUrl ?? tabletSrc;
         const img = (
           // Không dùng next/image: host R2/URL do admin nhập không nằm trong remotePatterns.
           <picture>
-            {/* Ảnh mobile là tuỳ chọn — thiếu thì <img> dưới tự dùng ảnh desktop. */}
-            {banner.mobileImageUrl ? (
-              <source media="(max-width: 640px)" srcSet={banner.mobileImageUrl} />
-            ) : null}
+            <source media="(max-width: 640px)" srcSet={mobileSrc} />
+            <source media="(max-width: 1024px)" srcSet={tabletSrc} />
             <img
               src={banner.imageUrl}
               alt={banner.altText}

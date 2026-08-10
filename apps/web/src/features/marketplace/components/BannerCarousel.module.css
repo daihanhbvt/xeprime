@@ -2,12 +2,24 @@
  * Hero carousel — chiều cao KHOÁ theo viewport (không theo ảnh) để ba slide tỉ lệ khác nhau
  * không làm trang nhảy layout, và lúc ảnh chưa về khung vẫn giữ nguyên chỗ.
  */
+/*
+ * Khung dùng ASPECT-RATIO đúng tỉ lệ chuẩn của từng slot (banner-media.ts) thay vì chiều cao
+ * cố định — ảnh đúng slot thì mọi bề rộng trong dải chỉ SCALE, không crop. max-height chặn
+ * màn siêu rộng (>1920px thì bắt đầu crop nhẹ hai bên, chấp nhận).
+ */
 .carousel {
   position: relative;
   overflow: hidden;
-  /* ~4.8:1 — khớp cỡ artwork banner (hint ở màn admin: 1440×300). */
-  height: clamp(200px, 20vw, 300px);
+  aspect-ratio: 1440 / 300;
+  max-height: 400px;
   background: linear-gradient(120deg, #241d12, #3a2f1a);
+}
+
+@media (max-width: 1024px) {
+  .carousel {
+    aspect-ratio: 1024 / 320;
+    max-height: none;
+  }
 }
 
 .slide {
@@ -62,7 +74,7 @@
 
 @media (max-width: 640px) {
   .carousel {
-    height: clamp(140px, 38vw, 200px);
+    aspect-ratio: 780 / 390;
   }
 
   .dots {

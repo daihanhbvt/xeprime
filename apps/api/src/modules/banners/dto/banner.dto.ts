@@ -25,7 +25,13 @@ export class PublicBannerDto {
   @ApiProperty({
     type: String,
     nullable: true,
-    description: 'Ảnh mobile — null thì client dùng ảnh desktop',
+    description: 'Ảnh tablet (1024×320) — null thì client fallback ảnh desktop',
+  })
+  tabletImageUrl!: string | null;
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Ảnh mobile (780×390) — null thì client fallback tablet rồi desktop',
   })
   mobileImageUrl!: string | null;
   @ApiProperty() altText!: string;
@@ -70,6 +76,17 @@ export class CreateBannerDto {
   @Matches(SAFE_URL_PATTERN, { message: 'imageUrl phải là http(s) hoặc path nội bộ' })
   @MaxLength(2000)
   imageUrl!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'URL ảnh tablet 1024×320 — bỏ trống dùng ảnh desktop',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(SAFE_URL_PATTERN, { message: 'tabletImageUrl phải là http(s) hoặc path nội bộ' })
+  @MaxLength(2000)
+  tabletImageUrl?: string | null;
 
   @ApiPropertyOptional({
     type: String,
@@ -141,6 +158,13 @@ export class UpdateBannerDto {
   @Matches(SAFE_URL_PATTERN, { message: 'imageUrl phải là http(s) hoặc path nội bộ' })
   @MaxLength(2000)
   imageUrl?: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @Matches(SAFE_URL_PATTERN, { message: 'tabletImageUrl phải là http(s) hoặc path nội bộ' })
+  @MaxLength(2000)
+  tabletImageUrl?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()

@@ -611,7 +611,9 @@ model MarketplaceBanner {
   title          String    @db.VarChar(150)
   /// Ảnh desktop (bắt buộc). Upload qua presign R2 như ảnh xe.
   imageUrl       String    @map("image_url") @db.Text
-  /// Ảnh mobile — thiếu thì public API tự fallback về ảnh desktop.
+  /// Ảnh tablet/mobile — thiếu đầu nào thì client fallback dần về ảnh desktop. Mỗi breakpoint
+  /// một ảnh ĐÚNG tỉ lệ khung (PC 1440×300, tablet 1024×320, mobile 780×390) → không bao giờ crop.
+  tabletImageUrl String?   @map("tablet_image_url") @db.Text
   mobileImageUrl String?   @map("mobile_image_url") @db.Text
   /// Alt bắt buộc: banner là nội dung marketing, không phải ảnh trang trí.
   altText        String    @map("alt_text") @db.VarChar(255)

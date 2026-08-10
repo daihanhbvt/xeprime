@@ -174,8 +174,9 @@ export default function AdminBannersPage() {
     <div>
       <ManagePageHeader title="Banner trang chủ" />
       <p className={styles.hint}>
-        Trang chủ hiển thị tối đa 3 banner đang bật, theo thứ tự từ trên xuống. Ảnh nên theo tỉ lệ
-        ngang rộng (khoảng 1440×300).
+        Trang chủ hiển thị tối đa 3 banner đang bật, theo thứ tự từ trên xuống. Mỗi cỡ màn một
+        ảnh đúng tỉ lệ: PC 1440×300 · tablet 1024×320 · mobile 780×390 (hoặc @2x) — sai tỉ lệ sẽ
+        bị chặn lúc tải lên. Chừa trống ~15% mép dưới: thẻ tìm kiếm của trang chủ đè lên đó.
       </p>
       <div className={styles.toolbar}>{createButton}</div>
 
