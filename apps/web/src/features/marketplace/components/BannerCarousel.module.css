@@ -1,0 +1,72 @@
+/*
+ * Hero carousel — chiều cao KHOÁ theo viewport (không theo ảnh) để ba slide tỉ lệ khác nhau
+ * không làm trang nhảy layout, và lúc ảnh chưa về khung vẫn giữ nguyên chỗ.
+ */
+.carousel {
+  position: relative;
+  overflow: hidden;
+  /* ~4.8:1 — khớp cỡ artwork banner (hint ở màn admin: 1440×300). */
+  height: clamp(200px, 20vw, 300px);
+  background: linear-gradient(120deg, #241d12, #3a2f1a);
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.slideActive {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.slideLink {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Thông điệp của banner nằm mép TRÁI (cả ba artwork hiện có) — crop thì crop bên phải. */
+  object-position: left center;
+}
+
+/* Chấm chuyển slide — Figma đặt góc dưới trái vùng hero. */
+.dots {
+  position: absolute;
+  bottom: 18px;
+  left: 64px;
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+}
+
+.dotActive {
+  background: var(--xp-color-primary);
+}
+
+@media (max-width: 640px) {
+  .carousel {
+    height: clamp(140px, 38vw, 200px);
+  }
+
+  .dots {
+    left: 16px;
+    bottom: 10px;
+  }
+}

@@ -9,7 +9,8 @@ import { useFeaturedShops } from '../hooks/use-featured-shops';
 import type { PublicShopSummary } from '../types';
 import styles from './FeaturedHosts.module.css';
 
-const LIMIT = 6;
+// Figma `18:4`: đúng MỘT hàng 4 gian hàng — nhiều hơn là thành danh bạ, không còn là "nổi bật".
+const LIMIT = 4;
 
 /**
  * "Gian hàng nổi bật" — shop đang hoạt động có xe công khai, sắp theo điểm đánh giá

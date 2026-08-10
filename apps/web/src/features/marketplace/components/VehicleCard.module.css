@@ -39,7 +39,15 @@
   color: var(--xp-gold-deep);
 }
 
+/*
+ * Ảnh PHẢI ra khỏi flow (absolute) — trong hộp aspect-ratio, height:100% của ảnh resolve theo
+ * chiều cao KHÔNG xác định nên ảnh dọc/ngang cho ra thẻ cao thấp khác nhau (đúng bẫy đã gặp ở
+ * VehicleManagementCard, Wave 3B). Absolute + inset ghim ảnh vào đúng hộp 16/10, mọi thẻ trên
+ * một hàng cao bằng nhau bất kể tỉ lệ ảnh nguồn.
+ */
 .photo {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;

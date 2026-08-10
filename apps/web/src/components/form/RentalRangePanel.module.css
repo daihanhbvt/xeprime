@@ -1,0 +1,149 @@
+/*
+ * Ruột hộp chọn khoảng thuê — số đo bám Figma `177:1657` (lịch đôi 2×360, ô ngày 36px).
+ * Biến --rdp-* là API theming chính thức của react-day-picker v10.
+ */
+.panel {
+  display: flex;
+  max-width: 100%;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Tab "Thuê theo ngày / Thuê theo giờ" — Figma `177:1652`: gạch chân vàng cho tab đang chọn. */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--xp-color-border);
+  gap: var(--xp-space-sm);
+}
+
+.tab {
+  padding: 8px 16px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.tabActive {
+  border-bottom-color: var(--xp-color-primary);
+  color: var(--xp-color-text);
+}
+
+.dayPicker {
+  --rdp-accent-color: var(--xp-color-primary);
+  --rdp-accent-background-color: var(--xp-color-bg-selected);
+  --rdp-day-width: 44px;
+  --rdp-day-height: 38px;
+  --rdp-day_button-width: 40px;
+  --rdp-day_button-height: 34px;
+  --rdp-day_button-border-radius: var(--xp-border-radius-sm);
+  --rdp-range_middle-background: var(--xp-color-bg-selected);
+  --rdp-range_start-date-background-color: var(--xp-color-primary);
+  --rdp-range_end-date-background-color: var(--xp-color-primary);
+  --rdp-today-color: var(--xp-color-primary-active);
+  --rdp-selected-font: inherit;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+/* Hai đầu khoảng: nền vàng đặc chữ tối — khớp Figma, không dựa mỗi viền. */
+.dayPicker :global(.rdp-range_start .rdp-day_button),
+.dayPicker :global(.rdp-range_end .rdp-day_button) {
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  gap: var(--xp-space-sm);
+}
+
+.timeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+}
+
+.timeField {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 150px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timeLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.timeSelect {
+  width: 100%;
+}
+
+.summaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  gap: 2px;
+}
+
+.duration {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.invalid {
+  color: var(--xp-color-error, #cf1322);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.placeholder {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.actions {
+  display: flex;
+  gap: var(--xp-space-sm);
+}
+
+/* Mobile: một tháng, ô ngày giãn đều bề ngang; hàng nút dàn hết chiều rộng cho dễ chạm. */
+@media (max-width: 640px) {
+  .dayPicker {
+    --rdp-day-width: 100%;
+    --rdp-day-height: 40px;
+  }
+
+  .dayPicker :global(.rdp-month_grid) {
+    width: 100%;
+  }
+
+  .summaryRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+  }
+}

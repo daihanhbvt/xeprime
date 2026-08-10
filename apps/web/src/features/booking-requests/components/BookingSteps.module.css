@@ -1,0 +1,105 @@
+/*
+ * Hàng bước — Figma `66:113`: dot 22px, nhãn 14px, các bước giãn đều trên bề ngang modal.
+ */
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 var(--xp-space-md);
+  border-bottom: 1px solid var(--xp-color-border);
+  margin: 0 0 var(--xp-space-md);
+  gap: var(--xp-space-xs);
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  color: var(--xp-color-text-tertiary);
+  gap: 8px;
+}
+
+.dot {
+  display: flex;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 1;
+}
+
+.label {
+  overflow: hidden;
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.active .dot {
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.done {
+  color: var(--xp-color-text-secondary);
+}
+
+/* Bước đã xong: dấu tích thay số, nền trong suốt để không tranh chú ý với bước đang làm. */
+.done .dot {
+  background: transparent;
+  color: var(--xp-color-success, #389e0d);
+  font-size: 18px;
+}
+
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/*
+ * Mobile: bốn bước vẫn nằm MỘT hàng ngang (yêu cầu wave 4A). Nhãn co lại, khoảng cách dot–nhãn
+ * giảm; không cuộn ngang, không xuống dòng.
+ */
+@media (max-width: 640px) {
+  .steps {
+    gap: 4px;
+  }
+
+  .step {
+    min-width: 0;
+    flex: 1 1 0;
+    gap: 4px;
+  }
+
+  .dot {
+    width: 18px;
+    height: 18px;
+    font-size: var(--xp-font-size-overline);
+  }
+
+  .done .dot {
+    font-size: 14px;
+  }
+
+  .label {
+    font-size: var(--xp-font-size-body-sm);
+    line-height: var(--xp-line-height-body-sm);
+  }
+}

@@ -5531,6 +5531,216 @@
           "platform-customers"
         ]
       }
+    },
+    "/public/banners": {
+      "get": {
+        "operationId": "PublicBannersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicBannerDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tối đa 3 banner đang hiển thị cho hero trang chủ",
+        "tags": [
+          "public-banners"
+        ]
+      }
+    },
+    "/platform/banners": {
+      "get": {
+        "operationId": "PlatformBannersController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminBannerDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Toàn bộ banner (kèm cờ đang-hiển-thị theo lịch)",
+        "tags": [
+          "platform-banners"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformBannersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBannerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBannerDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo banner",
+        "tags": [
+          "platform-banners"
+        ]
+      }
+    },
+    "/platform/banners/reorder": {
+      "post": {
+        "operationId": "PlatformBannersController_reorder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderBannersDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminBannerDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sắp lại thứ tự hiển thị (gửi trọn danh sách id)",
+        "tags": [
+          "platform-banners"
+        ]
+      }
+    },
+    "/platform/banners/presign": {
+      "post": {
+        "operationId": "PlatformBannersController_presign",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Presign upload ảnh banner lên R2 (prefix banners/ dựng server-side)",
+        "tags": [
+          "platform-banners"
+        ]
+      }
+    },
+    "/platform/banners/{id}": {
+      "patch": {
+        "operationId": "PlatformBannersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBannerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBannerDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa banner (ảnh/lịch/thứ tự/bật-tắt)",
+        "tags": [
+          "platform-banners"
+        ]
+      },
+      "delete": {
+        "operationId": "PlatformBannersController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Xoá banner (ảnh vẫn còn trên R2 — tạo lại được từ URL cũ)",
+        "tags": [
+          "platform-banners"
+        ]
+      }
     }
   },
   "info": {
@@ -5650,6 +5860,11 @@
             "type": "string",
             "nullable": true
           },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "SĐT của chính tài khoản, dạng nội địa `0xxxxxxxxx` — để điền sẵn ô liên hệ"
+          },
           "phoneVerified": {
             "type": "boolean",
             "description": "Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop"
@@ -5684,6 +5899,7 @@
           "displayName",
           "email",
           "avatarUrl",
+          "phone",
           "phoneVerified",
           "hasPassword",
           "tenant",
@@ -5836,6 +6052,7 @@
                 "platform.staff.manage",
                 "platform.billing.manage",
                 "platform.catalog.manage",
+                "platform.banners.manage",
                 "platform.vehicles.view",
                 "platform.vehicles.moderate",
                 "platform.bookings.view",
@@ -11937,6 +12154,212 @@
         "required": [
           "customerId"
         ]
+      },
+      "PublicBannerDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Ảnh desktop"
+          },
+          "mobileImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh mobile — null thì client dùng ảnh desktop"
+          },
+          "altText": {
+            "type": "string"
+          },
+          "linkUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Đích đến khi bấm — null = không bấm được"
+          }
+        },
+        "required": [
+          "id",
+          "imageUrl",
+          "mobileImageUrl",
+          "altText",
+          "linkUrl"
+        ]
+      },
+      "AdminBannerDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Ảnh desktop"
+          },
+          "mobileImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh mobile — null thì client dùng ảnh desktop"
+          },
+          "altText": {
+            "type": "string"
+          },
+          "linkUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Đích đến khi bấm — null = không bấm được"
+          },
+          "title": {
+            "type": "string",
+            "description": "Tên nội bộ"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "visibleNow": {
+            "type": "boolean",
+            "description": "Đang thực sự hiển thị ngoài trang chủ (active + trong khung lịch) tại thời điểm trả về"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "imageUrl",
+          "mobileImageUrl",
+          "altText",
+          "linkUrl",
+          "title",
+          "sortOrder",
+          "active",
+          "startsAt",
+          "endsAt",
+          "visibleNow",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateBannerDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Chiến dịch hè 2026",
+            "description": "Tên nội bộ — không hiển thị công khai"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "URL ảnh desktop (upload qua presign R2)"
+          },
+          "mobileImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL ảnh mobile — bỏ trống dùng ảnh desktop"
+          },
+          "altText": {
+            "type": "string",
+            "description": "Mô tả ảnh cho screen reader — bắt buộc"
+          },
+          "linkUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Đích đến khi bấm banner"
+          },
+          "sortOrder": {
+            "type": "number",
+            "default": 0
+          },
+          "active": {
+            "type": "boolean",
+            "default": true
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Bắt đầu hiển thị (ISO) — bỏ trống = ngay lập tức"
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ngừng hiển thị (ISO) — bỏ trống = vô hạn"
+          }
+        },
+        "required": [
+          "title",
+          "imageUrl",
+          "altText"
+        ]
+      },
+      "ReorderBannersDto": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "description": "Toàn bộ id banner theo thứ tự hiển thị mới",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "ids"
+        ]
+      },
+      "UpdateBannerDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "string"
+          },
+          "mobileImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "altText": {
+            "type": "string"
+          },
+          "linkUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "startsAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "endsAt": {
+            "type": "string",
+            "nullable": true
+          }
+        }
       },
       "ApiErrorBodyDto": {
         "type": "object",

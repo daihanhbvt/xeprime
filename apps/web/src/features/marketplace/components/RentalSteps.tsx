@@ -1,53 +1,32 @@
 'use client';
 
-import {
-  CarOutlined,
-  CheckCircleOutlined,
-  SearchOutlined,
-  StarOutlined,
-} from '@ant-design/icons';
-import type { ComponentType } from 'react';
 import { RENTAL_STEPS } from '../constants';
 import styles from './RentalSteps.module.css';
 
-/** Map key icon (constants) → component icon, giữ constants độc lập React. */
-const STEP_ICON: Readonly<Record<string, ComponentType>> = {
-  search: SearchOutlined,
-  check: CheckCircleOutlined,
-  car: CarOutlined,
-  star: StarOutlined,
-};
-
 /**
- * "Thuê xe chỉ với 4 bước" — nội dung tĩnh (không có state), nhưng vẫn cần `'use client'` vì dùng
- * `@ant-design/icons` (gọi `React.createContext` nội bộ, không chạy được trong cây Server
- * Component). Vẫn render sẵn ra HTML ở server như mọi Client Component — không mất SEO.
+ * "Thuê xe chỉ với 4 bước" — Figma `18:4`: MỘT thẻ trắng chia bốn cột bằng vạch dọc, mỗi cột
+ * là chấm số vàng + tên bước trên một hàng, mô tả ngắn bên dưới. Bản trước là bốn thẻ rời có
+ * icon — Figma không có icon nên bỏ, không tự chế thêm hoạ tiết.
+ *
+ * Nội dung tĩnh nhưng vẫn render sẵn ra HTML ở server (Client Component chỉ vì cây cha).
  */
 export function RentalSteps() {
   return (
     <section className={styles.section} aria-labelledby="steps-title">
-      <header className={styles.head}>
-        <h2 id="steps-title" className={styles.title}>
-          Thuê xe chỉ với 4 bước
-        </h2>
-      </header>
+      <h2 id="steps-title" className={styles.title}>
+        Thuê xe chỉ với 4 bước
+      </h2>
 
-      <ol className={styles.grid}>
-        {RENTAL_STEPS.map((step) => {
-          const Icon = STEP_ICON[step.icon];
-          return (
-            <li key={step.no} className={styles.card}>
-              <div className={styles.top}>
-                <span className={styles.no}>{step.no}</span>
-                <span className={styles.icon} aria-hidden="true">
-                  {Icon ? <Icon /> : null}
-                </span>
-              </div>
+      <ol className={styles.card}>
+        {RENTAL_STEPS.map((step) => (
+          <li key={step.no} className={styles.step}>
+            <div className={styles.stepHead}>
+              <span className={styles.no}>{step.no}</span>
               <h3 className={styles.stepTitle}>{step.title}</h3>
-              <p className={styles.desc}>{step.desc}</p>
-            </li>
-          );
-        })}
+            </div>
+            <p className={styles.desc}>{step.desc}</p>
+          </li>
+        ))}
       </ol>
     </section>
   );

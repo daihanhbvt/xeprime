@@ -6,6 +6,8 @@
  */
 export const ROUTES = {
   HOME: '/',
+  /** Trang kết quả tìm xe — sở hữu bộ lọc, sắp xếp, phân trang (trang chủ chỉ xem trước). */
+  SEARCH: '/search',
   LOGIN: '/login',
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
@@ -52,6 +54,7 @@ export const ROUTES = {
     ADMIN_STAFF: '/manage/admin/staff',
     ADMIN_PLANS: '/manage/admin/plans',
     ADMIN_CATALOG: '/manage/admin/catalog',
+    ADMIN_BANNERS: '/manage/admin/marketplace-banners',
   },
 } as const;
 

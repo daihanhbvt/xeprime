@@ -1,0 +1,92 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-bold, 700);
+  line-height: var(--xp-line-height-h2);
+}
+
+.count {
+  margin-left: 6px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.sub {
+  margin: 4px 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.seeAll {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body);
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* Cùng thang cột với lưới kết quả ở /search — thẻ xe trông giống nhau ở cả hai trang. */
+.grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+@media (min-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/*
+ * Ô chờ cao xấp xỉ thẻ thật (ảnh 16/10 + hai dòng chữ) — mục đích duy nhất là để lúc dữ liệu về
+ * trang không nhảy.
+ */
+.skeletonCard {
+  padding: 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.skeletonImg {
+  width: 100%;
+  height: 140px;
+  margin-bottom: 12px;
+}
+
+.skeletonImg :global(.ant-skeleton-image) {
+  width: 100%;
+  height: 140px;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--xp-space-xs);
+}

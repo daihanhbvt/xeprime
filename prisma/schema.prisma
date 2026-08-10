@@ -599,6 +599,38 @@ model CatalogItem {
 }
 
 // ---------------------------------------------------------------------------
+// Banner marketplace — hero trang chủ, platform admin quản lý
+// ---------------------------------------------------------------------------
+
+/// Banner quảng bá ở hero trang chủ. Trang chủ chỉ lấy TỐI ĐA 3 banner "đang hiển thị"
+/// (active + trong khung lịch nếu có đặt). `BannersService` là đường ghi duy nhất; mọi
+/// mutation ghi `audit_logs` — nội dung này hiện với toàn bộ khách truy cập.
+model MarketplaceBanner {
+  id             String    @id @db.Char(26)
+  /// Tên nội bộ cho admin nhận diện — KHÔNG hiển thị công khai.
+  title          String    @db.VarChar(150)
+  /// Ảnh desktop (bắt buộc). Upload qua presign R2 như ảnh xe.
+  imageUrl       String    @map("image_url") @db.Text
+  /// Ảnh mobile — thiếu thì public API tự fallback về ảnh desktop.
+  mobileImageUrl String?   @map("mobile_image_url") @db.Text
+  /// Alt bắt buộc: banner là nội dung marketing, không phải ảnh trang trí.
+  altText        String    @map("alt_text") @db.VarChar(255)
+  /// Đường dẫn khi bấm vào — http(s) hoặc path nội bộ; NULL = banner không bấm được.
+  linkUrl        String?   @map("link_url") @db.Text
+  sortOrder      Int       @default(0) @map("sort_order")
+  active         Boolean   @default(true)
+  /// Khung lịch hiển thị — NULL = không giới hạn đầu đó. CHECK ends > starts ở migration.
+  startsAt       DateTime? @map("starts_at") @db.Timestamptz(3)
+  endsAt         DateTime? @map("ends_at") @db.Timestamptz(3)
+  createdBy      String?   @map("created_by") @db.Char(26)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([active, sortOrder])
+  @@map("marketplace_banners")
+}
+
+// ---------------------------------------------------------------------------
 // Public listing snapshot — ADR 0008 / database_design §9.9
 // ---------------------------------------------------------------------------
 

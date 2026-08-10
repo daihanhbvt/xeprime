@@ -1,8 +1,10 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import { Spin } from 'antd';
+import { Skeleton } from 'antd';
+import { fetchBannersServer } from '@/features/banners/api';
+import { HomeHero } from '@/features/marketplace/components/HomeHero';
 import { HeroSearch } from '@/features/marketplace/components/HeroSearch';
-import { VehicleRecommendations } from '@/features/marketplace/components/VehicleRecommendations';
+import { VehiclePreview } from '@/features/marketplace/components/VehiclePreview';
 import { FeaturedLocations } from '@/features/marketplace/components/FeaturedLocations';
 import { FeaturedHosts } from '@/features/marketplace/components/FeaturedHosts';
 import { RentalSteps } from '@/features/marketplace/components/RentalSteps';
@@ -18,33 +20,36 @@ export const metadata: Metadata = {
 /**
  * Trang chủ Marketplace.
  *
- * Page là Server Component (SEO). HeroSearch/VehicleRecommendations/FeaturedLocations/
- * FeaturedHosts là client island vì cần state/URL (ADR 0004) — Suspense bọc phần dùng
- * `useSearchParams`. `RentalSteps`/`OwnerCta` có nội dung tĩnh nhưng vẫn là Client Component vì
- * dùng `@ant-design/icons` (đòi hỏi cây Client — xem comment trong từng file); nội dung vẫn được
- * render sẵn ra HTML ở server nên không mất SEO.
+ * Page là Server Component: banner fetch server-side (cache 60s) nên slide đầu có trong HTML —
+ * LCP không chờ client island. CHỈ `HeroSearch` cần Suspense (đọc `useSearchParams`); các khu
+ * còn lại là island độc lập tự lo skeleton/lỗi của mình — một mục hỏng không kéo cả trang chủ
+ * về một cái Spin.
  */
-export default function MarketplacePage() {
+export default async function MarketplacePage() {
+  const banners = await fetchBannersServer();
+
   return (
-    <Suspense fallback={<HomeFallback />}>
-      <HeroSearch />
+    <>
+      <HomeHero banners={banners} />
+      <Suspense fallback={<SearchCardFallback />}>
+        <HeroSearch />
+      </Suspense>
       <div className={styles.sections}>
-        <div id="recommendations">
-          <VehicleRecommendations />
-        </div>
+        <VehiclePreview />
         <FeaturedLocations />
         <FeaturedHosts />
         <RentalSteps />
         <OwnerCta />
       </div>
-    </Suspense>
+    </>
   );
 }
 
-function HomeFallback() {
+/** Giữ đúng chỗ của thẻ tìm kiếm trong lúc island gắn vào — không giật layout. */
+function SearchCardFallback() {
   return (
-    <div className={styles.fallback}>
-      <Spin size="large" />
+    <div className={styles.searchFallback}>
+      <Skeleton.Input active block className={styles.searchFallbackInner} />
     </div>
   );
 }

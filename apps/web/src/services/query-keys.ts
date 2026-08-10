@@ -34,6 +34,12 @@ export const queryKeys = {
     resources: (params: QueryParams) => ['calendar', 'resources', params] as const,
     events: (params: QueryParams) => ['calendar', 'events', params] as const,
   },
+  /** Banner hero trang chủ — public + bản quản trị chung một nhánh để mutation invalidate cả hai. */
+  banners: {
+    all: ['banners'] as const,
+    list: () => ['banners', 'public'] as const,
+    admin: () => ['banners', 'admin'] as const,
+  },
   /** Danh mục lọc dùng chung (hãng/kiểu dáng/nhiên liệu/tiện ích) — một key cho cả app. */
   catalog: {
     all: ['catalog'] as const,

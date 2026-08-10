@@ -118,6 +118,11 @@ export const PERMISSION = {
    * `platform.vehicles.moderate` vốn chỉ tác động một xe.
    */
   PLATFORM_CATALOG_MANAGE: 'platform.catalog.manage',
+  /**
+   * Quản lý banner hero trang chủ Marketplace. Quyền riêng vì nội dung này hiển thị với TOÀN BỘ
+   * khách truy cập — không gộp vào quyền quản trị nội bộ nào khác.
+   */
+  PLATFORM_BANNER_MANAGE: 'platform.banners.manage',
 
   // Nền tảng — giám sát toàn hệ thống (build plan §11.1). Tách khỏi `vehicles.*`/`bookings.*`
   // của gian hàng: quyền tenant chỉ có nghĩa TRONG một tenant, còn đây là đọc xuyên tenant.

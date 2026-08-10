@@ -1,85 +1,72 @@
 .section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  gap: var(--xp-space-md);
 }
 
 .title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  list-style: none;
-  padding: 0;
   margin: 0;
-}
-@media (min-width: 640px) {
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (min-width: 1000px) {
-  .grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
+  color: var(--xp-color-text);
+  font-size: 20px;
+  font-weight: var(--xp-font-weight-bold, 700);
 }
 
+/* MỘT thẻ chia cột bằng vạch dọc — Figma `18:4`, không phải bốn thẻ rời. */
 .card {
-  background: var(--xp-gold-wash);
-  border: 1px solid var(--xp-color-border-secondary);
+  display: grid;
+  padding: var(--xp-space-lg) 0;
+  border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  margin: 0;
+  background: var(--xp-color-bg-container);
+  grid-template-columns: 1fr;
+  list-style: none;
 }
 
-.top {
+.step {
+  padding: 10px var(--xp-space-lg);
+}
+
+.stepHead {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
 }
 
 .no {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--xp-color-primary);
-  font-variant-numeric: tabular-nums;
-}
-
-.icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--xp-color-bg-container);
-  color: var(--xp-gold-deep);
-  font-size: 16px;
+  display: flex;
+  width: 26px;
+  height: 26px;
   flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold, 700);
 }
 
 .stepTitle {
-  font-size: 15px;
-  font-weight: 700;
+  margin: 0;
   color: var(--xp-color-text);
-  margin-top: 2px;
+  font-size: 15px;
+  font-weight: var(--xp-font-weight-semibold, 600);
 }
 
 .desc {
-  font-size: 13px;
-  line-height: 1.55;
+  margin: 8px 0 0 36px;
   color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+@media (min-width: 760px) {
+  .card {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .step + .step {
+    border-left: 1px solid var(--xp-color-border-secondary);
+  }
 }

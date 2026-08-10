@@ -1,6 +1,6 @@
 'use client';
 
-import { FilterOutlined, RightOutlined } from '@ant-design/icons';
+import { CloseOutlined, FilterOutlined } from '@ant-design/icons';
 import { Alert, Badge, Button, Empty, Pagination, Skeleton } from 'antd';
 import { useState, type ReactNode } from 'react';
 import {
@@ -20,7 +20,7 @@ import styles from './VehicleRecommendations.module.css';
 const PAGE_SIZE = 8;
 
 /**
- * Khối "xe gợi ý" — nguồn dữ liệu duy nhất là `/public/listings`; mọi filter/paging đẩy ra URL
+ * Vùng làm việc của trang `/search` — nguồn dữ liệu duy nhất là `/public/listings`; mọi filter/paging đẩy ra URL
  * searchParams (ADR 0004) nên link chia sẻ được và nút back hoạt động. Lọc/sort/phân trang đều
  * chạy ở server, FE không tự cắt mảng. Bộ lọc chi tiết (giá/kiểu dáng/hãng/số chỗ/nhiên liệu/
  * tính năng/tiện ích/sắp xếp) nằm trong `FilterPanel`; hàng chip chỉ giữ lọc nhanh.
@@ -39,10 +39,15 @@ export function VehicleRecommendations() {
   const activeType = filters.vehicleType ?? 'all';
   const total = data?.meta.total ?? 0;
 
-  const heading =
+  /*
+   * Tiêu đề của TRANG KẾT QUẢ, không phải khối gợi ý ở trang chủ (khối đó nay là
+   * `VehiclePreview`). Có từ khoá thì nhắc lại từ khoá — người dùng cần thấy mình vừa tìm gì.
+   */
+  const typeLabel =
     filters.vehicleType && filters.vehicleType !== 'all'
-      ? `${VEHICLE_TYPE_LABEL[filters.vehicleType as VehicleType] ?? 'Xe'} gợi ý`
-      : 'Xe cho thuê gợi ý';
+      ? (VEHICLE_TYPE_LABEL[filters.vehicleType as VehicleType] ?? 'Xe')
+      : 'Xe';
+  const heading = filters.q ? `Kết quả cho "${filters.q}"` : `${typeLabel} cho thuê`;
 
   // Số CHIỀU filter nâng cao đang bật (ngoài loại xe) — badge trên nút "Bộ lọc".
   const advancedCount = [
@@ -91,9 +96,10 @@ export function VehicleRecommendations() {
           </h2>
           <p className={styles.count}>{isLoading ? 'Đang tìm xe…' : `${total} xe khả dụng`}</p>
         </div>
+        {/* Ở trang kết quả, lối thoát là XOÁ BỘ LỌC — "Xem tất cả" là chữ của trang chủ. */}
         {advancedCount > 0 || activeType !== 'all' ? (
           <button type="button" className={styles.seeAll} onClick={clearAll}>
-            Xem tất cả <RightOutlined />
+            Xoá bộ lọc <CloseOutlined />
           </button>
         ) : null}
       </header>

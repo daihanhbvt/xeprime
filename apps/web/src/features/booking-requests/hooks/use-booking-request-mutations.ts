@@ -24,7 +24,8 @@ export function useApproveBookingRequest() {
 export function useRejectBookingRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason?: string }) => rejectBookingRequest(id, reason),
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      rejectBookingRequest(id, reason),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all }),
   });
 }

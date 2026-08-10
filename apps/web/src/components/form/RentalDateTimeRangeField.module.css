@@ -1,0 +1,42 @@
+/* Trạng thái đóng: hai đầu Nhận/Trả của CÙNG một khoảng, nối bằng mũi tên. */
+.trigger {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.endpoint {
+  overflow: hidden;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: var(--xp-font-weight-semibold, 600);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.endpoint:disabled {
+  color: var(--xp-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.sep {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Lịch đôi 2×360 + lề — khoá bề rộng để Popover không co giãn theo nội dung từng tháng. */
+.popoverBody {
+  width: 700px;
+  max-width: calc(100vw - 32px);
+}
+
+.drawerBody {
+  /* Chừa khoảng an toàn cho máy có notch/thanh gạt — nút Áp dụng không bị che. */
+  padding-bottom: calc(var(--xp-space-md) + env(safe-area-inset-bottom, 0px)) !important;
+}

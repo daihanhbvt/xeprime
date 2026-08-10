@@ -13,6 +13,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Type FE sinh từ OpenAPI (KHÔNG sửa tay) | `packages/types/src/api.generated.ts` | 0007 |
 | Yup schema dùng chung | `packages/validators/src/` | — |
 | **Danh mục lọc** (hãng xe / kiểu dáng / nhiên liệu / tiện ích) — nội dung ở **DB**, không phải hằng số | bảng `catalog_items` · `apps/api/src/modules/catalog/` · FE `apps/web/src/features/catalog/` | — |
+| **Banner hero trang chủ** — platform admin quản lý, public lấy tối đa 3 | bảng `marketplace_banners` · `apps/api/src/modules/banners/` · FE `apps/web/src/features/banners/` + `BannerCarousel` | — |
+| **Khoảng thuê** `{pickupAt, returnAt}` — lịch đôi + tab ngày/giờ, dùng chung | `apps/web/src/components/form/RentalDateTimeRangeField.tsx` (bọc react-day-picker) | — |
 
 ## Backend (`apps/api/src`)
 
@@ -93,7 +95,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 
 | Cần gì | Ở đâu |
 | --- | --- |
-| Schema **39 model** (auth/tenant/vehicle/booking/finance/chat/catalog/…) | `prisma/schema.prisma` |
+| Schema **40 model** (auth/tenant/vehicle/booking/finance/chat/catalog/…) | `prisma/schema.prisma` |
 | Migration init (trigger + `EXCLUDE USING gist`) | `prisma/migrations/*_init/migration.sql` |
 | Migration viết tay từng phase (CHECK/constraint/partial index) | `prisma/migrations/<ts>_<name>/migration.sql` (booking_requests, finance, payments, phone_login…) |
 | Seed (idempotent, 3 scope + danh mục finance) | `prisma/src/seed.ts` |

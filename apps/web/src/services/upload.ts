@@ -51,6 +51,10 @@ export const presignVehicleImage = (file: File): Promise<UploadPresign> =>
 export const presignShopMedia = (file: File): Promise<UploadPresign> =>
   apiPost<UploadPresign>('/uploads/shop-media/presign', presignBody(file));
 
+/** Presign ảnh banner trang chủ — cần quyền `platform.banners.manage`. */
+export const presignBannerImage = (file: File): Promise<UploadPresign> =>
+  apiPost<UploadPresign>('/platform/banners/presign', presignBody(file));
+
 /** Presign 1 file ảnh rồi PUT lên R2, trả URL công khai để lưu vào form/API. */
 export async function uploadImage(
   file: File,

@@ -1,0 +1,56 @@
+.hero {
+  position: relative;
+}
+
+/* Fallback khi không có banner — cùng CHIỀU CAO với carousel để layout không đổi. */
+.fallback {
+  height: clamp(200px, 20vw, 300px);
+  background:
+    radial-gradient(80% 120% at 70% 20%, rgba(214, 160, 44, 0.35), transparent 60%),
+    linear-gradient(120deg, #241d12, #3a2f1a);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--xp-space-lg) var(--xp-space-xl);
+  pointer-events: none;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(26px, 3.4vw, 44px);
+  font-weight: var(--xp-font-weight-bold, 700);
+  line-height: 1.2;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+}
+
+.subtitle {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: clamp(13px, 1.2vw, 16px);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 640px) {
+  .fallback {
+    height: clamp(140px, 38vw, 200px);
+  }
+}
+
+/* h1 chỉ cho SEO/screen reader khi banner thật đang chiếm hero. */
+.srTitle {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

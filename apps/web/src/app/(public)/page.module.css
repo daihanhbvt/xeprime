@@ -1,14 +1,32 @@
 .sections {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 28px 16px 16px;
   display: flex;
+  max-width: 1120px;
   flex-direction: column;
-  gap: 44px;
+  padding: 40px 16px 24px;
+  margin: 0 auto;
+  gap: 48px;
 }
 
-.fallback {
-  min-height: 60vh;
-  display: grid;
-  place-items: center;
+/* Cùng footprint với .cardOuter của HeroSearch để island gắn vào không xê dịch trang. */
+.searchFallback {
+  position: relative;
+  z-index: 2;
+  max-width: 1120px;
+  padding: 0 16px;
+  margin: -44px auto 0;
+}
+
+.searchFallbackInner {
+  height: 82px !important;
+  border-radius: var(--xp-border-radius) !important;
+}
+
+@media (max-width: 640px) {
+  .searchFallback {
+    margin-top: -24px;
+  }
+
+  .searchFallbackInner {
+    height: 48px !important;
+  }
 }

@@ -62,6 +62,12 @@ export const API_ERROR_CODE = {
 
   // Nghiệp vụ lịch (ADR 0006)
   BOOKING_SCHEDULE_CONFLICT: 'BOOKING_SCHEDULE_CONFLICT',
+  /**
+   * Đã có một yêu cầu thuê y hệt (cùng xe + SĐT + khung giờ) đang chờ shop phản hồi.
+   * Mã riêng thay vì `CONFLICT` chung: FE hiện hộp "Yêu cầu trùng lặp" có lối đi tiếp
+   * (xem chuyến / nhắn chủ xe), khác hẳn một alert lỗi thường.
+   */
+  BOOKING_REQUEST_DUPLICATE: 'BOOKING_REQUEST_DUPLICATE',
   INVALID_STATUS_TRANSITION: 'INVALID_STATUS_TRANSITION',
 
   // Gói/hạn (ADR 0010)

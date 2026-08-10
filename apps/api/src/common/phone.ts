@@ -1,3 +1,5 @@
+import { normalizeVnPhone, toLocalVnPhone } from '@xeprime/types';
+
 /**
  * Chuẩn hoá và hiển thị số điện thoại Việt Nam.
  *
@@ -13,22 +15,13 @@
  * trông giống nhau trên mọi màn hình.
  */
 
-/** `0xxxxxxxxx` / `+84xxxxxxxxx` → `84xxxxxxxxx` (như eSMS legacy). Dạng LƯU của `users.phone`. */
-export function normalizePhone(raw: string): string {
-  const trimmed = raw.trim();
-  if (trimmed.startsWith('+84')) return `84${trimmed.slice(3)}`;
-  if (trimmed.startsWith('84')) return trimmed;
-  if (trimmed.startsWith('0')) return `84${trimmed.slice(1)}`;
-  return trimmed;
-}
-
-/** `84xxxxxxxxx` / `+84xxxxxxxxx` → `0xxxxxxxxx`. Dạng HIỂN THỊ (người Việt đọc số kiểu này). */
-export function toLocalPhone(raw: string): string {
-  const trimmed = raw.trim();
-  if (trimmed.startsWith('+84')) return `0${trimmed.slice(3)}`;
-  if (trimmed.startsWith('84')) return `0${trimmed.slice(2)}`;
-  return trimmed;
-}
+/**
+ * Cài đặt thật nằm ở `@xeprime/types/phone` — frontend cần ĐÚNG phép chuẩn hoá này để biết SĐT
+ * đang nhập có trùng SĐT tài khoản hay không (quyết định hiện bước OTP). Hai bản riêng sẽ trôi
+ * khỏi nhau. Ở đây chỉ tái xuất dưới tên cũ để không phải sửa hàng chục chỗ import.
+ */
+export const normalizePhone = normalizeVnPhone;
+export const toLocalPhone = toLocalVnPhone;
 
 /**
  * Mọi dạng lưu có thể có của một SĐT người dùng gõ vào ô tra cứu, để dùng với `{ in: [...] }`.

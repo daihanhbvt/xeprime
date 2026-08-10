@@ -3,6 +3,9 @@ import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { API_ERROR_CODE } from '@xeprime/types';
+import { ApiClientError } from '@/services/api-client';
+
 import { RequestBookingModal } from './RequestBookingModal';
 
 /**
@@ -23,6 +26,8 @@ const api = vi.hoisted(() => ({
 }));
 const media = vi.hoisted(() => ({ isMobile: false }));
 
+const me = vi.hoisted(() => ({ data: undefined as unknown }));
+vi.mock('@/hooks/use-current-user', () => ({ useCurrentUser: () => me }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: nav.push }) }));
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => media.isMobile,
@@ -98,7 +103,16 @@ function renderModal(open = true, onClose = vi.fn()) {
 async function advanceToContact() {
   api.checkAvailability.mockResolvedValue({ available: true });
   fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-  await screen.findByLabelText('Họ và tên');
+  // Mốc chờ phải có ở CẢ hai biến thể bước liên hệ: ô nhập (khách mới) và thẻ xác nhận (đã đăng nhập).
+  await screen.findByRole('button', { name: 'Đổi ngày' });
+}
+
+/** contact → otp với một SĐT cụ thể. */
+async function advanceToOtpWithPhone(phone: string) {
+  api.sendAsync.mockResolvedValue(undefined);
+  fireEvent.click(screen.getByRole('button', { name: 'Gửi mã xác thực' }));
+  await screen.findByLabelText('Mã OTP');
+  return phone;
 }
 
 /** contact → otp. */
@@ -106,13 +120,15 @@ async function advanceToOtp() {
   api.sendAsync.mockResolvedValue(undefined);
   fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: '  Nguyễn Văn A  ' } });
   fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0901234567' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Gửi mã xác thực' }));
   await screen.findByLabelText('Mã OTP');
 }
 
 beforeEach(() => {
   media.isMobile = false;
   nav.push.mockReset();
+  // Mặc định là KHÁCH VÃNG LAI — mọi test cũ mô tả đúng luồng đó.
+  me.data = undefined;
   Object.values(api).forEach((fn) => fn.mockReset());
 });
 
@@ -182,7 +198,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       await advanceToContact();
       fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'A' } });
       fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '123' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Gửi mã xác thực' }));
 
       expect(await screen.findByText('Số điện thoại không hợp lệ')).toBeTruthy();
       expect(api.sendAsync).not.toHaveBeenCalled();
@@ -201,7 +217,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       api.sendAsync.mockRejectedValue(new Error('Quá nhiều yêu cầu'));
       fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'A' } });
       fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0901234567' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Gửi mã xác thực' }));
 
       await waitFor(() => expect(api.sendAsync).toHaveBeenCalled());
       expect(screen.queryByLabelText('Mã OTP')).toBeNull();
@@ -303,7 +319,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       api.submitBookingRequest.mockResolvedValue({ id: 'R1' });
       fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } });
       fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê' }));
-      await screen.findByText('Yêu cầu thuê xe đã được gửi');
+      await screen.findByText('Yêu cầu đã được gửi');
     }
 
     it('hiện màn thành công', async () => {
@@ -311,16 +327,16 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       await advanceToContact();
       await advanceToOtp();
       await reachDone();
-      expect(screen.getByText('Yêu cầu thuê xe đã được gửi')).toBeTruthy();
+      expect(screen.getByText('Yêu cầu đã được gửi')).toBeTruthy();
     });
 
-    it('"Xem chuyến của tôi" đóng modal và điều hướng tới /trips', async () => {
+    it('"Xem chuyến đi" đóng modal và điều hướng tới /trips', async () => {
       const { onClose } = renderModal();
       await advanceToContact();
       await advanceToOtp();
       await reachDone();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Xem chuyến của tôi' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Xem chuyến đi' }));
       expect(onClose).toHaveBeenCalled();
       expect(nav.push).toHaveBeenCalledWith('/trips');
     });
@@ -331,9 +347,106 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       await advanceToOtp();
       await reachDone();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Về trang chủ' }));
       expect(onClose).toHaveBeenCalled();
       expect(nav.push).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * Wave 4A — luồng nhận biết đăng nhập. Điều kiện thật do backend
+   * (`BookingRequestsService.canSkipBookingOtp`) quyết; ở đây khoá phần FE: hiện màn nào và
+   * gọi API nào.
+   */
+  describe('khách đã đăng nhập', () => {
+    const verifiedMe = {
+      id: 'U1',
+      displayName: 'Trần Minh Tuấn',
+      phone: '0901234567',
+      phoneVerified: true,
+    };
+
+    it('SĐT tài khoản đã xác thực → KHÔNG qua bước OTP, gửi thẳng yêu cầu', async () => {
+      me.data = verifiedMe;
+      api.submitBookingRequest.mockResolvedValue({ id: 'R1' });
+      renderModal();
+      await advanceToContact();
+
+      // Thẻ xác nhận gọn thay cho hai ô nhập — không bắt gõ lại thứ hệ thống đã biết.
+      expect(screen.getByText('Đã xác thực')).toBeTruthy();
+      expect(screen.queryByLabelText('Số điện thoại')).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê' }));
+
+      await screen.findByText('Yêu cầu đã được gửi');
+      expect(api.sendAsync).not.toHaveBeenCalled();
+      expect(api.verifyOtp).not.toHaveBeenCalled();
+      expect(api.submitBookingRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ customerPhone: '0901234567' }),
+      );
+    });
+
+    it('dùng SĐT KHÁC số tài khoản → vẫn phải xác thực OTP', async () => {
+      me.data = verifiedMe;
+      renderModal();
+      await advanceToContact();
+
+      fireEvent.click(screen.getByRole('button', { name: /Đổi thông tin/ }));
+      fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0987654321' } });
+      await advanceToOtpWithPhone('0987654321');
+
+      expect(api.sendAsync).toHaveBeenCalledWith('0987654321');
+    });
+
+    it('SĐT tài khoản CHƯA xác thực → vẫn phải qua OTP', async () => {
+      me.data = { ...verifiedMe, phoneVerified: false };
+      renderModal();
+      await advanceToContact();
+
+      expect(screen.queryByText('Đã xác thực')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Gửi mã xác thực' })).toBeTruthy();
+    });
+
+    it('phiên hết hạn giữa chừng → lùi về bước OTP, GIỮ nguyên dữ liệu đã nhập', async () => {
+      me.data = verifiedMe;
+      api.submitBookingRequest.mockRejectedValue(
+        new ApiClientError({
+          code: API_ERROR_CODE.PHONE_NOT_VERIFIED,
+          message: 'Vui lòng xác thực số điện thoại',
+          status: 403,
+        }),
+      );
+      renderModal();
+      await advanceToContact();
+      fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê' }));
+
+      await screen.findByLabelText('Mã OTP');
+      expect(
+        screen.getByText('Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại số điện thoại.'),
+      ).toBeTruthy();
+      // Không đá về bước đầu: ngày giờ và SĐT vẫn còn; mã mới gửi bằng `send` (không ném lỗi).
+      expect(api.send).toHaveBeenCalledWith('0901234567');
+    });
+  });
+
+  describe('yêu cầu trùng lặp', () => {
+    it('mã BOOKING_REQUEST_DUPLICATE → màn riêng có lối đi tiếp, không phải alert lỗi', async () => {
+      api.submitBookingRequest.mockRejectedValue(
+        new ApiClientError({
+          code: API_ERROR_CODE.BOOKING_REQUEST_DUPLICATE,
+          message: 'trùng',
+          status: 409,
+        }),
+      );
+      api.verifyOtp.mockResolvedValue(undefined);
+      renderModal();
+      await advanceToContact();
+      await advanceToOtp();
+      fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123456' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê' }));
+
+      expect(await screen.findByText('Yêu cầu trùng lặp')).toBeTruthy();
+      expect(screen.getByRole('button', { name: 'Xem chuyến của tôi' })).toBeTruthy();
     });
   });
 

@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -6,9 +11,11 @@ import {
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   TENANT_STATUS,
+  USER_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type PaginationMeta,
 } from '@xeprime/types';
+import { normalizePhone } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
@@ -57,7 +64,9 @@ export class BookingRequestsService {
    * Xe khả dụng để đặt: đã `approved_public` và thuộc shop `active`. `tenantId` suy từ xe ở server
    * (không tin client). Dùng chung cho submit + check-availability.
    */
-  private async loadBookableVehicle(vehicleId: string): Promise<{ id: string; tenantId: string; name: string }> {
+  private async loadBookableVehicle(
+    vehicleId: string,
+  ): Promise<{ id: string; tenantId: string; name: string }> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: {
         id: vehicleId,
@@ -116,9 +125,12 @@ export class BookingRequestsService {
   ): Promise<{ receipt: BookingRequestReceiptDto; loginUserId: string | null }> {
     const vehicle = await this.loadBookableVehicle(dto.vehicleId);
 
-    // §8: khách chưa xác thực SĐT không gửi được yêu cầu thuê — đây cũng là bằng chứng sở hữu
-    // SĐT để tạo/đăng nhập tài khoản passwordless ngay dưới.
-    await this.phoneVerification.assertPhoneVerifiedForBooking(dto.customerPhone);
+    // §8: phải có bằng chứng sở hữu SĐT trước khi gửi yêu cầu — hoặc OTP vừa xác thực, hoặc
+    // SĐT đã verify sẵn trên chính tài khoản đang đăng nhập. Quyết định ở ĐÂY, không ở client:
+    // FE chỉ chọn hiển thị bước OTP hay không, còn cái chặn thật nằm ở dòng dưới.
+    if (!(await this.canSkipBookingOtp(customerUserId, dto.customerPhone))) {
+      await this.phoneVerification.assertPhoneVerifiedForBooking(dto.customerPhone);
+    }
 
     const pickupAt = new Date(dto.pickupAt);
     const returnAt = new Date(dto.returnAt);
@@ -177,7 +189,7 @@ export class BookingRequestsService {
       // Partial unique index chống double-submit: cùng (xe, SĐT, giờ nhận, giờ trả) đang pending.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException({
-          code: API_ERROR_CODE.CONFLICT,
+          code: API_ERROR_CODE.BOOKING_REQUEST_DUPLICATE,
           message: 'Bạn vừa gửi một yêu cầu giống hệt cho xe này — vui lòng chờ shop phản hồi',
         });
       }
@@ -188,6 +200,35 @@ export class BookingRequestsService {
       receipt: { id, status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL, authenticated: true },
       loginUserId,
     };
+  }
+
+  /**
+   * Được phép BỎ QUA OTP đặt xe hay không — cả ba điều kiện phải cùng đúng:
+   *
+   *   1. có phiên đăng nhập hợp lệ (`customerUserId` do controller giải mã từ cookie, không do
+   *      client tự khai);
+   *   2. SĐT gửi lên TRÙNG SĐT của chính tài khoản đó sau khi chuẩn hoá (`0901…` ≡ `+84901…` ≡
+   *      `84901…` — nếu so chuỗi thô thì cùng một số vẫn trượt và người dùng bị hỏi OTP vô cớ);
+   *   3. SĐT đó đã được đánh dấu verify trên tài khoản.
+   *
+   * Sai một điều kiện là quay về OTP. Đặc biệt: đăng nhập rồi nhưng gõ SĐT KHÁC thì vẫn phải OTP
+   * cho số mới — nếu không, một tài khoản bất kỳ sẽ gắn được SĐT của người khác vào yêu cầu thuê.
+   * Và ở đây KHÔNG bao giờ tra ngược SĐT ra tài khoản: danh tính đến từ cookie, SĐT chỉ được
+   * đem đi đối chiếu.
+   */
+  private async canSkipBookingOtp(
+    customerUserId: string | null | undefined,
+    rawPhone: string,
+  ): Promise<boolean> {
+    if (!customerUserId) return false;
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: customerUserId, deletedAt: null, status: USER_STATUS.ACTIVE },
+      select: { phone: true, phoneVerifiedAt: true },
+    });
+    if (!user?.phone || !user.phoneVerifiedAt) return false;
+
+    return normalizePhone(user.phone) === normalizePhone(rawPhone);
   }
 
   async list(

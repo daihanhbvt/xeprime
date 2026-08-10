@@ -127,10 +127,10 @@
   margin-top: 20px;
 }
 
-/* Màn thành công */
-.done {
-  text-align: center;
+/* Màn kết: thành công và trùng lặp dùng chung bố cục (icon → tiêu đề → mô tả → 2 nút). */
+.centered {
   padding: 16px 8px 8px;
+  text-align: center;
 }
 
 .doneIcon {
@@ -156,6 +156,61 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.warnIcon {
+  color: var(--xp-color-warning, #d48806);
+  font-size: 52px;
+}
+
+.doneNote {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+/*
+ * Thẻ xác nhận liên hệ của người đã đăng nhập — thay cho hai ô nhập. Không dùng `Descriptions`
+ * của AntD: ở bottom sheet 390px nó xuống dòng thành bảng hai hàng rất cao.
+ */
+.confirmCard {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  margin-bottom: var(--xp-space-md);
+  background: var(--xp-color-bg-muted);
+  gap: 10px;
+}
+
+.confirmRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.confirmLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.confirmValue {
+  display: flex;
+  align-items: center;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  gap: 6px;
+  text-align: right;
+}
+
+.verifiedTag {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-success, #389e0d);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular, 400);
+  gap: 4px;
 }
 
 @media (max-width: 480px) {

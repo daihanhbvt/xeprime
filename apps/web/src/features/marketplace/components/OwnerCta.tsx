@@ -1,42 +1,32 @@
 'use client';
 
-import { ArrowRightOutlined } from '@ant-design/icons';
 import Link from 'next/link';
-import { Logo } from '@/components/brand/Logo';
 import { resolveOwnerCtaHref } from '@/features/auth/post-auth-destination';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import styles from './OwnerCta.module.css';
 
 /**
- * CTA mời chủ xe đăng xe cho thuê — ý định làm CHỦ XE tường minh, nên đây là một trong số ít
- * chỗ ở marketplace dẫn thẳng sang cổng quản lý.
+ * CTA mời chủ xe — Figma `18:4`: DẢI sáng nền cát, tiêu đề + một dòng mô tả bên trái, nút viền
+ * "Tìm hiểu thêm" bên phải (bản trước là khối tối cả logo — không đúng thiết kế đã duyệt).
  *
- * Đích tuỳ trạng thái: chưa đăng nhập → portal login kèm `intent=owner`; đã đăng nhập mà chưa
- * có gian hàng → onboarding; đã có gian hàng → portal. Trước đây nút này trỏ cứng `/manage` và
- * dựa vào việc AppShell tự bật form tạo shop — chính là cơ chế khiến mọi user vào `/manage` đều
- * bị hỏi mở gian hàng.
+ * Đích tuỳ trạng thái đăng nhập/gian hàng — logic đó nằm ở `resolveOwnerCtaHref`, giữ nguyên.
  */
 export function OwnerCta() {
   const { data: user } = useCurrentUser();
 
   return (
-    <section className={styles.cta}>
-      <span className={styles.glow} aria-hidden="true" />
+    <section className={styles.cta} aria-labelledby="owner-cta-title">
       <div className={styles.body}>
-        <Logo size="sm" tone="light" />
-        <h2 className={styles.title}>
-          Có xe nhàn rỗi?
-          <br />
-          Cho thuê trên XePrime.
+        <h2 id="owner-cta-title" className={styles.title}>
+          Đăng xe cho thuê
         </h2>
         <p className={styles.desc}>
-          Đăng ô tô hoặc xe máy của bạn lên để khách chủ động liên hệ. Tự quản lý lịch, tự duyệt đơn
-          — XePrime lo phần còn lại.
+          Bạn có xe nhàn rỗi? Tạo thu nhập thụ động từ xe của bạn trên XePrime.
         </p>
-        <Link href={resolveOwnerCtaHref(user ?? null)} className={styles.button}>
-          Đăng xe cho thuê <ArrowRightOutlined />
-        </Link>
       </div>
+      <Link href={resolveOwnerCtaHref(user ?? null)} className={styles.button}>
+        Tìm hiểu thêm
+      </Link>
     </section>
   );
 }

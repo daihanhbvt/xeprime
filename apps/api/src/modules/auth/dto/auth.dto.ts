@@ -91,6 +91,13 @@ export class MeDto {
   @ApiProperty({ type: String, nullable: true }) email!: string | null;
   @ApiProperty({ type: String, nullable: true }) avatarUrl!: string | null;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'SĐT của chính tài khoản, dạng nội địa `0xxxxxxxxx` — để điền sẵn ô liên hệ',
+  })
+  phone!: string | null;
+
   @ApiProperty({ description: 'Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop' })
   phoneVerified!: boolean;
 

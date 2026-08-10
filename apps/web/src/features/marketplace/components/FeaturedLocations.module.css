@@ -120,13 +120,15 @@
 }
 
 @media (min-width: 760px) {
+  /* LƯỚI 5 cột cố định (Figma 18:4) thay vì flex — chỉ có 1-2 tỉnh thì tile vẫn giữ đúng cỡ
+     một cột, không phình ra chiếm cả hàng. */
   .grid {
-    flex-direction: row;
+    display: grid;
     gap: 12px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .tile {
-    flex: 1 1 0;
     min-width: 0;
     height: 150px;
     display: block;

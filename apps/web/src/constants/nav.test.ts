@@ -49,10 +49,10 @@ describe('nav — cấu trúc cây', () => {
     expect(flattenLeaves(SHOP_NAV)).toHaveLength(15);
   });
 
-  it('nền tảng: 1 mục gốc + 1 nhóm, tổng 10 mục lá', () => {
+  it('nền tảng: 1 mục gốc + 1 nhóm, tổng 11 mục lá', () => {
     expect(PLATFORM_NAV).toHaveLength(2);
     expect(PLATFORM_NAV.filter(isNavGroup).map((g) => g.label)).toEqual(['Quản trị nền tảng']);
-    expect(flattenLeaves(PLATFORM_NAV)).toHaveLength(10);
+    expect(flattenLeaves(PLATFORM_NAV)).toHaveLength(11);
   });
 
   it('mọi mục lá có href riêng — không hai mục cùng đích', () => {
@@ -146,10 +146,10 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
 });
 
 describe('nav — vai trò nền tảng nhìn thấy gì', () => {
-  it('platform_admin thấy đủ 10 mục', () => {
+  it('platform_admin thấy đủ 11 mục', () => {
     expect(
       visibleLabels(DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.PLATFORM_ADMIN], true),
-    ).toHaveLength(10);
+    ).toHaveLength(11);
   });
 
   it('platform_staff chỉ thấy 4 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {

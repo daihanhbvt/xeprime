@@ -1,16 +1,20 @@
 'use client';
 
-import {
-  CarOutlined,
-  EnvironmentOutlined,
-  SearchOutlined,
-  ThunderboltOutlined,
-} from '@ant-design/icons';
-import { Button, DatePicker, Select } from 'antd';
+import { CalendarOutlined, EnvironmentOutlined, SearchOutlined } from '@ant-design/icons';
+import { Button, Input, Segmented, Select } from 'antd';
 import dayjs from 'dayjs';
-import { VEHICLE_TYPE } from '@xeprime/types';
+import { useRouter } from 'next/navigation';
+import { VEHICLE_TYPE, VEHICLE_TYPE_LABEL, type VehicleType } from '@xeprime/types';
 import { useMemo, useState } from 'react';
-import { cx } from '@/lib/cx';
+import {
+  RentalDateTimeRangeField,
+  type RentalMode,
+  type RentalRange,
+} from '@/components/form/RentalDateTimeRangeField';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { ROUTES } from '@/constants/routes';
+import { useIsMobile } from '@/hooks/use-media-query';
+import { applyFilterPatch } from '../filter-params';
 import { useDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import styles from './HeroSearch.module.css';
@@ -19,32 +23,43 @@ import styles from './HeroSearch.module.css';
 const PROVINCE_OPTIONS_LIMIT = 24;
 
 /**
- * Hero + thẻ tìm kiếm.
+ * Thẻ tìm kiếm của trang chủ — đúng BỐN thứ theo Figma `18:4`: Từ khoá · Địa điểm · Thời gian
+ * thuê · nút Tìm xe. Bộ lọc nâng cao thuộc về `/search`, không nhồi vào đây.
  *
- * "Tìm xe khả dụng" đẩy loại xe + tỉnh + khoảng ngày vào URL searchParams (ADR 0004); backend lọc
- * theo tỉnh (`provinceName`) và xe rảnh trong khoảng ngày (`vehicle_occupancies`, ADR 0006).
- * Danh sách tỉnh lấy từ `/public/destinations` — chỉ nơi THỰC SỰ có xe, không hardcode ở FE.
+ * "Tìm xe" điều hướng sang `/search`, filter serialize bằng đúng bộ `applyFilterPatch` của
+ * marketplace (một định dạng query duy nhất; giá trị rỗng bị loại khỏi URL).
+ *
+ * Mobile (Figma `23:896`/`23:1053`): thẻ thu thành MỘT thanh tóm tắt, bấm mở sheet toàn màn
+ * chứa đủ trường (thêm toggle Loại xe theo đúng frame mobile-search-expanded).
  */
 export function HeroSearch() {
-  const { filters, setFilters } = useMarketplaceFilters();
-  const vehicleType = filters.vehicleType ?? VEHICLE_TYPE.CAR;
+  const router = useRouter();
+  const isMobile = useIsMobile();
+  const { filters } = useMarketplaceFilters();
   const { data: destinations, isLoading: loadingProvinces } =
     useDestinations(PROVINCE_OPTIONS_LIMIT);
 
+  const [keyword, setKeyword] = useState(filters.q ?? '');
   const [province, setProvince] = useState(filters.province ?? '');
-  const [pickup, setPickup] = useState(() =>
-    filters.pickupAt ? dayjs(filters.pickupAt) : dayjs().add(1, 'day'),
-  );
-  const [dropoff, setDropoff] = useState(() =>
-    filters.returnAt ? dayjs(filters.returnAt) : dayjs().add(4, 'day'),
-  );
+  const [vehicleType, setVehicleType] = useState<string>(filters.vehicleType ?? VEHICLE_TYPE.CAR);
+  // Tab "Thuê theo giờ" ánh xạ vào filter `hourly` sẵn có (xe CÓ giá thuê giờ) — nhờ vậy chế độ
+  // sống trong URL bằng đúng hợp đồng hiện tại, không phải chế một param mới cho backend lơ đi.
+  const [mode, setMode] = useState<RentalMode>(filters.hourly ? 'hourly' : 'daily');
+  const [range, setRange] = useState<RentalRange>(() => ({
+    pickupAt: filters.pickupAt
+      ? dayjs(filters.pickupAt)
+      : dayjs().add(1, 'day').hour(10).startOf('hour'),
+    returnAt: filters.returnAt
+      ? dayjs(filters.returnAt)
+      : dayjs().add(4, 'day').hour(10).startOf('hour'),
+  }));
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const provinceOptions = useMemo(() => {
     const fromApi = (destinations ?? []).map((d) => ({
       value: d.provinceName,
       label: d.provinceName,
     }));
-    // Giữ tỉnh đang lọc dù không nằm trong top — link chia sẻ vẫn hiển thị đúng.
     const current =
       province && !fromApi.some((o) => o.value === province)
         ? [{ value: province, label: province }]
@@ -53,134 +68,135 @@ export function HeroSearch() {
   }, [destinations, province]);
 
   function submit() {
-    setFilters({
+    const params = new URLSearchParams();
+    applyFilterPatch(params, {
       vehicleType,
+      q: keyword.trim() || undefined,
       province: province || undefined,
-      pickupAt: pickup.toISOString(),
-      returnAt: dropoff.toISOString(),
+      pickupAt: range.pickupAt?.toISOString(),
+      returnAt: range.returnAt?.toISOString(),
+      hourly: mode === 'hourly' ? true : undefined,
     });
-    document.getElementById('recommendations')?.scrollIntoView({ behavior: 'smooth' });
+    setSheetOpen(false);
+    const qs = params.toString();
+    router.push(qs ? `${ROUTES.SEARCH}?${qs}` : ROUTES.SEARCH);
   }
 
-  return (
+  const fields = (
     <>
-      <section className={styles.hero}>
-        <span className={styles.glow} aria-hidden="true" />
-        <div className={styles.inner}>
-          <p className={styles.eyebrow}>Nâng tầm giá trị mỗi hành trình</p>
-          <h1 className={styles.title}>
-            Cầm lái chiếc xe <em className={styles.accent}>vừa ý</em>,<br />
-            bất cứ đâu trên đất Việt.
-          </h1>
-
-          <div className={styles.tabs} role="tablist" aria-label="Loại xe">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={vehicleType === VEHICLE_TYPE.CAR}
-              className={cx(styles.tab, vehicleType === VEHICLE_TYPE.CAR && styles.tabActive)}
-              onClick={() => setFilters({ vehicleType: VEHICLE_TYPE.CAR })}
-            >
-              <CarOutlined /> Ô tô tự lái
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={vehicleType === VEHICLE_TYPE.MOTORBIKE}
-              className={cx(styles.tab, vehicleType === VEHICLE_TYPE.MOTORBIKE && styles.tabActive)}
-              onClick={() => setFilters({ vehicleType: VEHICLE_TYPE.MOTORBIKE })}
-            >
-              <ThunderboltOutlined /> Xe máy
-            </button>
-          </div>
+      <div className={styles.cell}>
+        <span className={styles.cellLabel}>Từ khoá tìm kiếm</span>
+        <div className={styles.box}>
+          <SearchOutlined className={styles.boxIcon} />
+          <Input
+            variant="borderless"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onPressEnter={submit}
+            placeholder="Toyota Vios, xe 7 chỗ…"
+            className={styles.keyword}
+            aria-label="Từ khoá tìm kiếm"
+          />
         </div>
-      </section>
+      </div>
 
-      {/*
-       * Thẻ tìm kiếm là SIBLING của hero (không lồng bên trong) — kéo lên bằng margin-top âm
-       * (`.cardOuter`). Cách này không đụng `overflow` của hero nên không bị cắt, và khoảng cách
-       * xuống "Xe cho thuê gợi ý" phía dưới chỉ phụ thuộc padding-top của khối kế tiếp, độc lập
-       * hoàn toàn với độ tràn vào hero — không còn hai con số phải khớp tay như bản cũ.
-       */}
-      <div className={styles.cardOuter}>
-        <div className={styles.card}>
-          <label className={styles.field}>
-            <span className={styles.fieldIcon}>
-              <EnvironmentOutlined />
-            </span>
-            <span className={styles.fieldBody}>
-              <span className={styles.fieldLabel}>Địa điểm</span>
-              <Select
-                variant="borderless"
-                value={province}
-                onChange={setProvince}
-                options={provinceOptions}
-                loading={loadingProvinces}
-                showSearch
-                optionFilterProp="label"
-                className={styles.select}
-                popupMatchSelectWidth={false}
-                aria-label="Địa điểm nhận xe"
-              />
-            </span>
-          </label>
+      <div className={styles.cell}>
+        <span className={styles.cellLabel}>Địa điểm</span>
+        <div className={styles.box}>
+          <EnvironmentOutlined className={styles.boxIcon} />
+          <Select
+            variant="borderless"
+            value={province}
+            onChange={setProvince}
+            options={provinceOptions}
+            loading={loadingProvinces}
+            showSearch
+            optionFilterProp="label"
+            className={styles.select}
+            popupMatchSelectWidth={false}
+            aria-label="Địa điểm nhận xe"
+          />
+        </div>
+      </div>
 
-          <div className={styles.dates}>
-            <label className={styles.field}>
-              <span className={styles.fieldIcon}>
-                <span className={styles.dot} aria-hidden="true" />
-              </span>
-              <span className={styles.fieldBody}>
-                <span className={styles.fieldLabel}>Nhận xe</span>
-                <DatePicker
-                  variant="borderless"
-                  value={pickup}
-                  onChange={(d) => {
-                    if (!d) return;
-                    setPickup(d);
-                    // Giữ khoảng hợp lệ: trả xe luôn phải sau nhận xe.
-                    if (!dropoff.isAfter(d)) setDropoff(d.add(1, 'day'));
-                  }}
-                  format="DD/MM/YYYY"
-                  allowClear={false}
-                  minDate={dayjs()}
-                  className={styles.date}
-                  inputReadOnly
-                />
-              </span>
-            </label>
-            <span className={styles.dateSep} aria-hidden="true" />
-            <label className={styles.field}>
-              <span className={styles.fieldIcon}>
-                <span className={styles.dot} aria-hidden="true" />
-              </span>
-              <span className={styles.fieldBody}>
-                <span className={styles.fieldLabel}>Trả xe</span>
-                <DatePicker
-                  variant="borderless"
-                  value={dropoff}
-                  onChange={(d) => d && setDropoff(d)}
-                  format="DD/MM/YYYY"
-                  allowClear={false}
-                  minDate={pickup.add(1, 'day')}
-                  className={styles.date}
-                  inputReadOnly
-                />
-              </span>
-            </label>
-          </div>
-
-          <Button
-            type="primary"
-            size="large"
-            icon={<SearchOutlined />}
-            className={styles.submit}
-            onClick={submit}
-          >
-            Tìm xe khả dụng
-          </Button>
+      <div className={styles.cell}>
+        <span className={styles.cellLabel}>Thời gian thuê</span>
+        <div className={styles.box}>
+          <CalendarOutlined className={styles.boxIcon} />
+          {/* MỘT giá trị khoảng, hai đầu Nhận/Trả vẫn bấm sửa riêng — xem RentalDateTimeRangeField. */}
+          <RentalDateTimeRangeField
+            value={range}
+            onChange={setRange}
+            mode={mode}
+            onModeChange={setMode}
+            className={styles.range}
+          />
         </div>
       </div>
     </>
+  );
+
+  if (isMobile) {
+    const summary = [
+      VEHICLE_TYPE_LABEL[vehicleType as VehicleType] ?? 'Xe',
+      province || 'Toàn quốc',
+      range.pickupAt && range.returnAt
+        ? `${range.pickupAt.format('DD/MM')}–${range.returnAt.format('DD/MM')}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+
+    return (
+      <div className={styles.cardOuter}>
+        <button type="button" className={styles.mobilePill} onClick={() => setSheetOpen(true)}>
+          <SearchOutlined /> <span className={styles.mobilePillText}>{summary}</span>
+        </button>
+
+        <ResponsiveDialog
+          title="Tìm kiếm"
+          open={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          footer={null}
+        >
+          <div className={styles.sheetBody}>
+            {/* Frame mobile-search-expanded có thêm toggle Loại xe — desktop thì không. */}
+            <div className={styles.cell}>
+              <span className={styles.cellLabel}>Loại xe</span>
+              <Segmented
+                block
+                value={vehicleType}
+                onChange={(v) => setVehicleType(v as string)}
+                options={[
+                  { value: VEHICLE_TYPE.CAR, label: 'Ô tô' },
+                  { value: VEHICLE_TYPE.MOTORBIKE, label: 'Xe máy' },
+                ]}
+              />
+            </div>
+            {fields}
+            <Button type="primary" size="large" block icon={<SearchOutlined />} onClick={submit}>
+              Tìm xe
+            </Button>
+          </div>
+        </ResponsiveDialog>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.cardOuter}>
+      <div className={styles.card}>
+        {fields}
+        <Button
+          type="primary"
+          size="large"
+          icon={<SearchOutlined />}
+          className={styles.submit}
+          onClick={submit}
+        >
+          Tìm xe
+        </Button>
+      </div>
+    </div>
   );
 }

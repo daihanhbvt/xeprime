@@ -1780,6 +1780,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/banners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tối đa 3 banner đang hiển thị cho hero trang chủ */
+        get: operations["PublicBannersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/banners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Toàn bộ banner (kèm cờ đang-hiển-thị theo lịch) */
+        get: operations["PlatformBannersController_list"];
+        put?: never;
+        /** Tạo banner */
+        post: operations["PlatformBannersController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/banners/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sắp lại thứ tự hiển thị (gửi trọn danh sách id) */
+        post: operations["PlatformBannersController_reorder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/banners/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Presign upload ảnh banner lên R2 (prefix banners/ dựng server-side) */
+        post: operations["PlatformBannersController_presign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/banners/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Xoá banner (ảnh vẫn còn trên R2 — tạo lại được từ URL cũ) */
+        delete: operations["PlatformBannersController_remove"];
+        options?: never;
+        head?: never;
+        /** Sửa banner (ảnh/lịch/thứ tự/bật-tắt) */
+        patch: operations["PlatformBannersController_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1805,6 +1892,8 @@ export interface components {
             displayName: string;
             email: string | null;
             avatarUrl: string | null;
+            /** @description SĐT của chính tài khoản, dạng nội địa `0xxxxxxxxx` — để điền sẵn ô liên hệ */
+            phone: string | null;
             /** @description Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop */
             phoneVerified: boolean;
             /** @description Đã có mật khẩu chưa — false với tài khoản tạo bằng SĐT/OTP (gợi ý đặt mật khẩu) */
@@ -1849,7 +1938,7 @@ export interface components {
             tenantRole?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer" | null;
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii")[];
         };
         NotificationDto: {
             id: string;
@@ -3742,6 +3831,78 @@ export interface components {
             customerId: string;
             phone?: string | null;
             email?: string | null;
+        };
+        PublicBannerDto: {
+            id: string;
+            /** @description Ảnh desktop */
+            imageUrl: string;
+            /** @description Ảnh mobile — null thì client dùng ảnh desktop */
+            mobileImageUrl: string | null;
+            altText: string;
+            /** @description Đích đến khi bấm — null = không bấm được */
+            linkUrl: string | null;
+        };
+        AdminBannerDto: {
+            id: string;
+            /** @description Ảnh desktop */
+            imageUrl: string;
+            /** @description Ảnh mobile — null thì client dùng ảnh desktop */
+            mobileImageUrl: string | null;
+            altText: string;
+            /** @description Đích đến khi bấm — null = không bấm được */
+            linkUrl: string | null;
+            /** @description Tên nội bộ */
+            title: string;
+            sortOrder: number;
+            active: boolean;
+            /** @description ISO-8601 UTC */
+            startsAt: string | null;
+            /** @description ISO-8601 UTC */
+            endsAt: string | null;
+            /** @description Đang thực sự hiển thị ngoài trang chủ (active + trong khung lịch) tại thời điểm trả về */
+            visibleNow: boolean;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+            /** @description ISO-8601 UTC */
+            updatedAt: string;
+        };
+        CreateBannerDto: {
+            /**
+             * @description Tên nội bộ — không hiển thị công khai
+             * @example Chiến dịch hè 2026
+             */
+            title: string;
+            /** @description URL ảnh desktop (upload qua presign R2) */
+            imageUrl: string;
+            /** @description URL ảnh mobile — bỏ trống dùng ảnh desktop */
+            mobileImageUrl?: string | null;
+            /** @description Mô tả ảnh cho screen reader — bắt buộc */
+            altText: string;
+            /** @description Đích đến khi bấm banner */
+            linkUrl?: string | null;
+            /** @default 0 */
+            sortOrder: number;
+            /** @default true */
+            active: boolean;
+            /** @description Bắt đầu hiển thị (ISO) — bỏ trống = ngay lập tức */
+            startsAt?: string | null;
+            /** @description Ngừng hiển thị (ISO) — bỏ trống = vô hạn */
+            endsAt?: string | null;
+        };
+        ReorderBannersDto: {
+            /** @description Toàn bộ id banner theo thứ tự hiển thị mới */
+            ids: string[];
+        };
+        UpdateBannerDto: {
+            title?: string;
+            imageUrl?: string;
+            mobileImageUrl?: string | null;
+            altText?: string;
+            linkUrl?: string | null;
+            sortOrder?: number;
+            active?: boolean;
+            startsAt?: string | null;
+            endsAt?: string | null;
         };
         ApiErrorBodyDto: {
             /** @example BOOKING_SCHEDULE_CONFLICT */
@@ -6796,6 +6957,157 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerContactDto"];
+                };
+            };
+        };
+    };
+    PublicBannersController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBannerDto"][];
+                };
+            };
+        };
+    };
+    PlatformBannersController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBannerDto"][];
+                };
+            };
+        };
+    };
+    PlatformBannersController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBannerDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBannerDto"];
+                };
+            };
+        };
+    };
+    PlatformBannersController_reorder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderBannersDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBannerDto"][];
+                };
+            };
+        };
+    };
+    PlatformBannersController_presign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignImageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadPresignDto"];
+                };
+            };
+        };
+    };
+    PlatformBannersController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformBannersController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBannerDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBannerDto"];
                 };
             };
         };

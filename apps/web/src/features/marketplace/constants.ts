@@ -15,39 +15,17 @@ export const SERVICE_CHIPS: ReadonlyArray<{ key: ServiceType; label: string }> =
 ];
 
 /**
- * "Thuê xe chỉ với 4 bước" — nội dung TĨNH (không phải dữ liệu nghiệp vụ). `icon` là key để
- * constants không phụ thuộc React; component tự map sang icon.
+ * "Thuê xe chỉ với 4 bước" — nội dung TĨNH (không phải dữ liệu nghiệp vụ), chữ theo Figma 18:4.
  */
 export const RENTAL_STEPS: ReadonlyArray<{
   no: string;
-  icon: 'search' | 'check' | 'car' | 'star';
   title: string;
   desc: string;
 }> = [
-  {
-    no: '01',
-    icon: 'search',
-    title: 'Chọn xe & gửi yêu cầu',
-    desc: 'Tìm ô tô hoặc xe máy phù hợp, gửi yêu cầu thuê chỉ trong vài bước.',
-  },
-  {
-    no: '02',
-    icon: 'check',
-    title: 'Chủ xe xác nhận',
-    desc: 'Chủ xe báo giá, cọc và hẹn giao nhận — bạn duyệt là xong.',
-  },
-  {
-    no: '03',
-    icon: 'car',
-    title: 'Nhận xe & lên đường',
-    desc: 'Nhận xe tại điểm hẹn và bắt đầu hành trình của bạn.',
-  },
-  {
-    no: '04',
-    icon: 'star',
-    title: 'Trả xe & đánh giá',
-    desc: 'Trả xe đúng hẹn và để lại đánh giá cho chủ xe.',
-  },
+  { no: '1', title: 'Tìm xe', desc: 'Chọn địa điểm và thời gian' },
+  { no: '2', title: 'Gửi yêu cầu', desc: 'Liên hệ gian hàng' },
+  { no: '3', title: 'Nhận xe', desc: 'Giao xe hoặc đến lấy' },
+  { no: '4', title: 'Trả xe', desc: 'Hoàn tất chuyến đi' },
 ];
 
 /** Cột liên kết ở chân trang — nội dung tĩnh, `href` trỏ route thật khi đã có. */
@@ -84,4 +62,3 @@ export const FOOTER_COLUMNS: ReadonlyArray<{
     ],
   },
 ];
-

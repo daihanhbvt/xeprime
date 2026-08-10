@@ -11,7 +11,7 @@ import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
-import { normalizePhone } from '../../common/phone';
+import { normalizePhone, toLocalPhone } from '../../common/phone';
 import { EmailService } from './email.service';
 import { IdTokenVerifier } from './token-verifier';
 import type { MeDto } from './dto/auth.dto';
@@ -99,7 +99,8 @@ export class AuthService {
       select: { id: true, passwordHash: true, status: true },
     });
 
-    const hash = user?.passwordHash ?? '$2a$12$0000000000000000000000000000000000000000000000000000';
+    const hash =
+      user?.passwordHash ?? '$2a$12$0000000000000000000000000000000000000000000000000000';
     const ok = await bcrypt.compare(password, hash);
 
     if (!user || !user.passwordHash || !ok) {
@@ -362,6 +363,7 @@ export class AuthService {
         displayName: true,
         email: true,
         avatarUrl: true,
+        phone: true,
         phoneVerifiedAt: true,
         passwordHash: true,
       },
@@ -403,6 +405,10 @@ export class AuthService {
       displayName: user.displayName,
       email: user.email,
       avatarUrl: user.avatarUrl,
+      // Dạng nội địa `0xxxxxxxxx` — đây là số của CHÍNH người đang đăng nhập, dùng để điền sẵn ô
+      // liên hệ khi đặt xe. DB lưu `84xxxxxxxxx`; trả nguyên dạng đó thì người dùng nhìn vào
+      // tưởng số lạ.
+      phone: user.phone ? toLocalPhone(user.phone) : null,
       phoneVerified: user.phoneVerifiedAt !== null,
       hasPassword: user.passwordHash !== null,
       tenant: membership

@@ -10,6 +10,7 @@ import {
   FileTextOutlined,
   HistoryOutlined,
   MessageOutlined,
+  PictureOutlined,
   SafetyCertificateOutlined,
   ScheduleOutlined,
   SettingOutlined,
@@ -257,6 +258,13 @@ export const PLATFORM_NAV: readonly NavNode[] = [
         href: ROUTES.MANAGE.ADMIN_PLANS,
         permission: PERMISSION.PLATFORM_BILLING_MANAGE,
         icon: CreditCardOutlined,
+      },
+      {
+        key: 'admin-banners',
+        label: 'Banner trang chủ',
+        href: ROUTES.MANAGE.ADMIN_BANNERS,
+        permission: PERMISSION.PLATFORM_BANNER_MANAGE,
+        icon: PictureOutlined,
       },
       {
         key: 'admin-catalog',

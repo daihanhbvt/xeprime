@@ -802,6 +802,49 @@ async function seedFinanceCategories(): Promise<void> {
   console.log(`  danh mục thu/chi hệ thống: ${total} (mới ${created})`);
 }
 
+/**
+ * Banner demo cho hero trang chủ — ảnh Unsplash pinned (như xe demo). Idempotent theo id CỐ ĐỊNH:
+ * chạy lại seed không nhân bản, và admin sửa nội dung banner demo thì lần seed sau GIỮ NGUYÊN
+ * (upsert với update rỗng) — seed không được đè lên dữ liệu admin đã đụng tay vào.
+ */
+const DEMO_BANNERS = [
+  {
+    id: '01SEEDBANNER0000000000000A',
+    title: 'Banner demo 1 — Thuê xe dễ dàng',
+    imageUrl: photo('1449965408869-eaa3f722e40d'),
+    altText: 'Thuê xe dễ dàng, trải nghiệm xứng tầm cùng XePrime',
+    linkUrl: '/search',
+    sortOrder: 0,
+  },
+  {
+    id: '01SEEDBANNER0000000000000B',
+    title: 'Banner demo 2 — Hành trình trọn vẹn',
+    imageUrl: photo('1502877338535-766e1452684a'),
+    altText: 'Đa dạng dòng xe, giá cạnh tranh, hỗ trợ 24/7',
+    linkUrl: '/search',
+    sortOrder: 1,
+  },
+  {
+    id: '01SEEDBANNER0000000000000C',
+    title: 'Banner demo 3 — Đi muôn nơi',
+    imageUrl: photo('1469854523086-cc02fe5d8800'),
+    altText: 'Đi muôn nơi theo cách của bạn — từ xe phổ thông đến cao cấp',
+    linkUrl: '/search',
+    sortOrder: 2,
+  },
+] as const;
+
+async function seedBanners(): Promise<void> {
+  for (const banner of DEMO_BANNERS) {
+    await prisma.marketplaceBanner.upsert({
+      where: { id: banner.id },
+      update: {},
+      create: { ...banner, active: true },
+    });
+  }
+  console.log(`  banner trang chủ: ${DEMO_BANNERS.length}`);
+}
+
 async function main(): Promise<void> {
   console.log('Seeding XePrime...');
 
@@ -828,6 +871,7 @@ async function main(): Promise<void> {
   console.log('  roles hệ thống: xong');
 
   await seedFinanceCategories();
+  await seedBanners();
 
   // Dọn tài khoản demo mock cũ (không mật khẩu) — đã chuyển sang đăng nhập email/mật khẩu.
   // Giữ owner@xeprime.test và customer@xeprime.test (đều được đặt mật khẩu ngay dưới đây).
