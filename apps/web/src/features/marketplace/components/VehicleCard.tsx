@@ -66,7 +66,12 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
       <div className={styles.media}>
         {listing.mainImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- ảnh xe từ storage ngoài, chưa qua next/image
-          <img src={listing.mainImageUrl} alt={listing.name} className={styles.photo} />
+          <img
+            src={listing.mainImageUrl}
+            alt={listing.name}
+            className={styles.photo}
+            loading="lazy"
+          />
         ) : (
           <CarGlyph type={listing.vehicleType as VehicleType} />
         )}

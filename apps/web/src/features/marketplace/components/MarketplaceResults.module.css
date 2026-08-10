@@ -1,0 +1,406 @@
+/* Vùng làm việc /search — Figma `18:567`. */
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/*
+ * Thanh tìm kiếm trên cùng: [ô từ khoá thật] | [vùng ngữ cảnh = MỘT nút].
+ * Desktop chung một thanh, mobile tách hai tầng (xem media query cuối file).
+ */
+.searchBar {
+  display: flex;
+  overflow: hidden;
+  align-items: stretch;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.searchBar:focus-within {
+  border-color: var(--xp-color-border-focus);
+}
+
+.keywordBox {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 46%;
+  align-items: center;
+  padding: 8px 8px 8px 16px;
+  gap: 8px;
+}
+
+.keywordIcon {
+  flex: none;
+  color: var(--xp-color-primary-active);
+}
+
+.keywordInput {
+  min-width: 0;
+  flex: 1;
+  padding: 4px 0 !important;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Cả vùng là BUTTON — bấm đâu cũng mở hộp chỉnh sửa, không phải nhắm trúng chữ. */
+.contextZone {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 54%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: none;
+  border-left: 1px solid var(--xp-color-border);
+  background: none;
+  cursor: pointer;
+  gap: var(--xp-space-sm);
+  text-align: left;
+}
+
+.contextZone:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.contextText {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contextEdit {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  border: none;
+  background: none;
+  color: var(--xp-color-primary-active);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+  gap: 6px;
+}
+
+/* Hàng đếm + chip nhanh + Bộ lọc + Sắp xếp. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.count {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-bold, 700);
+  white-space: nowrap;
+}
+
+.filterCountBadge {
+  padding: 2px 10px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold, 600);
+  white-space: nowrap;
+}
+
+.quickChips {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  padding: 5px 14px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  white-space: nowrap;
+}
+
+.chipActive {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.chipDivider {
+  width: 1px;
+  height: 18px;
+  background: var(--xp-color-border);
+}
+
+.toolbarRight {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  gap: var(--xp-space-sm);
+}
+
+.sort {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.sortLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Chip filter đang áp dụng — viền vàng, gỡ từng cái (Figma: Sedan ⊗ 5 chỗ ⊗ …). */
+.appliedRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.appliedChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border: 1px solid var(--xp-color-primary);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-selected);
+  color: var(--xp-color-primary-active);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  gap: 6px;
+}
+
+.appliedX {
+  font-size: 10px;
+}
+
+.clearAll {
+  border: none;
+  background: none;
+  color: var(--xp-color-primary-active);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold, 600);
+}
+
+/* Lưới kết quả — minmax(0,…) để tên xe dài không phá đều cột (bài học Remediation A). */
+.grid {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+  list-style: none;
+}
+
+@media (min-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.cell {
+  min-width: 0;
+}
+
+/* Khung chờ cùng hình học thẻ thật. */
+.skeletonCard {
+  padding: 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.skeletonMedia {
+  overflow: hidden;
+  margin-bottom: 12px;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.skeletonImg {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.skeletonImg :global(.ant-skeleton-image) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Hộp trạng thái giữa vùng (lỗi đầu / rỗng bộ lọc / chưa có xe) — Figma `18:1449`/`18:1510`. */
+.stateBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 64px 16px 72px;
+  gap: 10px;
+  text-align: center;
+}
+
+.stateIcon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 50%;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-tertiary);
+  font-size: 22px;
+  place-items: center;
+}
+
+.stateTitle {
+  margin: 6px 0 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-bold, 700);
+}
+
+.stateDesc {
+  max-width: 440px;
+  margin: 0 0 8px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.stateLink {
+  border: none;
+  background: none;
+  color: var(--xp-color-primary-active);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  text-decoration: underline;
+}
+
+/* Vùng đáy: sentinel + nút tải thêm + lỗi trang kế + ghi chú hết kết quả. */
+.footerZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Chừa chỗ để sentinel/nút không nấp sau thanh tab mobile. */
+  padding-bottom: calc(var(--xp-space-lg) + env(safe-area-inset-bottom, 0px));
+  gap: var(--xp-space-sm);
+}
+
+.sentinel {
+  width: 1px;
+  height: 1px;
+}
+
+.appendError {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border: 1px solid var(--xp-color-error, #cf1322);
+  border-radius: var(--xp-border-radius);
+  background: #fff2f0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  gap: 10px;
+}
+
+.endNote {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+@media (max-width: 640px) {
+  /* Mobile: từ khoá một tầng, vùng ngữ cảnh một tầng — ngăn bằng vạch ngang. */
+  .searchBar {
+    flex-direction: column;
+  }
+
+  .keywordBox {
+    flex: none;
+    padding: 6px 6px 6px 12px;
+  }
+
+  .contextZone {
+    flex: none;
+    padding: 10px 12px;
+    border-left: none;
+    border-top: 1px solid var(--xp-color-border);
+  }
+
+  /* Mobile (Figma 23:1100): hàng 1 = đếm + Bộ lọc/Sắp xếp; hàng 2 = chip nhanh CUỘN NGANG
+     (không wrap dọc thành cột dài). */
+  .toolbarLeft {
+    order: 1;
+  }
+
+  .toolbarRight {
+    order: 2;
+  }
+
+  .quickChips {
+    order: 3;
+    overflow-x: auto;
+    width: 100%;
+    flex: none;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .quickChips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sortLabel {
+    display: none;
+  }
+}
+
+/* Bỏ viền tròn bên trong ô từ khoá — thanh ngoài đã có viền (yêu cầu 10/08). */
+.keywordBox :global(.ant-input),
+.keywordBox :global(.ant-input-affix-wrapper),
+.keywordBox :global(.ant-input-outlined) {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}

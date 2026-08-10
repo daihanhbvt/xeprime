@@ -64,6 +64,12 @@
   background: var(--xp-color-bg-container);
 }
 
+/* RentalDateTimeRangeField chính là button viền ngoài; border đổi màu đã là focus indicator. */
+.box:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .boxIcon {
   flex: none;
   color: var(--xp-color-primary-active);
@@ -90,21 +96,61 @@
   font-weight: 700 !important;
 }
 
-/* Mobile: thẻ thu thành MỘT thanh tóm tắt (Figma `23:896`), bấm mở sheet tìm kiếm. */
-.mobilePill {
+/* Mobile hai tầng: ô từ khoá thật + hàng ngữ cảnh (cả hàng là nút mở sheet). */
+.mobileBox {
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-md, 0 6px 18px rgba(41, 31, 15, 0.12));
+}
+
+.mobileKeywordRow {
+  display: flex;
+  align-items: center;
+  padding: 6px 6px 6px 14px;
+  gap: 8px;
+}
+
+.mobileKeywordInput {
+  min-width: 0;
+  flex: 1;
+  padding: 6px 0 !important;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.mobileIcon {
+  flex: none;
+  color: var(--xp-color-primary-active);
+}
+
+.mobileContextRow {
   display: flex;
   width: 100%;
   align-items: center;
-  padding: 12px 14px;
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-md, 0 6px 18px rgba(41, 31, 15, 0.12));
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: none;
+  border-top: 1px solid var(--xp-color-border);
+  background: none;
   color: var(--xp-color-text);
   cursor: pointer;
   font-size: var(--xp-font-size-body);
   font-weight: var(--xp-font-weight-medium);
   gap: 8px;
+  text-align: left;
+}
+
+/* Ô nhập trong hộp mobile cũng không tự vẽ viền trong. */
+.mobileKeywordRow :global(.ant-input),
+.mobileKeywordRow :global(.ant-input-affix-wrapper),
+.mobileKeywordRow :global(.ant-input-outlined) {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .mobilePillText {
@@ -123,4 +169,24 @@
   .cardOuter {
     margin-top: -24px;
   }
+}
+
+/*
+ * BỎ viền/viền-focus TRÒN BÊN TRONG của Input/Select/DatePicker nằm trong hộp bọc (yêu cầu
+ * 10/08): hộp ngoài đã có viền + trạng thái focus-within, control bên trong mà tự vẽ thêm một
+ * vòng nữa là hai lớp viền lồng nhau. `!important` vì AntD tiêm style vào <head> sau CSS Module.
+ */
+.box :global(.ant-input),
+.box :global(.ant-input-affix-wrapper),
+.box :global(.ant-input-outlined),
+.box :global(.ant-select),
+.box :global(.ant-select .ant-select-selector),
+.box :global(.ant-select-focused .ant-select-selector),
+.box :global(.ant-select-selection-search-input),
+.box :global(.ant-picker) {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }

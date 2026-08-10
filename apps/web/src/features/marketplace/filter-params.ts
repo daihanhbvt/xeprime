@@ -10,7 +10,14 @@ import type { ListingSort, MarketplaceFilters } from './types';
 const ARRAY_KEYS = ['brand', 'bodyType', 'seats', 'fuelType', 'features'] as const;
 const BOOLEAN_KEYS = ['hourly', 'delivery', 'noCollateral', 'discount'] as const;
 const NUMBER_KEYS = ['minSeats', 'priceMin', 'priceMax', 'page', 'limit'] as const;
-const STRING_KEYS = ['vehicleType', 'serviceType', 'q', 'province', 'pickupAt', 'returnAt'] as const;
+const STRING_KEYS = [
+  'vehicleType',
+  'serviceType',
+  'q',
+  'province',
+  'pickupAt',
+  'returnAt',
+] as const;
 
 /**
  * Các key thuộc panel Bộ lọc — "Xoá bộ lọc" reset đúng nhóm này, giữ nguyên ngữ cảnh tìm kiếm

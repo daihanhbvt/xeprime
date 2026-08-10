@@ -12,10 +12,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
-import {
-  useAuthModal,
-  useNextFromCurrentPath,
-} from '@/features/auth/components/AuthModalProvider';
+import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { useAuthCache } from '@/features/auth/hooks/use-auth-actions';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';

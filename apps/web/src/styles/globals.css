@@ -76,6 +76,20 @@ textarea {
   box-shadow: 0 0 0 var(--xp-focus-ring-width) var(--xp-color-focus-ring);
 }
 
+/**
+ * Select searchable của AntD đặt một <input> kỹ thuật bên trong selector. Focus indicator toàn
+ * cục ở trên không được vẽ lên input này vì Select đã tự hiển thị focus ở control bên ngoài;
+ * nếu giữ lại sẽ thành một viền bo tròn thứ hai như ô Địa điểm trong marketplace.
+ */
+.ant-select-selection-search-input:focus,
+.ant-select-selection-search-input:focus-visible {
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
 /* --- Thanh cuộn chung: mảnh, bo tròn, vàng nhẹ (dùng cho mọi vùng scroll) --- */
 * {
   scrollbar-width: thin;

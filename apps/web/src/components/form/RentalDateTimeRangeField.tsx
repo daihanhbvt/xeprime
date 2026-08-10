@@ -2,6 +2,7 @@
 
 import { Drawer, Popover } from 'antd';
 import type { Dayjs } from 'dayjs';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
@@ -26,15 +27,17 @@ interface RentalDateTimeRangeFieldProps {
   disabled?: boolean;
   className?: string;
   ariaLabel?: string;
+  /** Icon nằm trong cùng vùng bấm; dùng để toàn bộ viền control đều mở lịch. */
+  prefix?: ReactNode;
 }
 
 /**
  * Khoảng thời gian thuê — MỘT giá trị `{ pickupAt, returnAt }`, dùng chung cho hero trang chủ
  * và mọi chỗ cần chọn khoảng thuê.
  *
- * Trạng thái đóng hiện HAI đầu "Nhận xe"/"Trả xe" nhưng chúng là hai nút của cùng một khoảng:
- * bấm đầu nào cũng mở CÙNG một hộp lịch (`RentalRangePanel`), chỉ khác đầu được ưu tiên sửa —
- * bấm "Trả xe" thì cú bấm lịch đầu tiên đổi ngày trả, không reset cả khoảng.
+ * Trạng thái đóng hiện HAI đầu "Nhận xe"/"Trả xe" của cùng một khoảng — bấm đầu nào cũng mở
+ * CÙNG một hộp lịch. Trong hộp, chọn range theo ngữ nghĩa CHUẨN (bấm mới = bắt đầu range mới):
+ * luật "đầu đang sửa" tự chế trước đây chính là nguồn bug lịch tô một đằng giá trị một nẻo (10/08).
  *
  * Overlay: desktop là Popover ngay dưới ô (Figma `177:1657` — lịch đôi); mobile là Drawer đáy
  * màn một tháng. Giá trị chỉ commit khi bấm "Áp dụng" — đóng ngang chừng không phá khoảng cũ.
@@ -48,16 +51,15 @@ export function RentalDateTimeRangeField({
   disabled,
   className,
   ariaLabel = 'Thời gian thuê',
+  prefix,
 }: RentalDateTimeRangeFieldProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const [focus, setFocus] = useState<'pickup' | 'return'>('pickup');
   const [draft, setDraft] = useState<RentalRange>(value);
 
-  function openAt(which: 'pickup' | 'return') {
+  function openPanel() {
     if (disabled) return;
     setDraft(value);
-    setFocus(which);
     setOpen(true);
   }
 
@@ -70,29 +72,23 @@ export function RentalDateTimeRangeField({
     d ? d.format(mode === 'daily' ? 'DD/MM/YYYY' : 'DD/MM HH:mm') : fallback;
 
   const trigger = (
-    <div className={cx(styles.trigger, className)} role="group" aria-label={ariaLabel}>
-      <button
-        type="button"
-        className={styles.endpoint}
-        disabled={disabled}
-        onClick={() => openAt('pickup')}
-        aria-label={`${labels.start}: ${fmt(value.pickupAt, 'chưa chọn')}`}
-      >
-        {fmt(value.pickupAt, labels.start)}
-      </button>
+    <button
+      type="button"
+      className={cx(styles.trigger, className)}
+      disabled={disabled}
+      onClick={openPanel}
+      aria-label={`${ariaLabel}: ${fmt(value.pickupAt, 'chưa chọn')} đến ${fmt(
+        value.returnAt,
+        'chưa chọn',
+      )}`}
+    >
+      {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
+      <span className={styles.endpoint}>{fmt(value.pickupAt, labels.start)}</span>
       <span className={styles.sep} aria-hidden>
         →
       </span>
-      <button
-        type="button"
-        className={styles.endpoint}
-        disabled={disabled}
-        onClick={() => openAt('return')}
-        aria-label={`${labels.end}: ${fmt(value.returnAt, 'chưa chọn')}`}
-      >
-        {fmt(value.returnAt, labels.end)}
-      </button>
-    </div>
+      <span className={styles.endpoint}>{fmt(value.returnAt, labels.end)}</span>
+    </button>
   );
 
   const panel = (
@@ -101,8 +97,6 @@ export function RentalDateTimeRangeField({
       onChange={setDraft}
       mode={mode}
       onModeChange={onModeChange}
-      focus={focus}
-      onFocusChange={setFocus}
       months={isMobile ? 1 : 2}
       onApply={apply}
       onCancel={() => setOpen(false)}
@@ -131,7 +125,7 @@ export function RentalDateTimeRangeField({
     <Popover
       open={open}
       onOpenChange={(next) => {
-        // Chỉ nhận tín hiệu ĐÓNG (Esc/bấm ra ngoài) — mở luôn đi qua openAt để đặt focus đúng đầu.
+        // Chỉ nhận tín hiệu ĐÓNG (Esc/bấm ra ngoài) — mở luôn đi qua openPanel để nạp draft mới.
         if (!next) setOpen(false);
       }}
       trigger={['click']}

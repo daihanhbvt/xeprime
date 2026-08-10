@@ -1,7 +1,12 @@
 'use client';
 
-import { CalendarOutlined, EnvironmentOutlined, SearchOutlined } from '@ant-design/icons';
-import { Button, Input, Segmented, Select } from 'antd';
+import {
+  CalendarOutlined,
+  EditOutlined,
+  EnvironmentOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
+import { Button, Input, Select } from 'antd';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
 import { VEHICLE_TYPE, VEHICLE_TYPE_LABEL, type VehicleType } from '@xeprime/types';
@@ -11,12 +16,12 @@ import {
   type RentalMode,
   type RentalRange,
 } from '@/components/form/RentalDateTimeRangeField';
-import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { ROUTES } from '@/constants/routes';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { applyFilterPatch } from '../filter-params';
 import { useDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
+import { SearchDialog } from './SearchDialog';
 import styles from './HeroSearch.module.css';
 
 /** Số tỉnh/thành đổ vào ô "Địa điểm" — ưu tiên nơi nhiều xe nhất. */
@@ -41,7 +46,8 @@ export function HeroSearch() {
 
   const [keyword, setKeyword] = useState(filters.q ?? '');
   const [province, setProvince] = useState(filters.province ?? '');
-  const [vehicleType, setVehicleType] = useState<string>(filters.vehicleType ?? VEHICLE_TYPE.CAR);
+  // Desktop không có nút đổi loại xe (hero đúng 4 ô); loại đổi ở sheet mobile/trang /search.
+  const vehicleType = filters.vehicleType ?? VEHICLE_TYPE.CAR;
   // Tab "Thuê theo giờ" ánh xạ vào filter `hourly` sẵn có (xe CÓ giá thuê giờ) — nhờ vậy chế độ
   // sống trong URL bằng đúng hợp đồng hiện tại, không phải chế một param mới cho backend lơ đi.
   const [mode, setMode] = useState<RentalMode>(filters.hourly ? 'hourly' : 'daily');
@@ -121,17 +127,15 @@ export function HeroSearch() {
 
       <div className={styles.cell}>
         <span className={styles.cellLabel}>Thời gian thuê</span>
-        <div className={styles.box}>
-          <CalendarOutlined className={styles.boxIcon} />
-          {/* MỘT giá trị khoảng, hai đầu Nhận/Trả vẫn bấm sửa riêng — xem RentalDateTimeRangeField. */}
-          <RentalDateTimeRangeField
-            value={range}
-            onChange={setRange}
-            mode={mode}
-            onModeChange={setMode}
-            className={styles.range}
-          />
-        </div>
+        {/* Toàn bộ control, gồm icon và khoảng đệm sát viền, là một nút mở cùng hộp lịch. */}
+        <RentalDateTimeRangeField
+          value={range}
+          onChange={setRange}
+          mode={mode}
+          onModeChange={setMode}
+          prefix={<CalendarOutlined className={styles.boxIcon} />}
+          className={styles.box}
+        />
       </div>
     </>
   );
@@ -149,36 +153,49 @@ export function HeroSearch() {
 
     return (
       <div className={styles.cardOuter}>
-        <button type="button" className={styles.mobilePill} onClick={() => setSheetOpen(true)}>
-          <SearchOutlined /> <span className={styles.mobilePillText}>{summary}</span>
-        </button>
-
-        <ResponsiveDialog
-          title="Tìm kiếm"
-          open={sheetOpen}
-          onClose={() => setSheetOpen(false)}
-          footer={null}
-        >
-          <div className={styles.sheetBody}>
-            {/* Frame mobile-search-expanded có thêm toggle Loại xe — desktop thì không. */}
-            <div className={styles.cell}>
-              <span className={styles.cellLabel}>Loại xe</span>
-              <Segmented
-                block
-                value={vehicleType}
-                onChange={(v) => setVehicleType(v as string)}
-                options={[
-                  { value: VEHICLE_TYPE.CAR, label: 'Ô tô' },
-                  { value: VEHICLE_TYPE.MOTORBIKE, label: 'Xe máy' },
-                ]}
-              />
-            </div>
-            {fields}
-            <Button type="primary" size="large" block icon={<SearchOutlined />} onClick={submit}>
-              Tìm xe
-            </Button>
+        {/*
+         * Mobile hai tầng: TỪ KHOÁ là ô nhập thật ngay trên trang (Enter → /search), tầng dưới
+         * là ngữ cảnh thuê — bấm bất kỳ đâu trong tầng đó đều mở sheet (không còn nấp trong sheet).
+         */}
+        <div className={styles.mobileBox}>
+          <div className={styles.mobileKeywordRow}>
+            <SearchOutlined className={styles.mobileIcon} />
+            <Input
+              variant="borderless"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onPressEnter={submit}
+              placeholder="Tìm theo tên xe, hãng xe…"
+              className={styles.mobileKeywordInput}
+              aria-label="Từ khoá tìm kiếm"
+            />
           </div>
-        </ResponsiveDialog>
+          <button
+            type="button"
+            className={styles.mobileContextRow}
+            onClick={() => setSheetOpen(true)}
+            aria-label={`Chỉnh sửa tìm kiếm: ${summary}`}
+          >
+            <span className={styles.mobilePillText}>{summary}</span>
+            <EditOutlined className={styles.mobileIcon} />
+          </button>
+        </div>
+
+        {/* Sheet dùng CHUNG với /search — chỉ ngữ cảnh thuê; từ khoá lấy từ ô đang gõ ở trên. */}
+        {sheetOpen ? (
+          <SearchDialog
+            open
+            initial={filters}
+            onClose={() => setSheetOpen(false)}
+            onSubmit={(values) => {
+              setSheetOpen(false);
+              const params = new URLSearchParams();
+              applyFilterPatch(params, { ...values, q: keyword.trim() || undefined });
+              const qs = params.toString();
+              router.push(qs ? `${ROUTES.SEARCH}?${qs}` : ROUTES.SEARCH);
+            }}
+          />
+        ) : null}
       </div>
     );
   }

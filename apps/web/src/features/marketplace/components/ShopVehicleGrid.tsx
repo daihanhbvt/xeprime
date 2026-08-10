@@ -56,7 +56,9 @@ export function ShopVehicleGrid({ slug }: { slug: string }) {
       ) : (
         <>
           <div className={styles.grid}>
-            {data?.listings.map((listing) => <VehicleCard key={listing.id} listing={listing} />)}
+            {data?.listings.map((listing) => (
+              <VehicleCard key={listing.id} listing={listing} />
+            ))}
           </div>
           {total > PAGE_SIZE ? (
             <div className={styles.pager}>

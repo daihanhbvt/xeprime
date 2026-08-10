@@ -50,7 +50,12 @@ export function FeaturedLocations() {
       </header>
 
       {isError ? (
-        <Alert type="error" showIcon message="Không tải được địa điểm" description={getErrorMessage(error)} />
+        <Alert
+          type="error"
+          showIcon
+          message="Không tải được địa điểm"
+          description={getErrorMessage(error)}
+        />
       ) : isLoading ? (
         <div className={styles.grid}>
           {Array.from({ length: PREVIEW_COUNT }).map((_, i) => (

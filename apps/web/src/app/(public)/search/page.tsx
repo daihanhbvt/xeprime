@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { Skeleton } from 'antd';
-import { VehicleRecommendations } from '@/features/marketplace/components/VehicleRecommendations';
+import { MarketplaceResults } from '@/features/marketplace/components/MarketplaceResults';
 import styles from './search-page.module.css';
 
 export const metadata: Metadata = {
@@ -25,7 +25,7 @@ export default function SearchPage() {
   return (
     <div className={styles.page}>
       <Suspense fallback={<SearchFallback />}>
-        <VehicleRecommendations />
+        <MarketplaceResults />
       </Suspense>
     </div>
   );

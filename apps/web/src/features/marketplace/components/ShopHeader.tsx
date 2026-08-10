@@ -39,7 +39,9 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
         <div className={styles.info}>
           <h1 className={styles.name}>{shop.name}</h1>
           <div className={styles.meta}>
-            {shop.provinceName ? <span className={styles.metaItem}>{shop.provinceName}</span> : null}
+            {shop.provinceName ? (
+              <span className={styles.metaItem}>{shop.provinceName}</span>
+            ) : null}
             <span className={styles.metaItem}>
               <span className={styles.star} aria-hidden="true">
                 ★
