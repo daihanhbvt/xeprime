@@ -5,14 +5,14 @@ import type { DescriptionsProps } from 'antd';
 import {
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS_META,
-  vehicleFeatureLabel,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { formatDateTime } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
-import { bodyTypeLabelOf, fuelTypeLabel, serviceTypeLabel, vehicleTypeLabel } from '../constants';
+import { useCatalogLabels } from '@/features/catalog/use-catalog';
+import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
 import { discountedPriceVnd } from '../pricing';
 import type { VehicleDetail } from '../types';
 import { VehiclePublicReviewPanel } from './VehiclePublicReviewPanel';
@@ -30,18 +30,20 @@ const EMPTY = '—';
  */
 export function VehicleDetailView({ vehicle }: { vehicle: VehicleDetail }) {
   const discounted = discountedPriceVnd(vehicle.weekdayPrice, vehicle.discountPercent);
+  // Xe lưu KEY của danh mục, không lưu nhãn — nhãn tra từ `catalog_items` do admin cấu hình.
+  const { brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel } = useCatalogLabels();
 
   const specs: DescriptionsProps['items'] = [
     { key: 'code', label: 'Mã quản lý', children: vehicle.code },
     { key: 'plate', label: 'Biển số', children: vehicle.plateNumber || EMPTY },
     { key: 'type', label: 'Loại phương tiện', children: vehicleTypeLabel(vehicle.vehicleType) },
     { key: 'service', label: 'Loại hình dịch vụ', children: serviceTypeLabel(vehicle.serviceType) },
-    { key: 'brand', label: 'Hãng xe', children: vehicle.brand || EMPTY },
+    { key: 'brand', label: 'Hãng xe', children: brandLabel(vehicle.brand) || EMPTY },
     { key: 'model', label: 'Mẫu xe', children: vehicle.model || EMPTY },
-    { key: 'body', label: 'Kiểu dáng thân xe', children: bodyTypeLabelOf(vehicle.bodyType) },
+    { key: 'body', label: 'Kiểu dáng thân xe', children: bodyTypeLabel(vehicle.bodyType) ?? EMPTY },
     { key: 'year', label: 'Năm sản xuất', children: vehicle.manufactureYear ?? EMPTY },
     { key: 'seats', label: 'Số chỗ ngồi', children: vehicle.seatCount ?? EMPTY },
-    { key: 'fuel', label: 'Nhiên liệu', children: fuelTypeLabel(vehicle.fuelType) },
+    { key: 'fuel', label: 'Nhiên liệu', children: fuelTypeLabel(vehicle.fuelType) ?? EMPTY },
     { key: 'color', label: 'Màu sắc', children: vehicle.color || EMPTY },
     {
       key: 'delivery',
@@ -102,7 +104,7 @@ export function VehicleDetailView({ vehicle }: { vehicle: VehicleDetail }) {
           <Card title="Tiện ích" className={styles.card}>
             <div className={styles.chips}>
               {vehicle.features.map((key) => (
-                <Tag key={key}>{vehicleFeatureLabel(key)}</Tag>
+                <Tag key={key}>{featureLabel(key)}</Tag>
               ))}
             </div>
           </Card>

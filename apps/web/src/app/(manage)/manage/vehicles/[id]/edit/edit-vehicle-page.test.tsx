@@ -19,6 +19,11 @@ import EditVehiclePage from './page';
 
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 
+// Danh mục lọc (hãng/kiểu dáng/nhiên liệu/tiện ích) tới từ API — test dùng bản cố định.
+vi.mock('@/features/catalog/use-catalog', async () =>
+  (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
+);
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
   useParams: () => ({ id: 'v1' }),

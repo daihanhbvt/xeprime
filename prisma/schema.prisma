@@ -567,6 +567,38 @@ model VehicleFeature {
 }
 
 // ---------------------------------------------------------------------------
+// Danh mục dữ liệu dùng chung cho bộ lọc
+// ---------------------------------------------------------------------------
+
+/// Bốn chiều lọc của marketplace — hãng xe, kiểu dáng, nhiên liệu, tiện ích — do platform admin
+/// quản lý. Trước đây là hằng số TypeScript nên admin không sửa được và thêm một hãng phải deploy.
+///
+/// `key` là giá trị lưu xuống `vehicles`/`public_listings`; `label` chỉ để hiển thị, đổi nhãn
+/// không đụng dữ liệu xe. `CatalogService` là đường ghi duy nhất.
+model CatalogItem {
+  id          String   @id @db.Char(26)
+  /// @xeprime/types → CatalogType (vehicle_brand | body_type | fuel_type | vehicle_feature).
+  /// CHECK ở migration giữ bộ giá trị đóng.
+  type        String   @db.VarChar(50)
+  /// Bất biến sau khi tạo — sửa key là mồ côi toàn bộ xe đang trỏ vào.
+  key         String   @db.VarChar(80)
+  label       String   @db.VarChar(120)
+  /// Dòng phụ dưới nhãn ở picker/bộ lọc ("5 chỗ · gầm cao").
+  description String?  @db.VarChar(255)
+  /// Kiểu dáng dùng `/body-types/*.png`, hãng xe dùng logo `/brands/*.svg`.
+  iconUrl     String?  @map("icon_url") @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  /// Tắt = ẩn khỏi form và bộ lọc; xe cũ trỏ vào key này vẫn hiển thị đúng nhãn.
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([type, key])
+  @@index([type, active, sortOrder])
+  @@map("catalog_items")
+}
+
+// ---------------------------------------------------------------------------
 // Public listing snapshot — ADR 0008 / database_design §9.9
 // ---------------------------------------------------------------------------
 

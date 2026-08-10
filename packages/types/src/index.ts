@@ -10,6 +10,7 @@
  * OpenAPI spec của backend. Chạy `pnpm contract` để sinh lại.
  */
 export * from './status/index';
+export * from './catalog';
 export * from './rbac';
 export * from './notifications';
 export * from './api';

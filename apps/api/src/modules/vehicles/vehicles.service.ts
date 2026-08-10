@@ -22,6 +22,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
+import { CatalogService } from '../catalog/catalog.service';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -91,6 +92,7 @@ export class VehiclesService {
     private readonly audit: AuditService,
     private readonly listings: ListingsService,
     private readonly billing: BillingService,
+    private readonly catalog: CatalogService,
   ) {}
 
   /**
@@ -242,6 +244,7 @@ export class VehiclesService {
     // Quota gói (ADR 0010): chạm max_vehicles của gói hiện hành → PLAN_LIMIT_REACHED.
     await this.billing.assertVehicleQuota(tenantId);
     await this.assertCodeFree(tenantId, dto.code);
+    await this.catalog.assertVehicleValues(dto);
 
     const id = newId();
     await this.prisma.$transaction(async (tx) => {
@@ -272,6 +275,7 @@ export class VehiclesService {
       select: SENSITIVE_SELECT,
     });
     if (!current) throw notFound();
+    await this.catalog.assertVehicleValues(dto);
 
     // Đổi mã thì mã mới phải còn trống trong gian hàng (unique DB là chốt chặn cuối).
     if (dto.code !== undefined && dto.code !== current.code) {

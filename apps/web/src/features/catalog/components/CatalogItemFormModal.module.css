@@ -1,0 +1,28 @@
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--xp-space-md);
+  gap: var(--xp-space-sm);
+}
+
+/* Xem trước ảnh ngay trong form: đường dẫn gõ sai là lỗi thường gặp nhất ở màn này. */
+.preview {
+  display: flex;
+  align-items: center;
+  padding: var(--xp-space-sm);
+  border: 1px dashed var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-sm);
+}
+
+.previewLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.previewImage {
+  max-width: 120px;
+  max-height: 48px;
+  object-fit: contain;
+}

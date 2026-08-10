@@ -18,7 +18,7 @@ import {
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { listingPath, shopPath } from '@/constants/routes';
 import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
-import { fuelLabel } from '@/lib/vehicle-labels';
+import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
 import styles from './VehicleCard.module.css';
@@ -26,25 +26,25 @@ import styles from './VehicleCard.module.css';
 /** Một thẻ xe trên marketplace. Chỉ hiển thị trường backend thật sự có — thiếu thì ẩn dòng đó. */
 export function VehicleCard({ listing }: { listing: PublicListing }) {
   const { filters } = useMarketplaceFilters();
+  // Thẻ xe lưu key hãng/nhiên liệu — nhãn tra từ danh mục chung với bộ lọc bên cạnh.
+  const { brandLabel, fuelTypeLabel } = useCatalogLabels();
 
   const typeLabel = VEHICLE_TYPE_LABEL[listing.vehicleType as VehicleType] ?? listing.vehicleType;
-  const brandLine = [listing.brand, listing.model].filter(Boolean).join(' ');
+  const brandLine = [brandLabel(listing.brand), listing.model].filter(Boolean).join(' ');
   const specs = [brandLine || typeLabel, listing.seatCount ? `${listing.seatCount} chỗ` : null]
     .filter(Boolean)
     .join(' · ');
 
   const serviceLabel =
     SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType;
-  const fuel = fuelLabel(listing.fuelType);
+  const fuel = fuelTypeLabel(listing.fuelType);
   const rating = Number(listing.ratingAvg);
   const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
 
   // Giá sau giảm chỉ để HIỂN THỊ (marketing) — giá chốt thật do shop quyết khi duyệt yêu cầu.
   const discount = listing.discountPercent ?? 0;
   const displayPrice =
-    discount > 0
-      ? applyDiscountPercent(listing.weekdayPrice, discount)
-      : listing.weekdayPrice;
+    discount > 0 ? applyDiscountPercent(listing.weekdayPrice, discount) : listing.weekdayPrice;
 
   // Mang ngày giờ đã lọc sang trang chi tiết để prefill luồng đặt xe.
   const dateQs = new URLSearchParams();
@@ -57,7 +57,11 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   return (
     <article className={styles.card}>
       {/* Stretched-link: cả thẻ dẫn tới trang chi tiết, trừ các nút z-index cao hơn. */}
-      <Link href={detailHref} className={styles.stretch} aria-label={`Xem chi tiết ${listing.name}`} />
+      <Link
+        href={detailHref}
+        className={styles.stretch}
+        aria-label={`Xem chi tiết ${listing.name}`}
+      />
 
       <div className={styles.media}>
         {listing.mainImageUrl ? (
@@ -104,12 +108,8 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
               <TeamOutlined /> {listing.seatCount} chỗ
             </span>
           ) : null}
-          {listing.deliveryEnabled ? (
-            <span className={styles.amenityTag}>Giao tận nơi</span>
-          ) : null}
-          {listing.noCollateral ? (
-            <span className={styles.amenityTag}>Miễn thế chấp</span>
-          ) : null}
+          {listing.deliveryEnabled ? <span className={styles.amenityTag}>Giao tận nơi</span> : null}
+          {listing.noCollateral ? <span className={styles.amenityTag}>Miễn thế chấp</span> : null}
         </div>
 
         <div className={styles.footer}>
@@ -151,7 +151,11 @@ function CarGlyph({ type }: { type: VehicleType }) {
         <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4">
           <circle cx="11" cy="34" r="6" />
           <circle cx="37" cy="34" r="6" />
-          <path d="M11 34l7-12h9l4 6h6M18 22l-3-6h-5" strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d="M11 34l7-12h9l4 6h6M18 22l-3-6h-5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       ) : (
         <svg viewBox="0 0 48 48" fill="currentColor">

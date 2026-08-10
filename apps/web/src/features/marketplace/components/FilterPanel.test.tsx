@@ -34,6 +34,11 @@ const state = vi.hoisted(() => ({
   setFilters: vi.fn(),
 }));
 
+// Danh mục lọc (hãng/kiểu dáng/nhiên liệu/tiện ích) tới từ API — test dùng bản cố định.
+vi.mock('@/features/catalog/use-catalog', async () =>
+  (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
+);
+
 vi.mock('../hooks/use-marketplace-filters', () => ({
   useMarketplaceFilters: () => ({ filters: state.filters, setFilters: state.setFilters }),
 }));

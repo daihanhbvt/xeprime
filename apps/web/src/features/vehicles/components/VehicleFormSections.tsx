@@ -1,10 +1,12 @@
 'use client';
 
-import { Col, Row, Select } from 'antd';
-import { Controller, type Control } from 'react-hook-form';
-import { VEHICLE_FEATURE_KEYS, VEHICLE_FEATURE_LABEL } from '@xeprime/types';
+import { Col, Row, Select, Skeleton } from 'antd';
+import { useMemo } from 'react';
+import { Controller, useWatch, type Control } from 'react-hook-form';
+import { CATALOG_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
-import { AutoCompleteField } from '@/components/form/AutoCompleteField';
+import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
+import { useCatalogItems, useCatalogOptions } from '@/features/catalog/use-catalog';
 import { ImageGalleryField } from '@/components/form/ImageGalleryField';
 import { ImageUploadField } from '@/components/form/ImageUploadField';
 import { NumberField } from '@/components/form/NumberField';
@@ -13,23 +15,11 @@ import { SwitchField } from '@/components/form/SwitchField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { presignVehicleImage } from '@/services/upload';
-import {
-  BODY_TYPE_OPTIONS,
-  BRAND_OPTIONS,
-  FUEL_TYPE_OPTIONS,
-  OPERATION_STATUS_OPTIONS,
-  SERVICE_TYPE_OPTIONS,
-  VEHICLE_TYPE_OPTIONS,
-} from '../constants';
+import { OPERATION_STATUS_OPTIONS, SERVICE_TYPE_OPTIONS, VEHICLE_TYPE_OPTIONS } from '../constants';
 import { publishRequiredLabel } from './VehicleCompleteness';
 import styles from './VehicleForm.module.css';
 
 const CURRENT_YEAR = new Date().getFullYear();
-
-const FEATURE_OPTIONS = VEHICLE_FEATURE_KEYS.map((key) => ({
-  value: key,
-  label: VEHICLE_FEATURE_LABEL[key],
-}));
 
 export type VehicleSectionKey = 'basic' | 'specs' | 'pricing' | 'media';
 
@@ -269,30 +259,11 @@ export function SpecsSection({ control, isCar }: SectionProps) {
         />
       </Col>
       <Col xs={24} sm={12}>
-        <AutoCompleteField
-          control={control}
-          name="brand"
-          label="Hãng sản xuất"
-          options={BRAND_OPTIONS}
-          placeholder="VD: Toyota"
-        />
+        <BrandSelect control={control} />
       </Col>
       <Col xs={24} sm={12}>
         <TextField control={control} name="model" label="Mẫu xe (model)" placeholder="VD: Vios" />
       </Col>
-      {isCar ? (
-        <Col xs={24} sm={12}>
-          <SelectField
-            control={control}
-            name="bodyType"
-            label="Kiểu dáng thân xe"
-            options={BODY_TYPE_OPTIONS}
-            placeholder="Sedan, SUV…"
-            allowClear
-            help="Chỉ áp dụng cho ô tô. Tự động xoá khi chuyển sang xe máy."
-          />
-        </Col>
-      ) : null}
       <Col xs={24} sm={12}>
         <NumberField
           control={control}
@@ -314,14 +285,7 @@ export function SpecsSection({ control, isCar }: SectionProps) {
         />
       </Col>
       <Col xs={24} sm={12}>
-        <SelectField
-          control={control}
-          name="fuelType"
-          label="Loại nhiên liệu"
-          options={FUEL_TYPE_OPTIONS}
-          placeholder="Chọn nhiên liệu"
-          allowClear
-        />
+        <FuelTypeSelect control={control} />
       </Col>
       <Col xs={24} sm={12}>
         <TextField
@@ -331,7 +295,112 @@ export function SpecsSection({ control, isCar }: SectionProps) {
           placeholder="VD: Trắng"
         />
       </Col>
+      {isCar ? (
+        <Col xs={24}>
+          <BodyTypePicker control={control} />
+        </Col>
+      ) : null}
     </Row>
+  );
+}
+
+/**
+ * Hãng xe — chọn trong danh mục do quản trị nền tảng cấu hình, KHÔNG còn nhập tự do.
+ *
+ * Trước đây đây là ô AutoComplete gõ gì cũng lưu, nên bộ lọc ngoài chợ mọc ra "Toyota",
+ * "toyota " và "TOYOTA" thành ba hãng khác nhau. Giá trị lưu xuống là `key` của danh mục.
+ */
+function BrandSelect({ control }: Pick<SectionProps, 'control'>) {
+  const current = useWatch({ control, name: 'brand' });
+  const options = useCatalogOptions(CATALOG_TYPE.VEHICLE_BRAND, current);
+  return (
+    <SelectField
+      control={control}
+      name="brand"
+      label="Hãng sản xuất"
+      options={options}
+      placeholder="Chọn hãng xe"
+      allowClear
+      showSearch
+    />
+  );
+}
+
+function FuelTypeSelect({ control }: Pick<SectionProps, 'control'>) {
+  const current = useWatch({ control, name: 'fuelType' });
+  const options = useCatalogOptions(CATALOG_TYPE.FUEL_TYPE, current);
+  return (
+    <SelectField
+      control={control}
+      name="fuelType"
+      label="Loại nhiên liệu"
+      options={options}
+      placeholder="Chọn nhiên liệu"
+      allowClear
+    />
+  );
+}
+
+/**
+ * Kiểu dáng xe — thẻ có ảnh thay vì dropdown chữ.
+ *
+ * Đây chính là chiều "Loại xe" khách dùng để lọc ngoài chợ, nên chọn sai là xe không ai tìm
+ * thấy; ảnh minh hoạ làm việc chọn tường minh hơn hẳn danh sách "CUV / SUV / MPV" bằng chữ.
+ * Cùng component với bộ lọc marketplace (`CatalogCardPicker`) nên hai màn không thể lệch ảnh.
+ */
+/** Tiện ích — cùng danh mục `vehicle_feature` mà bộ lọc ngoài chợ dùng. */
+function FeaturesSelect({ control }: Pick<SectionProps, 'control'>) {
+  const { items } = useCatalogItems(CATALOG_TYPE.VEHICLE_FEATURE);
+  const options = useMemo(
+    () => items.map((item) => ({ value: item.key, label: item.label })),
+    [items],
+  );
+  return (
+    <Controller
+      control={control}
+      name="features"
+      render={({ field }) => (
+        <Select
+          mode="multiple"
+          aria-labelledby="vehicle-features-label"
+          className={styles.fullWidth}
+          value={field.value ?? []}
+          onChange={field.onChange}
+          options={options}
+          placeholder="Chọn tiện ích (Bluetooth, camera lùi…)"
+          allowClear
+        />
+      )}
+    />
+  );
+}
+
+function BodyTypePicker({ control }: Pick<SectionProps, 'control'>) {
+  const { items, isLoading } = useCatalogItems(CATALOG_TYPE.BODY_TYPE);
+
+  return (
+    <div className={styles.galleryBlock}>
+      <div className={styles.fieldLabel} id="vehicle-body-type-label">
+        Kiểu dáng xe
+      </div>
+      <div className={styles.fieldHint}>Giúp khách lọc xe trên chợ. Bấm lại để bỏ chọn.</div>
+      {isLoading ? (
+        <Skeleton active paragraph={{ rows: 2 }} title={false} />
+      ) : (
+        <Controller
+          control={control}
+          name="bodyType"
+          render={({ field }) => (
+            <CatalogCardPicker
+              ariaLabel="Kiểu dáng xe"
+              items={items}
+              value={field.value ? [field.value] : []}
+              onChange={(next) => field.onChange(next[0] ?? null)}
+            />
+          )}
+        />
+      )}
+    </div>
   );
 }
 
@@ -468,22 +537,7 @@ export function FeaturesDescriptionSection({ control }: SectionProps) {
         <div className={styles.fieldLabel} id="vehicle-features-label">
           Tiện ích
         </div>
-        <Controller
-          control={control}
-          name="features"
-          render={({ field }) => (
-            <Select
-              mode="multiple"
-              aria-labelledby="vehicle-features-label"
-              className={styles.fullWidth}
-              value={field.value ?? []}
-              onChange={field.onChange}
-              options={FEATURE_OPTIONS}
-              placeholder="Chọn tiện ích (Bluetooth, camera lùi…)"
-              allowClear
-            />
-          )}
-        />
+        <FeaturesSelect control={control} />
       </div>
 
       <div className={styles.descBlock}>

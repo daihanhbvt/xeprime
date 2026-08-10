@@ -11,6 +11,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BillingService } from '../src/modules/billing/billing.service';
+import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
@@ -30,7 +31,13 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
 const listings = new ListingsService(asService);
-const vehicles = new VehiclesService(asService, audit, listings, new BillingService(asService, audit));
+const vehicles = new VehiclesService(
+  asService,
+  audit,
+  listings,
+  new BillingService(asService, audit),
+  new CatalogService(asService, audit),
+);
 const approvals = new PlatformApprovalService(asService, audit, notifications, listings);
 
 let dbAvailable = false;

@@ -259,6 +259,13 @@ export const PLATFORM_NAV: readonly NavNode[] = [
         icon: CreditCardOutlined,
       },
       {
+        key: 'admin-catalog',
+        label: 'Danh mục lọc',
+        href: ROUTES.MANAGE.ADMIN_CATALOG,
+        permission: PERMISSION.PLATFORM_CATALOG_MANAGE,
+        icon: AppstoreOutlined,
+      },
+      {
         key: 'admin-audit',
         label: 'Nhật ký hệ thống',
         href: ROUTES.MANAGE.ADMIN_AUDIT,

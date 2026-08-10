@@ -34,6 +34,12 @@ export const queryKeys = {
     resources: (params: QueryParams) => ['calendar', 'resources', params] as const,
     events: (params: QueryParams) => ['calendar', 'events', params] as const,
   },
+  /** Danh mục lọc dùng chung (hãng/kiểu dáng/nhiên liệu/tiện ích) — một key cho cả app. */
+  catalog: {
+    all: ['catalog'] as const,
+    list: () => ['catalog', 'list'] as const,
+    admin: (params: QueryParams) => ['catalog', 'admin', params] as const,
+  },
   vehicles: {
     all: ['vehicles'] as const,
     list: (params: QueryParams) => ['vehicles', 'list', params] as const,

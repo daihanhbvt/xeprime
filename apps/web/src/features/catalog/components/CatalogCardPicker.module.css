@@ -1,0 +1,103 @@
+/*
+ * Lưới thẻ danh mục có ảnh. `auto-fill` + `minmax` để cùng một component vừa xếp 2 cột trong
+ * cột form hẹp, vừa xếp 4 cột trong panel bộ lọc rộng — không cần media query, không cần prop
+ * `columns` mà gọi nào cũng phải nhớ truyền.
+ */
+.grid {
+  display: grid;
+  gap: var(--xp-space-sm);
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.card {
+  position: relative;
+  display: flex;
+  min-height: 96px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  cursor: pointer;
+  gap: 2px;
+  text-align: center;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.card:hover:not(:disabled) {
+  border-color: var(--xp-color-primary);
+}
+
+.card:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.active {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-bg-selected);
+}
+
+.media {
+  display: flex;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 48px;
+  object-fit: contain;
+}
+
+.fallbackIcon {
+  color: var(--xp-color-text-tertiary);
+  font-size: 28px;
+}
+
+.label {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.meta {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-overline);
+  line-height: var(--xp-line-height-overline);
+}
+
+/* Dấu tích góc: trạng thái chọn không chỉ dựa vào màu viền (WCAG 1.4.1). */
+.check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: var(--xp-color-primary-active);
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  }
+
+  .card {
+    min-height: 84px;
+  }
+
+  .media {
+    height: 36px;
+  }
+
+  .icon {
+    max-height: 36px;
+  }
+}

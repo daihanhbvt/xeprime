@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
-import { API_ERROR_CODE, CONTRACT_STATUS } from '@xeprime/types';
+import { API_ERROR_CODE, CATALOG_TYPE, CONTRACT_STATUS } from '@xeprime/types';
 import { bookingDebt } from '../../common/money';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -30,7 +30,11 @@ export class ContractsService {
    * snapshot không đổi). Snapshot đông cứng bên A/B, xe, thời gian, bảng giá, cọc lúc lập; sửa
    * booking sau KHÔNG ảnh hưởng HĐ đã in. `tenantId` từ scope, không tin client.
    */
-  async createFromBooking(tenantId: string, userId: string, bookingId: string): Promise<ContractDto> {
+  async createFromBooking(
+    tenantId: string,
+    userId: string,
+    bookingId: string,
+  ): Promise<ContractDto> {
     const existing = await this.prisma.contract.findFirst({
       where: { bookingId, tenantId },
       select: CONTRACT_SELECT,
@@ -117,7 +121,10 @@ export class ContractsService {
         plateNumber: booking.vehicle.plateNumber,
         vehicleType: booking.vehicle.vehicleType,
         serviceType: booking.vehicle.serviceType,
-        brand: booking.vehicle.brand,
+        // Đổi key danh mục ("vinfast") sang tên hiển thị ("VinFast") NGAY khi chốt snapshot:
+        // hợp đồng là văn bản đóng băng, in ra phải là tên hãng chứ không phải slug, và sau này
+        // admin đổi nhãn cũng không được sửa hợp đồng đã ký.
+        brand: await this.brandLabel(booking.vehicle.brand),
         model: booking.vehicle.model,
         manufactureYear: booking.vehicle.manufactureYear,
         color: booking.vehicle.color,
@@ -202,6 +209,16 @@ export class ContractsService {
     });
     if (!row) throw notFound();
     return toDto(row);
+  }
+
+  /** Key hãng xe → tên hiển thị. Key lạ (chưa chuẩn hoá) thì giữ nguyên, không bỏ trắng. */
+  private async brandLabel(key: string | null): Promise<string | null> {
+    if (!key) return null;
+    const item = await this.prisma.catalogItem.findUnique({
+      where: { type_key: { type: CATALOG_TYPE.VEHICLE_BRAND, key } },
+      select: { label: true },
+    });
+    return item?.label ?? key;
   }
 }
 

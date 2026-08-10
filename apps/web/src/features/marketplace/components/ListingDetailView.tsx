@@ -1,16 +1,10 @@
 import Link from 'next/link';
-import {
-  SERVICE_TYPE_LABEL,
-  VEHICLE_TYPE,
-  bodyTypeLabel,
-  vehicleFeatureLabel,
-  type ServiceType,
-} from '@xeprime/types';
+import { CATALOG_TYPE, SERVICE_TYPE_LABEL, VEHICLE_TYPE, type ServiceType } from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
+import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { shopPath } from '@/constants/routes';
 import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
-import { fuelLabel } from '@/lib/vehicle-labels';
 import type { PublicListingDetail } from '../types';
 import { ListingReviews } from './ListingReviews';
 import styles from './ListingDetailView.module.css';
@@ -22,22 +16,45 @@ function vehicleTypeLabel(type: string): string {
 /** Trang chi tiết một xe trên Marketplace (server-render). Nút thuê là client island. */
 export function ListingDetailView({
   listing,
+  catalog,
   pickupAt,
   returnAt,
 }: {
   listing: PublicListingDetail;
+  /** Danh mục lọc — trang server không gọi được `useCatalog`, page truyền xuống. */
+  catalog: CatalogMap;
   pickupAt?: string;
   returnAt?: string;
 }) {
+  const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
   const specs: Array<{ label: string; value: string }> = [
     { label: 'Loại xe', value: vehicleTypeLabel(listing.vehicleType) },
-    { label: 'Dịch vụ', value: SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType },
-    ...(listing.bodyType ? [{ label: 'Kiểu dáng', value: bodyTypeLabel(listing.bodyType) }] : []),
+    {
+      label: 'Dịch vụ',
+      value: SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType,
+    },
+    ...(listing.bodyType
+      ? [
+          {
+            label: 'Kiểu dáng',
+            value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '',
+          },
+        ]
+      : []),
     ...(listing.seatCount ? [{ label: 'Số chỗ', value: `${listing.seatCount} chỗ` }] : []),
-    ...(listing.fuelType ? [{ label: 'Nhiên liệu', value: fuelLabel(listing.fuelType) ?? listing.fuelType }] : []),
-    ...(listing.manufactureYear ? [{ label: 'Đời xe', value: String(listing.manufactureYear) }] : []),
+    ...(listing.fuelType
+      ? [
+          {
+            label: 'Nhiên liệu',
+            value: catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? '',
+          },
+        ]
+      : []),
+    ...(listing.manufactureYear
+      ? [{ label: 'Đời xe', value: String(listing.manufactureYear) }]
+      : []),
     ...(listing.color ? [{ label: 'Màu', value: listing.color }] : []),
-    ...(listing.brand ? [{ label: 'Hãng', value: [listing.brand, listing.model].filter(Boolean).join(' ') }] : []),
+    ...(brand ? [{ label: 'Hãng', value: [brand, listing.model].filter(Boolean).join(' ') }] : []),
   ];
 
   // Giá sau giảm chỉ để HIỂN THỊ (marketing) — giá chốt thật do shop quyết khi duyệt yêu cầu.
@@ -80,7 +97,9 @@ export function ListingDetailView({
             <span className={styles.weekend}>Cuối tuần {formatMoneyVnd(listing.weekendPrice)}</span>
           ) : null}
           {listing.hourlyPrice ? (
-            <span className={styles.weekend}>Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ</span>
+            <span className={styles.weekend}>
+              Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ
+            </span>
           ) : null}
         </div>
 
@@ -108,7 +127,7 @@ export function ListingDetailView({
           <div className={styles.features}>
             {listing.features.map((key) => (
               <span key={key} className={styles.featureChip}>
-                {vehicleFeatureLabel(key)}
+                {catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key)}
               </span>
             ))}
           </div>
@@ -118,7 +137,9 @@ export function ListingDetailView({
           <Link href={shopPath.detail(listing.shopSlug)} className={styles.shopName}>
             {listing.shopName}
           </Link>
-          {listing.shopProvince ? <div className={styles.shopMeta}>{listing.shopProvince}</div> : null}
+          {listing.shopProvince ? (
+            <div className={styles.shopMeta}>{listing.shopProvince}</div>
+          ) : null}
           {listing.shopBio ? <p className={styles.shopBio}>{listing.shopBio}</p> : null}
         </div>
 

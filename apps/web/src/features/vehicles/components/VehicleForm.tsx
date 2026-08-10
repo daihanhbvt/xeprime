@@ -277,10 +277,7 @@ export function VehicleForm({
         </Button>
         <div className={styles.finalActions}>
           {isCreate ? (
-            <Button
-              loading={submitting}
-              onClick={() => submitNow({ submitForReview: false })}
-            >
+            <Button loading={submitting} onClick={() => submitNow({ submitForReview: false })}>
               Lưu nháp
             </Button>
           ) : null}
@@ -320,9 +317,7 @@ export function VehicleForm({
           navigation={isCreate ? 'sequential' : 'free'}
           heading={steps[step]!.heading}
           description={
-            isCreate
-              ? undefined
-              : 'Điền đầy đủ thông tin của xe để chuyển qua bước tiếp theo.'
+            isCreate ? undefined : 'Điền đầy đủ thông tin của xe để chuyển qua bước tiếp theo.'
           }
           notice={
             <>

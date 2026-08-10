@@ -5,7 +5,6 @@ import { App, Button, Descriptions, Input, Popconfirm } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
 import {
-  FUEL_TYPE_LABEL,
   LISTING_STATUS_META,
   PERMISSION,
   SERVICE_TYPE_LABEL,
@@ -14,7 +13,6 @@ import {
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
   VEHICLE_TYPE_LABEL,
-  type FuelType,
   type ListingStatus,
   type ServiceType,
   type TenantStatus,
@@ -24,6 +22,7 @@ import {
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
+import { useCatalogLabels, type CatalogLabels } from '@/features/catalog/use-catalog';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { listingPath, shopPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -71,6 +70,7 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
   const { message } = App.useApp();
   const { has } = usePermissions();
   const moderation = useVehicleModeration(vehicle.id);
+  const labels = useCatalogLabels();
   const [hideOpen, setHideOpen] = useState(false);
   const [reason, setReason] = useState('');
 
@@ -106,7 +106,7 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
 
   return (
     <div>
-      <Descriptions column={1} size="small" bordered items={detailItems(vehicle)} />
+      <Descriptions column={1} size="small" bordered items={detailItems(vehicle, labels)} />
 
       <div className={styles.actions}>
         {!canModerate ? (
@@ -168,13 +168,13 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
   );
 }
 
-function detailItems(v: AdminVehicleDetail) {
+function detailItems(v: AdminVehicleDetail, labels: CatalogLabels) {
   const specs = [
-    v.brand,
+    labels.brandLabel(v.brand),
     v.model,
     v.manufactureYear ? String(v.manufactureYear) : null,
     v.seatCount ? `${v.seatCount} chỗ` : null,
-    v.fuelType ? (FUEL_TYPE_LABEL[v.fuelType as FuelType] ?? v.fuelType) : null,
+    labels.fuelTypeLabel(v.fuelType),
   ]
     .filter(Boolean)
     .join(' · ');

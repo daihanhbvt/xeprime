@@ -660,6 +660,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh mục lọc đang bật (hãng xe / kiểu dáng / nhiên liệu / tiện ích) */
+        get: operations["CatalogController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh mục đầy đủ, kèm mục đã tắt và số xe đang dùng */
+        get: operations["PlatformCatalogController_list"];
+        put?: never;
+        /** Thêm mục danh mục */
+        post: operations["PlatformCatalogController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/catalog/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sắp lại thứ tự hiển thị của một chiều danh mục */
+        post: operations["PlatformCatalogController_reorder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/catalog/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Xoá mục chưa có xe nào dùng (đã có xe thì tắt, không xoá) */
+        delete: operations["PlatformCatalogController_remove"];
+        options?: never;
+        head?: never;
+        /** Sửa nhãn / mô tả / ảnh / thứ tự / bật-tắt (không đổi mã) */
+        patch: operations["PlatformCatalogController_update"];
+        trace?: never;
+    };
     "/bookings": {
         parameters: {
             query?: never;
@@ -1779,7 +1849,7 @@ export interface components {
             tenantRole?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer" | null;
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii")[];
         };
         NotificationDto: {
             id: string;
@@ -2160,7 +2230,7 @@ export interface components {
             model?: string | null;
             manufactureYear?: number | null;
             seatCount?: number | null;
-            /** @description Kiểu dáng (BODY_TYPE) */
+            /** @description Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog) */
             bodyType?: string | null;
             /** @description % giảm giá marketing (0–100) */
             discountPercent?: number | null;
@@ -2214,7 +2284,7 @@ export interface components {
             model?: string | null;
             manufactureYear?: number | null;
             seatCount?: number | null;
-            /** @description Kiểu dáng (BODY_TYPE) */
+            /** @description Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog) */
             bodyType?: string | null;
             /** @description % giảm giá marketing (0–100) */
             discountPercent?: number | null;
@@ -2229,8 +2299,8 @@ export interface components {
             /** @description ISO-8601 UTC */
             updatedAt: string;
             color?: string | null;
-            /** @enum {string|null} */
-            fuelType?: "gasoline" | "diesel" | "electric" | "hybrid" | null;
+            /** @description Key nhiên liệu — tra nhãn ở danh mục `fuel_type` (GET /catalog) */
+            fuelType?: string | null;
             description?: string | null;
             /** @description Giá thuê giờ — string tiền (ADR 0007) */
             hourlyPrice?: string | null;
@@ -2263,18 +2333,25 @@ export interface components {
             serviceType: "self_drive" | "with_driver" | "both" | "long_term";
             /** @example 51K-123.45 */
             plateNumber?: string;
+            /**
+             * @description Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do
+             * @example vinfast
+             */
             brand?: string;
             model?: string;
             manufactureYear?: number;
             color?: string;
             seatCount?: number;
-            /** @enum {string} */
-            fuelType?: "gasoline" | "diesel" | "electric" | "hybrid";
             /**
-             * @description Kiểu dáng thân xe — chỉ với ô tô. Gửi null để xoá.
-             * @enum {string|null}
+             * @description Key nhiên liệu thuộc danh mục `fuel_type` (GET /catalog)
+             * @example gasoline
              */
-            bodyType?: "mini" | "sedan" | "cuv" | "suv" | "mpv" | "pickup" | "van" | "minibus" | "cargo" | null;
+            fuelType?: string;
+            /**
+             * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.
+             * @example suv
+             */
+            bodyType?: string | null;
             /**
              * @default available
              * @enum {string}
@@ -2306,8 +2383,14 @@ export interface components {
             discountPercent?: number | null;
             /** @description URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi) */
             images?: string[];
-            /** @description Tiện ích xe (thay toàn bộ khi gửi) */
-            features?: ("bluetooth" | "gps" | "backup_camera" | "camera_360" | "dash_camera" | "reverse_sensor" | "sunroof" | "etc" | "spare_tire" | "airbag" | "usb" | "screen" | "map" | "child_seat")[];
+            /**
+             * @description Key tiện ích thuộc danh mục `vehicle_feature` (GET /catalog) — thay toàn bộ khi gửi
+             * @example [
+             *       "bluetooth",
+             *       "gps"
+             *     ]
+             */
+            features?: string[];
         };
         UpdateVehicleDto: {
             /**
@@ -2326,18 +2409,25 @@ export interface components {
             serviceType: "self_drive" | "with_driver" | "both" | "long_term";
             /** @example 51K-123.45 */
             plateNumber?: string;
+            /**
+             * @description Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do
+             * @example vinfast
+             */
             brand?: string;
             model?: string;
             manufactureYear?: number;
             color?: string;
             seatCount?: number;
-            /** @enum {string} */
-            fuelType?: "gasoline" | "diesel" | "electric" | "hybrid";
             /**
-             * @description Kiểu dáng thân xe — chỉ với ô tô. Gửi null để xoá.
-             * @enum {string|null}
+             * @description Key nhiên liệu thuộc danh mục `fuel_type` (GET /catalog)
+             * @example gasoline
              */
-            bodyType?: "mini" | "sedan" | "cuv" | "suv" | "mpv" | "pickup" | "van" | "minibus" | "cargo" | null;
+            fuelType?: string;
+            /**
+             * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.
+             * @example suv
+             */
+            bodyType?: string | null;
             /**
              * @default available
              * @enum {string}
@@ -2369,8 +2459,14 @@ export interface components {
             discountPercent?: number | null;
             /** @description URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi) */
             images?: string[];
-            /** @description Tiện ích xe (thay toàn bộ khi gửi) */
-            features?: ("bluetooth" | "gps" | "backup_camera" | "camera_360" | "dash_camera" | "reverse_sensor" | "sunroof" | "etc" | "spare_tire" | "airbag" | "usb" | "screen" | "map" | "child_seat")[];
+            /**
+             * @description Key tiện ích thuộc danh mục `vehicle_feature` (GET /catalog) — thay toàn bộ khi gửi
+             * @example [
+             *       "bluetooth",
+             *       "gps"
+             *     ]
+             */
+            features?: string[];
         };
         PlanDto: {
             id: string;
@@ -2455,6 +2551,70 @@ export interface components {
             planId: string;
             /** @description Ghi chú (số chứng từ, lý do tặng…) */
             note?: string;
+        };
+        CatalogItemDto: {
+            id: string;
+            /** @enum {string} */
+            type: "vehicle_brand" | "body_type" | "fuel_type" | "vehicle_feature";
+            /** @example suv */
+            key: string;
+            /** @example SUV */
+            label: string;
+            /** @example 7 chỗ · gầm cao */
+            description: string | null;
+            /** @example /body-types/suv.png */
+            iconUrl: string | null;
+            sortOrder: number;
+            active: boolean;
+        };
+        CatalogItemAdminDto: {
+            id: string;
+            /** @enum {string} */
+            type: "vehicle_brand" | "body_type" | "fuel_type" | "vehicle_feature";
+            /** @example suv */
+            key: string;
+            /** @example SUV */
+            label: string;
+            /** @example 7 chỗ · gầm cao */
+            description: string | null;
+            /** @example /body-types/suv.png */
+            iconUrl: string | null;
+            sortOrder: number;
+            active: boolean;
+            /** @description Số xe đang trỏ vào key này (mọi gian hàng) */
+            usageCount: number;
+        };
+        CreateCatalogItemDto: {
+            /** @enum {string} */
+            type: "vehicle_brand" | "body_type" | "fuel_type" | "vehicle_feature";
+            /**
+             * @description Slug lưu xuống xe và đi vào URL bộ lọc — không đổi được sau khi tạo
+             * @example coupe
+             */
+            key: string;
+            /** @example Coupe */
+            label: string;
+            /** @example 2 chỗ · thể thao */
+            description?: Record<string, never>;
+            /** @example /body-types/coupe.png */
+            iconUrl?: Record<string, never>;
+            /** @default 0 */
+            sortOrder: number;
+            /** @default true */
+            active: boolean;
+        };
+        ReorderCatalogDto: {
+            /** @enum {string} */
+            type: "vehicle_brand" | "body_type" | "fuel_type" | "vehicle_feature";
+            /** @description Danh sách id theo đúng thứ tự hiển thị mong muốn */
+            ids: string[];
+        };
+        UpdateCatalogItemDto: {
+            label?: string;
+            description?: string | null;
+            iconUrl?: string | null;
+            sortOrder?: number;
+            active?: boolean;
         };
         BookingListItemDto: {
             id: string;
@@ -4758,6 +4918,142 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubscriptionDto"];
+                };
+            };
+        };
+    };
+    CatalogController_list: {
+        parameters: {
+            query?: {
+                /** @description Bỏ trống = trả cả bốn chiều trong một lượt */
+                type?: "vehicle_brand" | "body_type" | "fuel_type" | "vehicle_feature";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogItemDto"][];
+                };
+            };
+        };
+    };
+    PlatformCatalogController_list: {
+        parameters: {
+            query?: {
+                /** @description Bỏ trống = trả cả bốn chiều trong một lượt */
+                type?: "vehicle_brand" | "body_type" | "fuel_type" | "vehicle_feature";
+                /** @description true = kèm cả mục đã tắt */
+                includeInactive?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogItemAdminDto"][];
+                };
+            };
+        };
+    };
+    PlatformCatalogController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCatalogItemDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogItemDto"];
+                };
+            };
+        };
+    };
+    PlatformCatalogController_reorder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderCatalogDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogItemAdminDto"][];
+                };
+            };
+        };
+    };
+    PlatformCatalogController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlatformCatalogController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCatalogItemDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogItemDto"];
                 };
             };
         };

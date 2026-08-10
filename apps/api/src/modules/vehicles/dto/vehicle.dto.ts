@@ -1,11 +1,9 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   APPROVAL_STATUS_VALUES,
-  BODY_TYPE_VALUES,
-  FUEL_TYPE_VALUES,
+  CATALOG_KEY_PATTERN,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
-  VEHICLE_FEATURE_KEYS,
   VEHICLE_OPERATION_STATUS,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_PUBLIC_STATUS_VALUES,
@@ -39,6 +37,11 @@ const MIN_YEAR = 1980;
 const MAX_YEAR = new Date().getFullYear() + 1;
 /** Tiền nhập vào dạng chuỗi thập phân tối đa 2 số lẻ (ADR 0007 — không dùng number). */
 const MONEY_PATTERN = /^\d{1,12}(\.\d{1,2})?$/;
+/**
+ * Trần số tiện ích một xe. Danh mục tiện ích nằm ở DB nên không còn đếm được lúc compile;
+ * đây là chặn payload phình, còn "key có thật không" do `CatalogService` kiểm.
+ */
+const MAX_FEATURES = 64;
 
 export { DEFAULT_LIMIT as VEHICLE_DEFAULT_LIMIT, MAX_LIMIT as VEHICLE_MAX_LIMIT };
 
@@ -108,7 +111,11 @@ export class VehicleListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) model!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) manufactureYear!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) seatCount!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Kiểu dáng (BODY_TYPE)' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog)',
+  })
   bodyType!: string | null;
   @ApiPropertyOptional({
     type: Number,
@@ -140,7 +147,12 @@ export class VehiclePublicReviewDto {
 /** Chi tiết một xe — dùng cho trang xem/sửa. */
 export class VehicleDetailDto extends VehicleListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) color!: string | null;
-  @ApiPropertyOptional({ enum: FUEL_TYPE_VALUES, nullable: true }) fuelType!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Key nhiên liệu — tra nhãn ở danh mục `fuel_type` (GET /catalog)',
+  })
+  fuelType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
 
   @ApiPropertyOptional({
@@ -201,10 +213,13 @@ export class CreateVehicleDto {
   @MaxLength(50)
   plateNumber?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do',
+    example: 'vinfast',
+  })
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @Matches(CATALOG_KEY_PATTERN, { message: 'brand phải là key trong danh mục hãng xe' })
   brand?: string;
 
   @ApiPropertyOptional()
@@ -235,20 +250,29 @@ export class CreateVehicleDto {
   @Max(64)
   seatCount?: number;
 
-  @ApiPropertyOptional({ enum: FUEL_TYPE_VALUES })
+  @ApiPropertyOptional({
+    description: 'Key nhiên liệu thuộc danh mục `fuel_type` (GET /catalog)',
+    example: 'gasoline',
+  })
   @IsOptional()
-  @IsIn(FUEL_TYPE_VALUES)
+  @IsString()
+  @Matches(CATALOG_KEY_PATTERN, { message: 'fuelType phải là key trong danh mục nhiên liệu' })
   fuelType?: string;
 
   // Các trường có thể GỠ giá trị (gửi null) — @IsOptional bỏ qua validate khi null,
   // service ghi null xuống DB để xoá (vd đổi ô tô → xe máy thì bỏ kiểu dáng).
+  // `type: String` bắt buộc với field nullable — thiếu nó openapi-typescript sinh
+  // `Record<string, never>` thay vì `string` (xem ghi chú ở `VehicleDto`).
   @ApiPropertyOptional({
-    enum: BODY_TYPE_VALUES,
+    type: String,
     nullable: true,
-    description: 'Kiểu dáng thân xe — chỉ với ô tô. Gửi null để xoá.',
+    description:
+      'Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.',
+    example: 'suv',
   })
   @IsOptional()
-  @IsIn(BODY_TYPE_VALUES)
+  @IsString()
+  @Matches(CATALOG_KEY_PATTERN, { message: 'bodyType phải là key trong danh mục kiểu dáng' })
   bodyType?: string | null;
 
   @ApiPropertyOptional({
@@ -330,13 +354,18 @@ export class CreateVehicleDto {
 
   @ApiPropertyOptional({
     isArray: true,
-    enum: VEHICLE_FEATURE_KEYS,
-    description: 'Tiện ích xe (thay toàn bộ khi gửi)',
+    type: String,
+    description:
+      'Key tiện ích thuộc danh mục `vehicle_feature` (GET /catalog) — thay toàn bộ khi gửi',
+    example: ['bluetooth', 'gps'],
   })
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(VEHICLE_FEATURE_KEYS.length)
-  @IsIn(VEHICLE_FEATURE_KEYS, { each: true })
+  @ArrayMaxSize(MAX_FEATURES)
+  @Matches(CATALOG_KEY_PATTERN, {
+    each: true,
+    message: 'features phải là key trong danh mục tiện ích',
+  })
   features?: string[];
 }
 

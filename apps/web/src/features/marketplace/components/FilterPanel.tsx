@@ -3,11 +3,8 @@
 import { Button, Select, Slider, Switch } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BODY_TYPE_LABEL,
-  BODY_TYPE_VALUES,
+  CATALOG_TYPE,
   DEFAULT_LISTING_SORT,
-  FUEL_TYPE_LABEL,
-  FUEL_TYPE_VALUES,
   LISTING_AMENITY_DESC,
   LISTING_AMENITY_LABEL,
   LISTING_AMENITY_VALUES,
@@ -15,12 +12,12 @@ import {
   LISTING_SORT_VALUES,
   SEAT_BUCKET_LABEL,
   SEAT_BUCKET_VALUES,
-  VEHICLE_FEATURE_KEYS,
   VEHICLE_TYPE,
-  vehicleFeatureLabel,
   type ListingAmenity,
 } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
+import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { cx } from '@/lib/cx';
 import { formatMoneyVnd } from '@/lib/money';
@@ -145,6 +142,14 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
   const facetsQuery = useListingFacets(facetFilters, { enabled: open });
   const facets = facetsQuery.data;
 
+  // Danh mục do platform admin cấu hình — CÙNG nguồn với form tạo xe, nên bộ lọc không bao giờ
+  // liệt kê một kiểu dáng mà chủ xe không chọn được (và ngược lại).
+  const { catalog } = useCatalog();
+  const bodyTypeItems = catalog[CATALOG_TYPE.BODY_TYPE];
+  const fuelItems = catalog[CATALOG_TYPE.FUEL_TYPE];
+  const featureItems = catalog[CATALOG_TYPE.VEHICLE_FEATURE];
+  const { brandLabel } = useCatalogLabels();
+
   const countOf = useMemo(() => {
     const maps = {
       bodyType: new Map(facets?.bodyType.map((b) => [b.key, b.count]) ?? []),
@@ -236,20 +241,20 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
         </div>
       </section>
 
-      {showBodyType ? (
+      {showBodyType && bodyTypeItems.length > 0 ? (
         <section className={styles.section}>
           <h4 className={styles.sectionTitle}>Loại xe</h4>
-          <div className={styles.chipGrid}>
-            {BODY_TYPE_VALUES.map((key) => (
-              <FacetChip
-                key={key}
-                label={BODY_TYPE_LABEL[key]}
-                count={countOf('bodyType', key)}
-                active={draft.bodyType.includes(key)}
-                onToggle={() => setDraft((d) => ({ ...d, bodyType: toggle(d.bodyType, key) }))}
-              />
-            ))}
-          </div>
+          {/* Thẻ có ảnh — cùng component với ô "Kiểu dáng xe" ở form tạo xe, nên khách nhìn
+              thấy đúng cái hình mà chủ xe đã chọn. */}
+          <CatalogCardPicker
+            ariaLabel="Loại xe"
+            mode="multi"
+            items={bodyTypeItems}
+            value={draft.bodyType}
+            onChange={(next) => setDraft((d) => ({ ...d, bodyType: next }))}
+            countOf={(key) => countOf('bodyType', key) ?? undefined}
+            countSuffix="xe"
+          />
         </section>
       ) : null}
 
@@ -260,7 +265,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
             {brandOptions.map((b) => (
               <FacetChip
                 key={b.key}
-                label={b.key}
+                label={brandLabel(b.key) ?? b.key}
                 count={facets ? b.count : null}
                 active={draft.brand.includes(b.key)}
                 icon={<BrandMark brand={b.key} />}
@@ -289,13 +294,13 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
       <section className={styles.section}>
         <h4 className={styles.sectionTitle}>Nhiên liệu</h4>
         <div className={styles.chipGrid}>
-          {FUEL_TYPE_VALUES.map((key) => (
+          {fuelItems.map((item) => (
             <FacetChip
-              key={key}
-              label={FUEL_TYPE_LABEL[key]}
-              count={countOf('fuelType', key)}
-              active={draft.fuelType.includes(key)}
-              onToggle={() => setDraft((d) => ({ ...d, fuelType: toggle(d.fuelType, key) }))}
+              key={item.key}
+              label={item.label}
+              count={countOf('fuelType', item.key)}
+              active={draft.fuelType.includes(item.key)}
+              onToggle={() => setDraft((d) => ({ ...d, fuelType: toggle(d.fuelType, item.key) }))}
             />
           ))}
         </div>
@@ -304,13 +309,13 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
       <section className={styles.section}>
         <h4 className={styles.sectionTitle}>Tính năng</h4>
         <div className={styles.chipGrid}>
-          {VEHICLE_FEATURE_KEYS.map((key) => (
+          {featureItems.map((item) => (
             <FacetChip
-              key={key}
-              label={vehicleFeatureLabel(key)}
-              count={countOf('features', key)}
-              active={draft.features.includes(key)}
-              onToggle={() => setDraft((d) => ({ ...d, features: toggle(d.features, key) }))}
+              key={item.key}
+              label={item.label}
+              count={countOf('features', item.key)}
+              active={draft.features.includes(item.key)}
+              onToggle={() => setDraft((d) => ({ ...d, features: toggle(d.features, item.key) }))}
             />
           ))}
         </div>
@@ -403,7 +408,11 @@ function FacetChip({
       type="button"
       role="checkbox"
       aria-checked={active}
-      className={cx(styles.chip, active && styles.chipActive, count === 0 && !active && styles.chipDim)}
+      className={cx(
+        styles.chip,
+        active && styles.chipActive,
+        count === 0 && !active && styles.chipDim,
+      )}
       onClick={onToggle}
     >
       {icon}

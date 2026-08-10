@@ -2113,6 +2113,226 @@
         ]
       }
     },
+    "/catalog": {
+      "get": {
+        "operationId": "CatalogController_list",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Bỏ trống = trả cả bốn chiều trong một lượt",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "vehicle_brand",
+                "body_type",
+                "fuel_type",
+                "vehicle_feature"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogItemDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh mục lọc đang bật (hãng xe / kiểu dáng / nhiên liệu / tiện ích)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/platform/catalog": {
+      "get": {
+        "operationId": "PlatformCatalogController_list",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Bỏ trống = trả cả bốn chiều trong một lượt",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "vehicle_brand",
+                "body_type",
+                "fuel_type",
+                "vehicle_feature"
+              ]
+            }
+          },
+          {
+            "name": "includeInactive",
+            "required": false,
+            "in": "query",
+            "description": "true = kèm cả mục đã tắt",
+            "schema": {
+              "default": true,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogItemAdminDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh mục đầy đủ, kèm mục đã tắt và số xe đang dùng",
+        "tags": [
+          "platform-catalog"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformCatalogController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCatalogItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogItemDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thêm mục danh mục",
+        "tags": [
+          "platform-catalog"
+        ]
+      }
+    },
+    "/platform/catalog/reorder": {
+      "post": {
+        "operationId": "PlatformCatalogController_reorder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderCatalogDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogItemAdminDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sắp lại thứ tự hiển thị của một chiều danh mục",
+        "tags": [
+          "platform-catalog"
+        ]
+      }
+    },
+    "/platform/catalog/{id}": {
+      "patch": {
+        "operationId": "PlatformCatalogController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCatalogItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogItemDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa nhãn / mô tả / ảnh / thứ tự / bật-tắt (không đổi mã)",
+        "tags": [
+          "platform-catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "PlatformCatalogController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Xoá mục chưa có xe nào dùng (đã có xe thì tắt, không xoá)",
+        "tags": [
+          "platform-catalog"
+        ]
+      }
+    },
     "/bookings": {
       "get": {
         "operationId": "BookingsController_list",
@@ -5615,6 +5835,7 @@
                 "platform.audit.view",
                 "platform.staff.manage",
                 "platform.billing.manage",
+                "platform.catalog.manage",
                 "platform.vehicles.view",
                 "platform.vehicles.moderate",
                 "platform.bookings.view",
@@ -6878,7 +7099,7 @@
           "bodyType": {
             "type": "string",
             "nullable": true,
-            "description": "Kiểu dáng (BODY_TYPE)"
+            "description": "Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog)"
           },
           "discountPercent": {
             "type": "number",
@@ -7078,7 +7299,7 @@
           "bodyType": {
             "type": "string",
             "nullable": true,
-            "description": "Kiểu dáng (BODY_TYPE)"
+            "description": "Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog)"
           },
           "discountPercent": {
             "type": "number",
@@ -7129,13 +7350,8 @@
           },
           "fuelType": {
             "type": "string",
-            "enum": [
-              "gasoline",
-              "diesel",
-              "electric",
-              "hybrid"
-            ],
-            "nullable": true
+            "nullable": true,
+            "description": "Key nhiên liệu — tra nhãn ở danh mục `fuel_type` (GET /catalog)"
           },
           "description": {
             "type": "string",
@@ -7232,7 +7448,9 @@
             "example": "51K-123.45"
           },
           "brand": {
-            "type": "string"
+            "type": "string",
+            "description": "Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do",
+            "example": "vinfast"
           },
           "model": {
             "type": "string"
@@ -7252,28 +7470,14 @@
           },
           "fuelType": {
             "type": "string",
-            "enum": [
-              "gasoline",
-              "diesel",
-              "electric",
-              "hybrid"
-            ]
+            "description": "Key nhiên liệu thuộc danh mục `fuel_type` (GET /catalog)",
+            "example": "gasoline"
           },
           "bodyType": {
             "type": "string",
-            "enum": [
-              "mini",
-              "sedan",
-              "cuv",
-              "suv",
-              "mpv",
-              "pickup",
-              "van",
-              "minibus",
-              "cargo"
-            ],
             "nullable": true,
-            "description": "Kiểu dáng thân xe — chỉ với ô tô. Gửi null để xoá."
+            "description": "Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.",
+            "example": "suv"
           },
           "operationStatus": {
             "type": "string",
@@ -7331,26 +7535,14 @@
             }
           },
           "features": {
+            "description": "Key tiện ích thuộc danh mục `vehicle_feature` (GET /catalog) — thay toàn bộ khi gửi",
+            "example": [
+              "bluetooth",
+              "gps"
+            ],
             "type": "array",
-            "description": "Tiện ích xe (thay toàn bộ khi gửi)",
             "items": {
-              "type": "string",
-              "enum": [
-                "bluetooth",
-                "gps",
-                "backup_camera",
-                "camera_360",
-                "dash_camera",
-                "reverse_sensor",
-                "sunroof",
-                "etc",
-                "spare_tire",
-                "airbag",
-                "usb",
-                "screen",
-                "map",
-                "child_seat"
-              ]
+              "type": "string"
             }
           }
         },
@@ -7394,7 +7586,9 @@
             "example": "51K-123.45"
           },
           "brand": {
-            "type": "string"
+            "type": "string",
+            "description": "Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do",
+            "example": "vinfast"
           },
           "model": {
             "type": "string"
@@ -7414,28 +7608,14 @@
           },
           "fuelType": {
             "type": "string",
-            "enum": [
-              "gasoline",
-              "diesel",
-              "electric",
-              "hybrid"
-            ]
+            "description": "Key nhiên liệu thuộc danh mục `fuel_type` (GET /catalog)",
+            "example": "gasoline"
           },
           "bodyType": {
             "type": "string",
-            "enum": [
-              "mini",
-              "sedan",
-              "cuv",
-              "suv",
-              "mpv",
-              "pickup",
-              "van",
-              "minibus",
-              "cargo"
-            ],
             "nullable": true,
-            "description": "Kiểu dáng thân xe — chỉ với ô tô. Gửi null để xoá."
+            "description": "Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.",
+            "example": "suv"
           },
           "operationStatus": {
             "type": "string",
@@ -7493,26 +7673,14 @@
             }
           },
           "features": {
+            "description": "Key tiện ích thuộc danh mục `vehicle_feature` (GET /catalog) — thay toàn bộ khi gửi",
+            "example": [
+              "bluetooth",
+              "gps"
+            ],
             "type": "array",
-            "description": "Tiện ích xe (thay toàn bộ khi gửi)",
             "items": {
-              "type": "string",
-              "enum": [
-                "bluetooth",
-                "gps",
-                "backup_camera",
-                "camera_360",
-                "dash_camera",
-                "reverse_sensor",
-                "sunroof",
-                "etc",
-                "spare_tire",
-                "airbag",
-                "usb",
-                "screen",
-                "map",
-                "child_seat"
-              ]
+              "type": "string"
             }
           }
         }
@@ -7744,6 +7912,204 @@
         "required": [
           "planId"
         ]
+      },
+      "CatalogItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "vehicle_brand",
+              "body_type",
+              "fuel_type",
+              "vehicle_feature"
+            ]
+          },
+          "key": {
+            "type": "string",
+            "example": "suv"
+          },
+          "label": {
+            "type": "string",
+            "example": "SUV"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "7 chỗ · gầm cao"
+          },
+          "iconUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "/body-types/suv.png"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "key",
+          "label",
+          "description",
+          "iconUrl",
+          "sortOrder",
+          "active"
+        ]
+      },
+      "CatalogItemAdminDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "vehicle_brand",
+              "body_type",
+              "fuel_type",
+              "vehicle_feature"
+            ]
+          },
+          "key": {
+            "type": "string",
+            "example": "suv"
+          },
+          "label": {
+            "type": "string",
+            "example": "SUV"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "example": "7 chỗ · gầm cao"
+          },
+          "iconUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "/body-types/suv.png"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "usageCount": {
+            "type": "number",
+            "description": "Số xe đang trỏ vào key này (mọi gian hàng)"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "key",
+          "label",
+          "description",
+          "iconUrl",
+          "sortOrder",
+          "active",
+          "usageCount"
+        ]
+      },
+      "CreateCatalogItemDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "vehicle_brand",
+              "body_type",
+              "fuel_type",
+              "vehicle_feature"
+            ]
+          },
+          "key": {
+            "type": "string",
+            "example": "coupe",
+            "description": "Slug lưu xuống xe và đi vào URL bộ lọc — không đổi được sau khi tạo"
+          },
+          "label": {
+            "type": "string",
+            "example": "Coupe"
+          },
+          "description": {
+            "type": "object",
+            "example": "2 chỗ · thể thao"
+          },
+          "iconUrl": {
+            "type": "object",
+            "example": "/body-types/coupe.png"
+          },
+          "sortOrder": {
+            "type": "number",
+            "default": 0
+          },
+          "active": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "type",
+          "key",
+          "label"
+        ]
+      },
+      "ReorderCatalogDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "vehicle_brand",
+              "body_type",
+              "fuel_type",
+              "vehicle_feature"
+            ]
+          },
+          "ids": {
+            "description": "Danh sách id theo đúng thứ tự hiển thị mong muốn",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "ids"
+        ]
+      },
+      "UpdateCatalogItemDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "iconUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
       },
       "BookingListItemDto": {
         "type": "object",

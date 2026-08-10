@@ -112,6 +112,12 @@ export const PERMISSION = {
   PLATFORM_AUDIT_VIEW: 'platform.audit.view',
   PLATFORM_STAFF_MANAGE: 'platform.staff.manage',
   PLATFORM_BILLING_MANAGE: 'platform.billing.manage',
+  /**
+   * Quản lý danh mục lọc (hãng xe / kiểu dáng / nhiên liệu / tiện ích). Sửa ở đây đổi luôn ô chọn
+   * trong form tạo xe của MỌI gian hàng và bộ lọc ngoài chợ — quyền riêng, không gộp vào
+   * `platform.vehicles.moderate` vốn chỉ tác động một xe.
+   */
+  PLATFORM_CATALOG_MANAGE: 'platform.catalog.manage',
 
   // Nền tảng — giám sát toàn hệ thống (build plan §11.1). Tách khỏi `vehicles.*`/`bookings.*`
   // của gian hàng: quyền tenant chỉ có nghĩa TRONG một tenant, còn đây là đọc xuyên tenant.

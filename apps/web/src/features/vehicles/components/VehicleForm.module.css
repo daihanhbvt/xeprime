@@ -34,6 +34,15 @@
   font-size: var(--xp-font-size-body);
 }
 
+/* Dòng gợi ý dưới nhãn của khối không phải input (bộ chọn thẻ) — input thường đã có `help`. */
+.fieldHint {
+  margin-top: calc(-1 * var(--xp-space-xs));
+  margin-bottom: var(--xp-space-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
 .fullWidth {
   width: 100%;
 }

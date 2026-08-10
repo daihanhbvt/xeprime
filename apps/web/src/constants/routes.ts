@@ -51,6 +51,7 @@ export const ROUTES = {
     ADMIN_AUDIT: '/manage/admin/audit',
     ADMIN_STAFF: '/manage/admin/staff',
     ADMIN_PLANS: '/manage/admin/plans',
+    ADMIN_CATALOG: '/manage/admin/catalog',
   },
 } as const;
 

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { fetchCatalogServer } from '@/features/catalog/api';
 import { fetchListingDetail } from '@/features/marketplace/api';
 import { ListingDetailView } from '@/features/marketplace/components/ListingDetailView';
 
@@ -21,7 +22,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ListingDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
   const { pickupAt, returnAt } = await searchParams;
-  const listing = await fetchListingDetail(id);
+  // Trang này render trên server cho SEO nên không dùng được `useCatalog`; danh mục lấy song
+  // song với chi tiết xe để tra nhãn hãng/kiểu dáng/nhiên liệu/tiện ích từ key đã lưu.
+  const [listing, catalog] = await Promise.all([fetchListingDetail(id), fetchCatalogServer()]);
   if (!listing) notFound();
-  return <ListingDetailView listing={listing} pickupAt={pickupAt} returnAt={returnAt} />;
+  return (
+    <ListingDetailView
+      listing={listing}
+      catalog={catalog}
+      pickupAt={pickupAt}
+      returnAt={returnAt}
+    />
+  );
 }

@@ -7,6 +7,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BillingService } from '../src/modules/billing/billing.service';
+import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -21,7 +22,7 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const billing = new BillingService(asService, audit);
-const vehicles = new VehiclesService(asService, audit, new ListingsService(asService), billing);
+const vehicles = new VehiclesService(asService, audit, new ListingsService(asService), billing, new CatalogService(asService, audit));
 
 const RUN = newId().slice(-8).toLowerCase();
 

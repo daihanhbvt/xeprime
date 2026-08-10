@@ -4,7 +4,8 @@ import { Button, Empty } from 'antd';
 import { VEHICLE_OPERATION_STATUS_META, type VehicleOperationStatus } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { formatMoneyVnd } from '@/lib/money';
-import { bodyTypeLabelOf, fuelTypeLabel, serviceTypeLabel, vehicleTypeLabel } from '../constants';
+import { useCatalogLabels, type CatalogLabels } from '@/features/catalog/use-catalog';
+import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
 
 /** Nhãn trạng thái vận hành lấy từ META dùng chung — không khai lại bảng ánh xạ thứ hai. */
 const operationStatusLabel = (value: string): string =>
@@ -30,7 +31,7 @@ interface ReviewGroup {
   items: { label: string; value: string }[];
 }
 
-function groupsOf(values: VehicleFormValues): ReviewGroup[] {
+function groupsOf(values: VehicleFormValues, labels: CatalogLabels): ReviewGroup[] {
   const gallery = values.images?.length ?? 0;
   const features = values.features?.length ?? 0;
 
@@ -57,8 +58,8 @@ function groupsOf(values: VehicleFormValues): ReviewGroup[] {
         { label: 'Biển số', value: text(values.plateNumber) },
         {
           label: 'Hãng & Kiểu dáng',
-          value: [values.brand, values.model].filter(Boolean).join(' ')
-            ? `${[values.brand, values.model].filter(Boolean).join(' ')}${values.bodyType ? ` (${bodyTypeLabelOf(values.bodyType)})` : ''}`
+          value: [labels.brandLabel(values.brand), values.model].filter(Boolean).join(' ')
+            ? `${[labels.brandLabel(values.brand), values.model].filter(Boolean).join(' ')}${values.bodyType ? ` (${labels.bodyTypeLabel(values.bodyType)})` : ''}`
             : EMPTY,
         },
         {
@@ -66,7 +67,7 @@ function groupsOf(values: VehicleFormValues): ReviewGroup[] {
           value:
             [
               values.seatCount ? `${values.seatCount} chỗ` : null,
-              values.fuelType ? fuelTypeLabel(values.fuelType) : null,
+              values.fuelType ? labels.fuelTypeLabel(values.fuelType) : null,
             ]
               .filter(Boolean)
               .join(' / ') || EMPTY,
@@ -91,7 +92,10 @@ function groupsOf(values: VehicleFormValues): ReviewGroup[] {
         {
           label: 'Chính sách',
           value:
-            [values.deliveryEnabled ? 'Giao tận nơi' : null, values.noCollateral ? 'Miễn thế chấp' : null]
+            [
+              values.deliveryEnabled ? 'Giao tận nơi' : null,
+              values.noCollateral ? 'Miễn thế chấp' : null,
+            ]
               .filter(Boolean)
               .join(' · ') || 'Không áp dụng',
         },
@@ -129,10 +133,12 @@ interface VehicleReviewStepProps {
  */
 export function VehicleReviewStep({ values, initialValues, onEditStep }: VehicleReviewStepProps) {
   const isEdit = Boolean(initialValues);
+  // Bảng đối chiếu phải hiện TÊN hãng/kiểu dáng, không phải key đã lưu.
+  const labels = useCatalogLabels();
 
   if (isEdit) {
-    const groups = groupsOf(values);
-    const before = groupsOf(initialValues!);
+    const groups = groupsOf(values, labels);
+    const before = groupsOf(initialValues!, labels);
     const changed = groups.flatMap((group, groupIndex) =>
       group.items
         .map((item, itemIndex) => ({
@@ -143,7 +149,9 @@ export function VehicleReviewStep({ values, initialValues, onEditStep }: Vehicle
         }))
         .filter((row) => row.before !== row.after),
     );
-    const sensitive = new Set(sensitiveChanges(initialValues, values).map((change) => change.label));
+    const sensitive = new Set(
+      sensitiveChanges(initialValues, values).map((change) => change.label),
+    );
 
     if (changed.length === 0) {
       return (
@@ -183,7 +191,7 @@ export function VehicleReviewStep({ values, initialValues, onEditStep }: Vehicle
 
   return (
     <div className={styles.groups}>
-      {groupsOf(values).map((group) => (
+      {groupsOf(values, labels).map((group) => (
         <section key={group.key} className={styles.group}>
           <header className={styles.groupHeader}>
             <h3 className={styles.groupTitle}>{group.title}</h3>
