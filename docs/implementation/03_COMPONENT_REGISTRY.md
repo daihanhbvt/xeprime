@@ -606,3 +606,36 @@ wrapper bảng responsive thứ hai, hook breakpoint thứ hai, hay hệ status-
 
 **`renderCard` sau Pilot: 1/14.** Mười ba bảng còn lại vẫn cuộn ngang ở mobile — rollout theo
 module ở Wave 3, không mở rộng ở đây.
+
+---
+
+## Wave 3A — mở rộng chung ở tầng form
+
+Năm wrapper field nhận thêm **một seam chung duy nhất**, không có gì thuộc nghiệp vụ xe:
+
+| Prop                 | Có ở                                                                                                               | Vì sao ở tầng chung                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `label: ReactNode`   | `TextField` `NumberField` `SelectField` `TextAreaField` `AutoCompleteField` `ImageUploadField` `ImageGalleryField` | Feature tự gắn dấu hiệu riêng cạnh nhãn thay vì common code phải biết quy ước từng feature       |
+| `required?: boolean` | 5 field text/số/chọn                                                                                               | Mọi form đều cần đánh dấu trường bắt buộc. **Chỉ là dấu hiệu** — ràng buộc thật vẫn ở schema Yup |
+| `help?: ReactNode`   | 5 field text/số/chọn                                                                                               | Gợi ý dưới ô nhập, nối bằng `aria-describedby`. Lỗi luôn thắng gợi ý                             |
+
+`SelectField` và `AutoCompleteField` đồng thời được vá **nợ a11y**: trước Wave 3A hai field này
+đặt `label` lên `Form.Item` mà không có `id`/`htmlFor`, nên ô chọn **không có tên khả truy cập**
+và `getByLabelText` không tìm ra — đúng loại lỗi D14.4 đã vá cho `NumberField`/`TextAreaField` ở
+Wave 1C-C.
+
+`StickyFormActions` có **consumer thật đầu tiên**: `VehicleForm`. Trước Wave 3A nó chưa được dùng
+ở đâu (ghi ở 06).
+
+### Fleet — component riêng của feature
+
+| Component                                                            | Vai trò                                                                                                                  |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `VehicleCompleteness` (`CompletenessLegend`, `publishRequiredLabel`) | Quy ước hai giai đoạn `*` / `●` (Figma `60:70`). **Ở trong feature**, không phải common — đây là quy ước riêng của Fleet |
+| `pricing.ts` (`discountedPriceVnd`)                                  | Giá sau khuyến mãi, dùng chung bởi form (`60:327`) và chi tiết (`65:240`) nên công thức chỉ viết một lần                 |
+
+Không dựng `FleetModal`, `FleetDrawer`, `FleetButton`, `FleetEmptyState`, field tiền/ngày/text
+trùng lặp, thanh action dính thứ hai, hay vỏ form responsive thứ hai.
+
+**Trang chi tiết là PAGE, không phải drawer.** Figma `65:7`–`65:1793` vẽ nó là route đầy đủ ở
+1440×1024; `DetailDrawer` không được dùng ở đây chỉ vì nó tồn tại.

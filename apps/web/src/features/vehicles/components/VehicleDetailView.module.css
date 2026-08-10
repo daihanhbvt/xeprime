@@ -1,38 +1,141 @@
-.image {
-  width: 100%;
-  max-width: 420px;
-  max-height: 260px;
-  object-fit: cover;
-  border-radius: 12px;
-  margin-bottom: 16px;
-  border: 1px solid var(--xp-border, rgba(0, 0, 0, 0.08));
+/*
+ * Hai cột theo Figma `65:240`: cột chính co giãn, cột phụ cố định 340px (khớp các component
+ * `65:3598` Price Summary / `65:3702` Public Review Panel đều rộng 340–360).
+ *
+ * Dùng grid chứ không float/absolute: hai cột phải cao bằng nhau và tự xếp chồng ở màn hẹp.
+ */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--xp-space-md);
+  align-items: start;
 }
 
-.desc {
-  margin-top: 16px;
+/* Ranh chính tắc 1024px — dưới mức này AppShell đã bỏ sidebar, cột phụ không còn chỗ. */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Bảng giá + tiến trình duyệt lên trước thông số kỹ thuật: đó là thứ chủ xe cần thấy ngay. */
+  .side {
+    order: -1;
+  }
 }
 
-.descTitle {
-  font-weight: 600;
-  margin-bottom: 4px;
+.main,
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
 }
 
-.chips {
+.card {
+  margin: 0;
+}
+
+/*
+ * Mã quản lý và hai thẻ trạng thái đi LIỀN NHAU thành một khối định danh (Figma `65:240`).
+ *
+ * Trước đó dùng `justify-content: space-between`, đẩy hai thẻ ra tận mép phải của cột chính —
+ * cách xa tên xe cả nghìn pixel ở màn rộng, trông như hai nhãn lạc chỗ.
+ */
+.identity {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  border-radius: var(--xp-border-radius);
+  object-fit: cover;
+}
+
+.noImage {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
 }
 
 .gallery {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  padding: 0;
+  margin: var(--xp-space-sm) 0 0;
+  gap: var(--xp-space-sm);
+  list-style: none;
 }
 
 .thumb {
-  width: 120px;
-  height: 90px;
+  display: block;
+  width: 96px;
+  height: 72px;
+  border-radius: var(--xp-border-radius-sm);
   object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid var(--xp-border, rgba(0, 0, 0, 0.08));
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.description {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Bảng giá: `dl` vì đây là các cặp nhãn–giá trị, không phải bảng dữ liệu nhiều chiều. */
+.prices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+}
+
+.priceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.priceRow dt {
+  color: var(--xp-color-text-secondary);
+}
+
+.priceRow dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+}
+
+/* Giá sau khuyến mãi — nhấn bằng gold thương hiệu, KHÔNG mang nghĩa trạng thái. */
+.priceTotal {
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+.priceTotal dd {
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
 }

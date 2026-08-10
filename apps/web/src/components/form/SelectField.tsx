@@ -1,6 +1,7 @@
 'use client';
 
 import { Form, Select } from 'antd';
+import { useId, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 
 export interface SelectFieldOption {
@@ -11,12 +12,17 @@ export interface SelectFieldOption {
 interface SelectFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
-  label: string;
+  /** `ReactNode` để feature tự gắn dấu hiệu riêng cạnh nhãn (xem `TextField`). */
+  label: ReactNode;
   options: readonly SelectFieldOption[];
   placeholder?: string;
   /** Cho phép xoá chọn (field về null) — dùng cho select tuỳ chọn như nhiên liệu. */
   allowClear?: boolean;
   disabled?: boolean;
+  /** Dấu bắt buộc của AntD. Ràng buộc thật vẫn ở schema Yup. */
+  required?: boolean;
+  /** Gợi ý dưới ô chọn khi KHÔNG có lỗi. Lỗi luôn thắng. */
+  help?: ReactNode;
 }
 
 /**
@@ -31,17 +37,28 @@ export function SelectField<T extends FieldValues>({
   placeholder,
   allowClear,
   disabled,
+  required,
+  help,
 }: SelectFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
+  // AntD `Select` không tự nhận `htmlFor` của `Form.Item` — thiếu `id` tường minh thì bấm nhãn
+  // không mở được danh sách và `getByLabelText` không tìm ra ô chọn.
+  const selectId = `${String(name)}-${useId()}`;
+  const describedById = `${selectId}-help`;
+  const helpText = fieldState.error?.message ?? help;
 
   return (
     <Form.Item
       label={label}
+      htmlFor={selectId}
+      required={required}
       validateStatus={fieldState.error ? 'error' : ''}
-      help={fieldState.error?.message}
+      help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
       style={{ marginBottom: 14 }}
     >
       <Select
+        id={selectId}
+        aria-describedby={helpText ? describedById : undefined}
         size="large"
         value={(field.value as string | null | undefined) ?? undefined}
         onChange={(value: string | undefined) => field.onChange(value ?? null)}

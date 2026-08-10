@@ -1,15 +1,19 @@
 'use client';
 
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { App, Button, Popconfirm, Result, Skeleton, Space } from 'antd';
+import { App, Button, Popconfirm } from 'antd';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { ROUTES, vehiclePath } from '@/constants/routes';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { usePermissions } from '@/hooks/use-permissions';
+import { decorativeIcon } from '@/lib/decorative-icon';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { LoadingState } from '@/components/feedback/LoadingState';
+import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { VehicleDetailView } from '@/features/vehicles/components/VehicleDetailView';
-import { VehiclePublicReviewPanel } from '@/features/vehicles/components/VehiclePublicReviewPanel';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
 import { useDeleteVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 
@@ -19,7 +23,14 @@ export default function VehicleDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const { has } = usePermissions();
-  const { data: vehicle, isLoading, isError, error, refetch } = useVehicle(id);
+  const canView = has(PERMISSION.VEHICLE_VIEW);
+  const {
+    data: vehicle,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useVehicle(canView ? id : undefined);
   const deleteVehicle = useDeleteVehicle();
 
   const backToList = () => router.push(ROUTES.MANAGE.VEHICLES);
@@ -34,11 +45,28 @@ export default function VehicleDetailPage() {
     });
   }
 
+  // Cùng quy tắc với danh sách (Figma `58:2061`): không có quyền xem thì không dựng gì của bản ghi.
+  if (!canView) {
+    return (
+      <PermissionState
+        kind="forbidden"
+        title="Không có quyền xem xe"
+        description="Bạn cần quyền dưới đây để xem thông tin xe. Liên hệ quản trị viên để được cấp quyền."
+        missingPermissions={[PERMISSION.VEHICLE_VIEW]}
+        action={
+          <Link href={ROUTES.MANAGE.ROOT}>
+            <Button type="primary">Về trang chủ</Button>
+          </Link>
+        }
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <div>
         <ManagePageHeader title="Chi tiết xe" onBack={backToList} />
-        <Skeleton active paragraph={{ rows: 8 }} />
+        <LoadingState variant="page" label="Đang tải thông tin xe…" />
       </div>
     );
   }
@@ -46,20 +74,16 @@ export default function VehicleDetailPage() {
   if (isError || !vehicle) {
     const notFound = getErrorCode(error) === API_ERROR_CODE.NOT_FOUND;
     return (
-      <Result
-        status={notFound ? '404' : 'error'}
+      <EmptyState
+        variant="error"
         title={notFound ? 'Không tìm thấy xe' : 'Không tải được thông tin xe'}
-        subTitle={notFound ? 'Xe có thể đã bị xoá.' : 'Có lỗi khi lấy dữ liệu.'}
-        extra={
-          <Space>
-            <Button onClick={backToList}>Về danh sách</Button>
-            {!notFound ? (
-              <Button type="primary" onClick={() => void refetch()}>
-                Thử lại
-              </Button>
-            ) : null}
-          </Space>
+        description={
+          notFound
+            ? 'Xe có thể đã bị xoá hoặc không thuộc gian hàng này.'
+            : 'Có lỗi khi lấy dữ liệu. Vui lòng thử lại.'
         }
+        onRetry={notFound ? undefined : () => void refetch()}
+        action={<Button onClick={backToList}>Về danh sách</Button>}
       />
     );
   }
@@ -72,11 +96,12 @@ export default function VehicleDetailPage() {
         extra={
           <>
             {has(PERMISSION.VEHICLE_UPDATE) ? (
+              // Icon là trang trí: để nguyên thì tên khả truy cập thành "edit Chỉnh sửa" (D16.1).
               <Button
-                icon={<EditOutlined />}
+                icon={decorativeIcon(<EditOutlined />)}
                 onClick={() => router.push(vehiclePath.edit(id))}
               >
-                Sửa
+                Chỉnh sửa
               </Button>
             ) : null}
             {has(PERMISSION.VEHICLE_DELETE) ? (
@@ -88,15 +113,17 @@ export default function VehicleDetailPage() {
                 cancelText="Huỷ"
                 onConfirm={handleDelete}
               >
-                <Button danger icon={<DeleteOutlined />} loading={deleteVehicle.isPending}>
-                  Xoá
-                </Button>
+                <Button
+                  danger
+                  icon={decorativeIcon(<DeleteOutlined />)}
+                  loading={deleteVehicle.isPending}
+                  aria-label="Xoá xe"
+                />
               </Popconfirm>
             ) : null}
           </>
         }
       />
-      <VehiclePublicReviewPanel vehicle={vehicle} />
       <VehicleDetailView vehicle={vehicle} />
     </div>
   );

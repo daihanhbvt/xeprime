@@ -211,6 +211,7 @@ export const XP_TOKENS = {
   'shell-sidebar-collapsed-width': '64px', // 14:1532 = 47:77
   'shell-bottom-nav-height': '64px', // 14:1641
   'shell-drawer-width': '280px', // 14:1662
+  'shell-form-max-width': '1136px', // 60:69 (FormColumn trong workspace 1200)
 
   // ─── Lịch resource timeline ───────────────────────────────────────────────
   'calendar-resource-col-width': '220px',

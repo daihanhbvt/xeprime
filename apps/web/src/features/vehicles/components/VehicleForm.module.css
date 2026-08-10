@@ -1,52 +1,142 @@
+/* Cột form đơn — Figma `60:69` FormColumn rộng 1136 trong workspace 1200, tức là chiếm hết
+   vùng nội dung chứ không giới hạn 960px như bản trước Wave 3A. */
+/*
+ * Cột form đơn, **căn giữa** vùng nội dung.
+ *
+ * Figma `60:69` đặt FormColumn rộng 1136 trong workspace 1200 — ở 1440px nó vừa khít nên trông
+ * như căn trái. Ở màn 1900px thì không: thiếu `margin-inline: auto`, form dính lì mép trái và
+ * bỏ trống gần một nửa màn hình.
+ */
 .form {
-  max-width: 960px;
+  max-width: var(--xp-shell-form-max-width);
+  margin-inline: auto;
 }
 
 .section {
-  margin-bottom: 16px;
+  margin-bottom: var(--xp-space-md);
 }
 
 .alert {
-  margin-bottom: 16px;
+  margin-bottom: var(--xp-space-md);
 }
 
 .descBlock {
-  margin-top: 12px;
+  margin-top: var(--xp-space-sm);
 }
 
 .galleryBlock {
-  margin-top: 16px;
+  margin-top: var(--xp-space-md);
 }
 
 .fieldLabel {
-  margin-bottom: 8px;
-  font-size: 14px;
+  margin-bottom: var(--xp-space-sm);
   color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
 }
 
 .fullWidth {
   width: 100%;
 }
 
-/* Hai toggle chính sách thuê (giao tận nơi / miễn thế chấp) dưới hàng giá. */
+/*
+ * Nhóm radio "Loại phương tiện" (Figma `60:101`).
+ *
+ * `fieldset`/`legend` chứ không phải `div`/`label`: một nhóm radio cần tên chung, và chỉ
+ * `fieldset` mới cho trình đọc màn hình đọc tên nhóm trước từng lựa chọn. Bỏ viền mặc định của
+ * `fieldset` để nó nằm gọn trong hàng cùng các `Form.Item` khác.
+ */
+.fieldset {
+  padding: 0;
+  border: 0;
+  margin: 0 0 14px;
+}
+
+.fieldsetLegend {
+  padding: 0;
+  margin-bottom: var(--xp-space-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+.requiredMark {
+  margin-left: var(--xp-space-xs);
+  color: var(--xp-color-error);
+}
+
+/* Giá sau khuyến mãi — chỉ hiển thị, không phải giá trị được lưu. */
+.pricePreview {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * Hai toggle chính sách thuê (giao tận nơi / miễn thế chấp) dưới hàng giá.
+ *
+ * Có `max-width`: `SwitchField` đẩy công tắc về mép phải, nên không giới hạn bề rộng thì công
+ * tắc bay ra tận cạnh card, cách nhãn cả nghìn pixel — Figma `62:1560` vẽ Policy Toggle chỉ
+ * rộng 200px. (Bản Wave 3A lỡ bỏ mất giới hạn này.)
+ */
 .policyBlock {
   display: flex;
-  flex-direction: column;
-  border-top: 1px solid var(--xp-color-border-secondary);
-  margin-top: 4px;
-  padding-top: 4px;
   max-width: 480px;
+  flex-direction: column;
+  padding-top: var(--xp-space-xs);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  margin-top: var(--xp-space-xs);
 }
 
-.actions {
+/* ─── Wizard tạo mới (Figma `60:213` đã đi qua · `60:128` chưa tới) ─────────────────── */
+
+.stepDone,
+.stepFuture {
+  margin-bottom: var(--xp-space-md);
+}
+
+.stepDoneRow {
   display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-md);
 }
 
-@media (max-width: 576px) {
-  .actions {
-    flex-direction: column-reverse;
-  }
+.stepDoneIcon {
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: 1;
+}
+
+.stepDoneText {
+  flex: 1;
+  min-width: 0;
+}
+
+.stepDoneTitle {
+  margin: 0;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.stepDoneSummary {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Phần chưa tới bị làm mờ để mắt bỏ qua, nhưng KHÔNG ẩn — người dùng cần thấy còn mấy bước. */
+.stepFuture {
+  opacity: 0.65;
+}
+
+.stepFutureRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.stepFutureTitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-semibold);
 }

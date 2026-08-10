@@ -1,7 +1,7 @@
 'use client';
 
 import { Form, Input } from 'antd';
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 
 import styles from './field.module.css';
@@ -9,7 +9,8 @@ import styles from './field.module.css';
 interface TextAreaFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
-  label: string;
+  /** `ReactNode` để feature tự gắn dấu hiệu riêng cạnh nhãn (xem `TextField`). */
+  label: ReactNode;
   placeholder?: string;
   rows?: number;
   /** Đặt `maxLength` là bật luôn bộ đếm ký tự, trừ khi tắt bằng `showCount={false}`. */
@@ -17,7 +18,9 @@ interface TextAreaFieldProps<T extends FieldValues> {
   /** Ép bật/tắt bộ đếm độc lập với `maxLength` (Figma `62:1581` Character Counter). */
   showCount?: boolean;
   /** Gợi ý dưới ô nhập khi KHÔNG có lỗi. Lỗi luôn thắng — không hiện cả hai cùng lúc. */
-  help?: string;
+  help?: ReactNode;
+  /** Dấu bắt buộc của AntD. Ràng buộc thật vẫn ở schema Yup. */
+  required?: boolean;
 }
 
 /**
@@ -38,6 +41,7 @@ export function TextAreaField<T extends FieldValues>({
   maxLength,
   showCount,
   help,
+  required,
 }: TextAreaFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   const id = useId();
@@ -50,6 +54,7 @@ export function TextAreaField<T extends FieldValues>({
     <Form.Item
       label={label}
       htmlFor={id}
+      required={required}
       validateStatus={fieldState.error ? 'error' : ''}
       help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
       className={styles.item}

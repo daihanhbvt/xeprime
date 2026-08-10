@@ -41,32 +41,49 @@ interface VehicleTableProps {
 const EMPTY = '—';
 
 /**
- * Bề rộng từng cột — **mọi cột đều phải khai `width`**.
+ * Hợp đồng bề rộng cột — **mọi cột đều phải khai `width`**, kể cả cột định danh.
  *
- * `scroll={{ x }}` bật `table-layout: fixed`. Cột nào KHÔNG khai `width` là cột `auto` duy nhất
- * nên nuốt trọn phần dư của bảng: ở màn 1650px, cột "Xe" từng phình ra ~800px trong khi sáu cột
- * còn lại đứng yên ở đúng số px đã khai. Khi mọi cột có `width`, trình duyệt chia phần dư **theo
- * tỷ lệ** các bề rộng này, nên tỷ lệ cột giữ nguyên ở mọi độ rộng màn.
+ * `scroll={{ x }}` bật `table-layout: fixed`. Cột nào KHÔNG khai `width` trở thành cột `auto`
+ * duy nhất và **nuốt trọn phần dư** của bảng: ở màn 1920px, cột "Xe" từng phình ra ~800px trong
+ * khi sáu cột kia đứng yên ở đúng số px đã khai, dồn thành một cụm bên phải. Khi mọi cột có
+ * `width`, trình duyệt chia phần dư **theo tỷ lệ** các số này — tỷ lệ cột giữ nguyên ở mọi
+ * độ rộng màn, đúng hình học Figma `58:5` (`58:136`–`58:142`, khung bảng 1136px:
+ * Xe 260 · Loại 140 · Đời 110 · Giá 160 · Vận hành 130 · Công khai 130 · Thao tác 158).
  *
- * Tỷ lệ lấy từ hình học thật của Figma `58:5` (`58:136`–`58:142`, khung bảng 1136px):
- * Xe 260 · Loại 140 · Đời 110 · Giá 160 · Vận hành 130 · Công khai 130 · Thao tác 158.
+ * Mỗi số dưới đây là **bề rộng nhỏ nhất đủ chứa nội dung THẬT**, đã cộng 32px padding ô của
+ * AntD (16px mỗi bên) — theo `127:2104` "MIN_TABLE_WIDTH = tổng min-width các cột".
  *
- * Sàn 1060px (không phải 730px của `127:2003`) vì **nhãn trạng thái của ta là chữ đầy đủ**
- * (`Ngừng hoạt động`, `Đã duyệt public`) còn Figma mock viết tắt (`Ngừng HĐ`, `Đã duyệt`) —
- * khác biệt đã ghi ở 08 §Wave 2. Ép về 730 thì badge xuống dòng, trái `127:1783` "no truncate".
- * Mỗi số dưới đây là bề rộng nhỏ nhất đủ chứa nội dung THẬT, đã cộng 32px padding ô của AntD
- * (16px mỗi bên); giữ sàn thấp nhất có thể để laptop 1366px không phải cuộn ngang.
+ * ⚠️ Sàn 1060px, KHÔNG phải 730px của `127:2003`, vì nhãn của ta là chữ đầy đủ
+ * (`Ngừng hoạt động`, `Chờ duyệt public`) còn Figma mock viết tắt (`Ngừng HĐ`, `Chờ duyệt`) —
+ * khác biệt đã ghi ở 08 §Wave 2. Hệ quả: Fleet bắt đầu cuộn ngang ở viewport ~1324px thay vì
+ * 1280px như `127:2115` dự tính. Đây là lựa chọn CÓ CHỦ ĐÍCH: `127:2105`/`127:2111` cấm nén
+ * cột để nhét vừa viewport, và `127:1783` yêu cầu badge không bị cắt.
  */
 const COLUMN_WIDTH = {
+  /** 44 avatar + 8 gap + 126 tên/biển số + 32 padding. Figma min 180 (`127:1745`), tên truncate. */
   vehicle: 210,
-  type: 140,
-  specs: 120,
+  /** "Ô tô · Có tài xế" — chuỗi dài nhất, một dòng (Figma tách hai dòng nên min của họ nhỏ hơn). */
+  type: 145,
+  /** "2023 · 16 chỗ" — số chỗ hai chữ số là trường hợp rộng nhất. */
+  specs: 125,
+  /** "1.800.000 ₫" + thẻ giảm giá "-10%" nằm cùng dòng. */
   weekdayPrice: 160,
-  operationStatus: 150,
+  /** "Ngừng hoạt động" — nhãn vận hành dài nhất. */
+  operationStatus: 145,
+  /** "Chờ duyệt public" — nhãn public dài nhất. */
   publicStatus: 150,
-  actions: 130,
+  /** 3 nút icon `size="small"` (28px) + 2 khe 4px + 32 padding. `127:2068` ghi 100 nhưng chính
+      khung `58:167` của Figma vẽ 130px nội dung — lấy theo hình học thật. */
+  actions: 125,
 } as const;
 
+/**
+ * Sàn cuộn ngang = **tổng hợp đồng cột** (`127:2104`), không phải một số gõ tay.
+ *
+ * Trước Wave 2 chỗ này là `900` trong khi sáu cột đã khai cộng lại đã ~850 — con số vừa mâu
+ * thuẫn với chính comment của nó (ghi 730) vừa không mô tả bảng thật. Tính ra từ hợp đồng thì
+ * hai thứ không bao giờ lệch nhau được nữa.
+ */
 const MIN_TABLE_WIDTH = Object.values(COLUMN_WIDTH).reduce((sum, width) => sum + width, 0);
 
 export function VehicleTable({
@@ -243,7 +260,7 @@ export function VehicleTable({
       ),
     },
     {
-      title: 'Public',
+      title: 'Công khai',
       key: 'publicStatus',
       width: COLUMN_WIDTH.publicStatus,
       render: (_, row) => (
@@ -253,7 +270,11 @@ export function VehicleTable({
         />
       ),
     },
-    actionColumn<VehicleListItem>(rowActions, { width: COLUMN_WIDTH.actions }),
+    actionColumn<VehicleListItem>(rowActions, {
+      width: COLUMN_WIDTH.actions,
+      // Figma `58:142` có nhãn cột; mặc định của `actionColumn` là rỗng cho bảng không cần.
+      title: 'Thao tác',
+    }),
   ];
 
   return (

@@ -428,6 +428,23 @@ describe('/manage/vehicles — hình học cột bảng', () => {
 
     expect(table?.style.width).toBe(`${total}px`);
   });
+
+  it('cột hành động vẫn dính phải khi bảng cuộn ngang', () => {
+    // `127:2060` R1: cuộn ngang mà mất nút thao tác là hỏng. Bám vào class `-fix-end` của AntD 6
+    // vì đó chính là cơ chế dính — `DataTable.module.css` cũng tô nền đục qua đúng class này.
+    grant(PERMISSION.VEHICLE_UPDATE, PERMISSION.VEHICLE_DELETE);
+    setQuery({ data: { items: [vehicle()], meta: META } });
+    const { container } = renderPage();
+
+    const headers = Array.from(container.querySelectorAll('thead th'));
+    // Không dùng `tbody tr:first-child`: AntD chèn một hàng đo `aria-hidden` lên đầu tbody.
+    const lastCell = within(bodyRows()[0]!).getAllByRole('cell').at(-1)!;
+
+    expect(headers.at(-1)?.className).toMatch(/ant-table-cell-fix-end/);
+    expect(lastCell.className).toMatch(/ant-table-cell-fix-end/);
+    // Và đó phải là cột CHỨA hành động, không phải một cột rỗng dính nhầm (`127:2076` R10).
+    expect(within(lastCell).getAllByRole('button')).toHaveLength(3);
+  });
 });
 
 /* ------------------------------------------------------------------ hành động hàng */

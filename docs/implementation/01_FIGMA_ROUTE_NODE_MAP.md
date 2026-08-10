@@ -177,6 +177,11 @@ Ký hiệu: 🖥 desktop · ▭ tablet · 📱 mobile · ◐ state · 🔐 permi
 - **Confidence**: CAO — **10 trạng thái, đủ 3 viewport, có component định nghĩa sẵn. Đây là lý do chọn làm pilot.**
 - **Inspect**: Có — inspect đầy đủ cả 10 state + 4 component `Fleet/*`
 - **Phụ thuộc**: 1A · 1B · 1C · 1D (bắt buộc xong hết trước)
+- **Quyết định mục tiêu 10/08/2026**: thay table desktop/tablet bằng **card grid ở mọi viewport**.
+  Ảnh fleet tối do chủ dự án cung cấp chỉ tham khảo bố cục và thứ bậc thông tin; màu sắc và style
+  vẫn theo XePrime Foundations. Cập nhật toàn bộ state R14 trong Figma trước khi sửa code. Card chỉ
+  dùng dữ liệu Fleet/API hiện có; không sao chép các metric doanh thu/chi phí/lãi lỗ từ ảnh tham
+  khảo nếu backend chưa cung cấp.
 
 ### R15 — `/manage/vehicles/new` Tạo xe
 - **Feature**: [VehicleForm](../../apps/web/src/features/vehicles/components/VehicleForm.tsx) · `vehicleFormSchema` ([packages/validators](../../packages/validators/src/index.ts))

@@ -7,6 +7,19 @@
   margin-bottom: 14px;
 }
 
-.control {
+/*
+ * Ô nhập số phải rộng hết cột (Figma `60:270`, `60:276`) — mặc định của AntD là 90px.
+ *
+ * ⚠️ Nhân đôi class để lên (0,2,0). Đây lại là bẫy D19: rule `.ant-input-number { width: 90px }`
+ * của AntD cũng là (0,1,0), mà AntD tiêm `<style>` vào `<head>` LÚC CHẠY — tức là sau sheet của
+ * CSS Module. Hoà specificity thì thứ tự tiêm quyết định, và AntD luôn thắng. Một class đơn ở
+ * đây từng khiến ô "Giá ngày thường" hẹp 90px và cắt mất chữ số ("300.00" thay vì "300.000").
+ */
+.control.control {
+  width: 100%;
+}
+
+/* Có `addonAfter` (₫, %) thì AntD bọc thêm một lớp group; bề rộng phải đi qua cả hai lớp. */
+.control.control :global(.ant-input-number) {
   width: 100%;
 }

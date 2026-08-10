@@ -1,15 +1,21 @@
 'use client';
 
 import { AutoComplete, Form } from 'antd';
+import { useId, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 
 interface AutoCompleteFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
-  label: string;
+  /** `ReactNode` để feature tự gắn dấu hiệu riêng cạnh nhãn (xem `TextField`). */
+  label: ReactNode;
   /** Gợi ý sẵn (vd danh sách hãng xe curated) — vẫn cho nhập tự do ngoài danh sách. */
   options: ReadonlyArray<{ readonly value: string; readonly label?: string }>;
   placeholder?: string;
+  /** Dấu bắt buộc của AntD. Ràng buộc thật vẫn ở schema Yup. */
+  required?: boolean;
+  /** Gợi ý dưới ô nhập khi KHÔNG có lỗi. Lỗi luôn thắng. */
+  help?: ReactNode;
 }
 
 /**
@@ -22,17 +28,26 @@ export function AutoCompleteField<T extends FieldValues>({
   label,
   options,
   placeholder,
+  required,
+  help,
 }: AutoCompleteFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
+  const inputId = `${String(name)}-${useId()}`;
+  const describedById = `${inputId}-help`;
+  const helpText = fieldState.error?.message ?? help;
 
   return (
     <Form.Item
       label={label}
+      htmlFor={inputId}
+      required={required}
       validateStatus={fieldState.error ? 'error' : ''}
-      help={fieldState.error?.message}
+      help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
       style={{ marginBottom: 14 }}
     >
       <AutoComplete
+        id={inputId}
+        aria-describedby={helpText ? describedById : undefined}
         size="large"
         value={(field.value as string | null | undefined) ?? ''}
         options={options as { value: string; label?: string }[]}

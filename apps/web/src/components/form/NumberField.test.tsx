@@ -186,3 +186,48 @@ describe('NumberField — tương thích ngược', () => {
     expect(screen.queryByText('₫')).toBeNull();
   });
 });
+
+/*
+ * Mở rộng chung ở Wave 3A: `required` + `help` + nhãn `ReactNode`.
+ *
+ * Được thêm vào tầng chung (không phải trong Fleet) vì mọi form đều cần đánh dấu trường bắt buộc
+ * và gắn gợi ý; Fleet chỉ là consumer đầu tiên. Không có gì thuộc nghiệp vụ xe ở đây.
+ */
+describe('NumberField — dấu bắt buộc và gợi ý', () => {
+  it('không truyền `help`: không dựng phần mô tả thừa', () => {
+    render(<Harness />);
+    expect(input().getAttribute('aria-describedby')).toBeNull();
+  });
+
+  it('`help` được nối vào ô nhập bằng `aria-describedby`, không chỉ là chữ cạnh bên', () => {
+    render(<Harness help="Nhập theo đơn vị đồng" />);
+
+    const describedBy = input().getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy!)?.textContent).toBe('Nhập theo đơn vị đồng');
+  });
+
+  it('`required` đánh dấu trường mà KHÔNG tự thêm ràng buộc — validate vẫn của schema', () => {
+    const onValues = vi.fn();
+    render(<Harness required onValues={onValues} />);
+
+    // Nhãn có dấu bắt buộc…
+    expect(document.querySelector('.ant-form-item-required')).toBeTruthy();
+    // …nhưng ô nhập không bị đánh dấu lỗi khi chưa nhập gì: ràng buộc thật nằm ở resolver.
+    expect(input().getAttribute('aria-invalid')).toBeNull();
+  });
+
+  it('nhãn nhận `ReactNode`, phần chữ thêm vào vẫn tìm được', () => {
+    render(
+      <Harness
+        label={
+          <span>
+            Số tiền<span> (bắt buộc để duyệt)</span>
+          </span>
+        }
+      />,
+    );
+
+    expect(screen.getByText('(bắt buộc để duyệt)')).toBeTruthy();
+  });
+});

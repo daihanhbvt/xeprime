@@ -139,10 +139,13 @@ Admin nền tảng
 | Bước | Mô tả | Dữ liệu/API mục tiêu |
 |---|---|---|
 | 1 | Khách vào trang chủ | Next.js route `/` |
-| 2 | Hệ thống load xe public | API `GET /public/listings` hoặc đọc `public_listings` tạm thời |
-| 3 | Khách lọc xe theo ngày, địa điểm, loại xe, giá | API search/listing có pagination |
-| 4 | Khách mở chi tiết xe | Route `/cars/[id]` |
-| 5 | Khách xem thông tin gian hàng | Route `/shops/[slug]` |
+| 2 | Hệ thống hiển thị tối đa 8 xe public làm gợi ý, không phân trang trên homepage | `GET /public/listings?limit=8` |
+| 3 | Khách nhập từ khóa, địa điểm và chọn khoảng nhận–trả trong một input thời gian thuê | Search context trên URL |
+| 4 | Khách bấm “Tìm xe” | Chuyển sang `/search` với điều kiện tìm kiếm |
+| 5 | Hoặc khách bấm “Xem tất cả xe” | Chuyển sang `/search` không bắt buộc có điều kiện |
+| 6 | Trang `/search` hiển thị full filter, sort, kết quả và pagination; không lặp hero marketing của homepage | API search/listing có pagination |
+| 7 | Khách mở chi tiết xe | Route public listing detail hiện hành |
+| 8 | Khách xem thông tin gian hàng | Route `/shops/[slug]` |
 
 ### A2. Khách đăng nhập bằng Google/Facebook hoặc tiếp tục ẩn danh
 

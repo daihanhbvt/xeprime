@@ -472,3 +472,44 @@ một tài khoản có `vehicles.view`**. Môi trường này chưa dựng đư�
 7. **Màn 403** (`58:2061`) — thay toàn bộ nội dung, sidebar/topbar vẫn còn.
 8. **Tablet 768px** — Figma `58:2144` RỖNG, không có gì để đối chiếu; xác nhận bảng desktop
    dùng được ở bề rộng này.
+
+---
+
+## Wave 3A — Visual QA CÒN NỢ (3 route Fleet)
+
+Chặn: `/manage/vehicles/new`, `/manage/vehicles/[id]`, `/manage/vehicles/[id]/edit` đều gọi
+`/vehicles` + `/auth/me`, nên cần **Docker + PostgreSQL 16 + `apps/api` đang chạy + phiên đăng
+nhập có `vehicles.view`/`create`/`update`**. Môi trường hiện tại không dựng được.
+
+Đã đối chiếu Figma bằng cách đọc frame trực tiếp (`60:7`, `60:141`, `60:327`, `60:490`, `62:5`,
+`65:240`, `65:4844`) — đó là **so đặc tả**, không phải visual QA. Không tuyên bố đã kiểm pixel,
+mật độ hay cuộn.
+
+**Ưu tiên khi chạy được:**
+
+1. **360px** — form không tràn ngang; nhóm radio "Loại phương tiện" không vỡ hàng; bàn phím số
+   bật đúng ở ô tiền/năm/số chỗ.
+2. **Thanh hành động dính** ở form dài: không đè lên field cuối, an toàn vùng home-indicator iOS,
+   và **không chồng lên bottom tab bar** ở ≤1024px.
+3. **640 ↔ 641 và 1024 ↔ 1025** — chi tiết xe chuyển từ hai cột sang một cột; cột giá phải nhảy
+   LÊN TRƯỚC thông số kỹ thuật (`order: -1`), không rơi xuống đáy.
+4. **Upload ảnh**: kéo-thả, tiến trình, ảnh đại diện + thư viện 20 ảnh, sắp xếp lại thứ tự.
+5. **Giá trị dài**: tên xe/mô tả dài không phá bố cục thẻ giá và tiêu đề trang.
+6. **Màn 403** ở cả ba route — thay toàn bộ nội dung, sidebar/topbar vẫn còn.
+7. **Danh sách điều kiện gửi duyệt** — trạng thái đạt/chưa đạt đọc được bằng CHỮ, không chỉ bằng
+   màu icon (kiểm bằng chế độ đơn sắc).
+8. **Giá sau khuyến mãi** ở form và ở chi tiết phải ra cùng một con số.
+
+## Quyết định QA mới cho `/manage/vehicles` (10/08/2026)
+
+Route này sẽ chuyển sang card grid ở mọi viewport. Sau khi redesign được triển khai, checklist
+table overflow/sticky action column không còn là tiêu chí đích riêng cho R14. Phải kiểm:
+
+- 1440px: 3–4 card cân đối theo content width, không tạo một card quá rộng.
+- 1024px/768px: 2 card mỗi hàng, filter và action không tràn.
+- 390px/360px: 1 card mỗi hàng, ảnh, giá, status và menu hành động không bị cắt.
+- Ảnh thiếu có fallback đúng; ảnh khác tỷ lệ không làm chiều cao grid bất thường.
+- Tên/code/biển số dài; status dài; giá lớn; nhiều status cùng lúc.
+- Loading skeleton, empty, no-results, error/retry và permission giữ hình thái card-first.
+- Màu sắc, radius, shadow, typography và focus lấy từ XePrime token, không theo ảnh tham khảo tối.
+- Không hiển thị metric không có trong DTO/API chỉ vì ảnh tham khảo có.

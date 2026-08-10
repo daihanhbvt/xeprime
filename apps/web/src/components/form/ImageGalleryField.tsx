@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { App, Form, Upload } from 'antd';
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
@@ -21,7 +21,8 @@ import styles from './ImageGalleryField.module.css';
 interface ImageGalleryFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
-  label: string;
+  /** `ReactNode` để feature tự gắn dấu hiệu riêng cạnh nhãn (xem `TextField`). */
+  label: ReactNode;
   presign: (file: File) => Promise<UploadPresign>;
   /** Trần số ảnh — khớp validator (mặc định 20). */
   max?: number;
@@ -97,7 +98,11 @@ export function ImageGalleryField<T extends FieldValues>({
         <SortableContext items={items} strategy={rectSortingStrategy}>
           <div className={styles.grid}>
             {items.map((url) => (
-              <SortableThumb key={url} url={url} onRemove={() => commit(items.filter((u) => u !== url))} />
+              <SortableThumb
+                key={url}
+                url={url}
+                onRemove={() => commit(items.filter((u) => u !== url))}
+              />
             ))}
             {Array.from({ length: uploadingCount }).map((_, i) => (
               <div key={`pending-${i}`} className={styles.pendingTile}>

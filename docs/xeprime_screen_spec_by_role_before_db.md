@@ -109,21 +109,32 @@ Scope:
 | Role dùng | `guest`, `customer` |
 | Trạng thái | Giữ, cần chuyển sang Next.js |
 
+Quyết định sản phẩm mục tiêu (10/08/2026):
+
+- Trang chủ chỉ có ba tiêu chí tìm kiếm: **từ khóa**, **địa điểm**, **thời gian thuê**.
+- Thời gian nhận và trả được chọn trong **một input khoảng thời gian**; không tách thành hai ô
+  ngày nhận/ngày trả.
+- Bấm tìm kiếm chuyển sang route kết quả riêng **`/search`**, mang trạng thái tìm kiếm trên URL.
+- Trang chủ chỉ hiển thị tối đa **8 xe** làm nội dung gợi ý và nút **“Xem tất cả xe”**.
+- “Xem tất cả xe” chuyển sang `/search`; trang chủ không phân trang danh sách xe.
+- Bộ lọc đầy đủ và phân trang chỉ xuất hiện trên `/search`.
+- `/search` không lặp hero/header marketing của trang chủ để dành chiều rộng cho kết quả và bộ
+  lọc; thanh điều hướng public toàn cục vẫn được giữ.
+
 Chức năng và nút:
 
 | Nút/chức năng | Ai dùng | Hành động |
 | --- | --- | --- |
-| Ô tô / Xe máy | guest, customer | Đổi loại xe cần tìm |
-| Tự lái / Có tài xế / Thuê dài hạn | guest, customer | Đổi loại dịch vụ |
-| Nội thành / Liên tỉnh / Liên tỉnh 1 chiều | guest, customer | Lọc mode xe có tài xế |
-| Nơi nhận xe | guest, customer | Mở chọn tỉnh/thành, sân bay, vị trí hiện tại |
-| Thời gian thuê | guest, customer | Mở lịch chọn ngày/giờ nhận trả |
-| Tìm xe khả dụng | guest, customer | Lọc public listings theo điều kiện |
-| Bộ lọc | guest, customer | Mở filter nâng cao |
-| Loại xe, hãng xe, số chỗ | guest, customer | Lọc nhanh |
-| Thuê giờ, giao tận nơi, chủ xe 5 sao, miễn thế chấp, giảm giá | guest, customer | Toggle filter nhanh |
+| Từ khóa | guest, customer | Tìm theo tên xe, hãng, model hoặc từ khóa public listing được API hỗ trợ |
+| Địa điểm | guest, customer | Chọn tỉnh/thành hoặc địa điểm nhận xe được hệ thống hỗ trợ |
+| Thời gian thuê | guest, customer | Một input range chọn đồng thời thời gian nhận và thời gian trả |
+| Tìm xe | guest, customer | Chuyển sang `/search` với từ khóa, địa điểm và khoảng thuê trên URL |
+| Xem tất cả xe | guest, customer | Chuyển sang `/search` không bắt buộc có điều kiện tìm kiếm |
 | Thành phố nổi bật | guest, customer | Chọn nhanh tỉnh/thành |
 | Đăng xe cho thuê | guest, customer | Đi sang `/host` hoặc flow đăng ký gian hàng |
+
+Các bộ lọc loại xe, dịch vụ, giá, hãng, số chỗ, nhiên liệu, tiện ích, tính năng và sắp xếp không
+đặt trong hero trang chủ; chúng thuộc trang kết quả `/search`.
 
 Thiếu/cần sửa:
 
@@ -135,6 +146,12 @@ Thiếu/cần sửa:
 | Login | Thêm Google/Facebook login |
 
 ### 6.2 Danh sách xe và card xe
+
+Phân tách bề mặt:
+
+- Trên `/`: tối đa 8 card xe, không phân trang, có nút “Xem tất cả xe”.
+- Trên `/search`: danh sách kết quả đầy đủ, full filter, sort, URL state và phân trang.
+- `/search` bỏ hero/marketing header của homepage nhưng vẫn giữ global public navigation.
 
 | Nút/chức năng | Ai dùng | Hành động |
 | --- | --- | --- |

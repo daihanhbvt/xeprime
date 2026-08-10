@@ -1032,3 +1032,42 @@ Nhánh menu tràn gán thẳng `onClick: action.onClick`, tức **`confirm` bị
 Không đổi một giá trị, nhãn hay màu trạng thái nào. **P5 không bị đụng tới.** Bốn giá trị vận
 hành và bảy giá trị public giữ nguyên `VEHICLE_*_STATUS_META`. Thẻ mobile hiện **cả hai trục**
 trạng thái — đúng nguyên tắc "hai trục không được gộp" ghi ở `status/vehicle.ts`.
+
+---
+
+## Wave 3A — Fleet còn lại (create / detail / edit)
+
+Ba route: `/manage/vehicles/new`, `/manage/vehicles/[id]`, `/manage/vehicles/[id]/edit`.
+Nguồn chuẩn cho trường và ràng buộc: **ma trận trường Figma `65:4844`** (05.9C — mọi trường kèm
+save/publish requirement, sensitivity, visibility, validation).
+
+### Mô hình hoàn thiện hai giai đoạn — ĐÃ ÁP DỤNG
+
+`60:70` chia trường thành hai nhóm, khớp đúng hai cột "Save Req" / "Publish Req" của `65:4844`:
+
+| Dấu | Nghĩa                               | Trường                                                          |
+| --- | ----------------------------------- | --------------------------------------------------------------- |
+| `*` | Bắt buộc để **lưu** (nội bộ)        | `code`, `name`, `vehicleType`, `serviceType`, `operationStatus` |
+| `●` | Bắt buộc để **gửi duyệt công khai** | `plateNumber`, `weekdayPrice`, `mainImageUrl`, `description`    |
+
+Nhóm `●` trùng khớp với `REQUIRED` của `VehiclePublicReviewPanel` và `missingPublicFields` ở
+backend — nên nó không phải một quy ước mới, chỉ là làm hiện ra thứ đã có.
+
+### Xung đột Figma ↔ code
+
+| #   | Figma                                                                                                     | Code / hiện thực                                                                  | Quyết định                                                                                                                                                                  |
+| --- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `60:141`/`60:327`/`60:490`: tạo xe là **wizard nhiều bước, lưu nháp giữa chừng** ("Đã lưu nháp" `60:218`) | Một trang, **một** `POST /vehicles`; backend không có endpoint lưu nháp từng phần | **Giữ một trang.** Đây là đổi WORKFLOW, không phải layout — luật ưu tiên #2 (code nghiệp vụ đã kiểm chứng) thắng #3 (Figma). Wizard sẽ đẻ ra xe mồ côi nếu bỏ dở giữa chừng |
+| 2   | `65:4844`: `year` hợp lệ từ **1990**                                                                      | `vehicleFormSchema`: **1980**                                                     | Giữ 1980. Schema là nguồn nghiệp vụ (#2); nới rộng hơn Figma nên không tạo dữ liệu backend từ chối                                                                          |
+| 3   | `62:265`/`62:628`/`65:1978`: sửa trường "nhạy cảm" của xe **đã duyệt** → knock-back về chờ duyệt lại      | **Không tồn tại ở backend** (không có logic sensitive/knockback trong `apps/api`) | **Không dựng.** Vẽ một hộp xác nhận hứa hẹn điều backend không làm là nói dối người dùng. `VehiclePublicReviewPanel` đã cảnh báo bằng chữ ở trạng thái `approved_public`    |
+| 4   | `60:1354` create-vehicle-plan-limit · `62:1599` Plan Limit Error                                          | Không có hạn mức xe theo gói ở API xe                                             | Không dựng. Sẽ đến cùng tính năng gói (`115:4274`), không phải Wave 3A                                                                                                      |
+| 5   | `65:240`: field "Biển số"/"Năm sản xuất" có dấu ⚠️                                                        | Ý nghĩa dấu không được định nghĩa ở đâu                                           | Không dựng dấu này — `65:4844` không đánh `year` là sensitive, nên ⚠️ mâu thuẫn với chính ma trận trường. Ghi lại là **chỗ mơ hồ**                                          |
+| 6   | `60:105`: `vehicleType` là radio 2 lựa chọn                                                               | Trước Wave 3A là `Select`                                                         | **Theo Figma** — bố cục thuộc thẩm quyền của Figma (#3), và 2 lựa chọn thì radio ít thao tác hơn                                                                            |
+| 7   | `60:7` sticky action bar cao 72px                                                                         | `StickyFormActions` = 64px (`62:1623`)                                            | Giữ component chung. Hai frame Figma tự mâu thuẫn; component định nghĩa thắng frame                                                                                         |
+
+### Chưa hỗ trợ — có chủ đích
+
+- **Cảnh báo thay đổi chưa lưu** khi rời form: chưa có ở code, Figma không đặc tả rõ. Không tự
+  thêm hộp xác nhận chặn đường (chỉ thị Wave 3A). Ghi là nợ.
+- `65:2489` drivers · `65:2576` trash · `65:2663` maintenance: các frame "feature unavailable" —
+  không thuộc ba route của Wave 3A.

@@ -469,3 +469,30 @@ Nay `VehicleFiltersBar` chỉ còn **khai định nghĩa filter của Fleet** v�
   **`--xp-text-secondary`** — một token **không tồn tại** (tên đúng là `--xp-color-text-secondary`),
   kèm fallback `rgba()` thô. Đã xoá cả bốn.
 - `vehicles-page.module.css`: **không file nào import** — đã xoá hẳn.
+
+---
+
+## D22 — Thanh hành động form dựng tay ở `VehicleForm` ✅ ĐÃ GỘP (Wave 3A)
+
+`VehicleForm` tự dựng `.actions` (flex + hai `Button` + breakpoint riêng **576px**) trong khi
+`StickyFormActions` đã tồn tại từ Wave 1C và chưa có consumer nào. Đã thay bằng component chung:
+mất một bản sao bố cục, mất luôn **breakpoint 576px không chính tắc** (chỉ 640/1024 được phép).
+
+## D23 — Trạng thái tải/lỗi dựng tay ở 3 route Fleet ✅ ĐÃ GỘP (Wave 3A)
+
+`new` / `[id]` / `[id]/edit` dùng `<Skeleton>` và `<Result status="404|error">` trần thay vì
+`LoadingState` / `EmptyState`. Đã chuyển hết sang component chung. Kèm theo là một sửa hành vi
+thật: **404 không còn mời "Thử lại"** — thử lại một bản ghi không tồn tại là ngõ cụt
+(`EmptyState` R10).
+
+## D24 — Ba route Fleet KHÔNG gác quyền ✅ ĐÃ VÁ (Wave 3A)
+
+Nghiêm trọng nhất của Wave 3A: cả ba route đều dựng nội dung mà **không kiểm tra quyền nào**.
+`/new` dựng form tạo cho người không có `vehicles.create`; `/[id]/edit` dựng form sửa cho người
+không có `vehicles.update`; `/[id]` hiện toàn bộ bản ghi cho người không có `vehicles.view`.
+
+Đã thay bằng `PermissionState` cấp trang (cùng khuôn với Wave 2 `58:2061`, Figma `62:893` cho
+edit). Hai route chi tiết/sửa còn **không gọi API** khi thiếu quyền — bớt một request chắc chắn
+bị guard backend từ chối.
+
+⚠️ Đây là lớp trải nghiệm. Lớp chặn thật vẫn là guard backend; không route nào dựa vào việc ẩn nút.

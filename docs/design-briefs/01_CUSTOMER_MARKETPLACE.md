@@ -24,6 +24,27 @@ Four further gaps are structural rather than cosmetic:
 
 Pricing is display-only by design: the discounted figure shown on cards and detail is a marketing computation, and the binding price is set by the shop when it approves the request. This is correct against ADR 0006's preview/authority split but is **not communicated to the customer anywhere in the UI**.
 
+### 1.1 Accepted target information architecture (product decision 2026-08-10)
+
+The homepage and vehicle-search results are now two distinct product surfaces:
+
+- **`/` — discovery homepage.** Its search form contains only **keyword**, **location**, and one
+  **rental-period range control**. The range control selects pickup and return in a single
+  interaction; the homepage must not render separate pickup-date and return-date fields.
+- **`/search` — dedicated vehicle-search results.** Submitting the homepage search navigates here
+  with the three search-context values encoded in the URL. This page owns the full filter, sort,
+  result-count, applied-filter, pagination, empty/no-results, loading and error experience.
+- The homepage shows at most **8 available vehicles** as a preview and a clear **“Xem tất cả xe”**
+  action. That action navigates to `/search`; homepage vehicle pagination is removed.
+- The search-results page removes the homepage hero and other marketing header content so the
+  result workspace can use the available width. The global public navigation (`MarketHeader`)
+  remains: “remove the header” means remove the homepage hero/marketing header, not remove global
+  navigation, account access or authentication entry points.
+
+This is an **accepted target**, not a claim about current implementation. Sections explicitly
+labelled “Confirmed current” continue to describe the repository as built until the marketplace
+rollout implements this decision.
+
 ---
 
 ## 2. Scope
@@ -295,7 +316,12 @@ Whether keyword search was descoped or overlooked; whether hourly/time-of-day se
 
 ### 11.5 Recommended future behavior
 
-`[RECOMMENDED — NOT CURRENT]` Expose the existing `q` capability as a first-class control; make the hero one consistent commit action; give results their own route so that a result set is a page, not a scroll position.
+`[ACCEPTED — NOT CURRENT]` Implement the information architecture in §1.1. The homepage search has
+exactly three concepts: keyword, location and rental period. Pickup and return are selected through
+one range input. Submit navigates to `/search`; it does not scroll to a result anchor on `/`.
+
+Advanced dimensions such as vehicle type, service type, price, body type, brand, seats, fuel,
+features, amenities and sort belong to `/search`, not to the homepage hero.
 
 ---
 
@@ -358,6 +384,10 @@ Sort lives inside the filter panel and is omitted from the URL when it equals th
 **Confirmed.** Server-side everywhere; `{page, limit, total, hasNext}` in `meta`. API default `limit = 12`, hard maximum `48`, `page` floored at 1. The home results grid requests `limit = 8`; the shop grid uses `12`. Count and page are read inside one `$transaction` so `total` matches the returned rows. Both grids hide the pager when `total <= PAGE_SIZE` and disable the page-size changer. `page` is written to the URL (omitted when 1) and any filter change resets it.
 
 **Existing UX problems** — three page sizes coexist (API default 12, home 8, shop 12) with no shared constant; there is no page-size control; the home pager triggers `router.replace(..., {scroll: false})`, so paging leaves the viewport where it was rather than returning to the top of the grid; the shop grid uses `router.push` while home uses `router.replace`, producing different back-button behavior for the same interaction.
+
+**Accepted target:** `/` requests and displays only the first 8 vehicles and has no marketplace
+pager. “Xem tất cả xe” opens `/search`. Pagination of the complete result set belongs exclusively
+to `/search`; shop-profile pagination remains owned by `/shops/[slug]`.
 
 ---
 
@@ -632,8 +662,8 @@ Absent from the current code path. Absence is **not** evidence that the business
 
 `[RECOMMENDED — NOT CURRENT]` — none of the following exists; each is a proposal for product decision, ordered by the strength of the evidence that the gap is real.
 
-1. **Expose keyword search.** The lowest-cost, highest-certainty gap: the capability is already built and tested at the API and URL layers.
-2. **Give results their own route.** Unlocks indexable filtered pages, a real "back to results", and independent evolution of home versus results.
+1. **[ACCEPTED] Expose keyword search on the homepage.** The capability is already built and tested at the API and URL layers.
+2. **[ACCEPTED] Add `/search` as the dedicated results route.** Homepage submit and “Xem tất cả xe” navigate to it; full filters and pagination live there.
 3. **Show availability on the detail page.** The occupancy data already drives list filtering; the highest-intent screen currently omits it.
 4. **State the price contract.** Either show a computed total for the selected dates, or explicitly say the price is indicative until the shop confirms — the second is what the code actually guarantees.
 5. **Resolve the favourite button.** Implement persistence or remove the control; an inert affordance on every card is worse than none.
@@ -689,6 +719,10 @@ Conflicts between two authoritative sources, or between a stated intent and the 
 | Q11 | Which trust signals may be shown about a shop? | §17 |
 | Q12 | What should happen when the marketplace has no inventory in a region — hide, or explain? | L-3 |
 | Q13 | Should the public listing API have anti-scraping protection beyond the global throttler? | §23 |
+
+**Resolved 2026-08-10:** Q1 — keyword is a required homepage search field. Q2 — a dedicated
+`/search` route is required. The separate SEO question of which filtered URL permutations should be
+indexable remains open under §22; it does not block the route or UX split.
 
 ---
 

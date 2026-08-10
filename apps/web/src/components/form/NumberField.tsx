@@ -1,7 +1,7 @@
 'use client';
 
 import { Form, InputNumber } from 'antd';
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 
 import styles from './field.module.css';
@@ -9,7 +9,8 @@ import styles from './field.module.css';
 interface NumberFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
-  label: string;
+  /** `ReactNode` để feature tự gắn dấu hiệu riêng cạnh nhãn (xem `TextField`). */
+  label: ReactNode;
   placeholder?: string;
   min?: number;
   max?: number;
@@ -29,6 +30,10 @@ interface NumberFieldProps<T extends FieldValues> {
   /** Số chữ số thập phân. Mặc định: tiền và phần trăm nguyên → 0. */
   precision?: number;
   addonAfter?: string;
+  /** Dấu bắt buộc của AntD. Ràng buộc thật vẫn ở schema Yup. */
+  required?: boolean;
+  /** Gợi ý dưới ô nhập khi KHÔNG có lỗi. Lỗi luôn thắng. */
+  help?: ReactNode;
 }
 
 /** Nhóm nghìn theo kiểu Việt Nam (1.000.000) cho ô nhập tiền. */
@@ -65,24 +70,31 @@ export function NumberField<T extends FieldValues>({
   percent,
   precision,
   addonAfter,
+  required,
+  help,
 }: NumberFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   const id = useId();
+  const describedById = `${id}-help`;
 
   const effectiveMin = min ?? (percent ? 0 : undefined);
   const effectiveMax = max ?? (percent ? 100 : undefined);
   const suffix = addonAfter ?? (money ? '₫' : percent ? '%' : undefined);
+  const helpText = fieldState.error?.message ?? help;
 
   return (
     <Form.Item
       label={label}
       htmlFor={id}
+      required={required}
       validateStatus={fieldState.error ? 'error' : ''}
-      help={fieldState.error?.message}
+      help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
       className={styles.item}
     >
       <InputNumber
         id={id}
+        aria-describedby={helpText ? describedById : undefined}
+        aria-invalid={fieldState.error ? true : undefined}
         className={styles.control}
         size="large"
         value={(field.value as number | null | undefined) ?? null}

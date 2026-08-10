@@ -543,3 +543,27 @@ Sáu batch: **1C-A** kiểm kê + test đặc tả · **1C-B** 6 primitive · **
 cấm đụng ở 1C-E) · `renderCard` mobile · D9 tách 3 bảng nội tuyến · `FilterBar` cho 8 trang còn lại.
 
 **Wave 1D vẫn CHẶN bởi P1** (sidebar sáng/tối) — không có phần nào của 1D được bắt đầu.
+
+---
+
+## Wave 3A — Fleet còn lại ✅ HOÀN THÀNH
+
+Ba route cuối của module Fleet: `/manage/vehicles/new` · `/manage/vehicles/[id]` ·
+`/manage/vehicles/[id]/edit`. Fleet giờ **đã migrate trọn module**.
+
+| Mục tiêu                                 | Kết quả                                                                                       |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Ba route gác quyền ở cấp trang           | ✅ `PermissionState` cho create/view/update (trước đó **không route nào gác**)                |
+| Bỏ `Skeleton`/`Result` viết tay          | ✅ `LoadingState` + `EmptyState` cả ba route                                                  |
+| `StickyFormActions` có consumer          | ✅ `VehicleForm` — consumer thật đầu tiên                                                     |
+| Một `VehicleForm` cho cả create lẫn edit | ✅ Cùng schema, cùng mapper, cùng payload; chỉ khác nhãn nút + điều hướng                     |
+| Chống gửi trùng                          | ✅ Chặn ở `handleSubmit`, không chỉ dựa vào `loading` của nút                                 |
+| Giữ media khi sửa                        | ✅ Có test khoá: lưu mà không đụng ảnh gửi lại đúng bộ ảnh cũ                                 |
+| Không breakpoint ngoài 640/1024          | ✅ Bỏ 576px của `VehicleForm`                                                                 |
+| Không giá trị thiết kế thô               | ✅ Màu/khoảng cách/bo góc/chữ đều qua token; còn lại là kích thước bố cục có trích node Figma |
+
+**Test**: 915 (từ 852). Ba suite mới — create 18 · edit 17 · detail 23 — cộng 4 test chung cho
+seam `required`/`help` của field wrapper.
+
+**Chuyển tiếp (nợ Fleet)**: cảnh báo thay đổi chưa lưu · knock-back khi sửa trường nhạy cảm của xe
+đã duyệt (**cần backend trước**) · hạn mức xe theo gói · `renderCard` cho 13 bảng còn lại.

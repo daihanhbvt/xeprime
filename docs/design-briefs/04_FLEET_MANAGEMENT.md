@@ -190,6 +190,48 @@ stateDiagram-v2
 
 One view mode only (table) — the old Firebase UI's grid/list/table switcher was not carried over. No bulk selection (§14). Loading/empty/error states per `docs/project/05_PAGES.md`: URL filters, spinner/empty/error, delete confirmation.
 
+### 7.1 Accepted target redesign — card-first fleet list (product decision 2026-08-10)
+
+`/manage/vehicles` will use a **vehicle card grid as its canonical presentation at every
+viewport**, replacing the desktop data table. This is appropriate for the expected tenant fleet
+size and gives each vehicle's image and operational context enough visual priority. Do not add a
+table/grid switcher unless a later product requirement proves that large fleets need it.
+
+The supplied dark fleet screenshot is a **layout and information-hierarchy reference only**. It is
+not a color, typography, radius, shadow or component-style source. The implementation and updated
+Figma frames must continue to use XePrime Foundations, semantic tokens, the dark portal sidebar and
+the existing light content surfaces.
+
+Each card should expose, when the current DTO and permissions provide the value:
+
+1. Prominent main vehicle image with a vehicle fallback when missing.
+2. Vehicle name, internal code and license plate.
+3. Vehicle type, service type, manufacture year and seat count.
+4. Both independent status axes: operation status and public/publication status.
+5. Primary rental prices already owned by the vehicle record (weekday; weekend/hourly only when
+   present) and discount when applicable.
+6. Publication completeness or missing-requirement summary when it helps the owner act.
+7. Existing authorized actions: view, edit and delete. A calendar/schedule action may appear only
+   when an existing route and verified filter/deep-link contract support it.
+
+Do **not** copy revenue, cost, profit/loss, running-booking totals, registration-expiry warnings or
+other metrics from the reference screenshot unless those values already exist in the Fleet list
+API and are confirmed as in-scope business data. Visual inspiration is not authorization to create
+new analytics, joins or backend contracts.
+
+Layout target:
+
+- Wide desktop: up to 4 balanced cards per row.
+- Standard portal desktop: 3 cards per row where the content width allows it.
+- Tablet: 2 cards per row.
+- Mobile: 1 card per row.
+- Prefer responsive grid sizing over fixed screenshot-specific card widths; long names, prices and
+  status labels must not overflow.
+
+The existing filter/search/sort URL contract, server pagination, permission states, loading,
+empty, no-results, error/retry and delete confirmation remain unchanged. Desktop and mobile must
+consume one query result and one action definition; do not build a second data path for the grid.
+
 ### Search/filter/sort/pagination — confirmed
 
 - All state in URL via `use-vehicle-filters.ts` (ADR 0004); any filter change resets `page`; `router.replace` with `scroll: false`.
@@ -250,7 +292,13 @@ Delete: `Popconfirm` on the table row. Submit-public: plain button (no confirm) 
 
 ## 14. Responsive, accessibility, security
 
-**Responsive (confirmed):** form uses `Row/Col xs/sm` collapse; detail `Descriptions` collapses to one column; the table relies on horizontal overflow on mobile — the bảng→thẻ conversion mandated by `docs/design/05` §5 is not implemented here. Tablet behaviour `Unknown` (no rule anywhere, brief 00 §9).
+**Responsive (confirmed current):** form uses `Row/Col xs/sm` collapse; detail `Descriptions`
+collapses to one column; the current list renders cards only at the mobile breakpoint and a table
+on larger viewports.
+
+**Accepted list target:** §7.1 supersedes the current responsive split for `/manage/vehicles`:
+card grid at every viewport, with 4/3/2/1 columns according to available width. This target is not a
+claim that the current repository has already implemented the desktop/tablet grid.
 
 **Accessibility (confirmed):** all fields through the labelled RHF wrappers (`useId` binding); icon-only row actions have `Tooltip` but their `aria-label` presence is `Unknown` per static review (`docs/project/09` §A11y-2); status conveyed by tag color **plus** text (good). No live-region announcements for status changes after submit.
 

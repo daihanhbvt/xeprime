@@ -2,7 +2,7 @@
 
 import { DeleteOutlined, LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, Form, Upload } from 'antd';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
@@ -12,7 +12,8 @@ import styles from './ImageUploadField.module.css';
 interface ImageUploadFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
-  label: string;
+  /** `ReactNode` để feature tự gắn dấu hiệu riêng cạnh nhãn (xem `TextField`). */
+  label: ReactNode;
   /** Endpoint presign theo loại ảnh (xe / gian hàng) — component không tự biết prefix. */
   presign: (file: File) => Promise<UploadPresign>;
 }

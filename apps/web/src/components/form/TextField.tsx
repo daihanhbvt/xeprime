@@ -7,13 +7,21 @@ import { useController, type Control, type FieldValues, type Path } from 'react-
 interface TextFieldProps<T extends FieldValues> {
   control: Control<T>;
   name: Path<T>;
-  label: string;
+  /**
+   * `ReactNode` chứ không phải `string`: form nào cần gắn thêm dấu hiệu riêng cạnh nhãn thì tự
+   * dựng lấy, thay vì common code phải biết quy ước của từng feature.
+   */
+  label: ReactNode;
   type?: 'text' | 'email' | 'password';
   placeholder?: string;
   autoComplete?: string;
   prefix?: ReactNode;
   autoFocus?: boolean;
   disabled?: boolean;
+  /** Hiện dấu bắt buộc của AntD. Ràng buộc thật vẫn nằm ở schema Yup, đây chỉ là dấu hiệu. */
+  required?: boolean;
+  /** Gợi ý dưới ô nhập khi KHÔNG có lỗi. Lỗi luôn thắng — không hiện cả hai cùng lúc. */
+  help?: ReactNode;
 }
 
 /**
@@ -32,12 +40,16 @@ export function TextField<T extends FieldValues>({
   prefix,
   autoFocus,
   disabled,
+  required,
+  help,
 }: TextFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // `Form.Item` chỉ tự nối label ↔ input khi nằm trong `<Form>` của AntD. Các form ở đây dùng
   // React Hook Form nên phải tự gán `id`/`htmlFor`: thiếu nó, bấm vào label không focus được ô
   // nhập và trình đọc màn hình không đọc ra tên trường.
   const inputId = `${String(name)}-${useId()}`;
+  const describedById = `${inputId}-help`;
+  const helpText = fieldState.error?.message ?? help;
   const shared = {
     ...field,
     id: inputId,
@@ -47,6 +59,8 @@ export function TextField<T extends FieldValues>({
     autoFocus,
     prefix,
     disabled,
+    'aria-describedby': helpText ? describedById : undefined,
+    'aria-invalid': fieldState.error ? true : undefined,
     status: fieldState.error ? ('error' as const) : undefined,
   };
 
@@ -54,8 +68,9 @@ export function TextField<T extends FieldValues>({
     <Form.Item
       label={label}
       htmlFor={inputId}
+      required={required}
       validateStatus={fieldState.error ? 'error' : ''}
-      help={fieldState.error?.message}
+      help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
       style={{ marginBottom: 14 }}
     >
       {type === 'password' ? (

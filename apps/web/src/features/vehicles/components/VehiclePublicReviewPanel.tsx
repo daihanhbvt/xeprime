@@ -1,7 +1,7 @@
 'use client';
 
-import { CloudUploadOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Typography } from 'antd';
+import { CheckCircleFilled, CloseCircleOutlined, CloudUploadOutlined } from '@ant-design/icons';
+import { Alert, App, Button, Card } from 'antd';
 import {
   PERMISSION,
   VEHICLE_PUBLIC_STATUS,
@@ -9,14 +9,18 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { usePermissions } from '@/hooks/use-permissions';
+import { decorativeIcon } from '@/lib/decorative-icon';
 import { getErrorMessage } from '@/services/api-client';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle-mutations';
 import type { VehicleDetail } from '../types';
 import styles from './VehiclePublicReviewPanel.module.css';
 
-/** Điều kiện tối thiểu để xe được lên chợ — khớp `missingPublicFields` ở backend. */
+/**
+ * Điều kiện tối thiểu để xe được lên chợ — khớp `missingPublicFields` ở backend và cột
+ * "Publish Req" của ma trận trường Figma `65:4844`.
+ */
 const REQUIRED: readonly { present: (v: VehicleDetail) => boolean; label: string }[] = [
-  { present: (v) => Boolean(v.weekdayPrice), label: 'Giá thuê' },
+  { present: (v) => Boolean(v.weekdayPrice), label: 'Giá ngày thường' },
   { present: (v) => Boolean(v.mainImageUrl), label: 'Ảnh đại diện' },
   { present: (v) => Boolean(v.plateNumber), label: 'Biển số' },
   { present: (v) => Boolean(v.description), label: 'Mô tả xe' },
@@ -73,9 +77,12 @@ function presentationFor(
 }
 
 /**
- * Bảng trạng thái công khai của xe: hiện kết quả duyệt gần nhất (kèm lý do), danh sách điều kiện
- * còn thiếu, và nút gửi/gửi-lại duyệt. Gửi duyệt đi qua luồng nền tảng (ADR 0008) — client không
- * tự set `approved_public`.
+ * Tiến trình gửi duyệt công khai (Figma `65:240` cột phải · `65:3754` Requirements Checklist).
+ *
+ * Khác bản trước Wave 3A: hiện **toàn bộ** danh sách điều kiện kèm trạng thái đạt/chưa đạt, thay
+ * vì chỉ liệt kê phần còn thiếu. Chủ xe cần thấy mình còn cách bao xa, không chỉ thấy lỗi.
+ *
+ * Gửi duyệt đi qua luồng nền tảng (ADR 0008) — client không tự set `approved_public`.
  */
 export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }) {
   const { message } = App.useApp();
@@ -85,7 +92,8 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
   const status = vehicle.publicStatus as VehiclePublicStatus;
   const canSubmit =
     has(PERMISSION.VEHICLE_SUBMIT_PUBLIC) && VEHICLE_PUBLIC_STATUS_SUBMITTABLE.includes(status);
-  const missing = REQUIRED.filter((r) => !r.present(vehicle)).map((r) => r.label);
+  const checklist = REQUIRED.map((item) => ({ label: item.label, met: item.present(vehicle) }));
+  const missingCount = checklist.filter((item) => !item.met).length;
   const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
   const presentation = presentationFor(status, vehicle.latestPublicReview?.reason);
 
@@ -97,36 +105,41 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
   }
 
   return (
-    <Alert
-      className={styles.panel}
-      type={presentation.type}
-      showIcon
-      message={presentation.message}
-      description={
-        <div className={styles.body}>
-          <Typography.Text type="secondary">{presentation.description}</Typography.Text>
-          {canSubmit && missing.length > 0 ? (
-            <ul className={styles.missing}>
-              {missing.map((label) => (
-                <li key={label}>Thiếu: {label}</li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      }
-      action={
-        canSubmit ? (
+    <Card title="Tiến trình gửi duyệt công khai" className={styles.panel}>
+      <Alert
+        type={presentation.type}
+        showIcon
+        message={presentation.message}
+        description={presentation.description}
+      />
+
+      {canSubmit ? (
+        <>
+          <ul className={styles.checklist}>
+            {checklist.map((item) => (
+              <li key={item.label} className={item.met ? styles.met : styles.unmet}>
+                {item.met
+                  ? decorativeIcon(<CheckCircleFilled />)
+                  : decorativeIcon(<CloseCircleOutlined />)}
+                <span>{item.label}</span>
+                {/* Chữ mang nghĩa, không phải icon — icon là trang trí nên trình đọc bỏ qua. */}
+                <span className={styles.state}>{item.met ? 'Đã có' : 'Chưa có'}</span>
+              </li>
+            ))}
+          </ul>
+
           <Button
             type="primary"
+            block
             icon={<CloudUploadOutlined />}
             loading={submit.isPending}
-            disabled={missing.length > 0}
+            disabled={missingCount > 0}
             onClick={onSubmit}
           >
             {isResubmit ? 'Gửi duyệt lại' : 'Gửi duyệt công khai'}
           </Button>
-        ) : null
-      }
-    />
+        </>
+      ) : null}
+    </Card>
   );
 }
