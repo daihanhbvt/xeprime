@@ -79,3 +79,34 @@
 .pendingTile {
   color: var(--xp-color-text-tertiary);
 }
+
+.failedTile {
+  border-color: var(--xp-color-error);
+  color: var(--xp-color-error);
+  text-align: center;
+}
+
+.failedTile > span {
+  overflow: hidden;
+  max-width: 96px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pendingActions {
+  display: flex;
+  gap: var(--xp-space-xs);
+}
+
+.pendingActions button {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  color: inherit;
+  cursor: pointer;
+  place-items: center;
+}

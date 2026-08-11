@@ -5,22 +5,29 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { PERMISSION } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
-import { ROUTES, vehiclePath } from '@/constants/routes';
+import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { VehicleForm, type VehicleSubmitOptions } from '@/features/vehicles/components/VehicleForm';
+import { VehicleCreateSuccess } from '@/features/vehicles/components/VehicleCreateSuccess';
 import { submitVehiclePublic } from '@/features/vehicles/api';
 import { useCreateVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 import { formValuesToInput } from '@/features/vehicles/mappers';
+import type { VehicleDetail } from '@/features/vehicles/types';
+import { useState } from 'react';
 
 export default function NewVehiclePage() {
   const router = useRouter();
   const { message } = App.useApp();
   const { has } = usePermissions();
   const create = useCreateVehicle();
+  const [created, setCreated] = useState<{
+    vehicle: VehicleDetail;
+    submittedForReview: boolean;
+  } | null>(null);
 
   const backToList = () => router.push(ROUTES.MANAGE.VEHICLES);
 
@@ -37,17 +44,18 @@ export default function NewVehiclePage() {
       onSuccess: async (vehicle) => {
         if (!submitForReview) {
           message.success('Đã lưu nháp xe');
-          router.replace(vehiclePath.detail(vehicle.id));
+          setCreated({ vehicle, submittedForReview: false });
           return;
         }
 
         try {
-          await submitVehiclePublic(vehicle.id);
+          const submitted = await submitVehiclePublic(vehicle.id);
           message.success('Đã tạo xe và gửi duyệt công khai');
+          setCreated({ vehicle: submitted, submittedForReview: true });
         } catch (error) {
           message.warning(`Đã tạo xe nhưng chưa gửi duyệt được: ${getErrorMessage(error)}`);
+          setCreated({ vehicle, submittedForReview: false });
         }
-        router.replace(vehiclePath.detail(vehicle.id));
       },
       onError: (error) => message.error(getErrorMessage(error)),
     });
@@ -71,11 +79,22 @@ export default function NewVehiclePage() {
     );
   }
 
+  if (created) {
+    return (
+      <PageContainer>
+        <VehicleCreateSuccess
+          vehicle={created.vehicle}
+          submittedForReview={created.submittedForReview}
+          onCreateAnother={() => setCreated(null)}
+        />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
       <ManagePageHeader title="Thêm xe" onBack={backToList} />
       <VehicleForm
-        mode="create"
         submitting={create.isPending}
         errorMessage={create.isError ? getErrorMessage(create.error) : null}
         onSubmit={handleSubmit}

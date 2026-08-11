@@ -3,11 +3,11 @@ import {
   APPROVAL_STATUS_VALUES,
   BOOKING_STATUS_VALUES,
   CATALOG_KEY_PATTERN,
-  SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
-  VEHICLE_OPERATION_STATUS,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_PUBLIC_STATUS_VALUES,
+  TRANSMISSION_TYPE_VALUES,
+  VEHICLE_SOURCE_TYPE_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Transform, Type } from 'class-transformer';
@@ -17,6 +17,7 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Length,
@@ -108,6 +109,7 @@ export class VehicleListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
   @ApiProperty({ enum: VEHICLE_TYPE_VALUES }) vehicleType!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  @ApiPropertyOptional({ enum: VEHICLE_SOURCE_TYPE_VALUES }) sourceType?: string;
   @ApiPropertyOptional({ type: String, nullable: true }) brand!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) model!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) manufactureYear!: number | null;
@@ -154,6 +156,20 @@ export class VehicleDetailDto extends VehicleListItemDto {
     description: 'Key nhiên liệu — tra nhãn ở danh mục `fuel_type` (GET /catalog)',
   })
   fuelType!: string | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) lengthMm!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) widthMm!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) heightMm!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) curbWeightKg!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) engineDisplacementCc!: number | null;
+  @ApiPropertyOptional({ type: Number, nullable: true }) horsepowerHp!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, enum: TRANSMISSION_TYPE_VALUES })
+  transmission!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km dạng decimal string' })
+  fuelConsumptionCity!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km dạng decimal string' })
+  fuelConsumptionHighway!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'L/100km dạng decimal string' })
+  fuelConsumptionCombined!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
 
   @ApiPropertyOptional({
@@ -189,10 +205,14 @@ export class VehiclePageDto {
  * tenant lấy từ scope. Đưa xe ra công khai đi qua luồng duyệt riêng (ADR 0008), không phải ở đây.
  */
 export class CreateVehicleDto {
-  @ApiProperty({ description: 'Mã xe nội bộ, duy nhất trong gian hàng', example: 'XE-001' })
+  @ApiPropertyOptional({
+    description: 'Mã xe nội bộ. Bỏ trống để hệ thống tự sinh.',
+    example: 'XE-001',
+  })
+  @IsOptional()
   @IsString()
-  @Length(1, 80)
-  code!: string;
+  @MaxLength(80)
+  code?: string;
 
   @ApiProperty({ example: 'Toyota Vios 2022' })
   @IsString()
@@ -203,62 +223,148 @@ export class CreateVehicleDto {
   @IsIn(VEHICLE_TYPE_VALUES)
   vehicleType!: string;
 
-  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES, default: SERVICE_TYPE.SELF_DRIVE })
+  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
   @IsOptional()
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
 
-  @ApiPropertyOptional({ example: '51K-123.45' })
+  @ApiPropertyOptional({ enum: VEHICLE_SOURCE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(VEHICLE_SOURCE_TYPE_VALUES)
+  sourceType?: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true, example: '51K-123.45' })
   @IsOptional()
   @IsString()
   @MaxLength(50)
-  plateNumber?: string;
+  plateNumber?: string | null;
 
   @ApiPropertyOptional({
+    type: String,
+    nullable: true,
     description: 'Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do',
     example: 'vinfast',
   })
   @IsOptional()
   @IsString()
   @Matches(CATALOG_KEY_PATTERN, { message: 'brand phải là key trong danh mục hãng xe' })
-  brand?: string;
+  brand?: string | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  model?: string;
+  model?: string | null;
 
-  @ApiPropertyOptional({ minimum: MIN_YEAR, maximum: MAX_YEAR })
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: MIN_YEAR, maximum: MAX_YEAR })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(MIN_YEAR)
   @Max(MAX_YEAR)
-  manufactureYear?: number;
+  manufactureYear?: number | null;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
   @IsString()
   @MaxLength(80)
-  color?: string;
+  color?: string | null;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 64 })
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: 64 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(64)
-  seatCount?: number;
+  seatCount?: number | null;
 
   @ApiPropertyOptional({
+    type: String,
+    nullable: true,
     description: 'Key nhiên liệu thuộc danh mục `fuel_type` (GET /catalog)',
     example: 'gasoline',
   })
   @IsOptional()
   @IsString()
   @Matches(CATALOG_KEY_PATTERN, { message: 'fuelType phải là key trong danh mục nhiên liệu' })
-  fuelType?: string;
+  fuelType?: string | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: 30000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(30000)
+  lengthMm?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: 10000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  widthMm?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: 10000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10000)
+  heightMm?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: 100000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  curbWeightKg?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: 30000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(30000)
+  engineDisplacementCc?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 1, maximum: 5000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(5000)
+  horsepowerHp?: number | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, enum: TRANSMISSION_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(TRANSMISSION_TYPE_VALUES)
+  transmission?: string | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 0, maximum: 999 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(999)
+  fuelConsumptionCity?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 0, maximum: 999 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(999)
+  fuelConsumptionHighway?: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true, minimum: 0, maximum: 999 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(999)
+  fuelConsumptionCombined?: number | null;
 
   // Các trường có thể GỠ giá trị (gửi null) — @IsOptional bỏ qua validate khi null,
   // service ghi null xuống DB để xoá (vd đổi ô tô → xe máy thì bỏ kiểu dáng).
@@ -276,25 +382,22 @@ export class CreateVehicleDto {
   @Matches(CATALOG_KEY_PATTERN, { message: 'bodyType phải là key trong danh mục kiểu dáng' })
   bodyType?: string | null;
 
-  @ApiPropertyOptional({
-    enum: VEHICLE_OPERATION_STATUS_VALUES,
-    default: VEHICLE_OPERATION_STATUS.AVAILABLE,
-  })
+  @ApiPropertyOptional({ enum: VEHICLE_OPERATION_STATUS_VALUES })
   @IsOptional()
   @IsIn(VEHICLE_OPERATION_STATUS_VALUES)
   operationStatus?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
   @IsString()
   @MaxLength(4000)
-  description?: string;
+  description?: string | null;
 
-  @ApiPropertyOptional({ description: 'URL ảnh đại diện xe' })
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'URL ảnh đại diện xe' })
   @IsOptional()
   @IsString()
   @MaxLength(2000)
-  mainImageUrl?: string;
+  mainImageUrl?: string | null;
 
   @ApiPropertyOptional({
     description: 'Giá ngày thường, string thập phân — ADR 0007',

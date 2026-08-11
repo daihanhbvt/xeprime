@@ -1,7 +1,7 @@
 'use client';
 
-import { DeleteOutlined, LoadingOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Form, Upload } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { App, Button, Form, Progress, Upload } from 'antd';
 import { useState, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
@@ -40,8 +40,28 @@ export function ImageUploadField<T extends FieldValues>({
   const { field, fieldState } = useController({ control, name });
   const { message } = App.useApp();
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [failedUpload, setFailedUpload] = useState<{ file: File; message: string } | null>(null);
 
   const url = (field.value as string | null | undefined) ?? null;
+
+  function startUpload(file: File) {
+    setUploading(true);
+    setProgress(0);
+    setFailedUpload(null);
+    (validate ? validate(file) : Promise.resolve(null))
+      .then((extraError) => {
+        if (extraError) throw new Error(extraError);
+        return uploadImage(file, presign, setProgress);
+      })
+      .then((publicUrl) => field.onChange(publicUrl))
+      .catch((err: unknown) => {
+        const error = getErrorMessage(err);
+        setFailedUpload({ file, message: error });
+        message.error(error);
+      })
+      .finally(() => setUploading(false));
+  }
 
   function handleSelect(file: File): false {
     const invalid = validateImageFile(file);
@@ -49,15 +69,7 @@ export function ImageUploadField<T extends FieldValues>({
       message.error(invalid);
       return false;
     }
-    setUploading(true);
-    (validate ? validate(file) : Promise.resolve(null))
-      .then((extraError) => {
-        if (extraError) throw new Error(extraError);
-        return uploadImage(file, presign);
-      })
-      .then((publicUrl) => field.onChange(publicUrl))
-      .catch((err: unknown) => message.error(getErrorMessage(err)))
-      .finally(() => setUploading(false));
+    startUpload(file);
     // Luôn chặn upload mặc định của AntD — mình tự PUT lên R2.
     return false;
   }
@@ -82,8 +94,17 @@ export function ImageUploadField<T extends FieldValues>({
               <img src={url} alt="Ảnh đã chọn" className={styles.preview} />
             ) : (
               <span className={styles.placeholder}>
-                {uploading ? <LoadingOutlined /> : <PlusOutlined />}
-                <span>{uploading ? 'Đang tải…' : 'Tải ảnh lên'}</span>
+                {uploading ? (
+                  <Progress
+                    type="circle"
+                    percent={progress}
+                    size={48}
+                    aria-label="Tiến độ tải ảnh"
+                  />
+                ) : (
+                  <PlusOutlined />
+                )}
+                <span>{uploading ? `Đang tải ${progress}%` : 'Tải ảnh lên'}</span>
               </span>
             )}
           </button>
@@ -99,6 +120,14 @@ export function ImageUploadField<T extends FieldValues>({
           </Button>
         ) : null}
       </div>
+      {failedUpload ? (
+        <div className={styles.uploadError} role="alert">
+          <span>{failedUpload.message}</span>
+          <Button size="small" onClick={() => startUpload(failedUpload.file)}>
+            Thử lại
+          </Button>
+        </div>
+      ) : null}
     </Form.Item>
   );
 }

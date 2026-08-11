@@ -1,5 +1,14 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import { MEMBERSHIP_STATUS, TENANT_ROLE, TENANT_STATUS, VEHICLE_TYPE } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  FUEL_TYPE,
+  MEMBERSHIP_STATUS,
+  TENANT_ROLE,
+  TENANT_STATUS,
+  TRANSMISSION_TYPE,
+  VEHICLE_SOURCE_TYPE,
+  VEHICLE_TYPE,
+} from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BillingService } from '../src/modules/billing/billing.service';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
@@ -91,6 +100,57 @@ async function createBase(code: string) {
 }
 
 describe('Vehicle gallery + features (Gap 4)', () => {
+  maybe('chặn nguồn năng lượng không tương thích với loại phương tiện', async () => {
+    await expect(
+      vehicles.create(tenantId, ownerId, {
+        name: 'Xe máy dầu không hợp lệ',
+        vehicleType: VEHICLE_TYPE.MOTORBIKE,
+        fuelType: FUEL_TYPE.DIESEL,
+      }),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.VALIDATION_FAILED },
+    });
+  });
+
+  maybe('create lưu nguồn + thông số mở rộng; update tab khác không ghi đè', async () => {
+    const created = await vehicles.create(tenantId, ownerId, {
+      name: 'Toyota Altis',
+      vehicleType: VEHICLE_TYPE.CAR,
+      sourceType: VEHICLE_SOURCE_TYPE.FINANCED,
+      lengthMm: 4630,
+      transmission: TRANSMISSION_TYPE.AUTOMATIC,
+      fuelConsumptionCombined: 6.5,
+    });
+    expect(created.code).toMatch(/^XP-/);
+    expect(created.sourceType).toBe(VEHICLE_SOURCE_TYPE.FINANCED);
+    expect(created.lengthMm).toBe(4630);
+    expect(Number(created.fuelConsumptionCombined)).toBe(6.5);
+
+    const updated = await vehicles.update(tenantId, created.id, ownerId, { name: 'Altis mới' });
+    expect(updated.sourceType).toBe(VEHICLE_SOURCE_TYPE.FINANCED);
+    expect(updated.lengthMm).toBe(4630);
+    expect(updated.transmission).toBe(TRANSMISSION_TYPE.AUTOMATIC);
+  });
+
+  maybe('null có chủ đích xoá ảnh đại diện và thông tin tuỳ chọn', async () => {
+    const created = await vehicles.create(tenantId, ownerId, {
+      code: 'NULLABLE-1',
+      name: 'Xe có ảnh',
+      vehicleType: VEHICLE_TYPE.CAR,
+      plateNumber: '51A-000.01',
+      mainImageUrl: 'https://img/main.jpg',
+      description: 'Mô tả cũ',
+    });
+    const updated = await vehicles.update(tenantId, created.id, ownerId, {
+      plateNumber: null,
+      mainImageUrl: null,
+      description: null,
+    });
+    expect(updated.plateNumber).toBeNull();
+    expect(updated.mainImageUrl).toBeNull();
+    expect(updated.description).toBeNull();
+  });
+
   maybe('create lưu ảnh (đúng thứ tự) + tiện ích', async () => {
     const v = await createBase('MED-1');
     expect(v.images).toEqual(['https://img/1.jpg', 'https://img/2.jpg']);

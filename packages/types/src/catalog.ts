@@ -27,7 +27,7 @@ export function isCatalogType(value: unknown): value is CatalogType {
 export const CATALOG_TYPE_LABEL: Readonly<Record<CatalogType, string>> = {
   [CATALOG_TYPE.VEHICLE_BRAND]: 'Hãng xe',
   [CATALOG_TYPE.BODY_TYPE]: 'Kiểu dáng xe',
-  [CATALOG_TYPE.FUEL_TYPE]: 'Nhiên liệu',
+  [CATALOG_TYPE.FUEL_TYPE]: 'Nguồn năng lượng',
   [CATALOG_TYPE.VEHICLE_FEATURE]: 'Tiện ích xe',
 };
 
@@ -35,7 +35,7 @@ export const CATALOG_TYPE_LABEL: Readonly<Record<CatalogType, string>> = {
 export const CATALOG_TYPE_HINT: Readonly<Record<CatalogType, string>> = {
   [CATALOG_TYPE.VEHICLE_BRAND]: 'Hiện ở ô "Hãng xe" khi tạo/sửa xe và ở bộ lọc ngoài chợ.',
   [CATALOG_TYPE.BODY_TYPE]: 'Hiện thành thẻ có ảnh khi tạo/sửa xe và ở bộ lọc "Loại xe" ngoài chợ.',
-  [CATALOG_TYPE.FUEL_TYPE]: 'Hiện ở ô "Nhiên liệu" khi tạo/sửa xe và ở bộ lọc ngoài chợ.',
+  [CATALOG_TYPE.FUEL_TYPE]: 'Hiện ở ô "Nguồn năng lượng" khi tạo/sửa xe và ở bộ lọc ngoài chợ.',
   [CATALOG_TYPE.VEHICLE_FEATURE]: 'Hiện ở phần "Tiện ích" khi tạo/sửa xe và ở bộ lọc ngoài chợ.',
 };
 

@@ -45,7 +45,7 @@ export function ListingDetailView({
     ...(listing.fuelType
       ? [
           {
-            label: 'Nhiên liệu',
+            label: 'Nguồn năng lượng',
             value: catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? '',
           },
         ]

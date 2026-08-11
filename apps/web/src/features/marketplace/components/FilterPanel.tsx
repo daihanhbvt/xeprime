@@ -13,6 +13,7 @@ import {
   SEAT_BUCKET_LABEL,
   SEAT_BUCKET_VALUES,
   VEHICLE_TYPE,
+  vehicleFuelTypesFor,
   type ListingAmenity,
 } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -146,7 +147,12 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
   // liệt kê một kiểu dáng mà chủ xe không chọn được (và ngược lại).
   const { catalog } = useCatalog();
   const bodyTypeItems = catalog[CATALOG_TYPE.BODY_TYPE];
-  const fuelItems = catalog[CATALOG_TYPE.FUEL_TYPE];
+  const fuelItems = useMemo(() => {
+    const items = catalog[CATALOG_TYPE.FUEL_TYPE];
+    if (!filters.vehicleType) return items;
+    const allowed = vehicleFuelTypesFor(filters.vehicleType);
+    return items.filter((item) => allowed.some((value) => value === item.key));
+  }, [catalog, filters.vehicleType]);
   const featureItems = catalog[CATALOG_TYPE.VEHICLE_FEATURE];
   const { brandLabel } = useCatalogLabels();
 
@@ -292,7 +298,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
       </section>
 
       <section className={styles.section}>
-        <h4 className={styles.sectionTitle}>Nhiên liệu</h4>
+        <h4 className={styles.sectionTitle}>Nguồn năng lượng</h4>
         <div className={styles.chipGrid}>
           {fuelItems.map((item) => (
             <FacetChip

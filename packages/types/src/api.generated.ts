@@ -2436,6 +2436,8 @@ export interface components {
             vehicleType: "car" | "motorbike";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @enum {string} */
+            sourceType?: "owned" | "financed" | "rented" | "partnership";
             brand?: string | null;
             model?: string | null;
             manufactureYear?: number | null;
@@ -2502,6 +2504,8 @@ export interface components {
             vehicleType: "car" | "motorbike";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @enum {string} */
+            sourceType?: "owned" | "financed" | "rented" | "partnership";
             brand?: string | null;
             model?: string | null;
             manufactureYear?: number | null;
@@ -2523,6 +2527,20 @@ export interface components {
             color?: string | null;
             /** @description Key nhiên liệu — tra nhãn ở danh mục `fuel_type` (GET /catalog) */
             fuelType?: string | null;
+            lengthMm?: number | null;
+            widthMm?: number | null;
+            heightMm?: number | null;
+            curbWeightKg?: number | null;
+            engineDisplacementCc?: number | null;
+            horsepowerHp?: number | null;
+            /** @enum {string|null} */
+            transmission?: "automatic" | "manual" | "cvt" | "dct" | "other" | null;
+            /** @description L/100km dạng decimal string */
+            fuelConsumptionCity?: string | null;
+            /** @description L/100km dạng decimal string */
+            fuelConsumptionHighway?: string | null;
+            /** @description L/100km dạng decimal string */
+            fuelConsumptionCombined?: string | null;
             description?: string | null;
             /** @description Giá thuê giờ — string tiền (ADR 0007) */
             hourlyPrice?: string | null;
@@ -2635,48 +2653,55 @@ export interface components {
         };
         CreateVehicleDto: {
             /**
-             * @description Mã xe nội bộ, duy nhất trong gian hàng
+             * @description Mã xe nội bộ. Bỏ trống để hệ thống tự sinh.
              * @example XE-001
              */
-            code: string;
+            code?: string;
             /** @example Toyota Vios 2022 */
             name: string;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
-            /**
-             * @default self_drive
-             * @enum {string}
-             */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @enum {string} */
+            serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @enum {string} */
+            sourceType?: "owned" | "financed" | "rented" | "partnership";
             /** @example 51K-123.45 */
-            plateNumber?: string;
+            plateNumber?: string | null;
             /**
              * @description Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do
              * @example vinfast
              */
-            brand?: string;
-            model?: string;
-            manufactureYear?: number;
-            color?: string;
-            seatCount?: number;
+            brand?: string | null;
+            model?: string | null;
+            manufactureYear?: number | null;
+            color?: string | null;
+            seatCount?: number | null;
             /**
              * @description Key nhiên liệu thuộc danh mục `fuel_type` (GET /catalog)
              * @example gasoline
              */
-            fuelType?: string;
+            fuelType?: string | null;
+            lengthMm?: number | null;
+            widthMm?: number | null;
+            heightMm?: number | null;
+            curbWeightKg?: number | null;
+            engineDisplacementCc?: number | null;
+            horsepowerHp?: number | null;
+            /** @enum {string|null} */
+            transmission?: "automatic" | "manual" | "cvt" | "dct" | "other" | null;
+            fuelConsumptionCity?: number | null;
+            fuelConsumptionHighway?: number | null;
+            fuelConsumptionCombined?: number | null;
             /**
              * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.
              * @example suv
              */
             bodyType?: string | null;
-            /**
-             * @default available
-             * @enum {string}
-             */
-            operationStatus: "available" | "renting" | "maintenance" | "inactive";
-            description?: string;
+            /** @enum {string} */
+            operationStatus?: "available" | "renting" | "maintenance" | "inactive";
+            description?: string | null;
             /** @description URL ảnh đại diện xe */
-            mainImageUrl?: string;
+            mainImageUrl?: string | null;
             /**
              * @description Giá ngày thường, string thập phân — ADR 0007
              * @example 600000
@@ -2711,7 +2736,7 @@ export interface components {
         };
         UpdateVehicleDto: {
             /**
-             * @description Mã xe nội bộ, duy nhất trong gian hàng
+             * @description Mã xe nội bộ. Bỏ trống để hệ thống tự sinh.
              * @example XE-001
              */
             code?: string;
@@ -2719,40 +2744,47 @@ export interface components {
             name?: string;
             /** @enum {string} */
             vehicleType?: "car" | "motorbike";
-            /**
-             * @default self_drive
-             * @enum {string}
-             */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @enum {string} */
+            serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+            /** @enum {string} */
+            sourceType?: "owned" | "financed" | "rented" | "partnership";
             /** @example 51K-123.45 */
-            plateNumber?: string;
+            plateNumber?: string | null;
             /**
              * @description Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do
              * @example vinfast
              */
-            brand?: string;
-            model?: string;
-            manufactureYear?: number;
-            color?: string;
-            seatCount?: number;
+            brand?: string | null;
+            model?: string | null;
+            manufactureYear?: number | null;
+            color?: string | null;
+            seatCount?: number | null;
             /**
              * @description Key nhiên liệu thuộc danh mục `fuel_type` (GET /catalog)
              * @example gasoline
              */
-            fuelType?: string;
+            fuelType?: string | null;
+            lengthMm?: number | null;
+            widthMm?: number | null;
+            heightMm?: number | null;
+            curbWeightKg?: number | null;
+            engineDisplacementCc?: number | null;
+            horsepowerHp?: number | null;
+            /** @enum {string|null} */
+            transmission?: "automatic" | "manual" | "cvt" | "dct" | "other" | null;
+            fuelConsumptionCity?: number | null;
+            fuelConsumptionHighway?: number | null;
+            fuelConsumptionCombined?: number | null;
             /**
              * @description Key kiểu dáng thuộc danh mục `body_type` (GET /catalog) — chỉ với ô tô. Gửi null để xoá.
              * @example suv
              */
             bodyType?: string | null;
-            /**
-             * @default available
-             * @enum {string}
-             */
-            operationStatus: "available" | "renting" | "maintenance" | "inactive";
-            description?: string;
+            /** @enum {string} */
+            operationStatus?: "available" | "renting" | "maintenance" | "inactive";
+            description?: string | null;
             /** @description URL ảnh đại diện xe */
-            mainImageUrl?: string;
+            mainImageUrl?: string | null;
             /**
              * @description Giá ngày thường, string thập phân — ADR 0007
              * @example 600000

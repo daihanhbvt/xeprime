@@ -9,10 +9,14 @@ import * as yup from 'yup';
 import {
   BODY_TYPE_VALUES,
   FUEL_TYPE_VALUES,
+  isVehicleFuelTypeAllowed,
   SERVICE_TYPE_VALUES,
   TENANT_TYPE_VALUES,
+  TRANSMISSION_TYPE_VALUES,
   VEHICLE_FEATURE_KEYS,
   VEHICLE_OPERATION_STATUS_VALUES,
+  VEHICLE_SOURCE_TYPE_VALUES,
+  VEHICLE_TYPE,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 
@@ -39,12 +43,32 @@ const MAX_VEHICLE_YEAR = new Date().getFullYear() + 1;
 
 /** Text tuỳ chọn: chuỗi trim, rỗng coi như bỏ trống (map sang undefined khi gửi API). */
 const optionalText = (max: number) => yup.string().trim().max(max).default('');
+const optionalPositiveInt = (label: string, max: number) =>
+  yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
+    .typeError(`${label} phải là số`)
+    .integer(`${label} phải là số nguyên`)
+    .min(1, `${label} phải lớn hơn 0`)
+    .max(max, `${label} vượt quá giới hạn cho phép`)
+    .nullable()
+    .default(null);
+const optionalMetric = (label: string) =>
+  yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
+    .typeError(`${label} phải là số`)
+    .min(0, `${label} không được âm`)
+    .max(999, `${label} vượt quá giới hạn cho phép`)
+    .nullable()
+    .default(null);
 
 export const vehicleFormSchema = yup.object({
-  code: yup.string().trim().required('Mã xe là bắt buộc').max(80),
+  code: yup.string().trim().max(80).default(''),
   name: yup.string().trim().required('Tên xe là bắt buộc').max(255),
   vehicleType: yup.string().oneOf(VEHICLE_TYPE_VALUES).required('Chọn loại xe'),
   serviceType: yup.string().oneOf(SERVICE_TYPE_VALUES).required('Chọn loại dịch vụ'),
+  sourceType: yup.string().oneOf(VEHICLE_SOURCE_TYPE_VALUES).required('Chọn hình thức nguồn xe'),
   operationStatus: yup
     .string()
     .oneOf(VEHICLE_OPERATION_STATUS_VALUES)
@@ -53,9 +77,31 @@ export const vehicleFormSchema = yup.object({
   brand: optionalText(100),
   model: optionalText(100),
   color: optionalText(80),
-  fuelType: yup.string().oneOf(FUEL_TYPE_VALUES).nullable().default(null),
+  fuelType: yup
+    .string()
+    .oneOf(FUEL_TYPE_VALUES)
+    .nullable()
+    .default(null)
+    .test(
+      'vehicle-fuel-compatible',
+      'Nguồn năng lượng không phù hợp với loại phương tiện',
+      function compatibleFuel(value) {
+        return isVehicleFuelTypeAllowed(String(this.parent.vehicleType ?? ''), value);
+      },
+    ),
   /** Kiểu dáng thân xe — chỉ có nghĩa với ô tô; đổi sang xe máy thì form tự xoá. */
-  bodyType: yup.string().oneOf(BODY_TYPE_VALUES).nullable().default(null),
+  bodyType: yup
+    .string()
+    .oneOf(BODY_TYPE_VALUES)
+    .nullable()
+    .default(null)
+    .test(
+      'body-type-car-only',
+      'Kiểu dáng thân xe chỉ áp dụng cho ô tô',
+      function carBodyTypeOnly(value) {
+        return this.parent.vehicleType === VEHICLE_TYPE.CAR || value == null;
+      },
+    ),
   manufactureYear: yup
     .number()
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
@@ -74,6 +120,16 @@ export const vehicleFormSchema = yup.object({
     .max(64, 'Tối đa 64 chỗ')
     .nullable()
     .default(null),
+  lengthMm: optionalPositiveInt('Chiều dài', 30000),
+  widthMm: optionalPositiveInt('Chiều rộng', 10000),
+  heightMm: optionalPositiveInt('Chiều cao', 10000),
+  curbWeightKg: optionalPositiveInt('Trọng lượng', 100000),
+  engineDisplacementCc: optionalPositiveInt('Dung tích động cơ', 30000),
+  horsepowerHp: optionalPositiveInt('Công suất', 5000),
+  transmission: yup.string().oneOf(TRANSMISSION_TYPE_VALUES).nullable().default(null),
+  fuelConsumptionCity: optionalMetric('Mức tiêu thụ trong đô thị'),
+  fuelConsumptionHighway: optionalMetric('Mức tiêu thụ ngoài đô thị'),
+  fuelConsumptionCombined: optionalMetric('Mức tiêu thụ kết hợp'),
   weekdayPrice: moneySchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
@@ -113,10 +169,7 @@ export const vehicleFormSchema = yup.object({
     .of(yup.string().trim().url('Đường dẫn ảnh không hợp lệ').max(2000).required())
     .max(20, 'Tối đa 20 ảnh')
     .default([]),
-  features: yup
-    .array()
-    .of(yup.string().oneOf(VEHICLE_FEATURE_KEYS).required())
-    .default([]),
+  features: yup.array().of(yup.string().oneOf(VEHICLE_FEATURE_KEYS).required()).default([]),
 });
 
 export type VehicleFormValues = yup.InferType<typeof vehicleFormSchema>;
@@ -145,7 +198,12 @@ export type BookingPeriodValues = yup.InferType<typeof bookingPeriodSchema>;
 // ---------------------------------------------------------------------------
 
 export const registerShopSchema = yup.object({
-  name: yup.string().trim().required('Tên gian hàng là bắt buộc').min(2, 'Tối thiểu 2 ký tự').max(255),
+  name: yup
+    .string()
+    .trim()
+    .required('Tên gian hàng là bắt buộc')
+    .min(2, 'Tối thiểu 2 ký tự')
+    .max(255),
   tenantType: yup.string().oneOf(TENANT_TYPE_VALUES).required('Chọn loại hình'),
   // default('') + excludeEmptyString: bỏ trống là hợp lệ, chỉ validate khi có nhập.
   phone: yup

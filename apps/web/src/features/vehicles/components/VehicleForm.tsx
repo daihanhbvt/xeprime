@@ -4,26 +4,27 @@ import { Alert, Button, Form } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { SERVICE_TYPE, VEHICLE_OPERATION_STATUS, VEHICLE_TYPE } from '@xeprime/types';
+import {
+  SERVICE_TYPE,
+  VEHICLE_OPERATION_STATUS,
+  VEHICLE_SOURCE_TYPE,
+  VEHICLE_TYPE,
+  isVehicleFuelTypeAllowed,
+} from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { formatMoneyVnd } from '@/lib/money';
 import { discountedPriceVnd } from '../pricing';
-import { sensitiveChanges } from '../sensitive-changes';
 import {
   BasicSection,
   CREATE_WIZARD_STEPS,
-  EDIT_WIZARD_STEPS,
-  FeaturesDescriptionSection,
-  ImagesSection,
   MediaSection,
-  PoliciesSection,
-  PricesSection,
-  PricingSection,
   SpecsSection,
+  SourceTypeSection,
 } from './VehicleFormSections';
 import { VehicleReviewStep } from './VehicleReviewStep';
 import { VehicleWizard } from './VehicleWizard';
+import { CreateVehiclePricingStep } from './CreateVehiclePricingStep';
 import styles from './VehicleForm.module.css';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để select bắt buộc không rỗng. */
@@ -32,6 +33,7 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   name: '',
   vehicleType: VEHICLE_TYPE.CAR,
   serviceType: SERVICE_TYPE.SELF_DRIVE,
+  sourceType: VEHICLE_SOURCE_TYPE.OWNED,
   operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE,
   plateNumber: '',
   brand: '',
@@ -41,6 +43,16 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   bodyType: null,
   manufactureYear: null,
   seatCount: null,
+  lengthMm: null,
+  widthMm: null,
+  heightMm: null,
+  curbWeightKg: null,
+  engineDisplacementCc: null,
+  horsepowerHp: null,
+  transmission: null,
+  fuelConsumptionCity: null,
+  fuelConsumptionHighway: null,
+  fuelConsumptionCombined: null,
   weekdayPrice: null,
   weekendPrice: null,
   hourlyPrice: null,
@@ -76,61 +88,58 @@ export interface VehicleSubmitOptions {
 }
 
 interface VehicleFormProps {
-  mode: 'create' | 'edit';
-  initialValues?: VehicleFormValues;
   submitting: boolean;
   errorMessage?: string | null;
-  /** Xe đang hiển thị công khai → cảnh báo và hỏi lại khi đụng trường nhạy cảm (ADR 0008). */
-  isPublic?: boolean;
   onSubmit: (values: VehicleFormValues, options: VehicleSubmitOptions) => void;
   onCancel: () => void;
 }
 
 /**
- * Wizard tạo/sửa xe — Figma `193:1553`…`193:2009` (tạo) và `193:2297` (sửa).
- *
- * Một component cho cả hai route vì hợp đồng nghiệp vụ trùng khớp (cùng `vehicleFormSchema`,
- * `UpdateVehicleInput` là `Partial<CreateVehicleInput>`), nhưng **các bước thì khác nhau**:
- * người tạo đi theo trình tự hồ sơ, người sửa nhảy thẳng tới thứ muốn đổi. Danh sách bước lấy
- * từ `CREATE_WIZARD_STEPS` / `EDIT_WIZARD_STEPS`.
+ * Wizard tạo xe — Figma `236:2953`, `236:3176`, `236:3334` và responsive `241:2043`…`241:2733`.
+ * Route chỉnh sửa cố ý dùng `VehicleEditWorkspace` dạng tab, không đi qua wizard này.
  *
  * ⚠️ Wizard là **thuần client**: mọi bước giữ giá trị trong cùng một form React Hook Form và chỉ
  * gọi API **một lần** ở bước cuối. Backend không có endpoint lưu từng phần, nên không chỗ nào ở
  * đây được nói "đã lưu nháp" giữa chừng.
  */
-export function VehicleForm({
-  mode,
-  initialValues,
-  submitting,
-  errorMessage,
-  isPublic = false,
-  onSubmit,
-  onCancel,
-}: VehicleFormProps) {
+export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: VehicleFormProps) {
   const {
     control,
     handleSubmit,
     setValue,
     trigger,
     getValues,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<VehicleFormValues>({
     resolver: yupResolver(vehicleFormSchema),
-    defaultValues: initialValues ?? EMPTY_DEFAULTS,
+    defaultValues: EMPTY_DEFAULTS,
   });
 
-  const isCreate = mode === 'create';
-  const steps = isCreate ? CREATE_WIZARD_STEPS : EDIT_WIZARD_STEPS;
+  const steps = CREATE_WIZARD_STEPS;
   const lastStep = steps.length - 1;
   const [step, setStep] = useState(0);
-  const [pendingReview, setPendingReview] = useState<VehicleSubmitOptions | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
-  // Kiểu dáng thân xe chỉ có nghĩa với ô tô — đổi sang xe máy thì ẩn field và xoá giá trị.
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      event.preventDefault();
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [isDirty]);
+
+  // Kiểu dáng thân xe chỉ có nghĩa với ô tô. Nguồn năng lượng cũng phụ thuộc loại phương tiện:
+  // xe máy chỉ nhận xăng/điện, nên đổi từ ô tô dầu/hybrid phải xoá lựa chọn không còn hợp lệ.
   const vehicleType = useWatch({ control, name: 'vehicleType' });
+  const fuelType = useWatch({ control, name: 'fuelType' });
   const isCar = vehicleType === VEHICLE_TYPE.CAR;
   useEffect(() => {
     if (!isCar) setValue('bodyType', null);
-  }, [isCar, setValue]);
+    if (!isVehicleFuelTypeAllowed(vehicleType, fuelType)) {
+      setValue('fuelType', null, { shouldValidate: true });
+    }
+  }, [fuelType, isCar, setValue, vehicleType]);
 
   // Giá hiển thị trên sàn sau khi trừ khuyến mãi. Chỉ để xem — KHÔNG gửi lên API, backend tự
   // tính lại khi dựng `public_listings` (ADR 0008).
@@ -154,18 +163,14 @@ export function VehicleForm({
   const stepErrors = steps[step]!.fields.filter((field) => errors[field]).length;
 
   const values = getValues();
-  const changes = isCreate ? [] : sensitiveChanges(initialValues, values);
-  const needsConfirm = !isCreate && isPublic && changes.length > 0;
-
   function submitNow(options: VehicleSubmitOptions) {
-    setPendingReview(null);
     void handleSubmit(
       (formValues) => onSubmit(formValues, options),
       /*
        * Gửi mà schema không hợp lệ → **nhảy về bước chứa lỗi đầu tiên**.
        *
        * Bắt buộc phải có khi thanh bước cho nhảy tự do (luồng sửa): người dùng có thể bỏ trống
-       * một trường ở bước 1 rồi nhảy thẳng tới bước 5, và nếu không đưa họ về đúng chỗ thì màn
+       * một trường ở bước 1 rồi nhảy thẳng tới bước xác nhận, và nếu không đưa họ về đúng chỗ thì màn
        * xác nhận chỉ đứng im không giải thích gì.
        */
       (formErrors) => {
@@ -196,51 +201,28 @@ export function VehicleForm({
       return;
     }
 
-    const options: VehicleSubmitOptions = { submitForReview: isCreate };
-    if (needsConfirm) {
-      setPendingReview(options);
-      return;
-    }
-    submitNow(options);
+    submitNow({ submitForReview: true });
   }
 
   function renderStep() {
     const props = { control, isCar };
     switch (steps[step]!.key) {
       case 'basic':
-        return <BasicSection {...props} />;
-      case 'specs':
-        return <SpecsSection {...props} />;
-      case 'pricing':
-        return <PricingSection {...props} pricePreview={pricePreview} />;
-      case 'media':
-        return <MediaSection {...props} />;
-      case 'general':
         return (
           <>
             <BasicSection {...props} />
             <SpecsSection {...props} />
+            <SourceTypeSection control={control} />
           </>
         );
-      case 'images':
-        return <ImagesSection {...props} />;
-      case 'prices':
-        return <PricesSection {...props} pricePreview={pricePreview} />;
-      case 'terms':
+      case 'pricing':
         return (
-          <>
-            <PoliciesSection {...props} />
-            <FeaturesDescriptionSection {...props} />
-          </>
+          <CreateVehiclePricingStep control={control} isCar={isCar} pricePreview={pricePreview} />
         );
+      case 'media':
+        return <MediaSection {...props} />;
       default:
-        return (
-          <VehicleReviewStep
-            values={values}
-            initialValues={isCreate ? undefined : initialValues}
-            onEditStep={setStep}
-          />
-        );
+        return <VehicleReviewStep values={values} onEditStep={setStep} />;
     }
   }
 
@@ -261,7 +243,11 @@ export function VehicleForm({
           thoát trang.
         */}
         <Button
-          onClick={step > 0 ? () => setStep(step - 1) : onCancel}
+          onClick={
+            step > 0
+              ? () => setStep(step - 1)
+              : () => (isDirty ? setConfirmCancel(true) : onCancel())
+          }
           aria-label={step > 0 ? 'Quay lại bước trước' : undefined}
         >
           {step > 0 ? 'Quay lại' : 'Huỷ bỏ'}
@@ -276,27 +262,15 @@ export function VehicleForm({
           Quay lại
         </Button>
         <div className={styles.finalActions}>
-          {isCreate ? (
-            <Button loading={submitting} onClick={() => submitNow({ submitForReview: false })}>
-              Lưu nháp
-            </Button>
-          ) : null}
+          <Button loading={submitting} onClick={() => submitNow({ submitForReview: false })}>
+            Lưu nháp
+          </Button>
           <Button type="primary" htmlType="submit" loading={submitting}>
-            {isCreate ? 'Lưu & Gửi duyệt' : 'Lưu thay đổi'}
+            Lưu & Gửi duyệt
           </Button>
         </div>
       </>
     );
-
-  const notice =
-    !isCreate && isPublic ? (
-      <Alert
-        type="warning"
-        showIcon
-        className={styles.alert}
-        message="Xe này đang được công khai. Thay đổi các trường nhạy cảm (giá, biển số, loại xe, loại dịch vụ, ảnh đại diện) sẽ đưa xe về trạng thái chờ duyệt lại."
-      />
-    ) : null;
 
   return (
     /*
@@ -313,12 +287,8 @@ export function VehicleForm({
           steps={steps}
           current={step}
           onStepChange={setStep}
-          // Sửa: mọi giá trị đã có sẵn nên cho nhảy thẳng tới bước cần đổi. Tạo: đi tuần tự.
-          navigation={isCreate ? 'sequential' : 'free'}
+          navigation="sequential"
           heading={steps[step]!.heading}
-          description={
-            isCreate ? undefined : 'Điền đầy đủ thông tin của xe để chuyển qua bước tiếp theo.'
-          }
           notice={
             <>
               {errorMessage ? (
@@ -332,7 +302,6 @@ export function VehicleForm({
                   message={`${stepErrors} lỗi cần sửa trước khi tiếp tục`}
                 />
               ) : null}
-              {notice}
             </>
           }
           footer={footer}
@@ -341,33 +310,17 @@ export function VehicleForm({
         </VehicleWizard>
       </form>
 
-      {/*
-       * Hộp xác nhận thay đổi nhạy cảm — Figma `193:2568`.
-       *
-       * Danh sách trường lấy từ `VEHICLE_PUBLIC_SENSITIVE_FIELDS` ở `packages/types`, đúng hằng
-       * số mà `vehicles.service` dùng để quyết định đẩy xe về chờ duyệt lại. Câu hệ quả nói
-       * đúng thứ backend làm, không phải lời hứa của FE.
-       */}
       <ResponsiveDialog
-        open={pendingReview !== null}
-        title="Xác nhận thay đổi nhạy cảm"
+        open={confirmCancel}
+        title="Huỷ thông tin xe đang nhập?"
         size="sm"
-        confirmLoading={submitting}
-        onClose={() => setPendingReview(null)}
-        onOk={() => pendingReview && submitNow(pendingReview)}
-        okText="Xác nhận & Lưu"
-        cancelText="Huỷ"
+        onClose={() => setConfirmCancel(false)}
+        onOk={onCancel}
+        okText="Huỷ và thoát"
+        cancelText="Tiếp tục nhập"
+        destructive
       >
-        <p>Bạn đã thay đổi các trường nhạy cảm sau:</p>
-        <ul className={styles.sensitiveList}>
-          {changes.map((change) => (
-            <li key={change.field}>
-              {change.label}: <span className={styles.before}>{change.before}</span> →{' '}
-              <b>{change.after}</b>
-            </li>
-          ))}
-        </ul>
-        <p>Xe sẽ được đưa về trạng thái chờ duyệt lại và tạm ẩn khỏi marketplace.</p>
+        Các thay đổi chưa lưu trong wizard sẽ bị mất.
       </ResponsiveDialog>
     </Form>
   );

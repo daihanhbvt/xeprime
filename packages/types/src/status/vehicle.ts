@@ -136,6 +136,41 @@ export const VEHICLE_TYPE_LABEL: Readonly<Record<VehicleType, string>> = {
   [VEHICLE_TYPE.MOTORBIKE]: 'Xe máy',
 };
 
+/** Hình thức nguồn xe — Wave 3 chỉ lưu lựa chọn, hồ sơ tài chính chi tiết được bổ sung ở Wave 4. */
+export const VEHICLE_SOURCE_TYPE = {
+  OWNED: 'owned',
+  FINANCED: 'financed',
+  RENTED: 'rented',
+  PARTNERSHIP: 'partnership',
+} as const;
+
+export type VehicleSourceType = (typeof VEHICLE_SOURCE_TYPE)[keyof typeof VEHICLE_SOURCE_TYPE];
+export const VEHICLE_SOURCE_TYPE_VALUES = Object.values(VEHICLE_SOURCE_TYPE) as VehicleSourceType[];
+export const VEHICLE_SOURCE_TYPE_LABEL: Readonly<Record<VehicleSourceType, string>> = {
+  [VEHICLE_SOURCE_TYPE.OWNED]: 'Sở hữu',
+  [VEHICLE_SOURCE_TYPE.FINANCED]: 'Trả góp',
+  [VEHICLE_SOURCE_TYPE.RENTED]: 'Thuê lại',
+  [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: 'Hợp tác',
+};
+
+/** Loại hộp số dùng cho nhóm thông số kỹ thuật mở rộng. */
+export const TRANSMISSION_TYPE = {
+  AUTOMATIC: 'automatic',
+  MANUAL: 'manual',
+  CVT: 'cvt',
+  DCT: 'dct',
+  OTHER: 'other',
+} as const;
+export type TransmissionType = (typeof TRANSMISSION_TYPE)[keyof typeof TRANSMISSION_TYPE];
+export const TRANSMISSION_TYPE_VALUES = Object.values(TRANSMISSION_TYPE) as TransmissionType[];
+export const TRANSMISSION_TYPE_LABEL: Readonly<Record<TransmissionType, string>> = {
+  [TRANSMISSION_TYPE.AUTOMATIC]: 'Tự động',
+  [TRANSMISSION_TYPE.MANUAL]: 'Số sàn',
+  [TRANSMISSION_TYPE.CVT]: 'CVT',
+  [TRANSMISSION_TYPE.DCT]: 'Ly hợp kép (DCT)',
+  [TRANSMISSION_TYPE.OTHER]: 'Khác',
+};
+
 /** Loại dịch vụ cho thuê. */
 export const SERVICE_TYPE = {
   SELF_DRIVE: 'self_drive',
@@ -174,6 +209,28 @@ export const FUEL_TYPE_LABEL: Readonly<Record<FuelType, string>> = {
   [FUEL_TYPE.ELECTRIC]: 'Điện',
   [FUEL_TYPE.HYBRID]: 'Hybrid',
 };
+
+/**
+ * Ma trận loại phương tiện × nguồn năng lượng.
+ *
+ * Không tạo các enum tổ hợp như `electric_car`/`electric_motorbike`: hai chiều này được lưu
+ * độc lập để bộ lọc, báo cáo và danh mục xe không tăng số tổ hợp khi bổ sung nguồn năng lượng mới.
+ */
+export const VEHICLE_FUEL_TYPES: Readonly<Record<VehicleType, readonly FuelType[]>> = {
+  [VEHICLE_TYPE.CAR]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.DIESEL, FUEL_TYPE.ELECTRIC, FUEL_TYPE.HYBRID],
+  [VEHICLE_TYPE.MOTORBIKE]: [FUEL_TYPE.GASOLINE, FUEL_TYPE.ELECTRIC],
+};
+
+export function vehicleFuelTypesFor(vehicleType: string): readonly FuelType[] {
+  return VEHICLE_FUEL_TYPES[vehicleType as VehicleType] ?? [];
+}
+
+export function isVehicleFuelTypeAllowed(
+  vehicleType: string,
+  fuelType: string | null | undefined,
+): boolean {
+  return fuelType == null || vehicleFuelTypesFor(vehicleType).includes(fuelType as FuelType);
+}
 
 /**
  * Kiểu dáng thân xe (body type) — thuộc tính dữ liệu như nhiên liệu, chỉ áp dụng cho ô tô

@@ -16,8 +16,10 @@ import {
   LISTING_SORT_LABEL,
   LISTING_SORT_VALUES,
   SEAT_BUCKET_LABEL,
+  VEHICLE_TYPE,
   VEHICLE_TYPE_LABEL,
   VEHICLE_TYPE_VALUES,
+  vehicleFuelTypesFor,
   type ListingSort,
   type SeatBucket,
   type VehicleType,
@@ -251,9 +253,19 @@ export function MarketplaceResults() {
             <Chip
               key={type}
               active={filters.vehicleType === type}
-              onClick={() =>
-                setFilters({ vehicleType: filters.vehicleType === type ? undefined : type })
-              }
+              onClick={() => {
+                const nextType = filters.vehicleType === type ? undefined : type;
+                const allowed = nextType ? vehicleFuelTypesFor(nextType) : null;
+                setFilters({
+                  vehicleType: nextType,
+                  bodyType: nextType === VEHICLE_TYPE.MOTORBIKE ? undefined : filters.bodyType,
+                  fuelType: allowed
+                    ? filters.fuelType?.filter((fuel) =>
+                        allowed.some((allowedFuel) => allowedFuel === fuel),
+                      )
+                    : filters.fuelType,
+                });
+              }}
             >
               {VEHICLE_TYPE_LABEL[type]}
             </Chip>

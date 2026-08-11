@@ -1,8 +1,4 @@
-import {
-  IMAGE_UPLOAD_MAX_BYTES,
-  IMAGE_UPLOAD_MIME_TYPES,
-  type components,
-} from '@xeprime/types';
+import { IMAGE_UPLOAD_MAX_BYTES, IMAGE_UPLOAD_MIME_TYPES, type components } from '@xeprime/types';
 import { apiPost } from '@/services/api-client';
 
 /**
@@ -14,7 +10,35 @@ import { apiPost } from '@/services/api-client';
 export type UploadPresign = components['schemas']['UploadPresignDto'];
 
 /** Upload thẳng lên R2 qua presigned PUT — fetch trần, không cookie/envelope của api-client. */
-export async function uploadToR2(uploadUrl: string, file: File): Promise<void> {
+export async function uploadToR2(
+  uploadUrl: string,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<void> {
+  if (onProgress && typeof XMLHttpRequest !== 'undefined') {
+    await new Promise<void>((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open('PUT', uploadUrl);
+      request.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      request.upload.onprogress = (event) => {
+        if (!event.lengthComputable || event.total === 0) return;
+        onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+      };
+      request.onload = () => {
+        if (request.status >= 200 && request.status < 300) {
+          onProgress(100);
+          resolve();
+          return;
+        }
+        reject(new Error('Tải tệp lên thất bại'));
+      };
+      request.onerror = () => reject(new Error('Không thể kết nối dịch vụ tải tệp'));
+      request.onabort = () => reject(new Error('Đã huỷ tải tệp'));
+      request.send(file);
+    });
+    return;
+  }
+
   const res = await fetch(uploadUrl, {
     method: 'PUT',
     body: file,
@@ -59,10 +83,11 @@ export const presignBannerImage = (file: File): Promise<UploadPresign> =>
 export async function uploadImage(
   file: File,
   presign: (file: File) => Promise<UploadPresign>,
+  onProgress?: (percent: number) => void,
 ): Promise<string> {
   const invalid = validateImageFile(file);
   if (invalid) throw new Error(invalid);
   const ticket = await presign(file);
-  await uploadToR2(ticket.uploadUrl, file);
+  await uploadToR2(ticket.uploadUrl, file, onProgress);
   return ticket.publicUrl;
 }

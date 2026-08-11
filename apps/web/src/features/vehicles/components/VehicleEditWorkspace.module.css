@@ -1,0 +1,108 @@
+.workspace {
+  max-width: var(--xp-shell-form-max-width);
+  margin-inline: auto;
+}
+
+.vehicleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-md) 0;
+  gap: var(--xp-space-md);
+}
+
+.vehicleHeader h1 {
+  margin: 0;
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+}
+
+.vehicleHeader p {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.statuses {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs);
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: var(--xp-space-lg);
+}
+
+.tabs :global(.ant-tabs-nav-wrap) {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs :global(.ant-tabs-nav-list) {
+  min-width: max-content;
+}
+
+.sectionStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.formCard {
+  border-color: var(--xp-color-border);
+}
+
+.advancedCollapse {
+  border-color: var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+}
+
+.advancedCollapse :global(.ant-collapse-header-text) > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.advancedCollapse :global(.ant-collapse-header-text) small {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.advancedCollapse :global(.ant-collapse-content-box) {
+  padding-top: 0;
+}
+
+.formAlert {
+  margin-bottom: var(--xp-space-md);
+}
+
+.changeList {
+  padding-left: var(--xp-space-lg);
+}
+
+@media (max-width: 640px) {
+  .vehicleHeader {
+    align-items: flex-start;
+    padding: var(--xp-space-sm) 0;
+  }
+
+  .vehicleHeader h1 {
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .statuses {
+    max-width: 45%;
+  }
+
+  .tabs :global(.ant-tabs-tab) {
+    padding-block: var(--xp-space-sm);
+    font-size: var(--xp-font-size-body-sm);
+  }
+
+  .formCard :global(.ant-card-head),
+  .formCard :global(.ant-card-body) {
+    padding-inline: var(--xp-space-md);
+  }
+}

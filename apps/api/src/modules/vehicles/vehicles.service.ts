@@ -15,10 +15,12 @@ import {
   RECEIPT_STATUS,
   RECEIPT_TYPE,
   TENANT_STATUS,
+  isVehicleFuelTypeAllowed,
   VEHICLE_OPERATION_STATUS,
   VEHICLE_PUBLIC_SENSITIVE_FIELDS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
+  VEHICLE_TYPE,
   type PaginationMeta,
   type VehiclePublicStatus,
 } from '@xeprime/types';
@@ -52,6 +54,7 @@ const LIST_SELECT = {
   plateNumber: true,
   vehicleType: true,
   serviceType: true,
+  sourceType: true,
   brand: true,
   model: true,
   manufactureYear: true,
@@ -70,6 +73,16 @@ const DETAIL_SELECT = {
   ...LIST_SELECT,
   color: true,
   fuelType: true,
+  lengthMm: true,
+  widthMm: true,
+  heightMm: true,
+  curbWeightKg: true,
+  engineDisplacementCc: true,
+  horsepowerHp: true,
+  transmission: true,
+  fuelConsumptionCity: true,
+  fuelConsumptionHighway: true,
+  fuelConsumptionCombined: true,
   hourlyPrice: true,
   deliveryEnabled: true,
   noCollateral: true,
@@ -88,6 +101,8 @@ const SENSITIVE_SELECT = {
   discountPercent: true,
   plateNumber: true,
   vehicleType: true,
+  fuelType: true,
+  bodyType: true,
   serviceType: true,
   mainImageUrl: true,
 } satisfies Prisma.VehicleSelect;
@@ -358,17 +373,19 @@ export class VehiclesService {
   async create(tenantId: string, userId: string, dto: CreateVehicleDto): Promise<VehicleDetailDto> {
     // Quota gói (ADR 0010): chạm max_vehicles của gói hiện hành → PLAN_LIMIT_REACHED.
     await this.billing.assertVehicleQuota(tenantId);
-    await this.assertCodeFree(tenantId, dto.code);
-    await this.catalog.assertVehicleValues(dto);
-
     const id = newId();
+    const code = dto.code?.trim() || `XP-${id.slice(-8).toUpperCase()}`;
+    await this.assertCodeFree(tenantId, code);
+    await this.catalog.assertVehicleValues(dto);
+    assertVehicleClassification(dto.vehicleType, dto.fuelType, dto.bodyType);
+
     await this.prisma.$transaction(async (tx) => {
       await tx.vehicle.create({
         data: {
           id,
           tenantId,
           createdBy: userId,
-          code: dto.code,
+          code,
           name: dto.name,
           vehicleType: dto.vehicleType,
           ...writableFields(dto),
@@ -391,6 +408,11 @@ export class VehiclesService {
     });
     if (!current) throw notFound();
     await this.catalog.assertVehicleValues(dto);
+    assertVehicleClassification(
+      dto.vehicleType ?? current.vehicleType,
+      dto.fuelType !== undefined ? dto.fuelType : current.fuelType,
+      dto.bodyType !== undefined ? dto.bodyType : current.bodyType,
+    );
 
     // Đổi mã thì mã mới phải còn trống trong gian hàng (unique DB là chốt chặn cuối).
     if (dto.code !== undefined && dto.code !== current.code) {
@@ -804,17 +826,28 @@ function orderByOf(sort: VehicleListQueryDto['sort']): Prisma.VehicleOrderByWith
 /** Các trường scalar tuỳ chọn — kiểu thuần nên assign được cho cả `create` lẫn `update`. */
 interface VehicleWritableFields {
   serviceType?: string;
-  plateNumber?: string;
-  brand?: string;
-  model?: string;
-  manufactureYear?: number;
-  color?: string;
-  seatCount?: number;
-  fuelType?: string;
+  sourceType?: string;
+  plateNumber?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  manufactureYear?: number | null;
+  color?: string | null;
+  seatCount?: number | null;
+  fuelType?: string | null;
   bodyType?: string | null;
+  lengthMm?: number | null;
+  widthMm?: number | null;
+  heightMm?: number | null;
+  curbWeightKg?: number | null;
+  engineDisplacementCc?: number | null;
+  horsepowerHp?: number | null;
+  transmission?: string | null;
+  fuelConsumptionCity?: number | null;
+  fuelConsumptionHighway?: number | null;
+  fuelConsumptionCombined?: number | null;
   operationStatus?: string;
-  description?: string;
-  mainImageUrl?: string;
+  description?: string | null;
+  mainImageUrl?: string | null;
   weekdayPrice?: string;
   weekendPrice?: string;
   hourlyPrice?: string | null;
@@ -831,6 +864,7 @@ interface VehicleWritableFields {
 function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritableFields {
   return {
     ...(dto.serviceType !== undefined ? { serviceType: dto.serviceType } : {}),
+    ...(dto.sourceType !== undefined ? { sourceType: dto.sourceType } : {}),
     ...(dto.plateNumber !== undefined ? { plateNumber: dto.plateNumber } : {}),
     ...(dto.brand !== undefined ? { brand: dto.brand } : {}),
     ...(dto.model !== undefined ? { model: dto.model } : {}),
@@ -839,6 +873,24 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
     ...(dto.seatCount !== undefined ? { seatCount: dto.seatCount } : {}),
     ...(dto.fuelType !== undefined ? { fuelType: dto.fuelType } : {}),
     ...(dto.bodyType !== undefined ? { bodyType: dto.bodyType } : {}),
+    ...(dto.lengthMm !== undefined ? { lengthMm: dto.lengthMm } : {}),
+    ...(dto.widthMm !== undefined ? { widthMm: dto.widthMm } : {}),
+    ...(dto.heightMm !== undefined ? { heightMm: dto.heightMm } : {}),
+    ...(dto.curbWeightKg !== undefined ? { curbWeightKg: dto.curbWeightKg } : {}),
+    ...(dto.engineDisplacementCc !== undefined
+      ? { engineDisplacementCc: dto.engineDisplacementCc }
+      : {}),
+    ...(dto.horsepowerHp !== undefined ? { horsepowerHp: dto.horsepowerHp } : {}),
+    ...(dto.transmission !== undefined ? { transmission: dto.transmission } : {}),
+    ...(dto.fuelConsumptionCity !== undefined
+      ? { fuelConsumptionCity: dto.fuelConsumptionCity }
+      : {}),
+    ...(dto.fuelConsumptionHighway !== undefined
+      ? { fuelConsumptionHighway: dto.fuelConsumptionHighway }
+      : {}),
+    ...(dto.fuelConsumptionCombined !== undefined
+      ? { fuelConsumptionCombined: dto.fuelConsumptionCombined }
+      : {}),
     ...(dto.operationStatus !== undefined ? { operationStatus: dto.operationStatus } : {}),
     ...(dto.description !== undefined ? { description: dto.description } : {}),
     ...(dto.mainImageUrl !== undefined ? { mainImageUrl: dto.mainImageUrl } : {}),
@@ -849,6 +901,25 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
     ...(dto.noCollateral !== undefined ? { noCollateral: dto.noCollateral } : {}),
     ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
   };
+}
+
+function assertVehicleClassification(
+  vehicleType: string,
+  fuelType: string | null | undefined,
+  bodyType: string | null | undefined,
+): void {
+  if (!isVehicleFuelTypeAllowed(vehicleType, fuelType)) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Nguồn năng lượng không phù hợp với loại phương tiện đã chọn',
+    });
+  }
+  if (vehicleType !== VEHICLE_TYPE.CAR && bodyType != null) {
+    throw new BadRequestException({
+      code: API_ERROR_CODE.VALIDATION_FAILED,
+      message: 'Kiểu dáng thân xe chỉ áp dụng cho ô tô',
+    });
+  }
 }
 
 /** Decimal → string do ResponseInterceptor lo (ADR 0007); ở đây giữ nguyên kiểu. */
@@ -864,6 +935,7 @@ function toListItem(
     plateNumber: v.plateNumber,
     vehicleType: v.vehicleType,
     serviceType: v.serviceType,
+    sourceType: v.sourceType,
     brand: v.brand,
     model: v.model,
     manufactureYear: v.manufactureYear,
@@ -889,6 +961,16 @@ function toDetail(
     ...toListItem(v),
     color: v.color,
     fuelType: v.fuelType,
+    lengthMm: v.lengthMm,
+    widthMm: v.widthMm,
+    heightMm: v.heightMm,
+    curbWeightKg: v.curbWeightKg,
+    engineDisplacementCc: v.engineDisplacementCc,
+    horsepowerHp: v.horsepowerHp,
+    transmission: v.transmission,
+    fuelConsumptionCity: v.fuelConsumptionCity as unknown as string | null,
+    fuelConsumptionHighway: v.fuelConsumptionHighway as unknown as string | null,
+    fuelConsumptionCombined: v.fuelConsumptionCombined as unknown as string | null,
     hourlyPrice: v.hourlyPrice as unknown as string | null,
     deliveryEnabled: v.deliveryEnabled,
     noCollateral: v.noCollateral,

@@ -6,8 +6,11 @@ import Link from 'next/link';
 import {
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS_META,
+  VEHICLE_SOURCE_TYPE,
+  VEHICLE_SOURCE_TYPE_LABEL,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
+  type VehicleSourceType,
 } from '@xeprime/types';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -35,8 +38,7 @@ const EMPTY = '—';
  *
  * Giải phẫu khớp frame: **ảnh tràn viền → tên → mã · biển số → loại/dịch vụ kèm HAI trục trạng
  * thái → gạch ngang → giá thuê + khối chỉ số → gạch ngang → hàng nút.** Khác frame có chủ đích:
- *  - KHÔNG có chip nguồn xe và chip cảnh báo đăng kiểm/bảo dưỡng — schema chưa có cột nào cho
- *    các dữ liệu đó (Wave 4/6/7); không bịa số liệu.
+ *  - Chip nguồn xe dùng đúng `sourceType` đã lưu; cảnh báo đăng kiểm/bảo dưỡng vẫn chờ dữ liệu Wave 4.
  *  - Nhãn "TỔNG CHI PHÍ" thay vì "CHI PHÍ & KHẤU HAO" của Figma — con số là tổng phiếu chi đã
  *    duyệt, không có khấu hao; nhãn phải nói đúng số nó mô tả.
  *  - Thêm hàng giá ngày thường/cuối tuần (dữ liệu có thật trên bản ghi xe).
@@ -54,6 +56,7 @@ export function VehicleManagementCard({
 }: VehicleManagementCardProps) {
   const specs = `${vehicleTypeLabel(vehicle.vehicleType)} / ${serviceTypeLabel(vehicle.serviceType)}`;
   const identity = [vehicle.code, vehicle.plateNumber].filter(Boolean).join(' · ');
+  const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
 
   // Lãi/lỗ chỉ tính khi CẢ HAI vế cùng phạm vi luỹ kế — không trộn số theo kỳ với số luỹ kế.
   const hasFinance = stats?.totalIncome != null && stats?.totalExpense != null;
@@ -76,9 +79,16 @@ export function VehicleManagementCard({
 
       <div className={styles.body}>
         <div className={styles.identity}>
-          <Link href={vehiclePath.detail(vehicle.id)} className={styles.name} title={vehicle.name}>
-            {vehicle.name}
-          </Link>
+          <div className={styles.identityHead}>
+            <Link
+              href={vehiclePath.detail(vehicle.id)}
+              className={styles.name}
+              title={vehicle.name}
+            >
+              {vehicle.name}
+            </Link>
+            <span className={styles.sourceBadge}>{VEHICLE_SOURCE_TYPE_LABEL[sourceType]}</span>
+          </div>
           <p className={styles.meta}>{identity}</p>
         </div>
 

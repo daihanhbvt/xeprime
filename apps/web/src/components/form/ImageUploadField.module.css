@@ -41,3 +41,11 @@
   font-size: 12.5px;
   color: var(--xp-color-text-secondary);
 }
+
+.uploadError {
+  display: flex;
+  align-items: center;
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-error);
+  gap: var(--xp-space-sm);
+}

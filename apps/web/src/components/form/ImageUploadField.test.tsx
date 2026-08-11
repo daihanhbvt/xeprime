@@ -26,7 +26,10 @@ vi.mock('@/services/upload', () => ({
 // đụng spy (vi.spyOn), KHÔNG xoá lịch sử vi.fn → tự clear để test sau không thấy call của test trước.
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
+  mocks.validateImageFile.mockReset();
+  mocks.validateImageFile.mockReturnValue(null);
+  mocks.uploadImage.mockReset();
+  mocks.uploadImage.mockResolvedValue('https://pub.example.dev/tenants/t1/vehicles/img.jpg');
 });
 
 const fakePresign = async (): Promise<UploadPresign> => ({
@@ -66,9 +69,7 @@ describe('ImageUploadField', () => {
     await waitFor(() => expect(mocks.uploadImage).toHaveBeenCalledTimes(1));
     await waitFor(() => {
       const img = screen.getByAltText('Ảnh đã chọn');
-      expect(img.getAttribute('src')).toBe(
-        'https://pub.example.dev/tenants/t1/vehicles/img.jpg',
-      );
+      expect(img.getAttribute('src')).toBe('https://pub.example.dev/tenants/t1/vehicles/img.jpg');
     });
     // Có ảnh rồi thì hiện nút xoá.
     expect(screen.getByRole('button', { name: /Xoá ảnh/ })).toBeTruthy();
@@ -83,5 +84,23 @@ describe('ImageUploadField', () => {
 
     await waitFor(() => expect(mocks.validateImageFile).toHaveBeenCalled());
     expect(mocks.uploadImage).not.toHaveBeenCalled();
+  });
+
+  it('giữ file lỗi và cho thử lại mà không bắt người dùng chọn lại', async () => {
+    mocks.uploadImage.mockRejectedValueOnce(new Error('Mạng không ổn định'));
+    render(<Harness />);
+    pickFile(new File(['x'], 'xe.jpg', { type: 'image/jpeg' }));
+
+    const retry = await screen.findByRole('button', { name: 'Thử lại' });
+    expect(
+      screen
+        .getAllByRole('alert')
+        .some((alert) => alert.textContent?.includes('Mạng không ổn định')),
+    ).toBe(true);
+    fireEvent.click(retry);
+
+    await waitFor(() => expect(mocks.uploadImage).toHaveBeenCalledTimes(2));
+    expect(await screen.findByAltText('Ảnh đã chọn')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Thử lại' })).toBeNull();
   });
 });

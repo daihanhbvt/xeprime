@@ -1,7 +1,12 @@
 'use client';
 
 import { Button, Empty } from 'antd';
-import { VEHICLE_OPERATION_STATUS_META, type VehicleOperationStatus } from '@xeprime/types';
+import {
+  VEHICLE_OPERATION_STATUS_META,
+  VEHICLE_SOURCE_TYPE_LABEL,
+  type VehicleOperationStatus,
+  type VehicleSourceType,
+} from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { formatMoneyVnd } from '@/lib/money';
 import { useCatalogLabels, type CatalogLabels } from '@/features/catalog/use-catalog';
@@ -48,12 +53,17 @@ function groupsOf(values: VehicleFormValues, labels: CatalogLabels): ReviewGroup
           value: `${vehicleTypeLabel(values.vehicleType)} / ${serviceTypeLabel(values.serviceType)}`,
         },
         { label: 'Vận hành', value: operationStatusLabel(values.operationStatus) },
+        {
+          label: 'Nguồn xe',
+          value:
+            VEHICLE_SOURCE_TYPE_LABEL[values.sourceType as VehicleSourceType] ?? values.sourceType,
+        },
       ],
     },
     {
       key: 'specs',
-      title: 'Chi tiết kỹ thuật',
-      step: 1,
+      title: 'Thông tin phương tiện',
+      step: 0,
       items: [
         { label: 'Biển số', value: text(values.plateNumber) },
         {
@@ -63,7 +73,7 @@ function groupsOf(values: VehicleFormValues, labels: CatalogLabels): ReviewGroup
             : EMPTY,
         },
         {
-          label: 'Số chỗ / Động cơ',
+          label: 'Số chỗ / Năng lượng',
           value:
             [
               values.seatCount ? `${values.seatCount} chỗ` : null,
@@ -81,7 +91,7 @@ function groupsOf(values: VehicleFormValues, labels: CatalogLabels): ReviewGroup
     {
       key: 'pricing',
       title: 'Giá thuê & Chính sách',
-      step: 2,
+      step: 1,
       items: [
         { label: 'Đơn giá ngày thường', value: money(values.weekdayPrice) },
         { label: 'Giá cuối tuần', value: money(values.weekendPrice) },
@@ -104,7 +114,7 @@ function groupsOf(values: VehicleFormValues, labels: CatalogLabels): ReviewGroup
     {
       key: 'media',
       title: 'Hình ảnh & Tiện ích',
-      step: 3,
+      step: 2,
       items: [
         {
           label: 'Tổng quan',

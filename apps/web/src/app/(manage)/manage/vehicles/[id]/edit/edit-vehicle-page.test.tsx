@@ -1,137 +1,121 @@
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { API_ERROR_CODE, PERMISSION, type Permission } from '@xeprime/types';
-
-import { ApiClientError } from '@/services/api-client';
-import type { VehicleDetail } from '@/features/vehicles/types';
-
+import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import EditVehiclePage from './page';
 
-/**
- * `/manage/vehicles/[id]/edit` — sửa xe.
- *
- * Trọng tâm: quyền, nạp đúng giá trị đang có, và **không đánh mất media** khi lưu mà không đụng
- * tới ảnh. Đây là chỗ dễ mất dữ liệu nhất của cả luồng Fleet.
- */
-
-/* ------------------------------------------------------------------ hạ tầng mock */
-
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
-
-// Danh mục lọc (hãng/kiểu dáng/nhiên liệu/tiện ích) tới từ API — test dùng bản cố định.
+vi.mock('next/navigation', () => ({
+  useRouter: () => nav,
+  useParams: () => ({ id: 'vehicle-1' }),
+  usePathname: () => '/manage/vehicles/vehicle-1/edit',
+  useSearchParams: () => new URLSearchParams(),
+}));
 vi.mock('@/features/catalog/use-catalog', async () =>
   (await import('@/features/catalog/test-catalog')).catalogModuleMock(),
 );
-
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: nav.push, replace: nav.replace }),
-  useParams: () => ({ id: 'v1' }),
-  usePathname: () => '/manage/vehicles/v1/edit',
-  useSearchParams: () => new URLSearchParams(),
-}));
-
-const detail = vi.hoisted(() => ({
-  data: undefined as unknown,
-  isLoading: false,
-  isError: false,
-  error: undefined as unknown,
-  refetch: vi.fn(),
-  /** id mà trang thực sự yêu cầu — `undefined` nghĩa là trang cố ý không gọi API. */
-  requestedId: undefined as string | undefined,
-}));
-
-vi.mock('@/features/vehicles/hooks/use-vehicle', () => ({
-  useVehicle: (id: string | undefined) => {
-    detail.requestedId = id;
-    return detail;
-  },
-}));
-
-const update = vi.hoisted(() => ({
-  mutate: vi.fn(),
-  isPending: false,
-  isError: false,
-  error: undefined as unknown,
-}));
-
-vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
-  useUpdateVehicle: () => update,
-}));
-
-const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
-
-vi.mock('@/hooks/use-permissions', () => ({
-  usePermissions: () => ({
-    has: (p: string) => perms.granted.has(p),
-    hasAny: (...ps: string[]) => ps.some((p) => perms.granted.has(p)),
-    isLoading: false,
-  }),
-}));
-
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
   useIsTablet: () => false,
   useIsDesktop: () => true,
   useMediaQuery: () => false,
 }));
-
 vi.mock('@/services/upload', () => ({
   presignVehicleImage: vi.fn(),
   uploadImage: vi.fn(),
   validateImageFile: () => null,
 }));
+vi.mock('@/features/rental-policies/hooks/use-vehicle-pricing', () => ({
+  useVehiclePricing: () => ({
+    data: undefined,
+    isLoading: false,
+    isError: true,
+    refetch: vi.fn(),
+  }),
+  useSaveVehiclePricing: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 
-/* ------------------------------------------------------------------ dữ liệu mẫu */
+const permissions = vi.hoisted(() => ({ allow: true }));
+vi.mock('@/hooks/use-permissions', () => ({
+  usePermissions: () => ({
+    has: (permission: string) => permissions.allow && permission === PERMISSION.VEHICLE_UPDATE,
+    hasAny: () => permissions.allow,
+    isLoading: false,
+  }),
+}));
 
-function vehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
-  return {
-    id: 'v1',
-    code: 'XE-014',
-    name: 'Ford Transit 2021',
-    plateNumber: '51B-802.46',
-    vehicleType: 'car',
-    serviceType: 'self_drive',
-    operationStatus: 'available',
-    publicStatus: 'approved_public',
-    brand: 'Ford',
-    model: 'Transit',
-    color: 'Trắng',
-    fuelType: 'diesel',
-    bodyType: 'van',
-    manufactureYear: 2021,
-    seatCount: 16,
-    weekdayPrice: '1800000',
-    weekendPrice: '2000000',
-    hourlyPrice: null,
-    deliveryEnabled: true,
-    noCollateral: false,
-    discountPercent: null,
-    description: 'Xe 16 chỗ đời 2021.',
-    mainImageUrl: 'https://cdn.test/main.jpg',
-    images: ['https://cdn.test/a.jpg', 'https://cdn.test/b.jpg'],
-    features: [],
-    createdAt: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-08-01T00:00:00.000Z',
-    ...over,
-  } as VehicleDetail;
-}
+const vehicle = {
+  id: 'vehicle-1',
+  code: 'XP-001',
+  name: 'Toyota Vios 2024',
+  plateNumber: '51A-123.45',
+  vehicleType: 'car' as const,
+  serviceType: 'self_drive' as const,
+  sourceType: 'owned' as const,
+  brand: 'toyota',
+  model: 'Vios',
+  manufactureYear: 2024,
+  seatCount: 5,
+  bodyType: 'sedan',
+  discountPercent: null,
+  operationStatus: 'available' as const,
+  publicStatus: 'approved_public' as const,
+  mainImageUrl: 'https://cdn.test/main.jpg',
+  weekdayPrice: '850000',
+  weekendPrice: '1000000',
+  updatedAt: new Date().toISOString(),
+  color: 'Trắng',
+  fuelType: 'gasoline',
+  description: 'Xe gia đình',
+  hourlyPrice: null,
+  deliveryEnabled: true,
+  noCollateral: false,
+  createdAt: new Date().toISOString(),
+  images: ['https://cdn.test/gallery.jpg'],
+  features: ['bluetooth'],
+  latestPublicReview: null,
+  lengthMm: 4425,
+  widthMm: 1730,
+  heightMm: 1475,
+  curbWeightKg: 1110,
+  engineDisplacementCc: 1496,
+  horsepowerHp: 107,
+  transmission: 'automatic' as const,
+  fuelConsumptionCity: '7.5',
+  fuelConsumptionHighway: '5.1',
+  fuelConsumptionCombined: '6.0',
+};
 
-/**
- * Lỗi API **thật** chứ không phải một `Error` tự chế: `getErrorCode` chỉ đọc `code` từ
- * `ApiClientError`, nên lớp giả sẽ luôn rơi vào nhánh lỗi chung và test 404 mất hết ý nghĩa.
- */
-function apiError(message: string, code: string, status = 400) {
-  return new ApiClientError({ code, message, status });
-}
+const query = vi.hoisted(() => ({
+  data: undefined as typeof vehicle | undefined,
+  isLoading: false,
+  isError: false,
+  error: undefined as unknown,
+  refetch: vi.fn(),
+  requestedId: undefined as string | undefined,
+}));
+vi.mock('@/features/vehicles/hooks/use-vehicle', () => ({
+  useVehicle: (id?: string) => {
+    query.requestedId = id;
+    return query;
+  },
+}));
 
-function grant(...permissions: Permission[]) {
-  perms.granted = new Set<string>([PERMISSION.VEHICLE_UPDATE, ...permissions]);
-}
+const update = vi.hoisted(() => ({
+  mutateAsync: vi.fn(),
+  isPending: false,
+  isError: false,
+  error: undefined as unknown,
+}));
+vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
+  useUpdateVehicle: () => update,
+}));
 
-function revokeAll() {
-  perms.granted = new Set<string>();
-}
+vi.mock('@/services/api-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/services/api-client')>()),
+  getErrorCode: (error: { code?: string }) => error?.code,
+  getErrorMessage: () => 'Không thể lưu xe',
+}));
 
 function renderPage() {
   return render(
@@ -141,226 +125,141 @@ function renderPage() {
   );
 }
 
-/**
- * Sửa xe cũng là wizard từ Wave 3B-R2 (Figma `193:2297`) — đi hết bốn bước rồi mới tới nút lưu
- * ở bước "Xác nhận lại". Chờ tiêu đề từng bước, xem lý do ở `create-vehicle-page.test.tsx`.
- */
-async function saveForm() {
-  const headings = [
-    '2. Hình ảnh xe',
-    '3. Thiết lập giá thuê',
-    '4. Điều khoản thuê',
-    '5. Xác nhận & Hoàn tất chỉnh sửa',
-  ];
-  for (const heading of headings) {
-    fireEvent.click(screen.getByRole('button', { name: /Tiếp tục/ }));
-     
-    await screen.findByText(heading);
-  }
-  fireEvent.click(await screen.findByRole('button', { name: /Lưu thay đổi/ }));
-}
-
-function lastPayload(): Record<string, unknown> {
-  const calls = update.mutate.mock.calls;
-  return calls[calls.length - 1]![0] as Record<string, unknown>;
-}
-
 beforeEach(() => {
-  nav.push.mockReset();
-  nav.replace.mockReset();
-  update.mutate.mockReset();
+  permissions.allow = true;
+  query.data = vehicle;
+  query.isLoading = false;
+  query.isError = false;
+  query.error = undefined;
+  query.refetch.mockReset();
+  update.mutateAsync.mockReset();
+  update.mutateAsync.mockResolvedValue(vehicle);
   update.isPending = false;
   update.isError = false;
   update.error = undefined;
-  detail.data = vehicle();
-  detail.isLoading = false;
-  detail.isError = false;
-  detail.error = undefined;
-  detail.refetch.mockReset();
-  detail.requestedId = undefined;
-  grant();
+  nav.push.mockReset();
+  nav.replace.mockReset();
 });
-
 afterEach(cleanup);
 
-/* ------------------------------------------------------------------ quyền */
-
-describe('/manage/vehicles/[id]/edit — quyền', () => {
-  it('không có `vehicles.update`: màn 403 thay toàn bộ trang (Figma `62:893`)', () => {
-    revokeAll();
+describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
+  it('không có quyền thì không gọi API và hiện màn 403', () => {
+    permissions.allow = false;
     renderPage();
-
+    expect(query.requestedId).toBeUndefined();
     expect(screen.getByText('Không có quyền sửa xe')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Lưu thay đổi/ })).toBeNull();
   });
 
-  it('không có quyền sửa thì KHÔNG gọi API chi tiết', () => {
-    revokeAll();
+  it('có loading và deleted/not-found state rõ ràng', () => {
+    query.data = undefined;
+    query.isLoading = true;
+    const view = renderPage();
+    expect(screen.getByText('Đang tải thông tin xe…')).toBeTruthy();
+    view.unmount();
+    query.isLoading = false;
+    query.isError = true;
+    query.error = { code: API_ERROR_CODE.NOT_FOUND };
     renderPage();
-
-    expect(detail.requestedId).toBeUndefined();
-  });
-
-  it('có quyền sửa: trang yêu cầu đúng id trên URL', () => {
-    renderPage();
-    expect(detail.requestedId).toBe('v1');
-  });
-});
-
-/* ------------------------------------------------------------------ nạp dữ liệu */
-
-describe('/manage/vehicles/[id]/edit — nạp dữ liệu', () => {
-  it('đang tải: hiện trạng thái tải dùng chung, chưa dựng form', () => {
-    detail.data = undefined;
-    detail.isLoading = true;
-    renderPage();
-
-    expect(screen.getByRole('status')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Lưu thay đổi/ })).toBeNull();
-  });
-
-  it('lỗi tải: có nút thử lại và nút về danh sách', () => {
-    detail.data = undefined;
-    detail.isError = true;
-    detail.error = apiError('Lỗi mạng', 'INTERNAL', 500);
-    renderPage();
-
-    expect(screen.getByText('Không tải được thông tin xe')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Thử lại/ }));
-    expect(detail.refetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('không tìm thấy: KHÔNG mời thử lại — 404 thử lại là ngõ cụt', () => {
-    detail.data = undefined;
-    detail.isError = true;
-    detail.error = apiError('Không tìm thấy', API_ERROR_CODE.NOT_FOUND, 404);
-    renderPage();
-
     expect(screen.getByText('Không tìm thấy xe')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Thử lại/ })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Về danh sách' })).toBeTruthy();
   });
 
-  it('giá trị đang có được nạp đúng vào form', () => {
+  it('nạp đúng header, trạng thái và sáu tab; ba tab tương lai bị khoá', () => {
     renderPage();
-
-    expect((screen.getByLabelText(/Mã xe/) as HTMLInputElement).value).toBe('XE-014');
-    expect((screen.getByLabelText(/Tên xe/) as HTMLInputElement).value).toBe(
-      'Ford Transit 2021',
+    expect(screen.getByRole('heading', { name: vehicle.name })).toBeTruthy();
+    expect(screen.getByDisplayValue(vehicle.name)).toBeTruthy();
+    expect((screen.getByDisplayValue(vehicle.code) as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByRole('tab', { name: 'Thông tin xe' }).getAttribute('aria-selected')).toBe(
+      'true',
     );
-    expect((screen.getByLabelText(/Biển số xe/) as HTMLInputElement).value).toBe('51B-802.46');
+    expect(
+      screen.getByRole('tab', { name: 'Nguồn xe & tài chính' }).getAttribute('aria-disabled'),
+    ).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Giấy tờ' }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Bảo dưỡng & KM' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
   });
 
-  it('tiêu đề trang nói rõ đang sửa xe nào', () => {
+  it('Giá & chính sách được nhúng trực tiếp trong tab, không qua màn trung gian', async () => {
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Sửa: Ford Transit 2021' })).toBeTruthy();
-  });
-});
-
-/* ------------------------------------------------------------------ payload */
-
-describe('/manage/vehicles/[id]/edit — payload cập nhật', () => {
-  it('lưu mà không đụng ảnh: media cũ được gửi lại NGUYÊN VẸN', async () => {
-    renderPage();
-    await saveForm();
-
-    await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
-
-    const payload = lastPayload();
-    expect(payload.mainImageUrl).toBe('https://cdn.test/main.jpg');
-    expect(payload.images).toEqual(['https://cdn.test/a.jpg', 'https://cdn.test/b.jpg']);
+    fireEvent.click(screen.getByRole('tab', { name: 'Giá & chính sách' }));
+    expect(await screen.findByText('Không tải được giá & chính sách')).toBeTruthy();
+    expect(screen.queryByText('Mở Giá & chính sách')).toBeNull();
   });
 
-  it('các giá trị không đổi giữ nguyên, không bị chuẩn hoá thành rỗng', async () => {
+  it('thông số nâng cao mặc định đóng và tự đóng lại sau khi lưu', async () => {
     renderPage();
-    await saveForm();
-
-    await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
-
-    const payload = lastPayload();
-    expect(payload.code).toBe('XE-014');
-    expect(payload.plateNumber).toBe('51B-802.46');
-    expect(payload.brand).toBe('Ford');
-    expect(payload.manufactureYear).toBe(2021);
-    expect(payload.seatCount).toBe(16);
-    expect(payload.deliveryEnabled).toBe(true);
+    expect(screen.queryByLabelText('Chiều dài (mm)')).toBeNull();
+    const advanced = screen.getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ });
+    expect(advanced.getAttribute('aria-expanded')).toBe('false');
+    fireEvent.click(advanced);
+    expect(await screen.findByLabelText('Chiều dài (mm)')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Chiều dài (mm)'), { target: { value: '4500' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ })
+          .getAttribute('aria-expanded'),
+      ).toBe('false'),
+    );
   });
 
-  it('tiền vẫn là chuỗi trong payload (ADR 0007), không phải number', async () => {
+  it('tab Thông tin chỉ gửi field thuộc tab, không ghi đè media hay giá', async () => {
     renderPage();
-    await saveForm();
-
-    await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
-    expect(lastPayload().weekdayPrice).toBe('1800000');
+    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Toyota Vios mới' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    const payload = update.mutateAsync.mock.calls[0]![0];
+    expect(payload.name).toBe('Toyota Vios mới');
+    expect(payload).not.toHaveProperty('images');
+    expect(payload).not.toHaveProperty('mainImageUrl');
+    expect(payload).not.toHaveProperty('weekdayPrice');
+    expect(payload).not.toHaveProperty('sourceType');
   });
 
-  it('sửa một trường thì payload mang giá trị MỚI', async () => {
+  it('tab Hình ảnh chỉ gửi replace-set media có chủ đích', async () => {
     renderPage();
-    fireEvent.change(screen.getByLabelText(/Tên xe/), {
-      target: { value: 'Ford Transit 2022' },
+    fireEvent.click(screen.getByRole('tab', { name: 'Hình ảnh & tiện ích' }));
+    fireEvent.change(screen.getByLabelText(/Mô tả/), { target: { value: 'Mô tả mới' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(update.mutateAsync.mock.calls[0]![0]).toEqual({
+      mainImageUrl: vehicle.mainImageUrl,
+      images: vehicle.images,
+      features: vehicle.features,
+      description: 'Mô tả mới',
     });
-    await saveForm();
-
-    await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
-    expect(lastPayload().name).toBe('Ford Transit 2022');
   });
 
-  it('KHÔNG gửi `publicStatus` — sửa xe không được tự đổi trạng thái duyệt', async () => {
+  it('xoá ảnh đại diện gửi null có chủ đích và đi qua xác nhận của xe public', async () => {
     renderPage();
-    await saveForm();
+    fireEvent.click(screen.getByRole('tab', { name: 'Hình ảnh & tiện ích' }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Xoá ảnh/ })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    expect(await screen.findByText('Xác nhận thay đổi nhạy cảm')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận & Lưu' }));
 
-    await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
-    expect(lastPayload()).not.toHaveProperty('publicStatus');
-  });
-});
-
-/* ------------------------------------------------------------------ gửi + điều hướng */
-
-describe('/manage/vehicles/[id]/edit — gửi và điều hướng', () => {
-  it('đang lưu thì bấm lại KHÔNG tạo lời gọi thứ hai', async () => {
-    const { rerender } = renderPage();
-    await saveForm();
-    await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
-
-    update.isPending = true;
-    rerender(
-      <App>
-        <EditVehiclePage />
-      </App>,
-    );
-
-    // Wizard VẪN đang ở bước cuối sau `rerender`, nên bấm thẳng nút lưu — không đi lại bốn bước.
-    fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/ }));
-
-    await Promise.resolve();
-    expect(update.mutate).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(update.mutateAsync.mock.calls[0]![0].mainImageUrl).toBeNull();
   });
 
-  it('lỗi API hiện trong form, giá trị người dùng vừa nhập không bị mất', () => {
-    update.isError = true;
-    update.error = new Error('Biển số đã tồn tại');
+  it('không cho đổi tab làm mất dữ liệu chưa lưu', async () => {
     renderPage();
-
-    expect(screen.getByText('Biển số đã tồn tại')).toBeTruthy();
-    expect((screen.getByLabelText(/Mã xe/) as HTMLInputElement).value).toBe('XE-014');
+    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Chưa lưu' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Hình ảnh & tiện ích' }));
+    expect(await screen.findByText('Bỏ các thay đổi chưa lưu?')).toBeTruthy();
+    expect(screen.getByDisplayValue('Chưa lưu')).toBeTruthy();
   });
 
-  it('lưu xong: quay lại trang chi tiết bằng `replace`', async () => {
+  it('thay đổi nhạy cảm của xe public phải xác nhận trước khi gọi API', async () => {
     renderPage();
-    await saveForm();
-
-    await waitFor(() => expect(update.mutate).toHaveBeenCalledTimes(1));
-    const options = update.mutate.mock.calls[0]![1] as { onSuccess: (v: unknown) => void };
-    options.onSuccess(vehicle());
-
-    expect(nav.replace).toHaveBeenCalledWith('/manage/vehicles/v1');
-  });
-
-  it('huỷ: về chi tiết, KHÔNG gọi API cập nhật', () => {
-    renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Huỷ bỏ' }));
-
-    expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/v1');
-    expect(update.mutate).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(/Biển số xe/), { target: { value: '51A-999.99' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    expect(await screen.findByText('Xác nhận thay đổi nhạy cảm')).toBeTruthy();
+    expect(update.mutateAsync).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Xác nhận & Lưu' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
   });
 });

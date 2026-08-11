@@ -63,7 +63,7 @@ export function VehicleWizard({
     <div className={styles.root}>
       <Card className={styles.stepperCard} styles={{ body: { padding: 0 } }}>
         {/*
-          Mobile: số nằm TRÊN nhãn rút gọn (Figma mobile stepper) — năm bước vừa đúng một hàng
+          Mobile: số nằm TRÊN nhãn rút gọn — bốn bước vừa đúng một hàng
           ngang ở 390px. Để `horizontal` như desktop thì mỗi bước chiếm trọn một dòng.
         */}
         <Steps
@@ -72,7 +72,7 @@ export function VehicleWizard({
           current={current}
           /*
            * `responsive` mặc định BẬT: dưới 532px AntD tự đổi `direction` sang `vertical`, tức
-           * mỗi bước chiếm trọn một dòng. Phải tắt hẳn — thiết kế mobile xếp năm bước trên MỘT
+           * mỗi bước chiếm trọn một dòng. Phải tắt hẳn — thiết kế mobile xếp bốn bước trên MỘT
            * hàng, và `titlePlacement="vertical"` bên dưới mới là thứ đưa nhãn xuống dưới số.
            */
           responsive={false}

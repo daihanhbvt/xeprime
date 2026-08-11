@@ -442,7 +442,8 @@ describe('/manage/vehicles/[id] — khu vực chưa có dữ liệu', () => {
     expect(screen.getByText('Nguồn xe & Tài chính')).toBeTruthy();
     expect(screen.getByText('Bảo dưỡng & Số KM')).toBeTruthy();
     expect(screen.getByText(/Chưa có dữ liệu giấy tờ/)).toBeTruthy();
-    expect(screen.getByText(/Chưa có thông tin nguồn xe/)).toBeTruthy();
+    expect(screen.getByText('Hình thức nguồn xe')).toBeTruthy();
+    expect(screen.getByText('Sở hữu')).toBeTruthy();
     expect(screen.getByText(/Chưa có dữ liệu KM/)).toBeTruthy();
     // Không có lối vào form của wave sau.
     expect(

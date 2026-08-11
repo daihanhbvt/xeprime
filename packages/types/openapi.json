@@ -7603,6 +7603,15 @@
               "long_term"
             ]
           },
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "owned",
+              "financed",
+              "rented",
+              "partnership"
+            ]
+          },
           "brand": {
             "type": "string",
             "nullable": true
@@ -7835,6 +7844,15 @@
               "long_term"
             ]
           },
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "owned",
+              "financed",
+              "rented",
+              "partnership"
+            ]
+          },
           "brand": {
             "type": "string",
             "nullable": true
@@ -7907,6 +7925,56 @@
             "type": "string",
             "nullable": true,
             "description": "Key nhiên liệu — tra nhãn ở danh mục `fuel_type` (GET /catalog)"
+          },
+          "lengthMm": {
+            "type": "number",
+            "nullable": true
+          },
+          "widthMm": {
+            "type": "number",
+            "nullable": true
+          },
+          "heightMm": {
+            "type": "number",
+            "nullable": true
+          },
+          "curbWeightKg": {
+            "type": "number",
+            "nullable": true
+          },
+          "engineDisplacementCc": {
+            "type": "number",
+            "nullable": true
+          },
+          "horsepowerHp": {
+            "type": "number",
+            "nullable": true
+          },
+          "transmission": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "automatic",
+              "manual",
+              "cvt",
+              "dct",
+              "other"
+            ]
+          },
+          "fuelConsumptionCity": {
+            "type": "string",
+            "nullable": true,
+            "description": "L/100km dạng decimal string"
+          },
+          "fuelConsumptionHighway": {
+            "type": "string",
+            "nullable": true,
+            "description": "L/100km dạng decimal string"
+          },
+          "fuelConsumptionCombined": {
+            "type": "string",
+            "nullable": true,
+            "description": "L/100km dạng decimal string"
           },
           "description": {
             "type": "string",
@@ -8275,7 +8343,7 @@
         "properties": {
           "code": {
             "type": "string",
-            "description": "Mã xe nội bộ, duy nhất trong gian hàng",
+            "description": "Mã xe nội bộ. Bỏ trống để hệ thống tự sinh.",
             "example": "XE-001"
           },
           "name": {
@@ -8296,38 +8364,118 @@
               "with_driver",
               "both",
               "long_term"
-            ],
-            "default": "self_drive"
+            ]
+          },
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "owned",
+              "financed",
+              "rented",
+              "partnership"
+            ]
           },
           "plateNumber": {
             "type": "string",
+            "nullable": true,
             "example": "51K-123.45"
           },
           "brand": {
             "type": "string",
+            "nullable": true,
             "description": "Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do",
             "example": "vinfast"
           },
           "model": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "manufactureYear": {
             "type": "number",
+            "nullable": true,
             "minimum": 1980,
             "maximum": 2027
           },
           "color": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "seatCount": {
             "type": "number",
+            "nullable": true,
             "minimum": 1,
             "maximum": 64
           },
           "fuelType": {
             "type": "string",
+            "nullable": true,
             "description": "Key nhiên liệu thuộc danh mục `fuel_type` (GET /catalog)",
             "example": "gasoline"
+          },
+          "lengthMm": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 30000
+          },
+          "widthMm": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "heightMm": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "curbWeightKg": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "engineDisplacementCc": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 30000
+          },
+          "horsepowerHp": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 5000
+          },
+          "transmission": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "automatic",
+              "manual",
+              "cvt",
+              "dct",
+              "other"
+            ]
+          },
+          "fuelConsumptionCity": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 999
+          },
+          "fuelConsumptionHighway": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 999
+          },
+          "fuelConsumptionCombined": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 999
           },
           "bodyType": {
             "type": "string",
@@ -8342,14 +8490,15 @@
               "renting",
               "maintenance",
               "inactive"
-            ],
-            "default": "available"
+            ]
           },
           "description": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "mainImageUrl": {
             "type": "string",
+            "nullable": true,
             "description": "URL ảnh đại diện xe"
           },
           "weekdayPrice": {
@@ -8403,7 +8552,6 @@
           }
         },
         "required": [
-          "code",
           "name",
           "vehicleType"
         ]
@@ -8413,7 +8561,7 @@
         "properties": {
           "code": {
             "type": "string",
-            "description": "Mã xe nội bộ, duy nhất trong gian hàng",
+            "description": "Mã xe nội bộ. Bỏ trống để hệ thống tự sinh.",
             "example": "XE-001"
           },
           "name": {
@@ -8434,38 +8582,118 @@
               "with_driver",
               "both",
               "long_term"
-            ],
-            "default": "self_drive"
+            ]
+          },
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "owned",
+              "financed",
+              "rented",
+              "partnership"
+            ]
           },
           "plateNumber": {
             "type": "string",
+            "nullable": true,
             "example": "51K-123.45"
           },
           "brand": {
             "type": "string",
+            "nullable": true,
             "description": "Key hãng xe thuộc danh mục `vehicle_brand` (GET /catalog) — không phải tên tự do",
             "example": "vinfast"
           },
           "model": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "manufactureYear": {
             "type": "number",
+            "nullable": true,
             "minimum": 1980,
             "maximum": 2027
           },
           "color": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "seatCount": {
             "type": "number",
+            "nullable": true,
             "minimum": 1,
             "maximum": 64
           },
           "fuelType": {
             "type": "string",
+            "nullable": true,
             "description": "Key nhiên liệu thuộc danh mục `fuel_type` (GET /catalog)",
             "example": "gasoline"
+          },
+          "lengthMm": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 30000
+          },
+          "widthMm": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "heightMm": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "curbWeightKg": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "engineDisplacementCc": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 30000
+          },
+          "horsepowerHp": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 5000
+          },
+          "transmission": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "automatic",
+              "manual",
+              "cvt",
+              "dct",
+              "other"
+            ]
+          },
+          "fuelConsumptionCity": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 999
+          },
+          "fuelConsumptionHighway": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 999
+          },
+          "fuelConsumptionCombined": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 999
           },
           "bodyType": {
             "type": "string",
@@ -8480,14 +8708,15 @@
               "renting",
               "maintenance",
               "inactive"
-            ],
-            "default": "available"
+            ]
           },
           "description": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "mainImageUrl": {
             "type": "string",
+            "nullable": true,
             "description": "URL ảnh đại diện xe"
           },
           "weekdayPrice": {

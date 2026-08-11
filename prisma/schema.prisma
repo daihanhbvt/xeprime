@@ -484,6 +484,19 @@ model Vehicle {
   fuelType         String?   @map("fuel_type") @db.VarChar(50)
   /// @xeprime/types → BodyType. Kiểu dáng thân xe — chỉ có nghĩa khi vehicleType = car.
   bodyType         String?   @map("body_type") @db.VarChar(50)
+  /// @xeprime/types → VehicleSourceType. Wave 3 lưu loại nguồn; chi tiết hợp đồng/tài chính ở Wave 4.
+  sourceType               String    @default("owned") @map("source_type") @db.VarChar(30)
+  lengthMm                 Int?      @map("length_mm")
+  widthMm                  Int?      @map("width_mm")
+  heightMm                 Int?      @map("height_mm")
+  curbWeightKg             Int?      @map("curb_weight_kg")
+  engineDisplacementCc     Int?      @map("engine_displacement_cc")
+  horsepowerHp             Int?      @map("horsepower_hp")
+  /// @xeprime/types → TransmissionType.
+  transmission             String?   @db.VarChar(30)
+  fuelConsumptionCity      Decimal?  @map("fuel_consumption_city") @db.Decimal(6, 2)
+  fuelConsumptionHighway   Decimal?  @map("fuel_consumption_highway") @db.Decimal(6, 2)
+  fuelConsumptionCombined  Decimal?  @map("fuel_consumption_combined") @db.Decimal(6, 2)
   /// @xeprime/types → VehicleOperationStatus
   operationStatus  String    @default("available") @map("operation_status") @db.VarChar(50)
   /// @xeprime/types → VehiclePublicStatus.
@@ -525,6 +538,7 @@ model Vehicle {
   @@unique([tenantId, code])
   @@index([tenantId, publicStatus])
   @@index([tenantId, operationStatus])
+  @@index([tenantId, sourceType])
   @@index([vehicleType, serviceType])
   @@index([brand, model])
   /// Ba index dưới phục vụ màn "Xe toàn hệ thống" của admin — query KHÔNG có tenant_id

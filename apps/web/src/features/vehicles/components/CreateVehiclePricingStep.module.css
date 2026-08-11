@@ -1,0 +1,19 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.card {
+  border-color: var(--xp-color-border);
+}
+
+.description {
+  margin-top: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.policyLink {
+  display: inline-block;
+  margin-top: var(--xp-space-sm);
+}

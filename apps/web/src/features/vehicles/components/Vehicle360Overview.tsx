@@ -27,9 +27,13 @@ import {
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
+  VEHICLE_SOURCE_TYPE,
+  VEHICLE_SOURCE_TYPE_LABEL,
+  TRANSMISSION_TYPE_LABEL,
   type BookingStatus,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
+  type VehicleSourceType,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
@@ -70,10 +74,8 @@ export interface Vehicle360OverviewProps {
  *
  * Khác frame có chủ đích — không bịa dữ liệu chưa tồn tại (nguyên tắc "Chưa có" của
  * `docs/design/12` §12):
- *  - Header KHÔNG có "Nguồn xe"/"Odo" (schema chưa có cột — Wave 4/7).
- *  - Ba thẻ "Giấy tờ pháp lý" / "Nguồn xe & Tài chính" / "Bảo dưỡng & Số KM" là trạng thái
- *    "Chưa có dữ liệu" — giữ đúng vị trí thiết kế nhưng không có số liệu mẫu, không lối vào
- *    form của wave sau.
+ *  - Header hiển thị loại nguồn xe đã chọn; chi tiết tài chính của nguồn xe vẫn thuộc Wave 4.
+ *  - Giấy tờ và bảo dưỡng giữ trạng thái chưa có dữ liệu cho tới wave tương ứng, không bịa dữ liệu mẫu.
  *  - "Hiệu suất" là số LUỸ KẾ (backend không có chỉ số theo tháng) — tiêu đề nói thẳng điều đó.
  *  - Banner cảnh báo lấy từ trạng thái duyệt công khai (dữ liệu thật) thay vì hạn đăng kiểm.
  */
@@ -124,10 +126,7 @@ export function Vehicle360Overview({
           <MediaCard vehicle={vehicle} />
         </div>
         <div className={styles.column}>
-          <PlaceholderCard
-            title="Nguồn xe & Tài chính"
-            body="Chưa có thông tin nguồn xe (sở hữu / trả góp / thuê lại / hợp tác). Hồ sơ nguồn xe sẽ được bổ sung ở giai đoạn sau."
-          />
+          <SourceCard vehicle={vehicle} />
           <PlaceholderCard
             title="Bảo dưỡng & Số KM"
             body="Chưa có dữ liệu KM và lịch bảo dưỡng. Theo dõi odo và nhắc bảo dưỡng sẽ được bổ sung ở giai đoạn sau."
@@ -529,8 +528,38 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
     { key: 'body', label: 'Kiểu dáng thân xe', children: bodyTypeLabel(vehicle.bodyType) ?? EMPTY },
     { key: 'year', label: 'Năm sản xuất', children: vehicle.manufactureYear ?? EMPTY },
     { key: 'seats', label: 'Số chỗ ngồi', children: vehicle.seatCount ?? EMPTY },
-    { key: 'fuel', label: 'Nhiên liệu', children: fuelTypeLabel(vehicle.fuelType) ?? EMPTY },
+    {
+      key: 'fuel',
+      label: 'Nguồn năng lượng',
+      children: fuelTypeLabel(vehicle.fuelType) ?? EMPTY,
+    },
     { key: 'color', label: 'Màu sắc', children: vehicle.color || EMPTY },
+    { key: 'length', label: 'Chiều dài', children: formatMetric(vehicle.lengthMm, 'mm') },
+    { key: 'width', label: 'Chiều rộng', children: formatMetric(vehicle.widthMm, 'mm') },
+    { key: 'height', label: 'Chiều cao', children: formatMetric(vehicle.heightMm, 'mm') },
+    {
+      key: 'weight',
+      label: 'Trọng lượng bản thân',
+      children: formatMetric(vehicle.curbWeightKg, 'kg'),
+    },
+    {
+      key: 'engine',
+      label: 'Dung tích động cơ',
+      children: formatMetric(vehicle.engineDisplacementCc, 'cc'),
+    },
+    { key: 'power', label: 'Công suất', children: formatMetric(vehicle.horsepowerHp, 'HP') },
+    {
+      key: 'transmission',
+      label: 'Hộp số',
+      children: vehicle.transmission
+        ? (TRANSMISSION_TYPE_LABEL[vehicle.transmission] ?? vehicle.transmission)
+        : EMPTY,
+    },
+    {
+      key: 'fuel-combined',
+      label: 'Tiêu thụ hỗn hợp',
+      children: formatMetric(vehicle.fuelConsumptionCombined, 'L/100km'),
+    },
     { key: 'created', label: 'Tạo lúc', children: formatDateTime(vehicle.createdAt) },
     { key: 'updated', label: 'Cập nhật', children: formatDateTime(vehicle.updatedAt) },
   ];
@@ -548,6 +577,32 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
       ) : null}
 
       {vehicle.description ? <p className={styles.description}>{vehicle.description}</p> : null}
+    </Card>
+  );
+}
+
+function formatMetric(value: number | string | null | undefined, unit: string): string {
+  if (value == null || value === '') return EMPTY;
+  return `${Number(value).toLocaleString('vi-VN')} ${unit}`;
+}
+
+function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
+
+  return (
+    <Card title="Nguồn xe & Tài chính" className={styles.sectionCard}>
+      <dl className={styles.kvList}>
+        <div className={styles.kvRow}>
+          <dt>Hình thức nguồn xe</dt>
+          <dd>
+            <Tag color="gold">{VEHICLE_SOURCE_TYPE_LABEL[sourceType]}</Tag>
+          </dd>
+        </div>
+      </dl>
+      <p className={styles.muted}>
+        Thông tin tài chính, lịch thanh toán và hợp đồng của nguồn xe sẽ được quản lý ở tab chuyên
+        biệt trong Wave 4.
+      </p>
     </Card>
   );
 }

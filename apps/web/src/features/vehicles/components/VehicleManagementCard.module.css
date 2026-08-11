@@ -81,6 +81,14 @@
   min-width: 0;
 }
 
+.identityHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-xs);
+}
+
 .name {
   display: block;
   overflow: hidden;
@@ -89,6 +97,18 @@
   font-weight: var(--xp-font-weight-semibold);
   line-height: var(--xp-line-height-body);
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sourceBadge {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 18px;
   white-space: nowrap;
 }
 

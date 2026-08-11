@@ -1,9 +1,19 @@
 'use client';
 
-import { Col, Row, Select, Skeleton } from 'antd';
+import { BankOutlined, HomeOutlined, KeyOutlined, TeamOutlined } from '@ant-design/icons';
+import { Alert, Checkbox, Col, Radio, Row, Skeleton } from 'antd';
 import { useMemo } from 'react';
 import { Controller, useWatch, type Control } from 'react-hook-form';
-import { CATALOG_TYPE } from '@xeprime/types';
+import {
+  CATALOG_TYPE,
+  TRANSMISSION_TYPE_LABEL,
+  TRANSMISSION_TYPE_VALUES,
+  VEHICLE_TYPE,
+  VEHICLE_SOURCE_TYPE,
+  VEHICLE_SOURCE_TYPE_LABEL,
+  VEHICLE_SOURCE_TYPE_VALUES,
+  vehicleFuelTypesFor,
+} from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
 import { useCatalogItems, useCatalogOptions } from '@/features/catalog/use-catalog';
@@ -39,12 +49,12 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
   {
     key: 'basic',
     title: 'Thông tin cơ bản',
-    fields: ['code', 'name', 'vehicleType', 'serviceType', 'operationStatus'],
-  },
-  {
-    key: 'specs',
-    title: 'Chi tiết kỹ thuật & phân loại',
     fields: [
+      'code',
+      'name',
+      'vehicleType',
+      'serviceType',
+      'operationStatus',
       'plateNumber',
       'brand',
       'model',
@@ -53,6 +63,23 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
       'seatCount',
       'fuelType',
       'color',
+      'sourceType',
+    ],
+  },
+  {
+    key: 'specs',
+    title: 'Thông số kỹ thuật',
+    fields: [
+      'lengthMm',
+      'widthMm',
+      'heightMm',
+      'curbWeightKg',
+      'engineDisplacementCc',
+      'horsepowerHp',
+      'transmission',
+      'fuelConsumptionCity',
+      'fuelConsumptionHighway',
+      'fuelConsumptionCombined',
     ],
   },
   {
@@ -79,7 +106,7 @@ export interface VehicleWizardStep {
   key: string;
   /** Nhãn thanh bước ở desktop — dùng ĐÚNG chữ Figma. */
   title: string;
-  /** Nhãn rút gọn cho mobile: 390px không chứa nổi 5 nhãn dài trên một hàng. */
+  /** Nhãn rút gọn cho mobile: giữ toàn bộ wizard trên một hàng. */
   shortTitle: string;
   /** Tiêu đề trong thẻ nội dung, đã đánh số. */
   heading: string;
@@ -91,44 +118,38 @@ const FIELDS_OF = Object.fromEntries(
 ) as Record<VehicleSectionKey, ReadonlyArray<keyof VehicleFormValues>>;
 
 /**
- * Wizard **tạo xe** — 5 bước, nhãn lấy nguyên văn Figma `193:1590`.
+ * Wizard **tạo xe** — 4 bước. Thông số kỹ thuật nâng cao được nhập sau ở workspace chỉnh sửa;
+ * không bắt chủ xe đi qua một bước tuỳ chọn trong lúc onboarding.
  *
- * Bước 5 không có trường nào để validate: nó chỉ tổng kết lại bốn bước trước rồi gửi.
+ * Bước xác nhận không có trường nào để validate: nó tổng kết ba bước trước rồi gửi.
  */
 export const CREATE_WIZARD_STEPS: readonly VehicleWizardStep[] = [
   {
     key: 'basic',
-    title: 'Thông tin cơ bản',
+    title: 'Cơ bản',
     shortTitle: 'Cơ bản',
     heading: '1. Thông tin cơ bản của xe',
     fields: FIELDS_OF.basic,
   },
   {
-    key: 'specs',
-    title: 'Chi tiết kỹ thuật',
-    shortTitle: 'Thông số',
-    heading: '2. Chi tiết kỹ thuật xe',
-    fields: FIELDS_OF.specs,
-  },
-  {
     key: 'pricing',
-    title: 'Giá thuê & chính sách',
-    shortTitle: 'Giá cả',
-    heading: '3. Thiết lập giá thuê & chính sách',
+    title: 'Giá & chính sách',
+    shortTitle: 'Giá',
+    heading: '2. Giá thuê & chính sách',
     fields: FIELDS_OF.pricing,
   },
   {
     key: 'media',
-    title: 'Hình ảnh & mô tả',
+    title: 'Hình ảnh',
     shortTitle: 'Hình ảnh',
-    heading: '4. Hình ảnh, tiện ích & mô tả xe',
+    heading: '3. Hình ảnh, tiện ích & mô tả xe',
     fields: FIELDS_OF.media,
   },
   {
     key: 'review',
-    title: 'Xác nhận & gửi duyệt',
+    title: 'Xác nhận',
     shortTitle: 'Xác nhận',
-    heading: '5. Xác nhận thông tin hồ sơ xe',
+    heading: '4. Xác nhận thông tin hồ sơ xe',
     fields: [],
   },
 ];
@@ -182,12 +203,13 @@ export const EDIT_WIZARD_STEPS: readonly VehicleWizardStep[] = [
   },
 ];
 
-interface SectionProps {
+export interface SectionProps {
   control: Control<VehicleFormValues>;
   isCar: boolean;
+  codeReadOnly?: boolean;
 }
 
-export function BasicSection({ control, isCar: _isCar }: SectionProps) {
+export function BasicSection({ control, isCar: _isCar, codeReadOnly = false }: SectionProps) {
   return (
     <Row gutter={24}>
       {/* Thứ tự và nhãn theo Figma `193:1617`: Tên xe TRÁI, Mã xe PHẢI. */}
@@ -205,9 +227,9 @@ export function BasicSection({ control, isCar: _isCar }: SectionProps) {
           control={control}
           name="code"
           label="Mã xe"
-          placeholder="Ví dụ: XP-0001"
-          required
-          help="Mã nội bộ, duy nhất trong gian hàng"
+          placeholder="Hệ thống tự sinh nếu bỏ trống"
+          help="Mã định danh nội bộ, duy nhất trong gian hàng"
+          disabled={codeReadOnly}
         />
       </Col>
       <Col xs={24} sm={12}>
@@ -243,6 +265,192 @@ export function BasicSection({ control, isCar: _isCar }: SectionProps) {
         />
       </Col>
     </Row>
+  );
+}
+
+/** Wave 3 chỉ lưu loại nguồn xe. Các form tài chính/hợp đồng chi tiết thuộc tab Nguồn xe ở Wave 4. */
+export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
+  const iconOf = (value: (typeof VEHICLE_SOURCE_TYPE_VALUES)[number]) => {
+    if (value === VEHICLE_SOURCE_TYPE.OWNED) return <HomeOutlined />;
+    if (value === VEHICLE_SOURCE_TYPE.FINANCED) return <BankOutlined />;
+    if (value === VEHICLE_SOURCE_TYPE.RENTED) return <KeyOutlined />;
+    return <TeamOutlined />;
+  };
+
+  return (
+    <fieldset className={styles.sourceFieldset}>
+      <legend className={styles.sourceLegend}>Hình thức nguồn xe *</legend>
+      <p className={styles.sourceDescription}>
+        Xác định cách quản lý tài chính và phân chia lợi nhuận của xe
+      </p>
+      <Controller
+        control={control}
+        name="sourceType"
+        render={({ field, fieldState }) => (
+          <>
+            <Radio.Group
+              value={field.value}
+              onChange={(event) => field.onChange(event.target.value)}
+              className={styles.sourceGrid}
+            >
+              {VEHICLE_SOURCE_TYPE_VALUES.map((value) => (
+                <Radio key={value} value={value} className={styles.sourceOption}>
+                  <span className={styles.sourceIcon} aria-hidden="true">
+                    {iconOf(value)}
+                  </span>
+                  <span className={styles.sourceCopy}>
+                    <strong>{VEHICLE_SOURCE_TYPE_LABEL[value]}</strong>
+                    <small>
+                      {value === VEHICLE_SOURCE_TYPE.OWNED
+                        ? 'Xe thuộc quyền sở hữu của bạn'
+                        : value === VEHICLE_SOURCE_TYPE.FINANCED
+                          ? 'Đang góp qua ngân hàng'
+                          : value === VEHICLE_SOURCE_TYPE.RENTED
+                            ? 'Thuê từ chủ xe khác để kinh doanh'
+                            : 'Ký gửi/chia doanh thu với chủ xe'}
+                    </small>
+                  </span>
+                </Radio>
+              ))}
+            </Radio.Group>
+            {fieldState.error ? (
+              <div className={styles.fieldError}>{fieldState.error.message}</div>
+            ) : null}
+          </>
+        )}
+      />
+      <Alert
+        className={styles.sourceHint}
+        type="info"
+        showIcon
+        message="Bạn sẽ bổ sung hồ sơ tài chính hoặc hợp đồng chi tiết sau khi tạo xe."
+      />
+    </fieldset>
+  );
+}
+
+/** Thông số mở rộng là tuỳ chọn và chỉ xuất hiện trong vùng thu gọn của workspace chỉnh sửa. */
+export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>) {
+  const transmissionOptions = TRANSMISSION_TYPE_VALUES.map((value) => ({
+    value,
+    label: TRANSMISSION_TYPE_LABEL[value],
+  }));
+
+  return (
+    <div className={styles.advancedStack}>
+      <section className={styles.subSection}>
+        <h3 className={styles.subSectionTitle}>Kích thước & Trọng lượng</h3>
+        <p className={styles.fieldHint}>Không bắt buộc</p>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <NumberField
+              control={control}
+              name="lengthMm"
+              label="Chiều dài (mm)"
+              placeholder="VD: 4630"
+              min={1}
+            />
+          </Col>
+          <Col xs={24} sm={12}>
+            <NumberField
+              control={control}
+              name="widthMm"
+              label="Chiều rộng (mm)"
+              placeholder="VD: 1780"
+              min={1}
+            />
+          </Col>
+          <Col xs={24} sm={12}>
+            <NumberField
+              control={control}
+              name="heightMm"
+              label="Chiều cao (mm)"
+              placeholder="VD: 1435"
+              min={1}
+            />
+          </Col>
+          <Col xs={24} sm={12}>
+            <NumberField
+              control={control}
+              name="curbWeightKg"
+              label="Trọng lượng bản thân (kg)"
+              placeholder="VD: 1250"
+              min={1}
+            />
+          </Col>
+        </Row>
+      </section>
+      <section className={styles.subSection}>
+        <h3 className={styles.subSectionTitle}>Động cơ & Vận hành</h3>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <NumberField
+              control={control}
+              name="engineDisplacementCc"
+              label="Dung tích động cơ (cc)"
+              placeholder="VD: 1798"
+              min={1}
+            />
+          </Col>
+          <Col xs={24} sm={12}>
+            <NumberField
+              control={control}
+              name="horsepowerHp"
+              label="Công suất cực đại (HP)"
+              placeholder="VD: 138"
+              min={1}
+            />
+          </Col>
+          <Col xs={24} sm={12}>
+            <SelectField
+              control={control}
+              name="transmission"
+              label="Hộp số"
+              options={transmissionOptions}
+              allowClear
+              placeholder="Chọn hộp số"
+            />
+          </Col>
+        </Row>
+      </section>
+      <section className={styles.subSection}>
+        <h3 className={styles.subSectionTitle}>Mức tiêu thụ nhiên liệu (L/100km)</h3>
+        <Row gutter={16}>
+          <Col xs={24} sm={8}>
+            <NumberField
+              control={control}
+              name="fuelConsumptionCity"
+              label="Trong đô thị"
+              placeholder="VD: 8.5"
+              min={0}
+            />
+          </Col>
+          <Col xs={24} sm={8}>
+            <NumberField
+              control={control}
+              name="fuelConsumptionHighway"
+              label="Ngoài đô thị"
+              placeholder="VD: 5.2"
+              min={0}
+            />
+          </Col>
+          <Col xs={24} sm={8}>
+            <NumberField
+              control={control}
+              name="fuelConsumptionCombined"
+              label="Kết hợp"
+              placeholder="VD: 6.5"
+              min={0}
+            />
+          </Col>
+        </Row>
+      </section>
+      <Alert
+        type="info"
+        showIcon
+        message="Các thông số kỹ thuật giúp tăng khả năng tìm thấy xe; bạn có thể cập nhật sau."
+      />
+    </div>
   );
 }
 
@@ -285,7 +493,10 @@ export function SpecsSection({ control, isCar }: SectionProps) {
         />
       </Col>
       <Col xs={24} sm={12}>
-        <FuelTypeSelect control={control} />
+        <FuelTypeSelect
+          control={control}
+          vehicleType={isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE}
+        />
       </Col>
       <Col xs={24} sm={12}>
         <TextField
@@ -326,16 +537,23 @@ function BrandSelect({ control }: Pick<SectionProps, 'control'>) {
   );
 }
 
-function FuelTypeSelect({ control }: Pick<SectionProps, 'control'>) {
+function FuelTypeSelect({
+  control,
+  vehicleType,
+}: Pick<SectionProps, 'control'> & { vehicleType: string }) {
   const current = useWatch({ control, name: 'fuelType' });
-  const options = useCatalogOptions(CATALOG_TYPE.FUEL_TYPE, current);
+  const allOptions = useCatalogOptions(CATALOG_TYPE.FUEL_TYPE, current);
+  const allowed = vehicleFuelTypesFor(vehicleType);
+  const options = allOptions.filter((option) => allowed.some((value) => value === option.value));
   return (
     <SelectField
       control={control}
       name="fuelType"
-      label="Loại nhiên liệu"
+      label="Nguồn năng lượng"
       options={options}
-      placeholder="Chọn nhiên liệu"
+      placeholder={
+        vehicleType === VEHICLE_TYPE.CAR ? 'Xăng, dầu, điện hoặc hybrid' : 'Xăng hoặc điện'
+      }
       allowClear
     />
   );
@@ -360,16 +578,18 @@ function FeaturesSelect({ control }: Pick<SectionProps, 'control'>) {
       control={control}
       name="features"
       render={({ field }) => (
-        <Select
-          mode="multiple"
+        <Checkbox.Group
           aria-labelledby="vehicle-features-label"
-          className={styles.fullWidth}
+          className={styles.featuresGrid}
           value={field.value ?? []}
           onChange={field.onChange}
-          options={options}
-          placeholder="Chọn tiện ích (Bluetooth, camera lùi…)"
-          allowClear
-        />
+        >
+          {options.map((option) => (
+            <Checkbox key={option.value} value={option.value} className={styles.featureOption}>
+              {option.label}
+            </Checkbox>
+          ))}
+        </Checkbox.Group>
       )}
     />
   );
@@ -535,7 +755,7 @@ export function FeaturesDescriptionSection({ control }: SectionProps) {
     <>
       <div className={styles.galleryBlock}>
         <div className={styles.fieldLabel} id="vehicle-features-label">
-          Tiện ích
+          Tiện ích trên xe
         </div>
         <FeaturesSelect control={control} />
       </div>
