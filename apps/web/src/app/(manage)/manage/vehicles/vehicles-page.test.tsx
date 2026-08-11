@@ -54,16 +54,6 @@ vi.mock('@/features/vehicles/hooks/use-vehicles', () => ({
   },
 }));
 
-const deleteVehicle = vi.hoisted(() => ({
-  mutate: vi.fn(),
-  isPending: false,
-  variables: undefined as string | undefined,
-}));
-
-vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
-  useDeleteVehicle: () => deleteVehicle,
-}));
-
 /** Lưới thẻ gọi thật `useQuery`; harness này không có QueryClientProvider nên mock ở đây. */
 vi.mock('@/features/vehicles/hooks/use-vehicle-card-stats', () => ({
   useVehicleCardStats: () => ({ byId: new Map(), isLoading: false, isError: false }),
@@ -192,9 +182,6 @@ beforeEach(() => {
   nav.replace.mockReset();
   nav.params = new URLSearchParams();
   query.refetch.mockReset();
-  deleteVehicle.mutate.mockReset();
-  deleteVehicle.isPending = false;
-  deleteVehicle.variables = undefined;
   viewport.mobile = false;
   setQuery();
   grant();
@@ -337,11 +324,11 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
     expect(screen.getByText('XM-001 · 59X1-333.44')).toBeTruthy();
   });
 
-  it('thẻ KHÔNG dựng giá thuê — Figma `186:1676` không vẽ giá, giá nằm ở trang chi tiết', () => {
+  it('thẻ hiện giá thuê qua bộ format — bố cục Figma `236:1778` mang giá về thẻ', () => {
     setQuery({ data: { items: [vehicle({ weekdayPrice: '350000' })], meta: META } });
     renderPage();
 
-    expect(screen.queryByText(/350.000 ₫/)).toBeNull();
+    expect(screen.getByText('350.000 ₫')).toBeTruthy();
     expect(screen.queryByText('350000')).toBeNull();
   });
 
@@ -353,13 +340,13 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
     expect(within(row).getAllByRole('button')).toHaveLength(2);
   });
 
-  it('có quyền sửa và xoá: đủ bốn hành động', () => {
+  it('có quyền sửa: thêm nút Sửa — nhưng KHÔNG có Xoá (xoá chỉ ở Hồ sơ 360)', () => {
     grant(PERMISSION.VEHICLE_UPDATE, PERMISSION.VEHICLE_DELETE);
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
     const row = cards()[0]!;
-    expect(within(row).getAllByRole('button')).toHaveLength(4);
+    expect(within(row).getAllByRole('button')).toHaveLength(3);
   });
 
   it('quyền tạo mở nút "Thêm xe" ở đầu trang', () => {
@@ -379,13 +366,14 @@ describe('/manage/vehicles — dữ liệu và quyền', () => {
     renderPage();
 
     // Một lần quét duy nhất rồi so trên mảng nhãn: `getByRole` kèm `name` phải tính accessible
-    // name cho cả cây con, gọi bốn lần liên tiếp đủ chậm để vượt timeout khi chạy cả bộ test.
+    // name cho cả cây con, gọi nhiều lần liên tiếp đủ chậm để vượt timeout khi chạy cả bộ test.
     const labels = within(cards()[0]!)
       .getAllByRole('button')
       .map((button) => button.textContent);
 
     expect(labels.every(Boolean)).toBe(true);
-    expect(labels).toEqual(['Xem', 'Sửa', 'Lịch', 'Xoá']);
+    // Không có "Xoá" dù đủ quyền — bản chỉnh 11/08/2026: xoá chỉ nằm trong Hồ sơ 360.
+    expect(labels).toEqual(['Xem chi tiết', 'Sửa', 'Lịch']);
   });
 });
 

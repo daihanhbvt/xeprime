@@ -16,9 +16,24 @@
   margin: -44px auto 0;
 }
 
+/* Shimmer thuần CSS — fallback này render trong Server Component nên không dùng Skeleton antd. */
 .searchFallbackInner {
-  height: 82px !important;
-  border-radius: var(--xp-border-radius) !important;
+  height: 82px;
+  border-radius: var(--xp-border-radius);
+  animation: search-fallback-pulse 1.4s ease-in-out infinite;
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-lg, 0 12px 32px rgba(41, 31, 15, 0.16));
+}
+
+@keyframes search-fallback-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
 @media (max-width: 640px) {
@@ -27,6 +42,6 @@
   }
 
   .searchFallbackInner {
-    height: 48px !important;
+    height: 48px;
   }
 }

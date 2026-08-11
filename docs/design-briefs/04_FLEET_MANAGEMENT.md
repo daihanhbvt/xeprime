@@ -6,6 +6,8 @@
 > **Authoritative sources:** application source code, migrations, tests and accepted ADRs. `docs/project/` is secondary.
 >
 > **Reading contract:** *Confirmed* blocks describe what exists. Anything marked `[RECOMMENDED — NOT CURRENT]` describes nothing that exists today. Absent evidence is written as `Unknown`.
+>
+> **Accepted target addendum — 2026-08-11, NOT CURRENT:** Vehicle editing becomes a six-tab Vehicle 360 workspace; creation remains a short five-step wizard; policy inheritance, vehicle source/finance, documents/OCR and maintenance/KM follow [`docs/design/12_VEHICLE_360_MANAGEMENT.md`](../design/12_VEHICLE_360_MANAGEMENT.md). This is a product/design target and does not assert that the database, API or UI already implements it.
 
 ---
 

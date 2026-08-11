@@ -20,11 +20,12 @@ interface VehicleCardGridProps {
   filtered?: boolean;
   onClearFilters?: () => void;
   emptyAction?: ReactNode;
-  rowActions: (row: VehicleListItem) => RowAction[];
+  /** `shape` để nhãn hành động khớp bề mặt: thẻ desktop nhãn đầy đủ, hàng mobile nhãn rút gọn. */
+  rowActions: (row: VehicleListItem, shape: 'card' | 'row') => RowAction[];
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-/** Figma `188:1826` vẽ 5 khung chờ — đúng một hàng lưới. */
+/** Một hàng lưới đầy của bố cục desktop 5 cột (bản chỉnh 11/08/2026). */
 const SKELETON_COUNT = 5;
 
 /**
@@ -121,7 +122,7 @@ export function VehicleCardGrid({
               stats={stats.byId.get(item.id)}
               statsLoading={stats.isLoading}
               statsFailed={stats.isError}
-              actions={rowActions(item)}
+              actions={rowActions(item, 'row')}
             />
           </li>
         ))}
@@ -135,7 +136,7 @@ export function VehicleCardGrid({
               stats={stats.byId.get(item.id)}
               statsLoading={stats.isLoading}
               statsFailed={stats.isError}
-              actions={rowActions(item)}
+              actions={rowActions(item, 'card')}
             />
           </li>
         ))}

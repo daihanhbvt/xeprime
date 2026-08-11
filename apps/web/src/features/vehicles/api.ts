@@ -9,7 +9,9 @@ import {
 } from '@/services/api-client';
 import type {
   CreateVehicleInput,
+  FleetSummary,
   UpdateVehicleInput,
+  Vehicle360Summary,
   VehicleDetail,
   VehicleFilters,
   VehicleListItem,
@@ -80,3 +82,14 @@ export async function fetchVehicleStats(ids: string[]): Promise<VehicleStats[]> 
   });
   return res.data;
 }
+
+/** Đếm đội xe theo trạng thái vận hành — nói về CẢ đội xe, không theo trang/bộ lọc. */
+export const fetchFleetSummary = (): Promise<FleetSummary> =>
+  apiGet<FleetSummary>('/vehicles/fleet-summary');
+
+/**
+ * Tổng hợp Hồ sơ 360 của một xe — MỘT request cho chỉ số + đơn sắp tới + hoạt động gần đây.
+ * Khối nào người gọi không có quyền xem thì backend đã bỏ khỏi response (không phải FE tự ẩn).
+ */
+export const fetchVehicleSummary = (id: string): Promise<Vehicle360Summary> =>
+  apiGet<Vehicle360Summary>(`/vehicles/${id}/summary`);

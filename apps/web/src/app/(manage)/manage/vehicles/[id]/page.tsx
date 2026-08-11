@@ -1,23 +1,29 @@
 'use client';
 
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { App, Button, Popconfirm } from 'antd';
+import { App, Button } from 'antd';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { ROUTES, vehiclePath } from '@/constants/routes';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { usePermissions } from '@/hooks/use-permissions';
-import { decorativeIcon } from '@/lib/decorative-icon';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { VehicleDetailView } from '@/features/vehicles/components/VehicleDetailView';
+import { Vehicle360Overview } from '@/features/vehicles/components/Vehicle360Overview';
+import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
 import { useVehicle } from '@/features/vehicles/hooks/use-vehicle';
+import { useVehicleSummary } from '@/features/vehicles/hooks/use-vehicle-summary';
 import { useDeleteVehicle } from '@/features/vehicles/hooks/use-vehicle-mutations';
 
+/**
+ * Hồ sơ 360 của một xe — Figma `236:2222` (desktop) · `236:4783` (mobile).
+ *
+ * Trang chỉ điều phối: quyền, hai query (bản ghi xe + tổng hợp), và các trạng thái
+ * loading/lỗi/không-tìm-thấy. Toàn bộ trình bày nằm ở `Vehicle360Overview`.
+ */
 export default function VehicleDetailPage() {
   const router = useRouter();
   const { message } = App.useApp();
@@ -32,6 +38,8 @@ export default function VehicleDetailPage() {
     error,
     refetch,
   } = useVehicle(canView ? id : undefined);
+  // Tổng hợp (chỉ số + đơn thuê) tách query riêng: chậm hay hỏng cũng không kéo sập hồ sơ.
+  const summary = useVehicleSummary(canView ? id : undefined);
   const deleteVehicle = useDeleteVehicle();
 
   const backToList = () => router.push(ROUTES.MANAGE.VEHICLES);
@@ -46,7 +54,7 @@ export default function VehicleDetailPage() {
     });
   }
 
-  // Cùng quy tắc với danh sách (Figma `58:2061`): không có quyền xem thì không dựng gì của bản ghi.
+  // Cùng quy tắc với danh sách: không có quyền xem thì không dựng gì của bản ghi.
   if (!canView) {
     return (
       <PermissionState
@@ -66,7 +74,7 @@ export default function VehicleDetailPage() {
   if (isLoading) {
     return (
       <PageContainer>
-        <ManagePageHeader title="Chi tiết xe" onBack={backToList} />
+        <ManagePageHeader title="Hồ sơ chi tiết xe" onBack={backToList} />
         <LoadingState variant="page" label="Đang tải thông tin xe…" />
       </PageContainer>
     );
@@ -92,40 +100,22 @@ export default function VehicleDetailPage() {
   return (
     <PageContainer>
       <ManagePageHeader
-        title={vehicle.name}
+        title="Hồ sơ chi tiết xe"
+        subtitle="Thông tin vận hành, giá thuê và trạng thái công khai của phương tiện"
         onBack={backToList}
-        extra={
-          <>
-            {has(PERMISSION.VEHICLE_UPDATE) ? (
-              // Icon là trang trí: để nguyên thì tên khả truy cập thành "edit Chỉnh sửa" (D16.1).
-              <Button
-                icon={decorativeIcon(<EditOutlined />)}
-                onClick={() => router.push(vehiclePath.edit(id))}
-              >
-                Chỉnh sửa
-              </Button>
-            ) : null}
-            {has(PERMISSION.VEHICLE_DELETE) ? (
-              <Popconfirm
-                title="Xoá xe này?"
-                description="Xe sẽ bị ẩn khỏi danh sách. Không xoá được nếu còn lịch."
-                okText="Xoá"
-                okButtonProps={{ danger: true }}
-                cancelText="Huỷ"
-                onConfirm={handleDelete}
-              >
-                <Button
-                  danger
-                  icon={decorativeIcon(<DeleteOutlined />)}
-                  loading={deleteVehicle.isPending}
-                  aria-label="Xoá xe"
-                />
-              </Popconfirm>
-            ) : null}
-          </>
-        }
       />
-      <VehicleDetailView vehicle={vehicle} />
+      <Vehicle360Overview
+        vehicle={vehicle}
+        summary={summary.data}
+        summaryLoading={summary.isLoading}
+        summaryFailed={summary.isError}
+        canEdit={has(PERMISSION.VEHICLE_UPDATE)}
+        canDelete={has(PERMISSION.VEHICLE_DELETE)}
+        deletePending={deleteVehicle.isPending}
+        onEdit={() => router.push(vehiclePath.edit(id))}
+        onSchedule={() => router.push(vehicleSchedulePath(vehicle))}
+        onDelete={handleDelete}
+      />
     </PageContainer>
   );
 }

@@ -14,6 +14,7 @@ import {
   RECEIPT_STATUS,
   RECEIPT_TYPE,
   TENANT_STATUS,
+  VEHICLE_OPERATION_STATUS,
   VEHICLE_PUBLIC_SENSITIVE_FIELDS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_SUBMITTABLE,
@@ -27,9 +28,12 @@ import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateVehicleDto,
+  FleetSummaryDto,
   UpdateVehicleDto,
   VEHICLE_DEFAULT_LIMIT,
   VEHICLE_MAX_LIMIT,
+  Vehicle360SummaryDto,
+  VehicleBookingBriefDto,
   VehicleDetailDto,
   VehicleListItemDto,
   VehicleListQueryDto,
@@ -162,6 +166,113 @@ export class VehiclesService {
 
       return stats;
     });
+  }
+
+  /**
+   * Đếm đội xe theo trạng thái vận hành — dải chỉ số đầu `/manage/vehicles` (Figma `236:4648`).
+   *
+   * Con số nói về CẢ đội xe của gian hàng, không phụ thuộc trang/bộ lọc — nên đếm ở DB bằng
+   * `groupBy` (một truy vấn, vài dòng kết quả) thay vì để FE cộng từ trang hiện tại (sai ngay
+   * khi có trang 2).
+   */
+  async fleetSummary(tenantId: string): Promise<FleetSummaryDto> {
+    const groups = await this.prisma.vehicle.groupBy({
+      by: ['operationStatus'],
+      where: { tenantId, deletedAt: null },
+      _count: { _all: true },
+    });
+
+    const countOf = (status: string) =>
+      groups.find((g) => g.operationStatus === status)?._count._all ?? 0;
+
+    return {
+      total: groups.reduce((sum, g) => sum + g._count._all, 0),
+      available: countOf(VEHICLE_OPERATION_STATUS.AVAILABLE),
+      renting: countOf(VEHICLE_OPERATION_STATUS.RENTING),
+      maintenance: countOf(VEHICLE_OPERATION_STATUS.MAINTENANCE),
+      inactive: countOf(VEHICLE_OPERATION_STATUS.INACTIVE),
+    };
+  }
+
+  /**
+   * Tổng hợp cho Hồ sơ 360 của MỘT xe: chỉ số luỹ kế + đơn sắp tới + hoạt động gần đây.
+   *
+   * Gộp thành một endpoint để trang chi tiết không bắn N request rời. Từng khối gate theo quyền
+   * ở đây chứ không ở FE: thiếu `bookings.view` thì truy vấn đơn KHÔNG chạy và hai danh sách
+   * vắng mặt khỏi response; thiếu `finance.view` thì `stats` không mang số tiền (kế thừa từ
+   * `stats()`).
+   *
+   * Xe phải thuộc tenant của người gọi — id đoán được của shop khác trả 404, không lộ tồn tại.
+   */
+  async summary360(
+    tenantId: string,
+    id: string,
+    opts: { canViewFinance: boolean; canViewBookings: boolean },
+  ): Promise<Vehicle360SummaryDto> {
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!vehicle) throw notFound();
+
+    const [statsRow] = await this.stats(tenantId, [id], opts.canViewFinance);
+    // `stats()` luôn trả một dòng cho mỗi id truyền vào; fallback chỉ để thoả type index-access.
+    const result: Vehicle360SummaryDto = {
+      stats: statsRow ?? { vehicleId: id, activeBookings: 0, completedBookings: 0 },
+    };
+
+    if (!opts.canViewBookings) return result;
+
+    const briefSelect = {
+      id: true,
+      code: true,
+      customerName: true,
+      status: true,
+      pickupAt: true,
+      returnAt: true,
+      totalAmount: true,
+      updatedAt: true,
+    } satisfies Prisma.BookingSelect;
+
+    // "Sắp tới" = đơn còn chiếm lịch từ giờ trở đi (đặt trước/xác nhận/đang thuê, chưa trả xe).
+    const [upcoming, recent] = await Promise.all([
+      this.prisma.booking.findMany({
+        where: {
+          tenantId,
+          vehicleId: id,
+          deletedAt: null,
+          status: {
+            in: [BOOKING_STATUS.RESERVED, BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ACTIVE],
+          },
+          returnAt: { gte: new Date() },
+        },
+        orderBy: { pickupAt: 'asc' },
+        take: 3,
+        select: briefSelect,
+      }),
+      this.prisma.booking.findMany({
+        where: { tenantId, vehicleId: id, deletedAt: null },
+        orderBy: { updatedAt: 'desc' },
+        take: 3,
+        select: briefSelect,
+      }),
+    ]);
+
+    const toBrief = (b: (typeof upcoming)[number]): VehicleBookingBriefDto => ({
+      id: b.id,
+      code: b.code,
+      customerName: b.customerName,
+      status: b.status,
+      // Interceptor lo Date→ISO và Decimal→string ở tầng response (ADR 0007).
+      pickupAt: b.pickupAt as unknown as string,
+      returnAt: b.returnAt as unknown as string,
+      totalAmount: b.totalAmount as unknown as string,
+      updatedAt: b.updatedAt as unknown as string,
+    });
+
+    result.upcomingBookings = upcoming.map(toBrief);
+    result.recentBookings = recent.map(toBrief);
+    return result;
   }
 
   async list(

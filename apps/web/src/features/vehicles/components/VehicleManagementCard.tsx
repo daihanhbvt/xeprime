@@ -12,7 +12,7 @@ import {
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
-import { absoluteMoney, formatMoneyVnd, isNegativeMoney, subtractMoney } from '@/lib/money';
+import { formatMoneyVnd, isNegativeMoney, subtractMoney } from '@/lib/money';
 import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
 import type { VehicleListItem, VehicleStats } from '../types';
 import styles from './VehicleManagementCard.module.css';
@@ -27,15 +27,23 @@ interface VehicleManagementCardProps {
   actions: RowAction[];
 }
 
+const EMPTY = '—';
+
 /**
- * Thẻ xe trong lưới `/manage/vehicles` — dựng theo Figma `186:1673` (`fleet-list-v2-desktop`).
+ * Thẻ xe trong lưới `/manage/vehicles` — dựng theo Figma `236:1778` (`vehicle-list-v2-desktop`),
+ * bản chỉnh 11/08/2026 chuyển lưới desktop lên 5 cột thẻ gọn (~207px).
  *
- * Giải phẫu khớp frame: **ảnh tràn viền phía trên (209.6×122) → tên + mã·biển số → loại/dịch vụ
- * kèm trạng thái vận hành → gạch ngang → khối chỉ số → gạch ngang → 4 nút Xem/Sửa/Lịch/Xoá.**
- * Thẻ Figma cố tình KHÔNG có giá thuê; giá vẫn nằm ở trang chi tiết.
+ * Giải phẫu khớp frame: **ảnh tràn viền → tên → mã · biển số → loại/dịch vụ kèm HAI trục trạng
+ * thái → gạch ngang → giá thuê + khối chỉ số → gạch ngang → hàng nút.** Khác frame có chủ đích:
+ *  - KHÔNG có chip nguồn xe và chip cảnh báo đăng kiểm/bảo dưỡng — schema chưa có cột nào cho
+ *    các dữ liệu đó (Wave 4/6/7); không bịa số liệu.
+ *  - Nhãn "TỔNG CHI PHÍ" thay vì "CHI PHÍ & KHẤU HAO" của Figma — con số là tổng phiếu chi đã
+ *    duyệt, không có khấu hao; nhãn phải nói đúng số nó mô tả.
+ *  - Thêm hàng giá ngày thường/cuối tuần (dữ liệu có thật trên bản ghi xe).
+ *  - KHÔNG có nút "Xoá" (bản chỉnh 11/08/2026) — xoá chỉ nằm trong menu ⋮ của Hồ sơ 360.
  *
- * Không dựng lại primitive: trạng thái dùng `StatusTag`, hành động dùng `RowActions` (đã có xác
- * nhận xoá, chặn nổi bọt, tên khả truy cập).
+ * Không dựng lại primitive: trạng thái dùng `StatusTag`, hành động dùng `RowActions` (chặn nổi
+ * bọt, tên khả truy cập).
  */
 export function VehicleManagementCard({
   vehicle,
@@ -64,17 +72,6 @@ export function VehicleManagementCard({
             <CarOutlined />
           </span>
         )}
-        {/*
-         * Trục trạng thái công khai. Figma `186:1683` chỉ vẽ trạng thái VẬN HÀNH, nhưng đây là
-         * hai trục độc lập (ADR 0008) và chủ xe cần biết xe đã lên sàn chưa. Đặt ở góc ảnh để
-         * giữ nguyên hàng specs của Figma thay vì nhồi hai thẻ vào một dòng 185px.
-         */}
-        <span className={styles.publicBadge}>
-          <StatusTag
-            value={vehicle.publicStatus as VehiclePublicStatus}
-            meta={VEHICLE_PUBLIC_STATUS_META}
-          />
-        </span>
       </div>
 
       <div className={styles.body}>
@@ -85,15 +82,33 @@ export function VehicleManagementCard({
           <p className={styles.meta}>{identity}</p>
         </div>
 
+        {/* Hai trục trạng thái độc lập cùng một hàng — Figma `236:1794` vẽ cả hai chip. */}
         <div className={styles.specsStatus}>
           <span className={styles.specs}>{specs}</span>
-          <StatusTag
-            value={vehicle.operationStatus as VehicleOperationStatus}
-            meta={VEHICLE_OPERATION_STATUS_META}
-          />
+          <span className={styles.statusPair}>
+            <StatusTag
+              value={vehicle.operationStatus as VehicleOperationStatus}
+              meta={VEHICLE_OPERATION_STATUS_META}
+            />
+            <StatusTag
+              value={vehicle.publicStatus as VehiclePublicStatus}
+              meta={VEHICLE_PUBLIC_STATUS_META}
+            />
+          </span>
         </div>
 
         <div className={styles.metrics}>
+          <dl className={styles.metricRow}>
+            <div>
+              <dt>Giá ngày thường</dt>
+              <dd>{vehicle.weekdayPrice ? formatMoneyVnd(vehicle.weekdayPrice) : EMPTY}</dd>
+            </div>
+            <div className={styles.alignEnd}>
+              <dt>Giá cuối tuần</dt>
+              <dd>{vehicle.weekendPrice ? formatMoneyVnd(vehicle.weekendPrice) : EMPTY}</dd>
+            </div>
+          </dl>
+
           {statsLoading ? (
             <Skeleton active paragraph={{ rows: 2, width: ['100%', '70%'] }} title={false} />
           ) : statsFailed || !stats ? (
@@ -116,19 +131,20 @@ export function VehicleManagementCard({
                 <>
                   <dl className={styles.metricRow}>
                     <div>
-                      <dt>Tổng thu</dt>
+                      <dt>Tổng doanh thu</dt>
                       <dd className={styles.income}>{formatMoneyVnd(stats.totalIncome)}</dd>
                     </div>
                     <div className={styles.alignEnd}>
-                      <dt>Tổng chi</dt>
+                      <dt>Tổng chi phí</dt>
                       <dd className={styles.expense}>{formatMoneyVnd(stats.totalExpense)}</dd>
                     </div>
                   </dl>
 
+                  {/* Số mang dấu — Figma `236:2060` hiện "-500.000 đ" đỏ, nhãn giữ nguyên. */}
                   <dl className={styles.profitRow}>
-                    <dt>{atLoss ? 'Lỗ luỹ kế' : 'Lãi luỹ kế'}</dt>
+                    <dt>Lợi nhuận thực tế</dt>
                     <dd className={atLoss ? styles.expense : styles.income}>
-                      {formatMoneyVnd(absoluteMoney(profit))}
+                      {formatMoneyVnd(profit)}
                     </dd>
                   </dl>
                 </>

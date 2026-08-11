@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PERMISSION, type Permission } from '@xeprime/types';
 
@@ -41,16 +41,6 @@ vi.mock('@/features/vehicles/hooks/use-vehicles', () => ({
   useVehicles: () => query,
 }));
 
-const deleteVehicle = vi.hoisted(() => ({
-  mutate: vi.fn(),
-  isPending: false,
-  variables: undefined as string | undefined,
-}));
-
-vi.mock('@/features/vehicles/hooks/use-vehicle-mutations', () => ({
-  useDeleteVehicle: () => deleteVehicle,
-}));
-
 /** Chỉ số thẻ — mock ở tầng hook để không cần QueryClientProvider trong test trang. */
 const stats = vi.hoisted(() => ({
   byId: new Map<string, unknown>(),
@@ -65,6 +55,19 @@ vi.mock('@/features/vehicles/hooks/use-vehicle-card-stats', () => ({
     stats.requestedIds = ids;
     return stats;
   },
+}));
+
+/** Dải chỉ số đội xe (mobile) — mock ở tầng hook, cùng lý do với `useVehicleCardStats`. */
+const fleet = vi.hoisted(() => ({
+  data: undefined as
+    | { total: number; available: number; renting: number; maintenance: number; inactive: number }
+    | undefined,
+  isLoading: false,
+  isError: false,
+}));
+
+vi.mock('@/features/vehicles/hooks/use-fleet-summary', () => ({
+  useFleetSummary: () => fleet,
 }));
 
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
@@ -154,9 +157,10 @@ beforeEach(() => {
   nav.replace.mockReset();
   nav.params = new URLSearchParams();
   query.refetch.mockReset();
-  deleteVehicle.mutate.mockReset();
-  deleteVehicle.isPending = false;
   viewport.mobile = false;
+  fleet.data = { total: 32, available: 24, renting: 3, maintenance: 4, inactive: 1 };
+  fleet.isLoading = false;
+  fleet.isError = false;
   setQuery({ data: { items: [vehicle()], meta: META } });
   setStats([statsOf()]);
   grant();
@@ -213,26 +217,47 @@ describe('/manage/vehicles — nội dung thẻ', () => {
     expect(within(card).getByText('15')).toBeTruthy();
   });
 
-  it('lãi luỹ kế tính từ tổng thu trừ tổng chi, KHÔNG trộn phạm vi', () => {
+  it('lợi nhuận tính từ tổng doanh thu trừ tổng chi phí, KHÔNG trộn phạm vi', () => {
     renderPage();
 
     const card = cards()[0]!;
+    expect(within(card).getByText('Tổng doanh thu')).toBeTruthy();
     expect(within(card).getByText('12.750.000 ₫')).toBeTruthy();
+    expect(within(card).getByText('Tổng chi phí')).toBeTruthy();
     expect(within(card).getByText('3.200.000 ₫')).toBeTruthy();
     // 12.750.000 − 3.200.000
-    expect(within(card).getByText('Lãi luỹ kế')).toBeTruthy();
+    expect(within(card).getByText('Lợi nhuận thực tế')).toBeTruthy();
     expect(within(card).getByText('9.550.000 ₫')).toBeTruthy();
   });
 
-  it('chi nhiều hơn thu: đổi nhãn thành "Lỗ luỹ kế", không hiện số âm', () => {
-    // Nhãn đã nói "Lỗ" — thêm dấu trừ là phủ định hai lần, đọc ra thành "lỗ âm 500 nghìn".
+  it('chi nhiều hơn thu: giữ nhãn, số mang DẤU ÂM và tô đỏ (Figma `236:2060`)', () => {
     setStats([statsOf({ totalIncome: '1000000', totalExpense: '1500000' })]);
     renderPage();
 
     const card = cards()[0]!;
-    expect(within(card).getByText('Lỗ luỹ kế')).toBeTruthy();
-    expect(within(card).getByText('500.000 ₫')).toBeTruthy();
-    expect(within(card).queryByText('-500.000 ₫')).toBeNull();
+    expect(within(card).getByText('Lợi nhuận thực tế')).toBeTruthy();
+    expect(within(card).getByText('-500.000 ₫')).toBeTruthy();
+  });
+
+  it('thẻ hiện giá ngày thường và cuối tuần từ bản ghi xe', () => {
+    renderPage();
+
+    const card = cards()[0]!;
+    expect(within(card).getByText('Giá ngày thường')).toBeTruthy();
+    expect(within(card).getByText('300.000 ₫')).toBeTruthy();
+    expect(within(card).getByText('Giá cuối tuần')).toBeTruthy();
+    expect(within(card).getByText('350.000 ₫')).toBeTruthy();
+  });
+
+  it('xe chưa có giá: ô giá là "—", không phải 0 giả', () => {
+    setQuery({
+      data: { items: [vehicle({ weekdayPrice: null, weekendPrice: null })], meta: META },
+    });
+    renderPage();
+
+    const card = cards()[0]!;
+    expect(within(card).getByText('Giá ngày thường')).toBeTruthy();
+    expect(within(card).queryByText('0 ₫')).toBeNull();
   });
 
   it('tiền đi qua bộ format, không phải số thô', () => {
@@ -260,9 +285,9 @@ describe('/manage/vehicles — quyền tài chính', () => {
     renderPage();
 
     const card = cards()[0]!;
-    expect(within(card).queryByText('Tổng thu')).toBeNull();
-    expect(within(card).queryByText('Tổng chi')).toBeNull();
-    expect(within(card).queryByText(/Lãi luỹ kế|Lỗ luỹ kế/)).toBeNull();
+    expect(within(card).queryByText('Tổng doanh thu')).toBeNull();
+    expect(within(card).queryByText('Tổng chi phí')).toBeNull();
+    expect(within(card).queryByText('Lợi nhuận thực tế')).toBeNull();
   });
 
   it('thiếu quyền tài chính nhưng đơn hàng và định danh vẫn dùng được', () => {
@@ -293,7 +318,7 @@ describe('/manage/vehicles — trạng thái lưới thẻ', () => {
     const card = cards()[0]!;
     expect(within(card).getByText('Không tải được số liệu')).toBeTruthy();
     expect(within(card).getByText('Honda SH 150i 2023')).toBeTruthy();
-    expect(within(card).getByRole('button', { name: 'Xem' })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Xem chi tiết' })).toBeTruthy();
   });
 
   it('số liệu hỏng KHÔNG hiện số 0 giả', () => {
@@ -339,29 +364,30 @@ describe('/manage/vehicles — trạng thái lưới thẻ', () => {
 /* ------------------------------------------------------------------ hành động */
 
 describe('/manage/vehicles — hành động trên thẻ', () => {
-  it('chỉ có quyền xem: còn Xem và Lịch, không có Sửa/Xoá', () => {
+  it('chỉ có quyền xem: còn Xem chi tiết và Lịch, không có Sửa/Xoá', () => {
     renderPage();
 
     const card = cards()[0]!;
-    expect(within(card).getByRole('button', { name: 'Xem' })).toBeTruthy();
+    expect(within(card).getByRole('button', { name: 'Xem chi tiết' })).toBeTruthy();
     expect(within(card).queryByRole('button', { name: 'Sửa' })).toBeNull();
     expect(within(card).queryByRole('button', { name: 'Xoá' })).toBeNull();
   });
 
-  it('có quyền sửa và xoá: đủ bốn hành động, mỗi cái có tên khả truy cập', () => {
-    grant(PERMISSION.VEHICLE_UPDATE, PERMISSION.VEHICLE_DELETE);
+  it('có quyền sửa: đủ ba hành động, mỗi cái có tên khả truy cập', () => {
+    grant(PERMISSION.VEHICLE_UPDATE);
     renderPage();
 
     const labels = within(cards()[0]!)
       .getAllByRole('button')
       .map((button) => button.textContent);
 
-    expect(labels).toEqual(['Xem', 'Sửa', 'Lịch', 'Xoá']);
+    // Nhãn đầy đủ ở thẻ desktop (Figma `236:1820` "Xem chi tiết").
+    expect(labels).toEqual(['Xem chi tiết', 'Sửa', 'Lịch']);
   });
 
-  it('"Xem" mở trang chi tiết đúng id', () => {
+  it('"Xem chi tiết" mở trang chi tiết đúng id', () => {
     renderPage();
-    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Xem' }));
+    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Xem chi tiết' }));
 
     expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/v1');
   });
@@ -389,21 +415,11 @@ describe('/manage/vehicles — hành động trên thẻ', () => {
     expect(nav.push.mock.calls.at(-1)?.[0]).toContain('q=Honda+SH+150i+2023');
   });
 
-  it('xoá phải xác nhận trước, và hộp xác nhận nêu đích danh xe', async () => {
-    grant(PERMISSION.VEHICLE_DELETE);
+  it('KHÔNG có "Xoá" trên thẻ dù đủ quyền — xoá chỉ nằm trong Hồ sơ 360 (bản chỉnh 11/08/2026)', () => {
+    grant(PERMISSION.VEHICLE_UPDATE, PERMISSION.VEHICLE_DELETE);
     renderPage();
 
-    fireEvent.click(within(cards()[0]!).getByRole('button', { name: 'Xoá' }));
-    expect(deleteVehicle.mutate).not.toHaveBeenCalled();
-
-    expect(await screen.findByText('Xoá xe "Honda SH 150i 2023"?')).toBeTruthy();
-    expect(screen.getByText(/Không xoá được nếu còn lịch thuê/)).toBeTruthy();
-
-    // Nút xác nhận của Popconfirm trùng tên với nút hành động — lấy nút CUỐI (nút vừa mở ra).
-    const confirmButtons = screen.getAllByRole('button', { name: 'Xoá' });
-    fireEvent.click(confirmButtons.at(-1)!);
-    await waitFor(() => expect(deleteVehicle.mutate).toHaveBeenCalledTimes(1));
-    expect(deleteVehicle.mutate.mock.calls[0]![0]).toBe('v1');
+    expect(within(cards()[0]!).queryByRole('button', { name: 'Xoá' })).toBeNull();
   });
 });
 
@@ -448,7 +464,7 @@ describe('/manage/vehicles — hàng ngang ở mobile', () => {
       .getAllByRole('button')
       .map((button) => button.textContent);
 
-    expect(labels).toEqual(['Xem', 'Sửa', 'Lịch', 'Xoá']);
+    expect(labels).toEqual(['Xem', 'Sửa', 'Lịch']);
   });
 
   it('số liệu hỏng ở mobile cũng không dựng số 0 giả', () => {
@@ -456,5 +472,52 @@ describe('/manage/vehicles — hàng ngang ở mobile', () => {
     renderPage();
 
     expect(within(cards()[0]!).getByText('Không tải được số liệu')).toBeTruthy();
+  });
+
+  it('dải chỉ số đội xe: tổng / sẵn sàng / đang thuê từ API, không phụ thuộc trang', () => {
+    renderPage();
+
+    const bar = screen.getByLabelText('Chỉ số đội xe');
+    expect(within(bar).getByText('Tổng số xe')).toBeTruthy();
+    expect(within(bar).getByText('32 xe')).toBeTruthy();
+    expect(within(bar).getByText('Sẵn sàng')).toBeTruthy();
+    expect(within(bar).getByText('24 xe')).toBeTruthy();
+    expect(within(bar).getByText('Đang thuê')).toBeTruthy();
+    expect(within(bar).getByText('3 xe')).toBeTruthy();
+  });
+
+  it('dải chỉ số hỏng: tự ẩn, danh sách vẫn dựng bình thường', () => {
+    fleet.data = undefined;
+    fleet.isError = true;
+    renderPage();
+
+    expect(screen.queryByLabelText('Chỉ số đội xe')).toBeNull();
+    expect(cards()).toHaveLength(1);
+  });
+
+  it('chip trạng thái ghi vào CÙNG filter URL với dropdown "Vận hành" (ADR 0004)', () => {
+    renderPage();
+
+    const chips = screen.getByRole('group', { name: 'Lọc theo trạng thái vận hành' });
+    fireEvent.click(within(chips).getByRole('button', { name: 'Bảo dưỡng' }));
+
+    expect(String(nav.replace.mock.calls.at(-1)?.[0])).toContain('operationStatus=maintenance');
+  });
+
+  it('chip "Tất cả" đang bật khi không lọc — và có trạng thái bật cho trình đọc', () => {
+    renderPage();
+
+    const chips = screen.getByRole('group', { name: 'Lọc theo trạng thái vận hành' });
+    expect(within(chips).getByRole('button', { name: 'Tất cả' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+  });
+
+  it('desktop KHÔNG dựng dải chỉ số và hàng chip — hai khối là của mobile', () => {
+    viewport.mobile = false;
+    renderPage();
+
+    expect(screen.queryByLabelText('Chỉ số đội xe')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Lọc theo trạng thái vận hành' })).toBeNull();
   });
 });

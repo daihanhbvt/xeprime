@@ -1708,6 +1708,28 @@
         ]
       }
     },
+    "/vehicles/fleet-summary": {
+      "get": {
+        "operationId": "VehiclesController_fleetSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FleetSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đếm đội xe theo trạng thái vận hành (dải chỉ số đầu danh sách)",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
     "/vehicles/{id}": {
       "get": {
         "operationId": "VehiclesController_getOne",
@@ -1806,6 +1828,37 @@
           }
         },
         "summary": "Xoá mềm xe (chặn nếu còn lịch hiện tại/tương lai)",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
+    "/vehicles/{id}/summary": {
+      "get": {
+        "operationId": "VehiclesController_summary",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vehicle360SummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền)",
         "tags": [
           "vehicles"
         ]
@@ -7434,6 +7487,38 @@
           "data"
         ]
       },
+      "FleetSummaryDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Tổng số xe của gian hàng (không tính xe đã xoá mềm)"
+          },
+          "available": {
+            "type": "number",
+            "description": "Xe có operationStatus = available"
+          },
+          "renting": {
+            "type": "number",
+            "description": "Xe có operationStatus = renting"
+          },
+          "maintenance": {
+            "type": "number",
+            "description": "Xe có operationStatus = maintenance"
+          },
+          "inactive": {
+            "type": "number",
+            "description": "Xe có operationStatus = inactive"
+          }
+        },
+        "required": [
+          "total",
+          "available",
+          "renting",
+          "maintenance",
+          "inactive"
+        ]
+      },
       "VehiclePublicReviewDto": {
         "type": "object",
         "properties": {
@@ -7629,6 +7714,82 @@
           "createdAt",
           "images",
           "features"
+        ]
+      },
+      "VehicleBookingBriefDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "confirmed",
+              "active",
+              "completed",
+              "cancelled",
+              "no_show"
+            ]
+          },
+          "pickupAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "returnAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "totalAmount": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC — lần thay đổi gần nhất của đơn"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "customerName",
+          "status",
+          "pickupAt",
+          "returnAt",
+          "totalAmount",
+          "updatedAt"
+        ]
+      },
+      "Vehicle360SummaryDto": {
+        "type": "object",
+        "properties": {
+          "stats": {
+            "$ref": "#/components/schemas/VehicleStatsDto"
+          },
+          "upcomingBookings": {
+            "description": "Đơn sắp tới/đang chạy (tối đa 3, sớm nhất trước) — chỉ khi có `bookings.view`",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleBookingBriefDto"
+            }
+          },
+          "recentBookings": {
+            "description": "Đơn thay đổi gần nhất (tối đa 3, mới nhất trước) — chỉ khi có `bookings.view`",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleBookingBriefDto"
+            }
+          }
+        },
+        "required": [
+          "stats"
         ]
       },
       "CreateVehicleDto": {

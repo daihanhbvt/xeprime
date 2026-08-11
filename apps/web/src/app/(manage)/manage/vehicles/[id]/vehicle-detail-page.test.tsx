@@ -1,18 +1,18 @@
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { API_ERROR_CODE, PERMISSION, type Permission } from '@xeprime/types';
 
 import { ApiClientError } from '@/services/api-client';
-import type { VehicleDetail } from '@/features/vehicles/types';
+import type { Vehicle360Summary, VehicleDetail } from '@/features/vehicles/types';
 
 import VehicleDetailPage from './page';
 
 /**
- * `/manage/vehicles/[id]` — chi tiết xe.
+ * `/manage/vehicles/[id]` — Hồ sơ 360 của xe (Figma `236:2222`).
  *
- * Khẳng định trên hợp đồng: quyền nào mở hành động nào, trạng thái nào hiện ra, điều hướng đi đâu.
- * KHÔNG khẳng định trên bố cục hai cột (đó là chuyện của CSS, không phải nghiệp vụ).
+ * Khẳng định trên hợp đồng: quyền nào mở hành động nào, khối nào hiện từ dữ liệu nào, tổng hợp
+ * hỏng thì hồ sơ còn đứng không. KHÔNG khẳng định trên bố cục cột (đó là chuyện của CSS).
  */
 
 /* ------------------------------------------------------------------ hạ tầng mock */
@@ -44,6 +44,21 @@ vi.mock('@/features/vehicles/hooks/use-vehicle', () => ({
   useVehicle: (id: string | undefined) => {
     detail.requestedId = id;
     return detail;
+  },
+}));
+
+/** Tổng hợp 360 — mock ở tầng hook để không cần QueryClientProvider trong test trang. */
+const summary = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isLoading: false,
+  isError: false,
+  requestedId: undefined as string | undefined,
+}));
+
+vi.mock('@/features/vehicles/hooks/use-vehicle-summary', () => ({
+  useVehicleSummary: (id: string | undefined) => {
+    summary.requestedId = id;
+    return summary;
   },
 }));
 
@@ -107,6 +122,43 @@ function vehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
   } as VehicleDetail;
 }
 
+function summaryOf(over: Partial<Vehicle360Summary> = {}): Vehicle360Summary {
+  return {
+    stats: {
+      vehicleId: 'v1',
+      activeBookings: 1,
+      completedBookings: 12,
+      totalIncome: '12750000',
+      totalExpense: '3200000',
+    },
+    upcomingBookings: [
+      {
+        id: 'b1',
+        code: 'DH0001',
+        customerName: 'Anh Tuấn',
+        status: 'confirmed',
+        pickupAt: '2026-10-25T01:00:00.000Z',
+        returnAt: '2026-10-27T01:00:00.000Z',
+        totalAmount: '1700000',
+        updatedAt: '2026-10-20T01:00:00.000Z',
+      },
+    ],
+    recentBookings: [
+      {
+        id: 'b2',
+        code: 'DH0002',
+        customerName: 'Chị Thảo',
+        status: 'completed',
+        pickupAt: '2026-10-20T01:00:00.000Z',
+        returnAt: '2026-10-22T01:00:00.000Z',
+        totalAmount: '2550000',
+        updatedAt: '2026-10-24T05:30:00.000Z',
+      },
+    ],
+    ...over,
+  } as Vehicle360Summary;
+}
+
 function apiError(message: string, code: string, status = 400) {
   return new ApiClientError({ code, message, status });
 }
@@ -127,6 +179,11 @@ function renderPage() {
   );
 }
 
+/** Panel "Tiến trình gửi duyệt công khai" — để câu hỏi 'Chưa có' không dính các khối khác. */
+function reviewPanel(): HTMLElement {
+  return screen.getByText('Tiến trình gửi duyệt công khai').closest('.ant-card') as HTMLElement;
+}
+
 beforeEach(() => {
   nav.push.mockReset();
   nav.replace.mockReset();
@@ -140,6 +197,10 @@ beforeEach(() => {
   detail.error = undefined;
   detail.refetch.mockReset();
   detail.requestedId = undefined;
+  summary.data = summaryOf();
+  summary.isLoading = false;
+  summary.isError = false;
+  summary.requestedId = undefined;
   grant();
 });
 
@@ -148,12 +209,13 @@ afterEach(cleanup);
 /* ------------------------------------------------------------------ quyền */
 
 describe('/manage/vehicles/[id] — quyền', () => {
-  it('không có `vehicles.view`: màn 403 và KHÔNG gọi API chi tiết', () => {
+  it('không có `vehicles.view`: màn 403 và KHÔNG gọi API chi tiết lẫn tổng hợp', () => {
     revokeAll();
     renderPage();
 
     expect(screen.getByText('Không có quyền xem xe')).toBeTruthy();
     expect(detail.requestedId).toBeUndefined();
+    expect(summary.requestedId).toBeUndefined();
   });
 
   it('màn 403 KHÔNG để lộ bất cứ thông tin nào của xe', () => {
@@ -164,11 +226,13 @@ describe('/manage/vehicles/[id] — quyền', () => {
     expect(screen.queryByText('51B-802.46')).toBeNull();
   });
 
-  it('chỉ có quyền xem: không có nút sửa, không có nút xoá', () => {
+  it('chỉ có quyền xem: không có nút sửa, không có menu thao tác khác', () => {
     renderPage();
 
     expect(screen.queryByRole('button', { name: 'Chỉnh sửa' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Xoá xe' })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /Thao tác khác cho Ford Transit 2021/ }),
+    ).toBeNull();
   });
 
   it('có quyền sửa: nút "Chỉnh sửa" dẫn tới đúng route sửa', () => {
@@ -179,11 +243,20 @@ describe('/manage/vehicles/[id] — quyền', () => {
     expect(nav.push).toHaveBeenCalledWith('/manage/vehicles/v1/edit');
   });
 
-  it('có quyền xoá: nút xoá chỉ-icon vẫn có tên khả truy cập', () => {
+  it('nút "Xem lịch" mở màn lịch đã lọc sẵn về đúng xe', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xem lịch' }));
+    expect(nav.push).toHaveBeenCalledWith('/manage/calendar?q=51B-802.46');
+  });
+
+  it('có quyền xoá: nút menu chỉ-icon vẫn có tên khả truy cập', () => {
     grant(PERMISSION.VEHICLE_DELETE);
     renderPage();
 
-    expect(screen.getByRole('button', { name: 'Xoá xe' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: /Thao tác khác cho Ford Transit 2021/ }),
+    ).toBeTruthy();
   });
 });
 
@@ -196,7 +269,7 @@ describe('/manage/vehicles/[id] — tải, lỗi, không tìm thấy', () => {
     renderPage();
 
     expect(screen.getByRole('status')).toBeTruthy();
-    expect(screen.queryByText('Thông tin chi tiết phương tiện')).toBeNull();
+    expect(screen.queryByText('Thông số kỹ thuật')).toBeNull();
   });
 
   it('lỗi tải: có nút thử lại và gọi đúng refetch', () => {
@@ -230,25 +303,29 @@ describe('/manage/vehicles/[id] — tải, lỗi, không tìm thấy', () => {
   });
 });
 
-/* ------------------------------------------------------------------ nội dung */
+/* ------------------------------------------------------------------ hồ sơ */
 
-describe('/manage/vehicles/[id] — nội dung hiển thị', () => {
-  it('tiêu đề là tên xe, ở cấp heading của trang', () => {
+describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
+  it('tiêu đề trang là "Hồ sơ chi tiết xe"; tên xe nằm trong thẻ hồ sơ', () => {
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Ford Transit 2021' })).toBeTruthy();
+
+    expect(screen.getByRole('heading', { name: 'Hồ sơ chi tiết xe' })).toBeTruthy();
+    expect(screen.getByText('Ford Transit 2021')).toBeTruthy();
+    expect(screen.getByText('XE-014')).toBeTruthy();
   });
 
-  it('hiện CẢ HAI trục trạng thái — vận hành và public', () => {
+  it('hiện CẢ HAI trục trạng thái — vận hành và public — kèm nhãn trục', () => {
     renderPage();
 
+    expect(screen.getByText('Vận hành')).toBeTruthy();
     expect(screen.getByText('Sẵn sàng')).toBeTruthy();
+    expect(screen.getByText('Public')).toBeTruthy();
     expect(screen.getByText('Nháp')).toBeTruthy();
   });
 
   it('thông số kỹ thuật hiện đúng giá trị đang lưu', () => {
     renderPage();
 
-    expect(screen.getByText('XE-014')).toBeTruthy();
     expect(screen.getByText('51B-802.46')).toBeTruthy();
     expect(screen.getByText('Ford')).toBeTruthy();
     expect(screen.getByText('16')).toBeTruthy();
@@ -257,7 +334,7 @@ describe('/manage/vehicles/[id] — nội dung hiển thị', () => {
   it('tiền hiển thị qua bộ format, không phải số thô', () => {
     renderPage();
 
-    expect(screen.getByText('1.800.000 ₫')).toBeTruthy();
+    expect(screen.getByText(/1\.800\.000 ₫/)).toBeTruthy();
     expect(screen.queryByText('1800000')).toBeNull();
   });
 
@@ -274,11 +351,103 @@ describe('/manage/vehicles/[id] — nội dung hiển thị', () => {
     expect(screen.queryByText('Giá hiển thị sàn')).toBeNull();
   });
 
-  it('chưa có ảnh: nói rõ thay vì để khoảng trống', () => {
+  it('chưa có ảnh: fallback trang trí, và việc-cần-làm nêu đúng mục ảnh còn thiếu', () => {
     detail.data = vehicle({ mainImageUrl: null });
     renderPage();
 
-    expect(screen.getByText('Chưa có ảnh đại diện.')).toBeTruthy();
+    expect(screen.getByText('Bổ sung ảnh đại diện để đủ điều kiện public')).toBeTruthy();
+  });
+
+  it('xe bị từ chối: banner nêu lý do của nền tảng ngay trên thẻ hồ sơ', () => {
+    detail.data = vehicle({
+      publicStatus: 'rejected',
+      latestPublicReview: {
+        status: 'rejected',
+        reason: 'Ảnh không đúng xe thật',
+        reviewedAt: '2026-08-01T00:00:00.000Z',
+      },
+    } as Partial<VehicleDetail>);
+    renderPage();
+
+    expect(screen.getAllByText('Xe bị từ chối').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ảnh không đúng xe thật').length).toBeGreaterThan(0);
+  });
+});
+
+/* ------------------------------------------------------------------ khối tổng hợp */
+
+describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
+  it('lịch thuê sắp tới và hoạt động gần đây dựng từ dữ liệu tổng hợp', () => {
+    renderPage();
+
+    expect(screen.getByText(/Anh Tuấn • 25\/10 – 27\/10/)).toBeTruthy();
+    expect(screen.getByText(/1\.700\.000 ₫ • Đã xác nhận/)).toBeTruthy();
+    expect(screen.getByText('Đơn DH0002 · Hoàn thành')).toBeTruthy();
+  });
+
+  it('hiệu suất luỹ kế: doanh thu, lượt thuê và đơn đang chạy từ stats', () => {
+    renderPage();
+
+    const card = screen.getByText('Hiệu suất luỹ kế').closest('.ant-card') as HTMLElement;
+    expect(within(card).getByText('12.750.000 ₫')).toBeTruthy();
+    expect(within(card).getByText('12 chuyến')).toBeTruthy();
+    expect(within(card).getByText('1 đơn')).toBeTruthy();
+  });
+
+  it('thiếu quyền đơn thuê: backend bỏ hai danh sách → hai khối đó KHÔNG dựng', () => {
+    summary.data = summaryOf({ upcomingBookings: undefined, recentBookings: undefined });
+    renderPage();
+
+    expect(screen.queryByText('Lịch thuê sắp tới')).toBeNull();
+    expect(screen.queryByText('Hoạt động gần đây')).toBeNull();
+    // Hiệu suất vẫn còn — stats luôn có mặt.
+    expect(screen.getByText('Hiệu suất luỹ kế')).toBeTruthy();
+  });
+
+  it('thiếu quyền tài chính: khối hiệu suất không dựng dòng doanh thu', () => {
+    summary.data = summaryOf({
+      stats: { vehicleId: 'v1', activeBookings: 1, completedBookings: 12 },
+    });
+    renderPage();
+
+    const card = screen.getByText('Hiệu suất luỹ kế').closest('.ant-card') as HTMLElement;
+    expect(within(card).queryByText('Doanh thu')).toBeNull();
+    expect(within(card).getByText('12 chuyến')).toBeTruthy();
+  });
+
+  it('tổng hợp hỏng: hồ sơ vẫn hiển thị, từng khối báo "Không tải được"', () => {
+    summary.data = undefined;
+    summary.isError = true;
+    renderPage();
+
+    expect(screen.getByText('Ford Transit 2021')).toBeTruthy();
+    expect(screen.getAllByText('Không tải được dữ liệu.').length).toBeGreaterThan(0);
+  });
+
+  it('không có lịch sắp tới: nói rõ thay vì để trống', () => {
+    summary.data = summaryOf({ upcomingBookings: [] });
+    renderPage();
+
+    expect(screen.getByText('Không có lịch thuê sắp tới.')).toBeTruthy();
+  });
+});
+
+/* ------------------------------------------------------------------ khu vực wave sau */
+
+describe('/manage/vehicles/[id] — khu vực chưa có dữ liệu', () => {
+  it('giấy tờ / nguồn xe / bảo dưỡng hiện "Chưa có dữ liệu", không có số bịa', () => {
+    renderPage();
+
+    expect(screen.getByText('Hồ sơ & Giấy tờ pháp lý')).toBeTruthy();
+    expect(screen.getByText('Nguồn xe & Tài chính')).toBeTruthy();
+    expect(screen.getByText('Bảo dưỡng & Số KM')).toBeTruthy();
+    expect(screen.getByText(/Chưa có dữ liệu giấy tờ/)).toBeTruthy();
+    expect(screen.getByText(/Chưa có thông tin nguồn xe/)).toBeTruthy();
+    expect(screen.getByText(/Chưa có dữ liệu KM/)).toBeTruthy();
+    // Không có lối vào form của wave sau.
+    expect(
+      screen.queryByRole('button', { name: /Thêm giấy tờ|Nhập KM|Thiết lập nguồn xe/ }),
+    ).toBeNull();
   });
 });
 
@@ -295,7 +464,7 @@ describe('/manage/vehicles/[id] — tiến trình gửi duyệt', () => {
     grant(PERMISSION.VEHICLE_SUBMIT_PUBLIC);
     renderPage();
 
-    expect(screen.getAllByText('Đã có')).toHaveLength(4);
+    expect(within(reviewPanel()).getAllByText('Đã có')).toHaveLength(4);
     const button = screen.getByRole('button', { name: /Gửi duyệt công khai/ });
     fireEvent.click(button);
     expect(submitPublic.mutate).toHaveBeenCalledTimes(1);
@@ -306,7 +475,7 @@ describe('/manage/vehicles/[id] — tiến trình gửi duyệt', () => {
     detail.data = vehicle({ description: null, plateNumber: null });
     renderPage();
 
-    expect(screen.getAllByText('Chưa có')).toHaveLength(2);
+    expect(within(reviewPanel()).getAllByText('Chưa có')).toHaveLength(2);
     const button = screen.getByRole('button', { name: /Gửi duyệt công khai/ });
     expect(button.hasAttribute('disabled')).toBe(true);
 
@@ -327,16 +496,23 @@ describe('/manage/vehicles/[id] — tiến trình gửi duyệt', () => {
 /* ------------------------------------------------------------------ xoá + điều hướng */
 
 describe('/manage/vehicles/[id] — xoá và điều hướng', () => {
-  it('xoá phải xác nhận trước, rồi mới gọi mutation với đúng id', async () => {
+  async function openDeleteConfirm() {
+    fireEvent.click(screen.getByRole('button', { name: /Thao tác khác cho Ford Transit 2021/ }));
+    fireEvent.click(await screen.findByText('Xoá xe'));
+  }
+
+  it('xoá nằm sau menu ⋮, phải xác nhận và hộp thoại nói rõ hệ quả', async () => {
     grant(PERMISSION.VEHICLE_DELETE);
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xoá xe' }));
+    await openDeleteConfirm();
     expect(deleteVehicle.mutate).not.toHaveBeenCalled();
 
-    const confirm = await screen.findByRole('button', { name: 'Xoá' });
-    fireEvent.click(confirm);
+    expect(await screen.findByText('Xoá xe "Ford Transit 2021"?')).toBeTruthy();
+    expect(screen.getByText(/Đơn thuê, phiếu thu\/chi đã có vẫn được giữ/)).toBeTruthy();
+    expect(screen.getByText(/Không xoá được nếu xe còn lịch thuê/)).toBeTruthy();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Xoá' }));
     await waitFor(() => expect(deleteVehicle.mutate).toHaveBeenCalledTimes(1));
     expect(deleteVehicle.mutate.mock.calls[0]![0]).toBe('v1');
   });
@@ -345,7 +521,7 @@ describe('/manage/vehicles/[id] — xoá và điều hướng', () => {
     grant(PERMISSION.VEHICLE_DELETE);
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xoá xe' }));
+    await openDeleteConfirm();
     fireEvent.click(await screen.findByRole('button', { name: 'Xoá' }));
     await waitFor(() => expect(deleteVehicle.mutate).toHaveBeenCalledTimes(1));
 

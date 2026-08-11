@@ -1,0 +1,486 @@
+/*
+ * Hồ sơ 360 của xe — hình học từ Figma `236:2222` (desktop 1440) và `236:4783` (mobile 390).
+ * Mọi màu/khoảng cách/bo góc qua token XePrime (ADR 0003).
+ */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+/* ─── Thẻ hồ sơ đầu trang (Figma `236:2322`) ──────────────────────────────── */
+
+.profile {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+}
+
+.profileMain {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-lg);
+}
+
+/* Ảnh 200×140 (`236:2323`) — khung cố định, ảnh cover, không kéo lệch bố cục theo tỉ lệ nguồn. */
+.profileMedia {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  width: 200px;
+  height: 140px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.profileImage {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  inset: 0;
+}
+
+.profileMediaFallback {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-h1);
+}
+
+.profileInfo {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.nameRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.vehicleName {
+  overflow: hidden;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h2);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-heading);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.codeChip {
+  flex: none;
+  padding: 2px var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.plateRow {
+  overflow: hidden;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dot {
+  margin: 0 var(--xp-space-xs);
+  color: var(--xp-color-text-tertiary);
+}
+
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-md);
+}
+
+.axis {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.axisLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Cột hành động 160px bên phải (`236:2349`). Mobile dùng CTA cố định đáy màn thay thế. */
+.profileActions {
+  display: flex;
+  width: 160px;
+  flex: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--xp-space-xs);
+}
+
+/* ─── Ba thẻ nhanh (`236:2354`) ───────────────────────────────────────────── */
+
+.quickRow {
+  display: grid;
+  align-items: start;
+  gap: var(--xp-space-md);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.quickCard {
+  height: 100%;
+}
+
+.muted {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.todoList {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-xs);
+  list-style: none;
+}
+
+.todoItem {
+  display: flex;
+  align-items: baseline;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-xs);
+}
+
+.todoDot {
+  flex: none;
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* Màu chấm theo mức độ — trùng bộ màu ngữ nghĩa của Alert. */
+.error {
+  color: var(--xp-color-error);
+}
+
+.warning {
+  color: var(--xp-color-warning);
+}
+
+.info {
+  color: var(--xp-color-info);
+}
+
+.scheduleList {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-xs);
+  list-style: none;
+}
+
+.scheduleItem {
+  padding-bottom: var(--xp-space-xs);
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+.scheduleItem:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.scheduleTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.scheduleSub {
+  margin: 2px 0 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.perf {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.perfRow {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  gap: var(--xp-space-sm);
+}
+
+.perfRow dt {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.perfRow dd {
+  margin: 2px 0 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.alignEnd {
+  text-align: end;
+}
+
+.perfFoot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: var(--xp-space-xs);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-xs);
+}
+
+.income {
+  color: var(--xp-color-success);
+}
+
+/* ─── Lưới hai cột (`236:2393`) ───────────────────────────────────────────── */
+
+.columns {
+  display: grid;
+  align-items: start;
+  gap: var(--xp-space-lg);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.column {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.sectionCard {
+  width: 100%;
+}
+
+.cardLink {
+  padding: 0;
+}
+
+.kvList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-sm);
+}
+
+.kvRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.kvRow dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.kvRow dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+  text-align: end;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: var(--xp-space-md);
+  gap: var(--xp-space-xs);
+}
+
+.description {
+  margin: var(--xp-space-md) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  white-space: pre-wrap;
+}
+
+.gallery {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-xs);
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  list-style: none;
+}
+
+.galleryThumb {
+  display: block;
+  width: 100%;
+  border-radius: var(--xp-border-radius-sm);
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+/* ─── Hoạt động gần đây (`236:2488`) ──────────────────────────────────────── */
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-md);
+  list-style: none;
+}
+
+.activityItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.activityIcon {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+}
+
+.iconSuccess {
+  color: var(--xp-color-success);
+}
+
+.iconInfo {
+  color: var(--xp-color-info);
+}
+
+.iconError {
+  color: var(--xp-color-error);
+}
+
+.iconMuted {
+  color: var(--xp-color-text-tertiary);
+}
+
+.activityBody {
+  min-width: 0;
+  flex: 1;
+}
+
+.activityHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.activityTitle {
+  overflow: hidden;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activityTime {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.activitySub {
+  overflow: hidden;
+  margin: 2px 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── CTA cố định đáy màn (mobile — Figma `236:4890`) ─────────────────────── */
+
+.mobileActions {
+  display: none;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  /* Tablet: ba thẻ nhanh còn vừa; lưới nội dung xếp một cột (Figma `242:1940`). */
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  /* Mobile `236:4783`: hồ sơ thành thẻ dọc có ảnh bìa; hành động chuyển xuống CTA đáy màn. */
+  .profileMain {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--xp-space-sm);
+  }
+
+  .profileMedia {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 1;
+  }
+
+  .profileActions {
+    display: none;
+  }
+
+  .quickRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /*
+   * `sticky` ở CUỐI luồng nội dung: thanh bám đáy trong suốt lúc cuộn rồi đậu về vị trí thật ở
+   * cuối trang. Đáy dịch lên đúng chiều cao bottom-nav của AppShell + vùng an toàn iOS.
+   */
+  .mobileActions {
+    position: sticky;
+    z-index: 1;
+    bottom: calc(var(--xp-shell-bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    padding: var(--xp-space-sm);
+    border: 1px solid var(--xp-color-border);
+    border-radius: var(--xp-border-radius);
+    background: var(--xp-color-bg-container);
+    box-shadow: var(--xp-shadow-card);
+    gap: var(--xp-space-sm);
+  }
+}

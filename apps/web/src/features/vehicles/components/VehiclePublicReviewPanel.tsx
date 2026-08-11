@@ -12,69 +12,9 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { getErrorMessage } from '@/services/api-client';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle-mutations';
+import { PUBLISH_REQUIREMENTS, publicStatusPresentation } from '../publication';
 import type { VehicleDetail } from '../types';
 import styles from './VehiclePublicReviewPanel.module.css';
-
-/**
- * Điều kiện tối thiểu để xe được lên chợ — khớp `missingPublicFields` ở backend và cột
- * "Publish Req" của ma trận trường Figma `65:4844`.
- */
-const REQUIRED: readonly { present: (v: VehicleDetail) => boolean; label: string }[] = [
-  { present: (v) => Boolean(v.weekdayPrice), label: 'Giá ngày thường' },
-  { present: (v) => Boolean(v.mainImageUrl), label: 'Ảnh đại diện' },
-  { present: (v) => Boolean(v.plateNumber), label: 'Biển số' },
-  { present: (v) => Boolean(v.description), label: 'Mô tả xe' },
-];
-
-interface StatusPresentation {
-  type: 'success' | 'info' | 'warning' | 'error';
-  message: string;
-  description: string;
-}
-
-function presentationFor(
-  status: VehiclePublicStatus,
-  reason: string | null | undefined,
-): StatusPresentation {
-  switch (status) {
-    case VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW:
-      return {
-        type: 'info',
-        message: 'Đang chờ nền tảng duyệt công khai',
-        description: 'Xe sẽ hiển thị trên chợ ngay sau khi được duyệt.',
-      };
-    case VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC:
-      return {
-        type: 'success',
-        message: 'Xe đang hiển thị trên chợ',
-        description: 'Sửa giá, biển số, loại xe hoặc ảnh đại diện sẽ cần duyệt lại.',
-      };
-    case VEHICLE_PUBLIC_STATUS.REJECTED:
-      return {
-        type: 'error',
-        message: 'Xe bị từ chối',
-        description: reason ?? 'Hãy chỉnh sửa theo yêu cầu của nền tảng rồi gửi duyệt lại.',
-      };
-    case VEHICLE_PUBLIC_STATUS.NEEDS_REVISION:
-      return {
-        type: 'warning',
-        message: 'Cần bổ sung thông tin',
-        description: reason ?? 'Hãy bổ sung thông tin còn thiếu rồi gửi duyệt lại.',
-      };
-    case VEHICLE_PUBLIC_STATUS.HIDDEN:
-      return {
-        type: 'warning',
-        message: 'Xe đang bị ẩn khỏi chợ',
-        description: 'Gửi duyệt lại để xe hiển thị trở lại trên marketplace.',
-      };
-    default:
-      return {
-        type: 'info',
-        message: 'Xe chưa đăng lên chợ',
-        description: 'Gửi duyệt để khách hàng thấy xe trên marketplace.',
-      };
-  }
-}
 
 /**
  * Tiến trình gửi duyệt công khai (Figma `65:240` cột phải · `65:3754` Requirements Checklist).
@@ -92,10 +32,13 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
   const status = vehicle.publicStatus as VehiclePublicStatus;
   const canSubmit =
     has(PERMISSION.VEHICLE_SUBMIT_PUBLIC) && VEHICLE_PUBLIC_STATUS_SUBMITTABLE.includes(status);
-  const checklist = REQUIRED.map((item) => ({ label: item.label, met: item.present(vehicle) }));
+  const checklist = PUBLISH_REQUIREMENTS.map((item) => ({
+    label: item.label,
+    met: item.present(vehicle),
+  }));
   const missingCount = checklist.filter((item) => !item.met).length;
   const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
-  const presentation = presentationFor(status, vehicle.latestPublicReview?.reason);
+  const presentation = publicStatusPresentation(status, vehicle.latestPublicReview?.reason);
 
   function onSubmit() {
     submit.mutate(undefined, {

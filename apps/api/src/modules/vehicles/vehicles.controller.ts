@@ -21,7 +21,9 @@ import {
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   CreateVehicleDto,
+  FleetSummaryDto,
   UpdateVehicleDto,
+  Vehicle360SummaryDto,
   VehicleDetailDto,
   VehiclePageDto,
   VehicleListQueryDto,
@@ -75,6 +77,15 @@ export class VehiclesController {
     return { data: await this.vehicles.stats(tenant.tenantId, query.ids, canViewFinance) };
   }
 
+  /** Cùng lý do thứ tự với `stats`: route tĩnh phải đứng trước `:id`. */
+  @Get('fleet-summary')
+  @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @ApiOperation({ summary: 'Đếm đội xe theo trạng thái vận hành (dải chỉ số đầu danh sách)' })
+  @ApiOkResponse({ type: FleetSummaryDto })
+  fleetSummary(@CurrentTenant() tenant: TenantContext): Promise<FleetSummaryDto> {
+    return this.vehicles.fleetSummary(tenant.tenantId);
+  }
+
   @Get(':id')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Chi tiết một xe' })
@@ -84,6 +95,25 @@ export class VehiclesController {
     @Param('id') id: string,
   ): Promise<VehicleDetailDto> {
     return this.vehicles.getOne(tenant.tenantId, id);
+  }
+
+  /**
+   * Tổng hợp cho trang Hồ sơ 360 — một request thay vì FE tự ghép stats + đơn sắp tới + hoạt
+   * động. Khối đơn thuê/tài chính gate theo quyền BÊN TRONG service: response chỉ chứa phần
+   * người gọi được thấy (cùng nguyên tắc với `stats`).
+   */
+  @Get(':id/summary')
+  @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @ApiOperation({ summary: 'Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền)' })
+  @ApiOkResponse({ type: Vehicle360SummaryDto })
+  summary(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<Vehicle360SummaryDto> {
+    return this.vehicles.summary360(tenant.tenantId, id, {
+      canViewFinance: tenant.permissions.includes(PERMISSION.FINANCE_VIEW),
+      canViewBookings: tenant.permissions.includes(PERMISSION.BOOKING_VIEW),
+    });
   }
 
   @Post()

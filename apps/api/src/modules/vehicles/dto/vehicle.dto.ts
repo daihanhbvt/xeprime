@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   APPROVAL_STATUS_VALUES,
+  BOOKING_STATUS_VALUES,
   CATALOG_KEY_PATTERN,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
@@ -423,4 +424,62 @@ export class VehicleStatsQueryDto {
   @IsArray()
   @IsString({ each: true })
   ids!: string[];
+}
+
+/**
+ * Tổng quan đội xe theo trạng thái vận hành — dải chỉ số đầu danh sách xe (Figma `236:4648`).
+ *
+ * Đếm ở DB (`groupBy`), không phụ thuộc trang/bộ lọc hiện tại: con số nói về CẢ đội xe.
+ */
+export class FleetSummaryDto {
+  @ApiProperty({ description: 'Tổng số xe của gian hàng (không tính xe đã xoá mềm)' })
+  total!: number;
+
+  @ApiProperty({ description: 'Xe có operationStatus = available' })
+  available!: number;
+
+  @ApiProperty({ description: 'Xe có operationStatus = renting' })
+  renting!: number;
+
+  @ApiProperty({ description: 'Xe có operationStatus = maintenance' })
+  maintenance!: number;
+
+  @ApiProperty({ description: 'Xe có operationStatus = inactive' })
+  inactive!: number;
+}
+
+/** Một đơn thuê rút gọn cho trang Hồ sơ 360 của xe — đủ cho thẻ "Lịch thuê sắp tới"/hoạt động. */
+export class VehicleBookingBriefDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() customerName!: string;
+  @ApiProperty({ enum: BOOKING_STATUS_VALUES }) status!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
+  @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) totalAmount!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC — lần thay đổi gần nhất của đơn' }) updatedAt!: string;
+}
+
+/**
+ * Tổng hợp cho trang Hồ sơ 360 (`/manage/vehicles/[id]`) — MỘT request thay vì FE tự ghép
+ * stats + hai danh sách đơn (tránh bắn N request rời).
+ *
+ * Từng khối gate theo quyền Ở BACKEND: thiếu `bookings.view` thì hai danh sách đơn vắng mặt
+ * khỏi response (không chạy truy vấn), thiếu `finance.view` thì `stats` không mang số tiền.
+ */
+export class Vehicle360SummaryDto {
+  @ApiProperty({ type: VehicleStatsDto })
+  stats!: VehicleStatsDto;
+
+  @ApiPropertyOptional({
+    type: [VehicleBookingBriefDto],
+    description: 'Đơn sắp tới/đang chạy (tối đa 3, sớm nhất trước) — chỉ khi có `bookings.view`',
+  })
+  upcomingBookings?: VehicleBookingBriefDto[];
+
+  @ApiPropertyOptional({
+    type: [VehicleBookingBriefDto],
+    description: 'Đơn thay đổi gần nhất (tối đa 3, mới nhất trước) — chỉ khi có `bookings.view`',
+  })
+  recentBookings?: VehicleBookingBriefDto[];
 }

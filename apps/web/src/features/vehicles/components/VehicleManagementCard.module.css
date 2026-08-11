@@ -1,8 +1,6 @@
 /*
- * Thẻ xe — hình học lấy từ Figma `186:1673`. Dùng token XePrime; ảnh fleet tối màu do chủ dự án
- * cung cấp chỉ là tham chiếu bố cục, KHÔNG phải nguồn màu.
- *
- * Số đo Figma (thẻ 209.6px): padding thân 12, khoảng cách giữa các khối 10, ảnh 209.6×122.
+ * Thẻ xe — hình học lấy từ Figma `236:1778` (`vehicle-list-v2-desktop`); bản chỉnh 11/08/2026
+ * đưa lưới desktop lên 5 cột nên thẻ phải sống được ở ~207px (khung 1116px của màn 1440).
  */
 .card {
   display: flex;
@@ -22,8 +20,10 @@
 /* ─── Ảnh ─────────────────────────────────────────────────────────────────── */
 
 /*
- * 209.6 × 122 ở Figma → tỉ lệ 1.718. `12 / 7` = 1.714 lệch 0.3px ở bề rộng thẻ chuẩn — dùng phân
- * số thay số thập phân để tỉ lệ tự đúng ở mọi bề rộng cột.
+ * Thẻ ~352 × ảnh 136 ở Figma (`236:1779`) → tỉ lệ ≈ 2.59; `13 / 5` = 2.6 lệch dưới 1px ở bề
+ * rộng thẻ chuẩn — dùng phân số để tỉ lệ tự đúng ở mọi bề rộng cột. Khung cố định tỉ lệ +
+ * `object-fit: cover` bên trong là thứ giữ các thẻ trong một hàng cao bằng nhau dù ảnh nguồn
+ * mỗi xe một tỉ lệ.
  */
 .media {
   position: relative;
@@ -32,7 +32,7 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  aspect-ratio: 12 / 7;
+  aspect-ratio: 13 / 5;
   background: var(--xp-color-bg-muted);
 }
 
@@ -58,11 +58,12 @@
   font-size: var(--xp-font-size-h2);
 }
 
-/* Góc ảnh: trục công khai không chen vào hàng specs vốn chỉ rộng ~185px. */
-.publicBadge {
-  position: absolute;
-  top: var(--xp-space-xs);
-  right: var(--xp-space-xs);
+/* Hai chip trạng thái cạnh nhau (Figma `236:1794`) — không bao giờ bị bóp nhỏ. */
+.statusPair {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-xs);
 }
 
 /* ─── Thân thẻ ────────────────────────────────────────────────────────────── */
@@ -203,4 +204,17 @@
   padding-top: var(--xp-space-sm);
   border-top: 1px solid var(--xp-color-border-secondary);
   margin-top: auto;
+}
+
+/*
+ * "Xem chi tiết" chiếm phần dư của hàng nút — Figma `236:1820` (`act-xem` là flex 1, các nút còn
+ * lại cỡ theo chữ). Cụm nút của `RowActions` là <div> con duy nhất; nút đầu luôn là hành động
+ * chính theo hợp đồng `vehicleRowActions`.
+ */
+.actions > div {
+  flex: 1;
+}
+
+.actions > div > button:first-child {
+  flex: 1 1 auto;
 }

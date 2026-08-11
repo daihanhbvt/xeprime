@@ -91,12 +91,15 @@
 | `/manage/bookings` · `/manage/bookings/[id]` | ✅ / 🆕 | Chi tiết đang là drawer; cần URL riêng để chia sẻ được |
 | `/manage/handovers` | 🆕 | Bàn giao xe có bằng chứng (S-03) |
 | `/manage/vehicles` · `/new` · `/[id]` · `/[id]/edit` | ✅ | |
+| `/manage/maintenance` | 🆕 | Trung tâm bảo dưỡng/KM toàn đội xe; chi tiết record dùng drawer |
 | `/manage/customers` · `/[id]` | 🟡 / 🆕 | Khách hàng **của shop** (S-01) — khác `/manage/admin/customers` |
 | `/manage/drivers`, `/manage/pickup-areas`, `/manage/trash` | 🟡 | Stub |
 | `/manage/finance` · `/receipts` · `/debts` | ✅ | Gom thành nhóm "Tiền" |
+| `/manage/finance/vehicle-obligations` | 🆕 | Kỳ trả góp, thuê lại và quyết toán hợp tác theo xe |
 | `/manage/contracts/[id]` | ✅ | Xem/in hợp đồng |
 | `/manage/shop` | ✅ | Hồ sơ gian hàng |
 | `/manage/members` | ✅ | Người dùng của gian hàng |
+| `/manage/settings/rental-policies` | 🆕 | Mặc định cọc, giao nhận, quá giờ và giảm giá của gian hàng |
 | `/manage/subscription` | 🆕 | Gói của **chính gian hàng này** + hoá đơn (G-02). Hiện gói chỉ quản lý từ phía nền tảng |
 
 ---

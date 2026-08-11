@@ -20,6 +20,8 @@
 | 09 | [Page Design Order](09_PAGE_DESIGN_ORDER.md) | Thiết kế màn nào trước, xong là thế nào | Khi lập kế hoạch |
 | 10 | [Implementation Constraints](10_IMPLEMENTATION_CONSTRAINTS.md) | Cái gì rẻ, cái gì đắt, cái gì cấm | Trước khi đề xuất bất cứ điều gì mới |
 | 11 | [Figma Master Prompt](11_FIGMA_MASTER_PROMPT.md) | Prompt để sinh design system + màn hình | Khi bắt tay vẽ |
+| 12 | [Vehicle 360 Management](12_VEHICLE_360_MANAGEMENT.md) | Quản lý vòng đời xe, policy, nguồn xe, giấy tờ, KM và bảo dưỡng | Khi thiết kế/cài đặt Fleet v2 |
+| 13 | [Figma Vehicle 360 Prompts](13_FIGMA_VEHICLE_360_PROMPTS.md) | 4 batch Figma không phá thiết kế cũ | Khi cập nhật Fleet v2 trong Figma |
 
 ## Quan hệ với tài liệu còn lại
 

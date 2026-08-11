@@ -1,0 +1,43 @@
+/*
+ * Hàng chip lọc (mobile) — Figma `236:4663`: pill bo tròn, một hàng cuộn ngang, không wrap.
+ * Chip chọn nền gold thương hiệu (đây là CONTROL đang bật, không phải màu trạng thái).
+ */
+.row {
+  display: flex;
+  overflow-x: auto;
+  margin-bottom: var(--xp-space-sm);
+  gap: var(--xp-space-xs);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.row::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  padding: var(--xp-space-xs) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  /* Touch target ~40px cao — pill của Figma 33px quá thấp cho ngón tay. */
+  min-height: 40px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.chip:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Chip đang bật: nền gold + chữ tối — đúng cặp màu Figma `236:4664` (#d4af37 / #1a1612). */
+.active {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-bold);
+}

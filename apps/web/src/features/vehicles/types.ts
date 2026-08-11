@@ -30,3 +30,6 @@ export interface VehicleFilters {
 }
 
 export type VehicleStats = Schemas['VehicleStatsDto'];
+export type FleetSummary = Schemas['FleetSummaryDto'];
+export type Vehicle360Summary = Schemas['Vehicle360SummaryDto'];
+export type VehicleBookingBrief = Schemas['VehicleBookingBriefDto'];

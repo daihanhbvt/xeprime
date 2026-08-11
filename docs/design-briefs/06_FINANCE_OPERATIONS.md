@@ -7,6 +7,8 @@
 >
 > **Reading contract:** *Confirmed* = exists. `[RECOMMENDED — NOT CURRENT]` = does not exist. No evidence = `Unknown`.
 >
+> **Accepted target addendum — 2026-08-11, NOT CURRENT:** Finance gains a vehicle-obligations surface for financed, re-rented and partnership vehicles. The default partnership basis is rental after discount plus overtime, excluding deposit, delivery and penalties/other charges. Permissions must prevent financial amounts and contracts leaking into fleet summaries. See [`docs/design/12_VEHICLE_360_MANAGEMENT.md`](../design/12_VEHICLE_360_MANAGEMENT.md). This does not assert current implementation.
+>
 > **Authority statements (per task):**
 > 1. **`PaymentsService` is the authoritative — and only — writer of `booking.paid_amount`.** Its docblock says so ("writer DUY NHẤT"), and it writes via DB-level `increment`/`decrement` so two concurrent collections cannot lose an update.
 > 2. **Debt is computed, never stored: `max(0, total_amount − paid_amount)`** — `bookingDebt()` in [`common/money.ts`](../../apps/api/src/common/money.ts) for DTOs, and the equivalent `total_amount > paid_amount` predicate in raw SQL for the debts list. There is no debt column and no debt table, by design ("tránh drift").

@@ -52,6 +52,10 @@ export const queryKeys = {
     detail: (id: string) => ['vehicles', 'detail', id] as const,
     /** Chỉ số thẻ xe theo nhóm id — nằm dưới nhánh `vehicles` để mutation xe tự invalidate luôn. */
     stats: (ids: readonly string[]) => ['vehicles', 'stats', ids] as const,
+    /** Đếm đội xe theo trạng thái vận hành — dải chỉ số đầu danh sách. */
+    fleetSummary: () => ['vehicles', 'fleet-summary'] as const,
+    /** Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền). */
+    summary: (id: string) => ['vehicles', 'summary', id] as const,
   },
   bookings: {
     all: ['bookings'] as const,
@@ -105,7 +109,8 @@ export const queryKeys = {
     all: ['marketplace'] as const,
     listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,
     /** /search tải vô hạn — key KHÔNG chứa page (page là pageParam của TanStack). */
-    listingsInfinite: (params: QueryParams) => ['marketplace', 'listings-infinite', params] as const,
+    listingsInfinite: (params: QueryParams) =>
+      ['marketplace', 'listings-infinite', params] as const,
     facets: (params: QueryParams) => ['marketplace', 'facets', params] as const,
     reviews: (vehicleId: string, params: QueryParams) =>
       ['marketplace', 'reviews', vehicleId, params] as const,

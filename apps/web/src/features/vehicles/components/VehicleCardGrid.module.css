@@ -17,28 +17,26 @@
 }
 
 /*
- * Lưới thẻ — **tối đa 5 cột**, đúng Figma `186:1672` (5 thẻ 209.6px, gap 12px, hàng 1096).
+ * Lưới thẻ — bản chỉnh Figma 11/08/2026: desktop **5 cột** thẻ gọn (~207px ở khung 1116px của
+ * màn 1440), tablet giữ 2 cột thẻ rộng như bản `236:1777`.
  *
  * Sàn track là số LỚN HƠN giữa hai đại lượng:
- *  - `--card-min` (200px) — dưới mức này thẻ vỡ chữ, nên màn hẹp phải bớt cột;
- *  - một-phần-năm bề rộng khung — trên màn rộng, đây mới là số lớn hơn, và nó chặn cột thứ sáu
- *    xuất hiện. Thẻ nở ra thay vì lưới thêm cột.
- *
- * Vì sao không để cột chạy tự do: ở 1920 lưới ra **7 cột**, mỗi thẻ ~210px nhưng khối chỉ số bên
- * trong (hai cặp nhãn–số + dòng lãi/lỗ) bắt đầu xuống dòng — đúng hiện tượng "vỡ layout".
+ *  - `--card-min` — dưới mức này khối nhãn–số của thẻ vỡ chữ, nên màn hẹp phải bớt cột;
+ *  - một-phần-`--card-max-cols` bề rộng khung — trên màn rộng, đây mới là số lớn hơn, và nó
+ *    chặn cột thừa xuất hiện. Thẻ nở ra thay vì lưới thêm cột.
  *
  * `align-items: start` vì Figma để thẻ cao tự nhiên, không kéo bằng nhau.
  */
 .grid {
-  --card-gap: 12px;
-  --card-min: 200px;
-  --card-max-cols: 5;
+  --card-gap: 20px;
+  --card-min: 280px;
+  --card-max-cols: 3;
 
   display: grid;
   padding: 0;
   margin: 0;
   align-items: start;
-  gap: var(--xp-space-lg) var(--card-gap);
+  gap: var(--card-gap);
   grid-template-columns: repeat(
     auto-fill,
     minmax(
@@ -50,6 +48,18 @@
     )
   );
   list-style: none;
+}
+
+/*
+ * Desktop (sidebar đầy đủ): 5 thẻ một hàng. Sàn 200px vì (1116 − 4×20) / 5 ≈ 207px — đặt cao
+ * hơn là hàng 5 không bao giờ đạt được; thẻ đã co chữ/nhãn để sống được ở bề rộng này.
+ * Dưới 1025px quay về sàn 280px của khối trên: tablet 2 cột thẻ rộng, không nhồi 3 cột hẹp.
+ */
+@media (min-width: 1025px) {
+  .grid {
+    --card-min: 200px;
+    --card-max-cols: 5;
+  }
 }
 
 /*

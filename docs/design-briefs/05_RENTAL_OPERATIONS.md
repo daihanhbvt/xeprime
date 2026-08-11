@@ -8,6 +8,8 @@
 > **Reading contract:** *Confirmed* = exists today. `[RECOMMENDED — NOT CURRENT]` = does not exist. No evidence = `Unknown`.
 >
 > **Authority statement (per task):** double-booking is prevented by the PostgreSQL exclusion constraint `vehicle_occupancies_no_overlap` (`EXCLUDE USING gist ("vehicle_id" WITH =, "period" WITH &&)`), created in migration [`20260722000000_init`](../../prisma/migrations/20260722000000_init/migration.sql). Every mention of `check-conflict` / `check-availability` in this brief describes a **non-authoritative UX preview** whose result can be stale the moment it returns. This is stated in the constraint's own migration comment, in `OccupancyService`'s docblock, and in ADR 0006 — and it is the reason no service in this module performs SELECT-then-INSERT.
+>
+> **Accepted target addendum — 2026-08-11, NOT CURRENT:** Rental requests/bookings must snapshot deposit, one-way tiered delivery fee or manual quote, overtime and rental-only discount. Confirmed return KM flows through handover into the vehicle odometer and maintenance reminders. See [`docs/design/12_VEHICLE_360_MANAGEMENT.md`](../design/12_VEHICLE_360_MANAGEMENT.md). This does not assert current implementation.
 
 ---
 

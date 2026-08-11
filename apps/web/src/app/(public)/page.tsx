@@ -1,6 +1,5 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import { Skeleton } from 'antd';
 import { fetchBannersServer } from '@/features/banners/api';
 import { HomeHero } from '@/features/marketplace/components/HomeHero';
 import { HeroSearch } from '@/features/marketplace/components/HeroSearch';
@@ -45,11 +44,10 @@ export default async function MarketplacePage() {
   );
 }
 
-/** Giữ đúng chỗ của thẻ tìm kiếm trong lúc island gắn vào — không giật layout. */
 function SearchCardFallback() {
   return (
     <div className={styles.searchFallback}>
-      <Skeleton.Input active block className={styles.searchFallbackInner} />
+      <div className={styles.searchFallbackInner} aria-hidden />
     </div>
   );
 }

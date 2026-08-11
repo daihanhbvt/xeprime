@@ -4,43 +4,44 @@ import type { VehicleListItem } from './types';
 interface VehicleRowActionsInput {
   row: VehicleListItem;
   canEdit: boolean;
-  canDelete: boolean;
-  /** Id đang bị xoá — để nút "Xoá" của đúng xe đó báo loading. */
-  deletingId: string | null;
+  /**
+   * `true` = nhãn rút gọn ("Xem" thay vì "Xem chi tiết") cho hàng mobile — các nút đầy đủ chữ
+   * không vừa 232px nội dung của hàng 390px. Thẻ desktop dùng nhãn đầy đủ (Figma `236:1820`).
+   */
+  compact?: boolean;
   onView: (id: string) => void;
   onEdit: (id: string) => void;
   onSchedule: (row: VehicleListItem) => void;
-  onDelete: (id: string) => void;
 }
 
 /**
  * MỘT định nghĩa hành động cho cả **thẻ desktop** lẫn **hàng mobile**.
  *
- * Hai hình thái vẽ khác hẳn nhau nhưng phải có đúng bộ hành động, đúng quyền, đúng câu chữ xác
- * nhận. Để hai bản là mở đường cho quyền và câu chữ lệch nhau — thứ không ai phát hiện cho tới
- * khi một bên xoá được xe mà bên kia không.
+ * Hai hình thái vẽ khác hẳn nhau nhưng phải có đúng bộ hành động, đúng quyền, đúng câu chữ.
+ * Để hai bản là mở đường cho quyền và nhãn lệch nhau giữa hai bề mặt.
  *
- * KHÔNG đọc quyền ở đây: trang truyền `canEdit`/`canDelete` xuống, và guard backend mới là lớp
- * chặn thật (CLAUDE.md §3).
+ * KHÔNG có "Xoá" ở danh sách (bản chỉnh Figma 11/08/2026): xoá là hành động phá huỷ, chỉ nằm
+ * trong menu ⋮ của Hồ sơ 360 (`Vehicle360Overview`) — nơi có đủ ngữ cảnh và câu xác nhận đầy đủ.
+ *
+ * KHÔNG đọc quyền ở đây: trang truyền `canEdit` xuống, và guard backend mới là lớp chặn thật
+ * (CLAUDE.md §3).
  */
 export function vehicleRowActions({
   row,
   canEdit,
-  canDelete,
-  deletingId,
+  compact = false,
   onView,
   onEdit,
   onSchedule,
-  onDelete,
 }: VehicleRowActionsInput): RowAction[] {
   /*
-   * Bốn nút CÓ CHỮ và KHÔNG icon — Figma `186:1713`: mỗi `act-*` chỉ chứa một text node, rộng
-   * 41–45px. Thêm icon làm hàng nút rộng ~250px trong thân thẻ 186px và cắt cụt nút cuối.
+   * Nút CÓ CHỮ và KHÔNG icon — Figma `236:1819`: mỗi `act-*` chỉ chứa một text node.
+   * Thêm icon làm hàng nút tràn bề rộng thẻ và cắt cụt nút cuối (đo được ở Wave 3B-R1).
    */
   return [
     {
       key: 'view',
-      label: 'Xem',
+      label: compact ? 'Xem' : 'Xem chi tiết',
       showLabel: true,
       primary: true,
       onClick: () => onView(row.id),
@@ -57,21 +58,6 @@ export function vehicleRowActions({
       label: 'Lịch',
       showLabel: true,
       onClick: () => onSchedule(row),
-    },
-    {
-      key: 'delete',
-      label: 'Xoá',
-      showLabel: true,
-      danger: true,
-      hidden: !canDelete,
-      loading: deletingId === row.id,
-      confirm: {
-        title: `Xoá xe "${row.name}"?`,
-        description: `${row.code}${row.plateNumber ? ` · ${row.plateNumber}` : ''} — xe sẽ bị ẩn khỏi danh sách. Không xoá được nếu còn lịch thuê.`,
-        okText: 'Xoá',
-        cancelText: 'Huỷ',
-      },
-      onClick: () => onDelete(row.id),
     },
   ];
 }

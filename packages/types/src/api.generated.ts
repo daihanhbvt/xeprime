@@ -537,6 +537,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vehicles/fleet-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Đếm đội xe theo trạng thái vận hành (dải chỉ số đầu danh sách) */
+        get: operations["VehiclesController_fleetSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vehicles/{id}": {
         parameters: {
             query?: never;
@@ -554,6 +571,23 @@ export interface paths {
         head?: never;
         /** Sửa thông tin xe (sửa trường nhạy cảm khi đang công khai → chờ duyệt lại) */
         patch: operations["VehiclesController_update"];
+        trace?: never;
+    };
+    "/vehicles/{id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền) */
+        get: operations["VehiclesController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/vehicles/{id}/submit-public": {
@@ -2352,6 +2386,18 @@ export interface components {
         VehicleStatsListDto: {
             data: components["schemas"]["VehicleStatsDto"][];
         };
+        FleetSummaryDto: {
+            /** @description Tổng số xe của gian hàng (không tính xe đã xoá mềm) */
+            total: number;
+            /** @description Xe có operationStatus = available */
+            available: number;
+            /** @description Xe có operationStatus = renting */
+            renting: number;
+            /** @description Xe có operationStatus = maintenance */
+            maintenance: number;
+            /** @description Xe có operationStatus = inactive */
+            inactive: number;
+        };
         VehiclePublicReviewDto: {
             /** @enum {string} */
             status: "pending" | "approved" | "rejected" | "needs_revision" | "cancelled";
@@ -2404,6 +2450,28 @@ export interface components {
             /** @description Key tiện ích (VEHICLE_FEATURE_LABEL) */
             features: string[];
             latestPublicReview?: components["schemas"]["VehiclePublicReviewDto"] | null;
+        };
+        VehicleBookingBriefDto: {
+            id: string;
+            code: string;
+            customerName: string;
+            /** @enum {string} */
+            status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+            /** @description ISO-8601 UTC */
+            pickupAt: string;
+            /** @description ISO-8601 UTC */
+            returnAt: string;
+            /** @description Tiền dạng string — ADR 0007 */
+            totalAmount: string;
+            /** @description ISO-8601 UTC — lần thay đổi gần nhất của đơn */
+            updatedAt: string;
+        };
+        Vehicle360SummaryDto: {
+            stats: components["schemas"]["VehicleStatsDto"];
+            /** @description Đơn sắp tới/đang chạy (tối đa 3, sớm nhất trước) — chỉ khi có `bookings.view` */
+            upcomingBookings?: components["schemas"]["VehicleBookingBriefDto"][];
+            /** @description Đơn thay đổi gần nhất (tối đa 3, mới nhất trước) — chỉ khi có `bookings.view` */
+            recentBookings?: components["schemas"]["VehicleBookingBriefDto"][];
         };
         CreateVehicleDto: {
             /**
@@ -4838,6 +4906,25 @@ export interface operations {
             };
         };
     };
+    VehiclesController_fleetSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FleetSummaryDto"];
+                };
+            };
+        };
+    };
     VehiclesController_getOne: {
         parameters: {
             query?: never;
@@ -4903,6 +4990,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VehicleDetailDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Vehicle360SummaryDto"];
                 };
             };
         };
