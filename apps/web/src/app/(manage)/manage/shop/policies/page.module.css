@@ -1,0 +1,38 @@
+/* Chip phạm vi áp dụng — Figma `237:1638`: xanh = kế thừa, gold = ghi đè. */
+
+.statsRow {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-sm);
+}
+
+.statInherit,
+.statOverride {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+  gap: 6px;
+}
+
+.statInherit {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.statInherit::before,
+.statOverride::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentcolor;
+  content: '';
+}
+
+.statOverride {
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+}

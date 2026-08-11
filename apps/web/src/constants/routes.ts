@@ -38,6 +38,8 @@ export const ROUTES = {
 
     // Cài đặt gian hàng
     SHOP: '/manage/shop',
+    /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
+    SHOP_POLICIES: '/manage/shop/policies',
     MEMBERS: '/manage/members',
     PICKUP_AREAS: '/manage/pickup-areas',
     DRIVERS: '/manage/drivers',
@@ -64,6 +66,8 @@ export type ManageRoute = (typeof ROUTES.MANAGE)[keyof typeof ROUTES.MANAGE];
 export const vehiclePath = {
   detail: (id: string): string => `/manage/vehicles/${id}`,
   edit: (id: string): string => `/manage/vehicles/${id}/edit`,
+  /** Giá & chính sách theo xe (Wave 2): kế thừa gian hàng hoặc ghi đè riêng. */
+  pricing: (id: string): string => `/manage/vehicles/${id}/pricing`,
 };
 
 /** Trang xem/in hợp đồng thuê. */

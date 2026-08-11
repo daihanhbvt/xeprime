@@ -148,6 +148,11 @@ export async function apiPatch<TData>(path: string, body?: unknown): Promise<TDa
   return result.data;
 }
 
+export async function apiPut<TData>(path: string, body?: unknown): Promise<TData> {
+  const result = await apiRequest<TData>(path, { method: 'PUT', body });
+  return result.data;
+}
+
 export async function apiDelete<TData>(path: string): Promise<TData> {
   const result = await apiRequest<TData>(path, { method: 'DELETE' });
   return result.data;

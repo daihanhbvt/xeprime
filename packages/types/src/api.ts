@@ -69,6 +69,13 @@ export const API_ERROR_CODE = {
    */
   BOOKING_REQUEST_DUPLICATE: 'BOOKING_REQUEST_DUPLICATE',
   INVALID_STATUS_TRANSITION: 'INVALID_STATUS_TRANSITION',
+  /**
+   * Yêu cầu có giao xe tận nơi nhưng CHƯA có báo giá giao nhận — không duyệt được.
+   * Mã riêng để FE mở thẳng drawer "Báo giá giao nhận" thay vì alert lỗi chung.
+   */
+  DELIVERY_QUOTE_REQUIRED: 'DELIVERY_QUOTE_REQUIRED',
+  /** Khách yêu cầu giao tận nơi nhưng chính sách hiệu lực của xe không bật giao nhận. */
+  DELIVERY_NOT_SUPPORTED: 'DELIVERY_NOT_SUPPORTED',
 
   // Gói/hạn (ADR 0010)
   PLAN_LIMIT_REACHED: 'PLAN_LIMIT_REACHED',

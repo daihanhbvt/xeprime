@@ -1,0 +1,149 @@
+/* Tab Giá & chính sách theo xe — Figma `236:3495` / mobile `247:1645`, `247:1706`. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-md);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.desc {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.sourceRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  cursor: pointer;
+  gap: var(--xp-space-sm);
+}
+
+.sourceLabel {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sourceCustom {
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.inheritBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-sm);
+  border-radius: 8px;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm);
+}
+
+.inheritBanner > span {
+  min-width: 0;
+  flex: 1;
+}
+
+.inheritLink {
+  color: var(--xp-color-info);
+  font-weight: var(--xp-font-weight-bold);
+  white-space: nowrap;
+}
+
+.inheritBadge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+  white-space: nowrap;
+}
+
+.resetRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.priceRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+}
+
+.priceRow > * {
+  min-width: 260px;
+  flex: 1;
+}
+
+/* ─── Bảng kế thừa read-only ──────────────────────────────────────────────── */
+
+.summaryList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--xp-space-sm) 0;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+  gap: var(--xp-space-md);
+}
+
+.summaryRow:last-child {
+  border-bottom: none;
+}
+
+.summaryRow dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.summaryRow dd {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+  text-align: end;
+}
+
+.summaryOn {
+  color: var(--xp-color-success);
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+}

@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
@@ -7,8 +12,10 @@ import {
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
+  PRICE_ROW,
   canTransitionBooking,
   occupiesSchedule,
+  type BookingPriceSnapshot,
   type BookingStatus,
   type PaginationMeta,
 } from '@xeprime/types';
@@ -50,6 +57,7 @@ const DETAIL_SELECT = {
   baseAmount: true,
   deliveryFee: true,
   discountAmount: true,
+  priceSnapshot: true,
   actualPickupAt: true,
   actualReturnAt: true,
   note: true,
@@ -123,7 +131,9 @@ export class BookingsService {
    * exclusion constraint ném `23P01`, `AllExceptionsFilter` dịch thành BOOKING_SCHEDULE_CONFLICT.
    */
   async create(tenantId: string, userId: string, dto: CreateBookingDto): Promise<BookingDetailDto> {
-    return this.prisma.$transaction((tx) => this.createWithinTx(tx, tenantId, userId, dto, 'direct'));
+    return this.prisma.$transaction((tx) =>
+      this.createWithinTx(tx, tenantId, userId, dto, 'direct'),
+    );
   }
 
   /**
@@ -137,6 +147,7 @@ export class BookingsService {
     userId: string,
     dto: CreateBookingDto,
     source: BookingCreateSource = 'direct',
+    snapshot?: BookingPriceSnapshot,
   ): Promise<BookingDetailDto> {
     const pickupAt = new Date(dto.pickupAt);
     const returnAt = new Date(dto.returnAt);
@@ -145,10 +156,16 @@ export class BookingsService {
     const base = money(dto.baseAmount);
     const delivery = money(dto.deliveryFee);
     const discount = money(dto.discountAmount);
+    const deposit = money(dto.depositAmount);
     const total = base.plus(delivery).minus(discount);
 
     const id = newId();
     const code = `DH${id.slice(-6).toUpperCase()}`;
+
+    // MỌI đơn đều mang snapshot giá (Wave 2): luồng duyệt yêu cầu truyền snapshot từ
+    // PricingService; đơn shop tự lập chốt lại đúng các số shop đã nhập ('manual').
+    // Snapshot BẤT BIẾN — không code path nào UPDATE lại cột này.
+    const priceSnapshot = snapshot ?? manualSnapshot({ base, delivery, discount, deposit, total });
 
     const created = await tx.booking.create({
       data: {
@@ -165,8 +182,9 @@ export class BookingsService {
         baseAmount: base,
         deliveryFee: delivery,
         discountAmount: discount,
-        depositAmount: money(dto.depositAmount),
+        depositAmount: deposit,
         totalAmount: total,
+        priceSnapshot: priceSnapshot as unknown as Prisma.InputJsonValue,
         note: dto.note ?? null,
         createdBy: userId,
       },
@@ -222,7 +240,15 @@ export class BookingsService {
   async update(tenantId: string, id: string, dto: UpdateBookingDto): Promise<BookingDetailDto> {
     const current = await this.prisma.booking.findFirst({
       where: { id, tenantId, deletedAt: null },
-      select: { id: true, status: true, pickupAt: true, returnAt: true, baseAmount: true, deliveryFee: true, discountAmount: true },
+      select: {
+        id: true,
+        status: true,
+        pickupAt: true,
+        returnAt: true,
+        baseAmount: true,
+        deliveryFee: true,
+        discountAmount: true,
+      },
     });
     if (!current) throw notFound();
 
@@ -233,10 +259,12 @@ export class BookingsService {
     // Tính lại total nếu bất kỳ khoản cấu thành đổi.
     const base = dto.baseAmount !== undefined ? money(dto.baseAmount) : current.baseAmount;
     const delivery = dto.deliveryFee !== undefined ? money(dto.deliveryFee) : current.deliveryFee;
-    const discount = dto.discountAmount !== undefined ? money(dto.discountAmount) : current.discountAmount;
+    const discount =
+      dto.discountAmount !== undefined ? money(dto.discountAmount) : current.discountAmount;
     const total = new Prisma.Decimal(base).plus(delivery).minus(discount);
 
-    const rescheduled = Boolean(dto.pickupAt || dto.returnAt) && occupiesSchedule(current.status as BookingStatus);
+    const rescheduled =
+      Boolean(dto.pickupAt || dto.returnAt) && occupiesSchedule(current.status as BookingStatus);
 
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.booking.update({
@@ -251,7 +279,9 @@ export class BookingsService {
           ...(dto.deliveryFee !== undefined ? { deliveryFee: delivery } : {}),
           ...(dto.discountAmount !== undefined ? { discountAmount: discount } : {}),
           ...(dto.depositAmount !== undefined ? { depositAmount: money(dto.depositAmount) } : {}),
-          ...(dto.baseAmount !== undefined || dto.deliveryFee !== undefined || dto.discountAmount !== undefined
+          ...(dto.baseAmount !== undefined ||
+          dto.deliveryFee !== undefined ||
+          dto.discountAmount !== undefined
             ? { totalAmount: total }
             : {}),
           ...(dto.note !== undefined ? { note: dto.note } : {}),
@@ -353,6 +383,45 @@ function money(v: string | undefined): Prisma.Decimal {
   return new Prisma.Decimal(v ?? '0');
 }
 
+/**
+ * Snapshot cho đơn shop tự lập: chốt lại đúng các số shop đã nhập tay — không bịa chi tiết
+ * (không days/policy vì các số này không đi qua PricingService).
+ */
+function manualSnapshot(amounts: {
+  base: Prisma.Decimal;
+  delivery: Prisma.Decimal;
+  discount: Prisma.Decimal;
+  deposit: Prisma.Decimal;
+  total: Prisma.Decimal;
+}): BookingPriceSnapshot {
+  const rows: BookingPriceSnapshot['rows'] = [
+    { key: PRICE_ROW.BASE, label: 'Tiền thuê gốc', amount: amounts.base.toFixed(0) },
+  ];
+  if (!amounts.discount.isZero()) {
+    rows.push({
+      key: PRICE_ROW.DISCOUNT,
+      label: 'Giảm giá',
+      amount: amounts.discount.negated().toFixed(0),
+    });
+  }
+  if (!amounts.delivery.isZero()) {
+    rows.push({
+      key: PRICE_ROW.DELIVERY,
+      label: 'Phí giao nhận xe',
+      amount: amounts.delivery.toFixed(0),
+    });
+  }
+  return {
+    calculatedAt: new Date().toISOString(),
+    source: 'manual',
+    currency: 'VND',
+    rows,
+    totalAmount: amounts.total.toFixed(0),
+    depositAmount: amounts.deposit.toFixed(0),
+    policy: null,
+  };
+}
+
 function assertRange(pickupAt: Date, returnAt: Date): void {
   if (!(returnAt.getTime() > pickupAt.getTime())) {
     throw new BadRequestException({
@@ -412,6 +481,7 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     baseAmount: b.baseAmount as unknown as string,
     deliveryFee: b.deliveryFee as unknown as string,
     discountAmount: b.discountAmount as unknown as string,
+    priceSnapshot: (b.priceSnapshot as unknown as BookingDetailDto['priceSnapshot']) ?? null,
     actualPickupAt: b.actualPickupAt as unknown as string | null,
     actualReturnAt: b.actualReturnAt as unknown as string | null,
     note: b.note,

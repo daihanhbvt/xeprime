@@ -56,6 +56,13 @@ export const queryKeys = {
     fleetSummary: () => ['vehicles', 'fleet-summary'] as const,
     /** Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền). */
     summary: (id: string) => ['vehicles', 'summary', id] as const,
+    /** Giá & chính sách theo xe (nguồn kế thừa/ghi đè) — nằm dưới nhánh vehicles để mutation xe invalidate luôn. */
+    pricing: (id: string) => ['vehicles', 'pricing', id] as const,
+  },
+  /** Chính sách thuê mặc định của gian hàng (Wave 2). */
+  rentalPolicies: {
+    all: ['rental-policies'] as const,
+    shop: () => ['rental-policies', 'shop'] as const,
   },
   bookings: {
     all: ['bookings'] as const,
@@ -116,6 +123,9 @@ export const queryKeys = {
       ['marketplace', 'reviews', vehicleId, params] as const,
     shopListings: (slug: string, params: QueryParams) =>
       ['marketplace', 'shop-listings', slug, params] as const,
+    /** Báo giá công khai theo khoảng ngày — nguồn PricingService, FE không tự cộng trừ. */
+    quote: (vehicleId: string, params: QueryParams) =>
+      ['marketplace', 'quote', vehicleId, params] as const,
     destinations: (params: QueryParams) => ['marketplace', 'destinations', params] as const,
     shops: (params: QueryParams) => ['marketplace', 'shops', params] as const,
   },

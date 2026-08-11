@@ -4,6 +4,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { BillingService } from '../src/modules/billing/billing.service';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
+import { PricingService } from '../src/modules/pricing/pricing.service';
 import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -20,6 +21,7 @@ const vehicles = new VehiclesService(
   new ListingsService(asService),
   new BillingService(asService, new AuditService(asService)),
   new CatalogService(asService, new AuditService(asService)),
+  new PricingService(asService, new AuditService(asService)),
 );
 
 let dbAvailable = false;

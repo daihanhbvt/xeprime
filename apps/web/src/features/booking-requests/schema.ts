@@ -28,6 +28,17 @@ export const requestFormSchema = yup.object({
       return !value || !pickup || value.isAfter(pickup);
     },
   ),
+  /** Giao xe tận nơi (Wave 2) — chỉ hiện khi chính sách giao nhận của xe đang bật. */
+  deliveryRequested: yup.boolean().default(false),
+  deliveryAddress: yup
+    .string()
+    .trim()
+    .max(500, 'Tối đa 500 ký tự')
+    .default('')
+    .when('deliveryRequested', {
+      is: true,
+      then: (s) => s.required('Nhập địa điểm giao xe'),
+    }),
 });
 
 export type RequestFormValues = yup.InferType<typeof requestFormSchema>;

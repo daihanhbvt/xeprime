@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -19,6 +20,7 @@ import {
   TenantScoped,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
+import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
 import {
   CreateVehicleDto,
   FleetSummaryDto,
@@ -114,6 +116,35 @@ export class VehiclesController {
       canViewFinance: tenant.permissions.includes(PERMISSION.FINANCE_VIEW),
       canViewBookings: tenant.permissions.includes(PERMISSION.BOOKING_VIEW),
     });
+  }
+
+  @Get(':id/pricing')
+  @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @ApiOperation({ summary: 'Giá & chính sách của một xe (nguồn kế thừa/ghi đè + bản gian hàng)' })
+  @ApiOkResponse({ type: VehiclePricingDto })
+  getPricing(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<VehiclePricingDto> {
+    return this.vehicles.getPricing(tenant.tenantId, id);
+  }
+
+  /**
+   * `source='shop'` = đặt lại theo gian hàng (xoá bản ghi đè); `source='vehicle'` = lưu ghi đè.
+   * Đổi GIÁ của xe đang công khai sẽ hạ về chờ duyệt lại + tạm ẩn listing (ADR 0008) — FE phải
+   * xác nhận trước khi gọi; backend cứ thế thực thi, không hỏi lại.
+   */
+  @Put(':id/pricing')
+  @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
+  @ApiOperation({ summary: 'Lưu giá & chính sách theo xe (ghi đè hoặc đặt lại theo gian hàng)' })
+  @ApiOkResponse({ type: VehiclePricingDto })
+  savePricing(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SaveVehiclePricingDto,
+  ): Promise<VehiclePricingDto> {
+    return this.vehicles.savePricing(tenant.tenantId, id, user.id, dto);
   }
 
   @Post()

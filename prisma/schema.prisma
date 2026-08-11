@@ -145,6 +145,7 @@ model Tenant {
   payments      Payment[]
   contracts     Contract[]
   subscriptions TenantSubscription[]
+  rentalPolicies RentalPolicy[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -519,6 +520,7 @@ model Vehicle {
   images      VehicleImage[]
   features    VehicleFeature[]
   receipts    Receipt[]
+  rentalPolicy RentalPolicy?
 
   @@unique([tenantId, code])
   @@index([tenantId, publicStatus])
@@ -712,6 +714,10 @@ model Booking {
   totalAmount    Decimal   @default(0) @map("total_amount") @db.Decimal(14, 2)
   paidAmount     Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
   depositAmount  Decimal   @default(0) @map("deposit_amount") @db.Decimal(14, 2)
+  /// Snapshot giá BẤT BIẾN chốt lúc tạo đơn (Wave 2): đủ dòng breakdown + chính sách hiệu lực
+  /// để giải thích số tiền về sau. Đổi chính sách KHÔNG được ghi lại field này (chỉ ghi lúc
+  /// create). Cấu trúc → @xeprime/types `BookingPriceSnapshot`.
+  priceSnapshot  Json?     @map("price_snapshot_json") @db.JsonB
   note           String?   @db.Text
   createdBy      String?   @map("created_by") @db.Char(26)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -759,6 +765,12 @@ model BookingRequest {
   customerUserId String?  @map("customer_user_id") @db.Char(26)
   pickupAt      DateTime  @map("pickup_at") @db.Timestamptz(3)
   returnAt      DateTime  @map("return_at") @db.Timestamptz(3)
+  /// Khách yêu cầu giao xe tận nơi (chỉ nhận khi chính sách giao nhận đang bật).
+  deliveryRequested Boolean @default(false) @map("delivery_requested")
+  deliveryAddress   String? @map("delivery_address") @db.Text
+  /// Báo giá giao nhận của shop (Wave 2): { distanceKm, fee, source: auto|manual, note?,
+  /// quotedBy, quotedAt, policyUpdatedAt }. Ghi DUY NHẤT qua BookingRequestsService.
+  deliveryQuote     Json?   @map("delivery_quote_json") @db.JsonB
   note          String?   @db.Text
   rejectReason  String?   @map("reject_reason") @db.Text
   /// Set khi duyệt → trỏ tới Booking đã tạo (1-1). Postgres cho nhiều NULL nên yêu cầu
@@ -779,6 +791,48 @@ model BookingRequest {
   @@index([createdAt])
   @@index([customerUserId])
   @@map("booking_requests")
+}
+
+/// Chính sách thuê (Wave 2 — B2 Pricing & Rental Policies). MỘT bảng cho cả hai phạm vi:
+///
+///   - `vehicle_id NULL`  = chính sách mặc định của gian hàng — duy nhất mỗi tenant
+///     (partial unique index ở migration SQL tay, Prisma không mô tả được);
+///   - `vehicle_id` set   = bản ghi đè cho MỘT xe (unique theo vehicle_id).
+///
+/// Precedence: override của xe thắng mặc định gian hàng; đọc hợp nhất qua PricingService —
+/// service này là NGUỒN TÍNH GIÁ DUY NHẤT (public quote + duyệt booking request dùng chung).
+/// "Đặt lại theo gian hàng" = XOÁ row override, không phải ghi row copy.
+///
+/// Tiers để jsonb vì là mảng cấu trúc; hợp lệ hoá ở DTO (bậc tăng dần, không hở khoảng —
+/// "từ" của bậc sau suy từ "đến" của bậc trước nên không thể chồng lấn theo cấu trúc).
+model RentalPolicy {
+  id                      String   @id @db.Char(26)
+  tenantId                String   @map("tenant_id") @db.Char(26)
+  vehicleId               String?  @unique @map("vehicle_id") @db.Char(26)
+  /// Cọc thế chấp CỐ ĐỊNH bằng VND — không nằm trong doanh thu thuê, không chịu giảm giá.
+  depositAmount           Decimal  @default(0) @map("deposit_amount") @db.Decimal(14, 2)
+  deliveryEnabled         Boolean  @default(false) @map("delivery_enabled")
+  /// Bán kính tự báo giá tối đa (km) — ngoài bán kính này phải báo giá thủ công.
+  /// Bằng `toKm` của bậc cuối (DTO cưỡng chế) để không hở khoảng cấu hình.
+  deliveryMaxRadiusKm     Decimal? @map("delivery_max_radius_km") @db.Decimal(6, 1)
+  /// [{ toKm: number, fee: string }] — mốc "đến" tăng dần; "từ" suy từ mốc trước.
+  deliveryTiers           Json     @default("[]") @map("delivery_tiers_json") @db.JsonB
+  /// NULL = "Cần cấu hình" (thiết kế cho phép để trống, tính phí quá giờ ở luồng trả xe sau).
+  overtimeFeePerHour      Decimal? @map("overtime_fee_per_hour") @db.Decimal(14, 2)
+  overtimeGraceMinutes    Int?     @map("overtime_grace_minutes")
+  overtimeRoundingMinutes Int?     @map("overtime_rounding_minutes")
+  discountEnabled         Boolean  @default(false) @map("discount_enabled")
+  /// [{ minDays: number, percent: number, note?: string }] — minDays tăng dần, percent 1–100.
+  /// Giảm giá CHỈ áp lên tiền thuê cơ bản (không đụng cọc/giao nhận/quá giờ).
+  discountTiers           Json     @default("[]") @map("discount_tiers_json") @db.JsonB
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("rental_policies")
 }
 
 /// Bảng chiếm dụng lịch xe — ADR 0006.

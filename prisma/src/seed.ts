@@ -1625,7 +1625,39 @@ async function main(): Promise<void> {
       data: { provinceName: 'TP. Hồ Chí Minh' },
     });
   }
-  console.log('  tenant active + membership owner + profile: xong');
+  // Chính sách thuê mặc định của gian hàng (Wave 2). Chỉ tạo khi chưa có — partial unique
+  // `rental_policies_shop_default_key` là chốt chặn thật nếu hai lần seed đua nhau.
+  const existingPolicy = await prisma.rentalPolicy.findFirst({
+    where: { tenantId: tenant.id, vehicleId: null },
+    select: { id: true },
+  });
+  if (!existingPolicy) {
+    await prisma.rentalPolicy.create({
+      data: {
+        id: ulid(),
+        tenantId: tenant.id,
+        vehicleId: null,
+        depositAmount: 5_000_000,
+        deliveryEnabled: true,
+        deliveryMaxRadiusKm: 10,
+        deliveryTiers: [
+          { toKm: 3, fee: '0' },
+          { toKm: 5, fee: '30000' },
+          { toKm: 10, fee: '50000' },
+        ],
+        // Grace/rounding để NULL đúng trạng thái "Cần cấu hình" của thiết kế — seed không bịa.
+        overtimeFeePerHour: 100_000,
+        discountEnabled: true,
+        discountTiers: [
+          { minDays: 7, percent: 5, note: 'Ưu đãi mặc định cho thuê tuần' },
+          { minDays: 14, percent: 10, note: 'Ưu đãi mặc định nửa tháng' },
+          { minDays: 30, percent: 15, note: 'Mức chiết khấu tối đa cho thuê tháng' },
+        ],
+      },
+    });
+  }
+
+  console.log('  tenant active + membership owner + profile + chính sách thuê: xong');
 
   const vehicleIdByCode = new Map<string, string>();
   for (const v of DEMO_VEHICLES) {

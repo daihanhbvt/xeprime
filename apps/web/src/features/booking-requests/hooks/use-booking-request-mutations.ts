@@ -2,7 +2,8 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
-import { approveBookingRequest, rejectBookingRequest } from '../api';
+import { approveBookingRequest, rejectBookingRequest, saveDeliveryQuote } from '../api';
+import type { SaveDeliveryQuoteInput } from '../types';
 
 /**
  * Duyệt yêu cầu tạo Booking (giữ chỗ lịch) → invalidate cả bookings/calendar/dashboard ngoài
@@ -26,6 +27,16 @@ export function useRejectBookingRequest() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
       rejectBookingRequest(id, reason),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all }),
+  });
+}
+
+/** Chốt báo giá giao nhận — mở khoá nút Duyệt cho yêu cầu có giao tận nơi. */
+export function useSaveDeliveryQuote() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: SaveDeliveryQuoteInput }) =>
+      saveDeliveryQuote(id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all }),
   });
 }

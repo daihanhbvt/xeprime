@@ -151,6 +151,13 @@ export const SHOP_NAV: readonly NavNode[] = [
         icon: ShopOutlined,
       },
       {
+        key: 'shop-policies',
+        label: 'Chính sách thuê',
+        href: ROUTES.MANAGE.SHOP_POLICIES,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: SafetyCertificateOutlined,
+      },
+      {
         key: 'members',
         label: 'Người dùng',
         href: ROUTES.MANAGE.MEMBERS,

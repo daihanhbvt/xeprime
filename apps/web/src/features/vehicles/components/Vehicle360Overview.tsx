@@ -19,6 +19,7 @@ import {
   Tag,
 } from 'antd';
 import type { DescriptionsProps } from 'antd';
+import Link from 'next/link';
 import { useState } from 'react';
 import {
   BOOKING_STATUS,
@@ -31,6 +32,7 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { vehiclePath } from '@/constants/routes';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { formatDateTime, toAppTz } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
@@ -113,7 +115,7 @@ export function Vehicle360Overview({
 
       <div className={styles.columns}>
         <div className={styles.column}>
-          <PricingCard vehicle={vehicle} canEdit={canEdit} onEdit={onEdit} />
+          <PricingCard vehicle={vehicle} canEdit={canEdit} />
           <PlaceholderCard
             title="Hồ sơ & Giấy tờ pháp lý"
             body="Chưa có dữ liệu giấy tờ cho xe này. Quản lý đăng ký, đăng kiểm và bảo hiểm sẽ được bổ sung ở giai đoạn sau."
@@ -445,15 +447,7 @@ function PerformanceCard({
 
 /* ─── Lưới hai cột ────────────────────────────────────────────────────────── */
 
-function PricingCard({
-  vehicle,
-  canEdit,
-  onEdit,
-}: {
-  vehicle: VehicleDetail;
-  canEdit: boolean;
-  onEdit: () => void;
-}) {
+function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
   const discounted = discountedPriceVnd(vehicle.weekdayPrice, vehicle.discountPercent);
 
   return (
@@ -461,9 +455,10 @@ function PricingCard({
       title="Giá thuê & Chính sách"
       extra={
         canEdit ? (
-          <Button type="link" size="small" className={styles.cardLink} onClick={onEdit}>
+          // Wave 2: giá & chính sách có workspace riêng (kế thừa/ghi đè) — không đi qua wizard.
+          <Link href={vehiclePath.pricing(vehicle.id)} className={styles.cardLink}>
             Chỉnh sửa giá
-          </Button>
+          </Link>
         ) : null
       }
       className={styles.sectionCard}

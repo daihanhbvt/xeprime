@@ -11,6 +11,7 @@ import {
   APPROVAL_TARGET_TYPE,
   API_ERROR_CODE,
   BOOKING_STATUS,
+  POLICY_SOURCE,
   RECEIPT_STATUS,
   RECEIPT_TYPE,
   TENANT_STATUS,
@@ -24,6 +25,8 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { CatalogService } from '../catalog/catalog.service';
+import { policyData, PricingService } from '../pricing/pricing.service';
+import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
 import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -97,6 +100,7 @@ export class VehiclesService {
     private readonly listings: ListingsService,
     private readonly billing: BillingService,
     private readonly catalog: CatalogService,
+    private readonly pricing: PricingService,
   ) {}
 
   /**
@@ -436,6 +440,140 @@ export class VehiclesService {
       await this.listings.syncFromVehicle(current.id, tx);
     });
     return this.getOne(tenantId, current.id);
+  }
+
+  /** Giá & chính sách của một xe — nguồn hiệu lực + bản gian hàng để đối chiếu/đặt lại. */
+  async getPricing(tenantId: string, id: string): Promise<VehiclePricingDto> {
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true, weekdayPrice: true, weekendPrice: true, publicStatus: true },
+    });
+    if (!vehicle) throw notFound();
+
+    const [effective, shopPolicy] = await Promise.all([
+      this.pricing.effectivePolicy(tenantId, id),
+      this.pricing.shopPolicyValues(tenantId),
+    ]);
+
+    return {
+      source: effective?.source ?? null,
+      policy: effective?.values ?? null,
+      shopPolicy,
+      weekdayPrice: vehicle.weekdayPrice ? vehicle.weekdayPrice.toFixed(0) : null,
+      weekendPrice: vehicle.weekendPrice ? vehicle.weekendPrice.toFixed(0) : null,
+      isPublic: vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+    };
+  }
+
+  /**
+   * Lưu giá & chính sách theo xe trong MỘT transaction (Wave 2 — B2).
+   *
+   * VehiclesService là writer duy nhất của bản ghi đè (đi cùng quyền ghi xe): `source='vehicle'`
+   * upsert override, `source='shop'` XOÁ override (đặt lại theo gian hàng — không copy row).
+   * Đổi giá của xe đang công khai đi đúng đường knockback ADR 0008: hạ về chờ duyệt + tạo
+   * phiếu duyệt lại + listing ẩn. Đơn thuê đã chốt không bị đụng tới (snapshot bất biến).
+   */
+  async savePricing(
+    tenantId: string,
+    id: string,
+    userId: string,
+    dto: SaveVehiclePricingDto,
+  ): Promise<VehiclePricingDto> {
+    const current = await this.prisma.vehicle.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: SENSITIVE_SELECT,
+    });
+    if (!current) throw notFound();
+
+    const overriding = dto.source === POLICY_SOURCE.VEHICLE;
+    if (overriding) {
+      if (!dto.policy) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Ghi đè chính sách thì phải gửi kèm cấu hình chính sách',
+        });
+      }
+      this.pricing.validatePolicy(dto.policy);
+    }
+
+    // Giá chỉ sửa được ở chế độ ghi đè (chế độ kế thừa là read-only theo thiết kế).
+    const priceDto: UpdateVehicleDto = overriding
+      ? {
+          ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
+          ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
+        }
+      : {};
+    const priceChanged = hasSensitiveChange(current, priceDto);
+    const knockBack =
+      current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC && priceChanged;
+
+    await this.prisma.$transaction(async (tx) => {
+      const existingOverride = await tx.rentalPolicy.findUnique({
+        where: { vehicleId: id },
+        select: { id: true },
+      });
+
+      if (overriding) {
+        const data = policyData(dto.policy!);
+        if (existingOverride) {
+          await tx.rentalPolicy.update({ where: { id: existingOverride.id }, data });
+        } else {
+          await tx.rentalPolicy.create({ data: { id: newId(), tenantId, vehicleId: id, ...data } });
+        }
+      } else if (existingOverride) {
+        await tx.rentalPolicy.delete({ where: { id: existingOverride.id } });
+      }
+
+      if (Object.keys(priceDto).length > 0) {
+        const updated = await tx.vehicle.update({
+          where: { id: current.id },
+          data: {
+            ...writableFields(priceDto),
+            ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
+          },
+          select: DETAIL_SELECT,
+        });
+        if (knockBack) {
+          await this.createVehicleApprovalTask(tx, {
+            vehicleId: current.id,
+            tenantId,
+            actorUserId: userId,
+            fromStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+            snapshot: updated,
+            action: 'resubmit',
+          });
+        }
+        // Giá đổi (kể cả không knockback) → đồng bộ snapshot public_listings (ADR 0008).
+        await this.listings.syncFromVehicle(current.id, tx);
+      }
+
+      // Thay đổi nhạy cảm về tiền → audit đủ before/after để đối soát.
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'vehicle.pricing.update',
+          targetType: 'vehicle',
+          targetId: id,
+          before: {
+            source: existingOverride ? POLICY_SOURCE.VEHICLE : POLICY_SOURCE.SHOP,
+            weekdayPrice: current.weekdayPrice ? String(current.weekdayPrice) : null,
+            weekendPrice: current.weekendPrice ? String(current.weekendPrice) : null,
+          },
+          after: {
+            source: dto.source,
+            ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
+            ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
+            policy: overriding ? (dto.policy as unknown as Prisma.InputJsonValue) : null,
+            knockBack,
+          },
+        },
+        tx,
+      );
+    });
+
+    return this.getPricing(tenantId, id);
   }
 
   /**

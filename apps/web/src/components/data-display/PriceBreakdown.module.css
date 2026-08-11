@@ -1,0 +1,150 @@
+/* Bảng chi tiết giá dùng chung — hình học Figma `237:1988` (thẻ trắng, hàng nhãn–số). */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.badge {
+  padding: 2px 10px;
+  border-radius: 6px;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  margin: 0;
+  gap: var(--xp-space-sm);
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.rowLabel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sublabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.rowAmount {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+  white-space: nowrap;
+}
+
+/* Đỏ là màu ngữ nghĩa của khoản giảm trừ. */
+.discountText {
+  color: var(--xp-color-error);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.totalBlock {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  gap: 6px;
+}
+
+.totalRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.totalLabel {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.totalAmount {
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-h3);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.depositRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.depositLabel {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: 4px;
+}
+
+.depositInfo {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.depositAmount {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.depositNote {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  font-style: italic;
+}
+
+.footer {
+  display: flex;
+}

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BOOKING_REQUEST_STATUS_VALUES } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsEmail,
   IsIn,
@@ -15,6 +16,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { BookingRequestDeliveryQuoteDto } from '../../pricing/dto/pricing.dto';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -57,6 +59,19 @@ export class CreateBookingRequestDto {
   @IsString()
   @MaxLength(2000)
   note?: string;
+
+  @ApiPropertyOptional({
+    description: 'Yêu cầu giao xe tận nơi — chỉ nhận khi chính sách giao nhận của xe đang bật',
+  })
+  @IsOptional()
+  @IsBoolean()
+  deliveryRequested?: boolean;
+
+  @ApiPropertyOptional({ description: 'Địa điểm giao xe — bắt buộc khi yêu cầu giao tận nơi' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  deliveryAddress?: string;
 }
 
 /** Khách kiểm tra nhanh khung giờ của một xe có trống không (preview — ADR 0006). */
@@ -130,6 +145,19 @@ export class BookingRequestDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
+  @ApiProperty({ description: 'Khách yêu cầu giao xe tận nơi' }) deliveryRequested!: boolean;
+  @ApiPropertyOptional({ type: String, nullable: true }) deliveryAddress!: string | null;
+  @ApiPropertyOptional({
+    type: BookingRequestDeliveryQuoteDto,
+    nullable: true,
+    description: 'Báo giá giao nhận đã lưu — null khi chưa báo',
+  })
+  deliveryQuote!: BookingRequestDeliveryQuoteDto | null;
+  @ApiProperty({
+    description:
+      'Đang chờ duyệt + có yêu cầu giao + chưa có báo giá → phải báo giá trước khi duyệt',
+  })
+  needsDeliveryQuote!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true }) rejectReason!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Booking đã tạo khi duyệt' })
   bookingId!: string | null;

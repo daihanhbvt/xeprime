@@ -35,6 +35,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
 import { BillingModule } from './modules/billing/billing.module';
 import { BannersModule } from './modules/banners/banners.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { PricingModule } from './modules/pricing/pricing.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
     BillingModule,
     CatalogModule,
     BannersModule,
+    PricingModule,
   ],
   providers: [
     // Thứ tự quan trọng (guard global chạy theo đúng thứ tự khai báo): Throttler chặn trước

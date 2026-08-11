@@ -15,6 +15,7 @@ import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
+import { PricingService } from '../src/modules/pricing/pricing.service';
 import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -37,6 +38,7 @@ const vehicles = new VehiclesService(
   listings,
   new BillingService(asService, audit),
   new CatalogService(asService, audit),
+  new PricingService(asService, audit),
 );
 const approvals = new PlatformApprovalService(asService, audit, notifications, listings);
 

@@ -1,0 +1,277 @@
+/* Bốn khối chính sách thuê — hình học Figma `237:1557` (desktop) / `247:1554` (mobile). */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-md);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.cardTitle {
+  margin: 0;
+  padding-bottom: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+/* Tiêu đề trong hàng có toggle: đường gạch chân chuyển xuống cạnh dưới của cả hàng. */
+.cardHeader .cardTitle {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.desc {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.note {
+  padding: var(--xp-space-sm);
+  border-radius: 8px;
+  margin: 0;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.5;
+}
+
+.footnote {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.disabledNote {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.depositRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--xp-space-md);
+}
+
+.depositHint {
+  padding-bottom: var(--xp-space-md);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.inputNarrow {
+  width: 320px;
+  max-width: 100%;
+}
+
+/* ─── Bảng bậc ────────────────────────────────────────────────────────────── */
+
+.tierTable {
+  display: flex;
+  overflow: hidden;
+  flex-direction: column;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 8px;
+}
+
+.tierHead,
+.discountHead {
+  display: grid;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+  gap: var(--xp-space-md);
+}
+
+.tierHead {
+  grid-template-columns: 140px 1fr 1fr 88px;
+}
+
+.discountHead {
+  grid-template-columns: 1fr 120px 1.4fr 88px;
+}
+
+.tierRow,
+.discountRow {
+  display: grid;
+  align-items: start;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  gap: var(--xp-space-md);
+}
+
+.tierRow {
+  grid-template-columns: 140px 1fr 1fr 88px;
+}
+
+.discountRow {
+  grid-template-columns: 1fr 120px 1.4fr 88px;
+}
+
+/* Nhãn của field trong bảng đã nằm ở hàng tiêu đề — nhãn từng ô chỉ dành cho a11y. */
+.tierRow :global(.ant-form-item-label),
+.discountRow :global(.ant-form-item-label) {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.tierRow :global(.ant-form-item),
+.discountRow :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.tierFrom {
+  padding-top: 10px;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+.tierFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.tierOk {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: 6px;
+}
+
+.tierError {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.tierActionHead {
+  text-align: right;
+}
+
+.radiusRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+}
+
+.radiusWarning {
+  flex: 1;
+  min-width: 0;
+}
+
+.fieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+}
+
+.fieldRow > * {
+  min-width: 220px;
+  flex: 1;
+}
+
+.previewCard {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-sm);
+  border-radius: 8px;
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-body-sm);
+  gap: 4px;
+}
+
+.previewTitle {
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.previewText {
+  color: var(--xp-color-text-secondary);
+  line-height: 1.5;
+}
+
+/* ─── Mobile (Figma 247:1554): bảng bậc xếp dọc, cột "từ" thành nhãn dòng ─── */
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  .tierHead,
+  .discountHead {
+    display: none;
+  }
+
+  .tierRow,
+  .discountRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tierFrom {
+    padding-top: 0;
+    grid-column: 1 / -1;
+    color: var(--xp-color-text-secondary);
+    font-size: var(--xp-font-size-body-sm);
+    font-weight: var(--xp-font-weight-semibold);
+  }
+
+  /* Ở mobile nhãn ô nhập hiện lại — không còn hàng tiêu đề bảng để tựa. */
+  .tierRow :global(.ant-form-item-label),
+  .discountRow :global(.ant-form-item-label) {
+    position: static;
+    overflow: visible;
+    width: auto;
+    height: auto;
+    clip: auto;
+    white-space: normal;
+  }
+
+  .tierRow > button,
+  .discountRow > button {
+    justify-self: end;
+    grid-column: 1 / -1;
+  }
+
+  .depositRow,
+  .radiusRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .depositHint {
+    padding-bottom: 0;
+  }
+
+  .inputNarrow {
+    width: 100%;
+  }
+}

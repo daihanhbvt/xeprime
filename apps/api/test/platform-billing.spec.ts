@@ -1,14 +1,10 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
-import {
-  API_ERROR_CODE,
-  PLAN_STATUS,
-  SUBSCRIPTION_STATUS,
-  VEHICLE_TYPE,
-} from '@xeprime/types';
+import { API_ERROR_CODE, PLAN_STATUS, SUBSCRIPTION_STATUS, VEHICLE_TYPE } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BillingService } from '../src/modules/billing/billing.service';
 import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
+import { PricingService } from '../src/modules/pricing/pricing.service';
 import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -22,7 +18,14 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const billing = new BillingService(asService, audit);
-const vehicles = new VehiclesService(asService, audit, new ListingsService(asService), billing, new CatalogService(asService, audit));
+const vehicles = new VehiclesService(
+  asService,
+  audit,
+  new ListingsService(asService),
+  billing,
+  new CatalogService(asService, audit),
+  new PricingService(asService, audit),
+);
 
 const RUN = newId().slice(-8).toLowerCase();
 
@@ -33,7 +36,10 @@ let tenantFreeId: string;
 let planId: string;
 const planIds: string[] = [];
 
-async function mkPlan(code: string, opts: { durationDays?: number; maxVehicles?: number | null } = {}) {
+async function mkPlan(
+  code: string,
+  opts: { durationDays?: number; maxVehicles?: number | null } = {},
+) {
   const plan = await billing.createPlan(actorId, {
     code: `${code}-${RUN}`,
     name: `Gói ${code}`,
@@ -81,7 +87,9 @@ afterAll(async () => {
       where: { targetType: { in: ['plan', 'tenant_subscription'] }, actorUserId: actorId },
     });
     await prisma.auditLog.deleteMany({ where: { tenantId: { in: [tenantId, tenantFreeId] } } });
-    await prisma.tenantSubscription.deleteMany({ where: { tenantId: { in: [tenantId, tenantFreeId] } } });
+    await prisma.tenantSubscription.deleteMany({
+      where: { tenantId: { in: [tenantId, tenantFreeId] } },
+    });
     await prisma.plan.deleteMany({ where: { id: { in: planIds } } });
     await prisma.vehicle.deleteMany({ where: { tenantId: { in: [tenantId, tenantFreeId] } } });
     await prisma.tenant.deleteMany({ where: { id: { in: [tenantId, tenantFreeId] } } });
@@ -123,9 +131,9 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     const toArchive = await mkPlan('old');
     const archived = await billing.archivePlan(actorId, toArchive.id);
     expect(archived.status).toBe(PLAN_STATUS.ARCHIVED);
-    await expect(
-      billing.assign(tenantId, actorId, { planId: toArchive.id }),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.CONFLICT } });
+    await expect(billing.assign(tenantId, actorId, { planId: toArchive.id })).rejects.toMatchObject(
+      { response: { code: API_ERROR_CODE.CONFLICT } },
+    );
   });
 
   maybe('gán → gói hiện hành đúng (price snapshot); gia hạn trước hạn nối đuôi', async () => {
@@ -159,56 +167,62 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     expect(assignAudit).toBeTruthy();
   });
 
-  maybe('quota: max_vehicles=1 → xe thứ 2 bị PLAN_LIMIT_REACHED; tenant không gói thì thoải mái', async () => {
-    const mkVehicle = (tid: string, code: string) =>
-      vehicles.create(tid, actorId, {
-        code,
+  maybe(
+    'quota: max_vehicles=1 → xe thứ 2 bị PLAN_LIMIT_REACHED; tenant không gói thì thoải mái',
+    async () => {
+      const mkVehicle = (tid: string, code: string) =>
+        vehicles.create(tid, actorId, {
+          code,
+          name: 'Vios',
+          vehicleType: VEHICLE_TYPE.CAR,
+        } as Parameters<typeof vehicles.create>[2]);
+
+      await mkVehicle(tenantId, `XE1-${RUN}`);
+      await expect(mkVehicle(tenantId, `XE2-${RUN}`)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.PLAN_LIMIT_REACHED },
+      });
+
+      // Không có gói = không giới hạn (grandfather — ADR 0010).
+      await mkVehicle(tenantFreeId, `XF1-${RUN}`);
+      await mkVehicle(tenantFreeId, `XF2-${RUN}`);
+    },
+  );
+
+  maybe(
+    'huỷ cả 2 chu kỳ → current null; huỷ lần nữa → INVALID_STATUS_TRANSITION; quota mở lại',
+    async () => {
+      const history = await billing.listSubscriptions(tenantId, {});
+      for (const sub of history.data) {
+        const cancelled = await billing.cancel(tenantId, actorId, sub.id);
+        expect(cancelled.status).toBe(SUBSCRIPTION_STATUS.CANCELLED);
+      }
+      expect(await billing.currentPlan(tenantId)).toBeNull();
+
+      await expect(billing.cancel(tenantId, actorId, history.data[0]!.id)).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION },
+      });
+
+      const cancelAudit = await prisma.auditLog.count({
+        where: { action: 'subscription.cancel', tenantId },
+      });
+      expect(cancelAudit).toBe(2);
+
+      // Hết gói giới hạn → tạo xe lại được (unlimited).
+      await vehicles.create(tenantId, actorId, {
+        code: `XE3-${RUN}`,
         name: 'Vios',
         vehicleType: VEHICLE_TYPE.CAR,
       } as Parameters<typeof vehicles.create>[2]);
-
-    await mkVehicle(tenantId, `XE1-${RUN}`);
-    await expect(mkVehicle(tenantId, `XE2-${RUN}`)).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.PLAN_LIMIT_REACHED },
-    });
-
-    // Không có gói = không giới hạn (grandfather — ADR 0010).
-    await mkVehicle(tenantFreeId, `XF1-${RUN}`);
-    await mkVehicle(tenantFreeId, `XF2-${RUN}`);
-  });
-
-  maybe('huỷ cả 2 chu kỳ → current null; huỷ lần nữa → INVALID_STATUS_TRANSITION; quota mở lại', async () => {
-    const history = await billing.listSubscriptions(tenantId, {});
-    for (const sub of history.data) {
-      const cancelled = await billing.cancel(tenantId, actorId, sub.id);
-      expect(cancelled.status).toBe(SUBSCRIPTION_STATUS.CANCELLED);
-    }
-    expect(await billing.currentPlan(tenantId)).toBeNull();
-
-    await expect(
-      billing.cancel(tenantId, actorId, history.data[0]!.id),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.INVALID_STATUS_TRANSITION } });
-
-    const cancelAudit = await prisma.auditLog.count({
-      where: { action: 'subscription.cancel', tenantId },
-    });
-    expect(cancelAudit).toBe(2);
-
-    // Hết gói giới hạn → tạo xe lại được (unlimited).
-    await vehicles.create(tenantId, actorId, {
-      code: `XE3-${RUN}`,
-      name: 'Vios',
-      vehicleType: VEHICLE_TYPE.CAR,
-    } as Parameters<typeof vehicles.create>[2]);
-  });
+    },
+  );
 
   maybe('id lạ → NOT_FOUND (plan / tenant / subscription)', async () => {
     await expect(billing.updatePlan(actorId, newId(), { price: '1' })).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });
-    await expect(
-      billing.assign(newId(), actorId, { planId }),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
+    await expect(billing.assign(newId(), actorId, { planId })).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.NOT_FOUND },
+    });
     await expect(billing.cancel(tenantId, actorId, newId())).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });

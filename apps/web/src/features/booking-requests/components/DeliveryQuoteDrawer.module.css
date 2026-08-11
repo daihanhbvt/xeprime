@@ -1,0 +1,102 @@
+/* Drawer báo giá giao nhận — Figma `237:1845` (desktop 480px) / `247:2023` (mobile). */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.context {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  margin: 0;
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+}
+
+.contextRow {
+  display: flex;
+  align-items: baseline;
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm);
+}
+
+.contextRow dt {
+  flex: none;
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.contextRow dd {
+  overflow: hidden;
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  text-overflow: ellipsis;
+}
+
+.vehicleName {
+  color: var(--xp-color-primary);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.badgeRow {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+.outsideBadge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.autoFee {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.autoFeeLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.autoFeeValue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 8px;
+  background: var(--xp-color-bg-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-sm);
+}
+
+.autoFeeTag {
+  color: var(--xp-color-info);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.hint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}

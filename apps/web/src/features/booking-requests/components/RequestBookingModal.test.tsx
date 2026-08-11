@@ -39,6 +39,15 @@ vi.mock('../api', () => ({
   submitBookingRequest: (...a: unknown[]) => api.submitBookingRequest(...a),
 }));
 
+/**
+ * Public quote (Wave 2) trả lỗi ngay: các test này khoá luồng đặt xe, không khoá khối giá —
+ * query lỗi thì flow chỉ ẩn khối giá. KHÔNG mock kiểu treo vô hạn: `invalidateQueries()` sau
+ * khi gửi thành công sẽ đợi refetch của chính query này và làm test kẹt ở bước done.
+ */
+vi.mock('@/features/rental-policies/api', () => ({
+  fetchPublicQuote: () => Promise.reject(new Error('quote offline (test)')),
+}));
+
 vi.mock('@/features/phone-verification/api', () => ({
   verifyOtp: (...a: unknown[]) => api.verifyOtp(...a),
   sendOtp: vi.fn(),

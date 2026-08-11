@@ -1,3 +1,19 @@
+/* Khối giao tận nơi (Wave 2) — switch + ô địa chỉ, nằm trong bước liên hệ. */
+.deliveryBlock {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+}
+
+.deliveryFootnote {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+}
+
 .flow {
   display: block;
 }

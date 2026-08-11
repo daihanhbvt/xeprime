@@ -1,9 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  BOOKING_STATUS_VALUES,
-  SERVICE_TYPE,
-  SERVICE_TYPE_VALUES,
-} from '@xeprime/types';
+import { BOOKING_STATUS_VALUES, SERVICE_TYPE, SERVICE_TYPE_VALUES } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
@@ -18,6 +14,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { BookingPriceSnapshotDto } from '../../pricing/dto/pricing.dto';
 
 /** Cách sắp xếp danh sách đơn thuê. */
 export const BOOKING_SORT = ['newest', 'pickup_asc', 'pickup_desc', 'return_asc'] as const;
@@ -100,7 +97,8 @@ export class BookingListItemDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
   @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) totalAmount!: string;
   @ApiProperty() paidAmount!: string;
-  @ApiProperty({ description: 'Công nợ = max(0, total − paid), string — ADR 0007' }) debtAmount!: string;
+  @ApiProperty({ description: 'Công nợ = max(0, total − paid), string — ADR 0007' })
+  debtAmount!: string;
   @ApiProperty() depositAmount!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
@@ -110,6 +108,9 @@ export class BookingDetailDto extends BookingListItemDto {
   @ApiProperty() baseAmount!: string;
   @ApiProperty() deliveryFee!: string;
   @ApiProperty() discountAmount!: string;
+  /** Snapshot giá bất biến chốt lúc tạo đơn (Wave 2) — null với đơn tạo trước khi có tính năng. */
+  @ApiPropertyOptional({ type: BookingPriceSnapshotDto, nullable: true })
+  priceSnapshot!: BookingPriceSnapshotDto | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actualPickupAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) actualReturnAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
@@ -156,7 +157,10 @@ export class CreateBookingDto {
   @IsDateString()
   returnAt!: string;
 
-  @ApiPropertyOptional({ description: 'Tiền thuê gốc, string thập phân — ADR 0007', example: '600000' })
+  @ApiPropertyOptional({
+    description: 'Tiền thuê gốc, string thập phân — ADR 0007',
+    example: '600000',
+  })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'baseAmount phải là số tiền hợp lệ' })
   baseAmount?: string;

@@ -1,8 +1,14 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, CurrentUser, RequirePermissions, TenantScoped } from '../../common/decorators';
+import {
+  CurrentTenant,
+  CurrentUser,
+  RequirePermissions,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
+import { DeliveryQuotePreviewDto, SaveDeliveryQuoteDto } from '../pricing/dto/pricing.dto';
 import {
   BookingRequestDto,
   BookingRequestListQueryDto,
@@ -66,5 +72,36 @@ export class BookingRequestsController {
     @Body() dto: RejectBookingRequestDto,
   ): Promise<BookingRequestDto> {
     return this.requests.reject(tenant.tenantId, user.id, id, dto.reason);
+  }
+
+  /** Preview báo giá — tính bằng PricingService, KHÔNG lưu; drawer cập nhật khi shop gõ. */
+  @Post(':id/delivery-quote/preview')
+  @RequirePermissions(PERMISSION.BOOKING_REQUEST_APPROVE)
+  @ApiOperation({ summary: 'Preview báo giá giao nhận theo khoảng cách (không lưu)' })
+  @ApiOkResponse({ type: DeliveryQuotePreviewDto })
+  previewDeliveryQuote(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Body() dto: SaveDeliveryQuoteDto,
+  ): Promise<DeliveryQuotePreviewDto> {
+    return this.requests.deliveryQuotePreview(tenant.tenantId, id, dto);
+  }
+
+  /**
+   * Chốt báo giá giao nhận cho yêu cầu. Trong bán kính: phí tự tính theo bậc (input phí bị bỏ
+   * qua). Ngoài bán kính: phí nhập tay bắt buộc. Yêu cầu có giao tận nơi phải có báo giá này
+   * trước khi duyệt được (DELIVERY_QUOTE_REQUIRED).
+   */
+  @Post(':id/delivery-quote')
+  @RequirePermissions(PERMISSION.BOOKING_REQUEST_APPROVE)
+  @ApiOperation({ summary: 'Lưu báo giá giao nhận cho yêu cầu (audit)' })
+  @ApiOkResponse({ type: BookingRequestDto })
+  saveDeliveryQuote(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SaveDeliveryQuoteDto,
+  ): Promise<BookingRequestDto> {
+    return this.requests.saveDeliveryQuote(tenant.tenantId, user.id, id, dto);
   }
 }

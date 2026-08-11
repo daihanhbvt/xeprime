@@ -1864,6 +1864,76 @@
         ]
       }
     },
+    "/vehicles/{id}/pricing": {
+      "get": {
+        "operationId": "VehiclesController_getPricing",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehiclePricingDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Giá & chính sách của một xe (nguồn kế thừa/ghi đè + bản gian hàng)",
+        "tags": [
+          "vehicles"
+        ]
+      },
+      "put": {
+        "operationId": "VehiclesController_savePricing",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveVehiclePricingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehiclePricingDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lưu giá & chính sách theo xe (ghi đè hoặc đặt lại theo gian hàng)",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
     "/vehicles/{id}/submit-public": {
       "post": {
         "operationId": "VehiclesController_submitPublic",
@@ -2386,6 +2456,107 @@
         ]
       }
     },
+    "/shop/rental-policies": {
+      "get": {
+        "operationId": "ShopPoliciesController_get",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopRentalPolicyDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chính sách thuê mặc định + số xe kế thừa/ghi đè",
+        "tags": [
+          "rental-policies"
+        ]
+      },
+      "put": {
+        "operationId": "ShopPoliciesController_save",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRentalPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopRentalPolicyDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lưu chính sách thuê mặc định (upsert, audit before/after)",
+        "tags": [
+          "rental-policies"
+        ]
+      }
+    },
+    "/public/listings/{id}/quote": {
+      "get": {
+        "operationId": "PublicQuoteController_quote",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pickupAt",
+            "required": true,
+            "in": "query",
+            "description": "ISO datetime nhận xe",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnAt",
+            "required": true,
+            "in": "query",
+            "description": "ISO datetime trả xe",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicQuoteDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Báo giá thuê theo khoảng ngày (chưa gồm phí giao nhận)",
+        "tags": [
+          "public-listings"
+        ]
+      }
+    },
     "/bookings": {
       "get": {
         "operationId": "BookingsController_list",
@@ -2804,6 +2975,88 @@
           }
         },
         "summary": "Từ chối yêu cầu",
+        "tags": [
+          "booking-requests"
+        ]
+      }
+    },
+    "/booking-requests/{id}/delivery-quote/preview": {
+      "post": {
+        "operationId": "BookingRequestsController_previewDeliveryQuote",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveDeliveryQuoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryQuotePreviewDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview báo giá giao nhận theo khoảng cách (không lưu)",
+        "tags": [
+          "booking-requests"
+        ]
+      }
+    },
+    "/booking-requests/{id}/delivery-quote": {
+      "post": {
+        "operationId": "BookingRequestsController_saveDeliveryQuote",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveDeliveryQuoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingRequestDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lưu báo giá giao nhận cho yêu cầu (audit)",
         "tags": [
           "booking-requests"
         ]
@@ -7792,6 +8045,231 @@
           "stats"
         ]
       },
+      "DeliveryTierDto": {
+        "type": "object",
+        "properties": {
+          "toKm": {
+            "type": "number",
+            "description": "Mốc \"đến\" (km) — các bậc phải tăng dần nghiêm ngặt",
+            "maximum": 500
+          },
+          "fee": {
+            "type": "string",
+            "description": "Phí VND dạng chuỗi — '0' = miễn phí",
+            "example": "30000"
+          }
+        },
+        "required": [
+          "toKm",
+          "fee"
+        ]
+      },
+      "DiscountTierDto": {
+        "type": "object",
+        "properties": {
+          "minDays": {
+            "type": "number",
+            "description": "Số ngày thuê tối thiểu — các mốc phải tăng dần nghiêm ngặt"
+          },
+          "percent": {
+            "type": "number",
+            "description": "Mức giảm % (1–100), CHỈ áp lên tiền thuê cơ bản"
+          },
+          "note": {
+            "type": "string",
+            "description": "Ghi chú hiển thị"
+          }
+        },
+        "required": [
+          "minDays",
+          "percent"
+        ]
+      },
+      "RentalPolicyValuesDto": {
+        "type": "object",
+        "properties": {
+          "depositAmount": {
+            "type": "string"
+          },
+          "deliveryEnabled": {
+            "type": "boolean"
+          },
+          "deliveryMaxRadiusKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "deliveryTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTierDto"
+            }
+          },
+          "overtimeFeePerHour": {
+            "type": "string",
+            "nullable": true
+          },
+          "overtimeGraceMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "overtimeRoundingMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "discountEnabled": {
+            "type": "boolean"
+          },
+          "discountTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscountTierDto"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO — mốc phát hiện báo giá/preview cũ"
+          }
+        },
+        "required": [
+          "depositAmount",
+          "deliveryEnabled",
+          "deliveryTiers",
+          "discountEnabled",
+          "discountTiers",
+          "updatedAt"
+        ]
+      },
+      "VehiclePricingDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "shop",
+              "vehicle"
+            ],
+            "nullable": true,
+            "description": "null = chưa có chính sách nào (gian hàng chưa cấu hình, xe không ghi đè)"
+          },
+          "policy": {
+            "nullable": true,
+            "description": "Chính sách HIỆU LỰC của xe",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RentalPolicyValuesDto"
+              }
+            ]
+          },
+          "shopPolicy": {
+            "nullable": true,
+            "description": "Chính sách mặc định gian hàng (đối chiếu / đặt lại)",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RentalPolicyValuesDto"
+              }
+            ]
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "nullable": true
+          },
+          "weekendPrice": {
+            "type": "string",
+            "nullable": true
+          },
+          "isPublic": {
+            "type": "boolean",
+            "description": "Xe đang hiển thị công khai — lưu giá sẽ đưa xe về chờ duyệt lại (ADR 0008)"
+          }
+        },
+        "required": [
+          "source",
+          "isPublic"
+        ]
+      },
+      "SaveRentalPolicyDto": {
+        "type": "object",
+        "properties": {
+          "depositAmount": {
+            "type": "string",
+            "description": "Cọc thế chấp cố định VND (chuỗi)",
+            "example": "5000000"
+          },
+          "deliveryEnabled": {
+            "type": "boolean"
+          },
+          "deliveryMaxRadiusKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "Bán kính tự báo giá tối đa (km) — bắt buộc khi bật giao nhận, phải bằng mốc \"đến\" của bậc cuối"
+          },
+          "deliveryTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTierDto"
+            }
+          },
+          "overtimeFeePerHour": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phí mỗi giờ trả trễ (VND) — null = chưa cấu hình"
+          },
+          "overtimeGraceMinutes": {
+            "type": "number",
+            "nullable": true,
+            "description": "Phút trễ miễn phí tối đa — null = chưa cấu hình"
+          },
+          "overtimeRoundingMinutes": {
+            "type": "number",
+            "nullable": true,
+            "description": "Đơn vị làm tròn tối thiểu (phút) — null = chưa cấu hình"
+          },
+          "discountEnabled": {
+            "type": "boolean"
+          },
+          "discountTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscountTierDto"
+            }
+          }
+        },
+        "required": [
+          "depositAmount",
+          "deliveryEnabled",
+          "deliveryTiers",
+          "discountEnabled",
+          "discountTiers"
+        ]
+      },
+      "SaveVehiclePricingDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "shop",
+              "vehicle"
+            ]
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "description": "Giá thuê ngày thường VND — chỉ nhận khi source=vehicle"
+          },
+          "weekendPrice": {
+            "type": "string",
+            "description": "Giá cuối tuần VND — chỉ nhận khi source=vehicle"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/SaveRentalPolicyDto"
+          }
+        },
+        "required": [
+          "source"
+        ]
+      },
       "CreateVehicleDto": {
         "type": "object",
         "properties": {
@@ -8489,6 +8967,145 @@
           }
         }
       },
+      "ShopRentalPolicyDto": {
+        "type": "object",
+        "properties": {
+          "policy": {
+            "nullable": true,
+            "description": "null = gian hàng chưa cấu hình",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RentalPolicyValuesDto"
+              }
+            ]
+          },
+          "inheritingVehicles": {
+            "type": "number",
+            "description": "Số xe đang kế thừa chính sách chung"
+          },
+          "overriddenVehicles": {
+            "type": "number",
+            "description": "Số xe đã ghi đè chính sách riêng"
+          }
+        },
+        "required": [
+          "inheritingVehicles",
+          "overriddenVehicles"
+        ]
+      },
+      "PriceBreakdownRowDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "base",
+              "discount",
+              "subtotal",
+              "delivery",
+              "overtime",
+              "extras"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "sublabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "amount": {
+            "type": "string",
+            "description": "VND chuỗi; dòng giảm giá mang dấu âm"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "amount"
+        ]
+      },
+      "QuoteBreakdownDto": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "number",
+            "description": "Số ngày tính tiền"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceBreakdownRowDto"
+            }
+          },
+          "totalAmount": {
+            "type": "string",
+            "description": "Tổng khách trả TRƯỚC cọc"
+          },
+          "depositAmount": {
+            "type": "string",
+            "description": "Cọc thế chấp hoàn trả — không nằm trong tổng"
+          },
+          "policySource": {
+            "type": "string",
+            "enum": [
+              "shop",
+              "vehicle"
+            ],
+            "nullable": true
+          },
+          "policyUpdatedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "updatedAt của chính sách hiệu lực"
+          }
+        },
+        "required": [
+          "days",
+          "rows",
+          "totalAmount",
+          "depositAmount",
+          "policySource"
+        ]
+      },
+      "DeliverySummaryDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "maxRadiusKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "tiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTierDto"
+            }
+          }
+        },
+        "required": [
+          "enabled",
+          "tiers"
+        ]
+      },
+      "PublicQuoteDto": {
+        "type": "object",
+        "properties": {
+          "breakdown": {
+            "$ref": "#/components/schemas/QuoteBreakdownDto"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliverySummaryDto"
+          }
+        },
+        "required": [
+          "breakdown",
+          "delivery"
+        ]
+      },
       "BookingListItemDto": {
         "type": "object",
         "properties": {
@@ -8597,6 +9214,122 @@
           "meta"
         ]
       },
+      "SnapshotPolicyDto": {
+        "type": "object",
+        "properties": {
+          "depositAmount": {
+            "type": "string"
+          },
+          "deliveryEnabled": {
+            "type": "boolean"
+          },
+          "deliveryMaxRadiusKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "deliveryTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTierDto"
+            }
+          },
+          "overtimeFeePerHour": {
+            "type": "string",
+            "nullable": true
+          },
+          "overtimeGraceMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "overtimeRoundingMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "discountEnabled": {
+            "type": "boolean"
+          },
+          "discountTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscountTierDto"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO — mốc phát hiện báo giá/preview cũ"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "shop",
+              "vehicle"
+            ]
+          }
+        },
+        "required": [
+          "depositAmount",
+          "deliveryEnabled",
+          "deliveryTiers",
+          "discountEnabled",
+          "discountTiers",
+          "updatedAt",
+          "source"
+        ]
+      },
+      "BookingPriceSnapshotDto": {
+        "type": "object",
+        "properties": {
+          "calculatedAt": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "quote",
+              "manual"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "VND"
+            ]
+          },
+          "days": {
+            "type": "number",
+            "nullable": true
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceBreakdownRowDto"
+            }
+          },
+          "totalAmount": {
+            "type": "string"
+          },
+          "depositAmount": {
+            "type": "string"
+          },
+          "policy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SnapshotPolicyDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "calculatedAt",
+          "source",
+          "currency",
+          "rows",
+          "totalAmount",
+          "depositAmount"
+        ]
+      },
       "BookingDetailDto": {
         "type": "object",
         "properties": {
@@ -8677,6 +9410,15 @@
           },
           "discountAmount": {
             "type": "string"
+          },
+          "priceSnapshot": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingPriceSnapshotDto"
+              }
+            ]
           },
           "actualPickupAt": {
             "type": "string",
@@ -8854,6 +9596,42 @@
           "status"
         ]
       },
+      "BookingRequestDeliveryQuoteDto": {
+        "type": "object",
+        "properties": {
+          "distanceKm": {
+            "type": "number"
+          },
+          "fee": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "manual"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "quotedAt": {
+            "type": "string"
+          },
+          "stale": {
+            "type": "boolean",
+            "description": "Chính sách đã đổi SAU khi báo giá — nên báo giá lại"
+          }
+        },
+        "required": [
+          "distanceKm",
+          "fee",
+          "source",
+          "quotedAt",
+          "stale"
+        ]
+      },
       "BookingRequestDto": {
         "type": "object",
         "properties": {
@@ -8903,6 +9681,28 @@
             "type": "string",
             "nullable": true
           },
+          "deliveryRequested": {
+            "type": "boolean",
+            "description": "Khách yêu cầu giao xe tận nơi"
+          },
+          "deliveryAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "deliveryQuote": {
+            "nullable": true,
+            "description": "Báo giá giao nhận đã lưu — null khi chưa báo",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BookingRequestDeliveryQuoteDto"
+              }
+            ]
+          },
+          "needsDeliveryQuote": {
+            "type": "boolean",
+            "description": "Đang chờ duyệt + có yêu cầu giao + chưa có báo giá → phải báo giá trước khi duyệt"
+          },
           "rejectReason": {
             "type": "string",
             "nullable": true
@@ -8926,6 +9726,8 @@
           "customerPhone",
           "pickupAt",
           "returnAt",
+          "deliveryRequested",
+          "needsDeliveryQuote",
           "createdAt"
         ]
       },
@@ -8954,6 +9756,53 @@
             "type": "string"
           }
         }
+      },
+      "SaveDeliveryQuoteDto": {
+        "type": "object",
+        "properties": {
+          "distanceKm": {
+            "type": "number",
+            "description": "Khoảng cách một chiều shop xác nhận (km)",
+            "maximum": 500
+          },
+          "fee": {
+            "type": "string",
+            "description": "Phí đề xuất VND — bắt buộc khi NGOÀI bán kính tự báo; trong bán kính bị bỏ qua (phí tính tự động)"
+          },
+          "note": {
+            "type": "string",
+            "description": "Ghi chú cho khách hàng"
+          }
+        },
+        "required": [
+          "distanceKm"
+        ]
+      },
+      "DeliveryQuotePreviewDto": {
+        "type": "object",
+        "properties": {
+          "requiresManualFee": {
+            "type": "boolean",
+            "description": "Khoảng cách nằm ngoài bán kính tự báo → phí phải nhập tay"
+          },
+          "autoFee": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phí tự tính theo bậc (trong bán kính); null khi phải nhập tay"
+          },
+          "breakdown": {
+            "description": "Breakdown đầy đủ nếu chốt với khoảng cách/phí này",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QuoteBreakdownDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "requiresManualFee",
+          "breakdown"
+        ]
       },
       "CreateBookingRequestDto": {
         "type": "object",
@@ -8984,6 +9833,14 @@
           },
           "note": {
             "type": "string"
+          },
+          "deliveryRequested": {
+            "type": "boolean",
+            "description": "Yêu cầu giao xe tận nơi — chỉ nhận khi chính sách giao nhận của xe đang bật"
+          },
+          "deliveryAddress": {
+            "type": "string",
+            "description": "Địa điểm giao xe — bắt buộc khi yêu cầu giao tận nơi"
           }
         },
         "required": [

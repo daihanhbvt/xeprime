@@ -2,15 +2,19 @@
 
 import { CheckCircleFilled, EditOutlined, WarningFilled } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button } from 'antd';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { API_ERROR_CODE, isSameVnPhone, PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
+import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
 import { DateTimeField } from '@/components/form/DateTimeField';
+import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
+import { fetchPublicQuote } from '@/features/rental-policies/api';
+import { queryKeys } from '@/services/query-keys';
 import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { maskPhone } from '@/features/phone-verification/mask';
@@ -88,7 +92,28 @@ export function RequestBookingFlow({
       customerPhone: '',
       pickupAt: pickupAt ? dayjs(pickupAt) : null,
       returnAt: returnAt ? dayjs(returnAt) : null,
+      deliveryRequested: false,
+      deliveryAddress: '',
     },
+  });
+
+  /**
+   * Báo giá công khai (Wave 2) — CÙNG PricingService với luồng duyệt của shop, FE không tự
+   * cộng trừ. Chỉ gọi sau khi đã qua bước chọn ngày; hỏng cũng không chặn luồng đặt (khối giá
+   * chỉ là thông tin tham khảo, giá chốt vẫn do shop duyệt).
+   */
+  const watchedPickup = useWatch({ control, name: 'pickupAt' });
+  const watchedReturn = useWatch({ control, name: 'returnAt' });
+  const deliveryRequested = useWatch({ control, name: 'deliveryRequested' });
+  const quoteParams =
+    watchedPickup && watchedReturn
+      ? { pickupAt: watchedPickup.toISOString(), returnAt: watchedReturn.toISOString() }
+      : null;
+  const quoteQ = useQuery({
+    queryKey: queryKeys.marketplace.quote(vehicleId, quoteParams ?? {}),
+    queryFn: () => fetchPublicQuote(vehicleId, quoteParams!),
+    enabled: step === 'contact' && quoteParams != null,
+    staleTime: 60_000,
   });
 
   /**
@@ -137,6 +162,9 @@ export function RequestBookingFlow({
         customerPhone: phone,
         pickupAt: v.pickupAt?.toISOString() ?? '',
         returnAt: v.returnAt?.toISOString() ?? '',
+        ...(v.deliveryRequested
+          ? { deliveryRequested: true, deliveryAddress: v.deliveryAddress.trim() }
+          : {}),
       });
     },
     onSuccess: async () => {
@@ -196,7 +224,7 @@ export function RequestBookingFlow({
 
   async function continueFromContact() {
     setStepError(null);
-    if (!(await trigger(['customerName', 'customerPhone']))) return;
+    if (!(await trigger(['customerName', 'customerPhone', 'deliveryAddress']))) return;
     const phone = getValues('customerPhone').trim();
 
     // Đã đăng nhập + đúng SĐT đã xác thực → gửi thẳng, không dựng bước OTP thừa.
@@ -391,6 +419,46 @@ export function RequestBookingFlow({
               />
             </>
           )}
+
+          {/* Giao tận nơi — chỉ hiện khi chính sách giao nhận của xe đang bật (dữ liệu thật). */}
+          {quoteQ.data?.delivery.enabled ? (
+            <div className={styles.deliveryBlock}>
+              <SwitchField
+                control={control}
+                name="deliveryRequested"
+                label="Giao xe tận nơi"
+                description={`Miễn phí/tính phí theo khoảng cách trong bán kính ${quoteQ.data.delivery.maxRadiusKm ?? '—'} km; xa hơn shop sẽ báo giá riêng.`}
+              />
+              {deliveryRequested ? (
+                <TextField
+                  control={control}
+                  name="deliveryAddress"
+                  label="Địa điểm giao xe"
+                  placeholder="123 Nguyễn Huệ, Q.1, TP.HCM"
+                  autoComplete="street-address"
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          {/* Breakdown từ PricingService — tham khảo; giá chốt vẫn do shop duyệt yêu cầu. */}
+          {quoteQ.data ? (
+            <PriceBreakdown
+              rows={quoteQ.data.breakdown.rows}
+              totalAmount={quoteQ.data.breakdown.totalAmount}
+              depositAmount={quoteQ.data.breakdown.depositAmount}
+              title="Chi tiết giá thuê (dự kiến)"
+              footer={
+                deliveryRequested ? (
+                  <span className={styles.deliveryFootnote}>
+                    Chưa gồm phí giao nhận — shop xác nhận theo khoảng cách thực tế.
+                  </span>
+                ) : null
+              }
+            />
+          ) : quoteQ.isLoading ? (
+            <p className={styles.stepHint}>Đang tải chi tiết giá…</p>
+          ) : null}
 
           {vp.error ? (
             <Alert type="error" showIcon message={vp.error} className={styles.err} />
