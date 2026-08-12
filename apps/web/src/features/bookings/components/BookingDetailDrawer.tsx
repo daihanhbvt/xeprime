@@ -12,12 +12,14 @@ import {
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import { formatDateTime } from '@/lib/datetime';
 import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { contractPath } from '@/constants/routes';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
+import { HandoverPanel } from '@/features/handovers/components/HandoverPanel';
 import { PaymentHistory } from '@/features/payments/components/PaymentHistory';
 import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
 import { BOOKING_TRANSITION_LABEL, DESTRUCTIVE_TRANSITIONS, serviceTypeLabel } from '../constants';
@@ -36,31 +38,69 @@ export function BookingDetailDrawer({
   onEdit: (booking: BookingDetail) => void;
 }) {
   const { data, isLoading } = useBooking(bookingId);
+  /**
+   * Biên bản bàn giao nằm trong drawer này, và drawer đóng được bằng Esc/bấm nền — đóng lúc
+   * đó sẽ nuốt mất dữ liệu đang gõ ở quầy. Nên chính drawer phải hỏi trước, dùng đúng hộp
+   * xác nhận "Bỏ thay đổi / Tiếp tục chỉnh sửa" của cả kho.
+   */
+  const [handoverDirty, setHandoverDirty] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+
+  function requestClose() {
+    if (handoverDirty) {
+      setConfirmClose(true);
+      return;
+    }
+    onClose();
+  }
 
   return (
-    <DetailDrawer
-      title={data ? `Đơn ${data.code}` : 'Chi tiết đơn'}
-      size="md"
-      open={Boolean(bookingId)}
-      onClose={onClose}
-      loading={isLoading || !data}
-      extra={
-        data ? (
-          <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} />
-        ) : null
-      }
-    >
-      {data ? <BookingDetailBody booking={data} onEdit={onEdit} /> : null}
-    </DetailDrawer>
+    <>
+      <DetailDrawer
+        title={data ? `Đơn ${data.code}` : 'Chi tiết đơn'}
+        size="md"
+        open={Boolean(bookingId)}
+        onClose={requestClose}
+        loading={isLoading || !data}
+        extra={
+          data ? (
+            <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} />
+          ) : null
+        }
+      >
+        {data ? (
+          <BookingDetailBody booking={data} onEdit={onEdit} onHandoverDirty={setHandoverDirty} />
+        ) : null}
+      </DetailDrawer>
+
+      <ResponsiveDialog
+        open={confirmClose}
+        title="Bỏ các thay đổi chưa lưu?"
+        size="sm"
+        onClose={() => setConfirmClose(false)}
+        onOk={() => {
+          setConfirmClose(false);
+          setHandoverDirty(false);
+          onClose();
+        }}
+        okText="Bỏ thay đổi"
+        cancelText="Tiếp tục chỉnh sửa"
+        destructive
+      >
+        Biên bản bàn giao đang mở còn dữ liệu chưa lưu.
+      </ResponsiveDialog>
+    </>
   );
 }
 
 function BookingDetailBody({
   booking,
   onEdit,
+  onHandoverDirty,
 }: {
   booking: BookingDetail;
   onEdit: (booking: BookingDetail) => void;
+  onHandoverDirty: (dirty: boolean) => void;
 }) {
   const { message } = App.useApp();
   const { has } = usePermissions();
@@ -74,6 +114,7 @@ function BookingDetailBody({
   const canContract = has(PERMISSION.CONTRACT_MANAGE);
   const hasDebt = !isZeroMoney(booking.debtAmount);
   const nextStatuses = BOOKING_STATUS_TRANSITIONS[booking.status as BookingStatus] ?? [];
+  const statusLabel = BOOKING_STATUS_META[booking.status as BookingStatus]?.label ?? booking.status;
 
   function openContract() {
     createContract.mutate(booking.id, {
@@ -132,6 +173,17 @@ function BookingDetailBody({
           </Space>
         </div>
       ) : null}
+
+      <Divider titlePlacement="start" className={styles.paymentDivider}>
+        Bàn giao &amp; Nhận lại
+      </Divider>
+      {/* Bàn giao là một BƯỚC của đơn (Wave 7) — sống ngay trong chi tiết đơn, không phải
+          một mục điều hướng riêng. Panel tự lo quyền/loading/lỗi của chính nó. */}
+      <HandoverPanel
+        bookingId={booking.id}
+        bookingStatus={statusLabel}
+        onDirtyChange={onHandoverDirty}
+      />
 
       <Divider titlePlacement="start" className={styles.paymentDivider}>
         Thanh toán

@@ -1335,6 +1335,159 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bookings/{id}/handovers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ngữ cảnh bàn giao của đơn: biên bản giao + trả + số liệu suy ra */
+        get: operations["BookingHandoversController_context"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/handovers/{type}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Tạo hoặc lưu bản nháp bàn giao (không có hệ quả nghiệp vụ) */
+        put: operations["BookingHandoversController_saveDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/handovers/{type}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Xác nhận bàn giao — ghi KM + chuyển trạng thái đơn + lịch + audit, một transaction */
+        post: operations["BookingHandoversController_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/handovers/{type}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hủy bản nháp (biên bản đã xác nhận không hủy được) */
+        post: operations["BookingHandoversController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/handovers/{type}/odometer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bổ sung/sửa KM của biên bản đã xác nhận (bắt buộc lý do + audit) */
+        post: operations["BookingHandoversController_resolveOdometer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/handovers/{type}/photos/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Presign upload ảnh hiện trạng vào kho riêng tư (Wave 4.1) */
+        post: operations["BookingHandoversController_presignPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/handovers/{type}/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Xác minh object rồi gắn ảnh vào đúng góc chụp */
+        post: operations["BookingHandoversController_attachPhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/handovers/{type}/photos/{slot}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Gỡ ảnh khỏi một góc chụp của bản nháp */
+        delete: operations["BookingHandoversController_removePhoto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/handovers/{type}/photos/{fileId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Phát signed URL ngắn hạn xem một ảnh hiện trạng */
+        get: operations["BookingHandoversController_downloadPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/booking-requests": {
         parameters: {
             query?: never;
@@ -2490,7 +2643,7 @@ export interface components {
             tenantRole?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer" | null;
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii")[];
         };
         NotificationDto: {
             id: string;
@@ -4018,6 +4171,126 @@ export interface components {
             actualPickupAt?: string;
             /** @description Thời điểm trả xe thực tế (khi → completed) */
             actualReturnAt?: string;
+        };
+        HandoverPhotoDto: {
+            /** @enum {string} */
+            slot: "front" | "rear" | "left" | "right" | "odometer";
+            /** @description ISO */
+            uploadedAt: string;
+            /** @description Chỉ khi có handovers.view_files */
+            fileId?: string;
+            /** @description Chỉ khi có handovers.view_files */
+            name?: string;
+        };
+        HandoverDto: {
+            id: string;
+            bookingId: string;
+            vehicleId: string;
+            /** @enum {string} */
+            type: "pickup" | "return";
+            /** @enum {string} */
+            status: "draft" | "ready" | "confirmed" | "canceled";
+            /** @description null = chưa nhập, KHÔNG phải 0 km */
+            odometerKm?: number | null;
+            odometerMissing: boolean;
+            /** @description Người vận hành đã xác nhận KM bất thường là đúng */
+            suspiciousAcknowledged: boolean;
+            /** @description @xeprime/types → HandoverEnergyKind (suy từ nhiên liệu xe) */
+            energyKind: string;
+            /** @enum {string|null} */
+            fuelLevel?: "full" | "three_quarter" | "half" | "quarter" | "empty" | null;
+            batteryPercent?: number | null;
+            conditionNote?: string | null;
+            damageNote?: string | null;
+            notes?: string | null;
+            photos: components["schemas"]["HandoverPhotoDto"][];
+            /** @description ISO */
+            confirmedAt?: string | null;
+            confirmedByName?: string | null;
+            /** @description ISO */
+            canceledAt?: string | null;
+            /** @description Optimistic concurrency — nộp lại khi lưu/xác nhận */
+            rowVersion: number;
+            /** @description ISO */
+            updatedAt: string;
+        };
+        HandoverContextDto: {
+            bookingId: string;
+            bookingCode: string;
+            /** @description @xeprime/types → BookingStatus */
+            bookingStatus: string;
+            vehicleId: string;
+            vehicleName: string;
+            plateNumber?: string | null;
+            /** @description @xeprime/types → HandoverEnergyKind */
+            energyKind: string;
+            /** @description KM hiện tại của xe theo hệ thống — null = chưa từng ghi nhận */
+            vehicleOdometerKm?: number | null;
+            pickupOdometerKm?: number | null;
+            nextMaintenanceKm?: number | null;
+            /** @description Số ngày thuê theo đơn (làm tròn lên, tối thiểu 1) */
+            rentalDays: number;
+            suspiciousKmPerDay?: number | null;
+            pickup?: components["schemas"]["HandoverDto"] | null;
+            return?: components["schemas"]["HandoverDto"] | null;
+            canStartPickup: boolean;
+            canStartReturn: boolean;
+        };
+        SaveHandoverDto: {
+            /** @description KM đọc trên đồng hồ, 0–2000000 */
+            odometerKm?: number | null;
+            /** @enum {string|null} */
+            fuelLevel?: "full" | "three_quarter" | "half" | "quarter" | "empty" | null;
+            /** @description % pin xe điện (0–100) */
+            batteryPercent?: number | null;
+            conditionNote?: string | null;
+            /** @description Chỉ có nghĩa ở chiều trả */
+            damageNote?: string | null;
+            notes?: string | null;
+            markReady?: boolean;
+            /** @description Bắt buộc khi sửa bản đã có */
+            expectedRowVersion?: number | null;
+        };
+        ConfirmHandoverDto: {
+            /** @description Bắt buộc — chống hai người cùng xác nhận trên hai bản khác nhau */
+            expectedRowVersion: number;
+            acknowledgeSuspicious?: boolean;
+            /** @description Chỉ dùng cho chiều trả xe */
+            allowMissingOdometer?: boolean;
+        };
+        CancelHandoverDto: {
+            expectedRowVersion: number;
+        };
+        ResolveHandoverOdometerDto: {
+            /** @description KM đọc trên đồng hồ, 0–2000000 */
+            odometerKm: number;
+            /** @enum {string} */
+            reasonCode: "handover_error" | "device_error" | "cluster_replaced" | "data_migration" | "other";
+            /** @description Lý do chi tiết — bắt buộc */
+            reason: string;
+            /** @description Xác nhận giảm KM có chủ ý */
+            confirmDecrease?: boolean;
+            /** @description Bắt buộc — chống sửa đè */
+            expectedRowVersion: number;
+        };
+        PresignHandoverPhotoDto: {
+            /** @description Tên file gốc (chỉ để hiển thị) */
+            fileName: string;
+            /**
+             * @description Chỉ ảnh — không nhận PDF
+             * @enum {string}
+             */
+            contentType: "image/jpeg" | "image/png" | "image/webp";
+            /** @description Dung lượng (byte), tối đa 10485760 */
+            fileSize: number;
+            /** @enum {string} */
+            slot: "front" | "rear" | "left" | "right" | "odometer";
+        };
+        AttachHandoverPhotoDto: {
+            /** @description ID file đã presign (ULID do server phát) */
+            fileId: string;
+            /** @enum {string} */
+            slot: "front" | "rear" | "left" | "right" | "odometer";
         };
         BookingRequestDeliveryQuoteDto: {
             distanceKm: number;
@@ -7490,6 +7763,229 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookingDetailDto"];
+                };
+            };
+        };
+    };
+    BookingHandoversController_context: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverContextDto"];
+                };
+            };
+        };
+    };
+    BookingHandoversController_saveDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveHandoverDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverDto"];
+                };
+            };
+        };
+    };
+    BookingHandoversController_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmHandoverDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverContextDto"];
+                };
+            };
+        };
+    };
+    BookingHandoversController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelHandoverDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverContextDto"];
+                };
+            };
+        };
+    };
+    BookingHandoversController_resolveOdometer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveHandoverOdometerDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverContextDto"];
+                };
+            };
+        };
+    };
+    BookingHandoversController_presignPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignHandoverPhotoDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceContractPresignDto"];
+                };
+            };
+        };
+    };
+    BookingHandoversController_attachPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachHandoverPhotoDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverDto"];
+                };
+            };
+        };
+    };
+    BookingHandoversController_removePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                type: string;
+                slot: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoverDto"];
+                };
+            };
+        };
+    };
+    BookingHandoversController_downloadPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                type: string;
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceContractDownloadDto"];
                 };
             };
         };

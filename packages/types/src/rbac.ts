@@ -121,6 +121,21 @@ export const PERMISSION = {
    */
   VEHICLE_ODOMETER_DECREASE: 'vehicles.odometer.decrease',
 
+  // Bàn giao xe (Wave 7 — docs/design/12 §9.1+§10). Bốn mức tách bạch: xem đơn KHÔNG đương
+  // nhiên xem được biên bản, xem biên bản không đương nhiên xác nhận được, và không mức nào
+  // trong ba mức đó mở được ảnh bằng chứng riêng tư.
+  /** Xem biên bản bàn giao (KM, nhiên liệu, tình trạng) — KHÔNG mở được ảnh riêng tư. */
+  HANDOVER_VIEW: 'handovers.view',
+  /** Lập/sửa bản nháp, tải ảnh hiện trạng, hủy nháp. */
+  HANDOVER_MANAGE: 'handovers.manage',
+  /**
+   * XÁC NHẬN bàn giao — thao tác duy nhất có hệ quả thật: đổi trạng thái đơn, ghi KM có thẩm
+   * quyền, đụng lịch xe. Tách riêng vì mức thiệt hại khác hẳn việc nhập nháp.
+   */
+  HANDOVER_CONFIRM: 'handovers.confirm',
+  /** Mở/tải ảnh hiện trạng riêng tư — cùng kiểu tách như `documents.view_files`. */
+  HANDOVER_FILE_VIEW: 'handovers.view_files',
+
   // Đơn đặt xe / đơn thuê
   BOOKING_REQUEST_VIEW: 'booking_requests.view',
   BOOKING_REQUEST_APPROVE: 'booking_requests.approve',
@@ -205,6 +220,10 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.VEHICLE_ODOMETER_CORRECT,
       // KHÔNG có `vehicles.odometer.decrease`: giảm KM là quyền cấp riêng, mặc định chỉ chủ
       // gian hàng có (docs §9.1 "giảm KM cần quyền cao hơn").
+      PERMISSION.HANDOVER_VIEW,
+      PERMISSION.HANDOVER_MANAGE,
+      PERMISSION.HANDOVER_CONFIRM,
+      PERMISSION.HANDOVER_FILE_VIEW,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_REQUEST_APPROVE,
       PERMISSION.BOOKING_VIEW,
@@ -229,6 +248,12 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.VEHICLE_MAINTENANCE_VIEW,
       PERMISSION.VEHICLE_MAINTENANCE_MANAGE,
       PERMISSION.VEHICLE_ODOMETER_CORRECT,
+      // docs §10 — staff vận hành "Thực hiện" bàn giao: lập nháp, chụp ảnh, xác nhận tại quầy.
+      // KHÔNG kèm `handovers.view_files`: chụp lên là một việc, mở lại kho ảnh bằng chứng của
+      // mọi chuyến cũ là việc khác (cùng kỷ luật với giấy tờ xe).
+      PERMISSION.HANDOVER_VIEW,
+      PERMISSION.HANDOVER_MANAGE,
+      PERMISSION.HANDOVER_CONFIRM,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_VIEW,
       PERMISSION.BOOKING_CREATE,
@@ -243,6 +268,8 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.VEHICLE_DOCUMENT_VIEW,
       // Read-only, không nhạy cảm: thấy tình trạng bảo dưỡng nhưng không thấy chi phí (docs §10).
       PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+      // "Read-only theo quyền" (docs §10): đọc được biên bản, không lập/không xác nhận/không mở ảnh.
+      PERMISSION.HANDOVER_VIEW,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_VIEW,
       PERMISSION.CALENDAR_VIEW,

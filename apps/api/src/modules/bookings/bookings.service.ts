@@ -317,6 +317,34 @@ export class BookingsService {
 
     const from = current.status as BookingStatus;
     const to = dto.status as BookingStatus;
+
+    const row = await this.prisma.$transaction((tx) =>
+      this.transitionWithinTx(tx, tenantId, id, userId, from, to, {
+        actualPickupAt: dto.actualPickupAt,
+        actualReturnAt: dto.actualReturnAt,
+      }),
+    );
+
+    return toDetail(row);
+  }
+
+  /**
+   * Lõi chuyển trạng thái dùng chung — chạy TRONG transaction do bên gọi mở.
+   *
+   * Tồn tại vì bàn giao (Wave 7) phải đổi trạng thái đơn CÙNG transaction với việc ghi KM và
+   * đụng lịch xe: gọi `transition()` bên ngoài sẽ tạo ra khe hở "đơn đã completed nhưng KM
+   * chưa ghi". Mọi luật (validate chuyển trạng thái, nhả lịch, audit, thông báo) ở nguyên đây
+   * — không nhân bản sang module khác.
+   */
+  async transitionWithinTx(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+    userId: string,
+    from: BookingStatus,
+    to: BookingStatus,
+    opts: { actualPickupAt?: string | null; actualReturnAt?: string | null } = {},
+  ): Promise<BookingDetailRow> {
     if (from === to || !canTransitionBooking(from, to)) {
       throw new ConflictException({
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
@@ -324,58 +352,66 @@ export class BookingsService {
       });
     }
 
-    const row = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.booking.update({
-        where: { id: current.id },
-        data: {
-          status: to,
-          ...(to === BOOKING_STATUS.ACTIVE
-            ? { actualPickupAt: dto.actualPickupAt ? new Date(dto.actualPickupAt) : new Date() }
-            : {}),
-          ...(to === BOOKING_STATUS.COMPLETED
-            ? { actualReturnAt: dto.actualReturnAt ? new Date(dto.actualReturnAt) : new Date() }
-            : {}),
-        },
-        select: DETAIL_SELECT,
+    // Điều kiện `status: from` trong WHERE: nếu ai đó vừa chuyển trạng thái xen vào giữa thì
+    // 0 dòng khớp và ta 409 thay vì ghi đè quyết định của họ.
+    const claimed = await tx.booking.updateMany({
+      where: { id, tenantId, status: from, deletedAt: null },
+      data: {
+        status: to,
+        ...(to === BOOKING_STATUS.ACTIVE
+          ? { actualPickupAt: opts.actualPickupAt ? new Date(opts.actualPickupAt) : new Date() }
+          : {}),
+        ...(to === BOOKING_STATUS.COMPLETED
+          ? { actualReturnAt: opts.actualReturnAt ? new Date(opts.actualReturnAt) : new Date() }
+          : {}),
+      },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.CONFLICT,
+        message: 'Đơn vừa được người khác cập nhật — tải lại rồi thử lại',
       });
+    }
 
-      // Trạng thái đích không còn chiếm lịch → nhả occupancy để xe trống cho đơn khác.
-      if (!occupiesSchedule(to)) {
-        await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BOOKING, id);
-      }
-
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId: userId,
-          actorScope: 'tenant',
-          action: 'booking.transition',
-          targetType: 'booking',
-          targetId: id,
-          before: { status: from },
-          after: { status: to },
-        },
-        tx,
-      );
-
-      // Báo các thành viên khác của shop biết đơn đổi trạng thái (nhận biết nội bộ).
-      await this.notifications.emitToTenantMembers(
-        tenantId,
-        {
-          type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
-          title: `Đơn ${updated.code}: ${BOOKING_STATUS_META[to].label}`,
-          body: updated.vehicle.name,
-          targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
-          targetId: id,
-        },
-        tx,
-        { excludeUserId: userId },
-      );
-
-      return updated;
+    const updated = await tx.booking.findFirstOrThrow({
+      where: { id, tenantId },
+      select: DETAIL_SELECT,
     });
 
-    return toDetail(row);
+    // Trạng thái đích không còn chiếm lịch → nhả occupancy để xe trống cho đơn khác.
+    if (!occupiesSchedule(to)) {
+      await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.BOOKING, id);
+    }
+
+    await this.audit.record(
+      {
+        tenantId,
+        actorUserId: userId,
+        actorScope: 'tenant',
+        action: 'booking.transition',
+        targetType: 'booking',
+        targetId: id,
+        before: { status: from },
+        after: { status: to },
+      },
+      tx,
+    );
+
+    // Báo các thành viên khác của shop biết đơn đổi trạng thái (nhận biết nội bộ).
+    await this.notifications.emitToTenantMembers(
+      tenantId,
+      {
+        type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
+        title: `Đơn ${updated.code}: ${BOOKING_STATUS_META[to].label}`,
+        body: updated.vehicle.name,
+        targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+        targetId: id,
+      },
+      tx,
+      { excludeUserId: userId },
+    );
+
+    return updated;
   }
 }
 

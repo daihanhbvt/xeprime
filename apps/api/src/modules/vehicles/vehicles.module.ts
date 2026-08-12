@@ -60,6 +60,10 @@ import { VehiclesService } from './vehicles.service';
      */
     { provide: VEHICLE_DOCUMENT_OCR_PROVIDER, useClass: OcrNotConfiguredProvider },
   ],
-  exports: [VehiclesService],
+  /**
+   * Bàn giao (Wave 7, ở BookingsModule) tái dùng nguyên ba service này thay vì tự ghi KM /
+   * tự tạo phiếu bảo dưỡng / tự dựng luồng file riêng tư — mỗi bảng chỉ có một writer.
+   */
+  exports: [VehiclesService, OdometerService, MaintenanceService, VehicleContractsService],
 })
 export class VehiclesModule {}

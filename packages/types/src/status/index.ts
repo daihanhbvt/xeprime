@@ -17,6 +17,7 @@ export * from './vehicle-document';
 export * from './vehicle-maintenance';
 export * from './booking';
 export * from './booking-request';
+export * from './handover';
 export * from './review';
 export * from './chat';
 export * from './misc';

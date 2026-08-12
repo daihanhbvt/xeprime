@@ -8,6 +8,7 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   MAINTENANCE_DUE_SOON_KM_DEFAULT,
+  MAINTENANCE_DUE_STATUS,
   MAINTENANCE_STATUS,
   MAINTENANCE_STATUS_HOLDING_SCHEDULE,
   MAINTENANCE_TYPE,
@@ -18,6 +19,7 @@ import {
   PRIVATE_FILE_STATUS,
   isMaintenanceTransitionAllowed,
   vehicleMaintenanceSchedule,
+  type MaintenanceDueStatus,
   type MaintenanceStatus,
   type MaintenanceType,
   type PaginationMeta,
@@ -469,6 +471,92 @@ export class MaintenanceService {
       releaseSchedule: true,
     });
     return this.readRecord(tenantId, vehicleId, recordId, scope);
+  }
+
+  // ── Cảnh báo đến hạn sinh ra từ nghiệp vụ khác ────────────────────────────
+
+  /**
+   * Sau khi KM của xe vừa nhảy (bàn giao trả xe đã xác nhận — Wave 7), tính lại mốc bảo dưỡng
+   * và mở MỘT phiếu chờ nếu xe đã tới/quá hạn. Chạy TRONG transaction của bên gọi để "KM mới"
+   * và "cảnh báo bảo dưỡng" hoặc cùng có, hoặc cùng không.
+   *
+   * Idempotent: xe đang có phiếu mở (`scheduled`/`in_progress`) thì không mở thêm — trả xe
+   * mười chuyến liên tiếp vẫn chỉ một việc cần làm, không phải mười phiếu rác.
+   *
+   * Phiếu sinh ra CỐ Ý không có khoảng thời gian: đây là việc-cần-xếp-lịch, chưa phải lịch.
+   * Có mốc thời gian mới giữ chỗ trên `vehicle_occupancies` — tự ý khoá xe của khách vì một
+   * cảnh báo là hành vi không ai cho phép.
+   */
+  async ensureDueTaskWithinTx(
+    tx: Prisma.TransactionClient,
+    args: { tenantId: string; vehicleId: string; userId: string; reason: string },
+  ): Promise<{ recordId: string; dueStatus: MaintenanceDueStatus } | null> {
+    const profile = await tx.vehicleMaintenanceProfile.findUnique({
+      where: { vehicleId: args.vehicleId },
+      select: { currentOdometerKm: true, lastServiceKm: true, oilChangeIntervalKm: true },
+    });
+    if (!profile) return null;
+
+    const schedule = vehicleMaintenanceSchedule({
+      currentKm: profile.currentOdometerKm,
+      lastServiceKm: profile.lastServiceKm,
+      intervalKm: profile.oilChangeIntervalKm,
+      dueSoonKm: await this.dueSoonKm(args.tenantId, tx),
+    });
+    const needsTask =
+      schedule.status === MAINTENANCE_DUE_STATUS.OVERDUE ||
+      schedule.status === MAINTENANCE_DUE_STATUS.DUE_SOON;
+    if (!needsTask) return null;
+
+    const open = await tx.vehicleMaintenanceRecord.findFirst({
+      where: {
+        tenantId: args.tenantId,
+        vehicleId: args.vehicleId,
+        status: { in: [...MAINTENANCE_STATUS_HOLDING_SCHEDULE] },
+      },
+      select: { id: true },
+    });
+    if (open) return { recordId: open.id, dueStatus: schedule.status };
+
+    const id = newId();
+    await tx.vehicleMaintenanceRecord.create({
+      data: {
+        id,
+        tenantId: args.tenantId,
+        vehicleId: args.vehicleId,
+        type: MAINTENANCE_TYPE.OIL_CHANGE,
+        title:
+          schedule.status === MAINTENANCE_DUE_STATUS.OVERDUE
+            ? `Quá hạn bảo dưỡng — ${args.reason}`
+            : `Sắp đến hạn bảo dưỡng — ${args.reason}`,
+        status: MAINTENANCE_STATUS.SCHEDULED,
+        notes: schedule.nextMaintenanceKm
+          ? `Mốc bảo dưỡng: ${schedule.nextMaintenanceKm} km · KM hiện tại: ${profile.currentOdometerKm} km`
+          : null,
+        createdBy: args.userId,
+        updatedBy: args.userId,
+      },
+    });
+
+    await this.audit.record(
+      {
+        tenantId: args.tenantId,
+        actorUserId: args.userId,
+        actorScope: 'tenant',
+        action: 'vehicle.maintenance.due_task.create',
+        targetType: 'vehicle_maintenance_record',
+        targetId: id,
+        after: {
+          vehicleId: args.vehicleId,
+          dueStatus: schedule.status,
+          remainingKm: schedule.remainingKm,
+          trigger: args.reason,
+        },
+      },
+      tx,
+    );
+
+    return { recordId: id, dueStatus: schedule.status };
   }
 
   // ── Chứng từ riêng tư ─────────────────────────────────────────────────────
@@ -991,8 +1079,11 @@ export class MaintenanceService {
    * `tenant_profiles.settings_json.maintenanceDueSoonKm`, không có thì dùng mặc định nền tảng
    * đã đặt tên ở `@xeprime/types` — KHÔNG có hằng số vô danh nằm trong UI.
    */
-  private async dueSoonKm(tenantId: string): Promise<number> {
-    const profile = await this.prisma.tenantProfile.findUnique({
+  private async dueSoonKm(
+    tenantId: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<number> {
+    const profile = await db.tenantProfile.findUnique({
       where: { tenantId },
       select: { settings: true },
     });

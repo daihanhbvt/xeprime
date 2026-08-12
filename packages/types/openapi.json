@@ -4201,6 +4201,425 @@
         ]
       }
     },
+    "/bookings/{id}/handovers": {
+      "get": {
+        "operationId": "BookingHandoversController_context",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverContextDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ngữ cảnh bàn giao của đơn: biên bản giao + trả + số liệu suy ra",
+        "tags": [
+          "booking-handovers"
+        ]
+      }
+    },
+    "/bookings/{id}/handovers/{type}": {
+      "put": {
+        "operationId": "BookingHandoversController_saveDraft",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveHandoverDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo hoặc lưu bản nháp bàn giao (không có hệ quả nghiệp vụ)",
+        "tags": [
+          "booking-handovers"
+        ]
+      }
+    },
+    "/bookings/{id}/handovers/{type}/confirm": {
+      "post": {
+        "operationId": "BookingHandoversController_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmHandoverDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverContextDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xác nhận bàn giao — ghi KM + chuyển trạng thái đơn + lịch + audit, một transaction",
+        "tags": [
+          "booking-handovers"
+        ]
+      }
+    },
+    "/bookings/{id}/handovers/{type}/cancel": {
+      "post": {
+        "operationId": "BookingHandoversController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelHandoverDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverContextDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hủy bản nháp (biên bản đã xác nhận không hủy được)",
+        "tags": [
+          "booking-handovers"
+        ]
+      }
+    },
+    "/bookings/{id}/handovers/{type}/odometer": {
+      "post": {
+        "operationId": "BookingHandoversController_resolveOdometer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveHandoverOdometerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverContextDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Bổ sung/sửa KM của biên bản đã xác nhận (bắt buộc lý do + audit)",
+        "tags": [
+          "booking-handovers"
+        ]
+      }
+    },
+    "/bookings/{id}/handovers/{type}/photos/presign": {
+      "post": {
+        "operationId": "BookingHandoversController_presignPhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignHandoverPhotoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceContractPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Presign upload ảnh hiện trạng vào kho riêng tư (Wave 4.1)",
+        "tags": [
+          "booking-handovers"
+        ]
+      }
+    },
+    "/bookings/{id}/handovers/{type}/photos": {
+      "post": {
+        "operationId": "BookingHandoversController_attachPhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachHandoverPhotoDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xác minh object rồi gắn ảnh vào đúng góc chụp",
+        "tags": [
+          "booking-handovers"
+        ]
+      }
+    },
+    "/bookings/{id}/handovers/{type}/photos/{slot}": {
+      "delete": {
+        "operationId": "BookingHandoversController_removePhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slot",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gỡ ảnh khỏi một góc chụp của bản nháp",
+        "tags": [
+          "booking-handovers"
+        ]
+      }
+    },
+    "/bookings/{id}/handovers/{type}/photos/{fileId}/download": {
+      "get": {
+        "operationId": "BookingHandoversController_downloadPhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceContractDownloadDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Phát signed URL ngắn hạn xem một ảnh hiện trạng",
+        "tags": [
+          "booking-handovers"
+        ]
+      }
+    },
     "/booking-requests": {
       "get": {
         "operationId": "BookingRequestsController_list",
@@ -7676,6 +8095,10 @@
                 "vehicles.maintenance.view_cost",
                 "vehicles.odometer.correct",
                 "vehicles.odometer.decrease",
+                "handovers.view",
+                "handovers.manage",
+                "handovers.confirm",
+                "handovers.view_files",
                 "booking_requests.view",
                 "booking_requests.approve",
                 "bookings.view",
@@ -12651,6 +13074,411 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "HandoverPhotoDto": {
+        "type": "object",
+        "properties": {
+          "slot": {
+            "type": "string",
+            "enum": [
+              "front",
+              "rear",
+              "left",
+              "right",
+              "odometer"
+            ]
+          },
+          "uploadedAt": {
+            "type": "string",
+            "description": "ISO"
+          },
+          "fileId": {
+            "type": "string",
+            "description": "Chỉ khi có handovers.view_files"
+          },
+          "name": {
+            "type": "string",
+            "description": "Chỉ khi có handovers.view_files"
+          }
+        },
+        "required": [
+          "slot",
+          "uploadedAt"
+        ]
+      },
+      "HandoverDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "bookingId": {
+            "type": "string"
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "pickup",
+              "return"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "ready",
+              "confirmed",
+              "canceled"
+            ]
+          },
+          "odometerKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "null = chưa nhập, KHÔNG phải 0 km"
+          },
+          "odometerMissing": {
+            "type": "boolean"
+          },
+          "suspiciousAcknowledged": {
+            "type": "boolean",
+            "description": "Người vận hành đã xác nhận KM bất thường là đúng"
+          },
+          "energyKind": {
+            "type": "string",
+            "description": "@xeprime/types → HandoverEnergyKind (suy từ nhiên liệu xe)"
+          },
+          "fuelLevel": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "full",
+              "three_quarter",
+              "half",
+              "quarter",
+              "empty"
+            ]
+          },
+          "batteryPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "conditionNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "damageNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HandoverPhotoDto"
+            }
+          },
+          "confirmedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO"
+          },
+          "confirmedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "canceledAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO"
+          },
+          "rowVersion": {
+            "type": "number",
+            "description": "Optimistic concurrency — nộp lại khi lưu/xác nhận"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO"
+          }
+        },
+        "required": [
+          "id",
+          "bookingId",
+          "vehicleId",
+          "type",
+          "status",
+          "odometerMissing",
+          "suspiciousAcknowledged",
+          "energyKind",
+          "photos",
+          "rowVersion",
+          "updatedAt"
+        ]
+      },
+      "HandoverContextDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "bookingCode": {
+            "type": "string"
+          },
+          "bookingStatus": {
+            "type": "string",
+            "description": "@xeprime/types → BookingStatus"
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "energyKind": {
+            "type": "string",
+            "description": "@xeprime/types → HandoverEnergyKind"
+          },
+          "vehicleOdometerKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "KM hiện tại của xe theo hệ thống — null = chưa từng ghi nhận"
+          },
+          "pickupOdometerKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "nextMaintenanceKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "rentalDays": {
+            "type": "number",
+            "description": "Số ngày thuê theo đơn (làm tròn lên, tối thiểu 1)"
+          },
+          "suspiciousKmPerDay": {
+            "type": "number",
+            "nullable": true
+          },
+          "pickup": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HandoverDto"
+              }
+            ]
+          },
+          "return": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HandoverDto"
+              }
+            ]
+          },
+          "canStartPickup": {
+            "type": "boolean"
+          },
+          "canStartReturn": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "bookingId",
+          "bookingCode",
+          "bookingStatus",
+          "vehicleId",
+          "vehicleName",
+          "energyKind",
+          "rentalDays",
+          "canStartPickup",
+          "canStartReturn"
+        ]
+      },
+      "SaveHandoverDto": {
+        "type": "object",
+        "properties": {
+          "odometerKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "KM đọc trên đồng hồ, 0–2000000"
+          },
+          "fuelLevel": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "full",
+              "three_quarter",
+              "half",
+              "quarter",
+              "empty"
+            ]
+          },
+          "batteryPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% pin xe điện (0–100)"
+          },
+          "conditionNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "damageNote": {
+            "type": "string",
+            "nullable": true,
+            "description": "Chỉ có nghĩa ở chiều trả"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "markReady": {
+            "type": "boolean"
+          },
+          "expectedRowVersion": {
+            "type": "number",
+            "nullable": true,
+            "description": "Bắt buộc khi sửa bản đã có"
+          }
+        }
+      },
+      "ConfirmHandoverDto": {
+        "type": "object",
+        "properties": {
+          "expectedRowVersion": {
+            "type": "number",
+            "description": "Bắt buộc — chống hai người cùng xác nhận trên hai bản khác nhau"
+          },
+          "acknowledgeSuspicious": {
+            "type": "boolean"
+          },
+          "allowMissingOdometer": {
+            "type": "boolean",
+            "description": "Chỉ dùng cho chiều trả xe"
+          }
+        },
+        "required": [
+          "expectedRowVersion"
+        ]
+      },
+      "CancelHandoverDto": {
+        "type": "object",
+        "properties": {
+          "expectedRowVersion": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "expectedRowVersion"
+        ]
+      },
+      "ResolveHandoverOdometerDto": {
+        "type": "object",
+        "properties": {
+          "odometerKm": {
+            "type": "number",
+            "description": "KM đọc trên đồng hồ, 0–2000000"
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "handover_error",
+              "device_error",
+              "cluster_replaced",
+              "data_migration",
+              "other"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Lý do chi tiết — bắt buộc"
+          },
+          "confirmDecrease": {
+            "type": "boolean",
+            "description": "Xác nhận giảm KM có chủ ý"
+          },
+          "expectedRowVersion": {
+            "type": "number",
+            "description": "Bắt buộc — chống sửa đè"
+          }
+        },
+        "required": [
+          "odometerKm",
+          "reasonCode",
+          "reason",
+          "expectedRowVersion"
+        ]
+      },
+      "PresignHandoverPhotoDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Tên file gốc (chỉ để hiển thị)"
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ],
+            "description": "Chỉ ảnh — không nhận PDF"
+          },
+          "fileSize": {
+            "type": "number",
+            "description": "Dung lượng (byte), tối đa 10485760"
+          },
+          "slot": {
+            "type": "string",
+            "enum": [
+              "front",
+              "rear",
+              "left",
+              "right",
+              "odometer"
+            ]
+          }
+        },
+        "required": [
+          "fileName",
+          "contentType",
+          "fileSize",
+          "slot"
+        ]
+      },
+      "AttachHandoverPhotoDto": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "ID file đã presign (ULID do server phát)"
+          },
+          "slot": {
+            "type": "string",
+            "enum": [
+              "front",
+              "rear",
+              "left",
+              "right",
+              "odometer"
+            ]
+          }
+        },
+        "required": [
+          "fileId",
+          "slot"
         ]
       },
       "BookingRequestDeliveryQuoteDto": {

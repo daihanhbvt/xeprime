@@ -31,6 +31,12 @@ export const PRIVATE_FILE_PURPOSE = {
   VEHICLE_DOCUMENT: 'vehicle_document',
   /** Chứng từ bảo dưỡng (Wave 6): hóa đơn garage, phiếu chi — riêng tư như hai loại trên. */
   MAINTENANCE_RECORD: 'maintenance_record',
+  /**
+   * Ảnh hiện trạng bàn giao (Wave 7): 4 góc ngoại thất + ảnh đồng hồ Odo. Riêng tư TUYỆT ĐỐI
+   * — ảnh chứa biển số, đôi khi cả khách trong khung hình; đây là bằng chứng tranh chấp, không
+   * phải ảnh marketing.
+   */
+  HANDOVER_PHOTO: 'handover_photo',
 } as const;
 export type PrivateFilePurpose = (typeof PRIVATE_FILE_PURPOSE)[keyof typeof PRIVATE_FILE_PURPOSE];
 

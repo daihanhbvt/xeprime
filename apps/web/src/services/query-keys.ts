@@ -89,6 +89,9 @@ export const queryKeys = {
     all: ['bookings'] as const,
     list: (params: QueryParams) => ['bookings', 'list', params] as const,
     detail: (id: string) => ['bookings', 'detail', id] as const,
+    /** Bàn giao xe của một đơn (Wave 7) — nằm dưới nhánh `bookings` vì xác nhận bàn giao
+     *  đổi luôn trạng thái đơn, invalidate một chỗ là đủ. */
+    handovers: (id: string) => ['bookings', 'handovers', id] as const,
   },
   bookingRequests: {
     all: ['booking-requests'] as const,

@@ -155,6 +155,8 @@ model Tenant {
   vehicleOdometerReadings VehicleOdometerReading[]
   vehicleMaintenanceRecords VehicleMaintenanceRecord[]
   vehicleMaintenanceAttachments VehicleMaintenanceAttachment[]
+  vehicleHandovers VehicleHandover[]
+  vehicleHandoverPhotos VehicleHandoverPhoto[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -552,6 +554,8 @@ model Vehicle {
   odometerReadings VehicleOdometerReading[]
   maintenanceRecords VehicleMaintenanceRecord[]
   maintenanceAttachments VehicleMaintenanceAttachment[]
+  handovers   VehicleHandover[]
+  handoverPhotos VehicleHandoverPhoto[]
 
   @@unique([tenantId, code])
   /// Mục tiêu cho composite FK (vehicle_id, tenant_id) của các bảng con nhạy cảm — DB tự chặn
@@ -767,8 +771,12 @@ model Booking {
   receipts       Receipt[]
   payments       Payment[]
   contract       Contract?
+  handovers      VehicleHandover[]
 
   @@unique([tenantId, code])
+  /// Mục tiêu cho composite FK của `vehicle_handovers`: một biên bản bàn giao phải trỏ về
+  /// đơn CÙNG tenant VÀ CÙNG xe — DB chặn, không dựa vào code nhớ kiểm (Wave 7).
+  @@unique([id, tenantId, vehicleId])
   @@index([tenantId, status])
   @@index([vehicleId, pickupAt, returnAt])
   @@index([createdAt])
@@ -967,6 +975,8 @@ model VehiclePrivateFile {
   documentVersion VehicleDocumentVersion?
   /// 1:1 — một file chỉ đính vào một phiếu bảo dưỡng (unique private_file_id — Wave 6).
   maintenanceAttachment VehicleMaintenanceAttachment?
+  /// 1:1 — một file chỉ là ảnh của một biên bản bàn giao (unique private_file_id — Wave 7).
+  handoverPhoto VehicleHandoverPhoto?
 
   /// Mục tiêu cho composite FK "file cùng tenant + cùng xe" từ vehicle_document_versions (Wave 5.1).
   @@unique([id, tenantId, vehicleId])
@@ -1150,7 +1160,12 @@ model VehicleOdometerReading {
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /// Biên bản bàn giao đã sinh ra lần đọc này (Wave 7.1) — 0..n vì một biên bản có thể được
+  /// bổ sung/điều chỉnh KM, mỗi lần thêm một dòng lịch sử mới.
+  handovers VehicleHandover[]
 
+  /// Mục tiêu cho composite FK "biên bản trỏ đúng lần đọc CỦA CHÍNH xe đó" (Wave 7.1).
+  @@unique([id, tenantId, vehicleId])
   @@index([tenantId, vehicleId, recordedAt])
   @@map("vehicle_odometer_readings")
 }
@@ -1221,6 +1236,100 @@ model VehicleMaintenanceAttachment {
 
   @@index([tenantId, recordId])
   @@map("vehicle_maintenance_attachments")
+}
+
+/// Biên bản bàn giao xe (Wave 7) — giao xe hoặc nhận xe trả. docs/design/12 §9.1.
+///
+/// Đây là NƠI DUY NHẤT số KM đọc từ đồng hồ đi vào hệ thống. Bản nháp KHÔNG có hiệu lực:
+/// `current_odometer_km` của xe, trạng thái đơn và lịch xe chỉ đổi khi biên bản được XÁC NHẬN,
+/// và cả bốn việc đó nằm trong MỘT transaction (fail một cái là rollback trọn gói).
+///
+/// Chống trùng: partial unique `(booking_id, type) WHERE status <> 'canceled'` — double-click
+/// hay retry mạng không tạo được biên bản thứ hai. Xác nhận lặp lại là idempotent nhờ
+/// `row_version` + điều kiện trạng thái trong UPDATE.
+///
+/// `odometer_missing = true` là trạng thái nghiệp vụ "Thiếu KM trả" (§9.1): biên bản vẫn xác
+/// nhận được để giữ bằng chứng ảnh/tình trạng, nhưng KM có thẩm quyền KHÔNG bị đụng tới cho
+/// tới khi người đủ quyền bổ sung số.
+model VehicleHandover {
+  id             String    @id @db.Char(26)
+  tenantId       String    @map("tenant_id") @db.Char(26)
+  bookingId      String    @map("booking_id") @db.Char(26)
+  vehicleId      String    @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → HandoverType ('pickup' | 'return') — CHECK ở migration.
+  type           String    @db.VarChar(20)
+  /// @xeprime/types → HandoverStatus
+  status         String    @default("draft") @db.VarChar(20)
+  /// KM đọc trên đồng hồ. NULL = chưa nhập (nháp) hoặc thiếu KM trả đã xác nhận.
+  odometerKm     Int?      @map("odometer_km")
+  /// Bản ghi lịch sử KM sinh ra lúc xác nhận — móc truy vết, NULL khi thiếu KM trả.
+  /// FK thật là composite (odometer_reading_id, tenant_id, vehicle_id) viết tay ở migration
+  /// (Wave 7.1): lần đọc phải TỒN TẠI và thuộc đúng tenant + đúng xe của biên bản.
+  /// ON DELETE NO ACTION — lịch sử KM là chỉ-thêm, không ai được xoá một lần đọc đang được
+  /// biên bản viện dẫn; NO ACTION (không phải RESTRICT) để cascade xoá xe/gian hàng vẫn chạy.
+  odometerReadingId String? @map("odometer_reading_id") @db.Char(26)
+  /// Xác nhận nhưng KHÔNG có KM → task "Thiếu KM trả" chờ người đủ quyền bổ sung.
+  odometerMissing Boolean  @default(false) @map("odometer_missing")
+  /// Người vận hành đã thấy cảnh báo KM bất thường và xác nhận vẫn đúng (ghi kèm audit).
+  suspiciousAcknowledged Boolean @default(false) @map("suspicious_acknowledged")
+  /// @xeprime/types → FuelLevel. Chỉ dùng cho xe động cơ đốt trong.
+  fuelLevel      String?   @map("fuel_level") @db.VarChar(20)
+  /// % pin cho xe điện (0–100). Loại trừ lẫn nhau với `fuel_level` — CHECK ở migration.
+  batteryPercent Int?      @map("battery_percent")
+  conditionNote  String?   @map("condition_note") @db.Text
+  /// Hư hỏng/sự cố phát sinh — chỉ có nghĩa ở chiều nhận trả.
+  damageNote     String?   @map("damage_note") @db.Text
+  notes          String?   @db.Text
+  confirmedAt    DateTime? @map("confirmed_at") @db.Timestamptz(3)
+  confirmedBy    String?   @map("confirmed_by") @db.Char(26)
+  canceledAt     DateTime? @map("canceled_at") @db.Timestamptz(3)
+  canceledBy     String?   @map("canceled_by") @db.Char(26)
+  /// Optimistic concurrency — hai nhân viên cùng mở biên bản, người sau phải thấy bản mới.
+  rowVersion     Int       @default(1) @map("row_version")
+  createdBy      String?   @map("created_by") @db.Char(26)
+  updatedBy      String?   @map("updated_by") @db.Char(26)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  odometerReading VehicleOdometerReading? @relation(fields: [odometerReadingId], references: [id], onDelete: NoAction)
+  photos  VehicleHandoverPhoto[]
+
+  /// Mục tiêu cho composite FK của bảng ảnh (biên bản + tenant + xe khớp nhau).
+  @@unique([id, tenantId, vehicleId])
+  @@index([tenantId, bookingId])
+  /// Truy vấn "đơn nào đang thiếu KM trả" — partial index đặt tên ở migration.
+  @@index([tenantId, vehicleId, confirmedAt])
+  @@map("vehicle_handovers")
+}
+
+/// Ảnh hiện trạng của một biên bản bàn giao (Wave 7) — tái dùng nguyên kho
+/// `vehicle_private_files` (purpose `handover_photo`) của Wave 4.1/5.1/6.
+///
+/// `slot` là góc chụp cố định (trước/sau/trái/phải/đồng hồ Odo); unique `(handover_id, slot)`
+/// bảo đảm mỗi góc đúng một ảnh — tải lại là THAY, không phải chồng thêm.
+/// Composite FK khoá cả hai đầu: ảnh phải cùng tenant + cùng xe với biên bản.
+model VehicleHandoverPhoto {
+  id            String   @id @db.Char(26)
+  tenantId      String   @map("tenant_id") @db.Char(26)
+  vehicleId     String   @map("vehicle_id") @db.Char(26)
+  handoverId    String   @map("handover_id") @db.Char(26)
+  privateFileId String   @unique @map("private_file_id") @db.Char(26)
+  /// @xeprime/types → HandoverPhotoSlot — CHECK ở migration.
+  slot          String   @db.VarChar(20)
+  createdBy     String?  @map("created_by") @db.Char(26)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  handover    VehicleHandover    @relation(fields: [handoverId], references: [id], onDelete: Cascade)
+  privateFile VehiclePrivateFile @relation(fields: [privateFileId], references: [id], onDelete: NoAction)
+
+  @@unique([handoverId, slot])
+  @@index([tenantId, handoverId])
+  @@map("vehicle_handover_photos")
 }
 
 /// Bảng chiếm dụng lịch xe — ADR 0006.

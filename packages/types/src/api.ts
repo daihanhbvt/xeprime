@@ -106,6 +106,23 @@ export const API_ERROR_CODE = {
    */
   ODOMETER_DECREASE_FORBIDDEN: 'ODOMETER_DECREASE_FORBIDDEN',
 
+  // Bàn giao xe (Wave 7)
+  /**
+   * KM trả nhỏ hơn KM lúc giao. Mã riêng vì FE hiển thị được CHÍNH mốc phải vượt qua
+   * (`details.pickupKm`) ngay tại ô nhập, thay vì một dòng "dữ liệu không hợp lệ".
+   */
+  HANDOVER_ODOMETER_BELOW_PICKUP: 'HANDOVER_ODOMETER_BELOW_PICKUP',
+  /**
+   * Quãng đường phát sinh thấp bất thường so với ngưỡng gian hàng cấu hình. KHÔNG phải lỗi:
+   * người vận hành có thể xác nhận "vẫn đúng" và gửi lại kèm `acknowledgeSuspicious`.
+   */
+  HANDOVER_ODOMETER_SUSPICIOUS: 'HANDOVER_ODOMETER_SUSPICIOUS',
+  /**
+   * Đơn không còn ở trạng thái mở được chiều bàn giao này (đã hủy, đã hoàn thành, hoặc
+   * người khác vừa xác nhận). FE tải lại đơn thay vì hiện lỗi chung.
+   */
+  HANDOVER_NOT_ELIGIBLE: 'HANDOVER_NOT_ELIGIBLE',
+
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
