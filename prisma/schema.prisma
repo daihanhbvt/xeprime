@@ -146,6 +146,8 @@ model Tenant {
   contracts     Contract[]
   subscriptions TenantSubscription[]
   rentalPolicies RentalPolicy[]
+  vehicleSourceDetails VehicleSourceDetail[]
+  vehiclePrivateFiles VehiclePrivateFile[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -534,8 +536,13 @@ model Vehicle {
   features    VehicleFeature[]
   receipts    Receipt[]
   rentalPolicy RentalPolicy?
+  sourceDetail VehicleSourceDetail?
+  privateFiles VehiclePrivateFile[]
 
   @@unique([tenantId, code])
+  /// Mục tiêu cho composite FK (vehicle_id, tenant_id) của các bảng con nhạy cảm — DB tự chặn
+  /// bản ghi trỏ "tenant A + xe của tenant B" (Wave 4.1), không dựa vào kỷ luật service.
+  @@unique([id, tenantId])
   @@index([tenantId, publicStatus])
   @@index([tenantId, operationStatus])
   @@index([tenantId, sourceType])
@@ -847,6 +854,104 @@ model RentalPolicy {
 
   @@index([tenantId])
   @@map("rental_policies")
+}
+
+/// Chi tiết nguồn xe & tài chính (Wave 4) — MỘT bản ghi cho mỗi xe, biến thể theo `source_type`.
+///
+/// Một bảng chuẩn hoá thay vì rải cột lên `vehicles`: cột không thuộc biến thể hiện tại
+/// PHẢI NULL — CHECK constraint ở migration SQL tay giữ luật này, không phụ thuộc app.
+/// `source_type` ở đây luôn trùng `vehicles.source_type` (đồng bộ trong cùng transaction —
+/// scalar trên `vehicles` giữ lại cho filter/badge, bảng này giữ hồ sơ chi tiết).
+///
+/// Writer duy nhất: `VehicleSourceService` (apps/api). File hợp đồng trên R2 —
+/// KHÔNG BAO GIỜ xuất hiện ở API public/marketplace.
+model VehicleSourceDetail {
+  id        String @id @db.Char(26)
+  tenantId  String @map("tenant_id") @db.Char(26)
+  vehicleId String @unique @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → VehicleSourceType
+  sourceType String @map("source_type") @db.VarChar(30)
+
+  // ── owned: thông tin mua xe (tất cả tuỳ chọn) ──
+  purchaseDate  DateTime? @map("purchase_date") @db.Date
+  purchasePrice Decimal?  @map("purchase_price") @db.Decimal(14, 2)
+  purchasePlace String?   @map("purchase_place") @db.VarChar(255)
+
+  // ── financed: khoản vay mua xe ──
+  bankName          String?  @map("bank_name") @db.VarChar(160)
+  contractNumber    String?  @map("contract_number") @db.VarChar(120)
+  originalPrincipal Decimal? @map("original_principal") @db.Decimal(14, 2)
+  monthlyPrincipal  Decimal? @map("monthly_principal") @db.Decimal(14, 2)
+  monthlyInterest   Decimal? @map("monthly_interest") @db.Decimal(14, 2)
+  /// Lãi suất cố định %/năm — dữ liệu ghi nhận, KHÔNG dựng lịch trả nợ từ đây.
+  interestRatePercent Decimal? @map("interest_rate_percent") @db.Decimal(5, 2)
+  termMonths        Int?     @map("term_months")
+  /// @xeprime/types → VehicleFinanceInterestMethod
+  interestMethod    String?  @map("interest_method") @db.VarChar(30)
+
+  // ── rented + partnership: bên cho thuê / đối tác ký gửi ──
+  ownerName  String?  @map("owner_name") @db.VarChar(160)
+  ownerPhone String?  @map("owner_phone") @db.VarChar(30)
+  ownerEmail String?  @map("owner_email") @db.VarChar(160)
+  /// rented: tiền thuê định kỳ hàng tháng.
+  monthlyRent Decimal? @map("monthly_rent") @db.Decimal(14, 2)
+  /// partnership: % doanh thu chia cho CHỦ XE (0–100). Cơ sở tính: tiền thuê sau giảm giá,
+  /// KHÔNG gồm cọc hoàn lại / phí giao nhận / phí quá giờ / phạt / bồi thường (khớp
+  /// `rental_policies.discount_tiers_json` — giảm giá chỉ áp lên tiền thuê cơ bản).
+  commissionPercent Decimal? @map("commission_percent") @db.Decimal(5, 2)
+
+  // ── chung cho financed/rented/partnership ──
+  /// Ngày trong tháng đến hạn đóng tiền (1–31) — financed/rented.
+  paymentDay Int?      @map("payment_day")
+  startDate  DateTime? @map("start_date") @db.Date
+  endDate    DateTime? @map("end_date") @db.Date
+  /// [{ url, name, size? }] — file hợp đồng trên R2 (prefix tenant riêng).
+  contractFiles Json   @default("[]") @map("contract_files_json") @db.JsonB
+  notes      String?   @db.Text
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, sourceType])
+  @@map("vehicle_source_details")
+}
+
+/// Tài liệu RIÊNG TƯ gắn với xe (Wave 4.1) — hợp đồng nguồn xe; Wave 5 tái dùng cho giấy tờ.
+///
+/// Nhị phân nằm ở bucket R2 RIÊNG TƯ (không URL public); bảng này là sổ metadata do SERVER
+/// sở hữu: `object_key` sinh từ id ULID + đuôi suy từ MIME hợp lệ — client KHÔNG BAO GIỜ
+/// nộp URL/key. Truy cập file chỉ qua signed GET ngắn hạn sau khi kiểm quyền.
+///
+/// Vòng đời: `pending` (đã presign) → `ready` (HEAD + magic bytes khớp) → `deleted` (gỡ khỏi
+/// hồ sơ — object KHÔNG bị xoá tự động, dọn rác là việc vận hành có kiểm soát).
+///
+/// Composite FK (vehicle_id, tenant_id) → vehicles(id, tenant_id) ở migration SQL tay
+/// (Prisma không cho một cột đứng trong hai quan hệ): DB tự chặn file "tenant A, xe tenant B".
+model VehiclePrivateFile {
+  id           String    @id @db.Char(26)
+  tenantId     String    @map("tenant_id") @db.Char(26)
+  vehicleId    String    @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → PrivateFilePurpose ('source_contract'; Wave 5 thêm loại giấy tờ)
+  purpose      String    @db.VarChar(40)
+  /// tenants/{tenantId}/vehicles/{vehicleId}/contracts/{id}.{ext} — server dựng, unique.
+  objectKey    String    @unique @map("object_key") @db.VarChar(500)
+  originalName String    @map("original_name") @db.VarChar(255)
+  mimeType     String    @map("mime_type") @db.VarChar(100)
+  sizeBytes    Int       @map("size_bytes")
+  /// @xeprime/types → PrivateFileStatus
+  status       String    @default("pending") @db.VarChar(20)
+  createdBy    String?   @map("created_by") @db.Char(26)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(3)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, vehicleId, purpose, status])
+  @@map("vehicle_private_files")
 }
 
 /// Bảng chiếm dụng lịch xe — ADR 0006.

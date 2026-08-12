@@ -53,7 +53,6 @@ export function TextField<T extends FieldValues>({
   const shared = {
     ...field,
     id: inputId,
-    size: 'large' as const,
     placeholder,
     autoComplete,
     autoFocus,

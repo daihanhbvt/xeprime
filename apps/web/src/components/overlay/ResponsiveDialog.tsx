@@ -72,7 +72,11 @@ interface ResponsiveDialogBaseProps {
   confirmLoading?: boolean;
   /** Cho phép đóng bằng Esc. Mặc định `true`; luôn bị khoá khi `confirmLoading`. */
   closeOnEsc?: boolean;
-  /** Cho phép đóng khi bấm nền. Mặc định `true`; luôn bị khoá khi `confirmLoading`. */
+  /**
+   * Cho phép đóng khi bấm nền. Mặc định `true`; luôn bị khoá khi `confirmLoading`.
+   * Prop này là API của ResponsiveDialog; xuống AntD 6 nó đi qua `mask.closable`
+   * (`maskClosable` trần đã deprecated).
+   */
   maskClosable?: boolean;
   /** Mặc định `true`: mỗi lần mở là state mới. `false` khi cần giữ nội dung đã nhập. */
   destroyOnClose?: boolean;
@@ -138,7 +142,8 @@ export function ResponsiveDialog({
 
   // Đang gửi thì mọi đường đóng vô ý bị khoá, bất kể consumer cấu hình gì.
   const escEnabled = closeOnEsc && !confirmLoading;
-  const maskEnabled = maskClosable && !confirmLoading;
+  // `mask.closable` là dạng đúng ở AntD 6; chỉ đặt `closable`, `enabled` để mặc định (nền vẫn hiện).
+  const maskConfig = { closable: maskClosable && !confirmLoading };
 
   const resolvedFooter =
     footer === undefined && onOk
@@ -171,12 +176,13 @@ export function ResponsiveDialog({
         open={open}
         onClose={onClose}
         placement="bottom"
-        height={isSheet ? 'auto' : '100%'}
+        // AntD 6: `size` thay `height` khi neo đáy; `height` đã deprecated.
+        size={isSheet ? 'auto' : '100%'}
         title={headerTitle}
         // Quy tắc 6 (Figma): màn toàn trang đọc như một trang mới → mũi tên quay lại, không phải X.
         closeIcon={isSheet ? undefined : <ArrowLeftOutlined />}
         footer={resolvedFooter}
-        maskClosable={maskEnabled}
+        mask={maskConfig}
         keyboard={escEnabled}
         destroyOnHidden={destroyOnClose}
         rootClassName={cx(styles.mobileRoot, isSheet && styles.sheetRoot, className)}
@@ -201,7 +207,7 @@ export function ResponsiveDialog({
       width={MODAL_WIDTH[size]}
       footer={resolvedFooter ?? null}
       centered
-      maskClosable={maskEnabled}
+      mask={maskConfig}
       keyboard={escEnabled}
       destroyOnHidden={destroyOnClose}
       className={className}

@@ -33,7 +33,10 @@ import {
   FeaturesDescriptionSection,
   ImagesSection,
   SpecsSection,
+  StatusSection,
+  VEHICLE_SECTIONS,
 } from './VehicleFormSections';
+import { VehicleSourceWorkspace } from './VehicleSourceWorkspace';
 import styles from './VehicleEditWorkspace.module.css';
 
 type EditableTab = 'information' | 'media';
@@ -78,8 +81,11 @@ const MEDIA_FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
   'description',
 ];
 
+/** Các trường nằm TRONG vùng thu gọn "Thông số kỹ thuật nâng cao" — cần mở vùng khi chúng lỗi. */
+const ADVANCED_SPEC_FIELDS = VEHICLE_SECTIONS.find((section) => section.key === 'specs')!.fields;
+
 function parseTab(value: string | null): WorkspaceTab {
-  if (value === 'media' || value === 'pricing') return value;
+  if (value === 'media' || value === 'pricing' || value === 'source') return value;
   return 'information';
 }
 
@@ -97,8 +103,15 @@ export function VehicleEditWorkspace({
   const [pendingTab, setPendingTab] = useState<WorkspaceTab | null>(null);
   const [confirmSensitive, setConfirmSensitive] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  /**
+   * Tab Nguồn xe có form RIÊNG (không chung RHF với info/media) — nó tự báo dirty lên đây
+   * để guard đổi tab gộp cả nó. Bỏ thay đổi = remount tab nguồn qua `sourceResetKey`.
+   */
+  const [sourceDirty, setSourceDirty] = useState(false);
+  const [sourceResetKey, setSourceResetKey] = useState(0);
   const {
     control,
+    getFieldState,
     getValues,
     handleSubmit,
     reset,
@@ -144,7 +157,7 @@ export function VehicleEditWorkspace({
 
   function requestTab(next: string) {
     const target = next as WorkspaceTab;
-    if (!isDirty) {
+    if (!isDirty && !sourceDirty) {
       goToTab(target);
       return;
     }
@@ -153,7 +166,13 @@ export function VehicleEditWorkspace({
 
   async function saveCurrent() {
     const valid = await trigger([...activeFields]);
-    if (!valid) return;
+    if (!valid) {
+      // Lỗi validate không được nằm khuất sau vùng thu gọn đang đóng — mở nó ra cho thấy.
+      if (ADVANCED_SPEC_FIELDS.some((field) => getFieldState(field).invalid)) {
+        setAdvancedOpen(true);
+      }
+      return;
+    }
     const values = getValues();
     if (isPublic && sensitiveChanges(initialValues, values).length > 0) {
       setConfirmSensitive(true);
@@ -185,8 +204,14 @@ export function VehicleEditWorkspace({
     },
     {
       key: 'source',
-      label: <span title="Sẽ được kích hoạt ở Wave 4">Nguồn xe & tài chính</span>,
-      disabled: true,
+      label: 'Nguồn xe & tài chính',
+      children: (
+        <VehicleSourceWorkspace
+          key={sourceResetKey}
+          vehicle={vehicle}
+          onDirtyChange={setSourceDirty}
+        />
+      ),
     },
     {
       key: 'documents',
@@ -251,7 +276,10 @@ export function VehicleEditWorkspace({
                     codeReadOnly
                   />
                 </Card>
-                <Card title="Thông tin phương tiện" className={styles.formCard}>
+                <Card title="Quản lý trạng thái" className={styles.formCard}>
+                  <StatusSection control={control} />
+                </Card>
+                <Card title="Thông số kỹ thuật xe" className={styles.formCard}>
                   <SpecsSection control={control} isCar={vehicleType === VEHICLE_TYPE.CAR} />
                 </Card>
                 <Collapse
@@ -307,6 +335,11 @@ export function VehicleEditWorkspace({
         onClose={() => setPendingTab(null)}
         onOk={() => {
           reset(initialValues);
+          // Bỏ thay đổi của tab Nguồn xe: remount để form con dựng lại từ dữ liệu đã lưu.
+          if (sourceDirty) {
+            setSourceDirty(false);
+            setSourceResetKey((key) => key + 1);
+          }
           const next = pendingTab;
           setPendingTab(null);
           if (next) goToTab(next);

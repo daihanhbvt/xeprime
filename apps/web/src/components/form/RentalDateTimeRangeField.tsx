@@ -110,7 +110,7 @@ export function RentalDateTimeRangeField({
         <Drawer
           title="Chọn thời gian thuê"
           placement="bottom"
-          height="auto"
+          size="auto"
           open={open}
           onClose={() => setOpen(false)}
           classNames={{ body: styles.drawerBody }}

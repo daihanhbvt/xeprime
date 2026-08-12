@@ -48,7 +48,6 @@ export function AutoCompleteField<T extends FieldValues>({
       <AutoComplete
         id={inputId}
         aria-describedby={helpText ? describedById : undefined}
-        size="large"
         value={(field.value as string | null | undefined) ?? ''}
         options={options as { value: string; label?: string }[]}
         onChange={(value: string) => field.onChange(value)}

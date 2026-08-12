@@ -1,0 +1,158 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.card {
+  border-color: var(--xp-color-border);
+}
+
+/* Dải trạng thái đầu tab — nền gold nhạt, nói ngay hình thức sở hữu hiện hành. */
+.statusBanner {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-primary);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-primary-light);
+  gap: var(--xp-space-sm);
+}
+
+.statusIcon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.statusCopy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statusCopy small {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.statusTag {
+  margin-inline-start: var(--xp-space-xs);
+}
+
+.statusInfo {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+}
+
+/* Bốn thẻ hình thức nguồn — một hàng ở desktop, 2×2 ở tablet, 1 cột ở mobile hẹp. */
+.typeGrid.typeGrid {
+  display: grid;
+  width: 100%;
+  gap: var(--xp-space-sm);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.typeOption.typeOption {
+  display: flex;
+  height: auto;
+  min-height: 72px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  padding-right: 34px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-md);
+  margin-inline-end: 0;
+  background: var(--xp-color-bg-container);
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.typeOption.typeOption :global(.ant-radio) {
+  position: absolute;
+  top: var(--xp-space-sm);
+  right: var(--xp-space-sm);
+}
+
+.typeOption.typeOption:global(.ant-radio-wrapper-checked) {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
+.typeHead {
+  display: flex;
+  align-items: center;
+  color: var(--xp-color-text);
+  gap: var(--xp-space-xs);
+}
+
+.typeOption small {
+  margin-top: 2px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Preview tổng gốc+lãi / công thức chia doanh thu — dưới hàng input của thẻ. */
+.totalPreview {
+  margin-top: var(--xp-space-xs);
+}
+
+.methodBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding-top: var(--xp-space-xs);
+}
+
+.methodLabel {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+/* "Phần giữ lại của gian hàng" — ô đọc-chỉ đứng cạnh ô tỷ lệ, canh với ô nhập. */
+.shopShare {
+  display: flex;
+  height: var(--xp-control-height);
+  align-items: center;
+  padding: 0 var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-md);
+  margin-top: 30px;
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+}
+
+.shopShare strong {
+  margin-inline-start: var(--xp-space-xs);
+  color: var(--xp-color-success);
+}
+
+@media (max-width: 1024px) {
+  .typeGrid.typeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .typeGrid.typeGrid {
+    gap: var(--xp-space-xs);
+  }
+
+  .shopShare {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 379px) {
+  .typeGrid.typeGrid {
+    grid-template-columns: 1fr;
+  }
+}

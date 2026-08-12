@@ -153,6 +153,86 @@ export const VEHICLE_SOURCE_TYPE_LABEL: Readonly<Record<VehicleSourceType, strin
   [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: 'Hợp tác',
 };
 
+/** Mô tả ngắn của từng hình thức — dải trạng thái đầu tab Nguồn xe & thẻ chọn (Wave 4). */
+export const VEHICLE_SOURCE_TYPE_DESCRIPTION: Readonly<Record<VehicleSourceType, string>> = {
+  [VEHICLE_SOURCE_TYPE.OWNED]: 'Xe thuộc sở hữu trực tiếp, không có nghĩa vụ tài chính định kỳ.',
+  [VEHICLE_SOURCE_TYPE.FINANCED]:
+    'Thông tin tài chính được đồng bộ với phân hệ kế toán và tính toán chi phí vận hành.',
+  [VEHICLE_SOURCE_TYPE.RENTED]:
+    'Thông tin tài chính được đồng bộ với phân hệ kế toán và tính toán chi phí vận hành.',
+  [VEHICLE_SOURCE_TYPE.PARTNERSHIP]:
+    'Thông tin phân chia doanh thu được đồng bộ trực tiếp với hệ thống đối soát tài chính.',
+};
+
+/**
+ * Phương pháp tính lãi của khoản vay trả góp — chỉ là DỮ LIỆU GHI NHẬN (hiển thị/đối chiếu),
+ * hệ thống KHÔNG tự dựng lịch trả nợ từ nó (Wave 4 không làm amortization).
+ */
+export const VEHICLE_FINANCE_INTEREST_METHOD = {
+  REDUCING_BALANCE: 'reducing_balance',
+  FLAT: 'flat',
+} as const;
+
+export type VehicleFinanceInterestMethod =
+  (typeof VEHICLE_FINANCE_INTEREST_METHOD)[keyof typeof VEHICLE_FINANCE_INTEREST_METHOD];
+export const VEHICLE_FINANCE_INTEREST_METHOD_VALUES = Object.values(
+  VEHICLE_FINANCE_INTEREST_METHOD,
+) as VehicleFinanceInterestMethod[];
+export const VEHICLE_FINANCE_INTEREST_METHOD_LABEL: Readonly<
+  Record<VehicleFinanceInterestMethod, string>
+> = {
+  [VEHICLE_FINANCE_INTEREST_METHOD.REDUCING_BALANCE]: 'Dư nợ giảm dần',
+  [VEHICLE_FINANCE_INTEREST_METHOD.FLAT]: 'Trả đều (Niên kim)',
+};
+
+/**
+ * Hồ sơ nguồn đã ĐỦ cho theo dõi nghĩa vụ tài chính chưa (Wave 4.1 — trạng thái tất định,
+ * KHÔNG chặn việc lưu hồ sơ dở dang; phase nghĩa vụ tài chính sau này tiêu thụ cờ này):
+ *  - financed: cần bankName + monthlyPrincipal + monthlyInterest + paymentDay
+ *  - rented:   cần ownerName + monthlyRent + paymentDay
+ *  - partnership: cần ownerName + commissionPercent
+ *  - owned: luôn đủ (không có nghĩa vụ định kỳ)
+ */
+export function isVehicleSourceObligationReady(detail: {
+  sourceType: string;
+  bankName?: string | null;
+  monthlyPrincipal?: string | null;
+  monthlyInterest?: string | null;
+  monthlyRent?: string | null;
+  ownerName?: string | null;
+  commissionPercent?: string | null;
+  paymentDay?: number | null;
+}): boolean {
+  const has = (value: string | number | null | undefined) =>
+    value !== null && value !== undefined && value !== '';
+  switch (detail.sourceType) {
+    case VEHICLE_SOURCE_TYPE.FINANCED:
+      return (
+        has(detail.bankName) &&
+        has(detail.monthlyPrincipal) &&
+        has(detail.monthlyInterest) &&
+        has(detail.paymentDay)
+      );
+    case VEHICLE_SOURCE_TYPE.RENTED:
+      return has(detail.ownerName) && has(detail.monthlyRent) && has(detail.paymentDay);
+    case VEHICLE_SOURCE_TYPE.PARTNERSHIP:
+      return has(detail.ownerName) && has(detail.commissionPercent);
+    default:
+      return true;
+  }
+}
+
+/**
+ * Ngày đến hạn thực tế của một tháng (quy tắc chốt Wave 4.1, scheduler làm ở phase sau):
+ * tháng không có `paymentDay` (29–31) thì đến hạn vào NGÀY CUỐI tháng đó.
+ * `month` theo lịch 1–12.
+ */
+export function paymentDueDayForMonth(paymentDay: number, year: number, month: number): number {
+  // Date UTC với day=0 của tháng KẾ TIẾP = ngày cuối tháng hiện tại — không dính múi giờ.
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return Math.min(paymentDay, lastDay);
+}
+
 /** Loại hộp số dùng cho nhóm thông số kỹ thuật mở rộng. */
 export const TRANSMISSION_TYPE = {
   AUTOMATIC: 'automatic',

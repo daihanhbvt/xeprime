@@ -62,6 +62,19 @@ vi.mock('@/features/vehicles/hooks/use-vehicle-summary', () => ({
   },
 }));
 
+// Tóm tắt nguồn xe (Wave 4) trong Hồ sơ 360 — mặc định "chưa khai báo hồ sơ chi tiết".
+const sourceQuery = vi.hoisted(() => ({
+  data: { sourceType: 'owned', detail: null } as unknown,
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+
+vi.mock('@/features/vehicles/hooks/use-vehicle-source', () => ({
+  useVehicleSource: () => sourceQuery,
+  useSaveVehicleSource: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 const deleteVehicle = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 const submitPublic = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 

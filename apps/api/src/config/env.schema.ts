@@ -71,6 +71,13 @@ export const envSchema = z
     R2_BUCKET: z.string().optional(),
     R2_ENDPOINT: z.string().optional(),
     R2_PUBLIC_BASE_URL: z.string().optional(),
+    /**
+     * Bucket RIÊNG TƯ cho tài liệu nhạy cảm (hợp đồng nguồn xe — Wave 4.1; giấy tờ xe — Wave 5).
+     * Bucket này KHÔNG được bật r2.dev URL hay custom domain public — file chỉ ra ngoài qua
+     * signed GET URL ngắn hạn do backend phát sau khi kiểm quyền. Không cấu hình → endpoint
+     * hợp đồng trả 503 (fail closed), KHÔNG rơi về bucket public.
+     */
+    R2_PRIVATE_BUCKET: z.string().optional(),
 
     // --- Web + Email (cho link đặt lại mật khẩu) ---
     APP_WEB_URL: z.string().default('http://localhost:3000'),

@@ -1934,6 +1934,195 @@
         ]
       }
     },
+    "/vehicles/{id}/source": {
+      "get": {
+        "operationId": "VehiclesController_getSource",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleSourceDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hồ sơ nguồn xe & tài chính (Wave 4)",
+        "tags": [
+          "vehicles"
+        ]
+      },
+      "put": {
+        "operationId": "VehiclesController_saveSource",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveVehicleSourceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleSourceDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lưu hồ sơ nguồn xe & tài chính (replace theo hình thức nguồn)",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
+    "/vehicles/{id}/source/contracts/presign": {
+      "post": {
+        "operationId": "VehiclesController_presignSourceContract",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignSourceContractDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceContractPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Presign upload hợp đồng nguồn xe vào kho riêng tư",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
+    "/vehicles/{id}/source/contracts/{fileId}/complete": {
+      "post": {
+        "operationId": "VehiclesController_completeSourceContract",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleSourceContractFileDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hoàn tất upload hợp đồng (xác minh object rồi mới cho đính)",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
+    "/vehicles/{id}/source/contracts/{fileId}/download": {
+      "get": {
+        "operationId": "VehiclesController_downloadSourceContract",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceContractDownloadDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Phát signed URL ngắn hạn tải hợp đồng nguồn xe",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
     "/vehicles/{id}/submit-public": {
       "post": {
         "operationId": "VehiclesController_submitPublic",
@@ -2554,6 +2743,70 @@
         "summary": "Báo giá thuê theo khoảng ngày (chưa gồm phí giao nhận)",
         "tags": [
           "public-listings"
+        ]
+      }
+    },
+    "/uploads/vehicle-images/presign": {
+      "post": {
+        "operationId": "StorageController_presignVehicleImage",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Presign upload ảnh xe (đại diện/gallery) lên R2",
+        "tags": [
+          "uploads"
+        ]
+      }
+    },
+    "/uploads/shop-media/presign": {
+      "post": {
+        "operationId": "StorageController_presignShopMedia",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Presign upload logo/ảnh bìa gian hàng lên R2",
+        "tags": [
+          "uploads"
         ]
       }
     },
@@ -4458,70 +4711,6 @@
         "summary": "Xin presigned URL để upload đính kèm chat lên R2",
         "tags": [
           "chat"
-        ]
-      }
-    },
-    "/uploads/vehicle-images/presign": {
-      "post": {
-        "operationId": "StorageController_presignVehicleImage",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PresignImageDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UploadPresignDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Presign upload ảnh xe (đại diện/gallery) lên R2",
-        "tags": [
-          "uploads"
-        ]
-      }
-    },
-    "/uploads/shop-media/presign": {
-      "post": {
-        "operationId": "StorageController_presignShopMedia",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PresignImageDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UploadPresignDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Presign upload logo/ảnh bìa gian hàng lên R2",
-        "tags": [
-          "uploads"
         ]
       }
     },
@@ -8338,6 +8527,373 @@
           "source"
         ]
       },
+      "VehicleSourceContractFileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true,
+            "description": "ID file riêng tư (ULID)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Tên file hiển thị"
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "size": {
+            "type": "number",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "legacy"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "status"
+        ]
+      },
+      "VehicleSourceDetailDto": {
+        "type": "object",
+        "properties": {
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "owned",
+              "financed",
+              "rented",
+              "partnership"
+            ]
+          },
+          "purchaseDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "purchasePrice": {
+            "type": "string",
+            "nullable": true
+          },
+          "purchasePlace": {
+            "type": "string",
+            "nullable": true
+          },
+          "bankName": {
+            "type": "string",
+            "nullable": true
+          },
+          "contractNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalPrincipal": {
+            "type": "string",
+            "nullable": true
+          },
+          "monthlyPrincipal": {
+            "type": "string",
+            "nullable": true
+          },
+          "monthlyInterest": {
+            "type": "string",
+            "nullable": true
+          },
+          "monthlyTotal": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tổng phải đóng mỗi tháng = gốc + lãi — TÍNH RA, không lưu"
+          },
+          "interestRatePercent": {
+            "type": "string",
+            "nullable": true
+          },
+          "termMonths": {
+            "type": "number",
+            "nullable": true
+          },
+          "interestMethod": {
+            "type": "string",
+            "nullable": true
+          },
+          "ownerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "ownerPhone": {
+            "type": "string",
+            "nullable": true
+          },
+          "ownerEmail": {
+            "type": "string",
+            "nullable": true
+          },
+          "monthlyRent": {
+            "type": "string",
+            "nullable": true
+          },
+          "commissionPercent": {
+            "type": "string",
+            "nullable": true
+          },
+          "paymentDay": {
+            "type": "number",
+            "nullable": true
+          },
+          "startDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "endDate": {
+            "type": "string",
+            "nullable": true
+          },
+          "contractFiles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleSourceContractFileDto"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "obligationReady": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO — lần cập nhật hồ sơ gần nhất"
+          }
+        },
+        "required": [
+          "sourceType",
+          "contractFiles",
+          "obligationReady",
+          "updatedAt"
+        ]
+      },
+      "VehicleSourceDto": {
+        "type": "object",
+        "properties": {
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "owned",
+              "financed",
+              "rented",
+              "partnership"
+            ]
+          },
+          "detail": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VehicleSourceDetailDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "sourceType"
+        ]
+      },
+      "SaveVehicleSourceDto": {
+        "type": "object",
+        "properties": {
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "owned",
+              "financed",
+              "rented",
+              "partnership"
+            ]
+          },
+          "purchaseDate": {
+            "type": "string",
+            "description": "Ngày mua xe (YYYY-MM-DD)",
+            "nullable": true
+          },
+          "purchasePrice": {
+            "type": "string",
+            "description": "Giá trị xe khi mua (chuỗi thập phân VND)",
+            "nullable": true
+          },
+          "purchasePlace": {
+            "type": "string",
+            "description": "Nơi mua / đại lý bàn giao",
+            "nullable": true
+          },
+          "bankName": {
+            "type": "string",
+            "description": "Ngân hàng / tổ chức tín dụng",
+            "nullable": true
+          },
+          "contractNumber": {
+            "type": "string",
+            "description": "Số hợp đồng tín dụng",
+            "nullable": true
+          },
+          "originalPrincipal": {
+            "type": "string",
+            "description": "Dư nợ gốc ban đầu (chuỗi thập phân VND)",
+            "nullable": true
+          },
+          "monthlyPrincipal": {
+            "type": "string",
+            "description": "Gốc phải trả mỗi tháng (chuỗi thập phân VND)",
+            "nullable": true
+          },
+          "monthlyInterest": {
+            "type": "string",
+            "description": "Lãi phải trả mỗi tháng (chuỗi thập phân VND)",
+            "nullable": true
+          },
+          "interestRatePercent": {
+            "type": "string",
+            "description": "Lãi suất cố định %/năm (chuỗi 0–100)",
+            "nullable": true
+          },
+          "termMonths": {
+            "type": "number",
+            "description": "Thời hạn vay (tháng)",
+            "nullable": true
+          },
+          "interestMethod": {
+            "type": "string",
+            "enum": [
+              "reducing_balance",
+              "flat"
+            ]
+          },
+          "ownerName": {
+            "type": "string",
+            "description": "Tên chủ xe / doanh nghiệp (bên cho thuê / đối tác)",
+            "nullable": true
+          },
+          "ownerPhone": {
+            "type": "string",
+            "description": "Số điện thoại liên hệ của chủ xe",
+            "nullable": true
+          },
+          "ownerEmail": {
+            "type": "string",
+            "description": "Email chủ xe (tuỳ chọn)",
+            "nullable": true
+          },
+          "monthlyRent": {
+            "type": "string",
+            "description": "Tiền thuê định kỳ hàng tháng (chuỗi thập phân VND)",
+            "nullable": true
+          },
+          "commissionPercent": {
+            "type": "string",
+            "nullable": true,
+            "description": "% doanh thu chia cho CHỦ XE (0–100). Cơ sở: tiền thuê sau giảm giá; không gồm cọc/giao nhận/quá giờ/phạt/bồi thường."
+          },
+          "paymentDay": {
+            "type": "number",
+            "description": "Ngày trong tháng đến hạn đóng tiền (1–31)",
+            "nullable": true
+          },
+          "startDate": {
+            "type": "string",
+            "description": "Ngày bắt đầu hợp đồng / giải ngân (YYYY-MM-DD)",
+            "nullable": true
+          },
+          "endDate": {
+            "type": "string",
+            "description": "Ngày kết thúc hợp đồng (YYYY-MM-DD)",
+            "nullable": true
+          },
+          "contractFileIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "description": "Ghi chú thêm về nguồn gốc xe",
+            "nullable": true
+          }
+        },
+        "required": [
+          "sourceType"
+        ]
+      },
+      "PresignSourceContractDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Tên file gốc (chỉ để hiển thị, không tham gia định danh)"
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+              "application/pdf"
+            ]
+          },
+          "fileSize": {
+            "type": "number",
+            "description": "Dung lượng (byte), tối đa 10485760"
+          }
+        },
+        "required": [
+          "fileName",
+          "contentType",
+          "fileSize"
+        ]
+      },
+      "SourceContractPresignDto": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "ID file riêng tư — dùng cho bước hoàn tất + đính vào hồ sơ"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "description": "URL PUT lên bucket riêng tư (hết hạn ngắn)"
+          },
+          "expiresIn": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "fileId",
+          "uploadUrl",
+          "expiresIn"
+        ]
+      },
+      "SourceContractDownloadDto": {
+        "type": "object",
+        "properties": {
+          "downloadUrl": {
+            "type": "string",
+            "description": "Signed GET URL ngắn hạn — không cache, không lưu"
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "ISO — thời điểm URL hết hiệu lực"
+          }
+        },
+        "required": [
+          "downloadUrl",
+          "expiresAt"
+        ]
+      },
       "CreateVehicleDto": {
         "type": "object",
         "properties": {
@@ -9333,6 +9889,60 @@
         "required": [
           "breakdown",
           "delivery"
+        ]
+      },
+      "PresignImageDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Tên file gốc (chỉ để đặt key, đã sanitize)",
+            "example": "xe-01.jpg"
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ]
+          },
+          "fileSize": {
+            "type": "number",
+            "description": "Dung lượng file (byte), tối đa 10485760"
+          }
+        },
+        "required": [
+          "fileName",
+          "contentType",
+          "fileSize"
+        ]
+      },
+      "UploadPresignDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Key trong bucket"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "description": "URL để PUT file (hết hạn ngắn)"
+          },
+          "publicUrl": {
+            "type": "string",
+            "description": "URL công khai của file sau khi upload"
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Giây còn hiệu lực của uploadUrl"
+          }
+        },
+        "required": [
+          "key",
+          "uploadUrl",
+          "publicUrl",
+          "expiresIn"
         ]
       },
       "BookingListItemDto": {
@@ -11600,60 +12210,6 @@
           },
           "expiresIn": {
             "type": "number"
-          }
-        },
-        "required": [
-          "key",
-          "uploadUrl",
-          "publicUrl",
-          "expiresIn"
-        ]
-      },
-      "PresignImageDto": {
-        "type": "object",
-        "properties": {
-          "fileName": {
-            "type": "string",
-            "description": "Tên file gốc (chỉ để đặt key, đã sanitize)",
-            "example": "xe-01.jpg"
-          },
-          "contentType": {
-            "type": "string",
-            "enum": [
-              "image/jpeg",
-              "image/png",
-              "image/webp"
-            ]
-          },
-          "fileSize": {
-            "type": "number",
-            "description": "Dung lượng file (byte), tối đa 10485760"
-          }
-        },
-        "required": [
-          "fileName",
-          "contentType",
-          "fileSize"
-        ]
-      },
-      "UploadPresignDto": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "Key trong bucket"
-          },
-          "uploadUrl": {
-            "type": "string",
-            "description": "URL để PUT file (hết hạn ngắn)"
-          },
-          "publicUrl": {
-            "type": "string",
-            "description": "URL công khai của file sau khi upload"
-          },
-          "expiresIn": {
-            "type": "number",
-            "description": "Giây còn hiệu lực của uploadUrl"
           }
         },
         "required": [

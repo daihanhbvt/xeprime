@@ -167,9 +167,10 @@ export const XP_TOKENS = {
   'shadow-overlay': '0 8px 24px 0 rgba(41, 31, 15, 0.12)', // Elevation 3 · modal, drawer
 
   // ─── Focus ────────────────────────────────────────────────────────────────
-  // Figma `14:197`: “2px gold border + 3px gold ring (25% α)”.
+  // Figma `14:197` vẽ ring 3px; hạ xuống 2px theo góp ý review UI 12/08/2026 (ring 3px
+  // trên control 32px trông quá dày). Border focus vẫn 2px.
   'focus-outline-width': '2px',
-  'focus-ring-width': '3px',
+  'focus-ring-width': '2px',
   'color-focus-ring': 'rgba(214, 160, 44, 0.25)',
 
   // ─── Breakpoint ───────────────────────────────────────────────────────────
@@ -193,7 +194,8 @@ export const XP_TOKENS = {
   // ─── Kích thước component dùng chung ──────────────────────────────────────
   // Wave 1A CHỈ khai báo. Áp vào component là việc của các wave sau.
   // `control-height` = 32px là chiều cao AntD đang chạy; Figma `125:1571`/`125:2691`
-  // vẽ control 40px (= AntD size="large"). Chênh này ghi ở P16, chưa áp.
+  // vẽ control 40px (= AntD size="large"). Chênh này ghi ở P16. Review UI 12/08/2026 chốt:
+  // form field dùng cỡ MẶC ĐỊNH 32px (bỏ size="large"), 40px chỉ còn cho nút CTA.
   'control-height-sm': '24px',
   'control-height': '32px',
   'control-height-lg': '40px',

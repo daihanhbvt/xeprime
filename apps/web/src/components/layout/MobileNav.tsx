@@ -89,7 +89,7 @@ export function MobileNav() {
         onClose={close}
         // Escape và bấm ra ngoài đều đóng (mặc định AntD) — navigation-audit `134:3825`.
         keyboard
-        maskClosable
+        mask={{ closable: true }}
         // Trả tiêu điểm về nút "Thêm" sau khi đóng.
         afterOpenChange={(nowOpen) => {
           if (!nowOpen) triggerRef.current?.focus();

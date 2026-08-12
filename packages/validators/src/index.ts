@@ -14,6 +14,7 @@ import {
   TENANT_TYPE_VALUES,
   TRANSMISSION_TYPE_VALUES,
   VEHICLE_FEATURE_KEYS,
+  VEHICLE_FINANCE_INTEREST_METHOD_VALUES,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_SOURCE_TYPE_VALUES,
   VEHICLE_TYPE,
@@ -173,6 +174,116 @@ export const vehicleFormSchema = yup.object({
 });
 
 export type VehicleFormValues = yup.InferType<typeof vehicleFormSchema>;
+
+/** Số nguyên VND tuỳ chọn — form nhập number (NumberField), hoá chuỗi khi gửi API (ADR 0007). */
+const optionalMoney = yup
+  .number()
+  .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
+  .typeError('Vui lòng nhập số')
+  .integer('Số tiền phải là số nguyên')
+  .min(0, 'Số tiền không được âm')
+  .nullable()
+  .default(null);
+
+const optionalDate = yup.string().trim().nullable().default(null);
+
+/**
+ * Hồ sơ nguồn xe & tài chính (Wave 4) — tab Nguồn xe & tài chính.
+ *
+ * Bắt buộc-theo-biến-thể khớp REQUIRED_FIELDS ở backend (VehicleSourceService); các trường
+ * còn lại tuỳ chọn. Trường lạc biến thể không cần chặn ở đây — form chỉ render trường của
+ * biến thể đang chọn và mapper chỉ gửi đúng nhóm đó.
+ */
+export const vehicleSourceFormSchema = yup.object({
+  sourceType: yup.string().oneOf(VEHICLE_SOURCE_TYPE_VALUES).required('Chọn hình thức nguồn xe'),
+
+  // owned — tất cả tuỳ chọn
+  purchaseDate: optionalDate,
+  purchasePrice: optionalMoney,
+  purchasePlace: optionalText(255),
+
+  // financed
+  bankName: yup
+    .string()
+    .trim()
+    .max(160)
+    .default('')
+    .when('sourceType', {
+      is: 'financed',
+      then: (s) => s.required('Nhập ngân hàng / tổ chức tín dụng'),
+    }),
+  contractNumber: optionalText(120),
+  originalPrincipal: optionalMoney,
+  monthlyPrincipal: optionalMoney,
+  monthlyInterest: optionalMoney,
+  interestRatePercent: yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
+    .typeError('Lãi suất phải là số')
+    .min(0, 'Lãi suất không được âm')
+    .max(100, 'Lãi suất tối đa 100%')
+    .nullable()
+    .default(null),
+  termMonths: optionalPositiveInt('Thời hạn vay', 600),
+  interestMethod: yup
+    .string()
+    .oneOf([...VEHICLE_FINANCE_INTEREST_METHOD_VALUES])
+    .nullable()
+    .default(null),
+
+  // rented + partnership
+  ownerName: yup
+    .string()
+    .trim()
+    .max(160)
+    .default('')
+    .when('sourceType', {
+      is: (value: string) => value === 'rented' || value === 'partnership',
+      then: (s) => s.required('Nhập tên chủ xe / doanh nghiệp'),
+    }),
+  ownerPhone: optionalText(30),
+  ownerEmail: yup.string().trim().email('Email không hợp lệ').max(160).default(''),
+  monthlyRent: optionalMoney.when('sourceType', {
+    is: 'rented',
+    then: (s) => s.required('Nhập tiền thuê hàng tháng'),
+  }),
+  commissionPercent: yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
+    .typeError('Tỷ lệ phải là số')
+    .min(0, 'Tỷ lệ tối thiểu 0%')
+    .max(100, 'Tỷ lệ tối đa 100%')
+    .nullable()
+    .default(null)
+    .when('sourceType', {
+      is: 'partnership',
+      then: (s) => s.required('Nhập tỷ lệ chia sẻ doanh thu'),
+    }),
+
+  // chung
+  paymentDay: optionalPositiveInt('Ngày đến hạn', 31),
+  startDate: optionalDate,
+  endDate: optionalDate,
+  /**
+   * Tài liệu đính kèm — chỉ là METADATA server phát: `id` file riêng tư (null với bản ghi
+   * legacy Wave 4 chờ tải lên lại). KHÔNG có URL nào trong form state (Wave 4.1).
+   */
+  contractFiles: yup
+    .array()
+    .of(
+      yup.object({
+        id: yup.string().nullable().defined(),
+        name: yup.string().required(),
+        size: yup.number().nullable().optional(),
+        status: yup.string().oneOf(['ready', 'legacy']).required(),
+      }),
+    )
+    .max(10, 'Tối đa 10 tệp hợp đồng')
+    .default([]),
+  notes: optionalText(4000),
+});
+
+export type VehicleSourceFormValues = yup.InferType<typeof vehicleSourceFormSchema>;
 
 /**
  * Khoảng thuê. Kiểm tra `returnAt > pickupAt` ở đây chỉ để báo lỗi sớm — ràng buộc thật

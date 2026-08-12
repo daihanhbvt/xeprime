@@ -47,11 +47,18 @@
   width: 100%;
 }
 
+/* Ba nhóm của bước 1 luồng tạo xếp dọc, cách đều — khoảng cách do stack quyết, không do margin lẻ. */
+.sectionStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
 .sourceFieldset {
   padding: 20px;
   border: 1px solid var(--xp-color-border-secondary);
   border-radius: var(--xp-border-radius-lg);
-  margin: var(--xp-space-md) 0 0;
+  margin: 0;
 }
 
 .sourceLegend {
@@ -300,13 +307,32 @@
     padding: var(--xp-space-md);
   }
 
+  /*
+   * Mobile GIỮ lưới 2×2 (thiết kế 390px vẫn hai cột) — chỉ nén đệm/icon cho vừa.
+   * Cao tối thiểu 64px giữ vùng chạm ≥44px.
+   */
   .sourceGrid.sourceGrid {
-    grid-template-columns: 1fr;
+    gap: var(--xp-space-xs);
   }
 
   .sourceOption.sourceOption {
-    min-height: 72px;
-    padding: var(--xp-space-sm);
+    min-height: 64px;
+    align-items: flex-start;
+    padding: var(--xp-space-xs) var(--xp-space-sm);
+    padding-right: 30px;
+  }
+
+  .sourceOption.sourceOption :global(.ant-radio) {
+    top: var(--xp-space-sm);
+    right: var(--xp-space-xs);
+  }
+
+  .sourceIcon {
+    width: 22px;
+    height: 22px;
+    flex-basis: 22px;
+    margin-top: 2px;
+    font-size: var(--xp-font-size-body);
   }
 
   .featuresGrid {
@@ -316,5 +342,12 @@
 
   .finalActions {
     flex-direction: column-reverse;
+  }
+}
+
+/* Chỉ khi hai cột không còn đọc nổi (máy rất hẹp) mới xuống một cột. */
+@media (max-width: 379px) {
+  .sourceGrid.sourceGrid {
+    grid-template-columns: 1fr;
   }
 }

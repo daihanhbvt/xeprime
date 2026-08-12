@@ -4,7 +4,7 @@ import { DatePicker, Form } from 'antd';
 import { useId } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 
-import type { Dayjs } from '@/lib/datetime';
+import { DAY_PARAM_FORMAT, DATE_FORMAT, dayjs, type Dayjs } from '@/lib/datetime';
 
 import styles from './field.module.css';
 
@@ -16,15 +16,21 @@ interface DateTimeFieldBaseProps<T extends FieldValues> {
 }
 
 /**
- * `range` đổi luôn KIỂU giá trị của field, nên nó là union chứ không phải một cờ boolean rời:
- * - không có `range` → `Dayjs | null`
+ * `range`/`dateOnly` đổi luôn KIỂU giá trị của field, nên là union chứ không phải cờ rời:
+ * - không có gì → `Dayjs | null`
  * - `range` → `[Dayjs | null, Dayjs | null] | null`
+ * - `dateOnly` → **`string | null`** dạng `YYYY-MM-DD` — ngày-không-giờ (ngày hợp đồng,
+ *   ngày mua xe) là dữ liệu lịch, không phải mốc thời gian; giữ chuỗi để không dính múi giờ.
  *
  * Schema Yup của feature phải khai đúng kiểu tương ứng; sai kiểu là lỗi biên dịch chứ không phải
  * lỗi lúc chạy.
  */
 type DateTimeFieldProps<T extends FieldValues> = DateTimeFieldBaseProps<T> &
-  ({ range?: false } | { range: true; rangePlaceholder?: [string, string] });
+  (
+    | { range?: false; dateOnly?: false }
+    | { range: true; dateOnly?: false; rangePlaceholder?: [string, string] }
+    | { range?: false; dateOnly: true }
+  );
 
 const TIME_CONFIG = { format: 'HH:mm', minuteStep: 15 } as const;
 const DISPLAY_FORMAT = 'DD/MM/YYYY HH:mm';
@@ -45,12 +51,12 @@ export function DateTimeField<T extends FieldValues>(props: DateTimeFieldProps<T
   const { field, fieldState } = useController({ control, name });
   const id = useId();
 
+  const dateOnly = !props.range && props.dateOnly === true;
   const shared = {
     id,
     className: styles.control,
-    size: 'large' as const,
-    showTime: TIME_CONFIG,
-    format: DISPLAY_FORMAT,
+    ...(dateOnly ? {} : { showTime: TIME_CONFIG }),
+    format: dateOnly ? DATE_FORMAT : DISPLAY_FORMAT,
     onBlur: field.onBlur,
     status: fieldState.error ? ('error' as const) : undefined,
   };
@@ -63,7 +69,16 @@ export function DateTimeField<T extends FieldValues>(props: DateTimeFieldProps<T
       help={fieldState.error?.message}
       className={styles.item}
     >
-      {props.range ? (
+      {dateOnly ? (
+        <DatePicker
+          {...shared}
+          placeholder={placeholder}
+          value={field.value ? dayjs(field.value as string, DAY_PARAM_FORMAT) : null}
+          onChange={(value: Dayjs | null) =>
+            field.onChange(value ? value.format(DAY_PARAM_FORMAT) : null)
+          }
+        />
+      ) : props.range ? (
         <DatePicker.RangePicker
           {...shared}
           placeholder={props.rangePlaceholder ?? ['Từ ngày', 'Đến ngày']}

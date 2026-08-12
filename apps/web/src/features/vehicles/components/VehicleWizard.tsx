@@ -61,14 +61,19 @@ export function VehicleWizard({
 
   return (
     <div className={styles.root}>
-      <Card className={styles.stepperCard} styles={{ body: { padding: 0 } }}>
+      {/* Đệm của thẻ đặt ở BODY qua CSS module (xem `.stepperCard`) — không ép inline. */}
+      <Card className={styles.stepperCard}>
         {/*
           Mobile: số nằm TRÊN nhãn rút gọn — bốn bước vừa đúng một hàng
           ngang ở 390px. Để `horizontal` như desktop thì mỗi bước chiếm trọn một dòng.
         */}
+        {/*
+          Không dùng `size="small"`: kích thước do CSS var `--ant-cmp-steps-*` trong module
+          quyết định; class `.ant-steps-small` đặt lại cùng các var đó với specificity ngang
+          nhau và thắng nhờ thứ tự tiêm (bẫy D19).
+        */}
         <Steps
           className={styles.steps}
-          size="small"
           current={current}
           /*
            * `responsive` mặc định BẬT: dưới 532px AntD tự đổi `direction` sang `vertical`, tức

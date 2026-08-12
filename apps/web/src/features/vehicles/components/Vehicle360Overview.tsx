@@ -24,6 +24,7 @@ import { useState } from 'react';
 import {
   BOOKING_STATUS,
   BOOKING_STATUS_META,
+  PERMISSION,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
@@ -41,7 +42,9 @@ import { decorativeIcon } from '@/lib/decorative-icon';
 import { formatDateTime, toAppTz } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
+import { usePermissions } from '@/hooks/use-permissions';
 import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
+import { useVehicleSource } from '../hooks/use-vehicle-source';
 import { discountedPriceVnd } from '../pricing';
 import { missingPublishRequirements, publicStatusPresentation } from '../publication';
 import type { Vehicle360Summary, VehicleBookingBrief, VehicleDetail } from '../types';
@@ -586,8 +589,29 @@ function formatMetric(value: number | string | null | undefined, unit: string): 
   return `${Number(value).toLocaleString('vi-VN')} ${unit}`;
 }
 
+/**
+ * Tóm tắt nguồn xe (Wave 4). Chi tiết tài chính chỉ tải khi người xem có `finance.view` —
+ * người không có quyền chỉ thấy hình thức (đã nằm sẵn trên vehicle), không thấy con số.
+ */
 function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
+  const permissions = usePermissions();
+  const canViewFinance = permissions.has(PERMISSION.FINANCE_VIEW);
+  const source = useVehicleSource(vehicle.id, canViewFinance);
+  const detail = source.data?.detail ?? null;
+
+  const summary = detail
+    ? [
+        detail.bankName,
+        detail.ownerName,
+        detail.monthlyTotal ? `${formatMoneyVnd(detail.monthlyTotal)}/tháng (gốc + lãi)` : null,
+        detail.monthlyRent ? `${formatMoneyVnd(detail.monthlyRent)}/tháng` : null,
+        detail.commissionPercent ? `chia chủ xe ${detail.commissionPercent}%` : null,
+        detail.paymentDay ? `đến hạn ngày ${detail.paymentDay}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
 
   return (
     <Card title="Nguồn xe & Tài chính" className={styles.sectionCard}>
@@ -598,11 +622,25 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
             <Tag color="gold">{VEHICLE_SOURCE_TYPE_LABEL[sourceType]}</Tag>
           </dd>
         </div>
+        {detail && summary ? (
+          <div className={styles.kvRow}>
+            <dt>Tóm tắt</dt>
+            <dd>{summary}</dd>
+          </div>
+        ) : null}
       </dl>
-      <p className={styles.muted}>
-        Thông tin tài chính, lịch thanh toán và hợp đồng của nguồn xe sẽ được quản lý ở tab chuyên
-        biệt trong Wave 4.
-      </p>
+      {canViewFinance ? (
+        source.isLoading ? null : detail ? (
+          <Link href={`${vehiclePath.edit(vehicle.id)}?tab=source`} className={styles.muted}>
+            Xem hồ sơ nguồn xe & tài chính →
+          </Link>
+        ) : (
+          <p className={styles.muted}>
+            Chưa khai báo hồ sơ nguồn chi tiết.{' '}
+            <Link href={`${vehiclePath.edit(vehicle.id)}?tab=source`}>Bổ sung ngay →</Link>
+          </p>
+        )
+      ) : null}
     </Card>
   );
 }

@@ -58,6 +58,8 @@ export const queryKeys = {
     summary: (id: string) => ['vehicles', 'summary', id] as const,
     /** Giá & chính sách theo xe (nguồn kế thừa/ghi đè) — nằm dưới nhánh vehicles để mutation xe invalidate luôn. */
     pricing: (id: string) => ['vehicles', 'pricing', id] as const,
+    /** Hồ sơ nguồn xe & tài chính (Wave 4). */
+    source: (id: string) => ['vehicles', 'source', id] as const,
   },
   /** Chính sách thuê mặc định của gian hàng (Wave 2). */
   rentalPolicies: {

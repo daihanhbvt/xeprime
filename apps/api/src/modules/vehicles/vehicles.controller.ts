@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
@@ -21,6 +22,16 @@ import {
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
+import {
+  PresignSourceContractDto,
+  SaveVehicleSourceDto,
+  SourceContractDownloadDto,
+  SourceContractPresignDto,
+  VehicleSourceContractFileDto,
+  VehicleSourceDto,
+} from './dto/vehicle-source.dto';
+import { VehicleContractsService } from './vehicle-contracts.service';
+import { VehicleSourceService } from './vehicle-source.service';
 import {
   CreateVehicleDto,
   FleetSummaryDto,
@@ -45,7 +56,11 @@ import { VehiclesService } from './vehicles.service';
 @Controller('vehicles')
 @TenantScoped()
 export class VehiclesController {
-  constructor(private readonly vehicles: VehiclesService) {}
+  constructor(
+    private readonly vehicles: VehiclesService,
+    private readonly source: VehicleSourceService,
+    private readonly contracts: VehicleContractsService,
+  ) {}
 
   @Get()
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
@@ -145,6 +160,88 @@ export class VehiclesController {
     @Body() dto: SaveVehiclePricingDto,
   ): Promise<VehiclePricingDto> {
     return this.vehicles.savePricing(tenant.tenantId, id, user.id, dto);
+  }
+
+  /**
+   * Hồ sơ nguồn xe chứa dữ liệu tài chính nhạy cảm (ngân hàng, đối tác, tiền) — đọc đòi
+   * `finance.view`, không phải chỉ `vehicle.view`: ẩn tab ở FE không ngăn ai gọi thẳng API.
+   */
+  @Get(':id/source')
+  @RequirePermissions(PERMISSION.FINANCE_VIEW)
+  @ApiOperation({ summary: 'Hồ sơ nguồn xe & tài chính (Wave 4)' })
+  @ApiOkResponse({ type: VehicleSourceDto })
+  getSource(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<VehicleSourceDto> {
+    return this.source.getSource(tenant.tenantId, id);
+  }
+
+  /**
+   * Replace trọn hồ sơ theo biến thể; đổi hình thức nguồn đồng bộ `vehicles.source_type`
+   * trong cùng transaction + audit. FE xác nhận trước khi đổi hình thức; backend cứ thế thực thi.
+   */
+  @Put(':id/source')
+  @RequirePermissions(PERMISSION.VEHICLE_UPDATE, PERMISSION.FINANCE_VIEW)
+  @ApiOperation({ summary: 'Lưu hồ sơ nguồn xe & tài chính (replace theo hình thức nguồn)' })
+  @ApiOkResponse({ type: VehicleSourceDto })
+  saveSource(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: SaveVehicleSourceDto,
+  ): Promise<VehicleSourceDto> {
+    return this.source.saveSource(tenant.tenantId, id, user.id, dto);
+  }
+
+  /**
+   * Hợp đồng nguồn xe là TÀI LIỆU RIÊNG TƯ (Wave 4.1): presign gắn với XE cụ thể — server
+   * kiểm xe thuộc tenant rồi mới sinh id + object key (client không tự chọn được chỗ ghi),
+   * PUT nhắm vào bucket riêng tư, KHÔNG có publicUrl.
+   */
+  @Post(':id/source/contracts/presign')
+  @RequirePermissions(PERMISSION.VEHICLE_UPDATE, PERMISSION.FINANCE_VIEW)
+  @ApiOperation({ summary: 'Presign upload hợp đồng nguồn xe vào kho riêng tư' })
+  @ApiCreatedResponse({ type: SourceContractPresignDto })
+  presignSourceContract(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: PresignSourceContractDto,
+  ): Promise<SourceContractPresignDto> {
+    return this.contracts.presign(tenant.tenantId, id, user.id, dto);
+  }
+
+  /** PUT xong chưa phải là xong: server HEAD + soi chữ ký byte đầu rồi mới cho file `ready`. */
+  @Post(':id/source/contracts/:fileId/complete')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.VEHICLE_UPDATE, PERMISSION.FINANCE_VIEW)
+  @ApiOperation({ summary: 'Hoàn tất upload hợp đồng (xác minh object rồi mới cho đính)' })
+  @ApiOkResponse({ type: VehicleSourceContractFileDto })
+  completeSourceContract(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('fileId') fileId: string,
+  ): Promise<VehicleSourceContractFileDto> {
+    return this.contracts.complete(tenant.tenantId, id, user.id, fileId);
+  }
+
+  /**
+   * Tải hợp đồng: kiểm quyền + đúng tenant/xe/trạng thái rồi mới phát signed URL sống 120s.
+   * `no-store`: URL ký không được nằm lại trong cache trung gian nào.
+   */
+  @Get(':id/source/contracts/:fileId/download')
+  @Header('Cache-Control', 'no-store')
+  @RequirePermissions(PERMISSION.FINANCE_VIEW)
+  @ApiOperation({ summary: 'Phát signed URL ngắn hạn tải hợp đồng nguồn xe' })
+  @ApiOkResponse({ type: SourceContractDownloadDto })
+  downloadSourceContract(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+    @Param('fileId') fileId: string,
+  ): Promise<SourceContractDownloadDto> {
+    return this.contracts.download(tenant.tenantId, id, fileId);
   }
 
   @Post()

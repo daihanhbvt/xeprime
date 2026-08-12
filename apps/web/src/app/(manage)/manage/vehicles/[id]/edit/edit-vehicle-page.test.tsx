@@ -22,8 +22,11 @@ vi.mock('@/hooks/use-media-query', () => ({
 }));
 vi.mock('@/services/upload', () => ({
   presignVehicleImage: vi.fn(),
+  presignVehicleContract: vi.fn(),
   uploadImage: vi.fn(),
+  uploadToR2: vi.fn(),
   validateImageFile: () => null,
+  validateDocumentFile: () => null,
 }));
 vi.mock('@/features/rental-policies/hooks/use-vehicle-pricing', () => ({
   useVehiclePricing: () => ({
@@ -34,11 +37,22 @@ vi.mock('@/features/rental-policies/hooks/use-vehicle-pricing', () => ({
   }),
   useSaveVehiclePricing: () => ({ mutate: vi.fn(), isPending: false }),
 }));
+vi.mock('@/features/vehicles/hooks/use-vehicle-source', () => ({
+  useVehicleSource: () => ({
+    data: { sourceType: 'owned', detail: null },
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+  useSaveVehicleSource: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
 
 const permissions = vi.hoisted(() => ({ allow: true }));
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({
-    has: (permission: string) => permissions.allow && permission === PERMISSION.VEHICLE_UPDATE,
+    has: (permission: string) =>
+      permissions.allow &&
+      (permission === PERMISSION.VEHICLE_UPDATE || permission === PERMISSION.FINANCE_VIEW),
     hasAny: () => permissions.allow,
     isLoading: false,
   }),
@@ -163,7 +177,7 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(screen.getByText('Không tìm thấy xe')).toBeTruthy();
   });
 
-  it('nạp đúng header, trạng thái và sáu tab; ba tab tương lai bị khoá', () => {
+  it('nạp đúng header, trạng thái và sáu tab; Nguồn xe mở (Wave 4), hai tab tương lai bị khoá', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: vehicle.name })).toBeTruthy();
     expect(screen.getByDisplayValue(vehicle.name)).toBeTruthy();
@@ -173,7 +187,7 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     );
     expect(
       screen.getByRole('tab', { name: 'Nguồn xe & tài chính' }).getAttribute('aria-disabled'),
-    ).toBe('true');
+    ).not.toBe('true');
     expect(screen.getByRole('tab', { name: 'Giấy tờ' }).getAttribute('aria-disabled')).toBe('true');
     expect(screen.getByRole('tab', { name: 'Bảo dưỡng & KM' }).getAttribute('aria-disabled')).toBe(
       'true',
@@ -243,6 +257,16 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
 
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
     expect(update.mutateAsync.mock.calls[0]![0].mainImageUrl).toBeNull();
+  });
+
+  it('tab Nguồn xe (Wave 4): sửa dở rồi chuyển tab phải qua xác nhận bỏ thay đổi', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'Nguồn xe & tài chính' }));
+    fireEvent.change(await screen.findByLabelText(/Nơi mua/), {
+      target: { value: 'Toyota Đông Sài Gòn' },
+    });
+    fireEvent.click(screen.getByRole('tab', { name: 'Thông tin xe' }));
+    expect(await screen.findByText('Bỏ các thay đổi chưa lưu?')).toBeTruthy();
   });
 
   it('không cho đổi tab làm mất dữ liệu chưa lưu', async () => {

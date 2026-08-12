@@ -96,7 +96,9 @@ export function NumberField<T extends FieldValues>({
         aria-describedby={helpText ? describedById : undefined}
         aria-invalid={fieldState.error ? true : undefined}
         className={styles.control}
-        size="large"
+        // Không hiện nút tăng/giảm: các ô số ở đây (năm, giá, kích thước) đều gõ trực tiếp,
+        // và cặp mũi tên + vạch ngăn hiện lên lúc focus chỉ gây rối mắt.
+        controls={false}
         value={(field.value as number | null | undefined) ?? null}
         onChange={(value) => field.onChange(value ?? null)}
         onBlur={field.onBlur}

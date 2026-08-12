@@ -62,7 +62,6 @@ export function SelectField<T extends FieldValues>({
       <Select
         id={selectId}
         aria-describedby={helpText ? describedById : undefined}
-        size="large"
         value={(field.value as string | null | undefined) ?? undefined}
         onChange={(value: string | undefined) => field.onChange(value ?? null)}
         onBlur={field.onBlur}

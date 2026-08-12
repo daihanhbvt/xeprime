@@ -37,6 +37,9 @@ export class StorageController {
     });
   }
 
+  // Presign hợp đồng nguồn xe Wave 4 (bucket public) đã GỠ ở Wave 4.1 — hợp đồng là tài liệu
+  // riêng tư, đi qua POST /vehicles/:id/source/contracts/presign nhắm vào R2_PRIVATE_BUCKET.
+
   @Post('shop-media/presign')
   @RequirePermissions(PERMISSION.TENANT_UPDATE)
   @ApiOperation({ summary: 'Presign upload logo/ảnh bìa gian hàng lên R2' })

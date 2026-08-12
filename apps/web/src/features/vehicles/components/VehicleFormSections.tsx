@@ -154,55 +154,6 @@ export const CREATE_WIZARD_STEPS: readonly VehicleWizardStep[] = [
   },
 ];
 
-/**
- * Wizard **sửa xe** — nhãn lấy nguyên văn Figma `193:2297` (`StepperBar`).
- *
- * Nhóm trường khác luồng tạo có chủ đích: người sửa nhảy thẳng tới thứ muốn đổi, nên ảnh, giá và
- * điều khoản tách thành ba bước riêng thay vì gộp.
- *
- * ⚠️ Figma chỉ vẽ bước 1 và bước 3 của luồng sửa, và bước 1 chỉ có 5 trường cơ bản — tức **không
- * frame nào chứa thông số kỹ thuật** (biển số, hãng, số chỗ…). Bỏ chúng đi thì `plateNumber` —
- * một trường NHẠY CẢM — không còn sửa được ở đâu cả. Nên chúng nằm ở "Thông tin chung", nghĩa
- * rộng của nhãn này cho phép. Ghi lại ở báo cáo Wave 3B.
- */
-export const EDIT_WIZARD_STEPS: readonly VehicleWizardStep[] = [
-  {
-    key: 'general',
-    title: 'Thông tin chung',
-    shortTitle: 'Chung',
-    heading: '1. Thông tin chung',
-    fields: [...FIELDS_OF.basic, ...FIELDS_OF.specs],
-  },
-  {
-    key: 'images',
-    title: 'Hình ảnh xe',
-    shortTitle: 'Hình ảnh',
-    heading: '2. Hình ảnh xe',
-    fields: ['mainImageUrl', 'images'],
-  },
-  {
-    key: 'prices',
-    title: 'Thiết lập giá',
-    shortTitle: 'Giá',
-    heading: '3. Thiết lập giá thuê',
-    fields: ['weekdayPrice', 'weekendPrice', 'hourlyPrice', 'discountPercent'],
-  },
-  {
-    key: 'terms',
-    title: 'Điều khoản thuê',
-    shortTitle: 'Điều khoản',
-    heading: '4. Điều khoản thuê',
-    fields: ['deliveryEnabled', 'noCollateral', 'features', 'description'],
-  },
-  {
-    key: 'review',
-    title: 'Xác nhận lại',
-    shortTitle: 'Xác nhận',
-    heading: '5. Xác nhận & Hoàn tất chỉnh sửa',
-    fields: [],
-  },
-];
-
 export interface SectionProps {
   control: Control<VehicleFormValues>;
   isCar: boolean;
@@ -255,7 +206,20 @@ export function BasicSection({ control, isCar: _isCar, codeReadOnly = false }: S
           required
         />
       </Col>
-      <Col xs={24}>
+    </Row>
+  );
+}
+
+/**
+ * Trạng thái vận hành tách khỏi khối cơ bản: luồng TẠO không hỏi (xe mới mặc định "Sẵn sàng",
+ * hỏi ngay lúc onboarding là thừa — thiết kế bước 1 không có trường này), luồng SỬA hiện nó
+ * trong thẻ "Quản lý trạng thái" riêng. Trạng thái HIỂN THỊ (public) không nằm ở đây —
+ * client không bao giờ tự đặt `approved_public`, phải đi qua duyệt (lằn ranh bảo mật số 2).
+ */
+export function StatusSection({ control }: Pick<SectionProps, 'control'>) {
+  return (
+    <Row gutter={24}>
+      <Col xs={24} sm={12}>
         <SelectField
           control={control}
           name="operationStatus"
@@ -281,7 +245,7 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
     <fieldset className={styles.sourceFieldset}>
       <legend className={styles.sourceLegend}>Hình thức nguồn xe *</legend>
       <p className={styles.sourceDescription}>
-        Xác định cách quản lý tài chính và phân chia lợi nhuận của xe
+        Xác định phương thức quản lý tài chính và phân chia lợi nhuận của xe
       </p>
       <Controller
         control={control}
@@ -304,10 +268,10 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
                       {value === VEHICLE_SOURCE_TYPE.OWNED
                         ? 'Xe thuộc quyền sở hữu của bạn'
                         : value === VEHICLE_SOURCE_TYPE.FINANCED
-                          ? 'Đang góp qua ngân hàng'
+                          ? 'Đang trả góp qua ngân hàng'
                           : value === VEHICLE_SOURCE_TYPE.RENTED
                             ? 'Thuê từ chủ xe khác để kinh doanh'
-                            : 'Ký gửi/chia doanh thu với chủ xe'}
+                            : 'Chủ xe ký gửi, chia doanh thu'}
                     </small>
                   </span>
                 </Radio>
@@ -323,7 +287,7 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
         className={styles.sourceHint}
         type="info"
         showIcon
-        message="Bạn sẽ bổ sung hồ sơ tài chính hoặc hợp đồng chi tiết sau khi tạo xe."
+        message="Bạn sẽ hoàn thiện thông tin tài chính chi tiết sau khi tạo xe thành công."
       />
     </fieldset>
   );
@@ -470,7 +434,7 @@ export function SpecsSection({ control, isCar }: SectionProps) {
         <BrandSelect control={control} />
       </Col>
       <Col xs={24} sm={12}>
-        <TextField control={control} name="model" label="Mẫu xe (model)" placeholder="VD: Vios" />
+        <TextField control={control} name="model" label="Dòng xe (Model)" placeholder="VD: Vios" />
       </Col>
       <Col xs={24} sm={12}>
         <NumberField
@@ -486,7 +450,7 @@ export function SpecsSection({ control, isCar }: SectionProps) {
         <NumberField
           control={control}
           name="seatCount"
-          label="Số chỗ ngồi đăng ký"
+          label="Số chỗ ngồi"
           placeholder="VD: 5"
           min={1}
           max={64}
@@ -502,7 +466,7 @@ export function SpecsSection({ control, isCar }: SectionProps) {
         <TextField
           control={control}
           name="color"
-          label="Màu sắc ngoại thất"
+          label="Màu sắc"
           placeholder="VD: Trắng"
         />
       </Col>
@@ -528,7 +492,7 @@ function BrandSelect({ control }: Pick<SectionProps, 'control'>) {
     <SelectField
       control={control}
       name="brand"
-      label="Hãng sản xuất"
+      label="Hãng xe"
       options={options}
       placeholder="Chọn hãng xe"
       allowClear
@@ -549,7 +513,7 @@ function FuelTypeSelect({
     <SelectField
       control={control}
       name="fuelType"
-      label="Nguồn năng lượng"
+      label="Nhiên liệu"
       options={options}
       placeholder={
         vehicleType === VEHICLE_TYPE.CAR ? 'Xăng, dầu, điện hoặc hybrid' : 'Xăng hoặc điện'

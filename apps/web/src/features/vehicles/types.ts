@@ -29,6 +29,13 @@ export interface VehicleFilters {
   limit?: number;
 }
 
+export type VehicleSource = Schemas['VehicleSourceDto'];
+export type VehicleSourceDetail = Schemas['VehicleSourceDetailDto'];
+export type VehicleSourceContractFile = Schemas['VehicleSourceContractFileDto'];
+export type SaveVehicleSourceInput = Schemas['SaveVehicleSourceDto'];
+export type SourceContractPresign = Schemas['SourceContractPresignDto'];
+export type SourceContractDownload = Schemas['SourceContractDownloadDto'];
+
 export type VehicleStats = Schemas['VehicleStatsDto'];
 export type FleetSummary = Schemas['FleetSummaryDto'];
 export type Vehicle360Summary = Schemas['Vehicle360SummaryDto'];

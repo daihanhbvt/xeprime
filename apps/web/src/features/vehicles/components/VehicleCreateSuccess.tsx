@@ -74,8 +74,12 @@ export function VehicleCreateSuccess({
             <span>Kiểm tra giá, cọc và chính sách thuê</span>
             <Link href={vehiclePath.pricing(vehicle.id)}>Giá & chính sách →</Link>
           </li>
+          <li>
+            <span>Hoàn thiện thông tin nguồn xe & tài chính</span>
+            <Link href={`${vehiclePath.edit(vehicle.id)}?tab=source`}>Tab Nguồn xe →</Link>
+          </li>
           <li className={styles.futureItem}>
-            <span>Hồ sơ tài chính, giấy tờ và bảo dưỡng</span>
+            <span>Giấy tờ xe và bảo dưỡng</span>
             <span>Sẽ mở ở các wave tiếp theo</span>
           </li>
         </ul>

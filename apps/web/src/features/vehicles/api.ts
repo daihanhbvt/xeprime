@@ -4,17 +4,23 @@ import {
   apiGet,
   apiPatch,
   apiPost,
+  apiPut,
   apiRequest,
   type QueryParams,
 } from '@/services/api-client';
 import type {
   CreateVehicleInput,
   FleetSummary,
+  SaveVehicleSourceInput,
+  SourceContractDownload,
+  SourceContractPresign,
   UpdateVehicleInput,
   Vehicle360Summary,
   VehicleDetail,
   VehicleFilters,
   VehicleListItem,
+  VehicleSource,
+  VehicleSourceContractFile,
   VehicleStats,
 } from './types';
 
@@ -93,3 +99,42 @@ export const fetchFleetSummary = (): Promise<FleetSummary> =>
  */
 export const fetchVehicleSummary = (id: string): Promise<Vehicle360Summary> =>
   apiGet<Vehicle360Summary>(`/vehicles/${id}/summary`);
+
+/** Hồ sơ nguồn xe & tài chính (Wave 4) — GET cần `finance.view`, PUT thêm `vehicles.update`. */
+export const fetchVehicleSource = (id: string): Promise<VehicleSource> =>
+  apiGet<VehicleSource>(`/vehicles/${id}/source`);
+
+export const saveVehicleSource = (
+  id: string,
+  body: SaveVehicleSourceInput,
+): Promise<VehicleSource> => apiPut<VehicleSource>(`/vehicles/${id}/source`, body);
+
+/**
+ * Hợp đồng nguồn xe là TÀI LIỆU RIÊNG TƯ (Wave 4.1): presign gắn với xe, PUT vào bucket
+ * riêng tư, hoàn tất để server xác minh, tải về qua signed URL ngắn hạn phát sau kiểm quyền.
+ * Không có URL nào được lưu ở form hay DB.
+ */
+export const presignSourceContract = (
+  vehicleId: string,
+  file: File,
+): Promise<SourceContractPresign> =>
+  apiPost<SourceContractPresign>(`/vehicles/${vehicleId}/source/contracts/presign`, {
+    fileName: file.name,
+    contentType: file.type,
+    fileSize: file.size,
+  });
+
+export const completeSourceContract = (
+  vehicleId: string,
+  fileId: string,
+): Promise<VehicleSourceContractFile> =>
+  apiPost<VehicleSourceContractFile>(
+    `/vehicles/${vehicleId}/source/contracts/${fileId}/complete`,
+    {},
+  );
+
+export const fetchSourceContractDownload = (
+  vehicleId: string,
+  fileId: string,
+): Promise<SourceContractDownload> =>
+  apiGet<SourceContractDownload>(`/vehicles/${vehicleId}/source/contracts/${fileId}/download`);

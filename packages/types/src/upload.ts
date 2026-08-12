@@ -10,3 +10,38 @@ export const IMAGE_UPLOAD_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 export type ImageUploadMimeType = (typeof IMAGE_UPLOAD_MIME_TYPES)[number];
 
 export const IMAGE_UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Tài liệu hợp đồng (nguồn xe, thuê lại, hợp tác — Wave 4): ảnh chụp hoặc PDF scan.
+ * Cùng trần 10MB với ảnh; file này KHÔNG bao giờ xuất hiện ở API public (marketplace).
+ */
+export const DOCUMENT_UPLOAD_MIME_TYPES = [...IMAGE_UPLOAD_MIME_TYPES, 'application/pdf'] as const;
+
+export type DocumentUploadMimeType = (typeof DOCUMENT_UPLOAD_MIME_TYPES)[number];
+
+export const DOCUMENT_UPLOAD_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES;
+
+/**
+ * Tài liệu riêng tư gắn với xe (Wave 4.1) — hợp đồng nguồn xe; Wave 5 tái dùng cho giấy tờ.
+ * Nhị phân ở bucket R2 riêng tư, metadata do server sở hữu (`vehicle_private_files`).
+ */
+export const PRIVATE_FILE_PURPOSE = {
+  SOURCE_CONTRACT: 'source_contract',
+} as const;
+export type PrivateFilePurpose = (typeof PRIVATE_FILE_PURPOSE)[keyof typeof PRIVATE_FILE_PURPOSE];
+
+/** pending = đã presign chưa xác minh · ready = đã xác minh, đính được · deleted = đã gỡ. */
+export const PRIVATE_FILE_STATUS = {
+  PENDING: 'pending',
+  READY: 'ready',
+  DELETED: 'deleted',
+} as const;
+export type PrivateFileStatus = (typeof PRIVATE_FILE_STATUS)[keyof typeof PRIVATE_FILE_STATUS];
+
+/** Đuôi file an toàn suy từ MIME đã duyệt — KHÔNG lấy từ tên file người dùng nộp. */
+export const DOCUMENT_MIME_EXTENSION: Readonly<Record<DocumentUploadMimeType, string>> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'application/pdf': 'pdf',
+};

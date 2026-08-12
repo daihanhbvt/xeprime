@@ -208,12 +208,20 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
     const props = { control, isCar };
     switch (steps[step]!.key) {
       case 'basic':
+        // Ba nhóm có tiêu đề riêng theo thiết kế: Thông tin cơ bản → Thông số vận hành →
+        // Hình thức nguồn xe. Trạng thái vận hành KHÔNG hỏi lúc tạo (mặc định "Sẵn sàng").
         return (
-          <>
-            <BasicSection {...props} />
-            <SpecsSection {...props} />
+          <div className={styles.sectionStack}>
+            <section className={styles.subSection}>
+              <h3 className={styles.subSectionTitle}>Thông tin cơ bản</h3>
+              <BasicSection {...props} />
+            </section>
+            <section className={styles.subSection}>
+              <h3 className={styles.subSectionTitle}>Thông số vận hành</h3>
+              <SpecsSection {...props} />
+            </section>
             <SourceTypeSection control={control} />
-          </>
+          </div>
         );
       case 'pricing':
         return (

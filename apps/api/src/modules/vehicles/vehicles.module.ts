@@ -3,6 +3,9 @@ import { BillingModule } from '../billing/billing.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
+import { StorageModule } from '../storage/storage.module';
+import { VehicleContractsService } from './vehicle-contracts.service';
+import { VehicleSourceService } from './vehicle-source.service';
 import { VehiclesController } from './vehicles.controller';
 import { VehiclesService } from './vehicles.service';
 
@@ -17,9 +20,9 @@ import { VehiclesService } from './vehicles.service';
  * vào `vehicle_occupancies` (ADR 0006).
  */
 @Module({
-  imports: [PublicListingsModule, BillingModule, CatalogModule, PricingModule],
+  imports: [PublicListingsModule, BillingModule, CatalogModule, PricingModule, StorageModule],
   controllers: [VehiclesController],
-  providers: [VehiclesService],
+  providers: [VehiclesService, VehicleSourceService, VehicleContractsService],
   exports: [VehiclesService],
 })
 export class VehiclesModule {}

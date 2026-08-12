@@ -101,7 +101,8 @@ export function DetailDrawer({
       // Mobile: trượt kín viewport → đọc như một trang mới, nên nút đóng là mũi tên quay lại
       // (Figma quy tắc 6). Desktop: panel phải, giữ nút X mặc định.
       placement="right"
-      width={isMobile ? '100%' : DRAWER_WIDTH[size]}
+      // AntD 6: `size` thay cả `width` lẫn `height` (chọn theo `placement`); `width` đã deprecated.
+      size={isMobile ? '100%' : DRAWER_WIDTH[size]}
       closeIcon={isMobile ? <ArrowLeftOutlined /> : undefined}
       destroyOnHidden={destroyOnClose}
       className={className}

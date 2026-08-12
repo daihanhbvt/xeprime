@@ -608,6 +608,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vehicles/{id}/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hồ sơ nguồn xe & tài chính (Wave 4) */
+        get: operations["VehiclesController_getSource"];
+        /** Lưu hồ sơ nguồn xe & tài chính (replace theo hình thức nguồn) */
+        put: operations["VehiclesController_saveSource"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/source/contracts/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Presign upload hợp đồng nguồn xe vào kho riêng tư */
+        post: operations["VehiclesController_presignSourceContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/source/contracts/{fileId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hoàn tất upload hợp đồng (xác minh object rồi mới cho đính) */
+        post: operations["VehiclesController_completeSourceContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/source/contracts/{fileId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Phát signed URL ngắn hạn tải hợp đồng nguồn xe */
+        get: operations["VehiclesController_downloadSourceContract"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vehicles/{id}/submit-public": {
         parameters: {
             query?: never;
@@ -811,6 +880,40 @@ export interface paths {
         get: operations["PublicQuoteController_quote"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/uploads/vehicle-images/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Presign upload ảnh xe (đại diện/gallery) lên R2 */
+        post: operations["StorageController_presignVehicleImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/uploads/shop-media/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Presign upload logo/ảnh bìa gian hàng lên R2 */
+        post: operations["StorageController_presignShopMedia"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1451,40 +1554,6 @@ export interface paths {
         put?: never;
         /** Xin presigned URL để upload đính kèm chat lên R2 */
         post: operations["ChatController_presign"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/uploads/vehicle-images/presign": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Presign upload ảnh xe (đại diện/gallery) lên R2 */
-        post: operations["StorageController_presignVehicleImage"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/uploads/shop-media/presign": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Presign upload logo/ảnh bìa gian hàng lên R2 */
-        post: operations["StorageController_presignShopMedia"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2651,6 +2720,117 @@ export interface components {
             weekendPrice?: string;
             policy?: components["schemas"]["SaveRentalPolicyDto"];
         };
+        VehicleSourceContractFileDto: {
+            /** @description ID file riêng tư (ULID) */
+            id?: string | null;
+            /** @description Tên file hiển thị */
+            name: string;
+            mimeType?: string | null;
+            size?: number | null;
+            /** @enum {string} */
+            status: "ready" | "legacy";
+        };
+        VehicleSourceDetailDto: {
+            /** @enum {string} */
+            sourceType: "owned" | "financed" | "rented" | "partnership";
+            purchaseDate?: string | null;
+            purchasePrice?: string | null;
+            purchasePlace?: string | null;
+            bankName?: string | null;
+            contractNumber?: string | null;
+            originalPrincipal?: string | null;
+            monthlyPrincipal?: string | null;
+            monthlyInterest?: string | null;
+            /** @description Tổng phải đóng mỗi tháng = gốc + lãi — TÍNH RA, không lưu */
+            monthlyTotal?: string | null;
+            interestRatePercent?: string | null;
+            termMonths?: number | null;
+            interestMethod?: string | null;
+            ownerName?: string | null;
+            ownerPhone?: string | null;
+            ownerEmail?: string | null;
+            monthlyRent?: string | null;
+            commissionPercent?: string | null;
+            paymentDay?: number | null;
+            startDate?: string | null;
+            endDate?: string | null;
+            contractFiles: components["schemas"]["VehicleSourceContractFileDto"][];
+            notes?: string | null;
+            obligationReady: boolean;
+            /** @description ISO — lần cập nhật hồ sơ gần nhất */
+            updatedAt: string;
+        };
+        VehicleSourceDto: {
+            /** @enum {string} */
+            sourceType: "owned" | "financed" | "rented" | "partnership";
+            detail?: components["schemas"]["VehicleSourceDetailDto"] | null;
+        };
+        SaveVehicleSourceDto: {
+            /** @enum {string} */
+            sourceType: "owned" | "financed" | "rented" | "partnership";
+            /** @description Ngày mua xe (YYYY-MM-DD) */
+            purchaseDate?: string | null;
+            /** @description Giá trị xe khi mua (chuỗi thập phân VND) */
+            purchasePrice?: string | null;
+            /** @description Nơi mua / đại lý bàn giao */
+            purchasePlace?: string | null;
+            /** @description Ngân hàng / tổ chức tín dụng */
+            bankName?: string | null;
+            /** @description Số hợp đồng tín dụng */
+            contractNumber?: string | null;
+            /** @description Dư nợ gốc ban đầu (chuỗi thập phân VND) */
+            originalPrincipal?: string | null;
+            /** @description Gốc phải trả mỗi tháng (chuỗi thập phân VND) */
+            monthlyPrincipal?: string | null;
+            /** @description Lãi phải trả mỗi tháng (chuỗi thập phân VND) */
+            monthlyInterest?: string | null;
+            /** @description Lãi suất cố định %/năm (chuỗi 0–100) */
+            interestRatePercent?: string | null;
+            /** @description Thời hạn vay (tháng) */
+            termMonths?: number | null;
+            /** @enum {string} */
+            interestMethod?: "reducing_balance" | "flat";
+            /** @description Tên chủ xe / doanh nghiệp (bên cho thuê / đối tác) */
+            ownerName?: string | null;
+            /** @description Số điện thoại liên hệ của chủ xe */
+            ownerPhone?: string | null;
+            /** @description Email chủ xe (tuỳ chọn) */
+            ownerEmail?: string | null;
+            /** @description Tiền thuê định kỳ hàng tháng (chuỗi thập phân VND) */
+            monthlyRent?: string | null;
+            /** @description % doanh thu chia cho CHỦ XE (0–100). Cơ sở: tiền thuê sau giảm giá; không gồm cọc/giao nhận/quá giờ/phạt/bồi thường. */
+            commissionPercent?: string | null;
+            /** @description Ngày trong tháng đến hạn đóng tiền (1–31) */
+            paymentDay?: number | null;
+            /** @description Ngày bắt đầu hợp đồng / giải ngân (YYYY-MM-DD) */
+            startDate?: string | null;
+            /** @description Ngày kết thúc hợp đồng (YYYY-MM-DD) */
+            endDate?: string | null;
+            contractFileIds?: string[];
+            /** @description Ghi chú thêm về nguồn gốc xe */
+            notes?: string | null;
+        };
+        PresignSourceContractDto: {
+            /** @description Tên file gốc (chỉ để hiển thị, không tham gia định danh) */
+            fileName: string;
+            /** @enum {string} */
+            contentType: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+            /** @description Dung lượng (byte), tối đa 10485760 */
+            fileSize: number;
+        };
+        SourceContractPresignDto: {
+            /** @description ID file riêng tư — dùng cho bước hoàn tất + đính vào hồ sơ */
+            fileId: string;
+            /** @description URL PUT lên bucket riêng tư (hết hạn ngắn) */
+            uploadUrl: string;
+            expiresIn: number;
+        };
+        SourceContractDownloadDto: {
+            /** @description Signed GET URL ngắn hạn — không cache, không lưu */
+            downloadUrl: string;
+            /** @description ISO — thời điểm URL hết hiệu lực */
+            expiresAt: string;
+        };
         CreateVehicleDto: {
             /**
              * @description Mã xe nội bộ. Bỏ trống để hệ thống tự sinh.
@@ -3002,6 +3182,27 @@ export interface components {
         PublicQuoteDto: {
             breakdown: components["schemas"]["QuoteBreakdownDto"];
             delivery: components["schemas"]["DeliverySummaryDto"];
+        };
+        PresignImageDto: {
+            /**
+             * @description Tên file gốc (chỉ để đặt key, đã sanitize)
+             * @example xe-01.jpg
+             */
+            fileName: string;
+            /** @enum {string} */
+            contentType: "image/jpeg" | "image/png" | "image/webp";
+            /** @description Dung lượng file (byte), tối đa 10485760 */
+            fileSize: number;
+        };
+        UploadPresignDto: {
+            /** @description Key trong bucket */
+            key: string;
+            /** @description URL để PUT file (hết hạn ngắn) */
+            uploadUrl: string;
+            /** @description URL công khai của file sau khi upload */
+            publicUrl: string;
+            /** @description Giây còn hiệu lực của uploadUrl */
+            expiresIn: number;
         };
         BookingListItemDto: {
             id: string;
@@ -3691,27 +3892,6 @@ export interface components {
             key: string;
             uploadUrl: string;
             publicUrl: string;
-            expiresIn: number;
-        };
-        PresignImageDto: {
-            /**
-             * @description Tên file gốc (chỉ để đặt key, đã sanitize)
-             * @example xe-01.jpg
-             */
-            fileName: string;
-            /** @enum {string} */
-            contentType: "image/jpeg" | "image/png" | "image/webp";
-            /** @description Dung lượng file (byte), tối đa 10485760 */
-            fileSize: number;
-        };
-        UploadPresignDto: {
-            /** @description Key trong bucket */
-            key: string;
-            /** @description URL để PUT file (hết hạn ngắn) */
-            uploadUrl: string;
-            /** @description URL công khai của file sau khi upload */
-            publicUrl: string;
-            /** @description Giây còn hiệu lực của uploadUrl */
             expiresIn: number;
         };
         ApprovalTaskListItemDto: {
@@ -5356,6 +5536,121 @@ export interface operations {
             };
         };
     };
+    VehiclesController_getSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleSourceDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_saveSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveVehicleSourceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleSourceDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_presignSourceContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignSourceContractDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceContractPresignDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_completeSourceContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleSourceContractFileDto"];
+                };
+            };
+        };
+    };
+    VehiclesController_downloadSourceContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceContractDownloadDto"];
+                };
+            };
+        };
+    };
     VehiclesController_submitPublic: {
         parameters: {
             query?: never;
@@ -5739,6 +6034,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PublicQuoteDto"];
+                };
+            };
+        };
+    };
+    StorageController_presignVehicleImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignImageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadPresignDto"];
+                };
+            };
+        };
+    };
+    StorageController_presignShopMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignImageDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadPresignDto"];
                 };
             };
         };
@@ -6852,52 +7193,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PresignResultDto"];
-                };
-            };
-        };
-    };
-    StorageController_presignVehicleImage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PresignImageDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UploadPresignDto"];
-                };
-            };
-        };
-    };
-    StorageController_presignShopMedia: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PresignImageDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UploadPresignDto"];
                 };
             };
         };

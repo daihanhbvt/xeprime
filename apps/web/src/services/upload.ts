@@ -1,4 +1,10 @@
-import { IMAGE_UPLOAD_MAX_BYTES, IMAGE_UPLOAD_MIME_TYPES, type components } from '@xeprime/types';
+import {
+  DOCUMENT_UPLOAD_MAX_BYTES,
+  DOCUMENT_UPLOAD_MIME_TYPES,
+  IMAGE_UPLOAD_MAX_BYTES,
+  IMAGE_UPLOAD_MIME_TYPES,
+  type components,
+} from '@xeprime/types';
 import { apiPost } from '@/services/api-client';
 
 /**
@@ -61,6 +67,17 @@ export function validateImageFile(file: File): string | null {
   return null;
 }
 
+/** Tài liệu hợp đồng (ảnh chụp hoặc PDF scan) — cùng trần dung lượng với ảnh. */
+export function validateDocumentFile(file: File): string | null {
+  if (!(DOCUMENT_UPLOAD_MIME_TYPES as readonly string[]).includes(file.type)) {
+    return 'Chỉ nhận PDF hoặc ảnh JPG, PNG, WebP';
+  }
+  if (file.size > DOCUMENT_UPLOAD_MAX_BYTES) {
+    return `Tệp tối đa ${Math.round(DOCUMENT_UPLOAD_MAX_BYTES / 1024 / 1024)}MB`;
+  }
+  return null;
+}
+
 const presignBody = (file: File) => ({
   fileName: file.name,
   contentType: file.type,
@@ -70,6 +87,9 @@ const presignBody = (file: File) => ({
 /** Presign ảnh xe (đại diện/gallery) — cần quyền `vehicles.update` trong gian hàng. */
 export const presignVehicleImage = (file: File): Promise<UploadPresign> =>
   apiPost<UploadPresign>('/uploads/vehicle-images/presign', presignBody(file));
+
+// Presign hợp đồng nguồn xe Wave 4 đã GỠ (Wave 4.1): hợp đồng là tài liệu RIÊNG TƯ, đi qua
+// flow presign→complete→download có kiểm quyền ở `features/vehicles/api.ts`, không qua đây.
 
 /** Presign logo/ảnh bìa gian hàng — cần quyền `tenant.update`. */
 export const presignShopMedia = (file: File): Promise<UploadPresign> =>
