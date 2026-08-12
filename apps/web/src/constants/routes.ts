@@ -29,6 +29,8 @@ export const ROUTES = {
     CALENDAR: '/manage/calendar',
     VEHICLES: '/manage/vehicles',
     VEHICLE_NEW: '/manage/vehicles/new',
+    /** Trung tâm bảo dưỡng toàn đội xe (Wave 6 — docs/design/12 §9.2). */
+    MAINTENANCE: '/manage/maintenance',
     BOOKINGS: '/manage/bookings',
     BOOKING_REQUESTS: '/manage/booking-requests',
     CUSTOMERS: '/manage/customers',

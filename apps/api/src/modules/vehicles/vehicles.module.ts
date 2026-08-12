@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
 import { BillingModule } from '../billing/billing.module';
+import { CalendarModule } from '../calendar/calendar.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
 import { StorageModule } from '../storage/storage.module';
+import { MaintenanceBoardController } from './maintenance/maintenance-board.controller';
+import { MaintenanceService } from './maintenance/maintenance.service';
+import { OdometerService } from './maintenance/odometer.service';
+import { VehicleMaintenanceController } from './maintenance/vehicle-maintenance.controller';
 import { VehicleDocumentsController } from './documents/vehicle-documents.controller';
 import { VehicleDocumentsService } from './documents/vehicle-documents.service';
 import {
@@ -26,13 +31,28 @@ import { VehiclesService } from './vehicles.service';
  * vào `vehicle_occupancies` (ADR 0006).
  */
 @Module({
-  imports: [PublicListingsModule, BillingModule, CatalogModule, PricingModule, StorageModule],
-  controllers: [VehiclesController, VehicleDocumentsController],
+  imports: [
+    PublicListingsModule,
+    BillingModule,
+    CatalogModule,
+    PricingModule,
+    StorageModule,
+    // Bảo dưỡng ghi lịch xe qua OccupancyService — writer duy nhất của occupancies (ADR 0006).
+    CalendarModule,
+  ],
+  controllers: [
+    VehiclesController,
+    VehicleDocumentsController,
+    VehicleMaintenanceController,
+    MaintenanceBoardController,
+  ],
   providers: [
     VehiclesService,
     VehicleSourceService,
     VehicleContractsService,
     VehicleDocumentsService,
+    OdometerService,
+    MaintenanceService,
     /**
      * Repo CHƯA có provider OCR nào (không dependency/credential) — mặc định fail rõ ràng:
      * yêu cầu OCR trả 503 OCR_NOT_CONFIGURED, người dùng nhập tay. Có provider thật thì

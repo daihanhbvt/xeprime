@@ -151,6 +151,10 @@ model Tenant {
   vehicleDocuments VehicleDocument[]
   vehicleDocumentVersions VehicleDocumentVersion[]
   vehicleDocumentOcrJobs VehicleDocumentOcrJob[]
+  vehicleMaintenanceProfiles VehicleMaintenanceProfile[]
+  vehicleOdometerReadings VehicleOdometerReading[]
+  vehicleMaintenanceRecords VehicleMaintenanceRecord[]
+  vehicleMaintenanceAttachments VehicleMaintenanceAttachment[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -544,6 +548,10 @@ model Vehicle {
   documents    VehicleDocument[]
   documentVersions VehicleDocumentVersion[]
   documentOcrJobs  VehicleDocumentOcrJob[]
+  maintenanceProfile VehicleMaintenanceProfile?
+  odometerReadings VehicleOdometerReading[]
+  maintenanceRecords VehicleMaintenanceRecord[]
+  maintenanceAttachments VehicleMaintenanceAttachment[]
 
   @@unique([tenantId, code])
   /// Mục tiêu cho composite FK (vehicle_id, tenant_id) của các bảng con nhạy cảm — DB tự chặn
@@ -957,6 +965,8 @@ model VehiclePrivateFile {
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   /// 1:1 — một file chỉ thuộc một phiên bản giấy tờ (unique private_file_id — Wave 5.1).
   documentVersion VehicleDocumentVersion?
+  /// 1:1 — một file chỉ đính vào một phiếu bảo dưỡng (unique private_file_id — Wave 6).
+  maintenanceAttachment VehicleMaintenanceAttachment?
 
   /// Mục tiêu cho composite FK "file cùng tenant + cùng xe" từ vehicle_document_versions (Wave 5.1).
   @@unique([id, tenantId, vehicleId])
@@ -1069,6 +1079,148 @@ model VehicleDocumentOcrJob {
   /// `vehicle_document_ocr_jobs_one_processing_key` (Prisma không diễn đạt được WHERE).
   @@index([tenantId, vehicleId, documentId, createdAt])
   @@map("vehicle_document_ocr_jobs")
+}
+
+/// Hồ sơ bảo dưỡng & KM của MỘT xe (Wave 6) — 1:1 với `vehicles`. docs/design/12 §9.
+///
+/// Vì sao tách khỏi `vehicles`: KM và chu kỳ bảo dưỡng có nhịp ghi riêng (mỗi lần bàn giao,
+/// mỗi lần bảo dưỡng) và có `row_version` riêng cho optimistic concurrency — nhét vào
+/// `vehicles` sẽ khiến mọi sửa hồ sơ xe đụng độ với mọi lần ghi KM.
+///
+/// `current_odometer_km` là số DẪN XUẤT: nguồn sự thật là `vehicle_odometer_readings`
+/// (chỉ-thêm), cột này giữ bản mới nhất đã xác nhận để list/filter toàn đội xe không phải
+/// quét bảng lịch sử. Chỉ `OdometerService` được ghi nó.
+///
+/// NULL ở `current_odometer_km` nghĩa là CHƯA CÓ SỐ — không phải 0 km (§9: không dùng 0km giả).
+model VehicleMaintenanceProfile {
+  vehicleId              String    @id @map("vehicle_id") @db.Char(26)
+  tenantId               String    @map("tenant_id") @db.Char(26)
+  /// KM hiện tại đã xác nhận. NULL = chưa từng ghi nhận.
+  currentOdometerKm      Int?      @map("current_odometer_km")
+  /// @xeprime/types → OdometerSource. Nguồn của lần ghi tạo ra `current_odometer_km`.
+  currentOdometerSource  String?   @map("current_odometer_source") @db.VarChar(30)
+  currentOdometerAt      DateTime? @map("current_odometer_at") @db.Timestamptz(3)
+  /// Trỏ về bản ghi lịch sử đang là "hiện tại" — để UI truy vết nguồn mà không đoán.
+  currentOdometerReadingId String? @map("current_odometer_reading_id") @db.Char(26)
+  /// Chu kỳ thay nhớt (KM). NULL = chưa cấu hình → mốc tiếp theo là `Chưa đủ dữ liệu`.
+  oilChangeIntervalKm    Int?      @map("oil_change_interval_km")
+  /// KM tại lần thay nhớt gần nhất.
+  lastServiceKm          Int?      @map("last_service_km")
+  lastServiceAt          DateTime? @map("last_service_at") @db.Date
+  notes                  String?   @db.Text
+  /// Optimistic concurrency cho tab Bảo dưỡng & KM: update phải nộp version đang thấy.
+  rowVersion             Int       @default(1) @map("row_version")
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, currentOdometerKm])
+  @@map("vehicle_maintenance_profiles")
+}
+
+/// Lịch sử KM CHỈ-THÊM (Wave 6) — nguồn sự thật của odometer. docs/design/12 §9.1.
+///
+/// Không sửa, không xoá: một số KM sai được sửa bằng cách GHI THÊM một lần điều chỉnh có
+/// lý do, không phải bằng cách viết đè lịch sử. Đây là điều kiện để đối soát bàn giao và
+/// tranh chấp quãng đường có nghĩa.
+///
+/// `previous_km` chụp lại giá trị trước đó để đọc lịch sử không phải tự suy diễn thứ tự.
+/// CHECK ở migration bắt buộc `reason` khi `source = 'manual_correction'`.
+model VehicleOdometerReading {
+  id          String   @id @db.Char(26)
+  tenantId    String   @map("tenant_id") @db.Char(26)
+  vehicleId   String   @map("vehicle_id") @db.Char(26)
+  odometerKm  Int      @map("odometer_km")
+  /// KM ngay trước lần ghi này (NULL = lần ghi đầu tiên của xe).
+  previousKm  Int?     @map("previous_km")
+  /// @xeprime/types → OdometerSource
+  source      String   @db.VarChar(30)
+  /// Id nghiệp vụ gốc: booking (bàn giao) hoặc phiếu bảo dưỡng. NULL khi chỉnh tay/nhập liệu.
+  sourceRefId String?  @map("source_ref_id") @db.Char(26)
+  /// @xeprime/types → OdometerCorrectionReason (chỉ có nghĩa khi chỉnh tay).
+  reasonCode  String?  @map("reason_code") @db.VarChar(40)
+  reason      String?  @db.Text
+  /// Lần ghi này làm KM GIẢM — cần quyền `vehicles.odometer.decrease` (§9.1).
+  isDecrease  Boolean  @default(false) @map("is_decrease")
+  recordedAt  DateTime @default(now()) @map("recorded_at") @db.Timestamptz(3)
+  recordedBy  String?  @map("recorded_by") @db.Char(26)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, vehicleId, recordedAt])
+  @@map("vehicle_odometer_readings")
+}
+
+/// Một lần bảo dưỡng/sửa chữa (Wave 6) — kế hoạch hoặc đã thực hiện. docs/design/12 §9.
+///
+/// Lịch còn hiệu lực (`scheduled`/`in_progress`) GIỮ CHỖ trên `vehicle_occupancies` với
+/// `source_type='maintenance'`, `source_id` = id bản ghi này (ADR 0006) — nhờ vậy đặt xe
+/// trùng khoảng bảo dưỡng bị DB chặn, không phụ thuộc nhãn `operation_status`.
+/// Hủy/hoàn tất → nhả chỗ. Toàn bộ đi qua `MaintenanceService` trong transaction.
+model VehicleMaintenanceRecord {
+  id             String    @id @db.Char(26)
+  tenantId       String    @map("tenant_id") @db.Char(26)
+  vehicleId      String    @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → MaintenanceType
+  type           String    @db.VarChar(30)
+  /// Chỉ có nghĩa khi type = other — CHECK ở migration.
+  customTypeName String?   @map("custom_type_name") @db.VarChar(160)
+  title          String?   @db.VarChar(255)
+  /// @xeprime/types → MaintenanceStatus
+  status         String    @default("scheduled") @db.VarChar(30)
+  plannedStartAt DateTime? @map("planned_start_at") @db.Timestamptz(3)
+  plannedEndAt   DateTime? @map("planned_end_at") @db.Timestamptz(3)
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(3)
+  /// KM tại thời điểm bảo dưỡng — khi hoàn tất có thể đẩy KM hiện tại của xe lên.
+  odometerKm     Int?      @map("odometer_km")
+  providerName   String?   @map("provider_name") @db.VarChar(255)
+  /// Tiền: Decimal ở DB/BE, string trong JSON (ADR 0007). Chỉ trả cho vai trò có quyền tiền.
+  cost           Decimal?  @db.Decimal(14, 2)
+  /// Mã chứng từ/phiếu chi do người dùng nhập (vd `CT-40092`) — Wave 6 chưa FK sang `receipts`.
+  receiptCode    String?   @map("receipt_code") @db.VarChar(100)
+  notes          String?   @db.Text
+  rowVersion     Int       @default(1) @map("row_version")
+  createdBy      String?   @map("created_by") @db.Char(26)
+  updatedBy      String?   @map("updated_by") @db.Char(26)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  attachments VehicleMaintenanceAttachment[]
+
+  /// Mục tiêu cho composite FK của bảng đính kèm (bản ghi + xe khớp nhau).
+  @@unique([id, vehicleId])
+  @@index([tenantId, status, plannedStartAt])
+  @@index([tenantId, vehicleId, completedAt])
+  @@map("vehicle_maintenance_records")
+}
+
+/// Chứng từ riêng tư đính vào một phiếu bảo dưỡng (Wave 6) — tái dùng nguyên kho
+/// `vehicle_private_files` (purpose `maintenance_record`) của Wave 4.1/5.1.
+///
+/// Composite FK viết tay ở migration khoá cả hai đầu: file phải cùng tenant+xe với phiếu.
+/// Unique `private_file_id`: một file chỉ đính vào một phiếu.
+model VehicleMaintenanceAttachment {
+  id            String   @id @db.Char(26)
+  tenantId      String   @map("tenant_id") @db.Char(26)
+  vehicleId     String   @map("vehicle_id") @db.Char(26)
+  recordId      String   @map("record_id") @db.Char(26)
+  privateFileId String   @unique @map("private_file_id") @db.Char(26)
+  createdBy     String?  @map("created_by") @db.Char(26)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle                  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  record      VehicleMaintenanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  privateFile VehiclePrivateFile       @relation(fields: [privateFileId], references: [id], onDelete: NoAction)
+
+  @@index([tenantId, recordId])
+  @@map("vehicle_maintenance_attachments")
 }
 
 /// Bảng chiếm dụng lịch xe — ADR 0006.

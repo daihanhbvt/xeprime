@@ -37,6 +37,7 @@ import {
   type VehicleSourceType,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
 import { vehiclePath } from '@/constants/routes';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { formatDateTime, toAppTz } from '@/lib/datetime';
@@ -130,10 +131,7 @@ export function Vehicle360Overview({
         </div>
         <div className={styles.column}>
           <SourceCard vehicle={vehicle} />
-          <PlaceholderCard
-            title="Bảo dưỡng & Số KM"
-            body="Chưa có dữ liệu KM và lịch bảo dưỡng. Theo dõi odo và nhắc bảo dưỡng sẽ được bổ sung ở giai đoạn sau."
-          />
+          <VehicleMaintenanceCard vehicleId={vehicle.id} />
           <VehiclePublicReviewPanel vehicle={vehicle} />
         </div>
       </div>

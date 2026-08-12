@@ -67,6 +67,18 @@ export const queryKeys = {
     /** Lịch sử phiên bản file — endpoint riêng sau quyền `view_files` (Wave 5.1). */
     documentVersions: (id: string, documentId: string) =>
       ['vehicles', 'documents', id, documentId, 'versions'] as const,
+    /** Bảo dưỡng & KM của một xe (Wave 6) — nhánh gốc để invalidate cả cụm sau mutation. */
+    maintenance: (id: string) => ['vehicles', 'maintenance', id] as const,
+    maintenanceProfile: (id: string) => ['vehicles', 'maintenance', id, 'profile'] as const,
+    maintenanceRecords: (id: string) => ['vehicles', 'maintenance', id, 'records'] as const,
+    odometerHistory: (id: string, page: number) =>
+      ['vehicles', 'maintenance', id, 'odometer', page] as const,
+  },
+  /** Trung tâm bảo dưỡng toàn đội xe (Wave 6) — domain riêng vì không thuộc một xe nào. */
+  maintenance: {
+    all: ['maintenance'] as const,
+    board: (params: QueryParams) => ['maintenance', 'board', params] as const,
+    summary: () => ['maintenance', 'summary'] as const,
   },
   /** Chính sách thuê mặc định của gian hàng (Wave 2). */
   rentalPolicies: {

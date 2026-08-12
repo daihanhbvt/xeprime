@@ -1,0 +1,250 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.card {
+  border-color: var(--xp-color-border);
+}
+
+/* ── Chỉ số KM ── */
+.odometerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.odometerMain {
+  min-width: 0;
+}
+
+.odometerValue {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-heading-lg);
+  font-weight: var(--xp-font-weight-strong);
+  line-height: 1.2;
+}
+
+.odometerMeta {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.historyLink {
+  flex: none;
+  padding-inline: 0;
+}
+
+.inlineAlert {
+  margin-top: var(--xp-space-sm);
+}
+
+/* ── Chu kỳ ── */
+.scheduleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin-block: var(--xp-space-sm);
+}
+
+.scheduleHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.overdueText {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.thresholdNote {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.configActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--xp-space-sm);
+}
+
+/* ── Phiếu bảo dưỡng ── */
+.recordRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.recordBody {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recordHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.recordMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.recordCost {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.recordNotes {
+  margin: 2px 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.recordActions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.emptyText {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* ── Hộp thoại điều chỉnh KM ── */
+.correctionStack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.currentBox {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-bg-layout);
+}
+
+.currentLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  letter-spacing: 0.04em;
+}
+
+.currentValue {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-heading-md);
+}
+
+/* Ô nhập co được trong cột hẹp — không chống đẩy làm hộp thoại tràn ngang. */
+.correctionStack :global(.ant-form-item),
+.recordForm :global(.ant-form-item),
+.recordForm :global(.ant-col) {
+  min-width: 0;
+}
+
+/* ── Hộp thoại phiếu bảo dưỡng ── */
+.recordForm {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.conflictAlert {
+  margin-bottom: var(--xp-space-xs);
+}
+
+.attachmentNote {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* ── Lịch sử KM ── */
+.historyRow {
+  display: flex;
+  align-items: flex-start;
+}
+
+.historyBody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.historyHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.historyPrevious {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.historyMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.historyReason {
+  margin: 2px 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.historyPagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  .odometerValue {
+    font-size: var(--xp-font-size-heading-md);
+  }
+
+  .recordRow {
+    flex-wrap: wrap;
+  }
+
+  .recordActions {
+    width: 100%;
+  }
+
+  /* Touch target tối thiểu 44px trên mobile (docs §12.7). */
+  .recordActions :global(.ant-btn) {
+    min-height: 44px;
+  }
+}

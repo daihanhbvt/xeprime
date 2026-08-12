@@ -2620,6 +2620,679 @@
         ]
       }
     },
+    "/vehicles/{id}/maintenance/profile": {
+      "get": {
+        "operationId": "VehicleMaintenanceController_getProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceProfileDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "KM hiện tại + chu kỳ + mốc bảo dưỡng suy ra",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      },
+      "put": {
+        "operationId": "VehicleMaintenanceController_saveProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMaintenanceProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceProfileDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lưu cấu hình chu kỳ (KM hiện tại sửa ở endpoint riêng có lý do)",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/vehicles/{id}/maintenance/odometer/history": {
+      "get": {
+        "operationId": "VehicleMaintenanceController_odometerHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OdometerHistoryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lịch sử KM (chỉ-thêm), mới nhất trước",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/vehicles/{id}/maintenance/odometer/correction": {
+      "post": {
+        "operationId": "VehicleMaintenanceController_correctOdometer",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectOdometerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceProfileDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Điều chỉnh KM hiện tại (bắt buộc lý do; giảm cần quyền cao hơn)",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/vehicles/{id}/maintenance/records": {
+      "get": {
+        "operationId": "VehicleMaintenanceController_records",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceRecordListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lịch sắp tới + lịch sử bảo dưỡng của xe",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      },
+      "post": {
+        "operationId": "VehicleMaintenanceController_createRecord",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMaintenanceRecordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceRecordDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo phiếu/lịch bảo dưỡng (có khoảng thời gian → giữ chỗ lịch xe)",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/vehicles/{id}/maintenance/records/{recordId}": {
+      "put": {
+        "operationId": "VehicleMaintenanceController_updateRecord",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveMaintenanceRecordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceRecordDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa phiếu bảo dưỡng (optimistic concurrency, đồng bộ lịch xe)",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/vehicles/{id}/maintenance/records/{recordId}/start": {
+      "post": {
+        "operationId": "VehicleMaintenanceController_startRecord",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceRecordDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Bắt đầu thực hiện (giữ nguyên chỗ đã đặt trên lịch)",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/vehicles/{id}/maintenance/records/{recordId}/complete": {
+      "post": {
+        "operationId": "VehicleMaintenanceController_completeRecord",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteMaintenanceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceRecordDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hoàn tất: nhả lịch + ghi KM + (thay nhớt) dời mốc — một transaction",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/vehicles/{id}/maintenance/records/{recordId}/cancel": {
+      "post": {
+        "operationId": "VehicleMaintenanceController_cancelRecord",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceRecordDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hủy lịch — NHẢ chỗ trên lịch xe trong cùng transaction",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/vehicles/{id}/maintenance/records/{recordId}/attachments/presign": {
+      "post": {
+        "operationId": "VehicleMaintenanceController_presignAttachment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignMaintenanceFileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceContractPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Presign upload chứng từ vào kho riêng tư (Wave 4.1)",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/vehicles/{id}/maintenance/records/{recordId}/attachments": {
+      "post": {
+        "operationId": "VehicleMaintenanceController_attach",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceRecordDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xác minh object rồi đính chứng từ vào phiếu",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/vehicles/{id}/maintenance/records/{recordId}/attachments/{fileId}/download": {
+      "get": {
+        "operationId": "VehicleMaintenanceController_download",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fileId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceContractDownloadDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Phát signed URL ngắn hạn xem/tải một chứng từ",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
+    "/maintenance": {
+      "get": {
+        "operationId": "MaintenanceBoardController_list",
+        "parameters": [
+          {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "overdue",
+                "due_soon",
+                "in_progress",
+                "missing_odometer",
+                "upcoming",
+                "history"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên xe, mã xe hoặc biển số",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Loại của phiếu liên quan",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "oil_change",
+                "periodic_service",
+                "repair",
+                "tire",
+                "battery",
+                "other"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "ISO — lịch từ ngày",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "ISO — lịch đến ngày",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "remaining_asc | remaining_desc | name_asc | updated_desc",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceBoardListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách xe theo việc cần làm (quá hạn / sắp hạn / thiếu KM…)",
+        "tags": [
+          "maintenance"
+        ]
+      }
+    },
+    "/maintenance/summary": {
+      "get": {
+        "operationId": "MaintenanceBoardController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceBoardSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đếm theo từng nhóm việc — độc lập với trang/bộ lọc hiện tại",
+        "tags": [
+          "maintenance"
+        ]
+      }
+    },
     "/platform/plans": {
       "get": {
         "operationId": "PlansController_list",
@@ -6997,6 +7670,12 @@
                 "vehicles.documents.view_details",
                 "vehicles.documents.view_files",
                 "vehicles.documents.manage",
+                "vehicles.maintenance.view",
+                "vehicles.maintenance.manage",
+                "vehicles.maintenance.view_files",
+                "vehicles.maintenance.view_cost",
+                "vehicles.odometer.correct",
+                "vehicles.odometer.decrease",
                 "booking_requests.view",
                 "booking_requests.approve",
                 "bookings.view",
@@ -10242,6 +10921,627 @@
         },
         "required": [
           "fields"
+        ]
+      },
+      "MaintenanceProfileDto": {
+        "type": "object",
+        "properties": {
+          "currentOdometerKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "null = chưa có số, KHÔNG phải 0"
+          },
+          "currentOdometerSource": {
+            "type": "string",
+            "nullable": true
+          },
+          "currentOdometerAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO"
+          },
+          "currentOdometerRefLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "oilChangeIntervalKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "lastServiceKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "lastServiceAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "nextMaintenanceKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "remainingKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "usedKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "usedPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "dueStatus": {
+            "type": "string",
+            "description": "@xeprime/types → MaintenanceDueStatus"
+          },
+          "dueSoonKm": {
+            "type": "number"
+          },
+          "rowVersion": {
+            "type": "number",
+            "description": "Optimistic concurrency — nộp lại khi lưu"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO"
+          }
+        },
+        "required": [
+          "dueStatus",
+          "dueSoonKm",
+          "rowVersion",
+          "updatedAt"
+        ]
+      },
+      "SaveMaintenanceProfileDto": {
+        "type": "object",
+        "properties": {
+          "oilChangeIntervalKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "Chu kỳ thay nhớt (KM)"
+          },
+          "lastServiceKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "KM lần thay nhớt gần nhất"
+          },
+          "lastServiceAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "expectedRowVersion": {
+            "type": "number",
+            "nullable": true,
+            "description": "Bắt buộc — chống sửa đè"
+          }
+        }
+      },
+      "OdometerReadingDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "odometerKm": {
+            "type": "number"
+          },
+          "previousKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "description": "@xeprime/types → OdometerSource"
+          },
+          "sourceRefId": {
+            "type": "string",
+            "nullable": true
+          },
+          "reasonCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "isDecrease": {
+            "type": "boolean",
+            "description": "Lần ghi này làm KM giảm"
+          },
+          "recordedAt": {
+            "type": "string",
+            "description": "ISO"
+          },
+          "recordedByName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "odometerKm",
+          "source",
+          "isDecrease",
+          "recordedAt"
+        ]
+      },
+      "OdometerHistoryDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OdometerReadingDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "CorrectOdometerDto": {
+        "type": "object",
+        "properties": {
+          "odometerKm": {
+            "type": "number",
+            "description": "KM mới, 0–2000000"
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "handover_error",
+              "device_error",
+              "cluster_replaced",
+              "data_migration",
+              "other"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Lý do chi tiết — bắt buộc, không được để trống"
+          },
+          "confirmDecrease": {
+            "type": "boolean",
+            "description": "Xác nhận giảm KM có chủ ý"
+          },
+          "expectedRowVersion": {
+            "type": "number",
+            "nullable": true,
+            "description": "Bắt buộc — chống sửa đè"
+          }
+        },
+        "required": [
+          "odometerKm",
+          "reasonCode",
+          "reason"
+        ]
+      },
+      "MaintenanceAttachmentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "size": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "MaintenanceRecordDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "oil_change",
+              "periodic_service",
+              "repair",
+              "tire",
+              "battery",
+              "other"
+            ]
+          },
+          "customTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "in_progress",
+              "completed",
+              "canceled"
+            ]
+          },
+          "plannedStartAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO"
+          },
+          "plannedEndAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO"
+          },
+          "completedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO"
+          },
+          "odometerKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "providerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "cost": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền string — ADR 0007"
+          },
+          "receiptCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaintenanceAttachmentDto"
+            }
+          },
+          "attachmentCount": {
+            "type": "number"
+          },
+          "rowVersion": {
+            "type": "number",
+            "description": "Optimistic concurrency"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO"
+          }
+        },
+        "required": [
+          "id",
+          "vehicleId",
+          "type",
+          "status",
+          "attachmentCount",
+          "rowVersion",
+          "updatedAt"
+        ]
+      },
+      "MaintenanceRecordListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaintenanceRecordDto"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "SaveMaintenanceRecordDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "oil_change",
+              "periodic_service",
+              "repair",
+              "tire",
+              "battery",
+              "other"
+            ]
+          },
+          "customTypeName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Chỉ cho loại `other`"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "plannedStartAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO — mốc bắt đầu dự kiến"
+          },
+          "plannedEndAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO — mốc kết thúc dự kiến"
+          },
+          "odometerKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "providerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "cost": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền string — ADR 0007"
+          },
+          "receiptCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "attachmentFileIds": {
+            "description": "ID file riêng tư (ULID)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expectedRowVersion": {
+            "type": "number",
+            "nullable": true,
+            "description": "Bắt buộc khi sửa"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "CompleteMaintenanceDto": {
+        "type": "object",
+        "properties": {
+          "completedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO — mặc định là bây giờ"
+          },
+          "odometerKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "KM lúc bảo dưỡng — bỏ trống nếu ghi nhận hồi tố"
+          },
+          "cost": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền string — ADR 0007"
+          },
+          "receiptCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "expectedRowVersion": {
+            "type": "number",
+            "description": "Bắt buộc — chống sửa đè"
+          }
+        },
+        "required": [
+          "expectedRowVersion"
+        ]
+      },
+      "PresignMaintenanceFileDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Tên file gốc (chỉ để hiển thị)"
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+              "application/pdf"
+            ]
+          },
+          "fileSize": {
+            "type": "number",
+            "description": "Dung lượng (byte), tối đa 10485760"
+          }
+        },
+        "required": [
+          "fileName",
+          "contentType",
+          "fileSize"
+        ]
+      },
+      "MaintenanceBoardItemDto": {
+        "type": "object",
+        "properties": {
+          "vehicleId": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "vehicleCode": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "operationStatus": {
+            "type": "string",
+            "description": "@xeprime/types → VehicleOperationStatus"
+          },
+          "mainImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "currentOdometerKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "currentOdometerAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO"
+          },
+          "oilChangeIntervalKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "nextMaintenanceKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "remainingKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "dueStatus": {
+            "type": "string",
+            "description": "@xeprime/types → MaintenanceDueStatus"
+          },
+          "dueSoonKm": {
+            "type": "number"
+          },
+          "activeRecord": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MaintenanceRecordDto"
+              }
+            ]
+          },
+          "lastCompletedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO — hoàn tất gần nhất"
+          },
+          "expiringDocumentCount": {
+            "type": "number"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO"
+          }
+        },
+        "required": [
+          "vehicleId",
+          "vehicleName",
+          "vehicleCode",
+          "operationStatus",
+          "dueStatus",
+          "dueSoonKm",
+          "expiringDocumentCount",
+          "updatedAt"
+        ]
+      },
+      "MaintenanceBoardListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaintenanceBoardItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "MaintenanceBoardSummaryDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number"
+          },
+          "overdue": {
+            "type": "number"
+          },
+          "dueSoon": {
+            "type": "number"
+          },
+          "inProgress": {
+            "type": "number"
+          },
+          "missingOdometer": {
+            "type": "number"
+          },
+          "upcoming": {
+            "type": "number"
+          },
+          "expiringDocuments": {
+            "type": "number",
+            "description": "Xe có giấy tờ sắp/đã hết hạn — cảnh báo liên quan"
+          }
+        },
+        "required": [
+          "total",
+          "overdue",
+          "dueSoon",
+          "inProgress",
+          "missingOdometer",
+          "upcoming",
+          "expiringDocuments"
         ]
       },
       "PlanDto": {

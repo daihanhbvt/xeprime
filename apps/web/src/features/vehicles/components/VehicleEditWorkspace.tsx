@@ -37,6 +37,7 @@ import {
   VEHICLE_SECTIONS,
 } from './VehicleFormSections';
 import { VehicleDocumentsWorkspace } from '@/features/vehicle-documents/components/VehicleDocumentsWorkspace';
+import { VehicleMaintenanceWorkspace } from '@/features/vehicle-maintenance/components/VehicleMaintenanceWorkspace';
 import { VehicleSourceWorkspace } from './VehicleSourceWorkspace';
 import styles from './VehicleEditWorkspace.module.css';
 
@@ -86,7 +87,13 @@ const MEDIA_FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
 const ADVANCED_SPEC_FIELDS = VEHICLE_SECTIONS.find((section) => section.key === 'specs')!.fields;
 
 function parseTab(value: string | null): WorkspaceTab {
-  if (value === 'media' || value === 'pricing' || value === 'source' || value === 'documents')
+  if (
+    value === 'media' ||
+    value === 'pricing' ||
+    value === 'source' ||
+    value === 'documents' ||
+    value === 'maintenance'
+  )
     return value;
   return 'information';
 }
@@ -222,8 +229,8 @@ export function VehicleEditWorkspace({
     },
     {
       key: 'maintenance',
-      label: <span title="Sẽ được kích hoạt ở Wave 6">Bảo dưỡng & KM</span>,
-      disabled: true,
+      label: 'Bảo dưỡng & KM',
+      children: <VehicleMaintenanceWorkspace vehicle={vehicle} />,
     },
   ];
 

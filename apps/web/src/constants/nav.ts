@@ -17,6 +17,7 @@ import {
   ShopOutlined,
   SolutionOutlined,
   TeamOutlined,
+  ToolOutlined,
   TransactionOutlined,
   UsergroupAddOutlined,
   WalletOutlined,
@@ -91,6 +92,13 @@ export const SHOP_NAV: readonly NavNode[] = [
         href: ROUTES.MANAGE.VEHICLES,
         permission: PERMISSION.VEHICLE_VIEW,
         icon: CarOutlined,
+      },
+      {
+        key: 'maintenance',
+        label: 'Trung tâm bảo dưỡng',
+        href: ROUTES.MANAGE.MAINTENANCE,
+        permission: PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+        icon: ToolOutlined,
       },
       {
         key: 'bookings',

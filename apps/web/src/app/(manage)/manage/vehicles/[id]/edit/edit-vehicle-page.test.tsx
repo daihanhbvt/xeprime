@@ -37,6 +37,14 @@ vi.mock('@/features/rental-policies/hooks/use-vehicle-pricing', () => ({
   }),
   useSaveVehiclePricing: () => ({ mutate: vi.fn(), isPending: false }),
 }));
+/** Tab Bảo dưỡng & KM (Wave 6) gọi TanStack Query — test này không dựng provider. */
+vi.mock('@/features/vehicle-maintenance/hooks', () => ({
+  useMaintenanceProfile: () => ({ data: undefined, isLoading: false, isError: false }),
+  useMaintenanceRecords: () => ({ data: undefined, isLoading: false, isError: false }),
+  useOdometerHistory: () => ({ data: undefined, isLoading: false, isError: false }),
+  useInvalidateMaintenance: () => vi.fn(),
+}));
+
 vi.mock('@/features/vehicles/hooks/use-vehicle-source', () => ({
   useVehicleSource: () => ({
     data: { sourceType: 'owned', detail: null },
@@ -177,7 +185,7 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(screen.getByText('Không tìm thấy xe')).toBeTruthy();
   });
 
-  it('nạp đúng header, trạng thái và sáu tab; Nguồn xe (Wave 4) + Giấy tờ (Wave 5) mở, Bảo dưỡng khoá', () => {
+  it('nạp đúng header, trạng thái và sáu tab; Nguồn xe (Wave 4) + Giấy tờ (Wave 5) + Bảo dưỡng (Wave 6) đều mở', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: vehicle.name })).toBeTruthy();
     expect(screen.getByDisplayValue(vehicle.name)).toBeTruthy();
@@ -191,9 +199,9 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(screen.getByRole('tab', { name: 'Giấy tờ' }).getAttribute('aria-disabled')).not.toBe(
       'true',
     );
-    expect(screen.getByRole('tab', { name: 'Bảo dưỡng & KM' }).getAttribute('aria-disabled')).toBe(
-      'true',
-    );
+    expect(
+      screen.getByRole('tab', { name: 'Bảo dưỡng & KM' }).getAttribute('aria-disabled'),
+    ).not.toBe('true');
   });
 
   it('Giá & chính sách được nhúng trực tiếp trong tab, không qua màn trung gian', async () => {

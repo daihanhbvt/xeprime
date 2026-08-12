@@ -10,6 +10,9 @@ import {
   BODY_TYPE_VALUES,
   FUEL_TYPE_VALUES,
   isVehicleFuelTypeAllowed,
+  MAINTENANCE_TYPE_VALUES,
+  ODOMETER_CORRECTION_REASON_VALUES,
+  ODOMETER_MAX_KM,
   SERVICE_TYPE_VALUES,
   TENANT_TYPE_VALUES,
   TRANSMISSION_TYPE_VALUES,
@@ -310,6 +313,80 @@ export const vehicleDocumentFormSchema = yup.object({
 });
 
 export type VehicleDocumentFormValues = yup.InferType<typeof vehicleDocumentFormSchema>;
+
+// ---------------------------------------------------------------------------
+// Bảo dưỡng & KM (Wave 6) — docs/design/12 §9
+// ---------------------------------------------------------------------------
+
+/** Số KM: nguyên, không âm, trong trần vận hành. Backend + CHECK ở DB là lớp chặn thật. */
+const odometerKmSchema = yup
+  .number()
+  .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
+  .typeError('Số KM phải là số')
+  .integer('Số KM phải là số nguyên')
+  .min(0, 'Số KM không được âm')
+  .max(ODOMETER_MAX_KM, 'Số KM vượt quá giới hạn cho phép');
+
+export const maintenanceProfileFormSchema = yup.object({
+  oilChangeIntervalKm: yup
+    .number()
+    .transform((v, orig) => (orig === '' || orig === null || orig === undefined ? null : v))
+    .typeError('Chu kỳ phải là số')
+    .integer('Chu kỳ phải là số nguyên')
+    .min(1, 'Chu kỳ phải lớn hơn 0')
+    .max(1_000_000, 'Chu kỳ vượt quá giới hạn cho phép')
+    .nullable()
+    .default(null),
+  lastServiceKm: odometerKmSchema.nullable().default(null),
+  lastServiceAt: optionalDate,
+  notes: optionalText(2000),
+});
+
+export type MaintenanceProfileFormValues = yup.InferType<typeof maintenanceProfileFormSchema>;
+
+/**
+ * Điều chỉnh KM thủ công. Lý do là BẮT BUỘC ở cả ba lớp (form, DTO backend, CHECK ở DB) —
+ * một số KM đổi mà không ai biết vì sao là thứ không được phép tồn tại (§9.1).
+ */
+export const odometerCorrectionFormSchema = yup.object({
+  odometerKm: odometerKmSchema.required('Nhập số KM mới'),
+  reasonCode: yup
+    .string()
+    .oneOf(ODOMETER_CORRECTION_REASON_VALUES)
+    .required('Chọn lý do điều chỉnh'),
+  reason: yup
+    .string()
+    .trim()
+    .required('Nhập lý do chi tiết')
+    .min(3, 'Lý do quá ngắn')
+    .max(1000, 'Lý do tối đa 1000 ký tự'),
+});
+
+export type OdometerCorrectionFormValues = yup.InferType<typeof odometerCorrectionFormSchema>;
+
+/**
+ * Các mảnh dùng chung của form phiếu bảo dưỡng.
+ *
+ * Schema đầy đủ nằm ở `apps/web/src/features/vehicle-maintenance` vì hai mốc thời gian giữ
+ * kiểu `Dayjs` (đúng hợp đồng của `DateTimeField`: component KHÔNG tự serialize để không làm
+ * lệch múi giờ ở mọi form), mà package này cố ý không phụ thuộc `dayjs` — cùng lý do khiến
+ * schema banner cũng sống cạnh component của nó.
+ */
+export const maintenanceRecordFields = {
+  type: yup.string().oneOf(MAINTENANCE_TYPE_VALUES).required('Chọn loại bảo dưỡng'),
+  customTypeName: yup
+    .string()
+    .trim()
+    .max(160)
+    .default('')
+    .when('type', { is: 'other', then: (s) => s.required('Nhập tên hạng mục') }),
+  title: optionalText(255),
+  odometerKm: odometerKmSchema.nullable().default(null),
+  providerName: optionalText(255),
+  cost: moneySchema.nullable().default(null),
+  receiptCode: optionalText(100),
+  notes: optionalText(2000),
+};
 
 /**
  * Khoảng thuê. Kiểm tra `returnAt > pickupAt` ở đây chỉ để báo lỗi sớm — ràng buộc thật

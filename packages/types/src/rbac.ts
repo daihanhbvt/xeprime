@@ -100,6 +100,27 @@ export const PERMISSION = {
   /** Thêm/sửa/lưu trữ giấy tờ, tải file, chạy và áp kết quả OCR. */
   VEHICLE_DOCUMENT_MANAGE: 'vehicles.documents.manage',
 
+  // Bảo dưỡng & KM (Wave 6 — docs/design/12 §9+§10). Tách quyền theo mức thiệt hại nếu
+  // bị lạm dụng: xem ≠ ghi ≠ sửa số KM có thẩm quyền ≠ giảm KM ≠ thấy tiền.
+  /** Xem KM, chu kỳ, lịch và lịch sử bảo dưỡng (không thấy chi phí). */
+  VEHICLE_MAINTENANCE_VIEW: 'vehicles.maintenance.view',
+  /** Thêm/sửa/hoàn tất/hủy phiếu bảo dưỡng và cấu hình chu kỳ. */
+  VEHICLE_MAINTENANCE_MANAGE: 'vehicles.maintenance.manage',
+  /** Mở/tải chứng từ bảo dưỡng riêng tư (hóa đơn, phiếu chi) — tách như `documents.view_files`. */
+  VEHICLE_MAINTENANCE_FILE_VIEW: 'vehicles.maintenance.view_files',
+  /**
+   * Xem CHI PHÍ bảo dưỡng. Nhân viên vận hành làm được việc bảo dưỡng/KM nhưng không
+   * đương nhiên thấy tiền (docs §10) — quyền tiền luôn phải cấp riêng.
+   */
+  VEHICLE_MAINTENANCE_COST_VIEW: 'vehicles.maintenance.view_cost',
+  /** Chỉnh tay KM hiện tại (bắt buộc kèm lý do + ghi audit). */
+  VEHICLE_ODOMETER_CORRECT: 'vehicles.odometer.correct',
+  /**
+   * GIẢM KM — quyền cao hơn hẳn: KM là số có thẩm quyền dùng để tính bảo dưỡng và đối
+   * soát bàn giao, hạ nó xuống có thể che giấu quãng đường đã chạy (docs §9.1).
+   */
+  VEHICLE_ODOMETER_DECREASE: 'vehicles.odometer.decrease',
+
   // Đơn đặt xe / đơn thuê
   BOOKING_REQUEST_VIEW: 'booking_requests.view',
   BOOKING_REQUEST_APPROVE: 'booking_requests.approve',
@@ -177,6 +198,13 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.VEHICLE_DOCUMENT_DETAIL_VIEW,
       PERMISSION.VEHICLE_DOCUMENT_FILE_VIEW,
       PERMISSION.VEHICLE_DOCUMENT_MANAGE,
+      PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+      PERMISSION.VEHICLE_MAINTENANCE_MANAGE,
+      PERMISSION.VEHICLE_MAINTENANCE_FILE_VIEW,
+      PERMISSION.VEHICLE_MAINTENANCE_COST_VIEW,
+      PERMISSION.VEHICLE_ODOMETER_CORRECT,
+      // KHÔNG có `vehicles.odometer.decrease`: giảm KM là quyền cấp riêng, mặc định chỉ chủ
+      // gian hàng có (docs §9.1 "giảm KM cần quyền cao hơn").
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_REQUEST_APPROVE,
       PERMISSION.BOOKING_VIEW,
@@ -196,6 +224,11 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.VEHICLE_VIEW,
       // Chỉ TRẠNG THÁI giấy tờ (còn hạn/sắp hết hạn) — không mở được file nhạy cảm (docs §10).
       PERMISSION.VEHICLE_DOCUMENT_VIEW,
+      // "Nhập KM/record được giao" (docs §10): làm được việc bảo dưỡng, nhưng KHÔNG kèm
+      // `view_cost`/`view_files`/`odometer.decrease` — quyền tiền và quyền hạ KM cấp riêng.
+      PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+      PERMISSION.VEHICLE_MAINTENANCE_MANAGE,
+      PERMISSION.VEHICLE_ODOMETER_CORRECT,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_VIEW,
       PERMISSION.BOOKING_CREATE,
@@ -208,6 +241,8 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.TENANT_VIEW,
       PERMISSION.VEHICLE_VIEW,
       PERMISSION.VEHICLE_DOCUMENT_VIEW,
+      // Read-only, không nhạy cảm: thấy tình trạng bảo dưỡng nhưng không thấy chi phí (docs §10).
+      PERMISSION.VEHICLE_MAINTENANCE_VIEW,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_VIEW,
       PERMISSION.CALENDAR_VIEW,

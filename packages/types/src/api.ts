@@ -98,6 +98,14 @@ export const API_ERROR_CODE = {
   OCR_UNREADABLE: 'OCR_UNREADABLE',
   OCR_FAILED: 'OCR_FAILED',
 
+  // Bảo dưỡng & KM (Wave 6)
+  /**
+   * KM mới thấp hơn KM hiện tại. Mã riêng thay vì `VALIDATION_FAILED` vì FE có lối đi tiếp
+   * hẳn hoi: người đủ quyền cao thấy hộp xác nhận giảm KM kèm lý do, người không đủ quyền
+   * thấy hướng dẫn xin phê duyệt — không phải một alert lỗi thường.
+   */
+  ODOMETER_DECREASE_FORBIDDEN: 'ODOMETER_DECREASE_FORBIDDEN',
+
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',

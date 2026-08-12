@@ -75,6 +75,37 @@ vi.mock('@/features/vehicles/hooks/use-vehicle-source', () => ({
   useSaveVehicleSource: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
+/**
+ * Thẻ Bảo dưỡng & KM (Wave 6) trên hồ sơ 360 gọi TanStack Query — test này không dựng provider.
+ * Trả hồ sơ RỖNG (mọi số là null) để kiểm đúng hành vi "chưa có dữ liệu thì nói chưa có".
+ */
+const emptyMaintenanceProfile = vi.hoisted(() => ({
+  currentOdometerKm: null,
+  currentOdometerSource: null,
+  currentOdometerAt: null,
+  currentOdometerRefLabel: null,
+  oilChangeIntervalKm: null,
+  lastServiceKm: null,
+  lastServiceAt: null,
+  notes: null,
+  nextMaintenanceKm: null,
+  remainingKm: null,
+  usedKm: null,
+  usedPercent: null,
+  dueStatus: 'unknown',
+  dueSoonKm: 500,
+  rowVersion: 0,
+  updatedAt: '2026-08-01T00:00:00.000Z',
+}));
+vi.mock('@/features/vehicle-maintenance/hooks', () => ({
+  useMaintenanceProfile: () => ({
+    data: emptyMaintenanceProfile,
+    isLoading: false,
+    isError: false,
+  }),
+  useMaintenanceRecords: () => ({ data: [], isLoading: false, isError: false }),
+}));
+
 const deleteVehicle = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 const submitPublic = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 
@@ -449,6 +480,7 @@ describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
 
 describe('/manage/vehicles/[id] — khu vực chưa có dữ liệu', () => {
   it('giấy tờ / nguồn xe / bảo dưỡng hiện "Chưa có dữ liệu", không có số bịa', () => {
+    grant(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
     renderPage();
 
     expect(screen.getByText('Hồ sơ & Giấy tờ pháp lý')).toBeTruthy();
@@ -458,10 +490,17 @@ describe('/manage/vehicles/[id] — khu vực chưa có dữ liệu', () => {
     expect(screen.getByText('Hình thức nguồn xe')).toBeTruthy();
     expect(screen.getByText('Sở hữu')).toBeTruthy();
     expect(screen.getByText(/Chưa có dữ liệu KM/)).toBeTruthy();
+    // Mốc bảo dưỡng chưa tính được thì nói thẳng, KHÔNG dựng "0 km" giả (docs §9).
+    expect(screen.getAllByText('Chưa đủ dữ liệu').length).toBeGreaterThan(0);
     // Không có lối vào form của wave sau.
     expect(
       screen.queryByRole('button', { name: /Thêm giấy tờ|Nhập KM|Thiết lập nguồn xe/ }),
     ).toBeNull();
+  });
+
+  it('thiếu quyền bảo dưỡng: thẻ Bảo dưỡng & Số KM vắng mặt hẳn, không hiện khung rỗng', () => {
+    renderPage(); // chỉ có VEHICLE_VIEW
+    expect(screen.queryByText('Bảo dưỡng & Số KM')).toBeNull();
   });
 });
 

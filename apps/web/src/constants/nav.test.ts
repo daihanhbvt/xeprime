@@ -43,10 +43,10 @@ function visibleLabels(granted: readonly Permission[], isPlatform: boolean): str
 }
 
 describe('nav — cấu trúc cây', () => {
-  it('gian hàng: 1 mục gốc + 2 nhóm, tổng 16 mục lá', () => {
+  it('gian hàng: 1 mục gốc + 2 nhóm, tổng 17 mục lá', () => {
     expect(SHOP_NAV).toHaveLength(3);
     expect(SHOP_NAV.filter(isNavGroup).map((g) => g.label)).toEqual(['Quản lý', 'Cài đặt']);
-    expect(flattenLeaves(SHOP_NAV)).toHaveLength(16);
+    expect(flattenLeaves(SHOP_NAV)).toHaveLength(17);
   });
 
   it('nền tảng: 1 mục gốc + 1 nhóm, tổng 11 mục lá', () => {
@@ -111,16 +111,16 @@ describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
 });
 
 describe('nav — vai trò gian hàng nhìn thấy gì', () => {
-  it('shop_owner thấy đủ 16 mục', () => {
+  it('shop_owner thấy đủ 17 mục', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false),
-    ).toHaveLength(16);
+    ).toHaveLength(17);
   });
 
-  it('shop_manager cũng thấy đủ 16 mục (có MEMBER_VIEW và FINANCE_VIEW)', () => {
+  it('shop_manager cũng thấy đủ 17 mục (có MEMBER_VIEW và FINANCE_VIEW)', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_MANAGER], false),
-    ).toHaveLength(16);
+    ).toHaveLength(17);
   });
 
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {

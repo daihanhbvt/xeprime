@@ -29,6 +29,8 @@ export const PRIVATE_FILE_PURPOSE = {
   SOURCE_CONTRACT: 'source_contract',
   /** Giấy tờ xe (Wave 5): cà vẹt / đăng kiểm / bảo hiểm / khác. */
   VEHICLE_DOCUMENT: 'vehicle_document',
+  /** Chứng từ bảo dưỡng (Wave 6): hóa đơn garage, phiếu chi — riêng tư như hai loại trên. */
+  MAINTENANCE_RECORD: 'maintenance_record',
 } as const;
 export type PrivateFilePurpose = (typeof PRIVATE_FILE_PURPOSE)[keyof typeof PRIVATE_FILE_PURPOSE];
 
