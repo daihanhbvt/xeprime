@@ -72,6 +72,27 @@ export class VehicleContractsService {
     userId: string,
     dto: PresignSourceContractDto,
   ): Promise<SourceContractPresignDto> {
+    return this.presignFor(tenantId, vehicleId, userId, dto, {
+      purpose: PRIVATE_FILE_PURPOSE.SOURCE_CONTRACT,
+      keyOf: (vId, fileId, extension) =>
+        `tenants/${tenantId}/vehicles/${vId}/contracts/${fileId}.${extension}`,
+    });
+  }
+
+  /**
+   * Lõi presign dùng chung cho MỌI mục đích file riêng tư của xe (hợp đồng nguồn — Wave 4.1,
+   * giấy tờ — Wave 5): bản ghi `pending` + id ULID + object key do SERVER dựng.
+   */
+  async presignFor(
+    tenantId: string,
+    vehicleId: string,
+    userId: string,
+    dto: { fileName: string; contentType: string; fileSize: number },
+    opts: {
+      purpose: string;
+      keyOf: (vehicleId: string, fileId: string, extension: string) => string;
+    },
+  ): Promise<SourceContractPresignDto> {
     this.assertPrivateStorage();
     const vehicle = await this.findVehicle(tenantId, vehicleId);
 
@@ -79,14 +100,14 @@ export class VehicleContractsService {
     const extension = DOCUMENT_MIME_EXTENSION[dto.contentType as DocumentUploadMimeType];
     // Key hoàn toàn từ dữ liệu server sở hữu: id ULID + đuôi suy từ MIME đã duyệt.
     // Tên file người dùng KHÔNG tham gia định danh — chỉ lưu để hiển thị.
-    const objectKey = `tenants/${tenantId}/vehicles/${vehicle.id}/contracts/${fileId}.${extension}`;
+    const objectKey = opts.keyOf(vehicle.id, fileId, extension);
 
     await this.prisma.vehiclePrivateFile.create({
       data: {
         id: fileId,
         tenantId,
         vehicleId: vehicle.id,
-        purpose: PRIVATE_FILE_PURPOSE.SOURCE_CONTRACT,
+        purpose: opts.purpose,
         objectKey,
         originalName: dto.fileName,
         mimeType: dto.contentType,
@@ -116,12 +137,26 @@ export class VehicleContractsService {
     userId: string,
     fileId: string,
   ): Promise<VehicleSourceContractFileDto> {
+    return this.completeFor(tenantId, vehicleId, userId, fileId, {
+      purpose: PRIVATE_FILE_PURPOSE.SOURCE_CONTRACT,
+      auditAction: 'vehicle.contract.upload',
+    });
+  }
+
+  /** Lõi hoàn tất upload dùng chung — HEAD + magic bytes như tài liệu ở mục class. */
+  async completeFor(
+    tenantId: string,
+    vehicleId: string,
+    userId: string,
+    fileId: string,
+    opts: { purpose: string; auditAction: string },
+  ): Promise<VehicleSourceContractFileDto> {
     this.assertPrivateStorage();
     await this.findVehicle(tenantId, vehicleId);
 
     const file = await this.prisma.vehiclePrivateFile.findFirst({
       // Điều kiện tenant + vehicle nằm TRONG câu truy vấn — id của tenant khác là 404, không lộ.
-      where: { id: fileId, tenantId, vehicleId, purpose: PRIVATE_FILE_PURPOSE.SOURCE_CONTRACT },
+      where: { id: fileId, tenantId, vehicleId, purpose: opts.purpose },
     });
     if (!file) throw fileNotFound();
     if (file.status !== PRIVATE_FILE_STATUS.PENDING) {
@@ -160,7 +195,7 @@ export class VehicleContractsService {
       tenantId,
       actorUserId: userId,
       actorScope: 'tenant',
-      action: 'vehicle.contract.upload',
+      action: opts.auditAction,
       targetType: 'vehicle_private_file',
       targetId: file.id,
       after: { vehicleId, name: file.originalName, mimeType: file.mimeType, size: file.sizeBytes },
@@ -179,6 +214,16 @@ export class VehicleContractsService {
     vehicleId: string,
     fileId: string,
   ): Promise<SourceContractDownloadDto> {
+    return this.downloadFor(tenantId, vehicleId, fileId, PRIVATE_FILE_PURPOSE.SOURCE_CONTRACT);
+  }
+
+  /** Lõi phát signed GET dùng chung — chỉ file `ready` đúng tenant + xe + mục đích. */
+  async downloadFor(
+    tenantId: string,
+    vehicleId: string,
+    fileId: string,
+    purpose: string,
+  ): Promise<SourceContractDownloadDto> {
     this.assertPrivateStorage();
     await this.findVehicle(tenantId, vehicleId);
 
@@ -187,7 +232,7 @@ export class VehicleContractsService {
         id: fileId,
         tenantId,
         vehicleId,
-        purpose: PRIVATE_FILE_PURPOSE.SOURCE_CONTRACT,
+        purpose,
         status: PRIVATE_FILE_STATUS.READY,
         deletedAt: null,
       },

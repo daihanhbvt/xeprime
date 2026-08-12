@@ -2154,6 +2154,472 @@
         ]
       }
     },
+    "/vehicles/{id}/documents": {
+      "get": {
+        "operationId": "VehicleDocumentsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDocumentListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách TRẠNG THÁI giấy tờ của một xe (summary — không PII)",
+        "tags": [
+          "vehicle-documents"
+        ]
+      },
+      "post": {
+        "operationId": "VehicleDocumentsController_create",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveVehicleDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDocumentDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo hồ sơ giấy tờ (metadata — file gắn sau)",
+        "tags": [
+          "vehicle-documents"
+        ]
+      }
+    },
+    "/vehicles/{id}/documents/{documentId}": {
+      "get": {
+        "operationId": "VehicleDocumentsController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDocumentDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết metadata một giấy tờ (không kèm lịch sử file/OCR)",
+        "tags": [
+          "vehicle-documents"
+        ]
+      },
+      "patch": {
+        "operationId": "VehicleDocumentsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveVehicleDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDocumentDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cập nhật metadata giấy tờ (optimistic concurrency)",
+        "tags": [
+          "vehicle-documents"
+        ]
+      }
+    },
+    "/vehicles/{id}/documents/{documentId}/versions": {
+      "get": {
+        "operationId": "VehicleDocumentsController_listVersions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDocumentVersionListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lịch sử phiên bản file của một giấy tờ",
+        "tags": [
+          "vehicle-documents"
+        ]
+      },
+      "post": {
+        "operationId": "VehicleDocumentsController_attach",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachDocumentVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDocumentDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xác minh object rồi gắn thành phiên bản mới (bản cũ vào lịch sử)",
+        "tags": [
+          "vehicle-documents"
+        ]
+      }
+    },
+    "/vehicles/{id}/documents/{documentId}/archive": {
+      "post": {
+        "operationId": "VehicleDocumentsController_archive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Lưu trữ giấy tờ (không xoá lịch sử/file)",
+        "tags": [
+          "vehicle-documents"
+        ]
+      }
+    },
+    "/vehicles/{id}/documents/{documentId}/versions/presign": {
+      "post": {
+        "operationId": "VehicleDocumentsController_presign",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignVehicleDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceContractPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Presign upload file giấy tờ vào kho riêng tư (Wave 4.1)",
+        "tags": [
+          "vehicle-documents"
+        ]
+      }
+    },
+    "/vehicles/{id}/documents/{documentId}/versions/{versionId}/download": {
+      "get": {
+        "operationId": "VehicleDocumentsController_download",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceContractDownloadDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Phát signed URL ngắn hạn xem/tải một phiên bản giấy tờ",
+        "tags": [
+          "vehicle-documents"
+        ]
+      }
+    },
+    "/vehicles/{id}/documents/{documentId}/ocr": {
+      "post": {
+        "operationId": "VehicleDocumentsController_requestOcr",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDocumentOcrJobDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Yêu cầu trích xuất OCR (chưa cấu hình provider → 503 kiểm soát)",
+        "tags": [
+          "vehicle-documents"
+        ]
+      }
+    },
+    "/vehicles/{id}/documents/{documentId}/ocr/{jobId}/apply": {
+      "post": {
+        "operationId": "VehicleDocumentsController_applyOcr",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyOcrFieldsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleDocumentDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Áp các trường OCR đã chọn (fields rỗng = bỏ qua/đã đối soát)",
+        "tags": [
+          "vehicle-documents"
+        ]
+      }
+    },
     "/platform/plans": {
       "get": {
         "operationId": "PlansController_list",
@@ -6527,6 +6993,10 @@
                 "vehicles.delete",
                 "vehicles.submit_public",
                 "vehicles.block_schedule",
+                "vehicles.documents.view",
+                "vehicles.documents.view_details",
+                "vehicles.documents.view_files",
+                "vehicles.documents.manage",
                 "booking_requests.view",
                 "booking_requests.approve",
                 "bookings.view",
@@ -9325,6 +9795,454 @@
             }
           }
         }
+      },
+      "VehicleDocumentSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "registration",
+              "inspection",
+              "insurance",
+              "other"
+            ]
+          },
+          "customTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD — null = không thời hạn; cần cho cảnh báo hết hạn"
+          },
+          "presentation": {
+            "type": "string"
+          },
+          "warningDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "hasFile": {
+            "type": "boolean",
+            "description": "Giấy tờ đã có file đính kèm chưa"
+          },
+          "activeVersionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "presentation",
+          "hasFile",
+          "updatedAt"
+        ]
+      },
+      "VehicleDocumentListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleDocumentSummaryDto"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "VehicleDocumentFileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "size": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "VehicleDocumentVersionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number"
+          },
+          "file": {
+            "$ref": "#/components/schemas/VehicleDocumentFileDto"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "description": "ISO"
+          },
+          "archivedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO — đã bị thay thế lúc"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "file",
+          "uploadedAt"
+        ]
+      },
+      "VehicleDocumentDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "registration",
+              "inspection",
+              "insurance",
+              "other"
+            ]
+          },
+          "customTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD — null = không thời hạn; cần cho cảnh báo hết hạn"
+          },
+          "presentation": {
+            "type": "string"
+          },
+          "warningDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "hasFile": {
+            "type": "boolean",
+            "description": "Giấy tờ đã có file đính kèm chưa"
+          },
+          "activeVersionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO"
+          },
+          "documentNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "holderName": {
+            "type": "string",
+            "nullable": true
+          },
+          "holderAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "chassisNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "engineNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "issuedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "rowVersion": {
+            "type": "number",
+            "description": "Optimistic concurrency — nộp lại khi update"
+          },
+          "activeVersion": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VehicleDocumentVersionDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "presentation",
+          "hasFile",
+          "updatedAt",
+          "rowVersion"
+        ]
+      },
+      "VehicleDocumentVersionListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleDocumentVersionDto"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "SaveVehicleDocumentDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "registration",
+              "inspection",
+              "insurance",
+              "other"
+            ]
+          },
+          "customTypeName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Chỉ cho loại `other`"
+          },
+          "documentNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "holderName": {
+            "type": "string",
+            "nullable": true
+          },
+          "holderAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "chassisNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "engineNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "issuedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "expectedRowVersion": {
+            "type": "number",
+            "nullable": true,
+            "description": "Bắt buộc khi update"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "PresignVehicleDocumentDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Tên file gốc (chỉ để hiển thị)"
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+              "application/pdf"
+            ]
+          },
+          "fileSize": {
+            "type": "number",
+            "description": "Dung lượng (byte), tối đa 10485760"
+          }
+        },
+        "required": [
+          "fileName",
+          "contentType",
+          "fileSize"
+        ]
+      },
+      "AttachDocumentVersionDto": {
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "description": "ID file riêng tư do server phát (ULID)"
+          }
+        },
+        "required": [
+          "fileId"
+        ]
+      },
+      "VehicleDocumentOcrFieldDto": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "holderName",
+              "holderAddress",
+              "plateNumber",
+              "chassisNumber",
+              "engineNumber",
+              "issuedAt",
+              "expiresAt",
+              "documentNumber"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "description": "Giá trị nhận dạng (đã chuẩn hoá)"
+          },
+          "confidence": {
+            "type": "number",
+            "nullable": true,
+            "description": "Độ tin cậy 0–100"
+          },
+          "evidence": {
+            "type": "string",
+            "nullable": true,
+            "description": "Bằng chứng nguồn"
+          }
+        },
+        "required": [
+          "field",
+          "value"
+        ]
+      },
+      "VehicleDocumentOcrJobDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "needs_review",
+              "unreadable",
+              "failed",
+              "reviewed"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number",
+            "nullable": true
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleDocumentOcrFieldDto"
+            }
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO"
+          },
+          "completedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "provider",
+          "fields",
+          "createdAt"
+        ]
+      },
+      "ApplyOcrFieldsDto": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "holderName",
+                "holderAddress",
+                "plateNumber",
+                "chassisNumber",
+                "engineNumber",
+                "issuedAt",
+                "expiresAt",
+                "documentNumber"
+              ]
+            }
+          },
+          "applyPlateToVehicle": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fields"
+        ]
       },
       "PlanDto": {
         "type": "object",

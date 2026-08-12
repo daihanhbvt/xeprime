@@ -60,6 +60,13 @@ export const queryKeys = {
     pricing: (id: string) => ['vehicles', 'pricing', id] as const,
     /** Hồ sơ nguồn xe & tài chính (Wave 4). */
     source: (id: string) => ['vehicles', 'source', id] as const,
+    /** Giấy tờ xe (Wave 5). */
+    documents: (id: string) => ['vehicles', 'documents', id] as const,
+    document: (id: string, documentId: string) =>
+      ['vehicles', 'documents', id, documentId] as const,
+    /** Lịch sử phiên bản file — endpoint riêng sau quyền `view_files` (Wave 5.1). */
+    documentVersions: (id: string, documentId: string) =>
+      ['vehicles', 'documents', id, documentId, 'versions'] as const,
   },
   /** Chính sách thuê mặc định của gian hàng (Wave 2). */
   rentalPolicies: {

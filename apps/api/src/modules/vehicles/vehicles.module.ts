@@ -4,6 +4,12 @@ import { CatalogModule } from '../catalog/catalog.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
 import { StorageModule } from '../storage/storage.module';
+import { VehicleDocumentsController } from './documents/vehicle-documents.controller';
+import { VehicleDocumentsService } from './documents/vehicle-documents.service';
+import {
+  OcrNotConfiguredProvider,
+  VEHICLE_DOCUMENT_OCR_PROVIDER,
+} from './documents/ocr-provider';
 import { VehicleContractsService } from './vehicle-contracts.service';
 import { VehicleSourceService } from './vehicle-source.service';
 import { VehiclesController } from './vehicles.controller';
@@ -21,8 +27,19 @@ import { VehiclesService } from './vehicles.service';
  */
 @Module({
   imports: [PublicListingsModule, BillingModule, CatalogModule, PricingModule, StorageModule],
-  controllers: [VehiclesController],
-  providers: [VehiclesService, VehicleSourceService, VehicleContractsService],
+  controllers: [VehiclesController, VehicleDocumentsController],
+  providers: [
+    VehiclesService,
+    VehicleSourceService,
+    VehicleContractsService,
+    VehicleDocumentsService,
+    /**
+     * Repo CHƯA có provider OCR nào (không dependency/credential) — mặc định fail rõ ràng:
+     * yêu cầu OCR trả 503 OCR_NOT_CONFIGURED, người dùng nhập tay. Có provider thật thì
+     * thay `useClass` ở đây, phần điều phối/review không phải đổi.
+     */
+    { provide: VEHICLE_DOCUMENT_OCR_PROVIDER, useClass: OcrNotConfiguredProvider },
+  ],
   exports: [VehiclesService],
 })
 export class VehiclesModule {}

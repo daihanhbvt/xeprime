@@ -89,6 +89,15 @@ export const API_ERROR_CODE = {
   /** Nhập sai mã quá số lần cho phép — mã bị khoá, phải gửi lại mã mới. */
   OTP_LOCKED: 'OTP_LOCKED',
 
+  // OCR giấy tờ xe (Wave 5)
+  /** Chưa cấu hình nhà cung cấp OCR — trích xuất tự động không khả dụng, mời nhập tay. */
+  OCR_NOT_CONFIGURED: 'OCR_NOT_CONFIGURED',
+  /** Đang có job OCR chạy trên phiên bản này — không tạo job trùng. */
+  OCR_PROCESSING: 'OCR_PROCESSING',
+  /** Ảnh mờ/không đúng định dạng — không trích xuất được, mời nhập tay hoặc tải ảnh khác. */
+  OCR_UNREADABLE: 'OCR_UNREADABLE',
+  OCR_FAILED: 'OCR_FAILED',
+
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',

@@ -402,7 +402,26 @@ export class VehiclesService {
     userId: string,
     dto: UpdateVehicleDto,
   ): Promise<VehicleDetailDto> {
-    const current = await this.prisma.vehicle.findFirst({
+    await this.prisma.$transaction(async (tx) => {
+      await this.applyUpdate(tx, tenantId, id, userId, dto);
+    });
+    return this.getOne(tenantId, id);
+  }
+
+  /**
+   * Lõi update TRONG transaction của caller (Wave 5.1) — để nghiệp vụ khác (áp biển số từ
+   * OCR giấy tờ) chạy chung một transaction với phần của nó: fail ở đâu là rollback TẤT CẢ.
+   * Giữ nguyên luật ADR 0008 (knockback + duyệt lại + đồng bộ listing) — không module nào
+   * được chép lại luật này.
+   */
+  async applyUpdate(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+    userId: string,
+    dto: UpdateVehicleDto,
+  ): Promise<void> {
+    const current = await tx.vehicle.findFirst({
       where: { id, tenantId, deletedAt: null },
       select: SENSITIVE_SELECT,
     });
@@ -416,7 +435,7 @@ export class VehiclesService {
 
     // Đổi mã thì mã mới phải còn trống trong gian hàng (unique DB là chốt chặn cuối).
     if (dto.code !== undefined && dto.code !== current.code) {
-      await this.assertCodeFree(tenantId, dto.code);
+      await this.assertCodeFree(tenantId, dto.code, tx);
     }
 
     // ADR 0008: xe đang công khai mà sửa trường nhạy cảm (giá/biển số/loại/ảnh…) phải hạ về
@@ -433,23 +452,13 @@ export class VehiclesService {
       ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
     };
 
-    if (!knockBack) {
-      // Sửa xe (kể cả sửa tại chỗ xe đang công khai) → đồng bộ snapshot public_listings (ADR 0008).
-      await this.prisma.$transaction(async (tx) => {
-        await tx.vehicle.update({ where: { id: current.id }, data });
-        await this.replaceMedia(tx, current.id, tenantId, dto);
-        await this.listings.syncFromVehicle(current.id, tx);
-      });
-      return this.getOne(tenantId, current.id);
-    }
-
-    await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.vehicle.update({
-        where: { id: current.id },
-        data,
-        select: DETAIL_SELECT,
-      });
-      await this.replaceMedia(tx, current.id, tenantId, dto);
+    const updated = await tx.vehicle.update({
+      where: { id: current.id },
+      data,
+      select: DETAIL_SELECT,
+    });
+    await this.replaceMedia(tx, current.id, tenantId, dto);
+    if (knockBack) {
       await this.createVehicleApprovalTask(tx, {
         vehicleId: current.id,
         tenantId,
@@ -458,10 +467,9 @@ export class VehiclesService {
         snapshot: updated,
         action: 'resubmit',
       });
-      // Trường nhạy cảm đổi → xe về pending → listing ẩn (ADR 0008 §2).
-      await this.listings.syncFromVehicle(current.id, tx);
-    });
-    return this.getOne(tenantId, current.id);
+    }
+    // Mọi sửa xe → đồng bộ snapshot public_listings; nhạy cảm đổi → pending → listing ẩn (ADR 0008).
+    await this.listings.syncFromVehicle(current.id, tx);
   }
 
   /** Giá & chính sách của một xe — nguồn hiệu lực + bản gian hàng để đối chiếu/đặt lại. */
@@ -783,8 +791,12 @@ export class VehiclesService {
     return { id: current.id };
   }
 
-  private async assertCodeFree(tenantId: string, code: string): Promise<void> {
-    const clash = await this.prisma.vehicle.findFirst({
+  private async assertCodeFree(
+    tenantId: string,
+    code: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<void> {
+    const clash = await db.vehicle.findFirst({
       where: { tenantId, code, deletedAt: null },
       select: { id: true },
     });

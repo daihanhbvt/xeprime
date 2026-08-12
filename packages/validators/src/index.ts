@@ -13,6 +13,7 @@ import {
   SERVICE_TYPE_VALUES,
   TENANT_TYPE_VALUES,
   TRANSMISSION_TYPE_VALUES,
+  VEHICLE_DOCUMENT_TYPE_VALUES,
   VEHICLE_FEATURE_KEYS,
   VEHICLE_FINANCE_INTEREST_METHOD_VALUES,
   VEHICLE_OPERATION_STATUS_VALUES,
@@ -284,6 +285,31 @@ export const vehicleSourceFormSchema = yup.object({
 });
 
 export type VehicleSourceFormValues = yup.InferType<typeof vehicleSourceFormSchema>;
+
+/**
+ * Metadata giấy tờ xe (Wave 5) — nhập tay hoặc chỉnh sau OCR. Mọi trường tuỳ chọn
+ * (giấy tờ không bắt buộc); ràng buộc ngày ở backend là lớp chặn thật.
+ */
+export const vehicleDocumentFormSchema = yup.object({
+  type: yup.string().oneOf(VEHICLE_DOCUMENT_TYPE_VALUES).required('Chọn loại giấy tờ'),
+  customTypeName: yup
+    .string()
+    .trim()
+    .max(160)
+    .default('')
+    .when('type', { is: 'other', then: (s) => s.required('Nhập tên loại giấy tờ') }),
+  documentNumber: optionalText(120),
+  holderName: optionalText(160),
+  holderAddress: optionalText(255),
+  plateNumber: optionalText(50),
+  chassisNumber: optionalText(80),
+  engineNumber: optionalText(80),
+  issuedAt: optionalDate,
+  expiresAt: optionalDate,
+  notes: optionalText(4000),
+});
+
+export type VehicleDocumentFormValues = yup.InferType<typeof vehicleDocumentFormSchema>;
 
 /**
  * Khoảng thuê. Kiểm tra `returnAt > pickupAt` ở đây chỉ để báo lỗi sớm — ràng buộc thật

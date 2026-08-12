@@ -177,7 +177,7 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(screen.getByText('Không tìm thấy xe')).toBeTruthy();
   });
 
-  it('nạp đúng header, trạng thái và sáu tab; Nguồn xe mở (Wave 4), hai tab tương lai bị khoá', () => {
+  it('nạp đúng header, trạng thái và sáu tab; Nguồn xe (Wave 4) + Giấy tờ (Wave 5) mở, Bảo dưỡng khoá', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: vehicle.name })).toBeTruthy();
     expect(screen.getByDisplayValue(vehicle.name)).toBeTruthy();
@@ -188,7 +188,9 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(
       screen.getByRole('tab', { name: 'Nguồn xe & tài chính' }).getAttribute('aria-disabled'),
     ).not.toBe('true');
-    expect(screen.getByRole('tab', { name: 'Giấy tờ' }).getAttribute('aria-disabled')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Giấy tờ' }).getAttribute('aria-disabled')).not.toBe(
+      'true',
+    );
     expect(screen.getByRole('tab', { name: 'Bảo dưỡng & KM' }).getAttribute('aria-disabled')).toBe(
       'true',
     );

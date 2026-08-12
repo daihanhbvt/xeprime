@@ -148,6 +148,9 @@ model Tenant {
   rentalPolicies RentalPolicy[]
   vehicleSourceDetails VehicleSourceDetail[]
   vehiclePrivateFiles VehiclePrivateFile[]
+  vehicleDocuments VehicleDocument[]
+  vehicleDocumentVersions VehicleDocumentVersion[]
+  vehicleDocumentOcrJobs VehicleDocumentOcrJob[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -538,6 +541,9 @@ model Vehicle {
   rentalPolicy RentalPolicy?
   sourceDetail VehicleSourceDetail?
   privateFiles VehiclePrivateFile[]
+  documents    VehicleDocument[]
+  documentVersions VehicleDocumentVersion[]
+  documentOcrJobs  VehicleDocumentOcrJob[]
 
   @@unique([tenantId, code])
   /// Mục tiêu cho composite FK (vehicle_id, tenant_id) của các bảng con nhạy cảm — DB tự chặn
@@ -949,9 +955,120 @@ model VehiclePrivateFile {
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /// 1:1 — một file chỉ thuộc một phiên bản giấy tờ (unique private_file_id — Wave 5.1).
+  documentVersion VehicleDocumentVersion?
 
+  /// Mục tiêu cho composite FK "file cùng tenant + cùng xe" từ vehicle_document_versions (Wave 5.1).
+  @@unique([id, tenantId, vehicleId])
   @@index([tenantId, vehicleId, purpose, status])
   @@map("vehicle_private_files")
+}
+
+/// Giấy tờ xe (Wave 5) — cà vẹt / đăng kiểm / bảo hiểm / khác. docs/design/12 §8.
+///
+/// Giấy tờ là TUỲ CHỌN; hết hạn chỉ CẢNH BÁO — không cột nào ở đây được phép ảnh hưởng
+/// operation/public status của xe. Trạng thái "sắp hết hạn" SUY từ `expires_at` + ngưỡng
+/// cấu hình tenant (không lưu). File nằm ở `vehicle_private_files` (purpose
+/// `vehicle_document`) qua bảng phiên bản — thay file là THÊM version, không mất lịch sử.
+///
+/// `row_version` cho optimistic concurrency: update phải nộp version đang thấy, lệch → 409.
+/// Composite FK tenant↔xe viết tay ở migration (cùng lý do Wave 4.1).
+model VehicleDocument {
+  id             String    @id @db.Char(26)
+  tenantId       String    @map("tenant_id") @db.Char(26)
+  vehicleId      String    @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → VehicleDocumentType
+  type           String    @db.VarChar(30)
+  /// Chỉ có nghĩa khi type = other ("Phù hiệu xe hợp đồng"…) — CHECK ở migration.
+  customTypeName String?   @map("custom_type_name") @db.VarChar(160)
+  documentNumber String?   @map("document_number") @db.VarChar(120)
+  holderName     String?   @map("holder_name") @db.VarChar(160)
+  holderAddress  String?   @map("holder_address") @db.VarChar(255)
+  plateNumber    String?   @map("plate_number") @db.VarChar(50)
+  chassisNumber  String?   @map("chassis_number") @db.VarChar(80)
+  engineNumber   String?   @map("engine_number") @db.VarChar(80)
+  issuedAt       DateTime? @map("issued_at") @db.Date
+  /// NULL = không thời hạn (cà vẹt).
+  expiresAt      DateTime? @map("expires_at") @db.Date
+  notes          String?   @db.Text
+  activeVersionId String?  @unique @map("active_version_id") @db.Char(26)
+  rowVersion     Int       @default(1) @map("row_version")
+  archivedAt     DateTime? @map("archived_at") @db.Timestamptz(3)
+  createdBy      String?   @map("created_by") @db.Char(26)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle  Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  versions VehicleDocumentVersion[] @relation("document_versions")
+  /// FK thật là composite (active_version_id, id) → versions(id, document_id) viết tay ở
+  /// migration; ON DELETE NO ACTION (Wave 5.1) — SET NULL trên FK composite sẽ null cả PK.
+  activeVersion VehicleDocumentVersion? @relation("document_active_version", fields: [activeVersionId], references: [id], onDelete: NoAction)
+  ocrJobs  VehicleDocumentOcrJob[]
+
+  @@index([tenantId, vehicleId, type])
+  @@map("vehicle_documents")
+}
+
+/// Một lần tải file cho một giấy tờ — lịch sử giữ đủ, bản đang dùng trỏ từ
+/// `vehicle_documents.active_version_id`. `version` tăng dần trong một giấy tờ.
+model VehicleDocumentVersion {
+  id            String    @id @db.Char(26)
+  tenantId      String    @map("tenant_id") @db.Char(26)
+  vehicleId     String    @map("vehicle_id") @db.Char(26)
+  documentId    String    @map("document_id") @db.Char(26)
+  /// Unique (Wave 5.1): một file riêng tư chỉ gắn được vào MỘT phiên bản. Kèm composite FK
+  /// (private_file_id, tenant_id, vehicle_id) → vehicle_private_files viết tay ở migration —
+  /// DB tự chặn version trỏ tới file của tenant/xe khác.
+  privateFileId String    @unique @map("private_file_id") @db.Char(26)
+  version       Int
+  uploadedBy    String?   @map("uploaded_by") @db.Char(26)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  archivedAt    DateTime? @map("archived_at") @db.Timestamptz(3)
+
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  document    VehicleDocument     @relation("document_versions", fields: [documentId], references: [id], onDelete: Cascade)
+  privateFile VehiclePrivateFile  @relation(fields: [privateFileId], references: [id])
+  activeOf    VehicleDocument?    @relation("document_active_version")
+  ocrJobs     VehicleDocumentOcrJob[]
+
+  @@unique([documentId, version])
+  @@index([tenantId, vehicleId])
+  @@map("vehicle_document_versions")
+}
+
+/// Một lần chạy OCR trên một phiên bản giấy tờ. Kết quả LUÔN là bản nháp chờ đối soát —
+/// không code nào được ghi thẳng vào xe từ đây (docs §2: "OCR không tự ghi đè dữ liệu xe").
+/// `extracted_fields_json`: { [field]: { value, confidence?, evidence? } } — chỉ trường có
+/// bằng chứng; KHÔNG lưu nguyên payload thô của provider.
+model VehicleDocumentOcrJob {
+  id                String    @id @db.Char(26)
+  tenantId          String    @map("tenant_id") @db.Char(26)
+  vehicleId         String    @map("vehicle_id") @db.Char(26)
+  documentId        String    @map("document_id") @db.Char(26)
+  documentVersionId String    @map("document_version_id") @db.Char(26)
+  /// @xeprime/types → VehicleDocumentOcrStatus
+  status            String    @default("processing") @db.VarChar(30)
+  provider          String    @db.VarChar(60)
+  extractedFields   Json      @default("{}") @map("extracted_fields_json") @db.JsonB
+  /// Độ tin cậy tổng (0–100) do provider trả — null nếu provider không có.
+  confidence        Int?
+  errorCode         String?   @map("error_code") @db.VarChar(60)
+  attemptCount      Int       @default(1) @map("attempt_count")
+  createdBy         String?   @map("created_by") @db.Char(26)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  completedAt       DateTime? @map("completed_at") @db.Timestamptz(3)
+
+  tenant   Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle  Vehicle                @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  document VehicleDocument        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version  VehicleDocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+
+  /// Partial unique viết tay (Wave 5.1): tối đa MỘT job `processing` trên một giấy tờ —
+  /// `vehicle_document_ocr_jobs_one_processing_key` (Prisma không diễn đạt được WHERE).
+  @@index([tenantId, vehicleId, documentId, createdAt])
+  @@map("vehicle_document_ocr_jobs")
 }
 
 /// Bảng chiếm dụng lịch xe — ADR 0006.

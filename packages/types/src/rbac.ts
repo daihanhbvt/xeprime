@@ -86,6 +86,20 @@ export const PERMISSION = {
   VEHICLE_SUBMIT_PUBLIC: 'vehicles.submit_public',
   VEHICLE_BLOCK_SCHEDULE: 'vehicles.block_schedule',
 
+  // Giấy tờ xe (Wave 5/5.1 — docs/design/12 §10). Bốn mức tách bạch có chủ đích:
+  // staff vận hành thấy TRẠNG THÁI nhưng không mặc định thấy PII hay mở được FILE nhạy cảm.
+  /** Xem TRẠNG THÁI giấy tờ (loại/hạn/cảnh báo) — KHÔNG thấy PII, không mở được file. */
+  VEHICLE_DOCUMENT_VIEW: 'vehicles.documents.view',
+  /**
+   * Xem metadata nhạy cảm của giấy tờ (tên/địa chỉ chủ xe, số giấy tờ, số khung/máy…).
+   * KHÔNG tự động kèm quyền mở file — file là mức riêng bên dưới.
+   */
+  VEHICLE_DOCUMENT_DETAIL_VIEW: 'vehicles.documents.view_details',
+  /** Mở/tải file giấy tờ riêng tư — cùng kiểu tách như `platform.customers.view_pii`. */
+  VEHICLE_DOCUMENT_FILE_VIEW: 'vehicles.documents.view_files',
+  /** Thêm/sửa/lưu trữ giấy tờ, tải file, chạy và áp kết quả OCR. */
+  VEHICLE_DOCUMENT_MANAGE: 'vehicles.documents.manage',
+
   // Đơn đặt xe / đơn thuê
   BOOKING_REQUEST_VIEW: 'booking_requests.view',
   BOOKING_REQUEST_APPROVE: 'booking_requests.approve',
@@ -159,6 +173,10 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.VEHICLE_UPDATE,
       PERMISSION.VEHICLE_SUBMIT_PUBLIC,
       PERMISSION.VEHICLE_BLOCK_SCHEDULE,
+      PERMISSION.VEHICLE_DOCUMENT_VIEW,
+      PERMISSION.VEHICLE_DOCUMENT_DETAIL_VIEW,
+      PERMISSION.VEHICLE_DOCUMENT_FILE_VIEW,
+      PERMISSION.VEHICLE_DOCUMENT_MANAGE,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_REQUEST_APPROVE,
       PERMISSION.BOOKING_VIEW,
@@ -176,6 +194,8 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
     [TENANT_ROLE.SHOP_STAFF]: [
       PERMISSION.TENANT_VIEW,
       PERMISSION.VEHICLE_VIEW,
+      // Chỉ TRẠNG THÁI giấy tờ (còn hạn/sắp hết hạn) — không mở được file nhạy cảm (docs §10).
+      PERMISSION.VEHICLE_DOCUMENT_VIEW,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_VIEW,
       PERMISSION.BOOKING_CREATE,
@@ -187,6 +207,7 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
     [TENANT_ROLE.SHOP_VIEWER]: [
       PERMISSION.TENANT_VIEW,
       PERMISSION.VEHICLE_VIEW,
+      PERMISSION.VEHICLE_DOCUMENT_VIEW,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_VIEW,
       PERMISSION.CALENDAR_VIEW,

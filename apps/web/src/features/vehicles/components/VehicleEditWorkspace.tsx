@@ -36,6 +36,7 @@ import {
   StatusSection,
   VEHICLE_SECTIONS,
 } from './VehicleFormSections';
+import { VehicleDocumentsWorkspace } from '@/features/vehicle-documents/components/VehicleDocumentsWorkspace';
 import { VehicleSourceWorkspace } from './VehicleSourceWorkspace';
 import styles from './VehicleEditWorkspace.module.css';
 
@@ -85,7 +86,8 @@ const MEDIA_FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
 const ADVANCED_SPEC_FIELDS = VEHICLE_SECTIONS.find((section) => section.key === 'specs')!.fields;
 
 function parseTab(value: string | null): WorkspaceTab {
-  if (value === 'media' || value === 'pricing' || value === 'source') return value;
+  if (value === 'media' || value === 'pricing' || value === 'source' || value === 'documents')
+    return value;
   return 'information';
 }
 
@@ -215,8 +217,8 @@ export function VehicleEditWorkspace({
     },
     {
       key: 'documents',
-      label: <span title="Sẽ được kích hoạt ở Wave 5">Giấy tờ</span>,
-      disabled: true,
+      label: 'Giấy tờ',
+      children: <VehicleDocumentsWorkspace vehicle={vehicle} />,
     },
     {
       key: 'maintenance',

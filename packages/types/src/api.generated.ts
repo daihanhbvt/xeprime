@@ -694,6 +694,145 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vehicles/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách TRẠNG THÁI giấy tờ của một xe (summary — không PII) */
+        get: operations["VehicleDocumentsController_list"];
+        put?: never;
+        /** Tạo hồ sơ giấy tờ (metadata — file gắn sau) */
+        post: operations["VehicleDocumentsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chi tiết metadata một giấy tờ (không kèm lịch sử file/OCR) */
+        get: operations["VehicleDocumentsController_getOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cập nhật metadata giấy tờ (optimistic concurrency) */
+        patch: operations["VehicleDocumentsController_update"];
+        trace?: never;
+    };
+    "/vehicles/{id}/documents/{documentId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lịch sử phiên bản file của một giấy tờ */
+        get: operations["VehicleDocumentsController_listVersions"];
+        put?: never;
+        /** Xác minh object rồi gắn thành phiên bản mới (bản cũ vào lịch sử) */
+        post: operations["VehicleDocumentsController_attach"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/documents/{documentId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lưu trữ giấy tờ (không xoá lịch sử/file) */
+        post: operations["VehicleDocumentsController_archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/documents/{documentId}/versions/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Presign upload file giấy tờ vào kho riêng tư (Wave 4.1) */
+        post: operations["VehicleDocumentsController_presign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/documents/{documentId}/versions/{versionId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Phát signed URL ngắn hạn xem/tải một phiên bản giấy tờ */
+        get: operations["VehicleDocumentsController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/documents/{documentId}/ocr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Yêu cầu trích xuất OCR (chưa cấu hình provider → 503 kiểm soát) */
+        post: operations["VehicleDocumentsController_requestOcr"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/documents/{documentId}/ocr/{jobId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Áp các trường OCR đã chọn (fields rỗng = bỏ qua/đã đối soát) */
+        post: operations["VehicleDocumentsController_applyOcr"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/platform/plans": {
         parameters: {
             query?: never;
@@ -2128,7 +2267,7 @@ export interface components {
             tenantRole?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer" | null;
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii")[];
         };
         NotificationDto: {
             id: string;
@@ -2996,6 +3135,126 @@ export interface components {
              *     ]
              */
             features?: string[];
+        };
+        VehicleDocumentSummaryDto: {
+            id: string;
+            /** @enum {string} */
+            type: "registration" | "inspection" | "insurance" | "other";
+            customTypeName?: string | null;
+            /** @description YYYY-MM-DD — null = không thời hạn; cần cho cảnh báo hết hạn */
+            expiresAt?: string | null;
+            presentation: string;
+            warningDays?: number | null;
+            /** @description Giấy tờ đã có file đính kèm chưa */
+            hasFile: boolean;
+            activeVersionId?: string | null;
+            /** @description ISO */
+            updatedAt: string;
+        };
+        VehicleDocumentListDto: {
+            data: components["schemas"]["VehicleDocumentSummaryDto"][];
+        };
+        VehicleDocumentFileDto: {
+            id: string;
+            name: string;
+            mimeType?: string | null;
+            size?: number | null;
+        };
+        VehicleDocumentVersionDto: {
+            id: string;
+            version: number;
+            file: components["schemas"]["VehicleDocumentFileDto"];
+            /** @description ISO */
+            uploadedAt: string;
+            /** @description ISO — đã bị thay thế lúc */
+            archivedAt?: string | null;
+        };
+        VehicleDocumentDetailDto: {
+            id: string;
+            /** @enum {string} */
+            type: "registration" | "inspection" | "insurance" | "other";
+            customTypeName?: string | null;
+            /** @description YYYY-MM-DD — null = không thời hạn; cần cho cảnh báo hết hạn */
+            expiresAt?: string | null;
+            presentation: string;
+            warningDays?: number | null;
+            /** @description Giấy tờ đã có file đính kèm chưa */
+            hasFile: boolean;
+            activeVersionId?: string | null;
+            /** @description ISO */
+            updatedAt: string;
+            documentNumber?: string | null;
+            holderName?: string | null;
+            holderAddress?: string | null;
+            plateNumber?: string | null;
+            chassisNumber?: string | null;
+            engineNumber?: string | null;
+            /** @description YYYY-MM-DD */
+            issuedAt?: string | null;
+            notes?: string | null;
+            /** @description Optimistic concurrency — nộp lại khi update */
+            rowVersion: number;
+            activeVersion?: components["schemas"]["VehicleDocumentVersionDto"] | null;
+        };
+        VehicleDocumentVersionListDto: {
+            data: components["schemas"]["VehicleDocumentVersionDto"][];
+        };
+        SaveVehicleDocumentDto: {
+            /** @enum {string} */
+            type: "registration" | "inspection" | "insurance" | "other";
+            /** @description Chỉ cho loại `other` */
+            customTypeName?: string | null;
+            documentNumber?: string | null;
+            holderName?: string | null;
+            holderAddress?: string | null;
+            plateNumber?: string | null;
+            chassisNumber?: string | null;
+            engineNumber?: string | null;
+            /** @description YYYY-MM-DD */
+            issuedAt?: string | null;
+            /** @description YYYY-MM-DD */
+            expiresAt?: string | null;
+            notes?: string | null;
+            /** @description Bắt buộc khi update */
+            expectedRowVersion?: number | null;
+        };
+        PresignVehicleDocumentDto: {
+            /** @description Tên file gốc (chỉ để hiển thị) */
+            fileName: string;
+            /** @enum {string} */
+            contentType: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+            /** @description Dung lượng (byte), tối đa 10485760 */
+            fileSize: number;
+        };
+        AttachDocumentVersionDto: {
+            /** @description ID file riêng tư do server phát (ULID) */
+            fileId: string;
+        };
+        VehicleDocumentOcrFieldDto: {
+            /** @enum {string} */
+            field: "holderName" | "holderAddress" | "plateNumber" | "chassisNumber" | "engineNumber" | "issuedAt" | "expiresAt" | "documentNumber";
+            /** @description Giá trị nhận dạng (đã chuẩn hoá) */
+            value: string;
+            /** @description Độ tin cậy 0–100 */
+            confidence?: number | null;
+            /** @description Bằng chứng nguồn */
+            evidence?: string | null;
+        };
+        VehicleDocumentOcrJobDto: {
+            id: string;
+            /** @enum {string} */
+            status: "processing" | "needs_review" | "unreadable" | "failed" | "reviewed";
+            provider: string;
+            confidence?: number | null;
+            fields: components["schemas"]["VehicleDocumentOcrFieldDto"][];
+            errorCode?: string | null;
+            /** @description ISO */
+            createdAt: string;
+            completedAt?: string | null;
+        };
+        ApplyOcrFieldsDto: {
+            fields: ("holderName" | "holderAddress" | "plateNumber" | "chassisNumber" | "engineNumber" | "issuedAt" | "expiresAt" | "documentNumber")[];
+            applyPlateToVehicle?: boolean;
         };
         PlanDto: {
             id: string;
@@ -5668,6 +5927,266 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VehicleDetailDto"];
+                };
+            };
+        };
+    };
+    VehicleDocumentsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentListDto"];
+                };
+            };
+        };
+    };
+    VehicleDocumentsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveVehicleDocumentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentDetailDto"];
+                };
+            };
+        };
+    };
+    VehicleDocumentsController_getOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentDetailDto"];
+                };
+            };
+        };
+    };
+    VehicleDocumentsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveVehicleDocumentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentDetailDto"];
+                };
+            };
+        };
+    };
+    VehicleDocumentsController_listVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentVersionListDto"];
+                };
+            };
+        };
+    };
+    VehicleDocumentsController_attach: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachDocumentVersionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentDetailDto"];
+                };
+            };
+        };
+    };
+    VehicleDocumentsController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    VehicleDocumentsController_presign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignVehicleDocumentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceContractPresignDto"];
+                };
+            };
+        };
+    };
+    VehicleDocumentsController_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+                versionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceContractDownloadDto"];
+                };
+            };
+        };
+    };
+    VehicleDocumentsController_requestOcr: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentOcrJobDto"];
+                };
+            };
+        };
+    };
+    VehicleDocumentsController_applyOcr: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+                jobId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplyOcrFieldsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentDetailDto"];
                 };
             };
         };
