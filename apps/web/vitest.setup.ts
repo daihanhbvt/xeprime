@@ -1,4 +1,15 @@
+import { configure } from '@testing-library/react';
 import { vi } from 'vitest';
+
+/**
+ * `testTimeout` ở vitest.config.ts chỉ nới đồng hồ CỦA CẢ TEST; `findBy*`/`waitFor` có đồng hồ
+ * RIÊNG của testing-library và vẫn đứng ở mặc định 1s. Đó là khe hở còn lại: khi chạy cả bộ
+ * song song, `findByRole(..., { name })` phải tính accessible name trên cây AntD lớn ở mỗi vòng
+ * poll và chạm 1s vì MÁY BẬN, không phải vì component sai — cùng test đó xanh khi chạy riêng.
+ *
+ * Nới một lần ở đây, đúng lý do đã ghi cho `testTimeout`, thay vì bẻ cong từng test.
+ */
+configure({ asyncUtilTimeout: 5_000 });
 
 /**
  * jsdom không có `window.matchMedia`, còn Ant Design gọi nó ở khá nhiều component

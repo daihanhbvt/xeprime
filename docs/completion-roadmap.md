@@ -4,7 +4,7 @@
 > `docs/decisions/`, `docs/CODEMAP.md`). Khi **đóng xong một phase**, cập nhật bảng §2 + mục phase
 > tương ứng ở đây — đừng để tiến độ chỉ nằm trong trí nhớ hay plan file global `~/.claude/plans/`.
 >
-> Cập nhật gần nhất: **04/08/2026**.
+> Cập nhật gần nhất: **13/08/2026** — đóng epic **Vehicle 360** (§2.1).
 
 ---
 
@@ -35,6 +35,7 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 | 7 | Admin platform đầy đủ | ✅ **Lõi xong 31/07 (commit `262801b`)** — approval · gian hàng khoá/mở · dashboard · audit-view · nhân sự · gói-hạn (ADR 0010). ✅ **04/08: 3 màn giám sát** all-vehicles / all-bookings / all-customers (CHƯA commit). Còn lại §11.1: **support tickets · invoice cho gói** |
 | 8 | Migration từ Firestore + chạy song song | ❌ Sau |
 | 9 | QA / hardening / production | ❌ Sau |
+| — | **Epic Vehicle 360** (ngoài lịch phase) | ✅ **Xong 13/08/2026** — 8 wave, Release Gate PASS. Chi tiết §2.1 |
 
 > **Việc chèn ngoài phase (29–30/07):** đặt xe passwordless + đăng nhập SĐT + điều chỉnh UX là
 > feature do user yêu cầu, KHÔNG nằm trong lịch phase — làm xong nhưng **milestone chưa nhích**
@@ -124,9 +125,75 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 > **không thấy lý do ẩn** (chỉ nằm trong `audit_logs`) → nên hiện lý do trên phiếu duyệt ·
 > `use-url-filters`/`pagination` mới dùng ở 3 slice mới, 10 hook + 19 service cũ vẫn giữ bản copy
 > (dời dần khi chạm vào, đừng sửa hàng loạt trong diff không liên quan).
->
-> ➡️ Việc kế tiếp: **commit khối 04/08** rồi chọn: nốt §11.1 (**support tickets** · **invoice cho
-> gói**) · retrofit gate SĐT (§5) · Phase 8 (migration Firestore) · Phase 9 (QA/hardening).
+
+---
+
+## 2.1 Epic Vehicle 360 — ĐÓNG 13/08/2026
+
+Epic ngoài lịch phase (user yêu cầu, chạy sau Phase 7): biến hồ sơ xe từ form CRUD thành trung tâm
+quản lý vòng đời tài sản. Đặc tả mục tiêu ở [`docs/design/12_VEHICLE_360_MANAGEMENT.md`](design/12_VEHICLE_360_MANAGEMENT.md);
+**ranh giới đã-làm / một-phần / hoãn ở §0 của chính file đó**. Trạng thái nghiệp vụ đối chiếu code ở
+[`docs/design-briefs/04_FLEET_MANAGEMENT.md`](design-briefs/04_FLEET_MANAGEMENT.md) §2.4.
+
+Làm theo 8 wave (commit `f92d8ce` → `3f4bdce` trên `develop`).
+
+**Route đã xong**
+
+| Route | Nội dung |
+| --- | --- |
+| `/manage/vehicles` | Lưới thẻ xe ở MỌI viewport (bỏ hẳn bảng), thẻ mang cảnh báo + KM từ server |
+| `/manage/vehicles/new` | Wizard **4 bước** (`Thông số` gộp vào workspace sửa — có chủ đích), lưu nháp |
+| `/manage/vehicles/:id` | Hồ sơ 360: chỉ số, việc cần làm, đơn sắp tới/gần đây, thẻ giấy tờ/nguồn/bảo dưỡng theo quyền |
+| `/manage/vehicles/:id/edit?tab=` | 6 tab một route: `information` · `media` · `pricing` · `source` · `documents` · `maintenance`; tab lạ rơi về `information` |
+| `/manage/vehicles/:id/pricing` | Giá & chính sách theo xe (cũng nhúng làm tab `pricing`) |
+| `/manage/maintenance` | Trung tâm bảo dưỡng toàn đội xe + nhóm việc `Thiếu KM trả` |
+| `/manage/shop/policies` | Chính sách thuê mặc định của gian hàng |
+
+Bàn giao **không có route riêng**: vào từ drawer đơn thuê; việc tồn đọng vào từ Trung tâm bảo dưỡng.
+
+**Module backend đã xong** — `modules/vehicles/vehicle-alerts.service.ts` (nguồn DUY NHẤT của cảnh
+báo) · `vehicle-source.service.ts` · `vehicle-contracts.service.ts` (lõi file riêng tư dùng chung) ·
+`modules/vehicles/documents/` · `modules/vehicles/maintenance/` (+ `maintenance-board.controller.ts`) ·
+`modules/bookings/handovers/` (+ `handover-queue.controller.ts`) · `modules/pricing/shop-policies.controller.ts`.
+
+**Bảng mới** — `rental_policies` · `vehicle_source_details` · `vehicle_private_files` ·
+`vehicle_documents` (+`_versions`, +`_ocr_jobs`) · `vehicle_maintenance_profiles` ·
+`vehicle_odometer_readings` · `vehicle_maintenance_records` (+`_attachments`) · `vehicle_handovers`
+(+`_photos`). Schema lên **52 model / 29 migration**.
+
+**Quyền mới** — giấy tờ 4 mức (`vehicles.documents.view` · `view_details` · `view_files` · `manage`) ·
+bảo dưỡng/KM 5 mức (`vehicles.maintenance.view` · `manage` · `view_cost` · `view_files` ·
+`vehicles.odometer.correct` + `odometer.decrease`) · bàn giao 4 mức (`handovers.view` · `manage` ·
+`confirm` · `view_files`). Tách theo **mức thiệt hại nếu bị lạm dụng**, giữ một quyền không kéo theo
+quyền kế tiếp. Bảng "quyền nào lộ dữ liệu gì": brief 04 §4.1.
+
+**Luồng đã chạy end-to-end** — tạo/nối lại nháp → gửi duyệt · sửa từng tab độc lập (tab này không
+ghi đè field của tab kia, field không gửi không bị null hoá) · 4 hình thức nguồn xe + hợp đồng riêng
+tư (signed URL ngắn hạn) · giấy tờ có phiên bản/hạn/lưu trữ · cấu hình + ghi phiếu bảo dưỡng (chiếm
+lịch thật qua `OccupancyService`, ADR 0006) · chỉnh KM có lý do + audit, chống tụt KM âm thầm · bàn
+giao nhận/trả (xác nhận **idempotent**, `rowVersion` chống ghi đè) · hàng đợi `Thiếu KM trả` (việc và
+số đếm dùng CHUNG một vị từ nên biến mất cùng lúc) · cảnh báo xe **một phép tính, hai bề mặt**.
+
+**Kết quả checkpoint (Release Gate 13/08/2026)** — API **190/190** test (10 suite, chạy trên
+PostgreSQL thật) · web **1078/1078** (63 file) · `@xeprime/types` **21/21** · typecheck api + web sạch ·
+`prisma validate` + `migrate status` sạch (**không cần migration mới**) · `git diff --check` sạch.
+Hai lỗi tìm thấy và đã sửa: lệch design token `--xp-focus-ring-width` (`tokens.css` 3px ↔ `theme.ts`
+2px từ wave 3) và một test giấy tờ flaky do `asyncUtilTimeout` của testing-library còn ở mặc định 1s.
+**Không có visual QA/screenshot** — layout xác minh bằng test + đọc code.
+
+> ⚠️ **Bẫy CI:** các spec API của epic này **tự bỏ qua trong im lặng khi không kết nối được
+> PostgreSQL** và vẫn báo xanh. Chạy `pnpm db:up` trước, hoặc cho CI fail-fast khi thiếu DB — nếu
+> không, cả mảng backend Vehicle 360 sẽ xanh giả.
+
+**Hoãn có chủ đích (§5)** — provider OCR thật · chữ ký điện tử · trích nợ ngân hàng tự động ·
+kế toán/thuế · bản đồ tự tính khoảng cách · tự động chặn/ẩn xe vì giấy tờ hết hạn · phụ phí quyết
+toán chưa nối Finance · trang `/manage/finance/vehicle-obligations`.
+
+➡️ **Epic kế tiếp đề xuất: nối quyết toán đơn thuê vào Finance** — quá giờ, phạt/bồi thường, nhiên
+liệu và nghĩa vụ nguồn xe hiện ghi nhận được nhưng **không chảy vào phiếu thu/công nợ**. Đây là chỗ
+đứt duy nhất còn lại giữa vận hành (đã đủ) và tiền (đã có module). Sau đó chọn: nốt §11.1 (**support
+tickets** · **invoice cho gói**) · retrofit gate SĐT (§5) · Phase 8 (migration Firestore) · Phase 9
+(QA/hardening).
 
 ---
 
@@ -167,12 +234,14 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 
 ---
 
-## 4. Việc kế tiếp — Phase 6: Finance / Thu-Chi / Công nợ / Hợp đồng
+## 4. Phase 6 — Finance / Thu-Chi / Công nợ / Hợp đồng (ĐÃ XONG, giữ làm phạm vi tham chiếu)
 
-Nguồn: build plan §10 + `docs/xeprime_database_design.md` (phần finance). **Bảng chưa tồn tại →
-cần migration viết tay** (mẫu `prisma/migrations/*_init`). ID char(26) ULID · tiền `Decimal(14,2)` →
-string JSON (ADR 0007) · status String + union `@xeprime/types` (ADR 0005) · mỗi bảng dẫn xuất 1
-writer.
+> **Phase 6 đã đóng** (§2). Mục này giữ lại vì nó là bản mô tả phạm vi Finance đầy đủ nhất — dùng khi
+> nối quyết toán đơn thuê vào Finance (epic kế tiếp, §2.1). "Việc kế tiếp" thật sự ở §2.1.
+
+Nguồn: build plan §10 + `docs/xeprime_database_design.md` (phần finance). ID char(26) ULID · tiền
+`Decimal(14,2)` → string JSON (ADR 0007) · status String + union `@xeprime/types` (ADR 0005) · mỗi
+bảng dẫn xuất 1 writer.
 
 ### Backend (module mới)
 | Module | API |
@@ -184,8 +253,8 @@ writer.
 
 Bảng: `finance_categories`, `receipts`, `receipt_attachments`, `payments`, `debts`, `contracts`.
 
-### Frontend (thay 7 page stub 5-dòng đang có bằng bản thật)
-`app/(manage)/manage/{finance,receipts,debts}` hiện là placeholder. Cần: Finance dashboard
+### Frontend (đã thay page stub bằng bản thật)
+`app/(manage)/manage/{finance,receipts,debts}` nay là page thật. Phạm vi đã làm: Finance dashboard
 (doanh thu/cọc/chi phí/lợi nhuận xe), Thu-Chi (thêm/duyệt/huỷ phiếu), Công nợ, Contract view
 (xem/in/lưu ảnh). Phân trang/sort/filter server-side + states loading/rỗng/lỗi (quality bar).
 
@@ -204,12 +273,16 @@ chính khớp dữ liệu · in/xuất hợp đồng tối thiểu chạy.
 
 | Việc | Ghi chú |
 | --- | --- |
-| **Commit khối 04/08 (3 màn giám sát)** ⚠️ | Phase 7 lõi đã commit ở `262801b`. CHƯA commit: migration `add_platform_monitoring_indexes` (đã áp) + 5 permission + 3 module BE + 3 feature FE + `common/{mask,money}.ts` + `MaskedContact` + `USER_STATUS_META` + 4 spec mới. User tự commit (có thể tách: quyền+index / 3 slice / helper dùng chung). |
 | Trang khách hàng CỦA SHOP (`/manage/customers`) | Màn 04/08 là **của nền tảng** (`/manage/admin/customers`), không thay stub phía shop — shop cần danh sách khách RIÊNG của mình, làm ở phase liên quan |
 | Retrofit gate SĐT cho **mở shop** + **public xe** | Dùng lại `phone-verification` (purpose `shop_register`/`vehicle_public`), ngắn |
 | SMS OTP thật | Hiện `OTP_MODE=mock`. eSMS thật cần tài khoản riêng (key prod `vf3zone` ở Secret Manager, **không lấy về local được**) → set `OTP_MODE=esms` + `ESMS_*` |
 | Chat realtime | Bật sau cờ `FIRESTORE_ENABLED` + Firestore Security Rules + emulator test (ADR 0009) |
-| Upload ảnh R2 thật | Ảnh xe/đính kèm hiện nhập bằng URL; upload R2 là follow-up |
+| **Provider OCR thật** (Vehicle 360) | Khung điều phối + màn đối soát đã xong; chưa có provider nào cấu hình → endpoint trả **503 `OCR_NOT_CONFIGURED`**, người dùng nhập tay. Cắm provider = implement `VehicleDocumentOcrProvider` + đổi `useClass`, không phải sửa luồng |
+| **Quyết toán phụ phí chưa nối Finance** (Vehicle 360) | Quá giờ, phạt/bồi thường, nhiên liệu, nghĩa vụ nguồn xe ghi nhận được nhưng chưa thành phiếu thu/công nợ — xem epic kế tiếp §2.1 |
+| **Chưa có trang nghĩa vụ theo xe** | `/manage/finance/vehicle-obligations` (thiết kế §3.2) chưa dựng; cảnh báo "sắp tới kỳ thanh toán" đã có trên hồ sơ xe |
+| **Chưa có writer cho `blocked_range`** | `OCCUPANCY_SOURCE_TYPE` có 3 giá trị, `booking` + `maintenance` đã có writer; `blocked_range` và quyền `vehicles.block_schedule` vẫn treo — chủ xe chưa tự khoá lịch được |
+| `operationStatus = maintenance` đặt tay vẫn chỉ là nhãn | Chặn lịch thật đi qua **phiếu bảo dưỡng** (có occupancy). Nhãn đặt tay và availability có thể lệch nhau |
+| Rác R2 khi thay ảnh/file | Thay ảnh xe hoặc file riêng tư để lại object mồ côi — chưa có đường xoá |
 | Page stub `drivers`, `pickup-areas`, `customers`, `trash` | Vỏ 5-dòng, làm ở phase liên quan sau |
 
 ---

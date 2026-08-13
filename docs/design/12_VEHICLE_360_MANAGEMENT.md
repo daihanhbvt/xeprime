@@ -1,10 +1,63 @@
 # 12 — Vehicle 360 Management
 
-> **Loại tài liệu:** Target product & UX specification  
-> **Ngày chốt:** 2026-08-11  
-> **Trạng thái:** Accepted design direction — chưa phản ánh trạng thái code hiện tại  
-> **Phạm vi:** Quản lý xe của gian hàng, chính sách thuê, nguồn xe và nghĩa vụ tài chính, giấy tờ/OCR, bảo dưỡng/KM, các điểm nối với yêu cầu thuê và bàn giao  
-> **Đọc cùng:** [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md), [`05_RENTAL_OPERATIONS.md`](../design-briefs/05_RENTAL_OPERATIONS.md), [`06_FINANCE_OPERATIONS.md`](../design-briefs/06_FINANCE_OPERATIONS.md), [`07_INFORMATION_ARCHITECTURE.md`](07_INFORMATION_ARCHITECTURE.md), [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md), [`10_IMPLEMENTATION_CONSTRAINTS.md`](10_IMPLEMENTATION_CONSTRAINTS.md)
+> - **Loại tài liệu:** Target product & UX specification
+> - **Ngày chốt:** 2026-08-11 · **Đối chiếu code:** 2026-08-13
+> - **Trạng thái:** Accepted design direction — **phần lớn đã triển khai**; ranh giới đã-làm / làm-một-phần / hoãn ở [§0](#0-trạng-thái-triển-khai-đối-chiếu-code-13082026)
+> - **Phạm vi:** Quản lý xe của gian hàng, chính sách thuê, nguồn xe và nghĩa vụ tài chính, giấy tờ/OCR, bảo dưỡng/KM, các điểm nối với yêu cầu thuê và bàn giao
+> - **Đọc cùng:** [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md), [`05_RENTAL_OPERATIONS.md`](../design-briefs/05_RENTAL_OPERATIONS.md), [`06_FINANCE_OPERATIONS.md`](../design-briefs/06_FINANCE_OPERATIONS.md), [`07_INFORMATION_ARCHITECTURE.md`](07_INFORMATION_ARCHITECTURE.md), [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md), [`10_IMPLEMENTATION_CONSTRAINTS.md`](10_IMPLEMENTATION_CONSTRAINTS.md)
+
+---
+
+## 0. Trạng thái triển khai (đối chiếu code 13/08/2026)
+
+Phần còn lại của tài liệu giữ nguyên như **đặc tả mục tiêu**. Mục này nói **cái gì trong đó đã là code**.
+Khi hai bên lệch nhau, code thắng và mục này là chỗ ghi lại độ lệch.
+
+### 0.1 Đã triển khai
+
+| Vùng | Đã có | Nơi đọc |
+| --- | --- | --- |
+| Tạo xe | Wizard **4 bước** (`Cơ bản` · `Giá & chính sách` · `Hình ảnh` · `Xác nhận`), lưu nháp, gửi duyệt khi đủ điều kiện, checklist sau khi tạo | `apps/web/src/features/vehicles/components/{VehicleForm,VehicleWizard,VehicleFormSections,VehicleCreateSuccess}.tsx` |
+| Sửa xe | 6 tab trên một route, tab ở `?tab=`, chống mất dữ liệu chưa lưu, xác nhận sửa nhạy cảm trên xe public | `VehicleEditWorkspace.tsx` · `apps/web/src/constants/routes.ts` (`VEHICLE_EDIT_TAB`) |
+| Hồ sơ 360 | Trang tổng quan: chỉ số, việc cần làm, đơn sắp tới/gần đây, thẻ giấy tờ/nguồn/bảo dưỡng theo quyền | `Vehicle360Overview.tsx` · `GET /vehicles/:id/summary` |
+| Giá & chính sách | Cọc cố định, bậc phí giao nhận theo km một chiều + bán kính tự báo, quá giờ (giờ/miễn phí/làm tròn), bậc giảm giá; kế thừa gian hàng ↔ ghi đè theo xe | bảng `rental_policies` · `apps/api/src/modules/pricing/` · `features/rental-policies/` |
+| Nguồn xe & tài chính | Đủ 4 biến thể (`owned` · `financed` · `rented` · `partnership`), CHECK theo biến thể ở DB, hợp đồng là file riêng tư (presign → signed GET ngắn hạn), đổi loại nguồn replace trọn hồ sơ + audit | `vehicle-source.service.ts` · `vehicle-contracts.service.ts` · bảng `vehicle_source_details`, `vehicle_private_files` |
+| Giấy tờ | Tạo/sửa/lưu trữ, phiên bản (thay file → version tăng, bản cũ vẫn tải được), hạn + ngưỡng cảnh báo theo cấu hình gian hàng, nhập tay, tải file có kiểm chữ ký byte | `modules/vehicles/documents/` · `features/vehicle-documents/` |
+| OCR (khung) | Điều phối job + màn đối soát `Hiện tại / Nhận dạng`, áp **chọn lọc** từng trường, áp biển số đi qua luật knock-back (ADR 0008) | `documents/ocr-provider.ts` · `VehicleDocumentsWorkspace.tsx` |
+| Bảo dưỡng & KM | Chu kỳ + mốc tiếp theo (`Chưa đủ dữ liệu` khi thiếu, không dùng 0km giả), phiếu bảo dưỡng có vòng đời, lịch sử KM **chỉ-thêm**, chỉnh tay bắt buộc lý do + audit, giảm KM cần quyền riêng **và** xác nhận tường minh | `modules/vehicles/maintenance/` · `features/vehicle-maintenance/` |
+| Bảo dưỡng ↔ lịch | Phiếu bảo dưỡng **ghi `vehicle_occupancies`** qua `OccupancyService` — khoảng đã xác nhận chặn đặt xe thật, không chỉ đổi nhãn | `maintenance.service.ts` (`occupancy.reserve/reschedule/release`) — ADR 0006 |
+| Bàn giao | Nháp → xác nhận, ảnh hiện trạng bắt buộc theo góc, KM/nhiên liệu, `rowVersion` chống ghi đè, xác nhận **idempotent** (bấm hai lần không sinh hệ quả thứ hai) | `modules/bookings/handovers/` · `features/handovers/` |
+| KM từ bàn giao | Xác nhận trả xe là đường **duy nhất** đẩy KM vận hành; KM trả < KM giao bị từ chối; thiếu KM trả → sinh việc, **không** tự tăng KM | `handovers.service.ts` |
+| Hàng đợi thiếu KM | `GET /handovers/missing-odometer` + nhóm việc trong Trung tâm bảo dưỡng; vị từ lọc trùng khớp với phép đếm ở dải tổng hợp | `handover-queue.controller.ts` · `MissingReturnKmQueue.tsx` |
+| Cảnh báo xe | **Một phép tính, hai bề mặt** — thẻ danh sách và Hồ sơ 360 gọi cùng service; thứ tự ưu tiên tất định; cảnh báo không mang số tiền/PII/tên file | `vehicle-alerts.service.ts` |
+| Quyền | Giấy tờ 4 mức · bảo dưỡng/KM 5 mức · bàn giao 4 mức, tách theo mức thiệt hại; cảnh báo chịu đúng ràng buộc quyền của miền sinh ra nó | `packages/types/src/rbac.ts` · [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md) §4.1 |
+
+### 0.2 Triển khai một phần
+
+| Vùng | Có gì | Còn thiếu gì |
+| --- | --- | --- |
+| Wizard tạo xe | 4 bước | §5 đặc tả **5 bước** (tách `Thông số`). Đã **cố ý** gộp: thông số nâng cao nhập sau ở workspace sửa, không bắt đi qua một bước tuỳ chọn lúc onboarding (`VehicleFormSections.tsx` §`CREATE_WIZARD_STEPS`) |
+| Nghĩa vụ tài chính | Hồ sơ trả góp/thuê lại/hợp tác lưu đủ; cảnh báo "sắp tới kỳ thanh toán" theo `paymentDay` | Chưa có trang tổng hợp `/manage/finance/vehicle-obligations`; chưa sinh lịch trả góp tách gốc/lãi; chưa nối phiếu chi cho từng kỳ |
+| Quyết toán hợp tác | Tỷ lệ chủ xe lưu và validate 0–100 | Công thức §2.1 **chưa** chạy thành khoản phải trả trong Finance |
+| Phí giao nhận | Bậc phí + bán kính tự báo lưu và tính được | Luồng "Cần báo phí giao nhận" trong inbox yêu cầu thuê: **Unknown** đã nối tới đâu |
+| Phí quá giờ | Cấu hình lưu (giờ · miễn phí · làm tròn), cho phép để trống = `Cần cấu hình` | Chưa cộng vào quyết toán đơn lúc trả xe |
+| Trung tâm bảo dưỡng | Nhóm việc `Quá hạn` · `Sắp đến hạn` · `Đang bảo dưỡng` · `Thiếu dữ liệu KM` · `Thiếu KM trả` · `Sắp hết hạn giấy tờ`, lọc/tìm/phân trang chạy ở database | Chưa có trang bàn giao độc lập `/manage/handovers` — bàn giao vào từ đơn thuê, việc tồn đọng vào từ Trung tâm bảo dưỡng |
+
+### 0.3 Hoãn có chủ đích (code chưa chứng minh điều ngược lại)
+
+Giữ nguyên là **hoãn** cho tới khi có code:
+
+- **Nhà cung cấp OCR thật.** Repo không có provider nào được cấu hình; mặc định là `OcrNotConfiguredProvider` → endpoint trả **503 `OCR_NOT_CONFIGURED`**, người dùng nhập tay. Khung điều phối/đối soát đã xong, chỉ thiếu provider (`documents/ocr-provider.ts`).
+- **Chữ ký điện tử.** Không có.
+- **Tự động trích nợ ngân hàng.** Không có.
+- **Kế toán/thuế tự động.** Không có.
+- **Bản đồ tự tính khoảng cách.** Phí giao nhận tính từ km **người dùng nhập**, không có tích hợp bản đồ.
+- **Tự động chặn/ẩn xe vì giấy tờ hết hạn.** Đúng như §8 đã chốt: hết hạn **chỉ cảnh báo**, không đổi `operationStatus`/`publicStatus` và không chặn đặt xe (`vehicle-documents.spec.ts`).
+- **Phụ phí quyết toán chưa nối Finance.** Quá giờ, phạt/bồi thường, nhiên liệu ghi nhận được ở bàn giao nhưng **chưa** chảy vào phiếu thu/công nợ.
+
+### 0.4 Ngoài phạm vi
+
+§15 giữ nguyên. Bổ sung: `blocked_range` (chủ xe tự khoá lịch không vì booking/bảo dưỡng) vẫn **chưa có writer** — xem [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md) §2.3 #25.
 
 ---
 
@@ -58,6 +111,10 @@ Chỉ phát sinh khoản phải trả cho chủ xe khi đơn đã hoàn thành v
 
 ### 3.1 Màn hình hiện có cần cập nhật
 
+> Bốn dòng đầu (`/manage/vehicles`, `/new`, `/:id`, `/:id/edit`) **đã triển khai** — chi tiết và
+> độ lệch ở §0.1/§0.2. Hai dòng cuối (yêu cầu thuê, đơn thuê/bàn giao) đã có phần bàn giao; phần
+> báo giá giao nhận và quyết toán phụ phí xem §0.2/§0.3.
+
 | Route/surface | Cập nhật mục tiêu |
 | --- | --- |
 | `/manage/vehicles` | Giữ card grid; thêm cảnh báo hành động ngắn gọn, nguồn xe, giấy tờ/bảo dưỡng sắp hạn theo quyền. Không biến card thành báo cáo tài chính đầy đủ. |
@@ -71,12 +128,12 @@ Chỉ phát sinh khoản phải trả cho chủ xe khi đơn đã hoàn thành v
 
 Chỉ thêm bốn khu vực tổng hợp. Các form chi tiết vẫn dùng tab, drawer hoặc modal.
 
-| Màn hình | Route mục tiêu | Vì sao cần trang riêng | Vị trí điều hướng |
-| --- | --- | --- | --- |
-| Chính sách thuê | `/manage/settings/rental-policies` | Mặc định dùng cho nhiều xe; tránh nhập lặp khi tạo xe | Cài đặt |
-| Trung tâm bảo dưỡng | `/manage/maintenance` | Xem xe nào sắp/đã đến hạn trên toàn đội xe | Tài sản & khách |
-| Nghĩa vụ theo xe | `/manage/finance/vehicle-obligations` | Tổng hợp kỳ trả góp, thuê lại và quyết toán hợp tác | Tiền |
-| Bàn giao | `/manage/handovers` | Công việc liên đơn thuê, cần hàng đợi nhận/trả và bằng chứng | Điều hành |
+| Màn hình | Route mục tiêu | Route THẬT (13/08/2026) | Vì sao cần trang riêng | Vị trí điều hướng |
+| --- | --- | --- | --- | --- |
+| Chính sách thuê | `/manage/settings/rental-policies` | ✅ `/manage/shop/policies` — đặt trong hồ sơ gian hàng thay vì tạo nhánh `settings` mới | Mặc định dùng cho nhiều xe; tránh nhập lặp khi tạo xe | Gian hàng |
+| Trung tâm bảo dưỡng | `/manage/maintenance` | ✅ đúng như mục tiêu; mang thêm nhóm việc `Thiếu KM trả` | Xem xe nào sắp/đã đến hạn trên toàn đội xe | Tài sản & khách |
+| Nghĩa vụ theo xe | `/manage/finance/vehicle-obligations` | ❌ chưa có — xem §0.2 | Tổng hợp kỳ trả góp, thuê lại và quyết toán hợp tác | Tiền |
+| Bàn giao | `/manage/handovers` | ❌ chưa có trang riêng — bàn giao vào từ đơn thuê, việc tồn đọng vào từ Trung tâm bảo dưỡng | Công việc liên đơn thuê, cần hàng đợi nhận/trả và bằng chứng | Điều hành |
 
 Nếu Figma đã có `Bàn giao` trong Rental Operations thì **mở rộng frame hiện có trong vùng Proposed v2**, không tạo menu/khái niệm trùng lặp.
 
@@ -128,13 +185,16 @@ Desktop dùng tab sticky dưới header. Mobile giữ **một hàng ngang**, cu�
 
 ## 5. Luồng tạo xe
 
-Wizard tạo mới vẫn có 5 bước:
+Wizard tạo mới đặc tả 5 bước:
 
 1. `Cơ bản`
 2. `Thông số`
 3. `Giá & chính sách`
 4. `Hình ảnh`
 5. `Xác nhận`
+
+> **Đã triển khai 4 bước** — bước `Thông số` được gộp có chủ đích: thông số nâng cao nhập sau ở
+> workspace sửa, không bắt chủ xe đi qua một bước tuỳ chọn lúc onboarding. Xem §0.2.
 
 - Bước 1 hỏi nguồn xe nhưng **không yêu cầu hoàn tất toàn bộ tài chính/hợp đồng**.
 - Bước 3 mặc định bật `Dùng chính sách chung của gian hàng`; chỉ hiện tóm tắt. Có thể chọn `Thiết lập riêng cho xe này`.
@@ -240,7 +300,12 @@ flowchart LR
 
 OCR có thể đọc họ tên, địa chỉ, biển số, số khung, số máy, ngày đăng ký, ngày hết hạn và thông tin đăng kiểm tùy loại. Trường không có bằng chứng để trống. Khi khác dữ liệu xe, so sánh `Hiện tại / Nhận dạng` và chọn từng trường; không mặc định “Ghi đè tất cả”.
 
-Giấy tờ hết hạn cảnh báo trên detail/tab/trung tâm công việc nhưng không đổi operation/public status. Ngưỡng `sắp hết hạn` còn **Unknown**, không hard-code 30 ngày như luật đã chốt.
+Giấy tờ hết hạn cảnh báo trên detail/tab/trung tâm công việc nhưng không đổi operation/public status.
+
+> **Đã chốt khi triển khai:** ngưỡng `sắp hết hạn` là **cấu hình của gian hàng**
+> (`tenant_profiles.settings.documentExpiryWarningDays`). Chưa cấu hình thì **không** kết luận
+> `sắp hết hạn` — không có ngưỡng ngầm 30 ngày. Cùng ngưỡng đó dùng cho tab giấy tờ, cảnh báo xe
+> và Trung tâm bảo dưỡng.
 
 ## 9. Bảo dưỡng và KM
 
@@ -291,7 +356,14 @@ Khoảng bảo dưỡng đã xác nhận phải chặn availability bằng occup
 | Staff vận hành | Chỉ xem tóm tắt cần thiết | Không | Xem trạng thái, không mặc định xem file nhạy cảm | Nhập KM/record được giao | Thực hiện |
 | Viewer | Read-only không nhạy cảm | Không | Trạng thái tổng quát | Read-only | Read-only theo quyền |
 
-Capability mục tiêu: `vehicles.policies.manage`; `vehicles.finance.view/manage`; `vehicles.documents.view/manage`; `vehicles.maintenance.view/manage`; `handovers.manage`. Tên cuối cùng phải theo convention code khi triển khai; đây không phải xác nhận permission hiện có.
+Capability mục tiêu ban đầu: `vehicles.policies.manage`; `vehicles.finance.view/manage`; `vehicles.documents.view/manage`; `vehicles.maintenance.view/manage`; `handovers.manage`.
+
+> **Đã triển khai, tên khác và tách mịn hơn đề xuất trên.** Nguồn duy nhất là
+> [`packages/types/src/rbac.ts`](../../packages/types/src/rbac.ts); bảng đọc nhanh "quyền nào lộ
+> dữ liệu gì" ở [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md) §4.1. Hai
+> khác biệt đáng chú ý: tài chính nguồn xe dùng `finance.view` sẵn có (không thêm
+> `vehicles.finance.*`), và chính sách thuê đi theo `vehicles.update` + quyền gian hàng thay vì
+> một key `vehicles.policies.manage` riêng.
 
 ## 11. Trạng thái UI bắt buộc
 
@@ -345,5 +417,7 @@ Cấu trúc section mới:
 
 ## 15. Ngoài phạm vi
 
-Nhà cung cấp OCR; kế toán/thuế đầy đủ; bản đồ tự tính khoảng cách; tự động trích nợ ngân hàng; chữ ký điện tử; tự động chặn/ẩn vì giấy tờ hết hạn; thay đổi code/database/API trong giai đoạn Figma.
+Nhà cung cấp OCR; kế toán/thuế đầy đủ; bản đồ tự tính khoảng cách; tự động trích nợ ngân hàng; chữ ký điện tử; tự động chặn/ẩn vì giấy tờ hết hạn.
+
+Ràng buộc "không đổi code/database/API trong giai đoạn Figma" đã **hết hiệu lực** — giai đoạn triển khai đã xong (§0). Các mục còn lại vẫn ngoài phạm vi; trạng thái từng mục ở §0.3.
 

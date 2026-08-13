@@ -9,6 +9,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Status (booking/tenant/vehicle/…) — union + nhãn + màu | `packages/types/src/status/` | 0005 |
 | Trạng thái nào chiếm lịch | `packages/types/src/status/booking.ts` (`BOOKING_STATUS_OCCUPYING`) | 0006 |
 | Role / scope / permission key | `packages/types/src/rbac.ts` | — |
+| **Quyền Vehicle 360 — miền nào lộ dữ liệu gì** (giấy tờ · bảo dưỡng/KM · bàn giao tách 3–4 mức) | `packages/types/src/rbac.ts` (khối `vehicles.documents.*`, `vehicles.maintenance.*`, `vehicles.odometer.*`, `handovers.*`) · bảng đọc nhanh ở [`04_FLEET_MANAGEMENT.md`](design-briefs/04_FLEET_MANAGEMENT.md) §4.1 | — |
 | Convention response `{data,meta}` / error code | `packages/types/src/api.ts` | 0007 |
 | Type FE sinh từ OpenAPI (KHÔNG sửa tay) | `packages/types/src/api.generated.ts` | 0007 |
 | Yup schema dùng chung | `packages/validators/src/` | — |
@@ -37,6 +38,14 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | **Yêu cầu thuê** (public submit + approve→booking + `check-availability` preview) | `modules/booking-requests/` (`public-booking-requests.controller.ts`) | Phase 4; approve tạo booking → 23P01→409 |
 | **Đăng nhập passwordless SĐT** (find-or-create theo phone, set-password) | `modules/auth/` (`resolveOrCreateUserByPhone`, `setPassword`) + `modules/phone-verification/` (purpose `login`) | ADR 0002; xem `docs/guest-booking-passwordless.md` |
 | Xe + ảnh + tiện ích (submit public review) | `modules/vehicles/` | Phase 2–3 |
+| **Việc cần làm của xe — nguồn DUY NHẤT** cho cả thẻ danh sách lẫn Hồ sơ 360 | `modules/vehicles/vehicle-alerts.service.ts` (`forVehicles` / `forVehicle` / `vehicleAlertScopeOf`) | Wave 8; scope theo TỪNG miền quyền, miền thiếu quyền không chạy truy vấn |
+| **Nguồn xe & nghĩa vụ tài chính** (4 biến thể, CHECK theo biến thể ở migration) | `modules/vehicles/vehicle-source.service.ts` | Wave 4; writer duy nhất của `vehicle_source_details` |
+| **File riêng tư của xe** (presign → PUT R2 → complete, signed GET ngắn hạn) | `modules/vehicles/vehicle-contracts.service.ts` (`presignFor`/`completeFor`/`downloadFor`) | lõi dùng chung cho hợp đồng nguồn, giấy tờ, chứng từ bảo dưỡng |
+| **Giấy tờ xe** (phiên bản, hạn, lưu trữ, OCR review) | `modules/vehicles/documents/` (`vehicle-documents.controller.ts`, `document-metadata.ts`, `ocr-provider.ts`) | Wave 5/5.1; provider mặc định `OcrNotConfiguredProvider` → 503 `OCR_NOT_CONFIGURED` |
+| **Bảo dưỡng & KM** (chu kỳ, phiếu, lịch sử KM chỉ-thêm) · **Trung tâm bảo dưỡng** toàn đội xe | `modules/vehicles/maintenance/` (`maintenance.service.ts`, `odometer.service.ts`, `maintenance-board.controller.ts`) | Wave 6; phiếu bảo dưỡng ghi `vehicle_occupancies` qua `OccupancyService` (ADR 0006) |
+| **Bàn giao xe** (nháp → xác nhận, ảnh bằng chứng, KM có thẩm quyền) | `modules/bookings/handovers/` (`booking-handovers.controller.ts`, `handovers.service.ts`) | Wave 7; xác nhận trả xe là đường DUY NHẤT đẩy KM từ vận hành |
+| **Hàng đợi "Thiếu KM trả"** toàn gian hàng | `modules/bookings/handovers/handover-queue.controller.ts` (`GET /handovers/missing-odometer`) | Wave 8; vị từ lọc phải TRÙNG `MaintenanceService.boardSummary` — lệch là tab và bảng nói hai số |
+| **Chính sách thuê gian hàng** (cọc, bậc phí giao nhận, quá giờ, bậc giảm giá) | `modules/pricing/` (`shop-policies.controller.ts` → `shop/rental-policies`, `pricing.service.ts`) | Wave 2; kế thừa gian hàng ↔ ghi đè theo xe |
 | Thông báo (in-app) | `modules/notification/` | Phase 5 |
 | Đánh giá sau chuyến (+ public review) | `modules/review/` | Phase 5 |
 | Chat (PG source of truth, Firestore projection sau cờ) | `modules/chat/` (+ `conversations.controller`) | ADR 0009 |
@@ -85,6 +94,11 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Thu-Chi · Payments · Công nợ · Dashboard tài chính | `features/finance/` · `features/payments/` | Phase 6 |
 | Hợp đồng thuê (xem/in `window.print`, print CSS toàn cục `[data-print-root]`) | `features/contracts/` · `app/(manage)/manage/contracts/[id]/` | Phase 6 §11.7 |
 | Thông báo · Đánh giá · Chat · Thành viên · Duyệt hồ sơ · Xe · Tổng quan | `features/{notifications,reviews,chat,members,approvals,vehicles,dashboard}/` | Phase 2–6 |
+| **Hồ sơ 360 của xe** (chỉ số + việc cần làm + đơn gần đây) · **Dải cảnh báo** dùng chung | `features/vehicles/components/{Vehicle360Overview,VehicleAlerts}.tsx` | Wave 8; KHÔNG suy lại cảnh báo ở client — đọc thẳng từ server |
+| **Workspace sửa xe 6 tab** (`?tab=`) · wizard tạo xe 4 bước | `features/vehicles/components/{VehicleEditWorkspace,VehicleWizard,VehicleFormSections}.tsx` | tab hợp lệ ở `constants/routes.ts` (`VEHICLE_EDIT_TAB`); tab lạ rơi về `information` |
+| **Việc cần làm + KM theo lô xe** (hook) · **làm mới MỌI bề mặt của xe** sau mutation miền khác | `features/vehicles/hooks/use-vehicle-alerts.ts` (`useVehicleAlerts`, `useInvalidateVehicleSurfaces`) | một hàm, một danh sách key — đừng để mỗi feature tự nhớ invalidate cái gì |
+| Giá & chính sách theo xe · Nguồn xe & tài chính · Giấy tờ · Bảo dưỡng & KM (nội dung từng tab) | `features/rental-policies/` · `features/vehicles/components/VehicleSourceWorkspace.tsx` · `features/vehicle-documents/` · `features/vehicle-maintenance/` | Wave 2/4/5/6 |
+| Bàn giao xe (nháp/xác nhận/ảnh) · hàng đợi "Thiếu KM trả" | `features/handovers/` (`HandoverPanel`, `HandoverDialog`, `MissingReturnKmQueue`) | Wave 7/8; hàng đợi hiện trong `/manage/maintenance` |
 | Quản lý gian hàng nền tảng (list + khoá/mở khoá) | `features/admin-tenants/` · `app/(manage)/manage/admin/tenants/` | Phase 7 |
 | Giám sát nền tảng: xe · đơn thuê · khách thuê | `features/{admin-vehicles,admin-bookings,admin-customers}/` · `app/(manage)/manage/admin/{vehicles,bookings,customers}/` | Phase 7 §11.1; filter ở URL (ADR 0004) |
 | Ô liên hệ đã che + nút "xem đầy đủ" (dùng chung đơn/khách) | `components/data-display/MaskedContact.tsx` | bấm xem = 1 dòng audit ở BE |
@@ -95,7 +109,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 
 | Cần gì | Ở đâu |
 | --- | --- |
-| Schema **40 model** (auth/tenant/vehicle/booking/finance/chat/catalog/…) | `prisma/schema.prisma` |
+| Schema **52 model** (auth/tenant/vehicle/booking/finance/chat/catalog/…) | `prisma/schema.prisma` |
+| Vehicle 360: `rental_policies` · `vehicle_source_details` · `vehicle_private_files` · `vehicle_documents(+_versions,+_ocr_jobs)` · `vehicle_maintenance_profiles` · `vehicle_odometer_readings` · `vehicle_maintenance_records(+_attachments)` · `vehicle_handovers(+_photos)` | `prisma/schema.prisma` (Wave 2→7) |
 | Migration init (trigger + `EXCLUDE USING gist`) | `prisma/migrations/*_init/migration.sql` |
 | Migration viết tay từng phase (CHECK/constraint/partial index) | `prisma/migrations/<ts>_<name>/migration.sql` (booking_requests, finance, payments, phone_login…) |
 | Seed (idempotent, 3 scope + danh mục finance) | `prisma/src/seed.ts` |
@@ -111,8 +126,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 
 ## Định hướng sản phẩm & thiết kế
 
-`docs/design/` — 11 tài liệu (04/08/2026): brand, tầm nhìn, gap analysis, creative brief, mobile-first, nguyên tắc thiết kế, IA, UX guidelines, thứ tự thiết kế màn, ràng buộc triển khai, Figma master prompt. Định nghĩa **sản phẩm lý tưởng**; ADR vẫn thắng khi mâu thuẫn. Bắt đầu ở `docs/design/README.md`.
+`docs/design/` — 13 tài liệu: brand, tầm nhìn, gap analysis, creative brief, mobile-first, nguyên tắc thiết kế, IA, UX guidelines, thứ tự thiết kế màn, ràng buộc triển khai, Figma master prompt, **Vehicle 360 (12 — có mục trạng thái triển khai)**, Figma Vehicle 360 prompts. Định nghĩa **sản phẩm lý tưởng**; ADR vẫn thắng khi mâu thuẫn. Bắt đầu ở `docs/design/README.md`.
 
 ## Vì sao (đọc khi cần lý do, đừng đoán)
 
-`docs/decisions/` — **9 ADR (0001–0009)**. Mỗi quyết định kèm lý do và cái nó ghi đè. ADR thắng mọi tài liệu cũ khi mâu thuẫn.
+`docs/decisions/` — **10 ADR (0001–0010)**. Mỗi quyết định kèm lý do và cái nó ghi đè. ADR thắng mọi tài liệu cũ khi mâu thuẫn.

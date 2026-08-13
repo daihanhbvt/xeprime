@@ -154,7 +154,9 @@
 
   /* ─── Focus ───────────────────────────────────────────────────────────── */
   --xp-focus-outline-width: 2px;
-  --xp-focus-ring-width: 3px;
+  /* Figma `14:197` vẽ ring 3px; hạ xuống 2px theo góp ý review UI 12/08/2026 — giữ khớp
+     `XP_TOKENS['focus-ring-width']` ở theme.ts (AntD `controlOutlineWidth` đọc từ đó). */
+  --xp-focus-ring-width: 2px;
   --xp-color-focus-ring: rgba(214, 160, 44, 0.25);
 
   /* ─── Breakpoint (KHÔNG dùng được trong @media — xem XP_BREAKPOINTS) ──── */

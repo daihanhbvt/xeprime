@@ -7,19 +7,22 @@
 >
 > **Reading contract:** *Confirmed* blocks describe what exists. Anything marked `[RECOMMENDED — NOT CURRENT]` describes nothing that exists today. Absent evidence is written as `Unknown`.
 >
-> **Accepted target addendum — 2026-08-11, NOT CURRENT:** Vehicle editing becomes a six-tab Vehicle 360 workspace; creation remains a short five-step wizard; policy inheritance, vehicle source/finance, documents/OCR and maintenance/KM follow [`docs/design/12_VEHICLE_360_MANAGEMENT.md`](../design/12_VEHICLE_360_MANAGEMENT.md). This is a product/design target and does not assert that the database, API or UI already implements it.
+> **Vehicle 360 addendum — SHIPPED 2026-08-13.** The six-tab edit workspace, the 360 overview, policy inheritance, vehicle source/finance, documents, maintenance/odometer, handovers and cross-surface vehicle alerts are **implemented**, not a target. Creation shipped as a **four**-step wizard (the `Thông số` step was deliberately folded into the edit workspace). Implemented / partial / deferred boundaries: [`docs/design/12_VEHICLE_360_MANAGEMENT.md`](../design/12_VEHICLE_360_MANAGEMENT.md) §0. §2.4 below records what this changed in *this* brief; the historical analysis in §§6–24 is left intact except where it is now factually wrong.
 
 ---
 
 ## 1. Executive summary
 
-Fleet management is the tenant-side CRUD surface for vehicles and the gate through which a vehicle becomes marketplace inventory. Its core is architecturally disciplined and well-tested: two **independent status axes** (operation vs public), a knock-back rule that automatically demotes a published vehicle to re-review when any of eight sensitive fields changes (ADR 0008), a snapshot-based approval trail, plan-quota enforcement at creation (ADR 0010), soft delete blocked by future occupancy (ADR 0006), and a race-safe platform hide/unhide. Eight Jest suites cover the critical paths.
+Fleet management is the tenant-side CRUD surface for vehicles and the gate through which a vehicle becomes marketplace inventory. Its core is architecturally disciplined and well-tested: two **independent status axes** (operation vs public), a knock-back rule that automatically demotes a published vehicle to re-review when any of eight sensitive fields changes (ADR 0008), a snapshot-based approval trail, plan-quota enforcement at creation (ADR 0010), soft delete blocked by future occupancy (ADR 0006), and a race-safe platform hide/unhide. Jest suites cover the critical paths (see §24).
 
-The gaps cluster at the edges, and three deserve headline status:
+**Superseded by Vehicle 360 (2026-08-13):** the module is no longer a CRUD surface. It now carries rental policies, vehicle source/finance, documents, maintenance/odometer, handovers and a server-derived vehicle-alert feed shared by the list and the 360 profile. §2.4 lists what that changed; §§2.3, 6.1, 8, 14, 16, 19 have been corrected in place.
 
-1. **The occupancy vocabulary promises three sources; only one has a writer.** `OCCUPANCY_SOURCE_TYPE` defines `booking`, `blocked_range` and `maintenance` — with display metadata and calendar colors — but a call-site census shows `OccupancyService.reserve` is invoked **only** with `BOOKING`. The permission `vehicles.block_schedule` is defined and granted, and no endpoint requires it. A shop cannot block a vehicle for any non-booking reason.
-2. **Maintenance is a status, not a workflow.** `operationStatus = maintenance` is a manual dropdown value on the vehicle form. It writes no occupancy, so a vehicle "in maintenance" **still shows as bookable** on the marketplace availability filter and can accept bookings — the two systems that both claim to describe availability do not talk to each other.
-3. **Drivers and trash are navigable placeholders**, while `deletedAt` soft-delete is real — deleted vehicles are unreachable by any UI with no restore path.
+The gaps cluster at the edges, and two still deserve headline status:
+
+1. **The occupancy vocabulary promises three sources; two now have writers.** `OCCUPANCY_SOURCE_TYPE` defines `booking`, `blocked_range` and `maintenance`. `booking` and `maintenance` both write real rows (the latter since Wave 6 — a confirmed maintenance window blocks bookings through the GiST exclusion, ADR 0006). **`blocked_range` still has no writer**, and the permission `vehicles.block_schedule` is defined and granted while no endpoint requires it — a shop cannot block a vehicle for a non-booking, non-maintenance reason.
+2. **Drivers and trash are navigable placeholders**, while `deletedAt` soft-delete is real — deleted vehicles are unreachable by any UI with no restore path.
+
+One narrower asymmetry remains: `operationStatus = maintenance` set by hand on the vehicle form is still a **label only**. Availability is governed by maintenance *records*, not by that dropdown, so the two can disagree (edge case 17).
 
 One asymmetry is worth calling out for product attention: the shop-side detail page shows the **latest** approval decision only, and after a platform hide, the hide reason lives solely in `audit_logs` — the roadmap records this as a known gap (a resubmitting shop's reviewer cannot see why it was hidden).
 
@@ -43,14 +46,14 @@ Statuses follow `_DESIGN_BRIEF_STANDARD.md` §R4. Grouped as the task requires.
 
 | # | Capability | Evidence |
 |---|---|---|
-| 1 | Vehicle list (paginated, filtered, sorted, server-side) | `VehiclesService.list`, [`VehicleTable.tsx`](../../apps/web/src/features/vehicles/components/VehicleTable.tsx) |
+| 1 | Vehicle list (paginated, filtered, sorted, server-side) | `VehiclesService.list`, [`VehicleCardGrid.tsx`](../../apps/web/src/features/vehicles/components/VehicleCardGrid.tsx) (was `VehicleTable.tsx`, removed with §7.1) |
 | 2 | Vehicle search (name/code/plate/brand/model, case-insensitive OR) | `searchOr()` |
 | 3 | Filtering (vehicleType · serviceType · operationStatus · publicStatus) | `VehicleListQueryDto`, [`VehicleFilters.tsx`](../../apps/web/src/features/vehicles/components/VehicleFilters.tsx) |
 | 4 | Sorting (newest default · name · code · price asc/desc) | `orderByOf()` |
 | 5 | Pagination (default/max limits, count+page in one transaction) | `VEHICLE_DEFAULT_LIMIT`/`VEHICLE_MAX_LIMIT` |
 | 6 | Create vehicle | `create()` + quota + code-uniqueness |
 | 7 | Edit vehicle | `update()` + knock-back |
-| 8 | Vehicle detail (+ latest review, gallery, features) | `getOne()`, [`VehicleDetailView.tsx`](../../apps/web/src/features/vehicles/components/VehicleDetailView.tsx) |
+| 8 | Vehicle detail (+ latest review, gallery, features) | `getOne()`, [`Vehicle360Overview.tsx`](../../apps/web/src/features/vehicles/components/Vehicle360Overview.tsx) (was `VehicleDetailView.tsx`, replaced by the 360 overview) |
 | 9 | Code (unique per tenant) and plate | `@@unique([tenantId, code])`; plate optional |
 | 10 | Specifications (brand/model/year/color/seats/fuel/body) | `vehicleFormSchema`, DTOs |
 | 11 | Vehicle type · service type | `VEHICLE_TYPE`, `SERVICE_TYPE` (4 values incl. `both`, `long_term`) |
@@ -73,15 +76,38 @@ Statuses follow `_DESIGN_BRIEF_STANDARD.md` §R4. Grouped as the task requires.
 |---|---|---|
 | 24 | Availability | Occupancy rows + GiST exclusion (ADR 0006) fully guard bookings; marketplace availability filter reads them (brief 01 §11). **No vehicle-level availability view exists in fleet UI** — the shop sees availability only through the calendar page |
 | 25 | Vehicle schedule blocking | **Referenced but not implemented**: `blocked_range` source type, calendar color token `--xp-color-event-blocked`, and permission `vehicles.block_schedule` all exist; **no endpoint or UI writes a blocked range** |
-| 26 | Operation status ↔ availability | The two are **disconnected**: `operationStatus` is a manual label; setting `maintenance`/`inactive` writes no occupancy and does not affect marketplace availability or booking creation |
+| 26 | Operation status ↔ availability | Still **disconnected as a label**: setting `operationStatus = maintenance`/`inactive` by hand writes no occupancy. Availability is now governed by **maintenance records** (#28), which do write occupancy — so a hand-set label and real availability can disagree |
 
-**Placeholder driver/maintenance/trash features**
+**Placeholder driver/trash features**
 
 | # | Capability | State |
 |---|---|---|
 | 27 | Drivers | **Placeholder** — `PlaceholderPage`; no model, no API. `with_driver` service type is sold on the marketplace with no driver resource behind it |
-| 28 | Maintenance | **Placeholder as a workflow** — exists only as an `operationStatus` value and an occupancy source type with no writer; no maintenance records, schedule, or cost linkage |
 | 29 | Trash and recovery | **Placeholder** — `PlaceholderPage`; soft-deleted vehicles are real (`deletedAt`) but unlistable and unrestorable through any UI/API |
+
+### 2.4 Vehicle 360 — implemented capabilities (2026-08-13)
+
+Replaces the former "maintenance is a placeholder" and "no vehicle documents" findings. Boundaries and deferrals: [`docs/design/12_VEHICLE_360_MANAGEMENT.md`](../design/12_VEHICLE_360_MANAGEMENT.md) §0.
+
+| # | Capability | Evidence |
+|---|---|---|
+| 31 | Create wizard — 4 steps, draft save, resume, post-create checklist | [`VehicleForm.tsx`](../../apps/web/src/features/vehicles/components/VehicleForm.tsx) · `CREATE_WIZARD_STEPS` in [`VehicleFormSections.tsx`](../../apps/web/src/features/vehicles/components/VehicleFormSections.tsx) |
+| 32 | Six-tab edit workspace on one route, tab in `?tab=`, unsaved-change guard, sensitive-edit confirmation | [`VehicleEditWorkspace.tsx`](../../apps/web/src/features/vehicles/components/VehicleEditWorkspace.tsx) · `VEHICLE_EDIT_TAB` in [`routes.ts`](../../apps/web/src/constants/routes.ts) |
+| 33 | Tab payload isolation — each tab sends only its own fields; omitted fields are never nulled | `informationValuesToInput`/`mediaValuesToInput` in [`mappers.ts`](../../apps/web/src/features/vehicles/mappers.ts) · `writableFields()` guards every field with `!== undefined` |
+| 34 | Vehicle 360 summary — stats, alerts, upcoming/recent bookings, per-domain permission gating | `GET /vehicles/:id/summary` → `summary360()` · [`Vehicle360Overview.tsx`](../../apps/web/src/features/vehicles/components/Vehicle360Overview.tsx) |
+| 35 | Rental policies — deposit, one-way delivery tiers + self-quote radius, overtime, discount tiers; shop default ↔ per-vehicle override | `rental_policies` · [`shop-policies.controller.ts`](../../apps/api/src/modules/pricing/shop-policies.controller.ts) · `features/rental-policies/` |
+| 36 | Vehicle source — 4 variants with per-variant DB CHECK; type change replaces the whole record + audit | [`vehicle-source.service.ts`](../../apps/api/src/modules/vehicles/vehicle-source.service.ts) · `vehicle_source_details` |
+| 37 | Private vehicle files — server-built object key, byte-signature check on complete, short-lived signed GET, no URL ever in a DTO | [`vehicle-contracts.service.ts`](../../apps/api/src/modules/vehicles/vehicle-contracts.service.ts) · `vehicle_private_files` |
+| 38 | Documents — versioned replace (old version still downloadable), archive, expiry against a tenant-configured threshold, manual entry | [`documents/`](../../apps/api/src/modules/vehicles/documents/) · `vehicle_documents(+_versions)` |
+| 39 | OCR orchestration + `Hiện tại / Nhận dạng` review, selective per-field apply; plate apply routes through the knock-back rule | [`ocr-provider.ts`](../../apps/api/src/modules/vehicles/documents/ocr-provider.ts) · **no provider configured → 503 `OCR_NOT_CONFIGURED`** |
+| 40 | Maintenance — interval config, next-service computation (`Chưa đủ dữ liệu`, never a fake 0km), record lifecycle, cost/attachment gating | [`maintenance.service.ts`](../../apps/api/src/modules/vehicles/maintenance/maintenance.service.ts) |
+| 41 | Maintenance ↔ availability — a confirmed window reserves `vehicle_occupancies` via `OccupancyService`; cancel/reschedule release and move it | `occupancy.reserve/reschedule/release` calls in `maintenance.service.ts` (ADR 0006) |
+| 42 | Odometer — append-only history, manual correction requires a reason + audit, decrease needs a separate permission **and** explicit confirmation, `rowVersion` conflict → 409 | [`odometer.service.ts`](../../apps/api/src/modules/vehicles/maintenance/odometer.service.ts) |
+| 43 | Handovers — draft → confirm, required photo slots, fuel/battery by drivetrain, idempotent confirm, `rowVersion` guarding | [`handovers.service.ts`](../../apps/api/src/modules/bookings/handovers/handovers.service.ts) · `vehicle_handovers(+_photos)` |
+| 44 | Odometer from operations — confirmed return is the **only** path that moves authoritative KM; return < pickup rejected; missing return KM opens a task instead of inventing a number | `handovers.service.ts` |
+| 45 | Missing-return-KM queue + board count, filtered identically on both surfaces (soft-deleted vehicle/booking drops from both together) | [`handover-queue.controller.ts`](../../apps/api/src/modules/bookings/handovers/handover-queue.controller.ts) · `boardSummary()` · [`MissingReturnKmQueue.tsx`](../../apps/web/src/features/handovers/components/MissingReturnKmQueue.tsx) |
+| 46 | Cross-surface vehicle alerts — **one computation, two surfaces**; deterministic priority; never carries money, PII or file identifiers | [`vehicle-alerts.service.ts`](../../apps/api/src/modules/vehicles/vehicle-alerts.service.ts) · [`VehicleAlerts.tsx`](../../apps/web/src/features/vehicles/components/VehicleAlerts.tsx) |
+| 47 | Maintenance centre — work groups (overdue · due soon · in progress · missing KM data · missing return KM · expiring documents), filter/search/paging in the database | [`maintenance-board.controller.ts`](../../apps/api/src/modules/vehicles/maintenance/maintenance-board.controller.ts) · [`maintenance/page.tsx`](<../../apps/web/src/app/(manage)/manage/maintenance/page.tsx>) |
 
 **Referenced future seasonal pricing**
 
@@ -120,22 +146,59 @@ The module lets a tenant maintain a truthful digital twin of its physical fleet,
 
 Every tenant endpoint is `@TenantScoped()` at class level with a per-handler `@RequirePermissions`; scope comes from membership (brief 00 P2). `vehicles.block_schedule` is granted to owner and manager but **guards nothing** — no endpoint declares it.
 
+### 4.1 What each permission reveals
+
+Source of truth: [`rbac.ts`](../../packages/types/src/rbac.ts). Levels are split by *damage if abused*, not by convenience — holding one never implies the next.
+
+| Permission | Reveals | Does **not** reveal |
+|---|---|---|
+| `vehicles.view` | Vehicle core: identity, both status axes, specs, prices on the vehicle record, publication requirements | Documents, maintenance, odometer, handovers, bookings, finance — each is its own key |
+| `vehicles.create` / `update` / `delete` / `submit_public` | Write paths for vehicle core and its policy/source tabs | — |
+| `finance.view` | Vehicle source financial detail, contract file download, source payment-obligation alerts, revenue in the 360 stats | Amounts are never carried in alert titles/details regardless of this key |
+| `vehicles.documents.view` | Document **status** only: type, expiry, warning counts | Holder name/address, document numbers, VIN/engine numbers, file names, files |
+| `vehicles.documents.view_details` | Sensitive document metadata (holder, numbers) | Files — that is a separate key |
+| `vehicles.documents.view_files` | Opening/downloading private document files and version history | — |
+| `vehicles.documents.manage` | Create/edit/archive, upload versions, run and apply OCR | — |
+| `vehicles.maintenance.view` | Current odometer, interval, next-service state, schedule and history | Costs and private maintenance attachments |
+| `vehicles.maintenance.manage` | Create/edit/complete/cancel records, configure intervals | — |
+| `vehicles.maintenance.view_cost` | Maintenance costs | — |
+| `vehicles.maintenance.view_files` | Private maintenance documents (invoices, payment vouchers) | — |
+| `vehicles.odometer.correct` | Manual odometer correction — reason mandatory, audited | Decreasing the value |
+| `vehicles.odometer.decrease` | Lowering authoritative KM — strictly higher bar, since KM drives maintenance and handover reconciliation | — |
+| `handovers.view` | Handover records (KM, fuel, condition) and the missing-return-KM queue and its count | Private condition photos |
+| `handovers.manage` | Create/edit drafts, upload condition photos, discard drafts | Confirming |
+| `handovers.confirm` | The only action with real consequences: booking transition, authoritative KM write, schedule change | — |
+| `handovers.view_files` | Opening/downloading private condition photos | — |
+| `bookings.view` | Booking lists on the 360 profile, and alert links that carry a `bookingId` | — |
+
+**Alerts inherit the constraints of the domain that produced them.** `GET /vehicles/alerts` requires only `vehicles.view`, so `vehicleAlertScopeOf()` builds a per-domain scope and a domain without its permission is **not queried at all** — the data never leaves the database, and its absence cannot be inferred from response shape. A `vehicles.view`-only custom role therefore cannot deduce document expiry, odometer, maintenance state, pending handovers, booking identifiers or financial obligations. Follow-on links degrade the same way: a link carrying a `bookingId` appears only with `bookings.view`, the shared queue link only when that queue is reachable, otherwise `href` is null.
+
+Role defaults worth noting: `shop_staff` can do maintenance and handovers (including confirm) but has **no** `view_cost`, `view_files` or `odometer.decrease`; `shop_viewer` reads document status, maintenance state and handover records but cannot create, confirm or open any private file.
+
 ---
 
 ## 5. Information architecture
 
 ```
-/manage/vehicles              list (URL filters: q, vehicleType, serviceType,
-                              operationStatus, publicStatus, sort, page, limit)
-/manage/vehicles/new          create form
-/manage/vehicles/[id]         detail (Descriptions + features + gallery
-                              + VehiclePublicReviewPanel + edit/delete)
-/manage/vehicles/[id]/edit    edit form (same VehicleForm, prefilled)
-/manage/drivers               PlaceholderPage
-/manage/trash                 PlaceholderPage
+/manage/vehicles                  card grid (URL filters: q, vehicleType, serviceType,
+                                  operationStatus, publicStatus, sort, page, limit)
+/manage/vehicles/new              create wizard (4 steps)
+/manage/vehicles/[id]             Vehicle 360 overview (stats · alerts · bookings ·
+                                  document/source/maintenance cards by permission)
+/manage/vehicles/[id]/edit        six-tab workspace; tab in ?tab=
+                                  information | media | pricing | source | documents | maintenance
+/manage/vehicles/[id]/pricing     per-vehicle price & policy (also embedded as the pricing tab)
+/manage/maintenance               fleet maintenance centre + "missing return KM" queue
+/manage/shop/policies             shop-default rental policies
+/manage/drivers                   PlaceholderPage
+/manage/trash                     PlaceholderPage
 ```
 
-Detail and edit are **pages, not drawers** — vehicle records are shareable URLs, unlike booking detail (brief 00 K-list). The list→detail→edit loop is complete; there is no cross-link from a vehicle to *its* calendar rows, bookings or revenue (the same missing-adjacency problem recorded for the whole portal in `docs/design/07` §6, restated here as an observed gap).
+Handovers have **no standalone route**: they open from the booking detail drawer, and their operational backlog surfaces as a work group in `/manage/maintenance`.
+
+Detail and edit are **pages, not drawers** — vehicle records are shareable URLs, unlike booking detail (brief 00 K-list). The list→detail→edit loop is complete. A vehicle now cross-links to its calendar (`Xem lịch`, pre-filtered) and, with `bookings.view`, to its upcoming/recent bookings from the 360 overview; there is still no vehicle→revenue view.
+
+Invalid `?tab=` values normalize to `information` against `VEHICLE_EDIT_TAB` — the same constant that alert links are generated from, so a mistyped tab cannot silently produce a dead link.
 
 ---
 
@@ -192,12 +255,14 @@ stateDiagram-v2
 
 One view mode only (table) — the old Firebase UI's grid/list/table switcher was not carried over. No bulk selection (§14). Loading/empty/error states per `docs/project/05_PAGES.md`: URL filters, spinner/empty/error, delete confirmation.
 
-### 7.1 Accepted target redesign — card-first fleet list (product decision 2026-08-10)
+### 7.1 Card-first fleet list — SHIPPED (product decision 2026-08-10)
 
-`/manage/vehicles` will use a **vehicle card grid as its canonical presentation at every
+`/manage/vehicles` uses a **vehicle card grid as its canonical presentation at every
 viewport**, replacing the desktop data table. This is appropriate for the expected tenant fleet
 size and gives each vehicle's image and operational context enough visual priority. Do not add a
 table/grid switcher unless a later product requirement proves that large fleets need it.
+
+Implemented in [`VehicleCardGrid.tsx`](../../apps/web/src/features/vehicles/components/VehicleCardGrid.tsx) (grid), [`VehicleManagementCard.tsx`](../../apps/web/src/features/vehicles/components/VehicleManagementCard.tsx) (card) and [`VehicleListRow.tsx`](../../apps/web/src/features/vehicles/components/VehicleListRow.tsx) (compact mobile row). Cards carry the server-derived alert chips and current odometer from `GET /vehicles/alerts` — the list never recomputes them client-side. The table view is gone; §7's column table above is retained as the historical shape.
 
 The supplied dark fleet screenshot is a **layout and information-hierarchy reference only**. It is
 not a color, typography, radius, shadow or component-style source. The implementation and updated
@@ -248,7 +313,11 @@ One `VehicleForm` for both modes, RHF + `vehicleFormSchema` (shared Yup) + `clas
 
 Validation notes (confirmed): required = code/name/type/service/operationStatus only; everything the *marketplace* needs (price, image, plate, description) is optional at save time and enforced only at **submission** — a deliberate two-stage model that lets an internal-only vehicle stay incomplete. Body type auto-clears on switching to motorbike. Money fields transform `''`→null. Server re-validates enums with `@IsIn` and money as string decimals.
 
-**Confirmed problems:** no unsaved-changes guard; submit always enabled (no dirty gating — same as brief 03 §11); the form gives no indication which fields are "sensitive" beyond a sentence in the review panel, so a shop editing a published vehicle's price learns about the knock-back only after saving.
+**Superseded by Vehicle 360 (§2.4 #31–33).** Creation is a four-step wizard and editing is a six-tab workspace; the single shared `VehicleForm` description above still holds for field-level validation, which the wizard and the workspace both reuse.
+
+**Resolved:** an unsaved-changes guard now exists (`beforeunload` plus a confirm when switching tabs while dirty), and a sensitive edit on a published vehicle requires explicit confirmation **before** the API call — the shop learns about the knock-back before it happens, not after (V-1 closed).
+
+**Still open:** submit-public remains ungated by dirty state and unconfirmed (V-11).
 
 ---
 
@@ -295,12 +364,14 @@ Delete: `Popconfirm` on the table row. Submit-public: plain button (no confirm) 
 ## 14. Responsive, accessibility, security
 
 **Responsive (confirmed current):** form uses `Row/Col xs/sm` collapse; detail `Descriptions`
-collapses to one column; the current list renders cards only at the mobile breakpoint and a table
-on larger viewports.
+collapses to one column; `/manage/vehicles` is a card grid at every viewport per §7.1, with a
+compact single-row card on mobile. The create wizard's stepper is held to **one row at 390px**
+(AntD `responsive` disabled, vertical title placement, ellipsised labels) rather than collapsing to
+one step per line. Edit tabs stay horizontally usable and wide content scrolls inside its own
+container.
 
-**Accepted list target:** §7.1 supersedes the current responsive split for `/manage/vehicles`:
-card grid at every viewport, with 4/3/2/1 columns according to available width. This target is not a
-claim that the current repository has already implemented the desktop/tablet grid.
+Layout was verified by unit/DOM tests and code inspection. **No visual QA or screenshot comparison
+was performed** for this brief.
 
 **Accessibility (confirmed):** all fields through the labelled RHF wrappers (`useId` binding); icon-only row actions have `Tooltip` but their `aria-label` presence is `Unknown` per static review (`docs/project/09` §A11y-2); status conveyed by tag color **plus** text (good). No live-region announcements for status changes after submit.
 
@@ -345,40 +416,49 @@ claim that the current repository has already implemented the desktop/tablet gri
 | 14 | Shop resubmits a platform-hidden vehicle | Allowed (`hidden` is submittable); reviewer does not see the hide reason — known gap |
 | 15 | Motorbike with a body type | Prevented client-side (auto-clear); server accepts any valid enum (`Unknown` whether server should reject car-only fields for motorbikes) |
 | 16 | 21st gallery image | Rejected on both sides: Yup `max(20)` and DTO `@ArrayMaxSize(20)` |
-| 17 | Vehicle set to `maintenance` | Label changes; **remains bookable and marketplace-available** |
+| 17 | `operationStatus` set to `maintenance` by hand | Label changes only; **remains bookable**. Blocking availability requires a maintenance *record* (#41), which reserves occupancy |
+| 19 | Confirmed return with KM lower than pickup KM | Rejected, naming the exact figure it must exceed |
+| 20 | Confirmed return with no KM (where permitted) | Handover still closes; a `Thiếu KM trả` task opens; authoritative KM is **not** touched |
+| 21 | Same handover confirmed twice / concurrently | Idempotent — one winner, no second handover, KM write or history row |
+| 22 | Document with an expiry date but no file yet | Presented as `missing`, **not** `expired` — the documents tab and the alert feed agree |
+| 23 | Expiry threshold not configured by the tenant | No `expiring_soon` is inferred — there is no implicit 30-day default |
+| 24 | Vehicle or booking soft-deleted while a missing-KM task is open | Task leaves the queue **and** the board count together |
+| 25 | Two people reconcile the same OCR job | Second gets 409; nothing is applied twice |
 | 18 | `long_term`/`both` service types | Storable and filterable; no long-term-specific workflow exists (`docs/project/10`) |
 
 ---
 
 ## 17. Dependencies
 
-Billing (quota) · public-listings (`syncFromVehicle`, sole listing writer) · calendar/occupancy (delete guard; availability truth) · platform-approval (decisions + notifications) · platform-vehicles (moderation) · storage/R2 (media) · audit · `@xeprime/types` (all vocabularies) · `@xeprime/validators` (`vehicleFormSchema`) · tenant status (publish gate, brief 03).
+Billing (quota) · public-listings (`syncFromVehicle`, sole listing writer) · calendar/occupancy (delete guard; availability truth; maintenance windows) · platform-approval (decisions + notifications) · platform-vehicles (moderation) · storage/R2 (public media **and** private vehicle files) · audit · `@xeprime/types` (all vocabularies) · `@xeprime/validators` (`vehicleFormSchema`) · tenant status (publish gate, brief 03) · pricing (shop rental-policy defaults) · bookings/handovers (authoritative odometer, missing-KM backlog) · `tenant_profiles.settings` (maintenance due-soon and document-expiry thresholds).
 
 ---
 
 ## 18. Existing UX problems (consolidated)
 
-| ID | Problem |
-|---|---|
-| V-1 | Knock-back is invisible until it happens — the edit form does not mark sensitive fields or warn before saving one on a published vehicle |
-| V-2 | Revision requests are silent (shared with brief 03 AP-1) |
-| V-3 | Hide reason unreachable by the resubmit reviewer and never shown to the shop beyond the generic `hidden` alert |
-| V-4 | `maintenance`/`inactive` do not affect availability — an out-of-service vehicle is bookable |
-| V-5 | No blocked-range capability despite complete vocabulary/permission/color plumbing |
-| V-6 | Deleted vehicles are irrecoverable through the product; trash is a placeholder |
-| V-7 | `PLAN_LIMIT_REACHED` tells the shop to upgrade with nowhere to go |
-| V-8 | Approval history limited to the latest task |
-| V-9 | No vehicle→calendar/bookings/revenue cross-links |
-| V-10 | No bulk submit for multi-vehicle onboarding |
-| V-11 | Submit-public lacks a confirmation despite its consequences; delete has one — inverted severity |
-| V-12 | Table does not convert to cards on mobile |
-| V-13 | Orphaned R2 objects on image replacement |
+| ID | Problem | Status |
+|---|---|---|
+| V-1 | Knock-back invisible until it happens | **Closed** — sensitive edits on a published vehicle now confirm before the call (§8) |
+| V-2 | Revision requests are silent (shared with brief 03 AP-1) | Open |
+| V-3 | Hide reason unreachable by the resubmit reviewer and never shown to the shop beyond the generic `hidden` alert | Open |
+| V-4 | `maintenance`/`inactive` do not affect availability | **Partly closed** — maintenance records block availability; the hand-set label still does not (edge 17) |
+| V-5 | No blocked-range capability despite complete vocabulary/permission/color plumbing | Open |
+| V-6 | Deleted vehicles are irrecoverable through the product; trash is a placeholder | Open |
+| V-7 | `PLAN_LIMIT_REACHED` tells the shop to upgrade with nowhere to go | Open |
+| V-8 | Approval history limited to the latest task | Open |
+| V-9 | No vehicle→calendar/bookings/revenue cross-links | **Partly closed** — calendar deep-link and booking lists exist on the 360 overview; revenue view still missing |
+| V-10 | No bulk submit for multi-vehicle onboarding | Open |
+| V-11 | Submit-public lacks a confirmation despite its consequences; delete has one — inverted severity | Open |
+| V-12 | Table does not convert to cards on mobile | **Closed** — the table is gone; cards at every viewport (§7.1) |
+| V-13 | Orphaned R2 objects on image replacement | Open — applies to private vehicle files too |
 
 ---
 
 ## 19. Missing features
 
-Blocked ranges · maintenance records/workflow · driver management (while `with_driver` is sold) · trash/restore · seasonal pricing (`vehicle_pricing`) · vehicle documents (`imageType=document` unused; no registration/inspection tracking — the legacy UI showed "Hết hạn đăng kiểm" warnings, absent here) · bulk actions · vehicle-level availability view · plan-limit upsell path · typed gallery images · vehicle duplication/cloning for similar fleet units.
+Blocked ranges · driver management (while `with_driver` is sold) · trash/restore · seasonal pricing (`vehicle_pricing`) · bulk actions · vehicle-level availability view · plan-limit upsell path · typed gallery images (`imageType` still unwritten) · vehicle duplication/cloning for similar fleet units · a per-vehicle financial-obligation view (`/manage/finance/vehicle-obligations`) · partnership settlement actually posting to Finance.
+
+**Delivered since this brief was written:** maintenance records/workflow and vehicle documents, including the registration/inspection expiry warnings the legacy UI had (Q6 answered — required, and built).
 
 ---
 
@@ -407,7 +487,7 @@ Blocked ranges · maintenance records/workflow · driver management (while `with
 | Q3 | Is driver management planned for `with_driver` inventory, and what does assignment look like? | §2.3 #27 |
 | Q4 | Is trash/restore a requirement, and how should restored vehicles interact with reused codes? | V-6, edge 3 |
 | Q5 | Is seasonal pricing (`vehicle_pricing`) still intended, or is the Phase-0 flat model permanent? | §2.3 #30 |
-| Q6 | Are registration/inspection expiry warnings (legacy feature) required? | §19 |
+| ~~Q6~~ | ~~Are registration/inspection expiry warnings (legacy feature) required?~~ **Answered: yes — shipped as vehicle documents (§2.4 #38)** | closed |
 | Q7 | Should vehicle-level `archived` exist, or should the value be removed from the vocabulary? | §6.2 |
 | Q8 | Are typed gallery images (`interior`/`exterior`/`document`) a requirement? | §9 |
 | Q9 | Should the server reject car-only fields on motorbikes, or is client-side clearing sufficient? | edge 15 |
@@ -416,9 +496,11 @@ Blocked ranges · maintenance records/workflow · driver management (while `with
 
 ## 22. Acceptance criteria
 
-**Enforced today (regressions are defects):** VA1 code unique per tenant · VA2 quota checked at creation · VA3 publication requires the four fields + active tenant + submittable status · VA4 client can never set `publicStatus` · VA5 sensitive edits atomically knock back and hide the listing · VA6 unchanged-value writes do not knock back · VA7 delete blocked by future occupancy and archives the listing atomically · VA8 hide/unhide are single-step guarded transitions with mandatory hide reason and audit · VA9 listing sync accompanies every status-affecting write in the same transaction · VA10 approval evidence is snapshotted · VA11 all list state lives in the URL, server-side · VA12 money crosses as strings. Verified by the eight suites listed in §2.3 and `apps/api/test/{vehicle-approval,vehicle-media,platform-vehicles,platform-billing,listings-sync}.spec.ts`.
+**Enforced today (regressions are defects):** VA1 code unique per tenant · VA2 quota checked at creation · VA3 publication requires the four fields + active tenant + submittable status · VA4 client can never set `publicStatus` · VA5 sensitive edits atomically knock back and hide the listing · VA6 unchanged-value writes do not knock back · VA7 delete blocked by future occupancy and archives the listing atomically · VA8 hide/unhide are single-step guarded transitions with mandatory hide reason and audit · VA9 listing sync accompanies every status-affecting write in the same transaction · VA10 approval evidence is snapshotted · VA11 all list state lives in the URL, server-side · VA12 money crosses as strings. Verified by the suites listed in §24.
 
-**Proposed `[RECOMMENDED — NOT CURRENT]`:** VA13 sensitive fields are identifiable before saving · VA14 every operation status that means "not rentable" prevents rental · VA15 every defined occupancy source has a writer or is removed · VA16 deleted records are recoverable or deletion says it is permanent · VA17 every limit error links to its resolution · VA18 fleet tables convert to cards ≤640px.
+**Also enforced today (Vehicle 360 — regressions are defects):** VA19 a tab edit never writes a field owned by another tab, and an omitted field is never nulled · VA20 authoritative odometer moves only through a confirmed return; return KM below pickup KM is rejected · VA21 odometer history is append-only and every manual correction carries a reason plus an audit row · VA22 lowering odometer requires its own permission **and** explicit confirmation · VA23 handover confirmation is idempotent under retry and concurrency · VA24 a confirmed maintenance window occupies the vehicle through `OccupancyService` · VA25 the missing-return-KM queue and its board count use one predicate and change together · VA26 alerts are computed once server-side and consumed identically by the list and the 360 profile · VA27 a permission-less domain is never queried, so alerts leak nothing by presence, count or link · VA28 private file access is tenant+vehicle+purpose scoped, returns short-lived signed URLs, and no DTO ever carries a raw URL or object key · VA29 an expiry threshold that is not configured produces no `expiring_soon` verdict.
+
+**Proposed `[RECOMMENDED — NOT CURRENT]`:** VA14 every operation status that means "not rentable" prevents rental · VA15 every defined occupancy source has a writer or is removed · VA16 deleted records are recoverable or deletion says it is permanent · VA17 every limit error links to its resolution. (VA13 and VA18 are now enforced — see V-1 and §7.1.)
 
 ---
 
@@ -430,7 +512,7 @@ Conforms: URL state (ADR 0004 — reference-quality here) · tenant scope · per
 
 ## 24. Source references
 
-**Web:** [`vehicles/page.tsx`](<../../apps/web/src/app/(manage)/manage/vehicles/page.tsx>) · [`new/page.tsx`](<../../apps/web/src/app/(manage)/manage/vehicles/new/page.tsx>) · [`[id]/page.tsx`](<../../apps/web/src/app/(manage)/manage/vehicles/[id]/page.tsx>) · [`[id]/edit/page.tsx`](<../../apps/web/src/app/(manage)/manage/vehicles/[id]/edit/page.tsx>) · [`VehicleForm.tsx`](../../apps/web/src/features/vehicles/components/VehicleForm.tsx) · [`VehicleTable.tsx`](../../apps/web/src/features/vehicles/components/VehicleTable.tsx) · [`VehicleFilters.tsx`](../../apps/web/src/features/vehicles/components/VehicleFilters.tsx) · [`VehicleDetailView.tsx`](../../apps/web/src/features/vehicles/components/VehicleDetailView.tsx) · [`VehiclePublicReviewPanel.tsx`](../../apps/web/src/features/vehicles/components/VehiclePublicReviewPanel.tsx) · [`use-vehicle-filters.ts`](../../apps/web/src/features/vehicles/hooks/use-vehicle-filters.ts) · hooks/api/mappers/constants in [`features/vehicles/`](../../apps/web/src/features/vehicles/) · [`drivers/page.tsx`](<../../apps/web/src/app/(manage)/manage/drivers/page.tsx>) · [`trash/page.tsx`](<../../apps/web/src/app/(manage)/manage/trash/page.tsx>)
+**Web:** [`vehicles/page.tsx`](<../../apps/web/src/app/(manage)/manage/vehicles/page.tsx>) · [`new/page.tsx`](<../../apps/web/src/app/(manage)/manage/vehicles/new/page.tsx>) · [`[id]/page.tsx`](<../../apps/web/src/app/(manage)/manage/vehicles/[id]/page.tsx>) · [`[id]/edit/page.tsx`](<../../apps/web/src/app/(manage)/manage/vehicles/[id]/edit/page.tsx>) · [`VehicleForm.tsx`](../../apps/web/src/features/vehicles/components/VehicleForm.tsx) · [`VehicleCardGrid.tsx`](../../apps/web/src/features/vehicles/components/VehicleCardGrid.tsx) · [`VehicleFilters.tsx`](../../apps/web/src/features/vehicles/components/VehicleFilters.tsx) · [`Vehicle360Overview.tsx`](../../apps/web/src/features/vehicles/components/Vehicle360Overview.tsx) · [`VehiclePublicReviewPanel.tsx`](../../apps/web/src/features/vehicles/components/VehiclePublicReviewPanel.tsx) · [`use-vehicle-filters.ts`](../../apps/web/src/features/vehicles/hooks/use-vehicle-filters.ts) · hooks/api/mappers/constants in [`features/vehicles/`](../../apps/web/src/features/vehicles/) · [`drivers/page.tsx`](<../../apps/web/src/app/(manage)/manage/drivers/page.tsx>) · [`trash/page.tsx`](<../../apps/web/src/app/(manage)/manage/trash/page.tsx>)
 
 **API:** [`vehicles.service.ts`](../../apps/api/src/modules/vehicles/vehicles.service.ts) · [`vehicles.controller.ts`](../../apps/api/src/modules/vehicles/vehicles.controller.ts) · [`vehicle.dto.ts`](../../apps/api/src/modules/vehicles/dto/vehicle.dto.ts) · [`vehicles.module.ts`](../../apps/api/src/modules/vehicles/vehicles.module.ts) · [`listings.service.ts`](../../apps/api/src/modules/public-listings/listings.service.ts) · [`platform-vehicles.service.ts`](../../apps/api/src/modules/platform-admin/platform-vehicles.service.ts) · [`platform-approval.service.ts`](../../apps/api/src/modules/platform-admin/platform-approval.service.ts) · [`billing.service.ts`](../../apps/api/src/modules/billing/billing.service.ts) (`assertVehicleQuota`) · [`occupancy.service.ts`](../../apps/api/src/modules/calendar/occupancy.service.ts) · [`storage.controller.ts`](../../apps/api/src/modules/storage/storage.controller.ts)
 
@@ -438,7 +520,9 @@ Conforms: URL state (ADR 0004 — reference-quality here) · tenant scope · per
 
 **Data:** [`schema.prisma`](../../prisma/schema.prisma) — `Vehicle` (incl. the flat-pricing comment, the three admin indexes and the trigram index), `VehicleImage` (unused `imageType`), `VehicleFeature` (`@@unique([vehicleId, featureKey])`), `VehicleOccupancy` (tstzrange + `@@unique([sourceType, sourceId])`), `PublicListing` · migration [`20260730150000_add_listing_facets`](../../prisma/migrations/) (discount CHECK)
 
-**Tests:** `apps/api/test/{vehicle-approval,vehicle-media,platform-vehicles,platform-billing,listings-sync,listings-facets,occupancy-conflict,public-listings-filter}.spec.ts`
+**Vehicle 360 sources:** [`vehicle-alerts.service.ts`](../../apps/api/src/modules/vehicles/vehicle-alerts.service.ts) · [`vehicle-source.service.ts`](../../apps/api/src/modules/vehicles/vehicle-source.service.ts) · [`vehicle-contracts.service.ts`](../../apps/api/src/modules/vehicles/vehicle-contracts.service.ts) · [`documents/`](../../apps/api/src/modules/vehicles/documents/) · [`maintenance/`](../../apps/api/src/modules/vehicles/maintenance/) · [`handovers/`](../../apps/api/src/modules/bookings/handovers/) · [`pricing/`](../../apps/api/src/modules/pricing/) · web [`features/{vehicles,vehicle-documents,vehicle-maintenance,handovers,rental-policies}/`](../../apps/web/src/features/) · [`use-vehicle-alerts.ts`](../../apps/web/src/features/vehicles/hooks/use-vehicle-alerts.ts) (`useInvalidateVehicleSurfaces` — one list of query keys for every vehicle surface)
+
+**Tests:** `apps/api/test/{vehicle-approval,vehicle-media,platform-vehicles,platform-billing,listings-sync,listings-facets,occupancy-conflict,public-listings-filter}.spec.ts` · Vehicle 360: `apps/api/test/{vehicle-alerts,vehicle-summary,vehicle-source,vehicle-source-permissions,vehicle-documents,vehicle-maintenance,rental-pricing,booking-handovers}.spec.ts` (PostgreSQL-backed; they **skip silently when no database is reachable**, so a green run without `pnpm db:up` proves nothing) · web `apps/web/src/features/{vehicles,vehicle-documents,vehicle-maintenance,handovers,rental-policies}/**/*.test.tsx` and the vehicle page tests under `apps/web/src/app/(manage)/manage/vehicles/`
 
 **ADRs:** [0005](../decisions/0005-status-enums.md) · [0006](../decisions/0006-booking-concurrency.md) · [0007](../decisions/0007-api-type-contract.md) · [0008](../decisions/0008-public-listings-sync.md) · [0010](../decisions/0010-billing-plans-subscriptions.md)
 
