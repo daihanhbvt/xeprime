@@ -25,6 +25,7 @@ import {
 } from '@/components/form/RentalDateTimeRangeField';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
+import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { fetchListingDetailClient, fetchListingReviewsClient } from '@/features/marketplace/api';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import { verifyOtp } from '@/features/phone-verification/api';
