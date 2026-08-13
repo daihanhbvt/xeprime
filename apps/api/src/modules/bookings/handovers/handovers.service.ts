@@ -8,11 +8,10 @@ import {
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  BOOKING_STATUS,
   HANDOVER_CONFIRM_BOOKING_TARGET,
   HANDOVER_ENERGY_KIND,
   HANDOVER_MAX_PHOTOS,
-  HANDOVER_PHOTO_SLOT_LABEL,
-  HANDOVER_REQUIRED_SLOTS,
   HANDOVER_STATUS,
   HANDOVER_SUSPICIOUS_KM_PER_DAY_SETTING,
   HANDOVER_TYPE,
@@ -57,6 +56,12 @@ export interface HandoverViewScope {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Dung sai khi kiểm "thời điểm thực tế không ở tương lai" — đồng hồ máy khách lệch máy chủ vài
+ * chục giây là chuyện thường, và từ chối một biên bản vì lệch 5 giây là làm phiền vô cớ.
+ */
+const FUTURE_TOLERANCE_MS = 2 * 60 * 1000;
 
 const PHOTO_INCLUDE = {
   photos: { include: { privateFile: true }, orderBy: { createdAt: 'asc' as const } },
@@ -127,6 +132,8 @@ export class HandoversService {
       vehicleName: booking.vehicle.name,
       plateNumber: booking.vehicle.plateNumber,
       energyKind,
+      bookingPickupAt: booking.pickupAt.toISOString(),
+      bookingReturnAt: booking.returnAt.toISOString(),
       vehicleOdometerKm: profile?.currentOdometerKm ?? null,
       pickupOdometerKm: confirmedOdometerKm(pickup),
       // Cùng công thức với tab Bảo dưỡng & KM (§9) — hai màn không được lệch cách tính.
@@ -296,40 +303,47 @@ export class HandoversService {
     scope: HandoverViewScope,
   ): Promise<HandoverContextDto> {
     const booking = await this.requireBooking(tenantId, bookingId);
-    const handover = await this.requireActive(tenantId, bookingId, type);
+    const bookingStatus = booking.status as BookingStatus;
+
+    /**
+     * Wave 10 — LUỒNG NHANH: không cần bản nháp nào tồn tại trước. Một chuyến bình thường chỉ
+     * có hai lần bấm ở đầu và cuối chuyến, nên nếu chưa có biên bản thì tạo ngay tại đây rồi
+     * xác nhận. Ai đã mở phần nâng cao và lưu nháp trước thì bản đó được dùng tiếp như cũ.
+     */
+    let handover = await this.findActive(tenantId, bookingId, type);
+    if (!handover) {
+      if (!isHandoverEligible(type, bookingStatus)) throw notEligible(type, booking.status);
+      handover = await this.createForConfirm(tenantId, bookingId, booking.vehicleId, type, userId);
+    }
 
     // Retry mạng / bấm hai lần: đã xác nhận rồi thì trả nguyên trạng, KHÔNG chạy lại hệ quả.
     if (handover.status === HANDOVER_STATUS.CONFIRMED) {
       return this.context(tenantId, bookingId, scope);
     }
 
-    const bookingStatus = booking.status as BookingStatus;
     if (!isHandoverEligible(type, bookingStatus)) throw notEligible(type, booking.status);
 
-    assertRequiredPhotos(handover);
-    const odometerKm = handover.odometerKm;
-    if (odometerKm === null) {
-      /**
-       * KM lúc GIAO là bắt buộc, không có ngoại lệ: nó là mốc sàn để đối soát KM trả và là
-       * số duy nhất chứng minh xe rời bãi ở tình trạng nào. Thiếu nó thì cả chuyến mất khả
-       * năng đối soát — khác hẳn thiếu KM TRẢ (khách trả gấp, còn ảnh đồng hồ để đọc lại sau).
-       * Vì vậy `allowMissingOdometer` KHÔNG có tác dụng ở chiều giao xe; CHECK ở DB là chốt cuối.
-       */
-      if (type === HANDOVER_TYPE.PICKUP || !dto.allowMissingOdometer) {
-        throw new BadRequestException({
-          code: API_ERROR_CODE.VALIDATION_FAILED,
-          message:
-            type === HANDOVER_TYPE.PICKUP
-              ? 'Chỉ số KM lúc giao xe là bắt buộc — không thể xác nhận khi chưa có số'
-              : 'Chưa nhập chỉ số KM — nhập số hoặc xác nhận đóng biên bản thiếu KM',
-          details: {
-            fields: [{ field: 'odometerKm', message: 'Bắt buộc nhập chỉ số Odo' }],
-            // FE dùng cờ này để biết CÓ lối đi "đóng biên bản, bổ sung sau" hay không —
-            // không tự suy từ loại biên bản.
-            allowMissingSupported: type === HANDOVER_TYPE.RETURN,
-          },
-        });
-      }
+    /**
+     * Wave 10 (docs/design/14 §2): Odo và ảnh hiện trạng đều **TUỲ CHỌN ở CẢ HAI CHIỀU**.
+     *
+     * Trước đây KM lúc giao là bắt buộc và ảnh phải đủ góc — thực tế điều đó biến một việc
+     * 10 giây ở quầy thành một biểu mẫu, và nhân viên bịa số cho qua. Giờ số nào có thì ghi:
+     * thiếu KM giao thì không có mốc sàn để đối soát KM trả (và ta không giả vờ có), thiếu KM
+     * trả thì sinh việc `Thiếu KM trả`. KM của xe chỉ đổi khi có số thật.
+     */
+    const odometerKm = dto.odometerKm !== undefined ? dto.odometerKm : handover.odometerKm;
+
+    /**
+     * Mốc thực tế: client chọn được nhưng KHÔNG được ở tương lai — một biên bản "sẽ xảy ra"
+     * là vô nghĩa, và mở đường cho việc khai khống giờ nhận để né phí quá giờ.
+     */
+    const occurredAt = dto.occurredAt ? new Date(dto.occurredAt) : new Date();
+    if (occurredAt.getTime() > Date.now() + FUTURE_TOLERANCE_MS) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Thời điểm thực tế không thể ở tương lai',
+        details: { fields: [{ field: 'occurredAt', message: 'Chọn thời điểm không ở tương lai' }] },
+      });
     }
 
     const pickupKm = await this.confirmedPickupKm(tenantId, bookingId, type);
@@ -363,19 +377,29 @@ export class HandoversService {
          * và audit — ba nơi không được lệch nhau dù chỉ vài mili-giây.
          */
         const confirmedAt = new Date();
-        // Điều kiện `status` + `rowVersion` trong UPDATE là lớp chống trùng THẬT: hai người
-        // cùng bấm xác nhận thì chỉ một UPDATE khớp, người còn lại không chạy tiếp bước nào.
+        /**
+         * Điều kiện `status IN (draft, ready)` trong UPDATE là lớp chống trùng THẬT: hai người
+         * cùng bấm thì chỉ một UPDATE khớp, người còn lại không chạy tiếp bước nào. `rowVersion`
+         * là lớp BỔ SUNG, chỉ khi người gọi có bản nháp trong tay (Wave 10 cho xác nhận thẳng,
+         * lúc đó chẳng có bản nào để mà cũ).
+         */
         const claimed = await tx.vehicleHandover.updateMany({
           where: {
             id: handover.id,
             tenantId,
             status: { in: [HANDOVER_STATUS.DRAFT, HANDOVER_STATUS.READY] },
-            rowVersion: dto.expectedRowVersion,
+            ...(dto.expectedRowVersion != null ? { rowVersion: dto.expectedRowVersion } : {}),
           },
           data: {
             status: HANDOVER_STATUS.CONFIRMED,
             confirmedAt,
             confirmedBy: userId,
+            // Mốc việc thực sự xảy ra: client chọn được (mặc định `Bây giờ`), `confirmedAt` thì không.
+            occurredAt,
+            ...(dto.odometerKm !== undefined ? { odometerKm: dto.odometerKm } : {}),
+            ...(dto.condition !== undefined ? { condition: dto.condition } : {}),
+            ...(dto.conditionNote !== undefined ? { conditionNote: dto.conditionNote } : {}),
+            ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
             odometerMissing: odometerKm === null,
             suspiciousAcknowledged: Boolean(dto.acknowledgeSuspicious),
             updatedBy: userId,
@@ -404,16 +428,41 @@ export class HandoversService {
         // nguyên luật cũ, không nhân bản ở đây.
         const target = HANDOVER_CONFIRM_BOOKING_TARGET[type];
         if (target) {
+          /**
+           * Đơn shop tự lập nằm ở `reserved`, và bản đồ trạng thái KHÔNG có cạnh thẳng
+           * `reserved → active` — cố ý: `POST /bookings/:id/transition` là endpoint chung, thêm
+           * cạnh đó vào là mở một đường đổi đơn sang `Đang thuê` mà chẳng cần biên bản bàn giao
+           * nào (Wave 10 §3: trạng thái đơn chỉ đổi như HỆ QUẢ của một lần xác nhận thật).
+           *
+           * Giao xe hàm ý shop đã xác nhận đơn, nên ở đây đi đúng hai cạnh hợp lệ trong CÙNG
+           * transaction. Chặng giữa `silent` vì nó là bút toán, không phải một sự kiện người
+           * trong shop cần nhận tin riêng.
+           */
+          let from = bookingStatus;
+          if (target === BOOKING_STATUS.ACTIVE && from === BOOKING_STATUS.RESERVED) {
+            await this.bookings.transitionWithinTx(
+              tx,
+              tenantId,
+              bookingId,
+              userId,
+              from,
+              BOOKING_STATUS.CONFIRMED,
+              { silent: true },
+            );
+            from = BOOKING_STATUS.CONFIRMED;
+          }
+
           await this.bookings.transitionWithinTx(
             tx,
             tenantId,
             bookingId,
             userId,
-            bookingStatus,
+            from,
             target,
+            // Giờ nhận/trả THỰC TẾ của đơn lấy mốc vận hành, không phải lúc bấm ghi nhận.
             type === HANDOVER_TYPE.PICKUP
-              ? { actualPickupAt: confirmedAt.toISOString() }
-              : { actualReturnAt: confirmedAt.toISOString() },
+              ? { actualPickupAt: occurredAt.toISOString() }
+              : { actualReturnAt: occurredAt.toISOString() },
           );
         }
 
@@ -444,7 +493,9 @@ export class HandoversService {
               odometerMissing: odometerKm === null,
               suspiciousAcknowledged: Boolean(dto.acknowledgeSuspicious),
               // Cùng một mốc với biên bản và với `actual_*_at` của đơn — audit không được
-              // kể một giờ khác với thứ nó đang ghi nhận.
+              // kể một giờ khác với thứ nó đang ghi nhận. Ghi CẢ HAI mốc: giờ vận hành do
+              // người dùng khai, giờ ghi nhận do server sinh — lệch nhau là dữ liệu, không lỗi.
+              occurredAt: occurredAt.toISOString(),
               confirmedAt: confirmedAt.toISOString(),
             },
           },
@@ -879,6 +930,38 @@ export class HandoversService {
     });
   }
 
+  /**
+   * Dựng biên bản rỗng ngay trước khi xác nhận — luồng nhanh Wave 10 không bắt tạo nháp trước.
+   *
+   * Hai người cùng bấm: partial unique chặn bản thứ hai, người thua đọc lại bản của người thắng
+   * rồi đi tiếp bình thường (điều kiện `status` trong UPDATE mới là chỗ chống xác nhận đôi).
+   */
+  private async createForConfirm(
+    tenantId: string,
+    bookingId: string,
+    vehicleId: string,
+    type: HandoverType,
+    userId: string,
+  ): Promise<HandoverRow> {
+    try {
+      await this.prisma.vehicleHandover.create({
+        data: {
+          id: newId(),
+          tenantId,
+          bookingId,
+          vehicleId,
+          type,
+          status: HANDOVER_STATUS.DRAFT,
+          createdBy: userId,
+          updatedBy: userId,
+        },
+      });
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+    }
+    return this.requireActive(tenantId, bookingId, type);
+  }
+
   private async requireActive(
     tenantId: string,
     bookingId: string,
@@ -971,6 +1054,7 @@ function toDto(
     energyKind,
     fuelLevel: row.fuelLevel,
     batteryPercent: row.batteryPercent,
+    condition: row.condition,
     conditionNote: row.conditionNote,
     damageNote: row.damageNote,
     notes: row.notes,
@@ -983,6 +1067,7 @@ function toDto(
         ? { fileId: photo.privateFileId, name: photo.privateFile.originalName }
         : {}),
     })),
+    occurredAt: row.occurredAt?.toISOString() ?? null,
     confirmedAt: row.confirmedAt?.toISOString() ?? null,
     confirmedByName: row.confirmedBy ? (nameByUserId.get(row.confirmedBy) ?? null) : null,
     canceledAt: row.canceledAt?.toISOString() ?? null,
@@ -1010,6 +1095,7 @@ function patchOf(dto: SaveHandoverDto) {
           ...(dto.batteryPercent != null ? { fuelLevel: null } : {}),
         }
       : {}),
+    ...(dto.condition !== undefined ? { condition: dto.condition } : {}),
     ...(dto.conditionNote !== undefined ? { conditionNote: trimOrNull(dto.conditionNote) } : {}),
     ...(dto.damageNote !== undefined ? { damageNote: trimOrNull(dto.damageNote) } : {}),
     ...(dto.notes !== undefined ? { notes: trimOrNull(dto.notes) } : {}),
@@ -1058,20 +1144,13 @@ function assertEnergyInput(dto: SaveHandoverDto, energyKind: string): void {
   }
 }
 
-/**
- * Không có ảnh thì biên bản không giải quyết được tranh chấp nào — đòi tối thiểu hai góc đối
- * diện. Trả về CHÍNH các góc còn thiếu để UI chỉ đúng ô cần chụp.
+/*
+ * Wave 10 đã BỎ `assertRequiredPhotos`: ảnh hiện trạng là tuỳ chọn (docs/design/14 §2).
+ *
+ * Bắt đủ góc cho MỌI chuyến biến một việc 10 giây ở quầy thành một biểu mẫu, và kết quả thực
+ * tế là nhân viên chụp bừa cho qua — bằng chứng tệ hơn không có. Ai cần bằng chứng chặt thì
+ * mở `Ghi nhận hiện trạng`; ảnh cũ vẫn đọc được bình thường.
  */
-function assertRequiredPhotos(row: HandoverRow): void {
-  const present = new Set(row.photos.map((photo) => photo.slot));
-  const missing = HANDOVER_REQUIRED_SLOTS.filter((slot) => !present.has(slot));
-  if (missing.length === 0) return;
-  throw new BadRequestException({
-    code: API_ERROR_CODE.VALIDATION_FAILED,
-    message: `Cần ảnh hiện trạng: ${missing.map((slot) => HANDOVER_PHOTO_SLOT_LABEL[slot]).join(', ')}`,
-    details: { missingSlots: missing },
-  });
-}
 
 function belowPickup(pickupKm: number, odometerKm: number): BadRequestException {
   return new BadRequestException({

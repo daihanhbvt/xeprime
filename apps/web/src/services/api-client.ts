@@ -153,8 +153,12 @@ export async function apiPut<TData>(path: string, body?: unknown): Promise<TData
   return result.data;
 }
 
-export async function apiDelete<TData>(path: string): Promise<TData> {
-  const result = await apiRequest<TData>(path, { method: 'DELETE' });
+/**
+ * `body` tuỳ chọn: một số thao tác xoá cần LÝ DO đi kèm (gỡ khoản phát sinh, huỷ có audit) —
+ * nhét lý do vào query string thì nó lọt vào log truy cập, nên nó đi trong body.
+ */
+export async function apiDelete<TData>(path: string, body?: unknown): Promise<TData> {
+  const result = await apiRequest<TData>(path, { method: 'DELETE', body });
   return result.data;
 }
 

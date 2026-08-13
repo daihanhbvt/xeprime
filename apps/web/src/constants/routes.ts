@@ -96,6 +96,17 @@ export function vehicleTabPath(id: string, tab: VehicleEditTab): string {
   return `${vehiclePath.edit(id)}?tab=${tab}`;
 }
 
+/**
+ * Chi tiết một đơn thuê (Wave 10) — route THẬT, không phải drawer.
+ *
+ * Vận hành một chuyến (giao xe → đang thuê → nhận lại → hoàn cọc) kéo dài nhiều ngày và nhiều
+ * người cùng nhìn; nó cần một đường link gửi được, F5 không mất và mở lại đúng chỗ. Drawer ở
+ * danh sách vẫn giữ cho thao tác nhanh.
+ */
+export const bookingPath = {
+  detail: (id: string): string => `/manage/bookings/${id}`,
+};
+
 /** Trang xem/in hợp đồng thuê. */
 export const contractPath = {
   detail: (id: string): string => `/manage/contracts/${id}`,

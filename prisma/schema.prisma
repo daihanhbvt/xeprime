@@ -157,6 +157,8 @@ model Tenant {
   vehicleMaintenanceAttachments VehicleMaintenanceAttachment[]
   vehicleHandovers VehicleHandover[]
   vehicleHandoverPhotos VehicleHandoverPhoto[]
+  bookingSurcharges BookingSurcharge[]
+  bookingDepositSettlements BookingDepositSettlement[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -772,6 +774,8 @@ model Booking {
   payments       Payment[]
   contract       Contract?
   handovers      VehicleHandover[]
+  surcharges     BookingSurcharge[]
+  depositSettlement BookingDepositSettlement?
 
   @@unique([tenantId, code])
   /// Mục tiêu cho composite FK của `vehicle_handovers`: một biên bản bàn giao phải trỏ về
@@ -1276,12 +1280,22 @@ model VehicleHandover {
   fuelLevel      String?   @map("fuel_level") @db.VarChar(20)
   /// % pin cho xe điện (0–100). Loại trừ lẫn nhau với `fuel_level` — CHECK ở migration.
   batteryPercent Int?      @map("battery_percent")
+  /// @xeprime/types → HandoverCondition. NULL = chưa ghi nhận (mọi bản ghi trước Wave 10).
+  /// Cột riêng chứ không suy từ `condition_note`: "bình thường, có ghi chú" khác "có điểm cần
+  /// lưu ý", và cái sau mới là thứ cần lọc ra.
+  condition      String?   @db.VarChar(20)
   conditionNote  String?   @map("condition_note") @db.Text
   /// Hư hỏng/sự cố phát sinh — chỉ có nghĩa ở chiều nhận trả.
   damageNote     String?   @map("damage_note") @db.Text
   notes          String?   @db.Text
+  /// Khi biên bản được GHI NHẬN — server sinh, không nhận từ client, không sửa được.
   confirmedAt    DateTime? @map("confirmed_at") @db.Timestamptz(3)
   confirmedBy    String?   @map("confirmed_by") @db.Char(26)
+  /// Khi việc giao/nhận THỰC SỰ xảy ra (Wave 10). Tách khỏi `confirmed_at` vì hai mốc này khác
+  /// nhau thật: nhân viên giao xe lúc 9h rồi 9h20 mới vào ghi. Client chọn được mốc này (mặc
+  /// định `Bây giờ`) nhưng KHÔNG chọn được `confirmed_at` — nhờ vậy vẫn còn một mốc bất biến
+  /// để đối soát nếu ai đó khai lùi giờ. NULL = bản ghi cũ trước Wave 10, đọc `confirmed_at`.
+  occurredAt     DateTime? @map("occurred_at") @db.Timestamptz(3)
   canceledAt     DateTime? @map("canceled_at") @db.Timestamptz(3)
   canceledBy     String?   @map("canceled_by") @db.Char(26)
   /// Optimistic concurrency — hai nhân viên cùng mở biên bản, người sau phải thấy bản mới.
@@ -1330,6 +1344,81 @@ model VehicleHandoverPhoto {
   @@unique([handoverId, slot])
   @@index([tenantId, handoverId])
   @@map("vehicle_handover_photos")
+}
+
+/// Khoản phát sinh cuối chuyến (Wave 10 — docs/design/14 §4.2).
+///
+/// Bảng CHUẨN HOÁ chứ không phải một mảng JSON trên đơn: từng khoản có người tạo/sửa và có thể
+/// bị huỷ có vết, nên nó là bản ghi vận hành thật, không phải ghi chú.
+///
+/// KHÔNG có danh mục nhiên liệu — Wave 10 bỏ hẳn mức xăng/pin khỏi bàn giao (CHECK ở migration
+/// khoá đúng bốn danh mục cho phép).
+///
+/// Đây KHÔNG phải sổ tiền: ghi phát sinh không sinh phiếu thu, không đụng `paid_amount`, không
+/// tạo giao dịch. Nó nuôi phép tính đề xuất hoàn cọc và dừng ở đó.
+model BookingSurcharge {
+  id        String   @id @db.Char(26)
+  tenantId  String   @map("tenant_id") @db.Char(26)
+  bookingId String   @map("booking_id") @db.Char(26)
+  /// @xeprime/types → SurchargeCategory
+  category  String   @db.VarChar(30)
+  /// Không âm — CHECK ở migration. Tiền luôn Decimal, không bao giờ float (ADR 0007).
+  amount    Decimal  @db.Decimal(14, 2)
+  reason    String   @db.Text
+  /// Huỷ MỀM: khoản đã ghi nhầm được gỡ khỏi phép tính nhưng vẫn còn dấu vết ai gỡ, lúc nào.
+  voidedAt  DateTime? @map("voided_at") @db.Timestamptz(3)
+  voidedBy  String?   @map("voided_by") @db.Char(26)
+  voidReason String?  @map("void_reason") @db.Text
+  createdBy String?  @map("created_by") @db.Char(26)
+  updatedBy String?  @map("updated_by") @db.Char(26)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, bookingId])
+  @@map("booking_surcharges")
+}
+
+/// Ghi nhận hoàn cọc THỦ CÔNG (Wave 10 — docs/design/14 §5).
+///
+/// Một bản ghi cho mỗi đơn. Đây là bằng chứng "chủ xe đã trả tiền lại cho khách", KHÔNG phải
+/// một lệnh chuyển tiền: XePrime không có cổng thanh toán, tiền đi bằng chuyển khoản/tiền mặt
+/// bên ngoài rồi chủ xe vào đánh dấu.
+///
+/// Ba con số được chụp lại tại thời điểm ghi nhận (`depositReceived`, `surchargeTotal`) thay vì
+/// tính lại về sau: thêm một khoản phát sinh sau khi đã hoàn tiền KHÔNG được phép sửa lịch sử
+/// đã hoàn bao nhiêu.
+model BookingDepositSettlement {
+  id        String   @id @db.Char(26)
+  tenantId  String   @map("tenant_id") @db.Char(26)
+  /// Một đơn một bản ghi — sửa lại thì cập nhật tại chỗ kèm audit before/after, không đẻ bản mới.
+  bookingId String   @unique @map("booking_id") @db.Char(26)
+  /// Cọc ĐÃ THU tại thời điểm ghi nhận (suy từ `payments.kind = 'deposit'`), không phải số cấu hình.
+  depositReceived Decimal @map("deposit_received") @db.Decimal(14, 2)
+  /// Tổng phát sinh còn hiệu lực tại thời điểm ghi nhận.
+  surchargeTotal  Decimal @map("surcharge_total") @db.Decimal(14, 2)
+  /// Số thực tế đã hoàn — chủ xe có thể ghi khác số đề xuất (CHECK: không âm).
+  refundAmount    Decimal @map("refund_amount") @db.Decimal(14, 2)
+  /// @xeprime/types → RefundMethod
+  refundMethod    String  @map("refund_method") @db.VarChar(30)
+  /// Thời điểm chủ xe THỰC SỰ hoàn tiền (có thể sớm hơn lúc bấm ghi nhận).
+  refundedAt      DateTime @map("refunded_at") @db.Timestamptz(3)
+  /// Mã giao dịch/tham chiếu do chủ xe nhập — tuỳ chọn.
+  reference       String?  @db.VarChar(255)
+  note            String?  @db.Text
+  recordedBy      String?  @map("recorded_by") @db.Char(26)
+  /// Optimistic concurrency — hai người cùng sửa bản ghi hoàn cọc thì người sau phải thấy bản mới.
+  rowVersion      Int      @default(1) @map("row_version")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, bookingId])
+  @@map("booking_deposit_settlements")
 }
 
 /// Bảng chiếm dụng lịch xe — ADR 0006.
@@ -1698,6 +1787,12 @@ model Payment {
   currency              String    @default("VND") @db.VarChar(10)
   /// @xeprime/types → PaymentMethod
   method                String    @db.VarChar(50)
+  /// @xeprime/types → PaymentKind ('rental' | 'deposit') — CHECK ở migration Wave 10.
+  ///
+  /// Trước Wave 10 mọi khoản đều là tiền thuê và không có cách nào CHỨNG MINH đã thu cọc, nên
+  /// `bookings.deposit_amount` (số cấu hình) từng bị đọc nhầm thành tiền đã cầm. Cột này là
+  /// ranh giới đó: chỉ khoản `deposit` mới sinh ra việc hoàn cọc. Bản ghi cũ mặc định `rental`.
+  kind                  String    @default("rental") @db.VarChar(20)
   /// @xeprime/types → PaymentStatus
   status                String    @default("succeeded") @db.VarChar(50)
   provider              String?   @db.VarChar(50)

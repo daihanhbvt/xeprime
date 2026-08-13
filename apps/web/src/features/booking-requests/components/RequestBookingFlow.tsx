@@ -60,6 +60,12 @@ interface RequestBookingFlowProps {
    * khoá các đường đóng vô ý. Flow vẫn tự giữ state; đây chỉ là thông báo ra ngoài.
    */
   onBusyChange?: (busy: boolean) => void;
+  /**
+   * Đã sang màn KẾT QUẢ (gửi xong / trùng lặp). Vỏ dùng tín hiệu này để thu overlay lại cho vừa
+   * nội dung — khung hai cột rộng 1180px và cao hết màn là dành cho biểu mẫu, giữ nguyên cho
+   * một thẻ xác nhận ngắn thì thừa mênh mông chỗ trống.
+   */
+  onResultChange?: (isResult: boolean) => void;
 }
 
 const DELIVERY_NOTE =
@@ -94,6 +100,7 @@ export function RequestBookingFlow({
   returnAt,
   onClose,
   onBusyChange,
+  onResultChange,
 }: RequestBookingFlowProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -268,6 +275,11 @@ export function RequestBookingFlow({
   useEffect(() => {
     onBusyChange?.(submitting || verifying);
   }, [submitting, verifying, onBusyChange]);
+
+  const isResult = step === 'done' || duplicate;
+  useEffect(() => {
+    onResultChange?.(isResult);
+  }, [isResult, onResultChange]);
 
   const verifiedContact = useMemo(() => {
     if (step !== 'review' && step !== 'done') return null;

@@ -4748,6 +4748,254 @@
         ]
       }
     },
+    "/bookings/{id}/settlement": {
+      "get": {
+        "operationId": "BookingSettlementController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingSettlementDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Quyết toán đơn: phát sinh, cọc đã thu, đề xuất hoàn",
+        "tags": [
+          "booking-settlement"
+        ]
+      }
+    },
+    "/bookings/{id}/surcharges": {
+      "post": {
+        "operationId": "BookingSettlementController_addSurcharge",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveSurchargeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingSettlementDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thêm một khoản phát sinh (không sinh giao dịch)",
+        "tags": [
+          "booking-settlement"
+        ]
+      }
+    },
+    "/bookings/{id}/surcharges/{surchargeId}": {
+      "patch": {
+        "operationId": "BookingSettlementController_updateSurcharge",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "surchargeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveSurchargeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingSettlementDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa một khoản phát sinh (audit before/after)",
+        "tags": [
+          "booking-settlement"
+        ]
+      },
+      "delete": {
+        "operationId": "BookingSettlementController_voidSurcharge",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "surchargeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidSurchargeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingSettlementDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gỡ một khoản phát sinh (huỷ mềm, có lý do + audit)",
+        "tags": [
+          "booking-settlement"
+        ]
+      }
+    },
+    "/bookings/{id}/settlement/refund": {
+      "post": {
+        "operationId": "BookingSettlementController_recordRefund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordDepositRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingSettlementDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đánh dấu đã hoàn cọc (ghi nhận thủ công, không chuyển tiền)",
+        "tags": [
+          "booking-settlement"
+        ]
+      },
+      "patch": {
+        "operationId": "BookingSettlementController_correctRefund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectDepositRefundDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingSettlementDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Điều chỉnh bản ghi hoàn cọc (quyền cao, bắt buộc lý do)",
+        "tags": [
+          "booking-settlement"
+        ]
+      }
+    },
     "/booking-requests": {
       "get": {
         "operationId": "BookingRequestsController_list",
@@ -13056,6 +13304,10 @@
             "type": "string",
             "description": "ISO-8601 UTC"
           },
+          "vehicleImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
           "baseAmount": {
             "type": "string"
           },
@@ -13357,6 +13609,11 @@
             "type": "number",
             "nullable": true
           },
+          "condition": {
+            "type": "string",
+            "nullable": true,
+            "description": "@xeprime/types → HandoverCondition. null = chưa ghi nhận"
+          },
           "conditionNote": {
             "type": "string",
             "nullable": true
@@ -13375,10 +13632,15 @@
               "$ref": "#/components/schemas/HandoverPhotoDto"
             }
           },
+          "occurredAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO — khi việc giao/nhận THỰC SỰ xảy ra (bản ghi cũ: null, đọc confirmedAt)"
+          },
           "confirmedAt": {
             "type": "string",
             "nullable": true,
-            "description": "ISO"
+            "description": "ISO — khi được GHI NHẬN"
           },
           "confirmedByName": {
             "type": "string",
@@ -13439,6 +13701,14 @@
             "type": "string",
             "description": "@xeprime/types → HandoverEnergyKind"
           },
+          "bookingPickupAt": {
+            "type": "string",
+            "description": "Giờ nhận xe theo đơn (ISO-8601 UTC)"
+          },
+          "bookingReturnAt": {
+            "type": "string",
+            "description": "Giờ trả xe theo đơn (ISO-8601 UTC)"
+          },
           "vehicleOdometerKm": {
             "type": "number",
             "nullable": true,
@@ -13492,6 +13762,8 @@
           "vehicleId",
           "vehicleName",
           "energyKind",
+          "bookingPickupAt",
+          "bookingReturnAt",
           "rentalDays",
           "canStartPickup",
           "canStartReturn"
@@ -13521,6 +13793,14 @@
             "nullable": true,
             "description": "% pin xe điện (0–100)"
           },
+          "condition": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "normal",
+              "attention"
+            ]
+          },
           "conditionNote": {
             "type": "string",
             "nullable": true
@@ -13549,19 +13829,36 @@
         "properties": {
           "expectedRowVersion": {
             "type": "number",
-            "description": "Bắt buộc — chống hai người cùng xác nhận trên hai bản khác nhau"
+            "description": "Có bản nháp thì nộp lại để chống sửa đè"
+          },
+          "occurredAt": {
+            "type": "string",
+            "description": "ISO-8601. Không được ở tương lai. Mặc định: lúc xác nhận"
+          },
+          "odometerKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "0–2000000"
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "attention"
+            ]
+          },
+          "conditionNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
           },
           "acknowledgeSuspicious": {
             "type": "boolean"
-          },
-          "allowMissingOdometer": {
-            "type": "boolean",
-            "description": "Chỉ dùng cho chiều trả xe"
           }
-        },
-        "required": [
-          "expectedRowVersion"
-        ]
+        }
       },
       "CancelHandoverDto": {
         "type": "object",
@@ -13738,6 +14035,311 @@
         "required": [
           "data",
           "meta"
+        ]
+      },
+      "BookingSurchargeDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "overtime",
+              "cleaning",
+              "damage",
+              "other"
+            ]
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tiền dạng chuỗi — ADR 0007"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "createdByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO"
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "amount",
+          "reason",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "DepositRefundDto": {
+        "type": "object",
+        "properties": {
+          "refundAmount": {
+            "type": "string",
+            "description": "Tiền dạng chuỗi"
+          },
+          "refundMethod": {
+            "type": "string",
+            "enum": [
+              "bank_transfer",
+              "cash",
+              "other"
+            ]
+          },
+          "refundedAt": {
+            "type": "string",
+            "description": "ISO"
+          },
+          "reference": {
+            "type": "string",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "rowVersion": {
+            "type": "number",
+            "description": "Optimistic concurrency — nộp lại khi điều chỉnh"
+          }
+        },
+        "required": [
+          "refundAmount",
+          "refundMethod",
+          "refundedAt",
+          "rowVersion"
+        ]
+      },
+      "OvertimeSuggestionDto": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Có đủ dữ liệu (chính sách + giờ trả thực tế) để đề xuất không"
+          },
+          "lateMinutes": {
+            "type": "number",
+            "description": "Số phút trễ so với lịch (đã trừ thời gian miễn phí)"
+          },
+          "chargedHours": {
+            "type": "number",
+            "description": "Số giờ tính phí sau khi làm tròn"
+          },
+          "feePerHour": {
+            "type": "string",
+            "nullable": true
+          },
+          "amount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền đề xuất"
+          },
+          "formula": {
+            "type": "string",
+            "nullable": true,
+            "description": "Diễn giải công thức"
+          }
+        },
+        "required": [
+          "available",
+          "lateMinutes",
+          "chargedHours"
+        ]
+      },
+      "BookingSettlementDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "depositRequired": {
+            "type": "string",
+            "description": "Cọc theo cấu hình đơn — CHƯA chắc đã thu"
+          },
+          "depositReceived": {
+            "type": "string",
+            "description": "Cọc ĐÃ THU (từ payments kind=deposit)"
+          },
+          "surcharges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingSurchargeDto"
+            }
+          },
+          "surchargeTotal": {
+            "type": "string",
+            "description": "Tổng phát sinh còn hiệu lực"
+          },
+          "proposedRefund": {
+            "type": "string",
+            "description": "max(cọc đã thu − tổng phát sinh, 0)"
+          },
+          "additionalDue": {
+            "type": "string",
+            "description": "max(tổng phát sinh − cọc đã thu, 0)"
+          },
+          "depositStatus": {
+            "type": "string",
+            "enum": [
+              "none",
+              "not_received",
+              "awaiting_refund",
+              "refunded",
+              "partially_refunded"
+            ],
+            "description": "@xeprime/types → DepositStatus"
+          },
+          "refund": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DepositRefundDto"
+              }
+            ]
+          },
+          "overtime": {
+            "$ref": "#/components/schemas/OvertimeSuggestionDto"
+          }
+        },
+        "required": [
+          "bookingId",
+          "depositRequired",
+          "depositReceived",
+          "surcharges",
+          "surchargeTotal",
+          "proposedRefund",
+          "additionalDue",
+          "depositStatus",
+          "overtime"
+        ]
+      },
+      "SaveSurchargeDto": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "overtime",
+              "cleaning",
+              "damage",
+              "other"
+            ],
+            "description": "KHÔNG có danh mục nhiên liệu"
+          },
+          "amount": {
+            "type": "string",
+            "description": "VND, không âm (chuỗi — ADR 0007)"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Lý do — bắt buộc, đây là khoản trừ vào tiền của khách"
+          }
+        },
+        "required": [
+          "category",
+          "amount",
+          "reason"
+        ]
+      },
+      "VoidSurchargeDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Lý do gỡ — bắt buộc"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "RecordDepositRefundDto": {
+        "type": "object",
+        "properties": {
+          "refundAmount": {
+            "type": "string",
+            "description": "Số tiền thực hoàn (chuỗi — ADR 0007)"
+          },
+          "refundMethod": {
+            "type": "string",
+            "enum": [
+              "bank_transfer",
+              "cash",
+              "other"
+            ]
+          },
+          "refundedAt": {
+            "type": "string",
+            "description": "ISO — mặc định hiện tại. Không được ở tương lai."
+          },
+          "reference": {
+            "type": "string",
+            "description": "Mã giao dịch/tham chiếu"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refundAmount",
+          "refundMethod"
+        ]
+      },
+      "CorrectDepositRefundDto": {
+        "type": "object",
+        "properties": {
+          "refundAmount": {
+            "type": "string",
+            "description": "Số tiền thực hoàn (chuỗi — ADR 0007)"
+          },
+          "refundMethod": {
+            "type": "string",
+            "enum": [
+              "bank_transfer",
+              "cash",
+              "other"
+            ]
+          },
+          "refundedAt": {
+            "type": "string",
+            "description": "ISO — mặc định hiện tại. Không được ở tương lai."
+          },
+          "reference": {
+            "type": "string",
+            "description": "Mã giao dịch/tham chiếu"
+          },
+          "note": {
+            "type": "string"
+          },
+          "correctionReason": {
+            "type": "string",
+            "description": "Lý do điều chỉnh — bắt buộc, vào audit"
+          },
+          "expectedRowVersion": {
+            "type": "number",
+            "description": "Bắt buộc — chống sửa đè"
+          }
+        },
+        "required": [
+          "refundAmount",
+          "refundMethod",
+          "correctionReason",
+          "expectedRowVersion"
         ]
       },
       "BookingRequestDeliveryQuoteDto": {

@@ -103,8 +103,10 @@ export class BookingListItemDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
 
-/** Chi tiết một đơn — dùng cho drawer xem/sửa. */
+/** Chi tiết một đơn — dùng cho trang chi tiết đơn. */
 export class BookingDetailDto extends BookingListItemDto {
+  /** Ảnh đại diện xe (`vehicles.main_image_url`) — null = xe chưa có ảnh, UI không dựng ảnh giả. */
+  @ApiPropertyOptional({ type: String, nullable: true }) vehicleImageUrl!: string | null;
   @ApiProperty() baseAmount!: string;
   @ApiProperty() deliveryFee!: string;
   @ApiProperty() discountAmount!: string;

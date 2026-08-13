@@ -422,35 +422,50 @@
 /* ── Màn kết (thành công / trùng lặp) ──────────────────────────────────── */
 
 /*
- * Màn kết chiếm trọn thân modal (thân `xl` cao cố định và không cuộn) — nên chính nó phải cuộn
- * được và tự căn giữa theo chiều ngang.
+ * Màn kết: overlay đã thu về cỡ `md` nên khối này chỉ cần vừa nội dung, KHÔNG ép chiều cao —
+ * ép `height: 100%` ở đây là thứ để lại một vùng trống mênh mông dưới hàng nút.
  */
 .resultWrap {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
   min-width: 0;
-  height: 100%;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .centered {
   width: 100%;
-  max-width: 520px;
-  padding: var(--xp-space-md) 0;
+  min-width: 0;
+  padding: var(--xp-space-sm) 0;
   text-align: center;
 }
 
-.doneIcon {
-  font-size: 52px;
-  color: var(--xp-color-success);
+/**
+ * Huy hiệu kết quả: đĩa đặc + quầng nhạt, dấu tích trắng ở giữa.
+ *
+ * Màu nằm ở `background` của thẻ bọc chứ không phải `color` của glyph — glyph tô theo
+ * `currentColor`, mà style runtime của AntD tiêm sau CSS Module nên một class đơn không chắc
+ * thắng và dấu tích ra màu chữ. Cách này không phụ thuộc thừa kế nào.
+ */
+.doneBadge {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: var(--xp-border-radius-pill);
+  margin: 0 auto var(--xp-space-md);
+  background: var(--xp-color-success);
+  box-shadow: 0 0 0 8px var(--xp-color-success-bg);
+  color: #fff;
+  font-size: 26px;
 }
 
-.warnIcon {
-  font-size: 52px;
-  color: var(--xp-color-warning);
+/* Ăn chắc trước mọi rule `.anticon` khác: (0,2,0) > (0,1,0). */
+.doneBadge :global(.anticon) {
+  color: inherit;
+}
+
+.warnBadge {
+  background: var(--xp-color-warning);
+  box-shadow: 0 0 0 8px var(--xp-color-warning-bg);
 }
 
 .doneTitle {

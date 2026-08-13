@@ -1539,6 +1539,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bookings/{id}/settlement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quyết toán đơn: phát sinh, cọc đã thu, đề xuất hoàn */
+        get: operations["BookingSettlementController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/surcharges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Thêm một khoản phát sinh (không sinh giao dịch) */
+        post: operations["BookingSettlementController_addSurcharge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/bookings/{id}/surcharges/{surchargeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Gỡ một khoản phát sinh (huỷ mềm, có lý do + audit) */
+        delete: operations["BookingSettlementController_voidSurcharge"];
+        options?: never;
+        head?: never;
+        /** Sửa một khoản phát sinh (audit before/after) */
+        patch: operations["BookingSettlementController_updateSurcharge"];
+        trace?: never;
+    };
+    "/bookings/{id}/settlement/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Đánh dấu đã hoàn cọc (ghi nhận thủ công, không chuyển tiền) */
+        post: operations["BookingSettlementController_recordRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Điều chỉnh bản ghi hoàn cọc (quyền cao, bắt buộc lý do) */
+        patch: operations["BookingSettlementController_correctRefund"];
+        trace?: never;
+    };
     "/booking-requests": {
         parameters: {
             query?: never;
@@ -4161,6 +4231,7 @@ export interface components {
             depositAmount: string;
             /** @description ISO-8601 UTC */
             createdAt: string;
+            vehicleImageUrl?: string | null;
             baseAmount: string;
             deliveryFee: string;
             discountAmount: string;
@@ -4269,11 +4340,15 @@ export interface components {
             /** @enum {string|null} */
             fuelLevel?: "full" | "three_quarter" | "half" | "quarter" | "empty" | null;
             batteryPercent?: number | null;
+            /** @description @xeprime/types → HandoverCondition. null = chưa ghi nhận */
+            condition?: string | null;
             conditionNote?: string | null;
             damageNote?: string | null;
             notes?: string | null;
             photos: components["schemas"]["HandoverPhotoDto"][];
-            /** @description ISO */
+            /** @description ISO — khi việc giao/nhận THỰC SỰ xảy ra (bản ghi cũ: null, đọc confirmedAt) */
+            occurredAt?: string | null;
+            /** @description ISO — khi được GHI NHẬN */
             confirmedAt?: string | null;
             confirmedByName?: string | null;
             /** @description ISO */
@@ -4293,6 +4368,10 @@ export interface components {
             plateNumber?: string | null;
             /** @description @xeprime/types → HandoverEnergyKind */
             energyKind: string;
+            /** @description Giờ nhận xe theo đơn (ISO-8601 UTC) */
+            bookingPickupAt: string;
+            /** @description Giờ trả xe theo đơn (ISO-8601 UTC) */
+            bookingReturnAt: string;
             /** @description KM hiện tại của xe theo hệ thống — null = chưa từng ghi nhận */
             vehicleOdometerKm?: number | null;
             pickupOdometerKm?: number | null;
@@ -4312,6 +4391,8 @@ export interface components {
             fuelLevel?: "full" | "three_quarter" | "half" | "quarter" | "empty" | null;
             /** @description % pin xe điện (0–100) */
             batteryPercent?: number | null;
+            /** @enum {string|null} */
+            condition?: "normal" | "attention" | null;
             conditionNote?: string | null;
             /** @description Chỉ có nghĩa ở chiều trả */
             damageNote?: string | null;
@@ -4321,11 +4402,17 @@ export interface components {
             expectedRowVersion?: number | null;
         };
         ConfirmHandoverDto: {
-            /** @description Bắt buộc — chống hai người cùng xác nhận trên hai bản khác nhau */
-            expectedRowVersion: number;
+            /** @description Có bản nháp thì nộp lại để chống sửa đè */
+            expectedRowVersion?: number;
+            /** @description ISO-8601. Không được ở tương lai. Mặc định: lúc xác nhận */
+            occurredAt?: string;
+            /** @description 0–2000000 */
+            odometerKm?: number | null;
+            /** @enum {string} */
+            condition?: "normal" | "attention";
+            conditionNote?: string | null;
+            notes?: string | null;
             acknowledgeSuspicious?: boolean;
-            /** @description Chỉ dùng cho chiều trả xe */
-            allowMissingOdometer?: boolean;
         };
         CancelHandoverDto: {
             expectedRowVersion: number;
@@ -4379,6 +4466,107 @@ export interface components {
         MissingOdometerQueueDto: {
             data: components["schemas"]["MissingOdometerItemDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+        };
+        BookingSurchargeDto: {
+            id: string;
+            /** @enum {string} */
+            category: "overtime" | "cleaning" | "damage" | "other";
+            /** @description Tiền dạng chuỗi — ADR 0007 */
+            amount: string;
+            reason: string;
+            createdByName?: string | null;
+            /** @description ISO */
+            createdAt: string;
+            /** @description ISO */
+            updatedAt: string;
+        };
+        DepositRefundDto: {
+            /** @description Tiền dạng chuỗi */
+            refundAmount: string;
+            /** @enum {string} */
+            refundMethod: "bank_transfer" | "cash" | "other";
+            /** @description ISO */
+            refundedAt: string;
+            reference?: string | null;
+            note?: string | null;
+            recordedByName?: string | null;
+            /** @description Optimistic concurrency — nộp lại khi điều chỉnh */
+            rowVersion: number;
+        };
+        OvertimeSuggestionDto: {
+            /** @description Có đủ dữ liệu (chính sách + giờ trả thực tế) để đề xuất không */
+            available: boolean;
+            /** @description Số phút trễ so với lịch (đã trừ thời gian miễn phí) */
+            lateMinutes: number;
+            /** @description Số giờ tính phí sau khi làm tròn */
+            chargedHours: number;
+            feePerHour?: string | null;
+            /** @description Tiền đề xuất */
+            amount?: string | null;
+            /** @description Diễn giải công thức */
+            formula?: string | null;
+        };
+        BookingSettlementDto: {
+            bookingId: string;
+            /** @description Cọc theo cấu hình đơn — CHƯA chắc đã thu */
+            depositRequired: string;
+            /** @description Cọc ĐÃ THU (từ payments kind=deposit) */
+            depositReceived: string;
+            surcharges: components["schemas"]["BookingSurchargeDto"][];
+            /** @description Tổng phát sinh còn hiệu lực */
+            surchargeTotal: string;
+            /** @description max(cọc đã thu − tổng phát sinh, 0) */
+            proposedRefund: string;
+            /** @description max(tổng phát sinh − cọc đã thu, 0) */
+            additionalDue: string;
+            /**
+             * @description @xeprime/types → DepositStatus
+             * @enum {string}
+             */
+            depositStatus: "none" | "not_received" | "awaiting_refund" | "refunded" | "partially_refunded";
+            refund?: components["schemas"]["DepositRefundDto"] | null;
+            overtime: components["schemas"]["OvertimeSuggestionDto"];
+        };
+        SaveSurchargeDto: {
+            /**
+             * @description KHÔNG có danh mục nhiên liệu
+             * @enum {string}
+             */
+            category: "overtime" | "cleaning" | "damage" | "other";
+            /** @description VND, không âm (chuỗi — ADR 0007) */
+            amount: string;
+            /** @description Lý do — bắt buộc, đây là khoản trừ vào tiền của khách */
+            reason: string;
+        };
+        VoidSurchargeDto: {
+            /** @description Lý do gỡ — bắt buộc */
+            reason: string;
+        };
+        RecordDepositRefundDto: {
+            /** @description Số tiền thực hoàn (chuỗi — ADR 0007) */
+            refundAmount: string;
+            /** @enum {string} */
+            refundMethod: "bank_transfer" | "cash" | "other";
+            /** @description ISO — mặc định hiện tại. Không được ở tương lai. */
+            refundedAt?: string;
+            /** @description Mã giao dịch/tham chiếu */
+            reference?: string;
+            note?: string;
+        };
+        CorrectDepositRefundDto: {
+            /** @description Số tiền thực hoàn (chuỗi — ADR 0007) */
+            refundAmount: string;
+            /** @enum {string} */
+            refundMethod: "bank_transfer" | "cash" | "other";
+            /** @description ISO — mặc định hiện tại. Không được ở tương lai. */
+            refundedAt?: string;
+            /** @description Mã giao dịch/tham chiếu */
+            reference?: string;
+            note?: string;
+            /** @description Lý do điều chỉnh — bắt buộc, vào audit */
+            correctionReason: string;
+            /** @description Bắt buộc — chống sửa đè */
+            expectedRowVersion: number;
         };
         BookingRequestDeliveryQuoteDto: {
             distanceKm: number;
@@ -8125,6 +8313,154 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MissingOdometerQueueDto"];
+                };
+            };
+        };
+    };
+    BookingSettlementController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingSettlementDto"];
+                };
+            };
+        };
+    };
+    BookingSettlementController_addSurcharge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveSurchargeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingSettlementDto"];
+                };
+            };
+        };
+    };
+    BookingSettlementController_voidSurcharge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                surchargeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoidSurchargeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingSettlementDto"];
+                };
+            };
+        };
+    };
+    BookingSettlementController_updateSurcharge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                surchargeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveSurchargeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingSettlementDto"];
+                };
+            };
+        };
+    };
+    BookingSettlementController_recordRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordDepositRefundDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingSettlementDto"];
+                };
+            };
+        };
+    };
+    BookingSettlementController_correctRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectDepositRefundDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingSettlementDto"];
                 };
             };
         };

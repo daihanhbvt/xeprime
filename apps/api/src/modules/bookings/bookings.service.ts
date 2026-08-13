@@ -54,6 +54,9 @@ const LIST_SELECT = {
 
 const DETAIL_SELECT = {
   ...LIST_SELECT,
+  // Ảnh đại diện xe: một cột trên chính bảng `vehicles`, không join gallery — chi tiết đơn
+  // cần NHẬN RA chiếc xe, không cần xem bộ ảnh.
+  vehicle: { select: { name: true, plateNumber: true, mainImageUrl: true } },
   baseAmount: true,
   deliveryFee: true,
   discountAmount: true,
@@ -443,7 +446,17 @@ export class BookingsService {
     userId: string,
     from: BookingStatus,
     to: BookingStatus,
-    opts: { actualPickupAt?: string | null; actualReturnAt?: string | null } = {},
+    opts: {
+      actualPickupAt?: string | null;
+      actualReturnAt?: string | null;
+      /**
+       * Bỏ thông báo cho thành viên gian hàng. CHỈ dùng cho bước TRUNG GIAN của một chuỗi
+       * chuyển trạng thái xảy ra trong cùng một hành động (giao xe từ đơn `reserved` phải đi
+       * qua `confirmed`): người trong shop cần biết kết quả cuối, không cần hai tin trong cùng
+       * một giây kể lại từng chặng. Audit vẫn ghi đủ mọi chặng — đó mới là nơi truy vết.
+       */
+      silent?: boolean;
+    } = {},
   ): Promise<BookingDetailRow> {
     if (from === to || !canTransitionBooking(from, to)) {
       throw new ConflictException({
@@ -498,18 +511,20 @@ export class BookingsService {
     );
 
     // Báo các thành viên khác của shop biết đơn đổi trạng thái (nhận biết nội bộ).
-    await this.notifications.emitToTenantMembers(
-      tenantId,
-      {
-        type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
-        title: `Đơn ${updated.code}: ${BOOKING_STATUS_META[to].label}`,
-        body: updated.vehicle.name,
-        targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
-        targetId: id,
-      },
-      tx,
-      { excludeUserId: userId },
-    );
+    if (!opts.silent) {
+      await this.notifications.emitToTenantMembers(
+        tenantId,
+        {
+          type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
+          title: `Đơn ${updated.code}: ${BOOKING_STATUS_META[to].label}`,
+          body: updated.vehicle.name,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+          targetId: id,
+        },
+        tx,
+        { excludeUserId: userId },
+      );
+    }
 
     return updated;
   }
@@ -618,6 +633,7 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     deliveryFee: b.deliveryFee as unknown as string,
     discountAmount: b.discountAmount as unknown as string,
     priceSnapshot: (b.priceSnapshot as unknown as BookingDetailDto['priceSnapshot']) ?? null,
+    vehicleImageUrl: b.vehicle.mainImageUrl,
     actualPickupAt: b.actualPickupAt as unknown as string | null,
     actualReturnAt: b.actualReturnAt as unknown as string | null,
     note: b.note,

@@ -114,7 +114,7 @@ export function UpdateDeliveryFeeModal({
         <TextAreaField
           control={control}
           name="note"
-          label="Ghi chú nội bộ (không bắt buộc)"
+          label="Ghi chú nội bộ"
           placeholder="Lý do, mã tham chiếu…"
           rows={2}
         />

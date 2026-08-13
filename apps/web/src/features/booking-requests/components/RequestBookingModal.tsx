@@ -48,13 +48,21 @@ export function RequestBookingModal({
    * chưa. Nút đóng tường minh vẫn dùng được.
    */
   const [busy, setBusy] = useState(false);
+  /**
+   * Đã gửi xong (hoặc trùng lặp) → overlay THU lại vừa nội dung.
+   *
+   * Khung `xl` hai cột rộng 1180px và cao hết màn là để chứa biểu mẫu; giữ nguyên nó cho một
+   * thẻ xác nhận vài dòng thì phần lớn hộp thoại là chỗ trống, và mắt phải đi rất xa mới tới
+   * hàng nút. Kết quả là một thông báo, không phải một không gian làm việc.
+   */
+  const [isResult, setIsResult] = useState(false);
 
   return (
     <ResponsiveDialog
       title={TITLE}
       open={open}
       onClose={onClose}
-      size="xl"
+      size={isResult ? 'md' : 'xl'}
       footer={null}
       confirmLoading={busy}
     >
@@ -68,6 +76,7 @@ export function RequestBookingModal({
           returnAt={returnAt}
           onClose={onClose}
           onBusyChange={setBusy}
+          onResultChange={setIsResult}
         />
       ) : null}
     </ResponsiveDialog>

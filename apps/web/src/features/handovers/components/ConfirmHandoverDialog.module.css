@@ -1,0 +1,124 @@
+/**
+ * Hộp xác nhận giao/nhận xe (Wave 10) — gọn, một hành động chính.
+ * Vùng nâng cao đóng sẵn và không được chiếm chỗ của nút xác nhận.
+ */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.row dt {
+  flex: none;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.row dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--xp-color-text);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-text-secondary);
+}
+
+.hint {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.control {
+  width: 100%;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  min-height: var(--xp-touch-target-min);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font: inherit;
+}
+
+.textarea {
+  min-height: 0;
+  resize: vertical;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--xp-color-primary);
+}
+
+/* Vùng nâng cao: nhạt hơn phần chính để mắt không dừng ở đó trước. */
+.advanced :global(.ant-collapse-header) {
+  padding-left: 0 !important;
+  font-weight: 600;
+  color: var(--xp-color-text-secondary);
+}
+
+.advanced :global(.ant-collapse-content-box) {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.advancedBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.advancedLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+}
+
+.linkBtn {
+  padding: var(--xp-space-xs) 0;
+  border: none;
+  background: none;
+  color: var(--xp-gold-deep);
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}

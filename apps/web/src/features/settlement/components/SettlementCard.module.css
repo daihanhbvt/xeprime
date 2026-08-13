@@ -1,0 +1,162 @@
+/** Thẻ "Phát sinh & Tiền cọc" trên chi tiết đơn (Wave 10). */
+
+.card {
+  min-width: 0;
+}
+
+.body,
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.sectionTitle {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  min-width: 0;
+}
+
+.itemMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemCategory {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.itemReason {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+}
+
+.row,
+.rowTotal {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.row dt,
+.rowTotal dt {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+}
+
+.row dd,
+.rowTotal dd {
+  margin: 0;
+  text-align: right;
+}
+
+.rowTotal {
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  font-weight: 600;
+}
+
+/* Tiền không bao giờ ngắt dòng giữa con số. */
+.money,
+.moneyNegative,
+.moneyStrong {
+  white-space: nowrap;
+  color: var(--xp-color-text);
+}
+
+.moneyNegative {
+  color: var(--xp-color-error);
+}
+
+.moneyStrong {
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-h4);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+  font-weight: 400;
+  white-space: normal;
+}
+
+.refundBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.refundRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  min-width: 0;
+}
+
+.refundRow b {
+  color: var(--xp-color-text);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.actionBlock {
+  width: 100%;
+}
+
+.disclaimer {
+  display: block;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}

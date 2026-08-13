@@ -2,13 +2,14 @@
 
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Input, Select, Spin } from 'antd';
+import { useRouter } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { PERMISSION } from '@xeprime/types';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
+import { bookingPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { BOOKINGS_DEFAULT_LIMIT } from '@/features/bookings/api';
 import { BOOKING_SORT_OPTIONS, BOOKING_STATUS_OPTIONS } from '@/features/bookings/constants';
-import { BookingDetailDrawer } from '@/features/bookings/components/BookingDetailDrawer';
 import { BookingFormDrawer } from '@/features/bookings/components/BookingFormDrawer';
 import { BookingTable } from '@/features/bookings/components/BookingTable';
 import { useBookingFilters } from '@/features/bookings/hooks/use-booking-filters';
@@ -28,11 +29,12 @@ export default function BookingsPage() {
 }
 
 function BookingsView() {
+  const router = useRouter();
   const { has } = usePermissions();
   const { filters, setFilters } = useBookingFilters();
   const { data, isError, refetch, isFetching } = useBookings(filters);
 
-  const [detailId, setDetailId] = useState<string | null>(null);
+  // Danh sách chỉ còn TẠO đơn; sửa nằm ở trang chi tiết, nơi có đủ ngữ cảnh của chuyến.
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<BookingDetail | null>(null);
 
@@ -43,12 +45,6 @@ function BookingsView() {
 
   function openCreate() {
     setEditing(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(booking: BookingDetail) {
-    setDetailId(null);
-    setEditing(booking);
     setFormOpen(true);
   }
 
@@ -104,15 +100,15 @@ function BookingsView() {
             </Button>
           ) : undefined
         }
-        onView={(id) => setDetailId(id)}
+        /*
+         * Wave 10: bấm xem đi thẳng tới TRANG chi tiết thay vì mở drawer. Vận hành một chuyến
+         * kéo dài nhiều ngày, nhiều người cùng nhìn và người ta gửi link cho nhau — một drawer
+         * không có URL không phục vụ được việc đó. Chỉ còn MỘT bản chi tiết đơn.
+         */
+        onView={(id) => router.push(bookingPath.detail(id))}
         onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
       />
 
-      <BookingDetailDrawer
-        bookingId={detailId}
-        onClose={() => setDetailId(null)}
-        onEdit={openEdit}
-      />
       <BookingFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
     </div>
   );

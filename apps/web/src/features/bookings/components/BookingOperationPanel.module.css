@@ -1,0 +1,25 @@
+/** Diễn biến chuyến trên chi tiết đơn — chỉ kể trạng thái; nút bấm ở `BookingActionBar`. */
+
+.card {
+  min-width: 0;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/* Chặng kế tiếp: câu dẫn tới nút ở chân thẻ chi tiết, không phải một cảnh báo. */
+.next {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.note {
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}

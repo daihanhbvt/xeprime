@@ -105,6 +105,11 @@ export const queryKeys = {
     /** Bàn giao xe của một đơn (Wave 7) — nằm dưới nhánh `bookings` vì xác nhận bàn giao
      *  đổi luôn trạng thái đơn, invalidate một chỗ là đủ. */
     handovers: (id: string) => ['bookings', 'handovers', id] as const,
+    /**
+     * Quyết toán cuối chuyến (Wave 10): phát sinh + cọc đã thu + đề xuất hoàn. Nằm dưới nhánh
+     * `bookings` để xác nhận trả xe (đổi trạng thái đơn) tự làm mới luôn thẻ cọc.
+     */
+    settlement: (id: string) => ['bookings', 'settlement', id] as const,
   },
   bookingRequests: {
     all: ['booking-requests'] as const,

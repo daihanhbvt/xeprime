@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   FUEL_LEVEL_VALUES,
+  HANDOVER_CONDITION_VALUES,
   HANDOVER_PHOTO_SLOT_VALUES,
   HANDOVER_STATUS_VALUES,
   HANDOVER_TYPE_VALUES,
@@ -12,6 +13,7 @@ import {
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsDateString,
   IsIn,
   IsInt,
   IsOptional,
@@ -66,13 +68,25 @@ export class HandoverDto {
   fuelLevel!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) batteryPercent!: number | null;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: '@xeprime/types → HandoverCondition. null = chưa ghi nhận',
+  })
+  condition!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) conditionNote!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) damageNote!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) notes!: string | null;
 
   @ApiProperty({ type: [HandoverPhotoDto] }) photos!: HandoverPhotoDto[];
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO — khi việc giao/nhận THỰC SỰ xảy ra (bản ghi cũ: null, đọc confirmedAt)',
+  })
+  occurredAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO — khi được GHI NHẬN' })
   confirmedAt!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) confirmedByName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
@@ -106,6 +120,16 @@ export class HandoverContextDto {
   @ApiProperty() vehicleName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
   @ApiProperty({ description: '@xeprime/types → HandoverEnergyKind' }) energyKind!: string;
+
+  /**
+   * Giờ nhận/trả THEO ĐƠN (ISO-8601 UTC) — mốc mặc định của biên bản tương ứng.
+   *
+   * Mặc định theo giờ đã hẹn chứ không phải "lúc bấm": một chuyến chạy đúng lịch thì đó mới là
+   * giờ thật, còn `Bây giờ` chỉ tình cờ trùng lúc nhân viên rảnh tay mở máy. UI vẫn cho chỉnh,
+   * và server vẫn từ chối mốc ở tương lai.
+   */
+  @ApiProperty({ description: 'Giờ nhận xe theo đơn (ISO-8601 UTC)' }) bookingPickupAt!: string;
+  @ApiProperty({ description: 'Giờ trả xe theo đơn (ISO-8601 UTC)' }) bookingReturnAt!: string;
 
   @ApiPropertyOptional({
     type: Number,
@@ -199,7 +223,11 @@ export class MissingOdometerQueryDto {
  * ở quầy. `undefined` = không đụng tới, `null` = xoá giá trị — không nhập nhằng.
  */
 export class SaveHandoverDto {
-  @ApiPropertyOptional({ type: Number, nullable: true, description: `KM đọc trên đồng hồ, 0–${ODOMETER_MAX_KM}` })
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: `KM đọc trên đồng hồ, 0–${ODOMETER_MAX_KM}`,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -219,6 +247,12 @@ export class SaveHandoverDto {
   @Min(0)
   @Max(100)
   batteryPercent?: number | null;
+
+  /** @xeprime/types → HandoverCondition (Wave 10). Tuỳ chọn. */
+  @ApiPropertyOptional({ type: String, nullable: true, enum: HANDOVER_CONDITION_VALUES })
+  @IsOptional()
+  @IsIn([...HANDOVER_CONDITION_VALUES, null])
+  condition?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
@@ -264,28 +298,68 @@ export class SaveHandoverDto {
  * trường lọt vào body.
  */
 export class ConfirmHandoverDto {
-  @ApiProperty({ description: 'Bắt buộc — chống hai người cùng xác nhận trên hai bản khác nhau' })
+  /**
+   * Wave 10: **tuỳ chọn**. Luồng nhanh xác nhận thẳng, không có bản nháp nào để mà cũ; khi có
+   * (người dùng mở phần nâng cao lưu trước rồi mới xác nhận) thì vẫn chống sửa đè như cũ.
+   *
+   * Chống xác nhận HAI LẦN không dựa vào trường này mà dựa vào điều kiện `status IN (draft,
+   * ready)` trong `UPDATE` — thứ luôn có mặt.
+   */
+  @ApiPropertyOptional({ type: Number, description: 'Có bản nháp thì nộp lại để chống sửa đè' })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  expectedRowVersion!: number;
+  expectedRowVersion?: number;
+
+  /**
+   * Thời điểm việc giao/nhận THỰC SỰ xảy ra (Wave 10, mặc định `Bây giờ` ở FE).
+   *
+   * Tách khỏi `confirmedAt` — mốc ghi nhận do server sinh và client không đụng được. Nhờ vậy
+   * cho phép chỉnh giờ thực tế (nhân viên giao lúc 9h, 9h20 mới vào ghi) mà vẫn còn một mốc
+   * bất biến để đối soát. Server chặn giờ tương lai.
+   */
+  @ApiPropertyOptional({ description: 'ISO-8601. Không được ở tương lai. Mặc định: lúc xác nhận' })
+  @IsOptional()
+  @IsDateString()
+  occurredAt?: string;
+
+  /**
+   * Chỉ số Odo — **tuỳ chọn ở CẢ HAI chiều** (Wave 10). Gửi kèm ở đây thay vì phải lưu nháp
+   * trước; thiếu thì chuyến vẫn hoàn tất, KM của xe không bị đụng và chiều trả sinh việc
+   * `Thiếu KM trả`.
+   */
+  @ApiPropertyOptional({ type: Number, nullable: true, description: `0–${ODOMETER_MAX_KM}` })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(ODOMETER_MAX_KM)
+  odometerKm?: number | null;
+
+  /** @xeprime/types → HandoverCondition. Tuỳ chọn. */
+  @ApiPropertyOptional({ enum: HANDOVER_CONDITION_VALUES })
+  @IsOptional()
+  @IsIn(HANDOVER_CONDITION_VALUES)
+  condition?: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  conditionNote?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string | null;
 
   /** Đã xem cảnh báo KM bất thường và khẳng định số đọc là đúng. */
   @ApiPropertyOptional({ type: Boolean })
   @IsOptional()
   @IsBoolean()
   acknowledgeSuspicious?: boolean;
-
-  /**
-   * Chấp nhận đóng biên bản mà CHƯA có số KM — sinh task "Thiếu KM trả". KM có thẩm quyền của
-   * xe KHÔNG bị đụng tới (§9.1: "Thiếu KM trả: không tăng KM tự động").
-   *
-   * CHỈ có tác dụng ở chiều TRẢ xe. Biên bản giao xe thiếu KM luôn bị từ chối.
-   */
-  @ApiPropertyOptional({ type: Boolean, description: 'Chỉ dùng cho chiều trả xe' })
-  @IsOptional()
-  @IsBoolean()
-  allowMissingOdometer?: boolean;
 }
 
 export class CancelHandoverDto {

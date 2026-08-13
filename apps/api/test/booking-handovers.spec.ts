@@ -67,7 +67,9 @@ const fakeR2 = {
   },
   async readPrivateObjectPrefix(key: string) {
     // JPEG magic bytes — `completeFor` đối chiếu nội dung thật với MIME đã khai.
-    return objects.has(key) ? new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0]) : null;
+    return objects.has(key)
+      ? new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0])
+      : null;
   },
   async presignPrivateDownload() {
     return { downloadUrl: 'https://r2.local/signed-get', expiresIn: 120 };
@@ -89,14 +91,7 @@ const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Serv
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit);
 const bookings = new BookingsService(asService, occupancy, audit, notifications);
-const handovers = new HandoversService(
-  asService,
-  bookings,
-  odometer,
-  maintenance,
-  files,
-  audit,
-);
+const handovers = new HandoversService(asService, bookings, odometer, maintenance, files, audit);
 
 /** Chủ gian hàng (mở được ảnh) vs nhân viên vận hành (làm bàn giao, không mở kho ảnh). */
 const FULL_SCOPE = { canViewFiles: true };
@@ -407,7 +402,11 @@ describe('Bản nháp bàn giao', () => {
 // ── Xác nhận giao xe ────────────────────────────────────────────────────────
 
 describe('Xác nhận giao xe', () => {
-  maybe('thiếu ảnh bắt buộc thì không xác nhận được, và nói rõ thiếu góc nào', async () => {
+  /**
+   * Wave 10 thay luật "đủ góc ảnh mới được xác nhận": ảnh là bằng chứng TUỲ CHỌN. Chụp được
+   * một góc thì lưu một góc — không chặn việc giao xe vì thiếu ảnh sau.
+   */
+  maybe('một góc ảnh cũng xác nhận được — không đòi đủ bộ', async () => {
     const vehicle = await createVehicle();
     const booking = await createBooking(vehicle.id);
     const draft = await handovers.saveDraft(
@@ -420,21 +419,17 @@ describe('Xác nhận giao xe', () => {
     );
     await uploadPhoto(booking.id, HANDOVER_TYPE.PICKUP, HANDOVER_PHOTO_SLOT.FRONT);
 
-    await expect(
-      handovers.confirm(
-        tenantId,
-        booking.id,
-        HANDOVER_TYPE.PICKUP,
-        ownerId,
-        { expectedRowVersion: draft.rowVersion },
-        FULL_SCOPE,
-      ),
-    ).rejects.toMatchObject({
-      response: {
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        details: { missingSlots: [HANDOVER_PHOTO_SLOT.REAR] },
-      },
-    });
+    const after = await handovers.confirm(
+      tenantId,
+      booking.id,
+      HANDOVER_TYPE.PICKUP,
+      ownerId,
+      { expectedRowVersion: draft.rowVersion },
+      FULL_SCOPE,
+    );
+
+    expect(after.pickup?.status).toBe(HANDOVER_STATUS.CONFIRMED);
+    expect(after.pickup?.photos).toHaveLength(1);
   });
 
   maybe('xác nhận: đơn sang Đang thuê, KM ghi nguồn booking_pickup, biên bản chỉ đọc', async () => {
@@ -500,50 +495,53 @@ describe('Xác nhận giao xe', () => {
     expect(rows).toBe(1);
   });
 
-  maybe('hai người cùng xác nhận: một người thắng, người kia KHÔNG tạo hệ quả thứ hai', async () => {
-    const vehicle = await createVehicle();
-    await setKm(vehicle.id, 30_000);
-    const booking = await createBooking(vehicle.id);
-    await handovers.saveDraft(
-      tenantId,
-      booking.id,
-      HANDOVER_TYPE.PICKUP,
-      ownerId,
-      { odometerKm: 30_100 },
-      FULL_SCOPE,
-    );
-    await uploadRequiredPhotos(booking.id, HANDOVER_TYPE.PICKUP);
-    const ctx = await handovers.context(tenantId, booking.id, FULL_SCOPE);
-    const version = ctx.pickup?.rowVersion ?? 1;
-
-    // Hai request cùng nộp CÙNG một rowVersion — đúng tình huống double-click ở quầy.
-    const results = await Promise.allSettled([
-      handovers.confirm(
+  maybe(
+    'hai người cùng xác nhận: một người thắng, người kia KHÔNG tạo hệ quả thứ hai',
+    async () => {
+      const vehicle = await createVehicle();
+      await setKm(vehicle.id, 30_000);
+      const booking = await createBooking(vehicle.id);
+      await handovers.saveDraft(
         tenantId,
         booking.id,
         HANDOVER_TYPE.PICKUP,
         ownerId,
-        { expectedRowVersion: version },
+        { odometerKm: 30_100 },
         FULL_SCOPE,
-      ),
-      handovers.confirm(
-        tenantId,
-        booking.id,
-        HANDOVER_TYPE.PICKUP,
-        ownerId,
-        { expectedRowVersion: version },
-        FULL_SCOPE,
-      ),
-    ]);
-    expect(results.some((r) => r.status === 'fulfilled')).toBe(true);
+      );
+      await uploadRequiredPhotos(booking.id, HANDOVER_TYPE.PICKUP);
+      const ctx = await handovers.context(tenantId, booking.id, FULL_SCOPE);
+      const version = ctx.pickup?.rowVersion ?? 1;
 
-    const readings = await prisma.vehicleOdometerReading.count({
-      where: { vehicleId: vehicle.id, source: ODOMETER_SOURCE.BOOKING_PICKUP },
-    });
-    expect(readings).toBe(1);
-    const booked = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
-    expect(booked.status).toBe(BOOKING_STATUS.ACTIVE);
-  });
+      // Hai request cùng nộp CÙNG một rowVersion — đúng tình huống double-click ở quầy.
+      const results = await Promise.allSettled([
+        handovers.confirm(
+          tenantId,
+          booking.id,
+          HANDOVER_TYPE.PICKUP,
+          ownerId,
+          { expectedRowVersion: version },
+          FULL_SCOPE,
+        ),
+        handovers.confirm(
+          tenantId,
+          booking.id,
+          HANDOVER_TYPE.PICKUP,
+          ownerId,
+          { expectedRowVersion: version },
+          FULL_SCOPE,
+        ),
+      ]);
+      expect(results.some((r) => r.status === 'fulfilled')).toBe(true);
+
+      const readings = await prisma.vehicleOdometerReading.count({
+        where: { vehicleId: vehicle.id, source: ODOMETER_SOURCE.BOOKING_PICKUP },
+      });
+      expect(readings).toBe(1);
+      const booked = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+      expect(booked.status).toBe(BOOKING_STATUS.ACTIVE);
+    },
+  );
 
   maybe('rowVersion cũ (người khác vừa sửa nháp) → 409, không xác nhận nhầm bản cũ', async () => {
     const vehicle = await createVehicle();
@@ -674,50 +672,53 @@ describe('Xác nhận trả xe', () => {
     },
   );
 
-  maybe('trả xe vượt mốc bảo dưỡng → mở đúng MỘT việc cần làm, trả nhiều lần không nhân bản', async () => {
-    const vehicle = await createVehicle();
-    await setKm(vehicle.id, 49_000);
-    const profile0 = await maintenance.getProfile(tenantId, vehicle.id);
-    await maintenance.saveProfile(tenantId, vehicle.id, ownerId, {
-      oilChangeIntervalKm: 5_000,
-      lastServiceKm: 45_000, // mốc tiếp theo 50.000
-      expectedRowVersion: profile0.rowVersion,
-    });
+  maybe(
+    'trả xe vượt mốc bảo dưỡng → mở đúng MỘT việc cần làm, trả nhiều lần không nhân bản',
+    async () => {
+      const vehicle = await createVehicle();
+      await setKm(vehicle.id, 49_000);
+      const profile0 = await maintenance.getProfile(tenantId, vehicle.id);
+      await maintenance.saveProfile(tenantId, vehicle.id, ownerId, {
+        oilChangeIntervalKm: 5_000,
+        lastServiceKm: 45_000, // mốc tiếp theo 50.000
+        expectedRowVersion: profile0.rowVersion,
+      });
 
-    for (const [index, km] of [50_100, 50_500].entries()) {
-      const booking = await createBooking(vehicle.id, 10 + index * 6, 5);
-      await completePickup(booking.id, km - 100);
-      await handovers.saveDraft(
-        tenantId,
-        booking.id,
-        HANDOVER_TYPE.RETURN,
-        ownerId,
-        { odometerKm: km },
-        FULL_SCOPE,
-      );
-      await uploadRequiredPhotos(booking.id, HANDOVER_TYPE.RETURN);
-      const ctx = await handovers.context(tenantId, booking.id, FULL_SCOPE);
-      await handovers.confirm(
-        tenantId,
-        booking.id,
-        HANDOVER_TYPE.RETURN,
-        ownerId,
-        { expectedRowVersion: ctx.return?.rowVersion ?? 1 },
-        FULL_SCOPE,
-      );
-    }
+      for (const [index, km] of [50_100, 50_500].entries()) {
+        const booking = await createBooking(vehicle.id, 10 + index * 6, 5);
+        await completePickup(booking.id, km - 100);
+        await handovers.saveDraft(
+          tenantId,
+          booking.id,
+          HANDOVER_TYPE.RETURN,
+          ownerId,
+          { odometerKm: km },
+          FULL_SCOPE,
+        );
+        await uploadRequiredPhotos(booking.id, HANDOVER_TYPE.RETURN);
+        const ctx = await handovers.context(tenantId, booking.id, FULL_SCOPE);
+        await handovers.confirm(
+          tenantId,
+          booking.id,
+          HANDOVER_TYPE.RETURN,
+          ownerId,
+          { expectedRowVersion: ctx.return?.rowVersion ?? 1 },
+          FULL_SCOPE,
+        );
+      }
 
-    const open = await prisma.vehicleMaintenanceRecord.findMany({
-      where: { vehicleId: vehicle.id, status: MAINTENANCE_STATUS.SCHEDULED },
-    });
-    expect(open).toHaveLength(1);
-    // Việc-cần-xếp-lịch, CHƯA phải lịch: không mốc thời gian → không khoá xe của khách.
-    expect(open[0]?.plannedStartAt).toBeNull();
-    const held = await prisma.vehicleOccupancy.count({
-      where: { sourceType: OCCUPANCY_SOURCE_TYPE.MAINTENANCE, sourceId: open[0]?.id },
-    });
-    expect(held).toBe(0);
-  });
+      const open = await prisma.vehicleMaintenanceRecord.findMany({
+        where: { vehicleId: vehicle.id, status: MAINTENANCE_STATUS.SCHEDULED },
+      });
+      expect(open).toHaveLength(1);
+      // Việc-cần-xếp-lịch, CHƯA phải lịch: không mốc thời gian → không khoá xe của khách.
+      expect(open[0]?.plannedStartAt).toBeNull();
+      const held = await prisma.vehicleOccupancy.count({
+        where: { sourceType: OCCUPANCY_SOURCE_TYPE.MAINTENANCE, sourceId: open[0]?.id },
+      });
+      expect(held).toBe(0);
+    },
+  );
 
   maybe('thiếu KM trả: biên bản vẫn đóng, sinh task, KM có thẩm quyền KHÔNG bị đụng', async () => {
     const vehicle = await createVehicle();
@@ -736,24 +737,16 @@ describe('Xác nhận trả xe', () => {
     await uploadRequiredPhotos(booking.id, HANDOVER_TYPE.RETURN);
     const ctx = await handovers.context(tenantId, booking.id, FULL_SCOPE);
 
-    // Không cắm cờ chấp nhận thì bị chặn — thiếu KM không bao giờ là mặc định im lặng.
-    await expect(
-      handovers.confirm(
-        tenantId,
-        booking.id,
-        HANDOVER_TYPE.RETURN,
-        ownerId,
-        { expectedRowVersion: ctx.return?.rowVersion ?? 1 },
-        FULL_SCOPE,
-      ),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
-
+    /*
+     * Wave 10: KM là TUỲ CHỌN — không còn cờ "chấp nhận thiếu KM" nào phải cắm. Thiếu thì
+     * chuyến vẫn hoàn tất, KM xe không bị đụng, và việc `Thiếu KM trả` được sinh ra.
+     */
     const after = await handovers.confirm(
       tenantId,
       booking.id,
       HANDOVER_TYPE.RETURN,
       ownerId,
-      { expectedRowVersion: ctx.return?.rowVersion ?? 1, allowMissingOdometer: true },
+      { expectedRowVersion: ctx.return?.rowVersion ?? 1 },
       FULL_SCOPE,
     );
     expect(after.bookingStatus).toBe(BOOKING_STATUS.COMPLETED);
@@ -791,115 +784,236 @@ describe('Xác nhận trả xe', () => {
     expect(updated.currentOdometerKm).toBe(60_800);
   });
 
-  maybe('KM bất thường: chưa cấu hình ngưỡng thì không chặn; cấu hình rồi thì cần xác nhận', async () => {
+  maybe(
+    'KM bất thường: chưa cấu hình ngưỡng thì không chặn; cấu hình rồi thì cần xác nhận',
+    async () => {
+      const vehicle = await createVehicle();
+      await setKm(vehicle.id, 70_000);
+      const booking = await createBooking(vehicle.id);
+      await completePickup(booking.id, 70_000);
+
+      await handovers.saveDraft(
+        tenantId,
+        booking.id,
+        HANDOVER_TYPE.RETURN,
+        ownerId,
+        { odometerKm: 70_005 },
+        FULL_SCOPE,
+      );
+      await uploadRequiredPhotos(booking.id, HANDOVER_TYPE.RETURN);
+
+      // Gian hàng bật cảnh báo: 20 km/ngày × 5 ngày = 100 km, đi 5 km là bất thường.
+      await prisma.tenantProfile.upsert({
+        where: { tenantId },
+        update: { settings: { [HANDOVER_SUSPICIOUS_KM_PER_DAY_SETTING]: 20 } },
+        create: { tenantId, settings: { [HANDOVER_SUSPICIOUS_KM_PER_DAY_SETTING]: 20 } },
+      });
+
+      const ctx = await handovers.context(tenantId, booking.id, FULL_SCOPE);
+      expect(ctx.suspiciousKmPerDay).toBe(20);
+      const version = ctx.return?.rowVersion ?? 1;
+
+      await expect(
+        handovers.confirm(
+          tenantId,
+          booking.id,
+          HANDOVER_TYPE.RETURN,
+          ownerId,
+          { expectedRowVersion: version },
+          FULL_SCOPE,
+        ),
+      ).rejects.toMatchObject({
+        response: {
+          code: API_ERROR_CODE.HANDOVER_ODOMETER_SUSPICIOUS,
+          details: { expectedMinKm: 100, deltaKm: 5 },
+        },
+      });
+
+      const after = await handovers.confirm(
+        tenantId,
+        booking.id,
+        HANDOVER_TYPE.RETURN,
+        ownerId,
+        { expectedRowVersion: version, acknowledgeSuspicious: true },
+        FULL_SCOPE,
+      );
+      expect(after.return?.suspiciousAcknowledged).toBe(true);
+      expect(after.bookingStatus).toBe(BOOKING_STATUS.COMPLETED);
+
+      // Trả lại trạng thái "chưa cấu hình" để các test khác không bị ảnh hưởng.
+      await prisma.tenantProfile.update({ where: { tenantId }, data: { settings: {} } });
+      const clean = await handovers.context(tenantId, booking.id, FULL_SCOPE);
+      expect(clean.suspiciousKmPerDay).toBeNull();
+    },
+  );
+});
+
+// ── Wave 10: Odo và ảnh đều TUỲ CHỌN ────────────────────────────────────────
+
+/**
+ * Thay cho luật Wave 7.1 "KM lúc giao là bắt buộc".
+ *
+ * Bắt buộc KM/ảnh cho MỌI chuyến biến một việc 10 giây ở quầy thành biểu mẫu, và kết quả thật
+ * là nhân viên bịa số cho qua. Wave 10 (docs/design/14 §2): số nào có thì ghi; thiếu thì chuyến
+ * vẫn chạy, KM của xe không bị đụng, và chiều trả sinh việc `Thiếu KM trả`.
+ */
+describe('Odo và ảnh là tuỳ chọn (Wave 10)', () => {
+  maybe('giao xe KHÔNG cần Odo, KHÔNG cần ảnh, không cần nháp trước', async () => {
+    const vehicle = await createVehicle();
+    await setKm(vehicle.id, 50_000);
+    const booking = await createBooking(vehicle.id);
+
+    // Một phát: không saveDraft, không ảnh, không Odo.
+    const after = await handovers.confirm(
+      tenantId,
+      booking.id,
+      HANDOVER_TYPE.PICKUP,
+      ownerId,
+      {},
+      FULL_SCOPE,
+    );
+
+    expect(after.bookingStatus).toBe(BOOKING_STATUS.ACTIVE);
+    expect(after.pickup).toMatchObject({
+      status: HANDOVER_STATUS.CONFIRMED,
+      odometerKm: null,
+      odometerMissing: true,
+    });
+
+    // KM xe KHÔNG bị đụng — thiếu số không bao giờ hoá thành `0 km`.
+    const profile = await maintenance.getProfile(tenantId, vehicle.id);
+    expect(profile.currentOdometerKm).toBe(50_000);
+  });
+
+  /**
+   * Đơn shop tự lập nằm ở `reserved`, và bản đồ trạng thái không có cạnh `reserved → active`.
+   * Trước đây `isHandoverEligible` cho phép giao xe từ `reserved` còn `canTransitionBooking`
+   * thì không — hai luật cãi nhau, và người dùng lãnh đủ ngay ở nút chính: `Không thể chuyển
+   * đơn từ "reserved" sang "active"`. Bàn giao phải tự đi qua `confirmed`.
+   */
+  maybe(
+    'giao xe từ đơn `reserved`: tự đi qua `confirmed`, không bắt bấm xác nhận đơn trước',
+    async () => {
+      const vehicle = await createVehicle();
+      const booking = await bookings.create(tenantId, ownerId, {
+        vehicleId: vehicle.id,
+        customerName: 'Nguyễn Văn C',
+        pickupAt: days(0).toISOString(),
+        returnAt: days(2).toISOString(),
+        baseAmount: '1300000',
+      });
+      expect(booking.status).toBe(BOOKING_STATUS.RESERVED);
+
+      const after = await handovers.confirm(
+        tenantId,
+        booking.id,
+        HANDOVER_TYPE.PICKUP,
+        ownerId,
+        {},
+        FULL_SCOPE,
+      );
+
+      expect(after.bookingStatus).toBe(BOOKING_STATUS.ACTIVE);
+
+      // Cả hai chặng đều để lại vết: audit là nơi truy ngược, không phải thông báo.
+      const trail = await prisma.auditLog.findMany({
+        where: { targetType: 'booking', targetId: booking.id, action: 'booking.transition' },
+        orderBy: { createdAt: 'asc' },
+        select: { afterJson: true },
+      });
+      expect(trail.map((row) => (row.afterJson as { status: string }).status)).toEqual([
+        BOOKING_STATUS.CONFIRMED,
+        BOOKING_STATUS.ACTIVE,
+      ]);
+    },
+  );
+
+  maybe('giao xe kèm Odo tuỳ chọn: ghi thẳng trong một lần gọi', async () => {
     const vehicle = await createVehicle();
     await setKm(vehicle.id, 70_000);
     const booking = await createBooking(vehicle.id);
-    await completePickup(booking.id, 70_000);
 
-    await handovers.saveDraft(
+    const after = await handovers.confirm(
       tenantId,
       booking.id,
-      HANDOVER_TYPE.RETURN,
+      HANDOVER_TYPE.PICKUP,
       ownerId,
-      { odometerKm: 70_005 },
+      { odometerKm: 70_120, notes: 'Xe không có dấu hiệu hư hại mới' },
       FULL_SCOPE,
     );
-    await uploadRequiredPhotos(booking.id, HANDOVER_TYPE.RETURN);
 
-    // Gian hàng bật cảnh báo: 20 km/ngày × 5 ngày = 100 km, đi 5 km là bất thường.
-    await prisma.tenantProfile.upsert({
-      where: { tenantId },
-      update: { settings: { [HANDOVER_SUSPICIOUS_KM_PER_DAY_SETTING]: 20 } },
-      create: { tenantId, settings: { [HANDOVER_SUSPICIOUS_KM_PER_DAY_SETTING]: 20 } },
+    expect(after.pickup).toMatchObject({ odometerKm: 70_120, odometerMissing: false });
+    const profile = await maintenance.getProfile(tenantId, vehicle.id);
+    expect(profile.currentOdometerKm).toBe(70_120);
+  });
+
+  maybe('bấm xác nhận hai lần: không sinh hệ quả thứ hai', async () => {
+    const vehicle = await createVehicle();
+    await setKm(vehicle.id, 30_000);
+    const booking = await createBooking(vehicle.id);
+
+    await handovers.confirm(tenantId, booking.id, HANDOVER_TYPE.PICKUP, ownerId, {}, FULL_SCOPE);
+    const again = await handovers.confirm(
+      tenantId,
+      booking.id,
+      HANDOVER_TYPE.PICKUP,
+      ownerId,
+      {},
+      FULL_SCOPE,
+    );
+
+    expect(again.bookingStatus).toBe(BOOKING_STATUS.ACTIVE);
+    const rows = await prisma.vehicleHandover.count({
+      where: { bookingId: booking.id, type: HANDOVER_TYPE.PICKUP },
     });
+    expect(rows).toBe(1);
+  });
 
-    const ctx = await handovers.context(tenantId, booking.id, FULL_SCOPE);
-    expect(ctx.suspiciousKmPerDay).toBe(20);
-    const version = ctx.return?.rowVersion ?? 1;
+  maybe('thời điểm thực tế do người dùng khai; mốc GHI NHẬN vẫn do server sinh', async () => {
+    const vehicle = await createVehicle();
+    const booking = await createBooking(vehicle.id);
+    const occurred = new Date(Date.now() - 45 * 60_000);
+
+    const after = await handovers.confirm(
+      tenantId,
+      booking.id,
+      HANDOVER_TYPE.PICKUP,
+      ownerId,
+      { occurredAt: occurred.toISOString() },
+      FULL_SCOPE,
+    );
+
+    expect(after.pickup?.occurredAt).toBe(occurred.toISOString());
+    // Giờ nhận thực tế của ĐƠN đi theo mốc vận hành, không phải lúc bấm.
+    const booked = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+    expect(booked.actualPickupAt?.toISOString()).toBe(occurred.toISOString());
+    // Mốc ghi nhận vẫn là "bây giờ" — còn một mốc bất biến để đối soát nếu ai đó khai lùi giờ.
+    expect(new Date(after.pickup!.confirmedAt!).getTime()).toBeGreaterThan(occurred.getTime());
+  });
+
+  maybe('thời điểm thực tế ở TƯƠNG LAI bị từ chối', async () => {
+    const vehicle = await createVehicle();
+    const booking = await createBooking(vehicle.id);
 
     await expect(
       handovers.confirm(
         tenantId,
         booking.id,
-        HANDOVER_TYPE.RETURN,
+        HANDOVER_TYPE.PICKUP,
         ownerId,
-        { expectedRowVersion: version },
+        { occurredAt: new Date(Date.now() + 3 * 60 * 60_000).toISOString() },
         FULL_SCOPE,
       ),
-    ).rejects.toMatchObject({
-      response: {
-        code: API_ERROR_CODE.HANDOVER_ODOMETER_SUSPICIOUS,
-        details: { expectedMinKm: 100, deltaKm: 5 },
-      },
-    });
-
-    const after = await handovers.confirm(
-      tenantId,
-      booking.id,
-      HANDOVER_TYPE.RETURN,
-      ownerId,
-      { expectedRowVersion: version, acknowledgeSuspicious: true },
-      FULL_SCOPE,
-    );
-    expect(after.return?.suspiciousAcknowledged).toBe(true);
-    expect(after.bookingStatus).toBe(BOOKING_STATUS.COMPLETED);
-
-    // Trả lại trạng thái "chưa cấu hình" để các test khác không bị ảnh hưởng.
-    await prisma.tenantProfile.update({ where: { tenantId }, data: { settings: {} } });
-    const clean = await handovers.context(tenantId, booking.id, FULL_SCOPE);
-    expect(clean.suspiciousKmPerDay).toBeNull();
-  });
-});
-
-// ── KM giao xe là bắt buộc (Wave 7.1) ───────────────────────────────────────
-
-describe('KM lúc giao xe là bắt buộc', () => {
-  maybe('giao xe thiếu KM: từ chối, và allowMissingOdometer KHÔNG mở được cửa sau', async () => {
-    const vehicle = await createVehicle();
-    const booking = await createBooking(vehicle.id);
-    await handovers.saveDraft(
-      tenantId,
-      booking.id,
-      HANDOVER_TYPE.PICKUP,
-      ownerId,
-      { conditionNote: 'Chưa kịp đọc Odo' },
-      FULL_SCOPE,
-    );
-    await uploadRequiredPhotos(booking.id, HANDOVER_TYPE.PICKUP);
-    const ctx = await handovers.context(tenantId, booking.id, FULL_SCOPE);
-    const version = ctx.pickup?.rowVersion ?? 1;
-
-    for (const dto of [
-      { expectedRowVersion: version },
-      // Cùng cờ mà chiều trả chấp nhận — ở chiều giao thì vô hiệu.
-      { expectedRowVersion: version, allowMissingOdometer: true },
-    ]) {
-      await expect(
-        handovers.confirm(tenantId, booking.id, HANDOVER_TYPE.PICKUP, ownerId, dto, FULL_SCOPE),
-      ).rejects.toMatchObject({
-        response: {
-          code: API_ERROR_CODE.VALIDATION_FAILED,
-          // FE dựa vào cờ này để biết KHÔNG có lối "đóng biên bản, bổ sung sau".
-          details: { allowMissingSupported: false },
-        },
-      });
-    }
-
-    // Không hệ quả nào lọt ra: đơn chưa sang đang thuê, biên bản vẫn là nháp.
-    const booked = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
-    expect(booked.status).toBe(BOOKING_STATUS.CONFIRMED);
-    expect(booked.actualPickupAt).toBeNull();
-    const after = await handovers.context(tenantId, booking.id, FULL_SCOPE);
-    expect(after.pickup?.status).toBe(HANDOVER_STATUS.DRAFT);
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.VALIDATION_FAILED } });
   });
 
-  maybe('chiều TRẢ vẫn được đóng thiếu KM khi có xác nhận tường minh', async () => {
+  maybe('trả xe thiếu Odo: hoàn tất chuyến, sinh việc Thiếu KM trả, KM xe giữ nguyên', async () => {
     const vehicle = await createVehicle();
     await setKm(vehicle.id, 80_000);
     const booking = await createBooking(vehicle.id);
     await completePickup(booking.id, 80_100);
-    await handovers.saveDraft(
+
+    const after = await handovers.confirm(
       tenantId,
       booking.id,
       HANDOVER_TYPE.RETURN,
@@ -907,30 +1021,31 @@ describe('KM lúc giao xe là bắt buộc', () => {
       {},
       FULL_SCOPE,
     );
-    await uploadRequiredPhotos(booking.id, HANDOVER_TYPE.RETURN);
-    const ctx = await handovers.context(tenantId, booking.id, FULL_SCOPE);
 
-    // Chiều trả: server nói rõ CÓ lối đi tiếp.
+    expect(after.bookingStatus).toBe(BOOKING_STATUS.COMPLETED);
+    expect(after.return?.odometerMissing).toBe(true);
+    const profile = await maintenance.getProfile(tenantId, vehicle.id);
+    expect(profile.currentOdometerKm).toBe(80_100);
+  });
+
+  maybe('Odo trả nhỏ hơn Odo giao vẫn bị chặn — CHỈ khi có cả hai số', async () => {
+    const vehicle = await createVehicle();
+    await setKm(vehicle.id, 90_000);
+    const booking = await createBooking(vehicle.id);
+    await completePickup(booking.id, 90_500);
+
     await expect(
       handovers.confirm(
         tenantId,
         booking.id,
         HANDOVER_TYPE.RETURN,
         ownerId,
-        { expectedRowVersion: ctx.return?.rowVersion ?? 1 },
+        { odometerKm: 90_400 },
         FULL_SCOPE,
       ),
-    ).rejects.toMatchObject({ response: { details: { allowMissingSupported: true } } });
-
-    const after = await handovers.confirm(
-      tenantId,
-      booking.id,
-      HANDOVER_TYPE.RETURN,
-      ownerId,
-      { expectedRowVersion: ctx.return?.rowVersion ?? 1, allowMissingOdometer: true },
-      FULL_SCOPE,
-    );
-    expect(after.return?.odometerMissing).toBe(true);
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.HANDOVER_ODOMETER_BELOW_PICKUP },
+    });
   });
 });
 
@@ -948,17 +1063,19 @@ describe('Thời điểm xác nhận', () => {
     const meta = { type: 'body' as const, metatype: ConfirmHandoverDto, data: '' };
 
     await expect(
-      pipe.transform(
-        { expectedRowVersion: 1, confirmedAt: '2020-01-01T00:00:00.000Z' },
-        meta,
-      ),
+      pipe.transform({ expectedRowVersion: 1, confirmedAt: '2020-01-01T00:00:00.000Z' }, meta),
     ).rejects.toBeDefined();
 
     // Payload hợp lệ vẫn qua — chỉ trường lùi ngày bị chặn.
     await expect(pipe.transform({ expectedRowVersion: 1 }, meta)).resolves.toBeDefined();
   });
 
-  maybe('mốc xác nhận do server sinh và DÙNG CHUNG cho biên bản lẫn giờ nhận thực tế', async () => {
+  /**
+   * Wave 10 tách hai mốc: `occurredAt` (việc thực sự xảy ra — người dùng khai được) và
+   * `confirmedAt` (lúc GHI NHẬN — server sinh, không nhận từ body). Không khai gì thì hai mốc
+   * trùng nhau như trước.
+   */
+  maybe('không khai giờ: mốc ghi nhận do server sinh và trùng giờ vận hành', async () => {
     const vehicle = await createVehicle();
     await setKm(vehicle.id, 90_000);
     const booking = await createBooking(vehicle.id);
@@ -974,15 +1091,19 @@ describe('Thời điểm xác nhận', () => {
     expect(stamp).toBeGreaterThanOrEqual(before);
     expect(stamp).toBeLessThanOrEqual(now);
 
-    // Một mốc duy nhất: biên bản và `actual_pickup_at` của đơn không được lệch nhau.
+    // Không khai `occurredAt` → giờ vận hành = giờ ghi nhận, và `actual_pickup_at` bám theo nó.
     const booked = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
-    expect(booked.actualPickupAt?.toISOString()).toBe(confirmedAt);
+    expect(booked.actualPickupAt?.toISOString()).toBe(after.pickup?.occurredAt);
+    expect(Math.abs(new Date(after.pickup!.occurredAt!).getTime() - stamp)).toBeLessThanOrEqual(
+      1000,
+    );
 
-    // Audit kể đúng cái giờ đó.
+    // Audit kể CẢ HAI mốc.
     const log = await prisma.auditLog.findFirst({
       where: { tenantId, action: 'booking.handover.pickup.confirm', targetId: after.pickup!.id },
     });
     expect((log?.afterJson as { confirmedAt?: string } | null)?.confirmedAt).toBe(confirmedAt);
+    expect((log?.afterJson as { occurredAt?: string } | null)?.occurredAt).toBeTruthy();
   });
 });
 
@@ -1043,24 +1164,26 @@ describe('Trạng thái sẵn sàng và huỷ biên bản', () => {
     );
     const fileId = await uploadPhoto(booking.id, HANDOVER_TYPE.PICKUP, HANDOVER_PHOTO_SLOT.FRONT);
 
-    const afterCancel = await handovers.cancel(
-      tenantId,
-      booking.id,
-      HANDOVER_TYPE.PICKUP,
-      ownerId,
-      { expectedRowVersion: draft.rowVersion + 1 }, // +1 vì lần gắn ảnh đã có, lấy bản mới nhất
-      FULL_SCOPE,
-    ).catch(async () => {
-      const latest = await handovers.context(tenantId, booking.id, FULL_SCOPE);
-      return handovers.cancel(
+    const afterCancel = await handovers
+      .cancel(
         tenantId,
         booking.id,
         HANDOVER_TYPE.PICKUP,
         ownerId,
-        { expectedRowVersion: latest.pickup?.rowVersion ?? 1 },
+        { expectedRowVersion: draft.rowVersion + 1 }, // +1 vì lần gắn ảnh đã có, lấy bản mới nhất
         FULL_SCOPE,
-      );
-    });
+      )
+      .catch(async () => {
+        const latest = await handovers.context(tenantId, booking.id, FULL_SCOPE);
+        return handovers.cancel(
+          tenantId,
+          booking.id,
+          HANDOVER_TYPE.PICKUP,
+          ownerId,
+          { expectedRowVersion: latest.pickup?.rowVersion ?? 1 },
+          FULL_SCOPE,
+        );
+      });
     expect(afterCancel.pickup).toBeNull();
     expect(afterCancel.canStartPickup).toBe(true);
 
@@ -1140,7 +1263,11 @@ describe('Ảnh hiện trạng riêng tư', () => {
       { odometerKm: 100 },
       FULL_SCOPE,
     );
-    const firstFile = await uploadPhoto(booking.id, HANDOVER_TYPE.PICKUP, HANDOVER_PHOTO_SLOT.FRONT);
+    const firstFile = await uploadPhoto(
+      booking.id,
+      HANDOVER_TYPE.PICKUP,
+      HANDOVER_PHOTO_SLOT.FRONT,
+    );
     await uploadPhoto(booking.id, HANDOVER_TYPE.PICKUP, HANDOVER_PHOTO_SLOT.FRONT);
 
     const ctx = await handovers.context(tenantId, booking.id, FULL_SCOPE);
@@ -1202,7 +1329,12 @@ describe('Ảnh hiện trạng riêng tư', () => {
       booking.id,
       HANDOVER_TYPE.PICKUP,
       ownerId,
-      { fileName: 'photo.jpg', contentType: 'image/jpeg', fileSize: 2048, slot: HANDOVER_PHOTO_SLOT.FRONT },
+      {
+        fileName: 'photo.jpg',
+        contentType: 'image/jpeg',
+        fileSize: 2048,
+        slot: HANDOVER_PHOTO_SLOT.FRONT,
+      },
     );
     const attached = await handovers.attachPhoto(
       tenantId,
@@ -1253,9 +1385,9 @@ describe('Ảnh hiện trạng riêng tư', () => {
   maybe('tenant khác không đọc được ngữ cảnh bàn giao của đơn này', async () => {
     const vehicle = await createVehicle();
     const booking = await createBooking(vehicle.id);
-    await expect(
-      handovers.context(otherTenantId, booking.id, FULL_SCOPE),
-    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
+    await expect(handovers.context(otherTenantId, booking.id, FULL_SCOPE)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.NOT_FOUND },
+    });
   });
 });
 
@@ -1369,7 +1501,12 @@ describe('Bất biến ở tầng database', () => {
     ).rejects.toThrow(/vh_confirmed_has_actor/);
   });
 
-  maybe('không tồn tại biên bản GIAO XE gắn cờ thiếu KM (task chỉ có ở chiều trả)', async () => {
+  /**
+   * Wave 10 gỡ hai CHECK cũ (`vh_missing_km_return_only`, `vh_confirmed_pickup_has_km`) vì luật
+   * "KM lúc giao là bắt buộc" đã bị bỏ. Bất biến còn lại — và là cái đúng thật — là cờ
+   * `odometer_missing` phải NHẤT QUÁN với việc có số hay không.
+   */
+  maybe('không tồn tại bản ghi vừa "thiếu KM" vừa CÓ số KM', async () => {
     const vehicle = await createVehicle();
     const booking = await createBooking(vehicle.id);
     await expect(
@@ -1379,14 +1516,18 @@ describe('Bất biến ở tầng database', () => {
           tenantId,
           bookingId: booking.id,
           vehicleId: vehicle.id,
-          type: HANDOVER_TYPE.PICKUP,
+          type: HANDOVER_TYPE.RETURN,
+          status: HANDOVER_STATUS.CONFIRMED,
+          confirmedAt: new Date(),
+          confirmedBy: ownerId,
+          odometerKm: 12_000,
           odometerMissing: true,
         },
       }),
-    ).rejects.toThrow(/vh_missing_km_return_only/);
+    ).rejects.toThrow(/vh_missing_km_consistent/);
   });
 
-  maybe('không tồn tại biên bản giao xe đã xác nhận mà thiếu KM', async () => {
+  maybe('không tồn tại bản ghi đã xác nhận, KHÔNG có KM mà lại không gắn cờ thiếu', async () => {
     const vehicle = await createVehicle();
     const booking = await createBooking(vehicle.id);
     await expect(
@@ -1400,9 +1541,30 @@ describe('Bất biến ở tầng database', () => {
           status: HANDOVER_STATUS.CONFIRMED,
           confirmedAt: new Date(),
           confirmedBy: ownerId,
+          odometerMissing: false,
         },
       }),
-    ).rejects.toThrow(/vh_confirmed_pickup_has_km/);
+    ).rejects.toThrow(/vh_missing_km_consistent/);
+  });
+
+  /** Giao xe thiếu KM giờ là HỢP LỆ — không còn CHECK nào chặn (Wave 10). */
+  maybe('biên bản GIAO XE thiếu KM được chấp nhận', async () => {
+    const vehicle = await createVehicle();
+    const booking = await createBooking(vehicle.id);
+    const row = await prisma.vehicleHandover.create({
+      data: {
+        id: newId(),
+        tenantId,
+        bookingId: booking.id,
+        vehicleId: vehicle.id,
+        type: HANDOVER_TYPE.PICKUP,
+        status: HANDOVER_STATUS.CONFIRMED,
+        confirmedAt: new Date(),
+        confirmedBy: ownerId,
+        odometerMissing: true,
+      },
+    });
+    expect(row.odometerKm).toBeNull();
   });
 
   maybe('biên bản không trỏ được sang lần đọc KM của xe khác', async () => {

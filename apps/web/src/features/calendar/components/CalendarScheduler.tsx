@@ -2,6 +2,7 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Alert, App, Empty, Spin } from 'antd';
+import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import {
   API_ERROR_CODE,
@@ -15,8 +16,8 @@ import {
   BookingFormDrawer,
   type BookingPrefill,
 } from '@/features/bookings/components/BookingFormDrawer';
-import { BookingDetailDrawer } from '@/features/bookings/components/BookingDetailDrawer';
 import { useRescheduleBooking } from '@/features/bookings/hooks/use-booking-mutations';
+import { bookingPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
@@ -50,6 +51,7 @@ const RESOURCE_COL_WIDTH_PX = 220;
  * khoảng trống hợp lệ, vì người khác có thể vừa đặt vào đó.
  */
 export function CalendarScheduler() {
+  const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const { range, resources, eventsByResource, isLoading, error } = useCalendarData();
   const { has } = usePermissions();
@@ -59,7 +61,6 @@ export function CalendarScheduler() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<BookingDetail | null>(null);
   const [prefill, setPrefill] = useState<BookingPrefill | null>(null);
-  const [detailId, setDetailId] = useState<string | null>(null);
 
   const canCreate = has(PERMISSION.BOOKING_CREATE);
   const canReschedule = has(PERMISSION.BOOKING_UPDATE);
@@ -99,18 +100,17 @@ export function CalendarScheduler() {
     setFormOpen(true);
   }
 
-  /** Click thanh event: chỉ đơn thuê mới mở chi tiết (bảo dưỡng/khoá xe bỏ qua). */
+  /**
+   * Click thanh event: chỉ đơn thuê mới mở chi tiết (bảo dưỡng/khoá xe bỏ qua).
+   *
+   * Wave 10: đi tới TRANG chi tiết đơn thay vì mở drawer riêng — trước đây lịch và danh sách
+   * đơn mỗi bên dựng một bản chi tiết, hai bề mặt cùng một thứ và chỉ một bên được cập nhật
+   * khi luồng vận hành đổi.
+   */
   function handleEventSelect(event: CalendarEvent) {
     if (event.type === OCCUPANCY_SOURCE_TYPE.BOOKING && event.sourceId) {
-      setDetailId(event.sourceId);
+      router.push(bookingPath.detail(event.sourceId));
     }
-  }
-
-  function handleEdit(booking: BookingDetail) {
-    setDetailId(null);
-    setPrefill(null);
-    setEditing(booking);
-    setFormOpen(true);
   }
 
   /** Kéo/resize xong → đổi khung giờ. `deltaDays` là số ngày dịch (đã snap). */
@@ -237,11 +237,6 @@ export function CalendarScheduler() {
         )}
       </div>
 
-      <BookingDetailDrawer
-        bookingId={detailId}
-        onClose={() => setDetailId(null)}
-        onEdit={handleEdit}
-      />
       <BookingFormDrawer
         open={formOpen}
         editing={editing}
@@ -277,8 +272,7 @@ function EventBar({
 
   const palette = eventPalette(event);
   const isBooking = event.type === OCCUPANCY_SOURCE_TYPE.BOOKING && Boolean(event.sourceId);
-  const draggable =
-    canReschedule && isBooking && occupiesSchedule(event.status as BookingStatus);
+  const draggable = canReschedule && isBooking && occupiesSchedule(event.status as BookingStatus);
 
   function beginDrag(e: React.PointerEvent, mode: DragMode) {
     if (!draggable) return;
@@ -377,10 +371,18 @@ function EventBar({
  */
 function eventPalette(event: CalendarEvent): { bg: string; fg: string; border: string } {
   if (event.type === OCCUPANCY_SOURCE_TYPE.MAINTENANCE) {
-    return { bg: 'var(--xp-color-purple-bg)', fg: 'var(--xp-color-purple)', border: 'var(--xp-color-purple-border)' };
+    return {
+      bg: 'var(--xp-color-purple-bg)',
+      fg: 'var(--xp-color-purple)',
+      border: 'var(--xp-color-purple-border)',
+    };
   }
   if (event.type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE) {
-    return { bg: 'var(--xp-color-fill-secondary)', fg: 'var(--xp-color-text-secondary)', border: 'var(--xp-color-border)' };
+    return {
+      bg: 'var(--xp-color-fill-secondary)',
+      fg: 'var(--xp-color-text-secondary)',
+      border: 'var(--xp-color-border)',
+    };
   }
 
   const meta = event.status ? BOOKING_STATUS_META[event.status as BookingStatus] : undefined;

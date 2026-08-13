@@ -76,6 +76,20 @@ vi.mock('@/features/rental-policies/api', () => ({
     quote.data ? Promise.resolve(quote.data) : Promise.reject(new Error('quote offline (test)')),
 }));
 
+/**
+ * Nút "Liên hệ chủ xe" thật cần `AuthModalProvider` (nó tự mở modal đăng nhập khi khách chưa
+ * đăng nhập) và tự điều hướng sang khu tin nhắn. Overlay này chỉ mở từ route group `(public)`
+ * — nơi provider luôn có — nên ở test thay bằng nút giả, đủ để khoá việc nó CÓ MẶT và gọi
+ * `onNavigate` để đóng overlay trước khi rời trang.
+ */
+vi.mock('@/features/chat/components/ChatWithShopButton', () => ({
+  ChatWithShopButton: ({ label, onNavigate }: { label?: string; onNavigate?: () => void }) => (
+    <button type="button" onClick={onNavigate}>
+      {label}
+    </button>
+  ),
+}));
+
 vi.mock('@/features/phone-verification/api', () => ({
   verifyOtp: (...a: unknown[]) => api.verifyOtp(...a),
   sendOtp: vi.fn(),
@@ -479,6 +493,37 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.getByText('Yêu cầu đã được gửi')).toBeTruthy();
       expect(screen.getByText('R1')).toBeTruthy();
       expect(screen.getByText(/Xe chưa được giữ chỗ/)).toBeTruthy();
+    });
+
+    it('có lối liên hệ chủ xe, và nó đóng overlay trước khi rời trang', async () => {
+      const { onClose } = renderModal();
+      await advanceToContact();
+      await advanceToOtp();
+      await advanceToReview();
+      await reachDone();
+
+      const contact = screen.getByRole('button', { name: 'Liên hệ chủ xe' });
+      fireEvent.click(contact);
+      expect(onClose).toHaveBeenCalled();
+    });
+
+    it('tổng dự kiến đi qua bộ format tiền, không phải số thô', async () => {
+      quote.data = {
+        breakdown: {
+          rows: [{ key: 'base', label: 'Tiền thuê xe', amount: '1800000', sublabel: null }],
+          totalAmount: '1800000',
+          depositAmount: '5000000',
+        },
+        delivery: { enabled: false, maxRadiusKm: null },
+      };
+      renderModal();
+      await advanceToContact();
+      await advanceToOtp();
+      await advanceToReview();
+      await reachDone();
+
+      expect(screen.getByText('1.800.000 ₫')).toBeTruthy();
+      expect(screen.queryByText('1800000')).toBeNull();
     });
 
     it('"Xem chuyến của tôi" đóng modal và điều hướng tới /trips', async () => {
