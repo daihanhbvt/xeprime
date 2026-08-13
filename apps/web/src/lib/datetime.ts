@@ -55,5 +55,42 @@ export function formatDateTimeRange(
   return `${formatDateTime(from)} → ${formatDateTime(to)}`;
 }
 
+/** Thứ viết tắt kiểu Việt Nam. `Dayjs.day()` trả 0 = Chủ nhật. */
+const WEEKDAY_SHORT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as const;
+
+export function weekdayShort(value: Dayjs): string {
+  return WEEKDAY_SHORT[value.day()] ?? '';
+}
+
+/**
+ * Một MỐC thuê xe: `T6, 08/08 · 10:00`.
+ *
+ * **Không có năm** là cố ý: đơn thuê xe gần như luôn trong vài tuần tới, nên "2026" chỉ là nhiễu
+ * chiếm chỗ; còn THỨ mấy lại là thứ người Việt nghĩ tới đầu tiên khi xếp lịch ("trả xe chủ nhật")
+ * và trước đây không hề hiện ra. Khoảng thuê xuyên năm vẫn đọc đúng nhờ ngày/tháng.
+ *
+ * `withTime: false` cho chế độ thuê theo ngày ở những chỗ chật (giờ đã nằm chỗ khác).
+ */
+export function formatRentalPoint(value: Dayjs, opts: { withTime?: boolean } = {}): string {
+  const { withTime = true } = opts;
+  const base = `${weekdayShort(value)}, ${value.format('DD/MM')}`;
+  return withTime ? `${base} · ${value.format(TIME_FORMAT)}` : base;
+}
+
+/**
+ * Thời lượng dạng chữ: `3 ngày` · `5 giờ` · `2 ngày 4 giờ`.
+ *
+ * CHỈ để hiển thị. Số ngày TÍNH TIỀN do server quyết (`PricingService.chargedDays`); ghép hai
+ * phép đếm ở hai nơi là cách chắc chắn nhất để màn hình nói một đằng hoá đơn một nẻo.
+ * Làm tròn theo phút để 23h59 không thành "0 ngày".
+ */
+export function formatRentalDuration(from: Dayjs, to: Dayjs): string {
+  const minutes = Math.max(0, to.diff(from, 'minute'));
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.round((minutes % 1440) / 60);
+  if (days <= 0) return `${Math.max(1, hours)} giờ`;
+  return hours > 0 ? `${days} ngày ${hours} giờ` : `${days} ngày`;
+}
+
 export { dayjs };
 export type { Dayjs };

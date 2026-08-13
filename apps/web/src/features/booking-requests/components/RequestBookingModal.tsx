@@ -2,13 +2,15 @@
 
 import { useState } from 'react';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import type { PublicListingDetail } from '@/features/marketplace/types';
 import { RequestBookingFlow } from './RequestBookingFlow';
 
 interface RequestBookingModalProps {
   vehicleId: string;
   vehicleName: string;
   vehicleImageUrl?: string | null;
-  pricePerDay?: string | null;
+  /** Listing đầy đủ khi mở từ trang chi tiết — tránh gọi lại API cho cột hồ sơ xe. */
+  listing?: PublicListingDetail | null;
   pickupAt?: string | null;
   returnAt?: string | null;
   open: boolean;
@@ -23,18 +25,18 @@ const TITLE = 'Yêu cầu thuê xe';
  *
  * Chỉ render flow khi mở → mỗi lần mở là state mới (không mang theo bước dở của lần trước).
  *
- * `size="md"` → desktop 560px, mobile **toàn màn hình** theo Figma `130:1563` quy tắc 5
- * ("Form overlays → Full-Screen (luôn — cần chỗ cho bàn phím)"). Đúng thứ luồng này cần:
- * có ô nhập ngày, họ tên, SĐT và 6 ô OTP.
+ * `size="xl"` (Wave 9) → desktop modal rộng, đủ chỗ cho HAI cột (hồ sơ xe · luồng thao tác);
+ * mobile vẫn **toàn màn hình** theo Figma `130:1563` quy tắc 5 ("Form overlays → Full-Screen —
+ * cần chỗ cho bàn phím"). Đúng thứ luồng này cần: có lịch, họ tên, SĐT và 6 ô OTP.
  *
- * Bản trước truyền `size="88dvh"` cho `Drawer` — `size` của AntD chỉ nhận `'default' | 'large'`,
- * nên chiều cao đó chưa bao giờ có tác dụng (backlog D14.1). Migration này bỏ hẳn nó.
+ * `footer={null}`: mỗi bước có bộ nút riêng ngay cuối cột phải, nên footer chung của dialog sẽ
+ * là hàng nút thứ hai không ai bấm.
  */
 export function RequestBookingModal({
   vehicleId,
   vehicleName,
   vehicleImageUrl,
-  pricePerDay,
+  listing,
   pickupAt,
   returnAt,
   open,
@@ -52,7 +54,7 @@ export function RequestBookingModal({
       title={TITLE}
       open={open}
       onClose={onClose}
-      size="md"
+      size="xl"
       footer={null}
       confirmLoading={busy}
     >
@@ -61,7 +63,7 @@ export function RequestBookingModal({
           vehicleId={vehicleId}
           vehicleName={vehicleName}
           vehicleImageUrl={vehicleImageUrl}
-          pricePerDay={pricePerDay}
+          listing={listing}
           pickupAt={pickupAt}
           returnAt={returnAt}
           onClose={onClose}

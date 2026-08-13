@@ -11,7 +11,6 @@ import {
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { formatDateTimeRange } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import type { BookingRequestItem } from '../types';
 import styles from './BookingRequestTable.module.css';
 
@@ -23,12 +22,10 @@ interface Props {
   error?: { onRetry: () => void } | null;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
-  /** Mở drawer "Báo giá giao nhận" (Wave 2) — chỉ gọi cho yêu cầu có giao tận nơi. */
-  onQuote: (row: BookingRequestItem) => void;
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-/** Figma `127:1725` ghi 860px cho Booking Requests; Wave 2 thêm cụm báo giá giao nhận. */
+/** Figma `127:1725` ghi 860px; cột thao tác cố định bên phải cần thêm chỗ. */
 const MIN_TABLE_WIDTH = 1020;
 
 export function BookingRequestTable({
@@ -39,7 +36,6 @@ export function BookingRequestTable({
   error = null,
   onApprove,
   onReject,
-  onQuote,
   onPageChange,
 }: Props) {
   const columns: DataTableColumn<BookingRequestItem>[] = [
@@ -85,23 +81,14 @@ export function BookingRequestTable({
             value={row.status as BookingRequestStatus}
             meta={BOOKING_REQUEST_STATUS_META}
           />
-          {/* Nhánh giao tận nơi (Wave 2): thiếu báo giá → duyệt bị chặn, nói ra ngay ở hàng. */}
+          {/*
+            Giao tận nơi (Wave 9): KHÔNG còn cửa chặn báo giá. Chỉ nói hình thức nhận xe và mức
+            phí mặc định; chủ xe chốt phí thật trên ĐƠN sau khi duyệt và thoả thuận với khách.
+          */}
           {row.deliveryRequested ? (
-            row.needsDeliveryQuote ? (
-              <Tag color="orange" icon={<CarOutlined aria-hidden="true" />}>
-                Cần báo giá giao nhận
-              </Tag>
-            ) : row.deliveryQuote?.stale ? (
-              <Tooltip title="Chính sách giao nhận đã đổi sau khi báo giá — nên báo lại trước khi duyệt">
-                <Tag color="orange" icon={<CarOutlined aria-hidden="true" />}>
-                  Báo giá đã cũ
-                </Tag>
-              </Tooltip>
-            ) : row.deliveryQuote ? (
-              <Tag icon={<CarOutlined aria-hidden="true" />}>
-                Giao nhận {formatMoneyVnd(row.deliveryQuote.fee)}
-              </Tag>
-            ) : null
+            <Tooltip title={row.deliveryAddress ?? undefined}>
+              <Tag icon={<CarOutlined aria-hidden="true" />}>Giao tận nơi · Miễn phí</Tag>
+            </Tooltip>
           ) : null}
         </div>
       ),
@@ -119,20 +106,13 @@ export function BookingRequestTable({
       render: (_, row) =>
         row.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ? (
           <Space size="small" onClick={(event) => event.stopPropagation()}>
-            {row.deliveryRequested ? (
-              <Button
-                // Thiếu/cũ báo giá thì đây là hành động chính của hàng — duyệt sẽ bị chặn.
-                type={row.needsDeliveryQuote || row.deliveryQuote?.stale ? 'primary' : 'default'}
-                size="small"
-                icon={<CarOutlined aria-hidden="true" />}
-                onClick={() => onQuote(row)}
-              >
-                Báo giá
-              </Button>
-            ) : null}
             <Popconfirm
               title="Duyệt và tạo đơn thuê?"
-              description="Giá chốt theo chính sách hiện tại + báo giá giao nhận (nếu có); sẽ giữ chỗ lịch cho khung giờ này."
+              description={
+                row.deliveryRequested
+                  ? 'Giá chốt theo chính sách hiện tại, phí giao nhận mặc định Miễn phí (cập nhật sau trên đơn nếu cần); sẽ giữ chỗ lịch cho khung giờ này.'
+                  : 'Giá chốt theo chính sách hiện tại; sẽ giữ chỗ lịch cho khung giờ này.'
+              }
               okText="Duyệt"
               cancelText="Đóng"
               onConfirm={() => onApprove(row.id)}
@@ -142,8 +122,6 @@ export function BookingRequestTable({
                 size="small"
                 icon={<CheckOutlined aria-hidden="true" />}
                 loading={actingId === row.id}
-                // Chặn sớm cho đúng UX; chốt thật vẫn là DELIVERY_QUOTE_REQUIRED ở backend.
-                disabled={row.needsDeliveryQuote}
               >
                 Duyệt
               </Button>

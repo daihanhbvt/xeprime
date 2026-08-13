@@ -12,6 +12,13 @@ const requiredDate = (message: string) =>
     .defined()
     .test('required', message, (value) => value != null);
 
+/** Hai cách nhận xe — giá trị đi vào form, nhãn ở component. */
+export const PICKUP_METHOD = {
+  SELF: 'self',
+  DELIVERY: 'delivery',
+} as const;
+export type PickupMethod = (typeof PICKUP_METHOD)[keyof typeof PICKUP_METHOD];
+
 export const requestFormSchema = yup.object({
   customerName: yup.string().trim().required('Nhập họ tên').max(255),
   customerPhone: yup
@@ -19,6 +26,14 @@ export const requestFormSchema = yup.object({
     .trim()
     .required('Nhập số điện thoại')
     .matches(/^(0|\+84)\d{9}$/, 'Số điện thoại không hợp lệ'),
+  /** Tuỳ chọn — chỉ để shop liên hệ thêm; không dùng để định danh. */
+  customerEmail: yup
+    .string()
+    .trim()
+    .email('Email không hợp lệ')
+    .max(255)
+    .default('')
+    .transform((v: string) => v ?? ''),
   pickupAt: requiredDate('Chọn thời gian nhận xe'),
   returnAt: requiredDate('Chọn thời gian trả xe').test(
     'after-pickup',
@@ -28,17 +43,25 @@ export const requestFormSchema = yup.object({
       return !value || !pickup || value.isAfter(pickup);
     },
   ),
-  /** Giao xe tận nơi (Wave 2) — chỉ hiện khi chính sách giao nhận của xe đang bật. */
-  deliveryRequested: yup.boolean().default(false),
+  /**
+   * Hình thức nhận xe. Wave 9 bỏ hẳn công tắc "giao tận nơi" + báo giá theo khoảng cách; giờ là
+   * một lựa chọn hai phương án, và giao tận nơi **luôn miễn phí lúc gửi yêu cầu**.
+   */
+  pickupMethod: yup
+    .mixed<PickupMethod>()
+    .oneOf([PICKUP_METHOD.SELF, PICKUP_METHOD.DELIVERY])
+    .default(PICKUP_METHOD.SELF),
   deliveryAddress: yup
     .string()
     .trim()
     .max(500, 'Tối đa 500 ký tự')
     .default('')
-    .when('deliveryRequested', {
-      is: true,
-      then: (s) => s.required('Nhập địa điểm giao xe'),
+    .when('pickupMethod', {
+      is: PICKUP_METHOD.DELIVERY,
+      then: (s) => s.required('Nhập địa chỉ giao xe'),
     }),
+  /** Xác nhận điều khoản — chặn ở bước cuối, không phải lúc nhập liệu. */
+  agreed: yup.boolean().default(false),
 });
 
 export type RequestFormValues = yup.InferType<typeof requestFormSchema>;

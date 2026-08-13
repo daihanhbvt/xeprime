@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { DayPicker, type DateRange } from 'react-day-picker';
 import { vi } from 'react-day-picker/locale';
 import { cx } from '@/lib/cx';
+import { formatRentalDuration, formatRentalPoint } from '@/lib/datetime';
 import styles from './RentalRangePanel.module.css';
 
 export type RentalMode = 'daily' | 'hourly';
@@ -40,23 +41,6 @@ const HOURLY_DURATIONS = Array.from({ length: 24 }, (_, i) => i + 1);
 
 const DEFAULT_HOUR = 10;
 const DEFAULT_HOURLY_DURATION = 4;
-
-const WEEKDAY = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as const;
-
-/** "18:00 T2, 10/08" — format tóm tắt theo mockup thuê giờ. */
-const fmtPoint = (d: Dayjs) => `${d.format('HH:mm')} ${WEEKDAY[d.day()]}, ${d.format('DD/MM')}`;
-
-/**
- * Thời lượng dạng chữ: theo ngày hiện CẢ giờ lẻ ("10 ngày 2 giờ" khi giờ trả ≠ giờ nhận),
- * dưới một ngày hiện giờ. Làm tròn theo phút để 23h59 không thành "0 ngày".
- */
-function durationLabel(pickupAt: Dayjs, returnAt: Dayjs): string {
-  const minutes = returnAt.diff(pickupAt, 'minute');
-  const days = Math.floor(minutes / 1440);
-  const hours = Math.round((minutes % 1440) / 60);
-  if (days <= 0) return `${Math.max(1, hours)} giờ`;
-  return hours > 0 ? `${days} ngày ${hours} giờ` : `${days} ngày`;
-}
 
 /** Không cho chọn ngày trong quá khứ — thuê xe luôn là chuyện tương lai. */
 const disabledDate = (current: Dayjs) => current.isBefore(dayjs().startOf('day'));
@@ -309,12 +293,12 @@ export function RentalRangePanel({
             {complete && ordered ? (
               <>
                 <span>
-                  {fmtPoint(value.pickupAt!)} – {fmtPoint(value.returnAt!)}
+                  {formatRentalPoint(value.pickupAt!)} – {formatRentalPoint(value.returnAt!)}
                 </span>
                 <span className={styles.duration}>
                   Thời gian thuê:{' '}
                   <b className={styles.durationValue}>
-                    {durationLabel(value.pickupAt!, value.returnAt!)}
+                    {formatRentalDuration(value.pickupAt!, value.returnAt!)}
                   </b>
                 </span>
               </>

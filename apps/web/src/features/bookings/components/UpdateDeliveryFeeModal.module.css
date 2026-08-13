@@ -1,0 +1,35 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.currentRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.currentRow b {
+  color: var(--xp-color-text);
+  /* Số tiền không được xuống dòng giữa chừng. */
+  white-space: nowrap;
+}
+
+.diff {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.diff b {
+  color: var(--xp-color-primary);
+  white-space: nowrap;
+}

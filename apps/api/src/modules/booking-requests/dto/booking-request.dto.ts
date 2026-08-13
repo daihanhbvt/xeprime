@@ -150,14 +150,11 @@ export class BookingRequestDto {
   @ApiPropertyOptional({
     type: BookingRequestDeliveryQuoteDto,
     nullable: true,
-    description: 'Báo giá giao nhận đã lưu — null khi chưa báo',
+    description:
+      'LỊCH SỬ: báo giá giao nhận của các yêu cầu tạo trước Wave 9. Chỉ để đọc — không còn ' +
+      'ảnh hưởng tới việc duyệt, và yêu cầu mới luôn null.',
   })
   deliveryQuote!: BookingRequestDeliveryQuoteDto | null;
-  @ApiProperty({
-    description:
-      'Đang chờ duyệt + có yêu cầu giao + chưa có báo giá → phải báo giá trước khi duyệt',
-  })
-  needsDeliveryQuote!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true }) rejectReason!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Booking đã tạo khi duyệt' })
   bookingId!: string | null;

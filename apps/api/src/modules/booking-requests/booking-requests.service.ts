@@ -8,7 +8,6 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
-  DELIVERY_QUOTE_SOURCE,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   TENANT_STATUS,
@@ -25,8 +24,7 @@ import { OccupancyService } from '../calendar/occupancy.service';
 import { NotificationService } from '../notification/notification.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
-import { PricingService, type EffectivePolicy } from '../pricing/pricing.service';
-import { DeliveryQuotePreviewDto, SaveDeliveryQuoteDto } from '../pricing/dto/pricing.dto';
+import { PricingService } from '../pricing/pricing.service';
 import {
   BOOKING_REQUEST_DEFAULT_LIMIT,
   BOOKING_REQUEST_MAX_LIMIT,
@@ -286,13 +284,8 @@ export class BookingRequestsService {
       }),
     ]);
 
-    const stamps = await this.policyStamps(
-      tenantId,
-      rows.map((r) => r.vehicleId),
-    );
-
     return {
-      data: rows.map((r) => toDto(r, stamps.get(r.vehicleId) ?? null)),
+      data: rows.map(toDto),
       meta: { page, limit, total, hasNext: page * limit < total },
     };
   }
@@ -303,190 +296,28 @@ export class BookingRequestsService {
       select: SELECT,
     });
     if (!row) throw notFound();
-    const stamps = await this.policyStamps(tenantId, [row.vehicleId]);
-    return toDto(row, stamps.get(row.vehicleId) ?? null);
-  }
-
-  /**
-   * `updatedAt` của chính sách HIỆU LỰC theo từng xe (override thắng mặc định) — MỘT query cho
-   * cả trang, dùng phát hiện báo giá giao nhận đã cũ so với chính sách hiện tại.
-   */
-  private async policyStamps(
-    tenantId: string,
-    vehicleIds: string[],
-  ): Promise<Map<string, string | null>> {
-    const unique = [...new Set(vehicleIds)];
-    const rows = await this.prisma.rentalPolicy.findMany({
-      where: { tenantId, OR: [{ vehicleId: null }, { vehicleId: { in: unique } }] },
-      select: { vehicleId: true, updatedAt: true },
-    });
-    const shopStamp = rows.find((r) => r.vehicleId === null)?.updatedAt.toISOString() ?? null;
-    const map = new Map<string, string | null>();
-    for (const id of unique) {
-      const override = rows.find((r) => r.vehicleId === id);
-      map.set(id, override ? override.updatedAt.toISOString() : shopStamp);
-    }
-    return map;
-  }
-
-  /**
-   * Preview báo giá giao nhận — KHÔNG lưu gì. Trong bán kính: phí tự tính theo bậc (fee client
-   * gửi bị bỏ qua). Ngoài bán kính: phí lấy từ input; chưa nhập thì breakdown chưa có dòng
-   * giao nhận (`requiresManualFee` = true để FE bắt nhập).
-   */
-  async deliveryQuotePreview(
-    tenantId: string,
-    id: string,
-    dto: SaveDeliveryQuoteDto,
-  ): Promise<DeliveryQuotePreviewDto> {
-    const req = await this.loadForQuote(tenantId, id);
-    const policy = await this.pricing.effectivePolicy(tenantId, req.vehicleId);
-    const { fee, source, requiresManual } = this.resolveDeliveryFee(policy, dto, {
-      allowMissingManualFee: true,
-    });
-
-    const breakdown = this.pricing.buildQuote({
-      weekdayPrice: req.vehicle.weekdayPrice?.toFixed(0) ?? null,
-      weekendPrice: req.vehicle.weekendPrice?.toFixed(0) ?? null,
-      pickupAt: req.pickupAt,
-      returnAt: req.returnAt,
-      policy,
-      delivery: fee != null ? { fee, label: deliveryLabel(dto.distanceKm, source) } : null,
-    });
-
-    return { requiresManualFee: requiresManual, autoFee: requiresManual ? null : fee, breakdown };
-  }
-
-  /** Lưu báo giá giao nhận (ghi DUY NHẤT ở đây) + audit. Chỉ khi yêu cầu còn chờ duyệt. */
-  async saveDeliveryQuote(
-    tenantId: string,
-    userId: string,
-    id: string,
-    dto: SaveDeliveryQuoteDto,
-  ): Promise<BookingRequestDto> {
-    const req = await this.loadForQuote(tenantId, id);
-    const policy = await this.pricing.effectivePolicy(tenantId, req.vehicleId);
-    const { fee, source } = this.resolveDeliveryFee(policy, dto, { allowMissingManualFee: false });
-
-    const quote: BookingRequestDeliveryQuote = {
-      distanceKm: dto.distanceKm,
-      fee: fee!,
-      source,
-      ...(dto.note?.trim() ? { note: dto.note.trim() } : {}),
-      quotedBy: userId,
-      quotedAt: new Date().toISOString(),
-      policyUpdatedAt: policy?.values.updatedAt ?? null,
-    };
-
-    const row = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.bookingRequest.update({
-        where: { id: req.id },
-        data: { deliveryQuote: quote as unknown as Prisma.InputJsonValue },
-        select: SELECT,
-      });
-
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId: userId,
-          actorScope: 'tenant',
-          action: 'booking_request.delivery_quote',
-          targetType: 'booking_request',
-          targetId: id,
-          after: { distanceKm: dto.distanceKm, fee: fee!, source },
-        },
-        tx,
-      );
-
-      return updated;
-    });
-
-    return toDto(row, quote.policyUpdatedAt);
-  }
-
-  /**
-   * Phân giải phí giao nhận theo chính sách hiệu lực: trong bán kính = bậc tự động (input phí
-   * bị bỏ qua — không cho ghi đè bậc đã cấu hình); ngoài bán kính = bắt buộc nhập tay.
-   */
-  private resolveDeliveryFee(
-    policy: EffectivePolicy | null,
-    dto: SaveDeliveryQuoteDto,
-    opts: { allowMissingManualFee: boolean },
-  ): {
-    fee: string | null;
-    source: (typeof DELIVERY_QUOTE_SOURCE)[keyof typeof DELIVERY_QUOTE_SOURCE];
-    requiresManual: boolean;
-  } {
-    const result = this.pricing.deliveryFeeFor(policy?.values ?? null, dto.distanceKm);
-    if (result.kind === 'disabled') {
-      throw new ConflictException({
-        code: API_ERROR_CODE.DELIVERY_NOT_SUPPORTED,
-        message: 'Chính sách hiện tại không bật giao nhận — bật giao nhận trước khi báo giá',
-      });
-    }
-    if (result.kind === 'auto') {
-      return { fee: result.fee, source: DELIVERY_QUOTE_SOURCE.AUTO, requiresManual: false };
-    }
-    if (dto.fee == null) {
-      if (opts.allowMissingManualFee) {
-        return { fee: null, source: DELIVERY_QUOTE_SOURCE.MANUAL, requiresManual: true };
-      }
-      throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Khoảng cách ngoài bán kính tự báo — vui lòng nhập phí giao nhận đề xuất',
-      });
-    }
-    return { fee: dto.fee, source: DELIVERY_QUOTE_SOURCE.MANUAL, requiresManual: true };
-  }
-
-  /** Yêu cầu còn chờ duyệt + CÓ giao tận nơi — điều kiện của mọi thao tác báo giá. */
-  private async loadForQuote(tenantId: string, id: string) {
-    const req = await this.prisma.bookingRequest.findFirst({
-      where: { id, tenantId },
-      select: {
-        id: true,
-        status: true,
-        vehicleId: true,
-        deliveryRequested: true,
-        pickupAt: true,
-        returnAt: true,
-        vehicle: { select: { weekdayPrice: true, weekendPrice: true } },
-      },
-    });
-    if (!req) throw notFound();
-    if (req.status !== BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
-        message: 'Yêu cầu này đã được xử lý',
-      });
-    }
-    if (!req.deliveryRequested) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Yêu cầu này không có giao xe tận nơi',
-      });
-    }
-    return req;
+    return toDto(row);
   }
 
   /**
    * Shop duyệt → tạo Booking (giữ chỗ lịch) trong CÙNG transaction rồi set converted_to_booking.
    * Nếu xe đã bận khung giờ đó → `createWithinTx` để constraint ném 23P01 → 409 (ADR 0006).
    *
-   * Tiền của đơn KHÔNG nhập tay ở luồng này (Wave 2): PricingService tính từ giá xe + chính
-   * sách hiệu lực + báo giá giao nhận đã chốt, và snapshot bất biến ghi kèm đơn. Yêu cầu có
-   * giao tận nơi mà CHƯA báo giá → chặn với mã riêng để FE mở thẳng drawer báo giá.
+   * Tiền của đơn KHÔNG nhập tay ở luồng này: PricingService tính từ giá xe + chính sách hiệu
+   * lực, và snapshot bất biến ghi kèm đơn.
+   *
+   * **Giao nhận KHÔNG còn là cửa chặn (Wave 9).** Trước đây yêu cầu có giao tận nơi phải qua
+   * một vòng báo giá theo khoảng cách mới duyệt được (`DELIVERY_QUOTE_REQUIRED`) — thực tế chủ
+   * xe và khách vẫn thống nhất phí qua điện thoại, nên vòng đó chỉ chặn việc duyệt chứ không
+   * quyết định con số. Giờ **luôn duyệt được ngay** và đơn sinh ra với `deliveryFee = 0`
+   * (`Miễn phí`); sau khi hai bên thống nhất, chủ xe cập nhật phí bằng
+   * `BookingsService.updateDeliveryFee` — có audit, không cần khách xác nhận.
+   *
+   * Địa chỉ giao và cờ `deliveryRequested` của yêu cầu vẫn giữ nguyên để chủ xe biết phải giao
+   * ở đâu; dữ liệu báo giá cũ (nếu có) vẫn đọc được nhưng không còn ảnh hưởng gì tới việc duyệt.
    */
   async approve(tenantId: string, userId: string, id: string): Promise<BookingRequestDto> {
     const req = await this.loadPending(tenantId, id);
-
-    const quote = req.deliveryQuote as unknown as BookingRequestDeliveryQuote | null;
-    if (req.deliveryRequested && !quote) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.DELIVERY_QUOTE_REQUIRED,
-        message: 'Cần báo giá giao nhận trước khi duyệt yêu cầu này',
-      });
-    }
 
     const policy = await this.pricing.effectivePolicy(tenantId, req.vehicleId);
     const breakdown = this.pricing.buildQuote({
@@ -495,10 +326,8 @@ export class BookingRequestsService {
       pickupAt: req.pickupAt,
       returnAt: req.returnAt,
       policy,
-      delivery:
-        req.deliveryRequested && quote
-          ? { fee: quote.fee, label: deliveryLabel(quote.distanceKm, quote.source) }
-          : null,
+      // Miễn phí lúc duyệt — không dòng giao nhận nào trong snapshot giá gốc.
+      delivery: null,
     });
     const snapshot = this.pricing.buildSnapshot(breakdown, policy);
 
@@ -566,8 +395,7 @@ export class BookingRequestsService {
       return updated;
     });
 
-    const stamps = await this.policyStamps(tenantId, [row.vehicleId]);
-    return toDto(row, stamps.get(row.vehicleId) ?? null);
+    return toDto(row);
   }
 
   async reject(
@@ -620,8 +448,7 @@ export class BookingRequestsService {
       return updated;
     });
 
-    const stamps = await this.policyStamps(tenantId, [row.vehicleId]);
-    return toDto(row, stamps.get(row.vehicleId) ?? null);
+    return toDto(row);
   }
 
   /** Nạp yêu cầu đang chờ duyệt; đã quyết định rồi thì chặn (không duyệt/từ chối hai lần). */
@@ -656,12 +483,12 @@ export class BookingRequestsService {
 type BookingRequestRow = Prisma.BookingRequestGetPayload<{ select: typeof SELECT }>;
 
 /**
- * `policyUpdatedAt` = mốc chính sách hiệu lực HIỆN TẠI của xe — báo giá cũ hơn mốc này
- * (chính sách đã đổi sau khi báo) bị đánh dấu `stale` để shop báo giá lại trước khi duyệt.
+ * Wave 9: `deliveryQuote` chỉ còn là **dữ liệu lịch sử đọc-được** của các yêu cầu đã báo giá
+ * trước đây. Không còn `needsDeliveryQuote`/`stale` — không có gì để "cần" hay "cũ" nữa khi
+ * việc duyệt không phụ thuộc báo giá.
  */
-function toDto(r: BookingRequestRow, policyUpdatedAt: string | null): BookingRequestDto {
+function toDto(r: BookingRequestRow): BookingRequestDto {
   const quote = r.deliveryQuote as unknown as BookingRequestDeliveryQuote | null;
-  const pending = r.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
   return {
     id: r.id,
     vehicleId: r.vehicleId,
@@ -683,22 +510,12 @@ function toDto(r: BookingRequestRow, policyUpdatedAt: string | null): BookingReq
           source: quote.source,
           note: quote.note ?? null,
           quotedAt: quote.quotedAt,
-          stale: pending && (quote.policyUpdatedAt ?? null) !== policyUpdatedAt,
         }
       : null,
-    needsDeliveryQuote: pending && r.deliveryRequested && !quote,
     rejectReason: r.rejectReason,
     bookingId: r.bookingId,
     createdAt: r.createdAt as unknown as string,
   };
-}
-
-/** Sublabel dòng giao nhận trong breakdown/snapshot. */
-function deliveryLabel(distanceKm: number, source: string): string {
-  const km = Number.isInteger(distanceKm) ? String(distanceKm) : distanceKm.toFixed(1);
-  return source === DELIVERY_QUOTE_SOURCE.MANUAL
-    ? `Khoảng cách ${km} km một chiều (báo giá thủ công)`
-    : `Khoảng cách ${km} km một chiều`;
 }
 
 /** Số tiền của một dòng breakdown ('0' khi không có dòng đó). */

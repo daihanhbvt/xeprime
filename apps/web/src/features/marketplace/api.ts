@@ -1,5 +1,33 @@
-import { getApiBaseUrl } from '@/services/api-client';
+import { apiGet, apiRequest, getApiBaseUrl } from '@/services/api-client';
 import type { PublicListingDetail, PublicShop, ReviewPage } from './types';
+
+/**
+ * Cùng dữ liệu với `fetchListingDetail` nhưng gọi TỪ TRÌNH DUYỆT (qua `apiGet`, có cookie).
+ *
+ * Dùng khi overlay yêu cầu thuê được mở từ một thẻ xe: thẻ chỉ có dữ liệu tóm tắt, còn cột hồ
+ * sơ xe cần ảnh gallery/tiện ích/gian hàng. Mở từ trang chi tiết thì listing đã có sẵn và
+ * KHÔNG gọi lại.
+ */
+export const fetchListingDetailClient = (id: string): Promise<PublicListingDetail> =>
+  apiGet<PublicListingDetail>(`/public/listings/${encodeURIComponent(id)}`);
+
+/**
+ * Vài đánh giá tiêu biểu của một xe, gọi TỪ TRÌNH DUYỆT — dùng cho cột gian hàng trong overlay
+ * yêu cầu thuê.
+ *
+ * Endpoint trả sẵn `{ summary, data, meta }` nên KHÔNG dùng `apiGet` (nó bóc mất `summary`);
+ * `apiRequest` giữ nguyên cả phong bì.
+ */
+export async function fetchListingReviewsClient(
+  vehicleId: string,
+  limit: number,
+): Promise<ReviewPage> {
+  const res = await apiRequest<ReviewPage['data']>(
+    `/public/listings/${encodeURIComponent(vehicleId)}/reviews`,
+    { query: { limit } },
+  );
+  return res as unknown as ReviewPage;
+}
 
 /**
  * Lấy chi tiết một xe public — gọi server-side cho trang `/listings/[id]` (SEO).

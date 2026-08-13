@@ -18,11 +18,22 @@ export function ChatWithShopButton({
   block,
   size,
   className,
+  label = 'Nhắn shop',
+  type,
+  onNavigate,
 }: {
   vehicleId: string;
   block?: boolean;
   size?: 'middle' | 'large';
   className?: string;
+  /** Nhãn theo ngữ cảnh — trang xe dùng "Nhắn shop", màn gửi yêu cầu xong dùng "Liên hệ chủ xe". */
+  label?: string;
+  type?: 'default' | 'primary';
+  /**
+   * Gọi NGAY TRƯỚC khi rời trang. Nút này tự điều hướng sang khu tin nhắn, nên nơi gọi nằm
+   * trong overlay phải có chỗ đóng overlay lại — nếu không nó treo trên màn chat mới.
+   */
+  onNavigate?: () => void;
 }) {
   const { message } = App.useApp();
   const router = useRouter();
@@ -32,7 +43,10 @@ export function ChatWithShopButton({
 
   function startChat() {
     start.mutate(vehicleId, {
-      onSuccess: (conversation) => router.push(`${ROUTES.CHAT}?c=${conversation.id}`),
+      onSuccess: (conversation) => {
+        onNavigate?.();
+        router.push(`${ROUTES.CHAT}?c=${conversation.id}`);
+      },
       onError: (err) => {
         if (isUnauthenticated(err)) {
           // Mở modal ngay trên trang xe và TỰ CHẠY LẠI hành động sau khi đăng nhập — khách
@@ -52,13 +66,14 @@ export function ChatWithShopButton({
   return (
     <Button
       icon={<MessageOutlined />}
+      type={type}
       block={block}
       size={size}
       className={className}
       loading={start.isPending}
       onClick={startChat}
     >
-      Nhắn shop
+      {label}
     </Button>
   );
 }

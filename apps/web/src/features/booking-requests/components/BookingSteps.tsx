@@ -4,27 +4,28 @@ import { CheckCircleFilled } from '@ant-design/icons';
 import styles from './BookingSteps.module.css';
 
 /**
- * Bốn bước của luồng đặt xe. Nhãn ngắn theo yêu cầu wave 4A.
+ * **Ba** bước biểu mẫu của luồng đặt xe (Wave 9).
  *
- * ⚠️ Figma `66:117` và các ảnh duyệt ghi bước 1 là "Ngày giờ"; prompt wave 4A yêu cầu
- * "Thời gian" và prompt là nguồn sự thật cao hơn ảnh. Đổi ở đúng một dòng dưới đây.
+ * Hai thứ CỐ Ý không phải bước:
+ *  - `otp` là một trạng thái BÊN TRONG bước "Liên hệ" — không phải ai cũng đi qua nó (tài khoản
+ *    đã xác thực đúng số thì bỏ hẳn), nên để nó chiếm một ô cố định làm thanh tiến trình lúc có
+ *    lúc không, và người dùng đếm sai còn mấy bước nữa;
+ *  - `done` là KẾT QUẢ, không phải việc phải làm. Bước xong rồi thì thanh tiến trình cũng hết
+ *    việc — màn thành công tự nói lên nó.
  */
 export const BOOKING_STEPS = [
-  { key: 'dates', label: 'Thời gian' },
+  { key: 'time', label: 'Thời gian' },
   { key: 'contact', label: 'Liên hệ' },
-  { key: 'otp', label: 'Xác thực' },
-  { key: 'done', label: 'Hoàn tất' },
+  { key: 'review', label: 'Xác nhận' },
 ] as const;
 
-export type BookingStepKey = (typeof BOOKING_STEPS)[number]['key'];
+export type BookingFormStepKey = (typeof BOOKING_STEPS)[number]['key'];
+
+/** Trạng thái của cả luồng = ba bước biểu mẫu + hai trạng thái không nằm trên thanh tiến trình. */
+export type BookingStepKey = BookingFormStepKey | 'otp' | 'done';
 
 interface BookingStepsProps {
   current: BookingStepKey;
-  /**
-   * Bước đã xong nhưng người dùng KHÔNG phải đi qua (tài khoản đã xác thực SĐT thì bỏ qua OTP).
-   * Vẫn hiện đủ bốn bước — giấu đi một bước làm thanh tiến trình nhảy số và người dùng mất mốc.
-   */
-  skipped?: readonly BookingStepKey[];
 }
 
 /**
@@ -34,13 +35,22 @@ interface BookingStepsProps {
  * dấu gạch phân cách, không phải stepper có đường nối; và ở mobile bốn bước phải nằm gọn MỘT
  * hàng ngang, điều mà `Steps` chỉ làm được sau khi ghi đè khá nhiều.
  */
-export function BookingSteps({ current, skipped = [] }: BookingStepsProps) {
-  const currentIndex = BOOKING_STEPS.findIndex((s) => s.key === current);
+export function BookingSteps({ current }: BookingStepsProps) {
+  /*
+   * `otp` nằm TRONG bước "Liên hệ" nên vẫn tô sáng ô đó; `done` đã qua hết cả ba bước. Nhờ vậy
+   * thanh tiến trình không bao giờ trống hay nhảy về đầu ở hai trạng thái ngoài biểu mẫu.
+   */
+  const currentIndex =
+    current === 'otp'
+      ? BOOKING_STEPS.findIndex((s) => s.key === 'contact')
+      : current === 'done'
+        ? BOOKING_STEPS.length
+        : BOOKING_STEPS.findIndex((s) => s.key === current);
 
   return (
     <ol className={styles.steps} aria-label="Tiến trình đặt xe">
       {BOOKING_STEPS.map((step, index) => {
-        const done = index < currentIndex || skipped.includes(step.key);
+        const done = index < currentIndex;
         const active = index === currentIndex;
         return (
           <li

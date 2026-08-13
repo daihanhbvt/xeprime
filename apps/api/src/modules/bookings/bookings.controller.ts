@@ -1,7 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, CurrentUser, RequirePermissions, TenantScoped } from '../../common/decorators';
+import {
+  CurrentTenant,
+  CurrentUser,
+  RequirePermissions,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   BookingDetailDto,
@@ -9,6 +14,7 @@ import {
   BookingPageDto,
   CreateBookingDto,
   TransitionBookingDto,
+  UpdateBookingDeliveryFeeDto,
   UpdateBookingDto,
 } from './dto/booking.dto';
 import { BookingsService } from './bookings.service';
@@ -69,6 +75,25 @@ export class BookingsController {
     @Body() dto: UpdateBookingDto,
   ): Promise<BookingDetailDto> {
     return this.bookings.update(tenant.tenantId, id, dto);
+  }
+
+  /**
+   * Chốt phí giao nhận sau khi chủ xe và khách đã thống nhất ngoài ứng dụng (Wave 9).
+   *
+   * Endpoint riêng thay vì dùng `PATCH :id`: việc này cần vết audit riêng (ai đổi, từ bao nhiêu
+   * sang bao nhiêu) và tổng tiền phải do server tính lại. Không có bước khách xác nhận.
+   */
+  @Patch(':id/delivery-fee')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({ summary: 'Cập nhật phí giao nhận của đơn (server tính lại tổng, có audit)' })
+  @ApiOkResponse({ type: BookingDetailDto })
+  updateDeliveryFee(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateBookingDeliveryFeeDto,
+  ): Promise<BookingDetailDto> {
+    return this.bookings.updateDeliveryFee(tenant.tenantId, id, user.id, dto);
   }
 
   @Post(':id/transition')

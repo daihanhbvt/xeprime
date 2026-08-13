@@ -233,7 +233,15 @@ export class PricingService {
     return Math.max(1, Math.ceil((returnAt.getTime() - pickupAt.getTime()) / MS_PER_DAY));
   }
 
-  /** Tra phí giao nhận theo khoảng cách một chiều. Mốc biên thuộc về bậc đó (≤ toKm). */
+  /**
+   * Tra phí giao nhận theo khoảng cách một chiều. Mốc biên thuộc về bậc đó (≤ toKm).
+   *
+   * **Wave 9: KHÔNG còn đường gọi nào trong luồng nghiệp vụ.** Vòng "báo giá theo khoảng cách
+   * rồi mới duyệt" đã bỏ — giao nhận miễn phí lúc duyệt, chủ xe chốt phí đã thoả thuận trên đơn
+   * (`BookingsService.updateDeliveryFee`). Giữ lại hàm cùng cấu hình bậc phí trong chính sách
+   * gian hàng vì cấu hình đó vẫn sửa được và vẫn là dữ liệu của shop; nó chỉ đang không nuôi
+   * quyết định nào. Đừng nối lại vào luồng duyệt mà không có quyết định sản phẩm mới.
+   */
   deliveryFeeFor(policy: RentalPolicyValuesDto | null, distanceKm: number): DeliveryFeeResult {
     if (!policy?.deliveryEnabled) return { kind: 'disabled' };
     if (policy.deliveryMaxRadiusKm == null || distanceKm > policy.deliveryMaxRadiusKm) {

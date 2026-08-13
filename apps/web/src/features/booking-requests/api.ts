@@ -7,8 +7,6 @@ import type {
   CheckAvailabilityInput,
   CheckAvailabilityResult,
   CreateBookingRequestInput,
-  DeliveryQuotePreview,
-  SaveDeliveryQuoteInput,
 } from './types';
 
 export const BOOKING_REQUESTS_DEFAULT_LIMIT = 20;
@@ -49,20 +47,6 @@ export const approveBookingRequest = (id: string): Promise<BookingRequestItem> =
 
 export const rejectBookingRequest = (id: string, reason?: string): Promise<BookingRequestItem> =>
   apiPost<BookingRequestItem>(`/booking-requests/${id}/reject`, { reason });
-
-/** Preview báo giá giao nhận — PricingService tính, KHÔNG lưu (drawer gọi khi shop nhập). */
-export const previewDeliveryQuote = (
-  id: string,
-  body: SaveDeliveryQuoteInput,
-): Promise<DeliveryQuotePreview> =>
-  apiPost<DeliveryQuotePreview>(`/booking-requests/${id}/delivery-quote/preview`, body);
-
-/** Chốt báo giá giao nhận cho yêu cầu — điều kiện để duyệt được yêu cầu có giao tận nơi. */
-export const saveDeliveryQuote = (
-  id: string,
-  body: SaveDeliveryQuoteInput,
-): Promise<BookingRequestItem> =>
-  apiPost<BookingRequestItem>(`/booking-requests/${id}/delivery-quote`, body);
 
 /** Công khai — khách gửi yêu cầu thuê từ marketplace (không cần đăng nhập). */
 export const submitBookingRequest = (

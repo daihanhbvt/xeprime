@@ -1,21 +1,19 @@
 'use client';
 
 import { App, Select, Spin } from 'antd';
-import { Suspense, useState } from 'react';
+import { Suspense } from 'react';
 import { API_ERROR_CODE } from '@xeprime/types';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { BOOKING_REQUESTS_DEFAULT_LIMIT } from '@/features/booking-requests/api';
 import { BOOKING_REQUEST_STATUS_OPTIONS } from '@/features/booking-requests/constants';
 import { BookingRequestTable } from '@/features/booking-requests/components/BookingRequestTable';
-import { DeliveryQuoteDrawer } from '@/features/booking-requests/components/DeliveryQuoteDrawer';
 import { useBookingRequestFilters } from '@/features/booking-requests/hooks/use-booking-request-filters';
 import { useBookingRequests } from '@/features/booking-requests/hooks/use-booking-requests';
 import {
   useApproveBookingRequest,
   useRejectBookingRequest,
 } from '@/features/booking-requests/hooks/use-booking-request-mutations';
-import type { BookingRequestItem } from '@/features/booking-requests/types';
 import styles from './booking-requests-page.module.css';
 
 const STATUS_OPTIONS = [
@@ -37,8 +35,6 @@ function BookingRequestsView() {
   const { data, isError, refetch, isFetching } = useBookingRequests(filters);
   const approve = useApproveBookingRequest();
   const reject = useRejectBookingRequest();
-  /** Yêu cầu đang mở drawer "Báo giá giao nhận" — null = đóng. */
-  const [quotingRequest, setQuotingRequest] = useState<BookingRequestItem | null>(null);
 
   const items = data?.items ?? [];
   const meta = data?.meta ?? {
@@ -59,13 +55,6 @@ function BookingRequestsView() {
       onSuccess: () => message.success('Đã duyệt — đã tạo đơn thuê'),
       onError: (err) => {
         const code = getErrorCode(err);
-        if (code === API_ERROR_CODE.DELIVERY_QUOTE_REQUIRED) {
-          // Backend chặn duyệt vì thiếu báo giá giao nhận → mở thẳng drawer báo giá.
-          const row = items.find((r) => r.id === id);
-          if (row) setQuotingRequest(row);
-          message.warning('Cần báo giá giao nhận trước khi duyệt yêu cầu này');
-          return;
-        }
         message.error(
           code === API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT
             ? 'Xe đã bận khung giờ này, không thể duyệt'
@@ -110,14 +99,7 @@ function BookingRequestsView() {
         error={isError && !data ? { onRetry: () => void refetch() } : null}
         onApprove={handleApprove}
         onReject={handleReject}
-        onQuote={setQuotingRequest}
         onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
-      />
-
-      <DeliveryQuoteDrawer
-        request={quotingRequest}
-        onClose={() => setQuotingRequest(null)}
-        onSaved={() => setQuotingRequest(null)}
       />
     </div>
   );

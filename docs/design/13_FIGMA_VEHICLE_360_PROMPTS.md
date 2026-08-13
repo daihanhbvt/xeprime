@@ -175,7 +175,7 @@ Continue in the connected XePrime Figma file. Read `12_VEHICLE_360_MANAGEMENT.md
 Work only in `13 — Vehicle 360 Management — Proposed v2` lanes `04 — Documents, Maintenance & Handover`, `05 — Responsive & State Audit`, and `99 — Handoff Notes`. Do not alter anything outside Proposed v2 or any shared main component.
 
 GOAL
-Complete the loop: documents are safely reviewed through OCR; confirmed return odometer updates the vehicle; maintenance becomes actionable and availability-aware; the whole Proposed v2 remains consistent.
+Complete the loop: documents are safely reviewed through OCR; an optional confirmed return odometer updates the vehicle when supplied; maintenance becomes actionable and availability-aware; the whole Proposed v2 remains consistent. For handover/return, `14_SIMPLIFIED_HANDOVER_AND_RETURN.md` is the newest source of truth and supersedes older mandatory KM/fuel/settlement descriptions.
 
 DESIGN
 1. Vehicle tab `Giấy tờ`: cards for `Đăng ký/Cà vẹt`, `Đăng kiểm`, `Bảo hiểm`, `Khác`; statuses `Chưa có`, `Đang xử lý`, `Cần kiểm tra`, `Còn hiệu lực`, `Sắp hết hạn`, `Đã hết hạn`, `Không đọc được`; image/PDF upload, preview, replace, archive/history. Documents are optional; expiry warns only.
@@ -186,7 +186,7 @@ DESIGN
 
 4. New `/manage/maintenance`: overdue, due soon, in maintenance and missing-KM task-first views/filters; document-expiry may be related filter but not a maintenance record; scheduling shows availability-blocking period and explains status alone is insufficient.
 
-5. Handover integration: inspect `06 — Rental Operations` first. If handover exists, duplicate relevant frames into Proposed v2 and extend them; do not create duplicate navigation. Pickup/return capture odometer, fuel, condition, photos, notes, confirmation. Validate return KM >= pickup KM and show vehicle/maintenance impact. Cover missing/suspicious KM, upload error, draft, confirmed and read-only. Desktop drawer/dialog; mobile may be full-screen responsive dialog.
+5. Handover integration: inspect `06 — Rental Operations` first. If handover exists, duplicate relevant frames into Proposed v2 and extend them; do not create duplicate navigation. The happy path has only `Xác nhận đã giao xe` and `Xác nhận đã nhận xe`. Odometer, condition, photos and notes are optional progressive disclosure; fuel and fuel surcharge do not exist. Missing KM never blocks return; supplied KM must satisfy return >= pickup and then updates vehicle/maintenance. Deposit defaults to a full-refund proposal when no optional surcharge exists, but the owner transfers cash/bank funds outside XePrime and manually marks it refunded without OTP. Follow `14_SIMPLIFIED_HANDOVER_AND_RETURN.md` for screens, states and terminology. Desktop responsive dialog/drawer; mobile may be full-screen.
 
 6. Cross-surface warnings: concise document/maintenance indicators on fleet cards and up to 3 prioritized Vehicle 360 alerts; no sensitive finance leak.
 
@@ -212,4 +212,3 @@ Duyệt Proposed v2 rồi mới merge theo từng frame đã duyệt:
 5. chạy coverage audit lại.
 
 Không gộp merge vào bốn prompt sáng tạo trên.
-

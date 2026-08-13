@@ -10,11 +10,15 @@ import { XP_TOKENS } from '@/styles/theme';
 
 import styles from './ResponsiveDialog.module.css';
 
-/** Bề rộng modal desktop — Figma `125:1611` (SM 400 · MD 560 · LG 720), token hoá ở Wave 1A. */
+/**
+ * Bề rộng modal desktop — Figma `125:1611` (SM 400 · MD 560 · LG 720), token hoá ở Wave 1A.
+ * `xl` thêm ở Wave 9 cho overlay HAI CỘT (hồ sơ xe bên trái, luồng thao tác bên phải).
+ */
 const MODAL_WIDTH = {
   sm: XP_TOKENS['modal-width-sm'],
   md: XP_TOKENS['modal-width'],
   lg: XP_TOKENS['modal-width-lg'],
+  xl: XP_TOKENS['modal-width-xl'],
 } as const;
 
 /**
@@ -41,6 +45,7 @@ const DEFAULT_MOBILE_MODE: Record<DialogSize, DialogMobileMode> = {
   sm: 'sheet',
   md: 'fullscreen',
   lg: 'fullscreen',
+  xl: 'fullscreen',
 };
 
 interface ResponsiveDialogBaseProps {
@@ -212,7 +217,7 @@ export function ResponsiveDialog({
       destroyOnHidden={destroyOnClose}
       className={className}
       classNames={{
-        body: cx(styles.body, bodyClassName),
+        body: cx(styles.body, size === 'xl' && styles.xlBody, bodyClassName),
         footer: styles.footer,
         header: hideHeaderTitle ? styles.bareHeader : undefined,
       }}

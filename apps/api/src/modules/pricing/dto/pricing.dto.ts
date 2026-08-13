@@ -297,57 +297,19 @@ export class PublicQuoteQueryDto {
 // Báo giá giao nhận trên yêu cầu đặt xe
 // ---------------------------------------------------------------------------
 
-/** Input báo giá (lưu) và preview (không lưu) dùng chung. */
-export class SaveDeliveryQuoteDto {
-  @ApiProperty({ description: 'Khoảng cách một chiều shop xác nhận (km)', maximum: MAX_KM })
-  @IsNumber({ maxDecimalPlaces: 1 })
-  @Min(0, { message: 'Giá trị khoảng cách không thể âm' })
-  @Max(MAX_KM)
-  distanceKm!: number;
-
-  @ApiPropertyOptional({
-    description:
-      'Phí đề xuất VND — bắt buộc khi NGOÀI bán kính tự báo; trong bán kính bị bỏ qua (phí tính tự động)',
-  })
-  @IsOptional()
-  @Matches(MONEY_PATTERN, { message: 'Phí giao nhận không hợp lệ (số VND không âm)' })
-  fee?: string;
-
-  @ApiPropertyOptional({ description: 'Ghi chú cho khách hàng' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  note?: string;
-}
-
-/** Preview báo giá — chưa lưu gì. */
-export class DeliveryQuotePreviewDto {
-  @ApiProperty({ description: 'Khoảng cách nằm ngoài bán kính tự báo → phí phải nhập tay' })
-  requiresManualFee!: boolean;
-
-  @ApiPropertyOptional({
-    type: String,
-    nullable: true,
-    description: 'Phí tự tính theo bậc (trong bán kính); null khi phải nhập tay',
-  })
-  autoFee!: string | null;
-
-  @ApiProperty({
-    type: QuoteBreakdownDto,
-    description: 'Breakdown đầy đủ nếu chốt với khoảng cách/phí này',
-  })
-  breakdown!: QuoteBreakdownDto;
-}
-
-/** Báo giá giao nhận đã lưu trên một yêu cầu. */
+/**
+ * Báo giá giao nhận đã lưu trên một yêu cầu — **chỉ còn là dữ liệu lịch sử** (Wave 9).
+ *
+ * Vòng báo giá theo khoảng cách đã bị bỏ: giao nhận miễn phí lúc duyệt, chủ xe và khách thống
+ * nhất phí ngoài ứng dụng rồi cập nhật vào ĐƠN (`PATCH /bookings/:id/delivery-fee`). Giữ kiểu
+ * này để các yêu cầu cũ vẫn đọc được; không có đường ghi mới nào.
+ */
 export class BookingRequestDeliveryQuoteDto {
   @ApiProperty() distanceKm!: number;
   @ApiProperty() fee!: string;
   @ApiProperty({ enum: DELIVERY_QUOTE_SOURCE_VALUES }) source!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
   @ApiProperty() quotedAt!: string;
-  @ApiProperty({ description: 'Chính sách đã đổi SAU khi báo giá — nên báo giá lại' })
-  stale!: boolean;
 }
 
 // ---------------------------------------------------------------------------

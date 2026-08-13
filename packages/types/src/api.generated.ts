@@ -1335,6 +1335,23 @@ export interface paths {
         patch: operations["BookingsController_update"];
         trace?: never;
     };
+    "/bookings/{id}/delivery-fee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Cập nhật phí giao nhận của đơn (server tính lại tổng, có audit) */
+        patch: operations["BookingsController_updateDeliveryFee"];
+        trace?: never;
+    };
     "/bookings/{id}/transition": {
         parameters: {
             query?: never;
@@ -1565,7 +1582,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch) */
+        /** Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch, phí giao nhận 0) */
         post: operations["BookingRequestsController_approve"];
         delete?: never;
         options?: never;
@@ -1584,40 +1601,6 @@ export interface paths {
         put?: never;
         /** Từ chối yêu cầu */
         post: operations["BookingRequestsController_reject"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/booking-requests/{id}/delivery-quote/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Preview báo giá giao nhận theo khoảng cách (không lưu) */
-        post: operations["BookingRequestsController_previewDeliveryQuote"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/booking-requests/{id}/delivery-quote": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Lưu báo giá giao nhận cho yêu cầu (audit) */
-        post: operations["BookingRequestsController_saveDeliveryQuote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4238,6 +4221,15 @@ export interface components {
             depositAmount?: string;
             note?: string;
         };
+        UpdateBookingDeliveryFeeDto: {
+            /**
+             * @description Phí giao nhận VND (chuỗi — ADR 0007). `0` = miễn phí.
+             * @example 120000
+             */
+            deliveryFee: string;
+            /** @description Ghi chú NỘI BỘ (lý do, mã tham chiếu) — chỉ vào audit, KHÔNG hiển thị cho khách */
+            note?: string;
+        };
         TransitionBookingDto: {
             /**
              * @description Trạng thái đích
@@ -4395,8 +4387,6 @@ export interface components {
             source: "auto" | "manual";
             note?: string | null;
             quotedAt: string;
-            /** @description Chính sách đã đổi SAU khi báo giá — nên báo giá lại */
-            stale: boolean;
         };
         BookingRequestDto: {
             id: string;
@@ -4416,10 +4406,8 @@ export interface components {
             /** @description Khách yêu cầu giao xe tận nơi */
             deliveryRequested: boolean;
             deliveryAddress?: string | null;
-            /** @description Báo giá giao nhận đã lưu — null khi chưa báo */
+            /** @description LỊCH SỬ: báo giá giao nhận của các yêu cầu tạo trước Wave 9. Chỉ để đọc — không còn ảnh hưởng tới việc duyệt, và yêu cầu mới luôn null. */
             deliveryQuote?: components["schemas"]["BookingRequestDeliveryQuoteDto"] | null;
-            /** @description Đang chờ duyệt + có yêu cầu giao + chưa có báo giá → phải báo giá trước khi duyệt */
-            needsDeliveryQuote: boolean;
             rejectReason?: string | null;
             /** @description Booking đã tạo khi duyệt */
             bookingId?: string | null;
@@ -4432,22 +4420,6 @@ export interface components {
         };
         RejectBookingRequestDto: {
             reason?: string;
-        };
-        SaveDeliveryQuoteDto: {
-            /** @description Khoảng cách một chiều shop xác nhận (km) */
-            distanceKm: number;
-            /** @description Phí đề xuất VND — bắt buộc khi NGOÀI bán kính tự báo; trong bán kính bị bỏ qua (phí tính tự động) */
-            fee?: string;
-            /** @description Ghi chú cho khách hàng */
-            note?: string;
-        };
-        DeliveryQuotePreviewDto: {
-            /** @description Khoảng cách nằm ngoài bán kính tự báo → phí phải nhập tay */
-            requiresManualFee: boolean;
-            /** @description Phí tự tính theo bậc (trong bán kính); null khi phải nhập tay */
-            autoFee?: string | null;
-            /** @description Breakdown đầy đủ nếu chốt với khoảng cách/phí này */
-            breakdown: components["schemas"]["QuoteBreakdownDto"];
         };
         CreateBookingRequestDto: {
             /** @description ID xe (ULID) trên marketplace */
@@ -7860,6 +7832,31 @@ export interface operations {
             };
         };
     };
+    BookingsController_updateDeliveryFee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBookingDeliveryFeeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetailDto"];
+                };
+            };
+        };
+    };
     BookingsController_transition: {
         parameters: {
             query?: never;
@@ -8210,56 +8207,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RejectBookingRequestDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BookingRequestDto"];
-                };
-            };
-        };
-    };
-    BookingRequestsController_previewDeliveryQuote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SaveDeliveryQuoteDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeliveryQuotePreviewDto"];
-                };
-            };
-        };
-    };
-    BookingRequestsController_saveDeliveryQuote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SaveDeliveryQuoteDto"];
             };
         };
         responses: {

@@ -2,8 +2,13 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
-import { createBooking, transitionBooking, updateBooking } from '../api';
-import type { CreateBookingInput, TransitionInput, UpdateBookingInput } from '../types';
+import { createBooking, transitionBooking, updateBooking, updateBookingDeliveryFee } from '../api';
+import type {
+  CreateBookingInput,
+  TransitionInput,
+  UpdateBookingInput,
+  UpdateDeliveryFeeInput,
+} from '../types';
 
 /**
  * Sau mỗi mutation, invalidate `bookings` + `calendar` + `dashboard`: tạo/đổi đơn ảnh hưởng
@@ -27,6 +32,21 @@ export function useUpdateBooking(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: UpdateBookingInput) => updateBooking(id, body),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
+      invalidateAfterBookingChange(queryClient);
+    },
+  });
+}
+
+/**
+ * Chốt phí giao nhận của đơn (Wave 9). Tổng tiền do SERVER tính lại nên response là nguồn duy
+ * nhất — ghi thẳng vào cache detail thay vì tự cộng ở client.
+ */
+export function useUpdateBookingDeliveryFee(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateDeliveryFeeInput) => updateBookingDeliveryFee(id, body),
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
       invalidateAfterBookingChange(queryClient);

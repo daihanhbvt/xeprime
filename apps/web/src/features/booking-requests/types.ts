@@ -8,8 +8,6 @@ export type CreateBookingRequestInput = Schemas['CreateBookingRequestDto'];
 export type BookingRequestReceipt = Schemas['BookingRequestReceiptDto'];
 export type CheckAvailabilityInput = Schemas['CheckAvailabilityDto'];
 export type CheckAvailabilityResult = Schemas['CheckAvailabilityResultDto'];
-export type SaveDeliveryQuoteInput = Schemas['SaveDeliveryQuoteDto'];
-export type DeliveryQuotePreview = Schemas['DeliveryQuotePreviewDto'];
 
 /** Filter inbox yêu cầu — ở URL searchParams (ADR 0004). */
 export interface BookingRequestFilters {

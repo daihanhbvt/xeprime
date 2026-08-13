@@ -11,6 +11,7 @@ export type BookingDetail = Schemas['BookingDetailDto'];
 export type CreateBookingInput = Schemas['CreateBookingDto'];
 export type UpdateBookingInput = Schemas['UpdateBookingDto'];
 export type TransitionInput = Schemas['TransitionBookingDto'];
+export type UpdateDeliveryFeeInput = Schemas['UpdateBookingDeliveryFeeDto'];
 export type CheckConflictInput = Schemas['CheckConflictDto'];
 export type CheckConflictResult = Schemas['CheckConflictResultDto'];
 

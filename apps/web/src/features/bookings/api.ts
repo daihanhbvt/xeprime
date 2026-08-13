@@ -9,6 +9,7 @@ import type {
   CreateBookingInput,
   TransitionInput,
   UpdateBookingInput,
+  UpdateDeliveryFeeInput,
 } from './types';
 
 export const BOOKINGS_DEFAULT_LIMIT = 20;
@@ -56,6 +57,17 @@ export const updateBooking = (id: string, body: UpdateBookingInput): Promise<Boo
 
 export const transitionBooking = (id: string, body: TransitionInput): Promise<BookingDetail> =>
   apiPost<BookingDetail>(`/bookings/${id}/transition`, body);
+
+/**
+ * Chốt phí giao nhận sau khi chủ xe và khách đã thống nhất NGOÀI ứng dụng (Wave 9).
+ *
+ * Endpoint ngữ nghĩa riêng chứ không phải `PATCH /bookings/:id`: server tính lại tổng tiền và
+ * ghi audit (ai đổi, từ bao nhiêu sang bao nhiêu). Khách KHÔNG phải xác nhận.
+ */
+export const updateBookingDeliveryFee = (
+  id: string,
+  body: UpdateDeliveryFeeInput,
+): Promise<BookingDetail> => apiPatch<BookingDetail>(`/bookings/${id}/delivery-fee`, body);
 
 /** Preview trùng lịch — chỉ để cảnh báo sớm cho UX, không phải lớp bảo vệ (ADR 0006). */
 export const checkConflict = (body: CheckConflictInput): Promise<CheckConflictResult> =>

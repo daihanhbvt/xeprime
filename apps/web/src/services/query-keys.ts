@@ -91,8 +91,7 @@ export const queryKeys = {
      * Hàng đợi "Thiếu KM trả" (Wave 8) — nằm dưới nhánh `maintenance` vì nó là một nhóm việc
      * của Trung tâm bảo dưỡng, dù dữ liệu đến từ bàn giao.
      */
-    missingReturnKm: (params: QueryParams) =>
-      ['maintenance', 'missing-return-km', params] as const,
+    missingReturnKm: (params: QueryParams) => ['maintenance', 'missing-return-km', params] as const,
   },
   /** Chính sách thuê mặc định của gian hàng (Wave 2). */
   rentalPolicies: {
@@ -157,6 +156,11 @@ export const queryKeys = {
     listingsInfinite: (params: QueryParams) =>
       ['marketplace', 'listings-infinite', params] as const,
     facets: (params: QueryParams) => ['marketplace', 'facets', params] as const,
+    /**
+     * Chi tiết một xe public, tải TỪ TRÌNH DUYỆT. Trang `/listings/[id]` render server nên không
+     * dùng key này; overlay yêu cầu thuê mở từ thẻ xe thì cần (thẻ chỉ có dữ liệu tóm tắt).
+     */
+    listing: (vehicleId: string) => ['marketplace', 'listing', vehicleId] as const,
     reviews: (vehicleId: string, params: QueryParams) =>
       ['marketplace', 'reviews', vehicleId, params] as const,
     shopListings: (slug: string, params: QueryParams) =>

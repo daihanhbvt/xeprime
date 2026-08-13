@@ -203,6 +203,9 @@ export const XP_TOKENS = {
   'modal-width-sm': '400px', // 125:1611 size=SM
   'modal-width': '560px', // 125:1611 size=MD
   'modal-width-lg': '720px', // 125:1611 size=LG
+  // Overlay hai cột (yêu cầu thuê xe): cột trái hồ sơ xe + cột phải luồng thao tác. Vượt 720px
+  // là có chủ đích — nhồi hai cột vào LG làm cả hai cột hẹp tới mức không đọc được.
+  'modal-width-xl': '1180px',
   'drawer-width': '560px',
   'drawer-width-lg': '720px',
   'container-max-width': '1200px', // 117:1203 (Pagination/Desktop) · 127:2060

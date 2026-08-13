@@ -1,7 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   BOOKING_REQUEST_STATUS,
-  DELIVERY_QUOTE_SOURCE,
   MEMBERSHIP_STATUS,
   POLICY_SOURCE,
   PRICE_ROW,
@@ -28,10 +27,10 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  * Wave 2 (B2 — Pricing & Rental Policies), chạy trên PostgreSQL THẬT.
  *
  * Kiểm chứng đúng các quy tắc đã chốt: chính sách shop là mặc định — override theo xe thắng —
- * đặt lại là XOÁ override; mốc biên bậc giao nhận (≤ toKm); ngoài bán kính bắt buộc báo giá
- * thủ công (duyệt bị chặn bằng DELIVERY_QUOTE_REQUIRED khi chưa báo); giảm giá CHỈ áp lên tiền
- * thuê (không đụng cọc/phí giao nhận); đơn đã tạo giữ nguyên tiền + snapshot khi chính sách
- * đổi về sau. Không có DB thì tự skip.
+ * đặt lại là XOÁ override; mốc biên bậc giao nhận (≤ toKm); giảm giá CHỈ áp lên tiền thuê
+ * (không đụng cọc/phí giao nhận); đơn đã tạo giữ nguyên tiền + snapshot khi chính sách đổi về
+ * sau. **Wave 9**: giao tận nơi duyệt được ngay với phí 0, chủ xe chốt phí sau và server tính
+ * lại tổng kèm audit. Không có DB thì tự skip.
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
@@ -312,10 +311,18 @@ describe('buildQuote — giảm giá chỉ áp lên tiền thuê', () => {
   });
 });
 
-describe('báo giá giao nhận + duyệt + snapshot bất biến', () => {
+/**
+ * Wave 9 — giao nhận KHÔNG còn là cửa chặn duyệt.
+ *
+ * Trước đây yêu cầu có giao tận nơi phải đi qua một vòng báo giá theo khoảng cách
+ * (`DELIVERY_QUOTE_REQUIRED`) mới duyệt được. Vòng đó đã bị bỏ: duyệt được ngay, đơn sinh ra
+ * với phí giao nhận 0, và chủ xe chốt phí sau bằng `BookingsService.updateDeliveryFee`.
+ */
+describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapshot bất biến', () => {
   let requestId: string;
+  let bookingId: string;
 
-  maybe('giao tận nơi ngoài bán kính: duyệt bị chặn cho tới khi có báo giá', async () => {
+  maybe('giao tận nơi: duyệt được NGAY, không cần báo giá', async () => {
     requestId = newId();
     await prisma.bookingRequest.create({
       data: {
@@ -332,35 +339,17 @@ describe('báo giá giao nhận + duyệt + snapshot bất biến', () => {
       },
     });
 
-    await expect(requests.approve(tenantId, ownerId, requestId)).rejects.toMatchObject({
-      response: { code: 'DELIVERY_QUOTE_REQUIRED' },
-    });
-
-    // Ngoài bán kính (15 > 10) mà không nhập phí → 400 bắt nhập tay.
-    await expect(
-      requests.saveDeliveryQuote(tenantId, ownerId, requestId, { distanceKm: 15 }),
-    ).rejects.toMatchObject({ status: 400 });
-
-    const quoted = await requests.saveDeliveryQuote(tenantId, ownerId, requestId, {
-      distanceKm: 15,
-      fee: '120000',
-      note: 'Ngoài bán kính hỗ trợ mặc định',
-    });
-    expect(quoted.deliveryQuote).toMatchObject({
-      distanceKm: 15,
-      fee: '120000',
-      source: DELIVERY_QUOTE_SOURCE.MANUAL,
-      stale: false,
-    });
-    expect(quoted.needsDeliveryQuote).toBe(false);
-  });
-
-  maybe('duyệt → đơn mang đúng tiền từ PricingService + snapshot đầy đủ', async () => {
     const approved = await requests.approve(tenantId, ownerId, requestId);
     expect(approved.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+    // Địa chỉ giao và cờ yêu cầu giao vẫn còn — chủ xe cần biết giao ở đâu.
+    expect(approved.deliveryRequested).toBe(true);
+    expect(approved.deliveryAddress).toBe('123 Nguyễn Huệ, Q.1, HCM');
+    bookingId = approved.bookingId!;
+  });
 
+  maybe('đơn tạo ra: phí giao nhận 0, tiền thuê từ PricingService + snapshot đầy đủ', async () => {
     const booking = await prisma.booking.findUniqueOrThrow({
-      where: { id: approved.bookingId! },
+      where: { id: bookingId },
       select: {
         baseAmount: true,
         discountAmount: true,
@@ -370,12 +359,12 @@ describe('báo giá giao nhận + duyệt + snapshot bất biến', () => {
         priceSnapshot: true,
       },
     });
-    // 3 ngày × 900.000 = 2.700.000; giảm 5% = 135.000; giao nhận thủ công 120.000.
+    // 3 ngày × 900.000 = 2.700.000; giảm 5% = 135.000; giao nhận MIỄN PHÍ lúc duyệt.
     expect(booking.baseAmount.toFixed(0)).toBe('2700000');
     expect(booking.discountAmount.toFixed(0)).toBe('135000');
-    expect(booking.deliveryFee.toFixed(0)).toBe('120000');
+    expect(booking.deliveryFee.toFixed(0)).toBe('0');
     expect(booking.depositAmount.toFixed(0)).toBe('5000000');
-    expect(booking.totalAmount.toFixed(0)).toBe('2685000');
+    expect(booking.totalAmount.toFixed(0)).toBe('2565000');
 
     const snapshot = booking.priceSnapshot as {
       source: string;
@@ -384,7 +373,43 @@ describe('báo giá giao nhận + duyệt + snapshot bất biến', () => {
     };
     expect(snapshot.source).toBe('quote');
     expect(snapshot.policy.source).toBe(POLICY_SOURCE.SHOP);
-    expect(snapshot.rows.length).toBeGreaterThanOrEqual(4);
+    expect(snapshot.rows.length).toBeGreaterThanOrEqual(3);
+  });
+
+  maybe('chủ xe cập nhật phí giao nhận: server tính lại tổng + ghi audit', async () => {
+    const updated = await bookings.updateDeliveryFee(tenantId, bookingId, ownerId, {
+      deliveryFee: '120000',
+      note: 'Thoả thuận qua điện thoại',
+    });
+
+    // Gọi thẳng service nên tiền còn là Decimal (interceptor mới đổi sang string ở tầng response).
+    expect(String(updated.deliveryFee)).toBe('120000');
+    // Tổng do SERVER tính lại: 2.700.000 − 135.000 + 120.000.
+    expect(String(updated.totalAmount)).toBe('2685000');
+
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { tenantId, targetType: 'booking', targetId: bookingId },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(log.action).toBe('booking.delivery_fee_update');
+    expect(log.actorUserId).toBe(ownerId);
+    expect(log.beforeJson).toMatchObject({ deliveryFee: '0.00' });
+    expect(log.afterJson).toMatchObject({
+      deliveryFee: '120000.00',
+      totalAmount: '2685000.00',
+      note: 'Thoả thuận qua điện thoại',
+    });
+  });
+
+  maybe('đặt lại 0 để trả về Miễn phí — không phải trạng thái đặc biệt nào', async () => {
+    const back = await bookings.updateDeliveryFee(tenantId, bookingId, ownerId, {
+      deliveryFee: '0',
+    });
+    expect(String(back.deliveryFee)).toBe('0');
+    expect(String(back.totalAmount)).toBe('2565000');
+
+    // Trả lại 120k để phần kiểm snapshot bất biến bên dưới đọc một con số ổn định.
+    await bookings.updateDeliveryFee(tenantId, bookingId, ownerId, { deliveryFee: '120000' });
   });
 
   maybe('đổi chính sách SAU khi duyệt: đơn cũ giữ nguyên tiền + snapshot', async () => {
@@ -407,9 +432,8 @@ describe('báo giá giao nhận + duyệt + snapshot bất biến', () => {
     expect(after.depositAmount.toFixed(0)).toBe(before.depositAmount.toFixed(0));
     expect(after.priceSnapshot).toEqual(before.priceSnapshot);
 
-    // Và báo giá đã chốt trên yêu cầu khác sẽ bị đánh dấu cũ nếu còn pending — kiểm qua stamps:
+    // Yêu cầu mới KHÔNG còn sinh báo giá — trường này chỉ còn để đọc dữ liệu cũ.
     const dto = await requests.getOne(tenantId, requestId);
-    // Yêu cầu này đã chuyển thành đơn nên không còn "stale" (chỉ pending mới cần báo lại).
-    expect(dto.deliveryQuote?.stale).toBe(false);
+    expect(dto.deliveryQuote).toBeNull();
   });
 });

@@ -19,7 +19,7 @@ import {
   type BookingStatus,
   type PaginationMeta,
 } from '@xeprime/types';
-import { bookingDebt } from '../../common/money';
+import { bookingDebt, formatVnd } from '../../common/money';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -291,6 +291,106 @@ export class BookingsService {
 
       if (rescheduled) {
         await this.occupancy.reschedule(tx, OCCUPANCY_SOURCE_TYPE.BOOKING, id, pickupAt, returnAt);
+      }
+
+      return updated;
+    });
+
+    return toDetail(row);
+  }
+
+  /**
+   * Cập nhật phí giao nhận sau khi chủ xe và khách đã thống nhất NGOÀI ứng dụng (Wave 9).
+   *
+   * Thay cho vòng "báo giá → khách xác nhận" cũ. Ba điều đáng đóng đinh:
+   *
+   *  - **Tổng tiền do server tính lại**, không nhận `totalAmount` từ client — cùng công thức với
+   *    `update()` (`base + delivery − discount`), nên không có đường nào để trình duyệt tự quyết
+   *    số tiền của đơn.
+   *  - **Có vết**: ai đổi, từ bao nhiêu sang bao nhiêu, lúc nào. Đây là lý do việc này không đi
+   *    chung `PATCH /bookings/:id`.
+   *  - **Không có trạng thái chờ khách đồng ý.** Khách được BÁO là số tiền đã đổi (thông báo
+   *    thuần thông tin, không có nút Đồng ý/Từ chối) — thoả thuận đã xong trước đó.
+   *
+   * `note` là ghi chú nội bộ: vào audit, KHÔNG vào thông báo gửi khách.
+   */
+  async updateDeliveryFee(
+    tenantId: string,
+    id: string,
+    userId: string,
+    dto: { deliveryFee: string; note?: string },
+  ): Promise<BookingDetailDto> {
+    const current = await this.prisma.booking.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: {
+        id: true,
+        code: true,
+        baseAmount: true,
+        deliveryFee: true,
+        discountAmount: true,
+        vehicle: { select: { name: true } },
+        // Đơn KHÔNG giữ `customerUserId`; tài khoản khách (nếu có) nằm ở yêu cầu đã sinh ra nó.
+        bookingRequest: { select: { customerUserId: true } },
+      },
+    });
+    if (!current) throw notFound();
+
+    const nextFee = money(dto.deliveryFee);
+    const total = new Prisma.Decimal(current.baseAmount)
+      .plus(nextFee)
+      .minus(current.discountAmount);
+    const previousFee = current.deliveryFee.toFixed(2);
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.booking.update({
+        where: { id: current.id },
+        data: { deliveryFee: nextFee, totalAmount: total },
+        select: DETAIL_SELECT,
+      });
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'booking.delivery_fee_update',
+          targetType: 'booking',
+          targetId: id,
+          before: {
+            deliveryFee: previousFee,
+            totalAmount: current.baseAmount
+              .plus(current.deliveryFee)
+              .minus(current.discountAmount)
+              .toFixed(2),
+          },
+          after: {
+            deliveryFee: nextFee.toFixed(2),
+            totalAmount: total.toFixed(2),
+            ...(dto.note?.trim() ? { note: dto.note.trim() } : {}),
+          },
+        },
+        tx,
+      );
+
+      /*
+       * Khách có tài khoản thì được báo — dùng lại loại thông báo "Cập nhật đơn thuê" đã có,
+       * KHÔNG dựng hạ tầng thông báo mới. Thuần thông tin: không kèm hành động chấp nhận.
+       * Ghi chú nội bộ cố ý không đi kèm.
+       */
+      const customerUserId = current.bookingRequest?.customerUserId ?? null;
+      if (customerUserId) {
+        await this.notifications.emitToUser(
+          customerUserId,
+          {
+            type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
+            title: `Đơn ${current.code}: đã cập nhật phí giao nhận`,
+            body: `${current.vehicle.name} · phí giao nhận ${formatVnd(nextFee)}`,
+            tenantId,
+            targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+            targetId: id,
+          },
+          tx,
+        );
       }
 
       return updated;

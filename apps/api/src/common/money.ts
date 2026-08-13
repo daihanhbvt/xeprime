@@ -15,3 +15,15 @@ export function bookingDebt(
 ): Prisma.Decimal {
   return Prisma.Decimal.max(0, new Prisma.Decimal(totalAmount).minus(paidAmount));
 }
+
+/**
+ * Tiền VND cho **nội dung thông báo/email** — nơi duy nhất backend được phép format tiền.
+ *
+ * Mọi trường tiền trong JSON vẫn là chuỗi thập phân thô (ADR 0007) và do FE format; hàm này chỉ
+ * dùng khi số tiền nằm trong một câu văn xuôi gửi cho người đọc, vì lúc đó không còn chỗ nào
+ * khác để format nữa.
+ */
+export function formatVnd(amount: Prisma.Decimal | string | number): string {
+  const rounded = new Prisma.Decimal(amount).toDecimalPlaces(0).toFixed(0);
+  return `${rounded.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}đ`;
+}

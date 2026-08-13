@@ -4,7 +4,9 @@
 > - **Ngày chốt:** 2026-08-11 · **Đối chiếu code:** 2026-08-13
 > - **Trạng thái:** Accepted design direction — **phần lớn đã triển khai**; ranh giới đã-làm / làm-một-phần / hoãn ở [§0](#0-trạng-thái-triển-khai-đối-chiếu-code-13082026)
 > - **Phạm vi:** Quản lý xe của gian hàng, chính sách thuê, nguồn xe và nghĩa vụ tài chính, giấy tờ/OCR, bảo dưỡng/KM, các điểm nối với yêu cầu thuê và bàn giao
-> - **Đọc cùng:** [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md), [`05_RENTAL_OPERATIONS.md`](../design-briefs/05_RENTAL_OPERATIONS.md), [`06_FINANCE_OPERATIONS.md`](../design-briefs/06_FINANCE_OPERATIONS.md), [`07_INFORMATION_ARCHITECTURE.md`](07_INFORMATION_ARCHITECTURE.md), [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md), [`10_IMPLEMENTATION_CONSTRAINTS.md`](10_IMPLEMENTATION_CONSTRAINTS.md)
+> - **Đọc cùng:** [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md), [`05_RENTAL_OPERATIONS.md`](../design-briefs/05_RENTAL_OPERATIONS.md), [`06_FINANCE_OPERATIONS.md`](../design-briefs/06_FINANCE_OPERATIONS.md), [`07_INFORMATION_ARCHITECTURE.md`](07_INFORMATION_ARCHITECTURE.md), [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md), [`10_IMPLEMENTATION_CONSTRAINTS.md`](10_IMPLEMENTATION_CONSTRAINTS.md), [`14_SIMPLIFIED_HANDOVER_AND_RETURN.md`](14_SIMPLIFIED_HANDOVER_AND_RETURN.md)
+>
+> **Accepted Wave 10 simplification — 2026-08-13:** luồng giao/nhận chỉ có hai xác nhận chính; Odo, hiện trạng và phát sinh là tùy chọn nâng cao; bỏ nhiên liệu/phụ phí nhiên liệu; hoàn cọc được thực hiện thủ công bên ngoài hệ thống và không dùng OTP. Đặc tả mới nhất ở [`14_SIMPLIFIED_HANDOVER_AND_RETURN.md`](14_SIMPLIFIED_HANDOVER_AND_RETURN.md) và thắng mọi mô tả mục tiêu cũ mâu thuẫn trong tài liệu này.
 
 ---
 
@@ -42,6 +44,7 @@ Khi hai bên lệch nhau, code thắng và mục này là chỗ ghi lại độ 
 | Phí giao nhận | Bậc phí + bán kính tự báo lưu và tính được | Luồng "Cần báo phí giao nhận" trong inbox yêu cầu thuê: **Unknown** đã nối tới đâu |
 | Phí quá giờ | Cấu hình lưu (giờ · miễn phí · làm tròn), cho phép để trống = `Cần cấu hình` | Chưa cộng vào quyết toán đơn lúc trả xe |
 | Trung tâm bảo dưỡng | Nhóm việc `Quá hạn` · `Sắp đến hạn` · `Đang bảo dưỡng` · `Thiếu dữ liệu KM` · `Thiếu KM trả` · `Sắp hết hạn giấy tờ`, lọc/tìm/phân trang chạy ở database | Chưa có trang bàn giao độc lập `/manage/handovers` — bàn giao vào từ đơn thuê, việc tồn đọng vào từ Trung tâm bảo dưỡng |
+| Đơn giản hóa giao/nhận Wave 10 | Code hiện tại đã có bản ghi bàn giao, Odo, ảnh, nhiên liệu và xác nhận idempotent | Target mới bỏ wizard bắt buộc, bỏ nhiên liệu/phụ phí nhiên liệu, chuyển Odo/ảnh/phát sinh thành nâng cao tùy chọn và dùng hoàn cọc thủ công không OTP; xem tài liệu 14 |
 
 ### 0.3 Hoãn có chủ đích (code chưa chứng minh điều ngược lại)
 
@@ -53,7 +56,7 @@ Giữ nguyên là **hoãn** cho tới khi có code:
 - **Kế toán/thuế tự động.** Không có.
 - **Bản đồ tự tính khoảng cách.** Phí giao nhận tính từ km **người dùng nhập**, không có tích hợp bản đồ.
 - **Tự động chặn/ẩn xe vì giấy tờ hết hạn.** Đúng như §8 đã chốt: hết hạn **chỉ cảnh báo**, không đổi `operationStatus`/`publicStatus` và không chặn đặt xe (`vehicle-documents.spec.ts`).
-- **Phụ phí quyết toán chưa nối Finance.** Quá giờ, phạt/bồi thường, nhiên liệu ghi nhận được ở bàn giao nhưng **chưa** chảy vào phiếu thu/công nợ.
+- **Phụ phí quyết toán chưa nối Finance.** Quá giờ, vệ sinh, hư hại/bồi thường và khoản khác có thể được ghi nhận nâng cao nhưng **chưa** chảy vào phiếu thu/công nợ. Target Wave 10 không còn phụ phí nhiên liệu.
 
 ### 0.4 Ngoài phạm vi
 
@@ -89,6 +92,9 @@ Thiết kế ưu tiên người vận hành nhỏ và vừa, thường có vài 
 | Giấy tờ | Không bắt buộc để lưu hồ sơ xe. Hết hạn chỉ cảnh báo, không tự ẩn xe và không tự chặn đặt xe. |
 | OCR | Kết quả nhận dạng luôn là bản nháp để người dùng kiểm tra; không tự ghi đè dữ liệu xe. |
 | KM hiện tại | Sau khi hoàn tất trả xe, KM trả đã xác nhận cập nhật KM hiện tại. Chỉnh tay phải có lý do và lịch sử. |
+| Giao/nhận xe | Happy path chỉ xác nhận thời điểm giao và nhận. Odo, ảnh/hiện trạng, ghi chú và phát sinh là tùy chọn nâng cao, không chặn hoàn tất chuyến. |
+| Nhiên liệu khi trả xe | Không thu thập và không tính phụ phí nhiên liệu trong Wave 10. |
+| Hoàn cọc | Nếu đã nhận cọc và không có phát sinh thì đề xuất hoàn đủ. Chủ xe hoàn tiền mặt/chuyển khoản bên ngoài rồi đánh dấu đã hoàn; hệ thống không chuyển tiền và không dùng OTP. |
 
 ### 2.1 Công thức chia doanh thu hợp tác
 
@@ -122,7 +128,7 @@ Chỉ phát sinh khoản phải trả cho chủ xe khi đơn đã hoàn thành v
 | `/manage/vehicles/:id` | Thành trang tổng quan 360: tình trạng, việc cần làm, lịch gần nhất, chính sách, giấy tờ, bảo dưỡng và tài chính theo quyền. |
 | `/manage/vehicles/:id/edit` | Thay wizard chỉnh sửa bằng 6 tab trên cùng một route; tab lưu trong query `?tab=`. |
 | Yêu cầu thuê | Thêm trạng thái cần báo giá giao nhận thủ công và bảng phân rã giá trước khi duyệt. |
-| Đơn thuê/bàn giao | Ghi KM nhận/trả, nhiên liệu, ảnh, tình trạng; sau trả xe cập nhật KM và cảnh báo bảo dưỡng. |
+| Đơn thuê/bàn giao | Xác nhận giao/nhận thật nhanh; Odo, ảnh/hiện trạng và phát sinh nằm trong tác vụ nâng cao tùy chọn. Nếu có KM trả hợp lệ thì cập nhật KM/cảnh báo bảo dưỡng. Không có nhiên liệu/phụ phí nhiên liệu. |
 
 ### 3.2 Màn hình mới cần có
 
@@ -327,17 +333,17 @@ sequenceDiagram
   participant B as Đơn thuê
   participant V as Hồ sơ xe
   participant M as Bảo dưỡng
-  O->>H: Ghi KM nhận + ảnh đồng hồ
+  O->>H: Xác nhận giao xe; KM/ảnh tùy chọn
   H->>B: Xác nhận giao xe
-  O->>H: Ghi KM trả + ảnh đồng hồ
-  H->>H: Kiểm tra KM trả >= KM nhận
+  O->>H: Xác nhận nhận xe; KM/ảnh tùy chọn
+  H->>H: Nếu có KM: kiểm tra KM trả >= KM nhận
   H->>B: Hoàn tất trả xe
-  B->>V: Cập nhật KM hiện tại
-  V->>M: Tính lại mốc và cảnh báo
+  B->>V: Nếu có KM hợp lệ: cập nhật KM hiện tại
+  V->>M: Tính lại mốc/cảnh báo hoặc tạo việc Thiếu KM trả
 ```
 
 - Không cập nhật KM từ dữ liệu khách tự khai.
-- Thiếu KM trả: tạo task `Thiếu KM trả`, không tăng KM tự động.
+- Thiếu KM trả: không chặn hoàn tất chuyến; tạo task `Thiếu KM trả`, không tăng KM tự động.
 - Chỉnh KM thủ công phải có lý do; giảm KM cần quyền cao hơn và cảnh báo.
 - Bảo dưỡng hoàn tất có thể cập nhật KM lần gần nhất, chi phí và phiếu chi.
 
@@ -410,14 +416,13 @@ Cấu trúc section mới:
 - Đủ bốn nguồn xe và hai phương pháp trả góp.
 - Policy rõ mặc định/override; giao nhận rõ một chiều/tier/manual quote.
 - Công thức giảm giá, chia doanh thu và tổng tiền không mơ hồ.
-- OCR review trước lưu; KM trả cập nhật bảo dưỡng qua bàn giao.
+- OCR review trước lưu; KM trả nếu được nhập và hợp lệ cập nhật bảo dưỡng qua bàn giao.
 - Không lộ tài chính cho người thiếu quyền.
 - Có desktop/tablet/mobile và trạng thái bắt buộc.
 - Không duplicate component hoặc thay đổi ngoài Proposed v2.
 
 ## 15. Ngoài phạm vi
 
-Nhà cung cấp OCR; kế toán/thuế đầy đủ; bản đồ tự tính khoảng cách; tự động trích nợ ngân hàng; chữ ký điện tử; tự động chặn/ẩn vì giấy tờ hết hạn.
+Nhà cung cấp OCR; kế toán/thuế đầy đủ; bản đồ tự tính khoảng cách; tự động trích nợ ngân hàng; tự động chuyển/hoàn cọc; OTP quyết toán; phụ phí nhiên liệu; chữ ký điện tử; tự động chặn/ẩn vì giấy tờ hết hạn.
 
 Ràng buộc "không đổi code/database/API trong giai đoạn Figma" đã **hết hiệu lực** — giai đoạn triển khai đã xong (§0). Các mục còn lại vẫn ngoài phạm vi; trạng thái từng mục ở §0.3.
-

@@ -23,6 +23,7 @@
 | 11 | [Figma Master Prompt](11_FIGMA_MASTER_PROMPT.md) | Prompt để sinh design system + màn hình | Khi bắt tay vẽ |
 | 12 | [Vehicle 360 Management](12_VEHICLE_360_MANAGEMENT.md) | Quản lý vòng đời xe, policy, nguồn xe, giấy tờ, KM và bảo dưỡng — **§0: cái gì đã là code, cái gì còn hoãn** | Khi chạm vào bất cứ phần nào của hồ sơ xe |
 | 13 | [Figma Vehicle 360 Prompts](13_FIGMA_VEHICLE_360_PROMPTS.md) | 4 batch Figma không phá thiết kế cũ | Khi cập nhật Fleet v2 trong Figma |
+| 14 | [Simplified Handover & Return](14_SIMPLIFIED_HANDOVER_AND_RETURN.md) | Luồng giao/nhận nhanh, dữ liệu nâng cao tùy chọn và hoàn cọc thủ công | Khi thiết kế hoặc code Wave 10 bàn giao/trả xe |
 
 ## Quan hệ với tài liệu còn lại
 

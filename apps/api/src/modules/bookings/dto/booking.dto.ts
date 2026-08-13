@@ -249,6 +249,34 @@ export class UpdateBookingDto {
   note?: string;
 }
 
+/**
+ * Cập nhật phí giao nhận của đơn — hành động ngữ nghĩa riêng (Wave 9).
+ *
+ * Vì sao không dùng thẳng `PATCH /bookings/:id` (đã nhận `deliveryFee`): đường chung đó không
+ * ghi audit và trộn chung với sửa tiền thuê/cọc, nên không phân biệt được "chủ xe chốt phí giao
+ * sau khi thoả thuận" với "sửa lại giá đơn". Việc này cần vết riêng: ai đổi, từ bao nhiêu sang
+ * bao nhiêu, lúc nào.
+ *
+ * Không có trạng thái chờ khách đồng ý: hai bên đã thống nhất ngoài ứng dụng trước khi chủ xe
+ * bấm lưu.
+ */
+export class UpdateBookingDeliveryFeeDto {
+  @ApiProperty({
+    description: 'Phí giao nhận VND (chuỗi — ADR 0007). `0` = miễn phí.',
+    example: '120000',
+  })
+  @Matches(MONEY_PATTERN, { message: 'Phí giao nhận không hợp lệ (số VND không âm)' })
+  deliveryFee!: string;
+
+  @ApiPropertyOptional({
+    description: 'Ghi chú NỘI BỘ (lý do, mã tham chiếu) — chỉ vào audit, KHÔNG hiển thị cho khách',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
+}
+
 /** Chuyển trạng thái đơn — server validate bằng canTransitionBooking(), không tin client. */
 export class TransitionBookingDto {
   @ApiProperty({ enum: BOOKING_STATUS_VALUES, description: 'Trạng thái đích' })

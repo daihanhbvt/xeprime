@@ -16,6 +16,9 @@ export type SaveVehiclePricingInput = components['schemas']['SaveVehiclePricingD
 export type PriceBreakdownRow = components['schemas']['PriceBreakdownRowDto'];
 export type QuoteBreakdown = components['schemas']['QuoteBreakdownDto'];
 export type PublicQuote = components['schemas']['PublicQuoteDto'];
-export type DeliveryQuotePreview = components['schemas']['DeliveryQuotePreviewDto'];
-export type SaveDeliveryQuoteInput = components['schemas']['SaveDeliveryQuoteDto'];
+/**
+ * LỊCH SỬ (Wave 9): báo giá giao nhận theo khoảng cách đã bị bỏ. Kiểu này chỉ còn để ĐỌC dữ
+ * liệu của các yêu cầu tạo trước đó — không có đường ghi mới. Phí giao nhận nay chốt trên ĐƠN
+ * (`PATCH /bookings/:id/delivery-fee`).
+ */
 export type BookingRequestDeliveryQuote = components['schemas']['BookingRequestDeliveryQuoteDto'];

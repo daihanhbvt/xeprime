@@ -10,6 +10,23 @@
 }
 
 /**
+ * Modal `xl` (hai cột) cao theo viewport: header dính lại, phần thân giữ đúng một chiều cao.
+ * Không có trần này thì modal cao hơn màn hình và cả trang nền phải cuộn theo — đúng thứ
+ * "internal content scrolling" cần tránh. `dvh` vì thanh công cụ trình duyệt co giãn.
+ *
+ * `overflow: hidden` là có chủ đích: bố cục hai cột bên trong TỰ cuộn từng cột (mỗi bên một
+ * thanh cuộn riêng). Để thân cuộn nữa sẽ thành hai lớp cuộn lồng nhau, và hàng nút dính đáy
+ * cột phải sẽ trôi theo lớp ngoài.
+ */
+.xlBody {
+  /* Chừa chỗ cho header của modal và lề trên/dưới của AntD. */
+  height: calc(100dvh - var(--xp-space-xl) * 5);
+  max-height: calc(100dvh - var(--xp-space-xl) * 5);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/**
  * Tiêu đề chỉ dành cho trình đọc màn hình: overlay tự dựng heading trong thân vẫn phải có
  * tên khả truy cập. Ẩn bằng clip thay vì `display: none` — `display: none` gỡ luôn khỏi cây
  * khả truy cập, tức mất đúng thứ ta đang cố giữ.

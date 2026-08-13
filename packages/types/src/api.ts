@@ -70,8 +70,11 @@ export const API_ERROR_CODE = {
   BOOKING_REQUEST_DUPLICATE: 'BOOKING_REQUEST_DUPLICATE',
   INVALID_STATUS_TRANSITION: 'INVALID_STATUS_TRANSITION',
   /**
-   * Yêu cầu có giao xe tận nơi nhưng CHƯA có báo giá giao nhận — không duyệt được.
-   * Mã riêng để FE mở thẳng drawer "Báo giá giao nhận" thay vì alert lỗi chung.
+   * ĐÃ NGHỈ HƯU (Wave 9) — **không endpoint nào còn trả mã này**.
+   *
+   * Trước đây: yêu cầu có giao tận nơi mà chưa báo giá thì không duyệt được. Vòng báo giá đã bị
+   * bỏ; giao nhận miễn phí lúc duyệt và chủ xe chốt phí trên đơn sau khi thoả thuận với khách.
+   * Giữ khoá lại để log/audit cũ vẫn đọc được — đừng ném lại mã này.
    */
   DELIVERY_QUOTE_REQUIRED: 'DELIVERY_QUOTE_REQUIRED',
   /** Khách yêu cầu giao tận nơi nhưng chính sách hiệu lực của xe không bật giao nhận. */

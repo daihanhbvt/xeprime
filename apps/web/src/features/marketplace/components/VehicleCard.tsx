@@ -134,11 +134,11 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
           </Link>
         </div>
 
+        {/* Thẻ chỉ có dữ liệu tóm tắt — overlay tự tải hồ sơ xe đầy đủ cho cột trái. */}
         <RequestBookingButton
           vehicleId={listing.id}
           vehicleName={listing.name}
           vehicleImageUrl={listing.mainImageUrl}
-          pricePerDay={displayPrice}
           pickupAt={filters.pickupAt}
           returnAt={filters.returnAt}
           block

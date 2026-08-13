@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
+import { formatRentalDuration, formatRentalPoint } from '@/lib/datetime';
 import { RentalRangePanel, type RentalMode } from './RentalRangePanel';
 import styles from './RentalDateTimeRangeField.module.css';
 
@@ -29,6 +30,15 @@ interface RentalDateTimeRangeFieldProps {
   ariaLabel?: string;
   /** Icon nằm trong cùng vùng bấm; dùng để toàn bộ viền control đều mở lịch. */
   prefix?: ReactNode;
+  /**
+   * `compact` (mặc định): hai giá trị nối bằng mũi tên — cho ô hẹp trong thanh tìm kiếm, nơi đã
+   * có nhãn "Thời gian thuê" ở ngoài.
+   *
+   * `labelled`: mỗi đầu mang nhãn riêng ("Nhận xe: …") ngăn bằng vạch đứng, kèm viên thời lượng
+   * bên phải. Dùng ở chỗ rộng, khi ô này là control chính của màn và không được phép mơ hồ đầu
+   * nào là nhận / đầu nào là trả.
+   */
+  variant?: 'compact' | 'labelled';
 }
 
 /**
@@ -52,6 +62,7 @@ export function RentalDateTimeRangeField({
   className,
   ariaLabel = 'Thời gian thuê',
   prefix,
+  variant = 'compact',
 }: RentalDateTimeRangeFieldProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
@@ -68,28 +79,59 @@ export function RentalDateTimeRangeField({
     setOpen(false);
   }
 
-  const fmt = (d: Dayjs | null, fallback: string) =>
-    d ? d.format(mode === 'daily' ? 'DD/MM/YYYY' : 'DD/MM HH:mm') : fallback;
+  /**
+   * `T6, 08/08 · 10:00` — có THỨ, không có năm (xem `formatRentalPoint`). Chế độ theo ngày vẫn
+   * hiện giờ vì giờ nhận/trả là thứ quyết định ngày tính tiền, không phải chi tiết phụ.
+   */
+  const fmt = (d: Dayjs | null, fallback: string) => (d ? formatRentalPoint(d) : fallback);
 
-  const trigger = (
-    <button
-      type="button"
-      className={cx(styles.trigger, className)}
-      disabled={disabled}
-      onClick={openPanel}
-      aria-label={`${ariaLabel}: ${fmt(value.pickupAt, 'chưa chọn')} đến ${fmt(
-        value.returnAt,
-        'chưa chọn',
-      )}`}
-    >
-      {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
-      <span className={styles.endpoint}>{fmt(value.pickupAt, labels.start)}</span>
-      <span className={styles.sep} aria-hidden>
-        →
-      </span>
-      <span className={styles.endpoint}>{fmt(value.returnAt, labels.end)}</span>
-    </button>
-  );
+  const complete = Boolean(value.pickupAt && value.returnAt);
+  const ariaValue = `${ariaLabel}: ${fmt(value.pickupAt, 'chưa chọn')} đến ${fmt(
+    value.returnAt,
+    'chưa chọn',
+  )}`;
+
+  const trigger =
+    variant === 'labelled' ? (
+      <button
+        type="button"
+        className={cx(styles.trigger, styles.triggerLabelled, className)}
+        disabled={disabled}
+        onClick={openPanel}
+        aria-label={ariaValue}
+      >
+        {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
+        <span className={styles.endpointLabelled}>
+          <span className={styles.endpointLabel}>{labels.start}:</span>
+          <span className={styles.endpointValue}>{fmt(value.pickupAt, 'Chọn ngày giờ')}</span>
+        </span>
+        <span className={styles.divider} aria-hidden />
+        <span className={styles.endpointLabelled}>
+          <span className={styles.endpointLabel}>{labels.end}:</span>
+          <span className={styles.endpointValue}>{fmt(value.returnAt, 'Chọn ngày giờ')}</span>
+        </span>
+        {complete ? (
+          <span className={styles.durationPill}>
+            {formatRentalDuration(value.pickupAt!, value.returnAt!)}
+          </span>
+        ) : null}
+      </button>
+    ) : (
+      <button
+        type="button"
+        className={cx(styles.trigger, className)}
+        disabled={disabled}
+        onClick={openPanel}
+        aria-label={ariaValue}
+      >
+        {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
+        <span className={styles.endpoint}>{fmt(value.pickupAt, labels.start)}</span>
+        <span className={styles.sep} aria-hidden>
+          →
+        </span>
+        <span className={styles.endpoint}>{fmt(value.returnAt, labels.end)}</span>
+      </button>
+    );
 
   const panel = (
     <RentalRangePanel

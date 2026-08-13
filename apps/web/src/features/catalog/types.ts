@@ -31,9 +31,11 @@ export function groupCatalog(items: readonly CatalogItem[]): CatalogMap {
  * thà hiện `suv` còn hơn ô trống, và không bao giờ ném lỗi giữa lúc render.
  */
 export function catalogLabel(
-  items: readonly CatalogItem[],
+  items: readonly CatalogItem[] | undefined,
   key: string | null | undefined,
 ): string | null {
   if (!key) return null;
-  return items.find((item) => item.key === key)?.label ?? key;
+  // `items` có thể vắng khi nơi gọi tra một chiều chưa có trong map — vẫn phải trả về key,
+  // đúng như lời hứa ở trên, thay vì nổ giữa lúc render.
+  return items?.find((item) => item.key === key)?.label ?? key;
 }

@@ -144,11 +144,12 @@ export function ListingDetailView({
         </div>
 
         <div className={styles.actions}>
+          {/* Trang này đã có hồ sơ xe đầy đủ — truyền xuống để overlay khỏi tải lại. */}
           <RequestBookingButton
             vehicleId={listing.id}
             vehicleName={listing.name}
             vehicleImageUrl={listing.mainImageUrl}
-            pricePerDay={displayPrice}
+            listing={listing}
             pickupAt={pickupAt}
             returnAt={returnAt}
             size="large"

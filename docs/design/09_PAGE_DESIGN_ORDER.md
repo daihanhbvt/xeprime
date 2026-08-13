@@ -78,7 +78,7 @@
 | 3.2 | Thu chi | Tạo phiếu nhanh; workflow duyệt rõ ai đang chờ ai; đính kèm chứng từ |
 | 3.3 | Công nợ | Sắp theo mức độ khẩn; phân biệt **quá hạn** với **chưa tới hạn**; thu tiền tại chỗ; nhắc nợ (S-10) |
 | 3.4 | Hợp đồng | Bản xem, bản in (print CSS đã có), bản mobile |
-| 3.5 | Bàn giao xe 🆕 | Ảnh tình trạng, số km, mức xăng, chữ ký — cả lúc giao và lúc nhận (S-03) |
+| 3.5 | Bàn giao xe | Hai xác nhận nhanh `Đã giao xe`/`Đã nhận xe`; Odo, ảnh/hiện trạng, ghi chú và phát sinh là nâng cao tùy chọn; bỏ nhiên liệu/phụ phí nhiên liệu, chữ ký và OTP khỏi happy path; hoàn cọc thủ công ngoài hệ thống |
 
 **Xong khi**: con số trên dashboard khớp với sổ của chủ shop, và mỗi con số truy được về phiếu sinh ra nó.
 

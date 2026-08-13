@@ -4196,6 +4196,47 @@
         ]
       }
     },
+    "/bookings/{id}/delivery-fee": {
+      "patch": {
+        "operationId": "BookingsController_updateDeliveryFee",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBookingDeliveryFeeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cập nhật phí giao nhận của đơn (server tính lại tổng, có audit)",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
     "/bookings/{id}/transition": {
       "post": {
         "operationId": "BookingsController_transition",
@@ -4831,7 +4872,7 @@
             }
           }
         },
-        "summary": "Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch)",
+        "summary": "Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch, phí giao nhận 0)",
         "tags": [
           "booking-requests"
         ]
@@ -4873,88 +4914,6 @@
           }
         },
         "summary": "Từ chối yêu cầu",
-        "tags": [
-          "booking-requests"
-        ]
-      }
-    },
-    "/booking-requests/{id}/delivery-quote/preview": {
-      "post": {
-        "operationId": "BookingRequestsController_previewDeliveryQuote",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SaveDeliveryQuoteDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeliveryQuotePreviewDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Preview báo giá giao nhận theo khoảng cách (không lưu)",
-        "tags": [
-          "booking-requests"
-        ]
-      }
-    },
-    "/booking-requests/{id}/delivery-quote": {
-      "post": {
-        "operationId": "BookingRequestsController_saveDeliveryQuote",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SaveDeliveryQuoteDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BookingRequestDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Lưu báo giá giao nhận cho yêu cầu (audit)",
         "tags": [
           "booking-requests"
         ]
@@ -13263,6 +13222,23 @@
           }
         }
       },
+      "UpdateBookingDeliveryFeeDto": {
+        "type": "object",
+        "properties": {
+          "deliveryFee": {
+            "type": "string",
+            "description": "Phí giao nhận VND (chuỗi — ADR 0007). `0` = miễn phí.",
+            "example": "120000"
+          },
+          "note": {
+            "type": "string",
+            "description": "Ghi chú NỘI BỘ (lý do, mã tham chiếu) — chỉ vào audit, KHÔNG hiển thị cho khách"
+          }
+        },
+        "required": [
+          "deliveryFee"
+        ]
+      },
       "TransitionBookingDto": {
         "type": "object",
         "properties": {
@@ -13786,18 +13762,13 @@
           },
           "quotedAt": {
             "type": "string"
-          },
-          "stale": {
-            "type": "boolean",
-            "description": "Chính sách đã đổi SAU khi báo giá — nên báo giá lại"
           }
         },
         "required": [
           "distanceKm",
           "fee",
           "source",
-          "quotedAt",
-          "stale"
+          "quotedAt"
         ]
       },
       "BookingRequestDto": {
@@ -13859,17 +13830,13 @@
           },
           "deliveryQuote": {
             "nullable": true,
-            "description": "Báo giá giao nhận đã lưu — null khi chưa báo",
+            "description": "LỊCH SỬ: báo giá giao nhận của các yêu cầu tạo trước Wave 9. Chỉ để đọc — không còn ảnh hưởng tới việc duyệt, và yêu cầu mới luôn null.",
             "type": "object",
             "allOf": [
               {
                 "$ref": "#/components/schemas/BookingRequestDeliveryQuoteDto"
               }
             ]
-          },
-          "needsDeliveryQuote": {
-            "type": "boolean",
-            "description": "Đang chờ duyệt + có yêu cầu giao + chưa có báo giá → phải báo giá trước khi duyệt"
           },
           "rejectReason": {
             "type": "string",
@@ -13895,7 +13862,6 @@
           "pickupAt",
           "returnAt",
           "deliveryRequested",
-          "needsDeliveryQuote",
           "createdAt"
         ]
       },
@@ -13924,53 +13890,6 @@
             "type": "string"
           }
         }
-      },
-      "SaveDeliveryQuoteDto": {
-        "type": "object",
-        "properties": {
-          "distanceKm": {
-            "type": "number",
-            "description": "Khoảng cách một chiều shop xác nhận (km)",
-            "maximum": 500
-          },
-          "fee": {
-            "type": "string",
-            "description": "Phí đề xuất VND — bắt buộc khi NGOÀI bán kính tự báo; trong bán kính bị bỏ qua (phí tính tự động)"
-          },
-          "note": {
-            "type": "string",
-            "description": "Ghi chú cho khách hàng"
-          }
-        },
-        "required": [
-          "distanceKm"
-        ]
-      },
-      "DeliveryQuotePreviewDto": {
-        "type": "object",
-        "properties": {
-          "requiresManualFee": {
-            "type": "boolean",
-            "description": "Khoảng cách nằm ngoài bán kính tự báo → phí phải nhập tay"
-          },
-          "autoFee": {
-            "type": "string",
-            "nullable": true,
-            "description": "Phí tự tính theo bậc (trong bán kính); null khi phải nhập tay"
-          },
-          "breakdown": {
-            "description": "Breakdown đầy đủ nếu chốt với khoảng cách/phí này",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/QuoteBreakdownDto"
-              }
-            ]
-          }
-        },
-        "required": [
-          "requiresManualFee",
-          "breakdown"
-        ]
       },
       "CreateBookingRequestDto": {
         "type": "object",
