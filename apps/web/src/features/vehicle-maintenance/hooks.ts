@@ -43,12 +43,23 @@ export function useOdometerHistory(vehicleId: string, page: number, enabled = tr
   });
 }
 
-/** Invalidate cả nhánh bảo dưỡng của một xe + bảng toàn đội xe sau mọi mutation. */
+/**
+ * Invalidate cả nhánh bảo dưỡng của một xe + bảng toàn đội xe sau mọi mutation.
+ *
+ * Wave 8 mở rộng thêm nhánh `vehicles`: hoàn tất bảo dưỡng làm KM và cảnh báo đổi, mà hai thứ
+ * đó hiện trên thẻ xe ở danh sách, Hồ sơ 360 và lịch xe. Bỏ sót nhánh nào là để lại một màn
+ * hình nói chuyện cũ cho tới lần tải trang sau.
+ */
 export function useInvalidateMaintenance(vehicleId: string) {
   const queryClient = useQueryClient();
   return () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.maintenance(vehicleId) });
     void queryClient.invalidateQueries({ queryKey: queryKeys.maintenance.all });
+    // Nhánh gốc gồm danh sách + stats + alerts của mọi xe đang hiển thị.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.summary(vehicleId) });
+    // Hoàn tất/hủy lịch bảo dưỡng nhả chỗ trên `vehicle_occupancies` (ADR 0006).
+    void queryClient.invalidateQueries({ queryKey: queryKeys.calendar.all });
   };
 }
 

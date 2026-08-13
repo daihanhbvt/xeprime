@@ -4,6 +4,7 @@ import { VehiclesModule } from '../vehicles/vehicles.module';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 import { BookingHandoversController } from './handovers/booking-handovers.controller';
+import { HandoverQueueController } from './handovers/handover-queue.controller';
 import { HandoversService } from './handovers/handovers.service';
 
 /**
@@ -19,9 +20,12 @@ import { HandoversService } from './handovers/handovers.service';
  */
 @Module({
   imports: [CalendarModule, VehiclesModule],
-  controllers: [BookingsController, BookingHandoversController],
+  controllers: [BookingsController, BookingHandoversController, HandoverQueueController],
   providers: [BookingsService, HandoversService],
-  // Xuất để BookingRequestsModule dùng `createWithinTx` khi duyệt yêu cầu đặt xe.
-  exports: [BookingsService],
+  /**
+   * `HandoversService` xuất ra để Trung tâm bảo dưỡng đếm được việc `Thiếu KM trả` — hàng đợi
+   * đó sống ở bề mặt việc-cần-làm đã có, không phải một module điều hướng thứ hai (Wave 8).
+   */
+  exports: [BookingsService, HandoversService],
 })
 export class BookingsModule {}

@@ -24,7 +24,9 @@ import { useState } from 'react';
 import {
   BOOKING_STATUS,
   BOOKING_STATUS_META,
+  ODOMETER_SOURCE_LABEL,
   PERMISSION,
+  VEHICLE_ALERT_KIND,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
@@ -32,23 +34,27 @@ import {
   VEHICLE_SOURCE_TYPE_LABEL,
   TRANSMISSION_TYPE_LABEL,
   type BookingStatus,
+  type OdometerSource,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
   type VehicleSourceType,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
-import { vehiclePath } from '@/constants/routes';
+import { ROUTES, VEHICLE_EDIT_TAB, vehiclePath, vehicleTabPath } from '@/constants/routes';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { formatDateTime, toAppTz } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
+import { formatKm } from '@/lib/odometer';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { usePermissions } from '@/hooks/use-permissions';
 import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
+import { vehicleSchedulePath } from '../calendar-link';
 import { useVehicleSource } from '../hooks/use-vehicle-source';
 import { discountedPriceVnd } from '../pricing';
-import { missingPublishRequirements, publicStatusPresentation } from '../publication';
+import { publicStatusPresentation } from '../publication';
 import type { Vehicle360Summary, VehicleBookingBrief, VehicleDetail } from '../types';
+import { VehicleAlertList } from './VehicleAlerts';
 import { VehiclePublicReviewPanel } from './VehiclePublicReviewPanel';
 import styles from './Vehicle360Overview.module.css';
 
@@ -99,6 +105,7 @@ export function Vehicle360Overview({
     <div className={styles.stack}>
       <ProfileHeader
         vehicle={vehicle}
+        summary={summary}
         canEdit={canEdit}
         canDelete={canDelete}
         deletePending={deletePending}
@@ -108,7 +115,7 @@ export function Vehicle360Overview({
       />
 
       <div className={styles.quickRow}>
-        <TodoCard vehicle={vehicle} />
+        <TodoCard summary={summary} loading={summaryLoading} failed={summaryFailed} />
         {summary?.upcomingBookings !== undefined || summaryLoading || summaryFailed ? (
           <ScheduleCard
             bookings={summary?.upcomingBookings}
@@ -119,13 +126,12 @@ export function Vehicle360Overview({
         <PerformanceCard summary={summary} loading={summaryLoading} failed={summaryFailed} />
       </div>
 
+      <ModuleLinks vehicleId={vehicle.id} vehicle={vehicle} canEdit={canEdit} />
+
       <div className={styles.columns}>
         <div className={styles.column}>
           <PricingCard vehicle={vehicle} canEdit={canEdit} />
-          <PlaceholderCard
-            title="Hồ sơ & Giấy tờ pháp lý"
-            body="Chưa có dữ liệu giấy tờ cho xe này. Quản lý đăng ký, đăng kiểm và bảo hiểm sẽ được bổ sung ở giai đoạn sau."
-          />
+          <DocumentsCard vehicleId={vehicle.id} summary={summary} />
           <SpecsCard vehicle={vehicle} />
           <MediaCard vehicle={vehicle} />
         </div>
@@ -169,6 +175,7 @@ export function Vehicle360Overview({
 
 function ProfileHeader({
   vehicle,
+  summary,
   canEdit,
   canDelete,
   deletePending,
@@ -177,6 +184,7 @@ function ProfileHeader({
   onDelete,
 }: {
   vehicle: VehicleDetail;
+  summary: Vehicle360Summary | undefined;
   canEdit: boolean;
   canDelete: boolean;
   deletePending: boolean;
@@ -225,6 +233,21 @@ function ProfileHeader({
               •
             </span>
             {vehicleTypeLabel(vehicle.vehicleType)} / {serviceTypeLabel(vehicle.serviceType)}
+          </p>
+          {/*
+           * KM có thẩm quyền + NGUỒN của nó (Wave 8). Chưa có số thì nói "Chưa có" —
+           * không dựng "0 km" (docs §9). Nguồn cho biết số đến từ bàn giao, bảo dưỡng hay
+           * chỉnh tay, để người đọc biết tin nó tới đâu.
+           */}
+          <p className={styles.odometerRow}>
+            Số KM: <b>{formatKm(summary?.currentOdometerKm ?? null)}</b>
+            {summary?.currentOdometerSource ? (
+              <span className={styles.odometerSource}>
+                {' '}
+                · {ODOMETER_SOURCE_LABEL[summary.currentOdometerSource as OdometerSource] ??
+                  summary.currentOdometerSource}
+              </span>
+            ) : null}
           </p>
           <div className={styles.statusRow}>
             <span className={styles.axis}>
@@ -301,57 +324,36 @@ function ProfileHeader({
 
 /* ─── Ba thẻ nhanh ────────────────────────────────────────────────────────── */
 
-interface VehicleTodo {
-  tone: 'error' | 'warning' | 'info';
-  label: string;
-}
-
-/** Việc cần làm suy ra từ DỮ LIỆU THẬT: điều kiện public còn thiếu + trạng thái duyệt. */
-function buildTodos(vehicle: VehicleDetail): VehicleTodo[] {
-  const todos: VehicleTodo[] = [];
-  const status = vehicle.publicStatus as VehiclePublicStatus;
-  const missing = missingPublishRequirements(vehicle);
-
-  if (status === VEHICLE_PUBLIC_STATUS.REJECTED) {
-    todos.push({ tone: 'error', label: 'Xử lý lý do từ chối rồi gửi duyệt lại' });
-  }
-  if (status === VEHICLE_PUBLIC_STATUS.NEEDS_REVISION) {
-    todos.push({ tone: 'warning', label: 'Bổ sung theo yêu cầu của nền tảng rồi gửi duyệt lại' });
-  }
-  if (status === VEHICLE_PUBLIC_STATUS.HIDDEN) {
-    todos.push({ tone: 'warning', label: 'Gửi duyệt lại để xe hiển thị trở lại trên sàn' });
-  }
-  for (const label of missing) {
-    todos.push({ tone: 'warning', label: `Bổ sung ${label.toLowerCase()} để đủ điều kiện public` });
-  }
-  if (status === VEHICLE_PUBLIC_STATUS.DRAFT && missing.length === 0) {
-    todos.push({ tone: 'info', label: 'Xe đủ điều kiện — gửi duyệt công khai để lên sàn' });
-  }
-  return todos;
-}
-
-function TodoCard({ vehicle }: { vehicle: VehicleDetail }) {
-  const todos = buildTodos(vehicle);
+/**
+ * Việc cần làm — lấy TỪ SERVER (`VehicleAlertsService`), cùng phép tính với thẻ xe ở danh sách.
+ *
+ * Wave 8 gỡ bản suy diễn tại chỗ trước đây: nó chỉ nhìn thấy điều kiện đăng công khai, nên xe
+ * quá hạn bảo dưỡng hay thiếu KM trả vẫn hiện "Không có việc cần làm" — trang chi tiết và thẻ
+ * xe kể hai câu chuyện khác nhau về cùng một xe.
+ */
+function TodoCard({
+  summary,
+  loading,
+  failed,
+}: {
+  summary: Vehicle360Summary | undefined;
+  loading: boolean;
+  failed: boolean;
+}) {
+  const alerts = summary?.alerts ?? [];
 
   return (
     <Card
       title="Việc cần làm"
-      extra={todos.length > 0 ? <Badge count={todos.length} /> : null}
+      extra={alerts.length > 0 ? <Badge count={alerts.length} /> : null}
       className={styles.quickCard}
     >
-      {todos.length === 0 ? (
-        <p className={styles.muted}>Không có việc cần làm.</p>
+      {loading ? (
+        <Skeleton active title={false} paragraph={{ rows: 2 }} />
+      ) : failed || !summary ? (
+        <p className={styles.muted}>Không tải được dữ liệu.</p>
       ) : (
-        <ul className={styles.todoList}>
-          {todos.map((todo) => (
-            <li key={todo.label} className={styles.todoItem}>
-              <span className={`${styles.todoDot} ${styles[todo.tone]}`} aria-hidden="true">
-                ●
-              </span>
-              <span>{todo.label}</span>
-            </li>
-          ))}
-        </ul>
+        <VehicleAlertList alerts={alerts} />
       )}
     </Card>
   );
@@ -506,15 +508,126 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
 }
 
 /**
- * Thẻ khu vực CHƯA có dữ liệu (giấy tờ / nguồn xe / bảo dưỡng — Wave 4/6/7).
+ * Lối đi chuẩn sang các module liên quan (Wave 8).
  *
- * Giữ đúng vị trí trong bố cục Figma nhưng nói thẳng "Chưa có dữ liệu" thay vì số liệu mẫu,
- * và KHÔNG có lối vào form (tính năng chưa tồn tại — thà thiếu nút còn hơn nút chết).
+ * Hồ sơ 360 là trang TỔNG QUAN, không phải form thứ hai — nên nó chỉ dẫn đường sang đúng tab
+ * sửa/mô-đun đã có, dùng nguyên giá trị `?tab=` mà `VehicleEditWorkspace` hiểu. Không dựng lại
+ * form nào ở đây, và không có nút dẫn tới tính năng chưa tồn tại.
  */
-function PlaceholderCard({ title, body }: { title: string; body: string }) {
+function ModuleLinks({
+  vehicleId,
+  vehicle,
+  canEdit,
+}: {
+  vehicleId: string;
+  vehicle: VehicleDetail;
+  canEdit: boolean;
+}) {
+  const { has } = usePermissions();
+  const links: { href: string; label: string }[] = [];
+
+  if (canEdit) {
+    links.push(
+      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.INFORMATION), label: 'Thông tin xe' },
+      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MEDIA), label: 'Hình ảnh' },
+      { href: vehiclePath.pricing(vehicleId), label: 'Giá & Chính sách' },
+    );
+    if (has(PERMISSION.FINANCE_VIEW)) {
+      links.push({ href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.SOURCE), label: 'Nguồn xe' });
+    }
+  }
+  if (has(PERMISSION.VEHICLE_DOCUMENT_VIEW)) {
+    links.push({
+      href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS),
+      label: 'Giấy tờ xe',
+    });
+  }
+  if (has(PERMISSION.VEHICLE_MAINTENANCE_VIEW)) {
+    links.push(
+      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE), label: 'Bảo dưỡng & KM' },
+      { href: ROUTES.MANAGE.MAINTENANCE, label: 'Trung tâm bảo dưỡng' },
+    );
+  }
+  if (has(PERMISSION.CALENDAR_VIEW)) {
+    // Cùng helper với nút "Xem lịch" và thẻ ở danh sách — một đường dẫn lịch duy nhất.
+    links.push({ href: vehicleSchedulePath(vehicle), label: 'Lịch xe' });
+  }
+  if (has(PERMISSION.BOOKING_VIEW)) {
+    links.push({ href: `${ROUTES.MANAGE.BOOKINGS}?vehicleId=${vehicleId}`, label: 'Đơn thuê' });
+  }
+  if (links.length === 0) return null;
+
   return (
-    <Card title={title} className={styles.sectionCard}>
-      <p className={styles.muted}>{body}</p>
+    <nav className={styles.moduleLinks} aria-label="Liên kết nhanh tới các mục của xe">
+      {links.map((link) => (
+        <Link key={link.href} href={link.href} className={styles.moduleLink}>
+          {link.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * Tóm tắt giấy tờ (Wave 5) trên Hồ sơ 360.
+ *
+ * CỐ Ý chỉ hiện ĐẾM theo cảnh báo do server tính — không loại giấy tờ, không số hiệu, không
+ * ngày hết hạn cụ thể. Những thứ đó nằm sau `documents.view_details` và thuộc về tab giấy tờ;
+ * lặp lại chúng ở đây là mở một cửa sau vào dữ liệu PII.
+ */
+function DocumentsCard({
+  vehicleId,
+  summary,
+}: {
+  vehicleId: string;
+  summary: Vehicle360Summary | undefined;
+}) {
+  const { has } = usePermissions();
+  if (!has(PERMISSION.VEHICLE_DOCUMENT_VIEW)) return null;
+
+  const alerts = summary?.alerts ?? [];
+  const expired = alerts.find((a) => a.kind === VEHICLE_ALERT_KIND.DOCUMENT_EXPIRED);
+  const expiring = alerts.find((a) => a.kind === VEHICLE_ALERT_KIND.DOCUMENT_EXPIRING);
+
+  return (
+    <Card
+      title="Hồ sơ & Giấy tờ pháp lý"
+      extra={
+        <Link
+          href={vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS)}
+          className={styles.cardLink}
+        >
+          Quản lý giấy tờ
+        </Link>
+      }
+      className={styles.sectionCard}
+    >
+      {expired || expiring ? (
+        <ul className={styles.todoList}>
+          {expired ? (
+            <li className={styles.todoItem}>
+              <span className={`${styles.todoDot} ${styles.error}`} aria-hidden="true">
+                ●
+              </span>
+              <span>
+                {expired.count ?? 1} giấy tờ đã hết hạn — cần xử lý trước khi xe tiếp tục chạy
+              </span>
+            </li>
+          ) : null}
+          {expiring ? (
+            <li className={styles.todoItem}>
+              <span className={`${styles.todoDot} ${styles.warning}`} aria-hidden="true">
+                ●
+              </span>
+              <span>{expiring.count ?? 1} giấy tờ sắp hết hạn</span>
+            </li>
+          ) : null}
+        </ul>
+      ) : summary ? (
+        <p className={styles.muted}>Không có giấy tờ nào quá hạn hoặc sắp hết hạn.</p>
+      ) : (
+        <p className={styles.muted}>Chưa có thông tin.</p>
+      )}
     </Card>
   );
 }
@@ -629,13 +742,13 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
       </dl>
       {canViewFinance ? (
         source.isLoading ? null : detail ? (
-          <Link href={`${vehiclePath.edit(vehicle.id)}?tab=source`} className={styles.muted}>
+          <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.SOURCE)} className={styles.muted}>
             Xem hồ sơ nguồn xe & tài chính →
           </Link>
         ) : (
           <p className={styles.muted}>
             Chưa khai báo hồ sơ nguồn chi tiết.{' '}
-            <Link href={`${vehiclePath.edit(vehicle.id)}?tab=source`}>Bổ sung ngay →</Link>
+            <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.SOURCE)}>Bổ sung ngay →</Link>
           </p>
         )
       ) : null}

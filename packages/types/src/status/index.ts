@@ -13,6 +13,7 @@
 export type { StatusColor, StatusMeta } from './meta';
 export * from './tenant';
 export * from './vehicle';
+export * from './vehicle-alert';
 export * from './vehicle-document';
 export * from './vehicle-maintenance';
 export * from './booking';

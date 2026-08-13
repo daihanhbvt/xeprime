@@ -1708,6 +1708,41 @@
         ]
       }
     },
+    "/vehicles/alerts": {
+      "get": {
+        "operationId": "VehiclesController_alerts",
+        "parameters": [
+          {
+            "name": "ids",
+            "required": true,
+            "in": "query",
+            "description": "Danh sách id xe, phân tách bằng dấu phẩy (tối đa 100)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleAlertsListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Việc cần làm + KM hiện tại theo lô xe (thẻ xe ở danh sách)",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
     "/vehicles/fleet-summary": {
       "get": {
         "operationId": "VehiclesController_fleetSummary",
@@ -3176,7 +3211,8 @@
                 "in_progress",
                 "missing_odometer",
                 "upcoming",
-                "history"
+                "history",
+                "missing_return_km"
               ]
             }
           },
@@ -4617,6 +4653,57 @@
         "summary": "Phát signed URL ngắn hạn xem một ảnh hiện trạng",
         "tags": [
           "booking-handovers"
+        ]
+      }
+    },
+    "/handovers/missing-odometer": {
+      "get": {
+        "operationId": "HandoverQueueController_missingOdometer",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên xe, biển số hoặc mã đơn",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MissingOdometerQueueDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hàng đợi \"Thiếu KM trả\" toàn gian hàng (phân trang)",
+        "tags": [
+          "handover-queue"
         ]
       }
     },
@@ -9510,6 +9597,107 @@
           "data"
         ]
       },
+      "VehicleAlertDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "missing_return_odometer",
+              "document_expired",
+              "maintenance_overdue",
+              "public_action_required",
+              "document_expiring",
+              "maintenance_due_soon",
+              "missing_vehicle_info",
+              "missing_odometer",
+              "maintenance_in_progress",
+              "source_obligation_due"
+            ],
+            "description": "@xeprime/types → VehicleAlertKind"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "warning",
+              "info"
+            ],
+            "description": "@xeprime/types → VehicleAlertSeverity"
+          },
+          "title": {
+            "type": "string",
+            "description": "Câu mô tả việc cần làm — đã lọc dữ liệu nhạy cảm"
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "count": {
+            "type": "number",
+            "nullable": true,
+            "description": "Chỉ ĐẾM, không kèm định danh"
+          },
+          "href": {
+            "type": "string",
+            "nullable": true,
+            "description": "Đường dẫn nội bộ trong app"
+          }
+        },
+        "required": [
+          "kind",
+          "severity",
+          "title"
+        ]
+      },
+      "VehicleAlertsDto": {
+        "type": "object",
+        "properties": {
+          "vehicleId": {
+            "type": "string"
+          },
+          "currentOdometerKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "null = chưa từng ghi nhận KM, KHÔNG phải 0 km"
+          },
+          "currentOdometerSource": {
+            "type": "string",
+            "nullable": true,
+            "description": "@xeprime/types → OdometerSource (nguồn của số KM hiện tại)"
+          },
+          "currentOdometerAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO"
+          },
+          "alerts": {
+            "description": "Đã sắp theo thứ tự ưu tiên tất định",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleAlertDto"
+            }
+          }
+        },
+        "required": [
+          "vehicleId",
+          "alerts"
+        ]
+      },
+      "VehicleAlertsListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleAlertsDto"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "FleetSummaryDto": {
         "type": "object",
         "properties": {
@@ -9867,6 +10055,28 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/VehicleBookingBriefDto"
+            }
+          },
+          "currentOdometerKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "KM hiện tại — null = chưa từng ghi nhận, KHÔNG phải 0 km"
+          },
+          "currentOdometerSource": {
+            "type": "string",
+            "nullable": true,
+            "description": "@xeprime/types → OdometerSource"
+          },
+          "currentOdometerAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO"
+          },
+          "alerts": {
+            "description": "Đã sắp theo ưu tiên tất định",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleAlertDto"
             }
           }
         },
@@ -11955,6 +12165,10 @@
           "expiringDocuments": {
             "type": "number",
             "description": "Xe có giấy tờ sắp/đã hết hạn — cảnh báo liên quan"
+          },
+          "missingReturnKm": {
+            "type": "number",
+            "description": "Việc \"Thiếu KM trả\" đang tồn đọng"
           }
         },
         "required": [
@@ -11964,7 +12178,8 @@
           "inProgress",
           "missingOdometer",
           "upcoming",
-          "expiringDocuments"
+          "expiringDocuments",
+          "missingReturnKm"
         ]
       },
       "PlanDto": {
@@ -13479,6 +13694,74 @@
         "required": [
           "fileId",
           "slot"
+        ]
+      },
+      "MissingOdometerItemDto": {
+        "type": "object",
+        "properties": {
+          "handoverId": {
+            "type": "string"
+          },
+          "bookingId": {
+            "type": "string"
+          },
+          "bookingCode": {
+            "type": "string"
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "confirmedAt": {
+            "type": "string",
+            "description": "ISO — thời điểm biên bản được xác nhận"
+          },
+          "confirmedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "pickupOdometerKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "KM chốt lúc giao xe — mốc sàn khi bổ sung. null = biên bản giao cũng chưa có số"
+          },
+          "rowVersion": {
+            "type": "number",
+            "description": "Optimistic concurrency — nộp lại khi bổ sung KM"
+          }
+        },
+        "required": [
+          "handoverId",
+          "bookingId",
+          "bookingCode",
+          "vehicleId",
+          "vehicleName",
+          "confirmedAt",
+          "rowVersion"
+        ]
+      },
+      "MissingOdometerQueueDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MissingOdometerItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "BookingRequestDeliveryQuoteDto": {

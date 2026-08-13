@@ -1,9 +1,22 @@
-import type { components, HandoverPhotoSlot, HandoverType } from '@xeprime/types';
-import { apiDelete, apiGet, apiPost, apiPut } from '@/services/api-client';
+import type {
+  components,
+  HandoverPhotoSlot,
+  HandoverType,
+  PaginationMeta,
+} from '@xeprime/types';
+import {
+  apiDelete,
+  apiGet,
+  apiPost,
+  apiPut,
+  apiRequest,
+  type QueryParams,
+} from '@/services/api-client';
 import type {
   ConfirmHandoverInput,
   Handover,
   HandoverContext,
+  MissingOdometerItem,
   ResolveOdometerInput,
   SaveHandoverInput,
 } from './types';
@@ -76,6 +89,27 @@ export const removeHandoverPhoto = (
   type: HandoverType,
   slot: HandoverPhotoSlot,
 ): Promise<Handover> => apiDelete<Handover>(`${base(bookingId)}/${type}/photos/${slot}`);
+
+/**
+ * Hàng đợi "Thiếu KM trả" toàn gian hàng (Wave 8) — phân trang ở server, không kéo cả kho về
+ * rồi lọc ở client.
+ */
+export async function fetchMissingOdometerQueue(
+  params: QueryParams,
+): Promise<{ items: MissingOdometerItem[]; meta: PaginationMeta }> {
+  const res = await apiRequest<MissingOdometerItem[]>('/handovers/missing-odometer', {
+    query: params,
+  });
+  return {
+    items: res.data,
+    meta: (res.meta as PaginationMeta | undefined) ?? {
+      page: 1,
+      limit: res.data.length,
+      total: res.data.length,
+      hasNext: false,
+    },
+  };
+}
 
 export const fetchHandoverPhotoUrl = (
   bookingId: string,

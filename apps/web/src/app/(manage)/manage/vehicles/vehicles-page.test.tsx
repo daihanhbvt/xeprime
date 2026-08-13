@@ -58,6 +58,10 @@ vi.mock('@/features/vehicles/hooks/use-vehicles', () => ({
 vi.mock('@/features/vehicles/hooks/use-vehicle-card-stats', () => ({
   useVehicleCardStats: () => ({ byId: new Map(), isLoading: false, isError: false }),
 }));
+vi.mock('@/features/vehicles/hooks/use-vehicle-alerts', () => ({
+  useVehicleAlerts: () => ({ byId: new Map(), isLoading: false, isError: false }),
+  useInvalidateVehicleSurfaces: () => vi.fn(),
+}));
 
 /**
  * Bộ này khoá hành vi **cấp trang**: lọc, tìm kiếm, sắp xếp, phân trang, quyền và các trạng

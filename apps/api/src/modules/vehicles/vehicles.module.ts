@@ -15,6 +15,7 @@ import {
   OcrNotConfiguredProvider,
   VEHICLE_DOCUMENT_OCR_PROVIDER,
 } from './documents/ocr-provider';
+import { VehicleAlertsService } from './vehicle-alerts.service';
 import { VehicleContractsService } from './vehicle-contracts.service';
 import { VehicleSourceService } from './vehicle-source.service';
 import { VehiclesController } from './vehicles.controller';
@@ -50,6 +51,7 @@ import { VehiclesService } from './vehicles.service';
     VehiclesService,
     VehicleSourceService,
     VehicleContractsService,
+    VehicleAlertsService,
     VehicleDocumentsService,
     OdometerService,
     MaintenanceService,

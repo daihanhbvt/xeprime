@@ -44,11 +44,20 @@ export function useVehicleDocumentVersions(
   });
 }
 
-/** Invalidate nhánh giấy tờ sau mọi mutation — dùng chung cho create/update/attach/OCR. */
+/**
+ * Invalidate nhánh giấy tờ sau mọi mutation — dùng chung cho create/update/attach/OCR.
+ *
+ * Wave 8 thêm cảnh báo của xe: đổi hạn giấy tờ làm chip "Giấy tờ sắp hết hạn" trên thẻ xe và
+ * việc-cần-làm ở Hồ sơ 360 đổi theo. Không mở rộng ở đây thì sửa xong hạn mà danh sách vẫn
+ * hiện cảnh báo cũ.
+ */
 export function useInvalidateVehicleDocuments(vehicleId: string) {
   const queryClient = useQueryClient();
-  return () =>
+  return () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.documents(vehicleId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.alertsAll() });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.summary(vehicleId) });
+  };
 }
 
 export function useDocumentMutation<TInput, TResult>(

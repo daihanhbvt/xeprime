@@ -17,6 +17,14 @@
 }
 
 /*
+ * Dải báo "không tải được cảnh báo" (Wave 8.1) — đứng TRÊN lưới, gọn một dòng, không đẩy
+ * lưới xuống đáng kể. Danh sách xe vẫn dùng được khi cảnh báo hỏng.
+ */
+.alertsBanner {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
  * Lưới thẻ — bản chỉnh Figma 11/08/2026: desktop **5 cột** thẻ gọn (~207px ở khung 1116px của
  * màn 1440), tablet giữ 2 cột thẻ rộng như bản `236:1777`.
  *

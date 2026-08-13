@@ -104,6 +104,48 @@
   color: var(--xp-color-text-tertiary);
 }
 
+/* KM có thẩm quyền ở header (Wave 8). */
+.odometerRow {
+  margin: 0 0 var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.odometerSource {
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Dải liên kết sang các module — một hàng cuộn ngang, KHÔNG xuống dòng ở mobile. */
+.moduleLinks {
+  display: flex;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  gap: var(--xp-space-xs);
+  scrollbar-width: none;
+}
+
+.moduleLinks::-webkit-scrollbar {
+  display: none;
+}
+
+.moduleLink {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  white-space: nowrap;
+}
+
+.moduleLink:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+}
+
 .statusRow {
   display: flex;
   flex-wrap: wrap;
@@ -465,6 +507,11 @@
 
   .quickRow {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Vùng chạm 44px cho dải liên kết module trên mobile (docs §12.7). */
+  .moduleLink {
+    min-height: 44px;
   }
 
   /*

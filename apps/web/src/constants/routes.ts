@@ -72,6 +72,30 @@ export const vehiclePath = {
   pricing: (id: string): string => `/manage/vehicles/${id}/pricing`,
 };
 
+/**
+ * Giá trị `?tab=` CHUẨN của màn sửa xe (Wave 8).
+ *
+ * Đặt tên ở đây vì hai phía cùng phải hiểu một chuỗi: `VehicleEditWorkspace` đọc nó từ URL,
+ * còn Hồ sơ 360 / cảnh báo sinh link tới nó. Gõ lệch một chữ thì link không chết — nó âm thầm
+ * rơi về tab "Thông tin", và không ai nhận ra.
+ */
+export const VEHICLE_EDIT_TAB = {
+  INFORMATION: 'information',
+  /** Thư viện ảnh — giá trị chuẩn là `media` (không phải `images`). */
+  MEDIA: 'media',
+  PRICING: 'pricing',
+  SOURCE: 'source',
+  DOCUMENTS: 'documents',
+  MAINTENANCE: 'maintenance',
+} as const;
+
+export type VehicleEditTab = (typeof VEHICLE_EDIT_TAB)[keyof typeof VEHICLE_EDIT_TAB];
+export const VEHICLE_EDIT_TAB_VALUES = Object.values(VEHICLE_EDIT_TAB) as VehicleEditTab[];
+
+export function vehicleTabPath(id: string, tab: VehicleEditTab): string {
+  return `${vehiclePath.edit(id)}?tab=${tab}`;
+}
+
 /** Trang xem/in hợp đồng thuê. */
 export const contractPath = {
   detail: (id: string): string => `/manage/contracts/${id}`,

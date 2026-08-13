@@ -268,6 +268,14 @@ export const MAINTENANCE_BOARD_FILTER = {
   MISSING_ODOMETER: 'missing_odometer',
   UPCOMING: 'upcoming',
   HISTORY: 'history',
+  /**
+   * Hàng đợi "Thiếu KM trả" (Wave 8): các biên bản TRẢ XE đã xác nhận nhưng chưa có KM.
+   *
+   * Đây KHÔNG phải phiếu bảo dưỡng — nó là việc vận hành, chỉ *ảnh hưởng* tới tính toán bảo
+   * dưỡng vì KM có thẩm quyền đang treo. Đặt ở trung tâm bảo dưỡng vì đây là bề mặt việc-cần-làm
+   * đã có sẵn; tạo một mục điều hướng thứ hai cho một loại việc là cách chia nhỏ sự chú ý.
+   */
+  MISSING_RETURN_KM: 'missing_return_km',
 } as const;
 
 export type MaintenanceBoardFilter =
@@ -284,4 +292,13 @@ export const MAINTENANCE_BOARD_FILTER_LABEL: Readonly<Record<MaintenanceBoardFil
   [MAINTENANCE_BOARD_FILTER.MISSING_ODOMETER]: 'Thiếu dữ liệu KM',
   [MAINTENANCE_BOARD_FILTER.UPCOMING]: 'Lịch sắp tới',
   [MAINTENANCE_BOARD_FILTER.HISTORY]: 'Lịch sử',
+  [MAINTENANCE_BOARD_FILTER.MISSING_RETURN_KM]: 'Thiếu KM trả',
 };
+
+/**
+ * Nhóm việc KHÔNG phải danh sách xe: hàng đợi bàn giao thiếu KM có cột và hành động riêng.
+ * Tách ra để trang biết đổi bảng thay vì cố nhồi dữ liệu biên bản vào dòng-là-xe.
+ */
+export const MAINTENANCE_BOARD_QUEUE_FILTERS: readonly MaintenanceBoardFilter[] = [
+  MAINTENANCE_BOARD_FILTER.MISSING_RETURN_KM,
+];

@@ -39,4 +39,8 @@ export type SourceContractDownload = Schemas['SourceContractDownloadDto'];
 export type VehicleStats = Schemas['VehicleStatsDto'];
 export type FleetSummary = Schemas['FleetSummaryDto'];
 export type Vehicle360Summary = Schemas['Vehicle360SummaryDto'];
+
+/** Việc cần làm + KM hiện tại của một xe (Wave 8) — server tính, FE chỉ hiển thị. */
+export type VehicleAlertGroup = Schemas['VehicleAlertsDto'];
+export type VehicleAlertItem = Schemas['VehicleAlertDto'];
 export type VehicleBookingBrief = Schemas['VehicleBookingBriefDto'];

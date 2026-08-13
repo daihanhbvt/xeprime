@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -55,6 +58,25 @@ vi.mock('@/features/vehicles/hooks/use-vehicle-card-stats', () => ({
     stats.requestedIds = ids;
     return stats;
   },
+}));
+
+/**
+ * Việc cần làm + KM của xe (Wave 8) — mock ở tầng hook như `useVehicleCardStats`.
+ * `byId` rỗng nghĩa là "chưa tải xong / tải hỏng": thẻ vẫn dựng được, chỉ vắng cảnh báo.
+ */
+const alerts = vi.hoisted(() => ({
+  byId: new Map<string, unknown>(),
+  requestedIds: [] as string[],
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+vi.mock('@/features/vehicles/hooks/use-vehicle-alerts', () => ({
+  useVehicleAlerts: (ids: string[]) => {
+    alerts.requestedIds = ids;
+    return alerts;
+  },
+  useInvalidateVehicleSurfaces: () => vi.fn(),
 }));
 
 /** Dải chỉ số đội xe (mobile) — mock ở tầng hook, cùng lý do với `useVehicleCardStats`. */
@@ -163,6 +185,11 @@ beforeEach(() => {
   fleet.isError = false;
   setQuery({ data: { items: [vehicle()], meta: META } });
   setStats([statsOf()]);
+  // Mặc định: chưa có dữ liệu cảnh báo → thẻ phải dựng được mà không bịa gì (Wave 8).
+  alerts.byId = new Map();
+  alerts.isLoading = false;
+  alerts.isError = false;
+  alerts.refetch = vi.fn();
   grant();
 });
 
@@ -519,5 +546,136 @@ describe('/manage/vehicles — hàng ngang ở mobile', () => {
 
     expect(screen.queryByLabelText('Chỉ số đội xe')).toBeNull();
     expect(screen.queryByRole('group', { name: 'Lọc theo trạng thái vận hành' })).toBeNull();
+  });
+});
+
+/* ------------------------------------------------------ việc cần làm & KM (Wave 8) */
+
+describe('/manage/vehicles — cảnh báo và KM trên thẻ', () => {
+  /** Cảnh báo do SERVER tính; thẻ chỉ hiển thị, không tự suy ra. */
+  function withAlerts(items: unknown[], currentOdometerKm: number | null = 45_230) {
+    alerts.byId = new Map([['v1', { vehicleId: 'v1', currentOdometerKm, alerts: items }]]);
+  }
+
+  it('KM hiện tại lấy từ cảnh báo/KM của server, có định dạng', () => {
+    withAlerts([]);
+    renderPage();
+
+    const card = cards()[0]!;
+    expect(within(card).getByText('45.230 km')).toBeTruthy();
+  });
+
+  it('chưa có KM: nói "Chưa có", KHÔNG dựng 0 km giả (docs §9)', () => {
+    withAlerts([], null);
+    renderPage();
+
+    const card = cards()[0]!;
+    expect(within(card).getByText('Chưa có')).toBeTruthy();
+    expect(within(card).queryByText('0 km')).toBeNull();
+  });
+
+  it('cảnh báo hiện dưới dạng chip có NHÃN CHỮ, không chỉ dựa vào màu', () => {
+    withAlerts([
+      { kind: 'missing_return_odometer', severity: 'critical', title: 'Thiếu KM trả', count: 1 },
+      { kind: 'document_expiring', severity: 'warning', title: 'Có giấy tờ sắp hết hạn', count: 2 },
+    ]);
+    renderPage();
+
+    const card = cards()[0]!;
+    const chips = within(card).getByRole('list', { name: 'Cảnh báo của xe' });
+    expect(within(chips).getByText('Thiếu KM trả')).toBeTruthy();
+    expect(within(chips).getByText('Giấy tờ sắp hết hạn (2)')).toBeTruthy();
+    // Mức nghiêm trọng cũng nói ra cho trình đọc màn hình.
+    expect(within(chips).getByLabelText(/Nghiêm trọng: Thiếu KM trả/)).toBeTruthy();
+  });
+
+  it('không có cảnh báo: KHÔNG dựng khối rỗng trên thẻ', () => {
+    withAlerts([]);
+    renderPage();
+
+    const card = cards()[0]!;
+    expect(within(card).queryByRole('list', { name: 'Cảnh báo của xe' })).toBeNull();
+  });
+
+  it('cảnh báo chưa tải xong: thẻ vẫn dùng được, không hiện cảnh báo giả', () => {
+    alerts.byId = new Map();
+    renderPage();
+
+    const card = cards()[0]!;
+    expect(within(card).getByText('Honda SH 150i 2023')).toBeTruthy();
+    expect(within(card).queryByRole('list', { name: 'Cảnh báo của xe' })).toBeNull();
+  });
+
+  it('mọi thẻ dùng CÙNG một tỉ lệ khung ảnh — ảnh dọc không kéo cao thẻ', () => {
+    const css = readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        '../../../../features/vehicles/components/VehicleManagementCard.module.css',
+      ),
+      'utf8',
+    );
+    const media = css.slice(css.indexOf('.media {'), css.indexOf('.mediaFallback'));
+    expect(media).toContain('aspect-ratio');
+    expect(media).toContain('overflow: hidden');
+    // Ảnh phủ kín khung cố định thay vì tự quyết chiều cao.
+    expect(css).toContain('object-fit: cover');
+    expect(css).toContain('position: absolute');
+  });
+});
+
+/* ------------------------------------------- trạng thái tải/hỏng của cảnh báo (Wave 8.1) */
+
+describe('/manage/vehicles — cảnh báo hỏng KHÔNG được giống "không có việc"', () => {
+  it('đang tải: skeleton ở vùng cảnh báo, chưa kết luận gì', () => {
+    alerts.isLoading = true;
+    const view = renderPage();
+
+    const card = cards()[0]!;
+    expect(card.querySelector('.ant-skeleton')).toBeTruthy();
+    expect(within(card).queryByText('Không tải được cảnh báo')).toBeNull();
+    expect(view.container.textContent).not.toContain('Không tải được cảnh báo của xe');
+  });
+
+  it('gọi hỏng: thẻ nói KHÔNG BIẾT, KM là "Không rõ", và có dải thử lại ở đầu lưới', () => {
+    alerts.isError = true;
+    renderPage();
+
+    const card = cards()[0]!;
+    expect(within(card).getByText('Không tải được cảnh báo')).toBeTruthy();
+    // KM hỏng khác hẳn "xe chưa từng ghi nhận KM".
+    expect(within(card).getByText('Không rõ')).toBeTruthy();
+    expect(within(card).queryByText('Chưa có')).toBeNull();
+
+    expect(screen.getByText('Không tải được cảnh báo của xe')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Thử lại/ })).toBeTruthy();
+  });
+
+  it('bấm thử lại gọi lại đúng query cảnh báo, không tải lại cả trang', () => {
+    alerts.isError = true;
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Thử lại/ }));
+    expect(alerts.refetch).toHaveBeenCalled();
+    expect(query.refetch).not.toHaveBeenCalled();
+  });
+
+  it('tải xong và rỗng: KHÔNG dựng "0 cảnh báo" giả, cũng không báo lỗi', () => {
+    alerts.byId = new Map([['v1', { vehicleId: 'v1', currentOdometerKm: 45_230, alerts: [] }]]);
+    renderPage();
+
+    const card = cards()[0]!;
+    expect(within(card).queryByText('Không tải được cảnh báo')).toBeNull();
+    expect(within(card).queryByRole('list', { name: 'Cảnh báo của xe' })).toBeNull();
+    expect(within(card).queryByText(/0 cảnh báo/)).toBeNull();
+    expect(within(card).getByText('45.230 km')).toBeTruthy();
+  });
+
+  it('mobile: hàng gọn dùng ĐÚNG ba trạng thái đó', () => {
+    viewport.mobile = true;
+    alerts.isError = true;
+    renderPage();
+
+    expect(screen.getAllByText('Không tải được cảnh báo').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /Thử lại/ })).toBeTruthy();
   });
 });

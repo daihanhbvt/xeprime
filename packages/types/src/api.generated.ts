@@ -537,6 +537,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/vehicles/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Việc cần làm + KM hiện tại theo lô xe (thẻ xe ở danh sách) */
+        get: operations["VehiclesController_alerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vehicles/fleet-summary": {
         parameters: {
             query?: never;
@@ -1480,6 +1497,23 @@ export interface paths {
         };
         /** Phát signed URL ngắn hạn xem một ảnh hiện trạng */
         get: operations["BookingHandoversController_downloadPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/handovers/missing-odometer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hàng đợi "Thiếu KM trả" toàn gian hàng (phân trang) */
+        get: operations["HandoverQueueController_missingOdometer"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3059,6 +3093,39 @@ export interface components {
         VehicleStatsListDto: {
             data: components["schemas"]["VehicleStatsDto"][];
         };
+        VehicleAlertDto: {
+            /**
+             * @description @xeprime/types → VehicleAlertKind
+             * @enum {string}
+             */
+            kind: "missing_return_odometer" | "document_expired" | "maintenance_overdue" | "public_action_required" | "document_expiring" | "maintenance_due_soon" | "missing_vehicle_info" | "missing_odometer" | "maintenance_in_progress" | "source_obligation_due";
+            /**
+             * @description @xeprime/types → VehicleAlertSeverity
+             * @enum {string}
+             */
+            severity: "critical" | "warning" | "info";
+            /** @description Câu mô tả việc cần làm — đã lọc dữ liệu nhạy cảm */
+            title: string;
+            detail?: string | null;
+            /** @description Chỉ ĐẾM, không kèm định danh */
+            count?: number | null;
+            /** @description Đường dẫn nội bộ trong app */
+            href?: string | null;
+        };
+        VehicleAlertsDto: {
+            vehicleId: string;
+            /** @description null = chưa từng ghi nhận KM, KHÔNG phải 0 km */
+            currentOdometerKm?: number | null;
+            /** @description @xeprime/types → OdometerSource (nguồn của số KM hiện tại) */
+            currentOdometerSource?: string | null;
+            /** @description ISO */
+            currentOdometerAt?: string | null;
+            /** @description Đã sắp theo thứ tự ưu tiên tất định */
+            alerts: components["schemas"]["VehicleAlertDto"][];
+        };
+        VehicleAlertsListDto: {
+            data: components["schemas"]["VehicleAlertsDto"][];
+        };
         FleetSummaryDto: {
             /** @description Tổng số xe của gian hàng (không tính xe đã xoá mềm) */
             total: number;
@@ -3161,6 +3228,14 @@ export interface components {
             upcomingBookings?: components["schemas"]["VehicleBookingBriefDto"][];
             /** @description Đơn thay đổi gần nhất (tối đa 3, mới nhất trước) — chỉ khi có `bookings.view` */
             recentBookings?: components["schemas"]["VehicleBookingBriefDto"][];
+            /** @description KM hiện tại — null = chưa từng ghi nhận, KHÔNG phải 0 km */
+            currentOdometerKm?: number | null;
+            /** @description @xeprime/types → OdometerSource */
+            currentOdometerSource?: string | null;
+            /** @description ISO */
+            currentOdometerAt?: string | null;
+            /** @description Đã sắp theo ưu tiên tất định */
+            alerts?: components["schemas"]["VehicleAlertDto"][];
         };
         DeliveryTierDto: {
             /** @description Mốc "đến" (km) — các bậc phải tăng dần nghiêm ngặt */
@@ -3813,6 +3888,8 @@ export interface components {
             upcoming: number;
             /** @description Xe có giấy tờ sắp/đã hết hạn — cảnh báo liên quan */
             expiringDocuments: number;
+            /** @description Việc "Thiếu KM trả" đang tồn đọng */
+            missingReturnKm: number;
         };
         PlanDto: {
             id: string;
@@ -4291,6 +4368,25 @@ export interface components {
             fileId: string;
             /** @enum {string} */
             slot: "front" | "rear" | "left" | "right" | "odometer";
+        };
+        MissingOdometerItemDto: {
+            handoverId: string;
+            bookingId: string;
+            bookingCode: string;
+            vehicleId: string;
+            vehicleName: string;
+            plateNumber?: string | null;
+            /** @description ISO — thời điểm biên bản được xác nhận */
+            confirmedAt: string;
+            confirmedByName?: string | null;
+            /** @description KM chốt lúc giao xe — mốc sàn khi bổ sung. null = biên bản giao cũng chưa có số */
+            pickupOdometerKm?: number | null;
+            /** @description Optimistic concurrency — nộp lại khi bổ sung KM */
+            rowVersion: number;
+        };
+        MissingOdometerQueueDto: {
+            data: components["schemas"]["MissingOdometerItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
         };
         BookingRequestDeliveryQuoteDto: {
             distanceKm: number;
@@ -6318,6 +6414,28 @@ export interface operations {
             };
         };
     };
+    VehiclesController_alerts: {
+        parameters: {
+            query: {
+                /** @description Danh sách id xe, phân tách bằng dấu phẩy (tối đa 100) */
+                ids: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleAlertsListDto"];
+                };
+            };
+        };
+    };
     VehiclesController_fleetSummary: {
         parameters: {
             query?: never;
@@ -7180,7 +7298,7 @@ export interface operations {
     MaintenanceBoardController_list: {
         parameters: {
             query?: {
-                filter?: "all" | "overdue" | "due_soon" | "in_progress" | "missing_odometer" | "upcoming" | "history";
+                filter?: "all" | "overdue" | "due_soon" | "in_progress" | "missing_odometer" | "upcoming" | "history" | "missing_return_km";
                 /** @description Tìm theo tên xe, mã xe hoặc biển số */
                 q?: string;
                 /** @description Loại của phiếu liên quan */
@@ -7986,6 +8104,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SourceContractDownloadDto"];
+                };
+            };
+        };
+    };
+    HandoverQueueController_missingOdometer: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo tên xe, biển số hoặc mã đơn */
+                q?: string;
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MissingOdometerQueueDto"];
                 };
             };
         };

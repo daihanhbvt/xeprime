@@ -99,6 +99,13 @@
   font-size: var(--xp-font-size-body-sm);
 }
 
+/* KM hiện tại (Wave 8) — một dòng gọn, không đẩy chiều cao hàng. */
+.odometer {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
 .income {
   color: var(--xp-color-success);
 }

@@ -395,11 +395,54 @@ describe('/manage/vehicles/[id] — hồ sơ hiển thị', () => {
     expect(screen.queryByText('Giá hiển thị sàn')).toBeNull();
   });
 
-  it('chưa có ảnh: fallback trang trí, và việc-cần-làm nêu đúng mục ảnh còn thiếu', () => {
+  it('việc-cần-làm lấy TỪ SERVER, không suy lại ở client (Wave 8)', () => {
     detail.data = vehicle({ mainImageUrl: null });
+    summary.data = {
+      stats: { vehicleId: 'vehicle-1', activeBookings: 0, completedBookings: 0 },
+      currentOdometerKm: 45_230,
+      currentOdometerSource: 'booking_return',
+      alerts: [
+        {
+          kind: 'missing_vehicle_info',
+          severity: 'warning',
+          title: 'Thiếu thông tin để gửi duyệt công khai',
+          detail: 'Còn thiếu: ảnh đại diện',
+          count: 1,
+          href: '/manage/vehicles/v1/edit?tab=information',
+        },
+      ],
+    } as unknown as typeof summary.data;
     renderPage();
 
-    expect(screen.getByText('Bổ sung ảnh đại diện để đủ điều kiện public')).toBeTruthy();
+    expect(screen.getByText('Thiếu thông tin để gửi duyệt công khai')).toBeTruthy();
+    expect(screen.getByText('Còn thiếu: ảnh đại diện')).toBeTruthy();
+    // Mức nghiêm trọng nói bằng CHỮ, không chỉ bằng màu chấm.
+    expect(screen.getAllByText('Cần chú ý').length).toBeGreaterThan(0);
+    // KM có thẩm quyền + nguồn của nó hiện ngay trên header.
+    expect(screen.getByText('45.230 km')).toBeTruthy();
+    expect(screen.getByText(/Bàn giao trả xe/)).toBeTruthy();
+  });
+
+  it('chỉ hiện 3 việc quan trọng nhất, phần còn lại sau "Xem tất cả"', () => {
+    summary.data = {
+      stats: { vehicleId: 'vehicle-1', activeBookings: 0, completedBookings: 0 },
+      currentOdometerKm: null,
+      alerts: [
+        { kind: 'missing_return_odometer', severity: 'critical', title: 'Thiếu KM trả' },
+        { kind: 'document_expired', severity: 'critical', title: 'Có giấy tờ đã hết hạn' },
+        { kind: 'maintenance_overdue', severity: 'critical', title: 'Xe đã quá mốc bảo dưỡng' },
+        { kind: 'document_expiring', severity: 'warning', title: 'Có giấy tờ sắp hết hạn' },
+      ],
+    } as unknown as typeof summary.data;
+    renderPage();
+
+    expect(screen.getByText('Thiếu KM trả')).toBeTruthy();
+    expect(screen.queryByText('Có giấy tờ sắp hết hạn')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xem tất cả (4)' }));
+    expect(screen.getByText('Có giấy tờ sắp hết hạn')).toBeTruthy();
+    // KM chưa có thì nói "Chưa có", KHÔNG dựng "0 km" (docs §9).
+    expect(screen.queryByText('0 km')).toBeNull();
   });
 
   it('xe bị từ chối: banner nêu lý do của nền tảng ngay trên thẻ hồ sơ', () => {
@@ -479,23 +522,41 @@ describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
 /* ------------------------------------------------------------------ khu vực wave sau */
 
 describe('/manage/vehicles/[id] — khu vực chưa có dữ liệu', () => {
-  it('giấy tờ / nguồn xe / bảo dưỡng hiện "Chưa có dữ liệu", không có số bịa', () => {
-    grant(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
+  it('giấy tờ / nguồn xe / bảo dưỡng có thẻ thật và lối đi chuẩn (Wave 8)', () => {
+    grant(
+      PERMISSION.VEHICLE_UPDATE,
+      PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+      PERMISSION.VEHICLE_DOCUMENT_VIEW,
+    );
     renderPage();
 
     expect(screen.getByText('Hồ sơ & Giấy tờ pháp lý')).toBeTruthy();
     expect(screen.getByText('Nguồn xe & Tài chính')).toBeTruthy();
     expect(screen.getByText('Bảo dưỡng & Số KM')).toBeTruthy();
-    expect(screen.getByText(/Chưa có dữ liệu giấy tờ/)).toBeTruthy();
     expect(screen.getByText('Hình thức nguồn xe')).toBeTruthy();
     expect(screen.getByText('Sở hữu')).toBeTruthy();
     expect(screen.getByText(/Chưa có dữ liệu KM/)).toBeTruthy();
     // Mốc bảo dưỡng chưa tính được thì nói thẳng, KHÔNG dựng "0 km" giả (docs §9).
     expect(screen.getAllByText('Chưa đủ dữ liệu').length).toBeGreaterThan(0);
-    // Không có lối vào form của wave sau.
+
+    // Lối đi dùng ĐÚNG giá trị `?tab=` chuẩn của màn sửa xe.
+    const links = screen.getAllByRole('link');
+    const hrefs = links.map((link) => link.getAttribute('href'));
+    expect(hrefs).toContain('/manage/vehicles/v1/edit?tab=documents');
+    expect(hrefs).toContain('/manage/vehicles/v1/edit?tab=maintenance');
+    expect(hrefs).toContain('/manage/vehicles/v1/edit?tab=media');
+    expect(hrefs).toContain('/manage/maintenance');
+    // Hồ sơ 360 là trang tổng quan — không nhúng lại form của tab nào.
+    expect(screen.queryByRole('button', { name: /Lưu thay đổi|Thêm giấy tờ/ })).toBeNull();
+  });
+
+  it('thiếu quyền giấy tờ: thẻ giấy tờ vắng mặt hẳn, không hiện khung rỗng', () => {
+    grant(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
+    renderPage(); // không có VEHICLE_DOCUMENT_VIEW
+    expect(screen.queryByText('Hồ sơ & Giấy tờ pháp lý')).toBeNull();
     expect(
-      screen.queryByRole('button', { name: /Thêm giấy tờ|Nhập KM|Thiết lập nguồn xe/ }),
-    ).toBeNull();
+      screen.queryAllByRole('link').map((link) => link.getAttribute('href')),
+    ).not.toContain('/manage/vehicles/v1/edit?tab=documents');
   });
 
   it('thiếu quyền bảo dưỡng: thẻ Bảo dưỡng & Số KM vắng mặt hẳn, không hiện khung rỗng', () => {

@@ -26,6 +26,30 @@ vi.mock('@/hooks/use-media-query', () => ({
   useMediaQuery: () => false,
 }));
 
+/**
+ * Hàng đợi "Thiếu KM trả" (Wave 8) sống ở trang này nhưng dữ liệu đến từ bàn giao — mock ở
+ * tầng hook như các nhóm việc khác (harness không có QueryClientProvider).
+ */
+const queue = vi.hoisted(() => ({
+  data: undefined as { items: unknown[]; meta: unknown } | undefined,
+  isFetching: false,
+  isError: false,
+  refetch: vi.fn(),
+  enabled: undefined as boolean | undefined,
+}));
+vi.mock('@/features/handovers/hooks', () => ({
+  useMissingOdometerQueue: (_params: unknown, enabled?: boolean) => {
+    queue.enabled = enabled;
+    return queue;
+  },
+  useHandoverContext: () => ({ data: undefined, isLoading: true, isError: false }),
+  useInvalidateHandovers: () => vi.fn(),
+}));
+vi.mock('@/features/vehicles/hooks/use-vehicle-alerts', () => ({
+  useVehicleAlerts: () => ({ byId: new Map(), isLoading: false, isError: false }),
+  useInvalidateVehicleSurfaces: () => vi.fn(),
+}));
+
 const permissions = vi.hoisted(() => ({ granted: new Set<string>() }));
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({
@@ -99,6 +123,7 @@ const summary: MaintenanceBoardSummary = {
   missingOdometer: 4,
   upcoming: 5,
   expiringDocuments: 1,
+  missingReturnKm: 2,
 };
 
 function renderPage() {
@@ -125,6 +150,11 @@ beforeEach(() => {
     refetch: vi.fn(),
   };
   queries.summary = { data: summary, isLoading: false, refetch: vi.fn() };
+  queue.data = undefined;
+  queue.isFetching = false;
+  queue.isError = false;
+  queue.enabled = undefined;
+  queue.refetch = vi.fn();
 });
 afterEach(cleanup);
 
@@ -263,5 +293,46 @@ describe('/manage/maintenance — Trung tâm bảo dưỡng (Wave 6)', () => {
       sort: 'name_asc',
       page: 2,
     });
+  });
+});
+
+describe('/manage/maintenance — nhóm việc "Thiếu KM trả" theo quyền (Wave 8.1)', () => {
+  it('có handovers.view: tab hiện kèm số đếm', () => {
+    permissions.granted.add(PERMISSION.HANDOVER_VIEW);
+    renderPage();
+
+    const tab = screen.getByRole('tab', { name: /Thiếu KM trả/ });
+    expect(tab).toBeTruthy();
+    expect(tab.textContent).toContain('2');
+  });
+
+  it('thiếu handovers.view: tab BIẾN MẤT hẳn, không hiện tab luôn báo 0', () => {
+    renderPage(); // chỉ có quyền bảo dưỡng
+    expect(screen.queryByRole('tab', { name: /Thiếu KM trả/ })).toBeNull();
+    // Các nhóm việc bảo dưỡng khác vẫn nguyên.
+    expect(screen.getByRole('tab', { name: /Quá hạn/ })).toBeTruthy();
+  });
+
+  it('gõ tay filter=missing_return_km mà thiếu quyền: chuẩn hoá về nhóm mặc định', () => {
+    nav.params = new URLSearchParams('filter=missing_return_km');
+    renderPage();
+
+    // Không mở hàng đợi và KHÔNG gọi API bàn giao.
+    expect(queue.enabled).toBe(false);
+    expect(screen.queryByRole('list', { name: 'Việc thiếu KM trả' })).toBeNull();
+    // Bảng đội xe vẫn chạy với nhóm "Tất cả".
+    expect(queries.lastFilters).toMatchObject({ filter: 'all' });
+    expect(screen.getByRole('region', { name: 'Danh sách xe cần bảo dưỡng' })).toBeTruthy();
+  });
+
+  it('có quyền + filter hàng đợi: đổi sang bảng biên bản, không gọi bảng đội xe', () => {
+    permissions.granted.add(PERMISSION.HANDOVER_VIEW);
+    nav.params = new URLSearchParams('filter=missing_return_km');
+    queue.data = { items: [], meta: { page: 1, limit: 20, total: 0, hasNext: false } };
+    renderPage();
+
+    expect(queue.enabled).toBe(true);
+    expect(queries.boardEnabled).toBe(false);
+    expect(screen.getByText('Không còn việc thiếu KM trả')).toBeTruthy();
   });
 });

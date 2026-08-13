@@ -40,24 +40,45 @@ const TABS = [
     dot: null,
     count: (s: MaintenanceBoardSummary) => s.upcoming,
   },
+  /**
+   * Hàng đợi "Thiếu KM trả" (Wave 8) — dòng là BIÊN BẢN chứ không phải xe, nên trang đổi hẳn
+   * bảng khi chọn tab này. Đặt ở đây thay vì một mục điều hướng riêng: người vận hành đã ở
+   * bề mặt việc-cần-làm rồi, tách ra chỉ làm họ phải nhớ thêm một chỗ để nhìn.
+   */
+  {
+    key: MAINTENANCE_BOARD_FILTER.MISSING_RETURN_KM,
+    dot: styles.dotOverdue,
+    count: (s: MaintenanceBoardSummary) => s.missingReturnKm,
+  },
 ] as const;
 
 export function MaintenanceBoardTabs({
   active,
   summary,
   loading,
+  canViewHandovers = false,
   onChange,
 }: {
   active: string;
   summary?: MaintenanceBoardSummary;
   loading: boolean;
+  /**
+   * `handovers.view`. Thiếu quyền thì nhóm việc "Thiếu KM trả" biến mất HẲN — hiện một tab
+   * luôn báo 0 cũng là một câu trả lời về dữ liệu người dùng không được biết (Wave 8.1).
+   * Đây chỉ là lớp trình bày; backend vẫn là nơi chặn thật.
+   */
+  canViewHandovers?: boolean;
   onChange: (filter: string) => void;
 }) {
   if (loading && !summary) return <Skeleton.Input active block style={{ height: 44 }} />;
 
+  const visibleTabs = TABS.filter(
+    (tab) => canViewHandovers || tab.key !== MAINTENANCE_BOARD_FILTER.MISSING_RETURN_KM,
+  );
+
   return (
     <div className={styles.summaryTabs} role="tablist" aria-label="Nhóm việc bảo dưỡng">
-      {TABS.map((tab) => (
+      {visibleTabs.map((tab) => (
         <button
           key={tab.key}
           type="button"

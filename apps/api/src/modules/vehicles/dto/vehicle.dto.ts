@@ -27,6 +27,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { VehicleAlertDto } from './vehicle-alert.dto';
 
 /** Cách sắp xếp danh sách xe của gian hàng. */
 export const VEHICLE_SORT = ['newest', 'name_asc', 'code_asc', 'price_asc', 'price_desc'] as const;
@@ -585,4 +586,23 @@ export class Vehicle360SummaryDto {
     description: 'Đơn thay đổi gần nhất (tối đa 3, mới nhất trước) — chỉ khi có `bookings.view`',
   })
   recentBookings?: VehicleBookingBriefDto[];
+
+  // ── Việc cần làm + KM (Wave 8) ────────────────────────────────────────────
+  // Cùng `VehicleAlertsService` với `GET /vehicles/alerts` của lưới danh sách: một phép tính,
+  // hai bề mặt. Nội dung đã lọc dữ liệu nhạy cảm ngay ở service.
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'KM hiện tại — null = chưa từng ghi nhận, KHÔNG phải 0 km',
+  })
+  currentOdometerKm?: number | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: '@xeprime/types → OdometerSource' })
+  currentOdometerSource?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })
+  currentOdometerAt?: string | null;
+
+  @ApiPropertyOptional({ type: [VehicleAlertDto], description: 'Đã sắp theo ưu tiên tất định' })
+  alerts?: VehicleAlertDto[];
 }

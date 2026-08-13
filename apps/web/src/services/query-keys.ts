@@ -54,6 +54,14 @@ export const queryKeys = {
     stats: (ids: readonly string[]) => ['vehicles', 'stats', ids] as const,
     /** Đếm đội xe theo trạng thái vận hành — dải chỉ số đầu danh sách. */
     fleetSummary: () => ['vehicles', 'fleet-summary'] as const,
+    /**
+     * Việc cần làm + KM hiện tại theo lô xe (Wave 8). Nằm dưới nhánh `vehicles` để mọi mutation
+     * xe tự làm mới luôn; các miền khác (bàn giao, bảo dưỡng, giấy tờ) invalidate nhánh này khi
+     * dữ liệu của chúng đổi — xem `useInvalidateVehicleSurfaces`.
+     */
+    alerts: (ids: readonly string[]) => ['vehicles', 'alerts', ids] as const,
+    /** Tiền tố của mọi lô cảnh báo — invalidate một phát là mọi trang đang mở đều làm mới. */
+    alertsAll: () => ['vehicles', 'alerts'] as const,
     /** Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền). */
     summary: (id: string) => ['vehicles', 'summary', id] as const,
     /** Giá & chính sách theo xe (nguồn kế thừa/ghi đè) — nằm dưới nhánh vehicles để mutation xe invalidate luôn. */
@@ -79,6 +87,12 @@ export const queryKeys = {
     all: ['maintenance'] as const,
     board: (params: QueryParams) => ['maintenance', 'board', params] as const,
     summary: () => ['maintenance', 'summary'] as const,
+    /**
+     * Hàng đợi "Thiếu KM trả" (Wave 8) — nằm dưới nhánh `maintenance` vì nó là một nhóm việc
+     * của Trung tâm bảo dưỡng, dù dữ liệu đến từ bàn giao.
+     */
+    missingReturnKm: (params: QueryParams) =>
+      ['maintenance', 'missing-return-km', params] as const,
   },
   /** Chính sách thuê mặc định của gian hàng (Wave 2). */
   rentalPolicies: {

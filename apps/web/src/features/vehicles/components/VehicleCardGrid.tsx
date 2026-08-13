@@ -1,11 +1,12 @@
 'use client';
 
-import { Button, Pagination, Skeleton } from 'antd';
+import { Alert, Button, Pagination, Skeleton } from 'antd';
 import type { PaginationMeta } from '@xeprime/types';
 import type { ReactNode } from 'react';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import type { RowAction } from '@/components/data-display/RowActions';
 import { useIsMobile } from '@/hooks/use-media-query';
+import { useVehicleAlerts } from '../hooks/use-vehicle-alerts';
 import { useVehicleCardStats } from '../hooks/use-vehicle-card-stats';
 import type { VehicleListItem } from '../types';
 import { VehicleListRow } from './VehicleListRow';
@@ -52,6 +53,8 @@ export function VehicleCardGrid({
   const isMobile = useIsMobile();
   const ids = items.map((item) => item.id);
   const stats = useVehicleCardStats(ids);
+  // Desktop và mobile dùng CÙNG một nguồn dữ liệu nghiệp vụ — khác nhau ở cách vẽ, không ở dữ liệu.
+  const alerts = useVehicleAlerts(ids);
 
   const from = (meta.page - 1) * meta.limit + 1;
   const to = Math.min(meta.page * meta.limit, meta.total);
@@ -112,35 +115,68 @@ export function VehicleCardGrid({
     }
 
     const listProps = { 'aria-label': 'Danh sách xe', 'aria-busy': loading || undefined };
+    /**
+     * Cảnh báo hỏng KHÔNG làm hỏng danh sách xe — nhưng cũng KHÔNG được im lặng: một dải cảnh
+     * báo gọn có nút thử lại, dùng `Alert`/`Button` sẵn có (không dựng hệ thống thông báo thứ hai).
+     */
+    const alertsBanner = alerts.isError ? (
+      <Alert
+        type="warning"
+        showIcon
+        className={styles.alertsBanner}
+        message="Không tải được cảnh báo của xe"
+        description="Danh sách vẫn dùng được, nhưng phần việc cần làm và số KM đang không hiển thị."
+        action={
+          <Button size="small" onClick={alerts.refetch}>
+            Thử lại
+          </Button>
+        }
+      />
+    ) : null;
+
+    const cardAlertState = {
+      alertsLoading: alerts.isLoading,
+      alertsFailed: alerts.isError,
+    };
 
     return isMobile ? (
-      <ul className={styles.list} {...listProps}>
-        {items.map((item) => (
-          <li key={item.id}>
-            <VehicleListRow
-              vehicle={item}
-              stats={stats.byId.get(item.id)}
-              statsLoading={stats.isLoading}
-              statsFailed={stats.isError}
-              actions={rowActions(item, 'row')}
-            />
-          </li>
-        ))}
-      </ul>
+      <>
+        {alertsBanner}
+        <ul className={styles.list} {...listProps}>
+          {items.map((item) => (
+            <li key={item.id}>
+              <VehicleListRow
+                vehicle={item}
+                stats={stats.byId.get(item.id)}
+                statsLoading={stats.isLoading}
+                statsFailed={stats.isError}
+                alerts={alerts.byId.get(item.id)}
+                {...cardAlertState}
+                actions={rowActions(item, 'row')}
+              />
+            </li>
+          ))}
+        </ul>
+      </>
     ) : (
-      <ul className={styles.grid} {...listProps}>
-        {items.map((item) => (
-          <li key={item.id} className={styles.cell}>
-            <VehicleManagementCard
-              vehicle={item}
-              stats={stats.byId.get(item.id)}
-              statsLoading={stats.isLoading}
-              statsFailed={stats.isError}
-              actions={rowActions(item, 'card')}
-            />
-          </li>
-        ))}
-      </ul>
+      <>
+        {alertsBanner}
+        <ul className={styles.grid} {...listProps}>
+          {items.map((item) => (
+            <li key={item.id} className={styles.cell}>
+              <VehicleManagementCard
+                vehicle={item}
+                stats={stats.byId.get(item.id)}
+                statsLoading={stats.isLoading}
+                statsFailed={stats.isError}
+                alerts={alerts.byId.get(item.id)}
+                {...cardAlertState}
+                actions={rowActions(item, 'card')}
+              />
+            </li>
+          ))}
+        </ul>
+      </>
     );
   }
 

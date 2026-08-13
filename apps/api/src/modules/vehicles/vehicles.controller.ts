@@ -30,6 +30,8 @@ import {
   VehicleSourceContractFileDto,
   VehicleSourceDto,
 } from './dto/vehicle-source.dto';
+import { VehicleAlertsListDto } from './dto/vehicle-alert.dto';
+import { VehicleAlertsService, vehicleAlertScopeOf } from './vehicle-alerts.service';
 import { VehicleContractsService } from './vehicle-contracts.service';
 import { VehicleSourceService } from './vehicle-source.service';
 import {
@@ -60,6 +62,7 @@ export class VehiclesController {
     private readonly vehicles: VehiclesService,
     private readonly source: VehicleSourceService,
     private readonly contracts: VehicleContractsService,
+    private readonly alertsService: VehicleAlertsService,
   ) {}
 
   @Get()
@@ -94,6 +97,32 @@ export class VehiclesController {
     return { data: await this.vehicles.stats(tenant.tenantId, query.ids, canViewFinance) };
   }
 
+  /**
+   * Việc cần làm theo lô xe (Wave 8) — nguồn DUY NHẤT cho cảnh báo trên thẻ xe.
+   *
+   * Cùng service với Hồ sơ 360 (`:id/summary`), nên hai bề mặt không bao giờ nói hai điều khác
+   * nhau về cùng một xe. Nghĩa vụ tài chính chỉ được tính khi người gọi có `finance.view`.
+   * Route tĩnh phải đứng trước `:id` (cùng lý do với `stats`).
+   */
+  @Get('alerts')
+  @RequirePermissions(PERMISSION.VEHICLE_VIEW)
+  @ApiOperation({ summary: 'Việc cần làm + KM hiện tại theo lô xe (thẻ xe ở danh sách)' })
+  @ApiOkResponse({ type: VehicleAlertsListDto })
+  async alerts(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: VehicleStatsQueryDto,
+  ): Promise<VehicleAlertsListDto> {
+    return {
+      data: await this.alertsService.forVehicles(
+        tenant.tenantId,
+        query.ids,
+        // Scope theo TỪNG MIỀN (Wave 8.1): endpoint chỉ đòi `vehicles.view`, nên miền nào
+        // không có quyền thì không được tính, không được đếm, không được dẫn link.
+        vehicleAlertScopeOf(tenant.permissions),
+      ),
+    };
+  }
+
   /** Cùng lý do thứ tự với `stats`: route tĩnh phải đứng trước `:id`. */
   @Get('fleet-summary')
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
@@ -123,14 +152,22 @@ export class VehiclesController {
   @RequirePermissions(PERMISSION.VEHICLE_VIEW)
   @ApiOperation({ summary: 'Tổng hợp Hồ sơ 360 của một xe (chỉ số + đơn thuê theo quyền)' })
   @ApiOkResponse({ type: Vehicle360SummaryDto })
-  summary(
+  async summary(
     @CurrentTenant() tenant: TenantContext,
     @Param('id') id: string,
   ): Promise<Vehicle360SummaryDto> {
-    return this.vehicles.summary360(tenant.tenantId, id, {
+    const summary = await this.vehicles.summary360(tenant.tenantId, id, {
       canViewFinance: tenant.permissions.includes(PERMISSION.FINANCE_VIEW),
       canViewBookings: tenant.permissions.includes(PERMISSION.BOOKING_VIEW),
     });
+    // Cùng service VÀ cùng scope với `GET /vehicles/alerts` — Hồ sơ 360 và thẻ xe không được
+    // lệch nhau, kể cả về phần bị che theo quyền.
+    const alerts = await this.alertsService.forVehicle(
+      tenant.tenantId,
+      id,
+      vehicleAlertScopeOf(tenant.permissions),
+    );
+    return { ...summary, ...alerts };
   }
 
   @Get(':id/pricing')

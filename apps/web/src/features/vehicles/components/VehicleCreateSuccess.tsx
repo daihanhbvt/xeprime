@@ -9,7 +9,7 @@ import {
   type VehicleOperationStatus,
   type VehicleSourceType,
 } from '@xeprime/types';
-import { vehiclePath } from '@/constants/routes';
+import { VEHICLE_EDIT_TAB, vehiclePath, vehicleTabPath } from '@/constants/routes';
 import type { VehicleDetail } from '../types';
 import styles from './VehicleCreateSuccess.module.css';
 
@@ -64,11 +64,11 @@ export function VehicleCreateSuccess({
         <ul>
           <li>
             <span>Kiểm tra thông tin và thông số xe</span>
-            <Link href={`${vehiclePath.edit(vehicle.id)}?tab=information`}>Tab Thông tin →</Link>
+            <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.INFORMATION)}>Tab Thông tin →</Link>
           </li>
           <li>
             <span>Thêm ảnh thực tế và tiện ích</span>
-            <Link href={`${vehiclePath.edit(vehicle.id)}?tab=media`}>Tab Hình ảnh →</Link>
+            <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.MEDIA)}>Tab Hình ảnh →</Link>
           </li>
           <li>
             <span>Kiểm tra giá, cọc và chính sách thuê</span>
@@ -76,7 +76,7 @@ export function VehicleCreateSuccess({
           </li>
           <li>
             <span>Hoàn thiện thông tin nguồn xe & tài chính</span>
-            <Link href={`${vehiclePath.edit(vehicle.id)}?tab=source`}>Tab Nguồn xe →</Link>
+            <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.SOURCE)}>Tab Nguồn xe →</Link>
           </li>
           <li className={styles.futureItem}>
             <span>Giấy tờ xe và bảo dưỡng</span>

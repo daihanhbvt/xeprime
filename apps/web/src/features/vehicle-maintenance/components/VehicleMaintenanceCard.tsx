@@ -9,7 +9,7 @@ import {
   type MaintenanceDueStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { vehiclePath } from '@/constants/routes';
+import { VEHICLE_EDIT_TAB, vehicleTabPath } from '@/constants/routes';
 import { formatDate } from '@/lib/datetime';
 import { formatKm, formatRemainingKm, INSUFFICIENT_DATA_LABEL } from '@/lib/odometer';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -30,7 +30,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
 
   if (!canView) return null;
 
-  const href = `${vehiclePath.edit(vehicleId)}?tab=maintenance`;
+  const href = vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE);
 
   if (profile.isLoading) {
     return (

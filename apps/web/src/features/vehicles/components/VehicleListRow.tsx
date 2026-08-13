@@ -13,8 +13,10 @@ import { RowActions, type RowAction } from '@/components/data-display/RowActions
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
 import { absoluteMoney, formatMoneyCompactVnd, isNegativeMoney, subtractMoney } from '@/lib/money';
+import { formatKm } from '@/lib/odometer';
 import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
-import type { VehicleListItem, VehicleStats } from '../types';
+import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
+import { VehicleAlertChips } from './VehicleAlerts';
 import styles from './VehicleListRow.module.css';
 
 interface VehicleListRowProps {
@@ -22,6 +24,10 @@ interface VehicleListRowProps {
   stats?: VehicleStats;
   statsLoading: boolean;
   statsFailed: boolean;
+  /** Việc cần làm + KM hiện tại (Wave 8) — cùng nguồn VÀ cùng ba trạng thái với thẻ desktop. */
+  alerts?: VehicleAlertGroup;
+  alertsLoading?: boolean;
+  alertsFailed?: boolean;
   actions: RowAction[];
 }
 
@@ -37,6 +43,9 @@ export function VehicleListRow({
   stats,
   statsLoading,
   statsFailed,
+  alerts,
+  alertsLoading = false,
+  alertsFailed = false,
   actions,
 }: VehicleListRowProps) {
   const meta = [
@@ -83,6 +92,18 @@ export function VehicleListRow({
             meta={VEHICLE_PUBLIC_STATUS_META}
           />
         </div>
+
+        {/* Cùng dữ liệu VÀ cùng ba trạng thái với thẻ desktop — chỉ khác cách xếp. */}
+        {alertsLoading ? (
+          <Skeleton active paragraph={{ rows: 1, width: '60%' }} title={false} />
+        ) : alertsFailed ? (
+          <p className={styles.metricsUnavailable}>Không tải được cảnh báo</p>
+        ) : alerts ? (
+          <>
+            <VehicleAlertChips alerts={alerts.alerts} />
+            <p className={styles.odometer}>KM hiện tại: {formatKm(alerts.currentOdometerKm)}</p>
+          </>
+        ) : null}
 
         {/*
          * Một dòng chỉ số. Tiền rút gọn (`12,7tr`) vì 390px không chứa nổi dạng đầy đủ cạnh hai

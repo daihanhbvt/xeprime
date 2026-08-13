@@ -20,6 +20,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { PaginationMetaDto } from '../../../../common/dto/api-response.dto';
 
 // ── Ảnh hiện trạng ──────────────────────────────────────────────────────────
 
@@ -134,6 +135,61 @@ export class HandoverContextDto {
   /** Đơn có đang ở trạng thái mở được từng chiều bàn giao không (backend là nơi chốt). */
   @ApiProperty() canStartPickup!: boolean;
   @ApiProperty() canStartReturn!: boolean;
+}
+
+// ── Hàng đợi "Thiếu KM trả" toàn gian hàng (Wave 8) ─────────────────────────
+
+/**
+ * Một việc trong hàng đợi. Chỉ mang thứ cần để NHẬN RA việc và đi tới chỗ xử lý — không ảnh,
+ * không tên file, không ghi chú hiện trạng (những thứ đó nằm sau `handovers.view_files` và
+ * biên bản của chính đơn).
+ */
+export class MissingOdometerItemDto {
+  @ApiProperty() handoverId!: string;
+  @ApiProperty() bookingId!: string;
+  @ApiProperty() bookingCode!: string;
+  @ApiProperty() vehicleId!: string;
+  @ApiProperty() vehicleName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiProperty({ description: 'ISO — thời điểm biên bản được xác nhận' })
+  confirmedAt!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) confirmedByName!: string | null;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'KM chốt lúc giao xe — mốc sàn khi bổ sung. null = biên bản giao cũng chưa có số',
+  })
+  pickupOdometerKm!: number | null;
+  @ApiProperty({ description: 'Optimistic concurrency — nộp lại khi bổ sung KM' })
+  rowVersion!: number;
+}
+
+export class MissingOdometerQueueDto {
+  @ApiProperty({ type: [MissingOdometerItemDto] }) data!: MissingOdometerItemDto[];
+  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+}
+
+export class MissingOdometerQueryDto {
+  @ApiPropertyOptional({ description: 'Tìm theo tên xe, biển số hoặc mã đơn' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
+
+  @ApiPropertyOptional({ minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }
 
 // ── Đầu vào ─────────────────────────────────────────────────────────────────

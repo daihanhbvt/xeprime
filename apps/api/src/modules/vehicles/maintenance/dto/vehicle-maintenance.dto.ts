@@ -382,6 +382,12 @@ export class MaintenanceBoardSummaryDto {
   @ApiProperty() upcoming!: number;
   @ApiProperty({ description: 'Xe có giấy tờ sắp/đã hết hạn — cảnh báo liên quan' })
   expiringDocuments!: number;
+  /**
+   * Biên bản trả xe đã chốt nhưng chưa có KM (Wave 8). Đếm theo BIÊN BẢN, không theo xe —
+   * một xe có thể tồn đọng nhiều chuyến, và mỗi chuyến là một việc phải xử lý riêng.
+   */
+  @ApiProperty({ description: 'Việc "Thiếu KM trả" đang tồn đọng' })
+  missingReturnKm!: number;
 }
 
 export class MaintenanceBoardQueryDto {

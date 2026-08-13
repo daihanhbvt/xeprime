@@ -17,7 +17,7 @@ import type { PaginationMeta } from '@xeprime/types';
 import { actionColumn, DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { vehiclePath } from '@/constants/routes';
+import { VEHICLE_EDIT_TAB, vehicleTabPath } from '@/constants/routes';
 import { formatDate } from '@/lib/datetime';
 import { formatKm, formatRemainingKm, INSUFFICIENT_DATA_LABEL } from '@/lib/odometer';
 import type { MaintenanceBoardItem } from '../types';
@@ -38,7 +38,7 @@ interface BoardActions {
 
 /** Link tới đúng tab bảo dưỡng của xe — không dựng chuỗi query rải rác trong component. */
 export function maintenanceTabHref(vehicleId: string): string {
-  return `${vehiclePath.edit(vehicleId)}?tab=maintenance`;
+  return vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE);
 }
 
 function dueCell(row: MaintenanceBoardItem) {

@@ -16,8 +16,10 @@ import { RowActions, type RowAction } from '@/components/data-display/RowActions
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
 import { formatMoneyVnd, isNegativeMoney, subtractMoney } from '@/lib/money';
+import { formatKm } from '@/lib/odometer';
 import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
-import type { VehicleListItem, VehicleStats } from '../types';
+import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
+import { VehicleAlertChips } from './VehicleAlerts';
 import styles from './VehicleManagementCard.module.css';
 
 interface VehicleManagementCardProps {
@@ -27,6 +29,13 @@ interface VehicleManagementCardProps {
   statsLoading: boolean;
   /** Thống kê hỏng → hiện "không tải được" thay vì số 0 giả. */
   statsFailed: boolean;
+  /**
+   * Việc cần làm + KM hiện tại (Wave 8), do server tính. `undefined` = chưa có dữ liệu; hai cờ
+   * dưới đây nói RÕ vì sao, để "đang tải" và "gọi hỏng" không trông giống "xe không có việc".
+   */
+  alerts?: VehicleAlertGroup;
+  alertsLoading?: boolean;
+  alertsFailed?: boolean;
   actions: RowAction[];
 }
 
@@ -52,6 +61,9 @@ export function VehicleManagementCard({
   stats,
   statsLoading,
   statsFailed,
+  alerts,
+  alertsLoading = false,
+  alertsFailed = false,
   actions,
 }: VehicleManagementCardProps) {
   const specs = `${vehicleTypeLabel(vehicle.vehicleType)} / ${serviceTypeLabel(vehicle.serviceType)}`;
@@ -107,6 +119,19 @@ export function VehicleManagementCard({
           </span>
         </div>
 
+        {/*
+         * Cảnh báo do server tính — cùng phép tính với Hồ sơ 360, không suy lại ở đây.
+         * Ba trạng thái tách bạch: đang tải (skeleton) · hỏng (nói thẳng là không biết) ·
+         * xong (rỗng nghĩa là THẬT SỰ không có việc). Không bao giờ hiện "0 cảnh báo" giả.
+         */}
+        {alertsLoading ? (
+          <Skeleton active paragraph={{ rows: 1, width: '60%' }} title={false} />
+        ) : alertsFailed ? (
+          <p className={styles.metricsUnavailable}>Không tải được cảnh báo</p>
+        ) : alerts ? (
+          <VehicleAlertChips alerts={alerts.alerts} />
+        ) : null}
+
         <div className={styles.metrics}>
           <dl className={styles.metricRow}>
             <div>
@@ -114,6 +139,16 @@ export function VehicleManagementCard({
               <dd>{vehicle.weekdayPrice ? formatMoneyVnd(vehicle.weekdayPrice) : EMPTY}</dd>
             </div>
             <div className={styles.alignEnd}>
+              <dt>Số KM hiện tại</dt>
+              {/*
+               * Chưa có số thì nói "Chưa có" — KHÔNG dựng "0 km" (docs §9). Gọi hỏng thì nói
+               * "Không rõ": khác hẳn "xe chưa từng ghi nhận KM".
+               */}
+              <dd>{alertsFailed ? 'Không rõ' : alerts ? formatKm(alerts.currentOdometerKm) : EMPTY}</dd>
+            </div>
+          </dl>
+          <dl className={styles.metricRow}>
+            <div>
               <dt>Giá cuối tuần</dt>
               <dd>{vehicle.weekendPrice ? formatMoneyVnd(vehicle.weekendPrice) : EMPTY}</dd>
             </div>

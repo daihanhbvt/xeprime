@@ -18,6 +18,7 @@ import type {
   Vehicle360Summary,
   VehicleDetail,
   VehicleFilters,
+  VehicleAlertGroup,
   VehicleListItem,
   VehicleSource,
   VehicleSourceContractFile,
@@ -84,6 +85,20 @@ export const submitVehiclePublic = (id: string): Promise<VehicleDetail> =>
 export async function fetchVehicleStats(ids: string[]): Promise<VehicleStats[]> {
   if (ids.length === 0) return [];
   const res = await apiRequest<VehicleStats[]>('/vehicles/stats', {
+    query: { ids: ids.join(',') },
+  });
+  return res.data;
+}
+
+/**
+ * Việc cần làm + KM hiện tại theo lô xe (Wave 8).
+ *
+ * Cùng endpoint/service với Hồ sơ 360 — cảnh báo là thứ người vận hành hành động theo, hai
+ * phép tính song song là hai quyết định sai. Tách khỏi `fetchVehicles` cùng lý do với `stats`.
+ */
+export async function fetchVehicleAlerts(ids: string[]): Promise<VehicleAlertGroup[]> {
+  if (ids.length === 0) return [];
+  const res = await apiRequest<VehicleAlertGroup[]>('/vehicles/alerts', {
     query: { ids: ids.join(',') },
   });
   return res.data;

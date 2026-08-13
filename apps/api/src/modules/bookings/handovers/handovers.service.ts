@@ -45,6 +45,7 @@ import {
   ConfirmHandoverDto,
   HandoverContextDto,
   HandoverDto,
+  MissingOdometerQueueDto,
   PresignHandoverPhotoDto,
   ResolveHandoverOdometerDto,
   SaveHandoverDto,
@@ -586,6 +587,116 @@ export class HandoversService {
     });
 
     return this.context(tenantId, bookingId, scope);
+  }
+
+  // ── Hàng đợi vận hành toàn gian hàng (Wave 8) ─────────────────────────────
+
+  /**
+   * Biên bản TRẢ XE đã xác nhận nhưng chưa có KM — việc tồn đọng làm KM có thẩm quyền của xe
+   * bị treo, kéo theo mốc bảo dưỡng không tính được.
+   *
+   * Phân trang ở DB (partial index `vehicle_handovers_missing_odometer_idx` phục vụ đúng
+   * truy vấn này) — gian hàng vài trăm xe vẫn chỉ trả về một trang. Giải quyết xong thì
+   * `odometer_missing` thành false và việc tự rời hàng đợi, không cần dọn tay.
+   */
+  async missingOdometerQueue(
+    tenantId: string,
+    query: { q?: string; page?: number; limit?: number },
+  ): Promise<MissingOdometerQueueDto> {
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.min(100, Math.max(1, query.limit ?? 20));
+    const search = query.q?.trim();
+
+    const where: Prisma.VehicleHandoverWhereInput = {
+      tenantId,
+      type: HANDOVER_TYPE.RETURN,
+      status: HANDOVER_STATUS.CONFIRMED,
+      odometerMissing: true,
+      // Xe hoặc đơn đã xoá mềm thì không còn là việc phải làm. Điều kiện này phải TRÙNG với
+      // phép đếm ở `MaintenanceService.boardSummary` (Wave 8.1 §6) — lệch một vế là tab hiện
+      // một số còn bảng hiện số khác.
+      vehicle: { deletedAt: null },
+      booking: { deletedAt: null },
+      ...(search
+        ? {
+            OR: [
+              { vehicle: { name: { contains: search, mode: 'insensitive' } } },
+              { vehicle: { plateNumber: { contains: search, mode: 'insensitive' } } },
+              { booking: { code: { contains: search, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.vehicleHandover.count({ where }),
+      this.prisma.vehicleHandover.findMany({
+        where,
+        // Việc tồn đọng lâu nhất lên đầu — hàng đợi vận hành đọc theo tuổi, không theo mới nhất.
+        orderBy: [{ confirmedAt: 'asc' }, { id: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+        select: {
+          id: true,
+          bookingId: true,
+          vehicleId: true,
+          confirmedAt: true,
+          confirmedBy: true,
+          rowVersion: true,
+          vehicle: { select: { name: true, plateNumber: true } },
+          booking: { select: { code: true } },
+        },
+      }),
+    ]);
+
+    // KM lúc giao của đúng các đơn trên TRANG NÀY — bounded theo `limit`, không N+1 toàn kho.
+    const bookingIds = rows.map((row) => row.bookingId);
+    const [pickups, actors] = await Promise.all([
+      bookingIds.length
+        ? this.prisma.vehicleHandover.findMany({
+            where: {
+              tenantId,
+              bookingId: { in: bookingIds },
+              type: HANDOVER_TYPE.PICKUP,
+              status: HANDOVER_STATUS.CONFIRMED,
+            },
+            select: { bookingId: true, odometerKm: true },
+          })
+        : Promise.resolve([]),
+      this.actorNames(rows as unknown as HandoverRow[]),
+    ]);
+    const pickupKmByBooking = new Map(pickups.map((row) => [row.bookingId, row.odometerKm]));
+
+    return {
+      data: rows.map((row) => ({
+        handoverId: row.id,
+        bookingId: row.bookingId,
+        bookingCode: row.booking.code,
+        vehicleId: row.vehicleId,
+        vehicleName: row.vehicle.name,
+        plateNumber: row.vehicle.plateNumber,
+        // `confirmed_at` không thể null ở bản đã xác nhận (CHECK `vh_confirmed_has_actor`).
+        confirmedAt: row.confirmedAt!.toISOString(),
+        confirmedByName: row.confirmedBy ? (actors.get(row.confirmedBy) ?? null) : null,
+        pickupOdometerKm: pickupKmByBooking.get(row.bookingId) ?? null,
+        rowVersion: row.rowVersion,
+      })),
+      meta: { page, limit, total, hasNext: page * limit < total },
+    };
+  }
+
+  /** Đếm việc tồn đọng — cùng điều kiện với `missingOdometerQueue` (Wave 8.1 §6). */
+  countMissingOdometer(tenantId: string): Promise<number> {
+    return this.prisma.vehicleHandover.count({
+      where: {
+        tenantId,
+        type: HANDOVER_TYPE.RETURN,
+        status: HANDOVER_STATUS.CONFIRMED,
+        odometerMissing: true,
+        vehicle: { deletedAt: null },
+        booking: { deletedAt: null },
+      },
+    });
   }
 
   // ── Ảnh hiện trạng ────────────────────────────────────────────────────────

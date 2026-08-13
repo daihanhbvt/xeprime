@@ -40,6 +40,10 @@ export class MaintenanceBoardController {
   @ApiOperation({ summary: 'Đếm theo từng nhóm việc — độc lập với trang/bộ lọc hiện tại' })
   @ApiOkResponse({ type: MaintenanceBoardSummaryDto })
   summary(@CurrentTenant() tenant: TenantContext): Promise<MaintenanceBoardSummaryDto> {
-    return this.maintenance.boardSummary(tenant.tenantId);
+    // Nhóm việc "Thiếu KM trả" thuộc miền bàn giao — chỉ đếm khi người gọi có `handovers.view`
+    // (Wave 8.1). Không có quyền thì trả 0 chứ không lộ số việc đang hở.
+    return this.maintenance.boardSummary(tenant.tenantId, {
+      canViewHandovers: tenant.permissions.includes(PERMISSION.HANDOVER_VIEW),
+    });
   }
 }

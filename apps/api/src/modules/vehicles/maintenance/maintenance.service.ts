@@ -734,8 +734,17 @@ export class MaintenanceService {
     };
   }
 
-  /** Đếm theo từng nhóm việc — dải tab đầu trang, độc lập với trang/bộ lọc hiện tại. */
-  async boardSummary(tenantId: string): Promise<MaintenanceBoardSummaryDto> {
+  /**
+   * Đếm theo từng nhóm việc — dải tab đầu trang, độc lập với trang/bộ lọc hiện tại.
+   *
+   * `canViewHandovers` do controller truyền xuống (Wave 8.1): endpoint này chỉ đòi
+   * `vehicles.maintenance.view`, nên đếm "Thiếu KM trả" cho vai trò không có `handovers.view`
+   * là để họ suy ra có bao nhiêu biên bản bàn giao đang hở — một con số thuộc miền khác.
+   */
+  async boardSummary(
+    tenantId: string,
+    scope: { canViewHandovers: boolean } = { canViewHandovers: false },
+  ): Promise<MaintenanceBoardSummaryDto> {
     const dueSoonKm = await this.dueSoonKm(tenantId);
     const today = startOfUtcDay(new Date());
     const [row] = await this.prisma.$queryRaw<
@@ -785,6 +794,27 @@ export class MaintenanceService {
         count(*) FILTER (WHERE expiring_count > 0)::int AS expiring_documents
       FROM scored`;
 
+    /**
+     * Việc "Thiếu KM trả" (Wave 8) đếm THẲNG ở đây thay vì gọi `HandoversService`:
+     * `BookingsModule` đã import `VehiclesModule`, nên chiều ngược lại sẽ tạo vòng phụ thuộc.
+     * Đây là một phép ĐẾM chỉ-đọc trên bảng của module khác — cùng kiểu với việc thẻ này đã
+     * đếm `vehicle_documents`. Mọi thao tác GHI vẫn thuộc `HandoversService`.
+     *
+     * Điều kiện lọc phải TRÙNG KHỚP với `HandoversService.missingOdometerQueue` (Wave 8.1 §6):
+     * cùng tenant, biên bản TRẢ đã xác nhận, thiếu KM, xe và đơn chưa xoá mềm. Lệch một vế là
+     * tab hiện "3" trong khi bảng chỉ có 2 dòng.
+     */
+    const [queue] = scope.canViewHandovers
+      ? await this.prisma.$queryRaw<{ missing_return_km: number }[]>`
+          SELECT count(*)::int AS missing_return_km
+          FROM vehicle_handovers h
+          JOIN vehicles v ON v.id = h.vehicle_id AND v.deleted_at IS NULL
+          JOIN bookings b ON b.id = h.booking_id AND b.deleted_at IS NULL
+          WHERE h.tenant_id = ${tenantId}::char(26)
+            AND h.type = 'return' AND h.status = 'confirmed' AND h.odometer_missing = true`
+      : // Thiếu quyền: KHÔNG chạy truy vấn, trả 0 để giữ nguyên hình dạng response.
+        [{ missing_return_km: 0 }];
+
     return {
       total: row?.total ?? 0,
       overdue: row?.overdue ?? 0,
@@ -793,6 +823,7 @@ export class MaintenanceService {
       missingOdometer: row?.missing_odometer ?? 0,
       upcoming: row?.upcoming ?? 0,
       expiringDocuments: row?.expiring_documents ?? 0,
+      missingReturnKm: queue?.missing_return_km ?? 0,
     };
   }
 

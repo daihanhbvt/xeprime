@@ -17,7 +17,7 @@ import {
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { vehiclePath } from '@/constants/routes';
+import { VEHICLE_EDIT_TAB, VEHICLE_EDIT_TAB_VALUES, vehiclePath } from '@/constants/routes';
 import { getErrorMessage } from '@/services/api-client';
 import { VehiclePricingWorkspace } from '@/features/rental-policies/components/VehiclePricingWorkspace';
 import {
@@ -86,16 +86,15 @@ const MEDIA_FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
 /** Các trường nằm TRONG vùng thu gọn "Thông số kỹ thuật nâng cao" — cần mở vùng khi chúng lỗi. */
 const ADVANCED_SPEC_FIELDS = VEHICLE_SECTIONS.find((section) => section.key === 'specs')!.fields;
 
+/**
+ * Giá trị `?tab=` hợp lệ đọc từ hằng số CHUNG (Wave 8) — cùng bảng mà Hồ sơ 360 và cảnh báo
+ * dùng để sinh link. Trước đây danh sách này gõ tay ở đây, nên thêm tab mới là thêm một chỗ
+ * phải nhớ sửa. Giá trị lạ rơi về "Thông tin" như cũ.
+ */
 function parseTab(value: string | null): WorkspaceTab {
-  if (
-    value === 'media' ||
-    value === 'pricing' ||
-    value === 'source' ||
-    value === 'documents' ||
-    value === 'maintenance'
-  )
-    return value;
-  return 'information';
+  return (VEHICLE_EDIT_TAB_VALUES as string[]).includes(value ?? '')
+    ? (value as WorkspaceTab)
+    : VEHICLE_EDIT_TAB.INFORMATION;
 }
 
 export function VehicleEditWorkspace({

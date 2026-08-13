@@ -10,6 +10,9 @@ export type SaveHandoverInput = components['schemas']['SaveHandoverDto'];
 export type ConfirmHandoverInput = components['schemas']['ConfirmHandoverDto'];
 export type ResolveOdometerInput = components['schemas']['ResolveHandoverOdometerDto'];
 
+/** Một việc trong hàng đợi "Thiếu KM trả" toàn gian hàng (Wave 8). */
+export type MissingOdometerItem = components['schemas']['MissingOdometerItemDto'];
+
 /** Chi tiết kèm theo lỗi 409 "KM bất thường" — server tính, UI chỉ hiển thị. */
 export interface HandoverSuspicionDetails {
   suspicious: boolean;
