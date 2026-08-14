@@ -1,0 +1,71 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.search {
+  max-width: 420px;
+}
+
+.code {
+  font-family: var(--xp-font-family-mono, monospace);
+  color: var(--xp-color-text-secondary);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.name {
+  font-weight: 600;
+}
+
+/* Bí danh có thể rất dài (một tỉnh gộp từ ba tỉnh cũ) — cắt một dòng, đủ nội dung trong tooltip. */
+.aliases {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+  color: var(--xp-color-text-secondary);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.cardMeta {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.cardSwitches {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  .search {
+    max-width: 100%;
+  }
+}

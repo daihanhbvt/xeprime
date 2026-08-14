@@ -43,16 +43,16 @@ function visibleLabels(granted: readonly Permission[], isPlatform: boolean): str
 }
 
 describe('nav — cấu trúc cây', () => {
-  it('gian hàng: 1 mục gốc + 2 nhóm, tổng 17 mục lá', () => {
+  it('gian hàng: 1 mục gốc + 2 nhóm, tổng 18 mục lá', () => {
     expect(SHOP_NAV).toHaveLength(3);
     expect(SHOP_NAV.filter(isNavGroup).map((g) => g.label)).toEqual(['Quản lý', 'Cài đặt']);
-    expect(flattenLeaves(SHOP_NAV)).toHaveLength(17);
+    expect(flattenLeaves(SHOP_NAV)).toHaveLength(18);
   });
 
-  it('nền tảng: 1 mục gốc + 1 nhóm, tổng 11 mục lá', () => {
+  it('nền tảng: 1 mục gốc + 1 nhóm, tổng 12 mục lá', () => {
     expect(PLATFORM_NAV).toHaveLength(2);
     expect(PLATFORM_NAV.filter(isNavGroup).map((g) => g.label)).toEqual(['Quản trị nền tảng']);
-    expect(flattenLeaves(PLATFORM_NAV)).toHaveLength(11);
+    expect(flattenLeaves(PLATFORM_NAV)).toHaveLength(12);
   });
 
   it('mọi mục lá có href riêng — không hai mục cùng đích', () => {
@@ -111,16 +111,16 @@ describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
 });
 
 describe('nav — vai trò gian hàng nhìn thấy gì', () => {
-  it('shop_owner thấy đủ 17 mục', () => {
+  it('shop_owner thấy đủ 18 mục', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false),
-    ).toHaveLength(17);
+    ).toHaveLength(18);
   });
 
-  it('shop_manager cũng thấy đủ 17 mục (có MEMBER_VIEW và FINANCE_VIEW)', () => {
+  it('shop_manager cũng thấy đủ 18 mục (có MEMBER_VIEW và FINANCE_VIEW)', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_MANAGER], false),
-    ).toHaveLength(17);
+    ).toHaveLength(18);
   });
 
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {
@@ -146,23 +146,26 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
 });
 
 describe('nav — vai trò nền tảng nhìn thấy gì', () => {
-  it('platform_admin thấy đủ 11 mục', () => {
+  it('platform_admin thấy đủ 12 mục', () => {
     expect(
       visibleLabels(DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.PLATFORM_ADMIN], true),
-    ).toHaveLength(11);
+    ).toHaveLength(12);
   });
 
-  it('platform_staff chỉ thấy 4 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {
+  it('platform_staff chỉ thấy 5 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {
     const labels = visibleLabels(
       DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.PLATFORM_STAFF],
       true,
     );
 
+    // `Tỉnh/thành` là mục ĐỌC: staff cần tra danh mục để hiểu dữ liệu giám sát; bật/tắt hiển thị
+    // công khai là quyền riêng (`platform.locations.manage`) mà staff không có.
     expect(labels).toEqual([
       'Tổng quan',
       'Xe toàn hệ thống',
       'Đơn thuê toàn hệ thống',
       'Khách thuê',
+      'Tỉnh/thành',
     ]);
     for (const adminOnly of [
       'Duyệt hồ sơ',

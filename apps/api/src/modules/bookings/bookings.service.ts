@@ -92,6 +92,8 @@ export class BookingsService {
       deletedAt: null,
       ...(query.status ? { status: query.status } : {}),
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
+      // Lọc qua quan hệ xe → chi nhánh; `tenantId` vẫn là ranh giới thật.
+      ...(query.branchId ? { vehicle: { branchId: query.branchId } } : {}),
       ...(query.returnFrom || query.returnTo
         ? {
             returnAt: {

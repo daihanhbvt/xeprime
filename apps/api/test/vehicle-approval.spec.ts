@@ -10,14 +10,11 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeVehiclesService, seedBranch } from './helpers/service-factory';
 
 /**
  * WS0 — vòng đăng xe → duyệt → công khai (ADR 0008) chạy trên PostgreSQL THẬT. Kiểm chứng:
@@ -32,14 +29,7 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
 const listings = new ListingsService(asService);
-const vehicles = new VehiclesService(
-  asService,
-  audit,
-  listings,
-  new BillingService(asService, audit),
-  new CatalogService(asService, audit),
-  new PricingService(asService, audit),
-);
+const vehicles = makeVehiclesService(asService);
 const approvals = new PlatformApprovalService(asService, audit, notifications, listings);
 
 let dbAvailable = false;
@@ -48,6 +38,8 @@ let reviewerId: string;
 let tenantId: string;
 let draftTenantId: string;
 let vehicleId: string;
+/** Chi nhánh mặc định của từng tenant trong spec — xe phải thuộc một chi nhánh có tỉnh. */
+const branchByTenant = new Map<string, string>();
 
 async function seedVehicle(
   tenant: string,
@@ -58,6 +50,8 @@ async function seedVehicle(
     data: {
       id,
       tenantId: tenant,
+      // Gửi duyệt công khai đòi xe có chi nhánh CÓ TỈNH — vị trí là điều kiện để lên chợ.
+      branchId: branchByTenant.get(tenant),
       code: `V-${id.slice(-6)}`,
       name: 'Toyota Vios',
       vehicleType: VEHICLE_TYPE.CAR,
@@ -135,6 +129,9 @@ beforeAll(async () => {
       status: MEMBERSHIP_STATUS.ACTIVE,
     },
   });
+  for (const t of [tenantId, draftTenantId]) {
+    branchByTenant.set(t, await seedBranch(asService, { tenantId: t }));
+  }
   vehicleId = await seedVehicle(tenantId);
 });
 
@@ -153,6 +150,7 @@ afterAll(async () => {
     await prisma.auditLog.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.vehicle.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     await prisma.user.deleteMany({ where: { id: { in: [ownerId, reviewerId] } } });
   }

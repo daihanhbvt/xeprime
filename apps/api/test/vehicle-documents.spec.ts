@@ -17,10 +17,7 @@ import {
 import 'reflect-metadata';
 import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { VehicleDocumentsController } from '../src/modules/vehicles/documents/vehicle-documents.controller';
 import { VehicleDocumentsService } from '../src/modules/vehicles/documents/vehicle-documents.service';
@@ -30,8 +27,8 @@ import type {
 } from '../src/modules/vehicles/documents/ocr-provider';
 import { OcrNotConfiguredProvider } from '../src/modules/vehicles/documents/ocr-provider';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 5 + 5.1 — Giấy tờ xe & OCR trên PostgreSQL THẬT; R2 và OCR đều là FAKE trong bộ nhớ
@@ -78,14 +75,10 @@ const fakeOcr: VehicleDocumentOcrProvider & { result: OcrExtractionResult | Erro
 
 const audit = new AuditService(asService);
 const listings = new ListingsService(asService);
-const vehicles = new VehiclesService(
-  asService,
-  audit,
-  listings,
-  new BillingService(asService, audit),
-  new CatalogService(asService, audit),
-  new PricingService(asService, audit),
-);
+// Dùng CHUNG instance `listings` với service xe: test dưới `spyOn` nó để mô phỏng lỗi giữa
+// transaction, nên spy phải gắn đúng đối tượng mà VehiclesService thật sự gọi.
+const vehicles = makeVehiclesService(asService, { listings });
+const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const documents = new VehicleDocumentsService(asService, files, vehicles, audit, fakeOcr);
 
@@ -156,7 +149,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
   });
 
 async function createVehicle(code: string) {
-  return vehicles.create(tenantId, ownerId, {
+  return createVehicleWithBranch(tenantId, ownerId, {
     code,
     name: 'Toyota Vios',
     vehicleType: VEHICLE_TYPE.CAR,

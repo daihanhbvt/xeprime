@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
+  PERMISSION,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
@@ -39,6 +40,9 @@ import {
 import { VehicleDocumentsWorkspace } from '@/features/vehicle-documents/components/VehicleDocumentsWorkspace';
 import { VehicleMaintenanceWorkspace } from '@/features/vehicle-maintenance/components/VehicleMaintenanceWorkspace';
 import { VehicleSourceWorkspace } from './VehicleSourceWorkspace';
+import { useActiveBranches } from '@/features/branches/hooks/use-branches';
+import { branchLabel } from '@/features/branches/branch-label';
+import { usePermissions } from '@/hooks/use-permissions';
 import styles from './VehicleEditWorkspace.module.css';
 
 type EditableTab = 'information' | 'media';
@@ -54,6 +58,9 @@ interface VehicleEditWorkspaceProps {
 
 const INFORMATION_FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
   'name',
+  // Chi nhánh giữ xe = vị trí công khai của xe, ô nằm ngay ở tab này nên phải được validate và
+  // đếm lỗi cùng các trường khác — không thì lưu với chi nhánh rỗng mà không có báo lỗi nào.
+  'branchId',
   'vehicleType',
   'serviceType',
   'operationStatus',
@@ -132,6 +139,28 @@ export function VehicleEditWorkspace({
   });
   const vehicleType = useWatch({ control, name: 'vehicleType' });
   const fuelType = useWatch({ control, name: 'fuelType' });
+
+  /**
+   * Options chi nhánh cho tab Thông tin. Danh sách chỉ có chi nhánh ĐANG HOẠT ĐỘNG (không cho
+   * chuyển xe vào chi nhánh đã ngừng), nhưng phải BỔ SUNG chi nhánh hiện tại của xe nếu nó vừa
+   * bị ngừng — thiếu bước này thì mở form sửa sẽ thấy ô chi nhánh trống và người dùng tưởng xe
+   * mất vị trí.
+   */
+  const permissions = usePermissions();
+  const canUpdate = permissions.has(PERMISSION.VEHICLE_UPDATE);
+  const branches = useActiveBranches();
+  const branchOptions = useMemo(() => {
+    const options = (branches.data?.items ?? []).map((b) => ({
+      value: b.id,
+      label: branchLabel(b),
+    }));
+    const current = vehicle.branch;
+    if (current && !options.some((o) => o.value === current.id)) {
+      options.unshift({ value: current.id, label: `${branchLabel(current)} (đã ngừng)` });
+    }
+    return options;
+  }, [branches.data, vehicle.branch]);
+
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
   const operationMeta =
     VEHICLE_OPERATION_STATUS_META[vehicle.operationStatus as VehicleOperationStatus];
@@ -282,6 +311,9 @@ export function VehicleEditWorkspace({
                     control={control}
                     isCar={vehicleType === VEHICLE_TYPE.CAR}
                     codeReadOnly
+                    branchOptions={branchOptions}
+                    branchLoading={branches.isLoading}
+                    branchDisabled={!canUpdate}
                   />
                 </Card>
                 <Card title="Quản lý trạng thái" className={styles.formCard}>

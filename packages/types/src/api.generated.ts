@@ -247,6 +247,58 @@ export interface paths {
         patch: operations["UsersController_updateMe"];
         trace?: never;
     };
+    "/provinces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh mục tỉnh/thành đang mở cho đăng ký & tạo chi nhánh */
+        get: operations["ProvincesController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Toàn bộ danh mục tỉnh/thành kèm số chi nhánh, số xe và số xe đang công khai */
+        get: operations["PlatformLocationsController_list"];
+        put?: never;
+        /** Thêm đơn vị hành chính cấp tỉnh mới (mã bất biến sau khi tạo) */
+        post: operations["PlatformLocationsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/locations/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Đổi metadata hiển thị / bật-tắt chọn mới / ẩn-hiện công khai */
+        patch: operations["PlatformLocationsController_update"];
+        trace?: never;
+    };
     "/tenants": {
         parameters: {
             query?: never;
@@ -332,41 +384,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/calendar/resources": {
+    "/branches": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Danh sách xe làm hàng của resource timeline */
-        get: operations["CalendarController_resources"];
+        /** Danh sách chi nhánh của gian hàng (kèm số xe mỗi chi nhánh) */
+        get: operations["BranchesController_list"];
         put?: never;
-        post?: never;
+        /** Tạo chi nhánh mới (mã CNxx sinh ở server) */
+        post: operations["BranchesController_create"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/calendar/events": {
+    "/branches/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Sự kiện chiếm lịch trong khoảng thời gian */
-        get: operations["CalendarController_events"];
+        /** Chi tiết một chi nhánh */
+        get: operations["BranchesController_get"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Sửa chi nhánh (đổi tỉnh sẽ đồng bộ lại vị trí công khai của xe) */
+        patch: operations["BranchesController_update"];
         trace?: never;
     };
-    "/calendar/check-conflict": {
+    "/branches/{id}/set-default": {
         parameters: {
             query?: never;
             header?: never;
@@ -375,8 +429,42 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Xem trước trùng lịch (preview, không phải lớp bảo vệ) */
-        post: operations["CalendarController_checkConflict"];
+        /** Đặt làm chi nhánh mặc định của gian hàng */
+        post: operations["BranchesController_setDefault"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/branches/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ngừng hoạt động (chặn nếu còn xe hoặc đơn đang chạy/sắp tới) */
+        post: operations["BranchesController_deactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/branches/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bật lại chi nhánh đã ngừng hoạt động */
+        post: operations["BranchesController_activate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -496,6 +584,57 @@ export interface paths {
         get: operations["PublicShopsController_getShopListings"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/calendar/resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách xe làm hàng của resource timeline */
+        get: operations["CalendarController_resources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/calendar/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sự kiện chiếm lịch trong khoảng thời gian */
+        get: operations["CalendarController_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/calendar/check-conflict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Xem trước trùng lịch (preview, không phải lớp bảo vệ) */
+        post: operations["CalendarController_checkConflict"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2750,7 +2889,7 @@ export interface components {
             tenantRole?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer" | null;
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "branches.view" | "branches.manage" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii" | "platform.locations.view" | "platform.locations.manage")[];
         };
         NotificationDto: {
             id: string;
@@ -2805,9 +2944,76 @@ export interface components {
             displayName?: string;
             avatarUrl?: string;
         };
+        ProvinceDto: {
+            /**
+             * @description Mã hành chính chính thức, 2 ký tự
+             * @example 79
+             */
+            code: string;
+            /** @example Hồ Chí Minh */
+            name: string;
+            /** @enum {string} */
+            administrativeType: "province" | "municipality";
+            /** @example ho-chi-minh */
+            slug: string;
+        };
+        ProvinceListDto: {
+            items: components["schemas"]["ProvinceDto"][];
+        };
+        PlatformProvinceDto: {
+            /**
+             * @description Mã hành chính chính thức, 2 ký tự
+             * @example 79
+             */
+            code: string;
+            /** @example Hồ Chí Minh */
+            name: string;
+            /** @enum {string} */
+            administrativeType: "province" | "municipality";
+            /** @example ho-chi-minh */
+            slug: string;
+            isEnabled: boolean;
+            isPublicVisible: boolean;
+            sortOrder: number;
+            /** @description Số chi nhánh đang trỏ tới tỉnh này (chưa xoá) */
+            branchCount: number;
+            /** @description Tổng số xe (mọi trạng thái) thuộc các chi nhánh đó */
+            vehicleCount: number;
+            /** @description Số xe đang hiển thị công khai trên marketplace */
+            publicVehicleCount: number;
+            /** @description Bí danh (tên cũ / cách viết khác) */
+            aliases: string[];
+        };
+        PlatformProvinceListDto: {
+            items: components["schemas"]["PlatformProvinceDto"][];
+        };
+        CreateProvinceDto: {
+            /** @example 97 */
+            code: string;
+            name: string;
+            /** @enum {string} */
+            administrativeType: "province" | "municipality";
+            sortOrder?: number;
+        };
+        UpdateProvinceDto: {
+            /** @description Cho phép chọn khi đăng ký shop / tạo chi nhánh */
+            isEnabled?: boolean;
+            /** @description Cho phép xuất hiện trên marketplace công khai */
+            isPublicVisible?: boolean;
+            sortOrder?: number;
+            /** @description Tên hiển thị chuẩn */
+            name?: string;
+        };
         RegisterShopDto: {
             /** @example Cho thuê xe Bình Minh */
             name: string;
+            /**
+             * @description Mã tỉnh/thành 2 ký tự (GET /provinces)
+             * @example 48
+             */
+            provinceCode: string;
+            /** @description Địa chỉ chi nhánh đầu tiên */
+            address?: string;
             /**
              * @default individual
              * @enum {string}
@@ -2840,6 +3046,13 @@ export interface components {
             submittedAt: string;
             reviewedAt?: string | null;
         };
+        DefaultBranchDto: {
+            id: string;
+            code: string;
+            name: string;
+            provinceCode?: string | null;
+            provinceName?: string | null;
+        };
         MyShopDto: {
             id: string;
             code: string;
@@ -2853,6 +3066,7 @@ export interface components {
             email?: string | null;
             profile: components["schemas"]["TenantProfileDto"];
             latestApproval?: components["schemas"]["LatestApprovalDto"] | null;
+            defaultBranch?: components["schemas"]["DefaultBranchDto"] | null;
         };
         CurrentTenantDto: {
             id: string;
@@ -2891,63 +3105,64 @@ export interface components {
             bankAccountName?: string;
             qrUrl?: string;
         };
-        CalendarResourceDto: {
+        BranchDto: {
             id: string;
-            vehicleId: string;
+            /** @example CN01 */
+            code: string;
+            /** @example Chi nhánh Đà Nẵng */
             name: string;
-            plateNumber?: Record<string, never> | null;
+            provinceCode?: string | null;
+            provinceName?: string | null;
+            address?: string | null;
+            phone?: string | null;
+            /** @description Chuỗi thập phân */
+            latitude?: string | null;
+            longitude?: string | null;
+            isDefault: boolean;
             /** @enum {string} */
-            vehicleType: "car" | "motorbike";
-            /** @enum {string} */
-            operationStatus: "available" | "renting" | "maintenance" | "inactive";
+            status: "active" | "inactive";
+            /** @description Số xe (chưa xoá) đang thuộc chi nhánh */
+            vehicleCount: number;
+            /** @description Chi nhánh sinh từ migration mà chưa quy được tỉnh — chủ shop cần bổ sung */
+            needsLocationReview: boolean;
+            /** @description Giá trị tỉnh tự do cũ, chỉ để đối chiếu khi bổ sung vị trí */
+            legacyProvinceValue?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+            /** @description ISO-8601 UTC */
+            updatedAt: string;
         };
-        CalendarEventDto: {
-            id: string;
-            /** @description vehicleId — khớp CalendarResourceDto.id */
-            resourceId: string;
-            /** @enum {string} */
-            type: "booking" | "blocked_range" | "maintenance";
-            title: string;
-            customerName?: Record<string, never> | null;
-            /**
-             * @description ISO-8601 UTC
-             * @example 2026-07-12T02:00:00.000Z
-             */
-            startAt: string;
-            /**
-             * @description ISO-8601 UTC
-             * @example 2026-07-15T04:00:00.000Z
-             */
-            endAt: string;
-            /** @description BookingStatus khi type=booking */
-            status?: Record<string, never> | null;
-            sourceId?: Record<string, never> | null;
+        BranchListDto: {
+            items: components["schemas"]["BranchDto"][];
+            /** @description Tổng số chi nhánh (mọi trạng thái) */
+            total: number;
+            /** @description Số chi nhánh đang hoạt động */
+            activeCount: number;
+            /** @description Số chi nhánh còn thiếu tỉnh */
+            needsReviewCount: number;
         };
-        CheckConflictDto: {
-            /** @description ID xe (ULID) */
-            vehicleId: string;
+        CreateBranchDto: {
+            /** @example Chi nhánh Đà Nẵng */
+            name: string;
             /**
-             * Format: date-time
-             * @description Nhận xe, ISO-8601 UTC
+             * @description Mã tỉnh — BẮT BUỘC, phải đang mở đăng ký
+             * @example 48
              */
-            startAt: string;
-            /**
-             * Format: date-time
-             * @description Trả xe, ISO-8601 UTC
-             */
-            endAt: string;
-            /** @description Bỏ qua nguồn này (khi sửa chính đơn đang xét) */
-            excludeSourceId?: string;
+            provinceCode: string;
+            address?: string;
+            /** @example 0901234567 */
+            phone?: string;
+            /** @description Toạ độ tuỳ chọn — hiện chỉ lưu, chưa dùng để tính bán kính */
+            latitude?: number;
+            longitude?: number;
         };
-        ConflictItemDto: {
-            id: string;
-            sourceType: string;
-            sourceId: string;
-        };
-        CheckConflictResultDto: {
-            /** @description Có trùng lịch hay không */
-            hasConflict: boolean;
-            conflicts: components["schemas"]["ConflictItemDto"][];
+        UpdateBranchDto: {
+            name?: string;
+            provinceCode?: string;
+            address?: string;
+            phone?: string;
+            latitude?: number;
+            longitude?: number;
         };
         PublicListingDto: {
             id: string;
@@ -2980,6 +3195,8 @@ export interface components {
             shopSlug: string;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
+            /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
+            provinceCode?: string | null;
             /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
             ratingAvg?: string | null;
             /** @description Số lượt đánh giá của xe */
@@ -3064,6 +3281,8 @@ export interface components {
             shopSlug: string;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
+            /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
+            provinceCode?: string | null;
             /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
             ratingAvg?: string | null;
             /** @description Số lượt đánh giá của xe */
@@ -3081,7 +3300,9 @@ export interface components {
             features: string[];
         };
         PublicDestinationDto: {
-            /** @description Tên tỉnh/thành — dùng luôn làm giá trị lọc `province` */
+            /** @description Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode` */
+            provinceCode: string;
+            /** @description Tên tỉnh chuẩn — chỉ để HIỂN THỊ, không dùng để lọc */
             provinceName: string;
             /** @description Số xe đang hiển thị công khai ở tỉnh/thành này */
             vehicleCount: number;
@@ -3118,10 +3339,75 @@ export interface components {
             ratingAvg: string;
             ratingCount: number;
         };
+        CalendarResourceDto: {
+            id: string;
+            vehicleId: string;
+            name: string;
+            plateNumber?: Record<string, never> | null;
+            /** @enum {string} */
+            vehicleType: "car" | "motorbike";
+            /** @enum {string} */
+            operationStatus: "available" | "renting" | "maintenance" | "inactive";
+        };
+        CalendarEventDto: {
+            id: string;
+            /** @description vehicleId — khớp CalendarResourceDto.id */
+            resourceId: string;
+            /** @enum {string} */
+            type: "booking" | "blocked_range" | "maintenance";
+            title: string;
+            customerName?: Record<string, never> | null;
+            /**
+             * @description ISO-8601 UTC
+             * @example 2026-07-12T02:00:00.000Z
+             */
+            startAt: string;
+            /**
+             * @description ISO-8601 UTC
+             * @example 2026-07-15T04:00:00.000Z
+             */
+            endAt: string;
+            /** @description BookingStatus khi type=booking */
+            status?: Record<string, never> | null;
+            sourceId?: Record<string, never> | null;
+        };
+        CheckConflictDto: {
+            /** @description ID xe (ULID) */
+            vehicleId: string;
+            /**
+             * Format: date-time
+             * @description Nhận xe, ISO-8601 UTC
+             */
+            startAt: string;
+            /**
+             * Format: date-time
+             * @description Trả xe, ISO-8601 UTC
+             */
+            endAt: string;
+            /** @description Bỏ qua nguồn này (khi sửa chính đơn đang xét) */
+            excludeSourceId?: string;
+        };
+        ConflictItemDto: {
+            id: string;
+            sourceType: string;
+            sourceId: string;
+        };
+        CheckConflictResultDto: {
+            /** @description Có trùng lịch hay không */
+            hasConflict: boolean;
+            conflicts: components["schemas"]["ConflictItemDto"][];
+        };
+        VehicleBranchSummaryDto: {
+            id: string;
+            name: string;
+            provinceCode?: string | null;
+            provinceName?: string | null;
+        };
         VehicleListItemDto: {
             id: string;
             code: string;
             name: string;
+            branch?: components["schemas"]["VehicleBranchSummaryDto"] | null;
             plateNumber?: string | null;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
@@ -3223,6 +3509,7 @@ export interface components {
             id: string;
             code: string;
             name: string;
+            branch?: components["schemas"]["VehicleBranchSummaryDto"] | null;
             plateNumber?: string | null;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
@@ -3502,6 +3789,8 @@ export interface components {
             code?: string;
             /** @example Toyota Vios 2022 */
             name: string;
+            /** @description Id chi nhánh đang hoạt động của gian hàng (GET /branches) */
+            branchId: string;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
             /** @enum {string} */
@@ -3585,6 +3874,8 @@ export interface components {
             code?: string;
             /** @example Toyota Vios 2022 */
             name?: string;
+            /** @description Id chi nhánh đang hoạt động của gian hàng (GET /branches) */
+            branchId?: string;
             /** @enum {string} */
             vehicleType?: "car" | "motorbike";
             /** @enum {string} */
@@ -6230,6 +6521,95 @@ export interface operations {
             };
         };
     };
+    ProvincesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProvinceListDto"];
+                };
+            };
+        };
+    };
+    PlatformLocationsController_list: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo mã, tên hoặc bí danh */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProvinceListDto"];
+                };
+            };
+        };
+    };
+    PlatformLocationsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProvinceDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProvinceDto"];
+                };
+            };
+        };
+    };
+    PlatformLocationsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProvinceDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformProvinceDto"];
+                };
+            };
+        };
+    };
     TenantsController_register: {
         parameters: {
             query?: never;
@@ -6333,16 +6713,14 @@ export interface operations {
             };
         };
     };
-    CalendarController_resources: {
+    BranchesController_list: {
         parameters: {
-            query: {
-                /** @description Đầu khoảng, ISO-8601 UTC */
-                startAt: string;
-                /** @description Cuối khoảng, ISO-8601 UTC */
-                endAt: string;
-                vehicleType?: "car" | "motorbike";
-                /** @description Tìm theo tên xe hoặc biển số */
+            query?: {
+                /** @description Tìm theo tên, mã hoặc địa chỉ */
                 q?: string;
+                status?: "active" | "inactive";
+                /** @description Lọc theo mã tỉnh */
+                provinceCode?: string;
             };
             header?: never;
             path?: never;
@@ -6355,39 +6733,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CalendarResourceDto"][];
+                    "application/json": components["schemas"]["BranchListDto"];
                 };
             };
         };
     };
-    CalendarController_events: {
-        parameters: {
-            query: {
-                /** @description Đầu khoảng, ISO-8601 UTC */
-                startAt: string;
-                /** @description Cuối khoảng, ISO-8601 UTC */
-                endAt: string;
-                vehicleType?: "car" | "motorbike";
-                /** @description Tìm theo tên xe hoặc biển số */
-                q?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CalendarEventDto"][];
-                };
-            };
-        };
-    };
-    CalendarController_checkConflict: {
+    BranchesController_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -6396,7 +6747,53 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CheckConflictDto"];
+                "application/json": components["schemas"]["CreateBranchDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchDto"];
+                };
+            };
+        };
+    };
+    BranchesController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchDto"];
+                };
+            };
+        };
+    };
+    BranchesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBranchDto"];
             };
         };
         responses: {
@@ -6405,7 +6802,70 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CheckConflictResultDto"];
+                    "application/json": components["schemas"]["BranchDto"];
+                };
+            };
+        };
+    };
+    BranchesController_setDefault: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchDto"];
+                };
+            };
+        };
+    };
+    BranchesController_deactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchDto"];
+                };
+            };
+        };
+    };
+    BranchesController_activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchDto"];
                 };
             };
         };
@@ -6438,7 +6898,12 @@ export interface operations {
                 minSeats?: number;
                 /** @description Tìm theo tên/hãng/model */
                 q?: string;
-                /** @description Lọc theo tỉnh/thành của gian hàng */
+                /** @description Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations) */
+                provinceCode?: string;
+                /**
+                 * @deprecated
+                 * @description Tên tỉnh (link cũ) — được quy về provinceCode qua bí danh
+                 */
                 province?: string;
                 /** @description Giá thuê/ngày tối thiểu (VND) */
                 priceMin?: number;
@@ -6496,7 +6961,12 @@ export interface operations {
                 minSeats?: number;
                 /** @description Tìm theo tên/hãng/model */
                 q?: string;
-                /** @description Lọc theo tỉnh/thành của gian hàng */
+                /** @description Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations) */
+                provinceCode?: string;
+                /**
+                 * @deprecated
+                 * @description Tên tỉnh (link cũ) — được quy về provinceCode qua bí danh
+                 */
                 province?: string;
                 /** @description Giá thuê/ngày tối thiểu (VND) */
                 priceMin?: number;
@@ -6633,6 +7103,87 @@ export interface operations {
             };
         };
     };
+    CalendarController_resources: {
+        parameters: {
+            query: {
+                /** @description Đầu khoảng, ISO-8601 UTC */
+                startAt: string;
+                /** @description Cuối khoảng, ISO-8601 UTC */
+                endAt: string;
+                vehicleType?: "car" | "motorbike";
+                /** @description Tìm theo tên xe hoặc biển số */
+                q?: string;
+                /** @description Chỉ hiện xe của một chi nhánh */
+                branchId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarResourceDto"][];
+                };
+            };
+        };
+    };
+    CalendarController_events: {
+        parameters: {
+            query: {
+                /** @description Đầu khoảng, ISO-8601 UTC */
+                startAt: string;
+                /** @description Cuối khoảng, ISO-8601 UTC */
+                endAt: string;
+                vehicleType?: "car" | "motorbike";
+                /** @description Tìm theo tên xe hoặc biển số */
+                q?: string;
+                /** @description Chỉ hiện xe của một chi nhánh */
+                branchId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarEventDto"][];
+                };
+            };
+        };
+    };
+    CalendarController_checkConflict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckConflictDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckConflictResultDto"];
+                };
+            };
+        };
+    };
     VehiclesController_list: {
         parameters: {
             query?: {
@@ -6642,6 +7193,8 @@ export interface operations {
                 serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
                 operationStatus?: "available" | "renting" | "maintenance" | "inactive";
                 publicStatus?: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
+                /** @description Id chi nhánh — chỉ thu hẹp trong gian hàng hiện tại */
+                branchId?: string;
                 sort?: "newest" | "name_asc" | "code_asc" | "price_asc" | "price_desc";
                 page?: number;
                 limit?: number;
@@ -8060,6 +8613,8 @@ export interface operations {
                 status?: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
                 /** @description Lọc theo xe */
                 vehicleId?: string;
+                /** @description Lọc theo chi nhánh (qua xe của đơn) */
+                branchId?: string;
                 /** @description Trả xe từ (ISO) — lọc cho panel quá hạn/sắp trả */
                 returnFrom?: string;
                 /** @description Trả xe đến (ISO) */
@@ -8603,6 +9158,8 @@ export interface operations {
             query?: {
                 status?: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking";
                 vehicleId?: string;
+                /** @description Lọc theo chi nhánh (qua xe của yêu cầu) */
+                branchId?: string;
                 page?: number;
                 limit?: number;
             };

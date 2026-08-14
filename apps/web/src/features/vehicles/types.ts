@@ -24,6 +24,8 @@ export interface VehicleFilters {
   serviceType?: string;
   operationStatus?: string;
   publicStatus?: string;
+  /** Chi nhánh giữ xe — ghép từ bộ chọn ở thanh trên, không phải một ô lọc riêng trên trang. */
+  branchId?: string;
   sort?: VehicleSort;
   page?: number;
   limit?: number;

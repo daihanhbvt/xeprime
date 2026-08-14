@@ -26,6 +26,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
+import { BranchesService } from '../branches/branches.service';
 import { CatalogService } from '../catalog/catalog.service';
 import { policyData, PricingService } from '../pricing/pricing.service';
 import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
@@ -67,6 +68,10 @@ const LIST_SELECT = {
   weekdayPrice: true,
   weekendPrice: true,
   updatedAt: true,
+  // Chi nhánh đi kèm MỌI danh sách xe: "xe này ở đâu" là thông tin vận hành cơ bản, và tỉnh
+  // lấy từ đây chứ không từ hồ sơ gian hàng nữa.
+  branchId: true,
+  branch: { select: { name: true, province: { select: { code: true, name: true } } } },
 } satisfies Prisma.VehicleSelect;
 
 const DETAIL_SELECT = {
@@ -94,6 +99,7 @@ const DETAIL_SELECT = {
 const SENSITIVE_SELECT = {
   id: true,
   code: true,
+  branchId: true,
   publicStatus: true,
   weekdayPrice: true,
   weekendPrice: true,
@@ -113,6 +119,7 @@ export class VehiclesService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly listings: ListingsService,
+    private readonly branches: BranchesService,
     private readonly billing: BillingService,
     private readonly catalog: CatalogService,
     private readonly pricing: PricingService,
@@ -308,6 +315,9 @@ export class VehiclesService {
       ...(query.serviceType ? { serviceType: query.serviceType } : {}),
       ...(query.operationStatus ? { operationStatus: query.operationStatus } : {}),
       ...(query.publicStatus ? { publicStatus: query.publicStatus } : {}),
+      // `branchId` đứng SAU `tenantId` và không thay thế nó: bộ chọn chi nhánh chỉ thu hẹp phạm
+      // vi, không bao giờ là đường vòng ra khỏi gian hàng của mình.
+      ...(query.branchId ? { branchId: query.branchId } : {}),
       ...(query.q ? { OR: searchOr(query.q) } : {}),
     };
 
@@ -380,10 +390,14 @@ export class VehiclesService {
     assertVehicleClassification(dto.vehicleType, dto.fuelType, dto.bodyType);
 
     await this.prisma.$transaction(async (tx) => {
+      // Chi nhánh kiểm TRONG transaction: nó phải thuộc đúng gian hàng và đang hoạt động ngay
+      // tại thời điểm ghi. FK composite `(branch_id, tenant_id)` là chốt chặn cuối ở DB.
+      const branch = await this.branches.assertAssignable(tx, tenantId, dto.branchId);
       await tx.vehicle.create({
         data: {
           id,
           tenantId,
+          branchId: branch.id,
           createdBy: userId,
           code,
           name: dto.name,
@@ -444,10 +458,23 @@ export class VehiclesService {
       current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC &&
       hasSensitiveChange(current, dto);
 
+    // Chuyển xe sang chi nhánh khác = đổi VỊ TRÍ CÔNG KHAI của nó. Kiểm quyền sở hữu + trạng
+    // thái ngay đây, và ghi audit riêng: "xe này chuyển từ đâu sang đâu" là câu hỏi có thật khi
+    // đối soát, không suy được từ bản ghi sửa xe chung.
+    const branchChanged = dto.branchId !== undefined && dto.branchId !== current.branchId;
+    if (branchChanged) {
+      await this.branches.assertAssignable(tx, tenantId, dto.branchId!);
+    }
+
     const data: Prisma.VehicleUpdateInput = {
       ...(dto.code !== undefined ? { code: dto.code } : {}),
       ...(dto.name !== undefined ? { name: dto.name } : {}),
       ...(dto.vehicleType !== undefined ? { vehicleType: dto.vehicleType } : {}),
+      // `connect` theo khoá COMPOSITE `(id, tenant_id)` — cùng cặp mà FK dưới DB ràng buộc, nên
+      // không có đường nào nối xe sang chi nhánh của gian hàng khác.
+      ...(branchChanged
+        ? { branch: { connect: { id_tenantId: { id: dto.branchId!, tenantId } } } }
+        : {}),
       ...writableFields(dto),
       ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
     };
@@ -470,6 +497,22 @@ export class VehiclesService {
     }
     // Mọi sửa xe → đồng bộ snapshot public_listings; nhạy cảm đổi → pending → listing ẩn (ADR 0008).
     await this.listings.syncFromVehicle(current.id, tx);
+
+    if (branchChanged) {
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'vehicle.branch.reassign',
+          targetType: 'vehicle',
+          targetId: current.id,
+          before: { branchId: current.branchId },
+          after: { branchId: dto.branchId },
+        },
+        tx,
+      );
+    }
   }
 
   /** Giá & chính sách của một xe — nguồn hiệu lực + bản gian hàng để đối chiếu/đặt lại. */
@@ -665,6 +708,18 @@ export class VehiclesService {
           status === VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW
             ? 'Xe đang chờ duyệt công khai.'
             : 'Xe đã ở trạng thái công khai.',
+      });
+    }
+
+    // Không có tỉnh hợp lệ thì marketplace không biết xếp xe vào đâu — và scope công khai sẽ
+    // loại nó ra. Chặn ngay ở bước GỬI DUYỆT với thông báo chỉ đúng việc phải làm, thay vì để
+    // xe được duyệt rồi không ai tìm thấy.
+    if (!vehicle.branchId || !vehicle.branch?.province?.code) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.BRANCH_LOCATION_REQUIRED,
+        message:
+          'Chi nhánh của xe chưa có tỉnh/thành. Hãy bổ sung tỉnh cho chi nhánh trước khi đăng xe lên chợ.',
+        details: { branchId: vehicle.branchId },
       });
     }
 
@@ -944,6 +999,14 @@ function toListItem(
     id: v.id,
     code: v.code,
     name: v.name,
+    branch: v.branch
+      ? {
+          id: v.branchId!,
+          name: v.branch.name,
+          provinceCode: v.branch.province?.code ?? null,
+          provinceName: v.branch.province?.name ?? null,
+        }
+      : null,
     plateNumber: v.plateNumber,
     vehicleType: v.vehicleType,
     serviceType: v.serviceType,

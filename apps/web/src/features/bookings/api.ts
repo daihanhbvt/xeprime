@@ -25,6 +25,7 @@ export function filtersToParams(filters: BookingFilters): QueryParams {
     q: filters.q ?? null,
     status: filters.status ?? null,
     vehicleId: filters.vehicleId ?? null,
+    branchId: filters.branchId ?? null,
     returnFrom: filters.returnFrom ?? null,
     returnTo: filters.returnTo ?? null,
     sort: filters.sort ?? null,

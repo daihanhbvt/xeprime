@@ -25,6 +25,11 @@ interface SelectFieldProps<T extends FieldValues> {
   help?: ReactNode;
   /** Gõ để lọc trong danh sách — bật cho danh mục dài (hãng xe hiện có ~17 mục). */
   showSearch?: boolean;
+  /**
+   * Options đang được nạp từ API (danh mục tỉnh, chi nhánh). Hiện spinner trong ô thay vì để
+   * người dùng nhìn một dropdown rỗng và tưởng là "không có lựa chọn nào".
+   */
+  loading?: boolean;
 }
 
 /**
@@ -42,6 +47,7 @@ export function SelectField<T extends FieldValues>({
   required,
   help,
   showSearch,
+  loading,
 }: SelectFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // AntD `Select` không tự nhận `htmlFor` của `Form.Item` — thiếu `id` tường minh thì bấm nhãn
@@ -69,6 +75,7 @@ export function SelectField<T extends FieldValues>({
         placeholder={placeholder}
         allowClear={allowClear}
         disabled={disabled}
+        loading={loading}
         showSearch={showSearch}
         // Mặc định AntD lọc theo `value` (là key slug), nên gõ "Mercedes" không ra `mercedes`.
         optionFilterProp={showSearch ? 'label' : undefined}

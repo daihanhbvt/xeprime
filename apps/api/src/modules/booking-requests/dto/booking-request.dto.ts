@@ -116,6 +116,13 @@ export class BookingRequestListQueryDto {
   @Length(26, 26)
   vehicleId?: string;
 
+  /** Lọc theo chi nhánh của XE được yêu cầu — nguồn là bộ chọn chi nhánh ở thanh trên. */
+  @ApiPropertyOptional({ description: 'Lọc theo chi nhánh (qua xe của yêu cầu)' })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  branchId?: string;
+
   @ApiPropertyOptional({ default: 1, minimum: 1 })
   @IsOptional()
   @Type(() => Number)

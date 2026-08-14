@@ -11,8 +11,9 @@ import { Topbar } from './Topbar';
  * Thanh trên của cổng quản lý.
  *
  * Hai điều bộ này bảo vệ:
- *  1. **không có điều khiển chết** — trước 1D-B topbar có ô "Tất cả chi nhánh" là dropdown
- *     một mục, không nối với dữ liệu nào;
+ *  1. **không có điều khiển chết** — ô "Tất cả chi nhánh" chỉ được dựng khi nó THẬT SỰ chọn
+ *     được (≥2 chi nhánh + có quyền `branches.view`); gian hàng một chi nhánh thì đó là ngữ
+ *     cảnh, không phải dropdown một mục như bản trước 1D-B;
  *  2. **không có nút icon vô danh** — mọi nút chỉ có icon phải có `aria-label`.
  */
 
@@ -52,6 +53,26 @@ const currentUser = vi.hoisted(() => ({ value: null as unknown }));
 
 vi.mock('@/hooks/use-current-user', () => ({
   useCurrentUser: () => ({ data: currentUser.value, isLoading: false }),
+}));
+
+/**
+ * Chi nhánh: mock ở tầng HOOK SCOPE (không mock `useBranches`) để test nói đúng thứ nó quan tâm —
+ * "thanh trên hiện gì với N chi nhánh", chứ không phải cách hook gọi API.
+ */
+const branchScope = vi.hoisted(() => ({
+  value: {
+    branchId: null as string | null,
+    branch: null as unknown,
+    options: [] as { id: string; name: string; provinceName: string | null; isDefault: boolean }[],
+    canSelect: false,
+    isLoading: false,
+    select: vi.fn(),
+  },
+}));
+
+vi.mock('@/features/branches/hooks/use-branch-scope', () => ({
+  useBranchScope: () => branchScope.value,
+  useBranchScopeParams: () => ({}),
 }));
 
 const OWNER = {
@@ -94,6 +115,14 @@ beforeEach(() => {
   nav.pathname = '/manage/vehicles';
   chat.data = undefined;
   perms.granted = new Set<string>(['tenant.view', 'vehicles.view']);
+  branchScope.value = {
+    branchId: null,
+    branch: null,
+    options: [],
+    canSelect: false,
+    isLoading: false,
+    select: vi.fn(),
+  };
 });
 
 afterEach(cleanup);
@@ -109,8 +138,38 @@ describe('Topbar — dựng', () => {
     renderTopbar();
 
     expect(screen.getByText('Thuê Xe Minh Anh')).toBeTruthy();
-    // Điều khiển chết đã gỡ ở 1D-B.
+    // Không có chi nhánh nào chọn được → KHÔNG dựng dropdown (điều khiển chết đã gỡ ở 1D-B).
     expect(screen.queryByText('Tất cả chi nhánh')).toBeNull();
+  });
+
+  it('gian hàng MỘT chi nhánh: hiện ngữ cảnh, không dựng dropdown một mục', () => {
+    branchScope.value = {
+      ...branchScope.value,
+      options: [{ id: 'B1', name: 'Chi nhánh Đà Nẵng', provinceName: 'Đà Nẵng', isDefault: true }],
+      canSelect: false,
+    };
+    renderTopbar();
+
+    expect(screen.getByText('Chi nhánh Đà Nẵng · Đà Nẵng')).toBeTruthy();
+    expect(screen.queryByLabelText('Chi nhánh đang xem')).toBeNull();
+  });
+
+  it('gian hàng NHIỀU chi nhánh: bộ chọn là điều khiển thật, đổi được scope', () => {
+    const select = vi.fn();
+    branchScope.value = {
+      ...branchScope.value,
+      options: [
+        { id: 'B1', name: 'Chi nhánh HCM', provinceName: 'Hồ Chí Minh', isDefault: true },
+        { id: 'B2', name: 'Chi nhánh Đà Nẵng', provinceName: 'Đà Nẵng', isDefault: false },
+      ],
+      canSelect: true,
+      select,
+    };
+    renderTopbar();
+
+    // Đang ở "Tất cả chi nhánh" và ô chọn có tên truy cập được.
+    expect(screen.getByLabelText('Chi nhánh đang xem')).toBeTruthy();
+    expect(screen.getByTitle('Tất cả chi nhánh')).toBeTruthy();
   });
 
   it('nhân sự nền tảng không thuộc gian hàng nào → không dựng khối gian hàng rỗng', () => {

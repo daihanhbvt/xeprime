@@ -9,15 +9,16 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
-import { PublicListingsService } from '../src/modules/public-listings/public-listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import {
+  makePublicListingsService,
+  makeVehiclesService,
+  seedBranch,
+  seedProvince,
+} from './helpers/service-factory';
 
 /**
  * Gap 3 — 4 test bắt buộc ADR 0008 (§Test), chạy qua các service THẬT trên PostgreSQL:
@@ -30,23 +31,22 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
 const listings = new ListingsService(asService);
-const vehicles = new VehiclesService(
-  asService,
-  audit,
-  listings,
-  new BillingService(asService, audit),
-  new CatalogService(asService, audit),
-  new PricingService(asService, audit),
-);
+const vehicles = makeVehiclesService(asService);
 const approvals = new PlatformApprovalService(asService, audit, notifications, listings);
-const publicListings = new PublicListingsService(asService);
+const publicListings = makePublicListingsService(asService);
 
-const PROV = `ZZ-Sync-${newId().slice(-6)}`;
+/**
+ * Tỉnh riêng của spec này (mã ngoài danh mục chính thức) — cô lập bằng MÃ, vì bộ lọc marketplace
+ * giờ khớp mã chính xác chứ không so tên nữa.
+ */
+const PROV = 'Z1';
+const PROV_NAME = 'Zone Sync';
 
 let dbAvailable = false;
 let ownerId: string;
 let reviewerId: string;
 let tenantId: string;
+let branchId: string;
 let vApprove: string; // xe cho test duyệt/khoá/sửa
 let vDelete: string; // xe cho test xoá mềm
 
@@ -56,6 +56,8 @@ async function seedVehicle(): Promise<string> {
     data: {
       id,
       tenantId,
+      // Vị trí công khai của xe đến từ chi nhánh — snapshot lấy tỉnh ở đây.
+      branchId,
       code: `V-${id.slice(-6)}`,
       name: 'Toyota Vios',
       vehicleType: VEHICLE_TYPE.CAR,
@@ -90,7 +92,7 @@ async function approve(vehicleId: string): Promise<void> {
 }
 
 const inSearch = async (vehicleId: string): Promise<boolean> => {
-  const res = await publicListings.search({ province: PROV, limit: 48 } as never);
+  const res = await publicListings.search({ provinceCode: PROV, limit: 48 } as never);
   return res.data.some((v) => v.id === vehicleId);
 };
 
@@ -124,9 +126,11 @@ beforeAll(async () => {
       ownerUserId: ownerId,
     },
   });
+  await seedProvince(asService, PROV, PROV_NAME);
   await prisma.tenantProfile.create({
-    data: { tenantId, displayName: 'Shop Sync', provinceName: PROV },
+    data: { tenantId, displayName: 'Shop Sync', provinceCode: PROV, provinceName: PROV_NAME },
   });
+  branchId = await seedBranch(asService, { tenantId, provinceCode: PROV });
   await prisma.tenantMembership.create({
     data: {
       id: newId(),
@@ -159,8 +163,11 @@ afterAll(async () => {
     await prisma.vehicle.deleteMany({ where: { tenantId } });
     await prisma.tenantProfile.deleteMany({ where: { tenantId } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId } });
+    await prisma.tenantBranch.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
     await prisma.user.deleteMany({ where: { id: { in: [ownerId, reviewerId] } } });
+    // Tỉnh xoá SAU chi nhánh: FK `ON DELETE RESTRICT` chặn xoá tỉnh còn được tham chiếu.
+    await prisma.province.deleteMany({ where: { code: PROV } });
   }
   await prisma.$disconnect();
 });
@@ -183,7 +190,9 @@ describe('public_listings sync (ADR 0008)', () => {
           status: true,
           title: true,
           weekdayPrice: true,
+          provinceCode: true,
           provinceName: true,
+          branchId: true,
           bodyType: true,
           hourlyPrice: true,
           deliveryEnabled: true,
@@ -197,7 +206,10 @@ describe('public_listings sync (ADR 0008)', () => {
       expect(listing.status).toBe(LISTING_STATUS.ACTIVE);
       expect(listing.title).toBe('Toyota Vios');
       expect(String(listing.weekdayPrice)).toBe('600000');
-      expect(listing.provinceName).toBe(PROV);
+      // Vị trí trên snapshot đến từ CHI NHÁNH: mã để lọc, tên chuẩn để hiển thị.
+      expect(listing.branchId).toBe(branchId);
+      expect(listing.provinceCode).toBe(PROV);
+      expect(listing.provinceName).toBe(PROV_NAME);
       expect(listing.bodyType).toBe('sedan');
       expect(String(listing.hourlyPrice)).toBe('90000');
       expect(listing.deliveryEnabled).toBe(true);

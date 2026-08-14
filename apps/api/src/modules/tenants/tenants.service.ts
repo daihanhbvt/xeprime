@@ -13,8 +13,11 @@ import {
   type TenantStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
+import { BranchesService } from '../branches/branches.service';
+import { ProvincesService } from '../locations/provinces.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
+  DefaultBranchDto,
   MyShopDto,
   RegisterShopDto,
   TenantProfileDto,
@@ -42,11 +45,19 @@ export class TenantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly provinces: ProvincesService,
+    private readonly branches: BranchesService,
   ) {}
 
   /**
-   * Đăng ký gian hàng cho user chưa thuộc tenant nào. Tạo tenant (draft) + membership chủ shop
-   * + hồ sơ rỗng trong một transaction — nửa vời (có tenant mà không có membership) là hỏng.
+   * Đăng ký gian hàng cho user chưa thuộc tenant nào.
+   *
+   * MỘT transaction cho bốn thứ: tenant (draft) + membership chủ shop + hồ sơ + CHI NHÁNH MẶC
+   * ĐỊNH. Nửa vời là hỏng theo nhiều kiểu khác nhau — có tenant mà không có membership thì chủ
+   * shop không vào được; có tenant mà không có chi nhánh thì không tạo được xe nào.
+   *
+   * Tỉnh kiểm TRƯỚC transaction: sai mã là lỗi nhập liệu của người dùng, không đáng để mở
+   * transaction rồi rollback.
    */
   async registerShop(userId: string, dto: RegisterShopDto): Promise<MyShopDto> {
     const existing = await this.prisma.tenantMembership.findFirst({
@@ -59,6 +70,8 @@ export class TenantsService {
         message: 'Tài khoản đã thuộc một gian hàng. Hãy đăng nhập vào gian hàng đó.',
       });
     }
+
+    const province = await this.provinces.assertSelectable(dto.provinceCode);
 
     const id = newId();
     const tenantId = await this.prisma.$transaction(async (tx) => {
@@ -85,7 +98,25 @@ export class TenantsService {
           joinedAt: new Date(),
         },
       });
-      await tx.tenantProfile.create({ data: { tenantId: id, displayName: dto.name } });
+      await tx.tenantProfile.create({
+        data: {
+          tenantId: id,
+          displayName: dto.name,
+          address: dto.address ?? null,
+          // Hai cột này là bản SAO tương thích ngược của chi nhánh mặc định; nguồn sự thật vận
+          // hành là `tenant_branches`. Đồng bộ về sau đi qua `syncProfileFromDefaultBranch`.
+          provinceCode: province.code,
+          provinceName: province.name,
+        },
+      });
+      await this.branches.createDefaultBranch(tx, {
+        tenantId: id,
+        userId,
+        provinceCode: province.code,
+        provinceName: province.name,
+        phone: dto.phone ?? null,
+        address: dto.address ?? null,
+      });
       return id;
     });
 
@@ -109,11 +140,23 @@ export class TenantsService {
     });
     if (!tenant) throw notFound();
 
-    const latest = await this.prisma.approvalTask.findFirst({
-      where: { tenantId, targetType: APPROVAL_TARGET_TYPE.TENANT },
-      orderBy: { submittedAt: 'desc' },
-      select: { status: true, reason: true, submittedAt: true, reviewedAt: true },
-    });
+    const [latest, defaultBranch] = await Promise.all([
+      this.prisma.approvalTask.findFirst({
+        where: { tenantId, targetType: APPROVAL_TARGET_TYPE.TENANT },
+        orderBy: { submittedAt: 'desc' },
+        select: { status: true, reason: true, submittedAt: true, reviewedAt: true },
+      }),
+      this.prisma.tenantBranch.findFirst({
+        where: { tenantId, isDefault: true, deletedAt: null },
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          provinceCode: true,
+          province: { select: { name: true } },
+        },
+      }),
+    ]);
 
     return {
       id: tenant.id,
@@ -132,6 +175,15 @@ export class TenantsService {
             submittedAt: latest.submittedAt.toISOString(),
             reviewedAt: latest.reviewedAt?.toISOString() ?? null,
           }
+        : null,
+      defaultBranch: defaultBranch
+        ? ({
+            id: defaultBranch.id,
+            code: defaultBranch.code,
+            name: defaultBranch.name,
+            provinceCode: defaultBranch.provinceCode,
+            provinceName: defaultBranch.province?.name ?? null,
+          } satisfies DefaultBranchDto)
         : null,
     };
   }

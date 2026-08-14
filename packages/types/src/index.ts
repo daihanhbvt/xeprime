@@ -16,6 +16,7 @@ export * from './pricing';
 export * from './rbac';
 export * from './notifications';
 export * from './api';
+export * from './province';
 export * from './session';
 export * from './upload';
 

@@ -19,6 +19,7 @@ import {
 import { ROUTES } from '@/constants/routes';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { applyFilterPatch } from '../filter-params';
+import { buildProvinceOptions, provinceLabelOf } from '../province-options';
 import { useDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { SearchDialog } from './SearchDialog';
@@ -45,7 +46,8 @@ export function HeroSearch() {
     useDestinations(PROVINCE_OPTIONS_LIMIT);
 
   const [keyword, setKeyword] = useState(filters.q ?? '');
-  const [province, setProvince] = useState(filters.province ?? '');
+  // Giá trị state là MÃ tỉnh — cùng thứ đi vào URL và gửi cho API.
+  const [province, setProvince] = useState(filters.provinceCode ?? '');
   // Desktop không có nút đổi loại xe (hero đúng 4 ô); loại đổi ở sheet mobile/trang /search.
   const vehicleType = filters.vehicleType ?? VEHICLE_TYPE.CAR;
   // Tab "Thuê theo giờ" ánh xạ vào filter `hourly` sẵn có (xe CÓ giá thuê giờ) — nhờ vậy chế độ
@@ -61,24 +63,17 @@ export function HeroSearch() {
   }));
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const provinceOptions = useMemo(() => {
-    const fromApi = (destinations ?? []).map((d) => ({
-      value: d.provinceName,
-      label: d.provinceName,
-    }));
-    const current =
-      province && !fromApi.some((o) => o.value === province)
-        ? [{ value: province, label: province }]
-        : [];
-    return [{ value: '', label: 'Toàn quốc' }, ...current, ...fromApi];
-  }, [destinations, province]);
+  const provinceOptions = useMemo(
+    () => buildProvinceOptions(destinations, province),
+    [destinations, province],
+  );
 
   function submit() {
     const params = new URLSearchParams();
     applyFilterPatch(params, {
       vehicleType,
       q: keyword.trim() || undefined,
-      province: province || undefined,
+      provinceCode: province || undefined,
       pickupAt: range.pickupAt?.toISOString(),
       returnAt: range.returnAt?.toISOString(),
       hourly: mode === 'hourly' ? true : undefined,
@@ -143,7 +138,8 @@ export function HeroSearch() {
   if (isMobile) {
     const summary = [
       VEHICLE_TYPE_LABEL[vehicleType as VehicleType] ?? 'Xe',
-      province || 'Toàn quốc',
+      // Tóm tắt hiện TÊN tỉnh, không hiện mã — mã là chuyện của URL.
+      provinceLabelOf(destinations, province) ?? 'Toàn quốc',
       range.pickupAt && range.returnAt
         ? `${range.pickupAt.format('DD/MM')}–${range.returnAt.format('DD/MM')}`
         : null,

@@ -71,6 +71,11 @@ const optionalMetric = (label: string) =>
 export const vehicleFormSchema = yup.object({
   code: yup.string().trim().max(80).default(''),
   name: yup.string().trim().required('Tên xe là bắt buộc').max(255),
+  /**
+   * Chi nhánh giữ xe — BẮT BUỘC. Đây là vị trí công khai của xe trên marketplace, nên không có
+   * mặc định ngầm: form chọn sẵn chi nhánh mặc định của gian hàng, người dùng đổi được.
+   */
+  branchId: yup.string().trim().required('Chọn chi nhánh giữ xe'),
   vehicleType: yup.string().oneOf(VEHICLE_TYPE_VALUES).required('Chọn loại xe'),
   serviceType: yup.string().oneOf(SERVICE_TYPE_VALUES).required('Chọn loại dịch vụ'),
   sourceType: yup.string().oneOf(VEHICLE_SOURCE_TYPE_VALUES).required('Chọn hình thức nguồn xe'),
@@ -419,6 +424,17 @@ export const registerShopSchema = yup.object({
     .min(2, 'Tối thiểu 2 ký tự')
     .max(255),
   tenantType: yup.string().oneOf(TENANT_TYPE_VALUES).required('Chọn loại hình'),
+  /**
+   * Tỉnh/thành là BẮT BUỘC: đăng ký gian hàng tạo luôn chi nhánh mặc định, và chi nhánh đó là
+   * nguồn vị trí công khai của mọi xe sau này. Giá trị là MÃ 2 ký tự lấy từ `GET /provinces` —
+   * KHÔNG kiểm theo danh sách cứng ở đây, backend mới là nơi biết tỉnh nào đang mở.
+   */
+  provinceCode: yup
+    .string()
+    .trim()
+    .required('Chọn tỉnh/thành nơi đặt gian hàng')
+    .length(2, 'Mã tỉnh không hợp lệ'),
+  address: yup.string().trim().max(500).default(''),
   // default('') + excludeEmptyString: bỏ trống là hợp lệ, chỉ validate khi có nhập.
   phone: yup
     .string()
@@ -432,6 +448,35 @@ export const registerShopSchema = yup.object({
 });
 
 export type RegisterShopValues = yup.InferType<typeof registerShopSchema>;
+
+/**
+ * Form thêm/sửa chi nhánh. Dùng chung cho cả hai vì hai màn nhập ĐÚNG cùng một bộ trường —
+ * trạng thái/mặc định đi bằng endpoint riêng, không phải input của form.
+ */
+export const branchFormSchema = yup.object({
+  name: yup
+    .string()
+    .trim()
+    .required('Tên chi nhánh là bắt buộc')
+    .min(2, 'Tối thiểu 2 ký tự')
+    .max(255),
+  provinceCode: yup
+    .string()
+    .trim()
+    .required('Chọn tỉnh/thành của chi nhánh')
+    .length(2, 'Mã tỉnh không hợp lệ'),
+  address: yup.string().trim().max(500).default(''),
+  phone: yup
+    .string()
+    .trim()
+    .default('')
+    .matches(/^(0|\+84)\d{9}$/, {
+      message: 'Số điện thoại không hợp lệ',
+      excludeEmptyString: true,
+    }),
+});
+
+export type BranchFormValues = yup.InferType<typeof branchFormSchema>;
 
 const profileText = (max: number) => yup.string().trim().max(max).default('');
 

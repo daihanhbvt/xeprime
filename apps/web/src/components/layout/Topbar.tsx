@@ -3,6 +3,7 @@
 import { MenuOutlined, MessageOutlined, UserOutlined } from '@ant-design/icons';
 import { Avatar, Badge, Button, Dropdown } from 'antd';
 import { useRouter } from 'next/navigation';
+import { BranchScopeSelector } from '@/features/branches/components/BranchScopeSelector';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
 import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
@@ -61,9 +62,16 @@ export function Topbar({ user }: { user: CurrentUser }) {
         {tenantName ? (
           <>
             <span className={styles.divider} aria-hidden />
-            {/* Figma `14:1519` vẽ ô này kèm mũi tên xổ xuống, nhưng MVP mỗi tài khoản chỉ
-                thuộc một gian hàng — dựng dropdown một mục là điều khiển chết. Ở đây là
-                THÔNG TIN NGỮ CẢNH, không phải bộ chọn. */}
+            {/*
+              Bộ chọn CHI NHÁNH: từ wave chi nhánh nó có hành vi thật (thu hẹp danh sách xe/đơn/
+              yêu cầu thuê/lịch theo chi nhánh), nên không còn là điều khiển chết. Tự ẩn khi gian
+              hàng chỉ có một chi nhánh hoặc người dùng không có `branches.view`.
+
+              Chỉ hiện trong ngữ cảnh GIAN HÀNG: admin nền tảng không đứng trong tenant nào thì
+              `tenantName` rỗng và cả khối này không render.
+            */}
+            <BranchScopeSelector />
+            {/* Gian hàng là THÔNG TIN NGỮ CẢNH (mỗi tài khoản thuộc một gian hàng), không phải bộ chọn. */}
             <span className={styles.tenant} title={tenantName}>
               <span className={styles.tenantMark} aria-hidden>
                 {initialOf(tenantName)}

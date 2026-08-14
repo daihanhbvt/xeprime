@@ -40,6 +40,8 @@ export const ROUTES = {
 
     // Cài đặt gian hàng
     SHOP: '/manage/shop',
+    /** Chi nhánh gian hàng — nơi xe thực sự nằm, và là vị trí công khai của xe. */
+    SHOP_BRANCHES: '/manage/shop/branches',
     /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
     SHOP_POLICIES: '/manage/shop/policies',
     MEMBERS: '/manage/members',
@@ -58,6 +60,8 @@ export const ROUTES = {
     ADMIN_STAFF: '/manage/admin/staff',
     ADMIN_PLANS: '/manage/admin/plans',
     ADMIN_CATALOG: '/manage/admin/catalog',
+    /** Danh mục hành chính (tỉnh/thành) — dữ liệu dùng chung cho mọi gian hàng. */
+    ADMIN_LOCATIONS: '/manage/admin/locations',
     ADMIN_BANNERS: '/manage/admin/marketplace-banners',
   },
 } as const;

@@ -35,6 +35,8 @@ export class CalendarController {
         tenantId: tenant.tenantId,
         deletedAt: null,
         ...(query.vehicleType ? { vehicleType: query.vehicleType } : {}),
+        // Lịch theo chi nhánh: chỉ thu hẹp danh sách xe, `tenantId` vẫn là ranh giới thật.
+        ...(query.branchId ? { branchId: query.branchId } : {}),
         ...(query.q
           ? {
               OR: [

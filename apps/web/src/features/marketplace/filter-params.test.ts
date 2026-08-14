@@ -30,6 +30,22 @@ describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
     const params = new URLSearchParams('sort=hacked&page=abc&bodyType=,,&discount=true');
     expect(parseFilters(params)).toEqual({});
   });
+
+  it('`provinceCode` là tham số địa điểm CHUẨN và sống qua reload/back-forward', () => {
+    // Reload/back-forward = đọc lại đúng URL đó; parse phải ra đúng giá trị, không mất mã tỉnh.
+    const params = new URLSearchParams('provinceCode=48&q=vios&page=3');
+    expect(parseFilters(params)).toEqual({ provinceCode: '48', q: 'vios', page: 3 });
+  });
+
+  it('có mã thì BỎ tham số tên cũ — một URL không mang hai nguồn địa điểm mâu thuẫn', () => {
+    const params = new URLSearchParams('provinceCode=48&province=TP.%20HCM');
+    expect(parseFilters(params)).toEqual({ provinceCode: '48' });
+  });
+
+  it('link CŨ chỉ có tên vẫn đọc được (backend quy về mã qua bí danh)', () => {
+    const params = new URLSearchParams('province=TP.%20HCM');
+    expect(parseFilters(params)).toEqual({ province: 'TP. HCM' });
+  });
 });
 
 describe('applyFilterPatch — patch → searchParams', () => {
@@ -81,5 +97,17 @@ describe('toListingQueryParams — filter → query API', () => {
     const q = toListingQueryParams(filters);
     expect(q.features).toBe('gps,map');
     expect(q.delivery).toBe('1');
+  });
+
+  it('gửi `provinceCode` khi có mã, và KHÔNG gửi kèm tên cũ', () => {
+    const q = toListingQueryParams({ provinceCode: '79', province: 'TP. HCM' });
+    expect(q.provinceCode).toBe('79');
+    expect(q.province).toBeNull();
+  });
+
+  it('chỉ có tên (link cũ) thì vẫn gửi tên để backend quy về mã', () => {
+    const q = toListingQueryParams({ province: 'Bà Rịa - Vũng Tàu' });
+    expect(q.provinceCode).toBeNull();
+    expect(q.province).toBe('Bà Rịa - Vũng Tàu');
   });
 });

@@ -135,7 +135,28 @@ export class PublicListingQueryDto {
   @IsString()
   q?: string;
 
-  @ApiPropertyOptional({ description: 'Lọc theo tỉnh/thành của gian hàng' })
+  /**
+   * THAM SỐ CHUẨN để lọc theo địa điểm: mã tỉnh 2 ký tự, khớp CHÍNH XÁC.
+   *
+   * Mã thay tên vì tên tỉnh vừa đổi được (sáp nhập 01/07/2025) vừa có nhiều cách viết
+   * ("TP.HCM"/"Hồ Chí Minh"), còn URL đã phát ra ngoài thì sống rất lâu.
+   */
+  @ApiPropertyOptional({ description: 'Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations)' })
+  @IsOptional()
+  @IsString()
+  provinceCode?: string;
+
+  /**
+   * TƯƠNG THÍCH NGƯỢC: tên tỉnh dạng tự do từ link/bookmark cũ.
+   *
+   * Controller quy nó về `provinceCode` qua bảng bí danh rồi mới lọc; không quy được thì KHÔNG
+   * tìm cả nước (đó là trả về xe ở sai tỉnh) mà trả rỗng kèm cờ `unresolvedProvince` để FE nói
+   * rõ với người dùng. Không sinh URL mới theo dạng này nữa.
+   */
+  @ApiPropertyOptional({
+    deprecated: true,
+    description: 'Tên tỉnh (link cũ) — được quy về provinceCode qua bí danh',
+  })
   @IsOptional()
   @IsString()
   province?: string;
@@ -233,6 +254,13 @@ export class PublicListingDto {
   @ApiProperty({ description: 'Slug gian hàng cho route /shops/[slug]' }) shopSlug!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tỉnh/thành gian hàng' })
   shopProvince!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng',
+  })
+  provinceCode!: string | null;
 
   @ApiPropertyOptional({
     type: String,
@@ -343,7 +371,10 @@ export class PublicShopDto {
  * `public_listings` (không hardcode danh sách tỉnh ở FE).
  */
 export class PublicDestinationDto {
-  @ApiProperty({ description: 'Tên tỉnh/thành — dùng luôn làm giá trị lọc `province`' })
+  @ApiProperty({ description: 'Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode`' })
+  provinceCode!: string;
+
+  @ApiProperty({ description: 'Tên tỉnh chuẩn — chỉ để HIỂN THỊ, không dùng để lọc' })
   provinceName!: string;
 
   @ApiProperty({ description: 'Số xe đang hiển thị công khai ở tỉnh/thành này' })

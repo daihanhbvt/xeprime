@@ -27,6 +27,13 @@ export class CalendarRangeQueryDto {
   @IsOptional()
   @IsString()
   q?: string;
+
+  /** Lọc theo chi nhánh giữ xe — nguồn là bộ chọn chi nhánh ở thanh trên. */
+  @ApiPropertyOptional({ description: 'Chỉ hiện xe của một chi nhánh' })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  branchId?: string;
 }
 
 export class CalendarResourceDto {

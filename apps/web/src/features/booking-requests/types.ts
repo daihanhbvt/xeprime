@@ -13,6 +13,8 @@ export type CheckAvailabilityResult = Schemas['CheckAvailabilityResultDto'];
 export interface BookingRequestFilters {
   status?: string;
   vehicleId?: string;
+  /** Chi nhánh của XE được yêu cầu — ghép từ bộ chọn ở thanh trên. */
+  branchId?: string;
   page?: number;
   limit?: number;
 }

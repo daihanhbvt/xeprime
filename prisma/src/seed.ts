@@ -86,6 +86,13 @@ function assertSeedTargetIsSafe(): void {
   }
 }
 
+/**
+ * Tỉnh của gian hàng demo — dùng MÃ chính thức (79 = Hồ Chí Minh) có sẵn sau migration danh mục.
+ * Trước wave chi nhánh chỗ này là chuỗi tự do 'TP. Hồ Chí Minh'; giờ tên hiển thị lấy từ danh mục.
+ */
+const DEMO_PROVINCE_CODE = '79';
+const DEMO_PROVINCE_NAME = 'Hồ Chí Minh';
+
 /** Mốc thời gian cố định để seed cho ra lịch giống nhau mỗi lần chạy. */
 const TODAY = new Date();
 TODAY.setUTCHours(0, 0, 0, 0);
@@ -1405,7 +1412,10 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
       discountPercent: true,
       publicStatus: true,
       deletedAt: true,
-      tenant: { select: { slug: true, profile: { select: { provinceName: true } } } },
+      // Vị trí công khai lấy từ CHI NHÁNH của xe — cùng luật với `ListingsService.syncFromVehicle`.
+      branchId: true,
+      branch: { select: { provinceCode: true, province: { select: { name: true } } } },
+      tenant: { select: { slug: true } },
       features: { select: { featureKey: true } },
     },
   });
@@ -1436,7 +1446,9 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
     seatCount: v.seatCount,
     fuelType: v.fuelType,
     bodyType: v.bodyType,
-    provinceName: v.tenant.profile?.provinceName ?? null,
+    branchId: v.branchId,
+    provinceCode: v.branch?.provinceCode ?? null,
+    provinceName: v.branch?.province?.name ?? null,
     mainImageUrl: v.mainImageUrl,
     weekdayPrice: v.weekdayPrice,
     weekendPrice: v.weekendPrice,
@@ -1658,8 +1670,9 @@ async function main(): Promise<void> {
     },
   });
 
-  // Hồ sơ gian hàng: cần provinceName để listing có địa điểm (facet/điểm nổi bật đọc từ đây).
-  // Chỉ bổ sung khi chưa có — không ghi đè dữ liệu chủ shop đã tự sửa trong app.
+  // Hồ sơ gian hàng. Hai cột tỉnh ở đây là BẢN SAO tương thích ngược của chi nhánh mặc định —
+  // nguồn vị trí thật là `tenant_branches` (tạo ngay dưới). Chỉ bổ sung khi chưa có, không ghi
+  // đè dữ liệu chủ shop đã tự sửa trong app.
   const existingProfile = await prisma.tenantProfile.findUnique({
     where: { tenantId: tenant.id },
     select: { provinceName: true },
@@ -1669,7 +1682,8 @@ async function main(): Promise<void> {
       data: {
         tenantId: tenant.id,
         displayName: 'Gian hàng Demo XePrime',
-        provinceName: 'TP. Hồ Chí Minh',
+        provinceCode: DEMO_PROVINCE_CODE,
+        provinceName: DEMO_PROVINCE_NAME,
         bio: 'Gian hàng demo của XePrime — đủ loại xe từ mini tới 16 chỗ, giao xe tận nơi nội thành.',
         address: '123 Nguyễn Văn Cừ, Quận 5',
       },
@@ -1677,9 +1691,34 @@ async function main(): Promise<void> {
   } else if (!existingProfile.provinceName) {
     await prisma.tenantProfile.update({
       where: { tenantId: tenant.id },
-      data: { provinceName: 'TP. Hồ Chí Minh' },
+      data: { provinceCode: DEMO_PROVINCE_CODE, provinceName: DEMO_PROVINCE_NAME },
     });
   }
+
+  /**
+   * Chi nhánh mặc định của gian hàng demo — xe BẮT BUỘC thuộc một chi nhánh, và chi nhánh là
+   * nguồn vị trí công khai của xe. Không có nó thì toàn bộ xe demo biến mất khỏi marketplace.
+   *
+   * Upsert theo `(tenantId, code)`: chạy lại seed không đẻ chi nhánh thứ hai.
+   */
+  const demoBranch = await prisma.tenantBranch.upsert({
+    where: { tenantId_code: { tenantId: tenant.id, code: 'CN01' } },
+    update: {},
+    create: {
+      id: ulid(),
+      tenantId: tenant.id,
+      code: 'CN01',
+      name: `Chi nhánh ${DEMO_PROVINCE_NAME}`,
+      provinceCode: DEMO_PROVINCE_CODE,
+      address: '123 Nguyễn Văn Cừ, Quận 5',
+      phone: '0900000000',
+      isDefault: true,
+      status: 'active',
+      createdBy: ownerUserId,
+    },
+    select: { id: true },
+  });
+  const demoBranchId = demoBranch.id;
   // Chính sách thuê mặc định của gian hàng (Wave 2). Chỉ tạo khi chưa có — partial unique
   // `rental_policies_shop_default_key` là chốt chặn thật nếu hai lần seed đua nhau.
   const existingPolicy = await prisma.rentalPolicy.findFirst({
@@ -1746,10 +1785,13 @@ async function main(): Promise<void> {
     };
     const row = await prisma.vehicle.upsert({
       where: { tenantId_code: { tenantId: tenant.id, code: v.code } },
-      update: demoFields,
+      // `branchId` cũng nằm ở nhánh update: xe demo tạo từ seed ĐỜI CŨ (trước wave chi nhánh)
+      // chưa có chi nhánh, chạy lại seed phải gắn cho chúng chứ không để lơ lửng.
+      update: { ...demoFields, branchId: demoBranchId },
       create: {
         id: ulid(),
         tenantId: tenant.id,
+        branchId: demoBranchId,
         code: v.code,
         operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE,
         createdBy: ownerUserId,

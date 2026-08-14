@@ -34,6 +34,22 @@ export const queryKeys = {
     resources: (params: QueryParams) => ['calendar', 'resources', params] as const,
     events: (params: QueryParams) => ['calendar', 'events', params] as const,
   },
+  /**
+   * Danh mục hành chính (tỉnh/thành). Bản chọn-được (`provinces`) và bản quản trị (`admin`) nằm
+   * CHUNG một nhánh: admin bật/tắt một tỉnh là cả hai phải làm mới, không để form còn chọn được
+   * tỉnh vừa bị khoá.
+   */
+  locations: {
+    all: ['locations'] as const,
+    provinces: () => ['locations', 'provinces'] as const,
+    admin: (params: QueryParams) => ['locations', 'admin', params] as const,
+  },
+  /** Chi nhánh gian hàng — mọi màn có bộ chọn chi nhánh đọc chung nhánh này. */
+  branches: {
+    all: ['branches'] as const,
+    list: (params: QueryParams) => ['branches', 'list', params] as const,
+    detail: (id: string) => ['branches', 'detail', id] as const,
+  },
   /** Banner hero trang chủ — public + bản quản trị chung một nhánh để mutation invalidate cả hai. */
   banners: {
     all: ['banners'] as const,

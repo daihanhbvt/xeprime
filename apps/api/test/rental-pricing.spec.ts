@@ -9,19 +9,16 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
 import { BookingRequestsService } from '../src/modules/booking-requests/booking-requests.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 2 (B2 — Pricing & Rental Policies), chạy trên PostgreSQL THẬT.
@@ -36,14 +33,8 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const pricing = new PricingService(asService, audit);
-const vehicles = new VehiclesService(
-  asService,
-  audit,
-  new ListingsService(asService),
-  new BillingService(asService, audit),
-  new CatalogService(asService, audit),
-  pricing,
-);
+const vehicles = makeVehiclesService(asService);
+const createVehicle = vehicleCreator(vehicles, asService);
 const bookings = new BookingsService(
   asService,
   new OccupancyService(asService),
@@ -128,7 +119,7 @@ beforeAll(async () => {
 
   // weekendPrice bỏ trống CÓ CHỦ ĐÍCH: mọi ngày tính cùng đơn giá → số kỳ vọng xác định,
   // không phụ thuộc hôm chạy test rơi vào thứ mấy.
-  const v = await vehicles.create(tenantId, ownerId, {
+  const v = await createVehicle(tenantId, ownerId, {
     code: 'PRC-1',
     name: 'Toyota Vios Pricing',
     vehicleType: VEHICLE_TYPE.CAR,

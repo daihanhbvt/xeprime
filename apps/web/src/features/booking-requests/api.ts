@@ -20,6 +20,7 @@ export function filtersToParams(filters: BookingRequestFilters): QueryParams {
   return {
     status: filters.status ?? null,
     vehicleId: filters.vehicleId ?? null,
+    branchId: filters.branchId ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? BOOKING_REQUESTS_DEFAULT_LIMIT,
   };

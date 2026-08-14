@@ -14,6 +14,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { HealthModule } from './modules/health/health.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
+import { LocationsModule } from './modules/locations/locations.module';
+import { BranchesModule } from './modules/branches/branches.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { NotificationModule } from './modules/notification/notification.module';
@@ -86,7 +88,9 @@ import { PricingModule } from './modules/pricing/pricing.module';
 
     HealthModule,
     UsersModule,
+    LocationsModule,
     TenantsModule,
+    BranchesModule,
     CalendarModule,
     PublicListingsModule,
     VehiclesModule,

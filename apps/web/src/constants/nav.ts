@@ -159,6 +159,13 @@ export const SHOP_NAV: readonly NavNode[] = [
         icon: ShopOutlined,
       },
       {
+        key: 'shop-branches',
+        label: 'Chi nhánh',
+        href: ROUTES.MANAGE.SHOP_BRANCHES,
+        permission: PERMISSION.BRANCH_VIEW,
+        icon: EnvironmentOutlined,
+      },
+      {
         key: 'shop-policies',
         label: 'Chính sách thuê',
         href: ROUTES.MANAGE.SHOP_POLICIES,
@@ -287,6 +294,13 @@ export const PLATFORM_NAV: readonly NavNode[] = [
         href: ROUTES.MANAGE.ADMIN_CATALOG,
         permission: PERMISSION.PLATFORM_CATALOG_MANAGE,
         icon: AppstoreOutlined,
+      },
+      {
+        key: 'admin-locations',
+        label: 'Tỉnh/thành',
+        href: ROUTES.MANAGE.ADMIN_LOCATIONS,
+        permission: PERMISSION.PLATFORM_LOCATION_VIEW,
+        icon: EnvironmentOutlined,
       },
       {
         key: 'admin-audit',

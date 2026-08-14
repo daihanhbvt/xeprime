@@ -126,6 +126,16 @@ export const API_ERROR_CODE = {
    */
   HANDOVER_NOT_ELIGIBLE: 'HANDOVER_NOT_ELIGIBLE',
 
+  /**
+   * Chi nhánh còn ràng buộc nên chưa ngừng/đổi được: `details` liệt kê CHÍNH XÁC cái gì đang
+   * giữ nó (số xe, số đơn đang chạy/sắp tới) để người dùng biết phải chuyển gì trước.
+   */
+  BRANCH_HAS_DEPENDENCIES: 'BRANCH_HAS_DEPENDENCIES',
+  /** Chi nhánh mặc định không được ngừng hoạt động — gian hàng luôn phải có một nơi nhận xe. */
+  BRANCH_DEFAULT_IMMUTABLE: 'BRANCH_DEFAULT_IMMUTABLE',
+  /** Xe/chi nhánh chưa có tỉnh hợp lệ nên không thể đưa lên marketplace. */
+  BRANCH_LOCATION_REQUIRED: 'BRANCH_LOCATION_REQUIRED',
+
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',

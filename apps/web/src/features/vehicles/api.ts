@@ -40,6 +40,7 @@ export function filtersToParams(filters: VehicleFilters): QueryParams {
     serviceType: filters.serviceType ?? null,
     operationStatus: filters.operationStatus ?? null,
     publicStatus: filters.publicStatus ?? null,
+    branchId: filters.branchId ?? null,
     sort: filters.sort ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? VEHICLES_DEFAULT_LIMIT,

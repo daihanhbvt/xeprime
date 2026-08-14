@@ -15,6 +15,26 @@ export class RegisterShopDto {
   @Length(2, 255)
   name!: string;
 
+  /**
+   * BẮT BUỘC từ wave chi nhánh: gian hàng phải biết mình ở đâu ngay khi mở, vì chi nhánh mặc
+   * định tạo cùng lúc và nó là nguồn vị trí công khai của mọi xe sau này.
+   *
+   * Chỉ nhận MÃ. `provinceName` do server tra ra — client gửi tên lên là dữ liệu không kiểm soát
+   * được (đúng thứ kiến trúc này thay thế).
+   */
+  @ApiProperty({ example: '48', description: 'Mã tỉnh/thành 2 ký tự (GET /provinces)' })
+  @Transform(trimmed)
+  @IsString()
+  @Length(2, 2)
+  provinceCode!: string;
+
+  @ApiPropertyOptional({ description: 'Địa chỉ chi nhánh đầu tiên' })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MaxLength(500)
+  address?: string;
+
   @ApiPropertyOptional({ enum: TENANT_TYPE_VALUES, default: TENANT_TYPE.INDIVIDUAL })
   @IsOptional()
   @IsIn(TENANT_TYPE_VALUES)
@@ -139,6 +159,15 @@ export class LatestApprovalDto {
   @ApiPropertyOptional({ type: String, nullable: true }) reviewedAt!: string | null;
 }
 
+/** Chi nhánh mặc định — trả kèm ngay sau đăng ký để FE biết xe mới sẽ nằm ở đâu. */
+export class DefaultBranchDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) provinceCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
+}
+
 /** Gian hàng của tôi: thông tin tenant + hồ sơ + trạng thái duyệt gần nhất. */
 export class MyShopDto {
   @ApiProperty() id!: string;
@@ -152,4 +181,7 @@ export class MyShopDto {
   @ApiProperty({ type: TenantProfileDto }) profile!: TenantProfileDto;
   @ApiPropertyOptional({ type: LatestApprovalDto, nullable: true })
   latestApproval!: LatestApprovalDto | null;
+  /** Chi nhánh mặc định. `null` chỉ xảy ra với dữ liệu cũ chưa qua migration chi nhánh. */
+  @ApiPropertyOptional({ type: DefaultBranchDto, nullable: true })
+  defaultBranch!: DefaultBranchDto | null;
 }

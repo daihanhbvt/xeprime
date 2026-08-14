@@ -1,8 +1,8 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import { TENANT_STATUS, VEHICLE_PUBLIC_STATUS, VEHICLE_TYPE } from '@xeprime/types';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PublicListingsService } from '../src/modules/public-listings/public-listings.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makePublicListingsService, seedBranch } from './helpers/service-factory';
 
 /**
  * Phase 3 — trang gian hàng công khai `/shops/[slug]` chạy trên PostgreSQL THẬT. Kiểm chứng:
@@ -12,8 +12,14 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  * Chạy: pnpm db:up && pnpm --filter @xeprime/api test
  */
 const prisma = createPrismaClient();
-const service = new PublicListingsService(prisma as unknown as PrismaService);
-const listings = new ListingsService(prisma as unknown as PrismaService);
+const asService = prisma as unknown as PrismaService;
+const service = makePublicListingsService(asService);
+const listings = new ListingsService(asService);
+
+/** Tỉnh chính thức 79 — có sẵn sau migration danh mục, không cần seed riêng. */
+const PROV = '79';
+const PROV_NAME = 'Hồ Chí Minh';
+const branchByTenant = new Map<string, string>();
 
 let dbAvailable = false;
 let ownerId: string;
@@ -38,9 +44,17 @@ async function seedTenant(status: string): Promise<{ id: string; slug: string }>
       ratingCount: 3,
     },
   });
+  // Tỉnh CHÍNH THỨC (79 = Hồ Chí Minh) có sẵn trong mọi database sau migration danh mục —
+  // spec không phải tự dựng dữ liệu tham chiếu.
   await prisma.tenantProfile.create({
-    data: { tenantId: id, displayName: `Shop ${status}`, provinceName: 'TP. Hồ Chí Minh' },
+    data: {
+      tenantId: id,
+      displayName: `Shop ${status}`,
+      provinceCode: PROV,
+      provinceName: PROV_NAME,
+    },
   });
+  branchByTenant.set(id, await seedBranch(asService, { tenantId: id, provinceCode: PROV }));
   return { id, slug };
 }
 
@@ -50,6 +64,7 @@ async function seedVehicle(tenantId: string, publicStatus: string): Promise<stri
     data: {
       id,
       tenantId,
+      branchId: branchByTenant.get(tenantId),
       code: `V-${id.slice(-6)}`,
       name: 'Toyota Vios',
       vehicleType: VEHICLE_TYPE.CAR,
@@ -106,6 +121,7 @@ afterAll(async () => {
     const tenantIds = [activeTenantId, draftTenantId, otherTenantId];
     await prisma.vehicle.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantProfile.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     await prisma.user.deleteMany({ where: { id: ownerId } });
   }
@@ -122,7 +138,8 @@ describe('Public shop page (/shops/[slug])', () => {
   maybe('getShopBySlug shop active → hồ sơ công khai (rating string)', async () => {
     const shop = await service.getShopBySlug(activeSlug);
     expect(shop.slug).toBe(activeSlug);
-    expect(shop.provinceName).toBe('TP. Hồ Chí Minh');
+    // Tên CHUẨN từ danh mục ('Hồ Chí Minh'), không phải chuỗi tự do kiểu 'TP. Hồ Chí Minh'.
+    expect(shop.provinceName).toBe(PROV_NAME);
     expect(shop.ratingCount).toBe(3);
     // ADR 0007: tiền/decimal qua JSON là string (ResponseInterceptor ép ở tầng response;
     // ở service Decimal vẫn là Decimal nên so khớp giá trị).

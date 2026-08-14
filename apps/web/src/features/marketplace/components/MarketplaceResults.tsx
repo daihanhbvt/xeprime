@@ -32,6 +32,8 @@ import { formatDate } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { SERVICE_CHIPS } from '../constants';
 import { FACET_FILTER_KEYS } from '../filter-params';
+import { UNAVAILABLE_PROVINCE_LABEL, provinceLabelOf } from '../province-options';
+import { useDestinations } from '../hooks/use-destinations';
 import { useInfinitePublicListings } from '../hooks/use-infinite-listings';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { MarketplaceFilters } from '../types';
@@ -54,6 +56,8 @@ const SKELETON_COUNT = 12;
  */
 export function MarketplaceResults() {
   const { filters, setFilters } = useMarketplaceFilters();
+  // Cùng nguồn với các bộ chọn địa điểm khác — dùng để dịch mã tỉnh sang tên hiển thị.
+  const { data: destinations } = useDestinations(34);
   const [filterOpen, setFilterOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const { brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel } = useCatalogLabels();
@@ -166,6 +170,7 @@ export function MarketplaceResults() {
   const hasActiveQuery = Boolean(
     appliedChips.length > 0 ||
     filters.q ||
+    filters.provinceCode ||
     filters.province ||
     filters.vehicleType ||
     filters.serviceType ||
@@ -188,7 +193,10 @@ export function MarketplaceResults() {
       ? (VEHICLE_TYPE_LABEL[filters.vehicleType as VehicleType] ?? 'Xe')
       : 'Tất cả xe',
     // Từ khoá KHÔNG vào summary — nó đã có ô nhập riêng ngay bên cạnh.
-    filters.province ?? 'Toàn quốc',
+    // Địa điểm hiện TÊN tra từ danh sách điểm đến; mã không phải thứ để người dùng đọc. Lựa chọn
+    // cũ không còn khả dụng thì nói thẳng, KHÔNG âm thầm hiện "Toàn quốc" trong khi vẫn đang lọc.
+    provinceLabelOf(destinations, filters.provinceCode) ??
+      (filters.provinceCode || filters.province ? UNAVAILABLE_PROVINCE_LABEL : 'Toàn quốc'),
     filters.pickupAt && filters.returnAt
       ? `${formatDate(filters.pickupAt)} – ${formatDate(filters.returnAt)}${days ? ` (${days} ngày)` : ''}`
       : null,
@@ -435,7 +443,10 @@ export function MarketplaceResults() {
             // Ghi đè NGỮ CẢNH thuê; từ khoá (ô riêng trên trang) và facet Bộ lọc giữ nguyên.
             setFilters({
               vehicleType: values.vehicleType,
-              province: values.province,
+              provinceCode: values.provinceCode,
+              // Xoá tham số tên cũ khỏi URL khi người dùng vừa chọn lại địa điểm — từ đây URL
+              // chỉ còn mang mã.
+              province: undefined,
               pickupAt: values.pickupAt,
               returnAt: values.returnAt,
               hourly: values.hourly,

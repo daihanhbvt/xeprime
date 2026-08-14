@@ -2,7 +2,7 @@
 
 import { Alert, Button, Form } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
   SERVICE_TYPE,
@@ -25,12 +25,17 @@ import {
 import { VehicleReviewStep } from './VehicleReviewStep';
 import { VehicleWizard } from './VehicleWizard';
 import { CreateVehiclePricingStep } from './CreateVehiclePricingStep';
+import { useActiveBranches } from '@/features/branches/hooks/use-branches';
+import { branchLabel } from '@/features/branches/branch-label';
 import styles from './VehicleForm.module.css';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để select bắt buộc không rỗng. */
 const EMPTY_DEFAULTS: VehicleFormValues = {
   code: '',
   name: '',
+  // Chọn sẵn ở runtime bằng chi nhánh MẶC ĐỊNH của gian hàng (xem `useEffect` bên dưới) — hằng số
+  // này không thể biết id chi nhánh của một gian hàng cụ thể.
+  branchId: '',
   vehicleType: VEHICLE_TYPE.CAR,
   serviceType: SERVICE_TYPE.SELF_DRIVE,
   sourceType: VEHICLE_SOURCE_TYPE.OWNED,
@@ -119,6 +124,25 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
   const lastStep = steps.length - 1;
   const [step, setStep] = useState(0);
   const [confirmCancel, setConfirmCancel] = useState(false);
+
+  /**
+   * Chi nhánh: chọn sẵn cái MẶC ĐỊNH để thao tác vẫn một bước như trước, nhưng vẫn là một trường
+   * thật trên form — người dùng thấy xe sẽ nằm ở đâu và đổi được ngay tại đây.
+   *
+   * Chỉ điền khi ô còn trống: người dùng đã chọn tay rồi thì dữ liệu tới muộn không được ghi đè.
+   */
+  const branches = useActiveBranches();
+  const branchId = useWatch({ control, name: 'branchId' });
+  const branchOptions = useMemo(
+    () => (branches.data?.items ?? []).map((b) => ({ value: b.id, label: branchLabel(b) })),
+    [branches.data],
+  );
+  useEffect(() => {
+    if (branchId) return;
+    const preferred =
+      branches.data?.items.find((b) => b.isDefault) ?? branches.data?.items[0] ?? null;
+    if (preferred) setValue('branchId', preferred.id, { shouldValidate: true });
+  }, [branchId, branches.data, setValue]);
 
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
@@ -214,7 +238,12 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
           <div className={styles.sectionStack}>
             <section className={styles.subSection}>
               <h3 className={styles.subSectionTitle}>Thông tin cơ bản</h3>
-              <BasicSection {...props} />
+              <BasicSection
+                {...props}
+                branchOptions={branchOptions}
+                branchLoading={branches.isLoading}
+                branchDisabled={branches.isError}
+              />
             </section>
             <section className={styles.subSection}>
               <h3 className={styles.subSectionTitle}>Thông số vận hành</h3>

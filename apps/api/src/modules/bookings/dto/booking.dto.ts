@@ -49,6 +49,13 @@ export class BookingListQueryDto {
   @Length(26, 26)
   vehicleId?: string;
 
+  /** Lọc theo chi nhánh của XE trong đơn — nguồn là bộ chọn chi nhánh ở thanh trên. */
+  @ApiPropertyOptional({ description: 'Lọc theo chi nhánh (qua xe của đơn)' })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  branchId?: string;
+
   @ApiPropertyOptional({ description: 'Trả xe từ (ISO) — lọc cho panel quá hạn/sắp trả' })
   @IsOptional()
   @IsDateString()

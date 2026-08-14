@@ -14,6 +14,8 @@ const STRING_KEYS = [
   'vehicleType',
   'serviceType',
   'q',
+  'provinceCode',
+  // `province` (tên) chỉ còn để ĐỌC link cũ; xem `parseFilters`.
   'province',
   'pickupAt',
   'returnAt',
@@ -64,6 +66,10 @@ export function parseFilters(searchParams: URLSearchParams): MarketplaceFilters 
     filters.sort = sort as ListingSort;
   }
 
+  // Có `provinceCode` thì `province` (tên) không còn ý nghĩa: giữ lại chỉ tạo nguy cơ hai nguồn
+  // địa điểm mâu thuẫn trên cùng một URL.
+  if (filters.provinceCode) delete filters.province;
+
   return filters;
 }
 
@@ -100,7 +106,10 @@ export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
     vehicleType: filters.vehicleType ?? null,
     serviceType: filters.serviceType ?? null,
     q: filters.q ?? null,
-    province: filters.province ?? null,
+    // Tham số chuẩn là MÃ. `province` (tên) chỉ gửi kèm khi chưa có mã — backend quy nó về mã
+    // qua bảng bí danh, và URL sinh ra từ đó luôn mang mã.
+    provinceCode: filters.provinceCode ?? null,
+    province: filters.provinceCode ? null : (filters.province ?? null),
     brand: filters.brand?.length ? filters.brand.join(',') : null,
     bodyType: filters.bodyType?.length ? filters.bodyType.join(',') : null,
     seats: filters.seats?.length ? filters.seats.join(',') : null,

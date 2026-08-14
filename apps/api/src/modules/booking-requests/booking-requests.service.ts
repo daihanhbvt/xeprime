@@ -302,6 +302,9 @@ export class BookingRequestsService {
       tenantId,
       ...(query.status ? { status: query.status } : {}),
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
+      // Lọc qua quan hệ xe → chi nhánh. Đứng SAU `tenantId` và không thay thế nó: bộ chọn chi
+      // nhánh chỉ thu hẹp phạm vi, không bao giờ là đường ra khỏi gian hàng của mình.
+      ...(query.branchId ? { vehicle: { branchId: query.branchId } } : {}),
     };
 
     const [total, rows] = await this.prisma.$transaction([

@@ -47,7 +47,11 @@ export class ListingsService {
         discountPercent: true,
         publicStatus: true,
         deletedAt: true,
-        tenant: { select: { slug: true, profile: { select: { provinceName: true } } } },
+        branchId: true,
+        // Vị trí công khai của xe LẤY TỪ CHI NHÁNH, không còn từ hồ sơ gian hàng: một shop có
+        // thể có xe ở nhiều tỉnh, và `tenant_profiles.province_name` là chuỗi tự do.
+        branch: { select: { provinceCode: true, province: { select: { name: true } } } },
+        tenant: { select: { slug: true } },
         features: { select: { featureKey: true } },
       },
     });
@@ -70,7 +74,12 @@ export class ListingsService {
         seatCount: v.seatCount,
         fuelType: v.fuelType,
         bodyType: v.bodyType,
-        provinceName: v.tenant.profile?.provinceName ?? null,
+        branchId: v.branchId,
+        // Mã là thứ marketplace lọc; tên chỉ để hiển thị. Chi nhánh chưa có tỉnh (dữ liệu cũ
+        // chưa bổ sung) → cả hai NULL, và scope công khai sẽ loại xe đó ra cho tới khi sửa —
+        // thà không thấy còn hơn thấy ở sai tỉnh.
+        provinceCode: v.branch?.provinceCode ?? null,
+        provinceName: v.branch?.province?.name ?? null,
         mainImageUrl: v.mainImageUrl,
         weekdayPrice: v.weekdayPrice,
         weekendPrice: v.weekendPrice,
@@ -110,6 +119,34 @@ export class ListingsService {
       where: { vehicleId },
       data: { ratingAvg: rating.avg, ratingCount: rating.count },
     });
+  }
+
+  /**
+   * Đồng bộ lại vị trí đã denormalize của MỌI snapshot thuộc một chi nhánh — gọi khi chi nhánh
+   * đổi tỉnh.
+   *
+   * Một câu UPDATE theo `branch_id` thay vì lặp `syncFromVehicle` từng xe: một chi nhánh có thể
+   * giữ hàng trăm xe, và ở đây chỉ có đúng ba cột phụ thuộc chi nhánh — chạy lại toàn bộ snapshot
+   * (giá, tiện ích, rating) là việc thừa và là N+1 thật sự.
+   */
+  async syncBranchLocation(
+    branchId: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<number> {
+    const branch = await tx.tenantBranch.findUnique({
+      where: { id: branchId },
+      select: { provinceCode: true, province: { select: { name: true } } },
+    });
+    if (!branch) return 0;
+
+    const result = await tx.publicListing.updateMany({
+      where: { branchId },
+      data: {
+        provinceCode: branch.provinceCode,
+        provinceName: branch.province?.name ?? null,
+      },
+    });
+    return result.count;
   }
 }
 

@@ -31,6 +31,9 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
   return {
     code: textOrUndefined(values.code),
     name: values.name.trim(),
+    // Chi nhánh giữ xe — bắt buộc ở API. Form chọn sẵn chi nhánh mặc định nên thao tác không dài
+    // thêm, nhưng giá trị vẫn đi qua request thay vì để backend đoán.
+    branchId: values.branchId,
     vehicleType: values.vehicleType,
     serviceType: values.serviceType,
     sourceType: values.sourceType,
@@ -76,6 +79,9 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
   return {
     code: v.code,
     name: v.name,
+    // Xe dữ liệu cũ có thể chưa gán chi nhánh — để rỗng thì Select hiện placeholder và schema
+    // bắt chọn khi lưu, thay vì gửi một id không tồn tại.
+    branchId: v.branch?.id ?? '',
     vehicleType: v.vehicleType as VehicleType,
     serviceType: v.serviceType as ServiceType,
     sourceType: (v.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType,
@@ -118,6 +124,11 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
 export function informationValuesToInput(values: VehicleFormValues): UpdateVehicleInput {
   return {
     name: values.name.trim(),
+    // Chi nhánh nằm ở tab này (ô "Chi nhánh giữ xe") nên PHẢI đi theo payload — thiếu nó thì
+    // chuyển xe sang tỉnh khác báo lưu thành công mà vị trí công khai không đổi.
+    // Xe dữ liệu cũ chưa gán chi nhánh giữ giá trị rỗng → bỏ hẳn khỏi payload thay vì gửi ''
+    // (backend bắt đúng 26 ký tự), để lần sửa không liên quan không bị chặn.
+    branchId: textOrUndefined(values.branchId),
     vehicleType: values.vehicleType,
     serviceType: values.serviceType,
     operationStatus: values.operationStatus,

@@ -18,14 +18,10 @@ import {
 } from '@xeprime/types';
 import 'reflect-metadata';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { MaintenanceService } from '../src/modules/vehicles/maintenance/maintenance.service';
 import { OdometerService } from '../src/modules/vehicles/maintenance/odometer.service';
@@ -34,8 +30,8 @@ import {
   vehicleAlertScopeOf,
 } from '../src/modules/vehicles/vehicle-alerts.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 8 — Tổng hợp việc cần làm của xe + hàng đợi "Thiếu KM trả", trên PostgreSQL THẬT.
@@ -70,14 +66,8 @@ const fakeR2 = {
 const audit = new AuditService(asService);
 const occupancy = new OccupancyService(asService);
 const notifications = new NotificationService(asService);
-const vehicles = new VehiclesService(
-  asService,
-  audit,
-  new ListingsService(asService),
-  new BillingService(asService, audit),
-  new CatalogService(asService, audit),
-  new PricingService(asService, audit),
-);
+const vehicles = makeVehiclesService(asService);
+const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit);
@@ -187,7 +177,7 @@ let seq = 0;
 /** Xe đủ điều kiện lên sàn (có biển số + giá + ảnh) — để không dính cảnh báo "thiếu thông tin". */
 async function createVehicle(over: Record<string, unknown> = {}) {
   seq += 1;
-  return vehicles.create(tenantId, ownerId, {
+  return createVehicleWithBranch(tenantId, ownerId, {
     code: `W8-${Date.now().toString(36)}-${seq}`,
     name: 'Toyota Vios 2024',
     vehicleType: VEHICLE_TYPE.CAR,
@@ -440,7 +430,7 @@ describe('Tổng hợp việc cần làm của xe', () => {
   maybe('lô nhiều xe: mỗi xe đúng cảnh báo của nó, xe tenant khác KHÔNG lọt vào', async () => {
     const mine = await createVehicle();
     await setKm(mine.id, 5_000);
-    const foreign = await vehicles.create(otherTenantId, ownerId, {
+    const foreign = await createVehicleWithBranch(otherTenantId, ownerId, {
       code: `W8-FOREIGN-${Date.now().toString(36)}`,
       name: 'Xe shop khác',
       vehicleType: VEHICLE_TYPE.CAR,

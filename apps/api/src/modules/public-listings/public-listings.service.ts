@@ -3,6 +3,7 @@ import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   LISTING_STATUS,
+  PROVINCE_CODES,
   REVIEW_STATUS,
   SEAT_BUCKET_RANGE,
   SEAT_BUCKET_VALUES,
@@ -11,6 +12,7 @@ import {
   type PaginationMeta,
   type SeatBucket,
 } from '@xeprime/types';
+import { ProvincesService } from '../locations/provinces.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
   FacetBucketDto,
@@ -29,6 +31,14 @@ import type {
 
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 48;
+
+/**
+ * Mã không thuộc danh mục — dùng khi tên tỉnh cũ không quy được về mã nào.
+ *
+ * Lọc bằng nó ra kết quả RỖNG, đúng ý "không tìm thấy tỉnh đó". Không có mã hành chính nào là
+ * `00`, và `provinces.code` là khoá chính nên giá trị này không bao giờ va vào dữ liệu thật.
+ */
+const UNRESOLVED_PROVINCE_CODE = '00';
 
 /** Cột đủ cho một thẻ marketplace — đọc từ snapshot `public_listings` (ADR 0008). */
 const LISTING_CARD_SELECT = {
@@ -50,6 +60,7 @@ const LISTING_CARD_SELECT = {
   discountPercent: true,
   ratingAvg: true,
   ratingCount: true,
+  provinceCode: true,
   provinceName: true,
   shopSlug: true,
   tenant: { select: { name: true } },
@@ -89,6 +100,7 @@ function toListingCard(l: ListingCardRow): PublicListingDto {
     discountPercent: l.discountPercent,
     shopName: l.tenant.name,
     shopSlug: l.shopSlug,
+    provinceCode: l.provinceCode,
     shopProvince: l.provinceName,
     ratingAvg: l.ratingAvg != null ? l.ratingAvg.toFixed(1) : null,
     ratingCount: l.ratingCount,
@@ -160,8 +172,14 @@ function buildListingWhere(
 ): Prisma.PublicListingWhereInput {
   const and: Prisma.PublicListingWhereInput[] = [];
 
-  if (query.province) {
-    and.push({ provinceName: { contains: query.province, mode: 'insensitive' } });
+  // Lọc theo MÃ tỉnh, khớp chính xác.
+  //
+  // Trước đây chỗ này là `provinceName contains … insensitive`, và nó sai theo hai hướng cùng
+  // lúc: "Hà Nam" khớp luôn mọi tên chứa nó, còn "TP.HCM" thì không khớp "Hồ Chí Minh" dù là
+  // một nơi. Tên tỉnh còn đổi được; mã thì không. Tham số `province` (tên) vẫn nhận được nhưng
+  // controller đã quy nó về mã qua bảng bí danh TRƯỚC khi tới đây.
+  if (query.provinceCode) {
+    and.push({ provinceCode: query.provinceCode });
   }
   if (query.vehicleType) and.push({ vehicleType: query.vehicleType });
   if (query.serviceType) and.push({ serviceType: query.serviceType });
@@ -213,11 +231,31 @@ function buildListingWhere(
   if (exclude !== 'noCollateral' && query.noCollateral) and.push({ noCollateral: true });
   if (exclude !== 'discount' && query.discount) and.push({ discountPercent: { gt: 0 } });
 
+  return { ...publicListingScope(), AND: and };
+}
+
+/**
+ * Điều kiện để một snapshot ĐƯỢC PHÉP xuất hiện công khai — dùng chung cho search, facets,
+ * điểm đến, trang gian hàng và chi tiết xe.
+ *
+ * Gom một chỗ vì đây là ranh giới an toàn: thiếu một vế ở một endpoint là tỉnh đã ẩn vẫn tra
+ * được bằng cách gõ tay tham số, hoặc xe của gian hàng bị khoá vẫn hiện ở trang shop.
+ *
+ * Bốn vế:
+ *   1. listing đang `active`;
+ *   2. gian hàng đang hoạt động và chưa xoá (join, KHÔNG denormalize — ADR 0008 §3);
+ *   3. có tỉnh hợp lệ — xe chưa gán vị trí thì không biết xếp vào đâu;
+ *   4. tỉnh đó đang được phép hiển thị công khai (`isPublicVisible`).
+ *
+ * `branch` KHÔNG lọc theo `status`: chi nhánh ngừng hoạt động chỉ ngăn GẮN XE MỚI, nó không có
+ * nghĩa là những xe đang cho thuê ở đó biến mất khỏi chợ giữa chừng.
+ */
+function publicListingScope(): Prisma.PublicListingWhereInput {
   return {
     status: LISTING_STATUS.ACTIVE,
-    // Khoá shop là ẩn listing tức thì — join tenant, KHÔNG denormalize (ADR 0008 §3).
     tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
-    AND: and,
+    provinceCode: { not: null },
+    province: { isPublicVisible: true },
   };
 }
 
@@ -247,7 +285,10 @@ function availabilityFilter(pickupAt?: string, returnAt?: string): Prisma.Public
  */
 @Injectable()
 export class PublicListingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly provinces: ProvincesService,
+  ) {}
 
   async search(query: PublicListingQueryDto): Promise<{
     data: PublicListingDto[];
@@ -256,7 +297,7 @@ export class PublicListingsService {
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(MAX_LIMIT, Math.max(1, query.limit ?? DEFAULT_LIMIT));
 
-    const where = buildListingWhere(query);
+    const where = buildListingWhere(await this.withResolvedProvince(query));
 
     // Đếm và lấy trang trong một transaction để total khớp với data cùng thời điểm.
     const [total, rows] = await this.prisma.$transaction([
@@ -284,7 +325,8 @@ export class PublicListingsService {
    * overload transaction-mảng của groupBy mất literal type (`_count` suy về union) — số đếm
    * facet là dữ liệu hiển thị, lệch một nhịp giữa các query không sao.
    */
-  async facets(query: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
+  async facets(rawQuery: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
+    const query = await this.withResolvedProvince(rawQuery);
     const [
       total,
       priceAgg,
@@ -432,48 +474,76 @@ export class PublicListingsService {
   }
 
   /**
-   * "Địa điểm nổi bật" — các tỉnh/thành đang có xe, kèm số xe và một ảnh đại diện. Gộp từ snapshot
-   * `public_listings` (index `[provinceName]`), KHÔNG hardcode danh sách tỉnh ở FE. `provinceName`
-   * trả về dùng luôn được làm giá trị lọc `province` của `/public/listings`.
+   * Quy tham số địa điểm về MÃ trước khi dựng where.
    *
-   * Bounded tự nhiên (63 tỉnh/thành) nên trả mảng có trần `limit` thay vì phân trang.
+   * `provinceCode` có sẵn thì dùng luôn. Chỉ có `province` (tên, từ link/bookmark cũ) thì tra bí
+   * danh — "TP.HCM", "Bà Rịa - Vũng Tàu" (tỉnh đã sáp nhập) đều ra đúng mã.
+   *
+   * Không quy được thì gán mã KHÔNG TỒN TẠI (`00`) để kết quả rỗng, TUYỆT ĐỐI không bỏ qua bộ
+   * lọc: bỏ qua nghĩa là người dùng hỏi "xe ở Vientiane" và nhận về xe toàn quốc — sai lặng lẽ,
+   * kiểu tệ nhất.
+   */
+  private async withResolvedProvince<T extends { province?: string; provinceCode?: string }>(
+    query: T,
+  ): Promise<T> {
+    if (query.provinceCode || !query.province) return query;
+    const resolved = await this.provinces.resolveCode(query.province);
+    return { ...query, provinceCode: resolved ?? UNRESOLVED_PROVINCE_CODE };
+  }
+
+  /**
+   * "Địa điểm" công khai — các tỉnh ĐANG CÓ XE, kèm số xe và một ảnh đại diện.
+   *
+   * Đây là NGUỒN DUY NHẤT cho mọi bộ chọn địa điểm ở marketplace (hero desktop, dialog mobile,
+   * trang /search, địa điểm nổi bật). Frontend không có danh sách tỉnh riêng, nên desktop và
+   * mobile không thể lệch nhau, và tỉnh không có xe nào thì không hiện ở đâu cả.
+   *
+   * Gộp theo `provinceCode` (không phải tên): tên chỉ để hiển thị, mã mới là thứ đi vào URL và
+   * bộ lọc. Scope dùng chung `publicListingScope()` nên tỉnh bị admin ẩn tự biến mất khỏi đây.
+   *
+   * Trần `limit` mặc định nhỏ (trang chủ chỉ hiện vài ô); danh mục cấp tỉnh có 34 đơn vị nên
+   * `limit=34` là lấy hết, không cần phân trang.
    */
   async listDestinations(query: PublicDestinationQueryDto): Promise<PublicDestinationDto[]> {
-    const limit = Math.min(63, Math.max(1, query.limit ?? 6));
-
-    const scope: Prisma.PublicListingWhereInput = {
-      status: LISTING_STATUS.ACTIVE,
-      tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
-      provinceName: { not: null },
-    };
+    const limit = Math.min(PROVINCE_CODES.length, Math.max(1, query.limit ?? 6));
+    const scope = publicListingScope();
 
     const groups = await this.prisma.publicListing.groupBy({
-      by: ['provinceName'],
+      by: ['provinceCode'],
       where: scope,
       _count: { _all: true },
-      orderBy: { _count: { provinceName: 'desc' } },
+      orderBy: { _count: { provinceCode: 'desc' } },
       take: limit,
     });
 
-    const names = groups
-      .map((g) => g.provinceName)
-      .filter((n): n is string => n != null && n.length > 0);
-    if (names.length === 0) return [];
+    const codes = groups
+      .map((g) => g.provinceCode)
+      .filter((c): c is string => c != null && c.length > 0);
+    if (codes.length === 0) return [];
 
-    // Một ảnh đại diện cho mỗi tỉnh — `distinct` để DB trả đúng 1 dòng/tỉnh, không kéo cả bảng.
-    const covers = await this.prisma.publicListing.findMany({
-      where: { ...scope, provinceName: { in: names }, mainImageUrl: { not: null } },
-      distinct: ['provinceName'],
-      select: { provinceName: true, mainImageUrl: true },
-    });
-    const coverBy = new Map(covers.map((c) => [c.provinceName, c.mainImageUrl]));
+    // Ảnh đại diện + tên chuẩn: `distinct` để DB trả đúng một dòng mỗi tỉnh (không kéo cả bảng),
+    // tên lấy từ bảng `provinces` chứ không từ cột denormalize — tên chuẩn chỉ có một nguồn.
+    const [covers, provinces] = await Promise.all([
+      this.prisma.publicListing.findMany({
+        where: { ...scope, provinceCode: { in: codes }, mainImageUrl: { not: null } },
+        distinct: ['provinceCode'],
+        select: { provinceCode: true, mainImageUrl: true },
+      }),
+      this.prisma.province.findMany({
+        where: { code: { in: codes } },
+        select: { code: true, name: true },
+      }),
+    ]);
+    const coverBy = new Map(covers.map((c) => [c.provinceCode, c.mainImageUrl]));
+    const nameBy = new Map(provinces.map((p) => [p.code, p.name]));
 
     return groups
-      .filter((g): g is typeof g & { provinceName: string } => Boolean(g.provinceName))
+      .filter((g): g is typeof g & { provinceCode: string } => Boolean(g.provinceCode))
       .map((g) => ({
-        provinceName: g.provinceName,
+        provinceCode: g.provinceCode,
+        provinceName: nameBy.get(g.provinceCode) ?? g.provinceCode,
         vehicleCount: g._count._all,
-        imageUrl: coverBy.get(g.provinceName) ?? null,
+        imageUrl: coverBy.get(g.provinceCode) ?? null,
       }));
   }
 
@@ -487,10 +557,13 @@ export class PublicListingsService {
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(MAX_LIMIT, Math.max(1, query.limit ?? DEFAULT_LIMIT));
 
+    // "Có xe hiển thị được" phải dùng đúng luật hiển thị, không chỉ `status = active`: gian hàng
+    // mà toàn bộ xe nằm ở tỉnh đã ẩn thì không còn là gian hàng nổi bật.
+    const visibleListing = publicListingScope();
     const where: Prisma.TenantWhereInput = {
       status: TENANT_STATUS.ACTIVE,
       deletedAt: null,
-      publicListings: { some: { status: LISTING_STATUS.ACTIVE } },
+      publicListings: { some: visibleListing },
     };
 
     const [total, rows] = await this.prisma.$transaction([
@@ -506,7 +579,7 @@ export class PublicListingsService {
           ratingAvg: true,
           ratingCount: true,
           profile: { select: { provinceName: true, logoUrl: true } },
-          _count: { select: { publicListings: { where: { status: LISTING_STATUS.ACTIVE } } } },
+          _count: { select: { publicListings: { where: visibleListing } } },
         },
       }),
     ]);
@@ -582,11 +655,9 @@ export class PublicListingsService {
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(MAX_LIMIT, Math.max(1, query.limit ?? DEFAULT_LIMIT));
 
-    const where: Prisma.PublicListingWhereInput = {
-      status: LISTING_STATUS.ACTIVE,
-      shopSlug: slug,
-      tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
-    };
+    // Cùng scope với marketplace: xe của gian hàng nằm ở tỉnh đã bị ẩn cũng không hiện ở trang
+    // shop — nếu không, trang shop thành đường vòng qua luật hiển thị.
+    const where: Prisma.PublicListingWhereInput = { ...publicListingScope(), shopSlug: slug };
 
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.publicListing.count({ where }),
@@ -616,10 +687,14 @@ export class PublicListingsService {
         deletedAt: null,
         publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
         tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
+        // Link trực tiếp tới chi tiết xe KHÔNG được là đường vòng qua luật hiển thị theo tỉnh:
+        // ẩn một tỉnh mà URL cũ vẫn mở được xe ở đó thì việc ẩn chỉ là trang trí.
+        branch: { province: { isPublicVisible: true } },
       },
       select: {
         id: true,
         name: true,
+        branch: { select: { province: { select: { code: true, name: true } } } },
         vehicleType: true,
         serviceType: true,
         brand: true,
@@ -676,7 +751,10 @@ export class PublicListingsService {
       discountPercent: v.discountPercent,
       shopName: v.tenant.name,
       shopSlug: v.tenant.slug,
-      shopProvince: v.tenant.profile?.provinceName ?? null,
+      // Vị trí là của CHI NHÁNH giữ xe, không phải của hồ sơ gian hàng: shop nhiều chi nhánh thì
+      // hai xe cùng shop hoàn toàn có thể ở hai tỉnh khác nhau.
+      provinceCode: v.branch?.province?.code ?? null,
+      shopProvince: v.branch?.province?.name ?? null,
       description: v.description,
       color: v.color,
       manufactureYear: v.manufactureYear,

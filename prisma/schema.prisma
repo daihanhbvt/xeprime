@@ -58,6 +58,7 @@ model User {
   ownedTenants        Tenant[]             @relation("tenant_owner")
   auditLogs           AuditLog[]
   createdVehicles     Vehicle[]            @relation("vehicle_creator")
+  createdBranches     TenantBranch[]       @relation("branch_creator")
   createdBookings     Booking[]            @relation("booking_creator")
   uploadedDocuments   TenantDocument[]     @relation("document_uploader")
   reviewedDocuments   TenantDocument[]     @relation("document_reviewer")
@@ -125,6 +126,7 @@ model Tenant {
 
   owner         User               @relation("tenant_owner", fields: [ownerUserId], references: [id])
   profile       TenantProfile?
+  branches      TenantBranch[]
   memberships   TenantMembership[]
   documents     TenantDocument[]
   invites       TenantInvite[]
@@ -322,6 +324,116 @@ model PasswordResetToken {
 }
 
 // ---------------------------------------------------------------------------
+// Danh mục hành chính & chi nhánh
+// ---------------------------------------------------------------------------
+
+/// Danh mục tỉnh/thành CHÍNH THỨC (34 đơn vị từ 01/07/2025 — QĐ 19/2025/QĐ-TTg).
+///
+/// Đây là nguồn sự thật cho vị trí, thay cho chuỗi tự do `tenant_profiles.province_name` trước
+/// đây. Lọc marketplace dùng `code` (khớp CHÍNH XÁC), không bao giờ so tên bằng `contains` —
+/// "Hà Nam" từng khớp nhầm "Hà Nam Ninh", và tên tỉnh thì đổi được còn mã thì không.
+///
+/// Dữ liệu nạp bằng MIGRATION (không phải seed demo) nên mọi môi trường có ngay sau deploy.
+/// Bản soạn: `packages/types/src/province.ts`.
+model Province {
+  /// Mã hành chính chính thức 2 ký tự. BẤT BIẾN khi đã có dữ liệu tham chiếu.
+  code               String   @id @db.Char(2)
+  /// Tên hiển thị chuẩn (tiếng Việt có dấu) — luôn hiển thị bản này cho người dùng.
+  name               String   @unique @db.VarChar(100)
+  /// @xeprime/types → ProvinceAdministrativeType (province | municipality)
+  administrativeType String   @map("administrative_type") @db.VarChar(20)
+  slug               String   @unique @db.VarChar(120)
+  /// Cho phép CHỌN MỚI: đăng ký shop, tạo/sửa chi nhánh. Tắt KHÔNG xoá dữ liệu đang có.
+  isEnabled          Boolean  @default(true) @map("is_enabled")
+  /// Cho phép xuất hiện trên marketplace công khai (điểm đến, bộ lọc, chi tiết xe).
+  isPublicVisible    Boolean  @default(true) @map("is_public_visible")
+  sortOrder          Int      @default(0) @map("sort_order")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
+
+  aliases        ProvinceAlias[]
+  branches       TenantBranch[]
+  /// Snapshot marketplace tham chiếu tỉnh trực tiếp để scope công khai lọc `isPublicVisible`
+  /// bằng MỘT câu query — ẩn một tỉnh là nó biến mất khỏi chợ ngay, không đợi job đồng bộ.
+  publicListings PublicListing[]
+
+  @@index([isEnabled, sortOrder])
+  @@index([isPublicVisible, sortOrder])
+  @@map("provinces")
+}
+
+/// Bí danh trỏ về một tỉnh: tên cũ trước sáp nhập, và các cách viết khác.
+///
+/// `normalized_alias` là khoá tra cứu đã bỏ dấu/tiền tố/dấu câu (`normalizeProvinceAlias`), UNIQUE
+/// toàn bảng — một chuỗi không thể mơ hồ giữa hai tỉnh. Bảng này là thứ khiến dữ liệu tự do cũ
+/// ("TP.HCM", "Bà Rịa - Vũng Tàu") quy được về mã chuẩn mà không phải đoán.
+model ProvinceAlias {
+  id              String   @id @db.Char(26)
+  provinceCode    String   @map("province_code") @db.Char(2)
+  /// Bản gốc như người ta viết — giữ để đọc được lý do khi rà soát.
+  alias           String   @db.VarChar(150)
+  normalizedAlias String   @unique @map("normalized_alias") @db.VarChar(150)
+  /// @xeprime/types → ProvinceAliasType (canonical_name | legacy_name | display_variant)
+  aliasType       String   @map("alias_type") @db.VarChar(30)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  province Province @relation(fields: [provinceCode], references: [code], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([provinceCode])
+  @@map("province_aliases")
+}
+
+/// Chi nhánh của một gian hàng — đơn vị VẬN HÀNH thật (xe nằm ở đâu, khách nhận xe ở đâu).
+///
+/// Trước đây vị trí xe suy từ `tenant_profiles.province_name`, nên một shop chỉ có thể ở đúng
+/// một tỉnh và tỉnh đó là chuỗi tự do. Chi nhánh thay cả hai: xe thuộc chi nhánh, chi nhánh
+/// thuộc tỉnh có mã.
+///
+/// `provinceCode` NULLABLE có chủ đích: migration KHÔNG đoán tỉnh cho dữ liệu cũ không quy được
+/// (mục 4) — những chi nhánh đó mang `needsLocationReview = true` cùng giá trị gốc để chủ shop
+/// sửa. API tạo/sửa chi nhánh thì LUÔN đòi provinceCode.
+model TenantBranch {
+  id           String    @id @db.Char(26)
+  tenantId     String    @map("tenant_id") @db.Char(26)
+  /// Mã nội bộ, duy nhất trong tenant (CN01, CN02…).
+  code         String    @db.VarChar(50)
+  name         String    @db.VarChar(255)
+  provinceCode String?   @map("province_code") @db.Char(2)
+  address      String?   @db.Text
+  phone        String?   @db.VarChar(30)
+  latitude     Decimal?  @db.Decimal(10, 7)
+  longitude    Decimal?  @db.Decimal(10, 7)
+  /// Đúng MỘT chi nhánh mặc định còn sống mỗi tenant — partial unique index ở migration.
+  isDefault    Boolean   @default(false) @map("is_default")
+  /// @xeprime/types → BranchStatus (active | inactive)
+  status       String    @default("active") @db.VarChar(20)
+  /// Chi nhánh sinh ra từ migration mà KHÔNG quy được tỉnh — chờ chủ shop/admin bổ sung.
+  needsLocationReview Boolean @default(false) @map("needs_location_review")
+  /// Chuỗi tỉnh tự do gốc, giữ nguyên để người sửa biết dữ liệu cũ ghi gì. Không dùng để lọc.
+  legacyProvinceValue String? @map("legacy_province_value") @db.VarChar(150)
+  createdBy    String?   @map("created_by") @db.Char(26)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// Restrict: tỉnh đang được chi nhánh tham chiếu thì KHÔNG xoá cứng được (admin ẩn/tắt).
+  province       Province?       @relation(fields: [provinceCode], references: [code], onDelete: Restrict, onUpdate: Cascade)
+  creator        User?           @relation("branch_creator", fields: [createdBy], references: [id])
+  vehicles       Vehicle[]
+  publicListings PublicListing[]
+
+  @@unique([tenantId, code])
+  /// Mục tiêu cho FK composite của `vehicles`/`public_listings`: xe chỉ gắn được chi nhánh
+  /// CÙNG tenant, do DB giữ chứ không phải service nhớ kiểm.
+  @@unique([id, tenantId])
+  @@index([tenantId, status])
+  @@index([provinceCode])
+  @@index([tenantId, isDefault])
+  @@map("tenant_branches")
+}
+
+// ---------------------------------------------------------------------------
 // Hồ sơ & giấy tờ gian hàng — database_design §5.2, §5.3, §5.5
 // ---------------------------------------------------------------------------
 
@@ -482,6 +594,11 @@ model AdminNote {
 model Vehicle {
   id               String    @id @db.Char(26)
   tenantId         String    @map("tenant_id") @db.Char(26)
+  /// Chi nhánh xe đang nằm — nguồn VỊ TRÍ CÔNG KHAI của xe (thay `tenant_profiles.province_name`).
+  ///
+  /// Nullable ở tầng schema CHỈ để migration dữ liệu cũ chạy an toàn; API tạo xe BẮT BUỘC có
+  /// `branchId` (DTO + service), nên dữ liệu mới không bao giờ thiếu.
+  branchId         String?   @map("branch_id") @db.Char(26)
   code             String    @db.VarChar(80)
   name             String    @db.VarChar(255)
   plateNumber      String?   @map("plate_number") @db.VarChar(50)
@@ -536,6 +653,13 @@ model Vehicle {
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  /// FK COMPOSITE `(branch_id, tenant_id) → tenant_branches(id, tenant_id)`: DB không cho gắn
+  /// xe vào chi nhánh của gian hàng khác, kể cả khi service quên kiểm.
+  ///
+  /// `onDelete: NoAction` chứ không SetNull: SET NULL sẽ null cả `tenant_id` (cột NOT NULL).
+  /// NoAction kiểm ở CUỐI câu lệnh nên xoá tenant (cascade cả chi nhánh lẫn xe) vẫn chạy được,
+  /// còn xoá thẳng một chi nhánh đang có xe thì bị chặn — đúng ý "không xoá cứng khi còn tham chiếu".
+  branch      TenantBranch?      @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
   creator     User?              @relation("vehicle_creator", fields: [createdBy], references: [id])
   bookings    Booking[]
   bookingRequests BookingRequest[]
@@ -699,6 +823,11 @@ model PublicListing {
   fuelType     String?   @map("fuel_type") @db.VarChar(50)
   /// @xeprime/types → BodyType
   bodyType     String?   @map("body_type") @db.VarChar(50)
+  /// Chi nhánh giữ xe tại thời điểm snapshot — nguồn của `provinceCode`/`provinceName` dưới đây.
+  branchId     String?   @map("branch_id") @db.Char(26)
+  /// Mã tỉnh CHUẨN — thứ mọi bộ lọc marketplace so khớp. Chỉ ListingsService ghi (ADR 0008).
+  provinceCode String?   @map("province_code") @db.Char(2)
+  /// Tên tỉnh chuẩn đã denormalize để hiển thị; KHÔNG dùng để lọc (dùng `provinceCode`).
   provinceName String?   @map("province_name") @db.VarChar(100)
   mainImageUrl String?   @map("main_image_url") @db.Text
   weekdayPrice Decimal?  @map("weekday_price") @db.Decimal(14, 2)
@@ -719,9 +848,14 @@ model PublicListing {
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  /// Cùng cơ chế composite như `vehicles.branch` — snapshot công khai không thể trỏ sang chi
+  /// nhánh của gian hàng khác.
+  branch  TenantBranch? @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
+  province Province?    @relation(fields: [provinceCode], references: [code], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([status, vehicleType, serviceType])
-  @@index([provinceName])
+  /// Bộ lọc marketplace theo tỉnh chạy trên MÃ, không phải tên.
+  @@index([status, provinceCode])
   @@index([tenantId, status])
   @@index([weekdayPrice])
   @@index([status, bodyType])

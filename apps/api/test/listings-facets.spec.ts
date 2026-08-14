@@ -8,12 +8,12 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PublicListingsService } from '../src/modules/public-listings/public-listings.service';
 import type {
   ListingFacetsQueryDto,
   PublicListingQueryDto,
 } from '../src/modules/public-listings/dto/public-listing.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makePublicListingsService, seedBranch, seedProvince } from './helpers/service-factory';
 
 /**
  * Bộ lọc facet marketplace trên PostgreSQL THẬT: đếm theo chiều với semantics chuẩn (mỗi chiều
@@ -24,15 +24,17 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  * Chạy: pnpm db:up && pnpm --filter @xeprime/api test -- test/listings-facets.spec.ts
  */
 const prisma = createPrismaClient();
-const service = new PublicListingsService(prisma as unknown as PrismaService);
+const service = makePublicListingsService(prisma as unknown as PrismaService);
 const listings = new ListingsService(prisma as unknown as PrismaService);
 
-const PROV = `ZZ-Facet-${newId().slice(-6)}`;
+const PROV = 'Z2';
+const PROV_NAME = 'Zone Facet';
 
 let dbAvailable = false;
 let ownerId: string;
 let customerId: string;
 let tenantId: string;
+let branchId: string;
 /** sedan Toyota 5 chỗ xăng, bluetooth+gps, thuê giờ, giảm 10%, 600k, rating 5.00 (1 review). */
 let vSedan: string;
 /** suv Mazda 7 chỗ dầu, bluetooth+camera_360+sunroof, giao tận nơi, 1.2tr, rating 4.00. */
@@ -62,6 +64,7 @@ async function seedFacetVehicle(v: FacetVehicle): Promise<string> {
     data: {
       id,
       tenantId,
+      branchId,
       code: `V-${id.slice(-6)}`,
       name: `${v.brand} test`,
       vehicleType: VEHICLE_TYPE.CAR,
@@ -101,9 +104,9 @@ async function seedFacetVehicle(v: FacetVehicle): Promise<string> {
 }
 
 const fq = (extra: Partial<ListingFacetsQueryDto> = {}): ListingFacetsQueryDto =>
-  ({ province: PROV, ...extra }) as ListingFacetsQueryDto;
+  ({ provinceCode: PROV, ...extra }) as ListingFacetsQueryDto;
 const sq = (extra: Partial<PublicListingQueryDto> = {}): PublicListingQueryDto =>
-  ({ province: PROV, limit: 48, ...extra }) as PublicListingQueryDto;
+  ({ provinceCode: PROV, limit: 48, ...extra }) as PublicListingQueryDto;
 
 const countOf = (buckets: Array<{ key: string; count: number }>, key: string): number =>
   buckets.find((b) => b.key === key)?.count ?? 0;
@@ -138,9 +141,11 @@ beforeAll(async () => {
       ownerUserId: ownerId,
     },
   });
+  await seedProvince(prisma as unknown as PrismaService, PROV, PROV_NAME);
   await prisma.tenantProfile.create({
-    data: { tenantId, displayName: `Shop ${PROV}`, provinceName: PROV },
+    data: { tenantId, displayName: `Shop ${PROV}`, provinceCode: PROV, provinceName: PROV_NAME },
   });
+  branchId = await seedBranch(prisma as unknown as PrismaService, { tenantId, provinceCode: PROV });
 
   vSedan = await seedFacetVehicle({
     brand: 'Toyota', body: BODY_TYPE.SEDAN, seats: 5, fuel: FUEL_TYPE.GASOLINE, price: '600000',
@@ -165,8 +170,10 @@ afterAll(async () => {
     await prisma.review.deleteMany({ where: { tenantId } });
     await prisma.vehicle.deleteMany({ where: { tenantId } });
     await prisma.tenantProfile.deleteMany({ where: { tenantId } });
+    await prisma.tenantBranch.deleteMany({ where: { tenantId } });
     await prisma.tenant.deleteMany({ where: { id: tenantId } });
     await prisma.user.deleteMany({ where: { id: { in: [ownerId, customerId] } } });
+    await prisma.province.deleteMany({ where: { code: PROV } });
   }
   await prisma.$disconnect();
 });

@@ -9,13 +9,8 @@ import {
   VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
 } from '@xeprime/types';
-import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Gap 4 — gallery ảnh + tiện ích xe, chạy trên PostgreSQL THẬT. Kiểm chứng: create/update
@@ -24,14 +19,8 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const vehicles = new VehiclesService(
-  asService,
-  new AuditService(asService),
-  new ListingsService(asService),
-  new BillingService(asService, new AuditService(asService)),
-  new CatalogService(asService, new AuditService(asService)),
-  new PricingService(asService, new AuditService(asService)),
-);
+const vehicles = makeVehiclesService(asService);
+const createVehicle = vehicleCreator(vehicles, asService);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -90,7 +79,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
   });
 
 async function createBase(code: string) {
-  return vehicles.create(tenantId, ownerId, {
+  return createVehicle(tenantId, ownerId, {
     code,
     name: 'Toyota Vios',
     vehicleType: VEHICLE_TYPE.CAR,
@@ -102,7 +91,7 @@ async function createBase(code: string) {
 describe('Vehicle gallery + features (Gap 4)', () => {
   maybe('chặn nguồn năng lượng không tương thích với loại phương tiện', async () => {
     await expect(
-      vehicles.create(tenantId, ownerId, {
+      createVehicle(tenantId, ownerId, {
         name: 'Xe máy dầu không hợp lệ',
         vehicleType: VEHICLE_TYPE.MOTORBIKE,
         fuelType: FUEL_TYPE.DIESEL,
@@ -113,7 +102,7 @@ describe('Vehicle gallery + features (Gap 4)', () => {
   });
 
   maybe('create lưu nguồn + thông số mở rộng; update tab khác không ghi đè', async () => {
-    const created = await vehicles.create(tenantId, ownerId, {
+    const created = await createVehicle(tenantId, ownerId, {
       name: 'Toyota Altis',
       vehicleType: VEHICLE_TYPE.CAR,
       sourceType: VEHICLE_SOURCE_TYPE.FINANCED,
@@ -133,7 +122,7 @@ describe('Vehicle gallery + features (Gap 4)', () => {
   });
 
   maybe('null có chủ đích xoá ảnh đại diện và thông tin tuỳ chọn', async () => {
-    const created = await vehicles.create(tenantId, ownerId, {
+    const created = await createVehicle(tenantId, ownerId, {
       code: 'NULLABLE-1',
       name: 'Xe có ảnh',
       vehicleType: VEHICLE_TYPE.CAR,

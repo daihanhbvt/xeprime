@@ -2,11 +2,8 @@ import { createPrismaClient, newId } from '@xeprime/prisma';
 import { API_ERROR_CODE, PLAN_STATUS, SUBSCRIPTION_STATUS, VEHICLE_TYPE } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BillingService } from '../src/modules/billing/billing.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Phase 7 — Gói/hạn (ADR 0010), chạy trên PostgreSQL THẬT. Kiểm chứng: plan CRUD + code unique,
@@ -18,14 +15,8 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const billing = new BillingService(asService, audit);
-const vehicles = new VehiclesService(
-  asService,
-  audit,
-  new ListingsService(asService),
-  billing,
-  new CatalogService(asService, audit),
-  new PricingService(asService, audit),
-);
+const vehicles = makeVehiclesService(asService);
+const createVehicle = vehicleCreator(vehicles, asService);
 
 const RUN = newId().slice(-8).toLowerCase();
 
@@ -171,7 +162,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
     'quota: max_vehicles=1 → xe thứ 2 bị PLAN_LIMIT_REACHED; tenant không gói thì thoải mái',
     async () => {
       const mkVehicle = (tid: string, code: string) =>
-        vehicles.create(tid, actorId, {
+        createVehicle(tid, actorId, {
           code,
           name: 'Vios',
           vehicleType: VEHICLE_TYPE.CAR,
@@ -208,7 +199,7 @@ describe('Billing — plans & subscriptions (ADR 0010)', () => {
       expect(cancelAudit).toBe(2);
 
       // Hết gói giới hạn → tạo xe lại được (unlimited).
-      await vehicles.create(tenantId, actorId, {
+      await createVehicle(tenantId, actorId, {
         code: `XE3-${RUN}`,
         name: 'Vios',
         vehicleType: VEHICLE_TYPE.CAR,

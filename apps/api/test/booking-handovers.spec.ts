@@ -25,21 +25,17 @@ import 'reflect-metadata';
 import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { ConfirmHandoverDto } from '../src/modules/bookings/handovers/dto/handover.dto';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { BookingHandoversController } from '../src/modules/bookings/handovers/booking-handovers.controller';
 import { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { MaintenanceService } from '../src/modules/vehicles/maintenance/maintenance.service';
 import { OdometerService } from '../src/modules/vehicles/maintenance/odometer.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 7 — Bàn giao xe & đồng bộ KM, chạy trên PostgreSQL THẬT (R2 giả lập trong bộ nhớ).
@@ -79,14 +75,8 @@ const fakeR2 = {
 const audit = new AuditService(asService);
 const occupancy = new OccupancyService(asService);
 const notifications = new NotificationService(asService);
-const vehicles = new VehiclesService(
-  asService,
-  audit,
-  new ListingsService(asService),
-  new BillingService(asService, audit),
-  new CatalogService(asService, audit),
-  new PricingService(asService, audit),
-);
+const vehicles = makeVehiclesService(asService);
+const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit);
@@ -173,7 +163,7 @@ let vehicleSeq = 0;
 
 async function createVehicle(fuelType: string = FUEL_TYPE.GASOLINE) {
   vehicleSeq += 1;
-  return vehicles.create(tenantId, ownerId, {
+  return createVehicleWithBranch(tenantId, ownerId, {
     code: `HV-${Date.now().toString(36)}-${vehicleSeq}`,
     name: 'Toyota Vios 2024',
     vehicleType: VEHICLE_TYPE.CAR,

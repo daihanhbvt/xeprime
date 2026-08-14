@@ -11,6 +11,7 @@ import {
   type RentalRange,
 } from '@/components/form/RentalDateTimeRangeField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { buildProvinceOptions } from '../province-options';
 import { useDestinations } from '../hooks/use-destinations';
 import type { MarketplaceFilters } from '../types';
 import styles from './SearchDialog.module.css';
@@ -20,7 +21,8 @@ const PROVINCE_OPTIONS_LIMIT = 24;
 
 export interface SearchDialogValues {
   vehicleType: string;
-  province?: string;
+  /** MÃ tỉnh — cùng giá trị mà hero desktop phát ra, nên hai lối vào không lệch nhau. */
+  provinceCode?: string;
   pickupAt?: string;
   returnAt?: string;
   hourly?: boolean;
@@ -50,7 +52,7 @@ export function SearchDialog({
     useDestinations(PROVINCE_OPTIONS_LIMIT);
 
   const [vehicleType, setVehicleType] = useState<string>(initial.vehicleType ?? VEHICLE_TYPE.CAR);
-  const [province, setProvince] = useState(initial.province ?? '');
+  const [province, setProvince] = useState(initial.provinceCode ?? '');
   const [mode, setMode] = useState<RentalMode>(initial.hourly ? 'hourly' : 'daily');
   const [range, setRange] = useState<RentalRange>(() => ({
     pickupAt: initial.pickupAt
@@ -61,22 +63,15 @@ export function SearchDialog({
       : dayjs().add(4, 'day').hour(10).startOf('hour'),
   }));
 
-  const provinceOptions = useMemo(() => {
-    const fromApi = (destinations ?? []).map((d) => ({
-      value: d.provinceName,
-      label: d.provinceName,
-    }));
-    const current =
-      province && !fromApi.some((o) => o.value === province)
-        ? [{ value: province, label: province }]
-        : [];
-    return [{ value: '', label: 'Toàn quốc' }, ...current, ...fromApi];
-  }, [destinations, province]);
+  const provinceOptions = useMemo(
+    () => buildProvinceOptions(destinations, province),
+    [destinations, province],
+  );
 
   function submit() {
     onSubmit({
       vehicleType,
-      province: province || undefined,
+      provinceCode: province || undefined,
       pickupAt: range.pickupAt?.toISOString(),
       returnAt: range.returnAt?.toISOString(),
       hourly: mode === 'hourly' ? true : undefined,

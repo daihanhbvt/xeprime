@@ -12,16 +12,12 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import { SaveVehicleSourceDto } from '../src/modules/vehicles/dto/vehicle-source.dto';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
 import { VehicleSourceService } from '../src/modules/vehicles/vehicle-source.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 4 + 4.1 — hồ sơ nguồn xe & tài chính + tài liệu hợp đồng riêng tư, chạy trên PostgreSQL
@@ -54,14 +50,8 @@ const fakeR2 = {
 };
 
 const audit = new AuditService(asService);
-const vehicles = new VehiclesService(
-  asService,
-  audit,
-  new ListingsService(asService),
-  new BillingService(asService, audit),
-  new CatalogService(asService, audit),
-  new PricingService(asService, audit),
-);
+const vehicles = makeVehiclesService(asService);
+const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const contracts = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const source = new VehicleSourceService(asService, audit, contracts);
 
@@ -132,7 +122,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
   });
 
 async function createVehicle(code: string, sourceType?: string) {
-  return vehicles.create(tenantId, ownerId, {
+  return createVehicleWithBranch(tenantId, ownerId, {
     code,
     name: 'Toyota Vios',
     vehicleType: VEHICLE_TYPE.CAR,
@@ -317,7 +307,7 @@ describe('Vehicle source & finance (Wave 4)', () => {
   });
 
   maybe('lưu tab nguồn không đụng thông tin/media/giá của xe', async () => {
-    const v = await vehicles.create(tenantId, ownerId, {
+    const v = await createVehicleWithBranch(tenantId, ownerId, {
       code: 'SRC-SAFE',
       name: 'Xe giữ nguyên',
       vehicleType: VEHICLE_TYPE.CAR,

@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
 import { apiGet } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import type { CalendarEvent, CalendarResource } from '../types/calendar.types';
@@ -19,11 +20,15 @@ export function useCalendarData() {
 
   const range = useMemo(() => buildRange(filters.from, filters.days), [filters.from, filters.days]);
 
+  const branchScope = useBranchScopeParams();
   const query = {
     startAt: range.startAt.toISOString(),
     endAt: range.endAt.toISOString(),
     ...(filters.vehicleType ? { vehicleType: filters.vehicleType } : {}),
     ...(filters.q ? { q: filters.q } : {}),
+    // Bộ chọn chi nhánh ở thanh trên thu hẹp danh sách XE trên lịch (và do đó cả event của
+    // chúng). Nằm trong query key nên đổi chi nhánh là lịch tự nạp lại.
+    ...branchScope,
   };
 
   const resources = useQuery({

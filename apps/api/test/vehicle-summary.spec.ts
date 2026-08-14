@@ -7,13 +7,8 @@ import {
   VEHICLE_OPERATION_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
-import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 1 (Vehicle 360) — `fleetSummary` + `summary360`, chạy trên PostgreSQL THẬT.
@@ -25,14 +20,8 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  */
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
-const vehicles = new VehiclesService(
-  asService,
-  new AuditService(asService),
-  new ListingsService(asService),
-  new BillingService(asService, new AuditService(asService)),
-  new CatalogService(asService, new AuditService(asService)),
-  new PricingService(asService, new AuditService(asService)),
-);
+const vehicles = makeVehiclesService(asService);
+const createVehicle = vehicleCreator(vehicles, asService);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -111,13 +100,13 @@ beforeAll(async () => {
     },
   });
 
-  const mine = await vehicles.create(tenantId, ownerId, {
+  const mine = await createVehicle(tenantId, ownerId, {
     code: 'SUM-1',
     name: 'Toyota Vios',
     vehicleType: VEHICLE_TYPE.CAR,
   });
   vehicleId = mine.id;
-  const theirs = await vehicles.create(otherTenantId, ownerId, {
+  const theirs = await createVehicle(otherTenantId, ownerId, {
     code: 'SUM-X',
     name: 'Xe shop khác',
     vehicleType: VEHICLE_TYPE.CAR,
@@ -146,13 +135,13 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 
 describe('fleetSummary — đếm đội xe theo trạng thái vận hành', () => {
   maybe('đếm theo trạng thái, đúng scope tenant, bỏ xe xoá mềm', async () => {
-    const extra = await vehicles.create(tenantId, ownerId, {
+    const extra = await createVehicle(tenantId, ownerId, {
       code: 'SUM-2',
       name: 'Xe bảo dưỡng',
       vehicleType: VEHICLE_TYPE.CAR,
       operationStatus: VEHICLE_OPERATION_STATUS.MAINTENANCE,
     });
-    const deleted = await vehicles.create(tenantId, ownerId, {
+    const deleted = await createVehicle(tenantId, ownerId, {
       code: 'SUM-3',
       name: 'Xe sẽ xoá',
       vehicleType: VEHICLE_TYPE.CAR,

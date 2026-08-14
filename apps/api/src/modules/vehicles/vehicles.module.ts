@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BillingModule } from '../billing/billing.module';
+import { BranchesModule } from '../branches/branches.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { PricingModule } from '../pricing/pricing.module';
@@ -34,6 +35,9 @@ import { VehiclesService } from './vehicles.service';
 @Module({
   imports: [
     PublicListingsModule,
+    // Xe BẮT BUỘC thuộc một chi nhánh; kiểm tra "chi nhánh này của gian hàng mình và đang chạy"
+    // đi qua BranchesService, không lặp lại truy vấn ở đây.
+    BranchesModule,
     BillingModule,
     CatalogModule,
     PricingModule,

@@ -21,9 +21,9 @@ export function FeaturedLocations() {
   const { data, isLoading, isError, error } = useDestinations(FETCH_LIMIT);
   const [expanded, setExpanded] = useState(false);
 
-  function pick(provinceName: string) {
-    // Lọc theo tên tỉnh (khớp `provinceName`, backend so contains-insensitive).
-    setFilters({ province: provinceName });
+  function pick(provinceCode: string) {
+    // Lọc theo MÃ tỉnh (khớp chính xác). Xoá luôn tham số tên cũ nếu URL đang mang nó.
+    setFilters({ provinceCode, province: undefined });
     document.getElementById('recommendations')?.scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -68,10 +68,10 @@ export function FeaturedLocations() {
         <div className={styles.grid}>
           {shown.map((loc) => (
             <button
-              key={loc.provinceName}
+              key={loc.provinceCode}
               type="button"
               className={styles.tile}
-              onClick={() => pick(loc.provinceName)}
+              onClick={() => pick(loc.provinceCode)}
             >
               {loc.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- ảnh từ storage ngoài, chưa qua next/image

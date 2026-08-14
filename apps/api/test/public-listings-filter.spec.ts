@@ -6,9 +6,9 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PublicListingsService } from '../src/modules/public-listings/public-listings.service';
 import type { PublicListingQueryDto } from '../src/modules/public-listings/dto/public-listing.dto';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makePublicListingsService, seedBranch, seedProvince } from './helpers/service-factory';
 
 /**
  * Phase 3 Gap 2 — lọc marketplace theo giá + ngày rảnh + tỉnh, chạy trên PostgreSQL THẬT.
@@ -17,12 +17,15 @@ import type { PrismaService } from '../src/prisma/prisma.service';
  * Chạy: pnpm db:up && pnpm --filter @xeprime/api test
  */
 const prisma = createPrismaClient();
-const service = new PublicListingsService(prisma as unknown as PrismaService);
+const asService = prisma as unknown as PrismaService;
+const service = makePublicListingsService(prisma as unknown as PrismaService);
 const listings = new ListingsService(prisma as unknown as PrismaService);
 
 // provinceName duy nhất cho lần chạy này (khỏi đụng xe seed thật).
-const PROV_A = `ZZ-Prov-A-${newId().slice(-6)}`;
-const PROV_B = `ZZ-Prov-B-${newId().slice(-6)}`;
+const PROV_A = 'Z3';
+const PROV_A_NAME = 'Zone Filter A';
+const PROV_B = 'Z4';
+const PROV_B_NAME = 'Zone Filter B';
 
 // Cửa sổ bận của xe vBusy.
 const BUSY_START = new Date('2027-01-10T00:00:00.000Z');
@@ -38,21 +41,25 @@ let vHigh: string;
 let vBusy: string;
 let vProvB: string;
 
-async function seedActiveTenant(province: string): Promise<string> {
+/** Chi nhánh mặc định của mỗi tenant trong spec — xe lấy tỉnh từ đây. */
+const branchByTenant = new Map<string, string>();
+
+async function seedActiveTenant(provinceCode: string, provinceName: string): Promise<string> {
   const id = newId();
   await prisma.tenant.create({
     data: {
       id,
       code: `T-${id.slice(-8)}`,
       slug: `t-${id.toLowerCase().slice(-10)}`,
-      name: `Shop ${province}`,
+      name: `Shop ${provinceName}`,
       status: TENANT_STATUS.ACTIVE,
       ownerUserId: ownerId,
     },
   });
   await prisma.tenantProfile.create({
-    data: { tenantId: id, displayName: `Shop ${province}`, provinceName: province },
+    data: { tenantId: id, displayName: `Shop ${provinceName}`, provinceCode, provinceName },
   });
+  branchByTenant.set(id, await seedBranch(asService, { tenantId: id, provinceCode }));
   return id;
 }
 
@@ -62,6 +69,7 @@ async function seedVehicle(tenantId: string, price: string): Promise<string> {
     data: {
       id,
       tenantId,
+      branchId: branchByTenant.get(tenantId),
       code: `V-${id.slice(-6)}`,
       name: 'Toyota Vios',
       vehicleType: VEHICLE_TYPE.CAR,
@@ -91,8 +99,10 @@ beforeAll(async () => {
     data: { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
   });
 
-  tenantA = await seedActiveTenant(PROV_A);
-  tenantB = await seedActiveTenant(PROV_B);
+  await seedProvince(asService, PROV_A, PROV_A_NAME);
+  await seedProvince(asService, PROV_B, PROV_B_NAME);
+  tenantA = await seedActiveTenant(PROV_A, PROV_A_NAME);
+  tenantB = await seedActiveTenant(PROV_B, PROV_B_NAME);
 
   vCheap = await seedVehicle(tenantA, '400000');
   vMid = await seedVehicle(tenantA, '600000');
@@ -122,8 +132,10 @@ afterAll(async () => {
     await prisma.vehicleOccupancy.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.vehicle.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantProfile.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.tenantBranch.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenant.deleteMany({ where: { id: { in: tenantIds } } });
     await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.province.deleteMany({ where: { code: { in: [PROV_A, PROV_B] } } });
   }
   await prisma.$disconnect();
 });
@@ -136,7 +148,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
 
 describe('Marketplace filter (giá / ngày rảnh / tỉnh)', () => {
   maybe('lọc khoảng giá 500k–800k → chỉ xe trong khoảng', async () => {
-    const res = await service.search(q({ province: PROV_A, priceMin: 500000, priceMax: 800000 }));
+    const res = await service.search(q({ provinceCode: PROV_A, priceMin: 500000, priceMax: 800000 }));
     const ids = res.data.map((v) => v.id);
     expect(ids).toContain(vMid);
     expect(ids).toContain(vBusy); // 600k, chưa lọc ngày
@@ -145,7 +157,7 @@ describe('Marketplace filter (giá / ngày rảnh / tỉnh)', () => {
   });
 
   maybe('priceMax mở (chỉ min) — trên 1.2tr', async () => {
-    const res = await service.search(q({ province: PROV_A, priceMin: 1200000 }));
+    const res = await service.search(q({ provinceCode: PROV_A, priceMin: 1200000 }));
     const ids = res.data.map((v) => v.id);
     expect(ids).toEqual([vHigh]);
   });
@@ -153,7 +165,7 @@ describe('Marketplace filter (giá / ngày rảnh / tỉnh)', () => {
   maybe('ngày rảnh: xe bận trong khoảng bị loại, xe rảnh vẫn hiện', async () => {
     const res = await service.search(
       q({
-        province: PROV_A,
+        provinceCode: PROV_A,
         pickupAt: '2027-01-12T00:00:00.000Z',
         returnAt: '2027-01-14T00:00:00.000Z',
       }),
@@ -167,7 +179,7 @@ describe('Marketplace filter (giá / ngày rảnh / tỉnh)', () => {
   maybe('ngày không chồng lấn: xe bận hiện lại', async () => {
     const res = await service.search(
       q({
-        province: PROV_A,
+        provinceCode: PROV_A,
         pickupAt: '2027-02-01T00:00:00.000Z',
         returnAt: '2027-02-03T00:00:00.000Z',
       }),
@@ -176,7 +188,7 @@ describe('Marketplace filter (giá / ngày rảnh / tỉnh)', () => {
   });
 
   maybe('lọc tỉnh chỉ trả xe của tỉnh đó', async () => {
-    const res = await service.search(q({ province: PROV_B }));
+    const res = await service.search(q({ provinceCode: PROV_B }));
     const ids = res.data.map((v) => v.id);
     expect(ids).toEqual([vProvB]);
   });
@@ -184,7 +196,7 @@ describe('Marketplace filter (giá / ngày rảnh / tỉnh)', () => {
   maybe('giá + ngày rảnh kết hợp: 500–800k rảnh giữa cửa sổ bận', async () => {
     const res = await service.search(
       q({
-        province: PROV_A,
+        provinceCode: PROV_A,
         priceMin: 500000,
         priceMax: 800000,
         pickupAt: '2027-01-12T00:00:00.000Z',

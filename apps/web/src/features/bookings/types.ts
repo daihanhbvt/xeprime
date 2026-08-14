@@ -26,6 +26,8 @@ export interface BookingFilters {
   q?: string;
   status?: string;
   vehicleId?: string;
+  /** Chi nhánh của XE trong đơn — ghép từ bộ chọn ở thanh trên. */
+  branchId?: string;
   returnFrom?: string;
   returnTo?: string;
   sort?: BookingSort;

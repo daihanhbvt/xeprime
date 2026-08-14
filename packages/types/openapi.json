@@ -579,6 +579,131 @@
         ]
       }
     },
+    "/provinces": {
+      "get": {
+        "operationId": "ProvincesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvinceListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh mục tỉnh/thành đang mở cho đăng ký & tạo chi nhánh",
+        "tags": [
+          "locations"
+        ]
+      }
+    },
+    "/platform/locations": {
+      "get": {
+        "operationId": "PlatformLocationsController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo mã, tên hoặc bí danh",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformProvinceListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Toàn bộ danh mục tỉnh/thành kèm số chi nhánh, số xe và số xe đang công khai",
+        "tags": [
+          "platform-admin"
+        ]
+      },
+      "post": {
+        "operationId": "PlatformLocationsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProvinceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformProvinceDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thêm đơn vị hành chính cấp tỉnh mới (mã bất biến sau khi tạo)",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
+    "/platform/locations/{code}": {
+      "patch": {
+        "operationId": "PlatformLocationsController_update",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProvinceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformProvinceDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đổi metadata hiển thị / bật-tắt chọn mới / ẩn-hiện công khai",
+        "tags": [
+          "platform-admin"
+        ]
+      }
+    },
     "/tenants": {
       "post": {
         "operationId": "TenantsController_register",
@@ -709,49 +834,36 @@
         ]
       }
     },
-    "/calendar/resources": {
+    "/branches": {
       "get": {
-        "operationId": "CalendarController_resources",
+        "operationId": "BranchesController_list",
         "parameters": [
           {
-            "name": "startAt",
-            "required": true,
+            "name": "q",
+            "required": false,
             "in": "query",
-            "description": "Đầu khoảng, ISO-8601 UTC",
+            "description": "Tìm theo tên, mã hoặc địa chỉ",
             "schema": {
-              "format": "date-time",
-              "example": "2026-07-01T00:00:00.000Z",
               "type": "string"
             }
           },
           {
-            "name": "endAt",
-            "required": true,
-            "in": "query",
-            "description": "Cuối khoảng, ISO-8601 UTC",
-            "schema": {
-              "format": "date-time",
-              "example": "2026-08-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "vehicleType",
+            "name": "status",
             "required": false,
             "in": "query",
             "schema": {
               "type": "string",
               "enum": [
-                "car",
-                "motorbike"
+                "active",
+                "inactive"
               ]
             }
           },
           {
-            "name": "q",
+            "name": "provinceCode",
             "required": false,
             "in": "query",
-            "description": "Tìm theo tên xe hoặc biển số",
+            "description": "Lọc theo mã tỉnh",
             "schema": {
               "type": "string"
             }
@@ -763,100 +875,96 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CalendarResourceDto"
-                  }
+                  "$ref": "#/components/schemas/BranchListDto"
                 }
               }
             }
           }
         },
-        "summary": "Danh sách xe làm hàng của resource timeline",
+        "summary": "Danh sách chi nhánh của gian hàng (kèm số xe mỗi chi nhánh)",
         "tags": [
-          "calendar"
+          "branches"
         ]
-      }
-    },
-    "/calendar/events": {
-      "get": {
-        "operationId": "CalendarController_events",
-        "parameters": [
-          {
-            "name": "startAt",
-            "required": true,
-            "in": "query",
-            "description": "Đầu khoảng, ISO-8601 UTC",
-            "schema": {
-              "format": "date-time",
-              "example": "2026-07-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "endAt",
-            "required": true,
-            "in": "query",
-            "description": "Cuối khoảng, ISO-8601 UTC",
-            "schema": {
-              "format": "date-time",
-              "example": "2026-08-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "vehicleType",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "car",
-                "motorbike"
-              ]
-            }
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "description": "Tìm theo tên xe hoặc biển số",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CalendarEventDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Sự kiện chiếm lịch trong khoảng thời gian",
-        "tags": [
-          "calendar"
-        ]
-      }
-    },
-    "/calendar/check-conflict": {
+      },
       "post": {
-        "operationId": "CalendarController_checkConflict",
+        "operationId": "BranchesController_create",
         "parameters": [],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CheckConflictDto"
+                "$ref": "#/components/schemas/CreateBranchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo chi nhánh mới (mã CNxx sinh ở server)",
+        "tags": [
+          "branches"
+        ]
+      }
+    },
+    "/branches/{id}": {
+      "get": {
+        "operationId": "BranchesController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết một chi nhánh",
+        "tags": [
+          "branches"
+        ]
+      },
+      "patch": {
+        "operationId": "BranchesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBranchDto"
               }
             }
           }
@@ -867,15 +975,108 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CheckConflictResultDto"
+                  "$ref": "#/components/schemas/BranchDto"
                 }
               }
             }
           }
         },
-        "summary": "Xem trước trùng lịch (preview, không phải lớp bảo vệ)",
+        "summary": "Sửa chi nhánh (đổi tỉnh sẽ đồng bộ lại vị trí công khai của xe)",
         "tags": [
-          "calendar"
+          "branches"
+        ]
+      }
+    },
+    "/branches/{id}/set-default": {
+      "post": {
+        "operationId": "BranchesController_setDefault",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đặt làm chi nhánh mặc định của gian hàng",
+        "tags": [
+          "branches"
+        ]
+      }
+    },
+    "/branches/{id}/deactivate": {
+      "post": {
+        "operationId": "BranchesController_deactivate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ngừng hoạt động (chặn nếu còn xe hoặc đơn đang chạy/sắp tới)",
+        "tags": [
+          "branches"
+        ]
+      }
+    },
+    "/branches/{id}/activate": {
+      "post": {
+        "operationId": "BranchesController_activate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BranchDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Bật lại chi nhánh đã ngừng hoạt động",
+        "tags": [
+          "branches"
         ]
       }
     },
@@ -1010,10 +1211,20 @@
             }
           },
           {
+            "name": "provinceCode",
+            "required": false,
+            "in": "query",
+            "description": "Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "province",
             "required": false,
             "in": "query",
-            "description": "Lọc theo tỉnh/thành của gian hàng",
+            "deprecated": true,
+            "description": "Tên tỉnh (link cũ) — được quy về provinceCode qua bí danh",
             "schema": {
               "type": "string"
             }
@@ -1242,10 +1453,20 @@
             }
           },
           {
+            "name": "provinceCode",
+            "required": false,
+            "in": "query",
+            "description": "Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "province",
             "required": false,
             "in": "query",
-            "description": "Lọc theo tỉnh/thành của gian hàng",
+            "deprecated": true,
+            "description": "Tên tỉnh (link cũ) — được quy về provinceCode qua bí danh",
             "schema": {
               "type": "string"
             }
@@ -1517,6 +1738,194 @@
         ]
       }
     },
+    "/calendar/resources": {
+      "get": {
+        "operationId": "CalendarController_resources",
+        "parameters": [
+          {
+            "name": "startAt",
+            "required": true,
+            "in": "query",
+            "description": "Đầu khoảng, ISO-8601 UTC",
+            "schema": {
+              "format": "date-time",
+              "example": "2026-07-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endAt",
+            "required": true,
+            "in": "query",
+            "description": "Cuối khoảng, ISO-8601 UTC",
+            "schema": {
+              "format": "date-time",
+              "example": "2026-08-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên xe hoặc biển số",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ hiện xe của một chi nhánh",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarResourceDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách xe làm hàng của resource timeline",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/calendar/events": {
+      "get": {
+        "operationId": "CalendarController_events",
+        "parameters": [
+          {
+            "name": "startAt",
+            "required": true,
+            "in": "query",
+            "description": "Đầu khoảng, ISO-8601 UTC",
+            "schema": {
+              "format": "date-time",
+              "example": "2026-07-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "endAt",
+            "required": true,
+            "in": "query",
+            "description": "Cuối khoảng, ISO-8601 UTC",
+            "schema": {
+              "format": "date-time",
+              "example": "2026-08-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên xe hoặc biển số",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Chỉ hiện xe của một chi nhánh",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarEventDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sự kiện chiếm lịch trong khoảng thời gian",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/calendar/check-conflict": {
+      "post": {
+        "operationId": "CalendarController_checkConflict",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckConflictDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckConflictResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xem trước trùng lịch (preview, không phải lớp bảo vệ)",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
     "/vehicles": {
       "get": {
         "operationId": "VehiclesController_list",
@@ -1585,6 +1994,15 @@
                 "hidden",
                 "archived"
               ]
+            }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Id chi nhánh — chỉ thu hẹp trong gian hàng hiện tại",
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -4024,6 +4442,15 @@
             }
           },
           {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo chi nhánh (qua xe của đơn)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "returnFrom",
             "required": false,
             "in": "query",
@@ -5020,6 +5447,15 @@
             "name": "vehicleId",
             "required": false,
             "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo chi nhánh (qua xe của yêu cầu)",
             "schema": {
               "type": "string"
             }
@@ -8418,6 +8854,8 @@
                 "tenant.view",
                 "tenant.update",
                 "tenant.submit_review",
+                "branches.view",
+                "branches.manage",
                 "members.view",
                 "members.invite",
                 "members.update_role",
@@ -8467,7 +8905,9 @@
                 "platform.vehicles.moderate",
                 "platform.bookings.view",
                 "platform.customers.view",
-                "platform.customers.view_pii"
+                "platform.customers.view_pii",
+                "platform.locations.view",
+                "platform.locations.manage"
               ]
             }
           }
@@ -8661,12 +9101,193 @@
           }
         }
       },
+      "ProvinceDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "79",
+            "description": "Mã hành chính chính thức, 2 ký tự"
+          },
+          "name": {
+            "type": "string",
+            "example": "Hồ Chí Minh"
+          },
+          "administrativeType": {
+            "type": "string",
+            "enum": [
+              "province",
+              "municipality"
+            ]
+          },
+          "slug": {
+            "type": "string",
+            "example": "ho-chi-minh"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "administrativeType",
+          "slug"
+        ]
+      },
+      "ProvinceListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProvinceDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "PlatformProvinceDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "79",
+            "description": "Mã hành chính chính thức, 2 ký tự"
+          },
+          "name": {
+            "type": "string",
+            "example": "Hồ Chí Minh"
+          },
+          "administrativeType": {
+            "type": "string",
+            "enum": [
+              "province",
+              "municipality"
+            ]
+          },
+          "slug": {
+            "type": "string",
+            "example": "ho-chi-minh"
+          },
+          "isEnabled": {
+            "type": "boolean"
+          },
+          "isPublicVisible": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "branchCount": {
+            "type": "number",
+            "description": "Số chi nhánh đang trỏ tới tỉnh này (chưa xoá)"
+          },
+          "vehicleCount": {
+            "type": "number",
+            "description": "Tổng số xe (mọi trạng thái) thuộc các chi nhánh đó"
+          },
+          "publicVehicleCount": {
+            "type": "number",
+            "description": "Số xe đang hiển thị công khai trên marketplace"
+          },
+          "aliases": {
+            "description": "Bí danh (tên cũ / cách viết khác)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "administrativeType",
+          "slug",
+          "isEnabled",
+          "isPublicVisible",
+          "sortOrder",
+          "branchCount",
+          "vehicleCount",
+          "publicVehicleCount",
+          "aliases"
+        ]
+      },
+      "PlatformProvinceListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformProvinceDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CreateProvinceDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "97"
+          },
+          "name": {
+            "type": "string"
+          },
+          "administrativeType": {
+            "type": "string",
+            "enum": [
+              "province",
+              "municipality"
+            ]
+          },
+          "sortOrder": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "administrativeType"
+        ]
+      },
+      "UpdateProvinceDto": {
+        "type": "object",
+        "properties": {
+          "isEnabled": {
+            "type": "boolean",
+            "description": "Cho phép chọn khi đăng ký shop / tạo chi nhánh"
+          },
+          "isPublicVisible": {
+            "type": "boolean",
+            "description": "Cho phép xuất hiện trên marketplace công khai"
+          },
+          "sortOrder": {
+            "type": "number"
+          },
+          "name": {
+            "type": "string",
+            "description": "Tên hiển thị chuẩn"
+          }
+        }
+      },
       "RegisterShopDto": {
         "type": "object",
         "properties": {
           "name": {
             "type": "string",
             "example": "Cho thuê xe Bình Minh"
+          },
+          "provinceCode": {
+            "type": "string",
+            "example": "48",
+            "description": "Mã tỉnh/thành 2 ký tự (GET /provinces)"
+          },
+          "address": {
+            "type": "string",
+            "description": "Địa chỉ chi nhánh đầu tiên"
           },
           "tenantType": {
             "type": "string",
@@ -8685,7 +9306,8 @@
           }
         },
         "required": [
-          "name"
+          "name",
+          "provinceCode"
         ]
       },
       "TenantProfileDto": {
@@ -8776,6 +9398,33 @@
           "submittedAt"
         ]
       },
+      "DefaultBranchDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provinceCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name"
+        ]
+      },
       "MyShopDto": {
         "type": "object",
         "properties": {
@@ -8827,6 +9476,15 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/LatestApprovalDto"
+              }
+            ]
+          },
+          "defaultBranch": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DefaultBranchDto"
               }
             ]
           }
@@ -8965,166 +9623,172 @@
           }
         }
       },
-      "CalendarResourceDto": {
+      "BranchDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string"
           },
-          "vehicleId": {
+          "code": {
+            "type": "string",
+            "example": "CN01"
+          },
+          "name": {
+            "type": "string",
+            "example": "Chi nhánh Đà Nẵng"
+          },
+          "provinceCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "latitude": {
+            "type": "string",
+            "nullable": true,
+            "description": "Chuỗi thập phân"
+          },
+          "longitude": {
+            "type": "string",
+            "nullable": true
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
+          "vehicleCount": {
+            "type": "number",
+            "description": "Số xe (chưa xoá) đang thuộc chi nhánh"
+          },
+          "needsLocationReview": {
+            "type": "boolean",
+            "description": "Chi nhánh sinh từ migration mà chưa quy được tỉnh — chủ shop cần bổ sung"
+          },
+          "legacyProvinceValue": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá trị tỉnh tự do cũ, chỉ để đối chiếu khi bổ sung vị trí"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "isDefault",
+          "status",
+          "vehicleCount",
+          "needsLocationReview",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "BranchListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BranchDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Tổng số chi nhánh (mọi trạng thái)"
+          },
+          "activeCount": {
+            "type": "number",
+            "description": "Số chi nhánh đang hoạt động"
+          },
+          "needsReviewCount": {
+            "type": "number",
+            "description": "Số chi nhánh còn thiếu tỉnh"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "activeCount",
+          "needsReviewCount"
+        ]
+      },
+      "CreateBranchDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Chi nhánh Đà Nẵng"
+          },
+          "provinceCode": {
+            "type": "string",
+            "example": "48",
+            "description": "Mã tỉnh — BẮT BUỘC, phải đang mở đăng ký"
+          },
+          "address": {
             "type": "string"
           },
+          "phone": {
+            "type": "string",
+            "example": "0901234567"
+          },
+          "latitude": {
+            "type": "number",
+            "description": "Toạ độ tuỳ chọn — hiện chỉ lưu, chưa dùng để tính bán kính"
+          },
+          "longitude": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "provinceCode"
+        ]
+      },
+      "UpdateBranchDto": {
+        "type": "object",
+        "properties": {
           "name": {
             "type": "string"
           },
-          "plateNumber": {
-            "type": "object",
-            "nullable": true
-          },
-          "vehicleType": {
-            "type": "string",
-            "enum": [
-              "car",
-              "motorbike"
-            ]
-          },
-          "operationStatus": {
-            "type": "string",
-            "enum": [
-              "available",
-              "renting",
-              "maintenance",
-              "inactive"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "vehicleId",
-          "name",
-          "vehicleType",
-          "operationStatus"
-        ]
-      },
-      "CalendarEventDto": {
-        "type": "object",
-        "properties": {
-          "id": {
+          "provinceCode": {
             "type": "string"
           },
-          "resourceId": {
-            "type": "string",
-            "description": "vehicleId — khớp CalendarResourceDto.id"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "booking",
-              "blocked_range",
-              "maintenance"
-            ]
-          },
-          "title": {
+          "address": {
             "type": "string"
           },
-          "customerName": {
-            "type": "object",
-            "nullable": true
-          },
-          "startAt": {
-            "type": "string",
-            "description": "ISO-8601 UTC",
-            "example": "2026-07-12T02:00:00.000Z"
-          },
-          "endAt": {
-            "type": "string",
-            "description": "ISO-8601 UTC",
-            "example": "2026-07-15T04:00:00.000Z"
-          },
-          "status": {
-            "type": "object",
-            "nullable": true,
-            "description": "BookingStatus khi type=booking"
-          },
-          "sourceId": {
-            "type": "object",
-            "nullable": true
-          }
-        },
-        "required": [
-          "id",
-          "resourceId",
-          "type",
-          "title",
-          "startAt",
-          "endAt"
-        ]
-      },
-      "CheckConflictDto": {
-        "type": "object",
-        "properties": {
-          "vehicleId": {
-            "type": "string",
-            "description": "ID xe (ULID)"
-          },
-          "startAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Nhận xe, ISO-8601 UTC"
-          },
-          "endAt": {
-            "format": "date-time",
-            "type": "string",
-            "description": "Trả xe, ISO-8601 UTC"
-          },
-          "excludeSourceId": {
-            "type": "string",
-            "description": "Bỏ qua nguồn này (khi sửa chính đơn đang xét)"
-          }
-        },
-        "required": [
-          "vehicleId",
-          "startAt",
-          "endAt"
-        ]
-      },
-      "ConflictItemDto": {
-        "type": "object",
-        "properties": {
-          "id": {
+          "phone": {
             "type": "string"
           },
-          "sourceType": {
-            "type": "string"
+          "latitude": {
+            "type": "number"
           },
-          "sourceId": {
-            "type": "string"
+          "longitude": {
+            "type": "number"
           }
-        },
-        "required": [
-          "id",
-          "sourceType",
-          "sourceId"
-        ]
-      },
-      "CheckConflictResultDto": {
-        "type": "object",
-        "properties": {
-          "hasConflict": {
-            "type": "boolean",
-            "description": "Có trùng lịch hay không"
-          },
-          "conflicts": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ConflictItemDto"
-            }
-          }
-        },
-        "required": [
-          "hasConflict",
-          "conflicts"
-        ]
+        }
       },
       "PublicListingDto": {
         "type": "object",
@@ -9215,6 +9879,11 @@
             "type": "string",
             "nullable": true,
             "description": "Tỉnh/thành gian hàng"
+          },
+          "provinceCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng"
           },
           "ratingAvg": {
             "type": "string",
@@ -9488,6 +10157,11 @@
             "nullable": true,
             "description": "Tỉnh/thành gian hàng"
           },
+          "provinceCode": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng"
+          },
           "ratingAvg": {
             "type": "string",
             "nullable": true,
@@ -9551,9 +10225,13 @@
       "PublicDestinationDto": {
         "type": "object",
         "properties": {
+          "provinceCode": {
+            "type": "string",
+            "description": "Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode`"
+          },
           "provinceName": {
             "type": "string",
-            "description": "Tên tỉnh/thành — dùng luôn làm giá trị lọc `province`"
+            "description": "Tên tỉnh chuẩn — chỉ để HIỂN THỊ, không dùng để lọc"
           },
           "vehicleCount": {
             "type": "number",
@@ -9566,6 +10244,7 @@
           }
         },
         "required": [
+          "provinceCode",
           "provinceName",
           "vehicleCount"
         ]
@@ -9675,6 +10354,190 @@
           "ratingCount"
         ]
       },
+      "CalendarResourceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "object",
+            "nullable": true
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "operationStatus": {
+            "type": "string",
+            "enum": [
+              "available",
+              "renting",
+              "maintenance",
+              "inactive"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "vehicleId",
+          "name",
+          "vehicleType",
+          "operationStatus"
+        ]
+      },
+      "CalendarEventDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string",
+            "description": "vehicleId — khớp CalendarResourceDto.id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "booking",
+              "blocked_range",
+              "maintenance"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "object",
+            "nullable": true
+          },
+          "startAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC",
+            "example": "2026-07-12T02:00:00.000Z"
+          },
+          "endAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC",
+            "example": "2026-07-15T04:00:00.000Z"
+          },
+          "status": {
+            "type": "object",
+            "nullable": true,
+            "description": "BookingStatus khi type=booking"
+          },
+          "sourceId": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "resourceId",
+          "type",
+          "title",
+          "startAt",
+          "endAt"
+        ]
+      },
+      "CheckConflictDto": {
+        "type": "object",
+        "properties": {
+          "vehicleId": {
+            "type": "string",
+            "description": "ID xe (ULID)"
+          },
+          "startAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Nhận xe, ISO-8601 UTC"
+          },
+          "endAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Trả xe, ISO-8601 UTC"
+          },
+          "excludeSourceId": {
+            "type": "string",
+            "description": "Bỏ qua nguồn này (khi sửa chính đơn đang xét)"
+          }
+        },
+        "required": [
+          "vehicleId",
+          "startAt",
+          "endAt"
+        ]
+      },
+      "ConflictItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sourceType": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sourceType",
+          "sourceId"
+        ]
+      },
+      "CheckConflictResultDto": {
+        "type": "object",
+        "properties": {
+          "hasConflict": {
+            "type": "boolean",
+            "description": "Có trùng lịch hay không"
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConflictItemDto"
+            }
+          }
+        },
+        "required": [
+          "hasConflict",
+          "conflicts"
+        ]
+      },
+      "VehicleBranchSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provinceCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
       "VehicleListItemDto": {
         "type": "object",
         "properties": {
@@ -9686,6 +10549,15 @@
           },
           "name": {
             "type": "string"
+          },
+          "branch": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VehicleBranchSummaryDto"
+              }
+            ]
           },
           "plateNumber": {
             "type": "string",
@@ -10028,6 +10900,15 @@
           },
           "name": {
             "type": "string"
+          },
+          "branch": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VehicleBranchSummaryDto"
+              }
+            ]
           },
           "plateNumber": {
             "type": "string",
@@ -10944,6 +11825,10 @@
             "type": "string",
             "example": "Toyota Vios 2022"
           },
+          "branchId": {
+            "type": "string",
+            "description": "Id chi nhánh đang hoạt động của gian hàng (GET /branches)"
+          },
           "vehicleType": {
             "type": "string",
             "enum": [
@@ -11147,6 +12032,7 @@
         },
         "required": [
           "name",
+          "branchId",
           "vehicleType"
         ]
       },
@@ -11161,6 +12047,10 @@
           "name": {
             "type": "string",
             "example": "Toyota Vios 2022"
+          },
+          "branchId": {
+            "type": "string",
+            "description": "Id chi nhánh đang hoạt động của gian hàng (GET /branches)"
           },
           "vehicleType": {
             "type": "string",

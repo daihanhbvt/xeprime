@@ -44,6 +44,23 @@ vi.mock('@/features/vehicles/api', async (importOriginal) => ({
   submitVehiclePublic: submitPublic,
 }));
 
+/**
+ * Chi nhánh: xe BẮT BUỘC thuộc một chi nhánh từ wave chi nhánh. Mock trả về đúng một chi nhánh
+ * mặc định — wizard phải tự chọn nó, người dùng không phải bấm thêm bước nào.
+ */
+const branches = vi.hoisted(() => ({
+  items: [
+    { id: 'branch-1', name: 'Chi nhánh HCM', provinceName: 'Hồ Chí Minh', isDefault: true },
+  ] as { id: string; name: string; provinceName: string | null; isDefault: boolean }[],
+}));
+vi.mock('@/features/branches/hooks/use-branches', () => ({
+  useActiveBranches: () => ({
+    data: { items: branches.items, total: branches.items.length, activeCount: branches.items.length },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 const permissions = vi.hoisted(() => ({ allow: true }));
 vi.mock('@/hooks/use-permissions', () => ({
   usePermissions: () => ({

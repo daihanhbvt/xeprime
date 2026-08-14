@@ -12,6 +12,7 @@
  */
 export type { StatusColor, StatusMeta } from './meta';
 export * from './tenant';
+export * from './branch';
 export * from './vehicle';
 export * from './vehicle-alert';
 export * from './vehicle-document';

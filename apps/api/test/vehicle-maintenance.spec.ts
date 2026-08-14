@@ -16,19 +16,15 @@ import {
 import 'reflect-metadata';
 import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
-import { CatalogService } from '../src/modules/catalog/catalog.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
-import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { MaintenanceBoardController } from '../src/modules/vehicles/maintenance/maintenance-board.controller';
 import { MaintenanceService } from '../src/modules/vehicles/maintenance/maintenance.service';
 import { OdometerService } from '../src/modules/vehicles/maintenance/odometer.service';
 import { VehicleMaintenanceController } from '../src/modules/vehicles/maintenance/vehicle-maintenance.controller';
 import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
-import { VehiclesService } from '../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 
 /**
  * Wave 6 — Bảo dưỡng & KM trên PostgreSQL THẬT (R2 fake trong bộ nhớ).
@@ -60,14 +56,8 @@ const fakeR2 = {
 
 const audit = new AuditService(asService);
 const occupancy = new OccupancyService(asService);
-const vehicles = new VehiclesService(
-  asService,
-  audit,
-  new ListingsService(asService),
-  new BillingService(asService, audit),
-  new CatalogService(asService, audit),
-  new PricingService(asService, audit),
-);
+const vehicles = makeVehiclesService(asService);
+const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit);
@@ -146,7 +136,7 @@ const maybe = (name: string, fn: () => Promise<void>) =>
   });
 
 async function createVehicle(code: string) {
-  return vehicles.create(tenantId, ownerId, {
+  return createVehicleWithBranch(tenantId, ownerId, {
     code,
     name: 'Toyota Vios',
     vehicleType: VEHICLE_TYPE.CAR,

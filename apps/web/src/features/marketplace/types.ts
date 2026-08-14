@@ -24,7 +24,16 @@ export interface MarketplaceFilters {
   vehicleType?: string;
   serviceType?: string;
   q?: string;
-  /** Tỉnh/thành gian hàng — lọc từ "Địa điểm nổi bật". */
+  /**
+   * MÃ tỉnh — tham số địa điểm chuẩn, khớp chính xác. Mọi bộ chọn địa điểm ghi giá trị này.
+   */
+  provinceCode?: string;
+  /**
+   * TÊN tỉnh — chỉ đọc từ link/bookmark CŨ. Backend quy về mã qua bí danh; URL mới không sinh
+   * tham số này nữa (xem `parseFilters`).
+   *
+   * @deprecated dùng `provinceCode`
+   */
   province?: string;
   /** Các chiều multi-select của panel Bộ lọc — đi trên URL dạng CSV. */
   brand?: string[];

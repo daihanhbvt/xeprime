@@ -66,10 +66,33 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
+/** Chi nhánh của xe — bộ chọn ở tab Thông tin đọc danh sách này. */
+vi.mock('@/features/branches/hooks/use-branches', () => ({
+  useActiveBranches: () => ({
+    data: {
+      items: [
+        { id: 'branch-1', name: 'Chi nhánh HCM', provinceName: 'Hồ Chí Minh', isDefault: true },
+        { id: 'branch-2', name: 'Chi nhánh Hà Nội', provinceName: 'Hà Nội', isDefault: false },
+      ],
+      total: 2,
+      activeCount: 2,
+    },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 const vehicle = {
   id: 'vehicle-1',
   code: 'XP-001',
   name: 'Toyota Vios 2024',
+  // Xe luôn thuộc một chi nhánh — đây là vị trí công khai của nó (wave chi nhánh).
+  branch: {
+    id: 'branch-1',
+    name: 'Chi nhánh HCM',
+    provinceCode: '79',
+    provinceName: 'Hồ Chí Minh',
+  },
   plateNumber: '51A-123.45',
   vehicleType: 'car' as const,
   serviceType: 'self_drive' as const,
@@ -241,6 +264,15 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     expect(payload).not.toHaveProperty('mainImageUrl');
     expect(payload).not.toHaveProperty('weekdayPrice');
     expect(payload).not.toHaveProperty('sourceType');
+  });
+
+  it('chuyển xe sang chi nhánh tỉnh khác PHẢI gửi branchId — vị trí công khai đổi thật', async () => {
+    renderPage();
+    fireEvent.mouseDown(screen.getByLabelText(/Chi nhánh giữ xe/));
+    fireEvent.click(await screen.findByTitle('Chi nhánh Hà Nội · Hà Nội'));
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(update.mutateAsync.mock.calls[0]![0].branchId).toBe('branch-2');
   });
 
   it('tab Hình ảnh chỉ gửi replace-set media có chủ đích', async () => {

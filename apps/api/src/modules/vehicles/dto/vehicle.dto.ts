@@ -79,6 +79,18 @@ export class VehicleListQueryDto {
   @IsIn(VEHICLE_PUBLIC_STATUS_VALUES)
   publicStatus?: string;
 
+  /**
+   * Lọc theo chi nhánh — nguồn của bộ chọn "Tất cả chi nhánh" ở thanh trên.
+   *
+   * KHÔNG phải cơ chế phân quyền: `tenantId` vẫn quyết định phạm vi, `branchId` chỉ thu hẹp
+   * thêm. Chi nhánh của gian hàng khác lọt vào đây cũng chỉ ra danh sách rỗng.
+   */
+  @ApiPropertyOptional({ description: 'Id chi nhánh — chỉ thu hẹp trong gian hàng hiện tại' })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  branchId?: string;
+
   @ApiPropertyOptional({ enum: VEHICLE_SORT, default: 'newest' })
   @IsOptional()
   @IsIn(VEHICLE_SORT)
@@ -101,10 +113,24 @@ export class VehicleListQueryDto {
 }
 
 /** Một dòng trong bảng danh sách xe — vừa đủ cho bảng, không kéo mô tả dài. */
+/** Chi nhánh của xe, dạng tóm tắt — đủ để hiển thị "xe nằm ở đâu" mà không phải gọi thêm API. */
+export class VehicleBranchSummaryDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) provinceCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) provinceName!: string | null;
+}
+
 export class VehicleListItemDto {
   @ApiProperty() id!: string;
   @ApiProperty() code!: string;
   @ApiProperty() name!: string;
+  /**
+   * `null` chỉ với dữ liệu cũ chưa qua migration chi nhánh — xe tạo mới luôn có. FE hiển thị
+   * "Chưa gán chi nhánh" thay vì đoán.
+   */
+  @ApiPropertyOptional({ type: VehicleBranchSummaryDto, nullable: true })
+  branch!: VehicleBranchSummaryDto | null;
   // `type` tường minh cho field nullable: reflect-metadata trả `Object` cho union `X | null`,
   // thiếu nó thì openapi-typescript sinh ra `Record<string, never>` thay vì string/number.
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
@@ -219,6 +245,18 @@ export class CreateVehicleDto {
   @IsString()
   @Length(1, 255)
   name!: string;
+
+  /**
+   * BẮT BUỘC: chi nhánh giữ xe. Đây là nguồn VỊ TRÍ CÔNG KHAI của xe trên marketplace, nên
+   * không có mặc định ngầm ở backend — FE chọn sẵn chi nhánh mặc định để thao tác vẫn một bước,
+   * nhưng giá trị phải đi qua request để "xe này ở đâu" luôn là một quyết định có chủ ý.
+   *
+   * `provinceName`/`provinceCode` KHÔNG nhận từ client: vị trí suy từ chi nhánh.
+   */
+  @ApiProperty({ description: 'Id chi nhánh đang hoạt động của gian hàng (GET /branches)' })
+  @IsString()
+  @Length(26, 26)
+  branchId!: string;
 
   @ApiProperty({ enum: VEHICLE_TYPE_VALUES })
   @IsIn(VEHICLE_TYPE_VALUES)

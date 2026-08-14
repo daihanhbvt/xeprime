@@ -72,6 +72,12 @@ export const PERMISSION = {
   TENANT_UPDATE: 'tenant.update',
   TENANT_SUBMIT_REVIEW: 'tenant.submit_review',
 
+  // Chi nhánh gian hàng — nơi xe thực sự nằm, và là nguồn vị trí công khai của xe.
+  /** Xem danh sách chi nhánh + dùng bộ chọn chi nhánh ở thanh trên. */
+  BRANCH_VIEW: 'branches.view',
+  /** Tạo/sửa/đổi mặc định/ngưng hoạt động chi nhánh. */
+  BRANCH_MANAGE: 'branches.manage',
+
   // Nhân sự gian hàng
   MEMBER_VIEW: 'members.view',
   MEMBER_INVITE: 'members.invite',
@@ -186,6 +192,14 @@ export const PERMISSION = {
    * bỏ mask là hành động riêng, có quyền riêng và ghi `audit_logs` từng lần.
    */
   PLATFORM_CUSTOMER_PII_VIEW: 'platform.customers.view_pii',
+
+  /**
+   * Danh mục hành chính (tỉnh/thành) — dữ liệu DÙNG CHUNG cho mọi gian hàng, nên nằm ở nền tảng
+   * chứ không ở tenant. Tách view/manage vì bật-tắt hiển thị công khai một tỉnh làm cả một vùng
+   * biến mất khỏi marketplace: đó là hành động của admin, không phải của người đang tra cứu.
+   */
+  PLATFORM_LOCATION_VIEW: 'platform.locations.view',
+  PLATFORM_LOCATION_MANAGE: 'platform.locations.manage',
 } as const;
 
 export type Permission = (typeof PERMISSION)[keyof typeof PERMISSION];
@@ -202,6 +216,8 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
     [TENANT_ROLE.SHOP_OWNER]: PERMISSION_VALUES.filter((p) => !p.startsWith('platform.')),
     [TENANT_ROLE.SHOP_MANAGER]: [
       PERMISSION.TENANT_VIEW,
+      PERMISSION.BRANCH_VIEW,
+      PERMISSION.BRANCH_MANAGE,
       PERMISSION.MEMBER_VIEW,
       PERMISSION.MEMBER_INVITE,
       PERMISSION.VEHICLE_VIEW,
@@ -240,6 +256,8 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
     ],
     [TENANT_ROLE.SHOP_STAFF]: [
       PERMISSION.TENANT_VIEW,
+      // Xem để lọc theo chi nhánh mình đang trực; sửa chi nhánh là việc của quản lý/chủ shop.
+      PERMISSION.BRANCH_VIEW,
       PERMISSION.VEHICLE_VIEW,
       // Chỉ TRẠNG THÁI giấy tờ (còn hạn/sắp hết hạn) — không mở được file nhạy cảm (docs §10).
       PERMISSION.VEHICLE_DOCUMENT_VIEW,
@@ -264,6 +282,7 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
     ],
     [TENANT_ROLE.SHOP_VIEWER]: [
       PERMISSION.TENANT_VIEW,
+      PERMISSION.BRANCH_VIEW,
       PERMISSION.VEHICLE_VIEW,
       PERMISSION.VEHICLE_DOCUMENT_VIEW,
       // Read-only, không nhạy cảm: thấy tình trạng bảo dưỡng nhưng không thấy chi phí (docs §10).
@@ -288,6 +307,8 @@ export const DEFAULT_PLATFORM_ROLE_PERMISSIONS: Readonly<
     PERMISSION.PLATFORM_VEHICLE_VIEW,
     PERMISSION.PLATFORM_BOOKING_VIEW,
     PERMISSION.PLATFORM_CUSTOMER_VIEW,
+    // Tra cứu danh mục tỉnh: cần để đọc hiểu dữ liệu giám sát. Bật/tắt hiển thị là quyền riêng.
+    PERMISSION.PLATFORM_LOCATION_VIEW,
   ],
   [PLATFORM_ROLE.REVIEWER]: [
     PERMISSION.PLATFORM_DASHBOARD_VIEW,

@@ -52,6 +52,9 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
     fields: [
       'code',
       'name',
+      // Chi nhánh thuộc bước "Cơ bản": nó là VỊ TRÍ của xe, phải validate ngay bước đầu chứ
+      // không để lọt tới bước xác nhận rồi mới báo thiếu.
+      'branchId',
       'vehicleType',
       'serviceType',
       'operationStatus',
@@ -158,9 +161,24 @@ export interface SectionProps {
   control: Control<VehicleFormValues>;
   isCar: boolean;
   codeReadOnly?: boolean;
+  /**
+   * Options chi nhánh (id → tên · tỉnh). Caller nạp vì hai màn dùng nguồn khác nhau: wizard tạo
+   * xe lấy chi nhánh ĐANG HOẠT ĐỘNG, còn workspace sửa xe phải kèm cả chi nhánh hiện tại của xe
+   * kể cả khi nó vừa bị ngừng — nếu không, mở form sửa sẽ thấy ô chi nhánh trống.
+   */
+  branchOptions?: readonly { value: string; label: string }[];
+  branchLoading?: boolean;
+  branchDisabled?: boolean;
 }
 
-export function BasicSection({ control, isCar: _isCar, codeReadOnly = false }: SectionProps) {
+export function BasicSection({
+  control,
+  isCar: _isCar,
+  codeReadOnly = false,
+  branchOptions = [],
+  branchLoading = false,
+  branchDisabled = false,
+}: SectionProps) {
   return (
     <Row gutter={24}>
       {/* Thứ tự và nhãn theo Figma `193:1617`: Tên xe TRÁI, Mã xe PHẢI. */}
@@ -181,6 +199,24 @@ export function BasicSection({ control, isCar: _isCar, codeReadOnly = false }: S
           placeholder="Hệ thống tự sinh nếu bỏ trống"
           help="Mã định danh nội bộ, duy nhất trong gian hàng"
           disabled={codeReadOnly}
+        />
+      </Col>
+      <Col xs={24} sm={12}>
+        {/*
+          Chi nhánh = VỊ TRÍ CÔNG KHAI của xe. Ngay cả khi gian hàng chỉ có một chi nhánh, ô này
+          vẫn hiện (đã chọn sẵn) để người dùng biết xe sẽ hiển thị ở tỉnh nào — một trường bị ẩn
+          là một quyết định không ai nhìn thấy.
+        */}
+        <SelectField
+          control={control}
+          name="branchId"
+          label="Chi nhánh giữ xe"
+          options={branchOptions}
+          loading={branchLoading}
+          disabled={branchDisabled}
+          showSearch
+          required
+          help="Quyết định xe hiển thị ở tỉnh/thành nào trên marketplace."
         />
       </Col>
       <Col xs={24} sm={12}>
