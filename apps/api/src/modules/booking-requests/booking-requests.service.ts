@@ -16,7 +16,7 @@ import {
   type BookingRequestDeliveryQuote,
   type PaginationMeta,
 } from '@xeprime/types';
-import { normalizePhone } from '../../common/phone';
+import { normalizePhone, phoneLookupVariants } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
@@ -177,6 +177,8 @@ export class BookingRequestsService {
       loginUserId = userId;
     }
 
+    await this.assertNoPendingDuplicate(vehicle.id, dto.customerPhone, pickupAt, returnAt);
+
     const id = newId();
     // Ghi yêu cầu + báo cả shop trong một transaction: yêu cầu mới luôn có thông báo đi kèm.
     try {
@@ -213,11 +215,9 @@ export class BookingRequestsService {
       });
     } catch (err) {
       // Partial unique index chống double-submit: cùng (xe, SĐT, giờ nhận, giờ trả) đang pending.
+      // Đây là chốt chặn cho hai request CHẠY SONG SONG; kiểm ở trên lo phần định dạng khác nhau.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        throw new ConflictException({
-          code: API_ERROR_CODE.BOOKING_REQUEST_DUPLICATE,
-          message: 'Bạn vừa gửi một yêu cầu giống hệt cho xe này — vui lòng chờ shop phản hồi',
-        });
+        throw duplicateRequest();
       }
       throw err;
     }
@@ -242,6 +242,37 @@ export class BookingRequestsService {
    * Và ở đây KHÔNG bao giờ tra ngược SĐT ra tài khoản: danh tính đến từ cookie, SĐT chỉ được
    * đem đi đối chiếu.
    */
+  /**
+   * Chặn gửi trùng khi SĐT được gõ ở ĐỊNH DẠNG KHÁC.
+   *
+   * `booking_requests_pending_dedupe_idx` là unique một phần trên `(xe, customer_phone, giờ
+   * nhận, giờ trả)` — so khớp CHUỖI THÔ. Nhưng cột đó cố ý giữ nguyên như người dùng gõ, và DTO
+   * nhận cả `0901234567` lẫn `+84901234567`, nên cùng một người gửi hai lần bằng hai định dạng
+   * sẽ lọt qua index và shop nhận hai yêu cầu y hệt.
+   *
+   * Kiểm ở đây phủ mọi biến thể lưu được của cùng một số. Index vẫn giữ nguyên vai trò chốt
+   * chặn cuối cho hai request chạy song song — kiểm trước là để báo lỗi đúng, không phải để
+   * thay thế ràng buộc DB.
+   */
+  private async assertNoPendingDuplicate(
+    vehicleId: string,
+    rawPhone: string,
+    pickupAt: Date,
+    returnAt: Date,
+  ): Promise<void> {
+    const existing = await this.prisma.bookingRequest.findFirst({
+      where: {
+        vehicleId,
+        customerPhone: { in: phoneLookupVariants(rawPhone) },
+        pickupAt,
+        returnAt,
+        status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      },
+      select: { id: true },
+    });
+    if (existing) throw duplicateRequest();
+  }
+
   private async canSkipBookingOtp(
     customerUserId: string | null | undefined,
     rawPhone: string,
@@ -533,5 +564,13 @@ function notFound(): NotFoundException {
   return new NotFoundException({
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy yêu cầu đặt xe',
+  });
+}
+
+/** MỘT câu cho cả hai lớp chặn trùng (kiểm trước và ràng buộc DB) — client chỉ thấy một mã lỗi. */
+function duplicateRequest(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.BOOKING_REQUEST_DUPLICATE,
+    message: 'Bạn vừa gửi một yêu cầu giống hệt cho xe này — vui lòng chờ shop phản hồi',
   });
 }

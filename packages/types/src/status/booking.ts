@@ -32,9 +32,7 @@ export const BOOKING_DATE_FIELD = {
 } as const;
 
 export type BookingDateField = (typeof BOOKING_DATE_FIELD)[keyof typeof BOOKING_DATE_FIELD];
-export const BOOKING_DATE_FIELD_VALUES = Object.values(
-  BOOKING_DATE_FIELD,
-) as BookingDateField[];
+export const BOOKING_DATE_FIELD_VALUES = Object.values(BOOKING_DATE_FIELD) as BookingDateField[];
 
 export const BOOKING_DATE_FIELD_LABEL: Readonly<Record<BookingDateField, string>> = {
   [BOOKING_DATE_FIELD.CREATED_AT]: 'Theo ngày tạo',
@@ -83,6 +81,21 @@ export const BOOKING_STATUS_TRANSITIONS: Readonly<Record<BookingStatus, readonly
 
 export function canTransitionBooking(from: BookingStatus, to: BookingStatus): boolean {
   return BOOKING_STATUS_TRANSITIONS[from].includes(to);
+}
+
+/**
+ * Đơn đã đi tới điểm cuối — `completed`, `cancelled`, `no_show`.
+ *
+ * SUY từ chính bảng chuyển trạng thái (không còn cạnh đi ra) thay vì liệt kê một danh sách thứ
+ * hai: thêm một trạng thái kết thúc sau này sẽ tự động được tính vào đây thay vì âm thầm rơi ra
+ * ngoài.
+ *
+ * Dùng để khoá GHI, không phải để khoá đọc: một chuyến đã khép lại là bằng chứng — đổi giờ, đổi
+ * tiền hay đổi thông tin khách trên đó là viết lại lịch sử sau khi hai bên đã quyết toán. Sai số
+ * cần sửa thì đi qua đường có lý do tường minh (điều chỉnh KM, phát sinh, điều chỉnh hoàn cọc).
+ */
+export function isBookingFinal(status: BookingStatus): boolean {
+  return BOOKING_STATUS_TRANSITIONS[status].length === 0;
 }
 
 export const BOOKING_STATUS_META: Readonly<Record<BookingStatus, StatusMeta>> = {

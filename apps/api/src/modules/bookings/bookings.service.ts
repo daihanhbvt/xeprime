@@ -14,6 +14,7 @@ import {
   OCCUPANCY_SOURCE_TYPE,
   PRICE_ROW,
   canTransitionBooking,
+  isBookingFinal,
   occupiesSchedule,
   type BookingPriceSnapshot,
   type BookingStatus,
@@ -254,6 +255,7 @@ export class BookingsService {
       },
     });
     if (!current) throw notFound();
+    assertMutable(current.status as BookingStatus);
 
     const pickupAt = dto.pickupAt ? new Date(dto.pickupAt) : current.pickupAt;
     const returnAt = dto.returnAt ? new Date(dto.returnAt) : current.returnAt;
@@ -327,12 +329,19 @@ export class BookingsService {
       where: { id, tenantId, deletedAt: null },
       select: {
         id: true,
+        status: true,
         baseAmount: true,
         deliveryFee: true,
         discountAmount: true,
       },
     });
     if (!current) throw notFound();
+    /*
+     * Chuyến đã khép lại thì phí giao nhận đóng băng theo. Sửa nó sau khi khách đã thanh toán và
+     * cọc đã hoàn là đổi `total_amount` của một quyết toán đã xong — hoá đơn khách đang giữ và
+     * số trên hệ thống lập tức nói hai chuyện khác nhau.
+     */
+    assertMutable(current.status as BookingStatus);
 
     const nextFee = money(dto.deliveryFee);
     const total = new Prisma.Decimal(current.baseAmount)
@@ -662,5 +671,23 @@ function notFound(): NotFoundException {
   return new NotFoundException({
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy đơn thuê',
+  });
+}
+
+/**
+ * Chặn GHI lên đơn đã khép (`completed` / `cancelled` / `no_show`).
+ *
+ * Trước Wave 12 mọi đường sửa đơn đều bỏ qua trạng thái: một chuyến đã hoàn tất, đã quyết toán
+ * và đã hoàn cọc vẫn đổi được giờ thuê, tiền thuê, phí giao nhận và thông tin khách — tức là
+ * viết lại một bản ghi mà cả hai bên đã dựa vào để trả tiền cho nhau.
+ *
+ * Sửa số sau chuyến vẫn có đường riêng và có LÝ DO đi kèm: phát sinh, điều chỉnh hoàn cọc, bổ
+ * sung KM. Ở đây chỉ đóng cửa sau, không lấy đi cách nào cả.
+ */
+function assertMutable(status: BookingStatus): void {
+  if (!isBookingFinal(status)) return;
+  throw new ConflictException({
+    code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+    message: `Đơn đã ở trạng thái "${BOOKING_STATUS_META[status].label}" nên không sửa được nữa`,
   });
 }

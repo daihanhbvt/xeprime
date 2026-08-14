@@ -5,6 +5,7 @@ import {
   BOOKING_STATUS_META,
   BOOKING_STATUS_OCCUPYING,
   canTransitionBooking,
+  isBookingFinal,
   occupiesSchedule,
   isBookingStatus,
 } from './booking';
@@ -12,7 +13,12 @@ import { VEHICLE_PUBLIC_STATUS, VEHICLE_PUBLIC_STATUS_META } from './vehicle';
 import { TENANT_STATUS, TENANT_STATUS_META } from './tenant';
 import { BOOKING_REQUEST_STATUS, BOOKING_REQUEST_STATUS_META } from './booking-request';
 import { REVIEW_STATUS, REVIEW_STATUS_META, isReviewStatus } from './review';
-import { CONVERSATION_STATUS, CONVERSATION_STATUS_META, USER_STATUS, USER_STATUS_META } from './misc';
+import {
+  CONVERSATION_STATUS,
+  CONVERSATION_STATUS_META,
+  USER_STATUS,
+  USER_STATUS_META,
+} from './misc';
 import { isParticipantType } from './chat';
 import { NOTIFICATION_TYPE, NOTIFICATION_TYPE_META, isNotificationType } from '../notifications';
 
@@ -115,5 +121,28 @@ describe('booking state machine', () => {
 
   it('không huỷ được đơn đang thuê — phải hoàn thành', () => {
     expect(canTransitionBooking(BOOKING_STATUS.ACTIVE, BOOKING_STATUS.CANCELLED)).toBe(false);
+  });
+
+  /**
+   * Wave 12 — `isBookingFinal` là cổng khoá GHI cho đơn đã khép. Nó SUY từ bảng chuyển trạng
+   * thái nên không thể lệch: thêm một trạng thái kết thúc mới sẽ tự động được tính vào.
+   */
+  it('isBookingFinal đúng với ba trạng thái không còn đường đi tiếp', () => {
+    expect(isBookingFinal(BOOKING_STATUS.COMPLETED)).toBe(true);
+    expect(isBookingFinal(BOOKING_STATUS.CANCELLED)).toBe(true);
+    expect(isBookingFinal(BOOKING_STATUS.NO_SHOW)).toBe(true);
+  });
+
+  it('đơn còn đường đi tiếp thì chưa khép', () => {
+    expect(isBookingFinal(BOOKING_STATUS.RESERVED)).toBe(false);
+    expect(isBookingFinal(BOOKING_STATUS.CONFIRMED)).toBe(false);
+    expect(isBookingFinal(BOOKING_STATUS.ACTIVE)).toBe(false);
+  });
+
+  it('khép = không còn cạnh đi ra; hai cách nói phải luôn khớp nhau', () => {
+    for (const status of BOOKING_STATUS_VALUES) {
+      const hasExit = BOOKING_STATUS_VALUES.some((to) => canTransitionBooking(status, to));
+      expect(isBookingFinal(status)).toBe(!hasExit);
+    }
   });
 });

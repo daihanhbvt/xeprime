@@ -3,7 +3,13 @@
 import { App, Button } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { HANDOVER_TYPE, PERMISSION, type HandoverType } from '@xeprime/types';
+import {
+  HANDOVER_TYPE,
+  PERMISSION,
+  isBookingFinal,
+  type BookingStatus,
+  type HandoverType,
+} from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { contractPath } from '@/constants/routes';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
@@ -18,6 +24,9 @@ import { BookingFormDrawer } from './BookingFormDrawer';
 import { UpdateDeliveryFeeModal } from './UpdateDeliveryFeeModal';
 import type { BookingDetail } from '../types';
 import styles from './BookingActionBar.module.css';
+
+/** Lý do nút bị khoá — nói một lần, dùng cho mọi nút ghi trên đơn đã khép. */
+const CLOSED_HINT = 'Đơn đã kết thúc nên không sửa được nữa';
 
 /**
  * Thanh hành động ở CHÂN thẻ chi tiết đơn — **một hành động chính duy nhất**, mọi thứ khác lùi
@@ -53,6 +62,8 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
   const [feeOpen, setFeeOpen] = useState(false);
 
   const hasDebt = !isZeroMoney(booking.debtAmount);
+  // Cùng một luật với server (`isBookingFinal`), đọc từ `@xeprime/types` — không đoán lại ở UI.
+  const closed = isBookingFinal(booking.status as BookingStatus);
 
   /** Hành động chính DUY NHẤT, suy từ trạng thái đơn — backend vẫn là nơi chốt. */
   const primary =
@@ -85,9 +96,28 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
             </Button>
           ) : null}
           <Button onClick={() => setHistoryOpen(true)}>Lịch sử thanh toán</Button>
-          {canUpdate ? <Button onClick={() => setEditOpen(true)}>Sửa đơn</Button> : null}
+          {/*
+            Đơn đã khép thì server từ chối mọi lần ghi (Wave 12). Nút vẫn đứng nguyên chỗ nhưng
+            mờ đi và nói lý do — biến mất thì hàng nút nhảy chỗ giữa các đơn, còn để bấm được
+            thì người dùng ăn 409 mà không hiểu vì sao.
+          */}
           {canUpdate ? (
-            <Button onClick={() => setFeeOpen(true)}>Cập nhật phí giao nhận</Button>
+            <Button
+              disabled={closed}
+              title={closed ? CLOSED_HINT : undefined}
+              onClick={() => setEditOpen(true)}
+            >
+              Sửa đơn
+            </Button>
+          ) : null}
+          {canUpdate ? (
+            <Button
+              disabled={closed}
+              title={closed ? CLOSED_HINT : undefined}
+              onClick={() => setFeeOpen(true)}
+            >
+              Cập nhật phí giao nhận
+            </Button>
           ) : null}
           {canRecordPayment ? (
             // Hết nợ thì nút vẫn đứng nguyên chỗ nhưng nói rõ là không còn gì để thu.

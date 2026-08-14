@@ -69,8 +69,13 @@ export function MarketHeader() {
           {user ? (
             <>
               <Badge count={chatUnread?.count ?? 0} size="small" overflowCount={99}>
-                <Link href={ROUTES.CHAT} aria-label="Tin nhắn">
-                  <Button type="text" shape="circle" icon={<MessageOutlined />} />
+                {/*
+                  MỘT bề mặt tương tác: liên kết được tạo dáng như nút tròn, KHÔNG phải `<Button>`
+                  lồng trong `<Link>`. Lồng hai phần tử tương tác cho trình đọc màn hình hai đích
+                  cho cùng một hành động, và bàn phím phải Tab hai lần để đi qua một biểu tượng.
+                */}
+                <Link href={ROUTES.CHAT} aria-label="Tin nhắn" className={styles.iconBtn}>
+                  <MessageOutlined aria-hidden="true" />
                 </Link>
               </Badge>
               <NotificationBell context="customer" />
