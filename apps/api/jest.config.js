@@ -18,5 +18,7 @@ module.exports = {
   maxWorkers: 4,
   // Nest DI đọc metadata do emitDecoratorMetadata sinh ra; thiếu import này thì
   // provider không resolve được và lỗi chỉ hiện lúc chạy test, rất khó đọc.
-  setupFiles: ['reflect-metadata'],
+  // `setup-test-db` PHẢI đứng trước: nó chốt `DATABASE_URL` trước khi spec gọi
+  // `createPrismaClient()` ở module scope.
+  setupFiles: ['<rootDir>/test/setup-test-db.ts', 'reflect-metadata'],
 };

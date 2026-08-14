@@ -16,7 +16,13 @@ export default [
 
   // Seed và script CLI được phép in tiến trình ra stdout.
   {
-    files: ['prisma/src/seed.ts', 'scripts/**/*.ts', 'apps/*/src/main.ts', 'apps/*/src/openapi.ts'],
+    files: [
+      'prisma/src/seed.ts',
+      'prisma/src/cleanup-test-data.ts',
+      'scripts/**/*.ts',
+      'apps/*/src/main.ts',
+      'apps/*/src/openapi.ts',
+    ],
     rules: { 'no-console': 'off' },
   },
 

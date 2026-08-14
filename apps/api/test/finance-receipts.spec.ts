@@ -27,6 +27,13 @@ let dbAvailable = false;
 let ownerId: string;
 let tenantId: string;
 let otherTenantId: string;
+/**
+ * Danh mục hệ thống do spec tự tạo (nếu database chưa được seed) — chỉ dọn lại cái NÀY.
+ *
+ * Trước đây spec dựa vào danh mục hệ thống mà `pnpm db:seed` để lại: nó xanh trên database dev
+ * đã seed và đỏ trên một database test sạch. Test phải tự dựng đủ điều kiện của nó.
+ */
+let ownedSystemCategoryId: string | null = null;
 
 beforeAll(async () => {
   try {
@@ -65,6 +72,27 @@ beforeAll(async () => {
       status: MEMBERSHIP_STATUS.ACTIVE,
     },
   });
+
+  // Danh mục hệ thống (tenantId = null) là dữ liệu NỀN, không thuộc tenant nào. Trên database
+  // đã seed thì đã có; trên database test sạch thì chưa — tự tạo một cái để phần khẳng định
+  // "hệ thống hiển thị + không xoá được" luôn có đối tượng để kiểm.
+  const existingSystem = await prisma.financeCategory.findFirst({
+    where: { tenantId: null, isSystem: true },
+    select: { id: true },
+  });
+  if (!existingSystem) {
+    const created = await prisma.financeCategory.create({
+      data: {
+        id: newId(),
+        tenantId: null,
+        type: FINANCE_CATEGORY_TYPE.EXPENSE,
+        name: 'Chi phí vận hành (fixture)',
+        isSystem: true,
+      },
+      select: { id: true },
+    });
+    ownedSystemCategoryId = created.id;
+  }
 });
 
 afterAll(async () => {
@@ -76,6 +104,10 @@ afterAll(async () => {
       await prisma.tenant.deleteMany({ where: { id } });
     }
     await prisma.user.deleteMany({ where: { id: ownerId } });
+    // Chỉ xoá danh mục hệ thống nếu CHÍNH spec này tạo ra nó — database đã seed thì để nguyên.
+    if (ownedSystemCategoryId) {
+      await prisma.financeCategory.deleteMany({ where: { id: ownedSystemCategoryId } });
+    }
   }
   await prisma.$disconnect();
 });

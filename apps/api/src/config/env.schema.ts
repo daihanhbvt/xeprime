@@ -1,3 +1,4 @@
+import { SESSION_COOKIE_NAME_DEFAULT } from '@xeprime/types';
 import { z } from 'zod';
 
 /**
@@ -30,7 +31,8 @@ export const envSchema = z
     // --- Session (ADR 0002) ---
     SESSION_JWT_SECRET: z.string().min(32, 'SESSION_JWT_SECRET phải ít nhất 32 ký tự'),
     SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
-    SESSION_COOKIE_NAME: z.string().default('xp_session'),
+    // Default lấy từ `@xeprime/types` — web proxy đọc cùng hằng số này (ADR 0002).
+    SESSION_COOKIE_NAME: z.string().min(1).default(SESSION_COOKIE_NAME_DEFAULT),
     SESSION_COOKIE_SECURE: booleanish.default(false),
     SESSION_COOKIE_DOMAIN: z.string().optional(),
 
@@ -161,6 +163,99 @@ export const envSchema = z
         path: ['OTP_PEPPER'],
         message: 'OTP_PEPPER vẫn là giá trị mẫu — phải đổi trước khi lên production',
       });
+    }
+
+    // Bucket riêng tư PHẢI khác bucket public — đúng ở MỌI môi trường: trùng tên nghĩa là hợp
+    // đồng/giấy tờ xe nằm trong bucket có URL công khai.
+    if (env.R2_PRIVATE_BUCKET && env.R2_PRIVATE_BUCKET === env.R2_BUCKET) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['R2_PRIVATE_BUCKET'],
+        message:
+          'R2_PRIVATE_BUCKET không được trùng R2_BUCKET — tài liệu riêng tư sẽ nằm trong bucket công khai',
+      });
+    }
+
+    // ── Cửa chặn production ────────────────────────────────────────────────
+    // Mọi luật dưới đây đều là "mặc định tiện cho dev nhưng NGUY HIỂM ở production".
+    // Chúng phải fail lúc BOOT: một API production chạy với `AUTH_MODE=mock` hay ghi link đặt
+    // lại mật khẩu ra log là sự cố an ninh, không phải cấu hình sai vặt.
+    if (env.NODE_ENV !== 'production') return;
+
+    // Guard `mock` nhận token giả — bất kỳ ai cũng đăng nhập được thành bất kỳ ai.
+    if (env.AUTH_MODE === 'mock') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['AUTH_MODE'],
+        message: 'AUTH_MODE=mock chấp nhận token giả — production phải dùng firebase',
+      });
+    }
+
+    // OTP_MODE=mock ở production nghĩa là KHÔNG có SMS nào được gửi và mã 6 số chỉ nằm trong
+    // log server — vừa hỏng luồng đăng nhập vừa là rò rỉ mã.
+    if (env.OTP_MODE !== 'esms') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OTP_MODE'],
+        message: 'OTP_MODE=mock không gửi SMS và chỉ in mã ra log — production phải dùng esms',
+      });
+    }
+
+    // Thiếu SMTP thì EmailService in NGUYÊN link đặt lại mật khẩu (kèm token) ra log.
+    for (const key of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS'] as const) {
+      if (!env[key]) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} là bắt buộc ở production — thiếu SMTP thì link đặt lại mật khẩu (kèm token) bị ghi ra log`,
+        });
+      }
+    }
+
+    // CORS: '*' không đi được với credentials, và origin http để lộ cookie phiên trên đường truyền.
+    for (const origin of env.CORS_ORIGINS) {
+      if (origin === '*') {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['CORS_ORIGINS'],
+          message: 'CORS_ORIGINS không được chứa "*" ở production (cookie đi kèm credentials)',
+        });
+      } else if (!origin.startsWith('https://')) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['CORS_ORIGINS'],
+          message: `CORS_ORIGINS chứa origin không phải https ở production: ${origin}`,
+        });
+      }
+    }
+
+    // Link trong email đặt lại mật khẩu dựng từ APP_WEB_URL — trỏ localhost là email vô dụng.
+    if (!env.APP_WEB_URL.startsWith('https://') || /localhost|127\.0\.0\.1/.test(env.APP_WEB_URL)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['APP_WEB_URL'],
+        message: 'APP_WEB_URL phải là URL https của tên miền thật ở production (link đặt lại mật khẩu dựng từ đây)',
+      });
+    }
+
+    // Ảnh xe/gian hàng (bucket public) và tài liệu xe (bucket riêng tư) đều là chức năng đã phát
+    // hành. Thiếu env, chúng trả 503 lúc chạy — biết ở lần đầu người dùng bấm upload là quá muộn.
+    for (const key of [
+      'R2_ACCOUNT_ID',
+      'R2_ACCESS_KEY_ID',
+      'R2_SECRET_ACCESS_KEY',
+      'R2_BUCKET',
+      'R2_ENDPOINT',
+      'R2_PUBLIC_BASE_URL',
+      'R2_PRIVATE_BUCKET',
+    ] as const) {
+      if (!env[key]) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} là bắt buộc ở production (upload ảnh + tài liệu riêng tư của xe)`,
+        });
+      }
     }
   });
 

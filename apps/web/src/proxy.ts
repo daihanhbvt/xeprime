@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { resolveSessionCookieName } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { AUTH_INTENT, AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { isSafeNextPath } from '@/features/auth/safe-next';
@@ -17,7 +18,16 @@ import { isSafeNextPath } from '@/features/auth/safe-next';
  * user có phải nhân sự nền tảng không, nên nó chỉ giữ nguyên đích `/manage/admin/...` trong
  * `next` — việc từ chối (403) do layout admin + guard backend làm.
  */
-const SESSION_COOKIE = 'xp_session';
+/**
+ * Tên cookie lấy từ CÙNG một nguồn với backend (`@xeprime/types`), không gõ tay ở đây: API phát
+ * cookie theo `SESSION_COOKIE_NAME`; nếu đổi biến đó mà proxy vẫn tìm tên cũ thì mọi người đã
+ * đăng nhập bị đá về trang login mà không có lỗi nào để lần.
+ */
+const SESSION_COOKIE = resolveSessionCookieName({
+  // Next thay biểu thức này bằng giá trị lúc BUILD (proxy chạy ở Edge, không có process.env
+  // thật) — script build web đã nạp `.env` gốc repo nên biến có mặt.
+  SESSION_COOKIE_NAME: process.env.SESSION_COOKIE_NAME,
+});
 
 export function proxy(request: NextRequest): NextResponse {
   const hasSession = request.cookies.has(SESSION_COOKIE);

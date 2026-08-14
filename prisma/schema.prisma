@@ -1091,7 +1091,7 @@ model VehicleDocumentOcrJob {
 
   /// Partial unique viết tay (Wave 5.1): tối đa MỘT job `processing` trên một giấy tờ —
   /// `vehicle_document_ocr_jobs_one_processing_key` (Prisma không diễn đạt được WHERE).
-  @@index([tenantId, vehicleId, documentId, createdAt])
+  @@index([tenantId, vehicleId, documentId, createdAt], map: "vehicle_document_ocr_jobs_tenant_id_vehicle_id_document_id_crea")
   @@map("vehicle_document_ocr_jobs")
 }
 
@@ -1214,8 +1214,8 @@ model VehicleMaintenanceRecord {
 
   /// Mục tiêu cho composite FK của bảng đính kèm (bản ghi + xe khớp nhau).
   @@unique([id, vehicleId])
-  @@index([tenantId, status, plannedStartAt])
-  @@index([tenantId, vehicleId, completedAt])
+  @@index([tenantId, status, plannedStartAt], map: "vehicle_maintenance_records_tenant_id_status_planned_start_at_i")
+  @@index([tenantId, vehicleId, completedAt], map: "vehicle_maintenance_records_tenant_id_vehicle_id_completed_at_i")
   @@map("vehicle_maintenance_records")
 }
 
@@ -1372,12 +1372,15 @@ model BookingSurcharge {
   createdBy String?  @map("created_by") @db.Char(26)
   updatedBy String?  @map("updated_by") @db.Char(26)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  // `map:` khớp đúng tên constraint/index mà migration Wave 10 đã đặt tay (CREATE TABLE viết
+  // thẳng SQL). Không có nó, `prisma migrate dev` coi đây là drift và sinh migration đổi tên vô
+  // ích — tệ hơn, lập trình viên dễ bấm qua luôn cái diff kèm theo (các FK composite viết tay).
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "booking_surcharges_tenant_fkey")
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "booking_surcharges_booking_fkey")
 
-  @@index([tenantId, bookingId])
+  @@index([tenantId, bookingId], map: "booking_surcharges_tenant_booking_idx")
   @@map("booking_surcharges")
 }
 
@@ -1412,12 +1415,13 @@ model BookingDepositSettlement {
   /// Optimistic concurrency — hai người cùng sửa bản ghi hoàn cọc thì người sau phải thấy bản mới.
   rowVersion      Int      @default(1) @map("row_version")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  // Xem ghi chú `map:` ở BookingSurcharge — cùng migration Wave 10, cùng lý do.
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "booking_deposit_settlements_tenant_fkey")
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "booking_deposit_settlements_booking_fkey")
 
-  @@index([tenantId, bookingId])
+  @@index([tenantId, bookingId], map: "booking_deposit_settlements_tenant_booking_idx")
   @@map("booking_deposit_settlements")
 }
 
@@ -1806,6 +1810,8 @@ model Payment {
 
   @@index([tenantId, bookingId])
   @@index([bookingId])
+  /// Truy vấn nóng Wave 10: "đơn này đã thu cọc bao nhiêu" (`booking_id` + `kind`).
+  @@index([bookingId, kind], map: "payments_booking_kind_idx")
   @@index([createdAt])
   @@map("payments")
 }

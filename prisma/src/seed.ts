@@ -44,8 +44,47 @@ const BCRYPT_ROUNDS = 12;
 const PLATFORM_ADMIN_EMAIL = (process.env.PLATFORM_ADMIN_EMAIL ?? 'admin@xeprime.vn')
   .trim()
   .toLowerCase();
-const PLATFORM_ADMIN_PASSWORD = process.env.PLATFORM_ADMIN_PASSWORD ?? 'Abcd1234';
-const DEMO_OWNER_PASSWORD = process.env.DEMO_OWNER_PASSWORD ?? 'Abcd1234';
+const DEFAULT_DEV_PASSWORD = 'Abcd1234';
+const PLATFORM_ADMIN_PASSWORD = process.env.PLATFORM_ADMIN_PASSWORD ?? DEFAULT_DEV_PASSWORD;
+const DEMO_OWNER_PASSWORD = process.env.DEMO_OWNER_PASSWORD ?? DEFAULT_DEV_PASSWORD;
+
+/**
+ * `system` = CHỈ dữ liệu nền bắt buộc để app chạy (permission, role hệ thống, danh mục thu/chi).
+ * `demo`   = thêm gian hàng/xe/đơn/review mẫu — mặc định, dùng cho máy dev và môi trường demo.
+ *
+ * Tách ra vì hai thứ này có vòng đời khác nhau: dữ liệu nền phải chạy được ở MỌI môi trường
+ * (kể cả production, sau mỗi lần thêm permission mới), còn dữ liệu demo thì không bao giờ được
+ * đổ vào production.
+ */
+const SEED_MODE = process.env.SEED_MODE === 'system' ? 'system' : 'demo';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+/**
+ * Chặn hai tai nạn kinh điển trước khi ghi bất cứ dòng nào:
+ *  1. đổ 47 xe demo + tài khoản `@xeprime.test` vào database production;
+ *  2. tạo tài khoản platform admin production với mật khẩu mẫu `Abcd1234`.
+ *
+ * Không có cờ "force": muốn dữ liệu nền ở production thì chạy `SEED_MODE=system` — đó là cách
+ * đúng, không phải cách vòng.
+ */
+function assertSeedTargetIsSafe(): void {
+  if (!IS_PRODUCTION) return;
+
+  if (SEED_MODE === 'demo') {
+    throw new Error(
+      'NODE_ENV=production: từ chối seed dữ liệu DEMO. Dùng SEED_MODE=system nếu chỉ cần ' +
+        'permission/role/danh mục hệ thống.',
+    );
+  }
+  if (!process.env.PLATFORM_ADMIN_PASSWORD) {
+    throw new Error(
+      'NODE_ENV=production: PLATFORM_ADMIN_PASSWORD là bắt buộc — không dùng mật khẩu mẫu.',
+    );
+  }
+  if (PLATFORM_ADMIN_PASSWORD === DEFAULT_DEV_PASSWORD) {
+    throw new Error('NODE_ENV=production: PLATFORM_ADMIN_PASSWORD vẫn là mật khẩu mẫu.');
+  }
+}
 
 /** Mốc thời gian cố định để seed cho ra lịch giống nhau mỗi lần chạy. */
 const TODAY = new Date();
@@ -1505,7 +1544,8 @@ async function seedBanners(): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  console.log('Seeding XePrime...');
+  assertSeedTargetIsSafe();
+  console.log(`Seeding XePrime (SEED_MODE=${SEED_MODE})...`);
 
   const permissionIds = await seedPermissions();
 
@@ -1530,13 +1570,28 @@ async function main(): Promise<void> {
   console.log('  roles hệ thống: xong');
 
   await seedFinanceCategories();
+
+  // Ranh giới dữ liệu NỀN ↔ dữ liệu DEMO. Mọi thứ dưới đây (banner, tài khoản demo, gian hàng,
+  // xe, đơn, review) là dữ liệu minh hoạ — không bao giờ chạy ở chế độ `system`.
+  if (SEED_MODE === 'system') {
+    console.log('\nSeed dữ liệu nền xong (permission + role hệ thống + danh mục thu/chi).');
+    return;
+  }
+
   await seedBanners();
 
-  // Dọn tài khoản demo mock cũ (không mật khẩu) — đã chuyển sang đăng nhập email/mật khẩu.
+  // Dọn tài khoản demo mock cũ — đã chuyển sang đăng nhập email/mật khẩu.
   // Giữ owner@xeprime.test và customer@xeprime.test (đều được đặt mật khẩu ngay dưới đây).
-  await prisma.user.deleteMany({
-    where: { email: { in: ['admin@xeprime.test'] } },
+  //
+  // Điều kiện `passwordHash: null` KHÔNG thừa: nó là dấu hiệu xác định của tài khoản mock đời
+  // cũ. Nếu ai đó đã tạo lại email này thành tài khoản có mật khẩu thật, seed KHÔNG được xoá —
+  // seed là script chạy lại nhiều lần, không phải chỗ để mất dữ liệu người dùng.
+  const removedLegacy = await prisma.user.deleteMany({
+    where: { email: { in: ['admin@xeprime.test'] }, passwordHash: null },
   });
+  if (removedLegacy.count > 0) {
+    console.log(`  dọn tài khoản mock đời cũ: ${removedLegacy.count}`);
+  }
 
   const adminUserId = await upsertPasswordUser({
     email: PLATFORM_ADMIN_EMAIL,
@@ -1893,10 +1948,12 @@ async function main(): Promise<void> {
     }
   }
 
+  // CỐ Ý không in mật khẩu ra stdout: chúng đến từ env và stdout đi vào terminal log/CI log.
+  // Người chạy seed là người đã đặt các biến đó — họ không cần seed đọc lại cho nghe.
   console.log('\nSeed xong. Đăng nhập bằng email + mật khẩu tại /login:');
-  console.log(`  platform admin : ${PLATFORM_ADMIN_EMAIL} / ${PLATFORM_ADMIN_PASSWORD}`);
-  console.log(`  shop owner     : owner@xeprime.test / ${DEMO_OWNER_PASSWORD}`);
-  console.log(`  customer       : customer@xeprime.test / ${DEMO_OWNER_PASSWORD}`);
+  console.log(`  platform admin : ${PLATFORM_ADMIN_EMAIL}  (mật khẩu: $PLATFORM_ADMIN_PASSWORD)`);
+  console.log('  shop owner     : owner@xeprime.test  (mật khẩu: $DEMO_OWNER_PASSWORD)');
+  console.log('  customer       : customer@xeprime.test  (mật khẩu: $DEMO_OWNER_PASSWORD)');
 }
 
 main()

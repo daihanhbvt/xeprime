@@ -2,7 +2,7 @@ import { BadRequestException, INestApplication, ValidationPipe } from '@nestjs/c
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
-import { API_ERROR_CODE } from '@xeprime/types';
+import { API_ERROR_CODE, SESSION_COOKIE_NAME_DEFAULT } from '@xeprime/types';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
@@ -64,7 +64,10 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         'Tiền trả về dạng string, thời gian ISO-8601 UTC (ADR 0007).',
     )
     .setVersion('0.1.0')
-    .addCookieAuth('xp_session')
+    // Spec là artifact tĩnh (sinh lúc build, không theo deployment) nên dùng tên MẶC ĐỊNH dùng
+    // chung — không gõ lại literal. Deployment đổi `SESSION_COOKIE_NAME` thì cookie thật đổi
+    // theo env; spec vẫn mô tả cơ chế "httpOnly session cookie".
+    .addCookieAuth(SESSION_COOKIE_NAME_DEFAULT)
     .addTag('health')
     .addTag('auth')
     .addTag('users')

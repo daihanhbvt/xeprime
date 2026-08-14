@@ -1,5 +1,5 @@
 import { createPrismaClient } from '@xeprime/prisma';
-import { FIRESTORE_ENABLED } from './lib/env';
+import { FIRESTORE_ENABLED, assertWorkerEnv } from './lib/env';
 import { withAdvisoryLock } from './lib/advisory-lock';
 import { pumpOutbox } from './jobs/outbox-pump';
 import { runRetention } from './jobs/retention';
@@ -48,6 +48,7 @@ async function retentionLoop(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  assertWorkerEnv();
   await prisma.$connect();
 
   if (!FIRESTORE_ENABLED) {

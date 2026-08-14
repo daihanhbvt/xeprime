@@ -21,6 +21,7 @@
     "db:migrate": "pnpm --filter @xeprime/prisma run migrate:dev",
     "db:deploy": "pnpm --filter @xeprime/prisma run migrate:deploy",
     "db:seed": "pnpm --filter @xeprime/prisma run seed",
+    "db:cleanup-test": "pnpm --filter @xeprime/prisma run cleanup:test-data",
     "db:studio": "pnpm --filter @xeprime/prisma run studio",
     "db:reset": "pnpm --filter @xeprime/prisma run migrate:reset",
     "api:openapi": "pnpm --filter @xeprime/api run openapi",

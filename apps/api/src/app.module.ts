@@ -44,13 +44,30 @@ import { PricingModule } from './modules/pricing/pricing.module';
 
     LoggerModule.forRoot({
       pinoHttp: {
-        // Redact trước khi ghi: CLAUDE.md/security rules cấm log token.
+        // Redact TRƯỚC khi ghi: CLAUDE.md/security rules cấm log token.
+        //
+        // Danh sách này là mọi đường một bí mật có thể lọt vào log. `req.body.*` là phòng xa
+        // (serializer mặc định của pino-http không ghi body) — nhưng "mặc định" là thứ người
+        // sau có thể đổi, còn danh sách redact thì ở lại.
         redact: {
           paths: [
             'req.headers.cookie',
             'req.headers.authorization',
+            'req.headers["x-api-key"]',
             'res.headers["set-cookie"]',
+            // Đăng nhập / đổi mật khẩu / OTP / đặt lại mật khẩu.
             'req.body.idToken',
+            'req.body.password',
+            'req.body.newPassword',
+            'req.body.currentPassword',
+            'req.body.code',
+            'req.body.token',
+            // Presign R2: URL đã ký CHÍNH LÀ quyền truy cập file.
+            'req.body.uploadUrl',
+            'req.body.downloadUrl',
+            // Token đặt lại mật khẩu đi trong body; link `?token=…` là URL của WEB, không bao
+            // giờ chạm API, nên `req.url` không phải đường rò rỉ ở đây.
+            'req.query.token',
           ],
           remove: true,
         },
