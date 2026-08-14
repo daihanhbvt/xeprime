@@ -1,0 +1,76 @@
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.alert {
+  margin-bottom: 16px;
+}
+
+/* Modal rộng (xl) chia hai cột: trái khách & chuyến, phải tiền — cùng cấu trúc thẻ chi tiết đơn. */
+.columns {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--xp-space-xl);
+}
+
+.column {
+  min-width: 0;
+}
+
+.sectionTitle {
+  margin: 0 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--xp-color-text-tertiary);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: var(--xp-gold-wash);
+  border-radius: 10px;
+  color: var(--xp-color-text-secondary);
+}
+
+.total strong {
+  font-size: 18px;
+  color: var(--xp-gold-deep);
+}
+
+/* Chân form dính đáy vùng cuộn của modal — thao tác luôn trong tầm mắt khi form dài. */
+.actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--xp-space-sm) 0;
+  margin-top: var(--xp-space-xs);
+  background: var(--xp-color-bg-container);
+  border-top: 1px solid var(--xp-color-border);
+}
+
+@media (max-width: 768px) {
+  .columns {
+    grid-template-columns: 1fr;
+    gap: var(--xp-space-md);
+  }
+}
+
+@media (max-width: 480px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

@@ -29,6 +29,34 @@
   background: var(--xp-color-bg-hover);
 }
 
+/* ---------------------------------------------------------------- zebra hàng (mặc định bật)
+ *
+ * Nền dẫn xuất từ token bằng color-mix (không hex tự chế — ADR 0003) và là MÀU ĐỤC, nên ô
+ * hành động dính phải kế thừa đúng nền của hàng mình mà không hở cột chạy phía dưới khi cuộn
+ * ngang. Hover khai SAU zebra (cùng specificity) để trạng thái tương tác luôn thắng; các nền
+ * chọn/lỗi của AntD nằm trên `td` với specificity cao hơn nên không bị đụng. */
+.tableRoot {
+  --xp-table-zebra-bg: color-mix(
+    in srgb,
+    var(--xp-color-bg-muted) 45%,
+    var(--xp-color-bg-container)
+  );
+}
+
+.tableRoot :global(.ant-table-tbody) .rowStriped > :global(td.ant-table-cell) {
+  background: var(--xp-table-zebra-bg);
+}
+
+.tableRoot .rowStriped :global(.ant-table-cell-fix-end) {
+  background: var(--xp-table-zebra-bg);
+}
+
+/* Hover thắng zebra — khai sau để cùng specificity vẫn đè theo thứ tự nguồn. */
+.tableRoot :global(.ant-table-tbody) .rowStriped > :global(td.ant-table-cell-row-hover),
+.tableRoot .rowStriped:global(.ant-table-row:hover) :global(.ant-table-cell-fix-end) {
+  background: var(--xp-color-bg-hover);
+}
+
 /* Padding trái tách cột hành động khỏi cột dữ liệu cuối (R5: 16px). */
 .actionsCell {
   padding-left: var(--xp-space-md) !important;

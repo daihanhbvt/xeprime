@@ -212,6 +212,39 @@ describe('DataTable — bảng ở desktop', () => {
     expect(() => renderTable({ items: rows, rowKey: (row) => `custom-${row.name}` })).not.toThrow();
     expect(screen.getByText('A')).toBeTruthy();
   });
+
+  it('zebra mặc định BẬT: hàng lẻ (theo CHỈ SỐ dữ liệu) mang class sọc, hàng chẵn không', () => {
+    const { container } = renderTable();
+
+    const rows = container.querySelectorAll('.ant-table-tbody .ant-table-row');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.className).not.toContain('rowStriped');
+    expect(rows[1]!.className).toContain('rowStriped');
+  });
+
+  it('striped={false} tắt zebra cho bảng ngoại lệ', () => {
+    const { container } = renderTable({ striped: false });
+
+    for (const row of container.querySelectorAll('.ant-table-tbody .ant-table-row')) {
+      expect(row.className).not.toContain('rowStriped');
+    }
+  });
+
+  it('zebra tính theo chỉ số nên sống chung được với onRowClick (hai className cùng hàng)', () => {
+    const { container } = renderTable({ onRowClick: vi.fn() });
+
+    const second = container.querySelectorAll('.ant-table-tbody .ant-table-row')[1]!;
+    expect(second.className).toContain('rowStriped');
+    expect(second.className).toContain('rowClickable');
+  });
+
+  it('chế độ thẻ mobile KHÔNG nhận zebra của bảng', () => {
+    viewport.mobile = true;
+    const { container } = renderTable({ renderCard: (row) => <span>{row.name}</span> });
+
+    expect(container.querySelector('.ant-table')).toBeNull();
+    expect(container.querySelector('[class*="rowStriped"]')).toBeNull();
+  });
 });
 
 /* ------------------------------------------------------------------ cột hành động */

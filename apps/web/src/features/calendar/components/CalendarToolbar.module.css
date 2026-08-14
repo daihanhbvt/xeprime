@@ -2,23 +2,75 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--xp-space-md);
+  gap: var(--xp-space-sm) var(--xp-space-md);
   flex-wrap: wrap;
-  padding: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
   border-bottom: 1px solid var(--xp-color-border);
   background: var(--xp-color-bg-container);
 }
 
-.search {
-  width: 240px;
+.filters,
+.rangeControls {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
-@media (max-width: 768px) {
-  .search {
-    width: 100%;
+.search {
+  width: 200px;
+}
+
+.sortSelect {
+  min-width: 160px;
+}
+
+.pager {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.rangeLabel {
+  font-weight: 600;
+  color: var(--xp-color-text);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Mobile: MỖI pixel dọc là của lưới. Toolbar nén còn ba hàng thấp:
+ *   [tìm kiếm] · [loại xe + sắp xếp] · [khoảng xem + hôm nay + ◀▶ + nhãn]
+ * bằng cách cho ô tìm chiếm trọn hàng và các control còn lại chảy tiếp trên cùng hàng.
+ */
+@media (max-width: 640px) {
+  .toolbar {
+    padding: var(--xp-space-xs) var(--xp-space-sm);
+    gap: var(--xp-space-xs);
   }
 
-  .toolbar {
-    padding: var(--xp-space-sm);
+  .filters {
+    flex: 1 1 100%;
+    gap: var(--xp-space-xs);
+  }
+
+  .search {
+    flex: 1 1 100%;
+    width: auto;
+  }
+
+  /* Sắp xếp đứng cạnh bộ lọc loại xe trên CÙNG một hàng, chia nhau bề ngang còn lại. */
+  .sortSelect {
+    flex: 1 1 auto;
+    min-width: 132px;
+  }
+
+  .rangeControls {
+    flex: 1 1 100%;
+    gap: var(--xp-space-xs);
+  }
+
+  .rangeLabel {
+    font-size: var(--xp-font-size-sm);
   }
 }

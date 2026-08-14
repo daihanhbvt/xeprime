@@ -10,7 +10,7 @@ import { bookingPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { BOOKINGS_DEFAULT_LIMIT } from '@/features/bookings/api';
 import { BOOKING_SORT_OPTIONS, BOOKING_STATUS_OPTIONS } from '@/features/bookings/constants';
-import { BookingFormDrawer } from '@/features/bookings/components/BookingFormDrawer';
+import { BookingFormDialog } from '@/features/bookings/components/BookingFormDialog';
 import { BookingTable } from '@/features/bookings/components/BookingTable';
 import { useBookingFilters } from '@/features/bookings/hooks/use-booking-filters';
 import { useBookings } from '@/features/bookings/hooks/use-bookings';
@@ -109,7 +109,7 @@ function BookingsView() {
         onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
       />
 
-      <BookingFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
+      <BookingFormDialog open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
     </div>
   );
 }

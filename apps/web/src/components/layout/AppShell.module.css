@@ -44,6 +44,23 @@
   border-radius: var(--xp-border-radius);
 }
 
+/*
+ * Route chiếm trọn viewport (lịch xe): shell khoá đúng chiều cao màn hình để VÙNG CUỘN DỌC
+ * thuộc về màn đó, không phải body — điều kiện để header/summary sticky của lịch hoạt động.
+ */
+.shellViewport {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.shellViewport .main {
+  min-height: 0;
+}
+
+.contentViewport {
+  overflow: hidden;
+}
+
 /* Ranh chính tắc 1024px (`--xp-bp-tablet`) — xem ghi chú ở MobileNav.module.css. */
 @media (max-width: 1024px) {
   .content {
@@ -53,5 +70,11 @@
       calc(
         var(--xp-space-md) + var(--xp-shell-bottom-nav-height) + env(safe-area-inset-bottom, 0px)
       );
+  }
+
+  /* Route viewport không render MobileNav → không chừa đáy; padding gọn cho lịch. */
+  .contentViewport {
+    padding: var(--xp-space-sm) var(--xp-space-sm)
+      calc(var(--xp-space-sm) + env(safe-area-inset-bottom, 0px));
   }
 }

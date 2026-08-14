@@ -85,6 +85,13 @@ export interface DataTableProps<T> {
    */
   renderCard?: (row: T) => ReactNode;
   loadingLabel?: string;
+  /**
+   * Zebra hàng chẵn/lẻ (mặc định BẬT — chuẩn bảng desktop của XePrime). Tính theo CHỈ SỐ dữ
+   * liệu qua `rowClassName`, không phải `nth-child` — hàng đo lường/expand của AntD không phá
+   * được nhịp. Hover/chọn/lỗi vẫn thắng zebra; chế độ thẻ mobile không nhận zebra.
+   * Tắt (`striped={false}`) cho bảng ngoại lệ có nền hàng riêng.
+   */
+  striped?: boolean;
 }
 
 function defaultRowKey<T>(row: T): string {
@@ -122,6 +129,7 @@ export function DataTable<T>({
   onRowClick,
   renderCard,
   loadingLabel,
+  striped = true,
 }: DataTableProps<T>) {
   const isMobile = useIsMobile();
   const asCards = isMobile && Boolean(renderCard);
@@ -196,6 +204,9 @@ export function DataTable<T>({
         dataSource={items}
         loading={loading}
         scroll={{ x: minWidth }}
+        rowClassName={(_, index) =>
+          [striped && index % 2 === 1 ? styles.rowStriped : ''].filter(Boolean).join(' ')
+        }
         onRow={
           onRowClick
             ? (row) => ({ onClick: () => onRowClick(row), className: styles.rowClickable })

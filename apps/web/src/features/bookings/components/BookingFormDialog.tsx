@@ -1,17 +1,20 @@
 'use client';
 
-import { Alert, App, Button } from 'antd';
+import { Alert, App, Button, Form, Space } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useForm, useWatch } from 'react-hook-form';
+import { useController, useForm, useWatch, type Control } from 'react-hook-form';
 import { API_ERROR_CODE, SERVICE_TYPE } from '@xeprime/types';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
-import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { NumberField } from '@/components/form/NumberField';
 import { TextAreaField } from '@/components/form/TextAreaField';
-import { DateTimeField } from '@/components/form/DateTimeField';
+import {
+  RentalDateTimeRangeField,
+  type RentalMode,
+} from '@/components/form/RentalDateTimeRangeField';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import { dayjs } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
@@ -22,7 +25,7 @@ import { checkConflict } from '../api';
 import { useCreateBooking, useUpdateBooking } from '../hooks/use-booking-mutations';
 import { bookingFormSchema, type BookingFormValues } from '../schema';
 import type { BookingDetail, CreateBookingInput, UpdateBookingInput } from '../types';
-import styles from './BookingFormDrawer.module.css';
+import styles from './BookingFormDialog.module.css';
 
 /** Giá trị điền sẵn khi tạo đơn từ lịch: click ô trống biết trước xe + khung giờ. */
 export interface BookingPrefill {
@@ -35,7 +38,10 @@ function numOrNull(value: string | null | undefined): number | null {
   return value === null || value === undefined || value === '' ? null : Number(value);
 }
 
-function toDefaults(editing: BookingDetail | null, prefill: BookingPrefill | null): BookingFormValues {
+function toDefaults(
+  editing: BookingDetail | null,
+  prefill: BookingPrefill | null,
+): BookingFormValues {
   if (!editing) {
     return {
       vehicleId: prefill?.vehicleId ?? '',
@@ -66,8 +72,18 @@ function toDefaults(editing: BookingDetail | null, prefill: BookingPrefill | nul
   };
 }
 
-/** Drawer bọc form — remount form theo `key` để mỗi lần mở là state sạch (không cần reset effect). */
-export function BookingFormDrawer({
+/**
+ * Tạo/sửa đơn thuê — modal lớn responsive (desktop rộng, mobile toàn màn).
+ *
+ * Thay drawer + hai DateTimePicker rời (bản cũ): khoảng thuê giờ là MỘT giá trị đi qua
+ * `RentalDateTimeRangeField` — cùng control với modal yêu cầu đặt xe của khách, nên chủ xe và
+ * khách chọn thời gian bằng cùng một cách. Form remount theo `key` để mỗi lần mở là state sạch.
+ *
+ * Đây là đơn CHỦ ĐỘNG của shop (staff nhập tay khách): tạo thẳng đơn `reserved`, KHÔNG đi qua
+ * vòng yêu-cầu-rồi-tự-duyệt. Trùng lịch do exclusion constraint quyết (ADR 0006) — preview chỉ
+ * là cảnh báo sớm.
+ */
+export function BookingFormDialog({
   open,
   editing,
   prefill = null,
@@ -80,16 +96,51 @@ export function BookingFormDrawer({
   onClose: () => void;
 }) {
   // key gồm prefill để click ô lịch khác nhau thì form re-init đúng xe/giờ.
-  const formKey = editing?.id ?? (prefill ? `new-${prefill.vehicleId}-${prefill.pickupAt.valueOf()}` : 'new');
+  const formKey =
+    editing?.id ?? (prefill ? `new-${prefill.vehicleId}-${prefill.pickupAt.valueOf()}` : 'new');
   return (
-    <DetailDrawer
+    <ResponsiveDialog
       title={editing ? `Sửa đơn ${editing.code}` : 'Tạo đơn thuê'}
-      size="md"
+      size="xl"
+      mobileMode="fullscreen"
       open={open}
       onClose={onClose}
+      footer={null}
     >
-      {open ? <BookingForm key={formKey} editing={editing} prefill={prefill} onDone={onClose} /> : null}
-    </DetailDrawer>
+      {open ? (
+        <BookingForm key={formKey} editing={editing} prefill={prefill} onDone={onClose} />
+      ) : null}
+    </ResponsiveDialog>
+  );
+}
+
+/** Cầu RHF ↔ RentalDateTimeRangeField: hai field pickupAt/returnAt là MỘT khoảng trên UI. */
+function RentalRangeFormField({ control }: { control: Control<BookingFormValues> }) {
+  const pickup = useController({ control, name: 'pickupAt' });
+  const ret = useController({ control, name: 'returnAt' });
+  const [mode, setMode] = useState<RentalMode>('daily');
+
+  const error = pickup.fieldState.error?.message ?? ret.fieldState.error?.message;
+
+  return (
+    <Form.Item
+      label="Thời gian thuê"
+      required
+      validateStatus={error ? 'error' : ''}
+      help={error}
+      style={{ marginBottom: 14 }}
+    >
+      <RentalDateTimeRangeField
+        value={{ pickupAt: pickup.field.value, returnAt: ret.field.value }}
+        onChange={(next) => {
+          pickup.field.onChange(next.pickupAt);
+          ret.field.onChange(next.returnAt);
+        }}
+        mode={mode}
+        onModeChange={setMode}
+        variant="labelled"
+      />
+    </Form.Item>
   );
 }
 
@@ -103,6 +154,7 @@ function BookingForm({
   onDone: () => void;
 }) {
   const { message } = App.useApp();
+  const formId = useId();
   const [conflict, setConflict] = useState(false);
   const { data: vehiclesData } = useVehicles({ limit: 100 });
   const create = useCreateBooking();
@@ -196,7 +248,7 @@ function BookingForm({
   });
 
   return (
-    <form onSubmit={onSubmit} noValidate>
+    <form id={formId} onSubmit={onSubmit} noValidate className={styles.form}>
       {conflict ? (
         <Alert
           type="error"
@@ -215,49 +267,66 @@ function BookingForm({
         />
       ) : null}
 
-      <SelectField
-        control={control}
-        name="vehicleId"
-        label="Xe"
-        options={vehicleOptions}
-        placeholder="Chọn xe"
-        disabled={Boolean(editing)}
-      />
-      <TextField control={control} name="customerName" label="Tên khách" placeholder="Nguyễn Văn A" />
-      <TextField control={control} name="customerPhone" label="Số điện thoại" placeholder="0901234567" />
-      <SelectField
-        control={control}
-        name="serviceType"
-        label="Loại dịch vụ"
-        options={SERVICE_TYPE_OPTIONS}
-      />
+      <div className={styles.columns}>
+        <div className={styles.column}>
+          <h3 className={styles.sectionTitle}>Khách hàng &amp; chuyến đi</h3>
+          <SelectField
+            control={control}
+            name="vehicleId"
+            label="Xe"
+            options={vehicleOptions}
+            placeholder="Chọn xe"
+            disabled={Boolean(editing)}
+            showSearch
+          />
+          <TextField
+            control={control}
+            name="customerName"
+            label="Tên khách"
+            placeholder="Nguyễn Văn A"
+          />
+          <TextField
+            control={control}
+            name="customerPhone"
+            label="Số điện thoại"
+            placeholder="0901234567"
+          />
+          <SelectField
+            control={control}
+            name="serviceType"
+            label="Loại dịch vụ"
+            options={SERVICE_TYPE_OPTIONS}
+          />
+          <RentalRangeFormField control={control} />
+          <TextAreaField control={control} name="note" label="Ghi chú" rows={3} maxLength={2000} />
+        </div>
 
-      <div className={styles.row}>
-        <DateTimeField control={control} name="pickupAt" label="Nhận xe" placeholder="Chọn giờ nhận" />
-        <DateTimeField control={control} name="returnAt" label="Trả xe" placeholder="Chọn giờ trả" />
+        <div className={styles.column}>
+          <h3 className={styles.sectionTitle}>Chi phí &amp; đặt cọc</h3>
+          <div className={styles.row}>
+            <NumberField control={control} name="baseAmount" label="Tiền thuê" money min={0} />
+            <NumberField control={control} name="deliveryFee" label="Phí giao xe" money min={0} />
+          </div>
+          <div className={styles.row}>
+            <NumberField control={control} name="discountAmount" label="Giảm giá" money min={0} />
+            <NumberField control={control} name="depositAmount" label="Tiền cọc" money min={0} />
+          </div>
+          <div className={styles.total}>
+            <span>Tổng tiền</span>
+            <strong>{formatMoneyVnd(String(Math.max(0, total)))}</strong>
+          </div>
+        </div>
       </div>
-
-      <div className={styles.row}>
-        <NumberField control={control} name="baseAmount" label="Tiền thuê" money min={0} />
-        <NumberField control={control} name="deliveryFee" label="Phí giao xe" money min={0} />
-      </div>
-      <div className={styles.row}>
-        <NumberField control={control} name="discountAmount" label="Giảm giá" money min={0} />
-        <NumberField control={control} name="depositAmount" label="Tiền cọc" money min={0} />
-      </div>
-
-      <div className={styles.total}>
-        <span>Tổng tiền</span>
-        <strong>{formatMoneyVnd(String(Math.max(0, total)))}</strong>
-      </div>
-
-      <TextAreaField control={control} name="note" label="Ghi chú" rows={3} maxLength={2000} />
 
       <div className={styles.actions}>
-        <Button onClick={onDone}>Huỷ</Button>
-        <Button type="primary" htmlType="submit" loading={pending}>
-          {editing ? 'Lưu thay đổi' : 'Tạo đơn'}
-        </Button>
+        <Space>
+          <Button onClick={onDone} disabled={pending}>
+            Huỷ
+          </Button>
+          <Button type="primary" htmlType="submit" loading={pending}>
+            {editing ? 'Lưu thay đổi' : 'Tạo đơn'}
+          </Button>
+        </Space>
       </div>
     </form>
   );

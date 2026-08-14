@@ -354,6 +354,12 @@ export class BookingRequestsService {
     const req = await this.loadPending(tenantId, id);
 
     const policy = await this.pricing.effectivePolicy(tenantId, req.vehicleId);
+    // Giá riêng theo ngày áp cả ở đây — snapshot của đơn phải khớp báo giá khách đã thấy.
+    const dailyOverrides = await this.pricing.dailyOverridesFor(
+      req.vehicleId,
+      req.pickupAt,
+      req.returnAt,
+    );
     const breakdown = this.pricing.buildQuote({
       weekdayPrice: req.vehicle.weekdayPrice?.toFixed(0) ?? null,
       weekendPrice: req.vehicle.weekendPrice?.toFixed(0) ?? null,
@@ -362,6 +368,7 @@ export class BookingRequestsService {
       policy,
       // Miễn phí lúc duyệt — không dòng giao nhận nào trong snapshot giá gốc.
       delivery: null,
+      dailyOverrides,
     });
     const snapshot = this.pricing.buildSnapshot(breakdown, policy);
 

@@ -57,6 +57,33 @@ export function positionToCssVars(
  * booking request chưa duyệt (không giữ chỗ) và các nguồn khác, nên việc chồng vẫn xảy ra
  * trên UI — chồng thanh lên nhau sẽ che mất dữ liệu.
  */
+/**
+ * Xếp tầng theo VỊ TRÍ PIXEL đã vẽ, không theo thời gian.
+ *
+ * Cần bản này vì thanh event có SÀN bề rộng (event 2–3 tiếng vẫn phải đủ chỗ cho icon + chữ):
+ * hai event không chồng nhau về thời gian vẫn có thể chồng nhau trên màn hình sau khi nới —
+ * xếp tầng theo giờ sẽ để chúng đè lên nhau. Trả về lane theo ĐÚNG thứ tự mảng vào.
+ */
+export function assignPixelLanes(items: ReadonlyArray<{ left: number; width: number }>): number[] {
+  const order = items.map((_, i) => i).sort((a, b) => items[a]!.left - items[b]!.left);
+  const laneEnds: number[] = [];
+  const lanes = new Array<number>(items.length).fill(0);
+
+  for (const idx of order) {
+    const { left, width } = items[idx]!;
+    let lane = laneEnds.findIndex((end) => end <= left);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(left + width);
+    } else {
+      laneEnds[lane] = left + width;
+    }
+    lanes[idx] = lane;
+  }
+
+  return lanes;
+}
+
 export function assignLanes<T extends { startAt: string; endAt: string }>(
   events: readonly T[],
 ): Array<{ event: T; lane: number }> {

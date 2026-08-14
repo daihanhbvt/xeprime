@@ -1,0 +1,94 @@
+/* Panel neo cạnh ô — nằm TRONG canvas lịch nên cuộn theo lưới, không trôi lệch. */
+.panel {
+  position: absolute;
+  left: var(--xp-cell-menu-left);
+  top: var(--xp-cell-menu-top);
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  padding: var(--xp-space-xs);
+  background: var(--xp-color-bg-elevated);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  box-shadow: var(--xp-shadow-raised);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border);
+  margin-bottom: var(--xp-space-xs);
+}
+
+.headerVehicle {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.headerDate {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  text-transform: capitalize;
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border: 0;
+  border-radius: var(--xp-border-radius-sm);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  /* Mục tiêu chạm ≥ 40px cho cả sheet mobile lẫn panel desktop. */
+  min-height: 44px;
+}
+
+.action:hover,
+.action:focus-visible {
+  background: var(--xp-color-bg-hover);
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
+}
+
+.icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+}
+
+.texts {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.label {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.hint {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.sheetList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}

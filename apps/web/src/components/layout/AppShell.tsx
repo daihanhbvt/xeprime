@@ -29,6 +29,14 @@ const PUBLIC_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.LOGIN];
 const BARE_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.LOGIN, ROUTES.MANAGE.ONBOARDING];
 
 /**
+ * Route CHIẾM TRỌN VIEWPORT: vùng cuộn dọc là của chính màn đó (lịch xe cuộn TRONG lưới),
+ * không phải của body. Shell khoá chiều cao = 100dvh và tắt cuộn ở `.content`; đồng thời ẨN
+ * thanh bottom-nav mobile CHỈ ở các route này — lịch cần đáy màn hình cho hàng "Xe còn trống",
+ * các trang khác vẫn giữ điều hướng như cũ.
+ */
+const VIEWPORT_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.CALENDAR];
+
+/**
  * Khung của Management Portal.
  *
  * Portal dùng chung cho gian hàng và nền tảng, khác nhau ở scope (screen_spec §5) — nên
@@ -88,12 +96,22 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (isBarePortalPath) return <>{children}</>;
 
+  const isViewportPath = VIEWPORT_PORTAL_PATHS.includes(pathname);
+
   return (
-    <div className={styles.shell}>
+    <div
+      className={[styles.shell, isViewportPath ? styles.shellViewport : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
       <Sidebar />
       <div className={styles.main}>
         <Topbar user={user} />
-        <main className={styles.content}>
+        <main
+          className={[styles.content, isViewportPath ? styles.contentViewport : '']
+            .filter(Boolean)
+            .join(' ')}
+        >
           {isPendingApproval && tenant ? (
             <Result
               status="warning"
@@ -104,7 +122,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           ) : null}
           {children}
         </main>
-        <MobileNav />
+        {isViewportPath ? null : <MobileNav />}
       </div>
     </div>
   );

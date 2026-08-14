@@ -20,7 +20,7 @@ import { RecordPaymentModal } from '@/features/payments/components/RecordPayment
 import { usePermissions } from '@/hooks/use-permissions';
 import { isZeroMoney } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
-import { BookingFormDrawer } from './BookingFormDrawer';
+import { BookingFormDialog } from './BookingFormDialog';
 import { UpdateDeliveryFeeModal } from './UpdateDeliveryFeeModal';
 import type { BookingDetail } from '../types';
 import styles from './BookingActionBar.module.css';
@@ -183,7 +183,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
           onClose={() => setFeeOpen(false)}
         />
       ) : null}
-      <BookingFormDrawer open={editOpen} editing={booking} onClose={() => setEditOpen(false)} />
+      <BookingFormDialog open={editOpen} editing={booking} onClose={() => setEditOpen(false)} />
     </>
   );
 }

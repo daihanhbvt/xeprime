@@ -217,3 +217,34 @@ export const OCCUPANCY_SOURCE_TYPE_META: Readonly<Record<OccupancySourceType, St
   [OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE]: { label: 'Xe bị khóa', color: 'default' },
   [OCCUPANCY_SOURCE_TYPE.MAINTENANCE]: { label: 'Bảo dưỡng', color: 'purple' },
 };
+
+/**
+ * Lý do khoá xe thủ công (`vehicle_blocks`) — nguồn `blocked_range` của lịch xe.
+ *
+ * Khác với phiếu bảo dưỡng (`vehicle_maintenance_records`, có vòng đời riêng), khoá xe là một
+ * khoảng "không cho thuê" đơn thuần: tạo là giữ chỗ, xoá là nhả chỗ, không có trạng thái
+ * trung gian. `UNPLANNED_MAINTENANCE` dành cho việc sửa gấp chưa kịp lập phiếu.
+ */
+export const VEHICLE_BLOCK_REASON = {
+  UNPLANNED_MAINTENANCE: 'unplanned_maintenance',
+  REPAIR: 'repair',
+  INTERNAL_USE: 'internal_use',
+  NOT_FOR_RENT: 'not_for_rent',
+  OTHER: 'other',
+} as const;
+
+export type VehicleBlockReason = (typeof VEHICLE_BLOCK_REASON)[keyof typeof VEHICLE_BLOCK_REASON];
+export const VEHICLE_BLOCK_REASON_VALUES = Object.values(
+  VEHICLE_BLOCK_REASON,
+) as VehicleBlockReason[];
+
+export const VEHICLE_BLOCK_REASON_META: Readonly<Record<VehicleBlockReason, StatusMeta>> = {
+  [VEHICLE_BLOCK_REASON.UNPLANNED_MAINTENANCE]: {
+    label: 'Bảo dưỡng ngoài kế hoạch',
+    color: 'purple',
+  },
+  [VEHICLE_BLOCK_REASON.REPAIR]: { label: 'Sửa chữa', color: 'orange' },
+  [VEHICLE_BLOCK_REASON.INTERNAL_USE]: { label: 'Xe đang sử dụng nội bộ', color: 'blue' },
+  [VEHICLE_BLOCK_REASON.NOT_FOR_RENT]: { label: 'Không cho thuê', color: 'red' },
+  [VEHICLE_BLOCK_REASON.OTHER]: { label: 'Khác', color: 'default' },
+};

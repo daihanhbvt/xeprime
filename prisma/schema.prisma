@@ -58,6 +58,7 @@ model User {
   ownedTenants        Tenant[]             @relation("tenant_owner")
   auditLogs           AuditLog[]
   createdVehicles     Vehicle[]            @relation("vehicle_creator")
+  createdVehicleBlocks VehicleBlock[]      @relation("vehicle_block_creator")
   createdBranches     TenantBranch[]       @relation("branch_creator")
   createdBookings     Booking[]            @relation("booking_creator")
   uploadedDocuments   TenantDocument[]     @relation("document_uploader")
@@ -161,6 +162,8 @@ model Tenant {
   vehicleHandoverPhotos VehicleHandoverPhoto[]
   bookingSurcharges BookingSurcharge[]
   bookingDepositSettlements BookingDepositSettlement[]
+  vehicleBlocks VehicleBlock[]
+  vehicleDailyPrices VehicleDailyPrice[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -682,6 +685,8 @@ model Vehicle {
   maintenanceAttachments VehicleMaintenanceAttachment[]
   handovers   VehicleHandover[]
   handoverPhotos VehicleHandoverPhoto[]
+  blocks      VehicleBlock[]
+  dailyPrices VehicleDailyPrice[]
 
   @@unique([tenantId, code])
   /// Mục tiêu cho composite FK (vehicle_id, tenant_id) của các bảng con nhạy cảm — DB tự chặn
@@ -1593,6 +1598,66 @@ model VehicleOccupancy {
   @@index([vehicleId, startAt, endAt])
   @@index([tenantId])
   @@map("vehicle_occupancies")
+}
+
+/// Khoá xe thủ công (Wave lịch) — nguồn `blocked_range` của `vehicle_occupancies`.
+///
+/// Bản ghi nghiệp vụ đứng SAU occupancy: tạo/sửa/xoá block và giữ/đổi/nhả chỗ trên lịch xảy ra
+/// trong CÙNG transaction (ADR 0006), ghi qua `VehicleBlocksService` → `OccupancyService` —
+/// không module nào khác đụng vào cả hai bảng. Trùng lịch do exclusion constraint từ chối.
+model VehicleBlock {
+  id         String   @id @db.Char(26)
+  tenantId   String   @map("tenant_id") @db.Char(26)
+  vehicleId  String   @map("vehicle_id") @db.Char(26)
+  startAt    DateTime @map("start_at") @db.Timestamptz(3)
+  endAt      DateTime @map("end_at") @db.Timestamptz(3)
+  /// @xeprime/types → VehicleBlockReason
+  reason     String   @db.VarChar(30)
+  note       String?  @db.Text
+  /// Optimistic concurrency như phiếu bảo dưỡng — hai người cùng sửa thì người sau bị 409.
+  rowVersion Int      @default(1) @map("row_version")
+  createdBy  String?  @map("created_by") @db.Char(26)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  creator User?   @relation("vehicle_block_creator", fields: [createdBy], references: [id])
+
+  @@index([tenantId, vehicleId, startAt])
+  @@index([tenantId, startAt])
+  @@map("vehicle_blocks")
+}
+
+/// Giá riêng theo NGÀY của một xe (Wave lịch) — ghi đè giá thường/cuối tuần cho đúng ngày đó.
+///
+/// `date` là ngày LOCAL Asia/Ho_Chi_Minh (`@db.Date`, không giờ): "ngày lễ 02/09 giá 1.2tr"
+/// là một câu về ngày dương lịch Việt Nam, không phải về một khoảng UTC. Unique
+/// `(vehicle_id, date)` làm mô hình tất định — không hai bản ghi đè chồng nhau cho cùng ngày.
+/// Ghi đè KHÔNG đụng lịch trống: nó là giá, không phải occupancy.
+///
+/// Writer duy nhất: `PricingService` (nguồn tính giá duy nhất của hệ thống — Wave 2).
+model VehicleDailyPrice {
+  id          String   @id @db.Char(26)
+  tenantId    String   @map("tenant_id") @db.Char(26)
+  vehicleId   String   @map("vehicle_id") @db.Char(26)
+  date        DateTime @db.Date
+  /// Giá thuê NGÀY áp cho ngày này (thay cả giá thường lẫn cuối tuần). NULL = không ghi đè ngày.
+  dailyPrice  Decimal? @map("daily_price") @db.Decimal(14, 2)
+  /// Giá thuê GIỜ áp cho ngày này — chỉ có nghĩa với xe đang cho thuê theo giờ.
+  hourlyPrice Decimal? @map("hourly_price") @db.Decimal(14, 2)
+  note        String?  @db.VarChar(255)
+  createdBy   String?  @map("created_by") @db.Char(26)
+  updatedBy   String?  @map("updated_by") @db.Char(26)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, date])
+  @@index([tenantId, vehicleId, date])
+  @@map("vehicle_daily_prices")
 }
 
 // ---------------------------------------------------------------------------

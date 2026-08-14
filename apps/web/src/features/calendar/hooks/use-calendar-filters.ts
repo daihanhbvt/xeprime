@@ -10,6 +10,17 @@ const MIN_DAYS = 1;
 const MAX_DAYS = 62;
 
 /**
+ * Các kiểu sắp xếp hàng xe — nhãn cho toolbar, value khớp `CALENDAR_SORT_VALUES` của backend.
+ * Mặc định `next_booking`: xe có lịch đang chạy/sắp tới gần nhất lên đầu.
+ */
+export const CALENDAR_SORT_OPTIONS = [
+  { value: 'next_booking', label: 'Lịch gần nhất' },
+  { value: 'name', label: 'Tên xe' },
+  { value: 'price_asc', label: 'Giá thấp → cao' },
+  { value: 'price_desc', label: 'Giá cao → thấp' },
+] as const;
+
+/**
  * Filter lịch sống ở URL, KHÔNG ở Redux — ADR 0004.
  *
  * Tài liệu gốc (`xeprime_fe_base_stack_calendar.md` §5.1) xếp filter vào Redux. Đổi vì ba
@@ -18,9 +29,12 @@ const MAX_DAYS = 62;
  *   - nút Back hoàn tác filter thay vì văng khỏi trang
  *   - F5 không mất filter
  */
+/** `null` = xoá tham số khỏi URL (về mặc định) — dùng cho filter có default như `sort`. */
+type CalendarFilterPatch = { [K in keyof CalendarFilters]?: CalendarFilters[K] | null };
+
 export function useCalendarFilters(): {
   filters: CalendarFilters;
-  setFilters: (patch: Partial<CalendarFilters>) => void;
+  setFilters: (patch: CalendarFilterPatch) => void;
   reset: () => void;
 } {
   const router = useRouter();
@@ -29,6 +43,7 @@ export function useCalendarFilters(): {
 
   const filters = useMemo<CalendarFilters>(() => {
     const rawDays = Number(searchParams.get('days'));
+    const rawSort = searchParams.get('sort');
     return {
       from: searchParams.get('from') ?? todayIsoDate(),
       days:
@@ -37,11 +52,15 @@ export function useCalendarFilters(): {
           : DEFAULT_DAYS,
       vehicleType: searchParams.get('vehicleType'),
       q: searchParams.get('q'),
+      // Giá trị lạ trên URL rơi về mặc định — backend cũng validate lại (IsIn).
+      sort: CALENDAR_SORT_OPTIONS.some((o) => o.value === rawSort)
+        ? (rawSort as CalendarFilters['sort'])
+        : 'next_booking',
     };
   }, [searchParams]);
 
   const setFilters = useCallback(
-    (patch: Partial<CalendarFilters>) => {
+    (patch: CalendarFilterPatch) => {
       const next = new URLSearchParams(searchParams.toString());
 
       for (const [key, value] of Object.entries(patch)) {

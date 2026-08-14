@@ -1,64 +1,142 @@
-/* Resource timeline: cột xe sticky bên trái, lưới ngày cuộn ngang. */
+/**
+ * Resource timeline (bản thiết kế lại): MỘT vùng cuộn sở hữu cả hai chiều; cột xe sticky trái,
+ * header ngày sticky trên, hàng "Xe còn trống" sticky đáy. Hàng ảo hoá đặt bằng translateY
+ * trong spacer đúng tổng chiều cao. Kích thước lưới do JS bơm qua custom property (ADR 0003).
+ */
 
 .wrapper {
   display: flex;
   flex-direction: column;
+  flex: 1;
   height: 100%;
   min-height: 0;
   border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-radius-md);
+  border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
   overflow: hidden;
+
+  /* Ba giá trị DẪN XUẤT từ token — không hex tự chế (ADR 0003). */
+  --xp-cal-line: var(--xp-color-border);
+  --xp-cal-weekend-bg: color-mix(
+    in srgb,
+    var(--xp-color-bg-muted) 60%,
+    var(--xp-color-bg-container)
+  );
+  --xp-cal-zebra-bg: color-mix(in srgb, var(--xp-color-bg-muted) 45%, var(--xp-color-bg-container));
 }
 
-.scrollArea {
+.inlineAlert {
+  margin: var(--xp-space-sm) var(--xp-space-md) 0;
+}
+
+/* Thông báo "khoảng này chưa có lịch" — một dòng, KHÔNG chặn lưới bên dưới. */
+.emptyHint {
+  padding: 6px var(--xp-space-md);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  background: var(--xp-cal-weekend-bg);
+  border-bottom: 1px solid var(--xp-cal-line);
+}
+
+.loadingBlock {
+  padding: var(--xp-space-lg);
+}
+
+/* ── Vùng cuộn ─────────────────────────────────────────────────────────── */
+
+.viewport {
   position: relative;
   flex: 1;
   min-height: 0;
   overflow: auto;
-  /* Cuộn theo cả hai chiều trong khung này, không để cả trang cuộn ngang. */
+  /* Cuộn dừng ở biên lịch — không kéo cả trang cuộn theo (yêu cầu scroll ownership). */
   overscroll-behavior: contain;
 }
 
-.grid {
-  position: relative;
-  display: grid;
-  /* Cột đầu là danh sách xe; phần còn lại do inline custom property quyết định vì chiều
-     rộng phụ thuộc số ngày đang xem — giá trị chỉ biết lúc runtime (ADR 0003). */
-  grid-template-columns: var(--xp-resource-col-width) 1fr;
-  min-width: max-content;
+.viewport:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
 }
+
+/* Refetch nền: giữ nguyên dữ liệu, chỉ mờ nhẹ để biết đang cập nhật. */
+.refetching {
+  opacity: 0.75;
+  transition: opacity 0.2s ease;
+}
+
+.canvas {
+  position: relative;
+  width: var(--xp-canvas-width);
+  min-width: 100%;
+}
+
+/* ── Header ngày ───────────────────────────────────────────────────────── */
 
 .headerRow {
   position: sticky;
   top: 0;
-  z-index: 3;
-  display: contents;
+  z-index: var(--xp-z-calendar-header);
+  display: flex;
+  height: var(--xp-calendar-header-h);
+  background: var(--xp-color-bg-elevated);
+  border-bottom: 1px solid var(--xp-color-border);
 }
 
-.resourceHeader {
+.cornerCell {
   position: sticky;
-  top: 0;
   left: 0;
-  z-index: 4;
+  z-index: 2;
+  flex: 0 0 var(--xp-resource-col-width);
+  width: var(--xp-resource-col-width);
   display: flex;
   align-items: center;
-  padding: 0 var(--xp-space-md);
-  height: var(--xp-calendar-header-height);
+  justify-content: space-between;
+  gap: var(--xp-space-xs);
+  padding: 0 var(--xp-space-sm);
   background: var(--xp-color-bg-elevated);
   border-right: 1px solid var(--xp-color-border);
-  border-bottom: 1px solid var(--xp-color-border);
-  font-weight: 600;
+  font-size: var(--xp-font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--xp-color-text-secondary);
+  white-space: nowrap;
+}
+
+.cornerLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Nút thu gọn/mở rộng cột xe — luôn trong tầm với ở góc sticky. */
+.collapseToggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.collapseToggle:hover,
+.collapseToggle:focus-visible {
+  color: var(--xp-color-primary);
+  border-color: var(--xp-color-border-focus);
+}
+
+.collapseToggle:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 1px;
 }
 
 .dayHeaderTrack {
-  position: sticky;
-  top: 0;
-  z-index: 3;
   display: flex;
-  height: var(--xp-calendar-header-height);
-  background: var(--xp-color-bg-elevated);
-  border-bottom: 1px solid var(--xp-color-border);
 }
 
 .dayHeaderCell {
@@ -69,19 +147,31 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  border-right: 1px solid var(--xp-color-split);
+  border-right: 1px solid var(--xp-cal-line);
   font-size: var(--xp-font-size-sm);
   line-height: 1.2;
 }
 
 .dayHeaderCell.weekend {
-  background: var(--xp-color-fill-quaternary);
+  background: var(--xp-cal-weekend-bg);
 }
 
+/* Cột hôm nay: nhấn gold ngữ nghĩa (token primary), thắng nền cuối tuần. */
 .dayHeaderCell.today {
-  background: var(--xp-color-primary-bg);
-  font-weight: 700;
+  background: var(--xp-color-primary-light);
   color: var(--xp-color-primary);
+}
+
+.dayHeaderCell.today .dayNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-bg-container);
+  font-weight: 700;
 }
 
 .weekdayLabel {
@@ -89,94 +179,294 @@
   font-size: 11px;
 }
 
+.dayNumber {
+  font-weight: 600;
+}
+
+/* ── Thân lưới ảo hoá ──────────────────────────────────────────────────── */
+
+/* Spacer giữ ĐÚNG tổng chiều cao ảo — scrollbar thật, hàng đặt tuyệt đối bên trong. */
+.bodySpacer {
+  position: relative;
+}
+
+.row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  width: var(--xp-canvas-width);
+  border-bottom: 1px solid var(--xp-cal-line);
+  background: var(--xp-color-bg-container);
+}
+
+/* Zebra theo HÀNG XE (không theo cột — cột đã có ranh giới + nền hôm nay/cuối tuần). */
+.rowZebra {
+  background: var(--xp-cal-zebra-bg);
+}
+
+/* ── Cột xe (sticky trái) ──────────────────────────────────────────────── */
+
 .resourceCell {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: var(--xp-z-calendar-sticky-col);
+  flex: 0 0 var(--xp-resource-col-width);
+  width: var(--xp-resource-col-width);
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  padding: 0 var(--xp-space-md);
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: 0 var(--xp-space-sm);
+  /* Sticky phải ĐỤC — kế thừa từ nền hàng bằng inherit thì thành trong suốt khi cuộn. */
   background: var(--xp-color-bg-container);
   border-right: 1px solid var(--xp-color-border);
-  border-bottom: 1px solid var(--xp-color-split);
+}
+
+.rowZebra .resourceCell {
+  background: var(--xp-cal-zebra-bg);
+}
+
+/* Thu gọn: chỉ còn ảnh, canh giữa — thông tin đầy đủ nằm ở popover của chính ô. */
+.resourceCellCollapsed {
+  justify-content: center;
+  padding: 0 2px;
+}
+
+/* Cả ô xe là MỘT nút mở thẻ thông tin — reset vỏ button, giữ nguyên bố cục bên trong. */
+.resourceInfoTrigger {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.resourceInfoTrigger:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.resourceImage {
+  flex: none;
+  width: 56px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.resourceImageFallback {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 40px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+  font-size: 18px;
+}
+
+.resourceTexts {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
 .resourceName {
-  font-weight: 500;
+  font-weight: 600;
+  font-size: var(--xp-font-size-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--xp-color-text);
+}
+
+.resourceMeta {
+  font-size: 11px;
+  color: var(--xp-color-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.resourcePlate {
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-tertiary);
+.resourceStatus {
+  color: var(--xp-color-warning);
 }
+
+.resourcePrice {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--xp-gold-deep);
+  white-space: nowrap;
+}
+
+/* ── Ô ngày ────────────────────────────────────────────────────────────── */
 
 .rowTrack {
   position: relative;
-  border-bottom: 1px solid var(--xp-color-split);
+  display: flex;
+  flex: 1;
 }
 
-/* Ô trống bấm được để tạo đơn (Phase 4). Highlight nhẹ, nằm dưới thanh event. */
-.rowTrackClickable {
+.cell {
+  position: relative;
+  flex: 0 0 var(--xp-day-width);
+  width: var(--xp-day-width);
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid var(--xp-cal-line);
+  background: transparent;
+}
+
+.cell.weekend {
+  background: var(--xp-cal-weekend-bg);
+}
+
+.cell.today {
+  background: var(--xp-color-primary-light);
+}
+
+.cellInteractive {
   cursor: pointer;
 }
 
-.rowTrackClickable:hover {
+/* Hover chỉ trên Ô THAO TÁC ĐƯỢC — không tô cả hàng. */
+.cellInteractive:hover {
   background: var(--xp-color-bg-hover);
+  box-shadow: inset 0 0 0 1px var(--xp-color-border-focus);
 }
 
-/* Vạch ngày vẽ bằng gradient thay vì N phần tử DOM — với 30 ngày × 1.000 xe thì
-   30.000 div trống là lý do chính khiến lịch giật. */
-.rowTrack::before {
-  content: '';
+.cellInteractive:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+/* Chấm giá riêng — gold ngữ nghĩa, góc dưới phải ô. */
+.priceMarker {
   position: absolute;
-  inset: 0;
-  background-image: repeating-linear-gradient(
-    to right,
-    var(--xp-color-split) 0,
-    var(--xp-color-split) 1px,
-    transparent 1px,
-    transparent var(--xp-day-width)
-  );
+  right: 4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+  box-shadow: 0 0 0 2px var(--xp-color-primary-light);
   pointer-events: none;
 }
+
+/* ── Thanh event ───────────────────────────────────────────────────────── */
 
 .eventBar {
   position: absolute;
   left: var(--xp-bar-left);
+  top: var(--xp-bar-top);
   width: var(--xp-bar-width);
-  height: var(--xp-calendar-bar-height);
+  height: var(--xp-calendar-bar-height, 26px);
   display: flex;
   align-items: center;
+  gap: 4px;
   padding: 0 var(--xp-space-sm);
-  border-radius: var(--xp-radius-sm);
+  border-radius: var(--xp-border-radius-sm);
   font-size: var(--xp-font-size-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
   border: 1px solid transparent;
+  text-align: left;
   transition: filter 0.15s ease;
+}
+
+/*
+ * Tông màu theo trạng thái/loại — GIÁ TRỊ từ token ngữ nghĩa của XePrime; component chỉ chọn
+ * class theo META của @xeprime/types. Nền nhạt trộn bằng color-mix từ chính màu trạng thái để
+ * đổi token là cả bộ đổi theo (cùng kỹ thuật với sidebar tối ở tokens.css).
+ */
+.toneBlue {
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+  border-color: color-mix(in srgb, var(--xp-color-info) 35%, var(--xp-color-info-bg));
+}
+
+.toneGreen {
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  border-color: color-mix(in srgb, var(--xp-color-success) 35%, var(--xp-color-success-bg));
+}
+
+.toneGold {
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  border-color: color-mix(in srgb, var(--xp-color-primary) 45%, var(--xp-color-primary-light));
+}
+
+.toneOrange {
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+  border-color: color-mix(in srgb, var(--xp-color-warning) 35%, var(--xp-color-warning-bg));
+}
+
+.toneRed {
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+  border-color: color-mix(in srgb, var(--xp-color-error) 35%, var(--xp-color-error-bg));
+}
+
+.toneMaintenance {
+  background: color-mix(
+    in srgb,
+    var(--xp-color-event-maintenance) 10%,
+    var(--xp-color-bg-container)
+  );
+  color: var(--xp-color-event-maintenance);
+  border-color: color-mix(
+    in srgb,
+    var(--xp-color-event-maintenance) 35%,
+    var(--xp-color-bg-container)
+  );
+}
+
+.toneBlocked {
+  background: color-mix(in srgb, var(--xp-color-event-blocked) 12%, var(--xp-color-bg-container));
+  color: var(--xp-color-event-blocked);
+  border-color: color-mix(in srgb, var(--xp-color-event-blocked) 45%, var(--xp-color-bg-container));
+}
+
+.toneNeutral {
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-neutral);
+  border-color: var(--xp-color-border-strong);
 }
 
 .eventBar:hover {
   filter: brightness(0.95);
 }
 
-/* Kéo/resize đổi lịch (Phase 4). touch-action none để pointer drag chạy cả trên cảm ứng. */
-.eventDraggable {
-  touch-action: none;
+.eventBar:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 1px;
+  z-index: 2;
 }
 
-.eventDragging {
-  z-index: 5;
-  filter: brightness(0.92);
-  user-select: none;
-  box-shadow: var(--xp-shadow-md);
+/* Khoá xe: nét đứt — loại event không chỉ phân biệt bằng màu. */
+.eventBlocked {
+  border-style: dashed;
+}
+
+.eventIcon {
+  flex: none;
+  font-size: 12px;
 }
 
 .eventLabel {
@@ -184,20 +474,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.resizeHandle {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 9px;
-  cursor: ew-resize;
-}
-
-.eventBar:focus-visible {
-  outline: 2px solid var(--xp-color-primary);
-  outline-offset: 1px;
 }
 
 /* Bo góc phẳng ở đầu bị cắt để người dùng thấy event còn kéo dài ra ngoài khoảng. */
@@ -213,13 +489,259 @@
   border-right-style: dashed;
 }
 
-.emptyState {
-  padding: var(--xp-space-xl);
-  text-align: center;
+/* ── Hàng "Xe còn trống" (sticky đáy) ─────────────────────────────────── */
+
+.summaryRow {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--xp-z-calendar-header);
+  display: flex;
+  height: 40px;
+  background: var(--xp-color-bg-elevated);
+  border-top: 1px solid var(--xp-color-border);
 }
 
-@media (max-width: 768px) {
-  .grid {
-    grid-template-columns: var(--xp-resource-col-width-mobile) 1fr;
+.summaryLabel {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex: 0 0 var(--xp-resource-col-width);
+  width: var(--xp-resource-col-width);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--xp-space-sm);
+  background: var(--xp-color-bg-elevated);
+  border-right: 1px solid var(--xp-color-border);
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summaryTrack {
+  display: flex;
+}
+
+.summaryCell {
+  flex: 0 0 var(--xp-day-width);
+  width: var(--xp-day-width);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--xp-cal-line);
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-success);
+}
+
+.summaryCell.today {
+  background: var(--xp-color-primary-light);
+}
+
+/* Hết xe: cảnh báo bằng màu lỗi + vẫn có SỐ 0 (không chỉ màu). */
+.summaryNone {
+  color: var(--xp-color-error);
+}
+
+/* ── Thẻ xem nhanh (hover/focus một thanh event) ──────────────────────────
+ * Render trong PORTAL của Popover — nằm ngoài `.wrapper`, nên chỉ dùng token :root,
+ * không dùng biến --xp-cal-* cục bộ. */
+
+.quickCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 240px;
+  max-width: 300px;
+}
+
+.quickHead {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/* X đóng tường minh — trên cảm ứng không có "rời chuột" để thẻ tự tắt. */
+.quickClose {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--xp-border-radius-sm);
+  background: transparent;
+  color: var(--xp-color-text-tertiary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.quickClose:hover,
+.quickClose:focus-visible {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-text);
+}
+
+.quickType {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+}
+
+.quickTitle {
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: 700;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.quickCode {
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-primary-active);
+}
+
+.quickRows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--xp-color-border);
+}
+
+.quickRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.quickRow dt {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.quickRow dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--xp-color-text);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.quickHint {
+  padding-top: 6px;
+  border-top: 1px dashed var(--xp-color-border);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ── Chú giải ──────────────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+  padding: 6px var(--xp-space-md);
+  border-bottom: 1px solid var(--xp-cal-line);
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legendSwatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+
+.legendBooking {
+  background: var(--xp-color-info-bg);
+  border-color: color-mix(in srgb, var(--xp-color-info) 35%, var(--xp-color-info-bg));
+}
+
+.legendActive {
+  background: var(--xp-color-success-bg);
+  border-color: color-mix(in srgb, var(--xp-color-success) 35%, var(--xp-color-success-bg));
+}
+
+.legendMaintenance {
+  background: color-mix(
+    in srgb,
+    var(--xp-color-event-maintenance) 10%,
+    var(--xp-color-bg-container)
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--xp-color-event-maintenance) 35%,
+    var(--xp-color-bg-container)
+  );
+}
+
+.legendBlocked {
+  background: var(--xp-color-neutral-bg);
+  border-color: var(--xp-color-border);
+  border-style: dashed;
+}
+
+.legendPrice {
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+}
+
+/* ── Mobile ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  /* MỘT dòng cuộn ngang — chú giải không được ăn thêm chiều cao của lưới trên màn nhỏ. */
+  .legend {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: var(--xp-space-sm);
+    padding: 4px var(--xp-space-sm);
+    font-size: 11px;
+  }
+
+  .legendItem {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .cornerCell,
+  .summaryLabel {
+    padding: 0 var(--xp-space-sm);
+    font-size: 11px;
+  }
+
+  .resourceImage,
+  .resourceImageFallback {
+    width: 40px;
+    height: 30px;
+  }
+
+  /* Giá ẩn ở cột hẹp 104px — tên + mã là tối thiểu để nhận ra xe. */
+  .resourcePrice {
+    display: none;
+  }
+
+  .eventBar {
+    padding: 0 4px;
+    font-size: 11px;
   }
 }

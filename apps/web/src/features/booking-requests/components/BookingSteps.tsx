@@ -26,6 +26,12 @@ export type BookingStepKey = BookingFormStepKey | 'otp' | 'done';
 
 interface BookingStepsProps {
   current: BookingStepKey;
+  /**
+   * Đổi NHÃN một bước cho biến thể của luồng — luồng đặt hộ của gian hàng gọi bước "Liên hệ"
+   * là "Khách hàng" (staff nhập thông tin khách, không phải thông tin của mình). Cấu trúc và
+   * thứ tự bước là bất biến, chỉ nhãn được ghi đè.
+   */
+  labels?: Partial<Record<BookingFormStepKey, string>>;
 }
 
 /**
@@ -35,7 +41,7 @@ interface BookingStepsProps {
  * dấu gạch phân cách, không phải stepper có đường nối; và ở mobile bốn bước phải nằm gọn MỘT
  * hàng ngang, điều mà `Steps` chỉ làm được sau khi ghi đè khá nhiều.
  */
-export function BookingSteps({ current }: BookingStepsProps) {
+export function BookingSteps({ current, labels }: BookingStepsProps) {
   /*
    * `otp` nằm TRONG bước "Liên hệ" nên vẫn tô sáng ô đó; `done` đã qua hết cả ba bước. Nhờ vậy
    * thanh tiến trình không bao giờ trống hay nhảy về đầu ở hai trạng thái ngoài biểu mẫu.
@@ -61,7 +67,7 @@ export function BookingSteps({ current }: BookingStepsProps) {
             <span className={styles.dot} aria-hidden>
               {done ? <CheckCircleFilled /> : index + 1}
             </span>
-            <span className={styles.label}>{step.label}</span>
+            <span className={styles.label}>{labels?.[step.key] ?? step.label}</span>
             {/* Trạng thái cho screen reader — màu và dấu tích là tín hiệu thị giác. */}
             {done ? <span className={styles.srOnly}>(đã xong)</span> : null}
           </li>

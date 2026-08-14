@@ -22,6 +22,7 @@ import {
   SaveRentalPolicyDto,
   ShopRentalPolicyDto,
 } from './dto/pricing.dto';
+import { SaveDailyPricesDto, VehicleDailyPriceDto } from './dto/vehicle-daily-price.dto';
 
 const POLICY_SELECT = {
   id: true,
@@ -222,6 +223,157 @@ export class PricingService {
   }
 
   // -------------------------------------------------------------------------
+  // Giá riêng theo ngày (`vehicle_daily_prices`) — writer duy nhất là service này
+  // -------------------------------------------------------------------------
+
+  /** Bản ghi đè trong [from, to] (ngày local, bao gồm hai đầu) của một xe. */
+  async listDailyPrices(
+    tenantId: string,
+    vehicleId: string,
+    from: string,
+    to: string,
+  ): Promise<VehicleDailyPriceDto[]> {
+    assertDateRange(from, to);
+    const rows = await this.prisma.vehicleDailyPrice.findMany({
+      where: { tenantId, vehicleId, date: { gte: localDate(from), lte: localDate(to) } },
+      orderBy: { date: 'asc' },
+      select: {
+        vehicleId: true,
+        date: true,
+        dailyPrice: true,
+        hourlyPrice: true,
+        note: true,
+        updatedAt: true,
+      },
+    });
+    return rows.map(toDailyPriceDto);
+  }
+
+  /**
+   * Upsert giá riêng cho từng ngày trong `dto.dates` — mô hình tất định: mỗi ngày đúng một dòng
+   * (unique `(vehicle_id, date)`), lần lưu sau THAY THẾ trọn giá trị của lần trước cho ngày đó.
+   * Một audit record cho cả lô (ai đổi giá những ngày nào thành bao nhiêu).
+   */
+  async saveDailyPrices(
+    tenantId: string,
+    vehicleId: string,
+    userId: string,
+    dto: SaveDailyPricesDto,
+  ): Promise<VehicleDailyPriceDto[]> {
+    if (dto.dailyPrice == null && dto.hourlyPrice == null) {
+      throw invalid('Nhập ít nhất một giá (theo ngày hoặc theo giờ)');
+    }
+    await this.assertVehicle(tenantId, vehicleId);
+
+    const dates = [...new Set(dto.dates)].sort();
+    const daily = dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null;
+    const hourly = dto.hourlyPrice != null ? new Prisma.Decimal(dto.hourlyPrice) : null;
+    const note = dto.note?.trim() || null;
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const date of dates) {
+        await tx.vehicleDailyPrice.upsert({
+          where: { vehicleId_date: { vehicleId, date: localDate(date) } },
+          create: {
+            id: newId(),
+            tenantId,
+            vehicleId,
+            date: localDate(date),
+            dailyPrice: daily,
+            hourlyPrice: hourly,
+            note,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+          update: { dailyPrice: daily, hourlyPrice: hourly, note, updatedBy: userId },
+        });
+      }
+
+      // Giá ảnh hưởng mọi báo giá mới của xe → audit đầy đủ (lằn ranh 3, CLAUDE.md mục 6).
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'vehicle.daily_price.save',
+          targetType: 'vehicle',
+          targetId: vehicleId,
+          after: {
+            dates,
+            dailyPrice: daily?.toFixed(0) ?? null,
+            hourlyPrice: hourly?.toFixed(0) ?? null,
+            ...(note ? { note } : {}),
+          },
+        },
+        tx,
+      );
+    });
+
+    return this.listDailyPrices(tenantId, vehicleId, dates[0]!, dates[dates.length - 1]!);
+  }
+
+  /** Khôi phục giá mặc định cho [from, to]: xoá bản ghi đè — giá thường/cuối tuần áp trở lại. */
+  async deleteDailyPrices(
+    tenantId: string,
+    vehicleId: string,
+    userId: string,
+    from: string,
+    to: string,
+  ): Promise<number> {
+    assertDateRange(from, to);
+    await this.assertVehicle(tenantId, vehicleId);
+
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.vehicleDailyPrice.deleteMany({
+        where: { tenantId, vehicleId, date: { gte: localDate(from), lte: localDate(to) } },
+      });
+      if (result.count > 0) {
+        await this.audit.record(
+          {
+            tenantId,
+            actorUserId: userId,
+            actorScope: 'tenant',
+            action: 'vehicle.daily_price.delete',
+            targetType: 'vehicle',
+            targetId: vehicleId,
+            before: { from, to, count: result.count },
+          },
+          tx,
+        );
+      }
+      return result.count;
+    });
+  }
+
+  /**
+   * Map `ngày local → giá NGÀY ghi đè` cho khoảng thuê — nạp một lần rồi đưa vào `buildQuote`.
+   * Ngày chỉ ghi đè giá GIỜ (dailyPrice null) không vào map: quote hiện tại tính theo ngày.
+   */
+  async dailyOverridesFor(
+    vehicleId: string,
+    pickupAt: Date,
+    returnAt: Date,
+  ): Promise<ReadonlyMap<string, string>> {
+    const days = this.chargedDays(pickupAt, returnAt);
+    const keys = Array.from({ length: days }, (_, i) => localDayKey(pickupAt, i));
+    const rows = await this.prisma.vehicleDailyPrice.findMany({
+      where: { vehicleId, date: { in: keys.map(localDate) }, dailyPrice: { not: null } },
+      select: { date: true, dailyPrice: true },
+    });
+    return new Map(rows.map((r) => [r.date.toISOString().slice(0, 10), r.dailyPrice!.toFixed(0)]));
+  }
+
+  private async assertVehicle(tenantId: string, vehicleId: string): Promise<void> {
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: { id: vehicleId, tenantId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!vehicle) {
+      throw new NotFoundException({ code: API_ERROR_CODE.NOT_FOUND, message: 'Không tìm thấy xe' });
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Tính giá
   // -------------------------------------------------------------------------
 
@@ -263,6 +415,8 @@ export class PricingService {
     returnAt: Date;
     policy: EffectivePolicy | null;
     delivery?: { fee: string; label: string } | null;
+    /** `ngày local (YYYY-MM-DD) → giá NGÀY ghi đè` — nạp qua `dailyOverridesFor`. */
+    dailyOverrides?: ReadonlyMap<string, string>;
   }): QuoteBreakdownDto {
     if (!input.weekdayPrice) {
       throw invalid('Xe chưa có giá thuê theo ngày — cấu hình giá trước khi báo giá');
@@ -275,24 +429,37 @@ export class PricingService {
     const weekday = new Prisma.Decimal(input.weekdayPrice);
     const weekend = input.weekendPrice ? new Prisma.Decimal(input.weekendPrice) : weekday;
 
-    // Phân loại từng ngày tính tiền theo ngày bắt đầu của nó (giờ Việt Nam).
+    // Phân loại từng ngày tính tiền theo ngày bắt đầu của nó (giờ Việt Nam). Ngày có giá riêng
+    // (`vehicle_daily_prices`) lấy ĐÚNG giá đó — thay cả giá thường lẫn cuối tuần của ngày ấy.
     let weekendDays = 0;
+    let overrideDays = 0;
+    let base = new Prisma.Decimal(0);
     for (let i = 0; i < days; i++) {
+      const override = input.dailyOverrides?.get(localDayKey(input.pickupAt, i));
+      if (override != null) {
+        overrideDays += 1;
+        base = base.plus(new Prisma.Decimal(override));
+        continue;
+      }
       const dow = new Date(input.pickupAt.getTime() + i * MS_PER_DAY + TZ_OFFSET_MS).getUTCDay();
-      if (dow === 0 || dow === 6) weekendDays += 1;
+      const isWeekend = dow === 0 || dow === 6;
+      if (isWeekend) weekendDays += 1;
+      base = base.plus(isWeekend ? weekend : weekday);
     }
-    const weekdayDays = days - weekendDays;
+    const weekdayDays = days - weekendDays - overrideDays;
     const splitRates = weekendDays > 0 && !weekend.equals(weekday);
 
-    const base = weekday.mul(weekdayDays).plus(weekend.mul(weekendDays));
+    const baseSublabel = overrideDays
+      ? `${days} ngày · trong đó ${overrideDays} ngày áp giá riêng`
+      : splitRates
+        ? `${weekdayDays} ngày thường × ${vnd(weekday)} · ${weekendDays} ngày cuối tuần × ${vnd(weekend)}`
+        : `${days} ngày × ${vnd(weekday)}/ngày`;
 
     const rows: PriceBreakdownRowDto[] = [
       {
         key: PRICE_ROW.BASE,
         label: 'Tiền thuê gốc',
-        sublabel: splitRates
-          ? `${weekdayDays} ngày thường × ${vnd(weekday)} · ${weekendDays} ngày cuối tuần × ${vnd(weekend)}`
-          : `${days} ngày × ${vnd(weekday)}/ngày`,
+        sublabel: baseSublabel,
         amount: base.toFixed(0),
       },
     ];
@@ -416,6 +583,13 @@ export class PricingService {
     }
 
     const policy = await this.effectivePolicy(vehicle.tenantId, vehicle.id);
+    // Giá riêng theo ngày áp vào MỌI báo giá — khách ngoài chợ và shop duyệt yêu cầu phải
+    // nhìn cùng một con số.
+    const dailyOverrides = await this.dailyOverridesFor(
+      vehicle.id,
+      new Date(pickupAt),
+      new Date(returnAt),
+    );
     const breakdown = this.buildQuote({
       weekdayPrice: decimalToString(vehicle.weekdayPrice),
       weekendPrice: decimalToString(vehicle.weekendPrice),
@@ -423,6 +597,7 @@ export class PricingService {
       returnAt: new Date(returnAt),
       policy,
       delivery: null,
+      dailyOverrides,
     });
 
     const delivery: DeliverySummaryDto = policy?.values.deliveryEnabled
@@ -502,6 +677,51 @@ function auditShape(data: {
 
 function decimalToString(value: Prisma.Decimal | null): string | null {
   return value ? value.toFixed(0) : null;
+}
+
+/**
+ * Khoá ngày LOCAL (YYYY-MM-DD, giờ VN) của ngày tính tiền thứ `i` kể từ lúc nhận xe — cùng
+ * phép quy chiếu UTC+7 cố định mà buildQuote dùng để phân loại cuối tuần.
+ */
+function localDayKey(pickupAt: Date, dayIndex: number): string {
+  return new Date(pickupAt.getTime() + dayIndex * MS_PER_DAY + TZ_OFFSET_MS)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** `YYYY-MM-DD` → giá trị cho cột `@db.Date` (Prisma nhận Date ở nửa đêm UTC). */
+function localDate(isoDate: string): Date {
+  return new Date(`${isoDate}T00:00:00.000Z`);
+}
+
+/** Trần 366 ngày cho các truy vấn theo khoảng — lịch xem tối đa 62 ngày, chừa dư cho báo cáo. */
+function assertDateRange(from: string, to: string): void {
+  const fromMs = localDate(from).getTime();
+  const toMs = localDate(to).getTime();
+  if (Number.isNaN(fromMs) || Number.isNaN(toMs) || toMs < fromMs) {
+    throw invalid('Khoảng ngày không hợp lệ');
+  }
+  if (toMs - fromMs > 366 * MS_PER_DAY) {
+    throw invalid('Khoảng ngày tối đa 366 ngày');
+  }
+}
+
+function toDailyPriceDto(row: {
+  vehicleId: string;
+  date: Date;
+  dailyPrice: Prisma.Decimal | null;
+  hourlyPrice: Prisma.Decimal | null;
+  note: string | null;
+  updatedAt: Date;
+}): VehicleDailyPriceDto {
+  return {
+    vehicleId: row.vehicleId,
+    date: row.date.toISOString().slice(0, 10),
+    dailyPrice: row.dailyPrice ? row.dailyPrice.toFixed(0) : null,
+    hourlyPrice: row.hourlyPrice ? row.hourlyPrice.toFixed(0) : null,
+    note: row.note,
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }
 
 /** '800000' → '800.000đ' — chỉ dùng cho sublabel của snapshot/breakdown (tài liệu tự đọc). */

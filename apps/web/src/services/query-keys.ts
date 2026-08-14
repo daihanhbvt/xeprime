@@ -33,6 +33,17 @@ export const queryKeys = {
     all: ['calendar'] as const,
     resources: (params: QueryParams) => ['calendar', 'resources', params] as const,
     events: (params: QueryParams) => ['calendar', 'events', params] as const,
+    /** Hàng "Xe còn trống" — đếm ở backend trên toàn đội xe đã lọc. */
+    availability: (params: QueryParams) => ['calendar', 'availability', params] as const,
+    /** Dấu "giá riêng" theo ô (mọi xe đang lọc, một request cho cả lưới). */
+    dailyPrices: (params: QueryParams) => ['calendar', 'daily-prices', params] as const,
+    /** Chi tiết một lịch khoá xe — mở khi bấm vào event `blocked_range`. */
+    block: (id: string) => ['calendar', 'block', id] as const,
+    /** Báo giá nội bộ cho luồng Đặt xe trên lịch. */
+    quote: (params: QueryParams) => ['calendar', 'quote', params] as const,
+    /** Bản ghi đè giá theo ngày của MỘT xe (dialog đặt giá). */
+    vehicleDailyPrices: (vehicleId: string, params: QueryParams) =>
+      ['calendar', 'vehicle-daily-prices', vehicleId, params] as const,
   },
   /**
    * Danh mục hành chính (tỉnh/thành). Bản chọn-được (`provinces`) và bản quản trị (`admin`) nằm
