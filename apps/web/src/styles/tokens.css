@@ -182,7 +182,7 @@
   --xp-modal-width-xl: 1180px;
   --xp-drawer-width: 560px;
   --xp-drawer-width-lg: 720px;
-  --xp-container-max-width: 1200px;
+  --xp-container-max-width: 1280px;
 
   /* ─── Khung app ───────────────────────────────────────────────────────── */
   --xp-shell-topbar-height: 56px;
@@ -190,7 +190,7 @@
   --xp-shell-sidebar-collapsed-width: 64px;
   --xp-shell-bottom-nav-height: 64px;
   --xp-shell-drawer-width: 280px;
-  --xp-shell-form-max-width: 1136px;
+  --xp-shell-form-max-width: 1216px;
 
   /* ─── Lịch resource timeline ──────────────────────────────────────────── */
   --xp-calendar-resource-col-width: 220px;

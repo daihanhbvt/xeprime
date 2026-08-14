@@ -185,7 +185,8 @@ AntD: `fontSizeHeading1..5` ← 32/24/20/16/14 · `fontSizeLG` ← 16 · `fontSi
 | `--xp-touch-target-min` | 44px | WCAG 2.5.5 |
 | `--xp-modal-width-sm` / `` / `-lg` | 400 / 560 / 720 px | `125:1611` SM/MD/LG |
 | `--xp-drawer-width` / `-lg` | 560 / 720 px | căn theo modal |
-| `--xp-container-max-width` | 1200px | `117:1203`, `127:2060` |
+| `--xp-container-max-width` | **1280px** | `117:1203`, `127:2060` vẽ 1200 — nới lên 1280 (14/08/2026) cho mọi trang; marketplace bỏ số 1120 gõ tay, dùng chung token này |
+| `--xp-shell-form-max-width` | **1216px** | `60:69` FormColumn thụt 64px so với workspace → đi theo 1280 |
 
 ⚠️ **`controlHeight` giữ 32px, KHÔNG đổi thành 40.** Figma `125:1571` (button `padding: 10px 20px`, chữ 15px) và `125:2691` (input `padding: 10px 12px`) đều ra ~40px = AntD `size="large"`. Đổi mặc định sang 40 làm cao lên **mọi** input/button/select ở 37 trang — thuộc wave component, không phải wave token. Ghi ở **P16**.
 

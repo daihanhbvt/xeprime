@@ -1,6 +1,6 @@
 .page {
   width: 100%;
-  max-width: var(--xp-container-max-width, 1200px);
+  max-width: var(--xp-container-max-width);
   padding: var(--xp-space-lg) var(--xp-space-md) var(--xp-space-xl);
   margin-inline: auto;
 }

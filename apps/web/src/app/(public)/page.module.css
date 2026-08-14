@@ -1,6 +1,6 @@
 .sections {
   display: flex;
-  max-width: 1120px;
+  max-width: var(--xp-container-max-width);
   flex-direction: column;
   padding: 40px 16px 24px;
   margin: 0 auto;
@@ -11,7 +11,7 @@
 .searchFallback {
   position: relative;
   z-index: 2;
-  max-width: 1120px;
+  max-width: var(--xp-container-max-width);
   padding: 0 16px;
   margin: -44px auto 0;
 }

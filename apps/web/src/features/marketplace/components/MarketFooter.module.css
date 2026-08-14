@@ -5,7 +5,7 @@
 }
 
 .inner {
-  max-width: 1120px;
+  max-width: var(--xp-container-max-width);
   margin: 0 auto;
   padding: 32px 16px 20px;
   display: grid;
@@ -159,7 +159,7 @@
 .bottom {
   border-top: 1px solid var(--xp-color-border-secondary);
   padding: 14px 16px;
-  max-width: 1120px;
+  max-width: var(--xp-container-max-width);
   margin: 0 auto;
   display: flex;
   flex-wrap: wrap;

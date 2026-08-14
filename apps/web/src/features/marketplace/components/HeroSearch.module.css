@@ -6,7 +6,7 @@
 .cardOuter {
   position: relative;
   z-index: 2;
-  max-width: 1120px;
+  max-width: var(--xp-container-max-width);
   padding: 0 16px;
   margin: -44px auto 0;
 }

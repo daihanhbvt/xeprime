@@ -208,7 +208,10 @@ export const XP_TOKENS = {
   'modal-width-xl': '1180px',
   'drawer-width': '560px',
   'drawer-width-lg': '720px',
-  'container-max-width': '1200px', // 117:1203 (Pagination/Desktop) · 127:2060
+  // Figma `117:1203` (Pagination/Desktop) · `127:2060` vẽ vùng nội dung 1200. Chốt 14/08/2026:
+  // nới lên 1280 cho MỌI trang (marketplace lẫn portal) — 1200/1120 để lại quá nhiều lề chết
+  // trên màn 1440. Đây là nguồn duy nhất của bề rộng trang; không gõ số ở CSS Module.
+  'container-max-width': '1280px',
 
   // ─── Khung app ────────────────────────────────────────────────────────────
   'shell-topbar-height': '56px', // 14:1498
@@ -216,7 +219,8 @@ export const XP_TOKENS = {
   'shell-sidebar-collapsed-width': '64px', // 14:1532 = 47:77
   'shell-bottom-nav-height': '64px', // 14:1641
   'shell-drawer-width': '280px', // 14:1662
-  'shell-form-max-width': '1136px', // 60:69 (FormColumn trong workspace 1200)
+  // 60:69 (FormColumn thụt 64px so với workspace). Đi theo `container-max-width`: 1280 − 64.
+  'shell-form-max-width': '1216px',
 
   // ─── Lịch resource timeline ───────────────────────────────────────────────
   'calendar-resource-col-width': '220px',

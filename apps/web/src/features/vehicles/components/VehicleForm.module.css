@@ -1,11 +1,10 @@
-/* Cột form đơn — Figma `60:69` FormColumn rộng 1136 trong workspace 1200, tức là chiếm hết
-   vùng nội dung chứ không giới hạn 960px như bản trước Wave 3A. */
 /*
  * Cột form đơn, **căn giữa** vùng nội dung.
  *
- * Figma `60:69` đặt FormColumn rộng 1136 trong workspace 1200 — ở 1440px nó vừa khít nên trông
- * như căn trái. Ở màn 1900px thì không: thiếu `margin-inline: auto`, form dính lì mép trái và
- * bỏ trống gần một nửa màn hình.
+ * Figma `60:69` đặt FormColumn thụt 64px so với workspace (nay là 1216 trong 1280), tức chiếm
+ * gần hết vùng nội dung chứ không giới hạn 960px như bản trước Wave 3A. Ở 1440px nó vừa khít
+ * nên trông như căn trái; ở màn 1900px thì không — thiếu `margin-inline: auto`, form dính lì
+ * mép trái và bỏ trống gần một nửa màn hình.
  */
 .form {
   max-width: var(--xp-shell-form-max-width);

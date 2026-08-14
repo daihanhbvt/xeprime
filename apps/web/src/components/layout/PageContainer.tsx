@@ -15,8 +15,8 @@ interface PageContainerProps {
  * KHÔNG dùng cho danh sách: lưới thẻ và bảng có ích thật khi rộng hơn (Figma vẽ lưới xe tràn
  * hết vùng nội dung).
  *
- * Bề rộng lấy từ `--xp-container-max-width` (1200px) thay vì gõ số — Figma dựng vùng nội dung
- * 1116px trong workspace 1180px, cùng bậc thang.
+ * Bề rộng lấy từ `--xp-container-max-width` (1280px) thay vì gõ số — token là nguồn duy nhất
+ * của bề rộng trang, đổi một chỗ là mọi màn đi theo.
  */
 export function PageContainer({ children }: PageContainerProps) {
   return <div className={styles.container}>{children}</div>;
