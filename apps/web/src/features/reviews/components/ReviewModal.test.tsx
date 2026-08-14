@@ -2,8 +2,7 @@ import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ReviewModal } from './ReviewModal';
-import type { MyTrip } from '../types';
+import { ReviewModal, type ReviewTargetTrip } from './ReviewModal';
 
 /**
  * Test đặc tả viết TRƯỚC khi đổi vỏ overlay.
@@ -28,9 +27,9 @@ function commentBox(): HTMLTextAreaElement {
   return document.querySelector('textarea')!;
 }
 
-const TRIP = { bookingId: 'B1', vehicleName: 'Toyota Vios' } as MyTrip;
+const TRIP: ReviewTargetTrip = { bookingId: 'B1', vehicleName: 'Toyota Vios' };
 
-function renderModal(trip: MyTrip | null = TRIP, onClose = vi.fn()) {
+function renderModal(trip: ReviewTargetTrip | null = TRIP, onClose = vi.fn()) {
   const utils = render(
     <App>
       <ReviewModal trip={trip} open={trip !== null} onClose={onClose} />

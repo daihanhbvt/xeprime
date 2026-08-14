@@ -5,12 +5,23 @@ import { useState } from 'react';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import { RequestBookingModal } from './RequestBookingModal';
 
+/** Nhãn CTA vào luồng thuê. Cố ý KHÁC tên nghiệp vụ — xem docblock bên dưới. */
+const CTA_LABEL = 'Chọn thuê';
+
 /**
- * Nút "Yêu cầu thuê" + modal — client island để nhúng vào cả trang public (Server Component)
- * lẫn thẻ xe. Modal chỉ tạo YÊU CẦU, shop sẽ duyệt và tạo đơn.
+ * CTA vào luồng thuê + modal — client island nhúng vào trang chi tiết xe (Server Component).
  *
- * `listing` truyền xuống khi nơi gọi ĐÃ có hồ sơ xe đầy đủ (trang chi tiết). Thẻ xe chỉ có dữ
- * liệu tóm tắt nên bỏ trống, và modal tự tải phần còn thiếu.
+ * **Ranh giới thuật ngữ (Wave 11.1).** Nút này nói `Chọn thuê`, không phải `Yêu cầu thuê`: ở
+ * bước này khách mới chọn chiếc xe muốn thuê, chưa gửi gì cả. Đặt tên hành động theo kết quả
+ * cuối làm khách tưởng bấm là đã gửi yêu cầu. Còn `Yêu cầu thuê` vẫn là TÊN NGHIỆP VỤ của thực
+ * thể — tiêu đề modal `Yêu cầu thuê xe` và nút chốt `Gửi yêu cầu thuê` giữ nguyên, vì đó mới là
+ * lúc khách thật sự gửi đi.
+ *
+ * Chỉ trang CHI TIẾT xe mới có CTA này. Thẻ xe ở marketplace không mở luồng thuê: quyết định
+ * thuê cần giá theo ngày, chính sách cọc và điều kiện giao nhận — những thứ chỉ có ở trang chi
+ * tiết.
+ *
+ * `listing` truyền xuống khi nơi gọi ĐÃ có hồ sơ xe đầy đủ, để modal khỏi tải lại.
  */
 export function RequestBookingButton({
   vehicleId,
@@ -43,7 +54,7 @@ export function RequestBookingButton({
         className={className}
         onClick={() => setOpen(true)}
       >
-        Yêu cầu thuê
+        {CTA_LABEL}
       </Button>
       <RequestBookingModal
         vehicleId={vehicleId}

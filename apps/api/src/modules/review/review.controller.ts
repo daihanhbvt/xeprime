@@ -1,32 +1,21 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Post } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
-import {
-  CreateReviewDto,
-  MyTripPageDto,
-  ReviewListQueryDto,
-} from './dto/review.dto';
+import { CreateReviewDto } from './dto/review.dto';
 import { ReviewService } from './review.service';
 
 /**
  * Đánh giá phía khách — chỉ cần đăng nhập (không tenant-scoped). Khách chỉ thao tác trên chuyến
  * của chính mình; `customerUserId` lấy từ session, không nhận client.
+ *
+ * Danh sách chuyến KHÔNG ở đây: `GET /trips` (Wave 11) là bề mặt duy nhất, vì nó mang cả tiền,
+ * cọc và hoàn cọc. Hai endpoint cùng trả "chuyến của tôi" là hai câu trả lời sẽ lệch nhau.
  */
 @ApiTags('reviews')
 @Controller('reviews')
 export class ReviewController {
   constructor(private readonly reviews: ReviewService) {}
-
-  @Get('my-trips')
-  @ApiOperation({ summary: 'Các chuyến của tôi + trạng thái đánh giá (màn "Đơn thuê của tôi")' })
-  @ApiOkResponse({ type: MyTripPageDto })
-  myTrips(
-    @CurrentUser() user: AuthenticatedUser,
-    @Query() query: ReviewListQueryDto,
-  ): Promise<MyTripPageDto> {
-    return this.reviews.myTrips(user.id, query) as Promise<MyTripPageDto>;
-  }
 
   @Post()
   @ApiOperation({ summary: 'Đánh giá một chuyến thuê đã hoàn thành' })

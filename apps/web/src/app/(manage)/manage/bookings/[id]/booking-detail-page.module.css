@@ -66,7 +66,7 @@
 
 .blockTitle {
   margin: 0;
-  font-size: var(--xp-font-size-xs);
+  font-size: var(--xp-font-size-overline);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;

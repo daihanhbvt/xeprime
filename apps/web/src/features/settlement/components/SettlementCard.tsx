@@ -32,13 +32,7 @@ import styles from './SettlementCard.module.css';
  *
  * Hoàn cọc là việc THEO DÕI, không chặn hoàn tất chuyến: đơn đã `Hoàn tất` từ lúc nhận xe.
  */
-export function SettlementCard({
-  bookingId,
-  canView,
-}: {
-  bookingId: string;
-  canView: boolean;
-}) {
+export function SettlementCard({ bookingId, canView }: { bookingId: string; canView: boolean }) {
   const { has } = usePermissions();
   const canRecord = has(PERMISSION.PAYMENT_RECORD);
   const canCorrect = has(PERMISSION.PAYMENT_VOID);
@@ -79,6 +73,11 @@ export function SettlementCard({
   const status = data.depositStatus as DepositStatus;
   const hasSurcharges = data.surcharges.length > 0;
   const needsMore = Number(data.additionalDue) > 0;
+  // Dòng "hoàn lại" chỉ có nghĩa khi còn tiền để trả hoặc đã trả rồi.
+  const showRefundLine =
+    status === DEPOSIT_STATUS.AWAITING_REFUND ||
+    status === DEPOSIT_STATUS.REFUNDED ||
+    status === DEPOSIT_STATUS.PARTIALLY_REFUNDED;
 
   return (
     <Card
@@ -141,7 +140,12 @@ export function SettlementCard({
                 <dd className={styles.moneyNegative}>−{formatMoneyVnd(data.surchargeTotal)}</dd>
               </div>
             ) : null}
-            {status !== DEPOSIT_STATUS.NONE && status !== DEPOSIT_STATUS.NOT_RECEIVED ? (
+            {/*
+              Chỉ nói chuyện hoàn tiền khi thật sự có tiền trong tay. `RECEIVED` (đang thuê, cọc
+              còn giữ) chưa tới lúc đó; `SETTLED` thì phát sinh đã ăn hết — mời "hoàn 0đ" là một
+              việc không có thật.
+            */}
+            {showRefundLine ? (
               <div className={styles.rowTotal}>
                 <dt>{data.refund ? 'Đã hoàn' : 'Đề xuất hoàn lại'}</dt>
                 <dd className={styles.moneyStrong}>
@@ -165,6 +169,22 @@ export function SettlementCard({
               type="info"
               showIcon
               message="Chưa có ghi nhận thu cọc cho đơn này nên không có việc hoàn cọc. Ghi nhận khoản thu cọc ở mục Thanh toán nếu đã nhận tiền."
+            />
+          ) : null}
+
+          {status === DEPOSIT_STATUS.RECEIVED ? (
+            <Alert
+              type="info"
+              showIcon
+              message="Đang giữ tiền cọc của khách. Việc hoàn cọc mở ra sau khi nhận lại xe và chốt phát sinh."
+            />
+          ) : null}
+
+          {status === DEPOSIT_STATUS.SETTLED ? (
+            <Alert
+              type="info"
+              showIcon
+              message="Phát sinh đã bù trọn phần cọc đã thu — không còn khoản nào phải hoàn lại cho khách."
             />
           ) : null}
 

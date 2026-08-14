@@ -208,8 +208,8 @@ export function SurchargeDialog({
         </dl>
 
         <p className={styles.note}>
-          Các con số trên là ghi nhận vận hành. Hệ thống không tạo giao dịch ngân hàng và không
-          yêu cầu khách xác nhận.
+          Các con số trên là ghi nhận vận hành. Hệ thống không tạo giao dịch ngân hàng và không yêu
+          cầu khách xác nhận.
         </p>
       </div>
     </ResponsiveDialog>

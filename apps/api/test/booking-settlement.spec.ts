@@ -18,6 +18,7 @@ import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingSettlementController } from '../src/modules/bookings/settlement/booking-settlement.controller';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
+import { NotificationService } from '../src/modules/notification/notification.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -35,13 +36,16 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const pricing = new PricingService(asService, audit);
-const settlement = new SettlementService(asService, audit, pricing);
+const notifications = new NotificationService(asService);
+const settlement = new SettlementService(asService, audit, pricing, notifications);
 
 let dbAvailable = false;
 let ownerId: string;
 let tenantId: string;
 let otherTenantId: string;
 let vehicleId: string;
+/** Khách tạo trong lúc chạy — dọn ở `afterAll` để không để lại user mồ côi. */
+const customerIds: string[] = [];
 
 const BASE = new Date('2026-11-10T02:00:00.000Z');
 const hours = (n: number) => new Date(BASE.getTime() + n * 3_600_000);
@@ -105,13 +109,14 @@ afterAll(async () => {
       await prisma.bookingDepositSettlement.deleteMany({ where: { tenantId: id } });
       await prisma.bookingSurcharge.deleteMany({ where: { tenantId: id } });
       await prisma.payment.deleteMany({ where: { tenantId: id } });
+      await prisma.bookingRequest.deleteMany({ where: { tenantId: id } });
       await prisma.booking.deleteMany({ where: { tenantId: id } });
       await prisma.vehicle.deleteMany({ where: { tenantId: id } });
       await prisma.auditLog.deleteMany({ where: { tenantId: id } });
       await prisma.tenantMembership.deleteMany({ where: { tenantId: id } });
       await prisma.tenant.deleteMany({ where: { id } });
     }
-    await prisma.user.deleteMany({ where: { id: ownerId } });
+    await prisma.user.deleteMany({ where: { id: { in: [ownerId, ...customerIds] } } });
   }
   await prisma.$disconnect();
 });
@@ -143,6 +148,46 @@ async function createBooking(opts: { deposit?: string; status?: string } = {}) {
     },
   });
   return id;
+}
+
+/**
+ * Đơn kèm một tài khoản khách thật — cần cho các kiểm tra thông báo: khách vãng lai không có
+ * `customerUserId` nên mọi thứ đều "không gửi", và test sẽ xanh một cách vô nghĩa.
+ */
+async function createBookingWithCustomer(
+  opts: { deposit?: string; status?: string } = {},
+): Promise<{ bookingId: string; customerUserId: string }> {
+  const bookingId = await createBooking(opts);
+  const customerUserId = newId();
+  await prisma.user.create({
+    data: {
+      id: customerUserId,
+      displayName: 'Khách W11',
+      email: `cus-${customerUserId}@xeprime.test`,
+    },
+  });
+  customerIds.push(customerUserId);
+
+  const booking = await prisma.booking.findUniqueOrThrow({
+    where: { id: bookingId },
+    select: { pickupAt: true, returnAt: true },
+  });
+  await prisma.bookingRequest.create({
+    data: {
+      id: newId(),
+      tenantId,
+      vehicleId,
+      status: 'converted_to_booking',
+      customerName: 'Khách W11',
+      // SĐT riêng từng đơn: unique (vehicle, phone, pickup, return) chặn trùng yêu cầu.
+      customerPhone: `09${customerUserId.slice(-8)}`,
+      customerUserId,
+      bookingId,
+      pickupAt: booking.pickupAt,
+      returnAt: booking.returnAt,
+    },
+  });
+  return { bookingId, customerUserId };
 }
 
 /** Ghi nhận đã THU cọc — đường duy nhất tạo ra việc hoàn cọc. */
@@ -207,6 +252,105 @@ describe('Cọc đã CẤU HÌNH khác cọc đã THU', () => {
     expect(result.depositStatus).toBe(DEPOSIT_STATUS.AWAITING_REFUND);
     expect(result.proposedRefund).toBe('5000000.00');
     expect(result.additionalDue).toBe('0.00');
+  });
+
+  /**
+   * Wave 11.1 — hai chặng từng bị nuốt vào `NONE`/`AWAITING_REFUND` và nói sai về tiền thật.
+   */
+  maybe('đã thu cọc nhưng chuyến CHƯA xong → Đã nhận cọc, không phải "không có cọc"', async () => {
+    for (const status of [
+      BOOKING_STATUS.RESERVED,
+      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.ACTIVE,
+    ]) {
+      const bookingId = await createBooking({ deposit: '5000000', status });
+      await receiveDeposit(bookingId, '5000000');
+
+      const result = await settlement.get(tenantId, bookingId);
+      // Đơn đang cầm 5 triệu của khách — nhãn `Không có cọc` ở đây là nói sai về tiền thật.
+      expect(result.depositStatus).toBe(DEPOSIT_STATUS.RECEIVED);
+      expect(result.depositReceived).toBe('5000000.00');
+    }
+  });
+
+  maybe('phát sinh ăn hết cọc → Đã quyết toán cọc, không mời hoàn 0 đồng', async () => {
+    const bookingId = await createBooking({ deposit: '1000000' });
+    await receiveDeposit(bookingId, '1000000');
+    await settlement.addSurcharge(tenantId, bookingId, ownerId, {
+      category: SURCHARGE_CATEGORY.DAMAGE,
+      amount: '1000000',
+      reason: 'Hư hại đúng bằng tiền cọc',
+    });
+
+    const result = await settlement.get(tenantId, bookingId);
+    expect(result.depositStatus).toBe(DEPOSIT_STATUS.SETTLED);
+    expect(result.proposedRefund).toBe('0.00');
+    expect(result.additionalDue).toBe('0.00');
+  });
+
+  maybe('phát sinh vượt cọc cũng là Đã quyết toán — phần dư thu trực tiếp', async () => {
+    const bookingId = await createBooking({ deposit: '500000' });
+    await receiveDeposit(bookingId, '500000');
+    await settlement.addSurcharge(tenantId, bookingId, ownerId, {
+      category: SURCHARGE_CATEGORY.DAMAGE,
+      amount: '900000',
+      reason: 'Hư hại vượt cọc',
+    });
+
+    const result = await settlement.get(tenantId, bookingId);
+    expect(result.depositStatus).toBe(DEPOSIT_STATUS.SETTLED);
+    expect(result.additionalDue).toBe('400000.00');
+  });
+});
+
+/**
+ * Wave 11.1 — ghi phát sinh là thao tác NỘI BỘ của chủ xe trong lúc quyết toán. Nó lặp đi lặp
+ * lại (thêm, sửa số, gỡ đi) và khách không duyệt gì, nên không được bắn thông báo. Hoàn cọc thì
+ * ngược lại: tiền rời tay chủ xe, khách phải đi đối chiếu.
+ */
+describe('Thông báo: phát sinh im lặng, hoàn cọc thì không', () => {
+  maybe('thêm / sửa / gỡ phát sinh KHÔNG tạo thông báo nào cho khách', async () => {
+    const { bookingId, customerUserId } = await createBookingWithCustomer({ deposit: '1000000' });
+
+    const added = await settlement.addSurcharge(tenantId, bookingId, ownerId, {
+      category: SURCHARGE_CATEGORY.CLEANING,
+      amount: '100000',
+      reason: 'Vệ sinh xe',
+    });
+    const surchargeId = added.surcharges[0]!.id;
+    await settlement.updateSurcharge(tenantId, bookingId, surchargeId, ownerId, {
+      category: SURCHARGE_CATEGORY.CLEANING,
+      amount: '150000',
+      reason: 'Vệ sinh xe (tính lại)',
+    });
+    await settlement.voidSurcharge(tenantId, bookingId, surchargeId, ownerId, {
+      reason: 'Ghi nhầm',
+    });
+
+    const sent = await prisma.notification.count({ where: { userId: customerUserId } });
+    expect(sent).toBe(0);
+
+    // Nhưng vẫn để lại vết đầy đủ ở audit — truy vết là việc của audit, không phải thông báo.
+    const trail = await prisma.auditLog.count({
+      where: { tenantId, action: { startsWith: 'booking.surcharge.' }, targetId: surchargeId },
+    });
+    expect(trail).toBe(3);
+  });
+
+  maybe('ghi nhận hoàn cọc VẪN báo cho khách', async () => {
+    const { bookingId, customerUserId } = await createBookingWithCustomer({ deposit: '1000000' });
+    await receiveDeposit(bookingId, '1000000');
+    await settlement.recordRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '1000000',
+      refundMethod: REFUND_METHOD.BANK_TRANSFER,
+    });
+
+    const sent = await prisma.notification.findMany({
+      where: { userId: customerUserId },
+      select: { targetType: true, targetId: true },
+    });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ targetType: 'booking', targetId: bookingId });
   });
 });
 

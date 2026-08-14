@@ -9,14 +9,18 @@ import {
   API_ERROR_CODE,
   BOOKING_STATUS,
   DEPOSIT_STATUS,
+  NOTIFICATION_TARGET_TYPE,
+  NOTIFICATION_TYPE,
   PAYMENT_KIND,
   PAYMENT_STATUS,
   SURCHARGE_CATEGORY,
   type BookingStatus,
   type DepositStatus,
 } from '@xeprime/types';
+import { formatVnd } from '../../../common/money';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
+import { NotificationService } from '../../notification/notification.service';
 import { PricingService } from '../../pricing/pricing.service';
 import {
   BookingSettlementDto,
@@ -64,6 +68,7 @@ export class SettlementService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly pricing: PricingService,
+    private readonly notifications: NotificationService,
   ) {}
 
   async get(tenantId: string, bookingId: string): Promise<BookingSettlementDto> {
@@ -107,6 +112,16 @@ export class SettlementService {
         },
         tx,
       );
+
+      /*
+       * KHÔNG báo cho khách (Wave 11.1). Ghi phát sinh là việc chủ xe làm nhiều lần trong lúc
+       * quyết toán — thêm, sửa số, gỡ đi rồi ghi lại — và mỗi bước bắn một tin biến hộp thư của
+       * khách thành nhật ký thao tác của người khác. Khách không duyệt phát sinh, nên tin nhắn
+       * đó cũng không mở ra hành động nào.
+       *
+       * Minh bạch vẫn giữ nguyên: `GET /trips/:id` luôn tính lại từ dữ liệu mới nhất, kèm lý do
+       * từng khoản. Audit ở trên là nơi truy vết đầy đủ.
+       */
     });
 
     return this.build(tenantId, booking);
@@ -257,6 +272,13 @@ export class SettlementService {
         },
         tx,
       );
+
+      // Tiền về túi khách là tin khách chờ nhất — nhưng nói đúng sự thật: đây là chủ xe ĐÃ
+      // chuyển bên ngoài rồi đánh dấu lại, không phải hệ thống vừa chuyển khoản.
+      await this.notifyCustomer(tx, tenantId, bookingId, {
+        title: 'Chủ xe đã đánh dấu hoàn cọc',
+        body: `Số tiền hoàn ${formatVnd(refundAmount)}. Vui lòng đối chiếu với tài khoản của bạn.`,
+      });
     });
 
     return this.build(tenantId, booking);
@@ -353,6 +375,43 @@ export class SettlementService {
       });
     }
     return booking;
+  }
+
+  /**
+   * Báo cho KHÁCH của chuyến, nếu chuyến gắn với một tài khoản.
+   *
+   * Chỉ còn MỘT nơi gọi: **hoàn cọc đã ghi nhận**. Đó là tiền rời khỏi tay chủ xe và khách phải
+   * đi đối chiếu tài khoản — khác hẳn phí giao nhận / phát sinh, những thứ hai bên đã thống
+   * nhất trước và khách không có gì để làm khi nhận tin (Wave 11.1).
+   *
+   * Đi qua đúng kho thông báo đã có (`NotificationService`) và trỏ vào `booking` — link
+   * click-through của khách phân giải id đơn thành `/trips/:id`. Khách vãng lai chưa có tài
+   * khoản thì im lặng bỏ qua: không có ai để gửi, và đó không phải lỗi.
+   */
+  private async notifyCustomer(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    bookingId: string,
+    payload: { title: string; body: string },
+  ): Promise<void> {
+    const request = await tx.bookingRequest.findFirst({
+      where: { bookingId },
+      select: { customerUserId: true },
+    });
+    if (!request?.customerUserId) return;
+
+    await this.notifications.emitToUser(
+      request.customerUserId,
+      {
+        type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
+        title: payload.title,
+        body: payload.body,
+        tenantId,
+        targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+        targetId: bookingId,
+      },
+      tx,
+    );
   }
 
   private async requireSurcharge(tenantId: string, bookingId: string, surchargeId: string) {
@@ -584,10 +643,17 @@ function toSurchargeDto(row: SurchargeRow, names: Map<string, string>): BookingS
 }
 
 /**
- * Trạng thái cọc — thứ tự kiểm quan trọng.
+ * Trạng thái cọc — thứ tự kiểm quan trọng, và mỗi nhánh phải nói đúng về MỘT khoản tiền thật.
  *
- * `NOT_RECEIVED` phải đứng TRƯỚC mọi nhánh hoàn tiền: đơn có yêu cầu cọc nhưng chưa ghi nhận
- * đã thu thì không có việc hoàn cọc nào cả (docs/design/14 §5.1).
+ * Hai chỗ từng sai và đã sửa ở Wave 11.1:
+ *
+ *  - **Đã thu cọc nhưng chuyến chưa xong** từng trả `NONE`, khiến một đơn đang giữ 5 triệu hiện
+ *    nhãn `Không có cọc`. Giờ là `RECEIVED` — tiền đang được giữ, đúng vai trò của nó.
+ *  - **Phát sinh ăn hết cọc** từng cũng rơi vào nhánh "chờ hoàn" với số 0, mời chủ xe đi hoàn
+ *    một khoản không tồn tại. Giờ là `SETTLED` — đã dùng xong, không còn gì để trả lại.
+ *
+ * `NOT_RECEIVED` vẫn phải đứng TRƯỚC mọi nhánh hoàn tiền: có yêu cầu cọc mà chưa ghi nhận thu
+ * thì không có việc hoàn cọc nào cả (docs/design/14 §5.1).
  */
 function depositStatusOf(input: {
   bookingStatus: BookingStatus;
@@ -596,18 +662,23 @@ function depositStatusOf(input: {
   proposedRefund: Prisma.Decimal;
   refunded: Prisma.Decimal | null;
 }): DepositStatus {
-  if (input.depositReceived.greaterThan(0)) {
-    if (input.refunded !== null) {
-      return input.refunded.greaterThanOrEqualTo(input.proposedRefund)
-        ? DEPOSIT_STATUS.REFUNDED
-        : DEPOSIT_STATUS.PARTIALLY_REFUNDED;
-    }
-    // Chỉ tính là "chờ hoàn" khi chuyến đã kết thúc — đang thuê thì cọc còn đang giữ đúng vai trò.
-    return input.bookingStatus === BOOKING_STATUS.COMPLETED
-      ? DEPOSIT_STATUS.AWAITING_REFUND
-      : DEPOSIT_STATUS.NONE;
+  if (input.depositReceived.lessThanOrEqualTo(0)) {
+    return input.depositRequired.greaterThan(0) ? DEPOSIT_STATUS.NOT_RECEIVED : DEPOSIT_STATUS.NONE;
   }
-  return input.depositRequired.greaterThan(0) ? DEPOSIT_STATUS.NOT_RECEIVED : DEPOSIT_STATUS.NONE;
+
+  if (input.refunded !== null) {
+    return input.refunded.greaterThanOrEqualTo(input.proposedRefund)
+      ? DEPOSIT_STATUS.REFUNDED
+      : DEPOSIT_STATUS.PARTIALLY_REFUNDED;
+  }
+
+  // Chuyến chưa kết thúc: cọc đang được GIỮ, chưa tới lúc nói chuyện hoàn lại.
+  if (input.bookingStatus !== BOOKING_STATUS.COMPLETED) return DEPOSIT_STATUS.RECEIVED;
+
+  // Xong chuyến: còn gì để trả thì chờ hoàn, hết sạch vào phát sinh thì coi như đã quyết toán.
+  return input.proposedRefund.greaterThan(0)
+    ? DEPOSIT_STATUS.AWAITING_REFUND
+    : DEPOSIT_STATUS.SETTLED;
 }
 
 /** Re-export để controller khai kiểu mà không phải import chéo DTO. */

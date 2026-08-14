@@ -183,7 +183,15 @@ export const queryKeys = {
   },
   reviews: {
     all: ['reviews'] as const,
-    myTrips: (params: QueryParams) => ['reviews', 'my-trips', params] as const,
+  },
+  /**
+   * Chuyến của KHÁCH (Wave 11). Nhánh riêng chứ không nằm dưới `bookings`: đó là bề mặt của
+   * shop, invalidate chung sẽ kéo theo cả những query khách không có quyền gọi.
+   */
+  trips: {
+    all: ['trips'] as const,
+    list: (params: QueryParams) => ['trips', 'list', params] as const,
+    detail: (id: string) => ['trips', 'detail', id] as const,
   },
   chat: {
     all: ['chat'] as const,

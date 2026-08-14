@@ -1,0 +1,151 @@
+/**
+ * Thẻ chuyến trong danh sách.
+ *
+ * Desktop: ảnh · nội dung · cột phải (trạng thái, tiền, nút). Mobile: ảnh + nội dung ở hàng
+ * trên, cột phải rơi xuống thành một hàng ngang bên dưới — vẫn một thẻ, không phải một bố cục
+ * thứ hai.
+ */
+
+.card {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  gap: var(--xp-space-md);
+  align-items: center;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  min-width: 0;
+}
+
+.image,
+.imageFallback {
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.shop {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.shopName {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.name {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: 700;
+  min-width: 0;
+}
+
+.nameLink {
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.nameLink:hover {
+  color: var(--xp-color-primary);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.money {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.moneyLabel {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.moneyValue {
+  font-weight: 700;
+  /* Tiền không ngắt dòng giữa cụm số. */
+  white-space: nowrap;
+}
+
+/*
+ * Liên kết tạo dáng như nút — KHÔNG lồng `<Button>` vào `<Link>`. Vẫn giữ vùng chạm tối thiểu
+ * bằng `min-height` + padding, không dựa vào chiều cao mặc định của AntD.
+ */
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--xp-touch-target-min);
+  padding: 0 var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-text-inverse);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.action:hover {
+  background: var(--xp-color-primary-hover);
+  color: var(--xp-color-text-inverse);
+}
+
+/** 640px = `--xp-bp-mobile`; custom property không dùng được trong `@media` (quyết định P8). */
+@media (max-width: 640px) {
+  .card {
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .image,
+  .imageFallback {
+    width: 96px;
+    height: 72px;
+  }
+
+  /* Cột phải trải hết hàng dưới: trạng thái trái, tiền + nút phải. */
+  .side {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding-top: var(--xp-space-sm);
+    border-top: 1px solid var(--xp-color-border-subtle);
+  }
+
+  .money {
+    align-items: flex-start;
+  }
+}

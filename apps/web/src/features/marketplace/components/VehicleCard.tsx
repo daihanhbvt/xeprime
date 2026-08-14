@@ -15,7 +15,6 @@ import {
   type ServiceType,
   type VehicleType,
 } from '@xeprime/types';
-import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { listingPath, shopPath } from '@/constants/routes';
 import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
@@ -23,7 +22,15 @@ import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
 import styles from './VehicleCard.module.css';
 
-/** Một thẻ xe trên marketplace. Chỉ hiển thị trường backend thật sự có — thiếu thì ẩn dòng đó. */
+/**
+ * Một thẻ xe trên marketplace. Chỉ hiển thị trường backend thật sự có — thiếu thì ẩn dòng đó.
+ *
+ * KHÔNG có nút thuê ở đây (Wave 11.1). Thẻ chỉ mang dữ liệu tóm tắt, trong khi quyết định thuê
+ * cần giá theo ngày, chính sách cọc, điều kiện giao nhận và đánh giá — tức là trang chi tiết.
+ * Mở thẳng luồng thuê từ một thẻ trong lưới là mời khách cam kết trước khi đọc.
+ *
+ * Cả thẻ là một liên kết tới trang chi tiết; CTA `Chọn thuê` sống ở đó.
+ */
 export function VehicleCard({ listing }: { listing: PublicListing }) {
   const { filters } = useMarketplaceFilters();
   // Thẻ xe lưu key hãng/nhiên liệu — nhãn tra từ danh mục chung với bộ lọc bên cạnh.
@@ -133,17 +140,6 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
             {listing.shopName}
           </Link>
         </div>
-
-        {/* Thẻ chỉ có dữ liệu tóm tắt — overlay tự tải hồ sơ xe đầy đủ cho cột trái. */}
-        <RequestBookingButton
-          vehicleId={listing.id}
-          vehicleName={listing.name}
-          vehicleImageUrl={listing.mainImageUrl}
-          pickupAt={filters.pickupAt}
-          returnAt={filters.returnAt}
-          block
-          className={styles.requestBtn}
-        />
       </div>
     </article>
   );

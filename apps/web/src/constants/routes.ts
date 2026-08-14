@@ -112,6 +112,17 @@ export const contractPath = {
   detail: (id: string): string => `/manage/contracts/${id}`,
 };
 
+/**
+ * Chi tiết một chuyến của KHÁCH (Wave 11).
+ *
+ * `id` nhận cả id yêu cầu thuê lẫn id đơn thuê: thông báo phát ra từ Wave 5/9/10 trỏ vào cả hai
+ * loại, và backend phân giải cả hai về cùng một chuyến. Nhờ vậy không có link thông báo nào cần
+ * biết trước chuyến đã lên đơn hay chưa.
+ */
+export const tripPath = {
+  detail: (id: string): string => `/trips/${id}`,
+};
+
 /** Đường dẫn xe công khai trên Marketplace. */
 export const listingPath = {
   detail: (id: string): string => `/listings/${id}`,

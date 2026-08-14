@@ -18,6 +18,7 @@ export * from './vehicle-document';
 export * from './vehicle-maintenance';
 export * from './booking';
 export * from './booking-request';
+export * from './customer-trip';
 export * from './handover';
 export * from './settlement';
 export * from './review';

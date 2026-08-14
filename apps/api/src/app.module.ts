@@ -23,6 +23,7 @@ import { PublicListingsModule } from './modules/public-listings/public-listings.
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { BookingRequestsModule } from './modules/booking-requests/booking-requests.module';
+import { CustomerTripsModule } from './modules/customer-trips/customer-trips.module';
 import { PhoneVerificationModule } from './modules/phone-verification/phone-verification.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { PaymentsModule } from './modules/payments/payments.module';
@@ -74,6 +75,7 @@ import { PricingModule } from './modules/pricing/pricing.module';
     VehiclesModule,
     BookingsModule,
     BookingRequestsModule,
+    CustomerTripsModule,
     PhoneVerificationModule,
     FinanceModule,
     PaymentsModule,

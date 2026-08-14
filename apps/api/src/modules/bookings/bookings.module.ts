@@ -34,7 +34,11 @@ import { SettlementService } from './settlement/settlement.service';
   /**
    * `HandoversService` xuất ra để Trung tâm bảo dưỡng đếm được việc `Thiếu KM trả` — hàng đợi
    * đó sống ở bề mặt việc-cần-làm đã có, không phải một module điều hướng thứ hai (Wave 8).
+   *
+   * `SettlementService` xuất ra cho màn chuyến của KHÁCH (Wave 11): khách và chủ xe phải nhìn
+   * cùng một phép tính cọc/phát sinh. Dựng lại công thức ở module khách là cách chắc chắn nhất
+   * để hai bên đọc ra hai số tiền khác nhau.
    */
-  exports: [BookingsService, HandoversService],
+  exports: [BookingsService, HandoversService, SettlementService],
 })
 export class BookingsModule {}

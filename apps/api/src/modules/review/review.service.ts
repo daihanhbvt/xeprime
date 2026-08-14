@@ -18,7 +18,6 @@ import { NotificationService } from '../notification/notification.service';
 import { ListingsService } from '../public-listings/listings.service';
 import {
   CreateReviewDto,
-  MyTripDto,
   REVIEW_DEFAULT_LIMIT,
   REVIEW_MAX_LIMIT,
   ReviewDto,
@@ -155,75 +154,6 @@ export class ReviewService {
       data: rows.map(toPublicDto),
       meta: { page, limit, total, hasNext: page * limit < total },
     };
-  }
-
-  /**
-   * Các chuyến của khách (đơn thuê đến từ yêu cầu của họ) + trạng thái đánh giá. Là dữ liệu cho
-   * màn "Đơn thuê của tôi": khách thấy chuyến nào đã xong và đánh giá được.
-   */
-  async myTrips(
-    customerUserId: string,
-    query: ReviewListQueryDto,
-  ): Promise<{ data: MyTripDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(REVIEW_MAX_LIMIT, Math.max(1, query.limit ?? REVIEW_DEFAULT_LIMIT));
-
-    const where: Prisma.BookingRequestWhereInput = {
-      customerUserId,
-      bookingId: { not: null },
-    };
-
-    const [total, rows] = await this.prisma.$transaction([
-      this.prisma.bookingRequest.count({ where }),
-      this.prisma.bookingRequest.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-        select: {
-          booking: {
-            select: {
-              id: true,
-              code: true,
-              status: true,
-              pickupAt: true,
-              returnAt: true,
-              vehicleId: true,
-              vehicle: { select: { name: true } },
-              tenant: { select: { name: true } },
-              review: {
-                select: { id: true, rating: true, comment: true, createdAt: true },
-              },
-            },
-          },
-        },
-      }),
-    ]);
-
-    const data = rows
-      .map((r) => r.booking)
-      .filter((b): b is NonNullable<typeof b> => b !== null)
-      .map((b) => ({
-        bookingId: b.id,
-        code: b.code,
-        vehicleId: b.vehicleId,
-        vehicleName: b.vehicle.name,
-        shopName: b.tenant.name,
-        status: b.status,
-        pickupAt: b.pickupAt.toISOString(),
-        returnAt: b.returnAt.toISOString(),
-        canReview: b.status === BOOKING_STATUS.COMPLETED && b.review === null,
-        review: b.review
-          ? {
-              id: b.review.id,
-              rating: b.review.rating,
-              comment: b.review.comment,
-              createdAt: b.review.createdAt.toISOString(),
-            }
-          : null,
-      }));
-
-    return { data, meta: { page, limit, total, hasNext: page * limit < total } };
   }
 
   /**

@@ -8,12 +8,8 @@ import {
   ShopOutlined,
   StarOutlined,
 } from '@ant-design/icons';
-import {
-  NOTIFICATION_TARGET_TYPE,
-  NOTIFICATION_TYPE,
-  type NotificationType,
-} from '@xeprime/types';
-import { ROUTES } from '@/constants/routes';
+import { NOTIFICATION_TARGET_TYPE, NOTIFICATION_TYPE, type NotificationType } from '@xeprime/types';
+import { ROUTES, tripPath } from '@/constants/routes';
 
 /** Ngữ cảnh xem thông báo — quyết định link click-through (khu quản lý vs khu khách). */
 export type NotificationContext = 'manage' | 'customer';
@@ -37,10 +33,15 @@ export function notificationIcon(type: string): ReactNode {
 
 /**
  * Link click-through theo `targetType`. Người xem ở khu /manage đi tới màn shop tương ứng;
- * khách đi tới "Đơn thuê của tôi". Trả null khi không có đích hợp lý (chỉ đánh dấu đã đọc).
+ * khách đi thẳng tới ĐÚNG chuyến. Trả null khi không có đích hợp lý (chỉ đánh dấu đã đọc).
+ *
+ * Phía khách, `booking` và `booking_request` đều phân giải về `/trips/:id`: backend nhận cả hai
+ * loại id cho cùng một chuyến (Wave 11), nên thông báo cũ phát trước khi có đơn vẫn tới đúng
+ * nơi. `review` thì không — `targetId` của nó là id đánh giá, không phải id chuyến, nên link
+ * dừng ở danh sách thay vì dẫn tới một trang 404.
  */
 export function notificationHref(
-  notification: { targetType?: string | null },
+  notification: { targetType?: string | null; targetId?: string | null },
   context: NotificationContext,
 ): string | null {
   const target = notification.targetType;
@@ -48,6 +49,7 @@ export function notificationHref(
     switch (target) {
       case NOTIFICATION_TARGET_TYPE.BOOKING:
       case NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST:
+        return notification.targetId ? tripPath.detail(notification.targetId) : ROUTES.TRIPS;
       case NOTIFICATION_TARGET_TYPE.REVIEW:
         return ROUTES.TRIPS;
       default:

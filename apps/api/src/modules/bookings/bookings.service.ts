@@ -19,7 +19,7 @@ import {
   type BookingStatus,
   type PaginationMeta,
 } from '@xeprime/types';
-import { bookingDebt, formatVnd } from '../../common/money';
+import { bookingDebt } from '../../common/money';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -327,13 +327,9 @@ export class BookingsService {
       where: { id, tenantId, deletedAt: null },
       select: {
         id: true,
-        code: true,
         baseAmount: true,
         deliveryFee: true,
         discountAmount: true,
-        vehicle: { select: { name: true } },
-        // Đơn KHÔNG giữ `customerUserId`; tài khoản khách (nếu có) nằm ở yêu cầu đã sinh ra nó.
-        bookingRequest: { select: { customerUserId: true } },
       },
     });
     if (!current) throw notFound();
@@ -376,26 +372,13 @@ export class BookingsService {
       );
 
       /*
-       * Khách có tài khoản thì được báo — dùng lại loại thông báo "Cập nhật đơn thuê" đã có,
-       * KHÔNG dựng hạ tầng thông báo mới. Thuần thông tin: không kèm hành động chấp nhận.
-       * Ghi chú nội bộ cố ý không đi kèm.
+       * KHÔNG báo cho khách (Wave 11.1). Phí giao nhận là con số hai bên đã thống nhất qua điện
+       * thoại/chat TRƯỚC khi chủ xe vào chốt, nên tin nhắn ở đây chỉ lặp lại thứ khách đã biết —
+       * và khách cũng không có gì để duyệt. Chuyến của khách luôn hiện số MỚI NHẤT khi mở lại
+       * (`GET /trips/:id` tính tại chỗ), nên im lặng không làm mất thông tin nào.
+       *
+       * Audit ở trên vẫn ghi đủ trước/sau: truy vết là việc của audit, không phải của thông báo.
        */
-      const customerUserId = current.bookingRequest?.customerUserId ?? null;
-      if (customerUserId) {
-        await this.notifications.emitToUser(
-          customerUserId,
-          {
-            type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
-            title: `Đơn ${current.code}: đã cập nhật phí giao nhận`,
-            body: `${current.vehicle.name} · phí giao nhận ${formatVnd(nextFee)}`,
-            tenantId,
-            targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
-            targetId: id,
-          },
-          tx,
-        );
-      }
-
       return updated;
     });
 
@@ -524,6 +507,40 @@ export class BookingsService {
         tx,
         { excludeUserId: userId },
       );
+
+      /*
+       * Khách cũng phải biết chuyến của mình bắt đầu và kết thúc (Wave 11). Chỉ hai mốc đó —
+       * `reserved → confirmed` là bút toán nội bộ, khách không có việc gì với nó.
+       *
+       * Dùng lại đúng loại thông báo và kho thông báo đã có; trỏ thẳng vào chuyến để bấm là
+       * tới nơi. Khách vãng lai chưa có tài khoản thì không có gì để gửi.
+       */
+      if (to === BOOKING_STATUS.ACTIVE || to === BOOKING_STATUS.COMPLETED) {
+        const request = await tx.bookingRequest.findFirst({
+          where: { bookingId: id },
+          select: { customerUserId: true },
+        });
+        if (request?.customerUserId) {
+          await this.notifications.emitToUser(
+            request.customerUserId,
+            {
+              type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
+              title:
+                to === BOOKING_STATUS.ACTIVE
+                  ? 'Hành trình của bạn đã bắt đầu'
+                  : 'Chuyến đi đã hoàn thành',
+              body:
+                to === BOOKING_STATUS.ACTIVE
+                  ? `${updated.vehicle.name} · chúc bạn một chuyến đi an toàn`
+                  : `${updated.vehicle.name} · cảm ơn bạn đã đồng hành cùng XePrime`,
+              tenantId,
+              targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
+              targetId: id,
+            },
+            tx,
+          );
+        }
+      }
     }
 
     return updated;

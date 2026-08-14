@@ -19,12 +19,6 @@
   z-index: 1;
 }
 
-.requestBtn {
-  position: relative;
-  z-index: 2;
-  margin-top: 10px;
-}
-
 .card:hover {
   transform: translateY(-2px);
   box-shadow: var(--xp-shadow-md);

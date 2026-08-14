@@ -8,10 +8,20 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { useCreateReview } from '../hooks/use-create-review';
 import { reviewFormSchema, type ReviewFormValues } from '../schema';
-import type { MyTrip } from '../types';
 import styles from './ReviewModal.module.css';
 
 const DEFAULTS: ReviewFormValues = { rating: 5, comment: '' };
+
+/**
+ * Chuyến đang được đánh giá — chỉ khai đúng thứ hộp này cần.
+ *
+ * Cố ý KHÔNG buộc vào một DTO cụ thể: hộp đánh giá được mở từ danh sách chuyến lẫn trang chi
+ * tiết, và trói nó vào shape của một trong hai là bắt bên kia phải nặn dữ liệu cho vừa.
+ */
+export interface ReviewTargetTrip {
+  bookingId: string;
+  vehicleName: string;
+}
 
 /** Khách đánh giá một chuyến đã hoàn thành. Số sao qua AntD Rate (RHF Controller), nhận xét tuỳ chọn. */
 export function ReviewModal({
@@ -19,7 +29,7 @@ export function ReviewModal({
   open,
   onClose,
 }: {
-  trip: MyTrip | null;
+  trip: ReviewTargetTrip | null;
   open: boolean;
   onClose: () => void;
 }) {
@@ -61,13 +71,21 @@ export function ReviewModal({
             render={({ field, fieldState }) => (
               <div>
                 <Rate value={field.value} onChange={field.onChange} />
-                {fieldState.error ? <div className={styles.err}>{fieldState.error.message}</div> : null}
+                {fieldState.error ? (
+                  <div className={styles.err}>{fieldState.error.message}</div>
+                ) : null}
               </div>
             )}
           />
         </div>
 
-        <TextAreaField control={control} name="comment" label="Nhận xét (tuỳ chọn)" rows={4} maxLength={2000} />
+        <TextAreaField
+          control={control}
+          name="comment"
+          label="Nhận xét (tuỳ chọn)"
+          rows={4}
+          maxLength={2000}
+        />
 
         <div className={styles.actions}>
           <Button onClick={onClose}>Huỷ</Button>

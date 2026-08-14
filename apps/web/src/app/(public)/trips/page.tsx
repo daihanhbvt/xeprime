@@ -1,11 +1,21 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import { MyTripsView } from '@/features/reviews/components/MyTripsView';
+import { TripsView } from '@/features/trips/components/TripsView';
 
 export const metadata: Metadata = {
-  title: 'Đơn thuê của tôi',
+  title: 'Chuyến của tôi',
 };
 
-/** Khu khách hàng — chuyến thuê + đánh giá. Dữ liệu cá nhân nên không cần SEO; client island. */
+/**
+ * Khu khách hàng — danh sách chuyến. Dữ liệu cá nhân nên không cần SEO; client island.
+ *
+ * `Suspense` là bắt buộc: `TripsView` đọc `useSearchParams` (tab + trang sống ở URL, ADR 0004),
+ * và Next bắt mọi cây có nó phải nằm trong một ranh giới Suspense.
+ */
 export default function TripsPage() {
-  return <MyTripsView />;
+  return (
+    <Suspense fallback={null}>
+      <TripsView />
+    </Suspense>
+  );
 }

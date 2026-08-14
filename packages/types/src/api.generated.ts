@@ -1762,6 +1762,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách chuyến của tôi (lọc theo tab, phân trang ở DB) */
+        get: operations["CustomerTripsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/trips/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Chi tiết một chuyến của tôi
+         * @description Nhận id YÊU CẦU thuê hoặc id ĐƠN thuê — thông báo trỏ vào cả hai loại. Không phải chuyến của mình thì trả 404 (không tiết lộ id có tồn tại hay không).
+         */
+        get: operations["CustomerTripsController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/finance/categories": {
         parameters: {
             query?: never;
@@ -2005,23 +2042,6 @@ export interface paths {
         head?: never;
         /** Đổi vai trò thành viên */
         patch: operations["MembersController_updateRole"];
-        trace?: never;
-    };
-    "/reviews/my-trips": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Các chuyến của tôi + trạng thái đánh giá (màn "Đơn thuê của tôi") */
-        get: operations["ReviewController_myTrips"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/reviews": {
@@ -4523,7 +4543,7 @@ export interface components {
              * @description @xeprime/types → DepositStatus
              * @enum {string}
              */
-            depositStatus: "none" | "not_received" | "awaiting_refund" | "refunded" | "partially_refunded";
+            depositStatus: "none" | "not_received" | "received" | "awaiting_refund" | "settled" | "refunded" | "partially_refunded";
             refund?: components["schemas"]["DepositRefundDto"] | null;
             overtime: components["schemas"]["OvertimeSuggestionDto"];
         };
@@ -4681,6 +4701,146 @@ export interface components {
             phone: string;
             /** @example 123456 */
             code: string;
+        };
+        CustomerTripVehicleDto: {
+            id: string;
+            name: string;
+            imageUrl?: string | null;
+            seatCount?: number | null;
+            transmission?: string | null;
+            fuelType?: string | null;
+            plateNumber?: string | null;
+        };
+        CustomerTripShopDto: {
+            name: string;
+            slug: string;
+            /** @description Điểm trung bình (0 nếu chưa có đánh giá) */
+            ratingAvg: number;
+            ratingCount: number;
+            phone?: string | null;
+        };
+        CustomerTripListItemDto: {
+            id: string;
+            bookingId?: string | null;
+            /** @description Mã đơn (sau khi được nhận) */
+            code?: string | null;
+            /**
+             * @description @xeprime/types CustomerTripStage
+             * @enum {string}
+             */
+            stage: "pending_approval" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "no_show";
+            vehicle: components["schemas"]["CustomerTripVehicleDto"];
+            shop: components["schemas"]["CustomerTripShopDto"];
+            /** @description ISO-8601 UTC */
+            pickupAt: string;
+            /** @description ISO-8601 UTC */
+            returnAt: string;
+            deliveryRequested: boolean;
+            deliveryAddress?: string | null;
+            /** @description Tổng dịch vụ mới nhất (tiền thuê + phát sinh), string — ADR 0007 */
+            totalAmount?: string | null;
+            canReview: boolean;
+            hasReview: boolean;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        CustomerTripCountsDto: {
+            all: number;
+            pending: number;
+            upcoming: number;
+            active: number;
+            completed: number;
+            cancelled: number;
+        };
+        CustomerTripPageDto: {
+            data: components["schemas"]["CustomerTripListItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+            counts: components["schemas"]["CustomerTripCountsDto"];
+        };
+        CustomerSurchargeDto: {
+            /** @enum {string} */
+            category: "overtime" | "cleaning" | "damage" | "other";
+            /** @description Tiền dạng string — ADR 0007 */
+            amount: string;
+            /** @description Lý do chủ xe ghi — khách được thấy để đối chiếu */
+            reason: string;
+            /** @description ISO-8601 UTC */
+            recordedAt: string;
+        };
+        CustomerTripFinanceDto: {
+            /** @example VND */
+            currency: string;
+            /** @description Tiền thuê gốc */
+            baseAmount: string;
+            /** @description Khuyến mãi (số dương, hiển thị dấu trừ) */
+            discountAmount: string;
+            /** @description Phí giao nhận MỚI NHẤT chủ xe chốt — mặc định 0 */
+            deliveryFee: string;
+            /** @description Tiền thuê sau khuyến mãi + giao nhận (chưa gồm phát sinh) */
+            rentalTotal: string;
+            surcharges: components["schemas"]["CustomerSurchargeDto"][];
+            surchargeTotal: string;
+            /** @description Tổng dịch vụ cuối cùng = rentalTotal + surchargeTotal */
+            finalTotal: string;
+            /** @description Đã thanh toán TIỀN THUÊ (không gồm cọc) */
+            rentalPaid: string;
+            /** @description Cọc theo đơn (cấu hình) */
+            depositRequired: string;
+            /** @description Cọc chủ xe ĐÃ ghi nhận thu */
+            depositReceived: string;
+            /** @description Phần phát sinh khấu trừ vào cọc = min(phát sinh, cọc đã thu) */
+            depositDeducted: string;
+            /** @description Phát sinh vượt quá cọc — khách trả thêm trực tiếp */
+            additionalDue: string;
+            /** @description Số dự kiến hoàn lại (khi chưa có bản ghi hoàn) */
+            expectedRefund: string;
+            /** @enum {string} */
+            depositStatus: "none" | "not_received" | "received" | "awaiting_refund" | "settled" | "refunded" | "partially_refunded";
+            refundAmount?: string | null;
+            /** @enum {string|null} */
+            refundMethod?: "bank_transfer" | "cash" | "other" | null;
+            refundedAt?: string | null;
+            refundReference?: string | null;
+            /** @description Thiếu snapshot giá — chỉ còn tổng, không có chi tiết */
+            legacyPricing: boolean;
+        };
+        CustomerTripReviewDto: {
+            id: string;
+            rating: number;
+            comment?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        CustomerTripDetailDto: {
+            id: string;
+            bookingId?: string | null;
+            /** @description Mã đơn (sau khi được nhận) */
+            code?: string | null;
+            /**
+             * @description @xeprime/types CustomerTripStage
+             * @enum {string}
+             */
+            stage: "pending_approval" | "ready" | "active" | "completed" | "cancelled" | "rejected" | "no_show";
+            vehicle: components["schemas"]["CustomerTripVehicleDto"];
+            shop: components["schemas"]["CustomerTripShopDto"];
+            /** @description ISO-8601 UTC */
+            pickupAt: string;
+            /** @description ISO-8601 UTC */
+            returnAt: string;
+            deliveryRequested: boolean;
+            deliveryAddress?: string | null;
+            /** @description Tổng dịch vụ mới nhất (tiền thuê + phát sinh), string — ADR 0007 */
+            totalAmount?: string | null;
+            canReview: boolean;
+            hasReview: boolean;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+            customerNote?: string | null;
+            rejectReason?: string | null;
+            actualPickupAt?: string | null;
+            actualReturnAt?: string | null;
+            finance?: components["schemas"]["CustomerTripFinanceDto"] | null;
+            review?: components["schemas"]["CustomerTripReviewDto"] | null;
         };
         FinanceCategoryDto: {
             id: string;
@@ -4934,33 +5094,6 @@ export interface components {
         UpdateMemberRoleDto: {
             /** @enum {string} */
             roleKey: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer";
-        };
-        TripReviewDto: {
-            id: string;
-            rating: number;
-            comment?: string | null;
-            /** @description ISO-8601 UTC */
-            createdAt: string;
-        };
-        MyTripDto: {
-            bookingId: string;
-            code: string;
-            vehicleId: string;
-            vehicleName: string;
-            shopName: string;
-            /** @enum {string} */
-            status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
-            /** @description ISO-8601 UTC */
-            pickupAt: string;
-            /** @description ISO-8601 UTC */
-            returnAt: string;
-            /** @description Đủ điều kiện đánh giá (đã hoàn thành + chưa đánh giá) */
-            canReview: boolean;
-            review?: components["schemas"]["TripReviewDto"] | null;
-        };
-        MyTripPageDto: {
-            data: components["schemas"]["MyTripDto"][];
-            meta: components["schemas"]["PaginationMetaDto"];
         };
         CreateReviewDto: {
             /** @description ID đơn thuê đã COMPLETED của khách */
@@ -8671,6 +8804,50 @@ export interface operations {
             };
         };
     };
+    CustomerTripsController_list: {
+        parameters: {
+            query?: {
+                filter?: "all" | "pending" | "upcoming" | "active" | "completed" | "cancelled";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerTripPageDto"];
+                };
+            };
+        };
+    };
+    CustomerTripsController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerTripDetailDto"];
+                };
+            };
+        };
+    };
     FinanceCategoriesController_list: {
         parameters: {
             query?: {
@@ -9150,28 +9327,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MemberDto"];
-                };
-            };
-        };
-    };
-    ReviewController_myTrips: {
-        parameters: {
-            query?: {
-                page?: number;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MyTripPageDto"];
                 };
             };
         };

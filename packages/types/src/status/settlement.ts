@@ -69,8 +69,23 @@ export const DEPOSIT_STATUS = {
   NONE: 'none',
   /** Có yêu cầu cọc nhưng CHƯA ghi nhận đã thu — không tạo việc hoàn cọc. */
   NOT_RECEIVED: 'not_received',
+  /**
+   * Đã thu cọc và ĐANG GIỮ — chuyến chưa kết thúc nên chưa có gì để hoàn.
+   *
+   * Trước Wave 11.1 trường hợp này rơi vào `NONE`, tức là một đơn đã cầm 5 triệu tiền cọc hiện
+   * nhãn `Không có cọc`. Đó không phải lỗi hiển thị: nó nói sai về một khoản tiền thật đang nằm
+   * trong tay chủ xe, và cả hai phía đều đọc ra điều sai như nhau.
+   */
+  RECEIVED: 'received',
   /** Đã thu cọc, chuyến đã xong, chưa hoàn lại. */
   AWAITING_REFUND: 'awaiting_refund',
+  /**
+   * Đã thu cọc, chuyến đã xong, và **không còn gì để hoàn** vì phát sinh đã ăn hết phần cọc.
+   *
+   * Khác `NONE` (chưa từng có cọc) và khác `REFUNDED` (có trả lại tiền): ở đây tiền đã được
+   * dùng đúng vào việc nó được giữ để phòng.
+   */
+  SETTLED: 'settled',
   /** Đã hoàn đủ phần đề xuất. */
   REFUNDED: 'refunded',
   /** Đã hoàn nhưng ít hơn số đề xuất (chủ xe chủ động ghi số khác). */
@@ -83,10 +98,21 @@ export const DEPOSIT_STATUS_VALUES = Object.values(DEPOSIT_STATUS) as DepositSta
 export const DEPOSIT_STATUS_META: Readonly<Record<DepositStatus, StatusMeta>> = {
   [DEPOSIT_STATUS.NONE]: { label: 'Không có cọc', color: 'default' },
   [DEPOSIT_STATUS.NOT_RECEIVED]: { label: 'Chưa ghi nhận đã thu cọc', color: 'default' },
+  [DEPOSIT_STATUS.RECEIVED]: { label: 'Đã nhận cọc', color: 'green' },
   [DEPOSIT_STATUS.AWAITING_REFUND]: { label: 'Chờ hoàn cọc', color: 'gold' },
+  [DEPOSIT_STATUS.SETTLED]: { label: 'Đã quyết toán cọc', color: 'blue' },
   [DEPOSIT_STATUS.REFUNDED]: { label: 'Đã hoàn cọc', color: 'green' },
   [DEPOSIT_STATUS.PARTIALLY_REFUNDED]: { label: 'Hoàn một phần', color: 'blue' },
 };
+
+/**
+ * Trạng thái mà khối cọc PHẢI hiển thị. Chỉ `NONE` là thật sự không có gì để nói — mọi trạng
+ * thái còn lại đều dính tới một khoản tiền có thật (đang chờ thu, đang giữ, hoặc đã xử lý), và
+ * ẩn đi vì "chuyến chưa xong" là giấu tiền của khách.
+ */
+export function hasDepositToShow(status: DepositStatus): boolean {
+  return status !== DEPOSIT_STATUS.NONE;
+}
 
 /**
  * Câu bắt buộc hiện ở mọi bề mặt hoàn cọc (§5.2). Đặt thành hằng số để không nơi nào diễn đạt

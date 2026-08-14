@@ -20,8 +20,7 @@ export const fetchSettlement = (bookingId: string): Promise<BookingSettlement> =
 export const addSurcharge = (
   bookingId: string,
   body: SaveSurchargeInput,
-): Promise<BookingSettlement> =>
-  apiPost<BookingSettlement>(`${base(bookingId)}/surcharges`, body);
+): Promise<BookingSettlement> => apiPost<BookingSettlement>(`${base(bookingId)}/surcharges`, body);
 
 export const updateSurcharge = (
   bookingId: string,

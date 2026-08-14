@@ -58,15 +58,12 @@ export function RecordRefundDialog({
       : String(Number(settlement.proposedRefund)),
   );
   const [method, setMethod] = useState<RefundMethod>(
-    ((isCorrection && existingRefund?.refundMethod) ||
-      REFUND_METHOD.BANK_TRANSFER) as RefundMethod,
+    ((isCorrection && existingRefund?.refundMethod) || REFUND_METHOD.BANK_TRANSFER) as RefundMethod,
   );
   const [refundedAt, setRefundedAt] = useState<Dayjs>(() =>
     isCorrection && existingRefund ? dayjs(existingRefund.refundedAt) : dayjs(),
   );
-  const [reference, setReference] = useState(
-    isCorrection ? (existingRefund?.reference ?? '') : '',
-  );
+  const [reference, setReference] = useState(isCorrection ? (existingRefund?.reference ?? '') : '');
   const [note, setNote] = useState(isCorrection ? (existingRefund?.note ?? '') : '');
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);

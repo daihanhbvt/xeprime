@@ -108,8 +108,20 @@ beforeAll(async () => {
   });
   await prisma.tenantMembership.createMany({
     data: [
-      { id: newId(), tenantId, userId: ownerId, roleKey: TENANT_ROLE.SHOP_OWNER, status: MEMBERSHIP_STATUS.ACTIVE },
-      { id: newId(), tenantId, userId: staffId, roleKey: TENANT_ROLE.SHOP_STAFF, status: MEMBERSHIP_STATUS.ACTIVE },
+      {
+        id: newId(),
+        tenantId,
+        userId: ownerId,
+        roleKey: TENANT_ROLE.SHOP_OWNER,
+        status: MEMBERSHIP_STATUS.ACTIVE,
+      },
+      {
+        id: newId(),
+        tenantId,
+        userId: staffId,
+        roleKey: TENANT_ROLE.SHOP_STAFF,
+        status: MEMBERSHIP_STATUS.ACTIVE,
+      },
     ],
   });
   await prisma.vehicle.create({
@@ -204,15 +216,11 @@ describe('ReviewService — tạo đánh giá + recompute rating', () => {
     expect(res.data[0]?.customerName).toBe('Nguyễn Văn A.');
   });
 
-  maybe('my-trips: trả các chuyến của khách + trạng thái đánh giá', async () => {
-    const res = await reviews.myTrips(customerId, {});
-    expect(res.meta.total).toBe(3);
-    const reserved = res.data.find((t) => t.bookingId === bookingReserved);
-    const reviewed = res.data.find((t) => t.bookingId === bookingCompleted1);
-    expect(reserved?.canReview).toBe(false); // chưa hoàn thành
-    expect(reviewed?.canReview).toBe(false); // đã đánh giá
-    expect(reviewed?.review?.rating).toBe(5);
-  });
+  /*
+   * Danh sách chuyến của khách đã chuyển sang `GET /trips` (Wave 11) — `CustomerTripsService`,
+   * nơi có cả tiền/cọc/hoàn cọc. Các bảo đảm cũ về `canReview` được kiểm ở
+   * `customer-trips.spec.ts` để chỉ còn MỘT bộ test cho một bề mặt.
+   */
 });
 
 describe('Bất biến DB của reviews', () => {

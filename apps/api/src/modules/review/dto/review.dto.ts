@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BOOKING_STATUS_VALUES, RATING_MAX, RATING_MIN } from '@xeprime/types';
+import { RATING_MAX, RATING_MIN } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
@@ -63,33 +63,5 @@ export class ReviewSummaryDto {
 export class ReviewPageDto {
   @ApiProperty({ type: ReviewSummaryDto }) summary!: ReviewSummaryDto;
   @ApiProperty({ type: [ReviewDto] }) data!: ReviewDto[];
-  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
-}
-
-/** Đánh giá gắn với một chuyến (rút gọn) — cho màn "Đơn thuê của tôi". */
-export class TripReviewDto {
-  @ApiProperty() id!: string;
-  @ApiProperty() rating!: number;
-  @ApiPropertyOptional({ type: String, nullable: true }) comment!: string | null;
-  @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
-}
-
-/** Một chuyến của khách (đơn thuê đến từ yêu cầu của họ) + trạng thái đánh giá. */
-export class MyTripDto {
-  @ApiProperty() bookingId!: string;
-  @ApiProperty() code!: string;
-  @ApiProperty() vehicleId!: string;
-  @ApiProperty() vehicleName!: string;
-  @ApiProperty() shopName!: string;
-  @ApiProperty({ enum: BOOKING_STATUS_VALUES }) status!: string;
-  @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
-  @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
-  @ApiProperty({ description: 'Đủ điều kiện đánh giá (đã hoàn thành + chưa đánh giá)' })
-  canReview!: boolean;
-  @ApiPropertyOptional({ type: TripReviewDto, nullable: true }) review!: TripReviewDto | null;
-}
-
-export class MyTripPageDto {
-  @ApiProperty({ type: [MyTripDto] }) data!: MyTripDto[];
   @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
 }
