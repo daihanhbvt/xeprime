@@ -27,6 +27,7 @@ import {
   useDeleteCatalogItem,
   useReorderCatalog,
 } from '@/features/catalog/use-admin-catalog';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './catalog-page.module.css';
 
 const MIN_TABLE_WIDTH = 900;
@@ -95,8 +96,7 @@ export default function AdminCatalogPage() {
             width: 90,
             render: (_: unknown, item: CatalogItemAdmin) =>
               item.iconUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- URL do admin nhập
-                <img src={item.iconUrl} alt="" className={styles.icon} />
+                <PreviewImage src={item.iconUrl} alt="" className={styles.icon} />
               ) : (
                 <span className={styles.noIcon}>Chưa có</span>
               ),

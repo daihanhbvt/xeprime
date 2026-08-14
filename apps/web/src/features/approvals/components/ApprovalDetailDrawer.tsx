@@ -1,7 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { App, Button, Descriptions, Divider, Empty, Input, Space, Timeline, Typography } from 'antd';
+import {
+  App,
+  Button,
+  Descriptions,
+  Divider,
+  Empty,
+  Input,
+  Space,
+  Timeline,
+  Typography,
+} from 'antd';
 import { CheckOutlined, CloseOutlined, EditOutlined } from '@ant-design/icons';
 import {
   APPROVAL_STATUS,
@@ -9,6 +19,7 @@ import {
   APPROVAL_TARGET_TYPE,
   type ApprovalStatus,
 } from '@xeprime/types';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -47,7 +58,11 @@ export function ApprovalDetailDrawer({ taskId, onClose }: ApprovalDetailDrawerPr
       {
         onSuccess: () => {
           message.success(
-            kind === 'approve' ? 'Đã duyệt' : kind === 'reject' ? 'Đã từ chối' : 'Đã yêu cầu bổ sung',
+            kind === 'approve'
+              ? 'Đã duyệt'
+              : kind === 'reject'
+                ? 'Đã từ chối'
+                : 'Đã yêu cầu bổ sung',
           );
           setReasonModal(null);
           setReason('');
@@ -65,7 +80,11 @@ export function ApprovalDetailDrawer({ taskId, onClose }: ApprovalDetailDrawerPr
         size="md"
         title="Phiếu duyệt"
         loading={isLoading || !task}
-        extra={task ? <StatusTag value={task.status as ApprovalStatus} meta={APPROVAL_STATUS_META} /> : null}
+        extra={
+          task ? (
+            <StatusTag value={task.status as ApprovalStatus} meta={APPROVAL_STATUS_META} />
+          ) : null
+        }
         footer={
           isPending ? (
             <Space wrap>
@@ -134,7 +153,8 @@ function DetailBody({ task }: { task: ApprovalDetail }) {
   const snapshot = task.snapshot ?? {};
   const isVehicle = task.targetType === APPROVAL_TARGET_TYPE.VEHICLE;
   const fields = isVehicle ? VEHICLE_SNAPSHOT_FIELDS : SHOP_SNAPSHOT_FIELDS;
-  const image = isVehicle && typeof snapshot.mainImageUrl === 'string' ? snapshot.mainImageUrl : null;
+  const image =
+    isVehicle && typeof snapshot.mainImageUrl === 'string' ? snapshot.mainImageUrl : null;
 
   return (
     <div>
@@ -160,10 +180,7 @@ function DetailBody({ task }: { task: ApprovalDetail }) {
       ) : null}
 
       <Divider>{isVehicle ? 'Xe gửi duyệt' : 'Hồ sơ đã gửi'}</Divider>
-      {image ? (
-        // eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài từ URL người dùng nhập
-        <img src={image} alt="Ảnh xe" className={styles.snapshotImage} />
-      ) : null}
+      {image ? <PreviewImage src={image} alt="Ảnh xe" className={styles.snapshotImage} /> : null}
       {hasSnapshot(fields, snapshot) ? (
         <Descriptions bordered size="small" column={1} items={snapshotItems(fields, snapshot)} />
       ) : !image ? (

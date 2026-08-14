@@ -16,6 +16,7 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { useCreateCatalogItem, useUpdateCatalogItem } from '../use-admin-catalog';
 import type { CatalogItemAdmin } from '../types';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './CatalogItemFormModal.module.css';
 
 const schema = yup.object({
@@ -129,8 +130,7 @@ export function CatalogItemFormModal({
             {iconUrl ? (
               <div className={styles.preview}>
                 <span className={styles.previewLabel}>Xem trước</span>
-                {/* eslint-disable-next-line @next/next/no-img-element -- URL do admin nhập, có thể ngoài domain */}
-                <img src={iconUrl} alt="" className={styles.previewImage} />
+                <PreviewImage src={iconUrl} alt="" className={styles.previewImage} />
               </div>
             ) : null}
           </>

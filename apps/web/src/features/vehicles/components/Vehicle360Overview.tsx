@@ -39,6 +39,7 @@ import {
   type VehiclePublicStatus,
   type VehicleSourceType,
 } from '@xeprime/types';
+import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
 import { ROUTES, VEHICLE_EDIT_TAB, vehiclePath, vehicleTabPath } from '@/constants/routes';
@@ -213,8 +214,11 @@ function ProfileHeader({
       <div className={styles.profileMain}>
         <div className={styles.profileMedia}>
           {vehicle.mainImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài từ URL người dùng nhập
-            <img className={styles.profileImage} src={vehicle.mainImageUrl} alt={vehicle.name} />
+            <PreviewImage
+              className={styles.profileImage}
+              src={vehicle.mainImageUrl}
+              alt={vehicle.name}
+            />
           ) : (
             <span className={styles.profileMediaFallback} aria-hidden="true">
               <CarOutlined />
@@ -244,7 +248,8 @@ function ProfileHeader({
             {summary?.currentOdometerSource ? (
               <span className={styles.odometerSource}>
                 {' '}
-                · {ODOMETER_SOURCE_LABEL[summary.currentOdometerSource as OdometerSource] ??
+                ·{' '}
+                {ODOMETER_SOURCE_LABEL[summary.currentOdometerSource as OdometerSource] ??
                   summary.currentOdometerSource}
               </span>
             ) : null}
@@ -761,14 +766,16 @@ function MediaCard({ vehicle }: { vehicle: VehicleDetail }) {
 
   return (
     <Card title="Thư viện ảnh" className={styles.sectionCard}>
-      <ul className={styles.gallery} aria-label="Thư viện ảnh">
-        {vehicle.images.map((url) => (
-          <li key={url}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài từ URL người dùng nhập */}
-            <img src={url} alt="" className={styles.galleryThumb} loading="lazy" />
-          </li>
-        ))}
-      </ul>
+      {/* Group: bấm ảnh nào cũng mở trình xem toàn màn hình chung, chuyển ảnh bằng mũi tên. */}
+      <PreviewImageGroup>
+        <ul className={styles.gallery} aria-label="Thư viện ảnh">
+          {vehicle.images.map((url) => (
+            <li key={url}>
+              <PreviewImage src={url} alt="" className={styles.galleryThumb} loading="lazy" />
+            </li>
+          ))}
+        </ul>
+      </PreviewImageGroup>
     </Card>
   );
 }

@@ -8,7 +8,7 @@ import {
   ReloadOutlined,
   WarningFilled,
 } from '@ant-design/icons';
-import { App, Progress, Upload } from 'antd';
+import { App, Image, Progress, Upload } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import {
   HANDOVER_EXTERIOR_SLOTS,
@@ -19,6 +19,7 @@ import {
   type HandoverPhotoSlot,
   type HandoverType,
 } from '@xeprime/types';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { getErrorMessage } from '@/services/api-client';
 import { uploadToR2, validateImageFile } from '@/services/upload';
 import {
@@ -67,6 +68,8 @@ export function HandoverPhotoGrid({
   const [pending, setPending] = useState<Record<string, PendingUpload>>({});
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [busySlot, setBusySlot] = useState<string | null>(null);
+  /** URL ký đang xem toàn màn hình — thay cho mở tab mới; đóng trình xem là quên luôn URL. */
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const previewsRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
@@ -144,9 +147,10 @@ export function HandoverPhotoGrid({
     if (!photo?.fileId) return;
     setBusySlot(slot);
     try {
-      // URL ký sống ~2 phút, xin mới cho từng cú bấm — không giữ lại ở bất cứ đâu.
+      // URL ký sống ~2 phút, xin mới cho từng cú bấm; xem ngay trong app bằng trình xem
+      // toàn màn hình (zoom/xoay) thay vì bật tab mới.
       const ticket = await fetchHandoverPhotoUrl(bookingId, type, photo.fileId);
-      window.open(ticket.downloadUrl, '_blank', 'noopener');
+      setViewerUrl(ticket.downloadUrl);
     } catch (err) {
       message.error(getErrorMessage(err));
     } finally {
@@ -177,12 +181,7 @@ export function HandoverPhotoGrid({
         >
           {upload?.status === 'uploading' ? (
             <div className={styles.slotStatus} aria-label={`Đang tải ảnh ${label}`}>
-              <Progress
-                type="circle"
-                size={40}
-                percent={upload.progress}
-                aria-hidden
-              />
+              <Progress type="circle" size={40} percent={upload.progress} aria-hidden />
             </div>
           ) : upload?.status === 'error' ? (
             <button
@@ -199,8 +198,8 @@ export function HandoverPhotoGrid({
           ) : photo ? (
             <>
               {preview ? (
-                // eslint-disable-next-line @next/next/no-img-element -- blob cục bộ của file vừa chọn, không phải ảnh từ mạng
-                <img src={preview} alt={`Ảnh ${label}`} className={styles.slotImage} />
+                // Blob cục bộ của file vừa chọn — bấm vẫn phóng to xem lại được trước khi xác nhận.
+                <PreviewImage src={preview} alt={`Ảnh ${label}`} className={styles.slotImage} />
               ) : (
                 <span className={styles.slotStatus}>
                   <CheckCircleFilled className={styles.slotDoneIcon} />
@@ -271,6 +270,21 @@ export function HandoverPhotoGrid({
       <div className={styles.slotGrid}>{HANDOVER_EXTERIOR_SLOTS.map(renderSlot)}</div>
       <p className={styles.photoTitle}>Ảnh đồng hồ KM &amp; nhiên liệu</p>
       <div className={styles.slotGrid}>{renderSlot(HANDOVER_PHOTO_SLOT.ODOMETER)}</div>
+
+      {/* Ảnh neo ẨN cho trình xem điều khiển bằng state — nút Xem chỉ việc đặt URL ký. */}
+      {viewerUrl ? (
+        <Image
+          src={viewerUrl}
+          alt=""
+          rootClassName={styles.hiddenPreviewAnchor}
+          preview={{
+            visible: true,
+            onVisibleChange: (open) => {
+              if (!open) setViewerUrl(null);
+            },
+          }}
+        />
+      ) : null}
     </div>
   );
 }

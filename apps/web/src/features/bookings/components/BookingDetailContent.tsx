@@ -3,6 +3,7 @@
 import { Button, Card, Skeleton } from 'antd';
 import Link from 'next/link';
 import { PERMISSION } from '@xeprime/types';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { vehiclePath } from '@/constants/routes';
@@ -102,8 +103,7 @@ export function BookingDetailContent({
                 cấu hình từng môi trường, nên dùng thẻ ảnh thường.
               */}
               {data.vehicleImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- ảnh R2, host cấu hình theo môi trường
-                <img
+                <PreviewImage
                   src={data.vehicleImageUrl}
                   alt={data.vehicleName}
                   className={styles.vehicleImage}

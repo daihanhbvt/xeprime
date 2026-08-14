@@ -6,6 +6,7 @@ import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButto
 import { shopPath } from '@/constants/routes';
 import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
+import { ListingGallery } from './ListingGallery';
 import { ListingReviews } from './ListingReviews';
 import styles from './ListingDetailView.module.css';
 
@@ -65,20 +66,12 @@ export function ListingDetailView({
   return (
     <div className={styles.wrap}>
       <div className={styles.media}>
-        {listing.mainImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- ảnh xe từ storage ngoài, chưa qua next/image
-          <img src={listing.mainImageUrl} alt={listing.name} className={styles.photo} />
-        ) : (
-          <div className={styles.placeholder} aria-hidden="true" />
-        )}
-        {listing.images.length > 0 ? (
-          <div className={styles.gallery}>
-            {listing.images.map((url) => (
-              // eslint-disable-next-line @next/next/no-img-element -- ảnh xe từ storage ngoài
-              <img key={url} src={url} alt={listing.name} className={styles.thumb} />
-            ))}
-          </div>
-        ) : null}
+        {/* Client island: bấm ảnh nào cũng mở trình xem toàn màn hình chung (đếm x/y). */}
+        <ListingGallery
+          name={listing.name}
+          mainImageUrl={listing.mainImageUrl}
+          images={listing.images}
+        />
       </div>
 
       <div className={styles.info}>

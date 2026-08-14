@@ -16,6 +16,7 @@ import { useController, type Control, type FieldValues, type Path } from 'react-
 import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
 import { uploadImage, validateImageFile, type UploadPresign } from '@/services/upload';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './ImageGalleryField.module.css';
 
 interface ImageGalleryFieldProps<T extends FieldValues> {
@@ -230,8 +231,8 @@ function SortableThumb({ url, onRemove }: { url: string; onRemove: () => void })
       {...attributes}
       {...listeners}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element -- ảnh trên R2, không qua next/image */}
-      <img src={url} alt="Ảnh gallery" className={styles.photo} />
+      {/* Click ngắn mở trình xem to; kéo vẫn sắp xếp được (PointerSensor có activationConstraint). */}
+      <PreviewImage src={url} alt="Ảnh gallery" className={styles.photo} />
       <button
         type="button"
         className={styles.removeBtn}

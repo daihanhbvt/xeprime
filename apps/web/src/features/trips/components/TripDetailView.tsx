@@ -13,6 +13,7 @@ import {
   isCustomerTripClosed,
   type CustomerTripStage,
 } from '@xeprime/types';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { Stars } from '@/components/data-display/Stars';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -153,8 +154,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
             <h2 className={styles.blockTitle}>Thông tin phương tiện</h2>
             <div className={styles.vehicle}>
               {data.vehicle.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- ảnh R2, host cấu hình theo môi trường
-                <img
+                <PreviewImage
                   src={data.vehicle.imageUrl}
                   alt={data.vehicle.name}
                   className={styles.vehicleImage}

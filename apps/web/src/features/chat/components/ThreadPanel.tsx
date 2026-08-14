@@ -9,6 +9,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useThread } from '../hooks/use-thread';
 import type { ConversationSummary, MessageAttachment } from '../types';
 import { MessageComposer } from './MessageComposer';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './ChatView.module.css';
 
 /** Khung tin nhắn của một hội thoại. */
@@ -101,11 +102,13 @@ export function ThreadPanel({
 
 function Attachment({ attachment }: { attachment: MessageAttachment }) {
   if (attachment.fileType?.startsWith('image/')) {
+    // Bấm ảnh mở trình xem toàn màn hình ngay trong app — không nhảy sang tab mới.
     return (
-      <a href={attachment.url} target="_blank" rel="noreferrer" className={styles.attachImageLink}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- ảnh từ R2, không qua next/image */}
-        <img src={attachment.url} alt={attachment.fileName ?? 'Ảnh'} className={styles.attachImage} />
-      </a>
+      <PreviewImage
+        src={attachment.url}
+        alt={attachment.fileName ?? 'Ảnh'}
+        className={styles.attachImage}
+      />
     );
   }
   return (

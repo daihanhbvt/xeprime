@@ -11,6 +11,7 @@ import {
 } from '@xeprime/types';
 import { VEHICLE_EDIT_TAB, vehiclePath, vehicleTabPath } from '@/constants/routes';
 import type { VehicleDetail } from '../types';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './VehicleCreateSuccess.module.css';
 
 interface VehicleCreateSuccessProps {
@@ -43,8 +44,7 @@ export function VehicleCreateSuccess({
       <section className={styles.vehicleCard} aria-label="Xe vừa tạo">
         <div className={styles.thumb}>
           {vehicle.mainImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={vehicle.mainImageUrl} alt="" />
+            <PreviewImage src={vehicle.mainImageUrl} alt="" />
           ) : (
             <CarOutlined aria-hidden="true" />
           )}
@@ -64,7 +64,9 @@ export function VehicleCreateSuccess({
         <ul>
           <li>
             <span>Kiểm tra thông tin và thông số xe</span>
-            <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.INFORMATION)}>Tab Thông tin →</Link>
+            <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.INFORMATION)}>
+              Tab Thông tin →
+            </Link>
           </li>
           <li>
             <span>Thêm ảnh thực tế và tiện ích</span>

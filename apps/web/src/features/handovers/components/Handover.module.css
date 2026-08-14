@@ -335,6 +335,11 @@
   gap: 4px;
 }
 
+/* Ảnh neo của trình xem toàn màn hình (điều khiển bằng state) — không chiếm chỗ trong lưới. */
+.hiddenPreviewAnchor {
+  display: none;
+}
+
 .slotIconBtn {
   display: inline-flex;
   width: 28px;

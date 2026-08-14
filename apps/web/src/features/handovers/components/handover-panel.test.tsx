@@ -250,7 +250,9 @@ describe('Khối bàn giao trong chi tiết đơn (Wave 7)', () => {
   it('bấm bắt đầu: tạo bản nháp rỗng trước rồi mới mở form (ảnh cần biên bản có thật)', async () => {
     renderPanel();
     fireEvent.click(screen.getByRole('button', { name: /Bắt đầu giao xe/ }));
-    await waitFor(() => expect(api.saveHandoverDraft).toHaveBeenCalledWith('booking-1', 'pickup', {}));
+    await waitFor(() =>
+      expect(api.saveHandoverDraft).toHaveBeenCalledWith('booking-1', 'pickup', {}),
+    );
     expect(queries.invalidate).toHaveBeenCalled();
   });
 
@@ -353,9 +355,7 @@ describe('Hộp thoại bàn giao — nhập và lưu nháp', () => {
     fireEvent.change(screen.getByLabelText('Chỉ số Kilômét khi nhận lại'), {
       target: { value: '45890' },
     });
-    await waitFor(() =>
-      expect(screen.getByTestId('handover-delta').textContent).toBe('+660 km'),
-    );
+    await waitFor(() => expect(screen.getByTestId('handover-delta').textContent).toBe('+660 km'));
     const consequence = screen.getByTestId('handover-consequence');
     expect(consequence.textContent).toContain('45.890 km');
     expect(consequence.textContent).toContain('50.000 km');
@@ -370,9 +370,7 @@ describe('Hộp thoại bàn giao — nhập và lưu nháp', () => {
       target: { value: '45890' },
     });
     await waitFor(() =>
-      expect(screen.getByTestId('handover-consequence').textContent).toContain(
-        'Chưa đủ dữ liệu',
-      ),
+      expect(screen.getByTestId('handover-consequence').textContent).toContain('Chưa đủ dữ liệu'),
     );
   });
 });
@@ -547,7 +545,11 @@ describe('Hộp thoại bàn giao — xác nhận và các trạng thái lỗi',
 describe('Ảnh hiện trạng riêng tư', () => {
   it('tải ảnh hỏng giữa chừng: chỉ ô đó báo lỗi và có nút thử lại riêng', async () => {
     queries.context.data = returnStage();
-    api.presignHandoverPhoto.mockResolvedValue({ fileId: 'file-1', uploadUrl: 'u', expiresIn: 300 });
+    api.presignHandoverPhoto.mockResolvedValue({
+      fileId: 'file-1',
+      uploadUrl: 'u',
+      expiresIn: 300,
+    });
     uploads.uploadToR2.mockRejectedValueOnce(new Error('Tải tệp lên thất bại'));
     renderPanel();
     await openDialog(/Tiếp tục nhập/);
@@ -576,7 +578,7 @@ describe('Ảnh hiện trạng riêng tư', () => {
     expect(screen.queryByLabelText(/Xem ảnh/)).toBeNull();
   });
 
-  it('xem ảnh: xin signed URL mới cho từng cú bấm, không giữ URL trong DOM', async () => {
+  it('xem ảnh: xin signed URL mới cho từng cú bấm, mở TRÌNH XEM trong app, đóng là quên URL', async () => {
     queries.context.data = returnStage();
     api.fetchHandoverPhotoUrl.mockResolvedValue({
       downloadUrl: 'https://r2.local/signed',
@@ -588,9 +590,13 @@ describe('Ảnh hiện trạng riêng tư', () => {
 
     fireEvent.click(screen.getAllByLabelText(/Xem ảnh/)[0]!);
     await waitFor(() => expect(api.fetchHandoverPhotoUrl).toHaveBeenCalled());
-    expect(open).toHaveBeenCalledWith('https://r2.local/signed', '_blank', 'noopener');
-    // URL ký KHÔNG nằm trong markup — chỉ đi thẳng sang tab mới.
-    expect(document.body.innerHTML).not.toContain('r2.local/signed');
+    // Xem NGAY trong app (AntD Image preview) — không bật tab mới nữa.
+    expect(open).not.toHaveBeenCalled();
+    await waitFor(() => expect(document.body.innerHTML).toContain('r2.local/signed'));
+
+    // Đóng trình xem (Esc) → URL ký bị quên khỏi state lẫn DOM, không nằm lại đâu cả.
+    fireEvent.keyDown(document.body, { key: 'Escape', keyCode: 27 });
+    await waitFor(() => expect(document.body.innerHTML).not.toContain('r2.local/signed'));
     open.mockRestore();
   });
 });
@@ -627,9 +633,7 @@ describe('KM giao xe là bắt buộc (Wave 7.1)', () => {
     await openDialog(/Tiếp tục nhập/);
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận giao xe' }));
 
-    await waitFor(() =>
-      expect(screen.getByText(/Chỉ số KM lúc giao xe là bắt buộc/)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText(/Chỉ số KM lúc giao xe là bắt buộc/)).toBeTruthy());
     // Lối "đóng biên bản, bổ sung sau" CHỈ tồn tại ở chiều trả.
     expect(screen.queryByRole('button', { name: 'Đóng biên bản, bổ sung KM sau' })).toBeNull();
     expect(screen.queryByText('Chưa có chỉ số KM')).toBeNull();

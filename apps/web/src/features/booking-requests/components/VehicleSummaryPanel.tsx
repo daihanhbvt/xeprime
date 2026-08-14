@@ -13,6 +13,7 @@ import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
 import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
 import { maskPhone } from '@/features/phone-verification/mask';
+import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import styles from './VehicleSummaryPanel.module.css';
 
 interface VerifiedContact {
@@ -104,176 +105,179 @@ export function VehicleSummaryPanel({
    * số, tiện ích, gian hàng) mới là skeleton.
    */
   return (
-    <aside className={styles.panel} aria-busy={pending || undefined}>
-      <div className={styles.hero}>
-        {mainImage ? (
-          // eslint-disable-next-line @next/next/no-img-element -- ảnh xe từ storage ngoài
-          <img src={mainImage} alt={name} className={styles.heroImg} />
-        ) : (
-          <div className={styles.heroPlaceholder} aria-hidden="true" />
-        )}
-      </div>
-
-      <div className={styles.head}>
-        <div className={styles.badges}>
-          {listing ? (
-            <span className={styles.badge}>
-              {SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType}
-            </span>
-          ) : null}
-          {discount > 0 ? <span className={styles.badgePromo}>Khuyến mãi</span> : null}
+    // Group: ảnh đại diện + gallery vào chung MỘT trình xem toàn màn hình (đếm x/y).
+    <PreviewImageGroup>
+      <aside className={styles.panel} aria-busy={pending || undefined}>
+        <div className={styles.hero}>
+          {mainImage ? (
+            <PreviewImage src={mainImage} alt={name} className={styles.heroImg} />
+          ) : (
+            <div className={styles.heroPlaceholder} aria-hidden="true" />
+          )}
         </div>
-        <h3 className={styles.name}>{name}</h3>
-        {listing ? (
-          <p className={styles.meta}>
-            {[vehicleTypeLabel(listing.vehicleType), location].filter(Boolean).join(' · ')}
-          </p>
-        ) : null}
 
-        {/* Giá 0đ là giá thật; chỉ ẩn khi backend KHÔNG có giá. */}
-        {displayPrice != null && displayPrice !== '' ? (
-          <div className={styles.price}>
-            <b>{formatMoneyVnd(displayPrice)}</b>
-            <span>/ngày</span>
-            {listing?.hourlyPrice ? (
-              <span className={styles.priceAlt}>{formatMoneyVnd(listing.hourlyPrice)}/giờ</span>
+        <div className={styles.head}>
+          <div className={styles.badges}>
+            {listing ? (
+              <span className={styles.badge}>
+                {SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType}
+              </span>
             ) : null}
+            {discount > 0 ? <span className={styles.badgePromo}>Khuyến mãi</span> : null}
+          </div>
+          <h3 className={styles.name}>{name}</h3>
+          {listing ? (
+            <p className={styles.meta}>
+              {[vehicleTypeLabel(listing.vehicleType), location].filter(Boolean).join(' · ')}
+            </p>
+          ) : null}
+
+          {/* Giá 0đ là giá thật; chỉ ẩn khi backend KHÔNG có giá. */}
+          {displayPrice != null && displayPrice !== '' ? (
+            <div className={styles.price}>
+              <b>{formatMoneyVnd(displayPrice)}</b>
+              <span>/ngày</span>
+              {listing?.hourlyPrice ? (
+                <span className={styles.priceAlt}>{formatMoneyVnd(listing.hourlyPrice)}/giờ</span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
+        {isMobile && listing ? (
+          <button
+            type="button"
+            className={styles.expandBtn}
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+          >
+            {expanded ? 'Ẩn thông tin xe' : 'Xem thông tin xe'}
+            {expanded ? <UpOutlined /> : <DownOutlined />}
+          </button>
+        ) : null}
+
+        {pending ? (
+          <div className={styles.details}>
+            <Skeleton active title={false} paragraph={{ rows: 4 }} />
           </div>
         ) : null}
-      </div>
 
-      {isMobile && listing ? (
-        <button
-          type="button"
-          className={styles.expandBtn}
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-        >
-          {expanded ? 'Ẩn thông tin xe' : 'Xem thông tin xe'}
-          {expanded ? <UpOutlined /> : <DownOutlined />}
-        </button>
-      ) : null}
+        {showDetails && listing ? (
+          <div className={styles.details}>
+            {listing.images.length > 0 ? (
+              <div className={styles.gallery}>
+                {listing.images.slice(0, 6).map((url) => (
+                  <PreviewImage key={url} src={url} alt="" className={styles.thumb} />
+                ))}
+              </div>
+            ) : null}
 
-      {pending ? (
-        <div className={styles.details}>
-          <Skeleton active title={false} paragraph={{ rows: 4 }} />
-        </div>
-      ) : null}
+            {specs.length > 0 ? (
+              <dl className={styles.specs}>
+                {specs.map((s) => (
+                  <div key={s.label} className={styles.specRow}>
+                    <dt>{s.label}</dt>
+                    <dd>{s.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
 
-      {showDetails && listing ? (
-        <div className={styles.details}>
-          {listing.images.length > 0 ? (
-            <div className={styles.gallery}>
-              {listing.images.slice(0, 6).map((url) => (
-                // eslint-disable-next-line @next/next/no-img-element -- ảnh xe từ storage ngoài
-                <img key={url} src={url} alt="" className={styles.thumb} />
-              ))}
+            {listing.features.length > 0 ? (
+              <div className={styles.features}>
+                {listing.features.slice(0, 8).map((key) => (
+                  <span key={key} className={styles.featureChip}>
+                    {catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) ?? key}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+
+            <div className={styles.shop}>
+              <span className={styles.shopAvatar} aria-hidden="true">
+                {listing.shopLogoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- logo shop từ storage ngoài
+                  <img src={listing.shopLogoUrl} alt="" className={styles.shopLogo} />
+                ) : (
+                  listing.shopName.charAt(0).toUpperCase()
+                )}
+              </span>
+              <span className={styles.shopBody}>
+                <span className={styles.shopName}>{listing.shopName}</span>
+                {/* Chỉ hiện đánh giá khi CÓ số thật — không dựng "0.0 · 0 chuyến" giả. */}
+                {listing.ratingAvg != null && listing.ratingCount > 0 ? (
+                  <span className={styles.shopRating}>
+                    <StarFilled /> {listing.ratingAvg} · {listing.ratingCount} đánh giá
+                  </span>
+                ) : null}
+              </span>
+              <Link
+                href={shopPath.detail(listing.shopSlug)}
+                className={styles.shopLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Xem gian hàng
+              </Link>
             </div>
-          ) : null}
 
-          {specs.length > 0 ? (
-            <dl className={styles.specs}>
-              {specs.map((s) => (
-                <div key={s.label} className={styles.specRow}>
-                  <dt>{s.label}</dt>
-                  <dd>{s.value}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
-
-          {listing.features.length > 0 ? (
-            <div className={styles.features}>
-              {listing.features.slice(0, 8).map((key) => (
-                <span key={key} className={styles.featureChip}>
-                  {catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key) ?? key}
-                </span>
-              ))}
-            </div>
-          ) : null}
-
-          <div className={styles.shop}>
-            <span className={styles.shopAvatar} aria-hidden="true">
-              {listing.shopLogoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- logo shop từ storage ngoài
-                <img src={listing.shopLogoUrl} alt="" className={styles.shopLogo} />
-              ) : (
-                listing.shopName.charAt(0).toUpperCase()
-              )}
-            </span>
-            <span className={styles.shopBody}>
-              <span className={styles.shopName}>{listing.shopName}</span>
-              {/* Chỉ hiện đánh giá khi CÓ số thật — không dựng "0.0 · 0 chuyến" giả. */}
-              {listing.ratingAvg != null && listing.ratingCount > 0 ? (
-                <span className={styles.shopRating}>
-                  <StarFilled /> {listing.ratingAvg} · {listing.ratingCount} đánh giá
-                </span>
-              ) : null}
-            </span>
-            <Link
-              href={shopPath.detail(listing.shopSlug)}
-              className={styles.shopLink}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Xem gian hàng
-            </Link>
-          </div>
-
-          {/*
+            {/*
             Vài đánh giá TIÊU BIỂU — thứ khách thật sự đọc trước khi bấm gửi yêu cầu. Tải rời
             khỏi listing để hồ sơ xe hiện ngay; hỏng thì khối này vắng mặt chứ không chặn gì.
           */}
-          {reviewsLoading ? (
-            <div className={styles.reviews}>
-              <Skeleton active title={false} paragraph={{ rows: 3 }} />
-            </div>
-          ) : reviews.length > 0 ? (
-            <div className={styles.reviews}>
-              <div className={styles.reviewsHead}>
-                <span className={styles.reviewsTitle}>Khách nói gì về xe này</span>
-                {reviewSummary && reviewSummary.ratingCount > 0 ? (
-                  <span className={styles.reviewsScore}>
-                    <StarFilled /> {reviewSummary.ratingAvg.toFixed(1)}
-                    <span className={styles.reviewsCount}>
-                      ({reviewSummary.ratingCount} đánh giá)
-                    </span>
-                  </span>
-                ) : null}
+            {reviewsLoading ? (
+              <div className={styles.reviews}>
+                <Skeleton active title={false} paragraph={{ rows: 3 }} />
               </div>
-              <ul className={styles.reviewList}>
-                {reviews.map((review) => (
-                  <li key={review.id} className={styles.reviewItem}>
-                    <div className={styles.reviewMeta}>
-                      <span className={styles.reviewAuthor}>{review.customerName}</span>
-                      <span className={styles.reviewStars} aria-label={`${review.rating}/5 sao`}>
-                        {'★'.repeat(review.rating)}
-                        <span className={styles.reviewStarsDim}>
-                          {'★'.repeat(Math.max(0, 5 - review.rating))}
-                        </span>
+            ) : reviews.length > 0 ? (
+              <div className={styles.reviews}>
+                <div className={styles.reviewsHead}>
+                  <span className={styles.reviewsTitle}>Khách nói gì về xe này</span>
+                  {reviewSummary && reviewSummary.ratingCount > 0 ? (
+                    <span className={styles.reviewsScore}>
+                      <StarFilled /> {reviewSummary.ratingAvg.toFixed(1)}
+                      <span className={styles.reviewsCount}>
+                        ({reviewSummary.ratingCount} đánh giá)
                       </span>
-                    </div>
-                    {review.comment ? <p className={styles.reviewText}>{review.comment}</p> : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+                    </span>
+                  ) : null}
+                </div>
+                <ul className={styles.reviewList}>
+                  {reviews.map((review) => (
+                    <li key={review.id} className={styles.reviewItem}>
+                      <div className={styles.reviewMeta}>
+                        <span className={styles.reviewAuthor}>{review.customerName}</span>
+                        <span className={styles.reviewStars} aria-label={`${review.rating}/5 sao`}>
+                          {'★'.repeat(review.rating)}
+                          <span className={styles.reviewStarsDim}>
+                            {'★'.repeat(Math.max(0, 5 - review.rating))}
+                          </span>
+                        </span>
+                      </div>
+                      {review.comment ? (
+                        <p className={styles.reviewText}>{review.comment}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
-      {verifiedContact ? (
-        <div className={cx(styles.details, styles.contactCard)}>
-          <span className={styles.contactTitle}>Người thuê</span>
-          <span className={styles.contactName}>{verifiedContact.name}</span>
-          <span className={styles.contactPhone}>
-            {maskPhone(verifiedContact.phone)}
-            <span className={styles.verified}>
-              <CheckCircleFilled /> Đã xác thực
+        {verifiedContact ? (
+          <div className={cx(styles.details, styles.contactCard)}>
+            <span className={styles.contactTitle}>Người thuê</span>
+            <span className={styles.contactName}>{verifiedContact.name}</span>
+            <span className={styles.contactPhone}>
+              {maskPhone(verifiedContact.phone)}
+              <span className={styles.verified}>
+                <CheckCircleFilled /> Đã xác thực
+              </span>
             </span>
-          </span>
-        </div>
-      ) : null}
-    </aside>
+          </div>
+        ) : null}
+      </aside>
+    </PreviewImageGroup>
   );
 }

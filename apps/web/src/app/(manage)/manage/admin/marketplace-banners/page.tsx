@@ -21,6 +21,7 @@ import {
   useUpdateBanner,
 } from '@/features/banners/use-admin-banners';
 import type { AdminBanner } from '@/features/banners/types';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './banners-page.module.css';
 
 const MIN_TABLE_WIDTH = 960;
@@ -73,10 +74,7 @@ export default function AdminBannersPage() {
       title: 'Ảnh',
       key: 'preview',
       width: 150,
-      render: (_, b) => (
-        // eslint-disable-next-line @next/next/no-img-element -- ảnh từ R2/URL admin nhập
-        <img src={b.imageUrl} alt={b.altText} className={styles.thumb} />
-      ),
+      render: (_, b) => <PreviewImage src={b.imageUrl} alt={b.altText} className={styles.thumb} />,
     },
     {
       title: 'Banner',
@@ -174,9 +172,9 @@ export default function AdminBannersPage() {
     <div>
       <ManagePageHeader title="Banner trang chủ" />
       <p className={styles.hint}>
-        Trang chủ hiển thị tối đa 3 banner đang bật, theo thứ tự từ trên xuống. Mỗi cỡ màn một
-        ảnh đúng tỉ lệ: PC 1440×300 · tablet 1024×320 · mobile 780×390 (hoặc @2x) — sai tỉ lệ sẽ
-        bị chặn lúc tải lên. Chừa trống ~15% mép dưới: thẻ tìm kiếm của trang chủ đè lên đó.
+        Trang chủ hiển thị tối đa 3 banner đang bật, theo thứ tự từ trên xuống. Mỗi cỡ màn một ảnh
+        đúng tỉ lệ: PC 1440×300 · tablet 1024×320 · mobile 780×390 (hoặc @2x) — sai tỉ lệ sẽ bị chặn
+        lúc tải lên. Chừa trống ~15% mép dưới: thẻ tìm kiếm của trang chủ đè lên đó.
       </p>
       <div className={styles.toolbar}>{createButton}</div>
 
@@ -191,7 +189,10 @@ export default function AdminBannersPage() {
             ? { title: 'Không tải được danh sách banner', onRetry: () => void refetch() }
             : null
         }
-        empty={{ title: 'Chưa có banner nào — trang chủ đang dùng hero mặc định', action: createButton }}
+        empty={{
+          title: 'Chưa có banner nào — trang chủ đang dùng hero mặc định',
+          action: createButton,
+        }}
       />
 
       <BannerFormModal
