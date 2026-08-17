@@ -4,11 +4,30 @@
 > `docs/decisions/`, `docs/CODEMAP.md`). Khi **đóng xong một phase**, cập nhật bảng §2 + mục phase
 > tương ứng ở đây — đừng để tiến độ chỉ nằm trong trí nhớ hay plan file global `~/.claude/plans/`.
 >
-> Cập nhật gần nhất: **17/08/2026** — đóng epic **Đa dịch vụ** (tự lái / có tài xế / thuê dài
-> hạn): `vehicles.service_types` thành MẢNG (khai tử `both`), giá tháng + giá/ngày có tài xế,
-> quote theo dịch vụ (sàn dài hạn 7 ngày), yêu cầu thuê mang dịch vụ + lộ trình/địa chỉ đón
-> (fix bug approve rơi về self_drive), module tài xế tối thiểu (`/manage/drivers` + gán vào
-> đơn, composite FK chặn chéo tenant). Plan: `docs/plans/kind-noodling-marble.md`.
+> Cập nhật gần nhất: **17/08/2026 (đợt 2 — hoàn thiện)** — epic **Đa dịch vụ** đóng TRỌN sau
+> audit end-to-end, 6 commit:
+> **(1) Hành trình with_driver đi trọn vòng đời** — `bookings` +route_type/pickup_address/
+> destination (CHECK route⇒with_driver), approve() copy đủ trong cùng transaction, đơn tay
+> (BookingFormDialog + StaffBookingFlow) nhập hành trình, hiển thị ở chi tiết đơn/khối tài
+> xế/`/trips`/hợp đồng (snapshot đóng băng); helper chung `common/route-context.ts`.
+> **(2) Giá theo LỘ TRÌNH có tài xế** — +with_driver_inter_city_price/+one_way_price
+> (fallback bậc gần nhất + `estimateNote` = tổng chỉ là TẠM TÍNH); routeType vào public
+> quote + calendar quote (staff flow hết mù dịch vụ) + approve — khách và shop cùng một số.
+> **(3) Tab Giá & chính sách theo KHỐI dịch vụ** (tự lái ngày/cuối tuần/giờ · giá tháng ·
+> 3 giá route), bỏ dịch vụ → `orphanPriceClears` xoá giá stale (FE cảnh báo trước), publish
+> validation THEO dịch vụ (đăng gì phải có giá đó — BE `missingPublicFields` + FE
+> `publication.ts` đối xứng). **(4) Service context đồng bộ** — tab trang chủ ghi URL
+> (shallow) → khối "Xe khả dụng" lọc ngay; /search có chip "Tất cả" tường minh; MỘT
+> `activeService` cho badge+giá+link ở card; detail có selector dịch vụ + giá lớn đổi theo;
+> thiếu giá chuyên biệt → "Liên hệ báo giá" (không mượn giá tự lái).
+> **(5) Policy mặc định TÁCH THEO LOẠI XE** — `rental_policies.vehicle_type`, precedence
+> override xe → theo loại → legacy; migration nhân bản policy cũ cho car+motorbike; UI 2 tab.
+> **(6) Tài xế vận hành được** — EXCLUDE gist `bookings_driver_schedule_excl` (một tài xế
+> không nhận 2 đơn giao nhau, range nửa hở), `license_expires_at` (hết hạn trước lúc trả xe
+> → không gán), `GET /drivers/assignable` trả cờ bận/hết hạn để Select disable kèm lý do.
+> Verify: Jest 519 (5 spec mới) + vitest 1236, lint scoped sạch, seed idempotent, luồng thật
+> (quote 3 route 2.6/3.2/4.2tr, fallback + note, sàn 7 ngày 400, screenshot 3 trang).
+> Plan: `docs/plans/kind-noodling-marble.md`.
 
 ---
 
