@@ -251,18 +251,27 @@ export function MarketplaceResults() {
             </Chip>
           ))}
           <span className={styles.chipDivider} aria-hidden="true" />
+          {/*
+            Bộ chọn dịch vụ là LỰA CHỌN ĐỘC QUYỀN tường minh (17/08): "Tất cả" là một lựa
+            chọn thật, không phải hành vi ẩn "bấm lại chip đang chọn để bỏ lọc".
+          */}
+          <Chip
+            active={!filters.serviceType}
+            onClick={() => setFilters({ serviceType: undefined, routeType: undefined })}
+          >
+            Tất cả
+          </Chip>
           {SERVICE_CHIPS.map((s) => (
             <Chip
               key={s.key}
               active={filters.serviceType === s.key}
-              onClick={() => {
-                const next = filters.serviceType === s.key ? undefined : s.key;
+              onClick={() =>
                 setFilters({
-                  serviceType: next,
+                  serviceType: s.key,
                   // Lộ trình là ngữ cảnh CÓ TÀI XẾ — rời dịch vụ đó thì xoá khỏi URL.
-                  routeType: next === SERVICE_TYPE.WITH_DRIVER ? filters.routeType : undefined,
-                });
-              }}
+                  routeType: s.key === SERVICE_TYPE.WITH_DRIVER ? filters.routeType : undefined,
+                })
+              }
             >
               {s.label}
             </Chip>

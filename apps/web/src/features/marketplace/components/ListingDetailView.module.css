@@ -91,6 +91,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Dịch vụ đang xem chưa niêm yết giá — trạng thái rõ ràng thay vì mượn giá tự lái. */
+.price .priceContact {
+  font-size: 18px;
+  color: var(--xp-color-text-secondary);
+}
+
 .discountTag {
   font-size: 12px;
   font-weight: 700;

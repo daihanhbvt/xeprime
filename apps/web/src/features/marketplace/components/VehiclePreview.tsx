@@ -3,38 +3,70 @@
 import { RightOutlined } from '@ant-design/icons';
 import { Alert, Button, Empty, Skeleton } from 'antd';
 import Link from 'next/link';
+import { serviceTypeLabel } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
 import { getErrorMessage } from '@/services/api-client';
+import { applyFilterPatch } from '../filter-params';
+import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { usePublicListings } from '../hooks/use-public-listings';
 import { VehicleCard } from './VehicleCard';
 import styles from './VehiclePreview.module.css';
 
-/** Trang chủ chỉ XEM TRƯỚC — tối đa 8 xe, không phân trang, không bộ lọc. */
+/** Trang chủ chỉ XEM TRƯỚC — tối đa 8 xe, không phân trang, không bộ lọc facet. */
 const PREVIEW_LIMIT = 8;
 
 /**
- * Khối "Xe cho thuê gợi ý" ở trang chủ.
+ * Khối "Xe khả dụng" ở trang chủ.
  *
- * Trước đây trang chủ nhúng nguyên bộ máy tìm kiếm (bộ lọc + sắp xếp + phân trang), nên có HAI
- * nơi làm cùng một việc và link chia sẻ luôn trỏ về `/`. Giờ trang chủ chỉ giới thiệu 8 xe rồi
- * đưa sang `/search` — nơi duy nhất sở hữu bộ lọc và trạng thái tìm kiếm.
+ * ĐỌC ngữ cảnh dịch vụ từ URL (17/08): tab dịch vụ ở HeroSearch ghi `?serviceType=` lên `/`
+ * (shallow, không reload) → khối này query lại ngay theo dịch vụ đó, và link "Khám phá xe"
+ * mang trọn ngữ cảnh (dịch vụ, lộ trình, loại xe, tỉnh, ngày) sang `/search` — hai khối trên
+ * cùng một trang không bao giờ nói hai dịch vụ khác nhau.
  *
  * Hỏng khối này KHÔNG được làm hỏng cả trang chủ: lỗi hiện một alert gọn, các mục "Địa điểm nổi
  * bật"/"Gian hàng nổi bật" bên dưới vẫn dùng được.
  */
 export function VehiclePreview() {
-  const { data, isLoading, isError, error } = usePublicListings({ page: 1, limit: PREVIEW_LIMIT });
+  const { filters } = useMarketplaceFilters();
+  const { data, isLoading, isError, error } = usePublicListings({
+    // Ngữ cảnh từ hero (dịch vụ/loại xe/tỉnh/ngày) lọc luôn preview — facet sâu để cho /search.
+    serviceType: filters.serviceType,
+    vehicleType: filters.vehicleType,
+    provinceCode: filters.provinceCode,
+    pickupAt: filters.pickupAt,
+    returnAt: filters.returnAt,
+    page: 1,
+    limit: PREVIEW_LIMIT,
+  });
   const items = data?.listings ?? [];
 
+  // "Khám phá xe" giữ nguyên ngữ cảnh đang xem (kể cả routeType — key URL, không gửi API).
+  const exploreQs = new URLSearchParams();
+  applyFilterPatch(exploreQs, {
+    serviceType: filters.serviceType,
+    routeType: filters.routeType,
+    vehicleType: filters.vehicleType,
+    provinceCode: filters.provinceCode,
+    pickupAt: filters.pickupAt,
+    returnAt: filters.returnAt,
+    hourly: filters.hourly,
+  });
+  const exploreHref = exploreQs.toString()
+    ? `${ROUTES.SEARCH}?${exploreQs.toString()}`
+    : ROUTES.SEARCH;
+
   return (
-    <section className={styles.section} aria-labelledby="home-vehicles">
+    // id="recommendations": đích scroll của FeaturedLocations (bấm địa điểm → lọc + cuộn tới đây).
+    <section id="recommendations" className={styles.section} aria-labelledby="home-vehicles">
       <div className={styles.head}>
         <div>
           <h2 id="home-vehicles" className={styles.title}>
-            Xe khả dụng {data ? <span className={styles.count}>({data.meta.total} xe)</span> : null}
+            Xe khả dụng
+            {filters.serviceType ? ` · ${serviceTypeLabel(filters.serviceType)}` : ''}{' '}
+            {data ? <span className={styles.count}>({data.meta.total} xe)</span> : null}
           </h2>
         </div>
-        <Link href={ROUTES.SEARCH} className={styles.seeAll}>
+        <Link href={exploreHref} className={styles.seeAll}>
           Khám phá xe <RightOutlined />
         </Link>
       </div>
@@ -62,9 +94,13 @@ export function VehiclePreview() {
           }
         />
       ) : items.length === 0 ? (
-        // "Chưa có xe nào" ở đây nghĩa là HỆ THỐNG chưa có xe công khai — không phải lọc ra rỗng,
-        // vì khối này không nhận bộ lọc nào.
-        <Empty description="Chưa có xe nào được đăng công khai" />
+        <Empty
+          description={
+            filters.serviceType
+              ? `Chưa có xe ${serviceTypeLabel(filters.serviceType).toLowerCase()} nào phù hợp — thử tab dịch vụ khác`
+              : 'Chưa có xe nào được đăng công khai'
+          }
+        />
       ) : (
         <ul className={styles.grid}>
           {items.map((listing) => (

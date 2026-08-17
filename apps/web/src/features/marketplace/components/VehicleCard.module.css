@@ -203,6 +203,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Dịch vụ chưa niêm yết giá chuyên biệt — trạng thái rõ ràng thay vì mượn giá tự lái. */
+.priceContact {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text-secondary);
+}
+
 .price span {
   font-size: 12px;
   color: var(--xp-color-text-tertiary);

@@ -667,7 +667,13 @@ export function RequestBookingFlow({
                   }))}
                 />
               </div>
-            ) : null}
+            ) : (
+              /* Xe một dịch vụ vẫn NÓI RÕ đang thuê dịch vụ gì — không bắt khách tự đoán. */
+              <div className={styles.serviceField}>
+                <span className={styles.rangeFieldLabel}>Dịch vụ</span>
+                <p className={styles.rangeHint}>{serviceTypeLabel(watchedService)}</p>
+              </div>
+            )}
 
             {isWithDriver ? (
               <div className={styles.serviceField}>

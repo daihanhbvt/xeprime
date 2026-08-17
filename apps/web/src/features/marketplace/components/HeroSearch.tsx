@@ -11,7 +11,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Radio, Segmented, Select } from 'antd';
 import dayjs from 'dayjs';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LONG_TERM_MIN_DAYS,
   ROUTE_TYPE,
@@ -27,7 +27,7 @@ import {
   type ServiceType,
   type VehicleType,
 } from '@xeprime/types';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   RentalDateTimeRangeField,
   type RentalMode,
@@ -118,6 +118,38 @@ export function HeroSearch() {
       setRange({ pickupAt: range.pickupAt, returnAt: range.pickupAt.add(LONG_TERM_MIN_DAYS, 'day') });
     }
   }
+
+  /*
+   * Đồng bộ ngữ cảnh hero lên URL TRANG CHỦ khi người dùng tương tác (17/08): khối "Xe khả
+   * dụng" cùng trang đọc `?serviceType=` để query lại ngay, và link "Khám phá xe" mang trọn
+   * ngữ cảnh. Dùng history.replaceState (shallow, Next đồng bộ useSearchParams) — không
+   * re-render server component, không thêm entry lịch sử. Bỏ qua lần mount đầu để URL của
+   * khách vãng lai không bị nhét sẵn tham số mặc định.
+   */
+  const pathname = usePathname();
+  const heroTouched = useRef(false);
+  useEffect(() => {
+    if (!heroTouched.current) {
+      heroTouched.current = true;
+      return;
+    }
+    if (pathname !== ROUTES.HOME) return;
+    const params = new URLSearchParams(window.location.search);
+    applyFilterPatch(params, {
+      serviceType: service,
+      routeType: withDriver ? routeType : undefined,
+      vehicleType,
+      provinceCode: province || undefined,
+      pickupAt: range.pickupAt?.toISOString(),
+      returnAt: range.returnAt?.toISOString(),
+      hourly: !longTerm && mode === 'hourly' ? true : undefined,
+    });
+    const qs = params.toString();
+    const next = qs ? `${pathname}?${qs}` : pathname;
+    if (`${window.location.pathname}${window.location.search}` !== next) {
+      window.history.replaceState(null, '', next);
+    }
+  }, [pathname, service, withDriver, routeType, vehicleType, province, range, mode, longTerm]);
 
   const provinceOptions = useMemo(
     () => buildProvinceOptions(destinations, province),

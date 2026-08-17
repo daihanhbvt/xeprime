@@ -42,14 +42,21 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
     .filter(Boolean)
     .join(' · ');
 
-  // Xe mang MẢNG dịch vụ (17/08): badge đầu là dịch vụ ĐANG TÌM (khớp ngữ cảnh filter) hoặc
-  // dịch vụ đầu tiên; còn lại gộp thành "+n" cho thẻ không vỡ.
+  /*
+   * MỘT `activeService` duy nhất cho cả thẻ (17/08) — badge, giá, đơn vị, ghi chú và link
+   * chi tiết cùng đọc từ đây, không bao giờ badge nói một dịch vụ mà giá nói dịch vụ khác:
+   *   1. dịch vụ đang lọc (nếu xe phục vụ được);
+   *   2. không lọc → ưu tiên tự lái nếu xe hỗ trợ;
+   *   3. xe không có tự lái → dịch vụ đầu tiên xe đăng.
+   */
   const serviceTypes: string[] = listing.serviceTypes ?? [];
   const serviceContext =
     filters.serviceType && serviceTypes.includes(filters.serviceType)
       ? filters.serviceType
       : null;
-  const primaryService = serviceContext ?? serviceTypes[0];
+  const activeService =
+    serviceContext ??
+    (serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE) ? SERVICE_TYPE.SELF_DRIVE : serviceTypes[0]);
   const extraServiceCount = Math.max(0, serviceTypes.length - 1);
 
   const fuel = fuelTypeLabel(listing.fuelType);
@@ -60,32 +67,35 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   const discount = listing.discountPercent ?? 0;
 
   /*
-   * Giá theo NGỮ CẢNH dịch vụ đang tìm (17/08):
-   *   - dài hạn + có giá tháng → "X ₫/tháng" (không áp % giảm marketing — giá tháng là giá riêng);
-   *   - có tài xế + có giá tài xế → giá đó /ngày, đã gồm tài xế;
-   *   - còn lại → giá ngày như cũ (kèm gạch giá khi giảm).
+   * Giá theo `activeService` (17/08):
+   *   - dài hạn → giá tháng; CHƯA niêm yết → "Liên hệ báo giá" (không lấy giá tự lái trưng
+   *     như giá dài hạn);
+   *   - có tài xế → giá/ngày đã gồm tài xế; chưa niêm yết → "Liên hệ báo giá";
+   *   - tự lái → giá ngày như cũ (kèm gạch giá khi giảm; % giảm marketing chỉ áp giá tự lái).
    */
   const monthlyContext =
-    serviceContext === SERVICE_TYPE.LONG_TERM && listing.monthlyPrice ? listing.monthlyPrice : null;
+    activeService === SERVICE_TYPE.LONG_TERM && listing.monthlyPrice ? listing.monthlyPrice : null;
   const driverContext =
-    serviceContext === SERVICE_TYPE.WITH_DRIVER && listing.withDriverDailyPrice
+    activeService === SERVICE_TYPE.WITH_DRIVER && listing.withDriverDailyPrice
       ? listing.withDriverDailyPrice
       : null;
-  const displayPrice =
-    monthlyContext ??
-    driverContext ??
-    (discount > 0 ? applyDiscountPercent(listing.weekdayPrice, discount) : listing.weekdayPrice);
+  const selfDriveContext = activeService === SERVICE_TYPE.SELF_DRIVE;
+  const displayPrice = selfDriveContext
+    ? discount > 0
+      ? applyDiscountPercent(listing.weekdayPrice, discount)
+      : listing.weekdayPrice
+    : (monthlyContext ?? driverContext);
   const priceUnit = monthlyContext ? '/tháng' : '/ngày';
-  const showStrikethrough = !monthlyContext && !driverContext && discount > 0;
+  const showStrikethrough = selfDriveContext && discount > 0;
 
-  // Mang ngữ cảnh đã lọc sang trang chi tiết để prefill luồng đặt xe: ngày giờ + dịch vụ
-  // (nếu xe phục vụ được) + lộ trình có tài xế.
+  // Mang ngữ cảnh sang trang chi tiết để prefill luồng đặt xe: ngày giờ + dịch vụ đang active
+  // + lộ trình có tài xế — card và detail không bao giờ nói hai dịch vụ khác nhau.
   const dateQs = new URLSearchParams();
   if (filters.pickupAt) dateQs.set('pickupAt', filters.pickupAt);
   if (filters.returnAt) dateQs.set('returnAt', filters.returnAt);
-  if (serviceContext) {
-    dateQs.set('serviceType', serviceContext);
-    if (serviceContext === SERVICE_TYPE.WITH_DRIVER && filters.routeType) {
+  if (activeService) {
+    dateQs.set('serviceType', activeService);
+    if (activeService === SERVICE_TYPE.WITH_DRIVER && filters.routeType) {
       dateQs.set('routeType', filters.routeType);
     }
   }
@@ -114,9 +124,9 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
         ) : (
           <CarGlyph type={listing.vehicleType as VehicleType} />
         )}
-        {primaryService ? (
+        {activeService ? (
           <span className={styles.serviceBadge}>
-            {serviceTypeLabel(primaryService)}
+            {serviceTypeLabel(activeService)}
             {extraServiceCount > 0 ? ` +${extraServiceCount}` : ''}
           </span>
         ) : null}
@@ -163,15 +173,20 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
 
         <div className={styles.footer}>
           <div className={styles.price}>
-            {showStrikethrough && listing.weekdayPrice ? (
-              <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
-            ) : null}
-            <b>{formatMoneyVnd(displayPrice)}</b>
-            <span>{priceUnit}</span>
-            {serviceContext === SERVICE_TYPE.WITH_DRIVER && !driverContext ? (
-              // Xe chưa khai giá tài xế — nói thẳng giá đang xem là giá tự lái.
-              <span className={styles.priceNote}>chưa gồm tài xế</span>
-            ) : null}
+            {displayPrice ? (
+              <>
+                {showStrikethrough && listing.weekdayPrice ? (
+                  <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
+                ) : null}
+                <b>{formatMoneyVnd(displayPrice)}</b>
+                <span>{priceUnit}</span>
+                {driverContext ? <span className={styles.priceNote}>đã gồm tài xế</span> : null}
+              </>
+            ) : (
+              // Dịch vụ đang active chưa niêm yết giá chuyên biệt — KHÔNG lấy giá tự lái
+              // trưng như tổng tiền của dịch vụ khác (17/08).
+              <b className={styles.priceContact}>Liên hệ báo giá</b>
+            )}
           </div>
           <Link
             href={shopPath.detail(listing.shopSlug)}

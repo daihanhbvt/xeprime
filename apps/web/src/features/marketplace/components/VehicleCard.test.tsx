@@ -77,9 +77,10 @@ describe('VehicleCard', () => {
     expect(labels).toEqual(['Lưu xe']);
   });
 
-  it('cả thẻ dẫn tới trang chi tiết xe', () => {
+  it('cả thẻ dẫn tới trang chi tiết xe, mang theo dịch vụ đang active (17/08)', () => {
     render(<VehicleCard listing={LISTING} />);
-    expect(detailLink().getAttribute('href')).toBe('/listings/V1');
+    // Card và detail không bao giờ nói hai dịch vụ khác nhau — link luôn mang activeService.
+    expect(detailLink().getAttribute('href')).toBe('/listings/V1?serviceType=self_drive');
   });
 
   it('mang theo pickupAt/returnAt đang lọc sang trang chi tiết', () => {
@@ -99,6 +100,46 @@ describe('VehicleCard', () => {
     expect(screen.getByRole('link', { name: 'Gian hàng Minh Tuấn' }).getAttribute('href')).toBe(
       '/shops/minh-tuan',
     );
+  });
+
+  it('badge và giá cùng MỘT activeService: xe chỉ dài hạn hiện giá /tháng, không /ngày tự lái', () => {
+    const longTermOnly = {
+      ...LISTING,
+      serviceTypes: ['long_term'],
+      monthlyPrice: '12000000',
+    } as unknown as PublicListing;
+    render(<VehicleCard listing={longTermOnly} />);
+    expect(screen.getByText('Thuê dài hạn')).toBeTruthy();
+    expect(screen.getByText('12.000.000 ₫')).toBeTruthy();
+    expect(screen.getByText('/tháng')).toBeTruthy();
+    // Giá tự lái 1.050.000/ngày KHÔNG được xuất hiện — nó không phải giá dài hạn.
+    expect(screen.queryByText('1.050.000 ₫')).toBeNull();
+  });
+
+  it('dịch vụ active chưa niêm yết giá → "Liên hệ báo giá", không mượn giá tự lái', () => {
+    filters.value = { serviceType: 'with_driver' } as typeof filters.value;
+    const withDriver = {
+      ...LISTING,
+      serviceTypes: ['self_drive', 'with_driver'],
+      withDriverDailyPrice: null,
+    } as unknown as PublicListing;
+    render(<VehicleCard listing={withDriver} />);
+    expect(screen.getByText('Có tài xế +1')).toBeTruthy();
+    expect(screen.getByText('Liên hệ báo giá')).toBeTruthy();
+    expect(screen.queryByText('1.050.000 ₫')).toBeNull();
+  });
+
+  it('lọc có tài xế + xe có giá tài xế → giá đã gồm tài xế, cùng activeService với badge', () => {
+    filters.value = { serviceType: 'with_driver' } as typeof filters.value;
+    const withDriver = {
+      ...LISTING,
+      serviceTypes: ['self_drive', 'with_driver'],
+      withDriverDailyPrice: '1300000',
+    } as unknown as PublicListing;
+    render(<VehicleCard listing={withDriver} />);
+    expect(screen.getByText('Có tài xế +1')).toBeTruthy();
+    expect(screen.getByText('1.300.000 ₫')).toBeTruthy();
+    expect(screen.getByText('đã gồm tài xế')).toBeTruthy();
   });
 
   it('không để lại vùng hành động rỗng ở chân thẻ', () => {

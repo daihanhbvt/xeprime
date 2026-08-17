@@ -1,5 +1,12 @@
 import Link from 'next/link';
-import { CATALOG_TYPE, VEHICLE_TYPE, serviceTypesLabel } from '@xeprime/types';
+import {
+  CATALOG_TYPE,
+  LONG_TERM_MIN_DAYS,
+  ROUTE_TYPE_LABEL,
+  SERVICE_TYPE,
+  VEHICLE_TYPE,
+  serviceTypesLabel,
+} from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
@@ -8,6 +15,7 @@ import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
 import { ListingReviews } from './ListingReviews';
+import { ListingServiceSelector } from './ListingServiceSelector';
 import styles from './ListingDetailView.module.css';
 
 function vehicleTypeLabel(type: string): string {
@@ -61,6 +69,18 @@ export function ListingDetailView({
     ...(brand ? [{ label: 'Hãng', value: [brand, listing.model].filter(Boolean).join(' ') }] : []),
   ];
 
+  /*
+   * MỘT `activeService` cho cả trang (17/08) — selector, khối giá lớn và popup thuê cùng đọc:
+   * dịch vụ từ URL nếu xe phục vụ được → ưu tiên tự lái → dịch vụ đầu tiên xe đăng.
+   */
+  const services: readonly string[] = listing.serviceTypes ?? [];
+  const activeService =
+    serviceType && services.includes(serviceType)
+      ? serviceType
+      : services.includes(SERVICE_TYPE.SELF_DRIVE)
+        ? SERVICE_TYPE.SELF_DRIVE
+        : (services[0] ?? SERVICE_TYPE.SELF_DRIVE);
+
   // Giá sau giảm chỉ để HIỂN THỊ (marketing) — giá chốt thật do shop quyết khi duyệt yêu cầu.
   const discount = listing.discountPercent ?? 0;
   const displayPrice =
@@ -80,35 +100,75 @@ export function ListingDetailView({
       <div className={styles.info}>
         <h1 className={styles.title}>{listing.name}</h1>
 
-        <div className={styles.price}>
-          {discount > 0 && listing.weekdayPrice ? (
-            <>
-              <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
-              <span className={styles.discountTag}>-{discount}%</span>
-            </>
-          ) : null}
-          <b>{formatMoneyVnd(displayPrice)}</b>
-          <span>/ngày</span>
-          {listing.weekendPrice ? (
-            <span className={styles.weekend}>Cuối tuần {formatMoneyVnd(listing.weekendPrice)}</span>
-          ) : null}
-          {listing.hourlyPrice ? (
-            <span className={styles.weekend}>
-              Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ
-            </span>
-          ) : null}
-          {/* Giá theo dịch vụ (17/08) — tham chiếu; giá chốt do gian hàng xác nhận khi duyệt. */}
-          {listing.monthlyPrice ? (
-            <span className={styles.weekend}>
-              Dài hạn {formatMoneyVnd(listing.monthlyPrice)}/tháng
-            </span>
-          ) : null}
-          {listing.withDriverDailyPrice ? (
-            <span className={styles.weekend}>
-              Có tài xế {formatMoneyVnd(listing.withDriverDailyPrice)}/ngày
-            </span>
-          ) : null}
-        </div>
+        {/* Xe nhiều dịch vụ → selector nổi bật ngay trên khối giá; giá lớn đổi theo. */}
+        <ListingServiceSelector services={services} active={activeService} />
+
+        {activeService === SERVICE_TYPE.LONG_TERM ? (
+          <div className={styles.price}>
+            {listing.monthlyPrice ? (
+              <>
+                <b>{formatMoneyVnd(listing.monthlyPrice)}</b>
+                <span>/tháng</span>
+                <span className={styles.weekend}>
+                  Thuê tối thiểu {LONG_TERM_MIN_DAYS} ngày · ước tính = số ngày × giá tháng ÷ 30
+                </span>
+              </>
+            ) : (
+              <b className={styles.priceContact}>Liên hệ báo giá thuê dài hạn</b>
+            )}
+          </div>
+        ) : activeService === SERVICE_TYPE.WITH_DRIVER ? (
+          <div className={styles.price}>
+            {listing.withDriverDailyPrice ? (
+              <>
+                <b>{formatMoneyVnd(listing.withDriverDailyPrice)}</b>
+                <span>/ngày</span>
+                <span className={styles.weekend}>
+                  {ROUTE_TYPE_LABEL.in_city} · đã gồm tài xế
+                </span>
+                {listing.withDriverInterCityPrice ? (
+                  <span className={styles.weekend}>
+                    {ROUTE_TYPE_LABEL.inter_city}{' '}
+                    {formatMoneyVnd(listing.withDriverInterCityPrice)}/ngày
+                  </span>
+                ) : null}
+                {listing.withDriverOneWayPrice ? (
+                  <span className={styles.weekend}>
+                    {ROUTE_TYPE_LABEL.inter_city_one_way}{' '}
+                    {formatMoneyVnd(listing.withDriverOneWayPrice)}/ngày
+                  </span>
+                ) : null}
+                <span className={styles.weekend}>
+                  Chưa gồm phí cầu đường, ăn nghỉ của tài xế cho chuyến dài — gian hàng xác nhận
+                  khi duyệt
+                </span>
+              </>
+            ) : (
+              <b className={styles.priceContact}>Liên hệ báo giá chuyến có tài xế</b>
+            )}
+          </div>
+        ) : (
+          <div className={styles.price}>
+            {discount > 0 && listing.weekdayPrice ? (
+              <>
+                <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
+                <span className={styles.discountTag}>-{discount}%</span>
+              </>
+            ) : null}
+            <b>{formatMoneyVnd(displayPrice)}</b>
+            <span>/ngày</span>
+            {listing.weekendPrice ? (
+              <span className={styles.weekend}>
+                Cuối tuần {formatMoneyVnd(listing.weekendPrice)}
+              </span>
+            ) : null}
+            {listing.hourlyPrice ? (
+              <span className={styles.weekend}>
+                Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ
+              </span>
+            ) : null}
+          </div>
+        )}
 
         {listing.deliveryEnabled || listing.noCollateral ? (
           <div className={styles.amenities}>
@@ -159,7 +219,8 @@ export function ListingDetailView({
             listing={listing}
             pickupAt={pickupAt}
             returnAt={returnAt}
-            serviceType={serviceType}
+            // Cùng activeService với selector + khối giá — popup mở đúng dịch vụ đang xem.
+            serviceType={activeService}
             routeType={routeType}
             size="large"
             className={styles.cta}

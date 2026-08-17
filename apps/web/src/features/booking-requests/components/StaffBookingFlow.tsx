@@ -495,7 +495,13 @@ export function StaffBookingFlow({
                   }))}
                 />
               </div>
-            ) : null}
+            ) : (
+              /* Xe một dịch vụ vẫn NÓI RÕ đơn thuộc dịch vụ gì. */
+              <div className={styles.serviceField}>
+                <span className={styles.rangeFieldLabel}>Dịch vụ</span>
+                <p className={styles.rangeHint}>{serviceTypeLabel(serviceType)}</p>
+              </div>
+            )}
 
             {/* Lộ trình chuyến có tài xế — cùng markup với luồng của khách (RequestBookingFlow). */}
             {isWithDriver ? (
