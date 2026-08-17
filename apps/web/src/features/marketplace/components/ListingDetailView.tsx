@@ -15,6 +15,7 @@ import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
 import { ListingReviews } from './ListingReviews';
 import { ListingServiceSelector } from './ListingServiceSelector';
+import { ListingSpecsCard } from './ListingSpecsCard';
 import styles from './ListingDetailView.module.css';
 
 function vehicleTypeLabel(type: string): string {
@@ -40,30 +41,37 @@ export function ListingDetailView({
   routeType?: string;
 }) {
   const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
-  const specs: Array<{ label: string; value: string }> = [
-    { label: 'Loại xe', value: vehicleTypeLabel(listing.vehicleType) },
+  // Thẻ thông số 2 cột kèm icon (mockup đợt 4) — key để client island tra icon.
+  const specs: Array<{ key: string; label: string; value: string }> = [
+    { key: 'vehicleType', label: 'Loại xe', value: vehicleTypeLabel(listing.vehicleType) },
     ...(listing.bodyType
       ? [
           {
+            key: 'bodyType',
             label: 'Kiểu dáng',
             value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '',
           },
         ]
       : []),
-    ...(listing.seatCount ? [{ label: 'Số chỗ', value: `${listing.seatCount} chỗ` }] : []),
+    ...(listing.seatCount
+      ? [{ key: 'seatCount', label: 'Số chỗ', value: `${listing.seatCount} chỗ` }]
+      : []),
     ...(listing.fuelType
       ? [
           {
+            key: 'fuelType',
             label: 'Nguồn năng lượng',
             value: catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? '',
           },
         ]
       : []),
     ...(listing.manufactureYear
-      ? [{ label: 'Đời xe', value: String(listing.manufactureYear) }]
+      ? [{ key: 'manufactureYear', label: 'Đời xe', value: String(listing.manufactureYear) }]
       : []),
-    ...(listing.color ? [{ label: 'Màu', value: listing.color }] : []),
-    ...(brand ? [{ label: 'Hãng', value: [brand, listing.model].filter(Boolean).join(' ') }] : []),
+    ...(listing.color ? [{ key: 'color', label: 'Màu', value: listing.color }] : []),
+    ...(brand
+      ? [{ key: 'brand', label: 'Hãng', value: [brand, listing.model].filter(Boolean).join(' ') }]
+      : []),
   ];
 
   /*
@@ -200,14 +208,7 @@ export function ListingDetailView({
           </div>
         ) : null}
 
-        <dl className={styles.specs}>
-          {specs.map((s) => (
-            <div key={s.label} className={styles.specRow}>
-              <dt>{s.label}</dt>
-              <dd>{s.value}</dd>
-            </div>
-          ))}
-        </dl>
+        <ListingSpecsCard specs={specs} />
 
         {listing.features.length > 0 ? (
           <div className={styles.features}>
@@ -219,14 +220,31 @@ export function ListingDetailView({
           </div>
         ) : null}
 
+        {/* Thẻ gian hàng theo mockup: avatar (logo hoặc chữ cái đầu) + tick vàng đã duyệt. */}
         <div className={styles.shop}>
-          <Link href={shopPath.detail(listing.shopSlug)} className={styles.shopName}>
-            {listing.shopName}
-          </Link>
-          {listing.shopProvince ? (
-            <div className={styles.shopMeta}>{listing.shopProvince}</div>
-          ) : null}
-          {listing.shopBio ? <p className={styles.shopBio}>{listing.shopBio}</p> : null}
+          <span className={styles.shopAvatar} aria-hidden="true">
+            {listing.shopLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- logo từ R2, host theo môi trường
+              <img src={listing.shopLogoUrl} alt="" className={styles.shopAvatarImg} />
+            ) : (
+              listing.shopName.charAt(0).toUpperCase()
+            )}
+          </span>
+          <div className={styles.shopBody}>
+            <div className={styles.shopNameRow}>
+              <Link href={shopPath.detail(listing.shopSlug)} className={styles.shopName}>
+                {listing.shopName}
+              </Link>
+              {/* Xe lên chợ đồng nghĩa gian hàng đã qua duyệt nền tảng — tick nói đúng điều đó. */}
+              <span className={styles.verified} title="Gian hàng đã được duyệt">
+                ✓
+              </span>
+            </div>
+            {listing.shopProvince ? (
+              <div className={styles.shopMeta}>{listing.shopProvince}</div>
+            ) : null}
+            {listing.shopBio ? <p className={styles.shopBio}>{listing.shopBio}</p> : null}
+          </div>
         </div>
 
         <div className={styles.actions}>
@@ -246,15 +264,17 @@ export function ListingDetailView({
           />
           <ChatWithShopButton vehicleId={listing.id} size="large" />
         </div>
+      </div>
 
-        {listing.description ? (
-          <section className={styles.description}>
-            <h2 className={styles.descTitle}>Mô tả</h2>
-            <p>{listing.description}</p>
-          </section>
-        ) : null}
-
-        <ListingReviews vehicleId={listing.id} />
+      {/* Hàng dưới theo mockup: Mô tả và Đánh giá là HAI THẺ full-width dưới khu ảnh + giá. */}
+      <div className={styles.bottom}>
+        <section className={styles.bottomCard}>
+          <h2 className={styles.descTitle}>Mô tả</h2>
+          <p className={styles.descBody}>{listing.description || 'Gian hàng chưa viết mô tả.'}</p>
+        </section>
+        <section className={styles.bottomCard}>
+          <ListingReviews vehicleId={listing.id} />
+        </section>
       </div>
     </div>
   );

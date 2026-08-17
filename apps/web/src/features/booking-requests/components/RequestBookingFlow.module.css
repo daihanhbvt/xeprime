@@ -653,3 +653,46 @@
   font-size: 13px;
   font-weight: 700;
 }
+
+/* Hàng gói thuê dài hạn (đợt 4 — mô hình gói Mioto): pill bấm được, badge % ở góc. */
+.packageRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.packageBtn {
+  position: relative;
+  padding: 8px 14px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 10px;
+  background: var(--xp-color-bg-container);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+  cursor: pointer;
+}
+
+.packageBtn:hover {
+  border-color: var(--xp-gold-deep);
+}
+
+.packageBtnActive {
+  border-color: var(--xp-gold-deep);
+  color: var(--xp-gold-deep);
+  background: var(--xp-color-bg-sand);
+}
+
+/* Badge "-X%" nổi ở góc trên phải của gói — đúng lối trình bày gói của Mioto. */
+.packageBadge {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--xp-color-error);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}

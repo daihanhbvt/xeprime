@@ -1781,10 +1781,11 @@ async function main(): Promise<void> {
         // Grace/rounding để NULL đúng trạng thái "Cần cấu hình" của thiết kế — seed không bịa.
         overtimeFeePerHour: 100_000,
         discountEnabled: true,
+        // Ưu đãi THUÊ DÀI HẠN theo THÁNG (đợt 4 — mô hình gói Mioto): minDays = tháng × 30.
         discountTiers: [
-          { minDays: 7, percent: 5, note: 'Ưu đãi mặc định cho thuê tuần' },
-          { minDays: 14, percent: 10, note: 'Ưu đãi mặc định nửa tháng' },
-          { minDays: 30, percent: 15, note: 'Mức chiết khấu tối đa cho thuê tháng' },
+          { minDays: 90, percent: 2, note: 'Ưu đãi gói 3 tháng' },
+          { minDays: 180, percent: 4, note: 'Ưu đãi gói 6 tháng' },
+          { minDays: 360, percent: 6, note: 'Ưu đãi gói 12 tháng' },
         ],
       },
     });

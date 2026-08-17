@@ -325,6 +325,28 @@ export const LONG_TERM_MIN_DAYS = 7;
  */
 export const LONG_TERM_SUGGEST_RATIO = { min: 0.65, max: 0.8 } as const;
 
+/** Một "tháng" thuê dài hạn = 30 ngày — cùng quy ước với máy giá (giá tháng ÷ 30). */
+export const LONG_TERM_MONTH_DAYS = 30;
+
+/**
+ * Các gói thuê dài hạn chọn nhanh trong modal (đợt 4 — mô hình gói Mioto 1/3/6/9/12 tháng).
+ * Khách vẫn tuỳ chỉnh ngày tự do (sàn LONG_TERM_MIN_DAYS); gói chỉ là lối tắt đặt thời lượng.
+ */
+export const LONG_TERM_PACKAGE_MONTHS = [1, 3, 6, 9, 12] as const;
+
+/**
+ * % ưu đãi của một thời lượng thuê (ngày) theo mốc ưu đãi dài hạn của xe — mốc cao nhất mà
+ * thời lượng đạt tới (cùng cách chọn tier với máy giá). Null = không mốc nào áp.
+ */
+export function longTermTierPercentFor(
+  tiers: readonly { minDays: number; percent: number }[] | null | undefined,
+  days: number,
+): number | null {
+  if (!tiers?.length) return null;
+  const hit = [...tiers].filter((t) => days >= t.minDays).sort((a, b) => b.minDays - a.minDays)[0];
+  return hit ? hit.percent : null;
+}
+
 /** Đơn giá NGÀY quy đổi của giá tháng (÷30, làm tròn đồng) — cùng công thức với máy giá. */
 export function longTermDailyRate(monthlyPrice: string | number): number {
   return Math.round(Number(monthlyPrice) / 30);

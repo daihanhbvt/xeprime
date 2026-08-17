@@ -20,6 +20,9 @@ import { useForm, useWatch } from 'react-hook-form';
 import {
   API_ERROR_CODE,
   LONG_TERM_MIN_DAYS,
+  LONG_TERM_MONTH_DAYS,
+  LONG_TERM_PACKAGE_MONTHS,
+  longTermTierPercentFor,
   ROUTE_TYPE,
   ROUTE_TYPE_DESCRIPTION,
   ROUTE_TYPE_LABEL,
@@ -462,6 +465,29 @@ export function RequestBookingFlow({
   // Badge "-X%" trên tab Thuê dài hạn (17/08 đợt 3) — cùng công thức với quote/manage.
   const longTermPercent = longTermSavingsPercent(listing?.weekdayPrice, listing?.monthlyPrice);
 
+  /*
+   * Gói thuê dài hạn 1/3/6/9/12 tháng (đợt 4 — mô hình gói Mioto): gói chỉ là LỐI TẮT đặt
+   * thời lượng — chọn gói set returnAt = pickup + tháng × 30 ngày; sửa ngày tự do bên dưới
+   * thì trạng thái rơi về "Tuỳ chỉnh". Badge "-X%" mỗi gói đọc từ mốc ưu đãi dài hạn của xe
+   * (`longTermDiscountTiers`) — cùng tier mà máy giá sẽ áp, badge và quote không lệch nhau.
+   */
+  const chargedDaysValue =
+    watchedPickup && watchedReturn
+      ? Math.max(1, Math.ceil(watchedReturn.diff(watchedPickup, 'minute') / 1440))
+      : 0;
+  const isCustomDuration =
+    hasRange &&
+    !LONG_TERM_PACKAGE_MONTHS.some((m) => m * LONG_TERM_MONTH_DAYS === chargedDaysValue);
+
+  function selectPackage(months: number) {
+    const pickup = watchedPickup ?? dayjs().add(1, 'day').hour(10).startOf('hour');
+    setValue('pickupAt', pickup, { shouldValidate: true });
+    setValue('returnAt', pickup.add(months * LONG_TERM_MONTH_DAYS, 'day'), {
+      shouldValidate: true,
+    });
+    if (stepError) setStepError(null);
+  }
+
   /**
    * Cặp nút của footer, suy từ bước hiện tại — MỘT nơi quyết định nhãn/trạng thái cho cả luồng.
    * Bước đầu không có gì để "quay lại" nên nút phụ là `Huỷ`.
@@ -707,9 +733,46 @@ export function RequestBookingFlow({
 
             <p className={styles.stepHint}>
               {isLongTerm
-                ? `Thuê dài hạn: chọn ngày nhận và ngày trả cụ thể, tối thiểu ${LONG_TERM_MIN_DAYS} ngày.`
+                ? `Chọn gói thuê nhanh hoặc tự chọn ngày nhận – trả (tối thiểu ${LONG_TERM_MIN_DAYS} ngày).`
                 : 'Chọn thời gian thuê để kiểm tra xe còn trống. Có thể thuê theo ngày hoặc theo giờ.'}
             </p>
+
+            {/* Gói thuê dài hạn (đợt 4) — lối tắt đặt thời lượng, badge % từ mốc ưu đãi của xe. */}
+            {isLongTerm ? (
+              <div className={styles.serviceField}>
+                <span className={styles.rangeFieldLabel}>Gói thuê</span>
+                <div className={styles.packageRow} role="radiogroup" aria-label="Gói thuê dài hạn">
+                  {LONG_TERM_PACKAGE_MONTHS.map((months) => {
+                    const days = months * LONG_TERM_MONTH_DAYS;
+                    const percent = longTermTierPercentFor(
+                      listing?.longTermDiscountTiers,
+                      days,
+                    );
+                    const active = chargedDaysValue === days;
+                    return (
+                      <button
+                        key={months}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        className={cx(styles.packageBtn, active && styles.packageBtnActive)}
+                        onClick={() => selectPackage(months)}
+                      >
+                        {percent != null ? (
+                          <span className={styles.packageBadge}>-{percent}%</span>
+                        ) : null}
+                        {months} tháng
+                      </button>
+                    );
+                  })}
+                  {isCustomDuration ? (
+                    <span className={cx(styles.packageBtn, styles.packageBtnActive)}>
+                      Tuỳ chỉnh · {chargedDaysValue} ngày
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
 
             {/*
               Ô chọn thời gian phải TRÔNG như một ô nhập bấm được. Bản trước để trigger trần

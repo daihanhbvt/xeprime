@@ -49,7 +49,7 @@ export function PolicySections({ control, depositHint, numbered = true }: Policy
       <OvertimeSection control={control} title={n(3, 'Phí trả xe quá giờ thỏa thuận')} />
       <DiscountSection
         control={control}
-        title={n(4, 'Ưu đãi giảm giá mặc định theo thời gian thuê')}
+        title={n(4, 'Ưu đãi thuê dài hạn theo tháng')}
       />
     </div>
   );
@@ -307,9 +307,9 @@ function DiscountSection({
 
       {enabled ? (
         <>
-          <div className={styles.tierTable} role="group" aria-label="Mốc ưu đãi giảm giá">
+          <div className={styles.tierTable} role="group" aria-label="Mốc ưu đãi thuê dài hạn">
             <div className={styles.discountHead}>
-              <span>Số ngày thuê tối thiểu</span>
+              <span>Thuê từ (tháng)</span>
               <span>Mức giảm (%)</span>
               <span>Ghi chú</span>
               <span className={styles.tierActionHead}>Thao tác</span>
@@ -318,9 +318,9 @@ function DiscountSection({
               <div key={field.id} className={styles.discountRow}>
                 <NumberField
                   control={control}
-                  name={`discountTiers.${index}.minDays`}
-                  label={`Số ngày tối thiểu của mốc ${index + 1}`}
-                  addonAfter="ngày"
+                  name={`discountTiers.${index}.minMonths`}
+                  label={`Số tháng tối thiểu của mốc ${index + 1}`}
+                  addonAfter="tháng"
                   min={1}
                 />
                 <NumberField
@@ -333,7 +333,7 @@ function DiscountSection({
                   control={control}
                   name={`discountTiers.${index}.note`}
                   label={`Ghi chú mốc ${index + 1}`}
-                  placeholder="Ưu đãi mặc định cho thuê tuần…"
+                  placeholder="Ưu đãi gói 3 tháng…"
                 />
                 <Button
                   type="text"
@@ -351,7 +351,7 @@ function DiscountSection({
           <div className={styles.tierFooter}>
             <Button
               icon={<PlusOutlined aria-hidden />}
-              onClick={() => append({ minDays: null, percent: null, note: '' })}
+              onClick={() => append({ minMonths: null, percent: null, note: '' })}
             >
               Thêm mốc ưu đãi
             </Button>
@@ -365,7 +365,7 @@ function DiscountSection({
           <Alert
             type="info"
             showIcon
-            message="Ưu đãi giảm giá theo thời gian chỉ áp dụng trên tổng tiền thuê cơ bản thực tế. Không áp dụng giảm giá lên tiền cọc bảo đảm, phí giao nhận xe, phí quá giờ phát sinh hay các loại phụ phí dịch vụ khác."
+            message="Ưu đãi này CHỈ áp dụng cho dịch vụ THUÊ DÀI HẠN (gói 1 tháng, 3 tháng…) — thuê ngắn theo ngày không được giảm. Mức giảm tính trên tiền thuê cơ bản; không áp lên tiền cọc, phí giao nhận, phí quá giờ hay phụ phí khác."
           />
           <div className={styles.previewCard}>
             <span className={styles.previewTitle}>Công thức tính giá thuê thực tế:</span>

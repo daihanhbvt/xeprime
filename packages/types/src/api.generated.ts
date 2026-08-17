@@ -590,6 +590,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shop/rental-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chính sách thuê mặc định (theo loại xe) + số xe kế thừa/ghi đè */
+        get: operations["ShopPoliciesController_get"];
+        /** Lưu chính sách thuê mặc định theo loại xe (upsert, audit) */
+        put: operations["ShopPoliciesController_save"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/listings/{id}/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Báo giá thuê theo khoảng ngày (chưa gồm phí giao nhận) */
+        get: operations["PublicQuoteController_quote"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/vehicles/{id}/daily-prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bản ghi đè giá theo ngày trong [from, to] (ngày local VN) */
+        get: operations["VehicleDailyPricesController_list"];
+        /** Đặt giá riêng cho các ngày (upsert tất định theo (xe, ngày)) */
+        put: operations["VehicleDailyPricesController_save"];
+        post?: never;
+        /** Khôi phục giá mặc định cho [from, to] — xoá bản ghi đè */
+        delete: operations["VehicleDailyPricesController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/calendar/resources": {
         parameters: {
             query?: never;
@@ -723,60 +777,6 @@ export interface paths {
         /** Khoá xe một khoảng thời gian (giữ chỗ lịch trong cùng transaction) */
         post: operations["VehicleBlocksController_create"];
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/shop/rental-policies": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Chính sách thuê mặc định (theo loại xe) + số xe kế thừa/ghi đè */
-        get: operations["ShopPoliciesController_get"];
-        /** Lưu chính sách thuê mặc định theo loại xe (upsert, audit) */
-        put: operations["ShopPoliciesController_save"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/public/listings/{id}/quote": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Báo giá thuê theo khoảng ngày (chưa gồm phí giao nhận) */
-        get: operations["PublicQuoteController_quote"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/vehicles/{id}/daily-prices": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Bản ghi đè giá theo ngày trong [from, to] (ngày local VN) */
-        get: operations["VehicleDailyPricesController_list"];
-        /** Đặt giá riêng cho các ngày (upsert tất định theo (xe, ngày)) */
-        put: operations["VehicleDailyPricesController_save"];
-        post?: never;
-        /** Khôi phục giá mặc định cho [from, to] — xoá bản ghi đè */
-        delete: operations["VehicleDailyPricesController_remove"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3433,6 +3433,14 @@ export interface components {
             features: components["schemas"]["FacetBucketDto"][];
             amenities: components["schemas"]["AmenityFacetsDto"];
         };
+        DiscountTierDto: {
+            /** @description Số ngày thuê tối thiểu — các mốc phải tăng dần nghiêm ngặt */
+            minDays: number;
+            /** @description Mức giảm % (1–100), CHỈ áp lên tiền thuê cơ bản */
+            percent: number;
+            /** @description Ghi chú hiển thị */
+            note?: string;
+        };
         PublicListingDetailDto: {
             id: string;
             name: string;
@@ -3488,6 +3496,7 @@ export interface components {
             images: string[];
             /** @description Key tiện ích (VEHICLE_FEATURE_LABEL) */
             features: string[];
+            longTermDiscountTiers: components["schemas"]["DiscountTierDto"][];
         };
         PublicDestinationDto: {
             /** @description Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode` */
@@ -3529,23 +3538,54 @@ export interface components {
             ratingAvg: string;
             ratingCount: number;
         };
-        CalendarResourceDto: {
-            id: string;
-            vehicleId: string;
-            name: string;
-            /** @description Mã xe nội bộ */
-            code: string;
-            plateNumber?: string | null;
-            /** @description Ảnh đại diện cho cột xe */
-            mainImageUrl?: string | null;
-            /** @description Giá thuê ngày thường (chuỗi VND) */
-            weekdayPrice?: string | null;
-            /** @description Giá thuê theo giờ — null = không cho thuê giờ */
-            hourlyPrice?: string | null;
-            /** @enum {string} */
-            vehicleType: "car" | "motorbike";
-            /** @enum {string} */
-            operationStatus: "available" | "renting" | "maintenance" | "inactive";
+        DeliveryTierDto: {
+            /** @description Mốc "đến" (km) — các bậc phải tăng dần nghiêm ngặt */
+            toKm: number;
+            /**
+             * @description Phí VND dạng chuỗi — '0' = miễn phí
+             * @example 30000
+             */
+            fee: string;
+        };
+        RentalPolicyValuesDto: {
+            depositAmount: string;
+            deliveryEnabled: boolean;
+            deliveryMaxRadiusKm?: number | null;
+            deliveryTiers: components["schemas"]["DeliveryTierDto"][];
+            overtimeFeePerHour?: string | null;
+            overtimeGraceMinutes?: number | null;
+            overtimeRoundingMinutes?: number | null;
+            discountEnabled: boolean;
+            discountTiers: components["schemas"]["DiscountTierDto"][];
+            /** @description ISO — mốc phát hiện báo giá/preview cũ */
+            updatedAt: string;
+        };
+        ShopRentalPolicyDto: {
+            /** @description null = gian hàng chưa cấu hình */
+            policy?: components["schemas"]["RentalPolicyValuesDto"] | null;
+            /** @description Số xe đang kế thừa chính sách chung */
+            inheritingVehicles: number;
+            /** @description Số xe đã ghi đè chính sách riêng */
+            overriddenVehicles: number;
+        };
+        SaveRentalPolicyDto: {
+            /**
+             * @description Cọc thế chấp cố định VND (chuỗi)
+             * @example 5000000
+             */
+            depositAmount: string;
+            deliveryEnabled: boolean;
+            /** @description Bán kính tự báo giá tối đa (km) — bắt buộc khi bật giao nhận, phải bằng mốc "đến" của bậc cuối */
+            deliveryMaxRadiusKm?: number | null;
+            deliveryTiers: components["schemas"]["DeliveryTierDto"][];
+            /** @description Phí mỗi giờ trả trễ (VND) — null = chưa cấu hình */
+            overtimeFeePerHour?: string | null;
+            /** @description Phút trễ miễn phí tối đa — null = chưa cấu hình */
+            overtimeGraceMinutes?: number | null;
+            /** @description Đơn vị làm tròn tối thiểu (phút) — null = chưa cấu hình */
+            overtimeRoundingMinutes?: number | null;
+            discountEnabled: boolean;
+            discountTiers: components["schemas"]["DiscountTierDto"][];
         };
         PriceBreakdownRowDto: {
             /** @enum {string} */
@@ -3570,6 +3610,67 @@ export interface components {
             estimateNote?: string | null;
             longTermSavingsPercent?: number | null;
             longTermSavingsAmount?: string | null;
+        };
+        DeliverySummaryDto: {
+            enabled: boolean;
+            maxRadiusKm?: number | null;
+            tiers: components["schemas"]["DeliveryTierDto"][];
+        };
+        PublicQuoteDto: {
+            breakdown: components["schemas"]["QuoteBreakdownDto"];
+            delivery: components["schemas"]["DeliverySummaryDto"];
+        };
+        VehicleDailyPriceDto: {
+            vehicleId: string;
+            /** @description Ngày local YYYY-MM-DD */
+            date: string;
+            /** @description Giá ngày ghi đè (chuỗi VND) */
+            dailyPrice?: string | null;
+            /** @description Giá giờ ghi đè (chuỗi VND) */
+            hourlyPrice?: string | null;
+            note?: string | null;
+            /** @description ISO-8601 UTC */
+            updatedAt: string;
+        };
+        SaveDailyPricesDto: {
+            /**
+             * @description Các ngày local Asia/Ho_Chi_Minh, dạng YYYY-MM-DD
+             * @example [
+             *       "2026-09-02",
+             *       "2026-09-03"
+             *     ]
+             */
+            dates: string[];
+            /**
+             * @description Giá thuê NGÀY cho các ngày này (chuỗi VND)
+             * @example 1200000
+             */
+            dailyPrice?: string;
+            /**
+             * @description Giá thuê GIỜ cho các ngày này (chuỗi VND)
+             * @example 150000
+             */
+            hourlyPrice?: string;
+            /** @description Ghi chú (vd "Giá lễ 2/9") */
+            note?: string;
+        };
+        CalendarResourceDto: {
+            id: string;
+            vehicleId: string;
+            name: string;
+            /** @description Mã xe nội bộ */
+            code: string;
+            plateNumber?: string | null;
+            /** @description Ảnh đại diện cho cột xe */
+            mainImageUrl?: string | null;
+            /** @description Giá thuê ngày thường (chuỗi VND) */
+            weekdayPrice?: string | null;
+            /** @description Giá thuê theo giờ — null = không cho thuê giờ */
+            hourlyPrice?: string | null;
+            /** @enum {string} */
+            vehicleType: "car" | "motorbike";
+            /** @enum {string} */
+            operationStatus: "available" | "renting" | "maintenance" | "inactive";
         };
         CalendarAvailabilityDayDto: {
             /** @description Ngày local Asia/Ho_Chi_Minh, YYYY-MM-DD */
@@ -3692,106 +3793,6 @@ export interface components {
             note?: string;
             /** @description row_version đang hiển thị */
             expectedRowVersion: number;
-        };
-        DeliveryTierDto: {
-            /** @description Mốc "đến" (km) — các bậc phải tăng dần nghiêm ngặt */
-            toKm: number;
-            /**
-             * @description Phí VND dạng chuỗi — '0' = miễn phí
-             * @example 30000
-             */
-            fee: string;
-        };
-        DiscountTierDto: {
-            /** @description Số ngày thuê tối thiểu — các mốc phải tăng dần nghiêm ngặt */
-            minDays: number;
-            /** @description Mức giảm % (1–100), CHỈ áp lên tiền thuê cơ bản */
-            percent: number;
-            /** @description Ghi chú hiển thị */
-            note?: string;
-        };
-        RentalPolicyValuesDto: {
-            depositAmount: string;
-            deliveryEnabled: boolean;
-            deliveryMaxRadiusKm?: number | null;
-            deliveryTiers: components["schemas"]["DeliveryTierDto"][];
-            overtimeFeePerHour?: string | null;
-            overtimeGraceMinutes?: number | null;
-            overtimeRoundingMinutes?: number | null;
-            discountEnabled: boolean;
-            discountTiers: components["schemas"]["DiscountTierDto"][];
-            /** @description ISO — mốc phát hiện báo giá/preview cũ */
-            updatedAt: string;
-        };
-        ShopRentalPolicyDto: {
-            /** @description null = gian hàng chưa cấu hình */
-            policy?: components["schemas"]["RentalPolicyValuesDto"] | null;
-            /** @description Số xe đang kế thừa chính sách chung */
-            inheritingVehicles: number;
-            /** @description Số xe đã ghi đè chính sách riêng */
-            overriddenVehicles: number;
-        };
-        SaveRentalPolicyDto: {
-            /**
-             * @description Cọc thế chấp cố định VND (chuỗi)
-             * @example 5000000
-             */
-            depositAmount: string;
-            deliveryEnabled: boolean;
-            /** @description Bán kính tự báo giá tối đa (km) — bắt buộc khi bật giao nhận, phải bằng mốc "đến" của bậc cuối */
-            deliveryMaxRadiusKm?: number | null;
-            deliveryTiers: components["schemas"]["DeliveryTierDto"][];
-            /** @description Phí mỗi giờ trả trễ (VND) — null = chưa cấu hình */
-            overtimeFeePerHour?: string | null;
-            /** @description Phút trễ miễn phí tối đa — null = chưa cấu hình */
-            overtimeGraceMinutes?: number | null;
-            /** @description Đơn vị làm tròn tối thiểu (phút) — null = chưa cấu hình */
-            overtimeRoundingMinutes?: number | null;
-            discountEnabled: boolean;
-            discountTiers: components["schemas"]["DiscountTierDto"][];
-        };
-        DeliverySummaryDto: {
-            enabled: boolean;
-            maxRadiusKm?: number | null;
-            tiers: components["schemas"]["DeliveryTierDto"][];
-        };
-        PublicQuoteDto: {
-            breakdown: components["schemas"]["QuoteBreakdownDto"];
-            delivery: components["schemas"]["DeliverySummaryDto"];
-        };
-        VehicleDailyPriceDto: {
-            vehicleId: string;
-            /** @description Ngày local YYYY-MM-DD */
-            date: string;
-            /** @description Giá ngày ghi đè (chuỗi VND) */
-            dailyPrice?: string | null;
-            /** @description Giá giờ ghi đè (chuỗi VND) */
-            hourlyPrice?: string | null;
-            note?: string | null;
-            /** @description ISO-8601 UTC */
-            updatedAt: string;
-        };
-        SaveDailyPricesDto: {
-            /**
-             * @description Các ngày local Asia/Ho_Chi_Minh, dạng YYYY-MM-DD
-             * @example [
-             *       "2026-09-02",
-             *       "2026-09-03"
-             *     ]
-             */
-            dates: string[];
-            /**
-             * @description Giá thuê NGÀY cho các ngày này (chuỗi VND)
-             * @example 1200000
-             */
-            dailyPrice?: string;
-            /**
-             * @description Giá thuê GIỜ cho các ngày này (chuỗi VND)
-             * @example 150000
-             */
-            hourlyPrice?: string;
-            /** @description Ghi chú (vd "Giá lễ 2/9") */
-            note?: string;
         };
         VehicleBranchSummaryDto: {
             id: string;
@@ -7600,6 +7601,156 @@ export interface operations {
             };
         };
     };
+    ShopPoliciesController_get: {
+        parameters: {
+            query?: {
+                vehicleType?: "car" | "motorbike";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopRentalPolicyDto"];
+                };
+            };
+        };
+    };
+    ShopPoliciesController_save: {
+        parameters: {
+            query?: {
+                vehicleType?: "car" | "motorbike";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRentalPolicyDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopRentalPolicyDto"];
+                };
+            };
+        };
+    };
+    PublicQuoteController_quote: {
+        parameters: {
+            query: {
+                /** @description ISO datetime nhận xe */
+                pickupAt: string;
+                /** @description ISO datetime trả xe */
+                returnAt: string;
+                serviceType?: "self_drive" | "with_driver" | "long_term";
+                routeType?: "in_city" | "inter_city" | "inter_city_one_way";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicQuoteDto"];
+                };
+            };
+        };
+    };
+    VehicleDailyPricesController_list: {
+        parameters: {
+            query: {
+                /** @description Từ ngày (local, YYYY-MM-DD) */
+                from: string;
+                /** @description Đến ngày (local, YYYY-MM-DD, bao gồm) */
+                to: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDailyPriceDto"][];
+                };
+            };
+        };
+    };
+    VehicleDailyPricesController_save: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveDailyPricesDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDailyPriceDto"][];
+                };
+            };
+        };
+    };
+    VehicleDailyPricesController_remove: {
+        parameters: {
+            query: {
+                /** @description Từ ngày (local, YYYY-MM-DD) */
+                from: string;
+                /** @description Đến ngày (local, YYYY-MM-DD, bao gồm) */
+                to: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description { data: { deleted: number } } */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     CalendarController_resources: {
         parameters: {
             query: {
@@ -7856,156 +8007,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["VehicleBlockDto"];
                 };
-            };
-        };
-    };
-    ShopPoliciesController_get: {
-        parameters: {
-            query?: {
-                vehicleType?: "car" | "motorbike";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShopRentalPolicyDto"];
-                };
-            };
-        };
-    };
-    ShopPoliciesController_save: {
-        parameters: {
-            query?: {
-                vehicleType?: "car" | "motorbike";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SaveRentalPolicyDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShopRentalPolicyDto"];
-                };
-            };
-        };
-    };
-    PublicQuoteController_quote: {
-        parameters: {
-            query: {
-                /** @description ISO datetime nhận xe */
-                pickupAt: string;
-                /** @description ISO datetime trả xe */
-                returnAt: string;
-                serviceType?: "self_drive" | "with_driver" | "long_term";
-                routeType?: "in_city" | "inter_city" | "inter_city_one_way";
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublicQuoteDto"];
-                };
-            };
-        };
-    };
-    VehicleDailyPricesController_list: {
-        parameters: {
-            query: {
-                /** @description Từ ngày (local, YYYY-MM-DD) */
-                from: string;
-                /** @description Đến ngày (local, YYYY-MM-DD, bao gồm) */
-                to: string;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VehicleDailyPriceDto"][];
-                };
-            };
-        };
-    };
-    VehicleDailyPricesController_save: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SaveDailyPricesDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VehicleDailyPriceDto"][];
-                };
-            };
-        };
-    };
-    VehicleDailyPricesController_remove: {
-        parameters: {
-            query: {
-                /** @description Từ ngày (local, YYYY-MM-DD) */
-                from: string;
-                /** @description Đến ngày (local, YYYY-MM-DD, bao gồm) */
-                to: string;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description { data: { deleted: number } } */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };

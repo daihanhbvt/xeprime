@@ -35,8 +35,10 @@ export function policyToForm(policy: RentalPolicyValues | null | undefined): Pol
     overtimeGraceMinutes: policy.overtimeGraceMinutes ?? null,
     overtimeRoundingMinutes: policy.overtimeRoundingMinutes ?? null,
     discountEnabled: policy.discountEnabled,
+    // Form nhập theo THÁNG, API lưu theo ngày (minDays = tháng × 30). Mốc cũ cấu hình theo
+    // ngày (trước đợt 4) quy về tháng gần nhất, tối thiểu 1 — lưu lại là chuẩn hoá luôn.
     discountTiers: policy.discountTiers.map((t) => ({
-      minDays: t.minDays,
+      minMonths: Math.max(1, Math.round(t.minDays / 30)),
       percent: t.percent,
       note: t.note ?? '',
     })),
@@ -58,7 +60,7 @@ export function formToSaveInput(values: PolicyFormValues): SaveRentalPolicyInput
     overtimeRoundingMinutes: values.overtimeRoundingMinutes ?? null,
     discountEnabled: values.discountEnabled,
     discountTiers: (values.discountTiers ?? []).map((t) => ({
-      minDays: t.minDays ?? 1,
+      minDays: (t.minMonths ?? 1) * 30,
       percent: t.percent ?? 1,
       ...(t.note?.trim() ? { note: t.note.trim() } : {}),
     })),

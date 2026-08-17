@@ -1,0 +1,49 @@
+/* Thẻ thông số 2 cột (mỗi cột: nhãn trái, giá trị phải) — theo mockup chi tiết xe 17/08. */
+.card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 32px;
+  margin: 0;
+  padding: 18px 20px;
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 14px;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.row dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+}
+
+.icon {
+  color: var(--xp-color-text-tertiary);
+  font-size: 15px;
+}
+
+.row dd {
+  min-width: 0;
+  margin: 0;
+  font-weight: 600;
+  color: var(--xp-color-text);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .card {
+    grid-template-columns: 1fr;
+  }
+}

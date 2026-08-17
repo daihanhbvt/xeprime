@@ -7,12 +7,14 @@ import {
   REVIEW_STATUS,
   SEAT_BUCKET_RANGE,
   SEAT_BUCKET_VALUES,
+  SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type PaginationMeta,
   type SeatBucket,
 } from '@xeprime/types';
 import { ProvincesService } from '../locations/provinces.service';
+import { PricingService } from '../pricing/pricing.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import type {
   FacetBucketDto,
@@ -305,6 +307,7 @@ export class PublicListingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly provinces: ProvincesService,
+    private readonly pricing: PricingService,
   ) {}
 
   async search(query: PublicListingQueryDto): Promise<{
@@ -710,6 +713,7 @@ export class PublicListingsService {
       },
       select: {
         id: true,
+        tenantId: true,
         name: true,
         branch: { select: { province: { select: { code: true, name: true } } } },
         vehicleType: true,
@@ -753,6 +757,17 @@ export class PublicListingsService {
 
     const rating = (await this.ratingsByVehicle([v.id])).get(v.id);
 
+    /*
+     * Mốc ưu đãi THUÊ DÀI HẠN (đợt 4): lộ ra để nút gói 1/3/6/12 tháng của modal mang badge
+     * "-X%" TRƯỚC khi chọn ngày. Đọc qua effectivePolicy — cùng nguồn với máy giá, con số
+     * badge và con số quote không bao giờ lệch. Chỉ lộ khi xe đăng dịch vụ dài hạn.
+     */
+    const policy = v.serviceTypes.includes(SERVICE_TYPE.LONG_TERM)
+      ? await this.pricing.effectivePolicy(v.tenantId, v.id)
+      : null;
+    const longTermDiscountTiers =
+      policy?.values.discountEnabled === true ? policy.values.discountTiers : [];
+
     return {
       id: v.id,
       name: v.name,
@@ -789,6 +804,7 @@ export class PublicListingsService {
       features: v.features.map((f) => f.featureKey),
       ratingAvg: rating?.avg ?? null,
       ratingCount: rating?.count ?? 0,
+      longTermDiscountTiers,
     };
   }
 }

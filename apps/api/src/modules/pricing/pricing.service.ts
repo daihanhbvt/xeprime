@@ -675,7 +675,13 @@ export class PricingService {
         rows.push({
           key: PRICE_ROW.DISCOUNT,
           label: `Ưu đãi giảm giá (${tier.percent}%)`,
-          sublabel: tier.note ?? `Mốc thuê từ ${tier.minDays} ngày`,
+          // Mốc cấu hình theo THÁNG (đợt 4) — chia hết cho 30 thì nói "gói X tháng",
+          // dữ liệu cũ theo ngày vẫn đọc được nguyên nghĩa.
+          sublabel:
+            tier.note ??
+            (tier.minDays % 30 === 0
+              ? `Gói thuê từ ${tier.minDays / 30} tháng`
+              : `Mốc thuê từ ${tier.minDays} ngày`),
           amount: discount.negated().toFixed(0),
         });
         rows.push({

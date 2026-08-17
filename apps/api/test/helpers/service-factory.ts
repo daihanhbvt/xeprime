@@ -50,7 +50,12 @@ export function makeVehiclesService(
 }
 
 export function makePublicListingsService(prisma: PrismaService): PublicListingsService {
-  return new PublicListingsService(prisma, new ProvincesService(prisma, new AuditService(prisma)));
+  const audit = new AuditService(prisma);
+  return new PublicListingsService(
+    prisma,
+    new ProvincesService(prisma, audit),
+    new PricingService(prisma, audit),
+  );
 }
 
 export function makeProvincesService(prisma: PrismaService): ProvincesService {

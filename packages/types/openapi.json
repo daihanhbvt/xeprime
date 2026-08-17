@@ -1736,6 +1736,297 @@
         ]
       }
     },
+    "/shop/rental-policies": {
+      "get": {
+        "operationId": "ShopPoliciesController_get",
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopRentalPolicyDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chính sách thuê mặc định (theo loại xe) + số xe kế thừa/ghi đè",
+        "tags": [
+          "rental-policies"
+        ]
+      },
+      "put": {
+        "operationId": "ShopPoliciesController_save",
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRentalPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopRentalPolicyDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lưu chính sách thuê mặc định theo loại xe (upsert, audit)",
+        "tags": [
+          "rental-policies"
+        ]
+      }
+    },
+    "/public/listings/{id}/quote": {
+      "get": {
+        "operationId": "PublicQuoteController_quote",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pickupAt",
+            "required": true,
+            "in": "query",
+            "description": "ISO datetime nhận xe",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnAt",
+            "required": true,
+            "in": "query",
+            "description": "ISO datetime trả xe",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "serviceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "long_term"
+              ]
+            }
+          },
+          {
+            "name": "routeType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "in_city",
+                "inter_city",
+                "inter_city_one_way"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicQuoteDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Báo giá thuê theo khoảng ngày (chưa gồm phí giao nhận)",
+        "tags": [
+          "public-listings"
+        ]
+      }
+    },
+    "/vehicles/{id}/daily-prices": {
+      "get": {
+        "operationId": "VehicleDailyPricesController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Từ ngày (local, YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-09-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Đến ngày (local, YYYY-MM-DD, bao gồm)",
+            "schema": {
+              "example": "2026-09-30",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VehicleDailyPriceDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Bản ghi đè giá theo ngày trong [from, to] (ngày local VN)",
+        "tags": [
+          "pricing"
+        ]
+      },
+      "put": {
+        "operationId": "VehicleDailyPricesController_save",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveDailyPricesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VehicleDailyPriceDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đặt giá riêng cho các ngày (upsert tất định theo (xe, ngày))",
+        "tags": [
+          "pricing"
+        ]
+      },
+      "delete": {
+        "operationId": "VehicleDailyPricesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Từ ngày (local, YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-09-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Đến ngày (local, YYYY-MM-DD, bao gồm)",
+            "schema": {
+              "example": "2026-09-30",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ data: { deleted: number } }"
+          }
+        },
+        "summary": "Khôi phục giá mặc định cho [from, to] — xoá bản ghi đè",
+        "tags": [
+          "pricing"
+        ]
+      }
+    },
     "/calendar/resources": {
       "get": {
         "operationId": "CalendarController_resources",
@@ -2336,297 +2627,6 @@
         "summary": "Khoá xe một khoảng thời gian (giữ chỗ lịch trong cùng transaction)",
         "tags": [
           "calendar"
-        ]
-      }
-    },
-    "/shop/rental-policies": {
-      "get": {
-        "operationId": "ShopPoliciesController_get",
-        "parameters": [
-          {
-            "name": "vehicleType",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "car",
-                "motorbike"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ShopRentalPolicyDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Chính sách thuê mặc định (theo loại xe) + số xe kế thừa/ghi đè",
-        "tags": [
-          "rental-policies"
-        ]
-      },
-      "put": {
-        "operationId": "ShopPoliciesController_save",
-        "parameters": [
-          {
-            "name": "vehicleType",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "car",
-                "motorbike"
-              ]
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SaveRentalPolicyDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ShopRentalPolicyDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Lưu chính sách thuê mặc định theo loại xe (upsert, audit)",
-        "tags": [
-          "rental-policies"
-        ]
-      }
-    },
-    "/public/listings/{id}/quote": {
-      "get": {
-        "operationId": "PublicQuoteController_quote",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "pickupAt",
-            "required": true,
-            "in": "query",
-            "description": "ISO datetime nhận xe",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "returnAt",
-            "required": true,
-            "in": "query",
-            "description": "ISO datetime trả xe",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "serviceType",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "self_drive",
-                "with_driver",
-                "long_term"
-              ]
-            }
-          },
-          {
-            "name": "routeType",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "in_city",
-                "inter_city",
-                "inter_city_one_way"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicQuoteDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Báo giá thuê theo khoảng ngày (chưa gồm phí giao nhận)",
-        "tags": [
-          "public-listings"
-        ]
-      }
-    },
-    "/vehicles/{id}/daily-prices": {
-      "get": {
-        "operationId": "VehicleDailyPricesController_list",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": true,
-            "in": "query",
-            "description": "Từ ngày (local, YYYY-MM-DD)",
-            "schema": {
-              "example": "2026-09-01",
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": true,
-            "in": "query",
-            "description": "Đến ngày (local, YYYY-MM-DD, bao gồm)",
-            "schema": {
-              "example": "2026-09-30",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/VehicleDailyPriceDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Bản ghi đè giá theo ngày trong [from, to] (ngày local VN)",
-        "tags": [
-          "pricing"
-        ]
-      },
-      "put": {
-        "operationId": "VehicleDailyPricesController_save",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SaveDailyPricesDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/VehicleDailyPriceDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Đặt giá riêng cho các ngày (upsert tất định theo (xe, ngày))",
-        "tags": [
-          "pricing"
-        ]
-      },
-      "delete": {
-        "operationId": "VehicleDailyPricesController_remove",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": true,
-            "in": "query",
-            "description": "Từ ngày (local, YYYY-MM-DD)",
-            "schema": {
-              "example": "2026-09-01",
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": true,
-            "in": "query",
-            "description": "Đến ngày (local, YYYY-MM-DD, bao gồm)",
-            "schema": {
-              "example": "2026-09-30",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "{ data: { deleted: number } }"
-          }
-        },
-        "summary": "Khôi phục giá mặc định cho [from, to] — xoá bản ghi đè",
-        "tags": [
-          "pricing"
         ]
       }
     },
@@ -10955,6 +10955,27 @@
           "amenities"
         ]
       },
+      "DiscountTierDto": {
+        "type": "object",
+        "properties": {
+          "minDays": {
+            "type": "number",
+            "description": "Số ngày thuê tối thiểu — các mốc phải tăng dần nghiêm ngặt"
+          },
+          "percent": {
+            "type": "number",
+            "description": "Mức giảm % (1–100), CHỈ áp lên tiền thuê cơ bản"
+          },
+          "note": {
+            "type": "string",
+            "description": "Ghi chú hiển thị"
+          }
+        },
+        "required": [
+          "minDays",
+          "percent"
+        ]
+      },
       "PublicListingDetailDto": {
         "type": "object",
         "properties": {
@@ -11116,6 +11137,12 @@
             "items": {
               "type": "string"
             }
+          },
+          "longTermDiscountTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscountTierDto"
+            }
           }
         },
         "required": [
@@ -11129,7 +11156,8 @@
           "shopSlug",
           "ratingCount",
           "images",
-          "features"
+          "features",
+          "longTermDiscountTiers"
         ]
       },
       "PublicDestinationDto": {
@@ -11264,65 +11292,159 @@
           "ratingCount"
         ]
       },
-      "CalendarResourceDto": {
+      "DeliveryTierDto": {
         "type": "object",
         "properties": {
-          "id": {
-            "type": "string"
+          "toKm": {
+            "type": "number",
+            "description": "Mốc \"đến\" (km) — các bậc phải tăng dần nghiêm ngặt",
+            "maximum": 500
           },
-          "vehicleId": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "code": {
+          "fee": {
             "type": "string",
-            "description": "Mã xe nội bộ"
-          },
-          "plateNumber": {
-            "type": "string",
-            "nullable": true
-          },
-          "mainImageUrl": {
-            "type": "string",
-            "nullable": true,
-            "description": "Ảnh đại diện cho cột xe"
-          },
-          "weekdayPrice": {
-            "type": "string",
-            "nullable": true,
-            "description": "Giá thuê ngày thường (chuỗi VND)"
-          },
-          "hourlyPrice": {
-            "type": "string",
-            "nullable": true,
-            "description": "Giá thuê theo giờ — null = không cho thuê giờ"
-          },
-          "vehicleType": {
-            "type": "string",
-            "enum": [
-              "car",
-              "motorbike"
-            ]
-          },
-          "operationStatus": {
-            "type": "string",
-            "enum": [
-              "available",
-              "renting",
-              "maintenance",
-              "inactive"
-            ]
+            "description": "Phí VND dạng chuỗi — '0' = miễn phí",
+            "example": "30000"
           }
         },
         "required": [
-          "id",
-          "vehicleId",
-          "name",
-          "code",
-          "vehicleType",
-          "operationStatus"
+          "toKm",
+          "fee"
+        ]
+      },
+      "RentalPolicyValuesDto": {
+        "type": "object",
+        "properties": {
+          "depositAmount": {
+            "type": "string"
+          },
+          "deliveryEnabled": {
+            "type": "boolean"
+          },
+          "deliveryMaxRadiusKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "deliveryTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTierDto"
+            }
+          },
+          "overtimeFeePerHour": {
+            "type": "string",
+            "nullable": true
+          },
+          "overtimeGraceMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "overtimeRoundingMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "discountEnabled": {
+            "type": "boolean"
+          },
+          "discountTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscountTierDto"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO — mốc phát hiện báo giá/preview cũ"
+          }
+        },
+        "required": [
+          "depositAmount",
+          "deliveryEnabled",
+          "deliveryTiers",
+          "discountEnabled",
+          "discountTiers",
+          "updatedAt"
+        ]
+      },
+      "ShopRentalPolicyDto": {
+        "type": "object",
+        "properties": {
+          "policy": {
+            "nullable": true,
+            "description": "null = gian hàng chưa cấu hình",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RentalPolicyValuesDto"
+              }
+            ]
+          },
+          "inheritingVehicles": {
+            "type": "number",
+            "description": "Số xe đang kế thừa chính sách chung"
+          },
+          "overriddenVehicles": {
+            "type": "number",
+            "description": "Số xe đã ghi đè chính sách riêng"
+          }
+        },
+        "required": [
+          "inheritingVehicles",
+          "overriddenVehicles"
+        ]
+      },
+      "SaveRentalPolicyDto": {
+        "type": "object",
+        "properties": {
+          "depositAmount": {
+            "type": "string",
+            "description": "Cọc thế chấp cố định VND (chuỗi)",
+            "example": "5000000"
+          },
+          "deliveryEnabled": {
+            "type": "boolean"
+          },
+          "deliveryMaxRadiusKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "Bán kính tự báo giá tối đa (km) — bắt buộc khi bật giao nhận, phải bằng mốc \"đến\" của bậc cuối"
+          },
+          "deliveryTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTierDto"
+            }
+          },
+          "overtimeFeePerHour": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phí mỗi giờ trả trễ (VND) — null = chưa cấu hình"
+          },
+          "overtimeGraceMinutes": {
+            "type": "number",
+            "nullable": true,
+            "description": "Phút trễ miễn phí tối đa — null = chưa cấu hình"
+          },
+          "overtimeRoundingMinutes": {
+            "type": "number",
+            "nullable": true,
+            "description": "Đơn vị làm tròn tối thiểu (phút) — null = chưa cấu hình"
+          },
+          "discountEnabled": {
+            "type": "boolean"
+          },
+          "discountTiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscountTierDto"
+            }
+          }
+        },
+        "required": [
+          "depositAmount",
+          "deliveryEnabled",
+          "deliveryTiers",
+          "discountEnabled",
+          "discountTiers"
         ]
       },
       "PriceBreakdownRowDto": {
@@ -11410,6 +11532,172 @@
           "totalAmount",
           "depositAmount",
           "policySource"
+        ]
+      },
+      "DeliverySummaryDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "maxRadiusKm": {
+            "type": "number",
+            "nullable": true
+          },
+          "tiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeliveryTierDto"
+            }
+          }
+        },
+        "required": [
+          "enabled",
+          "tiers"
+        ]
+      },
+      "PublicQuoteDto": {
+        "type": "object",
+        "properties": {
+          "breakdown": {
+            "$ref": "#/components/schemas/QuoteBreakdownDto"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliverySummaryDto"
+          }
+        },
+        "required": [
+          "breakdown",
+          "delivery"
+        ]
+      },
+      "VehicleDailyPriceDto": {
+        "type": "object",
+        "properties": {
+          "vehicleId": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "description": "Ngày local YYYY-MM-DD"
+          },
+          "dailyPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá ngày ghi đè (chuỗi VND)"
+          },
+          "hourlyPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá giờ ghi đè (chuỗi VND)"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "vehicleId",
+          "date",
+          "updatedAt"
+        ]
+      },
+      "SaveDailyPricesDto": {
+        "type": "object",
+        "properties": {
+          "dates": {
+            "description": "Các ngày local Asia/Ho_Chi_Minh, dạng YYYY-MM-DD",
+            "example": [
+              "2026-09-02",
+              "2026-09-03"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dailyPrice": {
+            "type": "string",
+            "description": "Giá thuê NGÀY cho các ngày này (chuỗi VND)",
+            "example": "1200000"
+          },
+          "hourlyPrice": {
+            "type": "string",
+            "description": "Giá thuê GIỜ cho các ngày này (chuỗi VND)",
+            "example": "150000"
+          },
+          "note": {
+            "type": "string",
+            "description": "Ghi chú (vd \"Giá lễ 2/9\")"
+          }
+        },
+        "required": [
+          "dates"
+        ]
+      },
+      "CalendarResourceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "description": "Mã xe nội bộ"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "mainImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh đại diện cho cột xe"
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá thuê ngày thường (chuỗi VND)"
+          },
+          "hourlyPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá thuê theo giờ — null = không cho thuê giờ"
+          },
+          "vehicleType": {
+            "type": "string",
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
+          "operationStatus": {
+            "type": "string",
+            "enum": [
+              "available",
+              "renting",
+              "maintenance",
+              "inactive"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "vehicleId",
+          "name",
+          "code",
+          "vehicleType",
+          "operationStatus"
         ]
       },
       "CalendarAvailabilityDayDto": {
@@ -11735,287 +12023,6 @@
           "endAt",
           "reason",
           "expectedRowVersion"
-        ]
-      },
-      "DeliveryTierDto": {
-        "type": "object",
-        "properties": {
-          "toKm": {
-            "type": "number",
-            "description": "Mốc \"đến\" (km) — các bậc phải tăng dần nghiêm ngặt",
-            "maximum": 500
-          },
-          "fee": {
-            "type": "string",
-            "description": "Phí VND dạng chuỗi — '0' = miễn phí",
-            "example": "30000"
-          }
-        },
-        "required": [
-          "toKm",
-          "fee"
-        ]
-      },
-      "DiscountTierDto": {
-        "type": "object",
-        "properties": {
-          "minDays": {
-            "type": "number",
-            "description": "Số ngày thuê tối thiểu — các mốc phải tăng dần nghiêm ngặt"
-          },
-          "percent": {
-            "type": "number",
-            "description": "Mức giảm % (1–100), CHỈ áp lên tiền thuê cơ bản"
-          },
-          "note": {
-            "type": "string",
-            "description": "Ghi chú hiển thị"
-          }
-        },
-        "required": [
-          "minDays",
-          "percent"
-        ]
-      },
-      "RentalPolicyValuesDto": {
-        "type": "object",
-        "properties": {
-          "depositAmount": {
-            "type": "string"
-          },
-          "deliveryEnabled": {
-            "type": "boolean"
-          },
-          "deliveryMaxRadiusKm": {
-            "type": "number",
-            "nullable": true
-          },
-          "deliveryTiers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DeliveryTierDto"
-            }
-          },
-          "overtimeFeePerHour": {
-            "type": "string",
-            "nullable": true
-          },
-          "overtimeGraceMinutes": {
-            "type": "number",
-            "nullable": true
-          },
-          "overtimeRoundingMinutes": {
-            "type": "number",
-            "nullable": true
-          },
-          "discountEnabled": {
-            "type": "boolean"
-          },
-          "discountTiers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DiscountTierDto"
-            }
-          },
-          "updatedAt": {
-            "type": "string",
-            "description": "ISO — mốc phát hiện báo giá/preview cũ"
-          }
-        },
-        "required": [
-          "depositAmount",
-          "deliveryEnabled",
-          "deliveryTiers",
-          "discountEnabled",
-          "discountTiers",
-          "updatedAt"
-        ]
-      },
-      "ShopRentalPolicyDto": {
-        "type": "object",
-        "properties": {
-          "policy": {
-            "nullable": true,
-            "description": "null = gian hàng chưa cấu hình",
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/RentalPolicyValuesDto"
-              }
-            ]
-          },
-          "inheritingVehicles": {
-            "type": "number",
-            "description": "Số xe đang kế thừa chính sách chung"
-          },
-          "overriddenVehicles": {
-            "type": "number",
-            "description": "Số xe đã ghi đè chính sách riêng"
-          }
-        },
-        "required": [
-          "inheritingVehicles",
-          "overriddenVehicles"
-        ]
-      },
-      "SaveRentalPolicyDto": {
-        "type": "object",
-        "properties": {
-          "depositAmount": {
-            "type": "string",
-            "description": "Cọc thế chấp cố định VND (chuỗi)",
-            "example": "5000000"
-          },
-          "deliveryEnabled": {
-            "type": "boolean"
-          },
-          "deliveryMaxRadiusKm": {
-            "type": "number",
-            "nullable": true,
-            "description": "Bán kính tự báo giá tối đa (km) — bắt buộc khi bật giao nhận, phải bằng mốc \"đến\" của bậc cuối"
-          },
-          "deliveryTiers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DeliveryTierDto"
-            }
-          },
-          "overtimeFeePerHour": {
-            "type": "string",
-            "nullable": true,
-            "description": "Phí mỗi giờ trả trễ (VND) — null = chưa cấu hình"
-          },
-          "overtimeGraceMinutes": {
-            "type": "number",
-            "nullable": true,
-            "description": "Phút trễ miễn phí tối đa — null = chưa cấu hình"
-          },
-          "overtimeRoundingMinutes": {
-            "type": "number",
-            "nullable": true,
-            "description": "Đơn vị làm tròn tối thiểu (phút) — null = chưa cấu hình"
-          },
-          "discountEnabled": {
-            "type": "boolean"
-          },
-          "discountTiers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DiscountTierDto"
-            }
-          }
-        },
-        "required": [
-          "depositAmount",
-          "deliveryEnabled",
-          "deliveryTiers",
-          "discountEnabled",
-          "discountTiers"
-        ]
-      },
-      "DeliverySummaryDto": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          },
-          "maxRadiusKm": {
-            "type": "number",
-            "nullable": true
-          },
-          "tiers": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DeliveryTierDto"
-            }
-          }
-        },
-        "required": [
-          "enabled",
-          "tiers"
-        ]
-      },
-      "PublicQuoteDto": {
-        "type": "object",
-        "properties": {
-          "breakdown": {
-            "$ref": "#/components/schemas/QuoteBreakdownDto"
-          },
-          "delivery": {
-            "$ref": "#/components/schemas/DeliverySummaryDto"
-          }
-        },
-        "required": [
-          "breakdown",
-          "delivery"
-        ]
-      },
-      "VehicleDailyPriceDto": {
-        "type": "object",
-        "properties": {
-          "vehicleId": {
-            "type": "string"
-          },
-          "date": {
-            "type": "string",
-            "description": "Ngày local YYYY-MM-DD"
-          },
-          "dailyPrice": {
-            "type": "string",
-            "nullable": true,
-            "description": "Giá ngày ghi đè (chuỗi VND)"
-          },
-          "hourlyPrice": {
-            "type": "string",
-            "nullable": true,
-            "description": "Giá giờ ghi đè (chuỗi VND)"
-          },
-          "note": {
-            "type": "string",
-            "nullable": true
-          },
-          "updatedAt": {
-            "type": "string",
-            "description": "ISO-8601 UTC"
-          }
-        },
-        "required": [
-          "vehicleId",
-          "date",
-          "updatedAt"
-        ]
-      },
-      "SaveDailyPricesDto": {
-        "type": "object",
-        "properties": {
-          "dates": {
-            "description": "Các ngày local Asia/Ho_Chi_Minh, dạng YYYY-MM-DD",
-            "example": [
-              "2026-09-02",
-              "2026-09-03"
-            ],
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "dailyPrice": {
-            "type": "string",
-            "description": "Giá thuê NGÀY cho các ngày này (chuỗi VND)",
-            "example": "1200000"
-          },
-          "hourlyPrice": {
-            "type": "string",
-            "description": "Giá thuê GIỜ cho các ngày này (chuỗi VND)",
-            "example": "150000"
-          },
-          "note": {
-            "type": "string",
-            "description": "Ghi chú (vd \"Giá lễ 2/9\")"
-          }
-        },
-        "required": [
-          "dates"
         ]
       },
       "VehicleBranchSummaryDto": {

@@ -35,11 +35,16 @@ export const deliveryTierSchema = yup.object({
   fee: optionalMoney('Phí giao nhận'),
 });
 
+/**
+ * Mốc ưu đãi cấu hình theo THÁNG (17/08 đợt 4 — Mioto: -2% từ 3 tháng): form nhập tháng,
+ * lưu xuống API vẫn là `minDays = tháng × 30` (form.ts convert) — máy giá đếm ngày không đổi.
+ * Ưu đãi này CHỈ áp cho dịch vụ Thuê dài hạn (luật ở PricingService.buildQuote).
+ */
 export const discountTierSchema = yup.object({
-  minDays: requiredNumber('Nhập số ngày tối thiểu')
-    .integer('Số ngày phải là số nguyên')
-    .min(1, 'Ít nhất 1 ngày')
-    .max(365, 'Tối đa 365 ngày'),
+  minMonths: requiredNumber('Nhập số tháng tối thiểu')
+    .integer('Số tháng phải là số nguyên')
+    .min(1, 'Ít nhất 1 tháng')
+    .max(12, 'Tối đa 12 tháng'),
   percent: requiredNumber('Nhập mức giảm (%)')
     .integer('Mức giảm phải là số nguyên')
     .min(1, 'Ít nhất 1%')
@@ -125,17 +130,17 @@ export const policyFormSchema = yup.object({
       is: true,
       then: (s) => s.min(1, 'Bật ưu đãi thì phải có ít nhất một mốc giảm giá'),
     })
-    .test('ascending-days', '', function ascendingDays(tiers) {
+    .test('ascending-months', '', function ascendingMonths(tiers) {
       if (!tiers) return true;
       for (let i = 1; i < tiers.length; i++) {
-        const prev = tiers[i - 1]?.minDays;
-        const curr = tiers[i]?.minDays;
+        const prev = tiers[i - 1]?.minMonths;
+        const curr = tiers[i]?.minMonths;
         if (prev != null && curr != null && curr <= prev) {
           return this.createError({
             message:
               curr === prev
-                ? `Trùng mốc ưu đãi "từ ${curr} ngày"`
-                : 'Các mốc ưu đãi phải theo số ngày tăng dần',
+                ? `Trùng mốc ưu đãi "từ ${curr} tháng"`
+                : 'Các mốc ưu đãi phải theo số tháng tăng dần',
           });
         }
       }
