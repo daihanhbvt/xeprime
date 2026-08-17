@@ -128,7 +128,8 @@ export const queryKeys = {
   /** Chính sách thuê mặc định của gian hàng (Wave 2). */
   rentalPolicies: {
     all: ['rental-policies'] as const,
-    shop: () => ['rental-policies', 'shop'] as const,
+    /** Mặc định theo LOẠI XE (17/08) — hai tab Ô tô/Xe máy là hai cache riêng. */
+    shop: (vehicleType: string) => ['rental-policies', 'shop', vehicleType] as const,
   },
   bookings: {
     all: ['bookings'] as const,

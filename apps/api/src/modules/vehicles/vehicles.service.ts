@@ -535,6 +535,7 @@ export class VehiclesService {
       where: { id, tenantId, deletedAt: null },
       select: {
         id: true,
+        vehicleType: true,
         weekdayPrice: true,
         weekendPrice: true,
         hourlyPrice: true,
@@ -550,7 +551,8 @@ export class VehiclesService {
 
     const [effective, shopPolicy] = await Promise.all([
       this.pricing.effectivePolicy(tenantId, id),
-      this.pricing.shopPolicyValues(tenantId),
+      // Bản đối chiếu là mặc định THEO LOẠI XE của chính chiếc xe (17/08).
+      this.pricing.shopPolicyValues(tenantId, vehicle.vehicleType),
     ]);
 
     return {

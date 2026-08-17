@@ -1075,6 +1075,10 @@ model RentalPolicy {
   id                      String   @id @db.Char(26)
   tenantId                String   @map("tenant_id") @db.Char(26)
   vehicleId               String?  @unique @map("vehicle_id") @db.Char(26)
+  /// @xeprime/types → VehicleType. CHỈ dành cho hàng MẶC ĐỊNH (vehicle_id NULL — CHECK ở
+  /// migration): mặc định theo LOẠI XE thắng mặc định legacy (cả hai NULL); bản ghi đè theo
+  /// xe không mang cột này (loại đọc từ chính chiếc xe). Partial unique (tenant, vehicle_type).
+  vehicleType             String?  @map("vehicle_type") @db.VarChar(50)
   /// Cọc thế chấp CỐ ĐỊNH bằng VND — không nằm trong doanh thu thuê, không chịu giảm giá.
   depositAmount           Decimal  @default(0) @map("deposit_amount") @db.Decimal(14, 2)
   deliveryEnabled         Boolean  @default(false) @map("delivery_enabled")

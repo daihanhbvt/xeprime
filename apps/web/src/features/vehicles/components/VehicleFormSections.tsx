@@ -3,17 +3,19 @@
 import { BankOutlined, HomeOutlined, KeyOutlined, TeamOutlined } from '@ant-design/icons';
 import { Alert, Checkbox, Col, Radio, Row, Skeleton } from 'antd';
 import { useMemo } from 'react';
-import { Controller, useWatch, type Control } from 'react-hook-form';
+import { Controller, useFormState, useWatch, type Control } from 'react-hook-form';
 import {
   CATALOG_TYPE,
   SERVICE_TYPE,
   TRANSMISSION_TYPE_LABEL,
   TRANSMISSION_TYPE_VALUES,
   VEHICLE_TYPE,
+  VEHICLE_TYPE_LABEL,
   VEHICLE_SOURCE_TYPE,
   VEHICLE_SOURCE_TYPE_LABEL,
   VEHICLE_SOURCE_TYPE_VALUES,
   vehicleFuelTypesFor,
+  type VehicleType,
 } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
@@ -249,9 +251,32 @@ export function BasicSection({
         />
       </Col>
       <Col xs={24}>
+        <VehicleTypePolicyWarning control={control} />
+      </Col>
+      <Col xs={24}>
         <ServicePriceRemovalWarning control={control} />
       </Col>
     </Row>
+  );
+}
+
+/**
+ * Đổi LOẠI XE của một xe đã tồn tại → chính sách thuê kế thừa đổi theo (17/08: policy mặc
+ * định tách theo loại xe). Xe có chính sách riêng thì không ảnh hưởng — nói rõ cả hai vế.
+ */
+function VehicleTypePolicyWarning({ control }: Pick<SectionProps, 'control'>) {
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
+  const { defaultValues } = useFormState({ control });
+  const initial = defaultValues?.vehicleType;
+  if (!initial || initial === vehicleType) return null;
+
+  return (
+    <Alert
+      type="info"
+      showIcon
+      message={`Đổi loại xe sang ${VEHICLE_TYPE_LABEL[vehicleType as VehicleType] ?? vehicleType}: xe sẽ kế thừa chính sách thuê mặc định của loại mới`}
+      description="Cọc, phí giao nhận, quá giờ và ưu đãi theo cấu hình của loại xe mới sẽ áp cho các lượt đặt tiếp theo (trừ khi xe đã có chính sách riêng)."
+    />
   );
 }
 

@@ -102,11 +102,18 @@ describe('/manage/shop/policies — quyền và trạng thái tải', () => {
 });
 
 describe('/manage/shop/policies — dữ liệu và null-policy', () => {
-  it('chip phạm vi lấy số từ API: 12 kế thừa / 3 ghi đè', () => {
+  it('chip phạm vi lấy số từ API, đếm theo loại xe của tab: 12 kế thừa / 3 ghi đè', () => {
     renderPage();
-    expect(screen.getByText('12 xe đang kế thừa')).toBeTruthy();
+    // Tab mặc định là Ô tô (17/08: policy tách theo loại xe) — chip nói rõ loại.
+    expect(screen.getByText('12 ô tô đang kế thừa')).toBeTruthy();
     expect(screen.getByText('3 xe đã ghi đè')).toBeTruthy();
     expect(screen.getByText('12 xe đang dùng mức cọc này')).toBeTruthy();
+  });
+
+  it('có đủ hai tab Ô tô / Xe máy — mỗi loại một bộ chính sách riêng', () => {
+    renderPage();
+    expect(screen.getByRole('tab', { name: 'Ô tô' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Xe máy' })).toBeTruthy();
   });
 
   it('hiển thị đủ 4 khối chính sách với giá trị từ API', () => {

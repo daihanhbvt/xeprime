@@ -31,6 +31,7 @@ import { SaveDailyPricesDto, VehicleDailyPriceDto } from './dto/vehicle-daily-pr
 const POLICY_SELECT = {
   id: true,
   vehicleId: true,
+  vehicleType: true,
   depositAmount: true,
   deliveryEnabled: true,
   deliveryMaxRadiusKm: true,
@@ -83,17 +84,37 @@ export class PricingService {
   // Chính sách mặc định của gian hàng
   // -------------------------------------------------------------------------
 
-  async getShopPolicy(tenantId: string): Promise<ShopRentalPolicyDto> {
-    const [row, totalVehicles, overridden] = await this.prisma.$transaction([
-      this.prisma.rentalPolicy.findFirst({
-        where: { tenantId, vehicleId: null },
+  /**
+   * Chính sách mặc định của gian hàng THEO LOẠI XE (17/08). `vehicleType` bắt buộc từ UI hai
+   * tab Ô tô/Xe máy; chưa có hàng theo loại thì trả hàng LEGACY toàn gian hàng (tương thích) —
+   * người dùng vẫn thấy đúng thông số đang áp cho loại xe đó. Số xe kế thừa/ghi đè đếm theo
+   * đúng loại xe của tab.
+   */
+  async getShopPolicy(tenantId: string, vehicleType?: string): Promise<ShopRentalPolicyDto> {
+    const vehicleScope = {
+      tenantId,
+      deletedAt: null,
+      ...(vehicleType ? { vehicleType } : {}),
+    };
+    const [rows, totalVehicles, overridden] = await this.prisma.$transaction([
+      this.prisma.rentalPolicy.findMany({
+        where: { tenantId, vehicleId: null, vehicleType: vehicleType ? { in: [vehicleType] } : null },
         select: POLICY_SELECT,
       }),
-      this.prisma.vehicle.count({ where: { tenantId, deletedAt: null } }),
+      this.prisma.vehicle.count({ where: vehicleScope }),
       this.prisma.rentalPolicy.count({
-        where: { tenantId, vehicleId: { not: null }, vehicle: { deletedAt: null } },
+        where: { tenantId, vehicleId: { not: null }, vehicle: vehicleScope },
       }),
     ]);
+
+    let row = rows[0] ?? null;
+    if (!row && vehicleType) {
+      // Chưa có hàng theo loại → đọc hàng legacy làm giá trị đang áp (fallback tương thích).
+      row = await this.prisma.rentalPolicy.findFirst({
+        where: { tenantId, vehicleId: null, vehicleType: null },
+        select: POLICY_SELECT,
+      });
+    }
 
     return {
       policy: row ? toValues(row) : null,
@@ -102,17 +123,18 @@ export class PricingService {
     };
   }
 
-  /** Upsert chính sách mặc định + audit before/after trong một transaction. */
+  /** Upsert chính sách mặc định (theo loại xe nếu có) + audit before/after trong một transaction. */
   async saveShopPolicy(
     tenantId: string,
     userId: string,
     dto: SaveRentalPolicyDto,
+    vehicleType?: string,
   ): Promise<ShopRentalPolicyDto> {
     this.validatePolicy(dto);
 
     await this.prisma.$transaction(async (tx) => {
       const current = await tx.rentalPolicy.findFirst({
-        where: { tenantId, vehicleId: null },
+        where: { tenantId, vehicleId: null, vehicleType: vehicleType ?? null },
         select: POLICY_SELECT,
       });
 
@@ -120,8 +142,10 @@ export class PricingService {
       if (current) {
         await tx.rentalPolicy.update({ where: { id: current.id }, data });
       } else {
-        // Partial unique `rental_policies_shop_default_key` là chốt chặn nếu hai request đua.
-        await tx.rentalPolicy.create({ data: { id: newId(), tenantId, vehicleId: null, ...data } });
+        // Partial unique (shop_default / type_default) là chốt chặn nếu hai request đua.
+        await tx.rentalPolicy.create({
+          data: { id: newId(), tenantId, vehicleId: null, vehicleType: vehicleType ?? null, ...data },
+        });
       }
 
       // Thay đổi nhạy cảm (ảnh hưởng giá mọi lượt đặt mới của cả gian hàng) → audit đầy đủ.
@@ -134,43 +158,65 @@ export class PricingService {
           targetType: 'rental_policy',
           targetId: current?.id ?? null,
           before: current ? auditShape(current) : null,
-          after: auditShape(data),
+          after: { ...(vehicleType ? { vehicleType } : {}), ...auditShape(data) },
         },
         tx,
       );
     });
 
-    return this.getShopPolicy(tenantId);
+    return this.getShopPolicy(tenantId, vehicleType);
   }
 
   // -------------------------------------------------------------------------
   // Chính sách hiệu lực + tra cứu
   // -------------------------------------------------------------------------
 
-  /** Bản ghi đè của xe thắng mặc định gian hàng; null khi cả hai đều chưa có. */
+  /**
+   * Chính sách hiệu lực của một xe — precedence 17/08:
+   *   1. bản ghi đè riêng của xe;
+   *   2. mặc định theo LOẠI XE (car/motorbike) của gian hàng;
+   *   3. mặc định legacy toàn gian hàng (giai đoạn tương thích).
+   * null khi cả ba đều chưa có. Loại xe đọc từ CHÍNH chiếc xe, không tin tham số ngoài.
+   */
   async effectivePolicy(
     tenantId: string,
     vehicleId: string,
     tx?: Prisma.TransactionClient,
   ): Promise<EffectivePolicy | null> {
     const db = tx ?? this.prisma;
-    const rows = await db.rentalPolicy.findMany({
-      where: { tenantId, OR: [{ vehicleId }, { vehicleId: null }] },
-      select: POLICY_SELECT,
-    });
+    const [vehicle, rows] = await Promise.all([
+      db.vehicle.findFirst({
+        where: { id: vehicleId, tenantId },
+        select: { vehicleType: true },
+      }),
+      db.rentalPolicy.findMany({
+        where: { tenantId, OR: [{ vehicleId }, { vehicleId: null }] },
+        select: POLICY_SELECT,
+      }),
+    ]);
     const override = rows.find((r) => r.vehicleId === vehicleId);
-    const shop = rows.find((r) => r.vehicleId === null);
     if (override) return { values: toValues(override), source: POLICY_SOURCE.VEHICLE };
-    if (shop) return { values: toValues(shop), source: POLICY_SOURCE.SHOP };
+    const typed = vehicle
+      ? rows.find((r) => r.vehicleId === null && r.vehicleType === vehicle.vehicleType)
+      : undefined;
+    if (typed) return { values: toValues(typed), source: POLICY_SOURCE.SHOP };
+    const legacy = rows.find((r) => r.vehicleId === null && r.vehicleType === null);
+    if (legacy) return { values: toValues(legacy), source: POLICY_SOURCE.SHOP };
     return null;
   }
 
-  /** Chính sách mặc định gian hàng (đối chiếu trên màn giá theo xe). */
-  async shopPolicyValues(tenantId: string): Promise<RentalPolicyValuesDto | null> {
-    const row = await this.prisma.rentalPolicy.findFirst({
+  /** Chính sách mặc định gian hàng (đối chiếu trên màn giá theo xe) — theo loại xe nếu có. */
+  async shopPolicyValues(
+    tenantId: string,
+    vehicleType?: string,
+  ): Promise<RentalPolicyValuesDto | null> {
+    const rows = await this.prisma.rentalPolicy.findMany({
       where: { tenantId, vehicleId: null },
       select: POLICY_SELECT,
     });
+    const typed = vehicleType ? rows.find((r) => r.vehicleType === vehicleType) : undefined;
+    const legacy = rows.find((r) => r.vehicleType === null);
+    const row = typed ?? legacy ?? null;
     return row ? toValues(row) : null;
   }
 

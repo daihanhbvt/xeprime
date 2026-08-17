@@ -7,11 +7,15 @@ import type {
   VehiclePricing,
 } from './types';
 
-export const fetchShopPolicy = (): Promise<ShopRentalPolicy> =>
-  apiGet<ShopRentalPolicy>('/shop/rental-policies');
+/** Chính sách mặc định tách theo LOẠI XE (17/08) — UI hai tab luôn truyền vehicleType. */
+export const fetchShopPolicy = (vehicleType: string): Promise<ShopRentalPolicy> =>
+  apiGet<ShopRentalPolicy>('/shop/rental-policies', { vehicleType });
 
-export const saveShopPolicy = (body: SaveRentalPolicyInput): Promise<ShopRentalPolicy> =>
-  apiPut<ShopRentalPolicy>('/shop/rental-policies', body);
+export const saveShopPolicy = (
+  body: SaveRentalPolicyInput,
+  vehicleType: string,
+): Promise<ShopRentalPolicy> =>
+  apiPut<ShopRentalPolicy>(`/shop/rental-policies?vehicleType=${vehicleType}`, body);
 
 export const fetchVehiclePricing = (vehicleId: string): Promise<VehiclePricing> =>
   apiGet<VehiclePricing>(`/vehicles/${vehicleId}/pricing`);

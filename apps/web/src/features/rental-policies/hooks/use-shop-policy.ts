@@ -5,21 +5,21 @@ import { queryKeys } from '@/services/query-keys';
 import { fetchShopPolicy, saveShopPolicy } from '../api';
 import type { SaveRentalPolicyInput } from '../types';
 
-export function useShopPolicy(enabled = true) {
+export function useShopPolicy(vehicleType: string, enabled = true) {
   return useQuery({
-    queryKey: queryKeys.rentalPolicies.shop(),
-    queryFn: fetchShopPolicy,
+    queryKey: queryKeys.rentalPolicies.shop(vehicleType),
+    queryFn: () => fetchShopPolicy(vehicleType),
     enabled,
   });
 }
 
-/** Lưu chính sách shop — invalidate cả nhánh pricing theo xe (kế thừa đổi theo). */
-export function useSaveShopPolicy() {
+/** Lưu chính sách shop theo loại xe — invalidate cả nhánh pricing theo xe (kế thừa đổi theo). */
+export function useSaveShopPolicy(vehicleType: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: SaveRentalPolicyInput) => saveShopPolicy(body),
+    mutationFn: (body: SaveRentalPolicyInput) => saveShopPolicy(body, vehicleType),
     onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.rentalPolicies.shop(), data);
+      queryClient.setQueryData(queryKeys.rentalPolicies.shop(vehicleType), data);
       void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
     },
   });

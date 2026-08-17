@@ -3,6 +3,7 @@
 import { Alert, Card, Skeleton } from 'antd';
 import Link from 'next/link';
 import type { Control } from 'react-hook-form';
+import { VEHICLE_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { ROUTES } from '@/constants/routes';
 import { formatMoneyVnd } from '@/lib/money';
@@ -22,7 +23,8 @@ export function CreateVehiclePricingStep({
   isCar,
   pricePreview,
 }: CreateVehiclePricingStepProps) {
-  const policy = useShopPolicy();
+  // Chính sách kế thừa theo ĐÚNG loại xe đang tạo (17/08) — ô tô/xe máy hai bộ riêng.
+  const policy = useShopPolicy(isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE);
   const values = policy.data?.policy ?? null;
 
   return (

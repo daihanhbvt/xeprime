@@ -5,6 +5,7 @@ import {
   PRICE_ROW_VALUES,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE_VALUES,
+  VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -179,6 +180,17 @@ export class ShopRentalPolicyDto {
 
   @ApiProperty({ description: 'Số xe đã ghi đè chính sách riêng' })
   overriddenVehicles!: number;
+}
+
+/**
+ * Query của GET/PUT /shop/rental-policies (17/08): chính sách mặc định tách theo LOẠI XE.
+ * Bỏ trống = hàng legacy toàn gian hàng (giai đoạn tương thích — UI mới luôn gửi).
+ */
+export class ShopPolicyQueryDto {
+  @ApiPropertyOptional({ enum: VEHICLE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(VEHICLE_TYPE_VALUES)
+  vehicleType?: string;
 }
 
 // ---------------------------------------------------------------------------

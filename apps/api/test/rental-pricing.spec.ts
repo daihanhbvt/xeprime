@@ -434,6 +434,99 @@ describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapsho
   });
 });
 
+describe('policy mặc định theo LOẠI XE (17/08 — car/motorbike hai bộ riêng)', () => {
+  maybe('precedence: override xe → mặc định theo loại → legacy toàn gian hàng', async () => {
+    // Hai policy theo loại + một hàng legacy: cọc khác nhau để phân biệt được nguồn.
+    await pricing.saveShopPolicy(tenantId, ownerId, policyDto({ depositAmount: '1000000' }));
+    await pricing.saveShopPolicy(
+      tenantId,
+      ownerId,
+      policyDto({ depositAmount: '5000000' }),
+      VEHICLE_TYPE.CAR,
+    );
+    await pricing.saveShopPolicy(
+      tenantId,
+      ownerId,
+      policyDto({ depositAmount: '500000' }),
+      VEHICLE_TYPE.MOTORBIKE,
+    );
+
+    const car = await createVehicle(tenantId, ownerId, {
+      code: 'POL-CAR',
+      name: 'Xe hơi Policy',
+      vehicleType: VEHICLE_TYPE.CAR,
+      weekdayPrice: '800000',
+    });
+    const bike = await createVehicle(tenantId, ownerId, {
+      code: 'POL-BIKE',
+      name: 'Xe máy Policy',
+      vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      weekdayPrice: '150000',
+    });
+
+    // Ô tô và xe máy nhận HAI policy khác nhau — quote đọc đúng cọc theo loại.
+    const carPolicy = await pricing.effectivePolicy(tenantId, car.id);
+    const bikePolicy = await pricing.effectivePolicy(tenantId, bike.id);
+    expect(carPolicy?.values.depositAmount).toBe('5000000');
+    expect(bikePolicy?.values.depositAmount).toBe('500000');
+    expect(carPolicy?.source).toBe(POLICY_SOURCE.SHOP);
+
+    // Override riêng của xe vẫn thắng mặc định theo loại.
+    await vehicles.savePricing(tenantId, car.id, ownerId, {
+      source: POLICY_SOURCE.VEHICLE,
+      policy: policyDto({ depositAmount: '9000000' }),
+    });
+    const overridden = await pricing.effectivePolicy(tenantId, car.id);
+    expect(overridden?.values.depositAmount).toBe('9000000');
+    expect(overridden?.source).toBe(POLICY_SOURCE.VEHICLE);
+  });
+
+  maybe('tương thích legacy: chưa có hàng theo loại → rơi về hàng toàn gian hàng', async () => {
+    // Tenant riêng chỉ có policy legacy (mô phỏng dữ liệu trước migration).
+    const legacyTenantId = newId();
+    await prisma.tenant.create({
+      data: {
+        id: legacyTenantId,
+        code: `T-${legacyTenantId.slice(-8)}`,
+        slug: `t-${legacyTenantId.toLowerCase().slice(-10)}`,
+        name: 'Shop Legacy Policy',
+        status: TENANT_STATUS.ACTIVE,
+        ownerUserId: ownerId,
+      },
+    });
+    await prisma.rentalPolicy.create({
+      data: {
+        id: newId(),
+        tenantId: legacyTenantId,
+        vehicleId: null,
+        vehicleType: null,
+        depositAmount: '2000000',
+        deliveryTiers: [],
+        discountTiers: [],
+      },
+    });
+    const v = await createVehicle(legacyTenantId, ownerId, {
+      code: 'POL-LEG',
+      name: 'Xe legacy',
+      vehicleType: VEHICLE_TYPE.MOTORBIKE,
+      weekdayPrice: '120000',
+    });
+
+    const policy = await pricing.effectivePolicy(legacyTenantId, v.id);
+    expect(policy?.values.depositAmount).toBe('2000000');
+    // getShopPolicy theo loại cũng đọc được hàng legacy làm giá trị đang áp.
+    const shown = await pricing.getShopPolicy(legacyTenantId, VEHICLE_TYPE.MOTORBIKE);
+    expect(shown.policy?.depositAmount).toBe('2000000');
+
+    await prisma.vehicleOccupancy.deleteMany({ where: { tenantId: legacyTenantId } });
+    await prisma.rentalPolicy.deleteMany({ where: { tenantId: legacyTenantId } });
+    await prisma.auditLog.deleteMany({ where: { tenantId: legacyTenantId } });
+    await prisma.publicListing.deleteMany({ where: { tenantId: legacyTenantId } });
+    await prisma.vehicle.deleteMany({ where: { tenantId: legacyTenantId } });
+    await prisma.tenant.deleteMany({ where: { id: legacyTenantId } });
+  });
+});
+
 describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài xế giá riêng)', () => {
   // buildQuote là hàm thuần — kiểm số học trực tiếp, policy lấy từ DB thật cho đúng đường chạy.
   const PICKUP = new Date('2027-03-01T03:00:00.000Z');
