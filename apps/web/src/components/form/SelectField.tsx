@@ -30,6 +30,8 @@ interface SelectFieldProps<T extends FieldValues> {
    * người dùng nhìn một dropdown rỗng và tưởng là "không có lựa chọn nào".
    */
   loading?: boolean;
+  /** `multiple` = field giữ MẢNG giá trị (vd `serviceTypes` — một xe nhiều dịch vụ, 17/08). */
+  mode?: 'multiple';
 }
 
 /**
@@ -48,6 +50,7 @@ export function SelectField<T extends FieldValues>({
   help,
   showSearch,
   loading,
+  mode,
 }: SelectFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // AntD `Select` không tự nhận `htmlFor` của `Form.Item` — thiếu `id` tường minh thì bấm nhãn
@@ -68,8 +71,12 @@ export function SelectField<T extends FieldValues>({
       <Select
         id={selectId}
         aria-describedby={helpText ? describedById : undefined}
-        value={(field.value as string | null | undefined) ?? undefined}
-        onChange={(value: string | undefined) => field.onChange(value ?? null)}
+        mode={mode}
+        value={(field.value as string | string[] | null | undefined) ?? undefined}
+        // multiple: bỏ hết lựa chọn trả mảng RỖNG (schema .min(1) báo lỗi) chứ không phải null.
+        onChange={(value: string | string[] | undefined) =>
+          field.onChange(value ?? (mode === 'multiple' ? [] : null))
+        }
         onBlur={field.onBlur}
         options={options as { value: string; label: string }[]}
         placeholder={placeholder}

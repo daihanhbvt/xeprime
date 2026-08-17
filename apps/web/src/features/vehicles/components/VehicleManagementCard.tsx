@@ -17,7 +17,8 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
 import { formatMoneyVnd, isNegativeMoney, subtractMoney } from '@/lib/money';
 import { formatKm } from '@/lib/odometer';
-import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
+import { serviceTypesLabel } from '@xeprime/types';
+import { vehicleTypeLabel } from '../constants';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
 import { VehicleAlertChips } from './VehicleAlerts';
 import styles from './VehicleManagementCard.module.css';
@@ -66,7 +67,7 @@ export function VehicleManagementCard({
   alertsFailed = false,
   actions,
 }: VehicleManagementCardProps) {
-  const specs = `${vehicleTypeLabel(vehicle.vehicleType)} / ${serviceTypeLabel(vehicle.serviceType)}`;
+  const specs = `${vehicleTypeLabel(vehicle.vehicleType)} / ${serviceTypesLabel(vehicle.serviceTypes)}`;
   const identity = [vehicle.code, vehicle.plateNumber].filter(Boolean).join(' · ');
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
 

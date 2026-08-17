@@ -191,9 +191,9 @@ export const SHOP_NAV: readonly NavNode[] = [
         key: 'drivers',
         label: 'Tài xế',
         href: ROUTES.MANAGE.DRIVERS,
-        permission: PERMISSION.TENANT_VIEW,
+        // Trang thật từ 17/08 (nghiệp vụ xe có tài xế) — hồ sơ tài xế + gán vào đơn.
+        permission: PERMISSION.DRIVER_VIEW,
         icon: SolutionOutlined,
-        comingSoon: true,
       },
       {
         key: 'chat',

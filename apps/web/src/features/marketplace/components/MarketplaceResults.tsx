@@ -9,13 +9,16 @@ import {
   LISTING_AMENITY_VALUES,
   LISTING_SORT_LABEL,
   LISTING_SORT_VALUES,
+  ROUTE_TYPE_LABEL,
   SEAT_BUCKET_LABEL,
+  SERVICE_TYPE,
   SERVICE_TYPE_LABEL,
   VEHICLE_TYPE,
   VEHICLE_TYPE_LABEL,
   VEHICLE_TYPE_VALUES,
   vehicleFuelTypesFor,
   type ListingSort,
+  type RouteType,
   type SeatBucket,
   type ServiceType,
   type VehicleType,
@@ -170,6 +173,10 @@ export function MarketplaceResults() {
     filters.serviceType
       ? (SERVICE_TYPE_LABEL[filters.serviceType as ServiceType] ?? null)
       : null,
+    // Lộ trình (ngữ cảnh có tài xế) đi kèm ngay sau dịch vụ.
+    filters.serviceType === SERVICE_TYPE.WITH_DRIVER && filters.routeType
+      ? (ROUTE_TYPE_LABEL[filters.routeType as RouteType] ?? null)
+      : null,
     // Địa điểm hiện TÊN tra từ danh sách điểm đến; mã không phải thứ để người dùng đọc. Lựa chọn
     // cũ không còn khả dụng thì nói thẳng, KHÔNG âm thầm hiện "Toàn quốc" trong khi vẫn đang lọc.
     provinceLabelOf(destinations, filters.provinceCode) ??
@@ -248,9 +255,14 @@ export function MarketplaceResults() {
             <Chip
               key={s.key}
               active={filters.serviceType === s.key}
-              onClick={() =>
-                setFilters({ serviceType: filters.serviceType === s.key ? undefined : s.key })
-              }
+              onClick={() => {
+                const next = filters.serviceType === s.key ? undefined : s.key;
+                setFilters({
+                  serviceType: next,
+                  // Lộ trình là ngữ cảnh CÓ TÀI XẾ — rời dịch vụ đó thì xoá khỏi URL.
+                  routeType: next === SERVICE_TYPE.WITH_DRIVER ? filters.routeType : undefined,
+                });
+              }}
             >
               {s.label}
             </Chip>
@@ -405,7 +417,7 @@ export function MarketplaceResults() {
           onClose={() => setEditOpen(false)}
           onSubmit={(values) => {
             setEditOpen(false);
-            // Ghi đè NGỮ CẢNH thuê; từ khoá (ô riêng trên trang) và facet Bộ lọc giữ nguyên.
+            // Ghi đè NGỮ CẢNH thuê; facet Bộ lọc giữ nguyên.
             setFilters({
               vehicleType: values.vehicleType,
               provinceCode: values.provinceCode,
@@ -415,6 +427,7 @@ export function MarketplaceResults() {
               pickupAt: values.pickupAt,
               returnAt: values.returnAt,
               hourly: values.hourly,
+              routeType: values.routeType,
             });
           }}
         />

@@ -7,14 +7,13 @@ import { useState } from 'react';
 import {
   LISTING_STATUS_META,
   PERMISSION,
-  SERVICE_TYPE_LABEL,
   TENANT_STATUS_META,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
   VEHICLE_TYPE_LABEL,
+  serviceTypesLabel,
   type ListingStatus,
-  type ServiceType,
   type TenantStatus,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
@@ -185,9 +184,7 @@ function detailItems(v: AdminVehicleDetail, labels: CatalogLabels) {
     {
       key: 'type',
       label: 'Loại · dịch vụ',
-      children: `${VEHICLE_TYPE_LABEL[v.vehicleType as VehicleType] ?? v.vehicleType} · ${
-        SERVICE_TYPE_LABEL[v.serviceType as ServiceType] ?? v.serviceType
-      }`,
+      children: `${VEHICLE_TYPE_LABEL[v.vehicleType as VehicleType] ?? v.vehicleType} · ${serviceTypesLabel(v.serviceTypes ?? [])}`,
     },
     ...(specs ? [{ key: 'specs', label: 'Thông số', children: specs }] : []),
     {

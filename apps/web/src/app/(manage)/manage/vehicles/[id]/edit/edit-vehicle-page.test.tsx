@@ -95,7 +95,7 @@ const vehicle = {
   },
   plateNumber: '51A-123.45',
   vehicleType: 'car' as const,
-  serviceType: 'self_drive' as const,
+  serviceTypes: ['self_drive'] as const,
   sourceType: 'owned' as const,
   brand: 'toyota',
   model: 'Vios',

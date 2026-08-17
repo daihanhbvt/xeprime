@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CATALOG_TYPE, SERVICE_TYPE_LABEL, VEHICLE_TYPE, type ServiceType } from '@xeprime/types';
+import { CATALOG_TYPE, VEHICLE_TYPE, serviceTypesLabel } from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
@@ -20,20 +20,23 @@ export function ListingDetailView({
   catalog,
   pickupAt,
   returnAt,
+  serviceType,
+  routeType,
 }: {
   listing: PublicListingDetail;
   /** Danh mục lọc — trang server không gọi được `useCatalog`, page truyền xuống. */
   catalog: CatalogMap;
   pickupAt?: string;
   returnAt?: string;
+  /** Ngữ cảnh dịch vụ/lộ trình từ tab tìm kiếm — prefill luồng đặt (17/08). */
+  serviceType?: string;
+  routeType?: string;
 }) {
   const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
   const specs: Array<{ label: string; value: string }> = [
     { label: 'Loại xe', value: vehicleTypeLabel(listing.vehicleType) },
-    {
-      label: 'Dịch vụ',
-      value: SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType,
-    },
+    // Mảng dịch vụ (17/08) — "Tự lái · Có tài xế · Thuê dài hạn".
+    { label: 'Dịch vụ', value: serviceTypesLabel(listing.serviceTypes ?? []) },
     ...(listing.bodyType
       ? [
           {
@@ -94,6 +97,17 @@ export function ListingDetailView({
               Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ
             </span>
           ) : null}
+          {/* Giá theo dịch vụ (17/08) — tham chiếu; giá chốt do gian hàng xác nhận khi duyệt. */}
+          {listing.monthlyPrice ? (
+            <span className={styles.weekend}>
+              Dài hạn {formatMoneyVnd(listing.monthlyPrice)}/tháng
+            </span>
+          ) : null}
+          {listing.withDriverDailyPrice ? (
+            <span className={styles.weekend}>
+              Có tài xế {formatMoneyVnd(listing.withDriverDailyPrice)}/ngày
+            </span>
+          ) : null}
         </div>
 
         {listing.deliveryEnabled || listing.noCollateral ? (
@@ -145,6 +159,8 @@ export function ListingDetailView({
             listing={listing}
             pickupAt={pickupAt}
             returnAt={returnAt}
+            serviceType={serviceType}
+            routeType={routeType}
             size="large"
             className={styles.cta}
           />

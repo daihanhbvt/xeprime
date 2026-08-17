@@ -70,6 +70,12 @@ export const updateBookingDeliveryFee = (
   body: UpdateDeliveryFeeInput,
 ): Promise<BookingDetail> => apiPatch<BookingDetail>(`/bookings/${id}/delivery-fee`, body);
 
+/** Gán/bỏ gán tài xế cho đơn (17/08) — `driverId: null` là bỏ gán tường minh; server có audit. */
+export const assignBookingDriver = (
+  id: string,
+  driverId: string | null,
+): Promise<BookingDetail> => apiPatch<BookingDetail>(`/bookings/${id}/driver`, { driverId });
+
 /** Preview trùng lịch — chỉ để cảnh báo sớm cho UX, không phải lớp bảo vệ (ADR 0006). */
 export const checkConflict = (body: CheckConflictInput): Promise<CheckConflictResult> =>
   apiPost<CheckConflictResult>('/calendar/check-conflict', body);

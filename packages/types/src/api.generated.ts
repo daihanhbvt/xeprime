@@ -1597,6 +1597,23 @@ export interface paths {
         patch: operations["BookingsController_updateDeliveryFee"];
         trace?: never;
     };
+    "/bookings/{id}/driver": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Gán/bỏ gán tài xế cho đơn (driverId null = bỏ gán, có audit) */
+        patch: operations["BookingsController_assignDriver"];
+        trace?: never;
+    };
     "/bookings/{id}/transition": {
         parameters: {
             query?: never;
@@ -1852,6 +1869,42 @@ export interface paths {
         head?: never;
         /** Điều chỉnh bản ghi hoàn cọc (quyền cao, bắt buộc lý do) */
         patch: operations["BookingSettlementController_correctRefund"];
+        trace?: never;
+    };
+    "/drivers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách tài xế (tìm kiếm/lọc trạng thái, phân trang) */
+        get: operations["DriversController_list"];
+        put?: never;
+        /** Thêm tài xế */
+        post: operations["DriversController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/drivers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Xoá tài xế (soft-delete; chặn khi còn đơn chưa hoàn tất) */
+        delete: operations["DriversController_remove"];
+        options?: never;
+        head?: never;
+        /** Sửa hồ sơ / đổi trạng thái tài xế */
+        patch: operations["DriversController_update"];
         trace?: never;
     };
     "/booking-requests": {
@@ -2995,7 +3048,7 @@ export interface components {
             tenantRole?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer" | null;
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "branches.view" | "branches.manage" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii" | "platform.locations.view" | "platform.locations.manage")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "branches.view" | "branches.manage" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "drivers.view" | "drivers.manage" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii" | "platform.locations.view" | "platform.locations.manage")[];
         };
         NotificationDto: {
             id: string;
@@ -3275,8 +3328,7 @@ export interface components {
             name: string;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
-            /** @enum {string} */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
             brand?: string | null;
             model?: string | null;
             seatCount?: number | null;
@@ -3289,6 +3341,10 @@ export interface components {
             weekendPrice?: string | null;
             /** @description Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ. */
             hourlyPrice?: string | null;
+            /** @description Giá tháng tham chiếu thuê dài hạn (string — ADR 0007). */
+            monthlyPrice?: string | null;
+            /** @description Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt. */
+            withDriverDailyPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
@@ -3361,8 +3417,7 @@ export interface components {
             name: string;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
-            /** @enum {string} */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
             brand?: string | null;
             model?: string | null;
             seatCount?: number | null;
@@ -3375,6 +3430,10 @@ export interface components {
             weekendPrice?: string | null;
             /** @description Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ. */
             hourlyPrice?: string | null;
+            /** @description Giá tháng tham chiếu thuê dài hạn (string — ADR 0007). */
+            monthlyPrice?: string | null;
+            /** @description Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt. */
+            withDriverDailyPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
@@ -3720,8 +3779,7 @@ export interface components {
             plateNumber?: string | null;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
-            /** @enum {string} */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
             /** @enum {string} */
             sourceType?: "owned" | "financed" | "rented" | "partnership";
             brand?: string | null;
@@ -3822,8 +3880,7 @@ export interface components {
             plateNumber?: string | null;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
-            /** @enum {string} */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
             /** @enum {string} */
             sourceType?: "owned" | "financed" | "rented" | "partnership";
             brand?: string | null;
@@ -3864,6 +3921,10 @@ export interface components {
             description?: string | null;
             /** @description Giá thuê giờ — string tiền (ADR 0007) */
             hourlyPrice?: string | null;
+            /** @description Giá tháng tham chiếu thuê dài hạn — string tiền (ADR 0007) */
+            monthlyPrice?: string | null;
+            /** @description Giá/ngày đã gồm tài xế — string tiền (ADR 0007) */
+            withDriverDailyPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
@@ -3918,6 +3979,10 @@ export interface components {
             shopPolicy?: components["schemas"]["RentalPolicyValuesDto"] | null;
             weekdayPrice?: string | null;
             weekendPrice?: string | null;
+            /** @description Giá tháng tham chiếu thuê dài hạn (17/08) */
+            monthlyPrice?: string | null;
+            /** @description Giá/ngày đã gồm tài xế (17/08) */
+            withDriverDailyPrice?: string | null;
             /** @description Xe đang hiển thị công khai — lưu giá sẽ đưa xe về chờ duyệt lại (ADR 0008) */
             isPublic: boolean;
         };
@@ -3928,6 +3993,10 @@ export interface components {
             weekdayPrice?: string;
             /** @description Giá cuối tuần VND — chỉ nhận khi source=vehicle */
             weekendPrice?: string;
+            /** @description Giá tháng thuê dài hạn — chỉ nhận khi source=vehicle; null = xoá giá tháng */
+            monthlyPrice?: string | null;
+            /** @description Giá/ngày đã gồm tài xế — chỉ nhận khi source=vehicle; null = xoá giá */
+            withDriverDailyPrice?: string | null;
             policy?: components["schemas"]["SaveRentalPolicyDto"];
         };
         VehicleSourceContractFileDto: {
@@ -4053,8 +4122,7 @@ export interface components {
             branchId: string;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
-            /** @enum {string} */
-            serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceTypes?: ("self_drive" | "with_driver" | "long_term")[];
             /** @enum {string} */
             sourceType?: "owned" | "financed" | "rented" | "partnership";
             /** @example 51K-123.45 */
@@ -4109,6 +4177,16 @@ export interface components {
              * @example 120000
              */
             hourlyPrice?: string | null;
+            /**
+             * @description Giá tháng tham chiếu thuê dài hạn (÷30 ra đơn giá ngày) — chỉ có nghĩa khi serviceTypes chứa long_term. Gửi null = bỏ giá tháng.
+             * @example 8000000
+             */
+            monthlyPrice?: string | null;
+            /**
+             * @description Giá/ngày ĐÃ GỒM tài xế — chỉ có nghĩa khi serviceTypes chứa with_driver. Gửi null = shop báo giá khi duyệt.
+             * @example 1500000
+             */
+            withDriverDailyPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled?: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
@@ -4138,8 +4216,7 @@ export interface components {
             branchId?: string;
             /** @enum {string} */
             vehicleType?: "car" | "motorbike";
-            /** @enum {string} */
-            serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceTypes?: ("self_drive" | "with_driver" | "long_term")[];
             /** @enum {string} */
             sourceType?: "owned" | "financed" | "rented" | "partnership";
             /** @example 51K-123.45 */
@@ -4194,6 +4271,16 @@ export interface components {
              * @example 120000
              */
             hourlyPrice?: string | null;
+            /**
+             * @description Giá tháng tham chiếu thuê dài hạn (÷30 ra đơn giá ngày) — chỉ có nghĩa khi serviceTypes chứa long_term. Gửi null = bỏ giá tháng.
+             * @example 8000000
+             */
+            monthlyPrice?: string | null;
+            /**
+             * @description Giá/ngày ĐÃ GỒM tài xế — chỉ có nghĩa khi serviceTypes chứa with_driver. Gửi null = shop báo giá khi duyệt.
+             * @example 1500000
+             */
+            withDriverDailyPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled?: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
@@ -4684,6 +4771,11 @@ export interface components {
             /** @description Giây còn hiệu lực của uploadUrl */
             expiresIn: number;
         };
+        BookingDriverSummaryDto: {
+            id: string;
+            name: string;
+            phone: string;
+        };
         BookingListItemDto: {
             id: string;
             code: string;
@@ -4695,7 +4787,7 @@ export interface components {
             /** @enum {string} */
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @enum {string} */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceType: "self_drive" | "with_driver" | "long_term";
             /** @description ISO-8601 UTC */
             pickupAt: string;
             /** @description ISO-8601 UTC */
@@ -4706,6 +4798,7 @@ export interface components {
             /** @description Công nợ = max(0, total − paid), string — ADR 0007 */
             debtAmount: string;
             depositAmount: string;
+            driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
         };
@@ -4751,7 +4844,7 @@ export interface components {
             /** @enum {string} */
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @enum {string} */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceType: "self_drive" | "with_driver" | "long_term";
             /** @description ISO-8601 UTC */
             pickupAt: string;
             /** @description ISO-8601 UTC */
@@ -4762,6 +4855,7 @@ export interface components {
             /** @description Công nợ = max(0, total − paid), string — ADR 0007 */
             debtAmount: string;
             depositAmount: string;
+            driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
             vehicleImageUrl?: string | null;
@@ -4786,7 +4880,7 @@ export interface components {
              * @default self_drive
              * @enum {string}
              */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceType: "self_drive" | "with_driver" | "long_term";
             /** @description Nhận xe (ISO-8601) */
             pickupAt: string;
             /** @description Trả xe (ISO-8601), phải sau nhận xe */
@@ -4810,7 +4904,7 @@ export interface components {
             /** @example 0901234567 */
             customerPhone?: string;
             /** @enum {string} */
-            serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceType?: "self_drive" | "with_driver" | "long_term";
             /** @description Nhận xe (ISO-8601) */
             pickupAt?: string;
             /** @description Trả xe (ISO-8601) */
@@ -4833,6 +4927,10 @@ export interface components {
             deliveryFee: string;
             /** @description Ghi chú NỘI BỘ (lý do, mã tham chiếu) — chỉ vào audit, KHÔNG hiển thị cho khách */
             note?: string;
+        };
+        AssignBookingDriverDto: {
+            /** @description ID tài xế (ULID) — null để bỏ gán */
+            driverId: string | null;
         };
         TransitionBookingDto: {
             /**
@@ -5101,6 +5199,53 @@ export interface components {
             /** @description Bắt buộc — chống sửa đè */
             expectedRowVersion: number;
         };
+        DriverDto: {
+            id: string;
+            name: string;
+            phone: string;
+            /** @enum {string} */
+            driverType: "staff" | "collaborator" | "temporary";
+            /** @enum {string} */
+            status: "active" | "inactive";
+            licenseNo?: string | null;
+            idNo?: string | null;
+            note?: string | null;
+            /** @description Số đơn đang gán (chưa xong) — chặn hiểu nhầm khi ngừng tài xế */
+            activeBookingCount: number;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        DriverPageDto: {
+            data: components["schemas"]["DriverDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        CreateDriverDto: {
+            /** @example Trần Văn B */
+            name: string;
+            /** @example 0901234567 */
+            phone: string;
+            /**
+             * @default staff
+             * @enum {string}
+             */
+            driverType: "staff" | "collaborator" | "temporary";
+            /** @description Số GPLX */
+            licenseNo?: string | null;
+            /** @description Số CCCD */
+            idNo?: string | null;
+            note?: string | null;
+        };
+        UpdateDriverDto: {
+            name?: string;
+            phone?: string;
+            /** @enum {string} */
+            driverType?: "staff" | "collaborator" | "temporary";
+            /** @enum {string} */
+            status?: "active" | "inactive";
+            licenseNo?: string | null;
+            idNo?: string | null;
+            note?: string | null;
+        };
         BookingRequestDeliveryQuoteDto: {
             distanceKm: number;
             fee: string;
@@ -5123,6 +5268,12 @@ export interface components {
             pickupAt: string;
             /** @description ISO-8601 UTC */
             returnAt: string;
+            /** @enum {string} */
+            serviceType: "self_drive" | "with_driver" | "long_term";
+            /** @enum {string|null} */
+            routeType?: "in_city" | "inter_city" | "inter_city_one_way" | null;
+            pickupAddress?: string | null;
+            destination?: string | null;
             note?: string | null;
             /** @description Khách yêu cầu giao xe tận nơi */
             deliveryRequested: boolean;
@@ -5155,6 +5306,14 @@ export interface components {
             pickupAt: string;
             /** @description Trả xe (ISO-8601), phải sau nhận xe */
             returnAt: string;
+            /** @enum {string} */
+            serviceType?: "self_drive" | "with_driver" | "long_term";
+            /** @enum {string} */
+            routeType?: "in_city" | "inter_city" | "inter_city_one_way";
+            /** @description Địa chỉ đón khách (with_driver) */
+            pickupAddress?: string;
+            /** @description Điểm đến (with_driver liên tỉnh) */
+            destination?: string;
             note?: string;
             /** @description Yêu cầu giao xe tận nơi — chỉ nhận khi chính sách giao nhận của xe đang bật */
             deliveryRequested?: boolean;
@@ -5975,8 +6134,7 @@ export interface components {
             plateNumber?: string | null;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
-            /** @enum {string} */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
             /** @enum {string} */
             publicStatus: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
             /** @enum {string} */
@@ -6008,8 +6166,7 @@ export interface components {
             plateNumber?: string | null;
             /** @enum {string} */
             vehicleType: "car" | "motorbike";
-            /** @enum {string} */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
             /** @enum {string} */
             publicStatus: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
             /** @enum {string} */
@@ -6056,7 +6213,7 @@ export interface components {
             /** @enum {string} */
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @enum {string} */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceType: "self_drive" | "with_driver" | "long_term";
             customerName: string;
             /** @description ĐÃ che, vd 091****678 */
             customerPhoneMasked?: string | null;
@@ -6090,7 +6247,7 @@ export interface components {
             /** @enum {string} */
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @enum {string} */
-            serviceType: "self_drive" | "with_driver" | "both" | "long_term";
+            serviceType: "self_drive" | "with_driver" | "long_term";
             customerName: string;
             /** @description ĐÃ che, vd 091****678 */
             customerPhoneMasked?: string | null;
@@ -7097,7 +7254,7 @@ export interface operations {
             query?: {
                 /** @description car | motorbike */
                 vehicleType?: "car" | "motorbike";
-                serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+                serviceType?: "self_drive" | "with_driver" | "long_term";
                 /** @description Hãng xe — CSV, multi-select (vd: Toyota,Kia) */
                 brand?: string;
                 /** @description Kiểu dáng thân xe — CSV (BODY_TYPE) */
@@ -7160,7 +7317,7 @@ export interface operations {
             query?: {
                 /** @description car | motorbike */
                 vehicleType?: "car" | "motorbike";
-                serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+                serviceType?: "self_drive" | "with_driver" | "long_term";
                 /** @description Hãng xe — CSV, multi-select (vd: Toyota,Kia) */
                 brand?: string;
                 /** @description Kiểu dáng thân xe — CSV (BODY_TYPE) */
@@ -7631,6 +7788,7 @@ export interface operations {
                 pickupAt: string;
                 /** @description ISO datetime trả xe */
                 returnAt: string;
+                serviceType?: "self_drive" | "with_driver" | "long_term";
             };
             header?: never;
             path: {
@@ -7732,7 +7890,7 @@ export interface operations {
                 /** @description Tìm theo tên/mã/biển số/hãng/model */
                 q?: string;
                 vehicleType?: "car" | "motorbike";
-                serviceType?: "self_drive" | "with_driver" | "both" | "long_term";
+                serviceType?: "self_drive" | "with_driver" | "long_term";
                 operationStatus?: "available" | "renting" | "maintenance" | "inactive";
                 publicStatus?: "draft" | "pending_public_review" | "approved_public" | "needs_revision" | "rejected" | "hidden" | "archived";
                 /** @description Id chi nhánh — chỉ thu hẹp trong gian hàng hiện tại */
@@ -9207,6 +9365,31 @@ export interface operations {
             };
         };
     };
+    BookingsController_assignDriver: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignBookingDriverDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetailDto"];
+                };
+            };
+        };
+    };
     BookingsController_transition: {
         parameters: {
             query?: never;
@@ -9623,6 +9806,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookingSettlementDto"];
+                };
+            };
+        };
+    };
+    DriversController_list: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo tên/SĐT/số GPLX */
+                q?: string;
+                status?: "active" | "inactive";
+                driverType?: "staff" | "collaborator" | "temporary";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriverPageDto"];
+                };
+            };
+        };
+    };
+    DriversController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDriverDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriverDto"];
+                };
+            };
+        };
+    };
+    DriversController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DriversController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDriverDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriverDto"];
                 };
             };
         };

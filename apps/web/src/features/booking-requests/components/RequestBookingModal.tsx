@@ -13,6 +13,9 @@ interface RequestBookingModalProps {
   listing?: PublicListingDetail | null;
   pickupAt?: string | null;
   returnAt?: string | null;
+  /** Ngữ cảnh dịch vụ/lộ trình từ tab tìm kiếm — prefill luồng đặt (17/08). */
+  serviceType?: string | null;
+  routeType?: string | null;
   open: boolean;
   onClose: () => void;
 }
@@ -39,6 +42,8 @@ export function RequestBookingModal({
   listing,
   pickupAt,
   returnAt,
+  serviceType,
+  routeType,
   open,
   onClose,
 }: RequestBookingModalProps) {
@@ -74,6 +79,8 @@ export function RequestBookingModal({
           listing={listing}
           pickupAt={pickupAt}
           returnAt={returnAt}
+          serviceType={serviceType}
+          routeType={routeType}
           onClose={onClose}
           onBusyChange={setBusy}
           onResultChange={setIsResult}

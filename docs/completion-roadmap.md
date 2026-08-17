@@ -4,7 +4,11 @@
 > `docs/decisions/`, `docs/CODEMAP.md`). Khi **đóng xong một phase**, cập nhật bảng §2 + mục phase
 > tương ứng ở đây — đừng để tiến độ chỉ nằm trong trí nhớ hay plan file global `~/.claude/plans/`.
 >
-> Cập nhật gần nhất: **13/08/2026** — đóng epic **Vehicle 360** (§2.1).
+> Cập nhật gần nhất: **17/08/2026** — đóng epic **Đa dịch vụ** (tự lái / có tài xế / thuê dài
+> hạn): `vehicles.service_types` thành MẢNG (khai tử `both`), giá tháng + giá/ngày có tài xế,
+> quote theo dịch vụ (sàn dài hạn 7 ngày), yêu cầu thuê mang dịch vụ + lộ trình/địa chỉ đón
+> (fix bug approve rơi về self_drive), module tài xế tối thiểu (`/manage/drivers` + gán vào
+> đơn, composite FK chặn chéo tenant). Plan: `docs/plans/kind-noodling-marble.md`.
 
 ---
 

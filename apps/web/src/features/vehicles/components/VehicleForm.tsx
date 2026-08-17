@@ -37,7 +37,9 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   // này không thể biết id chi nhánh của một gian hàng cụ thể.
   branchId: '',
   vehicleType: VEHICLE_TYPE.CAR,
-  serviceType: SERVICE_TYPE.SELF_DRIVE,
+  serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
+  monthlyPrice: null,
+  withDriverDailyPrice: null,
   sourceType: VEHICLE_SOURCE_TYPE.OWNED,
   operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE,
   plateNumber: '',

@@ -30,6 +30,8 @@ export function RequestBookingButton({
   listing,
   pickupAt,
   returnAt,
+  serviceType,
+  routeType,
   block,
   size,
   className,
@@ -40,6 +42,9 @@ export function RequestBookingButton({
   listing?: PublicListingDetail | null;
   pickupAt?: string | null;
   returnAt?: string | null;
+  /** Ngữ cảnh dịch vụ/lộ trình từ tab tìm kiếm — prefill luồng đặt (17/08). */
+  serviceType?: string | null;
+  routeType?: string | null;
   block?: boolean;
   size?: 'small' | 'middle' | 'large';
   className?: string;
@@ -63,6 +68,8 @@ export function RequestBookingButton({
         listing={listing}
         pickupAt={pickupAt}
         returnAt={returnAt}
+        serviceType={serviceType}
+        routeType={routeType}
         open={open}
         onClose={() => setOpen(false)}
       />

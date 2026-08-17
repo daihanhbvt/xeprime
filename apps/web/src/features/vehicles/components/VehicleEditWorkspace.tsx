@@ -62,7 +62,7 @@ const INFORMATION_FIELDS: ReadonlyArray<keyof VehicleFormValues> = [
   // đếm lỗi cùng các trường khác — không thì lưu với chi nhánh rỗng mà không có báo lỗi nào.
   'branchId',
   'vehicleType',
-  'serviceType',
+  'serviceTypes',
   'operationStatus',
   'plateNumber',
   'brand',

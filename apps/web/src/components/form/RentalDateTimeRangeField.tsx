@@ -30,6 +30,8 @@ interface RentalDateTimeRangeFieldProps {
   ariaLabel?: string;
   /** Icon nằm trong cùng vùng bấm; dùng để toàn bộ viền control đều mở lịch. */
   prefix?: ReactNode;
+  /** Sàn số ngày thuê (17/08 — dài hạn truyền LONG_TERM_MIN_DAYS); xuyên xuống RentalRangePanel. */
+  minDays?: number;
   /**
    * `compact` (mặc định): hai giá trị nối bằng mũi tên — cho ô hẹp trong thanh tìm kiếm, nơi đã
    * có nhãn "Thời gian thuê" ở ngoài.
@@ -62,6 +64,7 @@ export function RentalDateTimeRangeField({
   className,
   ariaLabel = 'Thời gian thuê',
   prefix,
+  minDays,
   variant = 'compact',
 }: RentalDateTimeRangeFieldProps) {
   const isMobile = useIsMobile();
@@ -140,6 +143,7 @@ export function RentalDateTimeRangeField({
       mode={mode}
       onModeChange={onModeChange}
       months={isMobile ? 1 : 2}
+      minDays={minDays}
       onApply={apply}
       onCancel={() => setOpen(false)}
     />

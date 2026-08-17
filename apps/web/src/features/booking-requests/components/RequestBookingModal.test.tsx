@@ -390,6 +390,8 @@ describe('RequestBookingModal — luồng đặt xe', () => {
         customerPhone: '0901234567',
         pickupAt: '2026-09-01T02:00:00.000Z',
         returnAt: '2026-09-03T02:00:00.000Z',
+        // Dịch vụ của chuyến luôn đi kèm (17/08) — mặc định tự lái.
+        serviceType: 'self_drive',
       });
     });
 
@@ -696,7 +698,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       id: 'V1',
       name: 'Toyota Vios 2022',
       vehicleType: 'car',
-      serviceType: 'self_drive',
+      serviceTypes: ['self_drive'],
       seatCount: 5,
       manufactureYear: 2022,
       bodyType: 'sedan',

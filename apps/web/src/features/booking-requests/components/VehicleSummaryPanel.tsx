@@ -4,7 +4,7 @@ import { CheckCircleFilled, DownOutlined, StarFilled, UpOutlined } from '@ant-de
 import { Skeleton } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
-import { CATALOG_TYPE, SERVICE_TYPE_LABEL, VEHICLE_TYPE, type ServiceType } from '@xeprime/types';
+import { CATALOG_TYPE, VEHICLE_TYPE, serviceTypesLabel } from '@xeprime/types';
 import { shopPath } from '@/constants/routes';
 import { catalogLabel } from '@/features/catalog/types';
 import { useCatalog } from '@/features/catalog/use-catalog';
@@ -119,9 +119,7 @@ export function VehicleSummaryPanel({
         <div className={styles.head}>
           <div className={styles.badges}>
             {listing ? (
-              <span className={styles.badge}>
-                {SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType}
-              </span>
+              <span className={styles.badge}>{serviceTypesLabel(listing.serviceTypes ?? [])}</span>
             ) : null}
             {discount > 0 ? <span className={styles.badgePromo}>Khuyến mãi</span> : null}
           </div>

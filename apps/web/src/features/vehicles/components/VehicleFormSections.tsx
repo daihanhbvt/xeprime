@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { Controller, useWatch, type Control } from 'react-hook-form';
 import {
   CATALOG_TYPE,
+  SERVICE_TYPE,
   TRANSMISSION_TYPE_LABEL,
   TRANSMISSION_TYPE_VALUES,
   VEHICLE_TYPE,
@@ -56,7 +57,7 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
       // không để lọt tới bước xác nhận rồi mới báo thiếu.
       'branchId',
       'vehicleType',
-      'serviceType',
+      'serviceTypes',
       'operationStatus',
       'plateNumber',
       'brand',
@@ -92,6 +93,8 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
       'weekdayPrice',
       'weekendPrice',
       'hourlyPrice',
+      'monthlyPrice',
+      'withDriverDailyPrice',
       'discountPercent',
       'deliveryEnabled',
       'noCollateral',
@@ -234,12 +237,15 @@ export function BasicSection({
         />
       </Col>
       <Col xs={24} sm={12}>
+        {/* MẢNG dịch vụ (17/08) — một xe đăng đồng thời tự lái / có tài xế / dài hạn. */}
         <SelectField
           control={control}
-          name="serviceType"
+          name="serviceTypes"
           label="Loại dịch vụ"
           options={SERVICE_TYPE_OPTIONS}
+          mode="multiple"
           required
+          help="Chọn được nhiều loại — khai giá riêng cho dài hạn/có tài xế ở bước giá thuê"
         />
       </Col>
     </Row>
@@ -648,6 +654,12 @@ export function PricesSection({
   control,
   pricePreview,
 }: SectionProps & { pricePreview: React.ReactNode }) {
+  // Ô giá dài hạn/có tài xế chỉ hiện khi xe ĐĂNG dịch vụ đó (bước Cơ bản) — không bắt shop
+  // nhìn hai ô giá vô nghĩa với xe chỉ tự lái.
+  const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
+  const offersLongTerm = serviceTypes.includes(SERVICE_TYPE.LONG_TERM);
+  const offersWithDriver = serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER);
+
   return (
     <>
       <Row gutter={16}>
@@ -693,6 +705,32 @@ export function PricesSection({
             help="Giá sau giảm sẽ hiển thị trên marketplace"
           />
         </Col>
+        {offersLongTerm ? (
+          <Col xs={24} sm={12}>
+            <NumberField
+              control={control}
+              name="monthlyPrice"
+              label="Giá tháng (thuê dài hạn)"
+              placeholder="VD: 9.000.000"
+              min={0}
+              money
+              help="Ước tính cho khách = số ngày × giá tháng ÷ 30; bỏ trống thì dùng giá ngày"
+            />
+          </Col>
+        ) : null}
+        {offersWithDriver ? (
+          <Col xs={24} sm={12}>
+            <NumberField
+              control={control}
+              name="withDriverDailyPrice"
+              label="Giá/ngày có tài xế"
+              placeholder="VD: 1.500.000"
+              min={0}
+              money
+              help="Đã gồm tài xế; bỏ trống thì khách thấy giá tự lái kèm nhãn chưa gồm tài xế"
+            />
+          </Col>
+        ) : null}
       </Row>
 
       {pricePreview}

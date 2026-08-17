@@ -35,7 +35,7 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     // thêm, nhưng giá trị vẫn đi qua request thay vì để backend đoán.
     branchId: values.branchId,
     vehicleType: values.vehicleType,
-    serviceType: values.serviceType,
+    serviceTypes: values.serviceTypes,
     sourceType: values.sourceType,
     operationStatus: values.operationStatus,
     plateNumber: textOrUndefined(values.plateNumber),
@@ -60,6 +60,9 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     weekdayPrice: values.weekdayPrice == null ? undefined : String(values.weekdayPrice),
     weekendPrice: values.weekendPrice == null ? undefined : String(values.weekendPrice),
     hourlyPrice: values.hourlyPrice == null ? null : String(values.hourlyPrice),
+    monthlyPrice: values.monthlyPrice == null ? null : String(values.monthlyPrice),
+    withDriverDailyPrice:
+      values.withDriverDailyPrice == null ? null : String(values.withDriverDailyPrice),
     deliveryEnabled: values.deliveryEnabled,
     noCollateral: values.noCollateral,
     discountPercent: values.discountPercent ?? null,
@@ -83,7 +86,7 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     // bắt chọn khi lưu, thay vì gửi một id không tồn tại.
     branchId: v.branch?.id ?? '',
     vehicleType: v.vehicleType as VehicleType,
-    serviceType: v.serviceType as ServiceType,
+    serviceTypes: (v.serviceTypes ?? []) as ServiceType[],
     sourceType: (v.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType,
     operationStatus: v.operationStatus as VehicleOperationStatus,
     plateNumber: v.plateNumber ?? '',
@@ -109,6 +112,8 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     weekdayPrice: v.weekdayPrice == null ? null : Number(v.weekdayPrice),
     weekendPrice: v.weekendPrice == null ? null : Number(v.weekendPrice),
     hourlyPrice: v.hourlyPrice == null ? null : Number(v.hourlyPrice),
+    monthlyPrice: v.monthlyPrice == null ? null : Number(v.monthlyPrice),
+    withDriverDailyPrice: v.withDriverDailyPrice == null ? null : Number(v.withDriverDailyPrice),
     deliveryEnabled: v.deliveryEnabled,
     noCollateral: v.noCollateral,
     discountPercent: v.discountPercent ?? null,
@@ -130,7 +135,7 @@ export function informationValuesToInput(values: VehicleFormValues): UpdateVehic
     // (backend bắt đúng 26 ký tự), để lần sửa không liên quan không bị chặn.
     branchId: textOrUndefined(values.branchId),
     vehicleType: values.vehicleType,
-    serviceType: values.serviceType,
+    serviceTypes: values.serviceTypes,
     operationStatus: values.operationStatus,
     plateNumber: textOrNull(values.plateNumber),
     brand: textOrNull(values.brand),

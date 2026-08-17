@@ -49,7 +49,8 @@ import { formatMoneyVnd } from '@/lib/money';
 import { formatKm } from '@/lib/odometer';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { usePermissions } from '@/hooks/use-permissions';
-import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
+import { serviceTypesLabel } from '@xeprime/types';
+import { vehicleTypeLabel } from '../constants';
 import { vehicleSchedulePath } from '../calendar-link';
 import { useVehicleSource } from '../hooks/use-vehicle-source';
 import { discountedPriceVnd } from '../pricing';
@@ -236,7 +237,7 @@ function ProfileHeader({
             <span className={styles.dot} aria-hidden="true">
               •
             </span>
-            {vehicleTypeLabel(vehicle.vehicleType)} / {serviceTypeLabel(vehicle.serviceType)}
+            {vehicleTypeLabel(vehicle.vehicleType)} / {serviceTypesLabel(vehicle.serviceTypes)}
           </p>
           {/*
            * KM có thẩm quyền + NGUỒN của nó (Wave 8). Chưa có số thì nói "Chưa có" —

@@ -620,3 +620,10 @@
     min-height: var(--xp-touch-target-min);
   }
 }
+
+/* Khối chọn Dịch vụ / Lộ trình ở bước Thời gian (17/08) — cùng nhịp nhãn với ô thời gian. */
+.serviceField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

@@ -14,7 +14,8 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
 import { absoluteMoney, formatMoneyCompactVnd, isNegativeMoney, subtractMoney } from '@/lib/money';
 import { formatKm } from '@/lib/odometer';
-import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
+import { serviceTypesLabel } from '@xeprime/types';
+import { vehicleTypeLabel } from '../constants';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
 import { VehicleAlertChips } from './VehicleAlerts';
 import styles from './VehicleListRow.module.css';
@@ -51,7 +52,7 @@ export function VehicleListRow({
   const meta = [
     vehicle.code,
     vehicle.plateNumber,
-    `${vehicleTypeLabel(vehicle.vehicleType)} / ${serviceTypeLabel(vehicle.serviceType)}`,
+    `${vehicleTypeLabel(vehicle.vehicleType)} / ${serviceTypesLabel(vehicle.serviceTypes)}`,
   ]
     .filter(Boolean)
     .join(' · ');

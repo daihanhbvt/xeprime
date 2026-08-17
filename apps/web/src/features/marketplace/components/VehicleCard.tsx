@@ -9,10 +9,10 @@ import {
 } from '@ant-design/icons';
 import Link from 'next/link';
 import {
-  SERVICE_TYPE_LABEL,
+  SERVICE_TYPE,
   VEHICLE_TYPE,
   VEHICLE_TYPE_LABEL,
-  type ServiceType,
+  serviceTypeLabel,
   type VehicleType,
 } from '@xeprime/types';
 import { listingPath, shopPath } from '@/constants/routes';
@@ -42,21 +42,53 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
     .filter(Boolean)
     .join(' · ');
 
-  const serviceLabel =
-    SERVICE_TYPE_LABEL[listing.serviceType as ServiceType] ?? listing.serviceType;
+  // Xe mang MẢNG dịch vụ (17/08): badge đầu là dịch vụ ĐANG TÌM (khớp ngữ cảnh filter) hoặc
+  // dịch vụ đầu tiên; còn lại gộp thành "+n" cho thẻ không vỡ.
+  const serviceTypes: string[] = listing.serviceTypes ?? [];
+  const serviceContext =
+    filters.serviceType && serviceTypes.includes(filters.serviceType)
+      ? filters.serviceType
+      : null;
+  const primaryService = serviceContext ?? serviceTypes[0];
+  const extraServiceCount = Math.max(0, serviceTypes.length - 1);
+
   const fuel = fuelTypeLabel(listing.fuelType);
   const rating = Number(listing.ratingAvg);
   const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
 
   // Giá sau giảm chỉ để HIỂN THỊ (marketing) — giá chốt thật do shop quyết khi duyệt yêu cầu.
   const discount = listing.discountPercent ?? 0;
-  const displayPrice =
-    discount > 0 ? applyDiscountPercent(listing.weekdayPrice, discount) : listing.weekdayPrice;
 
-  // Mang ngày giờ đã lọc sang trang chi tiết để prefill luồng đặt xe.
+  /*
+   * Giá theo NGỮ CẢNH dịch vụ đang tìm (17/08):
+   *   - dài hạn + có giá tháng → "X ₫/tháng" (không áp % giảm marketing — giá tháng là giá riêng);
+   *   - có tài xế + có giá tài xế → giá đó /ngày, đã gồm tài xế;
+   *   - còn lại → giá ngày như cũ (kèm gạch giá khi giảm).
+   */
+  const monthlyContext =
+    serviceContext === SERVICE_TYPE.LONG_TERM && listing.monthlyPrice ? listing.monthlyPrice : null;
+  const driverContext =
+    serviceContext === SERVICE_TYPE.WITH_DRIVER && listing.withDriverDailyPrice
+      ? listing.withDriverDailyPrice
+      : null;
+  const displayPrice =
+    monthlyContext ??
+    driverContext ??
+    (discount > 0 ? applyDiscountPercent(listing.weekdayPrice, discount) : listing.weekdayPrice);
+  const priceUnit = monthlyContext ? '/tháng' : '/ngày';
+  const showStrikethrough = !monthlyContext && !driverContext && discount > 0;
+
+  // Mang ngữ cảnh đã lọc sang trang chi tiết để prefill luồng đặt xe: ngày giờ + dịch vụ
+  // (nếu xe phục vụ được) + lộ trình có tài xế.
   const dateQs = new URLSearchParams();
   if (filters.pickupAt) dateQs.set('pickupAt', filters.pickupAt);
   if (filters.returnAt) dateQs.set('returnAt', filters.returnAt);
+  if (serviceContext) {
+    dateQs.set('serviceType', serviceContext);
+    if (serviceContext === SERVICE_TYPE.WITH_DRIVER && filters.routeType) {
+      dateQs.set('routeType', filters.routeType);
+    }
+  }
   const detailHref = dateQs.toString()
     ? `${listingPath.detail(listing.id)}?${dateQs.toString()}`
     : listingPath.detail(listing.id);
@@ -82,7 +114,12 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
         ) : (
           <CarGlyph type={listing.vehicleType as VehicleType} />
         )}
-        <span className={styles.serviceBadge}>{serviceLabel}</span>
+        {primaryService ? (
+          <span className={styles.serviceBadge}>
+            {serviceTypeLabel(primaryService)}
+            {extraServiceCount > 0 ? ` +${extraServiceCount}` : ''}
+          </span>
+        ) : null}
         {discount > 0 ? <span className={styles.discountBadge}>-{discount}%</span> : null}
         <button className={styles.fav} type="button" aria-label="Lưu xe">
           <HeartOutlined />
@@ -126,11 +163,15 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
 
         <div className={styles.footer}>
           <div className={styles.price}>
-            {discount > 0 && listing.weekdayPrice ? (
+            {showStrikethrough && listing.weekdayPrice ? (
               <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
             ) : null}
             <b>{formatMoneyVnd(displayPrice)}</b>
-            <span>/ngày</span>
+            <span>{priceUnit}</span>
+            {serviceContext === SERVICE_TYPE.WITH_DRIVER && !driverContext ? (
+              // Xe chưa khai giá tài xế — nói thẳng giá đang xem là giá tự lái.
+              <span className={styles.priceNote}>chưa gồm tài xế</span>
+            ) : null}
           </div>
           <Link
             href={shopPath.detail(listing.shopSlug)}

@@ -524,7 +524,14 @@ export class VehiclesService {
   async getPricing(tenantId: string, id: string): Promise<VehiclePricingDto> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: { id, tenantId, deletedAt: null },
-      select: { id: true, weekdayPrice: true, weekendPrice: true, publicStatus: true },
+      select: {
+        id: true,
+        weekdayPrice: true,
+        weekendPrice: true,
+        monthlyPrice: true,
+        withDriverDailyPrice: true,
+        publicStatus: true,
+      },
     });
     if (!vehicle) throw notFound();
 
@@ -539,6 +546,10 @@ export class VehiclesService {
       shopPolicy,
       weekdayPrice: vehicle.weekdayPrice ? vehicle.weekdayPrice.toFixed(0) : null,
       weekendPrice: vehicle.weekendPrice ? vehicle.weekendPrice.toFixed(0) : null,
+      monthlyPrice: vehicle.monthlyPrice ? vehicle.monthlyPrice.toFixed(0) : null,
+      withDriverDailyPrice: vehicle.withDriverDailyPrice
+        ? vehicle.withDriverDailyPrice.toFixed(0)
+        : null,
       isPublic: vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
     };
   }
@@ -579,6 +590,10 @@ export class VehiclesService {
       ? {
           ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
           ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
+          ...(dto.monthlyPrice !== undefined ? { monthlyPrice: dto.monthlyPrice } : {}),
+          ...(dto.withDriverDailyPrice !== undefined
+            ? { withDriverDailyPrice: dto.withDriverDailyPrice }
+            : {}),
         }
       : {};
     const priceChanged = hasSensitiveChange(current, priceDto);

@@ -77,3 +77,9 @@
   box-shadow: none !important;
   outline: none !important;
 }
+
+/* Mô tả ngắn của lộ trình đang chọn (tab Có tài xế). */
+.routeHint {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm, 13px);
+}

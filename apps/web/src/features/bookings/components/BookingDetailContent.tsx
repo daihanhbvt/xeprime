@@ -15,6 +15,7 @@ import { SettlementCard } from '@/features/settlement/components/SettlementCard'
 import { useBooking } from '../hooks/use-booking';
 import { serviceTypeLabel } from '../constants';
 import { BookingActionBar } from './BookingActionBar';
+import { BookingDriverSection } from './BookingDriverSection';
 import { BookingOperationPanel } from './BookingOperationPanel';
 import styles from './BookingDetailContent.module.css';
 
@@ -139,6 +140,9 @@ export function BookingDetailContent({
               )}
             </div>
           </section>
+
+          {/* Tài xế (17/08) — gán/bỏ gán; đơn with_driver chưa phân công được nhắc rõ. */}
+          <BookingDriverSection booking={data} canUpdate={has(PERMISSION.BOOKING_UPDATE)} />
 
           <section className={styles.panel}>
             <h3 className={styles.blockTitle}>Thời gian thuê</h3>

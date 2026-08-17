@@ -67,11 +67,21 @@
     /* Loại xe | Địa điểm | Thời gian thuê | nút — cột co được nhờ min-width:0 ở .cell. */
     grid-template-columns: 0.9fr 1.1fr 1.5fr auto;
   }
+}
 
-  /* Dài hạn không có ô Thời gian thuê — Địa điểm giãn ra thay chỗ. */
-  .cardLongTerm {
-    grid-template-columns: 0.9fr 1.7fr auto;
-  }
+/* Hàng Lộ trình (tab Có tài xế) — chiếm trọn bề ngang, đứng trên các ô nhập. */
+.routeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  grid-column: 1 / -1;
+  gap: 6px 14px;
+}
+
+.routeHint {
+  flex-basis: 100%;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm, 13px);
 }
 
 .cell {

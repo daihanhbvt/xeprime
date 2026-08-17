@@ -98,7 +98,7 @@ function vehicle(over: Partial<VehicleListItem> = {}): VehicleListItem {
     name: 'Honda SH 150i 2023',
     plateNumber: '59X1-333.44',
     vehicleType: 'motorbike',
-    serviceType: 'self_drive',
+    serviceTypes: ['self_drive'],
     operationStatus: 'available',
     publicStatus: 'approved_public',
     weekdayPrice: '350000',

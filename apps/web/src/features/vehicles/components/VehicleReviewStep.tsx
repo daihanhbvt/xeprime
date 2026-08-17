@@ -10,7 +10,8 @@ import {
 import type { VehicleFormValues } from '@xeprime/validators';
 import { formatMoneyVnd } from '@/lib/money';
 import { useCatalogLabels, type CatalogLabels } from '@/features/catalog/use-catalog';
-import { serviceTypeLabel, vehicleTypeLabel } from '../constants';
+import { serviceTypesLabel } from '@xeprime/types';
+import { vehicleTypeLabel } from '../constants';
 import styles from './VehicleReviewStep.module.css';
 
 /** Nhãn trạng thái vận hành lấy từ META dùng chung — không khai lại bảng ánh xạ thứ hai. */
@@ -49,7 +50,7 @@ function groupsOf(values: VehicleFormValues, labels: CatalogLabels): ReviewGroup
         { label: 'Mã xe', value: text(values.code) },
         {
           label: 'Phân loại / Dịch vụ',
-          value: `${vehicleTypeLabel(values.vehicleType)} / ${serviceTypeLabel(values.serviceType)}`,
+          value: `${vehicleTypeLabel(values.vehicleType)} / ${serviceTypesLabel(values.serviceTypes)}`,
         },
         { label: 'Vận hành', value: operationStatusLabel(values.operationStatus) },
         {

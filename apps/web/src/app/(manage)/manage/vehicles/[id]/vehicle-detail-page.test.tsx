@@ -140,7 +140,7 @@ function vehicle(over: Partial<VehicleDetail> = {}): VehicleDetail {
     name: 'Ford Transit 2021',
     plateNumber: '51B-802.46',
     vehicleType: 'car',
-    serviceType: 'self_drive',
+    serviceTypes: ['self_drive'],
     operationStatus: 'available',
     publicStatus: 'draft',
     brand: 'Ford',

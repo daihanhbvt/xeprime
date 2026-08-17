@@ -2,7 +2,13 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
-import { createBooking, transitionBooking, updateBooking, updateBookingDeliveryFee } from '../api';
+import {
+  assignBookingDriver,
+  createBooking,
+  transitionBooking,
+  updateBooking,
+  updateBookingDeliveryFee,
+} from '../api';
 import type {
   CreateBookingInput,
   TransitionInput,
@@ -50,6 +56,20 @@ export function useUpdateBookingDeliveryFee(id: string) {
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
       invalidateAfterBookingChange(queryClient);
+    },
+  });
+}
+
+/** Gán/bỏ gán tài xế (17/08) — response là đơn đã cập nhật, ghi thẳng vào cache detail. */
+export function useAssignBookingDriver(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (driverId: string | null) => assignBookingDriver(id, driverId),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.bookings.detail(id), updated);
+      invalidateAfterBookingChange(queryClient);
+      // Số "đơn đang gán" trên trang Tài xế đổi theo.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.drivers.all });
     },
   });
 }

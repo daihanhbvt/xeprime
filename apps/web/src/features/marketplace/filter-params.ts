@@ -16,6 +16,9 @@ const NUMBER_KEYS = ['minSeats', 'priceMin', 'priceMax', 'page', 'limit'] as con
 const STRING_KEYS = [
   'vehicleType',
   'serviceType',
+  // Lộ trình có tài xế (17/08) — NGỮ CẢNH mang sang yêu cầu thuê, KHÔNG gửi API listings
+  // (xe không khai lộ trình phục vụ; lọc theo nó chỉ tạo kết quả rỗng giả).
+  'routeType',
   'provinceCode',
   // `province` (tên) chỉ còn để ĐỌC link cũ; xem `parseFilters`.
   'province',

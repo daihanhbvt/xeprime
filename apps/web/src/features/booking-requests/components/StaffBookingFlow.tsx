@@ -15,7 +15,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
-import { API_ERROR_CODE, PRICE_ROW, SERVICE_TYPE } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  PRICE_ROW,
+  SERVICE_TYPE,
+  serviceTypeLabel,
+  type ServiceType,
+} from '@xeprime/types';
+import { Segmented } from 'antd';
 import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
 import {
   RentalDateTimeRangeField,
@@ -130,6 +137,8 @@ export function StaffBookingFlow({
   const router = useRouter();
   const [step, setStep] = useState<BookingStepKey>('time');
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
+  // Dịch vụ của ĐƠN (17/08) — mặc định tự lái; đối chiếu với năng lực xe khi hồ sơ về.
+  const [serviceType, setServiceType] = useState<ServiceType>(SERVICE_TYPE.SELF_DRIVE);
   const [stepError, setStepError] = useState<string | null>(null);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -152,6 +161,13 @@ export function StaffBookingFlow({
     enabled: listingQ.isSuccess,
   });
   const listing = listingQ.data ?? null;
+  const vehicleServices: string[] = listing?.serviceTypes ?? [];
+
+  // Xe không phục vụ dịch vụ đang chọn (hồ sơ vừa về) → rơi về dịch vụ đầu tiên của xe.
+  // Điều chỉnh NGAY TRONG RENDER — pattern "derived state" chính tắc, không setState trong effect.
+  if (vehicleServices.length > 0 && !vehicleServices.includes(serviceType)) {
+    setServiceType(vehicleServices[0] as ServiceType);
+  }
 
   const { control, trigger, getValues, setValue, formState } = useForm<StaffBookingValues>({
     resolver: yupResolver(staffBookingSchema),
@@ -255,8 +271,8 @@ export function StaffBookingFlow({
         vehicleId,
         customerName: v.customerName.trim(),
         customerPhone: v.customerPhone.trim(),
-        // Marketplace hiện chỉ đặt tự lái — cùng giá trị luồng khách dùng.
-        serviceType: SERVICE_TYPE.SELF_DRIVE,
+        // Dịch vụ do staff chọn theo năng lực của xe (17/08) — hết hardcode tự lái.
+        serviceType,
         pickupAt: v.pickupAt!.toISOString(),
         returnAt: v.returnAt!.toISOString(),
         // Tiền từ báo giá server (đã gồm giá riêng theo ngày); giảm giá là dòng âm → tách dương.
@@ -406,6 +422,22 @@ export function StaffBookingFlow({
         {/* ── Bước 1 — Thời gian ───────────────────────────────────────────── */}
         {step === 'time' ? (
           <section className={styles.stepBody}>
+            {/* Xe phục vụ nhiều dịch vụ → staff chọn dịch vụ cho ĐƠN này (17/08). */}
+            {vehicleServices.length > 1 ? (
+              <div className={styles.serviceField}>
+                <span className={styles.rangeFieldLabel}>Dịch vụ</span>
+                <Segmented
+                  block
+                  value={serviceType}
+                  onChange={(v) => setServiceType(v as ServiceType)}
+                  options={vehicleServices.map((value) => ({
+                    value,
+                    label: serviceTypeLabel(value),
+                  }))}
+                />
+              </div>
+            ) : null}
+
             <p className={styles.stepHint}>
               Chọn thời gian thuê để kiểm tra xe còn trống. Có thể thuê theo ngày hoặc theo giờ.
             </p>

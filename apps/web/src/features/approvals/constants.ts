@@ -4,11 +4,11 @@ import {
   APPROVAL_TARGET_TYPE,
   BODY_TYPE_LABEL,
   FUEL_TYPE_LABEL,
-  SERVICE_TYPE_LABEL,
   VEHICLE_TYPE_LABEL,
+  serviceTypeLabel,
+  serviceTypesLabel,
   type BodyType,
   type FuelType,
-  type ServiceType,
   type VehicleType,
 } from '@xeprime/types';
 import { formatMoneyVnd } from '@/lib/money';
@@ -58,10 +58,20 @@ export const VEHICLE_SNAPSHOT_FIELDS: readonly SnapshotField[] = [
     label: 'Loại xe',
     format: (v) => VEHICLE_TYPE_LABEL[v as VehicleType] ?? String(v),
   },
+  /*
+   * Snapshot là jsonb ĐÓNG BĂNG, không migrate: phiếu cũ mang key `serviceType` (string, có thể
+   * là 'both' đã khai tử), phiếu từ 17/08 mang `serviceTypes` (mảng). Renderer chỉ hiện key có
+   * trong snapshot nên khai cả hai — mỗi phiếu khớp đúng một dòng.
+   */
   {
     key: 'serviceType',
     label: 'Dịch vụ',
-    format: (v) => SERVICE_TYPE_LABEL[v as ServiceType] ?? String(v),
+    format: (v) => serviceTypeLabel(String(v)),
+  },
+  {
+    key: 'serviceTypes',
+    label: 'Dịch vụ',
+    format: (v) => (Array.isArray(v) ? serviceTypesLabel(v as string[]) : serviceTypeLabel(String(v))),
   },
   { key: 'brand', label: 'Hãng' },
   { key: 'model', label: 'Dòng xe' },
@@ -81,6 +91,12 @@ export const VEHICLE_SNAPSHOT_FIELDS: readonly SnapshotField[] = [
   { key: 'weekdayPrice', label: 'Giá ngày thường', format: (v) => formatMoneyVnd(String(v)) },
   { key: 'weekendPrice', label: 'Giá cuối tuần', format: (v) => formatMoneyVnd(String(v)) },
   { key: 'hourlyPrice', label: 'Giá thuê giờ', format: (v) => formatMoneyVnd(String(v)) },
+  { key: 'monthlyPrice', label: 'Giá tháng (dài hạn)', format: (v) => formatMoneyVnd(String(v)) },
+  {
+    key: 'withDriverDailyPrice',
+    label: 'Giá/ngày có tài xế',
+    format: (v) => formatMoneyVnd(String(v)),
+  },
   { key: 'discountPercent', label: 'Giảm giá', format: (v) => `${String(v)}%` },
   { key: 'deliveryEnabled', label: 'Giao xe tận nơi', format: (v) => (v ? 'Có' : 'Không') },
   { key: 'noCollateral', label: 'Miễn thế chấp', format: (v) => (v ? 'Có' : 'Không') },

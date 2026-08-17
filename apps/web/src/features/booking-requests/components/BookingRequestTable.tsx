@@ -1,16 +1,20 @@
 'use client';
 
-import { CarOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { CarOutlined, CheckOutlined, CloseOutlined, MessageOutlined } from '@ant-design/icons';
 import { Button, Popconfirm, Space, Tag, Tooltip } from 'antd';
 import {
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_META,
+  ROUTE_TYPE_LABEL,
+  SERVICE_TYPE,
+  serviceTypeLabel,
   type BookingRequestStatus,
   type PaginationMeta,
+  type RouteType,
 } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDateTimeRange } from '@/lib/datetime';
+import { formatShortDateTimeRange } from '@/lib/datetime';
 import type { BookingRequestItem } from '../types';
 import styles from './BookingRequestTable.module.css';
 
@@ -25,8 +29,8 @@ interface Props {
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-/** Figma `127:1725` ghi 860px; cột thao tác cố định bên phải cần thêm chỗ. */
-const MIN_TABLE_WIDTH = 1020;
+/** Figma `127:1725` ghi 860px; thêm cột Dịch vụ (17/08) + cột thao tác cố định bên phải. */
+const MIN_TABLE_WIDTH = 1240;
 
 export function BookingRequestTable({
   items,
@@ -42,6 +46,7 @@ export function BookingRequestTable({
     {
       title: 'Khách hàng',
       key: 'customer',
+      width: 240,
       render: (_, row) => (
         <div>
           <div className={styles.name}>{row.customerName}</div>
@@ -66,9 +71,38 @@ export function BookingRequestTable({
     {
       title: 'Thời gian thuê',
       key: 'period',
+      width: 260,
+      render: (_, row) => (
+        <span className={styles.period}>
+          {formatShortDateTimeRange(row.pickupAt, row.returnAt)}
+        </span>
+      ),
+    },
+    {
+      // Dịch vụ + ngữ cảnh chuyến (17/08): có tài xế hiện lộ trình + địa chỉ đón/điểm đến —
+      // đúng thứ shop cần đọc để BÁO GIÁ trước khi duyệt.
+      title: 'Dịch vụ',
+      key: 'service',
       width: 220,
       render: (_, row) => (
-        <span className={styles.period}>{formatDateTimeRange(row.pickupAt, row.returnAt)}</span>
+        <div>
+          <Tag>{serviceTypeLabel(row.serviceType)}</Tag>
+          {row.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
+            <div className={styles.meta}>
+              {row.routeType ? (ROUTE_TYPE_LABEL[row.routeType as RouteType] ?? row.routeType) : ''}
+              {row.pickupAddress ? ` · Đón: ${row.pickupAddress}` : ''}
+              {row.destination ? ` → ${row.destination}` : ''}
+            </div>
+          ) : null}
+          {/* Ghi chú của khách từng bị bỏ quên (không render dù DTO trả) — nay hiện tại đây. */}
+          {row.note ? (
+            <Tooltip title={row.note}>
+              <div className={styles.meta}>
+                <MessageOutlined aria-hidden="true" /> {row.note}
+              </div>
+            </Tooltip>
+          ) : null}
+        </div>
       ),
     },
     {
@@ -98,7 +132,7 @@ export function BookingRequestTable({
       // nút icon phụ. `RowActions` render `type="text"`, sẽ hạ nút "Duyệt" từ nút chính xuống
       // chữ thường — mất hẳn thứ bậc thị giác của một quyết định tạo ra đơn thuê thật.
       // Vẫn giữ `fixed: 'right'` + width cố định theo Figma `127:2060` R1–R2.
-      title: '',
+      title: 'Thao tác',
       key: 'actions',
       align: 'right',
       fixed: 'right',

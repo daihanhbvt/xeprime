@@ -26,6 +26,12 @@ interface RentalRangePanelProps {
   onModeChange: (mode: RentalMode) => void;
   /** Một tháng (mobile) hay lịch đôi (desktop) — chỉ áp dụng cho chế độ theo ngày. */
   months: 1 | 2;
+  /**
+   * Sàn số ngày tính tiền (cùng công thức backend: `ceil(Δ/24h)`) — thuê DÀI HẠN truyền
+   * `LONG_TERM_MIN_DAYS`. >1 thì ẩn tab "Thuê theo giờ" (dài hạn không có ngữ nghĩa giờ),
+   * lịch khoá các ngày trả không đạt sàn, và "Áp dụng" chỉ bật khi đủ sàn.
+   */
+  minDays?: number;
   onApply: () => void;
   onCancel: () => void;
 }
@@ -62,10 +68,14 @@ export function RentalRangePanel({
   mode,
   onModeChange,
   months,
+  minDays = 1,
   onApply,
   onCancel,
 }: RentalRangePanelProps) {
   const [month, setMonth] = useState<Date>(() => (value.pickupAt ?? dayjs()).toDate());
+
+  /** Số ngày TÍNH TIỀN — trùng công thức `PricingService.chargedDays` để hai tầng không lệch. */
+  const chargedDays = (a: Dayjs, b: Dayjs) => Math.max(1, Math.ceil(b.diff(a, 'minute') / 1440));
 
   const timeOf = (d: Dayjs | null) =>
     d ? d.format('HH:mm') : `${String(DEFAULT_HOUR).padStart(2, '0')}:00`;
@@ -100,7 +110,11 @@ export function RentalRangePanel({
       return;
     }
     let returnAt = withTime(triggerDate, value.returnAt);
-    if (!returnAt.isAfter(value.pickupAt)) returnAt = value.pickupAt.add(1, 'day');
+    if (!returnAt.isAfter(value.pickupAt)) returnAt = value.pickupAt.add(Math.max(1, minDays), 'day');
+    // Lưới an toàn cho ca lệch giờ — lịch đã khoá các ngày dưới sàn (xem `dailyDisabled`).
+    else if (chargedDays(value.pickupAt, returnAt) < minDays) {
+      returnAt = withTime(value.pickupAt.add(minDays, 'day').toDate(), value.returnAt);
+    }
     onChange({ pickupAt: value.pickupAt, returnAt });
   }
 
@@ -139,28 +153,46 @@ export function RentalRangePanel({
 
   const complete = Boolean(value.pickupAt && value.returnAt);
   const ordered = Boolean(value.pickupAt && value.returnAt?.isAfter(value.pickupAt));
+  const meetsMin =
+    complete && ordered && chargedDays(value.pickupAt!, value.returnAt!) >= minDays;
+
+  // Đã chọn ngày nhận, đang chờ ngày trả + có sàn: khoá các ngày trả dưới sàn ngay trên lịch
+  // (bấm TRƯỚC ngày nhận vẫn được — đó là chọn lại ngày nhận).
+  const dailyDisabled =
+    minDays > 1 && value.pickupAt && !value.returnAt
+      ? [
+          { before: dayjs().startOf('day').toDate() },
+          {
+            after: value.pickupAt.startOf('day').toDate(),
+            before: value.pickupAt.startOf('day').add(minDays, 'day').toDate(),
+          },
+        ]
+      : { before: dayjs().startOf('day').toDate() };
 
   return (
     <div className={styles.panel}>
-      <div className={styles.tabs} role="tablist" aria-label="Cách tính thời gian thuê">
-        {(
-          [
-            { key: 'daily', label: 'Thuê theo ngày' },
-            { key: 'hourly', label: 'Thuê theo giờ' },
-          ] as const
-        ).map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            role="tab"
-            aria-selected={mode === tab.key}
-            className={cx(styles.tab, mode === tab.key && styles.tabActive)}
-            onClick={() => switchMode(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Dài hạn (minDays > 1) không có ngữ nghĩa thuê giờ — bỏ hẳn hàng tab, chỉ còn lịch. */}
+      {minDays > 1 ? null : (
+        <div className={styles.tabs} role="tablist" aria-label="Cách tính thời gian thuê">
+          {(
+            [
+              { key: 'daily', label: 'Thuê theo ngày' },
+              { key: 'hourly', label: 'Thuê theo giờ' },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={mode === tab.key}
+              className={cx(styles.tab, mode === tab.key && styles.tabActive)}
+              onClick={() => switchMode(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {mode === 'daily' ? (
         <>
@@ -172,7 +204,7 @@ export function RentalRangePanel({
             numberOfMonths={months}
             selected={{ from: value.pickupAt?.toDate(), to: value.returnAt?.toDate() }}
             onSelect={handleSelect}
-            disabled={{ before: dayjs().startOf('day').toDate() }}
+            disabled={dailyDisabled}
             showOutsideDays
             /*
              * Figma: tuần bắt đầu CN, nhãn cột "CN T2…T7", caption "Tháng 8, 2026". Locale vi
@@ -305,12 +337,16 @@ export function RentalRangePanel({
             ) : complete ? (
               <span className={styles.invalid}>Giờ trả phải sau giờ nhận</span>
             ) : (
-              <span className={styles.placeholder}>Chọn ngày nhận và ngày trả xe</span>
+              <span className={styles.placeholder}>
+                {minDays > 1
+                  ? `Chọn ngày nhận và ngày trả xe (tối thiểu ${minDays} ngày)`
+                  : 'Chọn ngày nhận và ngày trả xe'}
+              </span>
             )}
           </div>
           <div className={styles.actions}>
             <Button onClick={onCancel}>Huỷ</Button>
-            <Button type="primary" disabled={!complete || !ordered} onClick={onApply}>
+            <Button type="primary" disabled={!meetsMin} onClick={onApply}>
               Áp dụng
             </Button>
           </div>

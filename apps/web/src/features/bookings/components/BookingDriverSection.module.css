@@ -1,0 +1,55 @@
+/* Khối Tài xế trên chi tiết đơn — cùng nhịp panel với các khối khác của BookingDetailContent. */
+.panel {
+  padding: 14px 16px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.blockTitle {
+  margin: 0 0 10px;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold, 600);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.strong {
+  font-weight: var(--xp-font-weight-medium, 500);
+}
+
+.link {
+  color: var(--xp-color-primary-active);
+}
+
+.meta {
+  color: var(--xp-color-text-secondary);
+}
+
+/* Đơn CÓ TÀI XẾ chưa phân công — nhắc bằng màu cảnh báo, không phải chữ xám cho qua. */
+.missing {
+  color: var(--xp-color-warning, #d48806);
+  font-weight: var(--xp-font-weight-medium, 500);
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.select {
+  min-width: 260px;
+  flex: 1;
+}

@@ -20,6 +20,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -209,6 +210,18 @@ export class VehiclePricingDto {
 
   @ApiPropertyOptional({ type: String, nullable: true }) weekdayPrice!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) weekendPrice!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá tháng tham chiếu thuê dài hạn (17/08)',
+  })
+  monthlyPrice!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày đã gồm tài xế (17/08)',
+  })
+  withDriverDailyPrice!: string | null;
 
   @ApiProperty({
     description: 'Xe đang hiển thị công khai — lưu giá sẽ đưa xe về chờ duyệt lại (ADR 0008)',
@@ -236,6 +249,26 @@ export class SaveVehiclePricingDto {
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'Giá cuối tuần không hợp lệ (số VND không âm)' })
   weekendPrice?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá tháng thuê dài hạn — chỉ nhận khi source=vehicle; null = xoá giá tháng',
+  })
+  @IsOptional()
+  @ValidateIf((o: SaveVehiclePricingDto) => o.monthlyPrice !== null)
+  @Matches(MONEY_PATTERN, { message: 'Giá tháng không hợp lệ (số VND không âm)' })
+  monthlyPrice?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày đã gồm tài xế — chỉ nhận khi source=vehicle; null = xoá giá',
+  })
+  @IsOptional()
+  @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverDailyPrice !== null)
+  @Matches(MONEY_PATTERN, { message: 'Giá/ngày có tài xế không hợp lệ (số VND không âm)' })
+  withDriverDailyPrice?: string | null;
 
   @ApiPropertyOptional({ type: SaveRentalPolicyDto })
   @IsOptional()

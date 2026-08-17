@@ -24,9 +24,14 @@ export interface MarketplaceFilters {
   vehicleType?: string;
   /**
    * Loại dịch vụ (SERVICE_TYPE) — tab Xe tự lái / Xe có tài xế / Thuê dài hạn của thẻ tìm kiếm.
-   * Backend hiểu theo NĂNG LỰC phục vụ: `self_drive`/`with_driver` bao gồm cả xe đăng `both`.
+   * Backend lọc theo NĂNG LỰC phục vụ: mảng `service_types` của xe CHỨA giá trị này.
    */
   serviceType?: string;
+  /**
+   * Lộ trình có tài xế (ROUTE_TYPE) — ngữ cảnh prefill cho yêu cầu thuê, KHÔNG phải chiều lọc
+   * (không gửi API listings).
+   */
+  routeType?: string;
   /**
    * MÃ tỉnh — tham số địa điểm chuẩn, khớp chính xác. Mọi bộ chọn địa điểm ghi giá trị này.
    */

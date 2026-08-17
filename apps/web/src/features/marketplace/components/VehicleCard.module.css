@@ -190,6 +190,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Ghi chú cạnh giá ("chưa gồm tài xế") — phân biệt với đơn vị /ngày ngay trước nó. */
+.priceNote {
+  color: var(--xp-color-text-tertiary);
+  font-size: 11px;
+}
+
 .price b {
   font-size: 16px;
   font-weight: 700;

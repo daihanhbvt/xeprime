@@ -1,0 +1,9 @@
+/* Trang Tài xế — cùng nhịp chữ với các bảng manage khác. */
+.name {
+  font-weight: var(--xp-font-weight-medium, 500);
+}
+
+.meta {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm, 13px);
+}

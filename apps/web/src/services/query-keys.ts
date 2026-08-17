@@ -55,6 +55,11 @@ export const queryKeys = {
     provinces: () => ['locations', 'provinces'] as const,
     admin: (params: QueryParams) => ['locations', 'admin', params] as const,
   },
+  /** Tài xế của gian hàng (17/08) — danh sách CRUD + bộ chọn gán vào đơn đọc chung. */
+  drivers: {
+    all: ['drivers'] as const,
+    list: (params: QueryParams) => ['drivers', 'list', params] as const,
+  },
   /** Chi nhánh gian hàng — mọi màn có bộ chọn chi nhánh đọc chung nhánh này. */
   branches: {
     all: ['branches'] as const,

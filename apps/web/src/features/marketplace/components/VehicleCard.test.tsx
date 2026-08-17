@@ -30,7 +30,7 @@ const LISTING = {
   id: 'V1',
   name: 'Toyota Camry 2024',
   vehicleType: 'car',
-  serviceType: 'self_drive',
+  serviceTypes: ['self_drive'],
   brand: 'toyota',
   model: 'Camry',
   seatCount: 5,
