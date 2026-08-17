@@ -19,6 +19,7 @@ import {
 import 'reflect-metadata';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
+import { DriversService } from '../src/modules/drivers/drivers.service';
 import { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
@@ -71,7 +72,13 @@ const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit);
-const bookings = new BookingsService(asService, occupancy, audit, notifications);
+const bookings = new BookingsService(
+  asService,
+  occupancy,
+  audit,
+  notifications,
+  new DriversService(asService, audit),
+);
 const handovers = new HandoversService(asService, bookings, odometer, maintenance, files, audit);
 const alerts = new VehicleAlertsService(asService);
 

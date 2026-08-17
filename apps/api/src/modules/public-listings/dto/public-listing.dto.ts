@@ -54,6 +54,7 @@ export class PublicListingQueryDto {
   @IsIn(VEHICLE_TYPE_VALUES)
   vehicleType?: string;
 
+  /** Lọc "xe PHỤC VỤ ĐƯỢC dịch vụ X" — `has` trên mảng `service_types` (tab/chip dịch vụ). */
   @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
   @IsOptional()
   @IsIn(SERVICE_TYPE_VALUES)
@@ -217,7 +218,7 @@ export class PublicListingDto {
   @ApiProperty() id!: string;
   @ApiProperty() name!: string;
   @ApiProperty({ enum: VEHICLE_TYPE_VALUES }) vehicleType!: string;
-  @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  @ApiProperty({ enum: SERVICE_TYPE_VALUES, isArray: true }) serviceTypes!: string[];
   // `type` tường minh cho field nullable, nếu không openapi-typescript sinh `Record<string,never>`.
   @ApiPropertyOptional({ type: String, nullable: true }) brand!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) model!: string | null;
@@ -239,6 +240,20 @@ export class PublicListingDto {
     description: 'Giá thuê giờ (string — ADR 0007). Null = xe không cho thuê theo giờ.',
   })
   hourlyPrice!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá tháng tham chiếu thuê dài hạn (string — ADR 0007).',
+  })
+  monthlyPrice!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt.',
+  })
+  withDriverDailyPrice!: string | null;
 
   @ApiProperty({ description: 'Chủ xe hỗ trợ giao xe tận nơi' }) deliveryEnabled!: boolean;
   @ApiProperty({ description: 'Miễn thế chấp (không cần cọc tài sản)' }) noCollateral!: boolean;

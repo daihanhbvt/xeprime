@@ -63,7 +63,6 @@ export class ContractsService {
             name: true,
             plateNumber: true,
             vehicleType: true,
-            serviceType: true,
             brand: true,
             model: true,
             manufactureYear: true,
@@ -120,7 +119,10 @@ export class ContractsService {
         name: booking.vehicle.name,
         plateNumber: booking.vehicle.plateNumber,
         vehicleType: booking.vehicle.vehicleType,
-        serviceType: booking.vehicle.serviceType,
+        // Dịch vụ đóng băng là CỦA CHUYẾN (booking), không phải của xe — xe giờ mang MẢNG
+        // dịch vụ, còn hợp đồng ký cho đúng một chuyến. GIỮ key `serviceType` trong snapshot:
+        // hợp đồng cũ đã ký đọc y nguyên, không migrate jsonb.
+        serviceType: booking.serviceType,
         // Đổi key danh mục ("vinfast") sang tên hiển thị ("VinFast") NGAY khi chốt snapshot:
         // hợp đồng là văn bản đóng băng, in ra phải là tên hãng chứ không phải slug, và sau này
         // admin đổi nhãn cũng không được sửa hợp đồng đã ký.

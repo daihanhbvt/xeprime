@@ -25,6 +25,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
 import { OccupancyService } from '../calendar/occupancy.service';
+import { DriversService } from '../drivers/drivers.service';
 import {
   BOOKING_DEFAULT_LIMIT,
   BOOKING_MAX_LIMIT,
@@ -51,6 +52,7 @@ const LIST_SELECT = {
   depositAmount: true,
   createdAt: true,
   vehicle: { select: { name: true, plateNumber: true } },
+  driver: { select: { id: true, name: true, phone: true } },
 } satisfies Prisma.BookingSelect;
 
 const DETAIL_SELECT = {
@@ -78,6 +80,7 @@ export class BookingsService {
     private readonly occupancy: OccupancyService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
+    private readonly drivers: DriversService,
   ) {}
 
   async list(
@@ -397,6 +400,54 @@ export class BookingsService {
   }
 
   /**
+   * Gán/bỏ gán tài xế cho đơn (17/08 — nghiệp vụ xe có tài xế). "Tài xế gán được" định nghĩa
+   * MỘT nơi ở `DriversService.findAssignable` (cùng tenant + active + chưa xoá); composite FK
+   * `(driver_id, tenant_id)` ở DB chặn nốt trường hợp gán chéo tenant nếu service quên. Đơn đã
+   * khép (completed/cancelled/no_show) không sửa được — hồ sơ chuyến đã đóng băng.
+   */
+  async assignDriver(
+    tenantId: string,
+    id: string,
+    userId: string,
+    driverId: string | null,
+  ): Promise<BookingDetailDto> {
+    const current = await this.prisma.booking.findFirst({
+      where: { id, tenantId, deletedAt: null },
+      select: { id: true, status: true, driverId: true },
+    });
+    if (!current) throw notFound();
+    assertMutable(current.status as BookingStatus);
+
+    const driver = driverId ? await this.drivers.findAssignable(tenantId, driverId) : null;
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.booking.update({
+        where: { id: current.id },
+        data: { driverId: driver?.id ?? null },
+        select: DETAIL_SELECT,
+      });
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'booking.driver_assign',
+          targetType: 'booking',
+          targetId: id,
+          before: { driverId: current.driverId },
+          after: { driverId: driver?.id ?? null, ...(driver ? { driverName: driver.name } : {}) },
+        },
+        tx,
+      );
+
+      return updated;
+    });
+
+    return toDetail(row);
+  }
+
+  /**
    * Chuyển trạng thái đơn. Hợp lệ hoá bằng `canTransitionBooking` (không tin client). Khi đơn
    * rời tập trạng thái "chiếm lịch" (huỷ/không đến/hoàn thành) thì nhả lịch qua OccupancyService.
    */
@@ -650,6 +701,7 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     // Công nợ tính động = max(0, total − paid); không denormalize để khỏi drift (Phase 6).
     debtAmount: bookingDebt(b.totalAmount, b.paidAmount) as unknown as string,
     depositAmount: b.depositAmount as unknown as string,
+    driver: b.driver,
     createdAt: b.createdAt as unknown as string,
   };
 }

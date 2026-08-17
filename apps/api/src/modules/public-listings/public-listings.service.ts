@@ -7,7 +7,6 @@ import {
   REVIEW_STATUS,
   SEAT_BUCKET_RANGE,
   SEAT_BUCKET_VALUES,
-  SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type PaginationMeta,
@@ -46,7 +45,7 @@ const LISTING_CARD_SELECT = {
   vehicleId: true,
   title: true,
   vehicleType: true,
-  serviceType: true,
+  serviceTypes: true,
   brand: true,
   model: true,
   seatCount: true,
@@ -56,6 +55,8 @@ const LISTING_CARD_SELECT = {
   weekdayPrice: true,
   weekendPrice: true,
   hourlyPrice: true,
+  monthlyPrice: true,
+  withDriverDailyPrice: true,
   deliveryEnabled: true,
   noCollateral: true,
   discountPercent: true,
@@ -86,7 +87,7 @@ function toListingCard(l: ListingCardRow): PublicListingDto {
     id: l.vehicleId,
     name: l.title,
     vehicleType: l.vehicleType,
-    serviceType: l.serviceType,
+    serviceTypes: l.serviceTypes,
     brand: l.brand,
     model: l.model,
     seatCount: l.seatCount,
@@ -96,6 +97,8 @@ function toListingCard(l: ListingCardRow): PublicListingDto {
     weekdayPrice: l.weekdayPrice as unknown as string | null,
     weekendPrice: l.weekendPrice as unknown as string | null,
     hourlyPrice: l.hourlyPrice as unknown as string | null,
+    monthlyPrice: l.monthlyPrice as unknown as string | null,
+    withDriverDailyPrice: l.withDriverDailyPrice as unknown as string | null,
     deliveryEnabled: l.deliveryEnabled,
     noCollateral: l.noCollateral,
     discountPercent: l.discountPercent,
@@ -123,15 +126,12 @@ function listingOrderBy(
 }
 
 /**
- * Lọc dịch vụ theo NĂNG LỰC phục vụ, không phải giá trị cột: xe đăng `both` phục vụ được cả
- * chuyến tự lái lẫn có tài xế nên phải xuất hiện ở CẢ HAI tab tìm kiếm — khớp chính xác sẽ làm
- * nhóm xe này biến mất khỏi marketplace. `long_term` (và chính `both`) giữ khớp chính xác.
+ * Lọc dịch vụ theo NĂNG LỰC phục vụ: `service_types` là MẢNG (một xe đăng nhiều dịch vụ),
+ * filter là "mảng CÓ CHỨA dịch vụ đang tìm" — GIN index phục vụ `has`. Giá trị `both` cũ đã
+ * khai tử từ 17/08 (backfill thành ['self_drive','with_driver'] ở migration).
  */
 function serviceTypeFilter(serviceType: string): Prisma.PublicListingWhereInput {
-  if (serviceType === SERVICE_TYPE.SELF_DRIVE || serviceType === SERVICE_TYPE.WITH_DRIVER) {
-    return { serviceType: { in: [serviceType, SERVICE_TYPE.BOTH] } };
-  }
-  return { serviceType };
+  return { serviceTypes: { has: serviceType } };
 }
 
 /** Lọc khoảng giá thuê/ngày. Listing chưa có giá không lọt khi có ràng buộc giá. */
@@ -709,7 +709,7 @@ export class PublicListingsService {
         name: true,
         branch: { select: { province: { select: { code: true, name: true } } } },
         vehicleType: true,
-        serviceType: true,
+        serviceTypes: true,
         brand: true,
         model: true,
         seatCount: true,
@@ -719,6 +719,8 @@ export class PublicListingsService {
         weekdayPrice: true,
         weekendPrice: true,
         hourlyPrice: true,
+        monthlyPrice: true,
+        withDriverDailyPrice: true,
         deliveryEnabled: true,
         noCollateral: true,
         discountPercent: true,
@@ -749,7 +751,7 @@ export class PublicListingsService {
       id: v.id,
       name: v.name,
       vehicleType: v.vehicleType,
-      serviceType: v.serviceType,
+      serviceTypes: v.serviceTypes,
       brand: v.brand,
       model: v.model,
       seatCount: v.seatCount,
@@ -759,6 +761,8 @@ export class PublicListingsService {
       weekdayPrice: v.weekdayPrice as unknown as string | null,
       weekendPrice: v.weekendPrice as unknown as string | null,
       hourlyPrice: v.hourlyPrice as unknown as string | null,
+      monthlyPrice: v.monthlyPrice as unknown as string | null,
+      withDriverDailyPrice: v.withDriverDailyPrice as unknown as string | null,
       deliveryEnabled: v.deliveryEnabled,
       noCollateral: v.noCollateral,
       discountPercent: v.discountPercent,

@@ -9,6 +9,7 @@ import {
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
+  AssignBookingDriverDto,
   BookingDetailDto,
   BookingListQueryDto,
   BookingPageDto,
@@ -94,6 +95,20 @@ export class BookingsController {
     @Body() dto: UpdateBookingDeliveryFeeDto,
   ): Promise<BookingDetailDto> {
     return this.bookings.updateDeliveryFee(tenant.tenantId, id, user.id, dto);
+  }
+
+  /** Gán/bỏ gán tài xế (17/08) — endpoint riêng vì cần vết audit riêng (ai gán, gán ai). */
+  @Patch(':id/driver')
+  @RequirePermissions(PERMISSION.BOOKING_UPDATE)
+  @ApiOperation({ summary: 'Gán/bỏ gán tài xế cho đơn (driverId null = bỏ gán, có audit)' })
+  @ApiOkResponse({ type: BookingDetailDto })
+  assignDriver(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: AssignBookingDriverDto,
+  ): Promise<BookingDetailDto> {
+    return this.bookings.assignDriver(tenant.tenantId, id, user.id, dto.driverId);
   }
 
   @Post(':id/transition')

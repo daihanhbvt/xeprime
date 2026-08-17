@@ -100,7 +100,7 @@ describe('Platform dashboard (Phase 7)', () => {
         title: 'Vios',
         status: LISTING_STATUS.ACTIVE,
         vehicleType: VEHICLE_TYPE.CAR,
-        serviceType: SERVICE_TYPE.SELF_DRIVE,
+        serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
       },
     });
     await prisma.booking.create({

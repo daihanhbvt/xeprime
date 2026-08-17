@@ -73,10 +73,12 @@ export const VEHICLE_PUBLIC_SENSITIVE_FIELDS = [
   'weekdayPrice',
   'weekendPrice',
   'hourlyPrice',
+  'monthlyPrice',
+  'withDriverDailyPrice',
   'discountPercent',
   'plateNumber',
   'vehicleType',
-  'serviceType',
+  'serviceTypes',
   'mainImageUrl',
 ] as const;
 export type VehicleSensitiveField = (typeof VEHICLE_PUBLIC_SENSITIVE_FIELDS)[number];
@@ -266,11 +268,14 @@ export const TRANSMISSION_TYPE_LABEL: Readonly<Record<TransmissionType, string>>
   [TRANSMISSION_TYPE.OTHER]: 'Khác',
 };
 
-/** Loại dịch vụ cho thuê. */
+/**
+ * Loại dịch vụ cho thuê. Từ 17/08 xe mang MẢNG `serviceTypes` (một xe nhiều dịch vụ) — giá
+ * trị `both` cũ đã khai tử (nó là tổ hợp, không phải dịch vụ); booking/booking-request vẫn
+ * thuộc đúng MỘT giá trị ở đây.
+ */
 export const SERVICE_TYPE = {
   SELF_DRIVE: 'self_drive',
   WITH_DRIVER: 'with_driver',
-  BOTH: 'both',
   LONG_TERM: 'long_term',
 } as const;
 
@@ -280,7 +285,6 @@ export const SERVICE_TYPE_VALUES = Object.values(SERVICE_TYPE) as ServiceType[];
 export const SERVICE_TYPE_LABEL: Readonly<Record<ServiceType, string>> = {
   [SERVICE_TYPE.SELF_DRIVE]: 'Tự lái',
   [SERVICE_TYPE.WITH_DRIVER]: 'Có tài xế',
-  [SERVICE_TYPE.BOTH]: 'Tự lái & có tài xế',
   [SERVICE_TYPE.LONG_TERM]: 'Thuê dài hạn',
 };
 

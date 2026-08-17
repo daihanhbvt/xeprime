@@ -239,6 +239,12 @@ interface DemoVehicle {
   weekend: number;
   /** Giá thuê giờ — có = xe lên tiện ích "Thuê theo giờ". */
   hourly?: number;
+  /** Dịch vụ xe phục vụ (17/08) — bỏ trống = ['self_drive']. */
+  services?: readonly string[];
+  /** Giá tháng tham chiếu thuê dài hạn — chỉ có nghĩa khi services chứa long_term. */
+  monthly?: number;
+  /** Giá/ngày đã gồm tài xế — chỉ có nghĩa khi services chứa with_driver. */
+  driverDaily?: number;
   delivery?: boolean;
   noCollateral?: boolean;
   /** % giảm giá marketing. */
@@ -269,6 +275,10 @@ const DEMO_VEHICLES: readonly DemoVehicle[] = [
     weekday: 650_000,
     weekend: 800_000,
     hourly: 90_000,
+    // Xe demo phủ CẢ BA dịch vụ (17/08) — tab marketplace nào cũng có dữ liệu thật.
+    services: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER, SERVICE_TYPE.LONG_TERM],
+    monthly: 12_000_000,
+    driverDaily: 1_300_000,
     delivery: true,
     discount: 10,
     features: ['bluetooth', 'backup_camera', 'usb', 'map', 'airbag'],
@@ -375,6 +385,8 @@ const DEMO_VEHICLES: readonly DemoVehicle[] = [
     weekday: 480_000,
     weekend: 550_000,
     hourly: 70_000,
+    services: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.LONG_TERM],
+    monthly: 9_500_000,
     noCollateral: true,
     discount: 15,
     features: ['bluetooth', 'usb', 'airbag'],
@@ -396,6 +408,8 @@ const DEMO_VEHICLES: readonly DemoVehicle[] = [
     color: 'Vàng',
     weekday: 450_000,
     weekend: 520_000,
+    services: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.LONG_TERM],
+    monthly: 8_000_000,
     delivery: true,
     features: ['usb', 'bluetooth'],
     img: photo('1533473359331-0135ef1b58bf'),
@@ -541,9 +555,12 @@ const DEMO_VEHICLES: readonly DemoVehicle[] = [
     color: 'Bạc',
     weekday: 1_800_000,
     weekend: 2_100_000,
+    // Xe 16 chỗ CHỈ cho thuê kèm tài xế — không có nhánh tự lái (thực tế thị trường).
+    services: [SERVICE_TYPE.WITH_DRIVER],
+    driverDaily: 2_500_000,
     features: ['dash_camera', 'gps'],
     img: photo('1570125909232-eb263c188f7e'),
-    desc: 'Xe 16 chỗ chuyên tour, đưa đón sân bay, đi lễ — tài xế thuê thêm theo yêu cầu.',
+    desc: 'Xe 16 chỗ chuyên tour, đưa đón sân bay, đi lễ — luôn đi kèm tài xế của gian hàng.',
     approved: true,
   },
   {
@@ -607,6 +624,8 @@ const DEMO_VEHICLES: readonly DemoVehicle[] = [
     weekday: 620_000,
     weekend: 750_000,
     hourly: 85_000,
+    services: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.LONG_TERM],
+    monthly: 10_000_000,
     delivery: true,
     discount: 5,
     features: ['bluetooth', 'backup_camera', 'usb', 'screen', 'airbag'],
@@ -984,6 +1003,9 @@ const DEMO_VEHICLES: readonly DemoVehicle[] = [
     weekday: 1_250_000,
     weekend: 1_480_000,
     hourly: 175_000,
+    // Sedan hạng D chạy sự kiện/đối tác — có nhánh thuê kèm tài xế.
+    services: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER],
+    driverDaily: 2_000_000,
     noCollateral: true,
     features: ['camera_360', 'screen', 'airbag', 'bluetooth', 'etc', 'sunroof'],
     img: photo('1550355291-bbee04a92027'),
@@ -1397,7 +1419,7 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
       tenantId: true,
       name: true,
       vehicleType: true,
-      serviceType: true,
+      serviceTypes: true,
       brand: true,
       model: true,
       seatCount: true,
@@ -1407,6 +1429,8 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
       weekdayPrice: true,
       weekendPrice: true,
       hourlyPrice: true,
+      monthlyPrice: true,
+      withDriverDailyPrice: true,
       deliveryEnabled: true,
       noCollateral: true,
       discountPercent: true,
@@ -1440,7 +1464,7 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
     title: v.name,
     status: LISTING_STATUS.ACTIVE,
     vehicleType: v.vehicleType,
-    serviceType: v.serviceType,
+    serviceTypes: v.serviceTypes,
     brand: v.brand,
     model: v.model,
     seatCount: v.seatCount,
@@ -1453,6 +1477,8 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
     weekdayPrice: v.weekdayPrice,
     weekendPrice: v.weekendPrice,
     hourlyPrice: v.hourlyPrice,
+    monthlyPrice: v.monthlyPrice,
+    withDriverDailyPrice: v.withDriverDailyPrice,
     deliveryEnabled: v.deliveryEnabled,
     noCollateral: v.noCollateral,
     discountPercent: v.discountPercent,
@@ -1761,7 +1787,9 @@ async function main(): Promise<void> {
       name: v.name,
       plateNumber: v.plate,
       vehicleType: v.type,
-      serviceType: SERVICE_TYPE.SELF_DRIVE,
+      // Mảng dịch vụ canonicalize (sort) như VehiclesService.writableFields — snapshot listing
+      // copy nguyên mảng nên seed cũng phải giữ cùng dạng chuẩn.
+      serviceTypes: [...new Set(v.services ?? [SERVICE_TYPE.SELF_DRIVE])].sort(),
       brand: v.brand,
       model: v.model,
       manufactureYear: v.year,
@@ -1774,6 +1802,8 @@ async function main(): Promise<void> {
       weekdayPrice: v.weekday,
       weekendPrice: v.weekend,
       hourlyPrice: v.hourly ?? null,
+      monthlyPrice: v.monthly ?? null,
+      withDriverDailyPrice: v.driverDaily ?? null,
       deliveryEnabled: v.delivery ?? false,
       noCollateral: v.noCollateral ?? false,
       discountPercent: v.discount ?? null,

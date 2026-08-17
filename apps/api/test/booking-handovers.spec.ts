@@ -26,6 +26,7 @@ import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { ConfirmHandoverDto } from '../src/modules/bookings/handovers/dto/handover.dto';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
+import { DriversService } from '../src/modules/drivers/drivers.service';
 import { BookingHandoversController } from '../src/modules/bookings/handovers/booking-handovers.controller';
 import { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
@@ -80,7 +81,13 @@ const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
 const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit);
-const bookings = new BookingsService(asService, occupancy, audit, notifications);
+const bookings = new BookingsService(
+  asService,
+  occupancy,
+  audit,
+  notifications,
+  new DriversService(asService, audit),
+);
 const handovers = new HandoversService(asService, bookings, odometer, maintenance, files, audit);
 
 /** Chủ gian hàng (mở được ảnh) vs nhân viên vận hành (làm bàn giao, không mở kho ảnh). */

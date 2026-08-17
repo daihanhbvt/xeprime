@@ -12,8 +12,10 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
+import { BookingDriverSummaryDto } from '../../drivers/dto/driver.dto';
 import { BookingPriceSnapshotDto } from '../../pricing/dto/pricing.dto';
 
 /** Cách sắp xếp danh sách đơn thuê. */
@@ -107,6 +109,9 @@ export class BookingListItemDto {
   @ApiProperty({ description: 'Công nợ = max(0, total − paid), string — ADR 0007' })
   debtAmount!: string;
   @ApiProperty() depositAmount!: string;
+  /** Tài xế được gán (chủ yếu đơn with_driver) — null = chưa phân công. */
+  @ApiPropertyOptional({ type: BookingDriverSummaryDto, nullable: true })
+  driver!: BookingDriverSummaryDto | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 }
 
@@ -284,6 +289,19 @@ export class UpdateBookingDeliveryFeeDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+}
+
+/**
+ * Gán/bỏ gán tài xế cho đơn (17/08). `driverId = null` là BỎ GÁN tường minh — field bắt buộc
+ * để không lẫn "không gửi gì" với "gỡ tài xế". Tài xế phải cùng tenant + đang hoạt động
+ * (DriversService.findAssignable; composite FK ở DB chặn nốt trường hợp service quên).
+ */
+export class AssignBookingDriverDto {
+  @ApiProperty({ type: String, nullable: true, description: 'ID tài xế (ULID) — null để bỏ gán' })
+  @ValidateIf((o: AssignBookingDriverDto) => o.driverId !== null)
+  @IsString()
+  @Length(26, 26)
+  driverId!: string | null;
 }
 
 /** Chuyển trạng thái đơn — server validate bằng canTransitionBooking(), không tin client. */

@@ -17,6 +17,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
+import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
@@ -42,7 +43,13 @@ const notifications = new NotificationService(asService);
 const pricing = new PricingService(asService, audit);
 const settlement = new SettlementService(asService, audit, pricing, notifications);
 const occupancy = new OccupancyService(asService);
-const bookings = new BookingsService(asService, occupancy, audit, notifications);
+const bookings = new BookingsService(
+  asService,
+  occupancy,
+  audit,
+  notifications,
+  new DriversService(asService, audit),
+);
 const trips = new CustomerTripsService(asService, settlement);
 
 let dbAvailable = false;

@@ -73,7 +73,7 @@ export class PlatformVehicleDto {
   @ApiProperty() name!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
   @ApiProperty({ enum: VEHICLE_TYPE_VALUES }) vehicleType!: string;
-  @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  @ApiProperty({ enum: SERVICE_TYPE_VALUES, isArray: true }) serviceTypes!: string[];
   @ApiProperty({ enum: VEHICLE_PUBLIC_STATUS_VALUES }) publicStatus!: string;
   @ApiProperty({ enum: VEHICLE_OPERATION_STATUS_VALUES }) operationStatus!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) mainImageUrl!: string | null;

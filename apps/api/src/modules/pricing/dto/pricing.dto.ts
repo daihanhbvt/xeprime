@@ -3,6 +3,7 @@ import {
   DELIVERY_QUOTE_SOURCE_VALUES,
   POLICY_SOURCE_VALUES,
   PRICE_ROW_VALUES,
+  SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -291,6 +292,15 @@ export class PublicQuoteQueryDto {
   @ApiProperty({ description: 'ISO datetime trả xe' })
   @IsISO8601()
   returnAt!: string;
+
+  /**
+   * Dịch vụ của chuyến (17/08): long_term → đơn giá = giá tháng ÷ 30 (sàn 7 ngày);
+   * with_driver → đơn giá đã gồm tài xế. Bỏ trống = self_drive.
+   */
+  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(SERVICE_TYPE_VALUES)
+  serviceType?: string;
 }
 
 // ---------------------------------------------------------------------------

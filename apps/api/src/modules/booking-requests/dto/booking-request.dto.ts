@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BOOKING_REQUEST_STATUS_VALUES } from '@xeprime/types';
+import {
+  BOOKING_REQUEST_STATUS_VALUES,
+  ROUTE_TYPE_VALUES,
+  SERVICE_TYPE_VALUES,
+} from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
@@ -53,6 +57,35 @@ export class CreateBookingRequestDto {
   @ApiProperty({ description: 'Trả xe (ISO-8601), phải sau nhận xe' })
   @IsDateString()
   returnAt!: string;
+
+  /**
+   * Dịch vụ của chuyến (17/08) — phải nằm trong `serviceTypes` của xe (service kiểm).
+   * Bỏ trống = self_drive. long_term có sàn thời lượng; with_driver bắt buộc lộ trình.
+   */
+  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(SERVICE_TYPE_VALUES)
+  serviceType?: string;
+
+  /** Lộ trình — BẮT BUỘC khi serviceType = with_driver (service kiểm chéo). */
+  @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(ROUTE_TYPE_VALUES)
+  routeType?: string;
+
+  /** Địa chỉ đón khách — BẮT BUỘC khi with_driver (xe đến đón, khác giao xe tận nơi). */
+  @ApiPropertyOptional({ description: 'Địa chỉ đón khách (with_driver)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  pickupAddress?: string;
+
+  /** Điểm đến — BẮT BUỘC khi lộ trình liên tỉnh (inter_city / inter_city_one_way). */
+  @ApiPropertyOptional({ description: 'Điểm đến (with_driver liên tỉnh)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  destination?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -151,6 +184,11 @@ export class BookingRequestDto {
   @ApiPropertyOptional({ type: String, nullable: true }) customerEmail!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
+  @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, enum: ROUTE_TYPE_VALUES })
+  routeType!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) pickupAddress!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) destination!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) note!: string | null;
   @ApiProperty({ description: 'Khách yêu cầu giao xe tận nơi' }) deliveryRequested!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true }) deliveryAddress!: string | null;

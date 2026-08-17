@@ -2,8 +2,10 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  LONG_TERM_MIN_DAYS,
   POLICY_SOURCE,
   PRICE_ROW,
+  SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type BookingPriceSnapshot,
@@ -417,43 +419,89 @@ export class PricingService {
     delivery?: { fee: string; label: string } | null;
     /** `ngày local (YYYY-MM-DD) → giá NGÀY ghi đè` — nạp qua `dailyOverridesFor`. */
     dailyOverrides?: ReadonlyMap<string, string>;
+    /** Dịch vụ của chuyến (17/08) — đổi cách tính đơn giá. Mặc định self_drive. */
+    serviceType?: string;
+    /** Giá tháng tham chiếu — chỉ dùng khi serviceType = long_term. */
+    monthlyPrice?: string | null;
+    /** Giá/ngày đã gồm tài xế — chỉ dùng khi serviceType = with_driver. */
+    withDriverDailyPrice?: string | null;
   }): QuoteBreakdownDto {
-    if (!input.weekdayPrice) {
-      throw invalid('Xe chưa có giá thuê theo ngày — cấu hình giá trước khi báo giá');
-    }
     if (!(input.returnAt.getTime() > input.pickupAt.getTime())) {
       throw invalid('Thời điểm trả xe phải sau thời điểm nhận xe');
     }
 
     const days = this.chargedDays(input.pickupAt, input.returnAt);
-    const weekday = new Prisma.Decimal(input.weekdayPrice);
-    const weekend = input.weekendPrice ? new Prisma.Decimal(input.weekendPrice) : weekday;
+    const serviceType = input.serviceType ?? SERVICE_TYPE.SELF_DRIVE;
 
-    // Phân loại từng ngày tính tiền theo ngày bắt đầu của nó (giờ Việt Nam). Ngày có giá riêng
-    // (`vehicle_daily_prices`) lấy ĐÚNG giá đó — thay cả giá thường lẫn cuối tuần của ngày ấy.
-    let weekendDays = 0;
-    let overrideDays = 0;
-    let base = new Prisma.Decimal(0);
-    for (let i = 0; i < days; i++) {
-      const override = input.dailyOverrides?.get(localDayKey(input.pickupAt, i));
-      if (override != null) {
-        overrideDays += 1;
-        base = base.plus(new Prisma.Decimal(override));
-        continue;
-      }
-      const dow = new Date(input.pickupAt.getTime() + i * MS_PER_DAY + TZ_OFFSET_MS).getUTCDay();
-      const isWeekend = dow === 0 || dow === 6;
-      if (isWeekend) weekendDays += 1;
-      base = base.plus(isWeekend ? weekend : weekday);
+    // Sàn dài hạn kiểm ở ĐÂY (nguồn tính giá duy nhất) — mọi đường (public quote, tạo yêu cầu,
+    // duyệt) đều qua, FE chỉ là preview.
+    if (serviceType === SERVICE_TYPE.LONG_TERM && days < LONG_TERM_MIN_DAYS) {
+      throw invalid(`Thuê dài hạn tối thiểu ${LONG_TERM_MIN_DAYS} ngày`);
     }
-    const weekdayDays = days - weekendDays - overrideDays;
-    const splitRates = weekendDays > 0 && !weekend.equals(weekday);
 
-    const baseSublabel = overrideDays
-      ? `${days} ngày · trong đó ${overrideDays} ngày áp giá riêng`
-      : splitRates
-        ? `${weekdayDays} ngày thường × ${vnd(weekday)} · ${weekendDays} ngày cuối tuần × ${vnd(weekend)}`
-        : `${days} ngày × ${vnd(weekday)}/ngày`;
+    /*
+     * Đơn giá phẳng theo dịch vụ (17/08):
+     *   - Dài hạn CÓ giá tháng → đơn giá = giá tháng ÷ 30, KHÔNG tách weekday/cuối tuần,
+     *     KHÔNG áp giá riêng theo ngày và KHÔNG bậc giảm giá — giá tháng đã LÀ giá dài hạn,
+     *     chồng thêm ưu đãi là giảm kép.
+     *   - Có tài xế CÓ giá riêng → đơn giá = withDriverDailyPrice (đã gồm tài xế), GIỮ bậc
+     *     giảm giá theo ngày; bảng giá riêng theo ngày không áp (nó là giá tự lái).
+     *   - Còn lại (kể cả 2 dịch vụ trên nhưng CHƯA khai giá) → máy giá ngày như cũ.
+     */
+    const monthly =
+      serviceType === SERVICE_TYPE.LONG_TERM && input.monthlyPrice
+        ? new Prisma.Decimal(input.monthlyPrice)
+        : null;
+    const driverRate =
+      serviceType === SERVICE_TYPE.WITH_DRIVER && input.withDriverDailyPrice
+        ? new Prisma.Decimal(input.withDriverDailyPrice)
+        : null;
+
+    let base: Prisma.Decimal;
+    let baseSublabel: string;
+    let applyDiscountTiers = true;
+
+    if (monthly) {
+      const rate = monthly.div(30).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+      base = rate.mul(days);
+      baseSublabel = `${days} ngày × ${vnd(rate)}/ngày — giá tháng ${vnd(monthly)} ÷ 30`;
+      applyDiscountTiers = false;
+    } else if (driverRate) {
+      base = driverRate.mul(days);
+      baseSublabel = `${days} ngày × ${vnd(driverRate)}/ngày · đã gồm tài xế`;
+    } else {
+      if (!input.weekdayPrice) {
+        throw invalid('Xe chưa có giá thuê theo ngày — cấu hình giá trước khi báo giá');
+      }
+      const weekday = new Prisma.Decimal(input.weekdayPrice);
+      const weekend = input.weekendPrice ? new Prisma.Decimal(input.weekendPrice) : weekday;
+
+      // Phân loại từng ngày tính tiền theo ngày bắt đầu của nó (giờ Việt Nam). Ngày có giá riêng
+      // (`vehicle_daily_prices`) lấy ĐÚNG giá đó — thay cả giá thường lẫn cuối tuần của ngày ấy.
+      let weekendDays = 0;
+      let overrideDays = 0;
+      base = new Prisma.Decimal(0);
+      for (let i = 0; i < days; i++) {
+        const override = input.dailyOverrides?.get(localDayKey(input.pickupAt, i));
+        if (override != null) {
+          overrideDays += 1;
+          base = base.plus(new Prisma.Decimal(override));
+          continue;
+        }
+        const dow = new Date(input.pickupAt.getTime() + i * MS_PER_DAY + TZ_OFFSET_MS).getUTCDay();
+        const isWeekend = dow === 0 || dow === 6;
+        if (isWeekend) weekendDays += 1;
+        base = base.plus(isWeekend ? weekend : weekday);
+      }
+      const weekdayDays = days - weekendDays - overrideDays;
+      const splitRates = weekendDays > 0 && !weekend.equals(weekday);
+
+      baseSublabel = overrideDays
+        ? `${days} ngày · trong đó ${overrideDays} ngày áp giá riêng`
+        : splitRates
+          ? `${weekdayDays} ngày thường × ${vnd(weekday)} · ${weekendDays} ngày cuối tuần × ${vnd(weekend)}`
+          : `${days} ngày × ${vnd(weekday)}/ngày`;
+    }
 
     const rows: PriceBreakdownRowDto[] = [
       {
@@ -467,7 +515,7 @@ export class PricingService {
     // Giảm giá CHỈ áp lên tiền thuê cơ bản (quy tắc 6–7): mốc cao nhất mà days đạt tới.
     const policy = input.policy?.values ?? null;
     let discount = new Prisma.Decimal(0);
-    if (policy?.discountEnabled) {
+    if (applyDiscountTiers && policy?.discountEnabled) {
       const tier = [...policy.discountTiers]
         .filter((t) => days >= t.minDays)
         .sort((a, b) => b.minDays - a.minDays)[0];
@@ -565,6 +613,7 @@ export class PricingService {
     vehicleId: string,
     pickupAt: string,
     returnAt: string,
+    serviceType?: string,
   ): Promise<PublicQuoteDto> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: {
@@ -573,13 +622,25 @@ export class PricingService {
         publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
         tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
       },
-      select: { id: true, tenantId: true, weekdayPrice: true, weekendPrice: true },
+      select: {
+        id: true,
+        tenantId: true,
+        weekdayPrice: true,
+        weekendPrice: true,
+        serviceTypes: true,
+        monthlyPrice: true,
+        withDriverDailyPrice: true,
+      },
     });
     if (!vehicle) {
       throw new NotFoundException({
         code: API_ERROR_CODE.NOT_FOUND,
         message: 'Xe không khả dụng để báo giá',
       });
+    }
+    // Báo giá cho dịch vụ xe KHÔNG phục vụ là con số vô nghĩa — chặn sớm thay vì trả giá sai.
+    if (serviceType && !vehicle.serviceTypes.includes(serviceType)) {
+      throw invalid('Xe không phục vụ loại dịch vụ này');
     }
 
     const policy = await this.effectivePolicy(vehicle.tenantId, vehicle.id);
@@ -598,6 +659,9 @@ export class PricingService {
       policy,
       delivery: null,
       dailyOverrides,
+      serviceType,
+      monthlyPrice: decimalToString(vehicle.monthlyPrice),
+      withDriverDailyPrice: decimalToString(vehicle.withDriverDailyPrice),
     });
 
     const delivery: DeliverySummaryDto = policy?.values.deliveryEnabled

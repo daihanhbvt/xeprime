@@ -150,6 +150,13 @@ export const PERMISSION = {
   BOOKING_UPDATE: 'bookings.update',
   BOOKING_CANCEL: 'bookings.cancel',
 
+  // Tài xế của gian hàng (17/08 — nghiệp vụ xe có tài xế). Gán tài xế vào ĐƠN đi theo
+  // `bookings.update` (nó sửa đơn); hai quyền này là cho HỒ SƠ tài xế.
+  /** Xem danh sách/hồ sơ tài xế + bộ chọn tài xế khi gán vào đơn. */
+  DRIVER_VIEW: 'drivers.view',
+  /** Thêm/sửa/ngừng hoạt động/xoá hồ sơ tài xế. */
+  DRIVER_MANAGE: 'drivers.manage',
+
   // Lịch
   CALENDAR_VIEW: 'calendar.view',
 
@@ -246,6 +253,8 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.BOOKING_CREATE,
       PERMISSION.BOOKING_UPDATE,
       PERMISSION.BOOKING_CANCEL,
+      PERMISSION.DRIVER_VIEW,
+      PERMISSION.DRIVER_MANAGE,
       PERMISSION.CALENDAR_VIEW,
       PERMISSION.FINANCE_VIEW,
       PERMISSION.RECEIPT_CREATE,
@@ -276,6 +285,9 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.BOOKING_VIEW,
       PERMISSION.BOOKING_CREATE,
       PERMISSION.BOOKING_UPDATE,
+      // Xem hồ sơ để chọn tài xế khi gán vào đơn (gán = `bookings.update` đã có ở trên);
+      // quản lý hồ sơ tài xế là việc của quản lý/chủ shop.
+      PERMISSION.DRIVER_VIEW,
       PERMISSION.CALENDAR_VIEW,
       PERMISSION.RECEIPT_CREATE,
       PERMISSION.PAYMENT_RECORD,
@@ -291,6 +303,7 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.HANDOVER_VIEW,
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_VIEW,
+      PERMISSION.DRIVER_VIEW,
       PERMISSION.CALENDAR_VIEW,
     ],
   };

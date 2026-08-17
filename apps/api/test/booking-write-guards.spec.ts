@@ -12,6 +12,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
 import { BookingRequestsService } from '../src/modules/booking-requests/booking-requests.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
+import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
@@ -37,6 +38,7 @@ const bookings = new BookingsService(
   new OccupancyService(asService),
   audit,
   notifications,
+  new DriversService(asService, audit),
 );
 
 /**

@@ -13,6 +13,8 @@ import {
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
+  ArrayNotEmpty,
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsIn,
@@ -64,6 +66,7 @@ export class VehicleListQueryDto {
   @IsIn(VEHICLE_TYPE_VALUES)
   vehicleType?: string;
 
+  /** Lọc "xe PHỤC VỤ ĐƯỢC dịch vụ X" — chạy `has` trên mảng `service_types`. */
   @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
   @IsOptional()
   @IsIn(SERVICE_TYPE_VALUES)
@@ -135,7 +138,7 @@ export class VehicleListItemDto {
   // thiếu nó thì openapi-typescript sinh ra `Record<string, never>` thay vì string/number.
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
   @ApiProperty({ enum: VEHICLE_TYPE_VALUES }) vehicleType!: string;
-  @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  @ApiProperty({ enum: SERVICE_TYPE_VALUES, isArray: true }) serviceTypes!: string[];
   @ApiPropertyOptional({ enum: VEHICLE_SOURCE_TYPE_VALUES }) sourceType?: string;
   @ApiPropertyOptional({ type: String, nullable: true }) brand!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) model!: string | null;
@@ -206,6 +209,20 @@ export class VehicleDetailDto extends VehicleListItemDto {
   })
   hourlyPrice!: string | null;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá tháng tham chiếu thuê dài hạn — string tiền (ADR 0007)',
+  })
+  monthlyPrice!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày đã gồm tài xế — string tiền (ADR 0007)',
+  })
+  withDriverDailyPrice!: string | null;
+
   @ApiProperty({ description: 'Chủ xe hỗ trợ giao xe tận nơi' }) deliveryEnabled!: boolean;
   @ApiProperty({ description: 'Miễn thế chấp (không cần cọc tài sản)' }) noCollateral!: boolean;
 
@@ -262,10 +279,17 @@ export class CreateVehicleDto {
   @IsIn(VEHICLE_TYPE_VALUES)
   vehicleType!: string;
 
-  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
+  /**
+   * MẢNG dịch vụ xe phục vụ được (17/08) — tối thiểu 1, không trùng phần tử (CHECK subset ở
+   * DB không chặn được trùng — DTO là lớp chặn). Bỏ trống = mặc định ['self_drive'].
+   */
+  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES, isArray: true })
   @IsOptional()
-  @IsIn(SERVICE_TYPE_VALUES)
-  serviceType?: string;
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayUnique()
+  @IsIn(SERVICE_TYPE_VALUES, { each: true })
+  serviceTypes?: string[];
 
   @ApiPropertyOptional({ enum: VEHICLE_SOURCE_TYPE_VALUES })
   @IsOptional()
@@ -460,6 +484,28 @@ export class CreateVehicleDto {
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'hourlyPrice phải là số tiền hợp lệ' })
   hourlyPrice?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Giá tháng tham chiếu thuê dài hạn (÷30 ra đơn giá ngày) — chỉ có nghĩa khi serviceTypes chứa long_term. Gửi null = bỏ giá tháng.',
+    example: '8000000',
+  })
+  @IsOptional()
+  @Matches(MONEY_PATTERN, { message: 'monthlyPrice phải là số tiền hợp lệ' })
+  monthlyPrice?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description:
+      'Giá/ngày ĐÃ GỒM tài xế — chỉ có nghĩa khi serviceTypes chứa with_driver. Gửi null = shop báo giá khi duyệt.',
+    example: '1500000',
+  })
+  @IsOptional()
+  @Matches(MONEY_PATTERN, { message: 'withDriverDailyPrice phải là số tiền hợp lệ' })
+  withDriverDailyPrice?: string | null;
 
   @ApiPropertyOptional({ description: 'Chủ xe hỗ trợ giao xe tận nơi' })
   @IsOptional()

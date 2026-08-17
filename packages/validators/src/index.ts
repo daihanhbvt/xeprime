@@ -13,6 +13,7 @@ import {
   MAINTENANCE_TYPE_VALUES,
   ODOMETER_CORRECTION_REASON_VALUES,
   ODOMETER_MAX_KM,
+  SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
   TENANT_TYPE_VALUES,
   TRANSMISSION_TYPE_VALUES,
@@ -77,7 +78,13 @@ export const vehicleFormSchema = yup.object({
    */
   branchId: yup.string().trim().required('Chọn chi nhánh giữ xe'),
   vehicleType: yup.string().oneOf(VEHICLE_TYPE_VALUES).required('Chọn loại xe'),
-  serviceType: yup.string().oneOf(SERVICE_TYPE_VALUES).required('Chọn loại dịch vụ'),
+  /** MẢNG dịch vụ xe phục vụ được (17/08) — một xe đăng đồng thời tự lái/có tài xế/dài hạn. */
+  serviceTypes: yup
+    .array()
+    .of(yup.string().oneOf(SERVICE_TYPE_VALUES).required())
+    .min(1, 'Chọn ít nhất một loại dịch vụ')
+    .required('Chọn loại dịch vụ')
+    .default([SERVICE_TYPE.SELF_DRIVE]),
   sourceType: yup.string().oneOf(VEHICLE_SOURCE_TYPE_VALUES).required('Chọn hình thức nguồn xe'),
   operationStatus: yup
     .string()
@@ -150,6 +157,16 @@ export const vehicleFormSchema = yup.object({
     .default(null),
   /** Giá thuê theo giờ — bỏ trống = xe không cho thuê giờ (tiện ích "Thuê theo giờ"). */
   hourlyPrice: moneySchema
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .nullable()
+    .default(null),
+  /** Giá tháng tham chiếu thuê dài hạn — chỉ có nghĩa khi serviceTypes chứa long_term. */
+  monthlyPrice: moneySchema
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .nullable()
+    .default(null),
+  /** Giá/ngày đã gồm tài xế — chỉ có nghĩa khi serviceTypes chứa with_driver. */
+  withDriverDailyPrice: moneySchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
@@ -409,6 +426,28 @@ export const bookingPeriodSchema = yup.object({
         : schema,
     ),
 });
+
+/**
+ * Biến thể có SÀN thời lượng (ngày) — thuê dài hạn dùng `LONG_TERM_MIN_DAYS`. Đếm ngày theo
+ * đúng công thức backend (`ceil(Δ/24h)`) để hai tầng không bao giờ lệch nhau về ranh giới.
+ */
+export const bookingPeriodMinDaysSchema = (minDays: number) =>
+  bookingPeriodSchema.shape({
+    returnAt: yup
+      .date()
+      .required('Chọn thời gian trả xe')
+      .when('pickupAt', ([pickupAt], schema) =>
+        pickupAt instanceof Date
+          ? schema.test(
+              'min-rental-days',
+              `Thời gian thuê tối thiểu ${minDays} ngày`,
+              (returnAt) =>
+                returnAt instanceof Date &&
+                Math.ceil((returnAt.getTime() - pickupAt.getTime()) / 86_400_000) >= minDays,
+            )
+          : schema,
+      ),
+  });
 
 export type BookingPeriodValues = yup.InferType<typeof bookingPeriodSchema>;
 

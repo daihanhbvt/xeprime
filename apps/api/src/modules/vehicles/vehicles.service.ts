@@ -54,7 +54,7 @@ const LIST_SELECT = {
   name: true,
   plateNumber: true,
   vehicleType: true,
-  serviceType: true,
+  serviceTypes: true,
   sourceType: true,
   brand: true,
   model: true,
@@ -89,6 +89,8 @@ const DETAIL_SELECT = {
   fuelConsumptionHighway: true,
   fuelConsumptionCombined: true,
   hourlyPrice: true,
+  monthlyPrice: true,
+  withDriverDailyPrice: true,
   deliveryEnabled: true,
   noCollateral: true,
   description: true,
@@ -104,12 +106,14 @@ const SENSITIVE_SELECT = {
   weekdayPrice: true,
   weekendPrice: true,
   hourlyPrice: true,
+  monthlyPrice: true,
+  withDriverDailyPrice: true,
   discountPercent: true,
   plateNumber: true,
   vehicleType: true,
   fuelType: true,
   bodyType: true,
-  serviceType: true,
+  serviceTypes: true,
   mainImageUrl: true,
 } satisfies Prisma.VehicleSelect;
 
@@ -312,7 +316,8 @@ export class VehiclesService {
       tenantId,
       deletedAt: null,
       ...(query.vehicleType ? { vehicleType: query.vehicleType } : {}),
-      ...(query.serviceType ? { serviceType: query.serviceType } : {}),
+      // Lọc theo NĂNG LỰC: xe phục vụ được dịch vụ X — `has` trên mảng (GIN index).
+      ...(query.serviceType ? { serviceTypes: { has: query.serviceType } } : {}),
       ...(query.operationStatus ? { operationStatus: query.operationStatus } : {}),
       ...(query.publicStatus ? { publicStatus: query.publicStatus } : {}),
       // `branchId` đứng SAU `tenantId` và không thay thế nó: bộ chọn chi nhánh chỉ thu hẹp phạm
@@ -892,7 +897,7 @@ function orderByOf(sort: VehicleListQueryDto['sort']): Prisma.VehicleOrderByWith
 
 /** Các trường scalar tuỳ chọn — kiểu thuần nên assign được cho cả `create` lẫn `update`. */
 interface VehicleWritableFields {
-  serviceType?: string;
+  serviceTypes?: string[];
   sourceType?: string;
   plateNumber?: string | null;
   brand?: string | null;
@@ -918,6 +923,8 @@ interface VehicleWritableFields {
   weekdayPrice?: string;
   weekendPrice?: string;
   hourlyPrice?: string | null;
+  monthlyPrice?: string | null;
+  withDriverDailyPrice?: string | null;
   deliveryEnabled?: boolean;
   noCollateral?: boolean;
   discountPercent?: number | null;
@@ -930,7 +937,11 @@ interface VehicleWritableFields {
  */
 function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritableFields {
   return {
-    ...(dto.serviceType !== undefined ? { serviceType: dto.serviceType } : {}),
+    // Canonicalize (dedupe + sort) TRƯỚC khi ghi — CHECK subset của DB không chặn trùng phần
+    // tử, và thứ tự ổn định giữ cho so sánh nhạy cảm (hasSensitiveChange) không báo đổi oan.
+    ...(dto.serviceTypes !== undefined
+      ? { serviceTypes: [...new Set(dto.serviceTypes)].sort() }
+      : {}),
     ...(dto.sourceType !== undefined ? { sourceType: dto.sourceType } : {}),
     ...(dto.plateNumber !== undefined ? { plateNumber: dto.plateNumber } : {}),
     ...(dto.brand !== undefined ? { brand: dto.brand } : {}),
@@ -964,6 +975,10 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
     ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
     ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
     ...(dto.hourlyPrice !== undefined ? { hourlyPrice: dto.hourlyPrice } : {}),
+    ...(dto.monthlyPrice !== undefined ? { monthlyPrice: dto.monthlyPrice } : {}),
+    ...(dto.withDriverDailyPrice !== undefined
+      ? { withDriverDailyPrice: dto.withDriverDailyPrice }
+      : {}),
     ...(dto.deliveryEnabled !== undefined ? { deliveryEnabled: dto.deliveryEnabled } : {}),
     ...(dto.noCollateral !== undefined ? { noCollateral: dto.noCollateral } : {}),
     ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
@@ -1009,7 +1024,7 @@ function toListItem(
       : null,
     plateNumber: v.plateNumber,
     vehicleType: v.vehicleType,
-    serviceType: v.serviceType,
+    serviceTypes: v.serviceTypes,
     sourceType: v.sourceType,
     brand: v.brand,
     model: v.model,
@@ -1047,6 +1062,8 @@ function toDetail(
     fuelConsumptionHighway: v.fuelConsumptionHighway as unknown as string | null,
     fuelConsumptionCombined: v.fuelConsumptionCombined as unknown as string | null,
     hourlyPrice: v.hourlyPrice as unknown as string | null,
+    monthlyPrice: v.monthlyPrice as unknown as string | null,
+    withDriverDailyPrice: v.withDriverDailyPrice as unknown as string | null,
     deliveryEnabled: v.deliveryEnabled,
     noCollateral: v.noCollateral,
     description: v.description,
@@ -1059,15 +1076,23 @@ function toDetail(
 
 type SensitiveRow = Prisma.VehicleGetPayload<{ select: typeof SENSITIVE_SELECT }>;
 
+/**
+ * Khoá so sánh trường nhạy cảm — MẢNG canonicalize (dedupe + sort + join) để đổi THỨ TỰ chọn
+ * dịch vụ không bị tính là thay đổi. Công thức này có bản đối xứng ở FE
+ * (`apps/web/features/vehicles/sensitive-changes.ts`) — sửa một bên phải sửa cả hai.
+ */
+function sensitiveKey(value: unknown): string | null {
+  if (value == null) return null;
+  if (Array.isArray(value)) return [...new Set(value)].sort().join(',');
+  return String(value);
+}
+
 /** Có trường nhạy cảm nào được sửa sang giá trị khác hiện tại không (ADR 0008). */
 function hasSensitiveChange(current: SensitiveRow, dto: UpdateVehicleDto): boolean {
   return VEHICLE_PUBLIC_SENSITIVE_FIELDS.some((field) => {
     const next = dto[field];
     if (next === undefined) return false; // không đụng tới trường này
-    const curVal = current[field];
-    const curStr = curVal == null ? null : String(curVal);
-    const nextStr = next == null ? null : String(next);
-    return curStr !== nextStr;
+    return sensitiveKey(current[field]) !== sensitiveKey(next);
   });
 }
 
@@ -1088,7 +1113,9 @@ function vehicleSnapshot(v: VehicleRow): Record<string, unknown> {
     code: v.code,
     plateNumber: v.plateNumber,
     vehicleType: v.vehicleType,
-    serviceType: v.serviceType,
+    // Key MỚI `serviceTypes` (mảng) — snapshot cũ trong approval_tasks còn key `serviceType`
+    // (string, có thể 'both'); FE approvals đọc được cả hai shape.
+    serviceTypes: v.serviceTypes,
     brand: v.brand,
     model: v.model,
     manufactureYear: v.manufactureYear,
@@ -1101,6 +1128,8 @@ function vehicleSnapshot(v: VehicleRow): Record<string, unknown> {
     weekdayPrice: v.weekdayPrice == null ? null : String(v.weekdayPrice),
     weekendPrice: v.weekendPrice == null ? null : String(v.weekendPrice),
     hourlyPrice: v.hourlyPrice == null ? null : String(v.hourlyPrice),
+    monthlyPrice: v.monthlyPrice == null ? null : String(v.monthlyPrice),
+    withDriverDailyPrice: v.withDriverDailyPrice == null ? null : String(v.withDriverDailyPrice),
     deliveryEnabled: v.deliveryEnabled,
     noCollateral: v.noCollateral,
     discountPercent: v.discountPercent,

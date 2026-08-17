@@ -4,6 +4,7 @@ import {
   MEMBERSHIP_STATUS,
   POLICY_SOURCE,
   PRICE_ROW,
+  SERVICE_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
@@ -11,6 +12,7 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingRequestsService } from '../src/modules/booking-requests/booking-requests.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
+import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
@@ -40,6 +42,7 @@ const bookings = new BookingsService(
   new OccupancyService(asService),
   audit,
   new NotificationService(asService),
+  new DriversService(asService, audit),
 );
 // Nhánh test chỉ đi qua inbox shop (quote/approve) — không đụng OTP/đăng nhập khách, nên hai
 // dependency đó stub rỗng thay vì dựng cả cây AuthService/Firebase.
@@ -426,5 +429,79 @@ describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapsho
     // Yêu cầu mới KHÔNG còn sinh báo giá — trường này chỉ còn để đọc dữ liệu cũ.
     const dto = await requests.getOne(tenantId, requestId);
     expect(dto.deliveryQuote).toBeNull();
+  });
+});
+
+describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài xế giá riêng)', () => {
+  // buildQuote là hàm thuần — kiểm số học trực tiếp, policy lấy từ DB thật cho đúng đường chạy.
+  const PICKUP = new Date('2027-03-01T03:00:00.000Z');
+  const day = (n: number) => new Date(PICKUP.getTime() + n * 24 * 60 * 60 * 1000);
+
+  maybe('long_term có giá tháng: đơn giá = tháng ÷ 30, KHÔNG áp bậc giảm (tránh giảm kép)', async () => {
+    await pricing.saveShopPolicy(tenantId, ownerId, policyDto());
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const breakdown = pricing.buildQuote({
+      weekdayPrice: '800000',
+      weekendPrice: null,
+      pickupAt: PICKUP,
+      returnAt: day(10),
+      policy,
+      delivery: null,
+      serviceType: SERVICE_TYPE.LONG_TERM,
+      monthlyPrice: '9000000',
+    });
+    expect(breakdown.days).toBe(10);
+    // 9tr ÷ 30 = 300k/ngày × 10 ngày — policy có bậc 5% từ 3 ngày nhưng nhánh giá tháng bỏ qua.
+    expect(breakdown.totalAmount).toBe('3000000');
+    expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)).toBeUndefined();
+  });
+
+  maybe('long_term dưới sàn 7 ngày bị máy giá chặn (nguồn chặn thật, FE chỉ preview)', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    expect(() =>
+      pricing.buildQuote({
+        weekdayPrice: '800000',
+        weekendPrice: null,
+        pickupAt: PICKUP,
+        returnAt: day(5),
+        policy,
+        delivery: null,
+        serviceType: SERVICE_TYPE.LONG_TERM,
+        monthlyPrice: '9000000',
+      }),
+    ).toThrow(/tối thiểu 7 ngày/);
+  });
+
+  maybe('long_term CHƯA khai giá tháng: rơi về máy giá ngày + bậc giảm như cũ', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const breakdown = pricing.buildQuote({
+      weekdayPrice: '800000',
+      weekendPrice: null,
+      pickupAt: PICKUP,
+      returnAt: day(10),
+      policy,
+      delivery: null,
+      serviceType: SERVICE_TYPE.LONG_TERM,
+      monthlyPrice: null,
+    });
+    // 800k × 10 = 8tr, giảm 5% (mốc 3 ngày) = 7.6tr.
+    expect(breakdown.totalAmount).toBe('7600000');
+  });
+
+  maybe('with_driver có giá riêng: đơn giá phẳng đã gồm tài xế, GIỮ bậc giảm', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const breakdown = pricing.buildQuote({
+      weekdayPrice: '800000',
+      weekendPrice: null,
+      pickupAt: PICKUP,
+      returnAt: day(4),
+      policy,
+      delivery: null,
+      serviceType: SERVICE_TYPE.WITH_DRIVER,
+      withDriverDailyPrice: '1500000',
+    });
+    // 1.5tr × 4 = 6tr, giảm 5% (mốc 3 ngày) = 5.7tr.
+    expect(breakdown.totalAmount).toBe('5700000');
+    expect(breakdown.rows[0]?.sublabel).toContain('đã gồm tài xế');
   });
 });

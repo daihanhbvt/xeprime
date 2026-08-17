@@ -8,8 +8,11 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
+  LONG_TERM_MIN_DAYS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
+  ROUTE_TYPE,
+  SERVICE_TYPE,
   TENANT_STATUS,
   USER_STATUS,
   VEHICLE_PUBLIC_STATUS,
@@ -43,6 +46,10 @@ const SELECT = {
   customerEmail: true,
   pickupAt: true,
   returnAt: true,
+  serviceType: true,
+  routeType: true,
+  pickupAddress: true,
+  destination: true,
   note: true,
   deliveryRequested: true,
   deliveryAddress: true,
@@ -72,7 +79,7 @@ export class BookingRequestsService {
    */
   private async loadBookableVehicle(
     vehicleId: string,
-  ): Promise<{ id: string; tenantId: string; name: string }> {
+  ): Promise<{ id: string; tenantId: string; name: string; serviceTypes: string[] }> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: {
         id: vehicleId,
@@ -80,7 +87,7 @@ export class BookingRequestsService {
         publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
         tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
       },
-      select: { id: true, tenantId: true, name: true },
+      select: { id: true, tenantId: true, name: true, serviceTypes: true },
     });
     if (!vehicle) {
       throw new NotFoundException({
@@ -147,8 +154,56 @@ export class BookingRequestsService {
       });
     }
 
+    /*
+     * Dịch vụ của chuyến (17/08) — kiểm ở SERVER, FE chỉ là preview:
+     *   - phải nằm trong NĂNG LỰC của xe (`vehicle.serviceTypes`) — DB không cross-check được
+     *     hai bảng, đây là chỗ duy nhất dựa vào service;
+     *   - dài hạn có sàn thời lượng (cùng công thức đếm ngày với máy giá: ceil Δ/24h);
+     *   - có tài xế bắt buộc lộ trình + địa chỉ đón, liên tỉnh bắt buộc điểm đến;
+     *   - lộ trình/địa chỉ đón/điểm đến bị NORMALIZE về null với dịch vụ khác (CHECK DB
+     *     route_type ⇒ with_driver sẽ từ chối dữ liệu lệch nếu service quên).
+     */
+    const serviceType = dto.serviceType ?? SERVICE_TYPE.SELF_DRIVE;
+    if (!vehicle.serviceTypes.includes(serviceType)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Xe không phục vụ loại dịch vụ này',
+      });
+    }
+    if (serviceType === SERVICE_TYPE.LONG_TERM) {
+      const days = Math.ceil((returnAt.getTime() - pickupAt.getTime()) / 86_400_000);
+      if (days < LONG_TERM_MIN_DAYS) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: `Thuê dài hạn tối thiểu ${LONG_TERM_MIN_DAYS} ngày`,
+        });
+      }
+    }
+    const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
+    if (withDriver) {
+      if (!dto.routeType) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Vui lòng chọn lộ trình cho chuyến có tài xế',
+        });
+      }
+      if (!dto.pickupAddress?.trim()) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Vui lòng nhập địa chỉ đón',
+        });
+      }
+      if (dto.routeType !== ROUTE_TYPE.IN_CITY && !dto.destination?.trim()) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Vui lòng nhập điểm đến cho lộ trình liên tỉnh',
+        });
+      }
+    }
+
     // Giao tận nơi: kiểm ở SERVER theo chính sách hiệu lực — FE ẩn ô nhập không phải lớp chặn.
-    const deliveryRequested = dto.deliveryRequested === true;
+    // Chuyến CÓ TÀI XẾ thì xe đến đón khách — "giao xe tận nơi" không có nghĩa, ép false.
+    const deliveryRequested = !withDriver && dto.deliveryRequested === true;
     if (deliveryRequested) {
       if (!dto.deliveryAddress?.trim()) {
         throw new BadRequestException({
@@ -195,6 +250,13 @@ export class BookingRequestsService {
             customerUserId: effectiveUserId,
             pickupAt,
             returnAt,
+            serviceType,
+            routeType: withDriver ? dto.routeType : null,
+            pickupAddress: withDriver ? (dto.pickupAddress?.trim() ?? null) : null,
+            destination:
+              withDriver && dto.routeType !== ROUTE_TYPE.IN_CITY
+                ? (dto.destination?.trim() ?? null)
+                : null,
             note: dto.note ?? null,
             deliveryRequested,
             deliveryAddress: deliveryRequested ? dto.deliveryAddress!.trim() : null,
@@ -369,6 +431,11 @@ export class BookingRequestsService {
       // Miễn phí lúc duyệt — không dòng giao nhận nào trong snapshot giá gốc.
       delivery: null,
       dailyOverrides,
+      // Giá theo DỊCH VỤ của yêu cầu (17/08): dài hạn ăn giá tháng, có tài xế ăn giá tài xế —
+      // khách và shop nhìn cùng một con số với quote công khai.
+      serviceType: req.serviceType,
+      monthlyPrice: req.vehicle.monthlyPrice?.toFixed(0) ?? null,
+      withDriverDailyPrice: req.vehicle.withDriverDailyPrice?.toFixed(0) ?? null,
     });
     const snapshot = this.pricing.buildSnapshot(breakdown, policy);
 
@@ -383,6 +450,9 @@ export class BookingRequestsService {
           customerPhone: req.customerPhone,
           pickupAt: req.pickupAt.toISOString(),
           returnAt: req.returnAt.toISOString(),
+          // Fix 17/08: trước đây serviceType KHÔNG được map — mọi đơn sinh từ yêu cầu đều rơi
+          // về default self_drive, kể cả chuyến có tài xế/dài hạn.
+          serviceType: req.serviceType,
           baseAmount: rowAmount(breakdown.rows, 'base'),
           discountAmount: rowAmountAbs(breakdown.rows, 'discount'),
           deliveryFee: rowAmount(breakdown.rows, 'delivery'),
@@ -505,9 +575,18 @@ export class BookingRequestsService {
         customerUserId: true,
         pickupAt: true,
         returnAt: true,
+        serviceType: true,
         deliveryRequested: true,
         deliveryQuote: true,
-        vehicle: { select: { name: true, weekdayPrice: true, weekendPrice: true } },
+        vehicle: {
+          select: {
+            name: true,
+            weekdayPrice: true,
+            weekendPrice: true,
+            monthlyPrice: true,
+            withDriverDailyPrice: true,
+          },
+        },
       },
     });
     if (!req) throw notFound();
@@ -541,6 +620,10 @@ function toDto(r: BookingRequestRow): BookingRequestDto {
     customerEmail: r.customerEmail,
     pickupAt: r.pickupAt as unknown as string,
     returnAt: r.returnAt as unknown as string,
+    serviceType: r.serviceType,
+    routeType: r.routeType,
+    pickupAddress: r.pickupAddress,
+    destination: r.destination,
     note: r.note,
     deliveryRequested: r.deliveryRequested,
     deliveryAddress: r.deliveryAddress,
