@@ -1,15 +1,16 @@
 .wrap {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 28px;
-  max-width: 1080px;
+  grid-template-columns: minmax(0, 1.18fr) minmax(480px, 0.92fr);
+  gap: 40px;
+  max-width: var(--xp-container-max-width);
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 32px 16px 64px;
 }
 
 .media {
   position: sticky;
   top: 16px;
+  min-width: 0;
   align-self: start;
 }
 
@@ -58,6 +59,7 @@
 
 .info {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 16px;
 }
@@ -70,10 +72,25 @@
 }
 
 .price {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(180px, 1fr);
+  align-items: start;
+  gap: 12px 24px;
+}
+
+.priceMain {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
-  flex-wrap: wrap;
+}
+
+.priceDetails {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .price b {
@@ -108,8 +125,8 @@
 }
 
 .weekend {
-  margin-left: auto;
   font-size: 13px;
+  text-align: right;
 }
 
 .amenities {
@@ -130,8 +147,9 @@
 
 .specs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 20px;
+  grid-template-columns: max-content minmax(72px, 1fr) max-content minmax(120px, 1.25fr);
+  gap: 10px 16px;
+  margin: 0;
   padding: 16px;
   background: var(--xp-color-bg-container);
   border: 1px solid var(--xp-color-border-secondary);
@@ -139,20 +157,23 @@
 }
 
 .specRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  display: contents;
   font-size: 14px;
 }
 
 .specRow dt {
+  margin: 0;
   color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
 }
 
 .specRow dd {
+  min-width: 0;
+  margin: 0;
   font-weight: 600;
   color: var(--xp-color-text);
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .shop {
@@ -210,7 +231,7 @@
   margin-bottom: 6px;
 }
 
-@media (max-width: 840px) {
+@media (max-width: 960px) {
   .wrap {
     grid-template-columns: 1fr;
     gap: 20px;
@@ -219,8 +240,28 @@
   .media {
     position: static;
   }
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    padding-top: 16px;
+    padding-bottom: 32px;
+  }
+
+  .price {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .priceDetails {
+    align-items: flex-start;
+  }
+
+  .weekend {
+    text-align: left;
+  }
 
   .specs {
-    grid-template-columns: 1fr;
+    grid-template-columns: max-content minmax(0, 1fr);
   }
 }

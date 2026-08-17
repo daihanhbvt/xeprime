@@ -98,7 +98,11 @@ export class PricingService {
     };
     const [rows, totalVehicles, overridden] = await this.prisma.$transaction([
       this.prisma.rentalPolicy.findMany({
-        where: { tenantId, vehicleId: null, vehicleType: vehicleType ? { in: [vehicleType] } : null },
+        where: {
+          tenantId,
+          vehicleId: null,
+          vehicleType: vehicleType ? { in: [vehicleType] } : null,
+        },
         select: POLICY_SELECT,
       }),
       this.prisma.vehicle.count({ where: vehicleScope }),
@@ -144,7 +148,13 @@ export class PricingService {
       } else {
         // Partial unique (shop_default / type_default) là chốt chặn nếu hai request đua.
         await tx.rentalPolicy.create({
-          data: { id: newId(), tenantId, vehicleId: null, vehicleType: vehicleType ?? null, ...data },
+          data: {
+            id: newId(),
+            tenantId,
+            vehicleId: null,
+            vehicleType: vehicleType ?? null,
+            ...data,
+          },
         });
       }
 
@@ -479,6 +489,8 @@ export class PricingService {
     withDriverInterCityPrice?: string | null;
     /** Giá/ngày có tài xế liên tỉnh 1 chiều — fallback: liên tỉnh → cơ bản. */
     withDriverOneWayPrice?: string | null;
+    /** Khuyến mãi trực tiếp cho TIỀN THUÊ TỰ LÁI; không áp cho dịch vụ khác/phụ phí/cọc. */
+    discountPercent?: number | null;
   }): QuoteBreakdownDto {
     if (!(input.returnAt.getTime() > input.pickupAt.getTime())) {
       throw invalid('Thời điểm trả xe phải sau thời điểm nhận xe');
@@ -550,7 +562,7 @@ export class PricingService {
      * ngắn (tự lái/có tài xế theo ngày) không ăn bậc; dài hạn áp bậc CHỒNG lên giá tháng như
      * gói cam kết của Mioto — không phải giảm kép vì thuê ngắn đã bị loại khỏi bậc.
      */
-    let applyDiscountTiers = serviceType === SERVICE_TYPE.LONG_TERM;
+    const applyDiscountTiers = serviceType === SERVICE_TYPE.LONG_TERM;
     // Tiết kiệm so với giá ngày thường — FE hiện "-X% · tiết kiệm Y₫" để khách thấy chênh lệch.
     let longTermSavingsPercent: number | null = null;
     let longTermSavingsAmount: string | null = null;
@@ -626,10 +638,35 @@ export class PricingService {
       },
     ];
 
-    // Giảm giá CHỈ áp lên tiền thuê cơ bản (quy tắc 6–7): mốc cao nhất mà days đạt tới.
+    // Mọi khuyến mãi CHỈ áp lên tiền thuê cơ bản; không giảm phụ phí/cọc.
+    // Khuyến mãi trực tiếp thuộc dịch vụ TỰ LÁI, còn bậc theo thời lượng thuộc
+    // DÀI HẠN, nên hai loại không bao giờ chồng lên nhau.
     const policy = input.policy?.values ?? null;
     let discount = new Prisma.Decimal(0);
-    if (applyDiscountTiers && policy?.discountEnabled) {
+    const directDiscountPercent =
+      serviceType === SERVICE_TYPE.SELF_DRIVE &&
+      input.discountPercent != null &&
+      input.discountPercent > 0
+        ? Math.min(100, Math.trunc(input.discountPercent))
+        : null;
+    if (directDiscountPercent) {
+      discount = base
+        .mul(directDiscountPercent)
+        .div(100)
+        .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+      rows.push({
+        key: PRICE_ROW.DISCOUNT,
+        label: `Khuyến mãi trực tiếp (${directDiscountPercent}%)`,
+        sublabel: 'Áp dụng cho tiền thuê tự lái',
+        amount: discount.negated().toFixed(0),
+      });
+      rows.push({
+        key: PRICE_ROW.SUBTOTAL,
+        label: 'Giá sau khuyến mãi',
+        sublabel: null,
+        amount: base.minus(discount).toFixed(0),
+      });
+    } else if (applyDiscountTiers && policy?.discountEnabled) {
       const tier = [...policy.discountTiers]
         .filter((t) => days >= t.minDays)
         .sort((a, b) => b.minDays - a.minDays)[0];
@@ -752,6 +789,7 @@ export class PricingService {
         withDriverDailyPrice: true,
         withDriverInterCityPrice: true,
         withDriverOneWayPrice: true,
+        discountPercent: true,
       },
     });
     if (!vehicle) {
@@ -788,6 +826,7 @@ export class PricingService {
       withDriverDailyPrice: decimalToString(vehicle.withDriverDailyPrice),
       withDriverInterCityPrice: decimalToString(vehicle.withDriverInterCityPrice),
       withDriverOneWayPrice: decimalToString(vehicle.withDriverOneWayPrice),
+      discountPercent: vehicle.discountPercent,
     });
 
     const delivery: DeliverySummaryDto = policy?.values.deliveryEnabled

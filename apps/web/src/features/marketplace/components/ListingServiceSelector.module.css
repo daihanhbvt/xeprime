@@ -1,0 +1,94 @@
+.selector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.label {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.options {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.option {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  padding: 5px 11px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+  line-height: 20px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.option:hover {
+  transform: translateY(-1px);
+}
+
+.option:active {
+  transform: translateY(0);
+}
+
+.selfDrive {
+  border-color: color-mix(in srgb, var(--xp-color-info) 24%, var(--xp-color-border));
+  background: var(--xp-color-info-bg);
+  color: var(--xp-color-info);
+}
+
+.withDriver {
+  border-color: color-mix(in srgb, var(--xp-color-primary) 34%, var(--xp-color-border));
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+}
+
+.longTerm {
+  border-color: color-mix(in srgb, var(--xp-color-success) 24%, var(--xp-color-border));
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+}
+
+.active {
+  border-color: currentColor;
+  box-shadow:
+    0 0 0 2px var(--xp-color-bg-container),
+    0 0 0 3px currentColor;
+}
+
+@media (max-width: 640px) {
+  .selector {
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .label {
+    flex-basis: 100%;
+  }
+
+  .options {
+    gap: 6px;
+  }
+
+  .option {
+    min-height: 30px;
+    padding: 4px 9px;
+    font-size: 12.5px;
+  }
+}

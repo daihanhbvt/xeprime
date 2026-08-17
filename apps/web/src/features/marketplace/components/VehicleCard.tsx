@@ -51,9 +51,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
    */
   const serviceTypes: string[] = listing.serviceTypes ?? [];
   const serviceContext =
-    filters.serviceType && serviceTypes.includes(filters.serviceType)
-      ? filters.serviceType
-      : null;
+    filters.serviceType && serviceTypes.includes(filters.serviceType) ? filters.serviceType : null;
   const activeService =
     serviceContext ??
     (serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE) ? SERVICE_TYPE.SELF_DRIVE : serviceTypes[0]);
@@ -63,7 +61,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   const rating = Number(listing.ratingAvg);
   const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
 
-  // Giá sau giảm chỉ để HIỂN THỊ (marketing) — giá chốt thật do shop quyết khi duyệt yêu cầu.
+  // Preview cùng công thức với PricingService; báo giá server vẫn là nguồn chốt.
   const discount = listing.discountPercent ?? 0;
 
   /*
@@ -71,7 +69,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
    *   - dài hạn → giá tháng; CHƯA niêm yết → "Liên hệ báo giá" (không lấy giá tự lái trưng
    *     như giá dài hạn);
    *   - có tài xế → giá/ngày đã gồm tài xế; chưa niêm yết → "Liên hệ báo giá";
-   *   - tự lái → giá ngày như cũ (kèm gạch giá khi giảm; % giảm marketing chỉ áp giá tự lái).
+   *   - tự lái → giá ngày sau khuyến mãi (báo giá server cũng áp cùng mức giảm).
    */
   const monthlyContext =
     activeService === SERVICE_TYPE.LONG_TERM && listing.monthlyPrice ? listing.monthlyPrice : null;

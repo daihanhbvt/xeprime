@@ -116,9 +116,9 @@ export function isZeroMoney(value: MoneyString | null | undefined): boolean {
 }
 
 /**
- * Giá SAU giảm để HIỂN THỊ marketing (thẻ xe/trang chi tiết) — không phải số tiền chốt của
- * đơn (giá thật do shop quyết khi duyệt yêu cầu). Giá thuê VND là số nguyên ≤ 14 chữ số nên
- * `Number` ở đây không mất chính xác; không dùng cho cộng dồn kế toán (ADR 0007).
+ * Preview giá sau khuyến mãi ở client (thẻ xe/trang chi tiết/manage). PricingService
+ * chốt báo giá bằng cùng công thức; helper này không dùng để cộng dồn kế toán.
+ * Giá thuê VND là số nguyên ≤ 14 chữ số nên `Number` ở đây không mất chính xác (ADR 0007).
  */
 export function applyDiscountPercent(
   value: MoneyString | null | undefined,

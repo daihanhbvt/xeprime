@@ -423,6 +423,7 @@ export class BookingRequestsService {
       withDriverDailyPrice: req.vehicle.withDriverDailyPrice?.toFixed(0) ?? null,
       withDriverInterCityPrice: req.vehicle.withDriverInterCityPrice?.toFixed(0) ?? null,
       withDriverOneWayPrice: req.vehicle.withDriverOneWayPrice?.toFixed(0) ?? null,
+      discountPercent: req.vehicle.discountPercent,
     });
     const snapshot = this.pricing.buildSnapshot(breakdown, policy);
 
@@ -583,6 +584,7 @@ export class BookingRequestsService {
             withDriverDailyPrice: true,
             withDriverInterCityPrice: true,
             withDriverOneWayPrice: true,
+            discountPercent: true,
           },
         },
       },

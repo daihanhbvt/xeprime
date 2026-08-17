@@ -4,12 +4,13 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Switch } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
-import { useForm, useWatch, type Control } from 'react-hook-form';
+import { useForm, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { LONG_TERM_MIN_DAYS, POLICY_SOURCE, SERVICE_TYPE } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { ROUTES } from '@/constants/routes';
 import { formatMoneyVnd } from '@/lib/money';
+import { discountedPriceVnd } from '@/features/vehicles/pricing';
 import { formToSaveInput, policyToForm } from '../form';
 import { vehiclePricingFormSchema, type VehiclePricingFormValues } from '../schema';
 import type { RentalPolicyValues, SaveVehiclePricingInput, VehiclePricing } from '../types';
@@ -62,7 +63,7 @@ export function VehiclePricingWorkspace({
   const hasLongTerm = services.includes(SERVICE_TYPE.LONG_TERM);
   const hasWithDriver = services.includes(SERVICE_TYPE.WITH_DRIVER);
 
-  const { control, handleSubmit, reset, formState } = useForm<VehiclePricingFormValues>({
+  const { control, handleSubmit, reset, setValue, formState } = useForm<VehiclePricingFormValues>({
     resolver: yupResolver(vehiclePricingFormSchema),
     // Giá ngày thường chỉ bắt buộc khi xe đăng tự lái (schema đọc $serviceTypes từ context).
     context: { serviceTypes: services },
@@ -71,6 +72,7 @@ export function VehiclePricingWorkspace({
       weekdayPrice: toNumber(pricing.weekdayPrice),
       weekendPrice: toNumber(pricing.weekendPrice),
       hourlyPrice: toNumber(pricing.hourlyPrice),
+      discountPercent: pricing.discountPercent ?? null,
       monthlyPrice: toNumber(pricing.monthlyPrice),
       withDriverDailyPrice: toNumber(pricing.withDriverDailyPrice),
       withDriverInterCityPrice: toNumber(pricing.withDriverInterCityPrice),
@@ -105,6 +107,14 @@ export function VehiclePricingWorkspace({
         : {}),
       weekendPrice: money(values.weekendPrice),
       hourlyPrice: money(values.hourlyPrice),
+      ...(hasSelfDrive
+        ? {
+            discountPercent:
+              values.discountPercent != null && values.discountPercent > 0
+                ? Math.round(values.discountPercent)
+                : null,
+          }
+        : {}),
       ...(hasLongTerm ? { monthlyPrice: money(values.monthlyPrice) } : {}),
       ...(hasWithDriver
         ? {
@@ -116,14 +126,14 @@ export function VehiclePricingWorkspace({
       policy: formToSaveInput(values),
     };
 
-    const changed = (
-      next: string | null | undefined,
-      prev: string | null | undefined,
-    ): boolean => next !== undefined && (next ?? null) !== (prev ?? null);
+    const changed = (next: string | null | undefined, prev: string | null | undefined): boolean =>
+      next !== undefined && (next ?? null) !== (prev ?? null);
     const priceChanged =
       changed(body.weekdayPrice, pricing.weekdayPrice) ||
       changed(body.weekendPrice ?? null, pricing.weekendPrice) ||
       changed(body.hourlyPrice, pricing.hourlyPrice) ||
+      (body.discountPercent !== undefined &&
+        (body.discountPercent ?? null) !== (pricing.discountPercent ?? null)) ||
       changed(body.monthlyPrice, pricing.monthlyPrice) ||
       changed(body.withDriverDailyPrice, pricing.withDriverDailyPrice) ||
       changed(body.withDriverInterCityPrice, pricing.withDriverInterCityPrice) ||
@@ -253,6 +263,7 @@ export function VehiclePricingWorkspace({
                     help="Bỏ trống = xe không cho thuê theo giờ"
                   />
                 </div>
+                <DirectDiscountEditor control={control} setValue={setValue} />
               </section>
             ) : null}
 
@@ -323,8 +334,137 @@ export function VehiclePricingWorkspace({
           </div>
         </form>
       ) : (
-        <InheritedSummary pricing={pricing} policy={pricing.shopPolicy ?? null} />
+        <InheritedSummary
+          pricing={pricing}
+          policy={pricing.shopPolicy ?? null}
+          canEdit={canEdit}
+          onEdit={() => setEditingOverride(true)}
+        />
       )}
+    </div>
+  );
+}
+
+/**
+ * Khuyến mãi trực tiếp là một thiết lập giá riêng của xe, không phải bậc ưu đãi
+ * dài hạn. Preview dùng cùng công thức với card/chi tiết sàn để chủ xe không phải
+ * tự nhẩm giá sau giảm.
+ */
+function DirectDiscountEditor({
+  control,
+  setValue,
+}: {
+  control: Control<VehiclePricingFormValues>;
+  setValue: UseFormSetValue<VehiclePricingFormValues>;
+}) {
+  const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
+  const weekendPrice = useWatch({ control, name: 'weekendPrice' });
+  const hourlyPrice = useWatch({ control, name: 'hourlyPrice' });
+  const discountPercent = useWatch({ control, name: 'discountPercent' });
+  const enabled = discountPercent != null && discountPercent > 0;
+  const discountedWeekday = discountedPriceVnd(
+    weekdayPrice == null ? null : String(weekdayPrice),
+    discountPercent,
+  );
+  const discountedWeekend = discountedPriceVnd(
+    weekendPrice == null ? null : String(weekendPrice),
+    discountPercent,
+  );
+  const saving =
+    weekdayPrice != null && discountedWeekday != null
+      ? Math.max(0, Math.round(weekdayPrice) - Number(discountedWeekday))
+      : null;
+
+  return (
+    <div className={styles.promoCard}>
+      <div className={styles.promoSettings}>
+        <div className={styles.promoHeadingRow}>
+          <div>
+            <h3 className={styles.promoTitle}>Khuyến mãi trực tiếp</h3>
+            <p className={styles.promoDescription}>
+              Giảm trực tiếp trên tiền thuê tự lái. Báo giá và đơn mới sẽ dùng đúng mức này.
+            </p>
+          </div>
+          <Switch
+            aria-label="Bật khuyến mãi trực tiếp"
+            checked={enabled}
+            checkedChildren="Bật"
+            unCheckedChildren="Tắt"
+            onChange={(checked) =>
+              setValue('discountPercent', checked ? 10 : null, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+          />
+        </div>
+
+        {enabled ? (
+          <div className={styles.promoInput}>
+            <NumberField
+              control={control}
+              name="discountPercent"
+              label="Mức giảm trực tiếp"
+              percent
+              min={1}
+              max={100}
+              required
+              help="Áp dụng cho giá ngày thường, giá cuối tuần và giá riêng theo ngày của dịch vụ tự lái."
+            />
+          </div>
+        ) : (
+          <p className={styles.promoOffHint}>Khách đang thấy giá gốc, không có nhãn giảm giá.</p>
+        )}
+
+        <p className={styles.promoPolicyNote}>
+          Khác với “Ưu đãi theo thời lượng” ở phần chính sách phía dưới: mức này chỉ dùng cho tự
+          lái, không giảm giá thuê dài hạn, giá có tài xế, phụ phí hay tiền cọc.
+        </p>
+      </div>
+
+      <aside className={styles.pricePreview} aria-live="polite" aria-label="Xem trước giá trên sàn">
+        <span className={styles.previewEyebrow}>KHÁCH SẼ THẤY TRÊN SÀN</span>
+        <span className={styles.previewLabel}>Giá tự lái ngày thường</span>
+        {weekdayPrice != null ? (
+          enabled && discountedWeekday ? (
+            <>
+              <div className={styles.previewPriceLine}>
+                <span className={styles.previewOldPrice}>
+                  {formatMoneyVnd(String(weekdayPrice))}
+                </span>
+                <span className={styles.previewDiscount}>-{discountPercent}%</span>
+              </div>
+              <div className={styles.previewFinalPrice}>
+                {formatMoneyVnd(discountedWeekday)} <small>/ngày</small>
+              </div>
+              {saving != null ? (
+                <span className={styles.previewSaving}>
+                  Khách tiết kiệm {formatMoneyVnd(String(saving))} mỗi ngày
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <div className={styles.previewFinalPrice}>
+              {formatMoneyVnd(String(weekdayPrice))} <small>/ngày</small>
+            </div>
+          )
+        ) : (
+          <span className={styles.previewEmpty}>Nhập giá ngày thường để xem trước</span>
+        )}
+
+        {enabled && discountedWeekend ? (
+          <div className={styles.previewSecondary}>
+            <span>Cuối tuần sau giảm</span>
+            <strong>{formatMoneyVnd(discountedWeekend)}/ngày</strong>
+          </div>
+        ) : null}
+        {hourlyPrice != null ? (
+          <div className={styles.previewSecondary}>
+            <span>Thuê theo giờ (không giảm)</span>
+            <strong>{formatMoneyVnd(String(hourlyPrice))}/giờ</strong>
+          </div>
+        ) : null}
+      </aside>
     </div>
   );
 }
@@ -340,78 +480,119 @@ function LongTermPriceHintLive({ control }: { control: Control<VehiclePricingFor
 function InheritedSummary({
   pricing,
   policy,
+  canEdit,
+  onEdit,
 }: {
   pricing: VehiclePricing;
   policy: RentalPolicyValues | null;
+  canEdit: boolean;
+  onEdit: () => void;
 }) {
   const services = pricing.serviceTypes ?? [];
+  const discountedWeekday = discountedPriceVnd(pricing.weekdayPrice, pricing.discountPercent);
   return (
     <section className={styles.card} aria-label="Thông số kế thừa đang áp dụng">
       <div className={styles.cardHeader}>
-        <h2 className={styles.cardTitle}>Thông số kế thừa đang áp dụng</h2>
-        <span className={styles.inheritBadge}>Đang kế thừa</span>
+        <div>
+          <h2 className={styles.cardTitle}>Giá & chính sách đang áp dụng</h2>
+          <p className={styles.desc}>
+            {policy
+              ? 'Giá thuộc xe này; cọc, giao nhận và ưu đãi theo thời lượng đang kế thừa từ gian hàng.'
+              : 'Giá thuộc xe này; gian hàng chưa có chính sách cọc, giao nhận và ưu đãi theo thời lượng.'}
+          </p>
+        </div>
+        <div className={styles.summaryActions}>
+          <span className={policy ? styles.inheritBadge : styles.missingPolicyBadge}>
+            {policy ? 'Đang kế thừa' : 'Chưa có chính sách'}
+          </span>
+          {canEdit ? (
+            <Button type="primary" onClick={onEdit}>
+              Chỉnh sửa giá & khuyến mãi
+            </Button>
+          ) : null}
+        </div>
       </div>
 
-      {policy ? (
-        <dl className={styles.summaryList}>
-          {services.includes(SERVICE_TYPE.SELF_DRIVE) ? (
+      <dl className={styles.summaryList}>
+        {services.includes(SERVICE_TYPE.SELF_DRIVE) ? (
+          <>
             <div className={styles.summaryRow}>
-              <dt>Giá tự lái (ngày thường)</dt>
+              <dt>Giá tự lái gốc (ngày thường)</dt>
               <dd>
                 {pricing.weekdayPrice
                   ? `${formatMoneyVnd(pricing.weekdayPrice)}/ngày`
                   : 'Chưa có giá'}
               </dd>
             </div>
-          ) : null}
-          {services.includes(SERVICE_TYPE.LONG_TERM) ? (
             <div className={styles.summaryRow}>
-              <dt>Giá tháng (dài hạn)</dt>
-              <dd>
-                {pricing.monthlyPrice
-                  ? `${formatMoneyVnd(pricing.monthlyPrice)}/tháng`
-                  : 'Chưa có giá'}
+              <dt>Khuyến mãi trực tiếp</dt>
+              <dd className={pricing.discountPercent ? styles.summaryDiscount : undefined}>
+                {pricing.discountPercent ? `-${pricing.discountPercent}%` : 'Tắt'}
               </dd>
             </div>
-          ) : null}
-          {services.includes(SERVICE_TYPE.WITH_DRIVER) ? (
+            {discountedWeekday ? (
+              <div className={`${styles.summaryRow} ${styles.summaryHighlight}`}>
+                <dt>Giá khách thấy trên sàn</dt>
+                <dd>{formatMoneyVnd(discountedWeekday)}/ngày</dd>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+        {services.includes(SERVICE_TYPE.LONG_TERM) ? (
+          <div className={styles.summaryRow}>
+            <dt>Giá tháng (dài hạn)</dt>
+            <dd>
+              {pricing.monthlyPrice
+                ? `${formatMoneyVnd(pricing.monthlyPrice)}/tháng`
+                : 'Chưa có giá'}
+            </dd>
+          </div>
+        ) : null}
+        {services.includes(SERVICE_TYPE.WITH_DRIVER) ? (
+          <div className={styles.summaryRow}>
+            <dt>Giá có tài xế (nội thành)</dt>
+            <dd>
+              {pricing.withDriverDailyPrice
+                ? `${formatMoneyVnd(pricing.withDriverDailyPrice)}/ngày`
+                : 'Chưa có giá'}
+            </dd>
+          </div>
+        ) : null}
+        {policy ? (
+          <>
             <div className={styles.summaryRow}>
-              <dt>Giá có tài xế (nội thành)</dt>
-              <dd>
-                {pricing.withDriverDailyPrice
-                  ? `${formatMoneyVnd(pricing.withDriverDailyPrice)}/ngày`
-                  : 'Chưa có giá'}
+              <dt>Tiền đặt cọc thế chấp</dt>
+              <dd>{formatMoneyVnd(policy.depositAmount)}</dd>
+            </div>
+            <div className={styles.summaryRow}>
+              <dt>Giao nhận tận nơi</dt>
+              <dd className={policy.deliveryEnabled ? styles.summaryOn : undefined}>
+                {policy.deliveryEnabled
+                  ? `Bật (${policy.deliveryTiers.length} khoảng cách)`
+                  : 'Tắt'}
               </dd>
             </div>
-          ) : null}
-          <div className={styles.summaryRow}>
-            <dt>Tiền đặt cọc thế chấp</dt>
-            <dd>{formatMoneyVnd(policy.depositAmount)}</dd>
-          </div>
-          <div className={styles.summaryRow}>
-            <dt>Giao nhận tận nơi</dt>
-            <dd className={policy.deliveryEnabled ? styles.summaryOn : undefined}>
-              {policy.deliveryEnabled ? `Bật (${policy.deliveryTiers.length} khoảng cách)` : 'Tắt'}
-            </dd>
-          </div>
-          <div className={styles.summaryRow}>
-            <dt>Phí trả quá giờ</dt>
-            <dd>
-              {policy.overtimeFeePerHour
-                ? `${formatMoneyVnd(policy.overtimeFeePerHour)}/giờ`
-                : 'Cần cấu hình'}
-            </dd>
-          </div>
-          <div className={styles.summaryRow}>
-            <dt>Giảm giá thuê tuần/tháng</dt>
-            <dd>
-              {policy.discountEnabled && policy.discountTiers.length > 0
-                ? `Mức giảm tối đa ${Math.max(...policy.discountTiers.map((t) => t.percent))}%`
-                : 'Tắt'}
-            </dd>
-          </div>
-        </dl>
-      ) : (
+            <div className={styles.summaryRow}>
+              <dt>Phí trả quá giờ</dt>
+              <dd>
+                {policy.overtimeFeePerHour
+                  ? `${formatMoneyVnd(policy.overtimeFeePerHour)}/giờ`
+                  : 'Cần cấu hình'}
+              </dd>
+            </div>
+            <div className={styles.summaryRow}>
+              <dt>Ưu đãi theo thời lượng (thuê dài hạn)</dt>
+              <dd>
+                {policy.discountEnabled && policy.discountTiers.length > 0
+                  ? `Mức giảm tối đa ${Math.max(...policy.discountTiers.map((t) => t.percent))}%`
+                  : 'Tắt'}
+              </dd>
+            </div>
+          </>
+        ) : null}
+      </dl>
+
+      {!policy ? (
         <Alert
           type="info"
           showIcon
@@ -424,7 +605,7 @@ function InheritedSummary({
             </span>
           }
         />
-      )}
+      ) : null}
     </section>
   );
 }

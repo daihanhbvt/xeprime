@@ -1,8 +1,24 @@
 'use client';
 
-import { Segmented } from 'antd';
+import { CalendarOutlined, CarOutlined, UserOutlined } from '@ant-design/icons';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { SERVICE_TYPE, serviceTypeLabel } from '@xeprime/types';
+import { cx } from '@/lib/cx';
+import styles from './ListingServiceSelector.module.css';
+
+function serviceTone(value: string): string | undefined {
+  if (value === SERVICE_TYPE.SELF_DRIVE) return styles.selfDrive;
+  if (value === SERVICE_TYPE.WITH_DRIVER) return styles.withDriver;
+  if (value === SERVICE_TYPE.LONG_TERM) return styles.longTerm;
+  return undefined;
+}
+
+function serviceIcon(value: string) {
+  if (value === SERVICE_TYPE.SELF_DRIVE) return <CarOutlined aria-hidden="true" />;
+  if (value === SERVICE_TYPE.WITH_DRIVER) return <UserOutlined aria-hidden="true" />;
+  if (value === SERVICE_TYPE.LONG_TERM) return <CalendarOutlined aria-hidden="true" />;
+  return null;
+}
 
 /**
  * Bộ chọn dịch vụ trên trang chi tiết xe (17/08) — client island nhỏ cạnh khối giá.
@@ -23,19 +39,49 @@ export function ListingServiceSelector({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  if (services.length <= 1) return null;
+  if (services.length === 0) return null;
 
   return (
-    <Segmented
-      value={active}
-      onChange={(value) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set('serviceType', String(value));
-        if (value !== SERVICE_TYPE.WITH_DRIVER) params.delete('routeType');
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-      }}
-      options={services.map((value) => ({ value, label: serviceTypeLabel(value) }))}
-      aria-label="Chọn dịch vụ thuê"
-    />
+    <div className={styles.selector} role="group" aria-label="Chọn dịch vụ thuê">
+      <span className={styles.label}>Dịch vụ</span>
+      <div className={styles.options}>
+        {services.map((value) => {
+          const isActive = value === active;
+          const className = cx(styles.option, serviceTone(value), isActive && styles.active);
+          const content = (
+            <>
+              {serviceIcon(value)}
+              <span>{serviceTypeLabel(value)}</span>
+            </>
+          );
+
+          if (services.length === 1) {
+            return (
+              <span key={value} className={className}>
+                {content}
+              </span>
+            );
+          }
+
+          return (
+            <button
+              key={value}
+              type="button"
+              className={className}
+              aria-pressed={isActive}
+              onClick={() => {
+                if (isActive) return;
+                const params = new URLSearchParams(searchParams.toString());
+                params.set('serviceType', value);
+                if (value !== SERVICE_TYPE.WITH_DRIVER) params.delete('routeType');
+                router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+              }}
+            >
+              {content}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }

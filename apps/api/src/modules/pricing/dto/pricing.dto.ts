@@ -250,6 +250,15 @@ export class VehiclePricingDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Giá thuê theo giờ' })
   hourlyPrice!: string | null;
 
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 0,
+    maximum: 100,
+    description: '% khuyến mãi trực tiếp cho dịch vụ tự lái; null/0 = không khuyến mãi',
+  })
+  discountPercent!: number | null;
+
   /** Năng lực dịch vụ của xe — tab Giá chỉ hiện nhóm giá thuộc dịch vụ xe đăng. */
   @ApiProperty({ enum: SERVICE_TYPE_VALUES, isArray: true })
   serviceTypes!: string[];
@@ -335,6 +344,20 @@ export class SaveVehiclePricingDto {
   @ValidateIf((o: SaveVehiclePricingDto) => o.hourlyPrice !== null)
   @Matches(MONEY_PATTERN, { message: 'Giá theo giờ không hợp lệ (số VND không âm)' })
   hourlyPrice?: string | null;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    minimum: 0,
+    maximum: 100,
+    description: '% khuyến mãi trực tiếp cho dịch vụ tự lái; null = ngừng khuyến mãi',
+  })
+  @IsOptional()
+  @ValidateIf((o: SaveVehiclePricingDto) => o.discountPercent !== null)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  discountPercent?: number | null;
 
   @ApiPropertyOptional({ type: SaveRentalPolicyDto })
   @IsOptional()

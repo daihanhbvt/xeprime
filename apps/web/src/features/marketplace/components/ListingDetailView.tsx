@@ -5,7 +5,6 @@ import {
   ROUTE_TYPE_LABEL,
   SERVICE_TYPE,
   VEHICLE_TYPE,
-  serviceTypesLabel,
 } from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
@@ -43,8 +42,6 @@ export function ListingDetailView({
   const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
   const specs: Array<{ label: string; value: string }> = [
     { label: 'Loại xe', value: vehicleTypeLabel(listing.vehicleType) },
-    // Mảng dịch vụ (17/08) — "Tự lái · Có tài xế · Thuê dài hạn".
-    { label: 'Dịch vụ', value: serviceTypesLabel(listing.serviceTypes ?? []) },
     ...(listing.bodyType
       ? [
           {
@@ -81,7 +78,7 @@ export function ListingDetailView({
         ? SERVICE_TYPE.SELF_DRIVE
         : (services[0] ?? SERVICE_TYPE.SELF_DRIVE);
 
-  // Giá sau giảm chỉ để HIỂN THỊ (marketing) — giá chốt thật do shop quyết khi duyệt yêu cầu.
+  // Preview cùng công thức với PricingService; báo giá server vẫn là nguồn chốt.
   const discount = listing.discountPercent ?? 0;
   const displayPrice =
     discount > 0 ? applyDiscountPercent(listing.weekdayPrice, discount) : listing.weekdayPrice;
@@ -107,65 +104,87 @@ export function ListingDetailView({
           <div className={styles.price}>
             {listing.monthlyPrice ? (
               <>
-                <b>{formatMoneyVnd(listing.monthlyPrice)}</b>
-                <span>/tháng</span>
-                <span className={styles.weekend}>
-                  Thuê tối thiểu {LONG_TERM_MIN_DAYS} ngày · ước tính = số ngày × giá tháng ÷ 30
-                </span>
+                <div className={styles.priceMain}>
+                  <b>{formatMoneyVnd(listing.monthlyPrice)}</b>
+                  <span>/tháng</span>
+                </div>
+                <div className={styles.priceDetails}>
+                  <span className={styles.weekend}>
+                    Thuê tối thiểu {LONG_TERM_MIN_DAYS} ngày · ước tính = số ngày × giá tháng ÷ 30
+                  </span>
+                </div>
               </>
             ) : (
-              <b className={styles.priceContact}>Liên hệ báo giá thuê dài hạn</b>
+              <div className={styles.priceMain}>
+                <b className={styles.priceContact}>Liên hệ báo giá thuê dài hạn</b>
+              </div>
             )}
           </div>
         ) : activeService === SERVICE_TYPE.WITH_DRIVER ? (
           <div className={styles.price}>
             {listing.withDriverDailyPrice ? (
               <>
-                <b>{formatMoneyVnd(listing.withDriverDailyPrice)}</b>
-                <span>/ngày</span>
-                <span className={styles.weekend}>
-                  {ROUTE_TYPE_LABEL.in_city} · đã gồm tài xế
-                </span>
-                {listing.withDriverInterCityPrice ? (
+                <div className={styles.priceMain}>
+                  <b>{formatMoneyVnd(listing.withDriverDailyPrice)}</b>
+                  <span>/ngày</span>
+                </div>
+                <div className={styles.priceDetails}>
+                  <span className={styles.weekend}>{ROUTE_TYPE_LABEL.in_city} · đã gồm tài xế</span>
+                  {listing.withDriverInterCityPrice ? (
+                    <span className={styles.weekend}>
+                      {ROUTE_TYPE_LABEL.inter_city}{' '}
+                      {formatMoneyVnd(listing.withDriverInterCityPrice)}/ngày
+                    </span>
+                  ) : null}
+                  {listing.withDriverOneWayPrice ? (
+                    <span className={styles.weekend}>
+                      {ROUTE_TYPE_LABEL.inter_city_one_way}{' '}
+                      {formatMoneyVnd(listing.withDriverOneWayPrice)}/ngày
+                    </span>
+                  ) : null}
                   <span className={styles.weekend}>
-                    {ROUTE_TYPE_LABEL.inter_city}{' '}
-                    {formatMoneyVnd(listing.withDriverInterCityPrice)}/ngày
+                    Chưa gồm phí cầu đường, ăn nghỉ của tài xế cho chuyến dài — gian hàng xác nhận
+                    khi duyệt
                   </span>
-                ) : null}
-                {listing.withDriverOneWayPrice ? (
-                  <span className={styles.weekend}>
-                    {ROUTE_TYPE_LABEL.inter_city_one_way}{' '}
-                    {formatMoneyVnd(listing.withDriverOneWayPrice)}/ngày
-                  </span>
-                ) : null}
-                <span className={styles.weekend}>
-                  Chưa gồm phí cầu đường, ăn nghỉ của tài xế cho chuyến dài — gian hàng xác nhận
-                  khi duyệt
-                </span>
+                </div>
               </>
             ) : (
-              <b className={styles.priceContact}>Liên hệ báo giá chuyến có tài xế</b>
+              <div className={styles.priceMain}>
+                <b className={styles.priceContact}>Liên hệ báo giá chuyến có tài xế</b>
+              </div>
             )}
           </div>
         ) : (
           <div className={styles.price}>
-            {discount > 0 && listing.weekdayPrice ? (
-              <>
-                <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
-                <span className={styles.discountTag}>-{discount}%</span>
-              </>
-            ) : null}
-            <b>{formatMoneyVnd(displayPrice)}</b>
-            <span>/ngày</span>
-            {listing.weekendPrice ? (
-              <span className={styles.weekend}>
-                Cuối tuần {formatMoneyVnd(listing.weekendPrice)}
-              </span>
-            ) : null}
-            {listing.hourlyPrice ? (
-              <span className={styles.weekend}>
-                Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ
-              </span>
+            <div className={styles.priceMain}>
+              {discount > 0 && listing.weekdayPrice ? (
+                <>
+                  <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
+                  <span className={styles.discountTag}>-{discount}%</span>
+                </>
+              ) : null}
+              <b>{formatMoneyVnd(displayPrice)}</b>
+              <span>/ngày</span>
+            </div>
+            {listing.weekendPrice || listing.hourlyPrice ? (
+              <div className={styles.priceDetails}>
+                {listing.weekendPrice ? (
+                  <span className={styles.weekend}>
+                    Cuối tuần{' '}
+                    {formatMoneyVnd(
+                      discount > 0
+                        ? applyDiscountPercent(listing.weekendPrice, discount)
+                        : listing.weekendPrice,
+                    )}
+                    {discount > 0 ? ' sau giảm' : ''}
+                  </span>
+                ) : null}
+                {listing.hourlyPrice ? (
+                  <span className={styles.weekend}>
+                    Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ
+                  </span>
+                ) : null}
+              </div>
             ) : null}
           </div>
         )}

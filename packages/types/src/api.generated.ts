@@ -3370,7 +3370,7 @@ export interface components {
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
             noCollateral: boolean;
-            /** @description % giảm giá marketing (0–100). Giá chốt thật do shop quyết khi duyệt yêu cầu. */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
             discountPercent?: number | null;
             /** @description Tên gian hàng */
             shopName: string;
@@ -3463,7 +3463,7 @@ export interface components {
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
             noCollateral: boolean;
-            /** @description % giảm giá marketing (0–100). Giá chốt thật do shop quyết khi duyệt yêu cầu. */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
             discountPercent?: number | null;
             /** @description Tên gian hàng */
             shopName: string;
@@ -3816,7 +3816,7 @@ export interface components {
             seatCount?: number | null;
             /** @description Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog) */
             bodyType?: string | null;
-            /** @description % giảm giá marketing (0–100) */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
             discountPercent?: number | null;
             /** @enum {string} */
             operationStatus: "available" | "renting" | "maintenance" | "inactive";
@@ -3917,7 +3917,7 @@ export interface components {
             seatCount?: number | null;
             /** @description Key kiểu dáng — tra nhãn ở danh mục `body_type` (GET /catalog) */
             bodyType?: string | null;
-            /** @description % giảm giá marketing (0–100) */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái (0–100) */
             discountPercent?: number | null;
             /** @enum {string} */
             operationStatus: "available" | "renting" | "maintenance" | "inactive";
@@ -4021,6 +4021,8 @@ export interface components {
             withDriverOneWayPrice?: string | null;
             /** @description Giá thuê theo giờ */
             hourlyPrice?: string | null;
+            /** @description % khuyến mãi trực tiếp cho dịch vụ tự lái; null/0 = không khuyến mãi */
+            discountPercent?: number | null;
             serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
             /** @description Xe đang hiển thị công khai — lưu giá sẽ đưa xe về chờ duyệt lại (ADR 0008) */
             isPublic: boolean;
@@ -4042,6 +4044,8 @@ export interface components {
             withDriverOneWayPrice?: string | null;
             /** @description Giá thuê theo giờ — null = xe không cho thuê giờ */
             hourlyPrice?: string | null;
+            /** @description % khuyến mãi trực tiếp cho dịch vụ tự lái; null = ngừng khuyến mãi */
+            discountPercent?: number | null;
             policy?: components["schemas"]["SaveRentalPolicyDto"];
         };
         VehicleSourceContractFileDto: {
@@ -4246,7 +4250,7 @@ export interface components {
             deliveryEnabled?: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
             noCollateral?: boolean;
-            /** @description % giảm giá marketing. Gửi null = ngừng giảm giá. */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái. Gửi null = ngừng khuyến mãi. */
             discountPercent?: number | null;
             /** @description URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi) */
             images?: string[];
@@ -4350,7 +4354,7 @@ export interface components {
             deliveryEnabled?: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
             noCollateral?: boolean;
-            /** @description % giảm giá marketing. Gửi null = ngừng giảm giá. */
+            /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái. Gửi null = ngừng khuyến mãi. */
             discountPercent?: number | null;
             /** @description URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi) */
             images?: string[];

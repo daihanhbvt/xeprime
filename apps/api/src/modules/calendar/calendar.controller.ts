@@ -9,12 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Prisma } from '@xeprime/prisma';
-import {
-  API_ERROR_CODE,
-  OCCUPANCY_SOURCE_TYPE,
-  PERMISSION,
-  SERVICE_TYPE,
-} from '@xeprime/types';
+import { API_ERROR_CODE, OCCUPANCY_SOURCE_TYPE, PERMISSION, SERVICE_TYPE } from '@xeprime/types';
 import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -176,6 +171,7 @@ export class CalendarController {
         withDriverDailyPrice: true,
         withDriverInterCityPrice: true,
         withDriverOneWayPrice: true,
+        discountPercent: true,
       },
     });
     if (!vehicle) {
@@ -203,8 +199,7 @@ export class CalendarController {
       dailyOverrides,
       // Giá theo DỊCH VỤ + LỘ TRÌNH (17/08): staff và khách nhìn cùng con số cho cùng chuyến.
       serviceType: query.serviceType,
-      routeType:
-        query.serviceType === SERVICE_TYPE.WITH_DRIVER ? (query.routeType ?? null) : null,
+      routeType: query.serviceType === SERVICE_TYPE.WITH_DRIVER ? (query.routeType ?? null) : null,
       monthlyPrice: vehicle.monthlyPrice ? vehicle.monthlyPrice.toFixed(0) : null,
       withDriverDailyPrice: vehicle.withDriverDailyPrice
         ? vehicle.withDriverDailyPrice.toFixed(0)
@@ -215,6 +210,7 @@ export class CalendarController {
       withDriverOneWayPrice: vehicle.withDriverOneWayPrice
         ? vehicle.withDriverOneWayPrice.toFixed(0)
         : null,
+      discountPercent: vehicle.discountPercent,
     });
   }
 

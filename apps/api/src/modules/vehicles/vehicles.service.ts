@@ -543,6 +543,7 @@ export class VehiclesService {
         withDriverDailyPrice: true,
         withDriverInterCityPrice: true,
         withDriverOneWayPrice: true,
+        discountPercent: true,
         serviceTypes: true,
         publicStatus: true,
       },
@@ -572,6 +573,7 @@ export class VehiclesService {
       withDriverOneWayPrice: vehicle.withDriverOneWayPrice
         ? vehicle.withDriverOneWayPrice.toFixed(0)
         : null,
+      discountPercent: vehicle.discountPercent,
       serviceTypes: vehicle.serviceTypes,
       isPublic: vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
     };
@@ -626,8 +628,7 @@ export class VehiclesService {
     if (driverPriceSet && !current.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
-        message:
-          'Xe không đăng dịch vụ có tài xế — bổ sung dịch vụ trước khi đặt giá có tài xế',
+        message: 'Xe không đăng dịch vụ có tài xế — bổ sung dịch vụ trước khi đặt giá có tài xế',
       });
     }
 
@@ -647,6 +648,7 @@ export class VehiclesService {
           ...(dto.withDriverOneWayPrice !== undefined
             ? { withDriverOneWayPrice: dto.withDriverOneWayPrice }
             : {}),
+          ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
         }
       : {};
     const priceChanged = hasSensitiveChange(current, priceDto);
@@ -717,6 +719,7 @@ export class VehiclesService {
             withDriverOneWayPrice: current.withDriverOneWayPrice
               ? String(current.withDriverOneWayPrice)
               : null,
+            discountPercent: current.discountPercent,
           },
           after: {
             source: dto.source,
@@ -733,6 +736,7 @@ export class VehiclesService {
             ...(dto.withDriverOneWayPrice !== undefined
               ? { withDriverOneWayPrice: dto.withDriverOneWayPrice }
               : {}),
+            ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
             policy: overriding ? (dto.policy as unknown as Prisma.InputJsonValue) : null,
             knockBack,
           },
@@ -1264,8 +1268,7 @@ function vehicleSnapshot(v: VehicleRow): Record<string, unknown> {
     withDriverDailyPrice: v.withDriverDailyPrice == null ? null : String(v.withDriverDailyPrice),
     withDriverInterCityPrice:
       v.withDriverInterCityPrice == null ? null : String(v.withDriverInterCityPrice),
-    withDriverOneWayPrice:
-      v.withDriverOneWayPrice == null ? null : String(v.withDriverOneWayPrice),
+    withDriverOneWayPrice: v.withDriverOneWayPrice == null ? null : String(v.withDriverOneWayPrice),
     deliveryEnabled: v.deliveryEnabled,
     noCollateral: v.noCollateral,
     discountPercent: v.discountPercent,

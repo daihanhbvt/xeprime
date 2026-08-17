@@ -42,6 +42,7 @@ function pricingFixture(over: Partial<VehiclePricing> = {}): VehiclePricing {
     weekdayPrice: '800000',
     weekendPrice: null,
     hourlyPrice: null,
+    discountPercent: null,
     monthlyPrice: null,
     withDriverDailyPrice: null,
     withDriverInterCityPrice: null,
@@ -89,13 +90,16 @@ describe('State A — kế thừa gian hàng (read-only)', () => {
   it('gian hàng CHƯA có chính sách: nói thẳng, không bịa số', () => {
     renderWorkspace(pricingFixture({ source: null, policy: null, shopPolicy: null }));
     expect(screen.getByText('Gian hàng chưa cấu hình chính sách thuê')).toBeTruthy();
+    // Giá là dữ liệu của xe nên vẫn phải thấy/sửa được dù policy gian hàng chưa có.
+    expect(screen.getByText('800.000 ₫/ngày')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Chỉnh sửa giá & khuyến mãi' })).toBeTruthy();
   });
 });
 
 describe('State B — chuyển sang ghi đè và lưu', () => {
-  it('tắt switch kế thừa → form sửa hiện, prefill từ chính sách gian hàng + giá xe', async () => {
+  it('bấm chỉnh sửa → form hiện, prefill từ chính sách gian hàng + giá xe', async () => {
     renderWorkspace(pricingFixture());
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('button', { name: 'Chỉnh sửa giá & khuyến mãi' }));
 
     const price = (await screen.findByLabelText('Giá ngày thường')) as HTMLInputElement;
     expect(price.value).toBe('800.000');
@@ -172,6 +176,46 @@ describe('Giá đa dịch vụ (17/08)', () => {
     await screen.findByLabelText('Giá ngày thường');
     expect(screen.queryByLabelText('Giá tháng tham chiếu')).toBeNull();
     expect(screen.queryByLabelText('Nội thành (giá cơ bản)')).toBeNull();
+  });
+});
+
+describe('Khuyến mãi trực tiếp + xem trước giá trên sàn', () => {
+  it('hiện rõ giá gốc, % giảm, giá khách thấy và số tiền tiết kiệm', async () => {
+    renderWorkspace(
+      pricingFixture({
+        weekdayPrice: '600000',
+        weekendPrice: '550000',
+        discountPercent: 15,
+      }),
+    );
+    fireEvent.click(screen.getByRole('switch'));
+
+    expect(((await screen.findByLabelText('Mức giảm trực tiếp')) as HTMLInputElement).value).toBe(
+      '15',
+    );
+    const preview = screen.getByLabelText('Xem trước giá trên sàn');
+    expect(preview.textContent).toContain('600.000 ₫');
+    expect(preview.textContent).toContain('-15%');
+    expect(preview.textContent).toContain('510.000 ₫');
+    expect(preview.textContent).toContain('90.000 ₫');
+    expect(preview.textContent).toContain('467.500 ₫/ngày');
+  });
+
+  it('tắt khuyến mãi rồi lưu gửi discountPercent=null', async () => {
+    renderWorkspace(pricingFixture({ discountPercent: 15 }));
+    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(await screen.findByRole('switch', { name: 'Bật khuyến mãi trực tiếp' }));
+    expect(screen.queryByLabelText('Mức giảm trực tiếp')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    expect((await screen.findAllByText('Lưu chính sách riêng cho xe này?')).length).toBeGreaterThan(
+      0,
+    );
+    const buttons = screen.getAllByRole('button', { name: 'Lưu thay đổi' });
+    fireEvent.click(buttons[buttons.length - 1]!);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0]![0]).toMatchObject({ discountPercent: null });
   });
 });
 

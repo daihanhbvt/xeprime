@@ -4,8 +4,8 @@ import type { MoneyString } from '@xeprime/types';
  * Giá hiển thị trên sàn sau khuyến mãi — dùng ở cả form tạo/sửa (`60:327`) và trang chi tiết
  * (`65:240`), nên công thức chỉ được viết MỘT lần ở đây.
  *
- * **Chỉ để hiển thị.** Không gửi lên API: `public_listings` do backend dựng (ADR 0008), client
- * tính lại chỉ để chủ xe thấy trước con số khách sẽ nhìn thấy.
+ * Dùng cho preview phía client; `PricingService` là nguồn chốt báo giá và áp cùng công
+ * thức. `public_listings` do backend dựng (ADR 0008), client không tự ghi giá đã giảm.
  *
  * Về ADR 0007 (tiền không đi qua `number`): giá VND là số nguyên đồng, và phần nguyên của
  * `Decimal(14,2)` tối đa 12 chữ số — vẫn nằm trong `Number.MAX_SAFE_INTEGER` (~9·10¹⁵), nên

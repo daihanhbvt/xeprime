@@ -60,7 +60,10 @@ export class PublicListingQueryDto {
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
 
-  @ApiPropertyOptional({ type: String, description: 'Hãng xe — CSV, multi-select (vd: Toyota,Kia)' })
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Hãng xe — CSV, multi-select (vd: Toyota,Kia)',
+  })
   @IsOptional()
   @Transform(splitCsv)
   @IsArray()
@@ -142,7 +145,9 @@ export class PublicListingQueryDto {
    * Mã thay tên vì tên tỉnh vừa đổi được (sáp nhập 01/07/2025) vừa có nhiều cách viết
    * ("TP.HCM"/"Hồ Chí Minh"), còn URL đã phát ra ngoài thì sống rất lâu.
    */
-  @ApiPropertyOptional({ description: 'Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations)' })
+  @ApiPropertyOptional({
+    description: 'Mã tỉnh 2 ký tự — tham số chuẩn (GET /public/destinations)',
+  })
   @IsOptional()
   @IsString()
   provinceCode?: string;
@@ -275,7 +280,7 @@ export class PublicListingDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: '% giảm giá marketing (0–100). Giá chốt thật do shop quyết khi duyệt yêu cầu.',
+    description: '% khuyến mãi trực tiếp cho tiền thuê tự lái (0–100)',
   })
   discountPercent!: number | null;
 
@@ -336,10 +341,18 @@ export class FacetBucketDto {
 
 /** Biên giá thuê/ngày của tập listing khớp filter (bỏ qua chính filter giá) — nuôi slider. */
 export class PriceBoundsDto {
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giá thấp nhất — string tiền (ADR 0007)' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá thấp nhất — string tiền (ADR 0007)',
+  })
   min!: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giá cao nhất — string tiền (ADR 0007)' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá cao nhất — string tiền (ADR 0007)',
+  })
   max!: string | null;
 }
 

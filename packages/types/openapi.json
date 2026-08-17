@@ -10753,7 +10753,7 @@
           "discountPercent": {
             "type": "number",
             "nullable": true,
-            "description": "% giảm giá marketing (0–100). Giá chốt thật do shop quyết khi duyệt yêu cầu."
+            "description": "% khuyến mãi trực tiếp cho tiền thuê tự lái (0–100)"
           },
           "shopName": {
             "type": "string",
@@ -11052,7 +11052,7 @@
           "discountPercent": {
             "type": "number",
             "nullable": true,
-            "description": "% giảm giá marketing (0–100). Giá chốt thật do shop quyết khi duyệt yêu cầu."
+            "description": "% khuyến mãi trực tiếp cho tiền thuê tự lái (0–100)"
           },
           "shopName": {
             "type": "string",
@@ -12117,7 +12117,7 @@
           "discountPercent": {
             "type": "number",
             "nullable": true,
-            "description": "% giảm giá marketing (0–100)"
+            "description": "% khuyến mãi trực tiếp cho tiền thuê tự lái (0–100)"
           },
           "operationStatus": {
             "type": "string",
@@ -12470,7 +12470,7 @@
           "discountPercent": {
             "type": "number",
             "nullable": true,
-            "description": "% giảm giá marketing (0–100)"
+            "description": "% khuyến mãi trực tiếp cho tiền thuê tự lái (0–100)"
           },
           "operationStatus": {
             "type": "string",
@@ -12813,6 +12813,13 @@
             "nullable": true,
             "description": "Giá thuê theo giờ"
           },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100,
+            "description": "% khuyến mãi trực tiếp cho dịch vụ tự lái; null/0 = không khuyến mãi"
+          },
           "serviceTypes": {
             "type": "array",
             "items": {
@@ -12878,6 +12885,13 @@
             "type": "string",
             "nullable": true,
             "description": "Giá thuê theo giờ — null = xe không cho thuê giờ"
+          },
+          "discountPercent": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100,
+            "description": "% khuyến mãi trực tiếp cho dịch vụ tự lái; null = ngừng khuyến mãi"
           },
           "policy": {
             "$ref": "#/components/schemas/SaveRentalPolicyDto"
@@ -13477,7 +13491,7 @@
             "nullable": true,
             "minimum": 0,
             "maximum": 100,
-            "description": "% giảm giá marketing. Gửi null = ngừng giảm giá."
+            "description": "% khuyến mãi trực tiếp cho tiền thuê tự lái. Gửi null = ngừng khuyến mãi."
           },
           "images": {
             "description": "URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi)",
@@ -13727,7 +13741,7 @@
             "nullable": true,
             "minimum": 0,
             "maximum": 100,
-            "description": "% giảm giá marketing. Gửi null = ngừng giảm giá."
+            "description": "% khuyến mãi trực tiếp cho tiền thuê tự lái. Gửi null = ngừng khuyến mãi."
           },
           "images": {
             "description": "URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi)",

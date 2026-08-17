@@ -250,6 +250,28 @@ describe('kế thừa / ghi đè / đặt lại theo xe', () => {
     // Giá của xe không bị "đặt lại" — nó là dữ liệu của xe, không phải của chính sách.
     expect(reset.weekdayPrice).toBe('900000');
   });
+
+  maybe('lưu/bỏ khuyến mãi trực tiếp ngay trong workspace giá', async () => {
+    try {
+      const enabled = await vehicles.savePricing(tenantId, vehicleId, ownerId, {
+        source: POLICY_SOURCE.VEHICLE,
+        weekdayPrice: '900000',
+        discountPercent: 15,
+        policy: policyDto(),
+      });
+      expect(enabled.discountPercent).toBe(15);
+
+      const disabled = await vehicles.savePricing(tenantId, vehicleId, ownerId, {
+        source: POLICY_SOURCE.VEHICLE,
+        discountPercent: null,
+        policy: policyDto(),
+      });
+      expect(disabled.discountPercent).toBeNull();
+    } finally {
+      await vehicles.savePricing(tenantId, vehicleId, ownerId, { source: POLICY_SOURCE.SHOP });
+      await prisma.vehicle.update({ where: { id: vehicleId }, data: { discountPercent: null } });
+    }
+  });
 });
 
 describe('mốc biên bậc giao nhận', () => {
@@ -269,6 +291,28 @@ describe('mốc biên bậc giao nhận', () => {
 });
 
 describe('buildQuote — giảm giá chỉ áp lên tiền thuê', () => {
+  maybe('khuyến mãi trực tiếp 15% đi vào báo giá tự lái, không giảm cọc/phụ phí', async () => {
+    const pickupAt = new Date('2027-03-01T03:00:00.000Z');
+    const quote = pricing.buildQuote({
+      weekdayPrice: '600000',
+      weekendPrice: null,
+      pickupAt,
+      returnAt: new Date(pickupAt.getTime() + 2 * 24 * HOUR),
+      policy: await pricing.effectivePolicy(tenantId, vehicleId),
+      delivery: { fee: '50000', label: 'Giao xe' },
+      serviceType: SERVICE_TYPE.SELF_DRIVE,
+      discountPercent: 15,
+    });
+
+    expect(quote.rows.find((row) => row.key === PRICE_ROW.BASE)?.amount).toBe('1200000');
+    expect(quote.rows.find((row) => row.key === PRICE_ROW.DISCOUNT)).toMatchObject({
+      label: 'Khuyến mãi trực tiếp (15%)',
+      amount: '-180000',
+    });
+    expect(quote.totalAmount).toBe('1070000');
+    expect(quote.depositAmount).toBe('5000000');
+  });
+
   // Đợt 3 (17/08): bậc ưu đãi chỉ còn sống ở DỊCH VỤ DÀI HẠN — case cơ học "giảm không đụng
   // phí giao nhận/cọc" chạy trên nhánh dài hạn fallback (7 ngày, chưa có giá tháng).
   maybe('7 ngày × 900k, giảm 5%, giao nhận 50k: giảm KHÔNG đụng phí giao nhận/cọc', async () => {
@@ -537,29 +581,32 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
   const PICKUP = new Date('2027-03-01T03:00:00.000Z');
   const day = (n: number) => new Date(PICKUP.getTime() + n * 24 * 60 * 60 * 1000);
 
-  maybe('long_term có giá tháng: đơn giá = tháng ÷ 30, bậc ưu đãi ÁP CHỒNG + trả % tiết kiệm', async () => {
-    await pricing.saveShopPolicy(tenantId, ownerId, policyDto());
-    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-    const breakdown = pricing.buildQuote({
-      weekdayPrice: '800000',
-      weekendPrice: null,
-      pickupAt: PICKUP,
-      returnAt: day(10),
-      policy,
-      delivery: null,
-      serviceType: SERVICE_TYPE.LONG_TERM,
-      monthlyPrice: '9000000',
-    });
-    expect(breakdown.days).toBe(10);
-    // 9tr ÷ 30 = 300k/ngày × 10 = 3tr; bậc 5% (từ 3 ngày) là ƯU ĐÃI DÀI HẠN nên áp chồng
-    // (gói cam kết kiểu Mioto — đợt 3): 3tr − 150k = 2.85tr.
-    expect(breakdown.totalAmount).toBe('2850000');
-    expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-150000');
-    // Chênh lệch so với giá ngày thường phải NHÌN THẤY được: 800k → 300k = tiết kiệm 63%,
-    // (800k − 300k) × 10 ngày = 5tr.
-    expect(breakdown.longTermSavingsPercent).toBe(63);
-    expect(breakdown.longTermSavingsAmount).toBe('5000000');
-  });
+  maybe(
+    'long_term có giá tháng: đơn giá = tháng ÷ 30, bậc ưu đãi ÁP CHỒNG + trả % tiết kiệm',
+    async () => {
+      await pricing.saveShopPolicy(tenantId, ownerId, policyDto());
+      const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+      const breakdown = pricing.buildQuote({
+        weekdayPrice: '800000',
+        weekendPrice: null,
+        pickupAt: PICKUP,
+        returnAt: day(10),
+        policy,
+        delivery: null,
+        serviceType: SERVICE_TYPE.LONG_TERM,
+        monthlyPrice: '9000000',
+      });
+      expect(breakdown.days).toBe(10);
+      // 9tr ÷ 30 = 300k/ngày × 10 = 3tr; bậc 5% (từ 3 ngày) là ƯU ĐÃI DÀI HẠN nên áp chồng
+      // (gói cam kết kiểu Mioto — đợt 3): 3tr − 150k = 2.85tr.
+      expect(breakdown.totalAmount).toBe('2850000');
+      expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-150000');
+      // Chênh lệch so với giá ngày thường phải NHÌN THẤY được: 800k → 300k = tiết kiệm 63%,
+      // (800k − 300k) × 10 ngày = 5tr.
+      expect(breakdown.longTermSavingsPercent).toBe(63);
+      expect(breakdown.longTermSavingsAmount).toBe('5000000');
+    },
+  );
 
   maybe('long_term dưới sàn 7 ngày bị máy giá chặn (nguồn chặn thật, FE chỉ preview)', async () => {
     const policy = await pricing.effectivePolicy(tenantId, vehicleId);
@@ -593,39 +640,47 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
     expect(breakdown.totalAmount).toBe('7600000');
   });
 
-  maybe('with_driver có giá riêng: đơn giá phẳng đã gồm tài xế, KHÔNG áp bậc (bậc là ưu đãi dài hạn)', async () => {
-    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-    const breakdown = pricing.buildQuote({
-      weekdayPrice: '800000',
-      weekendPrice: null,
-      pickupAt: PICKUP,
-      returnAt: day(4),
-      policy,
-      delivery: null,
-      serviceType: SERVICE_TYPE.WITH_DRIVER,
-      withDriverDailyPrice: '1500000',
-    });
-    // 1.5tr × 4 = 6tr — bậc 5% (từ 3 ngày) KHÔNG áp cho thuê ngắn nữa (đợt 3).
-    expect(breakdown.totalAmount).toBe('6000000');
-    expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)).toBeUndefined();
-    expect(breakdown.rows[0]?.sublabel).toContain('đã gồm tài xế');
-  });
+  maybe(
+    'with_driver có giá riêng: đơn giá phẳng đã gồm tài xế, KHÔNG áp bậc (bậc là ưu đãi dài hạn)',
+    async () => {
+      const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+      const breakdown = pricing.buildQuote({
+        weekdayPrice: '800000',
+        weekendPrice: null,
+        pickupAt: PICKUP,
+        returnAt: day(4),
+        policy,
+        delivery: null,
+        serviceType: SERVICE_TYPE.WITH_DRIVER,
+        withDriverDailyPrice: '1500000',
+        discountPercent: 15,
+      });
+      // 1.5tr × 4 = 6tr — cả bậc dài hạn lẫn khuyến mãi trực tiếp tự lái đều
+      // KHÔNG áp cho dịch vụ có tài xế.
+      expect(breakdown.totalAmount).toBe('6000000');
+      expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)).toBeUndefined();
+      expect(breakdown.rows[0]?.sublabel).toContain('đã gồm tài xế');
+    },
+  );
 
-  maybe('self_drive thuê dài ngày cũng KHÔNG còn ăn bậc — ưu đãi thuộc dịch vụ dài hạn', async () => {
-    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-    const breakdown = pricing.buildQuote({
-      weekdayPrice: '800000',
-      weekendPrice: null,
-      pickupAt: PICKUP,
-      returnAt: day(10),
-      policy,
-      delivery: null,
-      serviceType: SERVICE_TYPE.SELF_DRIVE,
-    });
-    // 800k × 10 = 8tr nguyên — muốn hưởng ưu đãi thời gian thì đi dịch vụ Thuê dài hạn.
-    expect(breakdown.totalAmount).toBe('8000000');
-    expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)).toBeUndefined();
-  });
+  maybe(
+    'self_drive thuê dài ngày cũng KHÔNG còn ăn bậc — ưu đãi thuộc dịch vụ dài hạn',
+    async () => {
+      const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+      const breakdown = pricing.buildQuote({
+        weekdayPrice: '800000',
+        weekendPrice: null,
+        pickupAt: PICKUP,
+        returnAt: day(10),
+        policy,
+        delivery: null,
+        serviceType: SERVICE_TYPE.SELF_DRIVE,
+      });
+      // 800k × 10 = 8tr nguyên — muốn hưởng ưu đãi thời gian thì đi dịch vụ Thuê dài hạn.
+      expect(breakdown.totalAmount).toBe('8000000');
+      expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)).toBeUndefined();
+    },
+  );
 
   maybe('with_driver giá theo LỘ TRÌNH: nội thành/liên tỉnh/1 chiều ăn đúng cột giá', async () => {
     const policy = await pricing.effectivePolicy(tenantId, vehicleId);
@@ -673,53 +728,56 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
     expect(breakdown.estimateNote).toMatch(/chưa niêm yết/);
   });
 
-  maybe('public quote KHỚP số khi duyệt: yêu cầu with_driver liên tỉnh ra cùng một tổng', async () => {
-    // Niêm yết bảng giá route cho xe rồi đi cả hai đường: quote công khai và duyệt yêu cầu.
-    await prisma.vehicle.update({
-      where: { id: vehicleId },
-      data: {
-        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
-        serviceTypes: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER],
-        withDriverDailyPrice: new Prisma.Decimal('1300000'),
-        withDriverInterCityPrice: new Prisma.Decimal('1600000'),
-        withDriverOneWayPrice: new Prisma.Decimal('2100000'),
-      },
-    });
+  maybe(
+    'public quote KHỚP số khi duyệt: yêu cầu with_driver liên tỉnh ra cùng một tổng',
+    async () => {
+      // Niêm yết bảng giá route cho xe rồi đi cả hai đường: quote công khai và duyệt yêu cầu.
+      await prisma.vehicle.update({
+        where: { id: vehicleId },
+        data: {
+          publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+          serviceTypes: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER],
+          withDriverDailyPrice: new Prisma.Decimal('1300000'),
+          withDriverInterCityPrice: new Prisma.Decimal('1600000'),
+          withDriverOneWayPrice: new Prisma.Decimal('2100000'),
+        },
+      });
 
-    const pickupAt = new Date('2027-05-10T02:00:00.000Z');
-    const returnAt = new Date('2027-05-12T02:00:00.000Z');
-    const publicQuote = await pricing.publicQuote(
-      vehicleId,
-      pickupAt.toISOString(),
-      returnAt.toISOString(),
-      SERVICE_TYPE.WITH_DRIVER,
-      ROUTE_TYPE.INTER_CITY,
-    );
-
-    // Seed thẳng yêu cầu (spec này stub OTP/auth rỗng — không đi qua submitPublic).
-    const requestId = newId();
-    await prisma.bookingRequest.create({
-      data: {
-        id: requestId,
-        tenantId,
+      const pickupAt = new Date('2027-05-10T02:00:00.000Z');
+      const returnAt = new Date('2027-05-12T02:00:00.000Z');
+      const publicQuote = await pricing.publicQuote(
         vehicleId,
-        customerName: 'Khách Route',
-        customerPhone: '0905556677',
-        pickupAt,
-        returnAt,
-        serviceType: SERVICE_TYPE.WITH_DRIVER,
-        routeType: ROUTE_TYPE.INTER_CITY,
-        pickupAddress: '1 Lê Duẩn, Đà Nẵng',
-        destination: 'Huế',
-      },
-    });
-    const approved = await requests.approve(tenantId, ownerId, requestId);
-    const booking = await prisma.booking.findUniqueOrThrow({
-      where: { id: approved.bookingId! },
-      select: { totalAmount: true, baseAmount: true },
-    });
+        pickupAt.toISOString(),
+        returnAt.toISOString(),
+        SERVICE_TYPE.WITH_DRIVER,
+        ROUTE_TYPE.INTER_CITY,
+      );
 
-    // Khách ngoài chợ và shop lúc duyệt nhìn CÙNG một con số — một nguồn tính giá.
-    expect(booking.totalAmount.toFixed(0)).toBe(publicQuote.breakdown.totalAmount);
-  });
+      // Seed thẳng yêu cầu (spec này stub OTP/auth rỗng — không đi qua submitPublic).
+      const requestId = newId();
+      await prisma.bookingRequest.create({
+        data: {
+          id: requestId,
+          tenantId,
+          vehicleId,
+          customerName: 'Khách Route',
+          customerPhone: '0905556677',
+          pickupAt,
+          returnAt,
+          serviceType: SERVICE_TYPE.WITH_DRIVER,
+          routeType: ROUTE_TYPE.INTER_CITY,
+          pickupAddress: '1 Lê Duẩn, Đà Nẵng',
+          destination: 'Huế',
+        },
+      });
+      const approved = await requests.approve(tenantId, ownerId, requestId);
+      const booking = await prisma.booking.findUniqueOrThrow({
+        where: { id: approved.bookingId! },
+        select: { totalAmount: true, baseAmount: true },
+      });
+
+      // Khách ngoài chợ và shop lúc duyệt nhìn CÙNG một con số — một nguồn tính giá.
+      expect(booking.totalAmount.toFixed(0)).toBe(publicQuote.breakdown.totalAmount);
+    },
+  );
 });

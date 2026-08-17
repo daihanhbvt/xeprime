@@ -161,6 +161,14 @@ export const vehiclePricingFormSchema = policyFormSchema.shape({
   }),
   weekendPrice: optionalMoney('Giá cuối tuần'),
   hourlyPrice: optionalMoney('Giá theo giờ'),
+  discountPercent: yup
+    .number()
+    .nullable()
+    .defined()
+    .default(null)
+    .integer('Mức giảm phải là số nguyên')
+    .min(0, 'Mức giảm không được âm')
+    .max(100, 'Tối đa 100%'),
   monthlyPrice: optionalMoney('Giá tháng'),
   withDriverDailyPrice: optionalMoney('Giá/ngày có tài xế'),
   withDriverInterCityPrice: optionalMoney('Giá liên tỉnh'),

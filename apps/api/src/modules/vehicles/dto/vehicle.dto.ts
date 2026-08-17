@@ -153,7 +153,7 @@ export class VehicleListItemDto {
   @ApiPropertyOptional({
     type: Number,
     nullable: true,
-    description: '% giảm giá marketing (0–100)',
+    description: '% khuyến mãi trực tiếp cho tiền thuê tự lái (0–100)',
   })
   discountPercent!: number | null;
   @ApiProperty({ enum: VEHICLE_OPERATION_STATUS_VALUES }) operationStatus!: string;
@@ -561,7 +561,7 @@ export class CreateVehicleDto {
     nullable: true,
     minimum: 0,
     maximum: 100,
-    description: '% giảm giá marketing. Gửi null = ngừng giảm giá.',
+    description: '% khuyến mãi trực tiếp cho tiền thuê tự lái. Gửi null = ngừng khuyến mãi.',
   })
   @IsOptional()
   @IsInt()
@@ -720,7 +720,11 @@ export class Vehicle360SummaryDto {
   })
   currentOdometerKm?: number | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: '@xeprime/types → OdometerSource' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: '@xeprime/types → OdometerSource',
+  })
   currentOdometerSource?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO' })

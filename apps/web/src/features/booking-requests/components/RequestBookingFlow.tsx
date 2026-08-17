@@ -901,7 +901,16 @@ export function RequestBookingFlow({
                         <div className={styles.priceRow}>
                           <span>Cuối tuần</span>
                           <b>
-                            {formatMoneyVnd(listing.weekendPrice)}
+                            {promoPercent > 0 ? (
+                              <s className={styles.priceStrike}>
+                                {formatMoneyVnd(listing.weekendPrice)}
+                              </s>
+                            ) : null}
+                            {formatMoneyVnd(
+                              promoPercent > 0
+                                ? applyDiscountPercent(listing.weekendPrice, promoPercent)
+                                : listing.weekendPrice,
+                            )}
                             <span className={styles.priceUnit}>/ngày</span>
                           </b>
                         </div>
@@ -1021,59 +1030,59 @@ export function RequestBookingFlow({
                 ) : null}
                 <p className={styles.deliveryNote}>
                   Lộ trình: {ROUTE_TYPE_LABEL[watchedRoute]} —{' '}
-                  {ROUTE_TYPE_DESCRIPTION[watchedRoute]}. Phụ phí (nếu có) do chủ xe trao đổi
-                  trước khi chốt đơn.
+                  {ROUTE_TYPE_DESCRIPTION[watchedRoute]}. Phụ phí (nếu có) do chủ xe trao đổi trước
+                  khi chốt đơn.
                 </p>
               </div>
             ) : null}
 
             {/* ── Hình thức nhận xe (tự lái / dài hạn) ─────────────────────── */}
             {isWithDriver ? null : (
-            <fieldset className={styles.pickupGroup}>
-              <legend className={styles.fieldLabel}>Hình thức nhận xe</legend>
-              <div
-                className={styles.pickupOptions}
-                role="radiogroup"
-                aria-label="Hình thức nhận xe"
-              >
-                {(
-                  [
-                    {
-                      key: PICKUP_METHOD.SELF,
-                      label: 'Nhận tại điểm hẹn',
-                      hint: 'Tự tới nhận xe tại địa điểm của chủ xe',
-                      icon: <CarOutlined />,
-                    },
-                    {
-                      key: PICKUP_METHOD.DELIVERY,
-                      label: 'Giao xe tận nơi',
-                      hint: 'Chủ xe mang xe tới địa chỉ của bạn',
-                      icon: <EnvironmentOutlined />,
-                    },
-                  ] as const
-                ).map((option) => (
-                  <button
-                    key={option.key}
-                    type="button"
-                    role="radio"
-                    aria-checked={pickupMethod === option.key}
-                    className={cx(
-                      styles.pickupOption,
-                      pickupMethod === option.key && styles.pickupOptionActive,
-                    )}
-                    onClick={() => setValue('pickupMethod', option.key, { shouldValidate: true })}
-                  >
-                    <span className={styles.pickupIcon} aria-hidden>
-                      {option.icon}
-                    </span>
-                    <span className={styles.pickupText}>
-                      <span className={styles.pickupLabel}>{option.label}</span>
-                      <span className={styles.pickupHint}>{option.hint}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </fieldset>
+              <fieldset className={styles.pickupGroup}>
+                <legend className={styles.fieldLabel}>Hình thức nhận xe</legend>
+                <div
+                  className={styles.pickupOptions}
+                  role="radiogroup"
+                  aria-label="Hình thức nhận xe"
+                >
+                  {(
+                    [
+                      {
+                        key: PICKUP_METHOD.SELF,
+                        label: 'Nhận tại điểm hẹn',
+                        hint: 'Tự tới nhận xe tại địa điểm của chủ xe',
+                        icon: <CarOutlined />,
+                      },
+                      {
+                        key: PICKUP_METHOD.DELIVERY,
+                        label: 'Giao xe tận nơi',
+                        hint: 'Chủ xe mang xe tới địa chỉ của bạn',
+                        icon: <EnvironmentOutlined />,
+                      },
+                    ] as const
+                  ).map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={pickupMethod === option.key}
+                      className={cx(
+                        styles.pickupOption,
+                        pickupMethod === option.key && styles.pickupOptionActive,
+                      )}
+                      onClick={() => setValue('pickupMethod', option.key, { shouldValidate: true })}
+                    >
+                      <span className={styles.pickupIcon} aria-hidden>
+                        {option.icon}
+                      </span>
+                      <span className={styles.pickupText}>
+                        <span className={styles.pickupLabel}>{option.label}</span>
+                        <span className={styles.pickupHint}>{option.hint}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             )}
 
             {isDelivery ? (
