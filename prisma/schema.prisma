@@ -1041,6 +1041,9 @@ model Driver {
   /// @xeprime/types → DriverType (staff | collaborator | temporary)
   driverType String    @default("staff") @map("driver_type") @db.VarChar(30)
   licenseNo  String?   @map("license_no") @db.VarChar(50)
+  /// Hạn GPLX — hết hạn (so với thời điểm TRẢ XE của đơn) thì không gán được vào đơn mới;
+  /// NULL = chưa khai, không chặn nhưng UI nhắc bổ sung.
+  licenseExpiresAt DateTime? @map("license_expires_at") @db.Date
   idNo       String?   @map("id_no") @db.VarChar(50)
   note       String?   @db.Text
   /// @xeprime/types → DriverStatus — `inactive` không gán được vào đơn mới.

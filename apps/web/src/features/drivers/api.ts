@@ -1,6 +1,19 @@
 import type { PaginationMeta } from '@xeprime/types';
-import { apiDelete, apiPatch, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
-import type { CreateDriverInput, Driver, DriverFilters, UpdateDriverInput } from './types';
+import {
+  apiDelete,
+  apiGet,
+  apiPatch,
+  apiPost,
+  apiRequest,
+  type QueryParams,
+} from '@/services/api-client';
+import type {
+  AssignableDriver,
+  CreateDriverInput,
+  Driver,
+  DriverFilters,
+  UpdateDriverInput,
+} from './types';
 
 export const DRIVERS_DEFAULT_LIMIT = 20;
 
@@ -40,3 +53,15 @@ export const updateDriver = (id: string, body: UpdateDriverInput): Promise<Drive
 
 export const deleteDriver = (id: string): Promise<{ ok: true }> =>
   apiDelete<{ ok: true }>(`/drivers/${id}`);
+
+/** Tài xế cho bộ chọn gán đơn — kèm cờ bận khung giờ / GPLX hết hạn (17/08). */
+export const fetchAssignableDrivers = (window: {
+  pickupAt: string;
+  returnAt: string;
+  excludeBookingId?: string;
+}): Promise<AssignableDriver[]> =>
+  apiGet<AssignableDriver[]>('/drivers/assignable', {
+    pickupAt: window.pickupAt,
+    returnAt: window.returnAt,
+    excludeBookingId: window.excludeBookingId ?? null,
+  });

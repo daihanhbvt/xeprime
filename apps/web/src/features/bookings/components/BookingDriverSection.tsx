@@ -26,8 +26,16 @@ export function BookingDriverSection({
   const { message } = App.useApp();
   const [selecting, setSelecting] = useState(false);
   const assign = useAssignBookingDriver(booking.id);
-  // Chỉ tải danh sách khi thật sự mở bộ chọn — mở chi tiết đơn không kéo theo API thừa.
-  const driversQ = useAssignableDrivers(selecting);
+  // Chỉ tải danh sách khi thật sự mở bộ chọn — theo KHUNG GIỜ của đơn (17/08): người bận
+  // hoặc GPLX hết hạn vẫn hiện nhưng bị disable kèm lý do; backend kiểm lại trong transaction.
+  const driversQ = useAssignableDrivers(
+    {
+      pickupAt: booking.pickupAt,
+      returnAt: booking.returnAt,
+      excludeBookingId: booking.id,
+    },
+    selecting,
+  );
 
   const isWithDriver = booking.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const driver = booking.driver ?? null;
@@ -78,13 +86,19 @@ export function BookingDriverSection({
         <div className={styles.row}>
           <Select
             className={styles.select}
-            placeholder="Chọn tài xế đang hoạt động"
+            placeholder="Chọn tài xế khả dụng trong khung giờ đơn"
             loading={driversQ.isLoading}
             showSearch
             optionFilterProp="label"
-            options={(driversQ.data?.items ?? []).map((d) => ({
+            options={(driversQ.data ?? []).map((d) => ({
               value: d.id,
-              label: `${d.name} · ${d.phone}`,
+              // Người không khả dụng vẫn hiện kèm LÝ DO — disable, không giấu.
+              label: d.busy
+                ? `${d.name} · ${d.phone} — bận khung giờ này`
+                : d.licenseExpired
+                  ? `${d.name} · ${d.phone} — GPLX hết hạn`
+                  : `${d.name} · ${d.phone}`,
+              disabled: d.busy || d.licenseExpired,
             }))}
             // 0 tài xế không phải lỗi — nói thẳng và trỏ tới trang tạo hồ sơ.
             notFoundContent={driversQ.isLoading ? 'Đang tải…' : 'Chưa có tài xế nào đang hoạt động'}

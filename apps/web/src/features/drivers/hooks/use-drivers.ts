@@ -1,11 +1,11 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { DRIVER_STATUS } from '@xeprime/types';
 import { queryKeys } from '@/services/query-keys';
 import {
   createDriver,
   deleteDriver,
+  fetchAssignableDrivers,
   fetchDrivers,
   filtersToParams,
   updateDriver,
@@ -21,14 +21,20 @@ export function useDrivers(filters: DriverFilters) {
   });
 }
 
-/** Bộ chọn "gán tài xế vào đơn" — chỉ tài xế ĐANG hoạt động, đủ rộng cho một shop thật. */
-export function useAssignableDrivers(enabled = true) {
-  const filters: DriverFilters = { status: DRIVER_STATUS.ACTIVE, limit: 100 };
+/**
+ * Bộ chọn "gán tài xế vào đơn" (17/08): server trả CẢ người không khả dụng trong khung giờ
+ * của đơn kèm lý do (bận / GPLX hết hạn) — UI disable với giải thích, backend vẫn kiểm lại
+ * trong transaction (không tin FE).
+ */
+export function useAssignableDrivers(
+  window: { pickupAt: string; returnAt: string; excludeBookingId?: string },
+  enabled = true,
+) {
   return useQuery({
-    queryKey: queryKeys.drivers.list(filtersToParams(filters)),
-    queryFn: () => fetchDrivers(filters),
+    queryKey: queryKeys.drivers.assignable(window),
+    queryFn: () => fetchAssignableDrivers(window),
     enabled,
-    staleTime: 60_000,
+    staleTime: 30_000,
   });
 }
 

@@ -17,6 +17,7 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
+import { dayjs } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { DRIVERS_DEFAULT_LIMIT } from '@/features/drivers/api';
 import { DriverFormModal } from '@/features/drivers/components/DriverFormModal';
@@ -41,7 +42,27 @@ const FILTER_FIELDS: FilterField[] = [
   },
 ];
 
-const MIN_TABLE_WIDTH = 880;
+const MIN_TABLE_WIDTH = 920;
+
+/** Ngưỡng nhắc GPLX sắp hết hạn (ngày) — đủ thời gian đi gia hạn, không nhắc quá sớm. */
+const LICENSE_WARN_DAYS = 30;
+
+/**
+ * Tag hạn GPLX: hết hạn (đỏ — không gán vào đơn mới được) · sắp hết hạn ≤30 ngày (vàng) ·
+ * còn hạn dài thì chỉ hiện ngày. Chưa khai hạn thì không bịa tag.
+ */
+function LicenseExpiryTag({ licenseExpiresAt }: { licenseExpiresAt: string | null }) {
+  if (!licenseExpiresAt) return null;
+  const expiry = dayjs(licenseExpiresAt).endOf('day');
+  const daysLeft = expiry.diff(dayjs(), 'day');
+  if (daysLeft < 0) {
+    return <Tag color="red">GPLX hết hạn {expiry.format('DD/MM/YYYY')}</Tag>;
+  }
+  if (daysLeft <= LICENSE_WARN_DAYS) {
+    return <Tag color="orange">GPLX hết hạn {expiry.format('DD/MM/YYYY')}</Tag>;
+  }
+  return <span className={styles.meta}>GPLX đến {expiry.format('DD/MM/YYYY')}</span>;
+}
 
 /**
  * Hồ sơ tài xế của gian hàng (17/08 — nghiệp vụ xe có tài xế, mức tối thiểu: hồ sơ + gán vào
@@ -127,11 +148,14 @@ export default function DriversPage() {
     {
       title: 'GPLX / CCCD',
       key: 'papers',
-      width: 200,
+      width: 240,
       render: (_, row) => (
-        <span className={styles.meta}>
-          {[row.licenseNo, row.idNo].filter(Boolean).join(' · ') || '—'}
-        </span>
+        <div>
+          <span className={styles.meta}>
+            {[row.licenseNo, row.idNo].filter(Boolean).join(' · ') || '—'}
+          </span>
+          <LicenseExpiryTag licenseExpiresAt={row.licenseExpiresAt ?? null} />
+        </div>
       ),
     },
     {

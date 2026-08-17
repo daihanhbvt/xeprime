@@ -14,6 +14,8 @@ export const driverFormSchema = yup.object({
     .oneOf(DRIVER_TYPE_VALUES)
     .default(DRIVER_TYPE.STAFF),
   licenseNo: yup.string().trim().max(50).default(''),
+  /** Hạn GPLX dạng YYYY-MM-DD — hết hạn thì không gán vào đơn mới được (server chặn). */
+  licenseExpiresAt: yup.string().nullable().default(null),
   idNo: yup.string().trim().max(50).default(''),
   note: yup.string().trim().max(2000).default(''),
 });

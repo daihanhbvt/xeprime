@@ -59,6 +59,9 @@ export const queryKeys = {
   drivers: {
     all: ['drivers'] as const,
     list: (params: QueryParams) => ['drivers', 'list', params] as const,
+    /** Bộ chọn gán đơn theo khung giờ (17/08) — cache riêng theo cửa sổ thời gian. */
+    assignable: (window: { pickupAt: string; returnAt: string; excludeBookingId?: string }) =>
+      ['drivers', 'assignable', window] as const,
   },
   /** Chi nhánh gian hàng — mọi màn có bộ chọn chi nhánh đọc chung nhánh này. */
   branches: {

@@ -451,9 +451,11 @@ export class BookingsService {
 
   /**
    * Gán/bỏ gán tài xế cho đơn (17/08 — nghiệp vụ xe có tài xế). "Tài xế gán được" định nghĩa
-   * MỘT nơi ở `DriversService.findAssignable` (cùng tenant + active + chưa xoá); composite FK
-   * `(driver_id, tenant_id)` ở DB chặn nốt trường hợp gán chéo tenant nếu service quên. Đơn đã
-   * khép (completed/cancelled/no_show) không sửa được — hồ sơ chuyến đã đóng băng.
+   * MỘT nơi ở `DriversService.findAssignable` (cùng tenant + active + chưa xoá + GPLX còn hạn
+   * + KHÔNG trùng khung giờ với đơn sống khác — kiểm TRONG transaction, không tin FE);
+   * composite FK `(driver_id, tenant_id)` chặn gán chéo tenant, và exclusion constraint
+   * `bookings_driver_schedule_excl` là chốt chặn cuối cho hai request đua nhau (ADR 0006).
+   * Đơn đã khép (completed/cancelled/no_show) không sửa được — hồ sơ chuyến đã đóng băng.
    */
   async assignDriver(
     tenantId: string,
@@ -463,38 +465,63 @@ export class BookingsService {
   ): Promise<BookingDetailDto> {
     const current = await this.prisma.booking.findFirst({
       where: { id, tenantId, deletedAt: null },
-      select: { id: true, status: true, driverId: true },
+      select: { id: true, status: true, driverId: true, pickupAt: true, returnAt: true },
     });
     if (!current) throw notFound();
     assertMutable(current.status as BookingStatus);
 
-    const driver = driverId ? await this.drivers.findAssignable(tenantId, driverId) : null;
+    try {
+      const row = await this.prisma.$transaction(async (tx) => {
+        // Kiểm khả dụng trong CÙNG transaction với lệnh ghi — cửa sổ đua thu về constraint.
+        const driver = driverId
+          ? await this.drivers.findAssignable(
+              tenantId,
+              driverId,
+              {
+                pickupAt: current.pickupAt,
+                returnAt: current.returnAt,
+                excludeBookingId: current.id,
+              },
+              tx,
+            )
+          : null;
 
-    const row = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.booking.update({
-        where: { id: current.id },
-        data: { driverId: driver?.id ?? null },
-        select: DETAIL_SELECT,
+        const updated = await tx.booking.update({
+          where: { id: current.id },
+          data: { driverId: driver?.id ?? null },
+          select: DETAIL_SELECT,
+        });
+
+        await this.audit.record(
+          {
+            tenantId,
+            actorUserId: userId,
+            actorScope: 'tenant',
+            action: 'booking.driver_assign',
+            targetType: 'booking',
+            targetId: id,
+            before: { driverId: current.driverId },
+            after: {
+              driverId: driver?.id ?? null,
+              ...(driver ? { driverName: driver.name } : {}),
+            },
+          },
+          tx,
+        );
+
+        return updated;
       });
-
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId: userId,
-          actorScope: 'tenant',
-          action: 'booking.driver_assign',
-          targetType: 'booking',
-          targetId: id,
-          before: { driverId: current.driverId },
-          after: { driverId: driver?.id ?? null, ...(driver ? { driverName: driver.name } : {}) },
-        },
-        tx,
-      );
-
-      return updated;
-    });
-
-    return toDetail(row);
+      return toDetail(row);
+    } catch (err) {
+      // Hai request đua qua được bước kiểm — exclusion constraint từ chối kẻ đến sau (23P01).
+      if (isDriverScheduleConflict(err)) {
+        throw new ConflictException({
+          code: API_ERROR_CODE.CONFLICT,
+          message: 'Tài xế vừa được gán vào một đơn giao nhau — tải lại rồi chọn người khác',
+        });
+      }
+      throw err;
+    }
   }
 
   /**
@@ -700,6 +727,17 @@ function manualSnapshot(amounts: {
     depositAmount: amounts.deposit.toFixed(0),
     policy: null,
   };
+}
+
+/**
+ * Vi phạm exclusion `bookings_driver_schedule_excl` (23P01) — Prisma bọc trong
+ * PrismaClientKnownRequestError hoặc lỗi thô tuỳ đường đi; nhận diện theo TÊN constraint để
+ * không nuốt nhầm 23P01 của lịch xe (occupancy).
+ */
+function isDriverScheduleConflict(err: unknown): boolean {
+  const text =
+    err instanceof Error ? `${err.message} ${JSON.stringify((err as { meta?: unknown }).meta ?? '')}` : '';
+  return text.includes('bookings_driver_schedule_excl');
 }
 
 function assertRange(pickupAt: Date, returnAt: Date): void {

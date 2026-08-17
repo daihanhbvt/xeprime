@@ -10,6 +10,8 @@ import {
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { DriversService } from './drivers.service';
 import {
+  AssignableDriversDto,
+  AssignableDriversQueryDto,
   CreateDriverDto,
   DriverDto,
   DriverListQueryDto,
@@ -37,6 +39,24 @@ export class DriversController {
     @Query() query: DriverListQueryDto,
   ): Promise<DriverPageDto> {
     return this.drivers.list(tenant.tenantId, query);
+  }
+
+  @Get('assignable')
+  @RequirePermissions(PERMISSION.DRIVER_VIEW)
+  @ApiOperation({
+    summary: 'Tài xế cho bộ chọn gán đơn — kèm cờ bận khung giờ / GPLX hết hạn (17/08)',
+  })
+  @ApiOkResponse({ type: AssignableDriversDto })
+  async assignable(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: AssignableDriversQueryDto,
+  ): Promise<AssignableDriversDto> {
+    const data = await this.drivers.assignable(tenant.tenantId, {
+      pickupAt: new Date(query.pickupAt),
+      returnAt: new Date(query.returnAt),
+      excludeBookingId: query.excludeBookingId,
+    });
+    return { data };
   }
 
   @Post()

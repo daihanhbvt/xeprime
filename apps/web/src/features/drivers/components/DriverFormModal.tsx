@@ -6,6 +6,8 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { DRIVER_TYPE, DRIVER_TYPE_LABEL, DRIVER_TYPE_VALUES } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { DateTimeField } from '@/components/form/DateTimeField';
+import { DialogForm } from '@/components/form/DialogForm';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
@@ -24,6 +26,7 @@ const EMPTY: DriverFormValues = {
   phone: '',
   driverType: DRIVER_TYPE.STAFF,
   licenseNo: '',
+  licenseExpiresAt: null,
   idNo: '',
   note: '',
 };
@@ -34,6 +37,7 @@ function toValues(driver: Driver): DriverFormValues {
     phone: driver.phone,
     driverType: (driver.driverType as DriverFormValues['driverType']) ?? DRIVER_TYPE.STAFF,
     licenseNo: driver.licenseNo ?? '',
+    licenseExpiresAt: driver.licenseExpiresAt ?? null,
     idNo: driver.idNo ?? '',
     note: driver.note ?? '',
   };
@@ -74,6 +78,7 @@ export function DriverFormModal({
       phone: values.phone.trim(),
       driverType: values.driverType,
       licenseNo: values.licenseNo.trim() || null,
+      licenseExpiresAt: values.licenseExpiresAt || null,
       idNo: values.idNo.trim() || null,
       note: values.note.trim() || null,
     };
@@ -99,23 +104,32 @@ export function DriverFormModal({
       onOk={() => void submit()}
       onClose={onClose}
     >
-      <TextField control={control} name="name" label="Họ và tên" placeholder="Trần Văn B" />
-      <TextField
-        control={control}
-        name="phone"
-        label="Số điện thoại"
-        placeholder="0901234567"
-        autoComplete="tel"
-      />
-      <SelectField
-        control={control}
-        name="driverType"
-        label="Loại tài xế"
-        options={DRIVER_TYPE_OPTIONS}
-      />
-      <TextField control={control} name="licenseNo" label="Số GPLX (không bắt buộc)" />
-      <TextField control={control} name="idNo" label="Số CCCD (không bắt buộc)" />
-      <TextAreaField control={control} name="note" label="Ghi chú" rows={3} />
+      <DialogForm onSubmit={submit} labelWidth="lg">
+        <TextField control={control} name="name" label="Họ và tên" placeholder="Trần Văn B" />
+        <TextField
+          control={control}
+          name="phone"
+          label="Số điện thoại"
+          placeholder="0901234567"
+          autoComplete="tel"
+        />
+        <SelectField
+          control={control}
+          name="driverType"
+          label="Loại tài xế"
+          options={DRIVER_TYPE_OPTIONS}
+        />
+        <TextField control={control} name="licenseNo" label="Số GPLX (không bắt buộc)" />
+        <DateTimeField
+          control={control}
+          name="licenseExpiresAt"
+          label="Hạn GPLX"
+          dateOnly
+          placeholder="Hết hạn thì không gán được vào đơn mới"
+        />
+        <TextField control={control} name="idNo" label="Số CCCD (không bắt buộc)" />
+        <TextAreaField control={control} name="note" label="Ghi chú" rows={3} />
+      </DialogForm>
     </ResponsiveDialog>
   );
 }

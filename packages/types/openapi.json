@@ -2342,7 +2342,20 @@
     "/shop/rental-policies": {
       "get": {
         "operationId": "ShopPoliciesController_get",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2355,14 +2368,27 @@
             }
           }
         },
-        "summary": "Chính sách thuê mặc định + số xe kế thừa/ghi đè",
+        "summary": "Chính sách thuê mặc định (theo loại xe) + số xe kế thừa/ghi đè",
         "tags": [
           "rental-policies"
         ]
       },
       "put": {
         "operationId": "ShopPoliciesController_save",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "car",
+                "motorbike"
+              ]
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -2385,7 +2411,7 @@
             }
           }
         },
-        "summary": "Lưu chính sách thuê mặc định (upsert, audit before/after)",
+        "summary": "Lưu chính sách thuê mặc định theo loại xe (upsert, audit)",
         "tags": [
           "rental-policies"
         ]
@@ -6143,6 +6169,56 @@
           }
         },
         "summary": "Thêm tài xế",
+        "tags": [
+          "drivers"
+        ]
+      }
+    },
+    "/drivers/assignable": {
+      "get": {
+        "operationId": "DriversController_assignable",
+        "parameters": [
+          {
+            "name": "pickupAt",
+            "required": true,
+            "in": "query",
+            "description": "Nhận xe của đơn (ISO-8601)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnAt",
+            "required": true,
+            "in": "query",
+            "description": "Trả xe của đơn (ISO-8601)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "excludeBookingId",
+            "required": false,
+            "in": "query",
+            "description": "ID đơn đang gán (ULID) — loại khỏi kiểm tra trùng",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignableDriversDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tài xế cho bộ chọn gán đơn — kèm cờ bận khung giờ / GPLX hết hạn (17/08)",
         "tags": [
           "drivers"
         ]
@@ -16681,6 +16757,11 @@
             "type": "string",
             "nullable": true
           },
+          "licenseExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn GPLX (YYYY-MM-DD) — null = chưa khai"
+          },
           "idNo": {
             "type": "string",
             "nullable": true
@@ -16726,6 +16807,53 @@
           "meta"
         ]
       },
+      "AssignableDriverDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "licenseExpiresAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "busy": {
+            "type": "boolean",
+            "description": "Đang có đơn sống giao nhau với khung giờ này"
+          },
+          "licenseExpired": {
+            "type": "boolean",
+            "description": "GPLX hết hạn trước thời điểm trả xe"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "phone",
+          "busy",
+          "licenseExpired"
+        ]
+      },
+      "AssignableDriversDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignableDriverDto"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "CreateDriverDto": {
         "type": "object",
         "properties": {
@@ -16750,6 +16878,12 @@
             "type": "string",
             "nullable": true,
             "description": "Số GPLX"
+          },
+          "licenseExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn GPLX (YYYY-MM-DD) — hết hạn thì không gán được vào đơn mới",
+            "example": "2028-05-20"
           },
           "idNo": {
             "type": "string",
@@ -16793,6 +16927,11 @@
           "licenseNo": {
             "type": "string",
             "nullable": true
+          },
+          "licenseExpiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn GPLX (YYYY-MM-DD) — null = xoá hạn"
           },
           "idNo": {
             "type": "string",

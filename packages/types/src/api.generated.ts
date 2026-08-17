@@ -735,9 +735,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Chính sách thuê mặc định + số xe kế thừa/ghi đè */
+        /** Chính sách thuê mặc định (theo loại xe) + số xe kế thừa/ghi đè */
         get: operations["ShopPoliciesController_get"];
-        /** Lưu chính sách thuê mặc định (upsert, audit before/after) */
+        /** Lưu chính sách thuê mặc định theo loại xe (upsert, audit) */
         put: operations["ShopPoliciesController_save"];
         post?: never;
         delete?: never;
@@ -1883,6 +1883,23 @@ export interface paths {
         put?: never;
         /** Thêm tài xế */
         post: operations["DriversController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/drivers/assignable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tài xế cho bộ chọn gán đơn — kèm cờ bận khung giờ / GPLX hết hạn (17/08) */
+        get: operations["DriversController_assignable"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5270,6 +5287,8 @@ export interface components {
             /** @enum {string} */
             status: "active" | "inactive";
             licenseNo?: string | null;
+            /** @description Hạn GPLX (YYYY-MM-DD) — null = chưa khai */
+            licenseExpiresAt?: string | null;
             idNo?: string | null;
             note?: string | null;
             /** @description Số đơn đang gán (chưa xong) — chặn hiểu nhầm khi ngừng tài xế */
@@ -5280,6 +5299,19 @@ export interface components {
         DriverPageDto: {
             data: components["schemas"]["DriverDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
+        };
+        AssignableDriverDto: {
+            id: string;
+            name: string;
+            phone: string;
+            licenseExpiresAt?: string | null;
+            /** @description Đang có đơn sống giao nhau với khung giờ này */
+            busy: boolean;
+            /** @description GPLX hết hạn trước thời điểm trả xe */
+            licenseExpired: boolean;
+        };
+        AssignableDriversDto: {
+            data: components["schemas"]["AssignableDriverDto"][];
         };
         CreateDriverDto: {
             /** @example Trần Văn B */
@@ -5293,6 +5325,11 @@ export interface components {
             driverType: "staff" | "collaborator" | "temporary";
             /** @description Số GPLX */
             licenseNo?: string | null;
+            /**
+             * @description Hạn GPLX (YYYY-MM-DD) — hết hạn thì không gán được vào đơn mới
+             * @example 2028-05-20
+             */
+            licenseExpiresAt?: string | null;
             /** @description Số CCCD */
             idNo?: string | null;
             note?: string | null;
@@ -5305,6 +5342,8 @@ export interface components {
             /** @enum {string} */
             status?: "active" | "inactive";
             licenseNo?: string | null;
+            /** @description Hạn GPLX (YYYY-MM-DD) — null = xoá hạn */
+            licenseExpiresAt?: string | null;
             idNo?: string | null;
             note?: string | null;
         };
@@ -7816,7 +7855,9 @@ export interface operations {
     };
     ShopPoliciesController_get: {
         parameters: {
-            query?: never;
+            query?: {
+                vehicleType?: "car" | "motorbike";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -7835,7 +7876,9 @@ export interface operations {
     };
     ShopPoliciesController_save: {
         parameters: {
-            query?: never;
+            query?: {
+                vehicleType?: "car" | "motorbike";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -9931,6 +9974,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DriverDto"];
+                };
+            };
+        };
+    };
+    DriversController_assignable: {
+        parameters: {
+            query: {
+                /** @description Nhận xe của đơn (ISO-8601) */
+                pickupAt: string;
+                /** @description Trả xe của đơn (ISO-8601) */
+                returnAt: string;
+                /** @description ID đơn đang gán (ULID) — loại khỏi kiểm tra trùng */
+                excludeBookingId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignableDriversDto"];
                 };
             };
         };
