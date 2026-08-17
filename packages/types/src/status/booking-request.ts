@@ -36,6 +36,39 @@ export const BOOKING_REQUEST_STATUS_OCCUPYING: readonly BookingRequestStatus[] =
   BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
 ];
 
+/**
+ * Lộ trình của yêu cầu thuê XE CÓ TÀI XẾ (mô hình 3 lộ trình — plan 17/08).
+ *
+ * Là NGỮ CẢNH để shop báo giá đúng khi duyệt (phụ phí 1 chiều/lưu đêm...), KHÔNG phải chiều
+ * lọc marketplace — xe không khai "lộ trình phục vụ" nên lọc theo nó chỉ tạo kết quả rỗng giả.
+ */
+export const ROUTE_TYPE = {
+  IN_CITY: 'in_city',
+  INTER_CITY: 'inter_city',
+  INTER_CITY_ONE_WAY: 'inter_city_one_way',
+} as const;
+
+export type RouteType = (typeof ROUTE_TYPE)[keyof typeof ROUTE_TYPE];
+export const ROUTE_TYPE_VALUES = Object.values(ROUTE_TYPE) as RouteType[];
+
+export const ROUTE_TYPE_LABEL: Readonly<Record<RouteType, string>> = {
+  [ROUTE_TYPE.IN_CITY]: 'Nội thành',
+  [ROUTE_TYPE.INTER_CITY]: 'Liên tỉnh',
+  [ROUTE_TYPE.INTER_CITY_ONE_WAY]: 'Liên tỉnh (1 chiều)',
+};
+
+/** Mô tả ngắn dưới radio lộ trình — hero tìm kiếm và bước gửi yêu cầu dùng chung. */
+export const ROUTE_TYPE_DESCRIPTION: Readonly<Record<RouteType, string>> = {
+  [ROUTE_TYPE.IN_CITY]: 'Di chuyển trong nội thành hoặc lân cận, lộ trình tự do',
+  [ROUTE_TYPE.INTER_CITY]: 'Đi tỉnh/thành khác và quay về điểm đón (khứ hồi)',
+  [ROUTE_TYPE.INTER_CITY_ONE_WAY]:
+    'Đi tỉnh/thành khác một chiều — gian hàng có thể báo thêm phụ phí',
+};
+
+export function isRouteType(value: unknown): value is RouteType {
+  return typeof value === 'string' && (ROUTE_TYPE_VALUES as string[]).includes(value);
+}
+
 export const BOOKING_REQUEST_STATUS_META: Readonly<Record<BookingRequestStatus, StatusMeta>> = {
   [BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL]: {
     label: 'Chờ chủ shop duyệt',

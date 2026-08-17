@@ -285,6 +285,35 @@ export const SERVICE_TYPE_LABEL: Readonly<Record<ServiceType, string>> = {
 };
 
 /**
+ * Nhãn cho giá trị dịch vụ KHÔNG còn trong bộ hiện hành nhưng vẫn nằm trong snapshot jsonb
+ * đã đóng băng (approval_tasks, contracts) — snapshot không migrate, chỉ tương thích đọc.
+ */
+const LEGACY_SERVICE_TYPE_LABEL: Readonly<Record<string, string>> = {
+  both: 'Tự lái & có tài xế',
+};
+
+/** Nhãn một dịch vụ, chịu được cả giá trị legacy trong snapshot cũ — không bao giờ in mã thô. */
+export function serviceTypeLabel(value: string): string {
+  return (
+    (SERVICE_TYPE_LABEL as Readonly<Record<string, string>>)[value] ??
+    LEGACY_SERVICE_TYPE_LABEL[value] ??
+    value
+  );
+}
+
+/** Nhãn gộp cho MẢNG dịch vụ của xe (`service_types`) — điểm dùng chung cho mọi chỗ hiển thị. */
+export function serviceTypesLabel(values: readonly string[]): string {
+  return values.map(serviceTypeLabel).join(' · ');
+}
+
+/**
+ * Sàn thời lượng một chuyến THUÊ DÀI HẠN (ngày) — khách chọn ngày cụ thể, tối thiểu 1 tuần
+ * (chốt 17/08). Dùng chung FE (yup + minDays của control chọn ngày) lẫn BE (quote + tạo
+ * yêu cầu — backend là nguồn chặn thật).
+ */
+export const LONG_TERM_MIN_DAYS = 7;
+
+/**
  * Nhiên liệu — thuộc tính dữ liệu của xe (không phải trạng thái), nên chỉ có nhãn, không màu.
  * DB lưu String; đây là bộ giá trị chốt để form là select thay vì text trần (ADR 0005).
  */
