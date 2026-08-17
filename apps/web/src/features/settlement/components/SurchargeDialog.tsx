@@ -9,6 +9,7 @@ import {
   SURCHARGE_CATEGORY_VALUES,
   type SurchargeCategory,
 } from '@xeprime/types';
+import { MoneyInput } from '@/components/form/MoneyInput';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
@@ -46,7 +47,7 @@ export function SurchargeDialog({
   const remove = useVoidSurcharge(bookingId);
 
   const [category, setCategory] = useState<SurchargeCategory>(SURCHARGE_CATEGORY.OVERTIME);
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number | null>(null);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +58,7 @@ export function SurchargeDialog({
 
   function submit() {
     setError(null);
-    if (!amount.trim() || Number(amount) <= 0) {
+    if (amount == null || amount <= 0) {
       setError('Nhập số tiền lớn hơn 0.');
       return;
     }
@@ -66,11 +67,11 @@ export function SurchargeDialog({
       return;
     }
     add.mutate(
-      { category, amount: amount.trim(), reason: reason.trim() },
+      { category, amount: String(amount), reason: reason.trim() },
       {
         onSuccess: () => {
           message.success('Đã ghi nhận khoản phát sinh');
-          setAmount('');
+          setAmount(null);
           setReason('');
         },
         onError: (err) => setError(getErrorMessage(err)),
@@ -140,11 +141,12 @@ export function SurchargeDialog({
             </label>
             <label className={styles.field}>
               <span className={styles.label}>Số tiền (đ)</span>
-              <Input
-                inputMode="numeric"
+              <MoneyInput
                 value={amount}
-                onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
-                placeholder="600000"
+                onChange={(value) => setAmount(value ?? null)}
+                min={0}
+                placeholder="600.000"
+                className={styles.control}
               />
             </label>
           </div>
@@ -156,7 +158,7 @@ export function SurchargeDialog({
               message={`Đề xuất từ chính sách quá giờ: ${formatMoneyVnd(overtime.amount!)}`}
               description={overtime.formula}
               action={
-                <Button size="small" onClick={() => setAmount(String(Number(overtime.amount)))}>
+                <Button size="small" onClick={() => setAmount(Number(overtime.amount))}>
                   Dùng số này
                 </Button>
               }

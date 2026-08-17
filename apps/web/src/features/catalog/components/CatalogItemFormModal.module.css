@@ -1,10 +1,3 @@
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--xp-space-md);
-  gap: var(--xp-space-sm);
-}
-
 /* Xem trước ảnh ngay trong form: đường dẫn gõ sai là lỗi thường gặp nhất ở màn này. */
 .preview {
   display: flex;

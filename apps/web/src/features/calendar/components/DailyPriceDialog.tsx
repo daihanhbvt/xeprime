@@ -1,9 +1,10 @@
 'use client';
 
-import { Alert, App, Button, DatePicker, Descriptions, Form, Input, InputNumber } from 'antd';
+import { Alert, App, Button, DatePicker, Descriptions, Form, Input } from 'antd';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { MoneyInput } from '@/components/form/MoneyInput';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
@@ -188,28 +189,24 @@ function PriceForm({ state, onClose }: { state: DailyPriceDialogState; onClose: 
         label="Giá theo ngày"
         tooltip="Thay cả giá thường lẫn giá cuối tuần của đúng các ngày này"
       >
-        <InputNumber<number>
+        <MoneyInput
           value={dailyPrice ?? undefined}
           onChange={(v) => setDailyPrice(v ?? null)}
           min={0}
           step={50000}
           addonAfter="đ/ngày"
-          formatter={(v) => (v == null ? '' : String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '.'))}
-          parser={(v) => Number((v ?? '').replace(/\./g, ''))}
           className={styles.moneyInput}
         />
       </Form.Item>
 
       {state.hourlyPrice != null ? (
         <Form.Item label="Giá theo giờ">
-          <InputNumber<number>
+          <MoneyInput
             value={hourlyPrice ?? undefined}
             onChange={(v) => setHourlyPrice(v ?? null)}
             min={0}
             step={10000}
             addonAfter="đ/giờ"
-            formatter={(v) => (v == null ? '' : String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '.'))}
-            parser={(v) => Number((v ?? '').replace(/\./g, ''))}
             className={styles.moneyInput}
           />
         </Form.Item>

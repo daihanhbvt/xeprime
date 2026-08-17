@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { branchFormSchema, type BranchFormValues } from '@xeprime/validators';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
+import { DialogForm } from '@/components/form/DialogForm';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
@@ -66,16 +67,9 @@ export function BranchFormDialog({
       title={branch ? `Sửa ${branch.name}` : 'Thêm chi nhánh'}
       open={open}
       onClose={onClose}
-      footer={
-        <>
-          <Button onClick={onClose} disabled={submitting}>
-            Huỷ
-          </Button>
-          <Button type="primary" onClick={onSubmit} loading={submitting}>
-            {branch ? 'Lưu' : 'Tạo chi nhánh'}
-          </Button>
-        </>
-      }
+      okText={branch ? 'Lưu' : 'Tạo chi nhánh'}
+      onOk={() => void onSubmit()}
+      confirmLoading={submitting}
     >
       {branch?.needsLocationReview ? (
         <Alert
@@ -105,7 +99,7 @@ export function BranchFormDialog({
         />
       ) : null}
 
-      <form onSubmit={onSubmit} noValidate>
+      <DialogForm onSubmit={onSubmit} labelWidth="md">
         <TextField
           control={control}
           name="name"
@@ -131,7 +125,7 @@ export function BranchFormDialog({
           placeholder="Số nhà, đường, phường/xã"
         />
         <TextField control={control} name="phone" label="Số điện thoại" placeholder="0901234567" />
-      </form>
+      </DialogForm>
     </ResponsiveDialog>
   );
 }

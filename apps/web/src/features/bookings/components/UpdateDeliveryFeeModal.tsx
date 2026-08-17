@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
 import { NumberField } from '@/components/form/NumberField';
+import { DialogForm } from '@/components/form/DialogForm';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { formatMoneyVnd } from '@/lib/money';
@@ -95,7 +96,11 @@ export function UpdateDeliveryFeeModal({
       onOk={() => void handleSubmit(submit)()}
       confirmLoading={update.isPending}
     >
-      <div className={styles.body}>
+      <DialogForm
+        className={styles.body}
+        labelWidth="md"
+        onSubmit={(event) => void handleSubmit(submit)(event)}
+      >
         <div className={styles.currentRow}>
           <span>Phí đang áp dụng</span>
           <b>{Number(currentFee) > 0 ? formatMoneyVnd(currentFee) : 'Miễn phí'}</b>
@@ -131,7 +136,7 @@ export function UpdateDeliveryFeeModal({
             <b>{nextFee > 0 ? formatMoneyVnd(String(nextFee)) : 'Miễn phí'}</b>
           </p>
         ) : null}
-      </div>
+      </DialogForm>
     </ResponsiveDialog>
   );
 }

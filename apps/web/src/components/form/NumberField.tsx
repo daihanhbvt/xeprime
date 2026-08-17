@@ -4,6 +4,7 @@ import { Form, InputNumber } from 'antd';
 import { useId, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 
+import { MoneyInput } from './MoneyInput';
 import styles from './field.module.css';
 
 interface NumberFieldProps<T extends FieldValues> {
@@ -34,22 +35,6 @@ interface NumberFieldProps<T extends FieldValues> {
   required?: boolean;
   /** Gợi ý dưới ô nhập khi KHÔNG có lỗi. Lỗi luôn thắng. */
   help?: ReactNode;
-}
-
-/** Nhóm nghìn theo kiểu Việt Nam (1.000.000) cho ô nhập tiền. */
-const groupThousands = (value: string | number | undefined): string =>
-  `${value ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-/**
- * Bỏ dấu phân nhóm, trả số nguyên.
- *
- * Cố ý **không** dùng `parseFloat`: tiền VND là số nguyên, và `parseFloat('1.000.000')` trả `1`
- * (dừng ở dấu chấm đầu tiên) — sai 6 chữ số mà không báo lỗi. Chỉ giữ chữ số là cách duy nhất
- * an toàn với quy ước phân nhóm bằng dấu chấm của tiếng Việt.
- */
-function parseGroupedInteger(displayValue: string | undefined): number | null {
-  const digits = (displayValue ?? '').replace(/\D/g, '');
-  return digits === '' ? null : Number(digits);
 }
 
 /**
@@ -91,27 +76,40 @@ export function NumberField<T extends FieldValues>({
       help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
       className={styles.item}
     >
-      <InputNumber
-        id={id}
-        aria-describedby={helpText ? describedById : undefined}
-        aria-invalid={fieldState.error ? true : undefined}
-        className={styles.control}
-        // Không hiện nút tăng/giảm: các ô số ở đây (năm, giá, kích thước) đều gõ trực tiếp,
-        // và cặp mũi tên + vạch ngăn hiện lên lúc focus chỉ gây rối mắt.
-        controls={false}
-        value={(field.value as number | null | undefined) ?? null}
-        onChange={(value) => field.onChange(value ?? null)}
-        onBlur={field.onBlur}
-        min={effectiveMin}
-        max={effectiveMax}
-        precision={precision ?? (money || percent ? 0 : undefined)}
-        placeholder={placeholder}
-        addonAfter={suffix}
-        formatter={money ? groupThousands : undefined}
-        // Ép kiểu cho khớp generic `InputNumber<number>` — AntD chấp nhận `null` lúc chạy để xoá giá trị.
-        parser={money ? (value) => parseGroupedInteger(value) as unknown as number : undefined}
-        status={fieldState.error ? 'error' : undefined}
-      />
+      {money ? (
+        <MoneyInput
+          id={id}
+          aria-describedby={helpText ? describedById : undefined}
+          aria-invalid={fieldState.error ? true : undefined}
+          className={styles.control}
+          value={(field.value as number | null | undefined) ?? null}
+          onChange={(value) => field.onChange(value ?? null)}
+          onBlur={field.onBlur}
+          min={effectiveMin}
+          max={effectiveMax}
+          placeholder={placeholder}
+          addonAfter={suffix}
+          status={fieldState.error ? 'error' : undefined}
+        />
+      ) : (
+        <InputNumber
+          id={id}
+          aria-describedby={helpText ? describedById : undefined}
+          aria-invalid={fieldState.error ? true : undefined}
+          className={styles.control}
+          // Không hiện nút tăng/giảm: các ô số ở đây (năm, kích thước…) đều gõ trực tiếp.
+          controls={false}
+          value={(field.value as number | null | undefined) ?? null}
+          onChange={(value) => field.onChange(value ?? null)}
+          onBlur={field.onBlur}
+          min={effectiveMin}
+          max={effectiveMax}
+          precision={precision ?? (percent ? 0 : undefined)}
+          placeholder={placeholder}
+          suffix={suffix}
+          status={fieldState.error ? 'error' : undefined}
+        />
+      )}
     </Form.Item>
   );
 }

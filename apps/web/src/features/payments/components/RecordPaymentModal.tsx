@@ -1,8 +1,10 @@
 'use client';
 
-import { App, Button } from 'antd';
+import { App } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { DialogForm } from '@/components/form/DialogForm';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -21,6 +23,14 @@ const DEFAULTS: RecordPaymentValues = {
   description: '',
 };
 
+function defaultsForDebt(debtAmount: string): RecordPaymentValues {
+  const debt = Number(debtAmount);
+  return {
+    ...DEFAULTS,
+    amount: Number.isFinite(debt) && debt > 0 ? debt : null,
+  };
+}
+
 /** Modal ghi nhận một lần thu tiền cho đơn. `debt` để gợi ý số còn nợ. */
 export function RecordPaymentModal({
   bookingId,
@@ -36,9 +46,14 @@ export function RecordPaymentModal({
   const { message } = App.useApp();
   const { control, handleSubmit, reset } = useForm<RecordPaymentValues>({
     resolver: yupResolver(recordPaymentSchema),
-    defaultValues: DEFAULTS,
+    defaultValues: defaultsForDebt(debtAmount),
   });
   const record = useRecordPayment(bookingId);
+
+  // Mỗi lần mở (hoặc chuyển sang đơn khác) điền đúng số CÒN NỢ mới nhất, không giữ số đã gõ ở lần trước.
+  useEffect(() => {
+    if (open) reset(defaultsForDebt(debtAmount));
+  }, [debtAmount, open, reset]);
 
   const submit = handleSubmit((values) => {
     const body: RecordPaymentInput = {
@@ -58,11 +73,19 @@ export function RecordPaymentModal({
   });
 
   return (
-    <ResponsiveDialog title="Thu tiền đơn" open={open} onClose={onClose} footer={null}>
+    <ResponsiveDialog
+      title="Thu tiền đơn"
+      open={open}
+      onClose={onClose}
+      size="sm"
+      okText="Ghi nhận"
+      onOk={() => void submit()}
+      confirmLoading={record.isPending}
+    >
       <p style={{ marginBottom: 16 }}>
         Còn nợ: <b>{formatMoneyVnd(debtAmount)}</b>
       </p>
-      <form onSubmit={submit} noValidate>
+      <DialogForm onSubmit={submit} labelWidth="md">
         <NumberField control={control} name="amount" label="Số tiền nhận" money min={0} />
         <SelectField control={control} name="method" label="Hình thức" options={PAYMENT_METHOD_OPTIONS} />
         <TextField
@@ -72,13 +95,7 @@ export function RecordPaymentModal({
           placeholder="VD: mã giao dịch CK"
         />
         <TextField control={control} name="description" label="Ghi chú (tuỳ chọn)" />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
-          <Button onClick={onClose}>Huỷ</Button>
-          <Button type="primary" htmlType="submit" loading={record.isPending}>
-            Ghi nhận
-          </Button>
-        </div>
-      </form>
+      </DialogForm>
     </ResponsiveDialog>
   );
 }

@@ -1,17 +1,17 @@
 'use client';
 
-import { App, Button } from 'antd';
+import { App } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { PLATFORM_ROLE, PLATFORM_ROLE_VALUES } from '@xeprime/types';
+import { DialogForm } from '@/components/form/DialogForm';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { PLATFORM_ROLE_OPTIONS } from '../constants';
 import { useAddStaff } from '../hooks/use-staff-mutations';
-import styles from './AddStaffModal.module.css';
 
 const schema = yup.object({
   email: yup.string().trim().required('Nhập email').email('Email không hợp lệ'),
@@ -46,9 +46,15 @@ export function AddStaffModal({ open, onClose }: { open: boolean; onClose: () =>
   });
 
   return (
-    // `footer={null}`: nút gửi phải nằm TRONG `<form>` để `htmlType="submit"` còn tác dụng.
-    <ResponsiveDialog title="Thêm nhân sự nền tảng" open={open} onClose={onClose} footer={null}>
-      <form onSubmit={onSubmit} noValidate>
+    <ResponsiveDialog
+      title="Thêm nhân sự nền tảng"
+      open={open}
+      onClose={onClose}
+      okText="Thêm"
+      onOk={() => void onSubmit()}
+      confirmLoading={add.isPending}
+    >
+      <DialogForm onSubmit={onSubmit} labelWidth="sm">
         <TextField
           control={control}
           name="email"
@@ -57,13 +63,7 @@ export function AddStaffModal({ open, onClose }: { open: boolean; onClose: () =>
           placeholder="nhanvien@xeprime.vn"
         />
         <SelectField control={control} name="roleKey" label="Vai trò" options={PLATFORM_ROLE_OPTIONS} />
-        <div className={styles.actions}>
-          <Button onClick={onClose}>Huỷ</Button>
-          <Button type="primary" htmlType="submit" loading={add.isPending}>
-            Thêm
-          </Button>
-        </div>
-      </form>
+      </DialogForm>
     </ResponsiveDialog>
   );
 }

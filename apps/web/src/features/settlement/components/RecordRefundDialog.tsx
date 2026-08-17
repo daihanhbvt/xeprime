@@ -10,6 +10,7 @@ import {
   REFUND_METHOD_VALUES,
   type RefundMethod,
 } from '@xeprime/types';
+import { MoneyInput } from '@/components/form/MoneyInput';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
@@ -52,10 +53,10 @@ export function RecordRefundDialog({
    * đã là instance mới. Ghi nhận mới lấy số ĐỀ XUẤT của server làm mặc định; điều chỉnh thì
    * lấy chính số đã ghi để người sửa thấy đúng thứ mình đang sửa.
    */
-  const [amount, setAmount] = useState(() =>
+  const [amount, setAmount] = useState<number | null>(() =>
     isCorrection && existingRefund
-      ? String(Number(existingRefund.refundAmount))
-      : String(Number(settlement.proposedRefund)),
+      ? Number(existingRefund.refundAmount)
+      : Number(settlement.proposedRefund),
   );
   const [method, setMethod] = useState<RefundMethod>(
     ((isCorrection && existingRefund?.refundMethod) || REFUND_METHOD.BANK_TRANSFER) as RefundMethod,
@@ -70,7 +71,7 @@ export function RecordRefundDialog({
 
   function submit() {
     setError(null);
-    if (!amount.trim()) {
+    if (amount == null) {
       setError('Nhập số tiền đã hoàn.');
       return;
     }
@@ -80,7 +81,7 @@ export function RecordRefundDialog({
     }
 
     const body = {
-      refundAmount: amount.trim(),
+      refundAmount: String(amount),
       refundMethod: method,
       refundedAt: refundedAt.toISOString(),
       ...(reference.trim() ? { reference: reference.trim() } : {}),
@@ -133,10 +134,11 @@ export function RecordRefundDialog({
 
         <label className={styles.field}>
           <span className={styles.label}>Số tiền hoàn (đ)</span>
-          <Input
-            inputMode="numeric"
+          <MoneyInput
             value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
+            onChange={(value) => setAmount(value ?? null)}
+            min={0}
+            className={styles.control}
           />
           <span className={styles.hint}>
             Đề xuất: {formatMoneyVnd(settlement.proposedRefund)}. Sửa được nếu thực tế khác.

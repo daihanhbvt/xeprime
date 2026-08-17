@@ -1,7 +1,7 @@
 'use client';
 
 import { CarOutlined, CheckOutlined, CloseOutlined, MessageOutlined } from '@ant-design/icons';
-import { Button, Popconfirm, Space, Tag, Tooltip } from 'antd';
+import { Tag, Tooltip } from 'antd';
 import {
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_META,
@@ -12,7 +12,11 @@ import {
   type PaginationMeta,
   type RouteType,
 } from '@xeprime/types';
-import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
+import {
+  actionColumn,
+  DataTable,
+  type DataTableColumn,
+} from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { formatShortDateTimeRange } from '@/lib/datetime';
 import type { BookingRequestItem } from '../types';
@@ -127,63 +131,43 @@ export function BookingRequestTable({
         </div>
       ),
     },
-    {
-      // CỐ Ý KHÔNG dùng `actionColumn`/`RowActions`: đây là cặp CTA quyết định duyệt/từ chối,
-      // nên giữ cả hai nút hiện trực tiếp và dùng màu ngữ nghĩa riêng.
-      // Vẫn giữ `fixed: 'right'` + width cố định theo Figma `127:2060` R1–R2.
-      title: 'Thao tác',
-      key: 'actions',
-      align: 'right',
-      fixed: 'right',
-      width: 270,
-      render: (_, row) =>
-        row.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ? (
-          <Space
-            size="small"
-            className={styles.actions}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Popconfirm
-              title="Duyệt và tạo đơn thuê?"
-              description={
-                row.deliveryRequested
-                  ? 'Giá chốt theo chính sách hiện tại, phí giao nhận mặc định Miễn phí (cập nhật sau trên đơn nếu cần); sẽ giữ chỗ lịch cho khung giờ này.'
-                  : 'Giá chốt theo chính sách hiện tại; sẽ giữ chỗ lịch cho khung giờ này.'
-              }
-              okText="Duyệt"
-              cancelText="Đóng"
-              onConfirm={() => onApprove(row.id)}
-            >
-              <Button
-                type="primary"
-                size="small"
-                className={styles.actionButton}
-                icon={<CheckOutlined aria-hidden="true" />}
-                loading={actingId === row.id}
-              >
-                Duyệt
-              </Button>
-            </Popconfirm>
-            <Popconfirm
-              title="Từ chối yêu cầu này?"
-              okText="Từ chối"
-              okButtonProps={{ danger: true }}
-              cancelText="Đóng"
-              onConfirm={() => onReject(row.id)}
-            >
-              <Button
-                danger
-                size="small"
-                className={styles.actionButton}
-                icon={<CloseOutlined aria-hidden="true" />}
-                loading={actingId === row.id}
-              >
-                Từ chối
-              </Button>
-            </Popconfirm>
-          </Space>
-        ) : null,
-    },
+    actionColumn<BookingRequestItem>(
+      (row) =>
+        row.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL
+          ? [
+              {
+                key: 'approve',
+                label: 'Duyệt',
+                icon: <CheckOutlined aria-hidden="true" />,
+                primary: true,
+                loading: actingId === row.id,
+                confirm: {
+                  title: 'Duyệt và tạo đơn thuê?',
+                  description: row.deliveryRequested
+                    ? 'Giá chốt theo chính sách hiện tại, phí giao nhận mặc định Miễn phí (cập nhật sau trên đơn nếu cần); sẽ giữ chỗ lịch cho khung giờ này.'
+                    : 'Giá chốt theo chính sách hiện tại; sẽ giữ chỗ lịch cho khung giờ này.',
+                  okText: 'Duyệt',
+                  cancelText: 'Đóng',
+                },
+                onClick: () => onApprove(row.id),
+              },
+              {
+                key: 'reject',
+                label: 'Từ chối',
+                icon: <CloseOutlined aria-hidden="true" />,
+                danger: true,
+                loading: actingId === row.id,
+                confirm: {
+                  title: 'Từ chối yêu cầu này?',
+                  okText: 'Từ chối',
+                  cancelText: 'Đóng',
+                },
+                onClick: () => onReject(row.id),
+              },
+            ]
+          : [],
+      { width: 240, maxInline: 2 },
+    ),
   ];
 
   return (

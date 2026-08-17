@@ -1,6 +1,6 @@
 'use client';
 
-import { App, Button } from 'antd';
+import { App } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm, useWatch } from 'react-hook-form';
 import * as yup from 'yup';
@@ -10,6 +10,7 @@ import {
   CATALOG_TYPE_LABEL,
   type CatalogType,
 } from '@xeprime/types';
+import { DialogForm } from '@/components/form/DialogForm';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -95,9 +96,11 @@ export function CatalogItemFormModal({
       title={isEdit ? `Sửa: ${item?.label}` : `Thêm vào ${CATALOG_TYPE_LABEL[type]}`}
       open={open}
       onClose={onClose}
-      footer={null}
+      okText={isEdit ? 'Lưu' : 'Thêm'}
+      onOk={() => void onSubmit()}
+      confirmLoading={pending}
     >
-      <form onSubmit={onSubmit} noValidate>
+      <DialogForm onSubmit={onSubmit} labelWidth="md">
         <TextField
           control={control}
           name="key"
@@ -141,13 +144,7 @@ export function CatalogItemFormModal({
           label="Đang bật"
           description="Tắt thì mục biến khỏi form tạo xe và bộ lọc; xe cũ vẫn hiển thị đúng tên."
         />
-        <div className={styles.actions}>
-          <Button onClick={onClose}>Huỷ</Button>
-          <Button type="primary" htmlType="submit" loading={pending}>
-            {isEdit ? 'Lưu' : 'Thêm'}
-          </Button>
-        </div>
-      </form>
+      </DialogForm>
     </ResponsiveDialog>
   );
 }

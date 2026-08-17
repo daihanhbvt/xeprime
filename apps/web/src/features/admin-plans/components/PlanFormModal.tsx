@@ -1,17 +1,17 @@
 'use client';
 
-import { App, Button } from 'antd';
+import { App } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { NumberField } from '@/components/form/NumberField';
+import { DialogForm } from '@/components/form/DialogForm';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
 import { useCreatePlan, useUpdatePlan } from '../hooks/use-plan-mutations';
 import type { Plan } from '../types';
-import styles from './PlanFormModal.module.css';
 
 /** Số ở form là `number | null` (khớp NumberField) — pattern như `recordPaymentSchema`. */
 const schema = yup.object({
@@ -114,9 +114,11 @@ export function PlanFormModal({
       title={isEdit ? `Sửa gói: ${plan?.name}` : 'Tạo gói dịch vụ'}
       open={open}
       onClose={onClose}
-      footer={null}
+      okText={isEdit ? 'Lưu' : 'Tạo gói'}
+      onOk={() => void onSubmit()}
+      confirmLoading={pending}
     >
-      <form onSubmit={onSubmit} noValidate>
+      <DialogForm onSubmit={onSubmit} labelWidth="lg">
         {!isEdit ? (
           <TextField control={control} name="code" label="Mã gói" placeholder="basic" />
         ) : null}
@@ -132,13 +134,7 @@ export function PlanFormModal({
           addonAfter="xe"
         />
         <NumberField control={control} name="sortOrder" label="Thứ tự hiển thị" />
-        <div className={styles.actions}>
-          <Button onClick={onClose}>Huỷ</Button>
-          <Button type="primary" htmlType="submit" loading={pending}>
-            {isEdit ? 'Lưu' : 'Tạo gói'}
-          </Button>
-        </div>
-      </form>
+      </DialogForm>
     </ResponsiveDialog>
   );
 }
