@@ -1,15 +1,24 @@
 .wrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(480px, 0.92fr);
-  gap: 40px;
   max-width: var(--xp-container-max-width);
   margin: 0 auto;
   padding: 32px 16px 64px;
 }
 
+/*
+ * Biên cuộn của gallery sticky chỉ là khối ảnh + thông tin. Mô tả/đánh giá nằm
+ * ngoài `.top`, vì thế gallery dừng trước khi chạm hàng nội dung phía dưới.
+ */
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(480px, 0.92fr);
+  align-items: start;
+  gap: 40px;
+}
+
 .media {
   position: sticky;
-  top: 16px;
+  /* MarketHeader cao 60px; chừa thêm khoảng thở để ảnh không chui dưới header. */
+  top: calc(60px + var(--xp-space-md));
   min-width: 0;
   align-self: start;
 }
@@ -282,9 +291,9 @@
 
 /* Hàng dưới theo mockup: Mô tả + Đánh giá là hai THẺ ngang hàng, full-width dưới khối trên. */
 .bottom {
-  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  margin-top: 32px;
   gap: 24px;
   align-items: start;
 }
@@ -309,7 +318,7 @@
 }
 
 @media (max-width: 960px) {
-  .wrap {
+  .top {
     grid-template-columns: 1fr;
     gap: 20px;
   }

@@ -93,182 +93,191 @@ export function ListingDetailView({
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.media}>
-        {/* Client island: bấm ảnh nào cũng mở trình xem toàn màn hình chung (đếm x/y). */}
-        <ListingGallery
-          name={listing.name}
-          mainImageUrl={listing.mainImageUrl}
-          images={listing.images}
-        />
-      </div>
-
-      <div className={styles.info}>
-        <h1 className={styles.title}>{listing.name}</h1>
-
-        {/* Xe nhiều dịch vụ → selector nổi bật ngay trên khối giá; giá lớn đổi theo. */}
-        <ListingServiceSelector services={services} active={activeService} />
-
-        {activeService === SERVICE_TYPE.LONG_TERM ? (
-          <div className={styles.price}>
-            {listing.monthlyPrice ? (
-              <>
-                <div className={styles.priceMain}>
-                  <b>{formatMoneyVnd(listing.monthlyPrice)}</b>
-                  <span>/tháng</span>
-                </div>
-                <div className={styles.priceDetails}>
-                  <span className={styles.weekend}>
-                    Thuê tối thiểu {LONG_TERM_MIN_DAYS} ngày · ước tính = số ngày × giá tháng ÷ 30
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className={styles.priceMain}>
-                <b className={styles.priceContact}>Liên hệ báo giá thuê dài hạn</b>
-              </div>
-            )}
-          </div>
-        ) : activeService === SERVICE_TYPE.WITH_DRIVER ? (
-          <div className={styles.price}>
-            {listing.withDriverDailyPrice ? (
-              <>
-                <div className={styles.priceMain}>
-                  <b>{formatMoneyVnd(listing.withDriverDailyPrice)}</b>
-                  <span>/ngày</span>
-                </div>
-                <div className={styles.priceDetails}>
-                  <span className={styles.weekend}>{ROUTE_TYPE_LABEL.in_city} · đã gồm tài xế</span>
-                  {listing.withDriverInterCityPrice ? (
-                    <span className={styles.weekend}>
-                      {ROUTE_TYPE_LABEL.inter_city}{' '}
-                      {formatMoneyVnd(listing.withDriverInterCityPrice)}/ngày
-                    </span>
-                  ) : null}
-                  {listing.withDriverOneWayPrice ? (
-                    <span className={styles.weekend}>
-                      {ROUTE_TYPE_LABEL.inter_city_one_way}{' '}
-                      {formatMoneyVnd(listing.withDriverOneWayPrice)}/ngày
-                    </span>
-                  ) : null}
-                  <span className={styles.weekend}>
-                    Chưa gồm phí cầu đường, ăn nghỉ của tài xế cho chuyến dài — gian hàng xác nhận
-                    khi duyệt
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className={styles.priceMain}>
-                <b className={styles.priceContact}>Liên hệ báo giá chuyến có tài xế</b>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className={styles.price}>
-            <div className={styles.priceMain}>
-              {discount > 0 && listing.weekdayPrice ? (
-                <>
-                  <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
-                  <span className={styles.discountTag}>-{discount}%</span>
-                </>
-              ) : null}
-              <b>{formatMoneyVnd(displayPrice)}</b>
-              <span>/ngày</span>
-            </div>
-            {listing.weekendPrice || listing.hourlyPrice ? (
-              <div className={styles.priceDetails}>
-                {listing.weekendPrice ? (
-                  <span className={styles.weekend}>
-                    Cuối tuần{' '}
-                    {formatMoneyVnd(
-                      discount > 0
-                        ? applyDiscountPercent(listing.weekendPrice, discount)
-                        : listing.weekendPrice,
-                    )}
-                    {discount > 0 ? ' sau giảm' : ''}
-                  </span>
-                ) : null}
-                {listing.hourlyPrice ? (
-                  <span className={styles.weekend}>
-                    Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        )}
-
-        {listing.deliveryEnabled || listing.noCollateral ? (
-          <div className={styles.amenities}>
-            {listing.deliveryEnabled ? (
-              <span className={styles.amenityBadge}>Giao xe tận nơi</span>
-            ) : null}
-            {listing.noCollateral ? (
-              <span className={styles.amenityBadge}>Miễn thế chấp</span>
-            ) : null}
-          </div>
-        ) : null}
-
-        <ListingSpecsCard specs={specs} />
-
-        {listing.features.length > 0 ? (
-          <div className={styles.features}>
-            {listing.features.map((key) => (
-              <span key={key} className={styles.featureChip}>
-                {catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key)}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        {/* Thẻ gian hàng theo mockup: avatar (logo hoặc chữ cái đầu) + tick vàng đã duyệt. */}
-        <div className={styles.shop}>
-          <span className={styles.shopAvatar} aria-hidden="true">
-            {listing.shopLogoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- logo từ R2, host theo môi trường
-              <img src={listing.shopLogoUrl} alt="" className={styles.shopAvatarImg} />
-            ) : (
-              listing.shopName.charAt(0).toUpperCase()
-            )}
-          </span>
-          <div className={styles.shopBody}>
-            <div className={styles.shopNameRow}>
-              <Link href={shopPath.detail(listing.shopSlug)} className={styles.shopName}>
-                {listing.shopName}
-              </Link>
-              {/* Xe lên chợ đồng nghĩa gian hàng đã qua duyệt nền tảng — tick nói đúng điều đó. */}
-              <span className={styles.verified} title="Gian hàng đã được duyệt">
-                ✓
-              </span>
-            </div>
-            {listing.shopProvince ? (
-              <div className={styles.shopMeta}>{listing.shopProvince}</div>
-            ) : null}
-            {listing.shopBio ? <p className={styles.shopBio}>{listing.shopBio}</p> : null}
-          </div>
+      {/*
+       * Sticky gallery phải nằm trong RIÊNG khối đầu trang. Nếu đặt nó trực tiếp trong
+       * `.wrap` cùng Mô tả/Đánh giá, biên sticky là toàn trang và ảnh sẽ đè lên
+       * nội dung hàng dưới khi cuộn.
+       */}
+      <div className={styles.top}>
+        <div className={styles.media}>
+          {/* Client island: bấm ảnh nào cũng mở trình xem toàn màn hình chung (đếm x/y). */}
+          <ListingGallery
+            name={listing.name}
+            mainImageUrl={listing.mainImageUrl}
+            images={listing.images}
+          />
         </div>
 
-        <div className={styles.actions}>
-          {/* Trang này đã có hồ sơ xe đầy đủ — truyền xuống để overlay khỏi tải lại. */}
-          <RequestBookingButton
-            vehicleId={listing.id}
-            vehicleName={listing.name}
-            vehicleImageUrl={listing.mainImageUrl}
-            listing={listing}
-            pickupAt={pickupAt}
-            returnAt={returnAt}
-            // Cùng activeService với selector + khối giá — popup mở đúng dịch vụ đang xem.
-            serviceType={activeService}
-            routeType={routeType}
-            size="large"
-            className={styles.cta}
-          />
-          <ChatWithShopButton vehicleId={listing.id} size="large" />
+        <div className={styles.info}>
+          <h1 className={styles.title}>{listing.name}</h1>
+
+          {/* Xe nhiều dịch vụ → selector nổi bật ngay trên khối giá; giá lớn đổi theo. */}
+          <ListingServiceSelector services={services} active={activeService} />
+
+          {activeService === SERVICE_TYPE.LONG_TERM ? (
+            <div className={styles.price}>
+              {listing.monthlyPrice ? (
+                <>
+                  <div className={styles.priceMain}>
+                    <b>{formatMoneyVnd(listing.monthlyPrice)}</b>
+                    <span>/tháng</span>
+                  </div>
+                  <div className={styles.priceDetails}>
+                    <span className={styles.weekend}>
+                      Thuê tối thiểu {LONG_TERM_MIN_DAYS} ngày · ước tính = số ngày × giá tháng ÷ 30
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.priceMain}>
+                  <b className={styles.priceContact}>Liên hệ báo giá thuê dài hạn</b>
+                </div>
+              )}
+            </div>
+          ) : activeService === SERVICE_TYPE.WITH_DRIVER ? (
+            <div className={styles.price}>
+              {listing.withDriverDailyPrice ? (
+                <>
+                  <div className={styles.priceMain}>
+                    <b>{formatMoneyVnd(listing.withDriverDailyPrice)}</b>
+                    <span>/ngày</span>
+                  </div>
+                  <div className={styles.priceDetails}>
+                    <span className={styles.weekend}>
+                      {ROUTE_TYPE_LABEL.in_city} · đã gồm tài xế
+                    </span>
+                    {listing.withDriverInterCityPrice ? (
+                      <span className={styles.weekend}>
+                        {ROUTE_TYPE_LABEL.inter_city}{' '}
+                        {formatMoneyVnd(listing.withDriverInterCityPrice)}/ngày
+                      </span>
+                    ) : null}
+                    {listing.withDriverOneWayPrice ? (
+                      <span className={styles.weekend}>
+                        {ROUTE_TYPE_LABEL.inter_city_one_way}{' '}
+                        {formatMoneyVnd(listing.withDriverOneWayPrice)}/ngày
+                      </span>
+                    ) : null}
+                    <span className={styles.weekend}>
+                      Chưa gồm phí cầu đường, ăn nghỉ của tài xế cho chuyến dài — gian hàng xác nhận
+                      khi duyệt
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.priceMain}>
+                  <b className={styles.priceContact}>Liên hệ báo giá chuyến có tài xế</b>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className={styles.price}>
+              <div className={styles.priceMain}>
+                {discount > 0 && listing.weekdayPrice ? (
+                  <>
+                    <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
+                    <span className={styles.discountTag}>-{discount}%</span>
+                  </>
+                ) : null}
+                <b>{formatMoneyVnd(displayPrice)}</b>
+                <span>/ngày</span>
+              </div>
+              {listing.weekendPrice || listing.hourlyPrice ? (
+                <div className={styles.priceDetails}>
+                  {listing.weekendPrice ? (
+                    <span className={styles.weekend}>
+                      Cuối tuần{' '}
+                      {formatMoneyVnd(
+                        discount > 0
+                          ? applyDiscountPercent(listing.weekendPrice, discount)
+                          : listing.weekendPrice,
+                      )}
+                      {discount > 0 ? ' sau giảm' : ''}
+                    </span>
+                  ) : null}
+                  {listing.hourlyPrice ? (
+                    <span className={styles.weekend}>
+                      Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {listing.deliveryEnabled || listing.noCollateral ? (
+            <div className={styles.amenities}>
+              {listing.deliveryEnabled ? (
+                <span className={styles.amenityBadge}>Giao xe tận nơi</span>
+              ) : null}
+              {listing.noCollateral ? (
+                <span className={styles.amenityBadge}>Miễn thế chấp</span>
+              ) : null}
+            </div>
+          ) : null}
+
+          <ListingSpecsCard specs={specs} />
+
+          {listing.features.length > 0 ? (
+            <div className={styles.features}>
+              {listing.features.map((key) => (
+                <span key={key} className={styles.featureChip}>
+                  {catalogLabel(catalog[CATALOG_TYPE.VEHICLE_FEATURE], key)}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {/* Thẻ gian hàng theo mockup: avatar (logo hoặc chữ cái đầu) + tick vàng đã duyệt. */}
+          <div className={styles.shop}>
+            <span className={styles.shopAvatar} aria-hidden="true">
+              {listing.shopLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- logo từ R2, host theo môi trường
+                <img src={listing.shopLogoUrl} alt="" className={styles.shopAvatarImg} />
+              ) : (
+                listing.shopName.charAt(0).toUpperCase()
+              )}
+            </span>
+            <div className={styles.shopBody}>
+              <div className={styles.shopNameRow}>
+                <Link href={shopPath.detail(listing.shopSlug)} className={styles.shopName}>
+                  {listing.shopName}
+                </Link>
+                {/* Xe lên chợ đồng nghĩa gian hàng đã qua duyệt nền tảng — tick nói đúng điều đó. */}
+                <span className={styles.verified} title="Gian hàng đã được duyệt">
+                  ✓
+                </span>
+              </div>
+              {listing.shopProvince ? (
+                <div className={styles.shopMeta}>{listing.shopProvince}</div>
+              ) : null}
+              {listing.shopBio ? <p className={styles.shopBio}>{listing.shopBio}</p> : null}
+            </div>
+          </div>
+
+          <div className={styles.actions}>
+            {/* Trang này đã có hồ sơ xe đầy đủ — truyền xuống để overlay khỏi tải lại. */}
+            <RequestBookingButton
+              vehicleId={listing.id}
+              vehicleName={listing.name}
+              vehicleImageUrl={listing.mainImageUrl}
+              listing={listing}
+              pickupAt={pickupAt}
+              returnAt={returnAt}
+              // Cùng activeService với selector + khối giá — popup mở đúng dịch vụ đang xem.
+              serviceType={activeService}
+              routeType={routeType}
+              size="large"
+              className={styles.cta}
+            />
+            <ChatWithShopButton vehicleId={listing.id} size="large" />
+          </div>
         </div>
       </div>
 
       {/* Hàng dưới theo mockup: Mô tả và Đánh giá là HAI THẺ full-width dưới khu ảnh + giá. */}
       <div className={styles.bottom}>
-        <section className={styles.bottomCard}>
+        <section id="description" className={styles.bottomCard}>
           <h2 className={styles.descTitle}>Mô tả</h2>
           <p className={styles.descBody}>{listing.description || 'Gian hàng chưa viết mô tả.'}</p>
         </section>
