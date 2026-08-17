@@ -80,6 +80,7 @@ export default function AdminBannersPage() {
     {
       title: 'Banner',
       key: 'title',
+      width: 300,
       render: (_, b) => (
         <div>
           <div className={styles.title}>{b.title}</div>
@@ -123,6 +124,12 @@ export default function AdminBannersPage() {
         const index = items.findIndex((i) => i.id === b.id);
         return [
           {
+            key: 'edit',
+            label: 'Chỉnh sửa',
+            icon: <EditOutlined />,
+            onClick: () => openEdit(b),
+          },
+          {
             key: 'up',
             label: 'Đưa lên trên',
             icon: <ArrowUpOutlined />,
@@ -149,7 +156,6 @@ export default function AdminBannersPage() {
                 },
               ),
           },
-          { key: 'edit', label: 'Sửa', icon: <EditOutlined />, onClick: () => openEdit(b) },
           {
             key: 'delete',
             label: 'Xoá',
@@ -187,6 +193,7 @@ export default function AdminBannersPage() {
         label="Banner trang chủ"
         columns={columns}
         items={items}
+        onRowClick={openEdit}
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
         error={

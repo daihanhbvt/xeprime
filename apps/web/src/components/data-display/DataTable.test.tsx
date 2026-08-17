@@ -264,7 +264,8 @@ describe('DataTable — cột hành động', () => {
     const column = actionColumn<Row>(() => []);
 
     expect(column.fixed).toBe('right');
-    expect(column.width).toBe(100);
+    expect(column.width).toBe(160);
+    expect(column.title).toBe('Thao tác');
     expect(column.key).toBe('actions');
     expect(column.align).toBe('right');
   });
@@ -390,11 +391,37 @@ describe('DataTable — chế độ thẻ ở mobile', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(2);
   });
 
-  it('KHÔNG có renderCard thì giữ nguyên bảng cuộn ngang', () => {
+  it('KHÔNG có renderCard thì tự chuyển các cột thành thẻ nhãn–giá trị', () => {
     renderTable();
 
-    expect(screen.getByRole('table')).toBeTruthy();
-    expect(screen.queryByRole('list', { name: 'Danh sách xe' })).toBeNull();
+    expect(screen.queryByRole('table')).toBeNull();
+    const list = screen.getByRole('list', { name: 'Danh sách xe' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(list).getAllByText('Giá')).toHaveLength(2);
+    expect(within(list).getByText('Honda SH 150i')).toBeTruthy();
+  });
+
+  it('bấm phần trống của thẻ gọi onRowClick nhưng nút con không làm nổi bọt', () => {
+    const onRowClick = vi.fn();
+    const onAction = vi.fn();
+    renderTable({
+      onRowClick,
+      renderCard: (row) => (
+        <div>
+          <span>{row.name}</span>
+          <button type="button" onClick={onAction}>
+            Sửa
+          </button>
+        </div>
+      ),
+    });
+
+    fireEvent.click(screen.getByText('Toyota Vios'));
+    expect(onRowClick).toHaveBeenCalledWith(ROWS[1]);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Sửa' })[0]!);
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onRowClick).toHaveBeenCalledTimes(1);
   });
 
   it('phân trang vẫn dùng được ở chế độ thẻ', () => {

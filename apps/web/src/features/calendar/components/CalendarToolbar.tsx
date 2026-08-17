@@ -1,13 +1,9 @@
 'use client';
 
-import { Button, Input, Segmented, Select, Tooltip } from 'antd';
-import {
-  LeftOutlined,
-  RightOutlined,
-  SearchOutlined,
-  SortAscendingOutlined,
-} from '@ant-design/icons';
+import { Button, Segmented, Select, Tooltip } from 'antd';
+import { LeftOutlined, RightOutlined, SortAscendingOutlined } from '@ant-design/icons';
 import { VEHICLE_TYPE, VEHICLE_TYPE_LABEL } from '@xeprime/types';
+import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
 import { CALENDAR_SORT_OPTIONS, useCalendarFilters } from '../hooks/use-calendar-filters';
@@ -53,12 +49,10 @@ export function CalendarToolbar() {
   return (
     <div className={styles.toolbar}>
       <div className={styles.filters}>
-        <Input
-          allowClear
-          prefix={<SearchOutlined />}
+        <AutoSearchInput
           placeholder="Tìm xe, mã hoặc biển số"
-          defaultValue={filters.q ?? ''}
-          onChange={(e) => setFilters({ q: e.target.value || null })}
+          value={filters.q ?? ''}
+          onSearch={(value) => setFilters({ q: value || null })}
           className={styles.search}
           aria-label="Tìm xe trên lịch"
         />

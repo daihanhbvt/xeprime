@@ -61,6 +61,11 @@
 /* Vùng chạm tối thiểu trên mobile (WCAG 2.5.5 · Figma 130:1692 "44x44px"). Chỉ áp ở màn nhỏ để
    không làm cao hàng bảng trên desktop. */
 @media (max-width: 640px) {
+  /* Nút có icon tự thu gọn trên mobile; nhãn vẫn là accessible name qua `aria-label`. */
+  .responsiveLabel {
+    display: none;
+  }
+
   .root :global(.ant-btn) {
     min-width: var(--xp-touch-target-min);
     min-height: var(--xp-touch-target-min);

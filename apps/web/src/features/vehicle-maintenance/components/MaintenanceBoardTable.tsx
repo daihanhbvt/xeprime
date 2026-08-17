@@ -1,11 +1,18 @@
 'use client';
 
+import {
+  CalendarOutlined,
+  CheckOutlined,
+  DashboardOutlined,
+  EyeOutlined,
+  StopOutlined,
+} from '@ant-design/icons';
 import { Progress, Tag } from 'antd';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   MAINTENANCE_DUE_STATUS,
   MAINTENANCE_DUE_STATUS_META,
-  MAINTENANCE_STATUS,
   MAINTENANCE_STATUS_META,
   MAINTENANCE_TYPE_LABEL,
   PERMISSION,
@@ -17,6 +24,7 @@ import {
 import type { PaginationMeta } from '@xeprime/types';
 import { actionColumn, DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
+import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { VEHICLE_EDIT_TAB, vehicleTabPath } from '@/constants/routes';
 import { formatDate } from '@/lib/datetime';
@@ -104,6 +112,49 @@ export function MaintenanceBoardTable({
   onPageChange: (page: number, pageSize: number) => void;
   onClearFilters: () => void;
 }) {
+  const router = useRouter();
+  const rowActions = (row: MaintenanceBoardItem): RowAction[] => [
+    {
+      key: 'detail',
+      label: 'Chi tiết',
+      icon: <EyeOutlined />,
+      primary: true,
+      onClick: () => router.push(maintenanceTabHref(row.vehicleId)),
+    },
+    {
+      key: 'odometer',
+      label: 'Cập nhật ODO',
+      icon: <DashboardOutlined />,
+      hidden: !canCorrectOdometer,
+      onClick: () => actions.onCorrectOdometer(row),
+    },
+    {
+      key: 'schedule',
+      label: row.activeRecord ? 'Sửa lịch' : 'Lên lịch',
+      icon: <CalendarOutlined />,
+      hidden: !canManage,
+      onClick: () => actions.onSchedule(row),
+    },
+    {
+      key: 'complete',
+      label: 'Hoàn tất',
+      icon: <CheckOutlined />,
+      hidden: !canManage || !row.activeRecord,
+      onClick: () => actions.onComplete(row),
+    },
+    {
+      key: 'cancel',
+      label: 'Hủy lịch',
+      icon: <StopOutlined />,
+      danger: true,
+      hidden: !canManage || !row.activeRecord,
+      confirm: {
+        title: 'Hủy lịch bảo dưỡng này? Khoảng thời gian sẽ được giải phóng cho đơn thuê.',
+      },
+      onClick: () => actions.onCancel(row),
+    },
+  ];
+
   const columns: DataTableColumn<MaintenanceBoardItem>[] = [
     {
       key: 'vehicle',
@@ -188,40 +239,7 @@ export function MaintenanceBoardTable({
         </span>
       ),
     },
-    actionColumn<MaintenanceBoardItem>(
-      (row) => [
-        {
-          key: 'schedule',
-          label: row.activeRecord ? 'Sửa lịch' : 'Lên lịch ngay',
-          primary: !row.activeRecord,
-          hidden: !canManage,
-          onClick: () => actions.onSchedule(row),
-        },
-        {
-          key: 'complete',
-          label: 'Hoàn tất',
-          hidden: !canManage || !row.activeRecord,
-          onClick: () => actions.onComplete(row),
-        },
-        {
-          key: 'cancel',
-          label: 'Hủy lịch',
-          danger: true,
-          hidden: !canManage || !row.activeRecord,
-          confirm: {
-            title: 'Hủy lịch bảo dưỡng này? Khoảng thời gian sẽ được giải phóng cho đơn thuê.',
-          },
-          onClick: () => actions.onCancel(row),
-        },
-        {
-          key: 'odometer',
-          label: 'Cập nhật Odo',
-          hidden: !canCorrectOdometer,
-          onClick: () => actions.onCorrectOdometer(row),
-        },
-      ],
-      { width: 132, maxInline: 1 },
-    ),
+    actionColumn<MaintenanceBoardItem>(rowActions, { width: 350, maxInline: 3 }),
   ];
 
   return (
@@ -230,6 +248,7 @@ export function MaintenanceBoardTable({
       columns={columns}
       items={items}
       rowKey={(row) => row.vehicleId}
+      onRowClick={(row) => router.push(maintenanceTabHref(row.vehicleId))}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
       error={error ? { title: 'Không tải được danh sách bảo dưỡng', onRetry: error.onRetry } : null}
@@ -261,14 +280,7 @@ export function MaintenanceBoardTable({
         onChange: onPageChange,
         totalLabel: (total) => `${total} xe`,
       }}
-      renderCard={(row) => (
-        <MaintenanceBoardCard
-          row={row}
-          canManage={canManage}
-          onSchedule={() => actions.onSchedule(row)}
-          onComplete={() => actions.onComplete(row)}
-        />
-      )}
+      renderCard={(row) => <MaintenanceBoardCard row={row} rowActions={rowActions(row)} />}
     />
   );
 }
@@ -276,17 +288,12 @@ export function MaintenanceBoardTable({
 /** Thẻ mobile — thiết kế riêng theo ảnh Figma, không phải bảng desktop bị nén. */
 function MaintenanceBoardCard({
   row,
-  canManage,
-  onSchedule,
-  onComplete,
+  rowActions,
 }: {
   row: MaintenanceBoardItem;
-  canManage: boolean;
-  onSchedule: () => void;
-  onComplete: () => void;
+  rowActions: RowAction[];
 }) {
   const status = row.dueStatus as MaintenanceDueStatus;
-  const inProgress = row.activeRecord?.status === MAINTENANCE_STATUS.IN_PROGRESS;
 
   return (
     <article
@@ -317,18 +324,9 @@ function MaintenanceBoardCard({
           {MAINTENANCE_TYPE_LABEL[row.activeRecord.type as MaintenanceType]}
         </p>
       ) : null}
-      {canManage ? (
-        <div className={styles.cardActions}>
-          <button type="button" className={styles.cardButton} onClick={onSchedule}>
-            {row.activeRecord ? 'Sửa lịch' : 'Lên lịch ngay'}
-          </button>
-          {inProgress ? (
-            <button type="button" className={styles.cardButtonPrimary} onClick={onComplete}>
-              Hoàn tất
-            </button>
-          ) : null}
-        </div>
-      ) : null}
+      <div className={styles.cardActions}>
+        <RowActions actions={rowActions} align="start" variant="filled" maxInline={3} />
+      </div>
     </article>
   );
 }

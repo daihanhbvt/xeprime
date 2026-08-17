@@ -271,10 +271,10 @@ describe('/manage/admin/vehicles — dữ liệu', () => {
     expect(screen.getByText('350.000 ₫')).toBeTruthy();
   });
 
-  it('"Xem" mở panel chi tiết đúng xe', () => {
+  it('"Xem chi tiết" mở panel đúng xe', () => {
     renderPageWith(vehicle({ id: 'v-42' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xem' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Xem chi tiết' }));
     expect(drawer.vehicleId).toBe('v-42');
   });
 

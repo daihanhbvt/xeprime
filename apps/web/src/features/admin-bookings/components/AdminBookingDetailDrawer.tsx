@@ -16,7 +16,7 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDateTime } from '@/lib/datetime';
+import { formatDateTime, formatShortDateTimeRange } from '@/lib/datetime';
 import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { useAdminBooking, useRevealBookingContact } from '../hooks/use-admin-bookings';
@@ -87,7 +87,9 @@ function Body({ booking }: { booking: AdminBookingDetail }) {
             label: 'Gian hàng',
             children: (
               <span className={styles.inline}>
-                <Link href={`${ROUTES.MANAGE.ADMIN_TENANTS}?q=${encodeURIComponent(booking.tenantName)}`}>
+                <Link
+                  href={`${ROUTES.MANAGE.ADMIN_TENANTS}?q=${encodeURIComponent(booking.tenantName)}`}
+                >
                   {booking.tenantName}
                 </Link>
                 <StatusTag value={booking.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} />
@@ -98,7 +100,9 @@ function Body({ booking }: { booking: AdminBookingDetail }) {
             key: 'vehicle',
             label: 'Xe',
             children: (
-              <Link href={`${ROUTES.MANAGE.ADMIN_VEHICLES}?q=${encodeURIComponent(booking.vehicleName)}`}>
+              <Link
+                href={`${ROUTES.MANAGE.ADMIN_VEHICLES}?q=${encodeURIComponent(booking.vehicleName)}`}
+              >
                 {booking.vehicleName}
                 {booking.vehiclePlateNumber ? ` · ${booking.vehiclePlateNumber}` : ''}
               </Link>
@@ -107,20 +111,19 @@ function Body({ booking }: { booking: AdminBookingDetail }) {
           {
             key: 'service',
             label: 'Dịch vụ',
-            children:
-              SERVICE_TYPE_LABEL[booking.serviceType as ServiceType] ?? booking.serviceType,
+            children: SERVICE_TYPE_LABEL[booking.serviceType as ServiceType] ?? booking.serviceType,
           },
           {
             key: 'plan',
             label: 'Kế hoạch',
-            children: `${formatDateTime(booking.pickupAt)} → ${formatDateTime(booking.returnAt)}`,
+            children: formatShortDateTimeRange(booking.pickupAt, booking.returnAt),
           },
           {
             key: 'actual',
             label: 'Thực tế',
             children:
               booking.actualPickupAt || booking.actualReturnAt
-                ? `${formatDateTime(booking.actualPickupAt)} → ${formatDateTime(booking.actualReturnAt)}`
+                ? formatShortDateTimeRange(booking.actualPickupAt, booking.actualReturnAt)
                 : 'Chưa giao/nhận xe',
           },
         ]}

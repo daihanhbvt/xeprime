@@ -8,7 +8,7 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Input, Tag } from 'antd';
+import { Alert, Button, Tag } from 'antd';
 import { useMemo, useState } from 'react';
 import {
   BRANCH_STATUS,
@@ -18,6 +18,7 @@ import {
   type BranchStatus,
 } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
+import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -135,6 +136,7 @@ export function BranchesView() {
     {
       title: 'Chi nhánh',
       dataIndex: 'name',
+      width: 220,
       render: (_v, row) => (
         <div className={styles.identity}>
           <span className={styles.name}>{row.name}</span>
@@ -154,7 +156,7 @@ export function BranchesView() {
           <Tag color={STATUS_COLOR.WARNING}>Chưa có tỉnh/thành</Tag>
         ),
     },
-    { title: 'Địa chỉ', dataIndex: 'address', render: (v: string | null) => v || '—' },
+    { title: 'Địa chỉ', dataIndex: 'address', width: 280, render: (v: string | null) => v || '—' },
     { title: 'Điện thoại', dataIndex: 'phone', width: 140, render: (v: string | null) => v || '—' },
     {
       title: 'Số xe',
@@ -165,7 +167,7 @@ export function BranchesView() {
     {
       title: 'Trạng thái',
       dataIndex: 'status',
-      width: 150,
+      width: 420,
       render: (v: BranchStatus) => <StatusTag value={v} meta={BRANCH_STATUS_META} />,
     },
     {
@@ -174,8 +176,7 @@ export function BranchesView() {
       width: 150,
       // Cột hành động ghim mép phải: bảng cuộn ngang thì nút vẫn ở trong tầm với.
       fixed: 'right',
-      // Tối đa 3 hành động và cả ba đều là việc thường làm (sửa, đổi mặc định, ngừng/bật) —
-      // giấu sau menu ⋮ chỉ thêm một cú bấm cho mọi thao tác.
+      // Desktop để ba thao tác thường dùng có nhãn rõ; thẻ mobile vẫn chỉ giữ hai icon rồi gom dư.
       render: (_v, row) => <RowActions actions={actionsOf(row)} maxInline={3} />,
     },
   ];
@@ -204,9 +205,9 @@ export function BranchesView() {
       ) : null}
 
       <div className={styles.toolbar}>
-        <Input.Search
-          allowClear
+        <AutoSearchInput
           placeholder="Tìm theo tên, mã hoặc địa chỉ"
+          value={search}
           onSearch={setSearch}
           className={styles.search}
           aria-label="Tìm chi nhánh"
@@ -231,7 +232,8 @@ export function BranchesView() {
         label="Danh sách chi nhánh"
         columns={columns}
         items={items}
-        minWidth={900}
+        onRowClick={canManage ? openEdit : undefined}
+        minWidth={1200}
         loading={query.isLoading}
         error={
           query.isError && !query.data

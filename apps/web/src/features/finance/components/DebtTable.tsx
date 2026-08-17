@@ -1,9 +1,11 @@
 'use client';
 
-import { DollarOutlined } from '@ant-design/icons';
+import { DollarOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
+import { useRouter } from 'next/navigation';
 import type { PaginationMeta } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
+import { ROUTES } from '@/constants/routes';
 import { formatDate } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import type { DebtItem } from '../types';
@@ -35,10 +37,13 @@ export function DebtTable({
   onCollect,
   onPageChange,
 }: DebtTableProps) {
+  const router = useRouter();
+  const bookingHref = (bookingId: string) => `${ROUTES.MANAGE.BOOKINGS}?booking=${bookingId}`;
   const columns: DataTableColumn<DebtItem>[] = [
     {
       title: 'Đơn',
       key: 'booking',
+      width: 240,
       render: (_, r) => (
         <div>
           <div className={styles.name}>{r.customerName}</div>
@@ -76,15 +81,20 @@ export function DebtTable({
     actionColumn<DebtItem>(
       (r) => [
         {
+          key: 'view',
+          label: 'Xem đơn',
+          icon: <EyeOutlined />,
+          onClick: () => router.push(bookingHref(r.bookingId)),
+        },
+        {
           key: 'collect',
           label: 'Thu tiền',
-          showLabel: true,
           icon: <DollarOutlined />,
           hidden: !canRecord,
           onClick: () => onCollect(r),
         },
       ],
-      { width: 140 },
+      { width: 260, maxInline: 2 },
     ),
   ];
 
@@ -94,6 +104,7 @@ export function DebtTable({
       columns={columns}
       items={items}
       rowKey={(row) => row.bookingId}
+      onRowClick={(row) => router.push(bookingHref(row.bookingId))}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
       error={

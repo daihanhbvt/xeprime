@@ -99,6 +99,7 @@ export default function MembersPage() {
     {
       title: 'Thành viên',
       key: 'member',
+      width: 280,
       render: (_, row) => (
         <EntityIdentity
           kind="person"

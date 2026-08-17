@@ -230,10 +230,10 @@ describe('/manage/admin/plans — hành động', () => {
     expect(screen.getByTestId('plan-form').textContent).toBe('new');
   });
 
-  it('"Sửa" mở form với đúng gói', () => {
+  it('"Chỉnh sửa" mở form với đúng gói', () => {
     renderPageWith([plan({ id: 'p-42' })]);
 
-    fireEvent.click(screen.getByRole('button', { name: /Sửa/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Chỉnh sửa/ }));
     expect(screen.getByTestId('plan-form').textContent).toBe('p-42');
   });
 

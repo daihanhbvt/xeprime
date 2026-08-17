@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircleFilled } from '@ant-design/icons';
+import { CheckCircleFilled, EyeOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 import { USER_STATUS_META, type PaginationMeta, type UserStatus } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
@@ -37,6 +37,7 @@ export function AdminCustomerTable({
     {
       title: 'Khách',
       key: 'name',
+      width: 220,
       render: (_, r) => (
         <div>
           <div className={styles.name}>{r.displayName}</div>
@@ -95,10 +96,9 @@ export function AdminCustomerTable({
       render: (_, r) => (r.lastLoginAt ? formatDateTime(r.lastLoginAt) : 'Chưa đăng nhập'),
     },
     { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => formatDate(r.createdAt) },
-    actionColumn<AdminCustomer>(
-      (row) => [{ key: 'view', label: 'Xem', showLabel: true, onClick: () => onView(row.id) }],
-      { width: 120 },
-    ),
+    actionColumn<AdminCustomer>((row) => [
+      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+    ]),
   ];
 
   return (
@@ -106,6 +106,7 @@ export function AdminCustomerTable({
       label="Danh sách khách hàng"
       columns={columns}
       items={items}
+      onRowClick={(row) => onView(row.id)}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
       error={error ? { title: 'Không tải được danh sách khách', onRetry: error.onRetry } : null}

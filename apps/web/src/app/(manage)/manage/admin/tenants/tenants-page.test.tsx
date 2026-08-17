@@ -380,25 +380,24 @@ describe('/manage/admin/tenants — dữ liệu và hành động', () => {
     expect(screen.getByText('—')).toBeTruthy();
   });
 
-  it('"Xem" mở panel chi tiết đúng gian hàng, KHÔNG điều hướng trang', () => {
+  it('"Xem chi tiết" mở panel đúng gian hàng, KHÔNG điều hướng trang', () => {
     setQuery({ data: { items: [tenant({ id: 't-42' })], meta: META } });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xem' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Xem chi tiết' }));
 
     expect(drawer.tenantId).toBe('t-42');
     expect(screen.getByTestId('tenant-drawer').textContent).toBe('t-42');
     expect(nav.push).not.toHaveBeenCalled();
   });
 
-  it('HIỆN TRẠNG: bấm vào hàng KHÔNG mở gì — chỉ nút "Xem" mới mở', () => {
-    // Khác `/manage/vehicles` (có `onRow` click). Wave 1C phải giữ khác biệt này hoặc đổi có chủ ý.
+  it('bấm vào hàng cũng mở chi tiết để không phải dò đúng cột thao tác', () => {
     setQuery({ data: { items: [tenant()], meta: META } });
     renderPage();
 
     fireEvent.click(screen.getByText('Gian hàng Demo XePrime'));
 
-    expect(drawer.tenantId).toBeNull();
+    expect(drawer.tenantId).toBe('t1');
     expect(nav.push).not.toHaveBeenCalled();
   });
 
@@ -408,7 +407,7 @@ describe('/manage/admin/tenants — dữ liệu và hành động', () => {
 
     const buttons = within(bodyRows()[0]!).getAllByRole('button');
     expect(buttons).toHaveLength(1);
-    expect(buttons[0]!.textContent).toBe('Xem');
+    expect(buttons[0]!.textContent).toBe('Xem chi tiết');
   });
 
   it('đổi trang ghi page và limit vào URL', () => {

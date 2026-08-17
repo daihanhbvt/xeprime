@@ -74,6 +74,7 @@ export default function AdminPlansPage() {
     {
       title: 'Gói',
       key: 'name',
+      width: 260,
       render: (_, p) => (
         <div>
           <div>{p.name}</div>
@@ -123,15 +124,13 @@ export default function AdminPlansPage() {
       (p) => [
         {
           key: 'edit',
-          label: 'Sửa',
-          showLabel: true,
+          label: 'Chỉnh sửa',
           icon: <EditOutlined />,
           onClick: () => openEdit(p),
         },
         {
           key: 'archive',
           label: 'Ngừng bán',
-          showLabel: true,
           icon: <StopOutlined />,
           danger: true,
           hidden: p.status !== PLAN_STATUS.ACTIVE,
@@ -144,7 +143,7 @@ export default function AdminPlansPage() {
           onClick: () => handleArchive(p),
         },
       ],
-      { width: 230 },
+      { width: 260, maxInline: 2 },
     ),
   ];
 
@@ -163,6 +162,7 @@ export default function AdminPlansPage() {
         label="Gói dịch vụ"
         columns={columns}
         items={items}
+        onRowClick={openEdit}
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
         error={

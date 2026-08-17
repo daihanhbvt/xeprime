@@ -1,9 +1,10 @@
 'use client';
 
-import { Input, Switch, Tag, Tooltip } from 'antd';
+import { Switch, Tag, Tooltip } from 'antd';
 import { useState } from 'react';
 import { PERMISSION, PROVINCE_ADMINISTRATIVE_TYPE } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
+import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
@@ -41,10 +42,17 @@ export function AdminLocationsView() {
     {
       title: 'Tỉnh/thành',
       dataIndex: 'name',
+      width: 240,
       render: (_v, row) => (
         <div className={styles.identity}>
           <span className={styles.name}>{row.name}</span>
-          <Tag color={row.administrativeType === PROVINCE_ADMINISTRATIVE_TYPE.MUNICIPALITY ? 'blue' : 'default'}>
+          <Tag
+            color={
+              row.administrativeType === PROVINCE_ADMINISTRATIVE_TYPE.MUNICIPALITY
+                ? 'blue'
+                : 'default'
+            }
+          >
             {row.administrativeType === PROVINCE_ADMINISTRATIVE_TYPE.MUNICIPALITY
               ? 'Thành phố TW'
               : 'Tỉnh'}
@@ -55,6 +63,7 @@ export function AdminLocationsView() {
     {
       title: 'Tên cũ / cách viết khác',
       dataIndex: 'aliases',
+      width: 300,
       render: (aliases: string[]) =>
         aliases.length === 0 ? (
           '—'
@@ -115,9 +124,9 @@ export function AdminLocationsView() {
         subtitle="34 đơn vị hành chính cấp tỉnh (từ 01/07/2025). Tắt hiển thị KHÔNG xoá dữ liệu — chi nhánh và xe ở đó vẫn còn."
       />
 
-      <Input.Search
-        allowClear
+      <AutoSearchInput
         placeholder="Tìm theo mã, tên hoặc tên cũ (VD: 79, Hồ Chí Minh, Bà Rịa)"
+        value={search}
         onSearch={setSearch}
         className={styles.search}
         aria-label="Tìm tỉnh/thành"

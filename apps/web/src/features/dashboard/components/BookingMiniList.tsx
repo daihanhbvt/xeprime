@@ -3,7 +3,7 @@
 import { Spin } from 'antd';
 import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDateTimeRange } from '@/lib/datetime';
+import { formatShortDateTimeRange } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import type { BookingListItem } from '@/features/bookings/types';
 import styles from './BookingMiniList.module.css';
@@ -42,7 +42,7 @@ export function BookingMiniList({
             <div className={styles.info}>
               <div className={styles.name}>{b.customerName}</div>
               <div className={styles.meta}>
-                {b.vehicleName} · {formatDateTimeRange(b.pickupAt, b.returnAt)}
+                {b.vehicleName} · {formatShortDateTimeRange(b.pickupAt, b.returnAt)}
               </div>
             </div>
             <div className={styles.right}>

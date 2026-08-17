@@ -256,11 +256,11 @@ describe('/manage/admin/audit — dữ liệu và hành động', () => {
     expect(container.querySelector('.ant-tag')).toBeTruthy();
   });
 
-  it('"Xem" mở panel chi tiết đúng dòng, KHÔNG điều hướng', () => {
+  it('"Xem chi tiết" mở panel đúng dòng, KHÔNG điều hướng', () => {
     setQuery({ data: { items: [log({ id: 'l-42' })], meta: META } });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xem' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Xem chi tiết' }));
     expect(drawer.logId).toBe('l-42');
   });
 

@@ -107,6 +107,7 @@ export default function AdminCatalogPage() {
     {
       title: 'Tên hiển thị',
       key: 'label',
+      width: 280,
       render: (_, item) => (
         <div>
           <div className={styles.label}>{item.label}</div>
@@ -138,6 +139,12 @@ export default function AdminCatalogPage() {
         const index = items.findIndex((i) => i.id === item.id);
         return [
           {
+            key: 'edit',
+            label: 'Chỉnh sửa',
+            icon: <EditOutlined />,
+            onClick: () => openEdit(item),
+          },
+          {
             key: 'up',
             label: 'Đưa lên trên',
             icon: <ArrowUpOutlined />,
@@ -150,12 +157,6 @@ export default function AdminCatalogPage() {
             icon: <ArrowDownOutlined />,
             disabled: index >= items.length - 1 || reorder.isPending,
             onClick: () => move(index, 1),
-          },
-          {
-            key: 'edit',
-            label: 'Sửa',
-            icon: <EditOutlined />,
-            onClick: () => openEdit(item),
           },
           {
             key: 'delete',
@@ -199,6 +200,7 @@ export default function AdminCatalogPage() {
         label={CATALOG_TYPE_LABEL[type]}
         columns={columns}
         items={items}
+        onRowClick={openEdit}
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
         error={

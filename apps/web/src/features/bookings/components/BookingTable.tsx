@@ -91,12 +91,14 @@ export function BookingTable({
         <StatusTag value={row.status as BookingStatus} meta={BOOKING_STATUS_META} />
       ),
     },
-    actionColumn<BookingListItem>(
-      (row) => [
-        { key: 'view', label: 'Xem', icon: <EyeOutlined />, onClick: () => onView(row.id) },
-      ],
-      { width: 64 },
-    ),
+    actionColumn<BookingListItem>((row) => [
+      {
+        key: 'view',
+        label: 'Xem chi tiết',
+        icon: <EyeOutlined />,
+        onClick: () => onView(row.id),
+      },
+    ]),
   ];
 
   return (

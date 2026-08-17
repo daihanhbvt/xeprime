@@ -88,6 +88,70 @@
   box-shadow: var(--xp-shadow-card);
 }
 
+.cardClickable {
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.cardClickable:hover {
+  border-color: var(--xp-color-primary);
+  box-shadow: var(--xp-shadow-raised);
+}
+
+.cardClickable:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+.autoCard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.autoCardPrimary {
+  min-width: 0;
+  padding-bottom: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.autoCardFields {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-xs);
+}
+
+.autoCardField {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(96px, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+  gap: var(--xp-space-sm);
+}
+
+.autoCardField dt {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.autoCardField dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.autoCardActions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
 .cardsPagination {
   display: flex;
   justify-content: center;

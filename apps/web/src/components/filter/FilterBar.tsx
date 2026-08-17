@@ -1,10 +1,11 @@
 'use client';
 
-import { CloseOutlined, FilterOutlined, SearchOutlined } from '@ant-design/icons';
-import { Badge, Button, DatePicker, Input, Segmented, Select, Tag } from 'antd';
-import { useEffect, useState, type ReactNode } from 'react';
+import { CloseOutlined, FilterOutlined } from '@ant-design/icons';
+import { Badge, Button, DatePicker, Segmented, Select, Tag } from 'antd';
+import { useState, type ReactNode } from 'react';
 
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { DATE_FORMAT, DAY_PARAM_FORMAT, dayjs, type Dayjs } from '@/lib/datetime';
 
@@ -146,33 +147,15 @@ function SearchField({
   delayMs: number;
   compact?: boolean;
 }) {
-  const [draft, setDraft] = useState(value ?? '');
-
-  // Đồng bộ khi giá trị đổi từ ngoài (bấm "Xoá bộ lọc", nút back): so với giá trị render trước
-  // và chỉnh ngay trong render — pattern React chính thống, không setState-trong-effect.
-  const [prev, setPrev] = useState(value);
-  if (prev !== value) {
-    setPrev(value);
-    setDraft(value ?? '');
-  }
-
-  useEffect(() => {
-    const current = value ?? '';
-    if (draft === current) return;
-    const timer = setTimeout(() => onChange({ [field.key]: draft.trim() || undefined }), delayMs);
-    return () => clearTimeout(timer);
-  }, [draft, value, field.key, onChange, delayMs]);
-
   return (
-    <Input
+    <AutoSearchInput
       className={compact ? `${styles.search} ${styles.searchCompact}` : styles.search}
       size={compact ? 'middle' : 'large'}
-      allowClear
-      prefix={<SearchOutlined aria-hidden="true" />}
       aria-label={field.label}
       placeholder={field.placeholder ?? field.label}
-      value={draft}
-      onChange={(event) => setDraft(event.target.value)}
+      value={value}
+      debounceMs={delayMs}
+      onSearch={(next) => onChange({ [field.key]: next || undefined })}
     />
   );
 }

@@ -87,6 +87,7 @@ export default function AdminStaffPage() {
     {
       title: 'Nhân sự',
       key: 'staff',
+      width: 280,
       render: (_, row) => (
         <EntityIdentity
           kind="person"

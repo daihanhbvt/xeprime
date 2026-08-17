@@ -1,5 +1,6 @@
 'use client';
 
+import { CheckOutlined, StopOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import type { ReactNode } from 'react';
 import {
@@ -73,6 +74,7 @@ export function ReceiptTable({
     {
       title: 'Diễn giải',
       key: 'description',
+      width: 260,
       render: (_, row) => <span className={styles.desc}>{row.description ?? '—'}</span>,
     },
     {
@@ -110,7 +112,7 @@ export function ReceiptTable({
         {
           key: 'approve',
           label: 'Duyệt',
-          showLabel: true,
+          icon: <CheckOutlined />,
           hidden:
             !canApprove ||
             !(
@@ -122,14 +124,14 @@ export function ReceiptTable({
         {
           key: 'cancel',
           label: 'Huỷ',
-          showLabel: true,
+          icon: <StopOutlined />,
           danger: true,
           hidden: !canApprove || row.status === RECEIPT_STATUS.CANCELLED,
           confirm: { title: 'Huỷ phiếu này?', okText: 'Huỷ phiếu' },
           onClick: () => onCancel(row.id),
         },
       ],
-      { width: 160 },
+      { width: 220, maxInline: 2 },
     ),
   ];
 

@@ -258,16 +258,16 @@ describe('/manage/maintenance — Trung tâm bảo dưỡng (Wave 6)', () => {
     expect(view.container.querySelector('table')).toBeNull();
     expect(screen.getByRole('list', { name: 'Danh sách xe cần bảo dưỡng' })).toBeTruthy();
     expect(screen.getByText('Toyota Vios 2024')).toBeTruthy();
-    // Nút trên thẻ giữ vùng chạm 44px qua CSS module.
-    const cardButton = view.container.querySelector('[class*="cardButton"]');
-    expect(cardButton).toBeTruthy();
+    // Hành động trên thẻ dùng RowActions chung; mobile vẫn giữ vùng chạm 44px.
+    expect(screen.getAllByRole('button', { name: 'Chi tiết' }).length).toBeGreaterThan(0);
   });
 
-  it('thiếu quyền quản lý: thẻ mobile không có nút thao tác', () => {
+  it('thiếu quyền quản lý: thẻ mobile vẫn xem được chi tiết nhưng không có nút sửa/hoàn tất', () => {
     layout.mobile = true;
     permissions.granted = new Set([PERMISSION.VEHICLE_MAINTENANCE_VIEW]);
-    const view = renderPage();
-    expect(view.container.querySelector('[class*="cardButton"]')).toBeNull();
+    renderPage();
+    expect(screen.getByRole('button', { name: 'Chi tiết' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Lên lịch|Sửa lịch|Hoàn tất/ })).toBeNull();
   });
 
   it('không có kết quả sau khi lọc: gợi ý xoá bộ lọc thay vì màn rỗng chung', () => {

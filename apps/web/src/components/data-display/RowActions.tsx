@@ -19,7 +19,10 @@ export interface RowAction {
    */
   label: string;
   icon?: ReactNode;
-  /** Hiện chữ cạnh icon. Mặc định `false` = nút chỉ-icon. */
+  /**
+   * Điều khiển nhãn nút. Mặc định tự thích ứng: desktop hiện chữ, mobile chỉ giữ icon nếu có.
+   * `true` = luôn hiện chữ; `false` = luôn chỉ-icon.
+   */
   showLabel?: boolean;
   /**
    * Hành động chính của hàng/thẻ — nhận sắc thương hiệu ở `variant="filled"`.
@@ -91,21 +94,26 @@ function toneProps(action: RowAction, variant: 'text' | 'filled') {
 }
 
 function ActionButton({ action, variant }: { action: RowAction; variant: 'text' | 'filled' }) {
+  const hasIcon = Boolean(action.icon);
+  const showsText = action.showLabel !== false;
+  const responsiveText = action.showLabel === undefined && hasIcon;
   const commonProps = {
     ...toneProps(action, variant),
     size: 'small' as const,
     loading: action.loading,
     icon: decorative(action.icon),
     // Nút chỉ-icon phải có tên; nút có chữ thì chữ đã là tên, thêm `aria-label` sẽ nhân đôi.
-    'aria-label': action.showLabel ? undefined : action.label,
+    'aria-label': action.showLabel === true || (!hasIcon && showsText) ? undefined : action.label,
   };
-  const content = action.showLabel ? action.label : null;
+  const content = showsText ? (
+    <span className={responsiveText ? styles.responsiveLabel : undefined}>{action.label}</span>
+  ) : null;
 
   const tooltip = action.disabled
     ? action.disabledReason
-    : action.showLabel
-      ? undefined
-      : action.label;
+    : action.showLabel === false
+      ? action.label
+      : undefined;
 
   if (action.disabled) {
     const disabledButton = (

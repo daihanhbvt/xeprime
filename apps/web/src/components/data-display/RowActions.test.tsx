@@ -11,10 +11,11 @@ function action(over: Partial<RowAction> = {}): RowAction {
 }
 
 describe('RowActions — tên khả truy cập', () => {
-  it('nút chỉ-icon lấy aria-label từ label', () => {
+  it('mặc định hiện nhãn rõ trên desktop và vẫn lấy aria-label từ label', () => {
     render(<RowActions actions={[action({ key: 'view', label: 'Xem chi tiết' })]} />);
 
-    expect(screen.getByRole('button', { name: 'Xem chi tiết' })).toBeTruthy();
+    const button = screen.getByRole('button', { name: 'Xem chi tiết' });
+    expect(button.textContent).toContain('Xem chi tiết');
   });
 
   it('KHÔNG có nút icon nào thiếu tên — đây là lỗ a11y D15.2 mà component này sinh ra để vá', () => {

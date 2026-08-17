@@ -1,7 +1,8 @@
 'use client';
 
-import { Checkbox, Input, Select, Space, Spin } from 'antd';
+import { Checkbox, Select, Space, Spin } from 'antd';
 import { Suspense, useState } from 'react';
+import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ADMIN_CUSTOMERS_DEFAULT_LIMIT } from '@/features/admin-customers/api';
 import { ADMIN_CUSTOMER_STATUS_OPTIONS } from '@/features/admin-customers/constants';
@@ -54,29 +55,29 @@ function AdminCustomersView() {
         title="Khách thuê"
         extra={
           <Space wrap>
-            <Input.Search
+            <AutoSearchInput
               className={styles.search}
               size="large"
-              allowClear
               placeholder="Tìm theo tên"
-              defaultValue={filters.q}
-              onSearch={(value) => setFilters({ q: value.trim() || undefined })}
+              aria-label="Tìm khách theo tên"
+              value={filters.q}
+              onSearch={(value) => setFilters({ q: value || undefined })}
             />
-            <Input.Search
+            <AutoSearchInput
               className={styles.exact}
               size="large"
-              allowClear
               placeholder="Tra đúng SĐT"
-              defaultValue={filters.phone}
-              onSearch={(value) => setFilters({ phone: value.trim() || undefined })}
+              aria-label="Tra số điện thoại khách"
+              value={filters.phone}
+              onSearch={(value) => setFilters({ phone: value || undefined })}
             />
-            <Input.Search
+            <AutoSearchInput
               className={styles.exact}
               size="large"
-              allowClear
               placeholder="Tra đúng email"
-              defaultValue={filters.email}
-              onSearch={(value) => setFilters({ email: value.trim() || undefined })}
+              aria-label="Tra email khách"
+              value={filters.email}
+              onSearch={(value) => setFilters({ email: value || undefined })}
             />
             <Select
               className={styles.statusSelect}

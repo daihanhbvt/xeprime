@@ -1,7 +1,6 @@
 'use client';
 
-import { App, Descriptions, Empty, Table, Tag } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { App, Descriptions, Empty, Tag } from 'antd';
 import Link from 'next/link';
 import {
   BOOKING_REQUEST_STATUS_META,
@@ -12,11 +11,12 @@ import {
   type UserStatus,
 } from '@xeprime/types';
 import { MaskedContact } from '@/components/data-display/MaskedContact';
+import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDateTime } from '@/lib/datetime';
+import { formatDateTime, formatShortDateTime } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { useAdminCustomer, useRevealCustomerContact } from '../hooks/use-admin-customers';
 import type { AdminCustomerDetail, AdminCustomerRequest } from '../types';
@@ -123,23 +123,24 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
       {customer.recentRequests.length === 0 ? (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Khách chưa gửi yêu cầu thuê nào" />
       ) : (
-        <Table<AdminCustomerRequest>
-          rowKey="id"
-          size="small"
+        <DataTable<AdminCustomerRequest>
+          label="Yêu cầu thuê gần nhất"
           columns={REQUEST_COLUMNS}
-          dataSource={customer.recentRequests}
-          pagination={false}
-          scroll={{ x: 'max-content' }}
+          items={customer.recentRequests}
+          minWidth={760}
+          striped={false}
+          empty={{ title: 'Khách chưa gửi yêu cầu thuê nào' }}
         />
       )}
     </div>
   );
 }
 
-const REQUEST_COLUMNS: ColumnsType<AdminCustomerRequest> = [
+const REQUEST_COLUMNS: DataTableColumn<AdminCustomerRequest>[] = [
   {
     title: 'Gian hàng · xe',
     key: 'target',
+    width: 230,
     render: (_, r) => (
       <div>
         <div>{r.tenantName}</div>
@@ -150,24 +151,27 @@ const REQUEST_COLUMNS: ColumnsType<AdminCustomerRequest> = [
   {
     title: 'Thuê từ → đến',
     key: 'period',
+    width: 230,
     render: (_, r) => (
       <div>
-        <div>{formatDateTime(r.pickupAt)}</div>
-        <div className={styles.meta}>{formatDateTime(r.returnAt)}</div>
+        <div>{formatShortDateTime(r.pickupAt)}</div>
+        <div className={styles.meta}>{formatShortDateTime(r.returnAt)}</div>
       </div>
     ),
   },
   {
     title: 'Trạng thái',
     key: 'status',
+    width: 140,
     render: (_, r) => (
       <StatusTag value={r.status as BookingRequestStatus} meta={BOOKING_REQUEST_STATUS_META} />
     ),
   },
   {
-    title: '',
+    title: 'Liên kết',
     key: 'booking',
     align: 'right',
+    width: 150,
     render: (_, r) =>
       r.bookingCode ? (
         <Link href={`${ROUTES.MANAGE.ADMIN_BOOKINGS}?q=${encodeURIComponent(r.bookingCode)}`}>

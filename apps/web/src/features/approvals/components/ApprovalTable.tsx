@@ -1,5 +1,6 @@
 'use client';
 
+import { EyeOutlined } from '@ant-design/icons';
 import { APPROVAL_STATUS_META, type ApprovalStatus, type PaginationMeta } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -28,7 +29,7 @@ export function ApprovalTable({
   onPageChange,
 }: ApprovalTableProps) {
   const columns: DataTableColumn<ApprovalTask>[] = [
-    { title: 'Gian hàng', key: 'tenant', render: (_, row) => row.tenantName ?? '—' },
+    { title: 'Gian hàng', key: 'tenant', width: 220, render: (_, row) => row.tenantName ?? '—' },
     {
       title: 'Loại',
       key: 'targetType',
@@ -55,10 +56,9 @@ export function ApprovalTable({
         <StatusTag value={row.status as ApprovalStatus} meta={APPROVAL_STATUS_META} />
       ),
     },
-    actionColumn<ApprovalTask>(
-      (row) => [{ key: 'view', label: 'Xem', showLabel: true, onClick: () => onView(row.id) }],
-      { width: 120 },
-    ),
+    actionColumn<ApprovalTask>((row) => [
+      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+    ]),
   ];
 
   return (
@@ -66,6 +66,7 @@ export function ApprovalTable({
       label="Hàng đợi duyệt hồ sơ"
       columns={columns}
       items={items}
+      onRowClick={(row) => onView(row.id)}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
       error={error ? { title: 'Không tải được hàng đợi duyệt', onRetry: error.onRetry } : null}

@@ -1,5 +1,6 @@
 'use client';
 
+import { EyeOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import {
   BOOKING_STATUS_META,
@@ -11,7 +12,7 @@ import {
 } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDateTime } from '@/lib/datetime';
+import { formatDateTime, formatShortDateTimeRange } from '@/lib/datetime';
 import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
 import type { AdminBooking } from '../types';
 import styles from './AdminBookingTable.module.css';
@@ -67,6 +68,7 @@ export function AdminBookingTable({
     {
       title: 'Gian hàng · xe',
       key: 'tenant',
+      width: 230,
       render: (_, r) => (
         <div>
           <div className={styles.tenantName}>
@@ -85,13 +87,8 @@ export function AdminBookingTable({
     {
       title: 'Thuê từ → đến',
       key: 'period',
-      width: 170,
-      render: (_, r) => (
-        <div>
-          <div>{formatDateTime(r.pickupAt)}</div>
-          <div className={styles.meta}>{formatDateTime(r.returnAt)}</div>
-        </div>
-      ),
+      width: 260,
+      render: (_, r) => formatShortDateTimeRange(r.pickupAt, r.returnAt),
     },
     {
       title: 'Trạng thái',
@@ -117,10 +114,9 @@ export function AdminBookingTable({
         </span>
       ),
     },
-    actionColumn<AdminBooking>(
-      (row) => [{ key: 'view', label: 'Xem', showLabel: true, onClick: () => onView(row.id) }],
-      { width: 120 },
-    ),
+    actionColumn<AdminBooking>((row) => [
+      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+    ]),
   ];
 
   return (
@@ -128,6 +124,7 @@ export function AdminBookingTable({
       label="Đơn thuê toàn hệ thống"
       columns={columns}
       items={items}
+      onRowClick={(row) => onView(row.id)}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
       error={error ? { title: 'Không tải được danh sách đơn thuê', onRetry: error.onRetry } : null}

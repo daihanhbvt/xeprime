@@ -1,5 +1,6 @@
 'use client';
 
+import { EyeOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { AUDIT_ACTOR_SCOPE_META, type AuditActorScope, type PaginationMeta } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
@@ -88,10 +89,9 @@ export function AuditLogTable({
     },
     { title: 'Gian hàng', key: 'tenant', width: 160, render: (_, r) => r.tenantName ?? '—' },
     // Nút có chữ → 120px theo Figma `127:2060` R2.
-    actionColumn<AuditLog>(
-      (row) => [{ key: 'view', label: 'Xem', showLabel: true, onClick: () => onView(row.id) }],
-      { width: 120 },
-    ),
+    actionColumn<AuditLog>((row) => [
+      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+    ]),
   ];
 
   return (
@@ -99,6 +99,7 @@ export function AuditLogTable({
       label="Nhật ký hệ thống"
       columns={columns}
       items={items}
+      onRowClick={(row) => onView(row.id)}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
       error={error ? { title: 'Không tải được nhật ký', onRetry: error.onRetry } : null}

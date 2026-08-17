@@ -1,5 +1,6 @@
 'use client';
 
+import { EyeOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import {
   TENANT_STATUS_META,
@@ -42,6 +43,7 @@ export function AdminTenantTable({
     {
       title: 'Gian hàng',
       key: 'name',
+      width: 230,
       render: (_, r) => (
         <div>
           <div className={styles.name}>{r.name}</div>
@@ -77,10 +79,9 @@ export function AdminTenantTable({
       render: (_, r) => <StatusTag value={r.status as TenantStatus} meta={TENANT_STATUS_META} />,
     },
     { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => formatDate(r.createdAt) },
-    actionColumn<AdminTenant>(
-      (row) => [{ key: 'view', label: 'Xem', showLabel: true, onClick: () => onView(row.id) }],
-      { width: 120 },
-    ),
+    actionColumn<AdminTenant>((row) => [
+      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+    ]),
   ];
 
   return (
@@ -88,6 +89,7 @@ export function AdminTenantTable({
       label="Danh sách gian hàng"
       columns={columns}
       items={items}
+      onRowClick={(row) => onView(row.id)}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
       error={error ? { title: 'Không tải được danh sách gian hàng', onRetry: error.onRetry } : null}

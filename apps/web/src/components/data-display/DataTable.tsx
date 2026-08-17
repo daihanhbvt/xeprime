@@ -2,7 +2,7 @@
 
 import { Pagination, Table } from 'antd';
 import type { ColumnType } from 'antd/es/table';
-import type { ReactNode } from 'react';
+import { isValidElement, type Key, type MouseEvent, type ReactNode } from 'react';
 
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -80,8 +80,8 @@ export interface DataTableProps<T> {
   noResults?: DataTableEmptySlot;
   onRowClick?: (row: T) => void;
   /**
-   * Ở ≤640px render thẻ thay bảng (Figma `127:2257` R1). Không truyền → giữ bảng cuộn ngang,
-   * đúng hành vi hiện tại; bảng nào chưa có đặc tả thẻ thì cứ để trống và ghi lý do.
+   * Ở ≤640px render thẻ do feature thiết kế. Không truyền thì `DataTable` tự chuyển các cột
+   * thành thẻ nhãn–giá trị, để không còn bảng desktop bị ép ngang trên điện thoại.
    */
   renderCard?: (row: T) => ReactNode;
   loadingLabel?: string;
@@ -96,6 +96,94 @@ export interface DataTableProps<T> {
 
 function defaultRowKey<T>(row: T): string {
   return String((row as { id?: unknown }).id ?? '');
+}
+
+interface MobileColumnShape<T> {
+  key?: Key | null;
+  title?: ReactNode | ((props: unknown) => ReactNode);
+  dataIndex?: unknown;
+  hidden?: boolean;
+  render?: (value: unknown, row: T, index: number) => unknown;
+}
+
+function asMobileColumn<T>(column: DataTableColumn<T>): MobileColumnShape<T> {
+  // `ColumnType` có generic rất sâu; thẻ mobile chỉ cần tập thuộc tính nhỏ, ổn định này.
+  return column as unknown as MobileColumnShape<T>;
+}
+
+function columnValue<T>(row: T, dataIndex: unknown): unknown {
+  if (dataIndex === undefined) return undefined;
+  const path = Array.isArray(dataIndex) ? dataIndex : [dataIndex];
+  return path.reduce<unknown>((value, key) => {
+    if (value === null || value === undefined || typeof value !== 'object') return undefined;
+    if (typeof key !== 'string' && typeof key !== 'number' && typeof key !== 'symbol') {
+      return undefined;
+    }
+    return (value as Record<PropertyKey, unknown>)[key];
+  }, row);
+}
+
+function renderedColumn<T>(column: MobileColumnShape<T>, row: T, index: number): ReactNode {
+  const value = columnValue(row, column.dataIndex);
+  const rendered = column.render ? column.render(value, row, index) : value;
+
+  // AntD cho phép `render` trả `{ children, props }`; mobile chỉ cần phần nội dung của ô.
+  if (
+    rendered &&
+    typeof rendered === 'object' &&
+    !isValidElement(rendered) &&
+    'children' in rendered
+  ) {
+    return (rendered as { children?: ReactNode }).children ?? '—';
+  }
+  return (rendered ?? '—') as ReactNode;
+}
+
+function columnTitle<T>(column: MobileColumnShape<T>): ReactNode {
+  return typeof column.title === 'function' ? String(column.key ?? '') : (column.title ?? '');
+}
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest('a, button, input, select, textarea, [role="button"]'))
+  );
+}
+
+function GenericMobileCard<T>({
+  columns,
+  row,
+  index,
+}: {
+  columns: DataTableColumn<T>[];
+  row: T;
+  index: number;
+}) {
+  const visible = columns.map(asMobileColumn).filter((column) => !column.hidden);
+  const actions = visible.find((column) => column.key === 'actions');
+  const dataColumns = visible.filter((column) => column.key !== 'actions');
+  const [primary, ...details] = dataColumns;
+
+  return (
+    <article className={styles.autoCard}>
+      {primary ? (
+        <div className={styles.autoCardPrimary}>{renderedColumn(primary, row, index)}</div>
+      ) : null}
+      {details.length > 0 ? (
+        <dl className={styles.autoCardFields}>
+          {details.map((column, columnIndex) => (
+            <div className={styles.autoCardField} key={String(column.key ?? columnIndex)}>
+              <dt>{columnTitle(column)}</dt>
+              <dd>{renderedColumn(column, row, index)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {actions ? (
+        <div className={styles.autoCardActions}>{renderedColumn(actions, row, index)}</div>
+      ) : null}
+    </article>
+  );
 }
 
 /**
@@ -132,7 +220,7 @@ export function DataTable<T>({
   striped = true,
 }: DataTableProps<T>) {
   const isMobile = useIsMobile();
-  const asCards = isMobile && Boolean(renderCard);
+  const asCards = isMobile;
 
   if (permission) return <PermissionState {...permission} />;
 
@@ -172,9 +260,25 @@ export function DataTable<T>({
     return (
       <div className={styles.cardsRoot}>
         <ul className={styles.cards} aria-label={label} aria-busy={loading || undefined}>
-          {items.map((row) => (
-            <li key={rowKey(row)} className={styles.card}>
-              {renderCard!(row)}
+          {items.map((row, index) => (
+            <li
+              key={rowKey(row)}
+              className={[styles.card, onRowClick ? styles.cardClickable : '']
+                .filter(Boolean)
+                .join(' ')}
+              onClick={
+                onRowClick
+                  ? (event: MouseEvent<HTMLLIElement>) => {
+                      if (!isInteractiveTarget(event.target)) onRowClick(row);
+                    }
+                  : undefined
+              }
+            >
+              {renderCard ? (
+                renderCard(row)
+              ) : (
+                <GenericMobileCard columns={columns} row={row} index={index} />
+              )}
             </li>
           ))}
         </ul>
@@ -203,13 +307,20 @@ export function DataTable<T>({
         columns={columns}
         dataSource={items}
         loading={loading}
+        tableLayout="auto"
         scroll={{ x: minWidth }}
         rowClassName={(_, index) =>
           [striped && index % 2 === 1 ? styles.rowStriped : ''].filter(Boolean).join(' ')
         }
         onRow={
           onRowClick
-            ? (row) => ({ onClick: () => onRowClick(row), className: styles.rowClickable })
+            ? (row) => ({
+                onClick: (event) => {
+                  // Link/nút/select trong ô có hành vi riêng; không được mở hàng thêm lần nữa.
+                  if (!isInteractiveTarget(event.target)) onRowClick(row);
+                },
+                className: styles.rowClickable,
+              })
             : undefined
         }
         pagination={
@@ -235,7 +346,8 @@ export function DataTable<T>({
  * Gom vì 14 bảng đang khai lại cụm này mỗi nơi một kiểu và **13/14 quên `fixed: 'right'`**
  * (D15.1) — cuộn ngang là mất nút thao tác. Figma `127:2060` R1–R2.
  *
- * `width` mặc định 100px theo R2 (nút chỉ-icon); bảng nào dùng nút có chữ thì truyền 120 trở lên.
+ * `width` mặc định 160px để hành động chính có nhãn rõ trên desktop; mobile tự ẩn nhãn khi nút
+ * có icon và gom phần dư vào menu.
  * R10: bảng không có hành động thì **đừng gọi hàm này** — cột rỗng còn tệ hơn không có cột.
  */
 export function actionColumn<T>(
@@ -244,11 +356,11 @@ export function actionColumn<T>(
 ): DataTableColumn<T> {
   return {
     key: 'actions',
-    title: options.title ?? '',
+    title: options.title ?? 'Thao tác',
     align: 'right',
     fixed: 'right',
-    width: options.width ?? 100,
+    width: options.width ?? 160,
     className: styles.actionsCell,
-    render: (_, row) => <RowActions actions={getActions(row)} maxInline={options.maxInline} />,
+    render: (_, row) => <RowActions actions={getActions(row)} maxInline={options.maxInline ?? 1} />,
   };
 }

@@ -1,7 +1,8 @@
 'use client';
 
-import { DatePicker, Input, Select, Space, Spin } from 'antd';
+import { DatePicker, Select, Space, Spin } from 'antd';
 import { Suspense, useState } from 'react';
+import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ADMIN_BOOKINGS_DEFAULT_LIMIT } from '@/features/admin-bookings/api';
 import { BOOKING_DATE_FIELD } from '@xeprime/types';
@@ -68,21 +69,21 @@ function AdminBookingsView() {
         title="Đơn thuê toàn hệ thống"
         extra={
           <Space wrap>
-            <Input.Search
+            <AutoSearchInput
               className={styles.search}
               size="large"
-              allowClear
               placeholder="Tìm mã đơn / tên khách"
-              defaultValue={filters.q}
-              onSearch={(value) => setFilters({ q: value.trim() || undefined })}
+              aria-label="Tìm mã đơn hoặc tên khách"
+              value={filters.q}
+              onSearch={(value) => setFilters({ q: value || undefined })}
             />
-            <Input.Search
+            <AutoSearchInput
               className={styles.phone}
               size="large"
-              allowClear
               placeholder="Tra đúng SĐT khách"
-              defaultValue={filters.phone}
-              onSearch={(value) => setFilters({ phone: value.trim() || undefined })}
+              aria-label="Tra số điện thoại khách"
+              value={filters.phone}
+              onSearch={(value) => setFilters({ phone: value || undefined })}
             />
             <Select
               className={styles.statusSelect}

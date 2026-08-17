@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { CUSTOMER_TRIP_STAGE_META, type CustomerTripStage } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { tripPath } from '@/constants/routes';
-import { formatDateTimeRange } from '@/lib/datetime';
+import { formatShortDateTimeRange } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import type { CustomerTrip } from '../types';
 import styles from './TripCard.module.css';
@@ -51,7 +51,7 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
 
         <p className={styles.meta}>
           <CalendarOutlined aria-hidden="true" />
-          <span>{formatDateTimeRange(trip.pickupAt, trip.returnAt)}</span>
+          <span>{formatShortDateTimeRange(trip.pickupAt, trip.returnAt)}</span>
         </p>
         <p className={styles.meta}>
           <EnvironmentOutlined aria-hidden="true" />
