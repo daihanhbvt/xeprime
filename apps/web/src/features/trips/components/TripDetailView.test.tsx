@@ -62,6 +62,7 @@ const TRIP: CustomerTripDetail = {
   },
   pickupAt: '2026-08-09T14:00:00.000Z',
   returnAt: '2026-08-12T14:00:00.000Z',
+  serviceType: 'self_drive',
   deliveryRequested: true,
   deliveryAddress: '123 Nguyễn Văn Linh, Hải Châu, Đà Nẵng',
   totalAmount: '2772000.00',

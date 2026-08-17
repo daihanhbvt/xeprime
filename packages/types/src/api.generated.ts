@@ -4859,6 +4859,10 @@ export interface components {
             /** @description ISO-8601 UTC */
             createdAt: string;
             vehicleImageUrl?: string | null;
+            /** @enum {string|null} */
+            routeType?: "in_city" | "inter_city" | "inter_city_one_way" | null;
+            pickupAddress?: string | null;
+            destination?: string | null;
             baseAmount: string;
             deliveryFee: string;
             discountAmount: string;
@@ -4881,6 +4885,12 @@ export interface components {
              * @enum {string}
              */
             serviceType: "self_drive" | "with_driver" | "long_term";
+            /** @enum {string} */
+            routeType?: "in_city" | "inter_city" | "inter_city_one_way";
+            /** @description Địa chỉ đón khách (with_driver) */
+            pickupAddress?: string;
+            /** @description Điểm đến (with_driver liên tỉnh) */
+            destination?: string;
             /** @description Nhận xe (ISO-8601) */
             pickupAt: string;
             /** @description Trả xe (ISO-8601), phải sau nhận xe */
@@ -4905,6 +4915,12 @@ export interface components {
             customerPhone?: string;
             /** @enum {string} */
             serviceType?: "self_drive" | "with_driver" | "long_term";
+            /** @enum {string} */
+            routeType?: "in_city" | "inter_city" | "inter_city_one_way";
+            /** @description Địa chỉ đón khách (with_driver) */
+            pickupAddress?: string;
+            /** @description Điểm đến (with_driver liên tỉnh) */
+            destination?: string;
             /** @description Nhận xe (ISO-8601) */
             pickupAt?: string;
             /** @description Trả xe (ISO-8601) */
@@ -5407,6 +5423,10 @@ export interface components {
             pickupAt: string;
             /** @description ISO-8601 UTC */
             returnAt: string;
+            serviceType: string;
+            routeType?: string | null;
+            pickupAddress?: string | null;
+            destination?: string | null;
             deliveryRequested: boolean;
             deliveryAddress?: string | null;
             /** @description Tổng dịch vụ mới nhất (tiền thuê + phát sinh), string — ADR 0007 */
@@ -5499,6 +5519,10 @@ export interface components {
             pickupAt: string;
             /** @description ISO-8601 UTC */
             returnAt: string;
+            serviceType: string;
+            routeType?: string | null;
+            pickupAddress?: string | null;
+            destination?: string | null;
             deliveryRequested: boolean;
             deliveryAddress?: string | null;
             /** @description Tổng dịch vụ mới nhất (tiền thuê + phát sinh), string — ADR 0007 */
@@ -5698,6 +5722,9 @@ export interface components {
             returnAt: string;
             /** @description Số ngày thuê (làm tròn lên) */
             days: number;
+            routeType?: string | null;
+            pickupAddress?: string | null;
+            destination?: string | null;
         };
         ContractPricingDto: {
             /** @description MoneyString */

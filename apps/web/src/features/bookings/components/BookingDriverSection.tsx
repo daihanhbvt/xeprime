@@ -2,7 +2,7 @@
 
 import { App, Button, Select } from 'antd';
 import { useState } from 'react';
-import { SERVICE_TYPE } from '@xeprime/types';
+import { SERVICE_TYPE, routeTypeLabel } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
 import { useAssignableDrivers } from '@/features/drivers/hooks/use-drivers';
 import { useAssignBookingDriver } from '../hooks/use-booking-mutations';
@@ -45,6 +45,15 @@ export function BookingDriverSection({
   return (
     <section className={styles.panel}>
       <h3 className={styles.blockTitle}>Tài xế</h3>
+
+      {/* Tài xế cần biết mình chạy đâu — hành trình nằm ngay cạnh việc phân công. */}
+      {isWithDriver && booking.routeType ? (
+        <p className={styles.meta}>
+          {routeTypeLabel(booking.routeType)}
+          {booking.pickupAddress ? ` · Đón: ${booking.pickupAddress}` : ''}
+          {booking.destination ? ` → ${booking.destination}` : ''}
+        </p>
+      ) : null}
 
       {driver && !selecting ? (
         <div className={styles.row}>

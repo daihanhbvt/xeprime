@@ -49,6 +49,9 @@ export class ContractsService {
         customerName: true,
         customerPhone: true,
         serviceType: true,
+        routeType: true,
+        pickupAddress: true,
+        destination: true,
         pickupAt: true,
         returnAt: true,
         baseAmount: true,
@@ -137,6 +140,10 @@ export class ContractsService {
         pickupAt: booking.pickupAt.toISOString(),
         returnAt: booking.returnAt.toISOString(),
         days,
+        // Hành trình with_driver (17/08) — null với chuyến khác; hợp đồng cũ không có key này.
+        routeType: booking.routeType,
+        pickupAddress: booking.pickupAddress,
+        destination: booking.destination,
       },
       pricing: {
         baseAmount: booking.baseAmount.toString(),

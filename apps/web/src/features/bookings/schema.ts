@@ -1,5 +1,5 @@
 import type { Dayjs } from 'dayjs';
-import { SERVICE_TYPE, SERVICE_TYPE_VALUES } from '@xeprime/types';
+import { ROUTE_TYPE, ROUTE_TYPE_VALUES, SERVICE_TYPE, SERVICE_TYPE_VALUES } from '@xeprime/types';
 import { moneySchema } from '@xeprime/validators';
 import * as yup from 'yup';
 
@@ -35,6 +35,28 @@ export const bookingFormSchema = yup.object({
     .oneOf(SERVICE_TYPE_VALUES)
     .default(SERVICE_TYPE.SELF_DRIVE)
     .required('Chọn loại dịch vụ'),
+  /*
+   * Hành trình chuyến CÓ TÀI XẾ — cùng bộ luật với server (common/route-context): with_driver
+   * bắt buộc lộ trình + địa chỉ đón, liên tỉnh bắt buộc điểm đến; dịch vụ khác bỏ qua cả ba.
+   */
+  routeType: yup.string().oneOf(ROUTE_TYPE_VALUES).default(ROUTE_TYPE.IN_CITY),
+  pickupAddress: yup
+    .string()
+    .trim()
+    .default('')
+    .when('serviceType', {
+      is: SERVICE_TYPE.WITH_DRIVER,
+      then: (s) => s.required('Nhập địa chỉ đón khách').max(500),
+    }),
+  destination: yup
+    .string()
+    .trim()
+    .default('')
+    .when(['serviceType', 'routeType'], {
+      is: (serviceType: string, routeType: string) =>
+        serviceType === SERVICE_TYPE.WITH_DRIVER && routeType !== ROUTE_TYPE.IN_CITY,
+      then: (s) => s.required('Nhập điểm đến cho lộ trình liên tỉnh').max(500),
+    }),
   pickupAt: requiredDate('Chọn thời gian nhận xe'),
   returnAt: requiredDate('Chọn thời gian trả xe').test(
     'after-pickup',

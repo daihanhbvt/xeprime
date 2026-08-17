@@ -57,6 +57,7 @@ const TRIP = {
   },
   pickupAt: '2026-08-09T14:00:00.000Z',
   returnAt: '2026-08-12T14:00:00.000Z',
+  serviceType: 'self_drive',
   deliveryRequested: true,
   deliveryAddress: '123 Nguyễn Văn Linh',
   totalAmount: '2772000.00',
@@ -103,7 +104,8 @@ describe('Danh sách chuyến', () => {
   it('thẻ chuyến hiện tổng tiền và cách nhận xe', () => {
     renderView();
     expect(screen.getByText('Toyota Camry 2024')).toBeTruthy();
-    expect(screen.getByText('Giao xe tận nơi')).toBeTruthy();
+    // Thẻ giờ ghép dịch vụ + cách nhận xe: "Tự lái · Giao xe tận nơi" (17/08).
+    expect(screen.getByText(/Giao xe tận nơi/)).toBeTruthy();
     expect(screen.getByText(/2\.772\.000/)).toBeTruthy();
   });
 

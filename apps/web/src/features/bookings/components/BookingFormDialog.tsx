@@ -5,7 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useController, useForm, useWatch, type Control } from 'react-hook-form';
-import { API_ERROR_CODE, SERVICE_TYPE } from '@xeprime/types';
+import { API_ERROR_CODE, ROUTE_TYPE, ROUTE_TYPE_VALUES, SERVICE_TYPE, routeTypeLabel } from '@xeprime/types';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { NumberField } from '@/components/form/NumberField';
@@ -48,6 +48,9 @@ function toDefaults(
       customerName: '',
       customerPhone: '',
       serviceType: SERVICE_TYPE.SELF_DRIVE,
+      routeType: ROUTE_TYPE.IN_CITY,
+      pickupAddress: '',
+      destination: '',
       pickupAt: prefill?.pickupAt ?? null,
       returnAt: prefill?.returnAt ?? null,
       baseAmount: null,
@@ -62,6 +65,9 @@ function toDefaults(
     customerName: editing.customerName,
     customerPhone: editing.customerPhone ?? '',
     serviceType: editing.serviceType as BookingFormValues['serviceType'],
+    routeType: (editing.routeType ?? ROUTE_TYPE.IN_CITY) as BookingFormValues['routeType'],
+    pickupAddress: editing.pickupAddress ?? '',
+    destination: editing.destination ?? '',
     pickupAt: dayjs(editing.pickupAt),
     returnAt: dayjs(editing.returnAt),
     baseAmount: numOrNull(editing.baseAmount),
@@ -170,6 +176,10 @@ function BookingForm({
     name: ['baseAmount', 'deliveryFee', 'discountAmount'],
   });
   const total = (base ?? 0) + (delivery ?? 0) - (discount ?? 0);
+  const [watchedServiceType, watchedRouteType] = useWatch({
+    control,
+    name: ['serviceType', 'routeType'],
+  });
 
   // Preview trùng lịch (ADR 0006: chỉ cảnh báo sớm cho UX, KHÔNG chặn submit — chốt thật là
   // exclusion constraint ở DB). useQuery tự dedupe/cache theo khoá; khi sửa thì bỏ qua chính đơn.
@@ -207,10 +217,21 @@ function BookingForm({
 
   const onSubmit = handleSubmit((values) => {
     setConflict(false);
+    const withDriver = values.serviceType === SERVICE_TYPE.WITH_DRIVER;
     const shared = {
       customerName: values.customerName.trim(),
       customerPhone: values.customerPhone || undefined,
       serviceType: values.serviceType,
+      // Đơn with_driver mang hành trình; dịch vụ khác không gửi (server tự normalize về null).
+      ...(withDriver
+        ? {
+            routeType: values.routeType,
+            pickupAddress: values.pickupAddress.trim(),
+            ...(values.routeType !== ROUTE_TYPE.IN_CITY
+              ? { destination: values.destination.trim() }
+              : {}),
+          }
+        : {}),
       pickupAt: values.pickupAt?.toISOString(),
       returnAt: values.returnAt?.toISOString(),
       baseAmount: String(values.baseAmount ?? 0),
@@ -297,6 +318,34 @@ function BookingForm({
             label="Loại dịch vụ"
             options={SERVICE_TYPE_OPTIONS}
           />
+          {/* Hành trình chuyến CÓ TÀI XẾ — server validate lại cùng bộ luật (route-context). */}
+          {watchedServiceType === SERVICE_TYPE.WITH_DRIVER ? (
+            <>
+              <SelectField
+                control={control}
+                name="routeType"
+                label="Lộ trình"
+                options={ROUTE_TYPE_VALUES.map((value) => ({
+                  value,
+                  label: routeTypeLabel(value),
+                }))}
+              />
+              <TextField
+                control={control}
+                name="pickupAddress"
+                label="Địa chỉ đón khách"
+                placeholder="123 Lê Lợi, Q.1, TP.HCM"
+              />
+              {watchedRouteType !== ROUTE_TYPE.IN_CITY ? (
+                <TextField
+                  control={control}
+                  name="destination"
+                  label="Điểm đến"
+                  placeholder="TP. Đà Lạt, Lâm Đồng"
+                />
+              ) : null}
+            </>
+          ) : null}
           <RentalRangeFormField control={control} />
           <TextAreaField control={control} name="note" label="Ghi chú" rows={3} maxLength={2000} />
         </div>

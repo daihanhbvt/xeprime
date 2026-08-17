@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Alert, Button, Skeleton } from 'antd';
+import { Alert, Button, Radio, Skeleton } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -18,8 +18,13 @@ import * as yup from 'yup';
 import {
   API_ERROR_CODE,
   PRICE_ROW,
+  ROUTE_TYPE,
+  ROUTE_TYPE_DESCRIPTION,
+  ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
+  routeTypeLabel,
   serviceTypeLabel,
+  type RouteType,
   type ServiceType,
 } from '@xeprime/types';
 import { Segmented } from 'antd';
@@ -98,6 +103,29 @@ const staffBookingSchema = yup.object({
       is: PICKUP_METHOD.DELIVERY,
       then: (s) => s.required('Nhập địa chỉ giao xe').max(500),
     }),
+  /*
+   * Hành trình chuyến CÓ TÀI XẾ. Dịch vụ nằm ở state component (Segmented) nên vào schema qua
+   * yup CONTEXT (`$serviceType` — useForm truyền `context`), cùng bộ luật với luồng của khách:
+   * with_driver bắt buộc địa chỉ đón, liên tỉnh bắt buộc điểm đến.
+   */
+  routeType: yup.string().oneOf(ROUTE_TYPE_VALUES).default(ROUTE_TYPE.IN_CITY),
+  pickupAddress: yup
+    .string()
+    .trim()
+    .default('')
+    .when('$serviceType', {
+      is: SERVICE_TYPE.WITH_DRIVER,
+      then: (s) => s.required('Nhập địa chỉ đón khách').max(500),
+    }),
+  destination: yup
+    .string()
+    .trim()
+    .default('')
+    .when(['routeType', '$serviceType'], {
+      is: (routeType: string, serviceType: string) =>
+        serviceType === SERVICE_TYPE.WITH_DRIVER && routeType !== ROUTE_TYPE.IN_CITY,
+      then: (s) => s.required('Nhập điểm đến cho lộ trình liên tỉnh').max(500),
+    }),
   note: yup.string().trim().max(2000).default(''),
   /** Chỉ dùng khi KHÔNG có báo giá server — xe chưa cấu hình giá ngày. */
   manualBaseAmount: yup.number().min(0).nullable().default(null),
@@ -171,6 +199,8 @@ export function StaffBookingFlow({
 
   const { control, trigger, getValues, setValue, formState } = useForm<StaffBookingValues>({
     resolver: yupResolver(staffBookingSchema),
+    // Dịch vụ nằm ở state (Segmented) — đưa vào schema qua yup context ($serviceType).
+    context: { serviceType },
     defaultValues: {
       customerName: '',
       customerPhone: '',
@@ -178,6 +208,9 @@ export function StaffBookingFlow({
       returnAt: returnAt ? dayjs(returnAt) : null,
       pickupMethod: PICKUP_METHOD.SELF,
       deliveryAddress: '',
+      routeType: ROUTE_TYPE.IN_CITY,
+      pickupAddress: '',
+      destination: '',
       note: '',
       manualBaseAmount: null,
       manualDepositAmount: null,
@@ -187,7 +220,10 @@ export function StaffBookingFlow({
   const watchedPickup = useWatch({ control, name: 'pickupAt' });
   const watchedReturn = useWatch({ control, name: 'returnAt' });
   const pickupMethod = useWatch({ control, name: 'pickupMethod' });
-  const isDelivery = pickupMethod === PICKUP_METHOD.DELIVERY;
+  const watchedRoute = useWatch({ control, name: 'routeType' }) as RouteType;
+  const isWithDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
+  // Chuyến có tài xế: xe đến ĐÓN khách — "giao xe tận nơi" không có nghĩa.
+  const isDelivery = !isWithDriver && pickupMethod === PICKUP_METHOD.DELIVERY;
   const hasRange = Boolean(watchedPickup && watchedReturn && watchedReturn.isAfter(watchedPickup));
 
   /** Báo giá nội bộ — 400 (xe chưa có giá) là trạng thái hợp lệ: rơi về nhập tiền tay. */
@@ -246,7 +282,10 @@ export function StaffBookingFlow({
 
   async function continueFromContact() {
     setStepError(null);
-    if (await trigger(['customerName', 'customerPhone', 'deliveryAddress'])) setStep('review');
+    const fields = isWithDriver
+      ? (['customerName', 'customerPhone', 'pickupAddress', 'destination'] as const)
+      : (['customerName', 'customerPhone', 'deliveryAddress'] as const);
+    if (await trigger([...fields])) setStep('review');
   }
 
   async function submitBooking() {
@@ -273,6 +312,14 @@ export function StaffBookingFlow({
         customerPhone: v.customerPhone.trim(),
         // Dịch vụ do staff chọn theo năng lực của xe (17/08) — hết hardcode tự lái.
         serviceType,
+        // Hành trình with_driver — server validate lại (route bắt buộc, liên tỉnh cần điểm đến).
+        ...(isWithDriver
+          ? {
+              routeType: v.routeType,
+              pickupAddress: v.pickupAddress.trim(),
+              ...(v.routeType !== ROUTE_TYPE.IN_CITY ? { destination: v.destination.trim() } : {}),
+            }
+          : {}),
         pickupAt: v.pickupAt!.toISOString(),
         returnAt: v.returnAt!.toISOString(),
         // Tiền từ báo giá server (đã gồm giá riêng theo ngày); giảm giá là dòng âm → tách dương.
@@ -370,6 +417,15 @@ export function StaffBookingFlow({
                 {v.returnAt ? formatRentalPoint(v.returnAt) : '—'}
               </dd>
             </div>
+            <div className={styles.doneRow}>
+              <dt>Dịch vụ</dt>
+              <dd>
+                {serviceTypeLabel(serviceType)}
+                {serviceType === SERVICE_TYPE.WITH_DRIVER && v.pickupAddress
+                  ? ` · Đón: ${v.pickupAddress}`
+                  : ''}
+              </dd>
+            </div>
             {quote ? (
               <div className={styles.doneRow}>
                 <dt>Tổng tiền</dt>
@@ -435,6 +491,24 @@ export function StaffBookingFlow({
                     label: serviceTypeLabel(value),
                   }))}
                 />
+              </div>
+            ) : null}
+
+            {/* Lộ trình chuyến có tài xế — cùng markup với luồng của khách (RequestBookingFlow). */}
+            {isWithDriver ? (
+              <div className={styles.serviceField}>
+                <span className={styles.rangeFieldLabel}>Lộ trình</span>
+                <Radio.Group
+                  value={watchedRoute}
+                  onChange={(e) =>
+                    setValue('routeType', e.target.value as RouteType, { shouldValidate: true })
+                  }
+                  options={ROUTE_TYPE_VALUES.map((value) => ({
+                    value,
+                    label: routeTypeLabel(value),
+                  }))}
+                />
+                <p className={styles.rangeHint}>{ROUTE_TYPE_DESCRIPTION[watchedRoute]}</p>
               </div>
             ) : null}
 
@@ -536,6 +610,32 @@ export function StaffBookingFlow({
               autoComplete="off"
             />
 
+            {/* Chuyến có tài xế: xe đến đón khách — thay khối hình thức nhận xe bằng hành trình. */}
+            {isWithDriver ? (
+              <div className={styles.deliveryBlock}>
+                <TextField
+                  control={control}
+                  name="pickupAddress"
+                  label="Địa chỉ đón khách"
+                  placeholder="123 Lê Lợi, Q.1, TP.HCM"
+                  autoComplete="off"
+                />
+                {watchedRoute !== ROUTE_TYPE.IN_CITY ? (
+                  <TextField
+                    control={control}
+                    name="destination"
+                    label="Điểm đến"
+                    placeholder="TP. Đà Lạt, Lâm Đồng"
+                    autoComplete="off"
+                  />
+                ) : null}
+                <p className={styles.deliveryNote}>
+                  Lộ trình: {routeTypeLabel(watchedRoute)} — đổi ở bước Thời gian nếu cần.
+                </p>
+              </div>
+            ) : null}
+
+            {isWithDriver ? null : (
             <fieldset className={styles.pickupGroup}>
               <legend className={styles.fieldLabel}>Hình thức nhận xe</legend>
               <div
@@ -583,6 +683,7 @@ export function StaffBookingFlow({
                 ))}
               </div>
             </fieldset>
+            )}
 
             {isDelivery ? (
               <div className={styles.deliveryBlock}>
@@ -646,9 +747,31 @@ export function StaffBookingFlow({
                 <dd>{watchedReturn ? formatRentalPoint(watchedReturn) : '—'}</dd>
               </div>
               <div className={styles.reviewRow}>
-                <dt>Hình thức</dt>
-                <dd>{isDelivery ? 'Giao xe tận nơi' : 'Nhận tại điểm hẹn'}</dd>
+                <dt>Dịch vụ</dt>
+                <dd>
+                  {serviceTypeLabel(serviceType)}
+                  {isWithDriver ? ` · ${routeTypeLabel(watchedRoute)}` : ''}
+                </dd>
               </div>
+              {isWithDriver ? (
+                <>
+                  <div className={styles.reviewRow}>
+                    <dt>Địa chỉ đón</dt>
+                    <dd>{getValues('pickupAddress') || '—'}</dd>
+                  </div>
+                  {watchedRoute !== ROUTE_TYPE.IN_CITY ? (
+                    <div className={styles.reviewRow}>
+                      <dt>Điểm đến</dt>
+                      <dd>{getValues('destination') || '—'}</dd>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <div className={styles.reviewRow}>
+                  <dt>Hình thức</dt>
+                  <dd>{isDelivery ? 'Giao xe tận nơi' : 'Nhận tại điểm hẹn'}</dd>
+                </div>
+              )}
               {isDelivery ? (
                 <div className={styles.reviewRow}>
                   <dt>Địa chỉ giao</dt>

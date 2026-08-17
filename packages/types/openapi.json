@@ -15412,6 +15412,23 @@
             "type": "string",
             "nullable": true
           },
+          "routeType": {
+            "type": "string",
+            "enum": [
+              "in_city",
+              "inter_city",
+              "inter_city_one_way"
+            ],
+            "nullable": true
+          },
+          "pickupAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "destination": {
+            "type": "string",
+            "nullable": true
+          },
           "baseAmount": {
             "type": "string"
           },
@@ -15492,6 +15509,22 @@
             ],
             "default": "self_drive"
           },
+          "routeType": {
+            "type": "string",
+            "enum": [
+              "in_city",
+              "inter_city",
+              "inter_city_one_way"
+            ]
+          },
+          "pickupAddress": {
+            "type": "string",
+            "description": "Địa chỉ đón khách (with_driver)"
+          },
+          "destination": {
+            "type": "string",
+            "description": "Điểm đến (with_driver liên tỉnh)"
+          },
           "pickupAt": {
             "type": "string",
             "description": "Nhận xe (ISO-8601)"
@@ -15546,6 +15579,22 @@
               "with_driver",
               "long_term"
             ]
+          },
+          "routeType": {
+            "type": "string",
+            "enum": [
+              "in_city",
+              "inter_city",
+              "inter_city_one_way"
+            ]
+          },
+          "pickupAddress": {
+            "type": "string",
+            "description": "Địa chỉ đón khách (with_driver)"
+          },
+          "destination": {
+            "type": "string",
+            "description": "Điểm đến (with_driver liên tỉnh)"
           },
           "pickupAt": {
             "type": "string",
@@ -17130,6 +17179,21 @@
             "type": "string",
             "description": "ISO-8601 UTC"
           },
+          "serviceType": {
+            "type": "string"
+          },
+          "routeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "pickupAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "destination": {
+            "type": "string",
+            "nullable": true
+          },
           "deliveryRequested": {
             "type": "boolean"
           },
@@ -17160,6 +17224,7 @@
           "shop",
           "pickupAt",
           "returnAt",
+          "serviceType",
           "deliveryRequested",
           "canReview",
           "hasReview",
@@ -17434,6 +17499,21 @@
             "type": "string",
             "description": "ISO-8601 UTC"
           },
+          "serviceType": {
+            "type": "string"
+          },
+          "routeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "pickupAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "destination": {
+            "type": "string",
+            "nullable": true
+          },
           "deliveryRequested": {
             "type": "boolean"
           },
@@ -17498,6 +17578,7 @@
           "shop",
           "pickupAt",
           "returnAt",
+          "serviceType",
           "deliveryRequested",
           "canReview",
           "hasReview",
@@ -18107,6 +18188,18 @@
           "days": {
             "type": "number",
             "description": "Số ngày thuê (làm tròn lên)"
+          },
+          "routeType": {
+            "type": "string",
+            "nullable": true
+          },
+          "pickupAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "destination": {
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [

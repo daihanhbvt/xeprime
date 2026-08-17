@@ -1,6 +1,11 @@
 'use client';
 
-import { SERVICE_TYPE_LABEL, VEHICLE_TYPE, type ServiceType } from '@xeprime/types';
+import {
+  SERVICE_TYPE_LABEL,
+  VEHICLE_TYPE,
+  routeTypeLabel,
+  type ServiceType,
+} from '@xeprime/types';
 import { formatDate, formatDateTime } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import type { Contract } from '../types';
@@ -93,6 +98,14 @@ export function ContractDocument({ contract }: { contract: Contract }) {
           <Field label="Trả xe" value={formatDateTime(s.rental.returnAt)} />
           <Field label="Số ngày" value={`${s.rental.days} ngày`} />
           <Field label="Mã đơn" value={s.rental.bookingCode} />
+          {/* Hành trình chuyến có tài xế — hợp đồng cũ không có key này, chỉ render khi tồn tại. */}
+          {s.rental.routeType ? (
+            <Field label="Lộ trình" value={routeTypeLabel(s.rental.routeType)} />
+          ) : null}
+          {s.rental.pickupAddress ? (
+            <Field label="Địa chỉ đón" value={s.rental.pickupAddress} />
+          ) : null}
+          {s.rental.destination ? <Field label="Điểm đến" value={s.rental.destination} /> : null}
         </dl>
       </Section>
 

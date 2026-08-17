@@ -2,7 +2,7 @@
 
 import { Button, Card, Skeleton } from 'antd';
 import Link from 'next/link';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, SERVICE_TYPE, routeTypeLabel } from '@xeprime/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
@@ -140,6 +140,29 @@ export function BookingDetailContent({
               )}
             </div>
           </section>
+
+          {/* Hành trình chuyến CÓ TÀI XẾ (17/08) — copy từ yêu cầu khi duyệt / nhập khi lập tay. */}
+          {data.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
+            <section className={styles.panel}>
+              <h3 className={styles.blockTitle}>Hành trình</h3>
+              <dl className={styles.rows}>
+                <div className={styles.row}>
+                  <dt>Lộ trình</dt>
+                  <dd>{data.routeType ? routeTypeLabel(data.routeType) : 'Chưa có thông tin'}</dd>
+                </div>
+                <div className={styles.row}>
+                  <dt>Địa chỉ đón</dt>
+                  <dd>{data.pickupAddress ?? 'Chưa có thông tin'}</dd>
+                </div>
+                {data.destination ? (
+                  <div className={styles.row}>
+                    <dt>Điểm đến</dt>
+                    <dd>{data.destination}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
+          ) : null}
 
           {/* Tài xế (17/08) — gán/bỏ gán; đơn with_driver chưa phân công được nhắc rõ. */}
           <BookingDriverSection booking={data} canUpdate={has(PERMISSION.BOOKING_UPDATE)} />

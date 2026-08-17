@@ -289,6 +289,10 @@ const BOOKING_SELECT = {
   tenantId: true,
   code: true,
   status: true,
+  serviceType: true,
+  routeType: true,
+  pickupAddress: true,
+  destination: true,
   pickupAt: true,
   returnAt: true,
   actualPickupAt: true,
@@ -307,6 +311,10 @@ const LIST_SELECT = {
   status: true,
   pickupAt: true,
   returnAt: true,
+  serviceType: true,
+  routeType: true,
+  pickupAddress: true,
+  destination: true,
   deliveryRequested: true,
   deliveryAddress: true,
   createdAt: true,
@@ -369,6 +377,12 @@ function toListItem(
     // Giờ trên ĐƠN thắng giờ trên yêu cầu: shop dời lịch thì đơn mới là cái đang có hiệu lực.
     pickupAt: (booking?.pickupAt ?? row.pickupAt).toISOString(),
     returnAt: (booking?.returnAt ?? row.returnAt).toISOString(),
+    // Hành trình cùng nguyên tắc đơn-thắng-yêu-cầu (17/08): shop sửa lộ trình/địa chỉ trên đơn
+    // thì khách phải thấy bản đang hiệu lực, không phải bản mình gõ lúc gửi.
+    serviceType: booking?.serviceType ?? row.serviceType,
+    routeType: booking ? booking.routeType : row.routeType,
+    pickupAddress: booking ? booking.pickupAddress : row.pickupAddress,
+    destination: booking ? booking.destination : row.destination,
     deliveryRequested: row.deliveryRequested,
     deliveryAddress: row.deliveryAddress,
     /*

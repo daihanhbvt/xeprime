@@ -69,6 +69,11 @@ export function isRouteType(value: unknown): value is RouteType {
   return typeof value === 'string' && (ROUTE_TYPE_VALUES as string[]).includes(value);
 }
 
+/** Nhãn một lộ trình, chịu được giá trị lạ trong dữ liệu cũ — không bao giờ in mã thô. */
+export function routeTypeLabel(value: string): string {
+  return (ROUTE_TYPE_LABEL as Readonly<Record<string, string>>)[value] ?? value;
+}
+
 export const BOOKING_REQUEST_STATUS_META: Readonly<Record<BookingRequestStatus, StatusMeta>> = {
   [BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL]: {
     label: 'Chờ chủ shop duyệt',

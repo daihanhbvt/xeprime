@@ -16,11 +16,13 @@ import {
   canTransitionBooking,
   isBookingFinal,
   occupiesSchedule,
+  SERVICE_TYPE,
   type BookingPriceSnapshot,
   type BookingStatus,
   type PaginationMeta,
 } from '@xeprime/types';
 import { bookingDebt } from '../../common/money';
+import { normalizeRouteContext } from '../../common/route-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
@@ -64,6 +66,9 @@ const DETAIL_SELECT = {
   deliveryFee: true,
   discountAmount: true,
   priceSnapshot: true,
+  routeType: true,
+  pickupAddress: true,
+  destination: true,
   actualPickupAt: true,
   actualReturnAt: true,
   note: true,
@@ -162,6 +167,16 @@ export class BookingsService {
     const returnAt = new Date(dto.returnAt);
     assertRange(pickupAt, returnAt);
 
+    // Hành trình đi cùng dịch vụ: with_driver bắt buộc lộ trình + địa chỉ đón (liên tỉnh thêm
+    // điểm đến), dịch vụ khác bị normalize về null — CHECK DB là chốt chặn cuối.
+    const serviceType = dto.serviceType ?? SERVICE_TYPE.SELF_DRIVE;
+    const route = normalizeRouteContext({
+      serviceType,
+      routeType: dto.routeType,
+      pickupAddress: dto.pickupAddress,
+      destination: dto.destination,
+    });
+
     const base = money(dto.baseAmount);
     const delivery = money(dto.deliveryFee);
     const discount = money(dto.discountAmount);
@@ -185,7 +200,10 @@ export class BookingsService {
         customerName: dto.customerName,
         customerPhone: dto.customerPhone ?? null,
         status: BOOKING_STATUS.RESERVED,
-        serviceType: dto.serviceType ?? undefined,
+        serviceType,
+        routeType: route.routeType,
+        pickupAddress: route.pickupAddress,
+        destination: route.destination,
         pickupAt,
         returnAt,
         baseAmount: base,
@@ -252,6 +270,10 @@ export class BookingsService {
       select: {
         id: true,
         status: true,
+        serviceType: true,
+        routeType: true,
+        pickupAddress: true,
+        destination: true,
         pickupAt: true,
         returnAt: true,
         baseAmount: true,
@@ -261,6 +283,27 @@ export class BookingsService {
     });
     if (!current) throw notFound();
     assertMutable(current.status as BookingStatus);
+
+    /*
+     * Hành trình được validate lại mỗi khi đơn đụng tới dịch vụ HOẶC một trường hành trình:
+     * đổi sang with_driver phải nộp đủ lộ trình/địa chỉ đón, rời with_driver thì cả ba trường
+     * bị clear (CHECK DB không cho with_driver-context sống trên dịch vụ khác).
+     */
+    const nextServiceType = dto.serviceType ?? current.serviceType;
+    const routeTouched =
+      dto.serviceType !== undefined ||
+      dto.routeType !== undefined ||
+      dto.pickupAddress !== undefined ||
+      dto.destination !== undefined;
+    const route = routeTouched
+      ? normalizeRouteContext({
+          serviceType: nextServiceType,
+          routeType: dto.routeType !== undefined ? dto.routeType : current.routeType,
+          pickupAddress:
+            dto.pickupAddress !== undefined ? dto.pickupAddress : current.pickupAddress,
+          destination: dto.destination !== undefined ? dto.destination : current.destination,
+        })
+      : null;
 
     const pickupAt = dto.pickupAt ? new Date(dto.pickupAt) : current.pickupAt;
     const returnAt = dto.returnAt ? new Date(dto.returnAt) : current.returnAt;
@@ -283,6 +326,13 @@ export class BookingsService {
           ...(dto.customerName !== undefined ? { customerName: dto.customerName } : {}),
           ...(dto.customerPhone !== undefined ? { customerPhone: dto.customerPhone } : {}),
           ...(dto.serviceType !== undefined ? { serviceType: dto.serviceType } : {}),
+          ...(route
+            ? {
+                routeType: route.routeType,
+                pickupAddress: route.pickupAddress,
+                destination: route.destination,
+              }
+            : {}),
           ...(dto.pickupAt ? { pickupAt } : {}),
           ...(dto.returnAt ? { returnAt } : {}),
           ...(dto.baseAmount !== undefined ? { baseAmount: base } : {}),
@@ -713,6 +763,9 @@ function toDetail(b: BookingDetailRow): BookingDetailDto {
     deliveryFee: b.deliveryFee as unknown as string,
     discountAmount: b.discountAmount as unknown as string,
     priceSnapshot: (b.priceSnapshot as unknown as BookingDetailDto['priceSnapshot']) ?? null,
+    routeType: b.routeType,
+    pickupAddress: b.pickupAddress,
+    destination: b.destination,
     vehicleImageUrl: b.vehicle.mainImageUrl,
     actualPickupAt: b.actualPickupAt as unknown as string | null,
     actualReturnAt: b.actualReturnAt as unknown as string | null,

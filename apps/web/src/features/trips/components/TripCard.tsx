@@ -2,7 +2,13 @@
 
 import { CalendarOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import Link from 'next/link';
-import { CUSTOMER_TRIP_STAGE_META, type CustomerTripStage } from '@xeprime/types';
+import {
+  CUSTOMER_TRIP_STAGE_META,
+  SERVICE_TYPE,
+  routeTypeLabel,
+  serviceTypeLabel,
+  type CustomerTripStage,
+} from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { tripPath } from '@/constants/routes';
 import { formatShortDateTimeRange } from '@/lib/datetime';
@@ -55,7 +61,12 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
         </p>
         <p className={styles.meta}>
           <EnvironmentOutlined aria-hidden="true" />
-          <span>{trip.deliveryRequested ? 'Giao xe tận nơi' : 'Nhận tại đại lý'}</span>
+          <span>
+            {/* Chuyến có tài xế: xe đến đón — nhãn giao/nhận xe tự lái không đúng ngữ cảnh. */}
+            {trip.serviceType === SERVICE_TYPE.WITH_DRIVER
+              ? `${serviceTypeLabel(trip.serviceType)}${trip.routeType ? ` · ${routeTypeLabel(trip.routeType)}` : ''}`
+              : `${serviceTypeLabel(trip.serviceType)} · ${trip.deliveryRequested ? 'Giao xe tận nơi' : 'Nhận tại đại lý'}`}
+          </span>
         </p>
       </div>
 

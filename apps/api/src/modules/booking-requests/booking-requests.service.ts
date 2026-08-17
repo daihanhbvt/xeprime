@@ -11,7 +11,6 @@ import {
   LONG_TERM_MIN_DAYS,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
-  ROUTE_TYPE,
   SERVICE_TYPE,
   TENANT_STATUS,
   USER_STATUS,
@@ -20,6 +19,7 @@ import {
   type PaginationMeta,
 } from '@xeprime/types';
 import { normalizePhone, phoneLookupVariants } from '../../common/phone';
+import { normalizeRouteContext } from '../../common/route-context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
@@ -180,26 +180,13 @@ export class BookingRequestsService {
       }
     }
     const withDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
-    if (withDriver) {
-      if (!dto.routeType) {
-        throw new BadRequestException({
-          code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: 'Vui lòng chọn lộ trình cho chuyến có tài xế',
-        });
-      }
-      if (!dto.pickupAddress?.trim()) {
-        throw new BadRequestException({
-          code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: 'Vui lòng nhập địa chỉ đón',
-        });
-      }
-      if (dto.routeType !== ROUTE_TYPE.IN_CITY && !dto.destination?.trim()) {
-        throw new BadRequestException({
-          code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: 'Vui lòng nhập điểm đến cho lộ trình liên tỉnh',
-        });
-      }
-    }
+    // MỘT nguồn luật hành trình cho cả yêu cầu của khách lẫn đơn shop lập tay (common/route-context).
+    const route = normalizeRouteContext({
+      serviceType,
+      routeType: dto.routeType,
+      pickupAddress: dto.pickupAddress,
+      destination: dto.destination,
+    });
 
     // Giao tận nơi: kiểm ở SERVER theo chính sách hiệu lực — FE ẩn ô nhập không phải lớp chặn.
     // Chuyến CÓ TÀI XẾ thì xe đến đón khách — "giao xe tận nơi" không có nghĩa, ép false.
@@ -251,12 +238,9 @@ export class BookingRequestsService {
             pickupAt,
             returnAt,
             serviceType,
-            routeType: withDriver ? dto.routeType : null,
-            pickupAddress: withDriver ? (dto.pickupAddress?.trim() ?? null) : null,
-            destination:
-              withDriver && dto.routeType !== ROUTE_TYPE.IN_CITY
-                ? (dto.destination?.trim() ?? null)
-                : null,
+            routeType: route.routeType,
+            pickupAddress: route.pickupAddress,
+            destination: route.destination,
             note: dto.note ?? null,
             deliveryRequested,
             deliveryAddress: deliveryRequested ? dto.deliveryAddress!.trim() : null,
@@ -453,6 +437,12 @@ export class BookingRequestsService {
           // Fix 17/08: trước đây serviceType KHÔNG được map — mọi đơn sinh từ yêu cầu đều rơi
           // về default self_drive, kể cả chuyến có tài xế/dài hạn.
           serviceType: req.serviceType,
+          // Hành trình đi cùng đơn (đợt hoàn thiện 17/08): lộ trình/địa chỉ đón/điểm đến của
+          // yêu cầu with_driver copy nguyên sang Booking — chi tiết đơn, phân công tài xế,
+          // chuyến của khách và hợp đồng đều nhìn thấy, không phải quay lại yêu cầu gốc.
+          routeType: req.routeType ?? undefined,
+          pickupAddress: req.pickupAddress ?? undefined,
+          destination: req.destination ?? undefined,
           baseAmount: rowAmount(breakdown.rows, 'base'),
           discountAmount: rowAmountAbs(breakdown.rows, 'discount'),
           deliveryFee: rowAmount(breakdown.rows, 'delivery'),
@@ -576,6 +566,9 @@ export class BookingRequestsService {
         pickupAt: true,
         returnAt: true,
         serviceType: true,
+        routeType: true,
+        pickupAddress: true,
+        destination: true,
         deliveryRequested: true,
         deliveryQuote: true,
         vehicle: {

@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BOOKING_STATUS_VALUES, SERVICE_TYPE, SERVICE_TYPE_VALUES } from '@xeprime/types';
+import {
+  BOOKING_STATUS_VALUES,
+  ROUTE_TYPE_VALUES,
+  SERVICE_TYPE,
+  SERVICE_TYPE_VALUES,
+} from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
   IsDateString,
@@ -119,6 +124,11 @@ export class BookingListItemDto {
 export class BookingDetailDto extends BookingListItemDto {
   /** Ảnh đại diện xe (`vehicles.main_image_url`) — null = xe chưa có ảnh, UI không dựng ảnh giả. */
   @ApiPropertyOptional({ type: String, nullable: true }) vehicleImageUrl!: string | null;
+  /** Hành trình chuyến CÓ TÀI XẾ — null với dịch vụ khác (CHECK DB giữ luật này). */
+  @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES, type: String, nullable: true })
+  routeType!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) pickupAddress!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) destination!: string | null;
   @ApiProperty() baseAmount!: string;
   @ApiProperty() deliveryFee!: string;
   @ApiProperty() discountAmount!: string;
@@ -162,6 +172,27 @@ export class CreateBookingDto {
   @IsOptional()
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
+
+  /**
+   * Hành trình — bắt buộc khi `serviceType = with_driver` (kiểm chéo ở service qua
+   * `normalizeRouteContext`, class-validator không mô tả được điều kiện chéo này).
+   */
+  @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(ROUTE_TYPE_VALUES)
+  routeType?: string;
+
+  @ApiPropertyOptional({ description: 'Địa chỉ đón khách (with_driver)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  pickupAddress?: string;
+
+  @ApiPropertyOptional({ description: 'Điểm đến (with_driver liên tỉnh)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  destination?: string;
 
   @ApiProperty({ description: 'Nhận xe (ISO-8601)' })
   @IsDateString()
@@ -222,6 +253,24 @@ export class UpdateBookingDto {
   @IsOptional()
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
+
+  /** Sửa hành trình (with_driver). Đổi dịch vụ khỏi with_driver thì service tự clear cả ba. */
+  @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(ROUTE_TYPE_VALUES)
+  routeType?: string;
+
+  @ApiPropertyOptional({ description: 'Địa chỉ đón khách (with_driver)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  pickupAddress?: string;
+
+  @ApiPropertyOptional({ description: 'Điểm đến (with_driver liên tỉnh)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  destination?: string;
 
   @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601)' })
   @IsOptional()

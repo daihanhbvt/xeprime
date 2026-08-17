@@ -40,6 +40,13 @@ export class ContractRentalDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
   @ApiProperty({ description: 'Số ngày thuê (làm tròn lên)' }) days!: number;
+  /**
+   * Hành trình chuyến CÓ TÀI XẾ, đóng băng từ đơn lúc lập hợp đồng (17/08). Optional vì
+   * snapshot đã ký trước đó không có các key này — FE chỉ render khi tồn tại.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true }) routeType?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) pickupAddress?: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) destination?: string | null;
 }
 
 export class ContractPricingDto {

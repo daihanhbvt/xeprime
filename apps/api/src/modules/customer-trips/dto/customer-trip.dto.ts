@@ -144,6 +144,12 @@ export class CustomerTripListItemDto {
 
   @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
   @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
+  /** Dịch vụ của chuyến (@xeprime/types ServiceType) — tự lái / có tài xế / dài hạn. */
+  @ApiProperty() serviceType!: string;
+  /** Hành trình chuyến CÓ TÀI XẾ — null với dịch vụ khác. Đơn thắng yêu cầu nếu shop có sửa. */
+  @ApiPropertyOptional({ type: String, nullable: true }) routeType!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) pickupAddress!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) destination!: string | null;
   @ApiProperty() deliveryRequested!: boolean;
   @ApiPropertyOptional({ type: String, nullable: true }) deliveryAddress!: string | null;
 

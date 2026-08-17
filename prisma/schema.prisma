@@ -903,6 +903,14 @@ model Booking {
   /// canTransitionBooking(), không cho client set tự do.
   status         String    @default("reserved") @db.VarChar(50)
   serviceType    String    @default("self_drive") @map("service_type") @db.VarChar(50)
+  /// @xeprime/types → RouteType — hành trình chuyến CÓ TÀI XẾ (copy từ yêu cầu khi duyệt,
+  /// nhập tay khi shop tự lập đơn). CHECK DB: cả ba trường hành trình chỉ khác NULL khi
+  /// service_type = with_driver.
+  routeType      String?   @map("route_type") @db.VarChar(30)
+  /// Địa chỉ đón khách (with_driver — xe đến đón, khác luồng giao xe tự lái).
+  pickupAddress  String?   @map("pickup_address") @db.Text
+  /// Điểm đến (with_driver liên tỉnh).
+  destination    String?   @db.Text
   pickupAt       DateTime  @map("pickup_at") @db.Timestamptz(3)
   returnAt       DateTime  @map("return_at") @db.Timestamptz(3)
   actualPickupAt DateTime? @map("actual_pickup_at") @db.Timestamptz(3)

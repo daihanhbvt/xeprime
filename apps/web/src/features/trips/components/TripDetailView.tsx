@@ -9,8 +9,11 @@ import {
   API_ERROR_CODE,
   CUSTOMER_TRIP_STAGE,
   CUSTOMER_TRIP_STAGE_META,
+  SERVICE_TYPE,
   customerTripTimeline,
   isCustomerTripClosed,
+  routeTypeLabel,
+  serviceTypeLabel,
   type CustomerTripStage,
 } from '@xeprime/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
@@ -202,6 +205,13 @@ export function TripDetailView({ tripId }: { tripId: string }) {
             <h2 className={styles.blockTitle}>Thời gian &amp; địa điểm nhận xe</h2>
             <dl className={styles.rows}>
               <div className={styles.row}>
+                <dt>Dịch vụ</dt>
+                <dd>
+                  {serviceTypeLabel(data.serviceType)}
+                  {data.routeType ? ` · ${routeTypeLabel(data.routeType)}` : ''}
+                </dd>
+              </div>
+              <div className={styles.row}>
                 <dt>Nhận xe</dt>
                 <dd>{formatRentalPoint(dayjs(data.pickupAt))}</dd>
               </div>
@@ -214,15 +224,31 @@ export function TripDetailView({ tripId }: { tripId: string }) {
                 <dd>{formatRentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
               </div>
             </dl>
-            <p className={styles.pickupMethod}>
-              <EnvironmentOutlined aria-hidden="true" />
-              <span>
-                <b>{data.deliveryRequested ? 'Giao xe tận nơi' : 'Nhận tại đại lý'}</b>
-                {data.deliveryRequested && data.deliveryAddress ? (
-                  <span className={styles.address}>{data.deliveryAddress}</span>
-                ) : null}
-              </span>
-            </p>
+            {/* Chuyến CÓ TÀI XẾ: xe đến đón — hiện hành trình thay cho hình thức nhận xe. */}
+            {data.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
+              <p className={styles.pickupMethod}>
+                <EnvironmentOutlined aria-hidden="true" />
+                <span>
+                  <b>Xe đón tận nơi</b>
+                  {data.pickupAddress ? (
+                    <span className={styles.address}>Điểm đón: {data.pickupAddress}</span>
+                  ) : null}
+                  {data.destination ? (
+                    <span className={styles.address}>Điểm đến: {data.destination}</span>
+                  ) : null}
+                </span>
+              </p>
+            ) : (
+              <p className={styles.pickupMethod}>
+                <EnvironmentOutlined aria-hidden="true" />
+                <span>
+                  <b>{data.deliveryRequested ? 'Giao xe tận nơi' : 'Nhận tại đại lý'}</b>
+                  {data.deliveryRequested && data.deliveryAddress ? (
+                    <span className={styles.address}>{data.deliveryAddress}</span>
+                  ) : null}
+                </span>
+              </p>
+            )}
           </section>
 
           {/* Mốc THỰC TẾ chỉ có ý nghĩa sau chuyến — và chỉ hiện khi thật sự được ghi nhận. */}
