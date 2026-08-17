@@ -40,6 +40,7 @@ import {
   type VehicleSourceType,
 } from '@xeprime/types';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
+import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
 import { ROUTES, VEHICLE_EDIT_TAB, vehiclePath, vehicleTabPath } from '@/constants/routes';
@@ -490,7 +491,7 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
           <div className={styles.kvRow}>
             <dt>Giảm giá</dt>
             <dd>
-              <Tag color="red">-{vehicle.discountPercent}%</Tag>
+              <DiscountTag percent={vehicle.discountPercent} />
             </dd>
           </div>
         ) : null}

@@ -6,8 +6,8 @@ import { normalizePhone } from '../src/common/phone';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
 /**
- * Passwordless: `AuthService.resolveOrCreateUserByPhone` — nền của đăng nhập bằng SĐT + luồng
- * đặt xe của khách vãng lai. Chạy trên PostgreSQL THẬT. Kiểm chứng bất biến:
+ * Tài khoản theo SĐT: đăng ký mật khẩu và `resolveOrCreateUserByPhone` — nền của đăng nhập OTP
+ * + luồng đặt xe của khách vãng lai. Chạy trên PostgreSQL THẬT. Kiểm chứng bất biến:
  *  - SĐT mới → tạo user (passwordHash null, phone_verified_at set, identity provider phone_otp).
  *  - SĐT đã có → KHÔNG tạo trùng, trả cùng userId (users.phone @unique).
  *  - Tài khoản bị khoá → ACCOUNT_LOCKED.
@@ -24,13 +24,7 @@ const config = {
 } as unknown as ConfigService;
 
 // resolveOrCreateUserByPhone chỉ dùng this.prisma — verifier/rbac/email không được chạm tới.
-const auth = new AuthService(
-  asService,
-  null as never,
-  null as never,
-  null as never,
-  config,
-);
+const auth = new AuthService(asService, null as never, null as never, null as never, config);
 
 let dbAvailable = false;
 const usedPhones = new Set<string>();
@@ -66,6 +60,39 @@ const maybe = (name: string, fn: () => Promise<void>) =>
     if (!dbAvailable) return;
     await fn();
   });
+
+describe('Phone + password registration', () => {
+  maybe('đăng ký lưu SĐT chuẩn hoá + identity password và đăng nhập được ngay', async () => {
+    const phone = mkPhone();
+    const norm = normalizePhone(phone);
+    const { userId } = await auth.register({
+      displayName: 'Khách Đăng Ký',
+      phone,
+      password: 'matkhau123',
+    });
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    expect(user.phone).toBe(norm);
+    expect(user.email).toBeNull();
+    expect(user.phoneVerifiedAt).toBeNull();
+    expect(user.passwordHash).not.toBeNull();
+
+    const identity = await prisma.userIdentity.findUnique({
+      where: { provider_providerUserId: { provider: 'password', providerUserId: norm } },
+    });
+    expect(identity?.providerPhone).toBe(norm);
+    expect((await auth.loginWithPassword(phone, 'matkhau123')).userId).toBe(userId);
+  });
+
+  maybe('không cho đăng ký trùng cùng SĐT', async () => {
+    const phone = mkPhone();
+    await auth.register({ displayName: 'Khách A', phone, password: 'matkhau123' });
+
+    await expect(
+      auth.register({ displayName: 'Khách B', phone, password: 'matkhau123' }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.PHONE_TAKEN } });
+  });
+});
 
 describe('Passwordless phone account (resolveOrCreateUserByPhone)', () => {
   maybe('SĐT mới → tạo user passwordless + identity phone_otp', async () => {
@@ -110,7 +137,9 @@ describe('Passwordless phone account (resolveOrCreateUserByPhone)', () => {
   maybe('setPassword: đặt được khi chưa có mật khẩu; đặt lần 2 → CONFLICT', async () => {
     const phone = mkPhone();
     const { userId } = await auth.resolveOrCreateUserByPhone(phone);
-    expect((await prisma.user.findUniqueOrThrow({ where: { id: userId } })).passwordHash).toBeNull();
+    expect(
+      (await prisma.user.findUniqueOrThrow({ where: { id: userId } })).passwordHash,
+    ).toBeNull();
 
     await auth.setPassword(userId, 'matkhau123');
     expect(
@@ -122,19 +151,22 @@ describe('Passwordless phone account (resolveOrCreateUserByPhone)', () => {
     });
   });
 
-  maybe('đăng nhập bằng SĐT + mật khẩu (sau khi đã đặt); sai mật khẩu → INVALID_CREDENTIALS', async () => {
-    const phone = mkPhone();
-    const { userId } = await auth.resolveOrCreateUserByPhone(phone);
-    await auth.setPassword(userId, 'matkhau123');
+  maybe(
+    'đăng nhập bằng SĐT + mật khẩu (sau khi đã đặt); sai mật khẩu → INVALID_CREDENTIALS',
+    async () => {
+      const phone = mkPhone();
+      const { userId } = await auth.resolveOrCreateUserByPhone(phone);
+      await auth.setPassword(userId, 'matkhau123');
 
-    // Định danh là SĐT (không có '@') → tra theo users.phone.
-    const ok = await auth.loginWithPassword(phone, 'matkhau123');
-    expect(ok.userId).toBe(userId);
+      // Định danh là SĐT (không có '@') → tra theo users.phone.
+      const ok = await auth.loginWithPassword(phone, 'matkhau123');
+      expect(ok.userId).toBe(userId);
 
-    await expect(auth.loginWithPassword(phone, 'saibet123')).rejects.toMatchObject({
-      response: { code: API_ERROR_CODE.INVALID_CREDENTIALS },
-    });
-  });
+      await expect(auth.loginWithPassword(phone, 'saibet123')).rejects.toMatchObject({
+        response: { code: API_ERROR_CODE.INVALID_CREDENTIALS },
+      });
+    },
+  );
 
   maybe('tài khoản bị khoá → ACCOUNT_LOCKED', async () => {
     const phone = mkPhone();

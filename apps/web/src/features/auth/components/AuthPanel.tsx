@@ -1,6 +1,14 @@
 'use client';
 
-import { FacebookFilled, GoogleOutlined, LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  FacebookFilled,
+  GoogleOutlined,
+  LockOutlined,
+  MailOutlined,
+  MobileOutlined,
+  PhoneOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, Button, Divider, Tabs } from 'antd';
 import Link from 'next/link';
@@ -86,9 +94,12 @@ export function AuthPanel({
 
   if (passwordPrompt) {
     return (
-      <SetPasswordPrompt
-        onDone={() => void finish(passwordPrompt, false)}
-      />
+      <div className={styles.panel}>
+        <SetPasswordPrompt
+          primaryActionClassName={styles.submit}
+          onDone={() => void finish(passwordPrompt, false)}
+        />
+      </div>
     );
   }
 
@@ -101,9 +112,7 @@ export function AuthPanel({
           busy={busy}
           pending={pending === 'register'}
           autoFocus={autoFocus}
-          onSubmit={(values) =>
-            run('register', () => registerWithPassword(values), true)
-          }
+          onSubmit={(values) => run('register', () => registerWithPassword(values), true)}
         />
       ) : (
         <Tabs
@@ -113,7 +122,11 @@ export function AuthPanel({
           items={[
             {
               key: 'password',
-              label: 'Email / SĐT',
+              label: (
+                <span className={styles.tabLabel}>
+                  <MailOutlined /> Email / SĐT
+                </span>
+              ),
               children: (
                 <PasswordForm
                   busy={busy}
@@ -127,7 +140,11 @@ export function AuthPanel({
             },
             {
               key: 'otp',
-              label: 'Đăng nhập OTP',
+              label: (
+                <span className={styles.tabLabel}>
+                  <MobileOutlined /> Đăng nhập OTP
+                </span>
+              ),
               children: (
                 <PhoneLoginForm
                   onSuccess={(user) => {
@@ -151,7 +168,13 @@ export function AuthPanel({
               <Button
                 key={provider}
                 className={styles.oauthBtn}
-                icon={provider === AUTH_PROVIDER.GOOGLE ? <GoogleOutlined /> : <FacebookFilled />}
+                icon={
+                  provider === AUTH_PROVIDER.GOOGLE ? (
+                    <GoogleOutlined className={styles.googleIcon} />
+                  ) : (
+                    <FacebookFilled className={styles.facebookIcon} />
+                  )
+                }
                 block
                 size="large"
                 loading={pending === provider}
@@ -227,7 +250,7 @@ function PasswordForm({
         control={control}
         name="identifier"
         label="Email hoặc số điện thoại"
-        placeholder="ban@congty.vn hoặc 0901234567"
+        placeholder="Nhập email hoặc số điện thoại"
         autoComplete="username"
         prefix={<MailOutlined />}
         autoFocus={autoFocus}
@@ -270,11 +293,11 @@ function RegisterForm({
   busy: boolean;
   pending: boolean;
   autoFocus: boolean;
-  onSubmit: (values: { displayName: string; email: string; password: string }) => void;
+  onSubmit: (values: { displayName: string; phone: string; password: string }) => void;
 }) {
   const { control, handleSubmit } = useForm<RegisterValues>({
     resolver: yupResolver(registerSchema),
-    defaultValues: { displayName: '', email: '', password: '', confirmPassword: '' },
+    defaultValues: { displayName: '', phone: '', password: '', confirmPassword: '' },
   });
 
   return (
@@ -282,7 +305,7 @@ function RegisterForm({
       onSubmit={handleSubmit((values) =>
         onSubmit({
           displayName: values.displayName,
-          email: values.email,
+          phone: values.phone,
           password: values.password,
         }),
       )}
@@ -292,19 +315,19 @@ function RegisterForm({
         control={control}
         name="displayName"
         label="Họ tên"
-        placeholder="Nguyễn Văn A"
+        placeholder="Nhập họ và tên"
         autoComplete="name"
         prefix={<UserOutlined />}
         autoFocus={autoFocus}
       />
       <TextField
         control={control}
-        name="email"
-        label="Email"
-        type="email"
-        placeholder="ban@congty.vn"
-        autoComplete="email"
-        prefix={<MailOutlined />}
+        name="phone"
+        label="Số điện thoại"
+        type="tel"
+        placeholder="Nhập số điện thoại"
+        autoComplete="tel"
+        prefix={<PhoneOutlined />}
       />
       <TextField
         control={control}

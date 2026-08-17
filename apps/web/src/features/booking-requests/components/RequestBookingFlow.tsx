@@ -38,6 +38,7 @@ import {
   type ServiceType,
 } from '@xeprime/types';
 import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
+import { DiscountTag } from '@/components/data-display/DiscountTag';
 import {
   RentalDateTimeRangeField,
   type RentalMode,
@@ -698,7 +699,7 @@ export function RequestBookingFlow({
                       value === SERVICE_TYPE.LONG_TERM && longTermPercent != null ? (
                         <span className={styles.serviceOption}>
                           {serviceTypeLabel(value)}
-                          <span className={styles.savingsBadge}>-{longTermPercent}%</span>
+                          <DiscountTag percent={longTermPercent} size="sm" />
                         </span>
                       ) : (
                         serviceTypeLabel(value)
@@ -759,7 +760,11 @@ export function RequestBookingFlow({
                         onClick={() => selectPackage(months)}
                       >
                         {percent != null ? (
-                          <span className={styles.packageBadge}>-{percent}%</span>
+                          <DiscountTag
+                            percent={percent}
+                            size="sm"
+                            className={styles.packageBadge}
+                          />
                         ) : null}
                         {months} tháng
                       </button>
@@ -878,7 +883,7 @@ export function RequestBookingFlow({
                     Giá thuê xe · {serviceTypeLabel(watchedService)}
                   </span>
                   {!isWithDriver && !isLongTerm && promoPercent > 0 ? (
-                    <span className={styles.promoTag}>Giảm {promoPercent}%</span>
+                    <DiscountTag percent={promoPercent} />
                   ) : null}
                 </div>
                 <div className={styles.priceCardRows}>

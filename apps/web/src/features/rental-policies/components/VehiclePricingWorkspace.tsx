@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useForm, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { LONG_TERM_MIN_DAYS, POLICY_SOURCE, SERVICE_TYPE } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
+import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { ROUTES } from '@/constants/routes';
 import { formatMoneyVnd } from '@/lib/money';
@@ -432,7 +433,7 @@ function DirectDiscountEditor({
                 <span className={styles.previewOldPrice}>
                   {formatMoneyVnd(String(weekdayPrice))}
                 </span>
-                <span className={styles.previewDiscount}>-{discountPercent}%</span>
+                <DiscountTag percent={discountPercent} />
               </div>
               <div className={styles.previewFinalPrice}>
                 {formatMoneyVnd(discountedWeekday)} <small>/ngày</small>
@@ -526,8 +527,12 @@ function InheritedSummary({
             </div>
             <div className={styles.summaryRow}>
               <dt>Khuyến mãi trực tiếp</dt>
-              <dd className={pricing.discountPercent ? styles.summaryDiscount : undefined}>
-                {pricing.discountPercent ? `-${pricing.discountPercent}%` : 'Tắt'}
+              <dd>
+                {pricing.discountPercent ? (
+                  <DiscountTag percent={pricing.discountPercent} />
+                ) : (
+                  'Tắt'
+                )}
               </dd>
             </div>
             {discountedWeekday ? (

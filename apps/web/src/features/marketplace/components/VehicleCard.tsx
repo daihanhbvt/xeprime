@@ -16,6 +16,7 @@ import {
   type VehicleType,
 } from '@xeprime/types';
 import { listingPath, shopPath } from '@/constants/routes';
+import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
@@ -128,7 +129,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
             {extraServiceCount > 0 ? ` +${extraServiceCount}` : ''}
           </span>
         ) : null}
-        {discount > 0 ? <span className={styles.discountBadge}>-{discount}%</span> : null}
+        {discount > 0 ? <DiscountTag percent={discount} className={styles.discountBadge} /> : null}
         <button className={styles.fav} type="button" aria-label="Lưu xe">
           <HeartOutlined />
         </button>

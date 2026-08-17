@@ -9,6 +9,7 @@ import {
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
+import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { shopPath } from '@/constants/routes';
 import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
@@ -123,9 +124,7 @@ export function ListingDetailView({
                     <span>/tháng</span>
                   </div>
                   <div className={styles.priceDetails}>
-                    <span className={styles.weekend}>
-                      Thuê tối thiểu {LONG_TERM_MIN_DAYS} ngày · ước tính = số ngày × giá tháng ÷ 30
-                    </span>
+                    <span className={styles.weekend}>Thuê tối thiểu {LONG_TERM_MIN_DAYS} ngày</span>
                   </div>
                 </>
               ) : (
@@ -176,7 +175,7 @@ export function ListingDetailView({
                 {discount > 0 && listing.weekdayPrice ? (
                   <>
                     <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
-                    <span className={styles.discountTag}>-{discount}%</span>
+                    <DiscountTag percent={discount} />
                   </>
                 ) : null}
                 <b>{formatMoneyVnd(displayPrice)}</b>

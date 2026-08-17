@@ -29,54 +29,66 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  // ---- Đăng ký / đăng nhập email-mật khẩu -----------------------------------
+  // ---- Đăng ký / đăng nhập bằng định danh + mật khẩu ------------------------
 
   /**
-   * Đăng ký bằng email + mật khẩu. Email lưu chữ thường để tra cứu nhất quán.
+   * Đăng ký bằng SĐT + mật khẩu. SĐT được chuẩn hoá về dạng `84xxxxxxxxx` trước khi lưu.
    * Tạo user + identity(provider='password') trong một transaction.
    */
   async register(input: {
-    email: string;
+    phone: string;
     password: string;
     displayName: string;
   }): Promise<{ userId: string }> {
-    const email = input.email.trim().toLowerCase();
+    const phone = normalizePhone(input.phone);
 
     const existing = await this.prisma.user.findFirst({
-      where: { email, deletedAt: null },
+      where: { phone, deletedAt: null },
       select: { id: true },
     });
     if (existing) {
       throw new ConflictException({
-        code: API_ERROR_CODE.EMAIL_TAKEN,
-        message: 'Email này đã được đăng ký',
+        code: API_ERROR_CODE.PHONE_TAKEN,
+        message: 'Số điện thoại này đã được đăng ký',
       });
     }
 
     const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
     const userId = newId();
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.user.create({
-        data: {
-          id: userId,
-          email,
-          displayName: input.displayName.trim(),
-          passwordHash,
-          status: USER_STATUS.ACTIVE,
-          lastLoginAt: new Date(),
-        },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.create({
+          data: {
+            id: userId,
+            phone,
+            displayName: input.displayName.trim(),
+            passwordHash,
+            status: USER_STATUS.ACTIVE,
+            lastLoginAt: new Date(),
+          },
+        });
+        await tx.userIdentity.create({
+          data: {
+            id: newId(),
+            userId,
+            provider: 'password',
+            providerUserId: phone,
+            providerPhone: phone,
+          },
+        });
       });
-      await tx.userIdentity.create({
-        data: {
-          id: newId(),
-          userId,
-          provider: 'password',
-          providerUserId: email,
-          providerEmail: email,
-        },
-      });
-    });
+    } catch (err) {
+      // Hai request cùng SĐT có thể cùng vượt qua pre-check. Unique constraint là chốt thật;
+      // đổi P2002 thành lỗi nghiệp vụ ổn định thay vì để lộ lỗi DB 500.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException({
+          code: API_ERROR_CODE.PHONE_TAKEN,
+          message: 'Số điện thoại này đã được đăng ký',
+        });
+      }
+      throw err;
+    }
 
     return { userId };
   }

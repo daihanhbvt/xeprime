@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { VN_PHONE_PATTERN } from '@xeprime/types';
 
 const PASSWORD_MIN = 8;
 
@@ -22,10 +23,10 @@ export class RegisterDto extends PasswordField {
   @MaxLength(255)
   displayName!: string;
 
-  @ApiProperty({ example: 'ban@congty.vn' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
-  @IsEmail({}, { message: 'Email không hợp lệ' })
-  email!: string;
+  @ApiProperty({ example: '0901234567' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  phone!: string;
 }
 
 export class LoginDto {

@@ -3,6 +3,7 @@
 import { Form, Input } from 'antd';
 import { useId, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
+import styles from './field.module.css';
 
 interface TextFieldProps<T extends FieldValues> {
   control: Control<T>;
@@ -12,7 +13,7 @@ interface TextFieldProps<T extends FieldValues> {
    * dựng lấy, thay vì common code phải biết quy ước của từng feature.
    */
   label: ReactNode;
-  type?: 'text' | 'email' | 'password';
+  type?: 'text' | 'email' | 'password' | 'tel';
   placeholder?: string;
   autoComplete?: string;
   prefix?: ReactNode;
@@ -55,6 +56,7 @@ export function TextField<T extends FieldValues>({
     id: inputId,
     placeholder,
     autoComplete,
+    inputMode: type === 'tel' ? ('tel' as const) : undefined,
     autoFocus,
     prefix,
     disabled,
@@ -70,12 +72,12 @@ export function TextField<T extends FieldValues>({
       required={required}
       validateStatus={fieldState.error ? 'error' : ''}
       help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
-      style={{ marginBottom: 14 }}
+      className={styles.item}
     >
       {type === 'password' ? (
         <Input.Password {...shared} />
       ) : (
-        <Input {...shared} type={type === 'email' ? 'email' : 'text'} />
+        <Input {...shared} type={type === 'email' ? 'email' : type === 'tel' ? 'tel' : 'text'} />
       )}
     </Form.Item>
   );

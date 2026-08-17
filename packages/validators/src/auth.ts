@@ -1,10 +1,11 @@
 import * as yup from 'yup';
+import { requiredPhoneSchema } from './phone';
 
 /**
- * Yup schema cho đăng nhập/đăng ký email-mật khẩu.
+ * Yup schema cho đăng nhập/đăng ký bằng định danh + mật khẩu.
  *
  * Dùng chung tên field với DTO backend (class-validator) để hai lớp không lệch. Đây là lớp
- * báo lỗi sớm cho người dùng; ràng buộc thật (email unique, hash mật khẩu) ở backend.
+ * báo lỗi sớm cho người dùng; ràng buộc thật (SĐT unique, hash mật khẩu) ở backend.
  */
 
 export const PASSWORD_MIN = 8;
@@ -24,17 +25,14 @@ export const requiredEmailSchema = yup
   .required('Vui lòng nhập email');
 
 export const loginSchema = yup.object({
-  identifier: yup
-    .string()
-    .trim()
-    .required('Vui lòng nhập email hoặc số điện thoại'),
+  identifier: yup.string().trim().required('Vui lòng nhập email hoặc số điện thoại'),
   password: yup.string().required('Vui lòng nhập mật khẩu'),
 });
 export type LoginValues = yup.InferType<typeof loginSchema>;
 
 export const registerSchema = yup.object({
   displayName: yup.string().trim().required('Vui lòng nhập họ tên').max(255),
-  email: requiredEmailSchema,
+  phone: requiredPhoneSchema,
   password: passwordSchema,
   confirmPassword: yup
     .string()

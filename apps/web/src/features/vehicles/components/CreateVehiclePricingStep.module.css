@@ -83,10 +83,10 @@
 }
 
 .previewChip {
-  padding: 2px var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-primary-light);
-  color: var(--xp-color-text);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
 }
 

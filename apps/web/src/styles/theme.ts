@@ -78,6 +78,9 @@ export const XP_TOKENS = {
   'color-info-bg': '#eff6ff', // 14:87
   'color-neutral': '#6b6560',
   'color-neutral-bg': '#f5f3ef',
+  // Cam san hô dành riêng cho tag khuyến mãi — giảm giá không mang nghĩa error/warning.
+  'color-discount': '#ff5a2c',
+  'color-discount-contrast': '#ffffff',
 
   // ─── Vỏ portal ────────────────────────────────────────────────────────────
   // P1 đã chốt "TỐI" (07/08/2026) và Wave 1D-B đã áp dụng.

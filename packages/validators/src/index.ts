@@ -26,13 +26,7 @@ import {
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 
-/** SĐT Việt Nam: 0xxxxxxxxx hoặc +84xxxxxxxxx. */
-export const phoneSchema = yup
-  .string()
-  .trim()
-  .matches(/^(0|\+84)\d{9}$/, 'Số điện thoại không hợp lệ');
-
-export const requiredPhoneSchema = phoneSchema.required('Vui lòng nhập số điện thoại');
+export { phoneSchema, requiredPhoneSchema } from './phone';
 
 export const emailSchema = yup.string().trim().email('Email không hợp lệ');
 

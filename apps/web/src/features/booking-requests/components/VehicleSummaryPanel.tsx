@@ -14,6 +14,7 @@ import { cx } from '@/lib/cx';
 import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
 import { maskPhone } from '@/features/phone-verification/mask';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
+import { DiscountTag } from '@/components/data-display/DiscountTag';
 import styles from './VehicleSummaryPanel.module.css';
 
 interface VerifiedContact {
@@ -121,7 +122,7 @@ export function VehicleSummaryPanel({
             {listing ? (
               <span className={styles.badge}>{serviceTypesLabel(listing.serviceTypes ?? [])}</span>
             ) : null}
-            {discount > 0 ? <span className={styles.badgePromo}>Khuyến mãi</span> : null}
+            {discount > 0 ? <DiscountTag percent={discount} size="sm" /> : null}
           </div>
           <h3 className={styles.name}>{name}</h3>
           {listing ? (

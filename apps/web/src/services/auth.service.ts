@@ -3,7 +3,7 @@ import type { CurrentTenantSummary, CurrentUser } from '@/hooks/use-current-user
 
 export interface RegisterInput {
   displayName: string;
-  email: string;
+  phone: string;
   password: string;
 }
 
@@ -21,8 +21,8 @@ export const AUTH_PROVIDER = {
 export type AuthProvider = (typeof AUTH_PROVIDER)[keyof typeof AUTH_PROVIDER];
 
 export const AUTH_PROVIDER_LABEL: Readonly<Record<AuthProvider, string>> = {
-  [AUTH_PROVIDER.GOOGLE]: 'Đăng nhập với Google',
-  [AUTH_PROVIDER.FACEBOOK]: 'Đăng nhập với Facebook',
+  [AUTH_PROVIDER.GOOGLE]: 'Google',
+  [AUTH_PROVIDER.FACEBOOK]: 'Facebook',
 };
 
 const FIREBASE_NOT_WIRED_MESSAGE =
@@ -52,7 +52,7 @@ export function fetchCurrentUser(): Promise<CurrentUser> {
   return apiGet<CurrentUser>('/auth/me');
 }
 
-// --- Đăng nhập/đăng ký email-mật khẩu (độc lập Firebase) ---
+// --- Đăng nhập/đăng ký bằng định danh + mật khẩu (độc lập Firebase) ---
 
 /** POST /auth/register — tạo tài khoản rồi backend set cookie luôn (đăng nhập ngay). */
 export function registerWithPassword(input: RegisterInput): Promise<CurrentUser> {

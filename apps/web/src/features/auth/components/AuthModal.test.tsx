@@ -36,7 +36,10 @@ vi.mock('@/services/auth.service', async () => {
 });
 
 // Ép nhánh desktop (Modal). Nhánh mobile là Drawer, kiểm bằng test riêng ở dưới.
-vi.mock('@/hooks/use-media-query', () => ({ useIsMobile: () => false, useMediaQuery: () => false }));
+vi.mock('@/hooks/use-media-query', () => ({
+  useIsMobile: () => false,
+  useMediaQuery: () => false,
+}));
 // Tab OTP không thuộc phạm vi test này và kéo theo cả cụm phone-verification.
 vi.mock('@/features/phone-verification/components/PhoneLoginForm', () => ({
   PhoneLoginForm: () => null,
@@ -45,8 +48,9 @@ vi.mock('@/features/phone-verification/components/PhoneLoginForm', () => ({
 const CUSTOMER = {
   id: 'U1',
   displayName: 'Khách A',
-  email: 'khach@xeprime.test',
+  email: null,
   avatarUrl: null,
+  phone: '0901234567',
   phoneVerified: false,
   hasPassword: true,
   tenant: null,
@@ -62,7 +66,9 @@ const CUSTOMER = {
  * lần trong DOM; test lọc lấy bản nhìn thấy được.
  */
 function visibleTitle(text: string): HTMLElement | undefined {
-  return screen.getAllByText(text).find((el) => !el.className.includes('srOnly'));
+  return screen
+    .getAllByText((_, element) => element?.textContent === text)
+    .find((el) => !el.className.includes('srOnly'));
 }
 
 function renderModal(search: string) {
@@ -82,8 +88,8 @@ function renderModal(search: string) {
 /** Điền form đăng ký rồi submit. */
 async function submitRegister() {
   fireEvent.change(screen.getByLabelText('Họ tên'), { target: { value: 'Khách A' } });
-  fireEvent.change(screen.getByLabelText('Email'), {
-    target: { value: 'khach@xeprime.test' },
+  fireEvent.change(screen.getByLabelText('Số điện thoại'), {
+    target: { value: '0901234567' },
   });
   fireEvent.change(screen.getByLabelText('Mật khẩu'), { target: { value: 'Abcd1234' } });
   fireEvent.change(screen.getByLabelText('Nhập lại mật khẩu'), {
@@ -136,6 +142,11 @@ describe('AuthModal — sau khi đăng ký', () => {
     await submitRegister();
 
     await waitFor(() => expect(screen.getByText('Tạo tài khoản thành công')).toBeTruthy());
+    expect(api.register).toHaveBeenCalledWith({
+      displayName: 'Khách A',
+      phone: '0901234567',
+      password: 'Abcd1234',
+    });
     expect(nav.push).not.toHaveBeenCalledWith('/manage');
     expect(screen.queryByText('Tạo gian hàng')).toBeNull();
     expect(screen.queryByText('Tên gian hàng')).toBeNull();

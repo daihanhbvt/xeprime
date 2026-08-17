@@ -228,19 +228,6 @@
   text-decoration: line-through;
 }
 
-.previewDiscount,
-.summaryDiscount {
-  color: var(--xp-color-error);
-  font-weight: var(--xp-font-weight-bold);
-}
-
-.previewDiscount {
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--xp-color-error-bg);
-  font-size: var(--xp-font-size-body-sm);
-}
-
 .previewFinalPrice {
   color: var(--xp-color-primary-active);
   font-size: 28px;

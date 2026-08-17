@@ -7,6 +7,9 @@
  * backend chặn — người dùng bấm gửi rồi ăn lỗi.
  */
 
+/** Dạng người dùng được phép nhập ở các form xác thực: `0xxxxxxxxx` hoặc `+84xxxxxxxxx`. */
+export const VN_PHONE_PATTERN = /^(0|\+84)\d{9}$/;
+
 /** `0xxxxxxxxx` / `+84xxxxxxxxx` → `84xxxxxxxxx`. Dạng LƯU của `users.phone`. */
 export function normalizeVnPhone(raw: string): string {
   const trimmed = raw.trim().replace(/[\s.-]/g, '');

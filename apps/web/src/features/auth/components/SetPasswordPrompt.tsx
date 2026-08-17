@@ -18,7 +18,14 @@ import styles from './SetPasswordPrompt.module.css';
  * "Bỏ qua" là bắt buộc: đặt mật khẩu chỉ để lần sau đăng nhập nhanh hơn, không phải điều kiện
  * để dùng sản phẩm. Đặt rồi thì lần sau BE trả `hasPassword: true` và bước này không hiện lại.
  */
-export function SetPasswordPrompt({ onDone }: { onDone: () => void }) {
+export function SetPasswordPrompt({
+  onDone,
+  primaryActionClassName,
+}: {
+  onDone: () => void;
+  /** Nhận đúng class nút chính của AuthPanel để mọi bước auth luôn cùng một giao diện. */
+  primaryActionClassName?: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const { control, handleSubmit } = useForm<ResetPasswordValues>({
     resolver: yupResolver(resetPasswordSchema),
@@ -32,10 +39,17 @@ export function SetPasswordPrompt({ onDone }: { onDone: () => void }) {
   });
 
   return (
-    <div>
-      <div className={styles.head}>
-        <div className={styles.title}>Đặt mật khẩu</div>
-        <div className={styles.sub}>Để lần sau đăng nhập nhanh bằng mật khẩu (tuỳ chọn).</div>
+    <section className={styles.prompt}>
+      <div className={styles.intro}>
+        <span className={styles.introIcon} aria-hidden="true">
+          <LockOutlined />
+        </span>
+        <div>
+          <h2 className={styles.title}>Đặt mật khẩu</h2>
+          <p className={styles.sub}>
+            Tạo mật khẩu để lần sau đăng nhập nhanh hơn. Bạn vẫn có thể dùng OTP nếu bỏ qua.
+          </p>
+        </div>
       </div>
 
       {error ? <Alert type="error" showIcon message={error} className={styles.alert} /> : null}
@@ -71,16 +85,16 @@ export function SetPasswordPrompt({ onDone }: { onDone: () => void }) {
           htmlType="submit"
           block
           size="large"
-          className={styles.submit}
+          className={primaryActionClassName}
           loading={save.isPending}
         >
           Đặt mật khẩu
         </Button>
       </form>
 
-      <Button type="link" block disabled={save.isPending} onClick={onDone}>
-        Bỏ qua
+      <Button type="text" block className={styles.skip} disabled={save.isPending} onClick={onDone}>
+        Bỏ qua, tiếp tục
       </Button>
-    </div>
+    </section>
   );
 }

@@ -30,6 +30,7 @@ import {
 } from '@xeprime/types';
 import { Segmented } from 'antd';
 import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
+import { DiscountTag } from '@/components/data-display/DiscountTag';
 import {
   RentalDateTimeRangeField,
   type RentalMode,
@@ -502,7 +503,7 @@ export function StaffBookingFlow({
                         percent != null ? (
                           <span className={styles.serviceOption}>
                             {serviceTypeLabel(value)}
-                            <span className={styles.savingsBadge}>-{percent}%</span>
+                            <DiscountTag percent={percent} size="sm" />
                           </span>
                         ) : (
                           serviceTypeLabel(value)

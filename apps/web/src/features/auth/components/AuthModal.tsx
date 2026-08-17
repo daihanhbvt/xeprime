@@ -7,8 +7,13 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { ROUTES } from '@/constants/routes';
 import { useIsMobile } from '@/hooks/use-media-query';
 import type { CurrentUser } from '@/hooks/use-current-user';
+import { cx } from '@/lib/cx';
 import { useAuthCache } from '../hooks/use-auth-actions';
-import { AUTH_MODE, resolveCustomerDestination, resolveOwnerCtaHref } from '../post-auth-destination';
+import {
+  AUTH_MODE,
+  resolveCustomerDestination,
+  resolveOwnerCtaHref,
+} from '../post-auth-destination';
 import { AuthPanel } from './AuthPanel';
 import { useAuthModal } from './AuthModalProvider';
 import { RegisterSuccess } from './RegisterSuccess';
@@ -92,10 +97,13 @@ export function AuthModal() {
     />
   ) : (
     <>
-      <div className={styles.head}>
-        <Logo size="md" />
+      <div className={cx(styles.head, mode === AUTH_MODE.REGISTER && styles.registerHead)}>
+        <Logo size="sm" />
         <div>
-          <div className={styles.title}>{copy.title}</div>
+          <div className={styles.title}>
+            {mode === AUTH_MODE.LOGIN ? 'Đăng nhập' : 'Tạo tài khoản'}{' '}
+            <span className={styles.brandName}>XePrime</span>
+          </div>
           <div className={styles.sub}>{copy.sub}</div>
         </div>
       </div>
@@ -130,6 +138,7 @@ export function AuthModal() {
       size="sm"
       mobileMode="sheet"
       footer={null}
+      className={styles.dialog}
       bodyClassName={styles.body}
     >
       {body}

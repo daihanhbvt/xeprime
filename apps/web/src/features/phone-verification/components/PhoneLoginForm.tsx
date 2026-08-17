@@ -4,16 +4,13 @@ import { Alert, Button, Form, Input } from 'antd';
 import { PhoneOutlined } from '@ant-design/icons';
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
-import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
+import { PHONE_VERIFICATION_PURPOSE, VN_PHONE_PATTERN } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
 import { phoneLogin, type CurrentUser } from '@/services/auth.service';
 import { usePhoneVerify } from '../hooks/use-phone-verify';
 import { maskPhone } from '../mask';
 import { OtpCodeInput } from './OtpCodeInput';
 import styles from './PhoneLoginForm.module.css';
-
-/** SĐT VN — bật nút gửi mã khi hợp lệ (xác thực thật ở BE). */
-const VN_PHONE_RE = /^(0|\+84)\d{9}$/;
 
 /**
  * Đăng nhập passwordless bằng SĐT + OTP: nhập SĐT → gửi mã → nhập mã → đăng nhập. OTP purpose
@@ -39,7 +36,7 @@ export function PhoneLoginForm({
     onError: (e) => setError(getErrorMessage(e)),
   });
 
-  const phoneValid = VN_PHONE_RE.test(phone.trim());
+  const phoneValid = VN_PHONE_PATTERN.test(phone.trim());
   const sent = vp.status === 'code_sent';
   const displayError = error ?? vp.error;
 

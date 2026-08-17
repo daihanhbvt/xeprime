@@ -47,7 +47,7 @@ export class AuthController {
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Đăng ký bằng email + mật khẩu' })
+  @ApiOperation({ summary: 'Đăng ký bằng số điện thoại + mật khẩu' })
   @ApiOkResponse({ type: MeDto })
   async register(
     @Body() dto: RegisterDto,

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Control } from 'react-hook-form';
 import { VEHICLE_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
+import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { ROUTES } from '@/constants/routes';
 import { formatMoneyVnd } from '@/lib/money';
 import { useShopPolicy } from '@/features/rental-policies/hooks/use-shop-policy';
@@ -77,8 +78,7 @@ function PolicyPreview({ values }: { values: RentalPolicyValues }) {
       <div className={styles.previewHeader}>
         <strong>Xem trước bảng giá áp dụng</strong>
         <span className={styles.previewSource}>
-          Theo chính sách gian hàng{' '}
-          <Link href={ROUTES.MANAGE.SHOP_POLICIES}>Xem chi tiết</Link>
+          Theo chính sách gian hàng <Link href={ROUTES.MANAGE.SHOP_POLICIES}>Xem chi tiết</Link>
         </span>
       </div>
       <dl className={styles.previewGrid}>
@@ -101,13 +101,11 @@ function PolicyPreview({ values }: { values: RentalPolicyValues }) {
       </dl>
       {values.discountEnabled && values.discountTiers.length > 0 ? (
         <div className={styles.previewDiscounts}>
-          <span className={styles.previewDiscountsLabel}>
-            Chính sách khuyến mãi theo thời gian
-          </span>
+          <span className={styles.previewDiscountsLabel}>Chính sách khuyến mãi theo thời gian</span>
           <span className={styles.previewChips}>
             {values.discountTiers.map((tier) => (
               <span key={tier.minDays} className={styles.previewChip}>
-                Từ {tier.minDays} ngày: -{tier.percent}%
+                Từ {tier.minDays} ngày <DiscountTag percent={tier.percent} size="sm" />
               </span>
             ))}
           </span>

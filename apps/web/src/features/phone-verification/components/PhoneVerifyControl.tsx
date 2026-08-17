@@ -4,13 +4,10 @@ import { CheckCircleFilled } from '@ant-design/icons';
 import { Alert, Button, Input } from 'antd';
 import { useEffect, useState } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
-import type { PhoneVerificationPurpose } from '@xeprime/types';
+import { VN_PHONE_PATTERN, type PhoneVerificationPurpose } from '@xeprime/types';
 import { TextField } from '@/components/form/TextField';
 import { usePhoneVerify } from '../hooks/use-phone-verify';
 import styles from './PhoneVerifyControl.module.css';
-
-/** SĐT VN — bật nút "Gửi mã" khi hợp lệ (nguồn xác thực thật vẫn ở BE). */
-const VN_PHONE_RE = /^(0|\+84)\d{9}$/;
 
 interface PhoneVerifyControlProps<T extends FieldValues> {
   control: Control<T>;
@@ -51,7 +48,7 @@ export function PhoneVerifyControl<T extends FieldValues>({
     onVerifiedChange(verified);
   }, [verified, onVerifiedChange]);
 
-  const phoneValid = VN_PHONE_RE.test(phone);
+  const phoneValid = VN_PHONE_PATTERN.test(phone);
 
   return (
     <div className={styles.wrap}>

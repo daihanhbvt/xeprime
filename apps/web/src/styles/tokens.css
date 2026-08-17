@@ -61,6 +61,10 @@
   --xp-color-neutral: #6b6560;
   --xp-color-neutral-bg: #f5f3ef;
 
+  /* Khuyến mãi: cam san hô theo mẫu UI 17/08; tách khỏi error vì giảm giá không phải lỗi. */
+  --xp-color-discount: #ff5a2c;
+  --xp-color-discount-contrast: #ffffff;
+
   /* ─── Vỏ portal (sidebar tối — P1 chốt "tối", áp dụng ở Wave 1D-B) ───── */
   --xp-shell-sidebar-bg: #1e1b16;
   --xp-shell-sidebar-text: #e8e4dd;
