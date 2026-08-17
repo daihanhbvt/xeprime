@@ -128,9 +128,8 @@ export function BookingRequestTable({
       ),
     },
     {
-      // CỐ Ý KHÔNG dùng `actionColumn`/`RowActions`: đây là cặp CTA duyệt/từ chối, không phải dải
-      // nút icon phụ. `RowActions` render `type="text"`, sẽ hạ nút "Duyệt" từ nút chính xuống
-      // chữ thường — mất hẳn thứ bậc thị giác của một quyết định tạo ra đơn thuê thật.
+      // CỐ Ý KHÔNG dùng `actionColumn`/`RowActions`: đây là cặp CTA quyết định duyệt/từ chối,
+      // nên giữ cả hai nút hiện trực tiếp và dùng màu ngữ nghĩa riêng.
       // Vẫn giữ `fixed: 'right'` + width cố định theo Figma `127:2060` R1–R2.
       title: 'Thao tác',
       key: 'actions',
@@ -139,7 +138,11 @@ export function BookingRequestTable({
       width: 270,
       render: (_, row) =>
         row.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL ? (
-          <Space size="small" onClick={(event) => event.stopPropagation()}>
+          <Space
+            size="small"
+            className={styles.actions}
+            onClick={(event) => event.stopPropagation()}
+          >
             <Popconfirm
               title="Duyệt và tạo đơn thuê?"
               description={
@@ -154,6 +157,7 @@ export function BookingRequestTable({
               <Button
                 type="primary"
                 size="small"
+                className={styles.actionButton}
                 icon={<CheckOutlined aria-hidden="true" />}
                 loading={actingId === row.id}
               >
@@ -170,6 +174,7 @@ export function BookingRequestTable({
               <Button
                 danger
                 size="small"
+                className={styles.actionButton}
                 icon={<CloseOutlined aria-hidden="true" />}
                 loading={actingId === row.id}
               >

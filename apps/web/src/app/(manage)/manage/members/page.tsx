@@ -154,7 +154,7 @@ export default function MembersPage() {
     actionColumn<Member>((row) => [
       {
         key: 'remove',
-        label: `Gỡ ${row.displayName}`,
+        label: 'Gỡ thành viên',
         icon: <DeleteOutlined />,
         danger: true,
         // Ba điều kiện y hệt trước migrate: có quyền, không phải chủ shop, không phải chính mình.

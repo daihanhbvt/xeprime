@@ -25,8 +25,8 @@ export interface RowAction {
    */
   showLabel?: boolean;
   /**
-   * Hành động chính của hàng/thẻ — nhận sắc thương hiệu ở `variant="filled"`.
-   * Chỉ có nghĩa khi cụm nút dùng nền màu; ở dạng chữ phẳng thì mọi nút trông như nhau.
+   * Hành động chính của hàng/thẻ — nhận sắc thương hiệu ở `variant="filled"`. Nếu không action
+   * nào khai rõ, action đầu tiên được xem là chính để mỗi hàng luôn có một điểm bấm nổi bật.
    */
   primary?: boolean;
   danger?: boolean;
@@ -62,10 +62,8 @@ interface RowActionsProps {
    */
   align?: 'start' | 'end';
   /**
-   * `'text'` (mặc định) — nút phẳng, đúng cột hành động của bảng nơi nền màu sẽ gây nhiễu.
-   * `'filled'` — nền màu nhạt, **không viền** (Figma `186:1713`, đo pixel: `#f9f5e7` cho hành
-   * động chính, `#efefee` cho hành động thường, `#fbe9e9` cho hành động phá huỷ). Dùng khi cụm
-   * nút đứng trên mặt thẻ và cần đọc ra ngay là bấm được.
+   * `'text'` (mặc định) — dành cho bề mặt phụ cần nút phẳng.
+   * `'filled'` — nút có nền, viền và độ nổi rõ; đây là biến thể chuẩn cho bảng và thẻ quản trị.
    */
   variant?: 'text' | 'filled';
 }
@@ -85,20 +83,34 @@ const decorative = decorativeIcon;
  * được (`#dc2626`) khớp `--xp-color-error` từng chữ số. Tự viết `background` sẽ phải nhân đôi
  * class để thắng specificity của AntD (bẫy D19) và vẫn hỏng ở trạng thái hover/disabled/loading.
  */
-function toneProps(action: RowAction, variant: 'text' | 'filled') {
+function toneProps(action: RowAction, variant: 'text' | 'filled', emphasized = false) {
   if (variant !== 'filled') return { type: 'text' as const, danger: action.danger };
-  if (action.danger) return { variant: 'filled' as const, color: 'danger' as const };
-  return action.primary
+  if (action.danger) {
+    return {
+      variant: 'filled' as const,
+      color: 'danger' as const,
+      className: styles.toneDanger,
+    };
+  }
+  return (action.primary ?? emphasized)
     ? { variant: 'filled' as const, color: 'primary' as const, className: styles.tonePrimary }
     : { variant: 'filled' as const, color: 'default' as const, className: styles.toneNeutral };
 }
 
-function ActionButton({ action, variant }: { action: RowAction; variant: 'text' | 'filled' }) {
+function ActionButton({
+  action,
+  variant,
+  emphasized,
+}: {
+  action: RowAction;
+  variant: 'text' | 'filled';
+  emphasized?: boolean;
+}) {
   const hasIcon = Boolean(action.icon);
   const showsText = action.showLabel !== false;
   const responsiveText = action.showLabel === undefined && hasIcon;
   const commonProps = {
-    ...toneProps(action, variant),
+    ...toneProps(action, variant, emphasized),
     size: 'small' as const,
     loading: action.loading,
     icon: decorative(action.icon),
@@ -208,7 +220,13 @@ export function RowActions({
   const trigger = (
     <Dropdown menu={{ items: menuItems }} trigger={['click']}>
       <Button
-        type="text"
+        {...(variant === 'filled'
+          ? {
+              variant: 'filled' as const,
+              color: 'default' as const,
+              className: `${styles.toneNeutral} ${styles.overflowButton}`,
+            }
+          : { type: 'text' as const, className: styles.overflowButton })}
         size="small"
         icon={decorative(<MoreOutlined />)}
         aria-label={overflowLabel}
@@ -229,8 +247,8 @@ export function RowActions({
       onClick={(event) => event.stopPropagation()}
       role="presentation"
     >
-      {inline.map((action) => (
-        <ActionButton key={action.key} action={action} variant={variant} />
+      {inline.map((action, index) => (
+        <ActionButton key={action.key} action={action} variant={variant} emphasized={index === 0} />
       ))}
       {overflow.length > 0 ? (
         pending ? (

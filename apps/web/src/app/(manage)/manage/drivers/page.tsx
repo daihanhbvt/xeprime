@@ -20,11 +20,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
 import { DRIVERS_DEFAULT_LIMIT } from '@/features/drivers/api';
 import { DriverFormModal } from '@/features/drivers/components/DriverFormModal';
-import {
-  useDeleteDriver,
-  useDrivers,
-  useUpdateDriver,
-} from '@/features/drivers/hooks/use-drivers';
+import { useDeleteDriver, useDrivers, useUpdateDriver } from '@/features/drivers/hooks/use-drivers';
 import type { Driver, DriverFilters } from '@/features/drivers/types';
 import styles from './drivers-page.module.css';
 
@@ -149,12 +145,14 @@ export default function DriversPage() {
       title: 'Trạng thái',
       key: 'status',
       width: 150,
-      render: (_, row) => <StatusTag value={row.status as DriverStatus} meta={DRIVER_STATUS_META} />,
+      render: (_, row) => (
+        <StatusTag value={row.status as DriverStatus} meta={DRIVER_STATUS_META} />
+      ),
     },
     actionColumn<Driver>((row) => [
       {
         key: 'edit',
-        label: `Sửa ${row.name}`,
+        label: 'Chỉnh sửa',
         icon: <EditOutlined />,
         hidden: !canManage,
         onClick: () => {
@@ -164,10 +162,7 @@ export default function DriversPage() {
       },
       {
         key: 'toggle',
-        label:
-          row.status === DRIVER_STATUS.ACTIVE
-            ? `Ngừng hoạt động ${row.name}`
-            : `Bật lại ${row.name}`,
+        label: row.status === DRIVER_STATUS.ACTIVE ? 'Ngừng hoạt động' : 'Bật lại',
         hidden: !canManage,
         loading: update.isPending && update.variables?.id === row.id,
         confirm:
@@ -182,7 +177,7 @@ export default function DriversPage() {
       },
       {
         key: 'remove',
-        label: `Xoá ${row.name}`,
+        label: 'Xoá',
         icon: <DeleteOutlined />,
         danger: true,
         hidden: !canManage,

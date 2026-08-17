@@ -281,6 +281,8 @@ describe('DataTable — cột hành động', () => {
     expect(container.querySelector('.ant-table-cell-fix-end')).toBeTruthy();
     // AntD tự dựng bóng phân tách khi còn nội dung bị che (Figma 127:2060 R4 / 127:2097 R5).
     expect(container.querySelector('.ant-table-cell-fix-end-shadow')).toBeTruthy();
+    // Action trong bảng phải trông như nút thật, không còn là chữ/icon phẳng.
+    expect(container.querySelector('.ant-btn-variant-filled')).toBeTruthy();
   });
 
   it('nút hành động có tên khả truy cập riêng cho từng hàng', () => {

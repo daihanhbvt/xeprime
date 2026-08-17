@@ -140,7 +140,7 @@ export default function AdminStaffPage() {
     actionColumn<Staff>((row) => [
       {
         key: 'remove',
-        label: `Gỡ ${row.displayName}`,
+        label: 'Gỡ nhân sự',
         icon: <DeleteOutlined />,
         danger: true,
         hidden: row.userId === me?.id,

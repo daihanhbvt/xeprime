@@ -17,13 +17,35 @@
 }
 
 /*
- * `variant="filled"` — Figma `186:1713` đặt bốn nút cách nhau đúng 6px.
- *
- * Màu nền do AntD lo qua cặp `color`/`variant`, nên ở đây chỉ còn khoảng cách — không phải nhân
- * đôi class để tranh specificity như khi tự viết `background` (bẫy D19).
+ * Nút thao tác có hình khối rõ trên cả nền trắng và nền zebra của bảng. Màu vẫn lấy hoàn toàn
+ * từ token; CSS chỉ củng cố viền, độ nổi và chuyển động tương tác quanh variant của AntD.
  */
 .filled {
-  gap: 6px;
+  gap: var(--xp-space-sm);
+}
+
+.filled :global(.ant-btn) {
+  min-height: 34px;
+  padding-inline: 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--xp-color-text) 10%, transparent);
+  font-weight: 600;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.filled :global(.ant-btn:not(:disabled):hover) {
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--xp-color-text) 14%, transparent);
+  transform: translateY(-1px);
+}
+
+.filled :global(.ant-btn:not(:disabled):active) {
+  box-shadow: none;
+  transform: translateY(0);
 }
 
 /*
@@ -37,14 +59,44 @@
  * Class nhân đôi để thắng specificity của AntD (bẫy D19); phải khai cả `:hover` vì nếu không,
  * quy tắc nền của AntD lúc hover sẽ kéo màu chữ về mặc định.
  */
-.tonePrimary.tonePrimary,
-.tonePrimary.tonePrimary:hover {
+.tonePrimary.tonePrimary:not(:disabled) {
+  border-color: color-mix(in srgb, var(--xp-color-primary) 42%, var(--xp-color-border));
+  background: var(--xp-color-primary-light);
   color: var(--xp-color-primary-active);
 }
 
-.toneNeutral.toneNeutral,
-.toneNeutral.toneNeutral:hover {
+.tonePrimary.tonePrimary:not(:disabled):hover {
+  border-color: var(--xp-color-primary);
+  background: color-mix(in srgb, var(--xp-color-primary) 18%, var(--xp-color-primary-light));
+  color: var(--xp-color-primary-active);
+}
+
+.toneNeutral.toneNeutral:not(:disabled) {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-muted);
   color: var(--xp-color-text-secondary);
+}
+
+.toneNeutral.toneNeutral:not(:disabled):hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+}
+
+.toneDanger.toneDanger:not(:disabled) {
+  border-color: color-mix(in srgb, var(--xp-color-error) 30%, var(--xp-color-border));
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.toneDanger.toneDanger:not(:disabled):hover {
+  border-color: var(--xp-color-error);
+  background: color-mix(in srgb, var(--xp-color-error) 12%, var(--xp-color-error-bg));
+  color: var(--xp-color-error);
+}
+
+.overflowButton {
+  flex: 0 0 auto;
 }
 
 /* Popconfirm cần một phần tử nhận ref; `span` này chỉ để bọc, không tạo hình. */
@@ -69,5 +121,6 @@
   .root :global(.ant-btn) {
     min-width: var(--xp-touch-target-min);
     min-height: var(--xp-touch-target-min);
+    padding-inline: 11px;
   }
 }

@@ -21,3 +21,30 @@
   color: var(--xp-color-text-secondary);
   white-space: nowrap;
 }
+
+/* Hai CTA quyết định vẫn theo cùng hình khối với RowActions: có nền/viền, đủ độ nổi và vùng chạm. */
+.actionButton.actionButton {
+  min-height: 34px;
+  padding-inline: 12px;
+  border-radius: var(--xp-border-radius);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--xp-color-text) 10%, transparent);
+  font-weight: 600;
+}
+
+.actions :global(.ant-btn-dangerous:not(:disabled)) {
+  border-color: color-mix(in srgb, var(--xp-color-error) 30%, var(--xp-color-border));
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.actions :global(.ant-btn-dangerous:not(:disabled):hover) {
+  border-color: var(--xp-color-error);
+  background: color-mix(in srgb, var(--xp-color-error) 12%, var(--xp-color-error-bg));
+  color: var(--xp-color-error);
+}
+
+@media (max-width: 640px) {
+  .actionButton.actionButton {
+    min-height: var(--xp-touch-target-min);
+  }
+}

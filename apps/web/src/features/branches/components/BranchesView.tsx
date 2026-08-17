@@ -167,17 +167,17 @@ export function BranchesView() {
     {
       title: 'Trạng thái',
       dataIndex: 'status',
-      width: 420,
+      width: 150,
       render: (v: BranchStatus) => <StatusTag value={v} meta={BRANCH_STATUS_META} />,
     },
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 150,
+      width: 420,
       // Cột hành động ghim mép phải: bảng cuộn ngang thì nút vẫn ở trong tầm với.
       fixed: 'right',
       // Desktop để ba thao tác thường dùng có nhãn rõ; thẻ mobile vẫn chỉ giữ hai icon rồi gom dư.
-      render: (_v, row) => <RowActions actions={actionsOf(row)} maxInline={3} />,
+      render: (_v, row) => <RowActions actions={actionsOf(row)} maxInline={3} variant="filled" />,
     },
   ];
 
@@ -279,7 +279,7 @@ export function BranchesView() {
             </div>
             {row.address ? <div className={styles.cardMeta}>{row.address}</div> : null}
             <div className={styles.cardMeta}>{row.vehicleCount} xe</div>
-            <RowActions actions={actionsOf(row)} align="start" maxInline={2} />
+            <RowActions actions={actionsOf(row)} align="start" maxInline={2} variant="filled" />
           </div>
         )}
       />

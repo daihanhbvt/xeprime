@@ -45,6 +45,24 @@ describe('RowActions — tên khả truy cập', () => {
 });
 
 describe('RowActions — chạy hành động', () => {
+  it('variant filled tạo hình nút rõ và tự nhấn hành động đầu tiên', () => {
+    render(
+      <RowActions
+        variant="filled"
+        maxInline={3}
+        actions={[
+          action({ key: 'view', label: 'Xem chi tiết' }),
+          action({ key: 'edit', label: 'Chỉnh sửa', icon: <EditOutlined /> }),
+          action({ key: 'delete', label: 'Xoá', icon: <DeleteOutlined />, danger: true }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Xem chi tiết' }).className).toContain('tonePrimary');
+    expect(screen.getByRole('button', { name: 'Chỉnh sửa' }).className).toContain('toneNeutral');
+    expect(screen.getByRole('button', { name: 'Xoá' }).className).toContain('toneDanger');
+  });
+
   it('bấm gọi onClick đúng một lần', () => {
     const onClick = vi.fn();
     render(<RowActions actions={[action({ onClick })]} />);

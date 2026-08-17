@@ -361,6 +361,8 @@ export function actionColumn<T>(
     fixed: 'right',
     width: options.width ?? 160,
     className: styles.actionsCell,
-    render: (_, row) => <RowActions actions={getActions(row)} maxInline={options.maxInline ?? 1} />,
+    render: (_, row) => (
+      <RowActions actions={getActions(row)} maxInline={options.maxInline ?? 1} variant="filled" />
+    ),
   };
 }
