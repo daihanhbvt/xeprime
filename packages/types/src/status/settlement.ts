@@ -11,7 +11,7 @@
  *    đánh dấu; XePrime không có cổng thanh toán và không được nói như thể có.
  */
 
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /** Danh mục phát sinh được phép. Cố ý KHÔNG có nhiên liệu (§8). */
 export const SURCHARGE_CATEGORY = {
@@ -25,10 +25,13 @@ export type SurchargeCategory = (typeof SURCHARGE_CATEGORY)[keyof typeof SURCHAR
 export const SURCHARGE_CATEGORY_VALUES = Object.values(SURCHARGE_CATEGORY) as SurchargeCategory[];
 
 export const SURCHARGE_CATEGORY_META: Readonly<Record<SurchargeCategory, StatusMeta>> = {
-  [SURCHARGE_CATEGORY.OVERTIME]: { label: 'Quá giờ', color: 'gold' },
-  [SURCHARGE_CATEGORY.CLEANING]: { label: 'Vệ sinh', color: 'blue' },
-  [SURCHARGE_CATEGORY.DAMAGE]: { label: 'Hư hại / bồi thường', color: 'red' },
-  [SURCHARGE_CATEGORY.OTHER]: { label: 'Khác', color: 'default' },
+  [SURCHARGE_CATEGORY.OVERTIME]: { label: 'Quá giờ', color: STATUS_COLOR.WAITING },
+  [SURCHARGE_CATEGORY.CLEANING]: { label: 'Vệ sinh', color: STATUS_COLOR.INFO },
+  [SURCHARGE_CATEGORY.DAMAGE]: {
+    label: 'Hư hại / bồi thường',
+    color: STATUS_COLOR.DANGER,
+  },
+  [SURCHARGE_CATEGORY.OTHER]: { label: 'Khác', color: STATUS_COLOR.NEUTRAL },
 };
 
 export const SURCHARGE_CATEGORY_LABEL: Readonly<Record<SurchargeCategory, string>> = {
@@ -96,13 +99,19 @@ export type DepositStatus = (typeof DEPOSIT_STATUS)[keyof typeof DEPOSIT_STATUS]
 export const DEPOSIT_STATUS_VALUES = Object.values(DEPOSIT_STATUS) as DepositStatus[];
 
 export const DEPOSIT_STATUS_META: Readonly<Record<DepositStatus, StatusMeta>> = {
-  [DEPOSIT_STATUS.NONE]: { label: 'Không có cọc', color: 'default' },
-  [DEPOSIT_STATUS.NOT_RECEIVED]: { label: 'Chưa ghi nhận đã thu cọc', color: 'default' },
-  [DEPOSIT_STATUS.RECEIVED]: { label: 'Đã nhận cọc', color: 'green' },
-  [DEPOSIT_STATUS.AWAITING_REFUND]: { label: 'Chờ hoàn cọc', color: 'gold' },
-  [DEPOSIT_STATUS.SETTLED]: { label: 'Đã quyết toán cọc', color: 'blue' },
-  [DEPOSIT_STATUS.REFUNDED]: { label: 'Đã hoàn cọc', color: 'green' },
-  [DEPOSIT_STATUS.PARTIALLY_REFUNDED]: { label: 'Hoàn một phần', color: 'blue' },
+  [DEPOSIT_STATUS.NONE]: { label: 'Không có cọc', color: STATUS_COLOR.NEUTRAL },
+  [DEPOSIT_STATUS.NOT_RECEIVED]: {
+    label: 'Chưa ghi nhận đã thu cọc',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [DEPOSIT_STATUS.RECEIVED]: { label: 'Đã nhận cọc', color: STATUS_COLOR.SUCCESS },
+  [DEPOSIT_STATUS.AWAITING_REFUND]: { label: 'Chờ hoàn cọc', color: STATUS_COLOR.WAITING },
+  [DEPOSIT_STATUS.SETTLED]: { label: 'Đã quyết toán cọc', color: STATUS_COLOR.SUCCESS },
+  [DEPOSIT_STATUS.REFUNDED]: { label: 'Đã hoàn cọc', color: STATUS_COLOR.SUCCESS },
+  [DEPOSIT_STATUS.PARTIALLY_REFUNDED]: {
+    label: 'Hoàn một phần',
+    color: STATUS_COLOR.WARNING,
+  },
 };
 
 /**
@@ -151,6 +160,9 @@ export type HandoverCondition = (typeof HANDOVER_CONDITION)[keyof typeof HANDOVE
 export const HANDOVER_CONDITION_VALUES = Object.values(HANDOVER_CONDITION) as HandoverCondition[];
 
 export const HANDOVER_CONDITION_META: Readonly<Record<HandoverCondition, StatusMeta>> = {
-  [HANDOVER_CONDITION.NORMAL]: { label: 'Bình thường', color: 'green' },
-  [HANDOVER_CONDITION.ATTENTION]: { label: 'Có điểm cần lưu ý', color: 'gold' },
+  [HANDOVER_CONDITION.NORMAL]: { label: 'Bình thường', color: STATUS_COLOR.SUCCESS },
+  [HANDOVER_CONDITION.ATTENTION]: {
+    label: 'Có điểm cần lưu ý',
+    color: STATUS_COLOR.WAITING,
+  },
 };

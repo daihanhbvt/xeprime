@@ -22,8 +22,11 @@ export type { ListingSort };
 
 export interface MarketplaceFilters {
   vehicleType?: string;
+  /**
+   * Loại dịch vụ (SERVICE_TYPE) — tab Xe tự lái / Xe có tài xế / Thuê dài hạn của thẻ tìm kiếm.
+   * Backend hiểu theo NĂNG LỰC phục vụ: `self_drive`/`with_driver` bao gồm cả xe đăng `both`.
+   */
   serviceType?: string;
-  q?: string;
   /**
    * MÃ tỉnh — tham số địa điểm chuẩn, khớp chính xác. Mọi bộ chọn địa điểm ghi giá trị này.
    */

@@ -2,7 +2,7 @@
 
 import { Alert, List, Pagination, Skeleton, Tag } from 'antd';
 import { useState } from 'react';
-import { ODOMETER_SOURCE_LABEL, type OdometerSource } from '@xeprime/types';
+import { ODOMETER_SOURCE_LABEL, STATUS_COLOR, type OdometerSource } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { formatDateTime } from '@/lib/datetime';
 import { formatKm } from '@/lib/odometer';
@@ -36,9 +36,7 @@ export function OdometerHistoryDialog({
       footer={null}
     >
       {history.isLoading ? <Skeleton active paragraph={{ rows: 4 }} /> : null}
-      {history.isError ? (
-        <Alert type="error" showIcon message="Không tải được lịch sử KM" />
-      ) : null}
+      {history.isError ? <Alert type="error" showIcon message="Không tải được lịch sử KM" /> : null}
       {history.data ? (
         history.data.items.length === 0 ? (
           <p className={styles.emptyText}>Chưa có lần ghi nhận KM nào cho xe này.</p>
@@ -56,7 +54,7 @@ export function OdometerHistoryDialog({
                           từ {formatKm(reading.previousKm)}
                         </span>
                       ) : null}
-                      {reading.isDecrease ? <Tag color="red">Giảm KM</Tag> : null}
+                      {reading.isDecrease ? <Tag color={STATUS_COLOR.DANGER}>Giảm KM</Tag> : null}
                     </div>
                     <div className={styles.historyMeta}>
                       <span>

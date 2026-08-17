@@ -20,6 +20,7 @@ export const APP_TIME_ZONE = 'Asia/Ho_Chi_Minh';
 export const DATE_FORMAT = 'DD/MM/YYYY';
 export const TIME_FORMAT = 'HH:mm';
 export const DATE_TIME_FORMAT = 'DD/MM/YYYY HH:mm';
+export const SHORT_DATE_TIME_FORMAT = 'HH:mm · DD/MM';
 
 /** Tham số URL của lịch: tháng `YYYY-MM`, ngày `YYYY-MM-DD` (đều theo giờ Việt Nam). */
 export const MONTH_PARAM_FORMAT = 'YYYY-MM';
@@ -53,6 +54,19 @@ export function formatDateTimeRange(
   to: IsoDateTimeString | null | undefined,
 ): string {
   return `${formatDateTime(from)} → ${formatDateTime(to)}`;
+}
+
+/** Mốc giờ gọn cho bảng vận hành: `08:00 · 17/08`, bỏ năm để tránh chiếm ngang. */
+export function formatShortDateTime(value: IsoDateTimeString | null | undefined): string {
+  return value ? toAppTz(value).format(SHORT_DATE_TIME_FORMAT) : EMPTY_PLACEHOLDER;
+}
+
+/** Khoảng giờ gọn cho danh sách đơn: `08:00 · 17/08 → 14:00 · 18/08`. */
+export function formatShortDateTimeRange(
+  from: IsoDateTimeString | null | undefined,
+  to: IsoDateTimeString | null | undefined,
+): string {
+  return `${formatShortDateTime(from)} → ${formatShortDateTime(to)}`;
 }
 
 /** Thứ viết tắt kiểu Việt Nam. `Dayjs.day()` trả 0 = Chủ nhật. */

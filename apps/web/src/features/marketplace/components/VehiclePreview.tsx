@@ -35,7 +35,7 @@ export function VehiclePreview() {
           </h2>
         </div>
         <Link href={ROUTES.SEARCH} className={styles.seeAll}>
-          Xem tất cả xe <RightOutlined />
+          Khám phá xe <RightOutlined />
         </Link>
       </div>
 
@@ -74,12 +74,6 @@ export function VehiclePreview() {
           ))}
         </ul>
       )}
-
-      <div className={styles.footer}>
-        <Link href={ROUTES.SEARCH}>
-          <Button size="large">Xem tất cả xe →</Button>
-        </Link>
-      </div>
     </section>
   );
 }

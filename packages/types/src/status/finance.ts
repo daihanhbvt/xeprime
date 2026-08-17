@@ -1,4 +1,4 @@
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /**
  * Enum tài chính (Phase 6) — ADR 0005: DB lưu String, union ở đây là lớp chặn duy nhất.
@@ -17,8 +17,8 @@ export const FINANCE_CATEGORY_TYPE_VALUES = Object.values(
 ) as FinanceCategoryType[];
 
 export const FINANCE_CATEGORY_TYPE_META: Readonly<Record<FinanceCategoryType, StatusMeta>> = {
-  [FINANCE_CATEGORY_TYPE.INCOME]: { label: 'Thu', color: 'green' },
-  [FINANCE_CATEGORY_TYPE.EXPENSE]: { label: 'Chi', color: 'red' },
+  [FINANCE_CATEGORY_TYPE.INCOME]: { label: 'Thu', color: STATUS_COLOR.SUCCESS },
+  [FINANCE_CATEGORY_TYPE.EXPENSE]: { label: 'Chi', color: STATUS_COLOR.DANGER },
 };
 
 /** Loại phiếu thu-chi — trùng giá trị với category type (thu/chi). */
@@ -30,8 +30,8 @@ export type ReceiptType = (typeof RECEIPT_TYPE)[keyof typeof RECEIPT_TYPE];
 export const RECEIPT_TYPE_VALUES = Object.values(RECEIPT_TYPE) as ReceiptType[];
 
 export const RECEIPT_TYPE_META: Readonly<Record<ReceiptType, StatusMeta>> = {
-  [RECEIPT_TYPE.INCOME]: { label: 'Phiếu thu', color: 'green' },
-  [RECEIPT_TYPE.EXPENSE]: { label: 'Phiếu chi', color: 'red' },
+  [RECEIPT_TYPE.INCOME]: { label: 'Phiếu thu', color: STATUS_COLOR.SUCCESS },
+  [RECEIPT_TYPE.EXPENSE]: { label: 'Phiếu chi', color: STATUS_COLOR.DANGER },
 };
 
 /** Hình thức thanh toán. */
@@ -46,11 +46,11 @@ export type PaymentMethod = (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD]
 export const PAYMENT_METHOD_VALUES = Object.values(PAYMENT_METHOD) as PaymentMethod[];
 
 export const PAYMENT_METHOD_META: Readonly<Record<PaymentMethod, StatusMeta>> = {
-  [PAYMENT_METHOD.CASH]: { label: 'Tiền mặt', color: 'green' },
-  [PAYMENT_METHOD.BANK_TRANSFER]: { label: 'Chuyển khoản', color: 'blue' },
-  [PAYMENT_METHOD.QR]: { label: 'QR', color: 'cyan' },
-  [PAYMENT_METHOD.CARD]: { label: 'Thẻ', color: 'purple' },
-  [PAYMENT_METHOD.OTHER]: { label: 'Khác', color: 'default' },
+  [PAYMENT_METHOD.CASH]: { label: 'Tiền mặt', color: STATUS_COLOR.SUCCESS },
+  [PAYMENT_METHOD.BANK_TRANSFER]: { label: 'Chuyển khoản', color: STATUS_COLOR.INFO },
+  [PAYMENT_METHOD.QR]: { label: 'QR', color: STATUS_COLOR.PROCESSING },
+  [PAYMENT_METHOD.CARD]: { label: 'Thẻ', color: STATUS_COLOR.SPECIAL },
+  [PAYMENT_METHOD.OTHER]: { label: 'Khác', color: STATUS_COLOR.NEUTRAL },
 };
 
 /** Trạng thái giao dịch thanh toán. */
@@ -64,10 +64,10 @@ export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS]
 export const PAYMENT_STATUS_VALUES = Object.values(PAYMENT_STATUS) as PaymentStatus[];
 
 export const PAYMENT_STATUS_META: Readonly<Record<PaymentStatus, StatusMeta>> = {
-  [PAYMENT_STATUS.PENDING]: { label: 'Đang xử lý', color: 'gold' },
-  [PAYMENT_STATUS.SUCCEEDED]: { label: 'Thành công', color: 'green' },
-  [PAYMENT_STATUS.FAILED]: { label: 'Thất bại', color: 'red' },
-  [PAYMENT_STATUS.REFUNDED]: { label: 'Đã hoàn', color: 'default' },
+  [PAYMENT_STATUS.PENDING]: { label: 'Đang xử lý', color: STATUS_COLOR.WAITING },
+  [PAYMENT_STATUS.SUCCEEDED]: { label: 'Thành công', color: STATUS_COLOR.SUCCESS },
+  [PAYMENT_STATUS.FAILED]: { label: 'Thất bại', color: STATUS_COLOR.DANGER },
+  [PAYMENT_STATUS.REFUNDED]: { label: 'Đã hoàn', color: STATUS_COLOR.SUCCESS },
 };
 
 /** Trạng thái hợp đồng thuê. */
@@ -81,8 +81,8 @@ export type ContractStatus = (typeof CONTRACT_STATUS)[keyof typeof CONTRACT_STAT
 export const CONTRACT_STATUS_VALUES = Object.values(CONTRACT_STATUS) as ContractStatus[];
 
 export const CONTRACT_STATUS_META: Readonly<Record<ContractStatus, StatusMeta>> = {
-  [CONTRACT_STATUS.DRAFT]: { label: 'Nháp', color: 'default' },
-  [CONTRACT_STATUS.ACTIVE]: { label: 'Hiệu lực', color: 'green' },
-  [CONTRACT_STATUS.SIGNED]: { label: 'Đã ký', color: 'blue' },
-  [CONTRACT_STATUS.VOID]: { label: 'Vô hiệu', color: 'default' },
+  [CONTRACT_STATUS.DRAFT]: { label: 'Nháp', color: STATUS_COLOR.NEUTRAL },
+  [CONTRACT_STATUS.ACTIVE]: { label: 'Hiệu lực', color: STATUS_COLOR.SUCCESS },
+  [CONTRACT_STATUS.SIGNED]: { label: 'Đã ký', color: STATUS_COLOR.SUCCESS },
+  [CONTRACT_STATUS.VOID]: { label: 'Vô hiệu', color: STATUS_COLOR.NEUTRAL },
 };

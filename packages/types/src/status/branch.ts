@@ -1,4 +1,4 @@
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /**
  * Trạng thái chi nhánh gian hàng — ADR 0005 (không bao giờ dùng string literal trần).
@@ -23,8 +23,14 @@ export const BRANCH_STATUS_LABEL: Readonly<Record<BranchStatus, string>> = {
 
 /** Nhãn + màu cho `StatusTag` dùng chung (xanh = đang chạy, xám = đã dừng). */
 export const BRANCH_STATUS_META: Readonly<Record<BranchStatus, StatusMeta>> = {
-  [BRANCH_STATUS.ACTIVE]: { label: BRANCH_STATUS_LABEL[BRANCH_STATUS.ACTIVE], color: 'green' },
-  [BRANCH_STATUS.INACTIVE]: { label: BRANCH_STATUS_LABEL[BRANCH_STATUS.INACTIVE], color: 'default' },
+  [BRANCH_STATUS.ACTIVE]: {
+    label: BRANCH_STATUS_LABEL[BRANCH_STATUS.ACTIVE],
+    color: STATUS_COLOR.SUCCESS,
+  },
+  [BRANCH_STATUS.INACTIVE]: {
+    label: BRANCH_STATUS_LABEL[BRANCH_STATUS.INACTIVE],
+    color: STATUS_COLOR.NEUTRAL,
+  },
 };
 
 export function isBranchStatus(value: unknown): value is BranchStatus {

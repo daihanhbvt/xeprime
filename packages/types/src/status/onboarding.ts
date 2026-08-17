@@ -1,4 +1,4 @@
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /**
  * Status cho nhóm bảng Auth/Tenant/Approval (ADR 0005).
@@ -48,9 +48,9 @@ export type DocumentStatus = (typeof DOCUMENT_STATUS)[keyof typeof DOCUMENT_STAT
 export const DOCUMENT_STATUS_VALUES = Object.values(DOCUMENT_STATUS) as DocumentStatus[];
 
 export const DOCUMENT_STATUS_META: Readonly<Record<DocumentStatus, StatusMeta>> = {
-  [DOCUMENT_STATUS.PENDING]: { label: 'Chờ duyệt', color: 'gold' },
-  [DOCUMENT_STATUS.APPROVED]: { label: 'Đã duyệt', color: 'green' },
-  [DOCUMENT_STATUS.REJECTED]: { label: 'Từ chối', color: 'red' },
+  [DOCUMENT_STATUS.PENDING]: { label: 'Chờ duyệt', color: STATUS_COLOR.WAITING },
+  [DOCUMENT_STATUS.APPROVED]: { label: 'Đã duyệt', color: STATUS_COLOR.SUCCESS },
+  [DOCUMENT_STATUS.REJECTED]: { label: 'Từ chối', color: STATUS_COLOR.DANGER },
 };
 
 export const TENANT_DOCUMENT_TYPE = {
@@ -76,10 +76,10 @@ export type InviteStatus = (typeof INVITE_STATUS)[keyof typeof INVITE_STATUS];
 export const INVITE_STATUS_VALUES = Object.values(INVITE_STATUS) as InviteStatus[];
 
 export const INVITE_STATUS_META: Readonly<Record<InviteStatus, StatusMeta>> = {
-  [INVITE_STATUS.PENDING]: { label: 'Đang chờ', color: 'gold' },
-  [INVITE_STATUS.ACCEPTED]: { label: 'Đã tham gia', color: 'green' },
-  [INVITE_STATUS.EXPIRED]: { label: 'Hết hạn', color: 'default' },
-  [INVITE_STATUS.REVOKED]: { label: 'Đã thu hồi', color: 'red' },
+  [INVITE_STATUS.PENDING]: { label: 'Đang chờ', color: STATUS_COLOR.WAITING },
+  [INVITE_STATUS.ACCEPTED]: { label: 'Đã tham gia', color: STATUS_COLOR.SUCCESS },
+  [INVITE_STATUS.EXPIRED]: { label: 'Hết hạn', color: STATUS_COLOR.NEUTRAL },
+  [INVITE_STATUS.REVOKED]: { label: 'Đã thu hồi', color: STATUS_COLOR.DANGER },
 };
 
 // --- admin_notes (§7.3) ---

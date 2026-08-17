@@ -10,7 +10,7 @@
  */
 
 import { BOOKING_STATUS, type BookingStatus } from './booking';
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 import { FUEL_TYPE, type FuelType } from './vehicle';
 
 /** Hai chiều của một chuyến thuê. Mỗi đơn có tối đa một bản còn hiệu lực mỗi chiều. */
@@ -45,10 +45,10 @@ export type HandoverStatus = (typeof HANDOVER_STATUS)[keyof typeof HANDOVER_STAT
 export const HANDOVER_STATUS_VALUES = Object.values(HANDOVER_STATUS) as HandoverStatus[];
 
 export const HANDOVER_STATUS_META: Readonly<Record<HandoverStatus, StatusMeta>> = {
-  [HANDOVER_STATUS.DRAFT]: { label: 'Bản nháp', color: 'gold' },
-  [HANDOVER_STATUS.READY]: { label: 'Chờ xác nhận', color: 'blue' },
-  [HANDOVER_STATUS.CONFIRMED]: { label: 'Đã xác nhận', color: 'green' },
-  [HANDOVER_STATUS.CANCELED]: { label: 'Đã hủy', color: 'default' },
+  [HANDOVER_STATUS.DRAFT]: { label: 'Bản nháp', color: STATUS_COLOR.NEUTRAL },
+  [HANDOVER_STATUS.READY]: { label: 'Chờ xác nhận', color: STATUS_COLOR.WAITING },
+  [HANDOVER_STATUS.CONFIRMED]: { label: 'Đã xác nhận', color: STATUS_COLOR.SUCCESS },
+  [HANDOVER_STATUS.CANCELED]: { label: 'Đã hủy', color: STATUS_COLOR.NEUTRAL },
 };
 
 /** Trạng thái còn SỬA được. Ngoài hai giá trị này biên bản là chỉ đọc. */
@@ -76,12 +76,11 @@ export const HANDOVER_ELIGIBLE_BOOKING_STATUS: Readonly<
 };
 
 /** Trạng thái đơn mà việc xác nhận bàn giao sẽ chuyển tới. `null` = giữ nguyên trạng thái. */
-export const HANDOVER_CONFIRM_BOOKING_TARGET: Readonly<
-  Record<HandoverType, BookingStatus | null>
-> = {
-  [HANDOVER_TYPE.PICKUP]: BOOKING_STATUS.ACTIVE,
-  [HANDOVER_TYPE.RETURN]: BOOKING_STATUS.COMPLETED,
-};
+export const HANDOVER_CONFIRM_BOOKING_TARGET: Readonly<Record<HandoverType, BookingStatus | null>> =
+  {
+    [HANDOVER_TYPE.PICKUP]: BOOKING_STATUS.ACTIVE,
+    [HANDOVER_TYPE.RETURN]: BOOKING_STATUS.COMPLETED,
+  };
 
 export function isHandoverEligible(type: HandoverType, bookingStatus: BookingStatus): boolean {
   return HANDOVER_ELIGIBLE_BOOKING_STATUS[type].includes(bookingStatus);
@@ -98,13 +97,10 @@ export const HANDOVER_ENERGY_KIND = {
   BATTERY: 'battery',
 } as const;
 
-export type HandoverEnergyKind =
-  (typeof HANDOVER_ENERGY_KIND)[keyof typeof HANDOVER_ENERGY_KIND];
+export type HandoverEnergyKind = (typeof HANDOVER_ENERGY_KIND)[keyof typeof HANDOVER_ENERGY_KIND];
 
 export function handoverEnergyKind(fuelType: string | null | undefined): HandoverEnergyKind {
-  return fuelType === FUEL_TYPE.ELECTRIC
-    ? HANDOVER_ENERGY_KIND.BATTERY
-    : HANDOVER_ENERGY_KIND.FUEL;
+  return fuelType === FUEL_TYPE.ELECTRIC ? HANDOVER_ENERGY_KIND.BATTERY : HANDOVER_ENERGY_KIND.FUEL;
 }
 
 /** Xe hybrid vẫn đổ xăng — chỉ thuần điện mới chuyển sang ghi % pin. */
@@ -170,9 +166,7 @@ export const HANDOVER_PHOTO_SLOT = {
 } as const;
 
 export type HandoverPhotoSlot = (typeof HANDOVER_PHOTO_SLOT)[keyof typeof HANDOVER_PHOTO_SLOT];
-export const HANDOVER_PHOTO_SLOT_VALUES = Object.values(
-  HANDOVER_PHOTO_SLOT,
-) as HandoverPhotoSlot[];
+export const HANDOVER_PHOTO_SLOT_VALUES = Object.values(HANDOVER_PHOTO_SLOT) as HandoverPhotoSlot[];
 
 export const HANDOVER_PHOTO_SLOT_LABEL: Readonly<Record<HandoverPhotoSlot, string>> = {
   [HANDOVER_PHOTO_SLOT.FRONT]: 'Trước',

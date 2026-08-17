@@ -1,4 +1,4 @@
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /** Trạng thái gian hàng (ADR 0005). Nguồn: `xeprime_database_design.md` §5.1. */
 export const TENANT_STATUS = {
@@ -28,13 +28,13 @@ export function isTenantStatus(value: unknown): value is TenantStatus {
 export const TENANT_STATUS_PUBLISHABLE: readonly TenantStatus[] = [TENANT_STATUS.ACTIVE];
 
 export const TENANT_STATUS_META: Readonly<Record<TenantStatus, StatusMeta>> = {
-  [TENANT_STATUS.DRAFT]: { label: 'Nháp', color: 'default' },
-  [TENANT_STATUS.PENDING_REVIEW]: { label: 'Chờ duyệt', color: 'gold' },
-  [TENANT_STATUS.NEEDS_REVISION]: { label: 'Cần bổ sung', color: 'orange' },
-  [TENANT_STATUS.ACTIVE]: { label: 'Đang hoạt động', color: 'green' },
-  [TENANT_STATUS.SUSPENDED]: { label: 'Bị khóa', color: 'red' },
-  [TENANT_STATUS.REJECTED]: { label: 'Bị từ chối', color: 'red' },
-  [TENANT_STATUS.EXPIRED]: { label: 'Hết hạn gói', color: 'default' },
+  [TENANT_STATUS.DRAFT]: { label: 'Nháp', color: STATUS_COLOR.NEUTRAL },
+  [TENANT_STATUS.PENDING_REVIEW]: { label: 'Chờ duyệt', color: STATUS_COLOR.WAITING },
+  [TENANT_STATUS.NEEDS_REVISION]: { label: 'Cần bổ sung', color: STATUS_COLOR.WARNING },
+  [TENANT_STATUS.ACTIVE]: { label: 'Đang hoạt động', color: STATUS_COLOR.SUCCESS },
+  [TENANT_STATUS.SUSPENDED]: { label: 'Bị khóa', color: STATUS_COLOR.DANGER },
+  [TENANT_STATUS.REJECTED]: { label: 'Bị từ chối', color: STATUS_COLOR.DANGER },
+  [TENANT_STATUS.EXPIRED]: { label: 'Hết hạn gói', color: STATUS_COLOR.NEUTRAL },
 };
 
 /** Trạng thái tenant cho phép gửi (lại) duyệt: chưa gửi hoặc bị yêu cầu bổ sung. */

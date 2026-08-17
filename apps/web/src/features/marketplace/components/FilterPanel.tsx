@@ -114,13 +114,15 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
   }, [open]);
 
   // Facets chạy theo draft (debounce) + ngữ cảnh tìm kiếm ngoài panel (tab loại xe, dịch vụ,
-  // từ khoá, địa điểm, ngày giờ) — các chiều panel sở hữu lấy từ draft, KHÔNG lấy từ URL.
+  // địa điểm, ngày giờ) — các chiều panel sở hữu lấy từ draft, KHÔNG lấy từ URL.
   const debouncedDraft = useDebouncedValue(draft, 300);
   const facetFilters = useMemo<MarketplaceFilters>(
     () => ({
       vehicleType: filters.vehicleType,
       serviceType: filters.serviceType,
-      q: filters.q,
+      // provinceCode từng bị bỏ sót ở đây — facet đếm TOÀN QUỐC trong khi kết quả lọc theo
+      // tỉnh, số trên panel không khớp số xe thật.
+      provinceCode: filters.provinceCode,
       province: filters.province,
       pickupAt: filters.pickupAt,
       returnAt: filters.returnAt,

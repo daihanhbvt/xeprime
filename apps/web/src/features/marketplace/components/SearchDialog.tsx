@@ -3,7 +3,7 @@
 import { CalendarOutlined, EnvironmentOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Segmented, Select } from 'antd';
 import dayjs from 'dayjs';
-import { VEHICLE_TYPE } from '@xeprime/types';
+import { SERVICE_TYPE, VEHICLE_TYPE } from '@xeprime/types';
 import { useMemo, useState } from 'react';
 import {
   RentalDateTimeRangeField,
@@ -31,8 +31,9 @@ export interface SearchDialogValues {
 /**
  * Hộp "Tìm kiếm" dùng CHUNG — thanh tìm kiếm mobile của trang chủ và vùng ngữ cảnh trên
  * `/search`. Một bộ trường duy nhất (Thời gian thuê · Loại xe · Địa điểm) nên hai lối vào không
- * bao giờ lệch nhau. TỪ KHOÁ không nằm ở đây — nó là ô nhập trực tiếp trên trang (yêu cầu
- * 10/08), hộp này chỉ đổi NGỮ CẢNH thuê.
+ * bao giờ lệch nhau. DỊCH VỤ không đổi ở đây (tab hero / chip trên `/search` sở hữu nó) nhưng
+ * hộp ĐỌC `initial.serviceType`: ngữ cảnh dài hạn thì ẩn Thời gian thuê và không phát ngày giờ
+ * — thời điểm nhận xe dài hạn là thứ thoả thuận với gian hàng, không phải điều kiện lọc.
  *
  * Giữ DRAFT cục bộ, chỉ phát `onSubmit` khi bấm "Tìm xe" — đóng ngang chừng không đổi URL.
  * Remount theo `open` (key ở caller) để mỗi lần mở nạp lại đúng filter hiện hành.
@@ -50,6 +51,8 @@ export function SearchDialog({
 }) {
   const { data: destinations, isLoading: loadingProvinces } =
     useDestinations(PROVINCE_OPTIONS_LIMIT);
+
+  const longTerm = initial.serviceType === SERVICE_TYPE.LONG_TERM;
 
   const [vehicleType, setVehicleType] = useState<string>(initial.vehicleType ?? VEHICLE_TYPE.CAR);
   const [province, setProvince] = useState(initial.provinceCode ?? '');
@@ -72,27 +75,31 @@ export function SearchDialog({
     onSubmit({
       vehicleType,
       provinceCode: province || undefined,
-      pickupAt: range.pickupAt?.toISOString(),
-      returnAt: range.returnAt?.toISOString(),
-      hourly: mode === 'hourly' ? true : undefined,
+      // Dài hạn: xoá ngày giờ khỏi URL thay vì giữ giá trị cũ vô nghĩa với ngữ cảnh này.
+      pickupAt: longTerm ? undefined : range.pickupAt?.toISOString(),
+      returnAt: longTerm ? undefined : range.returnAt?.toISOString(),
+      hourly: !longTerm && mode === 'hourly' ? true : undefined,
     });
   }
 
   return (
     <ResponsiveDialog title="Tìm kiếm" open={open} onClose={onClose} footer={null}>
       <div className={styles.body}>
-        {/* Thời gian thuê đứng ĐẦU — lý do người dùng mở hộp này thường là đổi lịch. */}
-        <div className={styles.cell}>
-          <span className={styles.cellLabel}>Thời gian thuê</span>
-          <RentalDateTimeRangeField
-            value={range}
-            onChange={setRange}
-            mode={mode}
-            onModeChange={setMode}
-            prefix={<CalendarOutlined className={styles.boxIcon} />}
-            className={styles.box}
-          />
-        </div>
+        {/* Thời gian thuê đứng ĐẦU — lý do người dùng mở hộp này thường là đổi lịch.
+            Ngữ cảnh dài hạn không có lịch: thời điểm nhận xe thoả thuận với gian hàng. */}
+        {longTerm ? null : (
+          <div className={styles.cell}>
+            <span className={styles.cellLabel}>Thời gian thuê</span>
+            <RentalDateTimeRangeField
+              value={range}
+              onChange={setRange}
+              mode={mode}
+              onModeChange={setMode}
+              prefix={<CalendarOutlined className={styles.boxIcon} />}
+              className={styles.box}
+            />
+          </div>
+        )}
 
         <div className={styles.cell}>
           <span className={styles.cellLabel}>Loại xe</span>

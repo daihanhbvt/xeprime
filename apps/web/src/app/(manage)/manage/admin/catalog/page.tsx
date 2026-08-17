@@ -15,6 +15,7 @@ import {
   CATALOG_TYPE_HINT,
   CATALOG_TYPE_LABEL,
   CATALOG_TYPE_VALUES,
+  STATUS_COLOR,
   type CatalogType,
 } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
@@ -125,7 +126,12 @@ export default function AdminCatalogPage() {
       title: 'Trạng thái',
       key: 'active',
       width: 110,
-      render: (_, item) => (item.active ? <Tag color="green">Đang bật</Tag> : <Tag>Đã tắt</Tag>),
+      render: (_, item) =>
+        item.active ? (
+          <Tag color={STATUS_COLOR.SUCCESS}>Đang bật</Tag>
+        ) : (
+          <Tag color={STATUS_COLOR.NEUTRAL}>Đã tắt</Tag>
+        ),
     },
     actionColumn<CatalogItemAdmin>(
       (item) => {

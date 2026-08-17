@@ -1,14 +1,55 @@
 /*
- * Thẻ tìm kiếm — Figma `18:4`: thẻ trắng nổi ĐÈ lên mép dưới hero, bốn ô một hàng ở desktop.
- * Mỗi ô = nhãn hoa nhỏ phía trên + hộp viền chứa icon + input (đúng bố cục Figma, khác bản cũ
- * dùng input trần không viền).
+ * Thẻ tìm kiếm trang chủ (yêu cầu 17/08 — mô hình 3 dịch vụ): hàng TAB dịch vụ đè trên thẻ
+ * trắng nổi ở mép dưới hero; trong thẻ mỗi ô = nhãn hoa nhỏ phía trên + hộp viền chứa icon +
+ * control. Ô từ khoá đã bỏ — mọi trường đều có cấu trúc.
  */
 .cardOuter {
   position: relative;
   z-index: 2;
   max-width: var(--xp-container-max-width);
   padding: 0 16px;
-  margin: -44px auto 0;
+  margin: -64px auto 0;
+}
+
+/* --- Hàng tab dịch vụ (desktop) — khối trắng bo góc trên, tab active nền primary. --------- */
+.tabs {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: fit-content;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius) var(--xp-border-radius) 0 0;
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-md, 0 6px 18px rgba(41, 31, 15, 0.12));
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  padding: 12px 22px;
+  border: none;
+  background: none;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold, 600);
+  gap: 8px;
+}
+
+.tab:hover {
+  color: var(--xp-color-text);
+}
+
+.tabActive,
+.tabActive:hover {
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.tabIcon {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .card {
@@ -23,8 +64,13 @@
 
 @media (min-width: 760px) {
   .card {
-    /* Từ khoá | Địa điểm | Thời gian thuê | nút — cột co được nhờ min-width:0 ở .cell. */
-    grid-template-columns: 1.35fr 1fr 1.5fr auto;
+    /* Loại xe | Địa điểm | Thời gian thuê | nút — cột co được nhờ min-width:0 ở .cell. */
+    grid-template-columns: 0.9fr 1.1fr 1.5fr auto;
+  }
+
+  /* Dài hạn không có ô Thời gian thuê — Địa điểm giãn ra thay chỗ. */
+  .cardLongTerm {
+    grid-template-columns: 0.9fr 1.7fr auto;
   }
 }
 
@@ -75,7 +121,6 @@
   color: var(--xp-color-primary-active);
 }
 
-.keyword,
 .select,
 .range {
   min-width: 0;
@@ -96,7 +141,15 @@
   font-weight: 700 !important;
 }
 
-/* Mobile hai tầng: ô từ khoá thật + hàng ngữ cảnh (cả hàng là nút mở sheet). */
+/* Ghi chú tab dài hạn — chiếm trọn hàng dưới các ô. */
+.hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm, 13px);
+}
+
+/* Mobile ba tầng: Segmented dịch vụ + hàng ngữ cảnh (cả hàng là nút mở sheet) + nút Tìm xe. */
 .mobileBox {
   overflow: hidden;
   border: 1px solid var(--xp-color-border);
@@ -105,19 +158,8 @@
   box-shadow: var(--xp-shadow-md, 0 6px 18px rgba(41, 31, 15, 0.12));
 }
 
-.mobileKeywordRow {
-  display: flex;
-  align-items: center;
-  padding: 6px 6px 6px 14px;
-  gap: 8px;
-}
-
-.mobileKeywordInput {
-  min-width: 0;
-  flex: 1;
-  padding: 6px 0 !important;
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-medium);
+.mobileTabs {
+  padding: 10px 10px 0;
 }
 
 .mobileIcon {
@@ -130,9 +172,8 @@
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: none;
-  border-top: 1px solid var(--xp-color-border);
   background: none;
   color: var(--xp-color-text);
   cursor: pointer;
@@ -142,21 +183,14 @@
   text-align: left;
 }
 
-/* Ô nhập trong hộp mobile cũng không tự vẽ viền trong. */
-.mobileKeywordRow :global(.ant-input),
-.mobileKeywordRow :global(.ant-input-affix-wrapper),
-.mobileKeywordRow :global(.ant-input-outlined) {
-  border: none !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  outline: none !important;
-}
-
 .mobilePillText {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.mobileActions {
+  padding: 0 10px 12px;
 }
 
 .sheetBody {

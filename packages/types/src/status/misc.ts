@@ -1,4 +1,4 @@
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /** Trạng thái task duyệt (dùng chung cho duyệt shop / duyệt xe / duyệt giấy tờ). */
 export const APPROVAL_STATUS = {
@@ -13,11 +13,14 @@ export type ApprovalStatus = (typeof APPROVAL_STATUS)[keyof typeof APPROVAL_STAT
 export const APPROVAL_STATUS_VALUES = Object.values(APPROVAL_STATUS) as ApprovalStatus[];
 
 export const APPROVAL_STATUS_META: Readonly<Record<ApprovalStatus, StatusMeta>> = {
-  [APPROVAL_STATUS.PENDING]: { label: 'Chờ duyệt', color: 'gold' },
-  [APPROVAL_STATUS.APPROVED]: { label: 'Đã duyệt', color: 'green' },
-  [APPROVAL_STATUS.REJECTED]: { label: 'Từ chối', color: 'red' },
-  [APPROVAL_STATUS.NEEDS_REVISION]: { label: 'Yêu cầu bổ sung', color: 'orange' },
-  [APPROVAL_STATUS.CANCELLED]: { label: 'Đã hủy', color: 'default' },
+  [APPROVAL_STATUS.PENDING]: { label: 'Chờ duyệt', color: STATUS_COLOR.WAITING },
+  [APPROVAL_STATUS.APPROVED]: { label: 'Đã duyệt', color: STATUS_COLOR.SUCCESS },
+  [APPROVAL_STATUS.REJECTED]: { label: 'Từ chối', color: STATUS_COLOR.DANGER },
+  [APPROVAL_STATUS.NEEDS_REVISION]: {
+    label: 'Yêu cầu bổ sung',
+    color: STATUS_COLOR.WARNING,
+  },
+  [APPROVAL_STATUS.CANCELLED]: { label: 'Đã hủy', color: STATUS_COLOR.NEUTRAL },
 };
 
 /** Đối tượng được duyệt. */
@@ -28,8 +31,7 @@ export const APPROVAL_TARGET_TYPE = {
   VEHICLE_DOCUMENT: 'vehicle_document',
 } as const;
 
-export type ApprovalTargetType =
-  (typeof APPROVAL_TARGET_TYPE)[keyof typeof APPROVAL_TARGET_TYPE];
+export type ApprovalTargetType = (typeof APPROVAL_TARGET_TYPE)[keyof typeof APPROVAL_TARGET_TYPE];
 export const APPROVAL_TARGET_TYPE_VALUES = Object.values(
   APPROVAL_TARGET_TYPE,
 ) as ApprovalTargetType[];
@@ -46,10 +48,10 @@ export type ListingStatus = (typeof LISTING_STATUS)[keyof typeof LISTING_STATUS]
 export const LISTING_STATUS_VALUES = Object.values(LISTING_STATUS) as ListingStatus[];
 
 export const LISTING_STATUS_META: Readonly<Record<ListingStatus, StatusMeta>> = {
-  [LISTING_STATUS.ACTIVE]: { label: 'Đang hiển thị', color: 'green' },
-  [LISTING_STATUS.HIDDEN]: { label: 'Đã ẩn', color: 'default' },
-  [LISTING_STATUS.SUSPENDED]: { label: 'Tạm ngưng', color: 'orange' },
-  [LISTING_STATUS.ARCHIVED]: { label: 'Đã lưu trữ', color: 'default' },
+  [LISTING_STATUS.ACTIVE]: { label: 'Đang hiển thị', color: STATUS_COLOR.SUCCESS },
+  [LISTING_STATUS.HIDDEN]: { label: 'Đã ẩn', color: STATUS_COLOR.NEUTRAL },
+  [LISTING_STATUS.SUSPENDED]: { label: 'Tạm ngưng', color: STATUS_COLOR.WARNING },
+  [LISTING_STATUS.ARCHIVED]: { label: 'Đã lưu trữ', color: STATUS_COLOR.NEUTRAL },
 };
 
 /**
@@ -83,10 +85,10 @@ export type ReceiptStatus = (typeof RECEIPT_STATUS)[keyof typeof RECEIPT_STATUS]
 export const RECEIPT_STATUS_VALUES = Object.values(RECEIPT_STATUS) as ReceiptStatus[];
 
 export const RECEIPT_STATUS_META: Readonly<Record<ReceiptStatus, StatusMeta>> = {
-  [RECEIPT_STATUS.DRAFT]: { label: 'Nháp', color: 'default' },
-  [RECEIPT_STATUS.PENDING_APPROVAL]: { label: 'Chờ duyệt', color: 'gold' },
-  [RECEIPT_STATUS.APPROVED]: { label: 'Đã duyệt', color: 'green' },
-  [RECEIPT_STATUS.CANCELLED]: { label: 'Đã hủy', color: 'default' },
+  [RECEIPT_STATUS.DRAFT]: { label: 'Nháp', color: STATUS_COLOR.NEUTRAL },
+  [RECEIPT_STATUS.PENDING_APPROVAL]: { label: 'Chờ duyệt', color: STATUS_COLOR.WAITING },
+  [RECEIPT_STATUS.APPROVED]: { label: 'Đã duyệt', color: STATUS_COLOR.SUCCESS },
+  [RECEIPT_STATUS.CANCELLED]: { label: 'Đã hủy', color: STATUS_COLOR.NEUTRAL },
 };
 
 /** Trạng thái hội thoại chat. */
@@ -103,10 +105,10 @@ export const CONVERSATION_STATUS_VALUES = Object.values(
 ) as ConversationStatus[];
 
 export const CONVERSATION_STATUS_META: Readonly<Record<ConversationStatus, StatusMeta>> = {
-  [CONVERSATION_STATUS.OPEN]: { label: 'Đang mở', color: 'green' },
-  [CONVERSATION_STATUS.CLOSED]: { label: 'Đã đóng', color: 'default' },
-  [CONVERSATION_STATUS.FLAGGED]: { label: 'Cần xem xét', color: 'red' },
-  [CONVERSATION_STATUS.ARCHIVED]: { label: 'Đã lưu trữ', color: 'default' },
+  [CONVERSATION_STATUS.OPEN]: { label: 'Đang mở', color: STATUS_COLOR.PROCESSING },
+  [CONVERSATION_STATUS.CLOSED]: { label: 'Đã đóng', color: STATUS_COLOR.NEUTRAL },
+  [CONVERSATION_STATUS.FLAGGED]: { label: 'Cần xem xét', color: STATUS_COLOR.DANGER },
+  [CONVERSATION_STATUS.ARCHIVED]: { label: 'Đã lưu trữ', color: STATUS_COLOR.NEUTRAL },
 };
 
 /** Trạng thái gói dịch vụ trong danh mục (ADR 0010). Archived = ngừng bán, thuê bao cũ giữ nguyên. */
@@ -119,8 +121,8 @@ export type PlanStatus = (typeof PLAN_STATUS)[keyof typeof PLAN_STATUS];
 export const PLAN_STATUS_VALUES = Object.values(PLAN_STATUS) as PlanStatus[];
 
 export const PLAN_STATUS_META: Readonly<Record<PlanStatus, StatusMeta>> = {
-  [PLAN_STATUS.ACTIVE]: { label: 'Đang bán', color: 'green' },
-  [PLAN_STATUS.ARCHIVED]: { label: 'Ngừng bán', color: 'default' },
+  [PLAN_STATUS.ACTIVE]: { label: 'Đang bán', color: STATUS_COLOR.SUCCESS },
+  [PLAN_STATUS.ARCHIVED]: { label: 'Ngừng bán', color: STATUS_COLOR.NEUTRAL },
 };
 
 /**
@@ -143,11 +145,14 @@ export const SUBSCRIPTION_STATUS_VALUES = Object.values(
 ) as SubscriptionStatus[];
 
 export const SUBSCRIPTION_STATUS_META: Readonly<Record<SubscriptionStatus, StatusMeta>> = {
-  [SUBSCRIPTION_STATUS.TRIAL]: { label: 'Dùng thử', color: 'cyan' },
-  [SUBSCRIPTION_STATUS.ACTIVE]: { label: 'Đang hiệu lực', color: 'green' },
-  [SUBSCRIPTION_STATUS.PAST_DUE]: { label: 'Quá hạn thanh toán', color: 'orange' },
-  [SUBSCRIPTION_STATUS.EXPIRED]: { label: 'Hết hạn', color: 'red' },
-  [SUBSCRIPTION_STATUS.CANCELLED]: { label: 'Đã hủy', color: 'default' },
+  [SUBSCRIPTION_STATUS.TRIAL]: { label: 'Dùng thử', color: STATUS_COLOR.PROCESSING },
+  [SUBSCRIPTION_STATUS.ACTIVE]: { label: 'Đang hiệu lực', color: STATUS_COLOR.SUCCESS },
+  [SUBSCRIPTION_STATUS.PAST_DUE]: {
+    label: 'Quá hạn thanh toán',
+    color: STATUS_COLOR.WARNING,
+  },
+  [SUBSCRIPTION_STATUS.EXPIRED]: { label: 'Hết hạn', color: STATUS_COLOR.DANGER },
+  [SUBSCRIPTION_STATUS.CANCELLED]: { label: 'Đã hủy', color: STATUS_COLOR.NEUTRAL },
 };
 
 /** Trạng thái tài khoản người dùng. */
@@ -161,9 +166,9 @@ export type UserStatus = (typeof USER_STATUS)[keyof typeof USER_STATUS];
 export const USER_STATUS_VALUES = Object.values(USER_STATUS) as UserStatus[];
 
 export const USER_STATUS_META: Readonly<Record<UserStatus, StatusMeta>> = {
-  [USER_STATUS.ACTIVE]: { label: 'Đang hoạt động', color: 'green' },
-  [USER_STATUS.LOCKED]: { label: 'Bị khoá', color: 'red' },
-  [USER_STATUS.DELETED]: { label: 'Đã xoá', color: 'default' },
+  [USER_STATUS.ACTIVE]: { label: 'Đang hoạt động', color: STATUS_COLOR.SUCCESS },
+  [USER_STATUS.LOCKED]: { label: 'Bị khoá', color: STATUS_COLOR.DANGER },
+  [USER_STATUS.DELETED]: { label: 'Đã xoá', color: STATUS_COLOR.NEUTRAL },
 };
 
 /** Trạng thái membership (tenant lẫn platform). */
@@ -188,9 +193,9 @@ export type AuditActorScope = (typeof AUDIT_ACTOR_SCOPE)[keyof typeof AUDIT_ACTO
 export const AUDIT_ACTOR_SCOPE_VALUES = Object.values(AUDIT_ACTOR_SCOPE) as AuditActorScope[];
 
 export const AUDIT_ACTOR_SCOPE_META: Readonly<Record<AuditActorScope, StatusMeta>> = {
-  [AUDIT_ACTOR_SCOPE.TENANT]: { label: 'Gian hàng', color: 'blue' },
-  [AUDIT_ACTOR_SCOPE.PLATFORM]: { label: 'Nền tảng', color: 'purple' },
-  [AUDIT_ACTOR_SCOPE.SYSTEM]: { label: 'Hệ thống', color: 'default' },
+  [AUDIT_ACTOR_SCOPE.TENANT]: { label: 'Gian hàng', color: STATUS_COLOR.INFO },
+  [AUDIT_ACTOR_SCOPE.PLATFORM]: { label: 'Nền tảng', color: STATUS_COLOR.SPECIAL },
+  [AUDIT_ACTOR_SCOPE.SYSTEM]: { label: 'Hệ thống', color: STATUS_COLOR.NEUTRAL },
 };
 
 /**
@@ -213,9 +218,12 @@ export const OCCUPANCY_SOURCE_TYPE_VALUES = Object.values(
 ) as OccupancySourceType[];
 
 export const OCCUPANCY_SOURCE_TYPE_META: Readonly<Record<OccupancySourceType, StatusMeta>> = {
-  [OCCUPANCY_SOURCE_TYPE.BOOKING]: { label: 'Đơn thuê', color: 'blue' },
-  [OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE]: { label: 'Xe bị khóa', color: 'default' },
-  [OCCUPANCY_SOURCE_TYPE.MAINTENANCE]: { label: 'Bảo dưỡng', color: 'purple' },
+  [OCCUPANCY_SOURCE_TYPE.BOOKING]: { label: 'Đơn thuê', color: STATUS_COLOR.INFO },
+  [OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE]: {
+    label: 'Xe bị khóa',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [OCCUPANCY_SOURCE_TYPE.MAINTENANCE]: { label: 'Bảo dưỡng', color: STATUS_COLOR.SPECIAL },
 };
 
 /**
@@ -241,10 +249,16 @@ export const VEHICLE_BLOCK_REASON_VALUES = Object.values(
 export const VEHICLE_BLOCK_REASON_META: Readonly<Record<VehicleBlockReason, StatusMeta>> = {
   [VEHICLE_BLOCK_REASON.UNPLANNED_MAINTENANCE]: {
     label: 'Bảo dưỡng ngoài kế hoạch',
-    color: 'purple',
+    color: STATUS_COLOR.SPECIAL,
   },
-  [VEHICLE_BLOCK_REASON.REPAIR]: { label: 'Sửa chữa', color: 'orange' },
-  [VEHICLE_BLOCK_REASON.INTERNAL_USE]: { label: 'Xe đang sử dụng nội bộ', color: 'blue' },
-  [VEHICLE_BLOCK_REASON.NOT_FOR_RENT]: { label: 'Không cho thuê', color: 'red' },
-  [VEHICLE_BLOCK_REASON.OTHER]: { label: 'Khác', color: 'default' },
+  [VEHICLE_BLOCK_REASON.REPAIR]: { label: 'Sửa chữa', color: STATUS_COLOR.WARNING },
+  [VEHICLE_BLOCK_REASON.INTERNAL_USE]: {
+    label: 'Xe đang sử dụng nội bộ',
+    color: STATUS_COLOR.INFO,
+  },
+  [VEHICLE_BLOCK_REASON.NOT_FOR_RENT]: {
+    label: 'Không cho thuê',
+    color: STATUS_COLOR.DANGER,
+  },
+  [VEHICLE_BLOCK_REASON.OTHER]: { label: 'Khác', color: STATUS_COLOR.NEUTRAL },
 };

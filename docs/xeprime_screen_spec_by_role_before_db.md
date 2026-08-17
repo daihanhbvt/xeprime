@@ -115,8 +115,8 @@ Quyết định sản phẩm mục tiêu (10/08/2026):
 - Thời gian nhận và trả được chọn trong **một input khoảng thời gian**; không tách thành hai ô
   ngày nhận/ngày trả.
 - Bấm tìm kiếm chuyển sang route kết quả riêng **`/search`**, mang trạng thái tìm kiếm trên URL.
-- Trang chủ chỉ hiển thị tối đa **8 xe** làm nội dung gợi ý và nút **“Xem tất cả xe”**.
-- “Xem tất cả xe” chuyển sang `/search`; trang chủ không phân trang danh sách xe.
+- Trang chủ chỉ hiển thị tối đa **8 xe** làm nội dung gợi ý và nút **“Khám phá xe”**.
+- “Khám phá xe” chuyển sang `/search`; trang chủ không phân trang danh sách xe.
 - Bộ lọc đầy đủ và phân trang chỉ xuất hiện trên `/search`.
 - `/search` không lặp hero/header marketing của trang chủ để dành chiều rộng cho kết quả và bộ
   lọc; thanh điều hướng public toàn cục vẫn được giữ.
@@ -129,7 +129,7 @@ Chức năng và nút:
 | Địa điểm | guest, customer | Chọn tỉnh/thành hoặc địa điểm nhận xe được hệ thống hỗ trợ |
 | Thời gian thuê | guest, customer | Một input range chọn đồng thời thời gian nhận và thời gian trả |
 | Tìm xe | guest, customer | Chuyển sang `/search` với từ khóa, địa điểm và khoảng thuê trên URL |
-| Xem tất cả xe | guest, customer | Chuyển sang `/search` không bắt buộc có điều kiện tìm kiếm |
+| Khám phá xe | guest, customer | Chuyển sang `/search` không bắt buộc có điều kiện tìm kiếm |
 | Thành phố nổi bật | guest, customer | Chọn nhanh tỉnh/thành |
 | Đăng xe cho thuê | guest, customer | Đi sang `/host` hoặc flow đăng ký gian hàng |
 
@@ -149,7 +149,7 @@ Thiếu/cần sửa:
 
 Phân tách bề mặt:
 
-- Trên `/`: tối đa 8 card xe, không phân trang, có nút “Xem tất cả xe”.
+- Trên `/`: tối đa 8 card xe, không phân trang, có nút “Khám phá xe”.
 - Trên `/search`: danh sách kết quả đầy đủ, full filter, sort, URL state và phân trang.
 - `/search` bỏ hero/marketing header của homepage nhưng vẫn giữ global public navigation.
 

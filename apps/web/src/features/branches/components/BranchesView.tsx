@@ -10,7 +10,13 @@ import {
 } from '@ant-design/icons';
 import { Alert, Button, Input, Tag } from 'antd';
 import { useMemo, useState } from 'react';
-import { BRANCH_STATUS, BRANCH_STATUS_META, PERMISSION, type BranchStatus } from '@xeprime/types';
+import {
+  BRANCH_STATUS,
+  BRANCH_STATUS_META,
+  PERMISSION,
+  STATUS_COLOR,
+  type BranchStatus,
+} from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -133,7 +139,7 @@ export function BranchesView() {
         <div className={styles.identity}>
           <span className={styles.name}>{row.name}</span>
           <span className={styles.code}>{row.code}</span>
-          {row.isDefault ? <Tag color="gold">Mặc định</Tag> : null}
+          {row.isDefault ? <Tag color={STATUS_COLOR.WAITING}>Mặc định</Tag> : null}
         </div>
       ),
     },
@@ -145,7 +151,7 @@ export function BranchesView() {
         row.provinceName ? (
           <span>{row.provinceName}</span>
         ) : (
-          <Tag color="warning">Chưa có tỉnh/thành</Tag>
+          <Tag color={STATUS_COLOR.WARNING}>Chưa có tỉnh/thành</Tag>
         ),
     },
     { title: 'Địa chỉ', dataIndex: 'address', render: (v: string | null) => v || '—' },
@@ -180,12 +186,7 @@ export function BranchesView() {
         title="Chi nhánh"
         subtitle="Nơi xe của bạn đang đỗ. Chi nhánh quyết định xe hiển thị ở tỉnh/thành nào trên marketplace."
         extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={openCreate}
-            disabled={!canManage}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} disabled={!canManage}>
             Thêm chi nhánh
           </Button>
         }
@@ -267,7 +268,7 @@ export function BranchesView() {
           <div className={styles.card}>
             <div className={styles.cardHead}>
               <span className={styles.name}>{row.name}</span>
-              {row.isDefault ? <Tag color="gold">Mặc định</Tag> : null}
+              {row.isDefault ? <Tag color={STATUS_COLOR.WAITING}>Mặc định</Tag> : null}
               <StatusTag value={row.status as BranchStatus} meta={BRANCH_STATUS_META} />
             </div>
             <div className={styles.cardMeta}>

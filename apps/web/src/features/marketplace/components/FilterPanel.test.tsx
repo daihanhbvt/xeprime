@@ -6,7 +6,7 @@ import { FilterPanel } from './FilterPanel';
 /**
  * FilterPanel giữ DRAFT cục bộ: bấm chip không được ghi URL; chỉ "Áp dụng (N xe)" mới gọi
  * setFilters đúng MỘT lần với patch đầy đủ; "Xoá bộ lọc" reset các chiều panel sở hữu nhưng
- * không đụng ngữ cảnh tìm kiếm (q/province/ngày giờ).
+ * không đụng ngữ cảnh tìm kiếm (dịch vụ/province/ngày giờ).
  */
 
 const FACETS: PublicListingFacets = {
@@ -80,8 +80,8 @@ describe('FilterPanel', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('mở panel nạp draft từ URL; Xoá bộ lọc reset chiều panel nhưng patch không đụng q', async () => {
-    state.filters = { bodyType: ['sedan'], discount: true, q: 'vios' };
+  it('mở panel nạp draft từ URL; Xoá bộ lọc reset chiều panel nhưng không đụng ngữ cảnh tìm kiếm', async () => {
+    state.filters = { bodyType: ['sedan'], discount: true, serviceType: 'with_driver' };
     render(<FilterPanel open onClose={vi.fn()} />);
 
     // Draft nạp từ URL: chip Sedan đang chọn.
@@ -96,7 +96,8 @@ describe('FilterPanel', () => {
     const patch = state.setFilters.mock.calls[0]?.[0] as Partial<MarketplaceFilters>;
     expect(patch.bodyType).toEqual([]); // mảng rỗng → applyFilterPatch xoá param
     expect(patch.discount).toBe(false);
-    expect('q' in patch).toBe(false); // ngữ cảnh tìm kiếm không thuộc panel — giữ nguyên
+    // Ngữ cảnh tìm kiếm (tab dịch vụ) không thuộc panel — giữ nguyên.
+    expect('serviceType' in patch).toBe(false);
   });
 
   it('ẩn mục Loại xe khi đang tab xe máy (body type chỉ có nghĩa với ô tô)', () => {

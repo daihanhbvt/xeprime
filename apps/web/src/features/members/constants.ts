@@ -1,5 +1,6 @@
 import {
   MEMBERSHIP_STATUS,
+  STATUS_COLOR,
   TENANT_ROLE,
   TENANT_ROLE_LABEL,
   TENANT_ROLE_VALUES,
@@ -20,8 +21,8 @@ export const ALL_ROLE_OPTIONS = TENANT_ROLE_VALUES.map((role) => ({
 
 /** Meta trạng thái thành viên (chưa có trong @xeprime/types) — gói ở FE để StatusTag dùng chung. */
 export const MEMBERSHIP_STATUS_META: Readonly<Record<MembershipStatus, StatusMeta>> = {
-  [MEMBERSHIP_STATUS.ACTIVE]: { label: 'Đang hoạt động', color: 'green' },
-  [MEMBERSHIP_STATUS.INVITED]: { label: 'Đã mời', color: 'gold' },
-  [MEMBERSHIP_STATUS.LOCKED]: { label: 'Bị khoá', color: 'red' },
-  [MEMBERSHIP_STATUS.REMOVED]: { label: 'Đã gỡ', color: 'default' },
+  [MEMBERSHIP_STATUS.ACTIVE]: { label: 'Đang hoạt động', color: STATUS_COLOR.SUCCESS },
+  [MEMBERSHIP_STATUS.INVITED]: { label: 'Đã mời', color: STATUS_COLOR.WAITING },
+  [MEMBERSHIP_STATUS.LOCKED]: { label: 'Bị khoá', color: STATUS_COLOR.DANGER },
+  [MEMBERSHIP_STATUS.REMOVED]: { label: 'Đã gỡ', color: STATUS_COLOR.NEUTRAL },
 };

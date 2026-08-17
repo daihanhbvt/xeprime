@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import {
   SUBSCRIPTION_STATUS,
   SUBSCRIPTION_STATUS_META,
+  STATUS_COLOR,
   type SubscriptionStatus,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -112,8 +113,7 @@ function HistoryRow({
   onCancel: () => void;
 }) {
   const now = dayjs();
-  const isExpired =
-    sub.status === SUBSCRIPTION_STATUS.ACTIVE && dayjs(sub.endsAt).isBefore(now);
+  const isExpired = sub.status === SUBSCRIPTION_STATUS.ACTIVE && dayjs(sub.endsAt).isBefore(now);
   const isLive = sub.status === SUBSCRIPTION_STATUS.ACTIVE && !isExpired;
 
   return (
@@ -128,7 +128,7 @@ function HistoryRow({
       <div>
         {isExpired ? (
           // Dòng active đã qua endsAt → hiển thị "Hết hạn" (suy ra, ADR 0010 — DB vẫn lưu active).
-          <Tag color="red">Hết hạn</Tag>
+          <Tag color={STATUS_COLOR.DANGER}>Hết hạn</Tag>
         ) : (
           <StatusTag value={sub.status as SubscriptionStatus} meta={SUBSCRIPTION_STATUS_META} />
         )}
@@ -178,8 +178,7 @@ function AssignPlanModal({
     const plan = plans.data?.find((p) => p.id === planId);
     if (!plan) return null;
     const now = dayjs();
-    const starts =
-      currentEndsAt && dayjs(currentEndsAt).isAfter(now) ? dayjs(currentEndsAt) : now;
+    const starts = currentEndsAt && dayjs(currentEndsAt).isAfter(now) ? dayjs(currentEndsAt) : now;
     return {
       starts,
       ends: starts.add(plan.durationDays, 'day'),
@@ -212,7 +211,9 @@ function AssignPlanModal({
           <Spin />
         </div>
       ) : (plans.data?.length ?? 0) === 0 ? (
-        <div className={styles.empty}>Chưa có gói nào đang bán — tạo gói ở trang Gói dịch vụ trước.</div>
+        <div className={styles.empty}>
+          Chưa có gói nào đang bán — tạo gói ở trang Gói dịch vụ trước.
+        </div>
       ) : (
         <>
           <Select

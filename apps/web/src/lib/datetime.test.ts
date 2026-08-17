@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { dayjs, formatRentalDuration, formatRentalPoint, weekdayShort } from './datetime';
+import {
+  dayjs,
+  formatRentalDuration,
+  formatRentalPoint,
+  formatShortDateTimeRange,
+  weekdayShort,
+} from './datetime';
 
 /**
  * Định dạng mốc/thời lượng thuê xe — dùng chung ở ô chọn thời gian, hộp lịch và overlay yêu cầu
@@ -30,6 +36,14 @@ describe('formatRentalPoint', () => {
   it('khoảng xuyên năm vẫn đọc đúng nhờ ngày/tháng', () => {
     expect(formatRentalPoint(dayjs('2026-12-31T22:00:00'))).toContain('31/12');
     expect(formatRentalPoint(dayjs('2027-01-01T08:00:00'))).toContain('01/01');
+  });
+});
+
+describe('formatShortDateTimeRange', () => {
+  it('hiện giờ và ngày/tháng, không hiện năm', () => {
+    expect(formatShortDateTimeRange('2026-08-17T01:00:00.000Z', '2026-08-18T07:30:00.000Z')).toBe(
+      '08:00 · 17/08 → 14:30 · 18/08',
+    );
   });
 });
 

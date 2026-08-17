@@ -1,5 +1,5 @@
 import { Tag } from 'antd';
-import type { StatusMeta } from '@xeprime/types';
+import { STATUS_COLOR, type StatusMeta } from '@xeprime/types';
 
 /**
  * Hiển thị một trạng thái nghiệp vụ.
@@ -19,13 +19,13 @@ export function StatusTag<TStatus extends string>({
   meta: Readonly<Record<TStatus, StatusMeta>>;
   fallbackLabel?: string;
 }) {
-  if (!value) return <Tag>{fallbackLabel ?? '—'}</Tag>;
+  if (!value) return <Tag color={STATUS_COLOR.NEUTRAL}>{fallbackLabel ?? '—'}</Tag>;
 
   const entry = meta[value];
 
   // Status có trong DB nhưng chưa khai báo meta: hiện giá trị thô thay vì rỗng, để lỗi
   // nhìn thấy được ngay thay vì biến thành ô trống khó truy.
-  if (!entry) return <Tag color="default">{value}</Tag>;
+  if (!entry) return <Tag color={STATUS_COLOR.NEUTRAL}>{value}</Tag>;
 
   return <Tag color={entry.color}>{entry.label}</Tag>;
 }

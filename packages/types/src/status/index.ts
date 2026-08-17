@@ -10,7 +10,7 @@
  * Repository/service KHÔNG được để `string` rò ra ngoài tầng data — luôn khai báo kiểu
  * trả về bằng union type ở đây.
  */
-export type { StatusColor, StatusMeta } from './meta';
+export { STATUS_COLOR, type StatusColor, type StatusMeta } from './meta';
 export * from './tenant';
 export * from './branch';
 export * from './vehicle';

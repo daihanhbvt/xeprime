@@ -8,7 +8,7 @@
  *    chặn lịch bằng `vehicle_occupancies` (ADR 0006) — đổi nhãn trạng thái xe là KHÔNG đủ (§9.2).
  */
 
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /**
  * Nguồn của một lần ghi KM. `source` cho biết ai/cái gì làm KM đổi — chỉnh tay phải kèm lý do,
@@ -59,15 +59,14 @@ export const ODOMETER_CORRECTION_REASON_VALUES = Object.values(
   ODOMETER_CORRECTION_REASON,
 ) as OdometerCorrectionReason[];
 
-export const ODOMETER_CORRECTION_REASON_LABEL: Readonly<
-  Record<OdometerCorrectionReason, string>
-> = {
-  [ODOMETER_CORRECTION_REASON.HANDOVER_ERROR]: 'Sai số từ bàn giao',
-  [ODOMETER_CORRECTION_REASON.DEVICE_ERROR]: 'Lỗi đồng hồ đo',
-  [ODOMETER_CORRECTION_REASON.CLUSTER_REPLACED]: 'Thay cụm đồng hồ',
-  [ODOMETER_CORRECTION_REASON.DATA_MIGRATION]: 'Chuyển đổi dữ liệu',
-  [ODOMETER_CORRECTION_REASON.OTHER]: 'Lý do khác',
-};
+export const ODOMETER_CORRECTION_REASON_LABEL: Readonly<Record<OdometerCorrectionReason, string>> =
+  {
+    [ODOMETER_CORRECTION_REASON.HANDOVER_ERROR]: 'Sai số từ bàn giao',
+    [ODOMETER_CORRECTION_REASON.DEVICE_ERROR]: 'Lỗi đồng hồ đo',
+    [ODOMETER_CORRECTION_REASON.CLUSTER_REPLACED]: 'Thay cụm đồng hồ',
+    [ODOMETER_CORRECTION_REASON.DATA_MIGRATION]: 'Chuyển đổi dữ liệu',
+    [ODOMETER_CORRECTION_REASON.OTHER]: 'Lý do khác',
+  };
 
 // ── Bảo dưỡng ────────────────────────────────────────────────────────────────
 
@@ -111,10 +110,13 @@ export type MaintenanceStatus = (typeof MAINTENANCE_STATUS)[keyof typeof MAINTEN
 export const MAINTENANCE_STATUS_VALUES = Object.values(MAINTENANCE_STATUS) as MaintenanceStatus[];
 
 export const MAINTENANCE_STATUS_META: Readonly<Record<MaintenanceStatus, StatusMeta>> = {
-  [MAINTENANCE_STATUS.SCHEDULED]: { label: 'Đã lên lịch', color: 'blue' },
-  [MAINTENANCE_STATUS.IN_PROGRESS]: { label: 'Đang bảo dưỡng', color: 'purple' },
-  [MAINTENANCE_STATUS.COMPLETED]: { label: 'Hoàn tất', color: 'green' },
-  [MAINTENANCE_STATUS.CANCELED]: { label: 'Đã hủy', color: 'default' },
+  [MAINTENANCE_STATUS.SCHEDULED]: { label: 'Đã lên lịch', color: STATUS_COLOR.INFO },
+  [MAINTENANCE_STATUS.IN_PROGRESS]: {
+    label: 'Đang bảo dưỡng',
+    color: STATUS_COLOR.PROCESSING,
+  },
+  [MAINTENANCE_STATUS.COMPLETED]: { label: 'Hoàn tất', color: STATUS_COLOR.SUCCESS },
+  [MAINTENANCE_STATUS.CANCELED]: { label: 'Đã hủy', color: STATUS_COLOR.NEUTRAL },
 };
 
 /** Chuyển trạng thái hợp lệ — trạng thái kết thúc (hoàn tất/hủy) là điểm dừng. */
@@ -164,10 +166,16 @@ export const MAINTENANCE_DUE_STATUS_VALUES = Object.values(
 ) as MaintenanceDueStatus[];
 
 export const MAINTENANCE_DUE_STATUS_META: Readonly<Record<MaintenanceDueStatus, StatusMeta>> = {
-  [MAINTENANCE_DUE_STATUS.UNKNOWN]: { label: 'Chưa đủ dữ liệu', color: 'default' },
-  [MAINTENANCE_DUE_STATUS.OK]: { label: 'Trong chu kỳ', color: 'green' },
-  [MAINTENANCE_DUE_STATUS.DUE_SOON]: { label: 'Sắp đến hạn', color: 'orange' },
-  [MAINTENANCE_DUE_STATUS.OVERDUE]: { label: 'Quá hạn', color: 'red' },
+  [MAINTENANCE_DUE_STATUS.UNKNOWN]: {
+    label: 'Chưa đủ dữ liệu',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [MAINTENANCE_DUE_STATUS.OK]: { label: 'Trong chu kỳ', color: STATUS_COLOR.SUCCESS },
+  [MAINTENANCE_DUE_STATUS.DUE_SOON]: {
+    label: 'Sắp đến hạn',
+    color: STATUS_COLOR.WARNING,
+  },
+  [MAINTENANCE_DUE_STATUS.OVERDUE]: { label: 'Quá hạn', color: STATUS_COLOR.DANGER },
 };
 
 /**
@@ -244,7 +252,8 @@ export function vehicleMaintenanceSchedule(
 
   const remainingKm = nextMaintenanceKm - currentKm;
   const usedKm = currentKm - lastServiceKm;
-  const dueSoonKm = typeof input.dueSoonKm === 'number' && input.dueSoonKm > 0 ? input.dueSoonKm : null;
+  const dueSoonKm =
+    typeof input.dueSoonKm === 'number' && input.dueSoonKm > 0 ? input.dueSoonKm : null;
 
   let status: MaintenanceDueStatus = MAINTENANCE_DUE_STATUS.OK;
   if (remainingKm <= 0) status = MAINTENANCE_DUE_STATUS.OVERDUE;

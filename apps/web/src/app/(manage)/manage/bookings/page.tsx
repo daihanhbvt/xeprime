@@ -1,10 +1,11 @@
 'use client';
 
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Input, Select, Spin } from 'antd';
+import { Button, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { PERMISSION } from '@xeprime/types';
+import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { bookingPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -14,10 +15,33 @@ import { BookingFormDialog } from '@/features/bookings/components/BookingFormDia
 import { BookingTable } from '@/features/bookings/components/BookingTable';
 import { useBookingFilters } from '@/features/bookings/hooks/use-booking-filters';
 import { useBookings } from '@/features/bookings/hooks/use-bookings';
-import type { BookingDetail, BookingSort } from '@/features/bookings/types';
+import type { BookingDetail, BookingFilters, BookingSort } from '@/features/bookings/types';
 import styles from './bookings-page.module.css';
 
 const STATUS_OPTIONS = [{ value: 'all', label: 'Tất cả trạng thái' }, ...BOOKING_STATUS_OPTIONS];
+
+const FILTER_FIELDS: readonly FilterField[] = [
+  {
+    kind: 'search',
+    key: 'q',
+    label: 'Tìm kiếm đơn thuê',
+    placeholder: 'Tìm theo tên khách, SĐT, mã đơn',
+  },
+  {
+    kind: 'select',
+    key: 'status',
+    label: 'Trạng thái',
+    allowClear: false,
+    options: STATUS_OPTIONS,
+  },
+  {
+    kind: 'select',
+    key: 'sort',
+    label: 'Sắp xếp',
+    allowClear: false,
+    options: BOOKING_SORT_OPTIONS,
+  },
+];
 
 export default function BookingsPage() {
   // useBookingFilters đọc useSearchParams → cần Suspense trong route tĩnh (Next).
@@ -48,6 +72,14 @@ function BookingsView() {
     setFormOpen(true);
   }
 
+  function changeFilters(patch: FilterValues) {
+    const next: Partial<BookingFilters> = {};
+    if ('q' in patch) next.q = patch.q;
+    if ('status' in patch) next.status = patch.status === 'all' ? undefined : patch.status;
+    if ('sort' in patch) next.sort = patch.sort as BookingSort | undefined;
+    setFilters(next);
+  }
+
   return (
     <div>
       <ManagePageHeader
@@ -61,30 +93,16 @@ function BookingsView() {
         }
       />
 
-      <div className={styles.filters}>
-        <Input.Search
-          className={styles.search}
-          allowClear
-          size="large"
-          placeholder="Tìm theo tên khách, SĐT, mã đơn"
-          defaultValue={filters.q}
-          onSearch={(value) => setFilters({ q: value || undefined })}
-        />
-        <Select
-          className={styles.select}
-          size="large"
-          value={filters.status ?? 'all'}
-          options={STATUS_OPTIONS}
-          onChange={(value: string) => setFilters({ status: value === 'all' ? undefined : value })}
-        />
-        <Select
-          className={styles.select}
-          size="large"
-          value={filters.sort ?? 'newest'}
-          options={BOOKING_SORT_OPTIONS as unknown as { value: string; label: string }[]}
-          onChange={(value: BookingSort) => setFilters({ sort: value })}
-        />
-      </div>
+      <FilterBar
+        fields={FILTER_FIELDS}
+        values={{
+          q: filters.q,
+          status: filters.status ?? 'all',
+          sort: filters.sort ?? 'newest',
+        }}
+        onChange={changeFilters}
+        searchDebounceMs={300}
+      />
 
       <BookingTable
         items={items}

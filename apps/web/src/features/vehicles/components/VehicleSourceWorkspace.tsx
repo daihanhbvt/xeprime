@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import {
   PERMISSION,
+  STATUS_COLOR,
   VEHICLE_FINANCE_INTEREST_METHOD_LABEL,
   VEHICLE_FINANCE_INTEREST_METHOD_VALUES,
   VEHICLE_SOURCE_TYPE,
@@ -34,11 +35,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
 import { formatMoneyVnd } from '@/lib/money';
 import { uploadToR2 } from '@/services/upload';
-import {
-  completeSourceContract,
-  fetchSourceContractDownload,
-  presignSourceContract,
-} from '../api';
+import { completeSourceContract, fetchSourceContractDownload, presignSourceContract } from '../api';
 import { useSaveVehicleSource, useVehicleSource } from '../hooks/use-vehicle-source';
 import {
   emptySourceFormValues,
@@ -244,167 +241,167 @@ function VehicleSourceForm({
      * AntD: chế độ chỉ-đọc khoá TẤT CẢ control một chỗ, không rải prop từng field.
      */
     <Form component={false} layout="vertical" colon={false} disabled={!canEdit}>
-    <form
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        void handleSubmit(onSubmit)();
-      }}
-    >
-      <div className={styles.stack}>
-        {/* Dải trạng thái đầu tab — nói ngay xe đang ở hình thức nào. */}
-        <div className={styles.statusBanner}>
-          <span className={styles.statusIcon} aria-hidden="true">
-            {SOURCE_ICON[savedType]}
-          </span>
-          <div className={styles.statusCopy}>
-            <strong>
-              Hình thức sở hữu xe: {VEHICLE_SOURCE_TYPE_LABEL[savedType]}{' '}
-              <Tag className={styles.statusTag} color="gold">
-                {SOURCE_STATUS_TAG[savedType]}
-              </Tag>
-            </strong>
-            <small>{VEHICLE_SOURCE_TYPE_DESCRIPTION[savedType]}</small>
+      <form
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSubmit(onSubmit)();
+        }}
+      >
+        <div className={styles.stack}>
+          {/* Dải trạng thái đầu tab — nói ngay xe đang ở hình thức nào. */}
+          <div className={styles.statusBanner}>
+            <span className={styles.statusIcon} aria-hidden="true">
+              {SOURCE_ICON[savedType]}
+            </span>
+            <div className={styles.statusCopy}>
+              <strong>
+                Hình thức sở hữu xe: {VEHICLE_SOURCE_TYPE_LABEL[savedType]}{' '}
+                <Tag className={styles.statusTag} color={STATUS_COLOR.WAITING}>
+                  {SOURCE_STATUS_TAG[savedType]}
+                </Tag>
+              </strong>
+              <small>{VEHICLE_SOURCE_TYPE_DESCRIPTION[savedType]}</small>
+            </div>
+            <InfoCircleOutlined className={styles.statusInfo} aria-hidden="true" />
           </div>
-          <InfoCircleOutlined className={styles.statusInfo} aria-hidden="true" />
-        </div>
 
-        {!canEdit ? (
-          <Alert
-            type="info"
-            showIcon
-            message="Bạn đang xem ở chế độ chỉ đọc. Liên hệ quản lý để chỉnh sửa."
-          />
-        ) : null}
-
-        {errorCount > 0 ? (
-          <Alert type="error" showIcon message={`${errorCount} lỗi cần sửa trước khi lưu`} />
-        ) : null}
-
-        {!source.detail ? (
-          <Alert
-            type="warning"
-            showIcon
-            message="Xe chưa có hồ sơ nguồn chi tiết"
-            description="Bổ sung thông tin bên dưới để đồng bộ với phân hệ kế toán và tính toán chi phí vận hành."
-          />
-        ) : null}
-
-        <Card title="Hình thức nguồn xe" className={styles.card}>
-          <Controller
-            control={control}
-            name="sourceType"
-            render={({ field }) => (
-              <Radio.Group
-                value={field.value}
-                onChange={(event) => field.onChange(event.target.value)}
-                className={styles.typeGrid}
-                disabled={!canEdit}
-              >
-                {VEHICLE_SOURCE_TYPE_VALUES.map((value) => (
-                  <Radio key={value} value={value} className={styles.typeOption}>
-                    <span className={styles.typeHead}>
-                      <span aria-hidden="true">{SOURCE_ICON[value]}</span>
-                      <strong>{VEHICLE_SOURCE_TYPE_LABEL[value]}</strong>
-                    </span>
-                    <small>{SOURCE_CARD_HINT[value]}</small>
-                  </Radio>
-                ))}
-              </Radio.Group>
-            )}
-          />
-        </Card>
-
-        {sourceType === VEHICLE_SOURCE_TYPE.OWNED ? (
-          <OwnedSection control={control} disabled={!canEdit} />
-        ) : null}
-        {sourceType === VEHICLE_SOURCE_TYPE.FINANCED ? (
-          <FinancedSection control={control} disabled={!canEdit} monthlyTotal={monthlyTotal} />
-        ) : null}
-        {sourceType === VEHICLE_SOURCE_TYPE.RENTED ? (
-          <RentedSection control={control} disabled={!canEdit} />
-        ) : null}
-        {sourceType === VEHICLE_SOURCE_TYPE.PARTNERSHIP ? (
-          <PartnershipSection
-            control={control}
-            disabled={!canEdit}
-            commissionPercent={commissionPercent ?? null}
-          />
-        ) : null}
-
-        {sourceType !== VEHICLE_SOURCE_TYPE.OWNED || canEdit ? (
-          <Card
-            title={
-              sourceType === VEHICLE_SOURCE_TYPE.OWNED
-                ? 'Hồ sơ đính kèm (tùy chọn)'
-                : 'Hồ sơ hợp đồng'
-            }
-            className={styles.card}
-          >
-            <FileListField
-              control={control}
-              name="contractFiles"
-              label={
-                sourceType === VEHICLE_SOURCE_TYPE.FINANCED
-                  ? 'Hợp đồng vay (đã tải lên)'
-                  : sourceType === VEHICLE_SOURCE_TYPE.RENTED
-                    ? 'Hợp đồng thuê xe (bản scan)'
-                    : sourceType === VEHICLE_SOURCE_TYPE.PARTNERSHIP
-                      ? 'Hợp đồng hợp tác kinh doanh (mẫu đã ký)'
-                      : 'Giấy tờ mua bán / hoá đơn (nếu có)'
-              }
-              upload={uploadContract}
-              getDownloadUrl={contractDownloadUrl}
-              disabled={!canEdit}
+          {!canEdit ? (
+            <Alert
+              type="info"
+              showIcon
+              message="Bạn đang xem ở chế độ chỉ đọc. Liên hệ quản lý để chỉnh sửa."
             />
-            <TextAreaField
+          ) : null}
+
+          {errorCount > 0 ? (
+            <Alert type="error" showIcon message={`${errorCount} lỗi cần sửa trước khi lưu`} />
+          ) : null}
+
+          {!source.detail ? (
+            <Alert
+              type="warning"
+              showIcon
+              message="Xe chưa có hồ sơ nguồn chi tiết"
+              description="Bổ sung thông tin bên dưới để đồng bộ với phân hệ kế toán và tính toán chi phí vận hành."
+            />
+          ) : null}
+
+          <Card title="Hình thức nguồn xe" className={styles.card}>
+            <Controller
               control={control}
-              name="notes"
-              label="Ghi chú thêm"
-              placeholder="Nhập ghi chú hoặc thông tin bổ sung về nguồn gốc xe…"
-              rows={3}
-              maxLength={4000}
+              name="sourceType"
+              render={({ field }) => (
+                <Radio.Group
+                  value={field.value}
+                  onChange={(event) => field.onChange(event.target.value)}
+                  className={styles.typeGrid}
+                  disabled={!canEdit}
+                >
+                  {VEHICLE_SOURCE_TYPE_VALUES.map((value) => (
+                    <Radio key={value} value={value} className={styles.typeOption}>
+                      <span className={styles.typeHead}>
+                        <span aria-hidden="true">{SOURCE_ICON[value]}</span>
+                        <strong>{VEHICLE_SOURCE_TYPE_LABEL[value]}</strong>
+                      </span>
+                      <small>{SOURCE_CARD_HINT[value]}</small>
+                    </Radio>
+                  ))}
+                </Radio.Group>
+              )}
             />
           </Card>
+
+          {sourceType === VEHICLE_SOURCE_TYPE.OWNED ? (
+            <OwnedSection control={control} disabled={!canEdit} />
+          ) : null}
+          {sourceType === VEHICLE_SOURCE_TYPE.FINANCED ? (
+            <FinancedSection control={control} disabled={!canEdit} monthlyTotal={monthlyTotal} />
+          ) : null}
+          {sourceType === VEHICLE_SOURCE_TYPE.RENTED ? (
+            <RentedSection control={control} disabled={!canEdit} />
+          ) : null}
+          {sourceType === VEHICLE_SOURCE_TYPE.PARTNERSHIP ? (
+            <PartnershipSection
+              control={control}
+              disabled={!canEdit}
+              commissionPercent={commissionPercent ?? null}
+            />
+          ) : null}
+
+          {sourceType !== VEHICLE_SOURCE_TYPE.OWNED || canEdit ? (
+            <Card
+              title={
+                sourceType === VEHICLE_SOURCE_TYPE.OWNED
+                  ? 'Hồ sơ đính kèm (tùy chọn)'
+                  : 'Hồ sơ hợp đồng'
+              }
+              className={styles.card}
+            >
+              <FileListField
+                control={control}
+                name="contractFiles"
+                label={
+                  sourceType === VEHICLE_SOURCE_TYPE.FINANCED
+                    ? 'Hợp đồng vay (đã tải lên)'
+                    : sourceType === VEHICLE_SOURCE_TYPE.RENTED
+                      ? 'Hợp đồng thuê xe (bản scan)'
+                      : sourceType === VEHICLE_SOURCE_TYPE.PARTNERSHIP
+                        ? 'Hợp đồng hợp tác kinh doanh (mẫu đã ký)'
+                        : 'Giấy tờ mua bán / hoá đơn (nếu có)'
+                }
+                upload={uploadContract}
+                getDownloadUrl={contractDownloadUrl}
+                disabled={!canEdit}
+              />
+              <TextAreaField
+                control={control}
+                name="notes"
+                label="Ghi chú thêm"
+                placeholder="Nhập ghi chú hoặc thông tin bổ sung về nguồn gốc xe…"
+                rows={3}
+                maxLength={4000}
+              />
+            </Card>
+          ) : null}
+        </div>
+
+        {canEdit ? (
+          <StickyFormActions
+            submitLabel="Lưu thay đổi"
+            cancelLabel={isDirty ? 'Hoàn tác' : 'Huỷ bỏ'}
+            onCancel={() => reset(initialValues)}
+            submitting={save.isPending}
+            disabled={!isDirty}
+          />
         ) : null}
-      </div>
 
-      {canEdit ? (
-        <StickyFormActions
-          submitLabel="Lưu thay đổi"
-          cancelLabel={isDirty ? 'Hoàn tác' : 'Huỷ bỏ'}
-          onCancel={() => reset(initialValues)}
-          submitting={save.isPending}
-          disabled={!isDirty}
-        />
-      ) : null}
-
-      <ResponsiveDialog
-        open={confirmTypeChange !== null}
-        title="Đổi hình thức sở hữu xe?"
-        size="sm"
-        confirmLoading={save.isPending}
-        onClose={() => setConfirmTypeChange(null)}
-        onOk={() => confirmTypeChange && void persist(confirmTypeChange)}
-        okText="Xác nhận & Lưu"
-        cancelText="Huỷ"
-        destructive
-      >
-        <p>
-          Đổi từ <strong>{VEHICLE_SOURCE_TYPE_LABEL[savedType]}</strong> sang{' '}
-          <strong>
-            {confirmTypeChange
-              ? VEHICLE_SOURCE_TYPE_LABEL[confirmTypeChange.sourceType as VehicleSourceType]
-              : ''}
-          </strong>{' '}
-          sẽ thay thế toàn bộ hồ sơ tài chính hiện tại của xe.
-        </p>
-        <p>
-          Lưu ý: việc này có thể làm thay đổi các bảng tính dòng tiền và khấu hao hiện tại. Hồ sơ
-          cũ không thể khôi phục sau khi lưu.
-        </p>
-      </ResponsiveDialog>
-    </form>
+        <ResponsiveDialog
+          open={confirmTypeChange !== null}
+          title="Đổi hình thức sở hữu xe?"
+          size="sm"
+          confirmLoading={save.isPending}
+          onClose={() => setConfirmTypeChange(null)}
+          onOk={() => confirmTypeChange && void persist(confirmTypeChange)}
+          okText="Xác nhận & Lưu"
+          cancelText="Huỷ"
+          destructive
+        >
+          <p>
+            Đổi từ <strong>{VEHICLE_SOURCE_TYPE_LABEL[savedType]}</strong> sang{' '}
+            <strong>
+              {confirmTypeChange
+                ? VEHICLE_SOURCE_TYPE_LABEL[confirmTypeChange.sourceType as VehicleSourceType]
+                : ''}
+            </strong>{' '}
+            sẽ thay thế toàn bộ hồ sơ tài chính hiện tại của xe.
+          </p>
+          <p>
+            Lưu ý: việc này có thể làm thay đổi các bảng tính dòng tiền và khấu hao hiện tại. Hồ sơ
+            cũ không thể khôi phục sau khi lưu.
+          </p>
+        </ResponsiveDialog>
+      </form>
     </Form>
   );
 }

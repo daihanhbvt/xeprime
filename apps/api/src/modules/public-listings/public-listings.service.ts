@@ -7,6 +7,7 @@ import {
   REVIEW_STATUS,
   SEAT_BUCKET_RANGE,
   SEAT_BUCKET_VALUES,
+  SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type PaginationMeta,
@@ -121,6 +122,18 @@ function listingOrderBy(
   ];
 }
 
+/**
+ * Lọc dịch vụ theo NĂNG LỰC phục vụ, không phải giá trị cột: xe đăng `both` phục vụ được cả
+ * chuyến tự lái lẫn có tài xế nên phải xuất hiện ở CẢ HAI tab tìm kiếm — khớp chính xác sẽ làm
+ * nhóm xe này biến mất khỏi marketplace. `long_term` (và chính `both`) giữ khớp chính xác.
+ */
+function serviceTypeFilter(serviceType: string): Prisma.PublicListingWhereInput {
+  if (serviceType === SERVICE_TYPE.SELF_DRIVE || serviceType === SERVICE_TYPE.WITH_DRIVER) {
+    return { serviceType: { in: [serviceType, SERVICE_TYPE.BOTH] } };
+  }
+  return { serviceType };
+}
+
 /** Lọc khoảng giá thuê/ngày. Listing chưa có giá không lọt khi có ràng buộc giá. */
 function priceFilter(min?: number, max?: number): Prisma.PublicListingWhereInput {
   if (min == null && max == null) return {};
@@ -182,7 +195,7 @@ function buildListingWhere(
     and.push({ provinceCode: query.provinceCode });
   }
   if (query.vehicleType) and.push({ vehicleType: query.vehicleType });
-  if (query.serviceType) and.push({ serviceType: query.serviceType });
+  if (query.serviceType) and.push(serviceTypeFilter(query.serviceType));
   if (query.minSeats) and.push({ seatCount: { gte: query.minSeats } });
   const availability = availabilityFilter(query.pickupAt, query.returnAt);
   if (Object.keys(availability).length > 0) and.push(availability);

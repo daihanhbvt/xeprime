@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   BOOKING_REQUEST_STATUS_META,
   PERMISSION,
+  STATUS_COLOR,
   USER_STATUS_META,
   type BookingRequestStatus,
   type UserStatus,
@@ -77,7 +78,9 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
                   loading={reveal.isPending}
                   onReveal={onReveal}
                 />
-                {customer.phoneVerified ? <Tag color="green">Đã xác thực</Tag> : null}
+                {customer.phoneVerified ? (
+                  <Tag color={STATUS_COLOR.SUCCESS}>Đã xác thực</Tag>
+                ) : null}
               </span>
             ),
           },
@@ -93,7 +96,9 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
                   loading={reveal.isPending}
                   onReveal={onReveal}
                 />
-                {customer.emailVerifiedAt ? <Tag color="green">Đã xác thực</Tag> : null}
+                {customer.emailVerifiedAt ? (
+                  <Tag color={STATUS_COLOR.SUCCESS}>Đã xác thực</Tag>
+                ) : null}
               </span>
             ),
           },
@@ -105,7 +110,9 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
           {
             key: 'lastLogin',
             label: 'Đăng nhập gần nhất',
-            children: customer.lastLoginAt ? formatDateTime(customer.lastLoginAt) : 'Chưa đăng nhập',
+            children: customer.lastLoginAt
+              ? formatDateTime(customer.lastLoginAt)
+              : 'Chưa đăng nhập',
           },
           { key: 'created', label: 'Ngày tạo', children: formatDateTime(customer.createdAt) },
           { key: 'updated', label: 'Cập nhật', children: formatDateTime(customer.updatedAt) },
@@ -114,10 +121,7 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
 
       <div className={styles.sectionTitle}>Yêu cầu thuê gần nhất</div>
       {customer.recentRequests.length === 0 ? (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="Khách chưa gửi yêu cầu thuê nào"
-        />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Khách chưa gửi yêu cầu thuê nào" />
       ) : (
         <Table<AdminCustomerRequest>
           rowKey="id"

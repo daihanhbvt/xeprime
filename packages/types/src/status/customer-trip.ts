@@ -14,7 +14,7 @@
 
 import { BOOKING_STATUS, type BookingStatus } from './booking';
 import { BOOKING_REQUEST_STATUS, type BookingRequestStatus } from './booking-request';
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 export const CUSTOMER_TRIP_STAGE = {
   /** Đã gửi yêu cầu, chủ xe chưa trả lời. Chưa có đơn thuê. */
@@ -38,13 +38,19 @@ export type CustomerTripStage = (typeof CUSTOMER_TRIP_STAGE)[keyof typeof CUSTOM
 export const CUSTOMER_TRIP_STAGE_VALUES = Object.values(CUSTOMER_TRIP_STAGE) as CustomerTripStage[];
 
 export const CUSTOMER_TRIP_STAGE_META: Readonly<Record<CustomerTripStage, StatusMeta>> = {
-  [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL]: { label: 'Chờ xác nhận', color: 'gold' },
-  [CUSTOMER_TRIP_STAGE.READY]: { label: 'Sẵn sàng', color: 'green' },
-  [CUSTOMER_TRIP_STAGE.ACTIVE]: { label: 'Đang thuê', color: 'green' },
-  [CUSTOMER_TRIP_STAGE.COMPLETED]: { label: 'Hoàn thành', color: 'blue' },
-  [CUSTOMER_TRIP_STAGE.CANCELLED]: { label: 'Đã hủy chuyến', color: 'default' },
-  [CUSTOMER_TRIP_STAGE.REJECTED]: { label: 'Bị từ chối', color: 'red' },
-  [CUSTOMER_TRIP_STAGE.NO_SHOW]: { label: 'Không nhận xe', color: 'red' },
+  [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL]: {
+    label: 'Chờ xác nhận',
+    color: STATUS_COLOR.WAITING,
+  },
+  [CUSTOMER_TRIP_STAGE.READY]: { label: 'Sẵn sàng', color: STATUS_COLOR.INFO },
+  [CUSTOMER_TRIP_STAGE.ACTIVE]: { label: 'Đang thuê', color: STATUS_COLOR.PROCESSING },
+  [CUSTOMER_TRIP_STAGE.COMPLETED]: { label: 'Hoàn thành', color: STATUS_COLOR.SUCCESS },
+  [CUSTOMER_TRIP_STAGE.CANCELLED]: {
+    label: 'Đã hủy chuyến',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [CUSTOMER_TRIP_STAGE.REJECTED]: { label: 'Bị từ chối', color: STATUS_COLOR.DANGER },
+  [CUSTOMER_TRIP_STAGE.NO_SHOW]: { label: 'Không nhận xe', color: STATUS_COLOR.DANGER },
 };
 
 /**

@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import { App, Button, Tag } from 'antd';
 import { useState } from 'react';
+import { STATUS_COLOR } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { formatDateTime } from '@/lib/datetime';
@@ -106,11 +107,15 @@ export default function AdminBannersPage() {
       key: 'status',
       width: 140,
       render: (_, b) => {
-        if (!b.active) return <Tag>Đã tắt</Tag>;
-        if (b.visibleNow) return <Tag color="green">Đang hiển thị</Tag>;
+        if (!b.active) return <Tag color={STATUS_COLOR.NEUTRAL}>Đã tắt</Tag>;
+        if (b.visibleNow) return <Tag color={STATUS_COLOR.SUCCESS}>Đang hiển thị</Tag>;
         // active nhưng ngoài khung lịch — nói rõ vì sao không thấy ngoài trang chủ.
         const upcoming = b.startsAt && new Date(b.startsAt).getTime() > Date.now();
-        return upcoming ? <Tag color="gold">Chờ tới lịch</Tag> : <Tag color="orange">Hết lịch</Tag>;
+        return upcoming ? (
+          <Tag color={STATUS_COLOR.WAITING}>Chờ tới lịch</Tag>
+        ) : (
+          <Tag color={STATUS_COLOR.WARNING}>Hết lịch</Tag>
+        );
       },
     },
     actionColumn<AdminBanner>(

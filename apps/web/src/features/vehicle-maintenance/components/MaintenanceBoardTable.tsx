@@ -9,6 +9,7 @@ import {
   MAINTENANCE_STATUS_META,
   MAINTENANCE_TYPE_LABEL,
   PERMISSION,
+  STATUS_COLOR,
   type MaintenanceDueStatus,
   type MaintenanceStatus,
   type MaintenanceType,
@@ -50,14 +51,15 @@ function dueCell(row: MaintenanceBoardItem) {
     row.oilChangeIntervalKm && row.remainingKm != null
       ? Math.min(
           100,
-          Math.max(0, ((row.oilChangeIntervalKm - row.remainingKm) / row.oilChangeIntervalKm) * 100),
+          Math.max(
+            0,
+            ((row.oilChangeIntervalKm - row.remainingKm) / row.oilChangeIntervalKm) * 100,
+          ),
         )
       : null;
   return (
     <div className={styles.dueCell}>
-      <span
-        className={status === MAINTENANCE_DUE_STATUS.OVERDUE ? styles.overdue : styles.dueText}
-      >
+      <span className={status === MAINTENANCE_DUE_STATUS.OVERDUE ? styles.overdue : styles.dueText}>
         {formatRemainingKm(row.remainingKm)}
       </span>
       {percent != null ? (
@@ -125,7 +127,7 @@ export function MaintenanceBoardTable({
       width: 140,
       render: (_, row) =>
         row.currentOdometerKm == null ? (
-          <Tag color="orange">Thiếu KM</Tag>
+          <Tag color={STATUS_COLOR.WARNING}>Thiếu KM</Tag>
         ) : (
           <span className={styles.numeric}>{formatKm(row.currentOdometerKm)}</span>
         ),
@@ -147,7 +149,10 @@ export function MaintenanceBoardTable({
       title: 'Trạng thái',
       width: 140,
       render: (_, row) => (
-        <StatusTag value={row.dueStatus as MaintenanceDueStatus} meta={MAINTENANCE_DUE_STATUS_META} />
+        <StatusTag
+          value={row.dueStatus as MaintenanceDueStatus}
+          meta={MAINTENANCE_DUE_STATUS_META}
+        />
       ),
     },
     {

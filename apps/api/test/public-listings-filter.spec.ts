@@ -1,6 +1,7 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   OCCUPANCY_SOURCE_TYPE,
+  SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
@@ -40,6 +41,11 @@ let vMid: string;
 let vHigh: string;
 let vBusy: string;
 let vProvB: string;
+// Bộ xe theo loại dịch vụ — giá 400k (dưới sàn 500k của các test giá) để không lọt vào
+// các assertion `toEqual` theo khoảng giá phía trên.
+let vDriver: string;
+let vBothSvc: string;
+let vLongTerm: string;
 
 /** Chi nhánh mặc định của mỗi tenant trong spec — xe lấy tỉnh từ đây. */
 const branchByTenant = new Map<string, string>();
@@ -63,7 +69,11 @@ async function seedActiveTenant(provinceCode: string, provinceName: string): Pro
   return id;
 }
 
-async function seedVehicle(tenantId: string, price: string): Promise<string> {
+async function seedVehicle(
+  tenantId: string,
+  price: string,
+  serviceType?: string,
+): Promise<string> {
   const id = newId();
   await prisma.vehicle.create({
     data: {
@@ -76,6 +86,7 @@ async function seedVehicle(tenantId: string, price: string): Promise<string> {
       publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
       mainImageUrl: 'https://img.example/vios.jpg',
       weekdayPrice: price,
+      ...(serviceType ? { serviceType } : {}),
     },
   });
   return id;
@@ -109,6 +120,9 @@ beforeAll(async () => {
   vHigh = await seedVehicle(tenantA, '1500000');
   vBusy = await seedVehicle(tenantA, '600000');
   vProvB = await seedVehicle(tenantB, '700000');
+  vDriver = await seedVehicle(tenantA, '400000', SERVICE_TYPE.WITH_DRIVER);
+  vBothSvc = await seedVehicle(tenantA, '400000', SERVICE_TYPE.BOTH);
+  vLongTerm = await seedVehicle(tenantA, '400000', SERVICE_TYPE.LONG_TERM);
 
   await prisma.vehicleOccupancy.create({
     data: {
@@ -123,7 +137,8 @@ beforeAll(async () => {
   });
 
   // Reads đọc từ public_listings (ADR 0008) → sync mọi xe seed vào snapshot.
-  for (const id of [vCheap, vMid, vHigh, vBusy, vProvB]) await listings.syncFromVehicle(id);
+  for (const id of [vCheap, vMid, vHigh, vBusy, vProvB, vDriver, vBothSvc, vLongTerm])
+    await listings.syncFromVehicle(id);
 });
 
 afterAll(async () => {
@@ -205,5 +220,36 @@ describe('Marketplace filter (giá / ngày rảnh / tỉnh)', () => {
     );
     const ids = res.data.map((v) => v.id);
     expect(ids).toEqual([vMid]); // vBusy cùng giá nhưng bận → loại
+  });
+});
+
+describe('Marketplace filter (loại dịch vụ — tab tự lái / có tài xế / dài hạn)', () => {
+  maybe('self_drive bao gồm cả xe đăng both — lọc theo năng lực phục vụ', async () => {
+    const res = await service.search(
+      q({ provinceCode: PROV_A, serviceType: SERVICE_TYPE.SELF_DRIVE }),
+    );
+    const ids = res.data.map((v) => v.id);
+    expect(ids).toContain(vCheap); // default self_drive
+    expect(ids).toContain(vBothSvc); // both phục vụ được chuyến tự lái
+    expect(ids).not.toContain(vDriver);
+    expect(ids).not.toContain(vLongTerm);
+  });
+
+  maybe('with_driver bao gồm cả xe đăng both', async () => {
+    const res = await service.search(
+      q({ provinceCode: PROV_A, serviceType: SERVICE_TYPE.WITH_DRIVER }),
+    );
+    const ids = res.data.map((v) => v.id);
+    expect(ids).toContain(vDriver);
+    expect(ids).toContain(vBothSvc);
+    expect(ids).not.toContain(vCheap);
+    expect(ids).not.toContain(vLongTerm);
+  });
+
+  maybe('long_term khớp chính xác — không kéo theo xe both', async () => {
+    const res = await service.search(
+      q({ provinceCode: PROV_A, serviceType: SERVICE_TYPE.LONG_TERM }),
+    );
+    expect(res.data.map((v) => v.id)).toEqual([vLongTerm]);
   });
 });

@@ -16,8 +16,8 @@
 }
 
 /*
- * Thanh tìm kiếm trên cùng: [ô từ khoá thật] | [vùng ngữ cảnh = MỘT nút].
- * Desktop chung một thanh, mobile tách hai tầng (xem media query cuối file).
+ * Thanh ngữ cảnh trên cùng — MỘT nút chiếm cả thanh (ô từ khoá đã bỏ, yêu cầu 17/08): bấm đâu
+ * cũng mở hộp chỉnh sửa, không phải nhắm trúng chữ "Chỉnh sửa".
  */
 .searchBar {
   display: flex;
@@ -32,38 +32,14 @@
   border-color: var(--xp-color-border-focus);
 }
 
-.keywordBox {
-  display: flex;
-  min-width: 0;
-  flex: 1 1 46%;
-  align-items: center;
-  padding: 8px 8px 8px 16px;
-  gap: 8px;
-}
-
-.keywordIcon {
-  flex: none;
-  color: var(--xp-color-primary-active);
-}
-
-.keywordInput {
-  min-width: 0;
-  flex: 1;
-  padding: 4px 0 !important;
-  font-size: var(--xp-font-size-body);
-  font-weight: var(--xp-font-weight-medium);
-}
-
-/* Cả vùng là BUTTON — bấm đâu cũng mở hộp chỉnh sửa, không phải nhắm trúng chữ. */
 .contextZone {
   display: flex;
   min-width: 0;
-  flex: 1 1 54%;
+  flex: 1;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
   border: none;
-  border-left: 1px solid var(--xp-color-border);
   background: none;
   cursor: pointer;
   gap: var(--xp-space-sm);
@@ -349,20 +325,8 @@
 
 @media (max-width: 640px) {
   /* Mobile: từ khoá một tầng, vùng ngữ cảnh một tầng — ngăn bằng vạch ngang. */
-  .searchBar {
-    flex-direction: column;
-  }
-
-  .keywordBox {
-    flex: none;
-    padding: 6px 6px 6px 12px;
-  }
-
   .contextZone {
-    flex: none;
     padding: 10px 12px;
-    border-left: none;
-    border-top: 1px solid var(--xp-color-border);
   }
 
   /* Mobile (Figma 23:1100): hàng 1 = đếm + Bộ lọc/Sắp xếp; hàng 2 = chip nhanh CUỘN NGANG
@@ -395,12 +359,3 @@
 }
 
 /* Bỏ viền tròn bên trong ô từ khoá — thanh ngoài đã có viền (yêu cầu 10/08). */
-.keywordBox :global(.ant-input),
-.keywordBox :global(.ant-input-affix-wrapper),
-.keywordBox :global(.ant-input-outlined) {
-  border: none !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  outline: none !important;
-}

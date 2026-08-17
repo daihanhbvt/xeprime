@@ -142,7 +142,7 @@ Admin nền tảng
 | 2 | Hệ thống hiển thị tối đa 8 xe public làm gợi ý, không phân trang trên homepage | `GET /public/listings?limit=8` |
 | 3 | Khách nhập từ khóa, địa điểm và chọn khoảng nhận–trả trong một input thời gian thuê | Search context trên URL |
 | 4 | Khách bấm “Tìm xe” | Chuyển sang `/search` với điều kiện tìm kiếm |
-| 5 | Hoặc khách bấm “Xem tất cả xe” | Chuyển sang `/search` không bắt buộc có điều kiện |
+| 5 | Hoặc khách bấm “Khám phá xe” | Chuyển sang `/search` không bắt buộc có điều kiện |
 | 6 | Trang `/search` hiển thị full filter, sort, kết quả và pagination; không lặp hero marketing của homepage | API search/listing có pagination |
 | 7 | Khách mở chi tiết xe | Route public listing detail hiện hành |
 | 8 | Khách xem thông tin gian hàng | Route `/shops/[slug]` |

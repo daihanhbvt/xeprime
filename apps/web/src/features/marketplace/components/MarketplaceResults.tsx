@@ -1,13 +1,7 @@
 'use client';
 
-import {
-  CloseOutlined,
-  EditOutlined,
-  FilterOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
-import { Badge, Button, Input, Select, Skeleton } from 'antd';
+import { CloseOutlined, EditOutlined, FilterOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Badge, Button, Select, Skeleton } from 'antd';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   DEFAULT_LISTING_SORT,
@@ -16,16 +10,17 @@ import {
   LISTING_SORT_LABEL,
   LISTING_SORT_VALUES,
   SEAT_BUCKET_LABEL,
+  SERVICE_TYPE_LABEL,
   VEHICLE_TYPE,
   VEHICLE_TYPE_LABEL,
   VEHICLE_TYPE_VALUES,
   vehicleFuelTypesFor,
   type ListingSort,
   type SeatBucket,
+  type ServiceType,
   type VehicleType,
 } from '@xeprime/types';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
-import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { cx } from '@/lib/cx';
 import { formatMoneyVnd } from '@/lib/money';
 import { formatDate } from '@/lib/datetime';
@@ -61,26 +56,6 @@ export function MarketplaceResults() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const { brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel } = useCatalogLabels();
-
-  /*
-   * Từ khoá gõ thẳng trên trang: debounce 500ms đẩy xuống URL (`q`) — kết quả lọc dần theo
-   * người gõ; Enter áp ngay không chờ. Effect thứ hai nhận chiều NGƯỢC (back/forward, xoá q
-   * nơi khác) về lại ô nhập; hai chiều gặp nhau ở giá trị bằng nhau nên không giật vòng lặp.
-   */
-  const [keyword, setKeyword] = useState(filters.q ?? '');
-  // Chiều NGƯỢC (back/forward, xoá q nơi khác) đồng bộ NGAY TRONG RENDER — pattern "derived
-  // state" chính tắc của React, không setState trong effect (rule của React Compiler).
-  const [lastUrlQ, setLastUrlQ] = useState(filters.q ?? '');
-  if ((filters.q ?? '') !== lastUrlQ) {
-    setLastUrlQ(filters.q ?? '');
-    setKeyword(filters.q ?? '');
-  }
-  const debouncedKeyword = useDebouncedValue(keyword, 500);
-  useEffect(() => {
-    const next = debouncedKeyword.trim() || undefined;
-    if ((filters.q ?? undefined) !== next) setFilters({ q: next });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy theo nhịp gõ, không theo URL
-  }, [debouncedKeyword]);
 
   const {
     listings,
@@ -161,7 +136,7 @@ export function MarketplaceResults() {
     return chips;
   }, [filters, setFilters, brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel]);
 
-  /** Xoá đúng nhóm chip của panel Bộ lọc — giữ ngữ cảnh tìm kiếm (q/tỉnh/ngày/loại xe). */
+  /** Xoá đúng nhóm chip của panel Bộ lọc — giữ ngữ cảnh tìm kiếm (tỉnh/ngày/loại xe/dịch vụ). */
   function clearFacets() {
     setFilters(Object.fromEntries(FACET_FILTER_KEYS.map((key) => [key, undefined])));
   }
@@ -169,7 +144,6 @@ export function MarketplaceResults() {
   /** Có đang lọc/tìm gì không — quyết định "rỗng vì bộ lọc" hay "hệ thống chưa có xe". */
   const hasActiveQuery = Boolean(
     appliedChips.length > 0 ||
-    filters.q ||
     filters.provinceCode ||
     filters.province ||
     filters.vehicleType ||
@@ -192,7 +166,10 @@ export function MarketplaceResults() {
     filters.vehicleType
       ? (VEHICLE_TYPE_LABEL[filters.vehicleType as VehicleType] ?? 'Xe')
       : 'Tất cả xe',
-    // Từ khoá KHÔNG vào summary — nó đã có ô nhập riêng ngay bên cạnh.
+    // Dịch vụ vào summary — người đến từ tab trang chủ đọc được ngay mình đang tìm gì.
+    filters.serviceType
+      ? (SERVICE_TYPE_LABEL[filters.serviceType as ServiceType] ?? null)
+      : null,
     // Địa điểm hiện TÊN tra từ danh sách điểm đến; mã không phải thứ để người dùng đọc. Lựa chọn
     // cũ không còn khả dụng thì nói thẳng, KHÔNG âm thầm hiện "Toàn quốc" trong khi vẫn đang lọc.
     provinceLabelOf(destinations, filters.provinceCode) ??
@@ -213,24 +190,12 @@ export function MarketplaceResults() {
       </h1>
 
       {/*
-       * Thanh tìm kiếm: Ô TỪ KHOÁ nhập thẳng trên trang (gõ là lọc, Enter áp ngay) + vùng ngữ
-       * cảnh (loại xe · địa điểm · thời gian) là MỘT NÚT — bấm bất kỳ đâu trong vùng đều mở hộp
-       * chỉnh sửa, không phải nhắm trúng chữ "Chỉnh sửa".
+       * Thanh ngữ cảnh tìm kiếm (loại xe · dịch vụ · địa điểm · thời gian) là MỘT NÚT — bấm bất
+       * kỳ đâu trong vùng đều mở hộp chỉnh sửa, không phải nhắm trúng chữ "Chỉnh sửa". Ô từ khoá
+       * đã bỏ (yêu cầu 17/08) — mọi tiêu chí đều có cấu trúc: chip nhanh, hộp chỉnh sửa, panel
+       * Bộ lọc.
        */}
       <div className={styles.searchBar}>
-        <div className={styles.keywordBox}>
-          <SearchOutlined className={styles.keywordIcon} />
-          <Input
-            variant="borderless"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onPressEnter={() => setFilters({ q: keyword.trim() || undefined })}
-            placeholder="Tìm theo tên xe, hãng xe…"
-            allowClear
-            className={styles.keywordInput}
-            aria-label="Từ khoá tìm kiếm"
-          />
-        </div>
         <button
           type="button"
           className={styles.contextZone}

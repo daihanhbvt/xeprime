@@ -1,4 +1,4 @@
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /**
  * Trạng thái đơn thuê thật (ADR 0005).
@@ -99,10 +99,10 @@ export function isBookingFinal(status: BookingStatus): boolean {
 }
 
 export const BOOKING_STATUS_META: Readonly<Record<BookingStatus, StatusMeta>> = {
-  [BOOKING_STATUS.RESERVED]: { label: 'Đã đặt trước', color: 'blue' },
-  [BOOKING_STATUS.CONFIRMED]: { label: 'Đã xác nhận', color: 'cyan' },
-  [BOOKING_STATUS.ACTIVE]: { label: 'Đang thuê', color: 'green' },
-  [BOOKING_STATUS.COMPLETED]: { label: 'Hoàn thành', color: 'default' },
-  [BOOKING_STATUS.CANCELLED]: { label: 'Đã hủy', color: 'default' },
-  [BOOKING_STATUS.NO_SHOW]: { label: 'Khách không đến', color: 'red' },
+  [BOOKING_STATUS.RESERVED]: { label: 'Đã đặt trước', color: STATUS_COLOR.WAITING },
+  [BOOKING_STATUS.CONFIRMED]: { label: 'Đã xác nhận', color: STATUS_COLOR.INFO },
+  [BOOKING_STATUS.ACTIVE]: { label: 'Đang thuê', color: STATUS_COLOR.PROCESSING },
+  [BOOKING_STATUS.COMPLETED]: { label: 'Hoàn thành', color: STATUS_COLOR.SUCCESS },
+  [BOOKING_STATUS.CANCELLED]: { label: 'Đã hủy', color: STATUS_COLOR.NEUTRAL },
+  [BOOKING_STATUS.NO_SHOW]: { label: 'Khách không đến', color: STATUS_COLOR.DANGER },
 };

@@ -1,4 +1,4 @@
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /**
  * Trạng thái đánh giá (review) — ADR 0005.
@@ -25,6 +25,6 @@ export const RATING_MIN = 1;
 export const RATING_MAX = 5;
 
 export const REVIEW_STATUS_META: Readonly<Record<ReviewStatus, StatusMeta>> = {
-  [REVIEW_STATUS.PUBLISHED]: { label: 'Đang hiển thị', color: 'green' },
-  [REVIEW_STATUS.HIDDEN]: { label: 'Đã ẩn', color: 'default' },
+  [REVIEW_STATUS.PUBLISHED]: { label: 'Đang hiển thị', color: STATUS_COLOR.SUCCESS },
+  [REVIEW_STATUS.HIDDEN]: { label: 'Đã ẩn', color: STATUS_COLOR.NEUTRAL },
 };

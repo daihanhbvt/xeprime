@@ -4,12 +4,13 @@ import { applyFilterPatch, parseFilters, toListingQueryParams } from './filter-p
 describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
   it('đọc đủ kiểu: CSV → mảng, "1" → boolean, số → number, string giữ nguyên', () => {
     const params = new URLSearchParams(
-      'vehicleType=car&bodyType=sedan,suv&brand=Toyota,Kia&seats=4,8plus&fuelType=electric' +
-        '&features=bluetooth,gps&hourly=1&delivery=1&priceMin=400000&priceMax=900000' +
-        '&q=vios&province=TP.%20HCM&page=2&sort=price_asc',
+      'vehicleType=car&serviceType=with_driver&bodyType=sedan,suv&brand=Toyota,Kia' +
+        '&seats=4,8plus&fuelType=electric&features=bluetooth,gps&hourly=1&delivery=1' +
+        '&priceMin=400000&priceMax=900000&province=TP.%20HCM&page=2&sort=price_asc',
     );
     expect(parseFilters(params)).toEqual({
       vehicleType: 'car',
+      serviceType: 'with_driver',
       bodyType: ['sedan', 'suv'],
       brand: ['Toyota', 'Kia'],
       seats: ['4', '8plus'],
@@ -19,11 +20,15 @@ describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
       delivery: true,
       priceMin: 400000,
       priceMax: 900000,
-      q: 'vios',
       province: 'TP. HCM',
       page: 2,
       sort: 'price_asc',
     });
+  });
+
+  it('từ khoá `q` đã bỏ khỏi contract (17/08) — link cũ mang q bị lơ đi, không thành filter tàng hình', () => {
+    const params = new URLSearchParams('q=vios&provinceCode=48');
+    expect(parseFilters(params)).toEqual({ provinceCode: '48' });
   });
 
   it('bỏ giá trị rác: sort lạ, số không parse được, CSV toàn dấu phẩy, boolean khác "1"', () => {
@@ -33,8 +38,8 @@ describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
 
   it('`provinceCode` là tham số địa điểm CHUẨN và sống qua reload/back-forward', () => {
     // Reload/back-forward = đọc lại đúng URL đó; parse phải ra đúng giá trị, không mất mã tỉnh.
-    const params = new URLSearchParams('provinceCode=48&q=vios&page=3');
-    expect(parseFilters(params)).toEqual({ provinceCode: '48', q: 'vios', page: 3 });
+    const params = new URLSearchParams('provinceCode=48&serviceType=long_term&page=3');
+    expect(parseFilters(params)).toEqual({ provinceCode: '48', serviceType: 'long_term', page: 3 });
   });
 
   it('có mã thì BỎ tham số tên cũ — một URL không mang hai nguồn địa điểm mâu thuẫn', () => {
@@ -50,7 +55,7 @@ describe('parseFilters — URL searchParams → MarketplaceFilters', () => {
 
 describe('applyFilterPatch — patch → searchParams', () => {
   it('mảng join CSV; mảng rỗng / false / undefined xoá param', () => {
-    const params = new URLSearchParams('bodyType=sedan&hourly=1&q=vios');
+    const params = new URLSearchParams('bodyType=sedan&hourly=1&serviceType=self_drive');
     applyFilterPatch(params, {
       bodyType: ['suv', 'mpv'],
       brand: [],
@@ -63,7 +68,7 @@ describe('applyFilterPatch — patch → searchParams', () => {
     expect(params.has('hourly')).toBe(false);
     expect(params.get('delivery')).toBe('1');
     // Key không nằm trong patch giữ nguyên.
-    expect(params.get('q')).toBe('vios');
+    expect(params.get('serviceType')).toBe('self_drive');
   });
 
   it('đổi filter thì reset page; đổi chính page thì giữ', () => {

@@ -1,4 +1,4 @@
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /**
  * Trạng thái duyệt public của xe (ADR 0005).
@@ -86,13 +86,25 @@ export function isVehiclePublicStatus(value: unknown): value is VehiclePublicSta
 }
 
 export const VEHICLE_PUBLIC_STATUS_META: Readonly<Record<VehiclePublicStatus, StatusMeta>> = {
-  [VEHICLE_PUBLIC_STATUS.DRAFT]: { label: 'Nháp', color: 'default' },
-  [VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW]: { label: 'Chờ duyệt public', color: 'gold' },
-  [VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC]: { label: 'Đã duyệt public', color: 'green' },
-  [VEHICLE_PUBLIC_STATUS.NEEDS_REVISION]: { label: 'Cần bổ sung', color: 'orange' },
-  [VEHICLE_PUBLIC_STATUS.REJECTED]: { label: 'Bị từ chối', color: 'red' },
-  [VEHICLE_PUBLIC_STATUS.HIDDEN]: { label: 'Đã ẩn', color: 'default' },
-  [VEHICLE_PUBLIC_STATUS.ARCHIVED]: { label: 'Ngừng sử dụng', color: 'default' },
+  [VEHICLE_PUBLIC_STATUS.DRAFT]: { label: 'Nháp', color: STATUS_COLOR.NEUTRAL },
+  [VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW]: {
+    label: 'Chờ duyệt public',
+    color: STATUS_COLOR.WAITING,
+  },
+  [VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC]: {
+    label: 'Đã duyệt public',
+    color: STATUS_COLOR.SUCCESS,
+  },
+  [VEHICLE_PUBLIC_STATUS.NEEDS_REVISION]: {
+    label: 'Cần bổ sung',
+    color: STATUS_COLOR.WARNING,
+  },
+  [VEHICLE_PUBLIC_STATUS.REJECTED]: { label: 'Bị từ chối', color: STATUS_COLOR.DANGER },
+  [VEHICLE_PUBLIC_STATUS.HIDDEN]: { label: 'Đã ẩn', color: STATUS_COLOR.NEUTRAL },
+  [VEHICLE_PUBLIC_STATUS.ARCHIVED]: {
+    label: 'Ngừng sử dụng',
+    color: STATUS_COLOR.NEUTRAL,
+  },
 };
 
 /**
@@ -116,10 +128,13 @@ export const VEHICLE_OPERATION_STATUS_VALUES = Object.values(
 ) as VehicleOperationStatus[];
 
 export const VEHICLE_OPERATION_STATUS_META: Readonly<Record<VehicleOperationStatus, StatusMeta>> = {
-  [VEHICLE_OPERATION_STATUS.AVAILABLE]: { label: 'Sẵn sàng', color: 'green' },
-  [VEHICLE_OPERATION_STATUS.RENTING]: { label: 'Đang thuê', color: 'blue' },
-  [VEHICLE_OPERATION_STATUS.MAINTENANCE]: { label: 'Bảo dưỡng', color: 'purple' },
-  [VEHICLE_OPERATION_STATUS.INACTIVE]: { label: 'Ngừng hoạt động', color: 'default' },
+  [VEHICLE_OPERATION_STATUS.AVAILABLE]: { label: 'Sẵn sàng', color: STATUS_COLOR.SUCCESS },
+  [VEHICLE_OPERATION_STATUS.RENTING]: { label: 'Đang thuê', color: STATUS_COLOR.PROCESSING },
+  [VEHICLE_OPERATION_STATUS.MAINTENANCE]: { label: 'Bảo dưỡng', color: STATUS_COLOR.SPECIAL },
+  [VEHICLE_OPERATION_STATUS.INACTIVE]: {
+    label: 'Ngừng hoạt động',
+    color: STATUS_COLOR.NEUTRAL,
+  },
 };
 
 /** Loại xe. */

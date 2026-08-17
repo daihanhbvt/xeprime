@@ -5,7 +5,7 @@ import { Button } from 'antd';
 import { BOOKING_STATUS_META, type BookingStatus, type PaginationMeta } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDateTimeRange } from '@/lib/datetime';
+import { formatShortDateTimeRange } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import type { BookingListItem } from '../types';
 import styles from './BookingTable.module.css';
@@ -24,7 +24,7 @@ interface BookingTableProps {
 }
 
 /** Figma `127:1725` ghi 1050px cho bảng Bookings (10 cột); code có 6 cột. */
-const MIN_TABLE_WIDTH = 980;
+const MIN_TABLE_WIDTH = 1060;
 
 export function BookingTable({
   items,
@@ -41,6 +41,7 @@ export function BookingTable({
     {
       title: 'Khách hàng',
       key: 'customer',
+      width: 240,
       render: (_, row) => (
         <div>
           <div className={styles.name}>{row.customerName}</div>
@@ -54,7 +55,7 @@ export function BookingTable({
     {
       title: 'Xe',
       key: 'vehicle',
-      width: 200,
+      width: 220,
       render: (_, row) => (
         <div className={styles.cell}>
           <CarOutlined className={styles.carIcon} aria-hidden="true" />
@@ -68,9 +69,11 @@ export function BookingTable({
     {
       title: 'Thời gian thuê',
       key: 'period',
-      width: 220,
+      width: 260,
       render: (_, row) => (
-        <span className={styles.period}>{formatDateTimeRange(row.pickupAt, row.returnAt)}</span>
+        <span className={styles.period}>
+          {formatShortDateTimeRange(row.pickupAt, row.returnAt)}
+        </span>
       ),
     },
     {
@@ -88,9 +91,12 @@ export function BookingTable({
         <StatusTag value={row.status as BookingStatus} meta={BOOKING_STATUS_META} />
       ),
     },
-    actionColumn<BookingListItem>((row) => [
-      { key: 'view', label: 'Xem', icon: <EyeOutlined />, onClick: () => onView(row.id) },
-    ]),
+    actionColumn<BookingListItem>(
+      (row) => [
+        { key: 'view', label: 'Xem', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+      ],
+      { width: 64 },
+    ),
   ];
 
   return (

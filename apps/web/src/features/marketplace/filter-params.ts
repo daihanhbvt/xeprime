@@ -10,10 +10,12 @@ import type { ListingSort, MarketplaceFilters } from './types';
 const ARRAY_KEYS = ['brand', 'bodyType', 'seats', 'fuelType', 'features'] as const;
 const BOOLEAN_KEYS = ['hourly', 'delivery', 'noCollateral', 'discount'] as const;
 const NUMBER_KEYS = ['minSeats', 'priceMin', 'priceMax', 'page', 'limit'] as const;
+// Từ khoá `q` đã bị BỎ khỏi contract FE (yêu cầu 17/08 — gõ sai key là không ra xe, không thân
+// thiện): mọi lối vào tìm kiếm đều có cấu trúc (dịch vụ / loại xe / địa điểm / thời gian).
+// Link cũ còn mang `q` thì param bị lơ đi — kết quả RỘNG HƠN chứ không thành bộ lọc tàng hình.
 const STRING_KEYS = [
   'vehicleType',
   'serviceType',
-  'q',
   'provinceCode',
   // `province` (tên) chỉ còn để ĐỌC link cũ; xem `parseFilters`.
   'province',
@@ -23,7 +25,7 @@ const STRING_KEYS = [
 
 /**
  * Các key thuộc panel Bộ lọc — "Xoá bộ lọc" reset đúng nhóm này, giữ nguyên ngữ cảnh tìm kiếm
- * (q / địa điểm / ngày giờ / loại xe / dịch vụ).
+ * (địa điểm / ngày giờ / loại xe / dịch vụ).
  */
 export const FACET_FILTER_KEYS = [
   ...ARRAY_KEYS,
@@ -105,7 +107,6 @@ export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
   return {
     vehicleType: filters.vehicleType ?? null,
     serviceType: filters.serviceType ?? null,
-    q: filters.q ?? null,
     // Tham số chuẩn là MÃ. `province` (tên) chỉ gửi kèm khi chưa có mã — backend quy nó về mã
     // qua bảng bí danh, và URL sinh ra từ đó luôn mang mã.
     provinceCode: filters.provinceCode ?? null,

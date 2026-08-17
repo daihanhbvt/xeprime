@@ -1,4 +1,4 @@
-import type { StatusMeta } from './status/meta';
+import { STATUS_COLOR, type StatusMeta } from './status/meta';
 
 /**
  * Hợp đồng dùng chung cho chính sách thuê & tính giá (Wave 2 — B2).
@@ -22,8 +22,8 @@ export type PolicySource = (typeof POLICY_SOURCE)[keyof typeof POLICY_SOURCE];
 export const POLICY_SOURCE_VALUES = Object.values(POLICY_SOURCE) as PolicySource[];
 
 export const POLICY_SOURCE_META: Readonly<Record<PolicySource, StatusMeta>> = {
-  [POLICY_SOURCE.SHOP]: { label: 'Đang kế thừa', color: 'green' },
-  [POLICY_SOURCE.VEHICLE]: { label: 'Đang ghi đè', color: 'gold' },
+  [POLICY_SOURCE.SHOP]: { label: 'Đang kế thừa', color: STATUS_COLOR.SUCCESS },
+  [POLICY_SOURCE.VEHICLE]: { label: 'Đang ghi đè', color: STATUS_COLOR.WAITING },
 };
 
 /** Một bậc phí giao nhận: áp cho khoảng cách ≤ `toKm` (mốc "từ" suy từ bậc liền trước). */
@@ -56,8 +56,8 @@ export const DELIVERY_QUOTE_SOURCE_VALUES = Object.values(
 ) as DeliveryQuoteSource[];
 
 export const DELIVERY_QUOTE_SOURCE_META: Readonly<Record<DeliveryQuoteSource, StatusMeta>> = {
-  [DELIVERY_QUOTE_SOURCE.AUTO]: { label: 'Tự động tính', color: 'blue' },
-  [DELIVERY_QUOTE_SOURCE.MANUAL]: { label: 'Thủ công', color: 'gold' },
+  [DELIVERY_QUOTE_SOURCE.AUTO]: { label: 'Tự động tính', color: STATUS_COLOR.INFO },
+  [DELIVERY_QUOTE_SOURCE.MANUAL]: { label: 'Thủ công', color: STATUS_COLOR.WAITING },
 };
 
 /** Cấu trúc `booking_requests.delivery_quote_json` — ghi duy nhất qua BookingRequestsService. */

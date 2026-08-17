@@ -2,15 +2,25 @@
 
 import {
   CalendarOutlined,
+  CarOutlined,
   EditOutlined,
   EnvironmentOutlined,
+  IdcardOutlined,
+  ScheduleOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { Button, Input, Select } from 'antd';
+import { Button, Segmented, Select } from 'antd';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { VEHICLE_TYPE, VEHICLE_TYPE_LABEL, type VehicleType } from '@xeprime/types';
-import { useMemo, useState } from 'react';
+import {
+  SERVICE_TYPE,
+  VEHICLE_TYPE,
+  VEHICLE_TYPE_LABEL,
+  VEHICLE_TYPE_VALUES,
+  type ServiceType,
+  type VehicleType,
+} from '@xeprime/types';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   RentalDateTimeRangeField,
   type RentalMode,
@@ -18,7 +28,9 @@ import {
 } from '@/components/form/RentalDateTimeRangeField';
 import { ROUTES } from '@/constants/routes';
 import { useIsMobile } from '@/hooks/use-media-query';
+import { cx } from '@/lib/cx';
 import { applyFilterPatch } from '../filter-params';
+import { SERVICE_TABS } from '../constants';
 import { buildProvinceOptions, provinceLabelOf } from '../province-options';
 import { useDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
@@ -28,15 +40,30 @@ import styles from './HeroSearch.module.css';
 /** Số tỉnh/thành đổ vào ô "Địa điểm" — ưu tiên nơi nhiều xe nhất. */
 const PROVINCE_OPTIONS_LIMIT = 24;
 
+/** Icon từng tab dịch vụ — icon là ReactNode nên sống ở component, không nhét vào constants. */
+const SERVICE_TAB_ICON: Partial<Record<ServiceType, ReactNode>> = {
+  [SERVICE_TYPE.SELF_DRIVE]: <CarOutlined />,
+  [SERVICE_TYPE.WITH_DRIVER]: <IdcardOutlined />,
+  [SERVICE_TYPE.LONG_TERM]: <ScheduleOutlined />,
+};
+
 /**
- * Thẻ tìm kiếm của trang chủ — đúng BỐN thứ theo Figma `18:4`: Từ khoá · Địa điểm · Thời gian
- * thuê · nút Tìm xe. Bộ lọc nâng cao thuộc về `/search`, không nhồi vào đây.
+ * Thẻ tìm kiếm của trang chủ (yêu cầu 17/08 — mô hình 3 dịch vụ): hàng TAB Xe tự lái · Xe có
+ * tài xế · Thuê xe dài hạn đè trên thẻ trắng, trong thẻ là các ô CÓ CẤU TRÚC — Loại xe · Địa
+ * điểm · Thời gian thuê · nút Tìm xe. Ô TỪ KHOÁ đã bỏ hẳn: gõ tự do sai key là không ra xe,
+ * trong khi mọi ý định tìm ("xe 7 chỗ", hãng…) đều có bộ lọc cấu trúc trên `/search`.
+ *
+ * Tab chỉ đổi `serviceType` (+ ẩn Thời gian với dài hạn) — địa điểm/thời gian đã chọn GIỮ
+ * NGUYÊN khi đổi tab, người dùng không phải nhập lại. Riêng "Thuê dài hạn" không mang ngày giờ
+ * vào truy vấn: thời điểm nhận xe của hợp đồng dài hạn là thứ thoả thuận với gian hàng, không
+ * phải điều kiện lọc lịch trống.
  *
  * "Tìm xe" điều hướng sang `/search`, filter serialize bằng đúng bộ `applyFilterPatch` của
- * marketplace (một định dạng query duy nhất; giá trị rỗng bị loại khỏi URL).
+ * marketplace (một định dạng query duy nhất; giá trị rỗng bị loại khỏi URL) — `serviceType`
+ * trên URL cũng chính là chip dịch vụ đang bật ở trang kết quả.
  *
- * Mobile (Figma `23:896`/`23:1053`): thẻ thu thành MỘT thanh tóm tắt, bấm mở sheet toàn màn
- * chứa đủ trường (thêm toggle Loại xe theo đúng frame mobile-search-expanded).
+ * Mobile: thẻ thu thành Segmented 3 dịch vụ + hàng ngữ cảnh (bấm mở sheet chỉnh đủ trường) +
+ * nút Tìm xe — tìm ngay với mặc định hợp lý, không bắt mở sheet mới tìm được.
  */
 export function HeroSearch() {
   const router = useRouter();
@@ -45,11 +72,15 @@ export function HeroSearch() {
   const { data: destinations, isLoading: loadingProvinces } =
     useDestinations(PROVINCE_OPTIONS_LIMIT);
 
-  const [keyword, setKeyword] = useState(filters.q ?? '');
+  // Tab dịch vụ — nạp lại từ URL nếu quay về trang chủ với serviceType sẵn có.
+  const [service, setService] = useState<ServiceType>(() =>
+    SERVICE_TABS.some((t) => t.key === filters.serviceType)
+      ? (filters.serviceType as ServiceType)
+      : SERVICE_TYPE.SELF_DRIVE,
+  );
+  const [vehicleType, setVehicleType] = useState<string>(filters.vehicleType ?? VEHICLE_TYPE.CAR);
   // Giá trị state là MÃ tỉnh — cùng thứ đi vào URL và gửi cho API.
   const [province, setProvince] = useState(filters.provinceCode ?? '');
-  // Desktop không có nút đổi loại xe (hero đúng 4 ô); loại đổi ở sheet mobile/trang /search.
-  const vehicleType = filters.vehicleType ?? VEHICLE_TYPE.CAR;
   // Tab "Thuê theo giờ" ánh xạ vào filter `hourly` sẵn có (xe CÓ giá thuê giờ) — nhờ vậy chế độ
   // sống trong URL bằng đúng hợp đồng hiện tại, không phải chế một param mới cho backend lơ đi.
   const [mode, setMode] = useState<RentalMode>(filters.hourly ? 'hourly' : 'daily');
@@ -63,84 +94,40 @@ export function HeroSearch() {
   }));
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  const longTerm = service === SERVICE_TYPE.LONG_TERM;
+
   const provinceOptions = useMemo(
     () => buildProvinceOptions(destinations, province),
     [destinations, province],
   );
 
+  const vehicleTypeOptions = useMemo(
+    () => VEHICLE_TYPE_VALUES.map((value) => ({ value, label: VEHICLE_TYPE_LABEL[value] })),
+    [],
+  );
+
   function submit() {
     const params = new URLSearchParams();
     applyFilterPatch(params, {
+      serviceType: service,
       vehicleType,
-      q: keyword.trim() || undefined,
       provinceCode: province || undefined,
-      pickupAt: range.pickupAt?.toISOString(),
-      returnAt: range.returnAt?.toISOString(),
-      hourly: mode === 'hourly' ? true : undefined,
+      // Dài hạn: không mang ngày giờ/chế độ giờ vào truy vấn (xem doc-comment đầu file).
+      pickupAt: longTerm ? undefined : range.pickupAt?.toISOString(),
+      returnAt: longTerm ? undefined : range.returnAt?.toISOString(),
+      hourly: !longTerm && mode === 'hourly' ? true : undefined,
     });
     setSheetOpen(false);
     const qs = params.toString();
     router.push(qs ? `${ROUTES.SEARCH}?${qs}` : ROUTES.SEARCH);
   }
 
-  const fields = (
-    <>
-      <div className={styles.cell}>
-        <span className={styles.cellLabel}>Từ khoá tìm kiếm</span>
-        <div className={styles.box}>
-          <SearchOutlined className={styles.boxIcon} />
-          <Input
-            variant="borderless"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onPressEnter={submit}
-            placeholder="Toyota Vios, xe 7 chỗ…"
-            className={styles.keyword}
-            aria-label="Từ khoá tìm kiếm"
-          />
-        </div>
-      </div>
-
-      <div className={styles.cell}>
-        <span className={styles.cellLabel}>Địa điểm</span>
-        <div className={styles.box}>
-          <EnvironmentOutlined className={styles.boxIcon} />
-          <Select
-            variant="borderless"
-            value={province}
-            onChange={setProvince}
-            options={provinceOptions}
-            loading={loadingProvinces}
-            showSearch
-            optionFilterProp="label"
-            className={styles.select}
-            popupMatchSelectWidth={false}
-            aria-label="Địa điểm nhận xe"
-          />
-        </div>
-      </div>
-
-      <div className={styles.cell}>
-        <span className={styles.cellLabel}>Thời gian thuê</span>
-        {/* Toàn bộ control, gồm icon và khoảng đệm sát viền, là một nút mở cùng hộp lịch. */}
-        <RentalDateTimeRangeField
-          value={range}
-          onChange={setRange}
-          mode={mode}
-          onModeChange={setMode}
-          prefix={<CalendarOutlined className={styles.boxIcon} />}
-          className={styles.box}
-        />
-      </div>
-    </>
-  );
-
   if (isMobile) {
     const summary = [
       VEHICLE_TYPE_LABEL[vehicleType as VehicleType] ?? 'Xe',
       // Tóm tắt hiện TÊN tỉnh, không hiện mã — mã là chuyện của URL.
       provinceLabelOf(destinations, province) ?? 'Toàn quốc',
-      range.pickupAt && range.returnAt
+      !longTerm && range.pickupAt && range.returnAt
         ? `${range.pickupAt.format('DD/MM')}–${range.returnAt.format('DD/MM')}`
         : null,
     ]
@@ -149,21 +136,14 @@ export function HeroSearch() {
 
     return (
       <div className={styles.cardOuter}>
-        {/*
-         * Mobile hai tầng: TỪ KHOÁ là ô nhập thật ngay trên trang (Enter → /search), tầng dưới
-         * là ngữ cảnh thuê — bấm bất kỳ đâu trong tầng đó đều mở sheet (không còn nấp trong sheet).
-         */}
         <div className={styles.mobileBox}>
-          <div className={styles.mobileKeywordRow}>
-            <SearchOutlined className={styles.mobileIcon} />
-            <Input
-              variant="borderless"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onPressEnter={submit}
-              placeholder="Tìm theo tên xe, hãng xe…"
-              className={styles.mobileKeywordInput}
-              aria-label="Từ khoá tìm kiếm"
+          {/* Tab dịch vụ đứng đầu — quyết định các trường bên dưới, giống hàng tab desktop. */}
+          <div className={styles.mobileTabs}>
+            <Segmented
+              block
+              value={service}
+              onChange={(v) => setService(v as ServiceType)}
+              options={SERVICE_TABS.map((t) => ({ value: t.key, label: t.shortLabel }))}
             />
           </div>
           <button
@@ -175,18 +155,25 @@ export function HeroSearch() {
             <span className={styles.mobilePillText}>{summary}</span>
             <EditOutlined className={styles.mobileIcon} />
           </button>
+          {/* Tìm ngay với ngữ cảnh đang hiện — sheet chỉ dành cho ai muốn chỉnh trước. */}
+          <div className={styles.mobileActions}>
+            <Button type="primary" size="large" block icon={<SearchOutlined />} onClick={submit}>
+              Tìm xe
+            </Button>
+          </div>
         </div>
 
-        {/* Sheet dùng CHUNG với /search — chỉ ngữ cảnh thuê; từ khoá lấy từ ô đang gõ ở trên. */}
+        {/* Sheet dùng CHUNG với /search — nhận serviceType đang chọn để tự ẩn Thời gian thuê
+            khi là dài hạn. */}
         {sheetOpen ? (
           <SearchDialog
             open
-            initial={filters}
+            initial={{ ...filters, serviceType: service }}
             onClose={() => setSheetOpen(false)}
             onSubmit={(values) => {
               setSheetOpen(false);
               const params = new URLSearchParams();
-              applyFilterPatch(params, { ...values, q: keyword.trim() || undefined });
+              applyFilterPatch(params, { ...values, serviceType: service });
               const qs = params.toString();
               router.push(qs ? `${ROUTES.SEARCH}?${qs}` : ROUTES.SEARCH);
             }}
@@ -198,8 +185,73 @@ export function HeroSearch() {
 
   return (
     <div className={styles.cardOuter}>
-      <div className={styles.card}>
-        {fields}
+      <div className={styles.tabs} role="tablist" aria-label="Loại dịch vụ thuê xe">
+        {SERVICE_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={service === tab.key}
+            className={cx(styles.tab, service === tab.key && styles.tabActive)}
+            onClick={() => setService(tab.key)}
+          >
+            <span className={styles.tabIcon}>{SERVICE_TAB_ICON[tab.key]}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div className={cx(styles.card, longTerm && styles.cardLongTerm)}>
+        <div className={styles.cell}>
+          <span className={styles.cellLabel}>Loại xe</span>
+          <div className={styles.box}>
+            <CarOutlined className={styles.boxIcon} />
+            <Select
+              variant="borderless"
+              value={vehicleType}
+              onChange={setVehicleType}
+              options={vehicleTypeOptions}
+              className={styles.select}
+              popupMatchSelectWidth={false}
+              aria-label="Loại xe"
+            />
+          </div>
+        </div>
+
+        <div className={styles.cell}>
+          <span className={styles.cellLabel}>Địa điểm</span>
+          <div className={styles.box}>
+            <EnvironmentOutlined className={styles.boxIcon} />
+            <Select
+              variant="borderless"
+              value={province}
+              onChange={setProvince}
+              options={provinceOptions}
+              loading={loadingProvinces}
+              showSearch
+              optionFilterProp="label"
+              className={styles.select}
+              popupMatchSelectWidth={false}
+              aria-label="Địa điểm nhận xe"
+            />
+          </div>
+        </div>
+
+        {longTerm ? null : (
+          <div className={styles.cell}>
+            <span className={styles.cellLabel}>Thời gian thuê</span>
+            {/* Toàn bộ control, gồm icon và khoảng đệm sát viền, là một nút mở cùng hộp lịch. */}
+            <RentalDateTimeRangeField
+              value={range}
+              onChange={setRange}
+              mode={mode}
+              onModeChange={setMode}
+              prefix={<CalendarOutlined className={styles.boxIcon} />}
+              className={styles.box}
+            />
+          </div>
+        )}
+
         <Button
           type="primary"
           size="large"
@@ -209,6 +261,13 @@ export function HeroSearch() {
         >
           Tìm xe
         </Button>
+
+        {longTerm ? (
+          <p className={styles.hint}>
+            Thuê xe theo tháng — thời điểm nhận xe và giá chốt thoả thuận trực tiếp với gian hàng
+            sau khi bạn gửi yêu cầu.
+          </p>
+        ) : null}
       </div>
     </div>
   );

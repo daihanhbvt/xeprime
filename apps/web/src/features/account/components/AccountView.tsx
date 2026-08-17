@@ -5,6 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Avatar, Button, Card, Spin, Tag } from 'antd';
 import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { STATUS_COLOR } from '@xeprime/types';
 import { accountProfileSchema, type AccountProfileValues } from '@xeprime/validators';
 import { TextField } from '@/components/form/TextField';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
@@ -112,7 +113,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
           <div className={styles.contactRow}>
             <PhoneOutlined /> {profile.phone ?? 'Chưa có số điện thoại'}
             {profile.phone && profile.phoneVerified ? (
-              <Tag color="green" className={styles.verified}>
+              <Tag color={STATUS_COLOR.SUCCESS} className={styles.verified}>
                 <CheckCircleFilled /> Đã xác thực
               </Tag>
             ) : null}

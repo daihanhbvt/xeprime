@@ -1,4 +1,4 @@
-import type { StatusColor } from './status/meta';
+import { STATUS_COLOR, type StatusColor } from './status/meta';
 
 /**
  * Loại thông báo in-app (Phase 5). Không phải "status" — đây là loại sự kiện phát ra
@@ -31,8 +31,7 @@ export const NOTIFICATION_CHANNEL = {
   IN_APP: 'in_app',
 } as const;
 
-export type NotificationChannel =
-  (typeof NOTIFICATION_CHANNEL)[keyof typeof NOTIFICATION_CHANNEL];
+export type NotificationChannel = (typeof NOTIFICATION_CHANNEL)[keyof typeof NOTIFICATION_CHANNEL];
 
 export const NOTIFICATION_CHANNEL_VALUES = Object.values(
   NOTIFICATION_CHANNEL,
@@ -62,14 +61,29 @@ export interface NotificationTypeMeta {
 }
 
 export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, NotificationTypeMeta>> = {
-  [NOTIFICATION_TYPE.BOOKING_CREATED]: { label: 'Đơn thuê mới', color: 'blue' },
-  [NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED]: { label: 'Cập nhật đơn thuê', color: 'cyan' },
-  [NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED]: { label: 'Yêu cầu thuê mới', color: 'gold' },
-  [NOTIFICATION_TYPE.BOOKING_REQUEST_APPROVED]: { label: 'Yêu cầu được duyệt', color: 'green' },
-  [NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED]: { label: 'Yêu cầu bị từ chối', color: 'red' },
-  [NOTIFICATION_TYPE.SHOP_APPROVED]: { label: 'Gian hàng được duyệt', color: 'green' },
-  [NOTIFICATION_TYPE.SHOP_REJECTED]: { label: 'Gian hàng bị từ chối', color: 'red' },
-  [NOTIFICATION_TYPE.VEHICLE_APPROVED]: { label: 'Xe được duyệt công khai', color: 'green' },
-  [NOTIFICATION_TYPE.VEHICLE_REJECTED]: { label: 'Xe bị từ chối', color: 'red' },
-  [NOTIFICATION_TYPE.REVIEW_RECEIVED]: { label: 'Đánh giá mới', color: 'purple' },
+  [NOTIFICATION_TYPE.BOOKING_CREATED]: { label: 'Đơn thuê mới', color: STATUS_COLOR.INFO },
+  [NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED]: {
+    label: 'Cập nhật đơn thuê',
+    color: STATUS_COLOR.PROCESSING,
+  },
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED]: {
+    label: 'Yêu cầu thuê mới',
+    color: STATUS_COLOR.WAITING,
+  },
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_APPROVED]: {
+    label: 'Yêu cầu được duyệt',
+    color: STATUS_COLOR.SUCCESS,
+  },
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED]: {
+    label: 'Yêu cầu bị từ chối',
+    color: STATUS_COLOR.DANGER,
+  },
+  [NOTIFICATION_TYPE.SHOP_APPROVED]: { label: 'Gian hàng được duyệt', color: STATUS_COLOR.SUCCESS },
+  [NOTIFICATION_TYPE.SHOP_REJECTED]: { label: 'Gian hàng bị từ chối', color: STATUS_COLOR.DANGER },
+  [NOTIFICATION_TYPE.VEHICLE_APPROVED]: {
+    label: 'Xe được duyệt công khai',
+    color: STATUS_COLOR.SUCCESS,
+  },
+  [NOTIFICATION_TYPE.VEHICLE_REJECTED]: { label: 'Xe bị từ chối', color: STATUS_COLOR.DANGER },
+  [NOTIFICATION_TYPE.REVIEW_RECEIVED]: { label: 'Đánh giá mới', color: STATUS_COLOR.SPECIAL },
 };

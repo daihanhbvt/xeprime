@@ -5,6 +5,8 @@
  * không chặn đặt xe, không gỡ khỏi marketplace (quyết định nghiệp vụ §2).
  */
 
+import { STATUS_COLOR, type StatusMeta } from './meta';
+
 export const VEHICLE_DOCUMENT_TYPE = {
   REGISTRATION: 'registration',
   INSPECTION: 'inspection',
@@ -65,15 +67,30 @@ export type VehicleDocumentPresentation =
   (typeof VEHICLE_DOCUMENT_PRESENTATION)[keyof typeof VEHICLE_DOCUMENT_PRESENTATION];
 
 export const VEHICLE_DOCUMENT_PRESENTATION_META: Readonly<
-  Record<VehicleDocumentPresentation, { label: string; color: string }>
+  Record<VehicleDocumentPresentation, StatusMeta>
 > = {
-  [VEHICLE_DOCUMENT_PRESENTATION.MISSING]: { label: 'Chưa có', color: 'default' },
-  [VEHICLE_DOCUMENT_PRESENTATION.PROCESSING]: { label: 'Đang xử lý', color: 'blue' },
-  [VEHICLE_DOCUMENT_PRESENTATION.NEEDS_REVIEW]: { label: 'Cần kiểm tra', color: 'orange' },
-  [VEHICLE_DOCUMENT_PRESENTATION.UNREADABLE]: { label: 'Không đọc được', color: 'red' },
-  [VEHICLE_DOCUMENT_PRESENTATION.VALID]: { label: 'Còn hiệu lực', color: 'green' },
-  [VEHICLE_DOCUMENT_PRESENTATION.EXPIRING_SOON]: { label: 'Sắp hết hạn', color: 'orange' },
-  [VEHICLE_DOCUMENT_PRESENTATION.EXPIRED]: { label: 'Đã hết hạn', color: 'red' },
+  [VEHICLE_DOCUMENT_PRESENTATION.MISSING]: { label: 'Chưa có', color: STATUS_COLOR.NEUTRAL },
+  [VEHICLE_DOCUMENT_PRESENTATION.PROCESSING]: {
+    label: 'Đang xử lý',
+    color: STATUS_COLOR.PROCESSING,
+  },
+  [VEHICLE_DOCUMENT_PRESENTATION.NEEDS_REVIEW]: {
+    label: 'Cần kiểm tra',
+    color: STATUS_COLOR.WARNING,
+  },
+  [VEHICLE_DOCUMENT_PRESENTATION.UNREADABLE]: {
+    label: 'Không đọc được',
+    color: STATUS_COLOR.DANGER,
+  },
+  [VEHICLE_DOCUMENT_PRESENTATION.VALID]: { label: 'Còn hiệu lực', color: STATUS_COLOR.SUCCESS },
+  [VEHICLE_DOCUMENT_PRESENTATION.EXPIRING_SOON]: {
+    label: 'Sắp hết hạn',
+    color: STATUS_COLOR.WARNING,
+  },
+  [VEHICLE_DOCUMENT_PRESENTATION.EXPIRED]: {
+    label: 'Đã hết hạn',
+    color: STATUS_COLOR.DANGER,
+  },
 };
 
 /**
@@ -135,14 +152,13 @@ export const VEHICLE_DOCUMENT_OCR_FIELD_VALUES = Object.values(
   VEHICLE_DOCUMENT_OCR_FIELD,
 ) as VehicleDocumentOcrField[];
 
-export const VEHICLE_DOCUMENT_OCR_FIELD_LABEL: Readonly<Record<VehicleDocumentOcrField, string>> =
-  {
-    [VEHICLE_DOCUMENT_OCR_FIELD.HOLDER_NAME]: 'Họ tên chủ xe',
-    [VEHICLE_DOCUMENT_OCR_FIELD.HOLDER_ADDRESS]: 'Địa chỉ',
-    [VEHICLE_DOCUMENT_OCR_FIELD.PLATE_NUMBER]: 'Biển số',
-    [VEHICLE_DOCUMENT_OCR_FIELD.CHASSIS_NUMBER]: 'Số khung (Chassis)',
-    [VEHICLE_DOCUMENT_OCR_FIELD.ENGINE_NUMBER]: 'Số máy (Engine)',
-    [VEHICLE_DOCUMENT_OCR_FIELD.ISSUED_AT]: 'Ngày đăng ký',
-    [VEHICLE_DOCUMENT_OCR_FIELD.EXPIRES_AT]: 'Ngày hết hạn',
-    [VEHICLE_DOCUMENT_OCR_FIELD.DOCUMENT_NUMBER]: 'Số giấy tờ',
-  };
+export const VEHICLE_DOCUMENT_OCR_FIELD_LABEL: Readonly<Record<VehicleDocumentOcrField, string>> = {
+  [VEHICLE_DOCUMENT_OCR_FIELD.HOLDER_NAME]: 'Họ tên chủ xe',
+  [VEHICLE_DOCUMENT_OCR_FIELD.HOLDER_ADDRESS]: 'Địa chỉ',
+  [VEHICLE_DOCUMENT_OCR_FIELD.PLATE_NUMBER]: 'Biển số',
+  [VEHICLE_DOCUMENT_OCR_FIELD.CHASSIS_NUMBER]: 'Số khung (Chassis)',
+  [VEHICLE_DOCUMENT_OCR_FIELD.ENGINE_NUMBER]: 'Số máy (Engine)',
+  [VEHICLE_DOCUMENT_OCR_FIELD.ISSUED_AT]: 'Ngày đăng ký',
+  [VEHICLE_DOCUMENT_OCR_FIELD.EXPIRES_AT]: 'Ngày hết hạn',
+  [VEHICLE_DOCUMENT_OCR_FIELD.DOCUMENT_NUMBER]: 'Số giấy tờ',
+};

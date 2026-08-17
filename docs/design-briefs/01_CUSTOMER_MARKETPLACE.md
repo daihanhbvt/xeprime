@@ -34,7 +34,7 @@ The homepage and vehicle-search results are now two distinct product surfaces:
 - **`/search` — dedicated vehicle-search results.** Submitting the homepage search navigates here
   with the three search-context values encoded in the URL. This page owns the full filter, sort,
   result-count, applied-filter, pagination, empty/no-results, loading and error experience.
-- The homepage shows at most **8 available vehicles** as a preview and a clear **“Xem tất cả xe”**
+- The homepage shows at most **8 available vehicles** as a preview and a clear **“Khám phá xe”**
   action. That action navigates to `/search`; homepage vehicle pagination is removed.
 - The search-results page removes the homepage hero and other marketing header content so the
   result workspace can use the available width. The global public navigation (`MarketHeader`)
@@ -386,7 +386,7 @@ Sort lives inside the filter panel and is omitted from the URL when it equals th
 **Existing UX problems** — three page sizes coexist (API default 12, home 8, shop 12) with no shared constant; there is no page-size control; the home pager triggers `router.replace(..., {scroll: false})`, so paging leaves the viewport where it was rather than returning to the top of the grid; the shop grid uses `router.push` while home uses `router.replace`, producing different back-button behavior for the same interaction.
 
 **Accepted target:** `/` requests and displays only the first 8 vehicles and has no marketplace
-pager. “Xem tất cả xe” opens `/search`. Pagination of the complete result set belongs exclusively
+pager. “Khám phá xe” opens `/search`. Pagination of the complete result set belongs exclusively
 to `/search`; shop-profile pagination remains owned by `/shops/[slug]`.
 
 ---
@@ -663,7 +663,7 @@ Absent from the current code path. Absence is **not** evidence that the business
 `[RECOMMENDED — NOT CURRENT]` — none of the following exists; each is a proposal for product decision, ordered by the strength of the evidence that the gap is real.
 
 1. **[ACCEPTED] Expose keyword search on the homepage.** The capability is already built and tested at the API and URL layers.
-2. **[ACCEPTED] Add `/search` as the dedicated results route.** Homepage submit and “Xem tất cả xe” navigate to it; full filters and pagination live there.
+2. **[ACCEPTED] Add `/search` as the dedicated results route.** Homepage submit and “Khám phá xe” navigate to it; full filters and pagination live there.
 3. **Show availability on the detail page.** The occupancy data already drives list filtering; the highest-intent screen currently omits it.
 4. **State the price contract.** Either show a computed total for the selected dates, or explicitly say the price is indicative until the shop confirms — the second is what the code actually guarantees.
 5. **Resolve the favourite button.** Implement persistence or remove the control; an inert affordance on every card is worse than none.

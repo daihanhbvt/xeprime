@@ -1,22 +1,22 @@
 /**
- * Nhãn hiển thị của một trạng thái.
+ * Bảng màu NGỮ NGHĨA dùng chung cho mọi trạng thái nghiệp vụ.
  *
- * CLAUDE.md mục 5 cấm hard code text nghiệp vụ trong component. `StatusTag` đọc từ các
- * bảng `*_STATUS_META`, nên đổi nhãn chỉ sửa một chỗ.
- *
- * `color` là preset color của Ant Design Tag, không phải mã hex — giữ nhất quán với
- * design token thay vì tự chế màu (ADR 0003).
+ * Các bảng `*_STATUS_META` chọn vai trò theo ý nghĩa, không tự gõ preset Ant Design. Nhờ vậy cùng một
+ * trạng thái ở danh sách, chi tiết, dashboard và lịch luôn ra cùng màu; đổi hệ màu cũng chỉ sửa tại đây.
  */
-export type StatusColor =
-  | 'default'
-  | 'blue'
-  | 'cyan'
-  | 'green'
-  | 'gold'
-  | 'orange'
-  | 'red'
-  | 'purple'
-  | 'magenta';
+export const STATUS_COLOR = {
+  NEUTRAL: 'default',
+  INFO: 'blue',
+  PROCESSING: 'cyan',
+  SUCCESS: 'green',
+  WAITING: 'gold',
+  WARNING: 'orange',
+  DANGER: 'red',
+  SPECIAL: 'purple',
+  ACCENT: 'magenta',
+} as const;
+
+export type StatusColor = (typeof STATUS_COLOR)[keyof typeof STATUS_COLOR];
 
 export interface StatusMeta {
   /** Nhãn tiếng Việt hiển thị cho người dùng. */

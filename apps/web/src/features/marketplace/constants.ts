@@ -15,6 +15,21 @@ export const SERVICE_CHIPS: ReadonlyArray<{ key: ServiceType; label: string }> =
 ];
 
 /**
+ * Tab dịch vụ của thẻ tìm kiếm trang chủ (yêu cầu 17/08 — mô hình 3 dịch vụ). `label` cho tab
+ * desktop, `shortLabel` cho Segmented mobile. Key đi thẳng vào URL `serviceType` — cùng giá trị
+ * mà chip lọc nhanh trên `/search` dùng, nên hai màn không bao giờ lệch nhau.
+ */
+export const SERVICE_TABS: ReadonlyArray<{
+  key: ServiceType;
+  label: string;
+  shortLabel: string;
+}> = [
+  { key: SERVICE_TYPE.SELF_DRIVE, label: 'Xe tự lái', shortLabel: 'Tự lái' },
+  { key: SERVICE_TYPE.WITH_DRIVER, label: 'Xe có tài xế', shortLabel: 'Có tài xế' },
+  { key: SERVICE_TYPE.LONG_TERM, label: 'Thuê xe dài hạn', shortLabel: 'Dài hạn' },
+];
+
+/**
  * "Thuê xe chỉ với 4 bước" — nội dung TĨNH (không phải dữ liệu nghiệp vụ), chữ theo Figma 18:4.
  */
 export const RENTAL_STEPS: ReadonlyArray<{

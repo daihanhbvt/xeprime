@@ -20,6 +20,7 @@ import {
   USER_STATUS_META,
 } from './misc';
 import { isParticipantType } from './chat';
+import { STATUS_COLOR } from './meta';
 import { NOTIFICATION_TYPE, NOTIFICATION_TYPE_META, isNotificationType } from '../notifications';
 
 /**
@@ -43,6 +44,31 @@ describe('status metadata completeness', () => {
       expect(entry, `thiếu meta cho "${status}"`).toBeDefined();
       expect(entry?.label).toBeTruthy();
       expect(entry?.color).toBeTruthy();
+    }
+  });
+});
+
+describe('bảng màu trạng thái dùng chung', () => {
+  it('đơn thuê phân biệt rõ đang diễn ra, hoàn thành và lỗi', () => {
+    expect(BOOKING_STATUS_META[BOOKING_STATUS.ACTIVE].color).toBe(STATUS_COLOR.PROCESSING);
+    expect(BOOKING_STATUS_META[BOOKING_STATUS.COMPLETED].color).toBe(STATUS_COLOR.SUCCESS);
+    expect(BOOKING_STATUS_META[BOOKING_STATUS.NO_SHOW].color).toBe(STATUS_COLOR.DANGER);
+  });
+
+  it('mọi màu metadata đều lấy từ palette chung', () => {
+    const allowed = new Set(Object.values(STATUS_COLOR));
+    const metas = [
+      BOOKING_STATUS_META,
+      BOOKING_REQUEST_STATUS_META,
+      VEHICLE_PUBLIC_STATUS_META,
+      TENANT_STATUS_META,
+      REVIEW_STATUS_META,
+      CONVERSATION_STATUS_META,
+      USER_STATUS_META,
+    ];
+
+    for (const meta of metas) {
+      for (const entry of Object.values(meta)) expect(allowed.has(entry.color)).toBe(true);
     }
   });
 });
