@@ -96,8 +96,10 @@ export function SearchDialog({
     onSubmit({
       vehicleType,
       provinceCode: province || undefined,
-      pickupAt: range.pickupAt?.toISOString(),
-      returnAt: range.returnAt?.toISOString(),
+      // Dài hạn KHÔNG mang ngày (Mioto flow — 17/08 đợt 3): chọn xe trước, ngày chọn ở modal
+      // gửi yêu cầu (sàn 7 ngày giữ nguyên ở đó + backend).
+      pickupAt: longTerm ? undefined : range.pickupAt?.toISOString(),
+      returnAt: longTerm ? undefined : range.returnAt?.toISOString(),
       hourly: !longTerm && mode === 'hourly' ? true : undefined,
       routeType: withDriver ? routeType : undefined,
     });
@@ -121,21 +123,26 @@ export function SearchDialog({
           </div>
         ) : null}
 
-        {/* Thời gian thuê đứng ĐẦU các ô nhập — lý do mở hộp này thường là đổi lịch. */}
-        <div className={styles.cell}>
-          <span className={styles.cellLabel}>
-            {longTerm ? `Thời gian thuê (tối thiểu ${LONG_TERM_MIN_DAYS} ngày)` : 'Thời gian thuê'}
-          </span>
-          <RentalDateTimeRangeField
-            value={range}
-            onChange={setRange}
-            mode={longTerm ? 'daily' : mode}
-            onModeChange={setMode}
-            minDays={longTerm ? LONG_TERM_MIN_DAYS : undefined}
-            prefix={<CalendarOutlined className={styles.boxIcon} />}
-            className={styles.box}
-          />
-        </div>
+        {/* Thời gian thuê đứng ĐẦU các ô nhập — lý do mở hộp này thường là đổi lịch.
+            Dài hạn KHÔNG hỏi ngày ở bước tìm (Mioto flow): chọn xe trước, ngày ở bước yêu cầu. */}
+        {longTerm ? (
+          <p className={styles.routeHint}>
+            Chọn xe trước — ngày nhận và trả (tối thiểu {LONG_TERM_MIN_DAYS} ngày) chọn khi gửi
+            yêu cầu thuê.
+          </p>
+        ) : (
+          <div className={styles.cell}>
+            <span className={styles.cellLabel}>Thời gian thuê</span>
+            <RentalDateTimeRangeField
+              value={range}
+              onChange={setRange}
+              mode={mode}
+              onModeChange={setMode}
+              prefix={<CalendarOutlined className={styles.boxIcon} />}
+              className={styles.box}
+            />
+          </div>
+        )}
 
         <div className={styles.cell}>
           <span className={styles.cellLabel}>Loại xe</span>

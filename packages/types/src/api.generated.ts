@@ -3568,6 +3568,8 @@ export interface components {
             /** @description updatedAt của chính sách hiệu lực */
             policyUpdatedAt?: string | null;
             estimateNote?: string | null;
+            longTermSavingsPercent?: number | null;
+            longTermSavingsAmount?: string | null;
         };
         CalendarAvailabilityDayDto: {
             /** @description Ngày local Asia/Ho_Chi_Minh, YYYY-MM-DD */

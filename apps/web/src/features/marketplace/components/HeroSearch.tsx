@@ -140,8 +140,9 @@ export function HeroSearch() {
       routeType: withDriver ? routeType : undefined,
       vehicleType,
       provinceCode: province || undefined,
-      pickupAt: range.pickupAt?.toISOString(),
-      returnAt: range.returnAt?.toISOString(),
+      // Dài hạn không mang ngày (Mioto flow) — cả URL trang chủ lẫn link Khám phá xe.
+      pickupAt: longTerm ? undefined : range.pickupAt?.toISOString(),
+      returnAt: longTerm ? undefined : range.returnAt?.toISOString(),
       hourly: !longTerm && mode === 'hourly' ? true : undefined,
     });
     const qs = params.toString();
@@ -169,8 +170,9 @@ export function HeroSearch() {
       routeType: withDriver ? routeType : undefined,
       vehicleType,
       provinceCode: province || undefined,
-      pickupAt: range.pickupAt?.toISOString(),
-      returnAt: range.returnAt?.toISOString(),
+      // Dài hạn KHÔNG mang ngày (Mioto flow — đợt 3): chọn xe trước, chọn ngày trong modal.
+      pickupAt: longTerm ? undefined : range.pickupAt?.toISOString(),
+      returnAt: longTerm ? undefined : range.returnAt?.toISOString(),
       hourly: !longTerm && mode === 'hourly' ? true : undefined,
     });
     setSheetOpen(false);
@@ -184,9 +186,11 @@ export function HeroSearch() {
       withDriver ? ROUTE_TYPE_LABEL[routeType] : null,
       // Tóm tắt hiện TÊN tỉnh, không hiện mã — mã là chuyện của URL.
       provinceLabelOf(destinations, province) ?? 'Toàn quốc',
-      range.pickupAt && range.returnAt
+      // Dài hạn không hỏi ngày ở bước tìm (Mioto flow) — ngày chọn khi gửi yêu cầu.
+      !longTerm && range.pickupAt && range.returnAt
         ? `${range.pickupAt.format('DD/MM')}–${range.returnAt.format('DD/MM')}`
         : null,
+      longTerm ? 'Chọn ngày khi gửi yêu cầu' : null,
     ]
       .filter(Boolean)
       .join(' · ');
@@ -310,21 +314,25 @@ export function HeroSearch() {
           </div>
         </div>
 
-        <div className={styles.cell}>
-          <span className={styles.cellLabel}>
-            {longTerm ? `Thời gian thuê (tối thiểu ${LONG_TERM_MIN_DAYS} ngày)` : 'Thời gian thuê'}
-          </span>
-          {/* Toàn bộ control, gồm icon và khoảng đệm sát viền, là một nút mở cùng hộp lịch. */}
-          <RentalDateTimeRangeField
-            value={range}
-            onChange={setRange}
-            mode={longTerm ? 'daily' : mode}
-            onModeChange={setMode}
-            minDays={longTerm ? LONG_TERM_MIN_DAYS : undefined}
-            prefix={<CalendarOutlined className={styles.boxIcon} />}
-            className={styles.box}
-          />
-        </div>
+        {/*
+          Thuê DÀI HẠN không hỏi ngày ở bước tìm (mô hình Mioto — 17/08 đợt 3): lọc ra danh
+          sách xe dài hạn giá /tháng trước, CHỌN XE rồi mới chọn ngày nhận – trả trong luồng
+          gửi yêu cầu (sàn 7 ngày vẫn giữ ở modal + backend).
+        */}
+        {longTerm ? null : (
+          <div className={styles.cell}>
+            <span className={styles.cellLabel}>Thời gian thuê</span>
+            {/* Toàn bộ control, gồm icon và khoảng đệm sát viền, là một nút mở cùng hộp lịch. */}
+            <RentalDateTimeRangeField
+              value={range}
+              onChange={setRange}
+              mode={mode}
+              onModeChange={setMode}
+              prefix={<CalendarOutlined className={styles.boxIcon} />}
+              className={styles.box}
+            />
+          </div>
+        )}
 
         <Button
           type="primary"
@@ -338,8 +346,8 @@ export function HeroSearch() {
 
         {longTerm ? (
           <p className={styles.hint}>
-            Thuê liên tục từ {LONG_TERM_MIN_DAYS} ngày — giá tham chiếu theo tháng, gian hàng xác
-            nhận giá chốt khi duyệt yêu cầu.
+            Chọn xe trước — ngày nhận và trả (tối thiểu {LONG_TERM_MIN_DAYS} ngày) chọn khi gửi
+            yêu cầu thuê. Giá tham chiếu theo tháng, gian hàng xác nhận giá chốt khi duyệt.
           </p>
         ) : null}
       </div>

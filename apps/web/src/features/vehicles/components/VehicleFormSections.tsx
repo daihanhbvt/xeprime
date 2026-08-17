@@ -19,6 +19,7 @@ import {
 } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
+import { LongTermPriceHint } from '@/features/rental-policies/components/LongTermPriceHint';
 import { useCatalogItems, useCatalogOptions } from '@/features/catalog/use-catalog';
 import { ImageGalleryField } from '@/components/form/ImageGalleryField';
 import { ImageUploadField } from '@/components/form/ImageUploadField';
@@ -723,6 +724,9 @@ export function PricesSection({
   const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
   const offersLongTerm = serviceTypes.includes(SERVICE_TYPE.LONG_TERM);
   const offersWithDriver = serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER);
+  // Hook gọi vô điều kiện (rules of hooks) — hint chỉ RENDER khi có khối dài hạn.
+  const weekdayPriceValue = useWatch({ control, name: 'weekdayPrice' });
+  const monthlyPriceValue = useWatch({ control, name: 'monthlyPrice' });
 
   return (
     <>
@@ -770,17 +774,27 @@ export function PricesSection({
           />
         </Col>
         {offersLongTerm ? (
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="monthlyPrice"
-              label={publishRequiredLabel('Giá tháng (thuê dài hạn)')}
-              placeholder="VD: 9.000.000"
-              min={0}
-              money
-              help="Ước tính cho khách = số ngày × giá tháng ÷ 30. Cần có trước khi gửi duyệt."
-            />
-          </Col>
+          <>
+            <Col xs={24} sm={12}>
+              <NumberField
+                control={control}
+                name="monthlyPrice"
+                label={publishRequiredLabel('Giá tháng (thuê dài hạn)')}
+                placeholder="VD: 9.000.000"
+                min={0}
+                money
+                help="Ước tính cho khách = số ngày × giá tháng ÷ 30. Cần có trước khi gửi duyệt."
+              />
+            </Col>
+            <Col xs={24}>
+              {/* Gợi ý giá tháng theo giá ngày ĐANG NHẬP (17/08 đợt 3) — cùng component với
+                  tab Giá & chính sách, hai bề mặt không lệch lời khuyên. */}
+              <LongTermPriceHint
+                weekdayPrice={weekdayPriceValue}
+                monthlyPrice={monthlyPriceValue}
+              />
+            </Col>
+          </>
         ) : null}
         {offersWithDriver ? (
           <>

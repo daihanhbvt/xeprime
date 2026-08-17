@@ -28,6 +28,7 @@ import {
   SERVICE_TYPE_VALUES,
   isRouteType,
   isSameVnPhone,
+  longTermSavingsPercent,
   PHONE_VERIFICATION_PURPOSE,
   serviceTypeLabel,
   type RouteType,
@@ -458,6 +459,8 @@ export function RequestBookingFlow({
 
   const hasRange = Boolean(watchedPickup && watchedReturn);
   const promoPercent = listing?.discountPercent ?? 0;
+  // Badge "-X%" trên tab Thuê dài hạn (17/08 đợt 3) — cùng công thức với quote/manage.
+  const longTermPercent = longTermSavingsPercent(listing?.weekdayPrice, listing?.monthlyPrice);
 
   /**
    * Cặp nút của footer, suy từ bước hiện tại — MỘT nơi quyết định nhãn/trạng thái cho cả luồng.
@@ -663,7 +666,17 @@ export function RequestBookingFlow({
                   onChange={(v) => selectService(v as ServiceType)}
                   options={vehicleServices.map((value) => ({
                     value,
-                    label: serviceTypeLabel(value),
+                    // Tab Thuê dài hạn mang badge mức giảm so với giá ngày — khách thấy ngay
+                    // lý do chọn dài hạn (17/08 đợt 3, mô hình gói Mioto).
+                    label:
+                      value === SERVICE_TYPE.LONG_TERM && longTermPercent != null ? (
+                        <span className={styles.serviceOption}>
+                          {serviceTypeLabel(value)}
+                          <span className={styles.savingsBadge}>-{longTermPercent}%</span>
+                        </span>
+                      ) : (
+                        serviceTypeLabel(value)
+                      ),
                   }))}
                 />
               </div>
@@ -766,12 +779,20 @@ export function RequestBookingFlow({
                   depositAmount={quoteQ.data.breakdown.depositAmount}
                   title="Tạm tính cho khoảng thời gian đã chọn"
                   footer={
-                    <span className={styles.deliveryFootnote}>
-                      {quoteQ.data.breakdown.estimateNote
-                        ? `${quoteQ.data.breakdown.estimateNote}. `
-                        : ''}
-                      Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.
-                    </span>
+                    <>
+                      {quoteQ.data.breakdown.longTermSavingsAmount ? (
+                        <strong className={styles.savingsText}>
+                          Tiết kiệm {formatMoneyVnd(quoteQ.data.breakdown.longTermSavingsAmount)} (−
+                          {quoteQ.data.breakdown.longTermSavingsPercent}%) so với thuê theo ngày.
+                        </strong>
+                      ) : null}
+                      <span className={styles.deliveryFootnote}>
+                        {quoteQ.data.breakdown.estimateNote
+                          ? `${quoteQ.data.breakdown.estimateNote}. `
+                          : ''}
+                        Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.
+                      </span>
+                    </>
                   }
                 />
               ) : (
@@ -800,13 +821,21 @@ export function RequestBookingFlow({
                 <div className={styles.priceCardRows}>
                   {isLongTerm ? (
                     listing?.monthlyPrice ? (
-                      <div className={styles.priceRow}>
-                        <span>Giá tháng tham chiếu</span>
-                        <b>
-                          {formatMoneyVnd(listing.monthlyPrice)}
-                          <span className={styles.priceUnit}>/tháng</span>
-                        </b>
-                      </div>
+                      <>
+                        <div className={styles.priceRow}>
+                          <span>Giá tháng tham chiếu</span>
+                          <b>
+                            {formatMoneyVnd(listing.monthlyPrice)}
+                            <span className={styles.priceUnit}>/tháng</span>
+                          </b>
+                        </div>
+                        {longTermPercent != null ? (
+                          <div className={styles.priceRow}>
+                            <span>So với thuê theo ngày</span>
+                            <b className={styles.savingsText}>Rẻ hơn {longTermPercent}%</b>
+                          </div>
+                        ) : null}
+                      </>
                     ) : (
                       <div className={styles.priceRow}>
                         <span>Giá tháng</span>
@@ -1216,14 +1245,22 @@ export function RequestBookingFlow({
                 depositAmount={quoteQ.data.breakdown.depositAmount}
                 title="Chi tiết giá thuê (dự kiến)"
                 footer={
-                  <span className={styles.deliveryFootnote}>
-                    {quoteQ.data.breakdown.estimateNote
-                      ? `${quoteQ.data.breakdown.estimateNote}. `
-                      : ''}
-                    {isDelivery
-                      ? `Phí giao nhận: Miễn phí. ${DELIVERY_NOTE}`
-                      : 'Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.'}
-                  </span>
+                  <>
+                    {quoteQ.data.breakdown.longTermSavingsAmount ? (
+                      <strong className={styles.savingsText}>
+                        Tiết kiệm {formatMoneyVnd(quoteQ.data.breakdown.longTermSavingsAmount)} (−
+                        {quoteQ.data.breakdown.longTermSavingsPercent}%) so với thuê theo ngày.
+                      </strong>
+                    ) : null}
+                    <span className={styles.deliveryFootnote}>
+                      {quoteQ.data.breakdown.estimateNote
+                        ? `${quoteQ.data.breakdown.estimateNote}. `
+                        : ''}
+                      {isDelivery
+                        ? `Phí giao nhận: Miễn phí. ${DELIVERY_NOTE}`
+                        : 'Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.'}
+                    </span>
+                  </>
                 }
               />
             ) : (

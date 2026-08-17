@@ -320,6 +320,34 @@ export function serviceTypesLabel(values: readonly string[]): string {
 export const LONG_TERM_MIN_DAYS = 7;
 
 /**
+ * Dải GỢI Ý giá tháng cho chủ xe (17/08 đợt 3): 65–80% × giá ngày thường × 30 — vùng chiết
+ * khấu 20–35% phổ biến của thuê dài hạn. Chỉ là gợi ý hiển thị ở manage, không ràng buộc.
+ */
+export const LONG_TERM_SUGGEST_RATIO = { min: 0.65, max: 0.8 } as const;
+
+/** Đơn giá NGÀY quy đổi của giá tháng (÷30, làm tròn đồng) — cùng công thức với máy giá. */
+export function longTermDailyRate(monthlyPrice: string | number): number {
+  return Math.round(Number(monthlyPrice) / 30);
+}
+
+/**
+ * % tiết kiệm của thuê DÀI HẠN so với giá ngày thường (dương = rẻ hơn): badge "-17%" trên tab
+ * dịch vụ, dòng "tiết kiệm X₫" trong quote, và gợi ý giá ở manage cùng đọc một công thức.
+ * Trả null khi thiếu dữ liệu hoặc giá tháng KHÔNG rẻ hơn (không có gì để quảng cáo).
+ */
+export function longTermSavingsPercent(
+  weekdayPrice: string | number | null | undefined,
+  monthlyPrice: string | number | null | undefined,
+): number | null {
+  if (weekdayPrice == null || monthlyPrice == null) return null;
+  const weekday = Number(weekdayPrice);
+  if (!Number.isFinite(weekday) || weekday <= 0) return null;
+  const rate = longTermDailyRate(monthlyPrice);
+  if (!Number.isFinite(rate) || rate <= 0 || rate >= weekday) return null;
+  return Math.round(((weekday - rate) / weekday) * 100);
+}
+
+/**
  * Nhiên liệu — thuộc tính dữ liệu của xe (không phải trạng thái), nên chỉ có nhãn, không màu.
  * DB lưu String; đây là bộ giá trị chốt để form là select thay vì text trần (ADR 0005).
  */

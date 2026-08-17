@@ -22,6 +22,7 @@ import {
   ROUTE_TYPE_DESCRIPTION,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
+  longTermSavingsPercent,
   routeTypeLabel,
   serviceTypeLabel,
   type RouteType,
@@ -489,10 +490,25 @@ export function StaffBookingFlow({
                   block
                   value={serviceType}
                   onChange={(v) => setServiceType(v as ServiceType)}
-                  options={vehicleServices.map((value) => ({
-                    value,
-                    label: serviceTypeLabel(value),
-                  }))}
+                  options={vehicleServices.map((value) => {
+                    // Cùng badge "-X%" với luồng khách — staff cũng thấy lý do tư vấn dài hạn.
+                    const percent =
+                      value === SERVICE_TYPE.LONG_TERM
+                        ? longTermSavingsPercent(listing?.weekdayPrice, listing?.monthlyPrice)
+                        : null;
+                    return {
+                      value,
+                      label:
+                        percent != null ? (
+                          <span className={styles.serviceOption}>
+                            {serviceTypeLabel(value)}
+                            <span className={styles.savingsBadge}>-{percent}%</span>
+                          </span>
+                        ) : (
+                          serviceTypeLabel(value)
+                        ),
+                    };
+                  })}
                 />
               </div>
             ) : (
@@ -576,8 +592,18 @@ export function StaffBookingFlow({
                   depositAmount={quote.depositAmount}
                   title="Tạm tính cho khoảng thời gian đã chọn"
                   footer={
-                    quote.estimateNote ? (
-                      <span className={styles.deliveryFootnote}>{quote.estimateNote}.</span>
+                    quote.estimateNote || quote.longTermSavingsAmount ? (
+                      <>
+                        {quote.longTermSavingsAmount ? (
+                          <strong className={styles.savingsText}>
+                            Tiết kiệm {formatMoneyVnd(quote.longTermSavingsAmount)} (−
+                            {quote.longTermSavingsPercent}%) so với thuê theo ngày.
+                          </strong>
+                        ) : null}
+                        {quote.estimateNote ? (
+                          <span className={styles.deliveryFootnote}>{quote.estimateNote}.</span>
+                        ) : null}
+                      </>
                     ) : undefined
                   }
                 />
@@ -805,10 +831,18 @@ export function StaffBookingFlow({
                 depositAmount={quote.depositAmount}
                 title="Chi tiết giá thuê"
                 footer={
-                  <span className={styles.deliveryFootnote}>
-                    {quote.estimateNote ? `${quote.estimateNote}. ` : ''}
-                    Giá tính bởi hệ thống (đã gồm giá riêng theo ngày và ưu đãi theo số ngày thuê).
-                  </span>
+                  <>
+                    {quote.longTermSavingsAmount ? (
+                      <strong className={styles.savingsText}>
+                        Tiết kiệm {formatMoneyVnd(quote.longTermSavingsAmount)} (−
+                        {quote.longTermSavingsPercent}%) so với thuê theo ngày.
+                      </strong>
+                    ) : null}
+                    <span className={styles.deliveryFootnote}>
+                      {quote.estimateNote ? `${quote.estimateNote}. ` : ''}
+                      Giá tính bởi hệ thống (đã gồm giá riêng theo ngày và ưu đãi dài hạn nếu có).
+                    </span>
+                  </>
                 }
               />
             ) : (

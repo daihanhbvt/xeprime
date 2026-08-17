@@ -11394,6 +11394,14 @@
           "estimateNote": {
             "type": "string",
             "nullable": true
+          },
+          "longTermSavingsPercent": {
+            "type": "number",
+            "nullable": true
+          },
+          "longTermSavingsAmount": {
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [

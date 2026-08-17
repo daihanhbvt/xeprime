@@ -375,6 +375,14 @@ export class QuoteBreakdownDto {
    */
   @ApiPropertyOptional({ type: String, nullable: true })
   estimateNote!: string | null;
+  /**
+   * Thuê DÀI HẠN theo giá tháng: % và số tiền tiết kiệm so với thuê theo giá ngày thường
+   * (17/08 đợt 3) — null khi không phải dài hạn / chưa có giá tháng / giá tháng không rẻ hơn.
+   */
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  longTermSavingsPercent!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true })
+  longTermSavingsAmount!: string | null;
 }
 
 /** Tóm tắt giao nhận cho khách xem trước khi đặt (public). */

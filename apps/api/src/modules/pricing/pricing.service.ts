@@ -494,13 +494,14 @@ export class PricingService {
     }
 
     /*
-     * Đơn giá phẳng theo dịch vụ (17/08):
+     * Đơn giá phẳng theo dịch vụ (17/08; luật bậc ưu đãi sửa ở đợt 3):
      *   - Dài hạn CÓ giá tháng → đơn giá = giá tháng ÷ 30, KHÔNG tách weekday/cuối tuần,
-     *     KHÔNG áp giá riêng theo ngày và KHÔNG bậc giảm giá — giá tháng đã LÀ giá dài hạn,
-     *     chồng thêm ưu đãi là giảm kép.
-     *   - Có tài xế CÓ giá riêng → đơn giá = withDriverDailyPrice (đã gồm tài xế), GIỮ bậc
-     *     giảm giá theo ngày; bảng giá riêng theo ngày không áp (nó là giá tự lái).
-     *   - Còn lại (kể cả 2 dịch vụ trên nhưng CHƯA khai giá) → máy giá ngày như cũ.
+     *     KHÔNG áp giá riêng theo ngày; bậc ưu đãi theo thời gian ÁP CHỒNG (gói cam kết
+     *     kiểu Mioto) và quote trả kèm % + tiền tiết kiệm so với giá ngày thường.
+     *   - Có tài xế CÓ giá riêng → đơn giá theo LỘ TRÌNH (đã gồm tài xế), KHÔNG bậc ưu đãi
+     *     (bậc là ưu đãi của dịch vụ dài hạn); giá riêng theo ngày không áp (nó là giá tự lái).
+     *   - Còn lại (kể cả 2 dịch vụ trên nhưng CHƯA khai giá) → máy giá ngày; bậc ưu đãi chỉ
+     *     còn áp cho nhánh fallback CỦA DÀI HẠN.
      */
     const monthly =
       serviceType === SERVICE_TYPE.LONG_TERM && input.monthlyPrice
@@ -544,13 +545,32 @@ export class PricingService {
 
     let base: Prisma.Decimal;
     let baseSublabel: string;
-    let applyDiscountTiers = true;
+    /*
+     * Bậc ưu đãi theo thời gian thuê là ƯU ĐÃI CỦA DỊCH VỤ DÀI HẠN (chốt 17/08 đợt 3): thuê
+     * ngắn (tự lái/có tài xế theo ngày) không ăn bậc; dài hạn áp bậc CHỒNG lên giá tháng như
+     * gói cam kết của Mioto — không phải giảm kép vì thuê ngắn đã bị loại khỏi bậc.
+     */
+    let applyDiscountTiers = serviceType === SERVICE_TYPE.LONG_TERM;
+    // Tiết kiệm so với giá ngày thường — FE hiện "-X% · tiết kiệm Y₫" để khách thấy chênh lệch.
+    let longTermSavingsPercent: number | null = null;
+    let longTermSavingsAmount: string | null = null;
 
     if (monthly) {
       const rate = monthly.div(30).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
       base = rate.mul(days);
       baseSublabel = `${days} ngày × ${vnd(rate)}/ngày — giá tháng ${vnd(monthly)} ÷ 30`;
-      applyDiscountTiers = false;
+      if (input.weekdayPrice) {
+        const weekday = new Prisma.Decimal(input.weekdayPrice);
+        if (weekday.gt(0) && rate.lt(weekday)) {
+          longTermSavingsPercent = weekday
+            .minus(rate)
+            .div(weekday)
+            .mul(100)
+            .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+            .toNumber();
+          longTermSavingsAmount = weekday.minus(rate).mul(days).toFixed(0);
+        }
+      }
     } else if (driverRate) {
       base = driverRate.mul(days);
       baseSublabel = `${days} ngày × ${vnd(driverRate)}/ngày · đã gồm tài xế${
@@ -662,6 +682,8 @@ export class PricingService {
       // Khác null = tổng chỉ là TẠM TÍNH (giá chuyên biệt/giá route chưa niêm yết) — FE đổi
       // nhãn tổng và hiện ghi chú, không trưng như giá chốt.
       estimateNote,
+      longTermSavingsPercent,
+      longTermSavingsAmount,
     };
   }
 

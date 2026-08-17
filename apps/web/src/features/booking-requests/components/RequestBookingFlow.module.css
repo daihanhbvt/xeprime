@@ -627,3 +627,29 @@
   flex-direction: column;
   gap: 6px;
 }
+
+/* Tab dịch vụ mang badge mức giảm (17/08 đợt 3) — nhãn + pill nằm trên một dòng. */
+.serviceOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Pill "-X%" trên tab Thuê dài hạn — màu error làm nền cho nổi (đồng bộ discountBadge card). */
+.savingsBadge {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--xp-color-error);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+/* Dòng "Tiết kiệm X₫ (−Y%)" trong bảng giá — màu thành công, đậm để khách thấy ngay. */
+.savingsText {
+  display: block;
+  color: var(--xp-color-success);
+  font-size: 13px;
+  font-weight: 700;
+}

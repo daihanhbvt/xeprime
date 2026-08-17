@@ -4,7 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Switch } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch, type Control } from 'react-hook-form';
 import { LONG_TERM_MIN_DAYS, POLICY_SOURCE, SERVICE_TYPE } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
@@ -13,6 +13,7 @@ import { formatMoneyVnd } from '@/lib/money';
 import { formToSaveInput, policyToForm } from '../form';
 import { vehiclePricingFormSchema, type VehiclePricingFormValues } from '../schema';
 import type { RentalPolicyValues, SaveVehiclePricingInput, VehiclePricing } from '../types';
+import { LongTermPriceHint } from './LongTermPriceHint';
 import { PolicySections } from './PolicySections';
 
 import styles from './VehiclePricingWorkspace.module.css';
@@ -268,6 +269,8 @@ export function VehiclePricingWorkspace({
                     help={`Ước tính = số ngày × giá tháng ÷ 30, thuê tối thiểu ${LONG_TERM_MIN_DAYS} ngày. Thiếu giá tháng thì không gửi duyệt public dịch vụ này được.`}
                   />
                 </div>
+                {/* Gợi ý sống theo GIÁ ĐANG NHẬP — chủ xe thấy ngay mức giảm khách sẽ thấy. */}
+                <LongTermPriceHintLive control={control} />
               </section>
             ) : null}
 
@@ -324,6 +327,13 @@ export function VehiclePricingWorkspace({
       )}
     </div>
   );
+}
+
+/** Cầu useWatch → LongTermPriceHint: gợi ý đổi ngay khi chủ xe gõ giá, không đợi lưu. */
+function LongTermPriceHintLive({ control }: { control: Control<VehiclePricingFormValues> }) {
+  const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
+  const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
+  return <LongTermPriceHint weekdayPrice={weekdayPrice} monthlyPrice={monthlyPrice} />;
 }
 
 /** State A — bảng thông số kế thừa read-only (Figma `247:1645`). */

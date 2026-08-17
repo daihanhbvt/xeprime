@@ -269,25 +269,29 @@ describe('mốc biên bậc giao nhận', () => {
 });
 
 describe('buildQuote — giảm giá chỉ áp lên tiền thuê', () => {
-  maybe('3 ngày × 900k, giảm 5%, giao nhận 50k: giảm KHÔNG đụng phí giao nhận/cọc', async () => {
+  // Đợt 3 (17/08): bậc ưu đãi chỉ còn sống ở DỊCH VỤ DÀI HẠN — case cơ học "giảm không đụng
+  // phí giao nhận/cọc" chạy trên nhánh dài hạn fallback (7 ngày, chưa có giá tháng).
+  maybe('7 ngày × 900k, giảm 5%, giao nhận 50k: giảm KHÔNG đụng phí giao nhận/cọc', async () => {
     const policy = await pricing.effectivePolicy(tenantId, vehicleId);
     const pickupAt = inHours(24);
     const quote = pricing.buildQuote({
       weekdayPrice: '900000',
       weekendPrice: null,
       pickupAt,
-      returnAt: new Date(pickupAt.getTime() + 72 * HOUR),
+      returnAt: new Date(pickupAt.getTime() + 7 * 24 * HOUR),
       policy,
       delivery: { fee: '50000', label: 'Khoảng cách 8 km một chiều' },
+      serviceType: SERVICE_TYPE.LONG_TERM,
+      monthlyPrice: null,
     });
 
-    expect(quote.days).toBe(3);
+    expect(quote.days).toBe(7);
     const row = (key: string) => quote.rows.find((r) => r.key === key)?.amount;
-    expect(row(PRICE_ROW.BASE)).toBe('2700000');
-    // 5% của 2.700.000 = 135.000 — tính trên TIỀN THUÊ, không phải trên (thuê + giao nhận).
-    expect(row(PRICE_ROW.DISCOUNT)).toBe('-135000');
+    expect(row(PRICE_ROW.BASE)).toBe('6300000');
+    // 5% của 6.300.000 = 315.000 — tính trên TIỀN THUÊ, không phải trên (thuê + giao nhận).
+    expect(row(PRICE_ROW.DISCOUNT)).toBe('-315000');
     expect(row(PRICE_ROW.DELIVERY)).toBe('50000');
-    expect(quote.totalAmount).toBe('2615000');
+    expect(quote.totalAmount).toBe('6035000');
     // Cọc đứng ngoài tổng và không chịu giảm giá.
     expect(quote.depositAmount).toBe('5000000');
     expect(quote.policySource).toBe(POLICY_SOURCE.SHOP);
@@ -355,12 +359,13 @@ describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapsho
         priceSnapshot: true,
       },
     });
-    // 3 ngày × 900.000 = 2.700.000; giảm 5% = 135.000; giao nhận MIỄN PHÍ lúc duyệt.
+    // 3 ngày × 900.000 = 2.700.000; yêu cầu self_drive KHÔNG còn ăn bậc ưu đãi (đợt 3 —
+    // bậc là ưu đãi của dịch vụ dài hạn); giao nhận MIỄN PHÍ lúc duyệt.
     expect(booking.baseAmount.toFixed(0)).toBe('2700000');
-    expect(booking.discountAmount.toFixed(0)).toBe('135000');
+    expect(booking.discountAmount.toFixed(0)).toBe('0');
     expect(booking.deliveryFee.toFixed(0)).toBe('0');
     expect(booking.depositAmount.toFixed(0)).toBe('5000000');
-    expect(booking.totalAmount.toFixed(0)).toBe('2565000');
+    expect(booking.totalAmount.toFixed(0)).toBe('2700000');
 
     const snapshot = booking.priceSnapshot as {
       source: string;
@@ -380,8 +385,8 @@ describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapsho
 
     // Gọi thẳng service nên tiền còn là Decimal (interceptor mới đổi sang string ở tầng response).
     expect(String(updated.deliveryFee)).toBe('120000');
-    // Tổng do SERVER tính lại: 2.700.000 − 135.000 + 120.000.
-    expect(String(updated.totalAmount)).toBe('2685000');
+    // Tổng do SERVER tính lại: 2.700.000 − 0 + 120.000.
+    expect(String(updated.totalAmount)).toBe('2820000');
 
     const log = await prisma.auditLog.findFirstOrThrow({
       where: { tenantId, targetType: 'booking', targetId: bookingId },
@@ -392,7 +397,7 @@ describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapsho
     expect(log.beforeJson).toMatchObject({ deliveryFee: '0.00' });
     expect(log.afterJson).toMatchObject({
       deliveryFee: '120000.00',
-      totalAmount: '2685000.00',
+      totalAmount: '2820000.00',
       note: 'Thoả thuận qua điện thoại',
     });
   });
@@ -402,7 +407,7 @@ describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapsho
       deliveryFee: '0',
     });
     expect(String(back.deliveryFee)).toBe('0');
-    expect(String(back.totalAmount)).toBe('2565000');
+    expect(String(back.totalAmount)).toBe('2700000');
 
     // Trả lại 120k để phần kiểm snapshot bất biến bên dưới đọc một con số ổn định.
     await bookings.updateDeliveryFee(tenantId, bookingId, ownerId, { deliveryFee: '120000' });
@@ -532,7 +537,7 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
   const PICKUP = new Date('2027-03-01T03:00:00.000Z');
   const day = (n: number) => new Date(PICKUP.getTime() + n * 24 * 60 * 60 * 1000);
 
-  maybe('long_term có giá tháng: đơn giá = tháng ÷ 30, KHÔNG áp bậc giảm (tránh giảm kép)', async () => {
+  maybe('long_term có giá tháng: đơn giá = tháng ÷ 30, bậc ưu đãi ÁP CHỒNG + trả % tiết kiệm', async () => {
     await pricing.saveShopPolicy(tenantId, ownerId, policyDto());
     const policy = await pricing.effectivePolicy(tenantId, vehicleId);
     const breakdown = pricing.buildQuote({
@@ -546,9 +551,14 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
       monthlyPrice: '9000000',
     });
     expect(breakdown.days).toBe(10);
-    // 9tr ÷ 30 = 300k/ngày × 10 ngày — policy có bậc 5% từ 3 ngày nhưng nhánh giá tháng bỏ qua.
-    expect(breakdown.totalAmount).toBe('3000000');
-    expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)).toBeUndefined();
+    // 9tr ÷ 30 = 300k/ngày × 10 = 3tr; bậc 5% (từ 3 ngày) là ƯU ĐÃI DÀI HẠN nên áp chồng
+    // (gói cam kết kiểu Mioto — đợt 3): 3tr − 150k = 2.85tr.
+    expect(breakdown.totalAmount).toBe('2850000');
+    expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-150000');
+    // Chênh lệch so với giá ngày thường phải NHÌN THẤY được: 800k → 300k = tiết kiệm 63%,
+    // (800k − 300k) × 10 ngày = 5tr.
+    expect(breakdown.longTermSavingsPercent).toBe(63);
+    expect(breakdown.longTermSavingsAmount).toBe('5000000');
   });
 
   maybe('long_term dưới sàn 7 ngày bị máy giá chặn (nguồn chặn thật, FE chỉ preview)', async () => {
@@ -583,7 +593,7 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
     expect(breakdown.totalAmount).toBe('7600000');
   });
 
-  maybe('with_driver có giá riêng: đơn giá phẳng đã gồm tài xế, GIỮ bậc giảm', async () => {
+  maybe('with_driver có giá riêng: đơn giá phẳng đã gồm tài xế, KHÔNG áp bậc (bậc là ưu đãi dài hạn)', async () => {
     const policy = await pricing.effectivePolicy(tenantId, vehicleId);
     const breakdown = pricing.buildQuote({
       weekdayPrice: '800000',
@@ -595,9 +605,26 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
       serviceType: SERVICE_TYPE.WITH_DRIVER,
       withDriverDailyPrice: '1500000',
     });
-    // 1.5tr × 4 = 6tr, giảm 5% (mốc 3 ngày) = 5.7tr.
-    expect(breakdown.totalAmount).toBe('5700000');
+    // 1.5tr × 4 = 6tr — bậc 5% (từ 3 ngày) KHÔNG áp cho thuê ngắn nữa (đợt 3).
+    expect(breakdown.totalAmount).toBe('6000000');
+    expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)).toBeUndefined();
     expect(breakdown.rows[0]?.sublabel).toContain('đã gồm tài xế');
+  });
+
+  maybe('self_drive thuê dài ngày cũng KHÔNG còn ăn bậc — ưu đãi thuộc dịch vụ dài hạn', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const breakdown = pricing.buildQuote({
+      weekdayPrice: '800000',
+      weekendPrice: null,
+      pickupAt: PICKUP,
+      returnAt: day(10),
+      policy,
+      delivery: null,
+      serviceType: SERVICE_TYPE.SELF_DRIVE,
+    });
+    // 800k × 10 = 8tr nguyên — muốn hưởng ưu đãi thời gian thì đi dịch vụ Thuê dài hạn.
+    expect(breakdown.totalAmount).toBe('8000000');
+    expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)).toBeUndefined();
   });
 
   maybe('with_driver giá theo LỘ TRÌNH: nội thành/liên tỉnh/1 chiều ăn đúng cột giá', async () => {
