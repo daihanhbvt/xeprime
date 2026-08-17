@@ -165,8 +165,18 @@ export const vehicleFormSchema = yup.object({
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),
-  /** Giá/ngày đã gồm tài xế — chỉ có nghĩa khi serviceTypes chứa with_driver. */
+  /** Giá/ngày đã gồm tài xế (nội thành/cơ bản) — chỉ có nghĩa khi serviceTypes chứa with_driver. */
   withDriverDailyPrice: moneySchema
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .nullable()
+    .default(null),
+  /** Giá/ngày có tài xế lộ trình liên tỉnh (khứ hồi) — bỏ trống = rơi về giá cơ bản. */
+  withDriverInterCityPrice: moneySchema
+    .transform((v, orig) => (orig === '' || orig === null ? null : v))
+    .nullable()
+    .default(null),
+  /** Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — bỏ trống = fallback liên tỉnh → cơ bản. */
+  withDriverOneWayPrice: moneySchema
     .transform((v, orig) => (orig === '' || orig === null ? null : v))
     .nullable()
     .default(null),

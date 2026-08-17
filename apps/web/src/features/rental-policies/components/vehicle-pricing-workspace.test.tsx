@@ -41,6 +41,12 @@ function pricingFixture(over: Partial<VehiclePricing> = {}): VehiclePricing {
     shopPolicy: shopPolicy(),
     weekdayPrice: '800000',
     weekendPrice: null,
+    hourlyPrice: null,
+    monthlyPrice: null,
+    withDriverDailyPrice: null,
+    withDriverInterCityPrice: null,
+    withDriverOneWayPrice: null,
+    serviceTypes: ['self_drive'],
     isPublic: false,
     ...over,
   };
@@ -77,7 +83,7 @@ describe('State A — kế thừa gian hàng (read-only)', () => {
     expect(screen.getByText('100.000 ₫/giờ')).toBeTruthy();
     expect(screen.getByText('Mức giảm tối đa 15%')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Xem chính sách gian hàng →' })).toBeTruthy();
-    expect(screen.queryByLabelText('Giá thuê mặc định theo ngày')).toBeNull();
+    expect(screen.queryByLabelText('Giá ngày thường')).toBeNull();
   });
 
   it('gian hàng CHƯA có chính sách: nói thẳng, không bịa số', () => {
@@ -91,7 +97,7 @@ describe('State B — chuyển sang ghi đè và lưu', () => {
     renderWorkspace(pricingFixture());
     fireEvent.click(screen.getByRole('switch'));
 
-    const price = (await screen.findByLabelText('Giá thuê mặc định theo ngày')) as HTMLInputElement;
+    const price = (await screen.findByLabelText('Giá ngày thường')) as HTMLInputElement;
     expect(price.value).toBe('800.000');
     expect((screen.getByLabelText('Số tiền cọc mặc định') as HTMLInputElement).value).toBe(
       '5.000.000',
@@ -102,7 +108,7 @@ describe('State B — chuyển sang ghi đè và lưu', () => {
   it('lưu (xe KHÔNG công khai): xác nhận thường rồi gửi source=vehicle + policy + giá chuỗi', async () => {
     renderWorkspace(pricingFixture());
     fireEvent.click(screen.getByRole('switch'));
-    fireEvent.change(await screen.findByLabelText('Giá thuê mặc định theo ngày'), {
+    fireEvent.change(await screen.findByLabelText('Giá ngày thường'), {
       target: { value: '950000' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
@@ -126,11 +132,54 @@ describe('State B — chuyển sang ghi đè và lưu', () => {
   });
 });
 
+describe('Giá đa dịch vụ (17/08)', () => {
+  it('xe đăng cả 3 dịch vụ: hiện đủ 3 khối giá; lưu gửi kèm giá tháng + bảng giá tài xế', async () => {
+    renderWorkspace(
+      pricingFixture({
+        serviceTypes: ['self_drive', 'with_driver', 'long_term'],
+        monthlyPrice: '12000000',
+        withDriverDailyPrice: '1300000',
+      }),
+    );
+    fireEvent.click(screen.getByRole('switch'));
+
+    expect(await screen.findByLabelText('Giá ngày thường')).toBeTruthy();
+    const monthly = screen.getByLabelText('Giá tháng tham chiếu') as HTMLInputElement;
+    expect(monthly.value).toBe('12.000.000');
+    expect(screen.getByLabelText('Nội thành (giá cơ bản)')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Liên tỉnh — khứ hồi (tuỳ chọn)'), {
+      target: { value: '1600000' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    // Chờ modal xác nhận mở rồi mới bấm nút CUỐI (AntD render kèm bản sao motion).
+    expect((await screen.findAllByText('Lưu chính sách riêng cho xe này?')).length).toBeGreaterThan(
+      0,
+    );
+    const buttons = screen.getAllByRole('button', { name: 'Lưu thay đổi' });
+    fireEvent.click(buttons[buttons.length - 1]!);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const body = onSave.mock.calls[0]![0] as Record<string, unknown>;
+    expect(body.monthlyPrice).toBe('12000000');
+    expect(body.withDriverDailyPrice).toBe('1300000');
+    expect(body.withDriverInterCityPrice).toBe('1600000');
+  });
+
+  it('xe CHỈ tự lái: không hiện khối giá dài hạn/có tài xế', async () => {
+    renderWorkspace(pricingFixture());
+    fireEvent.click(screen.getByRole('switch'));
+    await screen.findByLabelText('Giá ngày thường');
+    expect(screen.queryByLabelText('Giá tháng tham chiếu')).toBeNull();
+    expect(screen.queryByLabelText('Nội thành (giá cơ bản)')).toBeNull();
+  });
+});
+
 describe('State D — thay đổi nhạy cảm trên xe công khai', () => {
   it('đổi giá xe đang công khai: hộp xác nhận nói đúng hệ quả knockback (ADR 0008)', async () => {
     renderWorkspace(pricingFixture({ isPublic: true }));
     fireEvent.click(screen.getByRole('switch'));
-    fireEvent.change(await screen.findByLabelText('Giá thuê mặc định theo ngày'), {
+    fireEvent.change(await screen.findByLabelText('Giá ngày thường'), {
       target: { value: '950000' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));

@@ -232,6 +232,9 @@ export function StaffBookingFlow({
         vehicleId,
         pickupAt: watchedPickup!.toISOString(),
         returnAt: watchedReturn!.toISOString(),
+        // Giá theo DỊCH VỤ + LỘ TRÌNH (17/08) — staff thấy đúng số khách sẽ trả.
+        serviceType,
+        ...(isWithDriver ? { routeType: watchedRoute } : {}),
       }
     : null;
   const quoteQ = useQuery({
@@ -563,8 +566,14 @@ export function StaffBookingFlow({
                 <PriceBreakdown
                   rows={quote.rows}
                   totalAmount={quote.totalAmount}
+                  totalLabel={quote.estimateNote ? 'Tạm tính' : undefined}
                   depositAmount={quote.depositAmount}
                   title="Tạm tính cho khoảng thời gian đã chọn"
+                  footer={
+                    quote.estimateNote ? (
+                      <span className={styles.deliveryFootnote}>{quote.estimateNote}.</span>
+                    ) : undefined
+                  }
                 />
               ) : (
                 <Alert
@@ -786,10 +795,12 @@ export function StaffBookingFlow({
               <PriceBreakdown
                 rows={quote.rows}
                 totalAmount={quote.totalAmount}
+                totalLabel={quote.estimateNote ? 'Tạm tính' : undefined}
                 depositAmount={quote.depositAmount}
                 title="Chi tiết giá thuê"
                 footer={
                   <span className={styles.deliveryFootnote}>
+                    {quote.estimateNote ? `${quote.estimateNote}. ` : ''}
                     Giá tính bởi hệ thống (đã gồm giá riêng theo ngày và ưu đãi theo số ngày thuê).
                   </span>
                 }

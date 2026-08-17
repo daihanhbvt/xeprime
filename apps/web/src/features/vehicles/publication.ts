@@ -1,4 +1,4 @@
-import { VEHICLE_PUBLIC_STATUS, type VehiclePublicStatus } from '@xeprime/types';
+import { SERVICE_TYPE, VEHICLE_PUBLIC_STATUS, type VehiclePublicStatus } from '@xeprime/types';
 import type { VehicleDetail } from './types';
 
 /**
@@ -8,20 +8,46 @@ import type { VehicleDetail } from './types';
  * Sống ở đây (không phải trong panel) vì HAI bề mặt cùng đọc: checklist của
  * `VehiclePublicReviewPanel` và mục "Việc cần làm" của Hồ sơ 360 — hai nơi lệch nhau một
  * điều kiện là chủ xe được bảo "đủ rồi" ở chỗ này và "còn thiếu" ở chỗ kia.
+ *
+ * Giá kiểm THEO DỊCH VỤ xe đăng (17/08): đăng dịch vụ nào phải có giá chuyên biệt của dịch vụ
+ * đó — không lấy giá tự lái trưng như giá có tài xế/dài hạn. `applies` = điều kiện có hiệu lực
+ * với xe này không (điều kiện không áp dụng thì không hiện trong checklist).
  */
 export const PUBLISH_REQUIREMENTS: readonly {
+  applies: (v: VehicleDetail) => boolean;
   present: (v: VehicleDetail) => boolean;
   label: string;
 }[] = [
-  { present: (v) => Boolean(v.weekdayPrice), label: 'Giá ngày thường' },
-  { present: (v) => Boolean(v.mainImageUrl), label: 'Ảnh đại diện' },
-  { present: (v) => Boolean(v.plateNumber), label: 'Biển số' },
-  { present: (v) => Boolean(v.description), label: 'Mô tả xe' },
+  {
+    applies: (v) => (v.serviceTypes ?? []).includes(SERVICE_TYPE.SELF_DRIVE),
+    present: (v) => Boolean(v.weekdayPrice),
+    label: 'Giá tự lái (ngày thường)',
+  },
+  {
+    applies: (v) => (v.serviceTypes ?? []).includes(SERVICE_TYPE.LONG_TERM),
+    present: (v) => Boolean(v.monthlyPrice),
+    label: 'Giá tháng thuê dài hạn',
+  },
+  {
+    applies: (v) => (v.serviceTypes ?? []).includes(SERVICE_TYPE.WITH_DRIVER),
+    present: (v) => Boolean(v.withDriverDailyPrice),
+    label: 'Giá/ngày có tài xế',
+  },
+  { applies: () => true, present: (v) => Boolean(v.mainImageUrl), label: 'Ảnh đại diện' },
+  { applies: () => true, present: (v) => Boolean(v.plateNumber), label: 'Biển số' },
+  { applies: () => true, present: (v) => Boolean(v.description), label: 'Mô tả xe' },
 ];
+
+/** Các điều kiện CÓ HIỆU LỰC với xe này (checklist chỉ hiện điều kiện áp dụng). */
+export function applicablePublishRequirements(vehicle: VehicleDetail) {
+  return PUBLISH_REQUIREMENTS.filter((item) => item.applies(vehicle));
+}
 
 /** Nhãn các điều kiện public còn thiếu của một xe — rỗng nghĩa là đủ điều kiện gửi duyệt. */
 export function missingPublishRequirements(vehicle: VehicleDetail): string[] {
-  return PUBLISH_REQUIREMENTS.filter((item) => !item.present(vehicle)).map((item) => item.label);
+  return applicablePublishRequirements(vehicle)
+    .filter((item) => !item.present(vehicle))
+    .map((item) => item.label);
 }
 
 export interface PublicStatusPresentation {

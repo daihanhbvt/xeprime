@@ -3,6 +3,7 @@ import {
   DELIVERY_QUOTE_SOURCE_VALUES,
   POLICY_SOURCE_VALUES,
   PRICE_ROW_VALUES,
+  ROUTE_TYPE_VALUES,
   SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
@@ -219,9 +220,27 @@ export class VehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày đã gồm tài xế (17/08)',
+    description: 'Giá/ngày đã gồm tài xế — lộ trình nội thành/cơ bản (17/08)',
   })
   withDriverDailyPrice!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày có tài xế — liên tỉnh khứ hồi; null = rơi về giá cơ bản',
+  })
+  withDriverInterCityPrice!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày có tài xế — liên tỉnh 1 chiều; null = rơi về liên tỉnh → cơ bản',
+  })
+  withDriverOneWayPrice!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Giá thuê theo giờ' })
+  hourlyPrice!: string | null;
+
+  /** Năng lực dịch vụ của xe — tab Giá chỉ hiện nhóm giá thuộc dịch vụ xe đăng. */
+  @ApiProperty({ enum: SERVICE_TYPE_VALUES, isArray: true })
+  serviceTypes!: string[];
 
   @ApiProperty({
     description: 'Xe đang hiển thị công khai — lưu giá sẽ đưa xe về chờ duyệt lại (ADR 0008)',
@@ -245,10 +264,15 @@ export class SaveVehiclePricingDto {
   @Matches(MONEY_PATTERN, { message: 'Giá thuê không hợp lệ (số VND không âm)' })
   weekdayPrice?: string;
 
-  @ApiPropertyOptional({ description: 'Giá cuối tuần VND — chỉ nhận khi source=vehicle' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá cuối tuần VND — chỉ nhận khi source=vehicle; null = xoá (dùng giá thường)',
+  })
   @IsOptional()
+  @ValidateIf((o: SaveVehiclePricingDto) => o.weekendPrice !== null)
   @Matches(MONEY_PATTERN, { message: 'Giá cuối tuần không hợp lệ (số VND không âm)' })
-  weekendPrice?: string;
+  weekendPrice?: string | null;
 
   @ApiPropertyOptional({
     type: String,
@@ -263,12 +287,42 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày đã gồm tài xế — chỉ nhận khi source=vehicle; null = xoá giá',
+    description: 'Giá/ngày đã gồm tài xế (nội thành/cơ bản) — chỉ nhận khi source=vehicle',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverDailyPrice !== null)
   @Matches(MONEY_PATTERN, { message: 'Giá/ngày có tài xế không hợp lệ (số VND không âm)' })
   withDriverDailyPrice?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày có tài xế liên tỉnh — null = xoá (rơi về giá cơ bản)',
+  })
+  @IsOptional()
+  @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverInterCityPrice !== null)
+  @Matches(MONEY_PATTERN, { message: 'Giá liên tỉnh không hợp lệ (số VND không âm)' })
+  withDriverInterCityPrice?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày có tài xế liên tỉnh 1 chiều — null = xoá',
+  })
+  @IsOptional()
+  @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverOneWayPrice !== null)
+  @Matches(MONEY_PATTERN, { message: 'Giá 1 chiều không hợp lệ (số VND không âm)' })
+  withDriverOneWayPrice?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá thuê theo giờ — null = xe không cho thuê giờ',
+  })
+  @IsOptional()
+  @ValidateIf((o: SaveVehiclePricingDto) => o.hourlyPrice !== null)
+  @Matches(MONEY_PATTERN, { message: 'Giá theo giờ không hợp lệ (số VND không âm)' })
+  hourlyPrice?: string | null;
 
   @ApiPropertyOptional({ type: SaveRentalPolicyDto })
   @IsOptional()
@@ -302,6 +356,13 @@ export class QuoteBreakdownDto {
     description: 'updatedAt của chính sách hiệu lực',
   })
   policyUpdatedAt!: string | null;
+  /**
+   * Khác null = tổng chỉ là TẠM TÍNH: giá chuyên biệt của dịch vụ / giá lộ trình chưa niêm
+   * yết, quote đang rơi về bậc gần nhất. FE đổi nhãn tổng ("Tạm tính") và hiện ghi chú này —
+   * không trưng như giá chốt (yêu cầu 17/08: không gọi "Tổng dự kiến" khi còn phụ phí).
+   */
+  @ApiPropertyOptional({ type: String, nullable: true })
+  estimateNote!: string | null;
 }
 
 /** Tóm tắt giao nhận cho khách xem trước khi đặt (public). */
@@ -334,6 +395,12 @@ export class PublicQuoteQueryDto {
   @IsOptional()
   @IsIn(SERVICE_TYPE_VALUES)
   serviceType?: string;
+
+  /** Lộ trình chuyến có tài xế — chỉ có nghĩa khi serviceType=with_driver (khác thì bỏ qua). */
+  @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(ROUTE_TYPE_VALUES)
+  routeType?: string;
 }
 
 // ---------------------------------------------------------------------------

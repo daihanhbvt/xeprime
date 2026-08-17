@@ -63,6 +63,10 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     monthlyPrice: values.monthlyPrice == null ? null : String(values.monthlyPrice),
     withDriverDailyPrice:
       values.withDriverDailyPrice == null ? null : String(values.withDriverDailyPrice),
+    withDriverInterCityPrice:
+      values.withDriverInterCityPrice == null ? null : String(values.withDriverInterCityPrice),
+    withDriverOneWayPrice:
+      values.withDriverOneWayPrice == null ? null : String(values.withDriverOneWayPrice),
     deliveryEnabled: values.deliveryEnabled,
     noCollateral: values.noCollateral,
     discountPercent: values.discountPercent ?? null,
@@ -114,6 +118,10 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     hourlyPrice: v.hourlyPrice == null ? null : Number(v.hourlyPrice),
     monthlyPrice: v.monthlyPrice == null ? null : Number(v.monthlyPrice),
     withDriverDailyPrice: v.withDriverDailyPrice == null ? null : Number(v.withDriverDailyPrice),
+    withDriverInterCityPrice:
+      v.withDriverInterCityPrice == null ? null : Number(v.withDriverInterCityPrice),
+    withDriverOneWayPrice:
+      v.withDriverOneWayPrice == null ? null : Number(v.withDriverOneWayPrice),
     deliveryEnabled: v.deliveryEnabled,
     noCollateral: v.noCollateral,
     discountPercent: v.discountPercent ?? null,

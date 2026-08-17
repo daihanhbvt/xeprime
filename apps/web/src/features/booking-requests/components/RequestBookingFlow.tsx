@@ -235,8 +235,9 @@ export function RequestBookingFlow({
       ? {
           pickupAt: watchedPickup.toISOString(),
           returnAt: watchedReturn.toISOString(),
-          // Giá theo DỊCH VỤ (17/08): dài hạn ăn giá tháng, có tài xế ăn giá tài xế.
+          // Giá theo DỊCH VỤ + LỘ TRÌNH (17/08): dài hạn ăn giá tháng, có tài xế ăn giá route.
           serviceType: watchedService,
+          ...(isWithDriver ? { routeType: watchedRoute } : {}),
         }
       : null;
   const quoteQ = useQuery({
@@ -593,7 +594,8 @@ export function RequestBookingFlow({
             </div>
             {quoteQ.data ? (
               <div className={styles.doneRow}>
-                <dt>Tổng dự kiến</dt>
+                {/* Còn phụ phí chưa tính (estimateNote) thì KHÔNG gọi "Tổng dự kiến" — 17/08. */}
+                <dt>{quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : 'Tổng dự kiến'}</dt>
                 {/* Tiền LUÔN qua bộ format — `1800000` trần là con số thô lọt ra ngoài. */}
                 <dd>{formatMoneyVnd(quoteQ.data.breakdown.totalAmount)}</dd>
               </div>
@@ -754,10 +756,14 @@ export function RequestBookingFlow({
                 <PriceBreakdown
                   rows={quoteQ.data.breakdown.rows}
                   totalAmount={quoteQ.data.breakdown.totalAmount}
+                  totalLabel={quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : undefined}
                   depositAmount={quoteQ.data.breakdown.depositAmount}
                   title="Tạm tính cho khoảng thời gian đã chọn"
                   footer={
                     <span className={styles.deliveryFootnote}>
+                      {quoteQ.data.breakdown.estimateNote
+                        ? `${quoteQ.data.breakdown.estimateNote}. `
+                        : ''}
                       Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.
                     </span>
                   }
@@ -771,53 +777,118 @@ export function RequestBookingFlow({
                 />
               )
             ) : (
+              /*
+               * Đơn giá TRƯỚC khi chọn ngày theo ĐÚNG dịch vụ đang chọn (17/08) — không trưng
+               * giá tự lái cho chuyến có tài xế/dài hạn. Sau khi chọn ngày, quote server là
+               * nguồn duy nhất.
+               */
               <div className={styles.priceCard}>
                 <div className={styles.priceCardHead}>
-                  <span className={styles.priceCardTitle}>Giá thuê xe</span>
-                  {promoPercent > 0 ? (
+                  <span className={styles.priceCardTitle}>
+                    Giá thuê xe · {serviceTypeLabel(watchedService)}
+                  </span>
+                  {!isWithDriver && !isLongTerm && promoPercent > 0 ? (
                     <span className={styles.promoTag}>Giảm {promoPercent}%</span>
                   ) : null}
                 </div>
                 <div className={styles.priceCardRows}>
-                  {listing?.weekdayPrice ? (
-                    <div className={styles.priceRow}>
-                      <span>Ngày thường</span>
-                      <b>
-                        {promoPercent > 0 ? (
-                          <s className={styles.priceStrike}>
-                            {formatMoneyVnd(listing.weekdayPrice)}
-                          </s>
+                  {isLongTerm ? (
+                    listing?.monthlyPrice ? (
+                      <div className={styles.priceRow}>
+                        <span>Giá tháng tham chiếu</span>
+                        <b>
+                          {formatMoneyVnd(listing.monthlyPrice)}
+                          <span className={styles.priceUnit}>/tháng</span>
+                        </b>
+                      </div>
+                    ) : (
+                      <div className={styles.priceRow}>
+                        <span>Giá tháng</span>
+                        <b>Liên hệ báo giá</b>
+                      </div>
+                    )
+                  ) : isWithDriver ? (
+                    listing?.withDriverDailyPrice ? (
+                      <>
+                        <div className={styles.priceRow}>
+                          <span>Nội thành (đã gồm tài xế)</span>
+                          <b>
+                            {formatMoneyVnd(listing.withDriverDailyPrice)}
+                            <span className={styles.priceUnit}>/ngày</span>
+                          </b>
+                        </div>
+                        {listing.withDriverInterCityPrice ? (
+                          <div className={styles.priceRow}>
+                            <span>Liên tỉnh (khứ hồi)</span>
+                            <b>
+                              {formatMoneyVnd(listing.withDriverInterCityPrice)}
+                              <span className={styles.priceUnit}>/ngày</span>
+                            </b>
+                          </div>
                         ) : null}
-                        {formatMoneyVnd(
-                          promoPercent > 0
-                            ? applyDiscountPercent(listing.weekdayPrice, promoPercent)
-                            : listing.weekdayPrice,
-                        )}
-                        <span className={styles.priceUnit}>/ngày</span>
-                      </b>
-                    </div>
-                  ) : null}
-                  {listing?.weekendPrice ? (
-                    <div className={styles.priceRow}>
-                      <span>Cuối tuần</span>
-                      <b>
-                        {formatMoneyVnd(listing.weekendPrice)}
-                        <span className={styles.priceUnit}>/ngày</span>
-                      </b>
-                    </div>
-                  ) : null}
-                  {listing?.hourlyPrice ? (
-                    <div className={styles.priceRow}>
-                      <span>Thuê theo giờ</span>
-                      <b>
-                        {formatMoneyVnd(listing.hourlyPrice)}
-                        <span className={styles.priceUnit}>/giờ</span>
-                      </b>
-                    </div>
-                  ) : null}
+                        {listing.withDriverOneWayPrice ? (
+                          <div className={styles.priceRow}>
+                            <span>Liên tỉnh 1 chiều</span>
+                            <b>
+                              {formatMoneyVnd(listing.withDriverOneWayPrice)}
+                              <span className={styles.priceUnit}>/ngày</span>
+                            </b>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <div className={styles.priceRow}>
+                        <span>Giá có tài xế</span>
+                        <b>Liên hệ báo giá</b>
+                      </div>
+                    )
+                  ) : (
+                    <>
+                      {listing?.weekdayPrice ? (
+                        <div className={styles.priceRow}>
+                          <span>Ngày thường</span>
+                          <b>
+                            {promoPercent > 0 ? (
+                              <s className={styles.priceStrike}>
+                                {formatMoneyVnd(listing.weekdayPrice)}
+                              </s>
+                            ) : null}
+                            {formatMoneyVnd(
+                              promoPercent > 0
+                                ? applyDiscountPercent(listing.weekdayPrice, promoPercent)
+                                : listing.weekdayPrice,
+                            )}
+                            <span className={styles.priceUnit}>/ngày</span>
+                          </b>
+                        </div>
+                      ) : null}
+                      {listing?.weekendPrice ? (
+                        <div className={styles.priceRow}>
+                          <span>Cuối tuần</span>
+                          <b>
+                            {formatMoneyVnd(listing.weekendPrice)}
+                            <span className={styles.priceUnit}>/ngày</span>
+                          </b>
+                        </div>
+                      ) : null}
+                      {listing?.hourlyPrice ? (
+                        <div className={styles.priceRow}>
+                          <span>Thuê theo giờ</span>
+                          <b>
+                            {formatMoneyVnd(listing.hourlyPrice)}
+                            <span className={styles.priceUnit}>/giờ</span>
+                          </b>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
                 </div>
                 <p className={styles.priceCardNote}>
-                  Chọn thời gian để xem tạm tính đầy đủ (đã gồm giảm giá theo số ngày và tiền cọc).
+                  {isLongTerm
+                    ? 'Ước tính = số ngày × giá tháng ÷ 30. Chọn thời gian để xem tạm tính đầy đủ.'
+                    : isWithDriver
+                      ? 'Chọn lộ trình và thời gian để xem tạm tính đầy đủ.'
+                      : 'Chọn thời gian để xem tạm tính đầy đủ (đã gồm giảm giá theo số ngày và tiền cọc).'}
                 </p>
               </div>
             )}
@@ -994,8 +1065,16 @@ export function RequestBookingFlow({
               <PriceBreakdown
                 rows={quoteQ.data.breakdown.rows}
                 totalAmount={quoteQ.data.breakdown.totalAmount}
+                totalLabel={quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : undefined}
                 depositAmount={quoteQ.data.breakdown.depositAmount}
                 title="Chi tiết giá thuê (dự kiến)"
+                footer={
+                  quoteQ.data.breakdown.estimateNote ? (
+                    <span className={styles.deliveryFootnote}>
+                      {quoteQ.data.breakdown.estimateNote}.
+                    </span>
+                  ) : undefined
+                }
               />
             ) : null}
 
@@ -1127,10 +1206,14 @@ export function RequestBookingFlow({
               <PriceBreakdown
                 rows={quoteQ.data.breakdown.rows}
                 totalAmount={quoteQ.data.breakdown.totalAmount}
+                totalLabel={quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : undefined}
                 depositAmount={quoteQ.data.breakdown.depositAmount}
                 title="Chi tiết giá thuê (dự kiến)"
                 footer={
                   <span className={styles.deliveryFootnote}>
+                    {quoteQ.data.breakdown.estimateNote
+                      ? `${quoteQ.data.breakdown.estimateNote}. `
+                      : ''}
                     {isDelivery
                       ? `Phí giao nhận: Miễn phí. ${DELIVERY_NOTE}`
                       : 'Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.'}

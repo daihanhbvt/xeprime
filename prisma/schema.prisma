@@ -649,9 +649,14 @@ model Vehicle {
   /// Giá tháng THAM CHIẾU cho thuê dài hạn (plan 17/08): ước tính = ngày × giá tháng ÷ 30;
   /// NULL = rơi về máy giá ngày. Giá chốt vẫn do shop quyết khi duyệt yêu cầu.
   monthlyPrice     Decimal?  @map("monthly_price") @db.Decimal(14, 2)
-  /// Giá/ngày ĐÃ GỒM tài xế (đơn giá phẳng, plan 17/08); NULL = hiện giá ngày thường kèm
-  /// nhãn "chưa gồm phí tài xế". Phụ phí 1 chiều/lưu đêm shop báo khi duyệt.
+  /// Giá/ngày ĐÃ GỒM tài xế cho lộ trình NỘI THÀNH (giá cơ bản, plan 17/08); NULL = hiện giá
+  /// ngày thường kèm nhãn "chưa gồm phí tài xế".
   withDriverDailyPrice Decimal? @map("with_driver_daily_price") @db.Decimal(14, 2)
+  /// Giá/ngày có tài xế lộ trình LIÊN TỈNH (khứ hồi) — NULL = quote rơi về giá cơ bản kèm ghi
+  /// chú phụ phí xác nhận khi duyệt.
+  withDriverInterCityPrice Decimal? @map("with_driver_inter_city_price") @db.Decimal(14, 2)
+  /// Giá/ngày có tài xế lộ trình LIÊN TỈNH 1 CHIỀU — fallback: liên tỉnh → cơ bản.
+  withDriverOneWayPrice Decimal? @map("with_driver_one_way_price") @db.Decimal(14, 2)
   /// Chủ xe hỗ trợ giao xe tận nơi.
   deliveryEnabled  Boolean   @default(false) @map("delivery_enabled")
   /// Không yêu cầu cọc tài sản (miễn thế chấp).
@@ -853,8 +858,10 @@ model PublicListing {
   hourlyPrice  Decimal?  @map("hourly_price") @db.Decimal(14, 2)
   /// Giá tháng tham chiếu thuê dài hạn — card marketplace hiện "X/tháng" ở ngữ cảnh dài hạn.
   monthlyPrice Decimal?  @map("monthly_price") @db.Decimal(14, 2)
-  /// Giá/ngày đã gồm tài xế — card marketplace hiện ở ngữ cảnh có tài xế.
+  /// Giá/ngày đã gồm tài xế (nội thành/cơ bản) — card marketplace hiện ở ngữ cảnh có tài xế.
   withDriverDailyPrice Decimal? @map("with_driver_daily_price") @db.Decimal(14, 2)
+  withDriverInterCityPrice Decimal? @map("with_driver_inter_city_price") @db.Decimal(14, 2)
+  withDriverOneWayPrice Decimal? @map("with_driver_one_way_price") @db.Decimal(14, 2)
   deliveryEnabled Boolean @default(false) @map("delivery_enabled")
   noCollateral Boolean   @default(false) @map("no_collateral")
   discountPercent Int?   @map("discount_percent")

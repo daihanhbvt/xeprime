@@ -24,5 +24,5 @@ export const saveVehiclePricing = (
 /** Báo giá công khai cho khách (marketplace) — cùng nguồn tính giá với luồng duyệt của shop. */
 export const fetchPublicQuote = (
   vehicleId: string,
-  params: { pickupAt: string; returnAt: string; serviceType?: string },
+  params: { pickupAt: string; returnAt: string; serviceType?: string; routeType?: string },
 ): Promise<PublicQuote> => apiGet<PublicQuote>(`/public/listings/${vehicleId}/quote`, params);

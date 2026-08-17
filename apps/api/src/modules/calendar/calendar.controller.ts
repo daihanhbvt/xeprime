@@ -1,7 +1,20 @@
-import { Body, Controller, Get, NotFoundException, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Prisma } from '@xeprime/prisma';
-import { API_ERROR_CODE, OCCUPANCY_SOURCE_TYPE, PERMISSION } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  OCCUPANCY_SOURCE_TYPE,
+  PERMISSION,
+  SERVICE_TYPE,
+} from '@xeprime/types';
 import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -154,10 +167,26 @@ export class CalendarController {
   ): Promise<QuoteBreakdownDto> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: { id: query.vehicleId, tenantId: tenant.tenantId, deletedAt: null },
-      select: { id: true, weekdayPrice: true, weekendPrice: true },
+      select: {
+        id: true,
+        weekdayPrice: true,
+        weekendPrice: true,
+        serviceTypes: true,
+        monthlyPrice: true,
+        withDriverDailyPrice: true,
+        withDriverInterCityPrice: true,
+        withDriverOneWayPrice: true,
+      },
     });
     if (!vehicle) {
       throw new NotFoundException({ code: API_ERROR_CODE.NOT_FOUND, message: 'Không tìm thấy xe' });
+    }
+    // Cùng luật với public quote: báo giá cho dịch vụ xe không phục vụ là con số vô nghĩa.
+    if (query.serviceType && !vehicle.serviceTypes.includes(query.serviceType)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Xe không phục vụ loại dịch vụ này',
+      });
     }
 
     const [policy, dailyOverrides] = await Promise.all([
@@ -172,6 +201,20 @@ export class CalendarController {
       policy,
       delivery: null,
       dailyOverrides,
+      // Giá theo DỊCH VỤ + LỘ TRÌNH (17/08): staff và khách nhìn cùng con số cho cùng chuyến.
+      serviceType: query.serviceType,
+      routeType:
+        query.serviceType === SERVICE_TYPE.WITH_DRIVER ? (query.routeType ?? null) : null,
+      monthlyPrice: vehicle.monthlyPrice ? vehicle.monthlyPrice.toFixed(0) : null,
+      withDriverDailyPrice: vehicle.withDriverDailyPrice
+        ? vehicle.withDriverDailyPrice.toFixed(0)
+        : null,
+      withDriverInterCityPrice: vehicle.withDriverInterCityPrice
+        ? vehicle.withDriverInterCityPrice.toFixed(0)
+        : null,
+      withDriverOneWayPrice: vehicle.withDriverOneWayPrice
+        ? vehicle.withDriverOneWayPrice.toFixed(0)
+        : null,
     });
   }
 

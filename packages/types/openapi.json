@@ -1861,6 +1861,32 @@
               "format": "date-time",
               "type": "string"
             }
+          },
+          {
+            "name": "serviceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "long_term"
+              ]
+            }
+          },
+          {
+            "name": "routeType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "in_city",
+                "inter_city",
+                "inter_city_one_way"
+              ]
+            }
           }
         ],
         "responses": {
@@ -2405,6 +2431,19 @@
                 "self_drive",
                 "with_driver",
                 "long_term"
+              ]
+            }
+          },
+          {
+            "name": "routeType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "in_city",
+                "inter_city",
+                "inter_city_one_way"
               ]
             }
           }
@@ -10617,6 +10656,16 @@
             "nullable": true,
             "description": "Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt."
           },
+          "withDriverInterCityPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007)"
+          },
+          "withDriverOneWayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007)"
+          },
           "deliveryEnabled": {
             "type": "boolean",
             "description": "Chủ xe hỗ trợ giao xe tận nơi"
@@ -10905,6 +10954,16 @@
             "type": "string",
             "nullable": true,
             "description": "Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt."
+          },
+          "withDriverInterCityPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007)"
+          },
+          "withDriverOneWayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007)"
           },
           "deliveryEnabled": {
             "type": "boolean",
@@ -11255,6 +11314,10 @@
             "type": "string",
             "nullable": true,
             "description": "updatedAt của chính sách hiệu lực"
+          },
+          "estimateNote": {
+            "type": "string",
+            "nullable": true
           }
         },
         "required": [
@@ -12439,7 +12502,17 @@
           "withDriverDailyPrice": {
             "type": "string",
             "nullable": true,
-            "description": "Giá/ngày đã gồm tài xế — string tiền (ADR 0007)"
+            "description": "Giá/ngày đã gồm tài xế (nội thành/cơ bản) — string tiền (ADR 0007)"
+          },
+          "withDriverInterCityPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007)"
+          },
+          "withDriverOneWayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007)"
           },
           "deliveryEnabled": {
             "type": "boolean",
@@ -12639,7 +12712,33 @@
           "withDriverDailyPrice": {
             "type": "string",
             "nullable": true,
-            "description": "Giá/ngày đã gồm tài xế (17/08)"
+            "description": "Giá/ngày đã gồm tài xế — lộ trình nội thành/cơ bản (17/08)"
+          },
+          "withDriverInterCityPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế — liên tỉnh khứ hồi; null = rơi về giá cơ bản"
+          },
+          "withDriverOneWayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế — liên tỉnh 1 chiều; null = rơi về liên tỉnh → cơ bản"
+          },
+          "hourlyPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá thuê theo giờ"
+          },
+          "serviceTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "long_term"
+              ]
+            }
           },
           "isPublic": {
             "type": "boolean",
@@ -12648,6 +12747,7 @@
         },
         "required": [
           "source",
+          "serviceTypes",
           "isPublic"
         ]
       },
@@ -12667,7 +12767,8 @@
           },
           "weekendPrice": {
             "type": "string",
-            "description": "Giá cuối tuần VND — chỉ nhận khi source=vehicle"
+            "nullable": true,
+            "description": "Giá cuối tuần VND — chỉ nhận khi source=vehicle; null = xoá (dùng giá thường)"
           },
           "monthlyPrice": {
             "type": "string",
@@ -12677,7 +12778,22 @@
           "withDriverDailyPrice": {
             "type": "string",
             "nullable": true,
-            "description": "Giá/ngày đã gồm tài xế — chỉ nhận khi source=vehicle; null = xoá giá"
+            "description": "Giá/ngày đã gồm tài xế (nội thành/cơ bản) — chỉ nhận khi source=vehicle"
+          },
+          "withDriverInterCityPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế liên tỉnh — null = xoá (rơi về giá cơ bản)"
+          },
+          "withDriverOneWayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế liên tỉnh 1 chiều — null = xoá"
+          },
+          "hourlyPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá thuê theo giờ — null = xe không cho thuê giờ"
           },
           "policy": {
             "$ref": "#/components/schemas/SaveRentalPolicyDto"
@@ -13230,7 +13346,8 @@
           },
           "weekendPrice": {
             "type": "string",
-            "description": "Giá cuối tuần",
+            "nullable": true,
+            "description": "Giá cuối tuần — gửi null = xoá (dùng giá ngày thường)",
             "example": "750000"
           },
           "hourlyPrice": {
@@ -13250,6 +13367,18 @@
             "nullable": true,
             "description": "Giá/ngày ĐÃ GỒM tài xế — chỉ có nghĩa khi serviceTypes chứa with_driver. Gửi null = shop báo giá khi duyệt.",
             "example": "1500000"
+          },
+          "withDriverInterCityPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế liên tỉnh (khứ hồi) — null = rơi về giá cơ bản kèm ghi chú",
+            "example": "1600000"
+          },
+          "withDriverOneWayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế liên tỉnh 1 CHIỀU — null = fallback liên tỉnh → cơ bản",
+            "example": "2000000"
           },
           "deliveryEnabled": {
             "type": "boolean",
@@ -13467,7 +13596,8 @@
           },
           "weekendPrice": {
             "type": "string",
-            "description": "Giá cuối tuần",
+            "nullable": true,
+            "description": "Giá cuối tuần — gửi null = xoá (dùng giá ngày thường)",
             "example": "750000"
           },
           "hourlyPrice": {
@@ -13487,6 +13617,18 @@
             "nullable": true,
             "description": "Giá/ngày ĐÃ GỒM tài xế — chỉ có nghĩa khi serviceTypes chứa with_driver. Gửi null = shop báo giá khi duyệt.",
             "example": "1500000"
+          },
+          "withDriverInterCityPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế liên tỉnh (khứ hồi) — null = rơi về giá cơ bản kèm ghi chú",
+            "example": "1600000"
+          },
+          "withDriverOneWayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá/ngày có tài xế liên tỉnh 1 CHIỀU — null = fallback liên tỉnh → cơ bản",
+            "example": "2000000"
           },
           "deliveryEnabled": {
             "type": "boolean",

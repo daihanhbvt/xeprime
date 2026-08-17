@@ -219,9 +219,23 @@ export class VehicleDetailDto extends VehicleListItemDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày đã gồm tài xế — string tiền (ADR 0007)',
+    description: 'Giá/ngày đã gồm tài xế (nội thành/cơ bản) — string tiền (ADR 0007)',
   })
   withDriverDailyPrice!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007)',
+  })
+  withDriverInterCityPrice!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007)',
+  })
+  withDriverOneWayPrice!: string | null;
 
   @ApiProperty({ description: 'Chủ xe hỗ trợ giao xe tận nơi' }) deliveryEnabled!: boolean;
   @ApiProperty({ description: 'Miễn thế chấp (không cần cọc tài sản)' }) noCollateral!: boolean;
@@ -470,10 +484,15 @@ export class CreateVehicleDto {
   @Matches(MONEY_PATTERN, { message: 'weekdayPrice phải là số tiền hợp lệ' })
   weekdayPrice?: string;
 
-  @ApiPropertyOptional({ description: 'Giá cuối tuần', example: '750000' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá cuối tuần — gửi null = xoá (dùng giá ngày thường)',
+    example: '750000',
+  })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'weekendPrice phải là số tiền hợp lệ' })
-  weekendPrice?: string;
+  weekendPrice?: string | null;
 
   @ApiPropertyOptional({
     type: String,
@@ -506,6 +525,26 @@ export class CreateVehicleDto {
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'withDriverDailyPrice phải là số tiền hợp lệ' })
   withDriverDailyPrice?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày có tài xế liên tỉnh (khứ hồi) — null = rơi về giá cơ bản kèm ghi chú',
+    example: '1600000',
+  })
+  @IsOptional()
+  @Matches(MONEY_PATTERN, { message: 'withDriverInterCityPrice phải là số tiền hợp lệ' })
+  withDriverInterCityPrice?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày có tài xế liên tỉnh 1 CHIỀU — null = fallback liên tỉnh → cơ bản',
+    example: '2000000',
+  })
+  @IsOptional()
+  @Matches(MONEY_PATTERN, { message: 'withDriverOneWayPrice phải là số tiền hợp lệ' })
+  withDriverOneWayPrice?: string | null;
 
   @ApiPropertyOptional({ description: 'Chủ xe hỗ trợ giao xe tận nơi' })
   @IsOptional()

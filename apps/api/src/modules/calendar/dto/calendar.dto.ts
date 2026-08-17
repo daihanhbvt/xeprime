@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   OCCUPANCY_SOURCE_TYPE_VALUES,
+  ROUTE_TYPE_VALUES,
+  SERVICE_TYPE_VALUES,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
@@ -65,6 +67,18 @@ export class CalendarQuoteQueryDto {
   @Type(() => Date)
   @IsDate()
   returnAt!: Date;
+
+  /** Dịch vụ của đơn sắp lập (17/08) — dài hạn ăn giá tháng, có tài xế ăn giá route. */
+  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(SERVICE_TYPE_VALUES)
+  serviceType?: string;
+
+  /** Lộ trình chuyến có tài xế — bỏ qua với dịch vụ khác. */
+  @ApiPropertyOptional({ enum: ROUTE_TYPE_VALUES })
+  @IsOptional()
+  @IsIn(ROUTE_TYPE_VALUES)
+  routeType?: string;
 }
 
 export class CalendarResourceDto {

@@ -5,6 +5,8 @@ import {
   LONG_TERM_MIN_DAYS,
   POLICY_SOURCE,
   PRICE_ROW,
+  ROUTE_TYPE,
+  routeTypeLabel,
   SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
@@ -421,10 +423,16 @@ export class PricingService {
     dailyOverrides?: ReadonlyMap<string, string>;
     /** Dịch vụ của chuyến (17/08) — đổi cách tính đơn giá. Mặc định self_drive. */
     serviceType?: string;
+    /** Lộ trình chuyến CÓ TÀI XẾ — quyết định cột giá route nào được áp. */
+    routeType?: string | null;
     /** Giá tháng tham chiếu — chỉ dùng khi serviceType = long_term. */
     monthlyPrice?: string | null;
-    /** Giá/ngày đã gồm tài xế — chỉ dùng khi serviceType = with_driver. */
+    /** Giá/ngày đã gồm tài xế, lộ trình nội thành/cơ bản — chỉ dùng khi with_driver. */
     withDriverDailyPrice?: string | null;
+    /** Giá/ngày có tài xế liên tỉnh (khứ hồi) — NULL rơi về giá cơ bản kèm ghi chú. */
+    withDriverInterCityPrice?: string | null;
+    /** Giá/ngày có tài xế liên tỉnh 1 chiều — fallback: liên tỉnh → cơ bản. */
+    withDriverOneWayPrice?: string | null;
   }): QuoteBreakdownDto {
     if (!(input.returnAt.getTime() > input.pickupAt.getTime())) {
       throw invalid('Thời điểm trả xe phải sau thời điểm nhận xe');
@@ -452,10 +460,41 @@ export class PricingService {
       serviceType === SERVICE_TYPE.LONG_TERM && input.monthlyPrice
         ? new Prisma.Decimal(input.monthlyPrice)
         : null;
-    const driverRate =
-      serviceType === SERVICE_TYPE.WITH_DRIVER && input.withDriverDailyPrice
-        ? new Prisma.Decimal(input.withDriverDailyPrice)
+
+    /*
+     * Giá có tài xế theo LỘ TRÌNH (17/08): nội thành ăn giá cơ bản; liên tỉnh/1 chiều ăn cột
+     * giá route riêng, CHƯA NIÊM YẾT thì rơi về bậc gần nhất (1 chiều → liên tỉnh → cơ bản)
+     * kèm `estimateNote` — tổng lúc đó là TẠM TÍNH, không được trưng như giá chốt.
+     */
+    let driverRate: Prisma.Decimal | null = null;
+    let driverRouteLabel: string | null = null;
+    let estimateNote: string | null = null;
+    if (serviceType === SERVICE_TYPE.WITH_DRIVER && input.withDriverDailyPrice) {
+      const basePrice = new Prisma.Decimal(input.withDriverDailyPrice);
+      const interCity = input.withDriverInterCityPrice
+        ? new Prisma.Decimal(input.withDriverInterCityPrice)
         : null;
+      const oneWay = input.withDriverOneWayPrice
+        ? new Prisma.Decimal(input.withDriverOneWayPrice)
+        : null;
+      const route = input.routeType ?? null;
+      if (route === ROUTE_TYPE.INTER_CITY) {
+        driverRate = interCity ?? basePrice;
+        if (!interCity) {
+          estimateNote =
+            'Giá lộ trình liên tỉnh chưa niêm yết — tạm tính theo giá cơ bản, gian hàng xác nhận phụ phí khi duyệt';
+        }
+      } else if (route === ROUTE_TYPE.INTER_CITY_ONE_WAY) {
+        driverRate = oneWay ?? interCity ?? basePrice;
+        if (!oneWay) {
+          estimateNote =
+            'Giá lộ trình 1 chiều chưa niêm yết — tạm tính theo bậc gần nhất, gian hàng xác nhận phụ phí khi duyệt';
+        }
+      } else {
+        driverRate = basePrice;
+      }
+      driverRouteLabel = route ? routeTypeLabel(route) : null;
+    }
 
     let base: Prisma.Decimal;
     let baseSublabel: string;
@@ -468,8 +507,17 @@ export class PricingService {
       applyDiscountTiers = false;
     } else if (driverRate) {
       base = driverRate.mul(days);
-      baseSublabel = `${days} ngày × ${vnd(driverRate)}/ngày · đã gồm tài xế`;
+      baseSublabel = `${days} ngày × ${vnd(driverRate)}/ngày · đã gồm tài xế${
+        driverRouteLabel ? ` · ${driverRouteLabel}` : ''
+      }`;
     } else {
+      // Máy giá ngày là FALLBACK cho dịch vụ chưa niêm yết giá chuyên biệt — tổng chỉ là
+      // tạm tính, FE không được trưng như giá chốt của dịch vụ đó.
+      if (serviceType === SERVICE_TYPE.WITH_DRIVER) {
+        estimateNote = 'Chưa gồm phí tài xế — gian hàng báo giá chính thức khi duyệt';
+      } else if (serviceType === SERVICE_TYPE.LONG_TERM) {
+        estimateNote = 'Xe chưa niêm yết giá tháng — tạm tính theo giá ngày thường';
+      }
       if (!input.weekdayPrice) {
         throw invalid('Xe chưa có giá thuê theo ngày — cấu hình giá trước khi báo giá');
       }
@@ -565,6 +613,9 @@ export class PricingService {
       depositAmount: policy ? new Prisma.Decimal(policy.depositAmount).toFixed(0) : '0',
       policySource: input.policy?.source ?? null,
       policyUpdatedAt: policy?.updatedAt ?? null,
+      // Khác null = tổng chỉ là TẠM TÍNH (giá chuyên biệt/giá route chưa niêm yết) — FE đổi
+      // nhãn tổng và hiện ghi chú, không trưng như giá chốt.
+      estimateNote,
     };
   }
 
@@ -614,6 +665,7 @@ export class PricingService {
     pickupAt: string,
     returnAt: string,
     serviceType?: string,
+    routeType?: string,
   ): Promise<PublicQuoteDto> {
     const vehicle = await this.prisma.vehicle.findFirst({
       where: {
@@ -630,6 +682,8 @@ export class PricingService {
         serviceTypes: true,
         monthlyPrice: true,
         withDriverDailyPrice: true,
+        withDriverInterCityPrice: true,
+        withDriverOneWayPrice: true,
       },
     });
     if (!vehicle) {
@@ -660,8 +714,12 @@ export class PricingService {
       delivery: null,
       dailyOverrides,
       serviceType,
+      // Lộ trình chỉ có nghĩa với chuyến có tài xế — dịch vụ khác bỏ qua để không lệch giá.
+      routeType: serviceType === SERVICE_TYPE.WITH_DRIVER ? (routeType ?? null) : null,
       monthlyPrice: decimalToString(vehicle.monthlyPrice),
       withDriverDailyPrice: decimalToString(vehicle.withDriverDailyPrice),
+      withDriverInterCityPrice: decimalToString(vehicle.withDriverInterCityPrice),
+      withDriverOneWayPrice: decimalToString(vehicle.withDriverOneWayPrice),
     });
 
     const delivery: DeliverySummaryDto = policy?.values.deliveryEnabled

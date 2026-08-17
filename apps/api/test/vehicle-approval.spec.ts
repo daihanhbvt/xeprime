@@ -254,4 +254,82 @@ describe('Vehicle public approval (WS0)', () => {
       /hoạt động/,
     );
   });
+
+  maybe('đăng dịch vụ nào phải có GIÁ CHUYÊN BIỆT của dịch vụ đó mới gửi duyệt được (17/08)', async () => {
+    // with_driver không có giá tài xế → chặn (không âm thầm trưng giá tự lái như tổng giá).
+    const withDriver = await seedVehicle(tenantId, {
+      serviceTypes: ['self_drive', 'with_driver'],
+    });
+    await expect(vehicles.submitForPublicReview(tenantId, withDriver, ownerId)).rejects.toThrow(
+      /có tài xế/,
+    );
+
+    // long_term không có giá tháng → chặn.
+    const longTerm = await seedVehicle(tenantId, { serviceTypes: ['self_drive', 'long_term'] });
+    await expect(vehicles.submitForPublicReview(tenantId, longTerm, ownerId)).rejects.toThrow(
+      /giá tháng/,
+    );
+
+    // Đủ giá chuyên biệt → gửi duyệt trôi.
+    const ready = await seedVehicle(tenantId, {
+      serviceTypes: ['self_drive', 'with_driver', 'long_term'],
+      monthlyPrice: '12000000',
+      withDriverDailyPrice: '1300000',
+    });
+    const submitted = await vehicles.submitForPublicReview(tenantId, ready, ownerId);
+    expect(submitted.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
+
+    // Xe CHỈ có tài xế (không tự lái): không bị ép giá ngày thường.
+    const driverOnly = await seedVehicle(tenantId, {
+      serviceTypes: ['with_driver'],
+      weekdayPrice: null,
+      weekendPrice: null,
+      withDriverDailyPrice: '2500000',
+    });
+    const submitted2 = await vehicles.submitForPublicReview(tenantId, driverOnly, ownerId);
+    expect(submitted2.publicStatus).toBe(VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW);
+  });
+
+  maybe('bỏ dịch vụ → giá chuyên biệt của nó bị XOÁ theo (không giữ giá stale)', async () => {
+    const v = await seedVehicle(tenantId, {
+      serviceTypes: ['self_drive', 'long_term', 'with_driver'],
+      monthlyPrice: '9000000',
+      withDriverDailyPrice: '1500000',
+      withDriverInterCityPrice: '1800000',
+    });
+    await vehicles.update(tenantId, v, ownerId, { serviceTypes: ['self_drive'] });
+    const after = await prisma.vehicle.findUniqueOrThrow({
+      where: { id: v },
+      select: {
+        monthlyPrice: true,
+        withDriverDailyPrice: true,
+        withDriverInterCityPrice: true,
+        withDriverOneWayPrice: true,
+      },
+    });
+    expect(after.monthlyPrice).toBeNull();
+    expect(after.withDriverDailyPrice).toBeNull();
+    expect(after.withDriverInterCityPrice).toBeNull();
+    expect(after.withDriverOneWayPrice).toBeNull();
+  });
+
+  maybe('savePricing chặn đặt giá cho dịch vụ xe KHÔNG đăng', async () => {
+    const v = await seedVehicle(tenantId, { serviceTypes: ['self_drive'] });
+    await expect(
+      vehicles.savePricing(tenantId, v, ownerId, {
+        source: 'vehicle',
+        monthlyPrice: '9000000',
+        policy: {
+          depositAmount: '0',
+          deliveryEnabled: false,
+          deliveryTiers: [],
+          overtimeFeePerHour: null,
+          overtimeGraceMinutes: null,
+          overtimeRoundingMinutes: null,
+          discountEnabled: false,
+          discountTiers: [],
+        },
+      }),
+    ).rejects.toThrow(/thuê dài hạn/);
+  });
 });

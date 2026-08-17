@@ -40,6 +40,8 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
   monthlyPrice: null,
   withDriverDailyPrice: null,
+  withDriverInterCityPrice: null,
+  withDriverOneWayPrice: null,
   sourceType: VEHICLE_SOURCE_TYPE.OWNED,
   operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE,
   plateNumber: '',

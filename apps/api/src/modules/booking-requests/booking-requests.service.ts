@@ -415,11 +415,14 @@ export class BookingRequestsService {
       // Miễn phí lúc duyệt — không dòng giao nhận nào trong snapshot giá gốc.
       delivery: null,
       dailyOverrides,
-      // Giá theo DỊCH VỤ của yêu cầu (17/08): dài hạn ăn giá tháng, có tài xế ăn giá tài xế —
-      // khách và shop nhìn cùng một con số với quote công khai.
+      // Giá theo DỊCH VỤ + LỘ TRÌNH của yêu cầu (17/08): dài hạn ăn giá tháng, có tài xế ăn
+      // giá route — khách và shop nhìn cùng một con số với quote công khai.
       serviceType: req.serviceType,
+      routeType: req.routeType,
       monthlyPrice: req.vehicle.monthlyPrice?.toFixed(0) ?? null,
       withDriverDailyPrice: req.vehicle.withDriverDailyPrice?.toFixed(0) ?? null,
+      withDriverInterCityPrice: req.vehicle.withDriverInterCityPrice?.toFixed(0) ?? null,
+      withDriverOneWayPrice: req.vehicle.withDriverOneWayPrice?.toFixed(0) ?? null,
     });
     const snapshot = this.pricing.buildSnapshot(breakdown, policy);
 
@@ -578,6 +581,8 @@ export class BookingRequestsService {
             weekendPrice: true,
             monthlyPrice: true,
             withDriverDailyPrice: true,
+            withDriverInterCityPrice: true,
+            withDriverOneWayPrice: true,
           },
         },
       },

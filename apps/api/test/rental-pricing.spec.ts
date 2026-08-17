@@ -1,12 +1,14 @@
-import { createPrismaClient, newId } from '@xeprime/prisma';
+import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   BOOKING_REQUEST_STATUS,
   MEMBERSHIP_STATUS,
   POLICY_SOURCE,
   PRICE_ROW,
+  ROUTE_TYPE,
   SERVICE_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
+  VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
@@ -503,5 +505,101 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
     // 1.5tr × 4 = 6tr, giảm 5% (mốc 3 ngày) = 5.7tr.
     expect(breakdown.totalAmount).toBe('5700000');
     expect(breakdown.rows[0]?.sublabel).toContain('đã gồm tài xế');
+  });
+
+  maybe('with_driver giá theo LỘ TRÌNH: nội thành/liên tỉnh/1 chiều ăn đúng cột giá', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const quoteFor = (routeType: string) =>
+      pricing.buildQuote({
+        weekdayPrice: '800000',
+        weekendPrice: null,
+        pickupAt: PICKUP,
+        returnAt: day(2),
+        policy,
+        delivery: null,
+        serviceType: SERVICE_TYPE.WITH_DRIVER,
+        routeType,
+        withDriverDailyPrice: '1300000',
+        withDriverInterCityPrice: '1600000',
+        withDriverOneWayPrice: '2100000',
+      });
+
+    // 2 ngày, không chạm mốc giảm giá nào (mốc từ 3 ngày).
+    expect(quoteFor(ROUTE_TYPE.IN_CITY).totalAmount).toBe('2600000');
+    expect(quoteFor(ROUTE_TYPE.INTER_CITY).totalAmount).toBe('3200000');
+    expect(quoteFor(ROUTE_TYPE.INTER_CITY_ONE_WAY).totalAmount).toBe('4200000');
+    // Đủ bảng giá route → KHÔNG có ghi chú tạm tính; sublabel ghi rõ lộ trình.
+    expect(quoteFor(ROUTE_TYPE.INTER_CITY).estimateNote).toBeNull();
+    expect(quoteFor(ROUTE_TYPE.INTER_CITY).rows[0]?.sublabel).toContain('Liên tỉnh');
+  });
+
+  maybe('with_driver THIẾU giá route: rơi về bậc gần nhất + estimateNote (tạm tính)', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const breakdown = pricing.buildQuote({
+      weekdayPrice: '800000',
+      weekendPrice: null,
+      pickupAt: PICKUP,
+      returnAt: day(2),
+      policy,
+      delivery: null,
+      serviceType: SERVICE_TYPE.WITH_DRIVER,
+      routeType: ROUTE_TYPE.INTER_CITY,
+      withDriverDailyPrice: '1300000',
+      withDriverInterCityPrice: null,
+      withDriverOneWayPrice: null,
+    });
+    // Fallback về giá cơ bản 1.3tr × 2 — nhưng tổng bị đánh dấu TẠM TÍNH, không phải giá chốt.
+    expect(breakdown.totalAmount).toBe('2600000');
+    expect(breakdown.estimateNote).toMatch(/chưa niêm yết/);
+  });
+
+  maybe('public quote KHỚP số khi duyệt: yêu cầu with_driver liên tỉnh ra cùng một tổng', async () => {
+    // Niêm yết bảng giá route cho xe rồi đi cả hai đường: quote công khai và duyệt yêu cầu.
+    await prisma.vehicle.update({
+      where: { id: vehicleId },
+      data: {
+        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+        serviceTypes: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER],
+        withDriverDailyPrice: new Prisma.Decimal('1300000'),
+        withDriverInterCityPrice: new Prisma.Decimal('1600000'),
+        withDriverOneWayPrice: new Prisma.Decimal('2100000'),
+      },
+    });
+
+    const pickupAt = new Date('2027-05-10T02:00:00.000Z');
+    const returnAt = new Date('2027-05-12T02:00:00.000Z');
+    const publicQuote = await pricing.publicQuote(
+      vehicleId,
+      pickupAt.toISOString(),
+      returnAt.toISOString(),
+      SERVICE_TYPE.WITH_DRIVER,
+      ROUTE_TYPE.INTER_CITY,
+    );
+
+    // Seed thẳng yêu cầu (spec này stub OTP/auth rỗng — không đi qua submitPublic).
+    const requestId = newId();
+    await prisma.bookingRequest.create({
+      data: {
+        id: requestId,
+        tenantId,
+        vehicleId,
+        customerName: 'Khách Route',
+        customerPhone: '0905556677',
+        pickupAt,
+        returnAt,
+        serviceType: SERVICE_TYPE.WITH_DRIVER,
+        routeType: ROUTE_TYPE.INTER_CITY,
+        pickupAddress: '1 Lê Duẩn, Đà Nẵng',
+        destination: 'Huế',
+      },
+    });
+    const approved = await requests.approve(tenantId, ownerId, requestId);
+    const booking = await prisma.booking.findUniqueOrThrow({
+      where: { id: approved.bookingId! },
+      select: { totalAmount: true, baseAmount: true },
+    });
+
+    // Khách ngoài chợ và shop lúc duyệt nhìn CÙNG một con số — một nguồn tính giá.
+    expect(booking.totalAmount.toFixed(0)).toBe(publicQuote.breakdown.totalAmount);
   });
 });

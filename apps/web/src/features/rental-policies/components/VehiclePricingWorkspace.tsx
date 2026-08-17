@@ -5,7 +5,7 @@ import { Alert, App, Button, Switch } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { POLICY_SOURCE } from '@xeprime/types';
+import { LONG_TERM_MIN_DAYS, POLICY_SOURCE, SERVICE_TYPE } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { ROUTES } from '@/constants/routes';
@@ -55,12 +55,25 @@ export function VehiclePricingWorkspace({
   const [editingOverride, setEditingOverride] = useState(false);
   const editMode = overriding || editingOverride;
 
+  // Nhóm giá hiện theo NĂNG LỰC dịch vụ của xe — không trộn mọi ô giá thành một danh sách.
+  const services = pricing.serviceTypes ?? [];
+  const hasSelfDrive = services.includes(SERVICE_TYPE.SELF_DRIVE);
+  const hasLongTerm = services.includes(SERVICE_TYPE.LONG_TERM);
+  const hasWithDriver = services.includes(SERVICE_TYPE.WITH_DRIVER);
+
   const { control, handleSubmit, reset, formState } = useForm<VehiclePricingFormValues>({
     resolver: yupResolver(vehiclePricingFormSchema),
+    // Giá ngày thường chỉ bắt buộc khi xe đăng tự lái (schema đọc $serviceTypes từ context).
+    context: { serviceTypes: services },
     values: {
       ...policyToForm(pricing.policy ?? pricing.shopPolicy),
       weekdayPrice: toNumber(pricing.weekdayPrice),
       weekendPrice: toNumber(pricing.weekendPrice),
+      hourlyPrice: toNumber(pricing.hourlyPrice),
+      monthlyPrice: toNumber(pricing.monthlyPrice),
+      withDriverDailyPrice: toNumber(pricing.withDriverDailyPrice),
+      withDriverInterCityPrice: toNumber(pricing.withDriverInterCityPrice),
+      withDriverOneWayPrice: toNumber(pricing.withDriverOneWayPrice),
     },
   });
 
@@ -80,18 +93,40 @@ export function VehiclePricingWorkspace({
   }
 
   const submit = handleSubmit((values) => {
+    // null tường minh = XOÁ giá đó (server nhận null-clear); chỉ gửi nhóm giá của dịch vụ
+    // xe đang đăng — giá dịch vụ khác server từ chối đặt (validation chéo).
+    const money = (v: number | null | undefined): string | null =>
+      v != null ? String(Math.round(v)) : null;
     const body: SaveVehiclePricingInput = {
       source: POLICY_SOURCE.VEHICLE,
-      weekdayPrice: String(Math.round(values.weekdayPrice ?? 0)),
-      ...(values.weekendPrice != null
-        ? { weekendPrice: String(Math.round(values.weekendPrice)) }
+      ...(hasSelfDrive || values.weekdayPrice != null
+        ? { weekdayPrice: money(values.weekdayPrice) ?? '0' }
+        : {}),
+      weekendPrice: money(values.weekendPrice),
+      hourlyPrice: money(values.hourlyPrice),
+      ...(hasLongTerm ? { monthlyPrice: money(values.monthlyPrice) } : {}),
+      ...(hasWithDriver
+        ? {
+            withDriverDailyPrice: money(values.withDriverDailyPrice),
+            withDriverInterCityPrice: money(values.withDriverInterCityPrice),
+            withDriverOneWayPrice: money(values.withDriverOneWayPrice),
+          }
         : {}),
       policy: formToSaveInput(values),
     };
 
+    const changed = (
+      next: string | null | undefined,
+      prev: string | null | undefined,
+    ): boolean => next !== undefined && (next ?? null) !== (prev ?? null);
     const priceChanged =
-      body.weekdayPrice !== (pricing.weekdayPrice ?? '') ||
-      (body.weekendPrice ?? null) !== pricing.weekendPrice;
+      changed(body.weekdayPrice, pricing.weekdayPrice) ||
+      changed(body.weekendPrice ?? null, pricing.weekendPrice) ||
+      changed(body.hourlyPrice, pricing.hourlyPrice) ||
+      changed(body.monthlyPrice, pricing.monthlyPrice) ||
+      changed(body.withDriverDailyPrice, pricing.withDriverDailyPrice) ||
+      changed(body.withDriverInterCityPrice, pricing.withDriverInterCityPrice) ||
+      changed(body.withDriverOneWayPrice, pricing.withDriverOneWayPrice);
 
     if (pricing.isPublic && priceChanged) {
       // Nói đúng hệ quả thật (ADR 0008): đổi giá xe công khai → chờ duyệt lại + tạm ẩn listing.
@@ -187,27 +222,86 @@ export function VehiclePricingWorkspace({
               />
             ) : null}
 
-            <section className={styles.card} aria-label="Giá thuê cơ bản">
-              <h2 className={styles.cardTitle}>Giá thuê cơ bản</h2>
-              <div className={styles.priceRow}>
-                <NumberField
-                  control={control}
-                  name="weekdayPrice"
-                  label="Giá thuê mặc định theo ngày"
-                  money
-                  addonAfter="đ / ngày"
-                  required
-                />
-                <NumberField
-                  control={control}
-                  name="weekendPrice"
-                  label="Giá cuối tuần (tuỳ chọn)"
-                  money
-                  addonAfter="đ / ngày"
-                  help="Bỏ trống = dùng giá ngày thường cho cả cuối tuần"
-                />
-              </div>
-            </section>
+            {/* Nhóm giá theo TỪNG DỊCH VỤ xe đăng (17/08) — không trộn thành một danh sách. */}
+            {hasSelfDrive ? (
+              <section className={styles.card} aria-label="Giá tự lái">
+                <h2 className={styles.cardTitle}>Giá tự lái</h2>
+                <div className={styles.priceRow}>
+                  <NumberField
+                    control={control}
+                    name="weekdayPrice"
+                    label="Giá ngày thường"
+                    money
+                    addonAfter="đ / ngày"
+                    required
+                  />
+                  <NumberField
+                    control={control}
+                    name="weekendPrice"
+                    label="Giá cuối tuần (tuỳ chọn)"
+                    money
+                    addonAfter="đ / ngày"
+                    help="Bỏ trống = dùng giá ngày thường cho cả cuối tuần"
+                  />
+                  <NumberField
+                    control={control}
+                    name="hourlyPrice"
+                    label="Giá theo giờ (tuỳ chọn)"
+                    money
+                    addonAfter="đ / giờ"
+                    help="Bỏ trống = xe không cho thuê theo giờ"
+                  />
+                </div>
+              </section>
+            ) : null}
+
+            {hasLongTerm ? (
+              <section className={styles.card} aria-label="Giá thuê dài hạn">
+                <h2 className={styles.cardTitle}>Thuê dài hạn</h2>
+                <div className={styles.priceRow}>
+                  <NumberField
+                    control={control}
+                    name="monthlyPrice"
+                    label="Giá tháng tham chiếu"
+                    money
+                    addonAfter="đ / tháng"
+                    help={`Ước tính = số ngày × giá tháng ÷ 30, thuê tối thiểu ${LONG_TERM_MIN_DAYS} ngày. Thiếu giá tháng thì không gửi duyệt public dịch vụ này được.`}
+                  />
+                </div>
+              </section>
+            ) : null}
+
+            {hasWithDriver ? (
+              <section className={styles.card} aria-label="Giá xe có tài xế">
+                <h2 className={styles.cardTitle}>Xe có tài xế (giá đã gồm tài xế)</h2>
+                <div className={styles.priceRow}>
+                  <NumberField
+                    control={control}
+                    name="withDriverDailyPrice"
+                    label="Nội thành (giá cơ bản)"
+                    money
+                    addonAfter="đ / ngày"
+                    help="Bắt buộc để gửi duyệt public dịch vụ có tài xế"
+                  />
+                  <NumberField
+                    control={control}
+                    name="withDriverInterCityPrice"
+                    label="Liên tỉnh — khứ hồi (tuỳ chọn)"
+                    money
+                    addonAfter="đ / ngày"
+                    help="Bỏ trống = tạm tính theo giá nội thành, phụ phí xác nhận khi duyệt"
+                  />
+                  <NumberField
+                    control={control}
+                    name="withDriverOneWayPrice"
+                    label="Liên tỉnh — 1 chiều (tuỳ chọn)"
+                    money
+                    addonAfter="đ / ngày"
+                    help="Bỏ trống = tạm tính theo bậc gần nhất (liên tỉnh → nội thành)"
+                  />
+                </div>
+              </section>
+            ) : null}
 
             {/* Form giá xe là SUPERSET của PolicyFormValues — cấu trúc tương thích, TS không
                 thu hẹp generic của RHF nên cần một cast tường minh tại biên. */}
@@ -226,10 +320,7 @@ export function VehiclePricingWorkspace({
           </div>
         </form>
       ) : (
-        <InheritedSummary
-          weekdayPrice={pricing.weekdayPrice ?? null}
-          policy={pricing.shopPolicy ?? null}
-        />
+        <InheritedSummary pricing={pricing} policy={pricing.shopPolicy ?? null} />
       )}
     </div>
   );
@@ -237,12 +328,13 @@ export function VehiclePricingWorkspace({
 
 /** State A — bảng thông số kế thừa read-only (Figma `247:1645`). */
 function InheritedSummary({
-  weekdayPrice,
+  pricing,
   policy,
 }: {
-  weekdayPrice: string | null;
+  pricing: VehiclePricing;
   policy: RentalPolicyValues | null;
 }) {
+  const services = pricing.serviceTypes ?? [];
   return (
     <section className={styles.card} aria-label="Thông số kế thừa đang áp dụng">
       <div className={styles.cardHeader}>
@@ -252,10 +344,36 @@ function InheritedSummary({
 
       {policy ? (
         <dl className={styles.summaryList}>
-          <div className={styles.summaryRow}>
-            <dt>Giá thuê mặc định</dt>
-            <dd>{weekdayPrice ? `${formatMoneyVnd(weekdayPrice)}/ngày` : 'Chưa có giá'}</dd>
-          </div>
+          {services.includes(SERVICE_TYPE.SELF_DRIVE) ? (
+            <div className={styles.summaryRow}>
+              <dt>Giá tự lái (ngày thường)</dt>
+              <dd>
+                {pricing.weekdayPrice
+                  ? `${formatMoneyVnd(pricing.weekdayPrice)}/ngày`
+                  : 'Chưa có giá'}
+              </dd>
+            </div>
+          ) : null}
+          {services.includes(SERVICE_TYPE.LONG_TERM) ? (
+            <div className={styles.summaryRow}>
+              <dt>Giá tháng (dài hạn)</dt>
+              <dd>
+                {pricing.monthlyPrice
+                  ? `${formatMoneyVnd(pricing.monthlyPrice)}/tháng`
+                  : 'Chưa có giá'}
+              </dd>
+            </div>
+          ) : null}
+          {services.includes(SERVICE_TYPE.WITH_DRIVER) ? (
+            <div className={styles.summaryRow}>
+              <dt>Giá có tài xế (nội thành)</dt>
+              <dd>
+                {pricing.withDriverDailyPrice
+                  ? `${formatMoneyVnd(pricing.withDriverDailyPrice)}/ngày`
+                  : 'Chưa có giá'}
+              </dd>
+            </div>
+          ) : null}
           <div className={styles.summaryRow}>
             <dt>Tiền đặt cọc thế chấp</dt>
             <dd>{formatMoneyVnd(policy.depositAmount)}</dd>

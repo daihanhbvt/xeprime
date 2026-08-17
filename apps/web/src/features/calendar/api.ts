@@ -47,6 +47,9 @@ export const fetchCalendarQuote = (query: {
   vehicleId: string;
   pickupAt: string;
   returnAt: string;
+  /** Dịch vụ + lộ trình của đơn sắp lập (17/08) — giá dài hạn/có tài xế tính đúng máy giá. */
+  serviceType?: string;
+  routeType?: string;
 }): Promise<CalendarQuote> => apiGet<CalendarQuote>('/calendar/quote', query);
 
 // ── Khoá xe (blocked_range) ────────────────────────────────────────────────

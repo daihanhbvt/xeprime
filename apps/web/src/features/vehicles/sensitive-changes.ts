@@ -30,7 +30,9 @@ const LABELS: Record<VehicleSensitiveField, string> = {
   weekendPrice: 'Giá cuối tuần',
   hourlyPrice: 'Giá theo giờ',
   monthlyPrice: 'Giá tháng (thuê dài hạn)',
-  withDriverDailyPrice: 'Giá/ngày có tài xế',
+  withDriverDailyPrice: 'Giá/ngày có tài xế (nội thành)',
+  withDriverInterCityPrice: 'Giá/ngày có tài xế (liên tỉnh)',
+  withDriverOneWayPrice: 'Giá/ngày có tài xế (1 chiều)',
   discountPercent: 'Giảm giá',
   plateNumber: 'Biển số',
   vehicleType: 'Loại xe',
@@ -48,6 +50,8 @@ function display(field: VehicleSensitiveField, value: VehicleFormValues[VehicleS
     case 'hourlyPrice':
     case 'monthlyPrice':
     case 'withDriverDailyPrice':
+    case 'withDriverInterCityPrice':
+    case 'withDriverOneWayPrice':
       return formatMoneyVnd(String(value));
     case 'discountPercent':
       return `${value}%`;

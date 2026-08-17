@@ -1,4 +1,5 @@
 import * as yup from 'yup';
+import { SERVICE_TYPE } from '@xeprime/types';
 
 /**
  * Schema form chính sách thuê (yup — báo lỗi sớm ngay trên ô nhập; validate thật ở BE:
@@ -144,14 +145,26 @@ export const policyFormSchema = yup.object({
 
 export type PolicyFormValues = yup.InferType<typeof policyFormSchema>;
 
-/** Form giá theo xe = giá + toàn bộ chính sách (khi ghi đè). */
+/**
+ * Form giá theo xe = giá ĐỦ các dịch vụ xe đăng + toàn bộ chính sách (khi ghi đè).
+ *
+ * Giá ngày thường chỉ bắt buộc khi xe đăng TỰ LÁI (`$serviceTypes` truyền qua context của
+ * useForm) — xe chỉ chạy có tài xế/dài hạn không bị ép nhập giá tự lái. Giá chuyên biệt còn
+ * lại là tuỳ chọn ở đây; điều kiện "đủ giá mới được gửi duyệt public" nằm ở
+ * `features/vehicles/publication.ts` (đối xứng backend `missingPublicFields`).
+ */
 export const vehiclePricingFormSchema = policyFormSchema.shape({
-  weekdayPrice: optionalMoney('Giá thuê').test(
-    'required',
-    'Nhập giá thuê theo ngày',
-    (value) => value != null,
-  ),
+  weekdayPrice: optionalMoney('Giá thuê').when('$serviceTypes', {
+    is: (services: readonly string[] | undefined) =>
+      !services || services.includes(SERVICE_TYPE.SELF_DRIVE),
+    then: (s) => s.test('required', 'Nhập giá thuê theo ngày', (value) => value != null),
+  }),
   weekendPrice: optionalMoney('Giá cuối tuần'),
+  hourlyPrice: optionalMoney('Giá theo giờ'),
+  monthlyPrice: optionalMoney('Giá tháng'),
+  withDriverDailyPrice: optionalMoney('Giá/ngày có tài xế'),
+  withDriverInterCityPrice: optionalMoney('Giá liên tỉnh'),
+  withDriverOneWayPrice: optionalMoney('Giá 1 chiều'),
 });
 
 export type VehiclePricingFormValues = yup.InferType<typeof vehiclePricingFormSchema>;

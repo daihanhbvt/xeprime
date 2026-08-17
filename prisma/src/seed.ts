@@ -243,8 +243,12 @@ interface DemoVehicle {
   services?: readonly string[];
   /** Giá tháng tham chiếu thuê dài hạn — chỉ có nghĩa khi services chứa long_term. */
   monthly?: number;
-  /** Giá/ngày đã gồm tài xế — chỉ có nghĩa khi services chứa with_driver. */
+  /** Giá/ngày đã gồm tài xế (nội thành/cơ bản) — chỉ có nghĩa khi services chứa with_driver. */
   driverDaily?: number;
+  /** Giá/ngày có tài xế lộ trình liên tỉnh (khứ hồi). */
+  driverInterCity?: number;
+  /** Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều. */
+  driverOneWay?: number;
   delivery?: boolean;
   noCollateral?: boolean;
   /** % giảm giá marketing. */
@@ -279,6 +283,8 @@ const DEMO_VEHICLES: readonly DemoVehicle[] = [
     services: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.WITH_DRIVER, SERVICE_TYPE.LONG_TERM],
     monthly: 12_000_000,
     driverDaily: 1_300_000,
+    driverInterCity: 1_600_000,
+    driverOneWay: 2_100_000,
     delivery: true,
     discount: 10,
     features: ['bluetooth', 'backup_camera', 'usb', 'map', 'airbag'],
@@ -558,6 +564,9 @@ const DEMO_VEHICLES: readonly DemoVehicle[] = [
     // Xe 16 chỗ CHỈ cho thuê kèm tài xế — không có nhánh tự lái (thực tế thị trường).
     services: [SERVICE_TYPE.WITH_DRIVER],
     driverDaily: 2_500_000,
+    // Đủ bảng giá 3 lộ trình; XE-034 cố ý KHÔNG có giá route để demo đường fallback + ghi chú.
+    driverInterCity: 3_000_000,
+    driverOneWay: 3_800_000,
     features: ['dash_camera', 'gps'],
     img: photo('1570125909232-eb263c188f7e'),
     desc: 'Xe 16 chỗ chuyên tour, đưa đón sân bay, đi lễ — luôn đi kèm tài xế của gian hàng.',
@@ -1431,6 +1440,8 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
       hourlyPrice: true,
       monthlyPrice: true,
       withDriverDailyPrice: true,
+      withDriverInterCityPrice: true,
+      withDriverOneWayPrice: true,
       deliveryEnabled: true,
       noCollateral: true,
       discountPercent: true,
@@ -1479,6 +1490,8 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
     hourlyPrice: v.hourlyPrice,
     monthlyPrice: v.monthlyPrice,
     withDriverDailyPrice: v.withDriverDailyPrice,
+    withDriverInterCityPrice: v.withDriverInterCityPrice,
+    withDriverOneWayPrice: v.withDriverOneWayPrice,
     deliveryEnabled: v.deliveryEnabled,
     noCollateral: v.noCollateral,
     discountPercent: v.discountPercent,
@@ -1804,6 +1817,8 @@ async function main(): Promise<void> {
       hourlyPrice: v.hourly ?? null,
       monthlyPrice: v.monthly ?? null,
       withDriverDailyPrice: v.driverDaily ?? null,
+      withDriverInterCityPrice: v.driverInterCity ?? null,
+      withDriverOneWayPrice: v.driverOneWay ?? null,
       deliveryEnabled: v.delivery ?? false,
       noCollateral: v.noCollateral ?? false,
       discountPercent: v.discount ?? null,

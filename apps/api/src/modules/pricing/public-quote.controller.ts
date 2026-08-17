@@ -20,6 +20,12 @@ export class PublicQuoteController {
   @ApiOperation({ summary: 'Báo giá thuê theo khoảng ngày (chưa gồm phí giao nhận)' })
   @ApiOkResponse({ type: PublicQuoteDto })
   quote(@Param('id') id: string, @Query() query: PublicQuoteQueryDto): Promise<PublicQuoteDto> {
-    return this.pricing.publicQuote(id, query.pickupAt, query.returnAt, query.serviceType);
+    return this.pricing.publicQuote(
+      id,
+      query.pickupAt,
+      query.returnAt,
+      query.serviceType,
+      query.routeType,
+    );
   }
 }

@@ -255,6 +255,20 @@ export class PublicListingDto {
   })
   withDriverDailyPrice!: string | null;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007)',
+  })
+  withDriverInterCityPrice!: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007)',
+  })
+  withDriverOneWayPrice!: string | null;
+
   @ApiProperty({ description: 'Chủ xe hỗ trợ giao xe tận nơi' }) deliveryEnabled!: boolean;
   @ApiProperty({ description: 'Miễn thế chấp (không cần cọc tài sản)' }) noCollateral!: boolean;
 

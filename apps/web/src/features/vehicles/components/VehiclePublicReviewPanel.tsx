@@ -12,7 +12,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { getErrorMessage } from '@/services/api-client';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle-mutations';
-import { PUBLISH_REQUIREMENTS, publicStatusPresentation } from '../publication';
+import { applicablePublishRequirements, publicStatusPresentation } from '../publication';
 import type { VehicleDetail } from '../types';
 import styles from './VehiclePublicReviewPanel.module.css';
 
@@ -32,7 +32,8 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
   const status = vehicle.publicStatus as VehiclePublicStatus;
   const canSubmit =
     has(PERMISSION.VEHICLE_SUBMIT_PUBLIC) && VEHICLE_PUBLIC_STATUS_SUBMITTABLE.includes(status);
-  const checklist = PUBLISH_REQUIREMENTS.map((item) => ({
+  // Checklist chỉ gồm điều kiện ÁP DỤNG với xe này — giá kiểm theo dịch vụ xe đăng (17/08).
+  const checklist = applicablePublishRequirements(vehicle).map((item) => ({
     label: item.label,
     met: item.present(vehicle),
   }));

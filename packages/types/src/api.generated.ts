@@ -3345,6 +3345,10 @@ export interface components {
             monthlyPrice?: string | null;
             /** @description Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt. */
             withDriverDailyPrice?: string | null;
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007) */
+            withDriverInterCityPrice?: string | null;
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007) */
+            withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
@@ -3434,6 +3438,10 @@ export interface components {
             monthlyPrice?: string | null;
             /** @description Giá/ngày đã gồm tài xế (string — ADR 0007). Null = gian hàng báo khi duyệt. */
             withDriverDailyPrice?: string | null;
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007) */
+            withDriverInterCityPrice?: string | null;
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007) */
+            withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
@@ -3542,6 +3550,7 @@ export interface components {
             policySource: "shop" | "vehicle" | null;
             /** @description updatedAt của chính sách hiệu lực */
             policyUpdatedAt?: string | null;
+            estimateNote?: string | null;
         };
         CalendarAvailabilityDayDto: {
             /** @description Ngày local Asia/Ho_Chi_Minh, YYYY-MM-DD */
@@ -3923,8 +3932,12 @@ export interface components {
             hourlyPrice?: string | null;
             /** @description Giá tháng tham chiếu thuê dài hạn — string tiền (ADR 0007) */
             monthlyPrice?: string | null;
-            /** @description Giá/ngày đã gồm tài xế — string tiền (ADR 0007) */
+            /** @description Giá/ngày đã gồm tài xế (nội thành/cơ bản) — string tiền (ADR 0007) */
             withDriverDailyPrice?: string | null;
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh — string tiền (ADR 0007) */
+            withDriverInterCityPrice?: string | null;
+            /** @description Giá/ngày có tài xế lộ trình liên tỉnh 1 chiều — string tiền (ADR 0007) */
+            withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
@@ -3981,8 +3994,15 @@ export interface components {
             weekendPrice?: string | null;
             /** @description Giá tháng tham chiếu thuê dài hạn (17/08) */
             monthlyPrice?: string | null;
-            /** @description Giá/ngày đã gồm tài xế (17/08) */
+            /** @description Giá/ngày đã gồm tài xế — lộ trình nội thành/cơ bản (17/08) */
             withDriverDailyPrice?: string | null;
+            /** @description Giá/ngày có tài xế — liên tỉnh khứ hồi; null = rơi về giá cơ bản */
+            withDriverInterCityPrice?: string | null;
+            /** @description Giá/ngày có tài xế — liên tỉnh 1 chiều; null = rơi về liên tỉnh → cơ bản */
+            withDriverOneWayPrice?: string | null;
+            /** @description Giá thuê theo giờ */
+            hourlyPrice?: string | null;
+            serviceTypes: ("self_drive" | "with_driver" | "long_term")[];
             /** @description Xe đang hiển thị công khai — lưu giá sẽ đưa xe về chờ duyệt lại (ADR 0008) */
             isPublic: boolean;
         };
@@ -3991,12 +4011,18 @@ export interface components {
             source: "shop" | "vehicle";
             /** @description Giá thuê ngày thường VND — chỉ nhận khi source=vehicle */
             weekdayPrice?: string;
-            /** @description Giá cuối tuần VND — chỉ nhận khi source=vehicle */
-            weekendPrice?: string;
+            /** @description Giá cuối tuần VND — chỉ nhận khi source=vehicle; null = xoá (dùng giá thường) */
+            weekendPrice?: string | null;
             /** @description Giá tháng thuê dài hạn — chỉ nhận khi source=vehicle; null = xoá giá tháng */
             monthlyPrice?: string | null;
-            /** @description Giá/ngày đã gồm tài xế — chỉ nhận khi source=vehicle; null = xoá giá */
+            /** @description Giá/ngày đã gồm tài xế (nội thành/cơ bản) — chỉ nhận khi source=vehicle */
             withDriverDailyPrice?: string | null;
+            /** @description Giá/ngày có tài xế liên tỉnh — null = xoá (rơi về giá cơ bản) */
+            withDriverInterCityPrice?: string | null;
+            /** @description Giá/ngày có tài xế liên tỉnh 1 chiều — null = xoá */
+            withDriverOneWayPrice?: string | null;
+            /** @description Giá thuê theo giờ — null = xe không cho thuê giờ */
+            hourlyPrice?: string | null;
             policy?: components["schemas"]["SaveRentalPolicyDto"];
         };
         VehicleSourceContractFileDto: {
@@ -4168,10 +4194,10 @@ export interface components {
              */
             weekdayPrice?: string;
             /**
-             * @description Giá cuối tuần
+             * @description Giá cuối tuần — gửi null = xoá (dùng giá ngày thường)
              * @example 750000
              */
-            weekendPrice?: string;
+            weekendPrice?: string | null;
             /**
              * @description Giá thuê theo giờ, string thập phân — ADR 0007. Gửi null = không cho thuê giờ.
              * @example 120000
@@ -4187,6 +4213,16 @@ export interface components {
              * @example 1500000
              */
             withDriverDailyPrice?: string | null;
+            /**
+             * @description Giá/ngày có tài xế liên tỉnh (khứ hồi) — null = rơi về giá cơ bản kèm ghi chú
+             * @example 1600000
+             */
+            withDriverInterCityPrice?: string | null;
+            /**
+             * @description Giá/ngày có tài xế liên tỉnh 1 CHIỀU — null = fallback liên tỉnh → cơ bản
+             * @example 2000000
+             */
+            withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled?: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
@@ -4262,10 +4298,10 @@ export interface components {
              */
             weekdayPrice?: string;
             /**
-             * @description Giá cuối tuần
+             * @description Giá cuối tuần — gửi null = xoá (dùng giá ngày thường)
              * @example 750000
              */
-            weekendPrice?: string;
+            weekendPrice?: string | null;
             /**
              * @description Giá thuê theo giờ, string thập phân — ADR 0007. Gửi null = không cho thuê giờ.
              * @example 120000
@@ -4281,6 +4317,16 @@ export interface components {
              * @example 1500000
              */
             withDriverDailyPrice?: string | null;
+            /**
+             * @description Giá/ngày có tài xế liên tỉnh (khứ hồi) — null = rơi về giá cơ bản kèm ghi chú
+             * @example 1600000
+             */
+            withDriverInterCityPrice?: string | null;
+            /**
+             * @description Giá/ngày có tài xế liên tỉnh 1 CHIỀU — null = fallback liên tỉnh → cơ bản
+             * @example 2000000
+             */
+            withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled?: boolean;
             /** @description Miễn thế chấp (không cần cọc tài sản) */
@@ -7548,6 +7594,8 @@ export interface operations {
                 pickupAt: string;
                 /** @description Trả xe, ISO-8601 UTC */
                 returnAt: string;
+                serviceType?: "self_drive" | "with_driver" | "long_term";
+                routeType?: "in_city" | "inter_city" | "inter_city_one_way";
             };
             header?: never;
             path?: never;
@@ -7816,6 +7864,7 @@ export interface operations {
                 /** @description ISO datetime trả xe */
                 returnAt: string;
                 serviceType?: "self_drive" | "with_driver" | "long_term";
+                routeType?: "in_city" | "inter_city" | "inter_city_one_way";
             };
             header?: never;
             path: {

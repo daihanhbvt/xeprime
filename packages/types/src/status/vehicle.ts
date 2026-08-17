@@ -75,6 +75,8 @@ export const VEHICLE_PUBLIC_SENSITIVE_FIELDS = [
   'hourlyPrice',
   'monthlyPrice',
   'withDriverDailyPrice',
+  'withDriverInterCityPrice',
+  'withDriverOneWayPrice',
   'discountPercent',
   'plateNumber',
   'vehicleType',

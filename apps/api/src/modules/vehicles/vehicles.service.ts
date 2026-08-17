@@ -14,6 +14,7 @@ import {
   POLICY_SOURCE,
   RECEIPT_STATUS,
   RECEIPT_TYPE,
+  SERVICE_TYPE,
   TENANT_STATUS,
   isVehicleFuelTypeAllowed,
   VEHICLE_OPERATION_STATUS,
@@ -91,6 +92,8 @@ const DETAIL_SELECT = {
   hourlyPrice: true,
   monthlyPrice: true,
   withDriverDailyPrice: true,
+  withDriverInterCityPrice: true,
+  withDriverOneWayPrice: true,
   deliveryEnabled: true,
   noCollateral: true,
   description: true,
@@ -108,6 +111,8 @@ const SENSITIVE_SELECT = {
   hourlyPrice: true,
   monthlyPrice: true,
   withDriverDailyPrice: true,
+  withDriverInterCityPrice: true,
+  withDriverOneWayPrice: true,
   discountPercent: true,
   plateNumber: true,
   vehicleType: true,
@@ -408,6 +413,8 @@ export class VehiclesService {
           name: dto.name,
           vehicleType: dto.vehicleType,
           ...writableFields(dto),
+          // Giá chuyên biệt của dịch vụ không đăng bị loại ngay từ lúc tạo — không có giá mồ côi.
+          ...orphanPriceClears(dto.serviceTypes ?? [SERVICE_TYPE.SELF_DRIVE]),
         },
       });
       await this.replaceMedia(tx, id, tenantId, dto);
@@ -481,6 +488,8 @@ export class VehiclesService {
         ? { branch: { connect: { id_tenantId: { id: dto.branchId!, tenantId } } } }
         : {}),
       ...writableFields(dto),
+      // Bỏ một dịch vụ → giá chuyên biệt của nó bị xoá theo (FE đã cảnh báo trước khi lưu).
+      ...(dto.serviceTypes !== undefined ? orphanPriceClears(dto.serviceTypes) : {}),
       ...(knockBack ? { publicStatus: VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW } : {}),
     };
 
@@ -528,8 +537,12 @@ export class VehiclesService {
         id: true,
         weekdayPrice: true,
         weekendPrice: true,
+        hourlyPrice: true,
         monthlyPrice: true,
         withDriverDailyPrice: true,
+        withDriverInterCityPrice: true,
+        withDriverOneWayPrice: true,
+        serviceTypes: true,
         publicStatus: true,
       },
     });
@@ -546,10 +559,18 @@ export class VehiclesService {
       shopPolicy,
       weekdayPrice: vehicle.weekdayPrice ? vehicle.weekdayPrice.toFixed(0) : null,
       weekendPrice: vehicle.weekendPrice ? vehicle.weekendPrice.toFixed(0) : null,
+      hourlyPrice: vehicle.hourlyPrice ? vehicle.hourlyPrice.toFixed(0) : null,
       monthlyPrice: vehicle.monthlyPrice ? vehicle.monthlyPrice.toFixed(0) : null,
       withDriverDailyPrice: vehicle.withDriverDailyPrice
         ? vehicle.withDriverDailyPrice.toFixed(0)
         : null,
+      withDriverInterCityPrice: vehicle.withDriverInterCityPrice
+        ? vehicle.withDriverInterCityPrice.toFixed(0)
+        : null,
+      withDriverOneWayPrice: vehicle.withDriverOneWayPrice
+        ? vehicle.withDriverOneWayPrice.toFixed(0)
+        : null,
+      serviceTypes: vehicle.serviceTypes,
       isPublic: vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
     };
   }
@@ -585,14 +606,44 @@ export class VehiclesService {
       this.pricing.validatePolicy(dto.policy);
     }
 
+    /*
+     * Giá chuyên biệt chỉ được ĐẶT cho dịch vụ xe đang đăng — đặt giá tháng cho xe không có
+     * "thuê dài hạn" là dữ liệu ẩn không đường nào dùng tới (validation chéo 17/08; xoá giá
+     * bằng null thì luôn hợp lệ).
+     */
+    if (dto.monthlyPrice != null && !current.serviceTypes.includes(SERVICE_TYPE.LONG_TERM)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Xe không đăng dịch vụ thuê dài hạn — bổ sung dịch vụ trước khi đặt giá tháng',
+      });
+    }
+    const driverPriceSet =
+      dto.withDriverDailyPrice != null ||
+      dto.withDriverInterCityPrice != null ||
+      dto.withDriverOneWayPrice != null;
+    if (driverPriceSet && !current.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message:
+          'Xe không đăng dịch vụ có tài xế — bổ sung dịch vụ trước khi đặt giá có tài xế',
+      });
+    }
+
     // Giá chỉ sửa được ở chế độ ghi đè (chế độ kế thừa là read-only theo thiết kế).
     const priceDto: UpdateVehicleDto = overriding
       ? {
           ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
           ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
+          ...(dto.hourlyPrice !== undefined ? { hourlyPrice: dto.hourlyPrice } : {}),
           ...(dto.monthlyPrice !== undefined ? { monthlyPrice: dto.monthlyPrice } : {}),
           ...(dto.withDriverDailyPrice !== undefined
             ? { withDriverDailyPrice: dto.withDriverDailyPrice }
+            : {}),
+          ...(dto.withDriverInterCityPrice !== undefined
+            ? { withDriverInterCityPrice: dto.withDriverInterCityPrice }
+            : {}),
+          ...(dto.withDriverOneWayPrice !== undefined
+            ? { withDriverOneWayPrice: dto.withDriverOneWayPrice }
             : {}),
         }
       : {};
@@ -653,11 +704,33 @@ export class VehiclesService {
             source: existingOverride ? POLICY_SOURCE.VEHICLE : POLICY_SOURCE.SHOP,
             weekdayPrice: current.weekdayPrice ? String(current.weekdayPrice) : null,
             weekendPrice: current.weekendPrice ? String(current.weekendPrice) : null,
+            hourlyPrice: current.hourlyPrice ? String(current.hourlyPrice) : null,
+            monthlyPrice: current.monthlyPrice ? String(current.monthlyPrice) : null,
+            withDriverDailyPrice: current.withDriverDailyPrice
+              ? String(current.withDriverDailyPrice)
+              : null,
+            withDriverInterCityPrice: current.withDriverInterCityPrice
+              ? String(current.withDriverInterCityPrice)
+              : null,
+            withDriverOneWayPrice: current.withDriverOneWayPrice
+              ? String(current.withDriverOneWayPrice)
+              : null,
           },
           after: {
             source: dto.source,
             ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
             ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
+            ...(dto.hourlyPrice !== undefined ? { hourlyPrice: dto.hourlyPrice } : {}),
+            ...(dto.monthlyPrice !== undefined ? { monthlyPrice: dto.monthlyPrice } : {}),
+            ...(dto.withDriverDailyPrice !== undefined
+              ? { withDriverDailyPrice: dto.withDriverDailyPrice }
+              : {}),
+            ...(dto.withDriverInterCityPrice !== undefined
+              ? { withDriverInterCityPrice: dto.withDriverInterCityPrice }
+              : {}),
+            ...(dto.withDriverOneWayPrice !== undefined
+              ? { withDriverOneWayPrice: dto.withDriverOneWayPrice }
+              : {}),
             policy: overriding ? (dto.policy as unknown as Prisma.InputJsonValue) : null,
             knockBack,
           },
@@ -936,10 +1009,12 @@ interface VehicleWritableFields {
   description?: string | null;
   mainImageUrl?: string | null;
   weekdayPrice?: string;
-  weekendPrice?: string;
+  weekendPrice?: string | null;
   hourlyPrice?: string | null;
   monthlyPrice?: string | null;
   withDriverDailyPrice?: string | null;
+  withDriverInterCityPrice?: string | null;
+  withDriverOneWayPrice?: string | null;
   deliveryEnabled?: boolean;
   noCollateral?: boolean;
   discountPercent?: number | null;
@@ -994,9 +1069,33 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
     ...(dto.withDriverDailyPrice !== undefined
       ? { withDriverDailyPrice: dto.withDriverDailyPrice }
       : {}),
+    ...(dto.withDriverInterCityPrice !== undefined
+      ? { withDriverInterCityPrice: dto.withDriverInterCityPrice }
+      : {}),
+    ...(dto.withDriverOneWayPrice !== undefined
+      ? { withDriverOneWayPrice: dto.withDriverOneWayPrice }
+      : {}),
     ...(dto.deliveryEnabled !== undefined ? { deliveryEnabled: dto.deliveryEnabled } : {}),
     ...(dto.noCollateral !== undefined ? { noCollateral: dto.noCollateral } : {}),
     ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
+  };
+}
+
+/**
+ * serviceTypes đổi → giá chuyên biệt của dịch vụ KHÔNG CÒN ĐĂNG bị xoá theo (17/08): không giữ
+ * giá ẩn/stale — bỏ "thuê dài hạn" thì giá tháng đi cùng, thêm lại dịch vụ thì nhập giá lại.
+ * FE cảnh báo trước khi lưu; đây là lớp thực thi.
+ */
+function orphanPriceClears(serviceTypes: string[]): Partial<VehicleWritableFields> {
+  return {
+    ...(serviceTypes.includes(SERVICE_TYPE.LONG_TERM) ? {} : { monthlyPrice: null }),
+    ...(serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER)
+      ? {}
+      : {
+          withDriverDailyPrice: null,
+          withDriverInterCityPrice: null,
+          withDriverOneWayPrice: null,
+        }),
   };
 }
 
@@ -1079,6 +1178,8 @@ function toDetail(
     hourlyPrice: v.hourlyPrice as unknown as string | null,
     monthlyPrice: v.monthlyPrice as unknown as string | null,
     withDriverDailyPrice: v.withDriverDailyPrice as unknown as string | null,
+    withDriverInterCityPrice: v.withDriverInterCityPrice as unknown as string | null,
+    withDriverOneWayPrice: v.withDriverOneWayPrice as unknown as string | null,
     deliveryEnabled: v.deliveryEnabled,
     noCollateral: v.noCollateral,
     description: v.description,
@@ -1111,10 +1212,24 @@ function hasSensitiveChange(current: SensitiveRow, dto: UpdateVehicleDto): boole
   });
 }
 
-/** Điều kiện tối thiểu để xe được lên chợ; trả danh sách còn thiếu (rỗng = đủ). */
+/**
+ * Điều kiện tối thiểu để xe được lên chợ; trả danh sách còn thiếu (rỗng = đủ).
+ *
+ * Giá kiểm THEO DỊCH VỤ xe đăng (17/08): đăng dịch vụ nào thì phải niêm yết giá chuyên biệt
+ * của dịch vụ đó — không âm thầm lấy giá tự lái trưng như tổng giá có tài xế/dài hạn. Bản đối
+ * xứng ở FE: `apps/web/features/vehicles/publication.ts` — sửa một bên phải sửa cả hai.
+ */
 function missingPublicFields(v: VehicleRow): string[] {
   const missing: string[] = [];
-  if (v.weekdayPrice == null) missing.push('giá thuê');
+  if (v.serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE) && v.weekdayPrice == null) {
+    missing.push('giá thuê tự lái (ngày thường)');
+  }
+  if (v.serviceTypes.includes(SERVICE_TYPE.LONG_TERM) && v.monthlyPrice == null) {
+    missing.push('giá tháng thuê dài hạn');
+  }
+  if (v.serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER) && v.withDriverDailyPrice == null) {
+    missing.push('giá/ngày có tài xế');
+  }
   if (!v.mainImageUrl) missing.push('ảnh đại diện');
   if (!v.plateNumber) missing.push('biển số');
   if (!v.description) missing.push('mô tả xe');
@@ -1145,6 +1260,10 @@ function vehicleSnapshot(v: VehicleRow): Record<string, unknown> {
     hourlyPrice: v.hourlyPrice == null ? null : String(v.hourlyPrice),
     monthlyPrice: v.monthlyPrice == null ? null : String(v.monthlyPrice),
     withDriverDailyPrice: v.withDriverDailyPrice == null ? null : String(v.withDriverDailyPrice),
+    withDriverInterCityPrice:
+      v.withDriverInterCityPrice == null ? null : String(v.withDriverInterCityPrice),
+    withDriverOneWayPrice:
+      v.withDriverOneWayPrice == null ? null : String(v.withDriverOneWayPrice),
     deliveryEnabled: v.deliveryEnabled,
     noCollateral: v.noCollateral,
     discountPercent: v.discountPercent,

@@ -248,7 +248,46 @@ export function BasicSection({
           help="Chọn được nhiều loại — khai giá riêng cho dài hạn/có tài xế ở bước giá thuê"
         />
       </Col>
+      <Col xs={24}>
+        <ServicePriceRemovalWarning control={control} />
+      </Col>
     </Row>
+  );
+}
+
+/**
+ * Cảnh báo NGAY khi bỏ một dịch vụ mà xe đang có giá chuyên biệt (17/08): lưu là giá đó bị
+ * xoá theo (server `orphanPriceClears`), thêm lại dịch vụ thì phải nhập giá lại. Đây là lời
+ * báo trước; nút Lưu bấm sau khi đã thấy cảnh báo chính là xác nhận.
+ */
+function ServicePriceRemovalWarning({ control }: Pick<SectionProps, 'control'>) {
+  const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
+  const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
+  const withDriverDailyPrice = useWatch({ control, name: 'withDriverDailyPrice' });
+  const withDriverInterCityPrice = useWatch({ control, name: 'withDriverInterCityPrice' });
+  const withDriverOneWayPrice = useWatch({ control, name: 'withDriverOneWayPrice' });
+
+  const losses: string[] = [];
+  if (!serviceTypes.includes(SERVICE_TYPE.LONG_TERM) && monthlyPrice != null) {
+    losses.push('giá tháng thuê dài hạn');
+  }
+  if (
+    !serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER) &&
+    (withDriverDailyPrice != null ||
+      withDriverInterCityPrice != null ||
+      withDriverOneWayPrice != null)
+  ) {
+    losses.push('bảng giá xe có tài xế');
+  }
+  if (losses.length === 0) return null;
+
+  return (
+    <Alert
+      type="warning"
+      showIcon
+      message={`Bỏ dịch vụ sẽ xoá ${losses.join(' và ')} khi lưu`}
+      description="Thêm lại dịch vụ sau này sẽ phải nhập giá lại từ đầu."
+    />
   );
 }
 
@@ -710,26 +749,50 @@ export function PricesSection({
             <NumberField
               control={control}
               name="monthlyPrice"
-              label="Giá tháng (thuê dài hạn)"
+              label={publishRequiredLabel('Giá tháng (thuê dài hạn)')}
               placeholder="VD: 9.000.000"
               min={0}
               money
-              help="Ước tính cho khách = số ngày × giá tháng ÷ 30; bỏ trống thì dùng giá ngày"
+              help="Ước tính cho khách = số ngày × giá tháng ÷ 30. Cần có trước khi gửi duyệt."
             />
           </Col>
         ) : null}
         {offersWithDriver ? (
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="withDriverDailyPrice"
-              label="Giá/ngày có tài xế"
-              placeholder="VD: 1.500.000"
-              min={0}
-              money
-              help="Đã gồm tài xế; bỏ trống thì khách thấy giá tự lái kèm nhãn chưa gồm tài xế"
-            />
-          </Col>
+          <>
+            <Col xs={24} sm={12}>
+              <NumberField
+                control={control}
+                name="withDriverDailyPrice"
+                label={publishRequiredLabel('Giá/ngày có tài xế — nội thành')}
+                placeholder="VD: 1.500.000"
+                min={0}
+                money
+                help="Đã gồm tài xế (giá cơ bản). Cần có trước khi gửi duyệt."
+              />
+            </Col>
+            <Col xs={24} sm={12}>
+              <NumberField
+                control={control}
+                name="withDriverInterCityPrice"
+                label="Giá/ngày có tài xế — liên tỉnh"
+                placeholder="VD: 1.800.000"
+                min={0}
+                money
+                help="Khứ hồi; bỏ trống = tạm tính theo giá nội thành"
+              />
+            </Col>
+            <Col xs={24} sm={12}>
+              <NumberField
+                control={control}
+                name="withDriverOneWayPrice"
+                label="Giá/ngày có tài xế — 1 chiều"
+                placeholder="VD: 2.200.000"
+                min={0}
+                money
+                help="Liên tỉnh một chiều; bỏ trống = tạm tính theo bậc gần nhất"
+              />
+            </Col>
+          </>
         ) : null}
       </Row>
 
