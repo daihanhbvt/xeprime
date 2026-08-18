@@ -1,7 +1,18 @@
+.form {
+  min-width: 0;
+}
+
 .introAlert {
   margin-bottom: var(--xp-space-md);
 }
 
 .dirtyBar {
   margin-bottom: var(--xp-space-md);
+}
+
+@media (max-width: 640px) {
+  /* Thanh sticky cao hơn một hàng trên màn nhỏ; chừa đáy để khối cuối không bị che khi cuộn. */
+  .form {
+    padding-bottom: calc(var(--xp-touch-target-min) + var(--xp-space-lg));
+  }
 }

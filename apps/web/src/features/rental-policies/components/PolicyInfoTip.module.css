@@ -1,0 +1,54 @@
+.trigger {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--xp-border-radius-pill);
+  margin: -6px -6px -6px 0;
+  appearance: none;
+  background: transparent;
+  color: var(--xp-color-text-tertiary);
+  cursor: help;
+  font-size: 14px;
+  place-items: center;
+  transition:
+    color var(--xp-motion-duration-fast),
+    background var(--xp-motion-duration-fast);
+}
+
+.trigger:hover,
+.trigger[aria-expanded='true'] {
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-primary-active);
+}
+
+.trigger:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-primary);
+  outline-offset: var(--xp-focus-outline-offset);
+}
+
+.content {
+  width: max-content;
+  max-width: min(320px, calc(100vw - 32px));
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.55;
+  white-space: normal;
+}
+
+@media (max-width: 640px) {
+  .trigger {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+    margin: -9px -8px -9px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+}

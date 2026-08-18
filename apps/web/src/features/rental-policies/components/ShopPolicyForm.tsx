@@ -12,6 +12,7 @@ import { PolicySections } from './PolicySections';
 import styles from './ShopPolicyForm.module.css';
 
 interface ShopPolicyFormProps {
+  formId: string;
   initial: ShopRentalPolicy;
   canEdit: boolean;
   submitting: boolean;
@@ -25,7 +26,13 @@ interface ShopPolicyFormProps {
  * khi gửi luôn có bước xác nhận nêu rõ phạm vi ảnh hưởng và cam kết "đơn cũ giữ nguyên"
  * (snapshot bất biến ở backend). Thanh cảnh báo thay đổi chưa lưu bám theo `isDirty`.
  */
-export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopPolicyFormProps) {
+export function ShopPolicyForm({
+  formId,
+  initial,
+  canEdit,
+  submitting,
+  onSubmit,
+}: ShopPolicyFormProps) {
   const { modal } = App.useApp();
   const { control, handleSubmit, reset, formState } = useForm<PolicyFormValues>({
     resolver: yupResolver(policyFormSchema),
@@ -46,7 +53,7 @@ export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopP
   });
 
   return (
-    <form onSubmit={confirmThenSubmit} noValidate>
+    <form id={formId} className={styles.form} onSubmit={confirmThenSubmit} noValidate>
       {initial.policy === null ? (
         <Alert
           className={styles.introAlert}
@@ -73,6 +80,7 @@ export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopP
 
       <PolicySections
         control={control}
+        disabled={!canEdit}
         // Mốc cũ theo NGÀY chưa quy đổi được: hiện cảnh báo để chủ xe chọn lại theo gói.
         legacyDiscountTiers={initial.policy?.legacyDiscountTiers}
         depositHint={
@@ -84,7 +92,7 @@ export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopP
 
       <StickyFormActions
         submitLabel="Lưu chính sách"
-        cancelLabel="Hủy thay đổi"
+        cancelLabel="Hoàn tác thay đổi"
         onCancel={formState.isDirty ? () => reset() : undefined}
         submitting={submitting}
         disabled={!canEdit}

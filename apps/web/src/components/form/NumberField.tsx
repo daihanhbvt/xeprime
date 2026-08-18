@@ -31,6 +31,7 @@ interface NumberFieldProps<T extends FieldValues> {
   /** Số chữ số thập phân. Mặc định: tiền và phần trăm nguyên → 0. */
   precision?: number;
   addonAfter?: string;
+  disabled?: boolean;
   /** Dấu bắt buộc của AntD. Ràng buộc thật vẫn ở schema Yup. */
   required?: boolean;
   /** Gợi ý dưới ô nhập khi KHÔNG có lỗi. Lỗi luôn thắng. */
@@ -55,6 +56,7 @@ export function NumberField<T extends FieldValues>({
   percent,
   precision,
   addonAfter,
+  disabled,
   required,
   help,
 }: NumberFieldProps<T>) {
@@ -89,6 +91,7 @@ export function NumberField<T extends FieldValues>({
           max={effectiveMax}
           placeholder={placeholder}
           addonAfter={suffix}
+          disabled={disabled}
           status={fieldState.error ? 'error' : undefined}
         />
       ) : (
@@ -107,6 +110,7 @@ export function NumberField<T extends FieldValues>({
           precision={precision ?? (percent ? 0 : undefined)}
           placeholder={placeholder}
           suffix={suffix}
+          disabled={disabled}
           status={fieldState.error ? 'error' : undefined}
         />
       )}

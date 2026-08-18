@@ -1,5 +1,11 @@
 'use client';
 
+import {
+  CheckCircleOutlined,
+  CheckOutlined,
+  CarOutlined,
+  DashboardOutlined,
+} from '@ant-design/icons';
 import { App, Button, Result, Skeleton, Tabs } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -14,23 +20,18 @@ import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
+import { PolicyInfoTip } from '@/features/rental-policies/components/PolicyInfoTip';
 import { ShopPolicyForm } from '@/features/rental-policies/components/ShopPolicyForm';
 import { useSaveShopPolicy, useShopPolicy } from '@/features/rental-policies/hooks/use-shop-policy';
 import { getErrorMessage } from '@/services/api-client';
 
 import styles from './page.module.css';
 
-/**
- * Chính sách thuê MẶC ĐỊNH của gian hàng (Wave 2 — Figma `237:1557`; tách theo LOẠI XE 17/08):
- * hai tab Ô tô/Xe máy, mỗi tab một bộ cọc thế chấp · bậc phí giao nhận · phí quá giờ · ưu đãi
- * riêng — xe máy không còn phải chịu mức cọc của ô tô. Xe chưa ghi đè riêng kế thừa policy
- * của ĐÚNG loại mình; đơn đã chốt giữ nguyên snapshot (backend đảm bảo).
- */
+/** Chính sách mặc định tách riêng theo loại xe; đơn đã chốt luôn giữ snapshot ở backend. */
 export default function ShopPoliciesPage() {
   const { has } = usePermissions();
   const canView = has(PERMISSION.TENANT_VIEW);
   const canEdit = has(PERMISSION.TENANT_UPDATE);
-  const [vehicleType, setVehicleType] = useState<VehicleType>(VEHICLE_TYPE.CAR);
 
   if (!canView) {
     return (
@@ -49,72 +50,112 @@ export default function ShopPoliciesPage() {
   }
 
   return (
-    <div>
+    <main className={styles.page}>
       <ManagePageHeader
         title="Chính sách thuê mặc định"
-        subtitle="Mỗi loại xe một bộ chính sách riêng — áp cho mọi xe cùng loại chưa thiết lập riêng biệt."
+        subtitle="Thiết lập các quy định và chi phí áp dụng mặc định cho mọi đơn thuê."
       />
-      <Tabs
-        activeKey={vehicleType}
-        onChange={(key) => setVehicleType(key as VehicleType)}
-        items={VEHICLE_TYPE_VALUES.map((value) => ({
-          key: value,
-          label: VEHICLE_TYPE_LABEL[value],
-          children: <PolicyTab vehicleType={value} canEdit={canEdit} />,
-        }))}
-      />
-    </div>
+      <PolicyWorkspace canEdit={canEdit} />
+    </main>
   );
 }
 
-/** Một tab = một bộ policy theo loại xe — query/mutation/cache tách riêng theo loại. */
-function PolicyTab({ vehicleType, canEdit }: { vehicleType: VehicleType; canEdit: boolean }) {
+/** Cả hai nút lưu cùng trỏ vào một form, nên chỉ có duy nhất một đường submit/mutation. */
+function PolicyWorkspace({ canEdit }: { canEdit: boolean }) {
   const { message } = App.useApp();
+  const [vehicleType, setVehicleType] = useState<VehicleType>(VEHICLE_TYPE.CAR);
   const { data, isLoading, isError, refetch } = useShopPolicy(vehicleType);
   const save = useSaveShopPolicy(vehicleType);
-
-  if (isError && !data) {
-    return (
-      <Result
-        status="error"
-        title="Không tải được chính sách thuê"
-        extra={
-          <Button type="primary" onClick={() => void refetch()}>
-            Thử lại
-          </Button>
-        }
-      />
-    );
-  }
-
-  if (isLoading || !data) {
-    return <Skeleton active paragraph={{ rows: 10 }} />;
-  }
+  const formId = `shop-policy-form-${vehicleType}`;
+  const vehicleLabel = VEHICLE_TYPE_LABEL[vehicleType].toLowerCase();
 
   return (
-    <div>
-      {/* Hai chip phạm vi áp dụng — số thật từ API, đếm theo ĐÚNG loại xe của tab. */}
-      <div className={styles.statsRow} aria-label="Phạm vi áp dụng chính sách">
-        <span className={styles.statInherit}>
-          {data.inheritingVehicles} {VEHICLE_TYPE_LABEL[vehicleType].toLowerCase()} đang kế thừa
-        </span>
-        <span className={styles.statOverride}>{data.overriddenVehicles} xe đã ghi đè</span>
+    <>
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarMeta}>
+          {data ? (
+            <span className={styles.appliedPill}>
+              <CheckCircleOutlined aria-hidden="true" />
+              <span>
+                Đã áp dụng cho {data.inheritingVehicles} {vehicleLabel}
+              </span>
+              {data.overriddenVehicles > 0 ? (
+                <PolicyInfoTip label="Giải thích phạm vi áp dụng chính sách" placement="bottomRight">
+                  {data.overriddenVehicles} xe đang dùng chính sách riêng nên không kế thừa bộ
+                  chính sách mặc định này.
+                </PolicyInfoTip>
+              ) : null}
+            </span>
+          ) : null}
+
+          <Button
+            className={styles.topSave}
+            type="primary"
+            size="large"
+            icon={<CheckOutlined aria-hidden="true" />}
+            htmlType="submit"
+            form={formId}
+            loading={save.isPending}
+            disabled={!canEdit || !data}
+          >
+            Lưu chính sách
+          </Button>
+        </div>
+
+        <Tabs
+          className={styles.vehicleTabs}
+          activeKey={vehicleType}
+          onChange={(key) => setVehicleType(key as VehicleType)}
+          items={VEHICLE_TYPE_VALUES.map((value) => ({
+            key: value,
+            label: (
+              <span className={styles.tabLabel}>
+                {value === VEHICLE_TYPE.CAR ? (
+                  <CarOutlined aria-hidden="true" />
+                ) : (
+                  <DashboardOutlined aria-hidden="true" />
+                )}
+                {VEHICLE_TYPE_LABEL[value]}
+              </span>
+            ),
+          }))}
+        />
       </div>
 
-      <ShopPolicyForm
-        // Remount khi đổi tab — form không mang giá trị của loại xe trước sang loại sau.
-        key={vehicleType}
-        initial={data}
-        canEdit={canEdit}
-        submitting={save.isPending}
-        onSubmit={(body) =>
-          save.mutate(body, {
-            onSuccess: () =>
-              message.success(`Đã lưu chính sách thuê cho ${VEHICLE_TYPE_LABEL[vehicleType]}`),
-            onError: (error) => message.error(getErrorMessage(error)),
-          })
-        }
-      />
-    </div>
+      {isError && !data ? (
+        <Result
+          status="error"
+          title="Không tải được chính sách thuê"
+          extra={
+            <Button type="primary" onClick={() => void refetch()}>
+              Thử lại
+            </Button>
+          }
+        />
+      ) : null}
+
+      {isLoading || (!data && !isError) ? (
+        <div className={styles.loadingCard}>
+          <Skeleton active paragraph={{ rows: 10 }} />
+        </div>
+      ) : null}
+
+      {data ? (
+        <ShopPolicyForm
+          key={vehicleType}
+          formId={formId}
+          initial={data}
+          canEdit={canEdit}
+          submitting={save.isPending}
+          onSubmit={(body) =>
+            save.mutate(body, {
+              onSuccess: () =>
+                message.success(`Đã lưu chính sách thuê cho ${VEHICLE_TYPE_LABEL[vehicleType]}`),
+              onError: (error) => message.error(getErrorMessage(error)),
+            })
+          }
+        />
+      ) : null}
+    </>
   );
 }
