@@ -1,0 +1,147 @@
+/*
+ * Bộ chọn xe LẤP ĐẦY thân overlay: thân cỡ `xl` có chiều cao cố định (`.xlBody`), nên một khối
+ * cao theo nội dung để lại đúng dải trống ở đáy. Ô tìm kiếm đứng yên, chỉ lưới thẻ cuộn.
+ */
+.picker {
+  display: flex;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.head {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.search {
+  max-width: 420px;
+  flex: 1 1 260px;
+}
+
+.count {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Trạng thái rỗng/lỗi/skeleton chiếm phần cao còn lại thay vì dồn lên đỉnh. */
+.state {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Vùng cuộn duy nhất của bước này — cũng là `root` của sentinel tải trang kế. */
+.scroller {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: var(--xp-space-xs);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  cursor: pointer;
+  text-align: left;
+  /* Cả thẻ là vùng chạm — thoải mái trên trần 44px của WCAG 2.5.5. */
+  min-height: var(--xp-touch-target-min);
+}
+
+.card:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
+.thumb {
+  display: grid;
+  flex: none;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbIcon {
+  font-size: var(--xp-font-size-h3);
+}
+
+.body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.name {
+  font-weight: var(--xp-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  overflow-wrap: anywhere;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.price {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mốc kích hoạt tải trang kế + chỗ đứng cho trạng thái của trang đó. */
+.sentinel {
+  display: flex;
+  min-height: var(--xp-space-xl);
+  align-items: center;
+  justify-content: center;
+  padding: var(--xp-space-sm) 0;
+}
+
+.loadingMore {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}

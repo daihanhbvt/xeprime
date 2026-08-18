@@ -64,6 +64,7 @@ const queries = vi.hoisted(() => ({
     isFetching: false,
     refetch: vi.fn(),
   },
+  previews: { data: undefined as Record<string, string | null> | undefined },
   detailId: undefined as string | null | undefined,
   addNote: vi.fn(),
   upload: vi.fn(),
@@ -98,6 +99,7 @@ vi.mock('@/features/customers/hooks/use-customers', () => ({
   useCreateCustomer: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateCustomer: () => ({ mutate: vi.fn(), isPending: false }),
   useInvalidateCustomers: () => vi.fn(),
+  useCustomerDocumentPreviews: () => queries.previews,
 }));
 
 function detail(overrides: Partial<TenantCustomerDetail> = {}): TenantCustomerDetail {
@@ -200,6 +202,7 @@ beforeEach(() => {
   queries.upload = vi.fn();
   queries.setArchived = vi.fn();
   api.download = vi.fn();
+  queries.previews = { data: undefined };
   queries.detailId = undefined;
 });
 afterEach(cleanup);
@@ -388,14 +391,13 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
     // Tên tệp là mốc duy nhất — nhãn loại giấy tờ còn xuất hiện trong ô chọn của khối tải lên.
     await waitFor(() => expect(screen.getByText(/cccd.pdf/)).toBeTruthy());
     expect(screen.queryByRole('button', { name: /Mở tệp/ })).toBeNull();
-    // Ô xem nhanh vẫn hiện (để biết có giấy tờ gì) nhưng không bấm được.
-    const thumb = screen.getByRole('button', { name: 'Bạn chưa có quyền mở tệp giấy tờ' });
-    expect(thumb.hasAttribute('disabled')).toBe(true);
+    // Thiếu quyền xem tệp thì KHÔNG có ảnh nào được nạp — ô chỉ còn icon loại tệp.
+    expect(screen.queryByRole('img', { name: 'cccd.pdf' })).toBeNull();
     // Nhắc rõ tệp nằm ở kho riêng tư và mỗi lần mở đều được ghi nhật ký.
     expect(screen.getByText(/kho riêng tư/i)).toBeTruthy();
   });
 
-  it('giấy tờ ẢNH: bấm ô xem nhanh mở ngay trong app, không bật tab mới', async () => {
+  it('giấy tờ ẢNH: hiện ảnh thu nhỏ THẬT, bấm là mở trình xem ảnh dùng chung của app', async () => {
     queries.documents.data = [
       {
         id: 'doc-img',
@@ -410,25 +412,21 @@ describe('/manage/customers/[id] — hồ sơ khách', () => {
         createdAt: '2027-08-01T02:00:00.000Z',
       } as CustomerDocument,
     ];
-    api.download = vi.fn().mockResolvedValue({
-      downloadUrl: 'https://r2.test/signed.jpg',
-      expiresAt: '2027-08-01T02:02:00.000Z',
-    });
-    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+    queries.previews = { data: { 'doc-img': 'https://r2.test/signed.jpg' } };
 
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Giấy tờ' }));
+
+    // Ảnh thật trong danh sách — không phải icon giữ chỗ.
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Xem cccd-mat-truoc.jpg' })).toBeTruthy(),
+      expect(screen.getByRole('img', { name: 'cccd-mat-truoc.jpg' })).toBeTruthy(),
     );
+    const img = screen.getByRole('img', { name: 'cccd-mat-truoc.jpg' });
+    expect(img.getAttribute('src')).toBe('https://r2.test/signed.jpg');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xem cccd-mat-truoc.jpg' }));
-    await waitFor(() => expect(api.download).toHaveBeenCalledWith('cus-1', 'doc-img'));
-    // Ảnh xem trong trình xem của app; tab mới chỉ dành cho PDF.
-    expect(openSpy).not.toHaveBeenCalled();
-    openSpy.mockRestore();
+    // Ảnh đã bấm-là-phóng-to bằng trình xem chung, nên KHÔNG kèm nút mở tab.
+    expect(screen.queryByRole('button', { name: /Mở tệp/ })).toBeNull();
   });
-
   it('giấy tờ PDF: vẫn mở bằng tab mới với URL ký xin ngay lúc bấm', async () => {
     queries.documents.data = [
       {

@@ -12,7 +12,6 @@ import {
   Button,
   DatePicker,
   Empty,
-  Image,
   Input,
   Popconfirm,
   Result,
@@ -28,16 +27,17 @@ import {
   CUSTOMER_DOCUMENT_TYPE,
   CUSTOMER_DOCUMENT_TYPE_LABEL,
   DOCUMENT_UPLOAD_MIME_TYPES,
-  IMAGE_UPLOAD_MIME_TYPES,
   type CustomerDocumentExpiry,
   type CustomerDocumentType,
 } from '@xeprime/types';
+import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DAY_PARAM_FORMAT, DATE_FORMAT, dayjs, formatDate } from '@/lib/datetime';
 import { fetchCustomerDocumentDownload } from '../api';
-import { CUSTOMER_HINTS, DOCUMENT_TYPE_OPTIONS } from '../constants';
+import { CUSTOMER_HINTS, DOCUMENT_TYPE_OPTIONS, isPreviewableImage } from '../constants';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import {
+  useCustomerDocumentPreviews,
   useCustomerDocuments,
   useDeleteCustomerDocument,
   useUploadCustomerDocument,
@@ -78,8 +78,6 @@ export function CustomerDocumentsPanel({
   const [customTypeName, setCustomTypeName] = useState('');
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
-  /** URL ký đang xem toàn màn hình — đóng trình xem là quên luôn, không cache ở đâu. */
-  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
 
   const isOtherType = documentType === CUSTOMER_DOCUMENT_TYPE.OTHER;
 
@@ -107,21 +105,12 @@ export function CustomerDocumentsPanel({
     }
   }
 
-  /**
-   * Mở giấy tờ: xin signed URL NGAY LÚC BẤM, không giữ URL nào trong state ngoài phiên xem
-   * đang mở (cùng kỷ luật `HandoverPhotoGrid`/`FileListField` — URL ký sống ~2 phút và chính
-   * nó là quyền truy cập file).
-   *
-   * Ảnh xem NGAY TRONG APP bằng trình xem toàn màn hình (zoom/xoay) thay vì bật tab mới — đúng
-   * việc nhân viên đang làm: liếc CCCD để đối chiếu với người đang đứng trước mặt, rồi quay lại
-   * hồ sơ. PDF thì trình duyệt vẫn xử lý tốt hơn, nên vẫn mở tab.
-   */
+  /** Mở PDF: xin signed URL NGAY LÚC BẤM rồi để trình duyệt render — không giữ URL ở đâu. */
   async function openDocument(document: CustomerDocument) {
     setOpening(document.id);
     try {
       const ticket = await fetchCustomerDocumentDownload(customerId, document.id);
-      if (isImage(document.mimeType)) setViewerUrl(ticket.downloadUrl);
-      else window.open(ticket.downloadUrl, '_blank', 'noopener,noreferrer');
+      window.open(ticket.downloadUrl, '_blank', 'noopener,noreferrer');
     } catch (err) {
       message.error(getErrorMessage(err));
     } finally {
@@ -130,6 +119,9 @@ export function CustomerDocumentsPanel({
   }
 
   const items = data ?? [];
+  // Ảnh thu nhỏ chỉ nạp cho người ĐƯỢC PHÉP mở tệp; thiếu quyền thì không request nào phát ra.
+  const previewQ = useCustomerDocumentPreviews(customerId, items, canViewFiles);
+  const previews = previewQ.data ?? {};
 
   return (
     <section className={styles.panel}>
@@ -198,111 +190,94 @@ export function CustomerDocumentsPanel({
       ) : null}
 
       {items.length > 0 ? (
-        <ul className={styles.list}>
-          {items.map((document) => (
-            <li key={document.id} className={styles.item}>
-              {/*
-               * Ô xem nhanh: nhận ra ngay đây là CCCD hay GPLX mà không phải đọc tên tệp, và
-               * bấm một cái là mở ảnh lớn. Ô CHƯA nạp ảnh sẵn — ảnh chỉ tải khi người dùng bấm,
-               * vì signed URL là quyền truy cập file và mỗi lần phát đều ghi nhật ký; nạp ngầm
-               * cho mọi khách vừa làm nhoè nhật ký "ai đã xem giấy tờ của ai", vừa phát URL cho
-               * cả những hồ sơ không ai định mở.
-               */}
-              <button
-                type="button"
-                className={styles.thumb}
-                disabled={!canViewFiles || opening === document.id}
-                aria-label={
-                  canViewFiles ? `Xem ${document.originalName}` : 'Bạn chưa có quyền mở tệp giấy tờ'
-                }
-                onClick={() => void openDocument(document)}
-              >
-                {isImage(document.mimeType) ? <FileImageOutlined /> : <FilePdfOutlined />}
-                <span className={styles.thumbHint}>{canViewFiles ? 'Xem' : 'Khoá'}</span>
-              </button>
+        <PreviewImageGroup>
+          <ul className={styles.list}>
+            {items.map((document) => (
+              <li key={document.id} className={styles.item}>
+                {/*
+                 * Ảnh thu nhỏ THẬT — bấm là phóng to toàn màn hình bằng đúng trình xem ảnh dùng
+                 * chung của app (zoom / xoay / lật / đếm x-y), y như ảnh xe hay ảnh bàn giao.
+                 * PDF không có thumbnail nên rơi về icon loại tệp + nút mở tab.
+                 */}
+                <span className={styles.thumb}>
+                  {previews[document.id] ? (
+                    <PreviewImage
+                      src={previews[document.id] as string}
+                      alt={document.originalName}
+                      className={styles.thumbImage}
+                    />
+                  ) : isPreviewableImage(document.mimeType) ? (
+                    <FileImageOutlined className={styles.thumbIcon} />
+                  ) : (
+                    <FilePdfOutlined className={styles.thumbIcon} />
+                  )}
+                </span>
 
-              <div className={styles.itemMain}>
-                <div className={styles.itemTitle}>
-                  {document.documentType === CUSTOMER_DOCUMENT_TYPE.OTHER && document.customTypeName
-                    ? document.customTypeName
-                    : (CUSTOMER_DOCUMENT_TYPE_LABEL[
-                        document.documentType as CustomerDocumentType
-                      ] ?? document.documentType)}
+                <div className={styles.itemMain}>
+                  <div className={styles.itemTitle}>
+                    {document.documentType === CUSTOMER_DOCUMENT_TYPE.OTHER &&
+                    document.customTypeName
+                      ? document.customTypeName
+                      : (CUSTOMER_DOCUMENT_TYPE_LABEL[
+                          document.documentType as CustomerDocumentType
+                        ] ?? document.documentType)}
+                  </div>
+                  <div className={styles.itemMeta}>
+                    {document.originalName} · {document.uploadedByName ?? 'Không rõ người tải'} ·{' '}
+                    {formatDate(document.createdAt)}
+                  </div>
                 </div>
-                <div className={styles.itemMeta}>
-                  {document.originalName} · {document.uploadedByName ?? 'Không rõ người tải'} ·{' '}
-                  {formatDate(document.createdAt)}
+                <div className={styles.itemTags}>
+                  <StatusTag
+                    value={document.expiryStatus as CustomerDocumentExpiry}
+                    meta={CUSTOMER_DOCUMENT_EXPIRY_META}
+                  />
+                  {document.expiresAt ? <Tag>Hạn {formatDate(document.expiresAt)}</Tag> : null}
                 </div>
-              </div>
-              <div className={styles.itemTags}>
-                <StatusTag
-                  value={document.expiryStatus as CustomerDocumentExpiry}
-                  meta={CUSTOMER_DOCUMENT_EXPIRY_META}
-                />
-                {document.expiresAt ? <Tag>Hạn {formatDate(document.expiresAt)}</Tag> : null}
-              </div>
-              <div className={styles.itemActions}>
-                {canViewFiles ? (
-                  <Button
-                    size="small"
-                    icon={<EyeOutlined />}
-                    loading={opening === document.id}
-                    onClick={() => void openDocument(document)}
-                  >
-                    {isImage(document.mimeType) ? 'Xem ảnh' : 'Mở tệp'}
-                  </Button>
-                ) : null}
-                {canManage && !disabled ? (
-                  <Popconfirm
-                    title="Gỡ giấy tờ này khỏi hồ sơ khách?"
-                    okText="Gỡ"
-                    cancelText="Đóng"
-                    onConfirm={() =>
-                      remove.mutate(
-                        { id: customerId, documentId: document.id },
-                        {
-                          onSuccess: () => message.success('Đã gỡ giấy tờ'),
-                          onError: (err) => message.error(getErrorMessage(err)),
-                        },
-                      )
-                    }
-                  >
+                <div className={styles.itemActions}>
+                  {/*
+                   * Ảnh đã có ô xem nhanh bấm-là-phóng-to, nên nút này chỉ còn cho PDF — thứ
+                   * trình duyệt hiển thị tốt hơn bất cứ gì ta dựng trong modal.
+                   */}
+                  {canViewFiles && !isPreviewableImage(document.mimeType) ? (
                     <Button
                       size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                      aria-label={`Gỡ ${document.originalName}`}
-                    />
-                  </Popconfirm>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {/*
-       * Ảnh neo ẨN cho trình xem điều khiển bằng state — cùng cách với `HandoverPhotoGrid`:
-       * nút "Xem" chỉ việc đặt URL ký, đóng trình xem là quên luôn URL đó.
-       */}
-      {viewerUrl ? (
-        <Image
-          src={viewerUrl}
-          alt=""
-          rootClassName={styles.hiddenViewerAnchor}
-          preview={{
-            visible: true,
-            onVisibleChange: (open) => {
-              if (!open) setViewerUrl(null);
-            },
-          }}
-        />
+                      icon={<EyeOutlined />}
+                      loading={opening === document.id}
+                      onClick={() => void openDocument(document)}
+                    >
+                      Mở tệp
+                    </Button>
+                  ) : null}
+                  {canManage && !disabled ? (
+                    <Popconfirm
+                      title="Gỡ giấy tờ này khỏi hồ sơ khách?"
+                      okText="Gỡ"
+                      cancelText="Đóng"
+                      onConfirm={() =>
+                        remove.mutate(
+                          { id: customerId, documentId: document.id },
+                          {
+                            onSuccess: () => message.success('Đã gỡ giấy tờ'),
+                            onError: (err) => message.error(getErrorMessage(err)),
+                          },
+                        )
+                      }
+                    >
+                      <Button
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        aria-label={`Gỡ ${document.originalName}`}
+                      />
+                    </Popconfirm>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </PreviewImageGroup>
       ) : null}
     </section>
   );
-}
-
-/** Chỉ ảnh mới xem được bằng trình xem trong app; PDF để trình duyệt lo. */
-function isImage(mimeType: string): boolean {
-  return (IMAGE_UPLOAD_MIME_TYPES as readonly string[]).includes(mimeType);
 }

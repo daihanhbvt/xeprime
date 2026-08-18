@@ -28,6 +28,8 @@
 }
 
 .left {
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overscroll-behavior: contain;
   /* Chừa chỗ cho thanh cuộn để nội dung không nhảy khi nó xuất hiện. */
@@ -698,4 +700,15 @@
 /* Ô chọn NGÀY muốn nhận xe (nguyện vọng) — chỉ ngày, giờ do gian hàng chốt. */
 .pickupDate {
   max-width: 240px;
+}
+
+/*
+ * "Chọn xe khác" — chỉ có ở luồng đặt hộ vào từ nơi CHƯA biết xe. Nằm trong cột hồ sơ xe nên
+ * nó cuộn cùng thẻ xe và KHÔNG đụng tới chiều cao của `.layout` (thân overlay `xl` cao cố định
+ * — chèn thêm khối ngoài `.layout` sẽ đẩy hàng nút ở đáy cột phải ra khỏi vùng thấy được).
+ */
+.changeVehicle {
+  align-self: flex-start;
+  margin-bottom: var(--xp-space-sm);
+  padding-left: 0;
 }

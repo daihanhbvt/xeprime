@@ -1,6 +1,7 @@
 import {
   CUSTOMER_DOCUMENT_TYPE_LABEL,
   CUSTOMER_DOCUMENT_TYPE_VALUES,
+  IMAGE_UPLOAD_MIME_TYPES,
   TENANT_CUSTOMER_FINANCE_RELATIONSHIPS,
   TENANT_CUSTOMER_FINANCE_SORTS,
   TENANT_CUSTOMER_NOTE_TYPE_META,
@@ -86,5 +87,14 @@ export const CUSTOMER_HINTS = {
     'Tệp nằm trong kho riêng tư. Mỗi lần mở đều được ghi vào nhật ký hệ thống và cần quyền xem tệp.',
   debt: 'Còn nợ = tổng tiền đơn − đã thu, bỏ qua đơn đã huỷ.',
 } as const;
+
+/**
+ * Giấy tờ nào hiện được ẢNH THU NHỎ. PDF không có thumbnail nên rơi về icon loại tệp.
+ * Là vị từ THUẦN, cố ý không nằm trong tầng hook: bề mặt nào cũng hỏi được mà không kéo
+ * theo data-fetching.
+ */
+export function isPreviewableImage(mimeType: string): boolean {
+  return (IMAGE_UPLOAD_MIME_TYPES as readonly string[]).includes(mimeType);
+}
 
 export { TENANT_CUSTOMER_RELATIONSHIP, TENANT_CUSTOMER_RISK_LEVEL };

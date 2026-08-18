@@ -47,3 +47,22 @@ if (!('ResizeObserver' in window)) {
     },
   });
 }
+
+/**
+ * `IntersectionObserver` cũng không có trong jsdom, mà các danh sách TẢI DẦN dùng nó làm mốc
+ * chạm đáy (`MarketplaceResults`, bộ chọn xe của luồng đặt hộ). Stub rỗng: test không mô phỏng
+ * cuộn thật, nó gọi thẳng callback qua instance được ghi lại khi cần.
+ */
+if (!('IntersectionObserver' in window)) {
+  Object.defineProperty(window, 'IntersectionObserver', {
+    writable: true,
+    value: class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return [];
+      }
+    },
+  });
+}

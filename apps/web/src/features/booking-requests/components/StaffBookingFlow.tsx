@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  ArrowLeftOutlined,
   CalendarOutlined,
   CarOutlined,
   CheckOutlined,
@@ -64,6 +65,18 @@ interface StaffBookingFlowProps {
   /** Prefill từ ô lịch được bấm (ISO). */
   pickupAt?: string | null;
   returnAt?: string | null;
+  /** Prefill khách khi lối vào đã biết người thuê (hồ sơ khách — S-01). */
+  customerName?: string | null;
+  customerPhone?: string | null;
+  /**
+   * Quay lại bước chọn xe — CHỈ có ở lối vào chưa biết xe (danh sách đơn, hồ sơ khách).
+   *
+   * Render bên TRONG cột hồ sơ xe thay vì làm anh em của luồng: thân overlay cỡ `xl` cao cố
+   * định và `overflow: hidden`, nên mọi thứ chèn cạnh `.layout` (vốn `height: 100%`) đều đẩy
+   * hàng nút ở đáy cột phải ra khỏi vùng thấy được. Đặt cạnh thẻ xe cũng đúng chỗ hơn: đây là
+   * thao tác về CHIẾC XE, không phải về cả hộp thoại.
+   */
+  onChangeVehicle?: (() => void) | null;
   onClose: () => void;
   onBusyChange?: (busy: boolean) => void;
   onResultChange?: (isResult: boolean) => void;
@@ -163,6 +176,9 @@ export function StaffBookingFlow({
   vehicleImageUrl,
   pickupAt,
   returnAt,
+  customerName,
+  customerPhone,
+  onChangeVehicle,
   onClose,
   onBusyChange,
   onResultChange,
@@ -212,8 +228,9 @@ export function StaffBookingFlow({
     // Dịch vụ nằm ở state (Segmented) — đưa vào schema qua yup context ($serviceType).
     context: { serviceType },
     defaultValues: {
-      customerName: '',
-      customerPhone: '',
+      // Đến từ hồ sơ khách thì không bắt nhân viên gõ lại tên + SĐT đã có trong sổ.
+      customerName: customerName ?? '',
+      customerPhone: customerPhone ?? '',
       pickupAt: pickupAt ? dayjs(pickupAt) : null,
       returnAt: returnAt ? dayjs(returnAt) : null,
       pickupMethod: PICKUP_METHOD.SELF,
@@ -501,6 +518,17 @@ export function StaffBookingFlow({
   return (
     <div className={styles.layout}>
       <div className={styles.left}>
+        {onChangeVehicle ? (
+          <Button
+            type="text"
+            size="small"
+            icon={<ArrowLeftOutlined />}
+            className={styles.changeVehicle}
+            onClick={onChangeVehicle}
+          >
+            Chọn xe khác
+          </Button>
+        ) : null}
         <VehicleSummaryPanel
           listing={listing}
           fallbackName={vehicleName}

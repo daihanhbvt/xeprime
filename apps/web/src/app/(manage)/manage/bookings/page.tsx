@@ -11,14 +11,11 @@ import { bookingPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { BOOKINGS_DEFAULT_LIMIT } from '@/features/bookings/api';
 import { BOOKING_SORT_OPTIONS, BOOKING_STATUS_OPTIONS } from '@/features/bookings/constants';
-import {
-  BookingFormDialog,
-  type BookingPrefill,
-} from '@/features/bookings/components/BookingFormDialog';
+import { StaffBookingDialog } from '@/features/booking-requests/components/StaffBookingDialog';
 import { BookingTable } from '@/features/bookings/components/BookingTable';
 import { useBookingFilters } from '@/features/bookings/hooks/use-booking-filters';
 import { useBookings } from '@/features/bookings/hooks/use-bookings';
-import type { BookingDetail, BookingFilters, BookingSort } from '@/features/bookings/types';
+import type { BookingFilters, BookingSort } from '@/features/bookings/types';
 import styles from './bookings-page.module.css';
 
 const STATUS_OPTIONS = [{ value: 'all', label: 'Tất cả trạng thái' }, ...BOOKING_STATUS_OPTIONS];
@@ -65,7 +62,6 @@ function BookingsView() {
 
   // Danh sách chỉ còn TẠO đơn; sửa nằm ở trang chi tiết, nơi có đủ ngữ cảnh của chuyến.
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<BookingDetail | null>(null);
 
   /*
    * Ý ĐỊNH đến từ nơi khác: hồ sơ khách (S-01) mở "Tạo đơn thuê" bằng `?create=1` kèm tên + SĐT.
@@ -77,12 +73,8 @@ function BookingsView() {
    * thoại — giữ lại thì F5 tự mở lại, và mọi lần đổi bộ lọc vẫn kéo theo tên khách trong URL.
    */
   const createIntent = searchParams.get('create') === '1';
-  const intentPrefill: BookingPrefill | null = createIntent
-    ? {
-        customerName: searchParams.get('customerName') ?? undefined,
-        customerPhone: searchParams.get('customerPhone') ?? undefined,
-      }
-    : null;
+  const intentCustomerName = createIntent ? searchParams.get('customerName') : null;
+  const intentCustomerPhone = createIntent ? searchParams.get('customerPhone') : null;
 
   function closeForm() {
     setFormOpen(false);
@@ -99,7 +91,6 @@ function BookingsView() {
   const hasFilters = Boolean(filters.q || filters.status);
 
   function openCreate() {
-    setEditing(null);
     setFormOpen(true);
   }
 
@@ -158,10 +149,15 @@ function BookingsView() {
         onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
       />
 
-      <BookingFormDialog
+      {/*
+       * Tạo đơn dùng NGUYÊN luồng "Đặt xe cho khách" của lịch — cùng giao diện khách thuê xe
+       * (hồ sơ xe + ba bước, báo giá server). Lối vào này chưa biết xe nên hộp thoại mở ở bước
+       * chọn xe trước; lối vào từ lịch đã biết xe thì vào thẳng.
+       */}
+      <StaffBookingDialog
         open={formOpen || createIntent}
-        editing={editing}
-        prefill={intentPrefill}
+        customerName={intentCustomerName}
+        customerPhone={intentCustomerPhone}
         onClose={closeForm}
       />
     </div>

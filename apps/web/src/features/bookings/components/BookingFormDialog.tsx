@@ -5,7 +5,13 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useController, useForm, useWatch, type Control } from 'react-hook-form';
-import { API_ERROR_CODE, ROUTE_TYPE, ROUTE_TYPE_VALUES, SERVICE_TYPE, routeTypeLabel } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  ROUTE_TYPE,
+  ROUTE_TYPE_VALUES,
+  SERVICE_TYPE,
+  routeTypeLabel,
+} from '@xeprime/types';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { NumberField } from '@/components/form/NumberField';
@@ -19,7 +25,6 @@ import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import { dayjs } from '@/lib/datetime';
 import { formatMoneyVnd } from '@/lib/money';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
-import type { Dayjs } from 'dayjs';
 import { SERVICE_TYPE_OPTIONS } from '../constants';
 import { checkConflict } from '../api';
 import { useCreateBooking, useUpdateBooking } from '../hooks/use-booking-mutations';
@@ -27,40 +32,22 @@ import { bookingFormSchema, type BookingFormValues } from '../schema';
 import type { BookingDetail, CreateBookingInput, UpdateBookingInput } from '../types';
 import styles from './BookingFormDialog.module.css';
 
-/**
- * Giá trị điền sẵn khi tạo đơn từ một ngữ cảnh đã biết trước.
- *
- * Hai lối vào, mỗi lối biết một nửa: **lịch** biết xe + khung giờ (click ô trống), **hồ sơ
- * khách** (S-01) biết tên + SĐT. Vì thế mọi trường đều tuỳ chọn — không lối nào bị ép bịa ra
- * phần nó không biết, và form vẫn là MỘT (không nhân bản form tạo đơn theo từng lối vào).
- */
-export interface BookingPrefill {
-  vehicleId?: string;
-  pickupAt?: Dayjs;
-  returnAt?: Dayjs;
-  customerName?: string;
-  customerPhone?: string;
-}
-
 function numOrNull(value: string | null | undefined): number | null {
   return value === null || value === undefined || value === '' ? null : Number(value);
 }
 
-function toDefaults(
-  editing: BookingDetail | null,
-  prefill: BookingPrefill | null,
-): BookingFormValues {
+function toDefaults(editing: BookingDetail | null): BookingFormValues {
   if (!editing) {
     return {
-      vehicleId: prefill?.vehicleId ?? '',
-      customerName: prefill?.customerName ?? '',
-      customerPhone: prefill?.customerPhone ?? '',
+      vehicleId: '',
+      customerName: '',
+      customerPhone: '',
       serviceType: SERVICE_TYPE.SELF_DRIVE,
       routeType: ROUTE_TYPE.IN_CITY,
       pickupAddress: '',
       destination: '',
-      pickupAt: prefill?.pickupAt ?? null,
-      returnAt: prefill?.returnAt ?? null,
+      pickupAt: null,
+      returnAt: null,
       baseAmount: null,
       deliveryFee: null,
       discountAmount: null,
@@ -87,34 +74,27 @@ function toDefaults(
 }
 
 /**
- * Tạo/sửa đơn thuê — modal lớn responsive (desktop rộng, mobile toàn màn).
+ * SỬA đơn thuê — modal lớn responsive (desktop rộng, mobile toàn màn).
  *
- * Thay drawer + hai DateTimePicker rời (bản cũ): khoảng thuê giờ là MỘT giá trị đi qua
- * `RentalDateTimeRangeField` — cùng control với modal yêu cầu đặt xe của khách, nên chủ xe và
- * khách chọn thời gian bằng cùng một cách. Form remount theo `key` để mỗi lần mở là state sạch.
+ * TẠO đơn KHÔNG còn đi qua đây: mọi lối tạo thủ công (lịch · danh sách đơn · hồ sơ khách) dùng
+ * `StaffBookingDialog` — cùng giao diện với luồng thuê xe của khách, kèm báo giá từ server. Form
+ * này ở lại cho việc SỬA một đơn đã có, nơi xe và khách đã cố định.
  *
- * Đây là đơn CHỦ ĐỘNG của shop (staff nhập tay khách): tạo thẳng đơn `reserved`, KHÔNG đi qua
- * vòng yêu-cầu-rồi-tự-duyệt. Trùng lịch do exclusion constraint quyết (ADR 0006) — preview chỉ
- * là cảnh báo sớm.
+ * Khoảng thuê là MỘT giá trị đi qua `RentalDateTimeRangeField` — cùng control với luồng đặt xe
+ * của khách, nên chủ xe và khách chọn thời gian bằng cùng một cách. Form remount theo `key` để
+ * mỗi lần mở là state sạch. Trùng lịch do exclusion constraint quyết (ADR 0006) — preview ở đây
+ * chỉ là cảnh báo sớm.
  */
 export function BookingFormDialog({
   open,
   editing,
-  prefill = null,
   onClose,
 }: {
   open: boolean;
   editing: BookingDetail | null;
-  /** Điền sẵn khi tạo từ lịch (chỉ dùng khi `editing` null). */
-  prefill?: BookingPrefill | null;
   onClose: () => void;
 }) {
-  // key gồm prefill để mở từ ngữ cảnh khác nhau (ô lịch khác, khách khác) thì form re-init lại.
-  const formKey =
-    editing?.id ??
-    (prefill
-      ? `new-${prefill.vehicleId ?? ''}-${prefill.pickupAt?.valueOf() ?? ''}-${prefill.customerPhone ?? ''}`
-      : 'new');
+  const formKey = editing?.id ?? 'new';
   return (
     <ResponsiveDialog
       title={editing ? `Sửa đơn ${editing.code}` : 'Tạo đơn thuê'}
@@ -124,9 +104,7 @@ export function BookingFormDialog({
       onClose={onClose}
       footer={null}
     >
-      {open ? (
-        <BookingForm key={formKey} editing={editing} prefill={prefill} onDone={onClose} />
-      ) : null}
+      {open ? <BookingForm key={formKey} editing={editing} onDone={onClose} /> : null}
     </ResponsiveDialog>
   );
 }
@@ -161,15 +139,7 @@ function RentalRangeFormField({ control }: { control: Control<BookingFormValues>
   );
 }
 
-function BookingForm({
-  editing,
-  prefill,
-  onDone,
-}: {
-  editing: BookingDetail | null;
-  prefill: BookingPrefill | null;
-  onDone: () => void;
-}) {
+function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDone: () => void }) {
   const { message } = App.useApp();
   const formId = useId();
   const [conflict, setConflict] = useState(false);
@@ -179,7 +149,7 @@ function BookingForm({
 
   const { control, handleSubmit } = useForm<BookingFormValues>({
     resolver: yupResolver(bookingFormSchema),
-    defaultValues: toDefaults(editing, prefill),
+    defaultValues: toDefaults(editing),
   });
 
   const [base, delivery, discount] = useWatch({

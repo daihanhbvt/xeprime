@@ -84,6 +84,8 @@ export const queryKeys = {
   vehicles: {
     all: ['vehicles'] as const,
     list: (params: QueryParams) => ['vehicles', 'list', params] as const,
+    /** Bộ chọn xe tải-dần theo cuộn — key KHÔNG chứa page (page là pageParam của TanStack). */
+    infinite: (params: QueryParams) => ['vehicles', 'list-infinite', params] as const,
     detail: (id: string) => ['vehicles', 'detail', id] as const,
     /** Chỉ số thẻ xe theo nhóm id — nằm dưới nhánh `vehicles` để mutation xe tự invalidate luôn. */
     stats: (ids: readonly string[]) => ['vehicles', 'stats', ids] as const,
@@ -166,6 +168,12 @@ export const queryKeys = {
     bookings: (id: string, page: number) => ['customers', 'detail', id, 'bookings', page] as const,
     notes: (id: string, page: number) => ['customers', 'detail', id, 'notes', page] as const,
     documents: (id: string) => ['customers', 'detail', id, 'documents'] as const,
+    /**
+     * URL ký để hiện ẢNH THU NHỎ của giấy tờ. Tách khỏi `documents` vì vòng đời khác hẳn:
+     * metadata giấy tờ ổn định, còn URL ký sống ~2 phút nên phải tự làm mới.
+     */
+    documentPreviews: (id: string, documentIds: readonly string[]) =>
+      ['customers', 'detail', id, 'document-previews', documentIds] as const,
   },
   members: {
     all: ['members'] as const,

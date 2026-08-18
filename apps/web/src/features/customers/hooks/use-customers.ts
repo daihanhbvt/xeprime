@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
+import { isPreviewableImage } from '../constants';
 import {
   archiveCustomer,
   createCustomer,
@@ -10,6 +11,7 @@ import {
   deleteCustomerNote,
   fetchCustomer,
   fetchCustomerBookings,
+  fetchCustomerDocumentDownload,
   fetchCustomerDocuments,
   fetchCustomerNotes,
   fetchCustomerSummary,
@@ -23,6 +25,7 @@ import {
 } from '../api';
 import type {
   CreateCustomerNoteInput,
+  CustomerDocument,
   CreateTenantCustomerInput,
   CustomerFilters,
   UpdateCustomerRiskInput,
@@ -165,5 +168,46 @@ export function useDeleteCustomerDocument() {
     mutationFn: ({ id, documentId }: { id: string; documentId: string }) =>
       deleteCustomerDocument(id, documentId),
     onSuccess: invalidate,
+  });
+}
+
+/**
+ * URL ký để hiện ẢNH THU NHỎ của giấy tờ — một query cho cả danh sách, không phải N query rời.
+ *
+ * Vì sao nạp sẵn thay vì đợi bấm: nhận ra CCCD/GPLX bằng mắt là việc chính của tab này, và một
+ * lưới ô xám không nói được gì. Đánh đổi đã cân nhắc: mỗi URL phát ra là một dòng `audit_logs`,
+ * nên mở tab Giấy tờ ≈ "đã xem giấy tờ của khách này" — đúng nghĩa đen, chỉ nhiều dòng hơn.
+ * Chỉ chạy khi người dùng có `customers.documents.view_files`; thiếu quyền thì không request nào
+ * rời khỏi trình duyệt.
+ *
+ * `staleTime` ngắn hơn hạn 2 phút của URL ký để quay lại tab là có link còn sống, không phải
+ * một ô ảnh vỡ.
+ */
+export function useCustomerDocumentPreviews(
+  customerId: string | null,
+  documents: CustomerDocument[],
+  enabled: boolean,
+) {
+  const previewable = documents.filter((document) => isPreviewableImage(document.mimeType));
+  const ids = previewable.map((document) => document.id);
+
+  return useQuery({
+    queryKey: queryKeys.customers.documentPreviews(customerId ?? '', ids),
+    queryFn: async () => {
+      const tickets = await Promise.all(
+        ids.map(async (documentId) => {
+          try {
+            const ticket = await fetchCustomerDocumentDownload(customerId as string, documentId);
+            return [documentId, ticket.downloadUrl] as const;
+          } catch {
+            // Một ảnh hỏng KHÔNG được kéo cả lưới về trạng thái lỗi — ô đó rơi về icon loại tệp.
+            return [documentId, null] as const;
+          }
+        }),
+      );
+      return Object.fromEntries(tickets) as Record<string, string | null>;
+    },
+    enabled: Boolean(customerId) && enabled && ids.length > 0,
+    staleTime: 90_000,
   });
 }
