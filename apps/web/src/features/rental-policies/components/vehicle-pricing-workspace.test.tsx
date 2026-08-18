@@ -110,6 +110,16 @@ describe('State B — chuyển sang ghi đè và lưu', () => {
     expect(screen.getByText('● Tùy chỉnh riêng cho xe này')).toBeTruthy();
   });
 
+  it('giải thích giá nằm ở icon cạnh label, không chiếm chỗ bên dưới input', async () => {
+    renderWorkspace(pricingFixture());
+    fireEvent.click(screen.getByRole('switch'));
+    await screen.findByLabelText('Giá cuối tuần (tuỳ chọn)');
+
+    expect(screen.queryByText('Bỏ trống = dùng giá ngày thường cho cả cuối tuần')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Giải thích giá cuối tuần' }));
+    expect(await screen.findByText(/Bỏ trống để dùng giá ngày thường/)).toBeTruthy();
+  });
+
   it('lưu (xe KHÔNG công khai): xác nhận thường rồi gửi source=vehicle + policy + giá chuỗi', async () => {
     renderWorkspace(pricingFixture());
     fireEvent.click(screen.getByRole('switch'));

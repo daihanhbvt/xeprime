@@ -105,9 +105,10 @@ describe('/manage/shop/policies — quyền và trạng thái tải', () => {
 describe('/manage/shop/policies — dữ liệu và null-policy', () => {
   it('chip phạm vi lấy số từ API, đếm theo loại xe của tab: 12 kế thừa / 3 ghi đè', () => {
     renderPage();
-    // Tab mặc định là Ô tô (17/08: policy tách theo loại xe) — chip nói rõ loại.
-    expect(screen.getByText('12 ô tô đang kế thừa')).toBeTruthy();
-    expect(screen.getByText('3 xe đã ghi đè')).toBeTruthy();
+    // Tab mặc định là Ô tô; số xe ghi đè nằm trong ghi chú để toolbar không bị quá tải.
+    expect(screen.getByText('Đã áp dụng cho 12 ô tô')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Giải thích phạm vi áp dụng chính sách' }));
+    expect(screen.getByText(/3 xe đang dùng chính sách riêng/)).toBeTruthy();
     expect(screen.getByText('12 xe đang dùng mức cọc này')).toBeTruthy();
   });
 
@@ -132,7 +133,7 @@ describe('/manage/shop/policies — dữ liệu và null-policy', () => {
       '100.000',
     );
     // Hai ô quá giờ chưa cấu hình — placeholder đúng thiết kế, không bịa số 0.
-    expect(screen.getByLabelText('Thời gian trễ miễn phí tối đa').getAttribute('placeholder')).toBe(
+    expect(screen.getByLabelText('Thời gian miễn phí tối đa').getAttribute('placeholder')).toBe(
       'Cần cấu hình',
     );
   });
@@ -177,7 +178,10 @@ describe('/manage/shop/policies — sửa, validate, xác nhận lưu', () => {
     fireEvent.change(screen.getByLabelText('Số tiền cọc mặc định'), {
       target: { value: '4000000' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Lưu chính sách' }));
+    // Chỉ còn nút sticky cuối form; không lặp một nút lưu ở toolbar phía trên.
+    const saveButton = screen.getByRole('button', { name: 'Lưu chính sách' });
+    expect(saveButton.getAttribute('form')).toBeNull();
+    fireEvent.click(saveButton);
 
     // AntD render modal kèm bản sao motion → luôn dùng findAll/getAll khi soi nội dung modal.
     expect(
@@ -207,7 +211,60 @@ describe('/manage/shop/policies — sửa, validate, xác nhận lưu', () => {
     grant(PERMISSION.TENANT_VIEW);
     renderPage();
     expect(
-      (screen.getByRole('button', { name: 'Lưu chính sách' }) as HTMLButtonElement).disabled,
+      screen
+        .getAllByRole('button', { name: 'Lưu chính sách' })
+        .every((button) => (button as HTMLButtonElement).disabled),
     ).toBe(true);
+    expect((screen.getByLabelText('Số tiền cọc mặc định') as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('các ghi chú section mở bằng click và đóng bằng Escape', async () => {
+    renderPage();
+    const infoButton = screen.getByRole('button', { name: 'Giải thích phí quá giờ' });
+
+    fireEvent.click(infoButton);
+    expect(infoButton.getAttribute('aria-expanded')).toBe('true');
+    expect(await screen.findByText(/Phí quá giờ được tính khi bàn trả xe/)).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('false'));
+  });
+
+  it('ghi chú của field nằm ở label và không lặp lại thành khối mô tả dưới input', async () => {
+    renderPage();
+    const infoButton = screen.getByRole('button', { name: 'Giải thích số tiền cọc mặc định' });
+
+    expect(screen.queryByText(/Cọc thế chấp là số tiền cố định bằng VND/)).toBeNull();
+    fireEvent.click(infoButton);
+    expect(await screen.findByText(/Mức tiền cố định bằng VND/)).toBeTruthy();
+  });
+
+  it('ghi chú cũng mở khi hover hoặc focus bằng bàn phím', async () => {
+    renderPage();
+    const infoButton = screen.getByRole('button', { name: 'Giải thích yêu cầu đặt cọc' });
+
+    fireEvent.mouseEnter(infoButton);
+    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('true'));
+    fireEvent.mouseLeave(infoButton);
+    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('false'));
+
+    fireEvent.focus(infoButton);
+    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('true'));
+  });
+
+  it('select mốc ưu đãi chỉ có đúng sáu gói thuê dài hạn cố định', async () => {
+    renderPage();
+    fireEvent.mouseDown(screen.getByLabelText('Mốc gói của bậc 1'));
+
+    for (const label of ['1 tháng', '2 tháng', '3 tháng', '6 tháng', '9 tháng', '12 tháng']) {
+      expect((await screen.findAllByText(label)).length).toBeGreaterThan(0);
+    }
+    expect(screen.queryByText('4 tháng')).toBeNull();
+  });
+
+  it('bảng mobile có nhãn gộp khoảng cách và nút xoá vẫn có tên truy cập', () => {
+    renderPage();
+    expect(screen.getByText('Khoảng cách')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Xóa bậc 1' })).toBeTruthy();
   });
 });

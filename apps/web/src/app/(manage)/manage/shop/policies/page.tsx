@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  CheckCircleOutlined,
-  CheckOutlined,
-  CarOutlined,
-  DashboardOutlined,
-} from '@ant-design/icons';
+import { CheckCircleOutlined, CarOutlined, DashboardOutlined } from '@ant-design/icons';
 import { App, Button, Result, Skeleton, Tabs } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -50,23 +45,22 @@ export default function ShopPoliciesPage() {
   }
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
       <ManagePageHeader
         title="Chính sách thuê mặc định"
         subtitle="Thiết lập các quy định và chi phí áp dụng mặc định cho mọi đơn thuê."
       />
       <PolicyWorkspace canEdit={canEdit} />
-    </main>
+    </div>
   );
 }
 
-/** Cả hai nút lưu cùng trỏ vào một form, nên chỉ có duy nhất một đường submit/mutation. */
+/** Một workspace theo loại xe: query, mutation và form không bị lẫn dữ liệu giữa hai tab. */
 function PolicyWorkspace({ canEdit }: { canEdit: boolean }) {
   const { message } = App.useApp();
   const [vehicleType, setVehicleType] = useState<VehicleType>(VEHICLE_TYPE.CAR);
   const { data, isLoading, isError, refetch } = useShopPolicy(vehicleType);
   const save = useSaveShopPolicy(vehicleType);
-  const formId = `shop-policy-form-${vehicleType}`;
   const vehicleLabel = VEHICLE_TYPE_LABEL[vehicleType].toLowerCase();
 
   return (
@@ -80,26 +74,16 @@ function PolicyWorkspace({ canEdit }: { canEdit: boolean }) {
                 Đã áp dụng cho {data.inheritingVehicles} {vehicleLabel}
               </span>
               {data.overriddenVehicles > 0 ? (
-                <PolicyInfoTip label="Giải thích phạm vi áp dụng chính sách" placement="bottomRight">
-                  {data.overriddenVehicles} xe đang dùng chính sách riêng nên không kế thừa bộ
-                  chính sách mặc định này.
+                <PolicyInfoTip
+                  label="Giải thích phạm vi áp dụng chính sách"
+                  placement="bottomRight"
+                >
+                  {data.overriddenVehicles} xe đang dùng chính sách riêng nên không kế thừa bộ chính
+                  sách mặc định này.
                 </PolicyInfoTip>
               ) : null}
             </span>
           ) : null}
-
-          <Button
-            className={styles.topSave}
-            type="primary"
-            size="large"
-            icon={<CheckOutlined aria-hidden="true" />}
-            htmlType="submit"
-            form={formId}
-            loading={save.isPending}
-            disabled={!canEdit || !data}
-          >
-            Lưu chính sách
-          </Button>
         </div>
 
         <Tabs
@@ -143,7 +127,6 @@ function PolicyWorkspace({ canEdit }: { canEdit: boolean }) {
       {data ? (
         <ShopPolicyForm
           key={vehicleType}
-          formId={formId}
           initial={data}
           canEdit={canEdit}
           submitting={save.isPending}

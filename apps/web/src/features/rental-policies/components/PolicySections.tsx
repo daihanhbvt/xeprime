@@ -109,22 +109,6 @@ function HeadLabel({
   );
 }
 
-function FieldWithTip({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className={styles.fieldWithTip}>
-      <span className={styles.fieldTip}>
-        <PolicyInfoTip label={label}>{children}</PolicyInfoTip>
-      </span>
-    </div>
-  );
-}
-
 function DepositSection({
   control,
   title,
@@ -143,13 +127,16 @@ function DepositSection({
       </SectionTitle>
       <div className={styles.depositRow}>
         <div className={styles.depositField}>
-          <FieldWithTip label="Giải thích số tiền cọc mặc định">
-            Mức tiền cố định áp dụng cho các lượt đặt mới của xe đang kế thừa chính sách này.
-          </FieldWithTip>
           <NumberField
             control={control}
             name="depositAmount"
             label="Số tiền cọc mặc định"
+            labelAccessory={
+              <PolicyInfoTip label="Giải thích số tiền cọc mặc định">
+                Mức tiền cố định bằng VND, thu riêng với giá thuê, không chịu chiết khấu và chỉ áp
+                dụng cho lượt đặt mới. Booking đã chốt giữ nguyên mức cọc cũ.
+              </PolicyInfoTip>
+            }
             money
             required
             min={0}
@@ -157,13 +144,6 @@ function DepositSection({
           />
         </div>
         {hint ? <div className={styles.depositHint}>{hint}</div> : null}
-      </div>
-      <div className={styles.note}>
-        <InfoCircleOutlined aria-hidden="true" />
-        <span>
-          Cọc thế chấp là số tiền cố định bằng VND, không nằm trong doanh thu thuê và không chịu
-          chiết khấu giảm giá. Thay đổi chỉ áp dụng cho lượt đặt mới; booking đã chốt giữ nguyên.
-        </span>
       </div>
     </section>
   );
@@ -191,7 +171,8 @@ function DeliverySection({
       })
     | undefined;
   const crossError = tierErrors?.root?.message ?? tierErrors?.message;
-  const tiersComplete = tiers.length > 0 && tiers.every((tier) => tier?.toKm != null) && radius != null;
+  const tiersComplete =
+    tiers.length > 0 && tiers.every((tier) => tier?.toKm != null) && radius != null;
 
   return (
     <section className={styles.card} aria-label={title}>
@@ -206,11 +187,6 @@ function DeliverySection({
           disabled={disabled}
         />
       </div>
-      <p className={styles.desc}>
-        Tính phí hỗ trợ theo khoảng cách một chiều thực tế từ vị trí gian hàng đến điểm giao xe
-        khách yêu cầu.
-      </p>
-
       {enabled ? (
         <>
           <div className={styles.tierTable} role="group" aria-label="Bậc phí giao nhận">
@@ -266,7 +242,9 @@ function DeliverySection({
                   name={`deliveryTiers.${index}.fee`}
                   label={`Phí của bậc ${index + 1}`}
                   money
-                  help={tiers[index]?.fee === 0 || tiers[index]?.fee == null ? 'Miễn phí' : undefined}
+                  help={
+                    tiers[index]?.fee === 0 || tiers[index]?.fee == null ? 'Miễn phí' : undefined
+                  }
                   disabled={disabled}
                 />
                 <Button
@@ -303,26 +281,21 @@ function DeliverySection({
             ) : null}
           </div>
 
-          <div className={styles.radiusRow}>
-            <div className={styles.radiusField}>
-              <FieldWithTip label="Giải thích bán kính hỗ trợ tối đa">
-                Mốc này phải khớp điểm kết thúc của bậc cuối. Ngoài bán kính, shop báo giá thủ công.
-              </FieldWithTip>
-              <NumberField
-                control={control}
-                name="deliveryMaxRadiusKm"
-                label="Bán kính hỗ trợ tối đa tự giao"
-                addonAfter="km"
-                min={0}
-                required
-                disabled={disabled}
-              />
-            </div>
-            <Alert
-              className={styles.radiusWarning}
-              type="warning"
-              showIcon
-              message='Ngoài bán kính này, khách thấy trạng thái "Liên hệ chủ xe" và yêu cầu chờ shop báo giá giao nhận thủ công.'
+          <div className={styles.radiusField}>
+            <NumberField
+              control={control}
+              name="deliveryMaxRadiusKm"
+              label="Bán kính hỗ trợ tối đa tự giao"
+              labelAccessory={
+                <PolicyInfoTip label="Giải thích bán kính hỗ trợ tối đa">
+                  Mốc này phải khớp điểm kết thúc của bậc cuối. Ngoài bán kính, khách thấy “Liên hệ
+                  chủ xe” và shop báo giá giao nhận thủ công.
+                </PolicyInfoTip>
+              }
+              addonAfter="km"
+              min={0}
+              required
+              disabled={disabled}
             />
           </div>
 
@@ -364,13 +337,15 @@ function OvertimeSection({
       </SectionTitle>
       <div className={styles.fieldRow}>
         <div className={styles.overtimeField}>
-          <FieldWithTip label="Giải thích phí mỗi giờ phát sinh">
-            Mức phí cho mỗi giờ khách trả xe trễ sau khoảng miễn phí.
-          </FieldWithTip>
           <NumberField
             control={control}
             name="overtimeFeePerHour"
             label="Phí mỗi giờ phát sinh"
+            labelAccessory={
+              <PolicyInfoTip label="Giải thích phí mỗi giờ phát sinh">
+                Mức phí cho mỗi giờ khách trả xe trễ sau khoảng miễn phí.
+              </PolicyInfoTip>
+            }
             money
             addonAfter="đ / giờ"
             placeholder="Cần cấu hình"
@@ -378,13 +353,15 @@ function OvertimeSection({
           />
         </div>
         <div className={styles.overtimeField}>
-          <FieldWithTip label="Giải thích thời gian miễn phí tối đa">
-            Khoảng trễ chưa phát sinh phí quá giờ.
-          </FieldWithTip>
           <NumberField
             control={control}
             name="overtimeGraceMinutes"
             label="Thời gian miễn phí tối đa"
+            labelAccessory={
+              <PolicyInfoTip label="Giải thích thời gian miễn phí tối đa">
+                Khoảng trễ chưa phát sinh phí quá giờ.
+              </PolicyInfoTip>
+            }
             addonAfter="phút"
             min={0}
             placeholder="Cần cấu hình"
@@ -392,13 +369,15 @@ function OvertimeSection({
           />
         </div>
         <div className={styles.overtimeField}>
-          <FieldWithTip label="Giải thích đơn vị làm tròn tối thiểu">
-            Bước thời gian nhỏ nhất dùng để làm tròn khi hệ thống tính phí.
-          </FieldWithTip>
           <NumberField
             control={control}
             name="overtimeRoundingMinutes"
             label="Đơn vị làm tròn tối thiểu"
+            labelAccessory={
+              <PolicyInfoTip label="Giải thích đơn vị làm tròn tối thiểu">
+                Bước thời gian nhỏ nhất dùng để làm tròn khi hệ thống tính phí.
+              </PolicyInfoTip>
+            }
             addonAfter="phút"
             min={1}
             placeholder="Cần cấu hình"
@@ -440,9 +419,8 @@ function DiscountSection({
         month === tiers[index]?.minMonths || !tiers.some((tier) => tier?.minMonths === month),
     ).map((month) => ({ value: String(month), label: longTermPackageLabel(month) }));
   const nextUnusedMonths =
-    LONG_TERM_PACKAGE_MONTHS.find(
-      (month) => !tiers.some((tier) => tier?.minMonths === month),
-    ) ?? null;
+    LONG_TERM_PACKAGE_MONTHS.find((month) => !tiers.some((tier) => tier?.minMonths === month)) ??
+    null;
 
   const tierErrors = errors.discountTiers as
     { root?: { message?: string }; message?: string } | undefined;
@@ -452,7 +430,8 @@ function DiscountSection({
     <section className={styles.card} aria-label={title}>
       <div className={styles.cardHeader}>
         <SectionTitle title={title} infoLabel="Giải thích ưu đãi thuê dài hạn">
-          Khách nhận mốc giảm cao nhất mà gói đã chọn đạt tới; các mốc không được cộng dồn.
+          Chỉ áp dụng cho thuê dài hạn. Khách nhận mốc giảm cao nhất mà gói đã chọn đạt tới và các
+          mốc không cộng dồn; ví dụ gói 9 tháng hưởng mốc 6 tháng nếu chưa có mốc cao hơn.
         </SectionTitle>
         <SwitchField
           control={control}
@@ -540,21 +519,17 @@ function DiscountSection({
             ) : null}
           </div>
 
-          <Alert
-            type="info"
-            showIcon
-            message="Ưu đãi chỉ áp dụng cho THUÊ DÀI HẠN và không cộng dồn. Gói thuê nhận mốc cao nhất mà gói đó đạt tới."
-            description="Ví dụ: gói 2 tháng hưởng mốc 1 tháng; gói 9 hoặc 12 tháng hưởng mốc 6 tháng nếu chưa có mốc cao hơn."
-          />
           {legacyTiers?.length ? (
             <Alert
               type="warning"
               showIcon
-              message={`${legacyTiers.length} mốc ưu đãi cũ theo NGÀY chưa quy đổi được sang gói`}
+              title={`${legacyTiers.length} mốc ưu đãi cũ theo NGÀY chưa quy đổi được sang gói`}
               description={
                 <>
                   <span>
-                    {legacyTiers.map((tier) => `từ ${tier.minDays} ngày giảm ${tier.percent}%`).join(' · ')}
+                    {legacyTiers
+                      .map((tier) => `từ ${tier.minDays} ngày giảm ${tier.percent}%`)
+                      .join(' · ')}
                   </span>
                   <br />
                   <span>

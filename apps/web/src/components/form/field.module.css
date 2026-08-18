@@ -23,3 +23,32 @@
 .control.control :global(.ant-input-number) {
   width: 100%;
 }
+
+.fieldWithAccessory {
+  min-width: 0;
+}
+
+.customLabelRow {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 2px;
+}
+
+.customLabel {
+  min-width: 0;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  overflow-wrap: anywhere;
+}
+
+.requiredMark {
+  margin-inline-end: 4px;
+  color: var(--xp-color-error);
+}
+
+.requiredMark::before {
+  content: '*';
+}

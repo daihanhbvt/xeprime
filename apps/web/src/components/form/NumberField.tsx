@@ -12,6 +12,8 @@ interface NumberFieldProps<T extends FieldValues> {
   name: Path<T>;
   /** `ReactNode` để feature tự gắn dấu hiệu riêng cạnh nhãn (xem `TextField`). */
   label: ReactNode;
+  /** Phần tử nằm NGAY SAU chữ nhãn, ví dụ nút giải thích; không được phủ lên ô nhập. */
+  labelAccessory?: ReactNode;
   placeholder?: string;
   min?: number;
   max?: number;
@@ -49,6 +51,7 @@ export function NumberField<T extends FieldValues>({
   control,
   name,
   label,
+  labelAccessory,
   placeholder,
   min,
   max,
@@ -68,52 +71,68 @@ export function NumberField<T extends FieldValues>({
   const effectiveMax = max ?? (percent ? 100 : undefined);
   const suffix = addonAfter ?? (money ? '₫' : percent ? '%' : undefined);
   const helpText = fieldState.error?.message ?? help;
+  const input = money ? (
+    <MoneyInput
+      id={id}
+      aria-describedby={helpText ? describedById : undefined}
+      aria-invalid={fieldState.error ? true : undefined}
+      className={styles.control}
+      value={(field.value as number | null | undefined) ?? null}
+      onChange={(value) => field.onChange(value ?? null)}
+      onBlur={field.onBlur}
+      min={effectiveMin}
+      max={effectiveMax}
+      placeholder={placeholder}
+      addonAfter={suffix}
+      disabled={disabled}
+      status={fieldState.error ? 'error' : undefined}
+    />
+  ) : (
+    <InputNumber
+      id={id}
+      aria-describedby={helpText ? describedById : undefined}
+      aria-invalid={fieldState.error ? true : undefined}
+      className={styles.control}
+      // Không hiện nút tăng/giảm: các ô số ở đây (năm, kích thước…) đều gõ trực tiếp.
+      controls={false}
+      value={(field.value as number | null | undefined) ?? null}
+      onChange={(value) => field.onChange(value ?? null)}
+      onBlur={field.onBlur}
+      min={effectiveMin}
+      max={effectiveMax}
+      precision={precision ?? (percent ? 0 : undefined)}
+      placeholder={placeholder}
+      suffix={suffix}
+      disabled={disabled}
+      status={fieldState.error ? 'error' : undefined}
+    />
+  );
 
-  return (
+  const item = (
     <Form.Item
-      label={label}
-      htmlFor={id}
-      required={required}
+      label={labelAccessory ? undefined : label}
+      htmlFor={labelAccessory ? undefined : id}
+      required={labelAccessory ? undefined : required}
       validateStatus={fieldState.error ? 'error' : ''}
       help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
       className={styles.item}
     >
-      {money ? (
-        <MoneyInput
-          id={id}
-          aria-describedby={helpText ? describedById : undefined}
-          aria-invalid={fieldState.error ? true : undefined}
-          className={styles.control}
-          value={(field.value as number | null | undefined) ?? null}
-          onChange={(value) => field.onChange(value ?? null)}
-          onBlur={field.onBlur}
-          min={effectiveMin}
-          max={effectiveMax}
-          placeholder={placeholder}
-          addonAfter={suffix}
-          disabled={disabled}
-          status={fieldState.error ? 'error' : undefined}
-        />
-      ) : (
-        <InputNumber
-          id={id}
-          aria-describedby={helpText ? describedById : undefined}
-          aria-invalid={fieldState.error ? true : undefined}
-          className={styles.control}
-          // Không hiện nút tăng/giảm: các ô số ở đây (năm, kích thước…) đều gõ trực tiếp.
-          controls={false}
-          value={(field.value as number | null | undefined) ?? null}
-          onChange={(value) => field.onChange(value ?? null)}
-          onBlur={field.onBlur}
-          min={effectiveMin}
-          max={effectiveMax}
-          precision={precision ?? (percent ? 0 : undefined)}
-          placeholder={placeholder}
-          suffix={suffix}
-          disabled={disabled}
-          status={fieldState.error ? 'error' : undefined}
-        />
-      )}
+      {input}
     </Form.Item>
+  );
+
+  if (!labelAccessory) return item;
+
+  return (
+    <div className={styles.fieldWithAccessory}>
+      <div className={styles.customLabelRow}>
+        <label htmlFor={id} className={styles.customLabel}>
+          {required ? <span className={styles.requiredMark} aria-hidden="true" /> : null}
+          {label}
+        </label>
+        {labelAccessory}
+      </div>
+      {item}
+    </div>
   );
 }

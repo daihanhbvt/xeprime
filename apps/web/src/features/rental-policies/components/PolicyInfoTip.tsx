@@ -53,6 +53,7 @@ export function PolicyInfoTip({ label, children, placement = 'top' }: PolicyInfo
         aria-expanded={open}
         aria-controls={contentId}
         aria-describedby={open ? contentId : undefined}
+        onClick={(event) => event.stopPropagation()}
       >
         <InfoCircleOutlined aria-hidden="true" />
       </button>

@@ -1,12 +1,12 @@
 .trigger {
   display: inline-grid;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
   padding: 0;
   border: 0;
   border-radius: var(--xp-border-radius-pill);
-  margin: -6px -6px -6px 0;
+  margin: -3px 0;
   appearance: none;
   background: transparent;
   color: var(--xp-color-text-tertiary);
@@ -14,8 +14,8 @@
   font-size: 14px;
   place-items: center;
   transition:
-    color var(--xp-motion-duration-fast),
-    background var(--xp-motion-duration-fast);
+    color 160ms ease,
+    background 160ms ease;
 }
 
 .trigger:hover,
@@ -26,7 +26,7 @@
 
 .trigger:focus-visible {
   outline: var(--xp-focus-outline-width) solid var(--xp-color-primary);
-  outline-offset: var(--xp-focus-outline-offset);
+  outline-offset: 2px;
 }
 
 .content {
@@ -40,10 +40,10 @@
 
 @media (max-width: 640px) {
   .trigger {
-    width: 36px;
-    height: 36px;
-    flex-basis: 36px;
-    margin: -9px -8px -9px 0;
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+    margin: -6px 0;
   }
 }
 

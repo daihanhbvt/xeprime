@@ -62,7 +62,7 @@ export function LongTermPriceHint({
       <Alert
         type="info"
         showIcon
-        message={`Giá tự lái ${formatMoneyVnd(String(weekday))}/ngày — chưa đặt giá thuê dài hạn`}
+        title={`Giá tự lái ${formatMoneyVnd(String(weekday))}/ngày — chưa đặt giá thuê dài hạn`}
         description={suggestion}
       />
     );
@@ -73,7 +73,7 @@ export function LongTermPriceHint({
       <Alert
         type="warning"
         showIcon
-        message={`Giá tháng (${formatMoneyVnd(String(monthly))}) không rẻ hơn thuê theo ngày cả tháng (${formatMoneyVnd(String(monthReference))})`}
+        title={`Giá tháng (${formatMoneyVnd(String(monthly))}) không rẻ hơn thuê theo ngày cả tháng (${formatMoneyVnd(String(monthReference))})`}
         description={`Khách không có lý do chọn gói dài hạn với mức này. ${suggestion}`}
       />
     );
@@ -99,7 +99,7 @@ export function LongTermPriceHint({
     <Alert
       type="success"
       showIcon
-      message={`Giá dài hạn cơ sở ${formatMoneyVnd(String(monthly))}/tháng`}
+      title={`Giá dài hạn cơ sở ${formatMoneyVnd(String(monthly))}/tháng`}
       description={
         <>
           <p className={styles.lead}>{suggestion}</p>

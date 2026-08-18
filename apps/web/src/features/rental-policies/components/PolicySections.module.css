@@ -1,15 +1,15 @@
-/* Bốn khối chính sách thuê — hình học Figma `237:1557` (desktop) / `247:1554` (mobile). */
-
 .stack {
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  gap: var(--xp-space-lg);
+  gap: var(--xp-space-md);
 }
 
 .card {
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  padding: var(--xp-space-md) var(--xp-space-lg);
+  padding: var(--xp-space-lg);
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
@@ -18,103 +18,143 @@
 
 .cardHeader {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-md);
 }
 
+.titleRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
 .cardTitle {
+  min-width: 0;
   margin: 0;
-  padding-bottom: var(--xp-space-sm);
-  border-bottom: 1px solid var(--xp-color-border-secondary);
+  color: var(--xp-color-text);
   font-size: var(--xp-font-size-h4);
   font-weight: var(--xp-font-weight-bold);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
-/* Tiêu đề trong hàng có toggle: đường gạch chân chuyển xuống cạnh dưới của cả hàng. */
-.cardHeader .cardTitle {
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.desc {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.note {
-  padding: var(--xp-space-sm);
-  border-radius: 8px;
-  margin: 0;
+.previewCard,
+.formulaCard {
+  min-width: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
   background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
-  line-height: 1.5;
 }
 
-.footnote {
-  margin: 0;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
+.previewCard {
+  display: flex;
+  align-items: flex-start;
+  color: var(--xp-color-text-secondary);
+  line-height: 1.55;
+  gap: var(--xp-space-sm);
+}
+
+.previewIcon {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  font-size: 16px;
+}
+
+.previewIcon {
+  color: var(--xp-color-info);
 }
 
 .disabledNote {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
   margin: 0;
+  background: var(--xp-color-bg-muted);
   color: var(--xp-color-text-tertiary);
   font-size: var(--xp-font-size-body-sm);
 }
 
 .depositRow {
   display: flex;
+  min-width: 0;
   align-items: flex-end;
   gap: var(--xp-space-md);
 }
 
+.depositField,
+.radiusField {
+  width: min(320px, 100%);
+  min-width: 0;
+}
+
 .depositHint {
-  padding-bottom: var(--xp-space-md);
-  color: var(--xp-color-primary);
+  padding-bottom: 20px;
+  color: var(--xp-color-primary-active);
   font-size: var(--xp-font-size-body-sm);
   font-weight: var(--xp-font-weight-semibold);
 }
 
-.inputNarrow {
-  width: 320px;
-  max-width: 100%;
-}
-
-/* ─── Bảng bậc ────────────────────────────────────────────────────────────── */
+/* ─── Bảng bậc ─────────────────────────────────────────────────────────── */
 
 .tierTable {
   display: flex;
   overflow: hidden;
+  width: 100%;
+  min-width: 0;
   flex-direction: column;
   border: 1px solid var(--xp-color-border);
-  border-radius: 8px;
+  border-radius: var(--xp-border-radius-sm);
 }
 
 .tierHead,
-.discountHead {
-  display: grid;
+.discountHead,
+.tierMobileHead {
   padding: var(--xp-space-sm) var(--xp-space-md);
   background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-secondary);
+  color: var(--xp-color-text);
   font-size: var(--xp-font-size-body-sm);
   font-weight: var(--xp-font-weight-bold);
   gap: var(--xp-space-md);
 }
 
 .tierHead {
-  grid-template-columns: 140px 1fr 1fr 88px;
+  display: grid;
+  grid-template-columns: 140px minmax(150px, 1fr) minmax(180px, 1fr) 88px;
 }
 
 .discountHead {
-  grid-template-columns: 1fr 120px 1.4fr 88px;
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) 120px minmax(180px, 1.4fr) 88px;
+}
+
+.tierMobileHead {
+  display: none;
+}
+
+.headLabel {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.headLabel > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tierActionHead {
+  align-self: center;
+  text-align: right;
 }
 
 .tierRow,
 .discountRow {
   display: grid;
+  min-width: 0;
   align-items: start;
   padding: var(--xp-space-sm) var(--xp-space-md);
   border-top: 1px solid var(--xp-color-border-secondary);
@@ -122,27 +162,19 @@
 }
 
 .tierRow {
-  grid-template-columns: 140px 1fr 1fr 88px;
+  grid-template-columns: 140px minmax(150px, 1fr) minmax(180px, 1fr) 88px;
 }
 
 .discountRow {
-  grid-template-columns: 1fr 120px 1.4fr 88px;
+  grid-template-columns: minmax(140px, 1fr) 120px minmax(180px, 1.4fr) 88px;
 }
 
-/* Nhãn của field trong bảng đã nằm ở hàng tiêu đề — nhãn từng ô chỉ dành cho a11y. */
-.tierRow :global(.ant-form-item-label),
-.discountRow :global(.ant-form-item-label) {
-  position: absolute;
-  overflow: hidden;
-  width: 1px;
-  height: 1px;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+.distanceCell {
+  display: contents;
 }
 
-.tierRow :global(.ant-form-item),
-.discountRow :global(.ant-form-item) {
-  margin-bottom: 0;
+.distanceSeparator {
+  display: none;
 }
 
 .tierFrom {
@@ -151,62 +183,91 @@
   font-size: var(--xp-font-size-body);
 }
 
+.tierTo,
+.tierRow > *,
+.discountRow > * {
+  min-width: 0;
+}
+
+/* Nhãn từng input vẫn tồn tại cho screen reader; hàng tiêu đề đảm nhiệm nhãn nhìn thấy. */
+.tierRow :global(.ant-form-item-label),
+.discountRow :global(.ant-form-item-label) {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.tierRow :global(.ant-form-item),
+.discountRow :global(.ant-form-item) {
+  min-width: 0;
+  margin-bottom: 0 !important;
+}
+
+.tierRow :global(.ant-input-number),
+.tierRow :global(.ant-input-number-group-wrapper),
+.discountRow :global(.ant-input-number),
+.discountRow :global(.ant-input-number-group-wrapper),
+.discountRow :global(.ant-select),
+.discountRow :global(.ant-input) {
+  width: 100%;
+  min-width: 0;
+}
+
+.deleteButton {
+  min-width: var(--xp-touch-target-min);
+  min-height: var(--xp-touch-target-min);
+  justify-self: end;
+}
+
 .tierFooter {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-sm);
 }
 
-.tierOk {
+.tierOk,
+.tierError {
   display: inline-flex;
+  min-width: 0;
   align-items: center;
-  color: var(--xp-color-success);
   font-size: var(--xp-font-size-body-sm);
   font-weight: var(--xp-font-weight-semibold);
   gap: 6px;
+  overflow-wrap: anywhere;
+}
+
+.tierOk {
+  color: var(--xp-color-success);
 }
 
 .tierError {
   color: var(--xp-color-error);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-semibold);
 }
 
-.tierActionHead {
-  text-align: right;
-}
+/* ─── Phí quá giờ và preview ───────────────────────────────────────────── */
 
-.radiusRow {
-  display: flex;
-  align-items: flex-start;
+.fieldRow {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--xp-space-md);
 }
 
-.radiusWarning {
-  flex: 1;
+.overtimeField {
   min-width: 0;
 }
 
-.fieldRow {
+.formulaCard {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-md);
-}
-
-.fieldRow > * {
-  min-width: 220px;
-  flex: 1;
-}
-
-.previewCard {
-  display: flex;
+  min-width: 0;
   flex-direction: column;
-  padding: var(--xp-space-sm);
-  border-radius: 8px;
-  background: var(--xp-color-bg-muted);
-  font-size: var(--xp-font-size-body-sm);
   gap: 4px;
 }
 
@@ -217,61 +278,183 @@
 .previewText {
   color: var(--xp-color-text-secondary);
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
-/* ─── Mobile (Figma 247:1554): bảng bậc xếp dọc, cột "từ" thành nhãn dòng ─── */
+@media (max-width: 1000px) {
+  .tierHead,
+  .tierRow {
+    grid-template-columns: 100px minmax(130px, 1fr) minmax(150px, 1fr) 56px;
+  }
 
-@media (max-width: 640px) {
+  .discountHead,
+  .discountRow {
+    grid-template-columns: minmax(120px, 1fr) 100px minmax(150px, 1.2fr) 56px;
+  }
+
+  .deleteText {
+    display: none;
+  }
+}
+
+/* Tablet hẹp/mobile: delivery còn 3 cột, discount đưa ghi chú xuống hàng hai. */
+@media (max-width: 760px) {
   .card {
     padding: var(--xp-space-md);
   }
 
-  .tierHead,
-  .discountHead {
+  .cardHeader {
+    align-items: flex-start;
+  }
+
+  .tierHead {
     display: none;
   }
 
-  .tierRow,
-  .discountRow {
-    grid-template-columns: 1fr 1fr;
+  .tierMobileHead {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(96px, 1fr) 52px;
+    gap: var(--xp-space-sm);
+  }
+
+  .tierMobileHead > :last-child {
+    text-align: right;
+  }
+
+  .tierRow {
+    grid-template-columns: minmax(0, 1.3fr) minmax(96px, 1fr) 52px;
+    gap: var(--xp-space-sm);
+  }
+
+  .distanceCell {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .distanceSeparator {
+    display: inline;
+    flex: 0 0 auto;
+    color: var(--xp-color-text-secondary);
   }
 
   .tierFrom {
     padding-top: 0;
-    grid-column: 1 / -1;
-    color: var(--xp-color-text-secondary);
+    flex: 0 0 auto;
     font-size: var(--xp-font-size-body-sm);
     font-weight: var(--xp-font-weight-semibold);
   }
 
-  /* Ở mobile nhãn ô nhập hiện lại — không còn hàng tiêu đề bảng để tựa. */
-  .tierRow :global(.ant-form-item-label),
-  .discountRow :global(.ant-form-item-label) {
-    position: static;
-    overflow: visible;
-    width: auto;
-    height: auto;
-    clip: auto;
-    white-space: normal;
+  .tierTo {
+    min-width: 0;
+    flex: 1;
   }
 
-  .tierRow > button,
-  .discountRow > button {
-    justify-self: end;
+  .discountHead,
+  .discountRow {
+    grid-template-columns: minmax(0, 1fr) 88px 52px;
+    gap: var(--xp-space-sm);
+  }
+
+  .discountHead > :nth-child(3) {
+    display: none;
+  }
+
+  .discountHead > :nth-child(4) {
+    grid-column: 3;
+  }
+
+  .discountRow > :nth-child(3) {
     grid-column: 1 / -1;
+    grid-row: 2;
   }
 
-  .depositRow,
-  .radiusRow {
+  .discountRow > .deleteButton {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .deleteButton {
+    width: var(--xp-touch-target-min);
+    padding-inline: 0;
+  }
+
+  .depositRow {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .depositField,
+  .radiusField {
+    width: 100%;
   }
 
   .depositHint {
     padding-bottom: 0;
   }
 
-  .inputNarrow {
+  .fieldRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .card {
+    padding: 14px 12px;
+    gap: 14px;
+  }
+
+  .cardHeader {
+    gap: var(--xp-space-sm);
+  }
+
+  .cardTitle {
+    font-size: var(--xp-font-size-body);
+  }
+
+  .tierHead,
+  .discountHead,
+  .tierMobileHead,
+  .tierRow,
+  .discountRow {
+    padding-inline: var(--xp-space-sm);
+  }
+
+  .tierMobileHead,
+  .tierRow {
+    grid-template-columns: minmax(0, 1.2fr) minmax(88px, 1fr) 44px;
+    gap: 6px;
+  }
+
+  .discountHead,
+  .discountRow {
+    grid-template-columns: minmax(0, 1fr) 78px 44px;
+    gap: 6px;
+  }
+
+  .tierActionHead {
+    font-size: 0;
+  }
+
+  .tierActionHead::after {
+    font-size: var(--xp-font-size-body-sm);
+    content: 'Xóa';
+  }
+
+  .tierFooter > button {
     width: 100%;
+  }
+
+  .tierOk,
+  .tierError {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .previewCard,
+  .formulaCard {
+    padding: var(--xp-space-sm);
   }
 }

@@ -3,7 +3,7 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Switch } from 'antd';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useForm, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import { LONG_TERM_PACKAGE_MONTHS, POLICY_SOURCE, SERVICE_TYPE } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
@@ -16,6 +16,7 @@ import { formToSaveInput, policyToForm } from '../form';
 import { vehiclePricingFormSchema, type VehiclePricingFormValues } from '../schema';
 import type { RentalPolicyValues, SaveVehiclePricingInput, VehiclePricing } from '../types';
 import { LongTermPriceHint } from './LongTermPriceHint';
+import { PolicyInfoTip } from './PolicyInfoTip';
 import { PolicySections } from './PolicySections';
 
 import styles from './VehiclePricingWorkspace.module.css';
@@ -30,6 +31,23 @@ interface VehiclePricingWorkspaceProps {
 }
 
 const toNumber = (v: string | null | undefined): number | null => (v == null ? null : Number(v));
+
+function PricingTitle({
+  children,
+  infoLabel,
+  info,
+}: {
+  children: ReactNode;
+  infoLabel: string;
+  info: ReactNode;
+}) {
+  return (
+    <div className={styles.cardTitleRow}>
+      <h2 className={styles.cardTitle}>{children}</h2>
+      <PolicyInfoTip label={infoLabel}>{info}</PolicyInfoTip>
+    </div>
+  );
+}
 
 /**
  * Tab "Giá & chính sách" của một xe (Figma `236:3495`, states `237:1911`, mobile `247:1645/1706`).
@@ -165,10 +183,12 @@ export function VehiclePricingWorkspace({
     <div className={styles.stack}>
       {/* Nguồn chính sách — Figma `policy-toggle-card`. */}
       <section className={styles.card} aria-label="Cấu hình nguồn chính sách">
-        <h2 className={styles.cardTitle}>Cấu hình nguồn chính sách</h2>
-        <p className={styles.desc}>
-          Chọn áp dụng chính sách chung của gian hàng hoặc tùy chỉnh riêng cho xe này.
-        </p>
+        <PricingTitle
+          infoLabel="Giải thích nguồn chính sách"
+          info="Xe có thể kế thừa cọc, giao nhận và ưu đãi từ gian hàng hoặc lưu một bộ chính sách riêng."
+        >
+          Cấu hình nguồn chính sách
+        </PricingTitle>
         <label className={styles.sourceRow}>
           <Switch
             checked={!editMode}
@@ -195,7 +215,7 @@ export function VehiclePricingWorkspace({
           <Alert
             type="warning"
             showIcon
-            message={`Thay đổi giá và chính sách dưới đây chỉ áp dụng cho ${vehicleName}${vehiclePlate ? ` (${vehiclePlate})` : ''}, không ảnh hưởng đến các xe khác sử dụng cấu hình chung của gian hàng.`}
+            title={`Đang tùy chỉnh riêng cho ${vehicleName}${vehiclePlate ? ` (${vehiclePlate})` : ''}; các xe khác không bị ảnh hưởng.`}
           />
         ) : (
           <div className={styles.inheritBanner}>
@@ -225,7 +245,7 @@ export function VehiclePricingWorkspace({
               <Alert
                 type="warning"
                 showIcon
-                message="Bạn có các thay đổi chưa được áp dụng"
+                title="Bạn có các thay đổi chưa được áp dụng"
                 action={
                   <Button size="small" onClick={() => reset()} disabled={submitting}>
                     Hủy bỏ
@@ -237,12 +257,23 @@ export function VehiclePricingWorkspace({
             {/* Nhóm giá theo TỪNG DỊCH VỤ xe đăng (17/08) — không trộn thành một danh sách. */}
             {hasSelfDrive ? (
               <section className={styles.card} aria-label="Giá tự lái">
-                <h2 className={styles.cardTitle}>Giá tự lái</h2>
+                <PricingTitle
+                  infoLabel="Giải thích giá tự lái"
+                  info="Giá cơ sở áp dụng cho dịch vụ tự lái; giá cuối tuần và giá theo giờ là tùy chọn."
+                >
+                  Giá tự lái
+                </PricingTitle>
                 <div className={styles.priceRow}>
                   <NumberField
                     control={control}
                     name="weekdayPrice"
                     label="Giá ngày thường"
+                    labelAccessory={
+                      <PolicyInfoTip label="Giải thích giá ngày thường">
+                        Giá cơ sở bắt buộc của dịch vụ tự lái, dùng cho ngày thường và làm giá thay
+                        thế khi chưa nhập giá cuối tuần.
+                      </PolicyInfoTip>
+                    }
                     money
                     addonAfter="đ / ngày"
                     required
@@ -251,17 +282,25 @@ export function VehiclePricingWorkspace({
                     control={control}
                     name="weekendPrice"
                     label="Giá cuối tuần (tuỳ chọn)"
+                    labelAccessory={
+                      <PolicyInfoTip label="Giải thích giá cuối tuần">
+                        Bỏ trống để dùng giá ngày thường cho cả cuối tuần.
+                      </PolicyInfoTip>
+                    }
                     money
                     addonAfter="đ / ngày"
-                    help="Bỏ trống = dùng giá ngày thường cho cả cuối tuần"
                   />
                   <NumberField
                     control={control}
                     name="hourlyPrice"
                     label="Giá theo giờ (tuỳ chọn)"
+                    labelAccessory={
+                      <PolicyInfoTip label="Giải thích giá theo giờ">
+                        Bỏ trống nếu xe không cung cấp hình thức thuê theo giờ.
+                      </PolicyInfoTip>
+                    }
                     money
                     addonAfter="đ / giờ"
-                    help="Bỏ trống = xe không cho thuê theo giờ"
                   />
                 </div>
                 <DirectDiscountEditor control={control} setValue={setValue} />
@@ -270,15 +309,26 @@ export function VehiclePricingWorkspace({
 
             {hasLongTerm ? (
               <section className={styles.card} aria-label="Giá thuê dài hạn">
-                <h2 className={styles.cardTitle}>Thuê dài hạn</h2>
+                <PricingTitle
+                  infoLabel="Giải thích giá thuê dài hạn"
+                  info="Giá gói được tính từ giá cơ sở một tháng nhân số tháng rồi trừ ưu đãi cam kết."
+                >
+                  Thuê dài hạn
+                </PricingTitle>
                 <div className={styles.priceRow}>
                   <NumberField
                     control={control}
                     name="monthlyPrice"
                     label="Giá dài hạn cơ sở (một tháng)"
+                    labelAccessory={
+                      <PolicyInfoTip label="Giải thích giá dài hạn cơ sở">
+                        Giá của một tháng. Khách chọn gói {LONG_TERM_PACKAGE_MONTHS.join(', ')}{' '}
+                        tháng; thiếu giá này thì xe không đủ điều kiện công khai dịch vụ thuê dài
+                        hạn.
+                      </PolicyInfoTip>
+                    }
                     money
                     addonAfter="đ / tháng"
-                    help={`Giá MỘT tháng — khách mua gói ${LONG_TERM_PACKAGE_MONTHS.join('/')} tháng và trả giá tháng × số tháng, trừ ưu đãi cam kết. Thiếu giá tháng thì không gửi duyệt public dịch vụ này được.`}
                   />
                 </div>
                 {/* Gợi ý sống theo GIÁ ĐANG NHẬP — chủ xe thấy ngay giá từng gói khách sẽ trả. */}
@@ -288,31 +338,48 @@ export function VehiclePricingWorkspace({
 
             {hasWithDriver ? (
               <section className={styles.card} aria-label="Giá xe có tài xế">
-                <h2 className={styles.cardTitle}>Xe có tài xế (giá đã gồm tài xế)</h2>
+                <PricingTitle
+                  infoLabel="Giải thích giá xe có tài xế"
+                  info="Các mức dưới đây đã gồm tài xế; giá nội thành là mức cơ sở để hệ thống dự phòng khi thiếu giá khác."
+                >
+                  Xe có tài xế
+                </PricingTitle>
                 <div className={styles.priceRow}>
                   <NumberField
                     control={control}
                     name="withDriverDailyPrice"
                     label="Nội thành (giá cơ bản)"
+                    labelAccessory={
+                      <PolicyInfoTip label="Giải thích giá nội thành có tài xế">
+                        Mức giá bắt buộc để công khai dịch vụ có tài xế.
+                      </PolicyInfoTip>
+                    }
                     money
                     addonAfter="đ / ngày"
-                    help="Bắt buộc để gửi duyệt public dịch vụ có tài xế"
                   />
                   <NumberField
                     control={control}
                     name="withDriverInterCityPrice"
                     label="Liên tỉnh — khứ hồi (tuỳ chọn)"
+                    labelAccessory={
+                      <PolicyInfoTip label="Giải thích giá liên tỉnh khứ hồi">
+                        Bỏ trống để tạm tính theo giá nội thành; phụ phí được xác nhận khi duyệt.
+                      </PolicyInfoTip>
+                    }
                     money
                     addonAfter="đ / ngày"
-                    help="Bỏ trống = tạm tính theo giá nội thành, phụ phí xác nhận khi duyệt"
                   />
                   <NumberField
                     control={control}
                     name="withDriverOneWayPrice"
                     label="Liên tỉnh — 1 chiều (tuỳ chọn)"
+                    labelAccessory={
+                      <PolicyInfoTip label="Giải thích giá liên tỉnh một chiều">
+                        Bỏ trống để tạm tính theo bậc gần nhất: liên tỉnh rồi đến nội thành.
+                      </PolicyInfoTip>
+                    }
                     money
                     addonAfter="đ / ngày"
-                    help="Bỏ trống = tạm tính theo bậc gần nhất (liên tỉnh → nội thành)"
                   />
                 </div>
               </section>
@@ -382,10 +449,13 @@ function DirectDiscountEditor({
       <div className={styles.promoSettings}>
         <div className={styles.promoHeadingRow}>
           <div>
-            <h3 className={styles.promoTitle}>Khuyến mãi trực tiếp</h3>
-            <p className={styles.promoDescription}>
-              Giảm trực tiếp trên tiền thuê tự lái. Báo giá và đơn mới sẽ dùng đúng mức này.
-            </p>
+            <div className={styles.promoTitleRow}>
+              <h3 className={styles.promoTitle}>Khuyến mãi trực tiếp</h3>
+              <PolicyInfoTip label="Giải thích khuyến mãi trực tiếp">
+                Giảm trên tiền thuê tự lái của báo giá và đơn mới; không giảm giá thuê dài hạn, giá
+                có tài xế, phụ phí hay tiền cọc.
+              </PolicyInfoTip>
+            </div>
           </div>
           <Switch
             aria-label="Bật khuyến mãi trực tiếp"
@@ -407,21 +477,21 @@ function DirectDiscountEditor({
               control={control}
               name="discountPercent"
               label="Mức giảm trực tiếp"
+              labelAccessory={
+                <PolicyInfoTip label="Giải thích mức giảm trực tiếp">
+                  Áp dụng cho giá ngày thường, giá cuối tuần và giá riêng theo ngày của dịch vụ tự
+                  lái.
+                </PolicyInfoTip>
+              }
               percent
               min={1}
               max={100}
               required
-              help="Áp dụng cho giá ngày thường, giá cuối tuần và giá riêng theo ngày của dịch vụ tự lái."
             />
           </div>
         ) : (
           <p className={styles.promoOffHint}>Khách đang thấy giá gốc, không có nhãn giảm giá.</p>
         )}
-
-        <p className={styles.promoPolicyNote}>
-          Khác với “Ưu đãi theo thời lượng” ở phần chính sách phía dưới: mức này chỉ dùng cho tự
-          lái, không giảm giá thuê dài hạn, giá có tài xế, phụ phí hay tiền cọc.
-        </p>
       </div>
 
       <aside className={styles.pricePreview} aria-live="polite" aria-label="Xem trước giá trên sàn">
@@ -614,7 +684,7 @@ function InheritedSummary({
         <Alert
           type="info"
           showIcon
-          message="Gian hàng chưa cấu hình chính sách thuê"
+          title="Gian hàng chưa cấu hình chính sách thuê"
           description={
             <span>
               Xe này chưa có tiền cọc, giao nhận hay ưu đãi. Cấu hình tại{' '}

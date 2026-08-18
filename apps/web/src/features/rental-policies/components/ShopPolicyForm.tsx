@@ -12,7 +12,6 @@ import { PolicySections } from './PolicySections';
 import styles from './ShopPolicyForm.module.css';
 
 interface ShopPolicyFormProps {
-  formId: string;
   initial: ShopRentalPolicy;
   canEdit: boolean;
   submitting: boolean;
@@ -26,13 +25,7 @@ interface ShopPolicyFormProps {
  * khi gửi luôn có bước xác nhận nêu rõ phạm vi ảnh hưởng và cam kết "đơn cũ giữ nguyên"
  * (snapshot bất biến ở backend). Thanh cảnh báo thay đổi chưa lưu bám theo `isDirty`.
  */
-export function ShopPolicyForm({
-  formId,
-  initial,
-  canEdit,
-  submitting,
-  onSubmit,
-}: ShopPolicyFormProps) {
+export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopPolicyFormProps) {
   const { modal } = App.useApp();
   const { control, handleSubmit, reset, formState } = useForm<PolicyFormValues>({
     resolver: yupResolver(policyFormSchema),
@@ -53,13 +46,13 @@ export function ShopPolicyForm({
   });
 
   return (
-    <form id={formId} className={styles.form} onSubmit={confirmThenSubmit} noValidate>
+    <form className={styles.form} onSubmit={confirmThenSubmit} noValidate>
       {initial.policy === null ? (
         <Alert
           className={styles.introAlert}
           type="info"
           showIcon
-          message="Gian hàng chưa cấu hình chính sách thuê"
+          title="Gian hàng chưa cấu hình chính sách thuê"
           description="Khi chưa có chính sách, các lượt đặt mới không có tiền cọc, không hỗ trợ giao tận nơi và không có ưu đãi giảm giá. Điền cấu hình bên dưới rồi bấm Lưu chính sách."
         />
       ) : null}
@@ -69,7 +62,7 @@ export function ShopPolicyForm({
           className={styles.dirtyBar}
           type="warning"
           showIcon
-          message="Bạn có các thay đổi chưa được áp dụng"
+          title="Bạn có các thay đổi chưa được áp dụng"
           action={
             <Button size="small" onClick={() => reset()} disabled={submitting}>
               Hủy bỏ

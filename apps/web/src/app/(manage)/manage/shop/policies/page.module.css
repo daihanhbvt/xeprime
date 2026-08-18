@@ -1,6 +1,9 @@
 .page {
+  width: 100%;
+  max-width: var(--xp-shell-form-max-width);
   min-width: 0;
   padding-bottom: var(--xp-space-lg);
+  margin-inline: auto;
 }
 
 .toolbar {
@@ -41,12 +44,6 @@
 .appliedPill > span:not(:last-child) {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-
-.topSave {
-  min-height: var(--xp-touch-target-min);
-  flex: 0 0 auto;
-  font-weight: var(--xp-font-weight-bold);
 }
 
 .vehicleTabs {
@@ -115,10 +112,6 @@
     flex: 1 1 auto;
   }
 
-  .topSave {
-    padding-inline: var(--xp-space-md);
-  }
-
   .vehicleTabs :global(.ant-tabs-nav-list) {
     width: 100%;
   }
@@ -128,15 +121,5 @@
     justify-content: center;
     margin: 0;
     padding-inline: var(--xp-space-sm);
-  }
-}
-
-@media (max-width: 360px) {
-  .toolbarMeta {
-    flex-wrap: wrap;
-  }
-
-  .topSave {
-    width: 100%;
   }
 }
