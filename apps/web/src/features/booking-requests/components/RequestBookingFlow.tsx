@@ -762,11 +762,12 @@ export function RequestBookingFlow({
               </div>
             ) : null}
 
-            <p className={styles.stepHint}>
-              {isLongTerm
-                ? 'Chọn gói thuê, sau đó cho gian hàng biết bạn muốn nhận xe khi nào.'
-                : 'Chọn thời gian thuê để kiểm tra xe còn trống. Có thể thuê theo ngày hoặc theo giờ.'}
-            </p>
+            {/* Dài hạn tự mang tiêu đề + nhãn riêng trong LongTermPackageStep — không lặp lại ở đây. */}
+            {isLongTerm ? null : (
+              <p className={styles.stepHint}>
+                Chọn thời gian thuê để kiểm tra xe còn trống. Có thể thuê theo ngày hoặc theo giờ.
+              </p>
+            )}
 
             {/*
               Thuê dài hạn là GÓI CỐ ĐỊNH (ADR 0011): đúng sáu gói, không có thời lượng tuỳ ý và

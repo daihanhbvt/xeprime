@@ -6,13 +6,13 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-lg);
+  gap: var(--xp-space-md);
 }
 
 .block {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
+  gap: var(--xp-space-xs);
 }
 
 .blockTitle {
@@ -39,9 +39,10 @@
  */
 .packages {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
-  gap: var(--xp-space-sm);
-  padding: 8px 4px 10px;
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  gap: 6px;
+  /* Chừa chỗ cho badge % ghim lệch góc và dấu tích tràn xuống — thiếu là sinh scroll. */
+  padding: 7px 4px 8px;
 }
 
 .package {
@@ -49,8 +50,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: var(--xp-space-sm) var(--xp-space-xs);
+  min-height: 38px;
+  padding: 6px var(--xp-space-xs);
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
@@ -75,7 +76,7 @@
 }
 
 .packageName {
-  font-size: var(--xp-font-size-body);
+  font-size: var(--xp-font-size-body-sm);
   font-weight: var(--xp-font-weight-semibold);
   color: var(--xp-color-text);
   /* "12 tháng" xuống dòng làm thẻ cuối cao hơn năm thẻ kia — giữ một dòng cho đều hàng. */
@@ -123,8 +124,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--xp-space-sm);
-  min-height: var(--xp-touch-target-min);
-  padding: var(--xp-space-sm) var(--xp-space-md);
+  min-height: 38px;
+  padding: 6px var(--xp-space-sm);
   border: 1px solid var(--xp-color-border);
   border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
@@ -203,8 +204,8 @@
 .summary {
   display: flex;
   flex-direction: column;
-  gap: var(--xp-space-sm);
-  padding: var(--xp-space-md);
+  gap: 6px;
+  padding: var(--xp-space-sm) var(--xp-space-md);
   border: 1px solid var(--xp-color-border-secondary);
   border-radius: var(--xp-border-radius-lg);
   background: var(--xp-color-bg-container);
@@ -265,7 +266,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--xp-space-md);
-  padding-top: var(--xp-space-sm);
+  padding-top: 6px;
   border-top: 1px dashed var(--xp-color-border);
 }
 
@@ -304,7 +305,7 @@
   align-items: center;
   gap: var(--xp-space-sm);
   margin: 0;
-  padding: var(--xp-space-sm) var(--xp-space-md);
+  padding: 6px var(--xp-space-sm);
   border-radius: var(--xp-border-radius);
   background: var(--xp-gold-wash);
   color: var(--xp-gold-deep);
@@ -315,10 +316,10 @@
 
 .trust {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: var(--xp-space-md);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--xp-space-sm);
   margin: 0;
-  padding-top: var(--xp-space-md);
+  padding-top: var(--xp-space-sm);
   border-top: 1px solid var(--xp-color-border-secondary);
   list-style: none;
 }
