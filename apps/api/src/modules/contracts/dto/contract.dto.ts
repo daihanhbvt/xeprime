@@ -44,6 +44,8 @@ export class ContractRentalDto {
    * Hành trình chuyến CÓ TÀI XẾ, đóng băng từ đơn lúc lập hợp đồng (17/08). Optional vì
    * snapshot đã ký trước đó không có các key này — FE chỉ render khi tồn tại.
    */
+  /** Gói thuê dài hạn (tháng lịch) — vắng ở hợp đồng ký trước ADR 0011 và ở dịch vụ khác. */
+  @ApiPropertyOptional({ type: Number, nullable: true }) longTermPackageMonths?: number | null;
   @ApiPropertyOptional({ type: String, nullable: true }) routeType?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) pickupAddress?: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) destination?: string | null;
@@ -56,7 +58,8 @@ export class ContractPricingDto {
   @ApiProperty({ description: 'MoneyString' }) totalAmount!: string;
   @ApiProperty({ description: 'MoneyString' }) depositAmount!: string;
   @ApiProperty({ description: 'MoneyString' }) paidAmount!: string;
-  @ApiProperty({ description: 'MoneyString — còn phải trả = tổng − đã trả' }) remainingAmount!: string;
+  @ApiProperty({ description: 'MoneyString — còn phải trả = tổng − đã trả' })
+  remainingAmount!: string;
 }
 
 export class ContractSnapshotDto {

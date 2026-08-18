@@ -4,6 +4,7 @@ import {
   MEMBERSHIP_STATUS,
   POLICY_SOURCE,
   PRICE_ROW,
+  LONG_TERM_PACKAGE_MONTHS,
   ROUTE_TYPE,
   SERVICE_TYPE,
   TENANT_ROLE,
@@ -82,7 +83,7 @@ function policyDto(over: Partial<SaveRentalPolicyDto> = {}): SaveRentalPolicyDto
     overtimeGraceMinutes: null,
     overtimeRoundingMinutes: null,
     discountEnabled: true,
-    discountTiers: [{ minDays: 3, percent: 5, note: 'Ưu đãi 3 ngày' }],
+    discountTiers: [{ minMonths: 1, percent: 5, note: 'Ưu đãi cam kết 1 tháng' }],
     ...over,
   };
 }
@@ -210,8 +211,8 @@ describe('chính sách shop — lưu, đọc, hợp lệ hoá', () => {
         ownerId,
         policyDto({
           discountTiers: [
-            { minDays: 7, percent: 5 },
-            { minDays: 7, percent: 10 },
+            { minMonths: 3, percent: 5 },
+            { minMonths: 3, percent: 10 },
           ],
         }),
       ),
@@ -290,10 +291,10 @@ describe('mốc biên bậc giao nhận', () => {
   });
 });
 
-describe('buildQuote — giảm giá chỉ áp lên tiền thuê', () => {
+describe('buildDailyQuote — giảm giá chỉ áp lên tiền thuê', () => {
   maybe('khuyến mãi trực tiếp 15% đi vào báo giá tự lái, không giảm cọc/phụ phí', async () => {
     const pickupAt = new Date('2027-03-01T03:00:00.000Z');
-    const quote = pricing.buildQuote({
+    const quote = pricing.buildDailyQuote({
       weekdayPrice: '600000',
       weekendPrice: null,
       pickupAt,
@@ -313,37 +314,36 @@ describe('buildQuote — giảm giá chỉ áp lên tiền thuê', () => {
     expect(quote.depositAmount).toBe('5000000');
   });
 
-  // Đợt 3 (17/08): bậc ưu đãi chỉ còn sống ở DỊCH VỤ DÀI HẠN — case cơ học "giảm không đụng
-  // phí giao nhận/cọc" chạy trên nhánh dài hạn fallback (7 ngày, chưa có giá tháng).
-  maybe('7 ngày × 900k, giảm 5%, giao nhận 50k: giảm KHÔNG đụng phí giao nhận/cọc', async () => {
-    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-    const pickupAt = inHours(24);
-    const quote = pricing.buildQuote({
-      weekdayPrice: '900000',
-      weekendPrice: null,
-      pickupAt,
-      returnAt: new Date(pickupAt.getTime() + 7 * 24 * HOUR),
-      policy,
-      delivery: { fee: '50000', label: 'Khoảng cách 8 km một chiều' },
-      serviceType: SERVICE_TYPE.LONG_TERM,
-      monthlyPrice: null,
-    });
+  // Bậc ưu đãi chỉ sống ở DỊCH VỤ DÀI HẠN (ADR 0011) — case cơ học "giảm không đụng phí giao
+  // nhận/cọc" chạy trên nhánh GÓI.
+  maybe(
+    'gói 1 tháng × 9tr, ưu đãi 5%, giao nhận 50k: giảm KHÔNG đụng phí giao nhận/cọc',
+    async () => {
+      const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+      const quote = pricing.buildLongTermPackageQuote({
+        monthlyPrice: '9000000',
+        packageMonths: 1,
+        policy,
+        delivery: { fee: '50000', label: 'Khoảng cách 8 km một chiều' },
+      });
 
-    expect(quote.days).toBe(7);
-    const row = (key: string) => quote.rows.find((r) => r.key === key)?.amount;
-    expect(row(PRICE_ROW.BASE)).toBe('6300000');
-    // 5% của 6.300.000 = 315.000 — tính trên TIỀN THUÊ, không phải trên (thuê + giao nhận).
-    expect(row(PRICE_ROW.DISCOUNT)).toBe('-315000');
-    expect(row(PRICE_ROW.DELIVERY)).toBe('50000');
-    expect(quote.totalAmount).toBe('6035000');
-    // Cọc đứng ngoài tổng và không chịu giảm giá.
-    expect(quote.depositAmount).toBe('5000000');
-    expect(quote.policySource).toBe(POLICY_SOURCE.SHOP);
-  });
+      // Gói không tính theo ngày — không có "số ngày tính tiền" nào để hiểu nhầm.
+      expect(quote.days).toBeNull();
+      const row = (key: string) => quote.rows.find((r) => r.key === key)?.amount;
+      expect(row(PRICE_ROW.BASE)).toBe('9000000');
+      // 5% của 9.000.000 = 450.000 — tính trên GIÁ CƠ SỞ GÓI, không phải trên (gói + giao nhận).
+      expect(row(PRICE_ROW.DISCOUNT)).toBe('-450000');
+      expect(row(PRICE_ROW.DELIVERY)).toBe('50000');
+      expect(quote.totalAmount).toBe('8600000');
+      // Cọc đứng ngoài tổng và không chịu giảm giá.
+      expect(quote.depositAmount).toBe('5000000');
+      expect(quote.policySource).toBe(POLICY_SOURCE.SHOP);
+    },
+  );
 
   maybe('xe chưa có giá → từ chối báo giá thay vì ra số 0 giả', async () => {
     expect(() =>
-      pricing.buildQuote({
+      pricing.buildDailyQuote({
         weekdayPrice: null,
         weekendPrice: null,
         pickupAt: inHours(24),
@@ -466,7 +466,7 @@ describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapsho
     await pricing.saveShopPolicy(
       tenantId,
       ownerId,
-      policyDto({ depositAmount: '9000000', discountTiers: [{ minDays: 3, percent: 50 }] }),
+      policyDto({ depositAmount: '9000000', discountTiers: [{ minMonths: 1, percent: 50 }] }),
     );
 
     const after = await prisma.booking.findUniqueOrThrow({
@@ -581,12 +581,139 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
   const PICKUP = new Date('2027-03-01T03:00:00.000Z');
   const day = (n: number) => new Date(PICKUP.getTime() + n * 24 * 60 * 60 * 1000);
 
-  maybe(
-    'long_term có giá tháng: đơn giá = tháng ÷ 30, bậc ưu đãi ÁP CHỒNG + trả % tiết kiệm',
-    async () => {
-      await pricing.saveShopPolicy(tenantId, ownerId, policyDto());
-      const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-      const breakdown = pricing.buildQuote({
+  maybe('gói 9 tháng: base 108tr − ưu đãi 20% = 86,4tr, bình quân 9,6tr/tháng', async () => {
+    // Dọn mọi chính sách của gian hàng (describe trước tạo bản ghi đè theo xe VÀ mặc định theo
+    // loại xe) để chính sách hiệu lực đúng là bộ mốc test này vừa lưu.
+    await prisma.rentalPolicy.deleteMany({ where: { tenantId } });
+    await pricing.saveShopPolicy(
+      tenantId,
+      ownerId,
+      policyDto({
+        discountTiers: [
+          { minMonths: 1, percent: 5 },
+          { minMonths: 3, percent: 15 },
+          { minMonths: 6, percent: 20 },
+        ],
+      }),
+    );
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const q = pricing.buildLongTermPackageQuote({
+      monthlyPrice: '12000000',
+      packageMonths: 9,
+      policy,
+    });
+
+    expect(q.longTerm).toMatchObject({
+      packageMonths: 9,
+      baseMonthlyPrice: '12000000',
+      basePackageAmount: '108000000',
+      durationDiscountPercent: 20,
+      durationDiscountAmount: '21600000',
+      finalPackageAmount: '86400000',
+      effectiveMonthlyAmount: '9600000',
+    });
+    expect(q.totalAmount).toBe('86400000');
+    expect(q.days).toBeNull();
+    expect(q.rows.find((r) => r.key === PRICE_ROW.BASE)).toMatchObject({
+      label: 'Giá cơ sở gói 9 tháng',
+      amount: '108000000',
+    });
+    expect(q.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)).toMatchObject({
+      label: 'Ưu đãi cam kết 9 tháng (20%)',
+      amount: '-21600000',
+    });
+    expect(q.rows.find((r) => r.key === PRICE_ROW.SUBTOTAL)?.amount).toBe('86400000');
+  });
+
+  maybe('mốc kế thừa và KHÔNG cộng dồn: 2 tháng ăn mốc 1, 9 và 12 ăn mốc 6', async () => {
+    // Dọn mọi chính sách của gian hàng (describe trước tạo bản ghi đè theo xe VÀ mặc định theo
+    // loại xe) để chính sách hiệu lực đúng là bộ mốc test này vừa lưu.
+    await prisma.rentalPolicy.deleteMany({ where: { tenantId } });
+    await pricing.saveShopPolicy(
+      tenantId,
+      ownerId,
+      policyDto({
+        discountTiers: [
+          { minMonths: 1, percent: 5 },
+          { minMonths: 3, percent: 15 },
+          { minMonths: 6, percent: 20 },
+        ],
+      }),
+    );
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const percentOf = (months: number) =>
+      pricing.buildLongTermPackageQuote({ monthlyPrice: '10000000', packageMonths: months, policy })
+        .longTerm?.durationDiscountPercent ?? null;
+
+    expect(percentOf(1)).toBe(5);
+    expect(percentOf(2)).toBe(5);
+    expect(percentOf(3)).toBe(15);
+    expect(percentOf(6)).toBe(20);
+    expect(percentOf(9)).toBe(20);
+    expect(percentOf(12)).toBe(20);
+
+    // Không cộng dồn: gói 12 tháng chỉ giảm 20%, không phải 5+15+20.
+    const q12 = pricing.buildLongTermPackageQuote({
+      monthlyPrice: '10000000',
+      packageMonths: 12,
+      policy,
+    });
+    expect(q12.longTerm?.durationDiscountAmount).toBe('24000000');
+    expect(q12.totalAmount).toBe('96000000');
+  });
+
+  maybe('bảng sáu gói khớp từng breakdown — nút chọn gói không lệch giá quote', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const packages = pricing.longTermPackages('10000000', policy);
+
+    expect(packages.map((x) => x.packageMonths)).toEqual([...LONG_TERM_PACKAGE_MONTHS]);
+    for (const option of packages) {
+      const q = pricing.buildLongTermPackageQuote({
+        monthlyPrice: '10000000',
+        packageMonths: option.packageMonths,
+        policy,
+      });
+      expect(q.longTerm).toEqual(option);
+      expect(q.totalAmount).toBe(option.finalPackageAmount);
+    }
+  });
+
+  maybe('gói không hợp lệ và xe chưa có giá tháng đều bị chặn ở máy giá', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    for (const bad of [0, 4, 5, 7, 10, 13]) {
+      expect(() =>
+        pricing.buildLongTermPackageQuote({ monthlyPrice: '10000000', packageMonths: bad, policy }),
+      ).toThrow(/Gói thuê dài hạn/);
+    }
+    expect(() =>
+      pricing.buildLongTermPackageQuote({ monthlyPrice: null, packageMonths: 3, policy }),
+    ).toThrow(/chưa niêm yết giá thuê dài hạn/);
+  });
+
+  maybe('khuyến mãi trực tiếp của TỰ LÁI không chạm giá gói dài hạn', async () => {
+    // discountPercent là tham số của máy giá NGÀY; nhánh gói không có đường nhận nó, nên
+    // giá gói bằng đúng base − ưu đãi cam kết dù xe đang treo khuyến mãi tự lái.
+    await prisma.vehicle.update({ where: { id: vehicleId }, data: { discountPercent: 30 } });
+    await prisma.rentalPolicy.deleteMany({ where: { tenantId } });
+    await pricing.saveShopPolicy(
+      tenantId,
+      ownerId,
+      policyDto({ discountTiers: [{ minMonths: 3, percent: 15 }] }),
+    );
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    const q = pricing.buildLongTermPackageQuote({
+      monthlyPrice: '10000000',
+      packageMonths: 3,
+      policy,
+    });
+    expect(q.totalAmount).toBe('25500000'); // 30tr − 15% = 25,5tr (không phải 30% của tự lái)
+    await prisma.vehicle.update({ where: { id: vehicleId }, data: { discountPercent: null } });
+  });
+
+  maybe('dài hạn đi nhầm vào máy giá NGÀY bị chặn thay vì ra số theo ngày', async () => {
+    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
+    expect(() =>
+      pricing.buildDailyQuote({
         weekdayPrice: '800000',
         weekendPrice: null,
         pickupAt: PICKUP,
@@ -594,57 +721,34 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
         policy,
         delivery: null,
         serviceType: SERVICE_TYPE.LONG_TERM,
-        monthlyPrice: '9000000',
-      });
-      expect(breakdown.days).toBe(10);
-      // 9tr ÷ 30 = 300k/ngày × 10 = 3tr; bậc 5% (từ 3 ngày) là ƯU ĐÃI DÀI HẠN nên áp chồng
-      // (gói cam kết kiểu Mioto — đợt 3): 3tr − 150k = 2.85tr.
-      expect(breakdown.totalAmount).toBe('2850000');
-      expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)?.amount).toBe('-150000');
-      // Chênh lệch so với giá ngày thường phải NHÌN THẤY được: 800k → 300k = tiết kiệm 63%,
-      // (800k − 300k) × 10 ngày = 5tr.
-      expect(breakdown.longTermSavingsPercent).toBe(63);
-      expect(breakdown.longTermSavingsAmount).toBe('5000000');
-    },
-  );
-
-  maybe('long_term dưới sàn 7 ngày bị máy giá chặn (nguồn chặn thật, FE chỉ preview)', async () => {
-    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-    expect(() =>
-      pricing.buildQuote({
-        weekdayPrice: '800000',
-        weekendPrice: null,
-        pickupAt: PICKUP,
-        returnAt: day(5),
-        policy,
-        delivery: null,
-        serviceType: SERVICE_TYPE.LONG_TERM,
-        monthlyPrice: '9000000',
       }),
-    ).toThrow(/tối thiểu 7 ngày/);
+    ).toThrow(/gói tháng/);
   });
 
-  maybe('long_term CHƯA khai giá tháng: rơi về máy giá ngày + bậc giảm như cũ', async () => {
-    const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-    const breakdown = pricing.buildQuote({
-      weekdayPrice: '800000',
-      weekendPrice: null,
-      pickupAt: PICKUP,
-      returnAt: day(10),
-      policy,
-      delivery: null,
-      serviceType: SERVICE_TYPE.LONG_TERM,
-      monthlyPrice: null,
+  maybe('% ưu đãi KHÔNG được giảm khi thời hạn tăng', async () => {
+    await expect(
+      pricing.saveShopPolicy(
+        tenantId,
+        ownerId,
+        policyDto({
+          discountTiers: [
+            { minMonths: 3, percent: 20 },
+            { minMonths: 6, percent: 10 },
+          ],
+        }),
+      ),
+    ).rejects.toMatchObject({
+      response: { message: expect.stringContaining('không được thấp hơn') },
     });
-    // 800k × 10 = 8tr, giảm 5% (mốc 3 ngày) = 7.6tr.
-    expect(breakdown.totalAmount).toBe('7600000');
+    // Trả chính sách về bộ mốc chuẩn cho các case sau.
+    await pricing.saveShopPolicy(tenantId, ownerId, policyDto());
   });
 
   maybe(
     'with_driver có giá riêng: đơn giá phẳng đã gồm tài xế, KHÔNG áp bậc (bậc là ưu đãi dài hạn)',
     async () => {
       const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-      const breakdown = pricing.buildQuote({
+      const breakdown = pricing.buildDailyQuote({
         weekdayPrice: '800000',
         weekendPrice: null,
         pickupAt: PICKUP,
@@ -667,7 +771,7 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
     'self_drive thuê dài ngày cũng KHÔNG còn ăn bậc — ưu đãi thuộc dịch vụ dài hạn',
     async () => {
       const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-      const breakdown = pricing.buildQuote({
+      const breakdown = pricing.buildDailyQuote({
         weekdayPrice: '800000',
         weekendPrice: null,
         pickupAt: PICKUP,
@@ -676,7 +780,7 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
         delivery: null,
         serviceType: SERVICE_TYPE.SELF_DRIVE,
       });
-      // 800k × 10 = 8tr nguyên — muốn hưởng ưu đãi thời gian thì đi dịch vụ Thuê dài hạn.
+      // 800k × 10 = 8tr nguyên — muốn ưu đãi cam kết thời hạn thì phải mua GÓI thuê dài hạn.
       expect(breakdown.totalAmount).toBe('8000000');
       expect(breakdown.rows.find((r) => r.key === PRICE_ROW.DISCOUNT)).toBeUndefined();
     },
@@ -685,7 +789,7 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
   maybe('with_driver giá theo LỘ TRÌNH: nội thành/liên tỉnh/1 chiều ăn đúng cột giá', async () => {
     const policy = await pricing.effectivePolicy(tenantId, vehicleId);
     const quoteFor = (routeType: string) =>
-      pricing.buildQuote({
+      pricing.buildDailyQuote({
         weekdayPrice: '800000',
         weekendPrice: null,
         pickupAt: PICKUP,
@@ -710,7 +814,7 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
 
   maybe('with_driver THIẾU giá route: rơi về bậc gần nhất + estimateNote (tạm tính)', async () => {
     const policy = await pricing.effectivePolicy(tenantId, vehicleId);
-    const breakdown = pricing.buildQuote({
+    const breakdown = pricing.buildDailyQuote({
       weekdayPrice: '800000',
       weekendPrice: null,
       pickupAt: PICKUP,
@@ -745,13 +849,12 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
 
       const pickupAt = new Date('2027-05-10T02:00:00.000Z');
       const returnAt = new Date('2027-05-12T02:00:00.000Z');
-      const publicQuote = await pricing.publicQuote(
-        vehicleId,
-        pickupAt.toISOString(),
-        returnAt.toISOString(),
-        SERVICE_TYPE.WITH_DRIVER,
-        ROUTE_TYPE.INTER_CITY,
-      );
+      const publicQuote = await pricing.publicQuote(vehicleId, {
+        pickupAt: pickupAt.toISOString(),
+        returnAt: returnAt.toISOString(),
+        serviceType: SERVICE_TYPE.WITH_DRIVER,
+        routeType: ROUTE_TYPE.INTER_CITY,
+      });
 
       // Seed thẳng yêu cầu (spec này stub OTP/auth rỗng — không đi qua submitPublic).
       const requestId = newId();

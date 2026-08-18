@@ -313,61 +313,17 @@ export function serviceTypesLabel(values: readonly string[]): string {
 }
 
 /**
- * Sàn thời lượng một chuyến THUÊ DÀI HẠN (ngày) — khách chọn ngày cụ thể, tối thiểu 1 tuần
- * (chốt 17/08). Dùng chung FE (yup + minDays của control chọn ngày) lẫn BE (quote + tạo
- * yêu cầu — backend là nguồn chặn thật).
- */
-export const LONG_TERM_MIN_DAYS = 7;
-
-/**
- * Dải GỢI Ý giá tháng cho chủ xe (17/08 đợt 3): 65–80% × giá ngày thường × 30 — vùng chiết
- * khấu 20–35% phổ biến của thuê dài hạn. Chỉ là gợi ý hiển thị ở manage, không ràng buộc.
+ * Dải GỢI Ý giá tháng cho chủ xe ở màn "Giá & chính sách": 65–80% × (giá ngày thường × 30) —
+ * vùng chiết khấu 20–35% phổ biến của thuê dài hạn.
+ *
+ * Đây là công cụ ĐỊNH GIÁ cho chủ xe, KHÔNG phải khuyến mãi hiển thị cho khách: khách chỉ
+ * bao giờ nhìn giá gói thật và ưu đãi cam kết thời hạn (`./../long-term`). Con số 30 ngày ở
+ * đây là quy ước gợi ý, tuyệt đối không dùng để tính lịch hay giá gói.
  */
 export const LONG_TERM_SUGGEST_RATIO = { min: 0.65, max: 0.8 } as const;
 
-/** Một "tháng" thuê dài hạn = 30 ngày — cùng quy ước với máy giá (giá tháng ÷ 30). */
-export const LONG_TERM_MONTH_DAYS = 30;
-
-/**
- * Các gói thuê dài hạn chọn nhanh trong modal (đợt 4 — mô hình gói Mioto 1/3/6/9/12 tháng).
- * Khách vẫn tuỳ chỉnh ngày tự do (sàn LONG_TERM_MIN_DAYS); gói chỉ là lối tắt đặt thời lượng.
- */
-export const LONG_TERM_PACKAGE_MONTHS = [1, 3, 6, 9, 12] as const;
-
-/**
- * % ưu đãi của một thời lượng thuê (ngày) theo mốc ưu đãi dài hạn của xe — mốc cao nhất mà
- * thời lượng đạt tới (cùng cách chọn tier với máy giá). Null = không mốc nào áp.
- */
-export function longTermTierPercentFor(
-  tiers: readonly { minDays: number; percent: number }[] | null | undefined,
-  days: number,
-): number | null {
-  if (!tiers?.length) return null;
-  const hit = [...tiers].filter((t) => days >= t.minDays).sort((a, b) => b.minDays - a.minDays)[0];
-  return hit ? hit.percent : null;
-}
-
-/** Đơn giá NGÀY quy đổi của giá tháng (÷30, làm tròn đồng) — cùng công thức với máy giá. */
-export function longTermDailyRate(monthlyPrice: string | number): number {
-  return Math.round(Number(monthlyPrice) / 30);
-}
-
-/**
- * % tiết kiệm của thuê DÀI HẠN so với giá ngày thường (dương = rẻ hơn): badge "-17%" trên tab
- * dịch vụ, dòng "tiết kiệm X₫" trong quote, và gợi ý giá ở manage cùng đọc một công thức.
- * Trả null khi thiếu dữ liệu hoặc giá tháng KHÔNG rẻ hơn (không có gì để quảng cáo).
- */
-export function longTermSavingsPercent(
-  weekdayPrice: string | number | null | undefined,
-  monthlyPrice: string | number | null | undefined,
-): number | null {
-  if (weekdayPrice == null || monthlyPrice == null) return null;
-  const weekday = Number(weekdayPrice);
-  if (!Number.isFinite(weekday) || weekday <= 0) return null;
-  const rate = longTermDailyRate(monthlyPrice);
-  if (!Number.isFinite(rate) || rate <= 0 || rate >= weekday) return null;
-  return Math.round(((weekday - rate) / weekday) * 100);
-}
+/** Số ngày quy ước của một tháng — CHỈ cho gợi ý giá ở màn cấu hình của chủ xe. */
+export const LONG_TERM_PRICE_HINT_DAYS_PER_MONTH = 30;
 
 /**
  * Nhiên liệu — thuộc tính dữ liệu của xe (không phải trạng thái), nên chỉ có nhãn, không màu.

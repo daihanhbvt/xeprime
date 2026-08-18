@@ -31,7 +31,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Đăng ký bằng email + mật khẩu */
+        /** Đăng ký bằng số điện thoại + mật khẩu */
         post: operations["AuthController_register"];
         delete?: never;
         options?: never;
@@ -615,7 +615,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Báo giá thuê theo khoảng ngày (chưa gồm phí giao nhận) */
+        /** Báo giá thuê — theo khoảng ngày, hoặc theo GÓI tháng lịch với thuê dài hạn */
         get: operations["PublicQuoteController_quote"];
         put?: never;
         post?: never;
@@ -1967,7 +1967,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch, phí giao nhận 0) */
+        /**
+         * Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch, phí giao nhận 0)
+         * @description Thuê dài hạn: body bắt buộc scheduledPickupAt — gian hàng chốt giờ nhận, server tính giờ trả theo gói tháng lịch (ADR 0011). Trùng lịch → 409, yêu cầu vẫn chờ duyệt.
+         */
         post: operations["BookingRequestsController_approve"];
         delete?: never;
         options?: never;
@@ -3035,8 +3038,8 @@ export interface components {
             password: string;
             /** @example Nguyễn Văn A */
             displayName: string;
-            /** @example ban@congty.vn */
-            email: string;
+            /** @example 0901234567 */
+            phone: string;
         };
         LoginDto: {
             /**
@@ -3433,13 +3436,20 @@ export interface components {
             features: components["schemas"]["FacetBucketDto"][];
             amenities: components["schemas"]["AmenityFacetsDto"];
         };
-        DiscountTierDto: {
-            /** @description Số ngày thuê tối thiểu — các mốc phải tăng dần nghiêm ngặt */
-            minDays: number;
-            /** @description Mức giảm % (1–100), CHỈ áp lên tiền thuê cơ bản */
-            percent: number;
-            /** @description Ghi chú hiển thị */
-            note?: string;
+        LongTermPackageOptionDto: {
+            /** @enum {number} */
+            packageMonths: 1 | 2 | 3 | 6 | 9 | 12;
+            /** @description Giá dài hạn cơ sở cho MỘT tháng (VND string) */
+            baseMonthlyPrice: string;
+            /** @description baseMonthlyPrice × packageMonths */
+            basePackageAmount: string;
+            /** @description % mốc cam kết đang áp — null = không mốc nào áp cho gói này */
+            durationDiscountPercent?: number | null;
+            durationDiscountAmount: string;
+            /** @description Giá gói sau ưu đãi — số khách thực trả (trước cọc) */
+            finalPackageAmount: string;
+            /** @description finalPackageAmount ÷ packageMonths */
+            effectiveMonthlyAmount: string;
         };
         PublicListingDetailDto: {
             id: string;
@@ -3496,7 +3506,7 @@ export interface components {
             images: string[];
             /** @description Key tiện ích (VEHICLE_FEATURE_LABEL) */
             features: string[];
-            longTermDiscountTiers: components["schemas"]["DiscountTierDto"][];
+            longTermPackages: components["schemas"]["LongTermPackageOptionDto"][];
         };
         PublicDestinationDto: {
             /** @description Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode` */
@@ -3547,6 +3557,25 @@ export interface components {
              */
             fee: string;
         };
+        DiscountTierDto: {
+            /**
+             * @description Số tháng cam kết tối thiểu — phải là một gói thuê hợp lệ
+             * @enum {number}
+             */
+            minMonths: 1 | 2 | 3 | 6 | 9 | 12;
+            /** @description Mức giảm % (1–100), CHỈ áp lên giá cơ sở của gói dài hạn */
+            percent: number;
+            /** @description Ghi chú hiển thị */
+            note?: string;
+        };
+        LegacyDiscountTierDto: {
+            /** @description Số ngày của mốc cũ */
+            minDays: number;
+            percent: number;
+            note?: string | null;
+            /** @description Luôn true — cờ nhận diện mốc cũ chưa quy đổi */
+            legacy: boolean;
+        };
         RentalPolicyValuesDto: {
             depositAmount: string;
             deliveryEnabled: boolean;
@@ -3556,7 +3585,10 @@ export interface components {
             overtimeGraceMinutes?: number | null;
             overtimeRoundingMinutes?: number | null;
             discountEnabled: boolean;
+            /** @description Mốc ưu đãi canonical (theo tháng) */
             discountTiers: components["schemas"]["DiscountTierDto"][];
+            /** @description Mốc cũ theo ngày không quy đổi được — chỉ để cảnh báo, KHÔNG tính giá */
+            legacyDiscountTiers: components["schemas"]["LegacyDiscountTierDto"][];
             /** @description ISO — mốc phát hiện báo giá/preview cũ */
             updatedAt: string;
         };
@@ -3596,8 +3628,10 @@ export interface components {
             amount: string;
         };
         QuoteBreakdownDto: {
-            /** @description Số ngày tính tiền */
-            days: number;
+            /** @description Số ngày tính tiền — null với báo giá theo GÓI dài hạn (không tính theo ngày) */
+            days?: number | null;
+            /** @description Cấu tạo giá gói — khác null ⇒ đây là báo giá THUÊ DÀI HẠN theo gói tháng lịch */
+            longTerm?: components["schemas"]["LongTermPackageOptionDto"] | null;
             rows: components["schemas"]["PriceBreakdownRowDto"][];
             /** @description Tổng khách trả TRƯỚC cọc */
             totalAmount: string;
@@ -3608,8 +3642,6 @@ export interface components {
             /** @description updatedAt của chính sách hiệu lực */
             policyUpdatedAt?: string | null;
             estimateNote?: string | null;
-            longTermSavingsPercent?: number | null;
-            longTermSavingsAmount?: string | null;
         };
         DeliverySummaryDto: {
             enabled: boolean;
@@ -4858,9 +4890,14 @@ export interface components {
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
+            /**
+             * @description Gói thuê dài hạn (tháng lịch) — null với dịch vụ khác và đơn dài hạn LEGACY
+             * @enum {number|null}
+             */
+            longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12 | null;
             /** @description ISO-8601 UTC */
             pickupAt: string;
-            /** @description ISO-8601 UTC */
+            /** @description ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói */
             returnAt: string;
             /** @description Tiền dạng string — ADR 0007 */
             totalAmount: string;
@@ -4885,7 +4922,10 @@ export interface components {
             overtimeGraceMinutes?: number | null;
             overtimeRoundingMinutes?: number | null;
             discountEnabled: boolean;
+            /** @description Mốc ưu đãi canonical (theo tháng) */
             discountTiers: components["schemas"]["DiscountTierDto"][];
+            /** @description Mốc cũ theo ngày không quy đổi được — chỉ để cảnh báo, KHÔNG tính giá */
+            legacyDiscountTiers: components["schemas"]["LegacyDiscountTierDto"][];
             /** @description ISO — mốc phát hiện báo giá/preview cũ */
             updatedAt: string;
             /** @enum {string} */
@@ -4915,9 +4955,14 @@ export interface components {
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
+            /**
+             * @description Gói thuê dài hạn (tháng lịch) — null với dịch vụ khác và đơn dài hạn LEGACY
+             * @enum {number|null}
+             */
+            longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12 | null;
             /** @description ISO-8601 UTC */
             pickupAt: string;
-            /** @description ISO-8601 UTC */
+            /** @description ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói */
             returnAt: string;
             /** @description Tiền dạng string — ADR 0007 */
             totalAmount: string;
@@ -4963,8 +5008,10 @@ export interface components {
             destination?: string;
             /** @description Nhận xe (ISO-8601) */
             pickupAt: string;
-            /** @description Trả xe (ISO-8601), phải sau nhận xe */
-            returnAt: string;
+            /** @enum {number} */
+            longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
+            /** @description Trả xe (ISO-8601) — không dùng cho long_term */
+            returnAt?: string;
             /**
              * @description Tiền thuê gốc, string thập phân — ADR 0007
              * @example 600000
@@ -5372,12 +5419,25 @@ export interface components {
             customerName: string;
             customerPhone: string;
             customerEmail?: string | null;
+            /** @description ISO-8601 UTC — null với yêu cầu dài hạn chưa chốt lịch */
+            pickupAt?: string | null;
             /** @description ISO-8601 UTC */
-            pickupAt: string;
-            /** @description ISO-8601 UTC */
-            returnAt: string;
+            returnAt?: string | null;
             /** @enum {string} */
             serviceType: "self_drive" | "with_driver" | "long_term";
+            /**
+             * @description Gói thuê dài hạn khách chọn — null ở yêu cầu dài hạn LEGACY
+             * @enum {number|null}
+             */
+            longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12 | null;
+            /** @enum {string|null} */
+            pickupPreference?: "within_7_days" | "specific_date" | null;
+            /** @description YYYY-MM-DD (giờ VN) */
+            requestedPickupDate?: string | null;
+            /** @description YYYY-MM-DD (giờ VN) */
+            pickupWindowStartDate?: string | null;
+            /** @description YYYY-MM-DD (giờ VN) */
+            pickupWindowEndDate?: string | null;
             /** @enum {string|null} */
             routeType?: "in_city" | "inter_city" | "inter_city_one_way" | null;
             pickupAddress?: string | null;
@@ -5398,6 +5458,12 @@ export interface components {
             data: components["schemas"]["BookingRequestDto"][];
             meta: components["schemas"]["PaginationMetaDto"];
         };
+        ApproveBookingRequestDto: {
+            /** @description Ngày/giờ nhận xe chính xác (ISO-8601) — BẮT BUỘC với yêu cầu thuê dài hạn */
+            scheduledPickupAt?: string;
+            /** @enum {number} */
+            longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
+        };
         RejectBookingRequestDto: {
             reason?: string;
         };
@@ -5410,10 +5476,16 @@ export interface components {
             customerPhone: string;
             /** @example a@example.com */
             customerEmail?: string;
-            /** @description Nhận xe (ISO-8601) */
-            pickupAt: string;
-            /** @description Trả xe (ISO-8601), phải sau nhận xe */
-            returnAt: string;
+            /** @description Nhận xe (ISO-8601) — không dùng cho long_term */
+            pickupAt?: string;
+            /** @description Trả xe (ISO-8601) — không dùng cho long_term */
+            returnAt?: string;
+            /** @enum {number} */
+            longTermPackageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
+            /** @enum {string} */
+            pickupPreference?: "within_7_days" | "specific_date";
+            /** @description Ngày muốn nhận xe (YYYY-MM-DD) */
+            requestedPickupDate?: string;
             /** @enum {string} */
             serviceType?: "self_drive" | "with_driver" | "long_term";
             /** @enum {string} */
@@ -5512,10 +5584,18 @@ export interface components {
             vehicle: components["schemas"]["CustomerTripVehicleDto"];
             shop: components["schemas"]["CustomerTripShopDto"];
             /** @description ISO-8601 UTC */
-            pickupAt: string;
+            pickupAt?: string | null;
             /** @description ISO-8601 UTC */
-            returnAt: string;
+            returnAt?: string | null;
             serviceType: string;
+            longTermPackageMonths?: number | null;
+            pickupPreference?: string | null;
+            /** @description YYYY-MM-DD */
+            requestedPickupDate?: string | null;
+            /** @description YYYY-MM-DD */
+            pickupWindowStartDate?: string | null;
+            /** @description YYYY-MM-DD */
+            pickupWindowEndDate?: string | null;
             routeType?: string | null;
             pickupAddress?: string | null;
             destination?: string | null;
@@ -5608,10 +5688,18 @@ export interface components {
             vehicle: components["schemas"]["CustomerTripVehicleDto"];
             shop: components["schemas"]["CustomerTripShopDto"];
             /** @description ISO-8601 UTC */
-            pickupAt: string;
+            pickupAt?: string | null;
             /** @description ISO-8601 UTC */
-            returnAt: string;
+            returnAt?: string | null;
             serviceType: string;
+            longTermPackageMonths?: number | null;
+            pickupPreference?: string | null;
+            /** @description YYYY-MM-DD */
+            requestedPickupDate?: string | null;
+            /** @description YYYY-MM-DD */
+            pickupWindowStartDate?: string | null;
+            /** @description YYYY-MM-DD */
+            pickupWindowEndDate?: string | null;
             routeType?: string | null;
             pickupAddress?: string | null;
             destination?: string | null;
@@ -5814,6 +5902,7 @@ export interface components {
             returnAt: string;
             /** @description Số ngày thuê (làm tròn lên) */
             days: number;
+            longTermPackageMonths?: number | null;
             routeType?: string | null;
             pickupAddress?: string | null;
             destination?: string | null;
@@ -7649,11 +7738,12 @@ export interface operations {
     };
     PublicQuoteController_quote: {
         parameters: {
-            query: {
-                /** @description ISO datetime nhận xe */
-                pickupAt: string;
-                /** @description ISO datetime trả xe */
-                returnAt: string;
+            query?: {
+                /** @description ISO datetime nhận xe (không dùng cho long_term) */
+                pickupAt?: string;
+                /** @description ISO datetime trả xe (không dùng cho long_term) */
+                returnAt?: string;
+                packageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
                 serviceType?: "self_drive" | "with_driver" | "long_term";
                 routeType?: "in_city" | "inter_city" | "inter_city_one_way";
             };
@@ -7786,10 +7876,11 @@ export interface operations {
             query: {
                 /** @description ID xe (ULID) thuộc gian hàng hiện tại */
                 vehicleId: string;
-                /** @description Nhận xe, ISO-8601 UTC */
-                pickupAt: string;
-                /** @description Trả xe, ISO-8601 UTC */
-                returnAt: string;
+                /** @description Nhận xe, ISO-8601 UTC (không dùng cho long_term) */
+                pickupAt?: string;
+                /** @description Trả xe, ISO-8601 UTC (không dùng cho long_term) */
+                returnAt?: string;
+                packageMonths?: 1 | 2 | 3 | 6 | 9 | 12;
                 serviceType?: "self_drive" | "with_driver" | "long_term";
                 routeType?: "in_city" | "inter_city" | "inter_city_one_way";
             };
@@ -10111,7 +10202,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApproveBookingRequestDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {

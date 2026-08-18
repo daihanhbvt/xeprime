@@ -1,9 +1,13 @@
 import {
-  LONG_TERM_MIN_DAYS,
+  LONG_TERM_PACKAGE_MONTHS,
+  PICKUP_PREFERENCE,
+  PICKUP_PREFERENCE_VALUES,
   ROUTE_TYPE,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
+  type LongTermPackageMonths,
+  type PickupPreference,
   type RouteType,
   type ServiceType,
 } from '@xeprime/types';
@@ -14,13 +18,6 @@ import * as yup from 'yup';
  * Schema form "Yêu cầu thuê" trên marketplace (yup — báo lỗi sớm; validate thật ở BE).
  * Ngày là `Dayjs` (AntD DatePicker); bắt buộc qua `.test()` để giữ type `Dayjs | null`.
  */
-const requiredDate = (message: string) =>
-  yup
-    .mixed<Dayjs>()
-    .nullable()
-    .defined()
-    .test('required', message, (value) => value != null);
-
 /** Hai cách nhận xe — giá trị đi vào form, nhãn ở component. */
 export const PICKUP_METHOD = {
   SELF: 'self',
@@ -44,15 +41,9 @@ export const requestFormSchema = yup.object({
     .default('')
     .transform((v: string) => v ?? ''),
   /** Dịch vụ của chuyến (17/08) — component chỉ đưa ra lựa chọn nằm trong serviceTypes của xe. */
-  serviceType: yup
-    .mixed<ServiceType>()
-    .oneOf(SERVICE_TYPE_VALUES)
-    .default(SERVICE_TYPE.SELF_DRIVE),
+  serviceType: yup.mixed<ServiceType>().oneOf(SERVICE_TYPE_VALUES).default(SERVICE_TYPE.SELF_DRIVE),
   /** Lộ trình — bắt buộc khi chuyến CÓ TÀI XẾ. */
-  routeType: yup
-    .mixed<RouteType>()
-    .oneOf(ROUTE_TYPE_VALUES)
-    .default(ROUTE_TYPE.IN_CITY),
+  routeType: yup.mixed<RouteType>().oneOf(ROUTE_TYPE_VALUES).default(ROUTE_TYPE.IN_CITY),
   /** Địa chỉ đón khách — bắt buộc khi có tài xế (xe đến đón, khác giao xe tận nơi). */
   pickupAddress: yup
     .string()
@@ -74,21 +65,56 @@ export const requestFormSchema = yup.object({
         serviceType === SERVICE_TYPE.WITH_DRIVER && routeType !== ROUTE_TYPE.IN_CITY,
       then: (s) => s.required('Nhập điểm đến'),
     }),
-  pickupAt: requiredDate('Chọn thời gian nhận xe'),
-  returnAt: requiredDate('Chọn thời gian trả xe')
+  /**
+   * Khoảng thuê chỉ tồn tại với dịch vụ tính theo NGÀY. Thuê dài hạn đi mô hình GÓI: khách chọn
+   * gói + nguyện vọng ngày nhận, ngày trả do server tính khi gian hàng duyệt (ADR 0011).
+   */
+  pickupAt: yup
+    .mixed<Dayjs>()
+    .nullable()
+    .defined()
+    .test('required', 'Chọn thời gian nhận xe', (value, ctx) =>
+      ctx.parent.serviceType === SERVICE_TYPE.LONG_TERM ? true : value != null,
+    ),
+  returnAt: yup
+    .mixed<Dayjs>()
+    .nullable()
+    .defined()
+    .test('required', 'Chọn thời gian trả xe', (value, ctx) =>
+      ctx.parent.serviceType === SERVICE_TYPE.LONG_TERM ? true : value != null,
+    )
     .test('after-pickup', 'Thời gian trả phải sau thời gian nhận', (value, ctx) => {
       const pickup = ctx.parent.pickupAt as Dayjs | null;
       return !value || !pickup || value.isAfter(pickup);
-    })
-    .test(
-      'long-term-min-days',
-      `Thuê dài hạn tối thiểu ${LONG_TERM_MIN_DAYS} ngày`,
-      (value, ctx) => {
-        const pickup = ctx.parent.pickupAt as Dayjs | null;
-        if (!value || !pickup || ctx.parent.serviceType !== SERVICE_TYPE.LONG_TERM) return true;
-        // Cùng công thức đếm ngày với backend (`ceil Δ/24h`) — hai tầng không lệch ranh giới.
-        return Math.ceil(value.diff(pickup, 'minute') / 1440) >= LONG_TERM_MIN_DAYS;
-      },
+    }),
+
+  /** Gói thuê dài hạn — bắt buộc khi dịch vụ là dài hạn; chỉ nhận đúng sáu gói. */
+  longTermPackageMonths: yup
+    .mixed<LongTermPackageMonths>()
+    .nullable()
+    .defined()
+    .default(null)
+    .test('package-required', 'Chọn gói thuê', (value, ctx) =>
+      ctx.parent.serviceType === SERVICE_TYPE.LONG_TERM
+        ? value != null && (LONG_TERM_PACKAGE_MONTHS as readonly number[]).includes(value)
+        : true,
+    ),
+  /** Nguyện vọng nhận xe — bắt buộc khi dài hạn. */
+  pickupPreference: yup
+    .mixed<PickupPreference>()
+    .oneOf(PICKUP_PREFERENCE_VALUES)
+    .default(PICKUP_PREFERENCE.WITHIN_7_DAYS),
+  /** Ngày khách muốn nhận — chỉ khi chọn "ngày cụ thể" (chỉ NGÀY, giờ do gian hàng chốt). */
+  requestedPickupDate: yup
+    .mixed<Dayjs>()
+    .nullable()
+    .defined()
+    .default(null)
+    .test('required-when-specific', 'Chọn ngày muốn nhận xe', (value, ctx) =>
+      ctx.parent.serviceType === SERVICE_TYPE.LONG_TERM &&
+      ctx.parent.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE
+        ? value != null
+        : true,
     ),
   /**
    * Hình thức nhận xe. Wave 9 bỏ hẳn công tắc "giao tận nơi" + báo giá theo khoảng cách; giờ là

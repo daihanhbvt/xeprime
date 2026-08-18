@@ -43,14 +43,22 @@ export const fetchCalendarDailyPrices = (query: QueryParams): Promise<CalendarDa
  * (gồm cả giá riêng theo ngày) nhưng scope theo tenant, xe chưa lên chợ vẫn báo được.
  * Xe chưa cấu hình giá → 400, luồng rơi về nhập tiền tay.
  */
-export const fetchCalendarQuote = (query: {
-  vehicleId: string;
-  pickupAt: string;
-  returnAt: string;
-  /** Dịch vụ + lộ trình của đơn sắp lập (17/08) — giá dài hạn/có tài xế tính đúng máy giá. */
-  serviceType?: string;
-  routeType?: string;
-}): Promise<CalendarQuote> => apiGet<CalendarQuote>('/calendar/quote', query);
+/**
+ * Báo giá nội bộ cho đơn sắp lập. Hai hình thái, đúng hai mô hình giá: dịch vụ theo NGÀY gửi
+ * khoảng nhận–trả; THUÊ DÀI HẠN gửi `packageMonths` và không gửi ngày (ADR 0011).
+ */
+export type CalendarQuoteParams =
+  | { vehicleId: string; serviceType: 'long_term'; packageMonths: number }
+  | {
+      vehicleId: string;
+      pickupAt: string;
+      returnAt: string;
+      serviceType?: string;
+      routeType?: string;
+    };
+
+export const fetchCalendarQuote = (query: CalendarQuoteParams): Promise<CalendarQuote> =>
+  apiGet<CalendarQuote>('/calendar/quote', query);
 
 // ── Khoá xe (blocked_range) ────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@
 
 import { Button, Card, Skeleton } from 'antd';
 import Link from 'next/link';
-import { PERMISSION, SERVICE_TYPE, routeTypeLabel } from '@xeprime/types';
+import { longTermPackageLabel, PERMISSION, routeTypeLabel, SERVICE_TYPE } from '@xeprime/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
@@ -180,7 +180,15 @@ export function BookingDetailContent({
               </div>
               <div className={styles.row}>
                 <dt>Thời lượng</dt>
-                <dd>{formatRentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
+                <dd>
+                  {/*
+                    Đơn THUÊ DÀI HẠN dài đúng bằng GÓI (tháng lịch — ADR 0011). Nói "92 ngày" cho
+                    gói 3 tháng là đúng số nhưng sai đơn vị nghiệp vụ: gói mới là thứ hai bên ký.
+                  */}
+                  {data.longTermPackageMonths
+                    ? `Gói ${longTermPackageLabel(data.longTermPackageMonths)}`
+                    : formatRentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}
+                </dd>
               </div>
               {/*
                 Mốc THỰC TẾ chỉ hiện khi đã có — chưa giao xe mà bày một dòng trống là mời người

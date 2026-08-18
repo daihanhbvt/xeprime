@@ -27,6 +27,16 @@
 > → không gán), `GET /drivers/assignable` trả cờ bận/hết hạn để Select disable kèm lý do.
 > Verify: Jest 519 (5 spec mới) + vitest 1236, lint scoped sạch, seed idempotent, luồng thật
 > (quote 3 route 2.6/3.2/4.2tr, fallback + note, sàn 7 ngày 400, screenshot 3 trang).
+>
+> **18/08 — thuê dài hạn chuyển sang GÓI CỐ ĐỊNH ([ADR 0011](decisions/0011-long-term-fixed-packages.md)).**
+> Sáu gói 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** do server tính (client không
+> gửi); khách chỉ nêu nguyện vọng nhận xe (`within_7_days` server tự tính khoảng | `specific_date`),
+> gian hàng chốt ngày giờ chính xác trong hộp thoại duyệt (trùng lịch → 409, yêu cầu vẫn chờ duyệt).
+> Máy giá tách `buildDailyQuote` ↔ `buildLongTermPackageQuote`; mốc ưu đãi canonical theo THÁNG,
+> không cộng dồn, % không được giảm khi hạn tăng. Gỡ sạch cách trình bày gây nhầm: badge `-38%`,
+> dòng "tiết kiệm so với thuê theo ngày", giá + khuyến mãi TỰ LÁI hiện trong ngữ cảnh dài hạn.
+> Dữ liệu cũ: chỉ backfill gói khi khớp khít tháng lịch; mốc ưu đãi theo ngày không quy đổi được
+> giữ nguyên dạng `legacy` (máy giá bỏ qua, form cảnh báo); snapshot giá lịch sử KHÔNG sửa.
 > Plan: `docs/plans/kind-noodling-marble.md`.
 
 ---

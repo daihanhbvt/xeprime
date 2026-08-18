@@ -918,6 +918,12 @@ model Booking {
   pickupAddress  String?   @map("pickup_address") @db.Text
   /// Điểm đến (with_driver liên tỉnh).
   destination    String?   @db.Text
+  /// Gói thuê dài hạn đã chốt (tháng lịch: 1|2|3|6|9|12 — CHECK ở migration, nguồn giá trị là
+  /// LONG_TERM_PACKAGE_MONTHS). Chỉ khác NULL khi service_type = 'long_term'; đơn dài hạn
+  /// LỊCH SỬ không khớp gói nào giữ NULL và giữ nguyên ngày cũ.
+  longTermPackageMonths Int? @map("long_term_package_months") @db.SmallInt
+  /// Đơn LUÔN có lịch chính xác — kể cả dài hạn (gian hàng chốt giờ nhận khi duyệt, server
+  /// tính giờ trả = nhận + gói tháng lịch).
   pickupAt       DateTime  @map("pickup_at") @db.Timestamptz(3)
   returnAt       DateTime  @map("return_at") @db.Timestamptz(3)
   actualPickupAt DateTime? @map("actual_pickup_at") @db.Timestamptz(3)
@@ -998,8 +1004,24 @@ model BookingRequest {
   pickupAddress String?   @map("pickup_address") @db.Text
   /// Điểm đến (with_driver liên tỉnh).
   destination   String?   @db.Text
-  pickupAt      DateTime  @map("pickup_at") @db.Timestamptz(3)
-  returnAt      DateTime  @map("return_at") @db.Timestamptz(3)
+  /// Gói thuê dài hạn khách chọn (tháng lịch 1|2|3|6|9|12). BẮT BUỘC với yêu cầu dài hạn mới;
+  /// NULL ở bản ghi dài hạn LEGACY (khách từng tự chọn khoảng ngày) — luồng duyệt bắt gian
+  /// hàng chọn gói khi xử lý, migration KHÔNG làm tròn ngầm.
+  longTermPackageMonths Int? @map("long_term_package_months") @db.SmallInt
+  /// @xeprime/types → PickupPreference (within_7_days | specific_date) — chỉ có nghĩa với dài
+  /// hạn. Hai nhánh dữ liệu dưới LOẠI TRỪ nhau (CHECK ở migration).
+  pickupPreference String? @map("pickup_preference") @db.VarChar(30)
+  /// Ngày khách muốn nhận (pickup_preference = specific_date) — chỉ NGÀY, giờ chốt khi duyệt.
+  requestedPickupDate DateTime? @map("requested_pickup_date") @db.Date
+  /// Khoảng nhận linh hoạt do SERVER tính lúc nhận yêu cầu (pickup_preference =
+  /// within_7_days): từ ngày mai tới hết ngày thứ 7. Client không được tự khai.
+  pickupWindowStartDate DateTime? @map("pickup_window_start_date") @db.Date
+  pickupWindowEndDate   DateTime? @map("pickup_window_end_date") @db.Date
+  /// NULL với yêu cầu DÀI HẠN mô hình gói (chưa có lịch chính xác — gian hàng chốt khi duyệt);
+  /// bắt buộc với mọi dịch vụ khác (CHECK ở migration). Lịch đã chốt nằm trên Booking, truy
+  /// ngược qua booking_id.
+  pickupAt      DateTime? @map("pickup_at") @db.Timestamptz(3)
+  returnAt      DateTime? @map("return_at") @db.Timestamptz(3)
   /// Khách yêu cầu giao xe tận nơi (chỉ nhận khi chính sách giao nhận đang bật).
   deliveryRequested Boolean @default(false) @map("delivery_requested")
   deliveryAddress   String? @map("delivery_address") @db.Text
@@ -1095,8 +1117,11 @@ model RentalPolicy {
   overtimeGraceMinutes    Int?     @map("overtime_grace_minutes")
   overtimeRoundingMinutes Int?     @map("overtime_rounding_minutes")
   discountEnabled         Boolean  @default(false) @map("discount_enabled")
-  /// [{ minDays: number, percent: number, note?: string }] — minDays tăng dần, percent 1–100.
-  /// Giảm giá CHỈ áp lên tiền thuê cơ bản (không đụng cọc/giao nhận/quá giờ).
+  /// [{ minMonths: 1|2|3|6|9|12, percent: number, note?: string }] — mốc ƯU ĐÃI CAM KẾT THỜI
+  /// HẠN của dịch vụ THUÊ DÀI HẠN: tăng dần theo tháng, percent 1–100, KHÔNG cộng dồn (lấy
+  /// mốc cao nhất gói đạt tới). Chỉ áp lên giá cơ sở của gói; không đụng cọc/giao nhận/quá
+  /// giờ và KHÔNG áp cho tự lái/có tài xế. Phần tử mang cờ legacy là mốc cũ theo ngày không
+  /// quy đổi được — giữ để khỏi mất cấu hình, máy giá bỏ qua (types → LegacyDiscountTier).
   discountTiers           Json     @default("[]") @map("discount_tiers_json") @db.JsonB
   createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

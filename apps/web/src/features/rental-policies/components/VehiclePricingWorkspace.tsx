@@ -5,7 +5,7 @@ import { Alert, App, Button, Switch } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useForm, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import { LONG_TERM_MIN_DAYS, POLICY_SOURCE, SERVICE_TYPE } from '@xeprime/types';
+import { LONG_TERM_PACKAGE_MONTHS, POLICY_SOURCE, SERVICE_TYPE } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
@@ -275,13 +275,13 @@ export function VehiclePricingWorkspace({
                   <NumberField
                     control={control}
                     name="monthlyPrice"
-                    label="Giá tháng tham chiếu"
+                    label="Giá dài hạn cơ sở (một tháng)"
                     money
                     addonAfter="đ / tháng"
-                    help={`Ước tính = số ngày × giá tháng ÷ 30, thuê tối thiểu ${LONG_TERM_MIN_DAYS} ngày. Thiếu giá tháng thì không gửi duyệt public dịch vụ này được.`}
+                    help={`Giá MỘT tháng — khách mua gói ${LONG_TERM_PACKAGE_MONTHS.join('/')} tháng và trả giá tháng × số tháng, trừ ưu đãi cam kết. Thiếu giá tháng thì không gửi duyệt public dịch vụ này được.`}
                   />
                 </div>
-                {/* Gợi ý sống theo GIÁ ĐANG NHẬP — chủ xe thấy ngay mức giảm khách sẽ thấy. */}
+                {/* Gợi ý sống theo GIÁ ĐANG NHẬP — chủ xe thấy ngay giá từng gói khách sẽ trả. */}
                 <LongTermPriceHintLive control={control} />
               </section>
             ) : null}
@@ -323,6 +323,7 @@ export function VehiclePricingWorkspace({
             <PolicySections
               control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
               numbered={false}
+              legacyDiscountTiers={(pricing.policy ?? pricing.shopPolicy)?.legacyDiscountTiers}
             />
 
             <StickyFormActions
@@ -470,11 +471,23 @@ function DirectDiscountEditor({
   );
 }
 
-/** Cầu useWatch → LongTermPriceHint: gợi ý đổi ngay khi chủ xe gõ giá, không đợi lưu. */
+/**
+ * Cầu useWatch → LongTermPriceHint: gợi ý VÀ bảng giá gói đổi ngay khi chủ xe gõ giá hoặc sửa
+ * mốc ưu đãi, không đợi lưu — thấy ngay khách sẽ trả bao nhiêu cho từng gói.
+ */
 function LongTermPriceHintLive({ control }: { control: Control<VehiclePricingFormValues> }) {
   const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
   const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
-  return <LongTermPriceHint weekdayPrice={weekdayPrice} monthlyPrice={monthlyPrice} />;
+  const discountTiers = useWatch({ control, name: 'discountTiers' });
+  const discountEnabled = useWatch({ control, name: 'discountEnabled' });
+  return (
+    <LongTermPriceHint
+      weekdayPrice={weekdayPrice}
+      monthlyPrice={monthlyPrice}
+      discountTiers={discountTiers}
+      discountEnabled={discountEnabled}
+    />
+  );
 }
 
 /** State A — bảng thông số kế thừa read-only (Figma `247:1645`). */

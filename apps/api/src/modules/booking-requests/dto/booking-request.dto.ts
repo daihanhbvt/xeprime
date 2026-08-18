@@ -1,7 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   BOOKING_REQUEST_STATUS_VALUES,
+  LONG_TERM_PACKAGE_MONTHS_VALUES,
+  PICKUP_PREFERENCE,
+  PICKUP_PREFERENCE_VALUES,
   ROUTE_TYPE_VALUES,
+  SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
@@ -18,7 +22,10 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
+
+import { DATE_ONLY_PATTERN } from '../../../common/date-only';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { BookingRequestDeliveryQuoteDto } from '../../pricing/dto/pricing.dto';
 
@@ -50,17 +57,48 @@ export class CreateBookingRequestDto {
   @MaxLength(255)
   customerEmail?: string;
 
-  @ApiProperty({ description: 'Nhận xe (ISO-8601)' })
+  /**
+   * Nhận/trả xe — BẮT BUỘC với dịch vụ tính theo ngày. Thuê dài hạn KHÔNG gửi hai trường này:
+   * khách chỉ nêu nguyện vọng ngày nhận, gian hàng chốt giờ nhận khi duyệt và server tính giờ
+   * trả từ gói (ADR 0011). Giá trị client gửi kèm cho long_term bị BỎ QUA.
+   */
+  @ApiPropertyOptional({ description: 'Nhận xe (ISO-8601) — không dùng cho long_term' })
+  @ValidateIf((o: CreateBookingRequestDto) => o.serviceType !== SERVICE_TYPE.LONG_TERM)
   @IsDateString()
-  pickupAt!: string;
+  pickupAt?: string;
 
-  @ApiProperty({ description: 'Trả xe (ISO-8601), phải sau nhận xe' })
+  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) — không dùng cho long_term' })
+  @ValidateIf((o: CreateBookingRequestDto) => o.serviceType !== SERVICE_TYPE.LONG_TERM)
   @IsDateString()
-  returnAt!: string;
+  returnAt?: string;
+
+  /** Gói thuê dài hạn (tháng lịch) — BẮT BUỘC khi serviceType = long_term. */
+  @ApiPropertyOptional({ enum: LONG_TERM_PACKAGE_MONTHS_VALUES })
+  @ValidateIf((o: CreateBookingRequestDto) => o.serviceType === SERVICE_TYPE.LONG_TERM)
+  @IsInt()
+  @IsIn(LONG_TERM_PACKAGE_MONTHS_VALUES)
+  longTermPackageMonths?: number;
 
   /**
-   * Dịch vụ của chuyến (17/08) — phải nằm trong `serviceTypes` của xe (service kiểm).
-   * Bỏ trống = self_drive. long_term có sàn thời lượng; with_driver bắt buộc lộ trình.
+   * Nguyện vọng nhận xe — BẮT BUỘC khi long_term. `within_7_days` là khoảng linh hoạt do
+   * SERVER tính (client không gửi khoảng); `specific_date` kèm `requestedPickupDate`.
+   */
+  @ApiPropertyOptional({ enum: PICKUP_PREFERENCE_VALUES })
+  @ValidateIf((o: CreateBookingRequestDto) => o.serviceType === SERVICE_TYPE.LONG_TERM)
+  @IsIn(PICKUP_PREFERENCE_VALUES)
+  pickupPreference?: string;
+
+  /** Ngày khách muốn nhận (`YYYY-MM-DD`, giờ VN) — BẮT BUỘC khi pickupPreference = specific_date. */
+  @ApiPropertyOptional({ description: 'Ngày muốn nhận xe (YYYY-MM-DD)' })
+  @ValidateIf(
+    (o: CreateBookingRequestDto) => o.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE,
+  )
+  @Matches(DATE_ONLY_PATTERN, { message: 'Ngày nhận xe không hợp lệ (YYYY-MM-DD)' })
+  requestedPickupDate?: string;
+
+  /**
+   * Dịch vụ của chuyến — phải nằm trong `serviceTypes` của xe (service kiểm chéo).
+   * Bỏ trống = self_drive. long_term đi mô hình gói; with_driver bắt buộc lộ trình.
    */
   @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
   @IsOptional()
@@ -128,6 +166,32 @@ export class CheckAvailabilityResultDto {
   available!: boolean;
 }
 
+/**
+ * Duyệt yêu cầu. Dịch vụ theo ngày không cần body (lịch đã có trên yêu cầu).
+ *
+ * THUÊ DÀI HẠN bắt buộc `scheduledPickupAt`: khách chỉ nêu nguyện vọng, gian hàng là bên chốt
+ * ngày/giờ nhận chính xác. Server kiểm ngày chốt có đúng nguyện vọng không, rồi tự tính ngày
+ * trả = nhận + gói tháng lịch — **không nhận ngày trả từ client** (ADR 0011).
+ */
+export class ApproveBookingRequestDto {
+  @ApiPropertyOptional({
+    description: 'Ngày/giờ nhận xe chính xác (ISO-8601) — BẮT BUỘC với yêu cầu thuê dài hạn',
+  })
+  @IsOptional()
+  @IsDateString()
+  scheduledPickupAt?: string;
+
+  /**
+   * Gói thuê — CHỈ dùng cho yêu cầu dài hạn LEGACY (gửi trước khi chuyển sang mô hình gói, nên
+   * không mang gói nào). Migration cố ý không làm tròn ngầm; gian hàng chọn gói khi xử lý.
+   */
+  @ApiPropertyOptional({ enum: LONG_TERM_PACKAGE_MONTHS_VALUES })
+  @IsOptional()
+  @IsInt()
+  @IsIn(LONG_TERM_PACKAGE_MONTHS_VALUES)
+  longTermPackageMonths?: number;
+}
+
 /** Từ chối yêu cầu — lý do tuỳ chọn để báo lại khách. */
 export class RejectBookingRequestDto {
   @ApiPropertyOptional()
@@ -182,9 +246,30 @@ export class BookingRequestDto {
   @ApiProperty() customerName!: string;
   @ApiProperty() customerPhone!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerEmail!: string | null;
-  @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
-  @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC — null với yêu cầu dài hạn chưa chốt lịch',
+  })
+  pickupAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
+  returnAt!: string | null;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    enum: LONG_TERM_PACKAGE_MONTHS_VALUES,
+    description: 'Gói thuê dài hạn khách chọn — null ở yêu cầu dài hạn LEGACY',
+  })
+  longTermPackageMonths!: number | null;
+  @ApiPropertyOptional({ type: String, nullable: true, enum: PICKUP_PREFERENCE_VALUES })
+  pickupPreference!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD (giờ VN)' })
+  requestedPickupDate!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD (giờ VN)' })
+  pickupWindowStartDate!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD (giờ VN)' })
+  pickupWindowEndDate!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, enum: ROUTE_TYPE_VALUES })
   routeType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) pickupAddress!: string | null;

@@ -8,9 +8,13 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
-  LONG_TERM_MIN_DAYS,
+  isLongTermPackageMonths,
+  vnDateKey,
+  longTermPickupWindow,
+  longTermReturnAt,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
+  PICKUP_PREFERENCE,
   SERVICE_TYPE,
   TENANT_STATUS,
   USER_STATUS,
@@ -18,6 +22,7 @@ import {
   type BookingRequestDeliveryQuote,
   type PaginationMeta,
 } from '@xeprime/types';
+import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { normalizePhone, phoneLookupVariants } from '../../common/phone';
 import { normalizeRouteContext } from '../../common/route-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -29,6 +34,7 @@ import { BookingsService } from '../bookings/bookings.service';
 import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
 import { PricingService } from '../pricing/pricing.service';
 import {
+  ApproveBookingRequestDto,
   BOOKING_REQUEST_DEFAULT_LIMIT,
   BOOKING_REQUEST_MAX_LIMIT,
   BookingRequestDto,
@@ -47,6 +53,11 @@ const SELECT = {
   pickupAt: true,
   returnAt: true,
   serviceType: true,
+  longTermPackageMonths: true,
+  pickupPreference: true,
+  requestedPickupDate: true,
+  pickupWindowStartDate: true,
+  pickupWindowEndDate: true,
   routeType: true,
   pickupAddress: true,
   destination: true,
@@ -59,6 +70,22 @@ const SELECT = {
   createdAt: true,
   vehicle: { select: { name: true, plateNumber: true } },
 } satisfies Prisma.BookingRequestSelect;
+
+/** Nguyện vọng thuê dài hạn sau khi server chuẩn hoá — hai nhánh ngày LOẠI TRỪ nhau. */
+interface LongTermIntent {
+  packageMonths: number;
+  preference: string;
+  requestedPickupDate: Date | null;
+  windowStart: Date | null;
+  windowEnd: Date | null;
+}
+
+/** Lịch chốt lúc duyệt: dịch vụ theo ngày giữ nguyên lịch của khách, dài hạn do gian hàng chốt. */
+interface ApprovalSchedule {
+  pickupAt: Date;
+  returnAt: Date;
+  packageMonths: number | null;
+}
 
 @Injectable()
 export class BookingRequestsService {
@@ -145,20 +172,11 @@ export class BookingRequestsService {
       await this.phoneVerification.assertPhoneVerifiedForBooking(dto.customerPhone);
     }
 
-    const pickupAt = new Date(dto.pickupAt);
-    const returnAt = new Date(dto.returnAt);
-    if (!(returnAt.getTime() > pickupAt.getTime())) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Thời điểm trả xe phải sau thời điểm nhận xe',
-      });
-    }
-
     /*
-     * Dịch vụ của chuyến (17/08) — kiểm ở SERVER, FE chỉ là preview:
+     * Dịch vụ của chuyến — kiểm ở SERVER, FE chỉ là preview:
      *   - phải nằm trong NĂNG LỰC của xe (`vehicle.serviceTypes`) — DB không cross-check được
      *     hai bảng, đây là chỗ duy nhất dựa vào service;
-     *   - dài hạn có sàn thời lượng (cùng công thức đếm ngày với máy giá: ceil Δ/24h);
+     *   - dài hạn đi mô hình GÓI (không có ngày trả từ client — ADR 0011);
      *   - có tài xế bắt buộc lộ trình + địa chỉ đón, liên tỉnh bắt buộc điểm đến;
      *   - lộ trình/địa chỉ đón/điểm đến bị NORMALIZE về null với dịch vụ khác (CHECK DB
      *     route_type ⇒ with_driver sẽ từ chối dữ liệu lệch nếu service quên).
@@ -170,12 +188,18 @@ export class BookingRequestsService {
         message: 'Xe không phục vụ loại dịch vụ này',
       });
     }
-    if (serviceType === SERVICE_TYPE.LONG_TERM) {
-      const days = Math.ceil((returnAt.getTime() - pickupAt.getTime()) / 86_400_000);
-      if (days < LONG_TERM_MIN_DAYS) {
+    const longTerm = serviceType === SERVICE_TYPE.LONG_TERM ? this.longTermIntent(dto) : null;
+
+    // Dịch vụ theo NGÀY vẫn giữ hợp đồng cũ: khách chọn khoảng nhận–trả và nó phải hợp lệ.
+    let pickupAt: Date | null = null;
+    let returnAt: Date | null = null;
+    if (!longTerm) {
+      pickupAt = new Date(dto.pickupAt!);
+      returnAt = new Date(dto.returnAt!);
+      if (!(returnAt.getTime() > pickupAt.getTime())) {
         throw new BadRequestException({
           code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: `Thuê dài hạn tối thiểu ${LONG_TERM_MIN_DAYS} ngày`,
+          message: 'Thời điểm trả xe phải sau thời điểm nhận xe',
         });
       }
     }
@@ -219,7 +243,13 @@ export class BookingRequestsService {
       loginUserId = userId;
     }
 
-    await this.assertNoPendingDuplicate(vehicle.id, dto.customerPhone, pickupAt, returnAt);
+    await this.assertNoPendingDuplicate(
+      vehicle.id,
+      dto.customerPhone,
+      pickupAt,
+      returnAt,
+      longTerm,
+    );
 
     const id = newId();
     // Ghi yêu cầu + báo cả shop trong một transaction: yêu cầu mới luôn có thông báo đi kèm.
@@ -238,6 +268,11 @@ export class BookingRequestsService {
             pickupAt,
             returnAt,
             serviceType,
+            longTermPackageMonths: longTerm?.packageMonths ?? null,
+            pickupPreference: longTerm?.preference ?? null,
+            requestedPickupDate: longTerm?.requestedPickupDate ?? null,
+            pickupWindowStartDate: longTerm?.windowStart ?? null,
+            pickupWindowEndDate: longTerm?.windowEnd ?? null,
             routeType: route.routeType,
             pickupAddress: route.pickupAddress,
             destination: route.destination,
@@ -303,20 +338,81 @@ export class BookingRequestsService {
   private async assertNoPendingDuplicate(
     vehicleId: string,
     rawPhone: string,
-    pickupAt: Date,
-    returnAt: Date,
+    pickupAt: Date | null,
+    returnAt: Date | null,
+    longTerm: LongTermIntent | null,
   ): Promise<void> {
     const existing = await this.prisma.bookingRequest.findFirst({
       where: {
         vehicleId,
         customerPhone: { in: phoneLookupVariants(rawPhone) },
-        pickupAt,
-        returnAt,
         status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+        // Dài hạn không có lịch để so — trùng nghĩa là cùng gói VÀ cùng nguyện vọng nhận xe.
+        ...(longTerm
+          ? {
+              serviceType: SERVICE_TYPE.LONG_TERM,
+              longTermPackageMonths: longTerm.packageMonths,
+              pickupPreference: longTerm.preference,
+              requestedPickupDate: longTerm.requestedPickupDate,
+            }
+          : { pickupAt, returnAt }),
       },
       select: { id: true },
     });
     if (existing) throw duplicateRequest();
+  }
+
+  /**
+   * Nguyện vọng thuê dài hạn của khách, chuẩn hoá ở SERVER.
+   *
+   * Khoảng "trong 7 ngày tới" tính từ THỜI ĐIỂM NHẬN yêu cầu — client không gửi và không thể
+   * giả mạo khoảng này. Ngày cụ thể phải từ ngày mai trở đi (nhận xe trong quá khứ là vô nghĩa).
+   */
+  private longTermIntent(dto: CreateBookingRequestDto): LongTermIntent {
+    const packageMonths = dto.longTermPackageMonths;
+    if (!isLongTermPackageMonths(packageMonths)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Chọn gói thuê dài hạn',
+      });
+    }
+    const now = new Date();
+    const window = longTermPickupWindow(now);
+    if (dto.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE) {
+      const requested = dto.requestedPickupDate;
+      if (!requested) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Chọn ngày muốn nhận xe',
+        });
+      }
+      if (requested < window.start) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Ngày nhận xe phải từ ngày mai trở đi',
+        });
+      }
+      return {
+        packageMonths,
+        preference: PICKUP_PREFERENCE.SPECIFIC_DATE,
+        requestedPickupDate: toDateOnly(requested),
+        windowStart: null,
+        windowEnd: null,
+      };
+    }
+    if (dto.pickupPreference !== PICKUP_PREFERENCE.WITHIN_7_DAYS) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Chọn nguyện vọng nhận xe',
+      });
+    }
+    return {
+      packageMonths,
+      preference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
+      requestedPickupDate: null,
+      windowStart: toDateOnly(window.start),
+      windowEnd: toDateOnly(window.end),
+    };
   }
 
   private async canSkipBookingOtp(
@@ -396,35 +492,51 @@ export class BookingRequestsService {
    * Địa chỉ giao và cờ `deliveryRequested` của yêu cầu vẫn giữ nguyên để chủ xe biết phải giao
    * ở đâu; dữ liệu báo giá cũ (nếu có) vẫn đọc được nhưng không còn ảnh hưởng gì tới việc duyệt.
    */
-  async approve(tenantId: string, userId: string, id: string): Promise<BookingRequestDto> {
+  async approve(
+    tenantId: string,
+    userId: string,
+    id: string,
+    dto: ApproveBookingRequestDto = {},
+  ): Promise<BookingRequestDto> {
     const req = await this.loadPending(tenantId, id);
 
     const policy = await this.pricing.effectivePolicy(tenantId, req.vehicleId);
-    // Giá riêng theo ngày áp cả ở đây — snapshot của đơn phải khớp báo giá khách đã thấy.
-    const dailyOverrides = await this.pricing.dailyOverridesFor(
-      req.vehicleId,
-      req.pickupAt,
-      req.returnAt,
-    );
-    const breakdown = this.pricing.buildQuote({
-      weekdayPrice: req.vehicle.weekdayPrice?.toFixed(0) ?? null,
-      weekendPrice: req.vehicle.weekendPrice?.toFixed(0) ?? null,
-      pickupAt: req.pickupAt,
-      returnAt: req.returnAt,
-      policy,
-      // Miễn phí lúc duyệt — không dòng giao nhận nào trong snapshot giá gốc.
-      delivery: null,
-      dailyOverrides,
-      // Giá theo DỊCH VỤ + LỘ TRÌNH của yêu cầu (17/08): dài hạn ăn giá tháng, có tài xế ăn
-      // giá route — khách và shop nhìn cùng một con số với quote công khai.
-      serviceType: req.serviceType,
-      routeType: req.routeType,
-      monthlyPrice: req.vehicle.monthlyPrice?.toFixed(0) ?? null,
-      withDriverDailyPrice: req.vehicle.withDriverDailyPrice?.toFixed(0) ?? null,
-      withDriverInterCityPrice: req.vehicle.withDriverInterCityPrice?.toFixed(0) ?? null,
-      withDriverOneWayPrice: req.vehicle.withDriverOneWayPrice?.toFixed(0) ?? null,
-      discountPercent: req.vehicle.discountPercent,
-    });
+    const schedule = this.resolveApprovalSchedule(req, dto);
+
+    /*
+     * Dài hạn tính theo GÓI tháng lịch — không đi qua máy giá ngày, không đụng giá riêng theo
+     * ngày và không ăn khuyến mãi trực tiếp của tự lái (ADR 0011). Khách xem giá gói nào ở
+     * marketplace thì duyệt ra đúng con số đó, vì cùng một hàm tính.
+     */
+    const breakdown =
+      req.serviceType === SERVICE_TYPE.LONG_TERM
+        ? this.pricing.buildLongTermPackageQuote({
+            monthlyPrice: req.vehicle.monthlyPrice?.toFixed(0) ?? null,
+            packageMonths: schedule.packageMonths!,
+            policy,
+            delivery: null,
+          })
+        : this.pricing.buildDailyQuote({
+            weekdayPrice: req.vehicle.weekdayPrice?.toFixed(0) ?? null,
+            weekendPrice: req.vehicle.weekendPrice?.toFixed(0) ?? null,
+            pickupAt: schedule.pickupAt,
+            returnAt: schedule.returnAt,
+            policy,
+            // Miễn phí lúc duyệt — không dòng giao nhận nào trong snapshot giá gốc.
+            delivery: null,
+            // Giá riêng theo ngày áp cả ở đây — snapshot của đơn phải khớp báo giá khách đã thấy.
+            dailyOverrides: await this.pricing.dailyOverridesFor(
+              req.vehicleId,
+              schedule.pickupAt,
+              schedule.returnAt,
+            ),
+            serviceType: req.serviceType,
+            routeType: req.routeType,
+            withDriverDailyPrice: req.vehicle.withDriverDailyPrice?.toFixed(0) ?? null,
+            withDriverInterCityPrice: req.vehicle.withDriverInterCityPrice?.toFixed(0) ?? null,
+            withDriverOneWayPrice: req.vehicle.withDriverOneWayPrice?.toFixed(0) ?? null,
+            discountPercent: req.vehicle.discountPercent,
+          });
     const snapshot = this.pricing.buildSnapshot(breakdown, policy);
 
     const row = await this.prisma.$transaction(async (tx) => {
@@ -436,8 +548,11 @@ export class BookingRequestsService {
           vehicleId: req.vehicleId,
           customerName: req.customerName,
           customerPhone: req.customerPhone,
-          pickupAt: req.pickupAt.toISOString(),
-          returnAt: req.returnAt.toISOString(),
+          // Lịch CHỐT: dịch vụ theo ngày giữ nguyên lịch khách chọn; dài hạn lấy giờ nhận gian
+          // hàng vừa chốt và giờ trả do SERVER tính từ gói (client không gửi được ngày trả).
+          pickupAt: schedule.pickupAt.toISOString(),
+          returnAt: schedule.returnAt.toISOString(),
+          longTermPackageMonths: schedule.packageMonths ?? undefined,
           // Fix 17/08: trước đây serviceType KHÔNG được map — mọi đơn sinh từ yêu cầu đều rơi
           // về default self_drive, kể cả chuyến có tài xế/dài hạn.
           serviceType: req.serviceType,
@@ -461,6 +576,11 @@ export class BookingRequestsService {
         data: {
           status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
           bookingId: booking.id,
+          // Yêu cầu dài hạn được sinh ra KHÔNG có lịch; sau khi duyệt nó phải giữ chính lịch
+          // đã chốt để inbox/lịch sử đọc được mà không phải join sang đơn.
+          pickupAt: schedule.pickupAt,
+          returnAt: schedule.returnAt,
+          longTermPackageMonths: schedule.packageMonths,
           decidedBy: userId,
           decidedAt: new Date(),
         },
@@ -501,6 +621,91 @@ export class BookingRequestsService {
     });
 
     return toDto(row);
+  }
+
+  /**
+   * Lịch chính xác của đơn sắp tạo.
+   *
+   * Dịch vụ theo NGÀY: giữ nguyên khoảng khách đã chọn. Muốn đổi lịch thì không được làm im
+   * lặng ở bước duyệt — trả lỗi để gian hàng thoả thuận lại với khách.
+   *
+   * THUÊ DÀI HẠN: gian hàng bắt buộc chốt `scheduledPickupAt`, và ngày đó phải ĐÚNG nguyện
+   * vọng khách nêu (trùng ngày cụ thể, hoặc nằm trong khoảng 7 ngày server đã tính). Ngày trả
+   * luôn do server suy ra từ gói bằng tháng lịch.
+   */
+  private resolveApprovalSchedule(
+    req: PendingRequestRow,
+    dto: ApproveBookingRequestDto,
+  ): ApprovalSchedule {
+    if (req.serviceType !== SERVICE_TYPE.LONG_TERM) {
+      if (dto.scheduledPickupAt) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Chỉ yêu cầu thuê dài hạn mới chốt lại giờ nhận khi duyệt',
+        });
+      }
+      if (!req.pickupAt || !req.returnAt) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Yêu cầu thiếu thời gian nhận/trả xe',
+        });
+      }
+      return { pickupAt: req.pickupAt, returnAt: req.returnAt, packageMonths: null };
+    }
+
+    // Gói: yêu cầu mới luôn có; bản ghi LEGACY chưa có nên gian hàng phải chọn khi xử lý.
+    const packageMonths = req.longTermPackageMonths ?? dto.longTermPackageMonths ?? null;
+    if (!isLongTermPackageMonths(packageMonths)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Yêu cầu thuê dài hạn cũ chưa có gói — chọn gói thuê trước khi duyệt',
+      });
+    }
+    if (
+      req.longTermPackageMonths != null &&
+      dto.longTermPackageMonths != null &&
+      dto.longTermPackageMonths !== req.longTermPackageMonths
+    ) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Không được đổi gói khách đã chọn — từ chối yêu cầu và mời khách đặt lại gói khác',
+      });
+    }
+
+    // Bản ghi legacy không có nguyện vọng: giữ nguyên giờ nhận khách từng chọn nếu gian hàng
+    // không chốt lại — migration đã cố ý không đổi ngày, luồng duyệt cũng không được đổi ngầm.
+    const pickupAt = dto.scheduledPickupAt
+      ? new Date(dto.scheduledPickupAt)
+      : req.pickupPreference == null
+        ? req.pickupAt
+        : null;
+    if (!pickupAt || Number.isNaN(pickupAt.getTime())) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Chọn ngày và giờ nhận xe chính xác để duyệt yêu cầu thuê dài hạn',
+      });
+    }
+    const scheduledDay = vnDateKey(pickupAt);
+    if (req.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE) {
+      const requested = fromDateOnly(req.requestedPickupDate);
+      if (requested && scheduledDay !== requested) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: `Khách yêu cầu nhận xe ngày ${requested} — chọn đúng ngày đó hoặc từ chối yêu cầu`,
+        });
+      }
+    } else if (req.pickupPreference === PICKUP_PREFERENCE.WITHIN_7_DAYS) {
+      const start = fromDateOnly(req.pickupWindowStartDate);
+      const end = fromDateOnly(req.pickupWindowEndDate);
+      if (start && end && (scheduledDay < start || scheduledDay > end)) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: `Ngày nhận phải nằm trong khoảng khách mong muốn (${start} → ${end})`,
+        });
+      }
+    }
+
+    return { pickupAt, returnAt: longTermReturnAt(pickupAt, packageMonths), packageMonths };
   }
 
   async reject(
@@ -557,37 +762,10 @@ export class BookingRequestsService {
   }
 
   /** Nạp yêu cầu đang chờ duyệt; đã quyết định rồi thì chặn (không duyệt/từ chối hai lần). */
-  private async loadPending(tenantId: string, id: string) {
+  private async loadPending(tenantId: string, id: string): Promise<PendingRequestRow> {
     const req = await this.prisma.bookingRequest.findFirst({
       where: { id, tenantId },
-      select: {
-        id: true,
-        status: true,
-        vehicleId: true,
-        customerName: true,
-        customerPhone: true,
-        customerUserId: true,
-        pickupAt: true,
-        returnAt: true,
-        serviceType: true,
-        routeType: true,
-        pickupAddress: true,
-        destination: true,
-        deliveryRequested: true,
-        deliveryQuote: true,
-        vehicle: {
-          select: {
-            name: true,
-            weekdayPrice: true,
-            weekendPrice: true,
-            monthlyPrice: true,
-            withDriverDailyPrice: true,
-            withDriverInterCityPrice: true,
-            withDriverOneWayPrice: true,
-            discountPercent: true,
-          },
-        },
-      },
+      select: PENDING_SELECT,
     });
     if (!req) throw notFound();
     if (req.status !== BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL) {
@@ -599,6 +777,43 @@ export class BookingRequestsService {
     return req;
   }
 }
+
+/** Cột cần để duyệt/từ chối một yêu cầu — gồm nguyện vọng dài hạn và giá của xe. */
+const PENDING_SELECT = {
+  id: true,
+  status: true,
+  vehicleId: true,
+  customerName: true,
+  customerPhone: true,
+  customerUserId: true,
+  pickupAt: true,
+  returnAt: true,
+  serviceType: true,
+  longTermPackageMonths: true,
+  pickupPreference: true,
+  requestedPickupDate: true,
+  pickupWindowStartDate: true,
+  pickupWindowEndDate: true,
+  routeType: true,
+  pickupAddress: true,
+  destination: true,
+  deliveryRequested: true,
+  deliveryQuote: true,
+  vehicle: {
+    select: {
+      name: true,
+      weekdayPrice: true,
+      weekendPrice: true,
+      monthlyPrice: true,
+      withDriverDailyPrice: true,
+      withDriverInterCityPrice: true,
+      withDriverOneWayPrice: true,
+      discountPercent: true,
+    },
+  },
+} satisfies Prisma.BookingRequestSelect;
+
+type PendingRequestRow = Prisma.BookingRequestGetPayload<{ select: typeof PENDING_SELECT }>;
 
 type BookingRequestRow = Prisma.BookingRequestGetPayload<{ select: typeof SELECT }>;
 
@@ -618,9 +833,14 @@ function toDto(r: BookingRequestRow): BookingRequestDto {
     customerName: r.customerName,
     customerPhone: r.customerPhone,
     customerEmail: r.customerEmail,
-    pickupAt: r.pickupAt as unknown as string,
-    returnAt: r.returnAt as unknown as string,
+    pickupAt: r.pickupAt ? (r.pickupAt as unknown as string) : null,
+    returnAt: r.returnAt ? (r.returnAt as unknown as string) : null,
     serviceType: r.serviceType,
+    longTermPackageMonths: r.longTermPackageMonths,
+    pickupPreference: r.pickupPreference,
+    requestedPickupDate: fromDateOnly(r.requestedPickupDate),
+    pickupWindowStartDate: fromDateOnly(r.pickupWindowStartDate),
+    pickupWindowEndDate: fromDateOnly(r.pickupWindowEndDate),
     routeType: r.routeType,
     pickupAddress: r.pickupAddress,
     destination: r.destination,

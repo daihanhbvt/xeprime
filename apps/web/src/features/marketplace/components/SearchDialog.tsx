@@ -4,7 +4,7 @@ import { CalendarOutlined, EnvironmentOutlined, SearchOutlined } from '@ant-desi
 import { Button, Radio, Segmented, Select } from 'antd';
 import dayjs from 'dayjs';
 import {
-  LONG_TERM_MIN_DAYS,
+  LONG_TERM_PACKAGE_MONTHS,
   ROUTE_TYPE,
   ROUTE_TYPE_DESCRIPTION,
   ROUTE_TYPE_LABEL,
@@ -44,7 +44,7 @@ export interface SearchDialogValues {
  * Hộp "Tìm kiếm" dùng CHUNG — thanh tìm kiếm mobile của trang chủ và vùng ngữ cảnh trên
  * `/search`. Một bộ trường duy nhất nên hai lối vào không bao giờ lệch nhau. DỊCH VỤ không đổi
  * ở đây (tab hero / chip trên `/search` sở hữu nó) nhưng hộp ĐỌC `initial.serviceType`:
- *   - dài hạn → lịch có SÀN `LONG_TERM_MIN_DAYS` ngày, không có chế độ thuê giờ;
+ *   - dài hạn → KHÔNG hỏi ngày (chọn gói + nguyện vọng ngày nhận ở bước gửi yêu cầu);
  *   - có tài xế → thêm radio LỘ TRÌNH (ngữ cảnh cho yêu cầu thuê, không phải chiều lọc).
  *
  * Giữ DRAFT cục bộ, chỉ phát `onSubmit` khi bấm "Tìm xe" — đóng ngang chừng không đổi URL.
@@ -77,13 +77,9 @@ export function SearchDialog({
     const pickupAt = initial.pickupAt
       ? dayjs(initial.pickupAt)
       : dayjs().add(1, 'day').hour(10).startOf('hour');
-    let returnAt = initial.returnAt
+    const returnAt = initial.returnAt
       ? dayjs(initial.returnAt)
       : dayjs().add(4, 'day').hour(10).startOf('hour');
-    // Dài hạn: nạp khoảng cũ dưới sàn thì NỚI luôn — không mở hộp trong trạng thái lỗi.
-    if (longTerm && Math.ceil(returnAt.diff(pickupAt, 'minute') / 1440) < LONG_TERM_MIN_DAYS) {
-      returnAt = pickupAt.add(LONG_TERM_MIN_DAYS, 'day');
-    }
     return { pickupAt, returnAt };
   });
 
@@ -127,8 +123,8 @@ export function SearchDialog({
             Dài hạn KHÔNG hỏi ngày ở bước tìm (Mioto flow): chọn xe trước, ngày ở bước yêu cầu. */}
         {longTerm ? (
           <p className={styles.routeHint}>
-            Chọn xe trước — ngày nhận và trả (tối thiểu {LONG_TERM_MIN_DAYS} ngày) chọn khi gửi
-            yêu cầu thuê.
+            Chọn xe trước — sau đó chọn gói thuê ({LONG_TERM_PACKAGE_MONTHS.join('/')} tháng) và
+            nguyện vọng ngày nhận khi gửi yêu cầu thuê.
           </p>
         ) : (
           <div className={styles.cell}>

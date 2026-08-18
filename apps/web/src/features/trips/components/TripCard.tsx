@@ -12,6 +12,7 @@ import {
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { tripPath } from '@/constants/routes';
 import { formatShortDateTimeRange } from '@/lib/datetime';
+import { packageLabelOf, pickupWishText } from '@/lib/long-term';
 import { formatMoneyVnd } from '@/lib/money';
 import type { CustomerTrip } from '../types';
 import styles from './TripCard.module.css';
@@ -57,7 +58,14 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
 
         <p className={styles.meta}>
           <CalendarOutlined aria-hidden="true" />
-          <span>{formatShortDateTimeRange(trip.pickupAt, trip.returnAt)}</span>
+          {/* Yêu cầu dài hạn chưa duyệt chưa có lịch — nói gói + nguyện vọng, không bịa ngày. */}
+          <span>
+            {trip.pickupAt && trip.returnAt
+              ? formatShortDateTimeRange(trip.pickupAt, trip.returnAt)
+              : [packageLabelOf(trip.longTermPackageMonths), pickupWishText(trip)]
+                  .filter(Boolean)
+                  .join(' · ')}
+          </span>
         </p>
         <p className={styles.meta}>
           <EnvironmentOutlined aria-hidden="true" />

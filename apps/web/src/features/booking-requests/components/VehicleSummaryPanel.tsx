@@ -4,7 +4,13 @@ import { CheckCircleFilled, DownOutlined, StarFilled, UpOutlined } from '@ant-de
 import { Skeleton } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
-import { CATALOG_TYPE, VEHICLE_TYPE, serviceTypesLabel } from '@xeprime/types';
+import {
+  CATALOG_TYPE,
+  longTermPackageLabel,
+  SERVICE_TYPE,
+  serviceTypesLabel,
+  VEHICLE_TYPE,
+} from '@xeprime/types';
 import { shopPath } from '@/constants/routes';
 import { catalogLabel } from '@/features/catalog/types';
 import { useCatalog } from '@/features/catalog/use-catalog';
@@ -35,6 +41,13 @@ interface VehicleSummaryPanelProps {
   reviewsLoading?: boolean;
   /** Hiện sau khi đã biết liên hệ đã xác thực (bước Xác nhận). */
   verifiedContact?: VerifiedContact | null;
+  /**
+   * Dịch vụ khách đang đặt. Panel phải nói giá CỦA DỊCH VỤ ĐÓ: trưng giá tự lái và khuyến mãi
+   * tự lái trong lúc khách đang mua gói dài hạn là hiển thị sai giá (ADR 0011).
+   */
+  serviceType?: string;
+  /** Gói dài hạn đang chọn — có gói thì hiện giá gói thật thay cho giá cơ sở /tháng. */
+  packageMonths?: number | null;
 }
 
 function vehicleTypeLabel(type: string): string {
@@ -60,6 +73,8 @@ export function VehicleSummaryPanel({
   reviewSummary = null,
   reviewsLoading = false,
   verifiedContact,
+  serviceType,
+  packageMonths = null,
 }: VehicleSummaryPanelProps) {
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
@@ -67,11 +82,35 @@ export function VehicleSummaryPanel({
 
   const name = listing?.name ?? fallbackName;
   const mainImage = listing?.mainImageUrl ?? fallbackImageUrl ?? null;
-  const discount = listing?.discountPercent ?? 0;
-  const displayPrice =
+
+  const isLongTerm = serviceType === SERVICE_TYPE.LONG_TERM;
+  const isWithDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
+  /*
+   * `discountPercent` là khuyến mãi trực tiếp của dịch vụ TỰ LÁI — không áp và không hiển thị
+   * cho dịch vụ khác. Giá ngày cũng vậy: khách mua gói dài hạn không trả theo ngày.
+   */
+  const discount = !isLongTerm && !isWithDriver ? (listing?.discountPercent ?? 0) : 0;
+  const dailyPrice =
     listing && discount > 0
       ? applyDiscountPercent(listing.weekdayPrice, discount)
       : (listing?.weekdayPrice ?? null);
+
+  /** Gói đang chọn (giá do server tính) — chưa chọn thì chỉ nói giá dài hạn cơ sở /tháng. */
+  const selectedPackage =
+    isLongTerm && packageMonths != null
+      ? ((listing?.longTermPackages ?? []).find((pkg) => pkg.packageMonths === packageMonths) ??
+        null)
+      : null;
+  const displayPrice = isLongTerm
+    ? (selectedPackage?.finalPackageAmount ?? listing?.monthlyPrice ?? null)
+    : isWithDriver
+      ? (listing?.withDriverDailyPrice ?? dailyPrice)
+      : dailyPrice;
+  const priceUnit = isLongTerm
+    ? selectedPackage
+      ? `/${longTermPackageLabel(selectedPackage.packageMonths)}`
+      : '/tháng'
+    : '/ngày';
 
   const location = [listing?.shopProvince].filter(Boolean).join(' · ');
 
@@ -135,8 +174,13 @@ export function VehicleSummaryPanel({
           {displayPrice != null && displayPrice !== '' ? (
             <div className={styles.price}>
               <b>{formatMoneyVnd(displayPrice)}</b>
-              <span>/ngày</span>
-              {listing?.hourlyPrice ? (
+              <span>{priceUnit}</span>
+              {/* Gói 1 tháng: giá bình quân tháng BẰNG tổng gói — lặp lại chỉ là nhiễu. */}
+              {selectedPackage && selectedPackage.packageMonths > 1 ? (
+                <span className={styles.priceAlt}>
+                  {formatMoneyVnd(selectedPackage.effectiveMonthlyAmount)}/tháng
+                </span>
+              ) : !isLongTerm && !isWithDriver && listing?.hourlyPrice ? (
                 <span className={styles.priceAlt}>{formatMoneyVnd(listing.hourlyPrice)}/giờ</span>
               ) : null}
             </div>

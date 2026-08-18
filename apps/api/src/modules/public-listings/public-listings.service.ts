@@ -118,9 +118,7 @@ function toListingCard(l: ListingCardRow): PublicListingDto {
 }
 
 /** `recommended` (mặc định): điểm cao trước (NULLS LAST) → nhiều đánh giá trước → mới trước. */
-function listingOrderBy(
-  sort: string | undefined,
-): Prisma.PublicListingOrderByWithRelationInput[] {
+function listingOrderBy(sort: string | undefined): Prisma.PublicListingOrderByWithRelationInput[] {
   if (sort === 'price_asc') return [{ weekdayPrice: 'asc' }];
   if (sort === 'price_desc') return [{ weekdayPrice: 'desc' }];
   if (sort === 'newest') return [{ createdAt: 'desc' }];
@@ -758,15 +756,16 @@ export class PublicListingsService {
     const rating = (await this.ratingsByVehicle([v.id])).get(v.id);
 
     /*
-     * Mốc ưu đãi THUÊ DÀI HẠN (đợt 4): lộ ra để nút gói 1/3/6/12 tháng của modal mang badge
-     * "-X%" TRƯỚC khi chọn ngày. Đọc qua effectivePolicy — cùng nguồn với máy giá, con số
-     * badge và con số quote không bao giờ lệch. Chỉ lộ khi xe đăng dịch vụ dài hạn.
+     * Giá SÁU gói thuê dài hạn (ADR 0011): bảng chọn gói phải hiện TIỀN THẬT ngay khi mở, nên
+     * giá tính sẵn ở đây bằng chính hàm mà báo giá dùng — nút gói và breakdown không thể lệch.
+     * Chỉ tính khi xe đăng dịch vụ dài hạn.
      */
-    const policy = v.serviceTypes.includes(SERVICE_TYPE.LONG_TERM)
-      ? await this.pricing.effectivePolicy(v.tenantId, v.id)
-      : null;
-    const longTermDiscountTiers =
-      policy?.values.discountEnabled === true ? policy.values.discountTiers : [];
+    const longTermPackages = v.serviceTypes.includes(SERVICE_TYPE.LONG_TERM)
+      ? this.pricing.longTermPackages(
+          v.monthlyPrice as unknown as string | null,
+          await this.pricing.effectivePolicy(v.tenantId, v.id),
+        )
+      : [];
 
     return {
       id: v.id,
@@ -804,7 +803,7 @@ export class PublicListingsService {
       features: v.features.map((f) => f.featureKey),
       ratingAvg: rating?.avg ?? null,
       ratingCount: rating?.count ?? 0,
-      longTermDiscountTiers,
+      longTermPackages,
     };
   }
 }

@@ -14,6 +14,7 @@ import {
   type CustomerTripFilter,
   type PaginationMeta,
 } from '@xeprime/types';
+import { fromDateOnly } from '../../common/date-only';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SettlementService } from '../bookings/settlement/settlement.service';
 import {
@@ -290,6 +291,7 @@ const BOOKING_SELECT = {
   code: true,
   status: true,
   serviceType: true,
+  longTermPackageMonths: true,
   routeType: true,
   pickupAddress: true,
   destination: true,
@@ -312,6 +314,11 @@ const LIST_SELECT = {
   pickupAt: true,
   returnAt: true,
   serviceType: true,
+  longTermPackageMonths: true,
+  pickupPreference: true,
+  requestedPickupDate: true,
+  pickupWindowStartDate: true,
+  pickupWindowEndDate: true,
   routeType: true,
   pickupAddress: true,
   destination: true,
@@ -375,11 +382,17 @@ function toListItem(
       phone: engaged ? row.tenant.phone : null,
     },
     // Giờ trên ĐƠN thắng giờ trên yêu cầu: shop dời lịch thì đơn mới là cái đang có hiệu lực.
-    pickupAt: (booking?.pickupAt ?? row.pickupAt).toISOString(),
-    returnAt: (booking?.returnAt ?? row.returnAt).toISOString(),
+    // Yêu cầu dài hạn chờ duyệt chưa có lịch nào — trả null, KHÔNG suy ra ngày từ nguyện vọng.
+    pickupAt: (booking?.pickupAt ?? row.pickupAt)?.toISOString() ?? null,
+    returnAt: (booking?.returnAt ?? row.returnAt)?.toISOString() ?? null,
     // Hành trình cùng nguyên tắc đơn-thắng-yêu-cầu (17/08): shop sửa lộ trình/địa chỉ trên đơn
     // thì khách phải thấy bản đang hiệu lực, không phải bản mình gõ lúc gửi.
     serviceType: booking?.serviceType ?? row.serviceType,
+    longTermPackageMonths: booking?.longTermPackageMonths ?? row.longTermPackageMonths,
+    pickupPreference: row.pickupPreference,
+    requestedPickupDate: fromDateOnly(row.requestedPickupDate),
+    pickupWindowStartDate: fromDateOnly(row.pickupWindowStartDate),
+    pickupWindowEndDate: fromDateOnly(row.pickupWindowEndDate),
     routeType: booking ? booking.routeType : row.routeType,
     pickupAddress: booking ? booking.pickupAddress : row.pickupAddress,
     destination: booking ? booking.destination : row.destination,

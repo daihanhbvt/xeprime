@@ -16,6 +16,8 @@ import {
   canTransitionBooking,
   isBookingFinal,
   occupiesSchedule,
+  isLongTermPackageMonths,
+  longTermReturnAt,
   SERVICE_TYPE,
   type BookingPriceSnapshot,
   type BookingStatus,
@@ -47,6 +49,7 @@ const LIST_SELECT = {
   customerPhone: true,
   status: true,
   serviceType: true,
+  longTermPackageMonths: true,
   pickupAt: true,
   returnAt: true,
   totalAmount: true,
@@ -163,13 +166,35 @@ export class BookingsService {
     source: BookingCreateSource = 'direct',
     snapshot?: BookingPriceSnapshot,
   ): Promise<BookingDetailDto> {
-    const pickupAt = new Date(dto.pickupAt);
-    const returnAt = new Date(dto.returnAt);
-    assertRange(pickupAt, returnAt);
-
     // Hành trình đi cùng dịch vụ: with_driver bắt buộc lộ trình + địa chỉ đón (liên tỉnh thêm
     // điểm đến), dịch vụ khác bị normalize về null — CHECK DB là chốt chặn cuối.
     const serviceType = dto.serviceType ?? SERVICE_TYPE.SELF_DRIVE;
+
+    /*
+     * Thuê dài hạn: ngày trả KHÔNG đến từ client mà suy ra từ gói bằng THÁNG LỊCH giờ Việt Nam
+     * (ADR 0011). Nhân viên chỉ chốt giờ nhận; mọi con số ngày trả gửi kèm đều bị bỏ qua, nên
+     * không có đường nào tạo ra đơn dài hạn dài/ngắn hơn gói khách mua.
+     */
+    const longTermPackageMonths =
+      serviceType === SERVICE_TYPE.LONG_TERM ? (dto.longTermPackageMonths ?? null) : null;
+    if (serviceType === SERVICE_TYPE.LONG_TERM && !isLongTermPackageMonths(longTermPackageMonths)) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Đơn thuê dài hạn phải gắn với một gói thuê',
+      });
+    }
+    const pickupAt = new Date(dto.pickupAt);
+    if (longTermPackageMonths == null && !dto.returnAt) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Thiếu thời gian trả xe',
+      });
+    }
+    const returnAt =
+      longTermPackageMonths != null
+        ? longTermReturnAt(pickupAt, longTermPackageMonths)
+        : new Date(dto.returnAt!);
+    assertRange(pickupAt, returnAt);
     const route = normalizeRouteContext({
       serviceType,
       routeType: dto.routeType,
@@ -201,6 +226,7 @@ export class BookingsService {
         customerPhone: dto.customerPhone ?? null,
         status: BOOKING_STATUS.RESERVED,
         serviceType,
+        longTermPackageMonths,
         routeType: route.routeType,
         pickupAddress: route.pickupAddress,
         destination: route.destination,
@@ -271,6 +297,7 @@ export class BookingsService {
         id: true,
         status: true,
         serviceType: true,
+        longTermPackageMonths: true,
         routeType: true,
         pickupAddress: true,
         destination: true,
@@ -305,8 +332,24 @@ export class BookingsService {
         })
       : null;
 
+    /*
+     * Đơn THUÊ DÀI HẠN có độ dài cố định bằng gói: dời giờ nhận thì giờ trả dịch theo bằng
+     * tháng lịch, và không ai được nhập tay giờ trả — nếu cho, đơn sẽ dài/ngắn hơn gói khách
+     * đã mua mà không có dấu vết nào (ADR 0011).
+     */
     const pickupAt = dto.pickupAt ? new Date(dto.pickupAt) : current.pickupAt;
-    const returnAt = dto.returnAt ? new Date(dto.returnAt) : current.returnAt;
+    let returnAt: Date;
+    if (current.longTermPackageMonths != null) {
+      if (dto.returnAt) {
+        throw new BadRequestException({
+          code: API_ERROR_CODE.VALIDATION_FAILED,
+          message: 'Đơn thuê dài hạn có ngày trả tính theo gói — chỉ đổi được ngày nhận',
+        });
+      }
+      returnAt = longTermReturnAt(pickupAt, current.longTermPackageMonths);
+    } else {
+      returnAt = dto.returnAt ? new Date(dto.returnAt) : current.returnAt;
+    }
     if (dto.pickupAt || dto.returnAt) assertRange(pickupAt, returnAt);
 
     // Tính lại total nếu bất kỳ khoản cấu thành đổi.
@@ -317,7 +360,8 @@ export class BookingsService {
     const total = new Prisma.Decimal(base).plus(delivery).minus(discount);
 
     const rescheduled =
-      Boolean(dto.pickupAt || dto.returnAt) && occupiesSchedule(current.status as BookingStatus);
+      (Boolean(dto.pickupAt) || returnAt.getTime() !== current.returnAt.getTime()) &&
+      occupiesSchedule(current.status as BookingStatus);
 
     const row = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.booking.update({
@@ -736,7 +780,9 @@ function manualSnapshot(amounts: {
  */
 function isDriverScheduleConflict(err: unknown): boolean {
   const text =
-    err instanceof Error ? `${err.message} ${JSON.stringify((err as { meta?: unknown }).meta ?? '')}` : '';
+    err instanceof Error
+      ? `${err.message} ${JSON.stringify((err as { meta?: unknown }).meta ?? '')}`
+      : '';
   return text.includes('bookings_driver_schedule_excl');
 }
 
@@ -778,6 +824,7 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     vehicleId: b.vehicleId,
     vehicleName: b.vehicle.name,
     vehiclePlate: b.vehicle.plateNumber,
+    longTermPackageMonths: b.longTermPackageMonths,
     customerName: b.customerName,
     customerPhone: b.customerPhone,
     status: b.status,

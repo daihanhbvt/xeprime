@@ -1,5 +1,11 @@
 # Nghiệp vụ đa dịch vụ: Xe có tài xế & Thuê dài hạn (manage + user)
 
+> ⚠️ **Phần THUÊ DÀI HẠN của plan này đã bị [ADR 0011](../decisions/0011-long-term-fixed-packages.md)
+> ghi đè (18/08/2026).** Không còn "khách chọn ngày cụ thể, tối thiểu 7 ngày", không còn
+> `LONG_TERM_MIN_DAYS`, không còn giá "ngày × giá tháng ÷ 30": dài hạn nay là **gói cố định
+> 1/2/3/6/9/12 THÁNG LỊCH**, khách chỉ nêu nguyện vọng ngày nhận và gian hàng chốt lịch khi duyệt.
+> Phần **Xe có tài xế** của plan vẫn đúng hiện trạng.
+
 ## 1. Bối cảnh & vấn đề
 
 Đợt 17/08 đã đưa 3 tab dịch vụ (Xe tự lái / Xe có tài xế / Thuê xe dài hạn) vào ô tìm kiếm

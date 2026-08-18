@@ -1,3 +1,4 @@
+import type { DiscountTier, LegacyDiscountTier } from './long-term';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
 
 /**
@@ -33,13 +34,11 @@ export interface DeliveryTier {
   fee: string;
 }
 
-/** Một mốc ưu đãi giảm giá theo thời gian thuê. */
-export interface DiscountTier {
-  minDays: number;
-  /** 1–100, áp CHỈ lên tiền thuê cơ bản. */
-  percent: number;
-  note?: string;
-}
+/*
+ * Mốc ưu đãi cam kết thời hạn (`rental_policies.discount_tiers_json`) sống ở `./long-term`
+ * dưới shape canonical THEO THÁNG — `DiscountTier` / `LegacyDiscountTier`. Ở đây chỉ import
+ * để mô tả snapshot; export công khai đi qua `./long-term` để tránh hai đường vào một type.
+ */
 
 /** Nguồn của báo giá giao nhận trên một yêu cầu đặt xe. */
 export const DELIVERY_QUOTE_SOURCE = {
@@ -80,9 +79,9 @@ export interface BookingRequestDeliveryQuote {
 
 /** Khoá từng dòng trong breakdown giá — FE map nhãn/màu theo khoá, không so chuỗi nhãn. */
 export const PRICE_ROW = {
-  /** Tiền thuê gốc (số ngày × đơn giá). */
+  /** Tiền thuê gốc: số ngày × đơn giá (thuê ngày) hoặc giá cơ sở của gói (thuê dài hạn). */
   BASE: 'base',
-  /** Giảm giá theo mốc thời gian thuê — chỉ trừ vào tiền thuê. */
+  /** Khuyến mãi trực tiếp (tự lái) hoặc ưu đãi cam kết thời hạn (dài hạn) — chỉ trừ tiền thuê. */
   DISCOUNT: 'discount',
   /** Tiền thuê sau giảm (dòng phụ, = base − discount). */
   SUBTOTAL: 'subtotal',
@@ -117,8 +116,21 @@ export interface BookingPriceSnapshot {
   /** 'quote' = tính từ PricingService khi duyệt yêu cầu; 'manual' = shop nhập tay khi tạo đơn. */
   source: 'quote' | 'manual';
   currency: 'VND';
-  /** Số ngày tính tiền (nếu source = quote). */
+  /** Số ngày tính tiền — chỉ có ở đơn tính theo NGÀY (tự lái / có tài xế). */
   days?: number;
+  /**
+   * Gói thuê dài hạn đã chốt (tháng lịch). Có mặt ⇒ đơn tính theo GÓI chứ không theo ngày:
+   * `basePackageAmount = baseMonthlyPrice × packageMonths`, ưu đãi cam kết áp lên số đó.
+   */
+  longTerm?: {
+    packageMonths: number;
+    baseMonthlyPrice: string;
+    basePackageAmount: string;
+    durationDiscountPercent: number | null;
+    durationDiscountAmount: string;
+    finalPackageAmount: string;
+    effectiveMonthlyAmount: string;
+  };
   rows: PriceBreakdownRow[];
   /** Tổng khách trả trước cọc (= tổng các dòng). */
   totalAmount: string;
@@ -136,6 +148,10 @@ export interface BookingPriceSnapshot {
     overtimeGraceMinutes: number | null;
     overtimeRoundingMinutes: number | null;
     discountEnabled: boolean;
-    discountTiers: DiscountTier[];
+    /**
+     * Snapshot đã đóng băng chịu được CẢ hai đời dữ liệu: đơn cũ giữ mốc theo ngày
+     * (`minDays`), đơn mới ghi mốc theo tháng (`minMonths`). Snapshot lịch sử KHÔNG migrate.
+     */
+    discountTiers: (DiscountTier | LegacyDiscountTier)[];
   } | null;
 }

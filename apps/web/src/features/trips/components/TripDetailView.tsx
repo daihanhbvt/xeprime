@@ -26,6 +26,7 @@ import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { ReviewModal } from '@/features/reviews/components/ReviewModal';
 import { dayjs, formatDateTime, formatRentalDuration, formatRentalPoint } from '@/lib/datetime';
+import { packageLabelOf, pickupWishText } from '@/lib/long-term';
 import { getErrorCode, getErrorMessage, isUnauthenticated } from '@/services/api-client';
 import { useTrip } from '../hooks';
 import type { CustomerTripDetail } from '../types';
@@ -211,18 +212,38 @@ export function TripDetailView({ tripId }: { tripId: string }) {
                   {data.routeType ? ` · ${routeTypeLabel(data.routeType)}` : ''}
                 </dd>
               </div>
-              <div className={styles.row}>
-                <dt>Nhận xe</dt>
-                <dd>{formatRentalPoint(dayjs(data.pickupAt))}</dd>
-              </div>
-              <div className={styles.row}>
-                <dt>Trả xe</dt>
-                <dd>{formatRentalPoint(dayjs(data.returnAt))}</dd>
-              </div>
-              <div className={styles.row}>
-                <dt>Thời lượng</dt>
-                <dd>{formatRentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
-              </div>
+              {/*
+                Chuyến THUÊ DÀI HẠN còn chờ duyệt chưa có lịch nào (ADR 0011): hiện gói đã mua và
+                nguyện vọng ngày nhận. Đổ dayjs(null) vào đây sẽ in "Invalid Date", và tệ hơn là
+                khiến khách tưởng lịch đã chốt.
+              */}
+              {data.longTermPackageMonths ? (
+                <div className={styles.row}>
+                  <dt>Gói thuê</dt>
+                  <dd>{packageLabelOf(data.longTermPackageMonths)}</dd>
+                </div>
+              ) : null}
+              {data.pickupAt && data.returnAt ? (
+                <>
+                  <div className={styles.row}>
+                    <dt>Nhận xe</dt>
+                    <dd>{formatRentalPoint(dayjs(data.pickupAt))}</dd>
+                  </div>
+                  <div className={styles.row}>
+                    <dt>Trả xe</dt>
+                    <dd>{formatRentalPoint(dayjs(data.returnAt))}</dd>
+                  </div>
+                  <div className={styles.row}>
+                    <dt>Thời lượng</dt>
+                    <dd>{formatRentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.row}>
+                  <dt>Nguyện vọng nhận xe</dt>
+                  <dd>{pickupWishText(data)}</dd>
+                </div>
+              )}
             </dl>
             {/* Chuyến CÓ TÀI XẾ: xe đến đón — hiện hành trình thay cho hình thức nhận xe. */}
             {data.serviceType === SERVICE_TYPE.WITH_DRIVER ? (

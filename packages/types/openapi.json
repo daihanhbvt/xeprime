@@ -72,7 +72,7 @@
             }
           }
         },
-        "summary": "Đăng ký bằng email + mật khẩu",
+        "summary": "Đăng ký bằng số điện thoại + mật khẩu",
         "tags": [
           "auth"
         ]
@@ -1828,20 +1828,36 @@
           },
           {
             "name": "pickupAt",
-            "required": true,
+            "required": false,
             "in": "query",
-            "description": "ISO datetime nhận xe",
+            "description": "ISO datetime nhận xe (không dùng cho long_term)",
             "schema": {
               "type": "string"
             }
           },
           {
             "name": "returnAt",
-            "required": true,
+            "required": false,
             "in": "query",
-            "description": "ISO datetime trả xe",
+            "description": "ISO datetime trả xe (không dùng cho long_term)",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "packageMonths",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "enum": [
+                1,
+                2,
+                3,
+                6,
+                9,
+                12
+              ]
             }
           },
           {
@@ -1883,7 +1899,7 @@
             }
           }
         },
-        "summary": "Báo giá thuê theo khoảng ngày (chưa gồm phí giao nhận)",
+        "summary": "Báo giá thuê — theo khoảng ngày, hoặc theo GÓI tháng lịch với thuê dài hạn",
         "tags": [
           "public-listings"
         ]
@@ -2135,9 +2151,9 @@
           },
           {
             "name": "pickupAt",
-            "required": true,
+            "required": false,
             "in": "query",
-            "description": "Nhận xe, ISO-8601 UTC",
+            "description": "Nhận xe, ISO-8601 UTC (không dùng cho long_term)",
             "schema": {
               "format": "date-time",
               "type": "string"
@@ -2145,12 +2161,28 @@
           },
           {
             "name": "returnAt",
-            "required": true,
+            "required": false,
             "in": "query",
-            "description": "Trả xe, ISO-8601 UTC",
+            "description": "Trả xe, ISO-8601 UTC (không dùng cho long_term)",
             "schema": {
               "format": "date-time",
               "type": "string"
+            }
+          },
+          {
+            "name": "packageMonths",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number",
+              "enum": [
+                1,
+                2,
+                3,
+                6,
+                9,
+                12
+              ]
             }
           },
           {
@@ -6397,6 +6429,7 @@
     },
     "/booking-requests/{id}/approve": {
       "post": {
+        "description": "Thuê dài hạn: body bắt buộc scheduledPickupAt — gian hàng chốt giờ nhận, server tính giờ trả theo gói tháng lịch (ADR 0011). Trùng lịch → 409, yêu cầu vẫn chờ duyệt.",
         "operationId": "BookingRequestsController_approve",
         "parameters": [
           {
@@ -6408,6 +6441,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveBookingRequestDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -9615,15 +9658,15 @@
             "type": "string",
             "example": "Nguyễn Văn A"
           },
-          "email": {
+          "phone": {
             "type": "string",
-            "example": "ban@congty.vn"
+            "example": "0901234567"
           }
         },
         "required": [
           "password",
           "displayName",
-          "email"
+          "phone"
         ]
       },
       "LoginDto": {
@@ -10955,25 +10998,52 @@
           "amenities"
         ]
       },
-      "DiscountTierDto": {
+      "LongTermPackageOptionDto": {
         "type": "object",
         "properties": {
-          "minDays": {
+          "packageMonths": {
             "type": "number",
-            "description": "Số ngày thuê tối thiểu — các mốc phải tăng dần nghiêm ngặt"
+            "enum": [
+              1,
+              2,
+              3,
+              6,
+              9,
+              12
+            ]
           },
-          "percent": {
-            "type": "number",
-            "description": "Mức giảm % (1–100), CHỈ áp lên tiền thuê cơ bản"
-          },
-          "note": {
+          "baseMonthlyPrice": {
             "type": "string",
-            "description": "Ghi chú hiển thị"
+            "description": "Giá dài hạn cơ sở cho MỘT tháng (VND string)"
+          },
+          "basePackageAmount": {
+            "type": "string",
+            "description": "baseMonthlyPrice × packageMonths"
+          },
+          "durationDiscountPercent": {
+            "type": "number",
+            "nullable": true,
+            "description": "% mốc cam kết đang áp — null = không mốc nào áp cho gói này"
+          },
+          "durationDiscountAmount": {
+            "type": "string"
+          },
+          "finalPackageAmount": {
+            "type": "string",
+            "description": "Giá gói sau ưu đãi — số khách thực trả (trước cọc)"
+          },
+          "effectiveMonthlyAmount": {
+            "type": "string",
+            "description": "finalPackageAmount ÷ packageMonths"
           }
         },
         "required": [
-          "minDays",
-          "percent"
+          "packageMonths",
+          "baseMonthlyPrice",
+          "basePackageAmount",
+          "durationDiscountAmount",
+          "finalPackageAmount",
+          "effectiveMonthlyAmount"
         ]
       },
       "PublicListingDetailDto": {
@@ -11138,10 +11208,10 @@
               "type": "string"
             }
           },
-          "longTermDiscountTiers": {
+          "longTermPackages": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/DiscountTierDto"
+              "$ref": "#/components/schemas/LongTermPackageOptionDto"
             }
           }
         },
@@ -11157,7 +11227,7 @@
           "ratingCount",
           "images",
           "features",
-          "longTermDiscountTiers"
+          "longTermPackages"
         ]
       },
       "PublicDestinationDto": {
@@ -11311,6 +11381,60 @@
           "fee"
         ]
       },
+      "DiscountTierDto": {
+        "type": "object",
+        "properties": {
+          "minMonths": {
+            "type": "number",
+            "description": "Số tháng cam kết tối thiểu — phải là một gói thuê hợp lệ",
+            "enum": [
+              1,
+              2,
+              3,
+              6,
+              9,
+              12
+            ]
+          },
+          "percent": {
+            "type": "number",
+            "description": "Mức giảm % (1–100), CHỈ áp lên giá cơ sở của gói dài hạn"
+          },
+          "note": {
+            "type": "string",
+            "description": "Ghi chú hiển thị"
+          }
+        },
+        "required": [
+          "minMonths",
+          "percent"
+        ]
+      },
+      "LegacyDiscountTierDto": {
+        "type": "object",
+        "properties": {
+          "minDays": {
+            "type": "number",
+            "description": "Số ngày của mốc cũ"
+          },
+          "percent": {
+            "type": "number"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          },
+          "legacy": {
+            "type": "boolean",
+            "description": "Luôn true — cờ nhận diện mốc cũ chưa quy đổi"
+          }
+        },
+        "required": [
+          "minDays",
+          "percent",
+          "legacy"
+        ]
+      },
       "RentalPolicyValuesDto": {
         "type": "object",
         "properties": {
@@ -11346,9 +11470,17 @@
             "type": "boolean"
           },
           "discountTiers": {
+            "description": "Mốc ưu đãi canonical (theo tháng)",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/DiscountTierDto"
+            }
+          },
+          "legacyDiscountTiers": {
+            "description": "Mốc cũ theo ngày không quy đổi được — chỉ để cảnh báo, KHÔNG tính giá",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LegacyDiscountTierDto"
             }
           },
           "updatedAt": {
@@ -11362,6 +11494,7 @@
           "deliveryTiers",
           "discountEnabled",
           "discountTiers",
+          "legacyDiscountTiers",
           "updatedAt"
         ]
       },
@@ -11484,7 +11617,18 @@
         "properties": {
           "days": {
             "type": "number",
-            "description": "Số ngày tính tiền"
+            "nullable": true,
+            "description": "Số ngày tính tiền — null với báo giá theo GÓI dài hạn (không tính theo ngày)"
+          },
+          "longTerm": {
+            "nullable": true,
+            "description": "Cấu tạo giá gói — khác null ⇒ đây là báo giá THUÊ DÀI HẠN theo gói tháng lịch",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LongTermPackageOptionDto"
+              }
+            ]
           },
           "rows": {
             "type": "array",
@@ -11516,18 +11660,9 @@
           "estimateNote": {
             "type": "string",
             "nullable": true
-          },
-          "longTermSavingsPercent": {
-            "type": "number",
-            "nullable": true
-          },
-          "longTermSavingsAmount": {
-            "type": "string",
-            "nullable": true
           }
         },
         "required": [
-          "days",
           "rows",
           "totalAmount",
           "depositAmount",
@@ -15388,13 +15523,26 @@
               "long_term"
             ]
           },
+          "longTermPackageMonths": {
+            "type": "number",
+            "nullable": true,
+            "enum": [
+              1,
+              2,
+              3,
+              6,
+              9,
+              12
+            ],
+            "description": "Gói thuê dài hạn (tháng lịch) — null với dịch vụ khác và đơn dài hạn LEGACY"
+          },
           "pickupAt": {
             "type": "string",
             "description": "ISO-8601 UTC"
           },
           "returnAt": {
             "type": "string",
-            "description": "ISO-8601 UTC"
+            "description": "ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói"
           },
           "totalAmount": {
             "type": "string",
@@ -15494,9 +15642,17 @@
             "type": "boolean"
           },
           "discountTiers": {
+            "description": "Mốc ưu đãi canonical (theo tháng)",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/DiscountTierDto"
+            }
+          },
+          "legacyDiscountTiers": {
+            "description": "Mốc cũ theo ngày không quy đổi được — chỉ để cảnh báo, KHÔNG tính giá",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LegacyDiscountTierDto"
             }
           },
           "updatedAt": {
@@ -15517,6 +15673,7 @@
           "deliveryTiers",
           "discountEnabled",
           "discountTiers",
+          "legacyDiscountTiers",
           "updatedAt",
           "source"
         ]
@@ -15620,13 +15777,26 @@
               "long_term"
             ]
           },
+          "longTermPackageMonths": {
+            "type": "number",
+            "nullable": true,
+            "enum": [
+              1,
+              2,
+              3,
+              6,
+              9,
+              12
+            ],
+            "description": "Gói thuê dài hạn (tháng lịch) — null với dịch vụ khác và đơn dài hạn LEGACY"
+          },
           "pickupAt": {
             "type": "string",
             "description": "ISO-8601 UTC"
           },
           "returnAt": {
             "type": "string",
-            "description": "ISO-8601 UTC"
+            "description": "ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói"
           },
           "totalAmount": {
             "type": "string",
@@ -15776,9 +15946,20 @@
             "type": "string",
             "description": "Nhận xe (ISO-8601)"
           },
+          "longTermPackageMonths": {
+            "type": "number",
+            "enum": [
+              1,
+              2,
+              3,
+              6,
+              9,
+              12
+            ]
+          },
           "returnAt": {
             "type": "string",
-            "description": "Trả xe (ISO-8601), phải sau nhận xe"
+            "description": "Trả xe (ISO-8601) — không dùng cho long_term"
           },
           "baseAmount": {
             "type": "string",
@@ -15804,8 +15985,7 @@
         "required": [
           "vehicleId",
           "customerName",
-          "pickupAt",
-          "returnAt"
+          "pickupAt"
         ]
       },
       "UpdateBookingDto": {
@@ -17042,10 +17222,12 @@
           },
           "pickupAt": {
             "type": "string",
-            "description": "ISO-8601 UTC"
+            "nullable": true,
+            "description": "ISO-8601 UTC — null với yêu cầu dài hạn chưa chốt lịch"
           },
           "returnAt": {
             "type": "string",
+            "nullable": true,
             "description": "ISO-8601 UTC"
           },
           "serviceType": {
@@ -17055,6 +17237,42 @@
               "with_driver",
               "long_term"
             ]
+          },
+          "longTermPackageMonths": {
+            "type": "number",
+            "nullable": true,
+            "enum": [
+              1,
+              2,
+              3,
+              6,
+              9,
+              12
+            ],
+            "description": "Gói thuê dài hạn khách chọn — null ở yêu cầu dài hạn LEGACY"
+          },
+          "pickupPreference": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "within_7_days",
+              "specific_date"
+            ]
+          },
+          "requestedPickupDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD (giờ VN)"
+          },
+          "pickupWindowStartDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD (giờ VN)"
+          },
+          "pickupWindowEndDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD (giờ VN)"
           },
           "routeType": {
             "type": "string",
@@ -17116,8 +17334,6 @@
           "status",
           "customerName",
           "customerPhone",
-          "pickupAt",
-          "returnAt",
           "serviceType",
           "deliveryRequested",
           "createdAt"
@@ -17140,6 +17356,26 @@
           "data",
           "meta"
         ]
+      },
+      "ApproveBookingRequestDto": {
+        "type": "object",
+        "properties": {
+          "scheduledPickupAt": {
+            "type": "string",
+            "description": "Ngày/giờ nhận xe chính xác (ISO-8601) — BẮT BUỘC với yêu cầu thuê dài hạn"
+          },
+          "longTermPackageMonths": {
+            "type": "number",
+            "enum": [
+              1,
+              2,
+              3,
+              6,
+              9,
+              12
+            ]
+          }
+        }
       },
       "RejectBookingRequestDto": {
         "type": "object",
@@ -17170,11 +17406,33 @@
           },
           "pickupAt": {
             "type": "string",
-            "description": "Nhận xe (ISO-8601)"
+            "description": "Nhận xe (ISO-8601) — không dùng cho long_term"
           },
           "returnAt": {
             "type": "string",
-            "description": "Trả xe (ISO-8601), phải sau nhận xe"
+            "description": "Trả xe (ISO-8601) — không dùng cho long_term"
+          },
+          "longTermPackageMonths": {
+            "type": "number",
+            "enum": [
+              1,
+              2,
+              3,
+              6,
+              9,
+              12
+            ]
+          },
+          "pickupPreference": {
+            "type": "string",
+            "enum": [
+              "within_7_days",
+              "specific_date"
+            ]
+          },
+          "requestedPickupDate": {
+            "type": "string",
+            "description": "Ngày muốn nhận xe (YYYY-MM-DD)"
           },
           "serviceType": {
             "type": "string",
@@ -17215,9 +17473,7 @@
         "required": [
           "vehicleId",
           "customerName",
-          "customerPhone",
-          "pickupAt",
-          "returnAt"
+          "customerPhone"
         ]
       },
       "BookingRequestReceiptDto": {
@@ -17483,14 +17739,39 @@
           },
           "pickupAt": {
             "type": "string",
+            "nullable": true,
             "description": "ISO-8601 UTC"
           },
           "returnAt": {
             "type": "string",
+            "nullable": true,
             "description": "ISO-8601 UTC"
           },
           "serviceType": {
             "type": "string"
+          },
+          "longTermPackageMonths": {
+            "type": "number",
+            "nullable": true
+          },
+          "pickupPreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestedPickupDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
+          },
+          "pickupWindowStartDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
+          },
+          "pickupWindowEndDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
           },
           "routeType": {
             "type": "string",
@@ -17532,8 +17813,6 @@
           "stage",
           "vehicle",
           "shop",
-          "pickupAt",
-          "returnAt",
           "serviceType",
           "deliveryRequested",
           "canReview",
@@ -17803,14 +18082,39 @@
           },
           "pickupAt": {
             "type": "string",
+            "nullable": true,
             "description": "ISO-8601 UTC"
           },
           "returnAt": {
             "type": "string",
+            "nullable": true,
             "description": "ISO-8601 UTC"
           },
           "serviceType": {
             "type": "string"
+          },
+          "longTermPackageMonths": {
+            "type": "number",
+            "nullable": true
+          },
+          "pickupPreference": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestedPickupDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
+          },
+          "pickupWindowStartDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
+          },
+          "pickupWindowEndDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "YYYY-MM-DD"
           },
           "routeType": {
             "type": "string",
@@ -17886,8 +18190,6 @@
           "stage",
           "vehicle",
           "shop",
-          "pickupAt",
-          "returnAt",
           "serviceType",
           "deliveryRequested",
           "canReview",
@@ -18498,6 +18800,10 @@
           "days": {
             "type": "number",
             "description": "Số ngày thuê (làm tròn lên)"
+          },
+          "longTermPackageMonths": {
+            "type": "number",
+            "nullable": true
           },
           "routeType": {
             "type": "string",

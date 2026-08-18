@@ -101,11 +101,13 @@ function PolicyPreview({ values }: { values: RentalPolicyValues }) {
       </dl>
       {values.discountEnabled && values.discountTiers.length > 0 ? (
         <div className={styles.previewDiscounts}>
-          <span className={styles.previewDiscountsLabel}>Chính sách khuyến mãi theo thời gian</span>
+          <span className={styles.previewDiscountsLabel}>
+            Ưu đãi cam kết thời hạn (thuê dài hạn)
+          </span>
           <span className={styles.previewChips}>
             {values.discountTiers.map((tier) => (
-              <span key={tier.minDays} className={styles.previewChip}>
-                Từ {tier.minDays} ngày <DiscountTag percent={tier.percent} size="sm" />
+              <span key={tier.minMonths} className={styles.previewChip}>
+                Gói {tier.minMonths} tháng <DiscountTag percent={tier.percent} size="sm" />
               </span>
             ))}
           </span>

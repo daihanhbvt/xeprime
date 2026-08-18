@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import { API_ERROR_CODE, BOOKING_STATUS, DRIVER_STATUS } from '@xeprime/types';
+import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
@@ -96,7 +97,7 @@ export class DriversService {
           phone: dto.phone,
           ...(dto.driverType ? { driverType: dto.driverType } : {}),
           licenseNo: dto.licenseNo?.trim() || null,
-          licenseExpiresAt: dto.licenseExpiresAt ? dateOnly(dto.licenseExpiresAt) : null,
+          licenseExpiresAt: dto.licenseExpiresAt ? toDateOnly(dto.licenseExpiresAt) : null,
           idNo: dto.idNo?.trim() || null,
           note: dto.note?.trim() || null,
         },
@@ -137,7 +138,7 @@ export class DriversService {
           ...(dto.status !== undefined ? { status: dto.status } : {}),
           ...(dto.licenseNo !== undefined ? { licenseNo: dto.licenseNo?.trim() || null } : {}),
           ...(dto.licenseExpiresAt !== undefined
-            ? { licenseExpiresAt: dto.licenseExpiresAt ? dateOnly(dto.licenseExpiresAt) : null }
+            ? { licenseExpiresAt: dto.licenseExpiresAt ? toDateOnly(dto.licenseExpiresAt) : null }
             : {}),
           ...(dto.idNo !== undefined ? { idNo: dto.idNo?.trim() || null } : {}),
           ...(dto.note !== undefined ? { note: dto.note?.trim() || null } : {}),
@@ -282,7 +283,7 @@ export class DriversService {
       id: d.id,
       name: d.name,
       phone: d.phone,
-      licenseExpiresAt: d.licenseExpiresAt ? d.licenseExpiresAt.toISOString().slice(0, 10) : null,
+      licenseExpiresAt: fromDateOnly(d.licenseExpiresAt),
       busy: busy.has(d.id),
       licenseExpired: licenseExpiredFor(d.licenseExpiresAt, window.returnAt),
     }));
@@ -325,17 +326,12 @@ function toDto(r: DriverRow, activeBookingCount: number): DriverDto {
     driverType: r.driverType,
     status: r.status,
     licenseNo: r.licenseNo,
-    licenseExpiresAt: r.licenseExpiresAt ? r.licenseExpiresAt.toISOString().slice(0, 10) : null,
+    licenseExpiresAt: fromDateOnly(r.licenseExpiresAt),
     idNo: r.idNo,
     note: r.note,
     activeBookingCount,
     createdAt: r.createdAt as unknown as string,
   };
-}
-
-/** `YYYY-MM-DD` → giá trị cho cột `@db.Date` (Prisma nhận Date ở nửa đêm UTC). */
-function dateOnly(isoDate: string): Date {
-  return new Date(`${isoDate}T00:00:00.000Z`);
 }
 
 /**

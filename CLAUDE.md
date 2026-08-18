@@ -51,6 +51,7 @@ Tài liệu tham chiếu (5–9) có vài quyết định kỹ thuật đã bị
 | [0007](docs/decisions/0007-api-type-contract.md) | Type FE sinh từ OpenAPI, không viết tay |
 | [0008](docs/decisions/0008-public-listings-sync.md) | Quy tắc đồng bộ `public_listings` |
 | [0009](docs/decisions/0009-chat-firestore-projection.md) | Chat: Firestore projection realtime, **PostgreSQL là source of truth**, outbox/retry, R2 |
+| [0011](docs/decisions/0011-long-term-fixed-packages.md) | Thuê dài hạn = **gói cố định theo THÁNG LỊCH** (1/2/3/6/9/12), khách chỉ nêu nguyện vọng ngày nhận |
 
 ### Công cụ Claude (`.claude/`)
 
@@ -86,6 +87,7 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | Auth | Firebase Auth chỉ là provider login → NestJS verify ID token → phát **httpOnly session cookie** — ADR 0002 |
 | API type | FE import từ `packages/types/src/api.generated.ts` sinh bằng `openapi-typescript` — ADR 0007 |
 | RBAC | Role/permission lưu DB, **guard backend là nguồn bảo vệ chính** |
+| Thuê dài hạn | **Gói cố định** 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** (server tính, client không gửi); khách nêu nguyện vọng ngày nhận, gian hàng chốt lịch khi duyệt; ưu đãi cam kết thời hạn theo THÁNG, không cộng dồn — ADR 0011 |
 | Chat | **PostgreSQL là source of truth** (mọi tin/thành viên/đính kèm/đã đọc); Firestore chỉ là projection realtime ~30–50 tin gần nhất; đồng bộ outbox/retry; attachment ở Cloudflare R2 — ADR 0009 |
 | Deploy MVP | 1 VPS 4GB RAM / 40GB SSD |
 
@@ -122,6 +124,8 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Module khác `ListingsService` ghi vào `public_listings` (ADR 0008)
 - ❌ Module khác `OccupancyService` ghi vào `vehicle_occupancies` (ADR 0006)
 - ❌ Dùng `number` cho tiền — `Decimal` ở BE, string ở JSON (ADR 0007)
+- ❌ Nhân `số tháng × 30` để suy lịch hay giá gói thuê dài hạn — dùng `addCalendarMonthsVn` / `longTermPackages` (ADR 0011)
+- ❌ Trưng chênh lệch giá dài hạn ↔ giá ngày như một khuyến mãi, hay hiện `discountPercent` (của TỰ LÁI) khi khách đang chọn dài hạn (ADR 0011)
 - ❌ Tạo microservices sớm
 - ❌ `any` tràn lan — nếu bắt buộc phải có comment lý do
 

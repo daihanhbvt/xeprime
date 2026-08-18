@@ -12,6 +12,7 @@
 export * from './status/index';
 export * from './catalog';
 export * from './phone';
+export * from './long-term';
 export * from './pricing';
 export * from './rbac';
 export * from './notifications';

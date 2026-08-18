@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import {
   CATALOG_TYPE,
-  LONG_TERM_MIN_DAYS,
-  ROUTE_TYPE_LABEL,
   SERVICE_TYPE,
   VEHICLE_TYPE,
 } from '@xeprime/types';
@@ -123,9 +121,6 @@ export function ListingDetailView({
                     <b>{formatMoneyVnd(listing.monthlyPrice)}</b>
                     <span>/tháng</span>
                   </div>
-                  <div className={styles.priceDetails}>
-                    <span className={styles.weekend}>Thuê tối thiểu {LONG_TERM_MIN_DAYS} ngày</span>
-                  </div>
                 </>
               ) : (
                 <div className={styles.priceMain}>
@@ -140,27 +135,6 @@ export function ListingDetailView({
                   <div className={styles.priceMain}>
                     <b>{formatMoneyVnd(listing.withDriverDailyPrice)}</b>
                     <span>/ngày</span>
-                  </div>
-                  <div className={styles.priceDetails}>
-                    <span className={styles.weekend}>
-                      {ROUTE_TYPE_LABEL.in_city} · đã gồm tài xế
-                    </span>
-                    {listing.withDriverInterCityPrice ? (
-                      <span className={styles.weekend}>
-                        {ROUTE_TYPE_LABEL.inter_city}{' '}
-                        {formatMoneyVnd(listing.withDriverInterCityPrice)}/ngày
-                      </span>
-                    ) : null}
-                    {listing.withDriverOneWayPrice ? (
-                      <span className={styles.weekend}>
-                        {ROUTE_TYPE_LABEL.inter_city_one_way}{' '}
-                        {formatMoneyVnd(listing.withDriverOneWayPrice)}/ngày
-                      </span>
-                    ) : null}
-                    <span className={styles.weekend}>
-                      Chưa gồm phí cầu đường, ăn nghỉ của tài xế cho chuyến dài — gian hàng xác nhận
-                      khi duyệt
-                    </span>
                   </div>
                 </>
               ) : (

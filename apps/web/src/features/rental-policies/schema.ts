@@ -1,5 +1,5 @@
 import * as yup from 'yup';
-import { SERVICE_TYPE } from '@xeprime/types';
+import { LONG_TERM_PACKAGE_MONTHS, SERVICE_TYPE } from '@xeprime/types';
 
 /**
  * Schema form chính sách thuê (yup — báo lỗi sớm ngay trên ô nhập; validate thật ở BE:
@@ -41,10 +41,11 @@ export const deliveryTierSchema = yup.object({
  * Ưu đãi này CHỈ áp cho dịch vụ Thuê dài hạn (luật ở PricingService.buildQuote).
  */
 export const discountTierSchema = yup.object({
-  minMonths: requiredNumber('Nhập số tháng tối thiểu')
-    .integer('Số tháng phải là số nguyên')
-    .min(1, 'Ít nhất 1 tháng')
-    .max(12, 'Tối đa 12 tháng'),
+  // Mốc là một GÓI thuê hợp lệ, không phải số tháng tự do — form dùng Select, schema chặn nốt.
+  minMonths: requiredNumber('Chọn mốc gói thuê').oneOf(
+    [...LONG_TERM_PACKAGE_MONTHS],
+    `Mốc ưu đãi phải là gói ${LONG_TERM_PACKAGE_MONTHS.join(', ')} tháng`,
+  ),
   percent: requiredNumber('Nhập mức giảm (%)')
     .integer('Mức giảm phải là số nguyên')
     .min(1, 'Ít nhất 1%')
@@ -130,17 +131,30 @@ export const policyFormSchema = yup.object({
       is: true,
       then: (s) => s.min(1, 'Bật ưu đãi thì phải có ít nhất một mốc giảm giá'),
     })
+    .max(LONG_TERM_PACKAGE_MONTHS.length, `Tối đa ${LONG_TERM_PACKAGE_MONTHS.length} mốc ưu đãi`)
+    /*
+     * Hai luật đi cùng nhau (cùng luật với PricingService.validatePolicy):
+     *   - mốc tăng dần, không trùng;
+     *   - % KHÔNG được giảm khi thời hạn tăng — cam kết dài hơn mà ưu đãi thấp hơn là nghịch lý
+     *     với khách, và vì mốc lấy theo "cao nhất đạt tới" nên nó tạo ra giá thuê lâu = đắt hơn.
+     */
     .test('ascending-months', '', function ascendingMonths(tiers) {
       if (!tiers) return true;
       for (let i = 1; i < tiers.length; i++) {
-        const prev = tiers[i - 1]?.minMonths;
-        const curr = tiers[i]?.minMonths;
-        if (prev != null && curr != null && curr <= prev) {
+        const prev = tiers[i - 1];
+        const curr = tiers[i];
+        if (prev?.minMonths == null || curr?.minMonths == null) continue;
+        if (curr.minMonths <= prev.minMonths) {
           return this.createError({
             message:
-              curr === prev
-                ? `Trùng mốc ưu đãi "từ ${curr} tháng"`
+              curr.minMonths === prev.minMonths
+                ? `Trùng mốc ưu đãi "${curr.minMonths} tháng"`
                 : 'Các mốc ưu đãi phải theo số tháng tăng dần',
+          });
+        }
+        if (curr.percent != null && prev.percent != null && curr.percent < prev.percent) {
+          return this.createError({
+            message: `Ưu đãi ${curr.minMonths} tháng không được thấp hơn mốc ${prev.minMonths} tháng`,
           });
         }
       }

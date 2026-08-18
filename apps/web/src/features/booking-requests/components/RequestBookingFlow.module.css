@@ -618,14 +618,7 @@
   gap: 6px;
 }
 
-/* Tab dịch vụ mang badge mức giảm (17/08 đợt 3) — nhãn + pill nằm trên một dòng. */
-.serviceOption {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Dòng "Tiết kiệm X₫ (−Y%)" trong bảng giá — màu thành công, đậm để khách thấy ngay. */
+/* Dòng "Tiết kiệm X₫ nhờ ưu đãi thời hạn" trong bảng giá — chỉ nói về ưu đãi CAM KẾT. */
 .savingsText {
   display: block;
   color: var(--xp-color-success);
@@ -633,22 +626,26 @@
   font-weight: 700;
 }
 
-/* Hàng gói thuê dài hạn (đợt 4 — mô hình gói Mioto): pill bấm được, badge % ở góc. */
+/*
+ * Bảng chọn GÓI thuê dài hạn (ADR 0011): mỗi ô hiện TÊN GÓI + tổng tiền thật + giá bình quân
+ * tháng — không badge phần trăm nổi. Lưới tự xuống dòng nên vừa cả màn hẹp.
+ */
 .packageRow {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 8px;
 }
 
 .packageBtn {
-  position: relative;
-  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 14px;
   border: 1px solid var(--xp-color-border-secondary);
   border-radius: 10px;
   background: var(--xp-color-bg-container);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--xp-color-text);
+  text-align: left;
   cursor: pointer;
 }
 
@@ -656,15 +653,36 @@
   border-color: var(--xp-gold-deep);
 }
 
+.packageBtn:focus-visible {
+  outline: 2px solid var(--xp-gold-deep);
+  outline-offset: 2px;
+}
+
 .packageBtnActive {
   border-color: var(--xp-gold-deep);
-  color: var(--xp-gold-deep);
   background: var(--xp-color-bg-sand);
 }
 
-/* Badge "-X%" nổi ở góc trên phải của gói — đúng lối trình bày gói của Mioto. */
-.packageBadge {
-  position: absolute;
-  top: -8px;
-  right: -6px;
+.packageName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.packageTotal {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--xp-gold-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.packageUnit {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ô chọn NGÀY muốn nhận xe (nguyện vọng) — chỉ ngày, giờ do gian hàng chốt. */
+.pickupDate {
+  max-width: 240px;
 }

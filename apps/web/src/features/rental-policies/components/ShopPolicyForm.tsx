@@ -73,6 +73,8 @@ export function ShopPolicyForm({ initial, canEdit, submitting, onSubmit }: ShopP
 
       <PolicySections
         control={control}
+        // Mốc cũ theo NGÀY chưa quy đổi được: hiện cảnh báo để chủ xe chọn lại theo gói.
+        legacyDiscountTiers={initial.policy?.legacyDiscountTiers}
         depositHint={
           initial.inheritingVehicles > 0
             ? `${initial.inheritingVehicles} xe đang dùng mức cọc này`

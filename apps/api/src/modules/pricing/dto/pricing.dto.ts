@@ -1,9 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   DELIVERY_QUOTE_SOURCE_VALUES,
+  LONG_TERM_PACKAGE_MONTHS_VALUES,
   POLICY_SOURCE_VALUES,
   PRICE_ROW_VALUES,
   ROUTE_TYPE_VALUES,
+  type LongTermPackageMonths,
+  SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
@@ -54,15 +57,22 @@ export class DeliveryTierDto {
   fee!: string;
 }
 
-/** Một mốc ưu đãi giảm giá theo số ngày thuê tối thiểu. */
+/**
+ * Một mốc ƯU ĐÃI CAM KẾT THỜI HẠN của dịch vụ THUÊ DÀI HẠN (ADR 0011).
+ *
+ * Mốc đo bằng THÁNG và chỉ nhận đúng các gói hợp lệ — không còn mốc theo ngày, không còn mốc
+ * tự do. Ràng buộc chéo (tăng dần, % không giảm khi thời hạn tăng) ở PricingService.validatePolicy.
+ */
 export class DiscountTierDto {
-  @ApiProperty({ description: 'Số ngày thuê tối thiểu — các mốc phải tăng dần nghiêm ngặt' })
+  @ApiProperty({
+    description: 'Số tháng cam kết tối thiểu — phải là một gói thuê hợp lệ',
+    enum: LONG_TERM_PACKAGE_MONTHS_VALUES,
+  })
   @IsInt()
-  @Min(1)
-  @Max(365)
-  minDays!: number;
+  @IsIn(LONG_TERM_PACKAGE_MONTHS_VALUES)
+  minMonths!: LongTermPackageMonths;
 
-  @ApiProperty({ description: 'Mức giảm % (1–100), CHỈ áp lên tiền thuê cơ bản' })
+  @ApiProperty({ description: 'Mức giảm % (1–100), CHỈ áp lên giá cơ sở của gói dài hạn' })
   @IsInt()
   @Min(1)
   @Max(100)
@@ -73,6 +83,18 @@ export class DiscountTierDto {
   @IsString()
   @MaxLength(255)
   note?: string;
+}
+
+/**
+ * Mốc cũ theo NGÀY còn sót trong `discount_tiers_json` mà migration không quy đổi được sang
+ * một gói hợp lệ. CHỈ ĐỌC: máy giá bỏ qua, màn cấu hình hiện cảnh báo để chủ xe chọn lại theo
+ * tháng, và bản ghi biến mất ngay lần lưu chính sách kế tiếp (mọi lần ghi đều canonical).
+ */
+export class LegacyDiscountTierDto {
+  @ApiProperty({ description: 'Số ngày của mốc cũ' }) minDays!: number;
+  @ApiProperty() percent!: number;
+  @ApiPropertyOptional({ type: String, nullable: true }) note?: string;
+  @ApiProperty({ description: 'Luôn true — cờ nhận diện mốc cũ chưa quy đổi' }) legacy!: true;
 }
 
 /**
@@ -162,7 +184,13 @@ export class RentalPolicyValuesDto {
   @ApiPropertyOptional({ type: Number, nullable: true }) overtimeGraceMinutes!: number | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) overtimeRoundingMinutes!: number | null;
   @ApiProperty() discountEnabled!: boolean;
-  @ApiProperty({ type: [DiscountTierDto] }) discountTiers!: DiscountTierDto[];
+  @ApiProperty({ type: [DiscountTierDto], description: 'Mốc ưu đãi canonical (theo tháng)' })
+  discountTiers!: DiscountTierDto[];
+  @ApiProperty({
+    type: [LegacyDiscountTierDto],
+    description: 'Mốc cũ theo ngày không quy đổi được — chỉ để cảnh báo, KHÔNG tính giá',
+  })
+  legacyDiscountTiers!: LegacyDiscountTierDto[];
   @ApiProperty({ description: 'ISO — mốc phát hiện báo giá/preview cũ' }) updatedAt!: string;
 }
 
@@ -377,8 +405,38 @@ export class PriceBreakdownRowDto {
   @ApiProperty({ description: 'VND chuỗi; dòng giảm giá mang dấu âm' }) amount!: string;
 }
 
+/** Con số của MỘT gói thuê dài hạn — server tính, client không bao giờ tự nhân. */
+export class LongTermPackageOptionDto {
+  @ApiProperty({ enum: LONG_TERM_PACKAGE_MONTHS_VALUES }) packageMonths!: number;
+  @ApiProperty({ description: 'Giá dài hạn cơ sở cho MỘT tháng (VND string)' })
+  baseMonthlyPrice!: string;
+  @ApiProperty({ description: 'baseMonthlyPrice × packageMonths' }) basePackageAmount!: string;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: '% mốc cam kết đang áp — null = không mốc nào áp cho gói này',
+  })
+  durationDiscountPercent!: number | null;
+  @ApiProperty() durationDiscountAmount!: string;
+  @ApiProperty({ description: 'Giá gói sau ưu đãi — số khách thực trả (trước cọc)' })
+  finalPackageAmount!: string;
+  @ApiProperty({ description: 'finalPackageAmount ÷ packageMonths' })
+  effectiveMonthlyAmount!: string;
+}
+
 export class QuoteBreakdownDto {
-  @ApiProperty({ description: 'Số ngày tính tiền' }) days!: number;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Số ngày tính tiền — null với báo giá theo GÓI dài hạn (không tính theo ngày)',
+  })
+  days!: number | null;
+  @ApiPropertyOptional({
+    type: LongTermPackageOptionDto,
+    nullable: true,
+    description: 'Cấu tạo giá gói — khác null ⇒ đây là báo giá THUÊ DÀI HẠN theo gói tháng lịch',
+  })
+  longTerm!: LongTermPackageOptionDto | null;
   @ApiProperty({ type: [PriceBreakdownRowDto] }) rows!: PriceBreakdownRowDto[];
   @ApiProperty({ description: 'Tổng khách trả TRƯỚC cọc' }) totalAmount!: string;
   @ApiProperty({ description: 'Cọc thế chấp hoàn trả — không nằm trong tổng' })
@@ -398,14 +456,6 @@ export class QuoteBreakdownDto {
    */
   @ApiPropertyOptional({ type: String, nullable: true })
   estimateNote!: string | null;
-  /**
-   * Thuê DÀI HẠN theo giá tháng: % và số tiền tiết kiệm so với thuê theo giá ngày thường
-   * (17/08 đợt 3) — null khi không phải dài hạn / chưa có giá tháng / giá tháng không rẻ hơn.
-   */
-  @ApiPropertyOptional({ type: Number, nullable: true })
-  longTermSavingsPercent!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true })
-  longTermSavingsAmount!: string | null;
 }
 
 /** Tóm tắt giao nhận cho khách xem trước khi đặt (public). */
@@ -422,17 +472,34 @@ export class PublicQuoteDto {
 }
 
 export class PublicQuoteQueryDto {
-  @ApiProperty({ description: 'ISO datetime nhận xe' })
+  /**
+   * Bắt buộc với dịch vụ tính theo NGÀY; bỏ trống với `long_term` (giá gói không phụ thuộc
+   * ngày nhận, và ngày nhận chính xác do gian hàng chốt khi duyệt).
+   */
+  @ApiPropertyOptional({ description: 'ISO datetime nhận xe (không dùng cho long_term)' })
+  @ValidateIf((o: PublicQuoteQueryDto) => o.serviceType !== SERVICE_TYPE.LONG_TERM)
   @IsISO8601()
-  pickupAt!: string;
+  pickupAt?: string;
 
-  @ApiProperty({ description: 'ISO datetime trả xe' })
+  @ApiPropertyOptional({ description: 'ISO datetime trả xe (không dùng cho long_term)' })
+  @ValidateIf((o: PublicQuoteQueryDto) => o.serviceType !== SERVICE_TYPE.LONG_TERM)
   @IsISO8601()
-  returnAt!: string;
+  returnAt?: string;
 
   /**
-   * Dịch vụ của chuyến (17/08): long_term → đơn giá = giá tháng ÷ 30 (sàn 7 ngày);
-   * with_driver → đơn giá đã gồm tài xế. Bỏ trống = self_drive.
+   * Gói thuê dài hạn (tháng lịch) — BẮT BUỘC khi serviceType = long_term; server tính giá từ
+   * gói, không từ số ngày. Ngày trả KHÔNG lấy từ client cho dịch vụ này.
+   */
+  @ApiPropertyOptional({ enum: LONG_TERM_PACKAGE_MONTHS_VALUES })
+  @ValidateIf((o: PublicQuoteQueryDto) => o.serviceType === SERVICE_TYPE.LONG_TERM)
+  @Type(() => Number)
+  @IsInt()
+  @IsIn(LONG_TERM_PACKAGE_MONTHS_VALUES)
+  packageMonths?: number;
+
+  /**
+   * Dịch vụ của chuyến: long_term → báo giá theo GÓI tháng lịch; with_driver → đơn giá đã gồm
+   * tài xế theo lộ trình. Bỏ trống = self_drive.
    */
   @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
   @IsOptional()

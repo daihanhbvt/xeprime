@@ -13,7 +13,7 @@ import { Button, Radio, Segmented, Select } from 'antd';
 import dayjs from 'dayjs';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LONG_TERM_MIN_DAYS,
+  LONG_TERM_PACKAGE_MONTHS,
   ROUTE_TYPE,
   ROUTE_TYPE_DESCRIPTION,
   ROUTE_TYPE_LABEL,
@@ -54,12 +54,6 @@ const SERVICE_TAB_ICON: Partial<Record<ServiceType, ReactNode>> = {
   [SERVICE_TYPE.LONG_TERM]: <ScheduleOutlined />,
 };
 
-/** Số ngày tính tiền — trùng công thức backend, để chỉnh khoảng dài hạn không lệch sàn. */
-function chargedDays(range: RentalRange): number {
-  if (!range.pickupAt || !range.returnAt) return 0;
-  return Math.max(1, Math.ceil(range.returnAt.diff(range.pickupAt, 'minute') / 1440));
-}
-
 /**
  * Thẻ tìm kiếm của trang chủ (mô hình 3 dịch vụ — plan 17/08): hàng TAB Xe tự lái · Xe có tài
  * xế · Thuê xe dài hạn đè trên thẻ trắng; trong thẻ là các ô CÓ CẤU TRÚC — Loại xe · Địa điểm ·
@@ -68,8 +62,8 @@ function chargedDays(range: RentalRange): number {
  * Khác nhau giữa tab (địa điểm/thời gian đã chọn GIỮ NGUYÊN khi đổi tab):
  *   - Có tài xế: thêm hàng LỘ TRÌNH (nội thành / liên tỉnh / 1 chiều) — là NGỮ CẢNH mang sang
  *     yêu cầu thuê để shop báo giá đúng, không phải chiều lọc danh sách xe.
- *   - Dài hạn: khách chọn NGÀY CỤ THỂ, sàn `LONG_TERM_MIN_DAYS` ngày (control tự khoá ngày
- *     dưới sàn, đổi tab tự nới khoảng); không có chế độ thuê giờ.
+ *   - Dài hạn: KHÔNG chọn ngày ở đây — khách chọn GÓI và nêu nguyện vọng ngày nhận ở bước gửi
+ *     yêu cầu thuê (ADR 0011); tab này chỉ mang ngữ cảnh dịch vụ + địa điểm.
  *
  * "Tìm xe" điều hướng sang `/search` với filter serialize bằng đúng `applyFilterPatch` —
  * `serviceType`/`routeType` trên URL cũng là thứ trang kết quả và luồng đặt xe đọc lại.
@@ -111,12 +105,12 @@ export function HeroSearch() {
   const longTerm = service === SERVICE_TYPE.LONG_TERM;
   const withDriver = service === SERVICE_TYPE.WITH_DRIVER;
 
-  /** Đổi tab: sang dài hạn thì tự NỚI khoảng lên sàn — không đưa người dùng vào trạng thái lỗi. */
+  /**
+   * Đổi tab dịch vụ. Dài hạn KHÔNG mang khoảng ngày nào lên URL (ADR 0011): giá gói không phụ
+   * thuộc ngày, và ngày nhận chỉ là nguyện vọng nêu ở bước gửi yêu cầu.
+   */
   function selectService(key: ServiceType) {
     setService(key);
-    if (key === SERVICE_TYPE.LONG_TERM && range.pickupAt && chargedDays(range) < LONG_TERM_MIN_DAYS) {
-      setRange({ pickupAt: range.pickupAt, returnAt: range.pickupAt.add(LONG_TERM_MIN_DAYS, 'day') });
-    }
   }
 
   /*
@@ -346,8 +340,9 @@ export function HeroSearch() {
 
         {longTerm ? (
           <p className={styles.hint}>
-            Chọn xe trước — ngày nhận và trả (tối thiểu {LONG_TERM_MIN_DAYS} ngày) chọn khi gửi
-            yêu cầu thuê. Giá tham chiếu theo tháng, gian hàng xác nhận giá chốt khi duyệt.
+            Chọn xe trước — sau đó chọn gói thuê ({LONG_TERM_PACKAGE_MONTHS.join('/')} tháng) và
+            nguyện vọng ngày nhận khi gửi yêu cầu. Gian hàng xác nhận ngày giờ nhận chính xác khi
+            duyệt.
           </p>
         ) : null}
       </div>

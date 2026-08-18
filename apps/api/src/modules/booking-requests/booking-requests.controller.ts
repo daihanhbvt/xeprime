@@ -9,6 +9,7 @@ import {
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
+  ApproveBookingRequestDto,
   BookingRequestDto,
   BookingRequestListQueryDto,
   BookingRequestPageDto,
@@ -55,14 +56,20 @@ export class BookingRequestsController {
    */
   @Post(':id/approve')
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_APPROVE)
-  @ApiOperation({ summary: 'Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch, phí giao nhận 0)' })
+  @ApiOperation({
+    summary: 'Duyệt yêu cầu → tạo đơn thuê (giữ chỗ lịch, phí giao nhận 0)',
+    description:
+      'Thuê dài hạn: body bắt buộc scheduledPickupAt — gian hàng chốt giờ nhận, server tính ' +
+      'giờ trả theo gói tháng lịch (ADR 0011). Trùng lịch → 409, yêu cầu vẫn chờ duyệt.',
+  })
   @ApiOkResponse({ type: BookingRequestDto })
   approve(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
+    @Body() dto: ApproveBookingRequestDto,
   ): Promise<BookingRequestDto> {
-    return this.requests.approve(tenant.tenantId, user.id, id);
+    return this.requests.approve(tenant.tenantId, user.id, id, dto);
   }
 
   @Post(':id/reject')

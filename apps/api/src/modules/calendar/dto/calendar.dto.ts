@@ -1,13 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  LONG_TERM_PACKAGE_MONTHS_VALUES,
   OCCUPANCY_SOURCE_TYPE_VALUES,
   ROUTE_TYPE_VALUES,
+  SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
   VEHICLE_OPERATION_STATUS_VALUES,
   VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
-import { IsDate, IsIn, IsOptional, IsString, Length } from 'class-validator';
+import { IsDate, IsIn, IsInt, IsOptional, IsString, Length, ValidateIf } from 'class-validator';
 
 /**
  * Thứ tự hàng xe trên lịch. `next_booking` (mặc định): xe có lịch ĐANG chạy/sắp tới gần nhất
@@ -58,17 +60,31 @@ export class CalendarQuoteQueryDto {
   @Length(26, 26)
   vehicleId!: string;
 
-  @ApiProperty({ description: 'Nhận xe, ISO-8601 UTC' })
+  /**
+   * Bắt buộc với dịch vụ tính theo NGÀY. Thuê dài hạn báo giá theo GÓI nên không cần khoảng
+   * ngày — nhân viên vẫn chọn giờ nhận chính xác, nhưng giá không phụ thuộc vào nó.
+   */
+  @ApiPropertyOptional({ description: 'Nhận xe, ISO-8601 UTC (không dùng cho long_term)' })
+  @ValidateIf((o: CalendarQuoteQueryDto) => o.serviceType !== SERVICE_TYPE.LONG_TERM)
   @Type(() => Date)
   @IsDate()
-  pickupAt!: Date;
+  pickupAt?: Date;
 
-  @ApiProperty({ description: 'Trả xe, ISO-8601 UTC' })
+  @ApiPropertyOptional({ description: 'Trả xe, ISO-8601 UTC (không dùng cho long_term)' })
+  @ValidateIf((o: CalendarQuoteQueryDto) => o.serviceType !== SERVICE_TYPE.LONG_TERM)
   @Type(() => Date)
   @IsDate()
-  returnAt!: Date;
+  returnAt?: Date;
 
-  /** Dịch vụ của đơn sắp lập (17/08) — dài hạn ăn giá tháng, có tài xế ăn giá route. */
+  /** Gói thuê dài hạn (tháng lịch) — BẮT BUỘC khi serviceType = long_term. */
+  @ApiPropertyOptional({ enum: LONG_TERM_PACKAGE_MONTHS_VALUES })
+  @ValidateIf((o: CalendarQuoteQueryDto) => o.serviceType === SERVICE_TYPE.LONG_TERM)
+  @Type(() => Number)
+  @IsInt()
+  @IsIn(LONG_TERM_PACKAGE_MONTHS_VALUES)
+  packageMonths?: number;
+
+  /** Dịch vụ của đơn sắp lập — dài hạn tính theo gói, có tài xế ăn giá route. */
   @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES })
   @IsOptional()
   @IsIn(SERVICE_TYPE_VALUES)

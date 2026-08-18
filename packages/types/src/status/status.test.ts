@@ -9,12 +9,7 @@ import {
   occupiesSchedule,
   isBookingStatus,
 } from './booking';
-import {
-  VEHICLE_PUBLIC_STATUS,
-  VEHICLE_PUBLIC_STATUS_META,
-  longTermDailyRate,
-  longTermSavingsPercent,
-} from './vehicle';
+import { VEHICLE_PUBLIC_STATUS, VEHICLE_PUBLIC_STATUS_META } from './vehicle';
 import { TENANT_STATUS, TENANT_STATUS_META } from './tenant';
 import { BOOKING_REQUEST_STATUS, BOOKING_REQUEST_STATUS_META } from './booking-request';
 import { REVIEW_STATUS, REVIEW_STATUS_META, isReviewStatus } from './review';
@@ -175,28 +170,5 @@ describe('booking state machine', () => {
       const hasExit = BOOKING_STATUS_VALUES.some((to) => canTransitionBooking(status, to));
       expect(isBookingFinal(status)).toBe(!hasExit);
     }
-  });
-});
-
-/**
- * 17/08 đợt 3 — chênh lệch giá dài hạn so với giá ngày là thứ HIỂN THỊ cho khách (badge -X%)
- * lẫn chủ xe (gợi ý giá), cùng một công thức: rate = round(monthly/30), % = round((weekday −
- * rate)/weekday × 100). Giá tháng không rẻ hơn thì null — không có gì để quảng cáo.
- */
-describe('longTermSavingsPercent — badge/gợi ý giá dài hạn', () => {
-  it('12tr/tháng vs 650k/ngày: rate 400k → giảm 38%', () => {
-    expect(longTermDailyRate('12000000')).toBe(400000);
-    expect(longTermSavingsPercent('650000', '12000000')).toBe(38);
-  });
-
-  it('giá tháng KHÔNG rẻ hơn giá ngày → null (không bịa ưu đãi)', () => {
-    expect(longTermSavingsPercent('300000', '12000000')).toBeNull();
-    expect(longTermSavingsPercent('400000', '12000000')).toBeNull();
-  });
-
-  it('thiếu một trong hai giá → null', () => {
-    expect(longTermSavingsPercent(null, '12000000')).toBeNull();
-    expect(longTermSavingsPercent('650000', null)).toBeNull();
-    expect(longTermSavingsPercent('0', '12000000')).toBeNull();
   });
 });

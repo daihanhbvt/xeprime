@@ -1781,11 +1781,15 @@ async function main(): Promise<void> {
         // Grace/rounding để NULL đúng trạng thái "Cần cấu hình" của thiết kế — seed không bịa.
         overtimeFeePerHour: 100_000,
         discountEnabled: true,
-        // Ưu đãi THUÊ DÀI HẠN theo THÁNG (đợt 4 — mô hình gói Mioto): minDays = tháng × 30.
+        /*
+         * Mốc ƯU ĐÃI CAM KẾT THỜI HẠN của dịch vụ THUÊ DÀI HẠN (ADR 0011) — đo bằng THÁNG,
+         * không cộng dồn: gói lấy mốc cao nhất nó đạt tới (gói 2 tháng ăn mốc 1, gói 9 và 12
+         * ăn mốc 6). % không được giảm khi thời hạn tăng.
+         */
         discountTiers: [
-          { minDays: 90, percent: 2, note: 'Ưu đãi gói 3 tháng' },
-          { minDays: 180, percent: 4, note: 'Ưu đãi gói 6 tháng' },
-          { minDays: 360, percent: 6, note: 'Ưu đãi gói 12 tháng' },
+          { minMonths: 1, percent: 5, note: 'Ưu đãi cam kết 1 tháng' },
+          { minMonths: 3, percent: 15, note: 'Ưu đãi cam kết 3 tháng' },
+          { minMonths: 6, percent: 20, note: 'Ưu đãi cam kết từ 6 tháng' },
         ],
       },
     });

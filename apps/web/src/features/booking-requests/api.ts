@@ -1,6 +1,7 @@
 import type { PaginationMeta } from '@xeprime/types';
 import { apiPost, apiRequest, type QueryParams } from '@/services/api-client';
 import type {
+  ApproveBookingRequestInput,
   BookingRequestFilters,
   BookingRequestItem,
   BookingRequestReceipt,
@@ -43,8 +44,15 @@ export async function fetchBookingRequests(
   };
 }
 
-export const approveBookingRequest = (id: string): Promise<BookingRequestItem> =>
-  apiPost<BookingRequestItem>(`/booking-requests/${id}/approve`);
+/**
+ * Duyệt yêu cầu. Dịch vụ theo ngày không cần body; THUÊ DÀI HẠN bắt buộc `scheduledPickupAt`
+ * (gian hàng chốt giờ nhận, server tính giờ trả theo gói — ADR 0011).
+ */
+export const approveBookingRequest = (
+  id: string,
+  body?: ApproveBookingRequestInput,
+): Promise<BookingRequestItem> =>
+  apiPost<BookingRequestItem>(`/booking-requests/${id}/approve`, body ?? {});
 
 export const rejectBookingRequest = (id: string, reason?: string): Promise<BookingRequestItem> =>
   apiPost<BookingRequestItem>(`/booking-requests/${id}/reject`, { reason });

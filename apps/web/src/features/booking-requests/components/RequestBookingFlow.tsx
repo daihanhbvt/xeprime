@@ -19,10 +19,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
   API_ERROR_CODE,
-  LONG_TERM_MIN_DAYS,
-  LONG_TERM_MONTH_DAYS,
   LONG_TERM_PACKAGE_MONTHS,
-  longTermTierPercentFor,
+  longTermPackageLabel,
+  longTermReturnAt,
+  PICKUP_PREFERENCE,
+  PICKUP_PREFERENCE_LABEL,
   ROUTE_TYPE,
   ROUTE_TYPE_DESCRIPTION,
   ROUTE_TYPE_LABEL,
@@ -31,13 +32,14 @@ import {
   SERVICE_TYPE_VALUES,
   isRouteType,
   isSameVnPhone,
-  longTermSavingsPercent,
   PHONE_VERIFICATION_PURPOSE,
   serviceTypeLabel,
+  type LongTermPackageMonths,
   type RouteType,
   type ServiceType,
 } from '@xeprime/types';
 import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
+import { LongTermPackageStep } from './LongTermPackageStep';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import {
   RentalDateTimeRangeField,
@@ -183,6 +185,11 @@ export function RequestBookingFlow({
       destination: '',
       pickupAt: pickupAt ? dayjs(pickupAt) : null,
       returnAt: returnAt ? dayjs(returnAt) : null,
+      // Thuê dài hạn: chọn sẵn gói NHỎ NHẤT và nguyện vọng linh hoạt nhất — khách thấy ngay
+      // một mức giá thật để so, thay vì một bảng trống phải bấm mới có số.
+      longTermPackageMonths: LONG_TERM_PACKAGE_MONTHS[0],
+      pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
+      requestedPickupDate: null,
       pickupMethod: PICKUP_METHOD.SELF,
       deliveryAddress: '',
       agreed: false,
@@ -195,6 +202,9 @@ export function RequestBookingFlow({
   const agreed = useWatch({ control, name: 'agreed' });
   const watchedService = useWatch({ control, name: 'serviceType' });
   const watchedRoute = useWatch({ control, name: 'routeType' });
+  const watchedPackage = useWatch({ control, name: 'longTermPackageMonths' });
+  const watchedPreference = useWatch({ control, name: 'pickupPreference' });
+  const watchedRequestedDate = useWatch({ control, name: 'requestedPickupDate' });
   const isLongTerm = watchedService === SERVICE_TYPE.LONG_TERM;
   const isWithDriver = watchedService === SERVICE_TYPE.WITH_DRIVER;
   // Có tài xế thì xe ĐẾN ĐÓN khách — "giao xe tận nơi" không có nghĩa với chuyến này.
@@ -217,30 +227,31 @@ export function RequestBookingFlow({
     }
   }, [vehicleServices, getValues, setValue]);
 
-  /** Đổi dịch vụ: sang dài hạn thì tự NỚI khoảng thuê lên sàn — không đưa vào trạng thái lỗi. */
+  /**
+   * Đổi dịch vụ. Dài hạn và các dịch vụ theo ngày dùng hai bộ input khác hẳn nhau (gói +
+   * nguyện vọng ngày nhận ↔ khoảng nhận–trả), nên không mang dữ liệu bên này sang bên kia.
+   */
   function selectService(next: ServiceType) {
     setValue('serviceType', next, { shouldValidate: true });
-    const pickup = getValues('pickupAt');
-    const ret = getValues('returnAt');
-    if (
-      next === SERVICE_TYPE.LONG_TERM &&
-      pickup &&
-      (!ret || Math.ceil(ret.diff(pickup, 'minute') / 1440) < LONG_TERM_MIN_DAYS)
-    ) {
-      setValue('returnAt', pickup.add(LONG_TERM_MIN_DAYS, 'day'), { shouldValidate: true });
-    }
+    setStepError(null);
   }
 
   /**
    * Báo giá công khai — CÙNG PricingService với luồng duyệt của shop, FE không tự cộng trừ.
    * Hỏng cũng không chặn luồng đặt: khối giá là thông tin tham khảo, giá chốt do shop duyệt.
    */
-  const quoteParams =
-    watchedPickup && watchedReturn
+  /*
+   * Dài hạn báo giá theo GÓI: không gửi ngày nào cả (giá không phụ thuộc ngày nhận, ADR 0011).
+   * Dịch vụ theo ngày giữ hợp đồng nhận–trả như cũ.
+   */
+  const quoteParams = isLongTerm
+    ? watchedPackage != null
+      ? { serviceType: watchedService, packageMonths: watchedPackage }
+      : null
+    : watchedPickup && watchedReturn
       ? {
           pickupAt: watchedPickup.toISOString(),
           returnAt: watchedReturn.toISOString(),
-          // Giá theo DỊCH VỤ + LỘ TRÌNH (17/08): dài hạn ăn giá tháng, có tài xế ăn giá route.
           serviceType: watchedService,
           ...(isWithDriver ? { routeType: watchedRoute } : {}),
         }
@@ -300,9 +311,23 @@ export function RequestBookingFlow({
         customerName: v.customerName.trim(),
         customerPhone: phone,
         ...(v.customerEmail.trim() ? { customerEmail: v.customerEmail.trim() } : {}),
-        pickupAt: v.pickupAt?.toISOString() ?? '',
-        returnAt: v.returnAt?.toISOString() ?? '',
         serviceType: v.serviceType,
+        /*
+         * Dài hạn KHÔNG gửi lịch: chỉ gói + nguyện vọng. Khoảng "trong 7 ngày tới" do server
+         * tính từ lúc nhận yêu cầu, client không khai (ADR 0011).
+         */
+        ...(v.serviceType === SERVICE_TYPE.LONG_TERM
+          ? {
+              longTermPackageMonths: v.longTermPackageMonths ?? undefined,
+              pickupPreference: v.pickupPreference,
+              ...(v.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && v.requestedPickupDate
+                ? { requestedPickupDate: v.requestedPickupDate.format('YYYY-MM-DD') }
+                : {}),
+            }
+          : {
+              pickupAt: v.pickupAt?.toISOString() ?? '',
+              returnAt: v.returnAt?.toISOString() ?? '',
+            }),
         // Có tài xế: lộ trình + địa chỉ đón (+ điểm đến khi liên tỉnh); backend validate lại.
         ...(withDriver
           ? {
@@ -377,6 +402,16 @@ export function RequestBookingFlow({
 
   async function continueFromTime() {
     setStepError(null);
+    if (isLongTerm) {
+      /*
+       * Dài hạn chưa có khung giờ cụ thể để kiểm lịch: khách mới nêu nguyện vọng, gian hàng chốt
+       * ngày giờ khi duyệt và constraint DB mới là chỗ chặn trùng lịch (ADR 0006).
+       */
+      if (await trigger(['longTermPackageMonths', 'pickupPreference', 'requestedPickupDate'])) {
+        setStep('contact');
+      }
+      return;
+    }
     if (await trigger(['pickupAt', 'returnAt'])) availabilityM.mutate();
   }
 
@@ -458,36 +493,36 @@ export function RequestBookingFlow({
       reviewSummary={reviewsQ.data?.summary ?? null}
       reviewsLoading={reviewsQ.isLoading}
       verifiedContact={verifiedContact}
+      // Panel nói giá của ĐÚNG dịch vụ/gói khách đang chọn, không phải giá tự lái mặc định.
+      serviceType={watchedService}
+      packageMonths={watchedPackage}
     />
   );
 
   const hasRange = Boolean(watchedPickup && watchedReturn);
   const promoPercent = listing?.discountPercent ?? 0;
-  // Badge "-X%" trên tab Thuê dài hạn (17/08 đợt 3) — cùng công thức với quote/manage.
-  const longTermPercent = longTermSavingsPercent(listing?.weekdayPrice, listing?.monthlyPrice);
 
   /*
-   * Gói thuê dài hạn 1/3/6/9/12 tháng (đợt 4 — mô hình gói Mioto): gói chỉ là LỐI TẮT đặt
-   * thời lượng — chọn gói set returnAt = pickup + tháng × 30 ngày; sửa ngày tự do bên dưới
-   * thì trạng thái rơi về "Tuỳ chỉnh". Badge "-X%" mỗi gói đọc từ mốc ưu đãi dài hạn của xe
-   * (`longTermDiscountTiers`) — cùng tier mà máy giá sẽ áp, badge và quote không lệch nhau.
+   * Giá SÁU gói do SERVER tính (ADR 0011) — client không nhân giá tháng với số tháng, nên nút
+   * chọn gói và breakdown của gói đang chọn không thể hiện hai con số khác nhau. Rỗng = xe chưa
+   * niêm yết giá tháng → "Liên hệ báo giá".
    */
-  const chargedDaysValue =
-    watchedPickup && watchedReturn
-      ? Math.max(1, Math.ceil(watchedReturn.diff(watchedPickup, 'minute') / 1440))
-      : 0;
-  const isCustomDuration =
-    hasRange &&
-    !LONG_TERM_PACKAGE_MONTHS.some((m) => m * LONG_TERM_MONTH_DAYS === chargedDaysValue);
+  const longTermPackages = listing?.longTermPackages ?? [];
+  const selectedPackage =
+    watchedPackage != null
+      ? (longTermPackages.find((pkg) => pkg.packageMonths === watchedPackage) ?? null)
+      : null;
 
-  function selectPackage(months: number) {
-    const pickup = watchedPickup ?? dayjs().add(1, 'day').hour(10).startOf('hour');
-    setValue('pickupAt', pickup, { shouldValidate: true });
-    setValue('returnAt', pickup.add(months * LONG_TERM_MONTH_DAYS, 'day'), {
-      shouldValidate: true,
-    });
+  function selectPackage(months: LongTermPackageMonths) {
+    setValue('longTermPackageMonths', months, { shouldValidate: true });
     if (stepError) setStepError(null);
   }
+
+  /** Ngày trả DỰ KIẾN của gói khi khách đã chọn ngày nhận cụ thể — giờ chốt khi gian hàng duyệt. */
+  const expectedReturnDate =
+    watchedPackage != null && watchedRequestedDate
+      ? dayjs(longTermReturnAt(watchedRequestedDate.toDate(), watchedPackage))
+      : null;
 
   /**
    * Cặp nút của footer, suy từ bước hiện tại — MỘT nơi quyết định nhãn/trạng thái cho cả luồng.
@@ -691,19 +726,14 @@ export function RequestBookingFlow({
                   block
                   value={watchedService}
                   onChange={(v) => selectService(v as ServiceType)}
+                  /*
+                   * Nhãn tab là TÊN DỊCH VỤ, không badge phần trăm: mức giảm của thuê dài hạn
+                   * là ưu đãi CAM KẾT THỜI HẠN, khác nhau theo từng gói, nên gắn một con số
+                   * chung lên tab chỉ làm khách hiểu sai (ADR 0011).
+                   */
                   options={vehicleServices.map((value) => ({
                     value,
-                    // Tab Thuê dài hạn mang badge mức giảm so với giá ngày — khách thấy ngay
-                    // lý do chọn dài hạn (17/08 đợt 3, mô hình gói Mioto).
-                    label:
-                      value === SERVICE_TYPE.LONG_TERM && longTermPercent != null ? (
-                        <span className={styles.serviceOption}>
-                          {serviceTypeLabel(value)}
-                          <DiscountTag percent={longTermPercent} size="sm" />
-                        </span>
-                      ) : (
-                        serviceTypeLabel(value)
-                      ),
+                    label: serviceTypeLabel(value),
                   }))}
                 />
               </div>
@@ -734,49 +764,39 @@ export function RequestBookingFlow({
 
             <p className={styles.stepHint}>
               {isLongTerm
-                ? `Chọn gói thuê nhanh hoặc tự chọn ngày nhận – trả (tối thiểu ${LONG_TERM_MIN_DAYS} ngày).`
+                ? 'Chọn gói thuê, sau đó cho gian hàng biết bạn muốn nhận xe khi nào.'
                 : 'Chọn thời gian thuê để kiểm tra xe còn trống. Có thể thuê theo ngày hoặc theo giờ.'}
             </p>
 
-            {/* Gói thuê dài hạn (đợt 4) — lối tắt đặt thời lượng, badge % từ mốc ưu đãi của xe. */}
+            {/*
+              Thuê dài hạn là GÓI CỐ ĐỊNH (ADR 0011): đúng sáu gói, không có thời lượng tuỳ ý và
+              không có ô chọn ngày trả. Cả bước gói + nguyện vọng + tóm tắt giá nằm trong một
+              component riêng để bước này không lẫn với luồng chọn khoảng ngày của dịch vụ khác.
+            */}
             {isLongTerm ? (
-              <div className={styles.serviceField}>
-                <span className={styles.rangeFieldLabel}>Gói thuê</span>
-                <div className={styles.packageRow} role="radiogroup" aria-label="Gói thuê dài hạn">
-                  {LONG_TERM_PACKAGE_MONTHS.map((months) => {
-                    const days = months * LONG_TERM_MONTH_DAYS;
-                    const percent = longTermTierPercentFor(
-                      listing?.longTermDiscountTiers,
-                      days,
-                    );
-                    const active = chargedDaysValue === days;
-                    return (
-                      <button
-                        key={months}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        className={cx(styles.packageBtn, active && styles.packageBtnActive)}
-                        onClick={() => selectPackage(months)}
-                      >
-                        {percent != null ? (
-                          <DiscountTag
-                            percent={percent}
-                            size="sm"
-                            className={styles.packageBadge}
-                          />
-                        ) : null}
-                        {months} tháng
-                      </button>
-                    );
-                  })}
-                  {isCustomDuration ? (
-                    <span className={cx(styles.packageBtn, styles.packageBtnActive)}>
-                      Tuỳ chỉnh · {chargedDaysValue} ngày
-                    </span>
-                  ) : null}
-                </div>
-              </div>
+              <LongTermPackageStep
+                packages={longTermPackages}
+                packagesLoading={listingQ.isLoading}
+                selectedMonths={watchedPackage}
+                onSelectPackage={selectPackage}
+                packageError={formState.errors.longTermPackageMonths?.message}
+                preference={watchedPreference}
+                onPreferenceChange={(next) => {
+                  setValue('pickupPreference', next, { shouldValidate: true });
+                  if (next === PICKUP_PREFERENCE.WITHIN_7_DAYS) {
+                    setValue('requestedPickupDate', null, { shouldValidate: true });
+                  }
+                  if (stepError) setStepError(null);
+                }}
+                requestedDate={watchedRequestedDate}
+                onRequestedDateChange={(value) => {
+                  setValue('requestedPickupDate', value, { shouldValidate: true });
+                  if (stepError) setStepError(null);
+                }}
+                dateError={formState.errors.requestedPickupDate?.message}
+                quote={quoteQ.data ?? null}
+                quoteLoading={quoteQ.isLoading}
+              />
             ) : null}
 
             {/*
@@ -785,46 +805,48 @@ export function RequestBookingFlow({
               đâu. Viền + nền + nhãn hai đầu ở đây là phần "vỏ ô nhập"; ruột vẫn là control lịch
               dùng chung, không dựng lịch thứ hai.
             */}
-            <div className={styles.rangeField}>
-              <span className={styles.rangeFieldLabel}>Thời gian thuê</span>
-              <div
-                className={cx(
-                  styles.rangeBox,
-                  (formState.errors.pickupAt || formState.errors.returnAt) && styles.rangeBoxError,
-                )}
-              >
-                <RentalDateTimeRangeField
-                  value={{ pickupAt: watchedPickup ?? null, returnAt: watchedReturn ?? null }}
-                  onChange={(next: { pickupAt: Dayjs | null; returnAt: Dayjs | null }) => {
-                    setValue('pickupAt', next.pickupAt, { shouldValidate: true });
-                    setValue('returnAt', next.returnAt, { shouldValidate: true });
-                    if (stepError) setStepError(null);
-                  }}
-                  mode={isLongTerm ? 'daily' : rentalMode}
-                  onModeChange={setRentalMode}
-                  minDays={isLongTerm ? LONG_TERM_MIN_DAYS : undefined}
-                  /*
-                   * Nhãn nằm NGAY CẠNH giá trị, không phải một hàng caption riêng phía trên:
-                   * hàng caption cũ căn theo hai mép ô còn giá trị lại nằm sát mũi tên ở giữa,
-                   * nên "TRẢ XE" trôi ra tận mép phải trong khi số của nó ở giữa ô.
-                   */
-                  variant="labelled"
-                  prefix={<CalendarOutlined />}
-                />
+            {!isLongTerm ? (
+              <div className={styles.rangeField}>
+                <span className={styles.rangeFieldLabel}>Thời gian thuê</span>
+                <div
+                  className={cx(
+                    styles.rangeBox,
+                    (formState.errors.pickupAt || formState.errors.returnAt) &&
+                      styles.rangeBoxError,
+                  )}
+                >
+                  <RentalDateTimeRangeField
+                    value={{ pickupAt: watchedPickup ?? null, returnAt: watchedReturn ?? null }}
+                    onChange={(next: { pickupAt: Dayjs | null; returnAt: Dayjs | null }) => {
+                      setValue('pickupAt', next.pickupAt, { shouldValidate: true });
+                      setValue('returnAt', next.returnAt, { shouldValidate: true });
+                      if (stepError) setStepError(null);
+                    }}
+                    mode={rentalMode}
+                    onModeChange={setRentalMode}
+                    /*
+                     * Nhãn nằm NGAY CẠNH giá trị, không phải một hàng caption riêng phía trên:
+                     * hàng caption cũ căn theo hai mép ô còn giá trị lại nằm sát mũi tên ở giữa,
+                     * nên "TRẢ XE" trôi ra tận mép phải trong khi số của nó ở giữa ô.
+                     */
+                    variant="labelled"
+                    prefix={<CalendarOutlined />}
+                  />
+                </div>
+                {/* Thời lượng đã nằm ở viên bên phải ô — dòng này chỉ nói CHẾ ĐỘ tính và cách đổi. */}
+                <p className={styles.rangeHint}>
+                  {hasRange ? (
+                    <>
+                      <ClockCircleOutlined aria-hidden />{' '}
+                      {rentalMode === 'hourly' ? 'Thuê theo giờ' : 'Thuê theo ngày'} · bấm vào ô để
+                      đổi
+                    </>
+                  ) : (
+                    'Bấm vào ô trên để mở lịch và chọn khoảng thuê.'
+                  )}
+                </p>
               </div>
-              {/* Thời lượng đã nằm ở viên bên phải ô — dòng này chỉ nói CHẾ ĐỘ tính và cách đổi. */}
-              <p className={styles.rangeHint}>
-                {hasRange ? (
-                  <>
-                    <ClockCircleOutlined aria-hidden />{' '}
-                    {rentalMode === 'hourly' ? 'Thuê theo giờ' : 'Thuê theo ngày'} · bấm vào ô để
-                    đổi
-                  </>
-                ) : (
-                  'Bấm vào ô trên để mở lịch và chọn khoảng thuê.'
-                )}
-              </p>
-            </div>
+            ) : null}
 
             {formState.errors.pickupAt || formState.errors.returnAt ? (
               <p className={styles.fieldError} role="alert">
@@ -836,7 +858,7 @@ export function RequestBookingFlow({
               Bảng giá của bước này: chưa chọn ngày thì cho biết ĐƠN GIÁ và cọc (khách quyết định
               có đi tiếp không dựa vào đó); chọn rồi thì thay bằng tạm tính THẬT từ server.
             */}
-            {hasRange ? (
+            {isLongTerm ? null : hasRange ? (
               quoteQ.isLoading ? (
                 <Skeleton active paragraph={{ rows: 3 }} title={false} />
               ) : quoteQ.data ? (
@@ -845,13 +867,24 @@ export function RequestBookingFlow({
                   totalAmount={quoteQ.data.breakdown.totalAmount}
                   totalLabel={quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : undefined}
                   depositAmount={quoteQ.data.breakdown.depositAmount}
-                  title="Tạm tính cho khoảng thời gian đã chọn"
+                  title={
+                    isLongTerm && selectedPackage
+                      ? `Giá gói ${longTermPackageLabel(selectedPackage.packageMonths)}`
+                      : 'Tạm tính cho khoảng thời gian đã chọn'
+                  }
                   footer={
                     <>
-                      {quoteQ.data.breakdown.longTermSavingsAmount ? (
+                      {/*
+                        "Tiết kiệm" ở đây CHỈ nói về ưu đãi cam kết thời hạn — tuyệt đối không so
+                        với giá thuê theo ngày, vì đó là dịch vụ khác và so như vậy là bịa khuyến
+                        mãi (ADR 0011).
+                      */}
+                      {quoteQ.data.breakdown.longTerm?.durationDiscountPercent ? (
                         <strong className={styles.savingsText}>
-                          Tiết kiệm {formatMoneyVnd(quoteQ.data.breakdown.longTermSavingsAmount)} (−
-                          {quoteQ.data.breakdown.longTermSavingsPercent}%) so với thuê theo ngày.
+                          Tiết kiệm{' '}
+                          {formatMoneyVnd(quoteQ.data.breakdown.longTerm.durationDiscountAmount)}{' '}
+                          nhờ ưu đãi thời hạn{' '}
+                          {longTermPackageLabel(quoteQ.data.breakdown.longTerm.packageMonths)}.
                         </strong>
                       ) : null}
                       <span className={styles.deliveryFootnote}>
@@ -882,6 +915,7 @@ export function RequestBookingFlow({
                   <span className={styles.priceCardTitle}>
                     Giá thuê xe · {serviceTypeLabel(watchedService)}
                   </span>
+                  {/* Khuyến mãi trực tiếp thuộc dịch vụ TỰ LÁI — không hiện ở dài hạn/có tài xế. */}
                   {!isWithDriver && !isLongTerm && promoPercent > 0 ? (
                     <DiscountTag percent={promoPercent} />
                   ) : null}
@@ -889,24 +923,16 @@ export function RequestBookingFlow({
                 <div className={styles.priceCardRows}>
                   {isLongTerm ? (
                     listing?.monthlyPrice ? (
-                      <>
-                        <div className={styles.priceRow}>
-                          <span>Giá tháng tham chiếu</span>
-                          <b>
-                            {formatMoneyVnd(listing.monthlyPrice)}
-                            <span className={styles.priceUnit}>/tháng</span>
-                          </b>
-                        </div>
-                        {longTermPercent != null ? (
-                          <div className={styles.priceRow}>
-                            <span>So với thuê theo ngày</span>
-                            <b className={styles.savingsText}>Rẻ hơn {longTermPercent}%</b>
-                          </div>
-                        ) : null}
-                      </>
+                      <div className={styles.priceRow}>
+                        <span>Giá dài hạn cơ sở</span>
+                        <b>
+                          {formatMoneyVnd(listing.monthlyPrice)}
+                          <span className={styles.priceUnit}>/tháng</span>
+                        </b>
+                      </div>
                     ) : (
                       <div className={styles.priceRow}>
-                        <span>Giá tháng</span>
+                        <span>Giá thuê dài hạn</span>
                         <b>Liên hệ báo giá</b>
                       </div>
                     )
@@ -1265,31 +1291,64 @@ export function RequestBookingFlow({
                 </dd>
               </div>
               <div className={styles.reviewRow}>
-                <dt>Nhận xe</dt>
-                <dd>{watchedPickup ? formatRentalPoint(watchedPickup) : '—'}</dd>
-              </div>
-              <div className={styles.reviewRow}>
-                <dt>Trả xe</dt>
-                <dd>{watchedReturn ? formatRentalPoint(watchedReturn) : '—'}</dd>
-              </div>
-              <div className={styles.reviewRow}>
                 <dt>Dịch vụ</dt>
                 <dd>
                   {serviceTypeLabel(watchedService)}
                   {isWithDriver ? ` · ${ROUTE_TYPE_LABEL[watchedRoute]}` : ''}
                 </dd>
               </div>
-              <div className={styles.reviewRow}>
-                <dt>Hình thức</dt>
-                <dd>
-                  {isLongTerm
-                    ? `Thuê dài hạn (tối thiểu ${LONG_TERM_MIN_DAYS} ngày)`
-                    : rentalMode === 'hourly' && !isWithDriver
-                      ? 'Thuê theo giờ'
-                      : 'Thuê theo ngày'}
-                  {isWithDriver ? '' : ` · ${isDelivery ? 'Giao xe tận nơi' : 'Nhận tại điểm hẹn'}`}
-                </dd>
-              </div>
+              {/*
+                Dài hạn KHÔNG hiện "nhận xe / trả xe" như một lịch đã chốt — chưa có lịch nào cả.
+                Hiện gói đã mua và nguyện vọng ngày nhận; ngày trả dự kiến chỉ nói được khi khách
+                đã chọn một ngày cụ thể, và vẫn ghi rõ giờ do gian hàng chốt (ADR 0011).
+              */}
+              {isLongTerm ? (
+                <>
+                  <div className={styles.reviewRow}>
+                    <dt>Gói thuê</dt>
+                    <dd>{watchedPackage != null ? longTermPackageLabel(watchedPackage) : '—'}</dd>
+                  </div>
+                  <div className={styles.reviewRow}>
+                    <dt>Nguyện vọng nhận xe</dt>
+                    <dd>
+                      {PICKUP_PREFERENCE_LABEL[watchedPreference]}
+                      {watchedPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && watchedRequestedDate
+                        ? ` · ${watchedRequestedDate.format('DD/MM/YYYY')}`
+                        : ` · ${dayjs().add(1, 'day').format('DD/MM')} – ${dayjs().add(7, 'day').format('DD/MM/YYYY')}`}
+                    </dd>
+                  </div>
+                  {expectedReturnDate ? (
+                    <div className={styles.reviewRow}>
+                      <dt>Dự kiến trả xe</dt>
+                      <dd>
+                        {expectedReturnDate.format('DD/MM/YYYY')} · giờ chốt khi gian hàng duyệt
+                      </dd>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <div className={styles.reviewRow}>
+                    <dt>Nhận xe</dt>
+                    <dd>{watchedPickup ? formatRentalPoint(watchedPickup) : '—'}</dd>
+                  </div>
+                  <div className={styles.reviewRow}>
+                    <dt>Trả xe</dt>
+                    <dd>{watchedReturn ? formatRentalPoint(watchedReturn) : '—'}</dd>
+                  </div>
+                  <div className={styles.reviewRow}>
+                    <dt>Hình thức</dt>
+                    <dd>
+                      {rentalMode === 'hourly' && !isWithDriver
+                        ? 'Thuê theo giờ'
+                        : 'Thuê theo ngày'}
+                      {isWithDriver
+                        ? ''
+                        : ` · ${isDelivery ? 'Giao xe tận nơi' : 'Nhận tại điểm hẹn'}`}
+                    </dd>
+                  </div>
+                </>
+              )}
               {isWithDriver ? (
                 <>
                   <div className={styles.reviewRow}>
@@ -1320,13 +1379,19 @@ export function RequestBookingFlow({
                 totalAmount={quoteQ.data.breakdown.totalAmount}
                 totalLabel={quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : undefined}
                 depositAmount={quoteQ.data.breakdown.depositAmount}
-                title="Chi tiết giá thuê (dự kiến)"
+                title={
+                  isLongTerm && selectedPackage
+                    ? `Chi tiết giá gói ${longTermPackageLabel(selectedPackage.packageMonths)}`
+                    : 'Chi tiết giá thuê (dự kiến)'
+                }
                 footer={
                   <>
-                    {quoteQ.data.breakdown.longTermSavingsAmount ? (
+                    {quoteQ.data.breakdown.longTerm?.durationDiscountPercent ? (
                       <strong className={styles.savingsText}>
-                        Tiết kiệm {formatMoneyVnd(quoteQ.data.breakdown.longTermSavingsAmount)} (−
-                        {quoteQ.data.breakdown.longTermSavingsPercent}%) so với thuê theo ngày.
+                        Tiết kiệm{' '}
+                        {formatMoneyVnd(quoteQ.data.breakdown.longTerm.durationDiscountAmount)} nhờ
+                        ưu đãi thời hạn{' '}
+                        {longTermPackageLabel(quoteQ.data.breakdown.longTerm.packageMonths)}.
                       </strong>
                     ) : null}
                     <span className={styles.deliveryFootnote}>

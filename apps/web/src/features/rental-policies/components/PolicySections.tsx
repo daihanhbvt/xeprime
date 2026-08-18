@@ -11,16 +11,29 @@ import {
   type FieldErrors,
 } from 'react-hook-form';
 import { NumberField } from '@/components/form/NumberField';
+import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
+import { LONG_TERM_PACKAGE_MONTHS, longTermPackageLabel } from '@xeprime/types';
 import { formatMoneyVnd } from '@/lib/money';
 import { deliverySummaryText } from '../form';
 import type { PolicyFormValues } from '../schema';
 
 import styles from './PolicySections.module.css';
 
+/**
+ * Mốc cũ chỉ để CẢNH BÁO nên component đọc đúng hai trường nó cần — nhận thẳng shape sinh từ
+ * OpenAPI (`note` có thể null) mà không phải ép kiểu ở mọi nơi gọi.
+ */
+type LegacyTierView = { minDays: number; percent: number };
+
 interface PolicySectionsProps {
   control: Control<PolicyFormValues>;
+  /**
+   * Mốc ưu đãi CŨ theo ngày còn sót trong dữ liệu, không quy đổi được sang gói nào (ADR 0011).
+   * Chỉ để cảnh báo — máy giá đã bỏ qua chúng, và lưu lại chính sách là chúng biến mất.
+   */
+  legacyDiscountTiers?: readonly LegacyTierView[];
   /** Gợi ý cạnh ô cọc (vd "12 xe đang dùng mức cọc này") — chỉ trang shop có số liệu này. */
   depositHint?: ReactNode;
   /** Đánh số tiêu đề "1. … 4." như màn chính sách shop; màn theo xe để trơn. */
@@ -35,7 +48,12 @@ interface PolicySectionsProps {
  * Chỉ là FORM: không gọi API, không đọc quyền. Ràng buộc chéo (bậc tăng dần, bán kính khớp
  * mốc cuối) nằm ở `schema.ts`; chốt thật ở backend.
  */
-export function PolicySections({ control, depositHint, numbered = true }: PolicySectionsProps) {
+export function PolicySections({
+  control,
+  depositHint,
+  legacyDiscountTiers,
+  numbered = true,
+}: PolicySectionsProps) {
   const n = (index: number, title: string) => (numbered ? `${index}. ${title}` : title);
 
   return (
@@ -49,7 +67,8 @@ export function PolicySections({ control, depositHint, numbered = true }: Policy
       <OvertimeSection control={control} title={n(3, 'Phí trả xe quá giờ thỏa thuận')} />
       <DiscountSection
         control={control}
-        title={n(4, 'Ưu đãi thuê dài hạn theo tháng')}
+        title={n(4, 'Ưu đãi cam kết thời hạn (thuê dài hạn)')}
+        legacyTiers={legacyDiscountTiers}
       />
     </div>
   );
@@ -282,13 +301,28 @@ function OvertimeSection({
 function DiscountSection({
   control,
   title,
+  legacyTiers,
 }: {
   control: Control<PolicyFormValues>;
   title: string;
+  legacyTiers?: readonly LegacyTierView[];
 }) {
   const enabled = useWatch({ control, name: 'discountEnabled' });
+  const tiers = useWatch({ control, name: 'discountTiers' }) ?? [];
   const { errors } = useFormState({ control, name: 'discountTiers' });
   const { fields, append, remove } = useFieldArray({ control, name: 'discountTiers' });
+
+  /*
+   * Mốc là một GÓI THUÊ, không phải số tháng tự do: gói 4 hay 5 tháng không tồn tại nên mốc ở
+   * đó cũng vô nghĩa. Mỗi ô chỉ liệt kê gói CHƯA dùng ở mốc khác (cộng gói của chính nó) — trùng
+   * mốc trở thành không chọn được, thay vì để người dùng gõ rồi mới bị báo lỗi.
+   */
+  const optionsFor = (index: number) =>
+    LONG_TERM_PACKAGE_MONTHS.filter(
+      (m) => m === tiers[index]?.minMonths || !tiers.some((t) => t?.minMonths === m),
+    ).map((m) => ({ value: String(m), label: longTermPackageLabel(m) }));
+  const nextUnusedMonths =
+    LONG_TERM_PACKAGE_MONTHS.find((m) => !tiers.some((t) => t?.minMonths === m)) ?? null;
 
   const tierErrors = errors.discountTiers as
     { root?: { message?: string }; message?: string } | undefined;
@@ -309,19 +343,19 @@ function DiscountSection({
         <>
           <div className={styles.tierTable} role="group" aria-label="Mốc ưu đãi thuê dài hạn">
             <div className={styles.discountHead}>
-              <span>Thuê từ (tháng)</span>
+              <span>Gói thuê từ</span>
               <span>Mức giảm (%)</span>
               <span>Ghi chú</span>
               <span className={styles.tierActionHead}>Thao tác</span>
             </div>
             {fields.map((field, index) => (
               <div key={field.id} className={styles.discountRow}>
-                <NumberField
+                <SelectField
                   control={control}
                   name={`discountTiers.${index}.minMonths`}
-                  label={`Số tháng tối thiểu của mốc ${index + 1}`}
-                  addonAfter="tháng"
-                  min={1}
+                  label={`Mốc gói của bậc ${index + 1}`}
+                  options={optionsFor(index)}
+                  placeholder="Chọn gói"
                 />
                 <NumberField
                   control={control}
@@ -351,7 +385,8 @@ function DiscountSection({
           <div className={styles.tierFooter}>
             <Button
               icon={<PlusOutlined aria-hidden />}
-              onClick={() => append({ minMonths: null, percent: null, note: '' })}
+              disabled={nextUnusedMonths == null}
+              onClick={() => append({ minMonths: nextUnusedMonths, percent: null, note: '' })}
             >
               Thêm mốc ưu đãi
             </Button>
@@ -365,12 +400,31 @@ function DiscountSection({
           <Alert
             type="info"
             showIcon
-            message="Ưu đãi này CHỈ áp dụng cho dịch vụ THUÊ DÀI HẠN (gói 1 tháng, 3 tháng…) — thuê ngắn theo ngày không được giảm. Mức giảm tính trên tiền thuê cơ bản; không áp lên tiền cọc, phí giao nhận, phí quá giờ hay phụ phí khác."
+            message="Ưu đãi này CHỈ áp dụng cho dịch vụ THUÊ DÀI HẠN — thuê tự lái/có tài xế theo ngày không được giảm. Khách mua gói nào thì hưởng mốc CAO NHẤT mà gói đó đạt tới, không cộng dồn: gói 2 tháng hưởng mốc 1 tháng, gói 9 và 12 tháng hưởng mốc 6 tháng nếu không có mốc cao hơn."
           />
+          {legacyTiers?.length ? (
+            <Alert
+              type="warning"
+              showIcon
+              message={`${legacyTiers.length} mốc ưu đãi cũ theo NGÀY chưa quy đổi được sang gói`}
+              description={
+                <>
+                  <span>
+                    {legacyTiers.map((t) => `từ ${t.minDays} ngày giảm ${t.percent}%`).join(' · ')}
+                  </span>
+                  <br />
+                  <span>
+                    Các mốc này KHÔNG còn được tính giá. Chọn lại mốc theo gói ở bảng trên rồi lưu —
+                    hệ thống cố ý không tự quy đổi để không đổi giá sau lưng bạn.
+                  </span>
+                </>
+              }
+            />
+          ) : null}
           <div className={styles.previewCard}>
-            <span className={styles.previewTitle}>Công thức tính giá thuê thực tế:</span>
+            <span className={styles.previewTitle}>Công thức tính giá gói:</span>
             <span className={styles.previewText}>
-              tiền_thuê_sau_giảm = tiền_thuê_cơ_bản − (tiền_thuê_cơ_bản × phần_trăm_giảm)
+              giá_gói = giá_tháng × số_tháng − (giá_tháng × số_tháng × phần_trăm_giảm)
             </span>
           </div>
         </>

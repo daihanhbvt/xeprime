@@ -5,6 +5,8 @@ type Schemas = components['schemas'];
 
 export type BookingRequestItem = Schemas['BookingRequestDto'];
 export type CreateBookingRequestInput = Schemas['CreateBookingRequestDto'];
+/** Body duyệt — thuê dài hạn bắt buộc `scheduledPickupAt` (ADR 0011). */
+export type ApproveBookingRequestInput = Schemas['ApproveBookingRequestDto'];
 export type BookingRequestReceipt = Schemas['BookingRequestReceiptDto'];
 export type CheckAvailabilityInput = Schemas['CheckAvailabilityDto'];
 export type CheckAvailabilityResult = Schemas['CheckAvailabilityResultDto'];

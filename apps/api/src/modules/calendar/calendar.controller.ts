@@ -185,11 +185,31 @@ export class CalendarController {
       });
     }
 
-    const [policy, dailyOverrides] = await Promise.all([
-      this.pricing.effectivePolicy(tenant.tenantId, vehicle.id),
-      this.pricing.dailyOverridesFor(vehicle.id, query.pickupAt, query.returnAt),
-    ]);
-    return this.pricing.buildQuote({
+    const policy = await this.pricing.effectivePolicy(tenant.tenantId, vehicle.id);
+
+    // Dài hạn: giá theo GÓI tháng lịch, không phụ thuộc khoảng ngày (ADR 0011). Nhân viên và
+    // khách vì thế luôn thấy cùng một con số cho cùng một gói.
+    if (query.serviceType === SERVICE_TYPE.LONG_TERM) {
+      return this.pricing.buildLongTermPackageQuote({
+        monthlyPrice: vehicle.monthlyPrice ? vehicle.monthlyPrice.toFixed(0) : null,
+        packageMonths: query.packageMonths!,
+        policy,
+        delivery: null,
+      });
+    }
+
+    if (!query.pickupAt || !query.returnAt) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Thiếu thời gian nhận/trả xe',
+      });
+    }
+    const dailyOverrides = await this.pricing.dailyOverridesFor(
+      vehicle.id,
+      query.pickupAt,
+      query.returnAt,
+    );
+    return this.pricing.buildDailyQuote({
       weekdayPrice: vehicle.weekdayPrice ? vehicle.weekdayPrice.toFixed(0) : null,
       weekendPrice: vehicle.weekendPrice ? vehicle.weekendPrice.toFixed(0) : null,
       pickupAt: query.pickupAt,
@@ -200,7 +220,6 @@ export class CalendarController {
       // Giá theo DỊCH VỤ + LỘ TRÌNH (17/08): staff và khách nhìn cùng con số cho cùng chuyến.
       serviceType: query.serviceType,
       routeType: query.serviceType === SERVICE_TYPE.WITH_DRIVER ? (query.routeType ?? null) : null,
-      monthlyPrice: vehicle.monthlyPrice ? vehicle.monthlyPrice.toFixed(0) : null,
       withDriverDailyPrice: vehicle.withDriverDailyPrice
         ? vehicle.withDriverDailyPrice.toFixed(0)
         : null,

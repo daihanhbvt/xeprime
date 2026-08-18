@@ -28,7 +28,8 @@ function shopPolicy(over: Partial<RentalPolicyValues> = {}): RentalPolicyValues 
     overtimeGraceMinutes: null,
     overtimeRoundingMinutes: null,
     discountEnabled: true,
-    discountTiers: [{ minDays: 7, percent: 15 }],
+    discountTiers: [{ minMonths: 3, percent: 15 }],
+    legacyDiscountTiers: [],
     updatedAt: '2026-08-01T00:00:00.000Z',
     ...over,
   };
@@ -148,7 +149,7 @@ describe('Giá đa dịch vụ (17/08)', () => {
     fireEvent.click(screen.getByRole('switch'));
 
     expect(await screen.findByLabelText('Giá ngày thường')).toBeTruthy();
-    const monthly = screen.getByLabelText('Giá tháng tham chiếu') as HTMLInputElement;
+    const monthly = screen.getByLabelText('Giá dài hạn cơ sở (một tháng)') as HTMLInputElement;
     expect(monthly.value).toBe('12.000.000');
     expect(screen.getByLabelText('Nội thành (giá cơ bản)')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Liên tỉnh — khứ hồi (tuỳ chọn)'), {
@@ -174,7 +175,7 @@ describe('Giá đa dịch vụ (17/08)', () => {
     renderWorkspace(pricingFixture());
     fireEvent.click(screen.getByRole('switch'));
     await screen.findByLabelText('Giá ngày thường');
-    expect(screen.queryByLabelText('Giá tháng tham chiếu')).toBeNull();
+    expect(screen.queryByLabelText('Giá dài hạn cơ sở (một tháng)')).toBeNull();
     expect(screen.queryByLabelText('Nội thành (giá cơ bản)')).toBeNull();
   });
 });

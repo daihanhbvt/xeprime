@@ -1,0 +1,351 @@
+/*
+ * Bước "Chọn gói thuê" của luồng thuê dài hạn (ADR 0011).
+ * Tag phần trăm dùng nguyên `DiscountTag` chung — ở đây chỉ ĐỊNH VỊ nó vào góc thẻ gói,
+ * không đụng màu/typography của tag.
+ */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.blockTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.fieldLabel {
+  font-size: var(--xp-font-size-label);
+  line-height: var(--xp-line-height-label);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text-secondary);
+}
+
+/* ── Thẻ gói ──────────────────────────────────────────────────────────────── */
+
+/*
+ * `auto-fit` co theo BỀ RỘNG CỘT CHỨA, không theo viewport: bước này nằm trong cột phải của
+ * overlay nên media query theo màn hình sẽ đo sai và làm tràn ngang.
+ * Padding hai bên chừa chỗ cho badge % ghim lệch ra góc — thiếu nó là sinh scroll ngang.
+ */
+.packages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: var(--xp-space-sm);
+  padding: 8px 4px 10px;
+}
+
+.package {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--xp-space-sm) var(--xp-space-xs);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.package:hover {
+  border-color: var(--xp-gold-deep);
+}
+
+.package:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.packageActive {
+  border-color: var(--xp-gold-deep);
+  background: var(--xp-gold-wash);
+}
+
+.packageName {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+  /* "12 tháng" xuống dòng làm thẻ cuối cao hơn năm thẻ kia — giữ một dòng cho đều hàng. */
+  white-space: nowrap;
+}
+
+.packageActive .packageName {
+  color: var(--xp-gold-deep);
+}
+
+/* Ghim tag % vào góc trên phải của thẻ — chỉ vị trí, màu do DiscountTag quyết định. */
+.packageBadge {
+  position: absolute;
+  top: -8px;
+  right: -4px;
+}
+
+/* Dấu tích neo giữa mép dưới, đè lên viền thẻ. */
+.packageCheck {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 16px;
+  color: var(--xp-gold-deep);
+  background: var(--xp-color-bg-container);
+  border-radius: 50%;
+}
+
+/* ── Nguyện vọng nhận xe ──────────────────────────────────────────────────── */
+
+.wishes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+/* Bọc viên lựa chọn + điểm neo popup lịch. */
+.wishAnchor {
+  position: relative;
+  min-width: 0;
+}
+
+.wish {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-height: var(--xp-touch-target-min);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  cursor: pointer;
+}
+
+.wish:hover {
+  border-color: var(--xp-gold-deep);
+}
+
+.wish:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.wishActive {
+  border-color: var(--xp-gold-deep);
+}
+
+/* Vòng radio vẽ tay: nút là <button role="radio"> nên không có input để mượn giao diện. */
+.wishDot {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 2px solid var(--xp-color-border-strong);
+  border-radius: 50%;
+}
+
+.wishDotActive {
+  border-color: var(--xp-gold-deep);
+  box-shadow: inset 0 0 0 3px var(--xp-color-bg-container);
+  background: var(--xp-gold-deep);
+}
+
+.wishLabel {
+  font-size: var(--xp-font-size-body);
+  color: var(--xp-color-text);
+}
+
+.wishIcon {
+  color: var(--xp-color-text-tertiary);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+/*
+ * Ô nhập ngày thu về 0×0 và trong suốt: nó chỉ còn nhiệm vụ neo popup lịch dưới viên "Chọn
+ * ngày cụ thể". Không `display:none` — AntD cần rect thật để đặt popup đúng chỗ.
+ */
+.datePickerAnchor {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  min-width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.error {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-error);
+}
+
+/* ── Tóm tắt lựa chọn ─────────────────────────────────────────────────────── */
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.summaryTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.summaryRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  font-size: var(--xp-font-size-body);
+}
+
+.summaryRow dt {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.summaryRow dd {
+  margin: 0;
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryDiscount dt,
+.summaryDiscount dd {
+  color: var(--xp-color-discount);
+}
+
+.packageChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.summaryTotal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding-top: var(--xp-space-sm);
+  border-top: 1px dashed var(--xp-color-border);
+}
+
+.summaryTotalLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.infoIcon {
+  color: var(--xp-color-text-tertiary);
+}
+
+.summaryTotalValue {
+  font-size: var(--xp-font-size-h3);
+  line-height: var(--xp-line-height-h3);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-gold-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryNote {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ── Dải tiết kiệm ────────────────────────────────────────────────────────── */
+
+.savings {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+  font-size: var(--xp-font-size-body);
+}
+
+/* ── Cam kết dịch vụ ──────────────────────────────────────────────────────── */
+
+.trust {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--xp-space-md);
+  margin: 0;
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  list-style: none;
+}
+
+.trustItem {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.trustIcon {
+  flex: none;
+  font-size: 20px;
+  color: var(--xp-gold-deep);
+}
+
+.trustText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.trustText b {
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}

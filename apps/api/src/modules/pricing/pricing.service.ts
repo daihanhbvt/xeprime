@@ -2,7 +2,12 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
-  LONG_TERM_MIN_DAYS,
+  discountTierFromStored,
+  legacyDiscountTierFromStored,
+  LONG_TERM_PACKAGE_MONTHS,
+  longTermTierFor,
+  isLongTermPackageMonths,
+  longTermPackageLabel,
   POLICY_SOURCE,
   PRICE_ROW,
   ROUTE_TYPE,
@@ -13,12 +18,14 @@ import {
   type BookingPriceSnapshot,
   type DeliveryTier,
   type DiscountTier,
+  type LegacyDiscountTier,
   type PolicySource,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   DeliverySummaryDto,
+  LongTermPackageOptionDto,
   PriceBreakdownRowDto,
   PublicQuoteDto,
   QuoteBreakdownDto,
@@ -266,17 +273,37 @@ export class PricingService {
       }
     }
 
+    /*
+     * Mốc ưu đãi CAM KẾT THỜI HẠN (ADR 0011): chỉ nhận đúng các gói hợp lệ, tăng dần theo
+     * tháng, và % KHÔNG được giảm khi thời hạn tăng — cam kết dài hơn mà ưu đãi thấp hơn là
+     * cấu hình vô nghĩa với khách và sinh nghịch lý "thuê lâu hơn đắt hơn".
+     */
     if (dto.discountEnabled && dto.discountTiers.length === 0) {
       throw invalid('Bật ưu đãi thì phải có ít nhất một mốc giảm giá');
     }
-    for (let i = 1; i < dto.discountTiers.length; i++) {
-      const prev = dto.discountTiers[i - 1]!.minDays;
-      const curr = dto.discountTiers[i]!.minDays;
-      if (curr <= prev) {
+    if (dto.discountTiers.length > LONG_TERM_PACKAGE_MONTHS.length) {
+      throw invalid(`Tối đa ${LONG_TERM_PACKAGE_MONTHS.length} mốc ưu đãi`);
+    }
+    for (let i = 0; i < dto.discountTiers.length; i++) {
+      const tier = dto.discountTiers[i]!;
+      if (!isLongTermPackageMonths(tier.minMonths)) {
         throw invalid(
-          curr === prev
-            ? `Trùng mốc ưu đãi "từ ${curr} ngày"`
-            : 'Các mốc ưu đãi phải theo số ngày tăng dần',
+          `Mốc ưu đãi phải là một gói thuê hợp lệ (${LONG_TERM_PACKAGE_MONTHS.join(', ')} tháng)`,
+        );
+      }
+      if (i === 0) continue;
+      const prev = dto.discountTiers[i - 1]!;
+      if (tier.minMonths <= prev.minMonths) {
+        throw invalid(
+          tier.minMonths === prev.minMonths
+            ? `Trùng mốc ưu đãi "${longTermPackageLabel(tier.minMonths)}"`
+            : 'Các mốc ưu đãi phải theo số tháng tăng dần',
+        );
+      }
+      if (tier.percent < prev.percent) {
+        throw invalid(
+          `Ưu đãi ${longTermPackageLabel(tier.minMonths)} (${tier.percent}%) không được thấp hơn mốc ` +
+            `${longTermPackageLabel(prev.minMonths)} (${prev.percent}%)`,
         );
       }
     }
@@ -465,10 +492,15 @@ export class PricingService {
   }
 
   /**
-   * Breakdown giá đầy đủ cho một khoảng thuê. Giao nhận truyền vào dạng đã-biết-phí
-   * (từ bậc tự động hoặc báo giá thủ công) — hàm này không tự quyết phí ngoài bán kính.
+   * Breakdown giá cho một khoảng thuê tính THEO NGÀY — tự lái và có tài xế.
+   *
+   * Thuê dài hạn KHÔNG đi qua đây (ADR 0011): nó tính theo GÓI tháng lịch ở
+   * {@link buildLongTermPackageQuote}, không có khái niệm "số ngày tính tiền".
+   *
+   * Giao nhận truyền vào dạng đã-biết-phí (bậc tự động hoặc báo giá thủ công) — hàm này không
+   * tự quyết phí ngoài bán kính.
    */
-  buildQuote(input: {
+  buildDailyQuote(input: {
     weekdayPrice: string | null;
     weekendPrice: string | null;
     pickupAt: Date;
@@ -477,12 +509,10 @@ export class PricingService {
     delivery?: { fee: string; label: string } | null;
     /** `ngày local (YYYY-MM-DD) → giá NGÀY ghi đè` — nạp qua `dailyOverridesFor`. */
     dailyOverrides?: ReadonlyMap<string, string>;
-    /** Dịch vụ của chuyến (17/08) — đổi cách tính đơn giá. Mặc định self_drive. */
+    /** Dịch vụ của chuyến — self_drive (mặc định) hoặc with_driver. */
     serviceType?: string;
     /** Lộ trình chuyến CÓ TÀI XẾ — quyết định cột giá route nào được áp. */
     routeType?: string | null;
-    /** Giá tháng tham chiếu — chỉ dùng khi serviceType = long_term. */
-    monthlyPrice?: string | null;
     /** Giá/ngày đã gồm tài xế, lộ trình nội thành/cơ bản — chỉ dùng khi with_driver. */
     withDriverDailyPrice?: string | null;
     /** Giá/ngày có tài xế liên tỉnh (khứ hồi) — NULL rơi về giá cơ bản kèm ghi chú. */
@@ -498,27 +528,10 @@ export class PricingService {
 
     const days = this.chargedDays(input.pickupAt, input.returnAt);
     const serviceType = input.serviceType ?? SERVICE_TYPE.SELF_DRIVE;
-
-    // Sàn dài hạn kiểm ở ĐÂY (nguồn tính giá duy nhất) — mọi đường (public quote, tạo yêu cầu,
-    // duyệt) đều qua, FE chỉ là preview.
-    if (serviceType === SERVICE_TYPE.LONG_TERM && days < LONG_TERM_MIN_DAYS) {
-      throw invalid(`Thuê dài hạn tối thiểu ${LONG_TERM_MIN_DAYS} ngày`);
+    if (serviceType === SERVICE_TYPE.LONG_TERM) {
+      // Bảo vệ lập trình: dài hạn tính theo GÓI; gọi nhầm vào đây sẽ ra con số theo ngày sai bản chất.
+      throw invalid('Thuê dài hạn tính theo gói tháng — dùng buildLongTermPackageQuote');
     }
-
-    /*
-     * Đơn giá phẳng theo dịch vụ (17/08; luật bậc ưu đãi sửa ở đợt 3):
-     *   - Dài hạn CÓ giá tháng → đơn giá = giá tháng ÷ 30, KHÔNG tách weekday/cuối tuần,
-     *     KHÔNG áp giá riêng theo ngày; bậc ưu đãi theo thời gian ÁP CHỒNG (gói cam kết
-     *     kiểu Mioto) và quote trả kèm % + tiền tiết kiệm so với giá ngày thường.
-     *   - Có tài xế CÓ giá riêng → đơn giá theo LỘ TRÌNH (đã gồm tài xế), KHÔNG bậc ưu đãi
-     *     (bậc là ưu đãi của dịch vụ dài hạn); giá riêng theo ngày không áp (nó là giá tự lái).
-     *   - Còn lại (kể cả 2 dịch vụ trên nhưng CHƯA khai giá) → máy giá ngày; bậc ưu đãi chỉ
-     *     còn áp cho nhánh fallback CỦA DÀI HẠN.
-     */
-    const monthly =
-      serviceType === SERVICE_TYPE.LONG_TERM && input.monthlyPrice
-        ? new Prisma.Decimal(input.monthlyPrice)
-        : null;
 
     /*
      * Giá có tài xế theo LỘ TRÌNH (17/08): nội thành ăn giá cơ bản; liên tỉnh/1 chiều ăn cột
@@ -557,33 +570,8 @@ export class PricingService {
 
     let base: Prisma.Decimal;
     let baseSublabel: string;
-    /*
-     * Bậc ưu đãi theo thời gian thuê là ƯU ĐÃI CỦA DỊCH VỤ DÀI HẠN (chốt 17/08 đợt 3): thuê
-     * ngắn (tự lái/có tài xế theo ngày) không ăn bậc; dài hạn áp bậc CHỒNG lên giá tháng như
-     * gói cam kết của Mioto — không phải giảm kép vì thuê ngắn đã bị loại khỏi bậc.
-     */
-    const applyDiscountTiers = serviceType === SERVICE_TYPE.LONG_TERM;
-    // Tiết kiệm so với giá ngày thường — FE hiện "-X% · tiết kiệm Y₫" để khách thấy chênh lệch.
-    let longTermSavingsPercent: number | null = null;
-    let longTermSavingsAmount: string | null = null;
 
-    if (monthly) {
-      const rate = monthly.div(30).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
-      base = rate.mul(days);
-      baseSublabel = `${days} ngày × ${vnd(rate)}/ngày — giá tháng ${vnd(monthly)} ÷ 30`;
-      if (input.weekdayPrice) {
-        const weekday = new Prisma.Decimal(input.weekdayPrice);
-        if (weekday.gt(0) && rate.lt(weekday)) {
-          longTermSavingsPercent = weekday
-            .minus(rate)
-            .div(weekday)
-            .mul(100)
-            .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
-            .toNumber();
-          longTermSavingsAmount = weekday.minus(rate).mul(days).toFixed(0);
-        }
-      }
-    } else if (driverRate) {
+    if (driverRate) {
       base = driverRate.mul(days);
       baseSublabel = `${days} ngày × ${vnd(driverRate)}/ngày · đã gồm tài xế${
         driverRouteLabel ? ` · ${driverRouteLabel}` : ''
@@ -593,8 +581,6 @@ export class PricingService {
       // tạm tính, FE không được trưng như giá chốt của dịch vụ đó.
       if (serviceType === SERVICE_TYPE.WITH_DRIVER) {
         estimateNote = 'Chưa gồm phí tài xế — gian hàng báo giá chính thức khi duyệt';
-      } else if (serviceType === SERVICE_TYPE.LONG_TERM) {
-        estimateNote = 'Xe chưa niêm yết giá tháng — tạm tính theo giá ngày thường';
       }
       if (!input.weekdayPrice) {
         throw invalid('Xe chưa có giá thuê theo ngày — cấu hình giá trước khi báo giá');
@@ -638,9 +624,9 @@ export class PricingService {
       },
     ];
 
-    // Mọi khuyến mãi CHỈ áp lên tiền thuê cơ bản; không giảm phụ phí/cọc.
-    // Khuyến mãi trực tiếp thuộc dịch vụ TỰ LÁI, còn bậc theo thời lượng thuộc
-    // DÀI HẠN, nên hai loại không bao giờ chồng lên nhau.
+    // Khuyến mãi trực tiếp CHỈ áp lên tiền thuê cơ bản của dịch vụ TỰ LÁI; không giảm phụ
+    // phí/cọc và không bao giờ đụng giá thuê dài hạn — ưu đãi của dài hạn là mốc cam kết thời
+    // hạn, tính trong buildLongTermPackageQuote (ADR 0011).
     const policy = input.policy?.values ?? null;
     let discount = new Prisma.Decimal(0);
     const directDiscountPercent =
@@ -666,31 +652,6 @@ export class PricingService {
         sublabel: null,
         amount: base.minus(discount).toFixed(0),
       });
-    } else if (applyDiscountTiers && policy?.discountEnabled) {
-      const tier = [...policy.discountTiers]
-        .filter((t) => days >= t.minDays)
-        .sort((a, b) => b.minDays - a.minDays)[0];
-      if (tier) {
-        discount = base.mul(tier.percent).div(100).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
-        rows.push({
-          key: PRICE_ROW.DISCOUNT,
-          label: `Ưu đãi giảm giá (${tier.percent}%)`,
-          // Mốc cấu hình theo THÁNG (đợt 4) — chia hết cho 30 thì nói "gói X tháng",
-          // dữ liệu cũ theo ngày vẫn đọc được nguyên nghĩa.
-          sublabel:
-            tier.note ??
-            (tier.minDays % 30 === 0
-              ? `Gói thuê từ ${tier.minDays / 30} tháng`
-              : `Mốc thuê từ ${tier.minDays} ngày`),
-          amount: discount.negated().toFixed(0),
-        });
-        rows.push({
-          key: PRICE_ROW.SUBTOTAL,
-          label: 'Giá sau chiết khấu',
-          sublabel: null,
-          amount: base.minus(discount).toFixed(0),
-        });
-      }
     }
 
     let deliveryFee = new Prisma.Decimal(0);
@@ -717,6 +678,7 @@ export class PricingService {
 
     return {
       days,
+      longTerm: null,
       rows,
       totalAmount: total.toFixed(0),
       depositAmount: policy ? new Prisma.Decimal(policy.depositAmount).toFixed(0) : '0',
@@ -725,8 +687,137 @@ export class PricingService {
       // Khác null = tổng chỉ là TẠM TÍNH (giá chuyên biệt/giá route chưa niêm yết) — FE đổi
       // nhãn tổng và hiện ghi chú, không trưng như giá chốt.
       estimateNote,
-      longTermSavingsPercent,
-      longTermSavingsAmount,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Thuê dài hạn — GÓI cố định theo tháng lịch (ADR 0011)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Con số của MỘT gói. Bảng chọn gói và breakdown của gói đang chọn cùng gọi hàm này, nên giá
+   * trên nút và giá trong breakdown không thể lệch nhau.
+   */
+  private longTermAmounts(
+    monthly: Prisma.Decimal,
+    months: number,
+    tier: DiscountTier | null,
+  ): LongTermPackageOptionDto {
+    const basePackage = monthly.mul(months).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+    const discount = tier
+      ? basePackage.mul(tier.percent).div(100).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+      : new Prisma.Decimal(0);
+    const finalPackage = basePackage.minus(discount);
+    return {
+      packageMonths: months,
+      baseMonthlyPrice: monthly.toFixed(0),
+      basePackageAmount: basePackage.toFixed(0),
+      durationDiscountPercent: tier ? tier.percent : null,
+      durationDiscountAmount: discount.toFixed(0),
+      finalPackageAmount: finalPackage.toFixed(0),
+      effectiveMonthlyAmount: finalPackage
+        .div(months)
+        .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+        .toFixed(0),
+    };
+  }
+
+  /** Mốc ưu đãi áp cho một gói theo chính sách hiệu lực — tắt ưu đãi ⇒ không mốc nào. */
+  private longTermTier(policy: EffectivePolicy | null, months: number): DiscountTier | null {
+    const values = policy?.values;
+    if (!values?.discountEnabled) return null;
+    return longTermTierFor(values.discountTiers, months);
+  }
+
+  /**
+   * Giá đủ SÁU gói cho bảng chọn gói. Mảng rỗng khi xe chưa niêm yết giá tháng — FE hiện
+   * "liên hệ báo giá" thay vì bịa số. Đây là đường DUY NHẤT frontend lấy giá gói: client không
+   * bao giờ tự nhân giá tháng với số tháng.
+   */
+  longTermPackages(
+    monthlyPrice: string | null,
+    policy: EffectivePolicy | null,
+  ): LongTermPackageOptionDto[] {
+    if (!monthlyPrice) return [];
+    const monthly = new Prisma.Decimal(monthlyPrice);
+    return LONG_TERM_PACKAGE_MONTHS.map((months) =>
+      this.longTermAmounts(monthly, months, this.longTermTier(policy, months)),
+    );
+  }
+
+  /**
+   * Breakdown của một GÓI thuê dài hạn.
+   *
+   *   basePackageAmount      = monthlyPrice × packageMonths
+   *   durationDiscountAmount = basePackageAmount × tier% / 100   (mốc cao nhất gói đạt tới)
+   *   finalPackageAmount     = base − discount
+   *
+   * Không có "số ngày tính tiền" và không cần ngày trả (ngày trả suy từ gói khi gian hàng chốt
+   * giờ nhận). KHÔNG bao giờ áp vehicle.discountPercent — khuyến mãi trực tiếp đó thuộc tự lái.
+   */
+  buildLongTermPackageQuote(input: {
+    monthlyPrice: string | null;
+    packageMonths: number;
+    policy: EffectivePolicy | null;
+    delivery?: { fee: string; label: string } | null;
+  }): QuoteBreakdownDto {
+    if (!isLongTermPackageMonths(input.packageMonths)) {
+      throw invalid(`Gói thuê dài hạn phải là ${LONG_TERM_PACKAGE_MONTHS.join(', ')} tháng`);
+    }
+    if (!input.monthlyPrice) {
+      throw invalid(
+        'Xe chưa niêm yết giá thuê dài hạn theo tháng — cấu hình giá trước khi báo giá',
+      );
+    }
+    const months = input.packageMonths;
+    const monthly = new Prisma.Decimal(input.monthlyPrice);
+    const tier = this.longTermTier(input.policy, months);
+    const amounts = this.longTermAmounts(monthly, months, tier);
+
+    const rows: PriceBreakdownRowDto[] = [
+      {
+        key: PRICE_ROW.BASE,
+        label: `Giá cơ sở gói ${longTermPackageLabel(months)}`,
+        sublabel: `${months} tháng × ${vnd(monthly)}/tháng`,
+        amount: amounts.basePackageAmount,
+      },
+    ];
+    if (tier) {
+      rows.push({
+        key: PRICE_ROW.DISCOUNT,
+        label: `Ưu đãi cam kết ${longTermPackageLabel(months)} (${tier.percent}%)`,
+        sublabel: tier.note ?? `Mốc ưu đãi từ ${longTermPackageLabel(tier.minMonths)}`,
+        amount: `-${amounts.durationDiscountAmount}`,
+      });
+      rows.push({
+        key: PRICE_ROW.SUBTOTAL,
+        label: 'Giá gói sau ưu đãi',
+        sublabel: null,
+        amount: amounts.finalPackageAmount,
+      });
+    }
+
+    let deliveryFee = new Prisma.Decimal(0);
+    if (input.delivery) {
+      deliveryFee = new Prisma.Decimal(input.delivery.fee);
+      rows.push({
+        key: PRICE_ROW.DELIVERY,
+        label: 'Phí giao nhận xe',
+        sublabel: input.delivery.label,
+        amount: deliveryFee.toFixed(0),
+      });
+    }
+
+    const policy = input.policy?.values ?? null;
+    return {
+      days: null,
+      longTerm: amounts,
+      rows,
+      totalAmount: new Prisma.Decimal(amounts.finalPackageAmount).plus(deliveryFee).toFixed(0),
+      depositAmount: policy ? new Prisma.Decimal(policy.depositAmount).toFixed(0) : '0',
+      policySource: input.policy?.source ?? null,
+      policyUpdatedAt: policy?.updatedAt ?? null,
+      estimateNote: null,
     };
   }
 
@@ -739,7 +830,10 @@ export class PricingService {
       calculatedAt: new Date().toISOString(),
       source: 'quote',
       currency: 'VND',
-      days: breakdown.days,
+      ...(breakdown.days != null ? { days: breakdown.days } : {}),
+      // Đơn dài hạn đóng băng ĐỦ cấu tạo giá gói (gói, giá tháng cơ sở, mốc ưu đãi, tiền giảm)
+      // để về sau giải thích được con số mà không phải tra lại chính sách hiện hành.
+      ...(breakdown.longTerm ? { longTerm: breakdown.longTerm } : {}),
       rows: breakdown.rows.map((r) => ({
         key: r.key as BookingPriceSnapshot['rows'][number]['key'],
         label: r.label,
@@ -760,7 +854,9 @@ export class PricingService {
             overtimeGraceMinutes: policy.values.overtimeGraceMinutes,
             overtimeRoundingMinutes: policy.values.overtimeRoundingMinutes,
             discountEnabled: policy.values.discountEnabled,
-            discountTiers: policy.values.discountTiers,
+            // Đóng băng ĐỦ mốc đang lưu (canonical + legacy chưa dọn) — snapshot phải giải
+            // thích được cấu hình tại thời điểm chốt, kể cả phần máy giá đã bỏ qua.
+            discountTiers: [...policy.values.discountTiers, ...policy.values.legacyDiscountTiers],
           }
         : null,
     };
@@ -770,14 +866,23 @@ export class PricingService {
   // Public quote (marketplace)
   // -------------------------------------------------------------------------
 
-  /** Báo giá công khai cho một xe đã duyệt — CHƯA gồm phí giao nhận (phụ thuộc khoảng cách). */
+  /**
+   * Báo giá công khai cho một xe đã duyệt — CHƯA gồm phí giao nhận (phụ thuộc khoảng cách).
+   *
+   * Dài hạn đi nhánh GÓI: chỉ cần `packageMonths`, KHÔNG cần (và không tin) ngày trả do client
+   * gửi lên. Dịch vụ khác giữ nguyên hợp đồng ngày nhận–ngày trả.
+   */
   async publicQuote(
     vehicleId: string,
-    pickupAt: string,
-    returnAt: string,
-    serviceType?: string,
-    routeType?: string,
+    query: {
+      pickupAt?: string;
+      returnAt?: string;
+      serviceType?: string;
+      routeType?: string;
+      packageMonths?: number;
+    },
   ): Promise<PublicQuoteDto> {
+    const { serviceType, routeType } = query;
     const vehicle = await this.prisma.vehicle.findFirst({
       where: {
         id: vehicleId,
@@ -810,6 +915,34 @@ export class PricingService {
     }
 
     const policy = await this.effectivePolicy(vehicle.tenantId, vehicle.id);
+    const delivery: DeliverySummaryDto = policy?.values.deliveryEnabled
+      ? {
+          enabled: true,
+          maxRadiusKm: policy.values.deliveryMaxRadiusKm,
+          tiers: policy.values.deliveryTiers,
+        }
+      : { enabled: false, maxRadiusKm: null, tiers: [] };
+
+    if (serviceType === SERVICE_TYPE.LONG_TERM) {
+      if (query.packageMonths == null) {
+        throw invalid('Chọn gói thuê dài hạn để xem giá');
+      }
+      return {
+        breakdown: this.buildLongTermPackageQuote({
+          monthlyPrice: decimalToString(vehicle.monthlyPrice),
+          packageMonths: query.packageMonths,
+          policy,
+          delivery: null,
+        }),
+        delivery,
+      };
+    }
+
+    if (!query.pickupAt || !query.returnAt) {
+      throw invalid('Thiếu thời gian nhận/trả xe');
+    }
+    const pickupAt = query.pickupAt;
+    const returnAt = query.returnAt;
     // Giá riêng theo ngày áp vào MỌI báo giá — khách ngoài chợ và shop duyệt yêu cầu phải
     // nhìn cùng một con số.
     const dailyOverrides = await this.dailyOverridesFor(
@@ -817,7 +950,7 @@ export class PricingService {
       new Date(pickupAt),
       new Date(returnAt),
     );
-    const breakdown = this.buildQuote({
+    const breakdown = this.buildDailyQuote({
       weekdayPrice: decimalToString(vehicle.weekdayPrice),
       weekendPrice: decimalToString(vehicle.weekendPrice),
       pickupAt: new Date(pickupAt),
@@ -828,20 +961,11 @@ export class PricingService {
       serviceType,
       // Lộ trình chỉ có nghĩa với chuyến có tài xế — dịch vụ khác bỏ qua để không lệch giá.
       routeType: serviceType === SERVICE_TYPE.WITH_DRIVER ? (routeType ?? null) : null,
-      monthlyPrice: decimalToString(vehicle.monthlyPrice),
       withDriverDailyPrice: decimalToString(vehicle.withDriverDailyPrice),
       withDriverInterCityPrice: decimalToString(vehicle.withDriverInterCityPrice),
       withDriverOneWayPrice: decimalToString(vehicle.withDriverOneWayPrice),
       discountPercent: vehicle.discountPercent,
     });
-
-    const delivery: DeliverySummaryDto = policy?.values.deliveryEnabled
-      ? {
-          enabled: true,
-          maxRadiusKm: policy.values.deliveryMaxRadiusKm,
-          tiers: policy.values.deliveryTiers,
-        }
-      : { enabled: false, maxRadiusKm: null, tiers: [] };
 
     return { breakdown, delivery };
   }
@@ -861,7 +985,15 @@ function toValues(row: PolicyRow): RentalPolicyValuesDto {
     overtimeGraceMinutes: row.overtimeGraceMinutes,
     overtimeRoundingMinutes: row.overtimeRoundingMinutes,
     discountEnabled: row.discountEnabled,
-    discountTiers: (row.discountTiers as unknown as DiscountTier[]) ?? [],
+    // jsonb chứa CẢ hai đời dữ liệu: mốc theo tháng (canonical) và mốc cũ theo ngày không quy
+    // đổi được. Chỉ mốc canonical đi vào máy giá; mốc legacy trả riêng để màn cấu hình nhắc chủ
+    // xe chọn lại — không bao giờ remap ngầm (ADR 0011).
+    discountTiers: storedTiers(row.discountTiers)
+      .map(discountTierFromStored)
+      .filter((t): t is DiscountTier => t !== null),
+    legacyDiscountTiers: storedTiers(row.discountTiers)
+      .map(legacyDiscountTierFromStored)
+      .filter((t): t is LegacyDiscountTier => t !== null),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -908,6 +1040,11 @@ function auditShape(data: {
     discountEnabled: data.discountEnabled,
     discountTiers: data.discountTiers,
   };
+}
+
+/** Phần tử thô của `discount_tiers_json` — jsonb có thể null/không phải mảng ở dữ liệu cũ. */
+function storedTiers(raw: unknown): unknown[] {
+  return Array.isArray(raw) ? raw : [];
 }
 
 function decimalToString(value: Prisma.Decimal | null): string | null {

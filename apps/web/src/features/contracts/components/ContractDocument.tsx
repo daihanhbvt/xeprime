@@ -3,6 +3,7 @@
 import {
   SERVICE_TYPE_LABEL,
   VEHICLE_TYPE,
+  longTermPackageLabel,
   routeTypeLabel,
   type ServiceType,
 } from '@xeprime/types';
@@ -79,16 +80,23 @@ export function ContractDocument({ contract }: { contract: Contract }) {
           <Field label="Loại xe" value={vehicleTypeLabel(s.vehicle.vehicleType)} />
           <Field
             label="Hình thức"
-            value={SERVICE_TYPE_LABEL[s.vehicle.serviceType as ServiceType] ?? s.vehicle.serviceType}
+            value={
+              SERVICE_TYPE_LABEL[s.vehicle.serviceType as ServiceType] ?? s.vehicle.serviceType
+            }
           />
           {s.vehicle.brand || s.vehicle.model ? (
-            <Field label="Hãng / dòng" value={[s.vehicle.brand, s.vehicle.model].filter(Boolean).join(' ')} />
+            <Field
+              label="Hãng / dòng"
+              value={[s.vehicle.brand, s.vehicle.model].filter(Boolean).join(' ')}
+            />
           ) : null}
           {s.vehicle.manufactureYear ? (
             <Field label="Đời xe" value={String(s.vehicle.manufactureYear)} />
           ) : null}
           {s.vehicle.color ? <Field label="Màu" value={s.vehicle.color} /> : null}
-          {s.vehicle.seatCount ? <Field label="Số chỗ" value={`${s.vehicle.seatCount} chỗ`} /> : null}
+          {s.vehicle.seatCount ? (
+            <Field label="Số chỗ" value={`${s.vehicle.seatCount} chỗ`} />
+          ) : null}
         </dl>
       </Section>
 
@@ -96,7 +104,19 @@ export function ContractDocument({ contract }: { contract: Contract }) {
         <dl className={styles.grid}>
           <Field label="Nhận xe" value={formatDateTime(s.rental.pickupAt)} />
           <Field label="Trả xe" value={formatDateTime(s.rental.returnAt)} />
-          <Field label="Số ngày" value={`${s.rental.days} ngày`} />
+          {/*
+            Chuyến THUÊ DÀI HẠN ký theo GÓI tháng lịch, không theo số ngày (ADR 0011) — in "90
+            ngày" cho gói 3 tháng là sai văn bản khi các tháng lệch độ dài. Hợp đồng ký trước
+            ADR 0011 không có key này nên vẫn in số ngày như cũ.
+          */}
+          {s.rental.longTermPackageMonths ? (
+            <Field
+              label="Thời hạn thuê"
+              value={longTermPackageLabel(s.rental.longTermPackageMonths)}
+            />
+          ) : (
+            <Field label="Số ngày" value={`${s.rental.days} ngày`} />
+          )}
           <Field label="Mã đơn" value={s.rental.bookingCode} />
           {/* Hành trình chuyến có tài xế — hợp đồng cũ không có key này, chỉ render khi tồn tại. */}
           {s.rental.routeType ? (
@@ -126,9 +146,15 @@ export function ContractDocument({ contract }: { contract: Contract }) {
       <Section title="Điều khoản">
         <ol className={styles.terms}>
           <li>Bên B nhận và trả xe đúng thời gian, địa điểm đã thỏa thuận; giữ gìn xe cẩn thận.</li>
-          <li>Bên B chịu trách nhiệm về vi phạm giao thông, hư hỏng, mất mát phát sinh trong thời gian thuê.</li>
+          <li>
+            Bên B chịu trách nhiệm về vi phạm giao thông, hư hỏng, mất mát phát sinh trong thời gian
+            thuê.
+          </li>
           <li>Tiền cọc được hoàn lại sau khi trả xe, trừ các khoản phát sinh (nếu có).</li>
-          <li>Hai bên tự thỏa thuận và giải quyết trên tinh thần hợp tác; XePrime chỉ là nền tảng kết nối.</li>
+          <li>
+            Hai bên tự thỏa thuận và giải quyết trên tinh thần hợp tác; XePrime chỉ là nền tảng kết
+            nối.
+          </li>
         </ol>
       </Section>
 

@@ -1,3 +1,4 @@
+import type { LongTermPackageMonths } from '@xeprime/types';
 import type { PolicyFormValues, VehiclePricingFormValues } from './schema';
 import type { RentalPolicyValues, SaveRentalPolicyInput } from './types';
 
@@ -35,10 +36,11 @@ export function policyToForm(policy: RentalPolicyValues | null | undefined): Pol
     overtimeGraceMinutes: policy.overtimeGraceMinutes ?? null,
     overtimeRoundingMinutes: policy.overtimeRoundingMinutes ?? null,
     discountEnabled: policy.discountEnabled,
-    // Form nhập theo THÁNG, API lưu theo ngày (minDays = tháng × 30). Mốc cũ cấu hình theo
-    // ngày (trước đợt 4) quy về tháng gần nhất, tối thiểu 1 — lưu lại là chuẩn hoá luôn.
+    // Mốc ưu đãi đã canonical theo THÁNG ở cả API lẫn DB (ADR 0011) — form không quy đổi gì.
+    // Mốc cũ theo ngày không khớp gói nào nằm ở `legacyDiscountTiers`, hiển thị riêng dạng
+    // cảnh báo và biến mất khi lưu lại; đưa vào form là remap ngầm, không được phép.
     discountTiers: policy.discountTiers.map((t) => ({
-      minMonths: Math.max(1, Math.round(t.minDays / 30)),
+      minMonths: t.minMonths,
       percent: t.percent,
       note: t.note ?? '',
     })),
@@ -60,7 +62,7 @@ export function formToSaveInput(values: PolicyFormValues): SaveRentalPolicyInput
     overtimeRoundingMinutes: values.overtimeRoundingMinutes ?? null,
     discountEnabled: values.discountEnabled,
     discountTiers: (values.discountTiers ?? []).map((t) => ({
-      minDays: (t.minMonths ?? 1) * 30,
+      minMonths: (t.minMonths ?? 1) as LongTermPackageMonths,
       percent: t.percent ?? 1,
       ...(t.note?.trim() ? { note: t.note.trim() } : {}),
     })),

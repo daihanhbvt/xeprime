@@ -21,16 +21,19 @@ import {
   ROUTE_TYPE,
   ROUTE_TYPE_DESCRIPTION,
   ROUTE_TYPE_VALUES,
+  LONG_TERM_PACKAGE_MONTHS,
+  longTermPackageLabel,
+  longTermReturnAt,
   SERVICE_TYPE,
-  longTermSavingsPercent,
   routeTypeLabel,
   serviceTypeLabel,
+  type LongTermPackageMonths,
   type RouteType,
   type ServiceType,
 } from '@xeprime/types';
 import { Segmented } from 'antd';
+import { DateTimeField } from '@/components/form/DateTimeField';
 import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
-import { DiscountTag } from '@/components/data-display/DiscountTag';
 import {
   RentalDateTimeRangeField,
   type RentalMode,
@@ -169,6 +172,11 @@ export function StaffBookingFlow({
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
   // Dịch vụ của ĐƠN (17/08) — mặc định tự lái; đối chiếu với năng lực xe khi hồ sơ về.
   const [serviceType, setServiceType] = useState<ServiceType>(SERVICE_TYPE.SELF_DRIVE);
+  /**
+   * Gói thuê dài hạn (ADR 0011). Đơn dài hạn có độ dài CỐ ĐỊNH theo gói: nhân viên chỉ chốt giờ
+   * nhận, giờ trả do server suy ra bằng tháng lịch — không có ô nhập ngày trả.
+   */
+  const [packageMonths, setPackageMonths] = useState<LongTermPackageMonths | null>(null);
   const [stepError, setStepError] = useState<string | null>(null);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
@@ -224,21 +232,34 @@ export function StaffBookingFlow({
   const pickupMethod = useWatch({ control, name: 'pickupMethod' });
   const watchedRoute = useWatch({ control, name: 'routeType' }) as RouteType;
   const isWithDriver = serviceType === SERVICE_TYPE.WITH_DRIVER;
+  const isLongTerm = serviceType === SERVICE_TYPE.LONG_TERM;
+  /** Ngày trả suy từ gói — chỉ để HIỂN THỊ; con số ghi vào đơn do server tính lại. */
+  const derivedReturnAt =
+    isLongTerm && packageMonths != null && watchedPickup
+      ? dayjs(longTermReturnAt(watchedPickup.toDate(), packageMonths))
+      : null;
   // Chuyến có tài xế: xe đến ĐÓN khách — "giao xe tận nơi" không có nghĩa.
   const isDelivery = !isWithDriver && pickupMethod === PICKUP_METHOD.DELIVERY;
-  const hasRange = Boolean(watchedPickup && watchedReturn && watchedReturn.isAfter(watchedPickup));
+  const hasRange = isLongTerm
+    ? Boolean(watchedPickup && packageMonths != null)
+    : Boolean(watchedPickup && watchedReturn && watchedReturn.isAfter(watchedPickup));
 
-  /** Báo giá nội bộ — 400 (xe chưa có giá) là trạng thái hợp lệ: rơi về nhập tiền tay. */
-  const quoteParams = hasRange
-    ? {
-        vehicleId,
-        pickupAt: watchedPickup!.toISOString(),
-        returnAt: watchedReturn!.toISOString(),
-        // Giá theo DỊCH VỤ + LỘ TRÌNH (17/08) — staff thấy đúng số khách sẽ trả.
-        serviceType,
-        ...(isWithDriver ? { routeType: watchedRoute } : {}),
-      }
-    : null;
+  /**
+   * Báo giá nội bộ — CÙNG hàm với báo giá công khai, nên nhân viên và khách thấy đúng một con
+   * số cho cùng một gói. 400 (xe chưa có giá) là trạng thái hợp lệ: rơi về nhập tiền tay.
+   */
+  const quoteParams = !hasRange
+    ? null
+    : isLongTerm
+      ? { vehicleId, serviceType, packageMonths: packageMonths! }
+      : {
+          vehicleId,
+          pickupAt: watchedPickup!.toISOString(),
+          returnAt: watchedReturn!.toISOString(),
+          // Giá theo DỊCH VỤ + LỘ TRÌNH (17/08) — staff thấy đúng số khách sẽ trả.
+          serviceType,
+          ...(isWithDriver ? { routeType: watchedRoute } : {}),
+        };
   const quoteQ = useQuery({
     queryKey: queryKeys.calendar.quote(quoteParams ?? {}),
     queryFn: () => fetchCalendarQuote(quoteParams!),
@@ -255,7 +276,8 @@ export function StaffBookingFlow({
       return checkConflict({
         vehicleId,
         startAt: v.pickupAt?.toISOString() ?? '',
-        endAt: v.returnAt?.toISOString() ?? '',
+        // Dài hạn: khoảng cần kiểm là [nhận, nhận + gói tháng lịch) — chính khoảng đơn sẽ chiếm.
+        endAt: (derivedReturnAt ?? v.returnAt)?.toISOString() ?? '',
       });
     },
     onSuccess: (res) => {
@@ -281,6 +303,17 @@ export function StaffBookingFlow({
   }, [isResult, onResultChange]);
 
   async function continueFromTime() {
+    if (isLongTerm) {
+      // Đơn dài hạn: khoảng lịch suy từ gói nên chỉ cần giờ nhận + gói, rồi vẫn kiểm trùng lịch
+      // trên KHOẢNG ĐÃ SUY (preview — constraint DB mới là chốt chặn, ADR 0006).
+      setStepError(null);
+      if (packageMonths == null) {
+        setStepError('Chọn gói thuê dài hạn trước khi tiếp tục.');
+        return;
+      }
+      if (await trigger(['pickupAt'])) availabilityM.mutate();
+      return;
+    }
     setStepError(null);
     if (await trigger(['pickupAt', 'returnAt'])) availabilityM.mutate();
   }
@@ -326,7 +359,10 @@ export function StaffBookingFlow({
             }
           : {}),
         pickupAt: v.pickupAt!.toISOString(),
-        returnAt: v.returnAt!.toISOString(),
+        // Dài hạn: KHÔNG gửi ngày trả — server suy từ gói bằng tháng lịch (ADR 0011).
+        ...(isLongTerm
+          ? { longTermPackageMonths: packageMonths ?? undefined }
+          : { returnAt: v.returnAt!.toISOString() }),
         // Tiền từ báo giá server (đã gồm giá riêng theo ngày); giảm giá là dòng âm → tách dương.
         baseAmount: quote
           ? (rowAmount(quote, PRICE_ROW.BASE) ?? quote.totalAmount)
@@ -474,6 +510,8 @@ export function StaffBookingFlow({
           reviewSummary={reviewsQ.data?.summary ?? null}
           reviewsLoading={listingQ.isSuccess && reviewsQ.isLoading}
           verifiedContact={null}
+          serviceType={serviceType}
+          packageMonths={packageMonths}
         />
       </div>
 
@@ -491,25 +529,12 @@ export function StaffBookingFlow({
                   block
                   value={serviceType}
                   onChange={(v) => setServiceType(v as ServiceType)}
-                  options={vehicleServices.map((value) => {
-                    // Cùng badge "-X%" với luồng khách — staff cũng thấy lý do tư vấn dài hạn.
-                    const percent =
-                      value === SERVICE_TYPE.LONG_TERM
-                        ? longTermSavingsPercent(listing?.weekdayPrice, listing?.monthlyPrice)
-                        : null;
-                    return {
-                      value,
-                      label:
-                        percent != null ? (
-                          <span className={styles.serviceOption}>
-                            {serviceTypeLabel(value)}
-                            <DiscountTag percent={percent} size="sm" />
-                          </span>
-                        ) : (
-                          serviceTypeLabel(value)
-                        ),
-                    };
-                  })}
+                  /* Nhãn tab là TÊN DỊCH VỤ — mức ưu đãi dài hạn khác nhau theo từng gói nên
+                     không gắn được một con số chung lên tab (ADR 0011). */
+                  options={vehicleServices.map((value) => ({
+                    value,
+                    label: serviceTypeLabel(value),
+                  }))}
                 />
               </div>
             ) : (
@@ -539,42 +564,95 @@ export function StaffBookingFlow({
             ) : null}
 
             <p className={styles.stepHint}>
-              Chọn thời gian thuê để kiểm tra xe còn trống. Có thể thuê theo ngày hoặc theo giờ.
+              {isLongTerm
+                ? 'Chọn gói thuê và giờ nhận xe — ngày trả tính theo tháng lịch, không sửa tay được.'
+                : 'Chọn thời gian thuê để kiểm tra xe còn trống. Có thể thuê theo ngày hoặc theo giờ.'}
             </p>
 
-            <div className={styles.rangeField}>
-              <span className={styles.rangeFieldLabel}>Thời gian thuê</span>
-              <div
-                className={cx(
-                  styles.rangeBox,
-                  (formState.errors.pickupAt || formState.errors.returnAt) && styles.rangeBoxError,
-                )}
-              >
-                <RentalDateTimeRangeField
-                  value={{ pickupAt: watchedPickup ?? null, returnAt: watchedReturn ?? null }}
-                  onChange={(next) => {
-                    setValue('pickupAt', next.pickupAt, { shouldValidate: true });
-                    setValue('returnAt', next.returnAt, { shouldValidate: true });
-                    if (stepError) setStepError(null);
-                  }}
-                  mode={rentalMode}
-                  onModeChange={setRentalMode}
-                  variant="labelled"
-                  prefix={<CalendarOutlined />}
-                />
+            {/*
+              Đơn THUÊ DÀI HẠN có độ dài cố định bằng gói (ADR 0011): nhân viên chọn gói + giờ
+              nhận, ngày trả hiện read-only. Không có ô chọn khoảng tự do — nếu có, đơn sẽ dài
+              ngắn khác gói khách mua mà không ai thấy.
+            */}
+            {isLongTerm ? (
+              <>
+                <div className={styles.serviceField}>
+                  <span className={styles.rangeFieldLabel}>Gói thuê</span>
+                  <div
+                    className={styles.packageRow}
+                    role="radiogroup"
+                    aria-label="Gói thuê dài hạn"
+                  >
+                    {LONG_TERM_PACKAGE_MONTHS.map((months) => (
+                      <button
+                        key={months}
+                        type="button"
+                        role="radio"
+                        aria-checked={packageMonths === months}
+                        className={cx(
+                          styles.packageBtn,
+                          packageMonths === months && styles.packageBtnActive,
+                        )}
+                        onClick={() => {
+                          setPackageMonths(months);
+                          setStepError(null);
+                        }}
+                      >
+                        {longTermPackageLabel(months)}
+                      </button>
+                    ))}
+                  </div>
+                  {packageMonths == null ? (
+                    <p className={styles.rangeHint}>Chọn gói để hệ thống báo giá.</p>
+                  ) : null}
+                </div>
+
+                <div className={styles.rangeField}>
+                  <span className={styles.rangeFieldLabel}>Giờ nhận xe</span>
+                  <DateTimeField control={control} name="pickupAt" label="Ngày và giờ nhận xe" />
+                  <p className={styles.rangeHint}>
+                    {derivedReturnAt
+                      ? `Ngày trả: ${derivedReturnAt.format('DD/MM/YYYY HH:mm')} — server tính theo tháng lịch.`
+                      : 'Chọn gói và giờ nhận để biết ngày trả.'}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className={styles.rangeField}>
+                <span className={styles.rangeFieldLabel}>Thời gian thuê</span>
+                <div
+                  className={cx(
+                    styles.rangeBox,
+                    (formState.errors.pickupAt || formState.errors.returnAt) &&
+                      styles.rangeBoxError,
+                  )}
+                >
+                  <RentalDateTimeRangeField
+                    value={{ pickupAt: watchedPickup ?? null, returnAt: watchedReturn ?? null }}
+                    onChange={(next) => {
+                      setValue('pickupAt', next.pickupAt, { shouldValidate: true });
+                      setValue('returnAt', next.returnAt, { shouldValidate: true });
+                      if (stepError) setStepError(null);
+                    }}
+                    mode={rentalMode}
+                    onModeChange={setRentalMode}
+                    variant="labelled"
+                    prefix={<CalendarOutlined />}
+                  />
+                </div>
+                <p className={styles.rangeHint}>
+                  {hasRange ? (
+                    <>
+                      <ClockCircleOutlined aria-hidden />{' '}
+                      {rentalMode === 'hourly' ? 'Thuê theo giờ' : 'Thuê theo ngày'} · bấm vào ô để
+                      đổi
+                    </>
+                  ) : (
+                    'Bấm vào ô trên để mở lịch và chọn khoảng thuê.'
+                  )}
+                </p>
               </div>
-              <p className={styles.rangeHint}>
-                {hasRange ? (
-                  <>
-                    <ClockCircleOutlined aria-hidden />{' '}
-                    {rentalMode === 'hourly' ? 'Thuê theo giờ' : 'Thuê theo ngày'} · bấm vào ô để
-                    đổi
-                  </>
-                ) : (
-                  'Bấm vào ô trên để mở lịch và chọn khoảng thuê.'
-                )}
-              </p>
-            </div>
+            )}
 
             {formState.errors.pickupAt || formState.errors.returnAt ? (
               <p className={styles.fieldError} role="alert">
@@ -593,12 +671,12 @@ export function StaffBookingFlow({
                   depositAmount={quote.depositAmount}
                   title="Tạm tính cho khoảng thời gian đã chọn"
                   footer={
-                    quote.estimateNote || quote.longTermSavingsAmount ? (
+                    quote.estimateNote || quote.longTerm?.durationDiscountPercent ? (
                       <>
-                        {quote.longTermSavingsAmount ? (
+                        {quote.longTerm?.durationDiscountPercent ? (
                           <strong className={styles.savingsText}>
-                            Tiết kiệm {formatMoneyVnd(quote.longTermSavingsAmount)} (−
-                            {quote.longTermSavingsPercent}%) so với thuê theo ngày.
+                            Tiết kiệm {formatMoneyVnd(quote.longTerm.durationDiscountAmount)} nhờ ưu
+                            đãi thời hạn {longTermPackageLabel(quote.longTerm.packageMonths)}.
                           </strong>
                         ) : null}
                         {quote.estimateNote ? (
@@ -678,53 +756,55 @@ export function StaffBookingFlow({
             ) : null}
 
             {isWithDriver ? null : (
-            <fieldset className={styles.pickupGroup}>
-              <legend className={styles.fieldLabel}>Hình thức nhận xe</legend>
-              <div
-                className={styles.pickupOptions}
-                role="radiogroup"
-                aria-label="Hình thức nhận xe"
-              >
-                {(
-                  [
-                    {
-                      key: PICKUP_METHOD.SELF,
-                      label: 'Nhận tại điểm hẹn',
-                      hint: 'Khách tới nhận xe tại địa điểm của gian hàng',
-                      icon: <CarOutlined />,
-                    },
-                    {
-                      key: PICKUP_METHOD.DELIVERY,
-                      label: 'Giao xe tận nơi',
-                      hint: 'Mang xe tới địa chỉ của khách',
-                      icon: <EnvironmentOutlined />,
-                    },
-                  ] as const
-                ).map((option) => (
-                  <button
-                    key={option.key}
-                    type="button"
-                    role="radio"
-                    aria-checked={pickupMethod === option.key}
-                    className={cx(
-                      styles.pickupOption,
-                      pickupMethod === option.key && styles.pickupOptionActive,
-                    )}
-                    onClick={() =>
-                      setValue('pickupMethod', option.key as PickupMethod, { shouldValidate: true })
-                    }
-                  >
-                    <span className={styles.pickupIcon} aria-hidden>
-                      {option.icon}
-                    </span>
-                    <span className={styles.pickupText}>
-                      <span className={styles.pickupLabel}>{option.label}</span>
-                      <span className={styles.pickupHint}>{option.hint}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </fieldset>
+              <fieldset className={styles.pickupGroup}>
+                <legend className={styles.fieldLabel}>Hình thức nhận xe</legend>
+                <div
+                  className={styles.pickupOptions}
+                  role="radiogroup"
+                  aria-label="Hình thức nhận xe"
+                >
+                  {(
+                    [
+                      {
+                        key: PICKUP_METHOD.SELF,
+                        label: 'Nhận tại điểm hẹn',
+                        hint: 'Khách tới nhận xe tại địa điểm của gian hàng',
+                        icon: <CarOutlined />,
+                      },
+                      {
+                        key: PICKUP_METHOD.DELIVERY,
+                        label: 'Giao xe tận nơi',
+                        hint: 'Mang xe tới địa chỉ của khách',
+                        icon: <EnvironmentOutlined />,
+                      },
+                    ] as const
+                  ).map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={pickupMethod === option.key}
+                      className={cx(
+                        styles.pickupOption,
+                        pickupMethod === option.key && styles.pickupOptionActive,
+                      )}
+                      onClick={() =>
+                        setValue('pickupMethod', option.key as PickupMethod, {
+                          shouldValidate: true,
+                        })
+                      }
+                    >
+                      <span className={styles.pickupIcon} aria-hidden>
+                        {option.icon}
+                      </span>
+                      <span className={styles.pickupText}>
+                        <span className={styles.pickupLabel}>{option.label}</span>
+                        <span className={styles.pickupHint}>{option.hint}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
             )}
 
             {isDelivery ? (
@@ -833,10 +913,10 @@ export function StaffBookingFlow({
                 title="Chi tiết giá thuê"
                 footer={
                   <>
-                    {quote.longTermSavingsAmount ? (
+                    {quote.longTerm?.durationDiscountPercent ? (
                       <strong className={styles.savingsText}>
-                        Tiết kiệm {formatMoneyVnd(quote.longTermSavingsAmount)} (−
-                        {quote.longTermSavingsPercent}%) so với thuê theo ngày.
+                        Tiết kiệm {formatMoneyVnd(quote.longTerm.durationDiscountAmount)} nhờ ưu đãi
+                        thời hạn {longTermPackageLabel(quote.longTerm.packageMonths)}.
                       </strong>
                     ) : null}
                     <span className={styles.deliveryFootnote}>

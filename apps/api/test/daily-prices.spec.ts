@@ -158,11 +158,10 @@ describe('Giá riêng theo ngày — PricingService là writer duy nhất', () =
     'báo giá công khai áp giá riêng cho ĐÚNG ngày local, xoá là trở về giá thường',
     async () => {
       // 3 ngày 20–22/10 giá thường 800k → 2.4tr.
-      const before = await pricing.publicQuote(
-        vehicleId,
-        PICKUP.toISOString(),
-        RETURN.toISOString(),
-      );
+      const before = await pricing.publicQuote(vehicleId, {
+        pickupAt: PICKUP.toISOString(),
+        returnAt: RETURN.toISOString(),
+      });
       expect(before.breakdown.totalAmount).toBe('2400000');
 
       // Ngày giữa (21/10) giá riêng 1.2tr → 800k + 1.2tr + 800k = 2.8tr.
@@ -170,11 +169,10 @@ describe('Giá riêng theo ngày — PricingService là writer duy nhất', () =
         dates: ['2026-10-21'],
         dailyPrice: '1200000',
       });
-      const withOverride = await pricing.publicQuote(
-        vehicleId,
-        PICKUP.toISOString(),
-        RETURN.toISOString(),
-      );
+      const withOverride = await pricing.publicQuote(vehicleId, {
+        pickupAt: PICKUP.toISOString(),
+        returnAt: RETURN.toISOString(),
+      });
       expect(withOverride.breakdown.totalAmount).toBe('2800000');
       expect(withOverride.breakdown.rows[0]!.sublabel).toContain('1 ngày áp giá riêng');
 
@@ -187,11 +185,10 @@ describe('Giá riêng theo ngày — PricingService là writer duy nhất', () =
         '2026-10-31',
       );
       expect(deleted).toBe(1);
-      const after = await pricing.publicQuote(
-        vehicleId,
-        PICKUP.toISOString(),
-        RETURN.toISOString(),
-      );
+      const after = await pricing.publicQuote(vehicleId, {
+        pickupAt: PICKUP.toISOString(),
+        returnAt: RETURN.toISOString(),
+      });
       expect(after.breakdown.totalAmount).toBe('2400000');
     },
   );
@@ -201,7 +198,10 @@ describe('Giá riêng theo ngày — PricingService là writer duy nhất', () =
       dates: ['2026-10-25'],
       dailyPrice: '9900000',
     });
-    const quote = await pricing.publicQuote(vehicleId, PICKUP.toISOString(), RETURN.toISOString());
+    const quote = await pricing.publicQuote(vehicleId, {
+      pickupAt: PICKUP.toISOString(),
+      returnAt: RETURN.toISOString(),
+    });
     expect(quote.breakdown.totalAmount).toBe('2400000');
   });
 

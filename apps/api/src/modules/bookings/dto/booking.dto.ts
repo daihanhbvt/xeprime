@@ -3,6 +3,7 @@ import {
   BOOKING_STATUS_VALUES,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
+  LONG_TERM_PACKAGE_MONTHS_VALUES,
   SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
@@ -107,8 +108,16 @@ export class BookingListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
   @ApiProperty({ enum: BOOKING_STATUS_VALUES }) status!: string;
   @ApiProperty({ enum: SERVICE_TYPE_VALUES }) serviceType!: string;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    enum: LONG_TERM_PACKAGE_MONTHS_VALUES,
+    description: 'Gói thuê dài hạn (tháng lịch) — null với dịch vụ khác và đơn dài hạn LEGACY',
+  })
+  longTermPackageMonths!: number | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
-  @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
+  @ApiProperty({ description: 'ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói' })
+  returnAt!: string;
   @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) totalAmount!: string;
   @ApiProperty() paidAmount!: string;
   @ApiProperty({ description: 'Công nợ = max(0, total − paid), string — ADR 0007' })
@@ -198,9 +207,21 @@ export class CreateBookingDto {
   @IsDateString()
   pickupAt!: string;
 
-  @ApiProperty({ description: 'Trả xe (ISO-8601), phải sau nhận xe' })
+  /**
+   * Gói thuê dài hạn (tháng lịch) — BẮT BUỘC khi serviceType = long_term. Ngày trả suy ra từ
+   * gói ở SERVER; giá trị `returnAt` client gửi kèm bị BỎ QUA cho dịch vụ này (ADR 0011).
+   */
+  @ApiPropertyOptional({ enum: LONG_TERM_PACKAGE_MONTHS_VALUES })
+  @ValidateIf((o: CreateBookingDto) => o.serviceType === SERVICE_TYPE.LONG_TERM)
+  @IsInt()
+  @IsIn(LONG_TERM_PACKAGE_MONTHS_VALUES)
+  longTermPackageMonths?: number;
+
+  /** Bỏ trống với thuê dài hạn — server suy ngày trả từ gói (giá trị gửi kèm bị bỏ qua). */
+  @ApiPropertyOptional({ description: 'Trả xe (ISO-8601) — không dùng cho long_term' })
+  @ValidateIf((o: CreateBookingDto) => o.serviceType !== SERVICE_TYPE.LONG_TERM)
   @IsDateString()
-  returnAt!: string;
+  returnAt?: string;
 
   @ApiPropertyOptional({
     description: 'Tiền thuê gốc, string thập phân — ADR 0007',

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
-import { DiscountTierDto } from '../../pricing/dto/pricing.dto';
+import { LongTermPackageOptionDto } from '../../pricing/dto/pricing.dto';
 import {
   BODY_TYPE_VALUES,
   DEFAULT_LISTING_SORT,
@@ -324,11 +324,12 @@ export class PublicListingDetailDto extends PublicListingDto {
   features!: string[];
 
   /**
-   * Mốc ưu đãi THUÊ DÀI HẠN của xe (đợt 4): minDays = tháng × 30 — nút gói 1/3/6/12 tháng
-   * trong modal mang badge "-X%" trước khi chọn ngày. Rỗng = không có ưu đãi/không đăng dài hạn.
+   * Giá SÁU gói thuê dài hạn của xe, do server tính (ADR 0011): mỗi gói kèm giá cuối và giá
+   * bình quân tháng, đủ để bảng chọn gói hiển thị TIỀN THẬT thay vì badge phần trăm. Rỗng khi
+   * xe không đăng dài hạn hoặc chưa niêm yết giá tháng — FE hiện "liên hệ báo giá".
    */
-  @ApiProperty({ type: [DiscountTierDto] })
-  longTermDiscountTiers!: DiscountTierDto[];
+  @ApiProperty({ type: [LongTermPackageOptionDto] })
+  longTermPackages!: LongTermPackageOptionDto[];
 }
 
 export class PublicListingPageMetaDto {

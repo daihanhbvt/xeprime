@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import { approveBookingRequest, rejectBookingRequest } from '../api';
+import type { ApproveBookingRequestInput } from '../types';
 
 /**
  * Duyệt yêu cầu tạo Booking (giữ chỗ lịch) → invalidate cả bookings/calendar/dashboard ngoài
@@ -14,7 +15,8 @@ import { approveBookingRequest, rejectBookingRequest } from '../api';
 export function useApproveBookingRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => approveBookingRequest(id),
+    mutationFn: ({ id, body }: { id: string; body?: ApproveBookingRequestInput }) =>
+      approveBookingRequest(id, body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all });
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings.all });

@@ -49,6 +49,7 @@ export class ContractsService {
         customerName: true,
         customerPhone: true,
         serviceType: true,
+        longTermPackageMonths: true,
         routeType: true,
         pickupAddress: true,
         destination: true,
@@ -140,6 +141,10 @@ export class ContractsService {
         pickupAt: booking.pickupAt.toISOString(),
         returnAt: booking.returnAt.toISOString(),
         days,
+        // Chuyến THUÊ DÀI HẠN ký theo GÓI tháng lịch, không theo số ngày — hợp đồng phải nói rõ
+        // gói mấy tháng, nếu không "90 ngày" và "3 tháng" thành hai cách hiểu khác nhau khi
+        // tháng lệch độ dài. Hợp đồng cũ không có key này (đọc tương thích).
+        longTermPackageMonths: booking.longTermPackageMonths,
         // Hành trình with_driver (17/08) — null với chuyến khác; hợp đồng cũ không có key này.
         routeType: booking.routeType,
         pickupAddress: booking.pickupAddress,

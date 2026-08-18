@@ -16,6 +16,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | **Danh mục lọc** (hãng xe / kiểu dáng / nhiên liệu / tiện ích) — nội dung ở **DB**, không phải hằng số | bảng `catalog_items` · `apps/api/src/modules/catalog/` · FE `apps/web/src/features/catalog/` | — |
 | **Banner hero trang chủ** — platform admin quản lý, public lấy tối đa 3 | bảng `marketplace_banners` · `apps/api/src/modules/banners/` · FE `apps/web/src/features/banners/` + `BannerCarousel` | — |
 | **Khoảng thuê** `{pickupAt, returnAt}` — lịch đôi + tab ngày/giờ, dùng chung | `apps/web/src/components/form/RentalDateTimeRangeField.tsx` (bọc react-day-picker) | — |
+| **Thuê dài hạn** — gói cố định, tháng lịch, nguyện vọng nhận xe, mốc ưu đãi cam kết | `packages/types/src/long-term.ts` (hằng + `addCalendarMonthsVn` + tier); FE hiển thị nguyện vọng ở `apps/web/src/lib/long-term.ts` | 0011 |
+| **Ngày date-only** (`YYYY-MM-DD` ↔ cột `@db.Date`) | `apps/api/src/common/date-only.ts` | — |
 
 ## Backend (`apps/api/src`)
 

@@ -142,10 +142,27 @@ export class CustomerTripListItemDto {
   @ApiProperty({ type: CustomerTripVehicleDto }) vehicle!: CustomerTripVehicleDto;
   @ApiProperty({ type: CustomerTripShopDto }) shop!: CustomerTripShopDto;
 
-  @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
-  @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
+  /**
+   * Lịch CHỐT của chuyến — `null` khi chuyến là yêu cầu THUÊ DÀI HẠN còn chờ duyệt: khách mới
+   * nêu nguyện vọng, gian hàng chưa chốt giờ nhận. Màn hình hiển thị gói + nguyện vọng thay vì
+   * bịa một ngày (ADR 0011).
+   */
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
+  pickupAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'ISO-8601 UTC' })
+  returnAt!: string | null;
   /** Dịch vụ của chuyến (@xeprime/types ServiceType) — tự lái / có tài xế / dài hạn. */
   @ApiProperty() serviceType!: string;
+  /** Gói thuê dài hạn (tháng lịch) — null với dịch vụ khác. */
+  @ApiPropertyOptional({ type: Number, nullable: true }) longTermPackageMonths!: number | null;
+  /** Nguyện vọng nhận xe của yêu cầu dài hạn (@xeprime/types PickupPreference). */
+  @ApiPropertyOptional({ type: String, nullable: true }) pickupPreference!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD' })
+  requestedPickupDate!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD' })
+  pickupWindowStartDate!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'YYYY-MM-DD' })
+  pickupWindowEndDate!: string | null;
   /** Hành trình chuyến CÓ TÀI XẾ — null với dịch vụ khác. Đơn thắng yêu cầu nếu shop có sửa. */
   @ApiPropertyOptional({ type: String, nullable: true }) routeType!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) pickupAddress!: string | null;

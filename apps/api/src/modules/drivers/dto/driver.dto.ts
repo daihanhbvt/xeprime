@@ -14,10 +14,8 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
+import { DATE_ONLY_PATTERN } from '../../../common/date-only';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
-
-/** Ngày date-only (YYYY-MM-DD) cho hạn GPLX — không mang giờ để khỏi lệch múi. */
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -87,7 +85,7 @@ export class CreateDriverDto {
   })
   @IsOptional()
   @ValidateIf((o: CreateDriverDto) => o.licenseExpiresAt !== null)
-  @Matches(DATE_ONLY, { message: 'Hạn GPLX phải theo dạng YYYY-MM-DD' })
+  @Matches(DATE_ONLY_PATTERN, { message: 'Hạn GPLX phải theo dạng YYYY-MM-DD' })
   licenseExpiresAt?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Số CCCD' })
@@ -140,7 +138,7 @@ export class UpdateDriverDto {
   })
   @IsOptional()
   @ValidateIf((o: UpdateDriverDto) => o.licenseExpiresAt !== null)
-  @Matches(DATE_ONLY, { message: 'Hạn GPLX phải theo dạng YYYY-MM-DD' })
+  @Matches(DATE_ONLY_PATTERN, { message: 'Hạn GPLX phải theo dạng YYYY-MM-DD' })
   licenseExpiresAt?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
