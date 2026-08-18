@@ -18,7 +18,7 @@ const PREVIEW_LIMIT = 8;
 /**
  * Khối "Xe khả dụng" ở trang chủ.
  *
- * ĐỌC ngữ cảnh dịch vụ từ URL (17/08): tab dịch vụ ở HeroSearch ghi `?serviceType=` lên `/`
+ * ĐỌC ngữ cảnh dịch vụ từ URL (17/08): tab dịch vụ ở thẻ tìm kiếm (search/SearchCard) ghi `?serviceType=` lên `/`
  * (shallow, không reload) → khối này query lại ngay theo dịch vụ đó, và link "Khám phá xe"
  * mang trọn ngữ cảnh (dịch vụ, lộ trình, loại xe, tỉnh, ngày) sang `/search` — hai khối trên
  * cùng một trang không bao giờ nói hai dịch vụ khác nhau.

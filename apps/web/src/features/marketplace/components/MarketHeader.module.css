@@ -10,7 +10,7 @@
 .inner {
   max-width: var(--xp-container-max-width);
   margin: 0 auto;
-  height: 60px;
+  height: var(--xp-market-header-height);
   padding: 0 16px;
   display: flex;
   align-items: center;

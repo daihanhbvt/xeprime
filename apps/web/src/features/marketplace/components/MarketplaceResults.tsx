@@ -35,6 +35,7 @@ import { useDestinations } from '../hooks/use-destinations';
 import { useInfinitePublicListings } from '../hooks/use-infinite-listings';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { MarketplaceFilters } from '../types';
+import { StickySearchOnly } from '../search/SearchExperience';
 import { FilterPanel } from './FilterPanel';
 import { SearchDialog } from './SearchDialog';
 import { VehicleCard } from './VehicleCard';
@@ -201,20 +202,25 @@ export function MarketplaceResults() {
        * kỳ đâu trong vùng đều mở hộp chỉnh sửa, không phải nhắm trúng chữ "Chỉnh sửa". Ô từ khoá
        * đã bỏ (yêu cầu 17/08) — mọi tiêu chí đều có cấu trúc: chip nhanh, hộp chỉnh sửa, panel
        * Bộ lọc.
+       *
+       * `StickySearchOnly` KHÔNG đổi gì ở thanh này; nó chỉ lấy thanh làm mốc quan sát và bung
+       * cụm tìm kiếm thu gọn (giống trang chủ) khi thanh đã cuộn khuất sau header.
        */}
-      <div className={styles.searchBar}>
-        <button
-          type="button"
-          className={styles.contextZone}
-          onClick={() => setEditOpen(true)}
-          aria-label={`Chỉnh sửa tìm kiếm: ${contextSummary}`}
-        >
-          <span className={styles.contextText}>{contextSummary}</span>
-          <span className={styles.contextEdit}>
-            <EditOutlined /> Chỉnh sửa
-          </span>
-        </button>
-      </div>
+      <StickySearchOnly>
+        <div className={styles.searchBar}>
+          <button
+            type="button"
+            className={styles.contextZone}
+            onClick={() => setEditOpen(true)}
+            aria-label={`Chỉnh sửa tìm kiếm: ${contextSummary}`}
+          >
+            <span className={styles.contextText}>{contextSummary}</span>
+            <span className={styles.contextEdit}>
+              <EditOutlined /> Chỉnh sửa
+            </span>
+          </button>
+        </div>
+      </StickySearchOnly>
 
       {/* Hàng đếm + lọc nhanh + Bộ lọc + Sắp xếp (Figma `18:567`). */}
       <div className={styles.toolbar}>

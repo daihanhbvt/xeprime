@@ -1,0 +1,27 @@
+/* Popover của AntD tự lo đổ bóng/bo góc; ở đây chỉ chỉnh khoảng đệm cho vừa nội dung panel. */
+.popoverBody {
+  padding: var(--xp-space-md) !important;
+}
+
+.panel {
+  /* Khoá bề rộng: panel không được co giãn theo độ dài tên tỉnh đang hiện. */
+  width: 380px;
+  max-width: calc(100vw - 2 * var(--xp-space-md));
+}
+
+/* Panel nhận focus bằng script; vòng focus của trình duyệt ở đây là nhiễu, viền panel đã rõ. */
+.panel:focus {
+  outline: none;
+}
+
+.panelSm {
+  width: 280px;
+}
+
+.title {
+  margin: 0 0 var(--xp-space-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}

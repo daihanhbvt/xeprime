@@ -6,7 +6,7 @@ import styles from './HomeHero.module.css';
 
 /**
  * Vùng hero trang chủ — Figma `18:4`: carousel banner (admin quản lý, tối đa 3); thẻ tìm kiếm
- * do page đặt ĐÈ lên mép dưới (xem `HeroSearch`). Banner do admin upload TỰ MANG thông điệp
+ * do page đặt ĐÈ lên mép dưới (xem `search/SearchCard`). Banner do admin upload TỰ MANG thông điệp
  * nên không phủ tiêu đề lên (h1 vẫn tồn tại cho SEO/screen reader, ẩn thị giác).
  *
  * Không có banner nào đang bật (hoặc API lỗi) → rơi về nền gradient mặc định, GIỮ NGUYÊN chiều

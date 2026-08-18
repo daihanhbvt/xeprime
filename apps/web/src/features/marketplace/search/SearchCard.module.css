@@ -1,0 +1,231 @@
+/*
+ * Thẻ tìm kiếm trang chủ — BA TẦNG xếp chồng như bậc thang, cùng canh giữa:
+ *
+ *        ┌───────── Ô tô · Xe máy ─────────┐          hẹp nhất, trên cùng
+ *   ┌──── Tự lái · Có tài xế · Dài hạn ────────┐      rộng hơn
+ * ┌──── Địa điểm · Thời gian thuê · Tìm xe ────────┐  rộng nhất, dưới cùng
+ *
+ * Hình bậc thang KHÔNG phải trang trí: nó nói ra thứ tự quyết định (loại xe → dịch vụ → tiêu
+ * chí), thứ mà một hàng ngang phẳng làm mất. Các tầng đè lên nhau vài pixel và cùng màu trắng
+ * nên đọc như MỘT thẻ liền, không phải ba hộp rời.
+ */
+.cardOuter {
+  position: relative;
+  z-index: 2;
+  max-width: var(--xp-container-max-width);
+  padding: 0 var(--xp-space-md);
+  /* Hai tầng chọn (56px + 56px) nằm TRỌN trên banner; tầng tiêu chí bắt đầu ngay dưới mép banner. */
+  margin: -112px auto 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Nền + bo góc dùng chung của cả ba tầng — khác nhau chỉ ở bề rộng và tầng z. */
+.tier {
+  position: relative;
+  background: var(--xp-color-bg-container);
+  border-radius: var(--xp-border-radius-pill);
+}
+
+/*
+ * Tầng trên nằm TRÊN tầng dưới: mối nối phải là màu trắng liền, không thấy viền bo của tầng
+ * dưới cắt qua. Đè 10px (12px ở tầng đáy vì bo góc của nó lớn hơn).
+ */
+.tierVehicle {
+  z-index: 3;
+  padding: 6px 8px;
+  box-shadow: 0 6px 16px -6px rgba(41, 31, 15, 0.18);
+}
+
+.tierService {
+  z-index: 2;
+  padding: 14px var(--xp-space-md) 8px;
+  margin-top: -10px;
+  box-shadow: 0 6px 16px -6px rgba(41, 31, 15, 0.18);
+}
+
+.tierFields {
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  padding: 20px 20px 22px;
+  /* Tầng đáy rộng cả hàng nên bo tròn hoàn toàn sẽ ăn mất hai đầu — bo góc lớn nhưng hữu hạn. */
+  border-radius: 32px;
+  margin-top: -12px;
+  box-shadow: var(--xp-shadow-overlay);
+  gap: 14px;
+  animation: tier-enter 0.2s ease-out;
+}
+
+@keyframes tier-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Hàng Lộ trình (dịch vụ Có tài xế) — chiếm trọn bề ngang, đứng trên các ô nhập. */
+.routeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+}
+
+.routeHint {
+  flex-basis: 100%;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.fields {
+  display: grid;
+  align-items: end;
+  gap: 14px;
+}
+
+@media (min-width: 760px) {
+  /* Địa điểm | Thời gian thuê | nút — cột co được nhờ `min-width: 0` ở .cell. */
+  .fields {
+    grid-template-columns: 1.1fr 1.6fr auto;
+  }
+
+  /* Dài hạn không có ô thời gian: địa điểm nở ra, KHÔNG chừa một cột trống giữ chỗ. */
+  .fieldsCompact {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+.cell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cellLabel {
+  padding-left: var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/*
+ * Ô nhập là VIÊN bo tròn, nền chìm, KHÔNG viền — viền chỉ xuất hiện khi focus. `min-width: 0`
+ * bắt buộc: control của AntD có min-width riêng, thiếu nó cột grid bị đẩy rộng và nút "Tìm xe"
+ * rớt xuống hàng dưới.
+ */
+.box {
+  display: flex;
+  min-width: 0;
+  height: 52px;
+  align-items: center;
+  padding: 0 var(--xp-space-md);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  gap: 10px;
+}
+
+.box:hover {
+  background: var(--xp-color-bg-selected);
+}
+
+.box:focus-visible {
+  border-color: var(--xp-color-border-focus);
+  outline: none;
+}
+
+.boxIcon {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: 17px;
+}
+
+.submit {
+  height: 52px !important;
+  padding-inline: var(--xp-space-xl) !important;
+  border-radius: var(--xp-border-radius-pill) !important;
+  font-size: 16px !important;
+  font-weight: var(--xp-font-weight-bold) !important;
+}
+
+/* Ghi chú dài hạn — nói rõ gói thuê chọn ở BƯỚC SAU, không phải ở đây. */
+.hint {
+  padding-left: var(--xp-space-md);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+@media (max-width: 760px) {
+  /*
+   * Màn hẹp không đủ chỗ cho bậc thang: ba tầng cùng chiếm trọn bề ngang, giữ NGUYÊN thứ tự
+   * trên–dưới nên phân tầng vẫn đọc được, chỉ mất phần thu hẹp dần.
+   */
+  .tier {
+    width: 100%;
+    border-radius: 24px;
+  }
+
+  .tierVehicle,
+  .tierService {
+    padding: 8px;
+  }
+
+  .tierService {
+    padding-top: 16px;
+  }
+
+  .tierFields {
+    padding: 18px var(--xp-space-md);
+    border-radius: 24px;
+  }
+
+  /* Banner mobile thấp hơn nhiều — đè 112px sẽ nuốt gần hết nó. */
+  .cardOuter {
+    margin-top: -40px;
+  }
+}
+
+@media (max-width: 640px) {
+  .cardOuter {
+    padding: 0 12px;
+    margin-top: -32px;
+  }
+
+  .tierFields {
+    gap: 12px;
+  }
+
+  .fields {
+    gap: 12px;
+  }
+
+  .box,
+  .submit {
+    height: 48px !important;
+  }
+
+  .submit {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tierFields {
+    animation: none;
+  }
+}

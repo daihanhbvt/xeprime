@@ -1,0 +1,115 @@
+/*
+ * Bộ chọn phân đoạn của thẻ tìm kiếm — dùng cho cả tầng loại xe và tầng dịch vụ.
+ * Nền chìm + viên nổi cho mục đang chọn: cùng ngôn ngữ với `Segmented` của AntD nhưng mang
+ * token vàng XePrime và ngữ nghĩa tab thật.
+ */
+.list {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: stretch;
+  padding: 4px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  gap: 2px;
+}
+
+/*
+ * Biến thể nền của rãnh. Tầng loại xe ngồi thẳng trên thẻ trắng nên rãnh phải TRONG SUỐT (thấy
+ * hai lớp nền xám chồng nhau là lộ ngay); tầng dịch vụ ngồi trên dải vàng nhạt.
+ */
+.listPlain {
+  background: none;
+}
+
+.listSand {
+  background: var(--xp-color-primary-light);
+}
+
+.tab {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--xp-space-md);
+  border: none;
+  border-radius: var(--xp-border-radius-pill);
+  background: none;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-sm);
+  transition:
+    background 0.18s ease-out,
+    color 0.18s ease-out;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--xp-color-text);
+}
+
+.tab:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 1px;
+}
+
+.tabActive,
+.tabActive:hover {
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.label {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+/*
+ * Vùng chạm 40px+ trên cảm ứng (token `--xp-touch-target-min` = 44px là mức trần của hàng nút
+ * chính); 36px của desktop vừa nhịp với các ô nhập 44px của thẻ.
+ */
+@media (max-width: 640px) {
+  .list {
+    display: flex;
+    width: 100%;
+  }
+
+  .tab {
+    min-height: 40px;
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 0 var(--xp-space-sm);
+  }
+}
+
+/* --- Biến thể `sm`: dùng trong panel thu gọn của thanh sticky --------------------------- */
+.listSm {
+  display: flex;
+  width: 100%;
+  padding: 3px;
+}
+
+.listSm .tab {
+  min-height: 34px;
+  min-width: 0;
+  flex: 1 1 0;
+  padding: 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab {
+    transition: none;
+  }
+}

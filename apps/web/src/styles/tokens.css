@@ -190,6 +190,9 @@
 
   /* ─── Khung app ───────────────────────────────────────────────────────── */
   --xp-shell-topbar-height: 56px;
+  /* Header marketplace công khai (MarketHeader) — cao hơn topbar portal. Thanh tìm kiếm thu gọn
+     của trang chủ neo ngay dưới nó, nên con số này phải nằm ở đúng MỘT chỗ. */
+  --xp-market-header-height: 60px;
   --xp-shell-sidebar-width: 232px;
   --xp-shell-sidebar-collapsed-width: 64px;
   --xp-shell-bottom-nav-height: 64px;

@@ -313,6 +313,32 @@ export function serviceTypesLabel(values: readonly string[]): string {
 }
 
 /**
+ * Ma trận loại phương tiện × dịch vụ cho thuê — cùng kiểu với {@link VEHICLE_FUEL_TYPES}.
+ *
+ * **Xe máy không có dịch vụ CÓ TÀI XẾ.** Thuê xe máy kèm người lái không phải sản phẩm cho thuê
+ * xe: đó là dịch vụ xe ôm, chịu khung pháp lý khác và XePrime không kinh doanh. Ô tô có đủ ba.
+ *
+ * Đây là nguồn DUY NHẤT của luật đó, nên bộ chọn dịch vụ ở thẻ tìm kiếm, form đăng xe và mọi
+ * chỗ đọc `service_types` không thể trôi ra ba cách hiểu khác nhau.
+ */
+export const VEHICLE_SERVICE_TYPES: Readonly<Record<VehicleType, readonly ServiceType[]>> = {
+  [VEHICLE_TYPE.CAR]: [
+    SERVICE_TYPE.SELF_DRIVE,
+    SERVICE_TYPE.WITH_DRIVER,
+    SERVICE_TYPE.LONG_TERM,
+  ],
+  [VEHICLE_TYPE.MOTORBIKE]: [SERVICE_TYPE.SELF_DRIVE, SERVICE_TYPE.LONG_TERM],
+};
+
+export function vehicleServiceTypesFor(vehicleType: string): readonly ServiceType[] {
+  return VEHICLE_SERVICE_TYPES[vehicleType as VehicleType] ?? SERVICE_TYPE_VALUES;
+}
+
+export function isVehicleServiceTypeAllowed(vehicleType: string, serviceType: string): boolean {
+  return vehicleServiceTypesFor(vehicleType).includes(serviceType as ServiceType);
+}
+
+/**
  * Dải GỢI Ý giá tháng cho chủ xe ở màn "Giá & chính sách": 65–80% × (giá ngày thường × 30) —
  * vùng chiết khấu 20–35% phổ biến của thuê dài hạn.
  *

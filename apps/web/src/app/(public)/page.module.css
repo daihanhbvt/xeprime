@@ -7,22 +7,25 @@
   gap: 48px;
 }
 
-/* Cùng footprint với .cardOuter của HeroSearch để island gắn vào không xê dịch trang. */
+/*
+ * Cùng footprint với `.cardOuter` của `SearchCard` để island gắn vào không xê dịch trang.
+ * Chiều cao bám đúng thẻ thật: hai tầng chọn (loại xe · dịch vụ) + một hàng ô nhập.
+ */
 .searchFallback {
   position: relative;
   z-index: 2;
   max-width: var(--xp-container-max-width);
-  padding: 0 16px;
-  margin: -44px auto 0;
+  padding: 0 var(--xp-space-md);
+  margin: -112px auto 0;
 }
 
 /* Shimmer thuần CSS — fallback này render trong Server Component nên không dùng Skeleton antd. */
 .searchFallbackInner {
-  height: 82px;
+  height: 216px;
   border-radius: var(--xp-border-radius);
   animation: search-fallback-pulse 1.4s ease-in-out infinite;
   background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-lg, 0 12px 32px rgba(41, 31, 15, 0.16));
+  box-shadow: var(--xp-shadow-overlay);
 }
 
 @keyframes search-fallback-pulse {
@@ -36,12 +39,13 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 760px) {
   .searchFallback {
-    margin-top: -24px;
+    margin-top: -40px;
   }
 
+  /* Mobile xếp dọc: ba tầng chiếm trọn bề ngang, ô nhập nằm dọc — cao hơn bậc thang desktop. */
   .searchFallbackInner {
-    height: 48px;
+    height: 362px;
   }
 }

@@ -218,6 +218,9 @@ export const XP_TOKENS = {
 
   // ─── Khung app ────────────────────────────────────────────────────────────
   'shell-topbar-height': '56px', // 14:1498
+  // Header marketplace công khai (MarketHeader). Thanh tìm kiếm thu gọn của trang chủ neo ngay
+  // dưới nó, và IntersectionObserver lấy đúng số này làm rootMargin — một nguồn cho CSS lẫn JS.
+  'market-header-height': '60px',
   'shell-sidebar-width': '232px', // 14:1424 (Foundations sở hữu giá trị; 47:5 = 240 lệch nhịp)
   'shell-sidebar-collapsed-width': '64px', // 14:1532 = 47:77
   'shell-bottom-nav-height': '64px', // 14:1641

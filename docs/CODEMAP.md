@@ -91,7 +91,11 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Design token · CSS Modules · token.css↔theme.ts | `styles/theme.ts` · `styles/tokens.css` | ADR 0003 |
 | Lịch (resource timeline) | `features/calendar/` | ADR 0006 |
 | Marketplace + trang gian hàng `/shops/[slug]` (thẻ xe, chi tiết, hồ sơ shop) | `features/marketplace/` · `app/(public)/shops/[slug]/` | ADR 0008 |
-| Trang chủ: Hero · gợi ý xe · địa điểm · gian hàng nổi bật · 4 bước · CTA · tab bar mobile | `features/marketplace/components/{HeroSearch,VehicleRecommendations,FeaturedLocations,FeaturedHosts,RentalSteps,OwnerCta,MobileTabBar}.tsx` | Nội dung tĩnh ở `features/marketplace/constants.ts` |
+| Trang chủ: Hero · gợi ý xe · địa điểm · gian hàng nổi bật · 4 bước · CTA · tab bar mobile | `features/marketplace/components/{HomeHero,VehiclePreview,FeaturedLocations,FeaturedHosts,RentalSteps,OwnerCta,MobileTabBar}.tsx` | Nội dung tĩnh ở `features/marketplace/constants.ts` |
+| **Thẻ tìm kiếm trang chủ** (hero + thanh thu gọn dính header) — MỘT trạng thái, hai trình bày | `features/marketplace/search/` (`SearchExperience` → `SearchCard` + `StickySearchBar`) | Phân tầng loại xe → dịch vụ → form; sticky theo `IntersectionObserver` |
+| **Cụm thu gọn cho trang khác** — quấn quanh bộ tìm kiếm sẵn có, chỉ bung khi nó cuộn khuất | `features/marketplace/search/SearchExperience.tsx` (`StickySearchOnly`) | Dùng ở `/search`; sửa ở đây LỌC TẠI CHỖ, không điều hướng |
+| Dịch vụ khả dụng theo loại xe (**xe máy KHÔNG có "có tài xế"**) | `packages/types/src/status/vehicle.ts` (`vehicleServiceTypesFor`) | cùng kiểu với `vehicleFuelTypesFor` |
+| **Luật "dịch vụ nào phát tham số URL nào"** — nguồn DUY NHẤT của serialize thẻ tìm kiếm | `features/marketplace/search/search-draft.ts` | 0004 · 0011 (dài hạn KHÔNG phát `pickupAt`/`returnAt`/`hourly`/`routeType`) |
 | Xác thực SĐT / OTP: `PhoneVerifyControl`, `PhoneLoginForm`, `OtpCodeInput`, `use-phone-verify` | `features/phone-verification/` | Phase 4 + passwordless |
 | Đặt xe khách (bottom-sheet/modal, từng bước) | `features/booking-requests/` (`RequestBookingFlow`, `RequestBookingModal`) | `guest-booking-passwordless.md` |
 | Đơn thuê (list/table/detail drawer, thu tiền) · Yêu cầu thuê inbox | `features/bookings/` · inbox ở `features/booking-requests/` | Phase 4/6 |

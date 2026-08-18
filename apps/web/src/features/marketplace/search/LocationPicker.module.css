@@ -1,0 +1,200 @@
+/* --- Nút mở: hai hình thái của CÙNG một ô ---------------------------------------------- */
+
+/*
+ * `field` — VIÊN bo tròn trong thẻ tìm kiếm: cùng chiều cao, cùng nền chìm và cùng cách bo với
+ * ô thời gian bên cạnh. Không viền ở trạng thái nghỉ; viền chỉ dùng để báo focus/đang mở.
+ */
+.field {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  align-items: center;
+  padding: 0 var(--xp-space-md);
+  border: 1px solid transparent;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font: inherit;
+  gap: 10px;
+  text-align: left;
+}
+
+.field:hover {
+  background: var(--xp-color-bg-selected);
+}
+
+.field[aria-expanded='true'] {
+  border-color: var(--xp-color-border-focus);
+  background: var(--xp-color-bg-selected);
+}
+
+/* `chip` — viên gọn trong thanh tìm kiếm thu gọn; hình dáng dùng chung ở `search-chip`. */
+.chip {
+  composes: chip from './search-chip.module.css';
+}
+
+.field:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 1px;
+}
+
+.triggerIcon {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: 17px;
+}
+
+/* Viên trong thanh thu gọn nhỏ hơn ô của thẻ — icon theo đó cũng nhỏ lại. */
+.chip .triggerIcon {
+  font-size: inherit;
+  color: var(--xp-color-primary-active);
+}
+
+.triggerValue {
+  overflow: hidden;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: var(--xp-font-weight-medium);
+  text-overflow: ellipsis;
+  /* Tên tỉnh dài ("Bà Rịa – Vũng Tàu") cắt gọn thay vì đẩy hàng tràn ngang. */
+  white-space: nowrap;
+}
+
+/* --- Panel ------------------------------------------------------------------------------ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.06em;
+  line-height: var(--xp-line-height-overline);
+  text-transform: uppercase;
+}
+
+.popularRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.popularChip {
+  padding: 6px 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.popularChip:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
+.popularChip:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 1px;
+}
+
+.popularChipActive,
+.popularChipActive:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.list {
+  /* Danh sách 34 tỉnh không được đẩy popover dài quá màn — cuộn TRONG panel. */
+  max-height: 280px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 var(--xp-space-sm);
+  border: none;
+  border-radius: var(--xp-border-radius-sm);
+  background: none;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font: inherit;
+  gap: var(--xp-space-sm);
+  text-align: left;
+}
+
+.row:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.row:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+.rowActive {
+  background: var(--xp-color-bg-selected);
+}
+
+.rowIcon {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+}
+
+.rowLabel {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  font-size: var(--xp-font-size-body-lg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowHint {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body);
+}
+
+.rowCheck {
+  flex: none;
+  color: var(--xp-color-primary-active);
+}
+
+.empty {
+  padding: var(--xp-space-md) var(--xp-space-sm);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  text-align: center;
+}
+
+/* Mobile: sheet đã chiếm trọn bề ngang, danh sách được cao hơn vì không bị popover giới hạn. */
+@media (max-width: 640px) {
+  .list {
+    max-height: none;
+  }
+}

@@ -41,6 +41,19 @@ interface RentalDateTimeRangeFieldProps {
    * nào là nhận / đầu nào là trả.
    */
   variant?: 'compact' | 'labelled';
+  /**
+   * Bỏ THỨ trong tuần ở trạng thái đóng: `19/08 10:00` thay vì `T4, 19/08 · 10:00`.
+   *
+   * Dành cho ô rất hẹp (thanh tìm kiếm thu gọn) — ở đó bản đầy đủ bị cắt cụt thành `T4, 19/08 ·
+   * 10:…`, mà giờ nhận mới là thứ người dùng cần đọc. Chỗ rộng vẫn giữ thứ: "T7" nói được nhiều
+   * hơn "22/08" khi đang cân nhắc cuối tuần.
+   */
+  compactPoint?: boolean;
+  /**
+   * Nơi render lịch. Mặc định `<body>`; ô nằm trong thanh `position: fixed` phải truyền chính
+   * thanh đó vào, nếu không lịch đứng theo toạ độ tài liệu và trôi khỏi ô khi cuộn.
+   */
+  getPopupContainer?: () => HTMLElement;
 }
 
 /**
@@ -66,6 +79,8 @@ export function RentalDateTimeRangeField({
   prefix,
   minDays,
   variant = 'compact',
+  compactPoint = false,
+  getPopupContainer,
 }: RentalDateTimeRangeFieldProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
@@ -85,8 +100,12 @@ export function RentalDateTimeRangeField({
   /**
    * `T6, 08/08 · 10:00` — có THỨ, không có năm (xem `formatRentalPoint`). Chế độ theo ngày vẫn
    * hiện giờ vì giờ nhận/trả là thứ quyết định ngày tính tiền, không phải chi tiết phụ.
+   *
+   * `compactPoint` bỏ thứ cho ô hẹp; GIỜ thì không bao giờ bỏ — cắt mất giờ nhận là cắt đúng
+   * thông tin quyết định số ngày tính tiền.
    */
-  const fmt = (d: Dayjs | null, fallback: string) => (d ? formatRentalPoint(d) : fallback);
+  const fmt = (d: Dayjs | null, fallback: string) =>
+    d ? (compactPoint ? d.format('DD/MM HH:mm') : formatRentalPoint(d)) : fallback;
 
   const complete = Boolean(value.pickupAt && value.returnAt);
   const ariaValue = `${ariaLabel}: ${fmt(value.pickupAt, 'chưa chọn')} đến ${fmt(
@@ -176,6 +195,7 @@ export function RentalDateTimeRangeField({
       }}
       trigger={['click']}
       placement="bottomLeft"
+      getPopupContainer={getPopupContainer}
       content={<div className={styles.popoverBody}>{panel}</div>}
     >
       {trigger}

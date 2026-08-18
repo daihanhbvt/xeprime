@@ -1,11 +1,5 @@
-import { SERVICE_TYPE, VEHICLE_TYPE, type ServiceType, type VehicleType } from '@xeprime/types';
+import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
-
-/** Tab loại xe ở hero (Ô tô / Xe máy). */
-export const VEHICLE_TABS: ReadonlyArray<{ key: VehicleType; label: string }> = [
-  { key: VEHICLE_TYPE.CAR, label: 'Ô tô tự lái' },
-  { key: VEHICLE_TYPE.MOTORBIKE, label: 'Xe máy' },
-];
 
 /** Loại dịch vụ dùng làm chip lọc nhanh. */
 export const SERVICE_CHIPS: ReadonlyArray<{ key: ServiceType; label: string }> = [
