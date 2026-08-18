@@ -2,7 +2,7 @@
 
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Spin } from 'antd';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { PERMISSION } from '@xeprime/types';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
@@ -11,7 +11,10 @@ import { bookingPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { BOOKINGS_DEFAULT_LIMIT } from '@/features/bookings/api';
 import { BOOKING_SORT_OPTIONS, BOOKING_STATUS_OPTIONS } from '@/features/bookings/constants';
-import { BookingFormDialog } from '@/features/bookings/components/BookingFormDialog';
+import {
+  BookingFormDialog,
+  type BookingPrefill,
+} from '@/features/bookings/components/BookingFormDialog';
 import { BookingTable } from '@/features/bookings/components/BookingTable';
 import { useBookingFilters } from '@/features/bookings/hooks/use-booking-filters';
 import { useBookings } from '@/features/bookings/hooks/use-bookings';
@@ -54,6 +57,8 @@ export default function BookingsPage() {
 
 function BookingsView() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { has } = usePermissions();
   const { filters, setFilters } = useBookingFilters();
   const { data, isError, refetch, isFetching } = useBookings(filters);
@@ -61,6 +66,32 @@ function BookingsView() {
   // Danh sách chỉ còn TẠO đơn; sửa nằm ở trang chi tiết, nơi có đủ ngữ cảnh của chuyến.
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<BookingDetail | null>(null);
+
+  /*
+   * Ý ĐỊNH đến từ nơi khác: hồ sơ khách (S-01) mở "Tạo đơn thuê" bằng `?create=1` kèm tên + SĐT.
+   * Đây là query-param ý định theo quy ước IA §5 (`?auth=login`, `?intent=owner`) — KHÔNG phải
+   * một form tạo đơn thứ hai dựng riêng cho sổ khách.
+   *
+   * Suy TRONG LÚC RENDER thay vì đồng bộ vào state bằng effect: URL đã là nguồn sự thật của ý
+   * định này, chép nó sang state chỉ tạo thêm một nguồn có thể lệch. Dọn tham số lúc ĐÓNG hộp
+   * thoại — giữ lại thì F5 tự mở lại, và mọi lần đổi bộ lọc vẫn kéo theo tên khách trong URL.
+   */
+  const createIntent = searchParams.get('create') === '1';
+  const intentPrefill: BookingPrefill | null = createIntent
+    ? {
+        customerName: searchParams.get('customerName') ?? undefined,
+        customerPhone: searchParams.get('customerPhone') ?? undefined,
+      }
+    : null;
+
+  function closeForm() {
+    setFormOpen(false);
+    if (!createIntent) return;
+    const next = new URLSearchParams(searchParams.toString());
+    for (const key of ['create', 'customerName', 'customerPhone']) next.delete(key);
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
 
   const canCreate = has(PERMISSION.BOOKING_CREATE);
   const items = data?.items ?? [];
@@ -127,7 +158,12 @@ function BookingsView() {
         onPageChange={(page, pageSize) => setFilters({ page, limit: pageSize })}
       />
 
-      <BookingFormDialog open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
+      <BookingFormDialog
+        open={formOpen || createIntent}
+        editing={editing}
+        prefill={intentPrefill}
+        onClose={closeForm}
+      />
     </div>
   );
 }

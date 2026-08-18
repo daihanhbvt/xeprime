@@ -16,6 +16,7 @@ import {
   NOTIFICATION_TYPE,
   PICKUP_PREFERENCE,
   SERVICE_TYPE,
+  TENANT_CUSTOMER_SOURCE,
   TENANT_STATUS,
   USER_STATUS,
   VEHICLE_PUBLIC_STATUS,
@@ -31,6 +32,7 @@ import { AuthService } from '../auth/auth.service';
 import { OccupancyService } from '../calendar/occupancy.service';
 import { NotificationService } from '../notification/notification.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { CustomersService } from '../customers/customers.service';
 import { PhoneVerificationService } from '../phone-verification/phone-verification.service';
 import { PricingService } from '../pricing/pricing.service';
 import {
@@ -67,6 +69,7 @@ const SELECT = {
   deliveryQuote: true,
   rejectReason: true,
   bookingId: true,
+  tenantCustomerId: true,
   createdAt: true,
   vehicle: { select: { name: true, plateNumber: true } },
 } satisfies Prisma.BookingRequestSelect;
@@ -98,6 +101,7 @@ export class BookingRequestsService {
     private readonly auth: AuthService,
     private readonly occupancy: OccupancyService,
     private readonly pricing: PricingService,
+    private readonly customers: CustomersService,
   ) {}
 
   /**
@@ -231,6 +235,16 @@ export class BookingRequestsService {
       }
     }
 
+    /*
+     * Gian hàng từ chối phục vụ SĐT này (S-01)?
+     *
+     * Đặt SAU cửa OTP là có chủ đích: người gửi phải chứng minh sở hữu SĐT trước khi biết kết
+     * quả, nên không dò được "số nào đang bị chặn ở gian hàng nào". Đặt TRƯỚC mọi tác dụng phụ
+     * (tạo tài khoản theo SĐT, ghi yêu cầu, bắn thông báo cho shop) để một yêu cầu chắc chắn bị
+     * từ chối không để lại rác. Thông điệp trả về TRUNG TÍNH — xem `blockedCustomer('public')`.
+     */
+    await this.customers.assertNotBlocked(vehicle.tenantId, dto.customerPhone, 'public');
+
     // Khách vãng lai đã verify SĐT → tạo/đăng nhập tài khoản theo SĐT, gắn yêu cầu vào đó.
     let effectiveUserId = customerUserId ?? null;
     let loginUserId: string | null = null;
@@ -255,10 +269,23 @@ export class BookingRequestsService {
     // Ghi yêu cầu + báo cả shop trong một transaction: yêu cầu mới luôn có thông báo đi kèm.
     try {
       await this.prisma.$transaction(async (tx) => {
+        // Sổ khách (S-01): yêu cầu gắn về một hồ sơ khách ngay khi nhận, trong cùng transaction.
+        // Khi duyệt, id này được COPY sang đơn — không tra lại theo SĐT (SĐT trên hồ sơ có thể
+        // đã được sửa giữa chừng, tra lại sẽ đẻ ra một khách thứ hai).
+        const tenantCustomerId = await this.customers.resolveWithinTx(tx, vehicle.tenantId, {
+          fullName: dto.customerName,
+          phone: dto.customerPhone,
+          email: dto.customerEmail,
+          customerUserId: effectiveUserId,
+          source: TENANT_CUSTOMER_SOURCE.MARKETPLACE,
+          mode: 'public',
+        });
+
         await tx.bookingRequest.create({
           data: {
             id,
             tenantId: vehicle.tenantId,
+            tenantCustomerId,
             vehicleId: vehicle.id,
             status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
             customerName: dto.customerName,
@@ -569,6 +596,10 @@ export class BookingRequestsService {
         },
         'from_request',
         snapshot,
+        // Sổ khách (S-01): COPY nguyên id đã gắn trên yêu cầu, không tra lại theo SĐT — SĐT trên
+        // hồ sơ có thể đã được sửa sau lúc khách gửi, và tra lại sẽ đẻ ra một khách thứ hai.
+        // Yêu cầu LEGACY (trước migration) không có id thì `createWithinTx` tự tìm-hoặc-tạo.
+        req.tenantCustomerId,
       );
 
       const updated = await tx.bookingRequest.update({
@@ -786,6 +817,8 @@ const PENDING_SELECT = {
   customerName: true,
   customerPhone: true,
   customerUserId: true,
+  /// Hồ sơ sổ khách đã gắn lúc nhận yêu cầu — duyệt COPY nguyên id này sang đơn (S-01).
+  tenantCustomerId: true,
   pickupAt: true,
   returnAt: true,
   serviceType: true,

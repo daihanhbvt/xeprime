@@ -1924,6 +1924,259 @@ export interface paths {
         patch: operations["DriversController_update"];
         trace?: never;
     };
+    "/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sổ khách của gian hàng (tìm kiếm / lọc nhóm / sắp xếp / phân trang)
+         * @description Trường tiền trả `null` khi thiếu `finance.view`; lọc `has_debt` và sắp xếp theo tiền bị từ chối 403 thay vì âm thầm bỏ qua.
+         */
+        get: operations["CustomersController_list"];
+        put?: never;
+        /**
+         * Thêm khách vào sổ
+         * @description SĐT bắt buộc và là định danh — trùng với khách khác trả 409 CUSTOMER_PHONE_DUPLICATE.
+         */
+        post: operations["CustomersController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dải chỉ số đầu trang sổ khách */
+        get: operations["CustomersController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Hồ sơ khách + số liệu tổng hợp + hoạt động gần đây */
+        get: operations["CustomersController_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Sửa hồ sơ khách
+         * @description Không đụng tới snapshot tên/SĐT trên đơn thuê và yêu cầu cũ — đó là sự thật của giao dịch.
+         */
+        patch: operations["CustomersController_update"];
+        trace?: never;
+    };
+    "/customers/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lưu trữ hồ sơ khách (soft — lịch sử đơn giữ nguyên) */
+        post: operations["CustomersController_archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Khôi phục hồ sơ khách đã lưu trữ */
+        post: operations["CustomersController_restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/risk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Đổi mức rủi ro của khách (bắt buộc lý do khi khác `normal`)
+         * @description `blocked` chặn yêu cầu/đơn MỚI ở gian hàng này; đơn và yêu cầu đang có giữ nguyên. Mọi lần đổi đều ghi audit kèm giá trị cũ, giá trị mới và lý do.
+         */
+        post: operations["CustomersController_updateRisk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lịch sử thuê của khách (phân trang) */
+        get: operations["CustomersController_bookings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ghi chú nội bộ về khách (phân trang) */
+        get: operations["CustomersController_notes"];
+        put?: never;
+        /** Thêm ghi chú nội bộ (bản ghi bất biến, có tác giả + thời điểm) */
+        post: operations["CustomersController_addNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/notes/{noteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Gỡ ghi chú nội bộ (soft-delete) */
+        delete: operations["CustomersController_removeNote"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Giấy tờ của khách (metadata — không có đường dẫn file) */
+        get: operations["CustomerDocumentsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/documents/presign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bước 1 — xin URL PUT lên bucket riêng tư (tạo bản ghi `pending`) */
+        post: operations["CustomerDocumentsController_presign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/documents/{documentId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Bước 2 — xác minh tệp đã tải lên (HEAD + chữ ký byte đầu) rồi chuyển `ready` */
+        post: operations["CustomerDocumentsController_complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/documents/{documentId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Signed GET ngắn hạn để mở giấy tờ — ghi audit từng lần */
+        get: operations["CustomerDocumentsController_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customers/{id}/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Gỡ giấy tờ (soft-delete + audit) */
+        delete: operations["CustomerDocumentsController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/booking-requests": {
         parameters: {
             query?: never;
@@ -3068,7 +3321,7 @@ export interface components {
             tenantRole?: "shop_owner" | "shop_manager" | "shop_staff" | "shop_viewer" | null;
             /** @enum {string|null} */
             platformRole?: "platform_admin" | "platform_staff" | "reviewer" | "support" | "finance_admin" | null;
-            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "branches.view" | "branches.manage" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "drivers.view" | "drivers.manage" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii" | "platform.locations.view" | "platform.locations.manage")[];
+            permissions: ("tenant.view" | "tenant.update" | "tenant.submit_review" | "branches.view" | "branches.manage" | "members.view" | "members.invite" | "members.update_role" | "members.remove" | "vehicles.view" | "vehicles.create" | "vehicles.update" | "vehicles.delete" | "vehicles.submit_public" | "vehicles.block_schedule" | "vehicles.documents.view" | "vehicles.documents.view_details" | "vehicles.documents.view_files" | "vehicles.documents.manage" | "vehicles.maintenance.view" | "vehicles.maintenance.manage" | "vehicles.maintenance.view_files" | "vehicles.maintenance.view_cost" | "vehicles.odometer.correct" | "vehicles.odometer.decrease" | "handovers.view" | "handovers.manage" | "handovers.confirm" | "handovers.view_files" | "booking_requests.view" | "booking_requests.approve" | "bookings.view" | "bookings.create" | "bookings.update" | "bookings.cancel" | "drivers.view" | "drivers.manage" | "customers.view" | "customers.manage" | "customers.manage_risk" | "customers.documents.manage" | "customers.documents.view_files" | "calendar.view" | "finance.view" | "receipts.create" | "receipts.approve" | "payments.record" | "payments.void" | "contracts.manage" | "platform.dashboard.view" | "platform.tenants.manage" | "platform.approvals.review" | "platform.audit.view" | "platform.staff.manage" | "platform.billing.manage" | "platform.catalog.manage" | "platform.banners.manage" | "platform.vehicles.view" | "platform.vehicles.moderate" | "platform.bookings.view" | "platform.customers.view" | "platform.customers.view_pii" | "platform.locations.view" | "platform.locations.manage")[];
         };
         NotificationDto: {
             id: string;
@@ -5400,6 +5653,201 @@ export interface components {
             licenseExpiresAt?: string | null;
             idNo?: string | null;
             note?: string | null;
+        };
+        TenantCustomerListItemDto: {
+            /** @description Số chuyến đã HOÀN TẤT */
+            completedRentalCount: number;
+            /** @description Đơn đang giữ chỗ / đang thuê (reserved · confirmed · active) */
+            activeBookingCount: number;
+            /** @description Số lần khách không tới nhận xe */
+            noShowCount: number;
+            /** @description Số chuyến trả xe MUỘN — chỉ đếm khi có `actual_return_at` thật, không suy đoán */
+            lateReturnCount: number;
+            /** @description ISO-8601 UTC · null = chưa thuê lần nào */
+            lastRentalAt?: string | null;
+            /** @description Tổng giá trị đơn KHÔNG tính đơn huỷ (chuỗi thập phân) · null = thiếu finance.view */
+            totalBookingAmount?: string | null;
+            /** @description Đã thu · null = thiếu finance.view */
+            paidAmount?: string | null;
+            /** @description Còn nợ = Σ max(total − paid, 0) · null = thiếu finance.view */
+            debtAmount?: string | null;
+            id: string;
+            fullName: string;
+            /** @description SĐT dạng hiển thị (`0…`) */
+            phone: string;
+            email?: string | null;
+            /** @enum {string} */
+            riskLevel: "normal" | "watchlist" | "blocked";
+            /** @enum {string} */
+            source: "manual" | "booking" | "marketplace";
+            /** @description Đã liên kết tài khoản trên nền tảng */
+            hasAccount: boolean;
+            /** @description ISO — null = đang hoạt động */
+            archivedAt?: string | null;
+        };
+        TenantCustomerPageDto: {
+            data: components["schemas"]["TenantCustomerListItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        TenantCustomerSummaryDto: {
+            /** @description Khách đang hoạt động (chưa lưu trữ) */
+            activeCustomers: number;
+            /** @description Khách quen — từ 2 chuyến hoàn tất trở lên */
+            returningCustomers: number;
+            watchlistCustomers: number;
+            blockedCustomers: number;
+            archivedCustomers: number;
+            totalDebt?: string | null;
+            /** @description Số khách còn nợ · null khi thiếu finance.view — FE ẩn hẳn ô, không hiện 0 */
+            debtCustomers?: number | null;
+        };
+        CreateTenantCustomerDto: {
+            /** @example Nguyễn Văn An */
+            fullName: string;
+            /**
+             * @description Bắt buộc — SĐT là định danh của khách trong sổ khách. Server chuẩn hoá trước khi lưu.
+             * @example 0901234567
+             */
+            phone: string;
+            email?: string | null;
+            address?: string | null;
+        };
+        CustomerBookingItemDto: {
+            id: string;
+            code: string;
+            /** @enum {string} */
+            status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+            /** @enum {string} */
+            serviceType: "self_drive" | "with_driver" | "long_term";
+            vehicleName: string;
+            vehiclePlate?: string | null;
+            /** @description ISO-8601 UTC */
+            pickupAt: string;
+            /** @description ISO-8601 UTC */
+            returnAt: string;
+            totalAmount?: string | null;
+            paidAmount?: string | null;
+            debtAmount?: string | null;
+        };
+        TenantCustomerDetailDto: {
+            /** @description Số chuyến đã HOÀN TẤT */
+            completedRentalCount: number;
+            /** @description Đơn đang giữ chỗ / đang thuê (reserved · confirmed · active) */
+            activeBookingCount: number;
+            /** @description Số lần khách không tới nhận xe */
+            noShowCount: number;
+            /** @description Số chuyến trả xe MUỘN — chỉ đếm khi có `actual_return_at` thật, không suy đoán */
+            lateReturnCount: number;
+            /** @description ISO-8601 UTC · null = chưa thuê lần nào */
+            lastRentalAt?: string | null;
+            /** @description Tổng giá trị đơn KHÔNG tính đơn huỷ (chuỗi thập phân) · null = thiếu finance.view */
+            totalBookingAmount?: string | null;
+            /** @description Đã thu · null = thiếu finance.view */
+            paidAmount?: string | null;
+            /** @description Còn nợ = Σ max(total − paid, 0) · null = thiếu finance.view */
+            debtAmount?: string | null;
+            id: string;
+            fullName: string;
+            phone: string;
+            /** @description Dạng chuẩn hoá — định danh khách trong gian hàng này */
+            normalizedPhone: string;
+            email?: string | null;
+            address?: string | null;
+            /** @enum {string} */
+            source: "manual" | "booking" | "marketplace";
+            /** @enum {string} */
+            riskLevel: "normal" | "watchlist" | "blocked";
+            /** @description Lý do rủi ro — NỘI BỘ, chỉ đi tới người trong gian hàng */
+            riskReason?: string | null;
+            hasAccount: boolean;
+            archivedAt?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+            /** @description ISO-8601 UTC */
+            updatedAt: string;
+            /** @description Hoạt động gần đây (tối đa 5). Rỗng khi người gọi không có `bookings.view`. */
+            recentBookings: components["schemas"]["CustomerBookingItemDto"][];
+        };
+        UpdateTenantCustomerDto: {
+            fullName?: string;
+            /** @description Đổi sang SĐT đã thuộc khách khác → 409 CUSTOMER_PHONE_DUPLICATE */
+            phone?: string;
+            email?: string | null;
+            address?: string | null;
+        };
+        UpdateCustomerRiskDto: {
+            /** @enum {string} */
+            riskLevel: "normal" | "watchlist" | "blocked";
+            /** @description Lý do NỘI BỘ — bắt buộc khi khác `normal`. Không bao giờ hiển thị cho khách. */
+            reason?: string | null;
+        };
+        CustomerBookingPageDto: {
+            data: components["schemas"]["CustomerBookingItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        CustomerNoteDto: {
+            id: string;
+            /** @enum {string} */
+            noteType: "general" | "preference" | "risk";
+            body: string;
+            /** @description Người ghi · null = tài khoản đã xoá */
+            authorName?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        CustomerNotePageDto: {
+            data: components["schemas"]["CustomerNoteDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        CreateCustomerNoteDto: {
+            /** @enum {string} */
+            noteType: "general" | "preference" | "risk";
+            /** @description Nội dung ghi chú nội bộ */
+            body: string;
+        };
+        CustomerDocumentDto: {
+            id: string;
+            /** @enum {string} */
+            documentType: "citizen_id" | "driver_licence" | "other";
+            customTypeName?: string | null;
+            /** @description Tên file gốc (hiển thị) — KHÔNG phải đường dẫn lưu trữ */
+            originalName: string;
+            mimeType: string;
+            sizeBytes: number;
+            /** @description Hạn giấy tờ (YYYY-MM-DD) */
+            expiresAt?: string | null;
+            /** @description Suy từ `expiresAt` lúc đọc: no_expiry | valid | expiring_soon | expired */
+            expiryStatus: string;
+            uploadedByName?: string | null;
+            /** @description ISO-8601 UTC */
+            createdAt: string;
+        };
+        PresignCustomerDocumentDto: {
+            /** @enum {string} */
+            documentType: "citizen_id" | "driver_licence" | "other";
+            /** @description Chỉ dùng khi documentType = other */
+            customTypeName?: string | null;
+            /** @description Hạn giấy tờ (YYYY-MM-DD) */
+            expiresAt?: string | null;
+            /** @description Tên file gốc (chỉ để hiển thị, không tham gia định danh) */
+            fileName: string;
+            /** @enum {string} */
+            contentType: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+            /** @description Dung lượng (byte), tối đa 10485760 */
+            fileSize: number;
+        };
+        CustomerDocumentPresignDto: {
+            /** @description ID bản ghi giấy tờ — dùng cho bước hoàn tất */
+            documentId: string;
+            /** @description URL PUT lên bucket riêng tư (hết hạn ngắn) */
+            uploadUrl: string;
+            expiresIn: number;
+        };
+        CustomerDocumentDownloadDto: {
+            /** @description Signed GET URL ngắn hạn — không cache, không lưu */
+            downloadUrl: string;
+            /** @description ISO — thời điểm URL hết hiệu lực */
+            expiresAt: string;
         };
         BookingRequestDeliveryQuoteDto: {
             distanceKm: number;
@@ -10143,6 +10591,392 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DriverDto"];
                 };
+            };
+        };
+    };
+    CustomersController_list: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo tên / SĐT (mọi định dạng) / email */
+                q?: string;
+                /** @description Nhóm quan hệ. `has_debt` là bộ lọc tài chính — thiếu `finance.view` sẽ bị từ chối, không âm thầm trả về danh sách đầy đủ. */
+                relationship?: "all" | "returning" | "has_debt" | "watchlist" | "blocked" | "archived";
+                /** @description `total_value` và `debt` là sắp xếp tài chính — gate như bộ lọc trên. */
+                sort?: "last_rental" | "rental_count" | "total_value" | "debt" | "name";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantCustomerPageDto"];
+                };
+            };
+        };
+    };
+    CustomersController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTenantCustomerDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantCustomerDetailDto"];
+                };
+            };
+        };
+    };
+    CustomersController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantCustomerSummaryDto"];
+                };
+            };
+        };
+    };
+    CustomersController_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantCustomerDetailDto"];
+                };
+            };
+        };
+    };
+    CustomersController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTenantCustomerDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantCustomerDetailDto"];
+                };
+            };
+        };
+    };
+    CustomersController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantCustomerDetailDto"];
+                };
+            };
+        };
+    };
+    CustomersController_restore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantCustomerDetailDto"];
+                };
+            };
+        };
+    };
+    CustomersController_updateRisk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCustomerRiskDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantCustomerDetailDto"];
+                };
+            };
+        };
+    };
+    CustomersController_bookings: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerBookingPageDto"];
+                };
+            };
+        };
+    };
+    CustomersController_notes: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerNotePageDto"];
+                };
+            };
+        };
+    };
+    CustomersController_addNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCustomerNoteDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerNoteDto"];
+                };
+            };
+        };
+    };
+    CustomersController_removeNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CustomerDocumentsController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerDocumentDto"][];
+                };
+            };
+        };
+    };
+    CustomerDocumentsController_presign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PresignCustomerDocumentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerDocumentPresignDto"];
+                };
+            };
+        };
+    };
+    CustomerDocumentsController_complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerDocumentDto"];
+                };
+            };
+        };
+    };
+    CustomerDocumentsController_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerDocumentDownloadDto"];
+                };
+            };
+        };
+    };
+    CustomerDocumentsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

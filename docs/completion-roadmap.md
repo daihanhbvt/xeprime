@@ -38,6 +38,22 @@
 > Dữ liệu cũ: chỉ backfill gói khi khớp khít tháng lịch; mốc ưu đãi theo ngày không quy đổi được
 > giữ nguyên dạng `legacy` (máy giá bỏ qua, form cảnh báo); snapshot giá lịch sử KHÔNG sửa.
 > Plan: `docs/plans/kind-noodling-marble.md`.
+>
+> **18/08 — SỔ KHÁCH CỦA GIAN HÀNG (gap S-01) đóng end-to-end.** `/manage/customers` +
+> `/manage/customers/[id]` hết là stub. Ba bảng mới (`tenant_customers` unique
+> `(tenant_id, normalized_phone)` · `tenant_customer_notes` bất biến · `tenant_customer_documents`
+> ở bucket R2 riêng tư) + composite FK từ `bookings`/`booking_requests`/`receipts` — DB tự chặn
+> gắn đơn của shop A vào khách của shop B. Định danh khách là **SĐT đã chuẩn hoá**: `09…`/`84…`/
+> `+84…` là một người; **không bao giờ gộp theo tên**. Backfill trong migration gom đơn + yêu cầu
+> cũ theo `(tenant, SĐT chuẩn hoá)`, idempotent, KHÔNG sửa một ký tự nào của snapshot
+> `customer_name`/`customer_phone`. Module `modules/customers/` (writer duy nhất) + 5 quyền mới
+> `customers.*`; mọi con số (số lần thuê, tổng, đã thu, còn nợ, no-show, trả muộn) **tính động**
+> từ `bookings` theo đúng định nghĩa công nợ Phase 6 — không cột đếm nào bị denormalize. Tiền là
+> quyền riêng: thiếu `finance.view` thì trường tiền trả `null` và lọc/sắp xếp theo tiền bị **từ
+> chối 403** (bỏ qua im lặng vẫn để lộ thứ hạng công nợ qua thứ tự dòng). `blocked` chặn yêu cầu
+> và đơn MỚI ở gian hàng đó; đường công khai chỉ nhận **thông điệp trung tính** (kiểm SAU cửa OTP
+> để không dò được số nào đang bị chặn). Verify: jest 42 test mới + 164 test cũ liên quan xanh,
+> vitest 34 test mới, typecheck api/web sạch, migration đã áp + chạy lại backfill ra 0 dòng.
 
 ---
 
@@ -74,9 +90,9 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 > feature do user yêu cầu, KHÔNG nằm trong lịch phase — làm xong nhưng **milestone chưa nhích**
 > (S3 Contracts vẫn là việc đóng Phase 6). Ghi ở mục Phase 4 (30/07).
 >
-> **Cờ `comingSoon` đã dọn (30/07):** `booking-requests` và `members` là **page thật đã xong** —
-> đã gỡ cờ trong `constants/nav.ts`. Còn `customers`/`pickup-areas`/`drivers`/`trash`/`admin-*`
-> vẫn là stub thật (giữ cờ).
+> **Cờ `comingSoon` đã dọn (30/07 → 18/08):** `booking-requests`, `members`, `drivers` và
+> `customers` là **page thật đã xong** — đã gỡ cờ trong `constants/nav.ts`. Còn `pickup-areas`
+> và `trash` vẫn là stub thật (giữ cờ).
 >
 > ✅ **Milestone "vận hành đủ tiền" đã đạt (Phase 6 xong hết).**
 >
@@ -306,7 +322,6 @@ chính khớp dữ liệu · in/xuất hợp đồng tối thiểu chạy.
 
 | Việc | Ghi chú |
 | --- | --- |
-| Trang khách hàng CỦA SHOP (`/manage/customers`) | Màn 04/08 là **của nền tảng** (`/manage/admin/customers`), không thay stub phía shop — shop cần danh sách khách RIÊNG của mình, làm ở phase liên quan |
 | Retrofit gate SĐT cho **mở shop** + **public xe** | Dùng lại `phone-verification` (purpose `shop_register`/`vehicle_public`), ngắn |
 | SMS OTP thật | Hiện `OTP_MODE=mock`. eSMS thật cần tài khoản riêng (key prod `vf3zone` ở Secret Manager, **không lấy về local được**) → set `OTP_MODE=esms` + `ESMS_*` |
 | Chat realtime | Bật sau cờ `FIRESTORE_ENABLED` + Firestore Security Rules + emulator test (ADR 0009) |
@@ -316,7 +331,7 @@ chính khớp dữ liệu · in/xuất hợp đồng tối thiểu chạy.
 | **Chưa có writer cho `blocked_range`** | `OCCUPANCY_SOURCE_TYPE` có 3 giá trị, `booking` + `maintenance` đã có writer; `blocked_range` và quyền `vehicles.block_schedule` vẫn treo — chủ xe chưa tự khoá lịch được |
 | `operationStatus = maintenance` đặt tay vẫn chỉ là nhãn | Chặn lịch thật đi qua **phiếu bảo dưỡng** (có occupancy). Nhãn đặt tay và availability có thể lệch nhau |
 | Rác R2 khi thay ảnh/file | Thay ảnh xe hoặc file riêng tư để lại object mồ côi — chưa có đường xoá |
-| Page stub `drivers`, `pickup-areas`, `customers`, `trash` | Vỏ 5-dòng, làm ở phase liên quan sau |
+| Page stub `pickup-areas`, `trash` | Vỏ 5-dòng, làm ở phase liên quan sau |
 
 ---
 

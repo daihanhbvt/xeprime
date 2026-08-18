@@ -19,6 +19,7 @@ import {
   isLongTermPackageMonths,
   longTermReturnAt,
   SERVICE_TYPE,
+  TENANT_CUSTOMER_SOURCE,
   type BookingPriceSnapshot,
   type BookingStatus,
   type PaginationMeta,
@@ -29,6 +30,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notification/notification.service';
 import { OccupancyService } from '../calendar/occupancy.service';
+import { CustomersService } from '../customers/customers.service';
 import { DriversService } from '../drivers/drivers.service';
 import {
   BOOKING_DEFAULT_LIMIT,
@@ -89,6 +91,7 @@ export class BookingsService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationService,
     private readonly drivers: DriversService,
+    private readonly customers: CustomersService,
   ) {}
 
   async list(
@@ -165,6 +168,16 @@ export class BookingsService {
     dto: CreateBookingDto,
     source: BookingCreateSource = 'direct',
     snapshot?: BookingPriceSnapshot,
+    /**
+     * Hồ sơ khách ĐÃ XÁC ĐỊNH của luồng gọi (duyệt yêu cầu thuê truyền id đã gắn trên yêu cầu).
+     *
+     * Cố ý KHÔNG nằm trong `CreateBookingDto`: id này không bao giờ được nhận từ client — client
+     * gửi lên một id của gian hàng khác thì composite FK chặn, nhưng gửi id của khách KHÁC trong
+     * cùng gian hàng thì không gì chặn nổi. Ở đây nó chỉ đến từ dữ liệu server đã đọc.
+     *
+     * Bỏ trống → service tự tìm-hoặc-tạo theo SĐT trên đơn.
+     */
+    tenantCustomerId?: string | null,
   ): Promise<BookingDetailDto> {
     // Hành trình đi cùng dịch vụ: with_driver bắt buộc lộ trình + địa chỉ đón (liên tỉnh thêm
     // điểm đến), dịch vụ khác bị normalize về null — CHECK DB là chốt chặn cuối.
@@ -208,6 +221,24 @@ export class BookingsService {
     const deposit = money(dto.depositAmount);
     const total = base.plus(delivery).minus(discount);
 
+    /*
+     * Sổ khách của gian hàng (S-01): mỗi đơn có SĐT đều gắn về một hồ sơ khách, TRONG CÙNG
+     * transaction với đơn — không có đường nào tạo được đơn mà quên gắn khách.
+     *
+     * Khách đang bị đánh dấu `blocked` thì `resolveWithinTx` ném 409 ngay tại đây: nhân viên
+     * không tự lập đơn mới cho khách đã bị từ chối phục vụ, và duyệt một yêu cầu cũ cũng không
+     * phải đường vòng. Đơn và yêu cầu ĐANG CÓ không bị đụng tới.
+     */
+    const customerId =
+      tenantCustomerId ??
+      (await this.customers.resolveWithinTx(tx, tenantId, {
+        fullName: dto.customerName,
+        phone: dto.customerPhone,
+        source: TENANT_CUSTOMER_SOURCE.BOOKING,
+        actorUserId: userId,
+        mode: 'internal',
+      }));
+
     const id = newId();
     const code = `DH${id.slice(-6).toUpperCase()}`;
 
@@ -224,6 +255,7 @@ export class BookingsService {
         code,
         customerName: dto.customerName,
         customerPhone: dto.customerPhone ?? null,
+        tenantCustomerId: customerId,
         status: BOOKING_STATUS.RESERVED,
         serviceType,
         longTermPackageMonths,

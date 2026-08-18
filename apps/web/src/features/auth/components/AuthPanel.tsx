@@ -1,8 +1,6 @@
 'use client';
 
 import {
-  FacebookFilled,
-  GoogleOutlined,
   LockOutlined,
   MailOutlined,
   MobileOutlined,
@@ -36,6 +34,7 @@ import {
 } from '@/services/auth.service';
 import { AUTH_MODE, type AuthMode } from '../post-auth-destination';
 import { SetPasswordPrompt } from './SetPasswordPrompt';
+import { SocialProviderLogo } from './SocialProviderLogo';
 import styles from './AuthPanel.module.css';
 
 export interface AuthPanelProps {
@@ -168,20 +167,14 @@ export function AuthPanel({
               <Button
                 key={provider}
                 className={styles.oauthBtn}
-                icon={
-                  provider === AUTH_PROVIDER.GOOGLE ? (
-                    <GoogleOutlined className={styles.googleIcon} />
-                  ) : (
-                    <FacebookFilled className={styles.facebookIcon} />
-                  )
-                }
+                icon={<SocialProviderLogo provider={provider} className={styles.providerLogo} />}
                 block
                 size="large"
                 loading={pending === provider}
                 disabled={busy && pending !== provider}
                 onClick={() => void signIn(provider)}
               >
-                {AUTH_PROVIDER_LABEL[provider]}
+                Tiếp tục với {AUTH_PROVIDER_LABEL[provider]}
               </Button>
             ))}
           </div>

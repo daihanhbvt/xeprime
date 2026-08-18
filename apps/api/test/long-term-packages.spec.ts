@@ -14,6 +14,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import type { AuthService } from '../src/modules/auth/auth.service';
 import { BookingRequestsService } from '../src/modules/booking-requests/booking-requests.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
+import { CustomersService } from '../src/modules/customers/customers.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
@@ -44,6 +45,7 @@ const bookings = new BookingsService(
   audit,
   notifications,
   new DriversService(asService, audit),
+  new CustomersService(asService, audit),
 );
 
 const phoneVerification = {
@@ -64,6 +66,7 @@ const requests = new BookingRequestsService(
   auth,
   occupancy,
   pricing,
+  new CustomersService(asService, audit),
 );
 
 let dbAvailable = false;

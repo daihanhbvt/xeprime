@@ -17,6 +17,7 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
+import { CustomersService } from '../src/modules/customers/customers.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
@@ -49,6 +50,7 @@ const bookings = new BookingsService(
   audit,
   notifications,
   new DriversService(asService, audit),
+  new CustomersService(asService, audit),
 );
 const trips = new CustomerTripsService(asService, settlement);
 

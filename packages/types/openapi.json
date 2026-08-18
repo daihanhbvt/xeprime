@@ -6319,6 +6319,681 @@
         ]
       }
     },
+    "/customers": {
+      "get": {
+        "description": "Trường tiền trả `null` khi thiếu `finance.view`; lọc `has_debt` và sắp xếp theo tiền bị từ chối 403 thay vì âm thầm bỏ qua.",
+        "operationId": "CustomersController_list",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên / SĐT (mọi định dạng) / email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "relationship",
+            "required": false,
+            "in": "query",
+            "description": "Nhóm quan hệ. `has_debt` là bộ lọc tài chính — thiếu `finance.view` sẽ bị từ chối, không âm thầm trả về danh sách đầy đủ.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "returning",
+                "has_debt",
+                "watchlist",
+                "blocked",
+                "archived"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "`total_value` và `debt` là sắp xếp tài chính — gate như bộ lọc trên.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "last_rental",
+                "rental_count",
+                "total_value",
+                "debt",
+                "name"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCustomerPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sổ khách của gian hàng (tìm kiếm / lọc nhóm / sắp xếp / phân trang)",
+        "tags": [
+          "customers"
+        ]
+      },
+      "post": {
+        "description": "SĐT bắt buộc và là định danh — trùng với khách khác trả 409 CUSTOMER_PHONE_DUPLICATE.",
+        "operationId": "CustomersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCustomerDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thêm khách vào sổ",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/summary": {
+      "get": {
+        "operationId": "CustomersController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCustomerSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Dải chỉ số đầu trang sổ khách",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}": {
+      "get": {
+        "operationId": "CustomersController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCustomerDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hồ sơ khách + số liệu tổng hợp + hoạt động gần đây",
+        "tags": [
+          "customers"
+        ]
+      },
+      "patch": {
+        "description": "Không đụng tới snapshot tên/SĐT trên đơn thuê và yêu cầu cũ — đó là sự thật của giao dịch.",
+        "operationId": "CustomersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCustomerDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa hồ sơ khách",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/archive": {
+      "post": {
+        "operationId": "CustomersController_archive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCustomerDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lưu trữ hồ sơ khách (soft — lịch sử đơn giữ nguyên)",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/restore": {
+      "post": {
+        "operationId": "CustomersController_restore",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCustomerDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Khôi phục hồ sơ khách đã lưu trữ",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/risk": {
+      "post": {
+        "description": "`blocked` chặn yêu cầu/đơn MỚI ở gian hàng này; đơn và yêu cầu đang có giữ nguyên. Mọi lần đổi đều ghi audit kèm giá trị cũ, giá trị mới và lý do.",
+        "operationId": "CustomersController_updateRisk",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerRiskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantCustomerDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đổi mức rủi ro của khách (bắt buộc lý do khi khác `normal`)",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/bookings": {
+      "get": {
+        "operationId": "CustomersController_bookings",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerBookingPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lịch sử thuê của khách (phân trang)",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/notes": {
+      "get": {
+        "operationId": "CustomersController_notes",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerNotePageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ghi chú nội bộ về khách (phân trang)",
+        "tags": [
+          "customers"
+        ]
+      },
+      "post": {
+        "operationId": "CustomersController_addNote",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerNoteDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Thêm ghi chú nội bộ (bản ghi bất biến, có tác giả + thời điểm)",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/notes/{noteId}": {
+      "delete": {
+        "operationId": "CustomersController_removeNote",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "noteId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Gỡ ghi chú nội bộ (soft-delete)",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/documents": {
+      "get": {
+        "operationId": "CustomerDocumentsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CustomerDocumentDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Giấy tờ của khách (metadata — không có đường dẫn file)",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/documents/presign": {
+      "post": {
+        "operationId": "CustomerDocumentsController_presign",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignCustomerDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDocumentPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Bước 1 — xin URL PUT lên bucket riêng tư (tạo bản ghi `pending`)",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/documents/{documentId}/complete": {
+      "post": {
+        "operationId": "CustomerDocumentsController_complete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDocumentDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Bước 2 — xác minh tệp đã tải lên (HEAD + chữ ký byte đầu) rồi chuyển `ready`",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/documents/{documentId}/download": {
+      "get": {
+        "operationId": "CustomerDocumentsController_download",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDocumentDownloadDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Signed GET ngắn hạn để mở giấy tờ — ghi audit từng lần",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}/documents/{documentId}": {
+      "delete": {
+        "operationId": "CustomerDocumentsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Gỡ giấy tờ (soft-delete + audit)",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
     "/booking-requests": {
       "get": {
         "operationId": "BookingRequestsController_list",
@@ -9795,6 +10470,11 @@
                 "bookings.cancel",
                 "drivers.view",
                 "drivers.manage",
+                "customers.view",
+                "customers.manage",
+                "customers.manage_risk",
+                "customers.documents.manage",
+                "customers.documents.view_files",
                 "calendar.view",
                 "finance.view",
                 "receipts.create",
@@ -17151,6 +17831,639 @@
             "nullable": true
           }
         }
+      },
+      "TenantCustomerListItemDto": {
+        "type": "object",
+        "properties": {
+          "completedRentalCount": {
+            "type": "number",
+            "description": "Số chuyến đã HOÀN TẤT"
+          },
+          "activeBookingCount": {
+            "type": "number",
+            "description": "Đơn đang giữ chỗ / đang thuê (reserved · confirmed · active)"
+          },
+          "noShowCount": {
+            "type": "number",
+            "description": "Số lần khách không tới nhận xe"
+          },
+          "lateReturnCount": {
+            "type": "number",
+            "description": "Số chuyến trả xe MUỘN — chỉ đếm khi có `actual_return_at` thật, không suy đoán"
+          },
+          "lastRentalAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC · null = chưa thuê lần nào"
+          },
+          "totalBookingAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tổng giá trị đơn KHÔNG tính đơn huỷ (chuỗi thập phân) · null = thiếu finance.view"
+          },
+          "paidAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Đã thu · null = thiếu finance.view"
+          },
+          "debtAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Còn nợ = Σ max(total − paid, 0) · null = thiếu finance.view"
+          },
+          "id": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "description": "SĐT dạng hiển thị (`0…`)"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "riskLevel": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "watchlist",
+              "blocked"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "booking",
+              "marketplace"
+            ]
+          },
+          "hasAccount": {
+            "type": "boolean",
+            "description": "Đã liên kết tài khoản trên nền tảng"
+          },
+          "archivedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO — null = đang hoạt động"
+          }
+        },
+        "required": [
+          "completedRentalCount",
+          "activeBookingCount",
+          "noShowCount",
+          "lateReturnCount",
+          "id",
+          "fullName",
+          "phone",
+          "riskLevel",
+          "source",
+          "hasAccount"
+        ]
+      },
+      "TenantCustomerPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TenantCustomerListItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "TenantCustomerSummaryDto": {
+        "type": "object",
+        "properties": {
+          "activeCustomers": {
+            "type": "number",
+            "description": "Khách đang hoạt động (chưa lưu trữ)"
+          },
+          "returningCustomers": {
+            "type": "number",
+            "description": "Khách quen — từ 2 chuyến hoàn tất trở lên"
+          },
+          "watchlistCustomers": {
+            "type": "number"
+          },
+          "blockedCustomers": {
+            "type": "number"
+          },
+          "archivedCustomers": {
+            "type": "number"
+          },
+          "totalDebt": {
+            "type": "string",
+            "nullable": true
+          },
+          "debtCustomers": {
+            "type": "number",
+            "nullable": true,
+            "description": "Số khách còn nợ · null khi thiếu finance.view — FE ẩn hẳn ô, không hiện 0"
+          }
+        },
+        "required": [
+          "activeCustomers",
+          "returningCustomers",
+          "watchlistCustomers",
+          "blockedCustomers",
+          "archivedCustomers"
+        ]
+      },
+      "CreateTenantCustomerDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "Nguyễn Văn An"
+          },
+          "phone": {
+            "type": "string",
+            "example": "0901234567",
+            "description": "Bắt buộc — SĐT là định danh của khách trong sổ khách. Server chuẩn hoá trước khi lưu."
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "fullName",
+          "phone"
+        ]
+      },
+      "CustomerBookingItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "confirmed",
+              "active",
+              "completed",
+              "cancelled",
+              "no_show"
+            ]
+          },
+          "serviceType": {
+            "type": "string",
+            "enum": [
+              "self_drive",
+              "with_driver",
+              "long_term"
+            ]
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "vehiclePlate": {
+            "type": "string",
+            "nullable": true
+          },
+          "pickupAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "returnAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "totalAmount": {
+            "type": "string",
+            "nullable": true
+          },
+          "paidAmount": {
+            "type": "string",
+            "nullable": true
+          },
+          "debtAmount": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "status",
+          "serviceType",
+          "vehicleName",
+          "pickupAt",
+          "returnAt"
+        ]
+      },
+      "TenantCustomerDetailDto": {
+        "type": "object",
+        "properties": {
+          "completedRentalCount": {
+            "type": "number",
+            "description": "Số chuyến đã HOÀN TẤT"
+          },
+          "activeBookingCount": {
+            "type": "number",
+            "description": "Đơn đang giữ chỗ / đang thuê (reserved · confirmed · active)"
+          },
+          "noShowCount": {
+            "type": "number",
+            "description": "Số lần khách không tới nhận xe"
+          },
+          "lateReturnCount": {
+            "type": "number",
+            "description": "Số chuyến trả xe MUỘN — chỉ đếm khi có `actual_return_at` thật, không suy đoán"
+          },
+          "lastRentalAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC · null = chưa thuê lần nào"
+          },
+          "totalBookingAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tổng giá trị đơn KHÔNG tính đơn huỷ (chuỗi thập phân) · null = thiếu finance.view"
+          },
+          "paidAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Đã thu · null = thiếu finance.view"
+          },
+          "debtAmount": {
+            "type": "string",
+            "nullable": true,
+            "description": "Còn nợ = Σ max(total − paid, 0) · null = thiếu finance.view"
+          },
+          "id": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "normalizedPhone": {
+            "type": "string",
+            "description": "Dạng chuẩn hoá — định danh khách trong gian hàng này"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "booking",
+              "marketplace"
+            ]
+          },
+          "riskLevel": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "watchlist",
+              "blocked"
+            ]
+          },
+          "riskReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Lý do rủi ro — NỘI BỘ, chỉ đi tới người trong gian hàng"
+          },
+          "hasAccount": {
+            "type": "boolean"
+          },
+          "archivedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "recentBookings": {
+            "description": "Hoạt động gần đây (tối đa 5). Rỗng khi người gọi không có `bookings.view`.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerBookingItemDto"
+            }
+          }
+        },
+        "required": [
+          "completedRentalCount",
+          "activeBookingCount",
+          "noShowCount",
+          "lateReturnCount",
+          "id",
+          "fullName",
+          "phone",
+          "normalizedPhone",
+          "source",
+          "riskLevel",
+          "hasAccount",
+          "createdAt",
+          "updatedAt",
+          "recentBookings"
+        ]
+      },
+      "UpdateTenantCustomerDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Đổi sang SĐT đã thuộc khách khác → 409 CUSTOMER_PHONE_DUPLICATE"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateCustomerRiskDto": {
+        "type": "object",
+        "properties": {
+          "riskLevel": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "watchlist",
+              "blocked"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Lý do NỘI BỘ — bắt buộc khi khác `normal`. Không bao giờ hiển thị cho khách."
+          }
+        },
+        "required": [
+          "riskLevel"
+        ]
+      },
+      "CustomerBookingPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerBookingItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "CustomerNoteDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "noteType": {
+            "type": "string",
+            "enum": [
+              "general",
+              "preference",
+              "risk"
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "authorName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Người ghi · null = tài khoản đã xoá"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "noteType",
+          "body",
+          "createdAt"
+        ]
+      },
+      "CustomerNotePageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerNoteDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "CreateCustomerNoteDto": {
+        "type": "object",
+        "properties": {
+          "noteType": {
+            "type": "string",
+            "enum": [
+              "general",
+              "preference",
+              "risk"
+            ]
+          },
+          "body": {
+            "type": "string",
+            "description": "Nội dung ghi chú nội bộ"
+          }
+        },
+        "required": [
+          "noteType",
+          "body"
+        ]
+      },
+      "CustomerDocumentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "documentType": {
+            "type": "string",
+            "enum": [
+              "citizen_id",
+              "driver_licence",
+              "other"
+            ]
+          },
+          "customTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "originalName": {
+            "type": "string",
+            "description": "Tên file gốc (hiển thị) — KHÔNG phải đường dẫn lưu trữ"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "number"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn giấy tờ (YYYY-MM-DD)"
+          },
+          "expiryStatus": {
+            "type": "string",
+            "description": "Suy từ `expiresAt` lúc đọc: no_expiry | valid | expiring_soon | expired"
+          },
+          "uploadedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "documentType",
+          "originalName",
+          "mimeType",
+          "sizeBytes",
+          "expiryStatus",
+          "createdAt"
+        ]
+      },
+      "PresignCustomerDocumentDto": {
+        "type": "object",
+        "properties": {
+          "documentType": {
+            "type": "string",
+            "enum": [
+              "citizen_id",
+              "driver_licence",
+              "other"
+            ]
+          },
+          "customTypeName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Chỉ dùng khi documentType = other"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Hạn giấy tờ (YYYY-MM-DD)"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "Tên file gốc (chỉ để hiển thị, không tham gia định danh)"
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp",
+              "application/pdf"
+            ]
+          },
+          "fileSize": {
+            "type": "number",
+            "description": "Dung lượng (byte), tối đa 10485760"
+          }
+        },
+        "required": [
+          "documentType",
+          "fileName",
+          "contentType",
+          "fileSize"
+        ]
+      },
+      "CustomerDocumentPresignDto": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "description": "ID bản ghi giấy tờ — dùng cho bước hoàn tất"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "description": "URL PUT lên bucket riêng tư (hết hạn ngắn)"
+          },
+          "expiresIn": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "documentId",
+          "uploadUrl",
+          "expiresIn"
+        ]
+      },
+      "CustomerDocumentDownloadDto": {
+        "type": "object",
+        "properties": {
+          "downloadUrl": {
+            "type": "string",
+            "description": "Signed GET URL ngắn hạn — không cache, không lưu"
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "ISO — thời điểm URL hết hiệu lực"
+          }
+        },
+        "required": [
+          "downloadUrl",
+          "expiresAt"
+        ]
       },
       "BookingRequestDeliveryQuoteDto": {
         "type": "object",

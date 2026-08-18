@@ -13,6 +13,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
+import { CustomersService } from '../src/modules/customers/customers.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { FinanceOverviewService } from '../src/modules/finance/finance-overview.service';
@@ -33,6 +34,7 @@ const bookings = new BookingsService(
   audit,
   new NotificationService(asService),
   new DriversService(asService, audit),
+  new CustomersService(asService, audit),
 );
 const payments = new PaymentsService(asService, audit, bookings, new ReceiptsService(asService, audit));
 const overview = new FinanceOverviewService(asService);

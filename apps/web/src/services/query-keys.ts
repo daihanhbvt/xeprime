@@ -151,6 +151,22 @@ export const queryKeys = {
     all: ['booking-requests'] as const,
     list: (params: QueryParams) => ['booking-requests', 'list', params] as const,
   },
+  /**
+   * Sổ khách của GIAN HÀNG (S-01) — khác hẳn `/manage/admin/customers` của nền tảng, nên nhánh
+   * riêng: invalidate một bên không được kéo theo bên kia.
+   *
+   * Mọi thứ thuộc một khách nằm DƯỚI `detail(id)` (lịch sử thuê, ghi chú, giấy tờ): đổi mức rủi
+   * ro hay lưu trữ hồ sơ là làm mới cả cụm bằng một lần invalidate, không phải nhớ 4 key.
+   */
+  customers: {
+    all: ['customers'] as const,
+    list: (params: QueryParams) => ['customers', 'list', params] as const,
+    summary: () => ['customers', 'summary'] as const,
+    detail: (id: string) => ['customers', 'detail', id] as const,
+    bookings: (id: string, page: number) => ['customers', 'detail', id, 'bookings', page] as const,
+    notes: (id: string, page: number) => ['customers', 'detail', id, 'notes', page] as const,
+    documents: (id: string) => ['customers', 'detail', id, 'documents'] as const,
+  },
   members: {
     all: ['members'] as const,
     list: (params: QueryParams) => ['members', 'list', params] as const,

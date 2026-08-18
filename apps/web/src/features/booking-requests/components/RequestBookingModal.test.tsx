@@ -77,7 +77,7 @@ vi.mock('@/features/rental-policies/api', () => ({
 }));
 
 /**
- * Nút "Liên hệ chủ xe" thật cần `AuthModalProvider` (nó tự mở modal đăng nhập khi khách chưa
+ * Nút "Nhắn chủ xe" thật cần `AuthModalProvider` (nó tự mở modal đăng nhập khi khách chưa
  * đăng nhập) và tự điều hướng sang khu tin nhắn. Overlay này chỉ mở từ route group `(public)`
  * — nơi provider luôn có — nên ở test thay bằng nút giả, đủ để khoá việc nó CÓ MẶT và gọi
  * `onNavigate` để đóng overlay trước khi rời trang.
@@ -504,7 +504,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       await advanceToReview();
       await reachDone();
 
-      const contact = screen.getByRole('button', { name: 'Liên hệ chủ xe' });
+      const contact = screen.getByRole('button', { name: 'Nhắn chủ xe' });
       fireEvent.click(contact);
       expect(onClose).toHaveBeenCalled();
     });
@@ -528,26 +528,26 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.queryByText('1800000')).toBeNull();
     });
 
-    it('"Xem chuyến của tôi" đóng modal và điều hướng tới /trips', async () => {
+    it('"Chuyến của tôi" đóng modal và điều hướng tới /trips', async () => {
       const { onClose } = renderModal();
       await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
       await reachDone();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Xem chuyến của tôi' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Chuyến của tôi' }));
       expect(onClose).toHaveBeenCalled();
       expect(nav.push).toHaveBeenCalledWith('/trips');
     });
 
-    it('"Quay lại trang xe" chỉ đóng, không điều hướng', async () => {
+    it('"Quay lại" chỉ đóng, không điều hướng', async () => {
       const { onClose } = renderModal();
       await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
       await reachDone();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Quay lại trang xe' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Quay lại' }));
       expect(onClose).toHaveBeenCalled();
       expect(nav.push).not.toHaveBeenCalled();
     });

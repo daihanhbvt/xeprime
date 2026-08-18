@@ -157,6 +157,29 @@ export const PERMISSION = {
   /** Thêm/sửa/ngừng hoạt động/xoá hồ sơ tài xế. */
   DRIVER_MANAGE: 'drivers.manage',
 
+  // Sổ khách của GIAN HÀNG (S-01). Tách khỏi `platform.customers.*`: quyền ở đây chỉ có nghĩa
+  // TRONG một tenant (sổ khách của chính shop), còn key platform là đọc xuyên tenant.
+  //
+  // Bốn mức tách theo MỨC THIỆT HẠI nếu bị lạm dụng — giữ một mức không kéo theo mức kế tiếp:
+  // xem hồ sơ ≠ sửa hồ sơ ≠ quyết định từ chối phục vụ ≠ mở lại kho giấy tờ tuỳ thân của khách.
+  /** Xem sổ khách + hồ sơ khách. KHÔNG kèm số liệu tài chính (đó là `finance.view`). */
+  CUSTOMER_VIEW: 'customers.view',
+  /** Thêm/sửa hồ sơ, ghi chú nội bộ, lưu trữ/khôi phục khách. */
+  CUSTOMER_MANAGE: 'customers.manage',
+  /**
+   * Đổi MỨC RỦI RO (cần lưu ý / từ chối phục vụ). Quyền riêng vì `blocked` chặn khách đặt xe ở
+   * gian hàng này — đó là quyết định kinh doanh của chủ/quản lý, không phải thao tác quầy.
+   */
+  CUSTOMER_MANAGE_RISK: 'customers.manage_risk',
+  /** Tải lên / gỡ giấy tờ khách (CCCD, GPLX) — nhân viên quầy chụp lúc giao xe. */
+  CUSTOMER_DOCUMENT_MANAGE: 'customers.documents.manage',
+  /**
+   * MỞ / TẢI VỀ file giấy tờ khách. Tách khỏi `manage` cùng kỷ luật với `vehicles.documents
+   * .view_files`: chụp giấy tờ của khách đang đứng trước mặt là một việc, mở lại kho CCCD của
+   * mọi khách cũ là việc khác hẳn.
+   */
+  CUSTOMER_DOCUMENT_FILE_VIEW: 'customers.documents.view_files',
+
   // Lịch
   CALENDAR_VIEW: 'calendar.view',
 
@@ -255,6 +278,12 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.BOOKING_CANCEL,
       PERMISSION.DRIVER_VIEW,
       PERMISSION.DRIVER_MANAGE,
+      // Sổ khách: quản lý gian hàng có đủ 5 mức, gồm cả quyết định từ chối phục vụ.
+      PERMISSION.CUSTOMER_VIEW,
+      PERMISSION.CUSTOMER_MANAGE,
+      PERMISSION.CUSTOMER_MANAGE_RISK,
+      PERMISSION.CUSTOMER_DOCUMENT_MANAGE,
+      PERMISSION.CUSTOMER_DOCUMENT_FILE_VIEW,
       PERMISSION.CALENDAR_VIEW,
       PERMISSION.FINANCE_VIEW,
       PERMISSION.RECEIPT_CREATE,
@@ -288,6 +317,13 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       // Xem hồ sơ để chọn tài xế khi gán vào đơn (gán = `bookings.update` đã có ở trên);
       // quản lý hồ sơ tài xế là việc của quản lý/chủ shop.
       PERMISSION.DRIVER_VIEW,
+      // Sổ khách — nhân viên quầy làm được việc hằng ngày: tra khách, sửa hồ sơ/ghi chú, chụp
+      // giấy tờ lúc giao xe. KHÔNG kèm `customers.manage_risk` (từ chối phục vụ là quyết định
+      // kinh doanh) và KHÔNG kèm `customers.documents.view_files` (mở lại kho CCCD của mọi
+      // khách cũ là việc khác hẳn với chụp giấy tờ của khách đang đứng trước mặt).
+      PERMISSION.CUSTOMER_VIEW,
+      PERMISSION.CUSTOMER_MANAGE,
+      PERMISSION.CUSTOMER_DOCUMENT_MANAGE,
       PERMISSION.CALENDAR_VIEW,
       PERMISSION.RECEIPT_CREATE,
       PERMISSION.PAYMENT_RECORD,
@@ -304,6 +340,9 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.BOOKING_REQUEST_VIEW,
       PERMISSION.BOOKING_VIEW,
       PERMISSION.DRIVER_VIEW,
+      // Read-only sổ khách: hồ sơ + số liệu tổng hợp. Không sửa, không đổi rủi ro, và không
+      // mở được giấy tờ tuỳ thân của khách.
+      PERMISSION.CUSTOMER_VIEW,
       PERMISSION.CALENDAR_VIEW,
     ],
   };

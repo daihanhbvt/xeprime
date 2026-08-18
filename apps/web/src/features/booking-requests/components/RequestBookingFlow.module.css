@@ -522,6 +522,19 @@
   gap: var(--xp-space-sm);
 }
 
+.doneActionsRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: var(--xp-space-sm);
+}
+
+.doneActionsRow :global(.ant-btn) {
+  width: 100%;
+  min-width: 0;
+  padding-inline: var(--xp-space-xs);
+  font-size: var(--xp-font-size-sm);
+}
+
 /*
  * Thẻ xác nhận liên hệ của người đã đăng nhập — thay cho hai ô nhập. Không dùng `Descriptions`
  * của AntD: ở màn 390px nó xuống dòng thành bảng hai hàng rất cao.

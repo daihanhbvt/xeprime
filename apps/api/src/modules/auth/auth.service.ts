@@ -229,6 +229,7 @@ export class AuthService {
    */
   async upsertUserFromIdToken(idToken: string): Promise<{ userId: string }> {
     const identity = await this.verifier.verify(idToken);
+    const providerEmail = identity.email?.trim().toLowerCase() ?? null;
 
     const existing = await this.prisma.userIdentity.findUnique({
       where: {
@@ -237,10 +238,16 @@ export class AuthService {
           providerUserId: identity.providerUserId,
         },
       },
-      select: { userId: true },
+      select: { userId: true, user: { select: { status: true } } },
     });
 
     if (existing) {
+      if (existing.user.status !== USER_STATUS.ACTIVE) {
+        throw new UnauthorizedException({
+          code: API_ERROR_CODE.ACCOUNT_LOCKED,
+          message: 'Tài khoản đã bị khoá',
+        });
+      }
       await this.prisma.user.update({
         where: { id: existing.userId },
         data: { lastLoginAt: new Date() },
@@ -248,14 +255,30 @@ export class AuthService {
       return { userId: existing.userId };
     }
 
-    // Chưa có identity: nối vào user cùng email nếu có, để một người đăng nhập bằng
-    // Google rồi Facebook không thành hai tài khoản.
-    const linkedUser = identity.email
+    // Email từ provider không đáng tin như nhau. Chỉ provider đã xác minh email mới được nối tự
+    // động vào tài khoản XePrime có sẵn; nếu không, kẻ khác có thể tự khai cùng email để chiếm tài khoản.
+    const emailUser = providerEmail
       ? await this.prisma.user.findFirst({
-          where: { email: identity.email, deletedAt: null },
-          select: { id: true },
+          where: { email: providerEmail, deletedAt: null },
+          select: { id: true, status: true },
         })
       : null;
+
+    if (emailUser && !identity.emailVerified) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.CONFLICT,
+        message:
+          'Email này đã có tài khoản XePrime. Hãy đăng nhập bằng phương thức đã dùng trước đó.',
+      });
+    }
+
+    const linkedUser = identity.emailVerified ? emailUser : null;
+    if (linkedUser && linkedUser.status !== USER_STATUS.ACTIVE) {
+      throw new UnauthorizedException({
+        code: API_ERROR_CODE.ACCOUNT_LOCKED,
+        message: 'Tài khoản đã bị khoá',
+      });
+    }
 
     const userId = linkedUser?.id ?? newId();
 
@@ -264,10 +287,10 @@ export class AuthService {
         await tx.user.create({
           data: {
             id: userId,
-            email: identity.email,
+            email: providerEmail,
             emailVerifiedAt: identity.emailVerified ? new Date() : null,
             phone: identity.phone,
-            displayName: identity.displayName ?? identity.email ?? 'Người dùng mới',
+            displayName: identity.displayName ?? providerEmail ?? 'Người dùng mới',
             avatarUrl: identity.avatarUrl,
             status: USER_STATUS.ACTIVE,
             lastLoginAt: new Date(),
@@ -283,7 +306,7 @@ export class AuthService {
           userId,
           provider: identity.provider,
           providerUserId: identity.providerUserId,
-          providerEmail: identity.email,
+          providerEmail,
           providerPhone: identity.phone,
         },
       });

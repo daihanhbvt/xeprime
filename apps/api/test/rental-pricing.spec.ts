@@ -15,6 +15,7 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingRequestsService } from '../src/modules/booking-requests/booking-requests.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
+import { CustomersService } from '../src/modules/customers/customers.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
@@ -46,6 +47,7 @@ const bookings = new BookingsService(
   audit,
   new NotificationService(asService),
   new DriversService(asService, audit),
+  new CustomersService(asService, audit),
 );
 // Nhánh test chỉ đi qua inbox shop (quote/approve) — không đụng OTP/đăng nhập khách, nên hai
 // dependency đó stub rỗng thay vì dựng cả cây AuthService/Firebase.
@@ -58,6 +60,7 @@ const requests = new BookingRequestsService(
   undefined as unknown as AuthService,
   new OccupancyService(asService),
   pricing,
+  new CustomersService(asService, audit),
 );
 
 let dbAvailable = false;

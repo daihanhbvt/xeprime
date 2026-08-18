@@ -118,9 +118,10 @@ export const SHOP_NAV: readonly NavNode[] = [
         key: 'customers',
         label: 'Khách hàng',
         href: ROUTES.MANAGE.CUSTOMERS,
-        permission: PERMISSION.BOOKING_VIEW,
+        // Trang thật từ 18/08 (sổ khách của gian hàng — gap S-01). Quyền RIÊNG `customers.view`,
+        // không mượn `bookings.view` như trước: xem sổ khách và xem đơn thuê là hai việc khác nhau.
+        permission: PERMISSION.CUSTOMER_VIEW,
         icon: TeamOutlined,
-        comingSoon: true,
       },
       {
         key: 'finance',

@@ -69,11 +69,11 @@ describe('nav — cấu trúc cây', () => {
     }
   });
 
-  it('đúng 3 mục gian hàng là placeholder (`comingSoon`) — drivers thành trang thật 17/08', () => {
+  it('đúng 2 mục gian hàng là placeholder (`comingSoon`) — customers thành trang thật 18/08', () => {
     const coming = flattenLeaves(SHOP_NAV)
       .filter((leaf) => leaf.comingSoon)
       .map((leaf) => leaf.key);
-    expect(coming).toEqual(['customers', 'pickup-areas', 'trash']);
+    expect(coming).toEqual(['pickup-areas', 'trash']);
     // Nền tảng không có mục nào chưa dựng.
     expect(flattenLeaves(PLATFORM_NAV).some((leaf) => leaf.comingSoon)).toBe(false);
   });

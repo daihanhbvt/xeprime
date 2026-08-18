@@ -40,6 +40,7 @@ import { BannersModule } from './modules/banners/banners.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { DriversModule } from './modules/drivers/drivers.module';
+import { CustomersModule } from './modules/customers/customers.module';
 
 @Module({
   imports: [
@@ -112,6 +113,7 @@ import { DriversModule } from './modules/drivers/drivers.module';
     BannersModule,
     PricingModule,
     DriversModule,
+    CustomersModule,
   ],
   providers: [
     // Thứ tự quan trọng (guard global chạy theo đúng thứ tự khai báo): Throttler chặn trước

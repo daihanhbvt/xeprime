@@ -26,7 +26,7 @@ export function ChatWithShopButton({
   block?: boolean;
   size?: 'middle' | 'large';
   className?: string;
-  /** Nhãn theo ngữ cảnh — trang xe dùng "Nhắn shop", màn gửi yêu cầu xong dùng "Liên hệ chủ xe". */
+  /** Nhãn theo ngữ cảnh — trang xe dùng "Nhắn shop", màn gửi yêu cầu xong dùng "Nhắn chủ xe". */
   label?: string;
   type?: 'default' | 'primary';
   /**

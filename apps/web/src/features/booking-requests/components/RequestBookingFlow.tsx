@@ -675,7 +675,7 @@ export function RequestBookingFlow({
             message="Xe chưa được giữ chỗ. Yêu cầu cần được chủ xe chấp thuận trước."
           />
 
-          <div className={styles.doneActions}>
+          <div className={cx(styles.doneActions, styles.doneActionsRow)}>
             <Button
               type="primary"
               size="large"
@@ -685,7 +685,7 @@ export function RequestBookingFlow({
                 router.push(ROUTES.TRIPS);
               }}
             >
-              Xem chuyến của tôi
+              Chuyến của tôi
             </Button>
             {/*
               Hỏi thêm chủ xe là việc RẤT hay xảy ra ngay sau khi gửi (giao xe ở đâu, có giao
@@ -694,13 +694,13 @@ export function RequestBookingFlow({
             */}
             <ChatWithShopButton
               vehicleId={vehicleId}
-              label="Liên hệ chủ xe"
+              label="Nhắn chủ xe"
               size="large"
               block
               onNavigate={onClose}
             />
             <Button size="large" block onClick={onClose}>
-              Quay lại trang xe
+              Quay lại
             </Button>
           </div>
         </div>

@@ -1,0 +1,63 @@
+'use client';
+
+import { CheckOutlined, CopyOutlined } from '@ant-design/icons';
+import { App, Button, Tooltip } from 'antd';
+import { useEffect, useRef, useState } from 'react';
+
+/** Thời gian giữ dấu tick sau khi chép — đủ để mắt bắt được, không đủ để tưởng là trạng thái. */
+const COPIED_FEEDBACK_MS = 1500;
+
+/**
+ * Nút sao chép chỉ-icon, đứng CẠNH giá trị đang hiển thị.
+ *
+ * Dùng cho giá trị người ta phải mang sang chỗ khác: SĐT dán vào máy gọi/Zalo, email, mã đơn.
+ * KHÔNG thay cho `tel:`/`mailto:` — giá trị vẫn hiển thị và vẫn bấm gọi được, nút này chỉ thêm
+ * một lối nữa cho trường hợp cần dán chứ không cần gọi.
+ *
+ * A11y: nút chỉ-icon nên `label` trở thành `aria-label` — `Tooltip` KHÔNG tạo được tên khả
+ * truy cập (cùng lý do đã ghi ở `RowActions`).
+ *
+ * `navigator.clipboard` chỉ tồn tại ở secure context; mở app qua IP LAN trên máy nhân viên là
+ * trường hợp thật, nên hỏng phải báo ra chứ không im lặng.
+ */
+export function CopyButton({
+  value,
+  label,
+  copiedLabel = 'Đã sao chép',
+  size = 'small',
+}: {
+  value: string;
+  /** Nhãn cho tooltip + `aria-label`: "Sao chép số điện thoại". */
+  label: string;
+  copiedLabel?: string;
+  size?: 'small' | 'middle';
+}) {
+  const { message } = App.useApp();
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => (timer.current ? clearTimeout(timer.current) : undefined), []);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
+    } catch {
+      message.error('Trình duyệt không cho phép sao chép — hãy bôi đen và chép tay');
+    }
+  }
+
+  return (
+    <Tooltip title={copied ? copiedLabel : label}>
+      <Button
+        type="text"
+        size={size}
+        aria-label={copied ? copiedLabel : label}
+        icon={copied ? <CheckOutlined /> : <CopyOutlined />}
+        onClick={() => void copy()}
+      />
+    </Tooltip>
+  );
+}

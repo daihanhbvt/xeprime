@@ -81,10 +81,7 @@
 }
 
 .price {
-  display: grid;
-  grid-template-columns: minmax(0, auto) minmax(180px, 1fr);
-  align-items: start;
-  gap: 12px 24px;
+  min-width: 0;
 }
 
 .priceMain {
@@ -94,20 +91,12 @@
   gap: 8px;
 }
 
-.priceDetails {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-
 .price b {
   font-size: 24px;
   color: var(--xp-gold-deep);
 }
 
-.price span {
+.priceUnit {
   color: var(--xp-color-text-secondary);
 }
 
@@ -121,11 +110,6 @@
 .price .priceContact {
   font-size: 18px;
   color: var(--xp-color-text-secondary);
-}
-
-.weekend {
-  font-size: 13px;
-  text-align: right;
 }
 
 .amenities {
@@ -322,19 +306,6 @@
   .wrap {
     padding-top: 16px;
     padding-bottom: 32px;
-  }
-
-  .price {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .priceDetails {
-    align-items: flex-start;
-  }
-
-  .weekend {
-    text-align: left;
   }
 
   .specs {

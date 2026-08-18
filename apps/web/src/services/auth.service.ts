@@ -1,5 +1,12 @@
 import { apiDelete, apiGet, apiPost } from './api-client';
 import type { CurrentTenantSummary, CurrentUser } from '@/hooks/use-current-user';
+import { getFirebaseProviderIdToken } from '@/features/auth/lib/firebase-social-auth';
+export {
+  AUTH_PROVIDER,
+  AUTH_PROVIDER_LABEL,
+  type AuthProvider,
+} from '@/features/auth/constants';
+import type { AuthProvider } from '@/features/auth/constants';
 
 export interface RegisterInput {
   displayName: string;
@@ -13,29 +20,12 @@ export interface RegisterInput {
  */
 export type { CurrentTenantSummary, CurrentUser };
 
-export const AUTH_PROVIDER = {
-  GOOGLE: 'google',
-  FACEBOOK: 'facebook',
-} as const;
-
-export type AuthProvider = (typeof AUTH_PROVIDER)[keyof typeof AUTH_PROVIDER];
-
-export const AUTH_PROVIDER_LABEL: Readonly<Record<AuthProvider, string>> = {
-  [AUTH_PROVIDER.GOOGLE]: 'Google',
-  [AUTH_PROVIDER.FACEBOOK]: 'Facebook',
-};
-
-const FIREBASE_NOT_WIRED_MESSAGE =
-  'Chưa cấu hình Firebase Web SDK. Phase 0 dùng ô "ID token" bên dưới để tạo phiên.';
-
 /**
  * ADR 0002: Firebase chỉ dùng đúng một lần để lấy ID token, phần còn lại của hệ thống không
  * biết Firebase tồn tại.
- *
- * TODO(Phase 1): thay bằng `signInWithPopup` của `firebase/auth` — chỉ file này phải sửa.
  */
-export async function getProviderIdToken(_provider: AuthProvider): Promise<string> {
-  return Promise.reject(new Error(FIREBASE_NOT_WIRED_MESSAGE));
+export function getProviderIdToken(provider: AuthProvider): Promise<string> {
+  return getFirebaseProviderIdToken(provider);
 }
 
 /** POST /auth/session — backend verify ID token rồi Set-Cookie httpOnly (ADR 0002). */

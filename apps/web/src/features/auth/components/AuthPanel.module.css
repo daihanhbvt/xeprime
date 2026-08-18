@@ -114,7 +114,7 @@
 
 .oauth {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   gap: var(--xp-space-sm);
 }
 
@@ -127,12 +127,11 @@
   font-weight: var(--xp-font-weight-medium);
 }
 
-.googleIcon {
-  color: var(--xp-color-primary-active);
-}
-
-.facebookIcon {
-  color: var(--xp-color-info);
+.providerLogo {
+  display: block;
+  width: 1.125rem;
+  height: 1.125rem;
+  object-fit: contain;
 }
 
 .switch {

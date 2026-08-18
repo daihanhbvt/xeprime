@@ -207,6 +207,19 @@ describe('AuthModal — sau khi đăng ký', () => {
 });
 
 describe('AuthModal — sau khi đăng nhập', () => {
+  it('hiển thị CTA và logo thương hiệu đúng cho Google/Facebook', async () => {
+    renderModal('auth=login');
+    await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());
+
+    const google = screen.getByRole('button', { name: 'Tiếp tục với Google' });
+    const facebook = screen.getByRole('button', { name: 'Tiếp tục với Facebook' });
+
+    expect(google.querySelector('svg')).toBeTruthy();
+    expect(google.querySelectorAll('path')).toHaveLength(4);
+    expect(facebook.querySelector('svg')).toBeTruthy();
+    expect(facebook.querySelectorAll('path')).toHaveLength(1);
+  });
+
   it('không có next → đóng modal, ở lại marketplace (KHÔNG /manage)', async () => {
     renderModal('auth=login');
     await waitFor(() => expect(visibleTitle('Đăng nhập XePrime')).toBeTruthy());

@@ -26,6 +26,7 @@ import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { ConfirmHandoverDto } from '../src/modules/bookings/handovers/dto/handover.dto';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
+import { CustomersService } from '../src/modules/customers/customers.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import { BookingHandoversController } from '../src/modules/bookings/handovers/booking-handovers.controller';
 import { HandoversService } from '../src/modules/bookings/handovers/handovers.service';
@@ -87,6 +88,7 @@ const bookings = new BookingsService(
   audit,
   notifications,
   new DriversService(asService, audit),
+  new CustomersService(asService, audit),
 );
 const handovers = new HandoversService(asService, bookings, odometer, maintenance, files, audit);
 

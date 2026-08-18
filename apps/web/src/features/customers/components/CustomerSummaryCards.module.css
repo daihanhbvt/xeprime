@@ -1,0 +1,22 @@
+/*
+ * Dải KPI: tự xuống dòng theo bề rộng, không cột nào ép cha cuộn ngang.
+ * `minmax(0, 1fr)` là bắt buộc — `1fr` mặc định có min-width auto, và một nhãn dài
+ * ("Cần lưu ý / từ chối phục vụ") sẽ đẩy cả lưới rộng hơn khung.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--xp-space-sm);
+  margin-bottom: var(--xp-space-md);
+}
+
+.grid > * {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    /* Hai cột ở điện thoại: bốn ô xếp dọc đẩy bộ lọc và danh sách xuống quá sâu. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

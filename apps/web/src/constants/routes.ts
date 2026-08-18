@@ -111,6 +111,16 @@ export const bookingPath = {
   detail: (id: string): string => `/manage/bookings/${id}`,
 };
 
+/**
+ * Hồ sơ một khách trong SỔ KHÁCH của gian hàng (S-01) — route thật, không phải drawer.
+ *
+ * Cùng lý do với `bookingPath`: người ta gửi link hồ sơ khách cho nhau ("xem giúp anh khách
+ * này"), mở lại nhiều lần trong ngày, và F5 không được mất chỗ đang đọc.
+ */
+export const customerPath = {
+  detail: (id: string): string => `/manage/customers/${id}`,
+};
+
 /** Trang xem/in hợp đồng thuê. */
 export const contractPath = {
   detail: (id: string): string => `/manage/contracts/${id}`,

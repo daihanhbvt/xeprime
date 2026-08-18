@@ -27,11 +27,19 @@ import { bookingFormSchema, type BookingFormValues } from '../schema';
 import type { BookingDetail, CreateBookingInput, UpdateBookingInput } from '../types';
 import styles from './BookingFormDialog.module.css';
 
-/** Giá trị điền sẵn khi tạo đơn từ lịch: click ô trống biết trước xe + khung giờ. */
+/**
+ * Giá trị điền sẵn khi tạo đơn từ một ngữ cảnh đã biết trước.
+ *
+ * Hai lối vào, mỗi lối biết một nửa: **lịch** biết xe + khung giờ (click ô trống), **hồ sơ
+ * khách** (S-01) biết tên + SĐT. Vì thế mọi trường đều tuỳ chọn — không lối nào bị ép bịa ra
+ * phần nó không biết, và form vẫn là MỘT (không nhân bản form tạo đơn theo từng lối vào).
+ */
 export interface BookingPrefill {
-  vehicleId: string;
-  pickupAt: Dayjs;
-  returnAt: Dayjs;
+  vehicleId?: string;
+  pickupAt?: Dayjs;
+  returnAt?: Dayjs;
+  customerName?: string;
+  customerPhone?: string;
 }
 
 function numOrNull(value: string | null | undefined): number | null {
@@ -45,8 +53,8 @@ function toDefaults(
   if (!editing) {
     return {
       vehicleId: prefill?.vehicleId ?? '',
-      customerName: '',
-      customerPhone: '',
+      customerName: prefill?.customerName ?? '',
+      customerPhone: prefill?.customerPhone ?? '',
       serviceType: SERVICE_TYPE.SELF_DRIVE,
       routeType: ROUTE_TYPE.IN_CITY,
       pickupAddress: '',
@@ -101,9 +109,12 @@ export function BookingFormDialog({
   prefill?: BookingPrefill | null;
   onClose: () => void;
 }) {
-  // key gồm prefill để click ô lịch khác nhau thì form re-init đúng xe/giờ.
+  // key gồm prefill để mở từ ngữ cảnh khác nhau (ô lịch khác, khách khác) thì form re-init lại.
   const formKey =
-    editing?.id ?? (prefill ? `new-${prefill.vehicleId}-${prefill.pickupAt.valueOf()}` : 'new');
+    editing?.id ??
+    (prefill
+      ? `new-${prefill.vehicleId ?? ''}-${prefill.pickupAt?.valueOf() ?? ''}-${prefill.customerPhone ?? ''}`
+      : 'new');
   return (
     <ResponsiveDialog
       title={editing ? `Sửa đơn ${editing.code}` : 'Tạo đơn thuê'}

@@ -75,6 +75,7 @@ model User {
   customerConversations   Conversation[]   @relation("conversation_customer")
   conversationParticipations ConversationParticipant[] @relation("participant_user")
   sentMessages            Message[]        @relation("message_sender")
+  tenantCustomerProfiles  TenantCustomer[] @relation("tenant_customer_account")
 
   @@index([status])
   @@index([createdAt])
@@ -165,6 +166,9 @@ model Tenant {
   bookingDepositSettlements BookingDepositSettlement[]
   vehicleBlocks VehicleBlock[]
   vehicleDailyPrices VehicleDailyPrice[]
+  tenantCustomers TenantCustomer[]
+  tenantCustomerNotes TenantCustomerNote[]
+  tenantCustomerDocuments TenantCustomerDocument[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -941,6 +945,10 @@ model Booking {
   note           String?   @db.Text
   /// Tài xế được gán cho đơn (chủ yếu đơn with_driver) — plan 17/08. NULL = chưa phân công.
   driverId       String?   @map("driver_id") @db.Char(26)
+  /// Hồ sơ khách trong SỔ KHÁCH của gian hàng (S-01). NULL với đơn lịch sử không có SĐT dùng
+  /// được — snapshot `customer_name`/`customer_phone` ở trên vẫn là sự thật của đơn và KHÔNG
+  /// bị hồ sơ khách ghi đè khi ai đó sửa tên khách về sau.
+  tenantCustomerId String? @map("tenant_customer_id") @db.Char(26)
   createdBy      String?   @map("created_by") @db.Char(26)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -951,6 +959,9 @@ model Booking {
   /// Composite FK (driver_id, tenant_id) — DB tự chặn gán tài xế của gian hàng khác
   /// (cùng cơ chế `vehicles.branch`). NoAction: xoá tài xế còn đơn tham chiếu thì bị chặn.
   driver  Driver? @relation(fields: [driverId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
+  /// Composite FK (tenant_customer_id, tenant_id) — DB tự chặn gắn đơn của shop A vào khách
+  /// của shop B. NoAction: hồ sơ khách chỉ LƯU TRỮ (soft), không xoá cứng khi còn lịch sử.
+  tenantCustomer TenantCustomer? @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "bookings_tenant_customer_fkey")
   creator User?   @relation("booking_creator", fields: [createdBy], references: [id])
   bookingRequest BookingRequest? @relation("request_booking")
   review         Review?         @relation("booking_review")
@@ -969,6 +980,8 @@ model Booking {
   @@index([vehicleId, pickupAt, returnAt])
   @@index([createdAt])
   @@index([driverId])
+  /// Lịch sử thuê theo khách + mọi số liệu tổng hợp của sổ khách gom theo cột này.
+  @@index([tenantId, tenantCustomerId])
   /// Ba index dưới phục vụ màn "Đơn thuê toàn hệ thống" của admin (không có tenant_id):
   /// lọc trạng thái xuyên tenant, tra theo SĐT khách, tìm theo mã đơn/tên khách.
   @@index([status, createdAt])
@@ -1033,6 +1046,10 @@ model BookingRequest {
   /// Set khi duyệt → trỏ tới Booking đã tạo (1-1). Postgres cho nhiều NULL nên yêu cầu
   /// chưa duyệt không đụng ràng buộc unique.
   bookingId     String?   @unique @map("booking_id") @db.Char(26)
+  /// Hồ sơ khách trong sổ khách của gian hàng (S-01) — gán ngay lúc nhận yêu cầu, rồi COPY
+  /// nguyên vẹn sang Booking khi duyệt (không tra lại theo SĐT: SĐT trên hồ sơ có thể đã được
+  /// sửa giữa chừng, tra lại sẽ đẻ ra một khách thứ hai).
+  tenantCustomerId String? @map("tenant_customer_id") @db.Char(26)
   decidedBy     String?   @map("decided_by") @db.Char(26)
   decidedAt     DateTime? @map("decided_at") @db.Timestamptz(3)
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -1042,11 +1059,14 @@ model BookingRequest {
   vehicle  Vehicle  @relation(fields: [vehicleId], references: [id])
   booking  Booking? @relation("request_booking", fields: [bookingId], references: [id])
   customer User?    @relation("request_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
+  /// Composite FK (tenant_customer_id, tenant_id) — chặn gắn chéo gian hàng ở tầng DB.
+  tenantCustomer TenantCustomer? @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "booking_requests_tenant_customer_fkey")
 
   @@index([tenantId, status])
   @@index([vehicleId])
   @@index([createdAt])
   @@index([customerUserId])
+  @@index([tenantId, tenantCustomerId])
   @@map("booking_requests")
 }
 
@@ -1082,6 +1102,134 @@ model Driver {
   @@index([tenantId, status])
   @@index([tenantId, deletedAt])
   @@map("drivers")
+}
+
+// ---------------------------------------------------------------------------
+// Sổ khách của GIAN HÀNG — database_design §10.2–10.4, gap S-01
+// ---------------------------------------------------------------------------
+
+/// Khách trong sổ khách của MỘT gian hàng.
+///
+/// Khác `users` (tài khoản toàn hệ thống) và khác màn giám sát `/manage/admin/customers` của nền
+/// tảng: cùng một người thuê ở shop A và shop B là HAI hồ sơ độc lập — tên gọi, ghi chú nội bộ,
+/// mức rủi ro và giấy tờ của shop A không bao giờ rò sang shop B.
+///
+/// Định danh trong một gian hàng là `normalized_phone` (`normalizeVnPhone`: `09…`/`849…`/`+849…`
+/// về cùng `84…`), unique theo `(tenant_id, normalized_phone)` — DB chặn trùng, không phải một
+/// câu SELECT mà hai request song song cùng đi qua được. KHÔNG bao giờ gộp theo tên.
+///
+/// KHÔNG có cột đếm/tổng tiền nào ở đây: số lần thuê, tổng giá trị, đã trả, còn nợ, lần thuê
+/// cuối đều TÍNH ĐỘNG từ `bookings` (cùng kỷ luật với công nợ ở Phase 6 — đếm denormalize là
+/// đếm sẽ drift).
+model TenantCustomer {
+  id              String    @id @db.Char(26)
+  tenantId        String    @map("tenant_id") @db.Char(26)
+  /// Tài khoản khách trên nền tảng, NẾU biết (khách đăng nhập lúc gửi yêu cầu). Chỉ là liên
+  /// kết tiện ích: hồ sơ trong sổ khách vẫn do gian hàng sở hữu và sửa độc lập.
+  customerUserId  String?   @map("customer_user_id") @db.Char(26)
+  fullName        String    @map("full_name") @db.VarChar(255)
+  /// SĐT như người dùng gõ/hiển thị (`0901234567`) — dạng đọc được cho nhân viên.
+  phone           String    @db.VarChar(30)
+  /// Dạng CHUẨN HOÁ (`84901234567`) — cột định danh, mọi tra cứu và ràng buộc unique đi qua nó.
+  normalizedPhone String    @map("normalized_phone") @db.VarChar(30)
+  email           String?   @db.VarChar(255)
+  address         String?   @db.Text
+  /// @xeprime/types → TenantCustomerSource (manual | booking | marketplace)
+  source          String    @default("manual") @db.VarChar(30)
+  /// @xeprime/types → TenantCustomerRiskLevel. `blocked` chặn đơn/yêu cầu mới Ở GIAN HÀNG NÀY;
+  /// nó KHÔNG phải lệnh cấm toàn nền tảng và không đụng tới tài khoản của khách.
+  riskLevel       String    @default("normal") @map("risk_level") @db.VarChar(20)
+  /// Lý do NỘI BỘ của mức rủi ro — bắt buộc khi khác `normal` (CHECK ở migration). Không bao
+  /// giờ đi ra đường công khai.
+  riskReason      String?   @map("risk_reason") @db.Text
+  createdBy       String?   @map("created_by") @db.Char(26)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  /// Lưu trữ (soft) — khách nghỉ vẫn giữ trọn lịch sử đơn và vẫn mở được từ đơn cũ.
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account User?  @relation("tenant_customer_account", fields: [customerUserId], references: [id], onDelete: SetNull)
+
+  notes           TenantCustomerNote[]
+  documents       TenantCustomerDocument[]
+  bookings        Booking[]
+  bookingRequests BookingRequest[]
+  receipts        Receipt[]
+
+  /// Một SĐT = một khách trong một gian hàng. Hồ sơ đã lưu trữ VẪN giữ chỗ: khách quay lại thì
+  /// khôi phục hồ sơ cũ (còn nguyên lịch sử), không đẻ bản sao.
+  @@unique([tenantId, normalizedPhone])
+  /// Mục tiêu cho composite FK (tenant_customer_id, tenant_id) từ bookings/booking_requests/receipts.
+  @@unique([id, tenantId])
+  @@index([tenantId, riskLevel])
+  @@index([tenantId, archivedAt])
+  /// Sắp xếp "Tên A → Z" của danh sách (tìm gần đúng theo tên dùng index trigram ở migration).
+  @@index([tenantId, fullName])
+  @@index([customerUserId])
+  /// Ô tìm kiếm chạy ILIKE '%q%' trên tên — btree không dùng được cho vị từ đó.
+  @@index([fullName(ops: raw("gin_trgm_ops"))], map: "tenant_customers_full_name_trgm_idx", type: Gin)
+  @@map("tenant_customers")
+}
+
+/// Ghi chú nội bộ về khách — BẢN GHI BẤT BIẾN có tác giả + thời điểm, không phải một ô `note`
+/// bị ghi đè (database_design §10.4). "Khách này từng trả xe muộn 2 lần" chỉ có giá trị khi biết
+/// ai ghi và ghi khi nào. Nội dung TUYỆT ĐỐI nội bộ: không đường API nào của khách đọc được.
+model TenantCustomerNote {
+  id               String    @id @db.Char(26)
+  tenantId         String    @map("tenant_id") @db.Char(26)
+  tenantCustomerId String    @map("tenant_customer_id") @db.Char(26)
+  /// @xeprime/types → TenantCustomerNoteType (general | preference | risk)
+  noteType         String    @default("general") @map("note_type") @db.VarChar(30)
+  body             String    @db.Text
+  createdBy        String?   @map("created_by") @db.Char(26)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Xoá là SOFT: ghi chú đã từng ảnh hưởng quyết định vận hành, không bốc hơi khỏi lịch sử.
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer TenantCustomer @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade, map: "tenant_customer_notes_customer_fkey")
+
+  @@index([tenantId, tenantCustomerId, createdAt], map: "tenant_customer_notes_tenant_customer_created_idx")
+  @@map("tenant_customer_notes")
+}
+
+/// Giấy tờ tuỳ thân của khách (CCCD / GPLX) — database_design §10.3.
+///
+/// Nhị phân nằm ở bucket R2 RIÊNG TƯ; bảng này chỉ giữ metadata + `object_key` do SERVER dựng.
+/// KHÔNG có cột URL, và không DTO thường nào trả `object_key` ra ngoài: xem file là một request
+/// riêng, có quyền riêng (`customers.documents.view_files`), phát signed URL sống rất ngắn và
+/// ghi audit từng lần. Vòng đời `pending → ready` giống file riêng tư của xe (Wave 4.1): PUT
+/// thành công CHƯA phải bằng chứng file hợp lệ.
+model TenantCustomerDocument {
+  id               String    @id @db.Char(26)
+  tenantId         String    @map("tenant_id") @db.Char(26)
+  tenantCustomerId String    @map("tenant_customer_id") @db.Char(26)
+  /// @xeprime/types → CustomerDocumentType (citizen_id | driver_licence | other)
+  documentType     String    @map("document_type") @db.VarChar(30)
+  /// Nhãn tự đặt, chỉ có nghĩa khi documentType = other (CHECK ở migration).
+  customTypeName   String?   @map("custom_type_name") @db.VarChar(160)
+  /// tenants/{tenantId}/customers/{customerId}/documents/{id}.{ext} — server dựng, unique.
+  objectKey        String    @unique @map("object_key") @db.VarChar(500)
+  originalName     String    @map("original_name") @db.VarChar(255)
+  mimeType         String    @map("mime_type") @db.VarChar(100)
+  sizeBytes        Int       @map("size_bytes")
+  /// @xeprime/types → CustomerDocumentStatus (pending | ready | deleted)
+  status           String    @default("pending") @db.VarChar(20)
+  /// Hạn của giấy tờ (date-only). Trạng thái "còn hạn / sắp hết hạn / hết hạn" SUY RA lúc đọc,
+  /// không lưu — trạng thái phụ thuộc ngày hôm nay thì không được có cột.
+  expiresAt        DateTime? @map("expires_at") @db.Date
+  uploadedBy       String?   @map("uploaded_by") @db.Char(26)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  completedAt      DateTime? @map("completed_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer TenantCustomer @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: Cascade, onUpdate: Cascade, map: "tenant_customer_documents_customer_fkey")
+
+  @@index([tenantId, tenantCustomerId, status], map: "tenant_customer_documents_tenant_customer_status_idx")
+  @@map("tenant_customer_documents")
 }
 
 /// Chính sách thuê (Wave 2 — B2 Pricing & Rental Policies). MỘT bảng cho cả hai phạm vi:
@@ -2058,6 +2206,9 @@ model Receipt {
   category    FinanceCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   booking     Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   vehicle     Vehicle?            @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  /// Composite FK (tenant_customer_id, tenant_id) — cột có từ Phase 6 nhưng tới S-01 mới có
+  /// bảng để trỏ tới; từ đây phiếu thu/chi gắn được vào đúng khách của đúng gian hàng.
+  tenantCustomer TenantCustomer? @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "receipts_tenant_customer_fkey")
   attachments ReceiptAttachment[]
   payments    Payment[]
 
@@ -2065,6 +2216,7 @@ model Receipt {
   @@index([tenantId, createdAt])
   @@index([bookingId])
   @@index([categoryId])
+  @@index([tenantId, tenantCustomerId])
   @@map("receipts")
 }
 

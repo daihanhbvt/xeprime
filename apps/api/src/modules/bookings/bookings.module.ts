@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CalendarModule } from '../calendar/calendar.module';
+import { CustomersModule } from '../customers/customers.module';
 import { DriversModule } from '../drivers/drivers.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
@@ -25,7 +26,9 @@ import { SettlementService } from './settlement/settlement.service';
 @Module({
   // `PricingModule` cho gợi ý phí quá giờ (Wave 10) — đọc chính sách hiệu lực, không ghi.
   // `DriversModule` cho gán tài xế vào đơn (17/08) — "gán được" định nghĩa ở DriversService.
-  imports: [CalendarModule, VehiclesModule, PricingModule, DriversModule],
+  // `CustomersModule` cho sổ khách (S-01) — mọi đơn có SĐT gắn về một hồ sơ khách trong cùng
+  // transaction, và khách bị từ chối phục vụ bị chặn ở đúng một chỗ.
+  imports: [CalendarModule, VehiclesModule, PricingModule, DriversModule, CustomersModule],
   controllers: [
     BookingsController,
     BookingHandoversController,

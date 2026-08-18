@@ -1,9 +1,5 @@
 import Link from 'next/link';
-import {
-  CATALOG_TYPE,
-  SERVICE_TYPE,
-  VEHICLE_TYPE,
-} from '@xeprime/types';
+import { CATALOG_TYPE, SERVICE_TYPE, VEHICLE_TYPE } from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
@@ -119,7 +115,7 @@ export function ListingDetailView({
                 <>
                   <div className={styles.priceMain}>
                     <b>{formatMoneyVnd(listing.monthlyPrice)}</b>
-                    <span>/tháng</span>
+                    <span className={styles.priceUnit}>/tháng</span>
                   </div>
                 </>
               ) : (
@@ -134,7 +130,7 @@ export function ListingDetailView({
                 <>
                   <div className={styles.priceMain}>
                     <b>{formatMoneyVnd(listing.withDriverDailyPrice)}</b>
-                    <span>/ngày</span>
+                    <span className={styles.priceUnit}>/ngày</span>
                   </div>
                 </>
               ) : (
@@ -153,28 +149,8 @@ export function ListingDetailView({
                   </>
                 ) : null}
                 <b>{formatMoneyVnd(displayPrice)}</b>
-                <span>/ngày</span>
+                <span className={styles.priceUnit}>/ngày</span>
               </div>
-              {listing.weekendPrice || listing.hourlyPrice ? (
-                <div className={styles.priceDetails}>
-                  {listing.weekendPrice ? (
-                    <span className={styles.weekend}>
-                      Cuối tuần{' '}
-                      {formatMoneyVnd(
-                        discount > 0
-                          ? applyDiscountPercent(listing.weekendPrice, discount)
-                          : listing.weekendPrice,
-                      )}
-                      {discount > 0 ? ' sau giảm' : ''}
-                    </span>
-                  ) : null}
-                  {listing.hourlyPrice ? (
-                    <span className={styles.weekend}>
-                      Thuê giờ {formatMoneyVnd(listing.hourlyPrice)}/giờ
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
             </div>
           )}
 

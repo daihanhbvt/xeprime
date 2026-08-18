@@ -37,6 +37,12 @@ export const PRIVATE_FILE_PURPOSE = {
    * phải ảnh marketing.
    */
   HANDOVER_PHOTO: 'handover_photo',
+  /**
+   * Giấy tờ KHÁCH THUÊ (CCCD / GPLX) trong sổ khách của gian hàng. Riêng tư tuyệt đối: đây là
+   * PII của người thứ ba mà shop chỉ giữ hộ để đối chiếu lúc giao xe — không bao giờ có URL
+   * công khai, và mở lại file cũ là một quyền riêng (`customers.documents.view_files`).
+   */
+  CUSTOMER_DOCUMENT: 'customer_document',
 } as const;
 export type PrivateFilePurpose = (typeof PRIVATE_FILE_PURPOSE)[keyof typeof PRIVATE_FILE_PURPOSE];
 

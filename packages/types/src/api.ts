@@ -127,6 +127,25 @@ export const API_ERROR_CODE = {
    */
   HANDOVER_NOT_ELIGIBLE: 'HANDOVER_NOT_ELIGIBLE',
 
+  // Sổ khách của gian hàng (S-01)
+  /**
+   * SĐT đã thuộc một khách khác TRONG CÙNG gian hàng (so trên dạng đã chuẩn hoá, nên `09…` và
+   * `+849…` là trùng). Mã riêng vì FE có lối đi tiếp hẳn hoi: mở hồ sơ đang giữ số đó
+   * (`details.customerId`), chứ không phải một alert lỗi thường. TUYỆT ĐỐI không tự gộp hai hồ
+   * sơ — gộp khách là việc có chủ đích, không phải hệ quả phụ của một lần sửa SĐT.
+   */
+  CUSTOMER_PHONE_DUPLICATE: 'CUSTOMER_PHONE_DUPLICATE',
+  /** Hồ sơ khách đã lưu trữ — khôi phục trước khi sửa / ghi chú / gắn giấy tờ. */
+  CUSTOMER_ARCHIVED: 'CUSTOMER_ARCHIVED',
+  /**
+   * Gian hàng đã đánh dấu khách này là "từ chối phục vụ".
+   *
+   * Mã này chỉ tới được NGƯỜI TRONG SHOP (lập đơn tại quầy, duyệt yêu cầu). Đường công khai
+   * (khách gửi yêu cầu từ Marketplace) KHÔNG bao giờ trả mã này — nó trả `CONFLICT` kèm thông
+   * điệp trung tính, vì khách không được biết mình nằm trong danh sách nội bộ nào.
+   */
+  CUSTOMER_BLOCKED: 'CUSTOMER_BLOCKED',
+
   /**
    * Chi nhánh còn ràng buộc nên chưa ngừng/đổi được: `details` liệt kê CHÍNH XÁC cái gì đang
    * giữ nó (số xe, số đơn đang chạy/sắp tới) để người dùng biết phải chuyển gì trước.

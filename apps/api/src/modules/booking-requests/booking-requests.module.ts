@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BookingsModule } from '../bookings/bookings.module';
 import { CalendarModule } from '../calendar/calendar.module';
+import { CustomersModule } from '../customers/customers.module';
 import { PhoneVerificationModule } from '../phone-verification/phone-verification.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { BookingRequestsController } from './booking-requests.controller';
@@ -15,7 +16,13 @@ import { BookingRequestsService } from './booking-requests.service';
  * logic. AuditService là @Global.
  */
 @Module({
-  imports: [BookingsModule, CalendarModule, PhoneVerificationModule, PricingModule],
+  imports: [
+    BookingsModule,
+    CalendarModule,
+    CustomersModule,
+    PhoneVerificationModule,
+    PricingModule,
+  ],
   controllers: [BookingRequestsController, PublicBookingRequestsController],
   providers: [BookingRequestsService],
 })

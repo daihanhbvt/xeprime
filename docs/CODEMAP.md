@@ -18,6 +18,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | **Khoảng thuê** `{pickupAt, returnAt}` — lịch đôi + tab ngày/giờ, dùng chung | `apps/web/src/components/form/RentalDateTimeRangeField.tsx` (bọc react-day-picker) | — |
 | **Thuê dài hạn** — gói cố định, tháng lịch, nguyện vọng nhận xe, mốc ưu đãi cam kết | `packages/types/src/long-term.ts` (hằng + `addCalendarMonthsVn` + tier); FE hiển thị nguyện vọng ở `apps/web/src/lib/long-term.ts` | 0011 |
 | **Ngày date-only** (`YYYY-MM-DD` ↔ cột `@db.Date`) | `apps/api/src/common/date-only.ts` | — |
+| **Chuẩn hoá SĐT Việt Nam** (`09…`/`84…`/`+84…` → `84…`) — định danh khách trong sổ khách | `packages/types/src/phone.ts` · re-export `apps/api/src/common/phone.ts` | — |
 
 ## Backend (`apps/api/src`)
 
@@ -51,6 +52,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Thông báo (in-app) | `modules/notification/` | Phase 5 |
 | Đánh giá sau chuyến (+ public review) | `modules/review/` | Phase 5 |
 | Chat (PG source of truth, Firestore projection sau cờ) | `modules/chat/` (+ `conversations.controller`) | ADR 0009 |
+| **Sổ khách của GIAN HÀNG** (hồ sơ + ghi chú + giấy tờ riêng tư + mức rủi ro) — writer DUY NHẤT của `tenant_customers` | `modules/customers/` (`customers.service.ts` · `customer-documents.service.ts`) | S-01; `resolveWithinTx` là nơi DUY NHẤT quyết định "SĐT này là khách nào" |
 | **Thu-Chi** (danh mục + phiếu thu/chi + workflow duyệt + dashboard) | `modules/finance/` (`finance-categories`, `receipts`, `finance-overview`) | Phase 6 §12 |
 | **Payments — writer DUY NHẤT của `booking.paid_amount`** (tx, increment/decrement) | `modules/payments/` | Phase 6; công nợ tính động = total−paid |
 | **Hợp đồng** (snapshot từ booking, số HĐ cố định, idempotent theo booking) | `modules/contracts/` | Phase 6 §11.7 |
@@ -93,6 +95,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Xác thực SĐT / OTP: `PhoneVerifyControl`, `PhoneLoginForm`, `OtpCodeInput`, `use-phone-verify` | `features/phone-verification/` | Phase 4 + passwordless |
 | Đặt xe khách (bottom-sheet/modal, từng bước) | `features/booking-requests/` (`RequestBookingFlow`, `RequestBookingModal`) | `guest-booking-passwordless.md` |
 | Đơn thuê (list/table/detail drawer, thu tiền) · Yêu cầu thuê inbox | `features/bookings/` · inbox ở `features/booking-requests/` | Phase 4/6 |
+| **Sổ khách của gian hàng** (danh sách + hồ sơ `/manage/customers/[id]`) | `features/customers/` · `app/(manage)/manage/customers/` | S-01; KHÁC `admin-customers` (giám sát nền tảng). Filter ở URL (ADR 0004) |
 | Thu-Chi · Payments · Công nợ · Dashboard tài chính | `features/finance/` · `features/payments/` | Phase 6 |
 | Hợp đồng thuê (xem/in `window.print`, print CSS toàn cục `[data-print-root]`) | `features/contracts/` · `app/(manage)/manage/contracts/[id]/` | Phase 6 §11.7 |
 | Thông báo · Đánh giá · Chat · Thành viên · Duyệt hồ sơ · Xe · Tổng quan | `features/{notifications,reviews,chat,members,approvals,vehicles,dashboard}/` | Phase 2–6 |
@@ -114,6 +117,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Schema **52 model** (auth/tenant/vehicle/booking/finance/chat/catalog/…) | `prisma/schema.prisma` |
 | Vehicle 360: `rental_policies` · `vehicle_source_details` · `vehicle_private_files` · `vehicle_documents(+_versions,+_ocr_jobs)` · `vehicle_maintenance_profiles` · `vehicle_odometer_readings` · `vehicle_maintenance_records(+_attachments)` · `vehicle_handovers(+_photos)` | `prisma/schema.prisma` (Wave 2→7) |
 | Migration init (trigger + `EXCLUDE USING gist`) | `prisma/migrations/*_init/migration.sql` |
+| Sổ khách: `tenant_customers` (unique `(tenant_id, normalized_phone)`) · `tenant_customer_notes` · `tenant_customer_documents`; composite FK từ `bookings`/`booking_requests`/`receipts` | `prisma/schema.prisma` (S-01) |
 | Migration viết tay từng phase (CHECK/constraint/partial index) | `prisma/migrations/<ts>_<name>/migration.sql` (booking_requests, finance, payments, phone_login…) |
 | Seed (idempotent, 3 scope + danh mục finance) | `prisma/src/seed.ts` |
 | Cấu hình CLI Prisma 7 | `prisma/prisma.config.ts` |
