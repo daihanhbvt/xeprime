@@ -11486,10 +11486,19 @@
             "type": "string",
             "description": "Slug gian hàng cho route /shops/[slug]"
           },
+          "shopLogoUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Logo gian hàng"
+          },
           "shopProvince": {
             "type": "string",
             "nullable": true,
             "description": "Tỉnh/thành gian hàng"
+          },
+          "completedTripCount": {
+            "type": "number",
+            "description": "Số chuyến đã hoàn thành của xe"
           },
           "provinceCode": {
             "type": "string",
@@ -11515,6 +11524,7 @@
           "noCollateral",
           "shopName",
           "shopSlug",
+          "completedTripCount",
           "ratingCount"
         ]
       },
@@ -11833,10 +11843,19 @@
             "type": "string",
             "description": "Slug gian hàng cho route /shops/[slug]"
           },
+          "shopLogoUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Logo gian hàng"
+          },
           "shopProvince": {
             "type": "string",
             "nullable": true,
             "description": "Tỉnh/thành gian hàng"
+          },
+          "completedTripCount": {
+            "type": "number",
+            "description": "Số chuyến đã hoàn thành của xe"
           },
           "provinceCode": {
             "type": "string",
@@ -11863,11 +11882,6 @@
           "manufactureYear": {
             "type": "number",
             "nullable": true
-          },
-          "shopLogoUrl": {
-            "type": "string",
-            "nullable": true,
-            "description": "Logo gian hàng"
           },
           "shopBio": {
             "type": "string",
@@ -11904,6 +11918,7 @@
           "noCollateral",
           "shopName",
           "shopSlug",
+          "completedTripCount",
           "ratingCount",
           "images",
           "features",

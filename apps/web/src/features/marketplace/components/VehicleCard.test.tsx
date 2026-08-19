@@ -1,8 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { VehicleCard } from './VehicleCard';
 import type { PublicListing } from '../types';
+import { renderWithIntl as render } from '@/i18n/test-utils';
 
 /**
  * Thẻ xe trên marketplace (Wave 11.1).
@@ -40,8 +41,10 @@ const LISTING = {
   discountPercent: null,
   ratingAvg: '4.8',
   ratingCount: 12,
+  completedTripCount: 27,
   shopName: 'Gian hàng Minh Tuấn',
   shopSlug: 'minh-tuan',
+  shopLogoUrl: null,
   shopProvince: 'Đà Nẵng',
   deliveryEnabled: true,
   noCollateral: false,
@@ -102,14 +105,21 @@ describe('VehicleCard', () => {
     );
   });
 
-  it('badge và giá cùng MỘT activeService: xe chỉ dài hạn hiện giá /tháng, không /ngày tự lái', () => {
+  it('hiển thị điểm xe, số chuyến thật và nhận diện gian hàng ở chân thẻ', () => {
+    render(<VehicleCard listing={LISTING} />);
+    expect(screen.getByText('4,8')).toBeTruthy();
+    expect(screen.getByText('27 chuyến')).toBeTruthy();
+    expect(screen.getByText('Chủ xe')).toBeTruthy();
+    expect(screen.getByText('Gian hàng Minh Tuấn')).toBeTruthy();
+  });
+
+  it('giá theo MỘT activeService: xe chỉ dài hạn hiện giá /tháng, không /ngày tự lái', () => {
     const longTermOnly = {
       ...LISTING,
       serviceTypes: ['long_term'],
       monthlyPrice: '12000000',
     } as unknown as PublicListing;
     render(<VehicleCard listing={longTermOnly} />);
-    expect(screen.getByText('Thuê dài hạn')).toBeTruthy();
     expect(screen.getByText('12.000.000 ₫')).toBeTruthy();
     expect(screen.getByText('/tháng')).toBeTruthy();
     // Giá tự lái 1.050.000/ngày KHÔNG được xuất hiện — nó không phải giá dài hạn.
@@ -124,12 +134,12 @@ describe('VehicleCard', () => {
       withDriverDailyPrice: null,
     } as unknown as PublicListing;
     render(<VehicleCard listing={withDriver} />);
-    expect(screen.getByText('Có tài xế +1')).toBeTruthy();
     expect(screen.getByText('Liên hệ báo giá')).toBeTruthy();
     expect(screen.queryByText('1.050.000 ₫')).toBeNull();
+    expect(detailLink().getAttribute('href')).toBe('/listings/V1?serviceType=with_driver');
   });
 
-  it('lọc có tài xế + xe có giá tài xế → giá đã gồm tài xế, cùng activeService với badge', () => {
+  it('lọc có tài xế + xe có giá tài xế → giá đã gồm tài xế và giữ đúng service trong link', () => {
     filters.value = { serviceType: 'with_driver' } as typeof filters.value;
     const withDriver = {
       ...LISTING,
@@ -137,9 +147,9 @@ describe('VehicleCard', () => {
       withDriverDailyPrice: '1300000',
     } as unknown as PublicListing;
     render(<VehicleCard listing={withDriver} />);
-    expect(screen.getByText('Có tài xế +1')).toBeTruthy();
     expect(screen.getByText('1.300.000 ₫')).toBeTruthy();
     expect(screen.getByText('đã gồm tài xế')).toBeTruthy();
+    expect(detailLink().getAttribute('href')).toBe('/listings/V1?serviceType=with_driver');
   });
 
   it('không để lại vùng hành động rỗng ở chân thẻ', () => {

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  BarChartOutlined,
   DashboardOutlined,
   EnvironmentOutlined,
   HeartOutlined,
@@ -8,16 +9,11 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import Link from 'next/link';
-import {
-  SERVICE_TYPE,
-  VEHICLE_TYPE,
-  VEHICLE_TYPE_LABEL,
-  serviceTypeLabel,
-  type VehicleType,
-} from '@xeprime/types';
+import { SERVICE_TYPE, VEHICLE_TYPE, VEHICLE_TYPE_LABEL, type VehicleType } from '@xeprime/types';
 import { listingPath, shopPath } from '@/constants/routes';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { applyDiscountPercent } from '@/lib/money';
+import { initialOf } from '@/lib/initials';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
@@ -50,12 +46,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
     VEHICLE_TYPE_LABEL[listing.vehicleType as VehicleType] ?? listing.vehicleType,
   );
   const brandLine = [brandLabel(listing.brand), listing.model].filter(Boolean).join(' ');
-  const specs = [
-    brandLine || typeLabel,
-    listing.seatCount ? t('seats', { count: listing.seatCount }) : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const specs = brandLine || typeLabel;
 
   /*
    * MỘT `activeService` duy nhất cho cả thẻ (17/08) — badge, giá, đơn vị, ghi chú và link
@@ -70,11 +61,10 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
   const activeService =
     serviceContext ??
     (serviceTypes.includes(SERVICE_TYPE.SELF_DRIVE) ? SERVICE_TYPE.SELF_DRIVE : serviceTypes[0]);
-  const extraServiceCount = Math.max(0, serviceTypes.length - 1);
-
   const fuel = fuelTypeLabel(listing.fuelType);
   const rating = Number(listing.ratingAvg);
   const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
+  const completedTripCount = listing.completedTripCount ?? 0;
 
   // Preview cùng công thức với PricingService; báo giá server vẫn là nguồn chốt.
   const discount = listing.discountPercent ?? 0;
@@ -137,12 +127,6 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
         ) : (
           <CarGlyph type={listing.vehicleType as VehicleType} />
         )}
-        {activeService ? (
-          <span className={styles.serviceBadge}>
-            {domainLabel('serviceType', activeService, serviceTypeLabel(activeService))}
-            {extraServiceCount > 0 ? ` ${t('extraServices', { count: extraServiceCount })}` : ''}
-          </span>
-        ) : null}
         {discount > 0 ? <DiscountTag percent={discount} className={styles.discountBadge} /> : null}
         <button className={styles.fav} type="button" aria-label={t('save')}>
           <HeartOutlined />
@@ -150,8 +134,10 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
       </div>
 
       <div className={styles.body}>
-        <h3 className={styles.title}>{listing.name}</h3>
-        {specs ? <p className={styles.specs}>{specs}</p> : null}
+        <div className={styles.heading}>
+          <h3 className={styles.title}>{listing.name}</h3>
+          <p className={styles.specs}>{specs}</p>
+        </div>
 
         <div className={styles.metaRow}>
           {listing.shopProvince ? (
@@ -159,17 +145,6 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
               <EnvironmentOutlined /> {listing.shopProvince}
             </span>
           ) : null}
-          {hasRating ? (
-            <span className={styles.metaItem}>
-              <StarFilled className={styles.star} /> {fmt.rating(rating)}
-              <span className={styles.ratingCount}>({listing.ratingCount})</span>
-            </span>
-          ) : (
-            <span className={styles.newTag}>{t('newVehicle')}</span>
-          )}
-        </div>
-
-        <div className={styles.featureRow}>
           {fuel ? (
             <span className={styles.metaItem}>
               <DashboardOutlined /> {fuel}
@@ -180,6 +155,9 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
               <TeamOutlined /> {t('seats', { count: listing.seatCount })}
             </span>
           ) : null}
+        </div>
+
+        <div className={styles.amenityRow}>
           {listing.deliveryEnabled ? (
             <span className={styles.amenityTag}>{t('delivery')}</span>
           ) : null}
@@ -188,7 +166,44 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
           ) : null}
         </div>
 
+        <div className={styles.reputationRow}>
+          {hasRating ? (
+            <span
+              className={styles.rating}
+              title={t('ratingCount', { count: listing.ratingCount })}
+            >
+              <StarFilled className={styles.star} /> {fmt.rating(rating)}
+            </span>
+          ) : (
+            <span className={styles.newVehicle}>{t('newVehicle')}</span>
+          )}
+          <span className={styles.reputationDivider} aria-hidden="true" />
+          <span className={styles.tripCount}>
+            <BarChartOutlined /> {t('completedTrips', { count: completedTripCount })}
+          </span>
+        </div>
+
         <div className={styles.footer}>
+          <Link
+            href={shopPath.detail(listing.shopSlug)}
+            className={styles.shop}
+            title={listing.shopName}
+            aria-label={listing.shopName}
+          >
+            <span className={styles.shopAvatar} aria-hidden="true">
+              {listing.shopLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- logo gian hàng từ storage ngoài
+                <img src={listing.shopLogoUrl} alt="" loading="lazy" />
+              ) : (
+                initialOf(listing.shopName)
+              )}
+            </span>
+            <span className={styles.shopCopy}>
+              <span className={styles.shopCaption}>{t('owner')}</span>
+              <span className={styles.shopName}>{listing.shopName}</span>
+            </span>
+          </Link>
+
           <div className={styles.price}>
             {displayPrice ? (
               <>
@@ -200,11 +215,13 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
                   Dựng bằng rich text của ICU thay vì nối hai chuỗi đã dịch: mỗi ngôn ngữ tự
                   quyết đơn vị đứng đâu, mà thẻ `<b>`/`<span>` vẫn đúng như thiết kế.
                 */}
-                {t.rich(priceMessage, {
-                  value: fmt.money(displayPrice),
-                  amount: (chunks) => <b>{chunks}</b>,
-                  unit: (chunks) => <span>{chunks}</span>,
-                })}
+                <span className={styles.currentPrice}>
+                  {t.rich(priceMessage, {
+                    value: fmt.money(displayPrice),
+                    amount: (chunks) => <b>{chunks}</b>,
+                    unit: (chunks) => <span>{chunks}</span>,
+                  })}
+                </span>
                 {driverContext ? (
                   <span className={styles.priceNote}>{t('includesDriver')}</span>
                 ) : null}
@@ -215,13 +232,6 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
               <b className={styles.priceContact}>{t('contactForQuote')}</b>
             )}
           </div>
-          <Link
-            href={shopPath.detail(listing.shopSlug)}
-            className={styles.shop}
-            title={listing.shopName}
-          >
-            {listing.shopName}
-          </Link>
         </div>
       </div>
     </article>

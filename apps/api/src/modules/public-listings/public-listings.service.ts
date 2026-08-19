@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  BOOKING_STATUS,
   LISTING_STATUS,
   PROVINCE_CODES,
   REVIEW_STATUS,
@@ -69,7 +70,7 @@ const LISTING_CARD_SELECT = {
   provinceCode: true,
   provinceName: true,
   shopSlug: true,
-  tenant: { select: { name: true } },
+  tenant: { select: { name: true, profile: { select: { logoUrl: true } } } },
 } satisfies Prisma.PublicListingSelect;
 
 type ListingCardRow = Prisma.PublicListingGetPayload<{ select: typeof LISTING_CARD_SELECT }>;
@@ -86,7 +87,7 @@ interface VehicleRating {
  * denormalize trên snapshot (ListingsService.refreshRating nuôi) — hiển thị 1 chữ số thập phân
  * như UI (4.9).
  */
-function toListingCard(l: ListingCardRow): PublicListingDto {
+function toListingCard(l: ListingCardRow, completedTripCount: number): PublicListingDto {
   return {
     id: l.vehicleId,
     name: l.title,
@@ -110,8 +111,10 @@ function toListingCard(l: ListingCardRow): PublicListingDto {
     discountPercent: l.discountPercent,
     shopName: l.tenant.name,
     shopSlug: l.shopSlug,
+    shopLogoUrl: l.tenant.profile?.logoUrl ?? null,
     provinceCode: l.provinceCode,
     shopProvince: l.provinceName,
+    completedTripCount,
     ratingAvg: l.ratingAvg != null ? l.ratingAvg.toFixed(1) : null,
     ratingCount: l.ratingCount,
   };
@@ -308,6 +311,26 @@ export class PublicListingsService {
     private readonly pricing: PricingService,
   ) {}
 
+  /**
+   * Một truy vấn gộp cho cả trang — không phát sinh N+1 khi card cần hiển thị số chuyến thật.
+   * Chỉ đếm đơn đã hoàn thành và chưa xoá; trạng thái khác không được quảng bá như một chuyến.
+   */
+  private async completedTripsByVehicle(vehicleIds: string[]): Promise<Map<string, number>> {
+    if (vehicleIds.length === 0) return new Map();
+
+    const groups = await this.prisma.booking.groupBy({
+      by: ['vehicleId'],
+      where: {
+        vehicleId: { in: vehicleIds },
+        status: BOOKING_STATUS.COMPLETED,
+        deletedAt: null,
+      },
+      _count: { _all: true },
+    });
+
+    return new Map(groups.map((group) => [group.vehicleId, group._count._all]));
+  }
+
   async search(query: PublicListingQueryDto): Promise<{
     data: PublicListingDto[];
     meta: PaginationMeta;
@@ -328,9 +351,10 @@ export class PublicListingsService {
         select: LISTING_CARD_SELECT,
       }),
     ]);
+    const completedTrips = await this.completedTripsByVehicle(rows.map((row) => row.vehicleId));
 
     return {
-      data: rows.map(toListingCard),
+      data: rows.map((row) => toListingCard(row, completedTrips.get(row.vehicleId) ?? 0)),
       meta: { page, limit, total, hasNext: page * limit < total },
     };
   }
@@ -687,9 +711,10 @@ export class PublicListingsService {
         select: LISTING_CARD_SELECT,
       }),
     ]);
+    const completedTrips = await this.completedTripsByVehicle(rows.map((row) => row.vehicleId));
 
     return {
-      data: rows.map(toListingCard),
+      data: rows.map((row) => toListingCard(row, completedTrips.get(row.vehicleId) ?? 0)),
       meta: { page, limit, total, hasNext: page * limit < total },
     };
   }
@@ -753,7 +778,12 @@ export class PublicListingsService {
       });
     }
 
-    const rating = (await this.ratingsByVehicle([v.id])).get(v.id);
+    const [rating, completedTripCount] = await Promise.all([
+      this.ratingsByVehicle([v.id]).then((ratings) => ratings.get(v.id)),
+      this.prisma.booking.count({
+        where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
+      }),
+    ]);
 
     /*
      * Giá SÁU gói thuê dài hạn (ADR 0011): bảng chọn gói phải hiện TIỀN THẬT ngay khi mở, nên
@@ -790,6 +820,7 @@ export class PublicListingsService {
       discountPercent: v.discountPercent,
       shopName: v.tenant.name,
       shopSlug: v.tenant.slug,
+      completedTripCount,
       // Vị trí là của CHI NHÁNH giữ xe, không phải của hồ sơ gian hàng: shop nhiều chi nhánh thì
       // hai xe cùng shop hoàn toàn có thể ở hai tỉnh khác nhau.
       provinceCode: v.branch?.province?.code ?? null,

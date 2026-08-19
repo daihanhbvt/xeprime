@@ -287,8 +287,13 @@ export class PublicListingDto {
 
   @ApiProperty({ description: 'Tên gian hàng' }) shopName!: string;
   @ApiProperty({ description: 'Slug gian hàng cho route /shops/[slug]' }) shopSlug!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Logo gian hàng' })
+  shopLogoUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Tỉnh/thành gian hàng' })
   shopProvince!: string | null;
+
+  @ApiProperty({ description: 'Số chuyến đã hoàn thành của xe' })
+  completedTripCount!: number;
 
   @ApiPropertyOptional({
     type: String,
@@ -312,8 +317,6 @@ export class PublicListingDetailDto extends PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) color!: string | null;
   @ApiPropertyOptional({ type: Number, nullable: true }) manufactureYear!: number | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Logo gian hàng' })
-  shopLogoUrl!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Giới thiệu gian hàng' })
   shopBio!: string | null;
 

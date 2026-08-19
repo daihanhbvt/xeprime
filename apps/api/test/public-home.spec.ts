@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  BOOKING_STATUS,
   REVIEW_STATUS,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
@@ -126,6 +127,28 @@ beforeAll(async () => {
   await seedVehicle(tenantSmall);
   await seedVehicle(tenantLocked);
 
+  await prisma.tenantProfile.update({
+    where: { tenantId: tenantBig },
+    data: { logoUrl: 'https://img.example/shop-big-logo.jpg' },
+  });
+
+  // Card công khai chỉ được gọi một booking COMPLETED là một chuyến; trạng thái khác không đếm.
+  for (const status of [BOOKING_STATUS.COMPLETED, BOOKING_STATUS.CANCELLED]) {
+    const id = newId();
+    await prisma.booking.create({
+      data: {
+        id,
+        tenantId: tenantBig,
+        vehicleId: ratedVehicle,
+        code: `B-${id.slice(-8)}`,
+        customerName: 'Khách marketplace',
+        status,
+        pickupAt: new Date('2026-08-01T01:00:00.000Z'),
+        returnAt: new Date('2026-08-02T01:00:00.000Z'),
+      },
+    });
+  }
+
   // 2 review published (5 + 4 = 4.5) + 1 hidden (không được tính).
   for (const [rating, status] of [
     [5, REVIEW_STATUS.PUBLISHED],
@@ -152,6 +175,7 @@ afterAll(async () => {
   if (dbAvailable) {
     const tenantIds = [tenantBig, tenantSmall, tenantLocked, tenantEmpty];
     await prisma.review.deleteMany({ where: { tenantId: { in: tenantIds } } });
+    await prisma.booking.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.publicListing.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.vehicle.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.tenantProfile.deleteMany({ where: { tenantId: { in: tenantIds } } });
@@ -226,7 +250,8 @@ describe('Dữ liệu trang chủ marketplace', () => {
 
     // Shop không có xe / shop bị khoá đều không lọt vào danh sách.
     const emptySlug = (await prisma.tenant.findUniqueOrThrow({ where: { id: tenantEmpty } })).slug;
-    const lockedSlug = (await prisma.tenant.findUniqueOrThrow({ where: { id: tenantLocked } })).slug;
+    const lockedSlug = (await prisma.tenant.findUniqueOrThrow({ where: { id: tenantLocked } }))
+      .slug;
     expect(slugs).not.toContain(emptySlug);
     expect(slugs).not.toContain(lockedSlug);
 
@@ -234,12 +259,14 @@ describe('Dữ liệu trang chủ marketplace', () => {
     expect([...ratings].sort((a, b) => b - a)).toEqual(ratings);
   });
 
-  maybe('thẻ xe mang điểm đánh giá của XE, chỉ tính review published', async () => {
+  maybe('thẻ xe mang điểm, số chuyến hoàn thành và logo gian hàng thật', async () => {
     const res = await service.search({ provinceCode: PROV_BIG, limit: 48 });
     const rated = res.data.find((v) => v.id === ratedVehicle);
     // (5 + 4) / 2 = 4.5 — review hidden bị loại.
     expect(rated?.ratingAvg).toBe('4.5');
     expect(rated?.ratingCount).toBe(2);
+    expect(rated?.completedTripCount).toBe(1);
+    expect(rated?.shopLogoUrl).toBe('https://img.example/shop-big-logo.jpg');
 
     const noReview = res.data.find((v) => v.id !== ratedVehicle);
     expect(noReview?.ratingAvg).toBeNull();

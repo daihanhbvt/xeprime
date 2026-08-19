@@ -3632,8 +3632,12 @@ export interface components {
             shopName: string;
             /** @description Slug gian hàng cho route /shops/[slug] */
             shopSlug: string;
+            /** @description Logo gian hàng */
+            shopLogoUrl?: string | null;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
+            /** @description Số chuyến đã hoàn thành của xe */
+            completedTripCount: number;
             /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
             provinceCode?: string | null;
             /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
@@ -3740,8 +3744,12 @@ export interface components {
             shopName: string;
             /** @description Slug gian hàng cho route /shops/[slug] */
             shopSlug: string;
+            /** @description Logo gian hàng */
+            shopLogoUrl?: string | null;
             /** @description Tỉnh/thành gian hàng */
             shopProvince?: string | null;
+            /** @description Số chuyến đã hoàn thành của xe */
+            completedTripCount: number;
             /** @description Mã tỉnh nơi xe đang đỗ (theo chi nhánh) — dùng để lọc/điều hướng */
             provinceCode?: string | null;
             /** @description Điểm đánh giá trung bình CỦA XE (review published). Null khi chưa có đánh giá. */
@@ -3751,8 +3759,6 @@ export interface components {
             description?: string | null;
             color?: string | null;
             manufactureYear?: number | null;
-            /** @description Logo gian hàng */
-            shopLogoUrl?: string | null;
             /** @description Giới thiệu gian hàng */
             shopBio?: string | null;
             /** @description URL ảnh gallery theo thứ tự */
