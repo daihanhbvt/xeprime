@@ -16,12 +16,12 @@
   z-index: 2;
   max-width: var(--xp-container-max-width);
   padding: 0 var(--xp-space-md);
-  margin: -112px auto 0;
+  margin: -119px auto 0;
 }
 
 /* Shimmer thuần CSS — fallback này render trong Server Component nên không dùng Skeleton antd. */
 .searchFallbackInner {
-  height: 216px;
+  height: 222px;
   border-radius: var(--xp-border-radius);
   animation: search-fallback-pulse 1.4s ease-in-out infinite;
   background: var(--xp-color-bg-container);
@@ -46,6 +46,6 @@
 
   /* Mobile xếp dọc: ba tầng chiếm trọn bề ngang, ô nhập nằm dọc — cao hơn bậc thang desktop. */
   .searchFallbackInner {
-    height: 362px;
+    height: 358px;
   }
 }

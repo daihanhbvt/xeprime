@@ -14,15 +14,11 @@
 }
 
 /*
- * Biến thể nền của rãnh. Tầng loại xe ngồi thẳng trên thẻ trắng nên rãnh phải TRONG SUỐT (thấy
- * hai lớp nền xám chồng nhau là lộ ngay); tầng dịch vụ ngồi trên dải vàng nhạt.
+ * Rãnh TRONG SUỐT: hai tầng chọn của thẻ tìm kiếm đã ngồi thẳng trên mặt thẻ trắng, vẽ thêm một
+ * nền xám nữa là hai lớp nền chồng nhau và lộ ra ngay ở mối nối giữa các tầng.
  */
 .listPlain {
   background: none;
-}
-
-.listSand {
-  background: var(--xp-color-primary-light);
 }
 
 .tab {

@@ -6,46 +6,61 @@
  * ┌──── Địa điểm · Thời gian thuê · Tìm xe ────────┐  rộng nhất, dưới cùng
  *
  * Hình bậc thang KHÔNG phải trang trí: nó nói ra thứ tự quyết định (loại xe → dịch vụ → tiêu
- * chí), thứ mà một hàng ngang phẳng làm mất. Các tầng đè lên nhau vài pixel và cùng màu trắng
- * nên đọc như MỘT thẻ liền, không phải ba hộp rời.
+ * chí), thứ mà một hàng ngang phẳng làm mất. Ba tầng cùng màu trắng, khít nhau và chỉ có MỘT
+ * viền bóng bao ngoài, nên đọc như một thẻ liền chứ không phải ba hộp chồng lên nhau.
  */
 .cardOuter {
   position: relative;
   z-index: 2;
   max-width: var(--xp-container-max-width);
   padding: 0 var(--xp-space-md);
-  /* Hai tầng chọn (56px + 56px) nằm TRỌN trên banner; tầng tiêu chí bắt đầu ngay dưới mép banner. */
-  margin: -112px auto 0;
+  /* Hai tầng chọn (60px + 59px) nằm TRỌN trên banner; tầng tiêu chí bắt đầu ngay dưới mép banner. */
+  margin: -119px auto 0;
 }
 
+/*
+ * Đổ bóng đặt ở ĐÂY, không phải ở từng tầng.
+ *
+ * `drop-shadow` bám theo SILHOUETTE thật của cả cụm (hợp của ba khối), nên chỉ có một viền bóng
+ * chạy quanh hình bậc thang. Cho bóng vào từng tầng thì tầng trên hắt một vệt tối ngang mặt tầng
+ * dưới — đúng cái làm ba tầng trông như đang đè lên nhau thay vì liền một khối.
+ */
 .card {
   display: flex;
   flex-direction: column;
   align-items: center;
+  filter: drop-shadow(0 8px 12px rgba(41, 31, 15, 0.14));
 }
 
-/* Nền + bo góc dùng chung của cả ba tầng — khác nhau chỉ ở bề rộng và tầng z. */
+/* Nền dùng chung của cả ba tầng — khác nhau ở bề rộng, bo góc và tầng z. */
 .tier {
   position: relative;
   background: var(--xp-color-bg-container);
-  border-radius: var(--xp-border-radius-pill);
 }
 
 /*
- * Tầng trên nằm TRÊN tầng dưới: mối nối phải là màu trắng liền, không thấy viền bo của tầng
- * dưới cắt qua. Đè 10px (12px ở tầng đáy vì bo góc của nó lớn hơn).
+ * Hai tầng trên bo góc **CHỈ Ở TRÊN**, đáy cắt thẳng.
+ *
+ * Đây là thứ biến ba khối rời thành một bậc thang liền: đáy bo tròn thì mỗi tầng đọc như một
+ * thẻ riêng đang trôi, còn đáy thẳng thì nó "đứng" trên mặt tầng dưới. Góc bo của tầng dưới
+ * vẫn thấy vì tầng dưới RỘNG HƠN — chính chỗ thừa ra hai bên tạo ra bậc.
+ *
+ * Hai tầng dùng CÙNG một khoảng đệm nên khoảng thở trên–dưới đều nhau; chúng chỉ chồng lên nhau
+ * đúng 1px — vừa đủ để mối nối không hở một đường tóc do làm tròn sub-pixel (nền hero lọt qua),
+ * và không đủ để thành một tầng đè lên tầng kia.
  */
 .tierVehicle {
   z-index: 3;
-  padding: 6px 8px;
-  box-shadow: 0 6px 16px -6px rgba(41, 31, 15, 0.18);
+  padding: var(--xp-space-xs);
+  border-radius: 24px 24px 0 0;
+  border-bottom: 1px solid var(--xp-color-border);
 }
 
 .tierService {
   z-index: 2;
-  padding: 14px var(--xp-space-md) 8px;
-  margin-top: -10px;
-  box-shadow: 0 6px 16px -6px rgba(41, 31, 15, 0.18);
+  padding: var(--xp-space-xs);
+  border-radius: 24px 24px 0 0;
+  /* border-bottom: 1px solid var(--xp-color-border); */
 }
 
 .tierFields {
@@ -54,24 +69,10 @@
   width: 100%;
   flex-direction: column;
   padding: 20px 20px 22px;
-  /* Tầng đáy rộng cả hàng nên bo tròn hoàn toàn sẽ ăn mất hai đầu — bo góc lớn nhưng hữu hạn. */
-  border-radius: 32px;
-  margin-top: -12px;
-  box-shadow: var(--xp-shadow-overlay);
+  border-radius: 28px;
+  margin-top: -1px;
   gap: 14px;
-  animation: tier-enter 0.2s ease-out;
-}
-
-@keyframes tier-enter {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  margin-top: -16px;
 }
 
 /* Hàng Lộ trình (dịch vụ Có tài xế) — chiếm trọn bề ngang, đứng trên các ô nhập. */
@@ -114,7 +115,6 @@
 }
 
 .cellLabel {
-  padding-left: var(--xp-space-md);
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-overline);
   font-weight: var(--xp-font-weight-semibold);
@@ -123,9 +123,9 @@
 }
 
 /*
- * Ô nhập là VIÊN bo tròn, nền chìm, KHÔNG viền — viền chỉ xuất hiện khi focus. `min-width: 0`
- * bắt buộc: control của AntD có min-width riêng, thiếu nó cột grid bị đẩy rộng và nút "Tìm xe"
- * rớt xuống hàng dưới.
+ * Ô thời gian: KHÔNG viền, KHÔNG nền — giống hệt ô địa điểm bên cạnh (xem `LocationPicker`).
+ * `min-width: 0` bắt buộc: control của AntD có min-width riêng, thiếu nó cột grid bị đẩy rộng
+ * và nút "Tìm xe" rớt xuống hàng dưới.
  */
 .box {
   display: flex;
@@ -139,18 +139,15 @@
   gap: 10px;
 }
 
-.box:hover {
-  background: var(--xp-color-bg-selected);
-}
-
+/* Ô không còn viền nên vòng focus phải đứng RỘNG ra ngoài chữ mới thấy được. */
 .box:focus-visible {
-  border-color: var(--xp-color-border-focus);
-  outline: none;
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 4px;
 }
 
 .boxIcon {
   flex: none;
-  color: var(--xp-color-text-tertiary);
+  color: var(--xp-color-text);
   font-size: 17px;
 }
 
@@ -164,7 +161,6 @@
 
 /* Ghi chú dài hạn — nói rõ gói thuê chọn ở BƯỚC SAU, không phải ở đây. */
 .hint {
-  padding-left: var(--xp-space-md);
   margin: 0;
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-sm);
@@ -172,29 +168,28 @@
 
 @media (max-width: 760px) {
   /*
-   * Màn hẹp không đủ chỗ cho bậc thang: ba tầng cùng chiếm trọn bề ngang, giữ NGUYÊN thứ tự
-   * trên–dưới nên phân tầng vẫn đọc được, chỉ mất phần thu hẹp dần.
+   * Màn hẹp không đủ chỗ cho bậc thang: ba tầng cùng chiếm trọn bề ngang. Cùng bề rộng thì
+   * không còn bậc để bo góc, nên chỉ MÉP NGOÀI của cả cụm được bo — trên cùng và dưới cùng —
+   * và ba tầng đọc thành MỘT thẻ liền. Thứ tự trên–dưới giữ nguyên nên phân tầng vẫn rõ.
    */
   .tier {
     width: 100%;
-    border-radius: 24px;
   }
 
-  .tierVehicle,
-  .tierService {
-    padding: 8px;
+  .tierVehicle {
+    border-radius: 24px 24px 0 0;
   }
 
   .tierService {
-    padding-top: 16px;
+    border-radius: 0;
   }
 
   .tierFields {
     padding: 18px var(--xp-space-md);
-    border-radius: 24px;
+    border-radius: 0 0 24px 24px;
   }
 
-  /* Banner mobile thấp hơn nhiều — đè 112px sẽ nuốt gần hết nó. */
+  /* Banner mobile thấp hơn nhiều — đè 119px sẽ nuốt gần hết nó. */
   .cardOuter {
     margin-top: -40px;
   }
@@ -214,18 +209,8 @@
     gap: 12px;
   }
 
-  .box,
-  .submit {
-    height: 48px !important;
-  }
-
   .submit {
     width: 100%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tierFields {
-    animation: none;
+    height: 48px !important;
   }
 }

@@ -89,17 +89,20 @@ export function SearchCard({
             items={serviceOptions}
             ariaLabel="Loại dịch vụ thuê xe"
             controls={formId}
-            tone="sand"
+            tone="plain"
           />
         </div>
 
         {/*
-          `key` theo dịch vụ: đổi dịch vụ là đổi form, nên khối được dựng lại và chạy lại hoạt
-          cảnh vào. Không animate CHIỀU CAO — mỗi form cao đúng nội dung của nó, và animate
-          height là nguồn giật khung hình kinh điển.
+          KHÔNG `key` theo dịch vụ, và KHÔNG hoạt cảnh vào ở tầng này.
+
+          Đổi dịch vụ chỉ đổi MỘT PHẦN của form: ô địa điểm và nút "Tìm xe" là chung cho cả ba
+          dịch vụ. Gắn `key` là ép React dựng lại cả khối, nên hai thứ không hề đổi cũng bị tháo
+          rồi dựng lại — cộng thêm một lần fade-in nữa là ra đúng cái chớp nháy khó chịu khi bấm
+          qua lại giữa các tab. Bỏ `key` thì các nút được giữ nguyên; chỉ hàng lộ trình, ô thời
+          gian và dòng ghi chú xuất hiện/biến mất, và chúng đổi TỨC THÌ.
         */}
         <div
-          key={draft.serviceType}
           id={formId}
           role="tabpanel"
           aria-label={`Tìm ${VEHICLE_TYPE_LABEL[draft.vehicleType].toLowerCase()} ${SERVICE_TYPE_LABEL[draft.serviceType].toLowerCase()}`}

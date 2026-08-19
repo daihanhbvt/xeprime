@@ -28,10 +28,10 @@ interface SegmentedTabsProps<T extends string> {
   /** `md` cho hero, `sm` cho panel thu gọn. */
   size?: 'md' | 'sm';
   /**
-   * Nền của rãnh chứa các tab — mỗi tầng của thẻ tìm kiếm ngồi trên một nền khác nhau:
-   * `plain` (trong suốt, tầng loại xe) · `sand` (vàng nhạt, tầng dịch vụ) · `muted` (mặc định).
+   * Nền của rãnh chứa các tab: `plain` (trong suốt — hai tầng của thẻ tìm kiếm, vốn đã ngồi
+   * trên mặt thẻ trắng) · `muted` (mặc định, cho panel đứng trên nền khác).
    */
-  tone?: 'muted' | 'plain' | 'sand';
+  tone?: 'muted' | 'plain';
   className?: string;
 }
 
@@ -88,7 +88,6 @@ export function SegmentedTabs<T extends string>({
         styles.list,
         size === 'sm' && styles.listSm,
         tone === 'plain' && styles.listPlain,
-        tone === 'sand' && styles.listSand,
         className,
       )}
       onKeyDown={handleKeyDown}
