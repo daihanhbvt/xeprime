@@ -44,7 +44,7 @@ export function VehicleCreateSuccess({
       <section className={styles.vehicleCard} aria-label="Xe vừa tạo">
         <div className={styles.thumb}>
           {vehicle.mainImageUrl ? (
-            <PreviewImage src={vehicle.mainImageUrl} alt="" />
+            <PreviewImage src={vehicle.mainImageUrl} alt="" className={styles.thumbImage} />
           ) : (
             <CarOutlined aria-hidden="true" />
           )}

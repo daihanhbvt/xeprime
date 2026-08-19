@@ -2,6 +2,10 @@
 
 import { Image } from 'antd';
 
+import { cx } from '@/lib/cx';
+
+import styles from './PreviewImage.module.css';
+
 /**
  * Ảnh NỘI DUNG: bấm vào là phóng to toàn màn hình (zoom / xoay / lật / đếm x-y — AntD Image
  * preview, đã ăn locale tiếng Việt của ConfigProvider).
@@ -10,24 +14,33 @@ import { Image } from 'antd';
  * gallery listing, ảnh chat, chứng từ bàn giao, xem trước trong form… Card xe hay ô
  * bấm-vào-là-đi-trang-chi-tiết KHÔNG dùng component này — ở đó cú bấm đã có nghĩa khác.
  *
- * `className` của `<img>` cũ được áp cho CẢ vỏ `.ant-image` lẫn `<img>` bên trong: mọi rule
- * kích thước/tỷ lệ/bo góc cũ giữ nguyên layout (giá trị tuyệt đối trùng nhau; `%` của img
- * tính trên vỏ mang cùng class). Nhờ vậy đổi `<img>` → `PreviewImage` là thay thế 1-1,
- * không phải sửa CSS từng nơi.
+ * `className` của `<img>` cũ đi vào semantic `classNames.root` — tức chỉ cái vỏ `.ant-image`,
+ * KHÔNG phải `rootClassName` (AntD dán `rootClassName` lên cả root của trình xem toàn màn
+ * hình). `<img>` bên trong nhận lại nguyên hình học của vỏ qua `PreviewImage.module.css`,
+ * nên đổi `<img>` → `PreviewImage` vẫn là thay thế 1-1, không phải sửa CSS từng nơi.
  */
 export function PreviewImage({
   src,
   alt = '',
   className,
   loading,
+  draggable,
 }: {
   src: string;
   alt?: string;
   className?: string;
   loading?: 'lazy' | 'eager';
+  /** `false` để chặn kéo-thả ảnh gốc của trình duyệt khi ảnh nằm trong vùng sắp xếp dnd-kit. */
+  draggable?: boolean;
 }) {
   return (
-    <Image src={src} alt={alt} className={className} rootClassName={className} loading={loading} />
+    <Image
+      src={src}
+      alt={alt}
+      loading={loading}
+      draggable={draggable}
+      classNames={{ root: cx(styles.root, className) }}
+    />
   );
 }
 

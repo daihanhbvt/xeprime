@@ -233,8 +233,12 @@ function SortableThumb({ url, onRemove }: { url: string; onRemove: () => void })
       {...attributes}
       {...listeners}
     >
-      {/* Click ngắn mở trình xem to; kéo vẫn sắp xếp được (PointerSensor có activationConstraint). */}
-      <PreviewImage src={url} alt="Ảnh gallery" className={styles.photo} />
+      {/*
+        Click ngắn mở trình xem to; kéo vẫn sắp xếp được (PointerSensor có activationConstraint).
+        `draggable={false}` chặn kéo-thả ảnh gốc của trình duyệt — thứ duy nhất cướp cú kéo —
+        thay cho `pointer-events: none` cũ (nó giết luôn cú click mở trình xem).
+      */}
+      <PreviewImage src={url} alt="Ảnh gallery" className={styles.photo} draggable={false} />
       <button
         type="button"
         className={styles.removeBtn}

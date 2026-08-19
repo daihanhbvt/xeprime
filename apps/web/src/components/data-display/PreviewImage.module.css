@@ -1,0 +1,28 @@
+/*
+ * AntD `Image` bọc `<img>` trong một `<div class="ant-image">`. Hai bẫy phải né:
+ *
+ * 1. `rootClassName` (và `className` cũ) KHÔNG chỉ chạm cái vỏ: `@rc-component/image` dán
+ *    `rootClassName` lên CẢ root của trình xem toàn màn hình. Class thumbnail có
+ *    `width/height` sẽ co trình xem thành ô bé xíu ở góc trái trên; có `display:none` thì
+ *    trình xem biến mất. Vì vậy class của nơi gọi chỉ đi qua semantic `classNames.root`.
+ *
+ * 2. Vỏ giữ hình học, nhưng `<img>` bên trong phải lấy lại đúng hình học đó mới hành xử như
+ *    `<img>` trần trước đây. AntD có sẵn `.ant-image .ant-image-img { width:100%; height:auto }`
+ *    — specificity (0,2,0) — nên selector dưới đây phải nặng hơn; nếu không ảnh giữ tỷ lệ gốc
+ *    và TRÀN ra khỏi ô, che chữ bên dưới. `.root.root` là cách nâng specificity lên (0,3,0)
+ *    mà không phải viết `!important`.
+ *
+ * `inherit` chứ không phải `100%`: vỏ mang đúng class cũ nên giá trị tính toán của nó chính là
+ * thứ `<img>` từng nhận — kể cả kiểu chỉ khai báo `max-width`/`max-height` (icon, ảnh chat)
+ * vốn co theo kích thước thật của ảnh.
+ */
+.root.root :global(.ant-image-img) {
+  width: inherit;
+  height: inherit;
+  max-width: inherit;
+  max-height: inherit;
+  aspect-ratio: inherit;
+  object-fit: inherit;
+  object-position: inherit;
+  border-radius: inherit;
+}

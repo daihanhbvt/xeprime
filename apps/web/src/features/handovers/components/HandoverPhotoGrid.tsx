@@ -278,10 +278,11 @@ export function HandoverPhotoGrid({
         <Image
           src={viewerUrl}
           alt=""
-          rootClassName={styles.hiddenPreviewAnchor}
+          // `classNames.root` chỉ ẩn cái neo; `rootClassName` ẩn LUÔN cả trình xem.
+          classNames={{ root: styles.hiddenPreviewAnchor }}
           preview={{
-            visible: true,
-            onVisibleChange: (open) => {
+            open: true,
+            onOpenChange: (open) => {
               if (!open) setViewerUrl(null);
             },
           }}
