@@ -12,6 +12,7 @@ import {
   API_ERROR_CODE,
   BOOKING_STATUS,
   POLICY_SOURCE,
+  HELD_FUNDS_RECEIPT_SOURCES,
   RECEIPT_STATUS,
   RECEIPT_TYPE,
   SERVICE_TYPE,
@@ -174,6 +175,10 @@ export class VehiclesService {
               vehicleId: { in: ids },
               status: RECEIPT_STATUS.APPROVED,
               deletedAt: null,
+              // Loại TIỀN GIỮ HỘ khỏi doanh thu/chi phí của xe. Từ khi thu cọc và hoàn cọc lên sổ
+              // (epic nối tiền), cọc cũng là phiếu thu gắn xe — cộng vào thì "Doanh thu" của xe
+              // phình đúng bằng số cọc đang cầm, dù chưa đồng nào là của gian hàng.
+              source: { notIn: [...HELD_FUNDS_RECEIPT_SOURCES] },
             },
             _sum: { amount: true },
           })

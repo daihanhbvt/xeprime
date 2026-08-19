@@ -43,7 +43,13 @@ import { PreviewImage, PreviewImageGroup } from '@/components/data-display/Previ
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
-import { ROUTES, VEHICLE_EDIT_TAB, vehiclePath, vehicleTabPath } from '@/constants/routes';
+import {
+  ROUTES,
+  VEHICLE_EDIT_TAB,
+  receiptsPath,
+  vehiclePath,
+  vehicleTabPath,
+} from '@/constants/routes';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { toAppTz } from '@/lib/datetime';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
@@ -573,6 +579,11 @@ function ModuleLinks({
   }
   if (has(PERMISSION.BOOKING_VIEW)) {
     links.push({ href: `${ROUTES.MANAGE.BOOKINGS}?vehicleId=${vehicleId}`, label: 'Đơn thuê' });
+  }
+  if (has(PERMISSION.FINANCE_VIEW)) {
+    // Doanh thu và chi phí của riêng xe này. Từ epic nối tiền, chi phí bảo dưỡng đã tự lên sổ
+    // nên đây mới là chỗ trả lời được "xe này lãi thật bao nhiêu".
+    links.push({ href: receiptsPath.filtered({ vehicleId }), label: 'Thu chi của xe' });
   }
   if (links.length === 0) return null;
 

@@ -52,7 +52,7 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 /** Dialog con mock thành marker — test scheduler chỉ cần biết ĐÚNG dialog nào được mở. */
-vi.mock('./BookingDetailDialog', () => ({
+vi.mock('@/features/bookings/components/BookingDetailDialog', () => ({
   BookingDetailDialog: ({ bookingId, open }: { bookingId: string; open: boolean }) =>
     open ? <div data-testid="booking-detail-dialog">{bookingId}</div> : null,
 }));
@@ -348,5 +348,40 @@ describe('CalendarScheduler — lưới điều phối đội xe', () => {
     permissions.granted = new Set();
     renderScheduler();
     expect(screen.getByText('Không có quyền xem lịch xe')).toBeTruthy();
+  });
+});
+
+/**
+ * Nút quay lại của thanh công cụ lịch.
+ *
+ * Người dùng tới màn lịch từ hộp thư yêu cầu thuê ("xe này có rảnh khung đó không?") rồi cần
+ * quay về ĐÚNG chỗ vừa rời — kèm tab và trang đang lọc. `?back=` mang đường đó, và vì nó trở
+ * thành `href` của một nút nên nó phải đi qua đúng bộ kiểm chống open-redirect của `?next=`.
+ */
+describe('CalendarToolbar — đường quay lại', () => {
+  it('có `?back=` hợp lệ ⇒ hiện nút quay lại trỏ đúng chỗ vừa rời', () => {
+    nav.params = new URLSearchParams(
+      'q=51A-123.45&back=%2Fmanage%2Fbooking-requests%3Fstatus%3Dall%26page%3D3',
+    );
+    renderScheduler();
+    expect(screen.getByRole('link', { name: 'Quay lại' }).getAttribute('href')).toBe(
+      '/manage/booking-requests?status=all&page=3',
+    );
+  });
+
+  it('không có `?back=` ⇒ KHÔNG có nút thừa', () => {
+    nav.params = new URLSearchParams('q=51A-123.45');
+    renderScheduler();
+    expect(screen.queryByRole('link', { name: 'Quay lại' })).toBeNull();
+  });
+
+  it('`back` trỏ ra ngoài miền bị bỏ — không biến lịch thành bàn đạp phishing', () => {
+    // `/\evil.example` — vài trình duyệt coi `\` như `/`, nên nó cũng là một đích ngoài miền.
+    for (const hostile of ['https://evil.example', '//evil.example', '/\\evil.example']) {
+      nav.params = new URLSearchParams({ back: hostile });
+      const view = renderScheduler();
+      expect(screen.queryByRole('link', { name: 'Quay lại' })).toBeNull();
+      view.unmount();
+    }
   });
 });

@@ -1,9 +1,14 @@
 'use client';
 
 import { Button, Segmented, Select, Tooltip } from 'antd';
-import { LeftOutlined, RightOutlined, SortAscendingOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, LeftOutlined, RightOutlined, SortAscendingOutlined } from '@ant-design/icons';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { VEHICLE_TYPE, VEHICLE_TYPE_LABEL } from '@xeprime/types';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
+import { isSafeNextPath } from '@/features/auth/safe-next';
+import { CALENDAR_BACK_PARAM } from '@/features/vehicles/calendar-link';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
 import { CALENDAR_SORT_OPTIONS, useCalendarFilters } from '../hooks/use-calendar-filters';
@@ -23,6 +28,18 @@ const ALL = 'all';
 export function CalendarToolbar() {
   const { filters, setFilters } = useCalendarFilters();
   const isMobile = useIsMobile();
+  const searchParams = useSearchParams();
+  const tCommon = useTranslations('Common');
+
+  /*
+   * Đường quay lại chỗ vừa đi ra (hộp thư yêu cầu thuê, hồ sơ xe…). Chỉ hiện khi người dùng
+   * THẬT SỰ tới đây từ một màn khác — vào lịch trực tiếp thì không có nút thừa.
+   *
+   * Kiểm bằng `isSafeNextPath` như `?next=` của luồng đăng nhập: giá trị này thành `href`, nên
+   * một đường dẫn ngoài miền lọt vào đây là một lỗ open-redirect.
+   */
+  const backParam = searchParams.get(CALENDAR_BACK_PARAM);
+  const backHref = isSafeNextPath(backParam) ? backParam : null;
 
   const start = dayjs.tz(filters.from, APP_TIME_ZONE);
   const end = start.add(filters.days - 1, 'day');
@@ -49,6 +66,12 @@ export function CalendarToolbar() {
   return (
     <div className={styles.toolbar}>
       <div className={styles.filters}>
+        {backHref ? (
+          <Link href={backHref} className={styles.back}>
+            <Button icon={<ArrowLeftOutlined aria-hidden="true" />}>{tCommon('actions.back')}</Button>
+          </Link>
+        ) : null}
+
         <AutoSearchInput
           placeholder="Tìm xe, mã hoặc biển số"
           value={filters.q ?? ''}

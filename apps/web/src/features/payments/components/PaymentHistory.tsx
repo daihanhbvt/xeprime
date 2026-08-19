@@ -2,7 +2,16 @@
 
 import { App, Button, List, Popconfirm, Tag } from 'antd';
 import {
-  PAYMENT_METHOD_META, PAYMENT_STATUS, PAYMENT_STATUS_META, PERMISSION, type PaymentMethod, type PaymentStatus, } from '@xeprime/types';
+  PAYMENT_KIND,
+  PAYMENT_KIND_LABEL,
+  PAYMENT_METHOD_META,
+  PAYMENT_STATUS,
+  PAYMENT_STATUS_META,
+  PERMISSION,
+  type PaymentKind,
+  type PaymentMethod,
+  type PaymentStatus,
+} from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
@@ -66,6 +75,11 @@ export function PaymentHistory({ bookingId }: { bookingId: string }) {
                 {fmt.money(p.amount)}
               </span>
               <Tag>{PAYMENT_METHOD_META[p.method as PaymentMethod]?.label ?? p.method}</Tag>
+              {/* Cọc và tiền thuê là hai loại tiền khác nhau: cọc KHÔNG trừ vào công nợ. Không
+                  phân biệt ở đây thì lịch sử hiện hai dòng giống hệt nhau mà đơn chỉ nhích một. */}
+              <Tag color={p.kind === PAYMENT_KIND.DEPOSIT ? 'cyan' : 'blue'}>
+                {PAYMENT_KIND_LABEL[p.kind as PaymentKind] ?? p.kind}
+              </Tag>
               <StatusTag value={p.status as PaymentStatus} meta={PAYMENT_STATUS_META} group="paymentStatus" />
               <span className={styles.time}>{fmt.dateTime(p.paidAt ?? p.createdAt)}</span>
             </div>

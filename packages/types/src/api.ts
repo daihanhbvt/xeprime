@@ -84,6 +84,16 @@ export const API_ERROR_CODE = {
   // Gói/hạn (ADR 0010)
   PLAN_LIMIT_REACHED: 'PLAN_LIMIT_REACHED',
 
+  // Sổ Thu-Chi (Phase 6 · epic nối tiền)
+  /**
+   * Phiếu sinh TỰ ĐỘNG từ một nghiệp vụ — không huỷ trực tiếp được.
+   *
+   * Huỷ thẳng phiếu thu của một lần thu tiền làm sổ báo ít hơn thực tế trong khi đơn vẫn ghi đã
+   * thu. Đảo phải đi qua chính nghiệp vụ gốc (hoàn giao dịch / sửa bản ghi hoàn cọc / sửa phiếu
+   * bảo dưỡng). `details` mang `{ source, sourceRefId, bookingId }` để FE dựng đúng đường quay về.
+   */
+  RECEIPT_SOURCE_LOCKED: 'RECEIPT_SOURCE_LOCKED',
+
   // Xác thực SĐT / OTP (Phase 4)
   PHONE_NOT_VERIFIED: 'PHONE_NOT_VERIFIED',
   OTP_INVALID: 'OTP_INVALID',
@@ -145,6 +155,17 @@ export const API_ERROR_CODE = {
    * điệp trung tính, vì khách không được biết mình nằm trong danh sách nội bộ nào.
    */
   CUSTOMER_BLOCKED: 'CUSTOMER_BLOCKED',
+
+  // Chat (ADR 0009)
+  /**
+   * Khách của yêu cầu/đơn này KHÔNG có tài khoản trên nền tảng (khách vãng lai gửi yêu cầu
+   * bằng SĐT đã xác thực OTP, chưa từng đăng nhập). Không có tài khoản thì không có phía bên
+   * kia để mở hội thoại — gian hàng phải gọi điện hoặc nhắn Zalo.
+   *
+   * Mã riêng thay vì `NOT_FOUND`: đây KHÔNG phải lỗi tra cứu mà là một sự thật về dữ liệu, và
+   * FE dùng nó để vô hiệu hoá nút "Nhắn tin" kèm lời giải thích thay vì hiện một alert lỗi.
+   */
+  CHAT_CUSTOMER_UNAVAILABLE: 'CHAT_CUSTOMER_UNAVAILABLE',
 
   /**
    * Chi nhánh còn ràng buộc nên chưa ngừng/đổi được: `details` liệt kê CHÍNH XÁC cái gì đang

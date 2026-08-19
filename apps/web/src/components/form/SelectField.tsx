@@ -32,6 +32,15 @@ interface SelectFieldProps<T extends FieldValues> {
   loading?: boolean;
   /** `multiple` = field giữ MẢNG giá trị (vd `serviceTypes` — một xe nhiều dịch vụ, 17/08). */
   mode?: 'multiple';
+  /**
+   * Tìm kiếm ở SERVER thay vì lọc danh sách đã tải.
+   *
+   * Cần khi tập nguồn lớn hơn thứ tải nổi một lần — ô chọn đơn thuê ở form phiếu thu-chi lấy
+   * 20 đơn ưu tiên còn nợ, nên đơn cũ chỉ tìm ra qua đường này. Truyền vào là tự động tắt lọc
+   * phía client (`filterOption={false}`): lọc lần nữa trên tập server vừa trả về sẽ giấu mất
+   * chính kết quả vừa tìm được.
+   */
+  onSearch?: (value: string) => void;
 }
 
 /**
@@ -51,6 +60,7 @@ export function SelectField<T extends FieldValues>({
   showSearch,
   loading,
   mode,
+  onSearch,
 }: SelectFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   // AntD `Select` không tự nhận `htmlFor` của `Form.Item` — thiếu `id` tường minh thì bấm nhãn
@@ -84,8 +94,12 @@ export function SelectField<T extends FieldValues>({
         disabled={disabled}
         loading={loading}
         showSearch={showSearch}
+        onSearch={onSearch}
+        // Tìm ở server thì KHÔNG lọc lại ở client — nếu không, kết quả server vừa trả về sẽ bị
+        // chính ô tìm kiếm giấu đi vì nhãn không chứa nguyên văn chuỗi đã gõ.
+        filterOption={onSearch ? false : undefined}
         // Mặc định AntD lọc theo `value` (là key slug), nên gõ "Mercedes" không ra `mercedes`.
-        optionFilterProp={showSearch ? 'label' : undefined}
+        optionFilterProp={showSearch && !onSearch ? 'label' : undefined}
         status={fieldState.error ? 'error' : undefined}
       />
     </Form.Item>

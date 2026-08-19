@@ -127,6 +127,25 @@ export const contractPath = {
 };
 
 /**
+ * Sổ Thu-Chi đã LỌC SẴN — đường đi từ một đơn / một xe / một khách sang phần tiền của nó.
+ *
+ * Ba tham số này không có ô nào trên thanh lọc: chúng chỉ đến từ đây. Dựng chuỗi ở một chỗ để
+ * ba màn nguồn không tự ghép query khác nhau rồi lệch tên tham số với backend.
+ */
+export const receiptsPath = {
+  filtered: (params: {
+    bookingId?: string;
+    vehicleId?: string;
+    tenantCustomerId?: string;
+  }): string => {
+    const query = new URLSearchParams(
+      Object.entries(params).filter(([, value]) => Boolean(value)) as [string, string][],
+    ).toString();
+    return query ? `${ROUTES.MANAGE.RECEIPTS}?${query}` : ROUTES.MANAGE.RECEIPTS;
+  },
+};
+
+/**
  * Chi tiết một chuyến của KHÁCH (Wave 11).
  *
  * `id` nhận cả id yêu cầu thuê lẫn id đơn thuê: thông báo phát ra từ Wave 5/9/10 trỏ vào cả hai

@@ -31,7 +31,7 @@ Any endpoint that returns a collection returns a *page* of it, never the whole t
 
 ## Build the whole endpoint, not the happy path
 
-A product endpoint handles the inputs that will occur, not only the tidy one from the demo: the not-found, the forbidden, the already-in-that-state, the empty result, the concurrent write. Each maps to the right status and a stable error code from `@xeprime/types`, so the frontend can react precisely. An operation that can partially fail runs in a transaction so it either fully happens or fully does not — a booking that gets created but whose occupancy write fails must roll back both, never leave a half-state. Finishing the success path and leaving the failure paths as "TODO" is shipping a bug with a delay timer on it.
+A product endpoint handles the inputs that will occur, not only the tidy one from the demo: the not-found, the forbidden, the already-in-that-state, the empty result, the concurrent write. Each maps to the right status and a stable error code from `@xeprime/types`, so the frontend can react precisely. An operation that can partially fail runs in a transaction so it either fully happens or fully does not — a booking that gets created but whose occupancy write fails must roll back both, never leave a half-state. Finishing the success path and leaving the failure paths as "TODO" is shipping a bug with a delay timer on it. A code the web must show is only half-delivered here: the frontend renders the **code**, not your Vietnamese `message` (ADR 0012), so a new `API_ERROR_CODE` needs its sentence added to `apps/web/messages/{vi,en}/errors.json` in the same change — see the `i18n` skill.
 
 ## Invariants belong in the database, services own the writes
 

@@ -16,6 +16,7 @@ import {
   IsISO8601,
   IsOptional,
   IsString,
+  Length,
   Matches,
   Max,
   MaxLength,
@@ -438,4 +439,38 @@ export class MaintenanceBoardQueryDto {
   @Min(1)
   @Max(MAX_LIMIT)
   limit?: number;
+}
+
+/**
+ * Sửa CHI PHÍ của phiếu bảo dưỡng đã hoàn tất (epic nối tiền).
+ *
+ * Cố ý hẹp: chỉ tiền + mã chứng từ. Lý do BẮT BUỘC vì con số này đã nằm trong sổ Thu-Chi — sửa
+ * tiền mà không nói vì sao là xoá dấu vết, đúng thứ `audit_logs` sinh ra để chống.
+ */
+export class CorrectMaintenanceCostDto {
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tiền string — ADR 0007. `null` = xoá chi phí (phiếu chi bị huỷ theo)',
+  })
+  @IsOptional()
+  @Matches(MONEY_PATTERN, { message: 'cost phải là số tiền hợp lệ' })
+  cost?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  receiptCode?: string | null;
+
+  @ApiProperty({ description: 'Vì sao sửa — vào audit cùng giá trị cũ' })
+  @IsString()
+  @Length(3, 500)
+  correctionReason!: string;
+
+  @ApiProperty({ description: 'rowVersion đang thấy — chống ghi đè' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  expectedRowVersion!: number;
 }

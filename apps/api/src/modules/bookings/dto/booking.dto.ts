@@ -118,9 +118,19 @@ export class BookingListItemDto {
   @ApiProperty({ description: 'ISO-8601 UTC' }) pickupAt!: string;
   @ApiProperty({ description: 'ISO-8601 UTC — với thuê dài hạn do SERVER tính từ gói' })
   returnAt!: string;
-  @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) totalAmount!: string;
-  @ApiProperty() paidAmount!: string;
-  @ApiProperty({ description: 'Công nợ = max(0, total − paid), string — ADR 0007' })
+  @ApiProperty({ description: 'Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string — ADR 0007' })
+  totalAmount!: string;
+  @ApiProperty({ description: 'Tiền thuê đã thu (`payments`) — writer duy nhất là PaymentsService' })
+  paidAmount!: string;
+  @ApiProperty({ description: 'Tổng phụ phí còn hiệu lực (quá giờ, vệ sinh, hư hại)' })
+  surchargeTotal!: string;
+  @ApiProperty({ description: 'PHẢI THU = tiền thuê + phụ phí — con số khách nợ tính trên nó' })
+  amountDue!: string;
+  @ApiProperty({ description: 'Thu thêm bằng phiếu NHẬP TAY đã duyệt gắn đơn' })
+  otherCollected!: string;
+  @ApiProperty({ description: 'ĐÃ THU = tiền thuê + phiếu tay + phần phụ phí cọc đã gánh' })
+  collectedAmount!: string;
+  @ApiProperty({ description: 'Công nợ = max(0, phải thu − đã thu) — common/booking-money.ts' })
   debtAmount!: string;
   @ApiProperty() depositAmount!: string;
   /** Tài xế được gán (chủ yếu đơn with_driver) — null = chưa phân công. */

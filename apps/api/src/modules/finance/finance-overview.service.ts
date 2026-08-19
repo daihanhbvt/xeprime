@@ -6,6 +6,15 @@ import {
   RECEIPT_TYPE,
   type PaginationMeta,
 } from '@xeprime/types';
+import {
+  BOOKING_MONEY_JOINS,
+  SQL_AMOUNT_DUE,
+  SQL_COLLECTED,
+  SQL_DEBT,
+  SQL_DEBT_SCOPE,
+  SQL_HAS_DEBT,
+} from '../../common/booking-money';
+import { dayRangeFilter } from '../../common/day-range';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   DebtItemDto,
@@ -22,9 +31,11 @@ interface DebtRow {
   customer_name: string;
   customer_phone: string | null;
   vehicle_name: string;
+  status: string;
   return_at: Date;
   total_amount: string;
   paid_amount: string;
+  surcharge_total: string;
   debt_amount: string;
 }
 
@@ -47,16 +58,20 @@ export class FinanceOverviewService {
     const soon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     const filterSql = debtFilterSql(query.filter, now, soon);
 
+    // `phải thu` / `đã thu` / `còn nợ` đến từ `common/booking-money.ts` — cùng công thức với
+    // chi tiết đơn, sổ khách và hợp đồng. Trước đây câu này tự viết `total - paid`, nên một đơn
+    // có phụ phí quá giờ chưa thu vẫn báo hết nợ và không ai đi đòi.
     const rows = await this.prisma.$queryRaw<DebtRow[]>(Prisma.sql`
       SELECT b.id AS booking_id, b.code, b.customer_name, b.customer_phone,
-             v.name AS vehicle_name, b.return_at,
-             trim_scale(b.total_amount)::text AS total_amount,
-             trim_scale(b.paid_amount)::text AS paid_amount,
-             trim_scale(b.total_amount - b.paid_amount)::text AS debt_amount
+             v.name AS vehicle_name, b.status, b.return_at,
+             trim_scale(${SQL_AMOUNT_DUE})::text AS total_amount,
+             trim_scale(${SQL_COLLECTED})::text AS paid_amount,
+             trim_scale(sur.total)::text AS surcharge_total,
+             trim_scale(${SQL_DEBT})::text AS debt_amount
       FROM bookings b JOIN vehicles v ON v.id = b.vehicle_id
-      WHERE b.tenant_id = ${tenantId} AND b.deleted_at IS NULL
-        AND b.status <> ${BOOKING_STATUS.CANCELLED}
-        AND b.total_amount > b.paid_amount
+      ${BOOKING_MONEY_JOINS}
+      WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE}
+        AND ${SQL_HAS_DEBT}
         ${filterSql}
       ORDER BY b.return_at ASC
       LIMIT ${limit} OFFSET ${offset}
@@ -65,9 +80,9 @@ export class FinanceOverviewService {
     const countRes = await this.prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
       SELECT COUNT(*)::bigint AS count
       FROM bookings b
-      WHERE b.tenant_id = ${tenantId} AND b.deleted_at IS NULL
-        AND b.status <> ${BOOKING_STATUS.CANCELLED}
-        AND b.total_amount > b.paid_amount
+      ${BOOKING_MONEY_JOINS}
+      WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE}
+        AND ${SQL_HAS_DEBT}
         ${filterSql}
     `);
     const total = Number(countRes[0]?.count ?? 0);
@@ -79,9 +94,11 @@ export class FinanceOverviewService {
         customerName: r.customer_name,
         customerPhone: r.customer_phone,
         vehicleName: r.vehicle_name,
+        status: r.status,
         returnAt: r.return_at.toISOString(),
         totalAmount: r.total_amount,
         paidAmount: r.paid_amount,
+        surchargeTotal: r.surcharge_total,
         debtAmount: r.debt_amount,
       })),
       meta: { page, limit, total, hasNext: page * limit < total },
@@ -89,18 +106,14 @@ export class FinanceOverviewService {
   }
 
   async summary(tenantId: string, query: FinanceSummaryQueryDto): Promise<FinanceSummaryDto> {
-    const createdAt =
-      query.from || query.to
-        ? {
-            ...(query.from ? { gte: new Date(query.from) } : {}),
-            ...(query.to ? { lte: new Date(query.to) } : {}),
-          }
-        : undefined;
+    // Cùng cột và cùng cách hiểu biên ngày với `/receipts` — trước đây màn này lọc `created_at`
+    // với ISO đầy đủ còn sổ lọc `created_at` với `YYYY-MM-DD`, nên hai màn ra hai con số.
+    const occurredAt = dayRangeFilter(query.from, query.to);
     const base: Prisma.ReceiptWhereInput = {
       tenantId,
       status: RECEIPT_STATUS.APPROVED,
       deletedAt: null,
-      ...(createdAt ? { createdAt } : {}),
+      ...(occurredAt ? { occurredAt } : {}),
     };
 
     const [income, expense, debtAgg] = await Promise.all([
@@ -113,10 +126,10 @@ export class FinanceOverviewService {
         _sum: { amount: true },
       }),
       this.prisma.$queryRaw<{ total: string; cnt: bigint }[]>(Prisma.sql`
-        SELECT trim_scale(COALESCE(SUM(total_amount - paid_amount), 0))::text AS total, COUNT(*)::bigint AS cnt
-        FROM bookings
-        WHERE tenant_id = ${tenantId} AND deleted_at IS NULL
-          AND status <> ${BOOKING_STATUS.CANCELLED} AND total_amount > paid_amount
+        SELECT trim_scale(COALESCE(SUM(${SQL_DEBT}), 0))::text AS total, COUNT(*)::bigint AS cnt
+        FROM bookings b
+        ${BOOKING_MONEY_JOINS}
+        WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE} AND ${SQL_HAS_DEBT}
       `),
     ]);
 
@@ -141,7 +154,9 @@ function debtFilterSql(filter: string | undefined, now: Date, soon: Date): Prism
     case 'upcoming':
       return Prisma.sql`AND b.return_at >= ${now} AND b.return_at <= ${soon}`;
     case 'unpaid':
-      return Prisma.sql`AND b.paid_amount = 0`;
+      // "Chưa thu đồng nào" tính trên ĐÃ THU đầy đủ, không chỉ `paid_amount`: một đơn đã nhận
+      // 200k quá giờ bằng phiếu tay thì không còn là chưa thu gì.
+      return Prisma.sql`AND ${SQL_COLLECTED} = 0`;
     default:
       return Prisma.empty;
   }

@@ -24,6 +24,11 @@ import {
   type BookingStatus,
   type PaginationMeta,
 } from '@xeprime/types';
+import {
+  bookingMoney,
+  emptyMoneySides,
+  loadBookingMoneySides,
+} from '../../common/booking-money';
 import { bookingDebt } from '../../common/money';
 import { normalizeRouteContext } from '../../common/route-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -132,9 +137,50 @@ export class BookingsService {
     ]);
 
     return {
-      data: rows.map(toListItem),
+      data: await this.withMoney(rows.map(toListItem)),
       meta: { page, limit, total, hasNext: page * limit < total },
     };
+  }
+
+  /**
+   * Vá các số tiền TỔNG HỢP vào DTO đã map.
+   *
+   * `toListItem`/`toDetail` là hàm thuần trên một dòng `bookings`, mà `phải thu`/`đã thu`/`còn
+   * nợ` lại cần ba tổng ở ba bảng khác (phụ phí, phiếu tay, cọc đã thu). Vá sau khi map giữ hai
+   * mapper thuần và gom việc nạp về đúng một chỗ, thay vì luồn tham số qua 7 lời gọi.
+   *
+   * Công thức nằm ở `common/booking-money.ts` — dùng CHUNG với `/manage/debts`, sổ khách và hợp
+   * đồng, nên bốn màn không thể nói bốn con số.
+   */
+  private async withMoney<T extends BookingListItemDto>(items: T[]): Promise<T[]> {
+    if (items.length === 0) return items;
+    const sides = await loadBookingMoneySides(
+      this.prisma,
+      items.map((i) => i.id),
+    );
+    return items.map((item) => {
+      const money = bookingMoney({
+        totalAmount: item.totalAmount,
+        paidAmount: item.paidAmount,
+        ...(sides.get(item.id) ?? emptyMoneySides()),
+      });
+      return {
+        ...item,
+        // toString() chứ không toFixed(2): tiền trên dây là chuỗi đã RÚT GỌN ở mọi DTO khác
+        // (interceptor serialize Decimal, SQL dùng trim_scale). Trả "1000000.00" ở riêng đây là
+        // một dạng thứ hai cho cùng một con số.
+        surchargeTotal: money.surchargeTotal.toString(),
+        amountDue: money.amountDue.toString(),
+        otherCollected: money.otherCollected.toString(),
+        collectedAmount: money.collectedAmount.toString(),
+        debtAmount: money.debtAmount.toString(),
+      };
+    });
+  }
+
+  private async withMoneyOne<T extends BookingListItemDto>(item: T): Promise<T> {
+    const [patched] = await this.withMoney([item]);
+    return patched!;
   }
 
   async getOne(tenantId: string, id: string): Promise<BookingDetailDto> {
@@ -143,7 +189,7 @@ export class BookingsService {
       select: DETAIL_SELECT,
     });
     if (!row) throw notFound();
-    return toDetail(row);
+    return this.withMoneyOne(toDetail(row));
   }
 
   /**
@@ -315,7 +361,7 @@ export class BookingsService {
       );
     }
 
-    return toDetail(created);
+    return this.withMoneyOne(toDetail(created));
   }
 
   /**
@@ -432,7 +478,7 @@ export class BookingsService {
       return updated;
     });
 
-    return toDetail(row);
+    return this.withMoneyOne(toDetail(row));
   }
 
   /**
@@ -522,7 +568,7 @@ export class BookingsService {
       return updated;
     });
 
-    return toDetail(row);
+    return this.withMoneyOne(toDetail(row));
   }
 
   /**
@@ -587,7 +633,7 @@ export class BookingsService {
 
         return updated;
       });
-      return toDetail(row);
+      return this.withMoneyOne(toDetail(row));
     } catch (err) {
       // Hai request đua qua được bước kiểm — exclusion constraint từ chối kẻ đến sau (23P01).
       if (isDriverScheduleConflict(err)) {
@@ -626,7 +672,7 @@ export class BookingsService {
       }),
     );
 
-    return toDetail(row);
+    return this.withMoneyOne(toDetail(row));
   }
 
   /**
@@ -865,7 +911,13 @@ function toListItem(b: BookingListRow): BookingListItemDto {
     returnAt: b.returnAt as unknown as string,
     totalAmount: b.totalAmount as unknown as string,
     paidAmount: b.paidAmount as unknown as string,
-    // Công nợ tính động = max(0, total − paid); không denormalize để khỏi drift (Phase 6).
+    // Năm số tổng hợp bên dưới do `BookingsService.withMoney` vá vào SAU khi map: chúng cần ba
+    // tổng ở ba bảng khác (phụ phí, phiếu tay, cọc đã thu) mà một dòng `bookings` không mang.
+    // Giá trị ở đây chỉ là mức nền an toàn nếu ai đó gọi mapper trực tiếp.
+    surchargeTotal: '0',
+    amountDue: b.totalAmount as unknown as string,
+    otherCollected: '0',
+    collectedAmount: b.paidAmount as unknown as string,
     debtAmount: bookingDebt(b.totalAmount, b.paidAmount) as unknown as string,
     depositAmount: b.depositAmount as unknown as string,
     driver: b.driver,

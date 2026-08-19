@@ -12,6 +12,8 @@ import {
   DEFAULT_PLATFORM_ROLE_PERMISSIONS,
   DEFAULT_TENANT_ROLE_PERMISSIONS,
   FINANCE_CATEGORY_TYPE,
+  SYSTEM_FINANCE_CATEGORY,
+  type SystemFinanceCategoryKey,
   FUEL_TYPE,
   LISTING_STATUS,
   MEMBERSHIP_STATUS,
@@ -1507,48 +1509,95 @@ async function syncSeedListing(vehicleId: string): Promise<boolean> {
   return true;
 }
 
-/** Danh mục thu/chi hệ thống (tenant_id null) — dùng chung mọi shop. Theo Vietrent legacy. */
-const SYSTEM_FINANCE_CATEGORIES: ReadonlyArray<{ type: string; name: string }> = [
-  ...[
-    'Tiền thuê xe',
-    'Tiền cọc',
-    'Thanh toán đơn',
-    'Phí quá giờ',
-    'Phí đền bù va quẹt',
-    'Phí phạt nguội',
-    'Thu khác',
-  ].map((name) => ({ type: FINANCE_CATEGORY_TYPE.INCOME, name })),
-  ...[
-    'Hoàn cọc',
-    'Bảo dưỡng/Thay nhớt',
-    'Sửa chữa sự cố',
-    'Mua bảo hiểm',
-    'Rửa xe',
-    'Giao/nhận xe',
-    'Đổ xăng',
-    'Chi phí vận hành',
-    'Chi phí marketing',
-    'Chi phí văn phòng',
-    'Chi khác',
-  ].map((name) => ({ type: FINANCE_CATEGORY_TYPE.EXPENSE, name })),
+/**
+ * Danh mục thu/chi hệ thống (tenant_id null) — dùng chung mọi shop. Theo Vietrent legacy.
+ *
+ * `systemKey` chỉ có ở 5 danh mục mà **phiếu tự động** cần trỏ tới. Số còn lại là danh mục để
+ * người dùng chọn tay, không đường ghi nào tra chúng, nên không cần khoá.
+ */
+const SYSTEM_FINANCE_CATEGORIES: ReadonlyArray<{
+  type: string;
+  name: string;
+  systemKey?: SystemFinanceCategoryKey;
+}> = [
+  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Tiền thuê xe' },
+  {
+    type: FINANCE_CATEGORY_TYPE.INCOME,
+    name: 'Tiền cọc',
+    systemKey: SYSTEM_FINANCE_CATEGORY.DEPOSIT,
+  },
+  {
+    type: FINANCE_CATEGORY_TYPE.INCOME,
+    name: 'Thanh toán đơn',
+    systemKey: SYSTEM_FINANCE_CATEGORY.BOOKING_PAYMENT,
+  },
+  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí quá giờ' },
+  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí đền bù va quẹt' },
+  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Phí phạt nguội' },
+  { type: FINANCE_CATEGORY_TYPE.INCOME, name: 'Thu khác' },
+
+  {
+    type: FINANCE_CATEGORY_TYPE.EXPENSE,
+    name: 'Hoàn cọc',
+    systemKey: SYSTEM_FINANCE_CATEGORY.DEPOSIT_REFUND,
+  },
+  {
+    type: FINANCE_CATEGORY_TYPE.EXPENSE,
+    name: 'Bảo dưỡng/Thay nhớt',
+    systemKey: SYSTEM_FINANCE_CATEGORY.MAINTENANCE,
+  },
+  {
+    type: FINANCE_CATEGORY_TYPE.EXPENSE,
+    name: 'Sửa chữa sự cố',
+    systemKey: SYSTEM_FINANCE_CATEGORY.REPAIR,
+  },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Mua bảo hiểm' },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Rửa xe' },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Giao/nhận xe' },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Đổ xăng' },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Chi phí vận hành' },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Chi phí marketing' },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Chi phí văn phòng' },
+  { type: FINANCE_CATEGORY_TYPE.EXPENSE, name: 'Chi khác' },
 ];
 
+/**
+ * Idempotent theo `systemKey` khi có (khoá ổn định), rơi về `(tenant, type, name)` cho danh mục
+ * không khoá. Danh mục đã tồn tại mà chưa có khoá thì **gán khoá**, KHÔNG đổi tên — migration đã
+ * gán một lượt, đây là lưới an toàn cho DB dựng từ seed trắng.
+ */
 async function seedFinanceCategories(): Promise<void> {
   let created = 0;
+  let keyed = 0;
   for (const cat of SYSTEM_FINANCE_CATEGORIES) {
     const existing = await prisma.financeCategory.findFirst({
-      where: { tenantId: null, type: cat.type, name: cat.name },
-      select: { id: true },
+      where: cat.systemKey
+        ? { OR: [{ systemKey: cat.systemKey }, { tenantId: null, type: cat.type, name: cat.name }] }
+        : { tenantId: null, type: cat.type, name: cat.name },
+      select: { id: true, systemKey: true },
     });
     if (!existing) {
       await prisma.financeCategory.create({
-        data: { id: ulid(), tenantId: null, type: cat.type, name: cat.name, isSystem: true },
+        data: {
+          id: ulid(),
+          tenantId: null,
+          type: cat.type,
+          name: cat.name,
+          isSystem: true,
+          systemKey: cat.systemKey ?? null,
+        },
       });
       created++;
+    } else if (cat.systemKey && existing.systemKey !== cat.systemKey) {
+      await prisma.financeCategory.update({
+        where: { id: existing.id },
+        data: { systemKey: cat.systemKey },
+      });
+      keyed++;
     }
   }
   const total = await prisma.financeCategory.count({ where: { tenantId: null, isSystem: true } });
-  console.log(`  danh mục thu/chi hệ thống: ${total} (mới ${created})`);
+  console.log(`  danh mục thu/chi hệ thống: ${total} (mới ${created}, gán khoá ${keyed})`);
 }
 
 /**

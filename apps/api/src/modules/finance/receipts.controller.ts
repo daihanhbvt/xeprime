@@ -7,8 +7,11 @@ import {
   CancelReceiptDto,
   CreateReceiptDto,
   ReceiptDetailDto,
+  ReceiptBookingOptionListDto,
+  ReceiptBookingOptionQueryDto,
   ReceiptListQueryDto,
   ReceiptPageDto,
+  ReceiptSummaryDto,
 } from './dto/finance.dto';
 import { ReceiptsService } from './receipts.service';
 
@@ -31,6 +34,35 @@ export class ReceiptsController {
     @Query() query: ReceiptListQueryDto,
   ): Promise<ReceiptPageDto> {
     return this.receipts.list(tenant.tenantId, query) as Promise<ReceiptPageDto>;
+  }
+
+  /**
+   * ⚠️ Phải đứng TRƯỚC `@Get(':id')` — Nest khớp route theo thứ tự khai báo, để sau thì
+   * `:id = 'summary'` và endpoint này trả 404 "Không tìm thấy phiếu".
+   */
+  @Get('summary')
+  @RequirePermissions(PERMISSION.FINANCE_VIEW)
+  @ApiOperation({
+    summary: 'Tổng thu/chi của ĐÚNG bộ lọc đang xem — thẻ tổng phải khớp danh sách bên dưới',
+  })
+  @ApiOkResponse({ type: ReceiptSummaryDto })
+  summary(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: ReceiptListQueryDto,
+  ): Promise<ReceiptSummaryDto> {
+    return this.receipts.summary(tenant.tenantId, query);
+  }
+
+  /** Nguồn cho ô "Liên kết đơn thuê (auto-fill)" ở form tạo phiếu. Cũng phải trước `:id`. */
+  @Get('booking-options')
+  @RequirePermissions(PERMISSION.RECEIPT_CREATE)
+  @ApiOperation({ summary: 'Đơn thuê gợi ý để gắn phiếu — ưu tiên đơn còn nợ' })
+  @ApiOkResponse({ type: ReceiptBookingOptionListDto })
+  async bookingOptions(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: ReceiptBookingOptionQueryDto,
+  ): Promise<ReceiptBookingOptionListDto> {
+    return { data: await this.receipts.bookingOptions(tenant.tenantId, query.q) };
   }
 
   @Get(':id')

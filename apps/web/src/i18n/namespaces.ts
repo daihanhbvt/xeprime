@@ -34,6 +34,12 @@ export const MESSAGE_NAMESPACES = [
 
   // — Cổng quản lý —
   { file: 'manage-common', namespace: 'ManageCommon' },
+  { file: 'booking-requests', namespace: 'BookingRequests' },
+  { file: 'bookings', namespace: 'Bookings' },
+  { file: 'vehicles', namespace: 'Vehicles' },
+  { file: 'customers', namespace: 'Customers' },
+  // Mới có màn Công nợ; sổ Thu-Chi vẫn còn chuỗi thô — xem `i18n:audit`.
+  { file: 'finance', namespace: 'Finance' },
 ] as const;
 
 export type MessageNamespace = (typeof MESSAGE_NAMESPACES)[number]['namespace'];

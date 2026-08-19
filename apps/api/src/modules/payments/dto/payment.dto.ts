@@ -1,5 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PAYMENT_METHOD_VALUES, PAYMENT_STATUS_VALUES } from '@xeprime/types';
+import {
+  PAYMENT_KIND,
+  PAYMENT_KIND_VALUES,
+  PAYMENT_METHOD_VALUES,
+  PAYMENT_STATUS_VALUES,
+} from '@xeprime/types';
 import { IsDateString, IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 /** Tiền nhập string thập phân ≤ 2 số lẻ (ADR 0007). */
@@ -17,6 +22,23 @@ export class RecordPaymentDto {
   @ApiProperty({ enum: PAYMENT_METHOD_VALUES })
   @IsIn(PAYMENT_METHOD_VALUES)
   method!: string;
+
+  /**
+   * Tiền THUÊ hay tiền CỌC. Mặc định `rental` để mọi client cũ giữ nguyên hành vi.
+   *
+   * Khác biệt không nằm ở nhãn: cọc là tài sản giữ hộ sẽ trả lại, nên **không** cộng vào
+   * `paid_amount` và **không** làm giảm công nợ (xem `PaymentsService`).
+   */
+  // KHÔNG khai `default:` ở đây: `openapi-typescript` coi mọi trường có `default` là luôn-có-mặt
+  // và sinh ra kiểu BẮT BUỘC ở phía web, tức mọi lời gọi cũ vỡ biên dịch. Giá trị mặc định thuộc
+  // về service (nơi nó thật sự được áp), mô tả nói rõ điều đó.
+  @ApiPropertyOptional({
+    enum: PAYMENT_KIND_VALUES,
+    description: `Bỏ trống = '${PAYMENT_KIND.RENTAL}' (tiền thuê)`,
+  })
+  @IsOptional()
+  @IsIn(PAYMENT_KIND_VALUES)
+  kind?: string;
 
   @ApiPropertyOptional({ description: 'Mã tra soát/tham chiếu (CK…)' })
   @IsOptional()
@@ -39,6 +61,7 @@ export class RecordPaymentDto {
 export class PaymentDto {
   @ApiProperty() id!: string;
   @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) amount!: string;
+  @ApiProperty({ enum: PAYMENT_KIND_VALUES, description: 'Tiền thuê hay tiền cọc' }) kind!: string;
   @ApiProperty({ enum: PAYMENT_METHOD_VALUES }) method!: string;
   @ApiProperty({ enum: PAYMENT_STATUS_VALUES }) status!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) receiptId!: string | null;

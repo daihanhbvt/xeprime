@@ -1,0 +1,45 @@
+/* Xác nhận duyệt yêu cầu theo ngày — cùng nhịp với ApproveLongTermDialog. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  margin: 0;
+  background: var(--xp-color-bg-muted);
+  gap: var(--xp-space-xs);
+}
+
+.row {
+  display: flex;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.row dt {
+  width: 96px;
+  flex: none;
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+}
+
+.row dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.effect {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

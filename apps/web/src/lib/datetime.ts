@@ -66,5 +66,40 @@ export function rentalDurationParts(from: Dayjs, to: Dayjs): RentalDurationParts
   return days <= 0 ? { days: 0, hours: Math.max(1, hours) } : { days, hours };
 }
 
+/**
+ * Khoảng `from`/`to` dạng `YYYY-MM-DD` cho một kỳ dựng sẵn, tính theo **giờ Việt Nam**.
+ *
+ * Trả chuỗi tham số URL chứ không phải `Dayjs`: đích đến của nó là searchParams (ADR 0004), và
+ * backend đã hiểu `YYYY-MM-DD` là trọn một ngày Việt Nam (`common/day-range.ts`). Đi qua `Date`
+ * ở giữa chỉ tạo thêm một chỗ để lệch múi giờ.
+ *
+ * `week` bắt đầu THỨ HAI — mặc định của dayjs là Chủ nhật, không phải cách người Việt đọc "tuần
+ * này". Ép tường minh thay vì `startOf('week')` để không phụ thuộc locale toàn cục (thứ mà repo
+ * này cấm đụng tới).
+ */
+export function buildPeriodRange(period: 'today' | 'this_week' | 'this_month' | 'last_month'): {
+  from: string;
+  to: string;
+} {
+  const now = dayjs().tz(APP_TIME_ZONE);
+  const fmt = (d: Dayjs) => d.format(DAY_PARAM_FORMAT);
+
+  switch (period) {
+    case 'today':
+      return { from: fmt(now), to: fmt(now) };
+    case 'this_week': {
+      // `day()` trả 0 cho Chủ nhật; quy về thứ Hai đầu tuần.
+      const monday = now.subtract((now.day() + 6) % 7, 'day');
+      return { from: fmt(monday), to: fmt(monday.add(6, 'day')) };
+    }
+    case 'this_month':
+      return { from: fmt(now.startOf('month')), to: fmt(now.endOf('month')) };
+    case 'last_month': {
+      const prev = now.subtract(1, 'month');
+      return { from: fmt(prev.startOf('month')), to: fmt(prev.endOf('month')) };
+    }
+  }
+}
+
 export { dayjs };
 export type { Dayjs };

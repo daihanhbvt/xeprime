@@ -21,6 +21,7 @@ import { CustomersService } from '../src/modules/customers/customers.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { CustomerTripsService } from '../src/modules/customer-trips/customer-trips.service';
+import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
@@ -42,7 +43,8 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
 const pricing = new PricingService(asService, audit);
-const settlement = new SettlementService(asService, audit, pricing, notifications);
+const receipts = new ReceiptsService(asService, audit);
+const settlement = new SettlementService(asService, audit, pricing, notifications, receipts);
 const occupancy = new OccupancyService(asService);
 const bookings = new BookingsService(
   asService,

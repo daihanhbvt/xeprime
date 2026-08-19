@@ -4,6 +4,10 @@ import {
   MAINTENANCE_DUE_STATUS,
   MAINTENANCE_STATUS,
   MAINTENANCE_TYPE,
+  RECEIPT_SOURCE,
+  RECEIPT_STATUS,
+  RECEIPT_TYPE,
+  SYSTEM_FINANCE_CATEGORY,
   MEMBERSHIP_STATUS,
   OCCUPANCY_SOURCE_TYPE,
   ODOMETER_SOURCE,
@@ -16,6 +20,7 @@ import {
 import 'reflect-metadata';
 import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import type { R2Service } from '../src/modules/storage/r2.service';
 import { MaintenanceBoardController } from '../src/modules/vehicles/maintenance/maintenance-board.controller';
@@ -60,7 +65,7 @@ const vehicles = makeVehiclesService(asService);
 const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
-const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit);
+const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit, new ReceiptsService(asService, audit));
 
 /** Vai trò đủ quyền (chủ gian hàng) vs vai trò vận hành (không tiền, không file). */
 const FULL_SCOPE = { canViewCost: true, canViewFiles: true };
@@ -988,5 +993,216 @@ describe('Trung tâm bảo dưỡng toàn đội xe (§9.2)', () => {
     const row = rows.data.find((item) => item.vehicleId === v.id)!;
     expect(row.activeRecord?.status).toBe(MAINTENANCE_STATUS.IN_PROGRESS);
     expect(JSON.stringify(row)).not.toContain('1200000');
+  });
+});
+
+/**
+ * Chi phí bảo dưỡng LÊN SỔ (epic nối tiền).
+ *
+ * Trước đây `cost` dừng lại ở hồ sơ xe, nên chi phí đội xe nằm ngoài sổ và "lãi thực theo xe"
+ * không tính được. Khoá cả ba chuyển tiếp, và khoá luôn ranh giới danh mục sửa-chữa ↔ bảo-dưỡng.
+ */
+describe('Bảo dưỡng → phiếu chi trong sổ', () => {
+  const costReceipts = (vehicleId: string) =>
+    prisma.receipt.findMany({
+      where: { tenantId, vehicleId, source: RECEIPT_SOURCE.MAINTENANCE },
+      select: { id: true, type: true, status: true, amount: true, receiptNo: true,
+                category: { select: { systemKey: true } } },
+    });
+
+  maybe('hoàn tất có chi phí → một phiếu chi, danh mục "Bảo dưỡng/Thay nhớt"', async () => {
+    const v = await createVehicle('MT-LEDGER-1');
+    const record = await maintenance.createRecord(
+      tenantId, v.id, ownerId,
+      { type: MAINTENANCE_TYPE.OIL_CHANGE, title: 'Thay nhớt định kỳ' },
+      FULL_SCOPE,
+    );
+    const done = await maintenance.completeRecord(
+      tenantId, v.id, ownerId, record.id,
+      { cost: '950000', expectedRowVersion: record.rowVersion },
+      FULL_SCOPE,
+    );
+
+    const rows = await costReceipts(v.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.type).toBe(RECEIPT_TYPE.EXPENSE);
+    expect(rows[0]!.status).toBe(RECEIPT_STATUS.APPROVED);
+    expect(rows[0]!.amount.toString()).toBe('950000');
+    expect(rows[0]!.category?.systemKey).toBe(SYSTEM_FINANCE_CATEGORY.MAINTENANCE);
+    // Ô chứng từ trống được điền bằng chính số phiếu vừa sinh.
+    expect(done.receiptCode).toBe(rows[0]!.receiptNo);
+  });
+
+  maybe('sửa chữa đi vào danh mục RIÊNG — không gộp với bảo dưỡng định kỳ', async () => {
+    const v = await createVehicle('MT-LEDGER-2');
+    const record = await maintenance.createRecord(
+      tenantId, v.id, ownerId,
+      { type: MAINTENANCE_TYPE.REPAIR, title: 'Thay má phanh' },
+      FULL_SCOPE,
+    );
+    await maintenance.completeRecord(
+      tenantId, v.id, ownerId, record.id,
+      { cost: '1200000', expectedRowVersion: record.rowVersion },
+      FULL_SCOPE,
+    );
+
+    const rows = await costReceipts(v.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.category?.systemKey).toBe(SYSTEM_FINANCE_CATEGORY.REPAIR);
+  });
+
+  maybe('hoàn tất KHÔNG có chi phí thì không sinh phiếu nào', async () => {
+    const v = await createVehicle('MT-LEDGER-3');
+    const record = await maintenance.createRecord(
+      tenantId, v.id, ownerId,
+      { type: MAINTENANCE_TYPE.TIRE, title: 'Đảo lốp' },
+      FULL_SCOPE,
+    );
+    await maintenance.completeRecord(
+      tenantId, v.id, ownerId, record.id,
+      { expectedRowVersion: record.rowVersion },
+      FULL_SCOPE,
+    );
+    expect(await costReceipts(v.id)).toHaveLength(0);
+  });
+
+  maybe('correctCost: phiếu đổi số TẠI CHỖ, không đẻ phiếu thứ hai', async () => {
+    const v = await createVehicle('MT-LEDGER-4');
+    const record = await maintenance.createRecord(
+      tenantId, v.id, ownerId,
+      { type: MAINTENANCE_TYPE.PERIODIC_SERVICE, title: 'Bảo dưỡng 10.000km' },
+      FULL_SCOPE,
+    );
+    const done = await maintenance.completeRecord(
+      tenantId, v.id, ownerId, record.id,
+      { cost: '800000', expectedRowVersion: record.rowVersion },
+      FULL_SCOPE,
+    );
+
+    const corrected = await maintenance.correctCost(
+      tenantId, v.id, ownerId, record.id,
+      { cost: '1500000', correctionReason: 'Gõ nhầm số 0', expectedRowVersion: done.rowVersion },
+      FULL_SCOPE,
+    );
+
+    const rows = await costReceipts(v.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.amount.toString()).toBe('1500000');
+    expect(rows[0]!.status).toBe(RECEIPT_STATUS.APPROVED);
+
+    // Sửa TIỀN phải để lại dấu vết kèm giá trị cũ — không thì đây là một đường xoá lịch sử.
+    const log = await prisma.auditLog.findFirstOrThrow({
+      where: { tenantId, action: 'vehicle.maintenance.cost_correct', targetId: record.id },
+    });
+    expect(log.beforeJson).toMatchObject({ cost: '800000' });
+    expect(log.afterJson).toMatchObject({ cost: '1500000', reason: 'Gõ nhầm số 0' });
+    expect(corrected.cost).toBe('1500000');
+  });
+
+  maybe('correctCost xoá chi phí → phiếu chi bị HUỶ, sổ không giữ khoản đã rút lại', async () => {
+    const v = await createVehicle('MT-LEDGER-5');
+    const record = await maintenance.createRecord(
+      tenantId, v.id, ownerId,
+      { type: MAINTENANCE_TYPE.BATTERY, title: 'Thay ắc quy' },
+      FULL_SCOPE,
+    );
+    const done = await maintenance.completeRecord(
+      tenantId, v.id, ownerId, record.id,
+      { cost: '600000', expectedRowVersion: record.rowVersion },
+      FULL_SCOPE,
+    );
+
+    await maintenance.correctCost(
+      tenantId, v.id, ownerId, record.id,
+      { cost: null, correctionReason: 'Bên bảo hành lo, shop không trả đồng nào',
+        expectedRowVersion: done.rowVersion },
+      FULL_SCOPE,
+    );
+
+    const rows = await costReceipts(v.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.status).toBe(RECEIPT_STATUS.CANCELLED);
+  });
+
+  maybe('correctCost từ chối phiếu CHƯA hoàn tất — phiếu đang mở thì sửa như thường', async () => {
+    const v = await createVehicle('MT-LEDGER-6');
+    const record = await maintenance.createRecord(
+      tenantId, v.id, ownerId,
+      { type: MAINTENANCE_TYPE.OTHER, customTypeName: 'Dán phim', title: 'Dán phim cách nhiệt' },
+      FULL_SCOPE,
+    );
+    await expect(
+      maintenance.correctCost(
+        tenantId, v.id, ownerId, record.id,
+        { cost: '100000', correctionReason: 'x', expectedRowVersion: record.rowVersion },
+        FULL_SCOPE,
+      ),
+    ).rejects.toMatchObject({ status: 409 });
+  });
+});
+
+/** Cùng vòng như hoàn cọc: xoá chi phí rồi nhập lại phải sống, không đụng unique index. */
+describe('Bảo dưỡng → xoá chi phí rồi nhập lại', () => {
+  maybe('phiếu chi sống lại, vẫn đúng MỘT dòng', async () => {
+    const v = await createVehicle('MT-REVIVE');
+    const record = await maintenance.createRecord(
+      tenantId, v.id, ownerId,
+      { type: MAINTENANCE_TYPE.OIL_CHANGE, title: 'Thay nhớt' },
+      FULL_SCOPE,
+    );
+    const done = await maintenance.completeRecord(
+      tenantId, v.id, ownerId, record.id,
+      { cost: '700000', expectedRowVersion: record.rowVersion },
+      FULL_SCOPE,
+    );
+    const cleared = await maintenance.correctCost(
+      tenantId, v.id, ownerId, record.id,
+      { cost: null, correctionReason: 'Chưa thanh toán', expectedRowVersion: done.rowVersion },
+      FULL_SCOPE,
+    );
+    await maintenance.correctCost(
+      tenantId, v.id, ownerId, record.id,
+      { cost: '850000', correctionReason: 'Đã trả tiền', expectedRowVersion: cleared.rowVersion },
+      FULL_SCOPE,
+    );
+
+    const rows = await prisma.receipt.findMany({
+      where: { tenantId, vehicleId: v.id, source: RECEIPT_SOURCE.MAINTENANCE },
+      select: { amount: true, status: true, cancelledAt: true },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.amount.toString()).toBe('850000');
+    expect(rows[0]!.status).toBe(RECEIPT_STATUS.APPROVED);
+    expect(rows[0]!.cancelledAt).toBeNull();
+  });
+
+  maybe('correctCost chỉ đổi mã chứng từ KHÔNG được xoá chi phí', async () => {
+    const v = await createVehicle('MT-PATCH');
+    const record = await maintenance.createRecord(
+      tenantId, v.id, ownerId,
+      { type: MAINTENANCE_TYPE.TIRE, title: 'Thay lốp' },
+      FULL_SCOPE,
+    );
+    const done = await maintenance.completeRecord(
+      tenantId, v.id, ownerId, record.id,
+      { cost: '2000000', expectedRowVersion: record.rowVersion },
+      FULL_SCOPE,
+    );
+
+    const patched = await maintenance.correctCost(
+      tenantId, v.id, ownerId, record.id,
+      { receiptCode: 'HD-9911', correctionReason: 'Bổ sung số hoá đơn',
+        expectedRowVersion: done.rowVersion },
+      FULL_SCOPE,
+    );
+
+    expect(patched.cost).toBe('2000000');
+    expect(patched.receiptCode).toBe('HD-9911');
+    const rows = await prisma.receipt.findMany({
+      where: { tenantId, vehicleId: v.id, source: RECEIPT_SOURCE.MAINTENANCE },
+      select: { amount: true, status: true },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.status).toBe(RECEIPT_STATUS.APPROVED);
   });
 });

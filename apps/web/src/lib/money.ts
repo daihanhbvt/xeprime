@@ -168,3 +168,83 @@ export function applyDiscountPercent(
   if (!Number.isFinite(n)) return value;
   return String(Math.round((n * (100 - percent)) / 100));
 }
+
+/**
+ * Số tiền ĐỌC BẰNG CHỮ tiếng Việt — "15950000" → "Mười lăm triệu chín trăm năm mươi nghìn đồng".
+ *
+ * Vì sao có: trên một ô nhập tiền, dòng chữ bên dưới là cách duy nhất người dùng bắt được lỗi
+ * thừa/thiếu một số 0. `15.000.000` và `150.000.000` nhìn gần như nhau khi gõ vội; "mười lăm
+ * triệu" và "một trăm năm mươi triệu" thì không.
+ *
+ * Cố ý là hàm THUẦN trên chuỗi (ADR 0007 — tiền không bao giờ đi qua `number`): `Number()` một số
+ * 12 chữ số vẫn an toàn, nhưng để tiền chạm `number` ở một chỗ là mở đường cho chỗ thứ hai.
+ *
+ * Ba quy tắc chính tả tiếng Việt phải đúng, và cả ba đều là lỗi kinh điển khi tự viết:
+ *  - hàng đơn vị **1** sau một chục ≥ 2 đọc là "mốt" (hai mươi **mốt**), không phải "một";
+ *  - hàng đơn vị **5** sau một chục bất kỳ đọc là "lăm" (mười **lăm**), không phải "năm";
+ *  - chục **1** đọc là "mười", chục **0** kèm đơn vị đọc là "lẻ" (một trăm **lẻ** năm).
+ */
+/** Hình dạng tiền hợp lệ trên dây (ADR 0007): số nguyên có dấu, tối đa 2 số lẻ. */
+const MONEY_SHAPE = /^-?\d+(\.\d{1,2})?$/;
+
+const VI_DIGITS = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
+/** Lớp ba chữ số: nghìn → triệu → tỷ. Vượt quá tỷ thì lặp lại "tỷ" (nghìn tỷ = "nghìn tỷ"). */
+const VI_SCALES = ['', ' nghìn', ' triệu', ' tỷ', ' nghìn tỷ', ' triệu tỷ'];
+
+/** Đọc một nhóm 3 chữ số. `full` = có nhóm lớn hơn đứng trước → luôn đọc đủ "không trăm". */
+function readTriple(value: number, full: boolean): string {
+  const hundred = Math.floor(value / 100);
+  const ten = Math.floor((value % 100) / 10);
+  const unit = value % 10;
+  const parts: string[] = [];
+
+  if (hundred > 0 || full) parts.push(`${VI_DIGITS[hundred]} trăm`);
+
+  if (ten > 1) {
+    parts.push(`${VI_DIGITS[ten]} mươi`);
+    if (unit === 1) parts.push('mốt');
+    else if (unit === 5) parts.push('lăm');
+    else if (unit > 0) parts.push(VI_DIGITS[unit]!);
+  } else if (ten === 1) {
+    parts.push('mười');
+    if (unit === 5) parts.push('lăm');
+    else if (unit > 0) parts.push(VI_DIGITS[unit]!);
+  } else if (unit > 0) {
+    // Chục bằng 0 mà có nhóm đứng trước → "lẻ" (một trăm lẻ năm).
+    if (hundred > 0 || full) parts.push('lẻ');
+    parts.push(VI_DIGITS[unit]!);
+  }
+
+  return parts.join(' ');
+}
+
+export function moneyToVietnameseWords(value: MoneyString | null | undefined): string {
+  if (value == null || value === '') return '';
+  // Chặn TRƯỚC khi gọi `wholeUnits`: nó dựng `BigInt` và ném với chuỗi không phải số. Ô nhập
+  // tiền không sinh ra rác, nhưng hàm này còn được gọi trên dữ liệu từ API.
+  if (!MONEY_SHAPE.test(value.trim())) return '';
+  // Phần lẻ bị bỏ có chủ đích: tiền Việt không dùng hào, và mọi ô nhập tiền đều `precision={0}`.
+  const digits = wholeUnits(value).replace(/^-/, '');
+  if (!/^\d+$/.test(digits)) return '';
+  if (/^0+$/.test(digits)) return 'Không đồng';
+
+  // Cắt từ phải sang trái thành các nhóm 3 chữ số.
+  const triples: number[] = [];
+  for (let end = digits.length; end > 0; end -= 3) {
+    triples.unshift(Number(digits.slice(Math.max(0, end - 3), end)));
+  }
+  if (triples.length > VI_SCALES.length) return '';
+
+  const spoken = triples
+    .map((triple, index) => {
+      if (triple === 0) return '';
+      const scale = VI_SCALES[triples.length - 1 - index] ?? '';
+      return `${readTriple(triple, index > 0)}${scale}`;
+    })
+    .filter(Boolean)
+    .join(' ');
+
+  const negative = wholeUnits(value).startsWith('-') ? 'Âm ' : '';
+  const text = `${negative}${spoken} đồng`.replace(/\s+/g, ' ').trim();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

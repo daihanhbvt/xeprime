@@ -29,3 +29,39 @@
   justify-content: flex-end;
   gap: 4px;
 }
+
+/* --- Thẻ mobile ---------------------------------------------------------- */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.cardTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  /* Số tiền là thứ mắt phải bắt trước tiên trên màn hình hẹp. */
+  font-size: var(--xp-font-size-h4);
+}
+
+.cardTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.cardLine {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
+}
+
+.cardMuted {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
+}

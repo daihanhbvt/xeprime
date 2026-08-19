@@ -287,6 +287,13 @@
     "shop": "Inherited",
     "vehicle": "Overridden"
   },
+  "receiptSource": {
+    "manual": "Manual",
+    "payment": "Booking payment",
+    "deposit": "Deposit received",
+    "deposit_refund": "Deposit refund",
+    "maintenance": "Maintenance"
+  },
   "receiptStatus": {
     "draft": "Draft",
     "pending_approval": "Awaiting approval",

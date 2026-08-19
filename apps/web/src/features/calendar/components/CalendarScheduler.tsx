@@ -24,7 +24,7 @@ import type {
   CalendarResource,
   VehicleBlock,
 } from '../types/calendar.types';
-import { BookingDetailDialog } from './BookingDetailDialog';
+import { BookingDetailDialog } from '@/features/bookings/components/BookingDetailDialog';
 import {
   CalendarCellActions,
   type CellActionKey,

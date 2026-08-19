@@ -287,6 +287,13 @@
     "shop": "Đang kế thừa",
     "vehicle": "Đang ghi đè"
   },
+  "receiptSource": {
+    "manual": "Nhập tay",
+    "payment": "Thu tiền đơn",
+    "deposit": "Thu cọc",
+    "deposit_refund": "Hoàn cọc",
+    "maintenance": "Bảo dưỡng"
+  },
   "receiptStatus": {
     "draft": "Nháp",
     "pending_approval": "Chờ duyệt",

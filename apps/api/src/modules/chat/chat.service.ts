@@ -96,20 +96,86 @@ export class ChatService {
       });
     }
 
+    return toSummary(
+      await this.getOrCreateFor({
+        tenantId: vehicle.tenantId,
+        customerUserId: userId,
+        vehicleId: vehicle.id,
+      }),
+      'customer',
+    );
+  }
+
+  /**
+   * Gian hàng mở/lấy hội thoại với KHÁCH CỦA MỘT YÊU CẦU THUÊ.
+   *
+   * Đường vào của phía shop cố ý KHÁC `getOrCreateConversation`: bên đó lấy người đang gọi làm
+   * KHÁCH của hội thoại, nên nhân viên gian hàng dùng lại nó sẽ tự biến mình thành khách và mở
+   * một thread rác. Ở đây `customerUserId` và `vehicleId` đọc từ chính yêu cầu, còn `tenantId`
+   * đến từ scope của phiên — client không gửi cả ba.
+   *
+   * Yêu cầu của gian hàng khác → 404 y hệt yêu cầu không tồn tại (không lộ sự tồn tại).
+   * Khách vãng lai (không có tài khoản) → `CHAT_CUSTOMER_UNAVAILABLE`: không có ai ở phía bên
+   * kia để nhắn, gian hàng phải gọi điện/Zalo.
+   *
+   * Idempotent theo (khách, xe) như đường của khách — cùng một hàm dựng, nên hai phía không thể
+   * đẻ ra hai thread song song cho cùng một cặp.
+   */
+  async getOrCreateConversationForBookingRequest(
+    tenantId: string,
+    requestId: string,
+  ): Promise<ConversationSummaryDto> {
+    const request = await this.prisma.bookingRequest.findFirst({
+      where: { id: requestId, tenantId },
+      select: { customerUserId: true, vehicleId: true },
+    });
+    if (!request) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Không tìm thấy yêu cầu đặt xe',
+      });
+    }
+    if (!request.customerUserId) {
+      throw new BadRequestException({
+        code: API_ERROR_CODE.CHAT_CUSTOMER_UNAVAILABLE,
+        message: 'Khách chưa có tài khoản trên nền tảng — hãy gọi điện hoặc nhắn Zalo',
+      });
+    }
+
+    return toSummary(
+      await this.getOrCreateFor({
+        tenantId,
+        customerUserId: request.customerUserId,
+        vehicleId: request.vehicleId,
+      }),
+      'shop',
+    );
+  }
+
+  /**
+   * Tìm-hoặc-tạo hội thoại của một cặp (khách, xe). MỘT hiện thực cho cả hai phía: khách bấm
+   * "Nhắn shop" và gian hàng bấm "Nhắn khách" phải rơi vào đúng một thread, nếu không hai bên
+   * ngồi nhìn hai hộp thư khác nhau.
+   */
+  private async getOrCreateFor(params: {
+    tenantId: string;
+    customerUserId: string;
+    vehicleId: string;
+  }): Promise<ConversationRow> {
     const existing = await this.prisma.conversation.findFirst({
-      where: { customerUserId: userId, vehicleId: vehicle.id },
+      where: { customerUserId: params.customerUserId, vehicleId: params.vehicleId },
       select: CONVERSATION_SELECT,
     });
-    if (existing) return toSummary(existing, 'customer');
+    if (existing) return existing;
 
     const id = newId();
-    const created = await this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx) => {
       const conv = await tx.conversation.create({
         data: {
           id,
-          tenantId: vehicle.tenantId,
-          customerUserId: userId,
-          vehicleId: vehicle.id,
+          tenantId: params.tenantId,
+          customerUserId: params.customerUserId,
+          vehicleId: params.vehicleId,
           status: CONVERSATION_STATUS.OPEN,
         },
         select: CONVERSATION_SELECT,
@@ -119,15 +185,13 @@ export class ChatService {
         data: {
           id: newId(),
           conversationId: id,
-          userId,
+          userId: params.customerUserId,
           participantType: 'customer',
           lastReadAt: new Date(),
         },
       });
       return conv;
     });
-
-    return toSummary(created, 'customer');
   }
 
   async listConversations(

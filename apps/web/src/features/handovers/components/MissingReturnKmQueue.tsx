@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { HANDOVER_TYPE, PERMISSION, type PaginationMeta } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
-import { ROUTES, vehiclePath } from '@/constants/routes';
+import { bookingPath, vehiclePath } from '@/constants/routes';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode } from '@/services/api-client';
@@ -107,7 +107,7 @@ export function MissingReturnKmQueue({
       key: 'booking',
       width: 180,
       render: (_, row) => (
-        <Link href={`${ROUTES.MANAGE.BOOKINGS}?booking=${row.bookingId}`}>{row.bookingCode}</Link>
+        <Link href={bookingPath.detail(row.bookingId)}>{row.bookingCode}</Link>
       ),
     },
     {
@@ -160,7 +160,7 @@ export function MissingReturnKmQueue({
               </div>
               <p className={styles.cardMeta}>
                 Đơn{' '}
-                <Link href={`${ROUTES.MANAGE.BOOKINGS}?booking=${row.bookingId}`}>
+                <Link href={bookingPath.detail(row.bookingId)}>
                   {row.bookingCode}
                 </Link>{' '}
                 · {fmt.dateTime(row.confirmedAt)}

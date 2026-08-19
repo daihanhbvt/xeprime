@@ -2,18 +2,19 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Alert, DatePicker, Modal, Select, Skeleton } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   LONG_TERM_PACKAGE_MONTHS,
-  longTermPackageLabel,
   longTermReturnAt,
   PICKUP_PREFERENCE,
-  PICKUP_PREFERENCE_LABEL,
+  SERVICE_TYPE,
   type LongTermPackageMonths,
 } from '@xeprime/types';
 import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
 import { fetchCalendarQuote } from '@/features/calendar/api';
+import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
+import { dayjs, startOfAppDay, toAppTz, type Dayjs } from '@/lib/datetime';
 import { queryKeys } from '@/services/query-keys';
 import type { ApproveBookingRequestInput, BookingRequestItem } from '../types';
 
@@ -28,6 +29,9 @@ interface Props {
   onConfirm: (body: ApproveBookingRequestInput) => void;
 }
 
+/** Giờ nhận gợi ý khi khách chỉ nêu NGÀY — 9h sáng, giờ mở cửa thường thấy của gian hàng. */
+const DEFAULT_PICKUP_HOUR = 9;
+
 /**
  * Ruột hộp thoại. Tách ra để `key={request.id}` REMOUNT khi đổi yêu cầu — state nạp lại từ
  * chính yêu cầu đó thay vì phải setState trong effect (state khởi tạo, không đồng bộ).
@@ -39,15 +43,30 @@ function ApproveLongTermForm({
   onCancel,
   onConfirm,
 }: Props & { request: BookingRequestItem }) {
+  const t = useTranslations('BookingRequests');
+  const tCommon = useTranslations('Common');
+  const fmt = useAppFormat();
+  /*
+   * Mẫu ngày của ô chọn đổi theo ngôn ngữ (`DD/MM/YYYY` ↔ `MM/DD/YYYY`). Nó vừa HIỂN THỊ vừa
+   * PHÂN TÍCH thứ người dùng gõ, nên để nguyên mẫu Việt ở giao diện tiếng Anh sẽ nhận nhầm
+   * ngày thành tháng suốt nửa đầu mỗi tháng — sai âm thầm, không báo lỗi.
+   */
+  const pattern = useDatePickerPattern();
+
   const requestPackage = request.longTermPackageMonths ?? null;
 
+  /*
+   * `requestedPickupDate`/`pickupWindow*` là NGÀY LỊCH `YYYY-MM-DD` theo giờ Việt Nam, không
+   * phải mốc thời gian — dựng bằng `startOfAppDay` chứ không `dayjs(value)`, vì `dayjs` của
+   * một chuỗi ngày trần lấy nửa đêm THEO MÁY người dùng và máy ở UTC+10 sẽ lùi mất một ngày.
+   */
   const [pickupAt, setPickupAt] = useState<Dayjs | null>(() =>
     request.requestedPickupDate
-      ? dayjs(request.requestedPickupDate).hour(9).startOf('hour')
+      ? startOfAppDay(request.requestedPickupDate).hour(DEFAULT_PICKUP_HOUR)
       : request.pickupWindowStartDate
-        ? dayjs(request.pickupWindowStartDate).hour(9).startOf('hour')
+        ? startOfAppDay(request.pickupWindowStartDate).hour(DEFAULT_PICKUP_HOUR)
         : request.pickupAt
-          ? dayjs(request.pickupAt)
+          ? toAppTz(request.pickupAt)
           : null,
   );
   /** Chỉ dùng cho yêu cầu LEGACY chưa mang gói — yêu cầu mới lấy gói của khách, không sửa được. */
@@ -61,7 +80,7 @@ function ApproveLongTermForm({
   const returnAt = useMemo(
     () =>
       pickupAt && effectivePackage != null
-        ? dayjs(longTermReturnAt(pickupAt.toDate(), effectivePackage))
+        ? toAppTz(longTermReturnAt(pickupAt.toDate(), effectivePackage))
         : null,
     [pickupAt, effectivePackage],
   );
@@ -74,7 +93,7 @@ function ApproveLongTermForm({
     queryFn: () =>
       fetchCalendarQuote({
         vehicleId: request.vehicleId,
-        serviceType: 'long_term',
+        serviceType: SERVICE_TYPE.LONG_TERM,
         packageMonths: effectivePackage!,
       }),
     enabled: effectivePackage != null,
@@ -87,31 +106,36 @@ function ApproveLongTermForm({
    * bước duyệt — hoặc chốt đúng nguyện vọng, hoặc từ chối để hai bên thoả thuận lại.
    */
   function disabledDate(current: Dayjs): boolean {
-    if (request.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE) {
-      return !current.isSame(dayjs(request.requestedPickupDate ?? undefined), 'day');
+    if (request.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && request.requestedPickupDate) {
+      return !current.isSame(startOfAppDay(request.requestedPickupDate), 'day');
     }
-    if (request.pickupPreference === PICKUP_PREFERENCE.WITHIN_7_DAYS) {
-      const start = dayjs(request.pickupWindowStartDate ?? undefined).startOf('day');
-      const end = dayjs(request.pickupWindowEndDate ?? undefined).endOf('day');
+    if (
+      request.pickupPreference === PICKUP_PREFERENCE.WITHIN_7_DAYS &&
+      request.pickupWindowStartDate &&
+      request.pickupWindowEndDate
+    ) {
+      const start = startOfAppDay(request.pickupWindowStartDate);
+      const end = startOfAppDay(request.pickupWindowEndDate).endOf('day');
       return current.isBefore(start) || current.isAfter(end);
     }
-    // Yêu cầu LEGACY không có nguyện vọng: chỉ chặn ngày quá khứ.
+    // Yêu cầu LEGACY (hoặc thiếu dữ liệu nguyện vọng): chỉ chặn ngày quá khứ.
     return current.isBefore(dayjs().startOf('day'));
   }
 
+  /*
+   * Câu chữ nguyện vọng đi qua ĐÚNG cửa `useAppFormat().pickupWish` như bốn bề mặt còn lại
+   * (ADR 0011/0012) — không `dayjs.format('DD/MM/YYYY')` tại chỗ, thứ vừa bỏ qua ngôn ngữ vừa
+   * làm hộp thoại này nói khác inbox ngay bên cạnh.
+   */
   const wishText =
-    request.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE
-      ? `${PICKUP_PREFERENCE_LABEL[PICKUP_PREFERENCE.SPECIFIC_DATE]} · ${dayjs(request.requestedPickupDate ?? undefined).format('DD/MM/YYYY')}`
-      : request.pickupPreference === PICKUP_PREFERENCE.WITHIN_7_DAYS
-        ? `${PICKUP_PREFERENCE_LABEL[PICKUP_PREFERENCE.WITHIN_7_DAYS]} · ${dayjs(request.pickupWindowStartDate ?? undefined).format('DD/MM')} – ${dayjs(request.pickupWindowEndDate ?? undefined).format('DD/MM/YYYY')}`
-        : 'Yêu cầu cũ — khách chưa nêu nguyện vọng theo mẫu mới';
+    request.pickupPreference == null ? t('longTerm.wishLegacy') : fmt.pickupWish(request);
 
   return (
     <Modal
       open
-      title="Duyệt yêu cầu thuê dài hạn"
-      okText="Duyệt và tạo đơn"
-      cancelText="Đóng"
+      title={t('longTerm.title')}
+      okText={t('longTerm.confirm')}
+      cancelText={tCommon('actions.cancel')}
       confirmLoading={submitting}
       okButtonProps={{ disabled: !pickupAt || effectivePackage == null }}
       onCancel={onCancel}
@@ -128,68 +152,62 @@ function ApproveLongTermForm({
       <div className={styles.body}>
         <dl className={styles.facts}>
           <div className={styles.row}>
-            <dt>Khách</dt>
+            <dt>{t('longTerm.customer')}</dt>
             <dd>
               {request.customerName} · {request.customerPhone}
             </dd>
           </div>
           <div className={styles.row}>
-            <dt>Xe</dt>
+            <dt>{t('longTerm.vehicle')}</dt>
             <dd>{request.vehicleName}</dd>
           </div>
           <div className={styles.row}>
-            <dt>Nguyện vọng nhận xe</dt>
+            <dt>{t('longTerm.pickupWish')}</dt>
             <dd>{wishText}</dd>
           </div>
         </dl>
 
         {requestPackage == null ? (
           <label className={styles.field}>
-            <span className={styles.label}>Gói thuê (yêu cầu cũ chưa có gói)</span>
+            <span className={styles.label}>{t('longTerm.legacyPackageLabel')}</span>
             <Select<LongTermPackageMonths>
               value={packageMonths ?? undefined}
               onChange={setPackageMonths}
-              placeholder="Chọn gói thuê"
+              placeholder={t('longTerm.legacyPackagePlaceholder')}
               options={LONG_TERM_PACKAGE_MONTHS.map((m) => ({
                 value: m,
-                label: longTermPackageLabel(m),
+                label: fmt.packageLabel(m),
               }))}
             />
-            <span className={styles.hint}>
-              Yêu cầu gửi trước khi chuyển sang mô hình gói nên không mang gói nào. Chọn gói đã thoả
-              thuận với khách — hệ thống cố ý không tự suy từ khoảng ngày cũ.
-            </span>
+            <span className={styles.hint}>{t('longTerm.legacyPackageHint')}</span>
           </label>
         ) : (
           <div className={styles.field}>
-            <span className={styles.label}>Gói khách đã chọn</span>
-            <strong>{longTermPackageLabel(requestPackage)}</strong>
+            <span className={styles.label}>{t('longTerm.chosenPackageLabel')}</span>
+            <strong>{fmt.packageLabel(requestPackage)}</strong>
           </div>
         )}
 
         <label className={styles.field}>
-          <span className={styles.label}>Ngày và giờ nhận xe (bắt buộc)</span>
+          <span className={styles.label}>{t('longTerm.pickupLabel')}</span>
           <DatePicker
             showTime={{ format: 'HH:mm', minuteStep: 15 }}
-            format="DD/MM/YYYY HH:mm"
+            format={pattern.dateTime}
             value={pickupAt}
             onChange={setPickupAt}
             disabledDate={disabledDate}
-            placeholder="Chọn ngày giờ nhận xe"
-            aria-label="Ngày và giờ nhận xe"
+            placeholder={t('longTerm.pickupPlaceholder')}
+            aria-label={t('longTerm.pickupLabel')}
           />
-          <span className={styles.hint}>
-            Chỉ chọn được trong nguyện vọng khách đã nêu. Muốn ngày khác thì từ chối yêu cầu và trao
-            đổi lại với khách.
-          </span>
+          <span className={styles.hint}>{t('longTerm.pickupHint')}</span>
         </label>
 
         <div className={styles.field}>
-          <span className={styles.label}>Ngày trả (tự tính theo tháng lịch)</span>
-          <strong>{returnAt ? returnAt.format('DD/MM/YYYY HH:mm') : '—'}</strong>
-          <span className={styles.hint}>
-            Độ dài đơn bằng đúng gói khách mua — không sửa tay được.
-          </span>
+          <span className={styles.label}>{t('longTerm.returnLabel')}</span>
+          <strong>
+            {returnAt ? fmt.rentalPoint(returnAt) : tCommon('labels.emptyValue')}
+          </strong>
+          <span className={styles.hint}>{t('longTerm.returnHint')}</span>
         </div>
 
         {effectivePackage != null ? (
@@ -200,14 +218,10 @@ function ApproveLongTermForm({
               rows={quoteQ.data.rows}
               totalAmount={quoteQ.data.totalAmount}
               depositAmount={quoteQ.data.depositAmount}
-              title={`Giá gói ${longTermPackageLabel(effectivePackage)}`}
+              title={t('longTerm.quoteTitle', { package: fmt.packageLabel(effectivePackage) ?? '' })}
             />
           ) : (
-            <Alert
-              type="warning"
-              showIcon
-              message="Chưa tải được giá gói — kiểm tra giá thuê dài hạn của xe trước khi duyệt."
-            />
+            <Alert type="warning" showIcon message={t('longTerm.quoteUnavailable')} />
           )
         ) : null}
 

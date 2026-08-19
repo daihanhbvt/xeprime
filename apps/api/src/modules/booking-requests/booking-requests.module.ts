@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BookingsModule } from '../bookings/bookings.module';
 import { CalendarModule } from '../calendar/calendar.module';
+import { ChatModule } from '../chat/chat.module';
 import { CustomersModule } from '../customers/customers.module';
 import { PhoneVerificationModule } from '../phone-verification/phone-verification.module';
 import { PricingModule } from '../pricing/pricing.module';
@@ -14,11 +15,16 @@ import { BookingRequestsService } from './booking-requests.service';
  * Duyệt yêu cầu tạo Booking qua `BookingsService.createWithinTx` (từ BookingsModule) trong
  * cùng transaction — giữ chỗ lịch + chống trùng bằng constraint DB (ADR 0006), không nhân đôi
  * logic. AuditService là @Global.
+ *
+ * `ChatModule` cho nút "Nhắn tin" của inbox gian hàng (`POST :id/conversation`) — ChatModule
+ * chỉ phụ thuộc StorageModule nên KHÔNG tạo vòng phụ thuộc; hội thoại vẫn do ChatService dựng,
+ * module này không tự ghi bảng chat (ADR 0009).
  */
 @Module({
   imports: [
     BookingsModule,
     CalendarModule,
+    ChatModule,
     CustomersModule,
     PhoneVerificationModule,
     PricingModule,

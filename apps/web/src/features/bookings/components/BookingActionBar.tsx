@@ -1,6 +1,7 @@
 'use client';
 
 import { App, Button } from 'antd';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -11,10 +12,11 @@ import {
   type HandoverType,
 } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { contractPath } from '@/constants/routes';
+import { contractPath, receiptsPath } from '@/constants/routes';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { ConfirmHandoverDialog } from '@/features/handovers/components/ConfirmHandoverDialog';
 import { useHandoverContext } from '@/features/handovers/hooks';
+import { BookingReceiptList } from '@/features/finance/components/BookingReceiptList';
 import { PaymentHistory } from '@/features/payments/components/PaymentHistory';
 import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
 import { usePermissions } from '@/hooks/use-permissions';
@@ -51,6 +53,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
   const canContract = has(PERMISSION.CONTRACT_MANAGE);
   const canRecordPayment = has(PERMISSION.PAYMENT_RECORD);
   const canUpdate = has(PERMISSION.BOOKING_UPDATE);
+  const canViewFinance = has(PERMISSION.FINANCE_VIEW);
 
   const { data: handover } = useHandoverContext(booking.id, canViewHandover);
   const createContract = useCreateContract();
@@ -95,7 +98,17 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
               Hợp đồng thuê xe
             </Button>
           ) : null}
-          <Button onClick={() => setHistoryOpen(true)}>Lịch sử thanh toán</Button>
+          <Button onClick={() => setHistoryOpen(true)}>Sổ tiền của đơn</Button>
+          {/*
+            Đường sang SỔ, không phải một bề mặt tiền thứ hai: lịch sử thanh toán ở đây đã trả lời
+            "đơn này thu được bao nhiêu", còn sổ trả lời "mọi phiếu của đơn này, gồm cả cọc, hoàn
+            cọc và chi phí xe". Dựng lại danh sách phiếu ngay tại đây là hai chỗ cùng một dữ liệu.
+          */}
+          {canViewFinance ? (
+            <Link href={receiptsPath.filtered({ bookingId: booking.id })}>
+              <Button>Phiếu thu chi</Button>
+            </Link>
+          ) : null}
           {/*
             Đơn đã khép thì server từ chối mọi lần ghi (Wave 12). Nút vẫn đứng nguyên chỗ nhưng
             mờ đi và nói lý do — biến mất thì hàng nút nhảy chỗ giữa các đơn, còn để bấm được
@@ -158,13 +171,16 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
       ) : null}
 
       <ResponsiveDialog
-        title="Lịch sử thanh toán"
+        title="Sổ tiền của đơn"
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
         size="md"
         footer={null}
       >
         <PaymentHistory bookingId={booking.id} />
+        {/* Phiếu nhập tay gắn đơn cũng là tiền của đơn — trước đây chúng chỉ nằm ở sổ Thu-Chi,
+            nên một khoản thu quá giờ 200k không hiện ở đâu trên màn đơn. */}
+        {canViewFinance ? <BookingReceiptList bookingId={booking.id} /> : null}
       </ResponsiveDialog>
 
       {payOpen ? (

@@ -1,0 +1,35 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+  width: 100%;
+  min-width: 0;
+}
+
+.income {
+  font-weight: 700;
+  color: var(--xp-color-success);
+  white-space: nowrap;
+}
+
+.expense {
+  font-weight: 700;
+  color: var(--xp-color-error);
+  white-space: nowrap;
+}
+
+.meta {
+  /* Chiếm chỗ trống để hai chip trạng thái dồn về cuối hàng. */
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
+}

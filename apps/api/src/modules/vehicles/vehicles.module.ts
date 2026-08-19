@@ -3,6 +3,7 @@ import { BillingModule } from '../billing/billing.module';
 import { BranchesModule } from '../branches/branches.module';
 import { CalendarModule } from '../calendar/calendar.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { FinanceModule } from '../finance/finance.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { PublicListingsModule } from '../public-listings/public-listings.module';
 import { StorageModule } from '../storage/storage.module';
@@ -44,6 +45,9 @@ import { VehiclesService } from './vehicles.service';
     StorageModule,
     // Bảo dưỡng ghi lịch xe qua OccupancyService — writer duy nhất của occupancies (ADR 0006).
     CalendarModule,
+    // Chi phí bảo dưỡng lên sổ Thu-Chi qua ReceiptsService — writer duy nhất của `receipts`
+    // (epic nối tiền). Module này chỉ gọi, không tự INSERT phiếu.
+    FinanceModule,
   ],
   controllers: [
     VehiclesController,

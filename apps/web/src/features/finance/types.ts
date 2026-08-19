@@ -6,6 +6,8 @@ type Schemas = components['schemas'];
 export type Receipt = Schemas['ReceiptListItemDto'];
 export type ReceiptDetail = Schemas['ReceiptDetailDto'];
 export type CreateReceiptInput = Schemas['CreateReceiptDto'];
+export type ReceiptSummary = Schemas['ReceiptSummaryDto'];
+export type ReceiptBookingOption = Schemas['ReceiptBookingOptionDto'];
 export type FinanceCategory = Schemas['FinanceCategoryDto'];
 export type CreateCategoryInput = Schemas['CreateCategoryDto'];
 export type DebtItem = Schemas['DebtItemDto'];
@@ -18,11 +20,23 @@ export interface DebtFilters {
   limit?: number;
 }
 
-/** Filter danh sách phiếu — ở URL searchParams (ADR 0004). */
+/**
+ * Filter danh sách phiếu — ở URL searchParams (ADR 0004).
+ *
+ * `bookingId`/`vehicleId`/`tenantCustomerId` không có ô điều khiển riêng trên thanh lọc: chúng là
+ * đường VÀO từ chi tiết đơn / hồ sơ xe / sổ khách. Vẫn phải nằm ở đây để URL đó chia sẻ được và
+ * sống sót qua reload.
+ */
 export interface ReceiptFilters {
   type?: string;
   status?: string;
   categoryId?: string;
+  source?: string;
+  paymentMethod?: string;
+  bookingId?: string;
+  vehicleId?: string;
+  tenantCustomerId?: string;
+  q?: string;
   from?: string;
   to?: string;
   page?: number;

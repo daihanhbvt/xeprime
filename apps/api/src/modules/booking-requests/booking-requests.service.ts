@@ -8,6 +8,7 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
+  BOOKING_REQUEST_STATUS_VALUES,
   isLongTermPackageMonths,
   vnDateKey,
   longTermPickupWindow,
@@ -21,7 +22,6 @@ import {
   USER_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type BookingRequestDeliveryQuote,
-  type PaginationMeta,
 } from '@xeprime/types';
 import { fromDateOnly, toDateOnly } from '../../common/date-only';
 import { normalizePhone, phoneLookupVariants } from '../../common/phone';
@@ -41,6 +41,7 @@ import {
   BOOKING_REQUEST_MAX_LIMIT,
   BookingRequestDto,
   BookingRequestListQueryDto,
+  BookingRequestPageMetaDto,
   BookingRequestReceiptDto,
   CreateBookingRequestDto,
 } from './dto/booking-request.dto';
@@ -71,7 +72,22 @@ const SELECT = {
   bookingId: true,
   tenantCustomerId: true,
   createdAt: true,
-  vehicle: { select: { name: true, plateNumber: true } },
+  decidedAt: true,
+  /**
+   * `customerUserId` được chọn để suy ra `canMessageOnPlatform` — nó KHÔNG bao giờ đi ra DTO
+   * (xem `toDto`): định danh tài khoản xuyên gian hàng không có việc gì ở inbox của một shop.
+   */
+  customerUserId: true,
+  /*
+   * Mọi thứ inbox cần nằm trong ĐÚNG một truy vấn — ảnh/mã/loại xe qua quan hệ `vehicle`, ảnh
+   * đại diện qua tài khoản khách, mức rủi ro qua hồ sơ sổ khách. Không có vòng lặp nào đi tra
+   * thêm sau khi có danh sách (N+1).
+   */
+  vehicle: {
+    select: { name: true, plateNumber: true, code: true, vehicleType: true, mainImageUrl: true },
+  },
+  customer: { select: { avatarUrl: true } },
+  tenantCustomer: { select: { riskLevel: true } },
 } satisfies Prisma.BookingRequestSelect;
 
 /** Nguyện vọng thuê dài hạn sau khi server chuẩn hoá — hai nhánh ngày LOẠI TRỪ nhau. */
@@ -457,26 +473,50 @@ export class BookingRequestsService {
     return normalizePhone(user.phone) === normalizePhone(rawPhone);
   }
 
+  /**
+   * Inbox yêu cầu của gian hàng.
+   *
+   * `meta.statusCounts` là con số trên các TAB, nên nó cố ý dùng phạm vi RỘNG HƠN trang đang
+   * xem: cùng gian hàng, cùng chi nhánh, cùng bộ lọc xe — nhưng KHÔNG có bộ lọc trạng thái.
+   * Nhờ vậy đứng ở tab "Cần xử lý" vẫn thấy tab "Đã từ chối" có bao nhiêu. Một lần `groupBy`
+   * cho toàn bộ các tab, không phải một truy vấn đếm mỗi trạng thái, và nằm cùng transaction
+   * với trang dữ liệu để hai con số không đọc từ hai thời điểm khác nhau.
+   */
   async list(
     tenantId: string,
     query: BookingRequestListQueryDto,
-  ): Promise<{ data: BookingRequestDto[]; meta: PaginationMeta }> {
+  ): Promise<{ data: BookingRequestDto[]; meta: BookingRequestPageMetaDto }> {
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(
       BOOKING_REQUEST_MAX_LIMIT,
       Math.max(1, query.limit ?? BOOKING_REQUEST_DEFAULT_LIMIT),
     );
 
-    const where: Prisma.BookingRequestWhereInput = {
+    const scope: Prisma.BookingRequestWhereInput = {
       tenantId,
-      ...(query.status ? { status: query.status } : {}),
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
       // Lọc qua quan hệ xe → chi nhánh. Đứng SAU `tenantId` và không thay thế nó: bộ chọn chi
       // nhánh chỉ thu hẹp phạm vi, không bao giờ là đường ra khỏi gian hàng của mình.
       ...(query.branchId ? { vehicle: { branchId: query.branchId } } : {}),
     };
+    const where: Prisma.BookingRequestWhereInput = {
+      ...scope,
+      ...(query.status ? { status: query.status } : {}),
+    };
 
-    const [total, rows] = await this.prisma.$transaction([
+    /*
+     * Tách biến trước khi đưa vào `$transaction([...])`: bên trong mảng, Prisma suy kiểu kết
+     * quả của `groupBy` bị nới thành union (`_count` có thể là `true`), còn ở đây nó giữ đúng
+     * `{ status, _count: number }`. Cả ba vẫn chạy trong CÙNG một transaction.
+     */
+    const countByStatus = this.prisma.bookingRequest.groupBy({
+      by: ['status'],
+      where: scope,
+      orderBy: { status: 'asc' },
+      _count: true,
+    });
+
+    const [total, rows, grouped] = await this.prisma.$transaction([
       this.prisma.bookingRequest.count({ where }),
       this.prisma.bookingRequest.findMany({
         where,
@@ -485,11 +525,25 @@ export class BookingRequestsService {
         take: limit,
         select: SELECT,
       }),
+      countByStatus,
     ]);
+
+    const counted = new Map(grouped.map((g) => [g.status, g._count]));
 
     return {
       data: rows.map(toDto),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: {
+        page,
+        limit,
+        total,
+        hasNext: page * limit < total,
+        // Liệt kê ĐỦ bộ trạng thái, kể cả trạng thái không có yêu cầu nào: một tab không có
+        // con số trông như "chưa tải xong", còn `0` là một câu trả lời.
+        statusCounts: BOOKING_REQUEST_STATUS_VALUES.map((status) => ({
+          status,
+          count: counted.get(status) ?? 0,
+        })),
+      },
     };
   }
 
@@ -526,6 +580,18 @@ export class BookingRequestsService {
     dto: ApproveBookingRequestDto = {},
   ): Promise<BookingRequestDto> {
     const req = await this.loadPending(tenantId, id);
+
+    /*
+     * Kiểm LẠI danh sách từ chối phục vụ ngay trước khi duyệt.
+     *
+     * Lúc khách GỬI yêu cầu họ có thể còn bình thường; gian hàng đánh dấu `blocked` sau đó,
+     * rồi vẫn còn yêu cầu cũ nằm trong inbox. Duyệt nó là lập một đơn cho đúng người mà gian
+     * hàng vừa quyết định không phục vụ nữa. `mode: 'internal'` vì đây là người TRONG shop —
+     * họ được biết lý do thật, khác đường công khai (ADR/CLAUDE mục lỗi CUSTOMER_BLOCKED).
+     *
+     * Giao diện có ẩn nút duyệt hay không không liên quan: chặn thật nằm ở đây.
+     */
+    await this.customers.assertNotBlocked(tenantId, req.customerPhone, 'internal');
 
     const policy = await this.pricing.effectivePolicy(tenantId, req.vehicleId);
     const schedule = this.resolveApprovalSchedule(req, dto);
@@ -862,10 +928,19 @@ function toDto(r: BookingRequestRow): BookingRequestDto {
     vehicleId: r.vehicleId,
     vehicleName: r.vehicle.name,
     vehiclePlate: r.vehicle.plateNumber,
+    vehicleCode: r.vehicle.code,
+    vehicleImageUrl: r.vehicle.mainImageUrl,
+    vehicleType: r.vehicle.vehicleType,
     status: r.status,
     customerName: r.customerName,
     customerPhone: r.customerPhone,
     customerEmail: r.customerEmail,
+    tenantCustomerId: r.tenantCustomerId,
+    customerAvatarUrl: r.customer?.avatarUrl ?? null,
+    customerRiskLevel: r.tenantCustomer?.riskLevel ?? null,
+    // Có tài khoản ⇒ có phía bên kia để mở hội thoại. `customerUserId` KHÔNG ra ngoài, chỉ sự
+    // thật boolean này ra — vừa đủ để bật/tắt nút "Nhắn tin".
+    canMessageOnPlatform: r.customerUserId != null,
     pickupAt: r.pickupAt ? (r.pickupAt as unknown as string) : null,
     returnAt: r.returnAt ? (r.returnAt as unknown as string) : null,
     serviceType: r.serviceType,
@@ -892,6 +967,7 @@ function toDto(r: BookingRequestRow): BookingRequestDto {
     rejectReason: r.rejectReason,
     bookingId: r.bookingId,
     createdAt: r.createdAt as unknown as string,
+    decidedAt: (r.decidedAt as unknown as string | null) ?? null,
   };
 }
 

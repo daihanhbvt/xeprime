@@ -1,0 +1,50 @@
+/* Hai cột trên PC, một cột trên điện thoại — form tiền ngắn, không đáng cuộn dài. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0 var(--xp-space-md);
+}
+
+/* Trường trải hết bề ngang: ô chọn đơn, diễn giải, ảnh minh chứng. */
+.wide {
+  grid-column: 1 / -1;
+}
+
+.linkBox {
+  grid-column: 1 / -1;
+  padding: var(--xp-space-sm) var(--xp-space-md) 0;
+  margin-bottom: var(--xp-space-md);
+  border: 1px dashed var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.linkHint {
+  margin: 0 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.filled {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  padding-bottom: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.filledLabel {
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Số tiền bằng chữ — chỗ duy nhất người dùng bắt được lỗi thừa/thiếu một số 0. */
+.words {
+  grid-column: 1 / -1;
+  margin: calc(-1 * var(--xp-space-sm)) 0 var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+  font-style: italic;
+  color: var(--xp-color-text-tertiary);
+  min-height: 18px;
+  overflow-wrap: anywhere;
+}

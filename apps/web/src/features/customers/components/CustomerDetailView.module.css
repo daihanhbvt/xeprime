@@ -229,3 +229,27 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/*
+ * Biến thể NHÚNG (modal hồ sơ khách): bỏ trần bề rộng và căn giữa của trang — overlay đã tự
+ * quyết bề rộng, áp thêm `max-width` ở đây sẽ tạo hai lớp giới hạn chồng nhau.
+ */
+.embedded {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.embedded > * {
+  min-width: 0;
+}
+
+/* Dải liên hệ + hành động thay cho `ManagePageHeader` khi nhúng trong modal. */
+.embeddedHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}

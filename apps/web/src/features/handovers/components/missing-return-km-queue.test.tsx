@@ -135,7 +135,7 @@ describe('Hàng đợi "Thiếu KM trả" (Wave 8)', () => {
     // Liên kết dẫn về đúng xe và đúng đơn — không dựng route mới.
     const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'));
     expect(hrefs).toContain('/manage/vehicles/vehicle-1');
-    expect(hrefs).toContain('/manage/bookings?booking=booking-1');
+    expect(hrefs).toContain('/manage/bookings/booking-1');
   });
 
   it('chưa có KM lúc giao: nói "Chưa có", KHÔNG dựng 0 km', () => {

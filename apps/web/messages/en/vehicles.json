@@ -1,0 +1,17 @@
+{
+  "detail": {
+    "title": "Vehicle profile",
+    "openPage": "Open full page",
+    "deleted": "Vehicle deleted",
+    "forbiddenTitle": "No permission to view vehicles",
+    "forbiddenBody": "You need the permission below to view vehicle information. Contact an administrator to request it.",
+    "home": "Back to home",
+    "loading": "Loading vehicle information…",
+    "notFoundTitle": "Vehicle not found",
+    "notFoundBody": "It may have been deleted, or it does not belong to this shop.",
+    "loadErrorTitle": "Could not load the vehicle",
+    "loadErrorBody": "Something went wrong while fetching the data. Please try again.",
+    "pageSubtitle": "Operating details, rental pricing and public listing status for this vehicle",
+    "backToList": "Back to list"
+  }
+}

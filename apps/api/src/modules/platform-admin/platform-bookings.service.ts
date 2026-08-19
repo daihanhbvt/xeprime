@@ -2,7 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import { API_ERROR_CODE, BOOKING_DATE_FIELD, type PaginationMeta } from '@xeprime/types';
 import { maskPhone } from '../../common/mask';
-import { bookingDebt } from '../../common/money';
+import {
+  bookingMoney,
+  emptyMoneySides,
+  loadBookingMoneySides,
+  type BookingMoneySides,
+} from '../../common/booking-money';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
 import { phoneLookupVariants } from '../../common/phone';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -100,7 +105,17 @@ export class PlatformBookingsService {
       }),
     ]);
 
-    return { data: rows.map(toListItem), meta: paginationMeta(paging, total) };
+    // Cong no dung CHUNG cong thuc voi gian hang (common/booking-money.ts): nhan vien nen tang
+    // va chu shop nhin mot don phai thay cung mot so, khong thi moi cuoc ho tro bat dau bang
+    // viec doi chieu hai con so khac nhau.
+    const sides = await loadBookingMoneySides(
+      this.prisma,
+      rows.map((r) => r.id),
+    );
+    return {
+      data: rows.map((r) => toListItem(r, sides.get(r.id) ?? emptyMoneySides())),
+      meta: paginationMeta(paging, total),
+    };
   }
 
   async getOne(id: string): Promise<PlatformBookingDetailDto> {
@@ -123,8 +138,10 @@ export class PlatformBookingsService {
     });
     if (!row) throw notFound();
 
+    const sides = await loadBookingMoneySides(this.prisma, [row.id]);
+
     return {
-      ...toListItem(row),
+      ...toListItem(row, sides.get(row.id) ?? emptyMoneySides()),
       baseAmount: row.baseAmount as unknown as string,
       deliveryFee: row.deliveryFee as unknown as string,
       discountAmount: row.discountAmount as unknown as string,
@@ -170,7 +187,8 @@ export class PlatformBookingsService {
 
 type BookingRow = Prisma.BookingGetPayload<{ select: typeof LIST_SELECT }>;
 
-function toListItem(b: BookingRow): PlatformBookingDto {
+function toListItem(b: BookingRow, sides: BookingMoneySides): PlatformBookingDto {
+  const money = bookingMoney({ totalAmount: b.totalAmount, paidAmount: b.paidAmount, ...sides });
   return {
     id: b.id,
     code: b.code,
@@ -180,9 +198,9 @@ function toListItem(b: BookingRow): PlatformBookingDto {
     customerPhoneMasked: maskPhone(b.customerPhone),
     pickupAt: (b.pickupAt as Date).toISOString(),
     returnAt: (b.returnAt as Date).toISOString(),
-    totalAmount: b.totalAmount as unknown as string,
-    paidAmount: b.paidAmount as unknown as string,
-    debtAmount: bookingDebt(b.totalAmount, b.paidAmount) as unknown as string,
+    totalAmount: money.amountDue.toString(),
+    paidAmount: money.collectedAmount.toString(),
+    debtAmount: money.debtAmount.toString(),
     tenantId: b.tenantId,
     tenantName: b.tenant.name,
     tenantStatus: b.tenant.status,

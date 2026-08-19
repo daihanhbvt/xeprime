@@ -1,0 +1,26 @@
+.inline,
+.card,
+.hero {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.card {
+  font-size: var(--xp-font-size-h4);
+}
+
+.hero {
+  display: block;
+  font-size: var(--xp-font-size-h1);
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.income {
+  color: var(--xp-color-success);
+}
+
+.expense {
+  color: var(--xp-color-error);
+}

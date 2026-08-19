@@ -22,5 +22,6 @@ Full-workspace `build`, `lint`, and `test` runs are slow and mostly re-check cod
 - Changed an api module/DTO → `pnpm --filter @xeprime/api typecheck`; run the affected Jest spec **by path**, not the whole suite.
 - Changed a `packages/*` package → typecheck/test just that package.
 - Touched the schema → apply the migration and re-run the seed; that IS the scoped verification here (see `database-change`). No full build needed.
+- Touched `messages/**` or added `t(...)` keys → `pnpm --filter @xeprime/web i18n:check` (fast, and the only thing that catches an `en` gap), then `i18n:audit` to confirm the area you converted is gone (see `i18n`).
 
 When unsure whether a command is both necessary and cheap, ask before running it.

@@ -18,6 +18,7 @@ import {
 } from '@xeprime/types';
 import 'reflect-metadata';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { CustomersService } from '../src/modules/customers/customers.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
@@ -72,7 +73,7 @@ const vehicles = makeVehiclesService(asService);
 const createVehicleWithBranch = vehicleCreator(vehicles, asService);
 const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
 const odometer = new OdometerService(asService, audit);
-const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit);
+const maintenance = new MaintenanceService(asService, occupancy, odometer, files, audit, new ReceiptsService(asService, audit));
 const bookings = new BookingsService(
   asService,
   occupancy,

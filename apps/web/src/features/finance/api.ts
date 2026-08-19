@@ -1,5 +1,5 @@
 import type { PaginationMeta } from '@xeprime/types';
-import { apiGet, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import { apiGet, apiPatch, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
 import { apiDelete } from '@/services/api-client';
 import { RECEIPTS_DEFAULT_LIMIT } from './constants';
 import type {
@@ -12,6 +12,8 @@ import type {
   Receipt,
   ReceiptDetail,
   ReceiptFilters,
+  ReceiptBookingOption,
+  ReceiptSummary,
 } from './types';
 
 export interface ReceiptListResult {
@@ -24,11 +26,28 @@ export function filtersToParams(filters: ReceiptFilters): QueryParams {
     type: filters.type ?? null,
     status: filters.status ?? null,
     categoryId: filters.categoryId ?? null,
+    source: filters.source ?? null,
+    paymentMethod: filters.paymentMethod ?? null,
+    bookingId: filters.bookingId ?? null,
+    vehicleId: filters.vehicleId ?? null,
+    tenantCustomerId: filters.tenantCustomerId ?? null,
+    q: filters.q ?? null,
     from: filters.from ?? null,
     to: filters.to ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? RECEIPTS_DEFAULT_LIMIT,
   };
+}
+
+/**
+ * Tham số cho thẻ tổng: CÙNG bộ lọc với danh sách, bỏ phân trang.
+ *
+ * Bỏ `page`/`limit` không phải để gọn — giữ chúng lại thì mỗi lần sang trang là một query key
+ * mới cho một con số không đổi, tức bốn thẻ nhấp nháy mỗi lần bấm sang trang.
+ */
+export function summaryParams(filters: ReceiptFilters): QueryParams {
+  const { page: _page, limit: _limit, ...rest } = filtersToParams(filters);
+  return rest;
 }
 
 export async function fetchReceipts(filters: ReceiptFilters): Promise<ReceiptListResult> {
@@ -47,6 +66,14 @@ export async function fetchReceipts(filters: ReceiptFilters): Promise<ReceiptLis
 export const fetchReceipt = (id: string): Promise<ReceiptDetail> =>
   apiGet<ReceiptDetail>(`/receipts/${id}`);
 
+/** Thẻ tổng của ĐÚNG bộ lọc đang xem — backend cộng cùng một vị từ với danh sách. */
+export const fetchReceiptSummary = (filters: ReceiptFilters): Promise<ReceiptSummary> =>
+  apiGet<ReceiptSummary>('/receipts/summary', summaryParams(filters));
+
+/** Đơn gợi ý cho ô "Liên kết đơn thuê" — server đã sắp đơn còn nợ lên trước. */
+export const fetchBookingOptions = (q?: string): Promise<ReceiptBookingOption[]> =>
+  apiGet<ReceiptBookingOption[]>('/receipts/booking-options', { q: q?.trim() || null });
+
 export const createReceipt = (body: CreateReceiptInput): Promise<ReceiptDetail> =>
   apiPost<ReceiptDetail>('/receipts', body);
 
@@ -61,6 +88,10 @@ export const fetchCategories = (type?: string): Promise<FinanceCategory[]> =>
 
 export const createCategory = (body: CreateCategoryInput): Promise<FinanceCategory> =>
   apiPost<FinanceCategory>('/finance/categories', body);
+
+/** Đổi tên danh mục của gian hàng — endpoint đã có từ Phase 6, FE trước nay chưa gọi. */
+export const updateCategory = (id: string, name: string): Promise<FinanceCategory> =>
+  apiPatch<FinanceCategory>(`/finance/categories/${id}`, { name });
 
 export const deleteCategory = (id: string): Promise<void> =>
   apiDelete<void>(`/finance/categories/${id}`);

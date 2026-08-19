@@ -190,3 +190,18 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* Dòng giải thích nằm dưới một dòng tổng — thụt vào, chữ nhỏ, không phải một mục ngang hàng. */
+.rowSub {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding-left: var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.rowSub dt,
+.rowSub dd {
+  margin: 0;
+}

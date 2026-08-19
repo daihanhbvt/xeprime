@@ -2164,6 +2164,10 @@ model FinanceCategory {
   type      String   @db.VarChar(20)
   name      String   @db.VarChar(255)
   isSystem  Boolean  @default(false) @map("is_system")
+  /// @xeprime/types → SystemFinanceCategoryKey. Khoá ỔN ĐỊNH để phiếu tự động tra danh mục mà
+  /// KHÔNG phải khớp tên tiếng Việt (đổi một dấu cách là mọi phiếu tự động mất danh mục). Chỉ
+  /// danh mục hệ thống mới có — CHECK `system_key IS NULL OR is_system` ở migration.
+  systemKey String?  @map("system_key") @db.VarChar(50)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   tenant   Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2191,6 +2195,18 @@ model Receipt {
   paymentMethod    String    @map("payment_method") @db.VarChar(50)
   referenceCode    String?   @map("reference_code") @db.VarChar(255)
   description      String?   @db.Text
+  /// @xeprime/types → ReceiptSource. NGUỒN sinh phiếu — sổ phải trả lời "đồng này từ đâu".
+  ///
+  /// Không suy từ `booking_id != null`: thu tiền thuê, thu cọc và hoàn cọc đều gắn đơn nhưng đảo ở
+  /// ba chỗ khác nhau. Phiếu `manual` mới duyệt/huỷ tay được; còn lại phải đảo ở nghiệp vụ gốc.
+  source           String    @default("manual") @db.VarChar(20)
+  /// Id bản ghi gốc (`payments` / `booking_deposit_settlements` / `vehicle_maintenance_records`).
+  /// Bắt buộc khi `source <> 'manual'` và cấm khi `= 'manual'` — CHECK ở migration. Unique cùng
+  /// `(tenant_id, source)` để một nghiệp vụ không bao giờ đẻ hai phiếu.
+  sourceRefId      String?   @map("source_ref_id") @db.Char(26)
+  /// Thời điểm tiền THỰC SỰ di chuyển — khác `created_at` (lúc ai đó gõ vào máy). Mọi bộ lọc và
+  /// tổng hợp chạy trên cột này, nếu không phiếu nhập bù cho tuần trước sẽ rơi sai kỳ.
+  occurredAt       DateTime  @default(now()) @map("occurred_at") @db.Timestamptz(3)
   /// @xeprime/types → ReceiptStatus
   status           String    @default("draft") @db.VarChar(50)
   requestedBy      String?   @map("requested_by") @db.Char(26)
@@ -2214,9 +2230,14 @@ model Receipt {
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
+  /// Bộ lọc và sắp xếp của sổ chạy trên `occurred_at`, không phải `created_at`.
+  @@index([tenantId, occurredAt], map: "receipts_tenant_occurred_idx")
   @@index([bookingId])
   @@index([categoryId])
   @@index([tenantId, tenantCustomerId])
+  /// Ô tìm kiếm dùng `ILIKE '%q%'`. Cả HAI cột phải có trong cùng một index GIN — Postgres chỉ
+  /// BitmapOr khi mọi nhánh của vị từ OR có index; thiếu một cột là cả vị từ rơi về seq scan.
+  @@index([receiptNo(ops: raw("gin_trgm_ops")), referenceCode(ops: raw("gin_trgm_ops"))], map: "receipts_search_trgm_idx", type: Gin)
   @@map("receipts")
 }
 

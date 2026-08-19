@@ -25,6 +25,7 @@ import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
+import { CustomerReceiptsPanel } from './CustomerReceiptsPanel';
 import { useIsDesktop } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { isZeroMoney } from '@/lib/money';
@@ -76,7 +77,21 @@ function SummaryCard({
  *
  * Ba khối tiền BIẾN MẤT hoàn toàn khi thiếu `finance.view` — không render số 0 giả.
  */
-export function CustomerDetailView({ customerId }: { customerId: string }) {
+export function CustomerDetailView({
+  customerId,
+  embedded = false,
+}: {
+  customerId: string;
+  /**
+   * Đang nằm TRONG một overlay (modal hồ sơ khách) chứ không phải một route.
+   *
+   * Chỉ tắt phần VỎ TRANG: tiêu đề `<h1>` và nút quay-lại-danh-sách. Modal đã có tiêu đề của
+   * riêng nó, và một `<h1>` thứ hai trong dialog làm hỏng cấu trúc heading của trang nền; còn
+   * nút "quay lại" trong modal thì điều hướng cả trang ra khỏi chỗ người dùng đang đứng.
+   * Mọi thứ còn lại — tag rủi ro, hành động, các tab — giữ nguyên.
+   */
+  embedded?: boolean;
+}) {
   const fmt = useAppFormat();
 
   const router = useRouter();
@@ -279,32 +294,48 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
     </aside>
   );
 
+  const headerExtra = (
+    <div className={styles.headerExtra}>
+      <div className={styles.headerTags}>
+        <StatusTag
+          value={data.riskLevel as TenantCustomerRiskLevel}
+          meta={TENANT_CUSTOMER_RISK_LEVEL_META}
+          group="tenantCustomerRiskLevel"
+        />
+        {archived ? <Tag>Đã lưu trữ</Tag> : null}
+      </div>
+      {actions}
+    </div>
+  );
+
+  /** Dòng liên hệ — dựng MỘT lần rồi dùng cho cả vỏ trang lẫn vỏ modal. */
+  const contactLine = (
+    <span className={styles.headerSub}>
+      <a href={`tel:${data.phone}`}>{data.phone}</a>
+      <CopyButton value={data.phone} label="Sao chép số điện thoại" />
+      {data.email ? <span className={styles.headerEmail}>· {data.email}</span> : null}
+    </span>
+  );
+
   return (
-    <div className={styles.page}>
-      <ManagePageHeader
-        title={data.fullName}
-        subtitle={
-          <span className={styles.headerSub}>
-            <a href={`tel:${data.phone}`}>{data.phone}</a>
-            <CopyButton value={data.phone} label="Sao chép số điện thoại" />
-            {data.email ? <span className={styles.headerEmail}>· {data.email}</span> : null}
-          </span>
-        }
-        onBack={back}
-        extra={
-          <div className={styles.headerExtra}>
-            <div className={styles.headerTags}>
-              <StatusTag
-                value={data.riskLevel as TenantCustomerRiskLevel}
-                meta={TENANT_CUSTOMER_RISK_LEVEL_META}
-                group="tenantCustomerRiskLevel"
-              />
-              {archived ? <Tag>Đã lưu trữ</Tag> : null}
-            </div>
-            {actions}
-          </div>
-        }
-      />
+    <div className={embedded ? styles.embedded : styles.page}>
+      {embedded ? (
+        /*
+         * Trong modal: bỏ vỏ trang, nhưng GIỮ nguyên liên hệ + tag rủi ro + hành động — đó là
+         * phần người dùng thật sự cần; chỉ `<h1>` và nút quay lại là thuộc về route.
+         */
+        <div className={styles.embeddedHeader}>
+          {contactLine}
+          {headerExtra}
+        </div>
+      ) : (
+        <ManagePageHeader
+          title={data.fullName}
+          subtitle={contactLine}
+          onBack={back}
+          extra={headerExtra}
+        />
+      )}
 
       {archived ? (
         <Alert
@@ -411,6 +442,15 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                           canOpenBooking={canViewBookings}
                         />
                       ),
+                    },
+                  ]
+                : []),
+              ...(canViewFinance
+                ? [
+                    {
+                      key: 'finance',
+                      label: 'Thu chi',
+                      children: <CustomerReceiptsPanel customerId={customerId} />,
                     },
                   ]
                 : []),

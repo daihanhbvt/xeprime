@@ -2,8 +2,12 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  PAYMENT_KIND,
   PAYMENT_STATUS,
+  RECEIPT_SOURCE,
   RECEIPT_TYPE,
+  SYSTEM_FINANCE_CATEGORY,
+  type PaymentKind,
   type PaymentMethod,
 } from '@xeprime/types';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -16,6 +20,7 @@ import { PaymentDto, RecordPaymentDto } from './dto/payment.dto';
 const SELECT = {
   id: true,
   amount: true,
+  kind: true,
   method: true,
   status: true,
   receiptId: true,
@@ -26,9 +31,18 @@ const SELECT = {
 /**
  * Ghi nhận thanh toán đơn (Phase 6) — **writer DUY NHẤT của `booking.paid_amount`**.
  *
- * Mỗi lần thu: ghi payment + cộng dồn paidAmount + tạo phiếu thu đã-duyệt, tất cả trong MỘT
- * transaction. Cập nhật paidAmount bằng `increment`/`decrement` (khoá ở DB) → 2 lần thu song
- * song vẫn cộng đúng, không lost-update. XePrime không cầm tiền: đây là sổ ghi nội bộ của shop.
+ * Mỗi lần thu: ghi payment + tạo phiếu thu đã-duyệt (+ cộng dồn paidAmount nếu là tiền THUÊ), tất
+ * cả trong MỘT transaction. Cập nhật paidAmount bằng `increment`/`decrement` (khoá ở DB) → 2 lần
+ * thu song song vẫn cộng đúng, không lost-update. XePrime không cầm tiền: đây là sổ ghi nội bộ.
+ *
+ * **Hai loại tiền, một đường ghi** (`dto.kind`):
+ * - `rental` — tiền thuê: cộng vào `paid_amount`, làm giảm công nợ.
+ * - `deposit` — tiền cọc: **KHÔNG** đụng `paid_amount`. Cọc là tài sản giữ hộ sẽ trả lại, không
+ *   phải doanh thu; `total_amount` chưa bao giờ chứa nó (cọc nằm ở `bookings.deposit_amount`).
+ *   Cộng cọc vào `paid_amount` làm một đơn đã đặt cọc trông như hết nợ.
+ *
+ * Cả hai đều lên sổ Thu-Chi thành phiếu thu — khác nhau ở danh mục và `source`, nên nhìn sổ vẫn
+ * tách được doanh thu với tiền đang giữ hộ.
  */
 @Injectable()
 export class PaymentsService {
@@ -48,7 +62,7 @@ export class PaymentsService {
   ): Promise<BookingDetailDto> {
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, tenantId, deletedAt: null },
-      select: { id: true, vehicleId: true, code: true },
+      select: { id: true, vehicleId: true, code: true, tenantCustomerId: true },
     });
     if (!booking) {
       throw new NotFoundException({
@@ -59,38 +73,59 @@ export class PaymentsService {
 
     const amount = new Prisma.Decimal(dto.amount);
     const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
+    const kind = (dto.kind ?? PAYMENT_KIND.RENTAL) as PaymentKind;
+    const isDeposit = kind === PAYMENT_KIND.DEPOSIT;
+
+    // Id payment sinh TRƯỚC phiếu: phiếu cần nó làm `sourceRefId` (đường lần ngược từ sổ về giao
+    // dịch), còn payment cần `receiptId` — hai chiều, nên một đầu phải có id trước.
+    const paymentId = newId();
 
     await this.prisma.$transaction(async (tx) => {
       // Phiếu thu đã-duyệt lên sổ Thu-Chi + dashboard (khỏi nhập tay 2 lần).
-      const receiptId = await this.receipts.createApprovedWithinTx(tx, tenantId, userId, {
+      const receipt = await this.receipts.createApprovedWithinTx(tx, tenantId, userId, {
         type: RECEIPT_TYPE.INCOME,
         amount: dto.amount,
         paymentMethod: dto.method as PaymentMethod,
+        source: isDeposit ? RECEIPT_SOURCE.DEPOSIT : RECEIPT_SOURCE.PAYMENT,
+        sourceRefId: paymentId,
+        categoryKey: isDeposit
+          ? SYSTEM_FINANCE_CATEGORY.DEPOSIT
+          : SYSTEM_FINANCE_CATEGORY.BOOKING_PAYMENT,
         bookingId,
         vehicleId: booking.vehicleId,
-        description: dto.description ?? `Thu tiền đơn ${booking.code}`,
+        tenantCustomerId: booking.tenantCustomerId,
+        occurredAt: paidAt,
+        description:
+          dto.description ??
+          (isDeposit ? `Thu cọc đơn ${booking.code}` : `Thu tiền đơn ${booking.code}`),
         referenceCode: dto.referenceCode ?? null,
       });
 
       await tx.payment.create({
         data: {
-          id: newId(),
+          id: paymentId,
           tenantId,
           bookingId,
-          receiptId,
+          receiptId: receipt.id,
           payerUserId: userId,
           amount,
+          kind,
           method: dto.method as PaymentMethod,
           status: PAYMENT_STATUS.SUCCEEDED,
           paidAt,
         },
       });
 
-      // Cộng dồn ở DB — chống lost-update khi 2 lần thu chạy song song.
-      await tx.booking.update({
-        where: { id: bookingId },
-        data: { paidAmount: { increment: amount } },
-      });
+      // CHỈ tiền thuê mới cộng vào `paid_amount`. Cọc là tài sản giữ hộ sẽ trả lại khách —
+      // cộng nó vào đây làm công nợ tụt giả và đơn biến mất khỏi /manage/debts trong khi khách
+      // chưa trả một đồng tiền thuê nào. Cọc đã thu đọc qua `payments.kind = 'deposit'`.
+      if (!isDeposit) {
+        // Cộng dồn ở DB — chống lost-update khi 2 lần thu chạy song song.
+        await tx.booking.update({
+          where: { id: bookingId },
+          data: { paidAmount: { increment: amount } },
+        });
+      }
 
       await this.audit.record(
         {
@@ -100,7 +135,7 @@ export class PaymentsService {
           action: 'payment.record',
           targetType: 'booking',
           targetId: bookingId,
-          after: { amount: dto.amount, method: dto.method },
+          after: { amount: dto.amount, method: dto.method, kind },
         },
         tx,
       );
@@ -113,7 +148,14 @@ export class PaymentsService {
   async voidPayment(tenantId: string, userId: string, paymentId: string): Promise<PaymentDto> {
     const payment = await this.prisma.payment.findFirst({
       where: { id: paymentId, tenantId },
-      select: { id: true, status: true, amount: true, bookingId: true, receiptId: true },
+      select: {
+        id: true,
+        status: true,
+        amount: true,
+        kind: true,
+        bookingId: true,
+        receiptId: true,
+      },
     });
     if (!payment) {
       throw new NotFoundException({
@@ -135,7 +177,10 @@ export class PaymentsService {
         });
       }
 
-      if (payment.bookingId) {
+      // Đối xứng với `recordForBooking`: chỉ trừ lại thứ đã từng cộng vào. Trừ vô điều kiện sẽ
+      // rút `paid_amount` xuống vì một khoản cọc chưa bao giờ nằm trong đó — công nợ phình lên
+      // từ hư không ngay lần hoàn cọc đầu tiên.
+      if (payment.bookingId && payment.kind !== PAYMENT_KIND.DEPOSIT) {
         await tx.booking.update({
           where: { id: payment.bookingId },
           data: { paidAmount: { decrement: payment.amount } },
@@ -179,6 +224,7 @@ function toDto(p: Row): PaymentDto {
   return {
     id: p.id,
     amount: p.amount.toString(),
+    kind: p.kind,
     method: p.method,
     status: p.status,
     receiptId: p.receiptId,

@@ -2,10 +2,10 @@
 
 import { DollarOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
-import { useRouter } from 'next/navigation';
-import type { PaginationMeta } from '@xeprime/types';
+import { useTranslations } from 'next-intl';
+import { BOOKING_STATUS_META, type PaginationMeta } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
-import { ROUTES } from '@/constants/routes';
+import { StatusTag } from '@/components/data-display/StatusTag';
 import type { DebtItem } from '../types';
 import styles from './DebtTable.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -15,34 +15,38 @@ interface DebtTableProps {
   meta: PaginationMeta;
   loading: boolean;
   canRecord: boolean;
+  canView: boolean;
   error?: { onRetry: () => void } | null;
   filtered?: boolean;
   onClearFilters?: () => void;
+  onView: (row: DebtItem) => void;
   onCollect: (row: DebtItem) => void;
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-/** Figma `127:1725` ghi 900px cho bảng Debts. */
-const MIN_TABLE_WIDTH = 960;
+/** Figma `127:1725` ghi 900px cho bảng Debts; cột trạng thái (19/08) đẩy lên 1120. */
+const MIN_TABLE_WIDTH = 1120;
 
 export function DebtTable({
   items,
   meta,
   loading,
   canRecord,
+  canView,
   error = null,
   filtered = false,
   onClearFilters,
+  onView,
   onCollect,
   onPageChange,
 }: DebtTableProps) {
   const fmt = useAppFormat();
+  const t = useTranslations('Finance.debts.table');
+  const tCommon = useTranslations('Common');
 
-  const router = useRouter();
-  const bookingHref = (bookingId: string) => `${ROUTES.MANAGE.BOOKINGS}?booking=${bookingId}`;
   const columns: DataTableColumn<DebtItem>[] = [
     {
-      title: 'Đơn',
+      title: t('columns.booking'),
       key: 'booking',
       width: 240,
       render: (_, r) => (
@@ -55,41 +59,66 @@ export function DebtTable({
         </div>
       ),
     },
-    { title: 'Xe', key: 'vehicle', width: 180, render: (_, r) => r.vehicleName },
-    { title: 'Đến hạn trả', key: 'returnAt', width: 130, render: (_, r) => fmt.date(r.returnAt) },
+    /*
+     * Trạng thái đứng NGAY sau tên khách, không nhét cuối bảng: bảng này toàn số tiền trông
+     * giống nhau, và một đơn `reserved`/`confirmed` (xe chưa ra khỏi bãi) còn nợ là chuyện
+     * bình thường — không phải việc phải đi đòi. Đọc từ trái sang, người thu thấy trạng thái
+     * trước khi thấy con số, nên không còn cảnh nhìn cả cột "còn nợ" rồi tưởng tất cả đều là
+     * tiền chưa thu được.
+     *
+     * Màu lấy từ `BOOKING_STATUS_META` dùng chung (ADR 0005) — cùng một trạng thái ở lịch, ở
+     * chi tiết đơn và ở đây luôn ra cùng màu; KHÔNG tự pha bảng màu riêng cho màn công nợ.
+     */
     {
-      title: 'Tổng',
+      title: tCommon('labels.status'),
+      key: 'status',
+      width: 150,
+      render: (_, r) => (
+        <StatusTag value={r.status} meta={BOOKING_STATUS_META} group="bookingStatus" />
+      ),
+    },
+    { title: t('columns.vehicle'), key: 'vehicle', width: 180, render: (_, r) => r.vehicleName },
+    {
+      title: t('columns.returnAt'),
+      key: 'returnAt',
+      width: 130,
+      render: (_, r) => fmt.date(r.returnAt),
+    },
+    {
+      title: t('columns.total'),
       key: 'total',
       align: 'right',
       width: 130,
       render: (_, r) => fmt.money(r.totalAmount),
     },
     {
-      title: 'Đã trả',
+      title: t('columns.paid'),
       key: 'paid',
       align: 'right',
       width: 130,
       render: (_, r) => fmt.money(r.paidAmount),
     },
     {
-      title: 'Còn nợ',
+      title: t('columns.debt'),
       key: 'debt',
       align: 'right',
       width: 130,
       render: (_, r) => <span className={styles.debt}>{fmt.money(r.debtAmount)}</span>,
     },
-    // Quyền do trang quyết (`canRecord` từ `PAYMENT_RECORD`); `RowActions` chỉ ẩn/hiện theo cờ.
+    // Quyền do trang quyết (`canRecord` từ `PAYMENT_RECORD`, `canView` từ `BOOKING_VIEW`);
+    // `RowActions` chỉ ẩn/hiện theo cờ.
     actionColumn<DebtItem>(
       (r) => [
         {
           key: 'view',
-          label: 'Xem đơn',
+          label: t('actions.view'),
           icon: <EyeOutlined />,
-          onClick: () => router.push(bookingHref(r.bookingId)),
+          hidden: !canView,
+          onClick: () => onView(r),
         },
         {
           key: 'collect',
-          label: 'Thu tiền',
+          label: t('actions.collect'),
           icon: <DollarOutlined />,
           hidden: !canRecord,
           onClick: () => onCollect(r),
@@ -101,29 +130,35 @@ export function DebtTable({
 
   return (
     <DataTable<DebtItem>
-      label="Danh sách công nợ"
+      label={t('label')}
       columns={columns}
       items={items}
       rowKey={(row) => row.bookingId}
-      onRowClick={(row) => router.push(bookingHref(row.bookingId))}
+      onRowClick={canView ? onView : undefined}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
       error={
         error
           ? {
-              title: 'Không tải được công nợ',
-              description: 'Có lỗi khi lấy dữ liệu. Vui lòng thử lại.',
+              title: t('error.title'),
+              description: t('error.description'),
               onRetry: error.onRetry,
             }
           : null
       }
       filtered={filtered}
-      empty={{ title: 'Không có đơn nào còn nợ' }}
+      empty={{ title: t('empty.title') }}
       noResults={{
-        title: 'Không có khoản nợ khớp bộ lọc',
-        action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
+        title: t('noResults.title'),
+        action: onClearFilters ? (
+          <Button onClick={onClearFilters}>{tCommon('actions.clear')}</Button>
+        ) : undefined,
       }}
-      pagination={{ meta, onChange: onPageChange, totalLabel: (total) => `${total} đơn còn nợ` }}
+      pagination={{
+        meta,
+        onChange: onPageChange,
+        totalLabel: (total) => t('totalLabel', { count: total }),
+      }}
     />
   );
 }

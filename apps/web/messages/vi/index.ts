@@ -19,6 +19,11 @@ import shops from './shops.json';
 import chat from './chat.json';
 import account from './account.json';
 import manageCommon from './manage-common.json';
+import bookingRequests from './booking-requests.json';
+import bookings from './bookings.json';
+import vehicles from './vehicles.json';
+import customers from './customers.json';
+import finance from './finance.json';
 
 const messages = {
   Common: common,
@@ -33,6 +38,11 @@ const messages = {
   Chat: chat,
   Account: account,
   ManageCommon: manageCommon,
+  BookingRequests: bookingRequests,
+  Bookings: bookings,
+  Vehicles: vehicles,
+  Customers: customers,
+  Finance: finance,
 };
 
 export default messages;

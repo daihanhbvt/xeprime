@@ -13,13 +13,18 @@ import {
   NOTIFICATION_TYPE,
   PAYMENT_KIND,
   PAYMENT_STATUS,
+  RECEIPT_SOURCE,
+  RECEIPT_TYPE,
   SURCHARGE_CATEGORY,
+  SYSTEM_FINANCE_CATEGORY,
   type BookingStatus,
   type DepositStatus,
+  type PaymentMethod,
 } from '@xeprime/types';
 import { formatVnd } from '../../../common/money';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
+import { ReceiptsService } from '../../finance/receipts.service';
 import { NotificationService } from '../../notification/notification.service';
 import { PricingService } from '../../pricing/pricing.service';
 import {
@@ -55,10 +60,13 @@ type SurchargeRow = Prisma.BookingSurchargeGetPayload<{ select: typeof SURCHARGE
  *  - **`depositRequired` ≠ `depositReceived`.** Cái đầu là số cấu hình trên đơn, cái sau là tiền
  *    THẬT đã thu (`payments.kind = 'deposit'`). Chỉ cái sau mới đẻ ra việc hoàn cọc — tạo việc
  *    "hoàn 5 triệu" cho khoản chưa ai thu là cách nhanh nhất để chủ xe mất tiền thật.
- *  - **Ghi phát sinh KHÔNG phải một giao dịch.** Không sinh phiếu thu, không đụng `paid_amount`,
- *    không chuyển khoản. Nó chỉ nuôi phép tính đề xuất hoàn cọc.
- *  - **Hoàn cọc là GHI NHẬN.** Tiền đi bằng chuyển khoản/tiền mặt ngoài hệ thống; XePrime không
- *    có cổng thanh toán và không được nói như thể có.
+ *  - **Ghi phát sinh KHÔNG phải một giao dịch.** Không sinh phiếu, không đụng `paid_amount`,
+ *    không chuyển khoản. Nó chỉ nuôi phép tính đề xuất hoàn cọc. Phụ phí là một KHOẢN ĐÒI, tiền
+ *    chỉ thật sự chuyển động khi khách trả thêm (phiếu thu) hoặc khi bị trừ vào cọc — mà phiếu
+ *    chi hoàn cọc đã là số RÒNG. Sinh thêm phiếu cho phụ phí là đếm một đồng hai lần.
+ *  - **Hoàn cọc là GHI NHẬN, nhưng CÓ lên sổ.** Tiền đi bằng chuyển khoản/tiền mặt ngoài hệ
+ *    thống — XePrime không có cổng thanh toán và không được nói như thể có. Nhưng đó vẫn là tiền
+ *    rời tay chủ xe, nên nó thành một phiếu CHI trong cùng transaction (epic nối tiền).
  *
  * Mọi phép tính tiền dùng `Prisma.Decimal` — không bao giờ số thực JS (ADR 0007).
  */
@@ -69,6 +77,7 @@ export class SettlementService {
     private readonly audit: AuditService,
     private readonly pricing: PricingService,
     private readonly notifications: NotificationService,
+    private readonly receipts: ReceiptsService,
   ) {}
 
   async get(tenantId: string, bookingId: string): Promise<BookingSettlementDto> {
@@ -253,6 +262,30 @@ export class SettlementService {
           recordedBy: userId,
         },
       });
+
+      // Tiền RỜI TAY chủ xe ⇒ phải là một dòng chi trong sổ, cùng transaction với bản ghi hoàn
+      // cọc. Số ở đây đã là số RÒNG (cọc đã thu − phát sinh), nên phụ phí không cần dòng riêng —
+      // ghi thêm một phiếu cho phụ phí là đếm cùng một đồng hai lần.
+      //
+      // Hoàn 0đ (phát sinh nuốt trọn cọc) thì không có đồng nào di chuyển: không sinh phiếu.
+      if (refundAmount.greaterThan(0)) {
+        await this.receipts.createApprovedWithinTx(tx, tenantId, userId, {
+          type: RECEIPT_TYPE.EXPENSE,
+          amount: refundAmount.toFixed(2),
+          // `REFUND_METHOD` là tập con của `PAYMENT_METHOD` (bank_transfer | cash | other).
+          paymentMethod: dto.refundMethod as PaymentMethod,
+          source: RECEIPT_SOURCE.DEPOSIT_REFUND,
+          sourceRefId: id,
+          categoryKey: SYSTEM_FINANCE_CATEGORY.DEPOSIT_REFUND,
+          bookingId,
+          vehicleId: booking.vehicleId,
+          tenantCustomerId: booking.tenantCustomerId,
+          occurredAt: refundedAt,
+          referenceCode: dto.reference?.trim() || null,
+          description: `Hoàn cọc đơn ${booking.code}`,
+        });
+      }
+
       await this.audit.record(
         {
           tenantId,
@@ -325,6 +358,20 @@ export class SettlementService {
         });
       }
 
+      // Sổ đi theo bản ghi. Sửa TẠI CHỖ chứ không huỷ-rồi-tạo-lại: unique index
+      // (tenant_id, source, source_ref_id) phủ cả dòng đã huỷ, nên tạo lại sẽ đụng constraint.
+      await this.syncRefundReceipt(tx, tenantId, userId, {
+        settlementId: existing.id,
+        bookingId,
+        bookingCode: booking.code,
+        vehicleId: booking.vehicleId,
+        tenantCustomerId: booking.tenantCustomerId,
+        refundAmount,
+        refundMethod: dto.refundMethod,
+        refundedAt,
+        reference: dto.reference?.trim() || null,
+      });
+
       await this.audit.record(
         {
           tenantId,
@@ -356,13 +403,81 @@ export class SettlementService {
 
   // ── Nội bộ ────────────────────────────────────────────────────────────────
 
+  /**
+   * Đưa phiếu chi hoàn cọc về khớp với bản ghi hoàn cọc sau khi sửa.
+   *
+   * Ba chuyển tiếp, cả ba đều phải đúng:
+   *  - **0đ → có tiền**: lần ghi đầu không sinh phiếu (không đồng nào di chuyển), sửa lên số dương
+   *    thì bây giờ mới sinh.
+   *  - **có tiền → số khác**: sửa tại chỗ (unique index phủ cả dòng đã huỷ, không tạo lại được).
+   *  - **có tiền → 0đ**: huỷ phiếu — sổ không được giữ một khoản chi đã bị rút lại.
+   */
+  private async syncRefundReceipt(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    userId: string,
+    input: {
+      settlementId: string;
+      bookingId: string;
+      bookingCode: string;
+      vehicleId: string;
+      tenantCustomerId: string | null;
+      refundAmount: Prisma.Decimal;
+      refundMethod: string;
+      refundedAt: Date;
+      reference: string | null;
+    },
+  ): Promise<void> {
+    if (input.refundAmount.lessThanOrEqualTo(0)) {
+      await this.receipts.cancelBySourceWithinTx(
+        tx,
+        tenantId,
+        RECEIPT_SOURCE.DEPOSIT_REFUND,
+        input.settlementId,
+        userId,
+      );
+      return;
+    }
+
+    const touched = await this.receipts.updateAmountWithinTx(
+      tx,
+      tenantId,
+      RECEIPT_SOURCE.DEPOSIT_REFUND,
+      input.settlementId,
+      userId,
+      {
+        amount: input.refundAmount.toFixed(2),
+        occurredAt: input.refundedAt,
+        referenceCode: input.reference,
+      },
+    );
+    if (touched > 0) return;
+
+    await this.receipts.createApprovedWithinTx(tx, tenantId, userId, {
+      type: RECEIPT_TYPE.EXPENSE,
+      amount: input.refundAmount.toFixed(2),
+      paymentMethod: input.refundMethod as PaymentMethod,
+      source: RECEIPT_SOURCE.DEPOSIT_REFUND,
+      sourceRefId: input.settlementId,
+      categoryKey: SYSTEM_FINANCE_CATEGORY.DEPOSIT_REFUND,
+      bookingId: input.bookingId,
+      vehicleId: input.vehicleId,
+      tenantCustomerId: input.tenantCustomerId,
+      occurredAt: input.refundedAt,
+      referenceCode: input.reference,
+      description: `Hoàn cọc đơn ${input.bookingCode}`,
+    });
+  }
+
   private async requireBooking(tenantId: string, bookingId: string) {
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, tenantId, deletedAt: null },
       select: {
         id: true,
+        code: true,
         status: true,
         vehicleId: true,
+        tenantCustomerId: true,
         depositAmount: true,
         returnAt: true,
         actualReturnAt: true,

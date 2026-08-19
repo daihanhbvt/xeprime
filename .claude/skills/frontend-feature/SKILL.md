@@ -42,6 +42,8 @@ Default to Server Components; reach for `'use client'` only when a boundary genu
 
 Statuses, roles, permissions, and business labels come from `@xeprime/types` and `constants/` — never a bare string in a component (ADR 0005). A status badge reads its label and colour from the type package's metadata map; a menu item carries a permission key; a route is a named constant. If you catch yourself typing a domain string literal, stop and import it.
 
+The same applies to the words on screen: no user-facing text is written in the component. Every label, toast, validation message, `aria-label`, and empty/error line goes through `t()` against a message namespace, in both `vi` and `en` (ADR 0012) — and a file you open that still holds raw Vietnamese gets converted as part of your change. Load the **`i18n`** skill before writing that text; it has the full loop and the two checks.
+
 ## Before you call it done
 
 Read the feature back as the next engineer *and* as a user hitting it in production. Is every repeated thing extracted, every library used at its intended seam, every domain string imported, every displayed value going through a helper? Does every list scale — paginated, filtered, sorted server-side — and does every surface handle loading, empty, and error? Are the edge cases the domain guarantees actually handled, not deferred? Verify with a scoped typecheck and the relevant test — `pnpm --filter @xeprime/web typecheck` (plus the covering `*.test.tsx`), not a full-workspace lint/build/test (see `verify-changes`). A feature that "works on the seed data" but folds at real volume, or shows a blank screen on error, is not done — it is a bug you have chosen not to see yet. Finish it now.

@@ -9,6 +9,20 @@
 >
 > **Accepted target addendum — 2026-08-11, NOT CURRENT:** Finance gains a vehicle-obligations surface for financed, re-rented and partnership vehicles. The default partnership basis is rental after discount plus overtime, excluding deposit, delivery and penalties/other charges. Permissions must prevent financial amounts and contracts leaking into fleet summaries. See [`docs/design/12_VEHICLE_360_MANAGEMENT.md`](../design/12_VEHICLE_360_MANAGEMENT.md). This does not assert current implementation.
 >
+> **⚠️ SUPERSEDED IN PART — 2026-08-19, epic "nối tiền vào sổ Thu-Chi".** This brief documents the
+> state as of 2026-08-04. The following no longer hold; read `docs/completion-roadmap.md` (top) and
+> `docs/plans/tham-kh-o-nh-m-n-kind-crystal.md` for what shipped:
+> **authority #4** (attachments unusable) — presign + gallery upload now exist ·
+> **authority #5** partially (no charts/export still true; per-filter summary cards now exist) ·
+> **F-1/F-3/F-4/F-6/F-11** closed · **F-12** superseded (booking/vehicle/customer now link into the
+> filtered ledger) · **edge 6** now blocked by 409 `RECEIPT_SOURCE_LOCKED` · **edge 10** closed
+> (`receipt_no` unique per tenant + retry) · **§12 subject 25** (`tenantCustomerId` dormant) closed.
+> New since: `receipts.occurred_at` (money-movement date, all filtering/summing moved to it),
+> `receipts.source`/`source_ref_id`, `finance_categories.system_key`, deposit collection via
+> `payments.kind` (deposit does **not** move `paid_amount`), deposit refund and maintenance cost as
+> auto expense receipts, and `common/day-range.ts` fixing a 7-hour date-filter skew that made this
+> screen and the dashboard disagree.
+>
 > **Authority statements (per task):**
 > 1. **`PaymentsService` is the authoritative — and only — writer of `booking.paid_amount`.** Its docblock says so ("writer DUY NHẤT"), and it writes via DB-level `increment`/`decrement` so two concurrent collections cannot lose an update.
 > 2. **Debt is computed, never stored: `max(0, total_amount − paid_amount)`** — `bookingDebt()` in [`common/money.ts`](../../apps/api/src/common/money.ts) for DTOs, and the equivalent `total_amount > paid_amount` predicate in raw SQL for the debts list. There is no debt column and no debt table, by design ("tránh drift").

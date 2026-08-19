@@ -74,3 +74,14 @@
     font-size: var(--xp-font-size-sm);
   }
 }
+
+/*
+ * Nút quay lại chỗ vừa đi ra (hộp thư yêu cầu thuê, hồ sơ xe…). Đứng ĐẦU hàng filter và có
+ * đường kẻ ngăn: nó là điều hướng, không phải một bộ lọc, nên không được đọc lẫn vào nhóm bên
+ * phải nó. Chỉ render khi URL mang `?back=` hợp lệ.
+ */
+.back {
+  display: inline-flex;
+  padding-inline-end: var(--xp-space-sm);
+  border-inline-end: 1px solid var(--xp-color-border);
+}

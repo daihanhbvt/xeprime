@@ -2,9 +2,13 @@ import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
+  PAYMENT_KIND,
   PAYMENT_METHOD,
   PAYMENT_STATUS,
+  RECEIPT_SOURCE,
+  RECEIPT_TYPE,
   RECEIPT_STATUS,
+  SYSTEM_FINANCE_CATEGORY,
   TENANT_ROLE,
   TENANT_STATUS,
   VEHICLE_TYPE,
@@ -203,5 +207,209 @@ describe('Payments — thu tiền đơn (S2)', () => {
     expect(Number(s.balance)).toBe(Number(s.totalIncome) - Number(s.totalExpense));
     expect(Number(s.totalDebt)).toBeGreaterThanOrEqual(0);
     expect(s.debtBookings).toBeGreaterThanOrEqual(0);
+  });
+});
+
+/**
+ * Ranh giới CỌC ↔ TIỀN THUÊ (epic nối tiền).
+ *
+ * Trước epic này `payments.kind` có cột nhưng không đường ghi nào set `deposit`, nên
+ * `depositReceived` của quyết toán vĩnh viễn bằng 0 và cả máy hoàn cọc chạy không tải. Nhóm test
+ * này khoá đúng cái ranh giới đó, và khoá luôn hai chiều: ghi và huỷ.
+ */
+describe('Payments — cọc không phải doanh thu', () => {
+  maybe('thu cọc KHÔNG cộng vào paidAmount và KHÔNG làm giảm công nợ', async () => {
+    const b = await makeBooking('1000000');
+    const after = await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '500000',
+      method: PAYMENT_METHOD.CASH,
+      kind: PAYMENT_KIND.DEPOSIT,
+    });
+    // Cọc là tài sản giữ hộ: khách vẫn nợ trọn tiền thuê.
+    expect(String(after.paidAmount)).toBe('0');
+    expect(String(after.debtAmount)).toBe('1000000');
+  });
+
+  maybe('thu cọc vẫn LÊN SỔ: phiếu thu đã duyệt, nguồn deposit, danh mục "Tiền cọc"', async () => {
+    const b = await makeBooking('1000000');
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '500000',
+      method: PAYMENT_METHOD.BANK_TRANSFER,
+      kind: PAYMENT_KIND.DEPOSIT,
+    });
+    const receipt = await prisma.receipt.findFirstOrThrow({
+      where: { tenantId, bookingId: b.id, source: RECEIPT_SOURCE.DEPOSIT },
+      select: { status: true, amount: true, sourceRefId: true, category: { select: { systemKey: true } } },
+    });
+    expect(receipt.status).toBe(RECEIPT_STATUS.APPROVED);
+    expect(receipt.amount.toString()).toBe('500000');
+    expect(receipt.category?.systemKey).toBe(SYSTEM_FINANCE_CATEGORY.DEPOSIT);
+    // `sourceRefId` phải trỏ về đúng giao dịch — đó là đường lần ngược từ sổ về nghiệp vụ.
+    const payment = await prisma.payment.findFirstOrThrow({
+      where: { bookingId: b.id, kind: PAYMENT_KIND.DEPOSIT },
+      select: { id: true },
+    });
+    expect(receipt.sourceRefId).toBe(payment.id);
+  });
+
+  maybe('thu tiền thuê vẫn giữ nguyên hành vi cũ + gắn danh mục "Thanh toán đơn"', async () => {
+    const b = await makeBooking('1000000');
+    const after = await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '400000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    expect(String(after.paidAmount)).toBe('400000');
+    expect(String(after.debtAmount)).toBe('600000');
+    const receipt = await prisma.receipt.findFirstOrThrow({
+      where: { tenantId, bookingId: b.id, source: RECEIPT_SOURCE.PAYMENT },
+      select: { category: { select: { systemKey: true } } },
+    });
+    expect(receipt.category?.systemKey).toBe(SYSTEM_FINANCE_CATEGORY.BOOKING_PAYMENT);
+  });
+
+  maybe('huỷ giao dịch CỌC không trừ paidAmount — nếu trừ, công nợ phình từ hư không', async () => {
+    const b = await makeBooking('1000000');
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '300000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '500000',
+      method: PAYMENT_METHOD.CASH,
+      kind: PAYMENT_KIND.DEPOSIT,
+    });
+    const deposit = await prisma.payment.findFirstOrThrow({
+      where: { bookingId: b.id, kind: PAYMENT_KIND.DEPOSIT },
+      select: { id: true },
+    });
+
+    await payments.voidPayment(tenantId, ownerId, deposit.id);
+
+    const booking = await prisma.booking.findUniqueOrThrow({
+      where: { id: b.id },
+      select: { paidAmount: true },
+    });
+    // Chỉ 300k tiền thuê từng được cộng vào, nên sau khi huỷ cọc nó phải còn nguyên 300k.
+    expect(booking.paidAmount.toString()).toBe('300000');
+  });
+
+  maybe('phiếu tự động KHÔNG huỷ trực tiếp được — phải đảo ở nghiệp vụ gốc', async () => {
+    const b = await makeBooking('1000000');
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '100000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    const receipt = await prisma.receipt.findFirstOrThrow({
+      where: { tenantId, bookingId: b.id, source: RECEIPT_SOURCE.PAYMENT },
+      select: { id: true },
+    });
+    const receipts = new ReceiptsService(asService, audit);
+    await expect(receipts.cancel(tenantId, ownerId, receipt.id)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.RECEIPT_SOURCE_LOCKED },
+    });
+  });
+});
+
+/**
+ * MỘT con số phải-thu cho một đơn (`common/booking-money.ts`).
+ *
+ * Tình huống thật đã gặp: đơn thu 720k tiền thuê qua nút "Thu tiền", rồi 200k quá giờ ghi bằng
+ * phiếu tay ở sổ. Trước đây màn đơn nói "đã thu 720k" còn sổ nói 920k, và phụ phí CHƯA thu thì
+ * `/manage/debts` báo 0 — gian hàng mất tiền không có gì báo.
+ */
+describe('Booking money — phụ phí và phiếu tay vào cùng một con số', () => {
+  maybe('phiếu thu TAY gắn đơn được tính là đã thu của đơn', async () => {
+    const b = await makeBooking('720000');
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '720000',
+      method: PAYMENT_METHOD.CASH,
+    });
+
+    const receipts = new ReceiptsService(asService, audit);
+    await receipts.create(tenantId, ownerId, {
+      type: RECEIPT_TYPE.INCOME,
+      amount: '200000',
+      paymentMethod: PAYMENT_METHOD.CASH,
+      bookingId: b.id,
+    });
+
+    // Phiếu CHƯA duyệt thì chưa phải tiền thật.
+    let after = await bookings.getOne(tenantId, b.id);
+    expect(String(after.collectedAmount)).toBe('720000');
+
+    const pending = await prisma.receipt.findFirstOrThrow({
+      where: { tenantId, bookingId: b.id, source: RECEIPT_SOURCE.MANUAL },
+      select: { id: true },
+    });
+    await receipts.approve(tenantId, ownerId, pending.id);
+
+    after = await bookings.getOne(tenantId, b.id);
+    expect(String(after.otherCollected)).toBe('200000');
+    expect(String(after.collectedAmount)).toBe('920000');
+    // `paidAmount` vẫn CHỈ là tiền qua PaymentsService — writer duy nhất không đổi.
+    expect(String(after.paidAmount)).toBe('720000');
+  });
+
+  maybe('phụ phí chưa thu → đơn CÒN NỢ và lọt vào danh sách công nợ', async () => {
+    const b = await makeBooking('500000');
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '500000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    let after = await bookings.getOne(tenantId, b.id);
+    expect(String(after.debtAmount)).toBe('0');
+
+    await prisma.bookingSurcharge.create({
+      data: {
+        id: newId(),
+        tenantId,
+        bookingId: b.id,
+        category: 'overtime',
+        amount: '150000',
+        reason: 'Trả trễ 3 tiếng',
+        createdBy: ownerId,
+      },
+    });
+
+    after = await bookings.getOne(tenantId, b.id);
+    expect(String(after.surchargeTotal)).toBe('150000');
+    expect(String(after.amountDue)).toBe('650000');
+    expect(String(after.debtAmount)).toBe('150000');
+
+    const debts = await overview.debts(tenantId, { limit: 100 });
+    const row = debts.data.find((d) => d.bookingId === b.id);
+    expect(row?.debtAmount).toBe('150000');
+    expect(row?.surchargeTotal).toBe('150000');
+  });
+
+  maybe('cọc ĐÃ THU gánh phụ phí — không đòi khách lần thứ hai', async () => {
+    const b = await makeBooking('400000');
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '400000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '2000000',
+      method: PAYMENT_METHOD.CASH,
+      kind: PAYMENT_KIND.DEPOSIT,
+    });
+    await prisma.bookingSurcharge.create({
+      data: {
+        id: newId(),
+        tenantId,
+        bookingId: b.id,
+        category: 'cleaning',
+        amount: '300000',
+        reason: 'Vệ sinh nội thất',
+        createdBy: ownerId,
+      },
+    });
+
+    const after = await bookings.getOne(tenantId, b.id);
+    // Phụ phí 300k nằm trong tầm cọc 2tr ⇒ quyết toán đã trừ vào tiền hoàn, nên KHÔNG thành nợ.
+    // Cộng thẳng phụ phí vào công nợ mà quên chỗ này là bắt khách trả hai lần.
+    expect(String(after.amountDue)).toBe('700000');
+    expect(String(after.collectedAmount)).toBe('700000');
+    expect(String(after.debtAmount)).toBe('0');
   });
 });

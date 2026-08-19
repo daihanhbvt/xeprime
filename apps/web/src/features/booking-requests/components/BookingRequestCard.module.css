@@ -1,0 +1,625 @@
+/*
+ * Thẻ một yêu cầu thuê — bố cục theo mẫu 19/08.
+ *
+ * Thân thẻ là bốn vùng (xe · khách · yêu cầu thuê · trạng thái) rồi một CHÂN THẺ ngăn bằng
+ * đường kẻ: trái là liên hệ, phải là quyết định. MOBILE-FIRST: mặc định hai cột hẹp, hai
+ * `@media (min-width: …)` mở dần ra. Không có nhánh JS nào theo breakpoint nên không có pha
+ * nhấp nháy khi hydrate.
+ *
+ * MÀU NHẤN LÀ GOLD, không phải xanh. Bản vẽ dùng xanh cho link/nút/badge, nhưng màu chính của
+ * XePrime là gold (`--xp-color-primary`) — dùng `--xp-color-link` ở đây sẽ đẻ ra một màu nhấn
+ * thứ hai chỉ sống trên đúng màn này. Chữ gold lấy bậc `--xp-color-primary-active` (bậc đậm
+ * nhất trong thang) đúng như `RowActions`/`FileListField` đang làm; `--xp-color-primary` chỉ
+ * dùng cho NỀN và VIỀN, nơi độ tương phản không phụ thuộc vào nó.
+ */
+.card {
+  min-width: 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.card:hover {
+  border-color: var(--xp-color-border-strong);
+  box-shadow: var(--xp-shadow-raised);
+}
+
+/* ── Thân thẻ ───────────────────────────────────────────────────────────── */
+
+.body {
+  display: grid;
+  min-width: 0;
+  padding: var(--xp-space-md);
+  column-gap: var(--xp-space-md);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'vehicle  vehicle'
+    'customer state'
+    'request  request'
+    'stamps   stamps';
+  row-gap: var(--xp-space-md);
+}
+
+.body > * {
+  min-width: 0;
+}
+
+/* ── Xe ─────────────────────────────────────────────────────────────────── */
+
+.vehicle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  grid-area: vehicle;
+}
+
+/* Tỉ lệ CỐ ĐỊNH 4:3 + `object-fit: cover`: ảnh nguồn dọc hay ngang thì hàng vẫn thẳng hàng. */
+.thumb {
+  display: flex;
+  overflow: hidden;
+  width: 76px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-sm);
+  aspect-ratio: 4 / 3;
+  background: var(--xp-color-bg-muted);
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumbFallback {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-h4);
+}
+
+.vehicleText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.vehicleName,
+.vehicleNamePlain {
+  overflow: hidden;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vehicleName:hover {
+  color: var(--xp-color-primary-active);
+}
+
+.vehicleName:focus-visible,
+.customerLink:focus-visible,
+.customerPhone:focus-visible,
+.bookingLink:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Biển số + hai chip dịch vụ nằm CÙNG một dòng, đúng như mẫu. */
+.vehicleLine {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.vehicleMeta {
+  overflow: hidden;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Chip trung tính, nhỏ — chúng mô tả xe, không phải trạng thái, nên không mang màu nghiệp vụ. */
+.chip {
+  margin-inline-end: 0 !important;
+  border-color: var(--xp-color-border) !important;
+  background: var(--xp-color-bg-muted) !important;
+  color: var(--xp-color-text-secondary) !important;
+  font-size: var(--xp-font-size-body-sm) !important;
+}
+
+/* "Xem lịch xe": hành động phụ của vùng xe — nhỏ, gold, không tranh chỗ với tên xe. */
+.scheduleLink {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-xs);
+}
+
+.scheduleLink:hover {
+  color: var(--xp-color-primary);
+  text-decoration: underline;
+}
+
+.scheduleLink:focus-visible {
+  border-radius: var(--xp-border-radius-sm);
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* ── Khách · yêu cầu thuê ───────────────────────────────────────────────── */
+
+.customer {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  grid-area: customer;
+}
+
+/*
+ * Vùng "Yêu cầu thuê" — nội dung CHÍNH của thẻ, nên nó là khối duy nhất có nền riêng và viền:
+ * mắt phải rơi vào đây ngay sau tên xe. Ba vùng còn lại giữ nền trắng để không tranh chỗ.
+ */
+.request {
+  display: flex;
+  position: relative;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  gap: var(--xp-space-xs);
+  grid-area: request;
+}
+
+/*
+ * Biến thể BẤM ĐƯỢC (yêu cầu đã thành đơn): thêm hẳn tín hiệu tương tác — con trỏ, viền và nền
+ * đổi khi rê chuột, kèm dòng gợi ý "Xem chi tiết đơn thuê ›" ở góc. Một vùng bấm được mà trông
+ * y hệt vùng tĩnh thì không ai bấm.
+ */
+.requestOpenable {
+  composes: request;
+  border-color: color-mix(in srgb, var(--xp-color-primary) 28%, var(--xp-color-border));
+  cursor: pointer;
+}
+
+.requestOpenable:hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
+.requestHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.requestCue {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  gap: var(--xp-space-xs);
+  white-space: nowrap;
+}
+
+/*
+ * Nút phủ kín vùng: vùng bấm là CẢ khối, nhưng DOM chỉ có đúng một phần tử tương tác nên không
+ * có nút lồng trong nút và trình đọc màn hình chỉ nghe một hành động.
+ *
+ * Nội dung được đặt `pointer-events: none` để cú bấm rơi xuống nút bên dưới. Đánh đổi có ý
+ * thức: chữ trong vùng này KHÔNG bôi đen được nữa. Chấp nhận vì vùng này không có gì cần chép
+ * tay (SĐT và biển số nằm ở vùng khác, vẫn chọn/chép bình thường), còn đổi lại là một vùng bấm
+ * đủ lớn thay vì một dòng chữ nhỏ ở góc.
+ */
+.requestHitArea {
+  position: absolute;
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  cursor: pointer;
+  inset: 0;
+}
+
+.requestHitArea:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.requestOpenable > .requestHead,
+.requestOpenable > .facts,
+.requestOpenable > .hint {
+  position: relative;
+  pointer-events: none;
+}
+
+.srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Tiêu đề vùng: nhỏ, in hoa — đủ để mắt tìm ra vùng, không tranh chỗ với nội dung. */
+.zoneTitle {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.06em;
+  line-height: var(--xp-line-height-overline);
+  text-transform: uppercase;
+}
+
+.customerLink {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.customerLink:hover {
+  color: var(--xp-color-primary-active);
+}
+
+/* SĐT là hành động (bấm để gọi) nên nó mang màu nhấn — GOLD, không phải xanh. */
+.customerPhone {
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.customerPhone:hover {
+  color: var(--xp-color-primary);
+  text-decoration: underline;
+}
+
+.email {
+  overflow: hidden;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  text-overflow: ellipsis;
+}
+
+.hint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* ── Dòng nhãn — giá trị ────────────────────────────────────────────────── */
+
+.facts {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-xs);
+}
+
+/*
+ * Mobile: nhãn trái, giá trị PHẢI (đúng mẫu — mắt quét cột giá trị thẳng đứng ở màn hẹp).
+ * Desktop: nhãn thành một cột cố định rồi giá trị bám sát ngay sau.
+ */
+.fact {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.factLabel {
+  flex: none;
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Dấu hai chấm là DẤU CÂU, không phải chữ — cả vi lẫn en dùng đúng ký tự này. */
+.factLabel::after {
+  content: ':';
+}
+
+.factValue,
+.factValueStrong {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  text-align: end;
+  /* Địa chỉ giao và điểm đến là chuỗi dài không có dấu cách — cho phép ngắt giữa từ. */
+  overflow-wrap: anywhere;
+}
+
+/* Mốc nhận/trả là thứ mắt phải chạm tới đầu tiên trong vùng lịch. */
+.factValueStrong {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.handover {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  gap: var(--xp-space-xs);
+}
+
+/* ── Trạng thái · dấu vết xử lý ─────────────────────────────────────────── */
+
+.state {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  grid-area: state;
+}
+
+.stamps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  grid-area: stamps;
+}
+
+.timestamp {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* ── Ngữ cảnh thêm: lộ trình · địa chỉ giao · ghi chú · lý do từ chối ───── */
+
+.extras {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--xp-space-md) var(--xp-space-md);
+  gap: var(--xp-space-sm);
+}
+
+/* Cảnh báo rủi ro là VĂN BẢN, không phải tooltip: phải đọc được trước khi tay chạm nút Duyệt. */
+.risk {
+  display: flex;
+  align-items: flex-start;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  margin: 0;
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  gap: var(--xp-space-xs);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.note,
+.rejectReason {
+  padding: var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.rejectReason {
+  border-left: 3px solid var(--xp-color-error);
+  background: var(--xp-color-error-bg);
+}
+
+.noteLabel {
+  margin: 0 0 var(--xp-space-xs);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Hai dòng mặc định — đủ để đọc ý chính; phần còn lại mở bằng nút, không giấu sau tooltip. */
+.noteBody {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  -webkit-box-orient: vertical;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  -webkit-line-clamp: 2;
+  line-height: var(--xp-line-height-body);
+  overflow-wrap: anywhere;
+}
+
+.noteBodyFull {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  overflow-wrap: anywhere;
+}
+
+.noteToggle {
+  height: auto !important;
+  padding: 0 !important;
+  color: var(--xp-color-primary-active) !important;
+}
+
+/* ── Chân thẻ ───────────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-sm);
+}
+
+/*
+ * Mobile: liên hệ chia đều cả hàng, quyết định chiếm trọn hàng dưới. Mỗi nút cao tối thiểu
+ * 44px (WCAG 2.5.5) và nhãn không bị cắt vì `flex: 1` chia đều chứ không nén theo nội dung.
+ *
+ * Cụm QUYẾT ĐỊNH là `RowActions variant="filled"` — nó tự lo tông màu, vùng chạm 44px và việc
+ * chặn sự kiện nổi bọt, nên ở đây chỉ còn việc cho nó chiếm trọn hàng ở màn hẹp.
+ */
+.contact,
+.decision {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 100%;
+  gap: var(--xp-space-sm);
+}
+
+.decision {
+  justify-content: flex-end;
+}
+
+.contactSlot,
+.contact > .contactButton,
+.contact > .zaloButton {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.contact :global(.ant-btn) {
+  width: 100%;
+  min-height: var(--xp-touch-target-min);
+}
+
+@media (max-width: 640px) {
+  /* `RowActions` render một `div` gốc — cho nó trải hết hàng rồi chia đôi hai nút bên trong. */
+  .decision > * {
+    width: 100%;
+  }
+
+  .decision :global(.ant-btn) {
+    flex: 1 1 0;
+  }
+}
+
+/*
+ * Nút Zalo: nền gold nhạt + chữ gold, thay cho xanh trong bản vẽ. Không cài thêm bộ icon chỉ
+ * để có một logo — chữ đã là nhãn rõ ràng và `aria-label` mang đủ ngữ cảnh.
+ */
+.zaloButton {
+  border: 1px solid transparent !important;
+  background: var(--xp-color-primary-light) !important;
+  color: var(--xp-color-primary-active) !important;
+  font-weight: var(--xp-font-weight-semibold) !important;
+}
+
+.zaloButton:hover {
+  border-color: var(--xp-color-primary) !important;
+  color: var(--xp-color-primary-active) !important;
+}
+
+.bookingLink {
+  display: inline-flex;
+  height: auto !important;
+  align-items: center;
+  padding: 0 !important;
+  color: var(--xp-color-primary-active) !important;
+  font-size: var(--xp-font-size-body) !important;
+  font-weight: var(--xp-font-weight-semibold) !important;
+  gap: var(--xp-space-xs);
+}
+
+.bookingLink:hover {
+  color: var(--xp-color-primary) !important;
+}
+
+/* ── Tablet trở lên: nút trở về bề rộng theo nội dung, chân thẻ thành một hàng ── */
+
+@media (min-width: 641px) {
+  .body {
+    padding: var(--xp-space-md) var(--xp-space-lg);
+  }
+
+  .contact,
+  .decision {
+    flex: 0 0 auto;
+  }
+
+  .contactSlot,
+  .contact > .contactButton,
+  .contact > .zaloButton {
+    flex: 0 0 auto;
+  }
+
+  .contact :global(.ant-btn) {
+    width: auto;
+    /* Cùng chiều cao với nút của `RowActions variant="filled"` để hai cụm thẳng hàng. */
+    min-height: 34px;
+  }
+
+  .footer {
+    padding: var(--xp-space-sm) var(--xp-space-lg);
+  }
+}
+
+/* ── Desktop: bốn vùng của một hàng hộp thư ─────────────────────────────── */
+
+@media (min-width: 1025px) {
+  .body {
+    align-items: start;
+    column-gap: var(--xp-space-lg);
+    grid-template-columns:
+      minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.2fr)
+      minmax(170px, 0.8fr);
+    grid-template-areas:
+      'vehicle customer request state'
+      'vehicle customer request stamps';
+    grid-template-rows: auto 1fr;
+    row-gap: var(--xp-space-xs);
+  }
+
+  .vehicle {
+    align-items: flex-start;
+  }
+
+  .thumb {
+    width: 88px;
+  }
+
+  /* Nhãn thành một cột canh đều; giá trị bám ngay sau thay vì bị đẩy sang mép phải. */
+  .fact {
+    justify-content: flex-start;
+  }
+
+  .factLabel {
+    width: 84px;
+  }
+
+  .factValue,
+  .factValueStrong {
+    text-align: start;
+  }
+
+  .state {
+    justify-content: flex-end;
+  }
+
+  .stamps {
+    align-items: flex-end;
+    text-align: end;
+  }
+}

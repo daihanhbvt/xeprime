@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Put,
   Query,
@@ -22,6 +23,7 @@ import type { AuthenticatedUser, TenantContext } from '../../../common/types/req
 import { SourceContractDownloadDto, SourceContractPresignDto } from '../dto/vehicle-source.dto';
 import {
   CompleteMaintenanceDto,
+  CorrectMaintenanceCostDto,
   CorrectOdometerDto,
   MaintenanceProfileDto,
   MaintenanceRecordDto,
@@ -203,6 +205,32 @@ export class VehicleMaintenanceController {
     @Body() dto: CompleteMaintenanceDto,
   ): Promise<MaintenanceRecordDto> {
     return this.maintenance.completeRecord(
+      tenant.tenantId,
+      vehicleId,
+      user.id,
+      recordId,
+      dto,
+      scopeOf(tenant),
+    );
+  }
+
+  /**
+   * Đòi CẢ `manage` lẫn `view_cost`: sửa con số đã nằm trong sổ Thu-Chi là việc của người được
+   * phép nhìn tiền, không phải của mọi người quản lý được lịch bảo dưỡng.
+   */
+  @Patch('records/:recordId/cost')
+  @HttpCode(HttpStatus.OK)
+  @RequirePermissions(PERMISSION.VEHICLE_MAINTENANCE_MANAGE, PERMISSION.VEHICLE_MAINTENANCE_COST_VIEW)
+  @ApiOperation({ summary: 'Sửa chi phí phiếu ĐÃ hoàn tất — phiếu chi trong sổ đổi theo' })
+  @ApiOkResponse({ type: MaintenanceRecordDto })
+  correctCost(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') vehicleId: string,
+    @Param('recordId') recordId: string,
+    @Body() dto: CorrectMaintenanceCostDto,
+  ): Promise<MaintenanceRecordDto> {
+    return this.maintenance.correctCost(
       tenant.tenantId,
       vehicleId,
       user.id,

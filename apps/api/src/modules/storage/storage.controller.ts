@@ -57,6 +57,28 @@ export class StorageController {
     });
   }
 
+  /**
+   * Ảnh minh chứng (bill/hoá đơn) của phiếu thu-chi. Bucket CÔNG KHAI, cùng mức phơi bày với ảnh
+   * xe — không phải kho riêng tư như hợp đồng nguồn xe: đây là ảnh hoá đơn xăng, rửa xe, biên lai
+   * chuyển khoản, không mang giấy tờ tuỳ thân.
+   */
+  @Post('receipt-attachments/presign')
+  @RequirePermissions(PERMISSION.RECEIPT_CREATE)
+  @ApiOperation({ summary: 'Presign upload ảnh minh chứng phiếu thu/chi lên R2' })
+  @ApiCreatedResponse({ type: UploadPresignDto })
+  presignReceiptAttachment(
+    @CurrentTenant() tenant: TenantContext,
+    @Body() dto: PresignImageDto,
+  ): Promise<UploadPresignDto> {
+    this.assertConfigured();
+    return this.r2.presignUpload({
+      prefix: `tenants/${tenant.tenantId}/receipts`,
+      fileName: dto.fileName,
+      contentType: dto.contentType,
+      contentLength: dto.fileSize,
+    });
+  }
+
   /** Thiếu env R2 → 503 mã ổn định để FE hiện hướng dẫn, thay vì 500 khó hiểu từ getOrThrow. */
   private assertConfigured(): void {
     if (!this.r2.enabled) {

@@ -4173,6 +4173,55 @@
         ]
       }
     },
+    "/vehicles/{id}/maintenance/records/{recordId}/cost": {
+      "patch": {
+        "operationId": "VehicleMaintenanceController_correctCost",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectMaintenanceCostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceRecordDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sửa chi phí phiếu ĐÃ hoàn tất — phiếu chi trong sổ đổi theo",
+        "tags": [
+          "vehicle-maintenance"
+        ]
+      }
+    },
     "/vehicles/{id}/maintenance/records/{recordId}/cancel": {
       "post": {
         "operationId": "VehicleMaintenanceController_cancelRecord",
@@ -5034,6 +5083,764 @@
         "summary": "Presign upload logo/ảnh bìa gian hàng lên R2",
         "tags": [
           "uploads"
+        ]
+      }
+    },
+    "/uploads/receipt-attachments/presign": {
+      "post": {
+        "operationId": "StorageController_presignReceiptAttachment",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadPresignDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Presign upload ảnh minh chứng phiếu thu/chi lên R2",
+        "tags": [
+          "uploads"
+        ]
+      }
+    },
+    "/finance/categories": {
+      "get": {
+        "operationId": "FinanceCategoriesController_list",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "income",
+                "expense"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FinanceCategoryDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh mục thu/chi (hệ thống + của tenant)",
+        "tags": [
+          "finance-categories"
+        ]
+      },
+      "post": {
+        "operationId": "FinanceCategoriesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinanceCategoryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo danh mục riêng của tenant",
+        "tags": [
+          "finance-categories"
+        ]
+      }
+    },
+    "/finance/categories/{id}": {
+      "patch": {
+        "operationId": "FinanceCategoriesController_rename",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinanceCategoryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đổi tên danh mục (chỉ danh mục riêng)",
+        "tags": [
+          "finance-categories"
+        ]
+      },
+      "delete": {
+        "operationId": "FinanceCategoriesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Xoá danh mục (chỉ danh mục riêng)",
+        "tags": [
+          "finance-categories"
+        ]
+      }
+    },
+    "/receipts": {
+      "get": {
+        "operationId": "ReceiptsController_list",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "income",
+                "expense"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending_approval",
+                "approved",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo danh mục",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo nguồn sinh phiếu",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "payment",
+                "deposit",
+                "deposit_refund",
+                "maintenance"
+              ]
+            }
+          },
+          {
+            "name": "paymentMethod",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo hình thức",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cash",
+                "bank_transfer",
+                "qr",
+                "card",
+                "other"
+              ]
+            }
+          },
+          {
+            "name": "bookingId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo đơn thuê",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vehicleId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo xe",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantCustomerId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo khách của gian hàng",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm mã phiếu / mã tra soát / diễn giải / mã đơn",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Từ ngày — `YYYY-MM-DD` (trọn ngày theo giờ VN) hoặc ISO đầy đủ. Lọc `occurred_at`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Đến ngày — cùng quy ước với `from`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách phiếu thu/chi (phân trang, filter)",
+        "tags": [
+          "receipts"
+        ]
+      },
+      "post": {
+        "operationId": "ReceiptsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReceiptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tạo phiếu thu/chi (chờ duyệt)",
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
+    "/receipts/summary": {
+      "get": {
+        "operationId": "ReceiptsController_summary",
+        "parameters": [
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "income",
+                "expense"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "pending_approval",
+                "approved",
+                "cancelled"
+              ]
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo danh mục",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo nguồn sinh phiếu",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "payment",
+                "deposit",
+                "deposit_refund",
+                "maintenance"
+              ]
+            }
+          },
+          {
+            "name": "paymentMethod",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo hình thức",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cash",
+                "bank_transfer",
+                "qr",
+                "card",
+                "other"
+              ]
+            }
+          },
+          {
+            "name": "bookingId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo đơn thuê",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vehicleId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo xe",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantCustomerId",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo khách của gian hàng",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm mã phiếu / mã tra soát / diễn giải / mã đơn",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Từ ngày — `YYYY-MM-DD` (trọn ngày theo giờ VN) hoặc ISO đầy đủ. Lọc `occurred_at`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Đến ngày — cùng quy ước với `from`",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tổng thu/chi của ĐÚNG bộ lọc đang xem — thẻ tổng phải khớp danh sách bên dưới",
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
+    "/receipts/booking-options": {
+      "get": {
+        "operationId": "ReceiptsController_bookingOptions",
+        "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo mã đơn / tên khách / SĐT / biển số",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptBookingOptionListDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đơn thuê gợi ý để gắn phiếu — ưu tiên đơn còn nợ",
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
+    "/receipts/{id}": {
+      "get": {
+        "operationId": "ReceiptsController_getOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Chi tiết phiếu",
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
+    "/receipts/{id}/approve": {
+      "post": {
+        "operationId": "ReceiptsController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Duyệt phiếu",
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
+    "/receipts/{id}/cancel": {
+      "post": {
+        "operationId": "ReceiptsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelReceiptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Huỷ phiếu",
+        "tags": [
+          "receipts"
+        ]
+      }
+    },
+    "/debts": {
+      "get": {
+        "operationId": "FinanceOverviewController_debts",
+        "parameters": [
+          {
+            "name": "filter",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "all",
+                "overdue",
+                "upcoming",
+                "unpaid"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DebtPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách đơn còn công nợ (lọc quá hạn/sắp đến/chưa thu)",
+        "tags": [
+          "finance-overview"
+        ]
+      }
+    },
+    "/finance/summary": {
+      "get": {
+        "operationId": "FinanceOverviewController_summary",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Từ ngày (ISO)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Đến ngày (ISO)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinanceSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tổng quan tài chính: thu/chi/cân đối/công nợ theo kỳ",
+        "tags": [
+          "finance-overview"
         ]
       }
     },
@@ -7185,6 +7992,38 @@
         ]
       }
     },
+    "/booking-requests/{id}/conversation": {
+      "post": {
+        "description": "Idempotent theo (khách, xe) — mở lại đúng thread cũ. Khách vãng lai chưa có tài khoản trả CHAT_CUSTOMER_UNAVAILABLE.",
+        "operationId": "BookingRequestsController_conversation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Mở/lấy hội thoại với khách của yêu cầu (phía gian hàng)",
+        "tags": [
+          "booking-requests"
+        ]
+      }
+    },
     "/public/booking-requests": {
       "post": {
         "operationId": "PublicBookingRequestsController_submit",
@@ -7246,6 +8085,277 @@
         "summary": "Khách kiểm tra nhanh khung giờ của một xe có trống không (preview)",
         "tags": [
           "public-booking-requests"
+        ]
+      }
+    },
+    "/conversations": {
+      "get": {
+        "operationId": "ConversationsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationPageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Danh sách hội thoại của tôi (phân trang)",
+        "tags": [
+          "conversations"
+        ]
+      },
+      "post": {
+        "operationId": "ConversationsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConversationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationSummaryDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Mở/lấy hội thoại với shop về một xe (khách)",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/conversations/unread-count": {
+      "get": {
+        "operationId": "ConversationsController_unreadCount",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatUnreadCountDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Tổng tin chưa đọc mọi hội thoại (cho badge icon chat)",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/conversations/{id}/messages": {
+      "get": {
+        "operationId": "ConversationsController_messages",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "before",
+            "required": false,
+            "in": "query",
+            "description": "Cursor: lấy tin CŨ hơn mốc ISO này (phân trang lịch sử)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 30,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagePageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lịch sử tin nhắn (cursor, mới nhất trước)",
+        "tags": [
+          "conversations"
+        ]
+      },
+      "post": {
+        "operationId": "ConversationsController_send",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gửi một tin nhắn",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/conversations/{id}/read": {
+      "post": {
+        "operationId": "ConversationsController_read",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkReadResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đánh dấu đã đọc hội thoại",
+        "tags": [
+          "conversations"
+        ]
+      }
+    },
+    "/chat/firebase-token": {
+      "post": {
+        "operationId": "ChatController_firebaseToken",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FirebaseTokenDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Custom token để signInWithCustomToken (uid = user id)",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/chat/attachments/presign": {
+      "post": {
+        "operationId": "ChatController_presign",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignAttachmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresignResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xin presigned URL để upload đính kèm chat lên R2",
+        "tags": [
+          "chat"
         ]
       }
     },
@@ -7435,476 +8545,6 @@
         "summary": "Chi tiết một chuyến của tôi",
         "tags": [
           "customer-trips"
-        ]
-      }
-    },
-    "/finance/categories": {
-      "get": {
-        "operationId": "FinanceCategoriesController_list",
-        "parameters": [
-          {
-            "name": "type",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "income",
-                "expense"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/FinanceCategoryDto"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Danh mục thu/chi (hệ thống + của tenant)",
-        "tags": [
-          "finance-categories"
-        ]
-      },
-      "post": {
-        "operationId": "FinanceCategoriesController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCategoryDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinanceCategoryDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Tạo danh mục riêng của tenant",
-        "tags": [
-          "finance-categories"
-        ]
-      }
-    },
-    "/finance/categories/{id}": {
-      "patch": {
-        "operationId": "FinanceCategoriesController_rename",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateCategoryDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinanceCategoryDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Đổi tên danh mục (chỉ danh mục riêng)",
-        "tags": [
-          "finance-categories"
-        ]
-      },
-      "delete": {
-        "operationId": "FinanceCategoriesController_remove",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          }
-        },
-        "summary": "Xoá danh mục (chỉ danh mục riêng)",
-        "tags": [
-          "finance-categories"
-        ]
-      }
-    },
-    "/receipts": {
-      "get": {
-        "operationId": "ReceiptsController_list",
-        "parameters": [
-          {
-            "name": "type",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "income",
-                "expense"
-              ]
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "pending_approval",
-                "approved",
-                "cancelled"
-              ]
-            }
-          },
-          {
-            "name": "categoryId",
-            "required": false,
-            "in": "query",
-            "description": "Lọc theo danh mục",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "bookingId",
-            "required": false,
-            "in": "query",
-            "description": "Lọc theo đơn thuê",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": false,
-            "in": "query",
-            "description": "Từ ngày (ISO) — theo created_at",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": false,
-            "in": "query",
-            "description": "Đến ngày (ISO)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReceiptPageDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Danh sách phiếu thu/chi (phân trang, filter)",
-        "tags": [
-          "receipts"
-        ]
-      },
-      "post": {
-        "operationId": "ReceiptsController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateReceiptDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReceiptDetailDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Tạo phiếu thu/chi (chờ duyệt)",
-        "tags": [
-          "receipts"
-        ]
-      }
-    },
-    "/receipts/{id}": {
-      "get": {
-        "operationId": "ReceiptsController_getOne",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReceiptDetailDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Chi tiết phiếu",
-        "tags": [
-          "receipts"
-        ]
-      }
-    },
-    "/receipts/{id}/approve": {
-      "post": {
-        "operationId": "ReceiptsController_approve",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReceiptDetailDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Duyệt phiếu",
-        "tags": [
-          "receipts"
-        ]
-      }
-    },
-    "/receipts/{id}/cancel": {
-      "post": {
-        "operationId": "ReceiptsController_cancel",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CancelReceiptDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReceiptDetailDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Huỷ phiếu",
-        "tags": [
-          "receipts"
-        ]
-      }
-    },
-    "/debts": {
-      "get": {
-        "operationId": "FinanceOverviewController_debts",
-        "parameters": [
-          {
-            "name": "filter",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "default": "all",
-              "type": "string",
-              "enum": [
-                "all",
-                "overdue",
-                "upcoming",
-                "unpaid"
-              ]
-            }
-          },
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 100,
-              "default": 20,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DebtPageDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Danh sách đơn còn công nợ (lọc quá hạn/sắp đến/chưa thu)",
-        "tags": [
-          "finance-overview"
-        ]
-      }
-    },
-    "/finance/summary": {
-      "get": {
-        "operationId": "FinanceOverviewController_summary",
-        "parameters": [
-          {
-            "name": "from",
-            "required": false,
-            "in": "query",
-            "description": "Từ ngày (ISO)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": false,
-            "in": "query",
-            "description": "Đến ngày (ISO)",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinanceSummaryDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Tổng quan tài chính: thu/chi/cân đối/công nợ theo kỳ",
-        "tags": [
-          "finance-overview"
         ]
       }
     },
@@ -8359,277 +8999,6 @@
         "summary": "Đánh giá công khai của một xe (phân trang)",
         "tags": [
           "public-reviews"
-        ]
-      }
-    },
-    "/conversations": {
-      "get": {
-        "operationId": "ConversationsController_list",
-        "parameters": [
-          {
-            "name": "page",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "default": 1,
-              "type": "number"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 50,
-              "default": 20,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConversationPageDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Danh sách hội thoại của tôi (phân trang)",
-        "tags": [
-          "conversations"
-        ]
-      },
-      "post": {
-        "operationId": "ConversationsController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateConversationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConversationSummaryDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Mở/lấy hội thoại với shop về một xe (khách)",
-        "tags": [
-          "conversations"
-        ]
-      }
-    },
-    "/conversations/unread-count": {
-      "get": {
-        "operationId": "ConversationsController_unreadCount",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChatUnreadCountDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Tổng tin chưa đọc mọi hội thoại (cho badge icon chat)",
-        "tags": [
-          "conversations"
-        ]
-      }
-    },
-    "/conversations/{id}/messages": {
-      "get": {
-        "operationId": "ConversationsController_messages",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "before",
-            "required": false,
-            "in": "query",
-            "description": "Cursor: lấy tin CŨ hơn mốc ISO này (phân trang lịch sử)",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "minimum": 1,
-              "maximum": 50,
-              "default": 30,
-              "type": "number"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MessagePageDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Lịch sử tin nhắn (cursor, mới nhất trước)",
-        "tags": [
-          "conversations"
-        ]
-      },
-      "post": {
-        "operationId": "ConversationsController_send",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SendMessageDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MessageDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Gửi một tin nhắn",
-        "tags": [
-          "conversations"
-        ]
-      }
-    },
-    "/conversations/{id}/read": {
-      "post": {
-        "operationId": "ConversationsController_read",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MarkReadResultDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Đánh dấu đã đọc hội thoại",
-        "tags": [
-          "conversations"
-        ]
-      }
-    },
-    "/chat/firebase-token": {
-      "post": {
-        "operationId": "ChatController_firebaseToken",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FirebaseTokenDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Custom token để signInWithCustomToken (uid = user id)",
-        "tags": [
-          "chat"
-        ]
-      }
-    },
-    "/chat/attachments/presign": {
-      "post": {
-        "operationId": "ChatController_presign",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PresignAttachmentDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PresignResultDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Xin presigned URL để upload đính kèm chat lên R2",
-        "tags": [
-          "chat"
         ]
       }
     },
@@ -15503,6 +15872,32 @@
           "expectedRowVersion"
         ]
       },
+      "CorrectMaintenanceCostDto": {
+        "type": "object",
+        "properties": {
+          "cost": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tiền string — ADR 0007. `null` = xoá chi phí (phiếu chi bị huỷ theo)"
+          },
+          "receiptCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "correctionReason": {
+            "type": "string",
+            "description": "Vì sao sửa — vào audit cùng giá trị cũ"
+          },
+          "expectedRowVersion": {
+            "type": "number",
+            "description": "rowVersion đang thấy — chống ghi đè"
+          }
+        },
+        "required": [
+          "correctionReason",
+          "expectedRowVersion"
+        ]
+      },
       "PresignMaintenanceFileDto": {
         "type": "object",
         "properties": {
@@ -16154,6 +16549,627 @@
           "expiresIn"
         ]
       },
+      "FinanceCategoryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "isSystem": {
+            "type": "boolean",
+            "description": "Danh mục hệ thống — không sửa/xoá được"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name",
+          "isSystem"
+        ]
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "example": "Phí vệ sinh xe"
+          }
+        },
+        "required": [
+          "type",
+          "name"
+        ]
+      },
+      "UpdateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Phí vệ sinh xe"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ReceiptListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "receiptNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_approval",
+              "approved",
+              "cancelled"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "payment",
+              "deposit",
+              "deposit_refund",
+              "maintenance"
+            ],
+            "description": "Nguồn sinh phiếu — `manual` mới sửa/huỷ tay được"
+          },
+          "sourceRefId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id bản ghi nghiệp vụ gốc"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "bookingId": {
+            "type": "string",
+            "nullable": true
+          },
+          "bookingCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleId": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleName": {
+            "type": "string",
+            "nullable": true
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantCustomerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurredAt": {
+            "type": "string",
+            "description": "Ngày tiền di chuyển, ISO-8601 UTC — mọi lọc/tổng hợp chạy trên cột này"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Lúc nhập vào máy, ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "source",
+          "amount",
+          "paymentMethod",
+          "occurredAt",
+          "createdAt"
+        ]
+      },
+      "ReceiptPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceiptListItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "ReceiptSummaryDto": {
+        "type": "object",
+        "properties": {
+          "totalIncome": {
+            "type": "string",
+            "description": "Tổng thu (phiếu đã duyệt trong bộ lọc), string"
+          },
+          "totalExpense": {
+            "type": "string",
+            "description": "Tổng chi (phiếu đã duyệt trong bộ lọc), string"
+          },
+          "balance": {
+            "type": "string",
+            "description": "Cân đối = thu − chi, string"
+          },
+          "incomeCash": {
+            "type": "string",
+            "description": "Thu bằng tiền mặt, string"
+          },
+          "incomeTransfer": {
+            "type": "string",
+            "description": "Thu bằng chuyển khoản/QR/thẻ, string"
+          },
+          "approvedCount": {
+            "type": "number",
+            "description": "Số phiếu đã duyệt được cộng vào các số trên"
+          }
+        },
+        "required": [
+          "totalIncome",
+          "totalExpense",
+          "balance",
+          "incomeCash",
+          "incomeTransfer",
+          "approvedCount"
+        ]
+      },
+      "ReceiptBookingOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerPhone": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantCustomerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleId": {
+            "type": "string"
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalAmount": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "paidAmount": {
+            "type": "string"
+          },
+          "debtAmount": {
+            "type": "string",
+            "description": "Còn nợ = max(0, tổng − đã trả)"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "customerName",
+          "vehicleId",
+          "vehicleName",
+          "totalAmount",
+          "paidAmount",
+          "debtAmount"
+        ]
+      },
+      "ReceiptBookingOptionListDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceiptBookingOptionDto"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ReceiptDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "receiptNo": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "pending_approval",
+              "approved",
+              "cancelled"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "manual",
+              "payment",
+              "deposit",
+              "deposit_refund",
+              "maintenance"
+            ],
+            "description": "Nguồn sinh phiếu — `manual` mới sửa/huỷ tay được"
+          },
+          "sourceRefId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id bản ghi nghiệp vụ gốc"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tiền dạng string — ADR 0007"
+          },
+          "paymentMethod": {
+            "type": "string"
+          },
+          "categoryId": {
+            "type": "string",
+            "nullable": true
+          },
+          "categoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "bookingId": {
+            "type": "string",
+            "nullable": true
+          },
+          "bookingCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleId": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleName": {
+            "type": "string",
+            "nullable": true
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "tenantCustomerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "occurredAt": {
+            "type": "string",
+            "description": "Ngày tiền di chuyển, ISO-8601 UTC — mọi lọc/tổng hợp chạy trên cột này"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Lúc nhập vào máy, ISO-8601 UTC"
+          },
+          "referenceCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "requestedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "approvedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "approvedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "cancelledByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "cancelledAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "attachments": {
+            "description": "URL ảnh minh chứng",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "source",
+          "amount",
+          "paymentMethod",
+          "occurredAt",
+          "createdAt",
+          "attachments",
+          "updatedAt"
+        ]
+      },
+      "CreateReceiptDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ],
+            "description": "income = phiếu thu, expense = phiếu chi"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Tiền, string thập phân — ADR 0007",
+            "example": "500000"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "bank_transfer",
+              "qr",
+              "card",
+              "other"
+            ]
+          },
+          "categoryId": {
+            "type": "string",
+            "description": "Danh mục (ULID)"
+          },
+          "bookingId": {
+            "type": "string",
+            "description": "Đơn thuê liên quan (ULID)"
+          },
+          "vehicleId": {
+            "type": "string",
+            "description": "Xe liên quan (ULID)"
+          },
+          "occurredAt": {
+            "type": "string",
+            "description": "Ngày tiền phát sinh (ISO hoặc YYYY-MM-DD); mặc định bây giờ. Nhập bù cho hôm trước thì đặt đúng ngày đó."
+          },
+          "referenceCode": {
+            "type": "string",
+            "description": "Mã tra soát/tham chiếu (CK…)"
+          },
+          "description": {
+            "type": "string"
+          },
+          "attachments": {
+            "description": "URL ảnh minh chứng (tối đa 10)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "amount",
+          "paymentMethod"
+        ]
+      },
+      "CancelReceiptDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "DebtItemDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "customerName": {
+            "type": "string"
+          },
+          "customerPhone": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "confirmed",
+              "active",
+              "completed",
+              "cancelled",
+              "no_show"
+            ]
+          },
+          "returnAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          },
+          "totalAmount": {
+            "type": "string",
+            "description": "PHẢI THU = tiền thuê + phụ phí còn hiệu lực. Tiền dạng string — ADR 0007"
+          },
+          "paidAmount": {
+            "type": "string",
+            "description": "ĐÃ THU = tiền thuê + phiếu tay đã duyệt + phần phụ phí cọc gánh"
+          },
+          "surchargeTotal": {
+            "type": "string"
+          },
+          "debtAmount": {
+            "type": "string",
+            "description": "max(0, phải thu − đã thu) — common/booking-money.ts"
+          }
+        },
+        "required": [
+          "bookingId",
+          "code",
+          "customerName",
+          "vehicleName",
+          "status",
+          "returnAt",
+          "totalAmount",
+          "paidAmount",
+          "surchargeTotal",
+          "debtAmount"
+        ]
+      },
+      "DebtPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DebtItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "FinanceSummaryDto": {
+        "type": "object",
+        "properties": {
+          "totalIncome": {
+            "type": "string",
+            "description": "Tổng thu (phiếu income đã duyệt), string"
+          },
+          "totalExpense": {
+            "type": "string",
+            "description": "Tổng chi (phiếu expense đã duyệt), string"
+          },
+          "balance": {
+            "type": "string",
+            "description": "Cân đối = thu − chi, string"
+          },
+          "totalDebt": {
+            "type": "string",
+            "description": "Tổng công nợ các đơn còn nợ, string"
+          },
+          "debtBookings": {
+            "type": "number",
+            "description": "Số đơn còn nợ"
+          }
+        },
+        "required": [
+          "totalIncome",
+          "totalExpense",
+          "balance",
+          "totalDebt",
+          "debtBookings"
+        ]
+      },
       "BookingDriverSummaryDto": {
         "type": "object",
         "properties": {
@@ -16241,14 +17257,31 @@
           },
           "totalAmount": {
             "type": "string",
-            "description": "Tiền dạng string — ADR 0007"
+            "description": "Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string — ADR 0007"
           },
           "paidAmount": {
-            "type": "string"
+            "type": "string",
+            "description": "Tiền thuê đã thu (`payments`) — writer duy nhất là PaymentsService"
+          },
+          "surchargeTotal": {
+            "type": "string",
+            "description": "Tổng phụ phí còn hiệu lực (quá giờ, vệ sinh, hư hại)"
+          },
+          "amountDue": {
+            "type": "string",
+            "description": "PHẢI THU = tiền thuê + phụ phí — con số khách nợ tính trên nó"
+          },
+          "otherCollected": {
+            "type": "string",
+            "description": "Thu thêm bằng phiếu NHẬP TAY đã duyệt gắn đơn"
+          },
+          "collectedAmount": {
+            "type": "string",
+            "description": "ĐÃ THU = tiền thuê + phiếu tay + phần phụ phí cọc đã gánh"
           },
           "debtAmount": {
             "type": "string",
-            "description": "Công nợ = max(0, total − paid), string — ADR 0007"
+            "description": "Công nợ = max(0, phải thu − đã thu) — common/booking-money.ts"
           },
           "depositAmount": {
             "type": "string"
@@ -16279,6 +17312,10 @@
           "returnAt",
           "totalAmount",
           "paidAmount",
+          "surchargeTotal",
+          "amountDue",
+          "otherCollected",
+          "collectedAmount",
           "debtAmount",
           "depositAmount",
           "createdAt"
@@ -16495,14 +17532,31 @@
           },
           "totalAmount": {
             "type": "string",
-            "description": "Tiền dạng string — ADR 0007"
+            "description": "Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string — ADR 0007"
           },
           "paidAmount": {
-            "type": "string"
+            "type": "string",
+            "description": "Tiền thuê đã thu (`payments`) — writer duy nhất là PaymentsService"
+          },
+          "surchargeTotal": {
+            "type": "string",
+            "description": "Tổng phụ phí còn hiệu lực (quá giờ, vệ sinh, hư hại)"
+          },
+          "amountDue": {
+            "type": "string",
+            "description": "PHẢI THU = tiền thuê + phụ phí — con số khách nợ tính trên nó"
+          },
+          "otherCollected": {
+            "type": "string",
+            "description": "Thu thêm bằng phiếu NHẬP TAY đã duyệt gắn đơn"
+          },
+          "collectedAmount": {
+            "type": "string",
+            "description": "ĐÃ THU = tiền thuê + phiếu tay + phần phụ phí cọc đã gánh"
           },
           "debtAmount": {
             "type": "string",
-            "description": "Công nợ = max(0, total − paid), string — ADR 0007"
+            "description": "Công nợ = max(0, phải thu − đã thu) — common/booking-money.ts"
           },
           "depositAmount": {
             "type": "string"
@@ -16588,6 +17642,10 @@
           "returnAt",
           "totalAmount",
           "paidAmount",
+          "surchargeTotal",
+          "amountDue",
+          "otherCollected",
+          "collectedAmount",
           "debtAmount",
           "depositAmount",
           "createdAt",
@@ -18527,6 +19585,23 @@
             "type": "string",
             "nullable": true
           },
+          "vehicleCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleImageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh đại diện của xe"
+          },
+          "vehicleType": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "car",
+              "motorbike"
+            ]
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -18547,6 +19622,28 @@
           "customerEmail": {
             "type": "string",
             "nullable": true
+          },
+          "tenantCustomerId": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerAvatarUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ảnh đại diện tài khoản khách"
+          },
+          "customerRiskLevel": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "normal",
+              "watchlist",
+              "blocked"
+            ]
+          },
+          "canMessageOnPlatform": {
+            "type": "boolean",
+            "description": "Nhắn tin trong ứng dụng được không"
           },
           "pickupAt": {
             "type": "string",
@@ -18653,6 +19750,11 @@
           "createdAt": {
             "type": "string",
             "description": "ISO-8601 UTC"
+          },
+          "decidedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC — thời điểm gian hàng duyệt/từ chối; null khi còn chờ"
           }
         },
         "required": [
@@ -18662,9 +19764,68 @@
           "status",
           "customerName",
           "customerPhone",
+          "canMessageOnPlatform",
           "serviceType",
           "deliveryRequested",
           "createdAt"
+        ]
+      },
+      "BookingRequestStatusCountDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_host_approval",
+              "approved_by_host",
+              "rejected_by_host",
+              "cancelled_by_customer",
+              "expired",
+              "converted_to_booking"
+            ]
+          },
+          "count": {
+            "type": "number",
+            "example": 7
+          }
+        },
+        "required": [
+          "status",
+          "count"
+        ]
+      },
+      "BookingRequestPageMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20
+          },
+          "total": {
+            "type": "number",
+            "example": 137
+          },
+          "hasNext": {
+            "type": "boolean",
+            "example": true
+          },
+          "statusCounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingRequestStatusCountDto"
+            }
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "hasNext",
+          "statusCounts"
         ]
       },
       "BookingRequestPageDto": {
@@ -18677,7 +19838,7 @@
             }
           },
           "meta": {
-            "$ref": "#/components/schemas/PaginationMetaDto"
+            "$ref": "#/components/schemas/BookingRequestPageMetaDto"
           }
         },
         "required": [
@@ -18712,6 +19873,57 @@
             "type": "string"
           }
         }
+      },
+      "ConversationSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "vehicleId": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleName": {
+            "type": "string",
+            "nullable": true
+          },
+          "partyName": {
+            "type": "string",
+            "description": "Tên phía bên kia (khách thấy tên shop, shop thấy tên khách)"
+          },
+          "side": {
+            "type": "string",
+            "description": "side của người xem: customer | shop"
+          },
+          "lastMessageText": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastMessageAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "lastSenderType": {
+            "type": "string",
+            "nullable": true
+          },
+          "unread": {
+            "type": "number",
+            "description": "Số tin chưa đọc của phía người xem"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "partyName",
+          "side",
+          "unread",
+          "status"
+        ]
       },
       "CreateBookingRequestDto": {
         "type": "object",
@@ -18864,6 +20076,281 @@
         },
         "required": [
           "available"
+        ]
+      },
+      "ConversationPageMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "hasNext": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "hasNext"
+        ]
+      },
+      "ConversationPageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationSummaryDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ConversationPageMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "CreateConversationDto": {
+        "type": "object",
+        "properties": {
+          "vehicleId": {
+            "type": "string",
+            "description": "ID xe (listing) muốn nhắn shop"
+          }
+        },
+        "required": [
+          "vehicleId"
+        ]
+      },
+      "ChatUnreadCountDto": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "number",
+            "example": 3,
+            "description": "Tổng tin chưa đọc mọi hội thoại (phía người xem)"
+          }
+        },
+        "required": [
+          "count"
+        ]
+      },
+      "MessageAttachmentDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "fileType": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "MessageDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "conversationId": {
+            "type": "string"
+          },
+          "senderUserId": {
+            "type": "string",
+            "nullable": true
+          },
+          "senderType": {
+            "type": "string"
+          },
+          "messageType": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "nullable": true
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageAttachmentDto"
+            }
+          },
+          "sentAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC"
+          }
+        },
+        "required": [
+          "id",
+          "conversationId",
+          "senderType",
+          "messageType",
+          "attachments",
+          "sentAt"
+        ]
+      },
+      "MessagePageDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "description": "Mới nhất trước",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageDto"
+            }
+          },
+          "nextBefore": {
+            "type": "string",
+            "nullable": true,
+            "description": "Cursor cho lần tải cũ hơn"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AttachmentInputDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL công khai R2 (phải thuộc R2_PUBLIC_BASE_URL)"
+          },
+          "fileType": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileName": {
+            "type": "string",
+            "nullable": true
+          },
+          "fileSize": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "SendMessageDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 4000
+          },
+          "messageType": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "file",
+              "system"
+            ]
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttachmentInputDto"
+            }
+          }
+        }
+      },
+      "MarkReadResultDto": {
+        "type": "object",
+        "properties": {
+          "conversationId": {
+            "type": "string"
+          },
+          "unread": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": [
+          "conversationId",
+          "unread"
+        ]
+      },
+      "FirebaseTokenDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Bật realtime chat không"
+          },
+          "token": {
+            "type": "string",
+            "nullable": true,
+            "description": "Custom token để signInWithCustomToken"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "PresignAttachmentDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "contentType": {
+            "type": "string",
+            "description": "MIME type",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "fileName",
+          "contentType"
+        ]
+      },
+      "PresignResultDto": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "uploadUrl": {
+            "type": "string"
+          },
+          "publicUrl": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "uploadUrl",
+          "publicUrl",
+          "expiresIn"
         ]
       },
       "SendOtpDto": {
@@ -19525,401 +21012,6 @@
           "createdAt"
         ]
       },
-      "FinanceCategoryDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "income",
-              "expense"
-            ]
-          },
-          "name": {
-            "type": "string"
-          },
-          "isSystem": {
-            "type": "boolean",
-            "description": "Danh mục hệ thống — không sửa/xoá được"
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "name",
-          "isSystem"
-        ]
-      },
-      "CreateCategoryDto": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "income",
-              "expense"
-            ]
-          },
-          "name": {
-            "type": "string",
-            "example": "Phí vệ sinh xe"
-          }
-        },
-        "required": [
-          "type",
-          "name"
-        ]
-      },
-      "UpdateCategoryDto": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "example": "Phí vệ sinh xe"
-          }
-        },
-        "required": [
-          "name"
-        ]
-      },
-      "ReceiptListItemDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "receiptNo": {
-            "type": "string",
-            "nullable": true
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "income",
-              "expense"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "draft",
-              "pending_approval",
-              "approved",
-              "cancelled"
-            ]
-          },
-          "amount": {
-            "type": "string",
-            "description": "Tiền dạng string — ADR 0007"
-          },
-          "paymentMethod": {
-            "type": "string"
-          },
-          "categoryId": {
-            "type": "string",
-            "nullable": true
-          },
-          "categoryName": {
-            "type": "string",
-            "nullable": true
-          },
-          "bookingId": {
-            "type": "string",
-            "nullable": true
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "ISO-8601 UTC"
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "status",
-          "amount",
-          "paymentMethod",
-          "createdAt"
-        ]
-      },
-      "ReceiptPageDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ReceiptListItemDto"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/PaginationMetaDto"
-          }
-        },
-        "required": [
-          "data",
-          "meta"
-        ]
-      },
-      "ReceiptDetailDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "receiptNo": {
-            "type": "string",
-            "nullable": true
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "income",
-              "expense"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "draft",
-              "pending_approval",
-              "approved",
-              "cancelled"
-            ]
-          },
-          "amount": {
-            "type": "string",
-            "description": "Tiền dạng string — ADR 0007"
-          },
-          "paymentMethod": {
-            "type": "string"
-          },
-          "categoryId": {
-            "type": "string",
-            "nullable": true
-          },
-          "categoryName": {
-            "type": "string",
-            "nullable": true
-          },
-          "bookingId": {
-            "type": "string",
-            "nullable": true
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "ISO-8601 UTC"
-          },
-          "vehicleId": {
-            "type": "string",
-            "nullable": true
-          },
-          "referenceCode": {
-            "type": "string",
-            "nullable": true
-          },
-          "approvedAt": {
-            "type": "string",
-            "nullable": true
-          },
-          "cancelledAt": {
-            "type": "string",
-            "nullable": true
-          },
-          "attachments": {
-            "description": "URL ảnh minh chứng",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "updatedAt": {
-            "type": "string",
-            "description": "ISO-8601 UTC"
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "status",
-          "amount",
-          "paymentMethod",
-          "createdAt",
-          "attachments",
-          "updatedAt"
-        ]
-      },
-      "CreateReceiptDto": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "income",
-              "expense"
-            ],
-            "description": "income = phiếu thu, expense = phiếu chi"
-          },
-          "amount": {
-            "type": "string",
-            "description": "Tiền, string thập phân — ADR 0007",
-            "example": "500000"
-          },
-          "paymentMethod": {
-            "type": "string",
-            "enum": [
-              "cash",
-              "bank_transfer",
-              "qr",
-              "card",
-              "other"
-            ]
-          },
-          "categoryId": {
-            "type": "string",
-            "description": "Danh mục (ULID)"
-          },
-          "bookingId": {
-            "type": "string",
-            "description": "Đơn thuê liên quan (ULID)"
-          },
-          "vehicleId": {
-            "type": "string",
-            "description": "Xe liên quan (ULID)"
-          },
-          "referenceCode": {
-            "type": "string",
-            "description": "Mã tra soát/tham chiếu (CK…)"
-          },
-          "description": {
-            "type": "string"
-          },
-          "attachments": {
-            "description": "URL ảnh minh chứng (tối đa 10)",
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "type",
-          "amount",
-          "paymentMethod"
-        ]
-      },
-      "CancelReceiptDto": {
-        "type": "object",
-        "properties": {
-          "reason": {
-            "type": "string"
-          }
-        }
-      },
-      "DebtItemDto": {
-        "type": "object",
-        "properties": {
-          "bookingId": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "customerName": {
-            "type": "string"
-          },
-          "customerPhone": {
-            "type": "string",
-            "nullable": true
-          },
-          "vehicleName": {
-            "type": "string"
-          },
-          "returnAt": {
-            "type": "string",
-            "description": "ISO-8601 UTC"
-          },
-          "totalAmount": {
-            "type": "string",
-            "description": "Tiền dạng string — ADR 0007"
-          },
-          "paidAmount": {
-            "type": "string"
-          },
-          "debtAmount": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "bookingId",
-          "code",
-          "customerName",
-          "vehicleName",
-          "returnAt",
-          "totalAmount",
-          "paidAmount",
-          "debtAmount"
-        ]
-      },
-      "DebtPageDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DebtItemDto"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/PaginationMetaDto"
-          }
-        },
-        "required": [
-          "data",
-          "meta"
-        ]
-      },
-      "FinanceSummaryDto": {
-        "type": "object",
-        "properties": {
-          "totalIncome": {
-            "type": "string",
-            "description": "Tổng thu (phiếu income đã duyệt), string"
-          },
-          "totalExpense": {
-            "type": "string",
-            "description": "Tổng chi (phiếu expense đã duyệt), string"
-          },
-          "balance": {
-            "type": "string",
-            "description": "Cân đối = thu − chi, string"
-          },
-          "totalDebt": {
-            "type": "string",
-            "description": "Tổng công nợ các đơn còn nợ, string"
-          },
-          "debtBookings": {
-            "type": "number",
-            "description": "Số đơn còn nợ"
-          }
-        },
-        "required": [
-          "totalIncome",
-          "totalExpense",
-          "balance",
-          "totalDebt",
-          "debtBookings"
-        ]
-      },
       "RecordPaymentDto": {
         "type": "object",
         "properties": {
@@ -19937,6 +21029,14 @@
               "card",
               "other"
             ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rental",
+              "deposit"
+            ],
+            "description": "Bỏ trống = 'rental' (tiền thuê)"
           },
           "referenceCode": {
             "type": "string",
@@ -19964,6 +21064,14 @@
           "amount": {
             "type": "string",
             "description": "Tiền dạng string — ADR 0007"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rental",
+              "deposit"
+            ],
+            "description": "Tiền thuê hay tiền cọc"
           },
           "method": {
             "type": "string",
@@ -20001,6 +21109,7 @@
         "required": [
           "id",
           "amount",
+          "kind",
           "method",
           "status",
           "createdAt"
@@ -20473,332 +21582,6 @@
           "summary",
           "data",
           "meta"
-        ]
-      },
-      "ConversationSummaryDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "vehicleId": {
-            "type": "string",
-            "nullable": true
-          },
-          "vehicleName": {
-            "type": "string",
-            "nullable": true
-          },
-          "partyName": {
-            "type": "string",
-            "description": "Tên phía bên kia (khách thấy tên shop, shop thấy tên khách)"
-          },
-          "side": {
-            "type": "string",
-            "description": "side của người xem: customer | shop"
-          },
-          "lastMessageText": {
-            "type": "string",
-            "nullable": true
-          },
-          "lastMessageAt": {
-            "type": "string",
-            "nullable": true,
-            "description": "ISO-8601 UTC"
-          },
-          "lastSenderType": {
-            "type": "string",
-            "nullable": true
-          },
-          "unread": {
-            "type": "number",
-            "description": "Số tin chưa đọc của phía người xem"
-          },
-          "status": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "partyName",
-          "side",
-          "unread",
-          "status"
-        ]
-      },
-      "ConversationPageMetaDto": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "number"
-          },
-          "limit": {
-            "type": "number"
-          },
-          "total": {
-            "type": "number"
-          },
-          "hasNext": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "page",
-          "limit",
-          "total",
-          "hasNext"
-        ]
-      },
-      "ConversationPageDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ConversationSummaryDto"
-            }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/ConversationPageMetaDto"
-          }
-        },
-        "required": [
-          "data",
-          "meta"
-        ]
-      },
-      "CreateConversationDto": {
-        "type": "object",
-        "properties": {
-          "vehicleId": {
-            "type": "string",
-            "description": "ID xe (listing) muốn nhắn shop"
-          }
-        },
-        "required": [
-          "vehicleId"
-        ]
-      },
-      "ChatUnreadCountDto": {
-        "type": "object",
-        "properties": {
-          "count": {
-            "type": "number",
-            "example": 3,
-            "description": "Tổng tin chưa đọc mọi hội thoại (phía người xem)"
-          }
-        },
-        "required": [
-          "count"
-        ]
-      },
-      "MessageAttachmentDto": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string"
-          },
-          "fileType": {
-            "type": "string",
-            "nullable": true
-          },
-          "fileName": {
-            "type": "string",
-            "nullable": true
-          },
-          "fileSize": {
-            "type": "number",
-            "nullable": true
-          }
-        },
-        "required": [
-          "url"
-        ]
-      },
-      "MessageDto": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "conversationId": {
-            "type": "string"
-          },
-          "senderUserId": {
-            "type": "string",
-            "nullable": true
-          },
-          "senderType": {
-            "type": "string"
-          },
-          "messageType": {
-            "type": "string"
-          },
-          "text": {
-            "type": "string",
-            "nullable": true
-          },
-          "attachments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MessageAttachmentDto"
-            }
-          },
-          "sentAt": {
-            "type": "string",
-            "description": "ISO-8601 UTC"
-          }
-        },
-        "required": [
-          "id",
-          "conversationId",
-          "senderType",
-          "messageType",
-          "attachments",
-          "sentAt"
-        ]
-      },
-      "MessagePageDto": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "description": "Mới nhất trước",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MessageDto"
-            }
-          },
-          "nextBefore": {
-            "type": "string",
-            "nullable": true,
-            "description": "Cursor cho lần tải cũ hơn"
-          }
-        },
-        "required": [
-          "data"
-        ]
-      },
-      "AttachmentInputDto": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "URL công khai R2 (phải thuộc R2_PUBLIC_BASE_URL)"
-          },
-          "fileType": {
-            "type": "string",
-            "nullable": true
-          },
-          "fileName": {
-            "type": "string",
-            "nullable": true
-          },
-          "fileSize": {
-            "type": "number",
-            "nullable": true
-          }
-        },
-        "required": [
-          "url"
-        ]
-      },
-      "SendMessageDto": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string",
-            "nullable": true,
-            "maxLength": 4000
-          },
-          "messageType": {
-            "type": "string",
-            "enum": [
-              "text",
-              "image",
-              "file",
-              "system"
-            ]
-          },
-          "attachments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AttachmentInputDto"
-            }
-          }
-        }
-      },
-      "MarkReadResultDto": {
-        "type": "object",
-        "properties": {
-          "conversationId": {
-            "type": "string"
-          },
-          "unread": {
-            "type": "number",
-            "example": 0
-          }
-        },
-        "required": [
-          "conversationId",
-          "unread"
-        ]
-      },
-      "FirebaseTokenDto": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "description": "Bật realtime chat không"
-          },
-          "token": {
-            "type": "string",
-            "nullable": true,
-            "description": "Custom token để signInWithCustomToken"
-          }
-        },
-        "required": [
-          "enabled"
-        ]
-      },
-      "PresignAttachmentDto": {
-        "type": "object",
-        "properties": {
-          "fileName": {
-            "type": "string",
-            "maxLength": 255
-          },
-          "contentType": {
-            "type": "string",
-            "description": "MIME type",
-            "maxLength": 100
-          }
-        },
-        "required": [
-          "fileName",
-          "contentType"
-        ]
-      },
-      "PresignResultDto": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string"
-          },
-          "uploadUrl": {
-            "type": "string"
-          },
-          "publicUrl": {
-            "type": "string"
-          },
-          "expiresIn": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "key",
-          "uploadUrl",
-          "publicUrl",
-          "expiresIn"
         ]
       },
       "ApprovalTaskListItemDto": {

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CalendarModule } from '../calendar/calendar.module';
 import { CustomersModule } from '../customers/customers.module';
 import { DriversModule } from '../drivers/drivers.module';
+import { FinanceModule } from '../finance/finance.module';
 import { PricingModule } from '../pricing/pricing.module';
 import { VehiclesModule } from '../vehicles/vehicles.module';
 import { BookingsController } from './bookings.controller';
@@ -28,7 +29,17 @@ import { SettlementService } from './settlement/settlement.service';
   // `DriversModule` cho gán tài xế vào đơn (17/08) — "gán được" định nghĩa ở DriversService.
   // `CustomersModule` cho sổ khách (S-01) — mọi đơn có SĐT gắn về một hồ sơ khách trong cùng
   // transaction, và khách bị từ chối phục vụ bị chặn ở đúng một chỗ.
-  imports: [CalendarModule, VehiclesModule, PricingModule, DriversModule, CustomersModule],
+  // `FinanceModule` cho quyết toán lên sổ (epic nối tiền): hoàn cọc là tiền THẬT rời tay chủ xe,
+  // phải thành phiếu chi trong CÙNG transaction với bản ghi hoàn cọc. `ReceiptsService` vẫn là
+  // writer duy nhất của `receipts` — module này chỉ gọi, không tự ghi.
+  imports: [
+    CalendarModule,
+    VehiclesModule,
+    PricingModule,
+    DriversModule,
+    CustomersModule,
+    FinanceModule,
+  ],
   controllers: [
     BookingsController,
     BookingHandoversController,

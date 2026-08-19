@@ -9,7 +9,7 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { vehiclePath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { dayjs } from '@/lib/datetime';
-import { isZeroMoney } from '@/lib/money';
+import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { SettlementCard } from '@/features/settlement/components/SettlementCard';
 import { useBooking } from '../hooks/use-booking';
@@ -89,6 +89,9 @@ export function BookingDetailContent({
 
   const hasDebt = !isZeroMoney(data.debtAmount);
   const hasDeposit = !isZeroMoney(data.depositAmount);
+  // Thu vượt = đã thu − phải thu, chỉ khi dương. Tính trên CHUỖI tiền (ADR 0007), không Number.
+  const excess = subtractMoney(data.collectedAmount, data.amountDue);
+  const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
 
   return (
     <div className={styles.stackGap}>
@@ -231,18 +234,46 @@ export function BookingDetailContent({
                   {isZeroMoney(data.deliveryFee) ? 'Miễn phí' : fmt.money(data.deliveryFee)}
                 </dd>
               </div>
-              <div className={styles.rowTotal}>
-                <dt>Tổng cộng</dt>
+              <div className={styles.row}>
+                <dt>Tiền thuê</dt>
                 <dd>{fmt.money(data.totalAmount)}</dd>
               </div>
-              <div className={styles.row}>
-                <dt>Đã thanh toán</dt>
-                <dd>{fmt.money(data.paidAmount)}</dd>
+              {/* Phụ phí cuối chuyến (quá giờ, vệ sinh, hư hại) LÀ tiền khách phải trả thêm —
+                  từ nay nó vào thẳng "phải thu", không còn nằm riêng ở khối quyết toán cọc. */}
+              {!isZeroMoney(data.surchargeTotal) ? (
+                <div className={styles.row}>
+                  <dt>Phát sinh</dt>
+                  <dd>+{fmt.money(data.surchargeTotal)}</dd>
+                </div>
+              ) : null}
+              <div className={styles.rowTotal}>
+                <dt>Phải thu</dt>
+                <dd>{fmt.money(data.amountDue)}</dd>
               </div>
+              <div className={styles.row}>
+                <dt>Đã thu</dt>
+                <dd>{fmt.money(data.collectedAmount)}</dd>
+              </div>
+              {/* Khoản thu ghi thẳng ở sổ Thu-Chi (phiếu tay gắn đơn). Tách ra vì nếu chỉ cộng
+                  vào "đã thu" thì con số nhảy lên mà không ai biết nó từ đâu. */}
+              {!isZeroMoney(data.otherCollected) ? (
+                <div className={styles.rowSub}>
+                  <dt>trong đó thu ở sổ Thu-Chi</dt>
+                  <dd>{fmt.money(data.otherCollected)}</dd>
+                </div>
+              ) : null}
               {hasDebt ? (
                 <div className={styles.row}>
                   <dt>Còn nợ</dt>
                   <dd className={styles.negative}>{fmt.money(data.debtAmount)}</dd>
+                </div>
+              ) : null}
+              {/* Thu nhiều hơn phải thu: gần như luôn là một khoản phát sinh đã thu tiền nhưng
+                  chưa ghi nhận trên đơn. Nói thẳng thay vì để hai con số lệch nhau không lời. */}
+              {overCollected ? (
+                <div className={styles.row}>
+                  <dt>Thu vượt</dt>
+                  <dd>{fmt.money(overCollected)}</dd>
                 </div>
               ) : null}
               {hasDeposit ? (

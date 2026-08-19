@@ -7,7 +7,11 @@ import {
   PAYMENT_METHOD,
   PAYMENT_STATUS,
   PERMISSION,
+  RECEIPT_SOURCE,
+  RECEIPT_STATUS,
+  RECEIPT_TYPE,
   REFUND_METHOD,
+  SYSTEM_FINANCE_CATEGORY,
   SURCHARGE_CATEGORY,
   TENANT_ROLE,
   TENANT_STATUS,
@@ -18,6 +22,7 @@ import { PERMISSIONS_KEY } from '../src/common/decorators';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { BookingSettlementController } from '../src/modules/bookings/settlement/booking-settlement.controller';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
+import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
@@ -37,7 +42,8 @@ const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const pricing = new PricingService(asService, audit);
 const notifications = new NotificationService(asService);
-const settlement = new SettlementService(asService, audit, pricing, notifications);
+const receipts = new ReceiptsService(asService, audit);
+const settlement = new SettlementService(asService, audit, pricing, notifications, receipts);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -643,5 +649,142 @@ describe('Quyền trên các endpoint quyết toán', () => {
     expect(permsOf('recordRefund')).toEqual([PERMISSION.PAYMENT_RECORD]);
     // `payments.void` chỉ quản lý trở lên mới có — sửa một bằng chứng đã chốt là việc khác hẳn.
     expect(permsOf('correctRefund')).toEqual([PERMISSION.PAYMENT_VOID]);
+  });
+});
+
+/**
+ * Hoàn cọc LÊN SỔ (epic nối tiền).
+ *
+ * Trước đây tiền rời tay chủ xe mà sổ Thu-Chi không thấy, nên `/finance/summary` báo lãi cao hơn
+ * thực tế. Nhóm này khoá cả ba chuyển tiếp — sinh, sửa tại chỗ, và rút về 0.
+ */
+describe('Hoàn cọc → phiếu chi trong sổ', () => {
+  const refundReceipts = (bookingId: string) =>
+    prisma.receipt.findMany({
+      where: { tenantId, bookingId, source: RECEIPT_SOURCE.DEPOSIT_REFUND },
+      select: { id: true, amount: true, type: true, status: true, occurredAt: true,
+                category: { select: { systemKey: true } } },
+    });
+
+  maybe('ghi nhận hoàn sinh đúng MỘT phiếu chi, danh mục "Hoàn cọc"', async () => {
+    const bookingId = await createBooking({ deposit: '5000000' });
+    await receiveDeposit(bookingId, '5000000');
+    await settlement.recordRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '5000000',
+      refundMethod: REFUND_METHOD.BANK_TRANSFER,
+    });
+
+    const rows = await refundReceipts(bookingId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.type).toBe(RECEIPT_TYPE.EXPENSE);
+    expect(rows[0]!.status).toBe(RECEIPT_STATUS.APPROVED);
+    expect(rows[0]!.amount.toString()).toBe('5000000');
+    expect(rows[0]!.category?.systemKey).toBe(SYSTEM_FINANCE_CATEGORY.DEPOSIT_REFUND);
+  });
+
+  maybe('phụ phí KHÔNG có phiếu riêng — phiếu hoàn cọc đã là số RÒNG', async () => {
+    const bookingId = await createBooking({ deposit: '5000000' });
+    await receiveDeposit(bookingId, '5000000');
+    await settlement.addSurcharge(tenantId, bookingId, ownerId, {
+      category: SURCHARGE_CATEGORY.CLEANING,
+      amount: '1000000',
+      reason: 'Vệ sinh nội thất',
+    });
+    await settlement.recordRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '4000000',
+      refundMethod: REFUND_METHOD.CASH,
+    });
+
+    const all = await prisma.receipt.findMany({ where: { tenantId, bookingId }, select: { source: true, amount: true } });
+    // Đúng hai dòng: thu cọc (do helper tạo tay nên KHÔNG có phiếu) → chỉ còn phiếu hoàn.
+    const refunds = all.filter((r) => r.source === RECEIPT_SOURCE.DEPOSIT_REFUND);
+    expect(refunds).toHaveLength(1);
+    expect(refunds[0]!.amount.toString()).toBe('4000000');
+    // Không dòng nào mang số của riêng khoản phát sinh.
+    expect(all.some((r) => r.amount.toString() === '1000000')).toBe(false);
+  });
+
+  maybe('sửa bản ghi hoàn: phiếu đổi số TẠI CHỖ, vẫn đúng một dòng', async () => {
+    const bookingId = await createBooking({ deposit: '5000000' });
+    await receiveDeposit(bookingId, '5000000');
+    const first = await settlement.recordRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '5000000',
+      refundMethod: REFUND_METHOD.CASH,
+    });
+
+    await settlement.correctRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '3000000',
+      refundMethod: REFUND_METHOD.CASH,
+      correctionReason: 'Ghi nhầm số',
+      expectedRowVersion: first.refund!.rowVersion,
+    });
+
+    const rows = await refundReceipts(bookingId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.amount.toString()).toBe('3000000');
+    expect(rows[0]!.status).toBe(RECEIPT_STATUS.APPROVED);
+  });
+
+  maybe('hoàn 0đ không sinh phiếu; sửa từ có tiền về 0đ thì HUỶ phiếu', async () => {
+    const bookingId = await createBooking({ deposit: '2000000' });
+    await receiveDeposit(bookingId, '2000000');
+    const first = await settlement.recordRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '2000000',
+      refundMethod: REFUND_METHOD.CASH,
+    });
+    await settlement.correctRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '0',
+      refundMethod: REFUND_METHOD.CASH,
+      correctionReason: 'Thực tế không hoàn đồng nào',
+      expectedRowVersion: first.refund!.rowVersion,
+    });
+
+    const rows = await refundReceipts(bookingId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.status).toBe(RECEIPT_STATUS.CANCELLED);
+  });
+});
+
+/**
+ * Vòng 0đ → có tiền lại — chuyển tiếp THỨ TƯ mà bản đầu bỏ sót.
+ *
+ * Unique index `(tenant_id, source, source_ref_id)` phủ CẢ dòng đã huỷ, nên nếu đường sửa bỏ qua
+ * phiếu cancelled rồi tạo mới, người dùng sửa hoàn cọc về 0 rồi sửa lại thành số dương sẽ ăn 409
+ * vĩnh viễn cho đơn đó. `updateAmountWithinTx` phải HỒI SINH phiếu, không tạo phiếu thứ hai.
+ */
+describe('Hoàn cọc → sửa về 0 rồi sửa lại thành số dương', () => {
+  maybe('phiếu sống lại, vẫn đúng MỘT dòng, không 409', async () => {
+    const bookingId = await createBooking({ deposit: '4000000' });
+    await receiveDeposit(bookingId, '4000000');
+
+    const first = await settlement.recordRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '4000000',
+      refundMethod: REFUND_METHOD.CASH,
+    });
+    const zeroed = await settlement.correctRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '0',
+      refundMethod: REFUND_METHOD.CASH,
+      correctionReason: 'Ghi nhầm, chưa hoàn đồng nào',
+      expectedRowVersion: first.refund!.rowVersion,
+    });
+
+    // Đây là bước từng vỡ: tạo lại đụng unique index.
+    await settlement.correctRefund(tenantId, bookingId, ownerId, {
+      refundAmount: '3000000',
+      refundMethod: REFUND_METHOD.CASH,
+      correctionReason: 'Thực tế đã hoàn 3 triệu',
+      expectedRowVersion: zeroed.refund!.rowVersion,
+    });
+
+    const rows = await prisma.receipt.findMany({
+      where: { tenantId, bookingId, source: RECEIPT_SOURCE.DEPOSIT_REFUND },
+      select: { amount: true, status: true, cancelledAt: true, cancelledBy: true },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.amount.toString()).toBe('3000000');
+    expect(rows[0]!.status).toBe(RECEIPT_STATUS.APPROVED);
+    // Phiếu đã duyệt mà vẫn mang dấu vết huỷ là một trạng thái tự mâu thuẫn.
+    expect(rows[0]!.cancelledAt).toBeNull();
+    expect(rows[0]!.cancelledBy).toBeNull();
   });
 });

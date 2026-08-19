@@ -1,0 +1,162 @@
+/* Chi tiết một yêu cầu chưa thành đơn — cùng nhịp với các modal chi tiết khác. */
+.titleRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  gap: var(--xp-space-sm);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.06em;
+  line-height: var(--xp-line-height-overline);
+  text-transform: uppercase;
+}
+
+/* Khối định danh + nút mở hồ sơ đầy đủ của thực thể đó. */
+.entity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.facts {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-xs);
+}
+
+.fact {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.factLabel {
+  width: 132px;
+  flex: none;
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body);
+}
+
+.factValue {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.factValue a {
+  color: var(--xp-color-primary-active);
+}
+
+.factValue a:hover {
+  color: var(--xp-color-primary);
+  text-decoration: underline;
+}
+
+/* Ghi chú trong hộp thoại hiện ĐỦ — đây đúng là chỗ để đọc hết, không cắt hai dòng như thẻ. */
+.longText {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.rejectReason {
+  composes: longText;
+  padding: var(--xp-space-sm);
+  border-left: 3px solid var(--xp-color-error);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-error-bg);
+}
+
+.risk {
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-sm);
+  margin: 0;
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.hint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/*
+ * Quyết định nằm NGAY trong hộp thoại: đọc xong chi tiết là duyệt/từ chối được luôn, không
+ * phải đóng ra rồi tìm lại đúng thẻ trong danh sách.
+ */
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 640px) {
+  .fact {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .factLabel {
+    width: auto;
+  }
+}
+
+/* Hai lối đi của một thực thể: mở hồ sơ (modal) và mở lịch (route). */
+.entityActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}

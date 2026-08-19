@@ -1,9 +1,11 @@
-import type { PaginationMeta } from '@xeprime/types';
 import { apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import { BOOKING_REQUEST_STATUS_ALL } from './constants';
 import type {
   ApproveBookingRequestInput,
+  BookingRequestConversation,
   BookingRequestFilters,
   BookingRequestItem,
+  BookingRequestListMeta,
   BookingRequestReceipt,
   CheckAvailabilityInput,
   CheckAvailabilityResult,
@@ -14,18 +16,34 @@ export const BOOKING_REQUESTS_DEFAULT_LIMIT = 20;
 
 export interface BookingRequestListResult {
   items: BookingRequestItem[];
-  meta: PaginationMeta;
+  meta: BookingRequestListMeta;
 }
 
+/**
+ * Filter của giao diện → tham số API.
+ *
+ * `status=all` là trạng thái của TAB, không phải một mã nghiệp vụ: backend chỉ biết bộ mã thật
+ * (ADR 0005) nên "Tất cả" được dịch thành *không gửi* `status`. Phép dịch nằm đúng ở đây, một
+ * chỗ, để URL giữ được lựa chọn còn dây thì vẫn sạch.
+ */
 export function filtersToParams(filters: BookingRequestFilters): QueryParams {
+  const status = filters.status === BOOKING_REQUEST_STATUS_ALL ? null : (filters.status ?? null);
   return {
-    status: filters.status ?? null,
+    status,
     vehicleId: filters.vehicleId ?? null,
     branchId: filters.branchId ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? BOOKING_REQUESTS_DEFAULT_LIMIT,
   };
 }
+
+const EMPTY_META = (limit: number, total: number): BookingRequestListMeta => ({
+  page: 1,
+  limit,
+  total,
+  hasNext: false,
+  statusCounts: [],
+});
 
 export async function fetchBookingRequests(
   filters: BookingRequestFilters,
@@ -35,12 +53,9 @@ export async function fetchBookingRequests(
   });
   return {
     items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: BOOKING_REQUESTS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
+    meta:
+      (res.meta as BookingRequestListMeta | undefined) ??
+      EMPTY_META(filters.limit ?? BOOKING_REQUESTS_DEFAULT_LIMIT, res.data.length),
   };
 }
 
@@ -56,6 +71,15 @@ export const approveBookingRequest = (
 
 export const rejectBookingRequest = (id: string, reason?: string): Promise<BookingRequestItem> =>
   apiPost<BookingRequestItem>(`/booking-requests/${id}/reject`, { reason });
+
+/**
+ * Mở/lấy hội thoại với khách của một yêu cầu — đường của GIAN HÀNG.
+ *
+ * KHÔNG dùng `startConversation(vehicleId)` của `features/chat`: endpoint đó lấy người đang
+ * đăng nhập làm KHÁCH, nên nhân viên gian hàng gọi vào sẽ tự mở một thread với chính mình.
+ */
+export const startBookingRequestConversation = (id: string): Promise<BookingRequestConversation> =>
+  apiPost<BookingRequestConversation>(`/booking-requests/${id}/conversation`, {});
 
 /** Công khai — khách gửi yêu cầu thuê từ marketplace (không cần đăng nhập). */
 export const submitBookingRequest = (

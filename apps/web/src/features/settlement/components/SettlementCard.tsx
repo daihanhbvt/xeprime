@@ -3,10 +3,22 @@
 import { Alert, Button, Card, Skeleton, Space } from 'antd';
 import { useState } from 'react';
 import {
-  DEPOSIT_STATUS, DEPOSIT_STATUS_META, PERMISSION, REFUND_DISCLAIMER, REFUND_METHOD_LABEL, SURCHARGE_CATEGORY_LABEL, type DepositStatus, type RefundMethod, type SurchargeCategory, } from '@xeprime/types';
+  DEPOSIT_STATUS,
+  DEPOSIT_STATUS_META,
+  PAYMENT_KIND,
+  PERMISSION,
+  REFUND_DISCLAIMER,
+  REFUND_METHOD_LABEL,
+  SURCHARGE_CATEGORY_LABEL,
+  type DepositStatus,
+  type RefundMethod,
+  type SurchargeCategory,
+} from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
+import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
+import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
 import { useSettlement } from '../hooks';
 import { RecordRefundDialog } from './RecordRefundDialog';
 import { SurchargeDialog } from './SurchargeDialog';
@@ -31,6 +43,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
   const { data, isLoading, isError, error, refetch } = useSettlement(bookingId, canView);
 
   const [surchargeOpen, setSurchargeOpen] = useState(false);
+  const [depositOpen, setDepositOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [correcting, setCorrecting] = useState(false);
 
@@ -65,6 +78,16 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
   const status = data.depositStatus as DepositStatus;
   const hasSurcharges = data.surcharges.length > 0;
   const needsMore = Number(data.additionalDue) > 0;
+  // Cọc còn THIẾU so với cấu hình trên đơn. Dùng phép trừ trên chuỗi tiền, không `Number`
+  // (ADR 0007) — đây là số sẽ điền sẵn vào ô nhập tiền.
+  const depositOutstanding = subtractMoney(data.depositRequired, data.depositReceived);
+  // Chỉ mời thu cọc khi còn thiếu VÀ chưa bước sang giai đoạn hoàn: sau khi đã hoàn thì "thu
+  // thêm" là một nghiệp vụ khác hẳn, không phải thu nốt cọc.
+  const canTakeDeposit =
+    !isNegativeMoney(depositOutstanding) &&
+    !isZeroMoney(depositOutstanding) &&
+    (status === DEPOSIT_STATUS.NOT_RECEIVED || status === DEPOSIT_STATUS.RECEIVED);
+
   // Dòng "hoàn lại" chỉ có nghĩa khi còn tiền để trả hoặc đã trả rồi.
   const showRefundLine =
     status === DEPOSIT_STATUS.AWAITING_REFUND ||
@@ -124,6 +147,16 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
                 ) : (
                   fmt.money(data.depositReceived)
                 )}
+                {/*
+                  Đường GHI NHẬN thu cọc — trước đây không tồn tại ở bất kỳ đâu trong sản phẩm,
+                  nên `depositReceived` vĩnh viễn bằng 0 và cả khối này chạy không tải. Chỉ mở
+                  khi còn thiếu so với cọc theo đơn và chưa bước sang giai đoạn hoàn.
+                */}
+                {canRecord && canTakeDeposit ? (
+                  <Button type="link" size="small" onClick={() => setDepositOpen(true)}>
+                    Thu cọc
+                  </Button>
+                ) : null}
               </dd>
             </div>
             {hasSurcharges ? (
@@ -251,6 +284,21 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
             setRefundOpen(false);
             setCorrecting(false);
           }}
+        />
+      ) : null}
+
+      {/*
+        Dùng LẠI đúng modal thu tiền của đơn, chỉ đổi `kind` — hai loại tiền cùng đi qua một
+        đường ghi (`PaymentsService`), nên dựng một hộp thoại thứ hai là mở đường cho hai luồng
+        ghi tiền lệch nhau.
+      */}
+      {depositOpen ? (
+        <RecordPaymentModal
+          bookingId={bookingId}
+          debtAmount={depositOutstanding}
+          kind={PAYMENT_KIND.DEPOSIT}
+          open
+          onClose={() => setDepositOpen(false)}
         />
       ) : null}
     </Card>

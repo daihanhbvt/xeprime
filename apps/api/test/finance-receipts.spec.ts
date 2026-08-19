@@ -131,7 +131,10 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
   maybe('tạo phiếu chi → pending_approval, receiptNo PC-, tiền string', async () => {
     const r = await createExpense();
     expect(r.status).toBe(RECEIPT_STATUS.PENDING_APPROVAL);
-    expect(r.receiptNo).toMatch(/^PC-\d{8}-[0-9A-Z]{4}$/);
+    // Hậu tố nới từ 4 lên 8 ký tự khi `receipt_no` có unique index: mọi lời gọi nằm trong một
+    // transaction, mà Postgres huỷ cả transaction ở vi phạm đầu tiên nên không retry được —
+    // cách duy nhất còn lại là làm cho va chạm không xảy ra.
+    expect(r.receiptNo).toMatch(/^PC-\d{8}-[0-9A-Z]{8}$/);
     expect(r.amount).toBe('500000');
     expect(typeof r.amount).toBe('string');
   });

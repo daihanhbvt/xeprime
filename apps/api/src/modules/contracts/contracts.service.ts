@@ -99,6 +99,14 @@ export class ContractsService {
     const profile = booking.tenant.profile;
     const total = new Prisma.Decimal(booking.totalAmount);
     const paid = new Prisma.Decimal(booking.paidAmount);
+    /*
+     * CỐ Ý dùng `total − paid`, KHÔNG dùng công thức phải-thu đầy đủ của `booking-money.ts`.
+     *
+     * Hợp đồng là bản ĐÔNG CỨNG thoả thuận lúc lập: giá thuê hai bên đã ký và phần còn phải trả
+     * theo đúng thoả thuận đó. Phụ phí quá giờ/hư hại phát sinh SAU khi ký — đưa chúng vào đây
+     * sẽ làm hợp đồng đã in nói một con số khác lúc ký, đúng thứ snapshot sinh ra để chống.
+     * Phần quyết toán cuối chuyến thuộc về màn đơn thuê, không phải hợp đồng.
+     */
     const remaining = bookingDebt(total, paid);
     const days = Math.max(
       1,

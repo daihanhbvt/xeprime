@@ -1,0 +1,38 @@
+{
+  "debts": {
+    "page": {
+      "title": "Công nợ"
+    },
+    "filters": {
+      "overdue": "Quá hạn",
+      "upcoming": "Sắp đến hạn",
+      "unpaid": "Chưa thu"
+    },
+    "table": {
+      "label": "Danh sách công nợ",
+      "totalLabel": "{count, plural, other {# đơn còn nợ}}",
+      "columns": {
+        "booking": "Đơn",
+        "vehicle": "Xe",
+        "returnAt": "Đến hạn trả",
+        "total": "Tổng",
+        "paid": "Đã trả",
+        "debt": "Còn nợ"
+      },
+      "actions": {
+        "view": "Xem đơn",
+        "collect": "Thu tiền"
+      },
+      "error": {
+        "title": "Không tải được công nợ",
+        "description": "Có lỗi khi lấy dữ liệu. Vui lòng thử lại."
+      },
+      "empty": {
+        "title": "Không có đơn nào còn nợ"
+      },
+      "noResults": {
+        "title": "Không có khoản nợ khớp bộ lọc"
+      }
+    }
+  }
+}

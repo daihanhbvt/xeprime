@@ -7,6 +7,8 @@ import {
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
+  TENANT_CUSTOMER_RISK_LEVEL_VALUES,
+  VEHICLE_TYPE_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -242,10 +244,38 @@ export class BookingRequestDto {
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) vehiclePlate!: string | null;
+  /** Mã nội bộ của xe trong gian hàng — thứ nhân viên đọc to ở quầy khi biển số chưa có. */
+  @ApiPropertyOptional({ type: String, nullable: true }) vehicleCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện của xe' })
+  vehicleImageUrl!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, enum: VEHICLE_TYPE_VALUES })
+  vehicleType!: string | null;
   @ApiProperty({ enum: BOOKING_REQUEST_STATUS_VALUES }) status!: string;
   @ApiProperty() customerName!: string;
   @ApiProperty() customerPhone!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerEmail!: string | null;
+  /**
+   * Hồ sơ khách trong SỔ KHÁCH của gian hàng — móc để mở hồ sơ 360 từ inbox. `null` với yêu
+   * cầu LEGACY chưa gắn hồ sơ.
+   *
+   * `customerUserId` (tài khoản nền tảng) CỐ Ý không ra ngoài: nó là định danh xuyên gian hàng,
+   * frontend không có việc gì cần tới nó, và lộ ra là mở đường cho việc dò tài khoản.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true }) tenantCustomerId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện tài khoản khách' })
+  customerAvatarUrl!: string | null;
+  /**
+   * Mức rủi ro gian hàng tự đánh giá cho khách này. `null` khi chưa có hồ sơ trong sổ khách.
+   * `watchlist`/`blocked` phải nhìn thấy TRƯỚC khi bấm duyệt; `normal` không cần trưng ra.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true, enum: TENANT_CUSTOMER_RISK_LEVEL_VALUES })
+  customerRiskLevel!: string | null;
+  /**
+   * Khách có tài khoản trên nền tảng để nhắn tin trong ứng dụng không. `false` với khách vãng
+   * lai — gian hàng chỉ liên hệ được qua điện thoại/Zalo.
+   */
+  @ApiProperty({ description: 'Nhắn tin trong ứng dụng được không' })
+  canMessageOnPlatform!: boolean;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
@@ -289,11 +319,41 @@ export class BookingRequestDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Booking đã tạo khi duyệt' })
   bookingId!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'ISO-8601 UTC — thời điểm gian hàng duyệt/từ chối; null khi còn chờ',
+  })
+  decidedAt!: string | null;
+}
+
+/**
+ * Số yêu cầu của MỘT trạng thái, trong phạm vi gian hàng + chi nhánh đang xem.
+ *
+ * Danh sách (thay vì một object có mỗi status là một khoá) để không phải gõ mã trạng thái trần
+ * ở DTO: bộ mã sống ở `@xeprime/types` (ADR 0005) và thêm một trạng thái mới không được kéo
+ * theo một lần sửa DTO nữa. `status` vẫn khai `enum` nên spec sinh ra vẫn có đủ giá trị hợp lệ.
+ */
+export class BookingRequestStatusCountDto {
+  @ApiProperty({ enum: BOOKING_REQUEST_STATUS_VALUES }) status!: string;
+  @ApiProperty({ example: 7 }) count!: number;
+}
+
+export class BookingRequestPageMetaDto extends PaginationMetaDto {
+  /**
+   * Đếm cho TỪNG tab, đủ mọi trạng thái (kể cả trạng thái có 0 yêu cầu).
+   *
+   * Cố ý BỎ QUA bộ lọc trạng thái đang bật: một tab phải nói được "bên kia có bao nhiêu việc"
+   * ngay cả khi người dùng đang đứng ở tab khác. Đếm từ trang hiện tại thì sai ngay từ bản ghi
+   * thứ 21, nên con số này do DB gộp, không do frontend cộng lại.
+   */
+  @ApiProperty({ type: [BookingRequestStatusCountDto] })
+  statusCounts!: BookingRequestStatusCountDto[];
 }
 
 export class BookingRequestPageDto {
   @ApiProperty({ type: [BookingRequestDto] }) data!: BookingRequestDto[];
-  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+  @ApiProperty({ type: BookingRequestPageMetaDto }) meta!: BookingRequestPageMetaDto;
 }
 
 /** Kết quả trả khách sau khi gửi yêu cầu (không lộ nội bộ tenant). */

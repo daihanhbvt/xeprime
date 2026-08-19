@@ -13,10 +13,15 @@ import {
   MAINTENANCE_STATUS_HOLDING_SCHEDULE,
   MAINTENANCE_TYPE,
   MAINTENANCE_TYPES_RESET_OIL_CHANGE,
+  MAINTENANCE_TYPE_LABEL,
   OCCUPANCY_SOURCE_TYPE,
   ODOMETER_SOURCE,
+  PAYMENT_METHOD,
   PRIVATE_FILE_PURPOSE,
   PRIVATE_FILE_STATUS,
+  RECEIPT_SOURCE,
+  RECEIPT_TYPE,
+  SYSTEM_FINANCE_CATEGORY,
   isMaintenanceTransitionAllowed,
   vehicleMaintenanceSchedule,
   type MaintenanceDueStatus,
@@ -26,11 +31,13 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../../audit/audit.service';
 import { OccupancyService } from '../../calendar/occupancy.service';
+import { ReceiptsService } from '../../finance/receipts.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { VehicleContractsService } from '../vehicle-contracts.service';
 import { OdometerService } from './odometer.service';
 import {
   CompleteMaintenanceDto,
+  CorrectMaintenanceCostDto,
   MaintenanceBoardItemDto,
   MaintenanceBoardQueryDto,
   MaintenanceBoardSummaryDto,
@@ -72,6 +79,7 @@ export class MaintenanceService {
     private readonly odometer: OdometerService,
     private readonly files: VehicleContractsService,
     private readonly audit: AuditService,
+    private readonly receipts: ReceiptsService,
   ) {}
 
   // ── Hồ sơ bảo dưỡng của một xe ────────────────────────────────────────────
@@ -310,6 +318,9 @@ export class MaintenanceService {
           );
         }
 
+        // Phiếu chưa hoàn tất thì chưa có phiếu chi nào để đồng bộ (`syncCostReceipt` chỉ chạy ở
+        // `completeRecord`). Sửa chi phí SAU khi hoàn tất đi đường riêng: `correctCost`.
+
         // Lịch đổi → dời/nhả/giữ chỗ tương ứng, cùng transaction với phiếu.
         await this.syncOccupancy(tx, {
           tenantId,
@@ -402,6 +413,19 @@ export class MaintenanceService {
       // Xong việc thì trả lịch — xe nhận đơn lại được ngay, không phải chờ ai dọn tay.
       await this.occupancy.release(tx, OCCUPANCY_SOURCE_TYPE.MAINTENANCE, recordId);
 
+      // Chi phí bảo dưỡng LÀ một khoản chi của gian hàng. Trước đây nó dừng lại ở hồ sơ xe, nên
+      // "lãi thực theo xe" không bao giờ tính được. Tự động, không hỏi lại bằng checkbox: người
+      // dùng đã gõ số tiền vào rồi, hỏi thêm một lần chỉ đẻ ra hai con số không khớp nhau.
+      await this.syncCostReceipt(tx, tenantId, userId, {
+        recordId,
+        vehicleId,
+        type: current.type as MaintenanceType,
+        cost: dto.cost !== undefined ? dto.cost : (current.cost?.toString() ?? null),
+        occurredAt: completedAt,
+        receiptCode:
+          dto.receiptCode !== undefined ? trimOrNull(dto.receiptCode) : current.receiptCode,
+      });
+
       if (odometerKm !== null) {
         // KM đi qua OdometerService: append lịch sử + chặn tụt số + audit riêng.
         await this.odometer.record(tx, {
@@ -448,6 +472,75 @@ export class MaintenanceService {
               current.type as MaintenanceType,
             ),
           },
+        },
+        tx,
+      );
+    });
+
+    return this.readRecord(tenantId, vehicleId, recordId, scope);
+  }
+
+  /**
+   * Sửa CHI PHÍ của một phiếu bảo dưỡng đã hoàn tất — đường duy nhất chữa một con số ghi sai.
+   *
+   * Vì sao phải có: `updateRecord` từ chối mọi phiếu đã đóng (đúng — lịch và hạng mục đã xong thì
+   * không sửa), còn `ReceiptsService.cancel` chặn phiếu tự động. Không có đường này thì một chi
+   * phí gõ nhầm sẽ nằm lại trong sổ Thu-Chi vĩnh viễn, không cách nào chữa qua sản phẩm.
+   *
+   * Hẹp có chủ đích, theo đúng khuôn `SettlementService.correctRefund`: chỉ tiền + mã chứng từ,
+   * lý do BẮT BUỘC, `rowVersion` chống ghi đè, audit giữ CẢ giá trị cũ. Không đụng trạng thái,
+   * lịch, KM hay loại việc.
+   */
+  async correctCost(
+    tenantId: string,
+    vehicleId: string,
+    userId: string,
+    recordId: string,
+    dto: CorrectMaintenanceCostDto,
+    scope: MaintenanceViewScope,
+  ): Promise<MaintenanceRecordDto> {
+    await this.assertVehicle(tenantId, vehicleId);
+    const current = await this.requireRecord(tenantId, vehicleId, recordId);
+    if (current.status !== MAINTENANCE_STATUS.COMPLETED) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+        message: 'Chỉ sửa được chi phí của phiếu ĐÃ hoàn tất — phiếu đang mở thì sửa như thường',
+      });
+    }
+
+    // `!== undefined`, KHÔNG phải `?? null`: PATCH bỏ trống một trường nghĩa là "đừng đụng vào",
+    // còn `null` tường minh mới là "xoá chi phí". Gộp hai thứ lại thì một client chỉ muốn sửa mã
+    // chứng từ sẽ âm thầm xoá luôn chi phí và huỷ phiếu chi trong sổ.
+    const cost = dto.cost !== undefined ? dto.cost : (current.cost?.toString() ?? null);
+    const receiptCode =
+      dto.receiptCode !== undefined ? trimOrNull(dto.receiptCode) : current.receiptCode;
+
+    await this.prisma.$transaction(async (tx) => {
+      const result = await tx.vehicleMaintenanceRecord.updateMany({
+        where: { id: recordId, tenantId, vehicleId, rowVersion: dto.expectedRowVersion },
+        data: { cost, receiptCode, updatedBy: userId, rowVersion: { increment: 1 } },
+      });
+      if (result.count === 0) throw staleRecord();
+
+      await this.syncCostReceipt(tx, tenantId, userId, {
+        recordId,
+        vehicleId,
+        type: current.type as MaintenanceType,
+        cost,
+        occurredAt: current.completedAt ?? new Date(),
+        receiptCode,
+      });
+
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'vehicle.maintenance.cost_correct',
+          targetType: 'vehicle_maintenance_record',
+          targetId: recordId,
+          before: { cost: current.cost?.toString() ?? null, receiptCode: current.receiptCode },
+          after: { cost, receiptCode, reason: dto.correctionReason },
         },
         tx,
       );
@@ -1055,6 +1148,93 @@ export class MaintenanceService {
     });
     if (!row) throw recordNotFound();
     return toRecordDto(row, scope);
+  }
+
+  /**
+   * Đưa phiếu CHI của một lần bảo dưỡng về khớp với chi phí đang ghi trên bản ghi.
+   *
+   * Ba chuyển tiếp giống hệt hoàn cọc, và cùng một lý do:
+   *  - **chưa có → có tiền**: sinh phiếu.
+   *  - **có tiền → số khác**: sửa TẠI CHỖ. Unique index `(tenant_id, source, source_ref_id)` phủ
+   *    cả dòng đã huỷ, nên huỷ-rồi-tạo-lại sẽ đụng constraint.
+   *  - **có tiền → 0đ/trống**: huỷ phiếu. Chi phí bị xoá thì sổ không được giữ khoản chi đó.
+   *
+   * `paymentMethod` là `cash` vì bản ghi bảo dưỡng không hỏi hình thức trả — đặt "khác" sẽ đẩy
+   * mọi chi phí đội xe ra khỏi cột "chi tiền mặt" mà chẳng nói thêm được gì.
+   */
+  private async syncCostReceipt(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    userId: string,
+    input: {
+      recordId: string;
+      vehicleId: string;
+      type: MaintenanceType;
+      cost: string | null;
+      occurredAt: Date;
+      receiptCode: string | null;
+    },
+  ): Promise<void> {
+    const amount = input.cost === null ? null : new Prisma.Decimal(input.cost);
+    if (!amount || amount.lessThanOrEqualTo(0)) {
+      await this.receipts.cancelBySourceWithinTx(
+        tx,
+        tenantId,
+        RECEIPT_SOURCE.MAINTENANCE,
+        input.recordId,
+        userId,
+      );
+      return;
+    }
+
+    const touched = await this.receipts.updateAmountWithinTx(
+      tx,
+      tenantId,
+      RECEIPT_SOURCE.MAINTENANCE,
+      input.recordId,
+      userId,
+      { amount: amount.toFixed(2), occurredAt: input.occurredAt, referenceCode: input.receiptCode },
+    );
+    if (touched > 0) return;
+
+    const vehicle = await tx.vehicle.findFirst({
+      where: { id: input.vehicleId, tenantId },
+      select: { name: true, plateNumber: true },
+    });
+    const label = MAINTENANCE_TYPE_LABEL[input.type] ?? 'Bảo dưỡng';
+    const vehicleLabel = vehicle
+      ? `${vehicle.name}${vehicle.plateNumber ? ` (${vehicle.plateNumber})` : ''}`
+      : 'xe';
+
+    const receipt = await this.receipts.createApprovedWithinTx(tx, tenantId, userId, {
+      type: RECEIPT_TYPE.EXPENSE,
+      amount: amount.toFixed(2),
+      paymentMethod: PAYMENT_METHOD.CASH,
+      source: RECEIPT_SOURCE.MAINTENANCE,
+      sourceRefId: input.recordId,
+      // Sửa chữa sự cố và bảo dưỡng định kỳ là hai loại chi phí khác nhau về bản chất — gộp một
+      // danh mục là mất luôn khả năng trả lời "xe này hỏng vặt tốn bao nhiêu".
+      categoryKey:
+        input.type === MAINTENANCE_TYPE.REPAIR
+          ? SYSTEM_FINANCE_CATEGORY.REPAIR
+          : SYSTEM_FINANCE_CATEGORY.MAINTENANCE,
+      vehicleId: input.vehicleId,
+      occurredAt: input.occurredAt,
+      referenceCode: input.receiptCode,
+      description: `${label} — ${vehicleLabel}`,
+    });
+
+    // `receipt_code` là ô chứng từ người dùng tự nhập (docblock Wave 6 đã chừa chỗ này). Chưa
+    // nhập gì thì điền số phiếu vừa sinh — có ngay một mã tra cứu, và vẫn sửa được.
+    //
+    // Số phiếu lấy từ giá trị `ReceiptsService` TRẢ VỀ, không `SELECT` lại `receipts`: module này
+    // không sở hữu bảng đó, và đọc thẳng là bước đầu tiên của việc rồi cũng ghi thẳng.
+    if (!input.receiptCode) {
+      await tx.vehicleMaintenanceRecord.update({
+        where: { id: input.recordId },
+        data: { receiptCode: receipt.receiptNo },
+      });
+    }
   }
 
   private async requireRecord(tenantId: string, vehicleId: string, recordId: string) {

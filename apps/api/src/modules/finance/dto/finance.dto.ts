@@ -1,7 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BOOKING_STATUS_VALUES,
   FINANCE_CATEGORY_TYPE_VALUES,
   PAYMENT_METHOD_VALUES,
+  RECEIPT_SOURCE_VALUES,
   RECEIPT_STATUS_VALUES,
   RECEIPT_TYPE_VALUES,
 } from '@xeprime/types';
@@ -82,18 +84,48 @@ export class ReceiptListQueryDto {
   @Length(26, 26)
   categoryId?: string;
 
+  @ApiPropertyOptional({ enum: RECEIPT_SOURCE_VALUES, description: 'Lọc theo nguồn sinh phiếu' })
+  @IsOptional()
+  @IsIn(RECEIPT_SOURCE_VALUES)
+  source?: string;
+
+  @ApiPropertyOptional({ enum: PAYMENT_METHOD_VALUES, description: 'Lọc theo hình thức' })
+  @IsOptional()
+  @IsIn(PAYMENT_METHOD_VALUES)
+  paymentMethod?: string;
+
   @ApiPropertyOptional({ description: 'Lọc theo đơn thuê' })
   @IsOptional()
   @IsString()
   @Length(26, 26)
   bookingId?: string;
 
-  @ApiPropertyOptional({ description: 'Từ ngày (ISO) — theo created_at' })
+  @ApiPropertyOptional({ description: 'Lọc theo xe' })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  vehicleId?: string;
+
+  @ApiPropertyOptional({ description: 'Lọc theo khách của gian hàng' })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  tenantCustomerId?: string;
+
+  @ApiPropertyOptional({ description: 'Tìm mã phiếu / mã tra soát / diễn giải / mã đơn' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
+  @ApiPropertyOptional({
+    description: 'Từ ngày — `YYYY-MM-DD` (trọn ngày theo giờ VN) hoặc ISO đầy đủ. Lọc `occurred_at`',
+  })
   @IsOptional()
   @IsDateString()
   from?: string;
 
-  @ApiPropertyOptional({ description: 'Đến ngày (ISO)' })
+  @ApiPropertyOptional({ description: 'Đến ngày — cùng quy ước với `from`' })
   @IsOptional()
   @IsDateString()
   to?: string;
@@ -145,6 +177,14 @@ export class CreateReceiptDto {
   @Length(26, 26)
   vehicleId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Ngày tiền phát sinh (ISO hoặc YYYY-MM-DD); mặc định bây giờ. Nhập bù cho hôm trước thì đặt đúng ngày đó.',
+  })
+  @IsOptional()
+  @IsDateString()
+  occurredAt?: string;
+
   @ApiPropertyOptional({ description: 'Mã tra soát/tham chiếu (CK…)' })
   @IsOptional()
   @IsString()
@@ -178,19 +218,33 @@ export class ReceiptListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) receiptNo!: string | null;
   @ApiProperty({ enum: RECEIPT_TYPE_VALUES }) type!: string;
   @ApiProperty({ enum: RECEIPT_STATUS_VALUES }) status!: string;
+  @ApiProperty({ enum: RECEIPT_SOURCE_VALUES, description: 'Nguồn sinh phiếu — `manual` mới sửa/huỷ tay được' })
+  source!: string;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Id bản ghi nghiệp vụ gốc' })
+  sourceRefId!: string | null;
   @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) amount!: string;
   @ApiProperty() paymentMethod!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) categoryId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) categoryName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) bookingId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) bookingCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) vehicleId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) vehicleName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) tenantCustomerId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) customerName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
-  @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+  @ApiProperty({ description: 'Ngày tiền di chuyển, ISO-8601 UTC — mọi lọc/tổng hợp chạy trên cột này' })
+  occurredAt!: string;
+  @ApiProperty({ description: 'Lúc nhập vào máy, ISO-8601 UTC' }) createdAt!: string;
 }
 
 export class ReceiptDetailDto extends ReceiptListItemDto {
-  @ApiPropertyOptional({ type: String, nullable: true }) vehicleId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) referenceCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) requestedByName!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) approvedByName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) approvedAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) cancelledByName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) cancelledAt!: string | null;
   @ApiProperty({ type: [String], description: 'URL ảnh minh chứng' }) attachments!: string[];
   @ApiProperty({ description: 'ISO-8601 UTC' }) updatedAt!: string;
@@ -233,10 +287,27 @@ export class DebtItemDto {
   @ApiProperty() customerName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
   @ApiProperty() vehicleName!: string;
+
+  /**
+   * Trạng thái đơn — thứ phân biệt "chưa tới ngày thu" với "đã chạy xong mà chưa trả tiền".
+   *
+   * Danh sách này chứa cả đơn `reserved`/`confirmed` (xe chưa ra khỏi bãi, còn nợ là bình
+   * thường) lẫn `completed`/`no_show` (nợ thật, phải đi đòi). Thiếu cột này người thu nhìn
+   * một bảng toàn số tiền giống nhau và không biết dòng nào cần gọi khách.
+   */
+  @ApiProperty({ enum: BOOKING_STATUS_VALUES }) status!: string;
+
   @ApiProperty({ description: 'ISO-8601 UTC' }) returnAt!: string;
-  @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) totalAmount!: string;
-  @ApiProperty() paidAmount!: string;
-  @ApiProperty() debtAmount!: string;
+  @ApiProperty({
+    description: 'PHẢI THU = tiền thuê + phụ phí còn hiệu lực. Tiền dạng string — ADR 0007',
+  })
+  totalAmount!: string;
+  @ApiProperty({ description: 'ĐÃ THU = tiền thuê + phiếu tay đã duyệt + phần phụ phí cọc gánh' })
+  paidAmount!: string;
+  /** Phụ phí còn hiệu lực — đã nằm TRONG `totalAmount`, tách ra để giải thích con số. */
+  @ApiProperty() surchargeTotal!: string;
+  @ApiProperty({ description: 'max(0, phải thu − đã thu) — common/booking-money.ts' })
+  debtAmount!: string;
 }
 
 export class DebtPageDto {
@@ -262,4 +333,47 @@ export class FinanceSummaryDto {
   @ApiProperty({ description: 'Cân đối = thu − chi, string' }) balance!: string;
   @ApiProperty({ description: 'Tổng công nợ các đơn còn nợ, string' }) totalDebt!: string;
   @ApiProperty({ description: 'Số đơn còn nợ' }) debtBookings!: number;
+}
+
+/**
+ * Tổng thu/chi của ĐÚNG bộ lọc đang xem trên `/manage/receipts`.
+ *
+ * Khác `FinanceSummaryDto` (dashboard, chỉ theo khoảng ngày): thẻ tổng nằm ngay trên một danh
+ * sách đã lọc thì phải cộng đúng những dòng đó — một thẻ "Tổng thu" không khớp bảng bên dưới là
+ * cách nhanh nhất khiến người dùng thôi tin cả hai con số.
+ */
+export class ReceiptSummaryDto {
+  @ApiProperty({ description: 'Tổng thu (phiếu đã duyệt trong bộ lọc), string' }) totalIncome!: string;
+  @ApiProperty({ description: 'Tổng chi (phiếu đã duyệt trong bộ lọc), string' }) totalExpense!: string;
+  @ApiProperty({ description: 'Cân đối = thu − chi, string' }) balance!: string;
+  @ApiProperty({ description: 'Thu bằng tiền mặt, string' }) incomeCash!: string;
+  @ApiProperty({ description: 'Thu bằng chuyển khoản/QR/thẻ, string' }) incomeTransfer!: string;
+  @ApiProperty({ description: 'Số phiếu đã duyệt được cộng vào các số trên' }) approvedCount!: number;
+}
+
+export class ReceiptBookingOptionQueryDto {
+  @ApiPropertyOptional({ description: 'Tìm theo mã đơn / tên khách / SĐT / biển số' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+}
+
+/** Đủ để form tự điền khách, xe và số tiền còn nợ — không hơn. */
+export class ReceiptBookingOptionDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() code!: string;
+  @ApiProperty() customerName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) tenantCustomerId!: string | null;
+  @ApiProperty() vehicleId!: string;
+  @ApiProperty() vehicleName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) totalAmount!: string;
+  @ApiProperty() paidAmount!: string;
+  @ApiProperty({ description: 'Còn nợ = max(0, tổng − đã trả)' }) debtAmount!: string;
+}
+
+export class ReceiptBookingOptionListDto {
+  @ApiProperty({ type: [ReceiptBookingOptionDto] }) data!: ReceiptBookingOptionDto[];
 }

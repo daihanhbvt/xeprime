@@ -63,6 +63,7 @@ Kỷ luật code đã đóng gói thành skill/agent — **dùng chúng, đừng
 | skill | `frontend-feature` | Trước khi viết bất cứ thứ gì ở `apps/web` |
 | skill | `backend-endpoint` | Trước khi thêm/sửa endpoint/module/DTO ở `apps/api` |
 | skill | `database-change` | Trước khi đụng `schema.prisma`/migration/seed |
+| skill | `i18n` | Trước khi viết BẤT KỲ chữ nào hiện cho người dùng — và khi mở màn hình còn chuỗi tiếng Việt thô thì chuyển luôn màn đó |
 | skill | `shared-code` | Khi thấy logic/giá trị lặp lần 2, hoặc code cross-tuyến web↔api |
 | skill | `verify-changes` | Trước khi chạy build/lint/test/typecheck — chỉ xác minh phần vừa sửa, không quét cả workspace |
 | agent | `navigator` (haiku) | Định vị file/symbol cần đọc mà không quét cả file — tiết kiệm token |
@@ -184,6 +185,8 @@ server trước khi render.
 | Nhãn status/role/enum | `useDomainLabel()` + namespace `Domain` |
 | Lỗi API | `useErrorMessage()` + namespace `Errors` (ánh xạ từ MÃ) |
 | Bộ đổi ngôn ngữ | `src/components/i18n/LocaleSwitcher.tsx` |
+
+Kỷ luật khi viết chữ mới hoặc chuyển màn hình chưa dịch: skill `i18n`.
 
 Hai lệnh kiểm tra:
 

@@ -49,6 +49,35 @@ vi.mock('@/features/finance/hooks/use-receipts', () => ({
   },
 }));
 
+/**
+ * Thẻ tổng và danh mục lọc là hai truy vấn RIÊNG. Stub ở đây để test vẫn chỉ nói về bảng và
+ * bộ lọc — thẻ tổng có bề mặt riêng, không phải thứ trang này chịu trách nhiệm chứng minh.
+ */
+const summaryQuery = vi.hoisted(() => ({
+  data: {
+    totalIncome: '1500000',
+    totalExpense: '0',
+    balance: '1500000',
+    incomeCash: '1500000',
+    incomeTransfer: '0',
+    approvedCount: 1,
+  } as unknown,
+  isFetching: false,
+  isError: false,
+  lastFilters: undefined as unknown,
+}));
+
+vi.mock('@/features/finance/hooks/use-receipt-summary', () => ({
+  useReceiptSummary: (filters: unknown) => {
+    summaryQuery.lastFilters = filters;
+    return summaryQuery;
+  },
+}));
+
+vi.mock('@/features/finance/hooks/use-finance-categories', () => ({
+  useFinanceCategories: () => ({ data: [], isFetching: false }),
+}));
+
 const approve = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 const cancel = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
 
@@ -65,6 +94,11 @@ vi.mock('@/features/finance/components/ReceiptFormDrawer', () => ({
     overlays.formOpen = open;
     return open ? <div data-testid="receipt-form" /> : null;
   },
+}));
+
+vi.mock('@/features/finance/components/ReceiptDetailDrawer', () => ({
+  ReceiptDetailDrawer: ({ receiptId }: { receiptId: string | null }) =>
+    receiptId ? <div data-testid="receipt-detail">{receiptId}</div> : null,
 }));
 
 vi.mock('@/features/finance/components/CategoryManagerModal', () => ({
@@ -99,10 +133,15 @@ function receipt(over: Partial<Receipt> = {}): Receipt {
     receiptNo: 'PT-0001',
     type: 'income',
     status: 'pending_approval',
+    // Mặc định NHẬP TAY: phiếu tự động có luật riêng (không huỷ trực tiếp được), nên test nào
+    // muốn nói về nó phải nói ra tường minh chứ không thừa hưởng im lặng.
+    source: 'manual',
+    sourceRefId: null,
     amount: '1500000',
     paymentMethod: 'cash',
     categoryName: 'Tiền thuê xe',
     description: 'Thu tiền đơn XP-001',
+    occurredAt: '2026-08-01T03:00:00.000Z',
     createdAt: '2026-08-01T03:00:00.000Z',
     ...over,
   };
@@ -117,8 +156,19 @@ function setQuery(over: Partial<typeof query> = {}) {
   Object.assign(query, over);
 }
 
+/**
+ * Cấp quyền cho một test.
+ *
+ * `finance.view` luôn được cấp kèm vì từ epic nối tiền, THIẾU nó là trang thay toàn bộ nội dung
+ * bằng màn "không có quyền" — mọi test nói về bảng/bộ lọc đều giả định đã vào được trang. Trường
+ * hợp không có quyền có test riêng, dùng `grantNothing()`.
+ */
 function grant(...permissions: Permission[]) {
-  perms.granted = new Set<string>(permissions);
+  perms.granted = new Set<string>([PERMISSION.FINANCE_VIEW, ...permissions]);
+}
+
+function grantNothing() {
+  perms.granted = new Set<string>();
 }
 
 function renderPage() {
@@ -208,11 +258,26 @@ describe('/manage/receipts — tải và lỗi', () => {
   });
 
   it('thanh lọc vẫn hiện trong lúc tải và cả khi lỗi', () => {
+    // Wave "nối tiền": hai `<Select>` thô đổi sang `FilterBar` dùng chung (được thêm kiểu trường
+    // `dateRange` CHÍNH VÌ trang này). Điều được khoá vẫn là "lỗi không nuốt mất thanh lọc".
     setQuery({ isError: true });
     renderPage();
 
-    expect(screen.getByText('Tất cả loại')).toBeTruthy();
-    expect(screen.getByText('Tất cả trạng thái')).toBeTruthy();
+    expect(screen.getByPlaceholderText(/Mã phiếu/)).toBeTruthy();
+    expect(screen.getByText('Loại')).toBeTruthy();
+    expect(screen.getByText('Trạng thái')).toBeTruthy();
+  });
+
+  it('thiếu finance.view: thay TOÀN BỘ trang bằng màn không-có-quyền', () => {
+    // Trước đây trang vẫn dựng đủ tiêu đề + bộ lọc + một bảng lỗi 403 — trông như hỏng chứ không
+    // như "bạn không được vào". Chặn thật vẫn là guard backend; đây là lớp trải nghiệm.
+    grantNothing();
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    expect(screen.getByText('Không có quyền xem sổ thu chi')).toBeTruthy();
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.queryByPlaceholderText(/Mã phiếu/)).toBeNull();
   });
 });
 
@@ -248,36 +313,41 @@ describe('/manage/receipts — rỗng và không có kết quả', () => {
     renderPage();
 
     expect(screen.getByText('Không có phiếu khớp bộ lọc')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Xoá bộ lọc' })).toBeTruthy();
+    // Hai lối xoá: một trên thanh lọc, một trong khối "không có kết quả" — cả hai đều hợp lệ.
+    expect(screen.getAllByRole('button', { name: 'Xoá bộ lọc' }).length).toBeGreaterThan(0);
   });
 
-  it('HIỆN TRẠNG: lọc theo khoảng ngày KHÔNG được tính là đang lọc', () => {
-    // `hasFilters` chỉ đọc `type` và `status`. Lọc theo `from`/`to`/`categoryId` mà không ra kết
-    // quả sẽ hiện "Chưa có phiếu thu/chi nào" — sai về nghĩa (Figma `134:2093` phân biệt rõ
-    // Empty vs No Results), nhưng ĐÂY LÀ HÀNH VI ĐANG CHẠY. Wave 1C sửa, không phải test này.
+  it('lọc theo khoảng ngày / danh mục RA RỖNG cũng là "không có kết quả"', () => {
+    // ĐÃ SỬA (epic nối tiền): `hasFilters` trước đây chỉ đọc `type`/`status`, nên lọc theo ngày
+    // ra rỗng lại báo "Chưa có phiếu thu/chi nào" — người dùng đóng màn hình vì tưởng chưa nhập
+    // gì, trong khi chỉ là lọc quá tay. Nay mọi filter đều được đếm.
     nav.params = new URLSearchParams('from=2026-01-01&to=2026-01-31&categoryId=c1');
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
 
-    expect(screen.getByText('Chưa có phiếu thu/chi nào')).toBeTruthy();
-    expect(screen.queryByText('Không có phiếu khớp bộ lọc')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Xoá bộ lọc' })).toBeNull();
+    expect(screen.getByText('Không có phiếu khớp bộ lọc')).toBeTruthy();
+    expect(screen.queryByText('Chưa có phiếu thu/chi nào')).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Xoá bộ lọc' }).length).toBeGreaterThan(0);
   });
 
-  it('"Xoá bộ lọc" chỉ xoá type và status, giữ khoảng ngày, và đưa về trang 1', () => {
-    nav.params = new URLSearchParams('type=income&status=draft&from=2026-01-01&page=6');
+  it('"Xoá bộ lọc" xoá HẾT mọi filter, kể cả khoảng ngày, và đưa về trang 1', () => {
+    // Cũng đã sửa: giữ lại `from` khi người dùng bấm "Xoá bộ lọc" là không làm đúng thứ nút đó
+    // hứa, và họ không có cách nào khác để về danh sách đầy đủ.
+    nav.params = new URLSearchParams('type=income&status=draft&from=2026-01-01&q=abc&page=6');
     setQuery({ data: { items: [], meta: { ...META, total: 0 } } });
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Xoá bộ lọc' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Xoá bộ lọc' })[0]!);
 
-    // Khẳng định KHẲNG ĐỊNH trước: chứng minh tương tác thật sự ghi URL, để ba phép phủ định
+    // Khẳng định KHẲNG ĐỊNH trước: chứng minh tương tác thật sự ghi URL, để các phép phủ định
     // bên dưới không thể đúng một cách vô nghĩa.
-    expect(nav.replace).toHaveBeenCalledTimes(1);
+    expect(nav.replace).toHaveBeenCalled();
     const url = lastReplacedUrl();
-    expect(url).toContain('from=2026-01-01');
+    expect(url).toContain('/manage/receipts');
     expect(url).not.toContain('type=');
     expect(url).not.toContain('status=');
+    expect(url).not.toContain('from=');
+    expect(url).not.toContain('q=');
     expect(url).not.toContain('page=');
   });
 });
@@ -478,11 +548,38 @@ describe('/manage/receipts — filter và phân trang', () => {
     expect(screen.getByText('245 phiếu')).toBeTruthy();
   });
 
-  it('HIỆN TRẠNG: trang này KHÔNG có ô tìm kiếm', () => {
-    // Figma `127:2339` xếp 07 Finance là "✅ Có search". Code thì không — chênh lệch ghi ở P24.
+  it('có ô tìm kiếm, và chuỗi gõ vào đi thẳng xuống lớp dữ liệu', () => {
+    // Figma `127:2339` xếp 07 Finance là "✅ Có search"; code trước đây thì không (chênh lệch ghi
+    // ở P24). Epic nối tiền đóng chênh lệch đó — backend tìm mã phiếu / mã tra soát / mã đơn.
+    nav.params = new URLSearchParams('q=PT-0001');
     setQuery({ data: { items: [receipt()], meta: META } });
     renderPage();
 
-    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.getByPlaceholderText(/Mã phiếu/)).toBeTruthy();
+    expect(query.lastFilters).toMatchObject({ q: 'PT-0001' });
+  });
+
+  it('bấm một dòng mở chi tiết phiếu', () => {
+    // `GET /receipts/:id` tồn tại từ Phase 6 mà không giao diện nào gọi — đây là đường vào nó.
+    setQuery({ data: { items: [receipt({ id: 'r-42' })], meta: META } });
+    renderPage();
+
+    fireEvent.click(screen.getByText('PT-0001'));
+    expect(screen.getByTestId('receipt-detail').textContent).toBe('r-42');
+  });
+
+  it('phiếu TỰ ĐỘNG không có hành động Huỷ — đảo phải đi qua nghiệp vụ gốc', () => {
+    grant(PERMISSION.RECEIPT_APPROVE);
+    setQuery({
+      data: {
+        items: [receipt({ status: 'approved', source: 'payment', sourceRefId: 'p1' })],
+        meta: META,
+      },
+    });
+    renderPage();
+
+    // Backend đã chặn bằng `RECEIPT_SOURCE_LOCKED`; ẩn nút để người dùng không bấm vào một hành
+    // động chắc chắn thất bại.
+    expect(screen.queryByRole('button', { name: 'Huỷ' })).toBeNull();
   });
 });

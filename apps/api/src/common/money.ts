@@ -1,13 +1,16 @@
 import { Prisma } from '@xeprime/prisma';
 
 /**
- * Công nợ còn lại của một đơn thuê = `max(0, total − paid)`.
+ * Phần còn phải trả **theo đúng giá thuê đã chốt** = `max(0, total − paid)`.
  *
- * Phase 6 chốt: KHÔNG denormalize cột công nợ — tính động từ `total_amount`/`paid_amount` để
- * không có gì phải drift. Vì thế công thức bị lặp ở mọi nơi hiển thị đơn (danh sách đơn, hợp
- * đồng, giám sát nền tảng); gom về đây để đúng một chỗ định nghĩa "thế nào là còn nợ".
+ * ⚠️ **Đây KHÔNG còn là công nợ của đơn.** Công nợ thật (có phụ phí, có phiếu thu tay, có phần
+ * cọc đã gánh) nằm ở [`booking-money.ts`](./booking-money.ts) — dùng `bookingMoney()` cho mọi
+ * bề mặt hiển thị "khách còn nợ bao nhiêu".
  *
- * Kẹp sàn 0 là có chủ đích: khách trả dư (đặt cọc rồi giảm giá) là công nợ 0, không phải số âm.
+ * Hàm này giữ lại cho đúng MỘT nơi: **hợp đồng thuê**. Hợp đồng là bản đông cứng thoả thuận lúc
+ * ký, còn phụ phí phát sinh sau khi ký — đưa chúng vào bản in là làm hợp đồng nói khác lúc ký.
+ *
+ * Kẹp sàn 0 là có chủ đích: khách trả dư (đặt cọc rồi giảm giá) là 0, không phải số âm.
  */
 export function bookingDebt(
   totalAmount: Prisma.Decimal | string | number,

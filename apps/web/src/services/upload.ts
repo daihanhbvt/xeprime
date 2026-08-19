@@ -127,6 +127,15 @@ export const presignVehicleImage = (file: File): Promise<UploadPresign> =>
 export const presignShopMedia = (file: File): Promise<UploadPresign> =>
   apiPost<UploadPresign>('/uploads/shop-media/presign', presignBody(file));
 
+/**
+ * Presign ảnh minh chứng phiếu thu/chi (bill, hoá đơn xăng, biên lai CK) — cần `receipts.create`.
+ *
+ * Bucket CÔNG KHAI như ảnh xe, không phải kho riêng tư của hợp đồng: đây là chứng từ chi tiêu,
+ * không mang giấy tờ tuỳ thân.
+ */
+export const presignReceiptAttachment = (file: File): Promise<UploadPresign> =>
+  apiPost<UploadPresign>('/uploads/receipt-attachments/presign', presignBody(file));
+
 /** Presign ảnh banner trang chủ — cần quyền `platform.banners.manage`. */
 export const presignBannerImage = (file: File): Promise<UploadPresign> =>
   apiPost<UploadPresign>('/platform/banners/presign', presignBody(file));

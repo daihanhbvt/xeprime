@@ -1,14 +1,11 @@
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.select {
-  min-width: 180px;
-}
-
 .state {
-  margin-top: 48px;
+  display: block;
+  margin: var(--xp-space-xl) auto;
+}
+
+/* Kỳ xem nhanh nằm ngay trên thanh lọc; cuộn ngang trên điện thoại thay vì xuống dòng lẻ. */
+.periods {
+  margin-bottom: var(--xp-space-sm);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }

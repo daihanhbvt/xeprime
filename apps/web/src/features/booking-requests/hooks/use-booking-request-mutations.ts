@@ -2,7 +2,11 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
-import { approveBookingRequest, rejectBookingRequest } from '../api';
+import {
+  approveBookingRequest,
+  rejectBookingRequest,
+  startBookingRequestConversation,
+} from '../api';
 import type { ApproveBookingRequestInput } from '../types';
 
 /**
@@ -29,8 +33,25 @@ export function useApproveBookingRequest() {
 export function useRejectBookingRequest() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       rejectBookingRequest(id, reason),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.bookingRequests.all }),
+  });
+}
+
+/**
+ * Gian hàng mở hội thoại với khách của một yêu cầu.
+ *
+ * Idempotent ở backend (mở lại đúng thread cũ), nên không cần optimistic gì; chỉ làm mới danh
+ * sách hội thoại + badge chưa đọc để khu tin nhắn hiện ngay thread vừa mở.
+ */
+export function useStartBookingRequestConversation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => startBookingRequestConversation(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.chat.conversations() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.chat.unreadCount() });
+    },
   });
 }

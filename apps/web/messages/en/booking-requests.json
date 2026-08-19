@@ -1,0 +1,140 @@
+{
+  "page": {
+    "title": "Rental requests",
+    "subtitle": "Your shop's request inbox: see which vehicle a guest asked for, when they need it, then approve or decline right here.",
+    "listLabel": "Rental request list",
+    "totalLabel": "{count, plural, one {# request} other {# requests}}"
+  },
+  "stats": {
+    "pending": "Pending",
+    "converted": "Completed"
+  },
+  "tabs": {
+    "ariaLabel": "Filter requests by status",
+    "needsAction": "Needs action",
+    "converted": "Booking created",
+    "rejected": "Rejected",
+    "cancelled": "Cancelled",
+    "expired": "Expired",
+    "all": "All"
+  },
+  "vehicle": {
+    "heading": "Requested vehicle",
+    "openDetail": "Open the profile for {name}",
+    "noImage": "No vehicle photo yet",
+    "viewSchedule": "Vehicle schedule",
+    "viewScheduleFor": "View the rental schedule for {vehicle}"
+  },
+  "customer": {
+    "heading": "Customer",
+    "openProfile": "Open the customer profile for {name}",
+    "noProfile": "Not in your customer book yet",
+    "riskWarning": "{level} — double-check before approving"
+  },
+  "schedule": {
+    "heading": "Rental request",
+    "pickup": "Pickup",
+    "return": "Return",
+    "duration": "Duration",
+    "package": "Package",
+    "packageMissing": "No package (legacy request)",
+    "pickupWish": "Preferred pickup",
+    "pickupWishHint": "The exact pickup time is finalized when you approve.",
+    "route": "Route",
+    "pickupAddress": "Pickup address",
+    "destination": "Destination",
+    "handoverHeading": "Handover",
+    "handoverAtShop": "Pickup at meeting point",
+    "handoverDelivery": "Vehicle delivery",
+    "deliveryAddress": "Delivery address",
+    "deliveryFeeHint": "The delivery fee is set on the booking once you and the guest agree."
+  },
+  "note": {
+    "label": "Customer note",
+    "expand": "Show full note",
+    "collapse": "Show less"
+  },
+  "trace": {
+    "createdAt": "Submitted {value}",
+    "decidedAt": "Handled {value}",
+    "rejectReason": "Reason for rejection",
+    "viewBooking": "View booking",
+    "viewBookingFor": "View the booking for {vehicle}"
+  },
+  "detail": {
+    "title": "Rental request detail",
+    "openVehicle": "View vehicle profile",
+    "openCustomer": "View customer profile",
+    "phone": "Phone number",
+    "createdAt": "Submitted at",
+    "decidedAt": "Handled at"
+  },
+  "actions": {
+    "approve": "Approve",
+    "reject": "Reject",
+    "message": "Message",
+    "messageAria": "Message {name} on XePrime",
+    "messageUnavailable": "This guest requested by phone and has no XePrime account — call them or reach out on Zalo instead.",
+    "call": "Call",
+    "callAria": "Call {name} at {phone}",
+    "zalo": "Zalo",
+    "zaloAria": "Open Zalo with {name} at {phone}"
+  },
+  "approve": {
+    "title": "Approve and create the booking?",
+    "vehicle": "Vehicle",
+    "customer": "Customer",
+    "schedule": "Schedule",
+    "effect": "Approving creates a booking and RESERVES this vehicle's schedule for the period below. Pricing follows your active policy.",
+    "deliveryNote": "This request asks for delivery. The booking starts with a 0₫ delivery fee — update it on the booking once you agree with the guest.",
+    "confirm": "Approve and create booking",
+    "success": "Approved — booking created",
+    "successLongTerm": "Approved — long-term booking created",
+    "scheduleConflict": "The vehicle is already booked for this period — pick another pickup time or reject the request."
+  },
+  "longTerm": {
+    "title": "Approve long-term rental request",
+    "customer": "Customer",
+    "vehicle": "Vehicle",
+    "pickupWish": "Preferred pickup",
+    "legacyPackageLabel": "Package (legacy request has none)",
+    "legacyPackagePlaceholder": "Choose a package",
+    "legacyPackageHint": "This request was submitted before packages existed, so it carries none. Pick the package you agreed with the guest — the system deliberately does not infer one from the old date range.",
+    "chosenPackageLabel": "Package chosen by the guest",
+    "pickupLabel": "Pickup date and time (required)",
+    "pickupPlaceholder": "Choose the pickup date and time",
+    "pickupHint": "You can only pick within what the guest asked for. For any other date, reject the request and agree on a new one with them.",
+    "returnLabel": "Return date (calculated in calendar months)",
+    "returnHint": "The booking lasts exactly as long as the package the guest bought — it cannot be edited by hand.",
+    "quoteTitle": "{package} package price",
+    "quoteUnavailable": "Could not load the package price — check this vehicle's long-term pricing before approving.",
+    "confirm": "Approve and create booking",
+    "wishLegacy": "Legacy request — the guest did not state a preference"
+  },
+  "reject": {
+    "title": "Reject rental request",
+    "context": "{customer} · {vehicle}",
+    "reasonLabel": "Reason for rejection (sent to the guest)",
+    "reasonPlaceholder": "Briefly explain why you cannot take this request",
+    "reasonRequired": "Enter a reason so the guest knows why the request was rejected",
+    "reasonHint": "The guest reads this in their notification, so write enough for them to know what to do next.",
+    "presetLabel": "Pick a quick reason",
+    "presets": {
+      "vehicleUnavailable": "The vehicle is not available for this period.",
+      "scheduleUnavailable": "We cannot accommodate the requested schedule.",
+      "requirementsUnsuitable": "The rental requirements do not fit our shop's policy.",
+      "other": "Other reason"
+    },
+    "confirm": "Reject request",
+    "success": "Request rejected"
+  },
+  "states": {
+    "loading": "Loading rental requests…",
+    "emptyPendingTitle": "No requests need action",
+    "emptyPendingBody": "New requests from the marketplace show up here right away.",
+    "emptyFilteredTitle": "No requests in this status",
+    "emptyFilteredBody": "Switch to another tab to see the remaining requests.",
+    "errorTitle": "Could not load the request list",
+    "refreshing": "Refreshing the list…"
+  }
+}

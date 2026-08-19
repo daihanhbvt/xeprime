@@ -1,0 +1,38 @@
+{
+  "debts": {
+    "page": {
+      "title": "Outstanding debts"
+    },
+    "filters": {
+      "overdue": "Overdue",
+      "upcoming": "Due soon",
+      "unpaid": "Nothing collected"
+    },
+    "table": {
+      "label": "Outstanding debt list",
+      "totalLabel": "{count, plural, one {# booking with a balance} other {# bookings with a balance}}",
+      "columns": {
+        "booking": "Booking",
+        "vehicle": "Vehicle",
+        "returnAt": "Return due",
+        "total": "Total",
+        "paid": "Collected",
+        "debt": "Balance"
+      },
+      "actions": {
+        "view": "View booking",
+        "collect": "Collect"
+      },
+      "error": {
+        "title": "Could not load outstanding debts",
+        "description": "Something went wrong while fetching the data. Please try again."
+      },
+      "empty": {
+        "title": "No booking has an outstanding balance"
+      },
+      "noResults": {
+        "title": "No outstanding debt matches these filters"
+      }
+    }
+  }
+}

@@ -4,10 +4,23 @@ import { CheckOutlined, StopOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import type { ReactNode } from 'react';
 import {
-  PAYMENT_METHOD_META, RECEIPT_STATUS, RECEIPT_STATUS_META, RECEIPT_TYPE, RECEIPT_TYPE_META, type PaginationMeta, type PaymentMethod, type ReceiptStatus, type ReceiptType, } from '@xeprime/types';
+  PAYMENT_METHOD_META,
+  RECEIPT_SOURCE_META,
+  RECEIPT_STATUS,
+  RECEIPT_STATUS_META,
+  RECEIPT_TYPE_META,
+  isAutoReceipt,
+  type PaginationMeta,
+  type PaymentMethod,
+  type ReceiptSource,
+  type ReceiptStatus,
+  type ReceiptType,
+} from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { vehicleLabel } from '@/lib/vehicle-label';
 import type { Receipt } from '../types';
+import { ReceiptAmount } from './ReceiptAmount';
 import styles from './ReceiptTable.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 
@@ -21,13 +34,14 @@ interface ReceiptTableProps {
   onClearFilters?: () => void;
   /** Nút tạo phiếu đầu tiên — trang quyết theo quyền `RECEIPT_CREATE`. */
   emptyAction?: ReactNode;
+  onOpen: (id: string) => void;
   onApprove: (id: string) => void;
   onCancel: (id: string) => void;
   onPageChange: (page: number, pageSize: number) => void;
 }
 
-/** Suy từ tổng bề rộng cột (P25) — 8 cột, một cột tiền và hai cột trạng thái. */
-const MIN_TABLE_WIDTH = 1120;
+/** Suy từ tổng bề rộng cột (P25) — 9 cột, một cột tiền và ba cột nhãn. */
+const MIN_TABLE_WIDTH = 1320;
 
 export function ReceiptTable({
   items,
@@ -38,6 +52,7 @@ export function ReceiptTable({
   filtered = false,
   onClearFilters,
   emptyAction,
+  onOpen,
   onApprove,
   onCancel,
   onPageChange,
@@ -48,11 +63,12 @@ export function ReceiptTable({
     {
       title: 'Phiếu',
       key: 'receipt',
-      width: 150,
+      width: 160,
       render: (_, row) => (
         <div>
           <div className={styles.name}>{row.receiptNo ?? '—'}</div>
-          <div className={styles.meta}>{fmt.date(row.createdAt)}</div>
+          {/* NGÀY PHÁT SINH, không phải lúc nhập — đây là ngày mọi tổng hợp chạy trên đó. */}
+          <div className={styles.meta}>{fmt.date(row.occurredAt)}</div>
         </div>
       ),
     },
@@ -62,11 +78,31 @@ export function ReceiptTable({
       width: 110,
       render: (_, row) => <StatusTag value={row.type as ReceiptType} meta={RECEIPT_TYPE_META} group="receiptType" />,
     },
+    {
+      title: 'Nguồn',
+      key: 'source',
+      width: 130,
+      render: (_, row) => (
+        <StatusTag
+          value={row.source as ReceiptSource}
+          meta={RECEIPT_SOURCE_META}
+          group="receiptSource"
+        />
+      ),
+    },
     { title: 'Danh mục', key: 'category', width: 150, render: (_, row) => row.categoryName ?? '—' },
+    {
+      // Không có cột này thì "đối tượng" của một dòng sổ là ba id 26 ký tự — sổ có số nhưng
+      // không trả lời được tiền của ai, xe nào.
+      title: 'Đối tượng',
+      key: 'subject',
+      width: 220,
+      render: (_, row) => <SubjectCell row={row} />,
+    },
     {
       title: 'Diễn giải',
       key: 'description',
-      width: 260,
+      width: 220,
       render: (_, row) => <span className={styles.desc}>{row.description ?? '—'}</span>,
     },
     {
@@ -74,13 +110,7 @@ export function ReceiptTable({
       key: 'amount',
       align: 'right',
       width: 150,
-      render: (_, row) => (
-        // Dấu +/− là THÔNG TIN nghiệp vụ (thu vs chi), không phải trang trí — giữ nguyên.
-        <span className={row.type === RECEIPT_TYPE.INCOME ? styles.income : styles.expense}>
-          {row.type === RECEIPT_TYPE.INCOME ? '+' : '−'}
-          {fmt.money(row.amount)}
-        </span>
-      ),
+      render: (_, row) => <ReceiptAmount type={row.type} amount={row.amount} />,
     },
     {
       title: 'Hình thức',
@@ -118,7 +148,9 @@ export function ReceiptTable({
           label: 'Huỷ',
           icon: <StopOutlined />,
           danger: true,
-          hidden: !canApprove || row.status === RECEIPT_STATUS.CANCELLED,
+          // Phiếu tự động huỷ ở nghiệp vụ gốc — backend đã chặn (RECEIPT_SOURCE_LOCKED); ẩn nút
+          // ở đây để người dùng không bấm vào một hành động chắc chắn thất bại.
+          hidden: !canApprove || row.status === RECEIPT_STATUS.CANCELLED || isAutoReceipt(row.source),
           confirm: { title: 'Huỷ phiếu này?', okText: 'Huỷ phiếu' },
           onClick: () => onCancel(row.id),
         },
@@ -141,7 +173,68 @@ export function ReceiptTable({
         title: 'Không có phiếu khớp bộ lọc',
         action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
       }}
+      onRowClick={(row) => onOpen(row.id)}
+      renderCard={(row) => <ReceiptCard row={row} />}
       pagination={{ meta, onChange: onPageChange, totalLabel: (total) => `${total} phiếu` }}
     />
+  );
+}
+
+/** Khách · xe (biển số) · mã đơn — mỗi thứ một dòng, thiếu thì bỏ hẳn dòng đó. */
+function SubjectCell({ row }: { row: Receipt }) {
+  const vehicle = vehicleLabel(row.vehicleName, row.plateNumber);
+  if (!row.customerName && !vehicle && !row.bookingCode) return <span>—</span>;
+
+  return (
+    <div>
+      {row.customerName ? <div className={styles.name}>{row.customerName}</div> : null}
+      {vehicle ? <div className={styles.meta}>{vehicle}</div> : null}
+      {row.bookingCode ? <div className={styles.meta}>{row.bookingCode}</div> : null}
+    </div>
+  );
+}
+
+/**
+ * Thẻ mobile riêng thay cho thẻ tự suy của `DataTable`.
+ *
+ * Thẻ tự suy trải 9 cột thành 9 dòng `label: value` — trên điện thoại đó là một khối chữ phải
+ * đọc từ đầu mới thấy số tiền. Ở đây số tiền là thứ to nhất, phần còn lại là ngữ cảnh.
+ */
+function ReceiptCard({ row }: { row: Receipt }) {
+  const fmt = useAppFormat();
+  const vehicle = vehicleLabel(row.vehicleName, row.plateNumber);
+
+  return (
+    <article className={styles.card}>
+      <div className={styles.cardTop}>
+        <ReceiptAmount type={row.type} amount={row.amount} size="card" />
+        <StatusTag
+          value={row.status as ReceiptStatus}
+          meta={RECEIPT_STATUS_META}
+          group="receiptStatus"
+        />
+      </div>
+
+      <div className={styles.cardTags}>
+        <StatusTag value={row.type as ReceiptType} meta={RECEIPT_TYPE_META} group="receiptType" />
+        <StatusTag
+          value={row.source as ReceiptSource}
+          meta={RECEIPT_SOURCE_META}
+          group="receiptSource"
+        />
+      </div>
+
+      <div className={styles.cardLine}>
+        {fmt.date(row.occurredAt)} · {row.categoryName ?? 'Chưa phân loại'}
+      </div>
+      {row.customerName || vehicle ? (
+        <div className={styles.cardLine}>{[row.customerName, vehicle].filter(Boolean).join(' · ')}</div>
+      ) : null}
+      {row.description ? <div className={styles.cardMuted}>{row.description}</div> : null}
+      <div className={styles.cardMuted}>
+        {row.receiptNo ?? '—'} ·{' '}
+        {PAYMENT_METHOD_META[row.paymentMethod as PaymentMethod]?.label ?? row.paymentMethod}
+      </div>
+    </article>
   );
 }

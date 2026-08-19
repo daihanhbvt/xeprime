@@ -24,6 +24,12 @@ import {
   type TenantCustomerRiskLevel,
   type TenantCustomerSort,
 } from '@xeprime/types';
+import {
+  BOOKING_MONEY_JOINS,
+  SQL_AMOUNT_DUE,
+  SQL_COLLECTED,
+  SQL_DEBT,
+} from '../../common/booking-money';
 import { normalizePhone, toLocalPhone } from '../../common/phone';
 import { resolvePaging, paginationMeta } from '../../common/pagination';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -845,16 +851,21 @@ function statsCte(tenantId: string): Prisma.Sql {
                WHERE b.actual_return_at IS NOT NULL AND b.actual_return_at > b.return_at
              )::bigint AS late_return_count,
              MAX(b.pickup_at) AS last_rental_at,
-             COALESCE(SUM(b.total_amount) FILTER (
+             -- Ba con số tiền dùng CHUNG công thức với chi tiết đơn và /manage/debts
+             -- (common/booking-money.ts): phụ phí vào phải-thu, phiếu thu tay vào đã-thu, phần
+             -- phụ phí cọc đã gánh không bị đòi lần hai. Tự viết lại total - paid ở đây là cách
+             -- sổ khách và màn công nợ nói hai con số cho cùng một khách.
+             COALESCE(SUM(${SQL_AMOUNT_DUE}) FILTER (
                WHERE b.status <> ${BOOKING_STATUS.CANCELLED}
              ), 0) AS total_booking_amount,
-             COALESCE(SUM(b.paid_amount) FILTER (
+             COALESCE(SUM(${SQL_COLLECTED}) FILTER (
                WHERE b.status <> ${BOOKING_STATUS.CANCELLED}
              ), 0) AS paid_amount,
-             COALESCE(SUM(GREATEST(b.total_amount - b.paid_amount, 0)) FILTER (
+             COALESCE(SUM(${SQL_DEBT}) FILTER (
                WHERE b.status <> ${BOOKING_STATUS.CANCELLED}
              ), 0) AS debt_amount
       FROM bookings b
+      ${BOOKING_MONEY_JOINS}
       WHERE b.tenant_id = ${tenantId}
         AND b.deleted_at IS NULL
         AND b.tenant_customer_id IS NOT NULL

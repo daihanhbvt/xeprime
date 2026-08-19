@@ -4,6 +4,55 @@
 > `docs/decisions/`, `docs/CODEMAP.md`). Khi **đóng xong một phase**, cập nhật bảng §2 + mục phase
 > tương ứng ở đây — đừng để tiến độ chỉ nằm trong trí nhớ hay plan file global `~/.claude/plans/`.
 >
+> **19/08 — epic NỐI TIỀN VÀO SỔ THU-CHI + dựng lại `/manage/receipts`.** Đóng đúng chỗ đứt mà
+> §2.1 đã chỉ ra, và nó rộng hơn mô tả cũ. **Bốn mắt xích đã nối:** (1) `payments.kind='deposit'`
+> **chưa từng có đường ghi nào** → `depositReceived` vĩnh viễn = 0 và cả máy quyết toán cọc Wave 10
+> chạy không tải; nay `RecordPaymentDto.kind` + nút **Thu cọc** ở `SettlementCard`, và cọc **KHÔNG**
+> cộng vào `paid_amount` (cọc là tài sản giữ hộ — cộng vào là công nợ tụt giả), `voidPayment` đối
+> xứng. (2) **Hoàn cọc** sinh phiếu **chi** số RÒNG trong cùng tx; sửa bản ghi thì **sửa phiếu tại
+> chỗ** (unique index phủ cả dòng đã huỷ). (3) **Chi phí bảo dưỡng** → phiếu chi khi hoàn tất, danh
+> mục tách `repair` ↔ `maintenance`. (4) `receipts.tenant_customer_id` (cột nằm không từ S-01) nay
+> có người ghi. **Phụ phí CỐ Ý không sinh phiếu** — nó là khoản ĐÒI, tiền chỉ chuyển động khi khách
+> trả thêm hoặc bị trừ vào cọc, mà phiếu hoàn cọc đã là số ròng; sinh thêm là đếm hai lần.
+> **Schema:** `receipts.occurred_at` (ngày tiền di chuyển ≠ lúc gõ vào máy) · `source` +
+> `source_ref_id` + CHECK + unique `(tenant,source,source_ref_id)` chống ghi kép · `receipt_no`
+> unique theo tenant + retry · `finance_categories.system_key`. **Chặn huỷ phiếu tự động** (409
+> `RECEIPT_SOURCE_LOCKED`, `details` chỉ đường quay về) — kèm đó phải mở đường sửa, nên có
+> `PATCH …/maintenance/records/:id/cost` (`correctCost`, lý do bắt buộc, audit giữ giá trị cũ):
+> `updateRecord` từ chối mọi phiếu ĐÃ ĐÓNG nên chi phí ghi sai vốn **không sửa được từ trước**.
+> **Lỗi tìm thấy khi làm:** bộ lọc ngày lệch **7 tiếng** (`new Date('2026-08-19')` = 07:00 giờ VN)
+> và `/manage/finance` gửi ISO đầy đủ còn `FilterBar` gửi `YYYY-MM-DD` → hai màn ra hai số cho cùng
+> một câu hỏi; sửa ở backend một chỗ (`common/day-range.ts`). **Màn `/manage/receipts` dựng lại:**
+> `FilterBar` 7 trường + preset kỳ, thẻ tổng cộng ĐÚNG bộ lọc đang xem (dùng chung `whereOf` với
+> danh sách), drawer chi tiết (dùng `GET /receipts/:id` vốn bỏ không), form auto-fill từ đơn + ảnh
+> minh chứng + số tiền bằng chữ, thẻ mobile riêng, gác `PermissionState`. **Liên kết hai chiều:**
+> đơn/xe → link sổ đã lọc; sổ khách → tab **Thu chi** thật.
+> **Vòng review nội bộ tìm thêm 7 lỗi, đã sửa hết** — nặng nhất: (a) vòng `0đ → có tiền lại` bị
+> unique index khoá **vĩnh viễn** (nay `updateAmountWithinTx` HỒI SINH phiếu thay vì bỏ qua dòng
+> đã huỷ, có test); (b) cọc thổi phồng "Doanh thu" theo xe (`HELD_FUNDS_RECEIPT_SOURCES` loại
+> `deposit`/`deposit_refund` khỏi `VehiclesService.stats`); (c) `bookingId`/`vehicleId` client gửi
+> ghi mà **không kiểm tenant** — FK là khoá đơn, không composite, nên `LIST_SELECT` join ra tên xe
+> + biển số của gian hàng khác; (d) vòng retry `receipt_no` là mã chết (transaction đã abort ở vi
+> phạm đầu) → bỏ vòng lặp, hậu tố 4→8 ký tự, ngày theo giờ VN. **Còn thiếu, đã ghi:** nút "Sửa chi
+> phí" trên phiếu bảo dưỡng đã hoàn tất (API xong, UI chưa) — xem §5.1 của plan.
+> **Đợt 2 — MỘT con số phải-thu cho một đơn** (`common/booking-money.ts`). Người dùng báo một
+> đơn thật: thu 720k tiền thuê qua nút "Thu tiền" + 200k quá giờ ghi bằng phiếu tay ⇒ màn đơn nói
+> 720k, sổ nói 920k. Nguyên nhân: tiền của một đơn nằm ở BA bảng không nói chuyện với nhau
+> (`payments` → `paid_amount` · `booking_surcharges` → chỉ nuôi phép tính hoàn cọc · `receipts`
+> gắn tay → chỉ ở sổ). Nay một công thức duy nhất, có cả bản TS lẫn bản SQL:
+> `phảiThu = total + phụ phí` · `đãThu = paid + phiếu tay đã duyệt + min(phụ phí, cọc đã thu)` ·
+> `cònNợ = max(0, phảiThu − đãThu)`. **`min(phụ phí, cọc đã thu)` là mấu chốt chống ĐẾM HAI LẦN** —
+> quyết toán đã trừ phụ phí vào tiền hoàn cọc, cộng thẳng vào nợ nữa là bắt khách trả hai lần.
+> Áp cho: chi tiết/danh sách đơn · `/manage/debts` (kể cả bộ lọc `unpaid`) · dashboard tài chính ·
+> sổ khách · giám sát nền tảng. **Hợp đồng CỐ Ý giữ `total − paid`** — nó là bản đông cứng lúc ký,
+> phụ phí phát sinh sau. Đơn thuê nay có `surchargeTotal`/`amountDue`/`otherCollected`/
+> `collectedAmount`, hiện "Thu vượt" khi thu nhiều hơn phải thu, và hộp "Sổ tiền của đơn" liệt kê
+> cả phiếu ghi thẳng ở sổ.
+> Verify: **jest 622/622 (51 suite, PostgreSQL thật)** · **vitest 1533/1533 (103 file)** ·
+> typecheck api/types/web sạch · lint scoped sạch · `migrate diff` sạch · backfill chạy lại ra 0
+> dòng · i18n:check parity.
+> Plan: `docs/plans/tham-kh-o-nh-m-n-kind-crystal.md`.
+>
 > Cập nhật gần nhất: **17/08/2026 (đợt 2 — hoàn thiện)** — epic **Đa dịch vụ** đóng TRỌN sau
 > audit end-to-end, 6 commit:
 > **(1) Hành trình with_driver đi trọn vòng đời** — `bookings` +route_type/pickup_address/
@@ -251,11 +300,14 @@ Hai lỗi tìm thấy và đã sửa: lệch design token `--xp-focus-ring-width
 kế toán/thuế · bản đồ tự tính khoảng cách · tự động chặn/ẩn xe vì giấy tờ hết hạn · phụ phí quyết
 toán chưa nối Finance · trang `/manage/finance/vehicle-obligations`.
 
-➡️ **Epic kế tiếp đề xuất: nối quyết toán đơn thuê vào Finance** — quá giờ, phạt/bồi thường, nhiên
-liệu và nghĩa vụ nguồn xe hiện ghi nhận được nhưng **không chảy vào phiếu thu/công nợ**. Đây là chỗ
-đứt duy nhất còn lại giữa vận hành (đã đủ) và tiền (đã có module). Sau đó chọn: nốt §11.1 (**support
-tickets** · **invoice cho gói**) · retrofit gate SĐT (§5) · Phase 8 (migration Firestore) · Phase 9
-(QA/hardening).
+➡️ ~~Epic kế tiếp đề xuất: nối quyết toán đơn thuê vào Finance~~ — **ĐÃ LÀM 19/08** (xem đầu file).
+Thu cọc, hoàn cọc và chi phí bảo dưỡng nay tự lên sổ Thu-Chi. **Phụ phí vẫn cố ý không sinh phiếu**
+(là khoản ĐÒI, không phải tiền đổi tay — phiếu hoàn cọc đã là số ròng); phần **thu `additionalDue`
+khi phụ phí vượt cọc** là việc còn lại của mảng này.
+
+Kế tiếp chọn một trong: nốt §11.1 (**support tickets** · **invoice cho gói**) · retrofit gate SĐT
+(§5) · báo cáo tài chính (lãi/lỗ theo xe, xuất CSV — dữ liệu nay đã đủ vì chi phí xe đã vào sổ) ·
+Phase 8 (migration Firestore) · Phase 9 (QA/hardening).
 
 ---
 

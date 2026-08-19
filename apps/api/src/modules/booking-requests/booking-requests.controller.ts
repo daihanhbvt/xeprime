@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
 import {
   CurrentTenant,
@@ -8,6 +8,8 @@ import {
   TenantScoped,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
+import { ChatService } from '../chat/chat.service';
+import { ConversationSummaryDto } from '../chat/dto/chat.dto';
 import {
   ApproveBookingRequestDto,
   BookingRequestDto,
@@ -25,7 +27,10 @@ import { BookingRequestsService } from './booking-requests.service';
 @Controller('booking-requests')
 @TenantScoped()
 export class BookingRequestsController {
-  constructor(private readonly requests: BookingRequestsService) {}
+  constructor(
+    private readonly requests: BookingRequestsService,
+    private readonly chat: ChatService,
+  ) {}
 
   @Get()
   @RequirePermissions(PERMISSION.BOOKING_REQUEST_VIEW)
@@ -35,7 +40,7 @@ export class BookingRequestsController {
     @CurrentTenant() tenant: TenantContext,
     @Query() query: BookingRequestListQueryDto,
   ): Promise<BookingRequestPageDto> {
-    return this.requests.list(tenant.tenantId, query) as Promise<BookingRequestPageDto>;
+    return this.requests.list(tenant.tenantId, query);
   }
 
   @Get(':id')
@@ -83,5 +88,32 @@ export class BookingRequestsController {
     @Body() dto: RejectBookingRequestDto,
   ): Promise<BookingRequestDto> {
     return this.requests.reject(tenant.tenantId, user.id, id, dto.reason);
+  }
+
+  /**
+   * Mở/lấy hội thoại với KHÁCH của yêu cầu này — nút "Nhắn tin" ở inbox gian hàng.
+   *
+   * Cố ý KHÔNG dùng `POST /conversations` (đường của KHÁCH): endpoint đó lấy người đang gọi làm
+   * khách của hội thoại, nên nhân viên gian hàng bấm vào sẽ tự mở một thread với chính mình.
+   * Ở đây `customerUserId`/`vehicleId` do ChatService đọc từ chính yêu cầu, `tenantId` từ scope
+   * của phiên — client không gửi thứ nào trong ba.
+   *
+   * Chỉ cần quyền XEM yêu cầu: liên hệ khách là việc của người trực, không phải việc của người
+   * có quyền duyệt.
+   */
+  @Post(':id/conversation')
+  @RequirePermissions(PERMISSION.BOOKING_REQUEST_VIEW)
+  @ApiOperation({
+    summary: 'Mở/lấy hội thoại với khách của yêu cầu (phía gian hàng)',
+    description:
+      'Idempotent theo (khách, xe) — mở lại đúng thread cũ. Khách vãng lai chưa có tài khoản ' +
+      'trả CHAT_CUSTOMER_UNAVAILABLE.',
+  })
+  @ApiCreatedResponse({ type: ConversationSummaryDto })
+  conversation(
+    @CurrentTenant() tenant: TenantContext,
+    @Param('id') id: string,
+  ): Promise<ConversationSummaryDto> {
+    return this.chat.getOrCreateConversationForBookingRequest(tenant.tenantId, id);
   }
 }
