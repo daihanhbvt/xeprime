@@ -28,6 +28,19 @@
 > Verify: Jest 519 (5 spec mới) + vitest 1236, lint scoped sạch, seed idempotent, luồng thật
 > (quote 3 route 2.6/3.2/4.2tr, fallback + note, sàn 7 ngày 400, screenshot 3 trang).
 >
+> **19/08 — nền đa ngữ vi/en dựng xong, i18n hoá đang đi theo đợt ([ADR 0012](decisions/0012-i18n-shared-url-cookie-locale.md)).**
+> `next-intl` KHÔNG locale routing: hai ngôn ngữ dùng CHUNG url, locale nằm ở cookie httpOnly
+> `XP_LOCALE` đọc phía server (`proxy.ts` không đổi một dòng). Xong trọn vẹn: hạ tầng + bộ đổi
+> ngôn ngữ (3 vị trí: MarketHeader · manage Topbar · vỏ trang auth), tầng ĐỊNH DẠNG dùng chung
+> (`useAppFormat`/`getAppFormat` — tiền/ngày/thời lượng/km/gói dài hạn, thay 333 lời gọi ở 86
+> file), 342 nhãn nghiệp vụ (`Domain`) phủ 68 `<StatusTag>`, bảng mã lỗi API (`Errors`), vỏ
+> công khai (header/footer/tab bar/4 bước/gian hàng nổi bật), **Hero + Sticky Search trọn bộ**
+> (gồm bộ chọn địa điểm), điều hướng hai cổng, và trang quên/đặt lại mật khẩu.
+> Hai lệnh gác: `pnpm --filter @xeprime/web i18n:check` (parity vi↔en, ICU, không giá trị rỗng)
+> và `i18n:audit` (quét AST). **Còn lại ~3.9k chuỗi**, gần hết nằm ở cổng quản lý — `i18n:audit`
+> là bản kiểm kê chính xác, đọc theo khu vực. Thứ tự làm tiếp: `components/form` + `manage-common`
+> (dùng chung, mở khoá phần còn lại) → vehicles → booking-requests → rental-policies → còn lại.
+>
 > **18/08 — thuê dài hạn chuyển sang GÓI CỐ ĐỊNH ([ADR 0011](decisions/0011-long-term-fixed-packages.md)).**
 > Sáu gói 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** do server tính (client không
 > gửi); khách chỉ nêu nguyện vọng nhận xe (`within_7_days` server tự tính khoảng | `specific_date`),

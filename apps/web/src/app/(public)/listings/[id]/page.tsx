@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { fetchCatalogServer } from '@/features/catalog/api';
 import { fetchListingDetail } from '@/features/marketplace/api';
 import { ListingDetailView } from '@/features/marketplace/components/ListingDetailView';
+import { getTranslations } from 'next-intl/server';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -17,11 +18,15 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const listing = await fetchListingDetail(id);
-  if (!listing) return { title: 'Không tìm thấy xe' };
+  const [listing, t] = await Promise.all([
+    fetchListingDetail(id),
+    getTranslations('Marketplace.meta.listing'),
+  ]);
+  if (!listing) return { title: t('notFound') };
   return {
-    title: `${listing.name} · Thuê xe`,
-    description: listing.description ?? `Thuê ${listing.name} tại ${listing.shopName}`,
+    title: t('title', { name: listing.name }),
+    description:
+      listing.description ?? t('description', { name: listing.name, shop: listing.shopName }),
   };
 }
 

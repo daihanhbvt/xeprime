@@ -1,73 +1,85 @@
 import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
+import type { FooterKey, ServiceLabelKey } from '@/i18n/keys';
 
-/** Loại dịch vụ dùng làm chip lọc nhanh. */
-export const SERVICE_CHIPS: ReadonlyArray<{ key: ServiceType; label: string }> = [
-  { key: SERVICE_TYPE.SELF_DRIVE, label: 'Tự lái' },
-  { key: SERVICE_TYPE.WITH_DRIVER, label: 'Có tài xế' },
-  { key: SERVICE_TYPE.LONG_TERM, label: 'Thuê dài hạn' },
+/**
+ * Cấu trúc TĨNH của marketplace: thứ tự tab, thứ tự bước, cột chân trang.
+ *
+ * Chữ KHÔNG nằm ở đây nữa — mỗi mục mang khoá message và nơi render dịch. Nhờ vậy thứ tự và
+ * đường dẫn (thứ phải giống nhau ở mọi ngôn ngữ) vẫn có đúng một nguồn, còn câu chữ thì đi
+ * theo ngôn ngữ người xem.
+ *
+ * Nhãn dịch vụ (`Tự lái` / `Self-drive`) là TỪ VỰNG NGHIỆP VỤ dùng chung cả marketplace lẫn
+ * cổng quản lý, nên nó nằm ở namespace `Domain.serviceType` — không chép lại ở đây.
+ */
+
+/** Loại dịch vụ dùng làm chip lọc nhanh; nhãn lấy từ `Domain.serviceType`. */
+export const SERVICE_CHIPS: readonly ServiceType[] = [
+  SERVICE_TYPE.SELF_DRIVE,
+  SERVICE_TYPE.WITH_DRIVER,
+  SERVICE_TYPE.LONG_TERM,
 ];
 
 /**
- * Tab dịch vụ của thẻ tìm kiếm trang chủ (yêu cầu 17/08 — mô hình 3 dịch vụ). `label` cho tab
- * desktop, `shortLabel` cho Segmented mobile. Key đi thẳng vào URL `serviceType` — cùng giá trị
- * mà chip lọc nhanh trên `/search` dùng, nên hai màn không bao giờ lệch nhau.
+ * Tab dịch vụ của thẻ tìm kiếm trang chủ (yêu cầu 17/08 — mô hình 3 dịch vụ).
+ *
+ * `labelKey`/`shortLabelKey` trỏ vào `HomeSearch.service.*`: tab desktop nói đủ ("Xe tự lái"),
+ * Segmented mobile nói gọn ("Tự lái"). Key đi thẳng vào URL `serviceType` — cùng giá trị mà
+ * chip lọc nhanh trên `/search` dùng, nên hai màn không bao giờ lệch nhau.
  */
 export const SERVICE_TABS: ReadonlyArray<{
   key: ServiceType;
-  label: string;
-  shortLabel: string;
+  labelKey: ServiceLabelKey;
+  shortLabelKey: ServiceLabelKey;
 }> = [
-  { key: SERVICE_TYPE.SELF_DRIVE, label: 'Xe tự lái', shortLabel: 'Tự lái' },
-  { key: SERVICE_TYPE.WITH_DRIVER, label: 'Xe có tài xế', shortLabel: 'Có tài xế' },
-  { key: SERVICE_TYPE.LONG_TERM, label: 'Thuê xe dài hạn', shortLabel: 'Dài hạn' },
+  { key: SERVICE_TYPE.SELF_DRIVE, labelKey: 'selfDrive', shortLabelKey: 'selfDriveShort' },
+  { key: SERVICE_TYPE.WITH_DRIVER, labelKey: 'withDriver', shortLabelKey: 'withDriverShort' },
+  { key: SERVICE_TYPE.LONG_TERM, labelKey: 'longTerm', shortLabelKey: 'longTermShort' },
 ];
 
-/**
- * "Thuê xe chỉ với 4 bước" — nội dung TĨNH (không phải dữ liệu nghiệp vụ), chữ theo Figma 18:4.
- */
-export const RENTAL_STEPS: ReadonlyArray<{
-  no: string;
-  title: string;
-  desc: string;
-}> = [
-  { no: '1', title: 'Tìm xe', desc: 'Chọn địa điểm và thời gian' },
-  { no: '2', title: 'Gửi yêu cầu', desc: 'Liên hệ gian hàng' },
-  { no: '3', title: 'Nhận xe', desc: 'Giao xe hoặc đến lấy' },
-  { no: '4', title: 'Trả xe', desc: 'Hoàn tất chuyến đi' },
+/** "Thuê xe chỉ với 4 bước" — nội dung TĨNH (không phải dữ liệu nghiệp vụ), bố cục theo Figma 18:4. */
+export const RENTAL_STEPS: ReadonlyArray<{ no: string; key: 'search' | 'request' | 'pickup' | 'return' }> = [
+  { no: '1', key: 'search' },
+  { no: '2', key: 'request' },
+  { no: '3', key: 'pickup' },
+  { no: '4', key: 'return' },
 ];
 
-/** Cột liên kết ở chân trang — nội dung tĩnh, `href` trỏ route thật khi đã có. */
+/** Cột liên kết ở chân trang — `href` trỏ route thật khi đã có, nhãn nằm ở `Marketplace.footer`. */
 export const FOOTER_COLUMNS: ReadonlyArray<{
-  title: string;
-  links: ReadonlyArray<{ label: string; href: string }>;
+  key: string;
+  titleKey: FooterKey;
+  links: ReadonlyArray<{ key: FooterKey; href: string }>;
 }> = [
   {
-    title: 'Về chúng tôi',
+    key: 'about',
+    titleKey: 'columns.about.title',
     links: [
-      { label: 'Giới thiệu', href: ROUTES.HOME },
-      { label: 'Blog', href: ROUTES.HOME },
-      { label: 'Tuyển dụng', href: ROUTES.HOME },
-      { label: 'Liên hệ', href: ROUTES.HOME },
+      { key: 'columns.about.intro', href: ROUTES.HOME },
+      { key: 'columns.about.blog', href: ROUTES.HOME },
+      { key: 'columns.about.careers', href: ROUTES.HOME },
+      { key: 'columns.about.contact', href: ROUTES.HOME },
     ],
   },
   {
-    title: 'Hỗ trợ',
+    key: 'support',
+    titleKey: 'columns.support.title',
     links: [
-      { label: 'Trung tâm trợ giúp', href: ROUTES.HOME },
-      { label: 'Hướng dẫn thuê xe', href: ROUTES.HOME },
-      { label: 'Điều khoản dịch vụ', href: ROUTES.HOME },
-      { label: 'Chính sách bảo mật', href: ROUTES.HOME },
+      { key: 'columns.support.helpCenter', href: ROUTES.HOME },
+      { key: 'columns.support.rentalGuide', href: ROUTES.HOME },
+      { key: 'columns.support.terms', href: ROUTES.HOME },
+      { key: 'columns.support.privacy', href: ROUTES.HOME },
     ],
   },
   {
-    title: 'Dành cho chủ xe',
+    key: 'hosts',
+    titleKey: 'columns.hosts.title',
     links: [
       // Ý định làm chủ xe → onboarding (proxy sẽ chèn bước đăng nhập nếu cần), KHÔNG phải
       // `/manage` — vào đó khi chưa có gian hàng chỉ gặp màn "Bạn chưa có gian hàng".
-      { label: 'Đăng xe cho thuê', href: ROUTES.MANAGE.ONBOARDING },
-      { label: 'Quản lý xe', href: ROUTES.MANAGE.VEHICLES },
-      { label: 'Bảng giá', href: ROUTES.HOME },
+      { key: 'columns.hosts.listVehicle', href: ROUTES.MANAGE.ONBOARDING },
+      { key: 'columns.hosts.manageVehicles', href: ROUTES.MANAGE.VEHICLES },
+      { key: 'columns.hosts.pricing', href: ROUTES.HOME },
     ],
   },
 ];

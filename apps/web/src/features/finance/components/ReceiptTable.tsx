@@ -4,22 +4,12 @@ import { CheckOutlined, StopOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import type { ReactNode } from 'react';
 import {
-  PAYMENT_METHOD_META,
-  RECEIPT_STATUS,
-  RECEIPT_STATUS_META,
-  RECEIPT_TYPE,
-  RECEIPT_TYPE_META,
-  type PaginationMeta,
-  type PaymentMethod,
-  type ReceiptStatus,
-  type ReceiptType,
-} from '@xeprime/types';
+  PAYMENT_METHOD_META, RECEIPT_STATUS, RECEIPT_STATUS_META, RECEIPT_TYPE, RECEIPT_TYPE_META, type PaginationMeta, type PaymentMethod, type ReceiptStatus, type ReceiptType, } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDate } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import type { Receipt } from '../types';
 import styles from './ReceiptTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface ReceiptTableProps {
   items: Receipt[];
@@ -52,6 +42,8 @@ export function ReceiptTable({
   onCancel,
   onPageChange,
 }: ReceiptTableProps) {
+  const fmt = useAppFormat();
+
   const columns: DataTableColumn<Receipt>[] = [
     {
       title: 'Phiếu',
@@ -60,7 +52,7 @@ export function ReceiptTable({
       render: (_, row) => (
         <div>
           <div className={styles.name}>{row.receiptNo ?? '—'}</div>
-          <div className={styles.meta}>{formatDate(row.createdAt)}</div>
+          <div className={styles.meta}>{fmt.date(row.createdAt)}</div>
         </div>
       ),
     },
@@ -68,7 +60,7 @@ export function ReceiptTable({
       title: 'Loại',
       key: 'type',
       width: 110,
-      render: (_, row) => <StatusTag value={row.type as ReceiptType} meta={RECEIPT_TYPE_META} />,
+      render: (_, row) => <StatusTag value={row.type as ReceiptType} meta={RECEIPT_TYPE_META} group="receiptType" />,
     },
     { title: 'Danh mục', key: 'category', width: 150, render: (_, row) => row.categoryName ?? '—' },
     {
@@ -86,7 +78,7 @@ export function ReceiptTable({
         // Dấu +/− là THÔNG TIN nghiệp vụ (thu vs chi), không phải trang trí — giữ nguyên.
         <span className={row.type === RECEIPT_TYPE.INCOME ? styles.income : styles.expense}>
           {row.type === RECEIPT_TYPE.INCOME ? '+' : '−'}
-          {formatMoneyVnd(row.amount)}
+          {fmt.money(row.amount)}
         </span>
       ),
     },
@@ -102,7 +94,7 @@ export function ReceiptTable({
       key: 'status',
       width: 130,
       render: (_, row) => (
-        <StatusTag value={row.status as ReceiptStatus} meta={RECEIPT_STATUS_META} />
+        <StatusTag value={row.status as ReceiptStatus} meta={RECEIPT_STATUS_META} group="receiptStatus" />
       ),
     },
     // Toàn bộ cột hành động biến mất khi thiếu `finance.receipt.approve` — quyền do trang truyền

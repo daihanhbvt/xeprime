@@ -25,6 +25,8 @@ import { buildProvinceOptions } from '../province-options';
 import { useDestinations } from '../hooks/use-destinations';
 import type { MarketplaceFilters } from '../types';
 import styles from './SearchDialog.module.css';
+import { useTranslations } from 'next-intl';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 /** Số tỉnh/thành đổ vào ô "Địa điểm" — ưu tiên nơi nhiều xe nhất. */
 const PROVINCE_OPTIONS_LIMIT = 24;
@@ -61,6 +63,10 @@ export function SearchDialog({
   onClose: () => void;
   onSubmit: (values: SearchDialogValues) => void;
 }) {
+  const domainLabel = useDomainLabel();
+  const tSearch = useTranslations('HomeSearch');
+  const tDialog = useTranslations('Marketplace.searchDialog');
+  const tLocation = useTranslations('HomeSearch.location');
   const { data: destinations, isLoading: loadingProvinces } =
     useDestinations(PROVINCE_OPTIONS_LIMIT);
 
@@ -84,8 +90,12 @@ export function SearchDialog({
   });
 
   const provinceOptions = useMemo(
-    () => buildProvinceOptions(destinations, province),
-    [destinations, province],
+    () =>
+      buildProvinceOptions(destinations, province, {
+        nationwide: tLocation('nationwide'),
+        unavailable: tLocation('unavailable'),
+      }),
+    [destinations, province, tLocation],
   );
 
   function submit() {
@@ -102,20 +112,22 @@ export function SearchDialog({
   }
 
   return (
-    <ResponsiveDialog title="Tìm kiếm" open={open} onClose={onClose} footer={null}>
+    <ResponsiveDialog title={tDialog('title')} open={open} onClose={onClose} footer={null}>
       <div className={styles.body}>
         {withDriver ? (
           <div className={styles.cell}>
-            <span className={styles.cellLabel}>Lộ trình</span>
+            <span className={styles.cellLabel}>{tSearch('route.label')}</span>
             <Radio.Group
               value={routeType}
               onChange={(e) => setRouteType(e.target.value as RouteType)}
               options={ROUTE_TYPE_VALUES.map((value) => ({
                 value,
-                label: ROUTE_TYPE_LABEL[value],
+                label: domainLabel('routeType', value, ROUTE_TYPE_LABEL[value]),
               }))}
             />
-            <span className={styles.routeHint}>{ROUTE_TYPE_DESCRIPTION[routeType]}</span>
+            <span className={styles.routeHint}>
+              {domainLabel('routeTypeDescription', routeType, ROUTE_TYPE_DESCRIPTION[routeType])}
+            </span>
           </div>
         ) : null}
 
@@ -123,12 +135,11 @@ export function SearchDialog({
             Dài hạn KHÔNG hỏi ngày ở bước tìm (Mioto flow): chọn xe trước, ngày ở bước yêu cầu. */}
         {longTerm ? (
           <p className={styles.routeHint}>
-            Chọn xe trước — sau đó chọn gói thuê ({LONG_TERM_PACKAGE_MONTHS.join('/')} tháng) và
-            nguyện vọng ngày nhận khi gửi yêu cầu thuê.
+            {tDialog('longTermHint', { packages: LONG_TERM_PACKAGE_MONTHS.join('/') })}
           </p>
         ) : (
           <div className={styles.cell}>
-            <span className={styles.cellLabel}>Thời gian thuê</span>
+            <span className={styles.cellLabel}>{tSearch('rental.label')}</span>
             <RentalDateTimeRangeField
               value={range}
               onChange={setRange}
@@ -141,20 +152,23 @@ export function SearchDialog({
         )}
 
         <div className={styles.cell}>
-          <span className={styles.cellLabel}>Loại xe</span>
+          <span className={styles.cellLabel}>{tSearch('card.vehicleTypeLabel')}</span>
           <Segmented
             block
             value={vehicleType}
             onChange={(v) => setVehicleType(v as string)}
             options={[
-              { value: VEHICLE_TYPE.CAR, label: 'Ô tô' },
-              { value: VEHICLE_TYPE.MOTORBIKE, label: 'Xe máy' },
+              { value: VEHICLE_TYPE.CAR, label: domainLabel('vehicleType', VEHICLE_TYPE.CAR) },
+              {
+                value: VEHICLE_TYPE.MOTORBIKE,
+                label: domainLabel('vehicleType', VEHICLE_TYPE.MOTORBIKE),
+              },
             ]}
           />
         </div>
 
         <div className={styles.cell}>
-          <span className={styles.cellLabel}>Địa điểm</span>
+          <span className={styles.cellLabel}>{tSearch('location.label')}</span>
           <div className={styles.box}>
             <EnvironmentOutlined className={styles.boxIcon} />
             <Select
@@ -167,13 +181,13 @@ export function SearchDialog({
               optionFilterProp="label"
               className={styles.grow}
               popupMatchSelectWidth={false}
-              aria-label="Địa điểm nhận xe"
+              aria-label={tDialog('locationAriaLabel')}
             />
           </div>
         </div>
 
         <Button type="primary" size="large" block icon={<SearchOutlined />} onClick={submit}>
-          Tìm xe
+          {tSearch('card.submit')}
         </Button>
       </div>
     </ResponsiveDialog>

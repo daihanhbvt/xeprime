@@ -3,19 +3,13 @@
 import { EyeOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import {
-  BOOKING_STATUS_META,
-  TENANT_STATUS,
-  TENANT_STATUS_META,
-  type BookingStatus,
-  type PaginationMeta,
-  type TenantStatus,
-} from '@xeprime/types';
+  BOOKING_STATUS_META, TENANT_STATUS, TENANT_STATUS_META, type BookingStatus, type PaginationMeta, type TenantStatus, } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDateTime, formatShortDateTimeRange } from '@/lib/datetime';
-import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
+import { isZeroMoney } from '@/lib/money';
 import type { AdminBooking } from '../types';
 import styles from './AdminBookingTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface AdminBookingTableProps {
   items: AdminBooking[];
@@ -41,6 +35,8 @@ export function AdminBookingTable({
   onView,
   onPageChange,
 }: AdminBookingTableProps) {
+  const fmt = useAppFormat();
+
   const columns: DataTableColumn<AdminBooking>[] = [
     {
       title: 'Đơn',
@@ -49,7 +45,7 @@ export function AdminBookingTable({
       render: (_, r) => (
         <div>
           <div className={styles.code}>{r.code}</div>
-          <div className={styles.meta}>{formatDateTime(r.createdAt)}</div>
+          <div className={styles.meta}>{fmt.dateTime(r.createdAt)}</div>
         </div>
       ),
     },
@@ -74,7 +70,7 @@ export function AdminBookingTable({
           <div className={styles.tenantName}>
             {r.tenantName}
             {r.tenantStatus === TENANT_STATUS.SUSPENDED ? (
-              <StatusTag value={r.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} />
+              <StatusTag value={r.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} group="tenantStatus" />
             ) : null}
           </div>
           <div className={styles.meta}>
@@ -88,20 +84,20 @@ export function AdminBookingTable({
       title: 'Thuê từ → đến',
       key: 'period',
       width: 260,
-      render: (_, r) => formatShortDateTimeRange(r.pickupAt, r.returnAt),
+      render: (_, r) => fmt.shortDateTimeRange(r.pickupAt, r.returnAt),
     },
     {
       title: 'Trạng thái',
       key: 'status',
       width: 130,
-      render: (_, r) => <StatusTag value={r.status as BookingStatus} meta={BOOKING_STATUS_META} />,
+      render: (_, r) => <StatusTag value={r.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />,
     },
     {
       title: 'Tổng tiền',
       key: 'totalAmount',
       align: 'right',
       width: 130,
-      render: (_, r) => formatMoneyVnd(r.totalAmount),
+      render: (_, r) => fmt.money(r.totalAmount),
     },
     {
       title: 'Còn nợ',
@@ -110,7 +106,7 @@ export function AdminBookingTable({
       width: 120,
       render: (_, r) => (
         <span className={isZeroMoney(r.debtAmount) ? undefined : styles.debt}>
-          {formatMoneyVnd(r.debtAmount)}
+          {fmt.money(r.debtAmount)}
         </span>
       ),
     },

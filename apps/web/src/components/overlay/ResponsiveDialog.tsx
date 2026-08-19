@@ -9,6 +9,7 @@ import { cx } from '@/lib/cx';
 import { XP_TOKENS } from '@/styles/theme';
 
 import styles from './ResponsiveDialog.module.css';
+import { useTranslations } from 'next-intl';
 
 /**
  * Bề rộng modal desktop — Figma `125:1611` (SM 400 · MD 560 · LG 720), token hoá ở Wave 1A.
@@ -130,8 +131,8 @@ export function ResponsiveDialog({
   mobileMode,
   footer,
   onOk,
-  okText = 'Xác nhận',
-  cancelText = 'Huỷ',
+  okText,
+  cancelText,
   destructive,
   okDisabled,
   confirmLoading = false,
@@ -142,6 +143,9 @@ export function ResponsiveDialog({
   bodyClassName,
   'data-testid': testId,
 }: ResponsiveDialogProps) {
+  const tCommon = useTranslations('Common');
+  const okLabel = okText ?? tCommon('actions.confirm');
+  const cancelLabel = cancelText ?? tCommon('actions.cancel');
   const isMobile = useIsMobile();
   const resolvedMobileMode = mobileMode ?? DEFAULT_MOBILE_MODE[size];
 
@@ -155,8 +159,8 @@ export function ResponsiveDialog({
       ? renderDefaultFooter({
           onClose,
           onOk,
-          okText,
-          cancelText,
+          okText: okLabel,
+          cancelText: cancelLabel,
           destructive,
           okDisabled,
           confirmLoading,

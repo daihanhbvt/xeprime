@@ -35,7 +35,7 @@ export default function BookingDetailPage() {
         subtitle="Quản lý chuyến đi và quá trình cho thuê hiện tại"
         onBack={() => router.push(ROUTES.MANAGE.BOOKINGS)}
         extra={
-          data ? <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} /> : null
+          data ? <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" /> : null
         }
       />
       <BookingDetailContent

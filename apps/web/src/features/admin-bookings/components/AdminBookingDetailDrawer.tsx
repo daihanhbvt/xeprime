@@ -3,25 +3,18 @@
 import { App, Descriptions, Tag } from 'antd';
 import Link from 'next/link';
 import {
-  BOOKING_STATUS_META,
-  PERMISSION,
-  SERVICE_TYPE_LABEL,
-  TENANT_STATUS_META,
-  type BookingStatus,
-  type ServiceType,
-  type TenantStatus,
-} from '@xeprime/types';
+  BOOKING_STATUS_META, PERMISSION, SERVICE_TYPE_LABEL, TENANT_STATUS_META, type BookingStatus, type ServiceType, type TenantStatus, } from '@xeprime/types';
 import { MaskedContact } from '@/components/data-display/MaskedContact';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDateTime, formatShortDateTimeRange } from '@/lib/datetime';
-import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
+import { isZeroMoney } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { useAdminBooking, useRevealBookingContact } from '../hooks/use-admin-bookings';
 import type { AdminBookingDetail } from '../types';
 import styles from './AdminBookingDetailDrawer.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 export function AdminBookingDetailDrawer({
   bookingId,
@@ -39,7 +32,7 @@ export function AdminBookingDetailDrawer({
       open={Boolean(bookingId)}
       onClose={onClose}
       extra={
-        data ? <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} /> : null
+        data ? <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" /> : null
       }
       loading={!isError && (isLoading || !data)}
       error={isError}
@@ -53,6 +46,8 @@ export function AdminBookingDetailDrawer({
 }
 
 function Body({ booking }: { booking: AdminBookingDetail }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const { has } = usePermissions();
   const reveal = useRevealBookingContact(booking.id);
@@ -92,7 +87,7 @@ function Body({ booking }: { booking: AdminBookingDetail }) {
                 >
                   {booking.tenantName}
                 </Link>
-                <StatusTag value={booking.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} />
+                <StatusTag value={booking.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} group="tenantStatus" />
               </span>
             ),
           },
@@ -116,14 +111,14 @@ function Body({ booking }: { booking: AdminBookingDetail }) {
           {
             key: 'plan',
             label: 'Kế hoạch',
-            children: formatShortDateTimeRange(booking.pickupAt, booking.returnAt),
+            children: fmt.shortDateTimeRange(booking.pickupAt, booking.returnAt),
           },
           {
             key: 'actual',
             label: 'Thực tế',
             children:
               booking.actualPickupAt || booking.actualReturnAt
-                ? formatShortDateTimeRange(booking.actualPickupAt, booking.actualReturnAt)
+                ? fmt.shortDateTimeRange(booking.actualPickupAt, booking.actualReturnAt)
                 : 'Chưa giao/nhận xe',
           },
         ]}
@@ -135,14 +130,14 @@ function Body({ booking }: { booking: AdminBookingDetail }) {
         size="small"
         bordered
         items={[
-          { key: 'base', label: 'Tiền thuê', children: formatMoneyVnd(booking.baseAmount) },
+          { key: 'base', label: 'Tiền thuê', children: fmt.money(booking.baseAmount) },
           ...(isZeroMoney(booking.deliveryFee)
             ? []
             : [
                 {
                   key: 'delivery',
                   label: 'Phí giao xe',
-                  children: formatMoneyVnd(booking.deliveryFee),
+                  children: fmt.money(booking.deliveryFee),
                 },
               ]),
           ...(isZeroMoney(booking.discountAmount)
@@ -151,18 +146,18 @@ function Body({ booking }: { booking: AdminBookingDetail }) {
                 {
                   key: 'discount',
                   label: 'Giảm giá',
-                  children: `− ${formatMoneyVnd(booking.discountAmount)}`,
+                  children: `− ${fmt.money(booking.discountAmount)}`,
                 },
               ]),
-          { key: 'total', label: 'Tổng cộng', children: formatMoneyVnd(booking.totalAmount) },
-          { key: 'deposit', label: 'Đặt cọc', children: formatMoneyVnd(booking.depositAmount) },
-          { key: 'paid', label: 'Đã thu', children: formatMoneyVnd(booking.paidAmount) },
+          { key: 'total', label: 'Tổng cộng', children: fmt.money(booking.totalAmount) },
+          { key: 'deposit', label: 'Đặt cọc', children: fmt.money(booking.depositAmount) },
+          { key: 'paid', label: 'Đã thu', children: fmt.money(booking.paidAmount) },
           {
             key: 'debt',
             label: 'Còn nợ',
             children: (
               <span className={isZeroMoney(booking.debtAmount) ? undefined : styles.debt}>
-                {formatMoneyVnd(booking.debtAmount)}
+                {fmt.money(booking.debtAmount)}
               </span>
             ),
           },
@@ -181,8 +176,8 @@ function Body({ booking }: { booking: AdminBookingDetail }) {
       {booking.note ? <div className={styles.note}>{booking.note}</div> : null}
 
       <div className={styles.footer}>
-        Người tạo: {booking.createdByName ?? '—'} · Tạo {formatDateTime(booking.createdAt)} · Cập
-        nhật {formatDateTime(booking.updatedAt)}
+        Người tạo: {booking.createdByName ?? '—'} · Tạo {fmt.dateTime(booking.createdAt)} · Cập
+        nhật {fmt.dateTime(booking.updatedAt)}
       </div>
     </div>
   );

@@ -5,23 +5,19 @@ import { Skeleton } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
 import {
-  CATALOG_TYPE,
-  longTermPackageLabel,
-  SERVICE_TYPE,
-  serviceTypesLabel,
-  VEHICLE_TYPE,
-} from '@xeprime/types';
+  CATALOG_TYPE, longTermPackageLabel, SERVICE_TYPE, serviceTypesLabel, VEHICLE_TYPE, } from '@xeprime/types';
 import { shopPath } from '@/constants/routes';
 import { catalogLabel } from '@/features/catalog/types';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import type { PublicListingDetail, ReviewItem, ReviewSummary } from '@/features/marketplace/types';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
-import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
+import { applyDiscountPercent } from '@/lib/money';
 import { maskPhone } from '@/features/phone-verification/mask';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import styles from './VehicleSummaryPanel.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface VerifiedContact {
   name: string;
@@ -76,6 +72,8 @@ export function VehicleSummaryPanel({
   serviceType,
   packageMonths = null,
 }: VehicleSummaryPanelProps) {
+  const fmt = useAppFormat();
+
   const isMobile = useIsMobile();
   const [expanded, setExpanded] = useState(false);
   const { catalog } = useCatalog();
@@ -173,15 +171,15 @@ export function VehicleSummaryPanel({
           {/* Giá 0đ là giá thật; chỉ ẩn khi backend KHÔNG có giá. */}
           {displayPrice != null && displayPrice !== '' ? (
             <div className={styles.price}>
-              <b>{formatMoneyVnd(displayPrice)}</b>
+              <b>{fmt.money(displayPrice)}</b>
               <span>{priceUnit}</span>
               {/* Gói 1 tháng: giá bình quân tháng BẰNG tổng gói — lặp lại chỉ là nhiễu. */}
               {selectedPackage && selectedPackage.packageMonths > 1 ? (
                 <span className={styles.priceAlt}>
-                  {formatMoneyVnd(selectedPackage.effectiveMonthlyAmount)}/tháng
+                  {fmt.money(selectedPackage.effectiveMonthlyAmount)}/tháng
                 </span>
               ) : !isLongTerm && !isWithDriver && listing?.hourlyPrice ? (
-                <span className={styles.priceAlt}>{formatMoneyVnd(listing.hourlyPrice)}/giờ</span>
+                <span className={styles.priceAlt}>{fmt.money(listing.hourlyPrice)}/giờ</span>
               ) : null}
             </div>
           ) : null}

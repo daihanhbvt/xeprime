@@ -3,20 +3,15 @@
 import { Button, Tag } from 'antd';
 import type { ReactNode } from 'react';
 import {
-  TENANT_CUSTOMER_RETURNING_MIN_RENTALS,
-  TENANT_CUSTOMER_RISK_LEVEL,
-  TENANT_CUSTOMER_RISK_LEVEL_META,
-  type PaginationMeta,
-  type TenantCustomerRiskLevel,
-} from '@xeprime/types';
+  TENANT_CUSTOMER_RETURNING_MIN_RENTALS, TENANT_CUSTOMER_RISK_LEVEL, TENANT_CUSTOMER_RISK_LEVEL_META, type PaginationMeta, type TenantCustomerRiskLevel, } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDate } from '@/lib/datetime';
-import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
+import { isZeroMoney } from '@/lib/money';
 import { cx } from '@/lib/cx';
 import type { TenantCustomer } from '../types';
 import styles from './CustomerTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const MIN_TABLE_WIDTH = 1040;
 
@@ -43,11 +38,13 @@ function ReturningTag({ count }: { count: number }) {
 
 /** Còn nợ nổi bật khi khác 0; so sánh trên CHUỖI, không `Number()` (ADR 0007). */
 function DebtValue({ value }: { value: string | null | undefined }) {
+  const fmt = useAppFormat();
+
   // `null` = KHÔNG được xem tiền (server quyết). Khác hẳn 0 đồng — nên hiện gạch, không hiện 0.
   if (value === null || value === undefined) return <span className={styles.muted}>—</span>;
   return (
     <span className={cx(styles.money, !isZeroMoney(value) && styles.debt)}>
-      {formatMoneyVnd(value)}
+      {fmt.money(value)}
     </span>
   );
 }
@@ -65,6 +62,8 @@ export function CustomerTable({
   onOpen,
   onPageChange,
 }: CustomerTableProps) {
+  const fmt = useAppFormat();
+
   const columns: DataTableColumn<TenantCustomer>[] = [
     {
       title: 'Khách hàng',
@@ -103,7 +102,7 @@ export function CustomerTable({
             width: 160,
             align: 'right',
             render: (_, row) => (
-              <span className={styles.money}>{formatMoneyVnd(row.totalBookingAmount)}</span>
+              <span className={styles.money}>{fmt.money(row.totalBookingAmount)}</span>
             ),
           },
           {
@@ -121,7 +120,7 @@ export function CustomerTable({
       width: 140,
       render: (_, row) =>
         row.lastRentalAt ? (
-          formatDate(row.lastRentalAt)
+          fmt.date(row.lastRentalAt)
         ) : (
           <span className={styles.muted}>Chưa thuê</span>
         ),
@@ -137,7 +136,7 @@ export function CustomerTable({
           ) : (
             <StatusTag
               value={row.riskLevel as TenantCustomerRiskLevel}
-              meta={TENANT_CUSTOMER_RISK_LEVEL_META}
+              meta={TENANT_CUSTOMER_RISK_LEVEL_META} group="tenantCustomerRiskLevel"
             />
           )}
           {row.archivedAt ? <Tag>Đã lưu trữ</Tag> : null}
@@ -179,7 +178,7 @@ export function CustomerTable({
           ) : (
             <StatusTag
               value={row.riskLevel as TenantCustomerRiskLevel}
-              meta={TENANT_CUSTOMER_RISK_LEVEL_META}
+              meta={TENANT_CUSTOMER_RISK_LEVEL_META} group="tenantCustomerRiskLevel"
             />
           )}
           {row.archivedAt ? <Tag>Đã lưu trữ</Tag> : null}
@@ -193,7 +192,7 @@ export function CustomerTable({
         </div>
         <div>
           <dt>Lần cuối</dt>
-          <dd>{row.lastRentalAt ? formatDate(row.lastRentalAt) : '—'}</dd>
+          <dd>{row.lastRentalAt ? fmt.date(row.lastRentalAt) : '—'}</dd>
         </div>
         {canViewFinance ? (
           <div>

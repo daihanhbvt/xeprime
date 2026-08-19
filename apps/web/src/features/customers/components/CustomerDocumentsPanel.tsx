@@ -32,7 +32,7 @@ import {
 } from '@xeprime/types';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { DAY_PARAM_FORMAT, DATE_FORMAT, dayjs, formatDate } from '@/lib/datetime';
+import { DAY_PARAM_FORMAT, dayjs } from '@/lib/datetime';
 import { fetchCustomerDocumentDownload } from '../api';
 import { CUSTOMER_HINTS, DOCUMENT_TYPE_OPTIONS, isPreviewableImage } from '../constants';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
@@ -44,6 +44,7 @@ import {
 } from '../hooks/use-customers';
 import type { CustomerDocument } from '../types';
 import styles from './CustomerDocumentsPanel.module.css';
+import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 
 const ACCEPT = DOCUMENT_UPLOAD_MIME_TYPES.join(',');
 
@@ -69,6 +70,9 @@ export function CustomerDocumentsPanel({
   canViewFiles: boolean;
   disabled?: boolean;
 }) {
+  const fmt = useAppFormat();
+  const datePattern = useDatePickerPattern();
+
   const { message } = App.useApp();
   const { data, isLoading, isError, refetch, isFetching } = useCustomerDocuments(customerId);
   const upload = useUploadCustomerDocument();
@@ -148,7 +152,7 @@ export function CustomerDocumentsPanel({
           ) : null}
           <DatePicker
             className={styles.expiry}
-            format={DATE_FORMAT}
+            format={datePattern.date}
             placeholder="Hạn giấy tờ (không bắt buộc)"
             value={expiresAt ? dayjs(expiresAt, DAY_PARAM_FORMAT) : null}
             onChange={(value) => setExpiresAt(value ? value.format(DAY_PARAM_FORMAT) : null)}
@@ -224,15 +228,16 @@ export function CustomerDocumentsPanel({
                   </div>
                   <div className={styles.itemMeta}>
                     {document.originalName} · {document.uploadedByName ?? 'Không rõ người tải'} ·{' '}
-                    {formatDate(document.createdAt)}
+                    {fmt.date(document.createdAt)}
                   </div>
                 </div>
                 <div className={styles.itemTags}>
                   <StatusTag
                     value={document.expiryStatus as CustomerDocumentExpiry}
                     meta={CUSTOMER_DOCUMENT_EXPIRY_META}
+                    group="customerDocumentExpiry"
                   />
-                  {document.expiresAt ? <Tag>Hạn {formatDate(document.expiresAt)}</Tag> : null}
+                  {document.expiresAt ? <Tag>Hạn {fmt.date(document.expiresAt)}</Tag> : null}
                 </div>
                 <div className={styles.itemActions}>
                   {/*

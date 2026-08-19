@@ -3,30 +3,20 @@
 import { Button, Select, Slider, Switch } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  CATALOG_TYPE,
-  DEFAULT_LISTING_SORT,
-  LISTING_AMENITY_DESC,
-  LISTING_AMENITY_LABEL,
-  LISTING_AMENITY_VALUES,
-  LISTING_SORT_LABEL,
-  LISTING_SORT_VALUES,
-  SEAT_BUCKET_LABEL,
-  SEAT_BUCKET_VALUES,
-  VEHICLE_TYPE,
-  vehicleFuelTypesFor,
-  type ListingAmenity,
-} from '@xeprime/types';
+  CATALOG_TYPE, DEFAULT_LISTING_SORT, LISTING_AMENITY_DESC, LISTING_AMENITY_LABEL, LISTING_AMENITY_VALUES, LISTING_SORT_LABEL, LISTING_SORT_VALUES, SEAT_BUCKET_LABEL, SEAT_BUCKET_VALUES, VEHICLE_TYPE, vehicleFuelTypesFor, type ListingAmenity, } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
 import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { cx } from '@/lib/cx';
-import { formatMoneyVnd } from '@/lib/money';
 import { useListingFacets } from '../hooks/use-listing-facets';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { ListingSort, MarketplaceFilters } from '../types';
 import { BrandMark } from './BrandMark';
 import styles from './FilterPanel.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 const PRICE_STEP = 50_000;
 /** Trần fallback khi chưa có dữ liệu giá (facets đang tải / chưa có xe). */
@@ -99,6 +89,10 @@ function toggle(list: string[], key: string): string[] {
  * Mobile = bottom-sheet Drawer, desktop = Modal — cùng một nội dung.
  */
 export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const domainLabel = useDomainLabel();
+  const t = useTranslations('Marketplace.filterPanel');
+  const fmt = useAppFormat();
+
   const { filters, setFilters } = useMarketplaceFilters();
 
   const [draft, setDraft] = useState<FilterDraft>(() => draftFromFilters(filters));
@@ -197,8 +191,11 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
   ];
   const priceCaption =
     draft.priceMin == null && draft.priceMax == null
-      ? 'Bất kỳ'
-      : `${formatMoneyVnd(String(sliderValue[0]))} – ${formatMoneyVnd(String(sliderValue[1]))}`;
+      ? t('any')
+      : t('priceRangeValue', {
+          from: fmt.money(String(sliderValue[0])),
+          to: fmt.money(String(sliderValue[1])),
+        });
 
   const showBodyType = filters.vehicleType !== VEHICLE_TYPE.MOTORBIKE;
   const amenityCount: Record<ListingAmenity, number | null> = {
@@ -216,18 +213,21 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
   const body = (
     <div className={styles.body}>
       <section className={styles.section}>
-        <h4 className={styles.sectionTitle}>Sắp xếp</h4>
+        <h4 className={styles.sectionTitle}>{t('sort')}</h4>
         <Select
           className={styles.sortSelect}
           size="large"
           value={draft.sort}
-          options={LISTING_SORT_VALUES.map((v) => ({ value: v, label: LISTING_SORT_LABEL[v] }))}
+          options={LISTING_SORT_VALUES.map((v) => ({
+            value: v,
+            label: domainLabel('listingSort', v, LISTING_SORT_LABEL[v]),
+          }))}
           onChange={(sort: ListingSort) => setDraft((d) => ({ ...d, sort }))}
         />
       </section>
 
       <section className={styles.section}>
-        <h4 className={styles.sectionTitle}>Mức giá / ngày</h4>
+        <h4 className={styles.sectionTitle}>{t('priceRange')}</h4>
         <div className={styles.sliderWrap}>
           <Slider
             range
@@ -235,7 +235,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
             max={priceBounds.max}
             step={PRICE_STEP}
             value={sliderValue}
-            tooltip={{ formatter: (v) => formatMoneyVnd(String(v ?? 0)) }}
+            tooltip={{ formatter: (v) => fmt.money(String(v ?? 0)) }}
             onChange={(value) => {
               const [lo, hi] = value as [number, number];
               setDraft((d) => ({
@@ -251,24 +251,24 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
 
       {showBodyType && bodyTypeItems.length > 0 ? (
         <section className={styles.section}>
-          <h4 className={styles.sectionTitle}>Loại xe</h4>
+          <h4 className={styles.sectionTitle}>{t('vehicleType')}</h4>
           {/* Thẻ có ảnh — cùng component với ô "Kiểu dáng xe" ở form tạo xe, nên khách nhìn
               thấy đúng cái hình mà chủ xe đã chọn. */}
           <CatalogCardPicker
-            ariaLabel="Loại xe"
+            ariaLabel={t('vehicleType')}
             mode="multi"
             items={bodyTypeItems}
             value={draft.bodyType}
             onChange={(next) => setDraft((d) => ({ ...d, bodyType: next }))}
             countOf={(key) => countOf('bodyType', key) ?? undefined}
-            countSuffix="xe"
+            countSuffix={t('countSuffix')}
           />
         </section>
       ) : null}
 
       {brandOptions.length > 0 ? (
         <section className={styles.section}>
-          <h4 className={styles.sectionTitle}>Hãng xe</h4>
+          <h4 className={styles.sectionTitle}>{t('brand')}</h4>
           <div className={styles.chipGrid}>
             {brandOptions.map((b) => (
               <FacetChip
@@ -285,12 +285,12 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
       ) : null}
 
       <section className={styles.section}>
-        <h4 className={styles.sectionTitle}>Số chỗ</h4>
+        <h4 className={styles.sectionTitle}>{t('seats')}</h4>
         <div className={styles.chipGrid}>
           {SEAT_BUCKET_VALUES.map((key) => (
             <FacetChip
               key={key}
-              label={SEAT_BUCKET_LABEL[key]}
+              label={domainLabel('seatBucket', key, SEAT_BUCKET_LABEL[key])}
               count={countOf('seats', key)}
               active={draft.seats.includes(key)}
               onToggle={() => setDraft((d) => ({ ...d, seats: toggle(d.seats, key) }))}
@@ -300,7 +300,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
       </section>
 
       <section className={styles.section}>
-        <h4 className={styles.sectionTitle}>Nguồn năng lượng</h4>
+        <h4 className={styles.sectionTitle}>{t('fuelType')}</h4>
         <div className={styles.chipGrid}>
           {fuelItems.map((item) => (
             <FacetChip
@@ -315,7 +315,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
       </section>
 
       <section className={styles.section}>
-        <h4 className={styles.sectionTitle}>Tính năng</h4>
+        <h4 className={styles.sectionTitle}>{t('features')}</h4>
         <div className={styles.chipGrid}>
           {featureItems.map((item) => (
             <FacetChip
@@ -330,13 +330,13 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
       </section>
 
       <section className={styles.section}>
-        <h4 className={styles.sectionTitle}>Tiện ích</h4>
+        <h4 className={styles.sectionTitle}>{t('amenities')}</h4>
         <div className={styles.amenityList}>
           {LISTING_AMENITY_VALUES.map((key) => (
             <label key={key} className={styles.amenityRow}>
               <span className={styles.amenityInfo}>
                 <span className={styles.amenityLabel}>
-                  {LISTING_AMENITY_LABEL[key]}
+                  {domainLabel('listingAmenity', key, LISTING_AMENITY_LABEL[key])}
                   {amenityCount[key] != null ? (
                     <span className={styles.amenityCount}> ({amenityCount[key]})</span>
                   ) : null}
@@ -357,7 +357,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
   const footer = (
     <div className={styles.footer}>
       <Button size="large" onClick={() => setDraft(EMPTY_DRAFT)}>
-        Xoá bộ lọc
+        {t('clear')}
       </Button>
       <Button
         type="primary"
@@ -366,7 +366,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
         loading={facetsQuery.isFetching}
         onClick={apply}
       >
-        Áp dụng{facets ? ` (${facets.total} xe)` : ''}
+        {facets ? t('applyWithCount', { count: facets.total }) : t('apply')}
       </Button>
     </div>
   );
@@ -381,7 +381,7 @@ export function FilterPanel({ open, onClose }: { open: boolean; onClose: () => v
      * `ResponsiveDialog` lo bằng token.
      */
     <ResponsiveDialog
-      title="Bộ lọc"
+      title={t('title')}
       open={open}
       onClose={onClose}
       size="md"

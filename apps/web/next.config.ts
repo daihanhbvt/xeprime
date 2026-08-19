@@ -1,3 +1,4 @@
+import createNextIntlPlugin from 'next-intl/plugin';
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
@@ -14,4 +15,11 @@ const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: false },
 };
 
-export default nextConfig;
+/**
+ * next-intl không dùng locale routing ở đây: URL cố ý KHÔNG mang ngôn ngữ (ADR 0012).
+ * Plugin chỉ có một việc — trỏ next-intl vào file cấu hình request để `getTranslations`
+ * trong Server Component tìm thấy locale/messages của request hiện tại.
+ */
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
+export default withNextIntl(nextConfig);

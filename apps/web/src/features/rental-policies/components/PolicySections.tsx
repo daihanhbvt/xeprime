@@ -20,12 +20,12 @@ import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
-import { formatMoneyVnd } from '@/lib/money';
 import { deliverySummaryText } from '../form';
 import type { PolicyFormValues } from '../schema';
 import { PolicyInfoTip } from './PolicyInfoTip';
 
 import styles from './PolicySections.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 type LegacyTierView = { minDays: number; percent: number };
 
@@ -327,6 +327,8 @@ function OvertimeSection({
   title: string;
   disabled: boolean;
 }) {
+  const fmt = useAppFormat();
+
   const fee = useWatch({ control, name: 'overtimeFeePerHour' });
 
   return (
@@ -389,7 +391,7 @@ function OvertimeSection({
         <span className={styles.previewTitle}>Công thức tính phí phạt trễ hạn tự động:</span>
         <span className={styles.previewText}>
           {fee != null
-            ? `Phí quá giờ = (số giờ trễ thực tế) × ${formatMoneyVnd(String(fee))}. Tính ở bước bàn trả xe.`
+            ? `Phí quá giờ = (số giờ trễ thực tế) × ${fmt.money(String(fee))}. Tính ở bước bàn trả xe.`
             : 'Chưa cấu hình phí mỗi giờ — phí quá giờ sẽ thoả thuận thủ công ở bước bàn trả xe.'}
         </span>
       </div>

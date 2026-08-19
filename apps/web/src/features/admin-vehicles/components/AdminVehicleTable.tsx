@@ -3,25 +3,12 @@
 import { EyeOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 import {
-  LISTING_STATUS_META,
-  TENANT_STATUS,
-  TENANT_STATUS_META,
-  VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_PUBLIC_STATUS_META,
-  VEHICLE_TYPE_LABEL,
-  type ListingStatus,
-  type PaginationMeta,
-  type TenantStatus,
-  type VehicleOperationStatus,
-  type VehiclePublicStatus,
-  type VehicleType,
-} from '@xeprime/types';
+  LISTING_STATUS_META, TENANT_STATUS, TENANT_STATUS_META, VEHICLE_OPERATION_STATUS_META, VEHICLE_PUBLIC_STATUS_META, VEHICLE_TYPE_LABEL, type ListingStatus, type PaginationMeta, type TenantStatus, type VehicleOperationStatus, type VehiclePublicStatus, type VehicleType, } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDate } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import type { AdminVehicle } from '../types';
 import styles from './AdminVehicleTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface AdminVehicleTableProps {
   items: AdminVehicle[];
@@ -50,6 +37,8 @@ export function AdminVehicleTable({
   onView,
   onPageChange,
 }: AdminVehicleTableProps) {
+  const fmt = useAppFormat();
+
   const columns: DataTableColumn<AdminVehicle>[] = [
     {
       title: 'Xe',
@@ -76,7 +65,7 @@ export function AdminVehicleTable({
             {r.tenantName}
             {/* Chỉ gắn nhãn khi shop BỊ KHOÁ — nhãn "đang hoạt động" ở mọi hàng là nhiễu. */}
             {r.tenantStatus === TENANT_STATUS.SUSPENDED ? (
-              <StatusTag value={r.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} />
+              <StatusTag value={r.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} group="tenantStatus" />
             ) : null}
           </div>
           {r.provinceName ? <div className={styles.meta}>{r.provinceName}</div> : null}
@@ -90,7 +79,7 @@ export function AdminVehicleTable({
       render: (_, r) => (
         <StatusTag
           value={r.publicStatus as VehiclePublicStatus}
-          meta={VEHICLE_PUBLIC_STATUS_META}
+          meta={VEHICLE_PUBLIC_STATUS_META} group="vehiclePublicStatus"
         />
       ),
     },
@@ -100,7 +89,7 @@ export function AdminVehicleTable({
       width: 130,
       render: (_, r) =>
         r.listingStatus ? (
-          <StatusTag value={r.listingStatus as ListingStatus} meta={LISTING_STATUS_META} />
+          <StatusTag value={r.listingStatus as ListingStatus} meta={LISTING_STATUS_META} group="listingStatus" />
         ) : (
           // Chưa từng lên sàn KHÔNG phải một trạng thái nghiệp vụ — không dựng StatusTag giả cho nó.
           <Tooltip title="Xe chưa từng được duyệt lên Marketplace">
@@ -115,7 +104,7 @@ export function AdminVehicleTable({
       render: (_, r) => (
         <StatusTag
           value={r.operationStatus as VehicleOperationStatus}
-          meta={VEHICLE_OPERATION_STATUS_META}
+          meta={VEHICLE_OPERATION_STATUS_META} group="vehicleOperationStatus"
         />
       ),
     },
@@ -124,9 +113,9 @@ export function AdminVehicleTable({
       key: 'weekdayPrice',
       align: 'right',
       width: 140,
-      render: (_, r) => formatMoneyVnd(r.weekdayPrice),
+      render: (_, r) => fmt.money(r.weekdayPrice),
     },
-    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => formatDate(r.createdAt) },
+    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => fmt.date(r.createdAt) },
     actionColumn<AdminVehicle>((row) => [
       { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
     ]),

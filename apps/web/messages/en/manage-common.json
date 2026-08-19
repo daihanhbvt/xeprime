@@ -1,0 +1,18 @@
+{
+  "shell": {
+    "pendingTitle": "Shop awaiting approval",
+    "pendingBody": "You can still view your data, but vehicles will not appear on the marketplace until the shop is approved.",
+    "navLabel": "Management portal navigation",
+    "expandMenu": "Expand menu",
+    "collapseMenu": "Collapse menu",
+    "back": "Back",
+    "logout": "Log out"
+  },
+  "permission": {
+    "deniedTitle": "You don't have access",
+    "readOnlyTitle": "You have view-only access",
+    "deniedBody": "Contact an administrator if you need access to this section.",
+    "readOnlyBody": "You can view the data but cannot make changes.",
+    "requires": "Requires:"
+  }
+}

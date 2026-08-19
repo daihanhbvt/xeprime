@@ -11,7 +11,9 @@ import {
   VEHICLE_TYPE_LABEL,
   type RouteType,
 } from '@xeprime/types';
+import { useTranslations } from 'next-intl';
 import { useCallback, useMemo, useRef } from 'react';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
@@ -20,7 +22,7 @@ import { SearchPopover } from './SearchPopover';
 import { SegmentedTabs } from './SegmentedTabs';
 import { useSearchExperience } from './search-context';
 import { serviceUsesRentalRange } from './search-draft';
-import { VEHICLE_ITEMS, serviceItems } from './search-items';
+import { serviceItems, vehicleItems } from './search-items';
 import { useEnterExit } from './use-element-visibility';
 import styles from './StickySearchBar.module.css';
 
@@ -46,6 +48,7 @@ const TRANSITION_MS = 200;
  * header đúng một bậc: header vẫn là lớp trên cùng, thanh này không bao giờ đè lên nó.
  */
 export function StickySearchBar({ active }: { active: boolean }) {
+  const t = useTranslations('HomeSearch');
   const { mounted, entered } = useEnterExit(active, TRANSITION_MS);
   const { draft, setRentalRange, setRentalMode, submit } = useSearchExperience();
   const isMobile = useIsMobile();
@@ -64,7 +67,7 @@ export function StickySearchBar({ active }: { active: boolean }) {
     <div
       ref={barRef}
       role="search"
-      aria-label="Tìm kiếm nhanh"
+      aria-label={t('card.stickyLabel')}
       className={cx(styles.bar, entered && styles.barIn)}
       inert={!entered ? true : undefined}
     >
@@ -103,10 +106,10 @@ export function StickySearchBar({ active }: { active: boolean }) {
           type="primary"
           icon={<SearchOutlined aria-hidden="true" />}
           className={styles.submit}
-          aria-label="Tìm xe"
+          aria-label={t('card.submit')}
           onClick={submit}
         >
-          {isMobile ? null : 'Tìm xe'}
+          {isMobile ? null : t('card.submit')}
         </Button>
       </div>
     </div>
@@ -115,16 +118,26 @@ export function StickySearchBar({ active }: { active: boolean }) {
 
 /** Viên "Ô tô · Tự lái" — mở đúng hai tầng chọn của thẻ tìm kiếm, không phải một menu dẹt khác. */
 function ModePicker({ popupContainer }: { popupContainer: () => HTMLElement }) {
+  const t = useTranslations('HomeSearch');
+  const tService = useTranslations('HomeSearch.service');
+  const domainLabel = useDomainLabel();
   const { draft, setVehicleType, setServiceType } = useSearchExperience();
-  const summary = `${VEHICLE_TYPE_LABEL[draft.vehicleType]} · ${SERVICE_TYPE_LABEL[draft.serviceType]}`;
-  const serviceOptions = useMemo(() => serviceItems(draft.vehicleType, false), [draft.vehicleType]);
+  const summary = t('mode.summary', {
+    vehicle: domainLabel('vehicleType', draft.vehicleType, VEHICLE_TYPE_LABEL[draft.vehicleType]),
+    service: domainLabel('serviceType', draft.serviceType, SERVICE_TYPE_LABEL[draft.serviceType]),
+  });
+  const serviceOptions = useMemo(
+    () => serviceItems(draft.vehicleType, false, tService),
+    [draft.vehicleType, tService],
+  );
+  const vehicleOptions = useMemo(() => vehicleItems(domainLabel), [domainLabel]);
 
   return (
     <SearchPopover
-      title="Loại xe và dịch vụ"
+      title={t('mode.title')}
       panelSize="sm"
       popupContainer={popupContainer}
-      triggerLabel={`Loại xe và dịch vụ: ${summary}`}
+      triggerLabel={t('mode.triggerLabel', { summary })}
       triggerClassName={cx(styles.chip, styles.modeChip)}
       trigger={
         <>
@@ -138,15 +151,15 @@ function ModePicker({ popupContainer }: { popupContainer: () => HTMLElement }) {
           <SegmentedTabs
             value={draft.vehicleType}
             onChange={setVehicleType}
-            items={VEHICLE_ITEMS}
-            ariaLabel="Loại xe"
+            items={vehicleOptions}
+            ariaLabel={t('card.vehicleTypeLabel')}
             size="sm"
           />
           <SegmentedTabs
             value={draft.serviceType}
             onChange={setServiceType}
             items={serviceOptions}
-            ariaLabel="Loại dịch vụ thuê xe"
+            ariaLabel={t('card.serviceTypeLabel')}
             size="sm"
           />
         </div>
@@ -157,18 +170,21 @@ function ModePicker({ popupContainer }: { popupContainer: () => HTMLElement }) {
 
 /** Lộ trình — chỉ tồn tại ở dịch vụ CÓ TÀI XẾ, đúng như ở thẻ tìm kiếm. */
 function RoutePicker({ popupContainer }: { popupContainer: () => HTMLElement }) {
+  const t = useTranslations('HomeSearch');
+  const domainLabel = useDomainLabel();
   const { draft, setRouteType } = useSearchExperience();
+  const routeLabel = domainLabel('routeType', draft.routeType, ROUTE_TYPE_LABEL[draft.routeType]);
 
   return (
     <SearchPopover
-      title="Lộ trình"
+      title={t('route.label')}
       panelSize="sm"
       popupContainer={popupContainer}
-      triggerLabel={`Lộ trình: ${ROUTE_TYPE_LABEL[draft.routeType]}`}
+      triggerLabel={t('route.triggerLabel', { value: routeLabel })}
       triggerClassName={styles.chip}
       trigger={
         <>
-          <span className={styles.chipValue}>{ROUTE_TYPE_LABEL[draft.routeType]}</span>
+          <span className={styles.chipValue}>{routeLabel}</span>
           <DownOutlined className={styles.caret} aria-hidden="true" />
         </>
       }
@@ -181,10 +197,19 @@ function RoutePicker({ popupContainer }: { popupContainer: () => HTMLElement }) 
               setRouteType(e.target.value as RouteType);
               close();
             }}
-            options={ROUTE_TYPE_VALUES.map((value) => ({ value, label: ROUTE_TYPE_LABEL[value] }))}
+            options={ROUTE_TYPE_VALUES.map((value) => ({
+              value,
+              label: domainLabel('routeType', value, ROUTE_TYPE_LABEL[value]),
+            }))}
             className={styles.routeGroup}
           />
-          <p className={styles.routeHint}>{ROUTE_TYPE_DESCRIPTION[draft.routeType]}</p>
+          <p className={styles.routeHint}>
+            {domainLabel(
+              'routeTypeDescription',
+              draft.routeType,
+              ROUTE_TYPE_DESCRIPTION[draft.routeType],
+            )}
+          </p>
         </div>
       )}
     </SearchPopover>

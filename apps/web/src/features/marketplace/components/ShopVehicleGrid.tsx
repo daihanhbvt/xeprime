@@ -2,10 +2,11 @@
 
 import { Alert, Empty, Pagination, Skeleton } from 'antd';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { getErrorMessage } from '@/services/api-client';
 import { useShopListings } from '../hooks/use-shop-listings';
 import { VehicleCard } from './VehicleCard';
 import styles from './ShopVehicleGrid.module.css';
+import { useTranslations } from 'next-intl';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 const PAGE_SIZE = 12;
 
@@ -14,6 +15,8 @@ const PAGE_SIZE = 12;
  * Đủ trạng thái loading/empty/error để không bao giờ ra màn trắng.
  */
 export function ShopVehicleGrid({ slug }: { slug: string }) {
+  const errorMessage = useErrorMessage();
+  const t = useTranslations('Shops.vehicles');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -32,15 +35,17 @@ export function ShopVehicleGrid({ slug }: { slug: string }) {
   }
 
   return (
-    <section className={styles.section} aria-label="Xe của gian hàng">
-      <h2 className={styles.title}>Xe đang cho thuê{total > 0 ? ` (${total})` : ''}</h2>
+    <section className={styles.section} aria-label={t('sectionLabel')}>
+      <h2 className={styles.title}>
+        {total > 0 ? t('titleWithCount', { count: total }) : t('title')}
+      </h2>
 
       {isError ? (
         <Alert
           type="error"
           showIcon
-          message="Không tải được danh sách xe"
-          description={getErrorMessage(error)}
+          message={t('loadError')}
+          description={errorMessage(error)}
         />
       ) : isLoading ? (
         <div className={styles.grid}>
@@ -52,7 +57,7 @@ export function ShopVehicleGrid({ slug }: { slug: string }) {
           ))}
         </div>
       ) : total === 0 ? (
-        <Empty className={styles.empty} description="Gian hàng chưa có xe công khai." />
+        <Empty className={styles.empty} description={t('empty')} />
       ) : (
         <>
           <div className={styles.grid}>

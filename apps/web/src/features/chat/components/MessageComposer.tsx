@@ -8,6 +8,7 @@ import { presignChatAttachment, uploadToR2 } from '../api';
 import { useSendMessage } from '../hooks/use-chat-mutations';
 import type { ChatMessage } from '../types';
 import styles from './ChatView.module.css';
+import { useTranslations } from 'next-intl';
 
 /** Ô soạn tin: text + đính kèm (presign → PUT R2 → gửi message tham chiếu URL). */
 export function MessageComposer({
@@ -17,6 +18,7 @@ export function MessageComposer({
   conversationId: string;
   onSent: (message: ChatMessage) => void;
 }) {
+  const t = useTranslations('Chat');
   const { message } = App.useApp();
   const [text, setText] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -85,13 +87,13 @@ export function MessageComposer({
         icon={<PaperClipOutlined />}
         loading={uploading}
         onClick={() => fileRef.current?.click()}
-        aria-label="Đính kèm"
+        aria-label={t('attach')}
       />
       <Input.TextArea
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="Nhập tin nhắn…"
+        placeholder={t('inputPlaceholder')}
         autoSize={{ minRows: 1, maxRows: 4 }}
         className={styles.composerInput}
       />
@@ -100,7 +102,7 @@ export function MessageComposer({
         icon={<SendOutlined />}
         loading={send.isPending}
         onClick={submitText}
-        aria-label="Gửi"
+        aria-label={t('send')}
       />
     </div>
   );

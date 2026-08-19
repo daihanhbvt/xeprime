@@ -3,6 +3,7 @@
 import { EyeOutlined } from '@ant-design/icons';
 import { Button, Tooltip } from 'antd';
 import styles from './MaskedContact.module.css';
+import { useTranslations } from 'next-intl';
 
 interface MaskedContactProps {
   /** Giá trị đã che do API trả về (nguồn duy nhất khi chưa bấm xem). */
@@ -29,6 +30,7 @@ export function MaskedContact({
   loading,
   onReveal,
 }: MaskedContactProps) {
+  const tCommon = useTranslations('Common');
   if (!masked && !revealed) return <span>—</span>;
 
   if (revealed != null) {
@@ -39,7 +41,7 @@ export function MaskedContact({
     <span className={styles.row}>
       <span className={styles.masked}>{masked}</span>
       {canReveal ? (
-        <Tooltip title="Xem đầy đủ — thao tác này được ghi vào nhật ký hệ thống">
+        <Tooltip title={tCommon('components.revealContact')}>
           <Button
             type="link"
             size="small"

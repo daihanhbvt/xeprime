@@ -6,9 +6,9 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
-import { formatRentalDuration, formatRentalPoint } from '@/lib/datetime';
 import { RentalRangePanel, type RentalMode } from './RentalRangePanel';
 import styles from './RentalDateTimeRangeField.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 export type { RentalMode } from './RentalRangePanel';
 
@@ -82,6 +82,8 @@ export function RentalDateTimeRangeField({
   compactPoint = false,
   getPopupContainer,
 }: RentalDateTimeRangeFieldProps) {
+  const fmt = useAppFormat();
+
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<RentalRange>(value);
@@ -104,11 +106,11 @@ export function RentalDateTimeRangeField({
    * `compactPoint` bỏ thứ cho ô hẹp; GIỜ thì không bao giờ bỏ — cắt mất giờ nhận là cắt đúng
    * thông tin quyết định số ngày tính tiền.
    */
-  const fmt = (d: Dayjs | null, fallback: string) =>
-    d ? (compactPoint ? d.format('DD/MM HH:mm') : formatRentalPoint(d)) : fallback;
+  const pointText = (d: Dayjs | null, fallback: string) =>
+    d ? (compactPoint ? d.format('DD/MM HH:mm') : fmt.rentalPoint(d)) : fallback;
 
   const complete = Boolean(value.pickupAt && value.returnAt);
-  const ariaValue = `${ariaLabel}: ${fmt(value.pickupAt, 'chưa chọn')} đến ${fmt(
+  const ariaValue = `${ariaLabel}: ${pointText(value.pickupAt, 'chưa chọn')} đến ${pointText(
     value.returnAt,
     'chưa chọn',
   )}`;
@@ -125,16 +127,16 @@ export function RentalDateTimeRangeField({
         {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
         <span className={styles.endpointLabelled}>
           <span className={styles.endpointLabel}>{labels.start}:</span>
-          <span className={styles.endpointValue}>{fmt(value.pickupAt, 'Chọn ngày giờ')}</span>
+          <span className={styles.endpointValue}>{pointText(value.pickupAt, 'Chọn ngày giờ')}</span>
         </span>
         <span className={styles.divider} aria-hidden />
         <span className={styles.endpointLabelled}>
           <span className={styles.endpointLabel}>{labels.end}:</span>
-          <span className={styles.endpointValue}>{fmt(value.returnAt, 'Chọn ngày giờ')}</span>
+          <span className={styles.endpointValue}>{pointText(value.returnAt, 'Chọn ngày giờ')}</span>
         </span>
         {complete ? (
           <span className={styles.durationPill}>
-            {formatRentalDuration(value.pickupAt!, value.returnAt!)}
+            {fmt.rentalDuration(value.pickupAt!, value.returnAt!)}
           </span>
         ) : null}
       </button>
@@ -147,11 +149,11 @@ export function RentalDateTimeRangeField({
         aria-label={ariaValue}
       >
         {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
-        <span className={styles.endpoint}>{fmt(value.pickupAt, labels.start)}</span>
+        <span className={styles.endpoint}>{pointText(value.pickupAt, labels.start)}</span>
         <span className={styles.sep} aria-hidden>
           →
         </span>
-        <span className={styles.endpoint}>{fmt(value.returnAt, labels.end)}</span>
+        <span className={styles.endpoint}>{pointText(value.returnAt, labels.end)}</span>
       </button>
     );
 

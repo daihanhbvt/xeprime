@@ -1,32 +1,26 @@
 /**
- * Hiển thị số KM. Tách khỏi component vì cả tab bảo dưỡng, Trung tâm bảo dưỡng và header
- * hồ sơ xe đều hiển thị KM, và cả ba phải nói cùng một thứ khi thiếu dữ liệu.
+ * Số KM — phần KHÔNG phụ thuộc ngôn ngữ.
  *
- * Luật §9 của docs/design/12: thiếu số thì nói `Chưa có`, KHÔNG bịa `0 km`.
+ * Luật §9 của docs/design/12: thiếu số thì nói "chưa có", KHÔNG bịa `0 km`. Việc chọn CHỮ cho
+ * "chưa có" / "còn bao nhiêu" / "quá hạn bao nhiêu" nằm ở `useAppFormat()`; ở đây chỉ còn phép
+ * phân loại, để cả tab bảo dưỡng, Trung tâm bảo dưỡng và header hồ sơ xe cùng phân loại một kiểu.
  */
-const KM_FORMAT = new Intl.NumberFormat('vi-VN');
 
-export const MISSING_VALUE_LABEL = 'Chưa có';
-/** Thiếu thành phần để tính mốc bảo dưỡng (§9) — dùng nguyên văn ở mọi surface. */
-export const INSUFFICIENT_DATA_LABEL = 'Chưa đủ dữ liệu';
+/** Cách diễn đạt quãng đường còn lại tới mốc bảo dưỡng. */
+export type RemainingKmKind = 'unknown' | 'overdue' | 'remaining';
 
-/** `45230` → `"45.230 km"`; `null` → `"Chưa có"` (không phải `"0 km"`). */
-export function formatKm(value: number | null | undefined): string {
-  if (value == null) return MISSING_VALUE_LABEL;
-  return `${KM_FORMAT.format(value)} km`;
-}
-
-/** Số KM không kèm đơn vị — cho ô nhập và các chỗ đã có nhãn "km" riêng. */
-export function formatKmNumber(value: number | null | undefined): string {
-  return value == null ? MISSING_VALUE_LABEL : KM_FORMAT.format(value);
+export interface RemainingKm {
+  readonly kind: RemainingKmKind;
+  /** Trị tuyệt đối của số KM; `null` khi chưa đủ dữ liệu để kết luận. */
+  readonly km: number | null;
 }
 
 /**
  * KM còn lại tới mốc bảo dưỡng, diễn đạt theo hướng người đọc cần: còn bao nhiêu, hay đã
- * vượt bao nhiêu. `null` = chưa đủ dữ liệu để kết luận.
+ * vượt bao nhiêu. `unknown` = chưa đủ dữ liệu để kết luận.
  */
-export function formatRemainingKm(value: number | null | undefined): string {
-  if (value == null) return INSUFFICIENT_DATA_LABEL;
-  if (value <= 0) return `Quá hạn ${KM_FORMAT.format(Math.abs(value))} km`;
-  return `Còn ${KM_FORMAT.format(value)} km`;
+export function remainingKm(value: number | null | undefined): RemainingKm {
+  if (value == null) return { kind: 'unknown', km: null };
+  if (value <= 0) return { kind: 'overdue', km: Math.abs(value) };
+  return { kind: 'remaining', km: value };
 }

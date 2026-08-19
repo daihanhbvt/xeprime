@@ -18,8 +18,6 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { VEHICLE_EDIT_TAB, vehicleTabPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatMoneyVnd } from '@/lib/money';
-import { formatKm } from '@/lib/odometer';
 import { getErrorMessage } from '@/services/api-client';
 import {
   cancelMaintenanceRecord,
@@ -33,6 +31,7 @@ import {
 import type { MaintenanceRecord } from '@/features/vehicle-maintenance/types';
 import { formatDateTime } from '../utils/calendar-date.util';
 import styles from './VehicleBlockDialog.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * Chi tiết lịch bảo dưỡng NGAY TRÊN LỊCH — bấm event `maintenance` mở ra đây.
@@ -57,6 +56,8 @@ export function MaintenanceEventDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const { has } = usePermissions();
   const { message, modal } = App.useApp();
   const canView = has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
@@ -156,6 +157,7 @@ export function MaintenanceEventDialog({
                     <StatusTag
                       value={record.status as MaintenanceStatus}
                       meta={MAINTENANCE_STATUS_META}
+                      group="maintenanceStatus"
                     />
                   ),
                 },
@@ -168,14 +170,14 @@ export function MaintenanceEventDialog({
                       : 'Chưa đặt lịch',
                 },
                 ...(record.odometerKm != null
-                  ? [{ key: 'km', label: 'KM ghi nhận', children: formatKm(record.odometerKm) }]
+                  ? [{ key: 'km', label: 'KM ghi nhận', children: fmt.km(record.odometerKm) }]
                   : []),
                 ...(record.providerName
                   ? [{ key: 'provider', label: 'Đơn vị thực hiện', children: record.providerName }]
                   : []),
                 // Chi phí là quyền RIÊNG — thiếu quyền thì dòng vắng mặt hẳn, không hiện 0đ giả.
                 ...(canViewCost && record.cost != null
-                  ? [{ key: 'cost', label: 'Chi phí', children: formatMoneyVnd(record.cost) }]
+                  ? [{ key: 'cost', label: 'Chi phí', children: fmt.money(record.cost) }]
                   : []),
                 ...(record.notes
                   ? [{ key: 'notes', label: 'Ghi chú', children: record.notes }]

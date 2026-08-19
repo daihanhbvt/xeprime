@@ -4,9 +4,10 @@ import { DatePicker, Form } from 'antd';
 import { useId } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 
-import { DAY_PARAM_FORMAT, DATE_FORMAT, dayjs, type Dayjs } from '@/lib/datetime';
+import { DAY_PARAM_FORMAT, dayjs, type Dayjs } from '@/lib/datetime';
 
 import styles from './field.module.css';
+import { useDatePickerPattern } from '@/i18n/use-app-format';
 
 interface DateTimeFieldBaseProps<T extends FieldValues> {
   control: Control<T>;
@@ -33,7 +34,6 @@ type DateTimeFieldProps<T extends FieldValues> = DateTimeFieldBaseProps<T> &
   );
 
 const TIME_CONFIG = { format: 'HH:mm', minuteStep: 15 } as const;
-const DISPLAY_FORMAT = 'DD/MM/YYYY HH:mm';
 
 /**
  * Ô chọn ngày-giờ nối RHF ↔ AntD DatePicker.
@@ -48,6 +48,7 @@ const DISPLAY_FORMAT = 'DD/MM/YYYY HH:mm';
  */
 export function DateTimeField<T extends FieldValues>(props: DateTimeFieldProps<T>) {
   const { control, name, label, placeholder } = props;
+  const datePattern = useDatePickerPattern();
   const { field, fieldState } = useController({ control, name });
   const id = useId();
 
@@ -56,7 +57,7 @@ export function DateTimeField<T extends FieldValues>(props: DateTimeFieldProps<T
     id,
     className: styles.control,
     ...(dateOnly ? {} : { showTime: TIME_CONFIG }),
-    format: dateOnly ? DATE_FORMAT : DISPLAY_FORMAT,
+    format: dateOnly ? datePattern.date : datePattern.dateTime,
     onBlur: field.onBlur,
     status: fieldState.error ? ('error' as const) : undefined,
   };

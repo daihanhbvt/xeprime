@@ -1,0 +1,14 @@
+{
+  "title": "Tài khoản của tôi",
+  "signInRequired": "Vui lòng đăng nhập để xem tài khoản của bạn.",
+  "signIn": "Đăng nhập",
+  "saved": "Đã cập nhật tài khoản",
+  "noEmail": "Chưa có email",
+  "noPhone": "Chưa có số điện thoại",
+  "verified": "Đã xác thực",
+  "displayName": "Họ tên hiển thị",
+  "displayNamePlaceholder": "Nguyễn Văn A",
+  "avatarUrl": "Ảnh đại diện (đường dẫn)",
+  "identityLockedTitle": "Email và số điện thoại chưa đổi được",
+  "identityLockedBody": "Hai thông tin này dùng để đăng nhập nên cần một luồng xác thực riêng. Liên hệ hỗ trợ nếu bạn cần đổi."
+}

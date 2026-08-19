@@ -44,7 +44,6 @@ import { TextField } from '@/components/form/TextField';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDate } from '@/lib/datetime';
 import { ApiClientError, getErrorCode, getErrorMessage } from '@/services/api-client';
 import { validateDocumentFile, uploadToR2 } from '@/services/upload';
 import type { VehicleDetail } from '@/features/vehicles/types';
@@ -63,12 +62,10 @@ import {
   useVehicleDocuments,
   useVehicleDocumentVersions,
 } from '../hooks';
-import type {
-  ApplyOcrFieldsInput,
-  VehicleDocumentOcrJob,
-  VehicleDocumentSummary,
-} from '../types';
+import type { ApplyOcrFieldsInput, VehicleDocumentOcrJob, VehicleDocumentSummary } from '../types';
 import styles from './VehicleDocumentsWorkspace.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 
 const STANDARD_TYPES: readonly VehicleDocumentType[] = [
   VEHICLE_DOCUMENT_TYPE.REGISTRATION,
@@ -164,6 +161,7 @@ function DocumentsList({
   canViewDetails: boolean;
   canViewFiles: boolean;
 }) {
+  const uploadRejectionMessage = useUploadRejectionMessage();
   const { message } = App.useApp();
   const invalidate = useInvalidateVehicleDocuments(vehicle.id);
   const [uploading, setUploading] = useState<Record<string, UploadingState>>({});
@@ -211,7 +209,7 @@ function DocumentsList({
   ) {
     const invalid = validateDocumentFile(file);
     if (invalid) {
-      message.error(invalid);
+      message.error(uploadRejectionMessage(invalid));
       return;
     }
     setUploadState(rowKey, { key: rowKey, fileName: file.name, progress: 0, file });
@@ -398,6 +396,8 @@ function DocumentRow({
   onEdit: () => void;
   onHistory: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const doc = row.document;
   const presentation = (doc?.presentation ??
     VEHICLE_DOCUMENT_PRESENTATION.MISSING) as VehicleDocumentPresentation;
@@ -420,7 +420,7 @@ function DocumentRow({
           Ngày hết hạn:{' '}
           <strong>
             {doc?.expiresAt
-              ? formatDate(`${doc.expiresAt}T00:00:00.000Z`)
+              ? fmt.date(`${doc.expiresAt}T00:00:00.000Z`)
               : hasFile
                 ? 'Không thời hạn'
                 : '--/--/----'}
@@ -431,7 +431,7 @@ function DocumentRow({
             className={styles.rowAlert}
             type="warning"
             showIcon
-            message={`Giấy tờ sắp hết hạn (mốc hết hạn: ${formatDate(`${doc.expiresAt}T00:00:00.000Z`)}).`}
+            message={`Giấy tờ sắp hết hạn (mốc hết hạn: ${fmt.date(`${doc.expiresAt}T00:00:00.000Z`)}).`}
           />
         ) : null}
         {presentation === VEHICLE_DOCUMENT_PRESENTATION.EXPIRED && doc?.expiresAt ? (
@@ -439,7 +439,7 @@ function DocumentRow({
             className={styles.rowAlert}
             type="error"
             showIcon
-            message={`Hết hạn sử dụng: đã hết hiệu lực từ ngày ${formatDate(`${doc.expiresAt}T00:00:00.000Z`)}.`}
+            message={`Hết hạn sử dụng: đã hết hiệu lực từ ngày ${fmt.date(`${doc.expiresAt}T00:00:00.000Z`)}.`}
           />
         ) : null}
         {uploading ? (
@@ -711,7 +711,13 @@ function DocumentMetadataDialog({
                 <DateTimeField control={control} name="expiresAt" label="Ngày hết hạn" dateOnly />
               </Col>
               <Col xs={24}>
-                <TextAreaField control={control} name="notes" label="Ghi chú" rows={2} maxLength={4000} />
+                <TextAreaField
+                  control={control}
+                  name="notes"
+                  label="Ghi chú"
+                  rows={2}
+                  maxLength={4000}
+                />
               </Col>
             </Row>
           </Form>
@@ -734,6 +740,8 @@ function DocumentHistoryDialog({
   canViewFiles: boolean;
   onClose: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   // Lịch sử chứa tên file → endpoint riêng sau quyền view_files (Wave 5.1).
   const versions = useVehicleDocumentVersions(vehicleId, document?.id ?? null, canViewFiles);
@@ -769,7 +777,9 @@ function DocumentHistoryDialog({
       ) : (
         <>
           {versions.isLoading ? <Skeleton active paragraph={{ rows: 3 }} /> : null}
-          {versions.isError ? <Alert type="error" showIcon message="Không tải được lịch sử" /> : null}
+          {versions.isError ? (
+            <Alert type="error" showIcon message="Không tải được lịch sử" />
+          ) : null}
           {versions.data ? (
             <List
               dataSource={versions.data}
@@ -790,8 +800,8 @@ function DocumentHistoryDialog({
                     title={`Bản ${version.version} — ${version.file.name}`}
                     description={
                       version.archivedAt
-                        ? `Đã thay thế ${formatDate(version.archivedAt)}`
-                        : `Đang sử dụng · tải lên ${formatDate(version.uploadedAt)}`
+                        ? `Đã thay thế ${fmt.date(version.archivedAt)}`
+                        : `Đang sử dụng · tải lên ${fmt.date(version.uploadedAt)}`
                     }
                   />
                 </List.Item>

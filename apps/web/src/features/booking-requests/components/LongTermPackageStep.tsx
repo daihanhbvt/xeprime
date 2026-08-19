@@ -24,11 +24,11 @@ import {
 } from '@xeprime/types';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { cx } from '@/lib/cx';
-import { formatMoneyVnd } from '@/lib/money';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import type { PublicQuote } from '@/features/rental-policies/types';
 
 import styles from './LongTermPackageStep.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 type LongTermPackage = NonNullable<PublicListingDetail['longTermPackages']>[number];
 
@@ -95,6 +95,8 @@ export function LongTermPackageStep({
   quote,
   quoteLoading,
 }: Props) {
+  const fmt = useAppFormat();
+
   const longTerm = quote?.breakdown.longTerm ?? null;
   /*
    * Lịch mở NGAY khi khách bấm "Chọn ngày cụ thể" — không đẻ thêm một ô nhập để bấm lần nữa.
@@ -241,12 +243,12 @@ export function LongTermPackageStep({
                 </div>
                 <div className={styles.summaryRow}>
                   <dt>Giá thuê (chưa ưu đãi)</dt>
-                  <dd>{formatMoneyVnd(longTerm.basePackageAmount)}</dd>
+                  <dd>{fmt.money(longTerm.basePackageAmount)}</dd>
                 </div>
                 {longTerm.durationDiscountPercent ? (
                   <div className={cx(styles.summaryRow, styles.summaryDiscount)}>
                     <dt>Ưu đãi ({longTerm.durationDiscountPercent}%)</dt>
-                    <dd>−{formatMoneyVnd(longTerm.durationDiscountAmount)}</dd>
+                    <dd>−{fmt.money(longTerm.durationDiscountAmount)}</dd>
                   </div>
                 ) : null}
               </dl>
@@ -258,15 +260,12 @@ export function LongTermPackageStep({
                     <InfoCircleOutlined className={styles.infoIcon} aria-hidden />
                   </Tooltip>
                 </span>
-                <b className={styles.summaryTotalValue}>
-                  {formatMoneyVnd(longTerm.finalPackageAmount)}
-                </b>
+                <b className={styles.summaryTotalValue}>{fmt.money(longTerm.finalPackageAmount)}</b>
               </div>
 
               <p className={styles.summaryNote}>
-                Giá gói là tiền thuê xe. Tiền cọc{' '}
-                {formatMoneyVnd(quote?.breakdown.depositAmount ?? '0')} thu riêng và được hoàn khi
-                trả xe; gian hàng xác nhận giá chốt khi duyệt yêu cầu.
+                Giá gói là tiền thuê xe. Tiền cọc {fmt.money(quote?.breakdown.depositAmount ?? '0')}{' '}
+                thu riêng và được hoàn khi trả xe; gian hàng xác nhận giá chốt khi duyệt yêu cầu.
               </p>
             </section>
 
@@ -278,7 +277,7 @@ export function LongTermPackageStep({
               <p className={styles.savings}>
                 <TagOutlined aria-hidden />
                 <span>
-                  Tiết kiệm <b>{formatMoneyVnd(longTerm.durationDiscountAmount)}</b> khi thuê{' '}
+                  Tiết kiệm <b>{fmt.money(longTerm.durationDiscountAmount)}</b> khi thuê{' '}
                   {longTermPackageLabel(longTerm.packageMonths)} so với giá gốc.
                 </span>
               </p>

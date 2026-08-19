@@ -4,18 +4,14 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Alert, Button, Input, Select } from 'antd';
 import { useState } from 'react';
 import {
-  SURCHARGE_CATEGORY,
-  SURCHARGE_CATEGORY_LABEL,
-  SURCHARGE_CATEGORY_VALUES,
-  type SurchargeCategory,
-} from '@xeprime/types';
+  SURCHARGE_CATEGORY, SURCHARGE_CATEGORY_LABEL, SURCHARGE_CATEGORY_VALUES, type SurchargeCategory, } from '@xeprime/types';
 import { MoneyInput } from '@/components/form/MoneyInput';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { useAddSurcharge, useVoidSurcharge } from '../hooks';
 import type { BookingSettlement } from '../types';
 import styles from './SurchargeDialog.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const CATEGORY_OPTIONS = SURCHARGE_CATEGORY_VALUES.map((value) => ({
   value,
@@ -42,6 +38,8 @@ export function SurchargeDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const add = useAddSurcharge(bookingId);
   const remove = useVoidSurcharge(bookingId);
@@ -100,7 +98,7 @@ export function SurchargeDialog({
                 <span className={styles.itemBody}>
                   <span className={styles.itemHead}>
                     <b>{SURCHARGE_CATEGORY_LABEL[row.category as SurchargeCategory]}</b>
-                    <b className={styles.money}>{formatMoneyVnd(row.amount)}</b>
+                    <b className={styles.money}>{fmt.money(row.amount)}</b>
                   </span>
                   <span className={styles.itemReason}>{row.reason}</span>
                 </span>
@@ -155,7 +153,7 @@ export function SurchargeDialog({
             <Alert
               type="warning"
               showIcon
-              message={`Đề xuất từ chính sách quá giờ: ${formatMoneyVnd(overtime.amount!)}`}
+              message={`Đề xuất từ chính sách quá giờ: ${fmt.money(overtime.amount!)}`}
               description={overtime.formula}
               action={
                 <Button size="small" onClick={() => setAmount(Number(overtime.amount))}>
@@ -191,20 +189,20 @@ export function SurchargeDialog({
         <dl className={styles.totals}>
           <div className={styles.totalRow}>
             <dt>Tiền cọc đã nhận</dt>
-            <dd>{formatMoneyVnd(settlement.depositReceived)}</dd>
+            <dd>{fmt.money(settlement.depositReceived)}</dd>
           </div>
           <div className={styles.totalRow}>
             <dt>Tổng chi phí phát sinh</dt>
-            <dd className={styles.negative}>−{formatMoneyVnd(settlement.surchargeTotal)}</dd>
+            <dd className={styles.negative}>−{fmt.money(settlement.surchargeTotal)}</dd>
           </div>
           <div className={styles.totalRowStrong}>
             <dt>Đề xuất hoàn lại cho khách</dt>
-            <dd className={styles.positive}>{formatMoneyVnd(settlement.proposedRefund)}</dd>
+            <dd className={styles.positive}>{fmt.money(settlement.proposedRefund)}</dd>
           </div>
           {Number(settlement.additionalDue) > 0 ? (
             <div className={styles.totalRowStrong}>
               <dt>Cần thu thêm</dt>
-              <dd className={styles.negative}>{formatMoneyVnd(settlement.additionalDue)}</dd>
+              <dd className={styles.negative}>{fmt.money(settlement.additionalDue)}</dd>
             </div>
           ) : null}
         </dl>

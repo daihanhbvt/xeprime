@@ -9,7 +9,15 @@ import type { PublicBanner } from './types';
  */
 export async function fetchBannersServer(): Promise<PublicBanner[]> {
   try {
-    const res = await fetch(`${getApiBaseUrl()}/public/banners`, { next: { revalidate: 60 } });
+    /*
+     * Dữ liệu này KHÔNG phụ thuộc ngôn ngữ nên hai ngôn ngữ dùng chung một bản cache.
+     * `cache: 'force-cache'` khai tường minh vì root layout đặt `dynamic = 'force-dynamic'`
+     * (ADR 0012): route render theo request, nhưng lời gọi này thì không cần.
+     */
+    const res = await fetch(`${getApiBaseUrl()}/public/banners`, {
+      cache: 'force-cache',
+      next: { revalidate: 60 },
+    });
     if (!res.ok) return [];
     const body = (await res.json()) as { data: PublicBanner[] };
     return body.data;

@@ -9,7 +9,9 @@ import {
 import { Badge } from 'antd';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import type { ComponentType } from 'react';
+import type { PublicNavKey } from '@/i18n/keys';
 import { cx } from '@/lib/cx';
 import { ROUTES } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
@@ -20,7 +22,8 @@ import styles from './MobileTabBar.module.css';
 
 interface Tab {
   key: string;
-  label: string;
+  /** Khoá trong `Navigation.public` — nhãn dựng lúc render. */
+  labelKey: PublicNavKey;
   href: string;
   Icon: ComponentType;
   /** Hiện huy hiệu số tin chưa đọc. */
@@ -37,6 +40,7 @@ interface Tab {
  * chủ shop.
  */
 export function MobileTabBar() {
+  const t = useTranslations('Navigation.public');
   const pathname = usePathname();
   const { data: user } = useCurrentUser();
   const { data: chatUnread } = useChatUnreadCount(!!user);
@@ -44,10 +48,10 @@ export function MobileTabBar() {
   const nextFromHere = useNextFromCurrentPath();
 
   const tabs: Tab[] = [
-    { key: 'explore', label: 'Khám phá', href: ROUTES.HOME, Icon: CompassOutlined },
+    { key: 'explore', labelKey: 'explore', href: ROUTES.HOME, Icon: CompassOutlined },
     {
       key: 'chat',
-      label: 'Tin nhắn',
+      labelKey: 'chat',
       href: ROUTES.CHAT,
       Icon: MessageOutlined,
       badge: true,
@@ -55,14 +59,14 @@ export function MobileTabBar() {
     },
     {
       key: 'trips',
-      label: 'Chuyến',
+      labelKey: 'tripsShort',
       href: ROUTES.TRIPS,
       Icon: ScheduleOutlined,
       requiresAuth: true,
     },
     {
       key: 'account',
-      label: user ? 'Tài khoản' : 'Đăng nhập',
+      labelKey: user ? 'account' : 'login',
       href: ROUTES.ACCOUNT,
       Icon: IdcardOutlined,
       requiresAuth: true,
@@ -70,7 +74,7 @@ export function MobileTabBar() {
   ];
 
   return (
-    <nav className={styles.bar} aria-label="Điều hướng nhanh">
+    <nav className={styles.bar} aria-label={t('quickNavLabel')}>
       {tabs.map((tab) => {
         // Khớp tuyệt đối hoặc khớp tiền tố CÓ DẤU `/` — `startsWith(tab.href)` trần sẽ cho
         // `/tripsomething` sáng tab `/trips`. Hôm nay chưa route nào đụng nhau, nhưng đây là
@@ -93,7 +97,7 @@ export function MobileTabBar() {
                 icon
               )}
             </span>
-            {tab.label}
+            {t(tab.labelKey)}
           </>
         );
 

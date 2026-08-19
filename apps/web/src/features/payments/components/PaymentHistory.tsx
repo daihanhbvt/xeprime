@@ -2,23 +2,18 @@
 
 import { App, Button, List, Popconfirm, Tag } from 'antd';
 import {
-  PAYMENT_METHOD_META,
-  PAYMENT_STATUS,
-  PAYMENT_STATUS_META,
-  PERMISSION,
-  type PaymentMethod,
-  type PaymentStatus,
-} from '@xeprime/types';
+  PAYMENT_METHOD_META, PAYMENT_STATUS, PAYMENT_STATUS_META, PERMISSION, type PaymentMethod, type PaymentStatus, } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDateTime } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { usePaymentHistory, useVoidPayment } from '../hooks/use-payments';
 import styles from './PaymentHistory.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /** Lịch sử thu tiền của một đơn + huỷ giao dịch (gate PAYMENT_VOID). */
 export function PaymentHistory({ bookingId }: { bookingId: string }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const { has } = usePermissions();
   const { data, isLoading } = usePaymentHistory(bookingId);
@@ -68,11 +63,11 @@ export function PaymentHistory({ bookingId }: { bookingId: string }) {
           >
             <div className={styles.row}>
               <span className={refunded ? styles.refunded : styles.amount}>
-                {formatMoneyVnd(p.amount)}
+                {fmt.money(p.amount)}
               </span>
               <Tag>{PAYMENT_METHOD_META[p.method as PaymentMethod]?.label ?? p.method}</Tag>
-              <StatusTag value={p.status as PaymentStatus} meta={PAYMENT_STATUS_META} />
-              <span className={styles.time}>{formatDateTime(p.paidAt ?? p.createdAt)}</span>
+              <StatusTag value={p.status as PaymentStatus} meta={PAYMENT_STATUS_META} group="paymentStatus" />
+              <span className={styles.time}>{fmt.dateTime(p.paidAt ?? p.createdAt)}</span>
             </div>
           </List.Item>
         );

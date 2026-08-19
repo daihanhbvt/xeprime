@@ -9,6 +9,7 @@ import { cx } from '@/lib/cx';
 import { XP_TOKENS } from '@/styles/theme';
 
 import styles from './DetailDrawer.module.css';
+import { useTranslations } from 'next-intl';
 
 /** Bề rộng panel desktop — token Wave 1A (`--xp-drawer-width` / `-lg`). */
 const DRAWER_WIDTH = {
@@ -77,17 +78,20 @@ export function DetailDrawer({
   loading = false,
   error = false,
   onRetry,
-  errorTitle = 'Không tải được dữ liệu',
+  errorTitle,
   // Mặc định KHÔNG có mô tả: các panel đang chạy chỉ hiện tiêu đề lỗi. Thêm câu mặc định sẽ
   // là chữ mới không ai viết. Nơi gọi nào cần thì tự truyền.
   errorDescription,
-  retryText = 'Thử lại',
+  retryText,
   ariaLabel,
   destroyOnClose = true,
   className,
   bodyClassName,
   'data-testid': testId,
 }: DetailDrawerProps) {
+  const tCommon = useTranslations('Common');
+  const errorTitleText = errorTitle ?? tCommon('states.loadError');
+  const retryLabel = retryText ?? tCommon('actions.retry');
   const isMobile = useIsMobile();
 
   return (
@@ -119,12 +123,12 @@ export function DetailDrawer({
       return (
         <Result
           status="error"
-          title={errorTitle}
+          title={errorTitleText}
           subTitle={errorDescription}
           extra={
             onRetry ? (
               <Button type="primary" onClick={onRetry}>
-                {retryText}
+                {retryLabel}
               </Button>
             ) : undefined
           }

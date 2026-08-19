@@ -7,6 +7,7 @@ import { getErrorMessage } from '@/services/api-client';
 import { useDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import styles from './FeaturedLocations.module.css';
+import { useTranslations } from 'next-intl';
 
 /** Số ô hiện ban đầu; "Xem tất cả" mở hết phần đã tải. */
 const PREVIEW_COUNT = 5;
@@ -17,6 +18,7 @@ const FETCH_LIMIT = 12;
  * Bấm một địa điểm sẽ lọc danh sách gợi ý theo tỉnh đó rồi cuộn xuống.
  */
 export function FeaturedLocations() {
+  const t = useTranslations('Marketplace.locations');
   const { setFilters } = useMarketplaceFilters();
   const { data, isLoading, isError, error } = useDestinations(FETCH_LIMIT);
   const [expanded, setExpanded] = useState(false);
@@ -38,13 +40,13 @@ export function FeaturedLocations() {
       <header className={styles.head}>
         <div>
           <h2 id="loc-title" className={styles.title}>
-            Địa điểm nổi bật
+            {t('title')}
           </h2>
-          <p className={styles.sub}>Khám phá xe thuê tại các điểm đến phổ biến</p>
+          <p className={styles.sub}>{t('subtitle')}</p>
         </div>
         {all.length > PREVIEW_COUNT ? (
           <button type="button" className={styles.seeAll} onClick={() => setExpanded((v) => !v)}>
-            {expanded ? 'Thu gọn' : 'Xem tất cả'} <RightOutlined />
+            {expanded ? t('collapse') : t('expand')} <RightOutlined />
           </button>
         ) : null}
       </header>
@@ -53,7 +55,7 @@ export function FeaturedLocations() {
         <Alert
           type="error"
           showIcon
-          message="Không tải được địa điểm"
+          message={t('loadError')}
           description={getErrorMessage(error)}
         />
       ) : isLoading ? (
@@ -84,7 +86,7 @@ export function FeaturedLocations() {
               <span className={styles.shade} aria-hidden="true" />
               <span className={styles.meta}>
                 <span className={styles.name}>{loc.provinceName}</span>
-                <span className={styles.count}>{loc.vehicleCount} xe có sẵn</span>
+                <span className={styles.count}>{t('available', { count: loc.vehicleCount })}</span>
               </span>
             </button>
           ))}

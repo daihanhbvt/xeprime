@@ -56,9 +56,8 @@ import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-ve
 import { maskPhone } from '@/features/phone-verification/mask';
 import { fetchPublicQuote } from '@/features/rental-policies/api';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { formatRentalPoint } from '@/lib/datetime';
 import { cx } from '@/lib/cx';
-import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
+import { applyDiscountPercent } from '@/lib/money';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import { checkAvailability, submitBookingRequest } from '../api';
@@ -66,6 +65,7 @@ import { PICKUP_METHOD, requestFormSchema, type RequestFormValues } from '../sch
 import { BookingSteps, type BookingStepKey } from './BookingSteps';
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
 import styles from './RequestBookingFlow.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface RequestBookingFlowProps {
   vehicleId: string;
@@ -129,6 +129,8 @@ export function RequestBookingFlow({
   onBusyChange,
   onResultChange,
 }: RequestBookingFlowProps) {
+  const fmt = useAppFormat();
+
   const router = useRouter();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<BookingStepKey>('time');
@@ -634,8 +636,8 @@ export function RequestBookingFlow({
             <div className={styles.doneRow}>
               <dt>Thời gian</dt>
               <dd>
-                {v.pickupAt ? formatRentalPoint(v.pickupAt) : '—'} →{' '}
-                {v.returnAt ? formatRentalPoint(v.returnAt) : '—'}
+                {v.pickupAt ? fmt.rentalPoint(v.pickupAt) : '—'} →{' '}
+                {v.returnAt ? fmt.rentalPoint(v.returnAt) : '—'}
               </dd>
             </div>
             <div className={styles.doneRow}>
@@ -662,7 +664,7 @@ export function RequestBookingFlow({
                 {/* Còn phụ phí chưa tính (estimateNote) thì KHÔNG gọi "Tổng dự kiến" — 17/08. */}
                 <dt>{quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : 'Tổng dự kiến'}</dt>
                 {/* Tiền LUÔN qua bộ format — `1800000` trần là con số thô lọt ra ngoài. */}
-                <dd>{formatMoneyVnd(quoteQ.data.breakdown.totalAmount)}</dd>
+                <dd>{fmt.money(quoteQ.data.breakdown.totalAmount)}</dd>
               </div>
             ) : null}
           </dl>
@@ -883,8 +885,8 @@ export function RequestBookingFlow({
                       {quoteQ.data.breakdown.longTerm?.durationDiscountPercent ? (
                         <strong className={styles.savingsText}>
                           Tiết kiệm{' '}
-                          {formatMoneyVnd(quoteQ.data.breakdown.longTerm.durationDiscountAmount)}{' '}
-                          nhờ ưu đãi thời hạn{' '}
+                          {fmt.money(quoteQ.data.breakdown.longTerm.durationDiscountAmount)} nhờ ưu
+                          đãi thời hạn{' '}
                           {longTermPackageLabel(quoteQ.data.breakdown.longTerm.packageMonths)}.
                         </strong>
                       ) : null}
@@ -927,7 +929,7 @@ export function RequestBookingFlow({
                       <div className={styles.priceRow}>
                         <span>Giá dài hạn cơ sở</span>
                         <b>
-                          {formatMoneyVnd(listing.monthlyPrice)}
+                          {fmt.money(listing.monthlyPrice)}
                           <span className={styles.priceUnit}>/tháng</span>
                         </b>
                       </div>
@@ -943,7 +945,7 @@ export function RequestBookingFlow({
                         <div className={styles.priceRow}>
                           <span>Nội thành (đã gồm tài xế)</span>
                           <b>
-                            {formatMoneyVnd(listing.withDriverDailyPrice)}
+                            {fmt.money(listing.withDriverDailyPrice)}
                             <span className={styles.priceUnit}>/ngày</span>
                           </b>
                         </div>
@@ -951,7 +953,7 @@ export function RequestBookingFlow({
                           <div className={styles.priceRow}>
                             <span>Liên tỉnh (khứ hồi)</span>
                             <b>
-                              {formatMoneyVnd(listing.withDriverInterCityPrice)}
+                              {fmt.money(listing.withDriverInterCityPrice)}
                               <span className={styles.priceUnit}>/ngày</span>
                             </b>
                           </div>
@@ -960,7 +962,7 @@ export function RequestBookingFlow({
                           <div className={styles.priceRow}>
                             <span>Liên tỉnh 1 chiều</span>
                             <b>
-                              {formatMoneyVnd(listing.withDriverOneWayPrice)}
+                              {fmt.money(listing.withDriverOneWayPrice)}
                               <span className={styles.priceUnit}>/ngày</span>
                             </b>
                           </div>
@@ -980,10 +982,10 @@ export function RequestBookingFlow({
                           <b>
                             {promoPercent > 0 ? (
                               <s className={styles.priceStrike}>
-                                {formatMoneyVnd(listing.weekdayPrice)}
+                                {fmt.money(listing.weekdayPrice)}
                               </s>
                             ) : null}
-                            {formatMoneyVnd(
+                            {fmt.money(
                               promoPercent > 0
                                 ? applyDiscountPercent(listing.weekdayPrice, promoPercent)
                                 : listing.weekdayPrice,
@@ -998,10 +1000,10 @@ export function RequestBookingFlow({
                           <b>
                             {promoPercent > 0 ? (
                               <s className={styles.priceStrike}>
-                                {formatMoneyVnd(listing.weekendPrice)}
+                                {fmt.money(listing.weekendPrice)}
                               </s>
                             ) : null}
-                            {formatMoneyVnd(
+                            {fmt.money(
                               promoPercent > 0
                                 ? applyDiscountPercent(listing.weekendPrice, promoPercent)
                                 : listing.weekendPrice,
@@ -1014,7 +1016,7 @@ export function RequestBookingFlow({
                         <div className={styles.priceRow}>
                           <span>Thuê theo giờ</span>
                           <b>
-                            {formatMoneyVnd(listing.hourlyPrice)}
+                            {fmt.money(listing.hourlyPrice)}
                             <span className={styles.priceUnit}>/giờ</span>
                           </b>
                         </div>
@@ -1043,8 +1045,8 @@ export function RequestBookingFlow({
           <section className={styles.stepBody}>
             <div className={styles.dateSummary}>
               <span>
-                {watchedPickup ? formatRentalPoint(watchedPickup) : '—'} →{' '}
-                {watchedReturn ? formatRentalPoint(watchedReturn) : '—'}
+                {watchedPickup ? fmt.rentalPoint(watchedPickup) : '—'} →{' '}
+                {watchedReturn ? fmt.rentalPoint(watchedReturn) : '—'}
               </span>
               <button type="button" className={styles.linkBtn} onClick={() => setStep('time')}>
                 Đổi thời gian
@@ -1331,11 +1333,11 @@ export function RequestBookingFlow({
                 <>
                   <div className={styles.reviewRow}>
                     <dt>Nhận xe</dt>
-                    <dd>{watchedPickup ? formatRentalPoint(watchedPickup) : '—'}</dd>
+                    <dd>{watchedPickup ? fmt.rentalPoint(watchedPickup) : '—'}</dd>
                   </div>
                   <div className={styles.reviewRow}>
                     <dt>Trả xe</dt>
-                    <dd>{watchedReturn ? formatRentalPoint(watchedReturn) : '—'}</dd>
+                    <dd>{watchedReturn ? fmt.rentalPoint(watchedReturn) : '—'}</dd>
                   </div>
                   <div className={styles.reviewRow}>
                     <dt>Hình thức</dt>
@@ -1389,9 +1391,8 @@ export function RequestBookingFlow({
                   <>
                     {quoteQ.data.breakdown.longTerm?.durationDiscountPercent ? (
                       <strong className={styles.savingsText}>
-                        Tiết kiệm{' '}
-                        {formatMoneyVnd(quoteQ.data.breakdown.longTerm.durationDiscountAmount)} nhờ
-                        ưu đãi thời hạn{' '}
+                        Tiết kiệm {fmt.money(quoteQ.data.breakdown.longTerm.durationDiscountAmount)}{' '}
+                        nhờ ưu đãi thời hạn{' '}
                         {longTermPackageLabel(quoteQ.data.breakdown.longTerm.packageMonths)}.
                       </strong>
                     ) : null}

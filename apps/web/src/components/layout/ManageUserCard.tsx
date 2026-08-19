@@ -13,6 +13,7 @@ import { usePortalLogout } from '@/features/auth/hooks/use-portal-logout';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { initialOf } from '@/lib/initials';
 import styles from './ManageUserCard.module.css';
+import { useTranslations } from 'next-intl';
 
 /** Nhãn vai trò hiển thị: ưu tiên role gian hàng, rồi tới role nền tảng. */
 function roleLabel(roleKey: string | undefined, platformRole: string | null): string {
@@ -44,6 +45,7 @@ export interface ManageUserCardProps {
  * Đăng xuất gọi `usePortalLogout` dùng chung với `Topbar` — một luồng, hai lối vào.
  */
 export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUserCardProps) {
+  const t = useTranslations('ManageCommon');
   const { data: user } = useCurrentUser();
   const logout = usePortalLogout();
 
@@ -65,7 +67,7 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
       size="small"
       className={cx(styles.logout, dark && styles.logoutDark)}
       icon={<LogoutOutlined />}
-      aria-label="Đăng xuất"
+      aria-label={t('shell.logout')}
       onClick={() => void logout()}
     />
   );

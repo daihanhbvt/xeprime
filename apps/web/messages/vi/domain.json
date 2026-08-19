@@ -1,0 +1,498 @@
+{
+  "approvalStatus": {
+    "pending": "Chờ duyệt",
+    "approved": "Đã duyệt",
+    "rejected": "Từ chối",
+    "needs_revision": "Yêu cầu bổ sung",
+    "cancelled": "Đã hủy"
+  },
+  "auditActorScope": {
+    "tenant": "Gian hàng",
+    "platform": "Nền tảng",
+    "system": "Hệ thống"
+  },
+  "bodyType": {
+    "mini": "Mini car",
+    "sedan": "Sedan",
+    "cuv": "CUV",
+    "suv": "SUV",
+    "mpv": "MPV (7 chỗ)",
+    "pickup": "Bán tải",
+    "van": "Van",
+    "minibus": "Xe 16 chỗ",
+    "cargo": "Xe tải – Cargo"
+  },
+  "bookingDateField": {
+    "createdAt": "Theo ngày tạo",
+    "pickupAt": "Theo ngày nhận xe"
+  },
+  "bookingRequestStatus": {
+    "pending_host_approval": "Chờ chủ shop duyệt",
+    "approved_by_host": "Chủ shop đã duyệt",
+    "rejected_by_host": "Chủ shop từ chối",
+    "cancelled_by_customer": "Khách đã hủy",
+    "expired": "Quá hạn phản hồi",
+    "converted_to_booking": "Đã tạo đơn thuê"
+  },
+  "bookingStatus": {
+    "reserved": "Đã đặt trước",
+    "confirmed": "Đã xác nhận",
+    "active": "Đang thuê",
+    "completed": "Hoàn thành",
+    "cancelled": "Đã hủy",
+    "no_show": "Khách không đến"
+  },
+  "branchStatus": {
+    "active": "Đang hoạt động",
+    "inactive": "Ngừng hoạt động"
+  },
+  "catalogType": {
+    "vehicle_brand": "Hãng xe",
+    "body_type": "Kiểu dáng xe",
+    "fuel_type": "Nguồn năng lượng",
+    "vehicle_feature": "Tiện ích xe"
+  },
+  "contractStatus": {
+    "draft": "Nháp",
+    "active": "Hiệu lực",
+    "signed": "Đã ký",
+    "void": "Vô hiệu"
+  },
+  "conversationStatus": {
+    "open": "Đang mở",
+    "closed": "Đã đóng",
+    "flagged": "Cần xem xét",
+    "archived": "Đã lưu trữ"
+  },
+  "customerDocumentExpiry": {
+    "no_expiry": "Không có hạn",
+    "valid": "Còn hiệu lực",
+    "expiring_soon": "Sắp hết hạn",
+    "expired": "Đã hết hạn"
+  },
+  "customerDocumentType": {
+    "citizen_id": "CCCD / CMND",
+    "driver_licence": "Giấy phép lái xe",
+    "other": "Giấy tờ khác"
+  },
+  "customerTripFilter": {
+    "all": "Tất cả",
+    "pending": "Chờ xác nhận",
+    "upcoming": "Sắp tới",
+    "active": "Đang thuê",
+    "completed": "Hoàn thành",
+    "cancelled": "Đã hủy"
+  },
+  "customerTripStage": {
+    "pending_approval": "Chờ xác nhận",
+    "ready": "Sẵn sàng",
+    "active": "Đang thuê",
+    "completed": "Hoàn thành",
+    "cancelled": "Đã hủy chuyến",
+    "rejected": "Bị từ chối",
+    "no_show": "Không nhận xe"
+  },
+  "deliveryQuoteSource": {
+    "auto": "Tự động tính",
+    "manual": "Thủ công"
+  },
+  "depositStatus": {
+    "none": "Không có cọc",
+    "not_received": "Chưa ghi nhận đã thu cọc",
+    "received": "Đã nhận cọc",
+    "awaiting_refund": "Chờ hoàn cọc",
+    "settled": "Đã quyết toán cọc",
+    "refunded": "Đã hoàn cọc",
+    "partially_refunded": "Hoàn một phần"
+  },
+  "documentStatus": {
+    "pending": "Chờ duyệt",
+    "approved": "Đã duyệt",
+    "rejected": "Từ chối"
+  },
+  "driverStatus": {
+    "active": "Đang hoạt động",
+    "inactive": "Ngừng hoạt động"
+  },
+  "driverType": {
+    "staff": "Nhân viên",
+    "collaborator": "Cộng tác viên",
+    "temporary": "Thời vụ"
+  },
+  "financeCategoryType": {
+    "income": "Thu",
+    "expense": "Chi"
+  },
+  "fuelLevel": {
+    "full": "Đầy (1/1)",
+    "three_quarter": "3/4 bình",
+    "half": "1/2 bình",
+    "quarter": "1/4 bình",
+    "empty": "Cạn"
+  },
+  "fuelType": {
+    "gasoline": "Xăng",
+    "diesel": "Dầu (Diesel)",
+    "electric": "Điện",
+    "hybrid": "Hybrid"
+  },
+  "handoverCondition": {
+    "normal": "Bình thường",
+    "attention": "Có điểm cần lưu ý"
+  },
+  "handoverPhotoSlot": {
+    "front": "Trước",
+    "rear": "Sau",
+    "left": "Trái",
+    "right": "Phải",
+    "odometer": "Đồng hồ Odo"
+  },
+  "handoverStatus": {
+    "draft": "Bản nháp",
+    "ready": "Chờ xác nhận",
+    "confirmed": "Đã xác nhận",
+    "canceled": "Đã hủy"
+  },
+  "handoverType": {
+    "pickup": "Giao xe",
+    "return": "Nhận xe trả"
+  },
+  "inviteStatus": {
+    "pending": "Đang chờ",
+    "accepted": "Đã tham gia",
+    "expired": "Hết hạn",
+    "revoked": "Đã thu hồi"
+  },
+  "legacyServiceType": {
+    "both": "Tự lái & có tài xế"
+  },
+  "listingAmenity": {
+    "hourly": "Thuê theo giờ",
+    "delivery": "Giao xe tận nơi",
+    "noCollateral": "Miễn thế chấp",
+    "discount": "Đang giảm giá"
+  },
+  "listingSort": {
+    "recommended": "Gợi ý",
+    "newest": "Mới nhất",
+    "price_asc": "Giá thấp → cao",
+    "price_desc": "Giá cao → thấp"
+  },
+  "listingStatus": {
+    "active": "Đang hiển thị",
+    "hidden": "Đã ẩn",
+    "suspended": "Tạm ngưng",
+    "archived": "Đã lưu trữ"
+  },
+  "maintenanceBoardFilter": {
+    "all": "Tất cả",
+    "overdue": "Quá hạn",
+    "due_soon": "Sắp đến hạn",
+    "in_progress": "Đang bảo dưỡng",
+    "missing_odometer": "Thiếu dữ liệu KM",
+    "upcoming": "Lịch sắp tới",
+    "history": "Lịch sử",
+    "missing_return_km": "Thiếu KM trả"
+  },
+  "maintenanceDueStatus": {
+    "unknown": "Chưa đủ dữ liệu",
+    "ok": "Trong chu kỳ",
+    "due_soon": "Sắp đến hạn",
+    "overdue": "Quá hạn"
+  },
+  "maintenanceStatus": {
+    "scheduled": "Đã lên lịch",
+    "in_progress": "Đang bảo dưỡng",
+    "completed": "Hoàn tất",
+    "canceled": "Đã hủy"
+  },
+  "maintenanceType": {
+    "oil_change": "Thay dầu động cơ & Lọc dầu",
+    "periodic_service": "Bảo dưỡng định kỳ",
+    "repair": "Sửa chữa",
+    "tire": "Lốp xe",
+    "battery": "Ắc quy",
+    "other": "Hạng mục khác"
+  },
+  "membershipStatus": {
+    "active": "Đang hoạt động",
+    "invited": "Đã mời",
+    "locked": "Bị khoá",
+    "removed": "Đã gỡ"
+  },
+  "notificationType": {
+    "booking_created": "Đơn thuê mới",
+    "booking_status_changed": "Cập nhật đơn thuê",
+    "booking_request_submitted": "Yêu cầu thuê mới",
+    "booking_request_approved": "Yêu cầu được duyệt",
+    "booking_request_rejected": "Yêu cầu bị từ chối",
+    "shop_approved": "Gian hàng được duyệt",
+    "shop_rejected": "Gian hàng bị từ chối",
+    "vehicle_approved": "Xe được duyệt công khai",
+    "vehicle_rejected": "Xe bị từ chối",
+    "review_received": "Đánh giá mới"
+  },
+  "occupancySourceType": {
+    "booking": "Đơn thuê",
+    "blocked_range": "Xe bị khóa",
+    "maintenance": "Bảo dưỡng"
+  },
+  "odometerCorrectionReason": {
+    "handover_error": "Sai số từ bàn giao",
+    "device_error": "Lỗi đồng hồ đo",
+    "cluster_replaced": "Thay cụm đồng hồ",
+    "data_migration": "Chuyển đổi dữ liệu",
+    "other": "Lý do khác"
+  },
+  "odometerSource": {
+    "manual_correction": "Điều chỉnh thủ công",
+    "maintenance": "Bảo dưỡng",
+    "booking_pickup": "Bàn giao nhận xe",
+    "booking_return": "Bàn giao trả xe",
+    "import": "Nhập dữ liệu"
+  },
+  "paymentKind": {
+    "rental": "Tiền thuê",
+    "deposit": "Tiền cọc"
+  },
+  "paymentMethod": {
+    "cash": "Tiền mặt",
+    "bank_transfer": "Chuyển khoản",
+    "qr": "QR",
+    "card": "Thẻ",
+    "other": "Khác"
+  },
+  "paymentStatus": {
+    "pending": "Đang xử lý",
+    "succeeded": "Thành công",
+    "failed": "Thất bại",
+    "refunded": "Đã hoàn"
+  },
+  "pickupPreference": {
+    "within_7_days": "Trong 7 ngày tới",
+    "specific_date": "Chọn ngày cụ thể"
+  },
+  "planStatus": {
+    "active": "Đang bán",
+    "archived": "Ngừng bán"
+  },
+  "platformRole": {
+    "platform_admin": "Super Admin",
+    "platform_staff": "Nhân viên nền tảng",
+    "reviewer": "Nhân viên kiểm duyệt",
+    "support": "Nhân viên hỗ trợ",
+    "finance_admin": "Nhân viên tài chính"
+  },
+  "policySource": {
+    "shop": "Đang kế thừa",
+    "vehicle": "Đang ghi đè"
+  },
+  "receiptStatus": {
+    "draft": "Nháp",
+    "pending_approval": "Chờ duyệt",
+    "approved": "Đã duyệt",
+    "cancelled": "Đã hủy"
+  },
+  "receiptType": {
+    "income": "Phiếu thu",
+    "expense": "Phiếu chi"
+  },
+  "refundMethod": {
+    "bank_transfer": "Chuyển khoản",
+    "cash": "Tiền mặt",
+    "other": "Khác"
+  },
+  "reviewStatus": {
+    "published": "Đang hiển thị",
+    "hidden": "Đã ẩn"
+  },
+  "routeType": {
+    "in_city": "Nội thành",
+    "inter_city": "Liên tỉnh",
+    "inter_city_one_way": "Liên tỉnh (1 chiều)"
+  },
+  "routeTypeDescription": {
+    "in_city": "Di chuyển trong nội thành hoặc lân cận, lộ trình tự do",
+    "inter_city": "Đi tỉnh/thành khác và quay về điểm đón (khứ hồi)",
+    "inter_city_one_way": "Đi tỉnh/thành khác một chiều — gian hàng có thể báo thêm phụ phí"
+  },
+  "seatBucket": {
+    "4": "4 chỗ",
+    "5": "5 chỗ",
+    "7": "7 chỗ",
+    "8plus": "7+ chỗ"
+  },
+  "serviceType": {
+    "self_drive": "Tự lái",
+    "with_driver": "Có tài xế",
+    "long_term": "Thuê dài hạn"
+  },
+  "subscriptionStatus": {
+    "trial": "Dùng thử",
+    "active": "Đang hiệu lực",
+    "past_due": "Quá hạn thanh toán",
+    "expired": "Hết hạn",
+    "cancelled": "Đã hủy"
+  },
+  "surchargeCategory": {
+    "overtime": "Quá giờ",
+    "cleaning": "Vệ sinh",
+    "damage": "Hư hại / bồi thường",
+    "other": "Khác"
+  },
+  "tenantCustomerNoteType": {
+    "general": "Ghi chú chung",
+    "preference": "Sở thích / thói quen",
+    "risk": "Cảnh báo rủi ro"
+  },
+  "tenantCustomerRelationship": {
+    "all": "Tất cả khách",
+    "returning": "Khách quen",
+    "has_debt": "Còn nợ",
+    "watchlist": "Cần lưu ý",
+    "blocked": "Từ chối phục vụ",
+    "archived": "Đã lưu trữ"
+  },
+  "tenantCustomerRiskLevel": {
+    "normal": "Bình thường",
+    "watchlist": "Cần lưu ý",
+    "blocked": "Từ chối phục vụ"
+  },
+  "tenantCustomerSort": {
+    "last_rental": "Thuê gần đây nhất",
+    "rental_count": "Số lần thuê nhiều nhất",
+    "total_value": "Tổng giá trị thuê cao nhất",
+    "debt": "Còn nợ nhiều nhất",
+    "name": "Tên A → Z"
+  },
+  "tenantCustomerSource": {
+    "manual": "Nhân viên thêm",
+    "booking": "Từ đơn thuê tại quầy",
+    "marketplace": "Từ yêu cầu trên Marketplace"
+  },
+  "tenantRole": {
+    "shop_owner": "Chủ gian hàng",
+    "shop_manager": "Quản lý gian hàng",
+    "shop_staff": "Nhân viên gian hàng",
+    "shop_viewer": "Chỉ xem"
+  },
+  "tenantStatus": {
+    "draft": "Nháp",
+    "pending_review": "Chờ duyệt",
+    "needs_revision": "Cần bổ sung",
+    "active": "Đang hoạt động",
+    "suspended": "Bị khóa",
+    "rejected": "Bị từ chối",
+    "expired": "Hết hạn gói"
+  },
+  "tenantType": {
+    "individual": "Cá nhân",
+    "business": "Doanh nghiệp"
+  },
+  "transmissionType": {
+    "automatic": "Tự động",
+    "manual": "Số sàn",
+    "cvt": "CVT",
+    "dct": "Ly hợp kép (DCT)",
+    "other": "Khác"
+  },
+  "userStatus": {
+    "active": "Đang hoạt động",
+    "locked": "Bị khoá",
+    "deleted": "Đã xoá"
+  },
+  "vehicleAlertSeverity": {
+    "critical": "Nghiêm trọng",
+    "warning": "Cần chú ý",
+    "info": "Thông tin"
+  },
+  "vehicleAlertShort": {
+    "missing_return_odometer": "Thiếu KM trả",
+    "document_expired": "Giấy tờ hết hạn",
+    "maintenance_overdue": "Quá hạn bảo dưỡng",
+    "public_action_required": "Cần xử lý duyệt",
+    "document_expiring": "Giấy tờ sắp hết hạn",
+    "maintenance_due_soon": "Sắp đến hạn bảo dưỡng",
+    "missing_vehicle_info": "Thiếu thông tin",
+    "missing_odometer": "Chưa có KM",
+    "source_obligation_due": "Nghĩa vụ tài chính",
+    "maintenance_in_progress": "Đang bảo dưỡng"
+  },
+  "vehicleBlockReason": {
+    "unplanned_maintenance": "Bảo dưỡng ngoài kế hoạch",
+    "repair": "Sửa chữa",
+    "internal_use": "Xe đang sử dụng nội bộ",
+    "not_for_rent": "Không cho thuê",
+    "other": "Khác"
+  },
+  "vehicleDocumentOcrField": {
+    "holderName": "Họ tên chủ xe",
+    "holderAddress": "Địa chỉ",
+    "plateNumber": "Biển số",
+    "chassisNumber": "Số khung (Chassis)",
+    "engineNumber": "Số máy (Engine)",
+    "issuedAt": "Ngày đăng ký",
+    "expiresAt": "Ngày hết hạn",
+    "documentNumber": "Số giấy tờ"
+  },
+  "vehicleDocumentPresentation": {
+    "missing": "Chưa có",
+    "processing": "Đang xử lý",
+    "needs_review": "Cần kiểm tra",
+    "unreadable": "Không đọc được",
+    "valid": "Còn hiệu lực",
+    "expiring_soon": "Sắp hết hạn",
+    "expired": "Đã hết hạn"
+  },
+  "vehicleDocumentType": {
+    "registration": "Đăng ký xe (Cà vẹt)",
+    "inspection": "Đăng kiểm kỹ thuật",
+    "insurance": "Bảo hiểm TNDS bắt buộc",
+    "other": "Giấy tờ khác"
+  },
+  "vehicleFeature": {
+    "bluetooth": "Bluetooth",
+    "gps": "Định vị GPS",
+    "backup_camera": "Camera lùi",
+    "camera_360": "Camera 360",
+    "dash_camera": "Camera hành trình",
+    "reverse_sensor": "Cảm biến lùi",
+    "sunroof": "Cửa sổ trời",
+    "etc": "ETC thu phí",
+    "spare_tire": "Lốp dự phòng",
+    "airbag": "Túi khí an toàn",
+    "usb": "Cổng USB",
+    "screen": "Màn hình giải trí",
+    "map": "Bản đồ",
+    "child_seat": "Ghế trẻ em"
+  },
+  "vehicleFinanceInterestMethod": {
+    "reducing_balance": "Dư nợ giảm dần",
+    "flat": "Trả đều (Niên kim)"
+  },
+  "vehicleOperationStatus": {
+    "available": "Sẵn sàng",
+    "renting": "Đang thuê",
+    "maintenance": "Bảo dưỡng",
+    "inactive": "Ngừng hoạt động"
+  },
+  "vehiclePublicStatus": {
+    "draft": "Nháp",
+    "pending_public_review": "Chờ duyệt public",
+    "approved_public": "Đã duyệt public",
+    "needs_revision": "Cần bổ sung",
+    "rejected": "Bị từ chối",
+    "hidden": "Đã ẩn",
+    "archived": "Ngừng sử dụng"
+  },
+  "vehicleSourceType": {
+    "owned": "Sở hữu",
+    "financed": "Trả góp",
+    "rented": "Thuê lại",
+    "partnership": "Hợp tác"
+  },
+  "vehicleType": {
+    "car": "Ô tô",
+    "motorbike": "Xe máy"
+  }
+}

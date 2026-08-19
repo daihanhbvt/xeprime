@@ -6,24 +6,16 @@ import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useController, useForm, useWatch, type Control } from 'react-hook-form';
 import {
-  API_ERROR_CODE,
-  ROUTE_TYPE,
-  ROUTE_TYPE_VALUES,
-  SERVICE_TYPE,
-  routeTypeLabel,
-} from '@xeprime/types';
+  API_ERROR_CODE, ROUTE_TYPE, ROUTE_TYPE_VALUES, SERVICE_TYPE, routeTypeLabel, } from '@xeprime/types';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { NumberField } from '@/components/form/NumberField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import {
-  RentalDateTimeRangeField,
-  type RentalMode,
-} from '@/components/form/RentalDateTimeRangeField';
+  RentalDateTimeRangeField, type RentalMode, } from '@/components/form/RentalDateTimeRangeField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import { dayjs } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { SERVICE_TYPE_OPTIONS } from '../constants';
 import { checkConflict } from '../api';
@@ -31,6 +23,7 @@ import { useCreateBooking, useUpdateBooking } from '../hooks/use-booking-mutatio
 import { bookingFormSchema, type BookingFormValues } from '../schema';
 import type { BookingDetail, CreateBookingInput, UpdateBookingInput } from '../types';
 import styles from './BookingFormDialog.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 function numOrNull(value: string | null | undefined): number | null {
   return value === null || value === undefined || value === '' ? null : Number(value);
@@ -140,6 +133,8 @@ function RentalRangeFormField({ control }: { control: Control<BookingFormValues>
 }
 
 function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDone: () => void }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const formId = useId();
   const [conflict, setConflict] = useState(false);
@@ -343,7 +338,7 @@ function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDon
           </div>
           <div className={styles.total}>
             <span>Tổng tiền</span>
-            <strong>{formatMoneyVnd(String(Math.max(0, total)))}</strong>
+            <strong>{fmt.money(String(Math.max(0, total)))}</strong>
           </div>
         </div>
       </div>

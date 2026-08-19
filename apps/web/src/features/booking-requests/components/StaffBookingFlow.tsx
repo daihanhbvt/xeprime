@@ -48,15 +48,14 @@ import { useCreateBooking } from '@/features/bookings/hooks/use-booking-mutation
 import { fetchCalendarQuote } from '@/features/calendar/api';
 import type { CalendarQuote } from '@/features/calendar/types/calendar.types';
 import { fetchListingDetailClient, fetchListingReviewsClient } from '@/features/marketplace/api';
-import { formatRentalPoint } from '@/lib/datetime';
 import { cx } from '@/lib/cx';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import { PICKUP_METHOD, type PickupMethod } from '../schema';
 import { BookingSteps, type BookingStepKey } from './BookingSteps';
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
 import styles from './RequestBookingFlow.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface StaffBookingFlowProps {
   vehicleId: string;
@@ -183,6 +182,8 @@ export function StaffBookingFlow({
   onBusyChange,
   onResultChange,
 }: StaffBookingFlowProps) {
+  const fmt = useAppFormat();
+
   const router = useRouter();
   const [step, setStep] = useState<BookingStepKey>('time');
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
@@ -471,8 +472,8 @@ export function StaffBookingFlow({
             <div className={styles.doneRow}>
               <dt>Thời gian</dt>
               <dd>
-                {v.pickupAt ? formatRentalPoint(v.pickupAt) : '—'} →{' '}
-                {v.returnAt ? formatRentalPoint(v.returnAt) : '—'}
+                {v.pickupAt ? fmt.rentalPoint(v.pickupAt) : '—'} →{' '}
+                {v.returnAt ? fmt.rentalPoint(v.returnAt) : '—'}
               </dd>
             </div>
             <div className={styles.doneRow}>
@@ -487,7 +488,7 @@ export function StaffBookingFlow({
             {quote ? (
               <div className={styles.doneRow}>
                 <dt>Tổng tiền</dt>
-                <dd>{formatMoneyVnd(quote.totalAmount)}</dd>
+                <dd>{fmt.money(quote.totalAmount)}</dd>
               </div>
             ) : null}
           </dl>
@@ -703,8 +704,8 @@ export function StaffBookingFlow({
                       <>
                         {quote.longTerm?.durationDiscountPercent ? (
                           <strong className={styles.savingsText}>
-                            Tiết kiệm {formatMoneyVnd(quote.longTerm.durationDiscountAmount)} nhờ ưu
-                            đãi thời hạn {longTermPackageLabel(quote.longTerm.packageMonths)}.
+                            Tiết kiệm {fmt.money(quote.longTerm.durationDiscountAmount)} nhờ ưu đãi
+                            thời hạn {longTermPackageLabel(quote.longTerm.packageMonths)}.
                           </strong>
                         ) : null}
                         {quote.estimateNote ? (
@@ -735,8 +736,8 @@ export function StaffBookingFlow({
           <section className={styles.stepBody}>
             <div className={styles.dateSummary}>
               <span>
-                {watchedPickup ? formatRentalPoint(watchedPickup) : '—'} →{' '}
-                {watchedReturn ? formatRentalPoint(watchedReturn) : '—'}
+                {watchedPickup ? fmt.rentalPoint(watchedPickup) : '—'} →{' '}
+                {watchedReturn ? fmt.rentalPoint(watchedReturn) : '—'}
               </span>
               <button type="button" className={styles.linkBtn} onClick={() => setStep('time')}>
                 Đổi thời gian
@@ -890,11 +891,11 @@ export function StaffBookingFlow({
               </div>
               <div className={styles.reviewRow}>
                 <dt>Nhận xe</dt>
-                <dd>{watchedPickup ? formatRentalPoint(watchedPickup) : '—'}</dd>
+                <dd>{watchedPickup ? fmt.rentalPoint(watchedPickup) : '—'}</dd>
               </div>
               <div className={styles.reviewRow}>
                 <dt>Trả xe</dt>
-                <dd>{watchedReturn ? formatRentalPoint(watchedReturn) : '—'}</dd>
+                <dd>{watchedReturn ? fmt.rentalPoint(watchedReturn) : '—'}</dd>
               </div>
               <div className={styles.reviewRow}>
                 <dt>Dịch vụ</dt>
@@ -943,8 +944,8 @@ export function StaffBookingFlow({
                   <>
                     {quote.longTerm?.durationDiscountPercent ? (
                       <strong className={styles.savingsText}>
-                        Tiết kiệm {formatMoneyVnd(quote.longTerm.durationDiscountAmount)} nhờ ưu đãi
-                        thời hạn {longTermPackageLabel(quote.longTerm.packageMonths)}.
+                        Tiết kiệm {fmt.money(quote.longTerm.durationDiscountAmount)} nhờ ưu đãi thời
+                        hạn {longTermPackageLabel(quote.longTerm.packageMonths)}.
                       </strong>
                     ) : null}
                     <span className={styles.deliveryFootnote}>

@@ -18,6 +18,7 @@ import { getErrorMessage } from '@/services/api-client';
 import { uploadImage, validateImageFile, type UploadPresign } from '@/services/upload';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './ImageGalleryField.module.css';
+import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 
 interface ImageGalleryFieldProps<T extends FieldValues> {
   control: Control<T>;
@@ -49,6 +50,7 @@ export function ImageGalleryField<T extends FieldValues>({
   presign,
   max = 20,
 }: ImageGalleryFieldProps<T>) {
+  const uploadRejectionMessage = useUploadRejectionMessage();
   const { field, fieldState } = useController({ control, name });
   const { message } = App.useApp();
   const [pending, setPending] = useState<PendingImageUpload[]>([]);
@@ -114,7 +116,7 @@ export function ImageGalleryField<T extends FieldValues>({
     }
     const invalid = validateImageFile(file);
     if (invalid) {
-      message.error(invalid);
+      message.error(uploadRejectionMessage(invalid));
       return false;
     }
     startUpload(file);

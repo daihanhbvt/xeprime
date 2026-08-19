@@ -10,13 +10,12 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { ROUTES, vehiclePath } from '@/constants/routes';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDateTime } from '@/lib/datetime';
-import { formatKm } from '@/lib/odometer';
 import { getErrorCode } from '@/services/api-client';
 import { useHandoverContext, useInvalidateHandovers } from '../hooks';
 import type { MissingOdometerItem } from '../types';
 import { ResolveOdometerDialog } from './ResolveOdometerDialog';
 import styles from './MissingReturnKmQueue.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /** Bề rộng sàn để bảng cuộn ngang thay vì nén cột (cùng kỷ luật `MaintenanceBoardTable`). */
 const TABLE_MIN_WIDTH = 980;
@@ -46,6 +45,8 @@ export function MissingReturnKmQueue({
   onPageChange: (page: number, pageSize: number) => void;
   onResolved: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const { has } = usePermissions();
   const isMobile = useIsMobile();
   const [resolving, setResolving] = useState<MissingOdometerItem | null>(null);
@@ -115,7 +116,7 @@ export function MissingReturnKmQueue({
       width: 220,
       render: (_, row) => (
         <div className={styles.vehicleCell}>
-          <span>{formatDateTime(row.confirmedAt)}</span>
+          <span>{fmt.dateTime(row.confirmedAt)}</span>
           {row.confirmedByName ? <span className={styles.sub}>{row.confirmedByName}</span> : null}
         </div>
       ),
@@ -126,7 +127,7 @@ export function MissingReturnKmQueue({
       width: 160,
       align: 'end',
       // Chưa có số thì nói "Chưa có" — KHÔNG dựng 0 km (docs §9).
-      render: (_, row) => formatKm(row.pickupOdometerKm),
+      render: (_, row) => fmt.km(row.pickupOdometerKm),
     },
     {
       title: 'Thao tác',
@@ -162,9 +163,9 @@ export function MissingReturnKmQueue({
                 <Link href={`${ROUTES.MANAGE.BOOKINGS}?booking=${row.bookingId}`}>
                   {row.bookingCode}
                 </Link>{' '}
-                · {formatDateTime(row.confirmedAt)}
+                · {fmt.dateTime(row.confirmedAt)}
               </p>
-              <p className={styles.cardMeta}>KM lúc giao: {formatKm(row.pickupOdometerKm)}</p>
+              <p className={styles.cardMeta}>KM lúc giao: {fmt.km(row.pickupOdometerKm)}</p>
               {canResolve ? (
                 <Button
                   type="primary"

@@ -4,7 +4,6 @@ import { BellOutlined } from '@ant-design/icons';
 import { Badge, Button, Empty, Popover, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { formatDateTime } from '@/lib/datetime';
 import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
 import { useNotifications } from '../hooks/use-notifications';
@@ -17,6 +16,7 @@ import {
 } from '../lib/notification-display';
 import type { NotificationItem } from '../types';
 import styles from './NotificationBell.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * Chuông thông báo — badge số chưa đọc + popover danh sách. Dùng chung ở Topbar khu quản lý
@@ -24,6 +24,8 @@ import styles from './NotificationBell.module.css';
  * khác nhau theo ngữ cảnh.
  */
 export function NotificationBell({ context }: { context: NotificationContext }) {
+  const fmt = useAppFormat();
+
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -85,7 +87,7 @@ export function NotificationBell({ context }: { context: NotificationContext }) 
                   <span className={styles.itemBody}>
                     <span className={styles.itemTitle}>{n.title}</span>
                     {n.body ? <span className={styles.itemText}>{n.body}</span> : null}
-                    <span className={styles.itemTime}>{formatDateTime(n.createdAt)}</span>
+                    <span className={styles.itemTime}>{fmt.dateTime(n.createdAt)}</span>
                   </span>
                   {!n.readAt ? <span className={styles.dot} aria-label="Chưa đọc" /> : null}
                 </button>

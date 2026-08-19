@@ -9,15 +9,23 @@ import {
   TikTokOutlined,
 } from '@ant-design/icons';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Logo } from '@/components/brand/Logo';
 import { FOOTER_COLUMNS } from '../constants';
 import styles from './MarketFooter.module.css';
 
+/** Tên mạng xã hội là DANH TỪ RIÊNG — không dịch, và cũng không cần khoá message. */
 const SOCIALS = [
   { key: 'facebook', label: 'Facebook', Icon: FacebookFilled },
   { key: 'instagram', label: 'Instagram', Icon: InstagramOutlined },
   { key: 'tiktok', label: 'TikTok', Icon: TikTokOutlined },
 ];
+
+/**
+ * Năm bản quyền lấy khi render — hằng `2026` viết cứng sẽ sai ngay 01/01 năm sau.
+ * Truyền dạng CHUỖI: ICU sẽ định dạng số có phân tách nhóm và biến 2026 thành "2.026".
+ */
+const COPYRIGHT_YEAR = String(new Date().getFullYear());
 
 /**
  * Chân trang marketplace.
@@ -30,15 +38,14 @@ const SOCIALS = [
  * ghi đè CSS cho luôn mở và ẩn mũi tên.
  */
 export function MarketFooter() {
+  const t = useTranslations('Marketplace.footer');
+
   return (
     <footer className={styles.footer}>
       <div className={styles.inner}>
         <div className={styles.brandCol}>
           <Logo size="sm" />
-          <p className={styles.tagline}>
-            XePrime là nền tảng kết nối chủ xe và người thuê xe trên toàn quốc. Thuê xe dễ dàng, an
-            toàn và minh bạch.
-          </p>
+          <p className={styles.tagline}>{t('tagline')}</p>
           <div className={styles.socials}>
             {SOCIALS.map(({ key, label, Icon }) => (
               <span key={key} className={styles.social} role="img" aria-label={label}>
@@ -49,51 +56,54 @@ export function MarketFooter() {
         </div>
 
         <div className={styles.cols}>
-          {FOOTER_COLUMNS.map((col) => (
-            <details key={col.title} className={styles.col}>
-              <summary className={styles.colTitle}>
-                {col.title}
-                <DownOutlined className={styles.caret} />
-              </summary>
-              <nav className={styles.colLinks} aria-label={col.title}>
-                {col.links.map((link) => (
-                  <Link key={link.label} href={link.href} className={styles.link}>
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
-            </details>
-          ))}
+          {FOOTER_COLUMNS.map((col) => {
+            const title = t(col.titleKey);
+            return (
+              <details key={col.key} className={styles.col}>
+                <summary className={styles.colTitle}>
+                  {title}
+                  <DownOutlined className={styles.caret} />
+                </summary>
+                <nav className={styles.colLinks} aria-label={title}>
+                  {col.links.map((link) => (
+                    <Link key={link.key} href={link.href} className={styles.link}>
+                      {t(link.key)}
+                    </Link>
+                  ))}
+                </nav>
+              </details>
+            );
+          })}
 
           <details className={styles.col}>
             <summary className={styles.colTitle}>
-              Tải ứng dụng
+              {t('apps.title')}
               <DownOutlined className={styles.caret} />
             </summary>
             <div className={styles.colLinks}>
               <span className={styles.store}>
                 <AppleFilled />
                 <span>
-                  <small>Tải trên</small>
+                  <small>{t('apps.downloadOn')}</small>
                   App Store
                 </span>
               </span>
               <span className={styles.store}>
                 <AndroidFilled />
                 <span>
-                  <small>Tải trên</small>
+                  <small>{t('apps.downloadOn')}</small>
                   Google Play
                 </span>
               </span>
-              <span className={styles.storeNote}>Ứng dụng đang phát triển</span>
+              <span className={styles.storeNote}>{t('apps.note')}</span>
             </div>
           </details>
         </div>
       </div>
 
       <div className={styles.bottom}>
-        <span>© 2026 XePrime. All rights reserved.</span>
-        <span>Nền tảng cho thuê xe tại Việt Nam</span>
+        <span>{t('copyright', { year: COPYRIGHT_YEAR })}</span>
+        <span>{t('country')}</span>
       </div>
     </footer>
   );

@@ -1,5 +1,6 @@
 import { cx } from '@/lib/cx';
 import styles from './DiscountTag.module.css';
+import { useTranslations } from 'next-intl';
 
 interface DiscountTagProps {
   percent: number;
@@ -11,12 +12,13 @@ interface DiscountTagProps {
 
 /** Tag phần trăm giảm giá duy nhất của web — màu, typography và nội dung không trôi giữa màn. */
 export function DiscountTag({ percent, size = 'md', className }: DiscountTagProps) {
+  const tCommon = useTranslations('Common');
   const normalized = Math.abs(percent);
 
   return (
     <span
       className={cx(styles.tag, size === 'sm' && styles.small, className)}
-      aria-label={`Giảm ${normalized}%`}
+      aria-label={tCommon('components.discount', { percent: normalized })}
     >
       -{normalized}%
     </span>

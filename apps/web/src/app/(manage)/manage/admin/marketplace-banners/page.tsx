@@ -12,7 +12,6 @@ import { useState } from 'react';
 import { STATUS_COLOR } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { formatDateTime } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { BannerFormModal } from '@/features/banners/components/BannerFormModal';
 import {
@@ -24,6 +23,7 @@ import {
 import type { AdminBanner } from '@/features/banners/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import styles from './banners-page.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const MIN_TABLE_WIDTH = 960;
 
@@ -34,6 +34,8 @@ const MIN_TABLE_WIDTH = 960;
  * rõ đã tắt / chờ tới lịch / hết lịch để admin không phải tự nhẩm.
  */
 export default function AdminBannersPage() {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const { data, isError, refetch, isFetching } = useAdminBanners();
   const update = useUpdateBanner();
@@ -96,8 +98,8 @@ export default function AdminBannersPage() {
       render: (_, b) =>
         b.startsAt || b.endsAt ? (
           <div className={styles.schedule}>
-            <div>{b.startsAt ? formatDateTime(b.startsAt) : 'Ngay lập tức'}</div>
-            <div>→ {b.endsAt ? formatDateTime(b.endsAt) : 'vô hạn'}</div>
+            <div>{b.startsAt ? fmt.dateTime(b.startsAt) : 'Ngay lập tức'}</div>
+            <div>→ {b.endsAt ? fmt.dateTime(b.endsAt) : 'vô hạn'}</div>
           </div>
         ) : (
           'Không giới hạn'

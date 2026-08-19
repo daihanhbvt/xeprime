@@ -21,7 +21,6 @@ import {
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
 import { PhoneLoginForm } from '@/features/phone-verification/components/PhoneLoginForm';
-import { getErrorMessage } from '@/services/api-client';
 import {
   AUTH_PROVIDER,
   AUTH_PROVIDER_LABEL,
@@ -36,6 +35,9 @@ import { AUTH_MODE, type AuthMode } from '../post-auth-destination';
 import { SetPasswordPrompt } from './SetPasswordPrompt';
 import { SocialProviderLogo } from './SocialProviderLogo';
 import styles from './AuthPanel.module.css';
+import { useLocale, useTranslations } from 'next-intl';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { SocialAuthError } from '../lib/firebase-social-auth';
 
 export interface AuthPanelProps {
   mode: AuthMode;
@@ -57,6 +59,9 @@ export interface AuthPanelProps {
  * lý, và cũng không tự điều hướng — nó chỉ gọi `onAuthenticated`. Đó là điều giữ cho hai
  * presentation không trôi thành hai bộ logic đăng nhập khác nhau.
  */
+/** Khoá hợp lệ của `Auth.*` — xem `i18n/keys.ts` về việc không dùng generic. */
+type AuthKey = Parameters<ReturnType<typeof useTranslations<'Auth'>>>[0];
+
 export function AuthPanel({
   mode,
   onModeChange,
@@ -64,12 +69,29 @@ export function AuthPanel({
   showSocial = true,
   autoFocus = false,
 }: AuthPanelProps) {
+  const t = useTranslations('Auth');
+  const locale = useLocale();
+  const apiErrorMessage = useErrorMessage();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   // Đăng nhập OTP mà tài khoản chưa có mật khẩu → gợi ý đặt (có "Bỏ qua").
   const [passwordPrompt, setPasswordPrompt] = useState<CurrentUser | null>(null);
 
   const busy = pending !== null;
+
+  /**
+   * Lỗi ở màn đăng nhập đến từ HAI nguồn: API của XePrime (mã trong `API_ERROR_CODE`) và
+   * popup của Firebase (mã `auth/...`, đã quy về `SocialAuthError`). Cả hai đều nói bằng MÃ,
+   * nên chỗ này chỉ việc chọn đúng bảng chữ.
+   */
+  function describeError(err: unknown): string {
+    if (err instanceof SocialAuthError) {
+      return t(`socialError.${err.key}` as AuthKey, {
+        provider: err.provider ? AUTH_PROVIDER_LABEL[err.provider] : '',
+      });
+    }
+    return apiErrorMessage(err);
+  }
 
   async function finish(user: CurrentUser, justRegistered: boolean) {
     await onAuthenticated(user, { justRegistered });
@@ -86,7 +108,7 @@ export function AuthPanel({
       const user = await action();
       await finish(user, justRegistered);
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(describeError(err));
       setPending(null);
     }
   }
@@ -123,7 +145,7 @@ export function AuthPanel({
               key: 'password',
               label: (
                 <span className={styles.tabLabel}>
-                  <MailOutlined /> Email / SĐT
+                  <MailOutlined /> {t('tabs.password')}
                 </span>
               ),
               children: (
@@ -141,7 +163,7 @@ export function AuthPanel({
               key: 'otp',
               label: (
                 <span className={styles.tabLabel}>
-                  <MobileOutlined /> Đăng nhập OTP
+                  <MobileOutlined /> {t('tabs.otp')}
                 </span>
               ),
               children: (
@@ -160,7 +182,7 @@ export function AuthPanel({
       {showSocial ? (
         <>
           <Divider className={styles.divider} plain>
-            hoặc
+            {t('social.divider')}
           </Divider>
           <div className={styles.oauth}>
             {[AUTH_PROVIDER.GOOGLE, AUTH_PROVIDER.FACEBOOK].map((provider) => (
@@ -174,7 +196,7 @@ export function AuthPanel({
                 disabled={busy && pending !== provider}
                 onClick={() => void signIn(provider)}
               >
-                Tiếp tục với {AUTH_PROVIDER_LABEL[provider]}
+                {t('social.continueWith', { provider: AUTH_PROVIDER_LABEL[provider] })}
               </Button>
             ))}
           </div>
@@ -185,26 +207,26 @@ export function AuthPanel({
         <div className={styles.switch}>
           {mode === AUTH_MODE.LOGIN ? (
             <>
-              Chưa có tài khoản?{' '}
+              {t('switchMode.noAccount')}{' '}
               <button
                 type="button"
                 className={styles.linkBtn}
                 disabled={busy}
                 onClick={() => onModeChange(AUTH_MODE.REGISTER)}
               >
-                Tạo tài khoản
+                {t('switchMode.toRegister')}
               </button>
             </>
           ) : (
             <>
-              Đã có tài khoản?{' '}
+              {t('switchMode.hasAccount')}{' '}
               <button
                 type="button"
                 className={styles.linkBtn}
                 disabled={busy}
                 onClick={() => onModeChange(AUTH_MODE.LOGIN)}
               >
-                Đăng nhập
+                {t('switchMode.toLogin')}
               </button>
             </>
           )}
@@ -215,7 +237,7 @@ export function AuthPanel({
 
   async function signIn(provider: AuthProvider) {
     await run(provider, async () => {
-      const idToken = await getProviderIdToken(provider);
+      const idToken = await getProviderIdToken(provider, locale);
       return createSession(idToken);
     });
   }
@@ -232,6 +254,7 @@ function PasswordForm({
   autoFocus: boolean;
   onSubmit: (values: LoginValues) => void;
 }) {
+  const t = useTranslations('Auth');
   const { control, handleSubmit } = useForm<LoginValues>({
     resolver: yupResolver(loginSchema),
     defaultValues: { identifier: '', password: '' },
@@ -242,8 +265,8 @@ function PasswordForm({
       <TextField
         control={control}
         name="identifier"
-        label="Email hoặc số điện thoại"
-        placeholder="Nhập email hoặc số điện thoại"
+        label={t('login.identifier')}
+        placeholder={t('login.identifierPlaceholder')}
         autoComplete="username"
         prefix={<MailOutlined />}
         autoFocus={autoFocus}
@@ -251,15 +274,15 @@ function PasswordForm({
       <TextField
         control={control}
         name="password"
-        label="Mật khẩu"
+        label={t('login.password')}
         type="password"
-        placeholder="Mật khẩu"
+        placeholder={t('login.passwordPlaceholder')}
         autoComplete="current-password"
         prefix={<LockOutlined />}
       />
       <div className={styles.rowEnd}>
         <Link href={ROUTES.FORGOT_PASSWORD} className={styles.link}>
-          Quên mật khẩu?
+          {t('login.forgot')}
         </Link>
       </div>
       <Button
@@ -271,7 +294,7 @@ function PasswordForm({
         loading={pending}
         disabled={busy && !pending}
       >
-        Đăng nhập
+        {t('login.submit')}
       </Button>
     </form>
   );
@@ -288,6 +311,7 @@ function RegisterForm({
   autoFocus: boolean;
   onSubmit: (values: { displayName: string; phone: string; password: string }) => void;
 }) {
+  const t = useTranslations('Auth');
   const { control, handleSubmit } = useForm<RegisterValues>({
     resolver: yupResolver(registerSchema),
     defaultValues: { displayName: '', phone: '', password: '', confirmPassword: '' },
@@ -307,8 +331,8 @@ function RegisterForm({
       <TextField
         control={control}
         name="displayName"
-        label="Họ tên"
-        placeholder="Nhập họ và tên"
+        label={t('register.fullName')}
+        placeholder={t('register.fullNamePlaceholder')}
         autoComplete="name"
         prefix={<UserOutlined />}
         autoFocus={autoFocus}
@@ -316,27 +340,27 @@ function RegisterForm({
       <TextField
         control={control}
         name="phone"
-        label="Số điện thoại"
+        label={t('register.phone')}
         type="tel"
-        placeholder="Nhập số điện thoại"
+        placeholder={t('register.phonePlaceholder')}
         autoComplete="tel"
         prefix={<PhoneOutlined />}
       />
       <TextField
         control={control}
         name="password"
-        label="Mật khẩu"
+        label={t('register.password')}
         type="password"
-        placeholder="Tối thiểu 8 ký tự, có chữ và số"
+        placeholder={t('register.passwordPlaceholder')}
         autoComplete="new-password"
         prefix={<LockOutlined />}
       />
       <TextField
         control={control}
         name="confirmPassword"
-        label="Nhập lại mật khẩu"
+        label={t('register.confirmPassword')}
         type="password"
-        placeholder="Nhập lại mật khẩu"
+        placeholder={t('register.confirmPasswordPlaceholder')}
         autoComplete="new-password"
         prefix={<LockOutlined />}
       />
@@ -349,7 +373,7 @@ function RegisterForm({
         loading={pending}
         disabled={busy && !pending}
       >
-        Tạo tài khoản
+        {t('register.submit')}
       </Button>
     </form>
   );

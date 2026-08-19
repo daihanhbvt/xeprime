@@ -13,21 +13,23 @@ import { useRouter } from 'next/navigation';
 import { TENANT_STATUS_META, type TenantStatus } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ROUTES } from '@/constants/routes';
-import { dayjs, formatDate } from '@/lib/datetime';
+import { dayjs } from '@/lib/datetime';
 import { DashboardPanel } from '@/features/dashboard/components/DashboardPanel';
 import { StatCard } from '@/features/dashboard/components/StatCard';
 import { usePlatformSummary } from '../hooks/use-platform-summary';
 import type { PlatformRecentTenant } from '../types';
 import styles from './PlatformDashboardView.module.css';
+import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
 
 /** Ngày hôm nay kiểu "Thứ Sáu, 24 tháng 7, 2026" (dayjs đã set locale vi ở providers). */
-function todayLabel(): string {
-  const text = dayjs().format('dddd, D [tháng] M, YYYY');
-  return text.charAt(0).toUpperCase() + text.slice(1);
+function todayLabel(fmt: AppFormat): string {
+  const text = fmt.fullDate(dayjs());
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1);
 }
 
 /** Dashboard nền tảng — số liệu toàn hệ thống + lối tắt sang duyệt hồ sơ / gian hàng. */
 export function PlatformDashboardView() {
+  const fmt = useAppFormat();
   const router = useRouter();
   const { data, isLoading, isError, refetch } = usePlatformSummary();
 
@@ -49,7 +51,7 @@ export function PlatformDashboardView() {
     <div className={styles.wrap}>
       <header className={styles.header}>
         <h1 className={styles.title}>Tổng quan nền tảng</h1>
-        <p className={styles.date}>{todayLabel()}</p>
+        <p className={styles.date}>{todayLabel(fmt)}</p>
       </header>
 
       <div className={styles.stats}>
@@ -114,7 +116,9 @@ export function PlatformDashboardView() {
                     onClick={() => router.push(ROUTES.MANAGE.ADMIN)}
                   >
                     <span className={styles.miniName}>Hồ sơ gian hàng</span>
-                    <span className={styles.miniMeta}>{data?.approvalPendingTenant ?? 0} phiếu</span>
+                    <span className={styles.miniMeta}>
+                      {data?.approvalPendingTenant ?? 0} phiếu
+                    </span>
                   </button>
                 </li>
                 <li className={styles.miniRow}>
@@ -124,7 +128,9 @@ export function PlatformDashboardView() {
                     onClick={() => router.push(ROUTES.MANAGE.ADMIN)}
                   >
                     <span className={styles.miniName}>Hồ sơ xe</span>
-                    <span className={styles.miniMeta}>{data?.approvalPendingVehicle ?? 0} phiếu</span>
+                    <span className={styles.miniMeta}>
+                      {data?.approvalPendingVehicle ?? 0} phiếu
+                    </span>
                   </button>
                 </li>
               </ul>
@@ -168,6 +174,8 @@ function RecentTenantList({
   items: PlatformRecentTenant[];
   onSelect: () => void;
 }) {
+  const fmt = useAppFormat();
+
   return (
     <ul className={styles.miniList}>
       {items.map((t) => (
@@ -177,10 +185,14 @@ function RecentTenantList({
               <div className={styles.miniName}>{t.name}</div>
               <div className={styles.miniMeta}>
                 {t.provinceName ? `${t.provinceName} · ` : ''}
-                {formatDate(t.createdAt)}
+                {fmt.date(t.createdAt)}
               </div>
             </div>
-            <StatusTag value={t.status as TenantStatus} meta={TENANT_STATUS_META} />
+            <StatusTag
+              value={t.status as TenantStatus}
+              meta={TENANT_STATUS_META}
+              group="tenantStatus"
+            />
           </button>
         </li>
       ))}

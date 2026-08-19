@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { fetchPublicShop } from '@/features/marketplace/api';
 import { ShopHeader } from '@/features/marketplace/components/ShopHeader';
 import { ShopVehicleGrid } from '@/features/marketplace/components/ShopVehicleGrid';
+import { getTranslations } from 'next-intl/server';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -10,11 +11,18 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const shop = await fetchPublicShop(slug);
-  if (!shop) return { title: 'Không tìm thấy gian hàng' };
+  const [shop, t] = await Promise.all([
+    fetchPublicShop(slug),
+    getTranslations('Marketplace.meta.shop'),
+  ]);
+  if (!shop) return { title: t('notFound') };
   return {
-    title: `${shop.name} · Gian hàng thuê xe`,
-    description: shop.bio ?? `Thuê xe tại ${shop.name}${shop.provinceName ? ` · ${shop.provinceName}` : ''}`,
+    title: t('title', { name: shop.name }),
+    description:
+      shop.bio ??
+      (shop.provinceName
+        ? t('descriptionWithProvince', { name: shop.name, province: shop.provinceName })
+        : t('description', { name: shop.name })),
   };
 }
 

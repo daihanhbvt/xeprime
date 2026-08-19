@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -19,17 +20,6 @@ import { useAuthModal } from './AuthModalProvider';
 import { RegisterSuccess } from './RegisterSuccess';
 import styles from './AuthModal.module.css';
 
-const COPY = {
-  [AUTH_MODE.LOGIN]: {
-    title: 'Đăng nhập XePrime',
-    sub: 'Đăng nhập để đặt xe và quản lý chuyến đi.',
-  },
-  [AUTH_MODE.REGISTER]: {
-    title: 'Tạo tài khoản XePrime',
-    sub: 'Tạo tài khoản để đặt xe nhanh hơn và theo dõi chuyến đi.',
-  },
-} as const;
-
 /**
  * Đăng nhập/đăng ký của KHÁCH — hiện ngay trên trang đang xem, không rời marketplace.
  *
@@ -37,6 +27,8 @@ const COPY = {
  * Cả hai đều lấy nội dung từ `AuthPanel` — không có bản sao logic đăng nhập thứ hai.
  */
 export function AuthModal() {
+  const t = useTranslations('Auth.modal');
+  const tCommon = useTranslations('Common');
   const router = useRouter();
   const isMobile = useIsMobile();
   const { isOpen, mode, next, close, setMode, takePendingAction } = useAuthModal();
@@ -86,11 +78,10 @@ export function AuthModal() {
     router.push(path);
   }
 
-  const copy = COPY[mode];
   const body = registered ? (
     <RegisterSuccess
       hasTenant={registered.tenant != null}
-      closeLabel={next ? 'Tiếp tục' : 'Đóng'}
+      closeLabel={next ? t('continueLabel') : tCommon('actions.close')}
       onClose={handleClose}
       onOpenAccount={() => goTo(ROUTES.ACCOUNT)}
       onBecomeOwner={() => goTo(resolveOwnerCtaHref(registered))}
@@ -101,10 +92,12 @@ export function AuthModal() {
         <Logo size="sm" />
         <div>
           <div className={styles.title}>
-            {mode === AUTH_MODE.LOGIN ? 'Đăng nhập' : 'Tạo tài khoản'}{' '}
+            {mode === AUTH_MODE.LOGIN ? t('loginTitle') : t('registerTitle')}{' '}
             <span className={styles.brandName}>XePrime</span>
           </div>
-          <div className={styles.sub}>{copy.sub}</div>
+          <div className={styles.sub}>
+            {mode === AUTH_MODE.LOGIN ? t('loginSub') : t('registerSub')}
+          </div>
         </div>
       </div>
       <AuthPanel
@@ -128,7 +121,12 @@ export function AuthModal() {
        * D14.2). `hideHeaderTitle` + `ariaLabel` dựng một tiêu đề chỉ-đọc-màn-hình, sửa đúng chỗ.
        */
       hideHeaderTitle
-      ariaLabel={copy.title}
+      /*
+       * Tên dialog mang cả THƯƠNG HIỆU và là một message riêng, không phải nhãn nút cộng chuỗi
+       * " XePrime": trật tự từ của hai ngôn ngữ khác nhau ("Đăng nhập XePrime" ↔ "Sign in to
+       * XePrime"), nên chỗ đặt thương hiệu phải do từng bản dịch quyết định.
+       */
+      ariaLabel={mode === AUTH_MODE.LOGIN ? t('loginDialogTitle') : t('registerDialogTitle')}
       /**
        * `sm` + `sheet`: giữ nguyên hình thái đang chạy — desktop hộp hẹp, mobile bottom sheet
        * cao theo nội dung. Cố ý KHÔNG dùng full-screen như quy tắc 5 của Figma `130:1563`:

@@ -14,6 +14,7 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
 import styles from './AppShell.module.css';
+import { useTranslations } from 'next-intl';
 
 /**
  * Các route NẰM TRONG `/manage` nhưng không dùng khung portal.
@@ -43,6 +44,7 @@ const VIEWPORT_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.CALENDAR];
  * shell không phân biệt host/admin, chỉ Sidebar lọc menu theo quyền.
  */
 export function AppShell({ children }: { children: ReactNode }) {
+  const t = useTranslations('ManageCommon');
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
@@ -115,8 +117,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           {isPendingApproval && tenant ? (
             <Result
               status="warning"
-              title="Gian hàng đang chờ duyệt"
-              subTitle="Bạn vẫn xem được dữ liệu, nhưng xe chưa lên marketplace cho tới khi hồ sơ được duyệt."
+              title={t('shell.pendingTitle')}
+              subTitle={t('shell.pendingBody')}
               className={styles.pendingBanner}
             />
           ) : null}

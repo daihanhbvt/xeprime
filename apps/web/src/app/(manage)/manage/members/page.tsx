@@ -148,7 +148,7 @@ export default function MembersPage() {
       key: 'status',
       width: 130,
       render: (_, row) => (
-        <StatusTag value={row.status as MembershipStatus} meta={MEMBERSHIP_STATUS_META} />
+        <StatusTag value={row.status as MembershipStatus} meta={MEMBERSHIP_STATUS_META} group="membershipStatus" />
       ),
     },
     actionColumn<Member>((row) => [

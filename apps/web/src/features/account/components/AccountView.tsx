@@ -14,14 +14,19 @@ import { getErrorMessage, isUnauthenticated } from '@/services/api-client';
 import { useMyProfile, useUpdateMyProfile } from '../hooks/use-account';
 import type { UserProfile } from '../types';
 import styles from './AccountView.module.css';
+import { useTranslations } from 'next-intl';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 /**
- * "Tài khoản của tôi" — hồ sơ của KHÁCH THUÊ XE.
+ * "{t('title')}" — hồ sơ của KHÁCH THUÊ XE.
  *
  * Không phải hồ sơ gian hàng (`/manage/shop`): người không có gian hàng vẫn phải sửa được tên
  * và ảnh của mình. Đây chính là đích của nút "Cập nhật tài khoản" sau khi đăng ký.
  */
 export function AccountView() {
+  const t = useTranslations('Account');
+  const tCommon = useTranslations('Common');
+  const errorMessage = useErrorMessage();
   const profile = useMyProfile();
   const { open } = useAuthModal();
   const nextFromHere = useNextFromCurrentPath();
@@ -38,20 +43,20 @@ export function AccountView() {
     if (isUnauthenticated(profile.error)) {
       return (
         <div className={styles.center}>
-          <Alert type="info" showIcon message="Vui lòng đăng nhập để xem tài khoản của bạn." />
+          <Alert type="info" showIcon message={t('signInRequired')} />
           <Button
             type="primary"
             onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
           >
-            Đăng nhập
+            {t('signIn')}
           </Button>
         </div>
       );
     }
     return (
       <div className={styles.center}>
-        <Alert type="error" showIcon message={getErrorMessage(profile.error)} />
-        <Button onClick={() => void profile.refetch()}>Thử lại</Button>
+        <Alert type="error" showIcon message={errorMessage(profile.error)} />
+        <Button onClick={() => void profile.refetch()}>{tCommon('actions.retry')}</Button>
       </div>
     );
   }
@@ -60,13 +65,15 @@ export function AccountView() {
 
   return (
     <div className={styles.wrap}>
-      <h1 className={styles.heading}>Tài khoản của tôi</h1>
+      <h1 className={styles.heading}>{t('title')}</h1>
       <ProfileForm profile={profile.data} />
     </div>
   );
 }
 
 function ProfileForm({ profile }: { profile: UserProfile }) {
+  const t = useTranslations('Account');
+  const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const update = useUpdateMyProfile();
 
@@ -93,7 +100,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
     update.mutate(
       { displayName: values.displayName, avatarUrl: values.avatarUrl ?? undefined },
       {
-        onSuccess: () => message.success('Đã cập nhật tài khoản'),
+        onSuccess: () => message.success(t('saved')),
         onError: (err) => message.error(getErrorMessage(err)),
       },
     );
@@ -108,13 +115,13 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
         <div>
           <div className={styles.name}>{displayName || profile.displayName}</div>
           <div className={styles.contactRow}>
-            <MailOutlined /> {profile.email ?? 'Chưa có email'}
+            <MailOutlined /> {profile.email ?? t('noEmail')}
           </div>
           <div className={styles.contactRow}>
-            <PhoneOutlined /> {profile.phone ?? 'Chưa có số điện thoại'}
+            <PhoneOutlined /> {profile.phone ?? t('noPhone')}
             {profile.phone && profile.phoneVerified ? (
               <Tag color={STATUS_COLOR.SUCCESS} className={styles.verified}>
-                <CheckCircleFilled /> Đã xác thực
+                <CheckCircleFilled /> {t('verified')}
               </Tag>
             ) : null}
           </div>
@@ -125,8 +132,8 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
         <TextField
           control={control}
           name="displayName"
-          label="Họ tên hiển thị"
-          placeholder="Nguyễn Văn A"
+          label={t('displayName')}
+          placeholder={t('displayNamePlaceholder')}
           autoComplete="name"
           prefix={<UserOutlined />}
           disabled={update.isPending}
@@ -134,7 +141,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
         <TextField
           control={control}
           name="avatarUrl"
-          label="Ảnh đại diện (đường dẫn)"
+          label={t('avatarUrl')}
           placeholder="https://…"
           disabled={update.isPending}
         />
@@ -143,8 +150,8 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
           type="info"
           showIcon
           className={styles.readonlyNote}
-          message="Email và số điện thoại chưa đổi được"
-          description="Hai thông tin này dùng để đăng nhập nên cần một luồng xác thực riêng. Liên hệ hỗ trợ nếu bạn cần thay đổi."
+          message={t('identityLockedTitle')}
+          description={t('identityLockedBody')}
         />
 
         <Button
@@ -154,7 +161,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
           loading={update.isPending}
           disabled={!formState.isDirty && !update.isPending}
         >
-          Lưu thay đổi
+          {tCommon('actions.saveChanges')}
         </Button>
       </form>
     </Card>

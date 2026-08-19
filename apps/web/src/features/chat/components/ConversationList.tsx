@@ -2,9 +2,10 @@
 
 import { Badge } from 'antd';
 import { cx } from '@/lib/cx';
-import { formatDateTime } from '@/lib/datetime';
 import type { ConversationSummary } from '../types';
 import styles from './ChatView.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 /** Danh sách hội thoại (presentational — dữ liệu do ChatView nạp). */
 export function ConversationList({
@@ -16,6 +17,9 @@ export function ConversationList({
   selectedId: string | null;
   onSelect: (conversation: ConversationSummary) => void;
 }) {
+  const t = useTranslations('Chat');
+  const fmt = useAppFormat();
+
   return (
     <ul className={styles.convList}>
       {items.map((c) => (
@@ -28,13 +32,13 @@ export function ConversationList({
             <div className={styles.convTop}>
               <span className={styles.convParty}>{c.partyName}</span>
               {c.lastMessageAt ? (
-                <span className={styles.convTime}>{formatDateTime(c.lastMessageAt)}</span>
+                <span className={styles.convTime}>{fmt.dateTime(c.lastMessageAt)}</span>
               ) : null}
             </div>
             <div className={styles.convBottom}>
               <span className={styles.convPreview}>
                 {c.lastMessageText ??
-                  (c.vehicleName ? `Về ${c.vehicleName}` : 'Bắt đầu trò chuyện')}
+                  (c.vehicleName ? t('about', { subject: c.vehicleName }) : t('startConversation'))}
               </span>
               {c.unread > 0 ? <Badge count={c.unread} size="small" /> : null}
             </div>

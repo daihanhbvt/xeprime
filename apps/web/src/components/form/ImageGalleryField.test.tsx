@@ -7,7 +7,7 @@ import { ImageGalleryField } from './ImageGalleryField';
 
 const mocks = vi.hoisted(() => ({
   uploadImage: vi.fn(),
-  validateImageFile: vi.fn((): string | null => null),
+  validateImageFile: vi.fn((): { reason: string } | null => null),
 }));
 
 vi.mock('@/services/upload', () => ({

@@ -5,7 +5,7 @@ import {
   IMAGE_UPLOAD_MIME_TYPES,
   type components,
 } from '@xeprime/types';
-import { apiPost } from '@/services/api-client';
+import { ApiClientError, apiPost } from '@/services/api-client';
 
 /**
  * Upload file lên R2 theo pattern presign → PUT thẳng (nhị phân KHÔNG đi qua API — cùng cơ chế
@@ -14,6 +14,18 @@ import { apiPost } from '@/services/api-client';
  */
 
 export type UploadPresign = components['schemas']['UploadPresignDto'];
+
+/**
+ * Lỗi tải tệp nói bằng MÃ như mọi lỗi khác (ADR 0012); giao diện chọn chữ qua `Errors.code.*`.
+ * `message` chỉ để đọc trong log — nó không bao giờ lên màn hình.
+ */
+function uploadFailed(status: number): ApiClientError {
+  return new ApiClientError({
+    code: 'UPLOAD_FAILED',
+    message: `Upload failed with HTTP ${status}`,
+    status,
+  });
+}
 
 /** Upload thẳng lên R2 qua presigned PUT — fetch trần, không cookie/envelope của api-client. */
 export async function uploadToR2(
@@ -36,10 +48,10 @@ export async function uploadToR2(
           resolve();
           return;
         }
-        reject(new Error('Tải tệp lên thất bại'));
+        reject(uploadFailed(request.status));
       };
-      request.onerror = () => reject(new Error('Không thể kết nối dịch vụ tải tệp'));
-      request.onabort = () => reject(new Error('Đã huỷ tải tệp'));
+      request.onerror = () => reject(uploadFailed(0));
+      request.onabort = () => reject(uploadFailed(0));
       request.send(file);
     });
     return;
@@ -50,30 +62,50 @@ export async function uploadToR2(
     body: file,
     headers: { 'Content-Type': file.type || 'application/octet-stream' },
   });
-  if (!res.ok) throw new Error('Tải tệp lên thất bại');
+  if (!res.ok) throw uploadFailed(res.status);
 }
+
+/**
+ * Vì sao tệp bị từ chối — LÝ DO kèm tham số, không phải một câu.
+ *
+ * Hai hàm dưới là hàm thuần chạy được ở mọi nơi (kể cả ngoài cây React), nên chúng không
+ * biết người dùng đang đọc ngôn ngữ nào. `useUploadRejectionMessage()` đổi lý do thành chữ.
+ */
+export type UploadRejectionReason =
+  | 'imageType'
+  | 'imageTooLarge'
+  | 'documentType'
+  | 'documentTooLarge';
+
+export interface UploadRejection {
+  readonly reason: UploadRejectionReason;
+  /** Trần dung lượng tính bằng MB — chỉ có ở hai lý do "quá lớn". */
+  readonly maxMb?: number;
+}
+
+const toMb = (bytes: number) => Math.round(bytes / 1024 / 1024);
 
 /**
  * Check MIME + dung lượng TRƯỚC khi presign — báo lỗi tức thì thay vì để R2 từ chối.
  * Trần thật vẫn ở backend (DTO validate + Content-Length ký trong URL).
  */
-export function validateImageFile(file: File): string | null {
+export function validateImageFile(file: File): UploadRejection | null {
   if (!(IMAGE_UPLOAD_MIME_TYPES as readonly string[]).includes(file.type)) {
-    return 'Chỉ nhận ảnh JPG, PNG hoặc WebP';
+    return { reason: 'imageType' };
   }
   if (file.size > IMAGE_UPLOAD_MAX_BYTES) {
-    return `Ảnh tối đa ${Math.round(IMAGE_UPLOAD_MAX_BYTES / 1024 / 1024)}MB`;
+    return { reason: 'imageTooLarge', maxMb: toMb(IMAGE_UPLOAD_MAX_BYTES) };
   }
   return null;
 }
 
 /** Tài liệu hợp đồng (ảnh chụp hoặc PDF scan) — cùng trần dung lượng với ảnh. */
-export function validateDocumentFile(file: File): string | null {
+export function validateDocumentFile(file: File): UploadRejection | null {
   if (!(DOCUMENT_UPLOAD_MIME_TYPES as readonly string[]).includes(file.type)) {
-    return 'Chỉ nhận PDF hoặc ảnh JPG, PNG, WebP';
+    return { reason: 'documentType' };
   }
   if (file.size > DOCUMENT_UPLOAD_MAX_BYTES) {
-    return `Tệp tối đa ${Math.round(DOCUMENT_UPLOAD_MAX_BYTES / 1024 / 1024)}MB`;
+    return { reason: 'documentTooLarge', maxMb: toMb(DOCUMENT_UPLOAD_MAX_BYTES) };
   }
   return null;
 }
@@ -106,7 +138,11 @@ export async function uploadImage(
   onProgress?: (percent: number) => void,
 ): Promise<string> {
   const invalid = validateImageFile(file);
-  if (invalid) throw new Error(invalid);
+  if (invalid) throw new ApiClientError({
+    code: `UPLOAD_REJECTED_${invalid.reason}`,
+    message: `Upload rejected: ${invalid.reason}`,
+    status: 0,
+  });
   const ticket = await presign(file);
   await uploadToR2(ticket.uploadUrl, file, onProgress);
   return ticket.publicUrl;

@@ -8,8 +8,8 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { vehiclePath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDateTime, formatRentalDuration, formatRentalPoint, dayjs } from '@/lib/datetime';
-import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
+import { dayjs } from '@/lib/datetime';
+import { isZeroMoney } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { SettlementCard } from '@/features/settlement/components/SettlementCard';
 import { useBooking } from '../hooks/use-booking';
@@ -18,6 +18,7 @@ import { BookingActionBar } from './BookingActionBar';
 import { BookingDriverSection } from './BookingDriverSection';
 import { BookingOperationPanel } from './BookingOperationPanel';
 import styles from './BookingDetailContent.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * Toàn bộ nội dung có thẩm quyền của MỘT đơn thuê: thẻ chi tiết (xe · khách · thời gian · tiền)
@@ -39,6 +40,8 @@ export function BookingDetailContent({
   /** Nút thoát khi đơn không còn (trang: về danh sách · modal: đóng). */
   onNotFoundAction?: { label: string; onClick: () => void };
 }) {
+  const fmt = useAppFormat();
+
   const { has } = usePermissions();
   const canView = has(PERMISSION.BOOKING_VIEW);
   const { data, isLoading, isError, error, refetch } = useBooking(canView ? bookingId : null);
@@ -92,7 +95,7 @@ export function BookingDetailContent({
       <Card
         title="Chi tiết đơn đặt xe"
         className={styles.card}
-        extra={<span className={styles.createdAt}>Lập lúc {formatDateTime(data.createdAt)}</span>}
+        extra={<span className={styles.createdAt}>Lập lúc {fmt.dateTime(data.createdAt)}</span>}
       >
         <div className={styles.detailGrid}>
           <section className={styles.block}>
@@ -172,11 +175,11 @@ export function BookingDetailContent({
             <dl className={styles.rows}>
               <div className={styles.row}>
                 <dt>Nhận xe</dt>
-                <dd>{formatRentalPoint(dayjs(data.pickupAt))}</dd>
+                <dd>{fmt.rentalPoint(dayjs(data.pickupAt))}</dd>
               </div>
               <div className={styles.row}>
                 <dt>Trả xe</dt>
-                <dd>{formatRentalPoint(dayjs(data.returnAt))}</dd>
+                <dd>{fmt.rentalPoint(dayjs(data.returnAt))}</dd>
               </div>
               <div className={styles.row}>
                 <dt>Thời lượng</dt>
@@ -187,7 +190,7 @@ export function BookingDetailContent({
                   */}
                   {data.longTermPackageMonths
                     ? `Gói ${longTermPackageLabel(data.longTermPackageMonths)}`
-                    : formatRentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}
+                    : fmt.rentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}
                 </dd>
               </div>
               {/*
@@ -197,13 +200,13 @@ export function BookingDetailContent({
               {data.actualPickupAt ? (
                 <div className={styles.row}>
                   <dt>Giao thực tế</dt>
-                  <dd>{formatRentalPoint(dayjs(data.actualPickupAt))}</dd>
+                  <dd>{fmt.rentalPoint(dayjs(data.actualPickupAt))}</dd>
                 </div>
               ) : null}
               {data.actualReturnAt ? (
                 <div className={styles.row}>
                   <dt>Nhận lại thực tế</dt>
-                  <dd>{formatRentalPoint(dayjs(data.actualReturnAt))}</dd>
+                  <dd>{fmt.rentalPoint(dayjs(data.actualReturnAt))}</dd>
                 </div>
               ) : null}
             </dl>
@@ -214,32 +217,32 @@ export function BookingDetailContent({
             <dl className={styles.rows}>
               <div className={styles.row}>
                 <dt>Tiền thuê</dt>
-                <dd>{formatMoneyVnd(data.baseAmount)}</dd>
+                <dd>{fmt.money(data.baseAmount)}</dd>
               </div>
               {!isZeroMoney(data.discountAmount) ? (
                 <div className={styles.row}>
                   <dt>Khuyến mãi</dt>
-                  <dd className={styles.negative}>−{formatMoneyVnd(data.discountAmount)}</dd>
+                  <dd className={styles.negative}>−{fmt.money(data.discountAmount)}</dd>
                 </div>
               ) : null}
               <div className={styles.row}>
                 <dt>Phí giao nhận</dt>
                 <dd>
-                  {isZeroMoney(data.deliveryFee) ? 'Miễn phí' : formatMoneyVnd(data.deliveryFee)}
+                  {isZeroMoney(data.deliveryFee) ? 'Miễn phí' : fmt.money(data.deliveryFee)}
                 </dd>
               </div>
               <div className={styles.rowTotal}>
                 <dt>Tổng cộng</dt>
-                <dd>{formatMoneyVnd(data.totalAmount)}</dd>
+                <dd>{fmt.money(data.totalAmount)}</dd>
               </div>
               <div className={styles.row}>
                 <dt>Đã thanh toán</dt>
-                <dd>{formatMoneyVnd(data.paidAmount)}</dd>
+                <dd>{fmt.money(data.paidAmount)}</dd>
               </div>
               {hasDebt ? (
                 <div className={styles.row}>
                   <dt>Còn nợ</dt>
-                  <dd className={styles.negative}>{formatMoneyVnd(data.debtAmount)}</dd>
+                  <dd className={styles.negative}>{fmt.money(data.debtAmount)}</dd>
                 </div>
               ) : null}
               {hasDeposit ? (
@@ -249,7 +252,7 @@ export function BookingDetailContent({
                     chưa nằm ở thẻ `Phát sinh & Tiền cọc` — hai con số khác nhau, không gộp.
                   */}
                   <dt>Đặt cọc tài sản</dt>
-                  <dd>{formatMoneyVnd(data.depositAmount)}</dd>
+                  <dd>{fmt.money(data.depositAmount)}</dd>
                 </div>
               ) : null}
             </dl>

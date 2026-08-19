@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cx } from '@/lib/cx';
 import type { PublicBanner } from '@/features/banners/types';
 import styles from './BannerCarousel.module.css';
+import { useTranslations } from 'next-intl';
 
 const ROTATE_MS = 6000;
 
@@ -20,6 +21,7 @@ const ROTATE_MS = 6000;
  * null để vỏ ngoài rơi về hero mặc định.
  */
 export function BannerCarousel({ banners }: { banners: PublicBanner[] }) {
+  const t = useTranslations('Marketplace.banner');
   const [index, setIndex] = useState(0);
   const [broken, setBroken] = useState<ReadonlySet<string>>(new Set());
   const [paused, setPaused] = useState(false);
@@ -59,7 +61,7 @@ export function BannerCarousel({ banners }: { banners: PublicBanner[] }) {
       className={styles.carousel}
       role="region"
       aria-roledescription="carousel"
-      aria-label="Banner quảng bá"
+      aria-label={t('carouselLabel')}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -127,7 +129,7 @@ export function BannerCarousel({ banners }: { banners: PublicBanner[] }) {
       })}
 
       {count > 1 ? (
-        <div className={styles.dots} role="tablist" aria-label="Chọn banner">
+        <div className={styles.dots} role="tablist" aria-label={t('selectLabel')}>
           {slides.map((banner, i) => (
             <button
               key={banner.id}

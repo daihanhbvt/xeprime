@@ -30,6 +30,7 @@ import {
 } from '../api';
 import type { Handover, HandoverPhoto } from '../types';
 import styles from './Handover.module.css';
+import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 
 interface PendingUpload {
   file: File;
@@ -64,6 +65,7 @@ export function HandoverPhotoGrid({
   disabled: boolean;
   onChanged: (handover: Handover) => void;
 }) {
+  const uploadRejectionMessage = useUploadRejectionMessage();
   const { message } = App.useApp();
   const [pending, setPending] = useState<Record<string, PendingUpload>>({});
   const [previews, setPreviews] = useState<Record<string, string>>({});
@@ -97,7 +99,7 @@ export function HandoverPhotoGrid({
   async function startUpload(slot: HandoverPhotoSlot, file: File) {
     const invalid = validateImageFile(file);
     if (invalid) {
-      message.error(invalid);
+      message.error(uploadRejectionMessage(invalid));
       return;
     }
     setPendingFor(slot, { file, progress: 0, status: 'uploading' });

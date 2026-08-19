@@ -170,7 +170,7 @@ export default function DriversPage() {
       key: 'status',
       width: 150,
       render: (_, row) => (
-        <StatusTag value={row.status as DriverStatus} meta={DRIVER_STATUS_META} />
+        <StatusTag value={row.status as DriverStatus} meta={DRIVER_STATUS_META} group="driverStatus" />
       ),
     },
     actionColumn<Driver>((row) => [

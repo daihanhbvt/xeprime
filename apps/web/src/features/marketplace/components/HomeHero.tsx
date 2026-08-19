@@ -3,6 +3,7 @@
 import type { PublicBanner } from '@/features/banners/types';
 import { BannerCarousel } from './BannerCarousel';
 import styles from './HomeHero.module.css';
+import { useTranslations } from 'next-intl';
 
 /**
  * Vùng hero trang chủ — Figma `18:4`: carousel banner (admin quản lý, tối đa 3); thẻ tìm kiếm
@@ -13,12 +14,13 @@ import styles from './HomeHero.module.css';
  * cao — trang không nhảy layout và không hiện carousel rỗng.
  */
 export function HomeHero({ banners }: { banners: PublicBanner[] }) {
+  const t = useTranslations('Marketplace.hero');
   if (banners.length > 0) {
     return (
       <section className={styles.hero}>
         <BannerCarousel banners={banners} />
         {/* Banner thật tự mang thông điệp — KHÔNG phủ tiêu đề lên, hai lớp chữ sẽ đè nhau. */}
-        <h1 className={styles.srTitle}>Tìm xe cho thuê phù hợp nhất</h1>
+        <h1 className={styles.srTitle}>{t('title')}</h1>
       </section>
     );
   }
@@ -27,9 +29,9 @@ export function HomeHero({ banners }: { banners: PublicBanner[] }) {
     <section className={styles.hero}>
       <div className={styles.fallback} />
       <div className={styles.overlay}>
-        <h1 className={styles.title}>Tìm xe cho thuê phù hợp nhất</h1>
+        <h1 className={styles.title}>{t('title')}</h1>
         <p className={styles.subtitle}>
-          Hàng nghìn xe ô tô và xe máy từ các gian hàng uy tín trên toàn quốc
+          {t('subtitle')}
         </p>
       </div>
     </section>

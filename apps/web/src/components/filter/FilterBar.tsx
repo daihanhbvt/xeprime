@@ -7,9 +7,11 @@ import { useState, type ReactNode } from 'react';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { useIsMobile } from '@/hooks/use-media-query';
-import { DATE_FORMAT, DAY_PARAM_FORMAT, dayjs, type Dayjs } from '@/lib/datetime';
+import { DAY_PARAM_FORMAT, dayjs, type Dayjs } from '@/lib/datetime';
 
 import styles from './FilterBar.module.css';
+import { useDatePickerPattern } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 export interface FilterOption {
   value: string;
@@ -173,6 +175,9 @@ function FieldControl({
   searchDebounceMs: number;
   compact: boolean;
 }) {
+  const tCommon = useTranslations('Common');
+  const datePattern = useDatePickerPattern();
+
   if (field.kind === 'search') {
     return (
       <SearchField
@@ -196,7 +201,7 @@ function FieldControl({
         aria-label={field.label}
         // Figma `186:1645` giữ nhãn ngay cả khi đã chọn: "Loại xe: Ô tô". Chọn xong mà chỉ còn
         // "Ô tô" thì bốn dropdown cạnh nhau không còn phân biệt được cái nào lọc cái gì.
-        placeholder={compact ? `${field.label}: Tất cả` : field.label}
+        placeholder={compact ? tCommon('components.filterBar.allOf', { label: field.label }) : field.label}
         labelRender={compact ? (item) => `${field.label}: ${item.label}` : undefined}
         options={field.options as FilterOption[]}
         value={values[field.key] ?? undefined}
@@ -223,7 +228,7 @@ function FieldControl({
       size="large"
       // Hiển thị theo quy ước Việt Nam (CLAUDE.md §9) nhưng **ghi ra URL** bằng `YYYY-MM-DD`
       // ở `onChange` — hai định dạng khác nhau là có chủ đích, không phải sơ suất.
-      format={DATE_FORMAT}
+      format={datePattern.date}
       allowEmpty={[true, true]}
       aria-label={field.label}
       value={[toDayjs(values[field.fromKey]), toDayjs(values[field.toKey])]}
@@ -259,6 +264,7 @@ export function FilterBar({
   showActiveChips = false,
   compactFields = false,
 }: FilterBarProps) {
+  const tCommon = useTranslations('Common');
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -274,7 +280,7 @@ export function FilterBar({
           setSheetOpen(false);
         }}
       >
-        Xoá bộ lọc
+        {tCommon('actions.clear')}
       </Button>
     ) : null;
 
@@ -287,7 +293,7 @@ export function FilterBar({
             key={chip.key}
             closable
             // `closeIcon` mặc định là dấu ×; nhãn cho trình đọc màn hình phải nói bỏ CÁI GÌ.
-            closeIcon={<CloseOutlined aria-label={`Bỏ lọc ${chip.label}`} />}
+            closeIcon={<CloseOutlined aria-label={tCommon('components.filterBar.removeFilter', { label: chip.label })} />}
             onClose={() => onChange({ [chip.key]: undefined })}
           >
             {chip.label}
@@ -295,7 +301,7 @@ export function FilterBar({
         ))}
         {onClear ? (
           <Button type="link" size="small" onClick={onClear}>
-            Xoá bộ lọc
+            {tCommon('actions.clear')}
           </Button>
         ) : null}
       </div>
@@ -322,7 +328,7 @@ export function FilterBar({
                 icon={<FilterOutlined aria-hidden="true" />}
                 onClick={() => setSheetOpen(true)}
               >
-                Bộ lọc
+                {tCommon('actions.filter')}
               </Button>
             </Badge>
           ) : null}
@@ -331,7 +337,7 @@ export function FilterBar({
         {chipRow}
 
         <ResponsiveDialog
-          title="Bộ lọc"
+          title={tCommon('actions.filter')}
           open={sheetOpen}
           onClose={() => setSheetOpen(false)}
           size="sm"
@@ -340,7 +346,7 @@ export function FilterBar({
             <div className={styles.sheetFooter}>
               {clearButton}
               <Button type="primary" onClick={() => setSheetOpen(false)}>
-                Áp dụng
+                {tCommon('actions.apply')}
               </Button>
             </div>
           }
@@ -378,7 +384,7 @@ export function FilterBar({
 
   return (
     // `search` là landmark đúng ngữ nghĩa cho một cụm điều khiển lọc/tìm.
-    <div className={styles.wrapper} role="search" aria-label="Bộ lọc danh sách">
+    <div className={styles.wrapper} role="search" aria-label={tCommon('components.filterBar.listFilters')}>
       <div className={styles.root}>
         <div className={compactFields ? `${styles.fields} ${styles.fieldsCompact}` : styles.fields}>
           {showSeparator ? (

@@ -1,6 +1,7 @@
 import { EyeOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DataTable, actionColumn, type DataTableColumn } from './DataTable';
@@ -265,7 +266,12 @@ describe('DataTable — cột hành động', () => {
 
     expect(column.fixed).toBe('right');
     expect(column.width).toBe(160);
-    expect(column.title).toBe('Thao tác');
+    /*
+     * Tiêu đề mặc định giờ là một COMPONENT (nó cần bộ dịch của request — xem
+     * `ActionsColumnTitle`), nên khẳng định vào thứ người dùng ĐỌC ĐƯỢC thay vì vào chuỗi.
+     */
+    render(<>{column.title as ReactNode}</>);
+    expect(screen.getByText('Thao tác')).toBeTruthy();
     expect(column.key).toBe('actions');
     expect(column.align).toBe('right');
   });

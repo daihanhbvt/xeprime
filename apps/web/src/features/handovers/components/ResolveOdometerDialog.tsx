@@ -5,22 +5,17 @@ import { Alert, App, Form } from 'antd';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
-  ODOMETER_CORRECTION_REASON,
-  ODOMETER_CORRECTION_REASON_LABEL,
-  ODOMETER_CORRECTION_REASON_VALUES,
-  type HandoverType,
-  type OdometerCorrectionReason,
-} from '@xeprime/types';
+  ODOMETER_CORRECTION_REASON, ODOMETER_CORRECTION_REASON_LABEL, ODOMETER_CORRECTION_REASON_VALUES, type HandoverType, type OdometerCorrectionReason, } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { formatKm } from '@/lib/odometer';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { resolveHandoverOdometer } from '../api';
 import { resolveOdometerSchema, type ResolveOdometerFormValues } from '../schema';
 import type { Handover, HandoverContext } from '../types';
 import styles from './Handover.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const REASON_OPTIONS = ODOMETER_CORRECTION_REASON_VALUES.map((value) => ({
   value,
@@ -49,6 +44,8 @@ export function ResolveOdometerDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const [saving, setSaving] = useState(false);
   const [decreaseWarning, setDecreaseWarning] = useState<string | null>(null);
@@ -128,12 +125,12 @@ export function ResolveOdometerDialog({
         <div className={styles.summaryBox}>
           <div className={styles.summaryRow}>
             <span className={styles.summaryLabel}>KM hiện tại của xe</span>
-            <span className={styles.summaryValue}>{formatKm(context.vehicleOdometerKm)}</span>
+            <span className={styles.summaryValue}>{fmt.km(context.vehicleOdometerKm)}</span>
           </div>
           {context.pickupOdometerKm != null ? (
             <div className={styles.summaryRow}>
               <span className={styles.summaryLabel}>KM lúc giao</span>
-              <span className={styles.summaryValue}>{formatKm(context.pickupOdometerKm)}</span>
+              <span className={styles.summaryValue}>{fmt.km(context.pickupOdometerKm)}</span>
             </div>
           ) : null}
         </div>

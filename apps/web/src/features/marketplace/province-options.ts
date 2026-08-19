@@ -8,10 +8,8 @@ export interface ProvinceOption {
   unavailable?: boolean;
 }
 
-export const NATIONWIDE_OPTION: ProvinceOption = { value: '', label: 'Toàn quốc' };
-
-/** Nhãn hiển thị cho một lựa chọn địa điểm đã cũ (tỉnh bị ẩn, hoặc không còn xe nào). */
-export const UNAVAILABLE_PROVINCE_LABEL = 'Địa điểm không còn khả dụng';
+/** Giá trị URL của "toàn quốc" là CHUỖI RỖNG. Nhãn nằm ở `HomeSearch.location.nationwide`. */
+export const NATIONWIDE_VALUE = '';
 
 /**
  * Dựng options cho MỌI bộ chọn địa điểm ở marketplace từ CÙNG một nguồn (`/public/destinations`).
@@ -26,6 +24,8 @@ export const UNAVAILABLE_PROVINCE_LABEL = 'Địa điểm không còn khả dụ
 export function buildProvinceOptions(
   destinations: readonly PublicDestination[] | undefined,
   selectedCode: string | undefined,
+  /** Nhãn đã dịch — hàm này KHÔNG sở hữu chữ, nếu không sẽ có hai nguồn cho cùng một từ. */
+  labels: { nationwide: string; unavailable: string },
 ): ProvinceOption[] {
   const fromApi: ProvinceOption[] = (destinations ?? []).map((d) => ({
     value: d.provinceCode,
@@ -34,10 +34,10 @@ export function buildProvinceOptions(
 
   const stale: ProvinceOption[] =
     selectedCode && !fromApi.some((o) => o.value === selectedCode)
-      ? [{ value: selectedCode, label: UNAVAILABLE_PROVINCE_LABEL, unavailable: true }]
+      ? [{ value: selectedCode, label: labels.unavailable, unavailable: true }]
       : [];
 
-  return [NATIONWIDE_OPTION, ...stale, ...fromApi];
+  return [{ value: NATIONWIDE_VALUE, label: labels.nationwide }, ...stale, ...fromApi];
 }
 
 /** Tên tỉnh để hiển thị tóm tắt; `null` khi chưa chọn hoặc lựa chọn đã cũ. */

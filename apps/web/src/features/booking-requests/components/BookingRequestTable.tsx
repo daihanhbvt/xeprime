@@ -3,22 +3,12 @@
 import { CarOutlined, CheckOutlined, CloseOutlined, MessageOutlined } from '@ant-design/icons';
 import { Tag, Tooltip } from 'antd';
 import {
-  BOOKING_REQUEST_STATUS,
-  BOOKING_REQUEST_STATUS_META,
-  longTermPackageLabel,
-  ROUTE_TYPE_LABEL,
-  SERVICE_TYPE,
-  serviceTypeLabel,
-  type BookingRequestStatus,
-  type PaginationMeta,
-  type RouteType,
-} from '@xeprime/types';
+  BOOKING_REQUEST_STATUS, BOOKING_REQUEST_STATUS_META, longTermPackageLabel, ROUTE_TYPE_LABEL, SERVICE_TYPE, serviceTypeLabel, type BookingRequestStatus, type PaginationMeta, type RouteType, } from '@xeprime/types';
 import { actionColumn, DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatShortDateTimeRange } from '@/lib/datetime';
-import { pickupWishText } from '@/lib/long-term';
 import type { BookingRequestItem } from '../types';
 import styles from './BookingRequestTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface Props {
   items: BookingRequestItem[];
@@ -45,6 +35,8 @@ export function BookingRequestTable({
   onReject,
   onPageChange,
 }: Props) {
+  const fmt = useAppFormat();
+
   const columns: DataTableColumn<BookingRequestItem>[] = [
     {
       title: 'Khách hàng',
@@ -82,7 +74,7 @@ export function BookingRequestTable({
       render: (_, row) =>
         row.pickupAt && row.returnAt ? (
           <span className={styles.period}>
-            {formatShortDateTimeRange(row.pickupAt, row.returnAt)}
+            {fmt.shortDateTimeRange(row.pickupAt, row.returnAt)}
           </span>
         ) : (
           <div>
@@ -91,7 +83,7 @@ export function BookingRequestTable({
                 ? `Gói ${longTermPackageLabel(row.longTermPackageMonths)}`
                 : 'Chưa có gói (yêu cầu cũ)'}
             </div>
-            <div className={styles.meta}>{pickupWishText(row)}</div>
+            <div className={styles.meta}>{fmt.pickupWish(row)}</div>
           </div>
         ),
     },
@@ -133,7 +125,7 @@ export function BookingRequestTable({
         <div className={styles.statusCell}>
           <StatusTag
             value={row.status as BookingRequestStatus}
-            meta={BOOKING_REQUEST_STATUS_META}
+            meta={BOOKING_REQUEST_STATUS_META} group="bookingRequestStatus"
           />
           {/*
             Giao tận nơi (Wave 9): KHÔNG còn cửa chặn báo giá. Chỉ nói hình thức nhận xe và mức

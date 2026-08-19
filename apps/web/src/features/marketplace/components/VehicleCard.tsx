@@ -17,11 +17,14 @@ import {
 } from '@xeprime/types';
 import { listingPath, shopPath } from '@/constants/routes';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
-import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
+import { applyDiscountPercent } from '@/lib/money';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import type { PublicListing } from '../types';
 import styles from './VehicleCard.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 /**
  * Một thẻ xe trên marketplace. Chỉ hiển thị trường backend thật sự có — thiếu thì ẩn dòng đó.
@@ -33,13 +36,24 @@ import styles from './VehicleCard.module.css';
  * Cả thẻ là một liên kết tới trang chi tiết; CTA `Chọn thuê` sống ở đó.
  */
 export function VehicleCard({ listing }: { listing: PublicListing }) {
+  const t = useTranslations('Listings.card');
+  const domainLabel = useDomainLabel();
+  const fmt = useAppFormat();
+
   const { filters } = useMarketplaceFilters();
   // Thẻ xe lưu key hãng/nhiên liệu — nhãn tra từ danh mục chung với bộ lọc bên cạnh.
   const { brandLabel, fuelTypeLabel } = useCatalogLabels();
 
-  const typeLabel = VEHICLE_TYPE_LABEL[listing.vehicleType as VehicleType] ?? listing.vehicleType;
+  const typeLabel = domainLabel(
+    'vehicleType',
+    listing.vehicleType,
+    VEHICLE_TYPE_LABEL[listing.vehicleType as VehicleType] ?? listing.vehicleType,
+  );
   const brandLine = [brandLabel(listing.brand), listing.model].filter(Boolean).join(' ');
-  const specs = [brandLine || typeLabel, listing.seatCount ? `${listing.seatCount} chỗ` : null]
+  const specs = [
+    brandLine || typeLabel,
+    listing.seatCount ? t('seats', { count: listing.seatCount }) : null,
+  ]
     .filter(Boolean)
     .join(' · ');
 
@@ -84,7 +98,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
       ? applyDiscountPercent(listing.weekdayPrice, discount)
       : listing.weekdayPrice
     : (monthlyContext ?? driverContext);
-  const priceUnit = monthlyContext ? '/tháng' : '/ngày';
+  const priceMessage = monthlyContext ? 'priceMonthly' : 'priceDaily';
   const showStrikethrough = selfDriveContext && discount > 0;
 
   // Mang ngữ cảnh sang trang chi tiết để prefill luồng đặt xe: ngày giờ + dịch vụ đang active
@@ -108,7 +122,7 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
       <Link
         href={detailHref}
         className={styles.stretch}
-        aria-label={`Xem chi tiết ${listing.name}`}
+        aria-label={t('viewDetail', { name: listing.name })}
       />
 
       <div className={styles.media}>
@@ -125,12 +139,12 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
         )}
         {activeService ? (
           <span className={styles.serviceBadge}>
-            {serviceTypeLabel(activeService)}
-            {extraServiceCount > 0 ? ` +${extraServiceCount}` : ''}
+            {domainLabel('serviceType', activeService, serviceTypeLabel(activeService))}
+            {extraServiceCount > 0 ? ` ${t('extraServices', { count: extraServiceCount })}` : ''}
           </span>
         ) : null}
         {discount > 0 ? <DiscountTag percent={discount} className={styles.discountBadge} /> : null}
-        <button className={styles.fav} type="button" aria-label="Lưu xe">
+        <button className={styles.fav} type="button" aria-label={t('save')}>
           <HeartOutlined />
         </button>
       </div>
@@ -147,11 +161,11 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
           ) : null}
           {hasRating ? (
             <span className={styles.metaItem}>
-              <StarFilled className={styles.star} /> {rating.toFixed(1)}
+              <StarFilled className={styles.star} /> {fmt.rating(rating)}
               <span className={styles.ratingCount}>({listing.ratingCount})</span>
             </span>
           ) : (
-            <span className={styles.newTag}>Xe mới</span>
+            <span className={styles.newTag}>{t('newVehicle')}</span>
           )}
         </div>
 
@@ -163,11 +177,15 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
           ) : null}
           {listing.seatCount ? (
             <span className={styles.metaItem}>
-              <TeamOutlined /> {listing.seatCount} chỗ
+              <TeamOutlined /> {t('seats', { count: listing.seatCount })}
             </span>
           ) : null}
-          {listing.deliveryEnabled ? <span className={styles.amenityTag}>Giao tận nơi</span> : null}
-          {listing.noCollateral ? <span className={styles.amenityTag}>Miễn thế chấp</span> : null}
+          {listing.deliveryEnabled ? (
+            <span className={styles.amenityTag}>{t('delivery')}</span>
+          ) : null}
+          {listing.noCollateral ? (
+            <span className={styles.amenityTag}>{t('noCollateral')}</span>
+          ) : null}
         </div>
 
         <div className={styles.footer}>
@@ -175,16 +193,26 @@ export function VehicleCard({ listing }: { listing: PublicListing }) {
             {displayPrice ? (
               <>
                 {showStrikethrough && listing.weekdayPrice ? (
-                  <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
+                  <s className={styles.oldPrice}>{fmt.money(listing.weekdayPrice)}</s>
                 ) : null}
-                <b>{formatMoneyVnd(displayPrice)}</b>
-                <span>{priceUnit}</span>
-                {driverContext ? <span className={styles.priceNote}>đã gồm tài xế</span> : null}
+                {/*
+                  Số tiền và ĐƠN VỊ là hai phần tử có style riêng (đơn vị nhỏ và mờ hơn).
+                  Dựng bằng rich text của ICU thay vì nối hai chuỗi đã dịch: mỗi ngôn ngữ tự
+                  quyết đơn vị đứng đâu, mà thẻ `<b>`/`<span>` vẫn đúng như thiết kế.
+                */}
+                {t.rich(priceMessage, {
+                  value: fmt.money(displayPrice),
+                  amount: (chunks) => <b>{chunks}</b>,
+                  unit: (chunks) => <span>{chunks}</span>,
+                })}
+                {driverContext ? (
+                  <span className={styles.priceNote}>{t('includesDriver')}</span>
+                ) : null}
               </>
             ) : (
               // Dịch vụ đang active chưa niêm yết giá chuyên biệt — KHÔNG lấy giá tự lái
               // trưng như tổng tiền của dịch vụ khác (17/08).
-              <b className={styles.priceContact}>Liên hệ báo giá</b>
+              <b className={styles.priceContact}>{t('contactForQuote')}</b>
             )}
           </div>
           <Link

@@ -6,16 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
-  API_ERROR_CODE,
-  CUSTOMER_TRIP_STAGE,
-  CUSTOMER_TRIP_STAGE_META,
-  SERVICE_TYPE,
-  customerTripTimeline,
-  isCustomerTripClosed,
-  routeTypeLabel,
-  serviceTypeLabel,
-  type CustomerTripStage,
-} from '@xeprime/types';
+  API_ERROR_CODE, CUSTOMER_TRIP_STAGE, CUSTOMER_TRIP_STAGE_META, SERVICE_TYPE, customerTripTimeline, isCustomerTripClosed, routeTypeLabel, serviceTypeLabel, type CustomerTripStage, } from '@xeprime/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { Stars } from '@/components/data-display/Stars';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -25,14 +16,14 @@ import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { ReviewModal } from '@/features/reviews/components/ReviewModal';
-import { dayjs, formatDateTime, formatRentalDuration, formatRentalPoint } from '@/lib/datetime';
-import { packageLabelOf, pickupWishText } from '@/lib/long-term';
+import { dayjs } from '@/lib/datetime';
 import { getErrorCode, getErrorMessage, isUnauthenticated } from '@/services/api-client';
 import { useTrip } from '../hooks';
 import type { CustomerTripDetail } from '../types';
 import { CustomerTripTimeline } from './CustomerTripTimeline';
 import { TripFinanceCard } from './TripFinanceCard';
 import styles from './TripDetailView.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * Chi tiết một chuyến — **một** kiến trúc cho mọi chặng.
@@ -44,6 +35,8 @@ import styles from './TripDetailView.module.css';
  * Phân nhánh dựa trên `stage` (view-model từ `@xeprime/types`), không đọc thẳng trạng thái đơn.
  */
 export function TripDetailView({ tripId }: { tripId: string }) {
+  const fmt = useAppFormat();
+
   const router = useRouter();
   const { open } = useAuthModal();
   const nextFromHere = useNextFromCurrentPath();
@@ -134,7 +127,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
           <h1 className={styles.heading}>Chi tiết chuyến đi{data.code ? ` #${data.code}` : ''}</h1>
           <p className={styles.sub}>{subtitleFor(stage)}</p>
         </div>
-        <StatusTag value={stage} meta={CUSTOMER_TRIP_STAGE_META} />
+        <StatusTag value={stage} meta={CUSTOMER_TRIP_STAGE_META} group="customerTripStage" />
       </header>
 
       <TerminalNotice trip={data} stage={stage} />
@@ -146,7 +139,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
               <h2 className={styles.highlightTitle}>Hành trình đang diễn ra</h2>
               <p className={styles.highlightLead}>
                 <ClockCircleOutlined aria-hidden="true" /> Thời gian trả xe dự kiến:{' '}
-                <b>{formatRentalPoint(dayjs(data.returnAt))}</b>
+                <b>{fmt.rentalPoint(dayjs(data.returnAt))}</b>
               </p>
               <p className={styles.highlightNote}>
                 Nếu có thay đổi, vui lòng liên hệ chủ xe sớm nhất.
@@ -220,28 +213,28 @@ export function TripDetailView({ tripId }: { tripId: string }) {
               {data.longTermPackageMonths ? (
                 <div className={styles.row}>
                   <dt>Gói thuê</dt>
-                  <dd>{packageLabelOf(data.longTermPackageMonths)}</dd>
+                  <dd>{fmt.packageLabel(data.longTermPackageMonths)}</dd>
                 </div>
               ) : null}
               {data.pickupAt && data.returnAt ? (
                 <>
                   <div className={styles.row}>
                     <dt>Nhận xe</dt>
-                    <dd>{formatRentalPoint(dayjs(data.pickupAt))}</dd>
+                    <dd>{fmt.rentalPoint(dayjs(data.pickupAt))}</dd>
                   </div>
                   <div className={styles.row}>
                     <dt>Trả xe</dt>
-                    <dd>{formatRentalPoint(dayjs(data.returnAt))}</dd>
+                    <dd>{fmt.rentalPoint(dayjs(data.returnAt))}</dd>
                   </div>
                   <div className={styles.row}>
                     <dt>Thời lượng</dt>
-                    <dd>{formatRentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
+                    <dd>{fmt.rentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
                   </div>
                 </>
               ) : (
                 <div className={styles.row}>
                   <dt>Nguyện vọng nhận xe</dt>
-                  <dd>{pickupWishText(data)}</dd>
+                  <dd>{fmt.pickupWish(data)}</dd>
                 </div>
               )}
             </dl>
@@ -280,13 +273,13 @@ export function TripDetailView({ tripId }: { tripId: string }) {
                 {data.actualPickupAt ? (
                   <div className={styles.row}>
                     <dt>Thời gian nhận bàn giao</dt>
-                    <dd>{formatDateTime(data.actualPickupAt)}</dd>
+                    <dd>{fmt.dateTime(data.actualPickupAt)}</dd>
                   </div>
                 ) : null}
                 {data.actualReturnAt ? (
                   <div className={styles.row}>
                     <dt>Thời gian hoàn tất bàn giao</dt>
-                    <dd>{formatDateTime(data.actualReturnAt)}</dd>
+                    <dd>{fmt.dateTime(data.actualReturnAt)}</dd>
                   </div>
                 ) : null}
               </dl>

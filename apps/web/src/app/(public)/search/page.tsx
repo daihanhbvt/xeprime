@@ -3,13 +3,17 @@ import type { Metadata } from 'next';
 import { Skeleton } from 'antd';
 import { MarketplaceResults } from '@/features/marketplace/components/MarketplaceResults';
 import styles from './search-page.module.css';
+import { getTranslations } from 'next-intl/server';
 
-export const metadata: Metadata = {
-  title: 'Tìm xe cho thuê',
-  description: 'Lọc và so sánh xe cho thuê trên XePrime theo địa điểm, thời gian, giá và tiện ích.',
-  // Trang kết quả có vô số tổ hợp query — không để công cụ tìm kiếm index từng tổ hợp.
-  robots: { index: false, follow: true },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Marketplace.meta.search');
+  return {
+    title: t('title'),
+    description: t('description'),
+    // Trang kết quả có vô số tổ hợp query — không để công cụ tìm kiếm index từng tổ hợp.
+    robots: { index: false, follow: true },
+  };
+}
 
 /**
  * `/search` — nơi DUY NHẤT sở hữu bối cảnh tìm kiếm: bộ lọc, chip đang lọc, tổng kết quả,

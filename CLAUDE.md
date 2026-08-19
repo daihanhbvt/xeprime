@@ -52,6 +52,7 @@ Tài liệu tham chiếu (5–9) có vài quyết định kỹ thuật đã bị
 | [0008](docs/decisions/0008-public-listings-sync.md) | Quy tắc đồng bộ `public_listings` |
 | [0009](docs/decisions/0009-chat-firestore-projection.md) | Chat: Firestore projection realtime, **PostgreSQL là source of truth**, outbox/retry, R2 |
 | [0011](docs/decisions/0011-long-term-fixed-packages.md) | Thuê dài hạn = **gói cố định theo THÁNG LỊCH** (1/2/3/6/9/12), khách chỉ nêu nguyện vọng ngày nhận |
+| [0012](docs/decisions/0012-i18n-shared-url-cookie-locale.md) | Đa ngữ vi/en: **một URL cho cả hai ngôn ngữ**, locale ở cookie `XP_LOCALE` đọc phía server |
 
 ### Công cụ Claude (`.claude/`)
 
@@ -88,6 +89,7 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | API type | FE import từ `packages/types/src/api.generated.ts` sinh bằng `openapi-typescript` — ADR 0007 |
 | RBAC | Role/permission lưu DB, **guard backend là nguồn bảo vệ chính** |
 | Thuê dài hạn | **Gói cố định** 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** (server tính, client không gửi); khách nêu nguyện vọng ngày nhận, gian hàng chốt lịch khi duyệt; ưu đãi cam kết thời hạn theo THÁNG, không cộng dồn — ADR 0011 |
+| Đa ngữ | `next-intl` KHÔNG locale routing; hai ngôn ngữ `vi`/`en` dùng CHUNG url; locale ở cookie `XP_LOCALE` (httpOnly) đọc phía server; tiền luôn VND, múi giờ luôn `Asia/Ho_Chi_Minh` — ADR 0012 |
 | Chat | **PostgreSQL là source of truth** (mọi tin/thành viên/đính kèm/đã đọc); Firestore chỉ là projection realtime ~30–50 tin gần nhất; đồng bộ outbox/retry; attachment ở Cloudflare R2 — ADR 0009 |
 | Deploy MVP | 1 VPS 4GB RAM / 40GB SSD |
 
@@ -126,6 +128,11 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Dùng `number` cho tiền — `Decimal` ở BE, string ở JSON (ADR 0007)
 - ❌ Nhân `số tháng × 30` để suy lịch hay giá gói thuê dài hạn — dùng `addCalendarMonthsVn` / `longTermPackages` (ADR 0011)
 - ❌ Trưng chênh lệch giá dài hạn ↔ giá ngày như một khuyến mãi, hay hiện `discountPercent` (của TỰ LÁI) khi khách đang chọn dài hạn (ADR 0011)
+- ❌ Tiền tố ngôn ngữ trong URL (`/en`, `/vi`), `app/[locale]`, hay tham số `?lang=`/`?locale=` — ADR 0012
+- ❌ Chuỗi giao diện viết thẳng trong component ở khu ĐÃ i18n hoá — dùng `t()` + `messages/<locale>/*.json`
+- ❌ `dayjs.locale(...)` ở bất kỳ đâu — nó đổi trạng thái toàn tiến trình và rò ngôn ngữ giữa các request SSR
+- ❌ Hiện `message` tiếng Việt của backend làm chữ chính ở giao diện tiếng Anh — ánh xạ từ MÃ lỗi (ADR 0012)
+- ❌ Dịch mã đi trên dây (status/permission/serviceType…) — mã là dữ liệu, chỉ NHÃN mới dịch
 - ❌ Tạo microservices sớm
 - ❌ `any` tràn lan — nếu bắt buộc phải có comment lý do
 
@@ -162,6 +169,31 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 | Docker daemon | Bật rồi tắt bất thường; nếu `up` treo là đang kéo image lần đầu. Gặp network/container mồ côi thì `docker compose down --remove-orphans` + xoá network trùng tên |
 
 Base Phase 0 (đã commit `0a76adf`): 11 bảng lõi + `vehicle_occupancies` (schema + constraint từ Phase 0, logic đầy đủ Phase 4 — ADR 0006); seed 3 scope (platform admin / shop owner / customer) idempotent; API/pages tối thiểu. Chi tiết tiến độ các phase sau: `docs/completion-roadmap.md`.
+
+## 8b. Đa ngữ (ADR 0012)
+
+Hai ngôn ngữ `vi` (mặc định) / `en`, **cùng một URL**. Locale ở cookie `XP_LOCALE`, đọc phía
+server trước khi render.
+
+| Việc | Ở đâu |
+| --- | --- |
+| Hằng locale, cookie, bản đồ `Intl` | `apps/web/src/i18n/config.ts` |
+| Đọc locale (server) | `src/i18n/locale.ts` · Server Action ghi cookie: `src/i18n/actions.ts` |
+| Message | `apps/web/messages/{vi,en}/*.json`, danh sách ở `src/i18n/namespaces.ts` |
+| Định dạng tiền/ngày/quãng đường | `useAppFormat()` (client) · `getAppFormat()` (server) |
+| Nhãn status/role/enum | `useDomainLabel()` + namespace `Domain` |
+| Lỗi API | `useErrorMessage()` + namespace `Errors` (ánh xạ từ MÃ) |
+| Bộ đổi ngôn ngữ | `src/components/i18n/LocaleSwitcher.tsx` |
+
+Hai lệnh kiểm tra:
+
+```bash
+pnpm --filter @xeprime/web i18n:check   # parity vi↔en, ICU, không giá trị rỗng
+pnpm --filter @xeprime/web i18n:audit   # quét AST tìm chuỗi giao diện còn thô
+```
+
+Việc i18n hoá đi theo đợt: `MESSAGE_NAMESPACES` chỉ liệt kê namespace ĐÃ có nội dung. Khu vực
+chưa chuyển vẫn dùng chuỗi tiếng Việt trong mã; `i18n:audit` là bản kiểm kê phần còn lại.
 
 ## 9. Convention API
 

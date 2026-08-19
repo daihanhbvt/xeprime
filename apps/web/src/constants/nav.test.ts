@@ -17,6 +17,8 @@ import {
   mobileTabsForScope,
   navForScope,
 } from './nav';
+import enNavigation from '../../messages/en/navigation.json';
+import viNavigation from '../../messages/vi/navigation.json';
 import { ROUTES } from './routes';
 
 /**
@@ -34,24 +36,35 @@ import { ROUTES } from './routes';
  * Và ẩn một mục menu KHÔNG bảo vệ gì: chặn thật nằm ở guard backend (CLAUDE.md mục 6).
  */
 
-/** Nhãn của các mục lá mà một tập quyền cho phép nhìn thấy, theo đúng thứ tự khai báo. */
+/**
+ * Khoá nhãn của các mục lá mà một tập quyền cho phép nhìn thấy, theo đúng thứ tự khai báo.
+ *
+ * Khẳng định trên KHOÁ chứ không trên câu tiếng Việt: cây menu là dữ liệu, và khoá là thứ
+ * không đổi khi đổi ngôn ngữ. Việc khoá có bản dịch ở CẢ HAI ngôn ngữ do bài test toàn vẹn ở
+ * cuối file giữ.
+ */
 function visibleLabels(granted: readonly Permission[], isPlatform: boolean): string[] {
   const set = new Set<string>(granted);
   return flattenLeaves(navForScope(isPlatform))
     .filter((leaf) => set.has(leaf.permission))
-    .map((leaf) => leaf.label);
+    .map((leaf) => leaf.labelKey);
 }
 
 describe('nav — cấu trúc cây', () => {
   it('gian hàng: 1 mục gốc + 2 nhóm, tổng 18 mục lá', () => {
     expect(SHOP_NAV).toHaveLength(3);
-    expect(SHOP_NAV.filter(isNavGroup).map((g) => g.label)).toEqual(['Quản lý', 'Cài đặt']);
+    expect(SHOP_NAV.filter(isNavGroup).map((g) => g.labelKey)).toEqual([
+      'manageGroups.operations',
+      'manageGroups.settings',
+    ]);
     expect(flattenLeaves(SHOP_NAV)).toHaveLength(18);
   });
 
   it('nền tảng: 1 mục gốc + 1 nhóm, tổng 12 mục lá', () => {
     expect(PLATFORM_NAV).toHaveLength(2);
-    expect(PLATFORM_NAV.filter(isNavGroup).map((g) => g.label)).toEqual(['Quản trị nền tảng']);
+    expect(PLATFORM_NAV.filter(isNavGroup).map((g) => g.labelKey)).toEqual([
+      'manageGroups.platform',
+    ]);
     expect(flattenLeaves(PLATFORM_NAV)).toHaveLength(12);
   });
 
@@ -80,7 +93,7 @@ describe('nav — cấu trúc cây', () => {
 
   it('mục placeholder VẪN nằm trong menu — chủ dự án yêu cầu "chưa làm thì để menu trống"', () => {
     expect(visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false)).toContain(
-      'Thùng rác',
+      'manage.trash',
     );
   });
 });
@@ -88,16 +101,16 @@ describe('nav — cấu trúc cây', () => {
 describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
   it('có platformRole → CHỈ cây nền tảng, không trộn mục gian hàng', () => {
     expect(navForScope(true)).toBe(PLATFORM_NAV);
-    const labels = flattenLeaves(PLATFORM_NAV).map((leaf) => leaf.label);
-    expect(labels).not.toContain('Lịch thuê xe');
-    expect(labels).not.toContain('Công nợ');
+    const labels = flattenLeaves(PLATFORM_NAV).map((leaf) => leaf.labelKey);
+    expect(labels).not.toContain('manage.calendar');
+    expect(labels).not.toContain('manage.debts');
   });
 
   it('không có platformRole → CHỈ cây gian hàng', () => {
     expect(navForScope(false)).toBe(SHOP_NAV);
-    const labels = flattenLeaves(SHOP_NAV).map((leaf) => leaf.label);
-    expect(labels).not.toContain('Nhật ký hệ thống');
-    expect(labels).not.toContain('Nhân sự nền tảng');
+    const labels = flattenLeaves(SHOP_NAV).map((leaf) => leaf.labelKey);
+    expect(labels).not.toContain('platform.audit');
+    expect(labels).not.toContain('platform.staff');
   });
 
   it('mục gian hàng không đòi quyền `platform.*` và ngược lại', () => {
@@ -126,13 +139,19 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {
     const labels = visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_STAFF], false);
 
-    expect(labels).not.toContain('Tài chính');
-    expect(labels).not.toContain('Thu chi');
-    expect(labels).not.toContain('Công nợ');
-    expect(labels).not.toContain('Người dùng');
+    expect(labels).not.toContain('manage.finance');
+    expect(labels).not.toContain('manage.receipts');
+    expect(labels).not.toContain('manage.debts');
+    expect(labels).not.toContain('manage.members');
     // Nhưng vẫn thấy phần vận hành hằng ngày.
     expect(labels).toEqual(
-      expect.arrayContaining(['Tổng quan', 'Lịch thuê xe', 'Xe', 'Đơn thuê', 'Đơn đặt xe']),
+      expect.arrayContaining([
+        'manage.dashboard',
+        'manage.calendar',
+        'manage.vehicles',
+        'manage.bookings',
+        'manage.bookingRequests',
+      ]),
     );
   });
 
@@ -161,18 +180,18 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
     // `Tỉnh/thành` là mục ĐỌC: staff cần tra danh mục để hiểu dữ liệu giám sát; bật/tắt hiển thị
     // công khai là quyền riêng (`platform.locations.manage`) mà staff không có.
     expect(labels).toEqual([
-      'Tổng quan',
-      'Xe toàn hệ thống',
-      'Đơn thuê toàn hệ thống',
-      'Khách thuê',
-      'Tỉnh/thành',
+      'manage.dashboard',
+      'platform.vehicles',
+      'platform.bookings',
+      'platform.customers',
+      'platform.locations',
     ]);
     for (const adminOnly of [
-      'Duyệt hồ sơ',
-      'Gian hàng',
-      'Nhân sự nền tảng',
-      'Gói dịch vụ',
-      'Nhật ký hệ thống',
+      'platform.approvals',
+      'platform.tenants',
+      'platform.staff',
+      'platform.plans',
+      'platform.audit',
     ]) {
       expect(labels).not.toContain(adminOnly);
     }
@@ -181,9 +200,9 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
   it('reviewer thấy Duyệt hồ sơ nhưng KHÔNG thấy Nhân sự/Gói dịch vụ', () => {
     const labels = visibleLabels(DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.REVIEWER], true);
 
-    expect(labels).toContain('Duyệt hồ sơ');
-    expect(labels).not.toContain('Nhân sự nền tảng');
-    expect(labels).not.toContain('Gói dịch vụ');
+    expect(labels).toContain('platform.approvals');
+    expect(labels).not.toContain('platform.staff');
+    expect(labels).not.toContain('platform.plans');
   });
 
   it('finance_admin thấy Gian hàng + Gói dịch vụ, KHÔNG thấy Duyệt hồ sơ', () => {
@@ -193,10 +212,10 @@ describe('nav — vai trò nền tảng nhìn thấy gì', () => {
     );
 
     expect(labels).toEqual(
-      expect.arrayContaining(['Gian hàng', 'Gói dịch vụ', 'Đơn thuê toàn hệ thống']),
+      expect.arrayContaining(['platform.tenants', 'platform.plans', 'platform.bookings']),
     );
-    expect(labels).not.toContain('Duyệt hồ sơ');
-    expect(labels).not.toContain('Nhật ký hệ thống');
+    expect(labels).not.toContain('platform.approvals');
+    expect(labels).not.toContain('platform.audit');
   });
 
   it('không có quyền nào → không mục nào (khách chưa từng vào portal)', () => {
@@ -291,5 +310,30 @@ describe('mobileTabsForScope — 4 tab dưới đáy', () => {
       'booking-requests',
       'bookings',
     ]);
+  });
+});
+
+/**
+ * Cây menu giữ KHOÁ, không giữ chữ — nên phải có gì đó bảo đảm mỗi khoá thật sự có bản dịch.
+ * Thiếu một khoá thì mục menu hiện ra chính chuỗi khoá đó trên production, và không có
+ * typecheck nào bắt được vì `NavLabelKey` chỉ suy từ bó TIẾNG VIỆT.
+ */
+describe('nav — mọi khoá nhãn đều có bản dịch ở cả hai ngôn ngữ', () => {
+  const lookup = (bundle: Record<string, unknown>, key: string): unknown =>
+    key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], bundle);
+
+  const allKeys = [
+    ...[...SHOP_NAV, ...PLATFORM_NAV].filter(isNavGroup).map((group) => group.labelKey),
+    ...flattenLeaves([...SHOP_NAV, ...PLATFORM_NAV]).map((leaf) => leaf.labelKey),
+    ...mobileTabsForScope(false).map((tab) => tab.labelKey),
+    ...mobileTabsForScope(true).map((tab) => tab.labelKey),
+  ];
+
+  it.each([
+    ['vi', viNavigation],
+    ['en', enNavigation],
+  ])('%s có đủ nhãn', (_locale, bundle) => {
+    const missing = allKeys.filter((key) => typeof lookup(bundle, key) !== 'string');
+    expect(missing).toEqual([]);
   });
 });

@@ -27,8 +27,7 @@ import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
 import { useIsDesktop } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDate } from '@/lib/datetime';
-import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
+import { isZeroMoney } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { CUSTOMER_HINTS } from '../constants';
 import { useCustomer, useSetCustomerArchived } from '../hooks/use-customers';
@@ -38,6 +37,7 @@ import { CustomerFormModal } from './CustomerFormModal';
 import { CustomerNotesPanel } from './CustomerNotesPanel';
 import { CustomerRiskModal } from './CustomerRiskModal';
 import styles from './CustomerDetailView.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /** Nhãn kèm biểu tượng giải thích — icon NGOÀI ô nhập, không chồng lên nội dung. */
 function LabelWithHint({ label, hint }: { label: string; hint: string }) {
@@ -77,6 +77,8 @@ function SummaryCard({
  * Ba khối tiền BIẾN MẤT hoàn toàn khi thiếu `finance.view` — không render số 0 giả.
  */
 export function CustomerDetailView({ customerId }: { customerId: string }) {
+  const fmt = useAppFormat();
+
   const router = useRouter();
   const { message } = App.useApp();
   const { has } = usePermissions();
@@ -271,7 +273,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         </div>
         <div>
           <dt>Vào sổ từ</dt>
-          <dd>{formatDate(data.createdAt)}</dd>
+          <dd>{fmt.date(data.createdAt)}</dd>
         </div>
       </dl>
     </aside>
@@ -295,6 +297,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
               <StatusTag
                 value={data.riskLevel as TenantCustomerRiskLevel}
                 meta={TENANT_CUSTOMER_RISK_LEVEL_META}
+                group="tenantCustomerRiskLevel"
               />
               {archived ? <Tag>Đã lưu trữ</Tag> : null}
             </div>
@@ -339,14 +342,11 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         <SummaryCard label="Đơn đang chạy / sắp tới" value={data.activeBookingCount} />
         {canViewFinance ? (
           <>
-            <SummaryCard
-              label="Tổng giá trị thuê"
-              value={formatMoneyVnd(data.totalBookingAmount)}
-            />
-            <SummaryCard label="Đã thu" value={formatMoneyVnd(data.paidAmount)} />
+            <SummaryCard label="Tổng giá trị thuê" value={fmt.money(data.totalBookingAmount)} />
+            <SummaryCard label="Đã thu" value={fmt.money(data.paidAmount)} />
             <SummaryCard
               label={<LabelWithHint label="Còn nợ" hint={CUSTOMER_HINTS.debt} />}
-              value={formatMoneyVnd(data.debtAmount)}
+              value={fmt.money(data.debtAmount)}
               danger={!isZeroMoney(data.debtAmount)}
             />
           </>
@@ -358,7 +358,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
         />
         <SummaryCard
           label="Lần thuê gần nhất"
-          value={data.lastRentalAt ? formatDate(data.lastRentalAt) : '—'}
+          value={data.lastRentalAt ? fmt.date(data.lastRentalAt) : '—'}
         />
       </div>
 
@@ -383,7 +383,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
                               <li key={booking.id} className={styles.recentItem}>
                                 <span className={styles.recentCode}>{booking.code}</span>
                                 <span className={styles.recentVehicle}>{booking.vehicleName}</span>
-                                <span className={styles.muted}>{formatDate(booking.pickupAt)}</span>
+                                <span className={styles.muted}>{fmt.date(booking.pickupAt)}</span>
                               </li>
                             ))}
                           </ul>

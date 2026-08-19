@@ -11,6 +11,7 @@ import { useManageNav } from './use-manage-nav';
 import { ManageMenu } from './ManageMenu';
 import { ManageUserCard } from './ManageUserCard';
 import styles from './Sidebar.module.css';
+import { useTranslations } from 'next-intl';
 
 const NAV_ID = 'xp-sidebar-nav';
 
@@ -26,6 +27,7 @@ const NAV_ID = 'xp-sidebar-nav';
  * của Batch 1D-C.
  */
 export function Sidebar() {
+  const t = useTranslations('ManageCommon');
   const dispatch = useAppDispatch();
   const collapsed = useAppSelector((s) => s.app.sidebarCollapsed);
   const { data: user } = useCurrentUser();
@@ -51,7 +53,7 @@ export function Sidebar() {
         size="small"
         className={styles.toggle}
         icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-        aria-label={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+        aria-label={collapsed ? t('shell.expandMenu') : t('shell.collapseMenu')}
         aria-expanded={!collapsed}
         aria-controls={NAV_ID}
         onClick={() => dispatch(toggleSidebar())}
@@ -59,7 +61,7 @@ export function Sidebar() {
 
       {/* Vùng landmark có tên — trang có nhiều <nav> (sidebar, bottom nav), không tên thì
           trình đọc màn hình chỉ đọc "navigation" hai lần. */}
-      <nav id={NAV_ID} className={styles.menu} aria-label="Điều hướng cổng quản lý">
+      <nav id={NAV_ID} className={styles.menu} aria-label={t('shell.navLabel')}>
         <ManageMenu items={items} selectedKey={selectedKey} tone="dark" collapsed={collapsed} />
       </nav>
 

@@ -3,10 +3,9 @@
 import { Spin } from 'antd';
 import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatShortDateTimeRange } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import type { BookingListItem } from '@/features/bookings/types';
 import styles from './BookingMiniList.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * Danh sách đơn rút gọn cho panel dashboard. Tự lo loading/empty để panel luôn có hình hài.
@@ -23,6 +22,8 @@ export function BookingMiniList({
   empty: string;
   onSelect: (id: string) => void;
 }) {
+  const fmt = useAppFormat();
+
   if (loading && items.length === 0) {
     return (
       <div className={styles.center}>
@@ -42,12 +43,12 @@ export function BookingMiniList({
             <div className={styles.info}>
               <div className={styles.name}>{b.customerName}</div>
               <div className={styles.meta}>
-                {b.vehicleName} · {formatShortDateTimeRange(b.pickupAt, b.returnAt)}
+                {b.vehicleName} · {fmt.shortDateTimeRange(b.pickupAt, b.returnAt)}
               </div>
             </div>
             <div className={styles.right}>
-              <span className={styles.price}>{formatMoneyVnd(b.totalAmount)}</span>
-              <StatusTag value={b.status as BookingStatus} meta={BOOKING_STATUS_META} />
+              <span className={styles.price}>{fmt.money(b.totalAmount)}</span>
+              <StatusTag value={b.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
             </div>
           </button>
         </li>

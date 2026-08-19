@@ -4,9 +4,9 @@ import { EyeOutlined } from '@ant-design/icons';
 import { APPROVAL_STATUS_META, type ApprovalStatus, type PaginationMeta } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDateTime } from '@/lib/datetime';
 import { targetTypeLabel } from '../constants';
 import type { ApprovalTask } from '../types';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface ApprovalTableProps {
   items: ApprovalTask[];
@@ -28,6 +28,8 @@ export function ApprovalTable({
   onView,
   onPageChange,
 }: ApprovalTableProps) {
+  const fmt = useAppFormat();
+
   const columns: DataTableColumn<ApprovalTask>[] = [
     { title: 'Gian hàng', key: 'tenant', width: 220, render: (_, row) => row.tenantName ?? '—' },
     {
@@ -46,14 +48,14 @@ export function ApprovalTable({
       title: 'Gửi lúc',
       key: 'submittedAt',
       width: 160,
-      render: (_, row) => formatDateTime(row.submittedAt),
+      render: (_, row) => fmt.dateTime(row.submittedAt),
     },
     {
       title: 'Trạng thái',
       key: 'status',
       width: 130,
       render: (_, row) => (
-        <StatusTag value={row.status as ApprovalStatus} meta={APPROVAL_STATUS_META} />
+        <StatusTag value={row.status as ApprovalStatus} meta={APPROVAL_STATUS_META} group="approvalStatus" />
       ),
     },
     actionColumn<ApprovalTask>((row) => [

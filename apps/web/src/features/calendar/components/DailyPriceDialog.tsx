@@ -6,13 +6,13 @@ import { useQuery } from '@tanstack/react-query';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { MoneyInput } from '@/components/form/MoneyInput';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import type { Dayjs } from 'dayjs';
 import { fetchVehicleDailyPrices } from '../api';
 import { useDeleteDailyPrices, useSaveDailyPrices } from '../hooks/use-calendar-mutations';
 import styles from './VehicleBlockDialog.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /** Mở từ ô lịch: biết xe (kèm giá thường để đối chiếu) và ngày được bấm. */
 export interface DailyPriceDialogState {
@@ -59,6 +59,8 @@ export function DailyPriceDialog({
 }
 
 function PriceForm({ state, onClose }: { state: DailyPriceDialogState; onClose: () => void }) {
+  const fmt = useAppFormat();
+
   const { message, modal } = App.useApp();
   const day = dayjs.tz(state.date, APP_TIME_ZONE);
   const [range, setRange] = useState<[Dayjs, Dayjs]>([day, day]);
@@ -168,7 +170,7 @@ function PriceForm({ state, onClose }: { state: DailyPriceDialogState; onClose: 
             key: 'normal',
             label: 'Giá mặc định',
             children: state.weekdayPrice
-              ? `${formatMoneyVnd(state.weekdayPrice)}/ngày${state.hourlyPrice ? ` · ${formatMoneyVnd(state.hourlyPrice)}/giờ` : ''}`
+              ? `${fmt.money(state.weekdayPrice)}/ngày${state.hourlyPrice ? ` · ${fmt.money(state.hourlyPrice)}/giờ` : ''}`
               : 'Chưa cấu hình giá',
           },
         ]}

@@ -1,10 +1,12 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { TripsView } from '@/features/trips/components/TripsView';
+import { getTranslations } from 'next-intl/server';
 
-export const metadata: Metadata = {
-  title: 'Chuyến của tôi',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Navigation.public');
+  return { title: t('trips') };
+}
 
 /**
  * Khu khách hàng — danh sách chuyến. Dữ liệu cá nhân nên không cần SEO; client island.

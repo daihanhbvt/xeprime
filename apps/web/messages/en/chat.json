@@ -1,0 +1,17 @@
+{
+  "loadError": "Couldn't load conversations",
+  "empty": "No conversations yet",
+  "pickConversation": "Pick a conversation to read it.",
+  "messageShop": "Message shop",
+  "about": "About {subject}",
+  "startConversation": "Start the conversation",
+  "attach": "Attach",
+  "inputPlaceholder": "Write a message…",
+  "send": "Send",
+  "back": "Back",
+  "olderMessages": "Load older messages",
+  "emptyThread": "Say hello to start the conversation.",
+  "imageAlt": "Image",
+  "attachment": "Attachment",
+  "messagesLoadError": "Couldn't load messages"
+}

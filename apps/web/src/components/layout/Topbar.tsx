@@ -3,6 +3,8 @@
 import { MenuOutlined, MessageOutlined, UserOutlined } from '@ant-design/icons';
 import { Avatar, Badge, Button, Dropdown } from 'antd';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { BranchScopeSelector } from '@/features/branches/components/BranchScopeSelector';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
@@ -27,6 +29,7 @@ import styles from './Topbar.module.css';
  *    phải trên topbar. Thêm bản thứ hai ở đây là nhân đôi điều khiển cho cùng một việc.
  */
 export function Topbar({ user }: { user: CurrentUser }) {
+  const t = useTranslations('Navigation');
   const router = useRouter();
   const dispatch = useAppDispatch();
   const logout = usePortalLogout();
@@ -41,19 +44,21 @@ export function Topbar({ user }: { user: CurrentUser }) {
           type="text"
           className={styles.hamburger}
           icon={<MenuOutlined />}
-          aria-label="Mở menu"
+          aria-label={t('manage.openMenu')}
           onClick={() => dispatch(setMobileNavOpen(true))}
         />
         <ManageBreadcrumb />
       </div>
 
       <div className={styles.right}>
+        {/* Đứng TRƯỚC tin nhắn/thông báo, đúng vị trí như ở header marketplace. */}
+        <LocaleSwitcher />
         <Badge count={chatUnread?.count ?? 0} size="small" overflowCount={99}>
           <Button
             type="text"
             shape="circle"
             icon={<MessageOutlined aria-hidden />}
-            aria-label="Trò chuyện"
+            aria-label={t('manage.chat')}
             onClick={() => router.push(ROUTES.MANAGE.CHAT)}
           />
         </Badge>
@@ -87,11 +92,11 @@ export function Topbar({ user }: { user: CurrentUser }) {
             items: [
               { key: 'name', label: user.displayName, disabled: true },
               { type: 'divider' },
-              { key: 'logout', label: 'Đăng xuất', onClick: () => void logout() },
+              { key: 'logout', label: t('public.logout'), onClick: () => void logout() },
             ],
           }}
         >
-          <button type="button" className={styles.avatarButton} aria-label="Tài khoản">
+          <button type="button" className={styles.avatarButton} aria-label={t('public.account')}>
             <Avatar
               className={styles.avatar}
               src={user.avatarUrl ?? undefined}

@@ -2,17 +2,13 @@
 
 import { Button } from 'antd';
 import {
-  VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_SOURCE_TYPE_LABEL,
-  type VehicleOperationStatus,
-  type VehicleSourceType,
-} from '@xeprime/types';
+  VEHICLE_OPERATION_STATUS_META, VEHICLE_SOURCE_TYPE_LABEL, type VehicleOperationStatus, type VehicleSourceType, } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
-import { formatMoneyVnd } from '@/lib/money';
 import { useCatalogLabels, type CatalogLabels } from '@/features/catalog/use-catalog';
 import { serviceTypesLabel } from '@xeprime/types';
 import { vehicleTypeLabel } from '../constants';
 import styles from './VehicleReviewStep.module.css';
+import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
 
 /** Nhãn trạng thái vận hành lấy từ META dùng chung — không khai lại bảng ánh xạ thứ hai. */
 const operationStatusLabel = (value: string): string =>
@@ -24,8 +20,8 @@ function text(value: string | number | null | undefined): string {
   return value == null || value === '' ? EMPTY : String(value);
 }
 
-function money(value: number | null | undefined): string {
-  return value == null ? EMPTY : formatMoneyVnd(String(value));
+function money(value: number | null | undefined, fmt: AppFormat): string {
+  return value == null ? EMPTY : fmt.money(String(value));
 }
 
 interface ReviewGroup {
@@ -36,7 +32,11 @@ interface ReviewGroup {
   items: { label: string; value: string }[];
 }
 
-function groupsOf(values: VehicleFormValues, labels: CatalogLabels): ReviewGroup[] {
+function groupsOf(
+  values: VehicleFormValues,
+  labels: CatalogLabels,
+  fmt: AppFormat,
+): ReviewGroup[] {
   const gallery = values.images?.length ?? 0;
   const features = values.features?.length ?? 0;
 
@@ -93,8 +93,8 @@ function groupsOf(values: VehicleFormValues, labels: CatalogLabels): ReviewGroup
       title: 'Giá thuê & Chính sách',
       step: 1,
       items: [
-        { label: 'Đơn giá ngày thường', value: money(values.weekdayPrice) },
-        { label: 'Giá cuối tuần', value: money(values.weekendPrice) },
+        { label: 'Đơn giá ngày thường', value: money(values.weekdayPrice, fmt) },
+        { label: 'Giá cuối tuần', value: money(values.weekendPrice, fmt) },
         {
           label: 'Giảm giá',
           value: values.discountPercent == null ? EMPTY : `-${values.discountPercent}%`,
@@ -139,12 +139,13 @@ interface VehicleReviewStepProps {
  * `VehicleEditWorkspace` dạng tab, xác nhận nhạy cảm nằm ở dialog của workspace.)
  */
 export function VehicleReviewStep({ values, onEditStep }: VehicleReviewStepProps) {
+  const fmt = useAppFormat();
   // Bảng tổng kết phải hiện TÊN hãng/kiểu dáng, không phải key đã lưu.
   const labels = useCatalogLabels();
 
   return (
     <div className={styles.groups}>
-      {groupsOf(values, labels).map((group) => (
+      {groupsOf(values, labels, fmt).map((group) => (
         <section key={group.key} className={styles.group}>
           <header className={styles.groupHeader}>
             <h3 className={styles.groupTitle}>{group.title}</h3>

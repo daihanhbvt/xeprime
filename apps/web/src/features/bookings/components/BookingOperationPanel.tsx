@@ -5,13 +5,12 @@ import { Alert, Button, Card, Skeleton } from 'antd';
 import { BOOKING_STATUS, PERMISSION, type BookingStatus } from '@xeprime/types';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatRentalPoint } from '@/lib/datetime';
-import { MISSING_VALUE_LABEL, formatKm } from '@/lib/odometer';
 import { dayjs } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { useHandoverContext } from '@/features/handovers/hooks';
 import type { Handover } from '@/features/handovers/types';
 import styles from './BookingOperationPanel.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * Diễn biến chuyến đi trên chi tiết đơn (Wave 10) — chuyến đã đi tới đâu và chặng kế là gì.
@@ -117,12 +116,14 @@ export function BookingOperationPanel({
  * không dựng ra `0 km` (docs/design/14 §7).
  */
 function HandoverBanner({ handover, kind }: { handover: Handover; kind: 'pickup' | 'return' }) {
+  const fmt = useAppFormat();
+
   const at = handover.occurredAt ?? handover.confirmedAt;
-  const when = at ? formatRentalPoint(dayjs(at)) : '';
+  const when = at ? fmt.rentalPoint(dayjs(at)) : '';
   const verb = kind === 'pickup' ? 'Đã giao xe' : 'Đã nhận lại xe';
   const odo =
     handover.odometerKm != null
-      ? `Chỉ số Odo ghi nhận: ${formatKm(handover.odometerKm)}.`
+      ? `Chỉ số Odo ghi nhận: ${fmt.km(handover.odometerKm)}.`
       : 'Không ghi nhận chỉ số Odo.';
 
   return (
@@ -140,5 +141,3 @@ function HandoverBanner({ handover, kind }: { handover: Handover; kind: 'pickup'
     />
   );
 }
-
-export { MISSING_VALUE_LABEL };

@@ -9,10 +9,10 @@ import { NumberField } from '@/components/form/NumberField';
 import { DialogForm } from '@/components/form/DialogForm';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { useUpdateBookingDeliveryFee } from '../hooks/use-booking-mutations';
 import styles from './UpdateDeliveryFeeModal.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const schema = yup.object({
   deliveryFee: yup
@@ -53,6 +53,8 @@ export function UpdateDeliveryFeeModal({
   open,
   onClose,
 }: UpdateDeliveryFeeModalProps) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const update = useUpdateBookingDeliveryFee(bookingId);
 
@@ -103,7 +105,7 @@ export function UpdateDeliveryFeeModal({
       >
         <div className={styles.currentRow}>
           <span>Phí đang áp dụng</span>
-          <b>{Number(currentFee) > 0 ? formatMoneyVnd(currentFee) : 'Miễn phí'}</b>
+          <b>{Number(currentFee) > 0 ? fmt.money(currentFee) : 'Miễn phí'}</b>
         </div>
 
         <NumberField
@@ -132,8 +134,8 @@ export function UpdateDeliveryFeeModal({
 
         {Number(currentFee) !== nextFee ? (
           <p className={styles.diff}>
-            {Number(currentFee) > 0 ? formatMoneyVnd(currentFee) : 'Miễn phí'} →{' '}
-            <b>{nextFee > 0 ? formatMoneyVnd(String(nextFee)) : 'Miễn phí'}</b>
+            {Number(currentFee) > 0 ? fmt.money(currentFee) : 'Miễn phí'} →{' '}
+            <b>{nextFee > 0 ? fmt.money(String(nextFee)) : 'Miễn phí'}</b>
           </p>
         ) : null}
       </DialogForm>

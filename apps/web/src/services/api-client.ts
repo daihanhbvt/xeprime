@@ -127,7 +127,9 @@ export async function apiRequest<TData>(
   // Endpoint quên bọc `{ data }` — coi là lỗi hợp đồng, không đoán mò (ADR 0007).
   throw new ApiClientError({
     code: API_ERROR_CODE.INTERNAL_ERROR,
-    message: `Response của ${path} không đúng convention { data }`,
+    // Vi phạm HỢP ĐỒNG giữa hai tầng — thông điệp cho lập trình viên đọc trong log, không
+    // bao giờ lên giao diện (giao diện dịch từ `code`). Vì thế nó ở tiếng Anh như mọi log khác.
+    message: `Response from ${path} does not follow the { data } envelope`,
     status: response.status,
     details: payload,
   });
@@ -162,6 +164,14 @@ export async function apiDelete<TData>(path: string, body?: unknown): Promise<TD
   return result.data;
 }
 
+/**
+ * @deprecated Dùng `useErrorMessage()` (`@/i18n/use-error-message`).
+ *
+ * Hàm này trả `message` do BACKEND sinh ra, và message đó là TIẾNG VIỆT — ở giao diện
+ * tiếng Anh nó hiện một câu tiếng Việt ngay lúc người dùng đang gặp sự cố (ADR 0012 §4).
+ * Bản dịch đúng đi từ MÃ lỗi. Giữ lại vì các khu chưa i18n hoá còn gọi; xoá khi
+ * `pnpm i18n:audit` về 0.
+ */
 const FALLBACK_ERROR_MESSAGE = 'Không kết nối được máy chủ. Thử lại sau.';
 
 export function getErrorMessage(error: unknown): string {

@@ -11,7 +11,7 @@ import {
   type FuelType,
   type VehicleType,
 } from '@xeprime/types';
-import { formatMoneyVnd } from '@/lib/money';
+import type { AppFormat } from '@/i18n/use-app-format';
 
 export const APPROVAL_STATUS_OPTIONS = APPROVAL_STATUS_VALUES.map((value) => ({
   value,
@@ -30,8 +30,12 @@ export const targetTypeLabel = (value: string): string => TARGET_LABELS[value] ?
 export interface SnapshotField {
   key: string;
   label: string;
-  /** Định dạng giá trị hiển thị (mã enum → nhãn, tiền → VND). Mặc định String(value). */
-  format?: (value: unknown) => string;
+  /**
+   * Định dạng giá trị hiển thị (mã enum → nhãn, tiền → VND). Mặc định `String(value)`.
+   * Nhận `fmt` qua tham số vì bảng này ở module scope — nó không gọi hook được, và
+   * tiền/ngày thì phụ thuộc ngôn ngữ của request.
+   */
+  format?: (value: unknown, fmt: AppFormat) => string;
 }
 
 /** Nhãn các trường trong snapshot hồ sơ gian hàng, theo thứ tự hiển thị. */
@@ -71,7 +75,8 @@ export const VEHICLE_SNAPSHOT_FIELDS: readonly SnapshotField[] = [
   {
     key: 'serviceTypes',
     label: 'Dịch vụ',
-    format: (v) => (Array.isArray(v) ? serviceTypesLabel(v as string[]) : serviceTypeLabel(String(v))),
+    format: (v) =>
+      Array.isArray(v) ? serviceTypesLabel(v as string[]) : serviceTypeLabel(String(v)),
   },
   { key: 'brand', label: 'Hãng' },
   { key: 'model', label: 'Dòng xe' },
@@ -88,14 +93,14 @@ export const VEHICLE_SNAPSHOT_FIELDS: readonly SnapshotField[] = [
     format: (v) => BODY_TYPE_LABEL[v as BodyType] ?? String(v),
   },
   { key: 'color', label: 'Màu sắc' },
-  { key: 'weekdayPrice', label: 'Giá ngày thường', format: (v) => formatMoneyVnd(String(v)) },
-  { key: 'weekendPrice', label: 'Giá cuối tuần', format: (v) => formatMoneyVnd(String(v)) },
-  { key: 'hourlyPrice', label: 'Giá thuê giờ', format: (v) => formatMoneyVnd(String(v)) },
-  { key: 'monthlyPrice', label: 'Giá tháng (dài hạn)', format: (v) => formatMoneyVnd(String(v)) },
+  { key: 'weekdayPrice', label: 'Giá ngày thường', format: (v, fmt) => fmt.money(String(v)) },
+  { key: 'weekendPrice', label: 'Giá cuối tuần', format: (v, fmt) => fmt.money(String(v)) },
+  { key: 'hourlyPrice', label: 'Giá thuê giờ', format: (v, fmt) => fmt.money(String(v)) },
+  { key: 'monthlyPrice', label: 'Giá tháng (dài hạn)', format: (v, fmt) => fmt.money(String(v)) },
   {
     key: 'withDriverDailyPrice',
     label: 'Giá/ngày có tài xế',
-    format: (v) => formatMoneyVnd(String(v)),
+    format: (v, fmt) => fmt.money(String(v)),
   },
   { key: 'discountPercent', label: 'Giảm giá', format: (v) => `${String(v)}%` },
   { key: 'deliveryEnabled', label: 'Giao xe tận nơi', format: (v) => (v ? 'Có' : 'Không') },

@@ -1,0 +1,38 @@
+/**
+ * Bó message của MỘT ngôn ngữ (vi).
+ *
+ * Import tĩnh, tường minh từng namespace: bundler nhờ vậy tách được đúng hai chunk và
+ * `i18n/messages.ts` chỉ chạm vào chunk của ngôn ngữ đang dùng — không bao giờ nạp cả hai.
+ *
+ * Danh sách namespace phải khớp `src/i18n/namespaces.ts`; `pnpm i18n:check` fail nếu lệch.
+ * File này SINH RA THỦ CÔNG nhưng có test giữ — đừng sửa lệch một bên.
+ */
+import common from './common.json';
+import navigation from './navigation.json';
+import domain from './domain.json';
+import errors from './errors.json';
+import auth from './auth.json';
+import homeSearch from './home-search.json';
+import marketplace from './marketplace.json';
+import listings from './listings.json';
+import shops from './shops.json';
+import chat from './chat.json';
+import account from './account.json';
+import manageCommon from './manage-common.json';
+
+const messages = {
+  Common: common,
+  Navigation: navigation,
+  Domain: domain,
+  Errors: errors,
+  Auth: auth,
+  HomeSearch: homeSearch,
+  Marketplace: marketplace,
+  Listings: listings,
+  Shops: shops,
+  Chat: chat,
+  Account: account,
+  ManageCommon: manageCommon,
+};
+
+export default messages;

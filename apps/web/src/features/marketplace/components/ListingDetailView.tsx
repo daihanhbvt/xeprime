@@ -1,24 +1,23 @@
 import Link from 'next/link';
-import { CATALOG_TYPE, SERVICE_TYPE, VEHICLE_TYPE } from '@xeprime/types';
+import { CATALOG_TYPE, SERVICE_TYPE } from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { shopPath } from '@/constants/routes';
-import { applyDiscountPercent, formatMoneyVnd } from '@/lib/money';
+import { applyDiscountPercent } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
 import { ListingReviews } from './ListingReviews';
 import { ListingServiceSelector } from './ListingServiceSelector';
 import { ListingSpecsCard } from './ListingSpecsCard';
 import styles from './ListingDetailView.module.css';
-
-function vehicleTypeLabel(type: string): string {
-  return type === VEHICLE_TYPE.MOTORBIKE ? 'Xe máy' : 'Ô tô';
-}
+import { getAppFormat } from '@/i18n/server-format';
+import { getTranslations } from 'next-intl/server';
+import { createDomainLabel } from '@/i18n/domain';
 
 /** Trang chi tiết một xe trên Marketplace (server-render). Nút thuê là client island. */
-export function ListingDetailView({
+export async function ListingDetailView({
   listing,
   catalog,
   pickupAt,
@@ -35,37 +34,67 @@ export function ListingDetailView({
   serviceType?: string;
   routeType?: string;
 }) {
+  const [fmt, t, tCard, tDomain] = await Promise.all([
+    getAppFormat(),
+    getTranslations('Listings.detail'),
+    getTranslations('Listings.card'),
+    getTranslations('Domain'),
+  ]);
+  const domainLabel = createDomainLabel(tDomain as never);
+
   const brand = catalogLabel(catalog[CATALOG_TYPE.VEHICLE_BRAND], listing.brand);
   // Thẻ thông số 2 cột kèm icon (mockup đợt 4) — key để client island tra icon.
   const specs: Array<{ key: string; label: string; value: string }> = [
-    { key: 'vehicleType', label: 'Loại xe', value: vehicleTypeLabel(listing.vehicleType) },
+    {
+      key: 'vehicleType',
+      label: t('specs.vehicleType'),
+      value: domainLabel('vehicleType', listing.vehicleType),
+    },
     ...(listing.bodyType
       ? [
           {
             key: 'bodyType',
-            label: 'Kiểu dáng',
+            label: t('specs.bodyType'),
             value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '',
           },
         ]
       : []),
     ...(listing.seatCount
-      ? [{ key: 'seatCount', label: 'Số chỗ', value: `${listing.seatCount} chỗ` }]
+      ? [
+          {
+            key: 'seatCount',
+            label: t('specs.seats'),
+            value: tCard('seats', { count: listing.seatCount }),
+          },
+        ]
       : []),
     ...(listing.fuelType
       ? [
           {
             key: 'fuelType',
-            label: 'Nguồn năng lượng',
+            label: t('specs.fuelType'),
             value: catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? '',
           },
         ]
       : []),
     ...(listing.manufactureYear
-      ? [{ key: 'manufactureYear', label: 'Đời xe', value: String(listing.manufactureYear) }]
+      ? [
+          {
+            key: 'manufactureYear',
+            label: t('specs.year'),
+            value: String(listing.manufactureYear),
+          },
+        ]
       : []),
-    ...(listing.color ? [{ key: 'color', label: 'Màu', value: listing.color }] : []),
+    ...(listing.color ? [{ key: 'color', label: t('specs.color'), value: listing.color }] : []),
     ...(brand
-      ? [{ key: 'brand', label: 'Hãng', value: [brand, listing.model].filter(Boolean).join(' ') }]
+      ? [
+          {
+            key: 'brand',
+            label: t('specs.brand'),
+            value: [brand, listing.model].filter(Boolean).join(' '),
+          },
+        ]
       : []),
   ];
 
@@ -114,13 +143,13 @@ export function ListingDetailView({
               {listing.monthlyPrice ? (
                 <>
                   <div className={styles.priceMain}>
-                    <b>{formatMoneyVnd(listing.monthlyPrice)}</b>
-                    <span className={styles.priceUnit}>/tháng</span>
+                    <b>{fmt.money(listing.monthlyPrice)}</b>
+                    <span className={styles.priceUnit}>{tCard('perMonthUnit')}</span>
                   </div>
                 </>
               ) : (
                 <div className={styles.priceMain}>
-                  <b className={styles.priceContact}>Liên hệ báo giá thuê dài hạn</b>
+                  <b className={styles.priceContact}>{t('longTermQuote')}</b>
                 </div>
               )}
             </div>
@@ -129,13 +158,13 @@ export function ListingDetailView({
               {listing.withDriverDailyPrice ? (
                 <>
                   <div className={styles.priceMain}>
-                    <b>{formatMoneyVnd(listing.withDriverDailyPrice)}</b>
-                    <span className={styles.priceUnit}>/ngày</span>
+                    <b>{fmt.money(listing.withDriverDailyPrice)}</b>
+                    <span className={styles.priceUnit}>{tCard('perDayUnit')}</span>
                   </div>
                 </>
               ) : (
                 <div className={styles.priceMain}>
-                  <b className={styles.priceContact}>Liên hệ báo giá chuyến có tài xế</b>
+                  <b className={styles.priceContact}>{t('withDriverQuote')}</b>
                 </div>
               )}
             </div>
@@ -144,12 +173,12 @@ export function ListingDetailView({
               <div className={styles.priceMain}>
                 {discount > 0 && listing.weekdayPrice ? (
                   <>
-                    <s className={styles.oldPrice}>{formatMoneyVnd(listing.weekdayPrice)}</s>
+                    <s className={styles.oldPrice}>{fmt.money(listing.weekdayPrice)}</s>
                     <DiscountTag percent={discount} />
                   </>
                 ) : null}
-                <b>{formatMoneyVnd(displayPrice)}</b>
-                <span className={styles.priceUnit}>/ngày</span>
+                <b>{fmt.money(displayPrice)}</b>
+                <span className={styles.priceUnit}>{tCard('perDayUnit')}</span>
               </div>
             </div>
           )}
@@ -157,10 +186,10 @@ export function ListingDetailView({
           {listing.deliveryEnabled || listing.noCollateral ? (
             <div className={styles.amenities}>
               {listing.deliveryEnabled ? (
-                <span className={styles.amenityBadge}>Giao xe tận nơi</span>
+                <span className={styles.amenityBadge}>{t('delivery')}</span>
               ) : null}
               {listing.noCollateral ? (
-                <span className={styles.amenityBadge}>Miễn thế chấp</span>
+                <span className={styles.amenityBadge}>{t('noCollateral')}</span>
               ) : null}
             </div>
           ) : null}
@@ -193,7 +222,7 @@ export function ListingDetailView({
                   {listing.shopName}
                 </Link>
                 {/* Xe lên chợ đồng nghĩa gian hàng đã qua duyệt nền tảng — tick nói đúng điều đó. */}
-                <span className={styles.verified} title="Gian hàng đã được duyệt">
+                <span className={styles.verified} title={t('shopVerified')}>
                   ✓
                 </span>
               </div>
@@ -227,8 +256,8 @@ export function ListingDetailView({
       {/* Hàng dưới theo mockup: Mô tả và Đánh giá là HAI THẺ full-width dưới khu ảnh + giá. */}
       <div className={styles.bottom}>
         <section id="description" className={styles.bottomCard}>
-          <h2 className={styles.descTitle}>Mô tả</h2>
-          <p className={styles.descBody}>{listing.description || 'Gian hàng chưa viết mô tả.'}</p>
+          <h2 className={styles.descTitle}>{t('description')}</h2>
+          <p className={styles.descBody}>{listing.description || t('descriptionEmpty')}</p>
         </section>
         <section className={styles.bottomCard}>
           <ListingReviews vehicleId={listing.id} />

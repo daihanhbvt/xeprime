@@ -5,10 +5,9 @@ import { Button } from 'antd';
 import { BOOKING_STATUS_META, type BookingStatus, type PaginationMeta } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatShortDateTimeRange } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import type { BookingListItem } from '../types';
 import styles from './BookingTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface BookingTableProps {
   items: BookingListItem[];
@@ -37,6 +36,8 @@ export function BookingTable({
   onView,
   onPageChange,
 }: BookingTableProps) {
+  const fmt = useAppFormat();
+
   const columns: DataTableColumn<BookingListItem>[] = [
     {
       title: 'Khách hàng',
@@ -72,7 +73,7 @@ export function BookingTable({
       width: 260,
       render: (_, row) => (
         <span className={styles.period}>
-          {formatShortDateTimeRange(row.pickupAt, row.returnAt)}
+          {fmt.shortDateTimeRange(row.pickupAt, row.returnAt)}
         </span>
       ),
     },
@@ -81,14 +82,14 @@ export function BookingTable({
       key: 'total',
       align: 'right',
       width: 140,
-      render: (_, row) => <span className={styles.price}>{formatMoneyVnd(row.totalAmount)}</span>,
+      render: (_, row) => <span className={styles.price}>{fmt.money(row.totalAmount)}</span>,
     },
     {
       title: 'Trạng thái',
       key: 'status',
       width: 140,
       render: (_, row) => (
-        <StatusTag value={row.status as BookingStatus} meta={BOOKING_STATUS_META} />
+        <StatusTag value={row.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
       ),
     },
     actionColumn<BookingListItem>((row) => [

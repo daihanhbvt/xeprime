@@ -5,12 +5,14 @@ import type { Dayjs } from 'dayjs';
 import { useState } from 'react';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { useFinanceSummary } from '@/features/finance/hooks/use-finance-summary';
-import { formatMoneyVnd } from '@/lib/money';
 import styles from './finance-page.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const { RangePicker } = DatePicker;
 
 export default function FinancePage() {
+  const fmt = useAppFormat();
+
   const [range, setRange] = useState<[Dayjs, Dayjs] | null>(null);
   const from = range?.[0]?.startOf('day').toISOString();
   const to = range?.[1]?.endOf('day').toISOString();
@@ -42,19 +44,19 @@ export default function FinancePage() {
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} lg={6}>
             <Card>
-              <Statistic title="Tổng thu" value={formatMoneyVnd(data.totalIncome)} valueStyle={{ color: '#389e0d' }} />
+              <Statistic title="Tổng thu" value={fmt.money(data.totalIncome)} valueStyle={{ color: '#389e0d' }} />
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={6}>
             <Card>
-              <Statistic title="Tổng chi" value={formatMoneyVnd(data.totalExpense)} valueStyle={{ color: '#cf1322' }} />
+              <Statistic title="Tổng chi" value={fmt.money(data.totalExpense)} valueStyle={{ color: '#cf1322' }} />
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
                 title="Cân đối (thu − chi)"
-                value={formatMoneyVnd(data.balance)}
+                value={fmt.money(data.balance)}
                 valueStyle={{ color: balance >= 0 ? '#389e0d' : '#cf1322' }}
               />
             </Card>
@@ -63,7 +65,7 @@ export default function FinancePage() {
             <Card>
               <Statistic
                 title={`Công nợ (${data.debtBookings} đơn)`}
-                value={formatMoneyVnd(data.totalDebt)}
+                value={fmt.money(data.totalDebt)}
                 valueStyle={{ color: '#d48806' }}
               />
             </Card>

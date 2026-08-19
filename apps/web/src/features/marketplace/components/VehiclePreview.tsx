@@ -5,12 +5,14 @@ import { Alert, Button, Empty, Skeleton } from 'antd';
 import Link from 'next/link';
 import { serviceTypeLabel } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
-import { getErrorMessage } from '@/services/api-client';
 import { applyFilterPatch } from '../filter-params';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
 import { usePublicListings } from '../hooks/use-public-listings';
 import { VehicleCard } from './VehicleCard';
 import styles from './VehiclePreview.module.css';
+import { useTranslations } from 'next-intl';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 /** Trang chủ chỉ XEM TRƯỚC — tối đa 8 xe, không phân trang, không bộ lọc facet. */
 const PREVIEW_LIMIT = 8;
@@ -27,6 +29,9 @@ const PREVIEW_LIMIT = 8;
  * bật"/"Gian hàng nổi bật" bên dưới vẫn dùng được.
  */
 export function VehiclePreview() {
+  const errorMessage = useErrorMessage();
+  const domainLabel = useDomainLabel();
+  const t = useTranslations('Marketplace.available');
   const { filters } = useMarketplaceFilters();
   const { data, isLoading, isError, error } = usePublicListings({
     // Ngữ cảnh từ hero (dịch vụ/loại xe/tỉnh/ngày) lọc luôn preview — facet sâu để cho /search.
@@ -61,13 +66,22 @@ export function VehiclePreview() {
       <div className={styles.head}>
         <div>
           <h2 id="home-vehicles" className={styles.title}>
-            Xe khả dụng
-            {filters.serviceType ? ` · ${serviceTypeLabel(filters.serviceType)}` : ''}{' '}
-            {data ? <span className={styles.count}>({data.meta.total} xe)</span> : null}
+            {filters.serviceType
+              ? t('titleWithService', {
+                  service: domainLabel(
+                    'serviceType',
+                    filters.serviceType,
+                    serviceTypeLabel(filters.serviceType),
+                  ),
+                })
+              : t('title')}{' '}
+            {data ? (
+              <span className={styles.count}>{t('count', { count: data.meta.total })}</span>
+            ) : null}
           </h2>
         </div>
         <Link href={exploreHref} className={styles.seeAll}>
-          Khám phá xe <RightOutlined />
+          {t('exploreAll')} <RightOutlined />
         </Link>
       </div>
 
@@ -85,11 +99,11 @@ export function VehiclePreview() {
         <Alert
           type="error"
           showIcon
-          message="Không tải được danh sách xe"
-          description={getErrorMessage(error)}
+          message={t('loadError')}
+          description={errorMessage(error)}
           action={
             <Link href={ROUTES.SEARCH}>
-              <Button size="small">Mở trang tìm xe</Button>
+              <Button size="small">{t('openSearch')}</Button>
             </Link>
           }
         />
@@ -97,8 +111,14 @@ export function VehiclePreview() {
         <Empty
           description={
             filters.serviceType
-              ? `Chưa có xe ${serviceTypeLabel(filters.serviceType).toLowerCase()} nào phù hợp — thử tab dịch vụ khác`
-              : 'Chưa có xe nào được đăng công khai'
+              ? t('emptyForService', {
+                  service: domainLabel(
+                    'serviceType',
+                    filters.serviceType,
+                    serviceTypeLabel(filters.serviceType),
+                  ),
+                })
+              : t('empty')
           }
         />
       ) : (

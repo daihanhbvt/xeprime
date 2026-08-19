@@ -1,0 +1,14 @@
+{
+  "header": {
+    "noRating": "No reviews yet",
+    "rating": "{avg} · {count, plural, one {# review} other {# reviews}}",
+    "call": "Call {phone}"
+  },
+  "vehicles": {
+    "sectionLabel": "Shop vehicles",
+    "title": "Vehicles for rent",
+    "titleWithCount": "Vehicles for rent ({count})",
+    "loadError": "Couldn't load the vehicle list",
+    "empty": "This shop has no public vehicles yet."
+  }
+}

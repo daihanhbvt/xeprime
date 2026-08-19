@@ -3,34 +3,17 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Alert, Button, Popover, Skeleton } from 'antd';
 import {
-  CarOutlined,
-  CloseOutlined,
-  LeftOutlined,
-  LockOutlined,
-  RightOutlined,
-  ToolOutlined,
-} from '@ant-design/icons';
+  CarOutlined, CloseOutlined, LeftOutlined, LockOutlined, RightOutlined, ToolOutlined, } from '@ant-design/icons';
 import { useLayoutEffect, useMemo, useState } from 'react';
 import {
-  BOOKING_STATUS_META,
-  OCCUPANCY_SOURCE_TYPE,
-  OCCUPANCY_SOURCE_TYPE_META,
-  PERMISSION,
-  VEHICLE_BLOCK_REASON_META,
-  VEHICLE_OPERATION_STATUS,
-  VEHICLE_OPERATION_STATUS_META,
-  type BookingStatus,
-  type OccupancySourceType,
-  type VehicleBlockReason,
-} from '@xeprime/types';
+  BOOKING_STATUS_META, OCCUPANCY_SOURCE_TYPE, OCCUPANCY_SOURCE_TYPE_META, PERMISSION, VEHICLE_BLOCK_REASON_META, VEHICLE_OPERATION_STATUS, VEHICLE_OPERATION_STATUS_META, type BookingStatus, type OccupancySourceType, type VehicleBlockReason, } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { StaffBookingDialog } from '@/features/booking-requests/components/StaffBookingDialog';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
-import { APP_TIME_ZONE, dayjs, formatRentalDuration } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
+import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { priceMarkerKey, useCalendarData } from '../hooks/use-calendar-data';
 import { formatDateTime, listDays } from '../utils/calendar-date.util';
@@ -53,6 +36,7 @@ import { MaintenanceEventDialog } from './MaintenanceEventDialog';
 import { VehicleBlockDetailDialog } from './VehicleBlockDetailDialog';
 import { VehicleBlockDialog, type VehicleBlockDialogState } from './VehicleBlockDialog';
 import styles from './CalendarScheduler.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /** Giờ nhận xe mặc định khi tạo đơn từ ô lịch (giờ Việt Nam). */
 const DEFAULT_PICKUP_HOUR = 8;
@@ -541,6 +525,8 @@ function QuickCardShell({
  * Hover (PC) / chạm (mobile) mở thẻ thông tin xe — đặc biệt cần khi cột đang THU GỌN chỉ còn ảnh.
  */
 function ResourceCell({ resource, collapsed }: { resource: CalendarResource; collapsed: boolean }) {
+  const fmt = useAppFormat();
+
   const [infoOpen, setInfoOpen] = useState(false);
   const showStatus =
     resource.operationStatus !== VEHICLE_OPERATION_STATUS.AVAILABLE &&
@@ -570,13 +556,13 @@ function ResourceCell({ resource, collapsed }: { resource: CalendarResource; col
         {resource.weekdayPrice ? (
           <div className={styles.quickRow}>
             <dt>Giá ngày</dt>
-            <dd>{formatMoneyVnd(resource.weekdayPrice)}</dd>
+            <dd>{fmt.money(resource.weekdayPrice)}</dd>
           </div>
         ) : null}
         {resource.hourlyPrice ? (
           <div className={styles.quickRow}>
             <dt>Giá giờ</dt>
-            <dd>{formatMoneyVnd(resource.hourlyPrice)}</dd>
+            <dd>{fmt.money(resource.hourlyPrice)}</dd>
           </div>
         ) : null}
         {statusMeta ? (
@@ -634,7 +620,7 @@ function ResourceCell({ resource, collapsed }: { resource: CalendarResource; col
               </span>
               {resource.weekdayPrice ? (
                 <span className={styles.resourcePrice}>
-                  {formatMoneyVnd(resource.weekdayPrice)}/ngày
+                  {fmt.money(resource.weekdayPrice)}/ngày
                 </span>
               ) : null}
             </span>
@@ -647,10 +633,12 @@ function ResourceCell({ resource, collapsed }: { resource: CalendarResource; col
 
 /** Chấm giá riêng trong ô — chỉ là DẤU (giá không chiếm lịch); chi tiết mở qua "Đặt giá". */
 function PriceMarker({ daily }: { daily: string | null }) {
+  const fmt = useAppFormat();
+
   return (
     <span
       className={styles.priceMarker}
-      title={daily ? `Giá riêng: ${formatMoneyVnd(daily)}/ngày` : 'Có giá riêng theo giờ'}
+      title={daily ? `Giá riêng: ${fmt.money(daily)}/ngày` : 'Có giá riêng theo giờ'}
       aria-hidden
     />
   );
@@ -790,6 +778,8 @@ function EventQuickCard({
   vehicleName: string;
   onClose: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const isBooking = event.type === OCCUPANCY_SOURCE_TYPE.BOOKING;
   const typeMeta = OCCUPANCY_SOURCE_TYPE_META[event.type as OccupancySourceType];
   const { code, customer } = isBooking
@@ -798,9 +788,9 @@ function EventQuickCard({
 
   const statusNode =
     isBooking && event.status ? (
-      <StatusTag value={event.status as BookingStatus} meta={BOOKING_STATUS_META} />
+      <StatusTag value={event.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
     ) : event.type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE && event.status ? (
-      <StatusTag value={event.status as VehicleBlockReason} meta={VEHICLE_BLOCK_REASON_META} />
+      <StatusTag value={event.status as VehicleBlockReason} meta={VEHICLE_BLOCK_REASON_META} group="vehicleBlockReason" />
     ) : null;
 
   return (
@@ -832,7 +822,7 @@ function EventQuickCard({
         </div>
         <div className={styles.quickRow}>
           <dt>Thời lượng</dt>
-          <dd>{formatRentalDuration(dayjs(event.startAt), dayjs(event.endAt))}</dd>
+          <dd>{fmt.rentalDuration(dayjs(event.startAt), dayjs(event.endAt))}</dd>
         </div>
       </dl>
       <div className={styles.quickHint}>Bấm vào thanh lịch để xem chi tiết</div>

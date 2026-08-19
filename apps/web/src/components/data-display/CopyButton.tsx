@@ -3,6 +3,7 @@
 import { CheckOutlined, CopyOutlined } from '@ant-design/icons';
 import { App, Button, Tooltip } from 'antd';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 /** Thời gian giữ dấu tick sau khi chép — đủ để mắt bắt được, không đủ để tưởng là trạng thái. */
 const COPIED_FEEDBACK_MS = 1500;
@@ -23,7 +24,7 @@ const COPIED_FEEDBACK_MS = 1500;
 export function CopyButton({
   value,
   label,
-  copiedLabel = 'Đã sao chép',
+  copiedLabel,
   size = 'small',
 }: {
   value: string;
@@ -32,6 +33,8 @@ export function CopyButton({
   copiedLabel?: string;
   size?: 'small' | 'middle';
 }) {
+  const tCommon = useTranslations('Common');
+  const copiedText = copiedLabel ?? tCommon('actions.copied');
   const { message } = App.useApp();
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -45,7 +48,7 @@ export function CopyButton({
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
     } catch {
-      message.error('Trình duyệt không cho phép sao chép — hãy bôi đen và chép tay');
+      message.error(tCommon('components.copyFailed'));
     }
   }
 

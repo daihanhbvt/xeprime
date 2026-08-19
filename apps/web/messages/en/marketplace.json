@@ -1,0 +1,163 @@
+{
+  "footer": {
+    "tagline": "XePrime connects vehicle owners with renters across Vietnam. Renting a car made easy, safe and transparent.",
+    "copyright": "© {year} XePrime. All rights reserved.",
+    "country": "A car rental platform in Vietnam",
+    "apps": {
+      "title": "Get the app",
+      "downloadOn": "Download on",
+      "note": "The app is in development"
+    },
+    "columns": {
+      "about": {
+        "title": "About us",
+        "intro": "About XePrime",
+        "blog": "Blog",
+        "careers": "Careers",
+        "contact": "Contact"
+      },
+      "support": {
+        "title": "Support",
+        "helpCenter": "Help centre",
+        "rentalGuide": "How to rent",
+        "terms": "Terms of service",
+        "privacy": "Privacy policy"
+      },
+      "hosts": {
+        "title": "For hosts",
+        "listVehicle": "List your vehicle",
+        "manageVehicles": "Manage vehicles",
+        "pricing": "Pricing"
+      }
+    }
+  },
+  "steps": {
+    "title": "Rent a car in 4 steps",
+    "search": {
+      "title": "Find a vehicle",
+      "desc": "Pick a location and dates"
+    },
+    "request": {
+      "title": "Send a request",
+      "desc": "Contact the shop"
+    },
+    "pickup": {
+      "title": "Collect the vehicle",
+      "desc": "Delivered or picked up"
+    },
+    "return": {
+      "title": "Return the vehicle",
+      "desc": "Finish your trip"
+    }
+  },
+  "hosts": {
+    "title": "Featured hosts",
+    "subtitle": "Hosts our renters rate highly",
+    "newBadge": "New",
+    "loadError": "Couldn't load shops",
+    "vehicleCount": "{count, plural, one {# vehicle} other {# vehicles}}"
+  },
+  "banner": {
+    "carouselLabel": "Promotional banners",
+    "selectLabel": "Select banner"
+  },
+  "hero": {
+    "title": "Find the right rental vehicle",
+    "subtitle": "Thousands of cars and motorbikes from trusted shops across Vietnam"
+  },
+  "available": {
+    "title": "Available vehicles",
+    "titleWithService": "Available vehicles · {service}",
+    "count": "({count, plural, one {# vehicle} other {# vehicles}})",
+    "exploreAll": "Explore vehicles",
+    "loadError": "Couldn't load the vehicle list",
+    "openSearch": "Open search",
+    "emptyForService": "No {service} vehicles match yet — try another service tab",
+    "empty": "No vehicles have been listed publicly yet"
+  },
+  "locations": {
+    "title": "Featured locations",
+    "subtitle": "Explore rentals in popular destinations",
+    "collapse": "Show less",
+    "expand": "Show all",
+    "loadError": "Couldn't load locations",
+    "available": "{count, plural, one {# vehicle} other {# vehicles}} available"
+  },
+  "results": {
+    "editSearch": "Edit search: {summary}",
+    "edit": "Edit",
+    "allVehicles": "All vehicles",
+    "searching": "Searching…",
+    "available": "{count, plural, one {# vehicle available} other {# vehicles available}}",
+    "filterCount": "{count, plural, one {# filter} other {# filters}}",
+    "quickChipsLabel": "Vehicle and service",
+    "allServices": "All",
+    "filters": "Filters",
+    "sortLabel": "Sort:",
+    "sortAriaLabel": "Sort results",
+    "dateRange": "{from} – {to}",
+    "dateRangeWithDays": "{from} – {to} ({days, plural, one {# day} other {# days}})",
+    "loadErrorTitle": "Couldn't load the vehicle list",
+    "loadingLabel": "Loading results",
+    "emptyFilteredTitle": "No matching vehicles",
+    "emptyFilteredDesc": "No vehicles match your current filters. Try changing your criteria, loosening the filters, or picking different dates.",
+    "changeTimeOrPlace": "Change dates or location",
+    "emptySystemTitle": "No vehicles listed yet",
+    "emptySystemDesc": "Shops have not listed any vehicles publicly. Please check back — new vehicles appear as soon as they are approved.",
+    "loadingMore": "Loading more vehicles",
+    "appendError": "Couldn't load the next page. {reason}",
+    "loadMore": "Load more vehicles",
+    "endNote": "Showing all {count, plural, one {# vehicle} other {# vehicles}}",
+    "title": "Search vehicles for rent",
+    "removeFilter": "Remove filter {label}",
+    "clearAll": "Clear all"
+  },
+  "filterPanel": {
+    "title": "Filters",
+    "any": "Any",
+    "sort": "Sort",
+    "priceRange": "Price / day",
+    "vehicleType": "Vehicle type",
+    "brand": "Brand",
+    "seats": "Seats",
+    "fuelType": "Fuel type",
+    "features": "Features",
+    "amenities": "Amenities",
+    "clear": "Clear filters",
+    "apply": "Apply",
+    "priceRangeValue": "{from} – {to}",
+    "countSuffix": "vehicles",
+    "applyWithCount": "Apply ({count, plural, one {# vehicle} other {# vehicles}})"
+  },
+  "ownerCta": {
+    "title": "List your vehicle",
+    "desc": "Got a vehicle sitting idle? Turn it into passive income on XePrime.",
+    "action": "Learn more"
+  },
+  "searchDialog": {
+    "title": "Search",
+    "longTermHint": "Choose a vehicle first — then pick a rental package ({packages} months) and your preferred pickup date when you send the request.",
+    "locationAriaLabel": "Pickup location"
+  },
+  "meta": {
+    "home": {
+      "title": "Self-drive & chauffeured car rental across Vietnam",
+      "description": "XePrime — rent self-drive cars, chauffeured cars and motorbikes across Vietnam. Book fast, pay after the host confirms."
+    },
+    "search": {
+      "title": "Search vehicles for rent",
+      "description": "Filter and compare rentals on XePrime by location, dates, price and amenities."
+    },
+    "listing": {
+      "notFound": "Vehicle not found",
+      "title": "{name} · Car rental",
+      "description": "Rent {name} from {shop}"
+    },
+    "shop": {
+      "notFound": "Shop not found",
+      "title": "{name} · Rental shop",
+      "description": "Rent vehicles from {name}",
+      "descriptionWithProvince": "Rent vehicles from {name} · {province}"
+    }
+  }
+}

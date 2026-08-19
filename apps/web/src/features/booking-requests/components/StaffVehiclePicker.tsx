@@ -8,9 +8,9 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { useInfiniteVehicles } from '@/features/vehicles/hooks/use-infinite-vehicles';
 import type { VehicleListItem } from '@/features/vehicles/types';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import styles from './StaffVehiclePicker.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /** Nạp trang kế TRƯỚC khi chạm đáy — người dùng không thấy khoảng chờ giữa hai trang. */
 const PREFETCH_MARGIN = '400px 0px';
@@ -27,6 +27,8 @@ const PREFETCH_MARGIN = '400px 0px';
  * hàng trăm xe, và một lần gọi `limit=100` vừa nặng vừa cắt mất xe thứ 101.
  */
 export function StaffVehiclePicker({ onPick }: { onPick: (vehicle: VehicleListItem) => void }) {
+  const fmt = useAppFormat();
+
   const [q, setQ] = useState('');
   const {
     vehicles,
@@ -125,11 +127,11 @@ export function StaffVehiclePicker({ onPick }: { onPick: (vehicle: VehicleListIt
                     <span className={styles.tags}>
                       <StatusTag
                         value={vehicle.operationStatus as VehicleOperationStatus}
-                        meta={VEHICLE_OPERATION_STATUS_META}
+                        meta={VEHICLE_OPERATION_STATUS_META} group="vehicleOperationStatus"
                       />
                       {vehicle.weekdayPrice ? (
                         <span className={styles.price}>
-                          {formatMoneyVnd(vehicle.weekdayPrice)}/ngày
+                          {fmt.money(vehicle.weekdayPrice)}/ngày
                         </span>
                       ) : null}
                     </span>

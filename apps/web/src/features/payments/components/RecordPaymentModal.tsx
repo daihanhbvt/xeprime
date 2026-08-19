@@ -10,11 +10,11 @@ import { SelectField } from '@/components/form/SelectField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { TextField } from '@/components/form/TextField';
 import { PAYMENT_METHOD_OPTIONS } from '@/features/finance/constants';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { useRecordPayment } from '../hooks/use-payments';
 import { recordPaymentSchema, type RecordPaymentValues } from '../schema';
 import type { RecordPaymentInput } from '../types';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const DEFAULTS: RecordPaymentValues = {
   amount: null,
@@ -43,6 +43,8 @@ export function RecordPaymentModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const { control, handleSubmit, reset } = useForm<RecordPaymentValues>({
     resolver: yupResolver(recordPaymentSchema),
@@ -83,7 +85,7 @@ export function RecordPaymentModal({
       confirmLoading={record.isPending}
     >
       <p style={{ marginBottom: 16 }}>
-        Còn nợ: <b>{formatMoneyVnd(debtAmount)}</b>
+        Còn nợ: <b>{fmt.money(debtAmount)}</b>
       </p>
       <DialogForm onSubmit={submit} labelWidth="md">
         <NumberField control={control} name="amount" label="Số tiền nhận" money min={0} />

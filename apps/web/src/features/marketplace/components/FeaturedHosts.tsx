@@ -3,8 +3,10 @@
 import { RightOutlined, StarFilled } from '@ant-design/icons';
 import { Alert, Skeleton } from 'antd';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { shopPath } from '@/constants/routes';
-import { getErrorMessage } from '@/services/api-client';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { useFeaturedShops } from '../hooks/use-featured-shops';
 import type { PublicShopSummary } from '../types';
 import styles from './FeaturedHosts.module.css';
@@ -17,6 +19,8 @@ const LIMIT = 4;
  * (`/public/shops`). Điểm và số xe đều từ backend, không biên tập tay.
  */
 export function FeaturedHosts() {
+  const t = useTranslations('Marketplace.hosts');
+  const errorMessage = useErrorMessage();
   const { data, isLoading, isError, error } = useFeaturedShops(LIMIT);
   const shops = data?.shops ?? [];
 
@@ -28,9 +32,9 @@ export function FeaturedHosts() {
       <header className={styles.head}>
         <div>
           <h2 id="hosts-title" className={styles.title}>
-            Gian hàng nổi bật
+            {t('title')}
           </h2>
-          <p className={styles.sub}>Những chủ xe được khách đánh giá cao</p>
+          <p className={styles.sub}>{t('subtitle')}</p>
         </div>
       </header>
 
@@ -38,8 +42,8 @@ export function FeaturedHosts() {
         <Alert
           type="error"
           showIcon
-          message="Không tải được gian hàng"
-          description={getErrorMessage(error)}
+          message={t('loadError')}
+          description={errorMessage(error)}
         />
       ) : isLoading ? (
         <div className={styles.grid}>
@@ -61,7 +65,11 @@ export function FeaturedHosts() {
 }
 
 function HostCard({ shop }: { shop: PublicShopSummary }) {
-  const meta = [`${shop.vehicleCount} xe`, shop.provinceName].filter(Boolean).join(' · ');
+  const t = useTranslations('Marketplace.hosts');
+  const fmt = useAppFormat();
+  const meta = [t('vehicleCount', { count: shop.vehicleCount }), shop.provinceName]
+    .filter(Boolean)
+    .join(' · ');
   const rating = Number(shop.ratingAvg);
   const hasRating = shop.ratingCount > 0 && Number.isFinite(rating);
 
@@ -83,10 +91,10 @@ function HostCard({ shop }: { shop: PublicShopSummary }) {
 
       {hasRating ? (
         <span className={styles.rating}>
-          <StarFilled className={styles.star} /> {rating.toFixed(1)}
+          <StarFilled className={styles.star} /> {fmt.rating(rating)}
         </span>
       ) : (
-        <span className={styles.newTag}>Mới</span>
+        <span className={styles.newTag}>{t('newBadge')}</span>
       )}
       <RightOutlined className={styles.chevron} />
     </Link>

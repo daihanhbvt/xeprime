@@ -6,10 +6,9 @@ import { useRouter } from 'next/navigation';
 import type { PaginationMeta } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { ROUTES } from '@/constants/routes';
-import { formatDate } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import type { DebtItem } from '../types';
 import styles from './DebtTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface DebtTableProps {
   items: DebtItem[];
@@ -37,6 +36,8 @@ export function DebtTable({
   onCollect,
   onPageChange,
 }: DebtTableProps) {
+  const fmt = useAppFormat();
+
   const router = useRouter();
   const bookingHref = (bookingId: string) => `${ROUTES.MANAGE.BOOKINGS}?booking=${bookingId}`;
   const columns: DataTableColumn<DebtItem>[] = [
@@ -55,27 +56,27 @@ export function DebtTable({
       ),
     },
     { title: 'Xe', key: 'vehicle', width: 180, render: (_, r) => r.vehicleName },
-    { title: 'Đến hạn trả', key: 'returnAt', width: 130, render: (_, r) => formatDate(r.returnAt) },
+    { title: 'Đến hạn trả', key: 'returnAt', width: 130, render: (_, r) => fmt.date(r.returnAt) },
     {
       title: 'Tổng',
       key: 'total',
       align: 'right',
       width: 130,
-      render: (_, r) => formatMoneyVnd(r.totalAmount),
+      render: (_, r) => fmt.money(r.totalAmount),
     },
     {
       title: 'Đã trả',
       key: 'paid',
       align: 'right',
       width: 130,
-      render: (_, r) => formatMoneyVnd(r.paidAmount),
+      render: (_, r) => fmt.money(r.paidAmount),
     },
     {
       title: 'Còn nợ',
       key: 'debt',
       align: 'right',
       width: 130,
-      render: (_, r) => <span className={styles.debt}>{formatMoneyVnd(r.debtAmount)}</span>,
+      render: (_, r) => <span className={styles.debt}>{fmt.money(r.debtAmount)}</span>,
     },
     // Quyền do trang quyết (`canRecord` từ `PAYMENT_RECORD`); `RowActions` chỉ ẩn/hiện theo cờ.
     actionColumn<DebtItem>(

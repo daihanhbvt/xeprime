@@ -16,6 +16,7 @@ import { DOCUMENT_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
 import { validateDocumentFile } from '@/services/upload';
 import styles from './FileListField.module.css';
+import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 
 /**
  * Một tài liệu trong form — CHỈ metadata server phát, không có URL nào (Wave 4.1).
@@ -70,6 +71,7 @@ export function FileListField<T extends FieldValues>({
   help,
   disabled = false,
 }: FileListFieldProps<T>) {
+  const uploadRejectionMessage = useUploadRejectionMessage();
   const { field, fieldState } = useController({ control, name });
   const { message } = App.useApp();
   const [pending, setPending] = useState<PendingFileUpload[]>([]);
@@ -134,7 +136,7 @@ export function FileListField<T extends FieldValues>({
     }
     const invalid = validateDocumentFile(file);
     if (invalid) {
-      message.error(invalid);
+      message.error(uploadRejectionMessage(invalid));
       return false;
     }
     startUpload(file);

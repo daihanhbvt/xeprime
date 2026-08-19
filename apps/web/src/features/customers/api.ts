@@ -7,6 +7,7 @@ import {
   apiRequest,
   type QueryParams,
 } from '@/services/api-client';
+import { ApiClientError } from '@/services/api-client';
 import { uploadToR2, validateDocumentFile } from '@/services/upload';
 import type {
   CreateCustomerNoteInput,
@@ -145,7 +146,14 @@ export async function uploadCustomerDocument(
   onProgress?: (percent: number) => void,
 ): Promise<CustomerDocument> {
   const invalid = validateDocumentFile(input.file);
-  if (invalid) throw new Error(invalid);
+  // Hàm thuần: ném LÝ DO có mã, nơi gọi (component) mới dịch — xem `useUploadRejectionMessage`.
+  if (invalid) {
+    throw new ApiClientError({
+      code: `UPLOAD_REJECTED_${invalid.reason}`,
+      message: `Upload rejected: ${invalid.reason}`,
+      status: 0,
+    });
+  }
 
   const ticket = await apiPost<CustomerDocumentPresign>(`/customers/${id}/documents/presign`, {
     documentType: input.documentType,

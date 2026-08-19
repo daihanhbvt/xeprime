@@ -8,6 +8,7 @@ import { useState, type ReactNode } from 'react';
 import { decorativeIcon } from '@/lib/decorative-icon';
 
 import styles from './RowActions.module.css';
+import { useTranslations } from 'next-intl';
 
 export interface RowAction {
   key: string;
@@ -106,6 +107,7 @@ function ActionButton({
   variant: 'text' | 'filled';
   emphasized?: boolean;
 }) {
+  const tCommon = useTranslations('Common');
   const hasIcon = Boolean(action.icon);
   const showsText = action.showLabel !== false;
   const responsiveText = action.showLabel === undefined && hasIcon;
@@ -149,8 +151,8 @@ function ActionButton({
       <Popconfirm
         title={action.confirm.title}
         description={action.confirm.description}
-        okText={action.confirm.okText ?? 'Đồng ý'}
-        cancelText={action.confirm.cancelText ?? 'Huỷ'}
+        okText={action.confirm.okText ?? tCommon('actions.agree')}
+        cancelText={action.confirm.cancelText ?? tCommon('actions.cancel')}
         okButtonProps={action.danger ? { danger: true } : undefined}
         onConfirm={action.onClick}
       >
@@ -186,10 +188,12 @@ function ActionButton({
 export function RowActions({
   actions,
   maxInline = DEFAULT_MAX_INLINE,
-  overflowLabel = 'Thêm thao tác',
+  overflowLabel,
   align = 'end',
   variant = 'text',
 }: RowActionsProps) {
+  const tCommon = useTranslations('Common');
+  const overflowText = overflowLabel ?? tCommon('components.moreActions');
   /**
    * Hành động trong menu ⋮ đang chờ xác nhận.
    *
@@ -229,7 +233,7 @@ export function RowActions({
           : { type: 'text' as const, className: styles.overflowButton })}
         size="small"
         icon={decorative(<MoreOutlined />)}
-        aria-label={overflowLabel}
+        aria-label={overflowText}
       />
     </Dropdown>
   );
@@ -259,8 +263,8 @@ export function RowActions({
             trigger={[]}
             title={pending.confirm?.title ?? ''}
             description={pending.confirm?.description}
-            okText={pending.confirm?.okText ?? 'Đồng ý'}
-            cancelText={pending.confirm?.cancelText ?? 'Huỷ'}
+            okText={pending.confirm?.okText ?? tCommon('actions.agree')}
+            cancelText={pending.confirm?.cancelText ?? tCommon('actions.cancel')}
             okButtonProps={pending.danger ? { danger: true } : undefined}
             onConfirm={() => {
               setPendingKey(null);

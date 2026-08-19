@@ -3,6 +3,7 @@
 import { CheckCircleFilled, ShopOutlined, UserOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import styles from './RegisterSuccess.module.css';
+import { useTranslations } from 'next-intl';
 
 export interface RegisterSuccessProps {
   /** Đã có gian hàng (hiếm — race/nhiều tab): "Trở thành chủ xe" đổi thành vào thẳng portal. */
@@ -28,29 +29,27 @@ export function RegisterSuccess({
   onClose,
   closeLabel,
 }: RegisterSuccessProps) {
+  const t = useTranslations('Auth.registered');
+
   return (
     <div className={styles.wrap}>
       <CheckCircleFilled className={styles.icon} />
-      <h2 className={styles.title}>Tạo tài khoản thành công</h2>
-      <p className={styles.desc}>
-        Bạn có thể tiếp tục tìm và đặt xe, cập nhật hồ sơ hoặc đăng ký trở thành chủ xe.
-      </p>
+      <h2 className={styles.title}>{t('title')}</h2>
+      <p className={styles.desc}>{t('body')}</p>
 
       <div className={styles.actions}>
         <Button type="primary" size="large" block onClick={onClose}>
           {closeLabel}
         </Button>
         <Button size="large" block icon={<UserOutlined />} onClick={onOpenAccount}>
-          Cập nhật tài khoản
+          {t('openAccount')}
         </Button>
         <Button size="large" block icon={<ShopOutlined />} onClick={onBecomeOwner}>
-          {hasTenant ? 'Vào cổng quản lý' : 'Trở thành chủ xe'}
+          {hasTenant ? t('openPortal') : t('becomeOwner')}
         </Button>
       </div>
 
-      <p className={styles.note}>
-        Chỉ đăng ký gian hàng nếu bạn muốn cho thuê xe — tài khoản hiện tại đã đủ để đặt xe.
-      </p>
+      <p className={styles.note}>{t('ownerNote')}</p>
     </div>
   );
 }

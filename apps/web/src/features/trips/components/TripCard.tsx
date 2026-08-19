@@ -3,19 +3,12 @@
 import { CalendarOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import {
-  CUSTOMER_TRIP_STAGE_META,
-  SERVICE_TYPE,
-  routeTypeLabel,
-  serviceTypeLabel,
-  type CustomerTripStage,
-} from '@xeprime/types';
+  CUSTOMER_TRIP_STAGE_META, SERVICE_TYPE, routeTypeLabel, serviceTypeLabel, type CustomerTripStage, } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { tripPath } from '@/constants/routes';
-import { formatShortDateTimeRange } from '@/lib/datetime';
-import { packageLabelOf, pickupWishText } from '@/lib/long-term';
-import { formatMoneyVnd } from '@/lib/money';
 import type { CustomerTrip } from '../types';
 import styles from './TripCard.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * Một chuyến trong danh sách `Chuyến của tôi`.
@@ -25,6 +18,8 @@ import styles from './TripCard.module.css';
  * đổi một chi tiết.
  */
 export function TripCard({ trip }: { trip: CustomerTrip }) {
+  const fmt = useAppFormat();
+
   const stage = trip.stage as CustomerTripStage;
   const href = tripPath.detail(trip.id);
 
@@ -61,8 +56,8 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
           {/* Yêu cầu dài hạn chưa duyệt chưa có lịch — nói gói + nguyện vọng, không bịa ngày. */}
           <span>
             {trip.pickupAt && trip.returnAt
-              ? formatShortDateTimeRange(trip.pickupAt, trip.returnAt)
-              : [packageLabelOf(trip.longTermPackageMonths), pickupWishText(trip)]
+              ? fmt.shortDateTimeRange(trip.pickupAt, trip.returnAt)
+              : [fmt.packageLabel(trip.longTermPackageMonths), fmt.pickupWish(trip)]
                   .filter(Boolean)
                   .join(' · ')}
           </span>
@@ -79,7 +74,7 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
       </div>
 
       <div className={styles.side}>
-        <StatusTag value={stage} meta={CUSTOMER_TRIP_STAGE_META} />
+        <StatusTag value={stage} meta={CUSTOMER_TRIP_STAGE_META} group="customerTripStage" />
         <div className={styles.money}>
           <span className={styles.moneyLabel}>Tổng thanh toán</span>
           {/*
@@ -87,7 +82,7 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
             "chuyến này miễn phí".
           */}
           <span className={styles.moneyValue}>
-            {trip.totalAmount ? formatMoneyVnd(trip.totalAmount) : 'Chờ báo giá'}
+            {trip.totalAmount ? fmt.money(trip.totalAmount) : 'Chờ báo giá'}
           </span>
         </div>
         {/*

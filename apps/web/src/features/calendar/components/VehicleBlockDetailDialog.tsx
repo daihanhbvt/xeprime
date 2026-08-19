@@ -102,7 +102,7 @@ export function VehicleBlockDetailDialog({
                 children: (
                   <StatusTag
                     value={data.reason as VehicleBlockReason}
-                    meta={VEHICLE_BLOCK_REASON_META}
+                    meta={VEHICLE_BLOCK_REASON_META} group="vehicleBlockReason"
                   />
                 ),
               },

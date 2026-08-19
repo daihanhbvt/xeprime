@@ -25,8 +25,19 @@ import {
 import type { ComponentType } from 'react';
 
 import { PERMISSION, type Permission } from '@xeprime/types';
+import type { useTranslations } from 'next-intl';
 
 import { ROUTES } from './routes';
+
+/**
+ * Khoá nhãn menu — một chuỗi trong namespace `Navigation`.
+ *
+ * Cây menu là DỮ LIỆU (route + quyền + biểu tượng), không phải chữ. Giữ khoá thay vì câu
+ * tiếng Việt để cùng một cây phục vụ được cả hai ngôn ngữ, và để đổi cách gọi một mục chỉ
+ * phải sửa ở bó message. `NavLabelKey` là union đóng lấy từ chính bó message tiếng Việt,
+ * nên gõ sai khoá là lỗi biên dịch chứ không phải một mục menu trống trên production.
+ */
+export type NavLabelKey = Parameters<ReturnType<typeof useTranslations<'Navigation'>>>[0];
 
 /**
  * Mục menu dẫn tới một trang.
@@ -38,7 +49,8 @@ import { ROUTES } from './routes';
 export interface NavLeaf {
   readonly type?: 'leaf';
   readonly key: string;
-  readonly label: string;
+  /** Khoá trong namespace `Navigation` — nhãn dựng lúc render theo ngôn ngữ. */
+  readonly labelKey: NavLabelKey;
   readonly href: string;
   readonly permission: Permission;
   readonly icon: ComponentType<{ className?: string }>;
@@ -49,7 +61,7 @@ export interface NavLeaf {
 export interface NavGroup {
   readonly type: 'group';
   readonly key: string;
-  readonly label: string;
+  readonly labelKey: NavLabelKey;
   readonly icon: ComponentType<{ className?: string }>;
   readonly children: readonly NavLeaf[];
 }
@@ -68,7 +80,7 @@ export function isNavGroup(node: NavNode): node is NavGroup {
 export const SHOP_NAV: readonly NavNode[] = [
   {
     key: 'dashboard',
-    label: 'Tổng quan',
+    labelKey: 'manage.dashboard',
     href: ROUTES.MANAGE.ROOT,
     permission: PERMISSION.TENANT_VIEW,
     icon: DashboardOutlined,
@@ -76,47 +88,47 @@ export const SHOP_NAV: readonly NavNode[] = [
   {
     type: 'group',
     key: 'operations',
-    label: 'Quản lý',
+    labelKey: 'manageGroups.operations',
     icon: AppstoreOutlined,
     children: [
       {
         key: 'calendar',
-        label: 'Lịch thuê xe',
+        labelKey: 'manage.calendar',
         href: ROUTES.MANAGE.CALENDAR,
         permission: PERMISSION.CALENDAR_VIEW,
         icon: CalendarOutlined,
       },
       {
         key: 'vehicles',
-        label: 'Xe',
+        labelKey: 'manage.vehicles',
         href: ROUTES.MANAGE.VEHICLES,
         permission: PERMISSION.VEHICLE_VIEW,
         icon: CarOutlined,
       },
       {
         key: 'maintenance',
-        label: 'Trung tâm bảo dưỡng',
+        labelKey: 'manage.maintenance',
         href: ROUTES.MANAGE.MAINTENANCE,
         permission: PERMISSION.VEHICLE_MAINTENANCE_VIEW,
         icon: ToolOutlined,
       },
       {
         key: 'bookings',
-        label: 'Đơn thuê',
+        labelKey: 'manage.bookings',
         href: ROUTES.MANAGE.BOOKINGS,
         permission: PERMISSION.BOOKING_VIEW,
         icon: FileTextOutlined,
       },
       {
         key: 'booking-requests',
-        label: 'Đơn đặt xe',
+        labelKey: 'manage.bookingRequests',
         href: ROUTES.MANAGE.BOOKING_REQUESTS,
         permission: PERMISSION.BOOKING_REQUEST_VIEW,
         icon: ScheduleOutlined,
       },
       {
         key: 'customers',
-        label: 'Khách hàng',
+        labelKey: 'manage.customers',
         href: ROUTES.MANAGE.CUSTOMERS,
         // Trang thật từ 18/08 (sổ khách của gian hàng — gap S-01). Quyền RIÊNG `customers.view`,
         // không mượn `bookings.view` như trước: xem sổ khách và xem đơn thuê là hai việc khác nhau.
@@ -125,21 +137,21 @@ export const SHOP_NAV: readonly NavNode[] = [
       },
       {
         key: 'finance',
-        label: 'Tài chính',
+        labelKey: 'manage.finance',
         href: ROUTES.MANAGE.FINANCE,
         permission: PERMISSION.FINANCE_VIEW,
         icon: WalletOutlined,
       },
       {
         key: 'receipts',
-        label: 'Thu chi',
+        labelKey: 'manage.receipts',
         href: ROUTES.MANAGE.RECEIPTS,
         permission: PERMISSION.FINANCE_VIEW,
         icon: TransactionOutlined,
       },
       {
         key: 'debts',
-        label: 'Công nợ',
+        labelKey: 'manage.debts',
         href: ROUTES.MANAGE.DEBTS,
         permission: PERMISSION.FINANCE_VIEW,
         icon: CreditCardOutlined,
@@ -149,40 +161,40 @@ export const SHOP_NAV: readonly NavNode[] = [
   {
     type: 'group',
     key: 'settings',
-    label: 'Cài đặt',
+    labelKey: 'manageGroups.settings',
     icon: SettingOutlined,
     children: [
       {
         key: 'shop',
-        label: 'Cửa hàng',
+        labelKey: 'manage.shop',
         href: ROUTES.MANAGE.SHOP,
         permission: PERMISSION.TENANT_VIEW,
         icon: ShopOutlined,
       },
       {
         key: 'shop-branches',
-        label: 'Chi nhánh',
+        labelKey: 'manage.shopBranches',
         href: ROUTES.MANAGE.SHOP_BRANCHES,
         permission: PERMISSION.BRANCH_VIEW,
         icon: EnvironmentOutlined,
       },
       {
         key: 'shop-policies',
-        label: 'Chính sách thuê',
+        labelKey: 'manage.shopPolicies',
         href: ROUTES.MANAGE.SHOP_POLICIES,
         permission: PERMISSION.TENANT_VIEW,
         icon: SafetyCertificateOutlined,
       },
       {
         key: 'members',
-        label: 'Người dùng',
+        labelKey: 'manage.members',
         href: ROUTES.MANAGE.MEMBERS,
         permission: PERMISSION.MEMBER_VIEW,
         icon: UsergroupAddOutlined,
       },
       {
         key: 'pickup-areas',
-        label: 'Khu vực nhận xe',
+        labelKey: 'manage.pickupAreas',
         href: ROUTES.MANAGE.PICKUP_AREAS,
         permission: PERMISSION.TENANT_VIEW,
         icon: EnvironmentOutlined,
@@ -190,7 +202,7 @@ export const SHOP_NAV: readonly NavNode[] = [
       },
       {
         key: 'drivers',
-        label: 'Tài xế',
+        labelKey: 'manage.drivers',
         href: ROUTES.MANAGE.DRIVERS,
         // Trang thật từ 17/08 (nghiệp vụ xe có tài xế) — hồ sơ tài xế + gán vào đơn.
         permission: PERMISSION.DRIVER_VIEW,
@@ -198,14 +210,14 @@ export const SHOP_NAV: readonly NavNode[] = [
       },
       {
         key: 'chat',
-        label: 'Trò chuyện',
+        labelKey: 'manage.chat',
         href: ROUTES.MANAGE.CHAT,
         permission: PERMISSION.TENANT_VIEW,
         icon: MessageOutlined,
       },
       {
         key: 'trash',
-        label: 'Thùng rác',
+        labelKey: 'manage.trash',
         href: ROUTES.MANAGE.TRASH,
         permission: PERMISSION.TENANT_VIEW,
         icon: DeleteOutlined,
@@ -222,7 +234,7 @@ export const SHOP_NAV: readonly NavNode[] = [
 export const PLATFORM_NAV: readonly NavNode[] = [
   {
     key: 'platform-dashboard',
-    label: 'Tổng quan',
+    labelKey: 'manage.dashboard',
     href: ROUTES.MANAGE.ROOT,
     permission: PERMISSION.PLATFORM_DASHBOARD_VIEW,
     icon: DashboardOutlined,
@@ -230,82 +242,82 @@ export const PLATFORM_NAV: readonly NavNode[] = [
   {
     type: 'group',
     key: 'platform',
-    label: 'Quản trị nền tảng',
+    labelKey: 'manageGroups.platform',
     icon: SafetyCertificateOutlined,
     children: [
       {
         key: 'approvals',
-        label: 'Duyệt hồ sơ',
+        labelKey: 'platform.approvals',
         href: ROUTES.MANAGE.ADMIN,
         permission: PERMISSION.PLATFORM_APPROVAL_REVIEW,
         icon: AuditOutlined,
       },
       {
         key: 'admin-tenants',
-        label: 'Gian hàng',
+        labelKey: 'platform.tenants',
         href: ROUTES.MANAGE.ADMIN_TENANTS,
         permission: PERMISSION.PLATFORM_TENANT_MANAGE,
         icon: ShopOutlined,
       },
       {
         key: 'admin-vehicles',
-        label: 'Xe toàn hệ thống',
+        labelKey: 'platform.vehicles',
         href: ROUTES.MANAGE.ADMIN_VEHICLES,
         permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
         icon: CarOutlined,
       },
       {
         key: 'admin-bookings',
-        label: 'Đơn thuê toàn hệ thống',
+        labelKey: 'platform.bookings',
         href: ROUTES.MANAGE.ADMIN_BOOKINGS,
         permission: PERMISSION.PLATFORM_BOOKING_VIEW,
         icon: FileTextOutlined,
       },
       {
         key: 'admin-customers',
-        label: 'Khách thuê',
+        labelKey: 'platform.customers',
         href: ROUTES.MANAGE.ADMIN_CUSTOMERS,
         permission: PERMISSION.PLATFORM_CUSTOMER_VIEW,
         icon: TeamOutlined,
       },
       {
         key: 'admin-staff',
-        label: 'Nhân sự nền tảng',
+        labelKey: 'platform.staff',
         href: ROUTES.MANAGE.ADMIN_STAFF,
         permission: PERMISSION.PLATFORM_STAFF_MANAGE,
         icon: UsergroupAddOutlined,
       },
       {
         key: 'admin-plans',
-        label: 'Gói dịch vụ',
+        labelKey: 'platform.plans',
         href: ROUTES.MANAGE.ADMIN_PLANS,
         permission: PERMISSION.PLATFORM_BILLING_MANAGE,
         icon: CreditCardOutlined,
       },
       {
         key: 'admin-banners',
-        label: 'Banner trang chủ',
+        labelKey: 'platform.banners',
         href: ROUTES.MANAGE.ADMIN_BANNERS,
         permission: PERMISSION.PLATFORM_BANNER_MANAGE,
         icon: PictureOutlined,
       },
       {
         key: 'admin-catalog',
-        label: 'Danh mục lọc',
+        labelKey: 'platform.catalog',
         href: ROUTES.MANAGE.ADMIN_CATALOG,
         permission: PERMISSION.PLATFORM_CATALOG_MANAGE,
         icon: AppstoreOutlined,
       },
       {
         key: 'admin-locations',
-        label: 'Tỉnh/thành',
+        labelKey: 'platform.locations',
         href: ROUTES.MANAGE.ADMIN_LOCATIONS,
         permission: PERMISSION.PLATFORM_LOCATION_VIEW,
         icon: EnvironmentOutlined,
       },
       {
         key: 'admin-audit',
-        label: 'Nhật ký hệ thống',
+        labelKey: 'platform.audit',
         href: ROUTES.MANAGE.ADMIN_AUDIT,
         permission: PERMISSION.PLATFORM_AUDIT_VIEW,
         icon: HistoryOutlined,
@@ -331,7 +343,7 @@ export function navForScope(isPlatform: boolean): readonly NavNode[] {
  */
 export interface MobileTab {
   readonly key: string;
-  readonly label: string;
+  readonly labelKey: NavLabelKey;
   readonly href: string;
   readonly permission: Permission;
   readonly icon: ComponentType<{ className?: string }>;
@@ -340,28 +352,28 @@ export interface MobileTab {
 const SHOP_MOBILE_TABS: readonly MobileTab[] = [
   {
     key: 'dashboard',
-    label: 'Tổng quan',
+    labelKey: 'manage.dashboard',
     href: ROUTES.MANAGE.ROOT,
     permission: PERMISSION.TENANT_VIEW,
     icon: DashboardOutlined,
   },
   {
     key: 'calendar',
-    label: 'Lịch xe',
+    labelKey: 'manage.calendarShort',
     href: ROUTES.MANAGE.CALENDAR,
     permission: PERMISSION.CALENDAR_VIEW,
     icon: CalendarOutlined,
   },
   {
     key: 'booking-requests',
-    label: 'Đơn đặt xe',
+    labelKey: 'manage.bookingRequests',
     href: ROUTES.MANAGE.BOOKING_REQUESTS,
     permission: PERMISSION.BOOKING_REQUEST_VIEW,
     icon: ScheduleOutlined,
   },
   {
     key: 'bookings',
-    label: 'Đơn thuê',
+    labelKey: 'manage.bookings',
     href: ROUTES.MANAGE.BOOKINGS,
     permission: PERMISSION.BOOKING_VIEW,
     icon: FileTextOutlined,
@@ -371,28 +383,28 @@ const SHOP_MOBILE_TABS: readonly MobileTab[] = [
 const PLATFORM_MOBILE_TABS: readonly MobileTab[] = [
   {
     key: 'dashboard',
-    label: 'Tổng quan',
+    labelKey: 'manage.dashboard',
     href: ROUTES.MANAGE.ROOT,
     permission: PERMISSION.PLATFORM_DASHBOARD_VIEW,
     icon: DashboardOutlined,
   },
   {
     key: 'approvals',
-    label: 'Duyệt hồ sơ',
+    labelKey: 'platform.approvals',
     href: ROUTES.MANAGE.ADMIN,
     permission: PERMISSION.PLATFORM_APPROVAL_REVIEW,
     icon: AuditOutlined,
   },
   {
     key: 'admin-vehicles',
-    label: 'Xe',
+    labelKey: 'platform.vehiclesShort',
     href: ROUTES.MANAGE.ADMIN_VEHICLES,
     permission: PERMISSION.PLATFORM_VEHICLE_VIEW,
     icon: CarOutlined,
   },
   {
     key: 'admin-bookings',
-    label: 'Đơn thuê',
+    labelKey: 'platform.bookingsShort',
     href: ROUTES.MANAGE.ADMIN_BOOKINGS,
     permission: PERMISSION.PLATFORM_BOOKING_VIEW,
     icon: FileTextOutlined,

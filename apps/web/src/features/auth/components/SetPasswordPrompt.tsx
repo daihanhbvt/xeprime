@@ -11,6 +11,7 @@ import { TextField } from '@/components/form/TextField';
 import { getErrorMessage } from '@/services/api-client';
 import { setPassword } from '@/services/auth.service';
 import styles from './SetPasswordPrompt.module.css';
+import { useTranslations } from 'next-intl';
 
 /**
  * Gợi ý đặt mật khẩu sau khi đăng nhập bằng SĐT + OTP (tài khoản chưa có mật khẩu).
@@ -26,6 +27,7 @@ export function SetPasswordPrompt({
   /** Nhận đúng class nút chính của AuthPanel để mọi bước auth luôn cùng một giao diện. */
   primaryActionClassName?: string;
 }) {
+  const t = useTranslations('Auth.setPassword');
   const [error, setError] = useState<string | null>(null);
   const { control, handleSubmit } = useForm<ResetPasswordValues>({
     resolver: yupResolver(resetPasswordSchema),
@@ -45,10 +47,8 @@ export function SetPasswordPrompt({
           <LockOutlined />
         </span>
         <div>
-          <h2 className={styles.title}>Đặt mật khẩu</h2>
-          <p className={styles.sub}>
-            Tạo mật khẩu để lần sau đăng nhập nhanh hơn. Bạn vẫn có thể dùng OTP nếu bỏ qua.
-          </p>
+          <h2 className={styles.title}>{t('title')}</h2>
+          <p className={styles.sub}>{t('body')}</p>
         </div>
       </div>
 
@@ -64,9 +64,9 @@ export function SetPasswordPrompt({
         <TextField
           control={control}
           name="password"
-          label="Mật khẩu mới"
+          label={t('newPassword')}
           type="password"
-          placeholder="Tối thiểu 8 ký tự, có chữ và số"
+          placeholder={t('newPasswordPlaceholder')}
           autoComplete="new-password"
           prefix={<LockOutlined />}
           autoFocus
@@ -74,9 +74,9 @@ export function SetPasswordPrompt({
         <TextField
           control={control}
           name="confirmPassword"
-          label="Nhập lại mật khẩu"
+          label={t('confirmPassword')}
           type="password"
-          placeholder="Nhập lại mật khẩu"
+          placeholder={t('confirmPasswordPlaceholder')}
           autoComplete="new-password"
           prefix={<LockOutlined />}
         />
@@ -88,12 +88,12 @@ export function SetPasswordPrompt({
           className={primaryActionClassName}
           loading={save.isPending}
         >
-          Đặt mật khẩu
+          {t('submit')}
         </Button>
       </form>
 
       <Button type="text" block className={styles.skip} disabled={save.isPending} onClick={onDone}>
-        Bỏ qua, tiếp tục
+        {t('skip')}
       </Button>
     </section>
   );

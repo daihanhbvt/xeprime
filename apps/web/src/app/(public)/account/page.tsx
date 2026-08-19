@@ -1,11 +1,15 @@
 import type { Metadata } from 'next';
 import { AccountView } from '@/features/account/components/AccountView';
+import { getTranslations } from 'next-intl/server';
 
-export const metadata: Metadata = {
-  title: 'Tài khoản của tôi',
-  // Hồ sơ cá nhân — không có gì để index, và không nên xuất hiện trên công cụ tìm kiếm.
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Navigation.public');
+  return {
+    title: t('accountMine'),
+    // Hồ sơ cá nhân — không có gì để index, và không nên xuất hiện trên công cụ tìm kiếm.
+    robots: { index: false, follow: false },
+  };
+}
 
 /**
  * Tài khoản của KHÁCH, nằm trong khu công khai để giữ nguyên header/footer marketplace —

@@ -44,6 +44,7 @@ import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { branchLabel } from '@/features/branches/branch-label';
 import { usePermissions } from '@/hooks/use-permissions';
 import styles from './VehicleEditWorkspace.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 type EditableTab = 'information' | 'media';
 type WorkspaceTab = EditableTab | 'pricing' | 'source' | 'documents' | 'maintenance';
@@ -111,6 +112,7 @@ export function VehicleEditWorkspace({
   onSave,
   onCancel,
 }: VehicleEditWorkspaceProps) {
+  const fmt = useAppFormat();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
@@ -211,7 +213,7 @@ export function VehicleEditWorkspace({
       return;
     }
     const values = getValues();
-    if (isPublic && sensitiveChanges(initialValues, values).length > 0) {
+    if (isPublic && sensitiveChanges(initialValues, values, fmt).length > 0) {
       setConfirmSensitive(true);
       return;
     }
@@ -403,7 +405,7 @@ export function VehicleEditWorkspace({
       >
         <p>Xe sẽ chuyển về trạng thái chờ duyệt lại và tạm ẩn khỏi marketplace.</p>
         <ul className={styles.changeList}>
-          {sensitiveChanges(initialValues, getValues()).map((change) => (
+          {sensitiveChanges(initialValues, getValues(), fmt).map((change) => (
             <li key={change.field}>
               <strong>{change.label}:</strong> {change.before} → {change.after}
             </li>

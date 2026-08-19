@@ -2,16 +2,14 @@
 
 import { Descriptions } from 'antd';
 import {
-  AUDIT_ACTOR_SCOPE_META,
-  type AuditActorScope,
-} from '@xeprime/types';
+  AUDIT_ACTOR_SCOPE_META, type AuditActorScope, } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
-import { formatDateTime } from '@/lib/datetime';
 import { auditActionLabel, auditTargetTypeLabel } from '../constants';
 import { useAuditLog } from '../hooks/use-audit-logs';
 import type { AuditLogDetail } from '../types';
 import styles from './AuditLogDetailDrawer.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 export function AuditLogDetailDrawer({
   logId,
@@ -32,7 +30,7 @@ export function AuditLogDetailDrawer({
       loading={isLoading || !data}
       extra={
         data ? (
-          <StatusTag value={data.actorScope as AuditActorScope} meta={AUDIT_ACTOR_SCOPE_META} />
+          <StatusTag value={data.actorScope as AuditActorScope} meta={AUDIT_ACTOR_SCOPE_META} group="auditActorScope" />
         ) : null
       }
     >
@@ -42,6 +40,8 @@ export function AuditLogDetailDrawer({
 }
 
 function Body({ log }: { log: AuditLogDetail }) {
+  const fmt = useAppFormat();
+
   return (
     <div>
       <Descriptions
@@ -49,7 +49,7 @@ function Body({ log }: { log: AuditLogDetail }) {
         size="small"
         bordered
         items={[
-          { key: 'time', label: 'Thời gian', children: formatDateTime(log.createdAt) },
+          { key: 'time', label: 'Thời gian', children: fmt.dateTime(log.createdAt) },
           {
             key: 'actor',
             label: 'Người thao tác',

@@ -3,21 +3,17 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import {
-  BOOKING_STATUS_META,
-  SERVICE_TYPE_LABEL,
-  type BookingStatus,
-  type ServiceType,
-} from '@xeprime/types';
+  BOOKING_STATUS_META, SERVICE_TYPE_LABEL, type BookingStatus, type ServiceType, } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { bookingPath } from '@/constants/routes';
-import { formatDateTimeRange, formatShortDateTime } from '@/lib/datetime';
-import { formatMoneyVnd, isZeroMoney } from '@/lib/money';
+import { isZeroMoney } from '@/lib/money';
 import { cx } from '@/lib/cx';
 import { CUSTOMER_HISTORY_DEFAULT_LIMIT } from '../api';
 import { useCustomerBookings } from '../hooks/use-customers';
 import type { CustomerBooking } from '../types';
 import styles from './CustomerBookingHistory.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const MIN_TABLE_WIDTH = 900;
 
@@ -37,6 +33,8 @@ export function CustomerBookingHistory({
   canViewFinance: boolean;
   canOpenBooking: boolean;
 }) {
+  const fmt = useAppFormat();
+
   const [page, setPage] = useState(1);
   const { data, isFetching, isError, refetch } = useCustomerBookings(customerId, page);
 
@@ -78,7 +76,7 @@ export function CustomerBookingHistory({
       key: 'range',
       width: 240,
       render: (_, row) => (
-        <span className={styles.meta}>{formatDateTimeRange(row.pickupAt, row.returnAt)}</span>
+        <span className={styles.meta}>{fmt.dateTimeRange(row.pickupAt, row.returnAt)}</span>
       ),
     },
     {
@@ -92,7 +90,7 @@ export function CustomerBookingHistory({
       key: 'status',
       width: 140,
       render: (_, row) => (
-        <StatusTag value={row.status as BookingStatus} meta={BOOKING_STATUS_META} />
+        <StatusTag value={row.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
       ),
     },
     ...(canViewFinance
@@ -103,7 +101,7 @@ export function CustomerBookingHistory({
             width: 150,
             align: 'right',
             render: (_, row) => (
-              <span className={styles.money}>{formatMoneyVnd(row.totalAmount)}</span>
+              <span className={styles.money}>{fmt.money(row.totalAmount)}</span>
             ),
           },
           {
@@ -113,7 +111,7 @@ export function CustomerBookingHistory({
             align: 'right',
             render: (_, row) => (
               <span className={cx(styles.money, !isZeroMoney(row.debtAmount) && styles.debt)}>
-                {formatMoneyVnd(row.debtAmount)}
+                {fmt.money(row.debtAmount)}
               </span>
             ),
           },
@@ -131,17 +129,17 @@ export function CustomerBookingHistory({
         ) : (
           <span className={styles.code}>{row.code}</span>
         )}
-        <StatusTag value={row.status as BookingStatus} meta={BOOKING_STATUS_META} />
+        <StatusTag value={row.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
       </header>
       <div className={styles.vehicleName}>{row.vehicleName}</div>
       <div className={styles.meta}>
-        {formatShortDateTime(row.pickupAt)} → {formatShortDateTime(row.returnAt)}
+        {fmt.shortDateTime(row.pickupAt)} → {fmt.shortDateTime(row.returnAt)}
       </div>
       {canViewFinance ? (
         <div className={styles.cardMoney}>
-          <span>{formatMoneyVnd(row.totalAmount)}</span>
+          <span>{fmt.money(row.totalAmount)}</span>
           {!isZeroMoney(row.debtAmount) ? (
-            <span className={styles.debt}>Còn nợ {formatMoneyVnd(row.debtAmount)}</span>
+            <span className={styles.debt}>Còn nợ {fmt.money(row.debtAmount)}</span>
           ) : null}
         </div>
       ) : null}

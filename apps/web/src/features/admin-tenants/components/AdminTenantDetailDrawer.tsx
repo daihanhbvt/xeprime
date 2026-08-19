@@ -3,16 +3,22 @@
 import { LockOutlined, UnlockOutlined } from '@ant-design/icons';
 import { App, Button, Descriptions, Input, Popconfirm } from 'antd';
 import { useState } from 'react';
-import { TENANT_STATUS, TENANT_STATUS_META, TENANT_TYPE_LABEL, type TenantStatus, type TenantType } from '@xeprime/types';
+import {
+  TENANT_STATUS,
+  TENANT_STATUS_META,
+  TENANT_TYPE_LABEL,
+  type TenantStatus,
+  type TenantType,
+} from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { formatDate } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { TenantPlanSection } from '@/features/admin-plans/components/TenantPlanSection';
 import { useAdminTenant, useTenantActions } from '../hooks/use-admin-tenants';
 import type { AdminTenantDetail } from '../types';
 import styles from './AdminTenantDetailDrawer.module.css';
+import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
 
 export function AdminTenantDetailDrawer({
   tenantId,
@@ -30,7 +36,15 @@ export function AdminTenantDetailDrawer({
       open={Boolean(tenantId)}
       onClose={onClose}
       loading={isLoading || !data}
-      extra={data ? <StatusTag value={data.status as TenantStatus} meta={TENANT_STATUS_META} /> : null}
+      extra={
+        data ? (
+          <StatusTag
+            value={data.status as TenantStatus}
+            meta={TENANT_STATUS_META}
+            group="tenantStatus"
+          />
+        ) : null
+      }
     >
       {data ? <Body tenant={data} /> : null}
     </DetailDrawer>
@@ -38,6 +52,7 @@ export function AdminTenantDetailDrawer({
 }
 
 function Body({ tenant }: { tenant: AdminTenantDetail }) {
+  const fmt = useAppFormat();
   const { message } = App.useApp();
   const actions = useTenantActions(tenant.id);
   const [lockOpen, setLockOpen] = useState(false);
@@ -72,13 +87,19 @@ function Body({ tenant }: { tenant: AdminTenantDetail }) {
 
   return (
     <div>
-      <Descriptions column={1} size="small" bordered items={detailItems(tenant)} />
+      <Descriptions column={1} size="small" bordered items={detailItems(tenant, fmt)} />
 
       <TenantPlanSection tenantId={tenant.id} currentPlan={tenant.currentPlan ?? null} />
 
       <div className={styles.actions}>
         {isActive ? (
-          <Button danger icon={<LockOutlined />} block loading={actions.isPending} onClick={() => setLockOpen(true)}>
+          <Button
+            danger
+            icon={<LockOutlined />}
+            block
+            loading={actions.isPending}
+            onClick={() => setLockOpen(true)}
+          >
             Khoá gian hàng
           </Button>
         ) : isSuspended ? (
@@ -125,19 +146,29 @@ function Body({ tenant }: { tenant: AdminTenantDetail }) {
   );
 }
 
-function detailItems(t: AdminTenantDetail) {
+function detailItems(t: AdminTenantDetail, fmt: AppFormat) {
   return [
     { key: 'code', label: 'Mã', children: t.code },
-    { key: 'type', label: 'Loại', children: TENANT_TYPE_LABEL[t.tenantType as TenantType] ?? t.tenantType },
+    {
+      key: 'type',
+      label: 'Loại',
+      children: TENANT_TYPE_LABEL[t.tenantType as TenantType] ?? t.tenantType,
+    },
     { key: 'owner', label: 'Chủ shop', children: t.ownerName ?? '—' },
-    { key: 'ownerContact', label: 'Liên hệ chủ', children: [t.ownerPhone, t.ownerEmail].filter(Boolean).join(' · ') || '—' },
+    {
+      key: 'ownerContact',
+      label: 'Liên hệ chủ',
+      children: [t.ownerPhone, t.ownerEmail].filter(Boolean).join(' · ') || '—',
+    },
     { key: 'phone', label: 'SĐT shop', children: t.phone ?? '—' },
     { key: 'province', label: 'Tỉnh/TP', children: t.provinceName ?? '—' },
     { key: 'address', label: 'Địa chỉ', children: t.address ?? '—' },
     ...(t.taxCode ? [{ key: 'tax', label: 'MST', children: t.taxCode }] : []),
-    ...(t.businessLicenseNo ? [{ key: 'license', label: 'GPKD', children: t.businessLicenseNo }] : []),
+    ...(t.businessLicenseNo
+      ? [{ key: 'license', label: 'GPKD', children: t.businessLicenseNo }]
+      : []),
     { key: 'vehicles', label: 'Số xe', children: String(t.vehicleCount) },
     { key: 'bookings', label: 'Số đơn', children: String(t.bookingCount) },
-    { key: 'created', label: 'Ngày tạo', children: formatDate(t.createdAt) },
+    { key: 'created', label: 'Ngày tạo', children: fmt.date(t.createdAt) },
   ];
 }

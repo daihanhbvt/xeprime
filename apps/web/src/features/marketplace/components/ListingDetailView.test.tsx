@@ -13,6 +13,20 @@ vi.mock('@/features/chat/components/ChatWithShopButton', () => ({
   ChatWithShopButton: () => <button type="button">Nhắn shop</button>,
 }));
 
+/*
+ * `getAppFormat()` gọi `getLocale()` của next-intl — API chỉ chạy trong môi trường react-server,
+ * nên trong jsdom nó ném. Thay bằng bộ định dạng dựng từ CHÍNH bó message thật.
+ */
+vi.mock('next-intl/server', async () => {
+  const { serverTranslationsStub } = await import('@/i18n/test-utils');
+  return serverTranslationsStub('vi');
+});
+
+vi.mock('@/i18n/server-format', async () => {
+  const { createTestAppFormat } = await import('@/i18n/test-utils');
+  return { getAppFormat: async () => createTestAppFormat('vi') };
+});
+
 vi.mock('./ListingGallery', () => ({
   ListingGallery: () => <div aria-label="Ảnh xe" />,
 }));
@@ -62,8 +76,13 @@ const LISTING = {
 afterEach(cleanup);
 
 describe('ListingDetailView pricing', () => {
-  it('dùng DiscountTag chung và không hiển thị giá cuối tuần/thuê giờ', () => {
-    render(<ListingDetailView listing={LISTING} catalog={EMPTY_CATALOG} />);
+  /*
+   * `ListingDetailView` là SERVER Component async (nó `await getAppFormat()`), nên không render
+   * thẳng bằng JSX được: gọi nó như một hàm, chờ cây trả về, rồi mới render cây đó.
+   * Chính bài test này là thứ bắt được nếu ai đó lỡ biến nó thành Client Component.
+   */
+  it('dùng DiscountTag chung và không hiển thị giá cuối tuần/thuê giờ', async () => {
+    render(await ListingDetailView({ listing: LISTING, catalog: EMPTY_CATALOG }));
 
     expect(screen.getByLabelText('Giảm 15%').textContent).toBe('-15%');
     expect(screen.getByText('408.000 ₫')).toBeTruthy();

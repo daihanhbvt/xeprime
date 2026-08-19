@@ -1,0 +1,17 @@
+{
+  "loadError": "Không tải được hội thoại",
+  "empty": "Chưa có hội thoại",
+  "pickConversation": "Chọn một hội thoại để xem.",
+  "messageShop": "Nhắn shop",
+  "about": "Về {subject}",
+  "startConversation": "Bắt đầu trò chuyện",
+  "attach": "Đính kèm",
+  "inputPlaceholder": "Nhập tin nhắn…",
+  "send": "Gửi",
+  "back": "Quay lại",
+  "olderMessages": "Xem tin cũ hơn",
+  "emptyThread": "Hãy bắt đầu trò chuyện.",
+  "imageAlt": "Ảnh",
+  "attachment": "Tệp đính kèm",
+  "messagesLoadError": "Không tải được tin nhắn"
+}

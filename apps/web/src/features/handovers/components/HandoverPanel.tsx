@@ -3,22 +3,11 @@
 import { App, Alert, Button, Divider, Skeleton, Space } from 'antd';
 import { useState } from 'react';
 import {
-  FUEL_LEVEL_LABEL,
-  HANDOVER_STATUS,
-  HANDOVER_STATUS_META,
-  HANDOVER_TYPE,
-  HANDOVER_TYPE_LABEL,
-  PERMISSION,
-  type FuelLevel,
-  type HandoverStatus,
-  type HandoverType,
-} from '@xeprime/types';
+  FUEL_LEVEL_LABEL, HANDOVER_STATUS, HANDOVER_STATUS_META, HANDOVER_TYPE, HANDOVER_TYPE_LABEL, PERMISSION, type FuelLevel, type HandoverStatus, type HandoverType, } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDateTime } from '@/lib/datetime';
-import { MISSING_VALUE_LABEL, formatKm } from '@/lib/odometer';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { cancelHandover, saveHandoverDraft } from '../api';
@@ -27,6 +16,8 @@ import type { Handover, HandoverContext } from '../types';
 import { HandoverDialog } from './HandoverDialog';
 import { ResolveOdometerDialog } from './ResolveOdometerDialog';
 import styles from './Handover.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 type OpenDialog = { kind: 'form' | 'odometer'; type: HandoverType } | null;
 
@@ -101,6 +92,9 @@ function HandoverPanelBody({
   bookingStatus: string;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
+  const tCommon = useTranslations('Common');
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const { has } = usePermissions();
   const invalidate = useInvalidateHandovers(context.bookingId, context.vehicleId);
@@ -213,7 +207,7 @@ function HandoverPanelBody({
         <div className={styles.panelHead}>
           <span className={styles.panelTitle}>{label}</span>
           {handover ? (
-            <StatusTag value={handover.status as HandoverStatus} meta={HANDOVER_STATUS_META} />
+            <StatusTag value={handover.status as HandoverStatus} meta={HANDOVER_STATUS_META} group="handoverStatus" />
           ) : (
             <span className={styles.panelMuted}>Chưa thực hiện</span>
           )}
@@ -223,7 +217,7 @@ function HandoverPanelBody({
           <dl className={styles.panelFacts}>
             <div className={styles.panelFact}>
               <dt>Chỉ số KM</dt>
-              <dd>{formatKm(handover.odometerKm)}</dd>
+              <dd>{fmt.km(handover.odometerKm)}</dd>
             </div>
             <div className={styles.panelFact}>
               <dt>{handover.batteryPercent != null ? 'Mức pin' : 'Nhiên liệu'}</dt>
@@ -232,7 +226,7 @@ function HandoverPanelBody({
                   ? `${handover.batteryPercent}%`
                   : handover.fuelLevel
                     ? FUEL_LEVEL_LABEL[handover.fuelLevel as FuelLevel]
-                    : MISSING_VALUE_LABEL}
+                    : tCommon('labels.notAvailable')}
               </dd>
             </div>
             <div className={styles.panelFact}>
@@ -243,7 +237,7 @@ function HandoverPanelBody({
               <div className={styles.panelFact}>
                 <dt>Xác nhận</dt>
                 <dd>
-                  {formatDateTime(handover.confirmedAt)}
+                  {fmt.dateTime(handover.confirmedAt)}
                   {handover.confirmedByName ? ` · ${handover.confirmedByName}` : ''}
                 </dd>
               </div>

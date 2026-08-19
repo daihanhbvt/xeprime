@@ -1,0 +1,85 @@
+/**
+ * Bộ đổi ngôn ngữ. Hình dáng bám nút biểu tượng tròn của MarketHeader/Topbar để nó không
+ * trông như một thành phần ghép thêm, nhưng ở đây là `<button>` THẬT — nó mở menu, không
+ * điều hướng, nên phải là nút cả về ngữ nghĩa lẫn bàn phím.
+ */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  min-width: var(--xp-touch-target-min);
+  padding: 0 10px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  font-family: inherit;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 1;
+  cursor: pointer;
+  /* Mã ngôn ngữ luôn 2 ký tự nên nút không co giãn khi đổi VI ↔ EN. */
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.trigger:hover:not(:disabled) {
+  color: var(--xp-color-primary);
+  border-color: var(--xp-color-primary);
+}
+
+/* Viền focus hiện rõ: đây là một trong số ít nút mà người dùng bàn phím tìm bằng Tab. */
+.trigger:focus-visible {
+  outline: var(--xp-focus-ring-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.trigger:disabled {
+  cursor: progress;
+  opacity: var(--xp-disabled-opacity);
+}
+
+/* Mobile hẹp: chỉ quả địa cầu, nhưng giữ nguyên vùng chạm tối thiểu. */
+.triggerCompact {
+  width: var(--xp-touch-target-min);
+  min-width: var(--xp-touch-target-min);
+  padding: 0;
+  justify-content: center;
+}
+
+.code {
+  letter-spacing: 0.02em;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 150px;
+}
+
+.optionName {
+  flex: 1;
+}
+
+.optionCode {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-label);
+  letter-spacing: 0.04em;
+}
+
+/*
+ * Dấu tích luôn CHIẾM CHỖ, chỉ ẩn hiện bằng opacity: nếu nó xuất hiện/biến mất thì hai dòng
+ * menu lệch nhau mỗi lần đổi ngôn ngữ.
+ */
+.check {
+  color: var(--xp-color-primary);
+  opacity: 0;
+}
+
+.checkActive {
+  opacity: 1;
+}

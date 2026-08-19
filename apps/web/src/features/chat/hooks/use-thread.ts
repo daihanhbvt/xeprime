@@ -7,6 +7,7 @@ import { queryKeys } from '@/services/query-keys';
 import { fetchMessages, markConversationRead } from '../api';
 import { useChatRealtime } from '../context/ChatRealtimeContext';
 import type { ChatMessage } from '../types';
+import { useTranslations } from 'next-intl';
 
 export interface ThreadState {
   messages: ChatMessage[];
@@ -25,6 +26,7 @@ export interface ThreadState {
  * trang cursor từ Postgres (ADR 0009). Là stateful nên dùng custom hook thay vì React Query.
  */
 export function useThread(conversationId: string | null): ThreadState {
+  const t = useTranslations('Chat');
   const { db, ready } = useChatRealtime();
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -69,7 +71,7 @@ export function useThread(conversationId: string | null): ThreadState {
         markRead(conversationId);
       })
       .catch(() => {
-        if (!cancelled) setError('Không tải được tin nhắn');
+        if (!cancelled) setError(t('messagesLoadError'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -77,7 +79,7 @@ export function useThread(conversationId: string | null): ThreadState {
     return () => {
       cancelled = true;
     };
-  }, [conversationId, markRead]);
+  }, [conversationId, markRead, t]);
 
   const refreshLatest = useCallback(async () => {
     if (!conversationId) return;

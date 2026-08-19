@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { RENTAL_STEPS } from '../constants';
 import styles from './RentalSteps.module.css';
 
@@ -11,10 +12,12 @@ import styles from './RentalSteps.module.css';
  * Nội dung tĩnh nhưng vẫn render sẵn ra HTML ở server (Client Component chỉ vì cây cha).
  */
 export function RentalSteps() {
+  const t = useTranslations('Marketplace.steps');
+
   return (
     <section className={styles.section} aria-labelledby="steps-title">
       <h2 id="steps-title" className={styles.title}>
-        Thuê xe chỉ với 4 bước
+        {t('title')}
       </h2>
 
       <ol className={styles.card}>
@@ -22,9 +25,9 @@ export function RentalSteps() {
           <li key={step.no} className={styles.step}>
             <div className={styles.stepHead}>
               <span className={styles.no}>{step.no}</span>
-              <h3 className={styles.stepTitle}>{step.title}</h3>
+              <h3 className={styles.stepTitle}>{t(`${step.key}.title`)}</h3>
             </div>
-            <p className={styles.desc}>{step.desc}</p>
+            <p className={styles.desc}>{t(`${step.key}.desc`)}</p>
           </li>
         ))}
       </ol>

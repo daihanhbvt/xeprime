@@ -11,6 +11,7 @@ import {
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { getErrorMessage, isUnauthenticated } from '@/services/api-client';
 import { useStartConversation } from '../hooks/use-chat-mutations';
+import { useTranslations } from 'next-intl';
 
 /** Nút "Nhắn shop" ở trang chi tiết xe — mở/lấy hội thoại rồi mở khu tin nhắn của khách. */
 export function ChatWithShopButton({
@@ -18,7 +19,7 @@ export function ChatWithShopButton({
   block,
   size,
   className,
-  label = 'Nhắn shop',
+  label,
   type,
   onNavigate,
 }: {
@@ -35,6 +36,8 @@ export function ChatWithShopButton({
    */
   onNavigate?: () => void;
 }) {
+  const t = useTranslations('Chat');
+  const buttonLabel = label ?? t('messageShop');
   const { message } = App.useApp();
   const router = useRouter();
   const start = useStartConversation();
@@ -73,7 +76,7 @@ export function ChatWithShopButton({
       loading={start.isPending}
       onClick={startChat}
     >
-      {label}
+      {buttonLabel}
     </Button>
   );
 }

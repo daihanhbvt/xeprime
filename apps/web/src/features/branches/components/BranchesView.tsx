@@ -168,7 +168,7 @@ export function BranchesView() {
       title: 'Trạng thái',
       dataIndex: 'status',
       width: 150,
-      render: (v: BranchStatus) => <StatusTag value={v} meta={BRANCH_STATUS_META} />,
+      render: (v: BranchStatus) => <StatusTag value={v} meta={BRANCH_STATUS_META} group="branchStatus" />,
     },
     {
       title: 'Thao tác',
@@ -271,7 +271,7 @@ export function BranchesView() {
             <div className={styles.cardHead}>
               <span className={styles.name}>{row.name}</span>
               {row.isDefault ? <Tag color={STATUS_COLOR.WAITING}>Mặc định</Tag> : null}
-              <StatusTag value={row.status as BranchStatus} meta={BRANCH_STATUS_META} />
+              <StatusTag value={row.status as BranchStatus} meta={BRANCH_STATUS_META} group="branchStatus" />
             </div>
             <div className={styles.cardMeta}>
               <EnvironmentOutlined />

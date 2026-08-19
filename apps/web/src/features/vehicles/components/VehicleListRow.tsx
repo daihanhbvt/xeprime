@@ -4,21 +4,17 @@ import { CarOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import Link from 'next/link';
 import {
-  VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_PUBLIC_STATUS_META,
-  type VehicleOperationStatus,
-  type VehiclePublicStatus,
-} from '@xeprime/types';
+  VEHICLE_OPERATION_STATUS_META, VEHICLE_PUBLIC_STATUS_META, type VehicleOperationStatus, type VehiclePublicStatus, } from '@xeprime/types';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
-import { absoluteMoney, formatMoneyCompactVnd, isNegativeMoney, subtractMoney } from '@/lib/money';
-import { formatKm } from '@/lib/odometer';
+import { absoluteMoney, isNegativeMoney, subtractMoney } from '@/lib/money';
 import { serviceTypesLabel } from '@xeprime/types';
 import { vehicleTypeLabel } from '../constants';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
 import { VehicleAlertChips } from './VehicleAlerts';
 import styles from './VehicleListRow.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface VehicleListRowProps {
   vehicle: VehicleListItem;
@@ -49,6 +45,8 @@ export function VehicleListRow({
   alertsFailed = false,
   actions,
 }: VehicleListRowProps) {
+  const fmt = useAppFormat();
+
   const meta = [
     vehicle.code,
     vehicle.plateNumber,
@@ -81,7 +79,7 @@ export function VehicleListRow({
           </Link>
           <StatusTag
             value={vehicle.operationStatus as VehicleOperationStatus}
-            meta={VEHICLE_OPERATION_STATUS_META}
+            meta={VEHICLE_OPERATION_STATUS_META} group="vehicleOperationStatus"
           />
         </div>
 
@@ -90,7 +88,7 @@ export function VehicleListRow({
         <div className={styles.statusRow}>
           <StatusTag
             value={vehicle.publicStatus as VehiclePublicStatus}
-            meta={VEHICLE_PUBLIC_STATUS_META}
+            meta={VEHICLE_PUBLIC_STATUS_META} group="vehiclePublicStatus"
           />
         </div>
 
@@ -102,7 +100,7 @@ export function VehicleListRow({
         ) : alerts ? (
           <>
             <VehicleAlertChips alerts={alerts.alerts} />
-            <p className={styles.odometer}>KM hiện tại: {formatKm(alerts.currentOdometerKm)}</p>
+            <p className={styles.odometer}>KM hiện tại: {fmt.km(alerts.currentOdometerKm)}</p>
           </>
         ) : null}
 
@@ -123,13 +121,13 @@ export function VehicleListRow({
               <>
                 <span aria-hidden="true">·</span>
                 <span>
-                  Thu: <b>{formatMoneyCompactVnd(stats.totalIncome)}</b>
+                  Thu: <b>{fmt.moneyCompact(stats.totalIncome)}</b>
                 </span>
                 <span aria-hidden="true">·</span>
                 <span>
                   {atLoss ? 'Lỗ' : 'Lãi'}:{' '}
                   <b className={atLoss ? styles.expense : styles.income}>
-                    {formatMoneyCompactVnd(absoluteMoney(profit))}
+                    {fmt.moneyCompact(absoluteMoney(profit))}
                   </b>
                 </span>
               </>

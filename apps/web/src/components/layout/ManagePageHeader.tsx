@@ -4,6 +4,7 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import { Button, Typography } from 'antd';
 import type { ReactNode } from 'react';
 import styles from './ManagePageHeader.module.css';
+import { useTranslations } from 'next-intl';
 
 /**
  * Tiêu đề chuẩn cho các trang trong Management Portal: nút back tuỳ chọn, tiêu đề, và vùng
@@ -33,11 +34,12 @@ export interface ManagePageHeaderProps {
 }
 
 export function ManagePageHeader({ title, subtitle, onBack, extra }: ManagePageHeaderProps) {
+  const t = useTranslations('ManageCommon');
   return (
     <div className={styles.header}>
       <div className={styles.left}>
         {onBack ? (
-          <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} aria-label="Quay lại" />
+          <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} aria-label={t('shell.back')} />
         ) : null}
         <div className={styles.heading}>
           <Typography.Title level={1} className={styles.title}>

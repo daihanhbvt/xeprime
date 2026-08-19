@@ -7,6 +7,7 @@ import { useConversations } from '../hooks/use-conversations';
 import { ConversationList } from './ConversationList';
 import { ThreadPanel } from './ThreadPanel';
 import styles from './ChatView.module.css';
+import { useTranslations } from 'next-intl';
 
 /**
  * Màn chat 2 cột (danh sách + thread). Dùng chung khu quản lý (shop) và khu khách — scope theo
@@ -14,6 +15,7 @@ import styles from './ChatView.module.css';
  * `initialConversationId` để deep-link (nút "Nhắn shop" → mở đúng thread).
  */
 export function ChatView({ initialConversationId }: { initialConversationId?: string | null }) {
+  const t = useTranslations('Chat');
   const { data, isLoading, isError } = useConversations();
   const items = useMemo(() => data?.items ?? [], [data]);
   // Khởi tạo từ deep-link (`?c=`); `selected` suy từ danh sách khi tải xong. Người dùng bấm để đổi.
@@ -32,11 +34,11 @@ export function ChatView({ initialConversationId }: { initialConversationId?: st
           </div>
         ) : isError ? (
           <div className={styles.centerPane}>
-            <span className={styles.error}>Không tải được hội thoại</span>
+            <span className={styles.error}>{t('loadError')}</span>
           </div>
         ) : items.length === 0 ? (
           <div className={styles.centerPane}>
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Chưa có hội thoại" />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('empty')} />
           </div>
         ) : (
           <ConversationList
@@ -52,7 +54,7 @@ export function ChatView({ initialConversationId }: { initialConversationId?: st
           <ThreadPanel key={selected.id} conversation={selected} onBack={() => setSelectedId(null)} />
         ) : (
           <div className={styles.centerPane}>
-            <span className={styles.hint}>Chọn một hội thoại để xem.</span>
+            <span className={styles.hint}>{t('pickConversation')}</span>
           </div>
         )}
       </section>

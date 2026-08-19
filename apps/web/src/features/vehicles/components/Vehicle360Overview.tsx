@@ -45,9 +45,7 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
 import { ROUTES, VEHICLE_EDIT_TAB, vehiclePath, vehicleTabPath } from '@/constants/routes';
 import { decorativeIcon } from '@/lib/decorative-icon';
-import { formatDateTime, toAppTz } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
-import { formatKm } from '@/lib/odometer';
+import { toAppTz } from '@/lib/datetime';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { usePermissions } from '@/hooks/use-permissions';
 import { serviceTypesLabel } from '@xeprime/types';
@@ -60,6 +58,7 @@ import type { Vehicle360Summary, VehicleBookingBrief, VehicleDetail } from '../t
 import { VehicleAlertList } from './VehicleAlerts';
 import { VehiclePublicReviewPanel } from './VehiclePublicReviewPanel';
 import styles from './Vehicle360Overview.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const EMPTY = '—';
 
@@ -195,6 +194,8 @@ function ProfileHeader({
   onSchedule: () => void;
   onDelete: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const status = vehicle.publicStatus as VehiclePublicStatus;
 
@@ -246,7 +247,7 @@ function ProfileHeader({
            * chỉnh tay, để người đọc biết tin nó tới đâu.
            */}
           <p className={styles.odometerRow}>
-            Số KM: <b>{formatKm(summary?.currentOdometerKm ?? null)}</b>
+            Số KM: <b>{fmt.km(summary?.currentOdometerKm ?? null)}</b>
             {summary?.currentOdometerSource ? (
               <span className={styles.odometerSource}>
                 {' '}
@@ -262,11 +263,16 @@ function ProfileHeader({
               <StatusTag
                 value={vehicle.operationStatus as VehicleOperationStatus}
                 meta={VEHICLE_OPERATION_STATUS_META}
+                group="vehicleOperationStatus"
               />
             </span>
             <span className={styles.axis}>
               <span className={styles.axisLabel}>Public</span>
-              <StatusTag value={status} meta={VEHICLE_PUBLIC_STATUS_META} />
+              <StatusTag
+                value={status}
+                meta={VEHICLE_PUBLIC_STATUS_META}
+                group="vehiclePublicStatus"
+              />
             </span>
           </div>
         </div>
@@ -384,6 +390,8 @@ function ScheduleCard({
   loading: boolean;
   failed: boolean;
 }) {
+  const fmt = useAppFormat();
+
   return (
     <Card title="Lịch thuê sắp tới" className={styles.quickCard}>
       {loading ? (
@@ -400,7 +408,7 @@ function ScheduleCard({
                 {booking.customerName} • {shortRange(booking.pickupAt, booking.returnAt)}
               </p>
               <p className={styles.scheduleSub}>
-                {formatMoneyVnd(booking.totalAmount)} • {bookingStatusLabel(booking.status)}
+                {fmt.money(booking.totalAmount)} • {bookingStatusLabel(booking.status)}
               </p>
             </li>
           ))}
@@ -419,6 +427,8 @@ function PerformanceCard({
   loading: boolean;
   failed: boolean;
 }) {
+  const fmt = useAppFormat();
+
   const stats = summary?.stats;
   const hasFinance = stats?.totalIncome != null;
 
@@ -436,7 +446,7 @@ function PerformanceCard({
             {hasFinance ? (
               <div>
                 <dt>Doanh thu</dt>
-                <dd className={styles.income}>{formatMoneyVnd(stats.totalIncome)}</dd>
+                <dd className={styles.income}>{fmt.money(stats.totalIncome)}</dd>
               </div>
             ) : null}
             <div className={hasFinance ? styles.alignEnd : undefined}>
@@ -457,6 +467,8 @@ function PerformanceCard({
 /* ─── Lưới hai cột ────────────────────────────────────────────────────────── */
 
 function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+  const fmt = useAppFormat();
+
   const discounted = discountedPriceVnd(vehicle.weekdayPrice, vehicle.discountPercent);
 
   return (
@@ -475,16 +487,16 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
       <dl className={styles.kvList}>
         <div className={styles.kvRow}>
           <dt>Ngày thường</dt>
-          <dd>{vehicle.weekdayPrice ? `${formatMoneyVnd(vehicle.weekdayPrice)} / ngày` : EMPTY}</dd>
+          <dd>{vehicle.weekdayPrice ? `${fmt.money(vehicle.weekdayPrice)} / ngày` : EMPTY}</dd>
         </div>
         <div className={styles.kvRow}>
           <dt>Cuối tuần</dt>
-          <dd>{vehicle.weekendPrice ? `${formatMoneyVnd(vehicle.weekendPrice)} / ngày` : EMPTY}</dd>
+          <dd>{vehicle.weekendPrice ? `${fmt.money(vehicle.weekendPrice)} / ngày` : EMPTY}</dd>
         </div>
         {vehicle.hourlyPrice ? (
           <div className={styles.kvRow}>
             <dt>Theo giờ</dt>
-            <dd>{formatMoneyVnd(vehicle.hourlyPrice)} / giờ</dd>
+            <dd>{fmt.money(vehicle.hourlyPrice)} / giờ</dd>
           </div>
         ) : null}
         {vehicle.discountPercent ? (
@@ -498,7 +510,7 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
         {discounted != null ? (
           <div className={styles.kvRow}>
             <dt>Giá hiển thị sàn</dt>
-            <dd>{formatMoneyVnd(discounted)}</dd>
+            <dd>{fmt.money(discounted)}</dd>
           </div>
         ) : null}
         <div className={styles.kvRow}>
@@ -640,6 +652,8 @@ function DocumentsCard({
 }
 
 function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const fmt = useAppFormat();
+
   // Xe lưu KEY của danh mục, không lưu nhãn — nhãn tra từ `catalog_items` do admin cấu hình.
   const { brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel } = useCatalogLabels();
 
@@ -681,8 +695,8 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
       label: 'Tiêu thụ hỗn hợp',
       children: formatMetric(vehicle.fuelConsumptionCombined, 'L/100km'),
     },
-    { key: 'created', label: 'Tạo lúc', children: formatDateTime(vehicle.createdAt) },
-    { key: 'updated', label: 'Cập nhật', children: formatDateTime(vehicle.updatedAt) },
+    { key: 'created', label: 'Tạo lúc', children: fmt.dateTime(vehicle.createdAt) },
+    { key: 'updated', label: 'Cập nhật', children: fmt.dateTime(vehicle.updatedAt) },
   ];
 
   return (
@@ -712,6 +726,8 @@ function formatMetric(value: number | string | null | undefined, unit: string): 
  * người không có quyền chỉ thấy hình thức (đã nằm sẵn trên vehicle), không thấy con số.
  */
 function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const fmt = useAppFormat();
+
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
   const permissions = usePermissions();
   const canViewFinance = permissions.has(PERMISSION.FINANCE_VIEW);
@@ -722,8 +738,8 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
     ? [
         detail.bankName,
         detail.ownerName,
-        detail.monthlyTotal ? `${formatMoneyVnd(detail.monthlyTotal)}/tháng (gốc + lãi)` : null,
-        detail.monthlyRent ? `${formatMoneyVnd(detail.monthlyRent)}/tháng` : null,
+        detail.monthlyTotal ? `${fmt.money(detail.monthlyTotal)}/tháng (gốc + lãi)` : null,
+        detail.monthlyRent ? `${fmt.money(detail.monthlyRent)}/tháng` : null,
         detail.commissionPercent ? `chia chủ xe ${detail.commissionPercent}%` : null,
         detail.paymentDay ? `đến hạn ngày ${detail.paymentDay}` : null,
       ]
@@ -807,6 +823,8 @@ function ActivityCard({
   loading: boolean;
   failed: boolean;
 }) {
+  const fmt = useAppFormat();
+
   return (
     <Card title="Hoạt động gần đây" className={styles.sectionCard}>
       {loading ? (
@@ -827,11 +845,11 @@ function ActivityCard({
                   <p className={styles.activityTitle}>
                     Đơn {booking.code} · {bookingStatusLabel(booking.status)}
                   </p>
-                  <span className={styles.activityTime}>{formatDateTime(booking.updatedAt)}</span>
+                  <span className={styles.activityTime}>{fmt.dateTime(booking.updatedAt)}</span>
                 </div>
                 <p className={styles.activitySub}>
                   {booking.customerName} • {shortRange(booking.pickupAt, booking.returnAt)} •{' '}
-                  {formatMoneyVnd(booking.totalAmount)}
+                  {fmt.money(booking.totalAmount)}
                 </p>
               </div>
             </li>

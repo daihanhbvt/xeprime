@@ -6,13 +6,9 @@ import { App, Button, Empty, Pagination, Popconfirm, Result, Skeleton, Tag } fro
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
-  TENANT_CUSTOMER_NOTE_TYPE,
-  TENANT_CUSTOMER_NOTE_TYPE_META,
-  type TenantCustomerNoteType,
-} from '@xeprime/types';
+  TENANT_CUSTOMER_NOTE_TYPE, TENANT_CUSTOMER_NOTE_TYPE_META, type TenantCustomerNoteType, } from '@xeprime/types';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
-import { formatDateTime } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { CUSTOMER_HINTS, NOTE_TYPE_OPTIONS } from '../constants';
 import {
@@ -22,6 +18,7 @@ import {
 } from '../hooks/use-customers';
 import { customerNoteSchema, type CustomerNoteFormValues } from '../schema';
 import styles from './CustomerNotesPanel.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const EMPTY: CustomerNoteFormValues = {
   noteType: TENANT_CUSTOMER_NOTE_TYPE.GENERAL,
@@ -44,6 +41,8 @@ export function CustomerNotesPanel({
   /** Hồ sơ đang lưu trữ — đọc được, không ghi thêm được (backend cũng chặn). */
   disabled?: boolean;
 }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, refetch, isFetching } = useCustomerNotes(customerId, page);
@@ -140,7 +139,7 @@ export function CustomerNotesPanel({
                     note.noteType}
                 </Tag>
                 <span className={styles.itemMeta}>
-                  {note.authorName ?? 'Người dùng đã xoá'} · {formatDateTime(note.createdAt)}
+                  {note.authorName ?? 'Người dùng đã xoá'} · {fmt.dateTime(note.createdAt)}
                 </span>
                 {canManage ? (
                   <Popconfirm
@@ -161,7 +160,7 @@ export function CustomerNotesPanel({
                       type="text"
                       size="small"
                       icon={<DeleteOutlined />}
-                      aria-label={`Gỡ ghi chú ngày ${formatDateTime(note.createdAt)}`}
+                      aria-label={`Gỡ ghi chú ngày ${fmt.dateTime(note.createdAt)}`}
                       className={styles.itemRemove}
                     />
                   </Popconfirm>

@@ -4,19 +4,14 @@ import { App, Alert, DatePicker, Input, Radio } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useState } from 'react';
 import {
-  REFUND_DISCLAIMER,
-  REFUND_METHOD,
-  REFUND_METHOD_LABEL,
-  REFUND_METHOD_VALUES,
-  type RefundMethod,
-} from '@xeprime/types';
+  REFUND_DISCLAIMER, REFUND_METHOD, REFUND_METHOD_LABEL, REFUND_METHOD_VALUES, type RefundMethod, } from '@xeprime/types';
 import { MoneyInput } from '@/components/form/MoneyInput';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { useCorrectRefund, useRecordRefund } from '../hooks';
 import type { BookingSettlement } from '../types';
 import styles from './RecordRefundDialog.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * `Đánh dấu đã hoàn cọc` (Wave 10 §5.2).
@@ -41,6 +36,8 @@ export function RecordRefundDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const record = useRecordRefund(bookingId);
   const correct = useCorrectRefund(bookingId);
@@ -123,12 +120,12 @@ export function RecordRefundDialog({
       <div className={styles.body}>
         <div className={styles.summary}>
           <span>Cọc đã nhận</span>
-          <b>{formatMoneyVnd(settlement.depositReceived)}</b>
+          <b>{fmt.money(settlement.depositReceived)}</b>
         </div>
         {Number(settlement.surchargeTotal) > 0 ? (
           <div className={styles.summary}>
             <span>Trừ phát sinh</span>
-            <b className={styles.negative}>−{formatMoneyVnd(settlement.surchargeTotal)}</b>
+            <b className={styles.negative}>−{fmt.money(settlement.surchargeTotal)}</b>
           </div>
         ) : null}
 
@@ -141,7 +138,7 @@ export function RecordRefundDialog({
             className={styles.control}
           />
           <span className={styles.hint}>
-            Đề xuất: {formatMoneyVnd(settlement.proposedRefund)}. Sửa được nếu thực tế khác.
+            Đề xuất: {fmt.money(settlement.proposedRefund)}. Sửa được nếu thực tế khác.
           </span>
         </label>
 

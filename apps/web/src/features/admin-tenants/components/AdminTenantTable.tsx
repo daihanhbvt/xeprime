@@ -3,17 +3,12 @@
 import { EyeOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import {
-  TENANT_STATUS_META,
-  TENANT_TYPE_LABEL,
-  type PaginationMeta,
-  type TenantStatus,
-  type TenantType,
-} from '@xeprime/types';
+  TENANT_STATUS_META, TENANT_TYPE_LABEL, type PaginationMeta, type TenantStatus, type TenantType, } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDate } from '@/lib/datetime';
 import type { AdminTenant } from '../types';
 import styles from './AdminTenantTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface AdminTenantTableProps {
   items: AdminTenant[];
@@ -39,6 +34,8 @@ export function AdminTenantTable({
   onView,
   onPageChange,
 }: AdminTenantTableProps) {
+  const fmt = useAppFormat();
+
   const columns: DataTableColumn<AdminTenant>[] = [
     {
       title: 'Gian hàng',
@@ -76,9 +73,9 @@ export function AdminTenantTable({
       title: 'Trạng thái',
       key: 'status',
       width: 130,
-      render: (_, r) => <StatusTag value={r.status as TenantStatus} meta={TENANT_STATUS_META} />,
+      render: (_, r) => <StatusTag value={r.status as TenantStatus} meta={TENANT_STATUS_META} group="tenantStatus" />,
     },
-    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => formatDate(r.createdAt) },
+    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => fmt.date(r.createdAt) },
     actionColumn<AdminTenant>((row) => [
       { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
     ]),

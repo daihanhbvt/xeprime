@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { SERVICE_TYPE, serviceTypeLabel } from '@xeprime/types';
 import { cx } from '@/lib/cx';
 import styles from './ListingServiceSelector.module.css';
+import { useTranslations } from 'next-intl';
 
 function serviceTone(value: string): string | undefined {
   if (value === SERVICE_TYPE.SELF_DRIVE) return styles.selfDrive;
@@ -35,6 +36,7 @@ export function ListingServiceSelector({
   services: readonly string[];
   active: string;
 }) {
+  const t = useTranslations('Listings.detail');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -42,8 +44,8 @@ export function ListingServiceSelector({
   if (services.length === 0) return null;
 
   return (
-    <div className={styles.selector} role="group" aria-label="Chọn dịch vụ thuê">
-      <span className={styles.label}>Dịch vụ</span>
+    <div className={styles.selector} role="group" aria-label={t('serviceSelector')}>
+      <span className={styles.label}>{t('serviceLabel')}</span>
       <div className={styles.options}>
         {services.map((value) => {
           const isActive = value === active;

@@ -2,15 +2,11 @@
 
 import { Alert, Button, Card, Popconfirm, Space } from 'antd';
 import {
-  TENANT_STATUS,
-  TENANT_STATUS_META,
-  TENANT_STATUS_SUBMITTABLE,
-  type TenantStatus,
-} from '@xeprime/types';
+  TENANT_STATUS, TENANT_STATUS_META, TENANT_STATUS_SUBMITTABLE, type TenantStatus, } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDateTime } from '@/lib/datetime';
 import type { MyShop } from '../types';
 import styles from './ShopStatusCard.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface ShopStatusCardProps {
   shop: MyShop;
@@ -19,6 +15,8 @@ interface ShopStatusCardProps {
 }
 
 export function ShopStatusCard({ shop, submitting, onSubmit }: ShopStatusCardProps) {
+  const fmt = useAppFormat();
+
   const status = shop.status as TenantStatus;
   const canSubmit = TENANT_STATUS_SUBMITTABLE.includes(status);
   const approval = shop.latestApproval;
@@ -28,7 +26,7 @@ export function ShopStatusCard({ shop, submitting, onSubmit }: ShopStatusCardPro
       <div className={styles.row}>
         <Space size="middle" wrap>
           <span className={styles.label}>Trạng thái gian hàng</span>
-          <StatusTag value={status} meta={TENANT_STATUS_META} />
+          <StatusTag value={status} meta={TENANT_STATUS_META} group="tenantStatus" />
         </Space>
         {canSubmit ? (
           <Popconfirm
@@ -52,7 +50,7 @@ export function ShopStatusCard({ shop, submitting, onSubmit }: ShopStatusCardPro
           showIcon
           message="Hồ sơ đang chờ nền tảng duyệt"
           description={
-            approval ? `Đã gửi lúc ${formatDateTime(approval.submittedAt)}.` : undefined
+            approval ? `Đã gửi lúc ${fmt.dateTime(approval.submittedAt)}.` : undefined
           }
         />
       ) : null}

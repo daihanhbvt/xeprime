@@ -4,20 +4,16 @@ import { CreditCardOutlined } from '@ant-design/icons';
 import { App, Button, Popconfirm, Select, Spin, Tag } from 'antd';
 import { useMemo, useState } from 'react';
 import {
-  SUBSCRIPTION_STATUS,
-  SUBSCRIPTION_STATUS_META,
-  STATUS_COLOR,
-  type SubscriptionStatus,
-} from '@xeprime/types';
+  SUBSCRIPTION_STATUS, SUBSCRIPTION_STATUS_META, STATUS_COLOR, type SubscriptionStatus, } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { dayjs, formatDate } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
+import { dayjs } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { useAssignSubscription, useCancelSubscription } from '../hooks/use-plan-mutations';
 import { usePlans, useTenantSubscriptions } from '../hooks/use-plans';
 import type { CurrentPlan, Subscription } from '../types';
 import styles from './TenantPlanSection.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * Section "Gói dịch vụ" trong drawer gian hàng (ADR 0010): gói hiện hành + gán/gia hạn +
@@ -30,6 +26,8 @@ export function TenantPlanSection({
   tenantId: string;
   currentPlan: CurrentPlan | null;
 }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const [assignOpen, setAssignOpen] = useState(false);
   const history = useTenantSubscriptions(tenantId);
@@ -53,7 +51,7 @@ export function TenantPlanSection({
           <div>
             <div className={styles.currentName}>{currentPlan.planName}</div>
             <div className={styles.meta}>
-              Hết hạn {formatDate(currentPlan.endsAt)}
+              Hết hạn {fmt.date(currentPlan.endsAt)}
               {currentPlan.maxVehicles != null
                 ? ` · tối đa ${currentPlan.maxVehicles} xe`
                 : ' · không giới hạn xe'}
@@ -112,6 +110,8 @@ function HistoryRow({
   cancelling: boolean;
   onCancel: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const now = dayjs();
   const isExpired = sub.status === SUBSCRIPTION_STATUS.ACTIVE && dayjs(sub.endsAt).isBefore(now);
   const isLive = sub.status === SUBSCRIPTION_STATUS.ACTIVE && !isExpired;
@@ -121,7 +121,7 @@ function HistoryRow({
       <div>
         <div>{sub.planName}</div>
         <div className={styles.meta}>
-          {formatDate(sub.startsAt)} → {formatDate(sub.endsAt)} · {formatMoneyVnd(sub.price)}
+          {fmt.date(sub.startsAt)} → {fmt.date(sub.endsAt)} · {fmt.money(sub.price)}
           {sub.note ? ` · ${sub.note}` : ''}
         </div>
       </div>
@@ -130,7 +130,7 @@ function HistoryRow({
           // Dòng active đã qua endsAt → hiển thị "Hết hạn" (suy ra, ADR 0010 — DB vẫn lưu active).
           <Tag color={STATUS_COLOR.DANGER}>Hết hạn</Tag>
         ) : (
-          <StatusTag value={sub.status as SubscriptionStatus} meta={SUBSCRIPTION_STATUS_META} />
+          <StatusTag value={sub.status as SubscriptionStatus} meta={SUBSCRIPTION_STATUS_META} group="subscriptionStatus" />
         )}
         {isLive ? (
           <Popconfirm
@@ -161,6 +161,8 @@ function AssignPlanModal({
   currentEndsAt: string | null;
   onClose: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const plans = usePlans('active');
   const assign = useAssignSubscription(tenantId);
@@ -168,7 +170,7 @@ function AssignPlanModal({
 
   const options = (plans.data ?? []).map((p) => ({
     value: p.id,
-    label: `${p.name} — ${formatMoneyVnd(p.price)} / ${p.durationDays} ngày${
+    label: `${p.name} — ${fmt.money(p.price)} / ${p.durationDays} ngày${
       p.maxVehicles != null ? ` · tối đa ${p.maxVehicles} xe` : ''
     }`,
   }));
@@ -226,8 +228,8 @@ function AssignPlanModal({
           />
           {preview ? (
             <div className={styles.preview}>
-              Chu kỳ mới: <b>{formatDate(preview.starts.toISOString())}</b> →{' '}
-              <b>{formatDate(preview.ends.toISOString())}</b> · {formatMoneyVnd(preview.price)}
+              Chu kỳ mới: <b>{fmt.date(preview.starts.toISOString())}</b> →{' '}
+              <b>{fmt.date(preview.ends.toISOString())}</b> · {fmt.money(preview.price)}
               {currentEndsAt && dayjs(currentEndsAt).isAfter(dayjs())
                 ? ' (nối đuôi gói hiện hành)'
                 : ''}

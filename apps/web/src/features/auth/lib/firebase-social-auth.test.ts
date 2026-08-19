@@ -82,7 +82,7 @@ describe('Firebase Social Auth', () => {
   it('đăng nhập Google bằng popup và trả ID token cho backend', async () => {
     const { getFirebaseProviderIdToken } = await import('./firebase-social-auth');
 
-    await expect(getFirebaseProviderIdToken('google')).resolves.toBe('firebase-id-token');
+    await expect(getFirebaseProviderIdToken('google', 'vi')).resolves.toBe('firebase-id-token');
 
     expect(firebase.initializeApp).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: FIREBASE_ENV.NEXT_PUBLIC_FIREBASE_PROJECT_ID }),
@@ -96,6 +96,7 @@ describe('Firebase Social Auth', () => {
     expect(firebase.signInWithPopup.mock.calls[0]?.[1]).toBeInstanceOf(
       firebase.GoogleAuthProvider,
     );
+    // Ngôn ngữ màn đồng ý của Firebase đi theo ngôn ngữ giao diện, không ghim cứng.
     expect(firebase.auth.languageCode).toBe('vi');
     expect(firebase.signOut).toHaveBeenCalledWith(firebase.auth);
   });
@@ -103,7 +104,7 @@ describe('Firebase Social Auth', () => {
   it('khởi tạo đúng Facebook provider', async () => {
     const { getFirebaseProviderIdToken } = await import('./firebase-social-auth');
 
-    await expect(getFirebaseProviderIdToken('facebook')).resolves.toBe('firebase-id-token');
+    await expect(getFirebaseProviderIdToken('facebook', 'vi')).resolves.toBe('firebase-id-token');
 
     expect(firebase.facebookSetCustomParameters).toHaveBeenCalledWith({ display: 'popup' });
     expect(firebase.signInWithPopup.mock.calls[0]?.[1]).toBeInstanceOf(
@@ -111,22 +112,48 @@ describe('Firebase Social Auth', () => {
     );
   });
 
-  it('đổi lỗi Firebase kỹ thuật thành hướng dẫn tiếng Việt', async () => {
+  /**
+   * Mô-đun này KHÔNG còn sinh câu tiếng Việt — nó nêu MÃ, giao diện chọn chữ (ADR 0012).
+   * Test vì thế khẳng định trên mã: đó là thứ không đổi khi đổi ngôn ngữ.
+   */
+  it('quy lỗi kỹ thuật của Firebase về MÃ ổn định, không phải một câu', async () => {
     firebase.signInWithPopup.mockRejectedValue({ code: 'auth/unauthorized-domain' });
+    const { getFirebaseProviderIdToken, SocialAuthError } = await import('./firebase-social-auth');
+
+    await expect(getFirebaseProviderIdToken('google', 'vi')).rejects.toMatchObject({
+      name: 'SocialAuthError',
+      key: 'unauthorizedDomain',
+      provider: 'google',
+    });
+    await expect(getFirebaseProviderIdToken('google', 'vi')).rejects.toBeInstanceOf(
+      SocialAuthError,
+    );
+  });
+
+  it('mã lạ rơi về "generic" chứ không lộ chuỗi lỗi thô của Firebase', async () => {
+    firebase.signInWithPopup.mockRejectedValue({ code: 'auth/something-brand-new' });
     const { getFirebaseProviderIdToken } = await import('./firebase-social-auth');
 
-    await expect(getFirebaseProviderIdToken('google')).rejects.toThrow(
-      'Tên miền hiện tại chưa được cho phép trong Firebase Authentication.',
-    );
+    await expect(getFirebaseProviderIdToken('facebook', 'vi')).rejects.toMatchObject({
+      key: 'generic',
+      provider: 'facebook',
+    });
+  });
+
+  it('truyền ngôn ngữ giao diện xuống màn đồng ý của Firebase', async () => {
+    const { getFirebaseProviderIdToken } = await import('./firebase-social-auth');
+
+    await getFirebaseProviderIdToken('google', 'en');
+    expect(firebase.auth.languageCode).toBe('en');
   });
 
   it('báo cấu hình thiếu mà không mở popup', async () => {
     delete process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
     const { getFirebaseProviderIdToken } = await import('./firebase-social-auth');
 
-    await expect(getFirebaseProviderIdToken('google')).rejects.toThrow(
-      'Đăng nhập mạng xã hội chưa được cấu hình.',
-    );
+    await expect(getFirebaseProviderIdToken('google', 'vi')).rejects.toMatchObject({
+      key: 'notConfigured',
+    });
     expect(firebase.signInWithPopup).not.toHaveBeenCalled();
   });
 });

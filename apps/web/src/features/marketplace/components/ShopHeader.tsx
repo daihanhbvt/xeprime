@@ -1,16 +1,16 @@
 import type { PublicShop } from '../types';
 import styles from './ShopHeader.module.css';
+import { getTranslations } from 'next-intl/server';
+import { getAppFormat } from '@/i18n/server-format';
 
-function ratingText(shop: PublicShop): string {
-  if (shop.ratingCount <= 0) return 'Chưa có đánh giá';
-  return `${Number(shop.ratingAvg).toFixed(1)} · ${shop.ratingCount} đánh giá`;
-}
+
 
 /**
  * Đầu trang gian hàng công khai — Server Component (không interactivity, không phụ thuộc antd)
  * để tối ưu SEO: ảnh bìa, logo, tên, tỉnh, điểm đánh giá, giới thiệu, liên hệ. Chỉ dữ liệu công khai.
  */
-export function ShopHeader({ shop }: { shop: PublicShop }) {
+export async function ShopHeader({ shop }: { shop: PublicShop }) {
+  const [t, fmt] = await Promise.all([getTranslations('Shops.header'), getAppFormat()]);
   const initial = shop.name.trim().charAt(0).toUpperCase() || '?';
 
   return (
@@ -46,14 +46,16 @@ export function ShopHeader({ shop }: { shop: PublicShop }) {
               <span className={styles.star} aria-hidden="true">
                 ★
               </span>{' '}
-              {ratingText(shop)}
+              {shop.ratingCount > 0
+                ? t('rating', { avg: fmt.rating(Number(shop.ratingAvg)), count: shop.ratingCount })
+                : t('noRating')}
             </span>
           </div>
         </div>
 
         {shop.phone ? (
           <a className={styles.contact} href={`tel:${shop.phone}`}>
-            Gọi {shop.phone}
+            {t('call', { phone: shop.phone })}
           </a>
         ) : null}
       </div>

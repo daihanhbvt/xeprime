@@ -9,12 +9,12 @@ import { FeaturedHosts } from '@/features/marketplace/components/FeaturedHosts';
 import { RentalSteps } from '@/features/marketplace/components/RentalSteps';
 import { OwnerCta } from '@/features/marketplace/components/OwnerCta';
 import styles from './page.module.css';
+import { getTranslations } from 'next-intl/server';
 
-export const metadata: Metadata = {
-  title: 'Thuê xe tự lái & có tài xế trên toàn quốc',
-  description:
-    'XePrime — thuê ô tô tự lái, có tài xế và xe máy khắp Việt Nam. Đặt xe nhanh, thanh toán sau khi chủ xe xác nhận.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('Marketplace.meta.home');
+  return { title: t('title'), description: t('description') };
+}
 
 /**
  * Trang chủ Marketplace.

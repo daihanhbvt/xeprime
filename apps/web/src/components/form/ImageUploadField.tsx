@@ -8,6 +8,7 @@ import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
 import { uploadImage, validateImageFile, type UploadPresign } from '@/services/upload';
 import styles from './ImageUploadField.module.css';
+import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 
 interface ImageUploadFieldProps<T extends FieldValues> {
   control: Control<T>;
@@ -37,6 +38,7 @@ export function ImageUploadField<T extends FieldValues>({
   validate,
   help,
 }: ImageUploadFieldProps<T>) {
+  const uploadRejectionMessage = useUploadRejectionMessage();
   const { field, fieldState } = useController({ control, name });
   const { message } = App.useApp();
   const [uploading, setUploading] = useState(false);
@@ -66,7 +68,7 @@ export function ImageUploadField<T extends FieldValues>({
   function handleSelect(file: File): false {
     const invalid = validateImageFile(file);
     if (invalid) {
-      message.error(invalid);
+      message.error(uploadRejectionMessage(invalid));
       return false;
     }
     startUpload(file);

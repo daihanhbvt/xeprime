@@ -1,0 +1,18 @@
+{
+  "shell": {
+    "pendingTitle": "Gian hàng đang chờ duyệt",
+    "pendingBody": "Bạn vẫn xem được dữ liệu, nhưng xe chưa lên marketplace cho tới khi hồ sơ được duyệt.",
+    "navLabel": "Điều hướng cổng quản lý",
+    "expandMenu": "Mở rộng menu",
+    "collapseMenu": "Thu gọn menu",
+    "back": "Quay lại",
+    "logout": "Đăng xuất"
+  },
+  "permission": {
+    "deniedTitle": "Bạn không có quyền truy cập",
+    "readOnlyTitle": "Bạn chỉ có quyền xem",
+    "deniedBody": "Liên hệ quản trị viên nếu bạn cần quyền cho mục này.",
+    "readOnlyBody": "Bạn xem được dữ liệu nhưng không thực hiện được thay đổi.",
+    "requires": "Cần quyền:"
+  }
+}

@@ -5,28 +5,12 @@ import { Alert, App, Button, Form, Space } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
-  FUEL_LEVEL_LABEL,
-  FUEL_LEVEL_VALUES,
-  HANDOVER_ENERGY_KIND,
-  HANDOVER_STATUS,
-  HANDOVER_TYPE,
-  HANDOVER_TYPE_LABEL,
-  fuelLevelDropQuarters,
-  type FuelLevel,
-  type HandoverType,
-} from '@xeprime/types';
+  FUEL_LEVEL_LABEL, FUEL_LEVEL_VALUES, HANDOVER_ENERGY_KIND, HANDOVER_STATUS, HANDOVER_TYPE, HANDOVER_TYPE_LABEL, fuelLevelDropQuarters, type FuelLevel, type HandoverType, } from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useIsMobile } from '@/hooks/use-media-query';
-import { formatDateTime } from '@/lib/datetime';
-import {
-  INSUFFICIENT_DATA_LABEL,
-  MISSING_VALUE_LABEL,
-  formatKm,
-  formatRemainingKm,
-} from '@/lib/odometer';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import type { ApiClientError } from '@/services/api-client';
 import { confirmHandover, saveHandoverDraft } from '../api';
@@ -39,6 +23,8 @@ import type {
 } from '../types';
 import { HandoverPhotoGrid } from './HandoverPhotoGrid';
 import styles from './Handover.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 const FUEL_OPTIONS = FUEL_LEVEL_VALUES.map((value) => ({
   value,
@@ -86,6 +72,9 @@ export function HandoverDialog({
    */
   onDirtyChange?: (dirty: boolean) => void;
 }) {
+  const tCommon = useTranslations('Common');
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const isMobile = useIsMobile();
   const [step, setStep] = useState(0);
@@ -254,7 +243,7 @@ export function HandoverDialog({
     if (code === 'HANDOVER_ODOMETER_BELOW_PICKUP') {
       const info = details as unknown as HandoverBelowPickupDetails;
       setError('odometerKm', {
-        message: `KM nhận lại không được nhỏ hơn chỉ số KM lúc giao (${formatKm(info?.pickupKm)}). Vui lòng đối soát lại.`,
+        message: `KM nhận lại không được nhỏ hơn chỉ số KM lúc giao (${fmt.km(info?.pickupKm)}). Vui lòng đối soát lại.`,
       });
       if (isMobile) setStep(0);
       return;
@@ -303,10 +292,10 @@ export function HandoverDialog({
 
   const odometerHelp = isReturn
     ? pickupKm != null
-      ? `Yêu cầu: KM nhận lại phải lớn hơn hoặc bằng KM lúc giao (${formatKm(pickupKm)})`
+      ? `Yêu cầu: KM nhận lại phải lớn hơn hoặc bằng KM lúc giao (${fmt.km(pickupKm)})`
       : 'Chưa có KM lúc giao để đối chiếu — biên bản giao xe chưa ghi số'
     : context.vehicleOdometerKm != null
-      ? `KM hiện tại theo hệ thống: ${formatKm(context.vehicleOdometerKm)}`
+      ? `KM hiện tại theo hệ thống: ${fmt.km(context.vehicleOdometerKm)}`
       : 'Xe chưa từng ghi nhận KM — số nhập ở đây sẽ là mốc đầu tiên';
 
   // ── Các khối nội dung (dùng chung desktop & mobile) ──────────────────────
@@ -323,7 +312,7 @@ export function HandoverDialog({
         <span className={styles.summaryLabel}>{isReturn ? 'Mốc lúc giao' : 'Thời gian thuê'}</span>
         <span className={styles.summaryValue}>
           {isReturn
-            ? `KM giao: ${formatKm(pickupKm)}${pickupFuel ? ` · Nhiên liệu: ${FUEL_LEVEL_LABEL[pickupFuel]}` : ''}`
+            ? `KM giao: ${fmt.km(pickupKm)}${pickupFuel ? ` · Nhiên liệu: ${FUEL_LEVEL_LABEL[pickupFuel]}` : ''}`
             : `${context.rentalDays} ngày`}
         </span>
       </div>
@@ -331,7 +320,7 @@ export function HandoverDialog({
         <div className={styles.summaryRow}>
           <span className={styles.summaryLabel}>Xác nhận</span>
           <span className={styles.summaryValue}>
-            {formatDateTime(handover.confirmedAt)}
+            {fmt.dateTime(handover.confirmedAt)}
             {handover.confirmedByName ? ` · ${handover.confirmedByName}` : ''}
           </span>
         </div>
@@ -360,7 +349,7 @@ export function HandoverDialog({
             data-testid="handover-delta"
           >
             {deltaKm >= 0 ? '+' : ''}
-            {formatKm(deltaKm)}
+            {fmt.km(deltaKm)}
           </span>
         ) : null}
       </div>
@@ -460,17 +449,17 @@ export function HandoverDialog({
       <div className={styles.consequenceBox} data-testid="handover-consequence">
         <p className={styles.consequenceTitle}>Hệ quả xử lý hệ thống</p>
         <p className={styles.consequenceText}>
-          Odo xe {context.vehicleName} sẽ cập nhật thành <strong>{formatKm(odometerKm)}</strong>.
+          Odo xe {context.vehicleName} sẽ cập nhật thành <strong>{fmt.km(odometerKm)}</strong>.
         </p>
         <p className={styles.consequenceText}>
           Mốc bảo dưỡng tiếp theo:{' '}
           {context.nextMaintenanceKm != null ? (
             <>
-              <strong>{formatKm(context.nextMaintenanceKm)}</strong> (
-              {formatRemainingKm(context.nextMaintenanceKm - odometerKm)})
+              <strong>{fmt.km(context.nextMaintenanceKm)}</strong> (
+              {fmt.remainingKm(context.nextMaintenanceKm - odometerKm)})
             </>
           ) : (
-            INSUFFICIENT_DATA_LABEL
+            tCommon('labels.insufficientData')
           )}
         </p>
       </div>
@@ -481,7 +470,7 @@ export function HandoverDialog({
     <div className={styles.reviewBox}>
       <div className={styles.summaryRow}>
         <span className={styles.summaryLabel}>{isReturn ? 'KM nhận lại' : 'KM khi giao'}</span>
-        <span className={styles.summaryValue}>{formatKm(odometerKm)}</span>
+        <span className={styles.summaryValue}>{fmt.km(odometerKm)}</span>
       </div>
       <div className={styles.summaryRow}>
         <span className={styles.summaryLabel}>{isBattery ? 'Mức pin' : 'Nhiên liệu'}</span>
@@ -489,10 +478,10 @@ export function HandoverDialog({
           {isBattery
             ? batteryPercent != null
               ? `${batteryPercent}%`
-              : MISSING_VALUE_LABEL
+              : tCommon('labels.notAvailable')
             : fuelLevel
               ? FUEL_LEVEL_LABEL[fuelLevel as FuelLevel]
-              : MISSING_VALUE_LABEL}
+              : tCommon('labels.notAvailable')}
         </span>
       </div>
       <div className={styles.summaryRow}>
@@ -514,9 +503,9 @@ export function HandoverDialog({
           description={
             <div className={styles.warningBody}>
               <p className={styles.warningText}>
-                Thuê {suspicion.rentalDays} ngày nhưng chỉ phát sinh {formatKm(suspicion.deltaKm)}.
+                Thuê {suspicion.rentalDays} ngày nhưng chỉ phát sinh {fmt.km(suspicion.deltaKm)}.
                 Theo cấu hình gian hàng ({suspicion.thresholdKmPerDay} km/ngày) thì tối thiểu nên
-                là {formatKm(suspicion.expectedMinKm)}. Có thể đồng hồ công-tơ-mét bị ngắt hoặc số
+                là {fmt.km(suspicion.expectedMinKm)}. Có thể đồng hồ công-tơ-mét bị ngắt hoặc số
                 đọc sai.
               </p>
               <Space wrap>

@@ -7,22 +7,9 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
-  MAINTENANCE_DUE_STATUS,
-  MAINTENANCE_DUE_STATUS_META,
-  MAINTENANCE_STATUS,
-  MAINTENANCE_STATUS_META,
-  MAINTENANCE_TYPE_LABEL,
-  ODOMETER_SOURCE_LABEL,
-  PERMISSION,
-  type MaintenanceDueStatus,
-  type MaintenanceStatus,
-  type MaintenanceType,
-  type OdometerSource,
-} from '@xeprime/types';
+  MAINTENANCE_DUE_STATUS, MAINTENANCE_DUE_STATUS_META, MAINTENANCE_STATUS, MAINTENANCE_STATUS_META, MAINTENANCE_TYPE_LABEL, ODOMETER_SOURCE_LABEL, PERMISSION, type MaintenanceDueStatus, type MaintenanceStatus, type MaintenanceType, type OdometerSource, } from '@xeprime/types';
 import {
-  maintenanceProfileFormSchema,
-  type MaintenanceProfileFormValues,
-} from '@xeprime/validators';
+  maintenanceProfileFormSchema, type MaintenanceProfileFormValues, } from '@xeprime/validators';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { NumberField } from '@/components/form/NumberField';
@@ -30,9 +17,6 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { DateTimeField } from '@/components/form/DateTimeField';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDate, formatDateTime } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
-import { formatKm, formatRemainingKm, INSUFFICIENT_DATA_LABEL } from '@/lib/odometer';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import type { VehicleDetail } from '@/features/vehicles/types';
 import { saveMaintenanceProfile } from '../api';
@@ -42,6 +26,8 @@ import { MaintenanceRecordDialog } from './MaintenanceRecordDialog';
 import { OdometerCorrectionDialog } from './OdometerCorrectionDialog';
 import { OdometerHistoryDialog } from './OdometerHistoryDialog';
 import styles from './VehicleMaintenanceWorkspace.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 /**
  * Tab "Bảo dưỡng & KM" của Vehicle 360 (Wave 6) — docs/design/12 §9.
@@ -129,6 +115,9 @@ function MaintenanceTab({
   canDecreaseOdometer: boolean;
   canViewFiles: boolean;
 }) {
+  const tCommon = useTranslations('Common');
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const invalidate = useInvalidateMaintenance(vehicle.id);
   const [correctionOpen, setCorrectionOpen] = useState(false);
@@ -222,11 +211,11 @@ function MaintenanceTab({
       >
         <div className={styles.odometerRow}>
           <div className={styles.odometerMain}>
-            <p className={styles.odometerValue}>{formatKm(profile.currentOdometerKm)}</p>
+            <p className={styles.odometerValue}>{fmt.km(profile.currentOdometerKm)}</p>
             <p className={styles.odometerMeta}>
               {profile.currentOdometerAt ? (
                 <>
-                  Cập nhật {formatDateTime(profile.currentOdometerAt)}
+                  Cập nhật {fmt.dateTime(profile.currentOdometerAt)}
                   {profile.currentOdometerRefLabel ? ` · ${profile.currentOdometerRefLabel}` : ''}
                   {profile.currentOdometerSource
                     ? ` · ${ODOMETER_SOURCE_LABEL[profile.currentOdometerSource as OdometerSource] ?? profile.currentOdometerSource}`
@@ -261,7 +250,7 @@ function MaintenanceTab({
       <Card
         className={styles.card}
         title="Theo dõi Thay nhớt định kỳ"
-        extra={<StatusTag value={dueStatus} meta={MAINTENANCE_DUE_STATUS_META} />}
+        extra={<StatusTag value={dueStatus} meta={MAINTENANCE_DUE_STATUS_META} group="maintenanceDueStatus" />}
       >
         <Form component={false} layout="vertical" colon={false} disabled={!canManage}>
           <Row gutter={16}>
@@ -302,8 +291,8 @@ function MaintenanceTab({
               Mốc bảo dưỡng tiếp theo:{' '}
               <strong>
                 {profile.nextMaintenanceKm != null
-                  ? formatKm(profile.nextMaintenanceKm)
-                  : INSUFFICIENT_DATA_LABEL}
+                  ? fmt.km(profile.nextMaintenanceKm)
+                  : tCommon('labels.insufficientData')}
               </strong>
             </span>
             <span
@@ -311,7 +300,7 @@ function MaintenanceTab({
                 dueStatus === MAINTENANCE_DUE_STATUS.OVERDUE ? styles.overdueText : undefined
               }
             >
-              {formatRemainingKm(profile.remainingKm)}
+              {fmt.remainingKm(profile.remainingKm)}
             </span>
           </div>
           {hasSchedule && profile.usedPercent != null ? (
@@ -326,12 +315,12 @@ function MaintenanceTab({
             <Alert
               type="info"
               showIcon
-              message={INSUFFICIENT_DATA_LABEL}
+              message={tCommon('labels.insufficientData')}
               description="Cần đủ KM hiện tại, chu kỳ và KM lần thay gần nhất mới tính được mốc tiếp theo."
             />
           )}
           <p className={styles.thresholdNote}>
-            Ngưỡng cảnh báo &ldquo;sắp đến hạn&rdquo; của gian hàng: còn {formatKm(profile.dueSoonKm)}.
+            Ngưỡng cảnh báo &ldquo;sắp đến hạn&rdquo; của gian hàng: còn {fmt.km(profile.dueSoonKm)}.
           </p>
         </div>
 
@@ -462,15 +451,17 @@ function RecordRow({
   onEdit?: () => void;
   onComplete?: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const title =
     record.title ||
     record.customTypeName ||
     MAINTENANCE_TYPE_LABEL[record.type as MaintenanceType] ||
     record.type;
   const when = record.completedAt
-    ? formatDate(record.completedAt)
+    ? fmt.date(record.completedAt)
     : record.plannedStartAt
-      ? formatDateTime(record.plannedStartAt)
+      ? fmt.dateTime(record.plannedStartAt)
       : null;
 
   return (
@@ -478,15 +469,15 @@ function RecordRow({
       <div className={styles.recordBody}>
         <div className={styles.recordHead}>
           <strong>{title}</strong>
-          <StatusTag value={record.status as MaintenanceStatus} meta={MAINTENANCE_STATUS_META} />
+          <StatusTag value={record.status as MaintenanceStatus} meta={MAINTENANCE_STATUS_META} group="maintenanceStatus" />
         </div>
         <div className={styles.recordMeta}>
           {when ? <span>{when}</span> : null}
-          {record.odometerKm != null ? <span>{formatKm(record.odometerKm)}</span> : null}
+          {record.odometerKm != null ? <span>{fmt.km(record.odometerKm)}</span> : null}
           {record.providerName ? <span>{record.providerName}</span> : null}
           {/* `cost` vắng mặt = thiếu quyền tiền (server đã lược); null = chưa nhập. */}
           {record.cost != null ? (
-            <span className={styles.recordCost}>{formatMoneyVnd(record.cost)}</span>
+            <span className={styles.recordCost}>{fmt.money(record.cost)}</span>
           ) : null}
           {canViewFiles && record.attachmentCount > 0 ? (
             <Tag>{record.attachmentCount} chứng từ</Tag>

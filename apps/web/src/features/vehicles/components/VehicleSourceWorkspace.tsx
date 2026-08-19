@@ -33,7 +33,6 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorMessage } from '@/services/api-client';
-import { formatMoneyVnd } from '@/lib/money';
 import { uploadToR2 } from '@/services/upload';
 import { completeSourceContract, fetchSourceContractDownload, presignSourceContract } from '../api';
 import { useSaveVehicleSource, useVehicleSource } from '../hooks/use-vehicle-source';
@@ -44,6 +43,7 @@ import {
 } from '../source-mappers';
 import type { VehicleDetail, VehicleSource } from '../types';
 import styles from './VehicleSourceWorkspace.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const SOURCE_ICON: Record<VehicleSourceType, React.ReactNode> = {
   [VEHICLE_SOURCE_TYPE.OWNED]: <HomeOutlined />,
@@ -447,6 +447,8 @@ function FinancedSection({
   disabled,
   monthlyTotal,
 }: SectionProps & { monthlyTotal: number | null }) {
+  const fmt = useAppFormat();
+
   return (
     <Card title="Thông tin khoản vay mua xe" className={styles.card}>
       <Row gutter={16}>
@@ -549,7 +551,7 @@ function FinancedSection({
           type="info"
           showIcon
           className={styles.totalPreview}
-          message={`Tổng phải đóng mỗi tháng (gốc + lãi): ${formatMoneyVnd(String(monthlyTotal))}`}
+          message={`Tổng phải đóng mỗi tháng (gốc + lãi): ${fmt.money(String(monthlyTotal))}`}
         />
       ) : null}
     </Card>

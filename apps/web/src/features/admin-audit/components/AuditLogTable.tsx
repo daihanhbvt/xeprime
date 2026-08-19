@@ -5,10 +5,10 @@ import { Button } from 'antd';
 import { AUDIT_ACTOR_SCOPE_META, type AuditActorScope, type PaginationMeta } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDateTime } from '@/lib/datetime';
 import { auditActionLabel, auditTargetTypeLabel } from '../constants';
 import type { AuditLog } from '../types';
 import styles from './AuditLogTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface AuditLogTableProps {
   items: AuditLog[];
@@ -38,12 +38,14 @@ export function AuditLogTable({
   onView,
   onPageChange,
 }: AuditLogTableProps) {
+  const fmt = useAppFormat();
+
   const columns: DataTableColumn<AuditLog>[] = [
     {
       title: 'Thời gian',
       key: 'createdAt',
       width: 150,
-      render: (_, r) => formatDateTime(r.createdAt),
+      render: (_, r) => fmt.dateTime(r.createdAt),
     },
     {
       title: 'Người thao tác',
@@ -61,7 +63,7 @@ export function AuditLogTable({
       key: 'scope',
       width: 120,
       render: (_, r) => (
-        <StatusTag value={r.actorScope as AuditActorScope} meta={AUDIT_ACTOR_SCOPE_META} />
+        <StatusTag value={r.actorScope as AuditActorScope} meta={AUDIT_ACTOR_SCOPE_META} group="auditActorScope" />
       ),
     },
     {

@@ -12,21 +12,27 @@ dayjs.extend(customParseFormat);
 /**
  * CLAUDE.md mục 9: lưu UTC, hiển thị Asia/Ho_Chi_Minh.
  *
- * Đây là chỗ duy nhất extend dayjs. Component nào cần format thì import từ file này, đừng
- * `import dayjs from 'dayjs'` trực tiếp — plugin sẽ không được nạp và `.tz()` sẽ nổ lúc chạy.
+ * Đây là chỗ duy nhất extend dayjs. Component nào cần tính toán ngày giờ thì import từ file
+ * này, đừng `import dayjs from 'dayjs'` trực tiếp — plugin sẽ không được nạp và `.tz()` sẽ nổ
+ * lúc chạy.
+ *
+ * File này CỐ Ý chỉ còn phần KHÔNG phụ thuộc ngôn ngữ: múi giờ, phép quy đổi, và các mẫu định
+ * dạng dùng cho THAM SỐ URL (thứ phải giữ nguyên ở mọi ngôn ngữ). Mọi chuỗi ngày giờ hiện ra
+ * cho người đọc đi qua `useAppFormat()` — xem `src/i18n/use-app-format.ts`.
+ *
+ * `dayjs.locale(...)` KHÔNG được gọi ở đâu trong app: nó đổi trạng thái toàn tiến trình và sẽ
+ * rò ngôn ngữ giữa các request đang render song song trên server.
  */
 export const APP_TIME_ZONE = 'Asia/Ho_Chi_Minh';
 
-export const DATE_FORMAT = 'DD/MM/YYYY';
 export const TIME_FORMAT = 'HH:mm';
-export const DATE_TIME_FORMAT = 'DD/MM/YYYY HH:mm';
-export const SHORT_DATE_TIME_FORMAT = 'HH:mm · DD/MM';
 
-/** Tham số URL của lịch: tháng `YYYY-MM`, ngày `YYYY-MM-DD` (đều theo giờ Việt Nam). */
+/**
+ * Tham số URL của lịch: tháng `YYYY-MM`, ngày `YYYY-MM-DD` (đều theo giờ Việt Nam).
+ * Đây là DỮ LIỆU, không phải chữ — không bao giờ đổi theo ngôn ngữ.
+ */
 export const MONTH_PARAM_FORMAT = 'YYYY-MM';
 export const DAY_PARAM_FORMAT = 'YYYY-MM-DD';
-
-const EMPTY_PLACEHOLDER = '—';
 
 export function toAppTz(value: IsoDateTimeString | number | Date | Dayjs): Dayjs {
   return dayjs(value).tz(APP_TIME_ZONE);
@@ -37,73 +43,27 @@ export function startOfAppDay(day: string): Dayjs {
   return dayjs.tz(`${day}T00:00:00`, APP_TIME_ZONE);
 }
 
-export function formatDate(value: IsoDateTimeString | null | undefined): string {
-  return value ? toAppTz(value).format(DATE_FORMAT) : EMPTY_PLACEHOLDER;
-}
-
-export function formatTime(value: IsoDateTimeString | null | undefined): string {
-  return value ? toAppTz(value).format(TIME_FORMAT) : EMPTY_PLACEHOLDER;
-}
-
-export function formatDateTime(value: IsoDateTimeString | null | undefined): string {
-  return value ? toAppTz(value).format(DATE_TIME_FORMAT) : EMPTY_PLACEHOLDER;
-}
-
-export function formatDateTimeRange(
-  from: IsoDateTimeString | null | undefined,
-  to: IsoDateTimeString | null | undefined,
-): string {
-  return `${formatDateTime(from)} → ${formatDateTime(to)}`;
-}
-
-/** Mốc giờ gọn cho bảng vận hành: `08:00 · 17/08`, bỏ năm để tránh chiếm ngang. */
-export function formatShortDateTime(value: IsoDateTimeString | null | undefined): string {
-  return value ? toAppTz(value).format(SHORT_DATE_TIME_FORMAT) : EMPTY_PLACEHOLDER;
-}
-
-/** Khoảng giờ gọn cho danh sách đơn: `08:00 · 17/08 → 14:00 · 18/08`. */
-export function formatShortDateTimeRange(
-  from: IsoDateTimeString | null | undefined,
-  to: IsoDateTimeString | null | undefined,
-): string {
-  return `${formatShortDateTime(from)} → ${formatShortDateTime(to)}`;
-}
-
-/** Thứ viết tắt kiểu Việt Nam. `Dayjs.day()` trả 0 = Chủ nhật. */
-const WEEKDAY_SHORT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as const;
-
-export function weekdayShort(value: Dayjs): string {
-  return WEEKDAY_SHORT[value.day()] ?? '';
+/** Phần ngày/giờ của một thời lượng thuê — con số thuần, chưa có chữ. */
+export interface RentalDurationParts {
+  readonly days: number;
+  readonly hours: number;
 }
 
 /**
- * Một MỐC thuê xe: `T6, 08/08 · 10:00`.
- *
- * **Không có năm** là cố ý: đơn thuê xe gần như luôn trong vài tuần tới, nên "2026" chỉ là nhiễu
- * chiếm chỗ; còn THỨ mấy lại là thứ người Việt nghĩ tới đầu tiên khi xếp lịch ("trả xe chủ nhật")
- * và trước đây không hề hiện ra. Khoảng thuê xuyên năm vẫn đọc đúng nhờ ngày/tháng.
- *
- * `withTime: false` cho chế độ thuê theo ngày ở những chỗ chật (giờ đã nằm chỗ khác).
- */
-export function formatRentalPoint(value: Dayjs, opts: { withTime?: boolean } = {}): string {
-  const { withTime = true } = opts;
-  const base = `${weekdayShort(value)}, ${value.format('DD/MM')}`;
-  return withTime ? `${base} · ${value.format(TIME_FORMAT)}` : base;
-}
-
-/**
- * Thời lượng dạng chữ: `3 ngày` · `5 giờ` · `2 ngày 4 giờ`.
+ * Đếm thời lượng một chuyến thuê.
  *
  * CHỈ để hiển thị. Số ngày TÍNH TIỀN do server quyết (`PricingService.chargedDays`); ghép hai
  * phép đếm ở hai nơi là cách chắc chắn nhất để màn hình nói một đằng hoá đơn một nẻo.
  * Làm tròn theo phút để 23h59 không thành "0 ngày".
+ *
+ * Trả về CON SỐ chứ không phải câu: "2 ngày 4 giờ" / "2 days 4 hours" là việc của message
+ * (ICU lo số nhiều), còn phép đếm thì giống nhau ở mọi ngôn ngữ.
  */
-export function formatRentalDuration(from: Dayjs, to: Dayjs): string {
+export function rentalDurationParts(from: Dayjs, to: Dayjs): RentalDurationParts {
   const minutes = Math.max(0, to.diff(from, 'minute'));
   const days = Math.floor(minutes / 1440);
   const hours = Math.round((minutes % 1440) / 60);
-  if (days <= 0) return `${Math.max(1, hours)} giờ`;
-  return hours > 0 ? `${days} ngày ${hours} giờ` : `${days} ngày`;
+  return days <= 0 ? { days: 0, hours: Math.max(1, hours) } : { days, hours };
 }
 
 export { dayjs };

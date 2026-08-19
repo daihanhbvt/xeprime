@@ -5,15 +5,9 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
-  SERVICE_TYPE,
-  VEHICLE_OPERATION_STATUS,
-  VEHICLE_SOURCE_TYPE,
-  VEHICLE_TYPE,
-  isVehicleFuelTypeAllowed,
-} from '@xeprime/types';
+  SERVICE_TYPE, VEHICLE_OPERATION_STATUS, VEHICLE_SOURCE_TYPE, VEHICLE_TYPE, isVehicleFuelTypeAllowed, } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { formatMoneyVnd } from '@/lib/money';
 import { discountedPriceVnd } from '../pricing';
 import {
   BasicSection,
@@ -28,6 +22,7 @@ import { CreateVehiclePricingStep } from './CreateVehiclePricingStep';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { branchLabel } from '@/features/branches/branch-label';
 import styles from './VehicleForm.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để select bắt buộc không rỗng. */
 const EMPTY_DEFAULTS: VehicleFormValues = {
@@ -112,6 +107,8 @@ interface VehicleFormProps {
  * đây được nói "đã lưu nháp" giữa chừng.
  */
 export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: VehicleFormProps) {
+  const fmt = useAppFormat();
+
   const {
     control,
     handleSubmit,
@@ -183,7 +180,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
         type="info"
         showIcon
         className={styles.pricePreview}
-        message={`Giá hiển thị trên sàn: ${formatMoneyVnd(discounted)}`}
+        message={`Giá hiển thị trên sàn: ${fmt.money(discounted)}`}
       />
     ) : null;
 

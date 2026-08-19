@@ -5,6 +5,7 @@ import { Button } from 'antd';
 import type { ReactNode } from 'react';
 
 import styles from './EmptyState.module.css';
+import { useTranslations } from 'next-intl';
 
 /**
  * Ba trạng thái "không có gì để xem", tách theo NGUYÊN NHÂN chứ không theo hình thức —
@@ -58,8 +59,10 @@ export function EmptyState({
   action,
   secondaryAction,
   onRetry,
-  retryLabel = 'Thử lại',
+  retryLabel,
 }: EmptyStateProps) {
+  const tCommon = useTranslations('Common');
+  const retryText = retryLabel ?? tCommon('actions.retry');
   const isError = variant === 'error';
 
   return (
@@ -73,7 +76,7 @@ export function EmptyState({
         <div className={styles.actions}>
           {onRetry ? (
             <Button type="primary" onClick={onRetry}>
-              {retryLabel}
+              {retryText}
             </Button>
           ) : null}
           {action}

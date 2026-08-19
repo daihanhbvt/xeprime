@@ -7,6 +7,7 @@ export {
   type AuthProvider,
 } from '@/features/auth/constants';
 import type { AuthProvider } from '@/features/auth/constants';
+import type { AppLocale } from '@/i18n/config';
 
 export interface RegisterInput {
   displayName: string;
@@ -24,8 +25,8 @@ export type { CurrentTenantSummary, CurrentUser };
  * ADR 0002: Firebase chỉ dùng đúng một lần để lấy ID token, phần còn lại của hệ thống không
  * biết Firebase tồn tại.
  */
-export function getProviderIdToken(provider: AuthProvider): Promise<string> {
-  return getFirebaseProviderIdToken(provider);
+export function getProviderIdToken(provider: AuthProvider, locale: AppLocale): Promise<string> {
+  return getFirebaseProviderIdToken(provider, locale);
 }
 
 /** POST /auth/session — backend verify ID token rồi Set-Cookie httpOnly (ADR 0002). */

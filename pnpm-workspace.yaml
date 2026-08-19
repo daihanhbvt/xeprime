@@ -28,8 +28,14 @@ minimumReleaseAgeExclude:
 # telemetry/tuỳ chọn, không cần chạy.
 allowBuilds:
   '@firebase/util': false
+  # next-intl kéo theo @parcel/watcher + @swc/core cho bộ trích message lúc build (SWC
+  # plugin) mà repo không dùng. Cả hai đã có sẵn binary qua optionalDependencies theo nền
+  # tảng nên postinstall chỉ là bước kiểm tra thừa; thiếu khai báo thì `pnpm install` dừng
+  # bằng ERR_PNPM_IGNORED_BUILDS sau khi đã cài xong package.
+  '@parcel/watcher': false
   '@prisma/engines': true
   '@scarf/scarf': false
+  '@swc/core': false
   esbuild: true
   prisma: true
   protobufjs: false

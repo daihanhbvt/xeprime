@@ -7,10 +7,9 @@ import {
   routeTypeLabel,
   type ServiceType,
 } from '@xeprime/types';
-import { formatDate, formatDateTime } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import type { Contract } from '../types';
 import styles from './ContractDocument.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 function vehicleTypeLabel(t: string): string {
   return t === VEHICLE_TYPE.MOTORBIKE ? 'Xe máy' : 'Ô tô';
@@ -21,6 +20,8 @@ function vehicleTypeLabel(t: string): string {
  * đẹp khổ A4 (print CSS ở page ẩn phần vỏ app, chỉ chừa `[data-print-root]`).
  */
 export function ContractDocument({ contract }: { contract: Contract }) {
+  const fmt = useAppFormat();
+
   const { snapshot: s, contractNo, createdAt } = contract;
   const shopContact = [s.shop.phone, s.shop.email].filter(Boolean).join(' · ');
   const shopLegal = [
@@ -45,7 +46,7 @@ export function ContractDocument({ contract }: { contract: Contract }) {
         </div>
         <div className={styles.headRight}>
           <div className={styles.contractNo}>Số: {contractNo}</div>
-          <div className={styles.shopMeta}>Ngày lập: {formatDate(createdAt)}</div>
+          <div className={styles.shopMeta}>Ngày lập: {fmt.date(createdAt)}</div>
         </div>
       </header>
 
@@ -102,8 +103,8 @@ export function ContractDocument({ contract }: { contract: Contract }) {
 
       <Section title="Thời gian thuê">
         <dl className={styles.grid}>
-          <Field label="Nhận xe" value={formatDateTime(s.rental.pickupAt)} />
-          <Field label="Trả xe" value={formatDateTime(s.rental.returnAt)} />
+          <Field label="Nhận xe" value={fmt.dateTime(s.rental.pickupAt)} />
+          <Field label="Trả xe" value={fmt.dateTime(s.rental.returnAt)} />
           {/*
             Chuyến THUÊ DÀI HẠN ký theo GÓI tháng lịch, không theo số ngày (ADR 0011) — in "90
             ngày" cho gói 3 tháng là sai văn bản khi các tháng lệch độ dài. Hợp đồng ký trước
@@ -207,12 +208,14 @@ function PriceRow({
   strong?: boolean;
   minus?: boolean;
 }) {
+  const fmt = useAppFormat();
+
   return (
     <tr className={strong ? styles.priceStrong : undefined}>
       <td>{label}</td>
       <td className={styles.priceValue}>
         {minus && value !== '0' ? '− ' : ''}
-        {formatMoneyVnd(value)}
+        {fmt.money(value)}
       </td>
     </tr>
   );

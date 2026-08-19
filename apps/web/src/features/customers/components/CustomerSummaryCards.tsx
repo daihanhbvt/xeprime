@@ -2,9 +2,9 @@
 
 import { AlertOutlined, StopOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
 import { StatCard } from '@/features/dashboard/components/StatCard';
-import { formatMoneyVnd } from '@/lib/money';
 import type { TenantCustomerSummary } from '../types';
 import styles from './CustomerSummaryCards.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * Dải chỉ số đầu trang sổ khách.
@@ -22,6 +22,8 @@ export function CustomerSummaryCards({
   loading: boolean;
   canViewFinance: boolean;
 }) {
+  const fmt = useAppFormat();
+
   const riskCount = (summary?.watchlistCustomers ?? 0) + (summary?.blockedCustomers ?? 0);
 
   return (
@@ -43,7 +45,7 @@ export function CustomerSummaryCards({
       {canViewFinance ? (
         <StatCard
           label={`Còn nợ · ${summary?.debtCustomers ?? 0} khách`}
-          value={formatMoneyVnd(summary?.totalDebt)}
+          value={fmt.money(summary?.totalDebt)}
           icon={WalletOutlined}
           tone="gold"
           danger={(summary?.debtCustomers ?? 0) > 0}

@@ -4,33 +4,13 @@ import { CloseOutlined, EditOutlined, FilterOutlined, ReloadOutlined } from '@an
 import { Badge, Button, Select, Skeleton } from 'antd';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  DEFAULT_LISTING_SORT,
-  LISTING_AMENITY_LABEL,
-  LISTING_AMENITY_VALUES,
-  LISTING_SORT_LABEL,
-  LISTING_SORT_VALUES,
-  ROUTE_TYPE_LABEL,
-  SEAT_BUCKET_LABEL,
-  SERVICE_TYPE,
-  SERVICE_TYPE_LABEL,
-  VEHICLE_TYPE,
-  VEHICLE_TYPE_LABEL,
-  VEHICLE_TYPE_VALUES,
-  vehicleFuelTypesFor,
-  type ListingSort,
-  type RouteType,
-  type SeatBucket,
-  type ServiceType,
-  type VehicleType,
-} from '@xeprime/types';
+  DEFAULT_LISTING_SORT, LISTING_AMENITY_LABEL, LISTING_AMENITY_VALUES, LISTING_SORT_LABEL, LISTING_SORT_VALUES, ROUTE_TYPE_LABEL, SEAT_BUCKET_LABEL, SERVICE_TYPE, SERVICE_TYPE_LABEL, VEHICLE_TYPE, VEHICLE_TYPE_LABEL, VEHICLE_TYPE_VALUES, vehicleFuelTypesFor, type ListingSort, type RouteType, type SeatBucket, type ServiceType, type VehicleType, } from '@xeprime/types';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { cx } from '@/lib/cx';
-import { formatMoneyVnd } from '@/lib/money';
-import { formatDate } from '@/lib/datetime';
-import { getErrorMessage } from '@/services/api-client';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { SERVICE_CHIPS } from '../constants';
 import { FACET_FILTER_KEYS } from '../filter-params';
-import { UNAVAILABLE_PROVINCE_LABEL, provinceLabelOf } from '../province-options';
+import { provinceLabelOf } from '../province-options';
 import { useDestinations } from '../hooks/use-destinations';
 import { useInfinitePublicListings } from '../hooks/use-infinite-listings';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
@@ -40,6 +20,9 @@ import { FilterPanel } from './FilterPanel';
 import { SearchDialog } from './SearchDialog';
 import { VehicleCard } from './VehicleCard';
 import styles from './MarketplaceResults.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
+import { useErrorMessage } from '@/i18n/use-error-message';
 
 /** Số ô khung chờ — bằng đúng cỡ trang của API để lưới không đổi hình khi dữ liệu về. */
 const SKELETON_COUNT = 12;
@@ -54,6 +37,15 @@ const SKELETON_COUNT = 12;
  * kế; đổi filter/sort là bộ trang reset về trang 1. Không còn phân trang số.
  */
 export function MarketplaceResults() {
+  const errorMessage = useErrorMessage();
+  const tFilters = useTranslations('Marketplace.filterPanel');
+  const tCommon = useTranslations('Common');
+  const t = useTranslations('Marketplace.results');
+  const tLocation = useTranslations('HomeSearch.location');
+  const domainLabel = useDomainLabel();
+
+  const fmt = useAppFormat();
+
   const { filters, setFilters } = useMarketplaceFilters();
   // Cùng nguồn với các bộ chọn địa điểm khác — dùng để dịch mã tỉnh sang tên hiển thị.
   const { data: destinations } = useDestinations(34);
@@ -111,7 +103,7 @@ export function MarketplaceResults() {
     for (const v of filters.seats ?? [])
       chips.push({
         key: `seats-${v}`,
-        label: SEAT_BUCKET_LABEL[v as SeatBucket] ?? `${v} chỗ`,
+        label: domainLabel('seatBucket', v, SEAT_BUCKET_LABEL[v as SeatBucket] ?? v),
         onRemove: removeFrom('seats', v),
       });
     for (const v of filters.fuelType ?? [])
@@ -132,13 +124,13 @@ export function MarketplaceResults() {
     if (filters.priceMin != null || filters.priceMax != null)
       chips.push({
         key: 'price',
-        label: `${filters.priceMin != null ? formatMoneyVnd(String(filters.priceMin)) : '0 ₫'} – ${
-          filters.priceMax != null ? formatMoneyVnd(String(filters.priceMax)) : '∞'
+        label: `${filters.priceMin != null ? fmt.money(String(filters.priceMin)) : '0 ₫'} – ${
+          filters.priceMax != null ? fmt.money(String(filters.priceMax)) : '∞'
         }`,
         onRemove: () => setFilters({ priceMin: undefined, priceMax: undefined }),
       });
     return chips;
-  }, [filters, setFilters, brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel]);
+  }, [filters, setFilters, brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel, fmt]);
 
   /** Xoá đúng nhóm chip của panel Bộ lọc — giữ ngữ cảnh tìm kiếm (tỉnh/ngày/loại xe/dịch vụ). */
   function clearFacets() {
@@ -168,22 +160,28 @@ export function MarketplaceResults() {
       : null;
   const contextSummary = [
     filters.vehicleType
-      ? (VEHICLE_TYPE_LABEL[filters.vehicleType as VehicleType] ?? 'Xe')
-      : 'Tất cả xe',
+      ? domainLabel('vehicleType', filters.vehicleType, VEHICLE_TYPE_LABEL[filters.vehicleType as VehicleType])
+      : t('allVehicles'),
     // Dịch vụ vào summary — người đến từ tab trang chủ đọc được ngay mình đang tìm gì.
     filters.serviceType
-      ? (SERVICE_TYPE_LABEL[filters.serviceType as ServiceType] ?? null)
+      ? domainLabel('serviceType', filters.serviceType, SERVICE_TYPE_LABEL[filters.serviceType as ServiceType])
       : null,
     // Lộ trình (ngữ cảnh có tài xế) đi kèm ngay sau dịch vụ.
     filters.serviceType === SERVICE_TYPE.WITH_DRIVER && filters.routeType
-      ? (ROUTE_TYPE_LABEL[filters.routeType as RouteType] ?? null)
+      ? domainLabel('routeType', filters.routeType, ROUTE_TYPE_LABEL[filters.routeType as RouteType])
       : null,
     // Địa điểm hiện TÊN tra từ danh sách điểm đến; mã không phải thứ để người dùng đọc. Lựa chọn
     // cũ không còn khả dụng thì nói thẳng, KHÔNG âm thầm hiện "Toàn quốc" trong khi vẫn đang lọc.
     provinceLabelOf(destinations, filters.provinceCode) ??
-      (filters.provinceCode || filters.province ? UNAVAILABLE_PROVINCE_LABEL : 'Toàn quốc'),
+      (filters.provinceCode || filters.province ? tLocation('unavailable') : tLocation('nationwide')),
     filters.pickupAt && filters.returnAt
-      ? `${formatDate(filters.pickupAt)} – ${formatDate(filters.returnAt)}${days ? ` (${days} ngày)` : ''}`
+      ? days
+        ? t('dateRangeWithDays', {
+            from: fmt.date(filters.pickupAt),
+            to: fmt.date(filters.returnAt),
+            days,
+          })
+        : t('dateRange', { from: fmt.date(filters.pickupAt), to: fmt.date(filters.returnAt) })
       : null,
   ]
     .filter(Boolean)
@@ -194,7 +192,7 @@ export function MarketplaceResults() {
   return (
     <section className={styles.workspace} aria-labelledby="search-title">
       <h1 id="search-title" className={styles.srOnly}>
-        Tìm xe cho thuê
+        {t('title')}
       </h1>
 
       {/*
@@ -212,11 +210,11 @@ export function MarketplaceResults() {
             type="button"
             className={styles.contextZone}
             onClick={() => setEditOpen(true)}
-            aria-label={`Chỉnh sửa tìm kiếm: ${contextSummary}`}
+            aria-label={t('editSearch', { summary: contextSummary })}
           >
             <span className={styles.contextText}>{contextSummary}</span>
             <span className={styles.contextEdit}>
-              <EditOutlined /> Chỉnh sửa
+              <EditOutlined /> {t('edit')}
             </span>
           </button>
         </div>
@@ -227,14 +225,20 @@ export function MarketplaceResults() {
         <div className={styles.toolbarLeft}>
           <span className={styles.count} aria-live="polite">
             {/* Lỗi trang đầu thì KHÔNG ghi "0 xe khả dụng" — chưa biết có bao nhiêu xe. */}
-            {initialError ? '—' : isInitialLoading ? 'Đang tìm xe…' : `${total} xe khả dụng`}
+            {initialError
+              ? tCommon('labels.emptyValue')
+              : isInitialLoading
+                ? t('searching')
+                : t('available', { count: total })}
           </span>
           {appliedChips.length > 0 ? (
-            <span className={styles.filterCountBadge}>{appliedChips.length} bộ lọc</span>
+            <span className={styles.filterCountBadge}>
+              {t('filterCount', { count: appliedChips.length })}
+            </span>
           ) : null}
         </div>
 
-        <div className={styles.quickChips} role="tablist" aria-label="Loại xe và dịch vụ">
+        <div className={styles.quickChips} role="tablist" aria-label={t('quickChipsLabel')}>
           {VEHICLE_TYPE_VALUES.map((type) => (
             <Chip
               key={type}
@@ -265,21 +269,21 @@ export function MarketplaceResults() {
             active={!filters.serviceType}
             onClick={() => setFilters({ serviceType: undefined, routeType: undefined })}
           >
-            Tất cả
+            {t('allServices')}
           </Chip>
-          {SERVICE_CHIPS.map((s) => (
+          {SERVICE_CHIPS.map((service) => (
             <Chip
-              key={s.key}
-              active={filters.serviceType === s.key}
+              key={service}
+              active={filters.serviceType === service}
               onClick={() =>
                 setFilters({
-                  serviceType: s.key,
+                  serviceType: service,
                   // Lộ trình là ngữ cảnh CÓ TÀI XẾ — rời dịch vụ đó thì xoá khỏi URL.
-                  routeType: s.key === SERVICE_TYPE.WITH_DRIVER ? filters.routeType : undefined,
+                  routeType: service === SERVICE_TYPE.WITH_DRIVER ? filters.routeType : undefined,
                 })
               }
             >
-              {s.label}
+              {domainLabel('serviceType', service)}
             </Chip>
           ))}
         </div>
@@ -287,11 +291,11 @@ export function MarketplaceResults() {
         <div className={styles.toolbarRight}>
           <Badge count={appliedChips.length} size="small" offset={[-4, 4]}>
             <Button icon={<FilterOutlined />} onClick={() => setFilterOpen(true)}>
-              Bộ lọc
+              {t('filters')}
             </Button>
           </Badge>
           <label className={styles.sort}>
-            <span className={styles.sortLabel}>Sắp xếp:</span>
+            <span className={styles.sortLabel}>{t('sortLabel')}</span>
             <Select
               value={sort}
               onChange={(value: ListingSort) =>
@@ -299,11 +303,11 @@ export function MarketplaceResults() {
               }
               options={LISTING_SORT_VALUES.map((value) => ({
                 value,
-                label: LISTING_SORT_LABEL[value],
+                label: domainLabel('listingSort', value, LISTING_SORT_LABEL[value]),
               }))}
               variant="borderless"
               popupMatchSelectWidth={false}
-              aria-label="Sắp xếp kết quả"
+              aria-label={t('sortAriaLabel')}
             />
           </label>
         </div>
@@ -318,13 +322,13 @@ export function MarketplaceResults() {
               type="button"
               className={styles.appliedChip}
               onClick={chip.onRemove}
-              aria-label={`Bỏ lọc ${chip.label}`}
+              aria-label={t('removeFilter', { label: chip.label })}
             >
               {chip.label} <CloseOutlined className={styles.appliedX} />
             </button>
           ))}
           <button type="button" className={styles.clearAll} onClick={clearFacets}>
-            Xoá tất cả
+            {t('clearAll')}
           </button>
         </div>
       ) : null}
@@ -335,15 +339,15 @@ export function MarketplaceResults() {
           <div className={styles.stateIcon}>
             <ReloadOutlined />
           </div>
-          <h2 className={styles.stateTitle}>Không tải được danh sách xe</h2>
-          <p className={styles.stateDesc}>{getErrorMessage(initialError)}</p>
+          <h2 className={styles.stateTitle}>{t('loadErrorTitle')}</h2>
+          <p className={styles.stateDesc}>{errorMessage(initialError)}</p>
           {/* Filter trên URL còn nguyên — thử lại chạy đúng truy vấn đang xem. */}
           <Button type="primary" onClick={retryInitial}>
-            Thử lại
+            {tCommon('actions.retry')}
           </Button>
         </div>
       ) : isInitialLoading ? (
-        <div className={styles.grid} aria-busy="true" aria-label="Đang tải kết quả">
+        <div className={styles.grid} aria-busy="true" aria-label={t('loadingLabel')}>
           {Array.from({ length: SKELETON_COUNT }, (_, i) => (
             <CardSkeleton key={i} />
           ))}
@@ -355,16 +359,13 @@ export function MarketplaceResults() {
             <div className={styles.stateIcon} aria-hidden>
               <FilterOutlined />
             </div>
-            <h2 className={styles.stateTitle}>Không tìm thấy xe phù hợp</h2>
-            <p className={styles.stateDesc}>
-              Không có xe nào khớp với bộ lọc hiện tại của bạn. Thử thay đổi tiêu chí, nới lỏng bộ
-              lọc hoặc cập nhật lịch trình đi chuyến khác.
-            </p>
+            <h2 className={styles.stateTitle}>{t('emptyFilteredTitle')}</h2>
+            <p className={styles.stateDesc}>{t('emptyFilteredDesc')}</p>
             <Button type="primary" onClick={clearFacets}>
-              Xoá bộ lọc
+              {tFilters('clear')}
             </Button>
             <button type="button" className={styles.stateLink} onClick={() => setEditOpen(true)}>
-              Thay đổi thời gian hoặc địa điểm
+              {t('changeTimeOrPlace')}
             </button>
           </div>
         ) : (
@@ -373,11 +374,8 @@ export function MarketplaceResults() {
             <div className={styles.stateIcon} aria-hidden>
               <FilterOutlined />
             </div>
-            <h2 className={styles.stateTitle}>Chưa có xe nào được đăng cho thuê</h2>
-            <p className={styles.stateDesc}>
-              Các gian hàng chưa đăng xe công khai. Vui lòng quay lại sau — xe mới xuất hiện ngay
-              khi được duyệt.
-            </p>
+            <h2 className={styles.stateTitle}>{t('emptySystemTitle')}</h2>
+            <p className={styles.stateDesc}>{t('emptySystemDesc')}</p>
           </div>
         )
       ) : (
@@ -402,23 +400,23 @@ export function MarketplaceResults() {
           <div className={styles.footerZone}>
             <div ref={sentinelRef} className={styles.sentinel} aria-hidden />
             <span className={styles.srOnly} aria-live="polite">
-              {isFetchingNextPage ? 'Đang tải thêm xe' : ''}
+              {isFetchingNextPage ? t('loadingMore') : ''}
             </span>
 
             {appendError ? (
               <div className={styles.appendError} role="alert">
-                <span>Không tải được trang tiếp theo. {getErrorMessage(appendError)}</span>
+                <span>{t('appendError', { reason: errorMessage(appendError) })}</span>
                 <Button size="small" onClick={retryNextPage}>
-                  Thử lại
+                  {tCommon('actions.retry')}
                 </Button>
               </div>
             ) : hasNextPage ? (
               /* Fallback tường minh cho bàn phím/screen reader — sentinel chỉ là đường tắt. */
               <Button loading={isFetchingNextPage} onClick={fetchNextPage}>
-                Tải thêm xe
+                {t('loadMore')}
               </Button>
             ) : listings.length > SKELETON_COUNT ? (
-              <p className={styles.endNote}>Đã hiển thị tất cả {total} xe</p>
+              <p className={styles.endNote}>{t('endNote', { count: total })}</p>
             ) : null}
           </div>
         </>

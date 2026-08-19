@@ -10,3 +10,21 @@
     radial-gradient(900px 500px at 100% -20%, var(--xp-gold-soft), transparent 60%),
     var(--xp-color-bg-layout);
 }
+
+/*
+ * Bộ đổi ngôn ngữ neo góc trên phải, ngoài luồng của thẻ đăng nhập.
+ *
+ * `position: absolute` trong `.wrapper` (đã là flex căn giữa): đặt nó vào luồng sẽ đẩy thẻ
+ * lệch khỏi tâm dọc — chính là thứ `align-items: center` ở trên đang giữ. Tôn trọng
+ * safe-area để không nằm dưới notch trên iPhone ngang.
+ */
+.wrapper {
+  position: relative;
+}
+
+.localeCorner {
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top));
+  right: calc(16px + env(safe-area-inset-right));
+  z-index: 1;
+}

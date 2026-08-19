@@ -3,6 +3,7 @@
 import { Skeleton, Spin } from 'antd';
 
 import styles from './LoadingState.module.css';
+import { useTranslations } from 'next-intl';
 
 /**
  * Figma `134:2011` (12.36) R1–R2 chia đôi rất rõ:
@@ -36,12 +37,14 @@ const DEFAULT_ROWS = 5;
  */
 export function LoadingState({
   variant = 'page',
-  label = 'Đang tải…',
+  label,
   rows = DEFAULT_ROWS,
 }: LoadingStateProps) {
+  const tCommon = useTranslations('Common');
+  const labelText = label ?? tCommon('states.loading');
   return (
     <div className={styles.root} role="status" aria-busy="true" aria-live="polite">
-      <span className={styles.srOnly}>{label}</span>
+      <span className={styles.srOnly}>{labelText}</span>
 
       {variant === 'page' ? (
         <div className={styles.page}>

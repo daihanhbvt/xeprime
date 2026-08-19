@@ -3,25 +3,15 @@
 import { Alert, Button, Card, Skeleton, Space } from 'antd';
 import { useState } from 'react';
 import {
-  DEPOSIT_STATUS,
-  DEPOSIT_STATUS_META,
-  PERMISSION,
-  REFUND_DISCLAIMER,
-  REFUND_METHOD_LABEL,
-  SURCHARGE_CATEGORY_LABEL,
-  type DepositStatus,
-  type RefundMethod,
-  type SurchargeCategory,
-} from '@xeprime/types';
+  DEPOSIT_STATUS, DEPOSIT_STATUS_META, PERMISSION, REFUND_DISCLAIMER, REFUND_METHOD_LABEL, SURCHARGE_CATEGORY_LABEL, type DepositStatus, type RefundMethod, type SurchargeCategory, } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDateTime } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { useSettlement } from '../hooks';
 import { RecordRefundDialog } from './RecordRefundDialog';
 import { SurchargeDialog } from './SurchargeDialog';
 import styles from './SettlementCard.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
  * Thẻ "Phát sinh & Tiền cọc" trên chi tiết đơn (Wave 10).
@@ -33,6 +23,8 @@ import styles from './SettlementCard.module.css';
  * Hoàn cọc là việc THEO DÕI, không chặn hoàn tất chuyến: đơn đã `Hoàn tất` từ lúc nhận xe.
  */
 export function SettlementCard({ bookingId, canView }: { bookingId: string; canView: boolean }) {
+  const fmt = useAppFormat();
+
   const { has } = usePermissions();
   const canRecord = has(PERMISSION.PAYMENT_RECORD);
   const canCorrect = has(PERMISSION.PAYMENT_VOID);
@@ -83,7 +75,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
     <Card
       title="Phát sinh & Tiền cọc"
       className={styles.card}
-      extra={<StatusTag value={status} meta={DEPOSIT_STATUS_META} />}
+      extra={<StatusTag value={status} meta={DEPOSIT_STATUS_META} group="depositStatus" />}
     >
       <div className={styles.body}>
         {/* ── Phát sinh ─────────────────────────────────────────────── */}
@@ -107,7 +99,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
                     </span>
                     <span className={styles.itemReason}>{row.reason}</span>
                   </span>
-                  <b className={styles.money}>{formatMoneyVnd(row.amount)}</b>
+                  <b className={styles.money}>{fmt.money(row.amount)}</b>
                 </li>
               ))}
             </ul>
@@ -121,7 +113,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
           <dl className={styles.rows}>
             <div className={styles.row}>
               <dt>Cọc theo đơn</dt>
-              <dd className={styles.money}>{formatMoneyVnd(data.depositRequired)}</dd>
+              <dd className={styles.money}>{fmt.money(data.depositRequired)}</dd>
             </div>
             <div className={styles.row}>
               <dt>Cọc đã nhận</dt>
@@ -130,14 +122,14 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
                   // Nói THẲNG là chưa có bằng chứng thu tiền, không hiện một số 0 mập mờ.
                   <span className={styles.muted}>Chưa ghi nhận đã thu cọc</span>
                 ) : (
-                  formatMoneyVnd(data.depositReceived)
+                  fmt.money(data.depositReceived)
                 )}
               </dd>
             </div>
             {hasSurcharges ? (
               <div className={styles.row}>
                 <dt>Tổng phát sinh</dt>
-                <dd className={styles.moneyNegative}>−{formatMoneyVnd(data.surchargeTotal)}</dd>
+                <dd className={styles.moneyNegative}>−{fmt.money(data.surchargeTotal)}</dd>
               </div>
             ) : null}
             {/*
@@ -149,7 +141,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
               <div className={styles.rowTotal}>
                 <dt>{data.refund ? 'Đã hoàn' : 'Đề xuất hoàn lại'}</dt>
                 <dd className={styles.moneyStrong}>
-                  {formatMoneyVnd(data.refund ? data.refund.refundAmount : data.proposedRefund)}
+                  {fmt.money(data.refund ? data.refund.refundAmount : data.proposedRefund)}
                 </dd>
               </div>
             ) : null}
@@ -159,7 +151,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
             <Alert
               type="warning"
               showIcon
-              message={`Cần thu thêm ${formatMoneyVnd(data.additionalDue)}`}
+              message={`Cần thu thêm ${fmt.money(data.additionalDue)}`}
               description="Phát sinh vượt quá tiền cọc đã nhận. Phần chênh lệch thu trực tiếp với khách."
             />
           ) : null}
@@ -196,7 +188,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
               </div>
               <div className={styles.refundRow}>
                 <span>Thời gian hoàn</span>
-                <b>{formatDateTime(data.refund.refundedAt)}</b>
+                <b>{fmt.dateTime(data.refund.refundedAt)}</b>
               </div>
               {data.refund.reference ? (
                 <div className={styles.refundRow}>

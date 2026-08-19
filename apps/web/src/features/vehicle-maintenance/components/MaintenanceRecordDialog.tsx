@@ -5,18 +5,14 @@ import { Alert, App, Col, Form, List, Row } from 'antd';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
-  MAINTENANCE_TYPE,
-  MAINTENANCE_TYPE_LABEL,
-  MAINTENANCE_TYPE_VALUES,
-  type MaintenanceType,
-} from '@xeprime/types';
+  MAINTENANCE_TYPE, MAINTENANCE_TYPE_LABEL, MAINTENANCE_TYPE_VALUES, type MaintenanceType, } from '@xeprime/types';
 import { DateTimeField } from '@/components/form/DateTimeField';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { dayjs, formatDateTimeRange } from '@/lib/datetime';
+import { dayjs } from '@/lib/datetime';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import type { ApiClientError } from '@/services/api-client';
 import {
@@ -30,6 +26,7 @@ import {
 } from '../schema';
 import type { MaintenanceRecord } from '../types';
 import styles from './VehicleMaintenanceWorkspace.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const TYPE_OPTIONS = MAINTENANCE_TYPE_VALUES.map((value) => ({
   value,
@@ -68,6 +65,8 @@ export function MaintenanceRecordDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const [saving, setSaving] = useState(false);
   const [conflicts, setConflicts] = useState<ScheduleConflict[]>([]);
@@ -199,7 +198,7 @@ export function MaintenanceRecordDialog({
                 dataSource={conflicts}
                 renderItem={(conflict) => (
                   <List.Item key={`${conflict.sourceType}-${conflict.startAt}`}>
-                    {conflict.label}: {formatDateTimeRange(conflict.startAt, conflict.endAt)}
+                    {conflict.label}: {fmt.dateTimeRange(conflict.startAt, conflict.endAt)}
                   </List.Item>
                 )}
               />

@@ -7,10 +7,11 @@ import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { DayPicker, type DateRange } from 'react-day-picker';
-import { vi } from 'react-day-picker/locale';
+import { enUS, vi } from 'react-day-picker/locale';
 import { cx } from '@/lib/cx';
-import { formatRentalDuration, formatRentalPoint } from '@/lib/datetime';
 import styles from './RentalRangePanel.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useLocale } from 'next-intl';
 
 export type RentalMode = 'daily' | 'hourly';
 
@@ -72,6 +73,9 @@ export function RentalRangePanel({
   onApply,
   onCancel,
 }: RentalRangePanelProps) {
+  const dayPickerLocale = useLocale() === 'en' ? enUS : vi;
+  const fmt = useAppFormat();
+
   const [month, setMonth] = useState<Date>(() => (value.pickupAt ?? dayjs()).toDate());
 
   /** Số ngày TÍNH TIỀN — trùng công thức `PricingService.chargedDays` để hai tầng không lệch. */
@@ -198,7 +202,7 @@ export function RentalRangePanel({
         <>
           <DayPicker
             mode="range"
-            locale={vi}
+            locale={dayPickerLocale}
             month={month}
             onMonthChange={setMonth}
             numberOfMonths={months}
@@ -212,8 +216,8 @@ export function RentalRangePanel({
              */
             weekStartsOn={0}
             formatters={{
-              formatCaption: (d) => `Tháng ${d.getMonth() + 1}, ${d.getFullYear()}`,
-              formatWeekdayName: (d) => (d.getDay() === 0 ? 'CN' : `T${d.getDay() + 1}`),
+              formatCaption: (d) => fmt.monthYear(d),
+              formatWeekdayName: (d) => fmt.weekdayShort(dayjs(d)),
             }}
             className={styles.dayPicker}
           />
@@ -325,12 +329,12 @@ export function RentalRangePanel({
             {complete && ordered ? (
               <>
                 <span>
-                  {formatRentalPoint(value.pickupAt!)} – {formatRentalPoint(value.returnAt!)}
+                  {fmt.rentalPoint(value.pickupAt!)} – {fmt.rentalPoint(value.returnAt!)}
                 </span>
                 <span className={styles.duration}>
                   Thời gian thuê:{' '}
                   <b className={styles.durationValue}>
-                    {formatRentalDuration(value.pickupAt!, value.returnAt!)}
+                    {fmt.rentalDuration(value.pickupAt!, value.returnAt!)}
                   </b>
                 </span>
               </>

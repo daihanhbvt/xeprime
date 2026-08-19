@@ -27,10 +27,10 @@ import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { VEHICLE_EDIT_TAB, vehicleTabPath } from '@/constants/routes';
-import { formatDate } from '@/lib/datetime';
-import { formatKm, formatRemainingKm, INSUFFICIENT_DATA_LABEL } from '@/lib/odometer';
 import type { MaintenanceBoardItem } from '../types';
 import styles from './MaintenanceBoard.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 /**
  * Bề rộng tối thiểu của bảng: hẹp hơn thì CUỘN NGANG, không nén cột (quy tắc bảng của repo +
@@ -50,10 +50,16 @@ export function maintenanceTabHref(vehicleId: string): string {
   return vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE);
 }
 
-function dueCell(row: MaintenanceBoardItem) {
+/**
+ * Ô "tình trạng chu kỳ" là COMPONENT chứ không phải hàm dựng JSX: nó cần nhãn theo ngôn
+ * ngữ (`useAppFormat`), mà hook chỉ gọi được trong component.
+ */
+function DueCell({ row }: { row: MaintenanceBoardItem }) {
+  const fmt = useAppFormat();
+  const tCommon = useTranslations('Common');
   const status = row.dueStatus as MaintenanceDueStatus;
   if (status === MAINTENANCE_DUE_STATUS.UNKNOWN) {
-    return <span className={styles.muted}>{INSUFFICIENT_DATA_LABEL}</span>;
+    return <span className={styles.muted}>{tCommon('labels.insufficientData')}</span>;
   }
   const percent =
     row.oilChangeIntervalKm && row.remainingKm != null
@@ -68,7 +74,7 @@ function dueCell(row: MaintenanceBoardItem) {
   return (
     <div className={styles.dueCell}>
       <span className={status === MAINTENANCE_DUE_STATUS.OVERDUE ? styles.overdue : styles.dueText}>
-        {formatRemainingKm(row.remainingKm)}
+        {fmt.remainingKm(row.remainingKm)}
       </span>
       {percent != null ? (
         <Progress
@@ -112,6 +118,8 @@ export function MaintenanceBoardTable({
   onPageChange: (page: number, pageSize: number) => void;
   onClearFilters: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const router = useRouter();
   const rowActions = (row: MaintenanceBoardItem): RowAction[] => [
     {
@@ -180,7 +188,7 @@ export function MaintenanceBoardTable({
         row.currentOdometerKm == null ? (
           <Tag color={STATUS_COLOR.WARNING}>Thiếu KM</Tag>
         ) : (
-          <span className={styles.numeric}>{formatKm(row.currentOdometerKm)}</span>
+          <span className={styles.numeric}>{fmt.km(row.currentOdometerKm)}</span>
         ),
     },
     {
@@ -190,11 +198,16 @@ export function MaintenanceBoardTable({
       width: 140,
       render: (_, row) => (
         <span className={styles.numeric}>
-          {row.nextMaintenanceKm != null ? formatKm(row.nextMaintenanceKm) : '—'}
+          {row.nextMaintenanceKm != null ? fmt.km(row.nextMaintenanceKm) : '—'}
         </span>
       ),
     },
-    { key: 'due', title: 'Tình trạng chu kỳ', width: 200, render: (_, row) => dueCell(row) },
+    {
+      key: 'due',
+      title: 'Tình trạng chu kỳ',
+      width: 200,
+      render: (_, row) => <DueCell row={row} />,
+    },
     {
       key: 'dueStatus',
       title: 'Trạng thái',
@@ -203,6 +216,7 @@ export function MaintenanceBoardTable({
         <StatusTag
           value={row.dueStatus as MaintenanceDueStatus}
           meta={MAINTENANCE_DUE_STATUS_META}
+          group="maintenanceDueStatus"
         />
       ),
     },
@@ -216,12 +230,13 @@ export function MaintenanceBoardTable({
             <StatusTag
               value={row.activeRecord.status as MaintenanceStatus}
               meta={MAINTENANCE_STATUS_META}
+              group="maintenanceStatus"
             />
             <span className={styles.muted}>
               {MAINTENANCE_TYPE_LABEL[row.activeRecord.type as MaintenanceType]}
             </span>
             {row.activeRecord.plannedStartAt ? (
-              <span className={styles.muted}>{formatDate(row.activeRecord.plannedStartAt)}</span>
+              <span className={styles.muted}>{fmt.date(row.activeRecord.plannedStartAt)}</span>
             ) : null}
           </div>
         ) : (
@@ -235,7 +250,7 @@ export function MaintenanceBoardTable({
       width: 130,
       render: (_, row) => (
         <span className={styles.numeric}>
-          {row.lastCompletedAt ? formatDate(row.lastCompletedAt) : '—'}
+          {row.lastCompletedAt ? fmt.date(row.lastCompletedAt) : '—'}
         </span>
       ),
     },
@@ -293,6 +308,8 @@ function MaintenanceBoardCard({
   row: MaintenanceBoardItem;
   rowActions: RowAction[];
 }) {
+  const fmt = useAppFormat();
+
   const status = row.dueStatus as MaintenanceDueStatus;
 
   return (
@@ -303,7 +320,7 @@ function MaintenanceBoardCard({
         <Link href={maintenanceTabHref(row.vehicleId)} className={styles.cardTitle}>
           {row.vehicleName}
         </Link>
-        <StatusTag value={status} meta={MAINTENANCE_DUE_STATUS_META} />
+        <StatusTag value={status} meta={MAINTENANCE_DUE_STATUS_META} group="maintenanceDueStatus" />
       </header>
       <p className={styles.cardSub}>
         {[row.vehicleCode, row.plateNumber].filter(Boolean).join(' · ')}
@@ -311,8 +328,8 @@ function MaintenanceBoardCard({
       <p className={styles.cardBody}>
         {row.currentOdometerKm == null
           ? 'Cần cập nhật Kilometer thủ công (chưa có dữ liệu hành trình)'
-          : `${formatRemainingKm(row.remainingKm)}${
-              row.oilChangeIntervalKm ? ` (Chu kỳ ${formatKm(row.oilChangeIntervalKm)})` : ''
+          : `${fmt.remainingKm(row.remainingKm)}${
+              row.oilChangeIntervalKm ? ` (Chu kỳ ${fmt.km(row.oilChangeIntervalKm)})` : ''
             }`}
       </p>
       {row.activeRecord ? (
@@ -320,6 +337,7 @@ function MaintenanceBoardCard({
           <StatusTag
             value={row.activeRecord.status as MaintenanceStatus}
             meta={MAINTENANCE_STATUS_META}
+            group="maintenanceStatus"
           />{' '}
           {MAINTENANCE_TYPE_LABEL[row.activeRecord.type as MaintenanceType]}
         </p>

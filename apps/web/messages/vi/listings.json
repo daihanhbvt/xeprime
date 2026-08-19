@@ -1,0 +1,42 @@
+{
+  "card": {
+    "viewDetail": "Xem chi tiết {name}",
+    "save": "Lưu xe",
+    "newVehicle": "Xe mới",
+    "seats": "{count, plural, other {# chỗ}}",
+    "delivery": "Giao tận nơi",
+    "noCollateral": "Miễn thế chấp",
+    "includesDriver": "đã gồm tài xế",
+    "contactForQuote": "Liên hệ báo giá",
+    "extraServices": "+{count}",
+    "priceDaily": "<amount>{value}</amount><unit>/ngày</unit>",
+    "priceMonthly": "<amount>{value}</amount><unit>/tháng</unit>",
+    "perDayUnit": "/ngày",
+    "perMonthUnit": "/tháng"
+  },
+  "detail": {
+    "specs": {
+      "vehicleType": "Loại xe",
+      "bodyType": "Kiểu dáng",
+      "seats": "Số chỗ",
+      "fuelType": "Nguồn năng lượng",
+      "year": "Đời xe",
+      "color": "Màu",
+      "brand": "Hãng"
+    },
+    "longTermQuote": "Liên hệ báo giá thuê dài hạn",
+    "withDriverQuote": "Liên hệ báo giá chuyến có tài xế",
+    "delivery": "Giao xe tận nơi",
+    "noCollateral": "Miễn thế chấp",
+    "shopVerified": "Gian hàng đã được duyệt",
+    "description": "Mô tả",
+    "descriptionEmpty": "Gian hàng chưa viết mô tả.",
+    "serviceSelector": "Chọn dịch vụ thuê",
+    "serviceLabel": "Dịch vụ"
+  },
+  "reviews": {
+    "title": "Đánh giá",
+    "count": "{count, plural, other {# đánh giá}}",
+    "empty": "Chưa có đánh giá cho xe này."
+  }
+}

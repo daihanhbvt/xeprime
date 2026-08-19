@@ -1,85 +1,71 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  dayjs,
-  formatRentalDuration,
-  formatRentalPoint,
-  formatShortDateTimeRange,
-  weekdayShort,
-} from './datetime';
+import { APP_TIME_ZONE, dayjs, rentalDurationParts, startOfAppDay, toAppTz } from './datetime';
 
 /**
- * Định dạng mốc/thời lượng thuê xe — dùng chung ở ô chọn thời gian, hộp lịch và overlay yêu cầu
- * thuê. Trước đây mỗi chỗ tự viết một bản; test này khoá đúng một cách hiển thị.
+ * Phần KHÔNG phụ thuộc ngôn ngữ của ngày giờ: quy đổi múi giờ và phép đếm thời lượng thuê.
+ *
+ * Cách HIỂN THỊ (thứ viết tắt, "3 ngày 4 giờ", mốc `T6, 08/08 · 10:00`) đã chuyển sang
+ * `useAppFormat` vì nó đổi theo ngôn ngữ — test của nó ở `src/i18n/use-app-format.test.tsx`.
+ * Ở đây chỉ khoá con số, và con số thì giống nhau ở mọi ngôn ngữ.
  */
-describe('weekdayShort', () => {
-  it('CN cho chủ nhật, T2–T7 cho các ngày còn lại', () => {
-    // 2026-08-09 là Chủ nhật.
-    const sunday = dayjs('2026-08-09T10:00:00');
-    expect(weekdayShort(sunday)).toBe('CN');
-    expect(weekdayShort(sunday.add(1, 'day'))).toBe('T2');
-    expect(weekdayShort(sunday.add(5, 'day'))).toBe('T6');
-    expect(weekdayShort(sunday.add(6, 'day'))).toBe('T7');
+describe('toAppTz', () => {
+  it('quy về giờ Việt Nam bất kể mốc gốc ghi bằng UTC', () => {
+    // 01:00Z = 08:00 giờ Việt Nam (UTC+7, không DST).
+    expect(toAppTz('2026-08-17T01:00:00.000Z').format('HH:mm')).toBe('08:00');
+    expect(toAppTz('2026-08-17T01:00:00.000Z').format('DD/MM/YYYY')).toBe('17/08/2026');
+  });
+
+  it('mốc sau 17:00Z đã sang ngày hôm sau theo giờ Việt Nam', () => {
+    expect(toAppTz('2026-08-17T17:30:00.000Z').format('DD/MM HH:mm')).toBe('18/08 00:30');
   });
 });
 
-describe('formatRentalPoint', () => {
-  it('có THỨ, ngày/tháng và giờ — KHÔNG có năm', () => {
-    // 2026-08-08 là thứ Bảy.
-    expect(formatRentalPoint(dayjs('2026-08-08T10:00:00'))).toBe('T7, 08/08 · 10:00');
+describe('startOfAppDay', () => {
+  it('00:00 giờ Việt Nam của một ngày = 17:00Z hôm trước', () => {
+    expect(startOfAppDay('2026-08-17').toISOString()).toBe('2026-08-16T17:00:00.000Z');
   });
 
-  it('bỏ giờ khi nơi gọi không cần', () => {
-    expect(formatRentalPoint(dayjs('2026-08-09T10:00:00'), { withTime: false })).toBe('CN, 09/08');
-  });
-
-  it('khoảng xuyên năm vẫn đọc đúng nhờ ngày/tháng', () => {
-    expect(formatRentalPoint(dayjs('2026-12-31T22:00:00'))).toContain('31/12');
-    expect(formatRentalPoint(dayjs('2027-01-01T08:00:00'))).toContain('01/01');
+  it('múi giờ ứng dụng không đổi theo ngôn ngữ', () => {
+    expect(APP_TIME_ZONE).toBe('Asia/Ho_Chi_Minh');
   });
 });
 
-describe('formatShortDateTimeRange', () => {
-  it('hiện giờ và ngày/tháng, không hiện năm', () => {
-    expect(formatShortDateTimeRange('2026-08-17T01:00:00.000Z', '2026-08-18T07:30:00.000Z')).toBe(
-      '08:00 · 17/08 → 14:30 · 18/08',
-    );
-  });
-});
-
-describe('formatRentalDuration', () => {
+describe('rentalDurationParts', () => {
   const at = (iso: string) => dayjs(iso);
 
   it('tròn ngày', () => {
-    expect(formatRentalDuration(at('2026-08-08T10:00:00'), at('2026-08-10T10:00:00'))).toBe(
-      '2 ngày',
-    );
+    expect(rentalDurationParts(at('2026-08-08T10:00:00'), at('2026-08-10T10:00:00'))).toEqual({
+      days: 2,
+      hours: 0,
+    });
   });
 
   it('ngày lẻ giờ', () => {
-    expect(formatRentalDuration(at('2026-08-08T10:00:00'), at('2026-08-10T13:00:00'))).toBe(
-      '2 ngày 3 giờ',
-    );
+    expect(rentalDurationParts(at('2026-08-08T10:00:00'), at('2026-08-10T13:00:00'))).toEqual({
+      days: 2,
+      hours: 3,
+    });
   });
 
   it('dưới một ngày đếm theo giờ', () => {
-    expect(formatRentalDuration(at('2026-08-08T10:00:00'), at('2026-08-08T15:00:00'))).toBe(
-      '5 giờ',
-    );
+    expect(rentalDurationParts(at('2026-08-08T10:00:00'), at('2026-08-08T15:00:00'))).toEqual({
+      days: 0,
+      hours: 5,
+    });
   });
 
-  it('23h59 KHÔNG thành "0 ngày" — làm tròn theo phút', () => {
-    expect(formatRentalDuration(at('2026-08-08T10:00:00'), at('2026-08-09T09:59:00'))).toBe(
-      '24 giờ',
-    );
+  it('23h59 không tụt về 0 — tối thiểu là 1 giờ', () => {
+    expect(rentalDurationParts(at('2026-08-08T10:00:00'), at('2026-08-08T10:20:00'))).toEqual({
+      days: 0,
+      hours: 1,
+    });
   });
 
-  it('khoảng rỗng/âm vẫn ra ít nhất 1 giờ, không ra số âm', () => {
-    expect(formatRentalDuration(at('2026-08-08T10:00:00'), at('2026-08-08T10:00:00'))).toBe(
-      '1 giờ',
-    );
-    expect(formatRentalDuration(at('2026-08-08T10:00:00'), at('2026-08-08T08:00:00'))).toBe(
-      '1 giờ',
-    );
+  it('khoảng âm (dữ liệu hỏng) kẹp về 0 chứ không ra số âm', () => {
+    expect(rentalDurationParts(at('2026-08-10T10:00:00'), at('2026-08-08T10:00:00'))).toEqual({
+      days: 0,
+      hours: 1,
+    });
   });
 });

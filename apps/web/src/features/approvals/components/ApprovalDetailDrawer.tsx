@@ -2,28 +2,14 @@
 
 import { useState } from 'react';
 import {
-  App,
-  Button,
-  Descriptions,
-  Divider,
-  Empty,
-  Input,
-  Space,
-  Timeline,
-  Typography,
-} from 'antd';
+  App, Button, Descriptions, Divider, Empty, Input, Space, Timeline, Typography, } from 'antd';
 import { CheckOutlined, CloseOutlined, EditOutlined } from '@ant-design/icons';
 import {
-  APPROVAL_STATUS,
-  APPROVAL_STATUS_META,
-  APPROVAL_TARGET_TYPE,
-  type ApprovalStatus,
-} from '@xeprime/types';
+  APPROVAL_STATUS, APPROVAL_STATUS_META, APPROVAL_TARGET_TYPE, type ApprovalStatus, } from '@xeprime/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { formatDateTime } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import {
   SHOP_SNAPSHOT_FIELDS,
@@ -34,6 +20,7 @@ import {
 import { useApproval, useReviewActions } from '../hooks/use-approvals';
 import type { ApprovalDetail } from '../types';
 import styles from './ApprovalDetailDrawer.module.css';
+import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
 
 const EMPTY = '—';
 type ReviewKind = 'approve' | 'reject' | 'request_revision';
@@ -82,7 +69,7 @@ export function ApprovalDetailDrawer({ taskId, onClose }: ApprovalDetailDrawerPr
         loading={isLoading || !task}
         extra={
           task ? (
-            <StatusTag value={task.status as ApprovalStatus} meta={APPROVAL_STATUS_META} />
+            <StatusTag value={task.status as ApprovalStatus} meta={APPROVAL_STATUS_META} group="approvalStatus" />
           ) : null
         }
         footer={
@@ -150,6 +137,8 @@ export function ApprovalDetailDrawer({ taskId, onClose }: ApprovalDetailDrawerPr
 }
 
 function DetailBody({ task }: { task: ApprovalDetail }) {
+  const fmt = useAppFormat();
+
   const snapshot = task.snapshot ?? {};
   const isVehicle = task.targetType === APPROVAL_TARGET_TYPE.VEHICLE;
   const fields = isVehicle ? VEHICLE_SNAPSHOT_FIELDS : SHOP_SNAPSHOT_FIELDS;
@@ -182,7 +171,7 @@ function DetailBody({ task }: { task: ApprovalDetail }) {
       <Divider>{isVehicle ? 'Xe gửi duyệt' : 'Hồ sơ đã gửi'}</Divider>
       {image ? <PreviewImage src={image} alt="Ảnh xe" className={styles.snapshotImage} /> : null}
       {hasSnapshot(fields, snapshot) ? (
-        <Descriptions bordered size="small" column={1} items={snapshotItems(fields, snapshot)} />
+        <Descriptions bordered size="small" column={1} items={snapshotItems(fields, snapshot, fmt)} />
       ) : !image ? (
         <Empty description="Không có hồ sơ đính kèm" />
       ) : null}
@@ -193,7 +182,7 @@ function DetailBody({ task }: { task: ApprovalDetail }) {
           children: (
             <div>
               <Typography.Text strong>{log.actorName ?? 'Hệ thống'}</Typography.Text>{' '}
-              <Typography.Text type="secondary">{formatDateTime(log.createdAt)}</Typography.Text>
+              <Typography.Text type="secondary">{fmt.dateTime(log.createdAt)}</Typography.Text>
               <div>
                 {log.fromStatus ? `${log.fromStatus} → ` : ''}
                 {log.toStatus}
@@ -211,12 +200,16 @@ function hasSnapshot(fields: readonly SnapshotField[], snapshot: Record<string, 
   return fields.some((f) => snapshot[f.key] != null && snapshot[f.key] !== '');
 }
 
-function snapshotItems(fields: readonly SnapshotField[], snapshot: Record<string, unknown>) {
+function snapshotItems(
+  fields: readonly SnapshotField[],
+  snapshot: Record<string, unknown>,
+  fmt: AppFormat,
+) {
   return fields
     .filter((f) => snapshot[f.key] != null && snapshot[f.key] !== '')
     .map((f) => ({
       key: f.key,
       label: f.label,
-      children: f.format ? f.format(snapshot[f.key]) : String(snapshot[f.key]),
+      children: f.format ? f.format(snapshot[f.key], fmt) : String(snapshot[f.key]),
     }));
 }

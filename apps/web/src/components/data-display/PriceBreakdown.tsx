@@ -4,9 +4,9 @@ import { InfoCircleOutlined } from '@ant-design/icons';
 import { Tooltip } from 'antd';
 import type { ReactNode } from 'react';
 import { PRICE_ROW } from '@xeprime/types';
-import { formatMoneyVnd } from '@/lib/money';
-
 import styles from './PriceBreakdown.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 /** Một dòng breakdown — cùng shape với `PriceBreakdownRowDto` của API/snapshot. */
 export interface PriceBreakdownRowInput {
@@ -42,17 +42,23 @@ interface PriceBreakdownProps {
 export function PriceBreakdown({
   rows,
   totalAmount,
-  totalLabel = 'Tổng trước cọc',
+  totalLabel,
   depositAmount,
-  depositNote = '* Tiền cọc được hoàn trả 100% khi bàn trả xe không phát sinh thiệt hại.',
-  title = 'Chi tiết giá thuê',
+  depositNote,
+  title,
   badge,
   footer,
 }: PriceBreakdownProps) {
+  const tCommon = useTranslations('Common');
+  const totalText = totalLabel ?? tCommon('components.price.subtotal');
+  const depositNoteText = depositNote ?? tCommon('components.price.depositNote');
+  const titleText = title ?? tCommon('components.price.title');
+  const fmt = useAppFormat();
+
   return (
-    <section className={styles.card} aria-label={title}>
+    <section className={styles.card} aria-label={titleText}>
       <header className={styles.header}>
-        <h3 className={styles.title}>{title}</h3>
+        <h3 className={styles.title}>{titleText}</h3>
         {badge ? <span className={styles.badge}>{badge}</span> : null}
       </header>
 
@@ -74,7 +80,7 @@ export function PriceBreakdown({
                 .filter(Boolean)
                 .join(' ')}
             >
-              {formatMoneyVnd(row.amount)}
+              {fmt.money(row.amount)}
             </dd>
           </div>
         ))}
@@ -82,22 +88,22 @@ export function PriceBreakdown({
 
       <div className={styles.totalBlock}>
         <div className={styles.totalRow}>
-          <span className={styles.totalLabel}>{totalLabel}</span>
-          <span className={styles.totalAmount}>{formatMoneyVnd(totalAmount)}</span>
+          <span className={styles.totalLabel}>{totalText}</span>
+          <span className={styles.totalAmount}>{fmt.money(totalAmount)}</span>
         </div>
 
         {depositAmount != null ? (
           <>
             <div className={styles.depositRow}>
               <span className={styles.depositLabel}>
-                Tiền đặt cọc thế chấp
-                <Tooltip title="Cọc cố định bằng VND, không nằm trong tổng khách trả và không chịu giảm giá.">
+                {tCommon('components.price.deposit')}
+                <Tooltip title={tCommon('components.price.depositHint')}>
                   <InfoCircleOutlined className={styles.depositInfo} />
                 </Tooltip>
               </span>
-              <span className={styles.depositAmount}>{formatMoneyVnd(depositAmount)}</span>
+              <span className={styles.depositAmount}>{fmt.money(depositAmount)}</span>
             </div>
-            <p className={styles.depositNote}>{depositNote}</p>
+            <p className={styles.depositNote}>{depositNoteText}</p>
           </>
         ) : null}
       </div>

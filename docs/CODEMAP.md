@@ -19,6 +19,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | **Thuê dài hạn** — gói cố định, tháng lịch, nguyện vọng nhận xe, mốc ưu đãi cam kết | `packages/types/src/long-term.ts` (hằng + `addCalendarMonthsVn` + tier); FE hiển thị nguyện vọng ở `apps/web/src/lib/long-term.ts` | 0011 |
 | **Ngày date-only** (`YYYY-MM-DD` ↔ cột `@db.Date`) | `apps/api/src/common/date-only.ts` | — |
 | **Chuẩn hoá SĐT Việt Nam** (`09…`/`84…`/`+84…` → `84…`) — định danh khách trong sổ khách | `packages/types/src/phone.ts` · re-export `apps/api/src/common/phone.ts` | — |
+| **Ngôn ngữ giao diện** — danh sách locale, cookie `XP_LOCALE`, bản đồ `Intl`, múi giờ | `apps/web/src/i18n/config.ts` | 0012 |
+| **Chuỗi giao diện** (vi/en) — chia theo namespace tính năng | `apps/web/messages/{vi,en}/*.json`, danh sách ở `apps/web/src/i18n/namespaces.ts` | 0012 |
 
 ## Backend (`apps/api/src`)
 
@@ -72,7 +74,11 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 
 | Cần gì | Ở đâu | Ghi chú |
 | --- | --- | --- |
-| Format tiền (`formatMoneyVnd`, `isZeroMoney`) / ngày giờ / classNames | `lib/money.ts` · `lib/datetime.ts` · `lib/cx.ts` | điểm extend dayjs duy nhất; so sánh tiền trên CHUỖI, không `Number()` (ADR 0007) |
+| **Hiển thị tiền / ngày giờ / thời lượng thuê / km / gói dài hạn** — theo NGÔN NGỮ | `i18n/use-app-format.ts` (client: `useAppFormat()`) · `i18n/server-format.ts` (server: `getAppFormat()`) | một hiện thực, hai lối vào; tiền luôn VND, giờ luôn `Asia/Ho_Chi_Minh` (ADR 0012) |
+| Phép tính thuần đằng sau (so sánh tiền, quy đổi múi giờ, đếm thời lượng) / classNames | `lib/money.ts` · `lib/datetime.ts` · `lib/cx.ts` | điểm extend dayjs duy nhất; **không** `dayjs.locale()`; so sánh tiền trên CHUỖI, không `Number()` (ADR 0007) |
+| Nhãn status/vai trò/enum theo ngôn ngữ | `i18n/use-domain-label.ts` + namespace `Domain` | `<StatusTag meta={…} group="…">` — `meta` cấp MÀU, `group` cấp NHÃN |
+| Lỗi API → câu tiếng người | `i18n/use-error-message.ts` + namespace `Errors` | ánh xạ từ **mã**, không hiện `message` tiếng Việt của backend |
+| Bộ đổi ngôn ngữ (3 vị trí) | `components/i18n/LocaleSwitcher.tsx` | MarketHeader · manage Topbar · vỏ `(auth)`; Server Action ghi cookie rồi `router.refresh()` — URL không đổi |
 | **Auth core dùng chung** (form email/SĐT + OTP + social, gợi ý đặt mật khẩu) | `features/auth/components/AuthPanel.tsx` | một logic, hai presentation — KHÔNG copy thành 2 bộ |
 | **Đăng nhập KHÁCH** = modal ngay trên trang đang xem (`?auth=login\|register`) | `features/auth/components/{AuthModal,AuthModalProvider}.tsx` · mount ở `app/(public)/layout.tsx` | provider KHÔNG đọc `useSearchParams` (giữ static render); `AuthUrlSync` là leaf riêng |
 | **Đăng nhập CỔNG QUẢN LÝ** = trang đầy đủ | `app/(manage)/manage/login/` | route CÔNG KHAI (AppShell + proxy bỏ qua) |

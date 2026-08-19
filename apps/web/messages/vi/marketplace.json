@@ -1,0 +1,163 @@
+{
+  "footer": {
+    "tagline": "XePrime là nền tảng kết nối chủ xe và người thuê xe trên toàn quốc. Thuê xe dễ dàng, an toàn và minh bạch.",
+    "copyright": "© {year} XePrime. All rights reserved.",
+    "country": "Nền tảng cho thuê xe tại Việt Nam",
+    "apps": {
+      "title": "Tải ứng dụng",
+      "downloadOn": "Tải trên",
+      "note": "Ứng dụng đang phát triển"
+    },
+    "columns": {
+      "about": {
+        "title": "Về chúng tôi",
+        "intro": "Giới thiệu",
+        "blog": "Blog",
+        "careers": "Tuyển dụng",
+        "contact": "Liên hệ"
+      },
+      "support": {
+        "title": "Hỗ trợ",
+        "helpCenter": "Trung tâm trợ giúp",
+        "rentalGuide": "Hướng dẫn thuê xe",
+        "terms": "Điều khoản dịch vụ",
+        "privacy": "Chính sách bảo mật"
+      },
+      "hosts": {
+        "title": "Dành cho chủ xe",
+        "listVehicle": "Đăng xe cho thuê",
+        "manageVehicles": "Quản lý xe",
+        "pricing": "Bảng giá"
+      }
+    }
+  },
+  "steps": {
+    "title": "Thuê xe chỉ với 4 bước",
+    "search": {
+      "title": "Tìm xe",
+      "desc": "Chọn địa điểm và thời gian"
+    },
+    "request": {
+      "title": "Gửi yêu cầu",
+      "desc": "Liên hệ gian hàng"
+    },
+    "pickup": {
+      "title": "Nhận xe",
+      "desc": "Giao xe hoặc đến lấy"
+    },
+    "return": {
+      "title": "Trả xe",
+      "desc": "Hoàn tất chuyến đi"
+    }
+  },
+  "hosts": {
+    "title": "Gian hàng nổi bật",
+    "subtitle": "Những chủ xe được khách đánh giá cao",
+    "newBadge": "Mới",
+    "loadError": "Không tải được gian hàng",
+    "vehicleCount": "{count, plural, other {# xe}}"
+  },
+  "banner": {
+    "carouselLabel": "Banner quảng bá",
+    "selectLabel": "Chọn banner"
+  },
+  "hero": {
+    "title": "Tìm xe cho thuê phù hợp nhất",
+    "subtitle": "Hàng nghìn xe ô tô và xe máy từ các gian hàng uy tín trên toàn quốc"
+  },
+  "available": {
+    "title": "Xe khả dụng",
+    "titleWithService": "Xe khả dụng · {service}",
+    "count": "({count, plural, other {# xe}})",
+    "exploreAll": "Khám phá xe",
+    "loadError": "Không tải được danh sách xe",
+    "openSearch": "Mở trang tìm xe",
+    "emptyForService": "Chưa có xe {service} nào phù hợp — thử tab dịch vụ khác",
+    "empty": "Chưa có xe nào được đăng công khai"
+  },
+  "locations": {
+    "title": "Địa điểm nổi bật",
+    "subtitle": "Khám phá xe thuê tại các điểm đến phổ biến",
+    "collapse": "Thu gọn",
+    "expand": "Xem tất cả",
+    "loadError": "Không tải được địa điểm",
+    "available": "{count, plural, other {# xe}} có sẵn"
+  },
+  "results": {
+    "editSearch": "Chỉnh sửa tìm kiếm: {summary}",
+    "edit": "Chỉnh sửa",
+    "allVehicles": "Tất cả xe",
+    "searching": "Đang tìm xe…",
+    "available": "{count, plural, other {# xe khả dụng}}",
+    "filterCount": "{count, plural, other {# bộ lọc}}",
+    "quickChipsLabel": "Loại xe và dịch vụ",
+    "allServices": "Tất cả",
+    "filters": "Bộ lọc",
+    "sortLabel": "Sắp xếp:",
+    "sortAriaLabel": "Sắp xếp kết quả",
+    "dateRange": "{from} – {to}",
+    "dateRangeWithDays": "{from} – {to} ({days, plural, other {# ngày}})",
+    "loadErrorTitle": "Không tải được danh sách xe",
+    "loadingLabel": "Đang tải kết quả",
+    "emptyFilteredTitle": "Không tìm thấy xe phù hợp",
+    "emptyFilteredDesc": "Không có xe nào khớp với bộ lọc hiện tại của bạn. Thử thay đổi tiêu chí, nới lỏng bộ lọc hoặc cập nhật lịch trình đi chuyến khác.",
+    "changeTimeOrPlace": "Thay đổi thời gian hoặc địa điểm",
+    "emptySystemTitle": "Chưa có xe nào được đăng cho thuê",
+    "emptySystemDesc": "Các gian hàng chưa đăng xe công khai. Vui lòng quay lại sau — xe mới xuất hiện ngay khi được duyệt.",
+    "loadingMore": "Đang tải thêm xe",
+    "appendError": "Không tải được trang tiếp theo. {reason}",
+    "loadMore": "Tải thêm xe",
+    "endNote": "Đã hiển thị tất cả {count, plural, other {# xe}}",
+    "title": "Tìm xe cho thuê",
+    "removeFilter": "Bỏ lọc {label}",
+    "clearAll": "Xoá tất cả"
+  },
+  "filterPanel": {
+    "title": "Bộ lọc",
+    "any": "Bất kỳ",
+    "sort": "Sắp xếp",
+    "priceRange": "Mức giá / ngày",
+    "vehicleType": "Loại xe",
+    "brand": "Hãng xe",
+    "seats": "Số chỗ",
+    "fuelType": "Nguồn năng lượng",
+    "features": "Tính năng",
+    "amenities": "Tiện ích",
+    "clear": "Xoá bộ lọc",
+    "apply": "Áp dụng",
+    "priceRangeValue": "{from} – {to}",
+    "countSuffix": "xe",
+    "applyWithCount": "Áp dụng ({count, plural, other {# xe}})"
+  },
+  "ownerCta": {
+    "title": "Đăng xe cho thuê",
+    "desc": "Bạn có xe nhàn rỗi? Tạo thu nhập thụ động từ xe của bạn trên XePrime.",
+    "action": "Tìm hiểu thêm"
+  },
+  "searchDialog": {
+    "title": "Tìm kiếm",
+    "longTermHint": "Chọn xe trước — sau đó chọn gói thuê ({packages} tháng) và nguyện vọng ngày nhận khi gửi yêu cầu thuê.",
+    "locationAriaLabel": "Địa điểm nhận xe"
+  },
+  "meta": {
+    "home": {
+      "title": "Thuê xe tự lái & có tài xế trên toàn quốc",
+      "description": "XePrime — thuê ô tô tự lái, có tài xế và xe máy khắp Việt Nam. Đặt xe nhanh, thanh toán sau khi chủ xe xác nhận."
+    },
+    "search": {
+      "title": "Tìm xe cho thuê",
+      "description": "Lọc và so sánh xe cho thuê trên XePrime theo địa điểm, thời gian, giá và tiện ích."
+    },
+    "listing": {
+      "notFound": "Không tìm thấy xe",
+      "title": "{name} · Thuê xe",
+      "description": "Thuê {name} tại {shop}"
+    },
+    "shop": {
+      "notFound": "Không tìm thấy gian hàng",
+      "title": "{name} · Gian hàng thuê xe",
+      "description": "Thuê xe tại {name}",
+      "descriptionWithProvince": "Thuê xe tại {name} · {province}"
+    }
+  }
+}

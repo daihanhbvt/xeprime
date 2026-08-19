@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { createElement } from 'react';
 import type { MenuProps } from 'antd';
 import Link from 'next/link';
@@ -29,6 +30,7 @@ export function useManageNav(onNavigate?: () => void): {
   items: MenuItem[];
   selectedKey: string | undefined;
 } {
+  const t = useTranslations('Navigation');
   const pathname = usePathname();
   const { data: user } = useCurrentUser();
   const { has } = usePermissions();
@@ -38,6 +40,7 @@ export function useManageNav(onNavigate?: () => void): {
 
   function buildLeaf(leaf: NavLeaf): MenuItem | null {
     if (!has(leaf.permission)) return null;
+    const label = t(leaf.labelKey);
     return {
       key: leaf.href,
       icon: createElement(leaf.icon),
@@ -50,11 +53,11 @@ export function useManageNav(onNavigate?: () => void): {
           aria-current={leaf.href === selectedKey ? 'page' : undefined}
           // Tên truy cập được PHẢI sống sót khi sidebar thu gọn. Lúc đó AntD ẩn phần chữ
           // bằng CSS; nếu chỉ dựa vào text con thì mục thu gọn thành nút không tên.
-          aria-label={leaf.label}
+          aria-label={label}
           // Nhãn dài bị cắt bằng ellipsis — `title` cho người dùng chuột đọc được đầy đủ.
-          title={leaf.label}
+          title={label}
         >
-          {leaf.label}
+          {label}
         </Link>
       ),
     };
@@ -65,7 +68,7 @@ export function useManageNav(onNavigate?: () => void): {
       .map(buildLeaf)
       .filter((item): item is MenuItem => item !== null);
     if (children.length === 0) return null;
-    return { key: group.key, type: 'group', label: group.label, children };
+    return { key: group.key, type: 'group', label: t(group.labelKey), children };
   }
 
   function buildNode(node: NavNode): MenuItem | null {

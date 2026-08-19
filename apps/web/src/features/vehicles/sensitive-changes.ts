@@ -4,8 +4,8 @@ import {
   type VehicleSensitiveField,
 } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
-import { formatMoneyVnd } from '@/lib/money';
 import { vehicleTypeLabel } from './constants';
+import type { AppFormat } from '@/i18n/use-app-format';
 
 export interface SensitiveChange {
   field: VehicleSensitiveField;
@@ -42,7 +42,11 @@ const LABELS: Record<VehicleSensitiveField, string> = {
 
 const EMPTY = 'Chưa có';
 
-function display(field: VehicleSensitiveField, value: VehicleFormValues[VehicleSensitiveField]) {
+function display(
+  field: VehicleSensitiveField,
+  value: VehicleFormValues[VehicleSensitiveField],
+  fmt: AppFormat,
+) {
   if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) return EMPTY;
   switch (field) {
     case 'weekdayPrice':
@@ -52,7 +56,7 @@ function display(field: VehicleSensitiveField, value: VehicleFormValues[VehicleS
     case 'withDriverDailyPrice':
     case 'withDriverInterCityPrice':
     case 'withDriverOneWayPrice':
-      return formatMoneyVnd(String(value));
+      return fmt.money(String(value));
     case 'discountPercent':
       return `${value}%`;
     case 'vehicleType':
@@ -87,6 +91,7 @@ function compareKey(value: unknown): string {
 export function sensitiveChanges(
   before: VehicleFormValues | undefined,
   after: VehicleFormValues,
+  fmt: AppFormat,
 ): SensitiveChange[] {
   if (!before) return [];
 
@@ -99,8 +104,8 @@ export function sensitiveChanges(
       {
         field,
         label: LABELS[field],
-        before: display(field, previous),
-        after: display(field, next),
+        before: display(field, previous, fmt),
+        after: display(field, next, fmt),
       },
     ];
   });

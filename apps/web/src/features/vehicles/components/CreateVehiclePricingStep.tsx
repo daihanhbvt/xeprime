@@ -7,11 +7,11 @@ import { VEHICLE_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { ROUTES } from '@/constants/routes';
-import { formatMoneyVnd } from '@/lib/money';
 import { useShopPolicy } from '@/features/rental-policies/hooks/use-shop-policy';
 import type { RentalPolicyValues } from '@/features/rental-policies/types';
 import { PricingSection } from './VehicleFormSections';
 import styles from './CreateVehiclePricingStep.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface CreateVehiclePricingStepProps {
   control: Control<VehicleFormValues>;
@@ -67,6 +67,8 @@ export function CreateVehiclePricingStep({
  * Chỉ hiển thị — mọi giá trị hiệu lực do backend quyết khi dựng báo giá (ADR 0008).
  */
 function PolicyPreview({ values }: { values: RentalPolicyValues }) {
+  const fmt = useAppFormat();
+
   const deliveryValue = values.deliveryEnabled
     ? values.deliveryMaxRadiusKm
       ? `Bật (Bán kính ${values.deliveryMaxRadiusKm}km)`
@@ -84,7 +86,7 @@ function PolicyPreview({ values }: { values: RentalPolicyValues }) {
       <dl className={styles.previewGrid}>
         <div className={styles.previewItem}>
           <dt>Tiền thế chấp (cọc)</dt>
-          <dd>{formatMoneyVnd(values.depositAmount)}</dd>
+          <dd>{fmt.money(values.depositAmount)}</dd>
         </div>
         <div className={styles.previewItem}>
           <dt>Giao nhận tận nơi</dt>
@@ -94,7 +96,7 @@ function PolicyPreview({ values }: { values: RentalPolicyValues }) {
           <dt>Phí quá giờ trả xe</dt>
           <dd>
             {values.overtimeFeePerHour
-              ? `${formatMoneyVnd(values.overtimeFeePerHour)}/giờ`
+              ? `${fmt.money(values.overtimeFeePerHour)}/giờ`
               : 'Chưa cấu hình'}
           </dd>
         </div>

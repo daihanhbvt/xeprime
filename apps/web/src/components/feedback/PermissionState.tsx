@@ -4,6 +4,7 @@ import { EyeOutlined, LockOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 
 import styles from './PermissionState.module.css';
+import { useTranslations } from 'next-intl';
 
 /**
  * Hai tình huống thiếu quyền ĐANG có trong sản phẩm:
@@ -33,16 +34,6 @@ export interface PermissionStateProps {
   action?: ReactNode;
 }
 
-const DEFAULT_TITLE: Record<PermissionKind, string> = {
-  forbidden: 'Bạn không có quyền truy cập',
-  'view-only': 'Bạn chỉ có quyền xem',
-};
-
-const DEFAULT_DESCRIPTION: Record<PermissionKind, string> = {
-  forbidden: 'Liên hệ quản trị viên nếu bạn cần quyền cho mục này.',
-  'view-only': 'Bạn xem được dữ liệu nhưng không thực hiện được thay đổi.',
-};
-
 const ICON: Record<PermissionKind, ReactNode> = {
   forbidden: <LockOutlined />,
   'view-only': <EyeOutlined />,
@@ -64,6 +55,19 @@ export function PermissionState({
   missingPermissions,
   action,
 }: PermissionStateProps) {
+  const t = useTranslations('ManageCommon');
+  /*
+   * Bảng mặc định dựng TRONG component, không ở module scope: nó cần bộ dịch của request,
+   * mà module scope chạy một lần cho cả tiến trình (và sẽ đóng băng ngôn ngữ đầu tiên).
+   */
+  const DEFAULT_TITLE: Record<PermissionKind, string> = {
+    forbidden: t('permission.deniedTitle'),
+    'view-only': t('permission.readOnlyTitle'),
+  };
+  const DEFAULT_DESCRIPTION: Record<PermissionKind, string> = {
+    forbidden: t('permission.deniedBody'),
+    'view-only': t('permission.readOnlyBody'),
+  };
   return (
     <div className={styles.root} role="status">
       <span className={styles.icon} aria-hidden="true">
@@ -72,7 +76,7 @@ export function PermissionState({
       <p className={styles.title}>{title ?? DEFAULT_TITLE[kind]}</p>
       <p className={styles.description}>{description ?? DEFAULT_DESCRIPTION[kind]}</p>
       {missingPermissions && missingPermissions.length > 0 ? (
-        <p className={styles.missing}>Cần quyền: {missingPermissions.join(', ')}</p>
+        <p className={styles.missing}>{t('permission.requires')} {missingPermissions.join(', ')}</p>
       ) : null}
       {action ? <div className={styles.actions}>{action}</div> : null}
     </div>

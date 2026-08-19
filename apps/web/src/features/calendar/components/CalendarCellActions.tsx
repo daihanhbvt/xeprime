@@ -6,6 +6,7 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
 import styles from './CalendarCellActions.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 export type CellActionKey = 'booking' | 'block' | 'price';
 
@@ -43,6 +44,7 @@ export function CalendarCellActions({
   onSelect: (action: CellActionKey) => void;
   onClose: () => void;
 }) {
+  const fmt = useAppFormat();
   const isMobile = useIsMobile();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -68,7 +70,8 @@ export function CalendarCellActions({
 
   if (!target || actions.length === 0) return null;
 
-  const dateLabel = dayjs.tz(target.date, APP_TIME_ZONE).format('dddd, DD/MM/YYYY');
+  // THỨ phải theo ngôn ngữ ⇒ đi qua formatter của request, không qua locale toàn cục của Day.js.
+  const dateLabel = fmt.fullDate(dayjs.tz(target.date, APP_TIME_ZONE));
   const items = actions.map((key) => (
     <button
       key={key}

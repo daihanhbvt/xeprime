@@ -4,20 +4,15 @@ import { App, Alert, Collapse, DatePicker, Radio } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useState } from 'react';
 import {
-  HANDOVER_CONDITION,
-  HANDOVER_TYPE,
-  type HandoverCondition,
-  type HandoverType,
-} from '@xeprime/types';
+  HANDOVER_CONDITION, HANDOVER_TYPE, type HandoverCondition, type HandoverType, } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { formatRentalPoint } from '@/lib/datetime';
-import { formatKm } from '@/lib/odometer';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { API_ERROR_CODE } from '@xeprime/types';
 import { confirmHandover } from '../api';
 import { useInvalidateHandovers } from '../hooks';
 import type { HandoverBelowPickupDetails, HandoverContext } from '../types';
 import styles from './ConfirmHandoverDialog.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface ConfirmHandoverDialogProps {
   context: HandoverContext;
@@ -76,6 +71,8 @@ export function ConfirmHandoverDialog({
   onOpenCondition,
   onOpenSurcharge,
 }: ConfirmHandoverDialogProps) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const copy = COPY[type];
   const invalidate = useInvalidateHandovers(context.bookingId, context.vehicleId);
@@ -173,7 +170,7 @@ export function ConfirmHandoverDialog({
           />
           <span className={styles.hint}>
             {context.vehicleOdometerKm != null
-              ? `KM hệ thống đang ghi: ${formatKm(context.vehicleOdometerKm)}. Không nhập cũng xác nhận được.`
+              ? `KM hệ thống đang ghi: ${fmt.km(context.vehicleOdometerKm)}. Không nhập cũng xác nhận được.`
               : 'Không nhập cũng xác nhận được. Bỏ trống thì KM của xe giữ nguyên.'}
           </span>
         </label>
@@ -208,7 +205,7 @@ export function ConfirmHandoverDialog({
                       disabledDate={(current) => current.isAfter(dayjs().endOf('day'))}
                     />
                     <span className={styles.hint}>
-                      {formatRentalPoint(occurredAt)} — mặc định theo giờ hẹn trên đơn, chỉnh lại
+                      {fmt.rentalPoint(occurredAt)} — mặc định theo giờ hẹn trên đơn, chỉnh lại
                       nếu giao/nhận lệch giờ.
                     </span>
                   </label>

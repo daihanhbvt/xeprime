@@ -5,32 +5,18 @@ import { App, Button, Descriptions, Input, Popconfirm } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
 import {
-  LISTING_STATUS_META,
-  PERMISSION,
-  TENANT_STATUS_META,
-  VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_PUBLIC_STATUS,
-  VEHICLE_PUBLIC_STATUS_META,
-  VEHICLE_TYPE_LABEL,
-  serviceTypesLabel,
-  type ListingStatus,
-  type TenantStatus,
-  type VehicleOperationStatus,
-  type VehiclePublicStatus,
-  type VehicleType,
-} from '@xeprime/types';
+  LISTING_STATUS_META, PERMISSION, TENANT_STATUS_META, VEHICLE_OPERATION_STATUS_META, VEHICLE_PUBLIC_STATUS, VEHICLE_PUBLIC_STATUS_META, VEHICLE_TYPE_LABEL, serviceTypesLabel, type ListingStatus, type TenantStatus, type VehicleOperationStatus, type VehiclePublicStatus, type VehicleType, } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { useCatalogLabels, type CatalogLabels } from '@/features/catalog/use-catalog';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { listingPath, shopPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDate } from '@/lib/datetime';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { useAdminVehicle, useVehicleModeration } from '../hooks/use-admin-vehicles';
 import type { AdminVehicleDetail } from '../types';
 import styles from './AdminVehicleDetailDrawer.module.css';
+import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
 
 export function AdminVehicleDetailDrawer({
   vehicleId,
@@ -55,7 +41,7 @@ export function AdminVehicleDetailDrawer({
         data ? (
           <StatusTag
             value={data.publicStatus as VehiclePublicStatus}
-            meta={VEHICLE_PUBLIC_STATUS_META}
+            meta={VEHICLE_PUBLIC_STATUS_META} group="vehiclePublicStatus"
           />
         ) : null
       }
@@ -66,6 +52,7 @@ export function AdminVehicleDetailDrawer({
 }
 
 function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
+  const fmt = useAppFormat();
   const { message } = App.useApp();
   const { has } = usePermissions();
   const moderation = useVehicleModeration(vehicle.id);
@@ -105,7 +92,7 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
 
   return (
     <div>
-      <Descriptions column={1} size="small" bordered items={detailItems(vehicle, labels)} />
+      <Descriptions column={1} size="small" bordered items={detailItems(vehicle, labels, fmt)} />
 
       <div className={styles.actions}>
         {!canModerate ? (
@@ -167,7 +154,7 @@ function Body({ vehicle }: { vehicle: AdminVehicleDetail }) {
   );
 }
 
-function detailItems(v: AdminVehicleDetail, labels: CatalogLabels) {
+function detailItems(v: AdminVehicleDetail, labels: CatalogLabels, fmt: AppFormat) {
   const specs = [
     labels.brandLabel(v.brand),
     v.model,
@@ -195,7 +182,7 @@ function detailItems(v: AdminVehicleDetail, labels: CatalogLabels) {
           <Link href={shopPath.detail(v.tenantSlug)} target="_blank">
             {v.tenantName}
           </Link>
-          <StatusTag value={v.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} />
+          <StatusTag value={v.tenantStatus as TenantStatus} meta={TENANT_STATUS_META} group="tenantStatus" />
         </span>
       ),
     },
@@ -207,7 +194,7 @@ function detailItems(v: AdminVehicleDetail, labels: CatalogLabels) {
       children: (
         <StatusTag
           value={v.operationStatus as VehicleOperationStatus}
-          meta={VEHICLE_OPERATION_STATUS_META}
+          meta={VEHICLE_OPERATION_STATUS_META} group="vehicleOperationStatus"
         />
       ),
     },
@@ -216,7 +203,7 @@ function detailItems(v: AdminVehicleDetail, labels: CatalogLabels) {
       label: 'Trên sàn',
       children: v.listingStatus ? (
         <span className={styles.inline}>
-          <StatusTag value={v.listingStatus as ListingStatus} meta={LISTING_STATUS_META} />
+          <StatusTag value={v.listingStatus as ListingStatus} meta={LISTING_STATUS_META} group="listingStatus" />
           <Link href={listingPath.detail(v.id)} target="_blank">
             Xem trang xe
           </Link>
@@ -228,11 +215,11 @@ function detailItems(v: AdminVehicleDetail, labels: CatalogLabels) {
     {
       key: 'prices',
       label: 'Giá thường · cuối tuần · giờ',
-      children: `${formatMoneyVnd(v.weekdayPrice)} · ${formatMoneyVnd(v.weekendPrice)} · ${formatMoneyVnd(v.hourlyPrice)}`,
+      children: `${fmt.money(v.weekdayPrice)} · ${fmt.money(v.weekendPrice)} · ${fmt.money(v.hourlyPrice)}`,
     },
     { key: 'bookings', label: 'Số đơn thuê', children: String(v.bookingCount) },
     { key: 'reviews', label: 'Số đánh giá', children: String(v.reviewCount) },
-    { key: 'created', label: 'Ngày tạo', children: formatDate(v.createdAt) },
-    { key: 'updated', label: 'Cập nhật', children: formatDate(v.updatedAt) },
+    { key: 'created', label: 'Ngày tạo', children: fmt.date(v.createdAt) },
+    { key: 'updated', label: 'Cập nhật', children: fmt.date(v.updatedAt) },
   ];
 }

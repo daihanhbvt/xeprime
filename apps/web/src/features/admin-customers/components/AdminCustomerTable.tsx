@@ -5,9 +5,9 @@ import { Button, Tooltip } from 'antd';
 import { USER_STATUS_META, type PaginationMeta, type UserStatus } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
-import { formatDate, formatDateTime } from '@/lib/datetime';
 import type { AdminCustomer } from '../types';
 import styles from './AdminCustomerTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface AdminCustomerTableProps {
   items: AdminCustomer[];
@@ -33,6 +33,8 @@ export function AdminCustomerTable({
   onView,
   onPageChange,
 }: AdminCustomerTableProps) {
+  const fmt = useAppFormat();
+
   const columns: DataTableColumn<AdminCustomer>[] = [
     {
       title: 'Khách',
@@ -87,15 +89,15 @@ export function AdminCustomerTable({
       title: 'Trạng thái',
       key: 'status',
       width: 120,
-      render: (_, r) => <StatusTag value={r.status as UserStatus} meta={USER_STATUS_META} />,
+      render: (_, r) => <StatusTag value={r.status as UserStatus} meta={USER_STATUS_META} group="userStatus" />,
     },
     {
       title: 'Đăng nhập gần nhất',
       key: 'lastLoginAt',
       width: 170,
-      render: (_, r) => (r.lastLoginAt ? formatDateTime(r.lastLoginAt) : 'Chưa đăng nhập'),
+      render: (_, r) => (r.lastLoginAt ? fmt.dateTime(r.lastLoginAt) : 'Chưa đăng nhập'),
     },
-    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => formatDate(r.createdAt) },
+    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => fmt.date(r.createdAt) },
     actionColumn<AdminCustomer>((row) => [
       { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
     ]),

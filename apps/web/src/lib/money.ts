@@ -1,25 +1,41 @@
 import type { MoneyString } from '@xeprime/types';
 
-const CURRENCY_SUFFIX = '₫';
-const EMPTY_PLACEHOLDER = '—';
+export const CURRENCY_SUFFIX = '₫';
+
+/**
+ * Dấu phân tách theo ngôn ngữ — `vi-VN` dùng `.` cho nhóm và `,` cho thập phân, `en-US` ngược
+ * lại. Suy ra từ `Intl` ở `useAppFormat`, KHÔNG gõ tay ở đây: file này không biết locale, nó
+ * chỉ biết chèn ký tự vào đúng chỗ.
+ */
+export interface MoneySeparators {
+  readonly group: string;
+  readonly decimal: string;
+}
 
 /**
  * Format tiền để HIỂN THỊ, không parse sang `number` — ADR 0007.
  *
  * `Number('12345678901234.56')` mất chính xác; cộng nhiều khoản bằng float thì sai lệch
- * tích luỹ. Ở đây chỉ chèn dấu phân cách nhóm vào chuỗi, không đụng tới giá trị.
+ * tích luỹ. Ở đây chỉ chèn dấu phân cách nhóm vào chuỗi, không đụng tới giá trị — nên đổi
+ * ngôn ngữ chỉ đổi KÝ TỰ ngăn cách, con số vẫn nguyên vẹn từng chữ số một.
+ *
+ * `Intl.NumberFormat` cố ý KHÔNG dùng ở đây vì nó buộc phải nhận `number`.
  */
-export function formatMoneyVnd(value: MoneyString | null | undefined): string {
+export function formatMoneyVnd(
+  value: MoneyString | null | undefined,
+  separators: MoneySeparators,
+  emptyPlaceholder: string,
+): string {
   if (value === null || value === undefined || value === '') {
-    return EMPTY_PLACEHOLDER;
+    return emptyPlaceholder;
   }
 
   const [integerPart = '0', fractionPart] = value.split('.');
-  const grouped = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const grouped = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, separators.group);
   const hasFraction = Boolean(fractionPart) && Number(fractionPart) !== 0;
 
   return hasFraction
-    ? `${grouped},${fractionPart} ${CURRENCY_SUFFIX}`
+    ? `${grouped}${separators.decimal}${fractionPart} ${CURRENCY_SUFFIX}`
     : `${grouped} ${CURRENCY_SUFFIX}`;
 }
 
@@ -72,37 +88,59 @@ export function absoluteMoney(value: MoneyString | null | undefined): MoneyStrin
   return fromCents(toCents(value) < 0n ? -toCents(value) : toCents(value));
 }
 
+/** Bậc rút gọn của một số tiền. Hậu tố là CHỮ nên nằm ở message, không nằm ở đây. */
+export type MoneyCompactUnit = 'billion' | 'million' | 'thousand';
+
+export interface CompactMoneyParts {
+  /** Con số đã rút gọn, đã chèn dấu thập phân theo ngôn ngữ: `12,7` (vi) · `12.7` (en). */
+  readonly value: string;
+  readonly unit: MoneyCompactUnit;
+}
+
 /**
- * Rút gọn tiền cho chỗ HẸP (một dòng trên thẻ mobile): `12.750.000` → `12,7tr`.
+ * Rút gọn tiền cho chỗ HẸP (một dòng trên thẻ mobile): `12.750.000` → `12,7` + bậc `million`.
+ *
+ * Trả về PHẦN, không phải câu: hậu tố (`tr` / `M`) là chữ theo ngôn ngữ nên do message ghép.
+ * `null` = số quá nhỏ để rút gọn ⇒ nơi gọi hiện dạng đầy đủ.
  *
  * Chỉ dùng khi bề rộng thật sự không chứa nổi con số đầy đủ — Figma `186:2417` là trường hợp
- * đó. Mọi chỗ còn lại dùng `formatMoneyVnd` vì rút gọn là **làm mất thông tin**.
+ * đó. Mọi chỗ còn lại dùng dạng đầy đủ vì rút gọn là **làm mất thông tin**.
  */
-export function formatMoneyCompactVnd(value: MoneyString | null | undefined): string {
-  if (value === null || value === undefined || value === '') return EMPTY_PLACEHOLDER;
-
+export function compactMoneyParts(
+  value: MoneyString,
+  separators: MoneySeparators,
+): CompactMoneyParts | null {
   const cents = toCents(value);
   const negative = cents < 0n;
   const absolute = negative ? -cents : cents;
   const sign = negative ? '-' : '';
 
-  // Ngưỡng theo cách người Việt đọc số tiền: nghìn → triệu → tỷ.
+  // Ngưỡng theo cách người Việt đọc số tiền: nghìn → triệu → tỷ. Bậc en dùng cùng ngưỡng
+  // (K/M/B trùng khớp 10^3/10^6/10^9), nên không có hai bảng ngưỡng để lệch nhau.
   const UNITS = [
-    { scale: 100_000_000_000n, suffix: 'tỷ' },
-    { scale: 100_000_000n, suffix: 'tr' },
-    { scale: 100_000n, suffix: 'k' },
+    { scale: 100_000_000_000n, unit: 'billion' },
+    { scale: 100_000_000n, unit: 'million' },
+    { scale: 100_000n, unit: 'thousand' },
   ] as const;
 
-  for (const { scale, suffix } of UNITS) {
+  for (const { scale, unit } of UNITS) {
     if (absolute >= scale) {
       const whole = absolute / scale;
       const tenth = (absolute % scale) / (scale / 10n);
-      const decimals = whole >= 100n || tenth === 0n ? '' : `,${tenth}`;
-      return `${sign}${whole}${decimals}${suffix}`;
+      const decimals = whole >= 100n || tenth === 0n ? '' : `${separators.decimal}${tenth}`;
+      return { value: `${sign}${whole}${decimals}`, unit };
     }
   }
 
-  return `${sign}${absolute / 100n} ${CURRENCY_SUFFIX}`;
+  return null;
+}
+
+/** Số tiền còn lại sau khi bỏ phần lẻ — dùng cho nhánh "quá nhỏ để rút gọn". */
+export function wholeUnits(value: MoneyString): MoneyString {
+  const cents = toCents(value);
+  const negative = cents < 0n;
+  const absolute = negative ? -cents : cents;
+  return `${negative ? '-' : ''}${absolute / 100n}`;
 }
 
 /**

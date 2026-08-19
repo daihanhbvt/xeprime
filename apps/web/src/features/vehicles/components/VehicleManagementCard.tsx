@@ -4,24 +4,17 @@ import { CarOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import Link from 'next/link';
 import {
-  VEHICLE_OPERATION_STATUS_META,
-  VEHICLE_PUBLIC_STATUS_META,
-  VEHICLE_SOURCE_TYPE,
-  VEHICLE_SOURCE_TYPE_LABEL,
-  type VehicleOperationStatus,
-  type VehiclePublicStatus,
-  type VehicleSourceType,
-} from '@xeprime/types';
+  VEHICLE_OPERATION_STATUS_META, VEHICLE_PUBLIC_STATUS_META, VEHICLE_SOURCE_TYPE, VEHICLE_SOURCE_TYPE_LABEL, type VehicleOperationStatus, type VehiclePublicStatus, type VehicleSourceType, } from '@xeprime/types';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
-import { formatMoneyVnd, isNegativeMoney, subtractMoney } from '@/lib/money';
-import { formatKm } from '@/lib/odometer';
+import { isNegativeMoney, subtractMoney } from '@/lib/money';
 import { serviceTypesLabel } from '@xeprime/types';
 import { vehicleTypeLabel } from '../constants';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
 import { VehicleAlertChips } from './VehicleAlerts';
 import styles from './VehicleManagementCard.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface VehicleManagementCardProps {
   vehicle: VehicleListItem;
@@ -67,6 +60,8 @@ export function VehicleManagementCard({
   alertsFailed = false,
   actions,
 }: VehicleManagementCardProps) {
+  const fmt = useAppFormat();
+
   const specs = `${vehicleTypeLabel(vehicle.vehicleType)} / ${serviceTypesLabel(vehicle.serviceTypes)}`;
   const identity = [vehicle.code, vehicle.plateNumber].filter(Boolean).join(' · ');
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
@@ -111,11 +106,11 @@ export function VehicleManagementCard({
           <span className={styles.statusPair}>
             <StatusTag
               value={vehicle.operationStatus as VehicleOperationStatus}
-              meta={VEHICLE_OPERATION_STATUS_META}
+              meta={VEHICLE_OPERATION_STATUS_META} group="vehicleOperationStatus"
             />
             <StatusTag
               value={vehicle.publicStatus as VehiclePublicStatus}
-              meta={VEHICLE_PUBLIC_STATUS_META}
+              meta={VEHICLE_PUBLIC_STATUS_META} group="vehiclePublicStatus"
             />
           </span>
         </div>
@@ -137,7 +132,7 @@ export function VehicleManagementCard({
           <dl className={styles.metricRow}>
             <div>
               <dt>Giá ngày thường</dt>
-              <dd>{vehicle.weekdayPrice ? formatMoneyVnd(vehicle.weekdayPrice) : EMPTY}</dd>
+              <dd>{vehicle.weekdayPrice ? fmt.money(vehicle.weekdayPrice) : EMPTY}</dd>
             </div>
             <div className={styles.alignEnd}>
               <dt>Số KM hiện tại</dt>
@@ -145,13 +140,13 @@ export function VehicleManagementCard({
                * Chưa có số thì nói "Chưa có" — KHÔNG dựng "0 km" (docs §9). Gọi hỏng thì nói
                * "Không rõ": khác hẳn "xe chưa từng ghi nhận KM".
                */}
-              <dd>{alertsFailed ? 'Không rõ' : alerts ? formatKm(alerts.currentOdometerKm) : EMPTY}</dd>
+              <dd>{alertsFailed ? 'Không rõ' : alerts ? fmt.km(alerts.currentOdometerKm) : EMPTY}</dd>
             </div>
           </dl>
           <dl className={styles.metricRow}>
             <div>
               <dt>Giá cuối tuần</dt>
-              <dd>{vehicle.weekendPrice ? formatMoneyVnd(vehicle.weekendPrice) : EMPTY}</dd>
+              <dd>{vehicle.weekendPrice ? fmt.money(vehicle.weekendPrice) : EMPTY}</dd>
             </div>
           </dl>
 
@@ -178,11 +173,11 @@ export function VehicleManagementCard({
                   <dl className={styles.metricRow}>
                     <div>
                       <dt>Tổng doanh thu</dt>
-                      <dd className={styles.income}>{formatMoneyVnd(stats.totalIncome)}</dd>
+                      <dd className={styles.income}>{fmt.money(stats.totalIncome)}</dd>
                     </div>
                     <div className={styles.alignEnd}>
                       <dt>Tổng chi phí</dt>
-                      <dd className={styles.expense}>{formatMoneyVnd(stats.totalExpense)}</dd>
+                      <dd className={styles.expense}>{fmt.money(stats.totalExpense)}</dd>
                     </div>
                   </dl>
 
@@ -190,7 +185,7 @@ export function VehicleManagementCard({
                   <dl className={styles.profitRow}>
                     <dt>Lợi nhuận thực tế</dt>
                     <dd className={atLoss ? styles.expense : styles.income}>
-                      {formatMoneyVnd(profit)}
+                      {fmt.money(profit)}
                     </dd>
                   </dl>
                 </>

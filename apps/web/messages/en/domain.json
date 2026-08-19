@@ -1,0 +1,498 @@
+{
+  "approvalStatus": {
+    "pending": "Awaiting review",
+    "approved": "Approved",
+    "rejected": "Declined",
+    "needs_revision": "Changes requested",
+    "cancelled": "Cancelled"
+  },
+  "auditActorScope": {
+    "tenant": "Shop",
+    "platform": "Platform",
+    "system": "System"
+  },
+  "bodyType": {
+    "mini": "Mini car",
+    "sedan": "Sedan",
+    "cuv": "CUV",
+    "suv": "SUV",
+    "mpv": "MPV (7 seats)",
+    "pickup": "Pickup",
+    "van": "Van",
+    "minibus": "16-seat minibus",
+    "cargo": "Cargo truck"
+  },
+  "bookingDateField": {
+    "createdAt": "By date created",
+    "pickupAt": "By pickup date"
+  },
+  "bookingRequestStatus": {
+    "pending_host_approval": "Awaiting shop approval",
+    "approved_by_host": "Approved by shop",
+    "rejected_by_host": "Declined by shop",
+    "cancelled_by_customer": "Cancelled by customer",
+    "expired": "Response window expired",
+    "converted_to_booking": "Booking created"
+  },
+  "bookingStatus": {
+    "reserved": "Reserved",
+    "confirmed": "Confirmed",
+    "active": "On rent",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "no_show": "No-show"
+  },
+  "branchStatus": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "catalogType": {
+    "vehicle_brand": "Vehicle brand",
+    "body_type": "Body type",
+    "fuel_type": "Fuel type",
+    "vehicle_feature": "Vehicle feature"
+  },
+  "contractStatus": {
+    "draft": "Draft",
+    "active": "In force",
+    "signed": "Signed",
+    "void": "Void"
+  },
+  "conversationStatus": {
+    "open": "Open",
+    "closed": "Closed",
+    "flagged": "Needs review",
+    "archived": "Archived"
+  },
+  "customerDocumentExpiry": {
+    "no_expiry": "No expiry",
+    "valid": "Valid",
+    "expiring_soon": "Expiring soon",
+    "expired": "Expired"
+  },
+  "customerDocumentType": {
+    "citizen_id": "Citizen ID",
+    "driver_licence": "Driver's licence",
+    "other": "Other document"
+  },
+  "customerTripFilter": {
+    "all": "All",
+    "pending": "Awaiting confirmation",
+    "upcoming": "Upcoming",
+    "active": "On rent",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "customerTripStage": {
+    "pending_approval": "Awaiting confirmation",
+    "ready": "Ready",
+    "active": "On rent",
+    "completed": "Completed",
+    "cancelled": "Trip cancelled",
+    "rejected": "Declined",
+    "no_show": "Not picked up"
+  },
+  "deliveryQuoteSource": {
+    "auto": "Calculated automatically",
+    "manual": "Set manually"
+  },
+  "depositStatus": {
+    "none": "No deposit",
+    "not_received": "Deposit not recorded",
+    "received": "Deposit received",
+    "awaiting_refund": "Awaiting refund",
+    "settled": "Deposit settled",
+    "refunded": "Deposit refunded",
+    "partially_refunded": "Partially refunded"
+  },
+  "documentStatus": {
+    "pending": "Awaiting review",
+    "approved": "Approved",
+    "rejected": "Declined"
+  },
+  "driverStatus": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "driverType": {
+    "staff": "Employee",
+    "collaborator": "Contractor",
+    "temporary": "Casual"
+  },
+  "financeCategoryType": {
+    "income": "Income",
+    "expense": "Expense"
+  },
+  "fuelLevel": {
+    "full": "Full (1/1)",
+    "three_quarter": "3/4 tank",
+    "half": "1/2 tank",
+    "quarter": "1/4 tank",
+    "empty": "Empty"
+  },
+  "fuelType": {
+    "gasoline": "Petrol",
+    "diesel": "Diesel",
+    "electric": "Electric",
+    "hybrid": "Hybrid"
+  },
+  "handoverCondition": {
+    "normal": "Normal",
+    "attention": "Needs attention"
+  },
+  "handoverPhotoSlot": {
+    "front": "Front",
+    "rear": "Rear",
+    "left": "Left",
+    "right": "Right",
+    "odometer": "Odometer"
+  },
+  "handoverStatus": {
+    "draft": "Draft",
+    "ready": "Awaiting confirmation",
+    "confirmed": "Confirmed",
+    "canceled": "Cancelled"
+  },
+  "handoverType": {
+    "pickup": "Vehicle pickup",
+    "return": "Vehicle return"
+  },
+  "inviteStatus": {
+    "pending": "Pending",
+    "accepted": "Joined",
+    "expired": "Expired",
+    "revoked": "Revoked"
+  },
+  "legacyServiceType": {
+    "both": "Self-drive & with driver"
+  },
+  "listingAmenity": {
+    "hourly": "Hourly rental",
+    "delivery": "Vehicle delivery",
+    "noCollateral": "No collateral",
+    "discount": "On discount"
+  },
+  "listingSort": {
+    "recommended": "Recommended",
+    "newest": "Newest",
+    "price_asc": "Price: low to high",
+    "price_desc": "Price: high to low"
+  },
+  "listingStatus": {
+    "active": "Listed",
+    "hidden": "Hidden",
+    "suspended": "Suspended",
+    "archived": "Archived"
+  },
+  "maintenanceBoardFilter": {
+    "all": "All",
+    "overdue": "Overdue",
+    "due_soon": "Due soon",
+    "in_progress": "In service",
+    "missing_odometer": "Missing odometer",
+    "upcoming": "Upcoming",
+    "history": "History",
+    "missing_return_km": "Missing return km"
+  },
+  "maintenanceDueStatus": {
+    "unknown": "Not enough data",
+    "ok": "Within interval",
+    "due_soon": "Due soon",
+    "overdue": "Overdue"
+  },
+  "maintenanceStatus": {
+    "scheduled": "Scheduled",
+    "in_progress": "In service",
+    "completed": "Completed",
+    "canceled": "Cancelled"
+  },
+  "maintenanceType": {
+    "oil_change": "Engine oil & filter change",
+    "periodic_service": "Scheduled service",
+    "repair": "Repair",
+    "tire": "Tyres",
+    "battery": "Battery",
+    "other": "Other item"
+  },
+  "membershipStatus": {
+    "active": "Active",
+    "invited": "Invited",
+    "locked": "Locked",
+    "removed": "Removed"
+  },
+  "notificationType": {
+    "booking_created": "New booking",
+    "booking_status_changed": "Booking updated",
+    "booking_request_submitted": "New rental request",
+    "booking_request_approved": "Request approved",
+    "booking_request_rejected": "Request declined",
+    "shop_approved": "Shop approved",
+    "shop_rejected": "Shop declined",
+    "vehicle_approved": "Vehicle listed publicly",
+    "vehicle_rejected": "Vehicle declined",
+    "review_received": "New review"
+  },
+  "occupancySourceType": {
+    "booking": "Booking",
+    "blocked_range": "Vehicle blocked",
+    "maintenance": "Maintenance"
+  },
+  "odometerCorrectionReason": {
+    "handover_error": "Handover entry error",
+    "device_error": "Faulty odometer",
+    "cluster_replaced": "Instrument cluster replaced",
+    "data_migration": "Data migration",
+    "other": "Other reason"
+  },
+  "odometerSource": {
+    "manual_correction": "Manual correction",
+    "maintenance": "Maintenance",
+    "booking_pickup": "Pickup handover",
+    "booking_return": "Return handover",
+    "import": "Data import"
+  },
+  "paymentKind": {
+    "rental": "Rental fee",
+    "deposit": "Deposit"
+  },
+  "paymentMethod": {
+    "cash": "Cash",
+    "bank_transfer": "Bank transfer",
+    "qr": "QR",
+    "card": "Card",
+    "other": "Other"
+  },
+  "paymentStatus": {
+    "pending": "Processing",
+    "succeeded": "Succeeded",
+    "failed": "Failed",
+    "refunded": "Refunded"
+  },
+  "pickupPreference": {
+    "within_7_days": "Within the next 7 days",
+    "specific_date": "Pick a specific date"
+  },
+  "planStatus": {
+    "active": "On sale",
+    "archived": "Withdrawn"
+  },
+  "platformRole": {
+    "platform_admin": "Super Admin",
+    "platform_staff": "Platform staff",
+    "reviewer": "Moderator",
+    "support": "Support agent",
+    "finance_admin": "Finance admin"
+  },
+  "policySource": {
+    "shop": "Inherited",
+    "vehicle": "Overridden"
+  },
+  "receiptStatus": {
+    "draft": "Draft",
+    "pending_approval": "Awaiting approval",
+    "approved": "Approved",
+    "cancelled": "Cancelled"
+  },
+  "receiptType": {
+    "income": "Receipt",
+    "expense": "Payment voucher"
+  },
+  "refundMethod": {
+    "bank_transfer": "Bank transfer",
+    "cash": "Cash",
+    "other": "Other"
+  },
+  "reviewStatus": {
+    "published": "Published",
+    "hidden": "Hidden"
+  },
+  "routeType": {
+    "in_city": "Within the city",
+    "inter_city": "Intercity",
+    "inter_city_one_way": "Intercity (one way)"
+  },
+  "routeTypeDescription": {
+    "in_city": "Travel within the city or nearby, with a free itinerary",
+    "inter_city": "Travel to another province and return to the pickup point (round trip)",
+    "inter_city_one_way": "One-way travel to another province — the shop may add a surcharge"
+  },
+  "seatBucket": {
+    "4": "4 seats",
+    "5": "5 seats",
+    "7": "7 seats",
+    "8plus": "7+ seats"
+  },
+  "serviceType": {
+    "self_drive": "Self-drive",
+    "with_driver": "With driver",
+    "long_term": "Long-term"
+  },
+  "subscriptionStatus": {
+    "trial": "Trial",
+    "active": "Active",
+    "past_due": "Payment overdue",
+    "expired": "Expired",
+    "cancelled": "Cancelled"
+  },
+  "surchargeCategory": {
+    "overtime": "Late return",
+    "cleaning": "Cleaning",
+    "damage": "Damage / compensation",
+    "other": "Other"
+  },
+  "tenantCustomerNoteType": {
+    "general": "General note",
+    "preference": "Preferences",
+    "risk": "Risk warning"
+  },
+  "tenantCustomerRelationship": {
+    "all": "All customers",
+    "returning": "Returning",
+    "has_debt": "Owes money",
+    "watchlist": "Watchlist",
+    "blocked": "Refused service",
+    "archived": "Archived"
+  },
+  "tenantCustomerRiskLevel": {
+    "normal": "Normal",
+    "watchlist": "Watchlist",
+    "blocked": "Refused service"
+  },
+  "tenantCustomerSort": {
+    "last_rental": "Most recent rental",
+    "rental_count": "Most rentals",
+    "total_value": "Highest total value",
+    "debt": "Largest outstanding debt",
+    "name": "Name A → Z"
+  },
+  "tenantCustomerSource": {
+    "manual": "Added by staff",
+    "booking": "From a counter booking",
+    "marketplace": "From a Marketplace request"
+  },
+  "tenantRole": {
+    "shop_owner": "Shop owner",
+    "shop_manager": "Shop manager",
+    "shop_staff": "Shop staff",
+    "shop_viewer": "View only"
+  },
+  "tenantStatus": {
+    "draft": "Draft",
+    "pending_review": "Awaiting review",
+    "needs_revision": "Changes required",
+    "active": "Active",
+    "suspended": "Suspended",
+    "rejected": "Declined",
+    "expired": "Plan expired"
+  },
+  "tenantType": {
+    "individual": "Individual",
+    "business": "Business"
+  },
+  "transmissionType": {
+    "automatic": "Automatic",
+    "manual": "Manual",
+    "cvt": "CVT",
+    "dct": "Dual-clutch (DCT)",
+    "other": "Other"
+  },
+  "userStatus": {
+    "active": "Active",
+    "locked": "Locked",
+    "deleted": "Deleted"
+  },
+  "vehicleAlertSeverity": {
+    "critical": "Critical",
+    "warning": "Needs attention",
+    "info": "Information"
+  },
+  "vehicleAlertShort": {
+    "missing_return_odometer": "Missing return km",
+    "document_expired": "Document expired",
+    "maintenance_overdue": "Service overdue",
+    "public_action_required": "Approval action needed",
+    "document_expiring": "Document expiring",
+    "maintenance_due_soon": "Service due soon",
+    "missing_vehicle_info": "Missing details",
+    "missing_odometer": "No odometer reading",
+    "source_obligation_due": "Financial obligation",
+    "maintenance_in_progress": "In service"
+  },
+  "vehicleBlockReason": {
+    "unplanned_maintenance": "Unplanned maintenance",
+    "repair": "Repair",
+    "internal_use": "In internal use",
+    "not_for_rent": "Not for rent",
+    "other": "Other"
+  },
+  "vehicleDocumentOcrField": {
+    "holderName": "Owner name",
+    "holderAddress": "Address",
+    "plateNumber": "Licence plate",
+    "chassisNumber": "Chassis number",
+    "engineNumber": "Engine number",
+    "issuedAt": "Registration date",
+    "expiresAt": "Expiry date",
+    "documentNumber": "Document number"
+  },
+  "vehicleDocumentPresentation": {
+    "missing": "Not uploaded",
+    "processing": "Processing",
+    "needs_review": "Needs checking",
+    "unreadable": "Unreadable",
+    "valid": "Valid",
+    "expiring_soon": "Expiring soon",
+    "expired": "Expired"
+  },
+  "vehicleDocumentType": {
+    "registration": "Vehicle registration",
+    "inspection": "Technical inspection",
+    "insurance": "Compulsory liability insurance",
+    "other": "Other document"
+  },
+  "vehicleFeature": {
+    "bluetooth": "Bluetooth",
+    "gps": "GPS navigation",
+    "backup_camera": "Reversing camera",
+    "camera_360": "360° camera",
+    "dash_camera": "Dash camera",
+    "reverse_sensor": "Parking sensors",
+    "sunroof": "Sunroof",
+    "etc": "ETC toll tag",
+    "spare_tire": "Spare tyre",
+    "airbag": "Airbags",
+    "usb": "USB port",
+    "screen": "Infotainment screen",
+    "map": "Map",
+    "child_seat": "Child seat"
+  },
+  "vehicleFinanceInterestMethod": {
+    "reducing_balance": "Reducing balance",
+    "flat": "Flat (annuity)"
+  },
+  "vehicleOperationStatus": {
+    "available": "Available",
+    "renting": "On rent",
+    "maintenance": "In service",
+    "inactive": "Inactive"
+  },
+  "vehiclePublicStatus": {
+    "draft": "Draft",
+    "pending_public_review": "Awaiting public review",
+    "approved_public": "Publicly listed",
+    "needs_revision": "Changes required",
+    "rejected": "Declined",
+    "hidden": "Hidden",
+    "archived": "Retired"
+  },
+  "vehicleSourceType": {
+    "owned": "Owned",
+    "financed": "Financed",
+    "rented": "Sub-leased",
+    "partnership": "Partnership"
+  },
+  "vehicleType": {
+    "car": "Car",
+    "motorbike": "Motorbike"
+  }
+}

@@ -12,7 +12,7 @@ import { ImageUploadField } from './ImageUploadField';
 
 const mocks = vi.hoisted(() => ({
   uploadImage: vi.fn(async () => 'https://pub.example.dev/tenants/t1/vehicles/img.jpg'),
-  validateImageFile: vi.fn((): string | null => null),
+  validateImageFile: vi.fn((): { reason: string } | null => null),
 }));
 
 vi.mock('@/services/upload', () => ({
@@ -78,7 +78,7 @@ describe('ImageUploadField', () => {
   it('file sai MIME bị chặn trước khi lên mạng', async () => {
     // mockReturnValue (không Once) — rc-upload có thể gọi beforeUpload nhiều nhịp cho 1 file;
     // restoreMocks của vitest.config trả mock về impl gốc sau mỗi test nên không rò sang test khác.
-    mocks.validateImageFile.mockReturnValue('Chỉ nhận ảnh JPG, PNG hoặc WebP');
+    mocks.validateImageFile.mockReturnValue({ reason: 'imageType' });
     render(<Harness />);
     pickFile(new File(['x'], 'anim.gif', { type: 'image/gif' }));
 

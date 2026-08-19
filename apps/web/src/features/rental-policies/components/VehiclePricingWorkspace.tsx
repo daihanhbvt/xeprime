@@ -10,7 +10,6 @@ import { NumberField } from '@/components/form/NumberField';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { ROUTES } from '@/constants/routes';
-import { formatMoneyVnd } from '@/lib/money';
 import { discountedPriceVnd } from '@/features/vehicles/pricing';
 import { formToSaveInput, policyToForm } from '../form';
 import { vehiclePricingFormSchema, type VehiclePricingFormValues } from '../schema';
@@ -20,6 +19,7 @@ import { PolicyInfoTip } from './PolicyInfoTip';
 import { PolicySections } from './PolicySections';
 
 import styles from './VehiclePricingWorkspace.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 interface VehiclePricingWorkspaceProps {
   vehicleName: string;
@@ -426,6 +426,8 @@ function DirectDiscountEditor({
   control: Control<VehiclePricingFormValues>;
   setValue: UseFormSetValue<VehiclePricingFormValues>;
 }) {
+  const fmt = useAppFormat();
+
   const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
   const weekendPrice = useWatch({ control, name: 'weekendPrice' });
   const hourlyPrice = useWatch({ control, name: 'hourlyPrice' });
@@ -502,22 +504,22 @@ function DirectDiscountEditor({
             <>
               <div className={styles.previewPriceLine}>
                 <span className={styles.previewOldPrice}>
-                  {formatMoneyVnd(String(weekdayPrice))}
+                  {fmt.money(String(weekdayPrice))}
                 </span>
                 <DiscountTag percent={discountPercent} />
               </div>
               <div className={styles.previewFinalPrice}>
-                {formatMoneyVnd(discountedWeekday)} <small>/ngày</small>
+                {fmt.money(discountedWeekday)} <small>/ngày</small>
               </div>
               {saving != null ? (
                 <span className={styles.previewSaving}>
-                  Khách tiết kiệm {formatMoneyVnd(String(saving))} mỗi ngày
+                  Khách tiết kiệm {fmt.money(String(saving))} mỗi ngày
                 </span>
               ) : null}
             </>
           ) : (
             <div className={styles.previewFinalPrice}>
-              {formatMoneyVnd(String(weekdayPrice))} <small>/ngày</small>
+              {fmt.money(String(weekdayPrice))} <small>/ngày</small>
             </div>
           )
         ) : (
@@ -527,13 +529,13 @@ function DirectDiscountEditor({
         {enabled && discountedWeekend ? (
           <div className={styles.previewSecondary}>
             <span>Cuối tuần sau giảm</span>
-            <strong>{formatMoneyVnd(discountedWeekend)}/ngày</strong>
+            <strong>{fmt.money(discountedWeekend)}/ngày</strong>
           </div>
         ) : null}
         {hourlyPrice != null ? (
           <div className={styles.previewSecondary}>
             <span>Thuê theo giờ (không giảm)</span>
-            <strong>{formatMoneyVnd(String(hourlyPrice))}/giờ</strong>
+            <strong>{fmt.money(String(hourlyPrice))}/giờ</strong>
           </div>
         ) : null}
       </aside>
@@ -572,6 +574,8 @@ function InheritedSummary({
   canEdit: boolean;
   onEdit: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const services = pricing.serviceTypes ?? [];
   const discountedWeekday = discountedPriceVnd(pricing.weekdayPrice, pricing.discountPercent);
   return (
@@ -604,7 +608,7 @@ function InheritedSummary({
               <dt>Giá tự lái gốc (ngày thường)</dt>
               <dd>
                 {pricing.weekdayPrice
-                  ? `${formatMoneyVnd(pricing.weekdayPrice)}/ngày`
+                  ? `${fmt.money(pricing.weekdayPrice)}/ngày`
                   : 'Chưa có giá'}
               </dd>
             </div>
@@ -621,7 +625,7 @@ function InheritedSummary({
             {discountedWeekday ? (
               <div className={`${styles.summaryRow} ${styles.summaryHighlight}`}>
                 <dt>Giá khách thấy trên sàn</dt>
-                <dd>{formatMoneyVnd(discountedWeekday)}/ngày</dd>
+                <dd>{fmt.money(discountedWeekday)}/ngày</dd>
               </div>
             ) : null}
           </>
@@ -631,7 +635,7 @@ function InheritedSummary({
             <dt>Giá tháng (dài hạn)</dt>
             <dd>
               {pricing.monthlyPrice
-                ? `${formatMoneyVnd(pricing.monthlyPrice)}/tháng`
+                ? `${fmt.money(pricing.monthlyPrice)}/tháng`
                 : 'Chưa có giá'}
             </dd>
           </div>
@@ -641,7 +645,7 @@ function InheritedSummary({
             <dt>Giá có tài xế (nội thành)</dt>
             <dd>
               {pricing.withDriverDailyPrice
-                ? `${formatMoneyVnd(pricing.withDriverDailyPrice)}/ngày`
+                ? `${fmt.money(pricing.withDriverDailyPrice)}/ngày`
                 : 'Chưa có giá'}
             </dd>
           </div>
@@ -650,7 +654,7 @@ function InheritedSummary({
           <>
             <div className={styles.summaryRow}>
               <dt>Tiền đặt cọc thế chấp</dt>
-              <dd>{formatMoneyVnd(policy.depositAmount)}</dd>
+              <dd>{fmt.money(policy.depositAmount)}</dd>
             </div>
             <div className={styles.summaryRow}>
               <dt>Giao nhận tận nơi</dt>
@@ -664,7 +668,7 @@ function InheritedSummary({
               <dt>Phí trả quá giờ</dt>
               <dd>
                 {policy.overtimeFeePerHour
-                  ? `${formatMoneyVnd(policy.overtimeFeePerHour)}/giờ`
+                  ? `${fmt.money(policy.overtimeFeePerHour)}/giờ`
                   : 'Cần cấu hình'}
               </dd>
             </div>

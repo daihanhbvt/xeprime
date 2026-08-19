@@ -5,23 +5,18 @@ import { Alert, App, Form } from 'antd';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
-  ODOMETER_CORRECTION_REASON_LABEL,
-  ODOMETER_CORRECTION_REASON_VALUES,
-  type OdometerCorrectionReason,
-} from '@xeprime/types';
+  ODOMETER_CORRECTION_REASON_LABEL, ODOMETER_CORRECTION_REASON_VALUES, type OdometerCorrectionReason, } from '@xeprime/types';
 import {
-  odometerCorrectionFormSchema,
-  type OdometerCorrectionFormValues,
-} from '@xeprime/validators';
+  odometerCorrectionFormSchema, type OdometerCorrectionFormValues, } from '@xeprime/validators';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { formatKm } from '@/lib/odometer';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { correctOdometer } from '../api';
 import type { MaintenanceProfile } from '../types';
 import styles from './VehicleMaintenanceWorkspace.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const REASON_OPTIONS = ODOMETER_CORRECTION_REASON_VALUES.map((value) => ({
   value,
@@ -52,6 +47,8 @@ export function OdometerCorrectionDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const [saving, setSaving] = useState(false);
   const defaults = useMemo<OdometerCorrectionFormValues>(
@@ -119,7 +116,7 @@ export function OdometerCorrectionDialog({
       <div className={styles.correctionStack}>
         <div className={styles.currentBox}>
           <span className={styles.currentLabel}>CHỈ SỐ HIỆN TẠI</span>
-          <strong className={styles.currentValue}>{formatKm(currentKm)}</strong>
+          <strong className={styles.currentValue}>{fmt.km(currentKm)}</strong>
         </div>
 
         <Form component={false} layout="vertical" colon={false}>
@@ -155,7 +152,7 @@ export function OdometerCorrectionDialog({
             type={canDecrease ? 'warning' : 'error'}
             showIcon
             role="alert"
-            message={`KM mới thấp hơn KM hiện tại (${formatKm(currentKm)}).`}
+            message={`KM mới thấp hơn KM hiện tại (${fmt.km(currentKm)}).`}
             description={
               canDecrease
                 ? 'Thao tác này sẽ được ghi lại kèm người thực hiện và lý do. Số cũ vẫn giữ nguyên trong lịch sử.'

@@ -41,7 +41,7 @@ export function BookingDetailDialog({
         <span className={styles.titleRow}>
           <span>{data ? `Đơn hàng ${data.code}` : 'Đơn thuê'}</span>
           {data ? (
-            <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} />
+            <StatusTag value={data.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
           ) : null}
           <Link href={bookingPath.detail(bookingId)} className={styles.pageLink}>
             Mở trang chi tiết

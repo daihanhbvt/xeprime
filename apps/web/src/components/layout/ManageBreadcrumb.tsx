@@ -1,6 +1,7 @@
 'use client';
 
 import { Breadcrumb } from 'antd';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { flattenLeaves, matchSelectedKey, navForScope } from '@/constants/nav';
@@ -21,6 +22,7 @@ import styles from './ManageBreadcrumb.module.css';
  * cấp còn hơn bịa ra một tiêu đề.
  */
 export function ManageBreadcrumb() {
+  const t = useTranslations('Navigation');
   const pathname = usePathname();
   const { data: user } = useCurrentUser();
 
@@ -33,13 +35,13 @@ export function ManageBreadcrumb() {
       key: 'root',
       title:
         pathname === ROUTES.MANAGE.ROOT ? (
-          'Trang chủ'
+          t('manage.home')
         ) : (
-          <Link href={ROUTES.MANAGE.ROOT}>Trang chủ</Link>
+          <Link href={ROUTES.MANAGE.ROOT}>{t('manage.home')}</Link>
         ),
     },
     ...(current && current.href !== ROUTES.MANAGE.ROOT
-      ? [{ key: current.href, title: current.label }]
+      ? [{ key: current.href, title: t(current.labelKey) }]
       : []),
   ];
 

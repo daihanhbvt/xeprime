@@ -10,7 +10,9 @@ import {
 import { Avatar, Badge, Button, Dropdown, type MenuProps } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Logo } from '@/components/brand/Logo';
+import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { ROUTES } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { useAuthCache } from '@/features/auth/hooks/use-auth-actions';
@@ -21,13 +23,15 @@ import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
 import { destroySession } from '@/services/auth.service';
 import styles from './MarketHeader.module.css';
 
+/** Điều hướng chính — thứ tự và đích cố định, nhãn theo ngôn ngữ. */
 const NAV = [
-  { key: 'explore', label: 'Khám phá', href: ROUTES.HOME },
-  { key: 'about', label: 'Về Prime', href: ROUTES.HOME },
-  { key: 'trips', label: 'Chuyến của tôi', href: ROUTES.TRIPS },
-];
+  { key: 'explore', labelKey: 'explore', href: ROUTES.HOME },
+  { key: 'about', labelKey: 'about', href: ROUTES.HOME },
+  { key: 'trips', labelKey: 'trips', href: ROUTES.TRIPS },
+] as const;
 
 export function MarketHeader() {
+  const t = useTranslations('Navigation.public');
   const router = useRouter();
   const { data: user } = useCurrentUser();
   const { data: chatUnread } = useChatUnreadCount(!!user);
@@ -53,19 +57,25 @@ export function MarketHeader() {
           <Logo size="sm" />
         </Link>
 
-        <nav className={styles.nav} aria-label="Điều hướng chính">
+        <nav className={styles.nav} aria-label={t('mainNavLabel')}>
           {NAV.map((item, i) => (
             <Link
               key={item.key}
               href={item.href}
               className={i === 0 ? styles.navActive : styles.navLink}
             >
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           ))}
         </nav>
 
         <div className={styles.right}>
+          {/*
+            Bộ đổi ngôn ngữ đứng TRƯỚC tin nhắn/thông báo/tài khoản, và có mặt cả khi CHƯA đăng
+            nhập: chọn ngôn ngữ là việc người ta làm trước khi làm bất cứ việc gì khác, nên nó
+            không được nằm trong menu tài khoản của người đã đăng nhập.
+          */}
+          <LocaleSwitcher />
           {user ? (
             <>
               <Badge count={chatUnread?.count ?? 0} size="small" overflowCount={99}>
@@ -74,17 +84,17 @@ export function MarketHeader() {
                   lồng trong `<Link>`. Lồng hai phần tử tương tác cho trình đọc màn hình hai đích
                   cho cùng một hành động, và bàn phím phải Tab hai lần để đi qua một biểu tượng.
                 */}
-                <Link href={ROUTES.CHAT} aria-label="Tin nhắn" className={styles.iconBtn}>
+                <Link href={ROUTES.CHAT} aria-label={t('chat')} className={styles.iconBtn}>
                   <MessageOutlined aria-hidden="true" />
                 </Link>
               </Badge>
               <NotificationBell context="customer" />
-              <Dropdown trigger={['click']} menu={{ items: accountMenu(user, handleLogout) }}>
+              <Dropdown trigger={['click']} menu={{ items: accountMenu(user, handleLogout, t) }}>
                 <span
                   className={styles.avatarTrigger}
                   role="button"
                   tabIndex={0}
-                  aria-label="Tài khoản"
+                  aria-label={t('account')}
                 >
                   <Avatar className={styles.avatar} size={34} src={user.avatarUrl ?? undefined}>
                     {initial(user.displayName)}
@@ -99,7 +109,7 @@ export function MarketHeader() {
               icon={<UserOutlined />}
               onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
             >
-              Đăng nhập
+              {t('login')}
             </Button>
           )}
         </div>
@@ -112,39 +122,48 @@ export function MarketHeader() {
  * Menu tài khoản chỉ hiện lối vào mà user THẬT SỰ có scope, trừ đúng một ngoại lệ: lời mời
  * "Trở thành chủ xe" — đó là hành động tự nguyện, không phải khu vực bị khoá.
  */
-function accountMenu(user: CurrentUser, onLogout: () => void): MenuProps['items'] {
+function accountMenu(
+  user: CurrentUser,
+  onLogout: () => void,
+  t: ReturnType<typeof useTranslations<'Navigation.public'>>,
+): MenuProps['items'] {
   return [
     { key: 'name', label: user.displayName, disabled: true },
     { type: 'divider' },
-    { key: 'account', label: <Link href={ROUTES.ACCOUNT}>Tài khoản của tôi</Link> },
-    { key: 'trips', label: <Link href={ROUTES.TRIPS}>Chuyến của tôi</Link> },
-    { key: 'chat', label: <Link href={ROUTES.CHAT}>Tin nhắn</Link> },
+    { key: 'account', label: <Link href={ROUTES.ACCOUNT}>{t('accountMine')}</Link> },
+    { key: 'trips', label: <Link href={ROUTES.TRIPS}>{t('trips')}</Link> },
+    { key: 'chat', label: <Link href={ROUTES.CHAT}>{t('chat')}</Link> },
     { type: 'divider' },
     user.tenant
       ? {
           key: 'manage',
           icon: <ShopOutlined />,
-          label: <Link href={ROUTES.MANAGE.ROOT}>Quản lý gian hàng</Link>,
+          label: <Link href={ROUTES.MANAGE.ROOT}>{t('manageShop')}</Link>,
         }
       : {
           key: 'become-owner',
           icon: <ShopOutlined />,
-          label: <Link href={ROUTES.MANAGE.ONBOARDING}>Trở thành chủ xe</Link>,
+          label: <Link href={ROUTES.MANAGE.ONBOARDING}>{t('becomeOwner')}</Link>,
         },
     ...(user.platformRole
       ? [
           {
             key: 'admin',
             icon: <SafetyCertificateOutlined />,
-            label: <Link href={ROUTES.MANAGE.ADMIN}>Quản trị nền tảng</Link>,
+            label: <Link href={ROUTES.MANAGE.ADMIN}>{t('platformAdmin')}</Link>,
           },
         ]
       : []),
     { type: 'divider' },
-    { key: 'logout', icon: <LogoutOutlined />, label: 'Đăng xuất', onClick: onLogout },
+    { key: 'logout', icon: <LogoutOutlined />, label: t('logout'), onClick: onLogout },
   ];
 }
 
+/**
+ * Chữ cái đầu của tên cho avatar. Fallback là chữ cái đầu của "Khách"/"Guest" theo ngôn ngữ —
+ * nhưng tên khách là dữ liệu người dùng nhập, nên trường hợp rỗng cực hiếm và một ký tự trung
+ * tính đủ dùng; không đáng kéo cả bộ dịch vào một hàm thuần.
+ */
 function initial(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || 'K';
+  return name.trim().charAt(0).toUpperCase() || '·';
 }

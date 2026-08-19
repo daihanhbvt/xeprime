@@ -3,18 +3,14 @@
 import { Alert, Card, Descriptions, Skeleton } from 'antd';
 import Link from 'next/link';
 import {
-  MAINTENANCE_DUE_STATUS,
-  MAINTENANCE_DUE_STATUS_META,
-  PERMISSION,
-  type MaintenanceDueStatus,
-} from '@xeprime/types';
+  MAINTENANCE_DUE_STATUS, MAINTENANCE_DUE_STATUS_META, PERMISSION, type MaintenanceDueStatus, } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { VEHICLE_EDIT_TAB, vehicleTabPath } from '@/constants/routes';
-import { formatDate } from '@/lib/datetime';
-import { formatKm, formatRemainingKm, INSUFFICIENT_DATA_LABEL } from '@/lib/odometer';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useMaintenanceProfile } from '../hooks';
 import styles from './MaintenanceBoard.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 /**
  * Thẻ "Bảo dưỡng & Số KM" trên Hồ sơ 360 của xe (Wave 6).
@@ -24,6 +20,9 @@ import styles from './MaintenanceBoard.module.css';
  * thay vì hiện khung rỗng.
  */
 export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
+  const tCommon = useTranslations('Common');
+  const fmt = useAppFormat();
+
   const permissions = usePermissions();
   const canView = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
   const profile = useMaintenanceProfile(vehicleId, canView);
@@ -62,7 +61,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
           className={styles.overviewAlert}
           type="error"
           showIcon
-          message={`Quá hạn bảo dưỡng — ${formatRemainingKm(data.remainingKm)}`}
+          message={`Quá hạn bảo dưỡng — ${fmt.remainingKm(data.remainingKm)}`}
         />
       ) : null}
       {dueStatus === MAINTENANCE_DUE_STATUS.DUE_SOON ? (
@@ -70,7 +69,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
           className={styles.overviewAlert}
           type="warning"
           showIcon
-          message={`Sắp đến hạn bảo dưỡng — ${formatRemainingKm(data.remainingKm)}`}
+          message={`Sắp đến hạn bảo dưỡng — ${fmt.remainingKm(data.remainingKm)}`}
         />
       ) : null}
       {data.currentOdometerKm == null ? (
@@ -90,29 +89,29 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
           {
             key: 'current',
             label: 'KM hiện tại',
-            children: formatKm(data.currentOdometerKm),
+            children: fmt.km(data.currentOdometerKm),
           },
           {
             key: 'next',
             label: 'Mốc tiếp theo',
             children:
               data.nextMaintenanceKm != null
-                ? formatKm(data.nextMaintenanceKm)
-                : INSUFFICIENT_DATA_LABEL,
+                ? fmt.km(data.nextMaintenanceKm)
+                : tCommon('labels.insufficientData'),
           },
           {
             key: 'last',
             label: 'Thay nhớt gần nhất',
             children: data.lastServiceAt
-              ? `${formatDate(`${data.lastServiceAt}T00:00:00.000Z`)}${
-                  data.lastServiceKm != null ? ` · ${formatKm(data.lastServiceKm)}` : ''
+              ? `${fmt.date(`${data.lastServiceAt}T00:00:00.000Z`)}${
+                  data.lastServiceKm != null ? ` · ${fmt.km(data.lastServiceKm)}` : ''
                 }`
-              : INSUFFICIENT_DATA_LABEL,
+              : tCommon('labels.insufficientData'),
           },
           {
             key: 'status',
             label: 'Tình trạng',
-            children: <StatusTag value={dueStatus} meta={MAINTENANCE_DUE_STATUS_META} />,
+            children: <StatusTag value={dueStatus} meta={MAINTENANCE_DUE_STATUS_META} group="maintenanceDueStatus" />,
           },
         ]}
       />

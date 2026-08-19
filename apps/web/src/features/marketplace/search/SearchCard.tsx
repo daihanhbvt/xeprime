@@ -2,6 +2,7 @@
 
 import { CalendarOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Radio } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useId, useMemo } from 'react';
 import {
   ROUTE_TYPE_DESCRIPTION,
@@ -12,13 +13,14 @@ import {
   VEHICLE_TYPE_LABEL,
   type RouteType,
 } from '@xeprime/types';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { RentalDateTimeRangeField } from '@/components/form/RentalDateTimeRangeField';
 import { cx } from '@/lib/cx';
 import { LocationPicker } from './LocationPicker';
 import { SegmentedTabs } from './SegmentedTabs';
 import { useSearchExperience } from './search-context';
 import { serviceUsesRentalRange } from './search-draft';
-import { VEHICLE_ITEMS, serviceItems } from './search-items';
+import { serviceItems, vehicleItems } from './search-items';
 import styles from './SearchCard.module.css';
 
 /**
@@ -56,8 +58,15 @@ export function SearchCard({
     setRentalMode,
     submit,
   } = useSearchExperience();
+  const t = useTranslations('HomeSearch');
+  const tService = useTranslations('HomeSearch.service');
+  const domainLabel = useDomainLabel();
   const formId = useId();
-  const serviceOptions = useMemo(() => serviceItems(draft.vehicleType, true), [draft.vehicleType]);
+  const serviceOptions = useMemo(
+    () => serviceItems(draft.vehicleType, true, tService),
+    [draft.vehicleType, tService],
+  );
+  const vehicleOptions = useMemo(() => vehicleItems(domainLabel), [domainLabel]);
 
   const withDriver = draft.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const longTerm = draft.serviceType === SERVICE_TYPE.LONG_TERM;
@@ -65,7 +74,7 @@ export function SearchCard({
 
   return (
     <div className={styles.cardOuter} ref={observerRef}>
-      <div role="search" aria-label="Tìm xe cho thuê" className={styles.card}>
+      <div role="search" aria-label={t('card.searchLabel')} className={styles.card}>
         {/*
           Ba TẦNG xếp chồng, mỗi tầng rộng hơn tầng trên và cùng canh giữa — hình bậc thang này
           chính là thứ nói ra thứ tự quyết định: chọn loại xe → chọn dịch vụ → mới tới tiêu chí.
@@ -75,8 +84,8 @@ export function SearchCard({
           <SegmentedTabs
             value={draft.vehicleType}
             onChange={setVehicleType}
-            items={VEHICLE_ITEMS}
-            ariaLabel="Loại xe"
+            items={vehicleOptions}
+            ariaLabel={t('card.vehicleTypeLabel')}
             controls={formId}
             tone="plain"
           />
@@ -87,7 +96,7 @@ export function SearchCard({
             value={draft.serviceType}
             onChange={setServiceType}
             items={serviceOptions}
-            ariaLabel="Loại dịch vụ thuê xe"
+            ariaLabel={t('card.serviceTypeLabel')}
             controls={formId}
             tone="plain"
           />
@@ -105,33 +114,47 @@ export function SearchCard({
         <div
           id={formId}
           role="tabpanel"
-          aria-label={`Tìm ${VEHICLE_TYPE_LABEL[draft.vehicleType].toLowerCase()} ${SERVICE_TYPE_LABEL[draft.serviceType].toLowerCase()}`}
+          /*
+           * Tên khả truy cập của vùng form GHÉP từ hai lựa chọn đang có. Ghép bằng ICU chứ
+           * không nối chuỗi: trật tự từ của hai ngôn ngữ khác nhau, và `.toLowerCase()` trên
+           * một câu tiếng Anh sẽ hạ cả danh từ riêng.
+           */
+          aria-label={t('card.panelLabel', {
+            vehicle: domainLabel('vehicleType', draft.vehicleType, VEHICLE_TYPE_LABEL[draft.vehicleType]),
+            service: domainLabel('serviceType', draft.serviceType, SERVICE_TYPE_LABEL[draft.serviceType]),
+          })}
           className={cx(styles.tier, styles.tierFields)}
         >
           {withDriver ? (
             <div className={styles.routeRow}>
-              <span className={styles.cellLabel}>Lộ trình</span>
+              <span className={styles.cellLabel}>{t('route.label')}</span>
               <Radio.Group
                 value={draft.routeType}
                 onChange={(e) => setRouteType(e.target.value as RouteType)}
                 options={ROUTE_TYPE_VALUES.map((value) => ({
                   value,
-                  label: ROUTE_TYPE_LABEL[value],
+                  label: domainLabel('routeType', value, ROUTE_TYPE_LABEL[value]),
                 }))}
               />
-              <span className={styles.routeHint}>{ROUTE_TYPE_DESCRIPTION[draft.routeType]}</span>
+              <span className={styles.routeHint}>
+                {domainLabel(
+                  'routeTypeDescription',
+                  draft.routeType,
+                  ROUTE_TYPE_DESCRIPTION[draft.routeType],
+                )}
+              </span>
             </div>
           ) : null}
 
           <div className={cx(styles.fields, longTerm && styles.fieldsCompact)}>
             <div className={styles.cell}>
-              <span className={styles.cellLabel}>Địa điểm</span>
+              <span className={styles.cellLabel}>{t('location.label')}</span>
               <LocationPicker />
             </div>
 
             {usesRange ? (
               <div className={styles.cell}>
-                <span className={styles.cellLabel}>Thời gian thuê</span>
+                <span className={styles.cellLabel}>{t('rental.label')}</span>
                 <RentalDateTimeRangeField
                   value={draft.rental}
                   onChange={setRentalRange}
@@ -150,15 +173,12 @@ export function SearchCard({
               className={styles.submit}
               onClick={submit}
             >
-              Tìm xe
+              {t('card.submit')}
             </Button>
           </div>
 
           {longTerm ? (
-            <p className={styles.hint}>
-              Chọn xe trước, sau đó chọn gói thuê và nguyện vọng ngày nhận. Gian hàng xác nhận ngày
-              giờ nhận chính xác khi duyệt yêu cầu.
-            </p>
+            <p className={styles.hint}>{t('card.longTermHint')}</p>
           ) : null}
         </div>
       </div>

@@ -3,24 +3,18 @@
 import { App, Descriptions, Empty, Tag } from 'antd';
 import Link from 'next/link';
 import {
-  BOOKING_REQUEST_STATUS_META,
-  PERMISSION,
-  STATUS_COLOR,
-  USER_STATUS_META,
-  type BookingRequestStatus,
-  type UserStatus,
-} from '@xeprime/types';
+  BOOKING_REQUEST_STATUS_META, PERMISSION, STATUS_COLOR, USER_STATUS_META, type BookingRequestStatus, type UserStatus, } from '@xeprime/types';
 import { MaskedContact } from '@/components/data-display/MaskedContact';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
-import { formatDateTime, formatShortDateTime } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { useAdminCustomer, useRevealCustomerContact } from '../hooks/use-admin-customers';
 import type { AdminCustomerDetail, AdminCustomerRequest } from '../types';
 import styles from './AdminCustomerDetailDrawer.module.css';
+import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
 
 export function AdminCustomerDetailDrawer({
   customerId,
@@ -38,7 +32,7 @@ export function AdminCustomerDetailDrawer({
       size="lg"
       open={Boolean(customerId)}
       onClose={onClose}
-      extra={data ? <StatusTag value={data.status as UserStatus} meta={USER_STATUS_META} /> : null}
+      extra={data ? <StatusTag value={data.status as UserStatus} meta={USER_STATUS_META} group="userStatus" /> : null}
       loading={!isError && (isLoading || !data)}
       error={isError}
       errorTitle="Không tải được thông tin khách"
@@ -51,6 +45,8 @@ export function AdminCustomerDetailDrawer({
 }
 
 function Body({ customer }: { customer: AdminCustomerDetail }) {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   const { has } = usePermissions();
   const reveal = useRevealCustomerContact(customer.id);
@@ -111,11 +107,11 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
             key: 'lastLogin',
             label: 'Đăng nhập gần nhất',
             children: customer.lastLoginAt
-              ? formatDateTime(customer.lastLoginAt)
+              ? fmt.dateTime(customer.lastLoginAt)
               : 'Chưa đăng nhập',
           },
-          { key: 'created', label: 'Ngày tạo', children: formatDateTime(customer.createdAt) },
-          { key: 'updated', label: 'Cập nhật', children: formatDateTime(customer.updatedAt) },
+          { key: 'created', label: 'Ngày tạo', children: fmt.dateTime(customer.createdAt) },
+          { key: 'updated', label: 'Cập nhật', children: fmt.dateTime(customer.updatedAt) },
         ]}
       />
 
@@ -125,7 +121,7 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
       ) : (
         <DataTable<AdminCustomerRequest>
           label="Yêu cầu thuê gần nhất"
-          columns={REQUEST_COLUMNS}
+          columns={requestColumns(fmt)}
           items={customer.recentRequests}
           minWidth={760}
           striped={false}
@@ -136,7 +132,11 @@ function Body({ customer }: { customer: AdminCustomerDetail }) {
   );
 }
 
-const REQUEST_COLUMNS: DataTableColumn<AdminCustomerRequest>[] = [
+/**
+ * Cột dựng bằng HÀM chứ không phải hằng ở module scope: mốc thời gian phải theo ngôn ngữ
+ * của request, mà ngôn ngữ chỉ đọc được trong cây React.
+ */
+const requestColumns = (fmt: AppFormat): DataTableColumn<AdminCustomerRequest>[] => [
   {
     title: 'Gian hàng · xe',
     key: 'target',
@@ -154,8 +154,8 @@ const REQUEST_COLUMNS: DataTableColumn<AdminCustomerRequest>[] = [
     width: 230,
     render: (_, r) => (
       <div>
-        <div>{formatShortDateTime(r.pickupAt)}</div>
-        <div className={styles.meta}>{formatShortDateTime(r.returnAt)}</div>
+        <div>{fmt.shortDateTime(r.pickupAt)}</div>
+        <div className={styles.meta}>{fmt.shortDateTime(r.returnAt)}</div>
       </div>
     ),
   },
@@ -164,7 +164,7 @@ const REQUEST_COLUMNS: DataTableColumn<AdminCustomerRequest>[] = [
     key: 'status',
     width: 140,
     render: (_, r) => (
-      <StatusTag value={r.status as BookingRequestStatus} meta={BOOKING_REQUEST_STATUS_META} />
+      <StatusTag value={r.status as BookingRequestStatus} meta={BOOKING_REQUEST_STATUS_META} group="bookingRequestStatus" />
     ),
   },
   {

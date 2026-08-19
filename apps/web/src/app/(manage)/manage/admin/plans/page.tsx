@@ -8,12 +8,12 @@ import { DataTable, actionColumn, type DataTableColumn } from '@/components/data
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
-import { formatMoneyVnd } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { PlanFormModal } from '@/features/admin-plans/components/PlanFormModal';
 import { useArchivePlan } from '@/features/admin-plans/hooks/use-plan-mutations';
 import { usePlans } from '@/features/admin-plans/hooks/use-plans';
 import type { Plan } from '@/features/admin-plans/types';
+import { useAppFormat } from '@/i18n/use-app-format';
 
 const STATUS_FILTER: FilterField[] = [
   {
@@ -35,6 +35,8 @@ const STATUS_FILTER: FilterField[] = [
 const MIN_TABLE_WIDTH = 980;
 
 export default function AdminPlansPage() {
+  const fmt = useAppFormat();
+
   const { message } = App.useApp();
   // Bộ lọc của trang này là state CỤC BỘ, không nằm trên URL — khác mọi danh sách khác.
   // Giữ nguyên: đưa lên URL là đổi hành vi, không thuộc phạm vi wave giao diện.
@@ -90,7 +92,7 @@ export default function AdminPlansPage() {
       key: 'price',
       align: 'right',
       width: 130,
-      render: (_, p) => formatMoneyVnd(p.price),
+      render: (_, p) => fmt.money(p.price),
     },
     {
       title: 'Chu kỳ',
@@ -117,7 +119,7 @@ export default function AdminPlansPage() {
       title: 'Trạng thái',
       key: 'status',
       width: 120,
-      render: (_, p) => <StatusTag value={p.status as PlanStatus} meta={PLAN_STATUS_META} />,
+      render: (_, p) => <StatusTag value={p.status as PlanStatus} meta={PLAN_STATUS_META} group="planStatus" />,
     },
     // Hai nút có chữ → rộng hơn thang icon; giữ cả hai inline như trước, không đẩy vào menu ⋮.
     actionColumn<Plan>(

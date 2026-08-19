@@ -1,0 +1,14 @@
+{
+  "title": "My account",
+  "signInRequired": "Please sign in to view your account.",
+  "signIn": "Sign in",
+  "saved": "Account updated",
+  "noEmail": "No email yet",
+  "noPhone": "No phone number yet",
+  "verified": "Verified",
+  "displayName": "Display name",
+  "displayNamePlaceholder": "Jane Doe",
+  "avatarUrl": "Avatar image URL",
+  "identityLockedTitle": "Email and phone number can't be changed here",
+  "identityLockedBody": "Both are used to sign in, so changing them needs a separate verification flow. Contact support if you need to change them."
+}

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { createElement, useRef } from 'react';
 import { EllipsisOutlined } from '@ant-design/icons';
 import { Drawer } from 'antd';
@@ -37,6 +38,7 @@ function isTabActive(pathname: string, href: string): boolean {
  * Ẩn trên desktop bằng CSS ở ranh chính tắc 1024px.
  */
 export function MobileNav() {
+  const t = useTranslations('Navigation');
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const open = useAppSelector((s) => s.app.mobileNavOpen);
@@ -55,7 +57,7 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className={styles.bar} aria-label="Điều hướng nhanh">
+      <nav className={styles.bar} aria-label={t('public.quickNavLabel')}>
         {tabs.map((tab) => {
           const active = isTabActive(pathname, tab.href);
           return (
@@ -66,7 +68,7 @@ export function MobileNav() {
               aria-current={active ? 'page' : undefined}
             >
               {decorativeIcon(createElement(tab.icon, { className: styles.icon }))}
-              <span className={styles.label}>{tab.label}</span>
+              <span className={styles.label}>{t(tab.labelKey)}</span>
             </Link>
           );
         })}
@@ -79,7 +81,7 @@ export function MobileNav() {
           onClick={() => dispatch(setMobileNavOpen(true))}
         >
           {decorativeIcon(<EllipsisOutlined className={styles.icon} />)}
-          <span className={styles.label}>Thêm</span>
+          <span className={styles.label}>{t('manage.more')}</span>
         </button>
       </nav>
 
@@ -97,10 +99,10 @@ export function MobileNav() {
         size="default"
         rootClassName={styles.drawer}
         title={<Logo size="sm" tone="light" />}
-        aria-label="Menu cổng quản lý"
+        aria-label={t('manage.menuLabel')}
       >
         {/* Vùng landmark có tên riêng: trang mobile có hai <nav> (thanh tab + menu đầy đủ). */}
-        <nav className={styles.drawerMenu} aria-label="Menu đầy đủ">
+        <nav className={styles.drawerMenu} aria-label={t('manage.fullMenu')}>
           <ManageMenu items={items} selectedKey={selectedKey} tone="dark" />
         </nav>
         <ManageUserCard tone="dark" />

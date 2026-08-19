@@ -13,6 +13,7 @@ import type { PaginationMeta } from '@xeprime/types';
 import type { RowAction } from './RowActions';
 import { RowActions } from './RowActions';
 import styles from './DataTable.module.css';
+import { useLocale, useTranslations } from 'next-intl';
 
 /**
  * Cột giữ nguyên hợp đồng của AntD — dùng lại chứ không bọc thêm một tầng: mọi bảng trong repo
@@ -219,6 +220,8 @@ export function DataTable<T>({
   loadingLabel,
   striped = true,
 }: DataTableProps<T>) {
+  const tCommon = useTranslations('Common');
+  const locale = useLocale();
   const isMobile = useIsMobile();
   const asCards = isMobile;
 
@@ -239,7 +242,13 @@ export function DataTable<T>({
     return (
       <LoadingState
         variant={asCards ? 'cards' : 'table'}
-        label={loadingLabel ?? `Đang tải ${label.toLocaleLowerCase('vi-VN')}…`}
+        /*
+         * Tên bảng ("Sổ khách của gian hàng") được hạ chữ hoa vì nó nằm GIỮA câu:
+         * "Đang tải sổ khách của gian hàng…". Hạ theo locale đang dùng chứ không ghim `vi-VN` —
+         * quy tắc chữ hoa/thường khác nhau giữa các ngôn ngữ (chữ İ của tiếng Thổ là ví dụ kinh
+         * điển), và tiếng Anh cũng đọc tự nhiên hơn ở dạng thường trong câu này.
+         */
+        label={loadingLabel ?? tCommon('components.loadingNamed', { label: label.toLocaleLowerCase(locale) })}
       />
     );
   }
@@ -350,13 +359,25 @@ export function DataTable<T>({
  * có icon và gom phần dư vào menu.
  * R10: bảng không có hành động thì **đừng gọi hàm này** — cột rỗng còn tệ hơn không có cột.
  */
+/**
+ * Tiêu đề mặc định của cột hành động.
+ *
+ * `actionColumn` là HÀM ở module scope (nó dựng cấu hình cột, không render), nên nó không
+ * gọi hook được. `title` nhận `ReactNode`, nên tiêu đề mặc định là một component nhỏ —
+ * nó lấy bộ dịch đúng lúc bảng render.
+ */
+function ActionsColumnTitle() {
+  const tCommon = useTranslations('Common');
+  return <>{tCommon('labels.actions')}</>;
+}
+
 export function actionColumn<T>(
   getActions: (row: T) => RowAction[],
   options: { width?: number; title?: ReactNode; maxInline?: number } = {},
 ): DataTableColumn<T> {
   return {
     key: 'actions',
-    title: options.title ?? 'Thao tác',
+    title: options.title ?? <ActionsColumnTitle />,
     align: 'right',
     fixed: 'right',
     width: options.width ?? 160,

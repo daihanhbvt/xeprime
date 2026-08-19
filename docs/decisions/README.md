@@ -17,6 +17,7 @@ Quy tắc: ADR ở đây **thắng** mọi tài liệu khác trong `docs/` khi c
 | [0009](0009-chat-firestore-projection.md) | Chat: Firestore là projection realtime, PostgreSQL là nguồn sự thật | Accepted 27/07/2026 |
 | [0010](0010-billing-plans-subscriptions.md) | Gói/thuê bao: history append-only, "hết hạn" suy ra, quota tối thiểu | Accepted 31/07/2026 |
 | [0011](0011-long-term-fixed-packages.md) | Thuê dài hạn: gói cố định 1/2/3/6/9/12 THÁNG LỊCH, khách nêu nguyện vọng — gian hàng chốt lịch khi duyệt | Accepted 18/08/2026 |
+| [0012](0012-i18n-shared-url-cookie-locale.md) | Đa ngữ vi/en: MỘT url cho cả hai ngôn ngữ, locale ở cookie `XP_LOCALE` đọc phía server; mã nghiệp vụ không dịch | Accepted 19/08/2026 |
 
 ## Khi nào viết ADR mới
 
