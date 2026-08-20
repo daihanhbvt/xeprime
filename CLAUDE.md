@@ -68,6 +68,7 @@ Kỷ luật code đã đóng gói thành skill/agent — **dùng chúng, đừng
 | skill | `verify-changes` | Trước khi chạy build/lint/test/typecheck — chỉ xác minh phần vừa sửa, không quét cả workspace |
 | agent | `navigator` (haiku) | Định vị file/symbol cần đọc mà không quét cả file — tiết kiệm token |
 | agent | `reviewer` (opus) | Review diff theo chuẩn senior trước khi commit |
+| command | `/commit` | Người dùng gõ tay sau khi review — chạy trọn quy trình Git: cập nhật `develop` → tạo branch → `add -A` → commit → push branch (KHÔNG merge, KHÔNG force). Quy ước ở `docs/git-workflow.md` |
 
 Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` đọc `docs/CODEMAP.md` trước tiên.
 

@@ -42,3 +42,9 @@ Thumbs.db
 # secrets — never commit service account keys
 *serviceAccount*.json
 firebase-adminsdk-*.json
+
+# git worktree phụ (agent) — không được để `git add -A` nuốt vào commit
+.codex-worktrees/
+
+# office lock file (~$Book.xlsx)
+~$*
