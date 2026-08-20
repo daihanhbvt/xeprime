@@ -1,10 +1,10 @@
 ---
-description: Git workflow tự động — kiểm tra → cập nhật develop → tạo branch → add → commit. KHÔNG push, KHÔNG merge.
+description: Git workflow tự động — kiểm tra → cập nhật develop → tạo branch → add → commit → push branch. KHÔNG merge.
 argument-hint: "[ten-task-tuy-chon]"
-allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git --no-pager diff:*), Bash(git log:*), Bash(git --no-pager log:*), Bash(git fetch:*), Bash(git merge --ff-only:*), Bash(git switch:*), Bash(git stash:*), Bash(git add:*), Bash(git commit:*), Bash(git restore:*)
+allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git diff:*), Bash(git --no-pager diff:*), Bash(git log:*), Bash(git --no-pager log:*), Bash(git fetch:*), Bash(git merge --ff-only:*), Bash(git switch:*), Bash(git stash:*), Bash(git add:*), Bash(git commit:*), Bash(git restore:*), Bash(git push -u origin:*)
 ---
 
-# /commit — commit nhanh, đơn giản, an toàn
+# /commit — commit + push nhanh, đơn giản, an toàn
 
 ## Bối cảnh đã lấy sẵn — KHÔNG chạy lại các lệnh này
 
@@ -16,7 +16,8 @@ allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git rev-parse:*), Ba
 
 ## Luật bất di bất dịch
 
-- ❌ `git push` · `git merge` (ngoại lệ duy nhất: `git merge --ff-only origin/develop`) · `git rebase` · `git checkout main`.
+- ✅ Push **đúng branch vừa commit** bằng `git push -u origin <branch>` (STEP 10).
+- ❌ `git push --force` / `--force-with-lease` · push `main` / `master` / `develop` · `git merge` (ngoại lệ duy nhất: `git merge --ff-only origin/develop`) · `git rebase` · `git checkout main` · tạo Pull Request.
 - ❌ Sửa code, format, refactor, sửa bug ngoài phạm vi. **Chỉ thao tác Git.** Thấy vấn đề thì báo, không tự sửa.
 - ❌ Chạy build / lint / test / typecheck / install. ❌ Đọc source ngoài diff. ❌ Gọi subagent.
 - ❌ Commit khi người dùng chưa xác nhận.
@@ -145,25 +146,36 @@ In đúng khối ngắn này, không thêm phân tích:
 Branch:  feature/web-rental-calendar   (mới tạo từ develop)
 Changes: 8 files changed
 Commit:  feat(web): improve rental calendar
+Push:    origin/feature/web-rental-calendar
 ```
 
-Rồi hỏi: `Commit these changes? [Y/n]` — **DỪNG chờ trả lời.** Chỉ chạy `git commit` sau khi người dùng đồng ý.
+Rồi hỏi: `Commit & push? [Y/n]` — **DỪNG chờ trả lời.** Một lần xác nhận này bao cả commit lẫn push; chỉ chạy STEP 10 sau khi người dùng đồng ý.
 
-## STEP 10 — commit và báo cáo
+## STEP 10 — commit, push và báo cáo
+
+Một lệnh duy nhất:
 
 ```bash
-git commit -m "<message>" && git --no-pager log -1 --format="%h %s"
+git commit -m "<message>" && git push -u origin <branch> && git --no-pager log -1 --format="%h %s"
 ```
 
 Rồi in:
 
 ```
-✓ Commit successful
+✓ Commit & push successful
 
 Branch:  feature/web-rental-calendar
 Commit:  abc1234
 Message: feat(web): improve rental calendar
-Push:    Not pushed
+Push:    origin/feature/web-rental-calendar
 ```
 
-Kết thúc tại đây. Không push, không merge, không checkout main, không đề nghị làm thêm việc khác.
+Khi push gãy — commit đã nằm ở local, **không mất gì**, và **không được** tự sửa bằng force/pull/rebase:
+
+| Tình huống | Xử lý |
+| --- | --- |
+| Offline / không có remote / thiếu quyền | Báo "commit OK, push fail: <lý do>" + gợi ý chạy lại `git push -u origin <branch>` sau. Không retry vòng lặp |
+| Bị từ chối `non-fast-forward` (remote đã đi trước) | DỪNG, báo. ❌ Không `--force`, ❌ không `--force-with-lease`, ❌ không tự `pull`/`rebase` — để người dùng quyết |
+| Branch hiện tại là `develop` (trường hợp bất thường, không tạo được branch mới) | Chỉ commit, **không push**, báo 1 dòng lý do |
+
+Kết thúc tại đây. Không merge, không tạo PR, không checkout main, không đề nghị làm thêm việc khác.

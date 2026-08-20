@@ -1,6 +1,6 @@
 # Git workflow
 
-Quy ước: branch gốc là `develop`. Không commit thẳng vào `main`. Không push/merge tự động.
+Quy ước: branch gốc là `develop`. Không commit thẳng vào `main`. `/commit` push branch vừa làm lên `origin`, nhưng **không bao giờ** merge và không bao giờ push thẳng `develop`/`main`.
 
 ## Khi đang code
 
@@ -21,7 +21,7 @@ Claude sẽ:
 3. `git add -A` toàn bộ thay đổi (coi là **một task**, không tách theo prompt).
 4. Quét nhanh tên file nhạy cảm (`.env`, `*.pem`, `*service-account*`…) — có thì dừng và hỏi.
 5. Tự đặt tên branch + commit message.
-6. Hỏi `Commit these changes? [Y/n]` → chỉ commit khi bạn đồng ý.
+6. Hỏi `Commit & push? [Y/n]` → bạn đồng ý thì commit rồi `git push -u origin <branch>`.
 
 Muốn tự đặt tên task: `/commit rental-calendar` → `feature/web-rental-calendar`.
 
@@ -49,12 +49,17 @@ Chọn 2 → Claude dừng hẳn. Chọn 1 → Claude sửa và cho bạn xem `g
 
 ## Push
 
-`/commit` **không bao giờ** push. Review commit xong thì tự push:
+Sau khi bạn xác nhận, `/commit` chạy `git push -u origin <branch>` — chỉ branch vừa commit, không bao giờ `develop`/`main`, không bao giờ `--force`.
 
-```bash
-git push -u origin <branch>
-```
+Push gãy thì commit vẫn nằm ở local, không mất gì:
+
+| Tình huống | Claude làm gì |
+| --- | --- |
+| Offline / thiếu quyền | Báo lý do, gợi ý chạy lại `git push -u origin <branch>` sau |
+| `non-fast-forward` (remote đã đi trước branch của bạn) | Dừng và báo. Không force, không tự `pull`/`rebase` — bạn quyết |
+
+Merge vào `develop` vẫn làm tay (hoặc qua Pull Request) — `/commit` không tạo PR, không merge.
 
 ## Những gì `/commit` cố tình KHÔNG làm
 
-Không chạy build/lint/test, không `pnpm install`, không đọc cả repo, không sửa/format code, không tách commit, không merge, không push. Muốn kiểm tra code thì chạy trước khi gõ `/commit` (xem skill `verify-changes`), hoặc review bằng agent `reviewer`.
+Không chạy build/lint/test, không `pnpm install`, không đọc cả repo, không sửa/format code, không tách commit, không force push, không merge, không tạo PR. Muốn kiểm tra code thì chạy trước khi gõ `/commit` (xem skill `verify-changes`), hoặc review bằng agent `reviewer`.
