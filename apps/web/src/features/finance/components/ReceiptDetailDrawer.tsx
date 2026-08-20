@@ -3,15 +3,14 @@
 import { CheckOutlined, StopOutlined } from '@ant-design/icons';
 import { Alert, Button } from 'antd';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import {
-  PAYMENT_METHOD_META,
   RECEIPT_SOURCE_META,
   RECEIPT_STATUS,
   RECEIPT_STATUS_META,
   RECEIPT_TYPE_META,
   isAutoReceipt,
-  type PaymentMethod,
   type ReceiptSource,
   type ReceiptStatus,
   type ReceiptType,
@@ -22,6 +21,7 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import { DetailDrawer } from '@/components/overlay/DetailDrawer';
 import { bookingPath, customerPath, vehiclePath } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { moneyToVietnameseWords } from '@/lib/money';
 import { vehicleLabel } from '@/lib/vehicle-label';
 import { useReceiptDetail } from '../hooks/use-receipt-detail';
@@ -52,6 +52,9 @@ export function ReceiptDetailDrawer({
   onCancel,
 }: ReceiptDetailDrawerProps) {
   const fmt = useAppFormat();
+  const t = useTranslations('Finance.receipts.detail');
+  const tCommon = useTranslations('Common');
+  const domainLabel = useDomainLabel();
   const { data, isLoading, isError, refetch } = useReceiptDetail(receiptId);
 
   const auto = data ? isAutoReceipt(data.source) : false;
@@ -69,12 +72,12 @@ export function ReceiptDetailDrawer({
       open={receiptId !== null}
       onClose={onClose}
       size="lg"
-      title={data?.receiptNo ?? 'Chi tiết phiếu'}
-      ariaLabel="Chi tiết phiếu thu chi"
+      title={data?.receiptNo ?? t('title')}
+      ariaLabel={t('ariaLabel')}
       loading={isLoading}
       error={isError}
       onRetry={() => void refetch()}
-      errorTitle="Không tải được phiếu"
+      errorTitle={t('errorTitle')}
       extra={
         data ? (
           <StatusTag
@@ -89,12 +92,12 @@ export function ReceiptDetailDrawer({
           <div className={styles.footer}>
             {canAct.cancel ? (
               <Button danger icon={<StopOutlined />} onClick={() => onCancel(data!.id)}>
-                Huỷ phiếu
+                {t('cancelAction')}
               </Button>
             ) : null}
             {canAct.approve ? (
               <Button type="primary" icon={<CheckOutlined />} onClick={() => onApprove(data!.id)}>
-                Duyệt
+                {tCommon('actions.approve')}
               </Button>
             ) : null}
           </div>
@@ -124,12 +127,10 @@ export function ReceiptDetailDrawer({
               className={styles.section}
               type="info"
               showIcon
-              message="Phiếu tự động"
+              message={t('auto.title')}
               description={
                 <>
-                  Phiếu này sinh từ {RECEIPT_SOURCE_META[data.source as ReceiptSource].label} nên
-                  không sửa/huỷ trực tiếp được — sổ sẽ lệch với đơn. Muốn đảo thì thao tác ở chính
-                  nghiệp vụ đó
+                  {t('auto.body', { source: domainLabel('receiptSource', data.source) })}
                   {/*
                     Phiếu bảo dưỡng KHÔNG gắn đơn, nên nếu chỉ dựng link theo `bookingId` thì
                     người dùng nhận một câu "thao tác ở nghiệp vụ đó" mà không có chỗ nào để đi —
@@ -138,12 +139,16 @@ export function ReceiptDetailDrawer({
                   {data.bookingId ? (
                     <>
                       {' '}
-                      (<Link href={bookingPath.detail(data.bookingId)}>mở đơn thuê</Link>)
+                      (
+                      <Link href={bookingPath.detail(data.bookingId)}>{t('auto.openBooking')}</Link>
+                      )
                     </>
                   ) : data.vehicleId ? (
                     <>
                       {' '}
-                      (<Link href={vehiclePath.detail(data.vehicleId)}>mở hồ sơ xe</Link>)
+                      (
+                      <Link href={vehiclePath.detail(data.vehicleId)}>{t('auto.openVehicle')}</Link>
+                      )
                     </>
                   ) : null}
                   .
@@ -153,55 +158,57 @@ export function ReceiptDetailDrawer({
           ) : null}
 
           <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Thông tin phiếu</h3>
+            <h3 className={styles.sectionTitle}>{t('sections.info')}</h3>
             <dl className={styles.rows}>
-              <Row label="Ngày phát sinh">{fmt.date(data.occurredAt)}</Row>
-              <Row label="Danh mục">{data.categoryName ?? '—'}</Row>
-              <Row label="Hình thức">
-                {PAYMENT_METHOD_META[data.paymentMethod as PaymentMethod]?.label ??
-                  data.paymentMethod}
+              <Row label={t('rows.occurredAt')}>{fmt.date(data.occurredAt)}</Row>
+              <Row label={t('rows.category')}>
+                {data.categoryName ?? tCommon('labels.emptyValue')}
               </Row>
-              <Row label="Mã tra soát">
+              <Row label={t('rows.method')}>{domainLabel('paymentMethod', data.paymentMethod)}</Row>
+              <Row label={t('rows.referenceCode')}>
                 {data.referenceCode ? (
                   <>
-                    {data.referenceCode} <CopyButton value={data.referenceCode} label="Chép mã" />
+                    {data.referenceCode}{' '}
+                    <CopyButton value={data.referenceCode} label={t('copyReference')} />
                   </>
                 ) : (
-                  '—'
+                  tCommon('labels.emptyValue')
                 )}
               </Row>
-              <Row label="Diễn giải">{data.description ?? '—'}</Row>
+              <Row label={t('rows.description')}>
+                {data.description ?? tCommon('labels.emptyValue')}
+              </Row>
             </dl>
           </section>
 
           <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Liên quan</h3>
+            <h3 className={styles.sectionTitle}>{t('sections.related')}</h3>
             <dl className={styles.rows}>
-              <Row label="Đơn thuê">
+              <Row label={t('rows.booking')}>
                 {data.bookingId ? (
                   <Link href={bookingPath.detail(data.bookingId)}>
-                    {data.bookingCode ?? 'Xem đơn'}
+                    {data.bookingCode ?? t('viewBooking')}
                   </Link>
                 ) : (
-                  '—'
+                  tCommon('labels.emptyValue')
                 )}
               </Row>
-              <Row label="Xe">
+              <Row label={t('rows.vehicle')}>
                 {data.vehicleId ? (
                   <Link href={vehiclePath.detail(data.vehicleId)}>
-                    {vehicleLabel(data.vehicleName, data.plateNumber) || 'Xem xe'}
+                    {vehicleLabel(data.vehicleName, data.plateNumber) || t('viewVehicle')}
                   </Link>
                 ) : (
-                  '—'
+                  tCommon('labels.emptyValue')
                 )}
               </Row>
-              <Row label="Khách hàng">
+              <Row label={t('rows.customer')}>
                 {data.tenantCustomerId ? (
                   <Link href={customerPath.detail(data.tenantCustomerId)}>
-                    {data.customerName ?? 'Xem khách'}
+                    {data.customerName ?? t('viewCustomer')}
                   </Link>
                 ) : (
-                  (data.customerName ?? '—')
+                  (data.customerName ?? tCommon('labels.emptyValue'))
                 )}
               </Row>
             </dl>
@@ -209,11 +216,16 @@ export function ReceiptDetailDrawer({
 
           {data.attachments.length > 0 ? (
             <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>Ảnh minh chứng</h3>
+              <h3 className={styles.sectionTitle}>{t('sections.attachments')}</h3>
               <PreviewImageGroup>
                 <div className={styles.attachments}>
                   {data.attachments.map((url) => (
-                    <PreviewImage key={url} src={url} alt="Ảnh minh chứng" className={styles.thumb} />
+                    <PreviewImage
+                      key={url}
+                      src={url}
+                      alt={t('attachmentAlt')}
+                      className={styles.thumb}
+                    />
                   ))}
                 </div>
               </PreviewImageGroup>
@@ -221,19 +233,22 @@ export function ReceiptDetailDrawer({
           ) : null}
 
           <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Dấu vết</h3>
+            <h3 className={styles.sectionTitle}>{t('sections.trace')}</h3>
             <dl className={styles.rows}>
-              <Row label="Người tạo">
-                {data.requestedByName ?? '—'} · {fmt.dateTime(data.createdAt)}
+              <Row label={t('rows.createdBy')}>
+                {data.requestedByName ?? tCommon('labels.emptyValue')} ·{' '}
+                {fmt.dateTime(data.createdAt)}
               </Row>
               {data.approvedAt ? (
-                <Row label="Người duyệt">
-                  {data.approvedByName ?? '—'} · {fmt.dateTime(data.approvedAt)}
+                <Row label={t('rows.approvedBy')}>
+                  {data.approvedByName ?? tCommon('labels.emptyValue')} ·{' '}
+                  {fmt.dateTime(data.approvedAt)}
                 </Row>
               ) : null}
               {data.cancelledAt ? (
-                <Row label="Người huỷ">
-                  {data.cancelledByName ?? '—'} · {fmt.dateTime(data.cancelledAt)}
+                <Row label={t('rows.cancelledBy')}>
+                  {data.cancelledByName ?? tCommon('labels.emptyValue')} ·{' '}
+                  {fmt.dateTime(data.cancelledAt)}
                 </Row>
               ) : null}
             </dl>

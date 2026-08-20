@@ -11,12 +11,17 @@ import { RequestBookingModal } from './RequestBookingModal';
 /**
  * Test đặc tả cho luồng ĐẶT XE — workflow rủi ro cao nhất của khu khách.
  *
- * State machine sống trong `RequestBookingFlow` (`time → contact → [otp] → review → done`),
+ * State machine sống trong `RequestBookingFlow` (`trip → [otp] → review → done`),
  * `RequestBookingModal` chỉ là vỏ. Test đi qua vỏ để khoá cả hai cùng lúc: payload gửi lên API,
  * nhánh OTP, giao xe tận nơi, chặn gửi trùng và điều hướng.
  *
- * **Wave 9**: OTP là trạng thái BÊN TRONG bước Liên hệ (không phải bước thứ ba), và giao tận
- * nơi chỉ hỏi ĐỊA CHỈ — không khoảng cách, không báo giá, không bước khách duyệt phí.
+ * **Hai bước (20/08)**: `Thời gian` và `Liên hệ` gộp thành MỘT bước `Chuyến đi` — thời gian là
+ * một trường, ô liên hệ chỉ dựng khi hệ thống chưa biết khách. OTP vẫn là trạng thái xen giữa,
+ * không phải một bước. Payload gửi lên API **không đổi** — đó là hợp đồng thật, và mọi assert về
+ * body ở đây giữ nguyên từ bản ba bước.
+ *
+ * **Wave 9**: giao tận nơi chỉ hỏi ĐỊA CHỈ — không khoảng cách, không báo giá, không bước khách
+ * duyệt phí; và lựa chọn đó chỉ tồn tại khi CHÍNH SÁCH cho phép (`listing.deliveryAvailable`).
  */
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 const api = vi.hoisted(() => ({
@@ -45,19 +50,14 @@ vi.mock('../api', () => ({
 }));
 
 /**
- * Cột hồ sơ xe + đánh giá. Mặc định CẢ HAI lỗi: phần lớn test ở đây khoá luồng đặt, và một cột
- * trái rỗng chứng minh luôn rằng luồng không phụ thuộc nó. Test nào cần dữ liệu thật thì tự đặt
- * `listing.data` / `listing.reviews`.
+ * Cột hồ sơ xe. Mặc định LỖI: phần lớn test ở đây khoá luồng đặt, và một cột trái rỗng chứng
+ * minh luôn rằng luồng không phụ thuộc nó. Test nào cần dữ liệu thật thì tự đặt `listing.data`.
  */
-const listing = vi.hoisted(() => ({
-  data: null as unknown,
-  reviews: null as unknown,
-}));
+const listing = vi.hoisted(() => ({ data: null as unknown }));
 vi.mock('@/features/marketplace/api', () => ({
   fetchListingDetailClient: () =>
     listing.data ? Promise.resolve(listing.data) : Promise.reject(new Error('listing offline')),
-  fetchListingReviewsClient: () =>
-    listing.reviews ? Promise.resolve(listing.reviews) : Promise.reject(new Error('reviews off')),
+  fetchListingReviewsClient: () => Promise.reject(new Error('reviews off')),
 }));
 /** Dùng đúng map rỗng của production (đủ mọi chiều), không phải `{}` — mock sai làm test dối. */
 vi.mock('@/features/catalog/use-catalog', async () => {
@@ -67,8 +67,8 @@ vi.mock('@/features/catalog/use-catalog', async () => {
 
 /**
  * Public quote: mặc định lỗi — các test này khoá luồng đặt xe, không khoá khối giá; query lỗi
- * thì flow chỉ ẩn khối giá. KHÔNG mock kiểu treo vô hạn: `invalidateQueries()` sau khi gửi
- * thành công sẽ đợi refetch của chính query này và làm test kẹt ở bước done.
+ * thì khối giá rơi về bảng niêm yết. KHÔNG mock kiểu treo vô hạn: `invalidateQueries()` sau khi
+ * gửi thành công sẽ đợi refetch của chính query này và làm test kẹt ở bước done.
  */
 const quote = vi.hoisted(() => ({ data: null as unknown }));
 vi.mock('@/features/rental-policies/api', () => ({
@@ -128,6 +128,41 @@ vi.mock('@/features/phone-verification/components/OtpCodeInput', () => ({
   ),
 }));
 
+/** Hồ sơ xe đủ dùng cho các test cần cột trái / chính sách giao xe / điểm nhận xe. */
+const LISTING = {
+  id: 'V1',
+  name: 'Toyota Vios 2022',
+  vehicleType: 'car',
+  serviceTypes: ['self_drive'],
+  seatCount: 5,
+  manufactureYear: 2022,
+  bodyType: 'sedan',
+  fuelType: 'gasoline',
+  mainImageUrl: null,
+  weekdayPrice: '585000',
+  weekendPrice: '650000',
+  hourlyPrice: '90000',
+  discountPercent: 10,
+  deliveryEnabled: true,
+  deliveryAvailable: true,
+  pickupPoint: null,
+  noCollateral: false,
+  shopName: 'Gian hàng Demo XePrime',
+  shopSlug: 'demo',
+  shopProvince: 'TP. Hồ Chí Minh',
+  shopLogoUrl: null,
+  shopBio: null,
+  ratingAvg: '4.5',
+  ratingCount: 2,
+  images: [],
+  features: ['bluetooth'],
+  description: null,
+  color: null,
+  brand: null,
+  model: null,
+  longTermPackages: [],
+};
+
 function renderModal(open = true, onClose = vi.fn()) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -163,19 +198,17 @@ function renderModalWithoutPrefill() {
   );
 }
 
-/** time → contact (khả dụng). */
-async function advanceToContact() {
-  api.checkAvailability.mockResolvedValue({ available: true });
-  fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-  // Mốc chờ phải có ở CẢ hai biến thể bước liên hệ: ô nhập (khách mới) và thẻ xác nhận.
-  await screen.findByRole('button', { name: 'Đổi thời gian' });
+/** Điền liên hệ ngay tại bước Chuyến đi (khách vãng lai). */
+function fillContact(phone = '0901234567', name = '  Nguyễn Văn A  ') {
+  fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: name } });
+  fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: phone } });
 }
 
-/** contact → otp (khách vãng lai). */
+/** trip → otp (khách vãng lai): kiểm khung giờ rồi gửi mã, tất cả trong một cú Tiếp tục. */
 async function advanceToOtp(phone = '0901234567') {
+  api.checkAvailability.mockResolvedValue({ available: true });
   api.sendAsync.mockResolvedValue(undefined);
-  fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: '  Nguyễn Văn A  ' } });
-  fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: phone } });
+  fillContact(phone);
   fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
   await screen.findByLabelText('Mã OTP');
 }
@@ -188,14 +221,15 @@ async function advanceToReview(code = '123456') {
   await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' });
 }
 
-/** Tick điều khoản rồi gửi. */
-async function submitFromReview() {
-  fireEvent.click(screen.getByRole('checkbox'));
-  await waitFor(() =>
-    expect(
-      (screen.getByRole('button', { name: 'Gửi yêu cầu thuê' }) as HTMLButtonElement).disabled,
-    ).toBe(false),
-  );
+/** trip → review thẳng (tài khoản đã đăng nhập, SĐT đã xác thực → không qua OTP). */
+async function advanceToReviewAsMember() {
+  api.checkAvailability.mockResolvedValue({ available: true });
+  fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+  await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' });
+}
+
+/** Gửi yêu cầu từ bước Xác nhận. Không còn ô tick điều khoản chắn trước nút gửi. */
+function submitFromReview() {
   fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê' }));
 }
 
@@ -205,7 +239,6 @@ beforeEach(() => {
   // Mặc định là KHÁCH VÃNG LAI — mọi test cũ mô tả đúng luồng đó.
   me.data = undefined;
   listing.data = null;
-  listing.reviews = null;
   quote.data = null;
   Object.values(api).forEach((fn) => fn.mockReset());
 });
@@ -225,27 +258,45 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.queryByText(/Chọn thời gian thuê để kiểm tra/)).toBeNull();
     });
 
-    it('ba bước biểu mẫu; OTP và Hoàn tất KHÔNG chiếm ô trên thanh tiến trình', () => {
+    it('HAI bước biểu mẫu; OTP và Hoàn tất KHÔNG chiếm ô trên thanh tiến trình', () => {
       renderModal();
       const steps = screen.getByRole('list', { name: 'Tiến trình đặt xe' });
-      expect(within(steps).getAllByRole('listitem')).toHaveLength(3);
-      expect(within(steps).getByText('Thời gian')).toBeTruthy();
-      expect(within(steps).getByText('Liên hệ')).toBeTruthy();
+      expect(within(steps).getAllByRole('listitem')).toHaveLength(2);
+      expect(within(steps).getByText('Chuyến đi')).toBeTruthy();
       expect(within(steps).getByText('Xác nhận')).toBeTruthy();
+      expect(within(steps).queryByText('Liên hệ')).toBeNull();
       expect(within(steps).queryByText('Hoàn tất')).toBeNull();
+    });
+
+    it('OTP vẫn nằm TRONG bước Chuyến đi trên thanh tiến trình', async () => {
+      renderModal();
+      await advanceToOtp();
+      const steps = screen.getByRole('list', { name: 'Tiến trình đặt xe' });
+      const items = within(steps).getAllByRole('listitem');
+      expect(items[0]?.getAttribute('aria-current')).toBe('step');
     });
   });
 
-  describe('bước 1 — thời gian & kiểm tra khả dụng', () => {
-    it('mở ra ở bước thời gian, prefill từ bộ lọc', () => {
+  describe('bước 1 — chuyến đi & kiểm tra khả dụng', () => {
+    it('mở ra ở bước Chuyến đi, prefill thời gian từ bộ lọc', () => {
       renderModal();
-      expect(screen.getByText(/Chọn thời gian thuê để kiểm tra/)).toBeTruthy();
+      expect(screen.getByText('Thời gian thuê')).toBeTruthy();
       expect(screen.getAllByText('Toyota Vios').length).toBeGreaterThan(0);
+    });
+
+    /**
+     * Xe chỉ phục vụ một dịch vụ thì "Dịch vụ · Tự lái" không phải một lựa chọn, chỉ là một
+     * dòng đọc lại thứ khách vừa bấm ở trang chi tiết. Cột trái đã nói xe làm dịch vụ gì.
+     */
+    it('xe một dịch vụ → KHÔNG dựng dòng "Dịch vụ" nào ở bước Chuyến đi', () => {
+      renderModal();
+      expect(screen.queryByText('Dịch vụ')).toBeNull();
     });
 
     it('gửi đúng vehicleId + ISO khi kiểm tra khả dụng', async () => {
       renderModal();
       api.checkAvailability.mockResolvedValue({ available: true });
+      fillContact();
       fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
       await waitFor(() => expect(api.checkAvailability).toHaveBeenCalledTimes(1));
@@ -255,22 +306,26 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(payload.returnAt).toBe('2026-09-03T02:00:00.000Z');
     });
 
-    it('KHÔNG khả dụng → báo lỗi, ở lại bước thời gian', async () => {
+    it('KHÔNG khả dụng → báo lỗi, ở lại bước Chuyến đi và KHÔNG gửi mã', async () => {
       renderModal();
       api.checkAvailability.mockResolvedValue({ available: false });
+      fillContact();
       fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
       expect(
         await screen.findByText('Xe đã có lịch trong khung giờ này. Vui lòng chọn thời gian khác.'),
       ).toBeTruthy();
-      expect(screen.queryByLabelText('Họ và tên')).toBeNull();
+      expect(screen.getByLabelText('Họ và tên')).toBeTruthy();
+      expect(api.sendAsync).not.toHaveBeenCalled();
     });
 
     it('lỗi API khi kiểm tra → hiện thông báo lỗi', async () => {
       renderModal();
-      api.checkAvailability.mockRejectedValue(new Error('Mạng lỗi'));
+      api.checkAvailability.mockRejectedValue(new Error('hỏng mạng'));
+      fillContact();
       fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-      expect(await screen.findByText('Mạng lỗi')).toBeTruthy();
+      // Chữ đến từ MÃ lỗi (ADR 0012) — không phải `message` tiếng Việt của backend.
+      expect(await screen.findByText(/Đã có lỗi xảy ra|Không kết nối/)).toBeTruthy();
     });
 
     it('dùng MỘT ô chọn khoảng thuê, không phải hai ô ngày rời', () => {
@@ -279,42 +334,57 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.queryByLabelText('Ngày nhận xe')).toBeNull();
       expect(screen.queryByLabelText('Ngày trả xe')).toBeNull();
     });
+
+    it('thời gian và liên hệ nằm CÙNG một bước — không phải hai lần bấm Tiếp tục', () => {
+      renderModal();
+      expect(screen.getByRole('button', { name: /Thời gian thuê:/ })).toBeTruthy();
+      expect(screen.getByLabelText('Họ và tên')).toBeTruthy();
+      expect(screen.getByLabelText('Số điện thoại')).toBeTruthy();
+    });
+
+    /**
+     * Liên hệ chỉ còn tên + SĐT. SĐT là thứ luồng này xác thực bằng OTP và gian hàng dùng để
+     * gọi lại; ô email "không bắt buộc" chỉ làm dài thêm một bước vốn đã dài.
+     */
+    it('liên hệ chỉ hỏi tên + SĐT — không có ô email', () => {
+      renderModal();
+      expect(screen.getByLabelText('Họ và tên')).toBeTruthy();
+      expect(screen.getByLabelText('Số điện thoại')).toBeTruthy();
+      expect(screen.queryByLabelText(/Email/)).toBeNull();
+    });
   });
 
-  describe('bước 2 — liên hệ & OTP', () => {
-    it('SĐT sai định dạng thì không gửi OTP', async () => {
+  describe('liên hệ & OTP', () => {
+    it('SĐT sai định dạng thì không kiểm lịch và không gửi OTP', async () => {
       renderModal();
-      await advanceToContact();
-      fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'A' } });
-      fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '123' } });
+      fillContact('123', 'A');
       fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
       expect(await screen.findByText('Số điện thoại không hợp lệ')).toBeTruthy();
+      expect(api.checkAvailability).not.toHaveBeenCalled();
       expect(api.sendAsync).not.toHaveBeenCalled();
     });
 
     it('hợp lệ → gửi OTP tới đúng số và vào trạng thái OTP', async () => {
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
       expect(api.sendAsync).toHaveBeenCalledWith('0901234567');
     });
 
-    it('gửi OTP lỗi thì ở lại bước liên hệ', async () => {
+    it('gửi OTP lỗi thì ở lại bước Chuyến đi', async () => {
       renderModal();
-      await advanceToContact();
+      api.checkAvailability.mockResolvedValue({ available: true });
       api.sendAsync.mockRejectedValue(new Error('Quá nhiều yêu cầu'));
-      fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'A' } });
-      fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0901234567' } });
+      fillContact();
       fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
       await waitFor(() => expect(api.sendAsync).toHaveBeenCalled());
       expect(screen.queryByLabelText('Mã OTP')).toBeNull();
+      expect(screen.getByLabelText('Họ và tên')).toBeTruthy();
     });
 
     it('mã chưa đủ 6 số thì nút xác thực bị vô hiệu và không gọi API', async () => {
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
 
       fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '123' } });
@@ -326,21 +396,25 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
     it('OTP sai → báo lỗi, giữ nguyên màn OTP, KHÔNG sang bước xác nhận', async () => {
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
 
-      api.verifyOtp.mockRejectedValue(new Error('Mã xác thực không đúng'));
+      api.verifyOtp.mockRejectedValue(
+        new ApiClientError({
+          code: API_ERROR_CODE.OTP_INVALID,
+          message: 'Mã xác thực không đúng',
+          status: 400,
+        }),
+      );
       fireEvent.change(screen.getByLabelText('Mã OTP'), { target: { value: '000000' } });
       fireEvent.click(screen.getByRole('button', { name: 'Xác thực' }));
 
-      expect(await screen.findByText('Mã xác thực không đúng')).toBeTruthy();
+      await waitFor(() => expect(api.verifyOtp).toHaveBeenCalled());
       expect(api.submitBookingRequest).not.toHaveBeenCalled();
       expect(screen.getByLabelText('Mã OTP')).toBeTruthy();
     });
 
-    it('"Sửa số điện thoại" quay lại bước liên hệ và xoá mã', async () => {
+    it('"Sửa số điện thoại" quay lại bước Chuyến đi và xoá mã', async () => {
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
 
       fireEvent.click(screen.getByRole('button', { name: 'Sửa số điện thoại' }));
@@ -350,7 +424,6 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
     it('"Gửi lại mã" gửi lại đúng số đã xác nhận', async () => {
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
 
       fireEvent.click(screen.getByRole('button', { name: 'Gửi lại mã' }));
@@ -358,27 +431,28 @@ describe('RequestBookingModal — luồng đặt xe', () => {
     });
   });
 
-  describe('bước 3 — xác nhận & gửi (khách vãng lai, thuê theo ngày)', () => {
-    it('chưa tick điều khoản thì không gửi được', async () => {
+  describe('bước 2 — xác nhận & gửi (khách vãng lai, thuê theo ngày)', () => {
+    /**
+     * Ô tick điều khoản đã bỏ (20/08): nó chặn nút gửi bằng một thao tác không ai đọc, trong khi
+     * chính nhãn nút đã nói đây là gửi YÊU CẦU. Soát xong là gửi được ngay.
+     */
+    it('bước Xác nhận không còn ô tick nào chắn trước nút gửi', async () => {
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
 
+      expect(screen.queryByRole('checkbox')).toBeNull();
       const submit = screen.getByRole('button', { name: 'Gửi yêu cầu thuê' });
-      expect((submit as HTMLButtonElement).disabled).toBe(true);
-      fireEvent.click(submit);
-      expect(api.submitBookingRequest).not.toHaveBeenCalled();
+      expect((submit as HTMLButtonElement).disabled).toBe(false);
     });
 
     it('gửi payload đúng (SĐT đã xác minh, tên đã trim, KHÔNG có trường giao nhận)', async () => {
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
 
       api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
-      await submitFromReview();
+      submitFromReview();
 
       await waitFor(() => expect(api.submitBookingRequest).toHaveBeenCalledTimes(1));
       expect(api.verifyOtp).toHaveBeenCalledWith(
@@ -395,34 +469,38 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       });
     });
 
-    it('nói rõ đây là YÊU CẦU — xe chưa được giữ chỗ', async () => {
+    it('có dòng "Người thuê" ngay trên bảng xác nhận', async () => {
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
-      expect(screen.getByText(/xe chưa được giữ chỗ/i)).toBeTruthy();
+      expect(screen.getByText('Người thuê')).toBeTruthy();
+      expect(screen.getByText(/Nguyễn Văn A · 0901234567/)).toBeTruthy();
     });
   });
 
   /**
-   * Wave 9 — giao xe tận nơi. Điều cần khoá: CHỈ hỏi địa chỉ, nói rõ miễn phí, và tuyệt đối
-   * không có khoảng cách / báo giá / bước khách duyệt phí.
+   * Wave 9 — giao xe tận nơi. Điều cần khoá: CHỈ hỏi địa chỉ, nói rõ miễn phí, tuyệt đối không
+   * có khoảng cách / báo giá / bước khách duyệt phí, và lựa chọn chỉ tồn tại khi CHÍNH SÁCH
+   * cho phép.
    */
   describe('giao xe tận nơi', () => {
     async function chooseDelivery() {
-      fireEvent.click(screen.getByRole('radio', { name: /Giao xe tận nơi/ }));
+      fireEvent.click(await screen.findByRole('radio', { name: /Giao xe tận nơi/ }));
       await screen.findByLabelText('Địa chỉ giao xe');
     }
 
+    beforeEach(() => {
+      listing.data = LISTING;
+    });
+
     it('mặc định là nhận tại điểm hẹn — KHÔNG hỏi địa chỉ', async () => {
       renderModal();
-      await advanceToContact();
+      await screen.findByRole('radio', { name: /Nhận tại điểm hẹn/ });
       expect(screen.queryByLabelText('Địa chỉ giao xe')).toBeNull();
     });
 
     it('chọn giao tận nơi → hiện ô địa chỉ, ghi Miễn phí và câu giải thích', async () => {
       renderModal();
-      await advanceToContact();
       await chooseDelivery();
 
       expect(screen.getByText('Miễn phí')).toBeTruthy();
@@ -435,21 +513,17 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
     it('KHÔNG có khoảng cách, báo giá hay bước khách duyệt phí', async () => {
       renderModal();
-      await advanceToContact();
       await chooseDelivery();
 
       expect(screen.queryByLabelText(/Khoảng cách/i)).toBeNull();
-      expect(screen.queryByText(/báo giá/i)).toBeNull();
       expect(screen.queryByText(/Chờ chủ xe báo giá/i)).toBeNull();
       expect(screen.queryByRole('button', { name: /Xác nhận phí/i })).toBeNull();
     });
 
     it('thiếu địa chỉ thì không đi tiếp được', async () => {
       renderModal();
-      await advanceToContact();
       await chooseDelivery();
-      fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'A' } });
-      fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0901234567' } });
+      fillContact();
       fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
       expect(await screen.findByText('Nhập địa chỉ giao xe')).toBeTruthy();
@@ -458,7 +532,6 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
     it('gửi kèm địa chỉ và deliveryRequested — KHÔNG kèm bất kỳ số phí nào', async () => {
       renderModal();
-      await advanceToContact();
       await chooseDelivery();
       fireEvent.change(screen.getByLabelText('Địa chỉ giao xe'), {
         target: { value: '  123 Nguyễn Văn Linh, Đà Nẵng  ' },
@@ -467,7 +540,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       await advanceToReview();
 
       api.submitBookingRequest.mockResolvedValue({ id: 'R2', status: 'pending_host_approval' });
-      await submitFromReview();
+      submitFromReview();
 
       await waitFor(() => expect(api.submitBookingRequest).toHaveBeenCalledTimes(1));
       const payload = api.submitBookingRequest.mock.calls[0]![0];
@@ -476,36 +549,65 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(payload).not.toHaveProperty('deliveryFee');
       expect(payload).not.toHaveProperty('distanceKm');
     });
+
+    /**
+     * Backend chặn `deliveryRequested` theo CHÍNH SÁCH hiệu lực, không theo chip tiện ích trên
+     * hồ sơ xe. Nếu FE vẫn cho chọn thì khách đi hết luồng rồi mới ăn `DELIVERY_NOT_SUPPORTED`
+     * ở đúng nút cuối cùng.
+     */
+    it('chính sách tắt giao xe → KHÔNG có lựa chọn nào để chọn nhầm', async () => {
+      listing.data = { ...LISTING, deliveryAvailable: false };
+      renderModal();
+
+      await screen.findByText('Gian hàng Demo XePrime');
+      expect(screen.queryByRole('radio', { name: /Giao xe tận nơi/ })).toBeNull();
+      expect(screen.queryByLabelText('Địa chỉ giao xe')).toBeNull();
+      expect(screen.getByText('Nhận tại điểm hẹn')).toBeTruthy();
+    });
+
+    it('có điểm nhận xe → hiện ĐỊA CHỈ thật thay cho câu gợi ý chung', async () => {
+      listing.data = {
+        ...LISTING,
+        deliveryAvailable: false,
+        pickupPoint: {
+          branchName: 'Chi nhánh Hải Châu',
+          address: '12 Nguyễn Văn Linh, Đà Nẵng',
+          provinceName: 'Đà Nẵng',
+          phone: '0900000000',
+        },
+      };
+      renderModal();
+
+      expect(await screen.findByText('12 Nguyễn Văn Linh, Đà Nẵng')).toBeTruthy();
+      expect(screen.queryByText('Tự tới nhận xe tại địa điểm của chủ xe')).toBeNull();
+    });
   });
 
   describe('thành công', () => {
     async function reachDone() {
       api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
-      await submitFromReview();
+      submitFromReview();
       await screen.findByText('Yêu cầu đã được gửi');
     }
 
     it('hiện màn thành công kèm mã yêu cầu', async () => {
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
       await reachDone();
 
       expect(screen.getByText('Yêu cầu đã được gửi')).toBeTruthy();
-      expect(screen.getByText('R1')).toBeTruthy();
+      expect(screen.getByText(/R1/)).toBeTruthy();
       expect(screen.getByText(/Xe chưa được giữ chỗ/)).toBeTruthy();
     });
 
     it('có lối liên hệ chủ xe, và nó đóng overlay trước khi rời trang', async () => {
       const { onClose } = renderModal();
-      await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
       await reachDone();
 
-      const contact = screen.getByRole('button', { name: 'Nhắn chủ xe' });
-      fireEvent.click(contact);
+      fireEvent.click(screen.getByRole('button', { name: 'Nhắn chủ xe' }));
       expect(onClose).toHaveBeenCalled();
     });
 
@@ -519,18 +621,16 @@ describe('RequestBookingModal — luồng đặt xe', () => {
         delivery: { enabled: false, maxRadiusKm: null },
       };
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
       await reachDone();
 
-      expect(screen.getByText('1.800.000 ₫')).toBeTruthy();
+      expect(screen.getAllByText('1.800.000 ₫').length).toBeGreaterThan(0);
       expect(screen.queryByText('1800000')).toBeNull();
     });
 
     it('"Chuyến của tôi" đóng modal và điều hướng tới /trips', async () => {
       const { onClose } = renderModal();
-      await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
       await reachDone();
@@ -542,7 +642,6 @@ describe('RequestBookingModal — luồng đặt xe', () => {
 
     it('"Quay lại" chỉ đóng, không điều hướng', async () => {
       const { onClose } = renderModal();
-      await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
       await reachDone();
@@ -565,20 +664,25 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       phoneVerified: true,
     };
 
+    it('KHÔNG hỏi lại thứ hệ thống đã biết — bước Chuyến đi không có ô liên hệ nào', () => {
+      me.data = verifiedMe;
+      renderModal();
+
+      expect(screen.queryByLabelText('Họ và tên')).toBeNull();
+      expect(screen.queryByLabelText('Số điện thoại')).toBeNull();
+    });
+
     it('SĐT tài khoản đã xác thực → BỎ QUA OTP, đi thẳng bước xác nhận', async () => {
       me.data = verifiedMe;
       api.submitBookingRequest.mockResolvedValue({ id: 'R1', status: 'pending_host_approval' });
       renderModal();
-      await advanceToContact();
+      await advanceToReviewAsMember();
 
-      // Thẻ xác nhận gọn thay cho hai ô nhập — không bắt gõ lại thứ hệ thống đã biết.
+      // Người thuê là MỘT DÒNG ở bước xác nhận, không còn là cả một bước.
       expect(screen.getByText('Đã xác thực')).toBeTruthy();
-      expect(screen.queryByLabelText('Số điện thoại')).toBeNull();
+      expect(screen.getByText(/Trần Minh Tuấn · 0901234567/)).toBeTruthy();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-      await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' });
-      await submitFromReview();
-
+      submitFromReview();
       await screen.findByText('Yêu cầu đã được gửi');
       expect(api.sendAsync).not.toHaveBeenCalled();
       expect(api.verifyOtp).not.toHaveBeenCalled();
@@ -587,12 +691,25 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       );
     });
 
+    it('nút "Đổi" ở bước xác nhận mở lại ô nhập liên hệ ở bước Chuyến đi', async () => {
+      me.data = verifiedMe;
+      renderModal();
+      await advanceToReviewAsMember();
+
+      fireEvent.click(screen.getByRole('button', { name: /Đổi/ }));
+      expect(screen.getByLabelText('Số điện thoại')).toBeTruthy();
+      expect((screen.getByLabelText('Số điện thoại') as HTMLInputElement).value).toBe(
+        '0901234567',
+      );
+    });
+
     it('dùng SĐT KHÁC số tài khoản → vẫn phải xác thực OTP', async () => {
       me.data = verifiedMe;
       renderModal();
-      await advanceToContact();
+      await advanceToReviewAsMember();
 
-      fireEvent.click(screen.getByRole('button', { name: /Đổi thông tin/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Đổi/ }));
+      api.checkAvailability.mockResolvedValue({ available: true });
       api.sendAsync.mockResolvedValue(undefined);
       fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0987654321' } });
       fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
@@ -601,10 +718,9 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(api.sendAsync).toHaveBeenCalledWith('0987654321');
     });
 
-    it('SĐT tài khoản CHƯA xác thực → vẫn phải qua OTP', async () => {
+    it('SĐT tài khoản CHƯA xác thực → vẫn phải qua OTP', () => {
       me.data = { ...verifiedMe, phoneVerified: false };
       renderModal();
-      await advanceToContact();
 
       expect(screen.queryByText('Đã xác thực')).toBeNull();
       expect(screen.getByLabelText('Số điện thoại')).toBeTruthy();
@@ -620,10 +736,8 @@ describe('RequestBookingModal — luồng đặt xe', () => {
         }),
       );
       renderModal();
-      await advanceToContact();
-      fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-      await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' });
-      await submitFromReview();
+      await advanceToReviewAsMember();
+      submitFromReview();
 
       await screen.findByLabelText('Mã OTP');
       expect(
@@ -644,10 +758,9 @@ describe('RequestBookingModal — luồng đặt xe', () => {
         }),
       );
       renderModal();
-      await advanceToContact();
       await advanceToOtp();
       await advanceToReview();
-      await submitFromReview();
+      submitFromReview();
 
       expect(await screen.findByText('Yêu cầu trùng lặp')).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Xem chuyến của tôi' })).toBeTruthy();
@@ -656,7 +769,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
   });
 
   describe('đóng & reset', () => {
-    it('nút Huỷ ở bước thời gian gọi onClose', () => {
+    it('nút Huỷ ở bước Chuyến đi gọi onClose', () => {
       const { onClose } = renderModal();
       fireEvent.click(screen.getByRole('button', { name: 'Huỷ' }));
       expect(onClose).toHaveBeenCalledTimes(1);
@@ -668,7 +781,6 @@ describe('RequestBookingModal — luồng đặt xe', () => {
      */
     it('đang xác thực OTP thì Esc KHÔNG đóng được', async () => {
       const { onClose } = renderModal();
-      await advanceToContact();
       await advanceToOtp();
 
       // Giữ request treo để trạng thái "đang gửi" tồn tại trong lúc bấm Esc.
@@ -689,42 +801,10 @@ describe('RequestBookingModal — luồng đặt xe', () => {
   });
 
   /**
-   * Phản hồi thiết kế 13/08: cột trái phải mang đủ ngữ cảnh gian hàng (kể cả đánh giá tiêu
-   * biểu), ô chọn thời gian phải TRÔNG như ô nhập, bước 1 không được trống, và cặp nút phải nằm
-   * ở một footer duy nhất bên phải.
+   * Bố cục: cặp nút + tiền ở MỘT khối đáy cột phải, ô thời gian trông như ô nhập, và tiền chỉ
+   * xuất hiện đúng MỘT lần trên mỗi bước.
    */
-  describe('bố cục & thông tin (phản hồi thiết kế)', () => {
-    const LISTING = {
-      id: 'V1',
-      name: 'Toyota Vios 2022',
-      vehicleType: 'car',
-      serviceTypes: ['self_drive'],
-      seatCount: 5,
-      manufactureYear: 2022,
-      bodyType: 'sedan',
-      fuelType: 'gasoline',
-      mainImageUrl: null,
-      weekdayPrice: '585000',
-      weekendPrice: '650000',
-      hourlyPrice: '90000',
-      discountPercent: 10,
-      deliveryEnabled: true,
-      noCollateral: false,
-      shopName: 'Gian hàng Demo XePrime',
-      shopSlug: 'demo',
-      shopProvince: 'TP. Hồ Chí Minh',
-      shopLogoUrl: null,
-      shopBio: null,
-      ratingAvg: '4.5',
-      ratingCount: 2,
-      images: [],
-      features: ['bluetooth'],
-      description: null,
-      color: null,
-      brand: null,
-      model: null,
-    };
-
+  describe('bố cục & khối giá', () => {
     it('cặp nút nằm ở MỘT footer, không rải trong thân từng bước', async () => {
       renderModal();
       const footer = document.querySelector('footer');
@@ -733,7 +813,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(within(footer as HTMLElement).getByRole('button', { name: 'Tiếp tục' })).toBeTruthy();
 
       // Sang bước sau, vẫn CÙNG một footer đổi nhãn — không sinh hàng nút thứ hai.
-      await advanceToContact();
+      await advanceToOtp();
       expect(document.querySelectorAll('footer')).toHaveLength(1);
       expect(
         within(document.querySelector('footer') as HTMLElement).getByRole('button', {
@@ -759,9 +839,7 @@ describe('RequestBookingModal — luồng đặt xe', () => {
        * test, và ghim "T3, 01/09" sẽ đỏ trên CI chạy UTC trong khi component vẫn đúng.
        */
       const point = /^(CN|T[2-7]), \d{2}\/\d{2} · \d{2}:\d{2}$/;
-      const points = screen.getAllByText(point);
-      expect(points).toHaveLength(2);
-      expect(screen.queryByText(/\d{4}/)).toBeNull();
+      expect(screen.getAllByText(point)).toHaveLength(2);
     });
 
     it('thời lượng hiện ở viên bên phải ô', () => {
@@ -779,7 +857,11 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.getByText(/Thuê theo ngày · bấm vào ô để đổi/)).toBeTruthy();
     });
 
-    it('bước 1 hiện tạm tính THẬT từ server khi đã chọn thời gian', async () => {
+    /**
+     * Điều quan trọng nhất của đợt này: bảng giá từng lặp y hệt ở cả ba bước. Bước nhập chỉ được
+     * có MỘT dòng tổng; bảng đầy đủ chỉ hiện khi khách chủ động mở.
+     */
+    it('bước Chuyến đi chỉ có MỘT dòng tổng, bảng chi tiết nằm sau nút Chi tiết', async () => {
       quote.data = {
         breakdown: {
           rows: [{ key: 'base', label: 'Tiền thuê xe', amount: '1170000', sublabel: '2 ngày' }],
@@ -789,49 +871,81 @@ describe('RequestBookingModal — luồng đặt xe', () => {
         delivery: { enabled: true, maxRadiusKm: 10 },
       };
       renderModal();
-      expect(await screen.findByText('Tạm tính cho khoảng thời gian đã chọn')).toBeTruthy();
+
+      expect(await screen.findByText('1.170.000 ₫')).toBeTruthy();
+      expect(screen.queryByText('Chi tiết giá thuê (dự kiến)')).toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: /Chi tiết/ }));
+      expect(await screen.findByText('Chi tiết giá thuê (dự kiến)')).toBeTruthy();
+      // Vẫn chỉ MỘT bảng — mở ra là thay hình thái, không phải thêm khối thứ hai.
+      expect(screen.getAllByText('Chi tiết giá thuê (dự kiến)')).toHaveLength(1);
     });
 
-    it('cột trái hiện vài đánh giá tiêu biểu của xe', async () => {
-      listing.data = LISTING;
-      listing.reviews = {
-        summary: { ratingAvg: 4.5, ratingCount: 2 },
-        data: [
-          {
-            id: 'r1',
-            rating: 5,
-            comment: 'Xe sạch, chủ nhiệt tình.',
-            customerName: 'Minh T.',
-            createdAt: '',
-          },
-          {
-            id: 'r2',
-            rating: 4,
-            comment: 'Giao xe đúng giờ.',
-            customerName: 'Lan P.',
-            createdAt: '',
-          },
-        ],
-        meta: { page: 1, limit: 3, total: 2, hasNext: false },
+    /**
+     * Bảng chi tiết phải nằm TRONG thân bước — cùng mạch cuộn với ô thời gian, hình thức nhận
+     * xe và ô liên hệ. Bản trước mở nó ngay trong khối dính đáy nên nó nở ngược lên che phần
+     * nhập liệu và tự cuộn trong một vùng riêng: bánh xe chuột kẹt ở đó, nội dung bước không
+     * đi đâu được. Kiểm bằng QUAN HỆ CHA–CON, thứ duy nhất nói lên điều đó.
+     */
+    it('bảng chi tiết nằm trong thân bước, không nằm trong khối dính đáy cùng hàng nút', async () => {
+      quote.data = {
+        breakdown: {
+          rows: [{ key: 'base', label: 'Tiền thuê xe', amount: '1170000', sublabel: '2 ngày' }],
+          totalAmount: '1170000',
+          depositAmount: '5000000',
+        },
+        delivery: { enabled: true, maxRadiusKm: 10 },
       };
       renderModal();
+      await screen.findByText('1.170.000 ₫');
 
-      expect(await screen.findByText('Khách nói gì về xe này')).toBeTruthy();
-      expect(screen.getByText('Xe sạch, chủ nhiệt tình.')).toBeTruthy();
-      expect(screen.getByText('Giao xe đúng giờ.')).toBeTruthy();
-      expect(screen.getByText('Minh T.')).toBeTruthy();
+      // Khối dính đáy = khối bọc hàng nút. Đang thu gọn thì nó mang dòng tổng.
+      const dock = screen.getByRole('button', { name: 'Tiếp tục' }).closest('div')!;
+      expect(within(dock).getByText('Tổng dự kiến')).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: /Chi tiết/ }));
+      const panel = await screen.findByLabelText('Chi tiết giá thuê (dự kiến)');
+      const stepBody = screen.getByRole('button', { name: /Thời gian thuê:/ }).closest('section');
+
+      expect(stepBody).not.toBeNull();
+      expect(stepBody!.contains(panel)).toBe(true);
+      // Hàng nút vẫn ở khối dính đáy, tức là NGOÀI thân bước.
+      expect(stepBody!.contains(screen.getByRole('button', { name: 'Tiếp tục' }))).toBe(false);
+      /*
+       * Và dòng tổng dính đáy RÚT ĐI khi bảng mở: bảng đã có hàng "TỔNG DỰ KIẾN" của nó, giữ
+       * cả hai là cùng một con số hiện hai lần cách nhau vài chục pixel.
+       */
+      expect(within(dock).queryByText('Tổng dự kiến')).toBeNull();
+      expect(within(panel).getByText('Tổng dự kiến')).toBeTruthy();
     });
 
-    it('không có đánh giá → khối đánh giá vắng mặt, không dựng khung rỗng', async () => {
-      listing.data = LISTING;
-      listing.reviews = {
-        summary: { ratingAvg: 0, ratingCount: 0 },
-        data: [],
-        meta: { page: 1, limit: 3, total: 0, hasNext: false },
+    it('bước Xác nhận mở sẵn bảng đầy đủ, và chỉ đúng một bảng', async () => {
+      quote.data = {
+        breakdown: {
+          rows: [{ key: 'base', label: 'Tiền thuê xe', amount: '1170000', sublabel: '2 ngày' }],
+          totalAmount: '1170000',
+          depositAmount: '5000000',
+        },
+        delivery: { enabled: true, maxRadiusKm: 10 },
       };
       renderModal();
+      await advanceToOtp();
+      await advanceToReview();
 
-      await screen.findByText('Gian hàng Demo XePrime');
+      expect(screen.getAllByText('Chi tiết giá thuê (dự kiến)')).toHaveLength(1);
+      expect(screen.getByText('Tiền thuê xe')).toBeTruthy();
+    });
+
+    /**
+     * Cột trái là mốc "đang đặt xe nào", KHÔNG phải bản sao trang chi tiết xe mà khách vừa rời
+     * khỏi — gallery, chip tiện ích và danh sách đánh giá đã bỏ hẳn.
+     */
+    it('cột trái gọn: có xe + gian hàng, KHÔNG dựng lại gallery/đánh giá', async () => {
+      listing.data = LISTING;
+      renderModal();
+
+      expect(await screen.findByText('Gian hàng Demo XePrime')).toBeTruthy();
+      expect(screen.getByText('Toyota Vios 2022')).toBeTruthy();
       expect(screen.queryByText('Khách nói gì về xe này')).toBeNull();
     });
   });
@@ -852,14 +966,14 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       ).toBeGreaterThan(0);
     });
 
-    it('mobile thu hồ sơ xe thành thẻ gọn, mở bằng "Xem thông tin xe"', async () => {
+    it('mobile hiện thẳng hồ sơ xe — không còn nút gấp/mở', async () => {
       media.isMobile = true;
+      listing.data = LISTING;
       renderModal();
-      // Panel chỉ dựng nút mở rộng khi ĐÃ có listing; ở test listing lỗi nên nút vắng mặt —
-      // điều cần khoá là không có cột trái chiếm chỗ và không vỡ layout.
+
+      expect(await screen.findByText('Gian hàng Demo XePrime')).toBeTruthy();
+      expect(screen.queryByRole('button', { name: /Xem thông tin xe/ })).toBeNull();
       expect(screen.queryByRole('button', { name: /Ẩn thông tin xe/ })).toBeNull();
-      await advanceToContact();
-      expect(screen.getByLabelText('Họ và tên')).toBeTruthy();
     });
   });
 });

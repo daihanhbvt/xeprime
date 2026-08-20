@@ -1,7 +1,7 @@
 'use client';
 
 import { CloseOutlined, FilterOutlined } from '@ant-design/icons';
-import { Badge, Button, DatePicker, Segmented, Select, Tag } from 'antd';
+import { Badge, Button, DatePicker, Popover, Segmented, Select, Tag } from 'antd';
 import { useState, type ReactNode } from 'react';
 
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
@@ -79,6 +79,26 @@ interface FilterBarProps {
    * riêng, không phải hệ quả phụ của batch này.
    */
   compactFields?: boolean;
+  /**
+   * Số trường lọc (KHÔNG tính ô tìm kiếm) được giữ trên hàng ở desktop; phần còn lại dồn vào
+   * một popover "Bộ lọc" có huy hiệu đếm.
+   *
+   * Sinh ra cho sổ Thu-Chi: sáu điều khiển + ô tìm kiếm + hai nút hành động không có cách nào
+   * đứng vừa một hàng, nên thanh lọc tự xuống dòng và ô chọn khoảng ngày rơi lẻ loi xuống hàng
+   * hai. Cắt bớt trường thì mất chức năng; thu nhỏ nữa thì không đọc được. Cách còn lại là thứ
+   * hình thái mobile đã làm đúng từ đầu — giấu nhóm phụ sau một nút có đếm — chỉ khác vỏ:
+   * popover neo vào nút thay vì bottom sheet.
+   *
+   * Không đặt thì mọi trường vẫn nằm trên hàng, y như trước.
+   */
+  inlineFieldLimit?: number;
+  /**
+   * Class phụ đặt lên vỏ ngoài (cả desktop lẫn mobile) — dành cho trang cần chỉnh KHOẢNG CÁCH
+   * của thanh lọc với thứ đứng cạnh nó, ví dụ khi nó nằm trong khe phải của một hàng tab.
+   *
+   * Chỉ dùng cho bố cục ngoài rìa; hình thức bên trong vẫn do component quyết.
+   */
+  className?: string;
 }
 
 /** Cùng độ trễ với `VehicleFiltersBar` đang chạy — giữ nguyên cảm giác gõ đã quen. */
@@ -102,23 +122,52 @@ export function countActiveFilters(fields: readonly FilterField[], values: Filte
   return fields.filter((field) => fieldKeys(field).some(isActive)).length;
 }
 
+/** Một filter đang bật, ở dạng gỡ được. */
+interface ActiveChip {
+  /** Khoá React + khoá nhận dạng. Khoảng ngày lấy `fromKey` làm id. */
+  id: string;
+  label: string;
+  /** Patch gỡ đúng chip này — khoảng ngày xoá CẢ HAI đầu trong một lần ghi URL. */
+  clear: FilterValues;
+}
+
 /**
  * Các filter đang bật, đã đổi sang nhãn người đọc được.
  *
- * Bỏ qua `search` (từ khoá đã hiện nguyên văn trong ô tìm kiếm) và `dateRange` (một chip không
- * diễn đạt nổi một khoảng, và gỡ nửa khoảng thì vô nghĩa).
+ * Bỏ qua `search`: từ khoá đã hiện nguyên văn trong ô tìm kiếm, thêm một chip nữa là nói hai lần.
+ *
+ * Khoảng ngày CÓ chip (khác bản đầu). Lý do đổi: từ khi có `inlineFieldLimit`, ô chọn ngày có
+ * thể nằm khuất trong popover — không chip thì người dùng chỉ thấy danh sách ngắn đi mà không
+ * thấy vì sao. Chip gỡ cả hai đầu một lượt, nên phản đối cũ ("gỡ nửa khoảng thì vô nghĩa") không
+ * còn đúng: không ai gỡ được nửa khoảng nữa.
  */
 function activeChips(
   fields: readonly FilterField[],
   values: FilterValues,
-): { key: string; label: string }[] {
-  const chips: { key: string; label: string }[] = [];
+  rangeLabel: (from: string | undefined, to: string | undefined) => string,
+): ActiveChip[] {
+  const chips: ActiveChip[] = [];
   for (const field of fields) {
-    if (field.kind !== 'select' && field.kind !== 'segmented') continue;
-    const value = values[field.key];
-    if (!value || value === 'all') continue;
-    const option = field.options.find((item) => item.value === value);
-    chips.push({ key: field.key, label: option?.label ?? value });
+    if (field.kind === 'select' || field.kind === 'segmented') {
+      const value = values[field.key];
+      if (!value || value === 'all') continue;
+      const option = field.options.find((item) => item.value === value);
+      chips.push({
+        id: field.key,
+        label: option?.label ?? value,
+        clear: { [field.key]: undefined },
+      });
+      continue;
+    }
+    if (field.kind !== 'dateRange') continue;
+    const from = values[field.fromKey];
+    const to = values[field.toKey];
+    if (!from && !to) continue;
+    chips.push({
+      id: field.fromKey,
+      label: rangeLabel(from, to),
+      clear: { [field.fromKey]: undefined, [field.toKey]: undefined },
+    });
   }
   return chips;
 }
@@ -201,7 +250,9 @@ function FieldControl({
         aria-label={field.label}
         // Figma `186:1645` giữ nhãn ngay cả khi đã chọn: "Loại xe: Ô tô". Chọn xong mà chỉ còn
         // "Ô tô" thì bốn dropdown cạnh nhau không còn phân biệt được cái nào lọc cái gì.
-        placeholder={compact ? tCommon('components.filterBar.allOf', { label: field.label }) : field.label}
+        placeholder={
+          compact ? tCommon('components.filterBar.allOf', { label: field.label }) : field.label
+        }
         labelRender={compact ? (item) => `${field.label}: ${item.label}` : undefined}
         options={field.options as FilterOption[]}
         value={values[field.key] ?? undefined}
@@ -263,14 +314,35 @@ export function FilterBar({
   searchDebounceMs = DEFAULT_SEARCH_DEBOUNCE_MS,
   showActiveChips = false,
   compactFields = false,
+  inlineFieldLimit,
+  className,
 }: FilterBarProps) {
   const tCommon = useTranslations('Common');
+  const datePattern = useDatePickerPattern();
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
 
   const activeCount = countActiveFilters(fields, values);
   const searchFields = fields.filter((field) => field.kind === 'search');
   const sheetFields = fields.filter((field) => field.kind !== 'search');
+
+  /*
+   * Desktop: cắt cụm lọc thành phần ĐỨNG TRÊN HÀNG và phần dồn vào popover. `inlineFieldLimit`
+   * không đặt → giữ nguyên hình thái cũ (mọi trường trên hàng, popover không tồn tại).
+   */
+  const inlineFields =
+    inlineFieldLimit === undefined ? sheetFields : sheetFields.slice(0, inlineFieldLimit);
+  const overflowFields = inlineFieldLimit === undefined ? [] : sheetFields.slice(inlineFieldLimit);
+  const overflowCount = countActiveFilters(overflowFields, values);
+
+  /** Nhãn chip của một khoảng ngày — hiển thị theo quy ước người dùng, không theo dạng URL. */
+  const rangeLabel = (from: string | undefined, to: string | undefined) => {
+    const show = (value: string) => toDayjs(value)?.format(datePattern.date) ?? value;
+    if (from && to) return tCommon('units.range', { from: show(from), to: show(to) });
+    if (from) return `${tCommon('labels.from')} ${show(from)}`;
+    return `${tCommon('labels.to')} ${show(to!)}`;
+  };
 
   const clearButton =
     onClear && activeCount > 0 ? (
@@ -278,23 +350,28 @@ export function FilterBar({
         onClick={() => {
           onClear();
           setSheetOpen(false);
+          setOverflowOpen(false);
         }}
       >
         {tCommon('actions.clear')}
       </Button>
     ) : null;
 
-  const chips = showActiveChips ? activeChips(fields, values) : [];
+  const chips = showActiveChips ? activeChips(fields, values, rangeLabel) : [];
   const chipRow =
     chips.length > 0 ? (
       <div className={styles.chips}>
         {chips.map((chip) => (
           <Tag
-            key={chip.key}
+            key={chip.id}
             closable
             // `closeIcon` mặc định là dấu ×; nhãn cho trình đọc màn hình phải nói bỏ CÁI GÌ.
-            closeIcon={<CloseOutlined aria-label={tCommon('components.filterBar.removeFilter', { label: chip.label })} />}
-            onClose={() => onChange({ [chip.key]: undefined })}
+            closeIcon={
+              <CloseOutlined
+                aria-label={tCommon('components.filterBar.removeFilter', { label: chip.label })}
+              />
+            }
+            onClose={() => onChange(chip.clear)}
           >
             {chip.label}
           </Tag>
@@ -309,7 +386,7 @@ export function FilterBar({
 
   if (isMobile) {
     return (
-      <div className={styles.mobileRoot}>
+      <div className={className ? `${styles.mobileRoot} ${className}` : styles.mobileRoot}>
         <div className={styles.mobileTop}>
           {searchFields.map((field) => (
             <FieldControl
@@ -380,22 +457,72 @@ export function FilterBar({
   );
 
   // Gạch dọc ngăn ô tìm kiếm với cụm lọc (Figma `197:1550`) — thuần trang trí nên `aria-hidden`.
-  const showSeparator = compactFields && searchFields.length > 0 && sheetFields.length > 0;
+  const showSeparator = compactFields && searchFields.length > 0 && inlineFields.length > 0;
+
+  /*
+   * Nút mở nhóm lọc phụ. Cùng chữ và cùng huy hiệu đếm với nút ở mobile — một người dùng đổi
+   * qua lại giữa laptop và điện thoại vẫn tìm đúng một thứ, chỉ khác chỗ nó mở ra.
+   */
+  const overflowButton =
+    overflowFields.length > 0 ? (
+      // `Badge` bọc NGOÀI `Popover`: popover phải gắn được onClick/ref lên đúng phần tử làm
+      // neo, nên trigger của nó là chính cái nút, không phải lớp huy hiệu bao quanh.
+      <Badge count={overflowCount} size="small" className={styles.overflowBadge}>
+        <Popover
+          open={overflowOpen}
+          onOpenChange={setOverflowOpen}
+          trigger="click"
+          placement="bottomRight"
+          title={tCommon('actions.filter')}
+          content={
+            <div className={styles.overflowPanel}>
+              <div className={styles.sheetFields}>{overflowFields.map(control)}</div>
+              <div className={styles.overflowFooter}>
+                {clearButton}
+                <Button type="primary" onClick={() => setOverflowOpen(false)}>
+                  {tCommon('actions.done')}
+                </Button>
+              </div>
+            </div>
+          }
+        >
+          <Button
+            size={compactFields ? 'middle' : 'large'}
+            icon={<FilterOutlined aria-hidden="true" />}
+            aria-expanded={overflowOpen}
+          >
+            {tCommon('actions.filter')}
+          </Button>
+        </Popover>
+      </Badge>
+    ) : null;
 
   return (
     // `search` là landmark đúng ngữ nghĩa cho một cụm điều khiển lọc/tìm.
-    <div className={styles.wrapper} role="search" aria-label={tCommon('components.filterBar.listFilters')}>
+    <div
+      className={className ? `${styles.wrapper} ${className}` : styles.wrapper}
+      role="search"
+      aria-label={tCommon('components.filterBar.listFilters')}
+    >
       <div className={styles.root}>
         <div className={compactFields ? `${styles.fields} ${styles.fieldsCompact}` : styles.fields}>
           {showSeparator ? (
             <>
               {searchFields.map(control)}
               <span className={styles.separator} aria-hidden="true" />
-              {sheetFields.map(control)}
+              {inlineFields.map(control)}
+            </>
+          ) : overflowFields.length > 0 ? (
+            <>
+              {searchFields.map(control)}
+              {inlineFields.map(control)}
             </>
           ) : (
+            // Không cắt nhóm phụ → giữ ĐÚNG thứ tự trang khai báo, kể cả khi ô tìm kiếm
+            // không đứng đầu mảng.
             fields.map(control)
           )}
+          {overflowButton}
         </div>
         {/* Bật chip thì "Xoá bộ lọc" thuộc về hàng chip — hai nút cùng tên trên một màn là thừa. */}
         {(!showActiveChips && clearButton) || actions ? (

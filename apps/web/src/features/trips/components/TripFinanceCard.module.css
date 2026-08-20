@@ -94,7 +94,7 @@
 }
 
 .totalValue {
-  color: var(--xp-color-primary);
+  color: var(--xp-color-price);
   font-size: var(--xp-font-size-h4);
   white-space: nowrap;
 }

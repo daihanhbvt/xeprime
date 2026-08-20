@@ -105,7 +105,8 @@
 }
 
 .totalAmount {
-  color: var(--xp-color-success);
+  /* Tổng khách trả — màu tiền dùng chung của app, không phải xanh "thành công". */
+  color: var(--xp-color-price);
   font-size: var(--xp-font-size-h3);
   font-variant-numeric: tabular-nums;
   font-weight: var(--xp-font-weight-bold);

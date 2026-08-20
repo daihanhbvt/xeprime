@@ -117,7 +117,11 @@ beforeAll(async () => {
   await prisma.user.createMany({
     data: [
       { id: ownerId, displayName: 'Chủ shop', email: `own-${ownerId}@xeprime.test` },
-      { id: otherOwnerId, displayName: 'Chủ shop khác', email: `own2-${otherOwnerId}@xeprime.test` },
+      {
+        id: otherOwnerId,
+        displayName: 'Chủ shop khác',
+        email: `own2-${otherOwnerId}@xeprime.test`,
+      },
       {
         id: customerUserId,
         displayName: 'Khách có tài khoản',
@@ -239,6 +243,8 @@ async function seedRequest(overrides: {
   tenantId: string;
   vehicleId: string;
   status?: string;
+  customerName?: string;
+  serviceType?: string;
   customerPhone?: string;
   customerUserId?: string | null;
   tenantCustomerId?: string | null;
@@ -253,12 +259,12 @@ async function seedRequest(overrides: {
       tenantId: overrides.tenantId,
       vehicleId: overrides.vehicleId,
       status: overrides.status ?? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
-      customerName: 'Nguyễn Văn An',
+      customerName: overrides.customerName ?? 'Nguyễn Văn An',
       customerPhone: overrides.customerPhone ?? '0901234567',
       customerEmail: 'an@test.vn',
       customerUserId: overrides.customerUserId ?? null,
       tenantCustomerId: overrides.tenantCustomerId ?? null,
-      serviceType: SERVICE_TYPE.SELF_DRIVE,
+      serviceType: overrides.serviceType ?? SERVICE_TYPE.SELF_DRIVE,
       pickupAt,
       returnAt: overrides.returnAt ?? new Date(pickupAt.getTime() + 2 * DAY),
     },
@@ -281,7 +287,12 @@ describe('BookingRequestsService.list — DTO của hộp thư', () => {
         customerUserId,
       },
     });
-    const id = await seedRequest({ tenantId, vehicleId: vehicleAId, customerUserId, tenantCustomerId });
+    const id = await seedRequest({
+      tenantId,
+      vehicleId: vehicleAId,
+      customerUserId,
+      tenantCustomerId,
+    });
 
     const page = await requests.list(tenantId, {});
     const row = page.data.find((r) => r.id === id)!;
@@ -332,6 +343,68 @@ describe('BookingRequestsService.list — DTO của hộp thư', () => {
   });
 });
 
+describe('BookingRequestsService.list — tìm kiếm và lọc dịch vụ', () => {
+  maybe('ô tìm kiếm chạm tên khách, SĐT, tên xe và biển số', async () => {
+    const id = await seedRequest({
+      tenantId,
+      vehicleId: vehicleAId,
+      customerName: 'Trần Thị Bích Ngọc',
+      customerPhone: '0917775555',
+    });
+
+    for (const term of ['Bích Ngọc', '0917775555', 'Carnival', '51A-123.45']) {
+      const page = await requests.list(tenantId, { q: term, status: undefined });
+      expect(page.data.map((r) => r.id)).toContain(id);
+    }
+
+    const none = await requests.list(tenantId, { q: 'khong-ton-tai-xyz' });
+    expect(none.data).toHaveLength(0);
+    expect(none.meta.total).toBe(0);
+  });
+
+  maybe('con số trên TAB đi theo ô tìm kiếm, không phải tổng cũ', async () => {
+    // Nếu `q` chỉ vào `where` mà không vào `scope`, tab vẫn khoe con số của cả hộp thư trong
+    // khi danh sách đã hẹp lại — người trực đọc hai con số mâu thuẫn nhau trên cùng một màn.
+    const all = await requests.list(tenantId, {});
+    const searched = await requests.list(tenantId, { q: 'khong-ton-tai-xyz' });
+
+    expect(searched.meta.statusCounts.every((entry) => entry.count === 0)).toBe(true);
+    expect(all.meta.statusCounts.some((entry) => entry.count > 0)).toBe(true);
+  });
+
+  maybe('lọc theo dịch vụ trả đúng nhánh, và cũng kéo theo con số của tab', async () => {
+    const longTermId = await seedRequest({
+      tenantId,
+      vehicleId: vehicleAId,
+      serviceType: SERVICE_TYPE.LONG_TERM,
+      customerPhone: '0918886666',
+    });
+
+    const longTerm = await requests.list(tenantId, { serviceType: SERVICE_TYPE.LONG_TERM });
+    expect(longTerm.data.map((r) => r.id)).toContain(longTermId);
+    expect(longTerm.data.every((r) => r.serviceType === SERVICE_TYPE.LONG_TERM)).toBe(true);
+    expect(longTerm.meta.total).toBe(longTerm.data.length);
+
+    const selfDrive = await requests.list(tenantId, { serviceType: SERVICE_TYPE.SELF_DRIVE });
+    expect(selfDrive.data.map((r) => r.id)).not.toContain(longTermId);
+  });
+
+  maybe('tìm kiếm KHÔNG vượt ra khỏi gian hàng của mình', async () => {
+    const id = await seedRequest({
+      tenantId,
+      vehicleId: vehicleAId,
+      customerName: 'Khách Chỉ Của Shop Này',
+      customerPhone: '0919997777',
+    });
+
+    const mine = await requests.list(tenantId, { q: 'Chỉ Của Shop Này' });
+    expect(mine.data.map((r) => r.id)).toContain(id);
+
+    const theirs = await requests.list(otherTenantId, { q: 'Chỉ Của Shop Này' });
+    expect(theirs.data).toHaveLength(0);
+  });
+});
+
 describe('BookingRequestsService.list — đếm theo trạng thái', () => {
   maybe('đếm BỎ QUA bộ lọc trạng thái đang bật (mỗi tab một con số đúng)', async () => {
     await seedRequest({
@@ -357,9 +430,9 @@ describe('BookingRequestsService.list — đếm theo trạng thái', () => {
 
   maybe('liệt kê ĐỦ bộ trạng thái, kể cả trạng thái chưa có yêu cầu nào', async () => {
     const page = await requests.list(tenantId, {});
-    expect(
-      page.meta.statusCounts.map((entry) => entry.status).sort(),
-    ).toEqual([...new Set(page.meta.statusCounts.map((e) => e.status))].sort());
+    expect(page.meta.statusCounts.map((entry) => entry.status).sort()).toEqual(
+      [...new Set(page.meta.statusCounts.map((e) => e.status))].sort(),
+    );
     expect(countOf(page, BOOKING_REQUEST_STATUS.APPROVED_BY_HOST)).toBe(0);
   });
 
@@ -530,12 +603,12 @@ describe('ChatService.getOrCreateConversationForBookingRequest — đường c�
       customerUserId: null,
     });
 
-    await expect(
-      chat.getOrCreateConversationForBookingRequest(tenantId, id),
-    ).rejects.toMatchObject({
-      status: 400,
-      response: { code: API_ERROR_CODE.CHAT_CUSTOMER_UNAVAILABLE },
-    });
+    await expect(chat.getOrCreateConversationForBookingRequest(tenantId, id)).rejects.toMatchObject(
+      {
+        status: 400,
+        response: { code: API_ERROR_CODE.CHAT_CUSTOMER_UNAVAILABLE },
+      },
+    );
   });
 
   maybe('yêu cầu của gian hàng khác ⇒ 404, và KHÔNG tạo hội thoại nào', async () => {
@@ -555,7 +628,10 @@ describe('ChatService.getOrCreateConversationForBookingRequest — đường c�
   });
 });
 
-function countOf(page: { meta: { statusCounts: { status: string; count: number }[] } }, status: string) {
+function countOf(
+  page: { meta: { statusCounts: { status: string; count: number }[] } },
+  status: string,
+) {
   return page.meta.statusCounts.find((entry) => entry.status === status)?.count ?? 0;
 }
 

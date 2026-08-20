@@ -15,6 +15,8 @@ export type FinanceSummary = Schemas['FinanceSummaryDto'];
 
 /** Filter công nợ ở URL searchParams (ADR 0004). */
 export interface DebtFilters {
+  /** Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số — lọc ở SERVER, không cắt ở client. */
+  q?: string;
   filter?: string;
   page?: number;
   limit?: number;

@@ -1,12 +1,10 @@
 'use client';
 
 import { Button } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import { RequestBookingModal } from './RequestBookingModal';
-
-/** Nhãn CTA vào luồng thuê. Cố ý KHÁC tên nghiệp vụ — xem docblock bên dưới. */
-const CTA_LABEL = 'Chọn thuê';
 
 /**
  * CTA vào luồng thuê + modal — client island nhúng vào trang chi tiết xe (Server Component).
@@ -49,6 +47,7 @@ export function RequestBookingButton({
   size?: 'small' | 'middle' | 'large';
   className?: string;
 }) {
+  const t = useTranslations('BookingRequests.flow');
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -59,7 +58,7 @@ export function RequestBookingButton({
         className={className}
         onClick={() => setOpen(true)}
       >
-        {CTA_LABEL}
+        {t('cta')}
       </Button>
       <RequestBookingModal
         vehicleId={vehicleId}

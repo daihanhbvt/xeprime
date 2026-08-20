@@ -119,7 +119,8 @@ export class ReceiptListQueryDto {
   q?: string;
 
   @ApiPropertyOptional({
-    description: 'Từ ngày — `YYYY-MM-DD` (trọn ngày theo giờ VN) hoặc ISO đầy đủ. Lọc `occurred_at`',
+    description:
+      'Từ ngày — `YYYY-MM-DD` (trọn ngày theo giờ VN) hoặc ISO đầy đủ. Lọc `occurred_at`',
   })
   @IsOptional()
   @IsDateString()
@@ -147,7 +148,10 @@ export class ReceiptListQueryDto {
 }
 
 export class CreateReceiptDto {
-  @ApiProperty({ enum: RECEIPT_TYPE_VALUES, description: 'income = phiếu thu, expense = phiếu chi' })
+  @ApiProperty({
+    enum: RECEIPT_TYPE_VALUES,
+    description: 'income = phiếu thu, expense = phiếu chi',
+  })
   @IsIn(RECEIPT_TYPE_VALUES)
   type!: string;
 
@@ -218,7 +222,10 @@ export class ReceiptListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) receiptNo!: string | null;
   @ApiProperty({ enum: RECEIPT_TYPE_VALUES }) type!: string;
   @ApiProperty({ enum: RECEIPT_STATUS_VALUES }) status!: string;
-  @ApiProperty({ enum: RECEIPT_SOURCE_VALUES, description: 'Nguồn sinh phiếu — `manual` mới sửa/huỷ tay được' })
+  @ApiProperty({
+    enum: RECEIPT_SOURCE_VALUES,
+    description: 'Nguồn sinh phiếu — `manual` mới sửa/huỷ tay được',
+  })
   source!: string;
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Id bản ghi nghiệp vụ gốc' })
   sourceRefId!: string | null;
@@ -234,7 +241,9 @@ export class ReceiptListItemDto {
   @ApiPropertyOptional({ type: String, nullable: true }) tenantCustomerId!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) customerName!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
-  @ApiProperty({ description: 'Ngày tiền di chuyển, ISO-8601 UTC — mọi lọc/tổng hợp chạy trên cột này' })
+  @ApiProperty({
+    description: 'Ngày tiền di chuyển, ISO-8601 UTC — mọi lọc/tổng hợp chạy trên cột này',
+  })
   occurredAt!: string;
   @ApiProperty({ description: 'Lúc nhập vào máy, ISO-8601 UTC' }) createdAt!: string;
 }
@@ -260,6 +269,12 @@ export class ReceiptPageDto {
 export const DEBT_FILTER = ['all', 'overdue', 'upcoming', 'unpaid'] as const;
 
 export class DebtListQueryDto {
+  @ApiPropertyOptional({ description: 'Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
+
   @ApiPropertyOptional({ enum: DEBT_FILTER, default: 'all' })
   @IsOptional()
   @IsIn(DEBT_FILTER)
@@ -343,12 +358,15 @@ export class FinanceSummaryDto {
  * cách nhanh nhất khiến người dùng thôi tin cả hai con số.
  */
 export class ReceiptSummaryDto {
-  @ApiProperty({ description: 'Tổng thu (phiếu đã duyệt trong bộ lọc), string' }) totalIncome!: string;
-  @ApiProperty({ description: 'Tổng chi (phiếu đã duyệt trong bộ lọc), string' }) totalExpense!: string;
+  @ApiProperty({ description: 'Tổng thu (phiếu đã duyệt trong bộ lọc), string' })
+  totalIncome!: string;
+  @ApiProperty({ description: 'Tổng chi (phiếu đã duyệt trong bộ lọc), string' })
+  totalExpense!: string;
   @ApiProperty({ description: 'Cân đối = thu − chi, string' }) balance!: string;
   @ApiProperty({ description: 'Thu bằng tiền mặt, string' }) incomeCash!: string;
   @ApiProperty({ description: 'Thu bằng chuyển khoản/QR/thẻ, string' }) incomeTransfer!: string;
-  @ApiProperty({ description: 'Số phiếu đã duyệt được cộng vào các số trên' }) approvedCount!: number;
+  @ApiProperty({ description: 'Số phiếu đã duyệt được cộng vào các số trên' })
+  approvedCount!: number;
 }
 
 export class ReceiptBookingOptionQueryDto {

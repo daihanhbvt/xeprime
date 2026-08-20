@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import type { PublicListingDetail } from '@/features/marketplace/types';
@@ -19,8 +20,6 @@ interface RequestBookingModalProps {
   open: boolean;
   onClose: () => void;
 }
-
-const TITLE = 'Yêu cầu thuê xe';
 
 /**
  * Vỏ đựng luồng đặt xe. Toàn bộ nghiệp vụ (kiểm tra khung giờ trống, OTP, gửi yêu cầu) nằm
@@ -52,6 +51,7 @@ export function RequestBookingModal({
    * đóng giữa chừng sẽ gỡ flow trong khi request đang bay, khách không biết yêu cầu đã gửi hay
    * chưa. Nút đóng tường minh vẫn dùng được.
    */
+  const t = useTranslations('BookingRequests.flow');
   const [busy, setBusy] = useState(false);
   /**
    * Đã gửi xong (hoặc trùng lặp) → overlay THU lại vừa nội dung.
@@ -64,7 +64,7 @@ export function RequestBookingModal({
 
   return (
     <ResponsiveDialog
-      title={TITLE}
+      title={t('title')}
       open={open}
       onClose={onClose}
       size={isResult ? 'md' : 'xl'}

@@ -93,7 +93,7 @@
 
 .price b {
   font-size: 24px;
-  color: var(--xp-gold-deep);
+  color: var(--xp-color-price);
 }
 
 .priceUnit {

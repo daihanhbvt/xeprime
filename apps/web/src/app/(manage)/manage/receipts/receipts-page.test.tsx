@@ -260,12 +260,62 @@ describe('/manage/receipts — tải và lỗi', () => {
   it('thanh lọc vẫn hiện trong lúc tải và cả khi lỗi', () => {
     // Wave "nối tiền": hai `<Select>` thô đổi sang `FilterBar` dùng chung (được thêm kiểu trường
     // `dateRange` CHÍNH VÌ trang này). Điều được khoá vẫn là "lỗi không nuốt mất thanh lọc".
+    //
+    // Khẳng định đi qua NHÃN TRỢ NĂNG chứ không phải chữ hiện trên màn: ở hình thái gọn, ô chọn
+    // mang sẵn nhãn trong placeholder ("Loại: Tất cả"), nên `getByText('Loại')` khoá đúng cách
+    // trình bày chứ không khoá "thanh lọc còn đó" — thứ test này thật sự nói về.
     setQuery({ isError: true });
     renderPage();
 
     expect(screen.getByPlaceholderText(/Mã phiếu/)).toBeTruthy();
-    expect(screen.getByText('Loại')).toBeTruthy();
-    expect(screen.getByText('Trạng thái')).toBeTruthy();
+    expect(screen.getByLabelText('Loại')).toBeTruthy();
+    expect(screen.getByLabelText('Trạng thái')).toBeTruthy();
+  });
+
+  it('bốn filter phụ nằm trong popover "Bộ lọc", mở ra mới thấy', async () => {
+    // Bảy điều khiển không đứng vừa một hàng — `inlineFieldLimit` giữ hai cái đầu trên hàng và
+    // dồn phần còn lại vào popover. Điều phải khoá: chúng KHÔNG bị cắt mất, chỉ đổi chỗ.
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    expect(screen.queryByLabelText('Khoảng ngày')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/ }));
+
+    await waitFor(() => expect(screen.getByLabelText('Danh mục')).toBeTruthy());
+    expect(screen.getByLabelText('Nguồn')).toBeTruthy();
+    expect(screen.getByLabelText('Hình thức')).toBeTruthy();
+    // `RangePicker` đặt `aria-label` lên vỏ ngoài chứ không lên ô nhập, nên `getByLabelText`
+    // (vốn đòi một liên kết nhãn ↔ điều khiển) không thấy nó — tra thẳng trên DOM.
+    expect(document.querySelector('[aria-label="Khoảng ngày"]')).toBeTruthy();
+  });
+
+  it('nút "Bộ lọc" đeo huy hiệu đếm số filter phụ đang bật', async () => {
+    // `source` và khoảng ngày đều nằm trong popover; đóng lại mà không có con số thì người dùng
+    // không có cách nào biết danh sách đang bị thu hẹp bởi thứ mình không nhìn thấy.
+    nav.params = new URLSearchParams('source=manual&from=2026-01-01&to=2026-01-31');
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    const badge = screen.getByRole('button', { name: /Bộ lọc/ }).closest('.ant-badge');
+    expect(badge?.textContent).toContain('2');
+  });
+
+  it('khoảng ngày đang lọc hiện thành chip gỡ được, dù ô chọn nằm trong popover', () => {
+    nav.params = new URLSearchParams('from=2026-01-01&to=2026-01-31');
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    // Chip hiện theo quy ước ngày Việt Nam, không phải dạng `YYYY-MM-DD` của URL.
+    expect(screen.getByText('01/01/2026 → 31/01/2026')).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('Bỏ lọc 01/01/2026 → 31/01/2026'));
+
+    expect(nav.replace).toHaveBeenCalled();
+    const url = lastReplacedUrl();
+    expect(url).toContain('/manage/receipts');
+    expect(url).not.toContain('from=');
+    expect(url).not.toContain('to=');
   });
 
   it('thiếu finance.view: thay TOÀN BỘ trang bằng màn không-có-quyền', () => {

@@ -492,12 +492,19 @@ export class BookingRequestsService {
       Math.max(1, query.limit ?? BOOKING_REQUEST_DEFAULT_LIMIT),
     );
 
+    /*
+     * `scope` = mọi thứ TRỪ trạng thái — vì nó nuôi cả `statusCounts` của hàng tab. Tìm kiếm và
+     * lọc dịch vụ nằm ở đây có chủ đích: gõ "Vios" xong, con số trên từng tab phải là số yêu cầu
+     * Vios của trạng thái đó, không phải tổng cũ đứng cạnh một danh sách đã lọc.
+     */
     const scope: Prisma.BookingRequestWhereInput = {
       tenantId,
       ...(query.vehicleId ? { vehicleId: query.vehicleId } : {}),
       // Lọc qua quan hệ xe → chi nhánh. Đứng SAU `tenantId` và không thay thế nó: bộ chọn chi
       // nhánh chỉ thu hẹp phạm vi, không bao giờ là đường ra khỏi gian hàng của mình.
       ...(query.branchId ? { vehicle: { branchId: query.branchId } } : {}),
+      ...(query.serviceType ? { serviceType: query.serviceType } : {}),
+      ...searchWhere(query.q),
     };
     const where: Prisma.BookingRequestWhereInput = {
       ...scope,
@@ -968,6 +975,28 @@ function toDto(r: BookingRequestRow): BookingRequestDto {
     bookingId: r.bookingId,
     createdAt: r.createdAt as unknown as string,
     decidedAt: (r.decidedAt as unknown as string | null) ?? null,
+  };
+}
+
+/**
+ * Ô tìm kiếm của hộp thư yêu cầu.
+ *
+ * Chạm đúng bốn thứ hiện trên THẺ: tên khách, SĐT, tên xe, biển số. Không tìm theo ghi chú —
+ * ghi chú là văn xuôi tự do, gõ một từ phổ biến sẽ kéo về nửa hộp thư và làm ô tìm kiếm mất
+ * nghĩa. `contains` + `insensitive` dịch ra `ILIKE '%…%'`, đi được bằng index trigram đã có
+ * trên `vehicles(name, plate_number)`.
+ */
+function searchWhere(q: string | undefined): Prisma.BookingRequestWhereInput {
+  const term = q?.trim();
+  if (!term) return {};
+  const contains = { contains: term, mode: 'insensitive' } as const;
+  return {
+    OR: [
+      { customerName: contains },
+      { customerPhone: contains },
+      { vehicle: { name: contains } },
+      { vehicle: { plateNumber: contains } },
+    ],
   };
 }
 

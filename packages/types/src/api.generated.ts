@@ -3796,6 +3796,16 @@ export interface components {
             /** @description finalPackageAmount ÷ packageMonths */
             effectiveMonthlyAmount: string;
         };
+        PickupPointDto: {
+            /** @description Tên chi nhánh giữ xe. Null khi địa chỉ rơi về hồ sơ gian hàng. */
+            branchName?: string | null;
+            /** @description Địa chỉ nhận xe */
+            address: string;
+            /** @description Tỉnh/thành của điểm nhận */
+            provinceName?: string | null;
+            /** @description SĐT chi nhánh */
+            phone?: string | null;
+        };
         PublicListingDetailDto: {
             id: string;
             name: string;
@@ -3854,6 +3864,10 @@ export interface components {
             /** @description Key tiện ích (VEHICLE_FEATURE_LABEL) */
             features: string[];
             longTermPackages: components["schemas"]["LongTermPackageOptionDto"][];
+            /** @description Chỗ nhận xe khi khách tự tới lấy — chi nhánh giữ xe, fallback hồ sơ gian hàng. */
+            pickupPoint?: components["schemas"]["PickupPointDto"] | null;
+            /** @description Giao xe tận nơi có ĐẶT ĐƯỢC không (theo chính sách hiệu lực) */
+            deliveryAvailable: boolean;
         };
         PublicDestinationDto: {
             /** @description Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode` */
@@ -10471,6 +10485,8 @@ export interface operations {
     FinanceOverviewController_debts: {
         parameters: {
             query?: {
+                /** @description Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số */
+                q?: string;
                 filter?: "all" | "overdue" | "upcoming" | "unpaid";
                 page?: number;
                 limit?: number;
@@ -11596,6 +11612,10 @@ export interface operations {
     BookingRequestsController_list: {
         parameters: {
             query?: {
+                /** @description Tìm theo tên khách / SĐT / tên xe / biển số */
+                q?: string;
+                /** @description Lọc theo dịch vụ được yêu cầu */
+                serviceType?: "self_drive" | "with_driver" | "long_term";
                 status?: "pending_host_approval" | "approved_by_host" | "rejected_by_host" | "cancelled_by_customer" | "expired" | "converted_to_booking";
                 vehicleId?: string;
                 /** @description Lọc theo chi nhánh (qua xe của yêu cầu) */

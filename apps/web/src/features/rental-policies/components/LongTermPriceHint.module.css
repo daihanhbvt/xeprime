@@ -28,7 +28,7 @@
 
 .pkgTotal {
   font-weight: 700;
-  color: var(--xp-gold-deep);
+  color: var(--xp-color-price);
   font-variant-numeric: tabular-nums;
 }
 

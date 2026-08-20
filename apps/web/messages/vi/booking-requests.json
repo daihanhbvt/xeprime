@@ -18,6 +18,11 @@
     "expired": "Quá hạn",
     "all": "Tất cả"
   },
+  "filters": {
+    "searchLabel": "Tìm yêu cầu",
+    "searchPlaceholder": "Tên khách, SĐT, tên xe, biển số…",
+    "serviceType": "Dịch vụ"
+  },
   "vehicle": {
     "heading": "Xe được yêu cầu",
     "openDetail": "Mở hồ sơ xe {name}",
@@ -134,7 +139,179 @@
     "emptyPendingBody": "Khách gửi yêu cầu mới từ marketplace sẽ hiện ngay ở đây.",
     "emptyFilteredTitle": "Không có yêu cầu nào ở trạng thái này",
     "emptyFilteredBody": "Đổi sang tab khác để xem các yêu cầu còn lại.",
+    "emptySearchTitle": "Không tìm thấy yêu cầu nào",
+    "emptySearchBody": "Thử từ khoá ngắn hơn, hoặc bỏ bớt bộ lọc để xem lại toàn bộ hộp thư.",
     "errorTitle": "Không tải được danh sách yêu cầu",
     "refreshing": "Đang cập nhật danh sách…"
+  },
+  "flow": {
+    "title": "Yêu cầu thuê xe",
+    "steps": {
+      "trip": "Chuyến đi",
+      "review": "Xác nhận"
+    },
+    "service": {
+      "label": "Dịch vụ",
+      "routeLabel": "Lộ trình"
+    },
+    "time": {
+      "label": "Thời gian thuê",
+      "empty": "Bấm vào ô trên để mở lịch và chọn khoảng thuê.",
+      "modeDaily": "Thuê theo ngày",
+      "modeHourly": "Thuê theo giờ",
+      "changeHint": "bấm vào ô để đổi",
+      "unavailable": "Xe đã có lịch trong khung giờ này. Vui lòng chọn thời gian khác."
+    },
+    "pickup": {
+      "legend": "Hình thức nhận xe",
+      "groupLabel": "Hình thức nhận xe",
+      "self": "Nhận tại điểm hẹn",
+      "selfHint": "Tự tới nhận xe tại địa điểm của chủ xe",
+      "selfOnly": "Xe này chỉ nhận tại điểm hẹn của chủ xe.",
+      "delivery": "Giao xe tận nơi",
+      "deliveryHint": "Chủ xe mang xe tới địa chỉ của bạn",
+      "addressLabel": "Địa chỉ giao xe",
+      "addressPlaceholder": "123 Nguyễn Văn Linh, Q. Hải Châu, Đà Nẵng",
+      "feeLabel": "Phí giao nhận",
+      "feeFree": "Miễn phí",
+      "feeNote": "Nếu có chi phí phát sinh, chủ xe sẽ trao đổi trực tiếp với bạn trước khi cập nhật đơn thuê."
+    },
+    "driver": {
+      "pickupAddressLabel": "Địa chỉ đón",
+      "pickupAddressPlaceholder": "123 Nguyễn Văn Linh, Q. Hải Châu, Đà Nẵng",
+      "destinationLabel": "Điểm đến",
+      "destinationPlaceholder": "VD: TP. Đà Lạt, Lâm Đồng",
+      "note": "Lộ trình: {route} — {description}. Phụ phí (nếu có) do chủ xe trao đổi trước khi chốt đơn."
+    },
+    "contact": {
+      "heading": "Thông tin liên hệ",
+      "nameLabel": "Họ và tên",
+      "namePlaceholder": "Nhập họ tên của bạn",
+      "phoneLabel": "Số điện thoại",
+      "phonePlaceholder": "Nhập số điện thoại của bạn",
+      "verified": "Đã xác thực",
+      "change": "Đổi"
+    },
+    "otp": {
+      "title": "Nhập mã xác thực",
+      "hint": "Mã gồm 6 số đã được gửi đến {phone}. XePrime dùng số này để chủ xe phản hồi và giúp bạn theo dõi yêu cầu thuê.",
+      "devCode": "Mã dev: {code} — chỉ hiện ở môi trường phát triển.",
+      "editPhone": "Sửa số điện thoại",
+      "resend": "Gửi lại mã",
+      "resendIn": "Gửi lại ({seconds}s)",
+      "sessionExpired": "Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại số điện thoại."
+    },
+    "review": {
+      "vehicle": "Xe",
+      "renter": "Người thuê",
+      "service": "Dịch vụ",
+      "pickupAt": "Nhận xe",
+      "returnAt": "Trả xe",
+      "mode": "Hình thức",
+      "package": "Gói thuê",
+      "pickupPreference": "Nguyện vọng nhận xe",
+      "expectedReturn": "Dự kiến trả xe",
+      "expectedReturnValue": "{date} · giờ chốt khi gian hàng duyệt",
+      "driverPickupAddress": "Địa chỉ đón",
+      "destination": "Điểm đến",
+      "deliveryAddress": "Địa chỉ giao"
+    },
+    "price": {
+      "estimateTitle": "Tạm tính cho khoảng thời gian đã chọn",
+      "detailTitle": "Chi tiết giá thuê (dự kiến)",
+      "packageTitle": "Chi tiết giá gói {months, plural, other {# tháng}}",
+      "subtotal": "Tạm tính",
+      "total": "Tổng dự kiến",
+      "expand": "Chi tiết",
+      "collapse": "Thu gọn",
+      "unitTitle": "Giá thuê xe · {service}",
+      "fromUnit": "Từ {price}",
+      "chooseTime": "Chọn thời gian để xem tạm tính",
+      "choosePackage": "Chọn gói để xem giá",
+      "perDay": "/ngày",
+      "perHour": "/giờ",
+      "perMonth": "/tháng",
+      "weekday": "Ngày thường",
+      "weekend": "Cuối tuần",
+      "hourly": "Thuê theo giờ",
+      "longTermBase": "Giá dài hạn cơ sở",
+      "withDriverInCity": "Nội thành (đã gồm tài xế)",
+      "withDriverInterCity": "Liên tỉnh (khứ hồi)",
+      "withDriverOneWay": "Liên tỉnh 1 chiều",
+      "onRequest": "Liên hệ báo giá",
+      "savings": "Tiết kiệm {amount} nhờ ưu đãi thời hạn {months, plural, other {# tháng}}.",
+      "finalNote": "Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.",
+      "deliveryNote": "Phí giao nhận: Miễn phí.",
+      "loadError": "Chưa tải được giá tạm tính. Bạn vẫn tiếp tục được; chủ xe sẽ xác nhận giá."
+    },
+    "done": {
+      "title": "Yêu cầu đã được gửi",
+      "requestCode": "Mã yêu cầu: {code}",
+      "body": "Chủ xe sẽ xem xét và phản hồi yêu cầu của bạn. Bạn có thể theo dõi trạng thái trong mục chuyến đi của mình.",
+      "time": "Thời gian",
+      "pickupMethod": "Nhận xe",
+      "driverPickup": "Đón tại: {address}",
+      "notReserved": "Xe chưa được giữ chỗ. Yêu cầu cần được chủ xe chấp thuận trước.",
+      "myTrips": "Chuyến của tôi",
+      "chatShop": "Nhắn chủ xe",
+      "close": "Quay lại"
+    },
+    "duplicate": {
+      "title": "Yêu cầu trùng lặp",
+      "body": "Bạn đã gửi một yêu cầu thuê xe này với cùng khung giờ. Vui lòng đợi chủ xe phản hồi trước khi gửi yêu cầu mới.",
+      "viewTrips": "Xem chuyến của tôi",
+      "close": "Đóng"
+    },
+    "panel": {
+      "specYear": "Đời xe",
+      "specSeats": "Số chỗ",
+      "seatCount": "{count, plural, other {# chỗ}}",
+      "specBody": "Kiểu dáng",
+      "specFuel": "Năng lượng",
+      "viewShop": "Xem gian hàng",
+      "ratingSummary": "{avg} · {count, plural, other {# đánh giá}}"
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "back": "Quay lại",
+      "continue": "Tiếp tục",
+      "checking": "Đang kiểm tra…",
+      "verify": "Xác thực",
+      "submit": "Gửi yêu cầu thuê"
+    },
+    "packageMonths": "{months, plural, other {# tháng}}",
+    "route": {
+      "description": {
+        "in_city": "Di chuyển trong nội thành hoặc lân cận, lộ trình tự do",
+        "inter_city": "Đi tỉnh/thành khác và quay về điểm đón (khứ hồi)",
+        "inter_city_one_way": "Đi tỉnh/thành khác một chiều — gian hàng có thể báo thêm phụ phí"
+      }
+    },
+    "longTerm": {
+      "chooseTitle": "Chọn gói thuê",
+      "chooseLabel": "Chọn thời gian thuê",
+      "groupLabel": "Gói thuê dài hạn",
+      "noPrice": "Xe chưa niêm yết giá thuê dài hạn — gian hàng sẽ báo giá sau khi nhận yêu cầu.",
+      "wishTitle": "Bạn muốn nhận xe khi nào?",
+      "wishGroupLabel": "Nguyện vọng nhận xe",
+      "wishValueLabel": "{preference}: {date}",
+      "dateLabel": "Ngày muốn nhận xe",
+      "hint": {
+        "within_7_days": "Gian hàng sẽ xác nhận ngày và giờ nhận xe trong 7 ngày tới.",
+        "specific_date": "Gian hàng sẽ xác nhận giờ nhận xe."
+      },
+      "trust": {
+        "processTitle": "Thủ tục nhanh gọn",
+        "processDesc": "Duyệt hồ sơ nhanh chóng",
+        "paymentTitle": "Thanh toán linh hoạt",
+        "paymentDesc": "Nhiều hình thức thanh toán",
+        "supportTitle": "Hỗ trợ 24/7",
+        "supportDesc": "Tư vấn mọi lúc, mọi nơi"
+      },
+      "windowValue": "{start} – {end}"
+    },
+    "cta": "Chọn thuê",
+    "stepsLabel": "Tiến trình đặt xe",
+    "stepDone": "(đã xong)"
   }
 }

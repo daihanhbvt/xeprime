@@ -18,6 +18,11 @@
     "expired": "Expired",
     "all": "All"
   },
+  "filters": {
+    "searchLabel": "Search requests",
+    "searchPlaceholder": "Customer, phone, vehicle, plate…",
+    "serviceType": "Service"
+  },
   "vehicle": {
     "heading": "Requested vehicle",
     "openDetail": "Open the profile for {name}",
@@ -134,7 +139,179 @@
     "emptyPendingBody": "New requests from the marketplace show up here right away.",
     "emptyFilteredTitle": "No requests in this status",
     "emptyFilteredBody": "Switch to another tab to see the remaining requests.",
+    "emptySearchTitle": "No request found",
+    "emptySearchBody": "Try a shorter keyword, or drop a filter to see the whole inbox again.",
     "errorTitle": "Could not load the request list",
     "refreshing": "Refreshing the list…"
+  },
+  "flow": {
+    "title": "Rental request",
+    "steps": {
+      "trip": "Your trip",
+      "review": "Review"
+    },
+    "service": {
+      "label": "Service",
+      "routeLabel": "Route"
+    },
+    "time": {
+      "label": "Rental period",
+      "empty": "Tap the field above to open the calendar and pick your dates.",
+      "modeDaily": "Daily rental",
+      "modeHourly": "Hourly rental",
+      "changeHint": "tap the field to change",
+      "unavailable": "This car is already booked for that period. Please pick another time."
+    },
+    "pickup": {
+      "legend": "How you get the car",
+      "groupLabel": "How you get the car",
+      "self": "Pick up at the meeting point",
+      "selfHint": "Collect the car yourself at the host's location",
+      "selfOnly": "This car can only be collected at the host's meeting point.",
+      "delivery": "Delivered to you",
+      "deliveryHint": "The host brings the car to your address",
+      "addressLabel": "Delivery address",
+      "addressPlaceholder": "123 Nguyen Van Linh, Hai Chau, Da Nang",
+      "feeLabel": "Delivery fee",
+      "feeFree": "Free",
+      "feeNote": "If any extra cost applies, the host will discuss it with you before updating the booking."
+    },
+    "driver": {
+      "pickupAddressLabel": "Pick-up address",
+      "pickupAddressPlaceholder": "123 Nguyen Van Linh, Hai Chau, Da Nang",
+      "destinationLabel": "Destination",
+      "destinationPlaceholder": "e.g. Da Lat, Lam Dong",
+      "note": "Route: {route} — {description}. Any surcharge is agreed with the host before the booking is confirmed."
+    },
+    "contact": {
+      "heading": "Contact details",
+      "nameLabel": "Full name",
+      "namePlaceholder": "Enter your full name",
+      "phoneLabel": "Phone number",
+      "phonePlaceholder": "Enter your phone number",
+      "verified": "Verified",
+      "change": "Change"
+    },
+    "otp": {
+      "title": "Enter the verification code",
+      "hint": "We sent a 6-digit code to {phone}. XePrime uses this number so the host can reach you and you can track your request.",
+      "devCode": "Dev code: {code} — shown in development only.",
+      "editPhone": "Change phone number",
+      "resend": "Resend code",
+      "resendIn": "Resend ({seconds}s)",
+      "sessionExpired": "Your session has expired. Please verify your phone number again."
+    },
+    "review": {
+      "vehicle": "Car",
+      "renter": "Renter",
+      "service": "Service",
+      "pickupAt": "Pick-up",
+      "returnAt": "Return",
+      "mode": "Rental type",
+      "package": "Package",
+      "pickupPreference": "Preferred pick-up",
+      "expectedReturn": "Expected return",
+      "expectedReturnValue": "{date} · exact time confirmed on approval",
+      "driverPickupAddress": "Pick-up address",
+      "destination": "Destination",
+      "deliveryAddress": "Delivery address"
+    },
+    "price": {
+      "estimateTitle": "Estimate for the selected period",
+      "detailTitle": "Price details (estimated)",
+      "packageTitle": "Price details · {months, plural, one {# month} other {# months}} package",
+      "subtotal": "Estimate",
+      "total": "Estimated total",
+      "expand": "Details",
+      "collapse": "Hide",
+      "unitTitle": "Rental price · {service}",
+      "fromUnit": "From {price}",
+      "chooseTime": "Pick a period to see the estimate",
+      "choosePackage": "Pick a package to see the price",
+      "perDay": "/day",
+      "perHour": "/hour",
+      "perMonth": "/month",
+      "weekday": "Weekdays",
+      "weekend": "Weekends",
+      "hourly": "Hourly",
+      "longTermBase": "Long-term base price",
+      "withDriverInCity": "In-city (driver included)",
+      "withDriverInterCity": "Intercity (round trip)",
+      "withDriverOneWay": "Intercity (one way)",
+      "onRequest": "Price on request",
+      "savings": "You save {amount} with the {months, plural, one {# month} other {# months}} commitment discount.",
+      "finalNote": "The final price is confirmed by the host when they approve your request.",
+      "deliveryNote": "Delivery fee: Free.",
+      "loadError": "We couldn't load the estimate. You can still continue; the host will confirm the price."
+    },
+    "done": {
+      "title": "Request sent",
+      "requestCode": "Request code: {code}",
+      "body": "The host will review your request and get back to you. You can follow its status under your trips.",
+      "time": "Period",
+      "pickupMethod": "Getting the car",
+      "driverPickup": "Pick-up at: {address}",
+      "notReserved": "The car is not held yet. Your request needs the host's approval first.",
+      "myTrips": "My trips",
+      "chatShop": "Message the host",
+      "close": "Back"
+    },
+    "duplicate": {
+      "title": "Duplicate request",
+      "body": "You already sent a request for this car with the same period. Please wait for the host to reply before sending another one.",
+      "viewTrips": "View my trips",
+      "close": "Close"
+    },
+    "panel": {
+      "specYear": "Year",
+      "specSeats": "Seats",
+      "seatCount": "{count, plural, one {# seat} other {# seats}}",
+      "specBody": "Body type",
+      "specFuel": "Fuel",
+      "viewShop": "View host",
+      "ratingSummary": "{avg} · {count, plural, one {# review} other {# reviews}}"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "back": "Back",
+      "continue": "Continue",
+      "checking": "Checking…",
+      "verify": "Verify",
+      "submit": "Send rental request"
+    },
+    "packageMonths": "{months, plural, one {# month} other {# months}}",
+    "route": {
+      "description": {
+        "in_city": "Driving within the city or nearby, route up to you",
+        "inter_city": "Travel to another province and return to the pick-up point (round trip)",
+        "inter_city_one_way": "One way to another province — the host may add a surcharge"
+      }
+    },
+    "longTerm": {
+      "chooseTitle": "Choose a package",
+      "chooseLabel": "Choose your rental length",
+      "groupLabel": "Long-term packages",
+      "noPrice": "This car has no long-term price listed yet — the host will quote after receiving your request.",
+      "wishTitle": "When would you like to collect the car?",
+      "wishGroupLabel": "Preferred pick-up",
+      "wishValueLabel": "{preference}: {date}",
+      "dateLabel": "Preferred pick-up date",
+      "hint": {
+        "within_7_days": "The host will confirm the exact pick-up date and time within the next 7 days.",
+        "specific_date": "The host will confirm the pick-up time."
+      },
+      "trust": {
+        "processTitle": "Quick paperwork",
+        "processDesc": "Fast application review",
+        "paymentTitle": "Flexible payment",
+        "paymentDesc": "Several payment methods",
+        "supportTitle": "24/7 support",
+        "supportDesc": "Help whenever you need it"
+      },
+      "windowValue": "{start} – {end}"
+    },
+    "cta": "Select this car",
+    "stepsLabel": "Booking progress",
+    "stepDone": "(done)"
   }
 }

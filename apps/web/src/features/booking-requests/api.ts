@@ -30,6 +30,8 @@ export function filtersToParams(filters: BookingRequestFilters): QueryParams {
   const status = filters.status === BOOKING_REQUEST_STATUS_ALL ? null : (filters.status ?? null);
   return {
     status,
+    q: filters.q ?? null,
+    serviceType: filters.serviceType ?? null,
     vehicleId: filters.vehicleId ?? null,
     branchId: filters.branchId ?? null,
     page: filters.page ?? 1,

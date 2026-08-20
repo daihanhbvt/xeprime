@@ -68,6 +68,24 @@
   margin-bottom: var(--xp-space-md);
 }
 
+/*
+ * Thanh lọc nằm trong khe phải của hàng tab: khoảng cách dưới là việc của hàng tab, không phải
+ * của nó — giữ lại thì gạch chân tab bị đẩy lệch khỏi chữ.
+ *
+ * Ở mobile nó xuống hàng riêng nên khoảng cách quay lại; đó là lý do quy tắc nằm trong media
+ * query của desktop chứ không đặt vô điều kiện.
+ */
+@media (min-width: 641px) {
+  /*
+   * Nhân đôi class để chắc chắn thắng `.wrapper` của `FilterBar.module.css`: hai selector một
+   * class có specificity BẰNG nhau, nên nếu không nhân đôi thì ai thắng phụ thuộc thứ tự
+   * stylesheet được gộp — thứ có thể đổi theo thứ tự import ở lần build sau.
+   */
+  .tabFilters.tabFilters {
+    margin-bottom: 0;
+  }
+}
+
 .tabLabel {
   display: inline-flex;
   align-items: center;

@@ -10,7 +10,7 @@ import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { TextField } from '@/components/form/TextField';
-import { PAYMENT_METHOD_OPTIONS } from '@/features/finance/constants';
+import { useFinanceOptions } from '@/features/finance/hooks/use-finance-options';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { useRecordPayment } from '../hooks/use-payments';
 import { recordPaymentSchema, type RecordPaymentValues } from '../schema';
@@ -64,6 +64,7 @@ export function RecordPaymentModal({
 
   const { message } = App.useApp();
   const errorMessage = useErrorMessage();
+  const financeOptions = useFinanceOptions();
   const { control, handleSubmit, reset } = useForm<RecordPaymentValues>({
     resolver: yupResolver(recordPaymentSchema),
     defaultValues: defaultsForAmount(debtAmount),
@@ -119,7 +120,12 @@ export function RecordPaymentModal({
       ) : null}
       <DialogForm onSubmit={submit} labelWidth="md">
         <NumberField control={control} name="amount" label="Số tiền nhận" money min={0} />
-        <SelectField control={control} name="method" label="Hình thức" options={PAYMENT_METHOD_OPTIONS} />
+        <SelectField
+          control={control}
+          name="method"
+          label="Hình thức"
+          options={financeOptions.paymentMethod}
+        />
         <TextField
           control={control}
           name="referenceCode"

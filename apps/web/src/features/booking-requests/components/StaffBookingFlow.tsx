@@ -47,15 +47,28 @@ import { checkConflict } from '@/features/bookings/api';
 import { useCreateBooking } from '@/features/bookings/hooks/use-booking-mutations';
 import { fetchCalendarQuote } from '@/features/calendar/api';
 import type { CalendarQuote } from '@/features/calendar/types/calendar.types';
-import { fetchListingDetailClient, fetchListingReviewsClient } from '@/features/marketplace/api';
+import { fetchListingDetailClient } from '@/features/marketplace/api';
 import { cx } from '@/lib/cx';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import { PICKUP_METHOD, type PickupMethod } from '../schema';
-import { BookingSteps, type BookingStepKey } from './BookingSteps';
+import { BookingSteps, type BookingStepItem, type BookingStepKey } from './BookingSteps';
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
 import styles from './RequestBookingFlow.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+
+/**
+ * Ba bước của luồng đặt hộ. KHÁC luồng khách (chỉ hai bước) một cách chính đáng: ở đây nhân
+ * viên thật sự phải chọn hoặc nhập hồ sơ khách, nên "Khách hàng" là một bước có việc để làm,
+ * không phải một thẻ chỉ-đọc bấm-qua.
+ *
+ * Chuỗi vẫn là tiếng Việt trong mã: cổng quản lý chưa tới đợt i18n (xem `pnpm i18n:audit`).
+ */
+const STAFF_STEPS: readonly BookingStepItem[] = [
+  { key: 'time', label: 'Thời gian' },
+  { key: 'contact', label: 'Khách hàng' },
+  { key: 'review', label: 'Xác nhận' },
+];
 
 interface StaffBookingFlowProps {
   vehicleId: string;
@@ -80,8 +93,6 @@ interface StaffBookingFlowProps {
   onBusyChange?: (busy: boolean) => void;
   onResultChange?: (isResult: boolean) => void;
 }
-
-const REVIEW_PREVIEW_COUNT = 3;
 
 /**
  * Form của luồng đặt hộ: staff nhập khách + ghi chú; KHÔNG có OTP/điều khoản (thao tác nội bộ
@@ -207,13 +218,6 @@ export function StaffBookingFlow({
     queryFn: () => fetchListingDetailClient(vehicleId),
     staleTime: 5 * 60_000,
     retry: false,
-  });
-  const reviewsQ = useQuery({
-    queryKey: queryKeys.marketplace.reviews(vehicleId, { limit: REVIEW_PREVIEW_COUNT }),
-    queryFn: () => fetchListingReviewsClient(vehicleId, REVIEW_PREVIEW_COUNT),
-    staleTime: 5 * 60_000,
-    retry: false,
-    enabled: listingQ.isSuccess,
   });
   const listing = listingQ.data ?? null;
   const vehicleServices: string[] = listing?.serviceTypes ?? [];
@@ -488,7 +492,7 @@ export function StaffBookingFlow({
             {quote ? (
               <div className={styles.doneRow}>
                 <dt>Tổng tiền</dt>
-                <dd>{fmt.money(quote.totalAmount)}</dd>
+                <dd className={styles.doneMoney}>{fmt.money(quote.totalAmount)}</dd>
               </div>
             ) : null}
           </dl>
@@ -535,17 +539,13 @@ export function StaffBookingFlow({
           fallbackName={vehicleName}
           fallbackImageUrl={vehicleImageUrl}
           loading={listingQ.isLoading}
-          reviews={reviewsQ.data?.data ?? []}
-          reviewSummary={reviewsQ.data?.summary ?? null}
-          reviewsLoading={listingQ.isSuccess && reviewsQ.isLoading}
-          verifiedContact={null}
           serviceType={serviceType}
           packageMonths={packageMonths}
         />
       </div>
 
       <div className={styles.right}>
-        <BookingSteps current={step} labels={{ contact: 'Khách hàng' }} />
+        <BookingSteps steps={STAFF_STEPS} current={step} />
 
         {/* ── Bước 1 — Thời gian ───────────────────────────────────────────── */}
         {step === 'time' ? (
@@ -566,13 +566,7 @@ export function StaffBookingFlow({
                   }))}
                 />
               </div>
-            ) : (
-              /* Xe một dịch vụ vẫn NÓI RÕ đơn thuộc dịch vụ gì. */
-              <div className={styles.serviceField}>
-                <span className={styles.rangeFieldLabel}>Dịch vụ</span>
-                <p className={styles.rangeHint}>{serviceTypeLabel(serviceType)}</p>
-              </div>
-            )}
+            ) : null}
 
             {/* Lộ trình chuyến có tài xế — cùng markup với luồng của khách (RequestBookingFlow). */}
             {isWithDriver ? (
@@ -591,13 +585,6 @@ export function StaffBookingFlow({
                 <p className={styles.rangeHint}>{ROUTE_TYPE_DESCRIPTION[watchedRoute]}</p>
               </div>
             ) : null}
-
-            <p className={styles.stepHint}>
-              {isLongTerm
-                ? 'Chọn gói thuê và giờ nhận xe — ngày trả tính theo tháng lịch, không sửa tay được.'
-                : 'Chọn thời gian thuê để kiểm tra xe còn trống. Có thể thuê theo ngày hoặc theo giờ.'}
-            </p>
-
             {/*
               Đơn THUÊ DÀI HẠN có độ dài cố định bằng gói (ADR 0011): nhân viên chọn gói + giờ
               nhận, ngày trả hiện read-only. Không có ô chọn khoảng tự do — nếu có, đơn sẽ dài

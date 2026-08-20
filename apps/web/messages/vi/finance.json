@@ -1,9 +1,157 @@
 {
+  "receipts": {
+    "page": {
+      "title": "Thu chi",
+      "subtitle": "Mọi khoản tiền của gian hàng — thu tiền đơn, cọc, hoàn cọc và chi phí xe đều tự lên sổ."
+    },
+    "periods": {
+      "label": "Kỳ xem nhanh",
+      "today": "Hôm nay",
+      "this_week": "Tuần này",
+      "this_month": "Tháng này",
+      "last_month": "Tháng trước"
+    },
+    "filters": {
+      "searchLabel": "Tìm phiếu",
+      "searchPlaceholder": "Mã phiếu, mã tra soát, mã đơn…",
+      "type": "Loại",
+      "status": "Trạng thái",
+      "category": "Danh mục",
+      "source": "Nguồn",
+      "paymentMethod": "Hình thức",
+      "dateRange": "Khoảng ngày"
+    },
+    "actions": {
+      "categories": "Danh mục",
+      "create": "Tạo phiếu",
+      "createFirst": "Tạo phiếu đầu tiên"
+    },
+    "toast": {
+      "approved": "Đã duyệt phiếu",
+      "cancelled": "Đã huỷ phiếu"
+    },
+    "forbidden": {
+      "title": "Không có quyền xem sổ thu chi",
+      "description": "Bạn cần quyền dưới đây để xem trang này. Liên hệ chủ gian hàng để được cấp quyền.",
+      "home": "Về trang chủ"
+    },
+    "table": {
+      "label": "Danh sách phiếu thu chi",
+      "totalLabel": "{count, plural, other {# phiếu}}",
+      "columns": {
+        "receipt": "Phiếu",
+        "type": "Loại",
+        "source": "Nguồn",
+        "category": "Danh mục",
+        "subject": "Đối tượng",
+        "description": "Diễn giải",
+        "amount": "Số tiền",
+        "method": "Hình thức"
+      },
+      "actions": {
+        "cancel": "Huỷ",
+        "approveConfirm": "Duyệt phiếu này?",
+        "cancelConfirm": "Huỷ phiếu này?",
+        "cancelOk": "Huỷ phiếu"
+      },
+      "error": {
+        "title": "Không tải được danh sách phiếu"
+      },
+      "empty": {
+        "title": "Chưa có phiếu thu/chi nào"
+      },
+      "noResults": {
+        "title": "Không có phiếu khớp bộ lọc"
+      },
+      "uncategorized": "Chưa phân loại"
+    },
+    "detail": {
+      "title": "Chi tiết phiếu",
+      "ariaLabel": "Chi tiết phiếu thu chi",
+      "errorTitle": "Không tải được phiếu",
+      "auto": {
+        "title": "Phiếu tự động",
+        "body": "Phiếu này sinh từ {source} nên không sửa/huỷ trực tiếp được — sổ sẽ lệch với đơn. Muốn đảo thì thao tác ở chính nghiệp vụ đó",
+        "openBooking": "mở đơn thuê",
+        "openVehicle": "mở hồ sơ xe"
+      },
+      "sections": {
+        "info": "Thông tin phiếu",
+        "related": "Liên quan",
+        "attachments": "Ảnh minh chứng",
+        "trace": "Dấu vết"
+      },
+      "rows": {
+        "occurredAt": "Ngày phát sinh",
+        "category": "Danh mục",
+        "method": "Hình thức",
+        "referenceCode": "Mã tra soát",
+        "description": "Diễn giải",
+        "booking": "Đơn thuê",
+        "vehicle": "Xe",
+        "customer": "Khách hàng",
+        "createdBy": "Người tạo",
+        "approvedBy": "Người duyệt",
+        "cancelledBy": "Người huỷ"
+      },
+      "copyReference": "Chép mã",
+      "viewBooking": "Xem đơn",
+      "viewVehicle": "Xem xe",
+      "viewCustomer": "Xem khách",
+      "attachmentAlt": "Ảnh minh chứng",
+      "cancelAction": "Huỷ phiếu"
+    },
+    "form": {
+      "title": "Tạo phiếu thu/chi",
+      "occurredAt": "Ngày phát sinh",
+      "type": "Loại phiếu",
+      "linkHint": "Chọn đơn thuê để tự điền khách, xe và số tiền còn nợ.",
+      "booking": "Liên kết đơn thuê",
+      "bookingPlaceholder": "Tìm mã đơn, tên khách hoặc biển số",
+      "category": "Danh mục",
+      "categoryPlaceholder": "Chọn danh mục",
+      "method": "Hình thức",
+      "amount": "Số tiền",
+      "referenceCode": "Mã tra soát (tuỳ chọn)",
+      "referenceCodePlaceholder": "VD: mã giao dịch CK",
+      "description": "Diễn giải / lý do",
+      "attachments": "Ảnh minh chứng (bill / hoá đơn)",
+      "submit": "Tạo phiếu",
+      "success": "Đã tạo phiếu — chờ duyệt",
+      "picked": {
+        "customer": "Khách: ",
+        "vehicle": "Xe: ",
+        "debt": "Còn nợ: "
+      }
+    },
+    "summary": {
+      "error": "Không tải được số tổng — danh sách bên dưới vẫn đúng",
+      "income": "Tổng thu",
+      "expense": "Tổng chi",
+      "balance": "Cân đối (thu − chi)",
+      "approvedCount": "Phiếu đã duyệt",
+      "cash": "Tiền mặt {value}",
+      "transfer": "Chuyển khoản {value}",
+      "inFilter": "Trong bộ lọc đang xem",
+      "wholeBook": "Toàn bộ sổ · phiếu chờ duyệt chưa tính"
+    },
+    "categories": {
+      "title": "Danh mục thu/chi",
+      "typeLabel": "Loại danh mục",
+      "namePlaceholder": "Tên danh mục mới",
+      "added": "Đã thêm danh mục",
+      "system": "Hệ thống",
+      "delete": "Xoá danh mục"
+    }
+  },
   "debts": {
     "page": {
       "title": "Công nợ"
     },
     "filters": {
+      "searchLabel": "Tìm khoản nợ",
+      "searchPlaceholder": "Mã đơn, tên khách, SĐT, biển số…",
+      "groupLabel": "Nhóm theo hạn trả",
       "overdue": "Quá hạn",
       "upcoming": "Sắp đến hạn",
       "unpaid": "Chưa thu"

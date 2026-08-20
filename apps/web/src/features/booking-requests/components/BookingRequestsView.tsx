@@ -1,21 +1,25 @@
 'use client';
 
-import { App, Pagination, Tabs } from 'antd';
+import { App, Button, Pagination, Tabs } from 'antd';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
   PERMISSION,
   SERVICE_TYPE,
+  SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
 import { currentPathWithQuery } from '@/features/auth/safe-next';
 import { getErrorCode } from '@/services/api-client';
@@ -56,12 +60,14 @@ export function BookingRequestsView() {
   const t = useTranslations('BookingRequests');
   const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
   const { message } = App.useApp();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { has } = usePermissions();
+  const isMobile = useIsMobile();
 
   /*
    * Chỗ đang đứng, KÈM tab và trang — gắn vào link "Xem lịch xe" để nút quay lại ở màn lịch
@@ -74,7 +80,8 @@ export function BookingRequestsView() {
   const canViewCustomer = has(PERMISSION.CUSTOMER_VIEW);
   const canViewBooking = has(PERMISSION.BOOKING_VIEW);
 
-  const { filters, setFilters, activeTab, selectTab } = useBookingRequestFilters();
+  const { filters, setFilters, activeTab, selectTab, hasFilters, clearFilters } =
+    useBookingRequestFilters();
   const { data, isError, isFetching, refetch } = useBookingRequests(filters);
 
   const approve = useApproveBookingRequest();
@@ -201,6 +208,35 @@ export function BookingRequestsView() {
     setCustomerDetail({ id: row.tenantCustomerId, name: row.customerName });
   }
 
+  /*
+   * Thanh lọc nằm DƯỚI hàng tab, không gộp vào nó: tab trả lời "yêu cầu đang ở bước nào", thanh
+   * lọc trả lời "yêu cầu nào" — hai câu hỏi khác nhau, và người trực hộp thư dùng chúng cùng lúc
+   * (đang ở tab Cần xử lý mà tìm đúng khách vừa gọi điện tới).
+   *
+   * Nhãn dịch vụ đọc từ namespace `Domain` như mọi nơi khác — mã (`self_drive`…) là dữ liệu đi
+   * trên dây, chỉ NHÃN mới dịch (ADR 0012).
+   */
+  const filterFields = useMemo<readonly FilterField[]>(
+    () => [
+      {
+        kind: 'search',
+        key: 'q',
+        label: t('filters.searchLabel'),
+        placeholder: t('filters.searchPlaceholder'),
+      },
+      {
+        kind: 'select',
+        key: 'serviceType',
+        label: t('filters.serviceType'),
+        options: SERVICE_TYPE_VALUES.map((value) => ({
+          value,
+          label: domainLabel('serviceType', value),
+        })),
+      },
+    ],
+    [t, domainLabel],
+  );
+
   const tabItems = BOOKING_REQUEST_TABS.map((tab) => ({
     key: tab.value,
     label: (
@@ -210,6 +246,17 @@ export function BookingRequestsView() {
       </span>
     ),
   }));
+
+  const filterBar = (
+    <FilterBar
+      fields={filterFields}
+      values={{ q: filters.q, serviceType: filters.serviceType } satisfies FilterValues}
+      onChange={(patch) => setFilters(patch)}
+      onClear={hasFilters ? clearFilters : undefined}
+      compactFields
+      className={styles.tabFilters}
+    />
+  );
 
   const isFirstLoad = isFetching && !data;
   const showEmpty = !isFirstLoad && !isError && items.length === 0;
@@ -251,7 +298,18 @@ export function BookingRequestsView() {
         onChange={selectTab}
         className={styles.tabs}
         aria-label={t('tabs.ariaLabel')}
+        /*
+         * Desktop: thanh lọc đi VÀO khe phải của hàng tab thay vì chiếm thêm một hàng. Hộp thư
+         * đã có tiêu đề, hai thẻ số và sáu tab phía trên; một hàng nữa chỉ để chứa một ô tìm
+         * kiếm là đẩy thẻ yêu cầu đầu tiên xuống dưới nếp gấp.
+         *
+         * Mobile thì KHÔNG: hàng tab ở đó tự cuộn ngang, nhét thêm ô tìm kiếm vào cùng hàng là
+         * bóp cả hai. Nó xuống hàng riêng ngay dưới (xem bên dưới).
+         */
+        tabBarExtraContent={isMobile ? undefined : { right: filterBar }}
       />
+
+      {isMobile ? filterBar : null}
 
       {isFirstLoad ? <LoadingState variant="cards" rows={4} label={t('states.loading')} /> : null}
 
@@ -265,12 +323,21 @@ export function BookingRequestsView() {
       ) : null}
 
       {/*
-        Hộp thư CẦN XỬ LÝ rỗng là tin VUI ("không còn việc nào"), còn một tab đã lọc mà rỗng
-        chỉ là không có kết quả khớp — hai câu khác nhau và hai biến thể khác nhau, đúng theo
-        cách `EmptyState` tách trạng thái theo NGUYÊN NHÂN.
+        Ba nguyên nhân rỗng, ba câu khác nhau — `EmptyState` tách trạng thái theo NGUYÊN NHÂN,
+        nên nói sai nguyên nhân là dẫn người dùng đi sai đường:
+          · đang lọc/tìm  → không có kết quả khớp, lối ra là XOÁ bộ lọc;
+          · tab Cần xử lý → tin VUI ("không còn việc nào"), không có gì phải làm;
+          · tab khác      → tab đó chưa có yêu cầu nào, lối ra là đổi tab.
       */}
       {showEmpty ? (
-        isNeedsActionTab ? (
+        hasFilters ? (
+          <EmptyState
+            variant="no-results"
+            title={t('states.emptySearchTitle')}
+            description={t('states.emptySearchBody')}
+            action={<Button onClick={clearFilters}>{tCommon('actions.clear')}</Button>}
+          />
+        ) : isNeedsActionTab ? (
           <EmptyState
             variant="empty"
             title={t('states.emptyPendingTitle')}

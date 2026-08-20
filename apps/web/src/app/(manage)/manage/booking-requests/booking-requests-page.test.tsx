@@ -11,10 +11,7 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { renderWithIntl } from '@/i18n/test-utils';
-import type {
-  BookingRequestItem,
-  BookingRequestListMeta,
-} from '@/features/booking-requests/types';
+import type { BookingRequestItem, BookingRequestListMeta } from '@/features/booking-requests/types';
 import BookingRequestsPage from './page';
 
 const nav = vi.hoisted(() => ({
@@ -225,10 +222,9 @@ describe('/manage/booking-requests — bộ lọc trạng thái ở URL', () => 
     nav.params = new URLSearchParams('status=pending_host_approval&page=4');
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: /Đã từ chối/ }));
-    expect(nav.replace).toHaveBeenCalledWith(
-      '/manage/booking-requests?status=rejected_by_host',
-      { scroll: false },
-    );
+    expect(nav.replace).toHaveBeenCalledWith('/manage/booking-requests?status=rejected_by_host', {
+      scroll: false,
+    });
   });
 
   it('đếm trên tab lấy từ backend, kể cả tab đang KHÔNG mở; "Tất cả" là tổng', () => {
@@ -238,6 +234,53 @@ describe('/manage/booking-requests — bộ lọc trạng thái ở URL', () => 
     expect(within(screen.getByRole('tab', { name: /Đã từ chối/ })).getByText('3')).toBeTruthy();
     // 7 + 12 + 3 + 2 + 1 + 0 — cộng ĐỦ bộ trạng thái, không chỉ các tab hiện ra.
     expect(within(screen.getByRole('tab', { name: /Tất cả/ })).getByText('25')).toBeTruthy();
+  });
+});
+
+describe('/manage/booking-requests — tìm kiếm và lọc dịch vụ', () => {
+  it('đọc `q` và `serviceType` từ URL rồi truyền thẳng xuống API', () => {
+    // Lọc chạy ở SERVER: nếu hai tham số này không tới hook thì hộp thư đang cắt dữ liệu ở
+    // client — sai ngay từ trang thứ hai.
+    nav.params = new URLSearchParams('q=Vios&serviceType=long_term');
+    renderPage();
+
+    expect(queries.lastFilters?.q).toBe('Vios');
+    expect(queries.lastFilters?.serviceType).toBe(SERVICE_TYPE.LONG_TERM);
+  });
+
+  it('gõ vào ô tìm kiếm ⇒ ghi `q` vào URL và về trang 1', async () => {
+    nav.params = new URLSearchParams('status=all&page=3');
+    renderPage();
+
+    fireEvent.change(screen.getByPlaceholderText(/Tên khách/), { target: { value: 'Ngọc' } });
+
+    await waitFor(() => expect(nav.replace).toHaveBeenCalled());
+    const url = nav.replace.mock.calls.at(-1)![0] as string;
+    expect(url).toContain('q=Ng');
+    expect(url).toContain('status=all');
+    expect(url).not.toContain('page=');
+  });
+
+  it('đang lọc mà rỗng ⇒ "không khớp bộ lọc" kèm lối xoá, KHÔNG phải "hết việc rồi"', () => {
+    // Tab mặc định là "Cần xử lý", nơi rỗng vốn là tin vui. Có từ khoá thì câu đó thành sai:
+    // người trực tưởng đã duyệt hết trong khi chỉ là gõ nhầm tên.
+    nav.params = new URLSearchParams('q=khong-co-ai');
+    setRows([], { total: 0 });
+    renderPage();
+
+    expect(screen.getByText('Không tìm thấy yêu cầu nào')).toBeTruthy();
+    // Hai lối xoá — một trên thanh lọc, một trong khối rỗng; cả hai đều hợp lệ.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Xoá bộ lọc' })[0]!);
+
+    expect(nav.replace).toHaveBeenCalled();
+    expect(nav.replace.mock.calls.at(-1)![0] as string).not.toContain('q=');
+  });
+
+  it('KHÔNG lọc mà tab "Cần xử lý" rỗng ⇒ vẫn là câu "hết việc rồi"', () => {
+    setRows([], { total: 0 });
+    renderPage();
+
+    expect(screen.getByText('Không có yêu cầu nào cần xử lý')).toBeTruthy();
   });
 });
 
@@ -253,9 +296,9 @@ describe('/manage/booking-requests — vùng xe và khách', () => {
 
   it('có quyền xem xe ⇒ tên xe là link tới hồ sơ xe', () => {
     renderPage();
-    expect(
-      screen.getByRole('link', { name: 'Kia Carnival 2025' }).getAttribute('href'),
-    ).toBe('/manage/vehicles/veh-1');
+    expect(screen.getByRole('link', { name: 'Kia Carnival 2025' }).getAttribute('href')).toBe(
+      '/manage/vehicles/veh-1',
+    );
   });
 
   it('thiếu `vehicles.view` ⇒ hiện CHỮ, không phải link dẫn tới màn 403', () => {
@@ -370,9 +413,7 @@ describe('/manage/booking-requests — lịch, lộ trình, giao nhận, ghi ch�
   });
 
   it('giao tận nơi: hiện ĐỦ địa chỉ giao (không giấu trong tooltip)', () => {
-    setRows([
-      request({ deliveryRequested: true, deliveryAddress: '99 Lê Lợi, Quận 3, TP.HCM' }),
-    ]);
+    setRows([request({ deliveryRequested: true, deliveryAddress: '99 Lê Lợi, Quận 3, TP.HCM' })]);
     renderPage();
     const card = cardFor('Kia Carnival 2025');
     expect(within(card).getByText('Giao xe tận nơi')).toBeTruthy();
@@ -419,7 +460,10 @@ describe('/manage/booking-requests — quyết định duyệt/từ chối', () 
 
   it('yêu cầu đã xử lý ⇒ không còn nút quyết định', () => {
     setRows([
-      request({ status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST, rejectReason: 'Xe đang bảo dưỡng' }),
+      request({
+        status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+        rejectReason: 'Xe đang bảo dưỡng',
+      }),
     ]);
     renderPage();
     const card = cardFor('Kia Carnival 2025');
@@ -620,9 +664,7 @@ describe('/manage/booking-requests — trạng thái màn hình', () => {
   });
 
   it('cả vùng "Yêu cầu thuê" bấm được và mở đúng modal đó', () => {
-    setRows([
-      request({ status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, bookingId: 'bk-9' }),
-    ]);
+    setRows([request({ status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, bookingId: 'bk-9' })]);
     renderPage();
 
     const card = cardFor('Kia Carnival 2025');
@@ -671,9 +713,7 @@ describe('/manage/booking-requests — trạng thái màn hình', () => {
 
   it('thiếu `bookings.view` ⇒ rơi về chi tiết YÊU CẦU, không mở chi tiết đơn', () => {
     permissions.granted.delete(PERMISSION.BOOKING_VIEW);
-    setRows([
-      request({ status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, bookingId: 'bk-1' }),
-    ]);
+    setRows([request({ status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING, bookingId: 'bk-1' })]);
     renderPage();
 
     // Đường sang ĐƠN biến mất hoàn toàn…
@@ -741,8 +781,7 @@ describe('/manage/booking-requests — xem lịch của chính chiếc xe', () =
   it('xe chưa có biển số ⇒ lọc theo tên', () => {
     setRows([request({ vehiclePlate: null })]);
     renderPage();
-    const href =
-      screen.getByRole('link', { name: /Xem lịch thuê của/ }).getAttribute('href') ?? '';
+    const href = screen.getByRole('link', { name: /Xem lịch thuê của/ }).getAttribute('href') ?? '';
     expect(new URLSearchParams(href.split('?')[1]).get('q')).toBe('Kia Carnival 2025');
   });
 

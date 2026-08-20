@@ -65,6 +65,12 @@
   --xp-color-discount: #ff5a2c;
   --xp-color-discount-contrast: #ffffff;
 
+  /*
+   * Màu của SỐ TIỀN khách phải trả — MỘT màu cho mọi giá cuối cùng (tổng dự kiến, giá xe,
+   * tổng đơn). Lý do và phạm vi không áp dụng: xem `XP_TOKENS['color-price']` ở theme.ts.
+   */
+  --xp-color-price: var(--xp-color-primary-active);
+
   /* ─── Vỏ portal (sidebar tối — P1 chốt "tối", áp dụng ở Wave 1D-B) ───── */
   --xp-shell-sidebar-bg: #1e1b16;
   --xp-shell-sidebar-text: #e8e4dd;

@@ -32,14 +32,11 @@ export const requestFormSchema = yup.object({
     .trim()
     .required('Nhập số điện thoại')
     .matches(/^(0|\+84)\d{9}$/, 'Số điện thoại không hợp lệ'),
-  /** Tuỳ chọn — chỉ để shop liên hệ thêm; không dùng để định danh. */
-  customerEmail: yup
-    .string()
-    .trim()
-    .email('Email không hợp lệ')
-    .max(255)
-    .default('')
-    .transform((v: string) => v ?? ''),
+  /*
+   * KHÔNG hỏi email. Liên hệ của luồng này là SĐT — nó được xác thực bằng OTP ngay tại đây và
+   * là thứ gian hàng dùng để gọi lại. Email từng là một ô "không bắt buộc" mà gần như không ai
+   * điền, còn cột `customerEmail` bên API vẫn nhận (khách có tài khoản đã có sẵn email).
+   */
   /** Dịch vụ của chuyến (17/08) — component chỉ đưa ra lựa chọn nằm trong serviceTypes của xe. */
   serviceType: yup.mixed<ServiceType>().oneOf(SERVICE_TYPE_VALUES).default(SERVICE_TYPE.SELF_DRIVE),
   /** Lộ trình — bắt buộc khi chuyến CÓ TÀI XẾ. */
@@ -133,8 +130,6 @@ export const requestFormSchema = yup.object({
       is: PICKUP_METHOD.DELIVERY,
       then: (s) => s.required('Nhập địa chỉ giao xe'),
     }),
-  /** Xác nhận điều khoản — chặn ở bước cuối, không phải lúc nhập liệu. */
-  agreed: yup.boolean().default(false),
 });
 
 export type RequestFormValues = yup.InferType<typeof requestFormSchema>;

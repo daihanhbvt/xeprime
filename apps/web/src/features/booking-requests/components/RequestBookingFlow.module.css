@@ -128,74 +128,6 @@
   color: var(--xp-color-text-secondary);
 }
 
-/* ── Bảng giá tham khảo khi CHƯA chọn thời gian ────────────────────────── */
-
-.priceCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  min-width: 0;
-}
-
-.priceCardHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-  flex-wrap: wrap;
-}
-
-.priceCardTitle {
-  font-weight: 600;
-  color: var(--xp-color-text);
-}
-
-.priceCardRows {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-xs);
-}
-
-.priceRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--xp-space-md);
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-secondary);
-  min-width: 0;
-}
-
-.priceRow b {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--xp-space-xs);
-  color: var(--xp-color-text);
-  /* Tiền không được ngắt dòng giữa con số. */
-  white-space: nowrap;
-}
-
-.priceStrike {
-  color: var(--xp-color-text-tertiary);
-  font-weight: 400;
-}
-
-.priceUnit {
-  font-size: var(--xp-font-size-sm);
-  font-weight: 400;
-  color: var(--xp-color-text-secondary);
-}
-
-.priceCardNote {
-  margin: 0;
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-tertiary);
-}
-
 /* Ngày đã chọn (ở bước liên hệ) + nút đổi */
 .dateSummary {
   display: flex;
@@ -241,6 +173,21 @@
   background: var(--xp-color-bg-container);
   text-align: left;
   cursor: pointer;
+  min-width: 0;
+}
+
+/*
+ * Chính sách tắt giao xe ⇒ chỉ còn một cách nhận xe. Vẫn dùng lại hình thức của một ô lựa chọn
+ * (icon + nhãn + địa chỉ) nhưng KHÔNG phải nút bấm được: nó là thông tin, không phải câu hỏi.
+ */
+.pickupSingle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
   min-width: 0;
 }
 
@@ -347,10 +294,6 @@
   overflow-wrap: anywhere;
 }
 
-.agree {
-  align-items: flex-start;
-}
-
 /* ── OTP ───────────────────────────────────────────────────────────────── */
 
 .otpTitle {
@@ -392,23 +335,33 @@
 }
 
 /**
- * Footer của cột phải — dính đáy, luôn thấy được dù bước hiện tại dài bao nhiêu.
+ * Đáy cột phải — TIỀN và NÚT trong cùng một khối dính đáy, luôn thấy được dù bước hiện tại dài
+ * bao nhiêu.
  *
- * `position: sticky` trong chính vùng cuộn của cột (`.right`) thay vì footer của AntD: nút phải
- * nằm ở cột PHẢI, còn footer của dialog trải hết bề ngang cả hai cột.
+ * `position: sticky` trong chính vùng cuộn của cột (`.right`) thay vì footer của AntD: khối này
+ * phải nằm ở cột PHẢI, còn footer của dialog trải hết bề ngang cả hai cột.
+ *
+ * Tiền nằm ở đây chứ không trôi trong thân bước là có chủ đích: khách đổi thời gian hay hình
+ * thức nhận xe ở nửa trên và thấy con số đổi theo ngay dưới mắt, thay vì phải cuộn đi tìm.
  */
-.footer {
+.dock {
   position: sticky;
   bottom: 0;
   z-index: 1;
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
   gap: var(--xp-space-sm);
   margin-top: auto;
   padding-top: var(--xp-space-md);
   border-top: 1px solid var(--xp-color-border);
-  /* Nền đặc để nội dung cuộn không lộ ra sau hàng nút. */
+  /* Nền đặc để nội dung cuộn không lộ ra sau khối. */
   background: var(--xp-color-bg-elevated);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
 }
 
 /* ── Màn kết (thành công / trùng lặp) ──────────────────────────────────── */
@@ -514,6 +467,13 @@
   overflow-wrap: anywhere;
 }
 
+/* Dòng tổng tiền của thẻ kết quả — cùng màu tiền với mọi giá cuối khác trong app. */
+.doneRow .doneMoney {
+  color: var(--xp-color-price);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .doneNote {
   text-align: left;
 }
@@ -535,47 +495,6 @@
   min-width: 0;
   padding-inline: var(--xp-space-xs);
   font-size: var(--xp-font-size-sm);
-}
-
-/*
- * Thẻ xác nhận liên hệ của người đã đăng nhập — thay cho hai ô nhập. Không dùng `Descriptions`
- * của AntD: ở màn 390px nó xuống dòng thành bảng hai hàng rất cao.
- */
-.confirmCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-muted);
-  min-width: 0;
-}
-
-.confirmRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-  min-width: 0;
-}
-
-.confirmLabel {
-  flex: none;
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-text-secondary);
-}
-
-.confirmValue {
-  display: flex;
-  align-items: center;
-  gap: var(--xp-space-xs);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  font-weight: 600;
-  color: var(--xp-color-text);
-  text-align: right;
-  overflow-wrap: anywhere;
 }
 
 .verifiedTag {
@@ -678,30 +597,6 @@
   background: var(--xp-color-bg-sand);
 }
 
-.packageName {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--xp-color-text);
-}
-
-.packageTotal {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--xp-gold-deep);
-  font-variant-numeric: tabular-nums;
-}
-
-.packageUnit {
-  font-size: 12px;
-  color: var(--xp-color-text-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Ô chọn NGÀY muốn nhận xe (nguyện vọng) — chỉ ngày, giờ do gian hàng chốt. */
-.pickupDate {
-  max-width: 240px;
-}
-
 /*
  * "Chọn xe khác" — chỉ có ở luồng đặt hộ vào từ nơi CHƯA biết xe. Nằm trong cột hồ sơ xe nên
  * nó cuộn cùng thẻ xe và KHÔNG đụng tới chiều cao của `.layout` (thân overlay `xl` cao cố định
@@ -711,4 +606,57 @@
   align-self: flex-start;
   margin-bottom: var(--xp-space-sm);
   padding-left: 0;
+}
+
+/* ── Khối liên hệ trong bước Chuyến đi (chỉ dựng khi hệ thống chưa biết khách) ── */
+
+.contactBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+/*
+ * Tên + SĐT nằm CÙNG một hàng: hai ô ngắn xếp chồng nhau chiếm hai dòng của một bước vốn đã
+ * dài, trong khi mỗi ô chỉ cần nửa cột là đủ đọc.
+ *
+ * `auto-fit` chứ không phải hai cột cứng + media query: khối này nằm trong CỘT PHẢI của
+ * overlay, mà bề rộng cột đó không suy được từ bề rộng màn hình (overlay `xl` bị `100vw` bóp
+ * lại ở tablet). Đo theo container thì hai ô tự xuống một cột đúng lúc chúng bắt đầu chật —
+ * cùng cách `.packages` của bước dài hạn đang làm.
+ *
+ * Khoảng cách dọc để 0: `Form.Item` đã tự mang `margin-bottom` (field.module.css).
+ */
+.contactFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0 var(--xp-space-md);
+}
+
+/*
+ * Vỏ của bảng chi tiết giá trong thân bước. Luôn có mặt để `ref` cuộn-vào-tầm-mắt đứng yên,
+ * nhưng khi bảng đang đóng thì nó rỗng — và một flex item rỗng vẫn ăn nguyên một khoảng `gap`
+ * của `.stepBody`. `:empty` gỡ đúng chỗ đó.
+ */
+.priceDetail {
+  min-width: 0;
+  /* Khối vừa mở dừng dưới đầu vùng cuộn một nhịp, không dán sát mép. */
+  scroll-margin-top: var(--xp-space-sm);
+}
+
+.priceDetail:empty {
+  display: none;
+}
+
+/*
+ * Dòng "Người thuê" ở bước Xác nhận — thay cho cả một bước Liên hệ cũ. Giá trị, chip đã xác thực
+ * và nút Đổi nằm cùng hàng, xuống dòng khi cột hẹp.
+ */
+.renterValue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+  justify-content: flex-end;
 }

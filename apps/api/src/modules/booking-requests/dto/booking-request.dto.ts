@@ -204,6 +204,17 @@ export class RejectBookingRequestDto {
 }
 
 export class BookingRequestListQueryDto {
+  @ApiPropertyOptional({ description: 'Tìm theo tên khách / SĐT / tên xe / biển số' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  q?: string;
+
+  @ApiPropertyOptional({ enum: SERVICE_TYPE_VALUES, description: 'Lọc theo dịch vụ được yêu cầu' })
+  @IsOptional()
+  @IsIn(SERVICE_TYPE_VALUES)
+  serviceType?: string;
+
   @ApiPropertyOptional({ enum: BOOKING_REQUEST_STATUS_VALUES })
   @IsOptional()
   @IsIn(BOOKING_REQUEST_STATUS_VALUES)
@@ -262,7 +273,11 @@ export class BookingRequestDto {
    * frontend không có việc gì cần tới nó, và lộ ra là mở đường cho việc dò tài khoản.
    */
   @ApiPropertyOptional({ type: String, nullable: true }) tenantCustomerId!: string | null;
-  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện tài khoản khách' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Ảnh đại diện tài khoản khách',
+  })
   customerAvatarUrl!: string | null;
   /**
    * Mức rủi ro gian hàng tự đánh giá cho khách này. `null` khi chưa có hồ sơ trong sổ khách.

@@ -2,27 +2,27 @@
 
 import { CheckOutlined, StopOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import {
-  PAYMENT_METHOD_META,
   RECEIPT_SOURCE_META,
   RECEIPT_STATUS,
   RECEIPT_STATUS_META,
   RECEIPT_TYPE_META,
   isAutoReceipt,
   type PaginationMeta,
-  type PaymentMethod,
   type ReceiptSource,
   type ReceiptStatus,
   type ReceiptType,
 } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { vehicleLabel } from '@/lib/vehicle-label';
 import type { Receipt } from '../types';
 import { ReceiptAmount } from './ReceiptAmount';
 import styles from './ReceiptTable.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
 
 interface ReceiptTableProps {
   items: Receipt[];
@@ -58,28 +58,33 @@ export function ReceiptTable({
   onPageChange,
 }: ReceiptTableProps) {
   const fmt = useAppFormat();
+  const t = useTranslations('Finance.receipts.table');
+  const tCommon = useTranslations('Common');
+  const domainLabel = useDomainLabel();
 
   const columns: DataTableColumn<Receipt>[] = [
     {
-      title: 'Phiếu',
+      title: t('columns.receipt'),
       key: 'receipt',
       width: 160,
       render: (_, row) => (
         <div>
-          <div className={styles.name}>{row.receiptNo ?? '—'}</div>
+          <div className={styles.name}>{row.receiptNo ?? tCommon('labels.emptyValue')}</div>
           {/* NGÀY PHÁT SINH, không phải lúc nhập — đây là ngày mọi tổng hợp chạy trên đó. */}
           <div className={styles.meta}>{fmt.date(row.occurredAt)}</div>
         </div>
       ),
     },
     {
-      title: 'Loại',
+      title: t('columns.type'),
       key: 'type',
       width: 110,
-      render: (_, row) => <StatusTag value={row.type as ReceiptType} meta={RECEIPT_TYPE_META} group="receiptType" />,
+      render: (_, row) => (
+        <StatusTag value={row.type as ReceiptType} meta={RECEIPT_TYPE_META} group="receiptType" />
+      ),
     },
     {
-      title: 'Nguồn',
+      title: t('columns.source'),
       key: 'source',
       width: 130,
       render: (_, row) => (
@@ -90,41 +95,51 @@ export function ReceiptTable({
         />
       ),
     },
-    { title: 'Danh mục', key: 'category', width: 150, render: (_, row) => row.categoryName ?? '—' },
+    {
+      title: t('columns.category'),
+      key: 'category',
+      width: 150,
+      render: (_, row) => row.categoryName ?? tCommon('labels.emptyValue'),
+    },
     {
       // Không có cột này thì "đối tượng" của một dòng sổ là ba id 26 ký tự — sổ có số nhưng
       // không trả lời được tiền của ai, xe nào.
-      title: 'Đối tượng',
+      title: t('columns.subject'),
       key: 'subject',
       width: 220,
       render: (_, row) => <SubjectCell row={row} />,
     },
     {
-      title: 'Diễn giải',
+      title: t('columns.description'),
       key: 'description',
       width: 220,
-      render: (_, row) => <span className={styles.desc}>{row.description ?? '—'}</span>,
+      render: (_, row) => (
+        <span className={styles.desc}>{row.description ?? tCommon('labels.emptyValue')}</span>
+      ),
     },
     {
-      title: 'Số tiền',
+      title: t('columns.amount'),
       key: 'amount',
       align: 'right',
       width: 150,
       render: (_, row) => <ReceiptAmount type={row.type} amount={row.amount} />,
     },
     {
-      title: 'Hình thức',
+      title: t('columns.method'),
       key: 'method',
       width: 130,
-      render: (_, row) =>
-        PAYMENT_METHOD_META[row.paymentMethod as PaymentMethod]?.label ?? row.paymentMethod,
+      render: (_, row) => domainLabel('paymentMethod', row.paymentMethod),
     },
     {
-      title: 'Trạng thái',
+      title: tCommon('labels.status'),
       key: 'status',
       width: 130,
       render: (_, row) => (
-        <StatusTag value={row.status as ReceiptStatus} meta={RECEIPT_STATUS_META} group="receiptStatus" />
+        <StatusTag
+          value={row.status as ReceiptStatus}
+          meta={RECEIPT_STATUS_META}
+          group="receiptStatus"
+        />
       ),
     },
     // Toàn bộ cột hành động biến mất khi thiếu `finance.receipt.approve` — quyền do trang truyền
@@ -133,25 +148,26 @@ export function ReceiptTable({
       (row) => [
         {
           key: 'approve',
-          label: 'Duyệt',
+          label: tCommon('actions.approve'),
           icon: <CheckOutlined />,
           hidden:
             !canApprove ||
             !(
               row.status === RECEIPT_STATUS.PENDING_APPROVAL || row.status === RECEIPT_STATUS.DRAFT
             ),
-          confirm: { title: 'Duyệt phiếu này?', okText: 'Duyệt' },
+          confirm: { title: t('actions.approveConfirm'), okText: tCommon('actions.approve') },
           onClick: () => onApprove(row.id),
         },
         {
           key: 'cancel',
-          label: 'Huỷ',
+          label: t('actions.cancel'),
           icon: <StopOutlined />,
           danger: true,
           // Phiếu tự động huỷ ở nghiệp vụ gốc — backend đã chặn (RECEIPT_SOURCE_LOCKED); ẩn nút
           // ở đây để người dùng không bấm vào một hành động chắc chắn thất bại.
-          hidden: !canApprove || row.status === RECEIPT_STATUS.CANCELLED || isAutoReceipt(row.source),
-          confirm: { title: 'Huỷ phiếu này?', okText: 'Huỷ phiếu' },
+          hidden:
+            !canApprove || row.status === RECEIPT_STATUS.CANCELLED || isAutoReceipt(row.source),
+          confirm: { title: t('actions.cancelConfirm'), okText: t('actions.cancelOk') },
           onClick: () => onCancel(row.id),
         },
       ],
@@ -161,29 +177,38 @@ export function ReceiptTable({
 
   return (
     <DataTable<Receipt>
-      label="Danh sách phiếu thu chi"
+      label={t('label')}
       columns={columns}
       items={items}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      error={error ? { title: 'Không tải được danh sách phiếu', onRetry: error.onRetry } : null}
+      error={error ? { title: t('error.title'), onRetry: error.onRetry } : null}
       filtered={filtered}
-      empty={{ title: 'Chưa có phiếu thu/chi nào', action: emptyAction }}
+      empty={{ title: t('empty.title'), action: emptyAction }}
       noResults={{
-        title: 'Không có phiếu khớp bộ lọc',
-        action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
+        title: t('noResults.title'),
+        action: onClearFilters ? (
+          <Button onClick={onClearFilters}>{tCommon('actions.clear')}</Button>
+        ) : undefined,
       }}
       onRowClick={(row) => onOpen(row.id)}
       renderCard={(row) => <ReceiptCard row={row} />}
-      pagination={{ meta, onChange: onPageChange, totalLabel: (total) => `${total} phiếu` }}
+      pagination={{
+        meta,
+        onChange: onPageChange,
+        totalLabel: (total) => t('totalLabel', { count: total }),
+      }}
     />
   );
 }
 
 /** Khách · xe (biển số) · mã đơn — mỗi thứ một dòng, thiếu thì bỏ hẳn dòng đó. */
 function SubjectCell({ row }: { row: Receipt }) {
+  const tCommon = useTranslations('Common');
   const vehicle = vehicleLabel(row.vehicleName, row.plateNumber);
-  if (!row.customerName && !vehicle && !row.bookingCode) return <span>—</span>;
+  if (!row.customerName && !vehicle && !row.bookingCode) {
+    return <span>{tCommon('labels.emptyValue')}</span>;
+  }
 
   return (
     <div>
@@ -202,6 +227,9 @@ function SubjectCell({ row }: { row: Receipt }) {
  */
 function ReceiptCard({ row }: { row: Receipt }) {
   const fmt = useAppFormat();
+  const t = useTranslations('Finance.receipts.table');
+  const tCommon = useTranslations('Common');
+  const domainLabel = useDomainLabel();
   const vehicle = vehicleLabel(row.vehicleName, row.plateNumber);
 
   return (
@@ -225,15 +253,17 @@ function ReceiptCard({ row }: { row: Receipt }) {
       </div>
 
       <div className={styles.cardLine}>
-        {fmt.date(row.occurredAt)} · {row.categoryName ?? 'Chưa phân loại'}
+        {fmt.date(row.occurredAt)} · {row.categoryName ?? t('uncategorized')}
       </div>
       {row.customerName || vehicle ? (
-        <div className={styles.cardLine}>{[row.customerName, vehicle].filter(Boolean).join(' · ')}</div>
+        <div className={styles.cardLine}>
+          {[row.customerName, vehicle].filter(Boolean).join(' · ')}
+        </div>
       ) : null}
       {row.description ? <div className={styles.cardMuted}>{row.description}</div> : null}
       <div className={styles.cardMuted}>
-        {row.receiptNo ?? '—'} ·{' '}
-        {PAYMENT_METHOD_META[row.paymentMethod as PaymentMethod]?.label ?? row.paymentMethod}
+        {row.receiptNo ?? tCommon('labels.emptyValue')} ·{' '}
+        {domainLabel('paymentMethod', row.paymentMethod)}
       </div>
     </article>
   );

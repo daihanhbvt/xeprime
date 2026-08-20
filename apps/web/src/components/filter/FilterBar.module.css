@@ -101,6 +101,32 @@
   flex: 0 0 auto;
 }
 
+/* ---------------------------------------------------------------- nhóm lọc phụ (desktop) */
+
+/*
+ * Popover chứa nhóm lọc phụ. Bề rộng cố định vừa một cột điều khiển: nội dung bên trong là
+ * các trường xếp DỌC (dùng lại `.sheetFields` của bottom sheet), nên để nó co theo nội dung
+ * sẽ ra một cột hẹp khác nhau ở mỗi trang.
+ */
+.overflowPanel {
+  display: flex;
+  width: 280px;
+  max-width: min(280px, calc(100vw - var(--xp-space-xl)));
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.overflowFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+/* Huy hiệu đếm không được kéo giãn theo hàng flex — nút bên trong có bề rộng nội dung riêng. */
+.overflowBadge {
+  flex: 0 0 auto;
+}
+
 .segmented {
   flex: 0 0 auto;
 }

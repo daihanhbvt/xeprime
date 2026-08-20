@@ -1,9 +1,157 @@
 {
+  "receipts": {
+    "page": {
+      "title": "Cash book",
+      "subtitle": "Every đồng that moves through your shop — booking payments, deposits, refunds and vehicle costs all land here automatically."
+    },
+    "periods": {
+      "label": "Quick period",
+      "today": "Today",
+      "this_week": "This week",
+      "this_month": "This month",
+      "last_month": "Last month"
+    },
+    "filters": {
+      "searchLabel": "Search entries",
+      "searchPlaceholder": "Entry no., reference, booking code…",
+      "type": "Type",
+      "status": "Status",
+      "category": "Category",
+      "source": "Source",
+      "paymentMethod": "Method",
+      "dateRange": "Date range"
+    },
+    "actions": {
+      "categories": "Categories",
+      "create": "New entry",
+      "createFirst": "Create the first entry"
+    },
+    "toast": {
+      "approved": "Entry approved",
+      "cancelled": "Entry cancelled"
+    },
+    "forbidden": {
+      "title": "You cannot view the cash book",
+      "description": "You need the permission below to open this page. Ask the shop owner to grant it.",
+      "home": "Back to dashboard"
+    },
+    "table": {
+      "label": "Cash book entries",
+      "totalLabel": "{count, plural, one {# entry} other {# entries}}",
+      "columns": {
+        "receipt": "Entry",
+        "type": "Type",
+        "source": "Source",
+        "category": "Category",
+        "subject": "Related to",
+        "description": "Details",
+        "amount": "Amount",
+        "method": "Method"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "approveConfirm": "Approve this entry?",
+        "cancelConfirm": "Cancel this entry?",
+        "cancelOk": "Cancel entry"
+      },
+      "error": {
+        "title": "Could not load the entry list"
+      },
+      "empty": {
+        "title": "No cash book entry yet"
+      },
+      "noResults": {
+        "title": "No entry matches these filters"
+      },
+      "uncategorized": "Uncategorised"
+    },
+    "detail": {
+      "title": "Entry detail",
+      "ariaLabel": "Cash book entry detail",
+      "errorTitle": "Could not load the entry",
+      "auto": {
+        "title": "Automatic entry",
+        "body": "This entry came from {source}, so it cannot be edited or cancelled here — the book would drift from the booking. Reverse it in that flow instead",
+        "openBooking": "open the booking",
+        "openVehicle": "open the vehicle"
+      },
+      "sections": {
+        "info": "Entry information",
+        "related": "Related records",
+        "attachments": "Proof photos",
+        "trace": "Audit trail"
+      },
+      "rows": {
+        "occurredAt": "Date incurred",
+        "category": "Category",
+        "method": "Method",
+        "referenceCode": "Reference",
+        "description": "Details",
+        "booking": "Booking",
+        "vehicle": "Vehicle",
+        "customer": "Customer",
+        "createdBy": "Created by",
+        "approvedBy": "Approved by",
+        "cancelledBy": "Cancelled by"
+      },
+      "copyReference": "Copy reference",
+      "viewBooking": "View booking",
+      "viewVehicle": "View vehicle",
+      "viewCustomer": "View customer",
+      "attachmentAlt": "Proof photo",
+      "cancelAction": "Cancel entry"
+    },
+    "form": {
+      "title": "New cash book entry",
+      "occurredAt": "Date incurred",
+      "type": "Entry type",
+      "linkHint": "Pick a booking to auto-fill the customer, vehicle and outstanding balance.",
+      "booking": "Linked booking",
+      "bookingPlaceholder": "Search booking code, customer or plate",
+      "category": "Category",
+      "categoryPlaceholder": "Pick a category",
+      "method": "Method",
+      "amount": "Amount",
+      "referenceCode": "Reference (optional)",
+      "referenceCodePlaceholder": "e.g. bank transfer reference",
+      "description": "Details / reason",
+      "attachments": "Proof photos (bill / invoice)",
+      "submit": "Create entry",
+      "success": "Entry created — awaiting approval",
+      "picked": {
+        "customer": "Customer: ",
+        "vehicle": "Vehicle: ",
+        "debt": "Balance: "
+      }
+    },
+    "summary": {
+      "error": "Could not load the totals — the list below is still correct",
+      "income": "Total in",
+      "expense": "Total out",
+      "balance": "Net (in − out)",
+      "approvedCount": "Approved entries",
+      "cash": "Cash {value}",
+      "transfer": "Bank transfer {value}",
+      "inFilter": "Within the current filters",
+      "wholeBook": "Whole book · pending entries not counted"
+    },
+    "categories": {
+      "title": "Income & expense categories",
+      "typeLabel": "Category type",
+      "namePlaceholder": "New category name",
+      "added": "Category added",
+      "system": "System",
+      "delete": "Delete category"
+    }
+  },
   "debts": {
     "page": {
       "title": "Outstanding debts"
     },
     "filters": {
+      "searchLabel": "Search debts",
+      "searchPlaceholder": "Booking code, customer, phone, plate…",
+      "groupLabel": "Group by due date",
       "overdue": "Overdue",
       "upcoming": "Due soon",
       "unpaid": "Nothing collected"

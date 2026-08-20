@@ -1,6 +1,7 @@
 'use client';
 
 import { Alert } from 'antd';
+import { useTranslations } from 'next-intl';
 import { isNegativeMoney } from '@/lib/money';
 import { useAppFormat } from '@/i18n/use-app-format';
 import type { ReceiptSummary } from '../types';
@@ -24,23 +25,12 @@ interface ReceiptSummaryCardsProps {
  * Chỉ cộng phiếu ĐÃ DUYỆT — phiếu chờ duyệt chưa phải tiền thật, và chú thích nói rõ điều đó
  * thay vì để người dùng tự đoán vì sao tổng không khớp số dòng.
  */
-export function ReceiptSummaryCards({
-  data,
-  loading,
-  error,
-  filtered,
-}: ReceiptSummaryCardsProps) {
+export function ReceiptSummaryCards({ data, loading, error, filtered }: ReceiptSummaryCardsProps) {
   const fmt = useAppFormat();
+  const t = useTranslations('Finance.receipts.summary');
 
   if (error && !data) {
-    return (
-      <Alert
-        className={styles.error}
-        type="warning"
-        showIcon
-        message="Không tải được số tổng — danh sách bên dưới vẫn đúng"
-      />
-    );
+    return <Alert className={styles.error} type="warning" showIcon message={t('error')} />;
   }
 
   const showSkeleton = loading && !data;
@@ -49,41 +39,37 @@ export function ReceiptSummaryCards({
   return (
     <div className={styles.grid}>
       <Card
-        label="Tổng thu"
+        label={t('income')}
         value={data ? fmt.money(data.totalIncome) : null}
         tone={styles.income}
         loading={showSkeleton}
         breakdown={
           data
             ? [
-                `Tiền mặt ${fmt.money(data.incomeCash)}`,
-                `Chuyển khoản ${fmt.money(data.incomeTransfer)}`,
+                t('cash', { value: fmt.money(data.incomeCash) }),
+                t('transfer', { value: fmt.money(data.incomeTransfer) }),
               ]
             : undefined
         }
       />
       <Card
-        label="Tổng chi"
+        label={t('expense')}
         value={data ? fmt.money(data.totalExpense) : null}
         tone={styles.expense}
         loading={showSkeleton}
       />
       <Card
-        label="Cân đối (thu − chi)"
+        label={t('balance')}
         value={data ? fmt.money(data.balance) : null}
         tone={balanceNegative ? styles.negative : styles.income}
         loading={showSkeleton}
       />
       <Card
-        label="Phiếu đã duyệt"
+        label={t('approvedCount')}
         value={data ? fmt.count(data.approvedCount) : null}
         tone={styles.neutral}
         loading={showSkeleton}
-        breakdown={
-          data
-            ? [filtered ? 'Trong bộ lọc đang xem' : 'Toàn bộ sổ · phiếu chờ duyệt chưa tính']
-            : undefined
-        }
+        breakdown={data ? [filtered ? t('inFilter') : t('wholeBook')] : undefined}
       />
     </div>
   );

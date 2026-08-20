@@ -81,7 +81,7 @@
 
 .price b {
   font-size: var(--xp-font-size-h4);
-  color: var(--xp-color-primary);
+  color: var(--xp-color-price);
 }
 
 .price span {
@@ -93,44 +93,11 @@
   margin-left: var(--xp-space-sm);
 }
 
-.expandBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--xp-space-xs);
-  width: 100%;
-  /* Vùng chạm tối thiểu trên mobile. */
-  min-height: var(--xp-touch-target-min);
-  padding: 0 var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius-sm);
-  background: transparent;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
-  cursor: pointer;
-}
-
 .details {
   display: flex;
   flex-direction: column;
   gap: var(--xp-space-md);
   min-width: 0;
-}
-
-.gallery {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--xp-space-xs);
-}
-
-.thumb {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
 }
 
 .specs {
@@ -157,20 +124,6 @@
   font-weight: 600;
   color: var(--xp-color-text);
   overflow-wrap: anywhere;
-}
-
-.features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-xs);
-}
-
-.featureChip {
-  font-size: var(--xp-font-size-sm);
-  padding: 2px var(--xp-space-sm);
-  border-radius: var(--xp-border-radius-pill);
-  background: var(--xp-color-bg-muted);
-  color: var(--xp-color-text-secondary);
 }
 
 .shop {
@@ -226,110 +179,6 @@
   font-size: var(--xp-font-size-sm);
   font-weight: 600;
   color: var(--xp-color-primary);
-}
-
-/* ── Đánh giá tiêu biểu ─────────────────────────────────────────────────── */
-
-.reviews {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  padding-top: var(--xp-space-md);
-  border-top: 1px solid var(--xp-color-border-subtle);
-  min-width: 0;
-}
-
-.reviewsHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--xp-space-sm);
-}
-
-.reviewsTitle {
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
-  color: var(--xp-color-text);
-}
-
-.reviewsScore {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--xp-space-xs);
-  font-weight: 600;
-  color: var(--xp-color-primary);
-  white-space: nowrap;
-}
-
-.reviewsCount {
-  font-size: var(--xp-font-size-sm);
-  font-weight: 400;
-  color: var(--xp-color-text-secondary);
-}
-
-.reviewList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-sm);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.reviewItem {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--xp-space-sm) var(--xp-space-md);
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-  min-width: 0;
-}
-
-.reviewMeta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--xp-space-sm);
-  min-width: 0;
-}
-
-.reviewAuthor {
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
-  color: var(--xp-color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.reviewStars {
-  flex: none;
-  font-size: var(--xp-font-size-sm);
-  color: var(--xp-color-primary);
-  letter-spacing: 1px;
-}
-
-.reviewStarsDim {
-  color: var(--xp-color-border-strong);
-}
-
-/*
- * Nhận xét dài cắt còn 3 dòng: cột này là ngữ cảnh, không phải trang đánh giá — để nguyên một
- * bài dài sẽ đẩy hết phần còn lại của hồ sơ xe xuống dưới màn.
- */
-.reviewText {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
-  overflow: hidden;
-  margin: 0;
-  font-size: var(--xp-font-size-sm);
-  line-height: var(--xp-line-height);
-  color: var(--xp-color-text-secondary);
-  overflow-wrap: anywhere;
 }
 
 .contactCard {

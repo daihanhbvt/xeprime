@@ -46,7 +46,7 @@
 
 .total strong {
   font-size: 18px;
-  color: var(--xp-gold-deep);
+  color: var(--xp-color-price);
 }
 
 /* Chân form dính đáy vùng cuộn của modal — thao tác luôn trong tầm mắt khi form dài. */

@@ -2,6 +2,7 @@
 
 import { App } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { ImageGalleryField } from '@/components/form/ImageGalleryField';
@@ -20,9 +21,10 @@ import { vehicleLabel } from '@/lib/vehicle-label';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { presignReceiptAttachment } from '@/services/upload';
 import { PAYMENT_METHOD } from '@xeprime/types';
-import { PAYMENT_METHOD_OPTIONS, RECEIPT_TYPE, RECEIPT_TYPE_OPTIONS } from '../constants';
+import { RECEIPT_TYPE } from '../constants';
 import { useBookingOptions } from '../hooks/use-booking-options';
 import { useFinanceCategories } from '../hooks/use-finance-categories';
+import { useFinanceOptions } from '../hooks/use-finance-options';
 import { useCreateReceipt } from '../hooks/use-receipt-mutations';
 import { receiptFormSchema, type ReceiptFormValues } from '../schema';
 import type { CreateReceiptInput, ReceiptBookingOption } from '../types';
@@ -58,7 +60,9 @@ const DEFAULTS = (): ReceiptFormValues => ({
  */
 export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { message } = App.useApp();
+  const t = useTranslations('Finance.receipts.form');
   const errorMessage = useErrorMessage();
+  const options = useFinanceOptions();
   const { control, handleSubmit, reset, setValue, getValues } = useForm<ReceiptFormValues>({
     resolver: yupResolver(receiptFormSchema),
     defaultValues: DEFAULTS(),
@@ -136,7 +140,7 @@ export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: (
     };
     create.mutate(body, {
       onSuccess: () => {
-        message.success('Đã tạo phiếu — chờ duyệt');
+        message.success(t('success'));
         reset(DEFAULTS());
         setBookingSearch('');
         onClose();
@@ -153,27 +157,25 @@ export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: (
 
   return (
     // Form drawer: nút gửi phải nằm TRONG <form> nên không dùng footer của DetailDrawer.
-    <DetailDrawer title="Tạo phiếu thu/chi" size="lg" open={open} onClose={handleClose}>
+    <DetailDrawer title={t('title')} size="lg" open={open} onClose={handleClose}>
       <form onSubmit={submit} noValidate>
         <div className={styles.grid}>
-          <DateTimeField control={control} name="occurredAt" label="Ngày phát sinh" dateOnly />
+          <DateTimeField control={control} name="occurredAt" label={t('occurredAt')} dateOnly />
           <SelectField
             control={control}
             name="type"
-            label="Loại phiếu"
-            options={RECEIPT_TYPE_OPTIONS}
+            label={t('type')}
+            options={options.receiptType}
           />
 
           <div className={styles.linkBox}>
-            <p className={styles.linkHint}>
-              Chọn đơn thuê để tự điền khách, xe và số tiền còn nợ.
-            </p>
+            <p className={styles.linkHint}>{t('linkHint')}</p>
             <SelectField
               control={control}
               name="bookingId"
-              label="Liên kết đơn thuê"
+              label={t('booking')}
               options={bookingOptions}
-              placeholder="Tìm mã đơn, tên khách hoặc biển số"
+              placeholder={t('bookingPlaceholder')}
               allowClear
               showSearch
               loading={loadingBookings}
@@ -185,9 +187,9 @@ export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: (
           <SelectField
             control={control}
             name="categoryId"
-            label="Danh mục"
+            label={t('category')}
             options={categoryOptions}
-            placeholder="Chọn danh mục"
+            placeholder={t('categoryPlaceholder')}
             allowClear
             showSearch
             loading={loadingCategories}
@@ -195,16 +197,16 @@ export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: (
           <SelectField
             control={control}
             name="paymentMethod"
-            label="Hình thức"
-            options={PAYMENT_METHOD_OPTIONS}
+            label={t('method')}
+            options={options.paymentMethod}
           />
 
-          <NumberField control={control} name="amount" label="Số tiền" money min={0} />
+          <NumberField control={control} name="amount" label={t('amount')} money min={0} />
           <TextField
             control={control}
             name="referenceCode"
-            label="Mã tra soát (tuỳ chọn)"
-            placeholder="VD: mã giao dịch CK"
+            label={t('referenceCode')}
+            placeholder={t('referenceCodePlaceholder')}
           />
           <div className={styles.words} aria-live="polite">
             {amount != null ? moneyToVietnameseWords(String(amount)) : null}
@@ -214,7 +216,7 @@ export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: (
             <TextAreaField
               control={control}
               name="description"
-              label="Diễn giải / lý do"
+              label={t('description')}
               rows={3}
               maxLength={2000}
             />
@@ -224,7 +226,7 @@ export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: (
             <ImageGalleryField
               control={control}
               name="attachments"
-              label="Ảnh minh chứng (bill / hoá đơn)"
+              label={t('attachments')}
               presign={presignReceiptAttachment}
               max={MAX_ATTACHMENTS}
             />
@@ -232,7 +234,7 @@ export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: (
         </div>
 
         <StickyFormActions
-          submitLabel="Tạo phiếu"
+          submitLabel={t('submit')}
           onCancel={handleClose}
           submitting={create.isPending}
           variant="inline"
@@ -250,18 +252,19 @@ export function ReceiptFormDrawer({ open, onClose }: { open: boolean; onClose: (
  */
 function PickedBooking({ booking }: { booking: ReceiptBookingOption }) {
   const fmt = useAppFormat();
+  const t = useTranslations('Finance.receipts.form.picked');
   return (
     <div className={styles.filled}>
       <span>
-        <span className={styles.filledLabel}>Khách: </span>
+        <span className={styles.filledLabel}>{t('customer')}</span>
         {booking.customerName}
       </span>
       <span>
-        <span className={styles.filledLabel}>Xe: </span>
+        <span className={styles.filledLabel}>{t('vehicle')}</span>
         {vehicleLabel(booking.vehicleName, booking.plateNumber)}
       </span>
       <span>
-        <span className={styles.filledLabel}>Còn nợ: </span>
+        <span className={styles.filledLabel}>{t('debt')}</span>
         {fmt.money(booking.debtAmount)}
       </span>
     </div>

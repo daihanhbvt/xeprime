@@ -40,7 +40,12 @@ const bookings = new BookingsService(
   new DriversService(asService, audit),
   new CustomersService(asService, audit),
 );
-const payments = new PaymentsService(asService, audit, bookings, new ReceiptsService(asService, audit));
+const payments = new PaymentsService(
+  asService,
+  audit,
+  bookings,
+  new ReceiptsService(asService, audit),
+);
 const overview = new FinanceOverviewService(asService);
 
 let dbAvailable = false;
@@ -84,7 +89,13 @@ beforeAll(async () => {
     },
   });
   await prisma.vehicle.create({
-    data: { id: vehicleId, tenantId, code: `XE-${vehicleId.slice(-6)}`, name: 'Vios', vehicleType: VEHICLE_TYPE.CAR },
+    data: {
+      id: vehicleId,
+      tenantId,
+      code: `XE-${vehicleId.slice(-6)}`,
+      name: 'Vios',
+      vehicleType: VEHICLE_TYPE.CAR,
+    },
   });
 });
 
@@ -144,22 +155,37 @@ describe('Payments — thu tiền đơn (S2)', () => {
   maybe('2 lần thu ĐỒNG THỜI → paidAmount = tổng (không lost-update)', async () => {
     const b = await makeBooking('1000000');
     await Promise.all([
-      payments.recordForBooking(tenantId, ownerId, b.id, { amount: '300000', method: PAYMENT_METHOD.CASH }),
-      payments.recordForBooking(tenantId, ownerId, b.id, { amount: '250000', method: PAYMENT_METHOD.BANK_TRANSFER }),
+      payments.recordForBooking(tenantId, ownerId, b.id, {
+        amount: '300000',
+        method: PAYMENT_METHOD.CASH,
+      }),
+      payments.recordForBooking(tenantId, ownerId, b.id, {
+        amount: '250000',
+        method: PAYMENT_METHOD.BANK_TRANSFER,
+      }),
     ]);
-    const fresh = await prisma.booking.findUniqueOrThrow({ where: { id: b.id }, select: { paidAmount: true } });
+    const fresh = await prisma.booking.findUniqueOrThrow({
+      where: { id: b.id },
+      select: { paidAmount: true },
+    });
     expect(fresh.paidAmount.toString()).toBe('550000');
   });
 
   maybe('void → paidAmount trừ lại + phiếu thu liên kết bị huỷ; void lần 2 → 409', async () => {
     const b = await makeBooking('1000000');
-    await payments.recordForBooking(tenantId, ownerId, b.id, { amount: '500000', method: PAYMENT_METHOD.CASH });
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '500000',
+      method: PAYMENT_METHOD.CASH,
+    });
     const payment = await prisma.payment.findFirstOrThrow({ where: { bookingId: b.id } });
 
     const voided = await payments.voidPayment(tenantId, ownerId, payment.id);
     expect(voided.status).toBe(PAYMENT_STATUS.REFUNDED);
 
-    const fresh = await prisma.booking.findUniqueOrThrow({ where: { id: b.id }, select: { paidAmount: true } });
+    const fresh = await prisma.booking.findUniqueOrThrow({
+      where: { id: b.id },
+      select: { paidAmount: true },
+    });
     expect(fresh.paidAmount.toString()).toBe('0');
     const receipt = await prisma.receipt.findUniqueOrThrow({ where: { id: payment.receiptId! } });
     expect(receipt.status).toBe(RECEIPT_STATUS.CANCELLED);
@@ -181,8 +207,14 @@ describe('Payments — thu tiền đơn (S2)', () => {
 
   maybe('lịch sử thu tiền của đơn', async () => {
     const b = await makeBooking('1000000');
-    await payments.recordForBooking(tenantId, ownerId, b.id, { amount: '100000', method: PAYMENT_METHOD.CASH });
-    await payments.recordForBooking(tenantId, ownerId, b.id, { amount: '200000', method: PAYMENT_METHOD.QR });
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '100000',
+      method: PAYMENT_METHOD.CASH,
+    });
+    await payments.recordForBooking(tenantId, ownerId, b.id, {
+      amount: '200000',
+      method: PAYMENT_METHOD.QR,
+    });
     const history = await payments.listForBooking(tenantId, b.id);
     expect(history).toHaveLength(2);
     expect(history.map((h) => h.amount).sort()).toEqual(['100000', '200000']);
@@ -190,9 +222,15 @@ describe('Payments — thu tiền đơn (S2)', () => {
 
   maybe('công nợ: đơn trả đủ KHÔNG nằm trong danh sách; đơn còn nợ CÓ', async () => {
     const paid = await makeBooking('1000000');
-    await payments.recordForBooking(tenantId, ownerId, paid.id, { amount: '1000000', method: PAYMENT_METHOD.CASH });
+    await payments.recordForBooking(tenantId, ownerId, paid.id, {
+      amount: '1000000',
+      method: PAYMENT_METHOD.CASH,
+    });
     const owing = await makeBooking('1000000');
-    await payments.recordForBooking(tenantId, ownerId, owing.id, { amount: '300000', method: PAYMENT_METHOD.CASH });
+    await payments.recordForBooking(tenantId, ownerId, owing.id, {
+      amount: '300000',
+      method: PAYMENT_METHOD.CASH,
+    });
 
     const res = await overview.debts(tenantId, { limit: 100 });
     const ids = res.data.map((d) => d.bookingId);
@@ -200,6 +238,40 @@ describe('Payments — thu tiền đơn (S2)', () => {
     expect(ids).not.toContain(paid.id);
     const owingRow = res.data.find((d) => d.bookingId === owing.id)!;
     expect(owingRow.debtAmount).toBe('700000');
+  });
+
+  maybe('công nợ: ô tìm kiếm chạm mã đơn, tên khách, SĐT, tên xe và biển số', async () => {
+    const target = await makeBooking('1000000');
+    await payments.recordForBooking(tenantId, ownerId, target.id, {
+      amount: '100000',
+      method: PAYMENT_METHOD.CASH,
+    });
+
+    // Mã đơn là chuỗi người thu nợ hay cầm nhất — tìm phải ra ĐÚNG một đơn, không phải cả trang.
+    const byCode = await overview.debts(tenantId, { q: target.code, limit: 100 });
+    expect(byCode.data.map((d) => d.bookingId)).toEqual([target.id]);
+
+    // Tên xe nằm ở bảng khác: nếu câu đếm quên join `vehicles` thì `total` sẽ to hơn số dòng.
+    const byVehicle = await overview.debts(tenantId, { q: 'Vios', limit: 100 });
+    expect(byVehicle.data.length).toBeGreaterThan(0);
+    expect(byVehicle.meta.total).toBe(byVehicle.data.length);
+
+    // Không khớp gì → rỗng THẬT, cả dòng lẫn tổng.
+    const none = await overview.debts(tenantId, { q: 'khong-ton-tai-xyz', limit: 100 });
+    expect(none.data).toHaveLength(0);
+    expect(none.meta.total).toBe(0);
+  });
+
+  maybe('công nợ: tìm kiếm KHÔNG vượt ra khỏi gian hàng của mình', async () => {
+    const mine = await makeBooking('1000000');
+    await payments.recordForBooking(tenantId, ownerId, mine.id, {
+      amount: '1000',
+      method: PAYMENT_METHOD.CASH,
+    });
+
+    // `tenantId` khác → cùng từ khoá nhưng không được thấy đơn của shop bên kia.
+    const theirs = await overview.debts(newId(), { q: mine.code, limit: 100 });
+    expect(theirs.data).toHaveLength(0);
   });
 
   maybe('dashboard summary: cân đối = tổng thu − tổng chi', async () => {
@@ -239,7 +311,12 @@ describe('Payments — cọc không phải doanh thu', () => {
     });
     const receipt = await prisma.receipt.findFirstOrThrow({
       where: { tenantId, bookingId: b.id, source: RECEIPT_SOURCE.DEPOSIT },
-      select: { status: true, amount: true, sourceRefId: true, category: { select: { systemKey: true } } },
+      select: {
+        status: true,
+        amount: true,
+        sourceRefId: true,
+        category: { select: { systemKey: true } },
+      },
     });
     expect(receipt.status).toBe(RECEIPT_STATUS.APPROVED);
     expect(receipt.amount.toString()).toBe('500000');

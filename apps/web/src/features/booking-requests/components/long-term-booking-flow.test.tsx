@@ -264,16 +264,25 @@ describe('Thuê dài hạn — chọn GÓI thay cho chọn khoảng ngày', () =
     ]);
   });
 
-  it('chọn gói → tóm tắt hiện TIỀN THẬT của gói đó', async () => {
+  /**
+   * Tiền của gói nằm ở khối giá dùng chung dưới đáy cột (một chỗ duy nhất cho cả luồng), không
+   * còn ở một khối "Tóm tắt lựa chọn" riêng của bước dài hạn — trước đây hai khối cùng dựng từ
+   * một `quote` nên cùng một con số hiện hai lần cạnh nhau.
+   */
+  it('chọn gói → khối giá hiện TIỀN THẬT của gói đó', async () => {
     await openLongTerm();
     fireEvent.click(screen.getByRole('radio', { name: /9 tháng/ }));
 
-    const summary = await screen.findByLabelText('Tóm tắt lựa chọn');
-    expect(within(summary).getByText('Giá thuê (chưa ưu đãi)')).toBeTruthy();
-    expect(within(summary).getByText('108.000.000 ₫')).toBeTruthy();
-    expect(within(summary).getByText('Ưu đãi (20%)')).toBeTruthy();
-    expect(within(summary).getByText('−21.600.000 ₫')).toBeTruthy();
-    expect(within(summary).getByText('86.400.000 ₫')).toBeTruthy();
+    // Thu gọn: chỉ tổng của gói.
+    expect(await screen.findByText('86.400.000 ₫')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /Chi tiết/ }));
+
+    const detail = await screen.findByLabelText('Chi tiết giá gói 9 tháng');
+    expect(within(detail).getByText('Giá cơ sở gói 9 tháng')).toBeTruthy();
+    expect(within(detail).getByText('108.000.000 ₫')).toBeTruthy();
+    expect(within(detail).getByText('Ưu đãi cam kết 9 tháng (20%)')).toBeTruthy();
+    expect(within(detail).getByText('-21.600.000 ₫')).toBeTruthy();
   });
 
   it('không có gói 4/5/7/8/10/11 tháng', async () => {
@@ -296,8 +305,9 @@ describe('Thuê dài hạn — chọn GÓI thay cho chọn khoảng ngày', () =
     await openLongTerm();
     fireEvent.click(screen.getByRole('radio', { name: /9 tháng/ }));
 
-    await screen.findByLabelText('Tóm tắt lựa chọn');
-    expect(screen.getByText(/khi thuê 9 tháng so với giá gốc/)).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: /Chi tiết/ }));
+    await screen.findByLabelText('Chi tiết giá gói 9 tháng');
+    expect(screen.getByText(/Tiết kiệm .* nhờ ưu đãi thời hạn 9 tháng/)).toBeTruthy();
     expect(screen.queryByText(/so với thuê theo ngày/)).toBeNull();
     // Con số "tiết kiệm" bịa từ chênh lệch giá ngày (67.500.000) không được xuất hiện.
     expect(screen.queryByText(/67\.500\.000/)).toBeNull();
@@ -353,17 +363,14 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     await openLongTerm();
 
     fireEvent.click(screen.getByRole('radio', { name: /6 tháng/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
-
-    // Dài hạn KHÔNG gọi check-availability: chưa có khung giờ nào để kiểm (ADR 0006).
-    await screen.findByRole('button', { name: 'Đổi thời gian' });
-    expect(api.checkAvailability).not.toHaveBeenCalled();
-
+    // Gói và liên hệ nằm cùng MỘT bước — một cú Tiếp tục là sang thẳng xác thực.
     fireEvent.change(screen.getByLabelText('Họ và tên'), { target: { value: 'Nguyễn Văn A' } });
     fireEvent.change(screen.getByLabelText('Số điện thoại'), { target: { value: '0901234567' } });
     fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
 
     fireEvent.change(await screen.findByLabelText('Mã OTP'), { target: { value: '123456' } });
+    // Dài hạn KHÔNG gọi check-availability: chưa có khung giờ nào để kiểm (ADR 0006).
+    expect(api.checkAvailability).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Xác thực' }));
     await screen.findByRole('button', { name: 'Gửi yêu cầu thuê' });
 
@@ -372,12 +379,6 @@ describe('Thuê dài hạn — nguyện vọng nhận xe', () => {
     expect(screen.getByText('Nguyện vọng nhận xe')).toBeTruthy();
     expect(screen.queryByText('Trả xe')).toBeNull();
 
-    fireEvent.click(screen.getByRole('checkbox'));
-    await waitFor(() =>
-      expect(
-        (screen.getByRole('button', { name: 'Gửi yêu cầu thuê' }) as HTMLButtonElement).disabled,
-      ).toBe(false),
-    );
     fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu thuê' }));
 
     await waitFor(() => expect(api.submitBookingRequest).toHaveBeenCalled());

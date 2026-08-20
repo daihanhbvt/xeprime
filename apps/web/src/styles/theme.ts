@@ -81,6 +81,22 @@ export const XP_TOKENS = {
   // Cam san hô dành riêng cho tag khuyến mãi — giảm giá không mang nghĩa error/warning.
   'color-discount': '#ff5a2c',
   'color-discount-contrast': '#ffffff',
+  /**
+   * Màu của SỐ TIỀN khách phải trả — một màu duy nhất cho mọi giá cuối cùng trong app
+   * (tổng dự kiến, giá niêm yết của xe, tổng đơn…).
+   *
+   * Trước đây mỗi màn tự chọn: bảng breakdown tô tổng bằng `color-success` (xanh = "thành
+   * công", không phải "tiền"), overlay đặt xe để tổng màu chữ thường, còn thẻ xe lại dùng
+   * gold. Cùng một con số mang ba nghĩa màu khác nhau.
+   *
+   * Dẫn xuất từ `color-primary-active` chứ không phải `color-primary`: gold sáng #d6a02c chỉ
+   * đạt 2.4:1 trên nền trắng — không đọc nổi ở cỡ chữ tiền. Gold đậm đạt 3.9:1, qua ngưỡng
+   * AA cho chữ lớn/đậm, mà vẫn là sắc thương hiệu.
+   *
+   * KHÔNG dùng cho: giá gạch ngang (khuyến mãi), số tiền phụ/tham chiếu, và tiền mang nghĩa
+   * thu/chi ở tuyến tài chính — những chỗ đó màu đang nói một điều khác.
+   */
+  'color-price': 'var(--xp-color-primary-active)',
 
   // ─── Vỏ portal ────────────────────────────────────────────────────────────
   // P1 đã chốt "TỐI" (07/08/2026) và Wave 1D-B đã áp dụng.

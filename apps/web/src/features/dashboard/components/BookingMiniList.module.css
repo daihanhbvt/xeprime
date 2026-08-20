@@ -70,6 +70,6 @@
 .price {
   font-weight: 600;
   font-size: 13px;
-  color: var(--xp-gold-deep);
+  color: var(--xp-color-price);
   white-space: nowrap;
 }

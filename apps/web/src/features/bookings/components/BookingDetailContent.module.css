@@ -156,6 +156,11 @@
   font-weight: 700;
 }
 
+/* Tổng phải thu = giá cuối của đơn → màu tiền dùng chung, như mọi tổng khác trong app. */
+.rowTotal dd {
+  color: var(--xp-color-price);
+}
+
 .negative {
   color: var(--xp-color-error);
 }

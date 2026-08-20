@@ -312,6 +312,30 @@ export class PublicListingDto {
   @ApiProperty({ description: 'Số lượt đánh giá của xe' }) ratingCount!: number;
 }
 
+/**
+ * Chỗ khách tới nhận xe khi chọn "Nhận tại điểm hẹn" — là CHI NHÁNH đang giữ xe, không phải
+ * địa chỉ chung của gian hàng: shop nhiều chi nhánh thì mỗi xe đỗ một nơi khác nhau.
+ *
+ * Địa chỉ rơi về hồ sơ gian hàng khi chi nhánh chưa điền (`tenant_branches.address` là optional).
+ * Không có địa chỉ nào ⇒ cả object là `null`, FE hiện câu gợi ý chung — KHÔNG dựng địa chỉ giả.
+ */
+export class PickupPointDto {
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tên chi nhánh giữ xe. Null khi địa chỉ rơi về hồ sơ gian hàng.',
+  })
+  branchName!: string | null;
+
+  @ApiProperty({ description: 'Địa chỉ nhận xe' }) address!: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Tỉnh/thành của điểm nhận' })
+  provinceName!: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'SĐT chi nhánh' })
+  phone!: string | null;
+}
+
 /** Chi tiết một xe trên marketplace — cho trang `/listings/[id]`. */
 export class PublicListingDetailDto extends PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
@@ -333,6 +357,24 @@ export class PublicListingDetailDto extends PublicListingDto {
    */
   @ApiProperty({ type: [LongTermPackageOptionDto] })
   longTermPackages!: LongTermPackageOptionDto[];
+
+  @ApiPropertyOptional({
+    type: PickupPointDto,
+    nullable: true,
+    description: 'Chỗ nhận xe khi khách tự tới lấy — chi nhánh giữ xe, fallback hồ sơ gian hàng.',
+  })
+  pickupPoint!: PickupPointDto | null;
+
+  /**
+   * KHÁC `deliveryEnabled`, và hai giá trị này lệch nhau được — đừng gộp:
+   *   - `deliveryEnabled` là TIỆN ÍCH khai trên hồ sơ xe, chỉ để gắn chip trên thẻ/trang xe;
+   *   - `deliveryAvailable` là CHÍNH SÁCH HIỆU LỰC (`rental_policies`), tức đúng thứ
+   *     `BookingRequestsService` dùng để chấp nhận hay từ chối `deliveryRequested`.
+   * Luồng đặt xe phải hỏi trường này, nếu không khách chọn được một hình thức mà tới nút gửi
+   * mới ăn `DELIVERY_NOT_SUPPORTED`.
+   */
+  @ApiProperty({ description: 'Giao xe tận nơi có ĐẶT ĐƯỢC không (theo chính sách hiệu lực)' })
+  deliveryAvailable!: boolean;
 }
 
 export class PublicListingPageMetaDto {

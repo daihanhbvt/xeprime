@@ -49,6 +49,15 @@ if (!('ResizeObserver' in window)) {
 }
 
 /**
+ * `Element.scrollIntoView` cũng vắng mặt trong jsdom. Nơi nào đưa một khối vừa mở ra vào tầm
+ * mắt (bảng chi tiết giá của luồng đặt xe, đáy khung chat) đều gọi nó, và thiếu nó thì test
+ * chết vì "không phải là hàm" — trong khi cuộn không phải thứ test đang kiểm.
+ */
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
+
+/**
  * `IntersectionObserver` cũng không có trong jsdom, mà các danh sách TẢI DẦN dùng nó làm mốc
  * chạm đáy (`MarketplaceResults`, bộ chọn xe của luồng đặt hộ). Stub rỗng: test không mô phỏng
  * cuộn thật, nó gọi thẳng callback qua instance được ghi lại khi cần.

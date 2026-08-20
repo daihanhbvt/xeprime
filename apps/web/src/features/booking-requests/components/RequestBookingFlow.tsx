@@ -12,35 +12,29 @@ import {
 } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Checkbox, Radio, Segmented, Skeleton } from 'antd';
+import { Alert, Button, Radio, Segmented } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
   API_ERROR_CODE,
   LONG_TERM_PACKAGE_MONTHS,
-  longTermPackageLabel,
   longTermReturnAt,
   PICKUP_PREFERENCE,
-  PICKUP_PREFERENCE_LABEL,
   ROUTE_TYPE,
-  ROUTE_TYPE_DESCRIPTION,
-  ROUTE_TYPE_LABEL,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   SERVICE_TYPE_VALUES,
   isRouteType,
   isSameVnPhone,
   PHONE_VERIFICATION_PURPOSE,
-  serviceTypeLabel,
   type LongTermPackageMonths,
   type RouteType,
   type ServiceType,
 } from '@xeprime/types';
-import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
 import { LongTermPackageStep } from './LongTermPackageStep';
-import { DiscountTag } from '@/components/data-display/DiscountTag';
 import {
   RentalDateTimeRangeField,
   type RentalMode,
@@ -48,7 +42,7 @@ import {
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
-import { fetchListingDetailClient, fetchListingReviewsClient } from '@/features/marketplace/api';
+import { fetchListingDetailClient } from '@/features/marketplace/api';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import { verifyOtp } from '@/features/phone-verification/api';
 import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
@@ -56,16 +50,18 @@ import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-ve
 import { maskPhone } from '@/features/phone-verification/mask';
 import { fetchPublicQuote } from '@/features/rental-policies/api';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
-import { applyDiscountPercent } from '@/lib/money';
-import { getErrorCode, getErrorMessage } from '@/services/api-client';
+import { getErrorCode } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import { checkAvailability, submitBookingRequest } from '../api';
 import { PICKUP_METHOD, requestFormSchema, type RequestFormValues } from '../schema';
-import { BookingSteps, type BookingStepKey } from './BookingSteps';
+import { BookingPriceSummary } from './BookingPriceSummary';
+import { BookingSteps, type BookingStepItem, type BookingStepKey } from './BookingSteps';
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
 import styles from './RequestBookingFlow.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
 
 interface RequestBookingFlowProps {
   vehicleId: string;
@@ -93,28 +89,33 @@ interface RequestBookingFlowProps {
   onResultChange?: (isResult: boolean) => void;
 }
 
-const DELIVERY_NOTE =
-  'Nếu có chi phí phát sinh, chủ xe sẽ trao đổi trực tiếp với bạn trước khi cập nhật đơn thuê.';
-
-/** Số đánh giá hiện trong cột hồ sơ xe — vài cái tiêu biểu, không phải cả trang đánh giá. */
-const REVIEW_PREVIEW_COUNT = 3;
-
 /**
- * Luồng "Yêu cầu thuê xe" của khách — **ba bước biểu mẫu**, hai cột trên desktop.
+ * Luồng "Yêu cầu thuê xe" của khách — **hai bước biểu mẫu**, hai cột trên desktop.
  *
  * Cột trái là hồ sơ xe đứng yên (`VehicleSummaryPanel`); cột phải đổi theo bước:
- * `Thời gian` → `Liên hệ` → `Xác nhận`. OTP là một TRẠNG THÁI bên trong bước Liên hệ chứ không
- * phải bước thứ tư — khách đã đăng nhập với đúng SĐT đã xác thực không đi qua nó bao giờ.
+ * `Chuyến đi` → `Xác nhận`.
  *
- * **Điều kiện bỏ qua OTP ở đây chỉ để CHỌN MÀN HÌNH.** Cái chặn thật nằm ở
- * `BookingRequestsService.canSkipBookingOtp`; nếu hai bên bất đồng (phiên vừa hết hạn) backend
- * trả `PHONE_NOT_VERIFIED` và flow tự lùi về OTP, giữ nguyên mọi thứ đã nhập.
+ * **Vì sao hai bước, không phải ba.** Bản trước tách `Thời gian` và `Liên hệ` thành hai bước
+ * riêng, nhưng cả hai đều gần như không có việc để làm: thẻ tìm kiếm ở trang chủ đã hỏi thời
+ * gian nên bước đầu chỉ còn một ô điền sẵn và một nút Tiếp tục, còn khách đã đăng nhập với SĐT
+ * đã xác thực thì bước Liên hệ chỉ là một thẻ chỉ-đọc. Gộp lại thành MỘT bước "Chuyến đi" —
+ * thời gian là một trường, ô liên hệ chỉ hiện với người hệ thống chưa biết — và giữ nguyên bước
+ * `Xác nhận` cuối cùng, nơi khách soát lại rồi mới gửi.
+ *
+ * OTP là một TRẠNG THÁI giữa hai bước chứ không phải bước thứ ba — khách đã đăng nhập với đúng
+ * SĐT đã xác thực không đi qua nó bao giờ. **Điều kiện bỏ qua OTP ở đây chỉ để CHỌN MÀN HÌNH.**
+ * Cái chặn thật nằm ở `BookingRequestsService.canSkipBookingOtp`; nếu hai bên bất đồng (phiên
+ * vừa hết hạn) backend trả `PHONE_NOT_VERIFIED` và flow tự lùi về OTP, giữ nguyên mọi thứ đã
+ * nhập.
  *
  * **Giao xe tận nơi (Wave 9)**: chỉ hỏi địa chỉ. Phí giao nhận luôn `Miễn phí` lúc gửi yêu cầu —
  * không hỏi khoảng cách, không báo giá, không có trạng thái chờ khách duyệt phí. Chủ xe thống
- * nhất phí ngoài ứng dụng rồi cập nhật vào đơn sau khi duyệt.
+ * nhất phí ngoài ứng dụng rồi cập nhật vào đơn sau khi duyệt. Lựa chọn này chỉ hiện khi CHÍNH
+ * SÁCH hiệu lực cho phép (`listing.deliveryAvailable`), không phải khi hồ sơ xe gắn chip tiện ích.
  *
- * Tiền hiển thị đều LẤY TỪ SERVER (`/public/listings/:id/quote`) — client không tự cộng trừ.
+ * Tiền hiển thị đều LẤY TỪ SERVER (`/public/listings/:id/quote`) và chỉ do `BookingPriceSummary`
+ * dựng: DÒNG TỔNG dính đáy cột phải (luôn thấy được), còn BẢNG CHI TIẾT mở ra ở cuối thân bước
+ * nên nó cuộn chung một mạch với phần nhập liệu thay vì nở ngược lên che mất.
  */
 export function RequestBookingFlow({
   vehicleId,
@@ -129,20 +130,32 @@ export function RequestBookingFlow({
   onBusyChange,
   onResultChange,
 }: RequestBookingFlowProps) {
+  const t = useTranslations('BookingRequests.flow');
+  const dl = useDomainLabel();
   const fmt = useAppFormat();
+  const errorMessage = useErrorMessage();
 
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<BookingStepKey>('time');
+  const [step, setStep] = useState<BookingStepKey>('trip');
   const [rentalMode, setRentalMode] = useState<RentalMode>('daily');
   const [otpPhone, setOtpPhone] = useState('');
   const [code, setCode] = useState('');
   const [stepError, setStepError] = useState<string | null>(null);
   /** Yêu cầu trùng lặp — trạng thái riêng, có lối đi tiếp, không phải một alert đỏ. */
   const [duplicate, setDuplicate] = useState(false);
-  /** Người đã đăng nhập bấm "Đổi thông tin" → hiện ô nhập thay vì thẻ xác nhận gọn. */
+  /** Người đã đăng nhập bấm "Đổi" ở bước xác nhận → hiện lại ô nhập liên hệ ở bước Chuyến đi. */
   const [editingContact, setEditingContact] = useState(false);
   const [requestCode, setRequestCode] = useState<string | null>(null);
+  /**
+   * Bảng chi tiết giá đang mở hay không.
+   *
+   * State nằm ở ĐÂY, không trong `BookingPriceSummary`: khối tiền có hai hình thái ở hai nhánh
+   * cây khác nhau — dòng tổng dính đáy cột, bảng chi tiết cuối thân bước — và nút mở nằm ở
+   * hình thái này còn nội dung mở ra ở hình thái kia.
+   */
+  const [priceExpanded, setPriceExpanded] = useState(false);
+  const priceDetailRef = useRef<HTMLDivElement | null>(null);
 
   // 401 = chưa đăng nhập, là trạng thái hợp lệ ở màn công khai này → coi như khách vãng lai.
   const { data: me } = useCurrentUser();
@@ -161,22 +174,11 @@ export function RequestBookingFlow({
   });
   const listing = providedListing ?? listingQ.data ?? null;
 
-  /**
-   * Vài đánh giá tiêu biểu của xe cho cột trái. Tải RỜI khỏi listing để hồ sơ xe hiện ngay,
-   * đánh giá đến sau; hỏng thì khối đánh giá vắng mặt chứ không chặn luồng đặt.
-   */
-  const reviewsQ = useQuery({
-    queryKey: queryKeys.marketplace.reviews(vehicleId, { limit: REVIEW_PREVIEW_COUNT }),
-    queryFn: () => fetchListingReviewsClient(vehicleId, REVIEW_PREVIEW_COUNT),
-    staleTime: 5 * 60_000,
-  });
-
   const { control, trigger, getValues, setValue, formState } = useForm<RequestFormValues>({
     resolver: yupResolver(requestFormSchema),
     defaultValues: {
       customerName: '',
       customerPhone: '',
-      customerEmail: '',
       // Dịch vụ/lộ trình prefill từ ngữ cảnh tìm kiếm; đối chiếu với năng lực xe ở effect dưới.
       serviceType:
         serviceTypeContext && (SERVICE_TYPE_VALUES as string[]).includes(serviceTypeContext)
@@ -194,14 +196,12 @@ export function RequestBookingFlow({
       requestedPickupDate: null,
       pickupMethod: PICKUP_METHOD.SELF,
       deliveryAddress: '',
-      agreed: false,
     },
   });
 
   const watchedPickup = useWatch({ control, name: 'pickupAt' });
   const watchedReturn = useWatch({ control, name: 'returnAt' });
   const pickupMethod = useWatch({ control, name: 'pickupMethod' });
-  const agreed = useWatch({ control, name: 'agreed' });
   const watchedService = useWatch({ control, name: 'serviceType' });
   const watchedRoute = useWatch({ control, name: 'routeType' });
   const watchedPackage = useWatch({ control, name: 'longTermPackageMonths' });
@@ -211,6 +211,15 @@ export function RequestBookingFlow({
   const isWithDriver = watchedService === SERVICE_TYPE.WITH_DRIVER;
   // Có tài xế thì xe ĐẾN ĐÓN khách — "giao xe tận nơi" không có nghĩa với chuyến này.
   const isDelivery = !isWithDriver && pickupMethod === PICKUP_METHOD.DELIVERY;
+
+  /**
+   * Giao tận nơi có ĐẶT ĐƯỢC không — theo CHÍNH SÁCH hiệu lực, không phải chip tiện ích trên
+   * hồ sơ xe. Hồ sơ xe chưa về thì chưa dựng lựa chọn nào để khỏi nháy một ô rồi rút lại.
+   */
+  const deliveryAvailable = Boolean(listing?.deliveryAvailable);
+
+  /** Chỗ khách tới lấy xe khi tự nhận — chi nhánh giữ xe, backend đã lo phần fallback. */
+  const pickupPoint = listing?.pickupPoint ?? null;
 
   /** Các dịch vụ xe phục vụ được — nguồn của bộ chọn dịch vụ trong luồng. */
   const vehicleServices = useMemo<string[]>(
@@ -230,6 +239,17 @@ export function RequestBookingFlow({
   }, [vehicleServices, getValues, setValue]);
 
   /**
+   * Chính sách tắt giao xe mà form còn giữ lựa chọn cũ (khách đổi dịch vụ, hoặc hồ sơ xe về
+   * muộn) → kéo về nhận tại điểm hẹn. Không làm việc này thì payload mang `deliveryRequested`
+   * mà giao diện không còn ô nào để sửa, và backend từ chối ở đúng nút cuối cùng.
+   */
+  useEffect(() => {
+    if (!deliveryAvailable && getValues('pickupMethod') === PICKUP_METHOD.DELIVERY) {
+      setValue('pickupMethod', PICKUP_METHOD.SELF, { shouldValidate: true });
+    }
+  }, [deliveryAvailable, getValues, setValue]);
+
+  /**
    * Đổi dịch vụ. Dài hạn và các dịch vụ theo ngày dùng hai bộ input khác hẳn nhau (gói +
    * nguyện vọng ngày nhận ↔ khoảng nhận–trả), nên không mang dữ liệu bên này sang bên kia.
    */
@@ -241,8 +261,7 @@ export function RequestBookingFlow({
   /**
    * Báo giá công khai — CÙNG PricingService với luồng duyệt của shop, FE không tự cộng trừ.
    * Hỏng cũng không chặn luồng đặt: khối giá là thông tin tham khảo, giá chốt do shop duyệt.
-   */
-  /*
+   *
    * Dài hạn báo giá theo GÓI: không gửi ngày nào cả (giá không phụ thuộc ngày nhận, ADR 0011).
    * Dịch vụ theo ngày giữ hợp đồng nhận–trả như cũ.
    */
@@ -261,7 +280,7 @@ export function RequestBookingFlow({
   const quoteQ = useQuery({
     queryKey: queryKeys.marketplace.quote(vehicleId, quoteParams ?? {}),
     queryFn: () => fetchPublicQuote(vehicleId, quoteParams!),
-    // Bật từ NGAY bước thời gian: chọn xong khoảng thuê là thấy tiền tạm tính, không phải đi
+    // Bật từ NGAY bước Chuyến đi: chọn xong khoảng thuê là thấy tiền tạm tính, không phải đi
     // hết một bước nữa mới biết mình sắp trả bao nhiêu.
     enabled: quoteParams != null,
     staleTime: 60_000,
@@ -283,6 +302,25 @@ export function RequestBookingFlow({
   const phoneMatchesAccount = (phone: string) =>
     accountPhoneVerified && isSameVnPhone(phone, accountPhone);
 
+  /**
+   * Hệ thống đã biết đủ liên hệ chưa. `false` ⇒ bước Chuyến đi dựng ô nhập tên + SĐT; `true`
+   * ⇒ không hỏi lại thứ đã có, chỉ hiện một dòng "Người thuê" ở bước Xác nhận kèm nút Đổi.
+   */
+  const contactKnown = accountPhoneVerified && !editingContact;
+
+  /**
+   * Đổi bước — MỘT cửa duy nhất, vì bước nào cũng kéo theo hình thái của khối tiền.
+   *
+   * Bước Xác nhận mở sẵn bảng giá đầy đủ (khách sắp cam kết thì phải thấy đủ), các bước khác
+   * bắt đầu ở dòng tổng; và trạng thái mở KHÔNG mang từ bước này sang bước kia. Đặt ở đây thay
+   * vì một `useEffect` theo dõi `step`: hiệu ứng đó chỉ chạy SAU khi bước mới đã render một
+   * lần với giá trị cũ, tức là một nhịp nháy, và nó cũng đè luôn lựa chọn khách vừa bấm.
+   */
+  function goToStep(next: BookingStepKey) {
+    setStep(next);
+    setPriceExpanded(next === 'review');
+  }
+
   const availabilityM = useMutation({
     mutationFn: () => {
       const v = getValues();
@@ -295,13 +333,13 @@ export function RequestBookingFlow({
     onSuccess: (res) => {
       if (res.available) {
         setStepError(null);
-        setStep('contact');
+        void afterTripStep();
       } else {
         // KHÔNG nói xe "đã được đặt" và không hé lộ đơn của người khác — chỉ nói khung giờ bận.
-        setStepError('Xe đã có lịch trong khung giờ này. Vui lòng chọn thời gian khác.');
+        setStepError(t('time.unavailable'));
       }
     },
-    onError: (e) => setStepError(getErrorMessage(e)),
+    onError: (e) => setStepError(errorMessage(e)),
   });
 
   const submitM = useMutation({
@@ -312,7 +350,6 @@ export function RequestBookingFlow({
         vehicleId,
         customerName: v.customerName.trim(),
         customerPhone: phone,
-        ...(v.customerEmail.trim() ? { customerEmail: v.customerEmail.trim() } : {}),
         serviceType: v.serviceType,
         /*
          * Dài hạn KHÔNG gửi lịch: chỉ gói + nguyện vọng. Khoảng "trong 7 ngày tới" do server
@@ -349,7 +386,7 @@ export function RequestBookingFlow({
       setRequestCode(receipt.id ?? null);
       // Có thể vừa được cấp phiên mới (passwordless) → làm mới toàn bộ cache để cả app biết.
       await queryClient.invalidateQueries();
-      setStep('done');
+      goToStep('done');
     },
     onError: (e) => {
       const code = getErrorCode(e);
@@ -366,20 +403,20 @@ export function RequestBookingFlow({
         const phone = getValues('customerPhone').trim();
         setOtpPhone(phone);
         setCode('');
-        setStep('otp');
-        setStepError('Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại số điện thoại.');
+        goToStep('otp');
+        setStepError(t('otp.sessionExpired'));
         vp.send(phone);
         return;
       }
-      setStepError(getErrorMessage(e));
+      setStepError(errorMessage(e));
     },
   });
 
   const verifyM = useMutation({
     mutationFn: () =>
       verifyOtp({ phone: otpPhone, purpose: PHONE_VERIFICATION_PURPOSE.BOOKING, code }),
-    onSuccess: () => setStep('review'),
-    onError: (e) => setStepError(getErrorMessage(e)),
+    onSuccess: () => goToStep('review'),
+    onError: (e) => setStepError(errorMessage(e)),
   });
 
   const submitting = submitM.isPending;
@@ -395,56 +432,60 @@ export function RequestBookingFlow({
     onResultChange?.(isResult);
   }, [isResult, onResultChange]);
 
-  const verifiedContact = useMemo(() => {
-    if (step !== 'review' && step !== 'done') return null;
-    const v = getValues();
-    return { name: v.customerName, phone: v.customerPhone };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- đọc giá trị form tại thời điểm render
-  }, [step]);
+  /**
+   * Vừa mở bảng chi tiết thì đưa nó vào tầm mắt. Bảng nằm cuối thân bước nên với một bước dài
+   * nó rơi dưới đáy vùng cuộn — bấm "Chi tiết" mà màn hình không đổi gì thì khách tưởng nút
+   * hỏng. `block: 'start'` đưa đầu bảng lên đầu vùng nhìn: phần còn lại cuộn tiếp như thường,
+   * và hàng nút dính đáy không che mất chỗ vừa mở.
+   */
+  useEffect(() => {
+    if (!priceExpanded) return;
+    priceDetailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [priceExpanded]);
 
-  async function continueFromTime() {
-    setStepError(null);
-    if (isLongTerm) {
-      /*
-       * Dài hạn chưa có khung giờ cụ thể để kiểm lịch: khách mới nêu nguyện vọng, gian hàng chốt
-       * ngày giờ khi duyệt và constraint DB mới là chỗ chặn trùng lịch (ADR 0006).
-       */
-      if (await trigger(['longTermPackageMonths', 'pickupPreference', 'requestedPickupDate'])) {
-        setStep('contact');
-      }
-      return;
-    }
-    if (await trigger(['pickupAt', 'returnAt'])) availabilityM.mutate();
-  }
 
-  async function continueFromContact() {
-    setStepError(null);
-    const fields: Array<keyof RequestFormValues> = [
-      'customerName',
-      'customerPhone',
-      'customerEmail',
-      'deliveryAddress',
-      // Có tài xế — schema tự bỏ qua khi không phải with_driver (.when).
-      'pickupAddress',
-      'destination',
-    ];
-    if (!(await trigger(fields))) return;
+  /** Rời bước Chuyến đi: SĐT đã xác thực thì sang thẳng Xác nhận, chưa thì dựng OTP. */
+  async function afterTripStep() {
     const phone = getValues('customerPhone').trim();
-
-    // Đã đăng nhập + đúng SĐT đã xác thực → sang thẳng bước xác nhận, không dựng OTP thừa.
     if (phoneMatchesAccount(phone)) {
-      setStep('review');
+      goToStep('review');
       return;
     }
-
     try {
       await vp.sendAsync(phone);
       setOtpPhone(phone);
       setCode('');
-      setStep('otp');
+      goToStep('otp');
     } catch {
-      /* lỗi gửi mã hiển thị qua vp.error tại bước liên hệ */
+      /* lỗi gửi mã hiển thị qua vp.error tại bước Chuyến đi */
     }
+  }
+
+  /**
+   * Một nút "Tiếp tục" cho cả bước Chuyến đi — gộp việc của hai bước cũ: kiểm dữ liệu chuyến,
+   * kiểm khung giờ còn trống, rồi mới quyết định đi qua OTP hay thẳng tới Xác nhận.
+   */
+  async function continueFromTrip() {
+    setStepError(null);
+
+    const fields: Array<keyof RequestFormValues> = isLongTerm
+      ? ['longTermPackageMonths', 'pickupPreference', 'requestedPickupDate']
+      : ['pickupAt', 'returnAt'];
+    // Địa chỉ giao/đón và liên hệ nằm CÙNG bước này — schema tự bỏ qua trường không liên quan.
+    fields.push('deliveryAddress', 'pickupAddress', 'destination');
+    if (!contactKnown) fields.push('customerName', 'customerPhone');
+
+    if (!(await trigger(fields))) return;
+
+    /*
+     * Dài hạn chưa có khung giờ cụ thể để kiểm lịch: khách mới nêu nguyện vọng, gian hàng chốt
+     * ngày giờ khi duyệt và constraint DB mới là chỗ chặn trùng lịch (ADR 0006).
+     */
+    if (isLongTerm) {
+      await afterTripStep();
+      return;
+    }
+    availabilityM.mutate();
   }
 
   function confirmOtp() {
@@ -458,9 +499,10 @@ export function RequestBookingFlow({
     setCode(next);
   }
 
-  function backToContact() {
-    setStep('contact');
-    setEditingContact(true);
+  /** Quay lại bước nhập; `editContact` = khách bấm "Đổi" ở dòng Người thuê. */
+  function backToTrip(editContact = false) {
+    goToStep('trip');
+    if (editContact) setEditingContact(true);
     setStepError(null);
     setCode('');
     vp.reset();
@@ -475,13 +517,8 @@ export function RequestBookingFlow({
     vp.send(otpPhone);
   }
 
-  async function submitRequest() {
+  function submitRequest() {
     setStepError(null);
-    if (!(await trigger('agreed'))) return;
-    if (!getValues('agreed')) {
-      setStepError('Vui lòng đồng ý với điều khoản thuê xe trước khi gửi yêu cầu.');
-      return;
-    }
     submitM.mutate(getValues('customerPhone').trim());
   }
 
@@ -491,10 +528,6 @@ export function RequestBookingFlow({
       fallbackName={vehicleName}
       fallbackImageUrl={vehicleImageUrl}
       loading={listingQ.isLoading}
-      reviews={reviewsQ.data?.data ?? []}
-      reviewSummary={reviewsQ.data?.summary ?? null}
-      reviewsLoading={reviewsQ.isLoading}
-      verifiedContact={verifiedContact}
       // Panel nói giá của ĐÚNG dịch vụ/gói khách đang chọn, không phải giá tự lái mặc định.
       serviceType={watchedService}
       packageMonths={watchedPackage}
@@ -502,18 +535,32 @@ export function RequestBookingFlow({
   );
 
   const hasRange = Boolean(watchedPickup && watchedReturn);
-  const promoPercent = listing?.discountPercent ?? 0;
+  /** Đã chọn đủ để server báo giá được chưa — quyết định hình thái khối tiền dưới đáy. */
+  const hasPriceSelection = isLongTerm ? watchedPackage != null : hasRange;
 
-  /*
-   * Giá SÁU gói do SERVER tính (ADR 0011) — client không nhân giá tháng với số tháng, nên nút
-   * chọn gói và breakdown của gói đang chọn không thể hiện hai con số khác nhau. Rỗng = xe chưa
-   * niêm yết giá tháng → "Liên hệ báo giá".
+  const priceProps = {
+    listing,
+    serviceType: watchedService,
+    routeType: watchedRoute,
+    quote: quoteQ.data ?? null,
+    quoteLoading: quoteQ.isLoading,
+    hasSelection: hasPriceSelection,
+    isDelivery,
+    expanded: priceExpanded,
+  };
+
+  /**
+   * Bảng chi tiết giá — đặt CUỐI thân bước, tức là trong cùng mạch cuộn với mọi khối nhập liệu
+   * phía trên. Vỏ luôn được dựng để `ref` đứng yên; rỗng thì CSS tự giấu đi (`:empty`) nên nó
+   * không để lại một khoảng trống nào khi bảng đang đóng.
    */
+  const priceDetail = (
+    <div ref={priceDetailRef} className={styles.priceDetail}>
+      <BookingPriceSummary {...priceProps} variant="detail" />
+    </div>
+  );
+
   const longTermPackages = listing?.longTermPackages ?? [];
-  const selectedPackage =
-    watchedPackage != null
-      ? (longTermPackages.find((pkg) => pkg.packageMonths === watchedPackage) ?? null)
-      : null;
 
   function selectPackage(months: LongTermPackageMonths) {
     setValue('longTermPackageMonths', months, { shouldValidate: true });
@@ -526,47 +573,43 @@ export function RequestBookingFlow({
       ? dayjs(longTermReturnAt(watchedRequestedDate.toDate(), watchedPackage))
       : null;
 
+  const steps: BookingStepItem[] = [
+    { key: 'trip', label: t('steps.trip') },
+    { key: 'review', label: t('steps.review') },
+  ];
+
   /**
    * Cặp nút của footer, suy từ bước hiện tại — MỘT nơi quyết định nhãn/trạng thái cho cả luồng.
    * Bước đầu không có gì để "quay lại" nên nút phụ là `Huỷ`.
    */
   const primaryAction =
-    step === 'time'
+    step === 'trip'
       ? {
-          label: availabilityM.isPending ? 'Đang kiểm tra…' : 'Tiếp tục',
-          onClick: () => void continueFromTime(),
-          loading: availabilityM.isPending,
+          label: availabilityM.isPending ? t('actions.checking') : t('actions.continue'),
+          onClick: () => void continueFromTrip(),
+          loading: availabilityM.isPending || vp.sending,
           disabled: false,
         }
-      : step === 'contact'
+      : step === 'otp'
         ? {
-            label: 'Tiếp tục',
-            onClick: () => void continueFromContact(),
-            loading: vp.sending,
-            disabled: false,
+            label: t('actions.verify'),
+            onClick: confirmOtp,
+            loading: verifying,
+            disabled: code.length !== 6,
           }
-        : step === 'otp'
-          ? {
-              label: 'Xác thực',
-              onClick: confirmOtp,
-              loading: verifying,
-              disabled: code.length !== 6,
-            }
-          : {
-              label: 'Gửi yêu cầu thuê',
-              onClick: () => void submitRequest(),
-              loading: submitting,
-              disabled: !agreed,
-            };
+        : {
+            label: t('actions.submit'),
+            onClick: submitRequest,
+            loading: submitting,
+            disabled: false,
+          };
 
   const secondaryAction =
-    step === 'time'
-      ? { label: 'Huỷ', onClick: onClose, disabled: false }
-      : step === 'contact'
-        ? { label: 'Quay lại', onClick: () => setStep('time'), disabled: false }
-        : step === 'otp'
-          ? { label: 'Quay lại', onClick: backToContact, disabled: verifying }
-          : { label: 'Quay lại', onClick: backToContact, disabled: submitting };
+    step === 'trip'
+      ? { label: t('actions.cancel'), onClick: onClose, disabled: false }
+      : step === 'otp'
+        ? { label: t('actions.back'), onClick: () => backToTrip(), disabled: verifying }
+        : { label: t('actions.back'), onClick: () => backToTrip(), disabled: submitting };
 
   // --- Trạng thái trùng lặp: chiếm trọn thân hộp thoại, có hai lối đi tiếp ------------------
   if (duplicate) {
@@ -576,11 +619,8 @@ export function RequestBookingFlow({
           <span className={cx(styles.doneBadge, styles.warnBadge)} aria-hidden>
             <ExclamationOutlined />
           </span>
-          <h3 className={styles.doneTitle}>Yêu cầu trùng lặp</h3>
-          <p className={styles.doneText}>
-            Bạn đã gửi một yêu cầu thuê xe này với cùng khung giờ. Vui lòng đợi chủ xe phản hồi
-            trước khi gửi yêu cầu mới.
-          </p>
+          <h3 className={styles.doneTitle}>{t('duplicate.title')}</h3>
+          <p className={styles.doneText}>{t('duplicate.body')}</p>
           <div className={styles.doneActions}>
             <Button
               type="primary"
@@ -591,10 +631,10 @@ export function RequestBookingFlow({
                 router.push(ROUTES.TRIPS);
               }}
             >
-              Xem chuyến của tôi
+              {t('duplicate.viewTrips')}
             </Button>
             <Button size="large" block onClick={onClose}>
-              Đóng
+              {t('duplicate.close')}
             </Button>
           </div>
         </div>
@@ -617,65 +657,59 @@ export function RequestBookingFlow({
           <span className={styles.doneBadge} aria-hidden>
             <CheckOutlined />
           </span>
-          <h3 className={styles.doneTitle}>Yêu cầu đã được gửi</h3>
+          <h3 className={styles.doneTitle}>{t('done.title')}</h3>
           {requestCode ? (
-            <p className={styles.requestCode}>
-              Mã yêu cầu: <b>{requestCode}</b>
-            </p>
+            <p className={styles.requestCode}>{t('done.requestCode', { code: requestCode })}</p>
           ) : null}
-          <p className={styles.doneText}>
-            Chủ xe sẽ xem xét và phản hồi yêu cầu của bạn. Bạn có thể theo dõi trạng thái trong mục
-            chuyến đi của mình.
-          </p>
+          <p className={styles.doneText}>{t('done.body')}</p>
 
           <dl className={styles.doneSummary}>
             <div className={styles.doneRow}>
-              <dt>Xe</dt>
+              <dt>{t('review.vehicle')}</dt>
               <dd>{listing?.name ?? vehicleName}</dd>
             </div>
             <div className={styles.doneRow}>
-              <dt>Thời gian</dt>
+              <dt>{t('done.time')}</dt>
               <dd>
                 {v.pickupAt ? fmt.rentalPoint(v.pickupAt) : '—'} →{' '}
                 {v.returnAt ? fmt.rentalPoint(v.returnAt) : '—'}
               </dd>
             </div>
             <div className={styles.doneRow}>
-              <dt>Dịch vụ</dt>
+              <dt>{t('review.service')}</dt>
               <dd>
-                {serviceTypeLabel(v.serviceType)}
+                {dl('serviceType', v.serviceType)}
                 {v.serviceType === SERVICE_TYPE.WITH_DRIVER
-                  ? ` · ${ROUTE_TYPE_LABEL[v.routeType]}`
+                  ? ` · ${dl('routeType', v.routeType)}`
                   : ''}
               </dd>
             </div>
             <div className={styles.doneRow}>
-              <dt>Nhận xe</dt>
+              <dt>{t('done.pickupMethod')}</dt>
               <dd>
                 {v.serviceType === SERVICE_TYPE.WITH_DRIVER
-                  ? `Đón tại: ${v.pickupAddress || '—'}`
+                  ? t('done.driverPickup', { address: v.pickupAddress || '—' })
                   : isDelivery
-                    ? 'Giao xe tận nơi'
-                    : 'Nhận tại điểm hẹn'}
+                    ? t('pickup.delivery')
+                    : t('pickup.self')}
               </dd>
             </div>
             {quoteQ.data ? (
               <div className={styles.doneRow}>
                 {/* Còn phụ phí chưa tính (estimateNote) thì KHÔNG gọi "Tổng dự kiến" — 17/08. */}
-                <dt>{quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : 'Tổng dự kiến'}</dt>
+                <dt>
+                  {quoteQ.data.breakdown.estimateNote ? t('price.subtotal') : t('price.total')}
+                </dt>
                 {/* Tiền LUÔN qua bộ format — `1800000` trần là con số thô lọt ra ngoài. */}
-                <dd>{fmt.money(quoteQ.data.breakdown.totalAmount)}</dd>
+                <dd className={styles.doneMoney}>
+                  {fmt.money(quoteQ.data.breakdown.totalAmount)}
+                </dd>
               </div>
             ) : null}
           </dl>
 
           {/* Nói rõ đây MỚI là yêu cầu — xe chưa bị giữ chỗ (pending không chiếm lịch). */}
-          <Alert
-            type="warning"
-            showIcon
-            className={styles.doneNote}
-            message="Xe chưa được giữ chỗ. Yêu cầu cần được chủ xe chấp thuận trước."
-          />
+          <Alert type="warning" showIcon className={styles.doneNote} message={t('done.notReserved')} />
 
           <div className={cx(styles.doneActions, styles.doneActionsRow)}>
             <Button
@@ -687,7 +721,7 @@ export function RequestBookingFlow({
                 router.push(ROUTES.TRIPS);
               }}
             >
-              Chuyến của tôi
+              {t('done.myTrips')}
             </Button>
             {/*
               Hỏi thêm chủ xe là việc RẤT hay xảy ra ngay sau khi gửi (giao xe ở đâu, có giao
@@ -696,13 +730,13 @@ export function RequestBookingFlow({
             */}
             <ChatWithShopButton
               vehicleId={vehicleId}
-              label="Nhắn chủ xe"
+              label={t('done.chatShop')}
               size="large"
               block
               onNavigate={onClose}
             />
             <Button size="large" block onClick={onClose}>
-              Quay lại
+              {t('done.close')}
             </Button>
           </div>
         </div>
@@ -715,15 +749,20 @@ export function RequestBookingFlow({
       <div className={styles.left}>{summaryPanel}</div>
 
       <div className={styles.right}>
-        <BookingSteps current={step} />
+        {/* OTP nằm TRONG bước Chuyến đi nên thanh vẫn sáng ô đó — xem docblock `BookingSteps`. */}
+        <BookingSteps steps={steps} current={step === 'otp' ? 'trip' : step} />
 
-        {/* ── Bước 1 — Thời gian ───────────────────────────────────────────── */}
-        {step === 'time' ? (
+        {/* ── Bước 1 — Chuyến đi ───────────────────────────────────────────── */}
+        {step === 'trip' ? (
           <section className={styles.stepBody}>
-            {/* Xe phục vụ nhiều dịch vụ → khách chọn dịch vụ cho CHUYẾN này (17/08). */}
+            {/*
+              Bộ chọn dịch vụ chỉ dựng khi xe phục vụ NHIỀU dịch vụ. Một dịch vụ thì không có
+              gì để chọn: dòng "Dịch vụ · Tự lái" chỉ đọc lại thứ khách vừa bấm ở trang chi
+              tiết, và nó nằm ngay dưới hàng chip dịch vụ của cột trái đã nói đúng điều đó.
+            */}
             {vehicleServices.length > 1 ? (
               <div className={styles.serviceField}>
-                <span className={styles.rangeFieldLabel}>Dịch vụ</span>
+                <span className={styles.rangeFieldLabel}>{t('service.label')}</span>
                 <Segmented
                   block
                   value={watchedService}
@@ -735,21 +774,15 @@ export function RequestBookingFlow({
                    */
                   options={vehicleServices.map((value) => ({
                     value,
-                    label: serviceTypeLabel(value),
+                    label: dl('serviceType', value),
                   }))}
                 />
               </div>
-            ) : (
-              /* Xe một dịch vụ vẫn NÓI RÕ đang thuê dịch vụ gì — không bắt khách tự đoán. */
-              <div className={styles.serviceField}>
-                <span className={styles.rangeFieldLabel}>Dịch vụ</span>
-                <p className={styles.rangeHint}>{serviceTypeLabel(watchedService)}</p>
-              </div>
-            )}
+            ) : null}
 
             {isWithDriver ? (
               <div className={styles.serviceField}>
-                <span className={styles.rangeFieldLabel}>Lộ trình</span>
+                <span className={styles.rangeFieldLabel}>{t('service.routeLabel')}</span>
                 <Radio.Group
                   value={watchedRoute}
                   onChange={(e) =>
@@ -757,24 +790,17 @@ export function RequestBookingFlow({
                   }
                   options={ROUTE_TYPE_VALUES.map((value) => ({
                     value,
-                    label: ROUTE_TYPE_LABEL[value],
+                    label: dl('routeType', value),
                   }))}
                 />
-                <p className={styles.rangeHint}>{ROUTE_TYPE_DESCRIPTION[watchedRoute]}</p>
+                <p className={styles.rangeHint}>{t(`route.description.${watchedRoute}`)}</p>
               </div>
             ) : null}
 
-            {/* Dài hạn tự mang tiêu đề + nhãn riêng trong LongTermPackageStep — không lặp lại ở đây. */}
-            {isLongTerm ? null : (
-              <p className={styles.stepHint}>
-                Chọn thời gian thuê để kiểm tra xe còn trống. Có thể thuê theo ngày hoặc theo giờ.
-              </p>
-            )}
-
             {/*
               Thuê dài hạn là GÓI CỐ ĐỊNH (ADR 0011): đúng sáu gói, không có thời lượng tuỳ ý và
-              không có ô chọn ngày trả. Cả bước gói + nguyện vọng + tóm tắt giá nằm trong một
-              component riêng để bước này không lẫn với luồng chọn khoảng ngày của dịch vụ khác.
+              không có ô chọn ngày trả. Cả bước gói + nguyện vọng nằm trong một component riêng
+              để bước này không lẫn với luồng chọn khoảng ngày của dịch vụ khác.
             */}
             {isLongTerm ? (
               <LongTermPackageStep
@@ -797,8 +823,6 @@ export function RequestBookingFlow({
                   if (stepError) setStepError(null);
                 }}
                 dateError={formState.errors.requestedPickupDate?.message}
-                quote={quoteQ.data ?? null}
-                quoteLoading={quoteQ.isLoading}
               />
             ) : null}
 
@@ -810,7 +834,7 @@ export function RequestBookingFlow({
             */}
             {!isLongTerm ? (
               <div className={styles.rangeField}>
-                <span className={styles.rangeFieldLabel}>Thời gian thuê</span>
+                <span className={styles.rangeFieldLabel}>{t('time.label')}</span>
                 <div
                   className={cx(
                     styles.rangeBox,
@@ -841,11 +865,11 @@ export function RequestBookingFlow({
                   {hasRange ? (
                     <>
                       <ClockCircleOutlined aria-hidden />{' '}
-                      {rentalMode === 'hourly' ? 'Thuê theo giờ' : 'Thuê theo ngày'} · bấm vào ô để
-                      đổi
+                      {rentalMode === 'hourly' ? t('time.modeHourly') : t('time.modeDaily')} ·{' '}
+                      {t('time.changeHint')}
                     </>
                   ) : (
-                    'Bấm vào ô trên để mở lịch và chọn khoảng thuê.'
+                    t('time.empty')
                   )}
                 </p>
               </div>
@@ -857,255 +881,6 @@ export function RequestBookingFlow({
               </p>
             ) : null}
 
-            {/*
-              Bảng giá của bước này: chưa chọn ngày thì cho biết ĐƠN GIÁ và cọc (khách quyết định
-              có đi tiếp không dựa vào đó); chọn rồi thì thay bằng tạm tính THẬT từ server.
-            */}
-            {isLongTerm ? null : hasRange ? (
-              quoteQ.isLoading ? (
-                <Skeleton active paragraph={{ rows: 3 }} title={false} />
-              ) : quoteQ.data ? (
-                <PriceBreakdown
-                  rows={quoteQ.data.breakdown.rows}
-                  totalAmount={quoteQ.data.breakdown.totalAmount}
-                  totalLabel={quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : undefined}
-                  depositAmount={quoteQ.data.breakdown.depositAmount}
-                  title={
-                    isLongTerm && selectedPackage
-                      ? `Giá gói ${longTermPackageLabel(selectedPackage.packageMonths)}`
-                      : 'Tạm tính cho khoảng thời gian đã chọn'
-                  }
-                  footer={
-                    <>
-                      {/*
-                        "Tiết kiệm" ở đây CHỈ nói về ưu đãi cam kết thời hạn — tuyệt đối không so
-                        với giá thuê theo ngày, vì đó là dịch vụ khác và so như vậy là bịa khuyến
-                        mãi (ADR 0011).
-                      */}
-                      {quoteQ.data.breakdown.longTerm?.durationDiscountPercent ? (
-                        <strong className={styles.savingsText}>
-                          Tiết kiệm{' '}
-                          {fmt.money(quoteQ.data.breakdown.longTerm.durationDiscountAmount)} nhờ ưu
-                          đãi thời hạn{' '}
-                          {longTermPackageLabel(quoteQ.data.breakdown.longTerm.packageMonths)}.
-                        </strong>
-                      ) : null}
-                      <span className={styles.deliveryFootnote}>
-                        {quoteQ.data.breakdown.estimateNote
-                          ? `${quoteQ.data.breakdown.estimateNote}. `
-                          : ''}
-                        Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.
-                      </span>
-                    </>
-                  }
-                />
-              ) : (
-                <Alert
-                  type="warning"
-                  showIcon
-                  className={styles.err}
-                  message="Chưa tải được giá tạm tính. Bạn vẫn tiếp tục được; chủ xe sẽ xác nhận giá."
-                />
-              )
-            ) : (
-              /*
-               * Đơn giá TRƯỚC khi chọn ngày theo ĐÚNG dịch vụ đang chọn (17/08) — không trưng
-               * giá tự lái cho chuyến có tài xế/dài hạn. Sau khi chọn ngày, quote server là
-               * nguồn duy nhất.
-               */
-              <div className={styles.priceCard}>
-                <div className={styles.priceCardHead}>
-                  <span className={styles.priceCardTitle}>
-                    Giá thuê xe · {serviceTypeLabel(watchedService)}
-                  </span>
-                  {/* Khuyến mãi trực tiếp thuộc dịch vụ TỰ LÁI — không hiện ở dài hạn/có tài xế. */}
-                  {!isWithDriver && !isLongTerm && promoPercent > 0 ? (
-                    <DiscountTag percent={promoPercent} />
-                  ) : null}
-                </div>
-                <div className={styles.priceCardRows}>
-                  {isLongTerm ? (
-                    listing?.monthlyPrice ? (
-                      <div className={styles.priceRow}>
-                        <span>Giá dài hạn cơ sở</span>
-                        <b>
-                          {fmt.money(listing.monthlyPrice)}
-                          <span className={styles.priceUnit}>/tháng</span>
-                        </b>
-                      </div>
-                    ) : (
-                      <div className={styles.priceRow}>
-                        <span>Giá thuê dài hạn</span>
-                        <b>Liên hệ báo giá</b>
-                      </div>
-                    )
-                  ) : isWithDriver ? (
-                    listing?.withDriverDailyPrice ? (
-                      <>
-                        <div className={styles.priceRow}>
-                          <span>Nội thành (đã gồm tài xế)</span>
-                          <b>
-                            {fmt.money(listing.withDriverDailyPrice)}
-                            <span className={styles.priceUnit}>/ngày</span>
-                          </b>
-                        </div>
-                        {listing.withDriverInterCityPrice ? (
-                          <div className={styles.priceRow}>
-                            <span>Liên tỉnh (khứ hồi)</span>
-                            <b>
-                              {fmt.money(listing.withDriverInterCityPrice)}
-                              <span className={styles.priceUnit}>/ngày</span>
-                            </b>
-                          </div>
-                        ) : null}
-                        {listing.withDriverOneWayPrice ? (
-                          <div className={styles.priceRow}>
-                            <span>Liên tỉnh 1 chiều</span>
-                            <b>
-                              {fmt.money(listing.withDriverOneWayPrice)}
-                              <span className={styles.priceUnit}>/ngày</span>
-                            </b>
-                          </div>
-                        ) : null}
-                      </>
-                    ) : (
-                      <div className={styles.priceRow}>
-                        <span>Giá có tài xế</span>
-                        <b>Liên hệ báo giá</b>
-                      </div>
-                    )
-                  ) : (
-                    <>
-                      {listing?.weekdayPrice ? (
-                        <div className={styles.priceRow}>
-                          <span>Ngày thường</span>
-                          <b>
-                            {promoPercent > 0 ? (
-                              <s className={styles.priceStrike}>
-                                {fmt.money(listing.weekdayPrice)}
-                              </s>
-                            ) : null}
-                            {fmt.money(
-                              promoPercent > 0
-                                ? applyDiscountPercent(listing.weekdayPrice, promoPercent)
-                                : listing.weekdayPrice,
-                            )}
-                            <span className={styles.priceUnit}>/ngày</span>
-                          </b>
-                        </div>
-                      ) : null}
-                      {listing?.weekendPrice ? (
-                        <div className={styles.priceRow}>
-                          <span>Cuối tuần</span>
-                          <b>
-                            {promoPercent > 0 ? (
-                              <s className={styles.priceStrike}>
-                                {fmt.money(listing.weekendPrice)}
-                              </s>
-                            ) : null}
-                            {fmt.money(
-                              promoPercent > 0
-                                ? applyDiscountPercent(listing.weekendPrice, promoPercent)
-                                : listing.weekendPrice,
-                            )}
-                            <span className={styles.priceUnit}>/ngày</span>
-                          </b>
-                        </div>
-                      ) : null}
-                      {listing?.hourlyPrice ? (
-                        <div className={styles.priceRow}>
-                          <span>Thuê theo giờ</span>
-                          <b>
-                            {fmt.money(listing.hourlyPrice)}
-                            <span className={styles.priceUnit}>/giờ</span>
-                          </b>
-                        </div>
-                      ) : null}
-                    </>
-                  )}
-                </div>
-                <p className={styles.priceCardNote}>
-                  {isLongTerm
-                    ? 'Ước tính = số ngày × giá tháng ÷ 30. Chọn thời gian để xem tạm tính đầy đủ.'
-                    : isWithDriver
-                      ? 'Chọn lộ trình và thời gian để xem tạm tính đầy đủ.'
-                      : 'Chọn thời gian để xem tạm tính đầy đủ (đã gồm giảm giá theo số ngày và tiền cọc).'}
-                </p>
-              </div>
-            )}
-
-            {stepError ? (
-              <Alert type="warning" showIcon message={stepError} className={styles.err} />
-            ) : null}
-          </section>
-        ) : null}
-
-        {/* ── Bước 2 — Liên hệ ─────────────────────────────────────────────── */}
-        {step === 'contact' ? (
-          <section className={styles.stepBody}>
-            <div className={styles.dateSummary}>
-              <span>
-                {watchedPickup ? fmt.rentalPoint(watchedPickup) : '—'} →{' '}
-                {watchedReturn ? fmt.rentalPoint(watchedReturn) : '—'}
-              </span>
-              <button type="button" className={styles.linkBtn} onClick={() => setStep('time')}>
-                Đổi thời gian
-              </button>
-            </div>
-
-            {accountPhoneVerified && !editingContact ? (
-              /*
-               * Đã đăng nhập, SĐT đã xác thực: KHÔNG bắt gõ lại thứ hệ thống đã biết. Hiện thẻ
-               * xác nhận gọn; muốn dùng số khác thì "Đổi thông tin" và đi qua OTP như khách mới.
-               */
-              <div className={styles.confirmCard}>
-                <div className={styles.confirmRow}>
-                  <span className={styles.confirmLabel}>Họ và tên</span>
-                  <span className={styles.confirmValue}>{getValues('customerName') || '—'}</span>
-                </div>
-                <div className={styles.confirmRow}>
-                  <span className={styles.confirmLabel}>Số điện thoại</span>
-                  <span className={styles.confirmValue}>
-                    {getValues('customerPhone')}
-                    <span className={styles.verifiedTag}>
-                      <CheckCircleFilled /> Đã xác thực
-                    </span>
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className={styles.linkBtn}
-                  onClick={() => setEditingContact(true)}
-                >
-                  <EditOutlined /> Đổi thông tin
-                </button>
-              </div>
-            ) : (
-              <>
-                <TextField
-                  control={control}
-                  name="customerName"
-                  label="Họ và tên"
-                  placeholder="Nguyễn Văn A"
-                  autoComplete="name"
-                />
-                <TextField
-                  control={control}
-                  name="customerPhone"
-                  label="Số điện thoại"
-                  placeholder="0901234567"
-                  autoComplete="tel"
-                />
-                <TextField
-                  control={control}
-                  name="customerEmail"
-                  label="Email (không bắt buộc)"
-                  placeholder="ban@example.com"
-                  autoComplete="email"
-                />
-              </>
-            )}
-
             {/* ── Có tài xế: xe ĐẾN ĐÓN — hỏi địa chỉ đón (+ điểm đến khi liên tỉnh),
                    không có khái niệm "giao xe tận nơi". ─────────────────────── */}
             {isWithDriver ? (
@@ -1113,22 +888,23 @@ export function RequestBookingFlow({
                 <TextField
                   control={control}
                   name="pickupAddress"
-                  label="Địa chỉ đón"
-                  placeholder="123 Nguyễn Văn Linh, Q. Hải Châu, Đà Nẵng"
+                  label={t('driver.pickupAddressLabel')}
+                  placeholder={t('driver.pickupAddressPlaceholder')}
                   autoComplete="street-address"
                 />
                 {watchedRoute !== ROUTE_TYPE.IN_CITY ? (
                   <TextField
                     control={control}
                     name="destination"
-                    label="Điểm đến"
-                    placeholder="VD: TP. Đà Lạt, Lâm Đồng"
+                    label={t('driver.destinationLabel')}
+                    placeholder={t('driver.destinationPlaceholder')}
                   />
                 ) : null}
                 <p className={styles.deliveryNote}>
-                  Lộ trình: {ROUTE_TYPE_LABEL[watchedRoute]} —{' '}
-                  {ROUTE_TYPE_DESCRIPTION[watchedRoute]}. Phụ phí (nếu có) do chủ xe trao đổi trước
-                  khi chốt đơn.
+                  {t('driver.note', {
+                    route: dl('routeType', watchedRoute),
+                    description: t(`route.description.${watchedRoute}`),
+                  })}
                 </p>
               </div>
             ) : null}
@@ -1136,49 +912,70 @@ export function RequestBookingFlow({
             {/* ── Hình thức nhận xe (tự lái / dài hạn) ─────────────────────── */}
             {isWithDriver ? null : (
               <fieldset className={styles.pickupGroup}>
-                <legend className={styles.fieldLabel}>Hình thức nhận xe</legend>
-                <div
-                  className={styles.pickupOptions}
-                  role="radiogroup"
-                  aria-label="Hình thức nhận xe"
-                >
-                  {(
-                    [
-                      {
-                        key: PICKUP_METHOD.SELF,
-                        label: 'Nhận tại điểm hẹn',
-                        hint: 'Tự tới nhận xe tại địa điểm của chủ xe',
-                        icon: <CarOutlined />,
-                      },
-                      {
-                        key: PICKUP_METHOD.DELIVERY,
-                        label: 'Giao xe tận nơi',
-                        hint: 'Chủ xe mang xe tới địa chỉ của bạn',
-                        icon: <EnvironmentOutlined />,
-                      },
-                    ] as const
-                  ).map((option) => (
-                    <button
-                      key={option.key}
-                      type="button"
-                      role="radio"
-                      aria-checked={pickupMethod === option.key}
-                      className={cx(
-                        styles.pickupOption,
-                        pickupMethod === option.key && styles.pickupOptionActive,
-                      )}
-                      onClick={() => setValue('pickupMethod', option.key, { shouldValidate: true })}
-                    >
-                      <span className={styles.pickupIcon} aria-hidden>
-                        {option.icon}
+                <legend className={styles.fieldLabel}>{t('pickup.legend')}</legend>
+                {deliveryAvailable ? (
+                  <div
+                    className={styles.pickupOptions}
+                    role="radiogroup"
+                    aria-label={t('pickup.groupLabel')}
+                  >
+                    {(
+                      [
+                        {
+                          key: PICKUP_METHOD.SELF,
+                          label: t('pickup.self'),
+                          hint: pickupPoint?.address ?? t('pickup.selfHint'),
+                          icon: <CarOutlined />,
+                        },
+                        {
+                          key: PICKUP_METHOD.DELIVERY,
+                          label: t('pickup.delivery'),
+                          hint: t('pickup.deliveryHint'),
+                          icon: <EnvironmentOutlined />,
+                        },
+                      ] as const
+                    ).map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        role="radio"
+                        aria-checked={pickupMethod === option.key}
+                        className={cx(
+                          styles.pickupOption,
+                          pickupMethod === option.key && styles.pickupOptionActive,
+                        )}
+                        onClick={() =>
+                          setValue('pickupMethod', option.key, { shouldValidate: true })
+                        }
+                      >
+                        <span className={styles.pickupIcon} aria-hidden>
+                          {option.icon}
+                        </span>
+                        <span className={styles.pickupText}>
+                          <span className={styles.pickupLabel}>{option.label}</span>
+                          <span className={styles.pickupHint}>{option.hint}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  /*
+                   * Chính sách tắt giao xe ⇒ chỉ còn MỘT cách nhận xe, mà một nhóm radio một
+                   * lựa chọn là câu hỏi không có câu trả lời nào khác. Nói thẳng chỗ nhận thay vì
+                   * bắt khách bấm vào thứ duy nhất bấm được.
+                   */
+                  <div className={styles.pickupSingle}>
+                    <span className={styles.pickupIcon} aria-hidden>
+                      <CarOutlined />
+                    </span>
+                    <span className={styles.pickupText}>
+                      <span className={styles.pickupLabel}>{t('pickup.self')}</span>
+                      <span className={styles.pickupHint}>
+                        {pickupPoint?.address ?? t('pickup.selfOnly')}
                       </span>
-                      <span className={styles.pickupText}>
-                        <span className={styles.pickupLabel}>{option.label}</span>
-                        <span className={styles.pickupHint}>{option.hint}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                    </span>
+                  </div>
+                )}
               </fieldset>
             )}
 
@@ -1187,61 +984,66 @@ export function RequestBookingFlow({
                 <TextField
                   control={control}
                   name="deliveryAddress"
-                  label="Địa chỉ giao xe"
-                  placeholder="123 Nguyễn Văn Linh, Q. Hải Châu, Đà Nẵng"
+                  label={t('pickup.addressLabel')}
+                  placeholder={t('pickup.addressPlaceholder')}
                   autoComplete="street-address"
                 />
                 <div className={styles.deliveryFeeRow}>
-                  <span>Phí giao nhận</span>
-                  <b className={styles.freeTag}>Miễn phí</b>
+                  <span>{t('pickup.feeLabel')}</span>
+                  <b className={styles.freeTag}>{t('pickup.feeFree')}</b>
                 </div>
-                <p className={styles.deliveryNote}>{DELIVERY_NOTE}</p>
+                <p className={styles.deliveryNote}>{t('pickup.feeNote')}</p>
               </div>
             ) : null}
 
-            {/* Breakdown từ PricingService — tham khảo; giá chốt vẫn do shop duyệt yêu cầu. */}
-            {quoteQ.isLoading ? (
-              <Skeleton active paragraph={{ rows: 3 }} title={false} />
-            ) : quoteQ.data ? (
-              <PriceBreakdown
-                rows={quoteQ.data.breakdown.rows}
-                totalAmount={quoteQ.data.breakdown.totalAmount}
-                totalLabel={quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : undefined}
-                depositAmount={quoteQ.data.breakdown.depositAmount}
-                title="Chi tiết giá thuê (dự kiến)"
-                footer={
-                  quoteQ.data.breakdown.estimateNote ? (
-                    <span className={styles.deliveryFootnote}>
-                      {quoteQ.data.breakdown.estimateNote}.
-                    </span>
-                  ) : undefined
-                }
-              />
-            ) : null}
+            {/*
+              Liên hệ chỉ hỏi khi hệ thống CHƯA biết: khách vãng lai, hoặc người đã đăng nhập vừa
+              bấm "Đổi". Người đã đăng nhập với SĐT đã xác thực không thấy ô nào ở đây — thông tin
+              của họ hiện thành một dòng ở bước Xác nhận.
+            */}
+            {contactKnown ? null : (
+              <div className={styles.contactBlock}>
+                <span className={styles.fieldLabel}>{t('contact.heading')}</span>
+                {/*
+                  Hai ô, một hàng. Gian hàng gọi lại khách qua SĐT (đã xác thực OTP ngay trong
+                  luồng này) nên đó là tất cả những gì cần hỏi — ô email từng đứng đây là một
+                  hàng nữa để khách bỏ qua, và không nơi nào trong luồng duyệt dùng tới nó.
+                */}
+                <div className={styles.contactFields}>
+                  <TextField
+                    control={control}
+                    name="customerName"
+                    label={t('contact.nameLabel')}
+                    placeholder={t('contact.namePlaceholder')}
+                    autoComplete="name"
+                  />
+                  <TextField
+                    control={control}
+                    name="customerPhone"
+                    label={t('contact.phoneLabel')}
+                    placeholder={t('contact.phonePlaceholder')}
+                    autoComplete="tel"
+                  />
+                </div>
+              </div>
+            )}
 
             {vp.error ? (
               <Alert type="error" showIcon message={vp.error} className={styles.err} />
             ) : null}
             {stepError ? (
-              <Alert
-                type="error"
-                showIcon
-                message={stepError}
-                className={styles.err}
-                role="alert"
-              />
+              <Alert type="warning" showIcon message={stepError} className={styles.err} role="alert" />
             ) : null}
+
+            {priceDetail}
           </section>
         ) : null}
 
-        {/* ── Trạng thái OTP — bên trong bước Liên hệ ──────────────────────── */}
+        {/* ── Trạng thái OTP — giữa hai bước, không chiếm ô trên thanh ─────── */}
         {step === 'otp' ? (
           <section className={styles.stepBody}>
-            <h3 className={styles.otpTitle}>Nhập mã xác thực</h3>
-            <p className={styles.stepHint}>
-              Mã gồm 6 số đã được gửi đến <b>{maskPhone(otpPhone)}</b>. XePrime dùng số này để chủ
-              xe phản hồi và giúp bạn theo dõi yêu cầu thuê.
-            </p>
+            <h3 className={styles.otpTitle}>{t('otp.title')}</h3>
+            <p className={styles.stepHint}>{t('otp.hint', { phone: maskPhone(otpPhone) })}</p>
             <OtpCodeInput
               value={code}
               onChange={onCodeChange}
@@ -1250,22 +1052,14 @@ export function RequestBookingFlow({
               disabled={verifying}
             />
             {vp.devCode ? (
-              <div className={styles.devHint}>
-                Mã dev: <b>{vp.devCode}</b> — chỉ hiện ở môi trường phát triển.
-              </div>
+              <div className={styles.devHint}>{t('otp.devCode', { code: vp.devCode })}</div>
             ) : null}
             {stepError ? (
-              <Alert
-                type="error"
-                showIcon
-                message={stepError}
-                className={styles.err}
-                role="alert"
-              />
+              <Alert type="error" showIcon message={stepError} className={styles.err} role="alert" />
             ) : null}
             <div className={styles.otpLinks}>
-              <button type="button" className={styles.linkBtn} onClick={backToContact}>
-                Sửa số điện thoại
+              <button type="button" className={styles.linkBtn} onClick={() => backToTrip(true)}>
+                {t('otp.editPhone')}
               </button>
               <button
                 type="button"
@@ -1273,31 +1067,48 @@ export function RequestBookingFlow({
                 disabled={vp.cooldown > 0 || vp.sending}
                 onClick={resend}
               >
-                {vp.cooldown > 0 ? `Gửi lại (${vp.cooldown}s)` : 'Gửi lại mã'}
+                {vp.cooldown > 0 ? t('otp.resendIn', { seconds: vp.cooldown }) : t('otp.resend')}
               </button>
             </div>
           </section>
         ) : null}
 
-        {/* ── Bước 3 — Xác nhận ────────────────────────────────────────────── */}
+        {/* ── Bước 2 — Xác nhận ────────────────────────────────────────────── */}
         {step === 'review' ? (
           <section className={styles.stepBody}>
             <dl className={styles.reviewList}>
               <div className={styles.reviewRow}>
-                <dt>Xe</dt>
+                <dt>{t('review.vehicle')}</dt>
                 <dd>{listing?.name ?? vehicleName}</dd>
               </div>
+              {/*
+                Người thuê là một DÒNG ở đây, không còn là cả một bước: với người đã đăng nhập thì
+                đây là thứ duy nhất cần soát, và nút Đổi đưa họ về đúng chỗ sửa được.
+              */}
               <div className={styles.reviewRow}>
-                <dt>Người thuê</dt>
-                <dd>
-                  {getValues('customerName')} · {getValues('customerPhone')}
+                <dt>{t('review.renter')}</dt>
+                <dd className={styles.renterValue}>
+                  <span>{`${getValues('customerName')} · ${getValues('customerPhone')}`}</span>
+                  {accountPhoneVerified ? (
+                    <span className={styles.verifiedTag}>
+                      <CheckCircleFilled /> {t('contact.verified')}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={styles.linkBtn}
+                    onClick={() => backToTrip(true)}
+                    disabled={submitting}
+                  >
+                    <EditOutlined /> {t('contact.change')}
+                  </button>
                 </dd>
               </div>
               <div className={styles.reviewRow}>
-                <dt>Dịch vụ</dt>
+                <dt>{t('review.service')}</dt>
                 <dd>
-                  {serviceTypeLabel(watchedService)}
-                  {isWithDriver ? ` · ${ROUTE_TYPE_LABEL[watchedRoute]}` : ''}
+                  {dl('serviceType', watchedService)}
+                  {isWithDriver ? ` · ${dl('routeType', watchedRoute)}` : ''}
                 </dd>
               </div>
               {/*
@@ -1308,23 +1119,32 @@ export function RequestBookingFlow({
               {isLongTerm ? (
                 <>
                   <div className={styles.reviewRow}>
-                    <dt>Gói thuê</dt>
-                    <dd>{watchedPackage != null ? longTermPackageLabel(watchedPackage) : '—'}</dd>
+                    <dt>{t('review.package')}</dt>
+                    <dd>
+                      {watchedPackage != null
+                        ? t('packageMonths', { months: watchedPackage })
+                        : '—'}
+                    </dd>
                   </div>
                   <div className={styles.reviewRow}>
-                    <dt>Nguyện vọng nhận xe</dt>
+                    <dt>{t('review.pickupPreference')}</dt>
                     <dd>
-                      {PICKUP_PREFERENCE_LABEL[watchedPreference]}
+                      {dl('pickupPreference', watchedPreference)}
                       {watchedPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && watchedRequestedDate
                         ? ` · ${watchedRequestedDate.format('DD/MM/YYYY')}`
-                        : ` · ${dayjs().add(1, 'day').format('DD/MM')} – ${dayjs().add(7, 'day').format('DD/MM/YYYY')}`}
+                        : ` · ${t('longTerm.windowValue', {
+                            start: dayjs().add(1, 'day').format('DD/MM'),
+                            end: dayjs().add(7, 'day').format('DD/MM/YYYY'),
+                          })}`}
                     </dd>
                   </div>
                   {expectedReturnDate ? (
                     <div className={styles.reviewRow}>
-                      <dt>Dự kiến trả xe</dt>
+                      <dt>{t('review.expectedReturn')}</dt>
                       <dd>
-                        {expectedReturnDate.format('DD/MM/YYYY')} · giờ chốt khi gian hàng duyệt
+                        {t('review.expectedReturnValue', {
+                          date: expectedReturnDate.format('DD/MM/YYYY'),
+                        })}
                       </dd>
                     </div>
                   ) : null}
@@ -1332,35 +1152,47 @@ export function RequestBookingFlow({
               ) : (
                 <>
                   <div className={styles.reviewRow}>
-                    <dt>Nhận xe</dt>
+                    <dt>{t('review.pickupAt')}</dt>
                     <dd>{watchedPickup ? fmt.rentalPoint(watchedPickup) : '—'}</dd>
                   </div>
                   <div className={styles.reviewRow}>
-                    <dt>Trả xe</dt>
+                    <dt>{t('review.returnAt')}</dt>
                     <dd>{watchedReturn ? fmt.rentalPoint(watchedReturn) : '—'}</dd>
                   </div>
                   <div className={styles.reviewRow}>
-                    <dt>Hình thức</dt>
+                    <dt>{t('review.mode')}</dt>
                     <dd>
                       {rentalMode === 'hourly' && !isWithDriver
-                        ? 'Thuê theo giờ'
-                        : 'Thuê theo ngày'}
+                        ? t('time.modeHourly')
+                        : t('time.modeDaily')}
                       {isWithDriver
                         ? ''
-                        : ` · ${isDelivery ? 'Giao xe tận nơi' : 'Nhận tại điểm hẹn'}`}
+                        : ` · ${isDelivery ? t('pickup.delivery') : t('pickup.self')}`}
                     </dd>
                   </div>
                 </>
               )}
+              {/*
+                Địa chỉ nhận xe được nhắc LẠI ở đây một cách có chủ đích: đây là lần cuối khách
+                soát trước khi gửi, và "tới đâu để lấy xe" là thứ họ phải chắc chắn nhất.
+              */}
+              {!isWithDriver && !isDelivery && pickupPoint ? (
+                <div className={styles.reviewRow}>
+                  <dt>{t('pickup.self')}</dt>
+                  <dd>
+                    {[pickupPoint.branchName, pickupPoint.address].filter(Boolean).join(' · ')}
+                  </dd>
+                </div>
+              ) : null}
               {isWithDriver ? (
                 <>
                   <div className={styles.reviewRow}>
-                    <dt>Địa chỉ đón</dt>
+                    <dt>{t('review.driverPickupAddress')}</dt>
                     <dd>{getValues('pickupAddress') || '—'}</dd>
                   </div>
                   {watchedRoute !== ROUTE_TYPE.IN_CITY ? (
                     <div className={styles.reviewRow}>
-                      <dt>Điểm đến</dt>
+                      <dt>{t('review.destination')}</dt>
                       <dd>{getValues('destination') || '—'}</dd>
                     </div>
                   ) : null}
@@ -1368,106 +1200,57 @@ export function RequestBookingFlow({
               ) : null}
               {isDelivery ? (
                 <div className={styles.reviewRow}>
-                  <dt>Địa chỉ giao</dt>
+                  <dt>{t('review.deliveryAddress')}</dt>
                   <dd>{getValues('deliveryAddress') || '—'}</dd>
                 </div>
               ) : null}
             </dl>
 
-            {quoteQ.isLoading ? (
-              <Skeleton active paragraph={{ rows: 3 }} title={false} />
-            ) : quoteQ.data ? (
-              <PriceBreakdown
-                rows={quoteQ.data.breakdown.rows}
-                totalAmount={quoteQ.data.breakdown.totalAmount}
-                totalLabel={quoteQ.data.breakdown.estimateNote ? 'Tạm tính' : undefined}
-                depositAmount={quoteQ.data.breakdown.depositAmount}
-                title={
-                  isLongTerm && selectedPackage
-                    ? `Chi tiết giá gói ${longTermPackageLabel(selectedPackage.packageMonths)}`
-                    : 'Chi tiết giá thuê (dự kiến)'
-                }
-                footer={
-                  <>
-                    {quoteQ.data.breakdown.longTerm?.durationDiscountPercent ? (
-                      <strong className={styles.savingsText}>
-                        Tiết kiệm {fmt.money(quoteQ.data.breakdown.longTerm.durationDiscountAmount)}{' '}
-                        nhờ ưu đãi thời hạn{' '}
-                        {longTermPackageLabel(quoteQ.data.breakdown.longTerm.packageMonths)}.
-                      </strong>
-                    ) : null}
-                    <span className={styles.deliveryFootnote}>
-                      {quoteQ.data.breakdown.estimateNote
-                        ? `${quoteQ.data.breakdown.estimateNote}. `
-                        : ''}
-                      {isDelivery
-                        ? `Phí giao nhận: Miễn phí. ${DELIVERY_NOTE}`
-                        : 'Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.'}
-                    </span>
-                  </>
-                }
-              />
-            ) : (
-              <Alert
-                type="warning"
-                showIcon
-                className={styles.err}
-                message="Chưa tải được chi tiết giá. Bạn vẫn gửi được yêu cầu; chủ xe sẽ xác nhận giá."
-              />
-            )}
-
-            <Checkbox
-              checked={agreed}
-              onChange={(e) => setValue('agreed', e.target.checked, { shouldValidate: true })}
-              className={styles.agree}
-            >
-              Tôi đồng ý với điều khoản thuê xe và xác nhận thông tin trên là chính xác.
-            </Checkbox>
-
-            <Alert
-              type="info"
-              showIcon
-              className={styles.doneNote}
-              message="Đây là YÊU CẦU thuê — xe chưa được giữ chỗ cho tới khi chủ xe chấp thuận."
-            />
-
             {stepError ? (
-              <Alert
-                type="error"
-                showIcon
-                message={stepError}
-                className={styles.err}
-                role="alert"
-              />
+              <Alert type="error" showIcon message={stepError} className={styles.err} role="alert" />
             ) : null}
+
+            {priceDetail}
           </section>
         ) : null}
 
         {/*
-          MỘT hàng nút cho cả luồng, dính đáy cột phải (yêu cầu: nút nằm ở footer bên phải).
-          Trước đây mỗi bước tự dựng hàng nút riêng — nút trôi theo nội dung, bước dài thì phải
-          cuộn mới thấy, và ba chỗ dễ lệch nhau về nhãn/trạng thái.
+          Tiền + nút: MỘT khối dính đáy cột phải.
+
+          Trước đây mỗi bước tự dựng `PriceBreakdown` riêng, nên cùng một bảng tiền hiện lại ở cả
+          ba bước và trôi mất khi cuộn. Giờ đáy cột chỉ giữ DÒNG TỔNG cạnh hàng nút — luôn trong
+          tầm mắt, không bao giờ cao quá một dòng — còn bảng chi tiết mở ra ở cuối thân bước,
+          trong đúng mạch cuộn của nội dung.
         */}
-        <footer className={styles.footer}>
-          <Button onClick={secondaryAction.onClick} disabled={secondaryAction.disabled}>
-            {secondaryAction.label}
-          </Button>
-          {/*
-            `key={step}` — mỗi bước là một nút RIÊNG, không tái dùng chung một phần tử DOM.
-            Dùng lại phần tử cũ khiến spinner của bước trước ở lại trong cây (AntD gỡ nó bằng
-            hoạt ảnh rời) và nút mang tên khả truy cập "loading …" của việc đã xong. Trong một
-            bước thì key không đổi, nên bật/tắt loading vẫn mượt như thường.
-          */}
-          <Button
-            key={step}
-            type="primary"
-            loading={primaryAction.loading}
-            disabled={primaryAction.disabled}
-            onClick={primaryAction.onClick}
-          >
-            {primaryAction.label}
-          </Button>
-        </footer>
+        <div className={styles.dock}>
+          {step === 'otp' ? null : (
+            <BookingPriceSummary
+              {...priceProps}
+              variant="bar"
+              onExpandedChange={setPriceExpanded}
+            />
+          )}
+          <footer className={styles.footer}>
+            <Button onClick={secondaryAction.onClick} disabled={secondaryAction.disabled}>
+              {secondaryAction.label}
+            </Button>
+            {/*
+              `key={step}` — mỗi bước là một nút RIÊNG, không tái dùng chung một phần tử DOM.
+              Dùng lại phần tử cũ khiến spinner của bước trước ở lại trong cây (AntD gỡ nó bằng
+              hoạt ảnh rời) và nút mang tên khả truy cập "loading …" của việc đã xong. Trong một
+              bước thì key không đổi, nên bật/tắt loading vẫn mượt như thường.
+            */}
+            <Button
+              key={step}
+              type="primary"
+              loading={primaryAction.loading}
+              disabled={primaryAction.disabled}
+              onClick={primaryAction.onClick}
+            >
+              {primaryAction.label}
+            </Button>
+          </footer>
+        </div>
       </div>
     </div>
   );

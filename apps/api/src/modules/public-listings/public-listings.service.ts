@@ -738,7 +738,15 @@ export class PublicListingsService {
         id: true,
         tenantId: true,
         name: true,
-        branch: { select: { province: { select: { code: true, name: true } } } },
+        // `name`/`address`/`phone`: chi nhánh giữ xe CHÍNH LÀ chỗ khách tới nhận khi tự lấy xe.
+        branch: {
+          select: {
+            name: true,
+            address: true,
+            phone: true,
+            province: { select: { code: true, name: true } },
+          },
+        },
         vehicleType: true,
         serviceTypes: true,
         brand: true,
@@ -764,7 +772,8 @@ export class PublicListingsService {
           select: {
             name: true,
             slug: true,
-            profile: { select: { provinceName: true, logoUrl: true, bio: true } },
+            // `address`: dự phòng cho điểm nhận xe khi chi nhánh chưa điền địa chỉ.
+            profile: { select: { provinceName: true, logoUrl: true, bio: true, address: true } },
           },
         },
         images: { orderBy: { sortOrder: 'asc' }, select: { imageUrl: true } },
@@ -778,11 +787,17 @@ export class PublicListingsService {
       });
     }
 
-    const [rating, completedTripCount] = await Promise.all([
+    /*
+     * `effectivePolicy` lấy cho MỌI xe chứ không chỉ xe dài hạn: ngoài giá gói, nó còn là nguồn
+     * DUY NHẤT trả lời được "xe này có đặt giao tận nơi được không" — cùng giá trị mà
+     * `BookingRequestsService` dùng để chấp nhận/từ chối `deliveryRequested`.
+     */
+    const [rating, completedTripCount, policy] = await Promise.all([
       this.ratingsByVehicle([v.id]).then((ratings) => ratings.get(v.id)),
       this.prisma.booking.count({
         where: { vehicleId: v.id, status: BOOKING_STATUS.COMPLETED, deletedAt: null },
       }),
+      this.pricing.effectivePolicy(v.tenantId, v.id),
     ]);
 
     /*
@@ -791,11 +806,24 @@ export class PublicListingsService {
      * Chỉ tính khi xe đăng dịch vụ dài hạn.
      */
     const longTermPackages = v.serviceTypes.includes(SERVICE_TYPE.LONG_TERM)
-      ? this.pricing.longTermPackages(
-          v.monthlyPrice as unknown as string | null,
-          await this.pricing.effectivePolicy(v.tenantId, v.id),
-        )
+      ? this.pricing.longTermPackages(v.monthlyPrice as unknown as string | null, policy)
       : [];
+
+    /*
+     * Điểm nhận xe: địa chỉ chi nhánh giữ xe, rơi về địa chỉ hồ sơ gian hàng khi chi nhánh chưa
+     * điền. Không có địa chỉ nào thì trả `null` — một điểm hẹn không có địa chỉ là thông tin vô
+     * dụng, và bịa ra tên chi nhánh trần còn tệ hơn im lặng.
+     */
+    const pickupAddress = v.branch?.address?.trim() || v.tenant.profile?.address?.trim() || null;
+    const pickupPoint = pickupAddress
+      ? {
+          // Tên chi nhánh chỉ có nghĩa khi địa chỉ ĐẾN TỪ chi nhánh đó.
+          branchName: v.branch?.address?.trim() ? (v.branch.name ?? null) : null,
+          address: pickupAddress,
+          provinceName: v.branch?.province?.name ?? v.tenant.profile?.provinceName ?? null,
+          phone: v.branch?.phone ?? null,
+        }
+      : null;
 
     return {
       id: v.id,
@@ -835,6 +863,8 @@ export class PublicListingsService {
       ratingAvg: rating?.avg ?? null,
       ratingCount: rating?.count ?? 0,
       longTermPackages,
+      pickupPoint,
+      deliveryAvailable: policy?.values.deliveryEnabled ?? false,
     };
   }
 }

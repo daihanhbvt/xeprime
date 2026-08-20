@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
-import {
-  BOOKING_STATUS,
-  RECEIPT_STATUS,
-  RECEIPT_TYPE,
-  type PaginationMeta,
-} from '@xeprime/types';
+import { BOOKING_STATUS, RECEIPT_STATUS, RECEIPT_TYPE, type PaginationMeta } from '@xeprime/types';
 import {
   BOOKING_MONEY_JOINS,
   SQL_AMOUNT_DUE,
@@ -57,6 +52,7 @@ export class FinanceOverviewService {
     const now = new Date();
     const soon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     const filterSql = debtFilterSql(query.filter, now, soon);
+    const searchSql = debtSearchSql(query.q);
 
     // `phải thu` / `đã thu` / `còn nợ` đến từ `common/booking-money.ts` — cùng công thức với
     // chi tiết đơn, sổ khách và hợp đồng. Trước đây câu này tự viết `total - paid`, nên một đơn
@@ -73,17 +69,21 @@ export class FinanceOverviewService {
       WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE}
         AND ${SQL_HAS_DEBT}
         ${filterSql}
+        ${searchSql}
       ORDER BY b.return_at ASC
       LIMIT ${limit} OFFSET ${offset}
     `);
 
     const countRes = await this.prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
       SELECT COUNT(*)::bigint AS count
-      FROM bookings b
+      -- Cùng FROM với câu lấy trang: ô tìm kiếm chạm cả tên xe/biển số, nên thiếu join này
+      -- thì tổng số đếm được sẽ nhiều hơn số dòng thật sự trả về.
+      FROM bookings b JOIN vehicles v ON v.id = b.vehicle_id
       ${BOOKING_MONEY_JOINS}
       WHERE b.tenant_id = ${tenantId} AND ${SQL_DEBT_SCOPE}
         AND ${SQL_HAS_DEBT}
         ${filterSql}
+        ${searchSql}
     `);
     const total = Number(countRes[0]?.count ?? 0);
 
@@ -144,6 +144,26 @@ export class FinanceOverviewService {
       debtBookings: Number(debtAgg[0]?.cnt ?? 0),
     };
   }
+}
+
+/**
+ * Ô tìm kiếm của màn công nợ.
+ *
+ * Chạm đúng những gì bảng ĐANG HIỆN: mã đơn, tên khách, SĐT, tên xe, biển số — người thu nợ
+ * cầm tờ giấy ghi biển số hoặc số điện thoại, không cầm ULID. `ILIKE '%…%'` đi được bằng hai
+ * index trigram đã có (`bookings_search_trgm_idx`, `vehicles_search_trgm_idx`).
+ */
+function debtSearchSql(q: string | undefined): Prisma.Sql {
+  const term = q?.trim();
+  if (!term) return Prisma.empty;
+  const like = `%${term}%`;
+  return Prisma.sql`AND (
+    b.code ILIKE ${like}
+    OR b.customer_name ILIKE ${like}
+    OR b.customer_phone ILIKE ${like}
+    OR v.name ILIKE ${like}
+    OR v.plate_number ILIKE ${like}
+  )`;
 }
 
 /** Lọc công nợ theo hạn trả. */

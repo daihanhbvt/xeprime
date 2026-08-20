@@ -31,6 +31,8 @@ export function useBookingRequestFilters() {
     };
     return {
       status: searchParams.get('status') ?? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+      q: searchParams.get('q') ?? undefined,
+      serviceType: searchParams.get('serviceType') ?? undefined,
       vehicleId: searchParams.get('vehicleId') ?? undefined,
       page: numberParam('page'),
       limit: numberParam('limit'),
@@ -54,6 +56,20 @@ export function useBookingRequestFilters() {
     [router, pathname, searchParams],
   );
 
+  /**
+   * Có filter nào (ngoài TAB) đang bật không.
+   *
+   * Trạng thái cố ý không tính: nó luôn có giá trị — mở hộp thư ra đã là "Cần xử lý" — nên đếm
+   * nó vào thì hộp thư trống lúc nào cũng đổ tại bộ lọc.
+   */
+  const hasFilters = Boolean(filters.q) || Boolean(filters.serviceType);
+
+  /** Xoá mọi filter ngoài tab. Mọi khoá phải có mặt, nếu không `setFilters` không đụng tới. */
+  const clearFilters = useCallback(
+    () => setFilters({ q: undefined, serviceType: undefined }),
+    [setFilters],
+  );
+
   /** Tab đang mở — dùng cho `<Tabs activeKey>`; thiếu tham số vẫn là "Cần xử lý". */
   const activeTab = filters.status ?? BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
 
@@ -63,5 +79,5 @@ export function useBookingRequestFilters() {
     [setFilters],
   );
 
-  return { filters, setFilters, activeTab, selectTab };
+  return { filters, setFilters, activeTab, selectTab, hasFilters, clearFilters };
 }

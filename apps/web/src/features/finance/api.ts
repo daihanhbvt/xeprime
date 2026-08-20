@@ -105,6 +105,7 @@ export interface DebtListResult {
 
 export function debtFiltersToParams(filters: DebtFilters): QueryParams {
   return {
+    q: filters.q ?? null,
     filter: filters.filter ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? RECEIPTS_DEFAULT_LIMIT,

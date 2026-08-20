@@ -34,6 +34,10 @@ export interface BookingRequestFilters {
    * được. Nó chỉ được dịch thành "không gửi `status`" ở lớp gọi API.
    */
   status?: string;
+  /** Tìm theo tên khách / SĐT / tên xe / biển số — lọc ở SERVER, không cắt trên trang đang mở. */
+  q?: string;
+  /** Dịch vụ khách yêu cầu (tự lái / có tài xế / dài hạn) — mã thật của `@xeprime/types`. */
+  serviceType?: string;
   vehicleId?: string;
   /** Chi nhánh của XE được yêu cầu — ghép từ bộ chọn ở thanh trên. */
   branchId?: string;

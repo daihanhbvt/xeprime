@@ -5749,6 +5749,15 @@
         "operationId": "FinanceOverviewController_debts",
         "parameters": [
           {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo mã đơn / tên khách / SĐT / tên xe / biển số",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "filter",
             "required": false,
             "in": "query",
@@ -7805,6 +7814,29 @@
       "get": {
         "operationId": "BookingRequestsController_list",
         "parameters": [
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Tìm theo tên khách / SĐT / tên xe / biển số",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "serviceType",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo dịch vụ được yêu cầu",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "self_drive",
+                "with_driver",
+                "long_term"
+              ]
+            }
+          },
           {
             "name": "status",
             "required": false,
@@ -12105,6 +12137,33 @@
           "effectiveMonthlyAmount"
         ]
       },
+      "PickupPointDto": {
+        "type": "object",
+        "properties": {
+          "branchName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tên chi nhánh giữ xe. Null khi địa chỉ rơi về hồ sơ gian hàng."
+          },
+          "address": {
+            "type": "string",
+            "description": "Địa chỉ nhận xe"
+          },
+          "provinceName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Tỉnh/thành của điểm nhận"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "SĐT chi nhánh"
+          }
+        },
+        "required": [
+          "address"
+        ]
+      },
       "PublicListingDetailDto": {
         "type": "object",
         "properties": {
@@ -12276,6 +12335,20 @@
             "items": {
               "$ref": "#/components/schemas/LongTermPackageOptionDto"
             }
+          },
+          "pickupPoint": {
+            "nullable": true,
+            "description": "Chỗ nhận xe khi khách tự tới lấy — chi nhánh giữ xe, fallback hồ sơ gian hàng.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PickupPointDto"
+              }
+            ]
+          },
+          "deliveryAvailable": {
+            "type": "boolean",
+            "description": "Giao xe tận nơi có ĐẶT ĐƯỢC không (theo chính sách hiệu lực)"
           }
         },
         "required": [
@@ -12291,7 +12364,8 @@
           "ratingCount",
           "images",
           "features",
-          "longTermPackages"
+          "longTermPackages",
+          "deliveryAvailable"
         ]
       },
       "PublicDestinationDto": {
