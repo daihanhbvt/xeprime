@@ -9,7 +9,8 @@
   "auditActorScope": {
     "tenant": "Gian hàng",
     "platform": "Nền tảng",
-    "system": "Hệ thống"
+    "system": "Hệ thống",
+    "customer": "Khách thuê"
   },
   "bodyType": {
     "mini": "Mini car",
@@ -230,7 +231,8 @@
     "shop_rejected": "Gian hàng bị từ chối",
     "vehicle_approved": "Xe được duyệt công khai",
     "vehicle_rejected": "Xe bị từ chối",
-    "review_received": "Đánh giá mới"
+    "review_received": "Đánh giá mới",
+    "booking_request_cancelled": "Khách đã huỷ yêu cầu"
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",

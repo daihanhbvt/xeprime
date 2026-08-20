@@ -54,3 +54,15 @@ export async function fetchTrips(filter: string, page: number): Promise<TripsRes
 export function fetchTrip(id: string): Promise<CustomerTripDetail> {
   return apiRequest<CustomerTripDetail>(`/trips/${id}`).then((res) => res.data);
 }
+
+/**
+ * Khách tự huỷ chuyến của mình.
+ *
+ * Trả về chính chuyến đó sau khi huỷ (đã đổi chặng) nên nơi gọi ghi thẳng vào cache, không cần
+ * một lượt đọc thứ hai chỉ để biết kết quả của việc mình vừa làm.
+ */
+export function cancelTrip(id: string): Promise<CustomerTripDetail> {
+  return apiRequest<CustomerTripDetail>(`/trips/${id}/cancel`, { method: 'POST' }).then(
+    (res) => res.data,
+  );
+}

@@ -2701,6 +2701,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/trips/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Khách tự huỷ chuyến của mình
+         * @description Huỷ được khi yêu cầu còn chờ gian hàng trả lời, hoặc khi đơn đã duyệt nhưng CHƯA giao xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` — việc cần làm lúc đó là liên hệ chủ xe. Trả về chính chuyến đó sau khi huỷ để giao diện không phải gọi thêm một lượt.
+         */
+        post: operations["CustomerTripsController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bookings/{id}/payments": {
         parameters: {
             query?: never;
@@ -3414,7 +3434,7 @@ export interface components {
         NotificationDto: {
             id: string;
             /** @enum {string} */
-            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "shop_approved" | "shop_rejected" | "vehicle_approved" | "vehicle_rejected" | "review_received";
+            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "booking_request_cancelled" | "shop_approved" | "shop_rejected" | "vehicle_approved" | "vehicle_rejected" | "review_received";
             title: string;
             body?: string | null;
             /** @description Loại đối tượng để dựng link */
@@ -6960,7 +6980,7 @@ export interface components {
         AuditLogDto: {
             id: string;
             /** @enum {string} */
-            actorScope: "tenant" | "platform" | "system";
+            actorScope: "tenant" | "platform" | "customer" | "system";
             action: string;
             targetType: string;
             targetId?: string | null;
@@ -6980,7 +7000,7 @@ export interface components {
         AuditLogDetailDto: {
             id: string;
             /** @enum {string} */
-            actorScope: "tenant" | "platform" | "system";
+            actorScope: "tenant" | "platform" | "customer" | "system";
             action: string;
             targetType: string;
             targetId?: string | null;
@@ -12067,6 +12087,27 @@ export interface operations {
             };
         };
     };
+    CustomerTripsController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerTripDetailDto"];
+                };
+            };
+        };
+    };
     PaymentsController_history: {
         parameters: {
             query?: never;
@@ -12576,7 +12617,7 @@ export interface operations {
     PlatformAuditController_list: {
         parameters: {
             query?: {
-                actorScope?: "tenant" | "platform" | "system";
+                actorScope?: "tenant" | "platform" | "customer" | "system";
                 /** @description Khớp chính xác, vd "tenant.lock" */
                 action?: string;
                 /** @description Loại đối tượng, vd "tenant" / "booking" */

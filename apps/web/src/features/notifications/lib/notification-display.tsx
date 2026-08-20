@@ -5,6 +5,7 @@ import {
   CarOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  RollbackOutlined,
   ShopOutlined,
   StarOutlined,
 } from '@ant-design/icons';
@@ -20,6 +21,8 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.BOOKING_REQUEST_SUBMITTED]: <CarOutlined />,
   [NOTIFICATION_TYPE.BOOKING_REQUEST_APPROVED]: <CheckCircleOutlined />,
   [NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED]: <CloseCircleOutlined />,
+  // Khách RÚT lại yêu cầu — khác chiều với shop từ chối, nên khác icon.
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED]: <RollbackOutlined />,
   [NOTIFICATION_TYPE.SHOP_APPROVED]: <ShopOutlined />,
   [NOTIFICATION_TYPE.SHOP_REJECTED]: <ShopOutlined />,
   [NOTIFICATION_TYPE.VEHICLE_APPROVED]: <CarOutlined />,

@@ -11,6 +11,13 @@ export const NOTIFICATION_TYPE = {
   BOOKING_REQUEST_SUBMITTED: 'booking_request_submitted',
   BOOKING_REQUEST_APPROVED: 'booking_request_approved',
   BOOKING_REQUEST_REJECTED: 'booking_request_rejected',
+  /**
+   * Khách tự rút yêu cầu trước khi gian hàng kịp trả lời.
+   *
+   * Loại riêng chứ không mượn `BOOKING_REQUEST_REJECTED`: hai việc ngược chiều nhau (shop từ
+   * chối ↔ khách rút), và nhân viên đang xử lý hộp thư cần biết ngay là không phải bấm gì nữa.
+   */
+  BOOKING_REQUEST_CANCELLED: 'booking_request_cancelled',
   SHOP_APPROVED: 'shop_approved',
   SHOP_REJECTED: 'shop_rejected',
   VEHICLE_APPROVED: 'vehicle_approved',
@@ -77,6 +84,10 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   [NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED]: {
     label: 'Yêu cầu bị từ chối',
     color: STATUS_COLOR.DANGER,
+  },
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED]: {
+    label: 'Khách đã huỷ yêu cầu',
+    color: STATUS_COLOR.NEUTRAL,
   },
   [NOTIFICATION_TYPE.SHOP_APPROVED]: { label: 'Gian hàng được duyệt', color: STATUS_COLOR.SUCCESS },
   [NOTIFICATION_TYPE.SHOP_REJECTED]: { label: 'Gian hàng bị từ chối', color: STATUS_COLOR.DANGER },

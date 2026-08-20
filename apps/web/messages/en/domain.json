@@ -9,7 +9,8 @@
   "auditActorScope": {
     "tenant": "Shop",
     "platform": "Platform",
-    "system": "System"
+    "system": "System",
+    "customer": "Renter"
   },
   "bodyType": {
     "mini": "Mini car",
@@ -230,7 +231,8 @@
     "shop_rejected": "Shop declined",
     "vehicle_approved": "Vehicle listed publicly",
     "vehicle_rejected": "Vehicle declined",
-    "review_received": "New review"
+    "review_received": "New review",
+    "booking_request_cancelled": "Renter cancelled the request"
   },
   "occupancySourceType": {
     "booking": "Booking",

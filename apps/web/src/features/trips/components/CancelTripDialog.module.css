@@ -1,0 +1,17 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.lead {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Ranh giới năng lực của hệ thống — tách khỏi các con số ở trên để không đọc lướt qua. */
+.refundNote {
+  margin-top: var(--xp-space-xs);
+}

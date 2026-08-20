@@ -21,6 +21,7 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   'booking.transition': 'Chuyển trạng thái đơn',
   'booking_request.approve': 'Duyệt yêu cầu đặt xe',
   'booking_request.reject': 'Từ chối yêu cầu đặt xe',
+  'booking_request.cancel': 'Khách huỷ yêu cầu đặt xe',
   'receipt.create': 'Tạo phiếu thu/chi',
   'receipt.approve': 'Duyệt phiếu',
   'receipt.cancel': 'Huỷ phiếu',
@@ -48,6 +49,8 @@ export const AUDIT_SCOPE_OPTIONS = [
   { value: 'all', label: 'Tất cả' },
   { value: AUDIT_ACTOR_SCOPE.PLATFORM, label: 'Nền tảng' },
   { value: AUDIT_ACTOR_SCOPE.TENANT, label: 'Gian hàng' },
+  // Khách tự huỷ chuyến (20/08) — thiếu tuỳ chọn này thì không lọc ra được "ai đã huỷ đơn".
+  { value: AUDIT_ACTOR_SCOPE.CUSTOMER, label: 'Khách thuê' },
   { value: AUDIT_ACTOR_SCOPE.SYSTEM, label: 'Hệ thống' },
 ];
 

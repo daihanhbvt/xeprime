@@ -17,8 +17,10 @@ import marketplace from './marketplace.json';
 import listings from './listings.json';
 import shops from './shops.json';
 import chat from './chat.json';
+import trips from './trips.json';
 import account from './account.json';
 import manageCommon from './manage-common.json';
+import shopOnboarding from './shop-onboarding.json';
 import bookingRequests from './booking-requests.json';
 import bookings from './bookings.json';
 import vehicles from './vehicles.json';
@@ -36,8 +38,10 @@ const messages = {
   Listings: listings,
   Shops: shops,
   Chat: chat,
+  Trips: trips,
   Account: account,
   ManageCommon: manageCommon,
+  ShopOnboarding: shopOnboarding,
   BookingRequests: bookingRequests,
   Bookings: bookings,
   Vehicles: vehicles,

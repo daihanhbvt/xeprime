@@ -2,11 +2,12 @@
 
 import { Alert, Button, Form } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
   SERVICE_TYPE, VEHICLE_OPERATION_STATUS, VEHICLE_SOURCE_TYPE, VEHICLE_TYPE, isVehicleFuelTypeAllowed, } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
+import { trailingRequiredMark } from '@/components/form/required-mark';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { discountedPriceVnd } from '../pricing';
 import {
@@ -68,23 +69,6 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   images: [],
   features: [],
 };
-
-/**
- * Dấu bắt buộc đặt SAU nhãn (Figma `193:1619`: "Tên xe" rồi mới tới `*`).
- * Mặc định của AntD là đặt trước nhãn — ngược với thiết kế.
- */
-function requiredMark(label: ReactNode, { required }: { required: boolean }) {
-  return (
-    <>
-      {label}
-      {required ? (
-        <span className={styles.requiredMark} aria-hidden="true">
-          *
-        </span>
-      ) : null}
-    </>
-  );
-}
 
 export interface VehicleSubmitOptions {
   /** Bấm "Lưu & Gửi duyệt" thay vì "Lưu nháp" — trang quyết định gọi thêm `submit-public`. */
@@ -319,7 +303,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
      * Không có ngữ cảnh này, `Form.Item` rơi về layout NGANG mặc định: nhãn nằm bên trái kèm dấu
      * hai chấm và ô nhập co lại theo phần thừa — sai hẳn Figma (nhãn NẰM TRÊN ô nhập).
      */
-    <Form component={false} layout="vertical" colon={false} requiredMark={requiredMark}>
+    <Form component={false} layout="vertical" colon={false} requiredMark={trailingRequiredMark}>
       <form onSubmit={handleFormSubmit} noValidate>
         <VehicleWizard
           steps={steps}

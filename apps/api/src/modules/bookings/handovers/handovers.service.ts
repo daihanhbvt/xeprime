@@ -20,6 +20,7 @@ import {
   PRIVATE_FILE_STATUS,
   handoverEnergyKind,
   handoverOdometerSuspicion,
+  canAttachHandoverPhoto,
   isHandoverEditable,
   isHandoverEligible,
   vehicleMaintenanceSchedule,
@@ -760,7 +761,7 @@ export class HandoversService {
     dto: PresignHandoverPhotoDto,
   ): Promise<SourceContractPresignDto> {
     const handover = await this.requireActive(tenantId, bookingId, type);
-    if (!isHandoverEditable(handover.status as HandoverStatus)) throw readOnly();
+    if (!canAttachHandoverPhoto(handover.status as HandoverStatus)) throw photoLocked();
     // Ảnh mới cùng slot là THAY ảnh cũ nên không tính thêm; chỉ chặn khi thật sự vượt trần.
     const replacing = handover.photos.some((photo) => photo.slot === dto.slot);
     if (!replacing && handover.photos.length >= HANDOVER_MAX_PHOTOS) {
@@ -789,7 +790,7 @@ export class HandoversService {
   ): Promise<HandoverDto> {
     const booking = await this.requireBooking(tenantId, bookingId);
     const handover = await this.requireActive(tenantId, bookingId, type);
-    if (!isHandoverEditable(handover.status as HandoverStatus)) throw readOnly();
+    if (!canAttachHandoverPhoto(handover.status as HandoverStatus)) throw photoLocked();
 
     await this.files.completeFor(tenantId, handover.vehicleId, userId, fileId, {
       purpose: PRIVATE_FILE_PURPOSE.HANDOVER_PHOTO,
@@ -840,7 +841,7 @@ export class HandoversService {
   ): Promise<HandoverDto> {
     const booking = await this.requireBooking(tenantId, bookingId);
     const handover = await this.requireActive(tenantId, bookingId, type);
-    if (!isHandoverEditable(handover.status as HandoverStatus)) throw readOnly();
+    if (!canAttachHandoverPhoto(handover.status as HandoverStatus)) throw photoLocked();
 
     const photo = handover.photos.find((row) => row.slot === slot);
     if (photo) {
@@ -1172,6 +1173,17 @@ function readOnly(): ConflictException {
   return new ConflictException({
     code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
     message: 'Biên bản đã xác nhận — chỉ đọc. Sai số KM thì dùng chức năng điều chỉnh có lý do.',
+  });
+}
+
+/**
+ * Ảnh chỉ bị khoá khi biên bản ĐÃ HUỶ — biên bản đã xác nhận vẫn đính bổ sung được
+ * (`canAttachHandoverPhoto`, xem docblock ở `@xeprime/types`).
+ */
+function photoLocked(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+    message: 'Biên bản đã huỷ — không đính thêm ảnh được',
   });
 }
 

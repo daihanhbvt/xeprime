@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CUSTOMER_TRIP_STAGE, DEPOSIT_STATUS } from '@xeprime/types';
 import { ApiClientError } from '@/services/api-client';
@@ -23,7 +23,16 @@ const query = vi.hoisted(() => ({
 }));
 const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 
-vi.mock('../hooks', () => ({ useTrip: () => query }));
+const cancelMutation = vi.hoisted(() => ({
+  mutate: vi.fn(),
+  isPending: false,
+  isError: false,
+  error: undefined as unknown,
+}));
+vi.mock('../hooks', () => ({
+  useTrip: () => query,
+  useCancelTrip: () => cancelMutation,
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => nav,
@@ -106,6 +115,10 @@ beforeEach(() => {
   query.isLoading = false;
   query.isError = false;
   query.error = undefined;
+  cancelMutation.mutate.mockReset();
+  cancelMutation.isPending = false;
+  cancelMutation.isError = false;
+  cancelMutation.error = undefined;
   setTrip({});
 });
 
@@ -175,7 +188,7 @@ describe('Sẵn sàng và Đang thuê', () => {
 
   it('vẫn liên hệ được chủ xe', () => {
     renderView();
-    expect(screen.getByText('Liên hệ cửa hàng')).toBeTruthy();
+    expect(screen.getByText('Nhắn tin cho cửa hàng')).toBeTruthy();
   });
 });
 
@@ -198,7 +211,7 @@ describe('Hoàn thành', () => {
   it('hiện hành trình thực tế và mở nút đánh giá', () => {
     renderView();
     expect(screen.getByText('Hành trình thực tế')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Đánh giá chuyến đi' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Đánh giá/ })).toBeTruthy();
   });
 
   it('đã đánh giá rồi thì hiện lại đánh giá, không mời đánh giá lần hai', () => {
@@ -215,7 +228,7 @@ describe('Hoàn thành', () => {
     });
     renderView();
     expect(screen.getByText('Xe cực kỳ mới')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Đánh giá chuyến đi' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Đánh giá/ })).toBeNull();
   });
 });
 
@@ -292,5 +305,68 @@ describe('Không tìm thấy / lỗi', () => {
     });
     renderView();
     expect(screen.getByText('Phiên đăng nhập đã hết hạn')).toBeTruthy();
+  });
+});
+
+/**
+ * Khách tự huỷ chuyến (20/08). Nút này là LỐI THOÁT khi gian hàng im lặng — trước đó
+ * `cancelled_by_customer` là trạng thái chỉ đọc được mà không endpoint nào ghi ra được.
+ *
+ * Ranh giới khoá ở đây: **xe chưa rời bãi**. Sau khi đã giao xe thì việc cần làm là gọi chủ xe,
+ * và một nút "Huỷ" ở đó chỉ là lời hứa hão.
+ */
+describe('Huỷ chuyến', () => {
+  it('chờ duyệt → có nút huỷ', () => {
+    setTrip({ stage: CUSTOMER_TRIP_STAGE.PENDING_APPROVAL });
+    renderView();
+    expect(screen.getByRole('button', { name: 'Huỷ chuyến' })).toBeTruthy();
+  });
+
+  it('đã duyệt, chưa giao xe → vẫn huỷ được', () => {
+    setTrip({ stage: CUSTOMER_TRIP_STAGE.READY });
+    renderView();
+    expect(screen.getByRole('button', { name: 'Huỷ chuyến' })).toBeTruthy();
+  });
+
+  it('ĐANG THUÊ → không còn nút huỷ', () => {
+    setTrip({ stage: CUSTOMER_TRIP_STAGE.ACTIVE });
+    renderView();
+    expect(screen.queryByRole('button', { name: 'Huỷ chuyến' })).toBeNull();
+  });
+
+  it('đã hoàn thành / đã huỷ → không có nút huỷ', () => {
+    for (const stage of [CUSTOMER_TRIP_STAGE.COMPLETED, CUSTOMER_TRIP_STAGE.CANCELLED] as const) {
+      cleanup();
+      setTrip({ stage });
+      renderView();
+      expect(screen.queryByRole('button', { name: 'Huỷ chuyến' })).toBeNull();
+    }
+  });
+
+  it('bấm huỷ mở hộp xác nhận, KHÔNG gọi API ngay', () => {
+    setTrip({ stage: CUSTOMER_TRIP_STAGE.PENDING_APPROVAL });
+    renderView();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Huỷ chuyến' }));
+
+    expect(screen.getByText('Huỷ chuyến đi?')).toBeTruthy();
+    expect(cancelMutation.mutate).not.toHaveBeenCalled();
+  });
+
+  /**
+   * XePrime không có cổng thanh toán (design 14 §5): huỷ KHÔNG hoàn lại đồng nào một cách tự
+   * động. Nói trước khi khách bấm, không để họ phát hiện ra sau.
+   */
+  it('đã thanh toán thì cảnh báo trước, và nói rõ hệ thống không tự chuyển tiền', () => {
+    setTrip({
+      stage: CUSTOMER_TRIP_STAGE.READY,
+      finance: { ...TRIP.finance!, rentalPaid: '500000.00', depositReceived: '1000000.00' },
+    });
+    renderView();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Huỷ chuyến' }));
+
+    expect(screen.getByText('Bạn đã thanh toán cho chuyến này')).toBeTruthy();
+    expect(screen.getByText(/không tự chuyển tiền/)).toBeTruthy();
   });
 });

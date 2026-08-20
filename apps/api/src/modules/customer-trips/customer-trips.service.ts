@@ -1,21 +1,29 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   CUSTOMER_TRIP_FILTER,
+  NOTIFICATION_TARGET_TYPE,
+  NOTIFICATION_TYPE,
   PAYMENT_KIND,
   PAYMENT_STATUS,
+  canCustomerCancelTrip,
   customerTripStage,
   isCustomerTripFilter,
   type BookingRequestStatus,
   type BookingStatus,
   type CustomerTripFilter,
+  type CustomerTripStage,
   type PaginationMeta,
 } from '@xeprime/types';
 import { fromDateOnly } from '../../common/date-only';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
+import { BookingsService } from '../bookings/bookings.service';
+import { NotificationService } from '../notification/notification.service';
 import { SettlementService } from '../bookings/settlement/settlement.service';
 import {
   CUSTOMER_TRIP_DEFAULT_LIMIT,
@@ -52,6 +60,9 @@ export class CustomerTripsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settlement: SettlementService,
+    private readonly bookings: BookingsService,
+    private readonly notifications: NotificationService,
+    private readonly audit: AuditService,
   ) {}
 
   async list(
@@ -144,6 +155,98 @@ export class CustomerTripsService {
           }
         : null,
     };
+  }
+
+  /**
+   * Khách tự huỷ chuyến — đường GHI duy nhất của module này.
+   *
+   * Hai trường hợp, hai bảng khác nhau, cố ý không gộp:
+   *
+   *  - **Chưa được duyệt** (chưa có đơn): đổi chính yêu cầu sang `cancelled_by_customer`. Yêu
+   *    cầu chờ duyệt KHÔNG chiếm lịch (ADR 0006) nên không có gì để nhả.
+   *  - **Đã duyệt, chưa giao xe**: huỷ ĐƠN qua `BookingsService.transitionWithinTx` — nơi đã
+   *    giữ sẵn luật chuyển trạng thái, nhả `vehicle_occupancies`, audit và báo cho gian hàng.
+   *    Trạng thái yêu cầu giữ nguyên `converted_to_booking`: nó là lịch sử có thật, và tab
+   *    "Đã huỷ" đã bắt chuyến này qua trạng thái ĐƠN rồi.
+   *
+   * Đã giao xe thì không huỷ được — xe đang ở ngoài đường, việc cần làm là gọi chủ xe.
+   *
+   * Chống đua ở cả hai nhánh bằng điều kiện trạng thái trong WHERE, không phải bằng câu `if`
+   * đọc trước: gian hàng bấm duyệt đúng lúc khách bấm huỷ là chuyện có thật.
+   */
+  async cancel(customerUserId: string, id: string): Promise<CustomerTripDetailDto> {
+    const row = await this.prisma.bookingRequest.findFirst({
+      where: { customerUserId, OR: [{ id }, { bookingId: id }] },
+      select: {
+        id: true,
+        tenantId: true,
+        status: true,
+        vehicle: { select: { name: true } },
+        booking: { select: { id: true, code: true, tenantId: true, status: true } },
+      },
+    });
+    if (!row) throw tripNotFound();
+
+    const stage = customerTripStage({
+      requestStatus: row.status as BookingRequestStatus,
+      bookingStatus: (row.booking?.status as BookingStatus | undefined) ?? null,
+    });
+    if (!canCustomerCancelTrip(stage)) throw cancelNotAllowed(stage);
+
+    const booking = row.booking;
+    if (booking) {
+      await this.prisma.$transaction(async (tx) => {
+        await this.bookings.transitionWithinTx(
+          tx,
+          booking.tenantId,
+          booking.id,
+          customerUserId,
+          booking.status as BookingStatus,
+          BOOKING_STATUS.CANCELLED,
+          // Khách thao tác, không phải nhân viên gian hàng — audit phải phân biệt được.
+          { actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER },
+        );
+      });
+      return this.detail(customerUserId, id);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.bookingRequest.updateMany({
+        where: { id: row.id, status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL },
+        data: { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER },
+      });
+      // 0 dòng = gian hàng vừa duyệt/từ chối xen vào giữa. Không ghi đè quyết định của họ.
+      if (claimed.count === 0) throw cancelNotAllowed(stage);
+
+      await this.audit.record(
+        {
+          tenantId: row.tenantId,
+          actorUserId: customerUserId,
+          actorScope: AUDIT_ACTOR_SCOPE.CUSTOMER,
+          action: 'booking_request.cancel',
+          targetType: 'booking_request',
+          targetId: row.id,
+          before: { status: row.status },
+          after: { status: BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER },
+        },
+        tx,
+      );
+
+      // Hộp thư yêu cầu của gian hàng phải biết ngay là không còn gì để bấm.
+      await this.notifications.emitToTenantMembers(
+        row.tenantId,
+        {
+          type: NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED,
+          title: 'Khách đã huỷ yêu cầu thuê',
+          body: row.vehicle.name,
+          targetType: NOTIFICATION_TARGET_TYPE.BOOKING_REQUEST,
+          targetId: row.id,
+        },
+        tx,
+      );
+    });
+
+    return this.detail(customerUserId, id);
   }
 
   // ── Tiền ──────────────────────────────────────────────────────────────────
@@ -434,6 +537,20 @@ function isEngagedTrip(requestStatus: BookingRequestStatus, hasBooking: boolean)
  * Chuyến không tồn tại VÀ chuyến của người khác trả về cùng một lỗi. Phân biệt hai cái đó là
  * cách lịch sự để xác nhận "id này có thật, chỉ là không phải của bạn".
  */
+/**
+ * Chặng hiện tại không cho huỷ nữa.
+ *
+ * `details.stage` để FE nói đúng lối đi tiếp: xe đã giao thì mời liên hệ chủ xe, còn chuyến đã
+ * khép lại thì chỉ cần tải lại danh sách — hai câu khác hẳn nhau cho cùng một mã lỗi.
+ */
+function cancelNotAllowed(stage: CustomerTripStage): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED,
+    message: 'Chuyến này không còn huỷ được nữa',
+    details: { stage },
+  });
+}
+
 function tripNotFound(): NotFoundException {
   return new NotFoundException({
     code: API_ERROR_CODE.NOT_FOUND,

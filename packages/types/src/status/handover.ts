@@ -184,14 +184,39 @@ export const HANDOVER_EXTERIOR_SLOTS: readonly HandoverPhotoSlot[] = [
   HANDOVER_PHOTO_SLOT.RIGHT,
 ];
 
-/**
- * Tối thiểu để xác nhận: hai góc đối diện. Đòi đủ bốn góc sẽ khiến nhân viên bỏ qua quy
- * trình lúc cao điểm; đòi hai góc là mức vừa đủ để đối chiếu mà vẫn làm được trong 30 giây.
+/*
+ * CỐ Ý KHÔNG có `HANDOVER_REQUIRED_SLOTS`.
+ *
+ * Wave 7 từng đòi tối thiểu hai góc đối diện, nhưng Wave 10 (design 14 §2) chốt ảnh hiện trạng
+ * là TUỲ CHỌN ở cả hai chiều — một chuyến bình thường phải xong bằng đúng hai lần bấm. Hằng số
+ * cũ chỉ còn tô viền "bắt buộc" trên UI trong khi không tầng nào chặn, tức là hứa suông với
+ * người dùng. Muốn siết bằng chứng thì đó là chính sách của gian hàng, không phải luật nền tảng.
  */
-export const HANDOVER_REQUIRED_SLOTS: readonly HandoverPhotoSlot[] = [
-  HANDOVER_PHOTO_SLOT.FRONT,
-  HANDOVER_PHOTO_SLOT.REAR,
+
+/**
+ * Trạng thái còn GẮN/GỠ ảnh được — rộng hơn `HANDOVER_STATUS_EDITABLE` đúng một bậc: gồm cả
+ * biên bản ĐÃ XÁC NHẬN.
+ *
+ * Vì sao nới: luồng nhanh Wave 10 khuyến khích xác nhận trong 10 giây ở quầy, nên chuyện quên
+ * đính ảnh rồi mới nhớ ra là bình thường chứ không phải ngoại lệ. Khoá cứng sau khi xác nhận
+ * nghĩa là bằng chứng KHÔNG BAO GIỜ vào được hệ thống — tệ hơn hẳn so với việc nó vào muộn.
+ * Đây cũng là tiền lệ đã có: `resolveOdometer` chỉ chạy trên biên bản đã xác nhận.
+ *
+ * Đổi lại, bản ghi phải TRUNG THỰC về thời điểm: mỗi ảnh mang `uploadedAt` riêng, và giao diện
+ * đánh dấu rõ ảnh nào thêm sau `confirmedAt` — một tấm chụp ba ngày sau không được phép đọc như
+ * bằng chứng hiện trạng lúc bàn giao.
+ *
+ * Biên bản ĐÃ HUỶ thì không: nó không còn là hồ sơ của chuyến nào cả.
+ */
+export const HANDOVER_PHOTO_ATTACHABLE_STATUS: readonly HandoverStatus[] = [
+  HANDOVER_STATUS.DRAFT,
+  HANDOVER_STATUS.READY,
+  HANDOVER_STATUS.CONFIRMED,
 ];
+
+export function canAttachHandoverPhoto(status: HandoverStatus): boolean {
+  return HANDOVER_PHOTO_ATTACHABLE_STATUS.includes(status);
+}
 
 /** Trần ảnh mỗi biên bản — 5 slot cố định, phần dư là ảnh hư hỏng chụp thêm. */
 export const HANDOVER_MAX_PHOTOS = 12;

@@ -2,12 +2,18 @@
 
 import { Alert } from 'antd';
 import {
-  DEPOSIT_STATUS, DEPOSIT_STATUS_META, REFUND_METHOD_LABEL, SURCHARGE_CATEGORY_LABEL, hasDepositToShow, type DepositStatus, type RefundMethod, type SurchargeCategory, } from '@xeprime/types';
+  DEPOSIT_STATUS,
+  DEPOSIT_STATUS_META,
+  hasDepositToShow,
+  type DepositStatus,
+} from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { isZeroMoney } from '@/lib/money';
 import type { CustomerTripFinance } from '../types';
 import styles from './TripFinanceCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useTranslations } from 'next-intl';
 
 /**
  * Hoá đơn + tiền cọc, phía KHÁCH.
@@ -27,6 +33,8 @@ export function TripFinanceCard({
   /** Chuyến đã khép: hiện hoá đơn cuối (có phụ phí) thay cho bảng giá dự kiến. */
   closed: boolean;
 }) {
+  const t = useTranslations('Trips.finance');
+  const dl = useDomainLabel();
   const fmt = useAppFormat();
 
   const depositStatus = finance.depositStatus as DepositStatus;
@@ -39,49 +47,49 @@ export function TripFinanceCard({
   const showDeposit = hasDepositToShow(depositStatus);
 
   return (
-    <section className={styles.card} aria-label={closed ? 'Hóa đơn dịch vụ' : 'Chi tiết giá'}>
-      <h2 className={styles.title}>{closed ? 'Hóa đơn dịch vụ' : 'Chi tiết giá'}</h2>
+    <section className={styles.card} aria-label={closed ? t('invoiceTitle') : t('priceTitle')}>
+      <h2 className={styles.title}>{closed ? t('invoiceTitle') : t('priceTitle')}</h2>
 
       {finance.legacyPricing ? (
         <Alert
           type="info"
           showIcon
-          message="Chuyến cũ nên hệ thống chỉ còn lưu tổng tiền, không còn chi tiết từng khoản."
+          message={t('legacy')}
         />
       ) : null}
 
       <dl className={styles.rows}>
         <div className={styles.row}>
-          <dt>Tiền thuê</dt>
+          <dt>{t('rental')}</dt>
           <dd>{fmt.money(finance.baseAmount)}</dd>
         </div>
         {!isZeroMoney(finance.discountAmount) ? (
           <div className={styles.row}>
-            <dt>Khuyến mãi</dt>
+            <dt>{t('discount')}</dt>
             <dd className={styles.discount}>−{fmt.money(finance.discountAmount)}</dd>
           </div>
         ) : null}
         <div className={styles.row}>
-          <dt>Phí giao xe</dt>
+          <dt>{t('deliveryFee')}</dt>
           {/*
             Phí giao nhận mặc định miễn phí; chủ xe chốt lại sau khi thoả thuận (Wave 9). Khách
             thấy số MỚI NHẤT — không có bước chấp nhận, nên cũng không có nút nào ở đây.
           */}
           <dd className={isZeroMoney(finance.deliveryFee) ? styles.free : undefined}>
-            {isZeroMoney(finance.deliveryFee) ? 'Miễn phí' : fmt.money(finance.deliveryFee)}
+            {isZeroMoney(finance.deliveryFee) ? t('free') : fmt.money(finance.deliveryFee)}
           </dd>
         </div>
       </dl>
 
       {hasSurcharge ? (
         <>
-          <h3 className={styles.subTitle}>Phụ phí phát sinh</h3>
+          <h3 className={styles.subTitle}>{t('surchargesTitle')}</h3>
           <dl className={styles.rows}>
             {finance.surcharges.map((row, index) => (
               <div key={`${row.category}-${row.recordedAt}-${index}`} className={styles.row}>
                 <dt className={styles.surchargeLabel}>
                   <span>
-                    {SURCHARGE_CATEGORY_LABEL[row.category as SurchargeCategory] ?? row.category}
+                    {dl('surchargeCategory', row.category)}
                   </span>
                   <span className={styles.surchargeReason}>{row.reason}</span>
                 </dt>
@@ -93,13 +101,13 @@ export function TripFinanceCard({
       ) : null}
 
       <div className={styles.total}>
-        <span>{closed ? 'Tổng thanh toán' : 'Tổng cộng'}</span>
+        <span>{closed ? t('totalFinal') : t('total')}</span>
         <span className={styles.totalValue}>{fmt.money(finance.finalTotal)}</span>
       </div>
 
       {!isZeroMoney(finance.rentalPaid) ? (
         <div className={styles.row}>
-          <dt className={styles.paidLabel}>Đã thanh toán</dt>
+          <dt className={styles.paidLabel}>{t('paid')}</dt>
           <dd>{fmt.money(finance.rentalPaid)}</dd>
         </div>
       ) : null}
@@ -110,8 +118,8 @@ export function TripFinanceCard({
         <Alert
           type="warning"
           showIcon
-          message={`Cần thanh toán thêm ${fmt.money(finance.additionalDue)}`}
-          description="Phụ phí vượt quá tiền cọc đã giữ. Vui lòng thanh toán phần chênh lệch trực tiếp với chủ xe."
+          message={t('additionalDue', { amount: fmt.money(finance.additionalDue) })}
+          description={t('additionalDueBody')}
         />
       ) : null}
     </section>
@@ -129,31 +137,32 @@ function DepositBlock({
   finance: CustomerTripFinance;
   status: DepositStatus;
 }) {
+  const t = useTranslations('Trips.finance');
+  const dl = useDomainLabel();
   const fmt = useAppFormat();
 
   const refunded = finance.refundAmount !== null;
 
   return (
-    <section className={styles.deposit} aria-label="Tiền đặt cọc">
+    <section className={styles.deposit} aria-label={t('depositAria')}>
       <header className={styles.depositHead}>
-        <h3 className={styles.subTitle}>Đặt cọc thế chấp</h3>
+        <h3 className={styles.subTitle}>{t('depositTitle')}</h3>
         <StatusTag value={status} meta={DEPOSIT_STATUS_META} group="depositStatus" />
       </header>
 
       {status === DEPOSIT_STATUS.NOT_RECEIVED ? (
         <p className={styles.depositNote}>
-          Chủ xe chưa ghi nhận đã thu khoản cọc {fmt.money(finance.depositRequired)} của chuyến
-          này. Nếu bạn đã chuyển tiền, vui lòng liên hệ chủ xe để đối chiếu.
+          {t('depositNotReceived', { amount: fmt.money(finance.depositRequired) })}
         </p>
       ) : (
         <dl className={styles.rows}>
           <div className={styles.row}>
-            <dt>Tiền cọc đã nhận giữ</dt>
+            <dt>{t('depositReceived')}</dt>
             <dd>{fmt.money(finance.depositReceived)}</dd>
           </div>
           {!isZeroMoney(finance.depositDeducted) ? (
             <div className={styles.row}>
-              <dt>Khấu trừ phụ phí</dt>
+              <dt>{t('depositDeducted')}</dt>
               <dd className={styles.discount}>−{fmt.money(finance.depositDeducted)}</dd>
             </div>
           ) : null}
@@ -163,7 +172,7 @@ function DepositBlock({
           */}
           {status === DEPOSIT_STATUS.RECEIVED ? null : (
             <div className={styles.depositTotal}>
-              <span>{refunded ? 'Số tiền thực hoàn' : 'Dự kiến hoàn lại'}</span>
+              <span>{refunded ? t('refundActual') : t('refundExpected')}</span>
               <span className={styles.totalValue}>
                 {fmt.money(refunded ? finance.refundAmount! : finance.expectedRefund)}
               </span>
@@ -173,34 +182,26 @@ function DepositBlock({
       )}
 
       {!isZeroMoney(finance.depositDeducted) ? (
-        <p className={styles.depositNote}>
-          Phần khấu trừ nằm trong tổng thanh toán ở trên — đây là cách bạn đã trả cho khoản phụ phí
-          đó, không phải một khoản bị trừ thêm.
-        </p>
+        <p className={styles.depositNote}>{t('deductNote')}</p>
       ) : null}
 
       {refunded ? (
         <p className={styles.depositNote}>
-          Đã hoàn bằng{' '}
-          {REFUND_METHOD_LABEL[finance.refundMethod as RefundMethod] ?? 'phương thức khác'}
-          {finance.refundedAt ? ` ngày ${fmt.dateTime(finance.refundedAt)}` : ''}
-          {finance.refundReference ? `. Mã tham chiếu: ${finance.refundReference}` : ''}. Vui lòng
-          đối chiếu với tài khoản của bạn.
+          {t('refundedBy', {
+            method: dl('refundMethod', finance.refundMethod, t('refundMethodOther')),
+          })}
+          {finance.refundedAt ? t('refundedAt', { date: fmt.dateTime(finance.refundedAt) }) : ''}
+          {finance.refundReference
+            ? t('refundRef', { reference: finance.refundReference })
+            : ''}
+          {t('refundedTail')}
         </p>
       ) : status === DEPOSIT_STATUS.AWAITING_REFUND ? (
-        <p className={styles.depositNote}>
-          Chủ xe sẽ chuyển lại khoản này và đánh dấu hoàn cọc trên hệ thống. XePrime ghi nhận trạng
-          thái, không thực hiện chuyển tiền.
-        </p>
+        <p className={styles.depositNote}>{t('awaitingRefund')}</p>
       ) : status === DEPOSIT_STATUS.RECEIVED ? (
-        <p className={styles.depositNote}>
-          Chủ xe đang giữ khoản cọc này trong suốt chuyến. Số tiền hoàn lại sẽ được chốt sau khi bạn
-          trả xe.
-        </p>
+        <p className={styles.depositNote}>{t('holding')}</p>
       ) : status === DEPOSIT_STATUS.SETTLED ? (
-        <p className={styles.depositNote}>
-          Khoản cọc đã dùng hết cho phụ phí phát sinh ở trên nên không còn tiền hoàn lại.
-        </p>
+        <p className={styles.depositNote}>{t('settled')}</p>
       ) : null}
     </section>
   );

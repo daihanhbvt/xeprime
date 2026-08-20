@@ -15,6 +15,7 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { contractPath, receiptsPath } from '@/constants/routes';
 import { useCreateContract } from '@/features/contracts/hooks/use-contract';
 import { ConfirmHandoverDialog } from '@/features/handovers/components/ConfirmHandoverDialog';
+import { HandoverSupplementDialog } from '@/features/handovers/components/HandoverSupplementDialog';
 import { useHandoverContext } from '@/features/handovers/hooks';
 import { BookingReceiptList } from '@/features/finance/components/BookingReceiptList';
 import { PaymentHistory } from '@/features/payments/components/PaymentHistory';
@@ -50,6 +51,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
 
   const canViewHandover = has(PERMISSION.HANDOVER_VIEW);
   const canConfirm = has(PERMISSION.HANDOVER_CONFIRM);
+  const canManageHandover = has(PERMISSION.HANDOVER_MANAGE);
   const canContract = has(PERMISSION.CONTRACT_MANAGE);
   const canRecordPayment = has(PERMISSION.PAYMENT_RECORD);
   const canUpdate = has(PERMISSION.BOOKING_UPDATE);
@@ -63,7 +65,10 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
   const [payOpen, setPayOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [feeOpen, setFeeOpen] = useState(false);
+  const [supplementOpen, setSupplementOpen] = useState(false);
 
+  /** Đã lập biên bản chiều nào chưa — chưa có thì không có gì để bổ sung. */
+  const hasHandover = Boolean(handover?.pickup || handover?.return);
   const hasDebt = !isZeroMoney(booking.debtAmount);
   // Cùng một luật với server (`isBookingFinal`), đọc từ `@xeprime/types` — không đoán lại ở UI.
   const closed = isBookingFinal(booking.status as BookingStatus);
@@ -138,6 +143,14 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
               {hasDebt ? 'Thu tiền' : 'Đã thu đủ'}
             </Button>
           ) : null}
+          {/*
+            Lối BỔ SUNG ảnh cho biên bản đã lập. Luồng nhanh Wave 10 cho xác nhận trong một cú
+            bấm, nên quên đính ảnh là chuyện thường ngày — không có nút này thì bằng chứng nằm
+            lại trong điện thoại nhân viên mãi mãi. Chỉ hiện khi thật sự đã có biên bản.
+          */}
+          {canManageHandover && hasHandover ? (
+            <Button onClick={() => setSupplementOpen(true)}>Bổ sung ảnh bàn giao</Button>
+          ) : null}
         </div>
 
         <div className={styles.primary}>
@@ -161,6 +174,14 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
         Dựng CÓ ĐIỀU KIỆN: mỗi lần mở là một instance mới, state khởi tạo từ số liệu hiện tại —
         không cần reset trong effect (và không tạo thêm một vòng render).
       */}
+      {supplementOpen && handover ? (
+        <HandoverSupplementDialog
+          context={handover}
+          open
+          onClose={() => setSupplementOpen(false)}
+        />
+      ) : null}
+
       {dialogType && handover ? (
         <ConfirmHandoverDialog
           context={handover}

@@ -14,12 +14,12 @@ import {
   HANDOVER_EXTERIOR_SLOTS,
   HANDOVER_PHOTO_SLOT,
   HANDOVER_PHOTO_SLOT_LABEL,
-  HANDOVER_REQUIRED_SLOTS,
   IMAGE_UPLOAD_MIME_TYPES,
   type HandoverPhotoSlot,
   type HandoverType,
 } from '@xeprime/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
+import { cx } from '@/lib/cx';
 import { getErrorMessage } from '@/services/api-client';
 import { uploadToR2, validateImageFile } from '@/services/upload';
 import {
@@ -57,6 +57,7 @@ export function HandoverPhotoGrid({
   canViewFiles,
   disabled,
   onChanged,
+  ensureHandover,
 }: {
   bookingId: string;
   type: HandoverType;
@@ -64,6 +65,15 @@ export function HandoverPhotoGrid({
   canViewFiles: boolean;
   disabled: boolean;
   onChanged: (handover: Handover) => void;
+  /**
+   * Bảo đảm đã có biên bản để gắn ảnh vào, gọi TRƯỚC cú upload đầu tiên.
+   *
+   * Cần vì luồng nhanh Wave 10 không tạo biên bản nào cho tới lúc bấm xác nhận, trong khi
+   * `POST …/photos/presign` đòi một biên bản còn sửa được (`requireActive` → 404). Tạo trễ
+   * đúng lúc khách thật sự chọn ảnh: mở vùng nâng cao ra xem rồi đóng lại thì không đẻ ra một
+   * bản nháp rỗng nào.
+   */
+  ensureHandover?: () => Promise<void>;
 }) {
   const uploadRejectionMessage = useUploadRejectionMessage();
   const { message } = App.useApp();
@@ -104,6 +114,7 @@ export function HandoverPhotoGrid({
     }
     setPendingFor(slot, { file, progress: 0, status: 'uploading' });
     try {
+      await ensureHandover?.();
       const ticket = await presignHandoverPhoto(bookingId, type, slot, file);
       await uploadToR2(ticket.uploadUrl, file, (progress) =>
         setPendingFor(slot, { file, progress, status: 'uploading' }),
@@ -163,7 +174,6 @@ export function HandoverPhotoGrid({
   function renderSlot(slot: HandoverPhotoSlot) {
     const photo = filled.get(slot);
     const upload = pending[slot];
-    const required = HANDOVER_REQUIRED_SLOTS.includes(slot);
     const preview = previews[slot];
     const label = HANDOVER_PHOTO_SLOT_LABEL[slot];
 
@@ -174,7 +184,6 @@ export function HandoverPhotoGrid({
             styles.slotBox,
             photo ? styles.slotFilled : '',
             upload?.status === 'error' ? styles.slotError : '',
-            !photo && !upload && required ? styles.slotRequired : '',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -253,10 +262,8 @@ export function HandoverPhotoGrid({
             </Upload>
           )}
         </div>
-        <span className={styles.slotLabel}>
-          {label}
-          {required ? <span className={styles.slotRequiredMark}> *</span> : null}
-        </span>
+        {/* Không dấu `*` ở đâu cả: ảnh hiện trạng TUỲ CHỌN hoàn toàn (design 14 §2). */}
+        <span className={styles.slotLabel}>{label}</span>
         {upload?.status === 'error' ? (
           <span className={styles.slotErrorText} role="alert">
             {upload.message}
@@ -270,8 +277,11 @@ export function HandoverPhotoGrid({
     <div className={styles.photoBlock}>
       <p className={styles.photoTitle}>Ảnh hiện trạng</p>
       <div className={styles.slotGrid}>{HANDOVER_EXTERIOR_SLOTS.map(renderSlot)}</div>
-      <p className={styles.photoTitle}>Ảnh đồng hồ KM &amp; nhiên liệu</p>
-      <div className={styles.slotGrid}>{renderSlot(HANDOVER_PHOTO_SLOT.ODOMETER)}</div>
+      {/* Chỉ KM: Wave 10 bỏ hẳn nhiên liệu khỏi bàn giao (design 14 §8). */}
+      <p className={styles.photoTitle}>Ảnh đồng hồ KM</p>
+      <div className={cx(styles.slotGrid, styles.slotGridSingle)}>
+        {renderSlot(HANDOVER_PHOTO_SLOT.ODOMETER)}
+      </div>
 
       {/* Ảnh neo ẨN cho trình xem điều khiển bằng state — nút Xem chỉ việc đặt URL ký. */}
       {viewerUrl ? (

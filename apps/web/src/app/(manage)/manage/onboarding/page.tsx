@@ -1,9 +1,10 @@
 'use client';
 
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import { Button, Spin } from 'antd';
+import { ArrowLeftOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { Button, Popover, Spin } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
@@ -20,8 +21,12 @@ import styles from './onboarding.module.css';
  *
  * Đã có gian hàng thì không có gì để làm ở đây → vào thẳng portal. Trường hợp chưa đăng nhập do
  * proxy chặn từ trước (`/manage/login?intent=owner&next=/manage/onboarding`).
+ *
+ * Trang tự dựng thanh trên cùng của riêng nó: `AppShell` liệt kê route này là "bare" (chưa có
+ * gian hàng thì cũng chưa có gì để điều hướng trong sidebar).
  */
 export default function OwnerOnboardingPage() {
+  const t = useTranslations('ShopOnboarding');
   const router = useRouter();
   const { data: user, isLoading } = useCurrentUser();
   const hasTenant = Boolean(user?.tenant);
@@ -39,25 +44,55 @@ export default function OwnerOnboardingPage() {
   }
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.inner}>
-        <div className={styles.head}>
-          <Logo size="lg" />
-          <h1 className={styles.title}>Trở thành chủ xe</h1>
-          <p className={styles.desc}>
-            Tạo gian hàng để đăng và quản lý xe cho thuê. Hồ sơ gian hàng cần được XePrime duyệt
-            trước khi xe của bạn xuất hiện công khai trên marketplace.
-          </p>
-        </div>
+    <div className={styles.page}>
+      <header className={styles.topbar}>
+        <Link href={ROUTES.HOME} aria-label={t('page.homeAriaLabel')} className={styles.brand}>
+          <Logo size="md" />
+        </Link>
 
+        {/*
+          Nền tảng chưa có trang trợ giúp riêng, nên "Hướng dẫn" mở ngay nội dung tại chỗ thay vì
+          trỏ tới một URL chết — ba bước này là toàn bộ thứ người mở gian hàng cần biết ở đây.
+        */}
+        <Popover
+          trigger="click"
+          placement="bottomRight"
+          title={t('guide.title')}
+          content={
+            <ol className={styles.guideList}>
+              <li>{t('guide.steps.fill')}</li>
+              <li>{t('guide.steps.review')}</li>
+              <li>{t('guide.steps.publish')}</li>
+            </ol>
+          }
+        >
+          <Button type="text" icon={<QuestionCircleOutlined />} className={styles.guideButton}>
+            {t('guide.trigger')}
+          </Button>
+        </Popover>
+      </header>
+
+      <section className={styles.hero}>
+        <div className={styles.heroInner}>
+          <div className={styles.heroText}>
+            <h1 className={styles.title}>{t('page.title')}</h1>
+            <p className={styles.desc}>{t('page.subtitle')}</p>
+          </div>
+          <div className={styles.heroArt} aria-hidden="true" />
+        </div>
+      </section>
+
+      <main className={styles.content}>
         <ShopRegistration />
 
-        <Link href={ROUTES.HOME} className={styles.backLink}>
-          <Button type="text" icon={<ArrowLeftOutlined />}>
-            Quay lại marketplace
-          </Button>
-        </Link>
-      </div>
+        <div className={styles.back}>
+          <Link href={ROUTES.HOME}>
+            <Button type="text" icon={<ArrowLeftOutlined />}>
+              {t('page.back')}
+            </Button>
+          </Link>
+        </div>
+      </main>
     </div>
   );
 }

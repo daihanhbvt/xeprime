@@ -80,6 +80,14 @@ export const API_ERROR_CODE = {
   DELIVERY_QUOTE_REQUIRED: 'DELIVERY_QUOTE_REQUIRED',
   /** Khách yêu cầu giao tận nơi nhưng chính sách hiệu lực của xe không bật giao nhận. */
   DELIVERY_NOT_SUPPORTED: 'DELIVERY_NOT_SUPPORTED',
+  /**
+   * Khách bấm huỷ chuyến ở chặng không còn huỷ được (xe đã giao, chuyến đã xong, hoặc yêu cầu
+   * đã bị từ chối/huỷ trước đó).
+   *
+   * Mã riêng thay vì `CONFLICT` chung để FE nói đúng lối đi tiếp — sau khi đã nhận xe thì việc
+   * cần làm là liên hệ chủ xe, không phải thử lại.
+   */
+  TRIP_CANCEL_NOT_ALLOWED: 'TRIP_CANCEL_NOT_ALLOWED',
 
   // Gói/hạn (ADR 0010)
   PLAN_LIMIT_REACHED: 'PLAN_LIMIT_REACHED',

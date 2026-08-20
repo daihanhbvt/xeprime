@@ -221,7 +221,8 @@ export function ResponsiveDialog({
       destroyOnHidden={destroyOnClose}
       className={className}
       classNames={{
-        body: cx(styles.body, size === 'xl' && styles.xlBody, bodyClassName),
+        // `xl` tự quản chiều cao (hai cột cuộn riêng) nên không chồng thêm trần chung.
+        body: cx(styles.body, size === 'xl' ? styles.xlBody : styles.modalBody, bodyClassName),
         footer: styles.footer,
         header: hideHeaderTitle ? styles.bareHeader : undefined,
       }}

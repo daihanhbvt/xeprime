@@ -194,11 +194,6 @@
   font-size: var(--xp-font-size-body);
 }
 
-.requiredMark {
-  margin-left: var(--xp-space-xs);
-  color: var(--xp-color-error);
-}
-
 /* Giá sau khuyến mãi — chỉ hiển thị, không phải giá trị được lưu. */
 .pricePreview {
   margin-bottom: var(--xp-space-md);

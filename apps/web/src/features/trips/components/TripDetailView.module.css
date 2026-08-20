@@ -336,3 +336,76 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* ── Cụm hỗ trợ chuyến ─────────────────────────────────────────────────────
+ *
+ * Ba nút full-width xếp chồng cùng cỡ (bản trước) không nói được cái nào là việc chính, và
+ * "Gọi 0900000000" thì nhãn dài quá khổ nên tràn ở cột hẹp. Ở đây: một thẻ có tiêu đề, nút
+ * NHẮN TIN là hành động chính chiếm trọn hàng, còn Gọi/Đánh giá là hai ô phụ chia đôi hàng
+ * dưới — số điện thoại và tên xe xuống dòng phụ nên nhãn luôn ngắn và đọc được.
+ */
+
+.support {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.supportTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * `1fr 1fr` chứ không phải flex-wrap: khi chỉ còn MỘT ô (chuyến chưa cho đánh giá) nó vẫn giữ
+ * đúng nửa hàng thay vì phình ra full-width — hai chuyến cạnh nhau không nhảy bố cục.
+ */
+.supportRow {
+  display: grid;
+  gap: var(--xp-space-sm);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.supportAction {
+  display: flex;
+  min-height: var(--xp-touch-target-min);
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  cursor: pointer;
+  text-align: center;
+}
+
+.supportAction:hover {
+  border-color: var(--xp-gold-deep);
+  color: var(--xp-gold-deep);
+}
+
+.supportLabel {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Số điện thoại / tên xe: dòng phụ, cắt bớt thay vì đẩy ô rộng ra. */
+.supportMeta {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

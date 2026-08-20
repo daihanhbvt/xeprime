@@ -1,17 +1,13 @@
 'use client';
 
 import { CheckCircleFilled } from '@ant-design/icons';
+import { useTranslations } from 'next-intl';
 import styles from './CustomerTripTimeline.module.css';
 
 interface CustomerTripTimelineProps {
   confirmedDone: boolean;
   completedDone: boolean;
 }
-
-const MILESTONES = [
-  { key: 'confirmed', label: 'Đã xác nhận' },
-  { key: 'completed', label: 'Hoàn thành' },
-] as const;
 
 /**
  * Dòng thời gian chuyến của khách — **luôn đúng hai mốc**, một hàng ngang, mọi bề rộng.
@@ -25,14 +21,19 @@ const MILESTONES = [
  * bao giờ `flex-wrap`.
  */
 export function CustomerTripTimeline({ confirmedDone, completedDone }: CustomerTripTimelineProps) {
+  const t = useTranslations('Trips.timeline');
   const done = [confirmedDone, completedDone];
+  const milestones = [
+    { key: 'confirmed', label: t('confirmed') },
+    { key: 'completed', label: t('completed') },
+  ];
 
   return (
     <ol
       className={styles.timeline}
-      aria-label={`Tiến trình chuyến: ${completedDone ? 'đã hoàn thành' : 'đã xác nhận, chưa hoàn thành'}`}
+      aria-label={completedDone ? t('ariaDone') : t('ariaPending')}
     >
-      {MILESTONES.map((milestone, index) => (
+      {milestones.map((milestone, index) => (
         <li key={milestone.key} className={styles.item}>
           {index > 0 ? (
             <span
@@ -51,9 +52,7 @@ export function CustomerTripTimeline({ confirmedDone, completedDone }: CustomerT
               </span>
             )}
             <span className={styles.label}>{milestone.label}</span>
-            <span className={styles.srOnly}>
-              {done[index] ? ' — đã xong' : ' — chưa hoàn thành'}
-            </span>
+            <span className={styles.srOnly}>{done[index] ? t('srDone') : t('srTodo')}</span>
           </span>
         </li>
       ))}

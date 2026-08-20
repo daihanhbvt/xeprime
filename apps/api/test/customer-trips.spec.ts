@@ -1,11 +1,15 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  API_ERROR_CODE,
+  AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   CUSTOMER_TRIP_FILTER,
   CUSTOMER_TRIP_STAGE,
   DEPOSIT_STATUS,
   MEMBERSHIP_STATUS,
+  NOTIFICATION_TYPE,
+  OCCUPANCY_SOURCE_TYPE,
   PAYMENT_KIND,
   PAYMENT_METHOD,
   PAYMENT_STATUS,
@@ -54,7 +58,7 @@ const bookings = new BookingsService(
   new DriversService(asService, audit),
   new CustomersService(asService, audit),
 );
-const trips = new CustomerTripsService(asService, settlement);
+const trips = new CustomerTripsService(asService, settlement, bookings, notifications, audit);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -746,5 +750,129 @@ describe('Đánh giá', () => {
     expect(after.canReview).toBe(false);
     expect(after.hasReview).toBe(true);
     expect(after.review?.rating).toBe(5);
+  });
+});
+
+/**
+ * Khách tự huỷ chuyến (20/08) — đường GHI duy nhất mà khách có trên chuyến của mình.
+ *
+ * Trước đợt này `cancelled_by_customer` là một trạng thái CHỈ ĐỌC ĐƯỢC: tab "Đã huỷ" lọc theo
+ * nó nhưng không endpoint nào ghi ra nó, nên một yêu cầu bị gian hàng bỏ quên sẽ nằm ở
+ * "Chờ xác nhận" vĩnh viễn và khách không có lối nào thoát ra.
+ */
+describe('Khách tự huỷ chuyến', () => {
+  maybe('yêu cầu còn chờ duyệt → huỷ được, chuyển sang cancelled_by_customer', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: null });
+
+    const after = await trips.cancel(customerId, requestId);
+
+    expect(after.stage).toBe(CUSTOMER_TRIP_STAGE.CANCELLED);
+    const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
+    expect(row.status).toBe(BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER);
+  });
+
+  maybe('huỷ yêu cầu ghi audit dưới scope KHÁCH, không phải gian hàng', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: null });
+    await trips.cancel(customerId, requestId);
+
+    const log = await prisma.auditLog.findFirst({
+      where: { targetType: 'booking_request', targetId: requestId },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(log?.action).toBe('booking_request.cancel');
+    expect(log?.actorScope).toBe(AUDIT_ACTOR_SCOPE.CUSTOMER);
+    expect(log?.actorUserId).toBe(customerId);
+  });
+
+  maybe('gian hàng nhận được thông báo khách đã huỷ', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: null });
+    await trips.cancel(customerId, requestId);
+
+    const notice = await prisma.notification.findFirst({
+      where: { userId: ownerId, targetId: requestId },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(notice?.type).toBe(NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED);
+  });
+
+  maybe('đơn đã duyệt nhưng CHƯA giao xe → huỷ được và NHẢ LỊCH', async () => {
+    const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.CONFIRMED });
+    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId! } });
+    await prisma.$transaction((tx) =>
+      occupancy.reserve(tx, {
+        tenantId,
+        vehicleId,
+        sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING,
+        sourceId: bookingId!,
+        startAt: booking.pickupAt,
+        endAt: booking.returnAt,
+      }),
+    );
+
+    const after = await trips.cancel(customerId, requestId);
+
+    expect(after.stage).toBe(CUSTOMER_TRIP_STAGE.CANCELLED);
+    expect(
+      (await prisma.booking.findUniqueOrThrow({ where: { id: bookingId! } })).status,
+    ).toBe(BOOKING_STATUS.CANCELLED);
+    // Xe phải trống lại ngay — nếu không, huỷ xong mà lịch vẫn kẹt là mất doanh thu thật.
+    expect(
+      await prisma.vehicleOccupancy.count({
+        where: { sourceType: OCCUPANCY_SOURCE_TYPE.BOOKING, sourceId: bookingId! },
+      }),
+    ).toBe(0);
+  });
+
+  maybe('huỷ đơn KHÔNG đụng trạng thái yêu cầu — lịch sử converted_to_booking giữ nguyên', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: BOOKING_STATUS.RESERVED });
+    await trips.cancel(customerId, requestId);
+
+    const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
+    expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+  });
+
+  maybe('ĐÃ GIAO XE thì không huỷ được nữa', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
+    await expect(trips.cancel(customerId, requestId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED },
+    });
+  });
+
+  maybe('chuyến đã hoàn thành thì không huỷ được', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: BOOKING_STATUS.COMPLETED });
+    await expect(trips.cancel(customerId, requestId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED },
+    });
+  });
+
+  maybe('gian hàng đã từ chối rồi thì khách không huỷ chồng lên được', async () => {
+    const { requestId } = await seedTrip({
+      bookingStatus: null,
+      requestStatus: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+    });
+    await expect(trips.cancel(customerId, requestId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED },
+    });
+  });
+
+  maybe('không huỷ được chuyến của người khác — 404 như mọi đường đọc', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: null, customerUserId: strangerId });
+    await expect(trips.cancel(customerId, requestId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.NOT_FOUND },
+    });
+  });
+
+  maybe('huỷ hai lần: lần sau bị chặn, không sinh sự kiện thứ hai', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: null });
+    await trips.cancel(customerId, requestId);
+
+    await expect(trips.cancel(customerId, requestId)).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED },
+    });
+    expect(
+      await prisma.notification.count({
+        where: { targetId: requestId, type: NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED },
+      }),
+    ).toBe(1);
   });
 });

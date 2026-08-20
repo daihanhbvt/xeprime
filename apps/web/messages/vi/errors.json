@@ -47,7 +47,8 @@
     "RATE_LIMITED": "Thao tác quá nhanh. Thử lại sau ít giây.",
     "INTERNAL_ERROR": "Máy chủ gặp sự cố. Thử lại sau giúp mình nhé.",
     "UPLOADS_NOT_CONFIGURED": "Chức năng tải tệp chưa được cấu hình.",
-    "UPLOAD_FAILED": "Tải tệp lên thất bại. Thử lại giúp mình nhé."
+    "UPLOAD_FAILED": "Tải tệp lên thất bại. Thử lại giúp mình nhé.",
+    "TRIP_CANCEL_NOT_ALLOWED": "Chuyến này không còn huỷ được nữa. Vui lòng liên hệ chủ xe."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

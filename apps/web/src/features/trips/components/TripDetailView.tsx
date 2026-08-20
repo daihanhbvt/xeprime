@@ -1,12 +1,26 @@
 'use client';
 
-import { ArrowLeftOutlined, ClockCircleOutlined, EnvironmentOutlined } from '@ant-design/icons';
+import {
+  ArrowLeftOutlined,
+  ClockCircleOutlined,
+  EnvironmentOutlined,
+  PhoneOutlined,
+  StarOutlined,
+} from '@ant-design/icons';
 import { Alert, Button, Skeleton } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
-  API_ERROR_CODE, CUSTOMER_TRIP_STAGE, CUSTOMER_TRIP_STAGE_META, SERVICE_TYPE, customerTripTimeline, isCustomerTripClosed, routeTypeLabel, serviceTypeLabel, type CustomerTripStage, } from '@xeprime/types';
+  API_ERROR_CODE,
+  CUSTOMER_TRIP_STAGE,
+  CUSTOMER_TRIP_STAGE_META,
+  SERVICE_TYPE,
+  canCustomerCancelTrip,
+  customerTripTimeline,
+  isCustomerTripClosed,
+  type CustomerTripStage,
+} from '@xeprime/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { Stars } from '@/components/data-display/Stars';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -17,13 +31,17 @@ import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { ReviewModal } from '@/features/reviews/components/ReviewModal';
 import { dayjs } from '@/lib/datetime';
-import { getErrorCode, getErrorMessage, isUnauthenticated } from '@/services/api-client';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { getErrorCode, isUnauthenticated } from '@/services/api-client';
 import { useTrip } from '../hooks';
 import type { CustomerTripDetail } from '../types';
+import { CancelTripDialog } from './CancelTripDialog';
 import { CustomerTripTimeline } from './CustomerTripTimeline';
 import { TripFinanceCard } from './TripFinanceCard';
 import styles from './TripDetailView.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 /**
  * Chi tiết một chuyến — **một** kiến trúc cho mọi chặng.
@@ -35,6 +53,9 @@ import { useAppFormat } from '@/i18n/use-app-format';
  * Phân nhánh dựa trên `stage` (view-model từ `@xeprime/types`), không đọc thẳng trạng thái đơn.
  */
 export function TripDetailView({ tripId }: { tripId: string }) {
+  const t = useTranslations('Trips');
+  const dl = useDomainLabel();
+  const errorMessage = useErrorMessage();
   const fmt = useAppFormat();
 
   const router = useRouter();
@@ -42,6 +63,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
   const nextFromHere = useNextFromCurrentPath();
   const { data, isLoading, isError, error, refetch } = useTrip(tripId);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -58,14 +80,14 @@ export function TripDetailView({ tripId }: { tripId: string }) {
         <div className={styles.page}>
           <EmptyState
             variant="empty"
-            title="Phiên đăng nhập đã hết hạn"
-            description="Vui lòng đăng nhập lại để xem chuyến đi này."
+            title={t('auth.expiredTitle')}
+            description={t('auth.expiredDetail')}
             action={
               <Button
                 type="primary"
                 onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
               >
-                Đăng nhập
+                {t('auth.login')}
               </Button>
             }
           />
@@ -86,16 +108,16 @@ export function TripDetailView({ tripId }: { tripId: string }) {
       <div className={styles.page}>
         <EmptyState
           variant={missing ? 'empty' : 'error'}
-          title={missing ? 'Chuyến đi không tồn tại hoặc đã bị xóa' : 'Không tải được chuyến đi'}
-          description={missing ? 'Mã định danh chuyến không tồn tại.' : getErrorMessage(error)}
+          title={missing ? t('detail.notFoundTitle') : t('detail.errorTitle')}
+          description={missing ? t('detail.notFoundBody') : errorMessage(error)}
           action={
             missing ? (
               <Button type="primary" onClick={() => router.push(ROUTES.TRIPS)}>
-                Về danh sách chuyến
+                {t('detail.backToTrips')}
               </Button>
             ) : (
               <Button type="primary" onClick={() => void refetch()}>
-                Thử lại
+                {t('detail.retry')}
               </Button>
             )
           }
@@ -112,7 +134,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
     <div className={styles.page}>
       <div className={styles.topBar}>
         <Link href={ROUTES.TRIPS} className={styles.back}>
-          <ArrowLeftOutlined aria-hidden="true" /> Quay lại danh sách
+          <ArrowLeftOutlined aria-hidden="true" /> {t('detail.back')}
         </Link>
         {timeline.visible ? (
           <CustomerTripTimeline
@@ -124,8 +146,10 @@ export function TripDetailView({ tripId }: { tripId: string }) {
 
       <header className={styles.header}>
         <div className={styles.headings}>
-          <h1 className={styles.heading}>Chi tiết chuyến đi{data.code ? ` #${data.code}` : ''}</h1>
-          <p className={styles.sub}>{subtitleFor(stage)}</p>
+          <h1 className={styles.heading}>
+            {data.code ? t('detail.headingWithCode', { code: data.code }) : t('detail.heading')}
+          </h1>
+          <p className={styles.sub}>{t(SUBTITLE_KEY[stage])}</p>
         </div>
         <StatusTag value={stage} meta={CUSTOMER_TRIP_STAGE_META} group="customerTripStage" />
       </header>
@@ -136,19 +160,17 @@ export function TripDetailView({ tripId }: { tripId: string }) {
         <div className={styles.main}>
           {stage === CUSTOMER_TRIP_STAGE.ACTIVE ? (
             <section className={styles.highlight}>
-              <h2 className={styles.highlightTitle}>Hành trình đang diễn ra</h2>
+              <h2 className={styles.highlightTitle}>{t('detail.activeTitle')}</h2>
               <p className={styles.highlightLead}>
-                <ClockCircleOutlined aria-hidden="true" /> Thời gian trả xe dự kiến:{' '}
+                <ClockCircleOutlined aria-hidden="true" /> {t('detail.activeReturn')}{' '}
                 <b>{fmt.rentalPoint(dayjs(data.returnAt))}</b>
               </p>
-              <p className={styles.highlightNote}>
-                Nếu có thay đổi, vui lòng liên hệ chủ xe sớm nhất.
-              </p>
+              <p className={styles.highlightNote}>{t('detail.activeNote')}</p>
             </section>
           ) : null}
 
           <section className={styles.block}>
-            <h2 className={styles.blockTitle}>Thông tin phương tiện</h2>
+            <h2 className={styles.blockTitle}>{t('detail.vehicleBlock')}</h2>
             <div className={styles.vehicle}>
               {data.vehicle.imageUrl ? (
                 <PreviewImage
@@ -162,7 +184,17 @@ export function TripDetailView({ tripId }: { tripId: string }) {
                 <Link href={listingPath.detail(data.vehicle.id)} className={styles.vehicleName}>
                   {data.vehicle.name}
                 </Link>
-                <p className={styles.vehicleSpecs}>{vehicleSpecs(data)}</p>
+                <p className={styles.vehicleSpecs}>
+                  {[
+                    data.vehicle.seatCount
+                      ? t('detail.seatCount', { count: data.vehicle.seatCount })
+                      : null,
+                    data.vehicle.transmission,
+                    data.vehicle.fuelType,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ') || t('detail.specsEmpty')}
+                </p>
                 {/* Biển số chỉ có sau khi chủ xe nhận chuyến — server quyết định, không phải UI. */}
                 {data.vehicle.plateNumber ? (
                   <p className={styles.plate}>{data.vehicle.plateNumber}</p>
@@ -182,27 +214,30 @@ export function TripDetailView({ tripId }: { tripId: string }) {
                   <>
                     <Stars value={data.shop.ratingAvg} size="sm" />
                     <span>
-                      {data.shop.ratingAvg} · {data.shop.ratingCount} đánh giá
+                      {t('detail.ratingSummary', {
+                        avg: fmt.rating(data.shop.ratingAvg),
+                        count: data.shop.ratingCount,
+                      })}
                     </span>
                   </>
                 ) : (
-                  <span>Chưa có đánh giá</span>
+                  <span>{t('detail.noRating')}</span>
                 )}
               </span>
             </div>
             <Link href={shopPath.detail(data.shop.slug)} className={styles.shopLink}>
-              Xem gian hàng →
+              {t('detail.viewShop')}
             </Link>
           </section>
 
           <section className={styles.block}>
-            <h2 className={styles.blockTitle}>Thời gian &amp; địa điểm nhận xe</h2>
+            <h2 className={styles.blockTitle}>{t('detail.scheduleBlock')}</h2>
             <dl className={styles.rows}>
               <div className={styles.row}>
-                <dt>Dịch vụ</dt>
+                <dt>{t('detail.service')}</dt>
                 <dd>
-                  {serviceTypeLabel(data.serviceType)}
-                  {data.routeType ? ` · ${routeTypeLabel(data.routeType)}` : ''}
+                  {dl('serviceType', data.serviceType)}
+                  {data.routeType ? ` · ${dl('routeType', data.routeType)}` : ''}
                 </dd>
               </div>
               {/*
@@ -212,28 +247,28 @@ export function TripDetailView({ tripId }: { tripId: string }) {
               */}
               {data.longTermPackageMonths ? (
                 <div className={styles.row}>
-                  <dt>Gói thuê</dt>
+                  <dt>{t('detail.package')}</dt>
                   <dd>{fmt.packageLabel(data.longTermPackageMonths)}</dd>
                 </div>
               ) : null}
               {data.pickupAt && data.returnAt ? (
                 <>
                   <div className={styles.row}>
-                    <dt>Nhận xe</dt>
+                    <dt>{t('detail.pickupAt')}</dt>
                     <dd>{fmt.rentalPoint(dayjs(data.pickupAt))}</dd>
                   </div>
                   <div className={styles.row}>
-                    <dt>Trả xe</dt>
+                    <dt>{t('detail.returnAt')}</dt>
                     <dd>{fmt.rentalPoint(dayjs(data.returnAt))}</dd>
                   </div>
                   <div className={styles.row}>
-                    <dt>Thời lượng</dt>
+                    <dt>{t('detail.duration')}</dt>
                     <dd>{fmt.rentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}</dd>
                   </div>
                 </>
               ) : (
                 <div className={styles.row}>
-                  <dt>Nguyện vọng nhận xe</dt>
+                  <dt>{t('detail.pickupWish')}</dt>
                   <dd>{fmt.pickupWish(data)}</dd>
                 </div>
               )}
@@ -243,12 +278,16 @@ export function TripDetailView({ tripId }: { tripId: string }) {
               <p className={styles.pickupMethod}>
                 <EnvironmentOutlined aria-hidden="true" />
                 <span>
-                  <b>Xe đón tận nơi</b>
+                  <b>{t('pickup.driverPickup')}</b>
                   {data.pickupAddress ? (
-                    <span className={styles.address}>Điểm đón: {data.pickupAddress}</span>
+                    <span className={styles.address}>
+                      {t('pickup.pickupPoint', { address: data.pickupAddress })}
+                    </span>
                   ) : null}
                   {data.destination ? (
-                    <span className={styles.address}>Điểm đến: {data.destination}</span>
+                    <span className={styles.address}>
+                      {t('pickup.destination', { address: data.destination })}
+                    </span>
                   ) : null}
                 </span>
               </p>
@@ -256,7 +295,7 @@ export function TripDetailView({ tripId }: { tripId: string }) {
               <p className={styles.pickupMethod}>
                 <EnvironmentOutlined aria-hidden="true" />
                 <span>
-                  <b>{data.deliveryRequested ? 'Giao xe tận nơi' : 'Nhận tại đại lý'}</b>
+                  <b>{data.deliveryRequested ? t('pickup.delivery') : t('pickup.agency')}</b>
                   {data.deliveryRequested && data.deliveryAddress ? (
                     <span className={styles.address}>{data.deliveryAddress}</span>
                   ) : null}
@@ -268,17 +307,17 @@ export function TripDetailView({ tripId }: { tripId: string }) {
           {/* Mốc THỰC TẾ chỉ có ý nghĩa sau chuyến — và chỉ hiện khi thật sự được ghi nhận. */}
           {data.actualPickupAt || data.actualReturnAt ? (
             <section className={styles.block}>
-              <h2 className={styles.blockTitle}>Hành trình thực tế</h2>
+              <h2 className={styles.blockTitle}>{t('detail.actualBlock')}</h2>
               <dl className={styles.rows}>
                 {data.actualPickupAt ? (
                   <div className={styles.row}>
-                    <dt>Thời gian nhận bàn giao</dt>
+                    <dt>{t('detail.actualPickup')}</dt>
                     <dd>{fmt.dateTime(data.actualPickupAt)}</dd>
                   </div>
                 ) : null}
                 {data.actualReturnAt ? (
                   <div className={styles.row}>
-                    <dt>Thời gian hoàn tất bàn giao</dt>
+                    <dt>{t('detail.actualReturn')}</dt>
                     <dd>{fmt.dateTime(data.actualReturnAt)}</dd>
                   </div>
                 ) : null}
@@ -288,14 +327,14 @@ export function TripDetailView({ tripId }: { tripId: string }) {
 
           {data.customerNote ? (
             <section className={styles.block}>
-              <h2 className={styles.blockTitle}>Ghi chú của bạn</h2>
+              <h2 className={styles.blockTitle}>{t('detail.noteBlock')}</h2>
               <p className={styles.note}>{data.customerNote}</p>
             </section>
           ) : null}
 
           {data.review ? (
             <section className={styles.block}>
-              <h2 className={styles.blockTitle}>Đánh giá của bạn</h2>
+              <h2 className={styles.blockTitle}>{t('detail.reviewBlock')}</h2>
               <Stars value={data.review.rating} />
               {data.review.comment ? <p className={styles.note}>{data.review.comment}</p> : null}
             </section>
@@ -307,32 +346,63 @@ export function TripDetailView({ tripId }: { tripId: string }) {
             <TripFinanceCard finance={data.finance} closed={closed} />
           ) : (
             <section className={styles.block}>
-              <h2 className={styles.blockTitle}>Chi tiết giá</h2>
+              <h2 className={styles.blockTitle}>{t('detail.priceBlock')}</h2>
               {/*
                 Chưa có đơn thì chưa có giá chốt. Dựng một bảng "dự kiến" ở đây là hứa hẹn thay
                 chủ xe — con số có thể khác hẳn sau khi họ xác nhận.
               */}
-              <p className={styles.note}>
-                Giá chính thức sẽ hiển thị ngay khi chủ xe xác nhận yêu cầu của bạn.
-              </p>
+              <p className={styles.note}>{t('detail.priceEmpty')}</p>
             </section>
           )}
 
-          <div className={styles.actions}>
+          {/*
+            Cụm hỗ trợ là một THẺ có tiêu đề, không phải ba nút xếp chồng vô danh.
+            Trước đây ba nút full-width cùng cỡ đứng nối đuôi nhau: mắt không biết cái nào là
+            việc chính, "Gọi 0900000000" thì dài quá khổ và tràn ở màn hẹp, còn "Đánh giá chuyến
+            đi" — chỉ hiện đúng một lần trong cả vòng đời chuyến — lại to ngang với việc nhắn tin
+            hằng ngày. Giờ: nhắn tin là nút chính, gọi và đánh giá là hai ô phụ chia đôi hàng
+            dưới, số điện thoại xuống dòng phụ để nhãn nút luôn ngắn.
+          */}
+          <section className={styles.support}>
+            <h2 className={styles.supportTitle}>{t('actions.title')}</h2>
             <ChatWithShopButton
               vehicleId={data.vehicle.id}
               type="primary"
+              size="large"
               block
-              label="Liên hệ cửa hàng"
+              label={t('actions.contactShop')}
             />
-            {data.shop.phone ? (
-              <Button block href={`tel:${data.shop.phone}`}>
-                Gọi {data.shop.phone}
-              </Button>
-            ) : null}
-            {data.canReview ? (
-              <Button block onClick={() => setReviewOpen(true)}>
-                Đánh giá chuyến đi
+            <div className={styles.supportRow}>
+              {data.shop.phone ? (
+                <a className={styles.supportAction} href={`tel:${data.shop.phone}`}>
+                  <PhoneOutlined aria-hidden="true" />
+                  <span className={styles.supportLabel}>{t('actions.call')}</span>
+                  <span className={styles.supportMeta}>{data.shop.phone}</span>
+                </a>
+              ) : null}
+              {data.canReview ? (
+                <button
+                  type="button"
+                  className={styles.supportAction}
+                  onClick={() => setReviewOpen(true)}
+                >
+                  <StarOutlined aria-hidden="true" />
+                  <span className={styles.supportLabel}>{t('actions.review')}</span>
+                  <span className={styles.supportMeta}>{data.vehicle.name}</span>
+                </button>
+              ) : null}
+            </div>
+          </section>
+
+          <div className={styles.actions}>
+            {/*
+              Huỷ đứng CUỐI và không phải nút chính: nó là lối thoát, không phải việc khách vào
+              đây để làm. Chỉ hiện tới trước lúc giao xe — sau đó xe đã ở ngoài đường và việc cần
+              làm là gọi chủ xe, nên một nút "Huỷ" ở đó chỉ là lời hứa hão.
+            */}
+            {canCustomerCancelTrip(data.stage) ? (
+              <Button block danger onClick={() => setCancelOpen(true)}>
+                {t('actions.cancel')}
               </Button>
             ) : null}
           </div>
@@ -351,6 +421,11 @@ export function TripDetailView({ tripId }: { tripId: string }) {
           onClose={() => setReviewOpen(false)}
         />
       ) : null}
+
+      {/* Dựng có điều kiện: mỗi lần mở là một instance mới, không mang lỗi của lần trước sang. */}
+      {cancelOpen ? (
+        <CancelTripDialog trip={data} open onClose={() => setCancelOpen(false)} />
+      ) : null}
     </div>
   );
 }
@@ -360,14 +435,11 @@ export function TripDetailView({ tripId }: { tripId: string }) {
  * chuyến bị huỷ là nói dối, còn để dòng thời gian trống lơ lửng thì không giải thích được gì.
  */
 function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: CustomerTripStage }) {
+  const t = useTranslations('Trips.notice');
+
   if (stage === CUSTOMER_TRIP_STAGE.PENDING_APPROVAL) {
     return (
-      <Alert
-        type="warning"
-        showIcon
-        message="Đang chờ chủ xe xác nhận"
-        description="Chủ xe đang xem xét yêu cầu đặt xe của bạn. Bạn sẽ nhận được thông báo ngay khi có phản hồi."
-      />
+      <Alert type="warning" showIcon message={t('pendingTitle')} description={t('pendingBody')} />
     );
   }
 
@@ -376,61 +448,44 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
       <Alert
         type="error"
         showIcon
-        message="Yêu cầu bị từ chối"
-        description={
-          trip.rejectReason ??
-          'Chủ xe không thể tiếp nhận yêu cầu này. Bạn có thể tìm một chiếc xe khác cho cùng lịch trình.'
-        }
+        message={t('rejectedTitle')}
+        // Lý do do chủ xe tự gõ — giữ nguyên chữ của họ, không có bản dịch nào cho câu đó.
+        description={trip.rejectReason ?? t('rejectedBody')}
       />
     );
   }
 
   if (stage === CUSTOMER_TRIP_STAGE.CANCELLED) {
     return (
-      <Alert
-        type="info"
-        showIcon
-        message="Chuyến đi đã hủy"
-        description="Chuyến này đã được hủy. Khoản giữ chỗ (nếu có) đã được giải phóng."
-      />
+      <Alert type="info" showIcon message={t('cancelledTitle')} description={t('cancelledBody')} />
     );
   }
 
   if (stage === CUSTOMER_TRIP_STAGE.NO_SHOW) {
     return (
-      <Alert
-        type="error"
-        showIcon
-        message="Khách không nhận xe"
-        description="Chuyến được đánh dấu là không nhận xe đúng hẹn. Liên hệ chủ xe nếu bạn cho rằng có nhầm lẫn."
-      />
+      <Alert type="error" showIcon message={t('noShowTitle')} description={t('noShowBody')} />
     );
   }
 
   return null;
 }
 
-function subtitleFor(stage: CustomerTripStage): string {
-  switch (stage) {
-    case CUSTOMER_TRIP_STAGE.PENDING_APPROVAL:
-      return 'Yêu cầu thuê xe của bạn đã được gửi tới chủ xe';
-    case CUSTOMER_TRIP_STAGE.READY:
-      return 'Yêu cầu thuê xe đã được chủ xe xác nhận thành công';
-    case CUSTOMER_TRIP_STAGE.ACTIVE:
-      return 'Bạn đang trong thời gian thuê xe này. Vui lòng đi chuyển an toàn';
-    case CUSTOMER_TRIP_STAGE.COMPLETED:
-      return 'Chuyến đi đã kết thúc tốt đẹp. Cảm ơn bạn đã đồng hành cùng XePrime!';
-    default:
-      return 'Chuyến đi đã kết thúc sớm';
-  }
-}
-
-/** Thông số xe — bỏ qua phần thiếu thay vì hiện dấu gạch cho từng ô trống. */
-function vehicleSpecs(trip: CustomerTripDetail): string {
-  const parts = [
-    trip.vehicle.seatCount ? `${trip.vehicle.seatCount} chỗ` : null,
-    trip.vehicle.transmission,
-    trip.vehicle.fuelType,
-  ].filter(Boolean);
-  return parts.length > 0 ? parts.join(' · ') : 'Chưa cập nhật thông số';
-}
+/**
+ * Chặng → KHOÁ message của câu phụ đề.
+ *
+ * Bảng tra literal chứ không ghép chuỗi lúc chạy: `next-intl` kiểm khoá message ở tầng KIỂU,
+ * nên `t(`subtitle.${stage}`)` chỉ ra `subtitle.${string}` và mất sạch bảo chứng — sai một khoá
+ * sẽ thành lỗi lúc chạy thay vì lỗi biên dịch. `Record` đủ mọi chặng nên thêm chặng mới là lỗi
+ * biên dịch ngay, không lặng lẽ rơi vào nhánh mặc định.
+ */
+const SUBTITLE_KEY = {
+  [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL]: 'subtitle.pending_approval',
+  [CUSTOMER_TRIP_STAGE.READY]: 'subtitle.ready',
+  [CUSTOMER_TRIP_STAGE.ACTIVE]: 'subtitle.active',
+  [CUSTOMER_TRIP_STAGE.COMPLETED]: 'subtitle.completed',
+  [CUSTOMER_TRIP_STAGE.CANCELLED]: 'subtitle.terminal',
+  [CUSTOMER_TRIP_STAGE.REJECTED]: 'subtitle.terminal',
+  [CUSTOMER_TRIP_STAGE.NO_SHOW]: 'subtitle.terminal',
+  // `as const` giữ kiểu LITERAL cho từng khoá (chú thích kiểu tường minh sẽ nới nó thành
+  // `string` và `t()` mất bảo chứng); `satisfies` vẫn bắt lỗi nếu thiếu một chặng.
+} as const satisfies Record<CustomerTripStage, string>;

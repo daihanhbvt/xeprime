@@ -1,43 +1,150 @@
-.wrap {
-  display: grid;
-  place-items: start center;
+/*
+ * Trang tạo gian hàng — trang ĐẦY ĐỦ, không dùng khung portal (xem `BARE_PORTAL_PATHS`).
+ *
+ * Ba dải: thanh trên cùng (logo + hướng dẫn) · hero nền kem có ảnh minh hoạ · thẻ form nhô lên
+ * đè mép dưới hero. Điểm gãy 900px trùng với `ShopRegistration.module.css` để hero và thẻ form
+ * đổi bố cục cùng lúc — lệch nhau thì có nhịp trung gian trông như lỗi.
+ */
+.page {
+  display: flex;
   min-height: 100dvh;
-  padding: 40px 20px calc(40px + env(safe-area-inset-bottom));
-  background: var(--xp-color-bg-layout);
+  flex-direction: column;
+  background: var(--xp-color-bg);
 }
 
-.inner {
-  width: 100%;
-  max-width: 480px;
-  text-align: center;
+/* ─── Thanh trên cùng ────────────────────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  height: 64px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding-inline: var(--xp-space-lg);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  background: var(--xp-color-bg-container);
 }
 
-.head {
-  margin-bottom: 22px;
+.brand {
+  display: inline-flex;
+  align-items: center;
 }
 
-.title {
-  margin: 18px 0 8px;
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--xp-color-text);
-}
-
-.desc {
-  margin: 0 auto;
-  max-width: 42ch;
-  font-size: 14px;
-  line-height: 1.6;
+.guideButton {
   color: var(--xp-color-text-secondary);
 }
 
-.backLink {
-  display: inline-block;
-  margin-top: 16px;
+.guideList {
+  display: flex;
+  margin: 0;
+  max-width: 300px;
+  flex-direction: column;
+  padding-inline-start: var(--xp-space-md);
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.6;
+}
+
+/* ─── Hero ───────────────────────────────────────────────────────────────── */
+
+/*
+ * `overflow: hidden` là lưới an toàn cho ảnh minh hoạ: nó neo theo mép DƯỚI của dải hero, nên
+ * khi chữ ngắn (tiếng Anh) hoặc màn hình hẹp làm dải thấp hơn ảnh, phần thừa bị cắt gọn ở mép
+ * dải thay vì tràn lên thanh trên cùng.
+ */
+.hero {
+  overflow: hidden;
+  background: color-mix(in srgb, var(--xp-color-primary-light) 60%, var(--xp-color-bg));
+}
+
+.heroInner {
+  position: relative;
+  margin: 0 auto;
+  width: 100%;
+  max-width: var(--xp-shell-form-max-width);
+  padding: var(--xp-space-xl) var(--xp-space-lg) calc(var(--xp-space-xl) + 40px);
+}
+
+.title {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h1);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: var(--xp-line-height-h1);
+}
+
+.desc {
+  margin: 0;
+  max-width: 56ch;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: 1.7;
+}
+
+/*
+ * Ảnh minh hoạ TRANG TRÍ (`aria-hidden`) — nền chứ không phải `<img>`: nó không mang thông tin
+ * nào mà chữ bên cạnh chưa nói, nên không cần vào cây trợ năng.
+ *
+ * Mobile: xếp dưới chữ, thấp lại. Desktop: neo góc phải hero đúng mẫu UI.
+ */
+.heroArt {
+  margin: var(--xp-space-md) auto 0;
+  width: 100%;
+  max-width: 320px;
+  height: 132px;
+  background: url('/illustrations/shop-onboarding.svg') no-repeat center bottom / contain;
+}
+
+@media (min-width: 900px) {
+  /* Cao tối thiểu để ảnh minh hoạ (460 × 287px) đứng trọn trong dải, không bị cắt. */
+  .heroInner {
+    min-height: 320px;
+    padding-block: 56px 96px;
+  }
+
+  .title {
+    font-size: var(--xp-font-size-display);
+    line-height: var(--xp-line-height-display);
+  }
+
+  .heroText {
+    max-width: 54%;
+  }
+
+  .heroArt {
+    position: absolute;
+    right: var(--xp-space-lg);
+    bottom: 0;
+    margin: 0;
+    width: min(42%, 460px);
+    max-width: none;
+    height: auto;
+    aspect-ratio: 640 / 400;
+    background-position: right bottom;
+    pointer-events: none;
+  }
+}
+
+/* ─── Thẻ form ───────────────────────────────────────────────────────────── */
+
+.content {
+  position: relative;
+  margin: -40px auto 0;
+  width: 100%;
+  max-width: var(--xp-shell-form-max-width);
+  padding: 0 var(--xp-space-lg) calc(var(--xp-space-xl) + env(safe-area-inset-bottom));
+}
+
+.back {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--xp-space-md);
 }
 
 .centered {
   display: grid;
-  place-items: center;
   min-height: 100dvh;
+  place-items: center;
 }

@@ -313,5 +313,13 @@
     "cta": "Select this car",
     "stepsLabel": "Booking progress",
     "stepDone": "(done)"
+  },
+  "approved": {
+    "title": "Booking created",
+    "lead": "The request is approved and the booking is created. The vehicle schedule is now held for this period.",
+    "leadLongTerm": "The request is approved and the long-term booking is created on the schedule you just set.",
+    "next": "Next: contact the renter to agree on a pick-up time, collect the deposit if any, then confirm handover right on the booking.",
+    "viewBooking": "View booking",
+    "close": "Close"
   }
 }

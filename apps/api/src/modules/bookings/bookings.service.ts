@@ -7,6 +7,7 @@ import {
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  AUDIT_ACTOR_SCOPE,
   BOOKING_STATUS,
   BOOKING_STATUS_META,
   NOTIFICATION_TARGET_TYPE,
@@ -20,6 +21,7 @@ import {
   longTermReturnAt,
   SERVICE_TYPE,
   TENANT_CUSTOMER_SOURCE,
+  type AuditActorScope,
   type BookingPriceSnapshot,
   type BookingStatus,
   type PaginationMeta,
@@ -700,6 +702,12 @@ export class BookingsService {
        * một giây kể lại từng chặng. Audit vẫn ghi đủ mọi chặng — đó mới là nơi truy vết.
        */
       silent?: boolean;
+      /**
+       * Ai thao tác. Mặc định là người của gian hàng vì phần lớn chuyển trạng thái đến từ cổng
+       * quản lý; KHÁCH tự huỷ chuyến phải khai `customer`, nếu không audit ghi nhầm thành nhân
+       * viên shop huỷ đơn của khách — đúng thứ mà cuốn sổ này tồn tại để phân định.
+       */
+      actorScope?: AuditActorScope;
     } = {},
   ): Promise<BookingDetailRow> {
     if (from === to || !canTransitionBooking(from, to)) {
@@ -744,7 +752,7 @@ export class BookingsService {
       {
         tenantId,
         actorUserId: userId,
-        actorScope: 'tenant',
+        actorScope: opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT,
         action: 'booking.transition',
         targetType: 'booking',
         targetId: id,

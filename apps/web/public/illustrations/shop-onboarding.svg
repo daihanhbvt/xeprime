@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" fill="none" role="img" aria-label="Gian hang cho thue xe XePrime">
+  <!--
+    Minh hoa hero cho /manage/onboarding — ve tay theo mau UI (gian hang + xe + skyline).
+    Bang mau bam theo token thuong hieu: gold #d6a02c va cac sac kem am cua nen kem.
+    Dung lam background-image trang tri (khong mang thong tin) nen khong co chu can dich,
+    ngoai ten thuong hieu "xe prime" — ten rieng, khong bao gio dich.
+  -->
+  <defs>
+    <clipPath id="xp-awning">
+      <path d="M348 166h134l16 38H332z" />
+    </clipPath>
+  </defs>
+
+  <!-- Nen dat -->
+  <ellipse cx="330" cy="332" rx="288" ry="28" fill="#f5ecda" />
+
+  <!-- Skyline mo phia sau -->
+  <g fill="#f2e6cf">
+    <rect x="82" y="212" width="44" height="112" rx="6" />
+    <rect x="134" y="182" width="32" height="142" rx="6" />
+    <rect x="174" y="228" width="50" height="96" rx="6" />
+    
+  </g>
+
+  <!-- May -->
+  <g fill="#fdf8ee">
+    <circle cx="150" cy="96" r="22" />
+    <circle cx="182" cy="80" r="31" />
+    <circle cx="216" cy="98" r="20" />
+    <rect x="142" y="96" width="86" height="24" rx="12" />
+  </g>
+
+  <!-- Cay xanh (nam sau xe) -->
+  <rect x="305" y="248" width="10" height="46" rx="5" fill="#c9a87c" />
+  <circle cx="310" cy="232" r="34" fill="#a9c191" />
+  <circle cx="300" cy="222" r="16" fill="#b8cda2" />
+
+  <!-- Gian hang -->
+  <g>
+    <!-- Bien hieu -->
+    <rect x="420" y="86" width="152" height="46" rx="14" fill="#dfa32f" />
+    <text x="496" y="117" text-anchor="middle" fill="#fffdf7" font-family="'Segoe UI', system-ui, -apple-system, sans-serif" font-size="21" font-weight="600" letter-spacing="0.6">xe prime</text>
+
+    <!-- Mai + tuong -->
+    <rect x="332" y="130" width="280" height="26" rx="9" fill="#f0e2c6" />
+    <rect x="344" y="156" width="256" height="166" rx="4" fill="#fffdf9" />
+    <rect x="344" y="156" width="256" height="10" fill="#f7eddc" />
+
+    <!-- Mai hien soc -->
+    <g clip-path="url(#xp-awning)">
+      <rect x="332" y="166" width="21" height="40" fill="#e6a336" />
+      <rect x="353" y="166" width="21" height="40" fill="#fff4de" />
+      <rect x="374" y="166" width="21" height="40" fill="#e6a336" />
+      <rect x="395" y="166" width="21" height="40" fill="#fff4de" />
+      <rect x="416" y="166" width="21" height="40" fill="#e6a336" />
+      <rect x="437" y="166" width="21" height="40" fill="#fff4de" />
+      <rect x="458" y="166" width="21" height="40" fill="#e6a336" />
+      <rect x="479" y="166" width="21" height="40" fill="#fff4de" />
+    </g>
+    <g>
+      <circle cx="342" cy="204" r="10" fill="#e6a336" />
+      <circle cx="363" cy="204" r="10" fill="#fff4de" />
+      <circle cx="384" cy="204" r="10" fill="#e6a336" />
+      <circle cx="405" cy="204" r="10" fill="#fff4de" />
+      <circle cx="426" cy="204" r="10" fill="#e6a336" />
+      <circle cx="447" cy="204" r="10" fill="#fff4de" />
+      <circle cx="468" cy="204" r="10" fill="#e6a336" />
+      <circle cx="489" cy="204" r="10" fill="#fff4de" />
+    </g>
+
+    <!-- Cua so -->
+    <rect x="358" y="224" width="140" height="80" rx="8" fill="#eef3f7" stroke="#eadfc8" stroke-width="4" />
+    <rect x="426" y="226" width="4" height="76" fill="#eadfc8" />
+
+    <!-- Cua ra vao -->
+    <rect x="520" y="196" width="66" height="126" rx="8" fill="#eeb84c" />
+    <rect x="527" y="203" width="52" height="119" rx="5" fill="#f7d287" />
+    <rect x="551" y="203" width="4" height="119" fill="#eeb84c" />
+    <circle cx="546" cy="262" r="3.5" fill="#c98f23" />
+    <circle cx="560" cy="262" r="3.5" fill="#c98f23" />
+    <rect x="508" y="318" width="90" height="9" rx="4.5" fill="#efe3cc" />
+
+    <!-- Chau cay canh cua -->
+    <circle cx="612" cy="286" r="18" fill="#a9c191" />
+    <path d="M600 302h24l-3 20h-18z" fill="#e0b177" />
+  </g>
+
+  <!-- Xe -->
+  <ellipse cx="205" cy="326" rx="152" ry="9" fill="#f0e4cd" />
+  <path d="M84 300a12 12 0 0 1-12-12v-12c0-10 7-19 17-21l44-9 32-27a36 36 0 0 1 23-8h48a36 36 0 0 1 27 12l23 26 33 7c10 2 18 11 18 22v10a12 12 0 0 1-12 12z" fill="#ffffff" />
+  <path d="M176 246l30-26a26 26 0 0 1 15-6h20v32z" fill="#dfe8ef" />
+  <path d="M248 214h18a26 26 0 0 1 19 8l20 24h-57z" fill="#dfe8ef" />
+  <rect x="72" y="270" width="20" height="11" rx="5.5" fill="#f6d693" />
+  <rect x="120" y="290" width="196" height="5" rx="2.5" fill="#f1ece2" />
+  <circle cx="148" cy="298" r="23" fill="#413b33" />
+  <circle cx="148" cy="298" r="9.5" fill="#e5ded1" />
+  <circle cx="278" cy="298" r="23" fill="#413b33" />
+  <circle cx="278" cy="298" r="9.5" fill="#e5ded1" />
+</svg>

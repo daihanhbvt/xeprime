@@ -30,10 +30,12 @@ export const MESSAGE_NAMESPACES = [
   { file: 'listings', namespace: 'Listings' },
   { file: 'shops', namespace: 'Shops' },
   { file: 'chat', namespace: 'Chat' },
+  { file: 'trips', namespace: 'Trips' },
   { file: 'account', namespace: 'Account' },
 
   // — Cổng quản lý —
   { file: 'manage-common', namespace: 'ManageCommon' },
+  { file: 'shop-onboarding', namespace: 'ShopOnboarding' },
   { file: 'booking-requests', namespace: 'BookingRequests' },
   { file: 'bookings', namespace: 'Bookings' },
   { file: 'vehicles', namespace: 'Vehicles' },

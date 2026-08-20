@@ -10,6 +10,22 @@
 }
 
 /**
+ * TRẦN chiều cao của thân modal desktop — thiếu nó thì `overflow-y: auto` ở trên vô tác dụng.
+ *
+ * Không có trần, modal cứ cao theo nội dung: nó vượt quá màn hình, `centered` đẩy phần đầu ra
+ * ngoài tầm nhìn, và thứ cuộn được là TRANG NỀN chứ không phải thân modal — người dùng cuộn thì
+ * nội dung bên trong đứng yên, còn header/footer thì trôi đi mất. Đúng triệu chứng đã gặp ở hộp
+ * xác nhận bàn giao khi mở vùng ảnh.
+ *
+ * `max-height` (không phải `height`) để hộp ngắn vẫn ôm sát nội dung. `dvh` vì thanh công cụ
+ * trình duyệt di động co giãn. Trừ đi chỗ của header, footer và lề trên/dưới của AntD.
+ */
+.modalBody {
+  max-height: calc(100dvh - var(--xp-space-xl) * 6);
+  min-height: 0;
+}
+
+/**
  * Modal `xl` (hai cột) cao theo viewport: header dính lại, phần thân giữ đúng một chiều cao.
  * Không có trần này thì modal cao hơn màn hình và cả trang nền phải cuộn theo — đúng thứ
  * "internal content scrolling" cần tránh. `dvh` vì thanh công cụ trình duyệt co giãn.

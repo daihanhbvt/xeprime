@@ -40,6 +40,7 @@ import type {
   BookingRequestStatusCount,
 } from '../types';
 import { ApproveBookingRequestDialog } from './ApproveBookingRequestDialog';
+import { ApproveSuccessDialog } from './ApproveSuccessDialog';
 import { ApproveLongTermDialog } from './ApproveLongTermDialog';
 import { BookingRequestCard, type BookingRequestAction } from './BookingRequestCard';
 import { BookingRequestDetailDialog } from './BookingRequestDetailDialog';
@@ -103,6 +104,8 @@ export function BookingRequestsView() {
   const [vehicleDetailId, setVehicleDetailId] = useState<string | null>(null);
   const [customerDetail, setCustomerDetail] = useState<{ id: string; name: string } | null>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
+  /** Yêu cầu vừa duyệt xong — mở hộp kết quả kèm lối sang đơn vừa tạo. */
+  const [approvedResult, setApprovedResult] = useState<BookingRequestItem | null>(null);
   const [rejectError, setRejectError] = useState<string | null>(null);
 
   const items = data?.items ?? [];
@@ -151,14 +154,15 @@ export function BookingRequestsView() {
     approve.mutate(
       { id: row.id, body },
       {
-        onSuccess: () => {
-          message.success(
-            row.serviceType === SERVICE_TYPE.LONG_TERM
-              ? t('approve.successLongTerm')
-              : t('approve.success'),
-          );
+        /*
+         * Kết quả mở thành một HỘP THOẠI, không phải toast: duyệt xong là đã có một đơn thuê
+         * thật và người trực còn nguyên một chuỗi việc trên chính đơn đó. Toast báo xong rồi
+         * biến mất bỏ họ lại giữa danh sách yêu cầu, phải tự đi tìm đơn mình vừa tạo.
+         */
+        onSuccess: (approved) => {
           setApproveTarget(null);
           setLongTermTarget(null);
+          setApprovedResult(approved);
         },
         // Trùng lịch (409): GIỮ hộp thoại mở để chọn giờ khác, không mất dữ liệu đã nhập.
         onError: (err) => setApproveError(approveErrorText(err)),
@@ -453,6 +457,15 @@ export function BookingRequestsView() {
           customerName={customerDetail.name}
           open
           onClose={() => setCustomerDetail(null)}
+        />
+      ) : null}
+
+      {/* Dựng có điều kiện: mỗi lần duyệt là một instance mới, không giữ lại đơn của lần trước. */}
+      {approvedResult ? (
+        <ApproveSuccessDialog
+          request={approvedResult}
+          open
+          onClose={() => setApprovedResult(null)}
         />
       ) : null}
 

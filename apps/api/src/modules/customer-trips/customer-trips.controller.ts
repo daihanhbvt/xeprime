@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
@@ -15,8 +15,9 @@ import {
  * Không có tham số nào nhận danh tính khách: `customerUserId` luôn lấy từ session (ADR 0002).
  * Vì thế không có cách nào gọi endpoint này để xem chuyến của người khác — kể cả khi biết id.
  *
- * Toàn bộ là ĐỌC. Mọi thao tác ghi (huỷ chuyến, phát sinh, hoàn cọc) thuộc luồng của chủ xe ở
- * Wave 9/10; Wave 11 cố ý không mở một đường ghi song song cho khách.
+ * Đường GHI duy nhất là **huỷ chuyến của chính mình** (20/08). Phát sinh, hoàn cọc, đổi lịch…
+ * vẫn thuộc luồng của chủ xe — mở thêm đường ghi cho khách ở đây là dựng một máy trạng thái
+ * thứ hai chạy song song với cái đã có.
  */
 @ApiTags('customer-trips')
 @Controller('trips')
@@ -46,5 +47,21 @@ export class CustomerTripsController {
     @Param('id') id: string,
   ): Promise<CustomerTripDetailDto> {
     return this.trips.detail(user.id, id);
+  }
+
+  @Post(':id/cancel')
+  @ApiOperation({
+    summary: 'Khách tự huỷ chuyến của mình',
+    description:
+      'Huỷ được khi yêu cầu còn chờ gian hàng trả lời, hoặc khi đơn đã duyệt nhưng CHƯA giao ' +
+      'xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` — việc cần làm lúc đó là liên hệ ' +
+      'chủ xe. Trả về chính chuyến đó sau khi huỷ để giao diện không phải gọi thêm một lượt.',
+  })
+  @ApiOkResponse({ type: CustomerTripDetailDto })
+  cancel(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripDetailDto> {
+    return this.trips.cancel(user.id, id);
   }
 }

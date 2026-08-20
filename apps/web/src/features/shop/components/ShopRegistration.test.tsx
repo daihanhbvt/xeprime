@@ -9,6 +9,9 @@ import { ShopRegistration } from './ShopRegistration';
  * Điều test này khoá: **tỉnh/thành là bắt buộc** và danh sách đến từ API chứ không phải một mảng
  * cứng trong React. Đăng ký tạo luôn chi nhánh mặc định, nên thiếu tỉnh nghĩa là gian hàng mở ra
  * mà không biết mình ở đâu — xe sẽ không lên chợ được.
+ *
+ * `getByLabelText` dùng regex chứ không phải chuỗi khớp tuyệt đối: dấu bắt buộc `*` là một node
+ * THẬT nằm sau nhãn (`trailingRequiredMark`), nên textContent của label là "Tên gian hàng*".
  */
 const mutation = vi.hoisted(() => ({
   mutate: vi.fn(),
@@ -54,13 +57,13 @@ afterEach(cleanup);
 describe('ShopRegistration', () => {
   it('dựng ô chọn tỉnh/thành từ API, không phải danh sách cứng trong FE', () => {
     renderForm();
-    expect(screen.getByLabelText('Tỉnh/thành')).toBeTruthy();
+    expect(screen.getByLabelText(/Tỉnh\/thành/)).toBeTruthy();
   });
 
   it('thiếu tỉnh/thành → KHÔNG gọi API và báo lỗi ngay tại field', async () => {
     renderForm();
 
-    fireEvent.change(screen.getByLabelText('Tên gian hàng'), {
+    fireEvent.change(screen.getByLabelText(/Tên gian hàng/), {
       target: { value: 'Cho thuê xe Bình Minh' },
     });
     fireEvent.click(screen.getByRole('button', { name: /Tạo gian hàng/ }));

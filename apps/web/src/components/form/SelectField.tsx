@@ -3,6 +3,7 @@
 import { Form, Select } from 'antd';
 import { useId, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
+import styles from './field.module.css';
 
 export interface SelectFieldOption {
   readonly value: string;
@@ -76,7 +77,7 @@ export function SelectField<T extends FieldValues>({
       required={required}
       validateStatus={fieldState.error ? 'error' : ''}
       help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
-      style={{ marginBottom: 14 }}
+      className={styles.item}
     >
       <Select
         id={selectId}

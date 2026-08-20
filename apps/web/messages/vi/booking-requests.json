@@ -313,5 +313,13 @@
     "cta": "Chọn thuê",
     "stepsLabel": "Tiến trình đặt xe",
     "stepDone": "(đã xong)"
+  },
+  "approved": {
+    "title": "Đã tạo đơn thuê",
+    "lead": "Yêu cầu đã được duyệt và đơn thuê đã được tạo. Lịch của xe đã được giữ chỗ trong khoảng thời gian này.",
+    "leadLongTerm": "Yêu cầu đã được duyệt và đơn thuê dài hạn đã được tạo theo lịch bạn vừa chốt.",
+    "next": "Việc tiếp theo: liên hệ khách để hẹn giờ nhận xe, thu cọc nếu có, rồi xác nhận giao xe ngay trên đơn.",
+    "viewBooking": "Xem chi tiết đơn",
+    "close": "Đóng"
   }
 }

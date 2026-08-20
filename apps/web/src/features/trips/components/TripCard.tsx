@@ -3,12 +3,17 @@
 import { CalendarOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import {
-  CUSTOMER_TRIP_STAGE_META, SERVICE_TYPE, routeTypeLabel, serviceTypeLabel, type CustomerTripStage, } from '@xeprime/types';
+  CUSTOMER_TRIP_STAGE_META,
+  SERVICE_TYPE,
+  type CustomerTripStage,
+} from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { tripPath } from '@/constants/routes';
 import type { CustomerTrip } from '../types';
 import styles from './TripCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useTranslations } from 'next-intl';
 
 /**
  * Một chuyến trong danh sách `Chuyến của tôi`.
@@ -18,6 +23,8 @@ import { useAppFormat } from '@/i18n/use-app-format';
  * đổi một chi tiết.
  */
 export function TripCard({ trip }: { trip: CustomerTrip }) {
+  const t = useTranslations('Trips');
+  const dl = useDomainLabel();
   const fmt = useAppFormat();
 
   const stage = trip.stage as CustomerTripStage;
@@ -43,7 +50,7 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
 
       <div className={styles.body}>
         <p className={styles.shop}>
-          Chủ xe: <span className={styles.shopName}>{trip.shop.name}</span>
+          {t('card.owner')}: <span className={styles.shopName}>{trip.shop.name}</span>
         </p>
         <h3 className={styles.name}>
           <Link href={href} className={styles.nameLink}>
@@ -67,8 +74,8 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
           <span>
             {/* Chuyến có tài xế: xe đến đón — nhãn giao/nhận xe tự lái không đúng ngữ cảnh. */}
             {trip.serviceType === SERVICE_TYPE.WITH_DRIVER
-              ? `${serviceTypeLabel(trip.serviceType)}${trip.routeType ? ` · ${routeTypeLabel(trip.routeType)}` : ''}`
-              : `${serviceTypeLabel(trip.serviceType)} · ${trip.deliveryRequested ? 'Giao xe tận nơi' : 'Nhận tại đại lý'}`}
+              ? `${dl('serviceType', trip.serviceType)}${trip.routeType ? ` · ${dl('routeType', trip.routeType)}` : ''}`
+              : `${dl('serviceType', trip.serviceType)} · ${trip.deliveryRequested ? t('pickup.delivery') : t('pickup.agency')}`}
           </span>
         </p>
       </div>
@@ -76,13 +83,13 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
       <div className={styles.side}>
         <StatusTag value={stage} meta={CUSTOMER_TRIP_STAGE_META} group="customerTripStage" />
         <div className={styles.money}>
-          <span className={styles.moneyLabel}>Tổng thanh toán</span>
+          <span className={styles.moneyLabel}>{t('card.total')}</span>
           {/*
             Chưa có đơn thì chưa có giá chốt — nói thẳng thay vì hiện `0 đ`, thứ trông y hệt
             "chuyến này miễn phí".
           */}
           <span className={styles.moneyValue}>
-            {trip.totalAmount ? fmt.money(trip.totalAmount) : 'Chờ báo giá'}
+            {trip.totalAmount ? fmt.money(trip.totalAmount) : t('card.awaitingQuote')}
           </span>
         </div>
         {/*
@@ -91,7 +98,7 @@ export function TripCard({ trip }: { trip: CustomerTrip }) {
           một thứ, và bàn phím phải Tab hai lần để đi qua một hành động.
         */}
         <Link href={href} className={styles.action}>
-          Xem chi tiết
+          {t('card.viewDetail')}
         </Link>
       </div>
     </article>

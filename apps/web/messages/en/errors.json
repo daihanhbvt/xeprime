@@ -47,7 +47,8 @@
     "RATE_LIMITED": "That was too fast. Try again in a few seconds.",
     "INTERNAL_ERROR": "The server hit a problem. Please try again later.",
     "UPLOADS_NOT_CONFIGURED": "File uploads aren't configured.",
-    "UPLOAD_FAILED": "The upload failed. Please try again."
+    "UPLOAD_FAILED": "The upload failed. Please try again.",
+    "TRIP_CANCEL_NOT_ALLOWED": "This trip can no longer be cancelled. Please contact the host."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

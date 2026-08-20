@@ -2,9 +2,9 @@
 
 import { Alert, Button, Pagination, Skeleton, Tabs } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   CUSTOMER_TRIP_FILTER,
-  CUSTOMER_TRIP_FILTER_LABEL,
   CUSTOMER_TRIP_FILTER_VALUES,
   isCustomerTripFilter,
   type CustomerTripFilter,
@@ -13,7 +13,9 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { ROUTES } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
-import { getErrorMessage, isUnauthenticated } from '@/services/api-client';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { isUnauthenticated } from '@/services/api-client';
 import { TRIPS_DEFAULT_LIMIT } from '../api';
 import { useTrips } from '../hooks';
 import type { CustomerTripCounts } from '../types';
@@ -31,6 +33,9 @@ import styles from './TripsView.module.css';
  * nói `Hoàn thành (3)` khi khách có 30 chuyến hoàn thành.
  */
 export function TripsView() {
+  const t = useTranslations('Trips');
+  const dl = useDomainLabel();
+  const errorMessage = useErrorMessage();
   const router = useRouter();
   const params = useSearchParams();
   const { open } = useAuthModal();
@@ -67,14 +72,14 @@ export function TripsView() {
         <div className={styles.page}>
           <EmptyState
             variant="empty"
-            title="Phiên đăng nhập đã hết hạn"
-            description="Vui lòng đăng nhập lại để tiếp tục xem các chuyến của bạn."
+            title={t('auth.expiredTitle')}
+            description={t('auth.expiredList')}
             action={
               <Button
                 type="primary"
                 onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
               >
-                Đăng nhập
+                {t('auth.login')}
               </Button>
             }
           />
@@ -85,11 +90,11 @@ export function TripsView() {
       <div className={styles.page}>
         <EmptyState
           variant="error"
-          title="Không tải được danh sách chuyến"
-          description={getErrorMessage(error)}
+          title={t('list.errorTitle')}
+          description={errorMessage(error)}
           action={
             <Button type="primary" onClick={() => void refetch()}>
-              Thử lại
+              {t('list.retry')}
             </Button>
           }
         />
@@ -104,10 +109,8 @@ export function TripsView() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.heading}>Chuyến của tôi</h1>
-        <p className={styles.sub}>
-          Quản lý hành trình và thông tin các chuyến của bạn trên XePrime
-        </p>
+        <h1 className={styles.heading}>{t('list.heading')}</h1>
+        <p className={styles.sub}>{t('list.sub')}</p>
       </header>
 
       <Tabs
@@ -115,7 +118,12 @@ export function TripsView() {
         onChange={(key) => navigate({ filter: key as CustomerTripFilter })}
         items={CUSTOMER_TRIP_FILTER_VALUES.map((key) => ({
           key,
-          label: `${CUSTOMER_TRIP_FILTER_LABEL[key]}${counts ? ` (${countOf(counts, key)})` : ''}`,
+          label: counts
+            ? t('list.tabLabel', {
+                label: dl('customerTripFilter', key),
+                count: countOf(counts, key),
+              })
+            : dl('customerTripFilter', key),
         }))}
       />
 
@@ -130,20 +138,20 @@ export function TripsView() {
       ) : items.length === 0 ? (
         <EmptyState
           variant="empty"
-          title="Bạn chưa có chuyến đi nào"
+          title={t('list.emptyTitle')}
           description={
             filter === CUSTOMER_TRIP_FILTER.ALL
-              ? 'Hãy tìm cho mình chiếc xe ưng ý ngay nhé!'
-              : 'Không có chuyến nào trong mục này.'
+              ? t('list.emptyAllBody')
+              : t('list.emptyFilteredBody')
           }
           action={
             filter === CUSTOMER_TRIP_FILTER.ALL ? (
               <Button type="primary" onClick={() => router.push(ROUTES.SEARCH)}>
-                Tìm xe
+                {t('list.findVehicle')}
               </Button>
             ) : (
               <Button onClick={() => navigate({ filter: CUSTOMER_TRIP_FILTER.ALL })}>
-                Xem tất cả chuyến
+                {t('list.viewAll')}
               </Button>
             )
           }
@@ -173,7 +181,7 @@ export function TripsView() {
 
       {/* Dữ liệu cũ vẫn hiển thị trong lúc nạp lại; chỉ báo nhẹ thay vì chớp sang skeleton. */}
       {!isLoading && isFetching ? (
-        <Alert type="info" showIcon message="Đang cập nhật…" className={styles.refreshing} />
+        <Alert type="info" showIcon message={t('list.refreshing')} className={styles.refreshing} />
       ) : null}
     </div>
   );

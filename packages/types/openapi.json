@@ -8580,6 +8580,38 @@
         ]
       }
     },
+    "/trips/{id}/cancel": {
+      "post": {
+        "description": "Huỷ được khi yêu cầu còn chờ gian hàng trả lời, hoặc khi đơn đã duyệt nhưng CHƯA giao xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` — việc cần làm lúc đó là liên hệ chủ xe. Trả về chính chuyến đó sau khi huỷ để giao diện không phải gọi thêm một lượt.",
+        "operationId": "CustomerTripsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerTripDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Khách tự huỷ chuyến của mình",
+        "tags": [
+          "customer-trips"
+        ]
+      }
+    },
     "/bookings/{id}/payments": {
       "post": {
         "operationId": "PaymentsController_record",
@@ -9470,6 +9502,7 @@
               "enum": [
                 "tenant",
                 "platform",
+                "customer",
                 "system"
               ]
             }
@@ -10920,6 +10953,7 @@
               "booking_request_submitted",
               "booking_request_approved",
               "booking_request_rejected",
+              "booking_request_cancelled",
               "shop_approved",
               "shop_rejected",
               "vehicle_approved",
@@ -22278,6 +22312,7 @@
             "enum": [
               "tenant",
               "platform",
+              "customer",
               "system"
             ]
           },
@@ -22357,6 +22392,7 @@
             "enum": [
               "tenant",
               "platform",
+              "customer",
               "system"
             ]
           },

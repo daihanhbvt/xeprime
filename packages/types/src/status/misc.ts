@@ -182,10 +182,17 @@ export const MEMBERSHIP_STATUS = {
 export type MembershipStatus = (typeof MEMBERSHIP_STATUS)[keyof typeof MEMBERSHIP_STATUS];
 export const MEMBERSHIP_STATUS_VALUES = Object.values(MEMBERSHIP_STATUS) as MembershipStatus[];
 
-/** Phạm vi người thao tác trong `audit_logs` (AuditEntry.actorScope). */
+/**
+ * Phạm vi người thao tác trong `audit_logs` (AuditEntry.actorScope).
+ *
+ * `CUSTOMER` tách riêng khỏi `TENANT` vì khách thuê KHÔNG thuộc gian hàng nào: ghi một cú khách
+ * tự huỷ chuyến dưới scope `tenant` là nói dối trong chính cuốn sổ dùng để đối chất khi tranh
+ * chấp — người đọc log sẽ tưởng nhân viên shop đã huỷ đơn của khách.
+ */
 export const AUDIT_ACTOR_SCOPE = {
   TENANT: 'tenant',
   PLATFORM: 'platform',
+  CUSTOMER: 'customer',
   SYSTEM: 'system',
 } as const;
 
@@ -195,6 +202,7 @@ export const AUDIT_ACTOR_SCOPE_VALUES = Object.values(AUDIT_ACTOR_SCOPE) as Audi
 export const AUDIT_ACTOR_SCOPE_META: Readonly<Record<AuditActorScope, StatusMeta>> = {
   [AUDIT_ACTOR_SCOPE.TENANT]: { label: 'Gian hàng', color: STATUS_COLOR.INFO },
   [AUDIT_ACTOR_SCOPE.PLATFORM]: { label: 'Nền tảng', color: STATUS_COLOR.SPECIAL },
+  [AUDIT_ACTOR_SCOPE.CUSTOMER]: { label: 'Khách thuê', color: STATUS_COLOR.WAITING },
   [AUDIT_ACTOR_SCOPE.SYSTEM]: { label: 'Hệ thống', color: STATUS_COLOR.NEUTRAL },
 };
 

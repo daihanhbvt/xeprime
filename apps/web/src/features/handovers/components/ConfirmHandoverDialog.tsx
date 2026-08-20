@@ -6,11 +6,13 @@ import { useState } from 'react';
 import {
   HANDOVER_CONDITION, HANDOVER_TYPE, type HandoverCondition, type HandoverType, } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
-import { API_ERROR_CODE } from '@xeprime/types';
-import { confirmHandover } from '../api';
+import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
+import { confirmHandover, saveHandoverDraft } from '../api';
 import { useInvalidateHandovers } from '../hooks';
-import type { HandoverBelowPickupDetails, HandoverContext } from '../types';
+import type { Handover, HandoverBelowPickupDetails, HandoverContext } from '../types';
+import { HandoverPhotoGrid } from './HandoverPhotoGrid';
 import styles from './ConfirmHandoverDialog.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 
@@ -19,8 +21,7 @@ interface ConfirmHandoverDialogProps {
   type: HandoverType;
   open: boolean;
   onClose: () => void;
-  /** Mở `Ghi nhận hiện trạng` / `Ghi nhận phát sinh` — hai tác vụ nâng cao, không phải bước. */
-  onOpenCondition?: () => void;
+  /** Mở `Ghi nhận phát sinh` — tác vụ nâng cao, không phải một bước của luồng. */
   onOpenSurcharge?: () => void;
 }
 
@@ -68,14 +69,16 @@ export function ConfirmHandoverDialog({
   type,
   open,
   onClose,
-  onOpenCondition,
   onOpenSurcharge,
 }: ConfirmHandoverDialogProps) {
   const fmt = useAppFormat();
 
   const { message } = App.useApp();
+  const { has } = usePermissions();
   const copy = COPY[type];
   const invalidate = useInvalidateHandovers(context.bookingId, context.vehicleId);
+  const canManage = has(PERMISSION.HANDOVER_MANAGE);
+  const canViewFiles = has(PERMISSION.HANDOVER_FILE_VIEW);
 
   const [occurredAt, setOccurredAt] = useState<Dayjs>(() =>
     defaultOccurredAt(
@@ -95,6 +98,24 @@ export function ConfirmHandoverDialog({
    */
   const existing = type === HANDOVER_TYPE.PICKUP ? context.pickup : context.return;
 
+  /**
+   * Biên bản đang cầm trong tay — `null` khi chuyến đi đường nhanh và chưa có bản nháp nào.
+   *
+   * Giữ ở state chứ không đọc thẳng `existing` vì ảnh làm `rowVersion` nhảy: gửi lại số cũ ở
+   * bước xác nhận sẽ ăn 409 đúng lúc người dùng vừa làm mọi thứ chỉn chu.
+   */
+  const [draft, setDraft] = useState<Handover | null>(existing ?? null);
+
+  /**
+   * Ảnh cần một biên bản để gắn vào, mà luồng nhanh Wave 10 chưa tạo cái nào cho tới lúc bấm
+   * xác nhận. Tạo TRỄ, đúng lúc người dùng chọn tấm ảnh đầu tiên — mở vùng nâng cao ra ngó rồi
+   * đóng lại thì không để lại bản nháp rỗng nào trong DB.
+   */
+  async function ensureHandover() {
+    if (draft) return;
+    setDraft(await saveHandoverDraft(context.bookingId, type, {}));
+  }
+
   async function submit() {
     if (submitting) return;
     setError(null);
@@ -105,7 +126,7 @@ export function ConfirmHandoverDialog({
         ...(odometerKm.trim() ? { odometerKm: Number(odometerKm) } : {}),
         ...(condition ? { condition } : {}),
         ...(notes.trim() ? { notes: notes.trim() } : {}),
-        ...(existing?.rowVersion ? { expectedRowVersion: existing.rowVersion } : {}),
+        ...(draft?.rowVersion ? { expectedRowVersion: draft.rowVersion } : {}),
       });
       invalidate();
       message.success(
@@ -234,18 +255,49 @@ export function ConfirmHandoverDialog({
                     />
                   </label>
 
-                  <div className={styles.advancedLinks}>
-                    {onOpenCondition ? (
-                      <button type="button" className={styles.linkBtn} onClick={onOpenCondition}>
-                        Ghi nhận hiện trạng (ảnh, mô tả chi tiết)
-                      </button>
-                    ) : null}
-                    {type === HANDOVER_TYPE.RETURN && onOpenSurcharge ? (
+                  {/*
+                    Ảnh hiện trạng nằm NGAY ĐÂY chứ không phải sau một link mở màn khác: đây là
+                    khoảnh khắc duy nhất người bàn giao đang đứng cạnh xe. Bản trước để nó sau
+                    một `onOpenCondition` mà nơi gọi không bao giờ truyền, nên cả bộ ảnh 5 góc
+                    KHÔNG có đường nào bấm tới.
+
+                    Vẫn TUỲ CHỌN hoàn toàn (design 14 §2): không ô nào bắt buộc, không chặn nút
+                    xác nhận, và nếu không mở vùng nâng cao thì không ai biết nó tồn tại.
+                  */}
+                  {canManage ? (
+                    <div className={styles.field}>
+                      {/* Tiêu đề do chính lưới ảnh dựng — ở đây chỉ nói rõ nó không bắt buộc. */}
+                      <span className={styles.hint}>
+                        Chụp lại để có bằng chứng khi đối chiếu cuối chuyến. Không bắt buộc — bỏ
+                        qua vẫn xác nhận được.
+                      </span>
+                      <HandoverPhotoGrid
+                        bookingId={context.bookingId}
+                        type={type}
+                        photos={draft?.photos ?? []}
+                        canViewFiles={canViewFiles}
+                        disabled={submitting}
+                        ensureHandover={ensureHandover}
+                        /*
+                          Ảnh đã nằm trên server ngay khi tải xong, kể cả khi người dùng đóng hộp
+                          mà chưa xác nhận. Phải báo cho query ngữ cảnh biết, nếu không lần mở
+                          sau đọc lại `context` cũ và tưởng chưa có tấm nào.
+                        */
+                        onChanged={(next) => {
+                          setDraft(next);
+                          invalidate();
+                        }}
+                      />
+                    </div>
+                  ) : null}
+
+                  {type === HANDOVER_TYPE.RETURN && onOpenSurcharge ? (
+                    <div className={styles.advancedLinks}>
                       <button type="button" className={styles.linkBtn} onClick={onOpenSurcharge}>
                         Ghi nhận phát sinh
                       </button>
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : null}
                 </div>
               ),
             },

@@ -1,6 +1,6 @@
 /*
  * Dùng chung cho các field đã dời khỏi inline style (CLAUDE.md §5 cấm inline style).
- * `NumberField`, `TextAreaField`, `DateTimeField`, `TextField` đã chuyển; `SelectField`,
+ * `NumberField`, `TextAreaField`, `DateTimeField`, `TextField`, `SelectField` đã chuyển;
  * `AutoCompleteField` còn inline style — dời khi chạm vào file đó.
  */
 .item.item {
@@ -51,4 +51,10 @@
 
 .requiredMark::before {
   content: '*';
+}
+
+/* Dấu bắt buộc đặt SAU nhãn — dùng bởi `trailingRequiredMark`. */
+.requiredMarkAfter {
+  margin-inline-start: var(--xp-space-xs);
+  color: var(--xp-color-error);
 }

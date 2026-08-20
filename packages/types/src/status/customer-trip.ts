@@ -179,3 +179,26 @@ export const CUSTOMER_TRIP_FILTER_STAGES: Readonly<
 export function isCustomerTripFilter(value: unknown): value is CustomerTripFilter {
   return typeof value === 'string' && (CUSTOMER_TRIP_FILTER_VALUES as string[]).includes(value);
 }
+
+// ── Khách tự huỷ chuyến ──────────────────────────────────────────────────────
+
+/**
+ * Chặng mà KHÁCH còn tự huỷ được — mốc là **xe chưa rời bãi**.
+ *
+ * Trước lúc giao xe, huỷ không gây thiệt hại vận hành nào: yêu cầu chờ duyệt vốn chưa chiếm
+ * lịch, còn đơn đã duyệt thì nhả lịch ra là xe lại nhận khách khác được. Sau khi đã giao xe thì
+ * khác hẳn — xe đang ở ngoài đường, việc cần làm là gọi cho chủ xe chứ không phải bấm một nút.
+ *
+ * Đây là NGUỒN CHUNG cho cả hai phía: nút ở `/trips` ẩn/hiện theo nó, và
+ * `CustomerTripsService.cancel` chặn theo nó. Backend vẫn là nơi chốt (kiểm lại trong
+ * transaction, có điều kiện trạng thái trong WHERE) — hằng số này chỉ giữ cho hai bên đừng
+ * nói hai luật khác nhau.
+ */
+export const CUSTOMER_CANCELLABLE_STAGES: readonly CustomerTripStage[] = [
+  CUSTOMER_TRIP_STAGE.PENDING_APPROVAL,
+  CUSTOMER_TRIP_STAGE.READY,
+];
+
+export function canCustomerCancelTrip(stage: CustomerTripStage): boolean {
+  return CUSTOMER_CANCELLABLE_STAGES.includes(stage);
+}

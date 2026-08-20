@@ -1,65 +1,4 @@
-/* Bàn giao xe (Wave 7) — CSS Modules + token AntD (ADR 0003). Không hex trần, không inline style. */
 
-/* ── Khối trong chi tiết đơn ── */
-.panel {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-}
-
-.panelDivider {
-  margin-block: var(--xp-space-sm);
-}
-
-.panelRow {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--xp-space-xs);
-}
-
-.panelHead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--xp-space-xs);
-}
-
-.panelTitle {
-  color: var(--xp-color-text);
-  font-weight: var(--xp-font-weight-strong);
-}
-
-.panelMuted {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.panelFacts {
-  display: grid;
-  margin: 0;
-  gap: var(--xp-space-xs) var(--xp-space-md);
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-}
-
-.panelFact {
-  min-width: 0;
-}
-
-.panelFact dt {
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.panelFact dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--xp-color-text);
-}
-
-.panelActions {
-  margin-top: var(--xp-space-xs);
-}
 
 /* ── Hộp thoại ── */
 .dialogBody {
@@ -110,70 +49,6 @@
   text-align: end;
 }
 
-/* ── Ô nhập KM + chênh lệch ── */
-.odometerRow {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--xp-space-sm);
-}
-
-.odometerField {
-  min-width: 0;
-  flex: 1;
-}
-
-.deltaGood,
-.deltaBad {
-  flex: none;
-  padding: 2px var(--xp-space-xs);
-  border-radius: var(--xp-border-radius-sm);
-  margin-top: 28px; /* canh với đáy ô nhập, dưới nhãn của Form.Item */
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-medium);
-  white-space: nowrap;
-}
-
-.deltaGood {
-  background: var(--xp-color-success-bg);
-  color: var(--xp-color-success);
-}
-
-.deltaBad {
-  background: var(--xp-color-error-bg);
-  color: var(--xp-color-error);
-}
-
-/* ── Hệ quả xử lý & tóm tắt ── */
-.consequenceBox {
-  padding: var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border-secondary);
-  border-radius: var(--xp-border-radius-md);
-  background: var(--xp-color-info-bg);
-}
-
-.consequenceTitle {
-  margin: 0 0 var(--xp-space-xs);
-  color: var(--xp-color-text);
-  font-size: var(--xp-font-size-body-sm);
-  font-weight: var(--xp-font-weight-strong);
-}
-
-.consequenceText {
-  margin: 0;
-  color: var(--xp-color-text-secondary);
-  font-size: var(--xp-font-size-body-sm);
-}
-
-.warningBody {
-  display: flex;
-  flex-direction: column;
-  gap: var(--xp-space-xs);
-}
-
-.warningText {
-  margin: 0;
-}
-
 .linkButton {
   padding: 0;
   border: 0;
@@ -182,42 +57,6 @@
   cursor: pointer;
   font: inherit;
   text-decoration: underline;
-}
-
-/* ── Bước trên mobile: một hàng ngang, cuộn được, KHÔNG xuống dòng ── */
-.stepper {
-  display: flex;
-  overflow-x: auto;
-  padding: 0;
-  margin: 0;
-  flex-wrap: nowrap;
-  gap: var(--xp-space-sm);
-  list-style: none;
-  scrollbar-width: none;
-}
-
-.stepper::-webkit-scrollbar {
-  display: none;
-}
-
-.step,
-.stepActive {
-  flex: none;
-  padding-bottom: var(--xp-space-xs);
-  border-bottom: 2px solid transparent;
-  color: var(--xp-color-text-tertiary);
-  font-size: var(--xp-font-size-body-sm);
-  white-space: nowrap;
-}
-
-.stepActive {
-  border-bottom-color: var(--xp-color-primary);
-  color: var(--xp-color-primary);
-  font-weight: var(--xp-font-weight-medium);
-}
-
-.mobileFooter {
-  width: 100%;
 }
 
 .mobileFooter :global(.ant-space-item) {
@@ -247,6 +86,19 @@
   grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
 }
 
+/**
+ * Lưới chỉ có MỘT ô (ảnh đồng hồ KM).
+ *
+ * `auto-fit` với một phần tử gộp về đúng một track `1fr` = trải hết bề ngang, rồi
+ * `aspect-ratio: 4/3` kéo chiều cao theo — ô đồng hồ phình to gấp mấy lần một ô ngoại thất
+ * và chiếm gần trọn hộp thoại. Trần `160px` giữ nó bằng cỡ các ô kia; `start` để nó nằm sát
+ * trái thay vì trôi ra giữa.
+ */
+.slotGridSingle {
+  grid-template-columns: repeat(auto-fit, minmax(84px, 160px));
+  justify-content: start;
+}
+
 .slot {
   display: flex;
   min-width: 0;
@@ -270,10 +122,6 @@
 .slotFilled {
   border-style: solid;
   border-color: var(--xp-color-border-secondary);
-}
-
-.slotRequired {
-  border-color: var(--xp-color-warning);
 }
 
 .slotError {
@@ -363,10 +211,6 @@
   color: var(--xp-color-text-secondary);
   font-size: var(--xp-font-size-body-sm);
   text-align: center;
-}
-
-.slotRequiredMark {
-  color: var(--xp-color-error);
 }
 
 .slotErrorText {
