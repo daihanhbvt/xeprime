@@ -31,3 +31,5 @@ Tất cả vẫn khôi phục được từ git history nếu cần.
 ## Làm việc với Claude
 
 Kỷ luật code (senior, tái sử dụng, không hard code, hướng common) nằm ở `../.claude/skills/` — tự kích hoạt theo loại việc. Định vị nhanh + review dùng `../.claude/agents/` (`navigator`, `reviewer`). Xem [`../CLAUDE.md`](../CLAUDE.md) mục "Công cụ Claude".
+
+Commit thì gõ `/commit` (command ở `../.claude/commands/commit.md`) — quy ước branch/commit message và cách xử lý conflict ở [`git-workflow.md`](git-workflow.md).
