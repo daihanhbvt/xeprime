@@ -100,9 +100,11 @@ export class TenantsController {
   @ApiOkResponse({ type: MyShopDto })
   updateProfile(
     @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateTenantProfileDto,
   ): Promise<MyShopDto> {
-    return this.tenants.updateProfile(tenant.tenantId, dto);
+    // `userId` cần cho nhánh đổi tỉnh: nó dời chi nhánh mặc định và việc đó phải ghi audit có tên.
+    return this.tenants.updateProfile(tenant.tenantId, user.id, dto);
   }
 
   @Post('current/submit-review')

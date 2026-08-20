@@ -3577,6 +3577,10 @@ export interface components {
             bankAccountNo?: string | null;
             bankAccountName?: string | null;
             qrUrl?: string | null;
+            ownerFullName?: string | null;
+            /** @description Dạng lưu 84… */
+            ownerPhone?: string | null;
+            ownerEmail?: string | null;
         };
         LatestApprovalDto: {
             /** @enum {string} */
@@ -3636,14 +3640,23 @@ export interface components {
             logoUrl?: string;
             coverUrl?: string;
             address?: string;
+            /** @description Mã tỉnh/thành 2 ký tự (GET /provinces) */
             provinceCode?: string;
-            provinceName?: string;
             taxCode?: string;
             businessLicenseNo?: string;
             bankName?: string;
             bankAccountNo?: string;
             bankAccountName?: string;
             qrUrl?: string;
+            /** @example Nguyễn Văn A */
+            ownerFullName?: string;
+            /**
+             * @description Nhận 09…/84…/+84…, lưu 84…
+             * @example 0901234567
+             */
+            ownerPhone?: string;
+            /** @example chugianhang@xeprime.vn */
+            ownerEmail?: string;
         };
         BranchDto: {
             id: string;

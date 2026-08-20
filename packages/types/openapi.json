@@ -11388,6 +11388,19 @@
           "qrUrl": {
             "type": "string",
             "nullable": true
+          },
+          "ownerFullName": {
+            "type": "string",
+            "nullable": true
+          },
+          "ownerPhone": {
+            "type": "string",
+            "nullable": true,
+            "description": "Dạng lưu 84…"
+          },
+          "ownerEmail": {
+            "type": "string",
+            "nullable": true
           }
         }
       },
@@ -11622,10 +11635,8 @@
             "type": "string"
           },
           "provinceCode": {
-            "type": "string"
-          },
-          "provinceName": {
-            "type": "string"
+            "type": "string",
+            "description": "Mã tỉnh/thành 2 ký tự (GET /provinces)"
           },
           "taxCode": {
             "type": "string"
@@ -11644,6 +11655,19 @@
           },
           "qrUrl": {
             "type": "string"
+          },
+          "ownerFullName": {
+            "type": "string",
+            "example": "Nguyễn Văn A"
+          },
+          "ownerPhone": {
+            "type": "string",
+            "example": "0901234567",
+            "description": "Nhận 09…/84…/+84…, lưu 84…"
+          },
+          "ownerEmail": {
+            "type": "string",
+            "example": "chugianhang@xeprime.vn"
           }
         }
       },

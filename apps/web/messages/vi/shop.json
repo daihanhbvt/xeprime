@@ -1,0 +1,139 @@
+{
+  "page": {
+    "subtitle": "Thông tin khách nhìn thấy trên marketplace, và thông tin nội bộ để XePrime duyệt hồ sơ.",
+    "viewPublicPage": "Xem gian hàng",
+    "loadError": "Không tải được hồ sơ gian hàng",
+    "forbidden": {
+      "title": "Không có quyền truy cập",
+      "description": "Bạn cần quyền dưới đây để xem hồ sơ gian hàng.",
+      "backHome": "Về trang chủ"
+    }
+  },
+  "noTenant": {
+    "title": "Bạn chưa có gian hàng",
+    "description": "Tài khoản hiện tại vẫn có thể dùng để tìm và đặt xe. Bạn chỉ cần đăng ký gian hàng nếu muốn cho thuê xe.",
+    "register": "Đăng ký trở thành chủ xe",
+    "backToSearch": "Quay lại tìm xe"
+  },
+  "status": {
+    "label": "Trạng thái gian hàng",
+    "submit": "Gửi duyệt",
+    "resubmit": "Gửi lại duyệt",
+    "submitConfirm": {
+      "title": "Gửi hồ sơ cho nền tảng duyệt?",
+      "description": "Sau khi gửi, bạn không sửa hồ sơ cho tới khi có kết quả.",
+      "ok": "Gửi duyệt"
+    },
+    "submitted": "Đã gửi hồ sơ cho nền tảng duyệt",
+    "draft": {
+      "title": "Hồ sơ chưa được gửi duyệt",
+      "description": "Điền đủ thông tin bên dưới rồi bấm Gửi duyệt. Xe chỉ hiển thị công khai sau khi hồ sơ được duyệt."
+    },
+    "pending": {
+      "title": "Hồ sơ đang chờ nền tảng duyệt",
+      "description": "Đã gửi lúc {at}."
+    },
+    "needsRevision": {
+      "title": "Nền tảng yêu cầu bổ sung"
+    },
+    "rejected": {
+      "title": "Hồ sơ bị từ chối"
+    },
+    "active": {
+      "title": "Gian hàng đang hoạt động — xe của bạn sẽ hiển thị trên marketplace."
+    },
+    "suspended": {
+      "title": "Gian hàng đang bị khoá",
+      "description": "Xe của bạn tạm ẩn khỏi marketplace và không nhận được đơn mới. Liên hệ đội ngũ XePrime để biết chi tiết."
+    },
+    "expired": {
+      "title": "Gói dịch vụ đã hết hạn",
+      "description": "Gia hạn gói để xe hiển thị trở lại trên marketplace."
+    }
+  },
+  "form": {
+    "saved": "Đã lưu thông tin gian hàng",
+    "submit": "Lưu thông tin",
+    "reset": "Huỷ bỏ",
+    "unsaved": "Chưa lưu",
+    "lockedWhilePending": "Hồ sơ đang chờ duyệt nên tạm khoá chỉnh sửa.",
+    "readOnly": "Bạn chỉ có quyền xem hồ sơ gian hàng.",
+    "display": {
+      "title": "Thông tin hiển thị",
+      "displayName": {
+        "label": "Tên hiển thị",
+        "placeholder": "Tên hiện trên marketplace"
+      },
+      "bio": {
+        "label": "Giới thiệu",
+        "placeholder": "Mô tả ngắn về gian hàng…"
+      },
+      "logo": {
+        "label": "Logo gian hàng",
+        "hint": "Kích thước đề xuất: 800×800px."
+      },
+      "cover": {
+        "label": "Ảnh bìa (trang gian hàng công khai)",
+        "hint": "Kích thước đề xuất: 1600×600px."
+      }
+    },
+    "owner": {
+      "title": "Thông tin chủ gian hàng",
+      "fullName": {
+        "label": "Họ và tên",
+        "placeholder": "VD: Nguyễn Văn A"
+      },
+      "phone": {
+        "label": "Số điện thoại",
+        "placeholder": "0901234567"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "chugianhang@xeprime.vn"
+      },
+      "privacy": {
+        "title": "Bảo mật thông tin",
+        "body": "Thông tin chủ gian hàng chỉ hiển thị với đội ngũ XePrime và không công khai với khách hàng."
+      }
+    },
+    "address": {
+      "title": "Địa chỉ & pháp lý",
+      "address": {
+        "label": "Địa chỉ",
+        "placeholder": "Số nhà, đường, phường/xã"
+      },
+      "province": {
+        "label": "Tỉnh / Thành",
+        "placeholder": "Chọn tỉnh/thành",
+        "loading": "Đang tải tỉnh/thành…",
+        "loadError": "Không tải được danh sách tỉnh/thành",
+        "help": "Vị trí của chi nhánh mặc định — xe thuộc chi nhánh này sẽ hiển thị ở tỉnh/thành đã chọn.",
+        "branchLink": "Quản lý chi nhánh"
+      },
+      "taxCode": {
+        "label": "Mã số thuế",
+        "placeholder": "Nếu có"
+      },
+      "businessLicenseNo": {
+        "label": "Số giấy phép KD",
+        "placeholder": "Nếu có"
+      }
+    },
+    "bank": {
+      "title": "Tài khoản nhận tiền",
+      "hint": "Tài khoản XePrime dùng để đối soát và chuyển tiền cho gian hàng.",
+      "bankName": {
+        "label": "Ngân hàng",
+        "placeholder": "VD: Vietcombank"
+      },
+      "accountNo": {
+        "label": "Số tài khoản",
+        "placeholder": "Số tài khoản nhận tiền"
+      },
+      "accountName": {
+        "label": "Chủ tài khoản",
+        "placeholder": "Tên chủ tài khoản"
+      }
+    }
+  }
+}

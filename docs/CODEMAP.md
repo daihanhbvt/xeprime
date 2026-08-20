@@ -87,6 +87,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | User không tenant ở `/manage` → màn lựa chọn | `features/shop/components/NoTenantState.tsx` | "chưa có shop" là trạng thái HỢP LỆ của khách |
 | 403 khu nền tảng (khác 401) | `app/(manage)/manage/admin/layout.tsx` | không đẩy sang onboarding shop |
 | Hồ sơ tài khoản KHÁCH (`/users/me`) | `features/account/` · `app/(public)/account/` | khác hồ sơ gian hàng `/manage/shop` |
+| **Hồ sơ GIAN HÀNG** (`/manage/shop`): khối công khai + khối **chủ gian hàng** (nội bộ) | `features/shop/components/{ShopProfileWorkspace,ShopStatusBanner}.tsx` · BE `modules/tenants/` | Chờ duyệt = backend khoá ghi (`INVALID_STATUS_TRANSITION`). Đổi tỉnh ở đây là **dời chi nhánh mặc định** qua `BranchesService` — hai cột tỉnh trên `tenant_profiles` chỉ là bản sao |
 | Gọi API (`credentials:'include'`, bóc `data`) | `services/api-client.ts` | ADR 0002 |
 | Query keys | `services/query-keys.ts` | — |
 | Redux store + slices (chỉ client UI state) | `store/` | ADR 0004 |

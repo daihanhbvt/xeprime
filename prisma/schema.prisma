@@ -462,6 +462,12 @@ model TenantProfile {
   bankAccountNo     String?  @map("bank_account_no") @db.VarChar(100)
   bankAccountName   String?  @map("bank_account_name") @db.VarChar(255)
   qrUrl             String?  @map("qr_url") @db.Text
+  /// Chủ gian hàng — NGƯỜI CHỊU TRÁCH NHIỆM pháp lý, không phải tài khoản đăng nhập (một shop có
+  /// thể do nhân viên vận hành). Dữ liệu NỘI BỘ: chỉ hồ sơ duyệt và đội ngũ nền tảng đọc, không
+  /// bao giờ lọt ra `public_listings` hay trang gian hàng công khai (ADR 0008).
+  ownerFullName     String?  @map("owner_full_name") @db.VarChar(255)
+  ownerPhone        String?  @map("owner_phone") @db.VarChar(30)
+  ownerEmail        String?  @map("owner_email") @db.VarChar(255)
   settings          Json?    @map("settings_json") @db.JsonB
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)

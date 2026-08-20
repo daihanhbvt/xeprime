@@ -1,0 +1,139 @@
+{
+  "page": {
+    "subtitle": "What renters see on the marketplace, plus the internal details XePrime uses to review your shop.",
+    "viewPublicPage": "View shop page",
+    "loadError": "Couldn't load your shop profile",
+    "forbidden": {
+      "title": "You don't have access",
+      "description": "You need the permission below to view the shop profile.",
+      "backHome": "Back to dashboard"
+    }
+  },
+  "noTenant": {
+    "title": "You don't have a shop yet",
+    "description": "You can still use this account to search for and book vehicles. You only need a shop if you want to rent your vehicles out.",
+    "register": "Become a host",
+    "backToSearch": "Back to search"
+  },
+  "status": {
+    "label": "Shop status",
+    "submit": "Submit for review",
+    "resubmit": "Resubmit for review",
+    "submitConfirm": {
+      "title": "Submit this profile for review?",
+      "description": "Once submitted, you can't edit the profile until we get back to you.",
+      "ok": "Submit"
+    },
+    "submitted": "Profile submitted for review",
+    "draft": {
+      "title": "This profile hasn't been submitted yet",
+      "description": "Fill in the details below, then submit for review. Your vehicles only go public once the profile is approved."
+    },
+    "pending": {
+      "title": "Your profile is waiting for review",
+      "description": "Submitted at {at}."
+    },
+    "needsRevision": {
+      "title": "We need more information"
+    },
+    "rejected": {
+      "title": "Profile rejected"
+    },
+    "active": {
+      "title": "Your shop is live — approved vehicles appear on the marketplace."
+    },
+    "suspended": {
+      "title": "Your shop is locked",
+      "description": "Your vehicles are hidden from the marketplace and can't take new bookings. Contact the XePrime team for details."
+    },
+    "expired": {
+      "title": "Your plan has expired",
+      "description": "Renew your plan to put your vehicles back on the marketplace."
+    }
+  },
+  "form": {
+    "saved": "Shop details saved",
+    "submit": "Save details",
+    "reset": "Discard",
+    "unsaved": "Unsaved",
+    "lockedWhilePending": "Editing is locked while the profile is under review.",
+    "readOnly": "You have view-only access to the shop profile.",
+    "display": {
+      "title": "Public details",
+      "displayName": {
+        "label": "Display name",
+        "placeholder": "The name shown on the marketplace"
+      },
+      "bio": {
+        "label": "About the shop",
+        "placeholder": "A short description of your shop…"
+      },
+      "logo": {
+        "label": "Shop logo",
+        "hint": "Recommended size: 800×800px."
+      },
+      "cover": {
+        "label": "Cover image (public shop page)",
+        "hint": "Recommended size: 1600×600px."
+      }
+    },
+    "owner": {
+      "title": "Shop owner",
+      "fullName": {
+        "label": "Full name",
+        "placeholder": "e.g. Nguyễn Văn A"
+      },
+      "phone": {
+        "label": "Phone number",
+        "placeholder": "0901234567"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "owner@yourshop.vn"
+      },
+      "privacy": {
+        "title": "Kept private",
+        "body": "Owner details are visible only to the XePrime team and are never shown to renters."
+      }
+    },
+    "address": {
+      "title": "Address & legal",
+      "address": {
+        "label": "Address",
+        "placeholder": "Street number, street, ward"
+      },
+      "province": {
+        "label": "Province / City",
+        "placeholder": "Select a province or city",
+        "loading": "Loading provinces…",
+        "loadError": "Couldn't load the list of provinces",
+        "help": "Where your default branch sits — vehicles at that branch are listed in this province.",
+        "branchLink": "Manage branches"
+      },
+      "taxCode": {
+        "label": "Tax code",
+        "placeholder": "If you have one"
+      },
+      "businessLicenseNo": {
+        "label": "Business licence no.",
+        "placeholder": "If you have one"
+      }
+    },
+    "bank": {
+      "title": "Payout account",
+      "hint": "XePrime uses this account to reconcile and pay out to your shop.",
+      "bankName": {
+        "label": "Bank",
+        "placeholder": "e.g. Vietcombank"
+      },
+      "accountNo": {
+        "label": "Account number",
+        "placeholder": "Payout account number"
+      },
+      "accountName": {
+        "label": "Account holder",
+        "placeholder": "Name on the account"
+      }
+    }
+  }
+}

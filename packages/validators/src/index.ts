@@ -24,6 +24,7 @@ import {
   VEHICLE_SOURCE_TYPE_VALUES,
   VEHICLE_TYPE,
   VEHICLE_TYPE_VALUES,
+  VN_PHONE_PATTERN,
 } from '@xeprime/types';
 
 export { phoneSchema, requiredPhoneSchema } from './phone';
@@ -483,7 +484,7 @@ export const registerShopSchema = yup.object({
     .string()
     .trim()
     .default('')
-    .matches(/^(0|\+84)\d{9}$/, {
+    .matches(VN_PHONE_PATTERN, {
       message: 'Số điện thoại không hợp lệ',
       excludeEmptyString: true,
     }),
@@ -513,7 +514,7 @@ export const branchFormSchema = yup.object({
     .string()
     .trim()
     .default('')
-    .matches(/^(0|\+84)\d{9}$/, {
+    .matches(VN_PHONE_PATTERN, {
       message: 'Số điện thoại không hợp lệ',
       excludeEmptyString: true,
     }),
@@ -524,10 +525,45 @@ export type BranchFormValues = yup.InferType<typeof branchFormSchema>;
 const profileText = (max: number) => yup.string().trim().max(max).default('');
 
 export const shopProfileSchema = yup.object({
-  displayName: profileText(255),
+  displayName: yup
+    .string()
+    .trim()
+    .required('Tên hiển thị là bắt buộc')
+    .max(255)
+    .default(''),
   bio: profileText(2000),
   address: profileText(500),
-  provinceName: profileText(100),
+  /**
+   * MÃ tỉnh, không phải tên — và nó là tỉnh của CHI NHÁNH MẶC ĐỊNH (backend chuyển tiếp cho
+   * `BranchesService`), nên đổi ở đây là dời vị trí công khai của mọi xe thuộc chi nhánh đó.
+   *
+   * Bắt buộc vì mọi gian hàng đều đã có một tỉnh từ lúc đăng ký; ô trống chỉ xảy ra với hồ sơ cũ
+   * mà migration chi nhánh không quy được địa danh — đúng những hồ sơ cần người chọn lại.
+   */
+  provinceCode: yup
+    .string()
+    .trim()
+    .required('Chọn tỉnh/thành của gian hàng')
+    .length(2, 'Mã tỉnh không hợp lệ')
+    .default(''),
+  /**
+   * Chủ gian hàng — dữ liệu NỘI BỘ cho đội ngũ XePrime, không hiện cho khách. Họ tên + SĐT là bắt
+   * buộc vì hồ sơ duyệt phải liên hệ được với một người thật; email để trống được, do một phần
+   * chủ shop chỉ đăng nhập bằng SĐT (passwordless) và không có email nào để khai.
+   */
+  ownerFullName: yup
+    .string()
+    .trim()
+    .required('Họ tên chủ gian hàng là bắt buộc')
+    .max(255)
+    .default(''),
+  ownerPhone: yup
+    .string()
+    .trim()
+    .required('Số điện thoại chủ gian hàng là bắt buộc')
+    .matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+    .default(''),
+  ownerEmail: yup.string().trim().default('').email('Email không hợp lệ'),
   taxCode: profileText(50),
   businessLicenseNo: profileText(100),
   bankName: profileText(100),

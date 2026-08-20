@@ -1,7 +1,8 @@
 'use client';
 
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { CloudUploadOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, Form, Progress, Upload } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useState, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
@@ -38,6 +39,7 @@ export function ImageUploadField<T extends FieldValues>({
   validate,
   help,
 }: ImageUploadFieldProps<T>) {
+  const t = useTranslations('Common.components.imageUpload');
   const uploadRejectionMessage = useUploadRejectionMessage();
   const { field, fieldState } = useController({ control, name });
   const { message } = App.useApp();
@@ -93,7 +95,7 @@ export function ImageUploadField<T extends FieldValues>({
           <button type="button" className={styles.tile} disabled={uploading}>
             {url ? (
               // eslint-disable-next-line @next/next/no-img-element -- ảnh trên R2, không qua next/image
-              <img src={url} alt="Ảnh đã chọn" className={styles.preview} />
+              <img src={url} alt={t('alt')} className={styles.preview} />
             ) : (
               <span className={styles.placeholder}>
                 {uploading ? (
@@ -101,25 +103,43 @@ export function ImageUploadField<T extends FieldValues>({
                     type="circle"
                     percent={progress}
                     size={48}
-                    aria-label="Tiến độ tải ảnh"
+                    aria-label={t('progressLabel')}
                   />
                 ) : (
                   <PlusOutlined />
                 )}
-                <span>{uploading ? `Đang tải ${progress}%` : 'Tải ảnh lên'}</span>
+                <span>{uploading ? t('uploading', { percent: progress }) : t('upload')}</span>
               </span>
             )}
           </button>
         </Upload>
+        {/*
+          Ảnh đã có: "Thay đổi" nói ra được việc mà tấm ảnh vốn đã làm khi bấm vào. Ô ảnh trông
+          như một tấm hình chứ không như một nút, nên nếu chỉ có "Xoá" thì lối duy nhất để đổi ảnh
+          là xoá đi rồi tải lại — người dùng không đoán ra bấm thẳng vào ảnh cũng được.
+        */}
         {url ? (
-          <Button
-            size="small"
-            icon={<DeleteOutlined />}
-            onClick={() => field.onChange(null)}
-            disabled={uploading}
-          >
-            Xoá ảnh
-          </Button>
+          <div className={styles.actions}>
+            <Upload
+              accept={IMAGE_UPLOAD_MIME_TYPES.join(',')}
+              showUploadList={false}
+              beforeUpload={handleSelect}
+              disabled={uploading}
+            >
+              <Button size="small" icon={<CloudUploadOutlined />} disabled={uploading}>
+                {t('change')}
+              </Button>
+            </Upload>
+            <Button
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => field.onChange(null)}
+              disabled={uploading}
+            >
+              {t('remove')}
+            </Button>
+          </div>
         ) : null}
       </div>
       {failedUpload ? (

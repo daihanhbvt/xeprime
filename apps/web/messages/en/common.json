@@ -142,6 +142,14 @@
     "discount": "{percent}% off",
     "rating": "{value} out of {max} stars",
     "revealContact": "Reveal in full — this action is recorded in the audit log",
+    "imageUpload": {
+      "upload": "Upload image",
+      "uploading": "Uploading {percent}%",
+      "progressLabel": "Upload progress",
+      "alt": "Selected image",
+      "change": "Replace",
+      "remove": "Remove image"
+    },
     "price": {
       "subtotal": "Subtotal before deposit",
       "depositNote": "* The deposit is refunded in full when the vehicle is returned undamaged.",

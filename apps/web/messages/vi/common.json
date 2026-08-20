@@ -142,6 +142,14 @@
     "discount": "Giảm {percent}%",
     "rating": "{value} trên {max} sao",
     "revealContact": "Xem đầy đủ — thao tác này được ghi vào nhật ký hệ thống",
+    "imageUpload": {
+      "upload": "Tải ảnh lên",
+      "uploading": "Đang tải {percent}%",
+      "progressLabel": "Tiến độ tải ảnh",
+      "alt": "Ảnh đã chọn",
+      "change": "Thay đổi",
+      "remove": "Xoá ảnh"
+    },
     "price": {
       "subtotal": "Tổng trước cọc",
       "depositNote": "* Tiền cọc được hoàn trả 100% khi bàn trả xe không phát sinh thiệt hại.",

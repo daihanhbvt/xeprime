@@ -23,12 +23,21 @@ export function useRegisterShop() {
   });
 }
 
+/**
+ * Lưu hồ sơ.
+ *
+ * Đổi tỉnh/thành ở hồ sơ là backend DỜI CHI NHÁNH MẶC ĐỊNH và đồng bộ lại vị trí công khai của
+ * xe thuộc chi nhánh đó — nên hai nhánh cache kia cũng cũ theo, không riêng gì `shop.current`.
+ * Bỏ sót chúng thì màn Chi nhánh còn hiện tỉnh cũ cho tới lần F5 tiếp theo.
+ */
 export function useUpdateShopProfile() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: UpdateProfileInput) => updateShopProfile(body),
     onSuccess: (shop) => {
       queryClient.setQueryData(queryKeys.shop.current(), shop);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.branches.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
     },
   });
 }

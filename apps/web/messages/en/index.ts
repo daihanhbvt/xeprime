@@ -21,6 +21,7 @@ import trips from './trips.json';
 import account from './account.json';
 import manageCommon from './manage-common.json';
 import shopOnboarding from './shop-onboarding.json';
+import shop from './shop.json';
 import bookingRequests from './booking-requests.json';
 import bookings from './bookings.json';
 import vehicles from './vehicles.json';
@@ -42,6 +43,7 @@ const messages = {
   Account: account,
   ManageCommon: manageCommon,
   ShopOnboarding: shopOnboarding,
+  Shop: shop,
   BookingRequests: bookingRequests,
   Bookings: bookings,
   Vehicles: vehicles,

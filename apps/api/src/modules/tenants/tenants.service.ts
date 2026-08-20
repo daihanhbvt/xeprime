@@ -38,6 +38,9 @@ const PROFILE_SELECT = {
   bankAccountNo: true,
   bankAccountName: true,
   qrUrl: true,
+  ownerFullName: true,
+  ownerPhone: true,
+  ownerEmail: true,
 } satisfies Prisma.TenantProfileSelect;
 
 @Injectable()
@@ -188,14 +191,66 @@ export class TenantsService {
     };
   }
 
-  async updateProfile(tenantId: string, dto: UpdateTenantProfileDto): Promise<MyShopDto> {
+  /**
+   * Cập nhật hồ sơ gian hàng.
+   *
+   * Hai thứ KHÔNG phải là "ghi thẳng vào `tenant_profiles`" và được tách riêng ở đây:
+   *
+   * 1. **Đang chờ duyệt thì khoá.** Frontend đã nói "tạm khoá chỉnh sửa" từ lâu nhưng backend
+   *    vẫn nhận — nghĩa là lời hứa đó chỉ là một thuộc tính `disabled`. Duyệt xong hồ sơ LIVE mới
+   *    là thứ lên marketplace, nên sửa trong lúc chờ là duyệt một đằng công khai một nẻo.
+   * 2. **Tỉnh/thành đi qua `BranchesService`.** Hai cột tỉnh trên hồ sơ là BẢN SAO của chi nhánh
+   *    mặc định (xem `syncProfileFromDefaultBranch`); ghi thẳng vào chúng sẽ đúng cho tới lần
+   *    chạm chi nhánh kế tiếp rồi âm thầm bị ghi đè, và trong lúc đó xe vẫn hiển thị ở tỉnh cũ
+   *    trên marketplace vì `public_listings` không hề biết có thay đổi.
+   */
+  async updateProfile(
+    tenantId: string,
+    userId: string,
+    dto: UpdateTenantProfileDto,
+  ): Promise<MyShopDto> {
+    const tenant = await this.prisma.tenant.findFirst({
+      where: { id: tenantId, deletedAt: null },
+      select: { status: true },
+    });
+    if (!tenant) throw notFound();
+    if (tenant.status === TENANT_STATUS.PENDING_REVIEW) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
+        message: 'Hồ sơ đang chờ nền tảng duyệt nên không sửa được.',
+      });
+    }
+
+    const { provinceCode, ...profile } = dto;
+    if (provinceCode !== undefined) await this.moveDefaultBranch(tenantId, userId, provinceCode);
+
+    const data = normalizeProfileWrite(profile);
     // upsert: tenant tạo qua đường khác có thể chưa có hồ sơ.
     await this.prisma.tenantProfile.upsert({
       where: { tenantId },
-      create: { tenantId, ...dto },
-      update: { ...dto },
+      create: { tenantId, ...data },
+      update: data,
     });
     return this.getMyShop(tenantId);
+  }
+
+  /**
+   * Đổi tỉnh của chi nhánh mặc định — hệ quả (đồng bộ `public_listings`, đồng bộ lại hai cột
+   * sao chép trên hồ sơ, ghi audit) nằm trọn trong `BranchesService.update`.
+   */
+  private async moveDefaultBranch(
+    tenantId: string,
+    userId: string,
+    provinceCode: string,
+  ): Promise<void> {
+    const branch = await this.prisma.tenantBranch.findFirst({
+      where: { tenantId, isDefault: true, deletedAt: null },
+      select: { id: true, provinceCode: true },
+    });
+    // Dữ liệu cũ chưa qua migration chi nhánh: không có gì để dời, và tuyệt đối không tự ghi hai
+    // cột sao chép — làm vậy là tạo ra đúng cái lệch mà hàm này sinh ra để tránh.
+    if (!branch || branch.provinceCode === provinceCode) return;
+    await this.branches.update(tenantId, branch.id, userId, { provinceCode });
   }
 
   /**
@@ -297,6 +352,23 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+/**
+ * Ô để trống = XOÁ giá trị, tức `NULL`, không phải chuỗi rỗng.
+ *
+ * `''` và `NULL` trông giống nhau trên màn hình nhưng khác nhau ở mọi nơi khác: `COALESCE`,
+ * `IS NULL`, và các bộ đếm "hồ sơ đã điền gì" của khu duyệt. Chuẩn hoá đúng một lần tại biên ghi
+ * để không có cột nào giữ hai cách nói "chưa có".
+ */
+function normalizeProfileWrite<T extends Record<string, string | undefined>>(
+  dto: T,
+): { [K in keyof T]: string | null | undefined } {
+  const out = {} as { [K in keyof T]: string | null | undefined };
+  for (const [key, value] of Object.entries(dto) as [keyof T, string | undefined][]) {
+    out[key] = value === undefined ? undefined : value.trim() === '' ? null : value;
+  }
+  return out;
+}
+
 function emptyProfileIfNull(
   profile: Prisma.TenantProfileGetPayload<{ select: typeof PROFILE_SELECT }> | null,
 ): TenantProfileDto {
@@ -314,6 +386,9 @@ function emptyProfileIfNull(
     bankAccountNo: profile?.bankAccountNo ?? null,
     bankAccountName: profile?.bankAccountName ?? null,
     qrUrl: profile?.qrUrl ?? null,
+    ownerFullName: profile?.ownerFullName ?? null,
+    ownerPhone: profile?.ownerPhone ?? null,
+    ownerEmail: profile?.ownerEmail ?? null,
   };
 }
 
