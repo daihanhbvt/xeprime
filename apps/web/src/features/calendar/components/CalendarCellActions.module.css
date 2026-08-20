@@ -1,9 +1,15 @@
-/* Panel neo cạnh ô — nằm TRONG canvas lịch nên cuộn theo lưới, không trôi lệch. */
+/*
+ * Panel neo cạnh ô — nằm TRONG canvas lịch nên cuộn theo lưới, không trôi lệch.
+ *
+ * Vì cùng canvas, nó là ANH EM của header ngày, cột xe sticky và hàng "Xe còn trống"; cả ba
+ * đều dính và đều có z-index. Panel từng để `z-index: 7` nên hàng "Xe còn trống" (30) đè lên
+ * và che mất phần dưới của menu.
+ */
 .panel {
   position: absolute;
   left: var(--xp-cell-menu-left);
   top: var(--xp-cell-menu-top);
-  z-index: 7;
+  z-index: var(--xp-z-calendar-popover);
   display: flex;
   flex-direction: column;
   min-width: 240px;

@@ -104,7 +104,6 @@ function groupsOf(
           value:
             [
               values.deliveryEnabled ? 'Giao tận nơi' : null,
-              values.noCollateral ? 'Miễn thế chấp' : null,
             ]
               .filter(Boolean)
               .join(' · ') || 'Không áp dụng',

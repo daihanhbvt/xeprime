@@ -865,6 +865,15 @@ export class PublicListingsService {
       longTermPackages,
       pickupPoint,
       deliveryAvailable: policy?.values.deliveryEnabled ?? false,
+      // Điều kiện bảo đảm lấy từ CHÍNH SÁCH HIỆU LỰC — cùng nguồn với nhãn "Miễn thế chấp" trên
+      // thẻ xe. Chưa có chính sách thì null: nói "chưa công bố" đúng hơn là hứa miễn thế chấp.
+      collateral: policy
+        ? {
+            mode: policy.values.collateralMode,
+            assetTypes: policy.values.collateralAssetTypes,
+            depositAmount: policy.values.depositAmount,
+          }
+        : null,
     };
   }
 }

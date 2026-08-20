@@ -1227,6 +1227,14 @@ model TenantCustomerDocument {
   /// không lưu — trạng thái phụ thuộc ngày hôm nay thì không được có cột.
   expiresAt        DateTime? @map("expires_at") @db.Date
   uploadedBy       String?   @map("uploaded_by") @db.Char(26)
+  /// ĐỐI CHIẾU giấy tờ (20/08): nhân viên tự soi VNeID/bản gốc rồi tích, hệ thống KHÔNG gọi API
+  /// định danh quốc gia. Bốn cột đi cùng nhau — `verified_at` NULL nghĩa là chưa đối chiếu, và
+  /// CHECK ở migration cấm trạng thái nửa vời (có thời điểm mà không có người, hay ngược lại).
+  verifiedAt       DateTime? @map("verified_at") @db.Timestamptz(3)
+  verifiedByUserId String?   @map("verified_by_user_id") @db.Char(26)
+  /// @xeprime/types → IdentityVerifyMethod (vneid | in_person)
+  verifyMethod     String?   @map("verify_method") @db.VarChar(20)
+  verifyNote       String?   @map("verify_note") @db.VarChar(255)
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   completedAt      DateTime? @map("completed_at") @db.Timestamptz(3)
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
@@ -1258,7 +1266,16 @@ model RentalPolicy {
   /// migration): mặc định theo LOẠI XE thắng mặc định legacy (cả hai NULL); bản ghi đè theo
   /// xe không mang cột này (loại đọc từ chính chiếc xe). Partial unique (tenant, vehicle_type).
   vehicleType             String?  @map("vehicle_type") @db.VarChar(50)
+  /// @xeprime/types → CollateralMode. Ba chế độ bảo đảm LOẠI TRỪ nhau (cash/asset/none).
+  /// Nguồn DUY NHẤT của nhãn "Miễn thế chấp" trên sàn kể từ 20/08 — `vehicles.no_collateral`
+  /// không còn được ghi tay, `ListingsService` suy nó ra từ đây (ADR 0008).
+  collateralMode          String   @default("cash") @map("collateral_mode") @db.VarChar(20)
+  /// @xeprime/types → CollateralAssetType. CHỈ có nghĩa khi mode='asset'; quan hệ ba bên với
+  /// `deposit_amount` giữ bằng CHECK `rental_policies_collateral_scope_check` ở migration —
+  /// ràng ở DB vì đây là thứ hai request đua nhau vẫn không được phép làm sai.
+  collateralAssetTypes    String[] @default([]) @map("collateral_asset_types") @db.VarChar(50)
   /// Cọc thế chấp CỐ ĐỊNH bằng VND — không nằm trong doanh thu thuê, không chịu giảm giá.
+  /// Chỉ khác 0 khi `collateral_mode = 'cash'`.
   depositAmount           Decimal  @default(0) @map("deposit_amount") @db.Decimal(14, 2)
   deliveryEnabled         Boolean  @default(false) @map("delivery_enabled")
   /// Bán kính tự báo giá tối đa (km) — ngoài bán kính này phải báo giá thủ công.

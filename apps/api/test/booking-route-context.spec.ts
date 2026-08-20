@@ -19,6 +19,7 @@ import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import type { PhoneVerificationService } from '../src/modules/phone-verification/phone-verification.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -37,7 +38,7 @@ const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
-const pricing = new PricingService(asService, audit);
+const pricing = new PricingService(asService, audit, new ListingsService(asService));
 const bookings = new BookingsService(
   asService,
   new OccupancyService(asService),

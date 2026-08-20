@@ -206,6 +206,9 @@ export const XP_TOKENS = {
   // CSS Module định vị tương đối mà không phải đoán. KHÔNG tạo nguồn thứ hai.
   'z-sidebar': '110',
   'z-topbar': '100',
+  // Popover neo trong canvas lịch — phải trên mọi lớp dính của lịch (chúng là anh em cùng
+  // stacking context), vẫn dưới topbar/sidebar.
+  'z-calendar-popover': '40',
   'z-calendar-header': '30',
   'z-calendar-sticky-col': '20',
   'z-popup-base': '1000',

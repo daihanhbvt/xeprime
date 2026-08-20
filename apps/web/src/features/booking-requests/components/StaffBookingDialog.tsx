@@ -75,6 +75,9 @@ export function StaffBookingDialog({
       open={open}
       onClose={handleClose}
       size={isResult ? 'md' : 'xl'}
+      // Bố cục hai cột tự cuộn từng bên (RequestBookingFlow `.left`/`.right`, StaffVehiclePicker
+      // `.scroller`) — thân overlay phải khoá cuộn để không thành hai lớp lồng nhau.
+      bodyScroll="content"
       mobileMode="fullscreen"
       footer={null}
       confirmLoading={busy}

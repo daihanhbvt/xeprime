@@ -312,3 +312,28 @@
     grid-template-columns: max-content minmax(0, 1fr);
   }
 }
+
+/* ── Bảo đảm & giấy tờ cần có (gap C-04) ─────────────────────────────────────────────── */
+
+.collateral {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-radius-lg);
+  background: var(--xp-color-fill-quaternary);
+}
+
+.collateralTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: 600;
+}
+
+.collateralLine {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

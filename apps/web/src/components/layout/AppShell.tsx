@@ -13,6 +13,7 @@ import { destroySession } from '@/services/auth.service';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
+import { useNavPreferencesSync } from './use-nav-preferences-sync';
 import styles from './AppShell.module.css';
 import { useTranslations } from 'next-intl';
 
@@ -50,6 +51,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { data: user, isLoading, isError } = useCurrentUser();
   const { hasNoTenant, isPendingApproval, tenant } = useTenantScope();
+  // Một chỗ ghi duy nhất cho tuỳ chọn sidebar/khối menu — sidebar desktop và Drawer mobile
+  // cùng sửa một state, nên việc lưu không thuộc về riêng cái nào.
+  useNavPreferencesSync();
 
   const isPublicPortalPath = PUBLIC_PORTAL_PATHS.includes(pathname);
   const isBarePortalPath = BARE_PORTAL_PATHS.includes(pathname);

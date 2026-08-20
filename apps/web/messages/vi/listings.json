@@ -27,6 +27,11 @@
       "color": "Màu",
       "brand": "Hãng"
     },
+    "collateralTitle": "Bảo đảm & giấy tờ cần có",
+    "collateralDeposit": "Đặt cọc {amount}",
+    "collateralAsset": "Thế chấp: {types}",
+    "collateralNone": "Không yêu cầu đặt cọc hay thế chấp tài sản",
+    "collateralDocuments": "Giấy tờ cần đối chiếu khi nhận xe: {documents}",
     "longTermQuote": "Liên hệ báo giá thuê dài hạn",
     "withDriverQuote": "Liên hệ báo giá chuyến có tài xế",
     "delivery": "Giao xe tận nơi",

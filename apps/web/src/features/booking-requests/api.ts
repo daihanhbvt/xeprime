@@ -10,6 +10,7 @@ import type {
   CheckAvailabilityInput,
   CheckAvailabilityResult,
   CreateBookingRequestInput,
+  VehicleBusyDays,
 } from './types';
 
 export const BOOKING_REQUESTS_DEFAULT_LIMIT = 20;
@@ -92,3 +93,26 @@ export const submitBookingRequest = (
 /** Công khai — kiểm tra nhanh khung giờ của một xe còn trống không (preview, ADR 0006). */
 export const checkAvailability = (body: CheckAvailabilityInput): Promise<CheckAvailabilityResult> =>
   apiPost<CheckAvailabilityResult>('/public/booking-requests/check-availability', body);
+
+/**
+ * Số ngày lịch bận nạp sẵn khi mở hộp chọn thời gian thuê.
+ *
+ * Một request cho cả năm thay vì một request mỗi lần lật tháng: kết quả THƯA (chỉ ngày bận) nên
+ * xe rảnh trả về mảng rỗng, và khách lật tháng không phải chờ lịch tô lại.
+ */
+export const BUSY_DAYS_LOOKAHEAD = 366;
+
+/**
+ * Công khai — lịch bận của một xe trong cửa sổ `[from, to]` (ngày lịch Việt Nam) để hộp chọn
+ * thời gian thuê khoá ngày bận. Preview, không phải bảo vệ (ADR 0006).
+ */
+export const fetchVehicleBusyDays = async (
+  vehicleId: string,
+  from: string,
+  to: string,
+): Promise<VehicleBusyDays> => {
+  const res = await apiRequest<VehicleBusyDays>('/public/booking-requests/busy-days', {
+    query: { vehicleId, from, to },
+  });
+  return res.data;
+};

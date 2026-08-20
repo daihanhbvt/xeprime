@@ -3,6 +3,7 @@ import { Be_Vietnam_Pro, Playfair_Display } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { getServerLocale } from '@/i18n/locale';
+import { getServerNavPreferences } from '@/lib/ui-preferences.server';
 import { Providers } from './providers';
 import '@/styles/tokens.css';
 import '@/styles/globals.css';
@@ -79,13 +80,16 @@ export const viewport: Viewport = {
  * từ `i18n/request.ts`, nên chỉ bó message của MỘT ngôn ngữ đi xuống client.
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const locale = await getServerLocale();
+  const [locale, navPreferences] = await Promise.all([
+    getServerLocale(),
+    getServerNavPreferences(),
+  ]);
 
   return (
     <html lang={locale} className={`${beVietnam.variable} ${playfair.variable}`}>
       <body>
         <NextIntlClientProvider>
-          <Providers>{children}</Providers>
+          <Providers navPreferences={navPreferences}>{children}</Providers>
         </NextIntlClientProvider>
       </body>
     </html>

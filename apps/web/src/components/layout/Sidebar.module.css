@@ -18,11 +18,17 @@
   width: var(--xp-shell-sidebar-collapsed-width);
 }
 
+/**
+ * Khối thương hiệu: logo bên trái, nút thu gọn bên phải, cùng một hàng cao bằng thanh trên.
+ *
+ * Cùng chiều cao với topbar là điều kiện để logo và breadcrumb nằm trên một đường ngang — mắt
+ * đọc được "đây là một vỏ", không phải hai thanh rời.
+ */
 .brand {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
   min-height: var(--xp-shell-topbar-height);
   padding: var(--xp-space-sm) var(--xp-space-md);
   flex: none;
@@ -30,13 +36,23 @@
   overflow: hidden;
 }
 
+.brandMark {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Thu gọn: logo và nút xếp dọc, căn giữa cột 64px (Figma `47:82`). */
 .siderCollapsed .brand {
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--xp-space-xs);
   padding-inline: 0;
 }
 
-/* Tên gian hàng — dòng phụ, có thể rất dài nên cắt bằng ellipsis. */
+/* Tên gian hàng — dòng phụ dưới logo, có thể rất dài nên cắt bằng ellipsis. */
 .tenant {
+  flex: none;
+  padding: 0 var(--xp-space-md) var(--xp-space-sm);
   font-size: var(--xp-font-size-body-sm);
   color: var(--xp-shell-sidebar-muted);
   overflow: hidden;
@@ -55,8 +71,6 @@
  */
 .sider .toggle {
   flex: none;
-  align-self: flex-end;
-  margin-inline: var(--xp-space-sm);
   color: var(--xp-shell-sidebar-muted);
 }
 
@@ -72,17 +86,14 @@
   outline-offset: 2px;
 }
 
-/* Thu gọn: nút xuống dưới logo và căn giữa cột (Figma `47:82`). */
-.siderCollapsed .toggle {
-  align-self: center;
-  margin-inline: 0;
-}
-
 .menu {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--xp-space-sm);
+  padding: 0 var(--xp-space-sm) var(--xp-space-sm);
+  /* Thanh cuộn mảnh, màu theo nền tối: mặc định của hệ điều hành là một vệt sáng cắt ngang cột. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--xp-shell-sidebar-border) transparent;
 }
 
 .siderCollapsed .menu {
@@ -90,7 +101,8 @@
 }
 
 /**
- * Chỉ desktop (>1024px). Từ 1024px trở xuống dùng Drawer + thanh tab dưới đáy.
+ * Chỉ desktop (>1024px). Từ 1024px trở xuống dùng Drawer + thanh tab dưới đáy — trên tablet
+ * điều đó còn tiết kiệm chỗ hơn cả cột thu gọn 64px, nên không có chế độ thứ ba cho tablet.
  *
  * Ranh là `--xp-bp-tablet` = 1024, KHÔNG phải 992 như trước Wave 1D-C: 992 là token `lg` của
  * Ant Design, không thuộc thang XePrime, và nó khiến dải 993–1024px hiện sidebar desktop

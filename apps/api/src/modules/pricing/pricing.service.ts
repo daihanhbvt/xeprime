@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  COLLATERAL_MODE,
   discountTierFromStored,
   legacyDiscountTierFromStored,
   LONG_TERM_PACKAGE_MONTHS,
@@ -16,12 +17,15 @@ import {
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   type BookingPriceSnapshot,
+  type CollateralAssetType,
+  type CollateralMode,
   type DeliveryTier,
   type DiscountTier,
   type LegacyDiscountTier,
   type PolicySource,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
+import { ListingsService } from '../public-listings/listings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   DeliverySummaryDto,
@@ -39,6 +43,8 @@ const POLICY_SELECT = {
   id: true,
   vehicleId: true,
   vehicleType: true,
+  collateralMode: true,
+  collateralAssetTypes: true,
   depositAmount: true,
   deliveryEnabled: true,
   deliveryMaxRadiusKm: true,
@@ -85,6 +91,7 @@ export class PricingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly listings: ListingsService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -164,6 +171,13 @@ export class PricingService {
           },
         });
       }
+
+      /*
+       * Nhãn "Miễn thế chấp" trên sàn là hệ quả của chính sách này (ADR 0008 — ghi qua writer
+       * duy nhất). Không đồng bộ ở đây thì sàn hiển thị sai cho tới lần sửa xe kế tiếp, tức là
+       * có thể sai vô thời hạn. Cùng transaction: chính sách và snapshot không được lệch nhau.
+       */
+      await this.listings.syncCollateralForPolicy(tenantId, tx);
 
       // Thay đổi nhạy cảm (ảnh hưởng giá mọi lượt đặt mới của cả gian hàng) → audit đầy đủ.
       await this.audit.record(
@@ -246,6 +260,26 @@ export class PricingService {
    * bậc trùng/không tăng dần, bán kính hở khoảng so với mốc cuối, mốc ưu đãi trùng.
    */
   validatePolicy(dto: SaveRentalPolicyDto): void {
+    /*
+     * Bảo đảm: ba chế độ LOẠI TRỪ nhau. CHECK ở DB là chốt chặn thật (hai request đua nhau vẫn
+     * không lọt), còn ở đây để người dùng nhận đúng câu lỗi thay vì một lỗi ràng buộc thô.
+     */
+    const deposit = Number(dto.depositAmount);
+    const assets = dto.collateralAssetTypes.length;
+    if (dto.collateralMode === COLLATERAL_MODE.CASH) {
+      if (!(deposit > 0)) throw invalid('Chọn "Cọc tiền" thì phải nhập số tiền cọc lớn hơn 0');
+      if (assets > 0) throw invalid('Chế độ "Cọc tiền" không nhận loại tài sản thế chấp');
+    } else if (dto.collateralMode === COLLATERAL_MODE.ASSET) {
+      if (assets === 0) throw invalid('Chọn "Cọc tài sản" thì phải chọn ít nhất một loại tài sản');
+      if (deposit !== 0) throw invalid('Chế độ "Cọc tài sản" không thu tiền cọc — để số tiền là 0');
+      if (new Set(dto.collateralAssetTypes).size !== assets) {
+        throw invalid('Loại tài sản thế chấp bị trùng');
+      }
+    } else {
+      if (deposit !== 0) throw invalid('Chế độ "Miễn thế chấp" không được giữ tiền cọc');
+      if (assets > 0) throw invalid('Chế độ "Miễn thế chấp" không nhận loại tài sản thế chấp');
+    }
+
     if (dto.deliveryEnabled) {
       if (dto.deliveryTiers.length === 0) {
         throw invalid('Bật giao nhận thì phải có ít nhất một bậc khoảng cách');
@@ -846,6 +880,10 @@ export class PricingService {
         ? {
             source: policy.source,
             updatedAt: policy.values.updatedAt,
+            // Điều kiện bảo đảm lúc chốt: khách đặt khi shop nhận cà vẹt thì về sau shop đổi
+            // sang cọc tiền cũng không được viết lại quá khứ của đơn.
+            collateralMode: policy.values.collateralMode as CollateralMode,
+            collateralAssetTypes: policy.values.collateralAssetTypes as CollateralAssetType[],
             depositAmount: policy.values.depositAmount,
             deliveryEnabled: policy.values.deliveryEnabled,
             deliveryMaxRadiusKm: policy.values.deliveryMaxRadiusKm,
@@ -977,6 +1015,8 @@ export class PricingService {
 
 function toValues(row: PolicyRow): RentalPolicyValuesDto {
   return {
+    collateralMode: row.collateralMode,
+    collateralAssetTypes: row.collateralAssetTypes,
     depositAmount: row.depositAmount.toFixed(0),
     deliveryEnabled: row.deliveryEnabled,
     deliveryMaxRadiusKm: row.deliveryMaxRadiusKm ? Number(row.deliveryMaxRadiusKm) : null,
@@ -1004,6 +1044,8 @@ function toValues(row: PolicyRow): RentalPolicyValuesDto {
  */
 export function policyData(dto: SaveRentalPolicyDto) {
   return {
+    collateralMode: dto.collateralMode,
+    collateralAssetTypes: dto.collateralAssetTypes,
     depositAmount: new Prisma.Decimal(dto.depositAmount),
     deliveryEnabled: dto.deliveryEnabled,
     deliveryMaxRadiusKm: dto.deliveryEnabled ? new Prisma.Decimal(dto.deliveryMaxRadiusKm!) : null,
@@ -1019,6 +1061,8 @@ export function policyData(dto: SaveRentalPolicyDto) {
 
 /** Bản ghi audit gọn — Decimal → string để jsonb không mang object lạ. */
 function auditShape(data: {
+  collateralMode: string;
+  collateralAssetTypes: string[];
   depositAmount: Prisma.Decimal;
   deliveryEnabled: boolean;
   deliveryMaxRadiusKm: Prisma.Decimal | null;
@@ -1030,6 +1074,8 @@ function auditShape(data: {
   discountTiers: unknown;
 }): Record<string, unknown> {
   return {
+    collateralMode: data.collateralMode,
+    collateralAssetTypes: data.collateralAssetTypes,
     depositAmount: data.depositAmount.toFixed(0),
     deliveryEnabled: data.deliveryEnabled,
     deliveryMaxRadiusKm: data.deliveryMaxRadiusKm ? Number(data.deliveryMaxRadiusKm) : null,

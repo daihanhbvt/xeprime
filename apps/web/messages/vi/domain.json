@@ -65,6 +65,20 @@
     "flagged": "Cần xem xét",
     "archived": "Đã lưu trữ"
   },
+  "collateralAssetType": {
+    "vehicle_registration": "Cà vẹt (đăng ký xe máy)",
+    "motorbike": "Xe máy",
+    "passport": "Hộ chiếu"
+  },
+  "collateralMode": {
+    "cash": "Cọc tiền",
+    "asset": "Cọc tài sản",
+    "none": "Miễn thế chấp"
+  },
+  "identityVerifyMethod": {
+    "vneid": "Đối chiếu qua VNeID",
+    "in_person": "Đối chiếu bản gốc trực tiếp"
+  },
   "customerDocumentExpiry": {
     "no_expiry": "Không có hạn",
     "valid": "Còn hiệu lực",

@@ -320,6 +320,8 @@ describe('Vehicle public approval (WS0)', () => {
         source: 'vehicle',
         monthlyPrice: '9000000',
         policy: {
+          collateralMode: 'none',
+          collateralAssetTypes: [],
           depositAmount: '0',
           deliveryEnabled: false,
           deliveryTiers: [],

@@ -62,7 +62,6 @@ const EMPTY_DEFAULTS: VehicleFormValues = {
   weekendPrice: null,
   hourlyPrice: null,
   deliveryEnabled: false,
-  noCollateral: false,
   discountPercent: null,
   description: '',
   mainImageUrl: null,

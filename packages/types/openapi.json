@@ -7778,6 +7778,48 @@
         ]
       }
     },
+    "/customers/{id}/documents/{documentId}/verify": {
+      "post": {
+        "operationId": "CustomerDocumentsController_verify",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "documentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCustomerDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Ghi nhận đã đối chiếu giấy tờ (thủ công — VNeID/bản gốc), có audit",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
     "/customers/{id}/documents/{documentId}": {
       "delete": {
         "operationId": "CustomerDocumentsController_remove",
@@ -8115,6 +8157,56 @@
           }
         },
         "summary": "Khách kiểm tra nhanh khung giờ của một xe có trống không (preview)",
+        "tags": [
+          "public-booking-requests"
+        ]
+      }
+    },
+    "/public/booking-requests/busy-days": {
+      "get": {
+        "operationId": "PublicBookingRequestsController_busyDays",
+        "parameters": [
+          {
+            "name": "vehicleId",
+            "required": true,
+            "in": "query",
+            "description": "ID xe (ULID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Ngày đầu cửa sổ tra cứu (YYYY-MM-DD, ngày lịch Việt Nam)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Ngày cuối cửa sổ (YYYY-MM-DD). Quá 400 ngày kể từ `from` thì bị kẹp về trần — xem `to` trong kết quả",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleBusyDaysDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ngày/giờ xe đã bận trong một cửa sổ, để tô lịch chọn thời gian thuê",
         "tags": [
           "public-booking-requests"
         ]
@@ -12222,6 +12314,39 @@
           "address"
         ]
       },
+      "ListingCollateralDto": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "asset",
+              "none"
+            ]
+          },
+          "assetTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "vehicle_registration",
+                "motorbike",
+                "passport"
+              ]
+            }
+          },
+          "depositAmount": {
+            "type": "string",
+            "description": "VND string — chỉ khác 0 khi mode = cash"
+          }
+        },
+        "required": [
+          "mode",
+          "assetTypes",
+          "depositAmount"
+        ]
+      },
       "PublicListingDetailDto": {
         "type": "object",
         "properties": {
@@ -12407,6 +12532,15 @@
           "deliveryAvailable": {
             "type": "boolean",
             "description": "Giao xe tận nơi có ĐẶT ĐƯỢC không (theo chính sách hiệu lực)"
+          },
+          "collateral": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ListingCollateralDto"
+              }
+            ]
           }
         },
         "required": [
@@ -12634,6 +12768,25 @@
       "RentalPolicyValuesDto": {
         "type": "object",
         "properties": {
+          "collateralMode": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "asset",
+              "none"
+            ]
+          },
+          "collateralAssetTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "vehicle_registration",
+                "motorbike",
+                "passport"
+              ]
+            }
+          },
           "depositAmount": {
             "type": "string"
           },
@@ -12685,6 +12838,8 @@
           }
         },
         "required": [
+          "collateralMode",
+          "collateralAssetTypes",
           "depositAmount",
           "deliveryEnabled",
           "deliveryTiers",
@@ -12724,9 +12879,30 @@
       "SaveRentalPolicyDto": {
         "type": "object",
         "properties": {
+          "collateralMode": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "asset",
+              "none"
+            ],
+            "description": "Hình thức bảo đảm — ba chế độ LOẠI TRỪ nhau. Quan hệ với depositAmount/collateralAssetTypes kiểm ở validatePolicy và ràng bằng CHECK ở DB."
+          },
+          "collateralAssetTypes": {
+            "type": "array",
+            "description": "Loại tài sản nhận thế chấp — chỉ có nghĩa khi collateralMode = asset",
+            "items": {
+              "type": "string",
+              "enum": [
+                "vehicle_registration",
+                "motorbike",
+                "passport"
+              ]
+            }
+          },
           "depositAmount": {
             "type": "string",
-            "description": "Cọc thế chấp cố định VND (chuỗi)",
+            "description": "Cọc thế chấp cố định VND (chuỗi) — khác 0 CHỈ khi collateralMode = cash",
             "example": "5000000"
           },
           "deliveryEnabled": {
@@ -12769,6 +12945,8 @@
           }
         },
         "required": [
+          "collateralMode",
+          "collateralAssetTypes",
           "depositAmount",
           "deliveryEnabled",
           "deliveryTiers",
@@ -13940,10 +14118,6 @@
             "type": "boolean",
             "description": "Chủ xe hỗ trợ giao xe tận nơi"
           },
-          "noCollateral": {
-            "type": "boolean",
-            "description": "Miễn thế chấp (không cần cọc tài sản)"
-          },
           "createdAt": {
             "type": "string",
             "description": "ISO-8601 UTC"
@@ -13982,7 +14156,6 @@
           "publicStatus",
           "updatedAt",
           "deliveryEnabled",
-          "noCollateral",
           "createdAt",
           "images",
           "features"
@@ -14188,26 +14361,27 @@
             "enum": [
               "shop",
               "vehicle"
-            ]
+            ],
+            "description": "NGUỒN CHÍNH SÁCH của xe — KHÔNG còn khoá phần giá (20/08). shop = xoá bản ghi đè và quay về kế thừa; vehicle = lưu bộ chính sách riêng (phải gửi kèm policy)."
           },
           "weekdayPrice": {
             "type": "string",
-            "description": "Giá thuê ngày thường VND — chỉ nhận khi source=vehicle"
+            "description": "Giá thuê ngày thường VND — độc lập với source (giá luôn sửa được)"
           },
           "weekendPrice": {
             "type": "string",
             "nullable": true,
-            "description": "Giá cuối tuần VND — chỉ nhận khi source=vehicle; null = xoá (dùng giá thường)"
+            "description": "Giá cuối tuần VND — độc lập với source (giá luôn sửa được); null = xoá (dùng giá thường)"
           },
           "monthlyPrice": {
             "type": "string",
             "nullable": true,
-            "description": "Giá tháng thuê dài hạn — chỉ nhận khi source=vehicle; null = xoá giá tháng"
+            "description": "Giá tháng thuê dài hạn — độc lập với source (giá luôn sửa được); null = xoá giá tháng"
           },
           "withDriverDailyPrice": {
             "type": "string",
             "nullable": true,
-            "description": "Giá/ngày đã gồm tài xế (nội thành/cơ bản) — chỉ nhận khi source=vehicle"
+            "description": "Giá/ngày đã gồm tài xế (nội thành/cơ bản) — độc lập với source (giá luôn sửa được)"
           },
           "withDriverInterCityPrice": {
             "type": "string",
@@ -14820,10 +14994,6 @@
             "type": "boolean",
             "description": "Chủ xe hỗ trợ giao xe tận nơi"
           },
-          "noCollateral": {
-            "type": "boolean",
-            "description": "Miễn thế chấp (không cần cọc tài sản)"
-          },
           "discountPercent": {
             "type": "number",
             "nullable": true,
@@ -15069,10 +15239,6 @@
           "deliveryEnabled": {
             "type": "boolean",
             "description": "Chủ xe hỗ trợ giao xe tận nơi"
-          },
-          "noCollateral": {
-            "type": "boolean",
-            "description": "Miễn thế chấp (không cần cọc tài sản)"
           },
           "discountPercent": {
             "type": "number",
@@ -17474,6 +17640,25 @@
       "SnapshotPolicyDto": {
         "type": "object",
         "properties": {
+          "collateralMode": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "asset",
+              "none"
+            ]
+          },
+          "collateralAssetTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "vehicle_registration",
+                "motorbike",
+                "passport"
+              ]
+            }
+          },
           "depositAmount": {
             "type": "string"
           },
@@ -17532,6 +17717,8 @@
           }
         },
         "required": [
+          "collateralMode",
+          "collateralAssetTypes",
           "depositAmount",
           "deliveryEnabled",
           "deliveryTiers",
@@ -17705,6 +17892,10 @@
           "createdAt": {
             "type": "string",
             "description": "ISO-8601 UTC"
+          },
+          "tenantCustomerId": {
+            "type": "string",
+            "nullable": true
           },
           "vehicleImageUrl": {
             "type": "string",
@@ -19571,6 +19762,26 @@
             "type": "string",
             "nullable": true
           },
+          "verifiedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "verifiedByName": {
+            "type": "string",
+            "nullable": true
+          },
+          "verifyMethod": {
+            "type": "string",
+            "enum": [
+              "vneid",
+              "in_person"
+            ],
+            "nullable": true
+          },
+          "verifyNote": {
+            "type": "string",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "description": "ISO-8601 UTC"
@@ -19668,6 +19879,26 @@
         "required": [
           "downloadUrl",
           "expiresAt"
+        ]
+      },
+      "VerifyCustomerDocumentDto": {
+        "type": "object",
+        "properties": {
+          "verifyMethod": {
+            "type": "string",
+            "enum": [
+              "vneid",
+              "in_person"
+            ]
+          },
+          "verifyNote": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ghi chú khi đối chiếu"
+          }
+        },
+        "required": [
+          "verifyMethod"
         ]
       },
       "BookingRequestDeliveryQuoteDto": {
@@ -20208,6 +20439,73 @@
         },
         "required": [
           "available"
+        ]
+      },
+      "VehicleBusyPeriodDto": {
+        "type": "object",
+        "properties": {
+          "startAt": {
+            "type": "string",
+            "description": "Bắt đầu bận (ISO-8601 UTC), đã cắt về trong ngày"
+          },
+          "endAt": {
+            "type": "string",
+            "description": "Kết thúc bận (ISO-8601 UTC), đã cắt về trong ngày"
+          }
+        },
+        "required": [
+          "startAt",
+          "endAt"
+        ]
+      },
+      "VehicleBusyDayDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Ngày local Asia/Ho_Chi_Minh, YYYY-MM-DD"
+          },
+          "fullyBusy": {
+            "type": "boolean",
+            "description": "Bận trọn ngày — ngày này không nhận cũng không trả xe được"
+          },
+          "periods": {
+            "description": "Các quãng bận trong ngày (đã gộp, tăng dần). Rỗng khi `fullyBusy`",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleBusyPeriodDto"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "fullyBusy",
+          "periods"
+        ]
+      },
+      "VehicleBusyDaysDto": {
+        "type": "object",
+        "properties": {
+          "days": {
+            "description": "CHỈ những ngày có lịch bận trong cửa sổ (danh sách thưa), tăng dần theo ngày",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VehicleBusyDayDto"
+            }
+          },
+          "from": {
+            "type": "string",
+            "description": "Ngày đầu cửa sổ đã áp dụng (YYYY-MM-DD)"
+          },
+          "to": {
+            "type": "string",
+            "description": "Ngày cuối cửa sổ đã áp dụng (YYYY-MM-DD) — có thể bị kẹp về trần"
+          }
+        },
+        "required": [
+          "days",
+          "from",
+          "to"
         ]
       },
       "ConversationPageMetaDto": {

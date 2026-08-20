@@ -17,6 +17,8 @@ import { VehiclePricingWorkspace } from './VehiclePricingWorkspace';
  */
 function shopPolicy(over: Partial<RentalPolicyValues> = {}): RentalPolicyValues {
   return {
+    collateralMode: 'cash',
+    collateralAssetTypes: [],
     depositAmount: '5000000',
     deliveryEnabled: true,
     deliveryMaxRadiusKm: 10,
@@ -74,33 +76,55 @@ function renderWorkspace(pricing: VehiclePricing, canEdit = true) {
 beforeEach(() => onSave.mockReset());
 afterEach(cleanup);
 
-describe('State A — kế thừa gian hàng (read-only)', () => {
-  it('bảng thông số kế thừa + huy hiệu + link về chính sách gian hàng; KHÔNG có form sửa', () => {
+describe('State A — kế thừa chính sách gian hàng', () => {
+  it('chính sách hiện read-only, nhưng GIÁ vẫn sửa được ngay (tách giá khỏi ghi đè, 20/08)', () => {
     renderWorkspace(pricingFixture());
 
     expect(screen.getByText('Đang kế thừa')).toBeTruthy();
-    expect(screen.getByText('800.000 ₫/ngày')).toBeTruthy();
-    expect(screen.getByText('5.000.000 ₫')).toBeTruthy();
+    expect(screen.getByText('Cọc tiền · 5.000.000 ₫')).toBeTruthy();
     expect(screen.getByText('Bật (2 khoảng cách)')).toBeTruthy();
     expect(screen.getByText('100.000 ₫/giờ')).toBeTruthy();
     expect(screen.getByText('Mức giảm tối đa 15%')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Xem chính sách gian hàng →' })).toBeTruthy();
-    expect(screen.queryByLabelText('Giá ngày thường')).toBeNull();
+    // Điểm CỐT LÕI của đợt này: kế thừa chính sách KHÔNG còn khoá ô giá.
+    expect((screen.getByLabelText('Giá ngày thường') as HTMLInputElement).value).toBe('800.000');
+    // Nhưng ô của chính sách thì chưa có — phải bật tùy chỉnh riêng mới hiện.
+    expect(screen.queryByLabelText('Số tiền cọc mặc định')).toBeNull();
   });
 
   it('gian hàng CHƯA có chính sách: nói thẳng, không bịa số', () => {
     renderWorkspace(pricingFixture({ source: null, policy: null, shopPolicy: null }));
     expect(screen.getByText('Gian hàng chưa cấu hình chính sách thuê')).toBeTruthy();
     // Giá là dữ liệu của xe nên vẫn phải thấy/sửa được dù policy gian hàng chưa có.
-    expect(screen.getByText('800.000 ₫/ngày')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Chỉnh sửa giá & khuyến mãi' })).toBeTruthy();
+    expect((screen.getByLabelText('Giá ngày thường') as HTMLInputElement).value).toBe('800.000');
+    expect(screen.getByRole('button', { name: 'Tùy chỉnh riêng cho xe này' })).toBeTruthy();
+  });
+
+  it('gian hàng CHƯA có chính sách: vẫn lưu được GIÁ, không bị ràng buộc cọc chặn', async () => {
+    // Ô "Số tiền cọc mặc định" KHÔNG hiện ở chế độ kế thừa, nên nó không được phép chặn submit —
+    // nếu không, một shop chưa cấu hình chính sách sẽ không bao giờ đặt nổi giá cho xe.
+    renderWorkspace(pricingFixture({ source: null, policy: null, shopPolicy: null }));
+    fireEvent.change(await screen.findByLabelText('Giá ngày thường'), {
+      target: { value: '990000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+
+    // Hộp thoại nói về GIÁ, không hứa lưu chính sách riêng — xe vẫn đang kế thừa.
+    expect((await screen.findAllByText('Lưu giá thuê cho xe này?')).length).toBeGreaterThan(0);
+    const buttons = screen.getAllByRole('button', { name: 'Lưu thay đổi' });
+    fireEvent.click(buttons[buttons.length - 1]!);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const body = onSave.mock.calls[0]![0] as { source: string; weekdayPrice: string };
+    expect(body.source).toBe(POLICY_SOURCE.SHOP);
+    expect(body.weekdayPrice).toBe('990000');
   });
 });
 
 describe('State B — chuyển sang ghi đè và lưu', () => {
   it('bấm chỉnh sửa → form hiện, prefill từ chính sách gian hàng + giá xe', async () => {
     renderWorkspace(pricingFixture());
-    fireEvent.click(screen.getByRole('button', { name: 'Chỉnh sửa giá & khuyến mãi' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tùy chỉnh riêng cho xe này' }));
 
     const price = (await screen.findByLabelText('Giá ngày thường')) as HTMLInputElement;
     expect(price.value).toBe('800.000');
@@ -112,7 +136,7 @@ describe('State B — chuyển sang ghi đè và lưu', () => {
 
   it('giải thích giá nằm ở icon cạnh label, không chiếm chỗ bên dưới input', async () => {
     renderWorkspace(pricingFixture());
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }));
     await screen.findByLabelText('Giá cuối tuần (tuỳ chọn)');
 
     expect(screen.queryByText('Bỏ trống = dùng giá ngày thường cho cả cuối tuần')).toBeNull();
@@ -122,7 +146,7 @@ describe('State B — chuyển sang ghi đè và lưu', () => {
 
   it('lưu (xe KHÔNG công khai): xác nhận thường rồi gửi source=vehicle + policy + giá chuỗi', async () => {
     renderWorkspace(pricingFixture());
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }));
     fireEvent.change(await screen.findByLabelText('Giá ngày thường'), {
       target: { value: '950000' },
     });
@@ -156,7 +180,7 @@ describe('Giá đa dịch vụ (17/08)', () => {
         withDriverDailyPrice: '1300000',
       }),
     );
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }));
 
     expect(await screen.findByLabelText('Giá ngày thường')).toBeTruthy();
     const monthly = screen.getByLabelText('Giá dài hạn cơ sở (một tháng)') as HTMLInputElement;
@@ -183,7 +207,7 @@ describe('Giá đa dịch vụ (17/08)', () => {
 
   it('xe CHỈ tự lái: không hiện khối giá dài hạn/có tài xế', async () => {
     renderWorkspace(pricingFixture());
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }));
     await screen.findByLabelText('Giá ngày thường');
     expect(screen.queryByLabelText('Giá dài hạn cơ sở (một tháng)')).toBeNull();
     expect(screen.queryByLabelText('Nội thành (giá cơ bản)')).toBeNull();
@@ -199,7 +223,7 @@ describe('Khuyến mãi trực tiếp + xem trước giá trên sàn', () => {
         discountPercent: 15,
       }),
     );
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }));
 
     expect(((await screen.findByLabelText('Mức giảm trực tiếp')) as HTMLInputElement).value).toBe(
       '15',
@@ -214,7 +238,7 @@ describe('Khuyến mãi trực tiếp + xem trước giá trên sàn', () => {
 
   it('tắt khuyến mãi rồi lưu gửi discountPercent=null', async () => {
     renderWorkspace(pricingFixture({ discountPercent: 15 }));
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }));
     fireEvent.click(await screen.findByRole('switch', { name: 'Bật khuyến mãi trực tiếp' }));
     expect(screen.queryByLabelText('Mức giảm trực tiếp')).toBeNull();
 
@@ -233,7 +257,7 @@ describe('Khuyến mãi trực tiếp + xem trước giá trên sàn', () => {
 describe('State D — thay đổi nhạy cảm trên xe công khai', () => {
   it('đổi giá xe đang công khai: hộp xác nhận nói đúng hệ quả knockback (ADR 0008)', async () => {
     renderWorkspace(pricingFixture({ isPublic: true }));
-    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }));
     fireEvent.change(await screen.findByLabelText('Giá ngày thường'), {
       target: { value: '950000' },
     });
@@ -267,6 +291,6 @@ describe('Đặt lại theo gian hàng', () => {
 
   it('thiếu quyền sửa: switch nguồn bị khoá', () => {
     renderWorkspace(pricingFixture(), false);
-    expect((screen.getByRole('switch') as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('switch', { name: 'Dùng chính sách chung của gian hàng' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

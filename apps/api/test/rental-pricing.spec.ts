@@ -19,6 +19,7 @@ import { CustomersService } from '../src/modules/customers/customers.service';
 import { DriversService } from '../src/modules/drivers/drivers.service';
 import { OccupancyService } from '../src/modules/calendar/occupancy.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
 import type { AuthService } from '../src/modules/auth/auth.service';
@@ -38,7 +39,7 @@ import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
-const pricing = new PricingService(asService, audit);
+const pricing = new PricingService(asService, audit, new ListingsService(asService));
 const vehicles = makeVehiclesService(asService);
 const createVehicle = vehicleCreator(vehicles, asService);
 const bookings = new BookingsService(
@@ -74,6 +75,8 @@ const inHours = (h: number) => new Date(Date.now() + h * HOUR);
 /** Chính sách demo đúng thiết kế: cọc 5tr; bậc 0–3 miễn phí, 3–5: 30k, 5–10: 50k; giảm 5% từ 3 ngày. */
 function policyDto(over: Partial<SaveRentalPolicyDto> = {}): SaveRentalPolicyDto {
   return {
+    collateralMode: 'cash',
+    collateralAssetTypes: [],
     depositAmount: '5000000',
     deliveryEnabled: true,
     deliveryMaxRadiusKm: 10,

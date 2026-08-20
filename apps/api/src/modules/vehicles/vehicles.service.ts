@@ -96,7 +96,6 @@ const DETAIL_SELECT = {
   withDriverInterCityPrice: true,
   withDriverOneWayPrice: true,
   deliveryEnabled: true,
-  noCollateral: true,
   description: true,
   createdAt: true,
 } satisfies Prisma.VehicleSelect;
@@ -637,25 +636,29 @@ export class VehiclesService {
       });
     }
 
-    // Giá chỉ sửa được ở chế độ ghi đè (chế độ kế thừa là read-only theo thiết kế).
-    const priceDto: UpdateVehicleDto = overriding
-      ? {
-          ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
-          ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
-          ...(dto.hourlyPrice !== undefined ? { hourlyPrice: dto.hourlyPrice } : {}),
-          ...(dto.monthlyPrice !== undefined ? { monthlyPrice: dto.monthlyPrice } : {}),
-          ...(dto.withDriverDailyPrice !== undefined
-            ? { withDriverDailyPrice: dto.withDriverDailyPrice }
-            : {}),
-          ...(dto.withDriverInterCityPrice !== undefined
-            ? { withDriverInterCityPrice: dto.withDriverInterCityPrice }
-            : {}),
-          ...(dto.withDriverOneWayPrice !== undefined
-            ? { withDriverOneWayPrice: dto.withDriverOneWayPrice }
-            : {}),
-          ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
-        }
-      : {};
+    /*
+     * GIÁ và CHÍNH SÁCH là hai trục độc lập (20/08). Trước đây `source` điều khiển cả hai, nên
+     * muốn đặt giá riêng cho một chiếc xe là buộc phải ghi đè TOÀN BỘ chính sách gian hàng —
+     * và bản ghi đè đó là một BẢN SAO đóng băng, khiến xe âm thầm ngừng nhận mọi thay đổi cọc/
+     * giao nhận/ưu đãi về sau. Giá vốn nằm trên `vehicles`, không nằm trên `rental_policies`,
+     * nên nó luôn ghi được; `source` từ đây chỉ còn quyết định hàng chính sách của xe.
+     */
+    const priceDto: UpdateVehicleDto = {
+      ...(dto.weekdayPrice !== undefined ? { weekdayPrice: dto.weekdayPrice } : {}),
+      ...(dto.weekendPrice !== undefined ? { weekendPrice: dto.weekendPrice } : {}),
+      ...(dto.hourlyPrice !== undefined ? { hourlyPrice: dto.hourlyPrice } : {}),
+      ...(dto.monthlyPrice !== undefined ? { monthlyPrice: dto.monthlyPrice } : {}),
+      ...(dto.withDriverDailyPrice !== undefined
+        ? { withDriverDailyPrice: dto.withDriverDailyPrice }
+        : {}),
+      ...(dto.withDriverInterCityPrice !== undefined
+        ? { withDriverInterCityPrice: dto.withDriverInterCityPrice }
+        : {}),
+      ...(dto.withDriverOneWayPrice !== undefined
+        ? { withDriverOneWayPrice: dto.withDriverOneWayPrice }
+        : {}),
+      ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
+    };
     const priceChanged = hasSensitiveChange(current, priceDto);
     const knockBack =
       current.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC && priceChanged;
@@ -666,6 +669,7 @@ export class VehiclesService {
         select: { id: true },
       });
 
+      let policyChanged = false;
       if (overriding) {
         const data = policyData(dto.policy!);
         if (existingOverride) {
@@ -673,8 +677,10 @@ export class VehiclesService {
         } else {
           await tx.rentalPolicy.create({ data: { id: newId(), tenantId, vehicleId: id, ...data } });
         }
+        policyChanged = true;
       } else if (existingOverride) {
         await tx.rentalPolicy.delete({ where: { id: existingOverride.id } });
+        policyChanged = true;
       }
 
       if (Object.keys(priceDto).length > 0) {
@@ -696,7 +702,14 @@ export class VehiclesService {
             action: 'resubmit',
           });
         }
-        // Giá đổi (kể cả không knockback) → đồng bộ snapshot public_listings (ADR 0008).
+      }
+
+      /*
+       * Đồng bộ snapshot (ADR 0008) khi giá đổi HOẶC chính sách của xe đổi — nhãn "Miễn thế
+       * chấp" trên sàn nay suy từ chính sách hiệu lực, nên bật/tắt ghi đè cũng làm nó đổi dù
+       * không đụng đồng nào tiền giá. Chạy sau nhánh giá để đọc được giá vừa ghi.
+       */
+      if (Object.keys(priceDto).length > 0 || policyChanged) {
         await this.listings.syncFromVehicle(current.id, tx);
       }
 
@@ -1027,7 +1040,6 @@ interface VehicleWritableFields {
   withDriverInterCityPrice?: string | null;
   withDriverOneWayPrice?: string | null;
   deliveryEnabled?: boolean;
-  noCollateral?: boolean;
   discountPercent?: number | null;
 }
 
@@ -1087,7 +1099,6 @@ function writableFields(dto: CreateVehicleDto | UpdateVehicleDto): VehicleWritab
       ? { withDriverOneWayPrice: dto.withDriverOneWayPrice }
       : {}),
     ...(dto.deliveryEnabled !== undefined ? { deliveryEnabled: dto.deliveryEnabled } : {}),
-    ...(dto.noCollateral !== undefined ? { noCollateral: dto.noCollateral } : {}),
     ...(dto.discountPercent !== undefined ? { discountPercent: dto.discountPercent } : {}),
   };
 }
@@ -1192,7 +1203,6 @@ function toDetail(
     withDriverInterCityPrice: v.withDriverInterCityPrice as unknown as string | null,
     withDriverOneWayPrice: v.withDriverOneWayPrice as unknown as string | null,
     deliveryEnabled: v.deliveryEnabled,
-    noCollateral: v.noCollateral,
     description: v.description,
     createdAt: v.createdAt as unknown as string,
     images,
@@ -1275,7 +1285,6 @@ function vehicleSnapshot(v: VehicleRow): Record<string, unknown> {
       v.withDriverInterCityPrice == null ? null : String(v.withDriverInterCityPrice),
     withDriverOneWayPrice: v.withDriverOneWayPrice == null ? null : String(v.withDriverOneWayPrice),
     deliveryEnabled: v.deliveryEnabled,
-    noCollateral: v.noCollateral,
     discountPercent: v.discountPercent,
   };
 }

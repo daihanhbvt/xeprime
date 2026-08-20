@@ -95,6 +95,7 @@ vi.mock('@/features/customers/hooks/use-customers', () => ({
   useDeleteCustomerNote: () => ({ mutate: vi.fn(), isPending: false }),
   useUploadCustomerDocument: () => ({ mutateAsync: queries.upload, isPending: false }),
   useDeleteCustomerDocument: () => ({ mutate: vi.fn(), isPending: false }),
+  useVerifyCustomerDocument: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateCustomerRisk: () => ({ mutate: vi.fn(), isPending: false }),
   useCreateCustomer: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateCustomer: () => ({ mutate: vi.fn(), isPending: false }),

@@ -6,6 +6,7 @@ import {
   setMobileNavOpen,
   setSidebarCollapsed,
   setThemeMode,
+  toggleNavSection,
   toggleSidebar,
   THEME_MODE,
   type AppState,
@@ -14,15 +15,15 @@ import {
 /**
  * State UI của vỏ portal.
  *
- * ⚠️ **Không có persistence.** `sidebarCollapsed` chỉ sống trong phiên. Repo chưa có hạ tầng
- * lưu trạng thái nào (không `redux-persist`, không đọc/ghi `localStorage` ở đâu), và chỉ thị
- * Batch 1D-B cấm dựng cơ chế lưu thứ hai chỉ để phục vụ một tuỳ chọn giao diện.
+ * **Persistence sống ở tầng cookie, KHÔNG ở reducer.** `sidebarCollapsed` và
+ * `navSectionsCollapsed` được đọc từ cookie `XP_NAV` PHÍA SERVER và nạp vào store lúc tạo
+ * (`getServerNavPreferences` → `makeStore(navPreferences)`); chiều ghi nằm ở
+ * `useNavPreferencesSync`. Nhờ vậy giá trị đã đúng ngay từ HTML đầu tiên: không có
+ * hydration mismatch, không có cú nhảy bố cục khi trang vừa tải — thứ mà một bản
+ * `localStorage` (chỉ đọc được sau hydrate) buộc phải đánh đổi.
  *
- * Đổi lại có một thứ được miễn phí và đáng giá: state khởi tạo là hằng `false` ở CẢ server lẫn
- * client, nên lần render đầu giống hệt nhau — không có hydration mismatch, không có cú nhảy
- * bố cục khi trang vừa tải. Một bản `localStorage` sẽ phải đánh đổi đúng chỗ đó.
- *
- * Test dưới đây khoá cả hai mặt: mặc định đúng, và KHÔNG có ai đang lén ghi ra ngoài.
+ * Test dưới đây khoá cả hai mặt: mặc định đúng, và reducer vẫn THUẦN (không tự đọc/ghi
+ * storage nào).
  */
 
 const initial = (): AppState => appReducer(undefined, { type: '@@INIT' });
@@ -31,6 +32,7 @@ describe('app.slice — mặc định', () => {
   it('sidebar mở, drawer đóng, theme sáng', () => {
     expect(initial()).toEqual({
       sidebarCollapsed: false,
+      navSectionsCollapsed: [],
       mobileNavOpen: false,
       themeMode: THEME_MODE.LIGHT,
     });
@@ -77,7 +79,38 @@ describe('app.slice — thu gọn sidebar', () => {
   });
 });
 
-describe('app.slice — chưa có persistence', () => {
+describe('app.slice — gập khối menu', () => {
+  it('toggleNavSection lật qua lại, lưu ở phía PHỦ ĐỊNH (chỉ khối đã gập)', () => {
+    let state = appReducer(initial(), toggleNavSection('settings'));
+    expect(state.navSectionsCollapsed).toEqual(['settings']);
+
+    state = appReducer(state, toggleNavSection('settings'));
+    expect(state.navSectionsCollapsed).toEqual([]);
+  });
+
+  it('gập nhiều khối độc lập với nhau', () => {
+    let state = appReducer(initial(), toggleNavSection('settings'));
+    state = appReducer(state, toggleNavSection('business'));
+
+    expect(state.navSectionsCollapsed).toEqual(['settings', 'business']);
+  });
+
+  it('khối MỚI thêm về sau mặc định vẫn mở với người dùng cũ', () => {
+    // Chính là lý do lưu phía phủ định: bản đã lưu của người dùng cũ không liệt kê khối mới,
+    // nên khối mới không bị ẩn mất một cách khó hiểu.
+    const state = appReducer(initial(), toggleNavSection('settings'));
+
+    expect(state.navSectionsCollapsed).not.toContain('storefront');
+  });
+
+  it('gập khối KHÔNG đụng tới trạng thái thu gọn của sidebar', () => {
+    const state = appReducer(initial(), toggleNavSection('operations'));
+
+    expect(state.sidebarCollapsed).toBe(false);
+  });
+});
+
+describe('app.slice — reducer thuần', () => {
   it('reducer là hàm thuần: không đọc/ghi storage nào', () => {
     const getItem = globalThis.localStorage?.getItem;
     let touched = false;
@@ -94,12 +127,23 @@ describe('app.slice — chưa có persistence', () => {
     expect(touched).toBe(false);
   });
 
-  it('hình dạng state chỉ có 3 field — thêm field mới phải sửa test này', () => {
-    // Nếu sau này có persistence thật, đây là chỗ phải cân nhắc bản đã lưu của người dùng cũ.
+  it('hình dạng state chỉ có 4 field — thêm field mới phải sửa test này', () => {
+    // Thêm field ở đây là phải trả lời: nó có thuộc bản lưu cookie không, và bản đã lưu của
+    // người dùng cũ (thiếu field đó) có còn đọc được không.
     expect(Object.keys(initial()).sort()).toEqual([
       'mobileNavOpen',
+      'navSectionsCollapsed',
       'sidebarCollapsed',
       'themeMode',
     ]);
+  });
+
+  it('makeStore nhận tuỳ chọn đọc từ cookie và nạp thẳng vào state', () => {
+    const store = makeStore({ sidebarCollapsed: true, navSectionsCollapsed: ['settings'] });
+
+    expect(store.getState().app.sidebarCollapsed).toBe(true);
+    expect(store.getState().app.navSectionsCollapsed).toEqual(['settings']);
+    // Các field còn lại vẫn là mặc định — cookie chỉ mang tuỳ chọn điều hướng.
+    expect(store.getState().app.themeMode).toBe(THEME_MODE.LIGHT);
   });
 });

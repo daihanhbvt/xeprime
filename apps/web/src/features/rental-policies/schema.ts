@@ -1,5 +1,11 @@
 import * as yup from 'yup';
-import { LONG_TERM_PACKAGE_MONTHS, SERVICE_TYPE } from '@xeprime/types';
+import {
+  COLLATERAL_ASSET_TYPE_VALUES,
+  COLLATERAL_MODE,
+  COLLATERAL_MODE_VALUES,
+  LONG_TERM_PACKAGE_MONTHS,
+  SERVICE_TYPE,
+} from '@xeprime/types';
 
 /**
  * Schema form chính sách thuê (yup — báo lỗi sớm ngay trên ô nhập; validate thật ở BE:
@@ -54,11 +60,33 @@ export const discountTierSchema = yup.object({
 });
 
 export const policyFormSchema = yup.object({
-  depositAmount: optionalMoney('Tiền cọc').test(
-    'required',
-    'Nhập số tiền cọc mặc định',
-    (value) => value != null,
-  ),
+  /*
+   * Ba chế độ bảo đảm LOẠI TRỪ nhau — cùng luật với CHECK `rental_policies_collateral_scope_check`
+   * và `PricingService.validatePolicy`. Ba lớp nói cùng một điều để người dùng không gặp hai
+   * kiểu thông báo khác nhau cho cùng một sai sót.
+   */
+  collateralMode: yup
+    .string()
+    .oneOf([...COLLATERAL_MODE_VALUES])
+    .defined()
+    .default(COLLATERAL_MODE.CASH),
+  collateralAssetTypes: yup
+    .array()
+    .of(yup.string().oneOf([...COLLATERAL_ASSET_TYPE_VALUES]).defined())
+    .defined()
+    .default([])
+    .when(['collateralMode', '$policyEditable'], {
+      is: (mode: string, editable?: boolean) => mode === COLLATERAL_MODE.ASSET && editable !== false,
+      then: (s) => s.min(1, 'Chọn ít nhất một loại tài sản nhận thế chấp'),
+    }),
+  // Chỉ bắt buộc ở chế độ "Cọc tiền"; hai chế độ kia không thu tiền nên ô này biến mất khỏi form.
+  depositAmount: optionalMoney('Tiền cọc').when(['collateralMode', '$policyEditable'], {
+    is: (mode: string, editable?: boolean) => mode === COLLATERAL_MODE.CASH && editable !== false,
+    then: (s) =>
+      s
+        .test('required', 'Nhập số tiền cọc mặc định', (value) => value != null)
+        .moreThan(0, 'Chọn "Cọc tiền" thì số tiền cọc phải lớn hơn 0'),
+  }),
   deliveryEnabled: yup.boolean().defined().default(false),
   deliveryMaxRadiusKm: yup
     .number()
@@ -67,8 +95,8 @@ export const policyFormSchema = yup.object({
     .default(null)
     .max(500, 'Tối đa 500 km')
     .moreThan(0, 'Giá trị bán kính không thể âm')
-    .when('deliveryEnabled', {
-      is: true,
+    .when(['deliveryEnabled', '$policyEditable'], {
+      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
       then: (s) => s.test('required', 'Nhập bán kính hỗ trợ tối đa', (value) => value != null),
     }),
   deliveryTiers: yup
@@ -76,8 +104,8 @@ export const policyFormSchema = yup.object({
     .of(deliveryTierSchema)
     .defined()
     .default([])
-    .when('deliveryEnabled', {
-      is: true,
+    .when(['deliveryEnabled', '$policyEditable'], {
+      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
       then: (s) => s.min(1, 'Bật giao nhận thì phải có ít nhất một bậc khoảng cách'),
     })
     .test('ascending', 'Các mốc khoảng cách phải tăng dần', (tiers) => {
@@ -127,8 +155,8 @@ export const policyFormSchema = yup.object({
     .of(discountTierSchema)
     .defined()
     .default([])
-    .when('discountEnabled', {
-      is: true,
+    .when(['discountEnabled', '$policyEditable'], {
+      is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
       then: (s) => s.min(1, 'Bật ưu đãi thì phải có ít nhất một mốc giảm giá'),
     })
     .max(LONG_TERM_PACKAGE_MONTHS.length, `Tối đa ${LONG_TERM_PACKAGE_MONTHS.length} mốc ưu đãi`)

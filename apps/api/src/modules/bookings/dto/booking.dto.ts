@@ -141,6 +141,14 @@ export class BookingListItemDto {
 
 /** Chi tiết một đơn — dùng cho trang chi tiết đơn. */
 export class BookingDetailDto extends BookingListItemDto {
+  /**
+   * Khách trong SỔ KHÁCH của gian hàng — mở hồ sơ/giấy tờ từ màn đơn. NULL với đơn cũ không
+   * khớp được khách (không có SĐT dùng được).
+   *
+   * CỐ Ý không lộ `customer_user_id`: đó là định danh XUYÊN TENANT, gian hàng không được cầm
+   * (đối xứng `BookingRequestDetailDto`).
+   */
+  @ApiPropertyOptional({ type: String, nullable: true }) tenantCustomerId!: string | null;
   /** Ảnh đại diện xe (`vehicles.main_image_url`) — null = xe chưa có ảnh, UI không dựng ảnh giả. */
   @ApiPropertyOptional({ type: String, nullable: true }) vehicleImageUrl!: string | null;
   /** Hành trình chuyến CÓ TÀI XẾ — null với dịch vụ khác (CHECK DB giữ luật này). */

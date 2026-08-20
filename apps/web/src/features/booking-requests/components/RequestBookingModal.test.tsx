@@ -3,7 +3,7 @@ import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { API_ERROR_CODE } from '@xeprime/types';
+import { addDateKeyDays, API_ERROR_CODE, vnDateKey } from '@xeprime/types';
 import { ApiClientError } from '@/services/api-client';
 
 import { RequestBookingModal } from './RequestBookingModal';
@@ -23,9 +23,16 @@ import { RequestBookingModal } from './RequestBookingModal';
  * **Wave 9**: giao tận nơi chỉ hỏi ĐỊA CHỈ — không khoảng cách, không báo giá, không bước khách
  * duyệt phí; và lựa chọn đó chỉ tồn tại khi CHÍNH SÁCH cho phép (`listing.deliveryAvailable`).
  */
+/**
+ * Hôm nay theo NGÀY LỊCH Việt Nam. Lịch bận trong test phải bám ngày THẬT: hằng cứng sẽ nằm
+ * trong quá khứ vào một ngày nào đó và ô lịch bị khoá vì lý do khác hẳn thứ đang kiểm.
+ */
+const TODAY_KEY = vnDateKey(new Date());
+
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 const api = vi.hoisted(() => ({
   checkAvailability: vi.fn(),
+  fetchVehicleBusyDays: vi.fn(),
   submitBookingRequest: vi.fn(),
   verifyOtp: vi.fn(),
   sendAsync: vi.fn(),
@@ -45,7 +52,9 @@ vi.mock('@/hooks/use-media-query', () => ({
 }));
 
 vi.mock('../api', () => ({
+  BUSY_DAYS_LOOKAHEAD: 366,
   checkAvailability: (...a: unknown[]) => api.checkAvailability(...a),
+  fetchVehicleBusyDays: (...a: unknown[]) => api.fetchVehicleBusyDays(...a),
   submitBookingRequest: (...a: unknown[]) => api.submitBookingRequest(...a),
 }));
 
@@ -241,6 +250,8 @@ beforeEach(() => {
   listing.data = null;
   quote.data = null;
   Object.values(api).forEach((fn) => fn.mockReset());
+  // Xe rảnh trơn là mặc định — test nào cần lịch bận thì tự đặt lại.
+  api.fetchVehicleBusyDays.mockResolvedValue({ days: [], from: TODAY_KEY, to: TODAY_KEY });
 });
 
 afterEach(cleanup);
@@ -326,6 +337,40 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
       // Chữ đến từ MÃ lỗi (ADR 0012) — không phải `message` tiếng Việt của backend.
       expect(await screen.findByText(/Đã có lỗi xảy ra|Không kết nối/)).toBeTruthy();
+    });
+
+    /**
+     * Lịch bận đi thẳng từ API vào hộp chọn thời gian: khách phải thấy ngày kín NGAY trên lịch,
+     * không phải chọn xong bấm Tiếp tục rồi mới bị `check-availability` từ chối.
+     */
+    it('nạp lịch bận của đúng xe đang xem, cửa sổ bắt đầu từ quanh hôm nay', async () => {
+      renderModal();
+
+      await waitFor(() => expect(api.fetchVehicleBusyDays).toHaveBeenCalled());
+      const [vehicleId, from, to] = api.fetchVehicleBusyDays.mock.calls[0] as [
+        string,
+        string,
+        string,
+      ];
+      expect(vehicleId).toBe('V1');
+      // Lùi một ngày: máy khách ở múi giờ âm có thể đang ở "hôm qua" so với ngày nghiệp vụ.
+      expect(from).toBe(addDateKeyDays(TODAY_KEY, -1));
+      expect(to).toBe(addDateKeyDays(from, 366));
+    });
+
+    it('ngày bận trọn ngày bị khoá ngay trên lịch của hộp chọn', async () => {
+      api.fetchVehicleBusyDays.mockResolvedValue({
+        days: [{ date: TODAY_KEY, fullyBusy: true, periods: [] }],
+        from: TODAY_KEY,
+        to: TODAY_KEY,
+      });
+      // Không prefill: lịch mở đúng THÁNG NÀY, nên ô "hôm nay" chắc chắn nằm trong lưới.
+      renderModalWithoutPrefill();
+
+      fireEvent.click(screen.getByRole('button', { name: /Thời gian thuê:/ }));
+      // Lịch đôi: một ngày cuối tháng còn hiện lại ở lưới tháng sau dưới dạng ngày ngoài.
+      const [busyDay] = await screen.findAllByTitle('Xe đã có lịch cả ngày');
+      expect((busyDay as HTMLButtonElement).disabled).toBe(true);
     });
 
     it('dùng MỘT ô chọn khoảng thuê, không phải hai ô ngày rời', () => {

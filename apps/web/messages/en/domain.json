@@ -65,6 +65,20 @@
     "flagged": "Needs review",
     "archived": "Archived"
   },
+  "collateralAssetType": {
+    "vehicle_registration": "Motorbike registration papers",
+    "motorbike": "Motorbike",
+    "passport": "Passport"
+  },
+  "collateralMode": {
+    "cash": "Cash deposit",
+    "asset": "Asset or document held",
+    "none": "No collateral required"
+  },
+  "identityVerifyMethod": {
+    "vneid": "Checked via VNeID",
+    "in_person": "Original documents checked in person"
+  },
   "customerDocumentExpiry": {
     "no_expiry": "No expiry",
     "valid": "Valid",

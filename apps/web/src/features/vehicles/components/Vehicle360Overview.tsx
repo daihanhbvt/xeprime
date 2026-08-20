@@ -519,10 +519,11 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
             <dd>{fmt.money(discounted)}</dd>
           </div>
         ) : null}
-        <div className={styles.kvRow}>
-          <dt>Thế chấp tài sản</dt>
-          <dd>{vehicle.noCollateral ? 'Không yêu cầu' : 'Có yêu cầu'}</dd>
-        </div>
+        {/*
+          Yêu cầu bảo đảm KHÔNG còn là thuộc tính của xe (20/08) — nó thuộc chính sách thuê hiệu
+          lực, kế thừa từ gian hàng hoặc ghi đè riêng. Hiện nó ở đây sẽ là số liệu chết đọc từ
+          cột không ai ghi nữa; chỗ đúng của nó là tab "Giá & chính sách".
+        */}
         <div className={styles.kvRow}>
           <dt>Giao xe tận nơi</dt>
           <dd>{vehicle.deliveryEnabled ? 'Có hỗ trợ' : 'Không'}</dd>

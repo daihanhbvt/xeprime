@@ -15,8 +15,17 @@ import {
   type Control,
   type FieldErrors,
 } from 'react-hook-form';
-import { LONG_TERM_PACKAGE_MONTHS, longTermPackageLabel } from '@xeprime/types';
+import {
+  COLLATERAL_ASSET_TYPE_LABEL,
+  COLLATERAL_ASSET_TYPE_VALUES,
+  COLLATERAL_MODE,
+  COLLATERAL_MODE_META,
+  LONG_TERM_PACKAGE_MONTHS,
+  longTermPackageLabel,
+} from '@xeprime/types';
+import { CheckboxGroupField } from '@/components/form/CheckboxGroupField';
 import { NumberField } from '@/components/form/NumberField';
+import { RadioGroupField } from '@/components/form/RadioGroupField';
 import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextField } from '@/components/form/TextField';
@@ -51,7 +60,7 @@ export function PolicySections({
     <div className={styles.stack}>
       <DepositSection
         control={control}
-        title={n(1, 'Yêu cầu đặt cọc thế chấp (Bảo đảm)')}
+        title={n(1, 'Yêu cầu bảo đảm (thế chấp)')}
         hint={depositHint}
         disabled={disabled}
       />
@@ -109,6 +118,37 @@ function HeadLabel({
   );
 }
 
+/** Ba chế độ bảo đảm, nhãn lấy từ META của `@xeprime/types` — component không tự biết mã nào. */
+const COLLATERAL_MODE_OPTIONS = [
+  {
+    value: COLLATERAL_MODE.CASH,
+    label: COLLATERAL_MODE_META[COLLATERAL_MODE.CASH].label,
+    description: 'Khách đặt một khoản tiền, hoàn lại khi bàn giao xe xong.',
+  },
+  {
+    value: COLLATERAL_MODE.ASSET,
+    label: COLLATERAL_MODE_META[COLLATERAL_MODE.ASSET].label,
+    description: 'Khách để lại giấy tờ hoặc tài sản thay cho tiền — gian hàng không giữ tiền.',
+  },
+  {
+    value: COLLATERAL_MODE.NONE,
+    label: COLLATERAL_MODE_META[COLLATERAL_MODE.NONE].label,
+    description: 'Không yêu cầu bảo đảm. Xe sẽ mang nhãn "Miễn thế chấp" trên sàn.',
+  },
+] as const;
+
+const COLLATERAL_ASSET_OPTIONS = COLLATERAL_ASSET_TYPE_VALUES.map((value) => ({
+  value,
+  label: COLLATERAL_ASSET_TYPE_LABEL[value],
+}));
+
+/**
+ * Khối BẢO ĐẢM — ba chế độ loại trừ nhau (gap C-04). Chỉ phần thuộc chế độ đang chọn hiện ra:
+ * ô tiền cọc ở `cash`, danh mục tài sản ở `asset`, `none` không có gì để nhập.
+ *
+ * Giấu phần không liên quan thay vì disable nó: một ô tiền cọc mờ đi bên cạnh "Miễn thế chấp"
+ * vẫn khiến người dùng tưởng số cũ còn hiệu lực, trong khi `formToSaveInput` đã ép nó về 0.
+ */
 function DepositSection({
   control,
   title,
@@ -120,31 +160,68 @@ function DepositSection({
   hint?: ReactNode;
   disabled: boolean;
 }) {
+  const mode = useWatch({ control, name: 'collateralMode' });
+
   return (
     <section className={styles.card} aria-label={title}>
-      <SectionTitle title={title} infoLabel="Giải thích yêu cầu đặt cọc">
-        Tiền bảo đảm được thu riêng với giá thuê và hoàn theo điều kiện bàn trả xe.
+      <SectionTitle title={title} infoLabel="Giải thích yêu cầu bảo đảm">
+        Bảo đảm là thứ gian hàng giữ để phòng rủi ro: tiền cọc, tài sản/giấy tờ, hoặc không yêu
+        cầu gì. Đây là việc RIÊNG với đối chiếu giấy tờ tuỳ thân — đối chiếu thì lượt thuê nào
+        cũng cần.
       </SectionTitle>
-      <div className={styles.depositRow}>
-        <div className={styles.depositField}>
-          <NumberField
-            control={control}
-            name="depositAmount"
-            label="Số tiền cọc mặc định"
-            labelAccessory={
-              <PolicyInfoTip label="Giải thích số tiền cọc mặc định">
-                Mức tiền cố định bằng VND, thu riêng với giá thuê, không chịu chiết khấu và chỉ áp
-                dụng cho lượt đặt mới. Booking đã chốt giữ nguyên mức cọc cũ.
-              </PolicyInfoTip>
-            }
-            money
-            required
-            min={0}
-            disabled={disabled}
-          />
+
+      <RadioGroupField
+        control={control}
+        name="collateralMode"
+        label="Hình thức bảo đảm"
+        options={COLLATERAL_MODE_OPTIONS}
+        disabled={disabled}
+        required
+      />
+
+      {mode === COLLATERAL_MODE.CASH ? (
+        <div className={styles.depositRow}>
+          <div className={styles.depositField}>
+            <NumberField
+              control={control}
+              name="depositAmount"
+              label="Số tiền cọc mặc định"
+              labelAccessory={
+                <PolicyInfoTip label="Giải thích số tiền cọc mặc định">
+                  Mức tiền cố định bằng VND, thu riêng với giá thuê, không chịu chiết khấu và chỉ
+                  áp dụng cho lượt đặt mới. Booking đã chốt giữ nguyên mức cọc cũ.
+                </PolicyInfoTip>
+              }
+              money
+              required
+              min={0}
+              disabled={disabled}
+            />
+          </div>
+          {hint ? <div className={styles.depositHint}>{hint}</div> : null}
         </div>
-        {hint ? <div className={styles.depositHint}>{hint}</div> : null}
-      </div>
+      ) : null}
+
+      {mode === COLLATERAL_MODE.ASSET ? (
+        <CheckboxGroupField
+          control={control}
+          name="collateralAssetTypes"
+          label="Loại tài sản nhận thế chấp"
+          options={COLLATERAL_ASSET_OPTIONS}
+          disabled={disabled}
+          required
+          help="Khách chỉ cần đáp ứng MỘT trong các hình thức đã chọn."
+        />
+      ) : null}
+
+      {mode === COLLATERAL_MODE.NONE ? (
+        <Alert
+          type="info"
+          showIcon
+          message="Không thu cọc và không giữ tài sản"
+          description='Xe áp dụng chính sách này sẽ hiện nhãn "Miễn thế chấp" và lọc được theo tiêu chí đó trên sàn.'
+        />
+      ) : null}
     </section>
   );
 }

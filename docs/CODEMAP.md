@@ -16,6 +16,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | **Danh mục lọc** (hãng xe / kiểu dáng / nhiên liệu / tiện ích) — nội dung ở **DB**, không phải hằng số | bảng `catalog_items` · `apps/api/src/modules/catalog/` · FE `apps/web/src/features/catalog/` | — |
 | **Banner hero trang chủ** — platform admin quản lý, public lấy tối đa 3 | bảng `marketplace_banners` · `apps/api/src/modules/banners/` · FE `apps/web/src/features/banners/` + `BannerCarousel` | — |
 | **Khoảng thuê** `{pickupAt, returnAt}` — lịch đôi + tab ngày/giờ, dùng chung | `apps/web/src/components/form/RentalDateTimeRangeField.tsx` (bọc react-day-picker) | — |
+| **Lịch bận của xe trên ô chọn khoảng thuê** — ngày kín bị khoá, ngày bận vài giờ tô riêng + ghi giờ | `apps/web/src/lib/rental-busy.ts` (tra cứu) · `GET /public/booking-requests/busy-days` | ADR 0006 — preview, constraint mới là chốt |
 | **Thuê dài hạn** — gói cố định, tháng lịch, nguyện vọng nhận xe, mốc ưu đãi cam kết | `packages/types/src/long-term.ts` (hằng + `addCalendarMonthsVn` + tier); FE hiển thị nguyện vọng ở `apps/web/src/lib/long-term.ts` | 0011 |
 | **Ngày date-only** (`YYYY-MM-DD` ↔ cột `@db.Date`) | `apps/api/src/common/date-only.ts` | — |
 | **Chuẩn hoá SĐT Việt Nam** (`09…`/`84…`/`+84…` → `84…`) — định danh khách trong sổ khách | `packages/types/src/phone.ts` · re-export `apps/api/src/common/phone.ts` | — |
@@ -40,7 +41,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | **Dữ liệu trang chủ**: `/public/destinations` (tỉnh + số xe), `/public/shops` (gian hàng nổi bật) | `modules/public-listings/` (`public-destinations.controller.ts`, `listDestinations`/`listShops`) | groupBy snapshot; KHÔNG hardcode tỉnh ở FE |
 | Điểm đánh giá theo XE trên thẻ marketplace (`ratingsByVehicle`) | `modules/public-listings/public-listings.service.ts` | groupBy `reviews` published, 1 query/trang |
 | **Đơn thuê** (create/update/transition, `createWithinTx` giữ lịch trong tx) | `modules/bookings/` | ADR 0006 |
-| **Yêu cầu thuê** (public submit + approve→booking + `check-availability` preview) | `modules/booking-requests/` (`public-booking-requests.controller.ts`) | Phase 4; approve tạo booking → 23P01→409 |
+| **Yêu cầu thuê** (public submit + approve→booking + `check-availability` / `busy-days` preview) | `modules/booking-requests/` (`public-booking-requests.controller.ts`) | Phase 4; approve tạo booking → 23P01→409 |
 | **Đăng nhập passwordless SĐT** (find-or-create theo phone, set-password) | `modules/auth/` (`resolveOrCreateUserByPhone`, `setPassword`) + `modules/phone-verification/` (purpose `login`) | ADR 0002; xem `docs/guest-booking-passwordless.md` |
 | Xe + ảnh + tiện ích (submit public review) | `modules/vehicles/` | Phase 2–3 |
 | **Việc cần làm của xe — nguồn DUY NHẤT** cho cả thẻ danh sách lẫn Hồ sơ 360 | `modules/vehicles/vehicle-alerts.service.ts` (`forVehicles` / `forVehicle` / `vehicleAlertScopeOf`) | Wave 8; scope theo TỪNG miền quyền, miền thiếu quyền không chạy truy vấn |
@@ -50,7 +51,10 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | **Bảo dưỡng & KM** (chu kỳ, phiếu, lịch sử KM chỉ-thêm) · **Trung tâm bảo dưỡng** toàn đội xe | `modules/vehicles/maintenance/` (`maintenance.service.ts`, `odometer.service.ts`, `maintenance-board.controller.ts`) | Wave 6; phiếu bảo dưỡng ghi `vehicle_occupancies` qua `OccupancyService` (ADR 0006) |
 | **Bàn giao xe** (nháp → xác nhận, ảnh bằng chứng, KM có thẩm quyền) | `modules/bookings/handovers/` (`booking-handovers.controller.ts`, `handovers.service.ts`) | Wave 7; xác nhận trả xe là đường DUY NHẤT đẩy KM từ vận hành |
 | **Hàng đợi "Thiếu KM trả"** toàn gian hàng | `modules/bookings/handovers/handover-queue.controller.ts` (`GET /handovers/missing-odometer`) | Wave 8; vị từ lọc phải TRÙNG `MaintenanceService.boardSummary` — lệch là tab và bảng nói hai số |
-| **Chính sách thuê gian hàng** (cọc, bậc phí giao nhận, quá giờ, bậc giảm giá) | `modules/pricing/` (`shop-policies.controller.ts` → `shop/rental-policies`, `pricing.service.ts`) | Wave 2; kế thừa gian hàng ↔ ghi đè theo xe |
+| **Chính sách thuê gian hàng** (BẢO ĐẢM 3 chế độ, bậc phí giao nhận, quá giờ, bậc giảm giá) | `modules/pricing/` (`shop-policies.controller.ts` → `shop/rental-policies`, `pricing.service.ts`) | Wave 2 + C-04 (20/08); kế thừa gian hàng ↔ ghi đè theo xe (NGUYÊN KHỐI cả dòng, không merge từng trường) |
+| **Writer `public_listings`** tách thành module LÁ | `modules/public-listings/listings-sync.module.ts` (`ListingsService`) | ADR 0008; gỡ vòng `PricingModule` ↔ `PublicListingsModule` mà không cần `forwardRef` |
+| Nhãn "Miễn thế chấp" trên sàn | SUY từ `collateral_mode = none` của chính sách hiệu lực — `ListingsService.syncFromVehicle` / `syncCollateralForPolicy` | 20/08; `vehicles.no_collateral` KHÔNG còn được ghi tay |
+| Đối chiếu giấy tờ tuỳ thân của khách (thủ công, có audit) | `modules/customers/customer-documents.controller.ts` (`POST :documentId/verify`) | 20/08; quyền `customers.documents.manage`, KHÔNG mượn quyền đơn |
 | Thông báo (in-app) | `modules/notification/` | Phase 5 |
 | Đánh giá sau chuyến (+ public review) | `modules/review/` | Phase 5 |
 | Chat (PG source of truth, Firestore projection sau cờ) | `modules/chat/` (+ `conversations.controller`) | ADR 0009 |

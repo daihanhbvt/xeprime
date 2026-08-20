@@ -5,12 +5,14 @@ import {
   EyeOutlined,
   FileImageOutlined,
   FilePdfOutlined,
+  SafetyCertificateOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
 import {
   App,
   Button,
   DatePicker,
+  Dropdown,
   Empty,
   Input,
   Popconfirm,
@@ -27,8 +29,11 @@ import {
   CUSTOMER_DOCUMENT_TYPE,
   CUSTOMER_DOCUMENT_TYPE_LABEL,
   DOCUMENT_UPLOAD_MIME_TYPES,
+  IDENTITY_VERIFY_METHOD_LABEL,
+  IDENTITY_VERIFY_METHOD_VALUES,
   type CustomerDocumentExpiry,
   type CustomerDocumentType,
+  type IdentityVerifyMethod,
 } from '@xeprime/types';
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { StatusTag } from '@/components/data-display/StatusTag';
@@ -40,11 +45,13 @@ import {
   useCustomerDocumentPreviews,
   useCustomerDocuments,
   useDeleteCustomerDocument,
+  useVerifyCustomerDocument,
   useUploadCustomerDocument,
 } from '../hooks/use-customers';
 import type { CustomerDocument } from '../types';
 import styles from './CustomerDocumentsPanel.module.css';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 const ACCEPT = DOCUMENT_UPLOAD_MIME_TYPES.join(',');
 
@@ -71,12 +78,14 @@ export function CustomerDocumentsPanel({
   disabled?: boolean;
 }) {
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
   const datePattern = useDatePickerPattern();
 
   const { message } = App.useApp();
   const { data, isLoading, isError, refetch, isFetching } = useCustomerDocuments(customerId);
   const upload = useUploadCustomerDocument();
   const remove = useDeleteCustomerDocument();
+  const verify = useVerifyCustomerDocument();
 
   const [documentType, setDocumentType] = useState<string>(CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID);
   const [customTypeName, setCustomTypeName] = useState('');
@@ -238,6 +247,17 @@ export function CustomerDocumentsPanel({
                     group="customerDocumentExpiry"
                   />
                   {document.expiresAt ? <Tag>Hạn {fmt.date(document.expiresAt)}</Tag> : null}
+                  {/*
+                    Đối chiếu là việc RIÊNG với hạn giấy tờ: một CCCD còn hạn mà chưa ai soi vẫn
+                    là rủi ro. Hiện cả hai trạng thái, không gộp thành một dấu "ổn".
+                  */}
+                  {document.verifiedAt ? (
+                    <Tag color="green" icon={<SafetyCertificateOutlined />}>
+                      Đã đối chiếu · {fmt.date(document.verifiedAt)}
+                    </Tag>
+                  ) : (
+                    <Tag>Chưa đối chiếu</Tag>
+                  )}
                 </div>
                 <div className={styles.itemActions}>
                   {/*
@@ -253,6 +273,47 @@ export function CustomerDocumentsPanel({
                     >
                       Mở tệp
                     </Button>
+                  ) : null}
+                  {/*
+                    Đối chiếu là thao tác THỦ CÔNG có ghi nhận — nhân viên tự soi VNeID hoặc bản
+                    gốc rồi tích. Hệ thống không gọi API định danh quốc gia, nên phải nói rõ đã
+                    soi bằng đường nào; về sau tra lại còn biết ai chịu trách nhiệm.
+                  */}
+                  {canManage && !disabled ? (
+                    <Dropdown
+                      trigger={['click']}
+                      disabled={verify.isPending}
+                      menu={{
+                        items: IDENTITY_VERIFY_METHOD_VALUES.map((method) => ({
+                          key: method,
+                          // Nhãn enum đi qua Domain như `customerDocumentExpiry` ở ngay trên —
+                          // META tiếng Việt chỉ là bản dự phòng (ADR 0012).
+                          label: domainLabel(
+                            'identityVerifyMethod',
+                            method,
+                            IDENTITY_VERIFY_METHOD_LABEL[method],
+                          ),
+                        })),
+                        onClick: ({ key }) =>
+                          verify.mutate(
+                            {
+                              id: customerId,
+                              documentId: document.id,
+                              // `key` của menu là string thô; nó đến TỪ chính danh sách phương
+                              // thức nên thu hẹp lại đúng union của contract.
+                              input: { verifyMethod: key as IdentityVerifyMethod },
+                            },
+                            {
+                              onSuccess: () => message.success('Đã ghi nhận đối chiếu'),
+                              onError: (err) => message.error(getErrorMessage(err)),
+                            },
+                          ),
+                      }}
+                    >
+                      <Button size="small" icon={<SafetyCertificateOutlined />}>
+                        {document.verifiedAt ? 'Đối chiếu lại' : 'Đã đối chiếu'}
+                      </Button>
+                    </Dropdown>
                   ) : null}
                   {canManage && !disabled ? (
                     <Popconfirm

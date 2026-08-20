@@ -26,6 +26,10 @@ vi.mock('@/hooks/use-current-user', () => ({
   useCurrentUser: () => ({ data: user.value, isLoading: false }),
 }));
 
+vi.mock('@/hooks/use-permissions', () => ({
+  usePermissions: () => ({ has: () => true, hasAny: () => true, isLoading: false }),
+}));
+
 vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => logout,
 }));
@@ -130,38 +134,58 @@ describe('ManageUserCard — thu gọn', () => {
     expect(screen.queryByText('Chủ gian hàng')).toBeNull();
   });
 
-  it('nhưng danh tính vẫn đọc được — avatar mang tên và vai trò', () => {
+  it('nhưng danh tính vẫn đọc được — nút mang tên và vai trò', () => {
     render(<ManageUserCard collapsed />);
 
-    expect(screen.getByRole('img', { name: 'Nguyễn Văn A · Chủ gian hàng' })).toBeTruthy();
-  });
-
-  it('vẫn còn nút đăng xuất có tên', () => {
-    render(<ManageUserCard collapsed />);
-
-    expect(screen.getByRole('button', { name: 'Đăng xuất' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Menu tài khoản: Nguyễn Văn A · Chủ gian hàng' }),
+    ).toBeTruthy();
   });
 });
 
-describe('ManageUserCard — đăng xuất', () => {
-  it('nút đăng xuất có tên truy cập được', () => {
+describe('ManageUserCard — menu tài khoản', () => {
+  /** Mở menu và trả về mục cần tìm — menu của AntD chỉ dựng sau khi bấm. */
+  async function openMenu(collapsed = false) {
+    render(<ManageUserCard collapsed={collapsed} />);
+    fireEvent.click(screen.getByRole('button', { name: /^Menu tài khoản/ }));
+    await screen.findByText('Đăng xuất');
+  }
+
+  it('thẻ người dùng là lối vào menu, không phải khối tĩnh', () => {
     render(<ManageUserCard />);
 
-    expect(screen.getByRole('button', { name: 'Đăng xuất' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Menu tài khoản/ })).toBeTruthy();
   });
 
-  it('gọi ĐÚNG luồng dùng chung, không tự dựng lại ba bước', async () => {
-    render(<ManageUserCard />);
+  it('menu chứa hồ sơ, cài đặt gian hàng và đăng xuất — không mục nào lên sidebar chính', async () => {
+    await openMenu();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Đăng xuất' }));
+    expect(screen.getByRole('link', { name: 'Hồ sơ' }).getAttribute('href')).toBe('/account');
+    expect(screen.getByRole('link', { name: 'Cài đặt gian hàng' }).getAttribute('href')).toBe(
+      '/manage/shop',
+    );
+    expect(screen.getByText('Đăng xuất')).toBeTruthy();
+  });
+
+  it('không thuộc gian hàng nào → không có mục "Cài đặt gian hàng" dẫn tới 403', async () => {
+    setUser({ tenant: null, platformRole: 'platform_admin' });
+    await openMenu();
+
+    expect(screen.queryByRole('link', { name: 'Cài đặt gian hàng' })).toBeNull();
+  });
+
+  it('đăng xuất gọi ĐÚNG luồng dùng chung, không tự dựng lại ba bước', async () => {
+    await openMenu();
+
+    fireEvent.click(screen.getByText('Đăng xuất'));
 
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
   });
 
-  it('bản thu gọn dùng CÙNG một luồng', async () => {
-    render(<ManageUserCard collapsed />);
+  it('bản thu gọn dùng CÙNG một menu', async () => {
+    await openMenu(true);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Đăng xuất' }));
+    fireEvent.click(screen.getByText('Đăng xuất'));
 
     await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
   });

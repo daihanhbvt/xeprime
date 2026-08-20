@@ -152,6 +152,12 @@ export const queryKeys = {
   bookingRequests: {
     all: ['booking-requests'] as const,
     list: (params: QueryParams) => ['booking-requests', 'list', params] as const,
+    /**
+     * Lịch bận của MỘT xe, dùng để tô/khoá ô trên hộp chọn thời gian thuê. Cửa sổ nằm trong
+     * khoá vì đổi cửa sổ là đổi dữ liệu — không phải cùng một kết quả cắt nhỏ.
+     */
+    busyDays: (vehicleId: string, from: string, to: string) =>
+      ['booking-requests', 'busy-days', vehicleId, from, to] as const,
   },
   /**
    * Sổ khách của GIAN HÀNG (S-01) — khác hẳn `/manage/admin/customers` của nền tảng, nên nhánh

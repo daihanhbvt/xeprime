@@ -216,3 +216,111 @@
 .hourly > .timeField {
   flex: none;
 }
+
+/* --- Lịch bận (20/08) -----------------------------------------------------------------
+ *
+ * Gạch chéo chứ không phải chỉ đổi màu: ô ngày đã dùng hết bảng màu vàng cho "đã chọn /
+ * trong khoảng", nên thêm một sắc độ nữa là bắt người đọc phân biệt hai thứ na ná nhau. Vân
+ * gạch khác HÌNH DẠNG, đọc được cả khi in đen trắng lẫn với mắt loạn sắc.
+ *
+ * Vân dựng bằng `color-mix` trên token, không phải hex rời — đổi token là vân đổi theo.
+ */
+.busyFull,
+.busyPartial {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 3px,
+    var(--xp-busy-stripe) 3px 6px
+  );
+  background-clip: content-box;
+}
+
+/* Bận trọn ngày: xám, và đã `disabled` nên rdp tự làm mờ chữ. */
+.busyFull {
+  --xp-busy-stripe: color-mix(in srgb, var(--xp-color-text-tertiary) 45%, transparent);
+}
+
+/* Bận vài giờ: vẫn chọn được → vân cam cảnh báo, chữ giữ nguyên độ đậm. */
+.busyPartial {
+  --xp-busy-stripe: color-mix(in srgb, var(--xp-color-warning) 35%, transparent);
+}
+
+/* Hai đầu khoảng đã tô nền vàng đặc — vân gạch chồng lên chỉ làm bẩn, bỏ hẳn ở đó. */
+.dayPicker :global(.rdp-range_start).busyPartial,
+.dayPicker :global(.rdp-range_end).busyPartial {
+  background-image: none;
+}
+
+/* Chú giải màu — Figma 20/08: bốn ô mẫu nằm cùng hàng với cặp nút. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 0 var(--xp-space-sm);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  list-style: none;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 18px;
+  height: 14px;
+  border-radius: var(--xp-border-radius-sm);
+  background-clip: padding-box;
+}
+
+.selected {
+  background: var(--xp-color-primary);
+}
+
+.inRange {
+  background: var(--xp-color-bg-selected);
+  box-shadow: inset 0 0 0 1px var(--xp-color-border);
+}
+
+.full {
+  background-color: var(--xp-color-bg-muted);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 3px,
+    color-mix(in srgb, var(--xp-color-text-tertiary) 45%, transparent) 3px 6px
+  );
+}
+
+.partial {
+  background-color: var(--xp-color-warning-bg);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 3px,
+    color-mix(in srgb, var(--xp-color-warning) 35%, transparent) 3px 6px
+  );
+}
+
+/* Lý do "Áp dụng" bị tắt — phải ĐỌC được, không chỉ hiện khi rê chuột lên nút. */
+.conflict {
+  padding-top: var(--xp-space-sm);
+  margin: 0;
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Thời lượng thuê giờ đụng lịch bận: mờ đi nhưng vẫn đọc được lý do ở cột phải. */
+.durationBusy {
+  cursor: not-allowed;
+  opacity: var(--xp-disabled-opacity);
+}
+
+.durationBusy .durationEnd {
+  color: var(--xp-color-warning);
+}
+
+.durationBusy:hover {
+  background: none;
+}

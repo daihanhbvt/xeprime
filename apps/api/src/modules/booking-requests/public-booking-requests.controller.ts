@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, Req, Res } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import { Public } from '../../common/decorators';
@@ -10,6 +10,8 @@ import {
   CheckAvailabilityDto,
   CheckAvailabilityResultDto,
   CreateBookingRequestDto,
+  VehicleBusyDaysDto,
+  VehicleBusyDaysQueryDto,
 } from './dto/booking-request.dto';
 import { BookingRequestsService } from './booking-requests.service';
 
@@ -57,5 +59,19 @@ export class PublicBookingRequestsController {
   @ApiOkResponse({ type: CheckAvailabilityResultDto })
   checkAvailability(@Body() dto: CheckAvailabilityDto): Promise<CheckAvailabilityResultDto> {
     return this.requests.checkPublicAvailability(dto.vehicleId, dto.pickupAt, dto.returnAt);
+  }
+
+  /**
+   * Lịch bận của một xe để hộp chọn thời gian thuê KHOÁ ngày bận ngay trên lịch.
+   *
+   * `GET` để trình duyệt và TanStack Query cache được — dữ liệu này đọc lại mỗi lần mở lịch,
+   * và nó không phải bí mật: chỉ nói xe bận hay rảnh, không nói bận vì đơn của ai.
+   */
+  @Public()
+  @Get('busy-days')
+  @ApiOperation({ summary: 'Ngày/giờ xe đã bận trong một cửa sổ, để tô lịch chọn thời gian thuê' })
+  @ApiOkResponse({ type: VehicleBusyDaysDto })
+  busyDays(@Query() query: VehicleBusyDaysQueryDto): Promise<VehicleBusyDaysDto> {
+    return this.requests.listPublicBusyDays(query.vehicleId, query.from, query.to);
   }
 }

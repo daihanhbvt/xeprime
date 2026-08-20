@@ -23,6 +23,7 @@ import { SettlementCard } from '@/features/settlement/components/SettlementCard'
 import { useBooking } from '../hooks/use-booking';
 import { serviceTypeLabel } from '../constants';
 import { BookingActionBar } from './BookingActionBar';
+import { BookingCustomerDocumentsDialog } from './BookingCustomerDocumentsDialog';
 import { BookingDriverSection } from './BookingDriverSection';
 import { BookingOperationPanel } from './BookingOperationPanel';
 import { UpdateDeliveryFeeModal } from './UpdateDeliveryFeeModal';
@@ -57,6 +58,7 @@ export function BookingDetailContent({
   const { data, isLoading, isError, error, refetch } = useBooking(canView ? bookingId : null);
   /** Sửa phí giao nhận — mở từ chính dòng phí ở khối chi phí, xem ghi chú tại chỗ đó. */
   const [feeOpen, setFeeOpen] = useState(false);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
 
   if (!canView) {
     return (
@@ -164,6 +166,25 @@ export function BookingDetailContent({
               ) : (
                 <span className={styles.meta}>Không có số điện thoại</span>
               )}
+              {/*
+                Nút đứng CẠNH dữ liệu nó thao tác, không dồn lên thanh hành động (cùng luật với
+                nút "Sửa" của phí giao nhận bên dưới).
+
+                Ẩn khi đơn cũ không khớp được khách trong sổ (`tenantCustomerId` null) — không có
+                hồ sơ thì không có chỗ nào để đính giấy tờ vào.
+
+                Quyền là quyền GIẤY TỜ, không phải quyền đơn: nhân viên xem được đơn không đương
+                nhiên được mở kho giấy tờ tuỳ thân của khách.
+              */}
+              {data.tenantCustomerId && has(PERMISSION.CUSTOMER_DOCUMENT_MANAGE) ? (
+                <Button
+                  size="small"
+                  onClick={() => setDocumentsOpen(true)}
+                  className={styles.inlineAction}
+                >
+                  Bổ sung giấy tờ
+                </Button>
+              ) : null}
             </div>
           </section>
 
@@ -341,6 +362,15 @@ export function BookingDetailContent({
           currentFee={data.deliveryFee}
           open
           onClose={() => setFeeOpen(false)}
+        />
+      ) : null}
+
+      {documentsOpen && data.tenantCustomerId ? (
+        <BookingCustomerDocumentsDialog
+          customerId={data.tenantCustomerId}
+          customerName={data.customerName}
+          open
+          onClose={() => setDocumentsOpen(false)}
         />
       ) : null}
 

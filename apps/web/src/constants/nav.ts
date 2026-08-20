@@ -1,4 +1,5 @@
 import {
+  ApartmentOutlined,
   AppstoreOutlined,
   AuditOutlined,
   CalendarOutlined,
@@ -7,18 +8,21 @@ import {
   DashboardOutlined,
   DeleteOutlined,
   EnvironmentOutlined,
+  FileDoneOutlined,
   FileTextOutlined,
   HistoryOutlined,
+  InboxOutlined,
+  LineChartOutlined,
   MessageOutlined,
   PictureOutlined,
+  QuestionCircleOutlined,
   SafetyCertificateOutlined,
-  ScheduleOutlined,
-  SettingOutlined,
   ShopOutlined,
   SolutionOutlined,
   TeamOutlined,
   ToolOutlined,
   TransactionOutlined,
+  UnorderedListOutlined,
   UsergroupAddOutlined,
   WalletOutlined,
 } from '@ant-design/icons';
@@ -40,6 +44,22 @@ import { ROUTES } from './routes';
 export type NavLabelKey = Parameters<ReturnType<typeof useTranslations<'Navigation'>>>[0];
 
 /**
+ * Con số "cần bạn xử lý" gắn trên một mục menu.
+ *
+ * Chỉ có hai — và cố ý chỉ có hai. Huy hiệu là lời kêu gọi hành động chứ không phải thống kê:
+ * đếm số xe hay số khách lên sidebar thì mục nào cũng sáng và không mục nào còn nghĩa gì.
+ * Nguồn số nằm ở `useNavBadges`; ở đây chỉ khai báo mục nào ĐƯỢC PHÉP mang huy hiệu.
+ */
+export const NAV_BADGE = {
+  /** Yêu cầu đặt xe đang chờ gian hàng duyệt. */
+  BOOKING_REQUESTS_PENDING: 'bookingRequestsPending',
+  /** Tin nhắn chưa đọc. */
+  CHAT_UNREAD: 'chatUnread',
+} as const;
+
+export type NavBadgeKey = (typeof NAV_BADGE)[keyof typeof NAV_BADGE];
+
+/**
  * Mục menu dẫn tới một trang.
  *
  * `permission` chỉ dùng để ẩn/hiện — guard backend mới chặn thật (CLAUDE.md mục 6).
@@ -54,43 +74,100 @@ export interface NavLeaf {
   readonly href: string;
   readonly permission: Permission;
   readonly icon: ComponentType<{ className?: string }>;
+  readonly badge?: NavBadgeKey;
   readonly comingSoon?: boolean;
 }
 
-/** Nhóm menu cha (submenu cấp 2) gom nhiều mục con. */
-export interface NavGroup {
-  readonly type: 'group';
+/**
+ * Mục cha mở ra vài mục con (submenu cấp 2) — bản thân KHÔNG dẫn tới trang nào.
+ *
+ * Dùng đúng ba chỗ mà nghiệp vụ là một nhưng route thì nhiều: "Xe của tôi" (danh sách xe +
+ * trung tâm bảo dưỡng), "Đơn thuê" (yêu cầu đặt xe + đơn đã chốt) và "Tài chính" (doanh thu +
+ * thu chi + công nợ). Gộp ở tầng ĐIỀU HƯỚNG chứ không gộp route: mọi trang cũ giữ nguyên URL,
+ * quyền và hành vi.
+ */
+export interface NavBranch {
+  readonly type: 'branch';
   readonly key: string;
   readonly labelKey: NavLabelKey;
   readonly icon: ComponentType<{ className?: string }>;
   readonly children: readonly NavLeaf[];
 }
 
-export type NavNode = NavLeaf | NavGroup;
+export type NavNode = NavLeaf | NavBranch;
 
-export function isNavGroup(node: NavNode): node is NavGroup {
-  return node.type === 'group';
+/**
+ * Khối chức năng của sidebar: nhãn nhỏ in hoa + vài mục bên dưới.
+ *
+ * Đây là tầng làm cho sidebar đọc được trong năm giây — mỗi khối trả lời một câu hỏi của chủ
+ * xe ("hôm nay chạy thế nào", "vận hành cái gì", "tiền nong ra sao", "chỉnh ở đâu"), thay cho
+ * 18 mục ngang cấp không có thứ bậc.
+ *
+ * `pinned` = luôn hiện, không có nút gập: Tổng quan (điểm bắt đầu) và Hỗ trợ (lối thoát).
+ */
+export interface NavSection {
+  readonly key: string;
+  readonly labelKey: NavLabelKey;
+  readonly children: readonly NavNode[];
+  readonly pinned?: boolean;
+}
+
+export function isNavBranch(node: NavNode): node is NavBranch {
+  return node.type === 'branch';
 }
 
 /**
- * Menu của gian hàng — bám theo giao diện Firebase-code (index.html), gom về 2 cấp:
- * Tổng quan · Quản lý · Cài đặt. Đã bỏ Phạt nguội / Nâng cấp xe / AI trợ lý theo yêu cầu.
- * Mục nào chưa dựng trang thật đánh `comingSoon`.
+ * Sidebar của GIAN HÀNG — sắp theo hành trình của chủ xe, không theo bảng chức năng.
+ *
+ * Trật tự có chủ đích: xem tình hình → vận hành đội xe và đơn → chăm khách & tiền → mặt tiền
+ * trên marketplace → cấu hình (đụng một lần rồi thôi) → hỗ trợ. Không mục nào bị xoá so với
+ * bản 18-mục-ngang-cấp: ba mục lui xuống làm mục con (Bảo dưỡng, Thu chi, Công nợ), Đơn đặt xe
+ * thành mục con của Đơn thuê, Thùng rác lui về Cấu hình.
  */
-export const SHOP_NAV: readonly NavNode[] = [
+export const SHOP_NAV: readonly NavSection[] = [
   {
-    key: 'dashboard',
-    labelKey: 'manage.dashboard',
-    href: ROUTES.MANAGE.ROOT,
-    permission: PERMISSION.TENANT_VIEW,
-    icon: DashboardOutlined,
+    key: 'overview',
+    labelKey: 'manageGroups.overview',
+    pinned: true,
+    children: [
+      {
+        key: 'dashboard',
+        labelKey: 'manage.dashboard',
+        href: ROUTES.MANAGE.ROOT,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: DashboardOutlined,
+      },
+    ],
   },
   {
-    type: 'group',
     key: 'operations',
     labelKey: 'manageGroups.operations',
-    icon: AppstoreOutlined,
     children: [
+      {
+        type: 'branch',
+        key: 'fleet',
+        labelKey: 'manage.myVehicles',
+        icon: CarOutlined,
+        children: [
+          {
+            key: 'vehicles',
+            labelKey: 'manage.vehicleList',
+            href: ROUTES.MANAGE.VEHICLES,
+            permission: PERMISSION.VEHICLE_VIEW,
+            icon: UnorderedListOutlined,
+          },
+          {
+            // Bảo dưỡng là việc CỦA XE, không phải nghiệp vụ ngang hàng với xe — nên nó nằm
+            // dưới đội xe. Trang toàn đội giữ nguyên route; bảo dưỡng của MỘT xe vẫn ở tab
+            // trong hồ sơ xe (`VEHICLE_EDIT_TAB.MAINTENANCE`).
+            key: 'maintenance',
+            labelKey: 'manage.maintenance',
+            href: ROUTES.MANAGE.MAINTENANCE,
+            permission: PERMISSION.VEHICLE_MAINTENANCE_VIEW,
+            icon: ToolOutlined,
+          },
+        ],
+      },
       {
         key: 'calendar',
         labelKey: 'manage.calendar',
@@ -99,70 +176,88 @@ export const SHOP_NAV: readonly NavNode[] = [
         icon: CalendarOutlined,
       },
       {
-        key: 'vehicles',
-        labelKey: 'manage.vehicles',
-        href: ROUTES.MANAGE.VEHICLES,
-        permission: PERMISSION.VEHICLE_VIEW,
-        icon: CarOutlined,
-      },
-      {
-        key: 'maintenance',
-        labelKey: 'manage.maintenance',
-        href: ROUTES.MANAGE.MAINTENANCE,
-        permission: PERMISSION.VEHICLE_MAINTENANCE_VIEW,
-        icon: ToolOutlined,
-      },
-      {
-        key: 'bookings',
-        labelKey: 'manage.bookings',
-        href: ROUTES.MANAGE.BOOKINGS,
-        permission: PERMISSION.BOOKING_VIEW,
+        type: 'branch',
+        key: 'orders',
+        labelKey: 'manage.orders',
         icon: FileTextOutlined,
-      },
-      {
-        key: 'booking-requests',
-        labelKey: 'manage.bookingRequests',
-        href: ROUTES.MANAGE.BOOKING_REQUESTS,
-        permission: PERMISSION.BOOKING_REQUEST_VIEW,
-        icon: ScheduleOutlined,
+        children: [
+          {
+            // Yêu cầu khách gửi lên, CHƯA phải đơn thuê: thực thể riêng, quyền riêng, luồng
+            // duyệt riêng. Không gộp được vào tab của `/manage/bookings` mà không đổi hành vi
+            // trang đó — nên gộp ở tầng menu. Đứng trước vì đây là việc phải làm trong ngày.
+            key: 'booking-requests',
+            labelKey: 'manage.bookingRequests',
+            href: ROUTES.MANAGE.BOOKING_REQUESTS,
+            permission: PERMISSION.BOOKING_REQUEST_VIEW,
+            icon: InboxOutlined,
+            badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
+          },
+          {
+            key: 'bookings',
+            labelKey: 'manage.bookings',
+            href: ROUTES.MANAGE.BOOKINGS,
+            permission: PERMISSION.BOOKING_VIEW,
+            icon: FileDoneOutlined,
+          },
+        ],
       },
       {
         key: 'customers',
         labelKey: 'manage.customers',
         href: ROUTES.MANAGE.CUSTOMERS,
-        // Trang thật từ 18/08 (sổ khách của gian hàng — gap S-01). Quyền RIÊNG `customers.view`,
-        // không mượn `bookings.view` như trước: xem sổ khách và xem đơn thuê là hai việc khác nhau.
+        // Quyền RIÊNG `customers.view`, không mượn `bookings.view`: xem sổ khách và xem đơn
+        // thuê là hai việc khác nhau.
         permission: PERMISSION.CUSTOMER_VIEW,
         icon: TeamOutlined,
-      },
-      {
-        key: 'finance',
-        labelKey: 'manage.finance',
-        href: ROUTES.MANAGE.FINANCE,
-        permission: PERMISSION.FINANCE_VIEW,
-        icon: WalletOutlined,
-      },
-      {
-        key: 'receipts',
-        labelKey: 'manage.receipts',
-        href: ROUTES.MANAGE.RECEIPTS,
-        permission: PERMISSION.FINANCE_VIEW,
-        icon: TransactionOutlined,
-      },
-      {
-        key: 'debts',
-        labelKey: 'manage.debts',
-        href: ROUTES.MANAGE.DEBTS,
-        permission: PERMISSION.FINANCE_VIEW,
-        icon: CreditCardOutlined,
       },
     ],
   },
   {
-    type: 'group',
-    key: 'settings',
-    labelKey: 'manageGroups.settings',
-    icon: SettingOutlined,
+    key: 'business',
+    labelKey: 'manageGroups.business',
+    children: [
+      {
+        key: 'chat',
+        labelKey: 'manage.chat',
+        href: ROUTES.MANAGE.CHAT,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: MessageOutlined,
+        badge: NAV_BADGE.CHAT_UNREAD,
+      },
+      {
+        type: 'branch',
+        key: 'finance',
+        labelKey: 'manage.finance',
+        icon: WalletOutlined,
+        children: [
+          {
+            key: 'finance-overview',
+            labelKey: 'manage.financeOverview',
+            href: ROUTES.MANAGE.FINANCE,
+            permission: PERMISSION.FINANCE_VIEW,
+            icon: LineChartOutlined,
+          },
+          {
+            key: 'receipts',
+            labelKey: 'manage.receipts',
+            href: ROUTES.MANAGE.RECEIPTS,
+            permission: PERMISSION.FINANCE_VIEW,
+            icon: TransactionOutlined,
+          },
+          {
+            key: 'debts',
+            labelKey: 'manage.debts',
+            href: ROUTES.MANAGE.DEBTS,
+            permission: PERMISSION.FINANCE_VIEW,
+            icon: CreditCardOutlined,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'storefront',
+    labelKey: 'manageGroups.storefront',
     children: [
       {
         key: 'shop',
@@ -171,26 +266,18 @@ export const SHOP_NAV: readonly NavNode[] = [
         permission: PERMISSION.TENANT_VIEW,
         icon: ShopOutlined,
       },
-      {
-        key: 'shop-branches',
-        labelKey: 'manage.shopBranches',
-        href: ROUTES.MANAGE.SHOP_BRANCHES,
-        permission: PERMISSION.BRANCH_VIEW,
-        icon: EnvironmentOutlined,
-      },
+    ],
+  },
+  {
+    key: 'settings',
+    labelKey: 'manageGroups.settings',
+    children: [
       {
         key: 'shop-policies',
         labelKey: 'manage.shopPolicies',
         href: ROUTES.MANAGE.SHOP_POLICIES,
         permission: PERMISSION.TENANT_VIEW,
         icon: SafetyCertificateOutlined,
-      },
-      {
-        key: 'members',
-        labelKey: 'manage.members',
-        href: ROUTES.MANAGE.MEMBERS,
-        permission: PERMISSION.MEMBER_VIEW,
-        icon: UsergroupAddOutlined,
       },
       {
         key: 'pickup-areas',
@@ -201,21 +288,29 @@ export const SHOP_NAV: readonly NavNode[] = [
         comingSoon: true,
       },
       {
+        key: 'shop-branches',
+        labelKey: 'manage.shopBranches',
+        href: ROUTES.MANAGE.SHOP_BRANCHES,
+        permission: PERMISSION.BRANCH_VIEW,
+        icon: ApartmentOutlined,
+      },
+      {
         key: 'drivers',
         labelKey: 'manage.drivers',
         href: ROUTES.MANAGE.DRIVERS,
-        // Trang thật từ 17/08 (nghiệp vụ xe có tài xế) — hồ sơ tài xế + gán vào đơn.
         permission: PERMISSION.DRIVER_VIEW,
         icon: SolutionOutlined,
       },
       {
-        key: 'chat',
-        labelKey: 'manage.chat',
-        href: ROUTES.MANAGE.CHAT,
-        permission: PERMISSION.TENANT_VIEW,
-        icon: MessageOutlined,
+        key: 'members',
+        labelKey: 'manage.members',
+        href: ROUTES.MANAGE.MEMBERS,
+        permission: PERMISSION.MEMBER_VIEW,
+        icon: UsergroupAddOutlined,
       },
       {
+        // Việc dọn dẹp, không phải việc hằng ngày — nằm cuối Cấu hình chứ không chiếm một
+        // dòng ngang hàng với Xe hay Đơn thuê.
         key: 'trash',
         labelKey: 'manage.trash',
         href: ROUTES.MANAGE.TRASH,
@@ -225,25 +320,47 @@ export const SHOP_NAV: readonly NavNode[] = [
       },
     ],
   },
+  {
+    key: 'support',
+    labelKey: 'manageGroups.support',
+    pinned: true,
+    children: [
+      {
+        key: 'support',
+        labelKey: 'manage.support',
+        href: ROUTES.MANAGE.SUPPORT,
+        permission: PERMISSION.TENANT_VIEW,
+        icon: QuestionCircleOutlined,
+      },
+    ],
+  },
 ];
 
 /**
- * Menu của nền tảng (platform_admin/staff). Các chức năng quản trị chưa có UI nhưng đã có
- * permission trong RBAC — thêm vào đây để lộ dần, gate đúng quyền.
+ * Sidebar của NỀN TẢNG (platform_admin/staff).
+ *
+ * Cùng mô hình khối như gian hàng, nhưng KHÔNG đổi thứ tự hay cách gom: bản thiết kế lại lần
+ * này nói về hành trình của chủ xe. Đổi cả hai cây trong một nhịp là gộp hai quyết định khác
+ * nhau vào cùng một diff.
  */
-export const PLATFORM_NAV: readonly NavNode[] = [
+export const PLATFORM_NAV: readonly NavSection[] = [
   {
-    key: 'platform-dashboard',
-    labelKey: 'manage.dashboard',
-    href: ROUTES.MANAGE.ROOT,
-    permission: PERMISSION.PLATFORM_DASHBOARD_VIEW,
-    icon: DashboardOutlined,
+    key: 'overview',
+    labelKey: 'manageGroups.overview',
+    pinned: true,
+    children: [
+      {
+        key: 'platform-dashboard',
+        labelKey: 'manage.dashboard',
+        href: ROUTES.MANAGE.ROOT,
+        permission: PERMISSION.PLATFORM_DASHBOARD_VIEW,
+        icon: DashboardOutlined,
+      },
+    ],
   },
   {
-    type: 'group',
     key: 'platform',
     labelKey: 'manageGroups.platform',
-    icon: SafetyCertificateOutlined,
     children: [
       {
         key: 'approvals',
@@ -327,16 +444,15 @@ export const PLATFORM_NAV: readonly NavNode[] = [
 ];
 
 /** Chọn cây menu theo scope: có platformRole → menu nền tảng, còn lại → menu gian hàng. */
-export function navForScope(isPlatform: boolean): readonly NavNode[] {
+export function navForScope(isPlatform: boolean): readonly NavSection[] {
   return isPlatform ? PLATFORM_NAV : SHOP_NAV;
 }
 
 /**
  * Tab trên thanh điều hướng dưới đáy (mobile). Tab "Thêm" mở Drawer, thêm ở component.
  *
- * `permission` thêm ở Wave 1D-C. Trước đó thanh tab KHÔNG lọc quyền trong khi sidebar thì có,
- * nên một vai trò tuỳ biến thiếu quyền vẫn thấy tab dẫn tới trang mà API sẽ trả 403. Đây chỉ
- * là lớp trải nghiệm — chặn thật vẫn nằm ở guard backend (CLAUDE.md mục 6).
+ * `permission` lọc như sidebar — thanh tab không được dẫn tới trang mà API sẽ trả 403. Đây chỉ
+ * là lớp trải nghiệm; chặn thật vẫn nằm ở guard backend (CLAUDE.md mục 6).
  *
  * Đây là **tập con** của cây menu, không phải bản sao: 4 đích chính, phần còn lại nằm trong
  * Drawer "Thêm".
@@ -347,6 +463,7 @@ export interface MobileTab {
   readonly href: string;
   readonly permission: Permission;
   readonly icon: ComponentType<{ className?: string }>;
+  readonly badge?: NavBadgeKey;
 }
 
 const SHOP_MOBILE_TABS: readonly MobileTab[] = [
@@ -366,17 +483,18 @@ const SHOP_MOBILE_TABS: readonly MobileTab[] = [
   },
   {
     key: 'booking-requests',
-    labelKey: 'manage.bookingRequests',
+    labelKey: 'manage.bookingRequestsShort',
     href: ROUTES.MANAGE.BOOKING_REQUESTS,
     permission: PERMISSION.BOOKING_REQUEST_VIEW,
-    icon: ScheduleOutlined,
+    icon: InboxOutlined,
+    badge: NAV_BADGE.BOOKING_REQUESTS_PENDING,
   },
   {
     key: 'bookings',
-    labelKey: 'manage.bookings',
+    labelKey: 'manage.bookingsShort',
     href: ROUTES.MANAGE.BOOKINGS,
     permission: PERMISSION.BOOKING_VIEW,
-    icon: FileTextOutlined,
+    icon: FileDoneOutlined,
   },
 ];
 
@@ -416,14 +534,19 @@ export function mobileTabsForScope(isPlatform: boolean): readonly MobileTab[] {
   return isPlatform ? PLATFORM_MOBILE_TABS : SHOP_MOBILE_TABS;
 }
 
+/** Mọi mục lá của một khối, không phân biệt nằm trực tiếp hay trong một mục cha. */
+export function leavesOfSection(section: NavSection): NavLeaf[] {
+  return section.children.flatMap((node) => (isNavBranch(node) ? [...node.children] : [node]));
+}
+
 /** Trải phẳng mọi mục lá của một cây menu. */
-export function flattenLeaves(nodes: readonly NavNode[]): NavLeaf[] {
-  return nodes.flatMap((node) => (isNavGroup(node) ? [...node.children] : [node]));
+export function flattenLeaves(sections: readonly NavSection[]): NavLeaf[] {
+  return sections.flatMap(leavesOfSection);
 }
 
 /**
  * Key menu khớp với đường dẫn hiện tại: ưu tiên khớp tuyệt đối, nếu không thì lấy mục lá
- * có href là tiền tố dài nhất (để `/manage/vehicles/new` vẫn sáng mục "Xe").
+ * có href là tiền tố dài nhất (để `/manage/vehicles/new` vẫn sáng mục "Danh sách xe").
  * `/manage` (Tổng quan) chỉ khớp tuyệt đối, không thì mọi trang đều dính vì đều bắt đầu bằng nó.
  */
 export function matchSelectedKey(pathname: string, leaves: readonly NavLeaf[]): string | undefined {
@@ -439,11 +562,32 @@ export function matchSelectedKey(pathname: string, leaves: readonly NavLeaf[]): 
   return best?.href;
 }
 
-/** Key nhóm cha chứa mục lá đang chọn — để mở sẵn đúng nhóm. */
-export function groupKeyOf(nodes: readonly NavNode[], selectedHref: string | undefined): string[] {
-  if (!selectedHref) return [];
-  return nodes
-    .filter(isNavGroup)
-    .filter((group) => group.children.some((child) => child.href === selectedHref))
-    .map((group) => group.key);
+/**
+ * Khối chứa mục đang mở — khối đó phải bung ra dù người dùng đã gập nó lại, nếu không sẽ có
+ * một trang "đang mở" mà không nhìn thấy trong menu.
+ */
+export function sectionKeyOf(
+  sections: readonly NavSection[],
+  selectedHref: string | undefined,
+): string | undefined {
+  if (!selectedHref) return undefined;
+  return sections.find((section) =>
+    leavesOfSection(section).some((leaf) => leaf.href === selectedHref),
+  )?.key;
+}
+
+/** Mục cha (submenu) chứa mục đang mở — để bung sẵn đúng submenu. */
+export function branchKeyOf(
+  sections: readonly NavSection[],
+  selectedHref: string | undefined,
+): string | undefined {
+  if (!selectedHref) return undefined;
+  for (const section of sections) {
+    for (const node of section.children) {
+      if (isNavBranch(node) && node.children.some((leaf) => leaf.href === selectedHref)) {
+        return node.key;
+      }
+    }
+  }
+  return undefined;
 }

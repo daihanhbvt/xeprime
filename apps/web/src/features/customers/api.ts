@@ -15,6 +15,7 @@ import type {
   CustomerBooking,
   CustomerDocument,
   CustomerDocumentDownload,
+  VerifyCustomerDocumentInput,
   CustomerDocumentPresign,
   CustomerFilters,
   CustomerNote,
@@ -114,6 +115,17 @@ export const fetchCustomerDocuments = (id: string): Promise<CustomerDocument[]> 
 
 export const deleteCustomerDocument = (id: string, documentId: string): Promise<{ ok: true }> =>
   apiDelete<{ ok: true }>(`/customers/${id}/documents/${documentId}`);
+
+/**
+ * Ghi nhận ĐỐI CHIẾU giấy tờ — thao tác thủ công của nhân viên, backend ghi ai/lúc nào + audit.
+ * Hệ thống KHÔNG gọi API định danh quốc gia; đây là lời khai có truy vết.
+ */
+export const verifyCustomerDocument = (
+  id: string,
+  documentId: string,
+  input: VerifyCustomerDocumentInput,
+): Promise<CustomerDocument> =>
+  apiPost<CustomerDocument>(`/customers/${id}/documents/${documentId}/verify`, input);
 
 /**
  * Mở giấy tờ: URL ký NGẮN HẠN xin ngay lúc bấm, không bao giờ lưu vào state hay cache.

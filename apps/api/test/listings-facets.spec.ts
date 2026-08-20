@@ -1,6 +1,7 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   BODY_TYPE,
+  COLLATERAL_MODE,
   FUEL_TYPE,
   REVIEW_STATUS,
   TENANT_STATUS,
@@ -76,11 +77,27 @@ async function seedFacetVehicle(v: FacetVehicle): Promise<string> {
       weekdayPrice: v.price,
       hourlyPrice: v.hourly ?? null,
       deliveryEnabled: v.delivery ?? false,
-      noCollateral: v.noCollateral ?? false,
       discountPercent: v.discount ?? null,
       mainImageUrl: 'https://img.example/x.jpg',
     },
   });
+  /*
+   * "Miễn thế chấp" từ 20/08 là HỆ QUẢ của chính sách thuê hiệu lực, không còn là cờ trên xe —
+   * nên muốn xe có nhãn đó thì phải cho nó một bản ghi đè chính sách ở chế độ `none`.
+   * Ghi đè theo XE (không phải mặc định gian hàng) để từng xe trong spec độc lập nhau.
+   */
+  if (v.noCollateral) {
+    await prisma.rentalPolicy.create({
+      data: {
+        id: newId(),
+        tenantId,
+        vehicleId: id,
+        collateralMode: COLLATERAL_MODE.NONE,
+        collateralAssetTypes: [],
+        depositAmount: '0',
+      },
+    });
+  }
   if (v.features?.length) {
     await prisma.vehicleFeature.createMany({
       data: v.features.map((featureKey) => ({ id: newId(), vehicleId: id, featureKey })),

@@ -10,6 +10,10 @@ export type ApproveBookingRequestInput = Schemas['ApproveBookingRequestDto'];
 export type BookingRequestReceipt = Schemas['BookingRequestReceiptDto'];
 export type CheckAvailabilityInput = Schemas['CheckAvailabilityDto'];
 export type CheckAvailabilityResult = Schemas['CheckAvailabilityResultDto'];
+/** Lịch bận của một xe để tô/khoá ô trên hộp chọn thời gian thuê (preview — ADR 0006). */
+export type VehicleBusyDays = Schemas['VehicleBusyDaysDto'];
+export type VehicleBusyDay = Schemas['VehicleBusyDayDto'];
+export type VehicleBusyPeriod = Schemas['VehicleBusyPeriodDto'];
 /** Hội thoại mở từ phía GIAN HÀNG cho một yêu cầu (`POST /booking-requests/:id/conversation`). */
 export type BookingRequestConversation = Schemas['ConversationSummaryDto'];
 

@@ -37,6 +37,12 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
+// Huy hiệu lấy từ hai query thật (chat + yêu cầu đặt xe) — chặn ở ranh giới đó, test này lo
+// điều hướng chứ không lo con số.
+vi.mock('./use-nav-badges', () => ({
+  useNavBadges: () => ({ bookingRequestsPending: 0, chatUnread: 0 }),
+}));
+
 // Thẻ người dùng gọi `destroySession`/router riêng — không thuộc phạm vi test điều hướng.
 vi.mock('./ManageUserCard', () => ({ ManageUserCard: () => <div data-testid="user-card" /> }));
 
@@ -101,7 +107,7 @@ describe('MobileNav — thanh tab dưới đáy', () => {
       within(bar)
         .getAllByRole('link')
         .map((a) => a.textContent),
-    ).toEqual(['Tổng quan', 'Lịch xe', 'Đơn đặt xe', 'Đơn thuê']);
+    ).toEqual(['Tổng quan', 'Lịch xe', 'Yêu cầu', 'Đơn thuê']);
     expect(within(bar).getByRole('button', { name: /Thêm$/ })).toBeTruthy();
   });
 
@@ -233,7 +239,7 @@ describe('MobileNav — Drawer menu đầy đủ', () => {
   it('mặc định đóng: nội dung menu chưa có trong tài liệu', () => {
     renderNav();
 
-    expect(screen.queryByRole('link', { name: 'Xe' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Lịch thuê' })).toBeNull();
     expect(store.getState().app.mobileNavOpen).toBe(false);
   });
 
@@ -243,7 +249,7 @@ describe('MobileNav — Drawer menu đầy đủ', () => {
     openDrawer();
 
     expect(store.getState().app.mobileNavOpen).toBe(true);
-    expect(screen.getByRole('link', { name: 'Xe' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
   });
 
   it('Drawer chứa menu ĐẦY ĐỦ, không chỉ 4 tab', () => {
@@ -258,12 +264,12 @@ describe('MobileNav — Drawer menu đầy đủ', () => {
   });
 
   it('Drawer lọc theo quyền y như sidebar', () => {
-    grant(PERMISSION.VEHICLE_VIEW);
+    grant(PERMISSION.CALENDAR_VIEW);
     renderNav();
 
     openDrawer();
 
-    expect(screen.getByRole('link', { name: 'Xe' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Cửa hàng' })).toBeNull();
   });
 
@@ -272,7 +278,7 @@ describe('MobileNav — Drawer menu đầy đủ', () => {
     openDrawer();
     expect(store.getState().app.mobileNavOpen).toBe(true);
 
-    fireEvent.click(screen.getByRole('link', { name: 'Xe' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Lịch thuê' }));
 
     expect(store.getState().app.mobileNavOpen).toBe(false);
   });
@@ -315,11 +321,13 @@ describe('MobileNav — Drawer menu đầy đủ', () => {
   });
 
   it('mục đang mở trong Drawer nhận ra được bằng aria-current', () => {
-    nav.pathname = '/manage/vehicles';
+    nav.pathname = '/manage/calendar';
     renderNav();
     openDrawer();
 
-    expect(screen.getByRole('link', { name: 'Xe' }).getAttribute('aria-current')).toBe('page');
+    expect(screen.getByRole('link', { name: 'Lịch thuê' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
   });
 
   it('đóng Drawer trả TIÊU ĐIỂM về nút đã mở nó', async () => {

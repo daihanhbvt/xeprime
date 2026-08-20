@@ -81,6 +81,34 @@ export class OccupancyService {
   }
 
   /**
+   * Các quãng CHIẾM CHỖ THẬT của một xe trong cửa sổ `[from, to)` — để tô ngày bận lên lịch
+   * trước khi khách chọn.
+   *
+   * Đọc `period` chứ không phải `start_at`/`end_at`: buffer chuẩn bị ở đuôi cũng chặn đơn kế
+   * tiếp y hệt giờ thuê, nên lịch phải tô đúng thứ mà constraint sẽ từ chối. Không lộ nguồn
+   * chiếm chỗ (đơn của ai, bảo dưỡng hay khoá tay) — khách chỉ cần biết BẬN.
+   *
+   * Số dòng bị chặn bởi độ dài cửa sổ (caller kẹp): các quãng không bao giờ chồng nhau nên
+   * không có chuyện một xe có vô hạn bản ghi trong cùng một khoảng. Truy vấn đi đúng index
+   * gist của chính exclusion constraint (`vehicle_id`, `period`).
+   *
+   * ADR 0006: chỉ ĐỌC, và như mọi preview thì có thể cũ ngay khi vừa trả về.
+   */
+  async listBusyPeriods(
+    vehicleId: string,
+    from: Date,
+    to: Date,
+  ): Promise<Array<{ startAt: Date; endAt: Date }>> {
+    return this.prisma.$queryRaw<Array<{ startAt: Date; endAt: Date }>>`
+      SELECT lower(period) AS "startAt", upper(period) AS "endAt"
+      FROM vehicle_occupancies
+      WHERE vehicle_id = ${vehicleId}
+        AND period && tstzrange(${from}, ${to}, '[)')
+      ORDER BY lower(period)
+    `;
+  }
+
+  /**
    * Preview trùng lịch cho UX (`POST /calendar/check-conflict`).
    *
    * ADR 0006: đây KHÔNG phải cơ chế bảo vệ. Kết quả có thể cũ ngay khi vừa trả về —

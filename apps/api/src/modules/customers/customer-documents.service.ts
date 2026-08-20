@@ -27,6 +27,7 @@ import {
   CustomerDocumentDto,
   CustomerDocumentPresignDto,
   PresignCustomerDocumentDto,
+  VerifyCustomerDocumentDto,
 } from './dto/customer.dto';
 
 /** Signed GET sống ngắn — đủ cho một cú click mở giấy tờ, không đủ để chia sẻ lại có ý nghĩa. */
@@ -56,6 +57,10 @@ function startsWith(bytes: Uint8Array, signature: number[]): boolean {
 const SELECT = {
   id: true,
   documentType: true,
+  verifiedAt: true,
+  verifiedByUserId: true,
+  verifyMethod: true,
+  verifyNote: true,
   customTypeName: true,
   originalName: true,
   mimeType: true,
@@ -103,8 +108,80 @@ export class CustomerDocumentsService {
       select: SELECT,
     });
 
-    const uploaderNames = await this.actorNames(rows.map((row) => row.uploadedBy));
-    return rows.map((row) => toDto(row, uploaderNames));
+    // Một lượt tra tên cho CẢ người tải lên lẫn người đối chiếu — hai vai thường khác nhau
+    // (nhân viên nhận xe tải ảnh, quản lý mới là người soi VNeID).
+    const actorNames = await this.actorNames([
+      ...rows.map((row) => row.uploadedBy),
+      ...rows.map((row) => row.verifiedByUserId),
+    ]);
+    return rows.map((row) => toDto(row, actorNames));
+  }
+
+  /**
+   * Ghi nhận ĐỐI CHIẾU giấy tờ — thao tác thủ công (nhân viên soi VNeID/bản gốc), hệ thống
+   * không gọi API định danh quốc gia nên đây là lời khai có truy vết, không phải xác thực máy.
+   *
+   * Chỉ đối chiếu được giấy tờ đã `ready`: một hàng `pending` là bản ghi chưa có file thật.
+   * Gọi lại trên giấy tờ đã đối chiếu = ghi đè (soi lại lần nữa), và audit giữ cả giá trị cũ.
+   */
+  async verify(
+    tenantId: string,
+    customerId: string,
+    userId: string,
+    documentId: string,
+    dto: VerifyCustomerDocumentDto,
+  ): Promise<CustomerDocumentDto> {
+    await this.customers.findOne(tenantId, customerId);
+    const before = await this.prisma.tenantCustomerDocument.findFirst({
+      where: {
+        id: documentId,
+        tenantId,
+        tenantCustomerId: customerId,
+        status: CUSTOMER_DOCUMENT_STATUS.READY,
+        deletedAt: null,
+      },
+      select: SELECT,
+    });
+    if (!before) throw documentNotFound();
+
+    const row = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.tenantCustomerDocument.update({
+        where: { id: documentId },
+        data: {
+          verifiedAt: new Date(),
+          verifiedByUserId: userId,
+          verifyMethod: dto.verifyMethod,
+          verifyNote: dto.verifyNote?.trim() || null,
+        },
+        select: SELECT,
+      });
+
+      // Đối chiếu danh tính là hành vi cần truy vết (database_design §bảo mật giấy tờ).
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: AUDIT_ACTOR_SCOPE.TENANT,
+          action: 'customer_document.verify',
+          targetType: 'tenant_customer_document',
+          targetId: documentId,
+          before: {
+            verifiedAt: before.verifiedAt?.toISOString() ?? null,
+            verifiedByUserId: before.verifiedByUserId,
+            verifyMethod: before.verifyMethod,
+          },
+          after: {
+            documentType: updated.documentType,
+            verifiedAt: updated.verifiedAt?.toISOString() ?? null,
+            verifyMethod: updated.verifyMethod,
+          },
+        },
+        tx,
+      );
+      return updated;
+    });
+
+    return toDto(row, await this.actorNames([row.uploadedBy, row.verifiedByUserId]));
   }
 
   /**
@@ -344,6 +421,12 @@ function toDto(row: DocumentRow, uploaderNames: Map<string, string>): CustomerDo
   return {
     id: row.id,
     documentType: row.documentType,
+    verifiedAt: row.verifiedAt ? row.verifiedAt.toISOString() : null,
+    verifiedByName: row.verifiedByUserId
+      ? (uploaderNames.get(row.verifiedByUserId) ?? null)
+      : null,
+    verifyMethod: row.verifyMethod,
+    verifyNote: row.verifyNote,
     customTypeName: row.customTypeName,
     originalName: row.originalName,
     mimeType: row.mimeType,

@@ -177,6 +177,10 @@
   /* ─── Tầng z (overlay do AntD sở hữu qua zIndexPopupBase) ─────────────── */
   --xp-z-sidebar: 110;
   --xp-z-topbar: 100;
+  /* Popover neo trong canvas lịch (bộ chọn thao tác của ô trống). PHẢI cao hơn mọi thứ dính
+     của lịch — header ngày, cột xe, hàng "Xe còn trống" đều là ANH EM cùng stacking context,
+     nên số nhỏ hơn là bị đè và popup mất nội dung. Vẫn thấp hơn topbar/sidebar. */
+  --xp-z-calendar-popover: 40;
   --xp-z-calendar-header: 30;
   --xp-z-calendar-sticky-col: 20;
   --xp-z-popup-base: 1000;

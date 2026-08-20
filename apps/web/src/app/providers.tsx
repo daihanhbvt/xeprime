@@ -13,6 +13,7 @@ import { useState, type ReactNode } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
 import { ChatRealtimeProvider } from '@/features/chat/context/ChatRealtimeContext';
 import type { AppLocale } from '@/i18n/config';
+import type { NavPreferences } from '@/lib/ui-preferences';
 import { makeStore } from '@/store/make-store';
 import { antdTheme } from '@/styles/theme';
 
@@ -46,12 +47,22 @@ const ANTD_LOCALE: Readonly<Record<AppLocale, AntdLocale>> = {
  * ADR 0003: không có StyledComponentsRegistry ở đây. Style riêng dùng CSS Modules,
  * nên chỉ còn đúng một cơ chế thu style SSR.
  */
-export function Providers({ children }: { children: ReactNode }) {
+export interface ProvidersProps {
+  children: ReactNode;
+  /**
+   * Tuỳ chọn giao diện của vỏ quản lý, đọc từ cookie phía server (`getServerNavPreferences`).
+   * Đi thẳng vào store lúc TẠO để lần render đầu trên server và trên client khớp nhau — dispatch
+   * sau khi hydrate sẽ làm sidebar nhấp nháy ở mọi lần tải trang.
+   */
+  navPreferences?: NavPreferences;
+}
+
+export function Providers({ children, navPreferences }: ProvidersProps) {
   const locale = useLocale();
 
   // makeStore/QueryClient tạo trong state chứ không phải module scope: module scope là
   // singleton dùng chung giữa các request trên server, tức là rò dữ liệu giữa người dùng.
-  const [store] = useState(makeStore);
+  const [store] = useState(() => makeStore(navPreferences));
   const [queryClient] = useState(
     () =>
       new QueryClient({

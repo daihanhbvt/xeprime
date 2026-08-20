@@ -39,6 +39,8 @@ vi.mock('@/features/rental-policies/hooks/use-shop-policy', () => ({
 function policyFixture(over: Partial<ShopRentalPolicy> = {}): ShopRentalPolicy {
   return {
     policy: {
+      collateralMode: 'cash',
+      collateralAssetTypes: [],
       depositAmount: '5000000',
       deliveryEnabled: true,
       deliveryMaxRadiusKm: 10,
@@ -241,7 +243,7 @@ describe('/manage/shop/policies — sửa, validate, xác nhận lưu', () => {
 
   it('ghi chú cũng mở khi hover hoặc focus bằng bàn phím', async () => {
     renderPage();
-    const infoButton = screen.getByRole('button', { name: 'Giải thích yêu cầu đặt cọc' });
+    const infoButton = screen.getByRole('button', { name: 'Giải thích yêu cầu bảo đảm' });
 
     fireEvent.mouseEnter(infoButton);
     await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('true'));

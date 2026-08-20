@@ -17,7 +17,9 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setMobileNavOpen } from '@/store/slices/app.slice';
 import { ManageMenu } from './ManageMenu';
 import { ManageUserCard } from './ManageUserCard';
+import { NavBadge } from './NavBadge';
 import { useManageNav } from './use-manage-nav';
+import { useNavBadges } from './use-nav-badges';
 import styles from './MobileNav.module.css';
 
 function isTabActive(pathname: string, href: string): boolean {
@@ -39,6 +41,7 @@ function isTabActive(pathname: string, href: string): boolean {
  */
 export function MobileNav() {
   const t = useTranslations('Navigation');
+  const tShell = useTranslations('ManageCommon');
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const open = useAppSelector((s) => s.app.mobileNavOpen);
@@ -50,7 +53,8 @@ export function MobileNav() {
 
   const close = () => dispatch(setMobileNavOpen(false));
   const tabs = mobileTabsForScope(Boolean(user?.platformRole)).filter((tab) => has(tab.permission));
-  const { items, selectedKey } = useManageNav(close);
+  const badges = useNavBadges();
+  const { items, selectedKey, openKeys, onOpenChange } = useManageNav({ onNavigate: close });
 
   // "Thêm" sáng khi trang hiện tại không thuộc tab chính nào (đang ở mục trong Drawer).
   const anyPrimaryActive = tabs.some((tab) => isTabActive(pathname, tab.href));
@@ -60,15 +64,27 @@ export function MobileNav() {
       <nav className={styles.bar} aria-label={t('public.quickNavLabel')}>
         {tabs.map((tab) => {
           const active = isTabActive(pathname, tab.href);
+          const label = t(tab.labelKey);
+          const count = tab.badge ? badges[tab.badge] : 0;
           return (
             <Link
               key={tab.key}
               href={tab.href}
               className={cx(styles.tab, active && styles.active)}
               aria-current={active ? 'page' : undefined}
+              // Nhãn tab bị rút ngắn cho vừa 5 cột; tên đọc được phải là tên đầy đủ kèm số
+              // việc đang chờ, chứ không phải chữ "Yêu cầu" trơ trọi.
+              aria-label={
+                count > 0 ? `${label}, ${tShell('shell.needsAction', { count })}` : undefined
+              }
             >
-              {decorativeIcon(createElement(tab.icon, { className: styles.icon }))}
-              <span className={styles.label}>{t(tab.labelKey)}</span>
+              <span className={styles.iconWrap}>
+                {decorativeIcon(createElement(tab.icon, { className: styles.icon }))}
+                <span className={styles.tabBadge}>
+                  <NavBadge count={count} />
+                </span>
+              </span>
+              <span className={styles.label}>{label}</span>
             </Link>
           );
         })}
@@ -103,7 +119,13 @@ export function MobileNav() {
       >
         {/* Vùng landmark có tên riêng: trang mobile có hai <nav> (thanh tab + menu đầy đủ). */}
         <nav className={styles.drawerMenu} aria-label={t('manage.fullMenu')}>
-          <ManageMenu items={items} selectedKey={selectedKey} tone="dark" />
+          <ManageMenu
+            items={items}
+            selectedKey={selectedKey}
+            openKeys={openKeys}
+            onOpenChange={onOpenChange}
+            tone="dark"
+          />
         </nav>
         <ManageUserCard tone="dark" />
       </Drawer>

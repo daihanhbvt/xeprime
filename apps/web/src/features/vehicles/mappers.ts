@@ -68,7 +68,6 @@ export function formValuesToInput(values: VehicleFormValues): CreateVehicleInput
     withDriverOneWayPrice:
       values.withDriverOneWayPrice == null ? null : String(values.withDriverOneWayPrice),
     deliveryEnabled: values.deliveryEnabled,
-    noCollateral: values.noCollateral,
     discountPercent: values.discountPercent ?? null,
     description: textOrUndefined(values.description),
     mainImageUrl: values.mainImageUrl ?? undefined,
@@ -123,7 +122,6 @@ export function vehicleToFormValues(v: VehicleDetail): VehicleFormValues {
     withDriverOneWayPrice:
       v.withDriverOneWayPrice == null ? null : Number(v.withDriverOneWayPrice),
     deliveryEnabled: v.deliveryEnabled,
-    noCollateral: v.noCollateral,
     discountPercent: v.discountPercent ?? null,
     description: v.description ?? '',
     mainImageUrl: v.mainImageUrl ?? null,

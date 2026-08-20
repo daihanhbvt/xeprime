@@ -234,3 +234,9 @@
 .editValueBtn:hover {
   text-decoration: underline;
 }
+
+/* Nút thao tác đứng cạnh dữ liệu trong khối chi tiết — không kéo giãn theo chiều ngang. */
+.inlineAction {
+  align-self: flex-start;
+  margin-block-start: var(--xp-space-xs);
+}

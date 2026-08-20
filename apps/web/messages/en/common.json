@@ -161,6 +161,40 @@
       "allOf": "{label}: All",
       "removeFilter": "Remove filter {label}",
       "listFilters": "List filters"
+    },
+    "rentalRange": {
+      "ariaLabel": "Rental period",
+      "ariaValue": "{label}: {start} to {end}",
+      "pickup": "Pick-up",
+      "return": "Return",
+      "notSelected": "not selected",
+      "pickDateTime": "Pick date & time",
+      "drawerTitle": "Choose your rental period",
+      "modeTablist": "How the rental time is counted",
+      "modeDaily": "By day",
+      "modeHourly": "By hour",
+      "pickupTime": "Pick-up time",
+      "returnTime": "Return time",
+      "startDate": "Start date",
+      "duration": "Rental length",
+      "durationEndsAt": "ends: {time}",
+      "durationOption": "{duration} (ends: {time})",
+      "summaryDuration": "Rental length: <value>{duration}</value>",
+      "returnBeforePickup": "The return time must be after the pick-up time",
+      "placeholder": "Choose your pick-up and return dates",
+      "placeholderMinDays": "Choose your pick-up and return dates ({count, plural, one {# day} other {# days}} minimum)",
+      "busy": {
+        "loading": "Loading the vehicle's schedule…",
+        "legendSelected": "Selected",
+        "legendInRange": "Within your range",
+        "legendFull": "Unavailable",
+        "legendPartial": "Partly booked",
+        "fullTooltip": "This vehicle is booked for the whole day",
+        "partialTooltip": "Booked {ranges} — you can still pick up or return outside those hours",
+        "period": "{start}–{end}",
+        "conflict": "Your selection overlaps a booked slot ({period} on {date}). Please pick different hours.",
+        "hourlyUnavailable": "Overlaps a booked slot"
+      }
     }
   }
 }

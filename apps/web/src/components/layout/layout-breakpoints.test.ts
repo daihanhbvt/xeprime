@@ -163,6 +163,13 @@ describe('vỏ portal — override AntD phải thắng được về độ đặ
 
     expect(menuRules.length).toBeGreaterThan(0);
     for (const selector of menuRules) {
+      if (selector.includes('.popup')) {
+        // Bảng thả nổi của mục cha khi thu gọn render QUA PORTAL, ngoài cây `.ant-menu-root` —
+        // ở đó không có lớp nào để bám. Độ đặc hiệu do chính class `.popup` gánh: ba class
+        // (0,3,0) vẫn thắng luật (0,2,0) của AntD.
+        expect(classCount(selector), selector).toBeGreaterThanOrEqual(3);
+        continue;
+      }
       expect(selector, selector).toContain('.ant-menu-root.ant-menu-light');
     }
   });

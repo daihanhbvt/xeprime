@@ -4,8 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { makeStore } from '@/store/make-store';
 import { XP_TOKENS } from '@/styles/theme';
 
 import { AppShell } from './AppShell';
@@ -69,11 +71,15 @@ const DUAL = {
 function renderShell() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <AppShell>
-        <div data-testid="page">Nội dung trang</div>
-      </AppShell>
-    </QueryClientProvider>,
+    // Shell lưu tuỳ chọn sidebar/khối menu vào cookie qua `useNavPreferencesSync`, nên nó đọc
+    // store — không có Provider thì react-redux ném ngay ở render đầu.
+    <Provider store={makeStore()}>
+      <QueryClientProvider client={queryClient}>
+        <AppShell>
+          <div data-testid="page">Nội dung trang</div>
+        </AppShell>
+      </QueryClientProvider>
+    </Provider>,
   );
 }
 

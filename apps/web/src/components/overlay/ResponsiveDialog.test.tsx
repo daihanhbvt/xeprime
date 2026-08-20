@@ -394,4 +394,36 @@ describe('ResponsiveDialog', () => {
     expect(screen.queryByText('Nội dung bí mật')).toBeNull();
     expect(document.querySelector('.ant-drawer')).toBeNull();
   });
+
+  /**
+   * Hồi quy: overlay `xl` MỘT LUỒNG phải cuộn được.
+   *
+   * Trước 20/08 `xl` luôn khoá `overflow: hidden` vì nó sinh ra cho bố cục hai cột tự cuộn.
+   * Ba overlay chi tiết (đơn thuê / khách / xe) là nội dung một luồng nên bị CẮT CỤT: hàng nút
+   * cuối biến mất và không có thanh cuộn nào để với tới — đúng lỗi gặp ở `/manage/debts`.
+   */
+  describe('cuộn thân modal xl', () => {
+    const modalBody = () => document.querySelector<HTMLElement>('.ant-modal-body');
+
+    it('mặc định: thân xl KHÔNG bị khoá cuộn (nội dung một luồng vẫn với tới cuối)', () => {
+      render(
+        <ResponsiveDialog open size="xl" title="Chi tiết" onClose={vi.fn()}>
+          <p>Nội dung dài</p>
+        </ResponsiveDialog>,
+      );
+      const body = modalBody();
+      expect(body).not.toBeNull();
+      expect(body!.className).toContain('xlBody');
+      expect(body!.className).not.toContain('xlBodyContained');
+    });
+
+    it('bodyScroll="content": thân khoá cuộn để các cột con tự cuộn', () => {
+      render(
+        <ResponsiveDialog open size="xl" bodyScroll="content" title="Đặt xe" onClose={vi.fn()}>
+          <p>Hai cột</p>
+        </ResponsiveDialog>,
+      );
+      expect(modalBody()!.className).toContain('xlBodyContained');
+    });
+  });
 });

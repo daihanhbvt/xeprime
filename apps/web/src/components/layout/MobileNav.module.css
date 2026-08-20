@@ -110,6 +110,20 @@
     line-height: 1;
   }
 
+  /* Huy hiệu neo vào GÓC ICON, không đứng cạnh nhãn: ở 360px nhãn đã phải cắt ellipsis, thêm
+     một con số vào dòng chữ là đẩy nó biến mất. */
+  .iconWrap {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .tabBadge {
+    position: absolute;
+    top: -6px;
+    inset-inline-start: 60%;
+    display: inline-flex;
+  }
+
   /* Nhãn dài ("Đơn đặt xe") ở 360px: cắt bằng ellipsis thay vì xuống dòng hay tràn. */
   .label {
     max-width: 100%;

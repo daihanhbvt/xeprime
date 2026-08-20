@@ -71,6 +71,7 @@ const LIST_SELECT = {
 
 const DETAIL_SELECT = {
   ...LIST_SELECT,
+  tenantCustomerId: true,
   // Ảnh đại diện xe: một cột trên chính bảng `vehicles`, không join gallery — chi tiết đơn
   // cần NHẬN RA chiếc xe, không cần xem bộ ảnh.
   vehicle: { select: { name: true, plateNumber: true, mainImageUrl: true } },
@@ -936,6 +937,7 @@ function toListItem(b: BookingListRow): BookingListItemDto {
 function toDetail(b: BookingDetailRow): BookingDetailDto {
   return {
     ...toListItem(b),
+    tenantCustomerId: b.tenantCustomerId,
     baseAmount: b.baseAmount as unknown as string,
     deliveryFee: b.deliveryFee as unknown as string,
     discountAmount: b.discountAmount as unknown as string,

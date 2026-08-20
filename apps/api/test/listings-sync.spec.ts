@@ -2,6 +2,7 @@ import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   APPROVAL_STATUS,
   APPROVAL_TARGET_TYPE,
+  COLLATERAL_MODE,
   LISTING_STATUS,
   MEMBERSHIP_STATUS,
   TENANT_ROLE,
@@ -12,6 +13,7 @@ import { AuditService } from '../src/modules/audit/audit.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
 import { PlatformApprovalService } from '../src/modules/platform-admin/platform-approval.service';
+import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makePublicListingsService,
@@ -32,6 +34,7 @@ const audit = new AuditService(asService);
 const notifications = new NotificationService(asService);
 const listings = new ListingsService(asService);
 const vehicles = makeVehiclesService(asService);
+const pricing = new PricingService(asService, audit, listings);
 const approvals = new PlatformApprovalService(asService, audit, notifications, listings);
 const publicListings = makePublicListingsService(asService);
 
@@ -280,8 +283,9 @@ describe('public_listings sync (ADR 0008)', () => {
       });
       expect(hidden.status).toBe(LISTING_STATUS.HIDDEN);
 
-      // Duyệt lại rồi sửa trường KHÔNG nhạy cảm (miễn thế chấp) → listing giữ active và snapshot
-      // cập nhật tại chỗ.
+      // Duyệt lại rồi đổi CHÍNH SÁCH gian hàng sang "miễn thế chấp" → listing giữ active và
+      // nhãn trên sàn đổi theo. Từ 20/08 `noCollateral` KHÔNG còn là cờ nhập tay trên xe: nó
+      // suy từ chính sách hiệu lực, nên đây mới là đường duy nhất làm nó đổi.
       const task2 = await prisma.approvalTask.findFirstOrThrow({
         where: {
           targetType: APPROVAL_TARGET_TYPE.VEHICLE,
@@ -292,7 +296,23 @@ describe('public_listings sync (ADR 0008)', () => {
       });
       await approvals.approve(task2.id, reviewerId);
 
-      await vehicles.update(tenantId, vApprove, ownerId, { noCollateral: true });
+      await pricing.saveShopPolicy(
+        tenantId,
+        ownerId,
+        {
+          collateralMode: COLLATERAL_MODE.NONE,
+          collateralAssetTypes: [],
+          depositAmount: '0',
+          deliveryEnabled: false,
+          deliveryTiers: [],
+          overtimeFeePerHour: null,
+          overtimeGraceMinutes: null,
+          overtimeRoundingMinutes: null,
+          discountEnabled: false,
+          discountTiers: [],
+        },
+        VEHICLE_TYPE.CAR,
+      );
       const listing = await prisma.publicListing.findUniqueOrThrow({
         where: { vehicleId: vApprove },
         select: { status: true, noCollateral: true, discountPercent: true },

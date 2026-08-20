@@ -49,6 +49,8 @@ export const ROUTES = {
     DRIVERS: '/manage/drivers',
     CHAT: '/manage/chat',
     TRASH: '/manage/trash',
+    /** Trung tâm hỗ trợ của cổng quản lý — hướng dẫn nhanh + câu hỏi thường gặp. */
+    SUPPORT: '/manage/support',
 
     // Quản trị nền tảng
     ADMIN: '/manage/admin',

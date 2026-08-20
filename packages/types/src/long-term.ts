@@ -86,6 +86,17 @@ export function addDateKeyDays(dateKey: string, days: number): string {
 }
 
 /**
+ * Nghịch đảo của {@link vnDateKey}: 00:00 giờ Việt Nam của ngày `YYYY-MM-DD`, trả về mốc thời
+ * gian TUYỆT ĐỐI.
+ *
+ * `new Date('2026-08-25')` cho nửa đêm UTC — sớm hơn nửa đêm VN 7 tiếng, tức vẫn còn nằm trong
+ * ngày 24/08 theo giờ nghiệp vụ. Mọi phép quy ranh giới ngày phải đi qua đây.
+ */
+export function vnDayStart(dateKey: string): Date {
+  return new Date(new Date(`${dateKey}T00:00:00.000Z`).getTime() - VN_UTC_OFFSET_MS);
+}
+
+/**
  * Khoảng nhận xe linh hoạt suy từ THỜI ĐIỂM GỬI yêu cầu: bắt đầu từ ngày mai, kết thúc hết
  * ngày thứ {@link LONG_TERM_PICKUP_WINDOW_DAYS} kể từ ngày gửi. Server là nơi tính (client
  * không được tự khai khoảng này), FE chỉ hiển thị lại giá trị server trả về.

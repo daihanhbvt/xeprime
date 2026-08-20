@@ -1,0 +1,11 @@
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--xp-space-sm);
+}
+
+.pageLink {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: 400;
+}

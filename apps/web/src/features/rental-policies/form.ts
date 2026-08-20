@@ -1,4 +1,4 @@
-import type { LongTermPackageMonths } from '@xeprime/types';
+import { COLLATERAL_MODE, type LongTermPackageMonths } from '@xeprime/types';
 import type { PolicyFormValues, VehiclePricingFormValues } from './schema';
 import type { RentalPolicyValues, SaveRentalPolicyInput } from './types';
 
@@ -14,6 +14,10 @@ const toMoneyString = (value: number | null | undefined): string => String(Math.
 
 /** Giá trị form khi CHƯA có chính sách (null-policy): mọi thứ tắt/trống, không bịa mặc định. */
 export const EMPTY_POLICY_FORM: PolicyFormValues = {
+  // Chưa cấu hình thì mặc định là "Cọc tiền" chưa nhập số — KHÔNG phải "Miễn thế chấp": đó là
+  // một lời hứa với khách, phải do chủ gian hàng chọn tường minh.
+  collateralMode: COLLATERAL_MODE.CASH,
+  collateralAssetTypes: [],
   depositAmount: null,
   deliveryEnabled: false,
   deliveryMaxRadiusKm: null,
@@ -28,6 +32,8 @@ export const EMPTY_POLICY_FORM: PolicyFormValues = {
 export function policyToForm(policy: RentalPolicyValues | null | undefined): PolicyFormValues {
   if (!policy) return EMPTY_POLICY_FORM;
   return {
+    collateralMode: policy.collateralMode,
+    collateralAssetTypes: [...policy.collateralAssetTypes],
     depositAmount: toNumber(policy.depositAmount),
     deliveryEnabled: policy.deliveryEnabled,
     deliveryMaxRadiusKm: policy.deliveryMaxRadiusKm ?? null,
@@ -49,7 +55,13 @@ export function policyToForm(policy: RentalPolicyValues | null | undefined): Pol
 
 export function formToSaveInput(values: PolicyFormValues): SaveRentalPolicyInput {
   return {
-    depositAmount: toMoneyString(values.depositAmount),
+    collateralMode: values.collateralMode,
+    // Loại tài sản chỉ có nghĩa ở chế độ 'asset'; gửi kèm ở chế độ khác là vi phạm CHECK của DB.
+    collateralAssetTypes:
+      values.collateralMode === COLLATERAL_MODE.ASSET ? values.collateralAssetTypes : [],
+    // Cọc tiền là số DUY NHẤT ở chế độ 'cash' — hai chế độ kia luôn 0, không giữ lại số cũ.
+    depositAmount:
+      values.collateralMode === COLLATERAL_MODE.CASH ? toMoneyString(values.depositAmount) : '0',
     deliveryEnabled: values.deliveryEnabled,
     deliveryMaxRadiusKm: values.deliveryEnabled ? (values.deliveryMaxRadiusKm ?? null) : null,
     deliveryTiers: (values.deliveryTiers ?? []).map((t) => ({

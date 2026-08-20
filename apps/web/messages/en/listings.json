@@ -27,6 +27,11 @@
       "color": "Colour",
       "brand": "Brand"
     },
+    "collateralTitle": "Security & required documents",
+    "collateralDeposit": "Cash deposit of {amount}",
+    "collateralAsset": "Collateral held: {types}",
+    "collateralNone": "No deposit or collateral required",
+    "collateralDocuments": "Documents checked at pickup: {documents}",
     "longTermQuote": "Contact for a long-term quote",
     "withDriverQuote": "Contact for a chauffeured quote",
     "delivery": "Vehicle delivery",

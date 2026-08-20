@@ -1,5 +1,12 @@
 import Link from 'next/link';
-import { CATALOG_TYPE, SERVICE_TYPE } from '@xeprime/types';
+import {
+  CATALOG_TYPE,
+  COLLATERAL_ASSET_TYPE_LABEL,
+  COLLATERAL_MODE,
+  CUSTOMER_DOCUMENT_TYPE_LABEL,
+  requiredIdentityDocuments,
+  SERVICE_TYPE,
+} from '@xeprime/types';
 import { RequestBookingButton } from '@/features/booking-requests/components/RequestBookingButton';
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
@@ -192,6 +199,43 @@ export async function ListingDetailView({
                 <span className={styles.amenityBadge}>{t('noCollateral')}</span>
               ) : null}
             </div>
+          ) : null}
+
+          {/*
+            Điều kiện bảo đảm + giấy tờ phải mang theo — khách cần biết TRƯỚC khi gửi yêu cầu,
+            không phải lúc đến quầy mới biết mình thiếu cà vẹt. Chỉ hiện khi gian hàng đã cấu
+            hình chính sách; chưa có thì im lặng còn hơn hứa sai.
+          */}
+          {listing.collateral ? (
+            <section className={styles.collateral} aria-label={t('collateralTitle')}>
+              <h2 className={styles.collateralTitle}>{t('collateralTitle')}</h2>
+              <p className={styles.collateralLine}>
+                {listing.collateral.mode === COLLATERAL_MODE.CASH
+                  ? t('collateralDeposit', { amount: fmt.money(listing.collateral.depositAmount) })
+                  : listing.collateral.mode === COLLATERAL_MODE.ASSET
+                    ? t('collateralAsset', {
+                        types: listing.collateral.assetTypes
+                          .map((type) =>
+                            domainLabel(
+                              'collateralAssetType',
+                              type,
+                              COLLATERAL_ASSET_TYPE_LABEL[type],
+                            ),
+                          )
+                          .join(', '),
+                      })
+                    : t('collateralNone')}
+              </p>
+              <p className={styles.collateralLine}>
+                {t('collateralDocuments', {
+                  documents: requiredIdentityDocuments(activeService)
+                    .map((doc) =>
+                      domainLabel('customerDocumentType', doc, CUSTOMER_DOCUMENT_TYPE_LABEL[doc]),
+                    )
+                    .join(', '),
+                })}
+              </p>
+            </section>
           ) : null}
 
           <ListingSpecsCard specs={specs} />

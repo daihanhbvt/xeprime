@@ -15,6 +15,7 @@ export type CreateCustomerNoteInput = Schemas['CreateCustomerNoteDto'];
 export type CustomerDocument = Schemas['CustomerDocumentDto'];
 export type CustomerDocumentPresign = Schemas['CustomerDocumentPresignDto'];
 export type CustomerDocumentDownload = Schemas['CustomerDocumentDownloadDto'];
+export type VerifyCustomerDocumentInput = Schemas['VerifyCustomerDocumentDto'];
 
 /**
  * Bộ lọc của danh sách — sống ở URL searchParams (ADR 0004), nên mọi trường là chuỗi/số đặt

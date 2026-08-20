@@ -228,3 +228,37 @@ export const TENANT_CUSTOMER_FINANCE_SORTS: readonly TenantCustomerSort[] = [
   TENANT_CUSTOMER_SORT.TOTAL_VALUE,
   TENANT_CUSTOMER_SORT.DEBT,
 ];
+
+/**
+ * Cách nhân viên ĐỐI CHIẾU giấy tờ tuỳ thân của khách. Đây là ghi nhận thao tác THỦ CÔNG —
+ * hệ thống không gọi API định danh quốc gia; `vneid` chỉ nói nhân viên đã mở app VNeID của
+ * khách ra soi, `in_person` là soi bản gốc cầm tay.
+ */
+export const IDENTITY_VERIFY_METHOD = {
+  VNEID: 'vneid',
+  IN_PERSON: 'in_person',
+} as const;
+
+export type IdentityVerifyMethod =
+  (typeof IDENTITY_VERIFY_METHOD)[keyof typeof IDENTITY_VERIFY_METHOD];
+export const IDENTITY_VERIFY_METHOD_VALUES = Object.values(
+  IDENTITY_VERIFY_METHOD,
+) as IdentityVerifyMethod[];
+
+export const IDENTITY_VERIFY_METHOD_LABEL: Readonly<Record<IdentityVerifyMethod, string>> = {
+  [IDENTITY_VERIFY_METHOD.VNEID]: 'Đối chiếu qua VNeID',
+  [IDENTITY_VERIFY_METHOD.IN_PERSON]: 'Đối chiếu bản gốc trực tiếp',
+};
+
+/**
+ * Giấy tờ BẮT BUỘC đối chiếu cho một dịch vụ — cố định theo dịch vụ, KHÔNG cho gian hàng cấu
+ * hình: một shop bỏ sót GPLX cho xe tự lái là rủi ro pháp lý thật, không phải tuỳ chọn kinh
+ * doanh. Khách thuê xe có tài xế không cầm lái nên chỉ cần CCCD.
+ *
+ * `other` không bao giờ nằm trong danh sách này — nó là giấy tờ phụ, không định danh được ai.
+ */
+export function requiredIdentityDocuments(serviceType: string): CustomerDocumentType[] {
+  return serviceType === 'with_driver'
+    ? [CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID]
+    : [CUSTOMER_DOCUMENT_TYPE.CITIZEN_ID, CUSTOMER_DOCUMENT_TYPE.DRIVER_LICENCE];
+}

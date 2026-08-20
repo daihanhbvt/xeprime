@@ -176,7 +176,6 @@ export const vehicleFormSchema = yup.object({
     .nullable()
     .default(null),
   deliveryEnabled: yup.boolean().default(false),
-  noCollateral: yup.boolean().default(false),
   /** % giảm giá marketing — bỏ trống = không giảm. */
   discountPercent: yup
     .number()

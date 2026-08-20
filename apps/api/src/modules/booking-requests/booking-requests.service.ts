@@ -6,11 +6,13 @@ import {
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
+  addDateKeyDays,
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_VALUES,
   isLongTermPackageMonths,
   vnDateKey,
+  vnDayStart,
   longTermPickupWindow,
   longTermReturnAt,
   NOTIFICATION_TARGET_TYPE,
@@ -43,8 +45,14 @@ import {
   BookingRequestListQueryDto,
   BookingRequestPageMetaDto,
   BookingRequestReceiptDto,
+  BUSY_DAYS_MAX_WINDOW,
   CreateBookingRequestDto,
+  VehicleBusyDayDto,
+  VehicleBusyDaysDto,
+  VehicleBusyPeriodDto,
 } from './dto/booking-request.dto';
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const SELECT = {
   id: true,
@@ -166,6 +174,85 @@ export class BookingRequestsService {
     }
     const overlapping = await this.occupancy.findOverlapping(vehicle.id, start, end);
     return { available: overlapping.length === 0 };
+  }
+
+  /**
+   * Lịch bận của một xe theo NGÀY LỊCH Việt Nam — để hộp chọn thời gian thuê khoá thẳng ngày
+   * bận thay vì để khách chọn rồi mới báo lỗi ở bước sau.
+   *
+   * Hai mức, vì hai mức có ý nghĩa khác nhau với khách:
+   *   - `fullyBusy`: bận trọn ngày → ngày đó không nhận cũng không trả xe được, lịch khoá luôn.
+   *   - còn lại: bận vài giờ → vẫn nhận/trả được trong ngày, nhưng phải tránh các quãng trả về
+   *     ở `periods` (FE tô màu riêng + ghi rõ giờ bận).
+   *
+   * Danh sách THƯA: chỉ ngày nào có lịch bận mới xuất hiện. Một cửa sổ 400 ngày của xe rảnh
+   * trả về mảng rỗng, không phải 400 dòng `false`.
+   *
+   * ADR 0006: preview cho UX, KHÔNG phải bảo vệ — quyết định thật vẫn là constraint lúc ghi.
+   */
+  async listPublicBusyDays(
+    vehicleId: string,
+    from: string,
+    to: string,
+  ): Promise<VehicleBusyDaysDto> {
+    const vehicle = await this.loadBookableVehicle(vehicleId);
+
+    // Kẹp cửa sổ ở server: client gửi gì cũng không quét quá trần, và trả lại khoảng THỰC SỰ
+    // đã dùng để FE biết phần ngoài trần là "chưa biết", không phải "chắc chắn rảnh".
+    const startKey = from;
+    const maxKey = addDateKeyDays(startKey, BUSY_DAYS_MAX_WINDOW - 1);
+    const endKey = to < startKey ? startKey : to > maxKey ? maxKey : to;
+
+    const windowStart = vnDayStart(startKey);
+    const windowEnd = vnDayStart(addDateKeyDays(endKey, 1));
+
+    const periods = await this.occupancy.listBusyPeriods(vehicle.id, windowStart, windowEnd);
+
+    // Cắt mỗi quãng bận theo từng ngày VN nó phủ. Quãng không bao giờ chồng nhau (exclusion
+    // constraint) nên gom theo ngày là đủ, không cần merge chống trùng.
+    const byDay = new Map<string, VehicleBusyPeriodDto[]>();
+    for (const p of periods) {
+      const startMs = Math.max(p.startAt.getTime(), windowStart.getTime());
+      const endMs = Math.min(p.endAt.getTime(), windowEnd.getTime());
+      if (endMs <= startMs) continue;
+
+      // Nửa mở `[start, end)`: kết thúc ĐÚNG nửa đêm thuộc ngày trước, không chạm ngày sau.
+      let dayKey = vnDateKey(new Date(startMs));
+      const lastKey = vnDateKey(new Date(endMs - 1));
+      while (dayKey <= lastKey) {
+        const dayStartMs = vnDayStart(dayKey).getTime();
+        const dayEndMs = dayStartMs + MS_PER_DAY;
+        const bucket = byDay.get(dayKey) ?? [];
+        bucket.push({
+          startAt: new Date(Math.max(startMs, dayStartMs)).toISOString(),
+          endAt: new Date(Math.min(endMs, dayEndMs)).toISOString(),
+        });
+        byDay.set(dayKey, bucket);
+        dayKey = addDateKeyDays(dayKey, 1);
+      }
+    }
+
+    const days: VehicleBusyDayDto[] = [...byDay.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, list]) => {
+        // Các quãng trong cùng một ngày rời nhau và đã cắt gọn trong ngày, nên tổng thời lượng
+        // đúng bằng 24h ⇔ phủ kín ngày. Không cần dò từng khe.
+        const covered = list.reduce(
+          (sum, p) => sum + (Date.parse(p.endAt) - Date.parse(p.startAt)),
+          0,
+        );
+        const fullyBusy = covered >= MS_PER_DAY;
+        return {
+          date,
+          fullyBusy,
+          // Ngày bận trọn thì `periods` là nhiễu — lịch khoá cả ngày, không có giờ nào để né.
+          periods: fullyBusy
+            ? []
+            : [...list].sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt)),
+        };
+      });
+
+    return { days, from: startKey, to: endKey };
   }
 
   /**

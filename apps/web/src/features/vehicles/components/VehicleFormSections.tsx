@@ -100,7 +100,6 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
       'withDriverDailyPrice',
       'discountPercent',
       'deliveryEnabled',
-      'noCollateral',
     ],
   },
   {
@@ -848,12 +847,6 @@ export function PoliciesSection({ control }: SectionProps) {
         name="deliveryEnabled"
         label="Giao xe tận nơi"
         description="Khách trên marketplace lọc được xe có hỗ trợ giao nhận"
-      />
-      <SwitchField
-        control={control}
-        name="noCollateral"
-        label="Miễn thế chấp"
-        description="Không yêu cầu khách cọc tài sản khi nhận xe"
       />
     </div>
   );

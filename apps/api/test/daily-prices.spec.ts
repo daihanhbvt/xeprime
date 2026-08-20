@@ -8,6 +8,7 @@ import {
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
@@ -22,7 +23,7 @@ import { makeVehiclesService, vehicleCreator } from './helpers/service-factory';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
-const pricing = new PricingService(asService, audit);
+const pricing = new PricingService(asService, audit, new ListingsService(asService));
 const vehicles = makeVehiclesService(asService);
 const createVehicle = vehicleCreator(vehicles, asService);
 

@@ -161,6 +161,40 @@
       "allOf": "{label}: Tất cả",
       "removeFilter": "Bỏ lọc {label}",
       "listFilters": "Bộ lọc danh sách"
+    },
+    "rentalRange": {
+      "ariaLabel": "Thời gian thuê",
+      "ariaValue": "{label}: {start} đến {end}",
+      "pickup": "Nhận xe",
+      "return": "Trả xe",
+      "notSelected": "chưa chọn",
+      "pickDateTime": "Chọn ngày giờ",
+      "drawerTitle": "Chọn thời gian thuê",
+      "modeTablist": "Cách tính thời gian thuê",
+      "modeDaily": "Thuê theo ngày",
+      "modeHourly": "Thuê theo giờ",
+      "pickupTime": "Giờ nhận xe",
+      "returnTime": "Giờ trả xe",
+      "startDate": "Ngày bắt đầu",
+      "duration": "Thời gian thuê",
+      "durationEndsAt": "kết thúc: {time}",
+      "durationOption": "{duration} (kết thúc: {time})",
+      "summaryDuration": "Thời gian thuê: <value>{duration}</value>",
+      "returnBeforePickup": "Giờ trả phải sau giờ nhận",
+      "placeholder": "Chọn ngày nhận và ngày trả xe",
+      "placeholderMinDays": "Chọn ngày nhận và ngày trả xe (tối thiểu {count, plural, other {# ngày}})",
+      "busy": {
+        "loading": "Đang tải lịch xe…",
+        "legendSelected": "Đã chọn",
+        "legendInRange": "Ngày trong khoảng chọn",
+        "legendFull": "Ngày bận",
+        "legendPartial": "Bận một phần",
+        "fullTooltip": "Xe đã có lịch cả ngày",
+        "partialTooltip": "Xe bận {ranges} — vẫn nhận hoặc trả được ngoài khung này",
+        "period": "{start}–{end}",
+        "conflict": "Khoảng đã chọn trùng giờ xe bận ({period} ngày {date}). Chọn giờ khác giúp bạn.",
+        "hourlyUnavailable": "Trùng giờ xe bận"
+      }
     }
   }
 }

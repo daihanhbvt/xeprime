@@ -24,6 +24,7 @@ import { BookingSettlementController } from '../src/modules/bookings/settlement/
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
 import { ReceiptsService } from '../src/modules/finance/receipts.service';
 import { NotificationService } from '../src/modules/notification/notification.service';
+import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
@@ -40,7 +41,7 @@ import type { PrismaService } from '../src/prisma/prisma.service';
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const audit = new AuditService(asService);
-const pricing = new PricingService(asService, audit);
+const pricing = new PricingService(asService, audit, new ListingsService(asService));
 const notifications = new NotificationService(asService);
 const receipts = new ReceiptsService(asService, audit);
 const settlement = new SettlementService(asService, audit, pricing, notifications, receipts);

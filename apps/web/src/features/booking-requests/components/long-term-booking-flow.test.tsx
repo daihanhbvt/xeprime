@@ -17,6 +17,7 @@ import { RequestBookingModal } from './RequestBookingModal';
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 const api = vi.hoisted(() => ({
   checkAvailability: vi.fn(),
+  fetchVehicleBusyDays: vi.fn(),
   submitBookingRequest: vi.fn(),
   verifyOtp: vi.fn(),
   sendAsync: vi.fn(),
@@ -33,7 +34,9 @@ vi.mock('@/hooks/use-media-query', () => ({
   useMediaQuery: () => false,
 }));
 vi.mock('../api', () => ({
+  BUSY_DAYS_LOOKAHEAD: 366,
   checkAvailability: (...a: unknown[]) => api.checkAvailability(...a),
+  fetchVehicleBusyDays: (...a: unknown[]) => api.fetchVehicleBusyDays(...a),
   submitBookingRequest: (...a: unknown[]) => api.submitBookingRequest(...a),
 }));
 
@@ -233,6 +236,7 @@ beforeEach(() => {
   nav.push.mockReset();
   quoteCalls.length = 0;
   Object.values(api).forEach((fn) => fn.mockReset());
+  api.fetchVehicleBusyDays.mockResolvedValue({ days: [], from: '2026-01-01', to: '2026-01-01' });
 });
 
 afterEach(cleanup);

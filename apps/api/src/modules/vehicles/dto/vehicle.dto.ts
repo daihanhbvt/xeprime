@@ -238,7 +238,6 @@ export class VehicleDetailDto extends VehicleListItemDto {
   withDriverOneWayPrice!: string | null;
 
   @ApiProperty({ description: 'Chủ xe hỗ trợ giao xe tận nơi' }) deliveryEnabled!: boolean;
-  @ApiProperty({ description: 'Miễn thế chấp (không cần cọc tài sản)' }) noCollateral!: boolean;
 
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
 
@@ -550,11 +549,6 @@ export class CreateVehicleDto {
   @IsOptional()
   @IsBoolean()
   deliveryEnabled?: boolean;
-
-  @ApiPropertyOptional({ description: 'Miễn thế chấp (không cần cọc tài sản)' })
-  @IsOptional()
-  @IsBoolean()
-  noCollateral?: boolean;
 
   @ApiPropertyOptional({
     type: Number,

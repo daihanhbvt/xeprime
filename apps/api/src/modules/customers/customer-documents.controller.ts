@@ -14,6 +14,7 @@ import {
   CustomerDocumentDto,
   CustomerDocumentPresignDto,
   PresignCustomerDocumentDto,
+  VerifyCustomerDocumentDto,
 } from './dto/customer.dto';
 
 /**
@@ -83,6 +84,21 @@ export class CustomerDocumentsController {
     @Param('documentId') documentId: string,
   ): Promise<CustomerDocumentDownloadDto> {
     return this.documents.download(tenant.tenantId, id, user.id, documentId);
+  }
+
+  @Post(':documentId/verify')
+  @RequirePermissions(PERMISSION.CUSTOMER_DOCUMENT_MANAGE)
+  @ApiOperation({
+    summary: 'Ghi nhận đã đối chiếu giấy tờ (thủ công — VNeID/bản gốc), có audit',
+  })
+  async verify(
+    @CurrentTenant() tenant: TenantContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('documentId') documentId: string,
+    @Body() dto: VerifyCustomerDocumentDto,
+  ): Promise<CustomerDocumentDto> {
+    return this.documents.verify(tenant.tenantId, id, user.id, documentId, dto);
   }
 
   @Delete(':documentId')

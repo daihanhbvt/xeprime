@@ -5,6 +5,12 @@
     "navLabel": "Management portal navigation",
     "expandMenu": "Expand menu",
     "collapseMenu": "Collapse menu",
+    "expandSection": "Expand the {name} group",
+    "collapseSection": "Collapse the {name} group",
+    "needsAction": "{count, plural, one {# item needs action} other {# items need action}}",
+    "accountMenu": "Account menu",
+    "profile": "Profile",
+    "shopSettings": "Shop settings",
     "back": "Back",
     "logout": "Log out"
   },
@@ -14,5 +20,67 @@
     "deniedBody": "Contact an administrator if you need access to this section.",
     "readOnlyBody": "You can view the data but cannot make changes.",
     "requires": "Requires:"
+  },
+  "support": {
+    "title": "Help centre",
+    "subtitle": "Quick guides and frequent questions for running a car rental shop on XePrime.",
+    "quickStart": {
+      "title": "Quick start",
+      "vehicles": {
+        "title": "Add a vehicle",
+        "body": "Fill in the details, photos and documents so the vehicle is ready for the marketplace."
+      },
+      "policies": {
+        "title": "Set rental policies",
+        "body": "Deposit, handover, late fees and discounts shared across the whole shop."
+      },
+      "requests": {
+        "title": "Review rental requests",
+        "body": "Customer requests wait for your confirmation before they become bookings."
+      },
+      "calendar": {
+        "title": "Read the rental calendar",
+        "body": "Every vehicle and every occupied period on a single grid."
+      },
+      "finance": {
+        "title": "Record receipts and payments",
+        "body": "The shop's cash book and outstanding debts live under Finance."
+      },
+      "members": {
+        "title": "Invite your staff",
+        "body": "Add users and grant permissions by role inside the shop."
+      }
+    },
+    "faq": {
+      "title": "Frequent questions",
+      "publish": {
+        "q": "Why is my vehicle not on the marketplace yet?",
+        "a": "A vehicle only goes live after the platform approves both the shop and the vehicle. While you wait you can still manage vehicles and take bookings."
+      },
+      "requestVsBooking": {
+        "q": "How is a rental request different from a booking?",
+        "a": "A rental request is a customer proposal and does not hold the vehicle. Once you approve it, it becomes a booking and locks that period."
+      },
+      "conflict": {
+        "q": "Why can't two bookings overlap on the same vehicle?",
+        "a": "Overlap is blocked in the database itself, so one vehicle can never hold two overlapping rentals. Change the period or pick another vehicle."
+      },
+      "longTerm": {
+        "q": "How is the return date calculated for long-term rentals?",
+        "a": "Long-term packages run on calendar months: the return date is the pickup date plus the package length, computed by the system rather than by multiplying 30 days."
+      },
+      "maintenance": {
+        "q": "Where is vehicle maintenance?",
+        "a": "Under Operations, inside My vehicles: 'Maintenance' tracks the whole fleet, while a single vehicle's history sits in that vehicle's profile."
+      },
+      "missingMenu": {
+        "q": "Why can't I see a menu item?",
+        "a": "The menu follows your account's permissions. If an item you need is missing, ask the shop owner to grant it under Users & permissions."
+      }
+    },
+    "contact": {
+      "title": "Still stuck?",
+      "body": "Reach out to your shop owner or administrator for access and further guidance."
+    }
   }
 }

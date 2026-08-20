@@ -19,6 +19,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
+  addDateKeyDays,
   API_ERROR_CODE,
   LONG_TERM_PACKAGE_MONTHS,
   longTermReturnAt,
@@ -29,6 +30,7 @@ import {
   SERVICE_TYPE_VALUES,
   isRouteType,
   isSameVnPhone,
+  vnDateKey,
   PHONE_VERIFICATION_PURPOSE,
   type LongTermPackageMonths,
   type RouteType,
@@ -54,9 +56,15 @@ import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { cx } from '@/lib/cx';
+import { buildBusyDayIndex } from '@/lib/rental-busy';
 import { getErrorCode } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
-import { checkAvailability, submitBookingRequest } from '../api';
+import {
+  BUSY_DAYS_LOOKAHEAD,
+  checkAvailability,
+  fetchVehicleBusyDays,
+  submitBookingRequest,
+} from '../api';
 import { PICKUP_METHOD, requestFormSchema, type RequestFormValues } from '../schema';
 import { BookingPriceSummary } from './BookingPriceSummary';
 import { BookingSteps, type BookingStepItem, type BookingStepKey } from './BookingSteps';
@@ -277,6 +285,27 @@ export function RequestBookingFlow({
           ...(isWithDriver ? { routeType: watchedRoute } : {}),
         }
       : null;
+  /**
+   * Lịch bận của xe — nạp MỘT lần cho cả năm khi mở luồng, không phải mỗi lần lật tháng.
+   *
+   * Cửa sổ lùi một ngày so với hôm nay theo giờ VN: máy khách ở múi giờ âm có thể đang ở "hôm
+   * qua" so với ngày nghiệp vụ, và ô đầu tiên trên lịch không được phép trống dữ liệu.
+   *
+   * Thuê dài hạn không có ô chọn khoảng (khách chỉ nêu nguyện vọng ngày nhận — ADR 0011) nên
+   * query tắt hẳn ở đó.
+   */
+  const busyWindow = useMemo(() => {
+    const from = addDateKeyDays(vnDateKey(new Date()), -1);
+    return { from, to: addDateKeyDays(from, BUSY_DAYS_LOOKAHEAD) };
+  }, []);
+  const busyDaysQ = useQuery({
+    queryKey: queryKeys.bookingRequests.busyDays(vehicleId, busyWindow.from, busyWindow.to),
+    queryFn: () => fetchVehicleBusyDays(vehicleId, busyWindow.from, busyWindow.to),
+    enabled: !isLongTerm,
+    staleTime: 60_000,
+  });
+  const busyDays = useMemo(() => buildBusyDayIndex(busyDaysQ.data?.days), [busyDaysQ.data]);
+
   const quoteQ = useQuery({
     queryKey: queryKeys.marketplace.quote(vehicleId, quoteParams ?? {}),
     queryFn: () => fetchPublicQuote(vehicleId, quoteParams!),
@@ -858,6 +887,9 @@ export function RequestBookingFlow({
                      */
                     variant="labelled"
                     prefix={<CalendarOutlined />}
+                    /* Lịch bận của chính xe này: khoá ngày đã kín, tô riêng ngày bận vài giờ. */
+                    busyDays={busyDays}
+                    busyLoading={busyDaysQ.isLoading}
                   />
                 </div>
                 {/* Thời lượng đã nằm ở viên bên phải ô — dòng này chỉ nói CHẾ ĐỘ tính và cách đổi. */}

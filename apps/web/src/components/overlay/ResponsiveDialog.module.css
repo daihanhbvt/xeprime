@@ -26,16 +26,29 @@
 }
 
 /**
- * Modal `xl` (hai cột) cao theo viewport: header dính lại, phần thân giữ đúng một chiều cao.
- * Không có trần này thì modal cao hơn màn hình và cả trang nền phải cuộn theo — đúng thứ
- * "internal content scrolling" cần tránh. `dvh` vì thanh công cụ trình duyệt co giãn.
+ * Modal `xl` — trần chiều cao theo viewport, CAO hơn `.modalBody` vì overlay `xl` vốn dành cho
+ * nội dung dày. `dvh` vì thanh công cụ trình duyệt co giãn.
  *
- * `overflow: hidden` là có chủ đích: bố cục hai cột bên trong TỰ cuộn từng cột (mỗi bên một
- * thanh cuộn riêng). Để thân cuộn nữa sẽ thành hai lớp cuộn lồng nhau, và hàng nút dính đáy
- * cột phải sẽ trôi theo lớp ngoài.
+ * Mặc định thân TỰ CUỘN (`overflow-y: auto` thừa kế từ `.body`) và dùng `max-height` chứ không
+ * `height`: nội dung ngắn thì hộp vẫn ôm sát, nội dung dài thì có thanh cuộn để với tới hàng
+ * nút cuối. Đây là hành vi đúng cho mọi overlay MỘT LUỒNG (chi tiết đơn, hồ sơ khách, hồ sơ xe).
  */
 .xlBody {
   /* Chừa chỗ cho header của modal và lề trên/dưới của AntD. */
+  max-height: calc(100dvh - var(--xp-space-xl) * 5);
+  min-height: 0;
+}
+
+/**
+ * Biến thể cho bố cục NHIỀU CỘT tự cuộn (`bodyScroll="content"`): mỗi cột có thanh cuộn riêng
+ * nên thân phải khoá cuộn, nếu không sẽ thành hai lớp cuộn lồng nhau và hàng nút dính đáy cột
+ * phải sẽ trôi theo lớp ngoài. Ở đây `height` cố định là ĐÚNG — các cột con cần một chiều cao
+ * xác định để `flex: 1; min-height: 0` của chúng tính ra vùng cuộn.
+ *
+ * Chỉ dùng khi bên trong THẬT SỰ có vùng cuộn. Đặt nhầm cho nội dung một luồng thì phần dư bị
+ * cắt cụt và không có cách nào cuộn tới — không thanh cuộn, không dấu hiệu.
+ */
+.xlBodyContained {
   height: calc(100dvh - var(--xp-space-xl) * 5);
   max-height: calc(100dvh - var(--xp-space-xl) * 5);
   min-height: 0;

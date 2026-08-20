@@ -2367,6 +2367,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/customers/{id}/documents/{documentId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ghi nhận đã đối chiếu giấy tờ (thủ công — VNeID/bản gốc), có audit */
+        post: operations["CustomerDocumentsController_verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/customers/{id}/documents/{documentId}": {
         parameters: {
             query?: never;
@@ -2503,6 +2520,23 @@ export interface paths {
         put?: never;
         /** Khách kiểm tra nhanh khung giờ của một xe có trống không (preview) */
         post: operations["PublicBookingRequestsController_checkAvailability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/booking-requests/busy-days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ngày/giờ xe đã bận trong một cửa sổ, để tô lịch chọn thời gian thuê */
+        get: operations["PublicBookingRequestsController_busyDays"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3839,6 +3873,13 @@ export interface components {
             /** @description SĐT chi nhánh */
             phone?: string | null;
         };
+        ListingCollateralDto: {
+            /** @enum {string} */
+            mode: "cash" | "asset" | "none";
+            assetTypes: ("vehicle_registration" | "motorbike" | "passport")[];
+            /** @description VND string — chỉ khác 0 khi mode = cash */
+            depositAmount: string;
+        };
         PublicListingDetailDto: {
             id: string;
             name: string;
@@ -3901,6 +3942,7 @@ export interface components {
             pickupPoint?: components["schemas"]["PickupPointDto"] | null;
             /** @description Giao xe tận nơi có ĐẶT ĐƯỢC không (theo chính sách hiệu lực) */
             deliveryAvailable: boolean;
+            collateral?: components["schemas"]["ListingCollateralDto"] | null;
         };
         PublicDestinationDto: {
             /** @description Mã tỉnh — giá trị đi vào URL và bộ lọc `provinceCode` */
@@ -3971,6 +4013,9 @@ export interface components {
             legacy: boolean;
         };
         RentalPolicyValuesDto: {
+            /** @enum {string} */
+            collateralMode: "cash" | "asset" | "none";
+            collateralAssetTypes: ("vehicle_registration" | "motorbike" | "passport")[];
             depositAmount: string;
             deliveryEnabled: boolean;
             deliveryMaxRadiusKm?: number | null;
@@ -3996,7 +4041,14 @@ export interface components {
         };
         SaveRentalPolicyDto: {
             /**
-             * @description Cọc thế chấp cố định VND (chuỗi)
+             * @description Hình thức bảo đảm — ba chế độ LOẠI TRỪ nhau. Quan hệ với depositAmount/collateralAssetTypes kiểm ở validatePolicy và ràng bằng CHECK ở DB.
+             * @enum {string}
+             */
+            collateralMode: "cash" | "asset" | "none";
+            /** @description Loại tài sản nhận thế chấp — chỉ có nghĩa khi collateralMode = asset */
+            collateralAssetTypes: ("vehicle_registration" | "motorbike" | "passport")[];
+            /**
+             * @description Cọc thế chấp cố định VND (chuỗi) — khác 0 CHỈ khi collateralMode = cash
              * @example 5000000
              */
             depositAmount: string;
@@ -4386,8 +4438,6 @@ export interface components {
             withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled: boolean;
-            /** @description Miễn thế chấp (không cần cọc tài sản) */
-            noCollateral: boolean;
             /** @description ISO-8601 UTC */
             createdAt: string;
             /** @description URL ảnh gallery theo thứ tự */
@@ -4455,15 +4505,18 @@ export interface components {
             isPublic: boolean;
         };
         SaveVehiclePricingDto: {
-            /** @enum {string} */
+            /**
+             * @description NGUỒN CHÍNH SÁCH của xe — KHÔNG còn khoá phần giá (20/08). shop = xoá bản ghi đè và quay về kế thừa; vehicle = lưu bộ chính sách riêng (phải gửi kèm policy).
+             * @enum {string}
+             */
             source: "shop" | "vehicle";
-            /** @description Giá thuê ngày thường VND — chỉ nhận khi source=vehicle */
+            /** @description Giá thuê ngày thường VND — độc lập với source (giá luôn sửa được) */
             weekdayPrice?: string;
-            /** @description Giá cuối tuần VND — chỉ nhận khi source=vehicle; null = xoá (dùng giá thường) */
+            /** @description Giá cuối tuần VND — độc lập với source (giá luôn sửa được); null = xoá (dùng giá thường) */
             weekendPrice?: string | null;
-            /** @description Giá tháng thuê dài hạn — chỉ nhận khi source=vehicle; null = xoá giá tháng */
+            /** @description Giá tháng thuê dài hạn — độc lập với source (giá luôn sửa được); null = xoá giá tháng */
             monthlyPrice?: string | null;
-            /** @description Giá/ngày đã gồm tài xế (nội thành/cơ bản) — chỉ nhận khi source=vehicle */
+            /** @description Giá/ngày đã gồm tài xế (nội thành/cơ bản) — độc lập với source (giá luôn sửa được) */
             withDriverDailyPrice?: string | null;
             /** @description Giá/ngày có tài xế liên tỉnh — null = xoá (rơi về giá cơ bản) */
             withDriverInterCityPrice?: string | null;
@@ -4675,8 +4728,6 @@ export interface components {
             withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled?: boolean;
-            /** @description Miễn thế chấp (không cần cọc tài sản) */
-            noCollateral?: boolean;
             /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái. Gửi null = ngừng khuyến mãi. */
             discountPercent?: number | null;
             /** @description URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi) */
@@ -4779,8 +4830,6 @@ export interface components {
             withDriverOneWayPrice?: string | null;
             /** @description Chủ xe hỗ trợ giao xe tận nơi */
             deliveryEnabled?: boolean;
-            /** @description Miễn thế chấp (không cần cọc tài sản) */
-            noCollateral?: boolean;
             /** @description % khuyến mãi trực tiếp cho tiền thuê tự lái. Gửi null = ngừng khuyến mãi. */
             discountPercent?: number | null;
             /** @description URL ảnh gallery theo thứ tự (thay toàn bộ khi gửi) */
@@ -5518,6 +5567,9 @@ export interface components {
             meta: components["schemas"]["PaginationMetaDto"];
         };
         SnapshotPolicyDto: {
+            /** @enum {string} */
+            collateralMode: "cash" | "asset" | "none";
+            collateralAssetTypes: ("vehicle_registration" | "motorbike" | "passport")[];
             depositAmount: string;
             deliveryEnabled: boolean;
             deliveryMaxRadiusKm?: number | null;
@@ -5586,6 +5638,7 @@ export interface components {
             driver?: components["schemas"]["BookingDriverSummaryDto"] | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
+            tenantCustomerId?: string | null;
             vehicleImageUrl?: string | null;
             /** @enum {string|null} */
             routeType?: "in_city" | "inter_city" | "inter_city_one_way" | null;
@@ -6179,6 +6232,11 @@ export interface components {
             /** @description Suy từ `expiresAt` lúc đọc: no_expiry | valid | expiring_soon | expired */
             expiryStatus: string;
             uploadedByName?: string | null;
+            verifiedAt?: string | null;
+            verifiedByName?: string | null;
+            /** @enum {string|null} */
+            verifyMethod?: "vneid" | "in_person" | null;
+            verifyNote?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
         };
@@ -6208,6 +6266,12 @@ export interface components {
             downloadUrl: string;
             /** @description ISO — thời điểm URL hết hiệu lực */
             expiresAt: string;
+        };
+        VerifyCustomerDocumentDto: {
+            /** @enum {string} */
+            verifyMethod: "vneid" | "in_person";
+            /** @description Ghi chú khi đối chiếu */
+            verifyNote?: string | null;
         };
         BookingRequestDeliveryQuoteDto: {
             distanceKm: number;
@@ -6373,6 +6437,28 @@ export interface components {
         CheckAvailabilityResultDto: {
             /** @description Khung giờ còn trống (preview, quyết định thật khi shop duyệt) */
             available: boolean;
+        };
+        VehicleBusyPeriodDto: {
+            /** @description Bắt đầu bận (ISO-8601 UTC), đã cắt về trong ngày */
+            startAt: string;
+            /** @description Kết thúc bận (ISO-8601 UTC), đã cắt về trong ngày */
+            endAt: string;
+        };
+        VehicleBusyDayDto: {
+            /** @description Ngày local Asia/Ho_Chi_Minh, YYYY-MM-DD */
+            date: string;
+            /** @description Bận trọn ngày — ngày này không nhận cũng không trả xe được */
+            fullyBusy: boolean;
+            /** @description Các quãng bận trong ngày (đã gộp, tăng dần). Rỗng khi `fullyBusy` */
+            periods: components["schemas"]["VehicleBusyPeriodDto"][];
+        };
+        VehicleBusyDaysDto: {
+            /** @description CHỈ những ngày có lịch bận trong cửa sổ (danh sách thưa), tăng dần theo ngày */
+            days: components["schemas"]["VehicleBusyDayDto"][];
+            /** @description Ngày đầu cửa sổ đã áp dụng (YYYY-MM-DD) */
+            from: string;
+            /** @description Ngày cuối cửa sổ đã áp dụng (YYYY-MM-DD) — có thể bị kẹp về trần */
+            to: string;
         };
         ConversationPageMetaDto: {
             page: number;
@@ -11622,6 +11708,30 @@ export interface operations {
             };
         };
     };
+    CustomerDocumentsController_verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                documentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyCustomerDocumentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     CustomerDocumentsController_remove: {
         parameters: {
             query?: never;
@@ -11806,6 +11916,32 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CheckAvailabilityResultDto"];
+                };
+            };
+        };
+    };
+    PublicBookingRequestsController_busyDays: {
+        parameters: {
+            query: {
+                /** @description ID xe (ULID) */
+                vehicleId: string;
+                /** @description Ngày đầu cửa sổ tra cứu (YYYY-MM-DD, ngày lịch Việt Nam) */
+                from: string;
+                /** @description Ngày cuối cửa sổ (YYYY-MM-DD). Quá 400 ngày kể từ `from` thì bị kẹp về trần — xem `to` trong kết quả */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleBusyDaysDto"];
                 };
             };
         };

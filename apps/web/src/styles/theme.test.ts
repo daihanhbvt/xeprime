@@ -150,6 +150,40 @@ describe('design token', () => {
     expect(derived.controlHeight).toBe(32);
   });
 
+
+  /**
+   * Thứ tự TẦNG Z. Các lớp dính của lịch (header ngày, cột xe, hàng "Xe còn trống") và popover
+   * neo trong canvas là ANH EM cùng một stacking context, nên thứ tự giữa chúng do đúng những
+   * con số này quyết định — không phải do thứ tự DOM.
+   *
+   * Lỗi đã gặp: popover ô lịch để `z-index: 7` trong khi hàng "Xe còn trống" dùng
+   * `--xp-z-calendar-header` (30), nên menu bị che mất nửa dưới. Test khoá lại quan hệ để một
+   * lần chỉnh token sau này không lặp lại chuyện đó.
+   */
+  describe('tầng z', () => {
+    const z = (name: string): number => {
+      const raw = cssTokens.get(name);
+      expect(raw, `thiếu token ${name}`).toBeDefined();
+      return Number(raw);
+    };
+
+    it('popover của lịch nằm TRÊN mọi lớp dính của lịch', () => {
+      expect(z('--xp-z-calendar-popover')).toBeGreaterThan(z('--xp-z-calendar-header'));
+      expect(z('--xp-z-calendar-popover')).toBeGreaterThan(z('--xp-z-calendar-sticky-col'));
+    });
+
+    it('mọi lớp của lịch nằm DƯỚI vỏ ứng dụng và overlay AntD', () => {
+      for (const layer of [
+        '--xp-z-calendar-popover',
+        '--xp-z-calendar-header',
+        '--xp-z-calendar-sticky-col',
+      ]) {
+        expect(z(layer)).toBeLessThan(z('--xp-z-topbar'));
+        expect(z(layer)).toBeLessThan(z('--xp-z-popup-base'));
+      }
+      expect(z('--xp-z-topbar')).toBeLessThan(z('--xp-z-sidebar'));
+    });
+  });
   /**
    * Tương phản màu. Brief 00 §16 ghi mức tuân thủ WCAG là `Unknown` (câu hỏi mở Q7) và
    * "contrast ratios unverified" là khoảng trống đã biết — nên test này KHÔNG ép AA lên

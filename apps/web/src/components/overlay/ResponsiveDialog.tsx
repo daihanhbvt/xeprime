@@ -86,6 +86,19 @@ interface ResponsiveDialogBaseProps {
   maskClosable?: boolean;
   /** Mặc định `true`: mỗi lần mở là state mới. `false` khi cần giữ nội dung đã nhập. */
   destroyOnClose?: boolean;
+  /**
+   * AI cuộn phần thân — chỉ có nghĩa với modal desktop `xl`.
+   *
+   *  - `'body'` (mặc định): thân overlay tự cuộn. Đúng cho mọi nội dung MỘT LUỒNG.
+   *  - `'content'`: nội dung tự quản việc cuộn (bố cục nhiều cột, mỗi cột một thanh cuộn
+   *    riêng). Thân bị khoá `overflow: hidden` để không sinh hai lớp cuộn lồng nhau.
+   *
+   * Mặc định là `'body'` có chủ đích: `'content'` chỉ đúng khi bên trong THẬT SỰ có vùng cuộn,
+   * và quên điều đó thì nội dung bị CẮT CỤT không dấu hiệu — hàng nút cuối overlay biến mất mà
+   * không có thanh cuộn nào để với tới. Đó chính là lỗi đã gặp ở overlay chi tiết đơn thuê mở
+   * từ `/manage/debts`.
+   */
+  bodyScroll?: 'body' | 'content';
   className?: string;
   bodyClassName?: string;
   'data-testid'?: string;
@@ -139,6 +152,7 @@ export function ResponsiveDialog({
   closeOnEsc = true,
   maskClosable = true,
   destroyOnClose = true,
+  bodyScroll = 'body',
   className,
   bodyClassName,
   'data-testid': testId,
@@ -221,8 +235,16 @@ export function ResponsiveDialog({
       destroyOnHidden={destroyOnClose}
       className={className}
       classNames={{
-        // `xl` tự quản chiều cao (hai cột cuộn riêng) nên không chồng thêm trần chung.
-        body: cx(styles.body, size === 'xl' ? styles.xlBody : styles.modalBody, bodyClassName),
+        // `xl` có trần chiều cao riêng (cao hơn) — và chỉ khoá cuộn khi NỘI DUNG tự cuộn.
+        body: cx(
+          styles.body,
+          size === 'xl'
+            ? bodyScroll === 'content'
+              ? styles.xlBodyContained
+              : styles.xlBody
+            : styles.modalBody,
+          bodyClassName,
+        ),
         footer: styles.footer,
         header: hideHeaderTitle ? styles.bareHeader : undefined,
       }}

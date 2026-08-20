@@ -8,6 +8,7 @@ import {
   createCustomer,
   createCustomerNote,
   deleteCustomerDocument,
+  verifyCustomerDocument,
   deleteCustomerNote,
   fetchCustomer,
   fetchCustomerBookings,
@@ -25,6 +26,7 @@ import {
 } from '../api';
 import type {
   CreateCustomerNoteInput,
+  VerifyCustomerDocumentInput,
   CustomerDocument,
   CreateTenantCustomerInput,
   CustomerFilters,
@@ -158,6 +160,22 @@ export function useUploadCustomerDocument() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UploadCustomerDocumentInput }) =>
       uploadCustomerDocument(id, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useVerifyCustomerDocument() {
+  const invalidate = useInvalidateCustomers();
+  return useMutation({
+    mutationFn: ({
+      id,
+      documentId,
+      input,
+    }: {
+      id: string;
+      documentId: string;
+      input: VerifyCustomerDocumentInput;
+    }) => verifyCustomerDocument(id, documentId, input),
     onSuccess: invalidate,
   });
 }

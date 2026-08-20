@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
 import {
+  COLLATERAL_MODE,
   LISTING_STATUS,
   REVIEW_STATUS,
   VEHICLE_PUBLIC_STATUS,
@@ -47,7 +48,6 @@ export class ListingsService {
         withDriverInterCityPrice: true,
         withDriverOneWayPrice: true,
         deliveryEnabled: true,
-        noCollateral: true,
         discountPercent: true,
         publicStatus: true,
         deletedAt: true,
@@ -62,6 +62,9 @@ export class ListingsService {
     if (!v) return;
 
     const status = deriveStatus(v.publicStatus, v.deletedAt);
+    // "Miễn thế chấp" từ 20/08 là HỆ QUẢ của chính sách hiệu lực, không còn là cờ nhập tay trên
+    // xe — trước đây hai thứ độc lập nên một xe có thể vừa gắn nhãn vừa đòi cọc 5 triệu.
+    const noCollateral = await resolveNoCollateral(tx, v.tenantId, v.id, v.vehicleType);
 
     if (status === LISTING_STATUS.ACTIVE) {
       // Xe đã duyệt → tạo/cập nhật snapshot đầy đủ, đưa về hiển thị. Rating tính lại từ review
@@ -94,7 +97,7 @@ export class ListingsService {
         withDriverInterCityPrice: v.withDriverInterCityPrice,
         withDriverOneWayPrice: v.withDriverOneWayPrice,
         deliveryEnabled: v.deliveryEnabled,
-        noCollateral: v.noCollateral,
+        noCollateral,
         discountPercent: v.discountPercent,
         // Sort key để mảng ổn định giữa các lần sync (so sánh/diff không nhiễu).
         features: v.features.map((f) => f.featureKey).sort(),
@@ -112,6 +115,54 @@ export class ListingsService {
     // Chưa duyệt / bị ẩn / xoá mềm: chỉ hạ trạng thái listing NẾU đã có row. Xe chưa từng duyệt
     // (draft/pending) không có listing → updateMany không khớp, không tạo listing ma.
     await tx.publicListing.updateMany({ where: { vehicleId }, data: { status } });
+  }
+
+  /**
+   * Đồng bộ lại nhãn "Miễn thế chấp" cho MỌI xe của một gian hàng đang KẾ THỪA chính sách mặc
+   * định — gọi từ `PricingService.saveShopPolicy` trong cùng transaction.
+   *
+   * Một câu UPDATE gộp thay vì lặp `syncFromVehicle` từng xe (cùng lý do với
+   * `syncBranchLocation`): một gian hàng có thể giữ hàng trăm xe, mà ở đây chỉ đúng MỘT cột
+   * phụ thuộc chính sách — dựng lại toàn bộ snapshot là N+1 thật sự.
+   *
+   * Hàm TỰ phân giải precedence thay vì nhận sẵn giá trị: lưu hàng legacy toàn gian hàng không
+   * được phép đè lên loại xe vốn đã có hàng mặc định riêng, mà chỗ gọi thì không biết điều đó.
+   * Số loại xe là hữu hạn (car/motorbike) nên đây là tối đa hai câu UPDATE, không phải N+1.
+   *
+   * Xe có bản ghi đè riêng bị loại trừ tường minh — chính sách gian hàng không nói gì về chúng.
+   */
+  async syncCollateralForPolicy(
+    tenantId: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<number> {
+    const defaults = await tx.rentalPolicy.findMany({
+      where: { tenantId, vehicleId: null },
+      select: { vehicleType: true, collateralMode: true },
+    });
+    const legacy = defaults.find((d) => d.vehicleType === null);
+    const types = await tx.publicListing.findMany({
+      where: { tenantId },
+      select: { vehicleType: true },
+      distinct: ['vehicleType'],
+    });
+
+    let changed = 0;
+    for (const { vehicleType } of types) {
+      const row = defaults.find((d) => d.vehicleType === vehicleType) ?? legacy;
+      if (!row) continue;
+      const noCollateral = row.collateralMode === COLLATERAL_MODE.NONE;
+      const res = await tx.publicListing.updateMany({
+        where: {
+          tenantId,
+          vehicleType,
+          vehicle: { rentalPolicy: null },
+          noCollateral: { not: noCollateral },
+        },
+        data: { noCollateral },
+      });
+      changed += res.count;
+    }
+    return changed;
   }
 
   /**
@@ -180,4 +231,32 @@ function deriveStatus(publicStatus: string, deletedAt: Date | null): ListingStat
   if (deletedAt) return LISTING_STATUS.ARCHIVED;
   if (publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC) return LISTING_STATUS.ACTIVE;
   return LISTING_STATUS.HIDDEN;
+}
+
+/**
+ * "Miễn thế chấp" của MỘT xe = chính sách hiệu lực của nó ở chế độ `none`.
+ *
+ * Lặp lại đúng precedence của `PricingService.effectivePolicy` (override xe → mặc định theo
+ * loại → legacy toàn gian hàng) bằng truy vấn Prisma trần, CỐ Ý không gọi `PricingService`:
+ * `ListingsService` phải ở lại module LÁ (xem `ListingsSyncModule`), vì chính `PricingService`
+ * là bên gọi nó khi lưu chính sách gian hàng. Nhận `PricingService` vào đây là dựng lại đúng
+ * vòng phụ thuộc vừa gỡ.
+ *
+ * Không có chính sách nào ⇒ `false`: chưa cấu hình thì không được hứa với khách là miễn cọc.
+ */
+async function resolveNoCollateral(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  vehicleId: string,
+  vehicleType: string,
+): Promise<boolean> {
+  const rows = await tx.rentalPolicy.findMany({
+    where: { tenantId, OR: [{ vehicleId }, { vehicleId: null }] },
+    select: { vehicleId: true, vehicleType: true, collateralMode: true },
+  });
+  const row =
+    rows.find((r) => r.vehicleId === vehicleId) ??
+    rows.find((r) => r.vehicleId === null && r.vehicleType === vehicleType) ??
+    rows.find((r) => r.vehicleId === null && r.vehicleType === null);
+  return row?.collateralMode === COLLATERAL_MODE.NONE;
 }

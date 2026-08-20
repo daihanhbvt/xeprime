@@ -11,6 +11,7 @@ import {
   longTermTierFor,
   PICKUP_PREFERENCE,
   vnDateKey,
+  vnDayStart,
   type DiscountTier,
 } from './long-term';
 
@@ -58,6 +59,23 @@ describe('cộng tháng lịch theo giờ Việt Nam', () => {
 
   it('cộng qua mốc năm', () => {
     expect(vnDateKey(addCalendarMonthsVn(vn('2026-12-15T07:00'), 3))).toBe('2027-03-15');
+  });
+});
+
+describe('ranh giới ngày theo giờ Việt Nam', () => {
+  it('vnDayStart là 17:00 UTC ngày hôm trước, không phải nửa đêm UTC', () => {
+    expect(vnDayStart('2026-08-25').toISOString()).toBe('2026-08-24T17:00:00.000Z');
+  });
+
+  it('vnDayStart và vnDateKey là nghịch đảo của nhau', () => {
+    for (const key of ['2026-01-01', '2026-08-25', '2026-12-31', '2028-02-29']) {
+      expect(vnDateKey(vnDayStart(key))).toBe(key);
+    }
+  });
+
+  it('mốc cuối ngày VN (23:59) vẫn thuộc chính ngày đó', () => {
+    const endOfDay = new Date(vnDayStart('2026-08-25').getTime() + 86_400_000 - 1);
+    expect(vnDateKey(endOfDay)).toBe('2026-08-25');
   });
 });
 

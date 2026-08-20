@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  COLLATERAL_ASSET_TYPE_VALUES,
+  COLLATERAL_MODE_VALUES,
   DELIVERY_QUOTE_SOURCE_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   POLICY_SOURCE_VALUES,
@@ -103,7 +105,29 @@ export class LegacyDiscountTierDto {
  * PricingService.validatePolicy — class-validator không mô tả được quan hệ giữa field.
  */
 export class SaveRentalPolicyDto {
-  @ApiProperty({ description: 'Cọc thế chấp cố định VND (chuỗi)', example: '5000000' })
+  @ApiProperty({
+    enum: COLLATERAL_MODE_VALUES,
+    description:
+      'Hình thức bảo đảm — ba chế độ LOẠI TRỪ nhau. Quan hệ với depositAmount/collateralAssetTypes ' +
+      'kiểm ở validatePolicy và ràng bằng CHECK ở DB.',
+  })
+  @IsIn(COLLATERAL_MODE_VALUES)
+  collateralMode!: string;
+
+  @ApiProperty({
+    enum: COLLATERAL_ASSET_TYPE_VALUES,
+    isArray: true,
+    description: 'Loại tài sản nhận thế chấp — chỉ có nghĩa khi collateralMode = asset',
+  })
+  @IsArray()
+  @ArrayMaxSize(COLLATERAL_ASSET_TYPE_VALUES.length)
+  @IsIn(COLLATERAL_ASSET_TYPE_VALUES, { each: true })
+  collateralAssetTypes!: string[];
+
+  @ApiProperty({
+    description: 'Cọc thế chấp cố định VND (chuỗi) — khác 0 CHỈ khi collateralMode = cash',
+    example: '5000000',
+  })
   @IsString()
   @Matches(MONEY_PATTERN, { message: 'Tiền cọc không hợp lệ (số VND không âm)' })
   depositAmount!: string;
@@ -176,6 +200,9 @@ export class SaveRentalPolicyDto {
 
 /** Giá trị chính sách trả về — tiers cùng shape với input, tiền là string. */
 export class RentalPolicyValuesDto {
+  @ApiProperty({ enum: COLLATERAL_MODE_VALUES }) collateralMode!: string;
+  @ApiProperty({ enum: COLLATERAL_ASSET_TYPE_VALUES, isArray: true })
+  collateralAssetTypes!: string[];
   @ApiProperty() depositAmount!: string;
   @ApiProperty() deliveryEnabled!: boolean;
   @ApiPropertyOptional({ type: Number, nullable: true }) deliveryMaxRadiusKm!: number | null;
@@ -304,11 +331,18 @@ export class VehiclePricingDto {
  * Giá chỉ được sửa khi ghi đè (thiết kế: chế độ kế thừa là read-only).
  */
 export class SaveVehiclePricingDto {
-  @ApiProperty({ enum: POLICY_SOURCE_VALUES })
+  @ApiProperty({
+    enum: POLICY_SOURCE_VALUES,
+    description:
+      'NGUỒN CHÍNH SÁCH của xe — KHÔNG còn khoá phần giá (20/08). shop = xoá bản ghi đè và ' +
+      'quay về kế thừa; vehicle = lưu bộ chính sách riêng (phải gửi kèm policy).',
+  })
   @IsIn(POLICY_SOURCE_VALUES)
   source!: string;
 
-  @ApiPropertyOptional({ description: 'Giá thuê ngày thường VND — chỉ nhận khi source=vehicle' })
+  @ApiPropertyOptional({
+    description: 'Giá thuê ngày thường VND — độc lập với source (giá luôn sửa được)',
+  })
   @IsOptional()
   @Matches(MONEY_PATTERN, { message: 'Giá thuê không hợp lệ (số VND không âm)' })
   weekdayPrice?: string;
@@ -316,7 +350,7 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá cuối tuần VND — chỉ nhận khi source=vehicle; null = xoá (dùng giá thường)',
+    description: 'Giá cuối tuần VND — độc lập với source (giá luôn sửa được); null = xoá (dùng giá thường)',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.weekendPrice !== null)
@@ -326,7 +360,7 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá tháng thuê dài hạn — chỉ nhận khi source=vehicle; null = xoá giá tháng',
+    description: 'Giá tháng thuê dài hạn — độc lập với source (giá luôn sửa được); null = xoá giá tháng',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.monthlyPrice !== null)
@@ -336,7 +370,7 @@ export class SaveVehiclePricingDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'Giá/ngày đã gồm tài xế (nội thành/cơ bản) — chỉ nhận khi source=vehicle',
+    description: 'Giá/ngày đã gồm tài xế (nội thành/cơ bản) — độc lập với source (giá luôn sửa được)',
   })
   @IsOptional()
   @ValidateIf((o: SaveVehiclePricingDto) => o.withDriverDailyPrice !== null)

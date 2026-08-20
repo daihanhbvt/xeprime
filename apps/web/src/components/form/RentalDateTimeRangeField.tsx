@@ -2,10 +2,12 @@
 
 import { Drawer, Popover } from 'antd';
 import type { Dayjs } from 'dayjs';
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { cx } from '@/lib/cx';
+import type { BusyDayIndex } from '@/lib/rental-busy';
 import { RentalRangePanel, type RentalMode } from './RentalRangePanel';
 import styles from './RentalDateTimeRangeField.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -23,7 +25,7 @@ interface RentalDateTimeRangeFieldProps {
   /** Độ mịn chọn giờ (tab Thuê theo ngày/giờ) — parent giữ để còn ghi ra URL. */
   mode: RentalMode;
   onModeChange: (mode: RentalMode) => void;
-  /** Nhãn hai đầu ở trạng thái đóng — Figma dùng "Nhận xe"/"Trả xe". */
+  /** Nhãn hai đầu ở trạng thái đóng — mặc định "Nhận xe"/"Trả xe" theo ngôn ngữ đang dùng. */
   labels?: { start: string; end: string };
   disabled?: boolean;
   className?: string;
@@ -32,6 +34,12 @@ interface RentalDateTimeRangeFieldProps {
   prefix?: ReactNode;
   /** Sàn số ngày thuê (17/08 — dài hạn truyền LONG_TERM_MIN_DAYS); xuyên xuống RentalRangePanel. */
   minDays?: number;
+  /**
+   * Lịch bận của chiếc xe đang chọn — có thì lịch khoá ngày bận và tô riêng ngày bận một phần
+   * (20/08). Bỏ trống ở những chỗ chưa gắn với một xe cụ thể (thanh tìm kiếm marketplace).
+   */
+  busyDays?: BusyDayIndex;
+  busyLoading?: boolean;
   /**
    * `compact` (mặc định): hai giá trị nối bằng mũi tên — cho ô hẹp trong thanh tìm kiếm, nơi đã
    * có nhãn "Thời gian thuê" ở ngoài.
@@ -72,21 +80,31 @@ export function RentalDateTimeRangeField({
   onChange,
   mode,
   onModeChange,
-  labels = { start: 'Nhận xe', end: 'Trả xe' },
+  labels,
   disabled,
   className,
-  ariaLabel = 'Thời gian thuê',
+  ariaLabel,
   prefix,
   minDays,
+  busyDays,
+  busyLoading,
   variant = 'compact',
   compactPoint = false,
   getPopupContainer,
 }: RentalDateTimeRangeFieldProps) {
   const fmt = useAppFormat();
+  const t = useTranslations('Common');
 
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<RentalRange>(value);
+
+  // Mặc định phải nằm SAU hook: tham số mặc định được tính trước khi `t` tồn tại.
+  const endpointLabels = labels ?? {
+    start: t('components.rentalRange.pickup'),
+    end: t('components.rentalRange.return'),
+  };
+  const fieldLabel = ariaLabel ?? t('components.rentalRange.ariaLabel');
 
   function openPanel() {
     if (disabled) return;
@@ -110,10 +128,12 @@ export function RentalDateTimeRangeField({
     d ? (compactPoint ? d.format('DD/MM HH:mm') : fmt.rentalPoint(d)) : fallback;
 
   const complete = Boolean(value.pickupAt && value.returnAt);
-  const ariaValue = `${ariaLabel}: ${pointText(value.pickupAt, 'chưa chọn')} đến ${pointText(
-    value.returnAt,
-    'chưa chọn',
-  )}`;
+  const notSelected = t('components.rentalRange.notSelected');
+  const ariaValue = t('components.rentalRange.ariaValue', {
+    label: fieldLabel,
+    start: pointText(value.pickupAt, notSelected),
+    end: pointText(value.returnAt, notSelected),
+  });
 
   const trigger =
     variant === 'labelled' ? (
@@ -126,13 +146,17 @@ export function RentalDateTimeRangeField({
       >
         {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
         <span className={styles.endpointLabelled}>
-          <span className={styles.endpointLabel}>{labels.start}:</span>
-          <span className={styles.endpointValue}>{pointText(value.pickupAt, 'Chọn ngày giờ')}</span>
+          <span className={styles.endpointLabel}>{endpointLabels.start}:</span>
+          <span className={styles.endpointValue}>
+            {pointText(value.pickupAt, t('components.rentalRange.pickDateTime'))}
+          </span>
         </span>
         <span className={styles.divider} aria-hidden />
         <span className={styles.endpointLabelled}>
-          <span className={styles.endpointLabel}>{labels.end}:</span>
-          <span className={styles.endpointValue}>{pointText(value.returnAt, 'Chọn ngày giờ')}</span>
+          <span className={styles.endpointLabel}>{endpointLabels.end}:</span>
+          <span className={styles.endpointValue}>
+            {pointText(value.returnAt, t('components.rentalRange.pickDateTime'))}
+          </span>
         </span>
         {complete ? (
           <span className={styles.durationPill}>
@@ -149,11 +173,11 @@ export function RentalDateTimeRangeField({
         aria-label={ariaValue}
       >
         {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
-        <span className={styles.endpoint}>{pointText(value.pickupAt, labels.start)}</span>
+        <span className={styles.endpoint}>{pointText(value.pickupAt, endpointLabels.start)}</span>
         <span className={styles.sep} aria-hidden>
           →
         </span>
-        <span className={styles.endpoint}>{pointText(value.returnAt, labels.end)}</span>
+        <span className={styles.endpoint}>{pointText(value.returnAt, endpointLabels.end)}</span>
       </button>
     );
 
@@ -165,6 +189,8 @@ export function RentalDateTimeRangeField({
       onModeChange={onModeChange}
       months={isMobile ? 1 : 2}
       minDays={minDays}
+      busyDays={busyDays}
+      busyLoading={busyLoading}
       onApply={apply}
       onCancel={() => setOpen(false)}
     />
@@ -175,7 +201,7 @@ export function RentalDateTimeRangeField({
       <>
         {trigger}
         <Drawer
-          title="Chọn thời gian thuê"
+          title={t('components.rentalRange.drawerTitle')}
           placement="bottom"
           size="auto"
           open={open}

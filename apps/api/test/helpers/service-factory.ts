@@ -45,7 +45,7 @@ export function makeVehiclesService(
     makeBranchesService(prisma),
     new BillingService(prisma, audit),
     new CatalogService(prisma, audit),
-    new PricingService(prisma, audit),
+    new PricingService(prisma, audit, new ListingsService(prisma)),
   );
 }
 
@@ -54,7 +54,7 @@ export function makePublicListingsService(prisma: PrismaService): PublicListings
   return new PublicListingsService(
     prisma,
     new ProvincesService(prisma, audit),
-    new PricingService(prisma, audit),
+    new PricingService(prisma, audit, new ListingsService(prisma)),
   );
 }
 

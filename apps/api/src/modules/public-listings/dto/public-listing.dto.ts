@@ -2,6 +2,8 @@ import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { LongTermPackageOptionDto } from '../../pricing/dto/pricing.dto';
 import {
   BODY_TYPE_VALUES,
+  COLLATERAL_ASSET_TYPE_VALUES,
+  COLLATERAL_MODE_VALUES,
   DEFAULT_LISTING_SORT,
   FUEL_TYPE_VALUES,
   LISTING_SORT_VALUES,
@@ -337,6 +339,15 @@ export class PickupPointDto {
 }
 
 /** Chi tiết một xe trên marketplace — cho trang `/listings/[id]`. */
+/**
+ * Điều kiện BẢO ĐẢM công bố cho khách (gap C-04). Mã đi trên dây; nhãn do FE dịch (ADR 0012).
+ */
+export class ListingCollateralDto {
+  @ApiProperty({ enum: COLLATERAL_MODE_VALUES }) mode!: string;
+  @ApiProperty({ enum: COLLATERAL_ASSET_TYPE_VALUES, isArray: true }) assetTypes!: string[];
+  @ApiProperty({ description: 'VND string — chỉ khác 0 khi mode = cash' }) depositAmount!: string;
+}
+
 export class PublicListingDetailDto extends PublicListingDto {
   @ApiPropertyOptional({ type: String, nullable: true }) description!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) color!: string | null;
@@ -375,6 +386,13 @@ export class PublicListingDetailDto extends PublicListingDto {
    */
   @ApiProperty({ description: 'Giao xe tận nơi có ĐẶT ĐƯỢC không (theo chính sách hiệu lực)' })
   deliveryAvailable!: boolean;
+
+  /**
+   * Điều kiện BẢO ĐẢM khách phải đáp ứng (gap C-04) — null khi gian hàng chưa cấu hình chính
+   * sách. Mã đi trên dây, FE tự map nhãn theo ngôn ngữ (ADR 0012).
+   */
+  @ApiPropertyOptional({ type: ListingCollateralDto, nullable: true })
+  collateral!: ListingCollateralDto | null;
 }
 
 export class PublicListingPageMetaDto {

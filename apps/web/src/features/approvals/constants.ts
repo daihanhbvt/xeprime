@@ -104,6 +104,5 @@ export const VEHICLE_SNAPSHOT_FIELDS: readonly SnapshotField[] = [
   },
   { key: 'discountPercent', label: 'Giảm giá', format: (v) => `${String(v)}%` },
   { key: 'deliveryEnabled', label: 'Giao xe tận nơi', format: (v) => (v ? 'Có' : 'Không') },
-  { key: 'noCollateral', label: 'Miễn thế chấp', format: (v) => (v ? 'Có' : 'Không') },
   { key: 'description', label: 'Mô tả' },
 ];

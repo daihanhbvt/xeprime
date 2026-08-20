@@ -49,6 +49,8 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
+vi.mock('./use-nav-badges', () => ({ useNavBadges: () => ({}) }));
+
 vi.mock('@/features/auth/hooks/use-portal-logout', () => ({
   usePortalLogout: () => vi.fn(async () => undefined),
 }));
@@ -113,7 +115,15 @@ describe('Sidebar — trạng thái mở rộng', () => {
   it('mục menu là link có nhãn đọc được', () => {
     renderSidebar();
 
-    expect(within(menuRegion()).getByRole('link', { name: 'Xe' })).toBeTruthy();
+    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
+  });
+
+  it('mục nằm trong một mục cha vẫn tới được: bấm mở "Xe của tôi"', () => {
+    renderSidebar();
+
+    fireEvent.click(within(menuRegion()).getByText('Xe của tôi'));
+
+    expect(within(menuRegion()).getByRole('link', { name: 'Danh sách xe' })).toBeTruthy();
   });
 });
 
@@ -162,24 +172,24 @@ describe('Sidebar — trạng thái thu gọn', () => {
   it('mọi mục menu GIỮ tên truy cập được', () => {
     renderCollapsed();
 
-    expect(within(menuRegion()).getByRole('link', { name: 'Xe' })).toBeTruthy();
-    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê xe' })).toBeTruthy();
+    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
+    expect(within(menuRegion()).getByRole('link', { name: 'Tổng quan' })).toBeTruthy();
   });
 
   it('mục đang mở vẫn nhận ra được bằng aria-current', () => {
-    nav.pathname = '/manage/vehicles';
+    nav.pathname = '/manage/calendar';
     renderCollapsed();
 
     expect(
-      within(menuRegion()).getByRole('link', { name: 'Xe' }).getAttribute('aria-current'),
+      within(menuRegion()).getByRole('link', { name: 'Lịch thuê' }).getAttribute('aria-current'),
     ).toBe('page');
   });
 
   it('vẫn lọc theo quyền — thu gọn không lộ thêm mục nào', () => {
-    grant(PERMISSION.VEHICLE_VIEW);
+    grant(PERMISSION.CALENDAR_VIEW);
     renderCollapsed();
 
-    expect(within(menuRegion()).getByRole('link', { name: 'Xe' })).toBeTruthy();
+    expect(within(menuRegion()).getByRole('link', { name: 'Lịch thuê' })).toBeTruthy();
     expect(within(menuRegion()).queryByRole('link', { name: 'Cửa hàng' })).toBeNull();
   });
 
@@ -199,10 +209,10 @@ describe('Sidebar — trạng thái thu gọn', () => {
     expect(within(menuRegion()).getAllByRole('link')).toHaveLength(before);
   });
 
-  it('vẫn còn lối đăng xuất', () => {
+  it('vẫn còn lối vào menu tài khoản (nơi chứa đăng xuất)', () => {
     renderCollapsed();
 
-    expect(screen.getByRole('button', { name: 'Đăng xuất' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Menu tài khoản/ })).toBeTruthy();
   });
 });
 
@@ -230,6 +240,44 @@ describe('Sidebar — hợp đồng token nền tối', () => {
     const darkBlock = menuCss.slice(menuCss.indexOf('.dark '));
     expect(darkBlock).not.toContain('--xp-color-text-secondary');
     expect(darkBlock).not.toContain('--xp-gold-deep');
+  });
+
+  /**
+   * Lỗi ĐÃ XẢY RA HAI LẦN, nên khoá lại bằng luật chứ không bằng một khẳng định lẻ.
+   *
+   * Lần gần nhất: mục cha "Xe của tôi" tàng hình khi chọn mục con "Bảo dưỡng" — khối nền sáng
+   * đặt `color: var(--xp-color-text)` cho `.ant-menu-submenu-selected > .ant-menu-submenu-title`
+   * mà khối `.dark` chỉ chỉnh lại màu ICON, quên mất màu CHỮ. Trên `--xp-shell-sidebar-bg` thì
+   * đó là chữ đen trên nền đen.
+   *
+   * Luật: **mọi selector AntD được khai `color` ở khối nền sáng đều phải có bản `.dark` tương
+   * ứng.** Thêm một luật màu mới mà quên bản nền tối là đỏ ngay tại đây.
+   */
+  it('mọi màu chữ khai ở khối nền sáng đều có bản ghi đè cho nền tối', () => {
+    const rules = menuCss
+      .split('}')
+      .map((block) => {
+        const [selector = '', body = ''] = block.split('{');
+        return { selector: selector.trim().replace(/\s+/g, ' '), body };
+      })
+      .filter((rule) => rule.selector);
+
+    /** Selector THẬT của AntD nằm trong `:global(...)` — phần so khớp giữa hai khối. */
+    const antdTargets = (selector: string) =>
+      [...selector.matchAll(/:global\(([^)]*)\)/g)].map((m) => m[1]!.trim().replace(/\s+/g, ' '));
+
+    const darkTargets = new Set(
+      rules
+        .filter((rule) => rule.selector.startsWith('.dark'))
+        .flatMap((rule) => antdTargets(rule.selector)),
+    );
+
+    const missing = rules
+      .filter((rule) => rule.selector.startsWith('.wrap') && /(^|[;\s])color:/.test(rule.body))
+      .flatMap((rule) => antdTargets(rule.selector))
+      .filter((target) => !darkTargets.has(target));
+
+    expect(missing).toEqual([]);
   });
 
   it('có trạng thái focus-visible riêng cho nền tối', () => {

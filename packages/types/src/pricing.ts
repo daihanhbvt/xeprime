@@ -27,6 +27,59 @@ export const POLICY_SOURCE_META: Readonly<Record<PolicySource, StatusMeta>> = {
   [POLICY_SOURCE.VEHICLE]: { label: 'Đang ghi đè', color: STATUS_COLOR.WAITING },
 };
 
+/**
+ * Hình thức BẢO ĐẢM (thế chấp) của một chính sách thuê — ba chế độ LOẠI TRỪ nhau, không phải
+ * cờ bật/tắt độc lập. Đây là thứ chuẩn hoá gap C-04: trước đây chỉ có một ô tiền cọc, còn
+ * "miễn thế chấp" là một boolean marketing rời trên `vehicles` có thể mâu thuẫn với số cọc.
+ *
+ * Luật nhất quán được ràng ở DB (CHECK `rental_policies_collateral_scope_check`), không chỉ ở app:
+ *   - `cash`  ⇒ deposit_amount > 0  và không có loại tài sản nào;
+ *   - `asset` ⇒ deposit_amount = 0  và có ít nhất một loại tài sản;
+ *   - `none`  ⇒ deposit_amount = 0  và không có loại tài sản nào.
+ */
+export const COLLATERAL_MODE = {
+  /** Khách đặt cọc TIỀN — số tiền nằm ở `depositAmount`, chảy vào sổ thu-chi. */
+  CASH: 'cash',
+  /** Khách thế chấp TÀI SẢN/giấy tờ — không có tiền nào chuyển động. */
+  ASSET: 'asset',
+  /** Miễn thế chấp — nguồn DUY NHẤT của nhãn "Miễn thế chấp" trên sàn. */
+  NONE: 'none',
+} as const;
+
+export type CollateralMode = (typeof COLLATERAL_MODE)[keyof typeof COLLATERAL_MODE];
+export const COLLATERAL_MODE_VALUES = Object.values(COLLATERAL_MODE) as CollateralMode[];
+
+export const COLLATERAL_MODE_META: Readonly<Record<CollateralMode, StatusMeta>> = {
+  [COLLATERAL_MODE.CASH]: { label: 'Cọc tiền', color: STATUS_COLOR.INFO },
+  [COLLATERAL_MODE.ASSET]: { label: 'Cọc tài sản', color: STATUS_COLOR.WAITING },
+  [COLLATERAL_MODE.NONE]: { label: 'Miễn thế chấp', color: STATUS_COLOR.SUCCESS },
+};
+
+/**
+ * Loại tài sản nhận thế chấp khi `collateralMode = 'asset'` — danh mục ĐÓNG (chốt 20/08).
+ * Không có mục "Khác": một ô tự nhập biến trường có cấu trúc trở lại thành đoạn văn tự do,
+ * đúng thứ C-04 sinh ra để dẹp, và làm hỏng khả năng lọc/so sánh trên sàn.
+ */
+export const COLLATERAL_ASSET_TYPE = {
+  /** Cà vẹt / giấy đăng ký xe máy của khách. */
+  VEHICLE_REGISTRATION: 'vehicle_registration',
+  /** Chính chiếc xe máy, gửi lại tại gian hàng suốt thời gian thuê. */
+  MOTORBIKE: 'motorbike',
+  PASSPORT: 'passport',
+} as const;
+
+export type CollateralAssetType =
+  (typeof COLLATERAL_ASSET_TYPE)[keyof typeof COLLATERAL_ASSET_TYPE];
+export const COLLATERAL_ASSET_TYPE_VALUES = Object.values(
+  COLLATERAL_ASSET_TYPE,
+) as CollateralAssetType[];
+
+export const COLLATERAL_ASSET_TYPE_LABEL: Readonly<Record<CollateralAssetType, string>> = {
+  [COLLATERAL_ASSET_TYPE.VEHICLE_REGISTRATION]: 'Cà vẹt (đăng ký xe máy)',
+  [COLLATERAL_ASSET_TYPE.MOTORBIKE]: 'Xe máy',
+  [COLLATERAL_ASSET_TYPE.PASSPORT]: 'Hộ chiếu',
+};
+
 /** Một bậc phí giao nhận: áp cho khoảng cách ≤ `toKm` (mốc "từ" suy từ bậc liền trước). */
 export interface DeliveryTier {
   toKm: number;
@@ -141,6 +194,12 @@ export interface BookingPriceSnapshot {
     source: PolicySource;
     updatedAt: string;
     depositAmount: string;
+    /**
+     * Đơn chốt TRƯỚC 20/08 không có hai trường này — đọc snapshot cũ phải chịu `undefined`,
+     * không được suy ngược từ `depositAmount` (cọc 0 của đơn cũ không đồng nghĩa "miễn cọc").
+     */
+    collateralMode?: CollateralMode;
+    collateralAssetTypes?: CollateralAssetType[];
     deliveryEnabled: boolean;
     deliveryMaxRadiusKm: number | null;
     deliveryTiers: DeliveryTier[];

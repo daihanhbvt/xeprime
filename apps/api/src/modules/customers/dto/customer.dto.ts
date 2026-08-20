@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   BOOKING_STATUS_VALUES,
   CUSTOMER_DOCUMENT_TYPE_VALUES,
+  IDENTITY_VERIFY_METHOD_VALUES,
   DOCUMENT_UPLOAD_MAX_BYTES,
   DOCUMENT_UPLOAD_MIME_TYPES,
   SERVICE_TYPE_VALUES,
@@ -349,7 +350,30 @@ export class CustomerDocumentDto {
   })
   expiryStatus!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) uploadedByName!: string | null;
+  /** ISO — null = CHƯA đối chiếu. Ba trường verify* đi cùng nhau (CHECK ở DB). */
+  @ApiPropertyOptional({ type: String, nullable: true }) verifiedAt!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) verifiedByName!: string | null;
+  @ApiPropertyOptional({ enum: IDENTITY_VERIFY_METHOD_VALUES, type: String, nullable: true })
+  verifyMethod!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) verifyNote!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+}
+
+/**
+ * Ghi nhận đối chiếu giấy tờ. KHÔNG có cờ "đạt/không đạt": giấy tờ không đối chiếu được thì
+ * không ghi nhận gì cả (và badge trên màn đơn vẫn báo thiếu) — một bản ghi "đã đối chiếu:
+ * không đạt" chỉ tạo ra trạng thái thứ ba mà không luồng nào xử lý.
+ */
+export class VerifyCustomerDocumentDto {
+  @ApiProperty({ enum: IDENTITY_VERIFY_METHOD_VALUES })
+  @IsIn(IDENTITY_VERIFY_METHOD_VALUES)
+  verifyMethod!: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ghi chú khi đối chiếu' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  verifyNote?: string | null;
 }
 
 export class PresignCustomerDocumentDto {

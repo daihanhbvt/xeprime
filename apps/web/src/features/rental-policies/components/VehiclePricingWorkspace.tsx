@@ -5,7 +5,14 @@ import { Alert, App, Button, Switch } from 'antd';
 import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 import { useForm, useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import { LONG_TERM_PACKAGE_MONTHS, POLICY_SOURCE, SERVICE_TYPE } from '@xeprime/types';
+import {
+  COLLATERAL_ASSET_TYPE_LABEL,
+  COLLATERAL_MODE,
+  COLLATERAL_MODE_META,
+  LONG_TERM_PACKAGE_MONTHS,
+  POLICY_SOURCE,
+  SERVICE_TYPE,
+} from '@xeprime/types';
 import { NumberField } from '@/components/form/NumberField';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
@@ -84,8 +91,15 @@ export function VehiclePricingWorkspace({
 
   const { control, handleSubmit, reset, setValue, formState } = useForm<VehiclePricingFormValues>({
     resolver: yupResolver(vehiclePricingFormSchema),
-    // Giá ngày thường chỉ bắt buộc khi xe đăng tự lái (schema đọc $serviceTypes từ context).
-    context: { serviceTypes: services },
+    /*
+     * Giá ngày thường chỉ bắt buộc khi xe đăng tự lái (schema đọc `$serviceTypes` từ context).
+     *
+     * `policyEditable` tắt mọi ràng buộc của khối CHÍNH SÁCH khi xe đang kế thừa: các ô đó không
+     * hiện ra để sửa, nên chúng không được phép chặn nút Lưu. Không có cờ này thì một gian hàng
+     * CHƯA cấu hình chính sách sẽ không bao giờ đặt nổi giá cho xe — form đòi "Nhập số tiền cọc
+     * mặc định" trên một ô vô hình.
+     */
+    context: { serviceTypes: services, policyEditable: editMode },
     values: {
       ...policyToForm(pricing.policy ?? pricing.shopPolicy),
       weekdayPrice: toNumber(pricing.weekdayPrice),
@@ -120,7 +134,10 @@ export function VehiclePricingWorkspace({
     const money = (v: number | null | undefined): string | null =>
       v != null ? String(Math.round(v)) : null;
     const body: SaveVehiclePricingInput = {
-      source: POLICY_SOURCE.VEHICLE,
+      // `source` chỉ nói về CHÍNH SÁCH (20/08). Đặt giá riêng không còn kéo theo ghi đè chính
+      // sách — gửi `vehicle` khi không sửa chính sách sẽ đóng băng một bản sao mà người dùng
+      // không hề yêu cầu, và xe im lặng ngừng nhận cập nhật của gian hàng.
+      source: editMode ? POLICY_SOURCE.VEHICLE : POLICY_SOURCE.SHOP,
       ...(hasSelfDrive || values.weekdayPrice != null
         ? { weekdayPrice: money(values.weekdayPrice) ?? '0' }
         : {}),
@@ -142,7 +159,7 @@ export function VehiclePricingWorkspace({
             withDriverOneWayPrice: money(values.withDriverOneWayPrice),
           }
         : {}),
-      policy: formToSaveInput(values),
+      ...(editMode ? { policy: formToSaveInput(values) } : {}),
     };
 
     const changed = (next: string | null | undefined, prev: string | null | undefined): boolean =>
@@ -170,9 +187,13 @@ export function VehiclePricingWorkspace({
       return;
     }
 
+    // Nói đúng thứ sắp được lưu: ở chế độ kế thừa KHÔNG có chính sách riêng nào được ghi, nên
+    // hộp thoại không được hứa điều đó (giá và chính sách đã là hai trục tách rời từ 20/08).
     modal.confirm({
-      title: 'Lưu chính sách riêng cho xe này?',
-      content: `Thay đổi chỉ áp dụng cho ${vehicleName}, tính từ các lượt đặt mới — không ảnh hưởng các xe khác và các đơn đã chốt.`,
+      title: editMode ? 'Lưu chính sách riêng cho xe này?' : 'Lưu giá thuê cho xe này?',
+      content: editMode
+        ? `Thay đổi chỉ áp dụng cho ${vehicleName}, tính từ các lượt đặt mới — không ảnh hưởng các xe khác và các đơn đã chốt.`
+        : `Giá mới chỉ áp dụng cho ${vehicleName}, tính từ các lượt đặt mới. Xe vẫn kế thừa chính sách chung của gian hàng.`,
       okText: 'Lưu thay đổi',
       cancelText: 'Hủy bỏ',
       onOk: () => onSave(body),
@@ -191,6 +212,9 @@ export function VehiclePricingWorkspace({
         </PricingTitle>
         <label className={styles.sourceRow}>
           <Switch
+            // Trang này có nhiều switch (khuyến mãi, giao nhận, ưu đãi) từ khi khối giá luôn
+            // hiện — cái này cần tên riêng để đọc màn hình và test gọi đúng tên nó.
+            aria-label="Dùng chính sách chung của gian hàng"
             checked={!editMode}
             disabled={!canEdit || submitting}
             onChange={(useShop) => {
@@ -230,8 +254,12 @@ export function VehiclePricingWorkspace({
         )}
       </section>
 
-      {editMode ? (
-        <form onSubmit={submit} noValidate>
+      {/*
+        Form BAO GIỜ cũng hiện: giá là thuộc tính của xe, không phụ thuộc nguồn chính sách. Chỉ
+        khối chính sách bên dưới mới đổi theo `editMode` — trước 20/08 cả hai bị khoá chung, nên
+        muốn sửa mỗi giá là phải ghi đè toàn bộ chính sách gian hàng.
+      */}
+      <form onSubmit={submit} noValidate>
           <div className={styles.stack}>
             {overriding && canEdit ? (
               <div className={styles.resetRow}>
@@ -385,13 +413,21 @@ export function VehiclePricingWorkspace({
               </section>
             ) : null}
 
-            {/* Form giá xe là SUPERSET của PolicyFormValues — cấu trúc tương thích, TS không
-                thu hẹp generic của RHF nên cần một cast tường minh tại biên. */}
-            <PolicySections
-              control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
-              numbered={false}
-              legacyDiscountTiers={(pricing.policy ?? pricing.shopPolicy)?.legacyDiscountTiers}
-            />
+            {editMode ? (
+              /* Form giá xe là SUPERSET của PolicyFormValues — cấu trúc tương thích, TS không
+                 thu hẹp generic của RHF nên cần một cast tường minh tại biên. */
+              <PolicySections
+                control={control as unknown as Parameters<typeof PolicySections>[0]['control']}
+                numbered={false}
+                legacyDiscountTiers={(pricing.policy ?? pricing.shopPolicy)?.legacyDiscountTiers}
+              />
+            ) : (
+              <InheritedPolicyCard
+                policy={pricing.shopPolicy ?? null}
+                canEdit={canEdit}
+                onEdit={() => setEditingOverride(true)}
+              />
+            )}
 
             <StickyFormActions
               submitLabel="Lưu thay đổi"
@@ -402,14 +438,6 @@ export function VehiclePricingWorkspace({
             />
           </div>
         </form>
-      ) : (
-        <InheritedSummary
-          pricing={pricing}
-          policy={pricing.shopPolicy ?? null}
-          canEdit={canEdit}
-          onEdit={() => setEditingOverride(true)}
-        />
-      )}
     </div>
   );
 }
@@ -563,141 +591,110 @@ function LongTermPriceHintLive({ control }: { control: Control<VehiclePricingFor
 }
 
 /** State A — bảng thông số kế thừa read-only (Figma `247:1645`). */
-function InheritedSummary({
-  pricing,
+/**
+ * Chính sách ĐANG KẾ THỪA từ gian hàng — chỉ đọc.
+ *
+ * Không còn liệt kê giá ở đây: từ 20/08 giá sửa trực tiếp trên chính form phía trên, kể cả khi
+ * xe vẫn kế thừa chính sách. Lặp lại giá dưới dạng read-only ngay dưới ô nhập giá là hai nguồn
+ * cho cùng một con số, và nguồn read-only luôn là nguồn cũ.
+ */
+function InheritedPolicyCard({
   policy,
   canEdit,
   onEdit,
 }: {
-  pricing: VehiclePricing;
   policy: RentalPolicyValues | null;
   canEdit: boolean;
   onEdit: () => void;
 }) {
   const fmt = useAppFormat();
 
-  const services = pricing.serviceTypes ?? [];
-  const discountedWeekday = discountedPriceVnd(pricing.weekdayPrice, pricing.discountPercent);
   return (
-    <section className={styles.card} aria-label="Thông số kế thừa đang áp dụng">
+    <section className={styles.card} aria-label="Chính sách kế thừa đang áp dụng">
       <div className={styles.cardHeader}>
         <div>
-          <h2 className={styles.cardTitle}>Giá & chính sách đang áp dụng</h2>
+          <h2 className={styles.cardTitle}>Chính sách đang áp dụng</h2>
           <p className={styles.desc}>
             {policy
-              ? 'Giá thuộc xe này; cọc, giao nhận và ưu đãi theo thời lượng đang kế thừa từ gian hàng.'
-              : 'Giá thuộc xe này; gian hàng chưa có chính sách cọc, giao nhận và ưu đãi theo thời lượng.'}
+              ? 'Bảo đảm, giao nhận và ưu đãi theo thời lượng đang kế thừa từ gian hàng.'
+              : 'Gian hàng chưa có chính sách bảo đảm, giao nhận và ưu đãi theo thời lượng.'}
           </p>
         </div>
         <div className={styles.summaryActions}>
           <span className={policy ? styles.inheritBadge : styles.missingPolicyBadge}>
             {policy ? 'Đang kế thừa' : 'Chưa có chính sách'}
           </span>
-          {canEdit ? (
-            <Button type="primary" onClick={onEdit}>
-              Chỉnh sửa giá & khuyến mãi
-            </Button>
-          ) : null}
+          {canEdit ? <Button onClick={onEdit}>Tùy chỉnh riêng cho xe này</Button> : null}
         </div>
       </div>
 
-      <dl className={styles.summaryList}>
-        {services.includes(SERVICE_TYPE.SELF_DRIVE) ? (
-          <>
-            <div className={styles.summaryRow}>
-              <dt>Giá tự lái gốc (ngày thường)</dt>
-              <dd>
-                {pricing.weekdayPrice
-                  ? `${fmt.money(pricing.weekdayPrice)}/ngày`
-                  : 'Chưa có giá'}
-              </dd>
-            </div>
-            <div className={styles.summaryRow}>
-              <dt>Khuyến mãi trực tiếp</dt>
-              <dd>
-                {pricing.discountPercent ? (
-                  <DiscountTag percent={pricing.discountPercent} />
-                ) : (
-                  'Tắt'
-                )}
-              </dd>
-            </div>
-            {discountedWeekday ? (
-              <div className={`${styles.summaryRow} ${styles.summaryHighlight}`}>
-                <dt>Giá khách thấy trên sàn</dt>
-                <dd>{fmt.money(discountedWeekday)}/ngày</dd>
-              </div>
-            ) : null}
-          </>
-        ) : null}
-        {services.includes(SERVICE_TYPE.LONG_TERM) ? (
+      {policy ? (
+        <dl className={styles.summaryList}>
           <div className={styles.summaryRow}>
-            <dt>Giá tháng (dài hạn)</dt>
-            <dd>
-              {pricing.monthlyPrice
-                ? `${fmt.money(pricing.monthlyPrice)}/tháng`
-                : 'Chưa có giá'}
+            <dt>Yêu cầu bảo đảm</dt>
+            <dd>{collateralSummary(policy, fmt.money)}</dd>
+          </div>
+          <div className={styles.summaryRow}>
+            <dt>Giao nhận tận nơi</dt>
+            <dd className={policy.deliveryEnabled ? styles.summaryOn : undefined}>
+              {policy.deliveryEnabled
+                ? `Bật (${policy.deliveryTiers.length} khoảng cách)`
+                : 'Tắt'}
             </dd>
           </div>
-        ) : null}
-        {services.includes(SERVICE_TYPE.WITH_DRIVER) ? (
           <div className={styles.summaryRow}>
-            <dt>Giá có tài xế (nội thành)</dt>
+            <dt>Phí trả quá giờ</dt>
             <dd>
-              {pricing.withDriverDailyPrice
-                ? `${fmt.money(pricing.withDriverDailyPrice)}/ngày`
-                : 'Chưa có giá'}
+              {policy.overtimeFeePerHour
+                ? `${fmt.money(policy.overtimeFeePerHour)}/giờ`
+                : 'Cần cấu hình'}
             </dd>
           </div>
-        ) : null}
-        {policy ? (
-          <>
-            <div className={styles.summaryRow}>
-              <dt>Tiền đặt cọc thế chấp</dt>
-              <dd>{fmt.money(policy.depositAmount)}</dd>
-            </div>
-            <div className={styles.summaryRow}>
-              <dt>Giao nhận tận nơi</dt>
-              <dd className={policy.deliveryEnabled ? styles.summaryOn : undefined}>
-                {policy.deliveryEnabled
-                  ? `Bật (${policy.deliveryTiers.length} khoảng cách)`
-                  : 'Tắt'}
-              </dd>
-            </div>
-            <div className={styles.summaryRow}>
-              <dt>Phí trả quá giờ</dt>
-              <dd>
-                {policy.overtimeFeePerHour
-                  ? `${fmt.money(policy.overtimeFeePerHour)}/giờ`
-                  : 'Cần cấu hình'}
-              </dd>
-            </div>
-            <div className={styles.summaryRow}>
-              <dt>Ưu đãi theo thời lượng (thuê dài hạn)</dt>
-              <dd>
-                {policy.discountEnabled && policy.discountTiers.length > 0
-                  ? `Mức giảm tối đa ${Math.max(...policy.discountTiers.map((t) => t.percent))}%`
-                  : 'Tắt'}
-              </dd>
-            </div>
-          </>
-        ) : null}
-      </dl>
-
-      {!policy ? (
+          <div className={styles.summaryRow}>
+            <dt>Ưu đãi theo thời lượng (thuê dài hạn)</dt>
+            <dd>
+              {policy.discountEnabled && policy.discountTiers.length > 0
+                ? `Mức giảm tối đa ${Math.max(...policy.discountTiers.map((t) => t.percent))}%`
+                : 'Tắt'}
+            </dd>
+          </div>
+        </dl>
+      ) : (
         <Alert
           type="info"
           showIcon
           title="Gian hàng chưa cấu hình chính sách thuê"
           description={
             <span>
-              Xe này chưa có tiền cọc, giao nhận hay ưu đãi. Cấu hình tại{' '}
+              Xe này chưa có yêu cầu bảo đảm, giao nhận hay ưu đãi. Cấu hình tại{' '}
               <Link href={ROUTES.MANAGE.SHOP_POLICIES}>Chính sách thuê của gian hàng</Link> hoặc
               chuyển sang tùy chỉnh riêng cho xe.
             </span>
           }
         />
-      ) : null}
+      )}
     </section>
   );
+}
+
+/**
+ * Một dòng tóm tắt yêu cầu bảo đảm cho các bảng chỉ-đọc.
+ *
+ * Ba chế độ đọc ra ba câu khác hẳn nhau, nên không thể chỉ in số tiền như trước: "0đ" ở chế độ
+ * `asset` sẽ khiến người đọc tưởng xe không yêu cầu gì, trong khi gian hàng đang giữ cà vẹt.
+ */
+export function collateralSummary(
+  policy: Pick<RentalPolicyValues, 'collateralMode' | 'collateralAssetTypes' | 'depositAmount'>,
+  money: (value: string) => string,
+): string {
+  if (policy.collateralMode === COLLATERAL_MODE.CASH) {
+    return `${COLLATERAL_MODE_META[COLLATERAL_MODE.CASH].label} · ${money(policy.depositAmount)}`;
+  }
+  if (policy.collateralMode === COLLATERAL_MODE.ASSET) {
+    const types = policy.collateralAssetTypes
+      .map((type) => COLLATERAL_ASSET_TYPE_LABEL[type])
+      .join(', ');
+    return `${COLLATERAL_MODE_META[COLLATERAL_MODE.ASSET].label} · ${types || 'chưa chọn loại'}`;
+  }
+  return COLLATERAL_MODE_META[COLLATERAL_MODE.NONE].label;
 }
