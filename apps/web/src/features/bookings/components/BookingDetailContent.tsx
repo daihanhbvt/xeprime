@@ -1,8 +1,16 @@
 'use client';
 
 import { Button, Card, Skeleton } from 'antd';
+import { useState } from 'react';
 import Link from 'next/link';
-import { longTermPackageLabel, PERMISSION, routeTypeLabel, SERVICE_TYPE } from '@xeprime/types';
+import {
+  isBookingFinal,
+  longTermPackageLabel,
+  PERMISSION,
+  routeTypeLabel,
+  SERVICE_TYPE,
+  type BookingStatus,
+} from '@xeprime/types';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
@@ -17,6 +25,7 @@ import { serviceTypeLabel } from '../constants';
 import { BookingActionBar } from './BookingActionBar';
 import { BookingDriverSection } from './BookingDriverSection';
 import { BookingOperationPanel } from './BookingOperationPanel';
+import { UpdateDeliveryFeeModal } from './UpdateDeliveryFeeModal';
 import styles from './BookingDetailContent.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 
@@ -44,7 +53,10 @@ export function BookingDetailContent({
 
   const { has } = usePermissions();
   const canView = has(PERMISSION.BOOKING_VIEW);
+  const canUpdate = has(PERMISSION.BOOKING_UPDATE);
   const { data, isLoading, isError, error, refetch } = useBooking(canView ? bookingId : null);
+  /** Sửa phí giao nhận — mở từ chính dòng phí ở khối chi phí, xem ghi chú tại chỗ đó. */
+  const [feeOpen, setFeeOpen] = useState(false);
 
   if (!canView) {
     return (
@@ -92,6 +104,14 @@ export function BookingDetailContent({
   // Thu vượt = đã thu − phải thu, chỉ khi dương. Tính trên CHUỖI tiền (ADR 0007), không Number.
   const excess = subtractMoney(data.collectedAmount, data.amountDue);
   const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
+  /*
+   * Cùng luật với server (`isBookingFinal`): đơn đã khép thì mọi đường ghi đều bị từ chối.
+   *
+   * Tên `closed` phải được khai báo TƯỜNG MINH ở đây — bỏ quên thì TypeScript lặng lẽ nối vào
+   * `window.closed` của DOM lib (cũng kiểu `boolean`), typecheck vẫn xanh còn lúc chạy thì luôn
+   * ra `false` và nút sửa hiện cả trên đơn đã đóng.
+   */
+  const closed = isBookingFinal(data.status as BookingStatus);
 
   return (
     <div className={styles.stackGap}>
@@ -230,8 +250,23 @@ export function BookingDetailContent({
               ) : null}
               <div className={styles.row}>
                 <dt>Phí giao nhận</dt>
-                <dd>
+                <dd className={styles.editableValue}>
                   {isZeroMoney(data.deliveryFee) ? 'Miễn phí' : fmt.money(data.deliveryFee)}
+                  {/*
+                    Nút sửa đứng CẠNH con số nó sửa, không phải một nút riêng trên thanh hành
+                    động của đơn. Phí giao nhận là số hai bên thoả thuận ngoài ứng dụng rồi ghi
+                    lại (Wave 9) — người dùng nghĩ tới nó khi đang NHÌN nó, và việc ghi lại kèm
+                    ghi chú nội bộ vào audit nên nó không nhập được vào form Sửa đơn chung.
+                  */}
+                  {canUpdate && !closed ? (
+                    <button
+                      type="button"
+                      className={styles.editValueBtn}
+                      onClick={() => setFeeOpen(true)}
+                    >
+                      Sửa
+                    </button>
+                  ) : null}
                 </dd>
               </div>
               <div className={styles.row}>
@@ -299,6 +334,15 @@ export function BookingDetailContent({
 
         <BookingActionBar booking={data} />
       </Card>
+
+      {feeOpen ? (
+        <UpdateDeliveryFeeModal
+          bookingId={data.id}
+          currentFee={data.deliveryFee}
+          open
+          onClose={() => setFeeOpen(false)}
+        />
+      ) : null}
 
       <div className={styles.layout}>
         <BookingOperationPanel bookingId={data.id} bookingStatus={data.status} />

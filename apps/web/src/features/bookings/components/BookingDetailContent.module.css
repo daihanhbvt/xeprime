@@ -210,3 +210,27 @@
 .rowSub dd {
   margin: 0;
 }
+
+/*
+ * Ô giá trị có nút sửa ngay bên cạnh — dùng cho phí giao nhận, con số hai bên thoả thuận ngoài
+ * ứng dụng rồi ghi lại. Nút là chữ, không phải `<Button>`: nó phải nhẹ hơn con số nó đứng cạnh.
+ */
+.editableValue {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--xp-space-sm);
+}
+
+.editValueBtn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--xp-gold-deep);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.editValueBtn:hover {
+  text-decoration: underline;
+}

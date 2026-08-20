@@ -24,7 +24,6 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { isZeroMoney } from '@/lib/money';
 import { getErrorMessage } from '@/services/api-client';
 import { BookingFormDialog } from './BookingFormDialog';
-import { UpdateDeliveryFeeModal } from './UpdateDeliveryFeeModal';
 import type { BookingDetail } from '../types';
 import styles from './BookingActionBar.module.css';
 
@@ -64,7 +63,6 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [feeOpen, setFeeOpen] = useState(false);
   const [supplementOpen, setSupplementOpen] = useState(false);
 
   /** Đã lập biên bản chiều nào chưa — chưa có thì không có gì để bổ sung. */
@@ -85,9 +83,15 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
     <>
       <div className={styles.bar}>
         {/*
-          Mọi thao tác phụ đứng THẲNG ở đây, không giấu sau menu ba-chấm: nhóm này chỉ có vài
-          nút và đều là việc thường ngày ở quầy — bắt bấm hai lần để tới `Thu tiền` là tính phí
-          lên thao tác phổ biến nhất.
+          Mọi thao tác phụ đứng THẲNG ở đây, không giấu sau menu ba-chấm: đều là việc thường
+          ngày ở quầy, và bắt bấm hai lần để tới `Thu tiền` là tính phí lên thao tác phổ biến
+          nhất.
+
+          Giữ được điều đó bằng cách BỚT NÚT chứ không phải bằng menu (20/08): thanh này từng
+          phình tới bảy nút vì mỗi việc nhỏ lại mọc một nút riêng. Hai cái bỏ đi không mất chức
+          năng nào — `Phiếu thu chi` thành một link ngay trong hộp `Lịch sử tiền` (cùng dữ liệu,
+          chỉ khác chỗ xem), còn `Cập nhật phí giao nhận` dời xuống đứng CẠNH chính con số nó
+          sửa ở khối chi phí.
         */}
         <div className={styles.secondary}>
           {canContract ? (
@@ -100,20 +104,15 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
                 })
               }
             >
-              Hợp đồng thuê xe
+              Hợp đồng
             </Button>
           ) : null}
-          <Button onClick={() => setHistoryOpen(true)}>Sổ tiền của đơn</Button>
           {/*
-            Đường sang SỔ, không phải một bề mặt tiền thứ hai: lịch sử thanh toán ở đây đã trả lời
-            "đơn này thu được bao nhiêu", còn sổ trả lời "mọi phiếu của đơn này, gồm cả cọc, hoàn
-            cọc và chi phí xe". Dựng lại danh sách phiếu ngay tại đây là hai chỗ cùng một dữ liệu.
+            "Lịch sử tiền" chứ không phải "Sổ tiền của đơn": hộp này liệt kê các lần thu và các
+            phiếu của ĐƠN, còn "sổ" là cuốn sổ Thu-Chi của cả gian hàng — hai thứ khác nhau mà
+            gọi cùng một chữ thì người dùng tưởng mình đang mở nhầm chỗ.
           */}
-          {canViewFinance ? (
-            <Link href={receiptsPath.filtered({ bookingId: booking.id })}>
-              <Button>Phiếu thu chi</Button>
-            </Link>
-          ) : null}
+          <Button onClick={() => setHistoryOpen(true)}>Lịch sử tiền</Button>
           {/*
             Đơn đã khép thì server từ chối mọi lần ghi (Wave 12). Nút vẫn đứng nguyên chỗ nhưng
             mờ đi và nói lý do — biến mất thì hàng nút nhảy chỗ giữa các đơn, còn để bấm được
@@ -128,15 +127,6 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
               Sửa đơn
             </Button>
           ) : null}
-          {canUpdate ? (
-            <Button
-              disabled={closed}
-              title={closed ? CLOSED_HINT : undefined}
-              onClick={() => setFeeOpen(true)}
-            >
-              Cập nhật phí giao nhận
-            </Button>
-          ) : null}
           {canRecordPayment ? (
             // Hết nợ thì nút vẫn đứng nguyên chỗ nhưng nói rõ là không còn gì để thu.
             <Button disabled={!hasDebt} onClick={() => setPayOpen(true)}>
@@ -149,7 +139,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
             lại trong điện thoại nhân viên mãi mãi. Chỉ hiện khi thật sự đã có biên bản.
           */}
           {canManageHandover && hasHandover ? (
-            <Button onClick={() => setSupplementOpen(true)}>Bổ sung ảnh bàn giao</Button>
+            <Button onClick={() => setSupplementOpen(true)}>Ảnh bàn giao</Button>
           ) : null}
         </div>
 
@@ -192,7 +182,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
       ) : null}
 
       <ResponsiveDialog
-        title="Sổ tiền của đơn"
+        title="Lịch sử tiền của đơn"
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
         size="md"
@@ -201,7 +191,21 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
         <PaymentHistory bookingId={booking.id} />
         {/* Phiếu nhập tay gắn đơn cũng là tiền của đơn — trước đây chúng chỉ nằm ở sổ Thu-Chi,
             nên một khoản thu quá giờ 200k không hiện ở đâu trên màn đơn. */}
-        {canViewFinance ? <BookingReceiptList bookingId={booking.id} /> : null}
+        {canViewFinance ? (
+          <>
+            <BookingReceiptList bookingId={booking.id} />
+            {/*
+              Đường sang cuốn sổ đầy đủ nằm Ở ĐÂY chứ không phải một nút riêng trên thanh hành
+              động: nó chỉ có nghĩa khi người ta ĐANG xem tiền của đơn và muốn xem rộng hơn.
+            */}
+            <Link
+              href={receiptsPath.filtered({ bookingId: booking.id })}
+              className={styles.ledgerLink}
+            >
+              Mở ở sổ Thu-Chi của gian hàng →
+            </Link>
+          </>
+        ) : null}
       </ResponsiveDialog>
 
       {payOpen ? (
@@ -210,14 +214,6 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
           debtAmount={booking.debtAmount}
           open
           onClose={() => setPayOpen(false)}
-        />
-      ) : null}
-      {feeOpen ? (
-        <UpdateDeliveryFeeModal
-          bookingId={booking.id}
-          currentFee={booking.deliveryFee}
-          open
-          onClose={() => setFeeOpen(false)}
         />
       ) : null}
       <BookingFormDialog open={editOpen} editing={booking} onClose={() => setEditOpen(false)} />

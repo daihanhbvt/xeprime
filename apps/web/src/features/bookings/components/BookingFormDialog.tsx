@@ -1,19 +1,22 @@
 'use client';
 
-import { Alert, App, Button, Form, Space } from 'antd';
+import { Alert, App, Form } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useController, useForm, useWatch, type Control } from 'react-hook-form';
-import {
-  API_ERROR_CODE, ROUTE_TYPE, ROUTE_TYPE_VALUES, SERVICE_TYPE, routeTypeLabel, } from '@xeprime/types';
+import { API_ERROR_CODE, ROUTE_TYPE, ROUTE_TYPE_VALUES, SERVICE_TYPE } from '@xeprime/types';
+import { DialogForm } from '@/components/form/DialogForm';
 import { SelectField } from '@/components/form/SelectField';
 import { TextField } from '@/components/form/TextField';
 import { NumberField } from '@/components/form/NumberField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import {
-  RentalDateTimeRangeField, type RentalMode, } from '@/components/form/RentalDateTimeRangeField';
+  RentalDateTimeRangeField,
+  type RentalMode,
+} from '@/components/form/RentalDateTimeRangeField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import { dayjs } from '@/lib/datetime';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
@@ -59,6 +62,7 @@ function toDefaults(editing: BookingDetail | null): BookingFormValues {
     pickupAt: dayjs(editing.pickupAt),
     returnAt: dayjs(editing.returnAt),
     baseAmount: numOrNull(editing.baseAmount),
+    // Phí giao nhận KHÔNG sửa ở form này — xem docblock component. Giữ nguyên giá trị đang lưu.
     deliveryFee: numOrNull(editing.deliveryFee),
     discountAmount: numOrNull(editing.discountAmount),
     depositAmount: numOrNull(editing.depositAmount),
@@ -67,11 +71,21 @@ function toDefaults(editing: BookingDetail | null): BookingFormValues {
 }
 
 /**
- * SỬA đơn thuê — modal lớn responsive (desktop rộng, mobile toàn màn).
+ * SỬA đơn thuê.
  *
- * TẠO đơn KHÔNG còn đi qua đây: mọi lối tạo thủ công (lịch · danh sách đơn · hồ sơ khách) dùng
+ * TẠO đơn KHÔNG đi qua đây: mọi lối tạo thủ công (lịch · danh sách đơn · hồ sơ khách) dùng
  * `StaffBookingDialog` — cùng giao diện với luồng thuê xe của khách, kèm báo giá từ server. Form
  * này ở lại cho việc SỬA một đơn đã có, nơi xe và khách đã cố định.
+ *
+ * **Khổ `lg` một cột, dựng trên `DialogForm` (20/08).** Bản trước là modal `xl` hai cột tự dựng
+ * lấy: nó vừa lạc lõng (10 hộp CRUD khác trong kho đều dùng `DialogForm`), vừa HỎNG — thân của
+ * `xl` là `overflow: hidden` vì khổ đó sinh ra cho bố cục hai cột tự cuộn riêng, nên ở màn thấp
+ * phần dưới của form (ghi chú, tổng tiền, cả hàng nút Lưu) bị cắt cụt và không cuộn tới được.
+ *
+ * **Phí giao nhận cố ý KHÔNG có ở đây.** Nó là con số hai bên thoả thuận ngoài ứng dụng rồi ghi
+ * lại, và việc ghi lại đi kèm ghi chú nội bộ vào audit (`UpdateDeliveryFeeModal`). Để nó thành
+ * một ô lẫn giữa các ô khác là mở đường ghi thứ hai cho cùng một cột, và đường đó mất lý do sửa.
+ * Chỗ sửa đứng ngay cạnh con số ở khối "Tổng hợp chi phí".
  *
  * Khoảng thuê là MỘT giá trị đi qua `RentalDateTimeRangeField` — cùng control với luồng đặt xe
  * của khách, nên chủ xe và khách chọn thời gian bằng cùng một cách. Form remount theo `key` để
@@ -87,19 +101,9 @@ export function BookingFormDialog({
   editing: BookingDetail | null;
   onClose: () => void;
 }) {
-  const formKey = editing?.id ?? 'new';
-  return (
-    <ResponsiveDialog
-      title={editing ? `Sửa đơn ${editing.code}` : 'Tạo đơn thuê'}
-      size="xl"
-      mobileMode="fullscreen"
-      open={open}
-      onClose={onClose}
-      footer={null}
-    >
-      {open ? <BookingForm key={formKey} editing={editing} onDone={onClose} /> : null}
-    </ResponsiveDialog>
-  );
+  // Chỉ dựng khi mở → mỗi lần mở là state sạch, không cần reset trong effect.
+  if (!open) return null;
+  return <BookingForm key={editing?.id ?? 'new'} editing={editing} onDone={onClose} />;
 }
 
 /** Cầu RHF ↔ RentalDateTimeRangeField: hai field pickupAt/returnAt là MỘT khoảng trên UI. */
@@ -111,13 +115,7 @@ function RentalRangeFormField({ control }: { control: Control<BookingFormValues>
   const error = pickup.fieldState.error?.message ?? ret.fieldState.error?.message;
 
   return (
-    <Form.Item
-      label="Thời gian thuê"
-      required
-      validateStatus={error ? 'error' : ''}
-      help={error}
-      style={{ marginBottom: 14 }}
-    >
+    <Form.Item label="Thời gian thuê" required validateStatus={error ? 'error' : ''} help={error}>
       <RentalDateTimeRangeField
         value={{ pickupAt: pickup.field.value, returnAt: ret.field.value }}
         onChange={(next) => {
@@ -134,6 +132,7 @@ function RentalRangeFormField({ control }: { control: Control<BookingFormValues>
 
 function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDone: () => void }) {
   const fmt = useAppFormat();
+  const dl = useDomainLabel();
 
   const { message } = App.useApp();
   const formId = useId();
@@ -198,31 +197,30 @@ function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDon
       customerName: values.customerName.trim(),
       customerPhone: values.customerPhone || undefined,
       serviceType: values.serviceType,
-      // Đơn with_driver mang hành trình; dịch vụ khác không gửi (server tự normalize về null).
+      pickupAt: values.pickupAt!.toISOString(),
+      returnAt: values.returnAt!.toISOString(),
+      baseAmount: values.baseAmount === null ? undefined : String(values.baseAmount),
+      deliveryFee: values.deliveryFee === null ? undefined : String(values.deliveryFee),
+      discountAmount: values.discountAmount === null ? undefined : String(values.discountAmount),
+      depositAmount: values.depositAmount === null ? undefined : String(values.depositAmount),
+      note: values.note?.trim() || undefined,
       ...(withDriver
         ? {
             routeType: values.routeType,
-            pickupAddress: values.pickupAddress.trim(),
-            ...(values.routeType !== ROUTE_TYPE.IN_CITY
+            pickupAddress: values.pickupAddress?.trim() || undefined,
+            ...(values.routeType !== ROUTE_TYPE.IN_CITY && values.destination?.trim()
               ? { destination: values.destination.trim() }
               : {}),
           }
         : {}),
-      pickupAt: values.pickupAt?.toISOString(),
-      returnAt: values.returnAt?.toISOString(),
-      baseAmount: String(values.baseAmount ?? 0),
-      deliveryFee: String(values.deliveryFee ?? 0),
-      discountAmount: String(values.discountAmount ?? 0),
-      depositAmount: String(values.depositAmount ?? 0),
-      note: values.note || undefined,
     };
 
-    const onError = (error: unknown) => {
-      if (getErrorCode(error) === API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT) {
+    const onError = (err: unknown) => {
+      if (getErrorCode(err) === API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT) {
         setConflict(true);
-      } else {
-        message.error(getErrorMessage(error));
+        return;
       }
+      message.error(getErrorMessage(err));
     };
 
     if (editing) {
@@ -245,114 +243,108 @@ function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDon
   });
 
   return (
-    <form id={formId} onSubmit={onSubmit} noValidate className={styles.form}>
-      {conflict ? (
-        <Alert
-          type="error"
-          showIcon
-          className={styles.alert}
-          message="Xe đã bận trong khung giờ này"
-          description="Chọn xe khác hoặc đổi thời gian nhận/trả."
-        />
-      ) : previewConflict ? (
-        <Alert
-          type="warning"
-          showIcon
-          className={styles.alert}
-          message="Xe có thể đã bận khung giờ này"
-          description="Cảnh báo sớm — hệ thống vẫn kiểm tra lại khi lưu."
-        />
-      ) : null}
+    <ResponsiveDialog
+      title={editing ? `Sửa đơn ${editing.code}` : 'Tạo đơn thuê'}
+      size="lg"
+      open
+      onClose={onDone}
+      okText={editing ? 'Lưu thay đổi' : 'Tạo đơn'}
+      onOk={() => void onSubmit()}
+      confirmLoading={pending}
+    >
+      <DialogForm id={formId} onSubmit={onSubmit} labelWidth="md">
+        {conflict ? (
+          <Alert
+            type="error"
+            showIcon
+            className={styles.alert}
+            message="Xe đã bận trong khung giờ này"
+            description="Chọn xe khác hoặc đổi thời gian nhận/trả."
+          />
+        ) : previewConflict ? (
+          <Alert
+            type="warning"
+            showIcon
+            className={styles.alert}
+            message="Xe có thể đã bận khung giờ này"
+            description="Cảnh báo sớm — hệ thống vẫn kiểm tra lại khi lưu."
+          />
+        ) : null}
 
-      <div className={styles.columns}>
-        <div className={styles.column}>
-          <h3 className={styles.sectionTitle}>Khách hàng &amp; chuyến đi</h3>
-          <SelectField
-            control={control}
-            name="vehicleId"
-            label="Xe"
-            options={vehicleOptions}
-            placeholder="Chọn xe"
-            disabled={Boolean(editing)}
-            showSearch
-          />
-          <TextField
-            control={control}
-            name="customerName"
-            label="Tên khách"
-            placeholder="Nguyễn Văn A"
-          />
-          <TextField
-            control={control}
-            name="customerPhone"
-            label="Số điện thoại"
-            placeholder="0901234567"
-          />
-          <SelectField
-            control={control}
-            name="serviceType"
-            label="Loại dịch vụ"
-            options={SERVICE_TYPE_OPTIONS}
-          />
-          {/* Hành trình chuyến CÓ TÀI XẾ — server validate lại cùng bộ luật (route-context). */}
-          {watchedServiceType === SERVICE_TYPE.WITH_DRIVER ? (
-            <>
-              <SelectField
-                control={control}
-                name="routeType"
-                label="Lộ trình"
-                options={ROUTE_TYPE_VALUES.map((value) => ({
-                  value,
-                  label: routeTypeLabel(value),
-                }))}
-              />
+        <SelectField
+          control={control}
+          name="vehicleId"
+          label="Xe"
+          options={vehicleOptions}
+          placeholder="Chọn xe"
+          disabled={Boolean(editing)}
+          showSearch
+        />
+        <TextField
+          control={control}
+          name="customerName"
+          label="Tên khách"
+          placeholder="Nguyễn Văn A"
+        />
+        <TextField
+          control={control}
+          name="customerPhone"
+          label="Số điện thoại"
+          placeholder="0901234567"
+        />
+        <SelectField
+          control={control}
+          name="serviceType"
+          label="Loại dịch vụ"
+          options={SERVICE_TYPE_OPTIONS}
+        />
+
+        {/* Hành trình chuyến CÓ TÀI XẾ — server validate lại cùng bộ luật (route-context). */}
+        {watchedServiceType === SERVICE_TYPE.WITH_DRIVER ? (
+          <>
+            <SelectField
+              control={control}
+              name="routeType"
+              label="Lộ trình"
+              options={ROUTE_TYPE_VALUES.map((value) => ({
+                value,
+                label: dl('routeType', value),
+              }))}
+            />
+            <TextField
+              control={control}
+              name="pickupAddress"
+              label="Địa chỉ đón khách"
+              placeholder="123 Lê Lợi, Q.1, TP.HCM"
+            />
+            {watchedRouteType !== ROUTE_TYPE.IN_CITY ? (
               <TextField
                 control={control}
-                name="pickupAddress"
-                label="Địa chỉ đón khách"
-                placeholder="123 Lê Lợi, Q.1, TP.HCM"
+                name="destination"
+                label="Điểm đến"
+                placeholder="TP. Đà Lạt, Lâm Đồng"
               />
-              {watchedRouteType !== ROUTE_TYPE.IN_CITY ? (
-                <TextField
-                  control={control}
-                  name="destination"
-                  label="Điểm đến"
-                  placeholder="TP. Đà Lạt, Lâm Đồng"
-                />
-              ) : null}
-            </>
-          ) : null}
-          <RentalRangeFormField control={control} />
-          <TextAreaField control={control} name="note" label="Ghi chú" rows={3} maxLength={2000} />
+            ) : null}
+          </>
+        ) : null}
+
+        <RentalRangeFormField control={control} />
+
+        <NumberField control={control} name="baseAmount" label="Tiền thuê" money min={0} />
+        <NumberField control={control} name="discountAmount" label="Giảm giá" money min={0} />
+        <NumberField control={control} name="depositAmount" label="Tiền cọc" money min={0} />
+
+        {/*
+          Tổng là số SUY RA, không phải một ô nhập — nên nó là một hàng tổng kết, không đứng
+          trong hàng nhãn/ô của form. Server vẫn tính lại khi lưu (ADR 0007).
+        */}
+        <div className={styles.total}>
+          <span>Tổng tiền</span>
+          <strong>{fmt.money(String(Math.max(0, total)))}</strong>
         </div>
 
-        <div className={styles.column}>
-          <h3 className={styles.sectionTitle}>Chi phí &amp; đặt cọc</h3>
-          <div className={styles.row}>
-            <NumberField control={control} name="baseAmount" label="Tiền thuê" money min={0} />
-            <NumberField control={control} name="deliveryFee" label="Phí giao xe" money min={0} />
-          </div>
-          <div className={styles.row}>
-            <NumberField control={control} name="discountAmount" label="Giảm giá" money min={0} />
-            <NumberField control={control} name="depositAmount" label="Tiền cọc" money min={0} />
-          </div>
-          <div className={styles.total}>
-            <span>Tổng tiền</span>
-            <strong>{fmt.money(String(Math.max(0, total)))}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.actions}>
-        <Space>
-          <Button onClick={onDone} disabled={pending}>
-            Huỷ
-          </Button>
-          <Button type="primary" htmlType="submit" loading={pending}>
-            {editing ? 'Lưu thay đổi' : 'Tạo đơn'}
-          </Button>
-        </Space>
-      </div>
-    </form>
+        <TextAreaField control={control} name="note" label="Ghi chú" rows={3} maxLength={2000} />
+      </DialogForm>
+    </ResponsiveDialog>
   );
 }

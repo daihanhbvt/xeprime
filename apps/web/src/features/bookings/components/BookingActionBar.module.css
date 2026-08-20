@@ -51,3 +51,19 @@
     flex: 1;
   }
 }
+
+/*
+ * Đường sang sổ Thu-Chi, nằm TRONG hộp lịch sử tiền chứ không phải một nút trên thanh hành
+ * động: nó chỉ có nghĩa khi người dùng đang xem tiền của đơn và muốn xem rộng hơn.
+ */
+.ledgerLink {
+  display: inline-block;
+  margin-top: var(--xp-space-sm);
+  color: var(--xp-gold-deep);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.ledgerLink:hover {
+  text-decoration: underline;
+}

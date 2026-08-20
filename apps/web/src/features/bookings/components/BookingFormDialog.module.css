@@ -1,76 +1,29 @@
-.form {
-  display: flex;
-  flex-direction: column;
-}
+/**
+ * Form sửa đơn — một cột, dựng trên `DialogForm` (khuôn chung của mọi hộp CRUD trong kho).
+ * Ở đây chỉ còn hai thứ riêng: dải cảnh báo trùng lịch và hàng tổng tiền.
+ */
 
 .alert {
-  margin-bottom: 16px;
+  margin-bottom: var(--xp-space-md);
 }
 
-/* Modal rộng (xl) chia hai cột: trái khách & chuyến, phải tiền — cùng cấu trúc thẻ chi tiết đơn. */
-.columns {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: var(--xp-space-xl);
-}
-
-.column {
-  min-width: 0;
-}
-
-.sectionTitle {
-  margin: 0 0 var(--xp-space-sm);
-  font-size: var(--xp-font-size-sm);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--xp-color-text-tertiary);
-}
-
-.row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
+/*
+ * Tổng tiền là số SUY RA, không phải một ô nhập — nên nó nằm ngoài cột nhãn/ô của form và được
+ * tô nền để đọc như một kết luận. Server vẫn tính lại khi lưu (ADR 0007).
+ */
 .total {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  margin-bottom: 14px;
+  gap: var(--xp-space-md);
+  margin-bottom: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
   background: var(--xp-gold-wash);
-  border-radius: 10px;
   color: var(--xp-color-text-secondary);
 }
 
 .total strong {
-  font-size: 18px;
   color: var(--xp-color-price);
-}
-
-/* Chân form dính đáy vùng cuộn của modal — thao tác luôn trong tầm mắt khi form dài. */
-.actions {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  justify-content: flex-end;
-  padding: var(--xp-space-sm) 0;
-  margin-top: var(--xp-space-xs);
-  background: var(--xp-color-bg-container);
-  border-top: 1px solid var(--xp-color-border);
-}
-
-@media (max-width: 768px) {
-  .columns {
-    grid-template-columns: 1fr;
-    gap: var(--xp-space-md);
-  }
-}
-
-@media (max-width: 480px) {
-  .row {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
+  font-size: var(--xp-font-size-h4);
 }
