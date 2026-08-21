@@ -24,7 +24,23 @@ export async function createApp(): Promise<INestApplication> {
   const isProduction = config.getOrThrow<string>('NODE_ENV') === 'production';
 
   app.useLogger(app.get(Logger));
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          // CSP mặc định của helmet bật `upgrade-insecure-requests`: trình duyệt nâng MỌI
+          // request con lên `https://`. Ngoài production API chạy HTTP trần, nên asset của
+          // Swagger UI chết với ERR_SSL_PROTOCOL_ERROR.
+          //
+          // Bẫy ở chỗ nó chỉ lộ ra khi mở bằng IP LAN: `localhost` được trình duyệt xếp vào
+          // "potentially trustworthy origin" và miễn nâng cấp, nên máy dev không bao giờ thấy.
+          // Production đứng sau TLS thì directive này có ích — chỉ bỏ khi chưa có HTTPS.
+          ...(isProduction ? {} : { 'upgrade-insecure-requests': null }),
+        },
+      },
+    }),
+  );
   app.use(cookieParser());
 
   // Cookie chỉ gửi kèm khi credentials được cho phép, và CORS credentials không đi cùng

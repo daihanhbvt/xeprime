@@ -19,6 +19,28 @@ pnpm --filter @xeprime/api dev     # cần Postgres đang chạy (docker compose
 Swagger UI **tắt khi `NODE_ENV=production`** (nó phơi toàn bộ bề mặt API). Muốn đưa tài liệu cho
 người ngoài mà không dựng server: gửi `packages/types/openapi.json`, mở bằng bất kỳ viewer nào.
 
+### Cho máy khác cùng mạng LAN vào xem
+
+API đã bind `0.0.0.0` sẵn, nên chỉ cần mở `http://<IP-máy-bạn>:4000/docs`. Hai thứ chặn đường:
+
+1. **Windows Firewall.** Rule `Node.js JavaScript Runtime` cài sẵn thường chỉ áp cho profile
+   *Public*, trong khi Wi-Fi ở nhà/văn phòng là *Private* → inbound bị chặn. Mở theo CỔNG (hẹp hơn
+   nới rule cho cả `node.exe`), chạy PowerShell **Administrator**:
+
+   ```powershell
+   New-NetFirewallRule -DisplayName "XePrime API (4000)" -Direction Inbound -Protocol TCP -LocalPort 4000 -Action Allow -Profile Private
+   New-NetFirewallRule -DisplayName "XePrime Web (3000)" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow -Profile Private
+   ```
+
+2. **CSP `upgrade-insecure-requests`.** Đã xử lý ở [bootstrap.ts](../apps/api/src/bootstrap.ts):
+   directive này bị bỏ khi `NODE_ENV` khác `production`. Nếu còn nó, trình duyệt nâng mọi asset
+   Swagger lên `https://` và trang trắng kèm `ERR_SSL_PROTOCOL_ERROR` — **chỉ xảy ra khi vào bằng
+   IP**, vì `localhost` được xếp vào "trustworthy origin" nên miễn nâng cấp. Đây là lý do lỗi này
+   không bao giờ lộ ra trên máy dev.
+
+Vẫn không vào được sau hai bước trên thì nghi router bật **AP/client isolation**. Kiểm từ máy kia:
+`Test-NetConnection <IP> -Port 4000` — firewall đã mở mà vẫn `TcpTestSucceeded: False` thì là router.
+
 ## 2. Thử gọi API ngay trong Swagger UI
 
 Xác thực là **httpOnly session cookie**, không phải Bearer token (ADR 0002) — nên **không có
@@ -106,10 +128,15 @@ Bỏ sót thì `apps/api/test/openapi-contract.spec.ts` fail, kèm danh sách đ
 pnpm --filter @xeprime/api test -- openapi-contract
 ```
 
-Spec đó khoá lại 16 khẳng định: mọi route có summary và tag đã khai báo, mọi route nói rõ cần
+Spec đó khoá lại 17 khẳng định: mọi route có summary và tag đã khai báo, mọi route nói rõ cần
 đăng nhập hay không và khớp `@Public` thật, mọi response 2xx mô tả đúng lớp bọc `{ data }`, mọi
 route có 429/500, route cần đăng nhập có 401, route công khai KHÔNG có 401, route đòi quyền có
 403 và liệt kê đúng permission.
+
+Khẳng định thứ 17 là quan trọng nhất với người sau: **`packages/types/openapi.json` đã commit phải
+khớp source hiện tại**. Sửa DTO rồi quên `pnpm contract` là im lặng tuyệt đối nếu không có nó —
+mọi test khác vẫn xanh vì chúng đọc document dựng tại chỗ, còn file đã commit thì đứng yên và web
+tiếp tục compile theo type CŨ. Test fail sẽ chỉ đúng đường dẫn/schema nào đã lệch.
 
 ## 7. Ngoại lệ đã biết
 

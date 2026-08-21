@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import type { INestApplication } from '@nestjs/common';
 import type { OpenAPIObject } from '@nestjs/swagger';
@@ -229,3 +231,58 @@ describe('OpenAPI · nhánh lỗi', () => {
     expect(wrong).toEqual([]);
   });
 });
+
+describe('OpenAPI · spec đã commit không được cũ đi', () => {
+  /**
+   * `packages/types/openapi.json` (và `api.generated.ts` sinh từ nó) là HỢP ĐỒNG giữa API và web.
+   *
+   * Nếu không có bài kiểm tra này thì đổi một DTO rồi quên chạy `pnpm contract` là hoàn toàn im
+   * lặng: mọi test khác vẫn xanh vì chúng đọc document dựng tại chỗ, còn file đã commit thì đứng
+   * yên. Web tiếp tục compile theo type CŨ và sai sót chỉ lộ ra lúc chạy thật.
+   *
+   * So sánh nguyên văn byte với cách `src/openapi.ts` ghi file. `.gitattributes` chốt `eol=lf`
+   * nên checkout trên Windows cũng không lệch xuống dòng.
+   */
+  const SPEC_PATH = resolve(__dirname, '../../../packages/types/openapi.json');
+
+  it('khớp đúng document dựng từ source hiện tại', () => {
+    const committed = readFileSync(SPEC_PATH, 'utf8');
+    const current = `${JSON.stringify(document, null, 2)}\n`;
+
+    if (committed === current) return;
+
+    const diff = summarizeDrift(JSON.parse(committed) as OpenAPIObject, document);
+    throw new Error(
+      `packages/types/openapi.json đã cũ so với source. Chạy \`pnpm contract\` rồi commit cả ` +
+        `openapi.json lẫn api.generated.ts.\n${diff}`,
+    );
+  });
+});
+
+/** Chỉ ra CHỖ lệch thay vì ném hai chuỗi JSON 600KB vào mặt người đọc log. */
+function summarizeDrift(committed: OpenAPIObject, current: OpenAPIObject): string {
+  const lines: string[] = [];
+
+  const report = (label: string, before: readonly string[], after: readonly string[]): void => {
+    const beforeSet = new Set(before);
+    const afterSet = new Set(after);
+    const added = after.filter((key) => !beforeSet.has(key));
+    const removed = before.filter((key) => !afterSet.has(key));
+    if (added.length) lines.push(`  ${label} thêm: ${added.slice(0, 10).join(', ')}`);
+    if (removed.length) lines.push(`  ${label} mất: ${removed.slice(0, 10).join(', ')}`);
+  };
+
+  report('Đường dẫn', Object.keys(committed.paths), Object.keys(current.paths));
+  report(
+    'Schema',
+    Object.keys(committed.components?.schemas ?? {}),
+    Object.keys(current.components?.schemas ?? {}),
+  );
+
+  // Cùng bộ khoá mà nội dung vẫn khác: đổi field/mô tả/nhánh lỗi bên trong một endpoint có sẵn.
+  if (lines.length === 0) {
+    lines.push('  Cùng bộ đường dẫn và schema — khác ở chi tiết bên trong (field, mô tả, response).');
+  }
+
+  return lines.join('\n');
+}

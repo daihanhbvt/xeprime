@@ -45,4 +45,8 @@ Anything an admin or platform user does that changes another party's data — ap
 
 ## Before you call it done
 
-Trace the request once as an attacker (can I pass a scope I do not own? a status I should not set? skip a permission?) and once as the next engineer (is the contract declared, the money a string, the invariant enforced by the DB and not by hope?). Regenerate the contract when the DTO changed, then verify with a scoped `pnpm --filter @xeprime/api typecheck` plus the affected Jest spec by path — not a full-workspace lint/build/test (see `verify-changes`). For anything touching the schedule, a passing concurrency test is not optional.
+Trace the request once as an attacker (can I pass a scope I do not own? a status I should not set? skip a permission?) and once as the next engineer (is the contract declared, the money a string, the invariant enforced by the DB and not by hope?).
+
+Then leave the published contract in a shippable state. Touching a controller, DTO, guard, or permission changes what `/docs` shows and what the web's generated types say — so `pnpm contract` runs in the same change, and the regenerated `packages/types/openapi.json` plus `packages/types/src/api.generated.ts` get committed alongside the code. This is not bookkeeping you can defer: the committed spec is what the web compiles against and what another engineer reads, and a stale one means they are building against an API that no longer exists. `test/openapi-contract.spec.ts` fails when the committed spec has drifted from the source, naming the paths and schemas that moved.
+
+Verify with a scoped `pnpm --filter @xeprime/api typecheck`, `pnpm --filter @xeprime/api test -- openapi-contract` (seconds, no database), plus the affected Jest spec by path — not a full-workspace lint/build/test (see `verify-changes`). For anything touching the schedule, a passing concurrency test is not optional.
