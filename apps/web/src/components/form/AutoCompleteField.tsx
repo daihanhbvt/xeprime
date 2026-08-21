@@ -3,6 +3,7 @@
 import { AutoComplete, Form } from 'antd';
 import { useId, type ReactNode } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
+import fieldStyles from './field.module.css';
 
 interface AutoCompleteFieldProps<T extends FieldValues> {
   control: Control<T>;
@@ -43,7 +44,7 @@ export function AutoCompleteField<T extends FieldValues>({
       required={required}
       validateStatus={fieldState.error ? 'error' : ''}
       help={helpText ? <span id={describedById}>{helpText}</span> : undefined}
-      style={{ marginBottom: 14 }}
+      className={fieldStyles.item}
     >
       <AutoComplete
         id={inputId}

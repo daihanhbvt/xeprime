@@ -77,7 +77,7 @@ export default function ForgotPasswordPage() {
       </div>
 
       {error ? (
-        <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />
+        <Alert type="error" showIcon message={error} className={styles.alert} />
       ) : null}
 
       <form onSubmit={onSubmit} noValidate>

@@ -1,11 +1,12 @@
-import type { PaginationMeta } from '@xeprime/types';
+import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import {
   apiDelete,
   apiGet,
   apiPatch,
   apiPost,
   apiPut,
-  apiRequest,
+  fetchPage,
+  type Paged,
   type QueryParams,
 } from '@/services/api-client';
 import type {
@@ -25,12 +26,9 @@ import type {
   VehicleStats,
 } from './types';
 
-export const VEHICLES_DEFAULT_LIMIT = 20;
+export const VEHICLES_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export interface VehicleListResult {
-  items: VehicleListItem[];
-  meta: PaginationMeta;
-}
+export type VehicleListResult = Paged<VehicleListItem>;
 
 /** Filter (URL) → query params gửi API. Bỏ giá trị rỗng để URL và cache key gọn. */
 export function filtersToParams(filters: VehicleFilters): QueryParams {
@@ -47,19 +45,8 @@ export function filtersToParams(filters: VehicleFilters): QueryParams {
   };
 }
 
-export async function fetchVehicles(filters: VehicleFilters): Promise<VehicleListResult> {
-  const params = filtersToParams(filters);
-  const res = await apiRequest<VehicleListItem[]>('/vehicles', { query: params });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: VEHICLES_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+export const fetchVehicles = (filters: VehicleFilters): Promise<VehicleListResult> =>
+  fetchPage<VehicleListItem>('/vehicles', filtersToParams(filters), VEHICLES_DEFAULT_LIMIT);
 
 export const fetchVehicle = (id: string): Promise<VehicleDetail> =>
   apiGet<VehicleDetail>(`/vehicles/${id}`);
@@ -83,12 +70,9 @@ export const submitVehiclePublic = (id: string): Promise<VehicleDetail> =>
  * Tách khỏi `fetchVehicles` để danh sách hiện ngay: tổng hợp thu/chi chậm hơn truy vấn xe, gộp
  * chung sẽ bắt cả trang chờ theo phần chậm nhất. Thống kê hỏng cũng không kéo sập danh sách.
  */
-export async function fetchVehicleStats(ids: string[]): Promise<VehicleStats[]> {
-  if (ids.length === 0) return [];
-  const res = await apiRequest<VehicleStats[]>('/vehicles/stats', {
-    query: { ids: ids.join(',') },
-  });
-  return res.data;
+export function fetchVehicleStats(ids: string[]): Promise<VehicleStats[]> {
+  if (ids.length === 0) return Promise.resolve([]);
+  return apiGet<VehicleStats[]>('/vehicles/stats', { ids: ids.join(',') });
 }
 
 /**
@@ -97,12 +81,9 @@ export async function fetchVehicleStats(ids: string[]): Promise<VehicleStats[]> 
  * Cùng endpoint/service với Hồ sơ 360 — cảnh báo là thứ người vận hành hành động theo, hai
  * phép tính song song là hai quyết định sai. Tách khỏi `fetchVehicles` cùng lý do với `stats`.
  */
-export async function fetchVehicleAlerts(ids: string[]): Promise<VehicleAlertGroup[]> {
-  if (ids.length === 0) return [];
-  const res = await apiRequest<VehicleAlertGroup[]>('/vehicles/alerts', {
-    query: { ids: ids.join(',') },
-  });
-  return res.data;
+export function fetchVehicleAlerts(ids: string[]): Promise<VehicleAlertGroup[]> {
+  if (ids.length === 0) return Promise.resolve([]);
+  return apiGet<VehicleAlertGroup[]>('/vehicles/alerts', { ids: ids.join(',') });
 }
 
 /** Đếm đội xe theo trạng thái vận hành — nói về CẢ đội xe, không theo trang/bộ lọc. */

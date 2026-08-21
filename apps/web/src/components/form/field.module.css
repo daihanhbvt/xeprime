@@ -1,7 +1,14 @@
 /*
- * Dùng chung cho các field đã dời khỏi inline style (CLAUDE.md §5 cấm inline style).
- * `NumberField`, `TextAreaField`, `DateTimeField`, `TextField`, `SelectField` đã chuyển;
- * `AutoCompleteField` còn inline style — dời khi chạm vào file đó.
+ * Khoảng cách dọc giữa các field của form — dùng chung cho MỌI `Form.Item` của bộ field
+ * (CLAUDE.md §5 cấm inline style).
+ *
+ * Đã gom đủ 21/08/2026: `AutoCompleteField`, `ImageUploadField`, `ImageGalleryField` là ba
+ * chỗ cuối còn `style={{ marginBottom: 14 }}`, và `FileListField.module.css` là bản thứ tư
+ * của cùng con số viết bằng CSS. Cả bốn nay đi qua `--xp-space-md`.
+ *
+ * Lưu ý khi review: 14px KHÔNG nằm trên thang 4·8·16·24 của hệ thiết kế, nên bốn chỗ đó đang
+ * lệch nhịp so với các field còn lại. Chuyển sang token là **đổi 14px → 16px** trên desktop
+ * (12px trên mobile) — có thay đổi thị giác, và đó chính là mục đích: một nhịp cho cả form.
  */
 .item.item {
   margin-bottom: var(--xp-space-md);

@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { PaginationMeta } from '@xeprime/types';
-import { apiRequest } from '@/services/api-client';
+import { fetchPage } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import type { PublicShopSummary } from '../types';
 
@@ -20,16 +20,8 @@ export function useFeaturedShops(limit: number) {
   return useQuery({
     queryKey: queryKeys.marketplace.shops(params),
     queryFn: async (): Promise<FeaturedShopsResult> => {
-      const res = await apiRequest<PublicShopSummary[]>('/public/shops', { query: params });
-      return {
-        shops: res.data,
-        meta: (res.meta as PaginationMeta | undefined) ?? {
-          page: 1,
-          limit,
-          total: res.data.length,
-          hasNext: false,
-        },
-      };
+      const { items, meta } = await fetchPage<PublicShopSummary>('/public/shops', params, limit);
+      return { shops: items, meta };
     },
     staleTime: 5 * 60_000,
   });

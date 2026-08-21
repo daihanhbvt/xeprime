@@ -1,13 +1,17 @@
-import type { PaginationMeta } from '@xeprime/types';
-import { apiDelete, apiPatch, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
+import {
+  apiDelete,
+  apiPatch,
+  apiPost,
+  fetchPage,
+  type Paged,
+  type QueryParams,
+} from '@/services/api-client';
 import type { AddMemberInput, Member, MemberFilters, UpdateMemberRoleInput } from './types';
 
-export const MEMBERS_DEFAULT_LIMIT = 20;
+export const MEMBERS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export interface MemberListResult {
-  items: Member[];
-  meta: PaginationMeta;
-}
+export type MemberListResult = Paged<Member>;
 
 export function filtersToParams(filters: MemberFilters): QueryParams {
   return {
@@ -18,18 +22,8 @@ export function filtersToParams(filters: MemberFilters): QueryParams {
   };
 }
 
-export async function fetchMembers(filters: MemberFilters): Promise<MemberListResult> {
-  const res = await apiRequest<Member[]>('/members', { query: filtersToParams(filters) });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: MEMBERS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+export const fetchMembers = (filters: MemberFilters): Promise<MemberListResult> =>
+  fetchPage<Member>('/members', filtersToParams(filters), MEMBERS_DEFAULT_LIMIT);
 
 export const addMember = (body: AddMemberInput): Promise<Member> => apiPost<Member>('/members', body);
 

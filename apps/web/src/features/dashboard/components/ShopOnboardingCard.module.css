@@ -1,0 +1,126 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-md);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.subtitle {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-sm);
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  gap: var(--xp-space-md);
+}
+
+/* Bước xong lùi về hàng hai — thứ cần đọc là bước CÒN LẠI. */
+.stepDone {
+  border-color: transparent;
+  background: var(--xp-color-border-subtle);
+}
+
+.marker {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.markerDone {
+  color: var(--xp-color-success);
+  font-size: 18px;
+}
+
+.body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.stepTitle {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  color: var(--xp-color-text);
+}
+
+.stepText {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.action {
+  flex: none;
+}
+
+.doneLabel {
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.waitingLabel {
+  display: inline-flex;
+  align-items: center;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: 6px;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  /*
+   * Trên mobile nút xuống hàng riêng, chiếm hết bề ngang: ba nút nhỏ nép bên phải cạnh hai dòng
+   * chữ dài là vùng chạm dưới ngưỡng và chữ bị bóp còn hai từ mỗi dòng.
+   */
+  .step {
+    flex-wrap: wrap;
+  }
+
+  .action {
+    width: 100%;
+    padding-inline-start: calc(26px + var(--xp-space-md));
+  }
+
+  .action :global(.ant-btn) {
+    width: 100%;
+    min-height: var(--xp-touch-target-min);
+  }
+}

@@ -1,13 +1,20 @@
-import type { PaginationMeta } from '@xeprime/types';
-import { apiGet, apiPatch, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import {
+  apiGet,
+  apiPatch,
+  apiPost,
+  fetchPage,
+  type Paged,
+  type QueryParams,
+} from '@/services/api-client';
 import type { NotificationFilters, NotificationItem } from './types';
 
+/**
+ * Cố ý ngắn hơn `DEFAULT_PAGE_SIZE`: danh sách này nằm trong dropdown của chuông thông báo,
+ * không phải một trang danh sách — 20 dòng là dài hơn chiều cao dropdown.
+ */
 export const NOTIFICATIONS_DEFAULT_LIMIT = 15;
 
-export interface NotificationListResult {
-  items: NotificationItem[];
-  meta: PaginationMeta;
-}
+export type NotificationListResult = Paged<NotificationItem>;
 
 export function filtersToParams(filters: NotificationFilters): QueryParams {
   return {
@@ -17,22 +24,14 @@ export function filtersToParams(filters: NotificationFilters): QueryParams {
   };
 }
 
-export async function fetchNotifications(
+export const fetchNotifications = (
   filters: NotificationFilters,
-): Promise<NotificationListResult> {
-  const res = await apiRequest<NotificationItem[]>('/notifications', {
-    query: filtersToParams(filters),
-  });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: NOTIFICATIONS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+): Promise<NotificationListResult> =>
+  fetchPage<NotificationItem>(
+    '/notifications',
+    filtersToParams(filters),
+    NOTIFICATIONS_DEFAULT_LIMIT,
+  );
 
 export const fetchUnreadCount = (): Promise<{ count: number }> =>
   apiGet<{ count: number }>('/notifications/unread-count');

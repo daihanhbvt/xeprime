@@ -1,6 +1,12 @@
-import type { PaginationMeta } from '@xeprime/types';
+import { DEFAULT_PAGE_SIZE, pickFilter } from '@/constants/filters';
 import { startOfAppDay } from '@/lib/datetime';
-import { apiGet, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import {
+  apiGet,
+  apiPost,
+  fetchPage,
+  type Paged,
+  type QueryParams,
+} from '@/services/api-client';
 import type {
   AdminBooking,
   AdminBookingDetail,
@@ -8,14 +14,9 @@ import type {
   BookingContact,
 } from './types';
 
-export const ADMIN_BOOKINGS_DEFAULT_LIMIT = 20;
+export const ADMIN_BOOKINGS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export interface AdminBookingListResult {
-  items: AdminBooking[];
-  meta: PaginationMeta;
-}
-
-const pick = (v: string | undefined) => (v && v !== 'all' ? v : null);
+export type AdminBookingListResult = Paged<AdminBooking>;
 
 export function filtersToParams(filters: AdminBookingFilters): QueryParams {
   return {
@@ -23,8 +24,8 @@ export function filtersToParams(filters: AdminBookingFilters): QueryParams {
     phone: filters.phone ?? null,
     tenantId: filters.tenantId ?? null,
     vehicleId: filters.vehicleId ?? null,
-    status: pick(filters.status),
-    dateField: pick(filters.dateField),
+    status: pickFilter(filters.status),
+    dateField: pickFilter(filters.dateField),
     // URL giữ `YYYY-MM-DD` (giờ VN) → API nhận mốc tuyệt đối: từ 00:00 ngày đầu đến hết ngày cuối.
     dateFrom: filters.dateFrom ? startOfAppDay(filters.dateFrom).toISOString() : null,
     dateTo: filters.dateTo
@@ -35,22 +36,14 @@ export function filtersToParams(filters: AdminBookingFilters): QueryParams {
   };
 }
 
-export async function fetchAdminBookings(
+export const fetchAdminBookings = (
   filters: AdminBookingFilters,
-): Promise<AdminBookingListResult> {
-  const res = await apiRequest<AdminBooking[]>('/platform/bookings', {
-    query: filtersToParams(filters),
-  });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: ADMIN_BOOKINGS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+): Promise<AdminBookingListResult> =>
+  fetchPage<AdminBooking>(
+    '/platform/bookings',
+    filtersToParams(filters),
+    ADMIN_BOOKINGS_DEFAULT_LIMIT,
+  );
 
 export const fetchAdminBooking = (id: string): Promise<AdminBookingDetail> =>
   apiGet<AdminBookingDetail>(`/platform/bookings/${id}`);

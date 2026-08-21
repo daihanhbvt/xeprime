@@ -4,6 +4,15 @@
 > Twelve documents: a writing standard, one cross-cutting brief, ten domain briefs, and the audit.
 > **Authority order:** source code and accepted ADRs (`docs/decisions/`) > these briefs > `docs/project/` as-built docs > historical specs. A brief never overrides an ADR.
 
+> ⚠️ **Ảnh chụp ngày 04/08/2026, không được cập nhật theo mã.** Tên file trong các brief là tên
+> TẠI THỜI ĐIỂM viết; chín component đã bị xoá và viết lại kể từ đó — bảng tra ở
+> [`../CODEMAP.md`](../CODEMAP.md) §"Tên cũ trong tài liệu thiết kế". Phần văn xuôi mô tả hành vi
+> cũng có thể đã lỗi thời (ví dụ `/trips` nay là một khu riêng có chi tiết chuyến và huỷ chuyến,
+> không còn là "review surface" như brief 02 mô tả). **Mã nguồn và ADR thắng.**
+>
+> Bộ `docs/project/` mà các brief trích dẫn đã bị dọn ngày 23/07/2026 và không tồn tại; các
+> trích dẫn tới nó nay là chữ thường, không phải liên kết.
+
 ## 1. Purpose
 
 These briefs are the evidence-based bridge between the as-built system and future product/UX work. Each one separates, per submodule: **confirmed current behavior** (with file references), **confirmed business rules**, **partial behavior**, **missing behavior**, **`Unknown` requirements**, and **recommendations** (always marked `[RECOMMENDED — NOT CURRENT]`). They exist so a designer, engineer and product reviewer can share one document without guessing which sentences describe reality.

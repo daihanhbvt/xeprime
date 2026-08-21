@@ -14,6 +14,7 @@ export * from './catalog';
 export * from './phone';
 export * from './long-term';
 export * from './pricing';
+export * from './shop-profile';
 export * from './rbac';
 export * from './notifications';
 export * from './api';

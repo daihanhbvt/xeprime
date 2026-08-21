@@ -35,6 +35,7 @@ export const MESSAGE_NAMESPACES = [
 
   // — Cổng quản lý —
   { file: 'manage-common', namespace: 'ManageCommon' },
+  { file: 'dashboard', namespace: 'Dashboard' },
   { file: 'shop-onboarding', namespace: 'ShopOnboarding' },
   { file: 'shop', namespace: 'Shop' },
   { file: 'booking-requests', namespace: 'BookingRequests' },

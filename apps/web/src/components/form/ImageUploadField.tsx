@@ -8,6 +8,7 @@ import { useController, type Control, type FieldValues, type Path } from 'react-
 import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
 import { uploadImage, validateImageFile, type UploadPresign } from '@/services/upload';
+import fieldStyles from './field.module.css';
 import styles from './ImageUploadField.module.css';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 
@@ -40,6 +41,7 @@ export function ImageUploadField<T extends FieldValues>({
   help,
 }: ImageUploadFieldProps<T>) {
   const t = useTranslations('Common.components.imageUpload');
+  const tCommon = useTranslations('Common');
   const uploadRejectionMessage = useUploadRejectionMessage();
   const { field, fieldState } = useController({ control, name });
   const { message } = App.useApp();
@@ -83,7 +85,7 @@ export function ImageUploadField<T extends FieldValues>({
       label={label}
       validateStatus={fieldState.error ? 'error' : ''}
       help={fieldState.error?.message ?? help}
-      style={{ marginBottom: 14 }}
+      className={fieldStyles.item}
     >
       <div className={styles.wrap}>
         <Upload
@@ -146,7 +148,7 @@ export function ImageUploadField<T extends FieldValues>({
         <div className={styles.uploadError} role="alert">
           <span>{failedUpload.message}</span>
           <Button size="small" onClick={() => startUpload(failedUpload.file)}>
-            Thử lại
+            {tCommon('actions.retry')}
           </Button>
         </div>
       ) : null}

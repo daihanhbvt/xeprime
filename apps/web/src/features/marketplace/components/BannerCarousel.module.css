@@ -12,7 +12,7 @@
   overflow: hidden;
   aspect-ratio: 1440 / 300;
   max-height: 400px;
-  background: linear-gradient(120deg, #241d12, #3a2f1a);
+  background: var(--xp-hero-backdrop);
 }
 
 @media (max-width: 1024px) {

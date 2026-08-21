@@ -2,6 +2,7 @@ import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
+  SHOP_PROFILE_REQUIREMENT,
   TENANT_ROLE,
   TENANT_STATUS,
 } from '@xeprime/types';
@@ -181,5 +182,41 @@ describe('Tỉnh/thành đi qua chi nhánh mặc định', () => {
     });
     expect(row.displayName).not.toBe('Không được lưu');
     expect(row.provinceCode).toBe(DANANG);
+  });
+});
+
+/**
+ * Cổng thứ hai của `submitForReview`.
+ *
+ * Trước đây hàm chỉ soi TRẠNG THÁI tenant, nên một hồ sơ trắng trơn vẫn vào được hàng đợi duyệt
+ * và reviewer nhận `{}` làm bằng chứng. Nút mờ ở web là gợi ý; chặn thật phải ở đây — và khi
+ * chặn thì phải nói ĐÚNG mục nào thiếu, vì đó là thứ web dùng để nhảy tới ô còn trống.
+ */
+describe('Gửi duyệt đòi hồ sơ đủ thông tin bắt buộc', () => {
+  maybe('thiếu SĐT chủ gian hàng → từ chối kèm danh sách mục thiếu, không tạo hồ sơ duyệt', async () => {
+    await tenants.updateProfile(tenantId, ownerId, { ownerPhone: '' });
+    const tasksBefore = await prisma.approvalTask.count({ where: { tenantId } });
+
+    await expect(tenants.submitForReview(tenantId, ownerId)).rejects.toMatchObject({
+      response: {
+        code: API_ERROR_CODE.PROFILE_INCOMPLETE,
+        details: { missing: [SHOP_PROFILE_REQUIREMENT.OWNER_PHONE] },
+      },
+    });
+
+    // Không nửa vời: trạng thái không nhúc nhích và hàng đợi duyệt không có gì mới.
+    const row = await prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { status: true },
+    });
+    expect(row.status).toBe(TENANT_STATUS.DRAFT);
+    expect(await prisma.approvalTask.count({ where: { tenantId } })).toBe(tasksBefore);
+  });
+
+  maybe('điền lại đủ → gửi duyệt đi qua', async () => {
+    await tenants.updateProfile(tenantId, ownerId, { ownerPhone: '0901234567' });
+    const shop = await tenants.submitForReview(tenantId, ownerId);
+
+    expect(shop.status).toBe(TENANT_STATUS.PENDING_REVIEW);
   });
 });

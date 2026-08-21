@@ -75,3 +75,8 @@
   gap: 8px;
   margin-top: 16px;
 }
+
+/* Ô chọn gói rộng hết cột của drawer — trước đây là `style={{ width: '100%' }}` (CLAUDE.md §5). */
+.planSelect {
+  width: 100%;
+}

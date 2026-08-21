@@ -1,16 +1,11 @@
 'use client';
 
-import { TENANT_STATUS } from '@xeprime/types';
 import { useCurrentUser, type CurrentTenantSummary } from './use-current-user';
 
 export interface TenantScope {
   tenant: CurrentTenantSummary | null;
   /** User đã đăng nhập nhưng chưa thuộc gian hàng nào — cần màn "chưa có gian hàng". */
   hasNoTenant: boolean;
-  /** Gian hàng đã được duyệt và đang hoạt động. */
-  isActive: boolean;
-  /** Đang chờ duyệt/cần bổ sung — portal chỉ nên hiện checklist hồ sơ. */
-  isPendingApproval: boolean;
   isLoading: boolean;
 }
 
@@ -19,6 +14,11 @@ export interface TenantScope {
  *
  * Lưu ý: đây là BẢN SAO để render, không phải nguồn phân quyền. Backend luôn tự lấy
  * tenant từ membership (CLAUDE.md mục 6, lằn ranh 1) — client không gửi tenantId lên.
+ *
+ * Ở đây từng có `isPendingApproval` gộp `draft | pending_review | needs_revision` thành một cờ,
+ * và `AppShell` in "Gian hàng đang chờ duyệt" cho cả ba — trong khi shop `draft` chưa gửi gì cả.
+ * Một cờ boolean không thể mang ba câu khác nhau, nên chỗ quyết định nói gì là
+ * `features/shop/status-notice.ts`, đọc thẳng từ `tenant.status`.
  */
 export function useTenantScope(): TenantScope {
   const { data, isLoading } = useCurrentUser();
@@ -27,11 +27,6 @@ export function useTenantScope(): TenantScope {
   return {
     tenant,
     hasNoTenant: !isLoading && Boolean(data) && tenant === null,
-    isActive: tenant?.status === TENANT_STATUS.ACTIVE,
-    isPendingApproval:
-      tenant?.status === TENANT_STATUS.PENDING_REVIEW ||
-      tenant?.status === TENANT_STATUS.NEEDS_REVISION ||
-      tenant?.status === TENANT_STATUS.DRAFT,
     isLoading,
   };
 }

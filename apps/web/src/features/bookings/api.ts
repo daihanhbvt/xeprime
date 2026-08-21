@@ -1,5 +1,12 @@
-import type { PaginationMeta } from '@xeprime/types';
-import { apiGet, apiPatch, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
+import {
+  apiGet,
+  apiPatch,
+  apiPost,
+  fetchPage,
+  type Paged,
+  type QueryParams,
+} from '@/services/api-client';
 import type {
   BookingDetail,
   BookingFilters,
@@ -12,12 +19,9 @@ import type {
   UpdateDeliveryFeeInput,
 } from './types';
 
-export const BOOKINGS_DEFAULT_LIMIT = 20;
+export const BOOKINGS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export interface BookingListResult {
-  items: BookingListItem[];
-  meta: PaginationMeta;
-}
+export type BookingListResult = Paged<BookingListItem>;
 
 /** Filter (URL) → query params gửi API. Bỏ giá trị rỗng để URL và cache key gọn. */
 export function filtersToParams(filters: BookingFilters): QueryParams {
@@ -34,18 +38,8 @@ export function filtersToParams(filters: BookingFilters): QueryParams {
   };
 }
 
-export async function fetchBookings(filters: BookingFilters): Promise<BookingListResult> {
-  const res = await apiRequest<BookingListItem[]>('/bookings', { query: filtersToParams(filters) });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: BOOKINGS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+export const fetchBookings = (filters: BookingFilters): Promise<BookingListResult> =>
+  fetchPage<BookingListItem>('/bookings', filtersToParams(filters), BOOKINGS_DEFAULT_LIMIT);
 
 export const fetchBooking = (id: string): Promise<BookingDetail> =>
   apiGet<BookingDetail>(`/bookings/${id}`);

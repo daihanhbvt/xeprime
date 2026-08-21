@@ -51,6 +51,7 @@ import {
   VehicleBusyDaysDto,
   VehicleBusyPeriodDto,
 } from './dto/booking-request.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -573,11 +574,7 @@ export class BookingRequestsService {
     tenantId: string,
     query: BookingRequestListQueryDto,
   ): Promise<{ data: BookingRequestDto[]; meta: BookingRequestPageMetaDto }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(
-      BOOKING_REQUEST_MAX_LIMIT,
-      Math.max(1, query.limit ?? BOOKING_REQUEST_DEFAULT_LIMIT),
-    );
+    const paging = resolvePaging(query, BOOKING_REQUEST_DEFAULT_LIMIT, BOOKING_REQUEST_MAX_LIMIT);
 
     /*
      * `scope` = mọi thứ TRỪ trạng thái — vì nó nuôi cả `statusCounts` của hàng tab. Tìm kiếm và
@@ -615,8 +612,8 @@ export class BookingRequestsService {
       this.prisma.bookingRequest.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: SELECT,
       }),
       countByStatus,
@@ -627,10 +624,7 @@ export class BookingRequestsService {
     return {
       data: rows.map(toDto),
       meta: {
-        page,
-        limit,
-        total,
-        hasNext: page * limit < total,
+        ...paginationMeta(paging, total),
         // Liệt kê ĐỦ bộ trạng thái, kể cả trạng thái không có yêu cầu nào: một tab không có
         // con số trông như "chưa tải xong", còn `0` là một câu trả lời.
         statusCounts: BOOKING_REQUEST_STATUS_VALUES.map((status) => ({

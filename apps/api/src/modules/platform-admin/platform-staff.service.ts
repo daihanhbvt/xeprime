@@ -21,6 +21,7 @@ import {
   StaffListQueryDto,
   UpdateStaffRoleDto,
 } from './dto/platform-staff.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const SELECT = {
   userId: true,
@@ -48,8 +49,7 @@ export class PlatformStaffService {
   ) {}
 
   async list(query: StaffListQueryDto): Promise<{ data: StaffDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(STAFF_MAX_LIMIT, Math.max(1, query.limit ?? STAFF_DEFAULT_LIMIT));
+    const paging = resolvePaging(query, STAFF_DEFAULT_LIMIT, STAFF_MAX_LIMIT);
 
     const where: Prisma.PlatformMembershipWhereInput = {
       status: { not: MEMBERSHIP_STATUS.REMOVED },
@@ -71,15 +71,15 @@ export class PlatformStaffService {
       this.prisma.platformMembership.findMany({
         where,
         orderBy: { createdAt: 'asc' },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: SELECT,
       }),
     ]);
 
     return {
       data: rows.map(toDto),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

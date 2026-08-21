@@ -44,29 +44,37 @@ export default function FinancePage() {
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} lg={6}>
             <Card>
-              <Statistic title="Tổng thu" value={fmt.money(data.totalIncome)} valueStyle={{ color: '#389e0d' }} />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic title="Tổng chi" value={fmt.money(data.totalExpense)} valueStyle={{ color: '#cf1322' }} />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
               <Statistic
-                title="Cân đối (thu − chi)"
-                value={fmt.money(data.balance)}
-                valueStyle={{ color: balance >= 0 ? '#389e0d' : '#cf1322' }}
+                className={styles.income}
+                title="Tổng thu"
+                value={fmt.money(data.totalIncome)}
               />
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
+                className={styles.expense}
+                title="Tổng chi"
+                value={fmt.money(data.totalExpense)}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                className={balance >= 0 ? styles.income : styles.expense}
+                title="Cân đối (thu − chi)"
+                value={fmt.money(data.balance)}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                className={styles.debt}
                 title={`Công nợ (${data.debtBookings} đơn)`}
                 value={fmt.money(data.totalDebt)}
-                valueStyle={{ color: '#d48806' }}
               />
             </Card>
           </Col>

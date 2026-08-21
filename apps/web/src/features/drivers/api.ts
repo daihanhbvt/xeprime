@@ -1,10 +1,11 @@
-import type { PaginationMeta } from '@xeprime/types';
+import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import {
   apiDelete,
   apiGet,
   apiPatch,
   apiPost,
-  apiRequest,
+  fetchPage,
+  type Paged,
   type QueryParams,
 } from '@/services/api-client';
 import type {
@@ -15,12 +16,9 @@ import type {
   UpdateDriverInput,
 } from './types';
 
-export const DRIVERS_DEFAULT_LIMIT = 20;
+export const DRIVERS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export interface DriverListResult {
-  items: Driver[];
-  meta: PaginationMeta;
-}
+export type DriverListResult = Paged<Driver>;
 
 export function filtersToParams(filters: DriverFilters): QueryParams {
   return {
@@ -32,18 +30,8 @@ export function filtersToParams(filters: DriverFilters): QueryParams {
   };
 }
 
-export async function fetchDrivers(filters: DriverFilters): Promise<DriverListResult> {
-  const res = await apiRequest<Driver[]>('/drivers', { query: filtersToParams(filters) });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: DRIVERS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+export const fetchDrivers = (filters: DriverFilters): Promise<DriverListResult> =>
+  fetchPage<Driver>('/drivers', filtersToParams(filters), DRIVERS_DEFAULT_LIMIT);
 
 export const createDriver = (body: CreateDriverInput): Promise<Driver> =>
   apiPost<Driver>('/drivers', body);

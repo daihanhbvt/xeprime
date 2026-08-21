@@ -46,5 +46,8 @@ firebase-adminsdk-*.json
 # git worktree phụ (agent) — không được để `git add -A` nuốt vào commit
 .codex-worktrees/
 
+# Project tracking - local only
+XePrime_Project_Tracking.xlsx
+
 # office lock file (~$Book.xlsx)
 ~$*

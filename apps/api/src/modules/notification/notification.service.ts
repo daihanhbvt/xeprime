@@ -15,6 +15,7 @@ import {
   NotificationDto,
   NotificationListQueryDto,
 } from './dto/notification.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 /** Payload nghiệp vụ để phát một thông báo. `title`/`body` đã địa phương hoá tại nơi gọi. */
 export interface NotifyPayload {
@@ -91,11 +92,7 @@ export class NotificationService {
     userId: string,
     query: NotificationListQueryDto,
   ): Promise<{ data: NotificationDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(
-      NOTIFICATION_MAX_LIMIT,
-      Math.max(1, query.limit ?? NOTIFICATION_DEFAULT_LIMIT),
-    );
+    const paging = resolvePaging(query, NOTIFICATION_DEFAULT_LIMIT, NOTIFICATION_MAX_LIMIT);
 
     const where: Prisma.NotificationWhereInput = {
       userId,
@@ -107,15 +104,15 @@ export class NotificationService {
       this.prisma.notification.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: SELECT,
       }),
     ]);
 
     return {
       data: rows.map(toDto),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

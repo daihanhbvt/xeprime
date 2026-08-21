@@ -68,7 +68,7 @@ export function CategoryManagerModal({ open, onClose }: { open: boolean; onClose
           onChange={setType}
           aria-label={t('typeLabel')}
           options={options.receiptType}
-          style={{ width: 110 }}
+          className={styles.typeSelect}
         />
         <Input
           value={name}

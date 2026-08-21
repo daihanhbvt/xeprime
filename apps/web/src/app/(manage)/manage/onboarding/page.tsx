@@ -19,8 +19,13 @@ import styles from './onboarding.module.css';
  * xe). Trước kia form này bật tự động trong `AppShell` cho mọi user chưa có tenant — đó chính
  * là lý do khách thuê xe tưởng mình bị bắt mở gian hàng.
  *
- * Đã có gian hàng thì không có gì để làm ở đây → vào thẳng portal. Trường hợp chưa đăng nhập do
- * proxy chặn từ trước (`/manage/login?intent=owner&next=/manage/onboarding`).
+ * Đã có gian hàng thì không có gì để làm ở đây → vào thẳng HỒ SƠ GIAN HÀNG. Trường hợp chưa
+ * đăng nhập do proxy chặn từ trước (`/manage/login?intent=owner&next=/manage/onboarding`).
+ *
+ * Vì sao `/manage/shop` chứ không phải `/manage`: gian hàng vừa tạo là bản nháp chưa gửi duyệt,
+ * chưa có xe, chưa có đơn — dashboard chỉ toàn số 0 và không nói được việc gì tiếp theo. Việc
+ * duy nhất còn lại lúc đó (điền nốt hồ sơ rồi gửi duyệt) nằm ở `/manage/shop`, nên đưa thẳng
+ * người dùng tới đó thay vì thả họ ở một màn hình trống rồi hy vọng họ tự tìm ra.
  *
  * Trang tự dựng thanh trên cùng của riêng nó: `AppShell` liệt kê route này là "bare" (chưa có
  * gian hàng thì cũng chưa có gì để điều hướng trong sidebar).
@@ -32,7 +37,7 @@ export default function OwnerOnboardingPage() {
   const hasTenant = Boolean(user?.tenant);
 
   useEffect(() => {
-    if (hasTenant) router.replace(ROUTES.MANAGE.ROOT);
+    if (hasTenant) router.replace(ROUTES.MANAGE.SHOP);
   }, [hasTenant, router]);
 
   if (isLoading || !user || hasTenant) {
@@ -60,8 +65,9 @@ export default function OwnerOnboardingPage() {
           title={t('guide.title')}
           content={
             <ol className={styles.guideList}>
-              <li>{t('guide.steps.fill')}</li>
-              <li>{t('guide.steps.review')}</li>
+              <li>{t('guide.steps.create')}</li>
+              <li>{t('guide.steps.complete')}</li>
+              <li>{t('guide.steps.prepare')}</li>
               <li>{t('guide.steps.publish')}</li>
             </ol>
           }

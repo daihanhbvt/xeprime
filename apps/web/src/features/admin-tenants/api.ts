@@ -1,38 +1,28 @@
-import type { PaginationMeta } from '@xeprime/types';
-import { apiGet, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import { DEFAULT_PAGE_SIZE, pickFilter } from '@/constants/filters';
+import {
+  apiGet,
+  apiPost,
+  fetchPage,
+  type Paged,
+  type QueryParams,
+} from '@/services/api-client';
 import type { AdminTenant, AdminTenantDetail, AdminTenantFilters } from './types';
 
-export const ADMIN_TENANTS_DEFAULT_LIMIT = 20;
+export const ADMIN_TENANTS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export interface AdminTenantListResult {
-  items: AdminTenant[];
-  meta: PaginationMeta;
-}
+export type AdminTenantListResult = Paged<AdminTenant>;
 
 export function filtersToParams(filters: AdminTenantFilters): QueryParams {
   return {
-    // 'all' = mọi trạng thái → bỏ tham số (BE chỉ nhận status hợp lệ).
-    status: filters.status && filters.status !== 'all' ? filters.status : null,
+    status: pickFilter(filters.status),
     q: filters.q ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? ADMIN_TENANTS_DEFAULT_LIMIT,
   };
 }
 
-export async function fetchAdminTenants(filters: AdminTenantFilters): Promise<AdminTenantListResult> {
-  const res = await apiRequest<AdminTenant[]>('/platform/tenants', {
-    query: filtersToParams(filters),
-  });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: ADMIN_TENANTS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+export const fetchAdminTenants = (filters: AdminTenantFilters): Promise<AdminTenantListResult> =>
+  fetchPage<AdminTenant>('/platform/tenants', filtersToParams(filters), ADMIN_TENANTS_DEFAULT_LIMIT);
 
 export const fetchAdminTenant = (id: string): Promise<AdminTenantDetail> =>
   apiGet<AdminTenantDetail>(`/platform/tenants/${id}`);

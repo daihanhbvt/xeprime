@@ -27,6 +27,7 @@ import {
   ApprovalTaskDetailDto,
   ApprovalTaskListItemDto,
 } from './dto/approval.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 type ReviewKind = 'approve' | 'reject' | 'request_revision';
 
@@ -81,8 +82,7 @@ export class PlatformApprovalService {
   async list(
     query: ApprovalListQueryDto,
   ): Promise<{ data: ApprovalTaskListItemDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(APPROVAL_MAX_LIMIT, Math.max(1, query.limit ?? APPROVAL_DEFAULT_LIMIT));
+    const paging = resolvePaging(query, APPROVAL_DEFAULT_LIMIT, APPROVAL_MAX_LIMIT);
 
     const where: Prisma.ApprovalTaskWhereInput = {
       ...(query.status ? { status: query.status } : {}),
@@ -94,8 +94,8 @@ export class PlatformApprovalService {
       this.prisma.approvalTask.findMany({
         where,
         orderBy: { submittedAt: 'asc' }, // hàng đợi: cũ nhất trước
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: {
           id: true,
           tenantId: true,
@@ -126,7 +126,7 @@ export class PlatformApprovalService {
         reviewedAt: r.reviewedAt?.toISOString() ?? null,
         reason: r.reason,
       })),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

@@ -7,16 +7,17 @@
   },
   "guide": {
     "trigger": "Hướng dẫn",
-    "title": "Mở gian hàng trong 3 bước",
+    "title": "Mở gian hàng trong 4 bước",
     "steps": {
-      "fill": "Điền thông tin gian hàng: tên, loại hình, tỉnh/thành và liên hệ.",
-      "review": "XePrime duyệt hồ sơ. Trong lúc chờ bạn vẫn vào được cổng quản lý.",
-      "publish": "Hồ sơ được duyệt: đăng xe và bắt đầu nhận đơn trên marketplace."
+      "create": "Tạo gian hàng: tên, loại hình, tỉnh/thành và liên hệ.",
+      "complete": "Hoàn thiện hồ sơ rồi bấm Gửi duyệt — XePrime chỉ xem hồ sơ sau khi bạn gửi.",
+      "prepare": "Trong lúc chờ duyệt, bạn vẫn thêm xe và chuẩn bị dữ liệu bình thường.",
+      "publish": "Hồ sơ được duyệt: xe lên marketplace và bắt đầu nhận đơn."
     }
   },
   "form": {
     "title": "Tạo gian hàng",
-    "intro": "Đăng ký gian hàng để bắt đầu cho thuê xe. Hồ sơ sẽ được nền tảng duyệt trước khi hiển thị công khai.",
+    "intro": "Bước này chỉ tạo bản nháp. Tạo xong bạn sẽ được đưa tới hồ sơ gian hàng để điền nốt thông tin và gửi duyệt.",
     "submit": "Tạo gian hàng",
     "fields": {
       "name": {
@@ -51,7 +52,7 @@
   "tips": {
     "title": "Lưu ý",
     "accuracy": "Thông tin chính xác giúp tăng tỷ lệ duyệt hồ sơ.",
-    "editable": "Bạn có thể cập nhật thông tin sau khi tạo gian hàng."
+    "editable": "Mọi thông tin ở đây đều sửa lại được sau khi tạo gian hàng."
   },
   "privacy": {
     "title": "Bảo mật thông tin",

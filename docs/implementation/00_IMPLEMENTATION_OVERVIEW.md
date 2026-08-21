@@ -3,6 +3,12 @@
 > Ngày lập: 06/08/2026 · Wave 0B — audit repo + lập bản đồ Figma + kế hoạch migration.
 > **Không sửa một dòng code ứng dụng nào trong wave này.** Mọi tài liệu ở đây là mô tả hiện trạng + kế hoạch, chưa phải uỷ quyền triển khai.
 
+> ⚠️ **Ảnh chụp Wave 0B (06/08/2026), không được cập nhật theo mã.** Các wave sau đã thi công
+> xong phần lớn kế hoạch ở đây. Đường dẫn file là tên TẠI THỜI ĐIỂM viết — bảng tra tên cũ →
+> chỗ hiện tại ở [`../CODEMAP.md`](../CODEMAP.md). Hai file còn được mã nguồn dẫn chiếu trực tiếp
+> và vẫn là nguồn sống: [`02_DESIGN_TOKEN_MAP.md`](02_DESIGN_TOKEN_MAP.md) (`styles/theme.ts`) và
+> [`04_COMPONENT_DUPLICATES.md`](04_COMPONENT_DUPLICATES.md) (`hooks/use-url-filters.ts`).
+
 ## 0. Bộ tài liệu Wave 0B
 
 | File | Trả lời câu hỏi |

@@ -1,15 +1,12 @@
-import type {
-  components,
-  HandoverPhotoSlot,
-  HandoverType,
-  PaginationMeta,
-} from '@xeprime/types';
+import type { components, HandoverPhotoSlot, HandoverType } from '@xeprime/types';
+import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import {
   apiDelete,
   apiGet,
   apiPost,
   apiPut,
-  apiRequest,
+  fetchPage,
+  type Paged,
   type QueryParams,
 } from '@/services/api-client';
 import type {
@@ -94,22 +91,14 @@ export const removeHandoverPhoto = (
  * Hàng đợi "Thiếu KM trả" toàn gian hàng (Wave 8) — phân trang ở server, không kéo cả kho về
  * rồi lọc ở client.
  */
-export async function fetchMissingOdometerQueue(
+export const fetchMissingOdometerQueue = (
   params: QueryParams,
-): Promise<{ items: MissingOdometerItem[]; meta: PaginationMeta }> {
-  const res = await apiRequest<MissingOdometerItem[]>('/handovers/missing-odometer', {
-    query: params,
-  });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: res.data.length,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+): Promise<Paged<MissingOdometerItem>> =>
+  fetchPage<MissingOdometerItem>(
+    '/handovers/missing-odometer',
+    params,
+    Number(params.limit) || DEFAULT_PAGE_SIZE,
+  );
 
 export const fetchHandoverPhotoUrl = (
   bookingId: string,

@@ -80,3 +80,8 @@
     border-radius: 14px;
   }
 }
+
+/* Alert lỗi phía trên form — tách khỏi form đúng một nhịp. Trước đây là inline style (CLAUDE.md §5). */
+.alert {
+  margin-bottom: var(--xp-space-md);
+}

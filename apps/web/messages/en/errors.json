@@ -48,7 +48,8 @@
     "INTERNAL_ERROR": "The server hit a problem. Please try again later.",
     "UPLOADS_NOT_CONFIGURED": "File uploads aren't configured.",
     "UPLOAD_FAILED": "The upload failed. Please try again.",
-    "TRIP_CANCEL_NOT_ALLOWED": "This trip can no longer be cancelled. Please contact the host."
+    "TRIP_CANCEL_NOT_ALLOWED": "This trip can no longer be cancelled. Please contact the host.",
+    "PROFILE_INCOMPLETE": "Your shop profile is still missing required details, so it cannot be submitted for review."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

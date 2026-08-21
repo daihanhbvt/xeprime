@@ -9,3 +9,25 @@
   font-size: 13px;
   color: var(--xp-color-text-tertiary);
 }
+
+/*
+ * Màu của bốn con số. Trước đây là `valueStyle={{ color: '#389e0d' }}` gõ thẳng trong TSX —
+ * vi phạm ADR 0003 (CSS Modules + token) và, quan trọng hơn, ba mã đó là bảng màu MẶC ĐỊNH
+ * CỦA ANTD chứ không phải của XePrime: `#389e0d` ≠ `--xp-color-success` (#16a34a),
+ * `#cf1322` ≠ `--xp-color-error` (#dc2626), `#d48806` ≠ `--xp-color-warning` (#e07b26).
+ * Nên đây không chỉ là dọn kiểu viết — màn hình đang hiển thị sai bộ màu thương hiệu.
+ *
+ * Nhắm vào `.ant-statistic-content` vì AntD dựng con số trong lớp đó; đặt màu trên thẻ ngoài
+ * sẽ bị chính style của AntD ghi đè.
+ */
+.income :global(.ant-statistic-content) {
+  color: var(--xp-color-success);
+}
+
+.expense :global(.ant-statistic-content) {
+  color: var(--xp-color-error);
+}
+
+.debt :global(.ant-statistic-content) {
+  color: var(--xp-color-warning);
+}

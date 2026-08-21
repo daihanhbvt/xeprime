@@ -9,27 +9,29 @@ import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { ShopProfileWorkspace } from '@/features/shop/components/ShopProfileWorkspace';
-import { ShopStatusBanner } from '@/features/shop/components/ShopStatusBanner';
 import {
   useMyShop,
   useSubmitShopReview,
   useUpdateShopProfile,
 } from '@/features/shop/hooks/use-shop';
-import { getErrorMessage } from '@/services/api-client';
+import type { UpdateProfileInput } from '@/features/shop/types';
 
 import styles from './page.module.css';
 
 /**
  * Route chỉ lo bốn việc: quyền, dữ liệu, mutation, và các trạng thái chưa-có-dữ-liệu.
  *
- * Tiêu đề + nút Lưu/Huỷ nằm trong `ShopProfileWorkspace` chứ không ở đây, vì cả hai nút chỉ có
- * nghĩa khi biết form CÓ THAY ĐỔI HAY CHƯA — trạng thái đó thuộc về form.
+ * Tiêu đề, dải trạng thái, checklist và cả hai nút (Lưu · Gửi duyệt) nằm trong
+ * `ShopProfileWorkspace` chứ không ở đây: cả bốn thứ chỉ có nghĩa khi biết form CÓ THAY ĐỔI HAY
+ * CHƯA và CÒN THIẾU GÌ — hai câu hỏi mà chỉ form trả lời được.
  */
 export default function ShopPage() {
   const t = useTranslations('Shop');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
   const { has } = usePermissions();
   const { tenant } = useTenantScope();
 
@@ -40,6 +42,27 @@ export default function ShopPage() {
   const { data: shop, isLoading, isError, refetch } = useMyShop(canView && Boolean(tenant));
   const updateProfile = useUpdateShopProfile();
   const submitReview = useSubmitShopReview();
+
+  /**
+   * Gửi duyệt = (lưu nốt nếu còn dở) → gửi.
+   *
+   * Backend snapshot hồ sơ TỪ DATABASE, nên gửi thẳng khi form còn thay đổi chưa lưu sẽ đưa cho
+   * người duyệt đúng bản cũ mà chủ shop vừa sửa xong và tưởng đã gửi đi. Nối hai bước ở đây
+   * thay vì bắt người dùng nhớ bấm Lưu trước — họ vừa bấm "Gửi duyệt" trên chính thứ đang nhìn.
+   */
+  function submitForReview(pendingChanges: UpdateProfileInput | null) {
+    const send = () =>
+      submitReview.mutate(undefined, {
+        onSuccess: () => message.success(t('status.submitted')),
+        onError: (error) => message.error(errorMessage(error)),
+      });
+
+    if (!pendingChanges) return send();
+    updateProfile.mutate(pendingChanges, {
+      onSuccess: send,
+      onError: (error) => message.error(errorMessage(error)),
+    });
+  }
 
   if (!canView) {
     return (
@@ -85,27 +108,19 @@ export default function ShopPage() {
       <ShopProfileWorkspace
         shop={shop}
         canEdit={canEdit}
+        canSubmit={canSubmit}
         saving={updateProfile.isPending}
-        errorMessage={updateProfile.isError ? getErrorMessage(updateProfile.error) : null}
-        onSubmit={(body) =>
+        // Bước lưu-trước cũng là một phần của "đang gửi duyệt": nút phải quay suốt cả hai chặng,
+        // nếu không nó sáng lại giữa chừng và mời bấm lần thứ hai.
+        submitting={submitReview.isPending || updateProfile.isPending}
+        errorMessage={updateProfile.isError ? errorMessage(updateProfile.error) : null}
+        onSave={(body) =>
           updateProfile.mutate(body, {
             onSuccess: () => message.success(t('form.saved')),
-            onError: (error) => message.error(getErrorMessage(error)),
+            onError: (error) => message.error(errorMessage(error)),
           })
         }
-        banner={
-          <ShopStatusBanner
-            shop={shop}
-            canSubmit={canSubmit}
-            submitting={submitReview.isPending}
-            onSubmit={() =>
-              submitReview.mutate(undefined, {
-                onSuccess: () => message.success(t('status.submitted')),
-                onError: (error) => message.error(getErrorMessage(error)),
-              })
-            }
-          />
-        }
+        onSubmitReview={submitForReview}
       />
     </div>
   );

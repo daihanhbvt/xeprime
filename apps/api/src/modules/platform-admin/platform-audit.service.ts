@@ -9,6 +9,7 @@ import {
   AuditLogDto,
   AuditLogListQueryDto,
 } from './dto/audit-log.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 /** Select cho DANH SÁCH — tuyệt đối không kéo beforeJson/afterJson (JSONB nặng, drawer lấy riêng). */
 const LIST_SELECT = {
@@ -36,8 +37,7 @@ export class PlatformAuditService {
   async list(
     query: AuditLogListQueryDto,
   ): Promise<{ data: AuditLogDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(AUDIT_LOG_MAX_LIMIT, Math.max(1, query.limit ?? AUDIT_LOG_DEFAULT_LIMIT));
+    const paging = resolvePaging(query, AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT);
 
     const createdAt =
       query.dateFrom || query.dateTo
@@ -63,15 +63,15 @@ export class PlatformAuditService {
         where,
         // ULID id làm tiebreak — thứ tự ổn định khi nhiều log cùng mili-giây.
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: LIST_SELECT,
       }),
     ]);
 
     return {
       data: rows.map(toListItem),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

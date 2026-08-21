@@ -6,10 +6,12 @@ Tài liệu của dự án, dọn lại ngày 23/07/2026. Chỉ giữ thứ còn
 
 | # | File | Là gì | Trạng thái |
 | --- | --- | --- | --- |
-| 1 | [`decisions/`](decisions/) | **8 ADR — quyết định kỹ thuật kèm lý do. Thắng mọi tài liệu khác khi mâu thuẫn.** | Sống, cập nhật khi có quyết định mới |
+| 1 | [`decisions/`](decisions/) | **12 ADR (0001–0012) — quyết định kỹ thuật kèm lý do. Thắng mọi tài liệu khác khi mâu thuẫn.** | Sống, cập nhật khi có quyết định mới |
 | 2 | [`CODEMAP.md`](CODEMAP.md) | Chỉ mục "cái gì nằm ở đâu" trong source | Sống |
 | 3 | [`../CLAUDE.md`](../CLAUDE.md) | Bản đồ workspace, kiến trúc chốt, điều cấm, tình trạng phase | Sống |
-| 3b | [`design/`](design/) | **Định hướng sản phẩm & thiết kế** (brand, tầm nhìn, gap, IA, UX, thứ tự thiết kế, ràng buộc) — 11 tài liệu, 04/08/2026 | Sống |
+| 3b | [`design/`](design/) | **Định hướng sản phẩm & thiết kế** (brand, tầm nhìn, gap, IA, UX, thứ tự thiết kế, ràng buộc) — 14 tài liệu, 04/08/2026 | Sống |
+| 3c | [`design-briefs/`](design-briefs/) | **Mô tả hệ thống AS-BUILT theo miền** — 13 brief + chuẩn viết, tách rõ "đang chạy" / "thiếu" / "đề xuất", có dẫn chứng tới file. Đọc khi cần biết một miền nghiệp vụ hiện làm gì. | Ảnh chụp 04/08/2026 |
+| 3d | [`implementation/`](implementation/) | **Bản đồ Figma ↔ mã + kế hoạch migration** (token map, component registry, chỗ trùng lặp, thứ tự làm, ma trận QA, backlog quyết định). Đọc khi làm việc với thiết kế Figma. | Ảnh chụp 06/08/2026 |
 | 4 | [`xeprime_screen_spec_by_role_before_db.md`](xeprime_screen_spec_by_role_before_db.md) | Đặc tả màn hình + chức năng theo role | Tham chiếu nghiệp vụ |
 | 5 | [`xeprime_overall_user_flow_next_node.md`](xeprime_overall_user_flow_next_node.md) | User flow customer / shop / platform | Tham chiếu nghiệp vụ |
 | 6 | [`xeprime_database_design.md`](xeprime_database_design.md) | Thiết kế đầy đủ các bảng (nhiều bảng làm ở phase sau) | Tham chiếu |

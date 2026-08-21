@@ -185,6 +185,17 @@ export const API_ERROR_CODE = {
   /** Xe/chi nhánh chưa có tỉnh hợp lệ nên không thể đưa lên marketplace. */
   BRANCH_LOCATION_REQUIRED: 'BRANCH_LOCATION_REQUIRED',
 
+  // Duyệt hồ sơ gian hàng
+  /**
+   * Hồ sơ gian hàng còn thiếu thông tin BẮT BUỘC nên chưa gửi duyệt được
+   * (`missingShopProfileRequirements` ở `shop-profile.ts` là quy tắc dùng chung hai phía).
+   *
+   * Mã riêng thay vì `VALIDATION_FAILED`: `details.missing[]` mang đúng danh sách khoá
+   * `SHOP_PROFILE_REQUIREMENT`, nên FE chỉ thẳng vào ô còn trống thay vì hiện một dòng "dữ liệu
+   * chưa hợp lệ" rồi để người dùng tự đi tìm.
+   */
+  PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
+
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',

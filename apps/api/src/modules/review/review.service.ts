@@ -24,6 +24,7 @@ import {
   ReviewListQueryDto,
   ReviewSummaryDto,
 } from './dto/review.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const PUBLIC_SELECT = {
   id: true,
@@ -121,8 +122,7 @@ export class ReviewService {
     vehicleId: string,
     query: ReviewListQueryDto,
   ): Promise<{ summary: ReviewSummaryDto; data: ReviewDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(REVIEW_MAX_LIMIT, Math.max(1, query.limit ?? REVIEW_DEFAULT_LIMIT));
+    const paging = resolvePaging(query, REVIEW_DEFAULT_LIMIT, REVIEW_MAX_LIMIT);
 
     const where: Prisma.ReviewWhereInput = {
       vehicleId,
@@ -135,8 +135,8 @@ export class ReviewService {
       this.prisma.review.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: PUBLIC_SELECT,
       }),
       this.prisma.review.aggregate({
@@ -152,7 +152,7 @@ export class ReviewService {
         ratingCount: agg._count,
       },
       data: rows.map(toPublicDto),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 
