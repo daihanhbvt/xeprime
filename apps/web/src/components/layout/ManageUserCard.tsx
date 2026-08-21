@@ -59,7 +59,7 @@ export function ManageUserCard({ collapsed = false, tone = 'light' }: ManageUser
     {
       key: 'profile',
       icon: <UserOutlined aria-hidden />,
-      label: <Link href={ROUTES.ACCOUNT}>{t('shell.profile')}</Link>,
+      label: <Link href={ROUTES.ACCOUNT.ROOT}>{t('shell.profile')}</Link>,
     },
     // Cài đặt gian hàng chỉ có nghĩa khi người dùng ĐANG đứng trong một gian hàng — nhân sự
     // nền tảng không có gian hàng nào để cài đặt.

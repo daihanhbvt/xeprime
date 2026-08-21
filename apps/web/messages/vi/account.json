@@ -1,5 +1,8 @@
 {
   "title": "Tài khoản của tôi",
+  "subtitle": "Quản lý thông tin tài khoản và cài đặt của bạn",
+  "memberSince": "Tham gia từ {date}",
+  "memberBadge": "Thành viên",
   "signInRequired": "Vui lòng đăng nhập để xem tài khoản của bạn.",
   "signIn": "Đăng nhập",
   "saved": "Đã cập nhật tài khoản",
@@ -10,5 +13,27 @@
   "displayNamePlaceholder": "Nguyễn Văn A",
   "avatarUrl": "Ảnh đại diện (đường dẫn)",
   "identityLockedTitle": "Email và số điện thoại chưa đổi được",
-  "identityLockedBody": "Hai thông tin này dùng để đăng nhập nên cần một luồng xác thực riêng. Liên hệ hỗ trợ nếu bạn cần đổi."
+  "identityLockedBody": "Hai thông tin này dùng để đăng nhập nên cần một luồng xác thực riêng. Liên hệ hỗ trợ nếu bạn cần đổi.",
+  "comingSoon": {
+    "badge": "Sắp có",
+    "title": "Phần này đang được xây dựng",
+    "body": "Mục đã có chỗ trong menu để bạn thấy trước bản đồ đầy đủ, nhưng nội dung thì chưa sẵn sàng. Chúng tôi sẽ mở khi xong."
+  },
+  "shopEntry": {
+    "hasShop": {
+      "title": "Gian hàng của tôi",
+      "body": "Xem đội xe, lịch thuê và đơn hàng ở cổng quản lý.",
+      "action": "Vào quản lý gian hàng"
+    },
+    "noShop": {
+      "title": "Đăng xe cho thuê",
+      "body": "Có xe đang nhàn rỗi? Đăng lên XePrime và bắt đầu nhận đơn.",
+      "action": "Bắt đầu"
+    },
+    "platform": {
+      "title": "Quản trị nền tảng",
+      "body": "Duyệt hồ sơ, theo dõi gian hàng và toàn bộ hệ thống.",
+      "action": "Vào trang quản trị"
+    }
+  }
 }

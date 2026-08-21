@@ -2,6 +2,10 @@
 
 Ngày: 21/08/2026 · Trạng thái: Accepted
 
+> ⚠️ **Đã được [ADR 0016](0016-sepay-bank-reconciliation.md) mở một KHE HẸP (21/08/2026):** tiền
+> GÓI theo chiều gian hàng → nền tảng được đối soát tự động qua SePay. Lệnh cấm ở đây **vẫn giữ
+> nguyên** cho tiền thuê xe (khách ↔ gian hàng).
+
 ## Bối cảnh
 
 Câu hỏi "XePrime có trung gian thu tiền không?" chưa từng được ghi ở đâu. Hệ quả là mỗi tài liệu

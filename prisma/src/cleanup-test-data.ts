@@ -18,17 +18,22 @@
  *   pnpm db:cleanup-test --execute
  */
 import { createPrismaClient } from './index';
+import { SEED_OWNED_EMAILS, SEED_OWNED_TENANT_SLUGS } from './seed/identities';
 
 const prisma = createPrismaClient();
 
 const EXECUTE = process.argv.includes('--execute');
 
 /**
- * Tài khoản/gian hàng của SEED — danh sách loại trừ tuyệt đối.
- * Chúng cũng dùng tên miền `@xeprime.test` nên phải nêu đích danh, không thể lọc theo tên miền.
+ * Tài khoản/gian hàng của SEED — danh sách loại trừ tuyệt đối. Chúng cũng dùng tên miền
+ * `@xeprime.test` nên phải nêu đích danh, không thể lọc theo tên miền.
+ *
+ * Danh sách SUY từ chính bản khai của seed (`seed/identities.ts`), không chép tay: chép tay là
+ * cách chắc chắn để nó lỗi thời ngay lần đầu ai đó thêm một gian hàng demo — và hậu quả của
+ * việc lỗi thời ở đây là script này xoá nhầm dữ liệu demo.
  */
-const SEED_EMAILS = ['owner@xeprime.test', 'customer@xeprime.test', 'admin@xeprime.test'];
-const SEED_TENANT_SLUGS = ['xeprime-demo'];
+const SEED_EMAILS = SEED_OWNED_EMAILS;
+const SEED_TENANT_SLUGS = SEED_OWNED_TENANT_SLUGS;
 
 /**
  * Email do spec sinh: `<tiền tố chữ>-<ULID hoặc tag>@xeprime.test` (vd `own-01K…@xeprime.test`).

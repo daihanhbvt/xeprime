@@ -15,6 +15,18 @@
     "mainNavLabel": "Điều hướng chính",
     "quickNavLabel": "Điều hướng nhanh"
   },
+  "account": {
+    "menuLabel": "Menu tài khoản",
+    "profile": "Tài khoản của tôi",
+    "trips": "Chuyến của tôi",
+    "payments": "Lịch sử thanh toán",
+    "favorites": "Xe yêu thích",
+    "addresses": "Địa chỉ của tôi",
+    "documents": "Giấy tờ & Xác minh",
+    "notifications": "Thông báo",
+    "support": "Hỗ trợ",
+    "settings": "Cài đặt"
+  },
   "manage": {
     "home": "Trang chủ",
     "more": "Thêm",

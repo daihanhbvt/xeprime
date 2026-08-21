@@ -130,12 +130,17 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 
 | Cần gì | Ở đâu |
 | --- | --- |
-| Schema **52 model** (auth/tenant/vehicle/booking/finance/chat/catalog/…) | `prisma/schema.prisma` |
+| Schema **63 model** (auth/tenant/vehicle/booking/finance/chat/catalog/…) | `prisma/schema.prisma` |
 | Vehicle 360: `rental_policies` · `vehicle_source_details` · `vehicle_private_files` · `vehicle_documents(+_versions,+_ocr_jobs)` · `vehicle_maintenance_profiles` · `vehicle_odometer_readings` · `vehicle_maintenance_records(+_attachments)` · `vehicle_handovers(+_photos)` | `prisma/schema.prisma` (Wave 2→7) |
-| Migration init (trigger + `EXCLUDE USING gist`) | `prisma/migrations/*_init/migration.sql` |
+| Migration **baseline duy nhất** (toàn bộ lược đồ + trigger + `EXCLUDE USING gist` + 135 CHECK + danh mục tỉnh/catalog) | `prisma/migrations/20260821000000_init/migration.sql` |
 | Sổ khách: `tenant_customers` (unique `(tenant_id, normalized_phone)`) · `tenant_customer_notes` · `tenant_customer_documents`; composite FK từ `bookings`/`booking_requests`/`receipts` | `prisma/schema.prisma` (S-01) |
-| Migration viết tay từng phase (CHECK/constraint/partial index) | `prisma/migrations/<ts>_<name>/migration.sql` (booking_requests, finance, payments, phone_login…) |
-| Seed (idempotent, 3 scope + danh mục finance) | `prisma/src/seed.ts` |
+| Migration mới (thêm sau baseline) | `prisma/migrations/<ts>_<name>/migration.sql` — đọc cảnh báo FK tổ hợp ở đầu file baseline trước khi chạy `migrate dev` |
+| Seed — điều phối + dọn dữ liệu seed đời cũ | `prisma/src/seed.ts` |
+| Seed — dữ liệu nền (quyền, role, danh mục thu/chi, gói, banner) | `prisma/src/seed/system.ts` |
+| Seed — danh tính tài khoản (dùng chung với script dọn dữ liệu test) | `prisma/src/seed/identities.ts` |
+| Seed — bản khai 5 gian hàng demo (40/10/3/1/0 xe) | `prisma/src/seed/shops.ts` |
+| Seed — kho 34 mẫu xe + thông số kỹ thuật | `prisma/src/seed/catalog.ts` |
+| Seed — dựng gian hàng · đội xe · vận hành | `prisma/src/seed/shop.ts` · `shop-fleet.ts` · `shop-operations.ts` |
 | Cấu hình CLI Prisma 7 | `prisma/prisma.config.ts` |
 
 ## Tham chiếu nghiệp vụ (đọc để hiểu "cái gì đang chạy", KHÔNG copy pattern)

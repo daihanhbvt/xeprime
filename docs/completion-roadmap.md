@@ -13,11 +13,11 @@ không phải trạng thái hiện tại. Bảng này mới là trạng thái hi
 | Lệnh | Kết quả 21/08/2026 |
 | --- | --- |
 | `pnpm run typecheck` | 11/11 task PASS |
-| `pnpm --filter @xeprime/web test` | **1637/1637 PASS** (110 file) |
+| `pnpm --filter @xeprime/web test` | **1658/1658 PASS** (113 file) — đo lại 21/08 sau A1 |
 | `pnpm --filter @xeprime/api test` | **665/666** — 1 đỏ, xem dưới |
 | `pnpm --filter @xeprime/web lint` | 0 error · 11 warning |
 | `pnpm --filter @xeprime/api lint` | sạch |
-| `pnpm --filter @xeprime/web i18n:check` | OK — 21 namespace × 2 ngôn ngữ, 1658 khoá, parity khớp |
+| `pnpm --filter @xeprime/web i18n:check` | OK — 21 namespace × 2 ngôn ngữ, 1683 khoá, parity khớp |
 
 **Một test đỏ, là BOM HẸN GIỜ chứ không phải hồi quy.**
 [`vehicle-documents.spec.ts`](../apps/api/test/vehicle-documents.spec.ts) hardcode
@@ -30,6 +30,37 @@ cho tới khi ngày trong test tính theo `now` thay vì cố định.
 không đổi từ 18/08. Mock `IntersectionObserver` dùng mảng cấp module. Hướng xử lý là ổn định
 test, **không** phải đổi `role` của sản phẩm.
 
+> **21/08 — ADR 0014/0015/0016 + wave A1 (khung `/account`).** Chốt bằng ADR ba câu hỏi đã treo:
+> **(0014)** chủ xe và chủ gian hàng là **MỘT vai** `shop_owner`, một tenant — `tenants.tenant_type`
+> (đã có từ Phase 0 nhưng chưa điều khiển gì) từ nay **chỉ là NHÃN hiển thị**, năng lực đọc từ GÓI;
+> "nâng cấp lên gian hàng" = mua gói + đổi nhãn, **không chuyển sở hữu**. Kèm đó là ranh giới
+> "XePrime là cái CHỢ": nền tảng vẫn duyệt gian hàng/xe nhưng **không đứng giữa** giấy tờ, giá,
+> tranh chấp, giao nhận — nên **xác thực giấy tờ khách là shop làm tay**, không có hàng đợi duyệt.
+> **(0015)** cước theo **CHỖ XE trả trước** (không đếm cuối kỳ → không cần cron chốt kỳ, và
+> `assertVehicleQuota` sẵn có làm đúng việc này), kỳ hạn bằng **THÁNG LỊCH** (`addCalendarMonthsVn`
+> của ADR 0011 — `plans.duration_days` là ngày, gia hạn 12 lần gói 30 ngày ra 360 ngày), bảng
+> `subscription_invoices`, và **hết hạn → gỡ xe khỏi chợ, KHÔNG khoá tenant** (đơn đang chạy có
+> khách thật). Sửa 3 điều của ADR 0010, đã ghi chú ngược vào chính file đó.
+> **(0016)** SePay là **đối soát chuyển khoản, không phải cổng thanh toán** và **không tự trừ tiền**
+> — mở một khe hẹp của ADR 0013 chỉ cho tiền GÓI (chiều gian hàng → nền tảng); webhook phải
+> idempotent **bằng constraint DB**, xác thực time-safe, kích hoạt do webhook chứ không do redirect.
+> **A1 (FE, không đụng backend):** `/account` từ một trang đơn thành **khu có vỏ riêng** —
+> `ROUTES.ACCOUNT` thành object 8 route, `constants/account-nav.ts` (9 mục, cờ `comingSoon` cho mục
+> chưa dựng theo yêu cầu "chưa làm thì để sẵn menu"), `AccountShell` (vỏ + **cổng đăng nhập đặt
+> MỘT lần** cho cả khu thay vì mỗi trang tự gác), `AccountSidebar` (desktop cột dọc ↔ mobile dải
+> cuộn ngang, cùng một cây dữ liệu), `AccountComingSoon`, `ShopEntryCard` (thẻ "Gian hàng của tôi"
+> / "Đăng xe cho thuê" / "Quản trị nền tảng" theo vai thực tế — **đây là cửa vào phễu thu phí**).
+> **Lọc theo ADR 0014, có chủ đích:** bỏ "Quản lý đơn thuê" (đã là `/manage/bookings`), bỏ
+> "Ví & Ưu đãi" (ví giữ số dư tiền cần giấy phép trung gian thanh toán), bỏ khối "Tỉ lệ phản hồi /
+> 5★" (là chỉ số của GIAN HÀNG, người đi thuê không có tỉ lệ phản hồi), ẩn "0 điểm".
+> **Dọn kèm:** `useMarketLogout()` — `MarketHeader` đang chép tay 3 bước đăng xuất và menu tài khoản
+> sắp là bản thứ ba; quên bước dọn cache ở một bản là dữ liệu người vừa thoát nằm lại cho người kế
+> tiếp. **Điều hướng `/account` ↔ `/manage` KHÔNG phải làm gì** — cả hai chiều đã nối sẵn từ trước
+> (`ManageUserCard` ▸ Hồ sơ · `MarketHeader` ▸ Quản lý gian hàng).
+> Verify: **vitest 1658/1658 (113 file, +21 test mới)** · typecheck web sạch · lint 0 error ·
+> `i18n:check` parity 1683 khoá · `i18n:audit` **0 chuỗi thô** trong mọi file mới.
+> Kế hoạch đầy đủ (EPIC A 5 wave + EPIC B 5 wave): `docs/plans/2026-08-21-tai-khoan-ca-nhan-va-mo-hinh-thu-phi.md`.
+>
 > **19/08 — epic NỐI TIỀN VÀO SỔ THU-CHI + dựng lại `/manage/receipts`.** Đóng đúng chỗ đứt mà
 > §2.1 đã chỉ ra, và nó rộng hơn mô tả cũ. **Bốn mắt xích đã nối:** (1) `payments.kind='deposit'`
 > **chưa từng có đường ghi nào** → `depositReceived` vĩnh viễn = 0 và cả máy quyết toán cọc Wave 10

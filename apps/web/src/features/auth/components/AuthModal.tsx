@@ -83,7 +83,7 @@ export function AuthModal() {
       hasTenant={registered.tenant != null}
       closeLabel={next ? t('continueLabel') : tCommon('actions.close')}
       onClose={handleClose}
-      onOpenAccount={() => goTo(ROUTES.ACCOUNT)}
+      onOpenAccount={() => goTo(ROUTES.ACCOUNT.ROOT)}
       onBecomeOwner={() => goTo(resolveOwnerCtaHref(registered))}
     />
   ) : (

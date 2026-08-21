@@ -19,7 +19,7 @@ Git: **thư mục này là repo** (remote `https://github.com/daihanhbvt/xeprime
 ## 2. Tài liệu — đọc theo thứ tự
 
 Nguồn sống (đọc trước, luôn đúng hiện tại):
-1. `docs/decisions/` — **13 ADR (0001–0013), thắng mọi tài liệu khác khi mâu thuẫn**
+1. `docs/decisions/` — **16 ADR (0001–0016), thắng mọi tài liệu khác khi mâu thuẫn**
 2. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu"
 3. `docs/completion-roadmap.md` — **"đang ở đâu / làm gì tiếp"** (tiến độ thực tế + milestone). Đóng xong phase thì cập nhật file này.
 4. File này (CLAUDE.md)
@@ -54,6 +54,9 @@ Tài liệu tham chiếu (5–9) có vài quyết định kỹ thuật đã bị
 | [0011](docs/decisions/0011-long-term-fixed-packages.md) | Thuê dài hạn = **gói cố định theo THÁNG LỊCH** (1/2/3/6/9/12), khách chỉ nêu nguyện vọng ngày nhận |
 | [0012](docs/decisions/0012-i18n-shared-url-cookie-locale.md) | Đa ngữ vi/en: **một URL cho cả hai ngôn ngữ**, locale ở cookie `XP_LOCALE` đọc phía server |
 | [0013](docs/decisions/0013-no-online-payment-mvp.md) | **KHÔNG làm thanh toán trực tuyến** ở giai đoạn này — module `payments` là ghi sổ thủ công |
+| [0014](docs/decisions/0014-owner-and-shop-single-role.md) | Chủ xe = chủ gian hàng = **MỘT vai** `shop_owner`; `tenant_type` chỉ là NHÃN; năng lực đến từ GÓI. Nền tảng **không đứng giữa** quan hệ khách ↔ gian hàng |
+| [0015](docs/decisions/0015-vehicle-slot-billing.md) | Cước theo **CHỖ XE**, trả trước, kỳ tính bằng **THÁNG LỊCH**; hết hạn → gỡ khỏi chợ (không khoá tenant) — **sửa ADR 0010** |
+| [0016](docs/decisions/0016-sepay-bank-reconciliation.md) | **SePay** đối soát chuyển khoản tự động, CHỈ cho tiền GÓI — **sửa phạm vi ADR 0013** |
 
 ### Công cụ Claude (`.claude/`)
 
@@ -171,7 +174,20 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 | **pnpm 11 chặn build script** | `pnpm-workspace.yaml`: `onlyBuiltDependencies` + `verifyDepsBeforeRun: false` (không thì `pnpm exec` tự chạy lại install và fail) |
 | Docker daemon | Bật rồi tắt bất thường; nếu `up` treo là đang kéo image lần đầu. Gặp network/container mồ côi thì `docker compose down --remove-orphans` + xoá network trùng tên |
 
-Base Phase 0 (đã commit `0a76adf`): 11 bảng lõi + `vehicle_occupancies` (schema + constraint từ Phase 0, logic đầy đủ Phase 4 — ADR 0006); seed 3 scope (platform admin / shop owner / customer) idempotent; API/pages tối thiểu. Chi tiết tiến độ các phase sau: `docs/completion-roadmap.md`.
+Base Phase 0 (đã commit `0a76adf`): 11 bảng lõi + `vehicle_occupancies` (schema + constraint từ Phase 0, logic đầy đủ Phase 4 — ADR 0006); API/pages tối thiểu. Chi tiết tiến độ các phase sau: `docs/completion-roadmap.md`.
+
+### Migration & seed (gộp lại 21/08/2026)
+
+| Việc | Trạng thái |
+| --- | --- |
+| Migration | **Một baseline duy nhất** `prisma/migrations/20260821000000_init/` — gộp 44 migration cũ, đã đối chiếu `pg_dump` với chuỗi cũ. Đọc header của file đó trước khi chạy `migrate dev`: nó cảnh báo các FK tổ hợp `(id, tenant_id)` mà `schema.prisma` không mô tả được và Prisma sẽ sinh lệnh DROP chúng |
+| Seed | `prisma/src/seed.ts` + `prisma/src/seed/` — idempotent trên toàn bộ 63 bảng (id tất định từ `seedId`, không xoá-tạo-lại) |
+| `SEED_MODE=system` | Chỉ dữ liệu nền: quyền, role hệ thống, danh mục thu/chi, gói dịch vụ, banner. Chạy được ở production |
+| `SEED_MODE=demo` (mặc định) | Thêm 5 gian hàng **khác quy mô** (40 xe/4 chi nhánh · 10/2 · 3 · 1 · 0 chưa duyệt), 19 tài khoản, 54 xe, 107 đơn, 273 phiếu thu chi |
+| Tài khoản demo | nền tảng đủ 5 vai trò (`admin@xeprime.vn`, `staff@`/`reviewer@`/`support@`/`finance@xeprime.test`) · 5 chủ shop `owner.<tỉnh>@xeprime.test` · 4 nhân viên shop · 5 khách `khach.<tên>@xeprime.test`. Mật khẩu từ env, không in ra stdout |
+| Danh tính seed sở hữu | `prisma/src/seed/identities.ts` — `cleanup-test-data.ts` import chính danh sách này làm bộ loại trừ, không chép tay |
+
+> `prisma migrate reset` bị Prisma chặn khi phát hiện agent chạy — người dùng phải tự gõ lệnh đó.
 
 ## 8b. Đa ngữ (ADR 0012)
 

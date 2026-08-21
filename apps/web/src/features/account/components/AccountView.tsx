@@ -8,66 +8,46 @@ import { useForm, useWatch } from 'react-hook-form';
 import { STATUS_COLOR } from '@xeprime/types';
 import { accountProfileSchema, type AccountProfileValues } from '@xeprime/validators';
 import { TextField } from '@/components/form/TextField';
-import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
-import { AUTH_MODE } from '@/features/auth/post-auth-destination';
-import { getErrorMessage, isUnauthenticated } from '@/services/api-client';
+import { getErrorMessage } from '@/services/api-client';
 import { useMyProfile, useUpdateMyProfile } from '../hooks/use-account';
 import type { UserProfile } from '../types';
+import { ShopEntryCard } from './ShopEntryCard';
 import styles from './AccountView.module.css';
 import { useTranslations } from 'next-intl';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
 /**
- * "{t('title')}" — hồ sơ của KHÁCH THUÊ XE.
+ * Trang gốc của khu tài khoản — hồ sơ của CON NGƯỜI đang đăng nhập.
  *
  * Không phải hồ sơ gian hàng (`/manage/shop`): người không có gian hàng vẫn phải sửa được tên
- * và ảnh của mình. Đây chính là đích của nút "Cập nhật tài khoản" sau khi đăng ký.
+ * và ảnh của mình, còn chủ gian hàng thì sửa hồ sơ cá nhân ở ĐÂY chứ không phải ở cổng quản lý
+ * (ADR 0014 — hai trang cùng ghi vào một hàng `users` là bug chờ sẵn).
+ *
+ * Cổng đăng nhập nằm ở `AccountShell`, không lặp lại ở đây; component này chỉ lo trạng thái
+ * của chính truy vấn hồ sơ.
  */
 export function AccountView() {
-  const t = useTranslations('Account');
   const tCommon = useTranslations('Common');
   const errorMessage = useErrorMessage();
   const profile = useMyProfile();
-  const { open } = useAuthModal();
-  const nextFromHere = useNextFromCurrentPath();
-
-  if (profile.isLoading) {
-    return (
-      <div className={styles.center}>
-        <Spin size="large" />
-      </div>
-    );
-  }
-
-  if (profile.isError) {
-    if (isUnauthenticated(profile.error)) {
-      return (
-        <div className={styles.center}>
-          <Alert type="info" showIcon message={t('signInRequired')} />
-          <Button
-            type="primary"
-            onClick={() => open({ mode: AUTH_MODE.LOGIN, next: nextFromHere() })}
-          >
-            {t('signIn')}
-          </Button>
-        </div>
-      );
-    }
-    return (
-      <div className={styles.center}>
-        <Alert type="error" showIcon message={errorMessage(profile.error)} />
-        <Button onClick={() => void profile.refetch()}>{tCommon('actions.retry')}</Button>
-      </div>
-    );
-  }
-
-  if (!profile.data) return null;
 
   return (
-    <div className={styles.wrap}>
-      <h1 className={styles.heading}>{t('title')}</h1>
-      <ProfileForm profile={profile.data} />
-    </div>
+    <>
+      <ShopEntryCard />
+
+      {profile.isLoading ? (
+        <div className={styles.center}>
+          <Spin size="large" />
+        </div>
+      ) : profile.isError ? (
+        <div className={styles.center}>
+          <Alert type="error" showIcon message={errorMessage(profile.error)} />
+          <Button onClick={() => void profile.refetch()}>{tCommon('actions.retry')}</Button>
+        </div>
+      ) : profile.data ? (
+        <ProfileForm profile={profile.data} />
+      ) : null}
+    </>
   );
 }
 

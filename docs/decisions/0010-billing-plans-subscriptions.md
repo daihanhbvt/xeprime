@@ -2,6 +2,11 @@
 
 Ngày: 31/07/2026 · Trạng thái: Accepted · Áp dụng ở Phase 7 (Billing/plans)
 
+> ⚠️ **Đã bị [ADR 0015](0015-vehicle-slot-billing.md) sửa (21/08/2026).** Ba điều không còn đúng:
+> `duration_days` đổi sang `duration_months` (tháng lịch) · `plans` tách năng lực khỏi kỳ hạn ·
+> "không gói = không giới hạn" bị đảo (nay `registerShop` tự gán gói). Phần *append-only*,
+> *"hết hạn" suy ra từ `ends_at`* và *1-writer `BillingService`* vẫn giữ nguyên.
+
 ## Bối cảnh
 
 Build plan §11 yêu cầu "Billing/plans: gói, gia hạn, invoice" với done-when "gia hạn gói cập nhật
