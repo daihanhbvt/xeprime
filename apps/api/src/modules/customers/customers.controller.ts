@@ -7,6 +7,7 @@ import {
   RequirePermissions,
   TenantScoped,
 } from '../../common/decorators';
+import { OkResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { CustomersService } from './customers.service';
 import {
@@ -202,6 +203,7 @@ export class CustomersController {
   @Delete(':id/notes/:noteId')
   @RequirePermissions(PERMISSION.CUSTOMER_MANAGE)
   @ApiOperation({ summary: 'Gỡ ghi chú nội bộ (soft-delete)' })
+  @ApiOkResponse({ type: OkResultDto })
   async removeNote(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,

@@ -4,7 +4,7 @@
 > - **Ngày chốt:** 2026-08-11 · **Đối chiếu code:** 2026-08-13
 > - **Trạng thái:** Accepted design direction — **phần lớn đã triển khai**; ranh giới đã-làm / làm-một-phần / hoãn ở [§0](#0-trạng-thái-triển-khai-đối-chiếu-code-13082026)
 > - **Phạm vi:** Quản lý xe của gian hàng, chính sách thuê, nguồn xe và nghĩa vụ tài chính, giấy tờ/OCR, bảo dưỡng/KM, các điểm nối với yêu cầu thuê và bàn giao
-> - **Đọc cùng:** [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md), [`05_RENTAL_OPERATIONS.md`](../design-briefs/05_RENTAL_OPERATIONS.md), [`06_FINANCE_OPERATIONS.md`](../design-briefs/06_FINANCE_OPERATIONS.md), [`07_INFORMATION_ARCHITECTURE.md`](07_INFORMATION_ARCHITECTURE.md), [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md), [`10_IMPLEMENTATION_CONSTRAINTS.md`](10_IMPLEMENTATION_CONSTRAINTS.md), [`14_SIMPLIFIED_HANDOVER_AND_RETURN.md`](14_SIMPLIFIED_HANDOVER_AND_RETURN.md)
+> - **Đọc cùng:** `04_FLEET_MANAGEMENT.md`, `05_RENTAL_OPERATIONS.md`, `06_FINANCE_OPERATIONS.md`, [`07_INFORMATION_ARCHITECTURE.md`](07_INFORMATION_ARCHITECTURE.md), [`08_UX_GUIDELINES.md`](08_UX_GUIDELINES.md), [`10_IMPLEMENTATION_CONSTRAINTS.md`](10_IMPLEMENTATION_CONSTRAINTS.md), [`14_SIMPLIFIED_HANDOVER_AND_RETURN.md`](14_SIMPLIFIED_HANDOVER_AND_RETURN.md)
 >
 > **Accepted Wave 10 simplification — 2026-08-13:** luồng giao/nhận chỉ có hai xác nhận chính; Odo, hiện trạng và phát sinh là tùy chọn nâng cao; bỏ nhiên liệu/phụ phí nhiên liệu; hoàn cọc được thực hiện thủ công bên ngoài hệ thống và không dùng OTP. Đặc tả mới nhất ở [`14_SIMPLIFIED_HANDOVER_AND_RETURN.md`](14_SIMPLIFIED_HANDOVER_AND_RETURN.md) và thắng mọi mô tả mục tiêu cũ mâu thuẫn trong tài liệu này.
 
@@ -32,7 +32,7 @@ Khi hai bên lệch nhau, code thắng và mục này là chỗ ghi lại độ 
 | KM từ bàn giao | Xác nhận trả xe là đường **duy nhất** đẩy KM vận hành; KM trả < KM giao bị từ chối; thiếu KM trả → sinh việc, **không** tự tăng KM | `handovers.service.ts` |
 | Hàng đợi thiếu KM | `GET /handovers/missing-odometer` + nhóm việc trong Trung tâm bảo dưỡng; vị từ lọc trùng khớp với phép đếm ở dải tổng hợp | `handover-queue.controller.ts` · `MissingReturnKmQueue.tsx` |
 | Cảnh báo xe | **Một phép tính, hai bề mặt** — thẻ danh sách và Hồ sơ 360 gọi cùng service; thứ tự ưu tiên tất định; cảnh báo không mang số tiền/PII/tên file | `vehicle-alerts.service.ts` |
-| Quyền | Giấy tờ 4 mức · bảo dưỡng/KM 5 mức · bàn giao 4 mức, tách theo mức thiệt hại; cảnh báo chịu đúng ràng buộc quyền của miền sinh ra nó | `packages/types/src/rbac.ts` · [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md) §4.1 |
+| Quyền | Giấy tờ 4 mức · bảo dưỡng/KM 5 mức · bàn giao 4 mức, tách theo mức thiệt hại; cảnh báo chịu đúng ràng buộc quyền của miền sinh ra nó | `packages/types/src/rbac.ts` · `04_FLEET_MANAGEMENT.md` §4.1 |
 
 ### 0.2 Triển khai một phần
 
@@ -60,7 +60,7 @@ Giữ nguyên là **hoãn** cho tới khi có code:
 
 ### 0.4 Ngoài phạm vi
 
-§15 giữ nguyên. Bổ sung: `blocked_range` (chủ xe tự khoá lịch không vì booking/bảo dưỡng) vẫn **chưa có writer** — xem [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md) §2.3 #25.
+§15 giữ nguyên. Bổ sung: `blocked_range` (chủ xe tự khoá lịch không vì booking/bảo dưỡng) vẫn **chưa có writer** — xem `04_FLEET_MANAGEMENT.md` §2.3 #25.
 
 ---
 
@@ -366,7 +366,7 @@ Capability mục tiêu ban đầu: `vehicles.policies.manage`; `vehicles.finance
 
 > **Đã triển khai, tên khác và tách mịn hơn đề xuất trên.** Nguồn duy nhất là
 > [`packages/types/src/rbac.ts`](../../packages/types/src/rbac.ts); bảng đọc nhanh "quyền nào lộ
-> dữ liệu gì" ở [`04_FLEET_MANAGEMENT.md`](../design-briefs/04_FLEET_MANAGEMENT.md) §4.1. Hai
+> dữ liệu gì" ở `04_FLEET_MANAGEMENT.md` §4.1. Hai
 > khác biệt đáng chú ý: tài chính nguồn xe dùng `finance.view` sẵn có (không thêm
 > `vehicles.finance.*`), và chính sách thuê đi theo `vehicles.update` + quyền gian hàng thay vì
 > một key `vehicles.policies.manage` riêng.

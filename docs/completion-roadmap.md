@@ -4,6 +4,32 @@
 > `docs/decisions/`, `docs/CODEMAP.md`). Khi **đóng xong một phase**, cập nhật bảng §2 + mục phase
 > tương ứng ở đây — đừng để tiến độ chỉ nằm trong trí nhớ hay plan file global `~/.claude/plans/`.
 >
+
+## 0. Trạng thái kiểm thử — đo ngày 21/08/2026
+
+Các con số `Verify:` nằm trong từng mục epic bên dưới là **ghi chép tại thời điểm đóng epic đó**,
+không phải trạng thái hiện tại. Bảng này mới là trạng thái hiện tại; cập nhật nó khi chạy lại.
+
+| Lệnh | Kết quả 21/08/2026 |
+| --- | --- |
+| `pnpm run typecheck` | 11/11 task PASS |
+| `pnpm --filter @xeprime/web test` | **1637/1637 PASS** (110 file) |
+| `pnpm --filter @xeprime/api test` | **665/666** — 1 đỏ, xem dưới |
+| `pnpm --filter @xeprime/web lint` | 0 error · 11 warning |
+| `pnpm --filter @xeprime/api lint` | sạch |
+| `pnpm --filter @xeprime/web i18n:check` | OK — 21 namespace × 2 ngôn ngữ, 1658 khoá, parity khớp |
+
+**Một test đỏ, là BOM HẸN GIỜ chứ không phải hồi quy.**
+[`vehicle-documents.spec.ts`](../apps/api/test/vehicle-documents.spec.ts) hardcode
+`expiresAt: '2026-08-20'` kèm chú thích "còn 8 ngày" — viết khi hôm nay là 12/08. Từ 21/08 giấy
+tờ đó **đã quá hạn thật**, nên assert đòi `expiring_soon` mà nhận `expired`. Nó sẽ đỏ mỗi ngày
+cho tới khi ngày trong test tính theo `now` thay vì cố định.
+
+**Một test flaky đã biết.** `search-experience.test.tsx` có lần đỏ 2 test
+(`getMultipleElementsFoundError` trên `role="tablist"`), lần sau xanh, trên **cùng một mã nguồn**
+không đổi từ 18/08. Mock `IntersectionObserver` dùng mảng cấp module. Hướng xử lý là ổn định
+test, **không** phải đổi `role` của sản phẩm.
+
 > **19/08 — epic NỐI TIỀN VÀO SỔ THU-CHI + dựng lại `/manage/receipts`.** Đóng đúng chỗ đứt mà
 > §2.1 đã chỉ ra, và nó rộng hơn mô tả cũ. **Bốn mắt xích đã nối:** (1) `payments.kind='deposit'`
 > **chưa từng có đường ghi nào** → `depositReceived` vĩnh viễn = 0 và cả máy quyết toán cọc Wave 10
@@ -51,7 +77,7 @@
 > Verify: **jest 622/622 (51 suite, PostgreSQL thật)** · **vitest 1533/1533 (103 file)** ·
 > typecheck api/types/web sạch · lint scoped sạch · `migrate diff` sạch · backfill chạy lại ra 0
 > dòng · i18n:check parity.
-> Plan: `docs/plans/tham-kh-o-nh-m-n-kind-crystal.md`.
+> Plan: `docs/plans/2026-08-19-noi-tien-vao-so-thu-chi.md`.
 >
 > Cập nhật gần nhất: **17/08/2026 (đợt 2 — hoàn thiện)** — epic **Đa dịch vụ** đóng TRỌN sau
 > audit end-to-end, 6 commit:
@@ -99,7 +125,7 @@
 > dòng "tiết kiệm so với thuê theo ngày", giá + khuyến mãi TỰ LÁI hiện trong ngữ cảnh dài hạn.
 > Dữ liệu cũ: chỉ backfill gói khi khớp khít tháng lịch; mốc ưu đãi theo ngày không quy đổi được
 > giữ nguyên dạng `legacy` (máy giá bỏ qua, form cảnh báo); snapshot giá lịch sử KHÔNG sửa.
-> Plan: `docs/plans/kind-noodling-marble.md`.
+> Plan: `docs/plans/2026-08-18-da-dich-vu-tai-xe-va-thue-dai-han.md`.
 >
 > **18/08 — SỔ KHÁCH CỦA GIAN HÀNG (gap S-01) đóng end-to-end.** `/manage/customers` +
 > `/manage/customers/[id]` hết là stub. Ba bảng mới (`tenant_customers` unique
@@ -244,7 +270,7 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 Epic ngoài lịch phase (user yêu cầu, chạy sau Phase 7): biến hồ sơ xe từ form CRUD thành trung tâm
 quản lý vòng đời tài sản. Đặc tả mục tiêu ở [`docs/design/12_VEHICLE_360_MANAGEMENT.md`](design/12_VEHICLE_360_MANAGEMENT.md);
 **ranh giới đã-làm / một-phần / hoãn ở §0 của chính file đó**. Trạng thái nghiệp vụ đối chiếu code ở
-[`docs/design-briefs/04_FLEET_MANAGEMENT.md`](design-briefs/04_FLEET_MANAGEMENT.md) §2.4.
+`docs/design-briefs/04_FLEET_MANAGEMENT.md` §2.4.
 
 Làm theo 8 wave (commit `f92d8ce` → `3f4bdce` trên `develop`).
 

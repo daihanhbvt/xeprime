@@ -9,7 +9,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Status (booking/tenant/vehicle/…) — union + nhãn + màu | `packages/types/src/status/` | 0005 |
 | Trạng thái nào chiếm lịch | `packages/types/src/status/booking.ts` (`BOOKING_STATUS_OCCUPYING`) | 0006 |
 | Role / scope / permission key | `packages/types/src/rbac.ts` | — |
-| **Quyền Vehicle 360 — miền nào lộ dữ liệu gì** (giấy tờ · bảo dưỡng/KM · bàn giao tách 3–4 mức) | `packages/types/src/rbac.ts` (khối `vehicles.documents.*`, `vehicles.maintenance.*`, `vehicles.odometer.*`, `handovers.*`) · bảng đọc nhanh ở [`04_FLEET_MANAGEMENT.md`](design-briefs/04_FLEET_MANAGEMENT.md) §4.1 | — |
+| **Quyền Vehicle 360 — miền nào lộ dữ liệu gì** (giấy tờ · bảo dưỡng/KM · bàn giao tách 3–4 mức) | `packages/types/src/rbac.ts` (khối `vehicles.documents.*`, `vehicles.maintenance.*`, `vehicles.odometer.*`, `handovers.*`) · bảng đọc nhanh ở `04_FLEET_MANAGEMENT.md` §4.1 | — |
 | Convention response `{data,meta}` / error code | `packages/types/src/api.ts` | 0007 |
 | Type FE sinh từ OpenAPI (KHÔNG sửa tay) | `packages/types/src/api.generated.ts` | 0007 |
 | Yup schema dùng chung | `packages/validators/src/` | — |
@@ -73,6 +73,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Env validate (zod) | `config/env.schema.ts` | OTP_MODE/AUTH_MODE/OTP_MAX_ATTEMPTS… |
 | Module mẫu chuẩn (controller+guard+dto) | `modules/tenants/` | — |
 | Sinh OpenAPI spec | `openapi.ts` (`nest build && node dist`) | ADR 0007 |
+| **Tài liệu API cho dev khác** (Swagger UI, tag, mã lỗi, ổ khoá quyền) | `openapi/` (`api-tags.ts`, `api-description.ts`, `route-access.ts`, `enhance-document.ts`) | Hướng dẫn: `docs/api-docs.md`; khoá bằng `test/openapi-contract.spec.ts` |
 
 ## Frontend (`apps/web/src`)
 
@@ -147,33 +148,10 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 
 ## Định hướng sản phẩm & thiết kế
 
-`docs/design/` — 13 tài liệu: brand, tầm nhìn, gap analysis, creative brief, mobile-first, nguyên tắc thiết kế, IA, UX guidelines, thứ tự thiết kế màn, ràng buộc triển khai, Figma master prompt, **Vehicle 360 (12 — có mục trạng thái triển khai)**, Figma Vehicle 360 prompts. Định nghĩa **sản phẩm lý tưởng**; ADR vẫn thắng khi mâu thuẫn. Bắt đầu ở `docs/design/README.md`.
+`docs/design/` — 14 tài liệu đánh số: brand, tầm nhìn, gap analysis, creative brief, mobile-first, nguyên tắc thiết kế, IA, UX guidelines, thứ tự thiết kế màn, ràng buộc triển khai, Figma master prompt, **Vehicle 360 (12 — có mục trạng thái triển khai)**, Figma Vehicle 360 prompts, bàn giao & nhận xe rút gọn (14). Định nghĩa **sản phẩm lý tưởng**; ADR vẫn thắng khi mâu thuẫn. Bắt đầu ở `docs/design/README.md`.
 
-## Tên cũ trong tài liệu thiết kế → chỗ hiện tại
-
-`docs/design-briefs/` (04/08/2026) và `docs/implementation/` (06/08/2026) mô tả mã nguồn TẠI
-THỜI ĐIỂM viết. Chín component dưới đây đã bị **xoá và viết lại** sau đó (git ghi `D`, không
-phải đổi tên), nên đường dẫn trong hai bộ tài liệu đó không mở được nữa. Đây là bảng tra; phần
-văn xuôi mô tả hành vi của chúng cũng có thể đã lỗi thời — kiểm lại bằng mã, đừng tin nguyên văn.
-
-| Tên trong tài liệu | Chỗ hiện tại |
-| --- | --- |
-| `features/vehicles/components/VehicleTable.tsx` | `VehicleCardGrid.tsx` + `VehicleListRow.tsx` (đổi thẻ/bảng theo `useIsMobile`) |
-| `features/vehicles/components/VehicleDetailView.tsx` | `VehicleDetailContent.tsx` (dùng chung trang thật + `VehicleDetailDialog.tsx`) |
-| `features/bookings/components/BookingFormDrawer.tsx` | `BookingFormDialog.tsx` |
-| `features/bookings/components/BookingDetailDrawer.tsx` | `BookingDetailDialog.tsx` + `BookingDetailContent.tsx` |
-| `features/shop/components/ShopProfileForm.tsx` | `ShopProfileWorkspace.tsx` |
-| `features/shop/components/ShopStatusCard.tsx` | `ShopStatusBanner.tsx` |
-| `features/reviews/components/MyTripsView.tsx` | `features/trips/components/TripsView.tsx` + `TripDetailView.tsx` — khu chuyến đi tách hẳn khỏi `features/reviews` |
-| `features/reviews/hooks/use-my-trips.ts` | `features/trips/hooks.ts` |
-| `features/marketplace/components/HeroSearch.tsx` | `features/marketplace/search/` (`SearchExperience`, `SearchCard`, `StickySearchBar`) |
-| `features/marketplace/components/VehicleRecommendations.tsx` | `MarketplaceResults.tsx` (giữ `FACET_FILTER_KEYS`) |
-| `lib/vehicle-labels.ts` | `lib/vehicle-label.ts` |
-
-`docs/project/` — bộ tài liệu as-built được `design-briefs` trích dẫn — **không tồn tại** (dọn
-ngày 23/07/2026, chưa từng vào git). Các trích dẫn tới nó đã gỡ liên kết, giữ lại tên để đọc
-được xuất xứ.
+⚠️ `05_MOBILE_FIRST_GUIDELINES.md` nói về **web responsive** (`useIsMobile ≤ 640px`), KHÔNG phải app native — tên file dễ gây hiểu nhầm cho người mới. Phần native ở [`mobile-readiness-audit.md`](mobile-readiness-audit.md).
 
 ## Vì sao (đọc khi cần lý do, đừng đoán)
 
-`docs/decisions/` — **12 ADR (0001–0012)**. Mỗi quyết định kèm lý do và cái nó ghi đè. ADR thắng mọi tài liệu cũ khi mâu thuẫn.
+`docs/decisions/` — **13 ADR (0001–0013)**. Mỗi quyết định kèm lý do và cái nó ghi đè. ADR thắng mọi tài liệu cũ khi mâu thuẫn.

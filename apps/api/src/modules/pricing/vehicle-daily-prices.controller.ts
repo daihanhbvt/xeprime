@@ -7,6 +7,7 @@ import {
   RequirePermissions,
   TenantScoped,
 } from '../../common/decorators';
+import { DeletedCountDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { PricingService } from './pricing.service';
 import {
@@ -57,7 +58,7 @@ export class VehicleDailyPricesController {
   @Delete()
   @RequirePermissions(PERMISSION.VEHICLE_UPDATE)
   @ApiOperation({ summary: 'Khôi phục giá mặc định cho [from, to] — xoá bản ghi đè' })
-  @ApiOkResponse({ description: '{ data: { deleted: number } }' })
+  @ApiOkResponse({ type: DeletedCountDto })
   async remove(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,

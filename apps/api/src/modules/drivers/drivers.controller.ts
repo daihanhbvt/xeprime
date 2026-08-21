@@ -7,6 +7,7 @@ import {
   RequirePermissions,
   TenantScoped,
 } from '../../common/decorators';
+import { OkResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { DriversService } from './drivers.service';
 import {
@@ -87,6 +88,7 @@ export class DriversController {
   @Delete(':id')
   @RequirePermissions(PERMISSION.DRIVER_MANAGE)
   @ApiOperation({ summary: 'Xoá tài xế (soft-delete; chặn khi còn đơn chưa hoàn tất)' })
+  @ApiOkResponse({ type: OkResultDto })
   async remove(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,

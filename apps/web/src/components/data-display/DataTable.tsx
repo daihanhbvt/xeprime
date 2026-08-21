@@ -193,7 +193,7 @@ function GenericMobileCard<T>({
  * API dựng từ 14 bảng có thật (Batch 1C-A), **không** phản chiếu toàn bộ API của AntD Table.
  *
  * **Cố ý KHÔNG có** — vì kiểm kê 1C-A đo được 0 nơi dùng, mà quy tắc của repo là component chung
- * cần ≥2 consumer thật ([03](../../../../docs/implementation/03_COMPONENT_REGISTRY.md)):
+ * cần ≥2 consumer thật (kiểm kê Batch 1C-A; `docs/implementation/` đã nghỉ hưu 21/08/2026):
  *  - **sắp xếp theo cột** (`sorter`): 0/14 bảng có. Sắp xếp chỉ tồn tại ở `vehicles`/`bookings`
  *    dưới dạng một `Select` trong thanh lọc, đẩy thẳng lên tham số `sort` của API.
  *  - **chọn hàng / hành động hàng loạt** (`rowSelection`): 0 nơi.

@@ -6,7 +6,7 @@
  *
  * Giá trị lấy từ Figma section 01 “XePrime Foundations” (`14:2`) — mã node ghi cạnh từng
  * token. Lý do chọn Foundations thay vì bộ giá trị của các component `XePrime/*`:
- * `docs/implementation/08_DECISION_BACKLOG.md` P15.
+ * `docs/design-token-map.md` §21 P15.
  *
  * Light-first; dark theme sẽ thêm ở increment sau (kiến trúc token đã sẵn sàng).
  */
@@ -33,7 +33,7 @@
   --xp-color-text-disabled: rgba(26, 26, 26, 0.25);
   --xp-color-text-inverse: #e8e4dd;
   /* Figma chưa định nghĩa màu link — hai token này soi lại giá trị AntD dẫn xuất từ
-     `colorInfo` (hành vi hiện tại). Xem 08_DECISION_BACKLOG.md P19. */
+     `colorInfo` (hành vi hiện tại). Xem `docs/design-token-map.md` §21 (P19 nằm trong bộ implementation/ đã nghỉ hưu 21/08/2026). */
   --xp-color-link: #2563eb;
   --xp-color-link-hover: #7aadff;
 
@@ -220,7 +220,7 @@
 
   /* ─── DEPRECATED — bí danh giữ cho code cũ ────────────────────────────────
    * Mỗi cái trỏ var() về token canonical: KHÔNG có giá trị nào bị nhân đôi.
-   * Số consumer còn lại + wave gỡ bỏ: docs/implementation/02_DESIGN_TOKEN_MAP.md §14.
+   * Số consumer còn lại + wave gỡ bỏ: docs/design-token-map.md §14.
    * Không thêm consumer mới cho nhóm này.
    */
   --xp-color-bg-layout: var(--xp-color-bg);

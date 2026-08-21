@@ -35,7 +35,7 @@
 
 | # | Khoảng trống | Hiện trạng | Mức | Công | Ghi chú |
 | --- | --- | --- | --- | --- | --- |
-| C-01 | **Thanh toán / cọc online** | Không có. Cọc ghi tay ở phiếu thu | P0 | L | Chặn "đặt xe là chắc chắn". Cần chọn cổng (VNPay/Momo/ZaloPay), thiết kế trạng thái tiền-đang-giữ, hoàn cọc. Kéo theo bảng mới ⇒ migration |
+| C-01 | ~~**Thanh toán / cọc online**~~ · **ĐÃ QUYẾT KHÔNG LÀM 21/08/2026 — [ADR 0013](../decisions/0013-no-online-payment-mvp.md)** | Không có. Cọc ghi tay ở phiếu thu — và đó là thiết kế, không phải thiếu sót | ~~P0~~ → Out of scope | ~~L~~ | Chặn "đặt xe là chắc chắn". Cần chọn cổng (VNPay/Momo/ZaloPay), thiết kế trạng thái tiền-đang-giữ, hoàn cọc. Kéo theo bảng mới ⇒ migration |
 | C-02 | **Lịch còn trống ngay trên trang chi tiết xe** | Chỉ biết trống/không sau khi bấm "Tìm xe khả dụng" hoặc ở bước chọn ngày | P0 | M | Đây là điểm rơi lớn nhất của phễu. API đã có (`OccupancyService.findOverlapping`); cần endpoint đọc dải ngày bận công khai + lịch tháng ở `features/marketplace/components/ListingDetailView.tsx` |
 | C-03 | **Bảng giá minh bạch trước khi gửi yêu cầu** | Thẻ xe hiện giá/ngày; tổng tiền, phí giao xe, cọc, chính sách huỷ chỉ rõ khi shop báo lại | P0 | M | "Giá đổi ở bước cuối" là lý do số một khách bỏ sàn. Cần khối tính giá: số ngày × đơn giá + phí giao − giảm giá = tổng, và cọc dự kiến |
 | C-04 | **Chính sách huỷ & thế chấp hiển thị chuẩn hoá** | Nằm trong mô tả tự do của shop, mỗi nơi viết một kiểu | P0 | M | Chuẩn hoá thành trường có cấu trúc (3–4 mẫu chính sách) để hiển thị và so sánh được ⇒ migration nhỏ |
@@ -129,7 +129,7 @@ Không phải "thiếu tính năng" — là **cách hiện tại làm sẽ khôn
 `S-01` khách hàng của shop · `S-02` mobile ops · `S-03` bàn giao có bằng chứng · `X-03` bảng dữ liệu dùng chung
 
 ### Đợt D — Tiền và hỗ trợ
-`C-01` thanh toán online · `G-02` invoice · `G-01`+`C-09` ticket · `S-10` nhắc nợ
+~~`C-01` thanh toán online~~ (bỏ — [ADR 0013](../decisions/0013-no-online-payment-mvp.md)) · `G-02` invoice · `G-01`+`C-09` ticket · `S-10` nhắc nợ
 
 ### Đợt E — Hoàn thiện
 `X-01` dark theme · `S-05`–`S-08` các stub · `X-04` ⌘K · `X-06` a11y · `X-07` PWA

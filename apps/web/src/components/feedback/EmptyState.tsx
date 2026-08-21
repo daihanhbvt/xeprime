@@ -9,7 +9,7 @@ import { useTranslations } from 'next-intl';
 
 /**
  * Ba trạng thái "không có gì để xem", tách theo NGUYÊN NHÂN chứ không theo hình thức —
- * Figma `134:2093` (12.37) yêu cầu phân biệt rõ, và [07 §4.4](../../../../docs/implementation/07_VISUAL_QA_MATRIX.md)
+ * Figma `134:2093` (12.37) yêu cầu phân biệt rõ, và ma trận QA thị giác Wave 0B §4.4 (`docs/implementation/` đã nghỉ hưu 21/08/2026)
  * xếp đây là cặp hay sai nhất.
  *
  * `permission-denied` KHÔNG nằm ở đây: nó có ngữ nghĩa bảo mật riêng và câu chữ riêng
