@@ -15,6 +15,18 @@
     "mainNavLabel": "Main navigation",
     "quickNavLabel": "Quick navigation"
   },
+  "account": {
+    "menuLabel": "Account menu",
+    "profile": "My account",
+    "trips": "My trips",
+    "payments": "Payment history",
+    "favorites": "Saved vehicles",
+    "addresses": "My addresses",
+    "documents": "Documents & verification",
+    "notifications": "Notifications",
+    "support": "Support",
+    "settings": "Settings"
+  },
   "manage": {
     "home": "Home",
     "more": "More",

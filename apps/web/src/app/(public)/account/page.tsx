@@ -12,8 +12,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Tài khoản của KHÁCH, nằm trong khu công khai để giữ nguyên header/footer marketplace —
- * khách không phải rời không gian đang dùng chỉ để sửa tên. Dữ liệu cá nhân nên là client island.
+ * Hồ sơ của CON NGƯỜI đang đăng nhập — chủ xe, chủ gian hàng và khách thuê dùng CHUNG trang
+ * này (ADR 0014). Vỏ (menu, cổng đăng nhập, tiêu đề) nằm ở `layout.tsx`.
  */
 export default function AccountPage() {
   return <AccountView />;

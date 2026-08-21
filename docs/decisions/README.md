@@ -19,6 +19,9 @@ Quy tắc: ADR ở đây **thắng** mọi tài liệu khác trong `docs/` khi c
 | [0011](0011-long-term-fixed-packages.md) | Thuê dài hạn: gói cố định 1/2/3/6/9/12 THÁNG LỊCH, khách nêu nguyện vọng — gian hàng chốt lịch khi duyệt | Accepted 18/08/2026 |
 | [0012](0012-i18n-shared-url-cookie-locale.md) | Đa ngữ vi/en: MỘT url cho cả hai ngôn ngữ, locale ở cookie `XP_LOCALE` đọc phía server; mã nghiệp vụ không dịch | Accepted 19/08/2026 |
 | [0013](0013-no-online-payment-mvp.md) | **Không làm thanh toán trực tuyến** ở giai đoạn này; module `payments` là ghi sổ thủ công | Accepted 21/08/2026 |
+| [0014](0014-owner-and-shop-single-role.md) | Chủ xe và chủ gian hàng là MỘT vai; năng lực đến từ GÓI, không từ role; nền tảng không đứng giữa quan hệ khách ↔ gian hàng | Accepted 21/08/2026 |
+| [0015](0015-vehicle-slot-billing.md) | Cước theo CHỖ XE, trả trước, kỳ tính bằng THÁNG LỊCH; hết hạn thì gỡ khỏi chợ — **sửa ADR 0010** | Accepted 21/08/2026 |
+| [0016](0016-sepay-bank-reconciliation.md) | SePay đối soát chuyển khoản tự động cho tiền GÓI — **sửa phạm vi ADR 0013** | Accepted 21/08/2026 |
 
 ## Khi nào viết ADR mới
 

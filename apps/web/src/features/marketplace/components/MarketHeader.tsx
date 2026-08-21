@@ -9,18 +9,16 @@ import {
 } from '@ant-design/icons';
 import { Avatar, Badge, Button, Dropdown, type MenuProps } from 'antd';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Logo } from '@/components/brand/Logo';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { ROUTES } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
-import { useAuthCache } from '@/features/auth/hooks/use-auth-actions';
+import { useMarketLogout } from '@/features/auth/hooks/use-market-logout';
 import { AUTH_MODE } from '@/features/auth/post-auth-destination';
 import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 import { useChatUnreadCount } from '@/features/chat/hooks/use-chat-unread-count';
 import { useCurrentUser, type CurrentUser } from '@/hooks/use-current-user';
-import { destroySession } from '@/services/auth.service';
 import styles from './MarketHeader.module.css';
 
 /** Điều hướng chính — thứ tự và đích cố định, nhãn theo ngôn ngữ. */
@@ -32,23 +30,11 @@ const NAV = [
 
 export function MarketHeader() {
   const t = useTranslations('Navigation.public');
-  const router = useRouter();
   const { data: user } = useCurrentUser();
   const { data: chatUnread } = useChatUnreadCount(!!user);
   const { open } = useAuthModal();
-  const { clearAfterLogout } = useAuthCache();
+  const logout = useMarketLogout();
   const nextFromHere = useNextFromCurrentPath();
-
-  async function handleLogout() {
-    try {
-      await destroySession();
-    } catch {
-      // Cookie có thể đã hết hạn — vẫn dọn cache + về Home.
-    }
-    // Xoá cache: dữ liệu người vừa thoát không hiện lại cho người kế tiếp trên cùng máy.
-    clearAfterLogout();
-    router.replace(ROUTES.HOME);
-  }
 
   return (
     <header className={styles.header}>
@@ -89,7 +75,7 @@ export function MarketHeader() {
                 </Link>
               </Badge>
               <NotificationBell context="customer" />
-              <Dropdown trigger={['click']} menu={{ items: accountMenu(user, handleLogout, t) }}>
+              <Dropdown trigger={['click']} menu={{ items: accountMenu(user, logout, t) }}>
                 <span
                   className={styles.avatarTrigger}
                   role="button"
@@ -130,7 +116,7 @@ function accountMenu(
   return [
     { key: 'name', label: user.displayName, disabled: true },
     { type: 'divider' },
-    { key: 'account', label: <Link href={ROUTES.ACCOUNT}>{t('accountMine')}</Link> },
+    { key: 'account', label: <Link href={ROUTES.ACCOUNT.ROOT}>{t('accountMine')}</Link> },
     { key: 'trips', label: <Link href={ROUTES.TRIPS}>{t('trips')}</Link> },
     { key: 'chat', label: <Link href={ROUTES.CHAT}>{t('chat')}</Link> },
     { type: 'divider' },

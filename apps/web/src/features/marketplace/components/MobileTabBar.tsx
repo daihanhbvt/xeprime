@@ -67,7 +67,7 @@ export function MobileTabBar() {
     {
       key: 'account',
       labelKey: user ? 'account' : 'login',
-      href: ROUTES.ACCOUNT,
+      href: ROUTES.ACCOUNT.ROOT,
       Icon: IdcardOutlined,
       requiresAuth: true,
     },

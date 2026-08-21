@@ -35,7 +35,7 @@ Ngày: 21/08/2026 · Nguồn: phiên trao đổi 21/08 (vai chủ xe/gian hàng 
 
 ---
 
-## 1. ADR phải viết trước khi code
+## 1. ADR phải viết trước khi code — ✅ XONG 21/08
 
 | ADR | Nội dung | Ghi đè gì |
 | --- | --- | --- |
@@ -80,7 +80,7 @@ Thêm mới: thẻ **"Gian hàng của tôi" → `/manage`** (có tenant) / **"�
 
 ### 2.2 Wave
 
-#### A1 — Khung `/account` + menu (nền, mở khoá phần còn lại)
+#### A1 — Khung `/account` + menu (nền, mở khoá phần còn lại) — ✅ XONG 21/08
 
 - `app/(public)/account/layout.tsx`: sidebar riêng theo mockup; mobile → drawer/tab
   (`docs/design/05_MOBILE_FIRST_GUIDELINES.md`).
@@ -91,6 +91,14 @@ Thêm mới: thẻ **"Gian hàng của tôi" → `/manage`** (có tenant) / **"�
 - Thẻ "Gian hàng của tôi" / "Đăng xe cho thuê" (đọc `useCurrentUser().tenant`).
 - i18n: namespace `Account` mở rộng, vi + en song song ngay từ đầu (skill `i18n`).
 - **Không đụng backend.**
+
+> **Đã làm:** `ROUTES.ACCOUNT` → object 8 route · `constants/account-nav.ts` (9 mục + `comingSoon`)
+> · `AccountShell` (vỏ + cổng đăng nhập MỘT lần cho cả khu) · `AccountSidebar` (dọc ↔ dải cuộn
+> ngang trên mobile) · `AccountComingSoon` · `ShopEntryCard` · 7 trang con placeholder ·
+> `Account`/`Navigation.account` mở rộng vi+en. **Dọn kèm:** `useMarketLogout()` gom 3 bước đăng
+> xuất mà `MarketHeader` đang chép tay.
+> Verify: vitest 1658/1658 (113 file, +21 test) · typecheck sạch · lint 0 error · i18n:check parity
+> · i18n:audit 0 chuỗi thô ở file mới.
 
 *Tuỳ chọn (không bắt buộc đợt này):* cho `/trips` dùng chung sidebar của `/account` để điều hướng
 liền mạch — làm sau nếu thấy rời rạc.

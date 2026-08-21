@@ -19,7 +19,7 @@ Git: **thư mục này là repo** (remote `https://github.com/daihanhbvt/xeprime
 ## 2. Tài liệu — đọc theo thứ tự
 
 Nguồn sống (đọc trước, luôn đúng hiện tại):
-1. `docs/decisions/` — **13 ADR (0001–0013), thắng mọi tài liệu khác khi mâu thuẫn**
+1. `docs/decisions/` — **16 ADR (0001–0016), thắng mọi tài liệu khác khi mâu thuẫn**
 2. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu"
 3. `docs/completion-roadmap.md` — **"đang ở đâu / làm gì tiếp"** (tiến độ thực tế + milestone). Đóng xong phase thì cập nhật file này.
 4. File này (CLAUDE.md)
@@ -54,6 +54,9 @@ Tài liệu tham chiếu (5–9) có vài quyết định kỹ thuật đã bị
 | [0011](docs/decisions/0011-long-term-fixed-packages.md) | Thuê dài hạn = **gói cố định theo THÁNG LỊCH** (1/2/3/6/9/12), khách chỉ nêu nguyện vọng ngày nhận |
 | [0012](docs/decisions/0012-i18n-shared-url-cookie-locale.md) | Đa ngữ vi/en: **một URL cho cả hai ngôn ngữ**, locale ở cookie `XP_LOCALE` đọc phía server |
 | [0013](docs/decisions/0013-no-online-payment-mvp.md) | **KHÔNG làm thanh toán trực tuyến** ở giai đoạn này — module `payments` là ghi sổ thủ công |
+| [0014](docs/decisions/0014-owner-and-shop-single-role.md) | Chủ xe = chủ gian hàng = **MỘT vai** `shop_owner`; `tenant_type` chỉ là NHÃN; năng lực đến từ GÓI. Nền tảng **không đứng giữa** quan hệ khách ↔ gian hàng |
+| [0015](docs/decisions/0015-vehicle-slot-billing.md) | Cước theo **CHỖ XE**, trả trước, kỳ tính bằng **THÁNG LỊCH**; hết hạn → gỡ khỏi chợ (không khoá tenant) — **sửa ADR 0010** |
+| [0016](docs/decisions/0016-sepay-bank-reconciliation.md) | **SePay** đối soát chuyển khoản tự động, CHỈ cho tiền GÓI — **sửa phạm vi ADR 0013** |
 
 ### Công cụ Claude (`.claude/`)
 

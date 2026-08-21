@@ -16,8 +16,28 @@ export const ROUTES = {
   TRIPS: '/trips',
   /** Khu tin nhắn của khách (chat với shop). Shop dùng /manage/chat. */
   CHAT: '/chat',
-  /** Hồ sơ tài khoản của KHÁCH — khác hoàn toàn hồ sơ gian hàng (`/manage/shop`). */
-  ACCOUNT: '/account',
+  /**
+   * Khu TÀI KHOẢN của một CON NGƯỜI — khác hoàn toàn hồ sơ gian hàng (`/manage/shop`).
+   *
+   * ADR 0014: chủ xe, chủ gian hàng và khách thuê là cùng một con người có thể mang nhiều vai,
+   * nên tất cả vào CHUNG khu này. Không có `/manage/account` — cổng quản lý chỉ link sang đây
+   * (`ManageUserCard`), vì hai trang cùng ghi vào một hàng `users` là bug chờ sẵn.
+   *
+   * Mục "Chuyến của tôi" và "Tin nhắn" KHÔNG nằm dưới `/account`: chúng đã có route riêng từ
+   * trước (`TRIPS`, `CHAT`) và đang được thông báo trỏ tới — menu tài khoản chỉ dẫn sang.
+   */
+  ACCOUNT: {
+    ROOT: '/account',
+    /** Tiền của các chuyến đã thuê — đọc từ `payments`, không phải ví. */
+    PAYMENTS: '/account/payments',
+    FAVORITES: '/account/favorites',
+    ADDRESSES: '/account/addresses',
+    /** Kho giấy tờ tuỳ thân của khách (GPLX/CCCD) — ADR 0014: gian hàng đối chiếu tay. */
+    DOCUMENTS: '/account/documents',
+    NOTIFICATIONS: '/account/notifications',
+    SUPPORT: '/account/support',
+    SETTINGS: '/account/settings',
+  },
   MANAGE: {
     ROOT: '/manage',
     /** Đăng nhập cổng quản lý (chủ xe / nhân viên / quản trị nền tảng). Route CÔNG KHAI. */
