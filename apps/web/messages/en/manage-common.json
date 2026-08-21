@@ -1,7 +1,5 @@
 {
   "shell": {
-    "pendingTitle": "Shop awaiting approval",
-    "pendingBody": "You can still view your data, but vehicles will not appear on the marketplace until the shop is approved.",
     "navLabel": "Management portal navigation",
     "expandMenu": "Expand menu",
     "collapseMenu": "Collapse menu",

@@ -60,7 +60,7 @@
 /* Bước đã xong: dấu tích thay số, nền trong suốt để không tranh chú ý với bước đang làm. */
 .done .dot {
   background: transparent;
-  color: var(--xp-color-success, #389e0d);
+  color: var(--xp-color-success);
   font-size: 18px;
 }
 

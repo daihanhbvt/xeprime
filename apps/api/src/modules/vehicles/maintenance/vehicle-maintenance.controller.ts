@@ -91,9 +91,13 @@ export class VehicleMaintenanceController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ): Promise<OdometerHistoryDto> {
-    const parsedPage = Math.max(1, Number(page) || 1);
-    const parsedLimit = Math.min(100, Math.max(1, Number(limit) || 20));
-    return this.odometer.history(tenant.tenantId, vehicleId, parsedPage, parsedLimit);
+    // Chỉ ĐỌC số; kẹp trần là việc của `resolvePaging` trong service (common/pagination.ts).
+    return this.odometer.history(
+      tenant.tenantId,
+      vehicleId,
+      Number(page) || undefined,
+      Number(limit) || undefined,
+    );
   }
 
   /**

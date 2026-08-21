@@ -11,15 +11,16 @@ import {
   ShopOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Form } from 'antd';
+import { Alert, App, Button, Form, Modal } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   TENANT_STATUS,
   TENANT_STATUS_META,
+  TENANT_STATUS_SUBMITTABLE,
   toLocalVnPhone,
   type TenantStatus,
 } from '@xeprime/types';
@@ -37,18 +38,51 @@ import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { getErrorMessage } from '@/services/api-client';
 import { presignShopMedia } from '@/services/upload';
 import type { MyShop, UpdateProfileInput } from '../types';
+import { ShopProfileChecklist } from './ShopProfileChecklist';
+import { ShopStatusBanner } from './ShopStatusBanner';
 import styles from './ShopProfileWorkspace.module.css';
 
 interface ShopProfileWorkspaceProps {
   shop: MyShop;
   /** Quyền `tenant.update`. Thiếu quyền và "đang chờ duyệt" đều dẫn tới chỉ-xem, xem `readOnly`. */
   canEdit: boolean;
+  /** Quyền `tenant.submit_review` — đổi TRẠNG THÁI hồ sơ, không phải "lưu". */
+  canSubmit: boolean;
   /** Đang gửi: khoá luôn ô nhập, để không ai sửa tiếp thứ vừa gửi đi và tưởng là đã lưu. */
   saving: boolean;
+  /** Đang gửi duyệt (gồm cả bước lưu nốt thay đổi còn dở trước khi gửi). */
+  submitting: boolean;
   errorMessage?: string | null;
-  onSubmit: (body: UpdateProfileInput) => void;
-  /** Dải trạng thái duyệt — trang dựng sẵn vì nó gắn với mutation "gửi duyệt", không phải form. */
-  banner?: ReactNode;
+  onSave: (body: UpdateProfileInput) => void;
+  /**
+   * Gửi duyệt.
+   *
+   * `pendingChanges` khác `null` nghĩa là form còn thay đổi CHƯA LƯU: trang phải lưu trước rồi
+   * mới gửi. Hồ sơ đi duyệt là bản ĐÃ LƯU (backend snapshot từ DB), nên gửi thẳng sẽ đưa cho
+   * người duyệt đúng bản cũ mà người gửi vừa sửa xong và tưởng đã gửi đi.
+   */
+  onSubmitReview: (pendingChanges: UpdateProfileInput | null) => void;
+}
+
+/** Giá trị form → thân request. Dùng cho CẢ hai đường ra: lưu, và lưu-rồi-gửi-duyệt. */
+function toBody(v: ShopProfileValues): UpdateProfileInput {
+  return {
+    displayName: v.displayName,
+    bio: v.bio,
+    address: v.address,
+    // Chỉ gửi MÃ tỉnh — tên do server tra ra. Backend chuyển tiếp cho chi nhánh mặc định.
+    provinceCode: v.provinceCode,
+    taxCode: v.taxCode,
+    businessLicenseNo: v.businessLicenseNo,
+    bankName: v.bankName,
+    bankAccountNo: v.bankAccountNo,
+    bankAccountName: v.bankAccountName,
+    logoUrl: v.logoUrl ?? '',
+    coverUrl: v.coverUrl ?? '',
+    ownerFullName: v.ownerFullName,
+    ownerPhone: v.ownerPhone,
+    ownerEmail: v.ownerEmail,
+  };
 }
 
 /**
@@ -94,21 +128,26 @@ function toValues(shop: MyShop): ShopProfileValues {
 export function ShopProfileWorkspace({
   shop,
   canEdit,
+  canSubmit,
   saving,
+  submitting,
   errorMessage,
-  onSubmit,
-  banner,
+  onSave,
+  onSubmitReview,
 }: ShopProfileWorkspaceProps) {
   const t = useTranslations('Shop');
   const tCommon = useTranslations('Common');
+  const { message } = App.useApp();
   const provinces = useProvinceOptions();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // `values` (không phải `defaultValues`): sau khi lưu, query trả hồ sơ mới và form phải theo —
   // nếu không, "Huỷ bỏ" mời người dùng hoàn tác thứ đã lưu xong rồi.
-  const { control, handleSubmit, reset, formState } = useForm<ShopProfileValues>({
-    resolver: yupResolver(shopProfileSchema),
-    values: toValues(shop),
-  });
+  const { control, handleSubmit, reset, formState, getValues } =
+    useForm<ShopProfileValues>({
+      resolver: yupResolver(shopProfileSchema),
+      values: toValues(shop),
+    });
 
   const status = shop.status as TenantStatus;
   // Backend cũng từ chối ghi khi đang chờ duyệt (`INVALID_STATUS_TRANSITION`). Khoá ở đây để
@@ -131,27 +170,52 @@ export function ShopProfileWorkspace({
    */
   const dirty = formState.isDirty && !readOnly;
 
-  const submit = handleSubmit((v) => {
-    onSubmit({
-      displayName: v.displayName,
-      bio: v.bio,
-      address: v.address,
-      // Chỉ gửi MÃ tỉnh — tên do server tra ra. Backend chuyển tiếp cho chi nhánh mặc định.
-      provinceCode: v.provinceCode,
-      taxCode: v.taxCode,
-      businessLicenseNo: v.businessLicenseNo,
-      bankName: v.bankName,
-      bankAccountNo: v.bankAccountNo,
-      bankAccountName: v.bankAccountName,
-      logoUrl: v.logoUrl ?? '',
-      coverUrl: v.coverUrl ?? '',
-      ownerFullName: v.ownerFullName,
-      ownerPhone: v.ownerPhone,
-      ownerEmail: v.ownerEmail,
-    });
-  });
+  /** Hồ sơ ở chặng "chưa gửi / bị trả về" — chỉ khi đó checklist và nút Gửi duyệt mới có nghĩa. */
+  const submittable = TENANT_STATUS_SUBMITTABLE.includes(status);
+
+  const submit = handleSubmit((v) => onSave(toBody(v)));
+
+  /**
+   * Bấm "Gửi duyệt" chạy VALIDATE TRƯỚC, rồi mới hỏi xác nhận.
+   *
+   * Trước đây nút này bỏ qua form hoàn toàn: nó sáng ngay cả khi họ tên và SĐT chủ gian hàng còn
+   * trống, và người duyệt nhận một hồ sơ không liên hệ được với ai. Thứ tự ở đây là có chủ ý —
+   * hỏi "gửi nhé?" rồi mới báo "thiếu 2 mục" là bắt người dùng đi qua một hộp thoại vô ích.
+   *
+   * Hồ sơ thiếu thì `shouldFocusError` của RHF đã tự đưa con trỏ tới ô sai ĐẦU TIÊN; câu thông
+   * báo lo phần còn lại, vì ô đang sáng chỉ là một trong số chúng.
+   */
+  const openSubmitConfirm = handleSubmit(
+    () => setConfirmOpen(true),
+    (errors) => {
+      message.warning(t('status.incomplete', { count: Object.keys(errors).length }));
+    },
+  );
+
+  const confirmSubmitReview = () => {
+    setConfirmOpen(false);
+    onSubmitReview(dirty ? toBody(getValues()) : null);
+  };
 
   return (
+    <>
+      {/* Hộp xác nhận nằm NGOÀI `<form>`: nút OK của nó là hành động riêng, không phải submit form. */}
+      <Modal
+        open={confirmOpen}
+        title={t('status.submitConfirm.title')}
+        okText={t('status.submitConfirm.ok')}
+        cancelText={tCommon('actions.cancel')}
+        confirmLoading={submitting}
+        onCancel={() => setConfirmOpen(false)}
+        onOk={confirmSubmitReview}
+      >
+        <p>
+          {dirty
+            ? t('status.submitConfirm.descriptionWithSave')
+            : t('status.submitConfirm.description')}
+        </p>
+      </Modal>
+
     <Form
       component={false}
       layout="vertical"
@@ -211,7 +275,18 @@ export function ShopProfileWorkspace({
           />
         </div>
 
-        {banner}
+        <ShopStatusBanner
+          shop={shop}
+          canSubmit={canSubmit}
+          submitting={submitting}
+          onSubmit={openSubmitConfirm}
+        />
+
+        {/*
+          Checklist chỉ ở chặng chưa gửi / bị trả về. Hồ sơ đang chờ duyệt hay đã hoạt động thì
+          nó không còn nói gì mới — người dùng đâu sửa được nữa.
+        */}
+        {submittable ? <ShopProfileChecklist control={control} /> : null}
 
         {errorMessage ? (
           <Alert type="error" showIcon title={errorMessage} className={styles.alert} />
@@ -401,9 +476,9 @@ export function ShopProfileWorkspace({
             </Section>
           </div>
         </fieldset>
-
-      </form>
-    </Form>
+        </form>
+      </Form>
+    </>
   );
 }
 

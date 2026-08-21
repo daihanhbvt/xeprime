@@ -35,6 +35,7 @@ import {
   CustomerTripListQueryDto,
   CustomerTripPageDto,
 } from './dto/customer-trip.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const ZERO = new Prisma.Decimal(0);
 
@@ -69,11 +70,7 @@ export class CustomerTripsService {
     customerUserId: string,
     query: CustomerTripListQueryDto,
   ): Promise<CustomerTripPageDto> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(
-      CUSTOMER_TRIP_MAX_LIMIT,
-      Math.max(1, query.limit ?? CUSTOMER_TRIP_DEFAULT_LIMIT),
-    );
+    const paging = resolvePaging(query, CUSTOMER_TRIP_DEFAULT_LIMIT, CUSTOMER_TRIP_MAX_LIMIT);
     const filter: CustomerTripFilter = isCustomerTripFilter(query.filter)
       ? query.filter
       : CUSTOMER_TRIP_FILTER.ALL;
@@ -85,8 +82,8 @@ export class CustomerTripsService {
       this.prisma.bookingRequest.findMany({
         where,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: LIST_SELECT,
       }),
       this.counts(customerUserId),
@@ -94,7 +91,7 @@ export class CustomerTripsService {
 
     const surchargeTotals = await this.surchargeTotals(rows.map((row) => row.bookingId));
 
-    const meta: PaginationMeta = { page, limit, total, hasNext: page * limit < total };
+    const meta: PaginationMeta = paginationMeta(paging, total);
     return { data: rows.map((row) => toListItem(row, surchargeTotals)), meta, counts };
   }
 

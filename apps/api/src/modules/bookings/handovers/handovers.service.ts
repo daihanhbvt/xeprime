@@ -50,6 +50,7 @@ import {
   ResolveHandoverOdometerDto,
   SaveHandoverDto,
 } from './dto/handover.dto';
+import { paginationMeta, resolvePaging } from '../../../common/pagination';
 
 /** Người gọi thấy được gì — controller kiểm quyền rồi truyền xuống, service không tự đọc. */
 export interface HandoverViewScope {
@@ -655,8 +656,7 @@ export class HandoversService {
     tenantId: string,
     query: { q?: string; page?: number; limit?: number },
   ): Promise<MissingOdometerQueueDto> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(100, Math.max(1, query.limit ?? 20));
+    const paging = resolvePaging(query, 20, 100);
     const search = query.q?.trim();
 
     const where: Prisma.VehicleHandoverWhereInput = {
@@ -686,8 +686,8 @@ export class HandoversService {
         where,
         // Việc tồn đọng lâu nhất lên đầu — hàng đợi vận hành đọc theo tuổi, không theo mới nhất.
         orderBy: [{ confirmedAt: 'asc' }, { id: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: {
           id: true,
           bookingId: true,
@@ -733,7 +733,7 @@ export class HandoversService {
         pickupOdometerKm: pickupKmByBooking.get(row.bookingId) ?? null,
         rowVersion: row.rowVersion,
       })),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

@@ -149,6 +149,31 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 
 `docs/design/` — 13 tài liệu: brand, tầm nhìn, gap analysis, creative brief, mobile-first, nguyên tắc thiết kế, IA, UX guidelines, thứ tự thiết kế màn, ràng buộc triển khai, Figma master prompt, **Vehicle 360 (12 — có mục trạng thái triển khai)**, Figma Vehicle 360 prompts. Định nghĩa **sản phẩm lý tưởng**; ADR vẫn thắng khi mâu thuẫn. Bắt đầu ở `docs/design/README.md`.
 
+## Tên cũ trong tài liệu thiết kế → chỗ hiện tại
+
+`docs/design-briefs/` (04/08/2026) và `docs/implementation/` (06/08/2026) mô tả mã nguồn TẠI
+THỜI ĐIỂM viết. Chín component dưới đây đã bị **xoá và viết lại** sau đó (git ghi `D`, không
+phải đổi tên), nên đường dẫn trong hai bộ tài liệu đó không mở được nữa. Đây là bảng tra; phần
+văn xuôi mô tả hành vi của chúng cũng có thể đã lỗi thời — kiểm lại bằng mã, đừng tin nguyên văn.
+
+| Tên trong tài liệu | Chỗ hiện tại |
+| --- | --- |
+| `features/vehicles/components/VehicleTable.tsx` | `VehicleCardGrid.tsx` + `VehicleListRow.tsx` (đổi thẻ/bảng theo `useIsMobile`) |
+| `features/vehicles/components/VehicleDetailView.tsx` | `VehicleDetailContent.tsx` (dùng chung trang thật + `VehicleDetailDialog.tsx`) |
+| `features/bookings/components/BookingFormDrawer.tsx` | `BookingFormDialog.tsx` |
+| `features/bookings/components/BookingDetailDrawer.tsx` | `BookingDetailDialog.tsx` + `BookingDetailContent.tsx` |
+| `features/shop/components/ShopProfileForm.tsx` | `ShopProfileWorkspace.tsx` |
+| `features/shop/components/ShopStatusCard.tsx` | `ShopStatusBanner.tsx` |
+| `features/reviews/components/MyTripsView.tsx` | `features/trips/components/TripsView.tsx` + `TripDetailView.tsx` — khu chuyến đi tách hẳn khỏi `features/reviews` |
+| `features/reviews/hooks/use-my-trips.ts` | `features/trips/hooks.ts` |
+| `features/marketplace/components/HeroSearch.tsx` | `features/marketplace/search/` (`SearchExperience`, `SearchCard`, `StickySearchBar`) |
+| `features/marketplace/components/VehicleRecommendations.tsx` | `MarketplaceResults.tsx` (giữ `FACET_FILTER_KEYS`) |
+| `lib/vehicle-labels.ts` | `lib/vehicle-label.ts` |
+
+`docs/project/` — bộ tài liệu as-built được `design-briefs` trích dẫn — **không tồn tại** (dọn
+ngày 23/07/2026, chưa từng vào git). Các trích dẫn tới nó đã gỡ liên kết, giữ lại tên để đọc
+được xuất xứ.
+
 ## Vì sao (đọc khi cần lý do, đừng đoán)
 
-`docs/decisions/` — **10 ADR (0001–0010)**. Mỗi quyết định kèm lý do và cái nó ghi đè. ADR thắng mọi tài liệu cũ khi mâu thuẫn.
+`docs/decisions/` — **12 ADR (0001–0012)**. Mỗi quyết định kèm lý do và cái nó ghi đè. ADR thắng mọi tài liệu cũ khi mâu thuẫn.

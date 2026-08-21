@@ -25,6 +25,7 @@ import {
   SubscriptionListQueryDto,
   UpdatePlanDto,
 } from './dto/billing.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const PLAN_SELECT = {
   id: true,
@@ -205,26 +206,22 @@ export class BillingService {
     query: SubscriptionListQueryDto,
   ): Promise<{ data: SubscriptionDto[]; meta: PaginationMeta }> {
     await this.assertTenant(tenantId);
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(
-      SUBSCRIPTION_MAX_LIMIT,
-      Math.max(1, query.limit ?? SUBSCRIPTION_DEFAULT_LIMIT),
-    );
+    const paging = resolvePaging(query, SUBSCRIPTION_DEFAULT_LIMIT, SUBSCRIPTION_MAX_LIMIT);
 
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.tenantSubscription.count({ where: { tenantId } }),
       this.prisma.tenantSubscription.findMany({
         where: { tenantId },
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: SUB_SELECT,
       }),
     ]);
 
     return {
       data: rows.map(toSubscriptionDto),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

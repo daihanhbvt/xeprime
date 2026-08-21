@@ -162,6 +162,9 @@
   --xp-shadow-raised: 0 4px 12px 0 rgba(41, 31, 15, 0.08);
   --xp-shadow-overlay: 0 8px 24px 0 rgba(41, 31, 15, 0.12);
 
+  /* ─── Nền hero trang chủ (dùng chung HomeHero + BannerCarousel) ────────── */
+  --xp-hero-backdrop: linear-gradient(120deg, #241d12, #3a2f1a);
+
   /* ─── Focus ───────────────────────────────────────────────────────────── */
   --xp-focus-outline-width: 2px;
   /* Figma `14:197` vẽ ring 3px; hạ xuống 2px theo góp ý review UI 12/08/2026 — giữ khớp

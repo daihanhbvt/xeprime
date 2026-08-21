@@ -11,6 +11,7 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useProvinceOptions } from '@/features/locations/hooks/use-provinces';
 import { useCreateBranch, useUpdateBranch } from '../hooks/use-branches';
 import type { Branch } from '../types';
+import styles from './BranchFormDialog.module.css';
 
 /**
  * Thêm/sửa chi nhánh — dùng `ResponsiveDialog` chung (modal ở desktop, drawer đáy ở mobile), nên
@@ -75,7 +76,7 @@ export function BranchFormDialog({
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 14 }}
+          className={styles.notice}
           message="Chi nhánh này chưa có tỉnh/thành"
           description={
             branch.legacyProvinceValue
@@ -89,7 +90,7 @@ export function BranchFormDialog({
         <Alert
           type="warning"
           showIcon
-          style={{ marginBottom: 14 }}
+          className={styles.notice}
           message="Không tải được danh sách tỉnh/thành"
           action={
             <Button size="small" onClick={provinces.refetch}>

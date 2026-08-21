@@ -27,7 +27,7 @@
   gap: 6px;
   margin-top: 34px;
   font-weight: 600;
-  color: var(--xp-color-success, #389e0d);
+  color: var(--xp-color-success);
   white-space: nowrap;
 }
 
@@ -40,7 +40,7 @@
 .devHint {
   font-size: 13px;
   color: var(--xp-color-text-tertiary);
-  background: var(--xp-color-bg-sand, #faf6ec);
+  background: var(--xp-color-bg-sand);
   border: 1px dashed var(--xp-color-border-secondary);
   border-radius: 8px;
   padding: 6px 10px;

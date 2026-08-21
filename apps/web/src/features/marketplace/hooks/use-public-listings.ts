@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { PaginationMeta } from '@xeprime/types';
-import { apiRequest } from '@/services/api-client';
+import { fetchPage } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import { toListingQueryParams } from '../filter-params';
 import type { MarketplaceFilters, PublicListing } from '../types';
@@ -29,16 +29,12 @@ export function usePublicListings(filters: MarketplaceFilters) {
   return useQuery({
     queryKey: queryKeys.marketplace.listings(params),
     queryFn: async (): Promise<PublicListingsResult> => {
-      const res = await apiRequest<PublicListing[]>('/public/listings', { query: params });
-      return {
-        listings: res.data,
-        meta: (res.meta as PaginationMeta | undefined) ?? {
-          page: 1,
-          limit: DEFAULT_LIMIT,
-          total: res.data.length,
-          hasNext: false,
-        },
-      };
+      const { items, meta } = await fetchPage<PublicListing>(
+        '/public/listings',
+        params,
+        DEFAULT_LIMIT,
+      );
+      return { listings: items, meta };
     },
   });
 }

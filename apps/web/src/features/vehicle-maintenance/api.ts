@@ -1,5 +1,13 @@
 import type { components } from '@xeprime/types';
-import { apiGet, apiPost, apiPut, apiRequest, type QueryParams } from '@/services/api-client';
+import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
+import {
+  apiGet,
+  apiPost,
+  apiPut,
+  fetchPage,
+  type Paged,
+  type QueryParams,
+} from '@/services/api-client';
 import type {
   CompleteMaintenanceInput,
   CorrectOdometerInput,
@@ -12,12 +20,11 @@ import type {
   SaveMaintenanceProfileInput,
   SaveMaintenanceRecordInput,
 } from './types';
-import type { PaginationMeta } from '@xeprime/types';
 
 type Presign = components['schemas']['SourceContractPresignDto'];
 type Download = components['schemas']['SourceContractDownloadDto'];
 
-export const MAINTENANCE_DEFAULT_LIMIT = 20;
+export const MAINTENANCE_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
 /**
  * Bảo dưỡng & KM (Wave 6). Chứng từ là TÀI LIỆU RIÊNG TƯ đi nguyên flow Wave 4.1:
@@ -39,26 +46,16 @@ export const correctOdometer = (
 ): Promise<MaintenanceProfile> =>
   apiPost<MaintenanceProfile>(`/vehicles/${vehicleId}/maintenance/odometer/correction`, body);
 
-/** Phân trang: đọc `meta` từ lớp bọc (`apiGet` chỉ trả `data`). */
-export async function fetchOdometerHistory(
+export const fetchOdometerHistory = (
   vehicleId: string,
   page = 1,
-  limit = 20,
-): Promise<{ items: OdometerReading[]; meta: PaginationMeta }> {
-  const res = await apiRequest<OdometerReading[]>(
+  limit = DEFAULT_PAGE_SIZE,
+): Promise<Paged<OdometerReading>> =>
+  fetchPage<OdometerReading>(
     `/vehicles/${vehicleId}/maintenance/odometer/history`,
-    { query: { page, limit } },
+    { page, limit },
+    limit,
   );
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page,
-      limit,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
 
 export const fetchMaintenanceRecords = (vehicleId: string): Promise<MaintenanceRecord[]> =>
   apiGet<MaintenanceRecord[]>(`/vehicles/${vehicleId}/maintenance/records`);
@@ -149,20 +146,10 @@ export function boardFiltersToParams(filters: MaintenanceBoardFilters): QueryPar
   };
 }
 
-export async function fetchMaintenanceBoard(
+export const fetchMaintenanceBoard = (
   params: QueryParams,
-): Promise<{ items: MaintenanceBoardItem[]; meta: PaginationMeta }> {
-  const res = await apiRequest<MaintenanceBoardItem[]>('/maintenance', { query: params });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: MAINTENANCE_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+): Promise<Paged<MaintenanceBoardItem>> =>
+  fetchPage<MaintenanceBoardItem>('/maintenance', params, MAINTENANCE_DEFAULT_LIMIT);
 
 export const fetchMaintenanceBoardSummary = (): Promise<MaintenanceBoardSummary> =>
   apiGet<MaintenanceBoardSummary>('/maintenance/summary');

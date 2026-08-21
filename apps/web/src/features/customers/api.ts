@@ -1,13 +1,14 @@
-import type { PaginationMeta } from '@xeprime/types';
 import {
   apiDelete,
   apiGet,
   apiPatch,
   apiPost,
-  apiRequest,
+  fetchPage,
+  type Paged,
   type QueryParams,
 } from '@/services/api-client';
 import { ApiClientError } from '@/services/api-client';
+import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import { uploadToR2, validateDocumentFile } from '@/services/upload';
 import type {
   CreateCustomerNoteInput,
@@ -26,13 +27,11 @@ import type {
   UpdateTenantCustomerInput,
 } from './types';
 
-export const CUSTOMERS_DEFAULT_LIMIT = 20;
+export const CUSTOMERS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
+/** Lịch sử thuê hiện trong một tab hẹp — trang ngắn hơn danh sách chính. */
 export const CUSTOMER_HISTORY_DEFAULT_LIMIT = 10;
 
-export interface Paged<T> {
-  items: T[];
-  meta: PaginationMeta;
-}
+export type { Paged };
 
 export function filtersToParams(filters: CustomerFilters): QueryParams {
   return {
@@ -41,22 +40,6 @@ export function filtersToParams(filters: CustomerFilters): QueryParams {
     sort: filters.sort ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? CUSTOMERS_DEFAULT_LIMIT,
-  };
-}
-
-function emptyMeta(limit: number, count: number): PaginationMeta {
-  return { page: 1, limit, total: count, hasNext: false };
-}
-
-async function fetchPage<T>(
-  path: string,
-  query: QueryParams,
-  fallbackLimit: number,
-): Promise<Paged<T>> {
-  const res = await apiRequest<T[]>(path, { query });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? emptyMeta(fallbackLimit, res.data.length),
   };
 }
 

@@ -1,5 +1,5 @@
 .item {
-  margin-bottom: 14px;
+  margin-bottom: var(--xp-space-md);
 }
 
 .list {

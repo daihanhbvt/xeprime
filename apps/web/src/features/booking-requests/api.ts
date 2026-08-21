@@ -1,3 +1,4 @@
+import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 import { apiPost, apiRequest, type QueryParams } from '@/services/api-client';
 import { BOOKING_REQUEST_STATUS_ALL } from './constants';
 import type {
@@ -13,7 +14,12 @@ import type {
   VehicleBusyDays,
 } from './types';
 
-export const BOOKING_REQUESTS_DEFAULT_LIMIT = 20;
+/**
+ * Fetch của inbox KHÔNG dùng `fetchPage` chung: `meta` ở đây là `BookingRequestListMeta`
+ * (thêm `statusCounts` cho hàng huy hiệu) chứ không phải `PaginationMeta` thuần — nhét vào
+ * helper chung sẽ làm rơi mất phần đếm ở nhánh dự phòng.
+ */
+export const BOOKING_REQUESTS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
 export interface BookingRequestListResult {
   items: BookingRequestItem[];

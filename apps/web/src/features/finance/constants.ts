@@ -1,6 +1,7 @@
 import { RECEIPT_SOURCE, RECEIPT_TYPE, isAutoReceipt } from '@xeprime/types';
+import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 
-export const RECEIPTS_DEFAULT_LIMIT = 20;
+export const RECEIPTS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
 /**
  * Khoảng ngày dựng sẵn cho thanh lọc.

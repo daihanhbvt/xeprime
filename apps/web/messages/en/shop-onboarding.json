@@ -7,16 +7,17 @@
   },
   "guide": {
     "trigger": "Guide",
-    "title": "Open your shop in 3 steps",
+    "title": "Open your shop in 4 steps",
     "steps": {
-      "fill": "Fill in your shop details: name, business type, province and contacts.",
-      "review": "XePrime reviews your profile. You can use the management portal while you wait.",
-      "publish": "Once approved: list your vehicles and start taking bookings on the marketplace."
+      "create": "Create the shop: name, business type, province and contacts.",
+      "complete": "Complete the profile, then press Submit for review — XePrime only looks at it once you submit.",
+      "prepare": "While you wait, you can already add vehicles and get your data ready.",
+      "publish": "Once approved: your vehicles go live on the marketplace and you start taking bookings."
     }
   },
   "form": {
     "title": "Create your shop",
-    "intro": "Register a shop to start renting out vehicles. XePrime reviews your profile before it is shown publicly.",
+    "intro": "This step only creates a draft. Next you will land on your shop profile to finish the details and submit for review.",
     "submit": "Create shop",
     "fields": {
       "name": {
@@ -51,7 +52,7 @@
   "tips": {
     "title": "Good to know",
     "accuracy": "Accurate details get your profile approved faster.",
-    "editable": "You can update everything after the shop is created."
+    "editable": "Everything here can be changed after the shop is created."
   },
   "privacy": {
     "title": "Your data is safe",

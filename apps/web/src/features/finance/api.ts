@@ -1,5 +1,11 @@
-import type { PaginationMeta } from '@xeprime/types';
-import { apiGet, apiPatch, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import {
+  apiGet,
+  apiPatch,
+  apiPost,
+  fetchPage,
+  type Paged,
+  type QueryParams,
+} from '@/services/api-client';
 import { apiDelete } from '@/services/api-client';
 import { RECEIPTS_DEFAULT_LIMIT } from './constants';
 import type {
@@ -16,10 +22,7 @@ import type {
   ReceiptSummary,
 } from './types';
 
-export interface ReceiptListResult {
-  items: Receipt[];
-  meta: PaginationMeta;
-}
+export type ReceiptListResult = Paged<Receipt>;
 
 export function filtersToParams(filters: ReceiptFilters): QueryParams {
   return {
@@ -50,18 +53,8 @@ export function summaryParams(filters: ReceiptFilters): QueryParams {
   return rest;
 }
 
-export async function fetchReceipts(filters: ReceiptFilters): Promise<ReceiptListResult> {
-  const res = await apiRequest<Receipt[]>('/receipts', { query: filtersToParams(filters) });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: RECEIPTS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+export const fetchReceipts = (filters: ReceiptFilters): Promise<ReceiptListResult> =>
+  fetchPage<Receipt>('/receipts', filtersToParams(filters), RECEIPTS_DEFAULT_LIMIT);
 
 export const fetchReceipt = (id: string): Promise<ReceiptDetail> =>
   apiGet<ReceiptDetail>(`/receipts/${id}`);
@@ -98,10 +91,7 @@ export const deleteCategory = (id: string): Promise<void> =>
 
 // --- Công nợ + dashboard ---------------------------------------------------
 
-export interface DebtListResult {
-  items: DebtItem[];
-  meta: PaginationMeta;
-}
+export type DebtListResult = Paged<DebtItem>;
 
 export function debtFiltersToParams(filters: DebtFilters): QueryParams {
   return {
@@ -112,18 +102,8 @@ export function debtFiltersToParams(filters: DebtFilters): QueryParams {
   };
 }
 
-export async function fetchDebts(filters: DebtFilters): Promise<DebtListResult> {
-  const res = await apiRequest<DebtItem[]>('/debts', { query: debtFiltersToParams(filters) });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: RECEIPTS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+export const fetchDebts = (filters: DebtFilters): Promise<DebtListResult> =>
+  fetchPage<DebtItem>('/debts', debtFiltersToParams(filters), RECEIPTS_DEFAULT_LIMIT);
 
 export const fetchFinanceSummary = (from?: string, to?: string): Promise<FinanceSummary> =>
   apiGet<FinanceSummary>('/finance/summary', { from: from ?? null, to: to ?? null });

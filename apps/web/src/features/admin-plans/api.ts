@@ -1,5 +1,5 @@
-import type { PaginationMeta } from '@xeprime/types';
-import { apiGet, apiPatch, apiPost, apiRequest } from '@/services/api-client';
+import { ALL_FILTER, DEFAULT_PAGE_SIZE } from '@/constants/filters';
+import { apiGet, apiPatch, apiPost, fetchPage, type Paged } from '@/services/api-client';
 import type {
   AssignSubscriptionInput,
   CreatePlanInput,
@@ -8,9 +8,9 @@ import type {
   UpdatePlanInput,
 } from './types';
 
-export const SUBSCRIPTIONS_DEFAULT_LIMIT = 20;
+export const SUBSCRIPTIONS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export const fetchPlans = (status: 'active' | 'all' = 'all'): Promise<Plan[]> =>
+export const fetchPlans = (status: 'active' | typeof ALL_FILTER = ALL_FILTER): Promise<Plan[]> =>
   apiGet<Plan[]>(`/platform/plans?status=${status}`);
 
 export const createPlan = (body: CreatePlanInput): Promise<Plan> =>
@@ -22,28 +22,17 @@ export const updatePlan = (id: string, body: UpdatePlanInput): Promise<Plan> =>
 export const archivePlan = (id: string): Promise<Plan> =>
   apiPost<Plan>(`/platform/plans/${id}/archive`);
 
-export interface SubscriptionListResult {
-  items: Subscription[];
-  meta: PaginationMeta;
-}
+export type SubscriptionListResult = Paged<Subscription>;
 
-export async function fetchTenantSubscriptions(
+export const fetchTenantSubscriptions = (
   tenantId: string,
   page = 1,
-): Promise<SubscriptionListResult> {
-  const res = await apiRequest<Subscription[]>(`/platform/tenants/${tenantId}/subscriptions`, {
-    query: { page, limit: SUBSCRIPTIONS_DEFAULT_LIMIT },
-  });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: SUBSCRIPTIONS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+): Promise<SubscriptionListResult> =>
+  fetchPage<Subscription>(
+    `/platform/tenants/${tenantId}/subscriptions`,
+    { page, limit: SUBSCRIPTIONS_DEFAULT_LIMIT },
+    SUBSCRIPTIONS_DEFAULT_LIMIT,
+  );
 
 export const assignSubscription = (
   tenantId: string,

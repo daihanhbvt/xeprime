@@ -178,3 +178,16 @@
   background: var(--xp-color-primary);
   color: var(--xp-color-text-light-solid);
 }
+
+/*
+ * Skeleton phải CAO ĐÚNG bằng hàng tab thật, nếu không nội dung bên dưới nhảy một nhịp khi
+ * dữ liệu về. Trước đây là `style={{ height: 44 }}` (CLAUDE.md §5 cấm inline style).
+ */
+.tabsSkeleton {
+  height: 44px;
+}
+
+.tabsSkeleton :global(.ant-skeleton-input) {
+  height: 44px;
+  min-width: 0;
+}

@@ -48,7 +48,8 @@
     "INTERNAL_ERROR": "Máy chủ gặp sự cố. Thử lại sau giúp mình nhé.",
     "UPLOADS_NOT_CONFIGURED": "Chức năng tải tệp chưa được cấu hình.",
     "UPLOAD_FAILED": "Tải tệp lên thất bại. Thử lại giúp mình nhé.",
-    "TRIP_CANCEL_NOT_ALLOWED": "Chuyến này không còn huỷ được nữa. Vui lòng liên hệ chủ xe."
+    "TRIP_CANCEL_NOT_ALLOWED": "Chuyến này không còn huỷ được nữa. Vui lòng liên hệ chủ xe.",
+    "PROFILE_INCOMPLETE": "Hồ sơ gian hàng còn thiếu thông tin bắt buộc nên chưa gửi duyệt được."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

@@ -31,6 +31,7 @@ import {
   MESSAGE_DEFAULT_LIMIT,
   MESSAGE_MAX_LIMIT,
 } from './dto/chat.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 /** Phía của người xem trong một hội thoại — quyết định quyền, senderType, và unread counter. */
 type Side = 'customer' | 'shop';
@@ -198,11 +199,7 @@ export class ChatService {
     userId: string,
     query: { page?: number; limit?: number },
   ): Promise<{ data: ConversationSummaryDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(
-      CONVERSATION_MAX_LIMIT,
-      Math.max(1, query.limit ?? CONVERSATION_DEFAULT_LIMIT),
-    );
+    const paging = resolvePaging(query, CONVERSATION_DEFAULT_LIMIT, CONVERSATION_MAX_LIMIT);
 
     const tenantIds = await this.activeTenantIds(userId);
     const where: Prisma.ConversationWhereInput = {
@@ -214,15 +211,15 @@ export class ChatService {
       this.prisma.conversation.findMany({
         where,
         orderBy: [{ lastMessageAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: CONVERSATION_SELECT,
       }),
     ]);
 
     return {
       data: rows.map((c) => toSummary(c, c.customerUserId === userId ? 'customer' : 'shop')),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

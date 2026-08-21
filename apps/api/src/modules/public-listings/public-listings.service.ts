@@ -31,6 +31,7 @@ import type {
   PublicShopSummaryDto,
   ShopListingQueryDto,
 } from './dto/public-listing.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 48;
@@ -335,8 +336,7 @@ export class PublicListingsService {
     data: PublicListingDto[];
     meta: PaginationMeta;
   }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(MAX_LIMIT, Math.max(1, query.limit ?? DEFAULT_LIMIT));
+    const paging = resolvePaging(query, DEFAULT_LIMIT, MAX_LIMIT);
 
     const where = buildListingWhere(await this.withResolvedProvince(query));
 
@@ -346,8 +346,8 @@ export class PublicListingsService {
       this.prisma.publicListing.findMany({
         where,
         orderBy: listingOrderBy(query.sort),
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: LISTING_CARD_SELECT,
       }),
     ]);
@@ -355,7 +355,7 @@ export class PublicListingsService {
 
     return {
       data: rows.map((row) => toListingCard(row, completedTrips.get(row.vehicleId) ?? 0)),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 
@@ -596,8 +596,7 @@ export class PublicListingsService {
   async listShops(
     query: PublicShopListQueryDto,
   ): Promise<{ data: PublicShopSummaryDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(MAX_LIMIT, Math.max(1, query.limit ?? DEFAULT_LIMIT));
+    const paging = resolvePaging(query, DEFAULT_LIMIT, MAX_LIMIT);
 
     // "Có xe hiển thị được" phải dùng đúng luật hiển thị, không chỉ `status = active`: gian hàng
     // mà toàn bộ xe nằm ở tỉnh đã ẩn thì không còn là gian hàng nổi bật.
@@ -613,8 +612,8 @@ export class PublicListingsService {
       this.prisma.tenant.findMany({
         where,
         orderBy: [{ ratingAvg: 'desc' }, { ratingCount: 'desc' }, { createdAt: 'desc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: {
           name: true,
           slug: true,
@@ -636,7 +635,7 @@ export class PublicListingsService {
         ratingAvg: t.ratingAvg as unknown as string,
         ratingCount: t.ratingCount,
       })),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 
@@ -694,8 +693,7 @@ export class PublicListingsService {
     slug: string,
     query: ShopListingQueryDto,
   ): Promise<{ data: PublicListingDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(MAX_LIMIT, Math.max(1, query.limit ?? DEFAULT_LIMIT));
+    const paging = resolvePaging(query, DEFAULT_LIMIT, MAX_LIMIT);
 
     // Cùng scope với marketplace: xe của gian hàng nằm ở tỉnh đã bị ẩn cũng không hiện ở trang
     // shop — nếu không, trang shop thành đường vòng qua luật hiển thị.
@@ -706,8 +704,8 @@ export class PublicListingsService {
       this.prisma.publicListing.findMany({
         where,
         orderBy: listingOrderBy(query.sort),
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: LISTING_CARD_SELECT,
       }),
     ]);
@@ -715,7 +713,7 @@ export class PublicListingsService {
 
     return {
       data: rows.map((row) => toListingCard(row, completedTrips.get(row.vehicleId) ?? 0)),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

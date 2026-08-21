@@ -28,7 +28,9 @@ Four capabilities named in the request are **present in the data model and absen
 
 Approval therefore reviews a **profile snapshot**, not documents — a shop is approved on self-declared text, with no licence, ID or vehicle-ownership evidence attached anywhere in the flow.
 
-Two defects are worth naming up front: `AppShell` shows the banner *"Gian hàng đang chờ duyệt"* for a shop in `draft` or `needs_revision` — neither of which is awaiting review — because `useTenantScope.isPendingApproval` groups all three; and `NoTenantState` accepts an `onLogout` prop that `AppShell` never passes, so its logout affordance is unreachable.
+One defect is worth naming up front: `NoTenantState` accepts an `onLogout` prop that `AppShell` never passes, so its logout affordance is unreachable.
+
+> **Updated 2026-08-21.** Four items this brief recorded as defects have been closed, and the text below reflects the new behaviour: the portal status notice now says something different for each status and links to where the fix lives (was ST-1); shop creation lands on `/manage/shop` rather than the empty dashboard; `/manage/shop` carries a completeness checklist (was §9 / #27); and `submitForReview` rejects an incomplete profile with `PROFILE_INCOMPLETE` (was AP-5). The shared rule behind the last two lives in `packages/types/src/shop-profile.ts`.
 
 ---
 
@@ -60,7 +62,7 @@ Authentication mechanics and routing (brief 00) · marketplace discovery (brief 
 | 12 | Tax and business licence info | **Partially implemented** — free-text fields, optional for every tenant type, never verified | `ShopProfileForm` "Địa chỉ & pháp lý" |
 | 13 | Bank information | Implemented | Bank name / account no / account holder |
 | 14 | Bank QR (`qrUrl`) | **Referenced but not implemented** — column, DTO field and service select exist; absent from `shopProfileSchema` and the form | `TenantProfile.qrUrl` vs `shopProfileSchema` |
-| 15 | **Tenant documents** | **Referenced but not implemented** — `tenant_documents` model with `documentType`, `status`, `rejectReason`, `reviewedBy`, `reviewedAt`; **no endpoint, no page, no upload path** | `schema.prisma`; confirmed absent in [`docs/project/04_API.md`](../project/04_API.md) and [`10_MISSING_FEATURES.md`](../project/10_MISSING_FEATURES.md) |
+| 15 | **Tenant documents** | **Referenced but not implemented** — `tenant_documents` model with `documentType`, `status`, `rejectReason`, `reviewedBy`, `reviewedAt`; **no endpoint, no page, no upload path** | `schema.prisma`; confirmed absent in `docs/project/04_API.md` and `10_MISSING_FEATURES.md` |
 | 16 | Approval submission | Implemented | `TenantsService.submitForReview` |
 | 17 | Approval status display | Implemented | [`ShopStatusCard.tsx`](../../apps/web/src/features/shop/components/ShopStatusCard.tsx) |
 | 18 | Revision request | **Partially implemented** — status and reason are set and shown; **no notification is emitted** | `TENANT_NOTIFY_BY_KIND.request_revision = null` |
@@ -72,7 +74,7 @@ Authentication mechanics and routing (brief 00) · marketplace discovery (brief 
 | 24 | Shop settings | **Partially implemented** — settings = the profile form only; `TenantProfile.settings` JSONB is unused | `settings_json` column, no reader/writer found |
 | 25 | Pickup areas | **Placeholder** — `PlaceholderPage` with "Chưa có dữ liệu"; no model, no API | [`pickup-areas/page.tsx`](<../../apps/web/src/app/(manage)/manage/pickup-areas/page.tsx>) |
 | 26 | Return to marketplace | Implemented | Onboarding back link; `NoTenantState` "Quay lại tìm xe" |
-| 27 | Onboarding checklist | **Referenced but not implemented** — no guidance on what completes a profile | No checklist component found |
+| 27 | Onboarding checklist | Implemented — required vs recommended items on `/manage/shop`, plus a three-step card on the dashboard until the shop is live | `ShopProfileChecklist.tsx`, `ShopOnboardingCard.tsx`, `packages/types/src/shop-profile.ts` |
 | 28 | Tenant invites | **Referenced but not implemented** — `tenant_invites` model with token/expiry; member add is direct by email | `schema.prisma`; `docs/project/10_MISSING_FEATURES.md` |
 
 ---
@@ -107,7 +109,7 @@ Derived from what the implementation optimizes for; no product requirement docum
 |---|---|---|
 | Authenticated user, no tenant | `POST /tenants` — create a draft shop and become its owner | `TenantsService.registerShop` rejects an existing active membership with `CONFLICT` |
 | `shop_owner` | View, update profile, submit for review | `tenant.view`, `tenant.update`, `tenant.submit_review` |
-| `shop_manager` | View and (by default) **not** update the profile or submit review | Per [`docs/project/02_USER_ROLES.md`](../project/02_USER_ROLES.md): manager lacks `tenant.update` and `tenant.submit_review` unless customized |
+| `shop_manager` | View and (by default) **not** update the profile or submit review | Per `docs/project/02_USER_ROLES.md`: manager lacks `tenant.update` and `tenant.submit_review` unless customized |
 | `shop_staff` / `shop_viewer` | View only | `tenant.view` |
 | `reviewer` / `platform_admin` | Approve, reject, request revision | `platform.approvals.review` |
 | `platform_admin` / `finance_admin` | Lock and unlock | `platform.tenants.manage` |
@@ -184,10 +186,10 @@ sequenceDiagram
   API->>API: tx: tenant(draft) + owner membership + empty profile
   API-->>OB: MyShopDto
   OB->>OB: invalidateQueries() → /auth/me now has a tenant
-  OB->>OB: hasTenant → router.replace('/manage')
+  OB->>OB: hasTenant → router.replace('/manage/shop')
 ```
 
-After creation the onboarding page redirects to `/manage`. **There is no guidance step**: the shop lands on the portal dashboard with an empty profile, an unsubmitted draft, and no instruction to complete or submit anything.
+After creation the onboarding page redirects to **`/manage/shop`**, where the status banner and the completeness checklist state the remaining work. It previously redirected to `/manage`, dropping the shop on a dashboard of zeroes with an unsubmitted draft and no instruction to complete or submit anything.
 
 ### 8.2 Profile completion and approval
 
@@ -214,20 +216,20 @@ flowchart TD
 
 ## 9. Onboarding checklist
 
-**Status: Referenced but not implemented.** No checklist, progress indicator or completeness signal exists anywhere in the module. The *implicit* checklist that the system actually enforces is:
+**Status: Implemented.** `ShopProfileChecklist` on `/manage/shop` scores the profile live from the form values and splits items by consequence — required items block submission, recommended ones do not. `ShopOnboardingCard` shows the same progress as three steps on the dashboard until the shop is live and has a vehicle. Both call `missingShopProfileRequirements` / `missingShopProfileSuggestions` from `@xeprime/types` — the same functions `submitForReview` enforces with, so the checklist cannot disagree with the server. What the system enforces:
 
 | Step | Enforced? | Where |
 |---|---|---|
 | Create the shop (name required) | Yes — `Length(2,255)` | `RegisterShopDto` |
-| Complete the profile | **No** — every profile field is optional | `UpdateTenantProfileDto`, `shopProfileSchema` |
+| Complete the profile | **Partly** — display name, province, owner name and owner phone are required to submit; the rest stay optional | `missingShopProfileRequirements`, `shopProfileSchema` |
 | Upload logo / cover | **No** | `ImageUploadField`, nullable |
 | Provide legal information | **No** — optional for both tenant types | `ShopProfileForm` |
 | Provide banking information | **No** | Same |
 | Upload documents | **Not possible** | No API |
-| Submit for review | Yes — status-gated | `submitForReview` |
+| Submit for review | Yes — status-gated **and** completeness-gated | `submitForReview` |
 | Add a vehicle and submit it publicly | Separate module | Vehicle brief |
 
-**Consequence (confirmed):** a shop can submit an entirely empty profile for review. `submitForReview` validates only the tenant's *status*, never the completeness of the snapshot it stores, so the platform reviewer can receive `{}` as evidence.
+**Previously:** a shop could submit an entirely empty profile, because `submitForReview` validated only the tenant’s *status* and never the snapshot it stored — the reviewer could receive `{}` as evidence. It now rejects an incomplete profile with `PROFILE_INCOMPLETE` plus `details.missing[]`, and the web runs the same check before it calls the endpoint.
 
 ---
 
@@ -301,9 +303,9 @@ Only `draft`/`needs_revision`/`rejected` may submit. Reject and request-revision
 | AP-2 | Notifications go to `tenant.ownerUserId` only — a `shop_manager` who submitted the profile is never told the outcome. | Same |
 | AP-3 | Review evidence is a profile snapshot; **no documents are attached** because none can be uploaded. | §2.3 #15 |
 | AP-4 | No SLA, queue position or expected-response indication is shown to a waiting shop. | `ShopStatusCard` |
-| AP-5 | Submission does not validate completeness, so an empty snapshot can enter the queue. | `submitForReview` |
+| AP-5 | ~~Submission does not validate completeness~~ — **closed 2026-08-21**: `submitForReview` rejects an incomplete profile with `PROFILE_INCOMPLETE`. | `submitForReview` |
 | AP-6 | The shop cannot see its own approval history — only the latest task. | `getMyShop` |
-| AP-7 | Suspension and unlock produce audit entries but **no notification and no in-portal notice**. A locked shop discovers it by noticing its inventory has vanished. | `platform-tenants.service.ts`; no `SUSPENDED` branch in `ShopStatusCard` or `AppShell` |
+| AP-7 | Suspension and unlock produce audit entries but **no notification**. The in-portal gap is closed — `suspended` and `expired` now render their own shell banner with a route to support — but nothing is pushed to the shop. | `platform-tenants.service.ts`; `features/shop/status-notice.ts` |
 
 ---
 
@@ -311,7 +313,7 @@ Only `draft`/`needs_revision`/`rejected` may submit. Reject and request-revision
 
 | Surface | Loading | Empty | Error | Success |
 |---|---|---|---|---|
-| `/manage/onboarding` | Centred `Spin` while `/auth/me` resolves **and** while redirecting an existing-tenant user | — | Registration failure → `Alert` in the card | Redirect to `/manage` |
+| `/manage/onboarding` | Centred `Spin` while `/auth/me` resolves **and** while redirecting an existing-tenant user | — | Registration failure → `Alert` in the card | Redirect to `/manage/shop` |
 | `NoTenantState` | — | This *is* an empty state: title, explanation, two actions | — | — |
 | `/manage/shop` | `ManagePageHeader` + `Skeleton` 8 rows | — | `Result status="error"` + "Thử lại" | `message.success('Đã lưu hồ sơ')` |
 | `ShopStatusCard` | Button `loading` | — | Toast via the page | Status-specific `Alert` per state (info / warning / error / success) |
@@ -322,8 +324,8 @@ Only `draft`/`needs_revision`/`rejected` may submit. Reject and request-revision
 
 | # | Problem |
 |---|---|
-| ST-1 | **`AppShell` shows "Gian hàng đang chờ duyệt" for `draft` and `needs_revision` shops.** `isPendingApproval` is true for `PENDING_REVIEW`, `NEEDS_REVISION` **and** `DRAFT`, so a shop that has never submitted — and one being asked to fix something — both read as "waiting for the platform". The banner also carries the sub-text "xe chưa lên marketplace cho tới khi hồ sơ được duyệt", which for a draft shop misattributes the delay to the platform. |
-| ST-2 | No portal state exists for `SUSPENDED`, `REJECTED` at shell level, or `EXPIRED`; `ShopStatusCard` covers rejection and revision but only on `/manage/shop`. |
+| ST-1 | ~~“Chờ duyệt” banner shown to `draft` and `needs_revision` shops~~ — **closed 2026-08-21**: one notice per status, sourced from `features/shop/status-notice.ts` |
+| ST-2 | ~~No portal state for `SUSPENDED` / `REJECTED` / `EXPIRED` at shell level~~ — **closed 2026-08-21**: every status a shop can hold now has its own shell notice with a next-step link, and `/manage/shop` keeps the fuller version with the reviewer’s reason. |
 | ST-3 | The pickup-areas placeholder says "Chưa có dữ liệu" — which implies an empty list rather than an unbuilt feature — and offers no return path or availability information. |
 | ST-4 | `NoTenantState` accepts `onLogout` but `AppShell` renders `<NoTenantState />` with no props, so the logout affordance is dead code. |
 
@@ -397,10 +399,10 @@ Only `draft`/`needs_revision`/`rejected` may submit. Reject and request-revision
 | ID | Problem |
 |---|---|
 | AP-1 | Revision requests are silent — the single largest workflow gap in this module |
-| AP-7 | Suspension is invisible to the shop: no notification, no portal notice |
-| ST-1 | "Chờ duyệt" banner shown to `draft` and `needs_revision` shops |
-| §9 | No onboarding guidance: after creation the shop is dropped on an empty portal with an unsubmitted draft |
-| AP-5 | An empty profile can be submitted for review |
+| AP-7 | Suspension notification is still missing; the portal notice half is **closed 2026-08-21** |
+| ST-1 | ~~“Chờ duyệt” banner shown to `draft` and `needs_revision` shops~~ — **closed 2026-08-21** |
+| §9 | ~~No onboarding guidance after creation~~ — **closed 2026-08-21**: creation lands on `/manage/shop` with a checklist; the dashboard carries a three-step card |
+| AP-5 | ~~An empty profile can be submitted for review~~ — **closed 2026-08-21** |
 | §2.3 #15 | No document upload, so approval reviews self-declared text only |
 | §2.3 #14 | Bank QR exists in the model and API and is unreachable in the UI |
 | §2.3 #9 | Shop phone and email cannot be edited after registration |
@@ -445,13 +447,13 @@ Tenant document upload and review · bank QR UI · pickup-area management (model
 
 1. **Emit a notification for revision requests.** The code comment already names this as deferred; a shop currently cannot learn it has been asked for something. Cheapest high-impact fix in the module.
 2. **Notify on suspension and unlock**, and render a portal-level notice for `suspended` so a locked shop is not left inferring it from vanished inventory.
-3. **Fix the pending banner** so `draft` and `needs_revision` do not read as "waiting for the platform" — three distinct states need three distinct messages.
-4. **Add an onboarding checklist** driven by the profile fields the platform actually wants, and use it to gate or warn before submission so empty snapshots stop entering the queue.
+3. ~~**Fix the pending banner**~~ — **done 2026-08-21.** `useTenantScope.isPendingApproval` is gone; `shopStatusNotice(status)` maps each status to its own title, tone, shell line and next-step link, and the shell suppresses itself on `/manage/shop` where the fuller banner already lives.
+4. ~~**Add an onboarding checklist**~~ — **done 2026-08-21.** `packages/types/src/shop-profile.ts` defines required vs recommended items once; the web renders it and the API enforces it, so empty snapshots no longer enter the queue.
 5. **Decide the document question.** Either build upload + review against the existing `tenant_documents` model, or remove the model and state that approval is profile-based. The current halfway position means the reviewer's quality gate has no evidence behind it.
 6. **Expose the bank QR field** or drop the column; a payment-relevant field that exists everywhere except the UI is a latent inconsistency.
 7. **Make province a picker** fed by the same destinations source the marketplace uses, and populate `provinceCode`.
 8. **Allow editing shop contact details**, which are published publicly and currently frozen at registration.
-9. **Enforce the pending-review edit lock server-side**, not only in the UI.
+9. ~~**Enforce the pending-review edit lock server-side**~~ — already done: `updateProfile` rejects a write while `pending_review` with `INVALID_STATUS_TRANSITION`.
 10. **Show the shop its own approval history**, not just the latest decision.
 11. **Resolve `expired`**: either implement it (with notification and a defined effect on inventory) or remove the value so the vocabulary stops promising a state that cannot occur.
 12. **Build or remove pickup areas** — they are referenced by the booking flow while unmanageable here.
@@ -559,7 +561,7 @@ No behaviour in this module contradicts an accepted ADR. The absence of expiry h
 [0002 Session cookie](../decisions/0002-auth-session-cookie.md) · [0005 Status enums](../decisions/0005-status-enums.md) · [0007 API type contract](../decisions/0007-api-type-contract.md) · [0008 Public listings sync](../decisions/0008-public-listings-sync.md) · [0010 Billing plans and subscriptions](../decisions/0010-billing-plans-subscriptions.md)
 
 ### Secondary documentation
-[`docs/project/02_USER_ROLES.md`](../project/02_USER_ROLES.md) · [`04_API.md`](../project/04_API.md) · [`05_PAGES.md`](../project/05_PAGES.md) · [`07_BUSINESS_RULES.md`](../project/07_BUSINESS_RULES.md) · [`08_WORKFLOW.md`](../project/08_WORKFLOW.md) · [`09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) · [`10_MISSING_FEATURES.md`](../project/10_MISSING_FEATURES.md)
+`docs/project/02_USER_ROLES.md` · `04_API.md` · `05_PAGES.md` · `07_BUSINESS_RULES.md` · `08_WORKFLOW.md` · `09_DESIGN_PROBLEMS.md` · `10_MISSING_FEATURES.md`
 
 ### Verification performed for this brief
 

@@ -14,6 +14,7 @@ import {
   DriverPageDto,
   UpdateDriverDto,
 } from './dto/driver.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const SELECT = {
   id: true,
@@ -50,8 +51,7 @@ export class DriversService {
   ) {}
 
   async list(tenantId: string, query: DriverListQueryDto): Promise<DriverPageDto> {
-    const page = query.page ?? 1;
-    const limit = Math.min(query.limit ?? DRIVER_DEFAULT_LIMIT, DRIVER_MAX_LIMIT);
+    const paging = resolvePaging(query, DRIVER_DEFAULT_LIMIT, DRIVER_MAX_LIMIT);
 
     const where: Prisma.DriverWhereInput = {
       tenantId,
@@ -74,8 +74,8 @@ export class DriversService {
       this.prisma.driver.findMany({
         where,
         orderBy: [{ status: 'asc' }, { name: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: SELECT,
       }),
     ]);
@@ -83,7 +83,7 @@ export class DriversService {
     const counts = await this.activeBookingCounts(rows.map((r) => r.id));
     return {
       data: rows.map((r) => toDto(r, counts.get(r.id) ?? 0)),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

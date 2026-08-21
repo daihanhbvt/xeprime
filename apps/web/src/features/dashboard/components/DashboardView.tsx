@@ -12,6 +12,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ROUTES } from '@/constants/routes';
 import { dayjs } from '@/lib/datetime';
 import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
@@ -19,6 +20,7 @@ import { useVehicleStats } from '../hooks/use-vehicle-stats';
 import { useDashboardBookings } from '../hooks/use-dashboard-bookings';
 import { BookingMiniList } from './BookingMiniList';
 import { DashboardPanel } from './DashboardPanel';
+import { ShopOnboardingCard } from './ShopOnboardingCard';
 import { StatCard } from './StatCard';
 import styles from './DashboardView.module.css';
 
@@ -35,6 +37,7 @@ function todayLabel(fmt: AppFormat): string {
 }
 
 export function DashboardView() {
+  const t = useTranslations('Dashboard');
   const fmt = useAppFormat();
   const router = useRouter();
   const { data: stats, isLoading } = useVehicleStats();
@@ -45,64 +48,70 @@ export function DashboardView() {
   return (
     <div className={styles.wrap}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Dashboard</h1>
+        <h1 className={styles.title}>{t('title')}</h1>
         <p className={styles.date}>{todayLabel(fmt)}</p>
       </header>
 
+      {/*
+        Gian hàng chưa duyệt xong / chưa có xe: ba bước cần làm đứng TRƯỚC bảng số liệu, vì lúc
+        đó mọi ô số đều là 0 và không ô nào nói được việc gì tiếp theo. Thẻ tự ẩn khi hết việc.
+      */}
+      <ShopOnboardingCard vehicleCount={stats?.total} />
+
       <div className={styles.stats}>
         <StatCard
-          label="Xe sẵn sàng"
+          label={t('stats.available')}
           value={stats ? `${stats.available}/${stats.total}` : '—'}
           icon={CarOutlined}
           tone="green"
           loading={isLoading}
         />
         <StatCard
-          label="Đang cho thuê"
-          value={activeCount === undefined ? '—' : `${activeCount} xe`}
+          label={t('stats.renting')}
+          value={activeCount === undefined ? '—' : t('stats.rentingValue', { count: activeCount })}
           icon={KeyOutlined}
           tone="blue"
         />
-        <StatCard label="Doanh thu" value="—" icon={DollarOutlined} tone="gold" />
+        <StatCard label={t('stats.revenue')} value="—" icon={DollarOutlined} tone="gold" />
         <StatCard
-          label="Quá hạn trả"
-          value={overdueCount === undefined ? '—' : `${overdueCount} đơn`}
+          label={t('stats.overdue')}
+          value={overdueCount === undefined ? '—' : t('stats.overdueValue', { count: overdueCount })}
           icon={ExclamationCircleOutlined}
           tone="red"
           danger={Boolean(overdueCount)}
         />
-        <StatCard label="Tiền cọc đang giữ" value="—" icon={LockOutlined} tone="gold" />
+        <StatCard label={t('stats.deposit')} value="—" icon={LockOutlined} tone="gold" />
       </div>
 
       <div className={styles.panels}>
-        <DashboardPanel title="Đơn gần đây" icon={<FileTextOutlined />}>
+        <DashboardPanel title={t('panels.recent')} icon={<FileTextOutlined />}>
           <BookingMiniList
             items={recent.data?.items ?? []}
             loading={recent.isLoading}
-            empty="Chưa có đơn nào"
+            empty={t('panels.recentEmpty')}
             onSelect={goBookings}
           />
         </DashboardPanel>
-        <DashboardPanel title="Quá hạn / Trả hôm nay" icon={<WarningOutlined />}>
+        <DashboardPanel title={t('panels.dueToday')} icon={<WarningOutlined />}>
           <BookingMiniList
             items={dueToday.data?.items ?? []}
             loading={dueToday.isLoading}
-            empty="Không có xe quá hạn 🎉"
+            empty={t('panels.dueTodayEmpty')}
             onSelect={goBookings}
           />
         </DashboardPanel>
-        <DashboardPanel title="Trả xe trong 3 ngày tới" icon={<ClockCircleOutlined />}>
+        <DashboardPanel title={t('panels.upcoming')} icon={<ClockCircleOutlined />}>
           <BookingMiniList
             items={upcoming.data?.items ?? []}
             loading={upcoming.isLoading}
-            empty="Không có xe nào sắp trả 🎉"
+            empty={t('panels.upcomingEmpty')}
             onSelect={goBookings}
           />
         </DashboardPanel>
         <DashboardPanel
-          title="Thu Chi hôm nay"
+          title={t('panels.receipts')}
           icon={<SwapOutlined />}
-          empty="Chưa có giao dịch hôm nay"
+          empty={t('panels.receiptsEmpty')}
         />
       </div>
     </div>

@@ -17,6 +17,7 @@ import { IMAGE_UPLOAD_MIME_TYPES } from '@xeprime/types';
 import { getErrorMessage } from '@/services/api-client';
 import { uploadImage, validateImageFile, type UploadPresign } from '@/services/upload';
 import { PreviewImage } from '@/components/data-display/PreviewImage';
+import fieldStyles from './field.module.css';
 import styles from './ImageGalleryField.module.css';
 import { useUploadRejectionMessage } from '@/i18n/use-upload-rejection-message';
 
@@ -137,7 +138,7 @@ export function ImageGalleryField<T extends FieldValues>({
       label={label}
       validateStatus={fieldState.error ? 'error' : ''}
       help={fieldState.error?.message ?? 'Kéo thả để đổi thứ tự hiển thị'}
-      style={{ marginBottom: 14 }}
+      className={fieldStyles.item}
     >
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={items} strategy={rectSortingStrategy}>

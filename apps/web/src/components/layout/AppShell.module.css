@@ -38,10 +38,44 @@
   text-align: center;
 }
 
-.pendingBanner {
-  padding: var(--xp-space-md);
-  background: color-mix(in srgb, var(--xp-color-warning) 12%, var(--xp-color-bg-container));
-  border-radius: var(--xp-border-radius);
+/*
+ * Dải trạng thái gian hàng: một dòng, không phải một màn hình.
+ *
+ * Bản trước dùng `Result` của AntD — icon lớn canh giữa, padding dày — nên nó chiếm gần hết
+ * khung nhìn đầu tiên của MỌI trang quản lý và đẩy dashboard xuống dưới nếp gấp. Màu và icon
+ * giờ do `type` của `Alert` lo, khác nhau theo trạng thái, nên ở đây không tô màu cứng nữa.
+ */
+.statusNotice {
+  align-items: flex-start;
+  margin-bottom: var(--xp-space-md);
+}
+
+.statusNotice :global(.ant-alert-actions) {
+  display: flex;
+  align-items: center;
+  margin-inline-start: var(--xp-space-md);
+}
+
+/*
+ * Vỏ compact (`≤1024px`, đúng ranh duy nhất của vỏ — xem `layout-breakpoints.test.ts`): nút
+ * xuống hàng riêng và chiếm hết bề ngang, thay vì bị nén cạnh chữ cho tới khi trạng thái xuống
+ * còn hai từ mỗi dòng và vùng chạm nhỏ hơn ngưỡng.
+ */
+@media (max-width: 1024px) {
+  .statusNotice {
+    flex-wrap: wrap;
+  }
+
+  .statusNotice :global(.ant-alert-actions) {
+    width: 100%;
+    margin-block-start: var(--xp-space-sm);
+    margin-inline-start: 0;
+  }
+
+  .statusNotice :global(.ant-alert-actions .ant-btn) {
+    width: 100%;
+    min-height: var(--xp-touch-target-min);
+  }
 }
 
 /*

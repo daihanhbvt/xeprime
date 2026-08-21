@@ -24,3 +24,11 @@
   text-align: center;
   color: var(--xp-color-text-tertiary);
 }
+
+/*
+ * Ô chọn Thu/Chi: đủ rộng cho nhãn dài nhất mà không ăn hết chỗ của ô tên danh mục bên cạnh.
+ * Trước đây là `style={{ width: 110 }}` (CLAUDE.md §5 cấm inline style).
+ */
+.typeSelect {
+  width: 110px;
+}

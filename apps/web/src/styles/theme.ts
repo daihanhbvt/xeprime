@@ -185,6 +185,15 @@ export const XP_TOKENS = {
   'shadow-raised': '0 4px 12px 0 rgba(41, 31, 15, 0.08)', // Elevation 2 · hover, dropdown
   'shadow-overlay': '0 8px 24px 0 rgba(41, 31, 15, 0.12)', // Elevation 3 · modal, drawer
 
+  /**
+   * Nền tối phía sau khu hero của trang chủ — hiện khi banner chưa tải xong hoặc không có
+   * banner nào đang bật. KHÔNG có node Figma riêng (Figma chỉ vẽ trạng thái CÓ banner); giá
+   * trị là sắc nâu tối cùng họ với `color-primary-contrast`. Trước đây gõ tay giống hệt nhau ở
+   * cả `HomeHero.module.css` lẫn `BannerCarousel.module.css` — hai khối nằm CHỒNG nhau trên
+   * cùng một chỗ của trang, nên lệch một mã màu là thấy đường nối ngay khi banner tải xong.
+   */
+  'hero-backdrop': 'linear-gradient(120deg, #241d12, #3a2f1a)',
+
   // ─── Focus ────────────────────────────────────────────────────────────────
   // Figma `14:197` vẽ ring 3px; hạ xuống 2px theo góp ý review UI 12/08/2026 (ring 3px
   // trên control 32px trông quá dày). Border focus vẫn 2px.

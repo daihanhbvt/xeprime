@@ -70,7 +70,7 @@ export function MaintenanceBoardTabs({
   canViewHandovers?: boolean;
   onChange: (filter: string) => void;
 }) {
-  if (loading && !summary) return <Skeleton.Input active block style={{ height: 44 }} />;
+  if (loading && !summary) return <Skeleton.Input active block className={styles.tabsSkeleton} />;
 
   const visibleTabs = TABS.filter(
     (tab) => canViewHandovers || tab.key !== MAINTENANCE_BOARD_FILTER.MISSING_RETURN_KM,

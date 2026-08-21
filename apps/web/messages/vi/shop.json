@@ -16,39 +16,60 @@
     "backToSearch": "Quay lại tìm xe"
   },
   "status": {
-    "label": "Trạng thái gian hàng",
     "submit": "Gửi duyệt",
     "resubmit": "Gửi lại duyệt",
+    "submitted": "Đã gửi hồ sơ cho nền tảng duyệt",
+    "incomplete": "{count, plural, other {Còn # mục chưa điền đúng}} — con trỏ đã nhảy tới mục đầu tiên.",
+    "reason": "Đội duyệt ghi: {reason}",
     "submitConfirm": {
       "title": "Gửi hồ sơ cho nền tảng duyệt?",
       "description": "Sau khi gửi, bạn không sửa hồ sơ cho tới khi có kết quả.",
+      "descriptionWithSave": "Thay đổi chưa lưu sẽ được lưu trước rồi mới gửi. Sau khi gửi, bạn không sửa hồ sơ cho tới khi có kết quả.",
       "ok": "Gửi duyệt"
     },
-    "submitted": "Đã gửi hồ sơ cho nền tảng duyệt",
+    "action": {
+      "complete": "Hoàn thiện hồ sơ",
+      "view": "Xem hồ sơ",
+      "revise": "Bổ sung ngay",
+      "reason": "Xem lý do",
+      "support": "Liên hệ hỗ trợ",
+      "addVehicle": "Thêm xe"
+    },
     "draft": {
       "title": "Hồ sơ chưa được gửi duyệt",
-      "description": "Điền đủ thông tin bên dưới rồi bấm Gửi duyệt. Xe chỉ hiển thị công khai sau khi hồ sơ được duyệt."
+      "body": "Điền đủ các mục bắt buộc bên dưới rồi bấm Gửi duyệt. Xe chỉ hiển thị công khai sau khi hồ sơ được duyệt.",
+      "shell": "Xe của bạn chưa lên marketplace. Hoàn thiện hồ sơ rồi gửi duyệt để bắt đầu nhận đơn."
     },
     "pending": {
       "title": "Hồ sơ đang chờ nền tảng duyệt",
-      "description": "Đã gửi lúc {at}."
+      "body": "Trong lúc chờ, bạn vẫn thêm xe và chuẩn bị dữ liệu bình thường.",
+      "submittedAt": "Đã gửi lúc {at}.",
+      "shell": "XePrime đang xem hồ sơ của bạn. Xe sẽ lên marketplace ngay khi được duyệt."
     },
     "needsRevision": {
-      "title": "Nền tảng yêu cầu bổ sung"
+      "title": "Nền tảng yêu cầu bổ sung",
+      "body": "Cập nhật theo yêu cầu rồi bấm Gửi lại duyệt.",
+      "shell": "XePrime cần bạn bổ sung thông tin trước khi duyệt gian hàng."
     },
     "rejected": {
-      "title": "Hồ sơ bị từ chối"
+      "title": "Hồ sơ bị từ chối",
+      "body": "Chỉnh lại theo lý do bên dưới rồi gửi lại — hồ sơ vẫn gửi lại được.",
+      "shell": "Hồ sơ gian hàng chưa được duyệt. Xem lý do rồi chỉnh lại và gửi lại."
     },
     "active": {
-      "title": "Gian hàng đang hoạt động — xe của bạn sẽ hiển thị trên marketplace."
+      "title": "Gian hàng đang hoạt động",
+      "body": "Xe đã duyệt của bạn đang hiển thị trên marketplace.",
+      "shell": "Gian hàng đang hoạt động."
     },
     "suspended": {
       "title": "Gian hàng đang bị khoá",
-      "description": "Xe của bạn tạm ẩn khỏi marketplace và không nhận được đơn mới. Liên hệ đội ngũ XePrime để biết chi tiết."
+      "body": "Xe của bạn tạm ẩn khỏi marketplace và không nhận được đơn mới. Liên hệ đội ngũ XePrime để biết chi tiết.",
+      "shell": "Gian hàng đang bị khoá: xe tạm ẩn khỏi marketplace và không nhận đơn mới."
     },
     "expired": {
       "title": "Gói dịch vụ đã hết hạn",
-      "description": "Gia hạn gói để xe hiển thị trở lại trên marketplace."
+      "body": "Gia hạn gói để xe hiển thị trở lại trên marketplace.",
+      "shell": "Gói dịch vụ đã hết hạn nên xe tạm ẩn khỏi marketplace."
     }
   },
   "form": {
@@ -134,6 +155,24 @@
         "label": "Chủ tài khoản",
         "placeholder": "Tên chủ tài khoản"
       }
+    }
+  },
+  "checklist": {
+    "title": "Hoàn thiện hồ sơ",
+    "requiredTitle": "Bắt buộc để gửi duyệt",
+    "requiredDone": "Đã đủ điều kiện gửi duyệt",
+    "suggestedTitle": "Nên có — giúp khách chọn gian hàng của bạn",
+    "goToField": "Điền",
+    "items": {
+      "displayName": "Tên hiển thị của gian hàng",
+      "province": "Tỉnh/thành đặt gian hàng",
+      "ownerName": "Họ tên chủ gian hàng",
+      "ownerPhone": "Số điện thoại chủ gian hàng",
+      "logo": "Logo gian hàng",
+      "bio": "Giới thiệu gian hàng",
+      "address": "Địa chỉ gian hàng",
+      "cover": "Ảnh bìa trang gian hàng",
+      "bank": "Tài khoản nhận tiền"
     }
   }
 }

@@ -19,6 +19,7 @@ import {
   RECEIPT_DEFAULT_LIMIT,
   RECEIPT_MAX_LIMIT,
 } from './dto/finance.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 interface DebtRow {
   booking_id: string;
@@ -46,9 +47,7 @@ export class FinanceOverviewService {
     tenantId: string,
     query: DebtListQueryDto,
   ): Promise<{ data: DebtItemDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(RECEIPT_MAX_LIMIT, Math.max(1, query.limit ?? RECEIPT_DEFAULT_LIMIT));
-    const offset = (page - 1) * limit;
+    const paging = resolvePaging(query, RECEIPT_DEFAULT_LIMIT, RECEIPT_MAX_LIMIT);
     const now = new Date();
     const soon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     const filterSql = debtFilterSql(query.filter, now, soon);
@@ -71,7 +70,7 @@ export class FinanceOverviewService {
         ${filterSql}
         ${searchSql}
       ORDER BY b.return_at ASC
-      LIMIT ${limit} OFFSET ${offset}
+      LIMIT ${paging.take} OFFSET ${paging.skip}
     `);
 
     const countRes = await this.prisma.$queryRaw<{ count: bigint }[]>(Prisma.sql`
@@ -101,7 +100,7 @@ export class FinanceOverviewService {
         surchargeTotal: r.surcharge_total,
         debtAmount: r.debt_amount,
       })),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

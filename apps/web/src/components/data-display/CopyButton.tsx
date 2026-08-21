@@ -34,6 +34,12 @@ export function CopyButton({
   size?: 'small' | 'middle';
 }) {
   const tCommon = useTranslations('Common');
+  /**
+   * PHẢI dùng biến này ở cả tooltip lẫn `aria-label`, không dùng thẳng `copiedLabel`:
+   * `copiedLabel` là tuỳ chọn và cả bốn nơi gọi hiện tại đều bỏ trống, nên dùng thẳng nó sẽ
+   * cho `aria-label={undefined}` trong 1,5 giây sau khi chép — đúng lúc nút đổi sang icon tick
+   * và mất luôn tên khả truy cập, thứ mà docblock ở trên nói rõ là không được phép.
+   */
   const copiedText = copiedLabel ?? tCommon('actions.copied');
   const { message } = App.useApp();
   const [copied, setCopied] = useState(false);
@@ -53,11 +59,11 @@ export function CopyButton({
   }
 
   return (
-    <Tooltip title={copied ? copiedLabel : label}>
+    <Tooltip title={copied ? copiedText : label}>
       <Button
         type="text"
         size={size}
-        aria-label={copied ? copiedLabel : label}
+        aria-label={copied ? copiedText : label}
         icon={copied ? <CheckOutlined /> : <CopyOutlined />}
         onClick={() => void copy()}
       />

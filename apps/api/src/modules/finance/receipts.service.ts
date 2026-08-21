@@ -28,6 +28,7 @@ import {
   RECEIPT_MAX_LIMIT,
   ReceiptSummaryDto,
 } from './dto/finance.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const LIST_SELECT = {
   id: true,
@@ -104,8 +105,7 @@ export class ReceiptsService {
     tenantId: string,
     query: ReceiptListQueryDto,
   ): Promise<{ data: ReceiptListItemDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(RECEIPT_MAX_LIMIT, Math.max(1, query.limit ?? RECEIPT_DEFAULT_LIMIT));
+    const paging = resolvePaging(query, RECEIPT_DEFAULT_LIMIT, RECEIPT_MAX_LIMIT);
 
     const where = this.whereOf(tenantId, query);
 
@@ -115,15 +115,15 @@ export class ReceiptsService {
         where,
         // `createdAt` là mốc phụ để hai phiếu cùng ngày phát sinh vẫn có thứ tự ổn định.
         orderBy: [{ occurredAt: 'desc' }, { createdAt: 'desc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: LIST_SELECT,
       }),
     ]);
 
     return {
       data: rows.map(toListItem),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

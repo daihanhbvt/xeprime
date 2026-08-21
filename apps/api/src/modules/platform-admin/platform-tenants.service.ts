@@ -12,6 +12,7 @@ import {
   PlatformTenantDto,
   PlatformTenantListQueryDto,
 } from './dto/platform-tenant.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const LIST_SELECT = {
   id: true,
@@ -43,8 +44,7 @@ export class PlatformTenantsService {
   async list(
     query: PlatformTenantListQueryDto,
   ): Promise<{ data: PlatformTenantDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(PLATFORM_TENANT_MAX_LIMIT, Math.max(1, query.limit ?? PLATFORM_TENANT_DEFAULT_LIMIT));
+    const paging = resolvePaging(query, PLATFORM_TENANT_DEFAULT_LIMIT, PLATFORM_TENANT_MAX_LIMIT);
 
     const q = query.q?.trim();
     const where: Prisma.TenantWhereInput = {
@@ -67,15 +67,15 @@ export class PlatformTenantsService {
       this.prisma.tenant.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: LIST_SELECT,
       }),
     ]);
 
     return {
       data: rows.map(toListItem),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

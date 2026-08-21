@@ -14,7 +14,14 @@ import {
 } from '@xeprime/types';
 import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { CorrectOdometerDto, OdometerHistoryDto, OdometerReadingDto } from './dto/vehicle-maintenance.dto';
+import {
+  CorrectOdometerDto,
+  MAINTENANCE_DEFAULT_LIMIT,
+  MAINTENANCE_MAX_LIMIT,
+  OdometerHistoryDto,
+  OdometerReadingDto,
+} from './dto/vehicle-maintenance.dto';
+import { paginationMeta, resolvePaging } from '../../../common/pagination';
 
 export interface RecordOdometerInput {
   tenantId: string;
@@ -206,18 +213,20 @@ export class OdometerService {
   async history(
     tenantId: string,
     vehicleId: string,
-    page: number,
-    limit: number,
+    page: number | undefined,
+    limit: number | undefined,
   ): Promise<OdometerHistoryDto> {
     await this.assertVehicle(tenantId, vehicleId);
+    // Kẹp trần ở đây, không ở controller: một chỗ quyết định trần cho mọi đường vào.
+    const paging = resolvePaging({ page, limit }, MAINTENANCE_DEFAULT_LIMIT, MAINTENANCE_MAX_LIMIT);
     const where = { tenantId, vehicleId };
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.vehicleOdometerReading.count({ where }),
       this.prisma.vehicleOdometerReading.findMany({
         where,
         orderBy: [{ recordedAt: 'desc' }, { id: 'desc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         include: { },
       }),
     ]);
@@ -233,7 +242,7 @@ export class OdometerService {
 
     return {
       data: rows.map((row) => toReadingDto(row, nameById.get(row.recordedBy ?? '') ?? null)),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

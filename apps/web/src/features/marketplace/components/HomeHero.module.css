@@ -9,7 +9,7 @@
   max-height: 400px;
   background:
     radial-gradient(80% 120% at 70% 20%, rgba(214, 160, 44, 0.35), transparent 60%),
-    linear-gradient(120deg, #241d12, #3a2f1a);
+    var(--xp-hero-backdrop);
 }
 
 .overlay {

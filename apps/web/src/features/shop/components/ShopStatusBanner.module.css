@@ -3,6 +3,16 @@
   align-items: flex-start;
 }
 
+/*
+ * Thông tin RIÊNG của lần gửi này (thời điểm đã gửi, nguyên văn lý do đội duyệt viết) xuống
+ * hàng riêng: nó là thứ người dùng vào đây để đọc, không phải phần đuôi của câu hướng dẫn.
+ */
+.extra {
+  display: block;
+  margin-top: var(--xp-space-xs);
+  font-weight: var(--xp-font-weight-medium);
+}
+
 /* Nút hành động canh giữa theo chiều dọc kể cả khi dải chỉ có một dòng chữ. */
 .banner :global(.ant-alert-actions) {
   display: flex;

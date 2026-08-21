@@ -48,6 +48,7 @@ import {
   VehicleStatsDto,
   VehiclePublicReviewDto,
 } from './dto/vehicle.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 /** Cột dùng cho một dòng bảng — không kéo `description` dài. */
 const LIST_SELECT = {
@@ -318,8 +319,7 @@ export class VehiclesService {
     tenantId: string,
     query: VehicleListQueryDto,
   ): Promise<{ data: VehicleListItemDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(VEHICLE_MAX_LIMIT, Math.max(1, query.limit ?? VEHICLE_DEFAULT_LIMIT));
+    const paging = resolvePaging(query, VEHICLE_DEFAULT_LIMIT, VEHICLE_MAX_LIMIT);
 
     const where: Prisma.VehicleWhereInput = {
       tenantId,
@@ -341,15 +341,15 @@ export class VehiclesService {
       this.prisma.vehicle.findMany({
         where,
         orderBy: orderByOf(query.sort),
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: LIST_SELECT,
       }),
     ]);
 
     return {
       data: rows.map(toListItem),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

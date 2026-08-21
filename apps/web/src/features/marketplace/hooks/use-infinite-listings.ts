@@ -3,7 +3,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type { PaginationMeta } from '@xeprime/types';
 import { useMemo } from 'react';
-import { apiRequest } from '@/services/api-client';
+import { fetchPage } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import { toListingQueryParams } from '../filter-params';
 import type { MarketplaceFilters, PublicListing } from '../types';
@@ -42,19 +42,13 @@ export function useInfinitePublicListings(filters: MarketplaceFilters) {
   const query = useInfiniteQuery({
     queryKey: queryKeys.marketplace.listingsInfinite(baseParams),
     queryFn: async ({ pageParam, signal }): Promise<ListingsPage> => {
-      const res = await apiRequest<PublicListing[]>('/public/listings', {
-        query: { ...baseParams, page: pageParam },
-        signal,
-      });
-      return {
-        listings: res.data,
-        meta: (res.meta as PaginationMeta | undefined) ?? {
-          page: pageParam,
-          limit: PAGE_SIZE,
-          total: res.data.length,
-          hasNext: false,
-        },
-      };
+      const { items, meta } = await fetchPage<PublicListing>(
+        '/public/listings',
+        { ...baseParams, page: pageParam },
+        PAGE_SIZE,
+        { signal },
+      );
+      return { listings: items, meta };
     },
     initialPageParam: 1,
     getNextPageParam: (last) => (last.meta.hasNext ? last.meta.page + 1 : undefined),

@@ -1,4 +1,10 @@
-import { API_ERROR_CODE, isApiError, type ApiErrorCode, type ApiSuccess } from '@xeprime/types';
+import {
+  API_ERROR_CODE,
+  isApiError,
+  type ApiErrorCode,
+  type ApiSuccess,
+  type PaginationMeta,
+} from '@xeprime/types';
 
 /**
  * Wrapper `fetch` duy nhất của web.
@@ -162,6 +168,55 @@ export async function apiPut<TData>(path: string, body?: unknown): Promise<TData
 export async function apiDelete<TData>(path: string, body?: unknown): Promise<TData> {
   const result = await apiRequest<TData>(path, { method: 'DELETE', body });
   return result.data;
+}
+
+/**
+ * Một trang kết quả của endpoint danh sách — `{ data, meta }` đã bóc sẵn.
+ *
+ * Tên `items` (không phải `data`) là cố ý: chỗ gọi thường destructure cạnh các giá trị khác
+ * (`const { items, meta } = ...`), và `data` ở đó không nói được nó là danh sách gì.
+ */
+export interface Paged<T> {
+  items: T[];
+  meta: PaginationMeta;
+}
+
+/**
+ * Meta dự phòng khi endpoint KHÔNG trả `meta` — coi kết quả nhận được là trọn một trang.
+ *
+ * `page` đọc từ CHÍNH query đã gửi, không cứng `1`: với `useInfiniteQuery`, trang thứ ba mà báo
+ * `page: 1` là nói dối về chỗ đang đứng. Không bịa `total` lớn hơn số dòng thật và không bao giờ
+ * `hasNext: true` — một nút "trang sau" dẫn tới trang rỗng tệ hơn hẳn việc thiếu nút.
+ */
+function fullPageMeta(query: QueryParams, limit: number, count: number): PaginationMeta {
+  return { page: Number(query.page) || 1, limit, total: count, hasNext: false };
+}
+
+/**
+ * Gọi một endpoint danh sách có phân trang.
+ *
+ * Đây là chỗ DUY NHẤT quyết định meta dự phòng trông thế nào. Trước đây 23 file mỗi file tự lặp
+ * lại đúng khối `?? { page: 1, limit: X, total: res.data.length, hasNext: false }` — cùng một
+ * quyết định viết ở 23 nơi là 23 dịp để chúng trôi khỏi nhau khi có ai sửa một chỗ.
+ *
+ * `signal` để `useInfiniteQuery` huỷ được request khi người dùng cuộn nhanh qua nhiều trang.
+ */
+export async function fetchPage<T>(
+  path: string,
+  query: QueryParams,
+  fallbackLimit: number,
+  options?: { signal?: AbortSignal },
+): Promise<Paged<T>> {
+  const res = await apiRequest<T[]>(path, {
+    query,
+    ...(options?.signal ? { signal: options.signal } : {}),
+  });
+  return {
+    items: res.data,
+    meta:
+      (res.meta as PaginationMeta | undefined) ??
+      fullPageMeta(query, fallbackLimit, res.data.length),
+  };
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   APPROVAL_TARGET_TYPE,
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
+  missingShopProfileRequirements,
   TENANT_ROLE,
   TENANT_STATUS,
   TENANT_STATUS_SUBMITTABLE,
@@ -256,11 +257,26 @@ export class TenantsService {
   /**
    * Gửi (lại) duyệt. Chỉ cho phép khi tenant đang draft/needs_revision/rejected. Snapshot hồ sơ
    * vào approval_task để reviewer thấy đúng thứ đã gửi. Ghi approval_log + audit cùng transaction.
+   *
+   * Hai cổng, không phải một: trạng thái ĐÚNG **và** hồ sơ ĐỦ. Cổng thứ hai từng không tồn tại —
+   * hàm này chỉ soi `status`, nên một hồ sơ trắng trơn vẫn vào được hàng đợi và reviewer nhận
+   * `{}` làm bằng chứng để duyệt. Nút mờ ở web là gợi ý; chặn thật nằm ở đây.
    */
   async submitForReview(tenantId: string, userId: string): Promise<MyShopDto> {
     const tenant = await this.prisma.tenant.findFirst({
       where: { id: tenantId, deletedAt: null },
-      select: { id: true, status: true, profile: { select: PROFILE_SELECT } },
+      select: {
+        id: true,
+        status: true,
+        profile: { select: PROFILE_SELECT },
+        // Tỉnh HIỆU LỰC nằm ở chi nhánh mặc định; hai cột trên hồ sơ chỉ là bản sao
+        // (`syncProfileFromDefaultBranch`), nên chấm theo bản sao là chấm nhầm nguồn.
+        branches: {
+          where: { isDefault: true, deletedAt: null },
+          select: { provinceCode: true },
+          take: 1,
+        },
+      },
     });
     if (!tenant) throw notFound();
 
@@ -271,6 +287,21 @@ export class TenantsService {
           tenant.status === TENANT_STATUS.PENDING_REVIEW
             ? 'Gian hàng đang chờ duyệt.'
             : 'Gian hàng đang hoạt động, không cần gửi duyệt.',
+      });
+    }
+
+    const missing = missingShopProfileRequirements({
+      displayName: tenant.profile?.displayName,
+      provinceCode: tenant.branches[0]?.provinceCode ?? tenant.profile?.provinceCode,
+      ownerFullName: tenant.profile?.ownerFullName,
+      ownerPhone: tenant.profile?.ownerPhone,
+    });
+    if (missing.length > 0) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.PROFILE_INCOMPLETE,
+        message: 'Hồ sơ gian hàng còn thiếu thông tin bắt buộc nên chưa gửi duyệt được.',
+        // Danh sách MÃ, không phải câu tiếng Việt — web tự dựng nhãn theo ngôn ngữ đang dùng.
+        details: { missing },
       });
     }
 

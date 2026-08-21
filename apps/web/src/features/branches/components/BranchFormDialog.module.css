@@ -1,0 +1,8 @@
+/*
+ * Alert cảnh báo trong hộp thoại thêm/sửa chi nhánh (thiếu tỉnh/thành, không tải được danh
+ * sách tỉnh). Trước đây là `style={{ marginBottom: 14 }}` gõ hai lần trong TSX — CLAUDE.md §5
+ * cấm inline style, và 14px không nằm trên thang khoảng cách của hệ thiết kế.
+ */
+.notice {
+  margin-bottom: var(--xp-space-md);
+}

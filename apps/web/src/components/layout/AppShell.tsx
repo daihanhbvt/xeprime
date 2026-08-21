@@ -1,12 +1,14 @@
 'use client';
 
-import { Result, Spin } from 'antd';
+import { Alert, Button, Spin } from 'antd';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
 import { ROUTES } from '@/constants/routes';
 import { portalLoginWithNext } from '@/features/auth/post-auth-destination';
 import { NoTenantState } from '@/features/shop/components/NoTenantState';
+import { shopStatusNotice } from '@/features/shop/status-notice';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
 import { destroySession } from '@/services/auth.service';
@@ -45,12 +47,12 @@ const VIEWPORT_PORTAL_PATHS: readonly string[] = [ROUTES.MANAGE.CALENDAR];
  * shell không phân biệt host/admin, chỉ Sidebar lọc menu theo quyền.
  */
 export function AppShell({ children }: { children: ReactNode }) {
-  const t = useTranslations('ManageCommon');
+  const tShop = useTranslations('Shop');
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const { data: user, isLoading, isError } = useCurrentUser();
-  const { hasNoTenant, isPendingApproval, tenant } = useTenantScope();
+  const { hasNoTenant, tenant } = useTenantScope();
   // Một chỗ ghi duy nhất cho tuỳ chọn sidebar/khối menu — sidebar desktop và Drawer mobile
   // cùng sửa một state, nên việc lưu không thuộc về riêng cái nào.
   useNavPreferencesSync();
@@ -104,6 +106,30 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const isViewportPath = VIEWPORT_PORTAL_PATHS.includes(pathname);
 
+  /**
+   * Dải trạng thái gian hàng, đầu vùng nội dung của MỌI trang quản lý.
+   *
+   * Ba điều đã sửa so với bản trước:
+   *
+   * 1. **Nói đúng trạng thái.** Trước đây một cờ gộp `draft | pending_review | needs_revision`
+   *    in chung câu "Gian hàng đang chờ duyệt" — với shop `draft` thì đó là chuyện chưa xảy ra.
+   *    Nội dung giờ lấy từ `shopStatusNotice`, cùng bảng mà dải ở trang hồ sơ dùng.
+   * 2. **Có lối đi tiếp.** Dải cũ chỉ phát biểu một tình trạng rồi thôi; giờ nó luôn kèm nút dẫn
+   *    tới nơi sửa được tình trạng đó — và ba trạng thái xấu (`rejected`/`suspended`/`expired`)
+   *    trước đây không có dải nào cả, gian hàng bị khoá chỉ biết qua việc xe biến mất.
+   * 3. **Không lặp ở `/manage/shop`.** Trang đó đã có bản đầy đủ (kèm lý do đội duyệt viết và
+   *    nút Gửi duyệt), nên dải này ở đó chỉ là câu thứ hai nói cùng một chuyện — mà trước đây
+   *    hai câu đó còn mâu thuẫn nhau.
+   *
+   * Dùng `Alert` chứ không phải `Result`: `Result` là trạng thái TOÀN TRANG (icon lớn, canh
+   * giữa, padding dày) và nó đẩy nội dung thật của mọi màn hình xuống dưới nếp gấp.
+   */
+  const shopNotice = (() => {
+    if (!tenant || pathname === ROUTES.MANAGE.SHOP) return null;
+    const notice = shopStatusNotice(tenant.status);
+    return notice.showInShell ? notice : null;
+  })();
+
   return (
     <div
       className={[styles.shell, isViewportPath ? styles.shellViewport : '']
@@ -118,12 +144,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             .filter(Boolean)
             .join(' ')}
         >
-          {isPendingApproval && tenant ? (
-            <Result
-              status="warning"
-              title={t('shell.pendingTitle')}
-              subTitle={t('shell.pendingBody')}
-              className={styles.pendingBanner}
+          {shopNotice ? (
+            <Alert
+              className={styles.statusNotice}
+              type={shopNotice.tone}
+              showIcon
+              title={tShop(`status.${shopNotice.key}.title`)}
+              description={tShop(`status.${shopNotice.key}.shell`)}
+              action={
+                shopNotice.action ? (
+                  <Link href={shopNotice.action.href}>
+                    <Button size="small">{tShop(`status.action.${shopNotice.action.key}`)}</Button>
+                  </Link>
+                ) : null
+              }
             />
           ) : null}
           {children}

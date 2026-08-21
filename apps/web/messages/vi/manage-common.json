@@ -1,7 +1,5 @@
 {
   "shell": {
-    "pendingTitle": "Gian hàng đang chờ duyệt",
-    "pendingBody": "Bạn vẫn xem được dữ liệu, nhưng xe chưa lên marketplace cho tới khi hồ sơ được duyệt.",
     "navLabel": "Điều hướng cổng quản lý",
     "expandMenu": "Mở rộng menu",
     "collapseMenu": "Thu gọn menu",

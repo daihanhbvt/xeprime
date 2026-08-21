@@ -93,7 +93,7 @@ Derived from the implementation (no PRD exists):
 |---|---|---|
 | Visitor/customer | Check availability (boolean only), submit request with verified phone | `@Public()` endpoints; `assertPhoneVerifiedForBooking`; vehicle must be `approved_public` of an `active` tenant, tenantId derived server-side from the vehicle |
 | `shop_owner`/`shop_manager` | Full request inbox + approve/reject; booking CRUD + transitions; calendar; contracts | `booking_requests.view/.approve`, `bookings.view/.create/.update/.cancel`, `calendar.view`, `contracts.manage` |
-| `shop_staff` | View requests/bookings/calendar; create/update bookings; **no approve, no cancel, no contracts** | rbac defaults ([`02_USER_ROLES.md`](../project/02_USER_ROLES.md)) |
+| `shop_staff` | View requests/bookings/calendar; create/update bookings; **no approve, no cancel, no contracts** | rbac defaults (`02_USER_ROLES.md`) |
 | `shop_viewer` | Read-only everywhere | `.view` keys |
 | Platform | Read-only cross-tenant booking monitor; **no mutation endpoint exists** | brief 00 §6; `platform-bookings` |
 | Customer post-booking | Sees the trip via `/reviews/my-trips` only | brief 02 §9 |

@@ -1,0 +1,45 @@
+{
+  "title": "Dashboard",
+  "stats": {
+    "available": "Vehicles ready",
+    "renting": "Out on rent",
+    "rentingValue": "{count, plural, one {# vehicle} other {# vehicles}}",
+    "revenue": "Revenue",
+    "overdue": "Overdue returns",
+    "overdueValue": "{count, plural, one {# booking} other {# bookings}}",
+    "deposit": "Deposits held"
+  },
+  "panels": {
+    "recent": "Recent bookings",
+    "recentEmpty": "No bookings yet",
+    "dueToday": "Overdue / due back today",
+    "dueTodayEmpty": "Nothing overdue 🎉",
+    "upcoming": "Returns in the next 3 days",
+    "upcomingEmpty": "No returns coming up 🎉",
+    "receipts": "Money in and out today",
+    "receiptsEmpty": "No transactions today"
+  },
+  "onboarding": {
+    "title": "Start renting on XePrime",
+    "subtitle": "Three things stand between your shop and its first booking.",
+    "done": "Done",
+    "waiting": "Under review",
+    "steps": {
+      "profile": {
+        "title": "Complete your shop profile",
+        "body": "Display name, province, and how we can reach the shop owner.",
+        "action": "Fill in the profile"
+      },
+      "review": {
+        "title": "Submit the profile for review",
+        "body": "Vehicles only go public once your shop profile is approved.",
+        "action": "Submit for review"
+      },
+      "vehicle": {
+        "title": "Add your first vehicle",
+        "body": "You can add it right now; it goes live as soon as the shop is approved.",
+        "action": "Add a vehicle"
+      }
+    }
+  }
+}

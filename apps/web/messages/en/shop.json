@@ -16,39 +16,60 @@
     "backToSearch": "Back to search"
   },
   "status": {
-    "label": "Shop status",
     "submit": "Submit for review",
     "resubmit": "Resubmit for review",
+    "submitted": "Profile submitted for review",
+    "incomplete": "{count, plural, one {# item still needs attention} other {# items still need attention}} — we moved the cursor to the first one.",
+    "reason": "The review team wrote: {reason}",
     "submitConfirm": {
       "title": "Submit this profile for review?",
-      "description": "Once submitted, you can't edit the profile until we get back to you.",
+      "description": "Once submitted, you cannot edit the profile until we get back to you.",
+      "descriptionWithSave": "Your unsaved changes will be saved first, then submitted. Once submitted, you cannot edit the profile until we get back to you.",
       "ok": "Submit"
     },
-    "submitted": "Profile submitted for review",
+    "action": {
+      "complete": "Complete profile",
+      "view": "View profile",
+      "revise": "Add the details",
+      "reason": "See the reason",
+      "support": "Contact support",
+      "addVehicle": "Add a vehicle"
+    },
     "draft": {
-      "title": "This profile hasn't been submitted yet",
-      "description": "Fill in the details below, then submit for review. Your vehicles only go public once the profile is approved."
+      "title": "This profile has not been submitted yet",
+      "body": "Fill in the required items below, then press Submit for review. Your vehicles only go public once the profile is approved.",
+      "shell": "Your vehicles are not on the marketplace yet. Complete your profile and submit it for review to start taking bookings."
     },
     "pending": {
       "title": "Your profile is waiting for review",
-      "description": "Submitted at {at}."
+      "body": "While you wait, you can already add vehicles and get your data ready.",
+      "submittedAt": "Submitted at {at}.",
+      "shell": "XePrime is reviewing your profile. Your vehicles go live as soon as it is approved."
     },
     "needsRevision": {
-      "title": "We need more information"
+      "title": "We need more information",
+      "body": "Update what was asked for, then press Resubmit for review.",
+      "shell": "XePrime needs more information from you before your shop can be approved."
     },
     "rejected": {
-      "title": "Profile rejected"
+      "title": "Profile rejected",
+      "body": "Fix what the reason below mentions and send it again — you can still resubmit.",
+      "shell": "Your shop profile was not approved. Read the reason, fix it and submit again."
     },
     "active": {
-      "title": "Your shop is live — approved vehicles appear on the marketplace."
+      "title": "Your shop is live",
+      "body": "Your approved vehicles are showing on the marketplace.",
+      "shell": "Your shop is live."
     },
     "suspended": {
       "title": "Your shop is locked",
-      "description": "Your vehicles are hidden from the marketplace and can't take new bookings. Contact the XePrime team for details."
+      "body": "Your vehicles are hidden from the marketplace and cannot take new bookings. Contact the XePrime team for details.",
+      "shell": "Your shop is locked: vehicles are hidden from the marketplace and cannot take new bookings."
     },
     "expired": {
       "title": "Your plan has expired",
-      "description": "Renew your plan to put your vehicles back on the marketplace."
+      "body": "Renew your plan to put your vehicles back on the marketplace.",
+      "shell": "Your plan has expired, so your vehicles are hidden from the marketplace."
     }
   },
   "form": {
@@ -134,6 +155,24 @@
         "label": "Account holder",
         "placeholder": "Name on the account"
       }
+    }
+  },
+  "checklist": {
+    "title": "Complete your profile",
+    "requiredTitle": "Required before you can submit",
+    "requiredDone": "Ready to submit for review",
+    "suggestedTitle": "Recommended — helps renters pick your shop",
+    "goToField": "Fill in",
+    "items": {
+      "displayName": "Shop display name",
+      "province": "Province the shop is based in",
+      "ownerName": "Shop owner name",
+      "ownerPhone": "Shop owner phone number",
+      "logo": "Shop logo",
+      "bio": "Shop description",
+      "address": "Shop address",
+      "cover": "Shop page cover image",
+      "bank": "Payout account"
     }
   }
 }

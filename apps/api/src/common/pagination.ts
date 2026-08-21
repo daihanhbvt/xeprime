@@ -7,8 +7,9 @@ import type { PaginationMeta } from '@xeprime/types';
  * không được tự nâng thành `limit=100000` để kéo cả bảng) và tính `hasNext` cùng một cách.
  * Viết lại từng service là cách để một chỗ nào đó quên kẹp trần.
  *
- * Các module cũ (finance, bookings, vehicles…) vẫn tự tính tại chỗ — dời dần sang đây khi
- * chạm vào, đừng sửa hàng loạt trong một diff không liên quan.
+ * Đã gom đủ 21/08/2026: 25/25 service danh sách đi qua đây, không còn chỗ nào tự viết
+ * `hasNext: page * limit < total`. Thêm endpoint danh sách mới thì dùng luôn hai hàm này —
+ * đừng tính tay, kể cả khi "chỉ một dòng".
  */
 export interface PagingQuery {
   page?: number;

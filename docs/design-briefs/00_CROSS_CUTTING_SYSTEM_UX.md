@@ -3,7 +3,7 @@
 > **Type:** Cross-cutting design brief · **Created:** 2026-08-04 · **Status:** Draft for product review
 > **Owners:** Principal Software Architect · Senior Product Manager · Senior Business Analyst · UX Architect
 > **Written to:** [`_DESIGN_BRIEF_STANDARD.md`](_DESIGN_BRIEF_STANDARD.md)
-> **Authoritative sources:** application source code and accepted ADRs in [`docs/decisions/`](../decisions/). As-built documentation in [`docs/project/`](../project/) is secondary; historical specifications in `docs/*.md` are weakest and may be superseded.
+> **Authoritative sources:** application source code and accepted ADRs in [`docs/decisions/`](../decisions/). As-built documentation in `docs/project/` is secondary; historical specifications in `docs/*.md` are weakest and may be superseded.
 >
 > **Reading contract:** blocks headed *Confirmed* describe the system as it exists. Blocks headed *Recommended* and lines marked `[RECOMMENDED — NOT CURRENT]` describe nothing that exists today. Where evidence is absent, this brief writes `Unknown` rather than inferring.
 
@@ -101,7 +101,7 @@ These principles are **derived from decisions already encoded in the system**, n
 
 ## 4. Personas and contexts
 
-Personas below are taken from the implemented role model ([`rbac.ts`](../../packages/types/src/rbac.ts), [`docs/project/02_USER_ROLES.md`](../project/02_USER_ROLES.md)). Device and situational context is **`Unknown`** — no analytics, research or telemetry source exists in the repository; the columns state only what the code implies about the surface each persona uses.
+Personas below are taken from the implemented role model ([`rbac.ts`](../../packages/types/src/rbac.ts), `docs/project/02_USER_ROLES.md`). Device and situational context is **`Unknown`** — no analytics, research or telemetry source exists in the repository; the columns state only what the code implies about the surface each persona uses.
 
 | Persona | Identity model | Primary surface | Auth entry | Notes |
 |---|---|---|---|---|
@@ -145,7 +145,7 @@ flowchart TD
 
 **Session lifecycle.** `SessionService.issue()` signs `{sub, sid}` with `SESSION_JWT_SECRET`, `expiresIn = SESSION_TTL_DAYS` (default 7), issuer `xeprime-api`. The cookie is `httpOnly`, `sameSite: 'lax'`, `path: '/'`, `secure` from `SESSION_COOKIE_SECURE` (forced `true` in production by [`env.schema.ts`](../../apps/api/src/config/env.schema.ts)), optional `domain`. `AuthGuard` verifies the token on every non-`@Public()` request and additionally re-loads the user, rejecting deleted or non-`ACTIVE` users immediately. Expiry produces `SESSION_EXPIRED`; anything else produces `UNAUTHENTICATED`. Logout is `DELETE /auth/session`, which clears the cookie server-side — the client cannot clear it.
 
-**Password login.** `POST /auth/login` accepts one `identifier` field resolved as email or normalized phone; failures do not disclose whether the identifier exists ([`docs/project/07_BUSINESS_RULES.md`](../project/07_BUSINESS_RULES.md) §Identity 1).
+**Password login.** `POST /auth/login` accepts one `identifier` field resolved as email or normalized phone; failures do not disclose whether the identifier exists (`docs/project/07_BUSINESS_RULES.md` §Identity 1).
 
 **Phone OTP login.** `POST /auth/phone/send-otp` and `/verify-otp` are purpose-scoped; `POST /auth/phone/login` performs find-or-create and issues a session. Configuration: `OTP_TTL_MINUTES=5`, `OTP_RESEND_COOLDOWN_SECONDS=60`, `OTP_MAX_SENDS_PER_HOUR=5`, `OTP_MAX_ATTEMPTS=5`, `OTP_MODE` default `mock`. Exhausting attempts yields `OTP_LOCKED`.
 
@@ -279,9 +279,9 @@ flowchart TD
 | # | Problem | Evidence |
 |---|---|---|
 | B1 | A permission failure outside `/manage/admin/*` gives no explanation of what is missing, although the API already returns `details.missing`. | No `MISSING_PERMISSION` handling in `apps/web/src` |
-| B2 | A user with both memberships cannot reach shop navigation at all, and no scope switcher exists. | [`nav.ts`](../../apps/web/src/constants/nav.ts) `navForScope`, [`docs/project/09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) §UX 4 |
+| B2 | A user with both memberships cannot reach shop navigation at all, and no scope switcher exists. | [`nav.ts`](../../apps/web/src/constants/nav.ts) `navForScope`, `docs/project/09_DESIGN_PROBLEMS.md` §UX 4 |
 | B3 | `/manage` resolves to three different experiences (shop dashboard, platform dashboard, no-tenant choice), reducing predictability of a bookmarked URL. | [`ManageHome.tsx`](../../apps/web/src/features/dashboard/components/ManageHome.tsx), [`AppShell.tsx`](../../apps/web/src/components/layout/AppShell.tsx) |
-| B4 | `finance_admin` is granted tenant-scoped `finance.view`, which has no effect without tenant membership and can mislead administrators. | [`rbac.ts`](../../packages/types/src/rbac.ts), [`docs/project/09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) §Content 2 |
+| B4 | `finance_admin` is granted tenant-scoped `finance.view`, which has no effect without tenant membership and can mislead administrators. | [`rbac.ts`](../../packages/types/src/rbac.ts), `docs/project/09_DESIGN_PROBLEMS.md` §Content 2 |
 
 ### 6.5 Unknown requirements
 
@@ -340,7 +340,7 @@ Next.js App Router cannot let a child route escape its parent layout, so shell e
 | # | Problem | Evidence |
 |---|---|---|
 | C1 | Four navigation destinations lead to placeholders with no return path or availability information. | [`nav.ts`](../../apps/web/src/constants/nav.ts), [`PlaceholderPage.tsx`](../../apps/web/src/components/common/PlaceholderPage.tsx) |
-| C2 | Terminology varies across navigation and messages ("gian hàng", "cửa hàng", "chủ shop", "chủ xe"). | [`docs/project/09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) §Content 1 |
+| C2 | Terminology varies across navigation and messages ("gian hàng", "cửa hàng", "chủ shop", "chủ xe"). | `docs/project/09_DESIGN_PROBLEMS.md` §Content 1 |
 | C3 | "Đơn đặt xe" (request) and "đơn thuê" (booking) are correct in data but not clearly distinguished in navigation labels. | Same source, §Content 3 |
 
 ### 7.5 Unknown requirements
@@ -365,7 +365,7 @@ Intended availability dates for placeholder destinations; whether chat belongs i
 | Filters/paging | URL search params per ADR 0004, via per-feature filter hooks; `useUrlFilters` + `common/pagination.ts` adopted by the three platform monitoring slices only | [`use-url-filters.ts`](../../apps/web/src/hooks/use-url-filters.ts), [`docs/completion-roadmap.md`](../completion-roadmap.md) |
 | Pagination | Server-side across management lists; envelope `meta` = `page`, `limit`, `total`, `hasNext` | [`api.ts`](../../packages/types/src/api.ts) |
 | Modal vs drawer | Chosen per feature; `AuthModal` is the explicit responsive pattern (`Modal` desktop / bottom `Drawer` mobile via `useIsMobile`) | [`AuthModal.tsx`](../../apps/web/src/features/auth/components/AuthModal.tsx) |
-| Confirmation | Mixture of `Popconfirm`, drawer actions and `App.useApp().message`; reason input required for reject/hide/lock actions | [`docs/project/09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) §UI 3 |
+| Confirmation | Mixture of `Popconfirm`, drawer actions and `App.useApp().message`; reason input required for reject/hide/lock actions | `docs/project/09_DESIGN_PROBLEMS.md` §UI 3 |
 | Upload | `presign → PUT to R2` for vehicle images, shop media and chat attachments; client pre-validates MIME against `IMAGE_UPLOAD_MIME_TYPES` and size against `IMAGE_UPLOAD_MAX_BYTES` | [`upload.ts`](../../apps/web/src/services/upload.ts) |
 | Query cache | `staleTime: 30s`, `refetchOnWindowFocus: false`, no retry on 401/403, otherwise up to 2 retries | [`providers.tsx`](../../apps/web/src/app/providers.tsx) |
 | Locale | AntD `viVN`, dayjs `vi` with `utc` + `timezone` plugins | [`providers.tsx`](../../apps/web/src/app/providers.tsx) |
@@ -378,10 +378,10 @@ Money crosses the API as a string and must not be computed client-side ([ADR 000
 
 | # | Problem | Evidence |
 |---|---|---|
-| D1 | No shared list-page shell: filter, empty, error and loading composition is repeated with small differences per feature. | [`docs/project/09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) §UI 1 |
+| D1 | No shared list-page shell: filter, empty, error and loading composition is repeated with small differences per feature. | `docs/project/09_DESIGN_PROBLEMS.md` §UI 1 |
 | D2 | Destructive-action severity language and mechanism are not standardized. | Same source, §UI 3 |
 | D3 | Avatar is edited as a URL text field while vehicle and shop images use the presign uploader — two different upload models for the same concept. | [`AccountView.tsx`](../../apps/web/src/features/account/components/AccountView.tsx) vs [`ImageUploadField.tsx`](../../apps/web/src/components/form/ImageUploadField.tsx) |
-| D4 | No offline/reconnect handling is documented for chat, uploads or long forms. | [`docs/project/09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) §Technical 4 |
+| D4 | No offline/reconnect handling is documented for chat, uploads or long forms. | `docs/project/09_DESIGN_PROBLEMS.md` §Technical 4 |
 | D5 | No bulk actions exist on any page, including high-volume moderation queues. | Same source, §Technical 3 |
 
 ### 8.4 Unknown requirements
@@ -409,7 +409,7 @@ Whether bulk moderation is required; expected upload size limits for production;
 |---|---|---|
 | E1 | Layout breaks at different widths on different screens because breakpoints are ad hoc. | CSS scan above |
 | E2 | The programmatic breakpoint (640) and the most common CSS breakpoints (560, 760, 1120) do not coincide, so JS-driven and CSS-driven layout changes can occur at different widths on the same page. | [`use-media-query.ts`](../../apps/web/src/hooks/use-media-query.ts) + CSS scan |
-| E3 | Calendar mobile behavior is horizontal scrolling of a desktop timeline. | [`docs/project/05_PAGES.md`](../project/05_PAGES.md) |
+| E3 | Calendar mobile behavior is horizontal scrolling of a desktop timeline. | `docs/project/05_PAGES.md` |
 
 ### 9.3 Unknown requirements
 
@@ -451,7 +451,7 @@ Duplication of list/table/filter composition across features (D1); no shared res
 
 ### 11.2 Existing UX problems
 
-Perceived loading differs by page because four mechanisms coexist ([`docs/project/09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) §UI 2). Client-guarded customer pages can show a loading or redirect flash, unlike proxy-guarded portal routes (same source, §UX 6).
+Perceived loading differs by page because four mechanisms coexist (`docs/project/09_DESIGN_PROBLEMS.md` §UI 2). Client-guarded customer pages can show a loading or redirect flash, unlike proxy-guarded portal routes (same source, §UX 6).
 
 ### 11.3 Unknown requirements
 
@@ -469,11 +469,11 @@ Acceptable perceived-latency thresholds; whether skeletons are required for port
 
 ### 12.1 Confirmed current behavior
 
-AntD `Empty` is used per feature, e.g. `NotificationBell` renders `Empty` with `description="Chưa có thông báo"`. Management lists document empty handling individually ([`docs/project/05_PAGES.md`](../project/05_PAGES.md)). `NoTenantState` is a purpose-built empty/choice state with title "Bạn chưa có gian hàng" and two exits. `PlaceholderPage` renders a title and generic message with no return path.
+AntD `Empty` is used per feature, e.g. `NotificationBell` renders `Empty` with `description="Chưa có thông báo"`. Management lists document empty handling individually (`docs/project/05_PAGES.md`). `NoTenantState` is a purpose-built empty/choice state with title "Bạn chưa có gian hàng" and two exits. `PlaceholderPage` renders a title and generic message with no return path.
 
 ### 12.2 Existing UX problems
 
-No repository-wide distinction between "no data yet" and "no results for current filter"; placeholder pages offer no next action ([`docs/project/09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) §UI 5).
+No repository-wide distinction between "no data yet" and "no results for current filter"; placeholder pages offer no next action (`docs/project/09_DESIGN_PROBLEMS.md` §UI 5).
 
 ### 12.3 Recommended future behavior
 
@@ -535,11 +535,11 @@ Money-affecting confirmations use the same transient toast as trivial saves, so 
 
 ### 15.2 Confirmed business rules
 
-A user cannot mark another user's notification as read ([`docs/project/07_BUSINESS_RULES.md`](../project/07_BUSINESS_RULES.md) §Chat 7).
+A user cannot mark another user's notification as read (`docs/project/07_BUSINESS_RULES.md` §Chat 7).
 
 ### 15.3 Unknown requirements
 
-Delivery channels beyond in-app (FCM, email) are `Unknown` ([`docs/project/10_MISSING_FEATURES.md`](../project/10_MISSING_FEATURES.md)); notification preferences, grouping, retention and priority are `Unknown` — no such code or configuration was found.
+Delivery channels beyond in-app (FCM, email) are `Unknown` (`docs/project/10_MISSING_FEATURES.md`); notification preferences, grouping, retention and priority are `Unknown` — no such code or configuration was found.
 
 ### 15.4 Recommended future behavior
 
@@ -561,7 +561,7 @@ Delivery channels beyond in-app (FCM, email) are `Unknown` ([`docs/project/10_MI
 
 ### 16.2 Existing UX problems
 
-Clickable avatar/menu triggers implemented as spans with `role="button"` without consistently evident keyboard handling ([`MarketHeader.tsx`](../../apps/web/src/features/marketplace/components/MarketHeader.tsx)); icon-only table actions whose accessible labels require per-component verification; no repository-level axe or accessibility tests; contrast ratios unverified; virtualized calendar semantics for screen readers `Unknown` ([`docs/project/09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) §Accessibility).
+Clickable avatar/menu triggers implemented as spans with `role="button"` without consistently evident keyboard handling ([`MarketHeader.tsx`](../../apps/web/src/features/marketplace/components/MarketHeader.tsx)); icon-only table actions whose accessible labels require per-component verification; no repository-level axe or accessibility tests; contrast ratios unverified; virtualized calendar semantics for screen readers `Unknown` (`docs/project/09_DESIGN_PROBLEMS.md` §Accessibility).
 
 ### 16.3 Unknown requirements
 
@@ -587,7 +587,7 @@ Target conformance level (WCAG 2.1 A/AA/AAA), whether any legal accessibility ob
 | Rate limiting | Global `ThrottlerModule` `{ttl: 60000, limit: 120}`; OTP has its own cooldown/quota/attempt limits | [`app.module.ts`](../../apps/api/src/app.module.ts), [`env.schema.ts`](../../apps/api/src/config/env.schema.ts) |
 | Secret hygiene | Production refuses sample `SESSION_JWT_SECRET` / `OTP_PEPPER` and non-secure cookies | [`env.schema.ts`](../../apps/api/src/config/env.schema.ts) |
 | Open redirect | `isSafeNextPath` rejects protocol-relative, absolute and control-character paths | [`safe-next.ts`](../../apps/web/src/features/auth/safe-next.ts) |
-| Enumeration | Login and password-reset responses do not reveal account existence | [`docs/project/07_BUSINESS_RULES.md`](../project/07_BUSINESS_RULES.md) |
+| Enumeration | Login and password-reset responses do not reveal account existence | `docs/project/07_BUSINESS_RULES.md` |
 | Swagger exposure | Swagger UI disabled outside non-production | [`main.ts`](../../apps/api/src/main.ts) |
 | **CSRF** | **Referenced but not implemented** — required by [ADR 0002](../decisions/0002-auth-session-cookie.md) §3 for cross-origin writes; only comments reference it | Repository search found no CSRF implementation |
 | **Session revocation** | **Referenced but not implemented** — `sid` is issued but no session store or revocation lookup exists | [`session.service.ts`](../../apps/api/src/modules/auth/session.service.ts), `prisma/schema.prisma` has no session model |
@@ -635,17 +635,17 @@ Confirmed handling, with evidence. Cases marked `Unknown` were not found to be h
 | 5 | `next` points to a platform route without `platformRole` | `resolvePortalDestination` returns `/manage`; the 403 decision is left to the admin layout and backend guards |
 | 6 | Authenticated, no tenant, no platform role, opens `/manage` | `NoTenantState` — never the shop-creation form |
 | 7 | Same user opens `/manage/onboarding` directly while unauthenticated | Proxy adds `intent=owner` and preserves `next` |
-| 8 | User already has a tenant and opens `/manage/onboarding` | Page redirects to the portal ([`docs/project/05_PAGES.md`](../project/05_PAGES.md)) |
+| 8 | User already has a tenant and opens `/manage/onboarding` | Page redirects to the portal (`docs/project/05_PAGES.md`) |
 | 9 | Registration completed with a pending `next` | `AuthModal.handleClose` continues to `next`; close label becomes "Tiếp tục" |
 | 10 | Auth opened to unblock a specific action | `takePendingAction()` runs the action after success instead of navigating |
 | 11 | Concurrent booking on the same vehicle/interval | PostgreSQL exclusion constraint (`23P01`) → 409; `check-conflict` is advisory only ([ADR 0006](../decisions/0006-booking-concurrency.md)) |
-| 12 | Duplicate identical pending request | Rejected as duplicate ([`docs/project/07_BUSINESS_RULES.md`](../project/07_BUSINESS_RULES.md)) |
+| 12 | Duplicate identical pending request | Rejected as duplicate (`docs/project/07_BUSINESS_RULES.md`) |
 | 13 | OTP entered incorrectly repeatedly | `OTP_LOCKED` after `OTP_MAX_ATTEMPTS` (default 5); resend cooldown 60 s; ≤5 sends/hour |
 | 14 | Phone stored as `84…` but searched as `09…` | `phoneLookupVariants` matches all stored forms exactly; masking applied on the local form |
 | 15 | Tenant suspended while an operator is signed in | Tenant status is re-read per request; portal shows status-driven state. Exact per-page behavior on suspension is `Unknown` |
 | 16 | User holds both tenant and platform membership | Platform navigation wins; permissions are unioned; no switcher (B2) |
 | 17 | Last active `platform_admin` removal/demotion | Blocked inside the transaction |
-| 18 | Firestore disabled | Chat degrades to non-realtime; no explicit user indication ([`docs/project/09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) §Technical 2) |
+| 18 | Firestore disabled | Chat degrades to non-realtime; no explicit user indication (`docs/project/09_DESIGN_PROBLEMS.md` §Technical 2) |
 | 19 | Provider login attempted while Firebase Web SDK unconfigured | Promise rejects with a developer-facing message shown to the user |
 | 20 | Network loss mid-upload or mid-form | `Unknown` — no offline/reconnect handling found |
 | 21 | Two tabs, one logs out | `Unknown` — no cross-tab session synchronization found |
@@ -668,7 +668,7 @@ Confirmed handling, with evidence. Cases marked `Unknown` were not found to be h
 | K9 | Terminology varies for the same concepts across UI text. | Source | Comprehension |
 | K10 | Customer routes are client-guarded while portal routes are proxy-guarded. | Source | Different flash/redirect behavior for equivalent protection |
 | K11 | README describes the worker as a skeleton although it contains outbox/retention logic. | Source vs doc | Stale documentation |
-| K12 | Swagger operation-level `security` metadata is not a reliable permission source. | [`docs/project/04_API.md`](../project/04_API.md) | Generated docs can mislead |
+| K12 | Swagger operation-level `security` metadata is not a reliable permission source. | `docs/project/04_API.md` | Generated docs can mislead |
 
 No entry in this table is resolved as of 2026-08-04.
 
@@ -753,7 +753,7 @@ Criteria every module brief and implementation inherits. Each is stated as verif
 
 ### As-built documentation (secondary)
 
-[`docs/project/01_PROJECT_OVERVIEW.md`](../project/01_PROJECT_OVERVIEW.md) · [`02_USER_ROLES.md`](../project/02_USER_ROLES.md) · [`04_API.md`](../project/04_API.md) · [`05_PAGES.md`](../project/05_PAGES.md) · [`06_COMPONENTS.md`](../project/06_COMPONENTS.md) · [`07_BUSINESS_RULES.md`](../project/07_BUSINESS_RULES.md) · [`08_WORKFLOW.md`](../project/08_WORKFLOW.md) · [`09_DESIGN_PROBLEMS.md`](../project/09_DESIGN_PROBLEMS.md) · [`10_MISSING_FEATURES.md`](../project/10_MISSING_FEATURES.md) · [`docs/completion-roadmap.md`](../completion-roadmap.md) · [`docs/guest-booking-passwordless.md`](../guest-booking-passwordless.md)
+`docs/project/01_PROJECT_OVERVIEW.md` · `02_USER_ROLES.md` · `04_API.md` · `05_PAGES.md` · `06_COMPONENTS.md` · `07_BUSINESS_RULES.md` · `08_WORKFLOW.md` · `09_DESIGN_PROBLEMS.md` · `10_MISSING_FEATURES.md` · [`docs/completion-roadmap.md`](../completion-roadmap.md) · [`docs/guest-booking-passwordless.md`](../guest-booking-passwordless.md)
 
 ### Verification performed for this brief
 

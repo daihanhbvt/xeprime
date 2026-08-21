@@ -219,7 +219,7 @@ function AssignPlanModal({
       ) : (
         <>
           <Select
-            style={{ width: '100%' }}
+            className={styles.planSelect}
             size="large"
             placeholder="Chọn gói"
             value={planId}

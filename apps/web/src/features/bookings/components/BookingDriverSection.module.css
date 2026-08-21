@@ -40,7 +40,7 @@
 
 /* Đơn CÓ TÀI XẾ chưa phân công — nhắc bằng màu cảnh báo, không phải chữ xám cho qua. */
 .missing {
-  color: var(--xp-color-warning, #d48806);
+  color: var(--xp-color-warning);
   font-weight: var(--xp-font-weight-medium, 500);
 }
 

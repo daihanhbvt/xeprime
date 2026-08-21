@@ -203,19 +203,80 @@ describe('AppShell — các vùng của khung', () => {
     expect(matchMedia).not.toHaveBeenCalled();
   });
 
-  it('gian hàng chờ duyệt: hiện băng thông báo NHƯNG vẫn cho xem nội dung', () => {
+  it('gian hàng chờ duyệt: hiện dải thông báo NHƯNG vẫn cho xem nội dung', () => {
     state.user = PENDING_OWNER;
     renderShell();
 
-    expect(screen.getByText('Gian hàng đang chờ duyệt')).toBeTruthy();
+    expect(screen.getByText('Hồ sơ đang chờ nền tảng duyệt')).toBeTruthy();
     expect(screen.getByTestId('page')).toBeTruthy();
     expect(screen.getByTestId('sidebar')).toBeTruthy();
   });
 
-  it('gian hàng đang hoạt động: KHÔNG có băng chờ duyệt', () => {
+  it('gian hàng đang hoạt động: KHÔNG có dải trạng thái nào', () => {
     renderShell();
 
-    expect(screen.queryByText('Gian hàng đang chờ duyệt')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+/**
+ * Dải trạng thái gian hàng.
+ *
+ * Bug gốc: một cờ gộp `draft | pending_review | needs_revision` in chung câu "Gian hàng đang chờ
+ * duyệt" cho cả ba — với shop `draft` thì đó là chuyện CHƯA XẢY RA, và ngay trên `/manage/shop`
+ * nó nằm đè lên một dải khác nói ngược lại ("Hồ sơ chưa được gửi duyệt"). Ba trạng thái xấu còn
+ * lại thì không có dải nào: gian hàng bị khoá chỉ biết qua việc xe biến mất khỏi marketplace.
+ */
+describe('AppShell — dải trạng thái gian hàng', () => {
+  const withStatus = (status: string) => ({
+    displayName: 'Chủ shop',
+    tenant: { id: 'T9', name: 'Shop', slug: 's', status, roleKey: 'shop_owner' },
+    platformRole: null,
+  });
+
+  it('nháp: nói CHƯA GỬI, không nói đang chờ — và chỉ đường về hồ sơ', () => {
+    state.user = withStatus('draft');
+    renderShell();
+
+    expect(screen.getByText('Hồ sơ chưa được gửi duyệt')).toBeTruthy();
+    expect(screen.queryByText('Hồ sơ đang chờ nền tảng duyệt')).toBeNull();
+    expect(screen.getByRole('button', { name: /Hoàn thiện hồ sơ/ })).toBeTruthy();
+  });
+
+  it('cần bổ sung: câu riêng, không phải câu của "đang chờ duyệt"', () => {
+    state.user = withStatus('needs_revision');
+    renderShell();
+
+    expect(screen.getByText('Nền tảng yêu cầu bổ sung')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Bổ sung ngay/ })).toBeTruthy();
+  });
+
+  it.each([
+    ['rejected', 'Hồ sơ bị từ chối', 'Xem lý do'],
+    ['suspended', 'Gian hàng đang bị khoá', 'Liên hệ hỗ trợ'],
+    ['expired', 'Gói dịch vụ đã hết hạn', 'Liên hệ hỗ trợ'],
+  ])('%s: có dải riêng kèm lối đi tiếp (trước đây im lặng hoàn toàn)', (status, title, action) => {
+    state.user = withStatus(status);
+    renderShell();
+
+    expect(screen.getByText(title)).toBeTruthy();
+    expect(screen.getByRole('button', { name: new RegExp(action) })).toBeTruthy();
+  });
+
+  it('ở CHÍNH /manage/shop thì im lặng — trang đó đã có bản đầy đủ, hai dải là hai câu chồng nhau', () => {
+    nav.pathname = '/manage/shop';
+    state.user = withStatus('draft');
+    renderShell();
+
+    expect(screen.queryByText('Hồ sơ chưa được gửi duyệt')).toBeNull();
+    expect(screen.getByTestId('page')).toBeTruthy();
+  });
+
+  it('nhân sự nền tảng không có gian hàng: không có dải nào', () => {
+    state.user = ADMIN;
+    renderShell();
+
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('route thoát khung KHÔNG dựng vùng nào của khung', () => {

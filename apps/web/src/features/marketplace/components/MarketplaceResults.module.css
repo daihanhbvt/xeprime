@@ -309,9 +309,9 @@
   align-items: center;
   justify-content: center;
   padding: 10px 14px;
-  border: 1px solid var(--xp-color-error, #cf1322);
+  border: 1px solid var(--xp-color-error);
   border-radius: var(--xp-border-radius);
-  background: #fff2f0;
+  background: var(--xp-color-error-bg);
   color: var(--xp-color-text);
   font-size: var(--xp-font-size-body-sm);
   gap: 10px;

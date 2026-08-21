@@ -49,6 +49,7 @@ import {
   TransitionBookingDto,
   UpdateBookingDto,
 } from './dto/booking.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const LIST_SELECT = {
   id: true,
@@ -106,8 +107,7 @@ export class BookingsService {
     tenantId: string,
     query: BookingListQueryDto,
   ): Promise<{ data: BookingListItemDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(BOOKING_MAX_LIMIT, Math.max(1, query.limit ?? BOOKING_DEFAULT_LIMIT));
+    const paging = resolvePaging(query, BOOKING_DEFAULT_LIMIT, BOOKING_MAX_LIMIT);
 
     const where: Prisma.BookingWhereInput = {
       tenantId,
@@ -133,15 +133,15 @@ export class BookingsService {
       this.prisma.booking.findMany({
         where,
         orderBy: orderByOf(query.sort),
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: LIST_SELECT,
       }),
     ]);
 
     return {
       data: await this.withMoney(rows.map(toListItem)),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

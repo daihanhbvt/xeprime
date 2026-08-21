@@ -1,5 +1,5 @@
-import type { PaginationMeta } from '@xeprime/types';
-import { apiGet, apiPost, apiRequest } from '@/services/api-client';
+import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
+import { apiGet, apiPost, apiRequest, fetchPage, type Paged } from '@/services/api-client';
 import type {
   ChatMessage,
   ConversationSummary,
@@ -8,27 +8,16 @@ import type {
   SendMessageInput,
 } from './types';
 
-export const CONVERSATIONS_LIMIT = 20;
+export const CONVERSATIONS_LIMIT = DEFAULT_PAGE_SIZE;
 
-export interface ConversationListResult {
-  items: ConversationSummary[];
-  meta: PaginationMeta;
-}
+export type ConversationListResult = Paged<ConversationSummary>;
 
-export async function fetchConversations(page = 1): Promise<ConversationListResult> {
-  const res = await apiRequest<ConversationSummary[]>('/conversations', {
-    query: { page, limit: CONVERSATIONS_LIMIT },
-  });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: CONVERSATIONS_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+export const fetchConversations = (page = 1): Promise<ConversationListResult> =>
+  fetchPage<ConversationSummary>(
+    '/conversations',
+    { page, limit: CONVERSATIONS_LIMIT },
+    CONVERSATIONS_LIMIT,
+  );
 
 export const startConversation = (vehicleId: string): Promise<ConversationSummary> =>
   apiPost<ConversationSummary>('/conversations', { vehicleId });

@@ -14,13 +14,13 @@
 
 .income {
   font-weight: 700;
-  color: var(--xp-color-success, #389e0d);
+  color: var(--xp-color-success);
   white-space: nowrap;
 }
 
 .expense {
   font-weight: 700;
-  color: var(--xp-color-error, #cf1322);
+  color: var(--xp-color-error);
   white-space: nowrap;
 }
 

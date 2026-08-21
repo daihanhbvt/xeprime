@@ -16,6 +16,7 @@ import {
   MemberListQueryDto,
   UpdateMemberRoleDto,
 } from './dto/member.dto';
+import { paginationMeta, resolvePaging } from '../../common/pagination';
 
 const SELECT = {
   userId: true,
@@ -37,8 +38,7 @@ export class MembersService {
     tenantId: string,
     query: MemberListQueryDto,
   ): Promise<{ data: MemberDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(MEMBER_MAX_LIMIT, Math.max(1, query.limit ?? MEMBER_DEFAULT_LIMIT));
+    const paging = resolvePaging(query, MEMBER_DEFAULT_LIMIT, MEMBER_MAX_LIMIT);
 
     const where: Prisma.TenantMembershipWhereInput = {
       tenantId,
@@ -62,15 +62,15 @@ export class MembersService {
         where,
         // Chủ shop lên đầu, rồi mới tới các vai trò khác, cuối cùng theo thời điểm tham gia.
         orderBy: [{ roleKey: 'asc' }, { createdAt: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        skip: paging.skip,
+        take: paging.take,
         select: SELECT,
       }),
     ]);
 
     return {
       data: rows.map(toDto),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

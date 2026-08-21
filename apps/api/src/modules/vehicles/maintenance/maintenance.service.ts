@@ -48,6 +48,7 @@ import {
   SaveMaintenanceRecordDto,
 } from './dto/vehicle-maintenance.dto';
 import { SourceContractDownloadDto, SourceContractPresignDto } from '../dto/vehicle-source.dto';
+import { paginationMeta, resolvePaging } from '../../../common/pagination';
 
 /** Người gọi thấy được gì — controller kiểm quyền rồi truyền xuống, service không tự đọc. */
 export interface MaintenanceViewScope {
@@ -725,8 +726,7 @@ export class MaintenanceService {
     query: MaintenanceBoardQueryDto,
     scope: MaintenanceViewScope,
   ): Promise<{ data: MaintenanceBoardItemDto[]; meta: PaginationMeta }> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(100, Math.max(1, query.limit ?? DEFAULT_LIMIT));
+    const paging = resolvePaging(query, DEFAULT_LIMIT, 100);
     const dueSoonKm = await this.dueSoonKm(tenantId);
     const today = startOfUtcDay(new Date());
 
@@ -808,7 +808,7 @@ export class MaintenanceService {
         CASE WHEN ${query.sort ?? 'remaining_asc'} = 'name_asc' THEN name END ASC,
         CASE WHEN ${query.sort ?? 'remaining_asc'} = 'updated_desc' THEN updated_at END DESC,
         name ASC
-      LIMIT ${limit} OFFSET ${(page - 1) * limit}`;
+      LIMIT ${paging.take} OFFSET ${paging.skip}`;
 
     const total = rows[0]?.total_count ?? 0;
     // Phiếu đang mở của đúng trang này — bounded theo `limit`, không phải N+1 toàn đội xe.
@@ -823,7 +823,7 @@ export class MaintenanceService {
 
     return {
       data: rows.map((row) => toBoardItem(row, dueSoonKm, recordById)),
-      meta: { page, limit, total, hasNext: page * limit < total },
+      meta: paginationMeta(paging, total),
     };
   }
 

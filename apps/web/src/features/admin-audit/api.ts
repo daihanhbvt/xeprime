@@ -1,21 +1,17 @@
-import type { PaginationMeta } from '@xeprime/types';
+import { DEFAULT_PAGE_SIZE, pickFilter } from '@/constants/filters';
 import { startOfAppDay } from '@/lib/datetime';
-import { apiGet, apiRequest, type QueryParams } from '@/services/api-client';
+import { apiGet, fetchPage, type Paged, type QueryParams } from '@/services/api-client';
 import type { AuditLog, AuditLogDetail, AuditLogFilters } from './types';
 
-export const AUDIT_LOGS_DEFAULT_LIMIT = 20;
+export const AUDIT_LOGS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export interface AuditLogListResult {
-  items: AuditLog[];
-  meta: PaginationMeta;
-}
+export type AuditLogListResult = Paged<AuditLog>;
 
 export function filtersToParams(filters: AuditLogFilters): QueryParams {
-  const pick = (v: string | undefined) => (v && v !== 'all' ? v : null);
   return {
-    actorScope: pick(filters.actorScope),
-    action: pick(filters.action),
-    targetType: pick(filters.targetType),
+    actorScope: pickFilter(filters.actorScope),
+    action: pickFilter(filters.action),
+    targetType: pickFilter(filters.targetType),
     targetId: filters.targetId ?? null,
     tenantId: filters.tenantId ?? null,
     actorUserId: filters.actorUserId ?? null,
@@ -29,20 +25,8 @@ export function filtersToParams(filters: AuditLogFilters): QueryParams {
   };
 }
 
-export async function fetchAuditLogs(filters: AuditLogFilters): Promise<AuditLogListResult> {
-  const res = await apiRequest<AuditLog[]>('/platform/audit-logs', {
-    query: filtersToParams(filters),
-  });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: AUDIT_LOGS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+export const fetchAuditLogs = (filters: AuditLogFilters): Promise<AuditLogListResult> =>
+  fetchPage<AuditLog>('/platform/audit-logs', filtersToParams(filters), AUDIT_LOGS_DEFAULT_LIMIT);
 
 export const fetchAuditLog = (id: string): Promise<AuditLogDetail> =>
   apiGet<AuditLogDetail>(`/platform/audit-logs/${id}`);

@@ -4,7 +4,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import type { PaginationMeta } from '@xeprime/types';
 import { useMemo } from 'react';
 import { useBranchScopeParams } from '@/features/branches/hooks/use-branch-scope';
-import { apiRequest } from '@/services/api-client';
+import { fetchPage } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
 import type { VehicleListItem } from '../types';
 
@@ -39,19 +39,13 @@ export function useInfiniteVehicles(q: string) {
   const query = useInfiniteQuery({
     queryKey: queryKeys.vehicles.infinite(baseParams),
     queryFn: async ({ pageParam, signal }): Promise<VehiclesPage> => {
-      const res = await apiRequest<VehicleListItem[]>('/vehicles', {
-        query: { ...baseParams, page: pageParam },
-        signal,
-      });
-      return {
-        vehicles: res.data,
-        meta: (res.meta as PaginationMeta | undefined) ?? {
-          page: pageParam,
-          limit: PAGE_SIZE,
-          total: res.data.length,
-          hasNext: false,
-        },
-      };
+      const { items, meta } = await fetchPage<VehicleListItem>(
+        '/vehicles',
+        { ...baseParams, page: pageParam },
+        PAGE_SIZE,
+        { signal },
+      );
+      return { vehicles: items, meta };
     },
     initialPageParam: 1,
     getNextPageParam: (last) => (last.meta.hasNext ? last.meta.page + 1 : undefined),
