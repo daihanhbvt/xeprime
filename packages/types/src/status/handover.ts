@@ -1,5 +1,5 @@
 /**
- * Bàn giao xe (Wave 7) — docs/design/12_VEHICLE_360_MANAGEMENT.md §9.1 + design-briefs/05.
+ * Bàn giao xe (Wave 7) — docs/design/12_VEHICLE_360_MANAGEMENT.md §9.1.
  *
  * Bàn giao là CẦU NỐI giữa đơn thuê và hồ sơ xe: nó là nơi DUY NHẤT mà số KM do con người
  * đọc trên đồng hồ được đưa vào hệ thống, và chỉ khi ĐÃ XÁC NHẬN mới chảy tiếp sang

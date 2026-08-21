@@ -91,7 +91,7 @@ Thiết kế đòi những thứ dưới đây ⇒ báo trước, vì chúng thu
 | Lưu xe yêu thích (C-05) | Bảng mới |
 | Tìm theo bản đồ (C-07) | Toạ độ + index không gian |
 | Bàn giao xe có bằng chứng (S-03) | Bảng handover + ảnh |
-| Thanh toán online (C-01) | Bảng giao dịch + trạng thái + webhook |
+| ~~Thanh toán online (C-01)~~ **bỏ khỏi phạm vi 21/08/2026, [ADR 0013](../decisions/0013-no-online-payment-mvp.md)** | ~~Bảng giao dịch + trạng thái + webhook~~ |
 | Nhiều chi nhánh (S-09) | Thay đổi mô hình quan hệ — **đắt nhất trong danh sách** |
 | Ticket hỗ trợ (G-01) | Bảng mới |
 

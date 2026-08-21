@@ -17,6 +17,7 @@ import {
   RequirePermissions,
   TenantScoped,
 } from '../../../common/decorators';
+import { IdResultDto } from '../../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../../common/types/request-context';
 import { SourceContractDownloadDto, SourceContractPresignDto } from '../dto/vehicle-source.dto';
 import {
@@ -115,6 +116,7 @@ export class VehicleDocumentsController {
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.VEHICLE_DOCUMENT_MANAGE)
   @ApiOperation({ summary: 'Lưu trữ giấy tờ (không xoá lịch sử/file)' })
+  @ApiOkResponse({ type: IdResultDto })
   archive(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,

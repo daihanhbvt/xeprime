@@ -6,9 +6,9 @@ import type { ThemeConfig } from 'antd';
  * Giá trị lấy từ **Figma section 01 “XePrime Foundations”** (`14:2`), đọc ở cấp node trong
  * Wave 1A. File Figma KHÔNG dùng Figma Variables — mỗi token là một swatch frame tự ghi mã màu.
  *
- * ⚠️ Trong cùng file Figma tồn tại HAI bộ giá trị (xem `docs/implementation/08_DECISION_BACKLOG.md`
- * P15): Foundations `14:*` và các component `XePrime/*` cấp page. Hợp đồng nguồn sự thật ở
- * `docs/implementation/00_IMPLEMENTATION_OVERVIEW.md` §9 quy định **Foundations thắng về GIÁ TRỊ
+ * ⚠️ Trong cùng file Figma tồn tại HAI bộ giá trị (xem `docs/design-token-map.md`
+ * §21 P15): Foundations `14:*` và các component `XePrime/*` cấp page. Hợp đồng nguồn sự thật ở
+ * `docs/design-token-map.md` §21 P15 quy định **Foundations thắng về GIÁ TRỊ
  * token**, component definition chỉ thắng về hợp đồng biến thể. Không tự đổi sang bộ kia.
  *
  * Mỗi key ở đây tương ứng đúng một CSS custom property `--xp-<key>` trong `tokens.css`.
@@ -17,7 +17,7 @@ import type { ThemeConfig } from 'antd';
  *
  * Token nào đánh dấu DEPRECATED ở cuối file là bí danh giữ cho code cũ — chúng trỏ bằng
  * `var()` về token canonical, nên KHÔNG có hai nguồn giá trị. Đích gỡ bỏ ghi ở
- * `docs/implementation/02_DESIGN_TOKEN_MAP.md`.
+ * `docs/design-token-map.md`.
  */
 export const XP_TOKENS = {
   // ─── Thương hiệu ──────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ export const XP_TOKENS = {
   'color-border': '#e8e4dd', // 14:38
   'color-border-strong': '#d4cfc6', // 14:42
   // Foundations chỉ có 2 bậc viền. Bậc “mảnh hơn” tái dùng tông `color-bg-muted`
-  // (14:34) thay vì chế giá trị mới — ghi ở 02_DESIGN_TOKEN_MAP.md §2.
+  // (14:34) thay vì chế giá trị mới — ghi ở docs/design-token-map.md §2.
   'color-border-subtle': '#f5f3ef',
   'color-border-focus': '#d6a02c',
   'color-border-disabled': '#e8e4dd',
@@ -160,7 +160,7 @@ export const XP_TOKENS = {
   // Cỡ chữ mặc định của body + line-height toàn cục.
   // ⚠️ `line-height` (1.5714 → 22px) là giá trị AntD đang chạy, KHÁC `line-height-body`
   // (20px) của Figma. Đổi nó làm lệch chiều cao mọi hàng bảng và mọi form → hoãn sang
-  // wave có QA thị giác. Nợ kỹ thuật ghi ở 02_DESIGN_TOKEN_MAP.md §5.
+  // wave có QA thị giác. Nợ kỹ thuật ghi ở docs/design-token-map.md §5.
   'font-size': '14px',
   'font-size-sm': '12px',
   'line-height': '1.5714',
@@ -203,7 +203,7 @@ export const XP_TOKENS = {
 
   // ─── Breakpoint ───────────────────────────────────────────────────────────
   // Figma `14:183`–`14:192`. CSS custom property KHÔNG dùng được trong `@media`
-  // (xem 08_DECISION_BACKLOG.md P8) — nguồn dùng cho JS là `XP_BREAKPOINTS` bên dưới;
+  // (xem docs/design-token-map.md §21 P8) — nguồn dùng cho JS là `XP_BREAKPOINTS` bên dưới;
   // các token này phục vụ `max-width`/container query và tài liệu.
   'bp-mobile': '640px', // ≤640 · 4 cột · gutter 16
   'bp-tablet': '1024px', // 641–1024 · 8 cột · gutter 24
@@ -264,7 +264,7 @@ export const XP_TOKENS = {
 
   // ─── DEPRECATED — bí danh giữ cho code cũ ─────────────────────────────────
   // Mỗi cái trỏ `var()` về token canonical: không có giá trị nào bị nhân đôi.
-  // Số consumer + wave gỡ bỏ: 02_DESIGN_TOKEN_MAP.md §14.
+  // Số consumer + wave gỡ bỏ: docs/design-token-map.md §14.
   /** @deprecated → `--xp-color-bg` */
   'color-bg-layout': 'var(--xp-color-bg)',
   /** @deprecated → `--xp-color-border-subtle` */

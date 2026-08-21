@@ -20,6 +20,7 @@ import {
   RequirePermissions,
   TenantScoped,
 } from '../../common/decorators';
+import { IdResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
 import {
@@ -324,7 +325,7 @@ export class VehiclesController {
   @Delete(':id')
   @RequirePermissions(PERMISSION.VEHICLE_DELETE)
   @ApiOperation({ summary: 'Xoá mềm xe (chặn nếu còn lịch hiện tại/tương lai)' })
-  @ApiOkResponse({ schema: { properties: { id: { type: 'string' } } } })
+  @ApiOkResponse({ type: IdResultDto })
   remove(@CurrentTenant() tenant: TenantContext, @Param('id') id: string): Promise<{ id: string }> {
     return this.vehicles.remove(tenant.tenantId, id);
   }

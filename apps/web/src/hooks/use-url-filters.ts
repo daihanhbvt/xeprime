@@ -23,8 +23,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
  *
  * **`use-calendar-filters` nằm ngoài phạm vi gom, vĩnh viễn** — không phải vì chưa tới lượt:
  * lịch **không phân trang**, nên luật trung tâm của hook này ("đổi filter → về trang 1") vô nghĩa
- * ở đó, và ép vào sẽ thêm một nhánh điều kiện chỉ phục vụ một nơi. Xem
- * [04 D2](../../../../docs/implementation/04_COMPONENT_DUPLICATES.md).
+ * ở đó, và ép vào sẽ thêm một nhánh điều kiện chỉ phục vụ một nơi. (Ghi nhận ở kiểm kê
+ * trùng lặp Wave 0B D2; `docs/implementation/` đã nghỉ hưu 21/08/2026.)
  */
 export interface SetFiltersOptions {
   /**

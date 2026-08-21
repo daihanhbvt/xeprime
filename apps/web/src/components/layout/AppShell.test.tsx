@@ -396,7 +396,7 @@ describe('AppShell — chồng lớp overlay', () => {
 describe('MobileNav — ngoại lệ có chủ ý với DetailDrawer', () => {
   it('dùng thẳng Drawer của AntD, KHÔNG dùng DetailDrawer', () => {
     // `DetailDrawer` (Wave 1B) mang ngữ nghĩa "chi tiết một thực thể nghiệp vụ". Điều hướng
-    // không phải thực thể. Ghi lại như ngoại lệ — xem 04_COMPONENT_DUPLICATES §D17.
+    // không phải thực thể. Ghi lại như ngoại lệ (kiểm kê trùng lặp Wave 0B §D17, đã nghỉ hưu).
     const code = codeOf('./MobileNav.tsx');
 
     expect(code).not.toContain('DetailDrawer');

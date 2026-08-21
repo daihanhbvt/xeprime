@@ -36,7 +36,7 @@
 > Plan file · tạo 19/08/2026 · phạm vi đã chốt với user
 > Kế thừa: [ADR 0005](../decisions/0005-status-enums.md) · [0007](../decisions/0007-api-type-contract.md) ·
 > [0003](../decisions/0003-styling-css-modules.md) · [0004](../decisions/0004-client-state.md) ·
-> đối chiếu [`docs/design-briefs/06_FINANCE_OPERATIONS.md`](../design-briefs/06_FINANCE_OPERATIONS.md)
+> đối chiếu `docs/design-briefs/06_FINANCE_OPERATIONS.md`
 
 ---
 

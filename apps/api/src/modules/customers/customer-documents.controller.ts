@@ -7,6 +7,7 @@ import {
   RequirePermissions,
   TenantScoped,
 } from '../../common/decorators';
+import { OkResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { CustomerDocumentsService } from './customer-documents.service';
 import {
@@ -91,6 +92,12 @@ export class CustomerDocumentsController {
   @ApiOperation({
     summary: 'Ghi nhận đã đối chiếu giấy tờ (thủ công — VNeID/bản gốc), có audit',
   })
+  // 201 là mặc định của `@Post` trong Nest, không có gì được tạo mới ở đây — giữ nguyên mã cũ
+  // để không phá client đang chạy, nhưng nói rõ trong tài liệu.
+  @ApiCreatedResponse({
+    type: CustomerDocumentDto,
+    description: 'Giấy tờ sau khi đánh dấu đã đối chiếu',
+  })
   async verify(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,
@@ -104,6 +111,7 @@ export class CustomerDocumentsController {
   @Delete(':documentId')
   @RequirePermissions(PERMISSION.CUSTOMER_DOCUMENT_MANAGE)
   @ApiOperation({ summary: 'Gỡ giấy tờ (soft-delete + audit)' })
+  @ApiOkResponse({ type: OkResultDto })
   async remove(
     @CurrentTenant() tenant: TenantContext,
     @CurrentUser() user: AuthenticatedUser,

@@ -35,7 +35,7 @@ function isTabActive(pathname: string, href: string): boolean {
  * ngữ nghĩa "chi tiết một thực thể nghiệp vụ" — nó có tiêu đề thực thể, vùng hành động trên
  * thực thể đó, và người dùng hiểu là đang xem một bản ghi. Nhét menu vào đó là nói dối về ngữ
  * nghĩa và kéo theo cả bộ hành vi không liên quan. `Drawer` của AntD dùng thẳng vẫn là primitive
- * đúng ở đây (ghi lại như một ngoại lệ có chủ ý — 04_COMPONENT_DUPLICATES §D17).
+ * đúng ở đây (ghi lại như một ngoại lệ có chủ ý — kiểm kê trùng lặp Wave 0B §D17, bộ tài liệu đó đã nghỉ hưu).
  *
  * Ẩn trên desktop bằng CSS ở ranh chính tắc 1024px.
  */

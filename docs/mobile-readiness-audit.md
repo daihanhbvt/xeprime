@@ -76,20 +76,21 @@ Con số then chốt: 4.386 dòng `api.ts` + `types.ts` + `schema.ts` + `constan
 - **Chưa có ADR nào về mobile.** Tài liệu duy nhất nói về native là
   `docs/xeprime_build_plan_nextjs_nestjs_prod.md:751` — và nó ghi ngược lại: *"Native mobile app |
   Chưa làm, ưu tiên PWA responsive"*.
-- **PAY-01 chưa có quyết định.** Có/không thanh toán trực tuyến quyết định luồng đặt xe của mobile
-  kết thúc ở "đã gửi yêu cầu" hay ở "đã trả tiền".
+- ~~**PAY-01 chưa có quyết định.**~~ **ĐÃ CHỐT 21/08/2026 — [ADR 0013](decisions/0013-no-online-payment-mvp.md):
+  KHÔNG làm thanh toán trực tuyến.** Luồng đặt xe của mobile kết thúc ở "đã gửi yêu cầu → gian hàng
+  duyệt", giống hệt web. Không thiết kế bước thanh toán, không trạng thái "chờ thanh toán".
 
 **8. Blocker lớn nhất?** — Theo thứ tự: (1) đường vận chuyển session cho native; (2) quyết định
 thanh toán; (3) push notification — không có `device_tokens`, không có FCM sender, và nội dung
 thông báo đang là tiếng Việt cứng; (4) vòng đời phiên: không refresh, không sliding renewal,
 không bảng thu hồi phiên → mất máy là không revoke được, và 7 ngày là đăng xuất im lặng.
 
-**9. Năm việc Leader nên làm trước** — xem mục 12; tóm tắt: chốt PAY-01 · viết ADR 0013 mobile ·
+**9. Năm việc Leader nên làm trước** — xem mục 12; tóm tắt: ~~chốt PAY-01~~ (xong, ADR 0013) · viết ADR mobile ·
 duyệt việc mở Bearer cho AuthGuard · duyệt tách 2 package dùng chung · ký eSMS + cấp SMTP.
 
 **10. Nếu chỉ có 1 tuần?** — Làm đúng 3 việc, bỏ hết phần còn lại:
 `Bearer auth (1–2 ngày)` → `tách @xeprime/api-client + @xeprime/domain (2–3 ngày)` →
-`ADR 0013 + chốt PAY-01 (song song, việc của Leader)`. Ba việc này biến "mobile dev ngồi chờ"
+`ADR mobile (song song — PAY-01 đã chốt ở ADR 0013)`. Ba việc này biến "mobile dev ngồi chờ"
 thành "mobile dev clone được ngay đợt 1". i18n, push, PDF, test đều **không** nên nhét vào tuần đó.
 
 ---
@@ -316,7 +317,7 @@ Không có `next/*`. Không có `antd`. Không có `react-dom`. Đây là lý do
 | --- | --- | --- | --- |
 | **P0-1** | **AuthGuard chỉ nhận cookie** | `apps/api/src/common/guards/auth.guard.ts:36` + docblock `:17-18` | ✅ **ADR 0002 đã chốt**: *"App native sau này: cho AuthGuard chấp nhận thêm nguồn `Authorization: Bearer <session jwt>`. Cùng một session, khác cách vận chuyển."* → chỉ cần một ticket, **không cần ADR mới** |
 | **P0-2** | **Chưa có ADR về mobile** — và tài liệu hiện có nói ngược lại | `docs/xeprime_build_plan_nextjs_nestjs_prod.md:81` "Mobile web \| Responsive PWA trước, chưa build native app vội"; `:751` "Native mobile app \| Chưa làm, ưu tiên PWA responsive". Grep toàn `docs/`: **chỉ 1 file** nhắc tới native | ❌ Cần ADR 0013 |
-| **P0-3** | **PAY-01 chưa có quyết định nghiệp vụ** | 0 kết quả grep cổng thanh toán; không ADR nào nhắc tới | ❌ Cần sếp chốt |
+| ~~**P0-3**~~ **ĐÃ GỠ** | ~~PAY-01 chưa có quyết định nghiệp vụ~~ | Đã chốt 21/08/2026 | ✅ [ADR 0013](decisions/0013-no-online-payment-mvp.md) — không làm; luồng mobile dừng ở "đã gửi yêu cầu" |
 | **P0-4** | **Hợp đồng client chưa đóng gói được** — `api-client`, query key, `api.ts` của feature nằm trong `apps/web` | mục 3.2 | ❌ Cần tách package (mục 14) |
 
 ### P1 — nên xong trước khi mobile chạm vào luồng tương ứng
@@ -361,7 +362,7 @@ ADM-13 support ticket · toàn bộ ADM-01→13 trên mobile.
 | `docs/CODEMAP.md` | **KEEP** | Khớp code. **Thiếu**: chưa có dòng nào cho `packages/api-client`/`domain` (chưa tồn tại) — nhớ thêm khi tách |
 | `docs/claude-i18n-prompt.txt` | **DELETE CANDIDATE** | 24K, **không file `.md` nào tham chiếu**. Là prompt one-off còn sót |
 | `docs/plans/*.md` (5 file) | **UNKNOWN** | 4/5 tên bị mã hoá hỏng dấu tiếng Việt (`ph-n-t-ch-trang-vast-nygaard.md`, `y-l-m-n-h-nh-cached-thacker.md`…). 120K. Là plan cũ, không ai tra cứu được bằng tên |
-| `docs/design-briefs/` (532K) · `docs/implementation/` (648K) | **KEEP nhưng cần index** | 1,1MB tài liệu không nằm trong mục lục nào. Với người mới (mobile dev) là 1,1MB không biết có nên đọc |
+| ~~`docs/design-briefs/` (532K) · `docs/implementation/` (648K)~~ | **ĐÃ CHO NGHỈ HƯU 21/08/2026** | 24 file / ~11.900 dòng đã xoá: ảnh chụp 04–06/08, 0 mã nào dẫn `design-briefs`, 11/14 brief chưa từng được duyệt, spot-check ra 6 khẳng định sai. Giữ lại đúng [`design-token-map.md`](design-token-map.md) vì `theme.test.ts` cưỡng chế nó. Lý do đầy đủ ở [`README.md`](README.md) §Đã xóa |
 | `docs/xeprime_database_design.md`, `_screen_spec_`, `_overall_user_flow_`, `_fe_base_stack_calendar` | **KEEP (tham chiếu)** | Đã đánh dấu đúng là "ADR thắng khi mâu thuẫn" |
 
 **Kết luận docs**: không có tài liệu nào sai về nghiệp vụ. Drift nằm ở **mục lục và số đếm**, cộng
@@ -387,7 +388,7 @@ nào trong toàn bộ mã nguồn.
 - `features/catalog/test-catalog.ts` — 4 file test dùng.
 - `packages/ui/src/index.ts` (`export {}`) — rỗng **có chủ ý**, docblock giải thích rõ.
 - Token `@deprecated` trong `styles/theme.ts` (9 cái) — alias trỏ `var()` về token canonical, có
-  đích gỡ ghi ở `docs/implementation/02_DESIGN_TOKEN_MAP.md`.
+  đích gỡ ghi ở `docs/design-token-map.md`.
 - `getErrorMessage()` ở `api-client.ts:168` `@deprecated` — vẫn được khu chưa i18n dùng; xoá khi
   `i18n:audit` về 0.
 - `API_ERROR_CODE.DELIVERY_QUOTE_REQUIRED` — đã nghỉ hưu nhưng cố ý giữ cho log/audit cũ.
@@ -465,7 +466,7 @@ Cần thêm: `packages/config/tsconfig/react-native.json` (chưa có).
 
 | # | Việc | Vì sao không hoãn được | Đầu ra |
 | --- | --- | --- | --- |
-| L1 | **Chốt PAY-01: XePrime có trung gian thu tiền không?** | Quyết định luôn kiến trúc mobile (luồng đặt xe kết thúc ở đâu), schema (`Payment` hiện chỉ ghi sổ tay), và cả pháp lý | ADR 0014 hoặc một dòng "không làm ở MVP" trong roadmap |
+| ~~L1~~ ✅ **XONG 21/08** | ~~Chốt PAY-01~~ → **Không** ([ADR 0013](decisions/0013-no-online-payment-mvp.md)) | Quyết định luôn kiến trúc mobile (luồng đặt xe kết thúc ở đâu), schema (`Payment` hiện chỉ ghi sổ tay), và cả pháp lý | ADR 0014 hoặc một dòng "không làm ở MVP" trong roadmap |
 | L2 | **Viết ADR 0013 — Mobile native** | Hiện tại tài liệu duy nhất nói về native là `build_plan:751` và nó ghi *"chưa làm, ưu tiên PWA"*. Mobile dev vào đọc sẽ mâu thuẫn với chính việc họ được thuê | ADR: stack, phạm vi (khách? shop? cả hai?), quan hệ với PWA hiện có, chiến lược auth |
 | L3 | **Duyệt mở Bearer cho AuthGuard** | ADR 0002 đã chốt sẵn giải pháp — anh chỉ cần duyệt cho làm, **không cần ADR mới** | Ticket cho backend |
 | L4 | **Duyệt tách 2 package dùng chung** | Không tách thì mobile viết lại ~8.400 dòng, và mỗi dòng viết lại là một chỗ để hai app nói khác nhau | Duyệt kế hoạch ở mục 14 |
@@ -524,7 +525,7 @@ Cần thêm: `packages/config/tsconfig/react-native.json` (chưa có).
 
 | ID | Category | Task | Current State | Target | Owner | Prio | Dependency | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| MA-01 | Leader | Chốt PAY-01 có/không thanh toán online | Không có ADR, 0 dòng mã | ADR hoặc quyết định ghi vào roadmap | Leader | **P0** | — | TODO |
+| ~~MA-01~~ | Leader | ~~Chốt PAY-01 có/không thanh toán online~~ | ✅ **DONE 21/08** — [ADR 0013](decisions/0013-no-online-payment-mvp.md) | ADR hoặc quyết định ghi vào roadmap | Leader | ~~P0~~ | — | DONE |
 | MA-02 | Leader | ADR 0013 — Mobile native (stack, phạm vi, auth) | `build_plan:751` nói ngược | ADR merged | Leader | **P0** | — | TODO |
 | MA-03 | Backend | `AuthGuard` nhận `Authorization: Bearer` | `auth.guard.ts:36` chỉ đọc cookie | Cả hai nguồn, cùng một session | Backend | **P0** | MA-02 | TODO |
 | MA-04 | Shared | Tạo `@xeprime/api-client` (client + query key + api/types của feature) | Nằm trong `apps/web` | Package độc lập, web import ngược | Web + Mobile | **P0** | L4 duyệt | TODO |
@@ -706,8 +707,15 @@ sed -n '88,89p' apps/web/src/features/notifications/components/NotificationBell.
 
 ---
 
-## Ghi chú về nơi lưu tài liệu
+## Cập nhật file này khi nào
 
-File này đang nằm ở `docs/plans/` vì đó là nơi plan mode ghi. Nội dung của nó là **báo cáo**, không
-phải plan một lần dùng — nếu anh duyệt, chỗ đúng của nó là `docs/mobile-readiness-audit.md`, để nó
-đứng cạnh `completion-roadmap.md` như một nguồn sống và được cập nhật khi các blocker P0 đóng lại.
+Đây là **nguồn sống**, không phải ảnh chụp một lần: mỗi khi một blocker ở mục 7 đóng lại thì sửa
+ngay dòng đó, đừng để nó nói sai như `xeprime_build_plan` đã từng.
+
+Ba con số cần đo lại khi đọc, đừng tin số in sẵn: kết quả test (xem
+[`completion-roadmap.md`](completion-roadmap.md) §0), số chuỗi chưa i18n
+(`pnpm --filter @xeprime/web i18n:audit`), và số dòng logic còn kẹt trong `apps/web` (mục 3.3).
+
+Đổi chỗ ngày 21/08/2026 từ `docs/plans/xeprime-second-pass-elegant-neumann.md` — nó nằm ở
+`docs/plans/` chỉ vì plan mode ghi vào đó, còn nội dung là báo cáo phải cập nhật, không phải plan
+một lần dùng.

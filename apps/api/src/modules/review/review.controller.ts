@@ -1,6 +1,7 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators';
+import { IdResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { CreateReviewDto } from './dto/review.dto';
 import { ReviewService } from './review.service';
@@ -19,7 +20,7 @@ export class ReviewController {
 
   @Post()
   @ApiOperation({ summary: 'Đánh giá một chuyến thuê đã hoàn thành' })
-  @ApiCreatedResponse({ schema: { properties: { id: { type: 'string' } } } })
+  @ApiCreatedResponse({ type: IdResultDto })
   create(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CreateReviewDto,

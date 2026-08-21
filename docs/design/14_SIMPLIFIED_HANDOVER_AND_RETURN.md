@@ -4,7 +4,7 @@
 > - **Ngày chốt:** 2026-08-13
 > - **Trạng thái:** Target cho việc sửa trực tiếp Figma Wave 10; **không khẳng định code hiện tại đã làm theo**
 > - **Figma scope:** `02 — Wave 10 — Return Settlement & Surcharges`, node `298:3069`
-> - **Đọc cùng:** [`12_VEHICLE_360_MANAGEMENT.md`](12_VEHICLE_360_MANAGEMENT.md), [`05_RENTAL_OPERATIONS.md`](../design-briefs/05_RENTAL_OPERATIONS.md)
+> - **Đọc cùng:** [`12_VEHICLE_360_MANAGEMENT.md`](12_VEHICLE_360_MANAGEMENT.md), `05_RENTAL_OPERATIONS.md`
 
 ---
 

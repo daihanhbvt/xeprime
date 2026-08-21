@@ -19,7 +19,7 @@ Git: **thư mục này là repo** (remote `https://github.com/daihanhbvt/xeprime
 ## 2. Tài liệu — đọc theo thứ tự
 
 Nguồn sống (đọc trước, luôn đúng hiện tại):
-1. `docs/decisions/` — **12 ADR (0001–0012), thắng mọi tài liệu khác khi mâu thuẫn**
+1. `docs/decisions/` — **13 ADR (0001–0013), thắng mọi tài liệu khác khi mâu thuẫn**
 2. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu"
 3. `docs/completion-roadmap.md` — **"đang ở đâu / làm gì tiếp"** (tiến độ thực tế + milestone). Đóng xong phase thì cập nhật file này.
 4. File này (CLAUDE.md)
@@ -53,6 +53,7 @@ Tài liệu tham chiếu (5–9) có vài quyết định kỹ thuật đã bị
 | [0009](docs/decisions/0009-chat-firestore-projection.md) | Chat: Firestore projection realtime, **PostgreSQL là source of truth**, outbox/retry, R2 |
 | [0011](docs/decisions/0011-long-term-fixed-packages.md) | Thuê dài hạn = **gói cố định theo THÁNG LỊCH** (1/2/3/6/9/12), khách chỉ nêu nguyện vọng ngày nhận |
 | [0012](docs/decisions/0012-i18n-shared-url-cookie-locale.md) | Đa ngữ vi/en: **một URL cho cả hai ngôn ngữ**, locale ở cookie `XP_LOCALE` đọc phía server |
+| [0013](docs/decisions/0013-no-online-payment-mvp.md) | **KHÔNG làm thanh toán trực tuyến** ở giai đoạn này — module `payments` là ghi sổ thủ công |
 
 ### Công cụ Claude (`.claude/`)
 
@@ -61,7 +62,7 @@ Kỷ luật code đã đóng gói thành skill/agent — **dùng chúng, đừng
 | Loại | Tên | Khi nào |
 | --- | --- | --- |
 | skill | `frontend-feature` | Trước khi viết bất cứ thứ gì ở `apps/web` |
-| skill | `backend-endpoint` | Trước khi thêm/sửa endpoint/module/DTO ở `apps/api` |
+| skill | `backend-endpoint` | Trước khi thêm/sửa endpoint/module/DTO ở `apps/api` (tài liệu Swagger đi kèm: `docs/api-docs.md` §6) |
 | skill | `database-change` | Trước khi đụng `schema.prisma`/migration/seed |
 | skill | `i18n` | Trước khi viết BẤT KỲ chữ nào hiện cho người dùng — và khi mở màn hình còn chuỗi tiếng Việt thô thì chuyển luôn màn đó |
 | skill | `shared-code` | Khi thấy logic/giá trị lặp lần 2, hoặc code cross-tuyến web↔api |

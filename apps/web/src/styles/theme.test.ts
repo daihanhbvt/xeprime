@@ -206,7 +206,7 @@ describe('design token', () => {
     });
 
     /**
-     * Các cặp CHƯA đạt AA, đã đo và ghi nhận (xem 08_DECISION_BACKLOG.md P18).
+     * Các cặp CHƯA đạt AA, đã đo và ghi nhận (xem docs/design-token-map.md §21 P18).
      * `color-text-tertiary` vốn đã trượt từ trước Wave 1A (bản cũ 2.99). Ngưỡng dưới ở đây
      * là chốt chặn: giảm thêm là test đỏ.
      */
