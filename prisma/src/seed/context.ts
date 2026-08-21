@@ -130,5 +130,6 @@ export function pick<T>(list: readonly T[], index: number): T {
 }
 
 export function log(message: string): void {
+  // eslint-disable-next-line no-console -- seed là script CLI, stdout CHÍNH LÀ giao diện của nó
   console.log(message);
 }

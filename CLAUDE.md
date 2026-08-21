@@ -171,7 +171,20 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 | **pnpm 11 chặn build script** | `pnpm-workspace.yaml`: `onlyBuiltDependencies` + `verifyDepsBeforeRun: false` (không thì `pnpm exec` tự chạy lại install và fail) |
 | Docker daemon | Bật rồi tắt bất thường; nếu `up` treo là đang kéo image lần đầu. Gặp network/container mồ côi thì `docker compose down --remove-orphans` + xoá network trùng tên |
 
-Base Phase 0 (đã commit `0a76adf`): 11 bảng lõi + `vehicle_occupancies` (schema + constraint từ Phase 0, logic đầy đủ Phase 4 — ADR 0006); seed 3 scope (platform admin / shop owner / customer) idempotent; API/pages tối thiểu. Chi tiết tiến độ các phase sau: `docs/completion-roadmap.md`.
+Base Phase 0 (đã commit `0a76adf`): 11 bảng lõi + `vehicle_occupancies` (schema + constraint từ Phase 0, logic đầy đủ Phase 4 — ADR 0006); API/pages tối thiểu. Chi tiết tiến độ các phase sau: `docs/completion-roadmap.md`.
+
+### Migration & seed (gộp lại 21/08/2026)
+
+| Việc | Trạng thái |
+| --- | --- |
+| Migration | **Một baseline duy nhất** `prisma/migrations/20260821000000_init/` — gộp 44 migration cũ, đã đối chiếu `pg_dump` với chuỗi cũ. Đọc header của file đó trước khi chạy `migrate dev`: nó cảnh báo các FK tổ hợp `(id, tenant_id)` mà `schema.prisma` không mô tả được và Prisma sẽ sinh lệnh DROP chúng |
+| Seed | `prisma/src/seed.ts` + `prisma/src/seed/` — idempotent trên toàn bộ 63 bảng (id tất định từ `seedId`, không xoá-tạo-lại) |
+| `SEED_MODE=system` | Chỉ dữ liệu nền: quyền, role hệ thống, danh mục thu/chi, gói dịch vụ, banner. Chạy được ở production |
+| `SEED_MODE=demo` (mặc định) | Thêm 5 gian hàng **khác quy mô** (40 xe/4 chi nhánh · 10/2 · 3 · 1 · 0 chưa duyệt), 19 tài khoản, 54 xe, 107 đơn, 273 phiếu thu chi |
+| Tài khoản demo | nền tảng đủ 5 vai trò (`admin@xeprime.vn`, `staff@`/`reviewer@`/`support@`/`finance@xeprime.test`) · 5 chủ shop `owner.<tỉnh>@xeprime.test` · 4 nhân viên shop · 5 khách `khach.<tên>@xeprime.test`. Mật khẩu từ env, không in ra stdout |
+| Danh tính seed sở hữu | `prisma/src/seed/identities.ts` — `cleanup-test-data.ts` import chính danh sách này làm bộ loại trừ, không chép tay |
+
+> `prisma migrate reset` bị Prisma chặn khi phát hiện agent chạy — người dùng phải tự gõ lệnh đó.
 
 ## 8b. Đa ngữ (ADR 0012)
 

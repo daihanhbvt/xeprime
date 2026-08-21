@@ -1,8 +1,10 @@
 /**
  * Tài khoản đăng nhập của seed: đội ngũ NỀN TẢNG và KHÁCH THUÊ.
  *
- * Chủ gian hàng và nhân viên gian hàng KHÔNG ở đây — họ khai trong `fixtures.ts` cùng gian
- * hàng của mình, vì tài khoản đó chỉ có nghĩa khi đi kèm membership vào một tenant cụ thể.
+ * Chủ gian hàng và nhân viên gian hàng KHÔNG ở đây — họ khai trong `shops.ts` cùng gian hàng
+ * của mình, vì tài khoản đó chỉ có nghĩa khi đi kèm membership vào một tenant cụ thể.
+ *
+ * Bản khai danh tính (email/SĐT) nằm ở `identities.ts` — file này chỉ lo việc ghi xuống DB.
  *
  * Mật khẩu lấy từ env, không hard-code (xem `context.ts`); mọi tài khoản dùng cùng một mật khẩu
  * dev để đăng nhập thử cho nhanh.
@@ -18,6 +20,7 @@ import {
   prisma,
   seedId,
 } from './context';
+import { CUSTOMER_ACCOUNTS, PLATFORM_ACCOUNTS, type CustomerKey } from './identities';
 
 export interface PasswordUserInput {
   email: string;
@@ -77,11 +80,10 @@ export async function upsertPasswordUser(input: PasswordUserInput): Promise<stri
 // ---------------------------------------------------------------------------
 
 /**
- * Năm vai trò nền tảng đều có tài khoản riêng, không gộp vào một "admin" duy nhất: quyền của
- * `reviewer`, `support`, `finance_admin` hẹp hơn hẳn `platform_admin`, và cách duy nhất để biết
- * màn nào thiếu quyền là đăng nhập bằng đúng vai trò đó mà bấm thử.
+ * Tài khoản `platform_admin` lấy email từ env nên phải ghép ở đây; bốn vai trò còn lại là dữ
+ * liệu thuần, khai ở `identities.ts` để `cleanup-test-data.ts` dùng chung.
  */
-const PLATFORM_ACCOUNTS: ReadonlyArray<{
+const ALL_PLATFORM_ACCOUNTS: ReadonlyArray<{
   roleKey: string;
   email: string;
   displayName: string;
@@ -93,30 +95,7 @@ const PLATFORM_ACCOUNTS: ReadonlyArray<{
     displayName: 'Quản trị nền tảng',
     phone: '0900000001',
   },
-  {
-    roleKey: PLATFORM_ROLE.PLATFORM_STAFF,
-    email: 'staff@xeprime.test',
-    displayName: 'Nhân viên nền tảng',
-    phone: '0900000002',
-  },
-  {
-    roleKey: PLATFORM_ROLE.REVIEWER,
-    email: 'reviewer@xeprime.test',
-    displayName: 'Chuyên viên duyệt hồ sơ',
-    phone: '0900000003',
-  },
-  {
-    roleKey: PLATFORM_ROLE.SUPPORT,
-    email: 'support@xeprime.test',
-    displayName: 'Hỗ trợ khách hàng',
-    phone: '0900000004',
-  },
-  {
-    roleKey: PLATFORM_ROLE.FINANCE_ADMIN,
-    email: 'finance@xeprime.test',
-    displayName: 'Kế toán nền tảng',
-    phone: '0900000005',
-  },
+  ...PLATFORM_ACCOUNTS,
 ];
 
 export interface PlatformAccounts {
@@ -129,7 +108,7 @@ export interface PlatformAccounts {
 export async function seedPlatformAccounts(): Promise<PlatformAccounts> {
   const byRole = new Map<string, string>();
 
-  for (const account of PLATFORM_ACCOUNTS) {
+  for (const account of ALL_PLATFORM_ACCOUNTS) {
     const password =
       account.roleKey === PLATFORM_ROLE.PLATFORM_ADMIN ? PLATFORM_ADMIN_PASSWORD : DEMO_PASSWORD;
     const userId = await upsertPasswordUser({
@@ -153,7 +132,7 @@ export async function seedPlatformAccounts(): Promise<PlatformAccounts> {
     byRole.set(account.roleKey, userId);
   }
 
-  log(`  tài khoản nền tảng: ${PLATFORM_ACCOUNTS.length} (đủ 5 vai trò)`);
+  log(`  tài khoản nền tảng: ${ALL_PLATFORM_ACCOUNTS.length} (đủ 5 vai trò)`);
 
   return {
     adminUserId: byRole.get(PLATFORM_ROLE.PLATFORM_ADMIN)!,
@@ -165,53 +144,6 @@ export async function seedPlatformAccounts(): Promise<PlatformAccounts> {
 // ---------------------------------------------------------------------------
 // Khách thuê
 // ---------------------------------------------------------------------------
-
-/**
- * Năm tài khoản khách, mỗi tài khoản một hoàn cảnh khác nhau — dữ liệu demo chỉ có ích khi
- * các màn "lịch sử thuê", "đánh giá của tôi", "chưa có chuyến nào" đều có người để mở ra xem.
- *
- * `phone` ở đây là SĐT của TÀI KHOẢN. Hồ sơ khách trong sổ của từng gian hàng
- * (`tenant_customers`) tra theo chính SĐT này, nên hai bên khớp nhau như dữ liệu thật.
- */
-export const CUSTOMER_ACCOUNTS = [
-  {
-    key: 'an',
-    email: 'khach.an@xeprime.test',
-    displayName: 'Nguyễn Văn An',
-    phone: '0901000001',
-    note: 'Khách quen: nhiều chuyến đã hoàn tất ở gian hàng lớn, có đánh giá.',
-  },
-  {
-    key: 'binh',
-    email: 'khach.binh@xeprime.test',
-    displayName: 'Trần Thị Bình',
-    phone: '0901000002',
-    note: 'Đang thuê dài hạn theo gói tháng.',
-  },
-  {
-    key: 'cuong',
-    email: 'khach.cuong@xeprime.test',
-    displayName: 'Lê Hoàng Cường',
-    phone: '0901000003',
-    note: 'Thuê xe có tài xế đi liên tỉnh; còn nợ một phần tiền.',
-  },
-  {
-    key: 'dung',
-    email: 'khach.dung@xeprime.test',
-    displayName: 'Phạm Thu Dung',
-    phone: '0901000004',
-    note: 'Tài khoản mới — chưa có chuyến nào, để thử màn trạng thái rỗng.',
-  },
-  {
-    key: 'duc',
-    email: 'khach.duc@xeprime.test',
-    displayName: 'Võ Minh Đức',
-    phone: '0901000005',
-    note: 'Bị một gian hàng đưa vào danh sách chặn (chỉ ở gian hàng đó).',
-  },
-] as const;
-
-export type CustomerKey = (typeof CUSTOMER_ACCOUNTS)[number]['key'];
 
 export type CustomerAccounts = Map<CustomerKey, { userId: string; name: string; phone: string }>;
 
