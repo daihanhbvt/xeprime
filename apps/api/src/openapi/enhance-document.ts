@@ -53,6 +53,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   [API_ERROR_CODE.NOT_FOUND]: 'Không tìm thấy dữ liệu',
   [API_ERROR_CODE.CONFLICT]: 'Dữ liệu đã tồn tại',
   [API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT]: 'Xe đã có lịch khác trùng khoảng thời gian này',
+  [API_ERROR_CODE.INVALID_CREDENTIALS]: 'Email/số điện thoại hoặc mật khẩu không đúng',
+  [API_ERROR_CODE.SESSION_EXPIRED]: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại',
+  [API_ERROR_CODE.ACCOUNT_LOCKED]: 'Tài khoản đã bị khoá',
   [API_ERROR_CODE.RATE_LIMITED]: 'Vượt giới hạn số request',
   [API_ERROR_CODE.INTERNAL_ERROR]: 'Có lỗi xảy ra, vui lòng thử lại',
 };
@@ -210,6 +213,14 @@ function addErrorResponses(
   if (!route.isPublic) {
     setResponse(operation, '401', 'Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn', [
       API_ERROR_CODE.UNAUTHENTICATED,
+    ]);
+  } else if (route.verifiesCredentials) {
+    // @Public() nhưng handler tự kiểm credential — xem `@VerifiesCredentials`. Đây là nhánh
+    // client PHẢI code theo, không phải lỗi hiếm.
+    setResponse(operation, '401', 'Thông tin đăng nhập không hợp lệ, hoặc phiên đã hết hạn', [
+      API_ERROR_CODE.INVALID_CREDENTIALS,
+      API_ERROR_CODE.SESSION_EXPIRED,
+      API_ERROR_CODE.ACCOUNT_LOCKED,
     ]);
   }
 

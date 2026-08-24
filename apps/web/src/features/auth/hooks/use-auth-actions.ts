@@ -3,7 +3,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import type { CurrentUser } from '@/hooks/use-current-user';
-import { apiGet } from '@/services/api-client';
+import { authApi } from '@xeprime/api-client';
 import { queryKeys } from '@/services/query-keys';
 
 /**
@@ -28,7 +28,7 @@ export function useAuthCache() {
         return user;
       }
       try {
-        const fresh = await apiGet<CurrentUser>('/auth/me');
+        const fresh = await authApi.me();
         queryClient.setQueryData(queryKeys.auth.me(), fresh);
         return fresh;
       } catch {

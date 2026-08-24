@@ -43,8 +43,11 @@ Vẫn không vào được sau hai bước trên thì nghi router bật **AP/cli
 
 ## 2. Thử gọi API ngay trong Swagger UI
 
-Xác thực là **httpOnly session cookie**, không phải Bearer token (ADR 0002) — nên **không có
-nút "Authorize" nào để dán token vào**. Cách đăng nhập:
+API có **hai đường xác thực**, và Swagger UI chỉ tiện cho đường thứ nhất.
+
+### 2.1 Web — httpOnly session cookie (ADR 0002)
+
+**Không có nút "Authorize" nào để dán token vào** — cookie không phải thứ dán tay được.
 
 1. Mở `auth` → `POST /auth/session` → **Try it out** → gửi ID token Firebase.
 2. Trình duyệt tự giữ cookie. Mọi endpoint sau đó dùng lại cookie đó, không cần thao tác gì thêm.
@@ -59,6 +62,43 @@ curl -c jar.txt -b jar.txt -X POST http://localhost:4000/auth/session \
   -H 'Content-Type: application/json' -d '{"idToken":"..."}'
 curl -b jar.txt http://localhost:4000/bookings?page=1
 ```
+
+### 2.2 App native — `Authorization: Bearer` (ADR 0017)
+
+Bốn endpoint dưới nhóm `auth`, tiền tố `/auth/mobile`:
+
+| Endpoint | Trả về | Ghi chú |
+| --- | --- | --- |
+| `POST /auth/mobile/session` | `MobileSessionDto` (tokens + `MeDto`) | Đổi Firebase ID token lấy cặp token |
+| `POST /auth/mobile/login` | `MobileSessionDto` | Email/SĐT + mật khẩu. Throttle 5 req/phút |
+| `POST /auth/mobile/refresh` | `MobileTokenPairDto` | **Xoay**: trả cặp mới, token cũ chết ngay |
+| `POST /auth/mobile/logout` | 204 | Thu hồi phiên của thiết bị. Luôn 204, kể cả token lạ |
+
+```bash
+# Đăng nhập → lấy access token
+ACCESS=$(curl -s -X POST http://localhost:4000/auth/mobile/login \
+  -H 'Content-Type: application/json' \
+  -d '{"identifier":"owner@xeprime.test","password":"..."}' | jq -r .data.tokens.accessToken)
+
+# Gọi endpoint cần đăng nhập bằng Bearer — KHÔNG cần cookie jar
+curl -H "Authorization: Bearer $ACCESS" 'http://localhost:4000/bookings?page=1'
+```
+
+Ba điều dễ vấp:
+
+- **Đừng gửi cả cookie lẫn Bearer.** Guard trả 401 thay vì đoán bên nào thắng — cố ý (ADR 0017 §5).
+  Trong Swagger UI, sau khi đã đăng nhập bằng cookie ở §2.1 thì mọi "Try it out" kèm header
+  `Authorization` sẽ 401; mở tab ẩn danh hoặc dùng curl.
+- **Access token sống 15 phút.** Hết hạn trả `SESSION_EXPIRED`; gọi `/auth/mobile/refresh`, đừng
+  đăng nhập lại.
+- **Refresh token dùng một lần.** Gửi lại token đã dùng ⇒ coi là bị đánh cắp ⇒ **thu hồi cả phiên**.
+  Lưu token mới sau MỖI lần refresh.
+
+Quyền và tenant scope **không** nằm trong token ở cả hai đường — `GET /auth/me` là chỗ duy nhất trả
+chúng, và nó đọc DB mỗi lần gọi.
+
+Cách app native cấu hình client: [`packages/api-client/README.md`](../packages/api-client/README.md).
+
 
 ## 3. Đọc gì trên mỗi endpoint
 

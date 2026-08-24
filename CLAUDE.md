@@ -19,7 +19,7 @@ Git: **thư mục này là repo** (remote `https://github.com/daihanhbvt/xeprime
 ## 2. Tài liệu — đọc theo thứ tự
 
 Nguồn sống (đọc trước, luôn đúng hiện tại):
-1. `docs/decisions/` — **16 ADR (0001–0016), thắng mọi tài liệu khác khi mâu thuẫn**
+1. `docs/decisions/` — **17 ADR (0001–0017), thắng mọi tài liệu khác khi mâu thuẫn**
 2. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu"
 3. `docs/completion-roadmap.md` — **"đang ở đâu / làm gì tiếp"** (tiến độ thực tế + milestone). Đóng xong phase thì cập nhật file này.
 4. File này (CLAUDE.md)
@@ -57,6 +57,7 @@ Tài liệu tham chiếu (5–9) có vài quyết định kỹ thuật đã bị
 | [0014](docs/decisions/0014-owner-and-shop-single-role.md) | Chủ xe = chủ gian hàng = **MỘT vai** `shop_owner`; `tenant_type` chỉ là NHÃN; năng lực đến từ GÓI. Nền tảng **không đứng giữa** quan hệ khách ↔ gian hàng |
 | [0015](docs/decisions/0015-vehicle-slot-billing.md) | Cước theo **CHỖ XE**, trả trước, kỳ tính bằng **THÁNG LỊCH**; hết hạn → gỡ khỏi chợ (không khoá tenant) — **sửa ADR 0010** |
 | [0016](docs/decisions/0016-sepay-bank-reconciliation.md) | **SePay** đối soát chuyển khoản tự động, CHỈ cho tiền GÓI — **sửa phạm vi ADR 0013** |
+| [0017](docs/decisions/0017-native-bearer-auth.md) | App native xác thực bằng **Bearer access token 15 phút** + refresh token opaque xoay vòng, thu hồi theo thiết bị. Web **giữ nguyên** cookie httpOnly. Quyền/tenant/PII không bao giờ là claim JWT |
 
 ### Công cụ Claude (`.claude/`)
 
@@ -82,7 +83,7 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 
 | Hạng mục | Quyết định |
 | --- | --- |
-| Repo | Monorepo pnpm workspace: `apps/web`, `apps/api`, `apps/worker`, `packages/{types,validators,config,ui}`, `prisma`, `docs` |
+| Repo | Monorepo pnpm workspace: `apps/web`, `apps/api`, `apps/worker`, `packages/{types,validators,api-client,domain,config,ui}`, `prisma`, `docs` |
 | Frontend | Next.js App Router + TS strict, route groups `(public)` `(auth)` `(manage)`, Server Components mặc định |
 | UI | Ant Design + `@ant-design/nextjs-registry`. Style riêng dùng **CSS Modules + AntD token** — ADR 0003 |
 | Form | React Hook Form + Yup + `@hookform/resolvers` |
@@ -91,7 +92,10 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | Backend | NestJS modular monolith (KHÔNG microservices), Express adapter |
 | DB | **PostgreSQL 16** + Prisma — ADR 0001. ID `String @id @db.Char(26)` (ULID), snake_case `@@map`/`@map`, tiền `Decimal @db.Decimal(14,2)`, thời gian `@db.Timestamptz(3)`, JSON dùng `jsonb`, status là String (union type ở `packages/types` — ADR 0005) |
 | Chống trùng lịch | Bảng `vehicle_occupancies` + `EXCLUDE USING gist` — ADR 0006. **Không** dựa vào check ở tầng app |
-| Auth | Firebase Auth chỉ là provider login → NestJS verify ID token → phát **httpOnly session cookie** — ADR 0002 |
+| Auth (web) | Firebase Auth chỉ là provider login → NestJS verify ID token → phát **httpOnly session cookie** — ADR 0002 |
+| Auth (native) | `Authorization: Bearer <accessToken>` — access token JWT 15 phút, refresh token opaque xoay vòng, phiên thu hồi được theo thiết bị. Endpoint `/auth/mobile/*` — ADR 0017 |
+| Client HTTP | `@xeprime/api-client` — MỘT client cho web và native; hai app khác nhau đúng một chỗ: `AuthTransport` (web `credentials: 'include'`, native header Bearer). Web cấu hình ở `apps/web/src/services/api-client.ts` |
+| Logic nghiệp vụ dùng chung | `@xeprime/domain` — tiền trên chuỗi · múi giờ + thời lượng thuê · lịch bận · nguyện vọng nhận xe. Framework-free, Metro đọc được; `apps/web/src/lib/*` là re-export shim |
 | API type | FE import từ `packages/types/src/api.generated.ts` sinh bằng `openapi-typescript` — ADR 0007 |
 | RBAC | Role/permission lưu DB, **guard backend là nguồn bảo vệ chính** |
 | Thuê dài hạn | **Gói cố định** 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** (server tính, client không gửi); khách nêu nguyện vọng ngày nhận, gian hàng chốt lịch khi duyệt; ưu đãi cam kết thời hạn theo THÁNG, không cộng dồn — ADR 0011 |
@@ -128,6 +132,11 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ String literal trần cho status — luôn `BOOKING_STATUS.ACTIVE`, không bao giờ `'active'` (ADR 0005)
 - ❌ API tenant-sensitive nhận `tenant_id` từ body/query — backend lấy từ membership/scope
 - ❌ Nhét role/permission/tenant_id vào session JWT — quyền luôn đọc từ DB mỗi request (ADR 0002)
+- ❌ Nhét quyền/tenant/PII vào access token native — claim chỉ có `sub`/`sid`/`typ`/`aud`/`iat`/`exp` (ADR 0017)
+- ❌ Lưu token ở `localStorage`/`AsyncStorage` — refresh token native CHỈ ở Keychain/Keystore (ADR 0017)
+- ❌ Ghi refresh token thô vào DB/log/message lỗi — chỉ SHA-256 của nó (ADR 0017)
+- ❌ Import `next/*`, `antd`, DOM API, `File`, `XMLHttpRequest`, CSS, hay React UI vào `packages/api-client` / `packages/domain` — Metro không đọc được, và đó là lý do hai package đó tồn tại
+- ❌ Đọc `process.env` trong package dùng chung — app truyền cấu hình vào (`configureApiClient({ baseUrl })`)
 - ❌ Client tự set `approved_public` / `tenant.status` / quyết định lịch trống
 - ❌ Module khác `ListingsService` ghi vào `public_listings` (ADR 0008)
 - ❌ Module khác `OccupancyService` ghi vào `vehicle_occupancies` (ADR 0006)
@@ -198,7 +207,7 @@ server trước khi render.
 | --- | --- |
 | Hằng locale, cookie, bản đồ `Intl` | `apps/web/src/i18n/config.ts` |
 | Đọc locale (server) | `src/i18n/locale.ts` · Server Action ghi cookie: `src/i18n/actions.ts` |
-| Message | `apps/web/messages/{vi,en}/*.json`, danh sách ở `src/i18n/namespaces.ts` |
+| Message — **một gốc dùng chung** | TOÀN BỘ 21 namespace ở `packages/domain/messages/{vi,en}/` — web và app native dùng chung, một khoá một bản dịch (24/08/2026). `apps/web/messages/<locale>/index.ts` chỉ là bảng gom của web. Danh sách ở `src/i18n/namespaces.ts`; `i18n:check` quét gốc package và CHẶN JSON mọc lại ở gốc web cũ |
 | Định dạng tiền/ngày/quãng đường | `useAppFormat()` (client) · `getAppFormat()` (server) |
 | Nhãn status/role/enum | `useDomainLabel()` + namespace `Domain` |
 | Lỗi API | `useErrorMessage()` + namespace `Errors` (ánh xạ từ MÃ) |

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Post, Res } from '@nestjs/common';
 import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { CurrentUser, Public } from '../../common/decorators';
+import { CurrentUser, Public, VerifiesCredentials } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { AuthService } from './auth.service';
 import { SessionService } from './session.service';
@@ -30,6 +30,7 @@ export class AuthController {
    * bao giờ gửi token nữa; mọi request đi bằng session cookie.
    */
   @Public()
+  @VerifiesCredentials()
   @Post('session')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng nhập: đổi ID token lấy session cookie httpOnly' })
@@ -59,6 +60,7 @@ export class AuthController {
   }
 
   @Public()
+  @VerifiesCredentials()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Đăng nhập bằng email hoặc số điện thoại + mật khẩu' })

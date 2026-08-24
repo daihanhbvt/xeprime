@@ -4,6 +4,7 @@ import type { Request, Response } from 'express';
 import { Public } from '../../common/decorators';
 import { resolveOptionalUserId } from '../../common/optional-user';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NativeSessionService } from '../auth/native-session.service';
 import { SessionService } from '../auth/session.service';
 import {
   BookingRequestReceiptDto,
@@ -31,6 +32,7 @@ export class PublicBookingRequestsController {
   constructor(
     private readonly requests: BookingRequestsService,
     private readonly sessions: SessionService,
+    private readonly nativeSessions: NativeSessionService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -43,7 +45,12 @@ export class PublicBookingRequestsController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<BookingRequestReceiptDto> {
-    const customerUserId = await resolveOptionalUserId(req, this.sessions, this.prisma);
+    const customerUserId = await resolveOptionalUserId(
+      req,
+      this.sessions,
+      this.prisma,
+      this.nativeSessions,
+    );
     const { receipt, loginUserId } = await this.requests.submitPublic(dto, customerUserId);
     if (loginUserId) {
       const { token } = this.sessions.issue(loginUserId);

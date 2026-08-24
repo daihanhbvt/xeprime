@@ -13,21 +13,26 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Convention response `{data,meta}` / error code | `packages/types/src/api.ts` | 0007 |
 | Type FE sinh từ OpenAPI (KHÔNG sửa tay) | `packages/types/src/api.generated.ts` | 0007 |
 | Yup schema dùng chung | `packages/validators/src/` | — |
+| **Client HTTP + envelope `{data,meta}` + `ApiClientError` + query key** — MỘT bản cho web và app native | `packages/api-client/src/` (`client.ts`, `transport.ts`, `query-keys.ts`); web cấu hình ở `apps/web/src/services/api-client.ts` | 0007 · 0017 |
+| **Đường vận chuyển danh tính** — web trả `credentials: 'include'`, native trả `Authorization: Bearer` | `packages/api-client/src/transport.ts` (`AuthTransport`) | 0002 · 0017 |
+| **Luật nghiệp vụ thuần dùng chung** — tiền trên chuỗi · múi giờ + thời lượng thuê · lịch bận · nguyện vọng nhận xe | `packages/domain/src/` (re-export shim ở `apps/web/src/lib/{money,datetime,rental-busy,long-term}.ts`) | 0006 · 0007 · 0011 |
 | **Danh mục lọc** (hãng xe / kiểu dáng / nhiên liệu / tiện ích) — nội dung ở **DB**, không phải hằng số | bảng `catalog_items` · `apps/api/src/modules/catalog/` · FE `apps/web/src/features/catalog/` | — |
 | **Banner hero trang chủ** — platform admin quản lý, public lấy tối đa 3 | bảng `marketplace_banners` · `apps/api/src/modules/banners/` · FE `apps/web/src/features/banners/` + `BannerCarousel` | — |
 | **Khoảng thuê** `{pickupAt, returnAt}` — lịch đôi + tab ngày/giờ, dùng chung | `apps/web/src/components/form/RentalDateTimeRangeField.tsx` (bọc react-day-picker) | — |
-| **Lịch bận của xe trên ô chọn khoảng thuê** — ngày kín bị khoá, ngày bận vài giờ tô riêng + ghi giờ | `apps/web/src/lib/rental-busy.ts` (tra cứu) · `GET /public/booking-requests/busy-days` | ADR 0006 — preview, constraint mới là chốt |
-| **Thuê dài hạn** — gói cố định, tháng lịch, nguyện vọng nhận xe, mốc ưu đãi cam kết | `packages/types/src/long-term.ts` (hằng + `addCalendarMonthsVn` + tier); FE hiển thị nguyện vọng ở `apps/web/src/lib/long-term.ts` | 0011 |
+| **Lịch bận của xe trên ô chọn khoảng thuê** — ngày kín bị khoá, ngày bận vài giờ tô riêng + ghi giờ | `packages/domain/src/rental-busy.ts` (tra cứu) · `GET /public/booking-requests/busy-days` | ADR 0006 — preview, constraint mới là chốt |
+| **Thuê dài hạn** — gói cố định, tháng lịch, nguyện vọng nhận xe, mốc ưu đãi cam kết | `packages/types/src/long-term.ts` (hằng + `addCalendarMonthsVn` + tier); FE hiển thị nguyện vọng ở `packages/domain/src/long-term.ts` | 0011 |
 | **Ngày date-only** (`YYYY-MM-DD` ↔ cột `@db.Date`) | `apps/api/src/common/date-only.ts` | — |
 | **Chuẩn hoá SĐT Việt Nam** (`09…`/`84…`/`+84…` → `84…`) — định danh khách trong sổ khách | `packages/types/src/phone.ts` · re-export `apps/api/src/common/phone.ts` | — |
 | **Ngôn ngữ giao diện** — danh sách locale, cookie `XP_LOCALE`, bản đồ `Intl`, múi giờ | `apps/web/src/i18n/config.ts` | 0012 |
-| **Chuỗi giao diện** (vi/en) — chia theo namespace tính năng | `apps/web/messages/{vi,en}/*.json`, danh sách ở `apps/web/src/i18n/namespaces.ts` | 0012 |
+| **Chuỗi giao diện** (vi/en) — chia theo namespace tính năng | `packages/domain/messages/{vi,en}/*.json` — TOÀN BỘ 21 namespace dùng chung web + app native (24/08/2026). Bảng gom của web: `apps/web/messages/<locale>/index.ts`. Danh sách ở `apps/web/src/i18n/namespaces.ts` | 0012 |
 
 ## Backend (`apps/api/src`)
 
 | Cần gì | Ở đâu | Ghi chú |
 | --- | --- | --- |
-| Xác thực, session cookie | `modules/auth/` (`session.service.ts`, `token-verifier.ts`) | ADR 0002 |
+| Xác thực — **hai đường**: cookie (web) và `Authorization: Bearer` (native) | `common/guards/auth.guard.ts` · `common/optional-user.ts` | 0002 · 0017 |
+| Session cookie của web | `modules/auth/session.service.ts`, `token-verifier.ts` | 0002 |
+| **Phiên app native** — access token 15', refresh token opaque xoay vòng, thu hồi theo thiết bị | `modules/auth/native-session.service.ts` · `mobile-auth.controller.ts` · bảng `native_auth_sessions` + `native_refresh_tokens` | 0017 |
 | Guard: Auth / TenantScope / Permission | `common/guards/` | scope lấy từ membership |
 | Decorator: `@CurrentUser` `@CurrentTenant` `@RequirePermissions` `@Public` | `common/decorators/index.ts` | — |
 | Chuẩn hoá lỗi → `{error:{code}}` (gồm 23P01 → conflict) | `common/filters/all-exceptions.filter.ts` | ADR 0006 |

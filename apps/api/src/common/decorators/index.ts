@@ -12,6 +12,23 @@ import type { AuthenticatedUser, RequestContext, TenantContext } from '../types/
 export const IS_PUBLIC_KEY = 'xeprime:isPublic';
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 
+/**
+ * Endpoint `@Public()` nhưng TỰ kiểm credential trong handler — nên nó trả 401 được.
+ *
+ * Chỉ có 6 endpoint như vậy, tất cả dưới `/auth`: đăng nhập mật khẩu, đổi ID token lấy phiên,
+ * đăng nhập OTP, và ba endpoint native (`/auth/mobile/*`). Guard không chạy ở đó, nên luật
+ * "không public ⇒ 401" của `enhance-document.ts` bỏ sót đúng những endpoint mà 401 là nhánh
+ * client PHẢI code theo (app native gặp `SESSION_EXPIRED` ở `/auth/mobile/refresh` thì phải đá
+ * về màn đăng nhập).
+ *
+ * Marker này KHÔNG có tác dụng lúc chạy — nó là metadata cho tài liệu, và đó là chủ đích. Thứ
+ * giữ nó khỏi trôi khỏi sự thật là `openapi-contract.spec.ts`: nó kiểm CẢ HAI chiều — gắn marker
+ * mà spec thiếu 401 là fail, và public không gắn marker mà spec CÓ 401 cũng fail. Một decorator
+ * không ai kiểm mới là tài liệu viết tay; cái này bị kiểm.
+ */
+export const VERIFIES_CREDENTIALS_KEY = 'xeprime:verifiesCredentials';
+export const VerifiesCredentials = () => SetMetadata(VERIFIES_CREDENTIALS_KEY, true);
+
 /** Permission key mà endpoint đòi hỏi. PermissionGuard đọc metadata này. */
 export const PERMISSIONS_KEY = 'xeprime:permissions';
 export const RequirePermissions = (...permissions: Permission[]) =>

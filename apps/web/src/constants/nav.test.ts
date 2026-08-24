@@ -19,8 +19,8 @@ import {
   navForScope,
   sectionKeyOf,
 } from './nav';
-import enNavigation from '../../messages/en/navigation.json';
-import viNavigation from '../../messages/vi/navigation.json';
+import enNavigation from '@xeprime/domain/messages/en/navigation.json';
+import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
 import { ROUTES } from './routes';
 
 /**
@@ -417,12 +417,16 @@ describe('mobileTabsForScope — 4 tab dưới đáy', () => {
  */
 describe('nav — mọi khoá nhãn đều có bản dịch ở cả hai ngôn ngữ', () => {
   const lookup = (bundle: Record<string, unknown>, key: string): unknown =>
-    key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], bundle);
+    key
+      .split('.')
+      .reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], bundle);
 
   const allSections = [...SHOP_NAV, ...PLATFORM_NAV];
   const allKeys = [
     ...allSections.map((section) => section.labelKey),
-    ...allSections.flatMap((section) => section.children.filter(isNavBranch)).map((b) => b.labelKey),
+    ...allSections
+      .flatMap((section) => section.children.filter(isNavBranch))
+      .map((b) => b.labelKey),
     ...flattenLeaves(allSections).map((leaf) => leaf.labelKey),
     ...mobileTabsForScope(false).map((tab) => tab.labelKey),
     ...mobileTabsForScope(true).map((tab) => tab.labelKey),

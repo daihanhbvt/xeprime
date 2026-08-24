@@ -49,33 +49,34 @@ model User {
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  identities          UserIdentity[]
-  phoneVerifications  PhoneVerification[]
-  passwordResets      PasswordResetToken[]
-  tenantMemberships   TenantMembership[]   @relation("membership_user")
-  invitedMemberships  TenantMembership[]   @relation("membership_inviter")
-  platformMemberships PlatformMembership[] @relation("platform_membership_user")
-  ownedTenants        Tenant[]             @relation("tenant_owner")
-  auditLogs           AuditLog[]
-  createdVehicles     Vehicle[]            @relation("vehicle_creator")
-  createdVehicleBlocks VehicleBlock[]      @relation("vehicle_block_creator")
-  createdBranches     TenantBranch[]       @relation("branch_creator")
-  createdBookings     Booking[]            @relation("booking_creator")
-  uploadedDocuments   TenantDocument[]     @relation("document_uploader")
-  reviewedDocuments   TenantDocument[]     @relation("document_reviewer")
-  createdInvites      TenantInvite[]       @relation("invite_creator")
-  acceptedInvites     TenantInvite[]       @relation("invite_acceptor")
-  submittedApprovals  ApprovalTask[]       @relation("approval_submitter")
-  reviewedApprovals   ApprovalTask[]       @relation("approval_reviewer")
-  approvalLogs        ApprovalLog[]
-  adminNotes          AdminNote[]
-  notifications       Notification[]       @relation("notification_recipient")
-  reviews             Review[]             @relation("review_customer")
-  customerBookingRequests BookingRequest[] @relation("request_customer")
-  customerConversations   Conversation[]   @relation("conversation_customer")
+  identities                 UserIdentity[]
+  phoneVerifications         PhoneVerification[]
+  passwordResets             PasswordResetToken[]
+  nativeAuthSessions         NativeAuthSession[]
+  tenantMemberships          TenantMembership[]        @relation("membership_user")
+  invitedMemberships         TenantMembership[]        @relation("membership_inviter")
+  platformMemberships        PlatformMembership[]      @relation("platform_membership_user")
+  ownedTenants               Tenant[]                  @relation("tenant_owner")
+  auditLogs                  AuditLog[]
+  createdVehicles            Vehicle[]                 @relation("vehicle_creator")
+  createdVehicleBlocks       VehicleBlock[]            @relation("vehicle_block_creator")
+  createdBranches            TenantBranch[]            @relation("branch_creator")
+  createdBookings            Booking[]                 @relation("booking_creator")
+  uploadedDocuments          TenantDocument[]          @relation("document_uploader")
+  reviewedDocuments          TenantDocument[]          @relation("document_reviewer")
+  createdInvites             TenantInvite[]            @relation("invite_creator")
+  acceptedInvites            TenantInvite[]            @relation("invite_acceptor")
+  submittedApprovals         ApprovalTask[]            @relation("approval_submitter")
+  reviewedApprovals          ApprovalTask[]            @relation("approval_reviewer")
+  approvalLogs               ApprovalLog[]
+  adminNotes                 AdminNote[]
+  notifications              Notification[]            @relation("notification_recipient")
+  reviews                    Review[]                  @relation("review_customer")
+  customerBookingRequests    BookingRequest[]          @relation("request_customer")
+  customerConversations      Conversation[]            @relation("conversation_customer")
   conversationParticipations ConversationParticipant[] @relation("participant_user")
-  sentMessages            Message[]        @relation("message_sender")
-  tenantCustomerProfiles  TenantCustomer[] @relation("tenant_customer_account")
+  sentMessages               Message[]                 @relation("message_sender")
+  tenantCustomerProfiles     TenantCustomer[]          @relation("tenant_customer_account")
 
   @@index([status])
   @@index([createdAt])
@@ -126,49 +127,49 @@ model Tenant {
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  owner         User               @relation("tenant_owner", fields: [ownerUserId], references: [id])
-  profile       TenantProfile?
-  branches      TenantBranch[]
-  memberships   TenantMembership[]
-  documents     TenantDocument[]
-  invites       TenantInvite[]
-  roles         Role[]
-  vehicles      Vehicle[]
-  bookings      Booking[]
-  bookingRequests BookingRequest[]
-  drivers       Driver[]
-  occupancies   VehicleOccupancy[]
-  approvalTasks ApprovalTask[]
-  adminNotes    AdminNote[]
-  auditLogs     AuditLog[]
-  notifications Notification[]
-  reviews       Review[]
-  conversations Conversation[]
-  publicListings PublicListing[]
-  financeCategories FinanceCategory[]
-  receipts      Receipt[]
-  payments      Payment[]
-  contracts     Contract[]
-  subscriptions TenantSubscription[]
-  rentalPolicies RentalPolicy[]
-  vehicleSourceDetails VehicleSourceDetail[]
-  vehiclePrivateFiles VehiclePrivateFile[]
-  vehicleDocuments VehicleDocument[]
-  vehicleDocumentVersions VehicleDocumentVersion[]
-  vehicleDocumentOcrJobs VehicleDocumentOcrJob[]
-  vehicleMaintenanceProfiles VehicleMaintenanceProfile[]
-  vehicleOdometerReadings VehicleOdometerReading[]
-  vehicleMaintenanceRecords VehicleMaintenanceRecord[]
+  owner                         User                           @relation("tenant_owner", fields: [ownerUserId], references: [id])
+  profile                       TenantProfile?
+  branches                      TenantBranch[]
+  memberships                   TenantMembership[]
+  documents                     TenantDocument[]
+  invites                       TenantInvite[]
+  roles                         Role[]
+  vehicles                      Vehicle[]
+  bookings                      Booking[]
+  bookingRequests               BookingRequest[]
+  drivers                       Driver[]
+  occupancies                   VehicleOccupancy[]
+  approvalTasks                 ApprovalTask[]
+  adminNotes                    AdminNote[]
+  auditLogs                     AuditLog[]
+  notifications                 Notification[]
+  reviews                       Review[]
+  conversations                 Conversation[]
+  publicListings                PublicListing[]
+  financeCategories             FinanceCategory[]
+  receipts                      Receipt[]
+  payments                      Payment[]
+  contracts                     Contract[]
+  subscriptions                 TenantSubscription[]
+  rentalPolicies                RentalPolicy[]
+  vehicleSourceDetails          VehicleSourceDetail[]
+  vehiclePrivateFiles           VehiclePrivateFile[]
+  vehicleDocuments              VehicleDocument[]
+  vehicleDocumentVersions       VehicleDocumentVersion[]
+  vehicleDocumentOcrJobs        VehicleDocumentOcrJob[]
+  vehicleMaintenanceProfiles    VehicleMaintenanceProfile[]
+  vehicleOdometerReadings       VehicleOdometerReading[]
+  vehicleMaintenanceRecords     VehicleMaintenanceRecord[]
   vehicleMaintenanceAttachments VehicleMaintenanceAttachment[]
-  vehicleHandovers VehicleHandover[]
-  vehicleHandoverPhotos VehicleHandoverPhoto[]
-  bookingSurcharges BookingSurcharge[]
-  bookingDepositSettlements BookingDepositSettlement[]
-  vehicleBlocks VehicleBlock[]
-  vehicleDailyPrices VehicleDailyPrice[]
-  tenantCustomers TenantCustomer[]
-  tenantCustomerNotes TenantCustomerNote[]
-  tenantCustomerDocuments TenantCustomerDocument[]
+  vehicleHandovers              VehicleHandover[]
+  vehicleHandoverPhotos         VehicleHandoverPhoto[]
+  bookingSurcharges             BookingSurcharge[]
+  bookingDepositSettlements     BookingDepositSettlement[]
+  vehicleBlocks                 VehicleBlock[]
+  vehicleDailyPrices            VehicleDailyPrice[]
+  tenantCustomers               TenantCustomer[]
+  tenantCustomerNotes           TenantCustomerNote[]
+  tenantCustomerDocuments       TenantCustomerDocument[]
 
   @@index([status])
   @@index([ownerUserId])
@@ -177,20 +178,20 @@ model Tenant {
 }
 
 model TenantMembership {
-  id                   String    @id @db.Char(26)
-  tenantId             String    @map("tenant_id") @db.Char(26)
-  userId               String    @map("user_id") @db.Char(26)
+  id                  String    @id @db.Char(26)
+  tenantId            String    @map("tenant_id") @db.Char(26)
+  userId              String    @map("user_id") @db.Char(26)
   /// @xeprime/types → TenantRole
-  roleKey              String    @map("role_key") @db.VarChar(50)
+  roleKey             String    @map("role_key") @db.VarChar(50)
   /// Custom role của tenant, nếu shop tự tạo role riêng.
-  roleId               String?   @map("role_id") @db.Char(26)
+  roleId              String?   @map("role_id") @db.Char(26)
   /// @xeprime/types → MembershipStatus
-  status               String    @default("active") @db.VarChar(50)
-  displayNameInTenant  String?   @map("display_name_in_tenant") @db.VarChar(255)
-  invitedBy            String?   @map("invited_by") @db.Char(26)
-  joinedAt             DateTime? @map("joined_at") @db.Timestamptz(3)
-  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  status              String    @default("active") @db.VarChar(50)
+  displayNameInTenant String?   @map("display_name_in_tenant") @db.VarChar(255)
+  invitedBy           String?   @map("invited_by") @db.Char(26)
+  joinedAt            DateTime? @map("joined_at") @db.Timestamptz(3)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user    User   @relation("membership_user", fields: [userId], references: [id], onDelete: Cascade)
@@ -286,22 +287,22 @@ model PlatformMembership {
 /// Luồng xác thực SĐT. user_flow: chỉ bắt khi đặt xe / mở shop / public xe, KHÔNG bắt lúc
 /// login Google/Facebook. `otp_hash` chỉ dùng khi tự gửi OTP (provider=esms/manual).
 model PhoneVerification {
-  id         String    @id @db.Char(26)
-  userId     String?   @map("user_id") @db.Char(26)
-  phone      String    @db.VarChar(30)
+  id           String    @id @db.Char(26)
+  userId       String?   @map("user_id") @db.Char(26)
+  phone        String    @db.VarChar(30)
   /// @xeprime/types → PhoneVerificationPurpose
-  purpose    String    @db.VarChar(50)
+  purpose      String    @db.VarChar(50)
   /// firebase | esms | manual
-  provider   String    @db.VarChar(50)
-  otpHash    String?   @map("otp_hash") @db.VarChar(255)
+  provider     String    @db.VarChar(50)
+  otpHash      String?   @map("otp_hash") @db.VarChar(255)
   /// @xeprime/types → PhoneVerificationStatus
-  status     String    @default("pending") @db.VarChar(50)
-  sentCount  Int       @default(0) @map("sent_count")
+  status       String    @default("pending") @db.VarChar(50)
+  sentCount    Int       @default(0) @map("sent_count")
   /// Số lần nhập SAI mã. Chạm OTP_MAX_ATTEMPTS → status=failed (khoá mã, chống brute-force).
-  attemptCount Int     @default(0) @map("attempt_count")
-  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
-  verifiedAt DateTime? @map("verified_at") @db.Timestamptz(3)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  attemptCount Int       @default(0) @map("attempt_count")
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(3)
+  verifiedAt   DateTime? @map("verified_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -331,6 +332,68 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
+/// Phiên đăng nhập của MỘT thiết bị native — ADR 0017.
+///
+/// Tên `native_*` là cố ý: web vẫn dùng session cookie không có bảng (ADR 0002), và ngày web cần
+/// phiên thu hồi được thì đó là một quyết định riêng — không phải hệ quả phụ của bảng này.
+model NativeAuthSession {
+  id     String @id @db.Char(26)
+  userId String @map("user_id") @db.Char(26)
+
+  /// Luôn `mobile` hôm nay. Có cột để ngày thêm client khác (CLI, thiết bị POS) không phải sửa
+  /// schema, và để log/audit đọc được phiên này thuộc loại nào.
+  clientType String @default("mobile") @map("client_type") @db.VarChar(30)
+
+  /// Metadata thiết bị — CHỈ để người dùng nhận ra máy nào trong màn "thiết bị đang đăng nhập".
+  /// Không dùng cho quyết định bảo mật nào: client tự khai, nên nó không chứng minh được gì.
+  deviceName     String? @map("device_name") @db.VarChar(120)
+  devicePlatform String? @map("device_platform") @db.VarChar(30)
+  appVersion     String? @map("app_version") @db.VarChar(30)
+
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Chạm mỗi lần refresh thành công — cột nuôi màn "thiết bị đang đăng nhập".
+  lastUsedAt    DateTime? @map("last_used_at") @db.Timestamptz(3)
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz(3)
+  /// Khác null = phiên đã bị thu hồi. Access token còn hạn cũng bị AuthGuard từ chối ngay.
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz(3)
+  /// `logout` | `refresh_reuse` | `user_disabled` — để đọc lịch sử biết vì sao phiên chết.
+  revokedReason String?   @map("revoked_reason") @db.VarChar(50)
+
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens NativeRefreshToken[]
+
+  @@index([userId])
+  /// Dọn phiên hết hạn theo lô (job sau này), và tra phiên còn sống của một user.
+  @@index([revokedAt, expiresAt])
+  @@map("native_auth_sessions")
+}
+
+/// Một lần xoay refresh token — ADR 0017 §4.
+///
+/// Mỗi hàng là MỘT token. Refresh thành công tạo hàng mới và đóng hàng cũ bằng `usedAt`, nên cả
+/// bảng là lịch sử của "hàng token" (token family) và phát hiện dùng lại chỉ là một phép đọc:
+/// `usedAt` đã khác null mà token lại được gửi lên ⇒ có hai bên đang giữ cùng một token.
+model NativeRefreshToken {
+  id        String @id @db.Char(26)
+  sessionId String @map("session_id") @db.Char(26)
+
+  /// SHA-256 hex của refresh token. Token THÔ không bao giờ nằm trong DB, log, hay message lỗi.
+  /// SHA-256 (không bcrypt): 256 bit entropy từ CSPRNG, không có gì để dò từ điển — ADR 0017 §3.
+  tokenHash String @map("token_hash") @db.Char(64)
+
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  /// Khác null = đã dùng để xoay. Gửi lại token này ⇒ replay ⇒ thu hồi cả phiên.
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  session NativeAuthSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([tokenHash])
+  @@index([sessionId])
+  @@map("native_refresh_tokens")
+}
+
 // ---------------------------------------------------------------------------
 // Danh mục hành chính & chi nhánh
 // ---------------------------------------------------------------------------
@@ -357,7 +420,7 @@ model Province {
   isPublicVisible    Boolean  @default(true) @map("is_public_visible")
   sortOrder          Int      @default(0) @map("sort_order")
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt          DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   aliases        ProvinceAlias[]
   branches       TenantBranch[]
@@ -401,28 +464,28 @@ model ProvinceAlias {
 /// (mục 4) — những chi nhánh đó mang `needsLocationReview = true` cùng giá trị gốc để chủ shop
 /// sửa. API tạo/sửa chi nhánh thì LUÔN đòi provinceCode.
 model TenantBranch {
-  id           String    @id @db.Char(26)
-  tenantId     String    @map("tenant_id") @db.Char(26)
+  id                  String    @id @db.Char(26)
+  tenantId            String    @map("tenant_id") @db.Char(26)
   /// Mã nội bộ, duy nhất trong tenant (CN01, CN02…).
-  code         String    @db.VarChar(50)
-  name         String    @db.VarChar(255)
-  provinceCode String?   @map("province_code") @db.Char(2)
-  address      String?   @db.Text
-  phone        String?   @db.VarChar(30)
-  latitude     Decimal?  @db.Decimal(10, 7)
-  longitude    Decimal?  @db.Decimal(10, 7)
+  code                String    @db.VarChar(50)
+  name                String    @db.VarChar(255)
+  provinceCode        String?   @map("province_code") @db.Char(2)
+  address             String?   @db.Text
+  phone               String?   @db.VarChar(30)
+  latitude            Decimal?  @db.Decimal(10, 7)
+  longitude           Decimal?  @db.Decimal(10, 7)
   /// Đúng MỘT chi nhánh mặc định còn sống mỗi tenant — partial unique index ở migration.
-  isDefault    Boolean   @default(false) @map("is_default")
+  isDefault           Boolean   @default(false) @map("is_default")
   /// @xeprime/types → BranchStatus (active | inactive)
-  status       String    @default("active") @db.VarChar(20)
+  status              String    @default("active") @db.VarChar(20)
   /// Chi nhánh sinh ra từ migration mà KHÔNG quy được tỉnh — chờ chủ shop/admin bổ sung.
-  needsLocationReview Boolean @default(false) @map("needs_location_review")
+  needsLocationReview Boolean   @default(false) @map("needs_location_review")
   /// Chuỗi tỉnh tự do gốc, giữ nguyên để người sửa biết dữ liệu cũ ghi gì. Không dùng để lọc.
-  legacyProvinceValue String? @map("legacy_province_value") @db.VarChar(150)
-  createdBy    String?   @map("created_by") @db.Char(26)
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
-  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+  legacyProvinceValue String?   @map("legacy_province_value") @db.VarChar(150)
+  createdBy           String?   @map("created_by") @db.Char(26)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt           DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   /// Restrict: tỉnh đang được chi nhánh tham chiếu thì KHÔNG xoá cứng được (admin ẩn/tắt).
@@ -503,19 +566,19 @@ model TenantDocument {
 
 /// Mời nhân viên vào gian hàng. `token_hash` = hash của token gửi qua email/SĐT, không lưu token trần.
 model TenantInvite {
-  id         String    @id @db.Char(26)
-  tenantId   String    @map("tenant_id") @db.Char(26)
-  email      String?   @db.VarChar(255)
-  phone      String?   @db.VarChar(30)
+  id         String   @id @db.Char(26)
+  tenantId   String   @map("tenant_id") @db.Char(26)
+  email      String?  @db.VarChar(255)
+  phone      String?  @db.VarChar(30)
   /// @xeprime/types → TenantRole
-  roleKey    String    @map("role_key") @db.VarChar(50)
-  tokenHash  String    @map("token_hash") @db.VarChar(255)
+  roleKey    String   @map("role_key") @db.VarChar(50)
+  tokenHash  String   @map("token_hash") @db.VarChar(255)
   /// @xeprime/types → InviteStatus
-  status     String    @default("pending") @db.VarChar(50)
-  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
-  createdBy  String    @map("created_by") @db.Char(26)
-  acceptedBy String?   @map("accepted_by") @db.Char(26)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  status     String   @default("pending") @db.VarChar(50)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  createdBy  String   @map("created_by") @db.Char(26)
+  acceptedBy String?  @map("accepted_by") @db.Char(26)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   creator  User   @relation("invite_creator", fields: [createdBy], references: [id])
@@ -606,30 +669,30 @@ model AdminNote {
 // ---------------------------------------------------------------------------
 
 model Vehicle {
-  id               String    @id @db.Char(26)
-  tenantId         String    @map("tenant_id") @db.Char(26)
+  id                       String    @id @db.Char(26)
+  tenantId                 String    @map("tenant_id") @db.Char(26)
   /// Chi nhánh xe đang nằm — nguồn VỊ TRÍ CÔNG KHAI của xe (thay `tenant_profiles.province_name`).
   ///
   /// Nullable ở tầng schema CHỈ để migration dữ liệu cũ chạy an toàn; API tạo xe BẮT BUỘC có
   /// `branchId` (DTO + service), nên dữ liệu mới không bao giờ thiếu.
-  branchId         String?   @map("branch_id") @db.Char(26)
-  code             String    @db.VarChar(80)
-  name             String    @db.VarChar(255)
-  plateNumber      String?   @map("plate_number") @db.VarChar(50)
+  branchId                 String?   @map("branch_id") @db.Char(26)
+  code                     String    @db.VarChar(80)
+  name                     String    @db.VarChar(255)
+  plateNumber              String?   @map("plate_number") @db.VarChar(50)
   /// @xeprime/types → VehicleType
-  vehicleType      String    @map("vehicle_type") @db.VarChar(50)
+  vehicleType              String    @map("vehicle_type") @db.VarChar(50)
   /// @xeprime/types → ServiceType — MẢNG năng lực phục vụ (một xe đăng nhiều dịch vụ đồng
   /// thời; 'both' đã khai tử — nó là tổ hợp, không phải giá trị). Tập con hợp lệ + không rỗng
   /// giữ bằng CHECK ở migration; service canonicalize (sort+dedupe) trước khi ghi.
-  serviceTypes     String[]  @default(["self_drive"]) @map("service_types") @db.VarChar(50)
-  brand            String?   @db.VarChar(100)
-  model            String?   @db.VarChar(100)
-  manufactureYear  Int?      @map("manufacture_year")
-  color            String?   @db.VarChar(80)
-  seatCount        Int?      @map("seat_count")
-  fuelType         String?   @map("fuel_type") @db.VarChar(50)
+  serviceTypes             String[]  @default(["self_drive"]) @map("service_types") @db.VarChar(50)
+  brand                    String?   @db.VarChar(100)
+  model                    String?   @db.VarChar(100)
+  manufactureYear          Int?      @map("manufacture_year")
+  color                    String?   @db.VarChar(80)
+  seatCount                Int?      @map("seat_count")
+  fuelType                 String?   @map("fuel_type") @db.VarChar(50)
   /// @xeprime/types → BodyType. Kiểu dáng thân xe — chỉ có nghĩa khi vehicleType = car.
-  bodyType         String?   @map("body_type") @db.VarChar(50)
+  bodyType                 String?   @map("body_type") @db.VarChar(50)
   /// @xeprime/types → VehicleSourceType. Wave 3 lưu loại nguồn; chi tiết hợp đồng/tài chính ở Wave 4.
   sourceType               String    @default("owned") @map("source_type") @db.VarChar(30)
   lengthMm                 Int?      @map("length_mm")
@@ -644,73 +707,73 @@ model Vehicle {
   fuelConsumptionHighway   Decimal?  @map("fuel_consumption_highway") @db.Decimal(6, 2)
   fuelConsumptionCombined  Decimal?  @map("fuel_consumption_combined") @db.Decimal(6, 2)
   /// @xeprime/types → VehicleOperationStatus
-  operationStatus  String    @default("available") @map("operation_status") @db.VarChar(50)
+  operationStatus          String    @default("available") @map("operation_status") @db.VarChar(50)
   /// @xeprime/types → VehiclePublicStatus.
   /// CLAUDE.md mục 5: chỉ ApprovalService đổi được sang `approved_public`.
-  publicStatus     String    @default("draft") @map("public_status") @db.VarChar(50)
-  description      String?   @db.Text
-  mainImageUrl     String?   @map("main_image_url") @db.Text
+  publicStatus             String    @default("draft") @map("public_status") @db.VarChar(50)
+  description              String?   @db.Text
+  mainImageUrl             String?   @map("main_image_url") @db.Text
   /// Giá tham chiếu Phase 0 (bảng vehicle_pricing riêng trong design §9.6 KHÔNG tách nữa —
   /// giá + tiện ích thuê nằm luôn trên vehicles, mirror sang public_listings để filter).
-  weekdayPrice     Decimal?  @map("weekday_price") @db.Decimal(14, 2)
-  weekendPrice     Decimal?  @map("weekend_price") @db.Decimal(14, 2)
+  weekdayPrice             Decimal?  @map("weekday_price") @db.Decimal(14, 2)
+  weekendPrice             Decimal?  @map("weekend_price") @db.Decimal(14, 2)
   /// Giá thuê theo giờ — NULL = xe không cho thuê giờ (tiện ích "Thuê theo giờ").
-  hourlyPrice      Decimal?  @map("hourly_price") @db.Decimal(14, 2)
+  hourlyPrice              Decimal?  @map("hourly_price") @db.Decimal(14, 2)
   /// Giá tháng THAM CHIẾU cho thuê dài hạn (plan 17/08): ước tính = ngày × giá tháng ÷ 30;
   /// NULL = rơi về máy giá ngày. Giá chốt vẫn do shop quyết khi duyệt yêu cầu.
-  monthlyPrice     Decimal?  @map("monthly_price") @db.Decimal(14, 2)
+  monthlyPrice             Decimal?  @map("monthly_price") @db.Decimal(14, 2)
   /// Giá/ngày ĐÃ GỒM tài xế cho lộ trình NỘI THÀNH (giá cơ bản, plan 17/08); NULL = hiện giá
   /// ngày thường kèm nhãn "chưa gồm phí tài xế".
-  withDriverDailyPrice Decimal? @map("with_driver_daily_price") @db.Decimal(14, 2)
+  withDriverDailyPrice     Decimal?  @map("with_driver_daily_price") @db.Decimal(14, 2)
   /// Giá/ngày có tài xế lộ trình LIÊN TỈNH (khứ hồi) — NULL = quote rơi về giá cơ bản kèm ghi
   /// chú phụ phí xác nhận khi duyệt.
-  withDriverInterCityPrice Decimal? @map("with_driver_inter_city_price") @db.Decimal(14, 2)
+  withDriverInterCityPrice Decimal?  @map("with_driver_inter_city_price") @db.Decimal(14, 2)
   /// Giá/ngày có tài xế lộ trình LIÊN TỈNH 1 CHIỀU — fallback: liên tỉnh → cơ bản.
-  withDriverOneWayPrice Decimal? @map("with_driver_one_way_price") @db.Decimal(14, 2)
+  withDriverOneWayPrice    Decimal?  @map("with_driver_one_way_price") @db.Decimal(14, 2)
   /// Chủ xe hỗ trợ giao xe tận nơi.
-  deliveryEnabled  Boolean   @default(false) @map("delivery_enabled")
+  deliveryEnabled          Boolean   @default(false) @map("delivery_enabled")
   /// Không yêu cầu cọc tài sản (miễn thế chấp).
-  noCollateral     Boolean   @default(false) @map("no_collateral")
+  noCollateral             Boolean   @default(false) @map("no_collateral")
   /// % giảm giá đang chạy (0–100, CHECK ở migration) — NULL/0 = không giảm. Chỉ để hiển thị
   /// marketing; giá chốt thật do shop quyết khi duyệt booking request.
-  discountPercent  Int?      @map("discount_percent")
-  createdBy        String?   @map("created_by") @db.Char(26)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+  discountPercent          Int?      @map("discount_percent")
+  createdBy                String?   @map("created_by") @db.Char(26)
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                 Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   /// FK COMPOSITE `(branch_id, tenant_id) → tenant_branches(id, tenant_id)`: DB không cho gắn
   /// xe vào chi nhánh của gian hàng khác, kể cả khi service quên kiểm.
   ///
   /// `onDelete: NoAction` chứ không SetNull: SET NULL sẽ null cả `tenant_id` (cột NOT NULL).
   /// NoAction kiểm ở CUỐI câu lệnh nên xoá tenant (cascade cả chi nhánh lẫn xe) vẫn chạy được,
   /// còn xoá thẳng một chi nhánh đang có xe thì bị chặn — đúng ý "không xoá cứng khi còn tham chiếu".
-  branch      TenantBranch?      @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
-  creator     User?              @relation("vehicle_creator", fields: [createdBy], references: [id])
-  bookings    Booking[]
-  bookingRequests BookingRequest[]
-  occupancies VehicleOccupancy[]
-  reviews     Review[]
-  conversations Conversation[]
-  publicListing PublicListing?
-  images      VehicleImage[]
-  features    VehicleFeature[]
-  receipts    Receipt[]
-  rentalPolicy RentalPolicy?
-  sourceDetail VehicleSourceDetail?
-  privateFiles VehiclePrivateFile[]
-  documents    VehicleDocument[]
-  documentVersions VehicleDocumentVersion[]
-  documentOcrJobs  VehicleDocumentOcrJob[]
-  maintenanceProfile VehicleMaintenanceProfile?
-  odometerReadings VehicleOdometerReading[]
-  maintenanceRecords VehicleMaintenanceRecord[]
+  branch                 TenantBranch?                  @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
+  creator                User?                          @relation("vehicle_creator", fields: [createdBy], references: [id])
+  bookings               Booking[]
+  bookingRequests        BookingRequest[]
+  occupancies            VehicleOccupancy[]
+  reviews                Review[]
+  conversations          Conversation[]
+  publicListing          PublicListing?
+  images                 VehicleImage[]
+  features               VehicleFeature[]
+  receipts               Receipt[]
+  rentalPolicy           RentalPolicy?
+  sourceDetail           VehicleSourceDetail?
+  privateFiles           VehiclePrivateFile[]
+  documents              VehicleDocument[]
+  documentVersions       VehicleDocumentVersion[]
+  documentOcrJobs        VehicleDocumentOcrJob[]
+  maintenanceProfile     VehicleMaintenanceProfile?
+  odometerReadings       VehicleOdometerReading[]
+  maintenanceRecords     VehicleMaintenanceRecord[]
   maintenanceAttachments VehicleMaintenanceAttachment[]
-  handovers   VehicleHandover[]
-  handoverPhotos VehicleHandoverPhoto[]
-  blocks      VehicleBlock[]
-  dailyPrices VehicleDailyPrice[]
+  handovers              VehicleHandover[]
+  handoverPhotos         VehicleHandoverPhoto[]
+  blocks                 VehicleBlock[]
+  dailyPrices            VehicleDailyPrice[]
 
   @@unique([tenantId, code])
   /// Mục tiêu cho composite FK (vehicle_id, tenant_id) của các bảng con nhạy cảm — DB tự chặn
@@ -840,57 +903,57 @@ model MarketplaceBanner {
 /// INSERT/UPDATE bảng này. Trạng thái tenant KHÔNG denormalize ở đây (ADR 0008 §3): marketplace
 /// luôn join `tenants` lọc `status='active'`, nên khoá tenant có hiệu lực tức thì.
 model PublicListing {
-  id           String    @id @db.Char(26)
-  tenantId     String    @map("tenant_id") @db.Char(26)
-  vehicleId    String    @unique @map("vehicle_id") @db.Char(26)
-  shopSlug     String    @map("shop_slug") @db.VarChar(120)
-  title        String    @db.VarChar(255)
+  id                       String   @id @db.Char(26)
+  tenantId                 String   @map("tenant_id") @db.Char(26)
+  vehicleId                String   @unique @map("vehicle_id") @db.Char(26)
+  shopSlug                 String   @map("shop_slug") @db.VarChar(120)
+  title                    String   @db.VarChar(255)
   /// @xeprime/types → ListingStatus (active | hidden | suspended | archived)
-  status       String    @default("active") @db.VarChar(50)
-  vehicleType  String    @map("vehicle_type") @db.VarChar(50)
+  status                   String   @default("active") @db.VarChar(50)
+  vehicleType              String   @map("vehicle_type") @db.VarChar(50)
   /// Mirror `vehicles.service_types` (mảng năng lực) — chỉ ListingsService ghi (ADR 0008).
-  serviceTypes String[]  @default(["self_drive"]) @map("service_types") @db.VarChar(50)
-  brand        String?   @db.VarChar(100)
-  model        String?   @db.VarChar(100)
-  seatCount    Int?      @map("seat_count")
-  fuelType     String?   @map("fuel_type") @db.VarChar(50)
+  serviceTypes             String[] @default(["self_drive"]) @map("service_types") @db.VarChar(50)
+  brand                    String?  @db.VarChar(100)
+  model                    String?  @db.VarChar(100)
+  seatCount                Int?     @map("seat_count")
+  fuelType                 String?  @map("fuel_type") @db.VarChar(50)
   /// @xeprime/types → BodyType
-  bodyType     String?   @map("body_type") @db.VarChar(50)
+  bodyType                 String?  @map("body_type") @db.VarChar(50)
   /// Chi nhánh giữ xe tại thời điểm snapshot — nguồn của `provinceCode`/`provinceName` dưới đây.
-  branchId     String?   @map("branch_id") @db.Char(26)
+  branchId                 String?  @map("branch_id") @db.Char(26)
   /// Mã tỉnh CHUẨN — thứ mọi bộ lọc marketplace so khớp. Chỉ ListingsService ghi (ADR 0008).
-  provinceCode String?   @map("province_code") @db.Char(2)
+  provinceCode             String?  @map("province_code") @db.Char(2)
   /// Tên tỉnh chuẩn đã denormalize để hiển thị; KHÔNG dùng để lọc (dùng `provinceCode`).
-  provinceName String?   @map("province_name") @db.VarChar(100)
-  mainImageUrl String?   @map("main_image_url") @db.Text
-  weekdayPrice Decimal?  @map("weekday_price") @db.Decimal(14, 2)
-  weekendPrice Decimal?  @map("weekend_price") @db.Decimal(14, 2)
-  hourlyPrice  Decimal?  @map("hourly_price") @db.Decimal(14, 2)
+  provinceName             String?  @map("province_name") @db.VarChar(100)
+  mainImageUrl             String?  @map("main_image_url") @db.Text
+  weekdayPrice             Decimal? @map("weekday_price") @db.Decimal(14, 2)
+  weekendPrice             Decimal? @map("weekend_price") @db.Decimal(14, 2)
+  hourlyPrice              Decimal? @map("hourly_price") @db.Decimal(14, 2)
   /// Giá tháng tham chiếu thuê dài hạn — card marketplace hiện "X/tháng" ở ngữ cảnh dài hạn.
-  monthlyPrice Decimal?  @map("monthly_price") @db.Decimal(14, 2)
+  monthlyPrice             Decimal? @map("monthly_price") @db.Decimal(14, 2)
   /// Giá/ngày đã gồm tài xế (nội thành/cơ bản) — card marketplace hiện ở ngữ cảnh có tài xế.
-  withDriverDailyPrice Decimal? @map("with_driver_daily_price") @db.Decimal(14, 2)
+  withDriverDailyPrice     Decimal? @map("with_driver_daily_price") @db.Decimal(14, 2)
   withDriverInterCityPrice Decimal? @map("with_driver_inter_city_price") @db.Decimal(14, 2)
-  withDriverOneWayPrice Decimal? @map("with_driver_one_way_price") @db.Decimal(14, 2)
-  deliveryEnabled Boolean @default(false) @map("delivery_enabled")
-  noCollateral Boolean   @default(false) @map("no_collateral")
-  discountPercent Int?   @map("discount_percent")
+  withDriverOneWayPrice    Decimal? @map("with_driver_one_way_price") @db.Decimal(14, 2)
+  deliveryEnabled          Boolean  @default(false) @map("delivery_enabled")
+  noCollateral             Boolean  @default(false) @map("no_collateral")
+  discountPercent          Int?     @map("discount_percent")
   /// Denormalize từ vehicle_features (key thuộc VEHICLE_FEATURE_LABEL) — filter `hasEvery`
   /// + facet count qua GIN index, khỏi join 2 bảng mỗi query marketplace.
-  features     String[]  @default([])
+  features                 String[] @default([])
   /// Denormalize điểm đánh giá (review published) — nuôi sort `recommended`. Chỉ
   /// ListingsService.refreshRating được cập nhật (ADR 0008).
-  ratingAvg    Decimal?  @map("rating_avg") @db.Decimal(3, 2)
-  ratingCount  Int       @default(0) @map("rating_count")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  ratingAvg                Decimal? @map("rating_avg") @db.Decimal(3, 2)
+  ratingCount              Int      @default(0) @map("rating_count")
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle  Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   /// Cùng cơ chế composite như `vehicles.branch` — snapshot công khai không thể trỏ sang chi
   /// nhánh của gian hàng khác.
-  branch  TenantBranch? @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
-  province Province?    @relation(fields: [provinceCode], references: [code], onDelete: Restrict, onUpdate: Cascade)
+  branch   TenantBranch? @relation(fields: [branchId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
+  province Province?     @relation(fields: [provinceCode], references: [code], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([status, vehicleType])
   /// Lọc dịch vụ chạy `has` trên mảng — GIN; kết hợp chiều khác qua BitmapAnd với các btree.
@@ -910,72 +973,72 @@ model PublicListing {
 // ---------------------------------------------------------------------------
 
 model Booking {
-  id             String    @id @db.Char(26)
-  tenantId       String    @map("tenant_id") @db.Char(26)
-  vehicleId      String    @map("vehicle_id") @db.Char(26)
-  code           String    @db.VarChar(50)
-  customerName   String    @map("customer_name") @db.VarChar(255)
-  customerPhone  String?   @map("customer_phone") @db.VarChar(30)
+  id                    String    @id @db.Char(26)
+  tenantId              String    @map("tenant_id") @db.Char(26)
+  vehicleId             String    @map("vehicle_id") @db.Char(26)
+  code                  String    @db.VarChar(50)
+  customerName          String    @map("customer_name") @db.VarChar(255)
+  customerPhone         String?   @map("customer_phone") @db.VarChar(30)
   /// @xeprime/types → BookingStatus. Chuyển trạng thái validate bằng
   /// canTransitionBooking(), không cho client set tự do.
-  status         String    @default("reserved") @db.VarChar(50)
-  serviceType    String    @default("self_drive") @map("service_type") @db.VarChar(50)
+  status                String    @default("reserved") @db.VarChar(50)
+  serviceType           String    @default("self_drive") @map("service_type") @db.VarChar(50)
   /// @xeprime/types → RouteType — hành trình chuyến CÓ TÀI XẾ (copy từ yêu cầu khi duyệt,
   /// nhập tay khi shop tự lập đơn). CHECK DB: cả ba trường hành trình chỉ khác NULL khi
   /// service_type = with_driver.
-  routeType      String?   @map("route_type") @db.VarChar(30)
+  routeType             String?   @map("route_type") @db.VarChar(30)
   /// Địa chỉ đón khách (with_driver — xe đến đón, khác luồng giao xe tự lái).
-  pickupAddress  String?   @map("pickup_address") @db.Text
+  pickupAddress         String?   @map("pickup_address") @db.Text
   /// Điểm đến (with_driver liên tỉnh).
-  destination    String?   @db.Text
+  destination           String?   @db.Text
   /// Gói thuê dài hạn đã chốt (tháng lịch: 1|2|3|6|9|12 — CHECK ở migration, nguồn giá trị là
   /// LONG_TERM_PACKAGE_MONTHS). Chỉ khác NULL khi service_type = 'long_term'; đơn dài hạn
   /// LỊCH SỬ không khớp gói nào giữ NULL và giữ nguyên ngày cũ.
-  longTermPackageMonths Int? @map("long_term_package_months") @db.SmallInt
+  longTermPackageMonths Int?      @map("long_term_package_months") @db.SmallInt
   /// Đơn LUÔN có lịch chính xác — kể cả dài hạn (gian hàng chốt giờ nhận khi duyệt, server
   /// tính giờ trả = nhận + gói tháng lịch).
-  pickupAt       DateTime  @map("pickup_at") @db.Timestamptz(3)
-  returnAt       DateTime  @map("return_at") @db.Timestamptz(3)
-  actualPickupAt DateTime? @map("actual_pickup_at") @db.Timestamptz(3)
-  actualReturnAt DateTime? @map("actual_return_at") @db.Timestamptz(3)
-  baseAmount     Decimal   @default(0) @map("base_amount") @db.Decimal(14, 2)
-  deliveryFee    Decimal   @default(0) @map("delivery_fee") @db.Decimal(14, 2)
-  discountAmount Decimal   @default(0) @map("discount_amount") @db.Decimal(14, 2)
-  totalAmount    Decimal   @default(0) @map("total_amount") @db.Decimal(14, 2)
-  paidAmount     Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
-  depositAmount  Decimal   @default(0) @map("deposit_amount") @db.Decimal(14, 2)
+  pickupAt              DateTime  @map("pickup_at") @db.Timestamptz(3)
+  returnAt              DateTime  @map("return_at") @db.Timestamptz(3)
+  actualPickupAt        DateTime? @map("actual_pickup_at") @db.Timestamptz(3)
+  actualReturnAt        DateTime? @map("actual_return_at") @db.Timestamptz(3)
+  baseAmount            Decimal   @default(0) @map("base_amount") @db.Decimal(14, 2)
+  deliveryFee           Decimal   @default(0) @map("delivery_fee") @db.Decimal(14, 2)
+  discountAmount        Decimal   @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  totalAmount           Decimal   @default(0) @map("total_amount") @db.Decimal(14, 2)
+  paidAmount            Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
+  depositAmount         Decimal   @default(0) @map("deposit_amount") @db.Decimal(14, 2)
   /// Snapshot giá BẤT BIẾN chốt lúc tạo đơn (Wave 2): đủ dòng breakdown + chính sách hiệu lực
   /// để giải thích số tiền về sau. Đổi chính sách KHÔNG được ghi lại field này (chỉ ghi lúc
   /// create). Cấu trúc → @xeprime/types `BookingPriceSnapshot`.
-  priceSnapshot  Json?     @map("price_snapshot_json") @db.JsonB
-  note           String?   @db.Text
+  priceSnapshot         Json?     @map("price_snapshot_json") @db.JsonB
+  note                  String?   @db.Text
   /// Tài xế được gán cho đơn (chủ yếu đơn with_driver) — plan 17/08. NULL = chưa phân công.
-  driverId       String?   @map("driver_id") @db.Char(26)
+  driverId              String?   @map("driver_id") @db.Char(26)
   /// Hồ sơ khách trong SỔ KHÁCH của gian hàng (S-01). NULL với đơn lịch sử không có SĐT dùng
   /// được — snapshot `customer_name`/`customer_phone` ở trên vẫn là sự thật của đơn và KHÔNG
   /// bị hồ sơ khách ghi đè khi ai đó sửa tên khách về sau.
-  tenantCustomerId String? @map("tenant_customer_id") @db.Char(26)
-  createdBy      String?   @map("created_by") @db.Char(26)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+  tenantCustomerId      String?   @map("tenant_customer_id") @db.Char(26)
+  createdBy             String?   @map("created_by") @db.Char(26)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt             DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle           Vehicle                   @relation(fields: [vehicleId], references: [id])
   /// Composite FK (driver_id, tenant_id) — DB tự chặn gán tài xế của gian hàng khác
   /// (cùng cơ chế `vehicles.branch`). NoAction: xoá tài xế còn đơn tham chiếu thì bị chặn.
-  driver  Driver? @relation(fields: [driverId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
+  driver            Driver?                   @relation(fields: [driverId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction)
   /// Composite FK (tenant_customer_id, tenant_id) — DB tự chặn gắn đơn của shop A vào khách
   /// của shop B. NoAction: hồ sơ khách chỉ LƯU TRỮ (soft), không xoá cứng khi còn lịch sử.
-  tenantCustomer TenantCustomer? @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "bookings_tenant_customer_fkey")
-  creator User?   @relation("booking_creator", fields: [createdBy], references: [id])
-  bookingRequest BookingRequest? @relation("request_booking")
-  review         Review?         @relation("booking_review")
-  receipts       Receipt[]
-  payments       Payment[]
-  contract       Contract?
-  handovers      VehicleHandover[]
-  surcharges     BookingSurcharge[]
+  tenantCustomer    TenantCustomer?           @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "bookings_tenant_customer_fkey")
+  creator           User?                     @relation("booking_creator", fields: [createdBy], references: [id])
+  bookingRequest    BookingRequest?           @relation("request_booking")
+  review            Review?                   @relation("booking_review")
+  receipts          Receipt[]
+  payments          Payment[]
+  contract          Contract?
+  handovers         VehicleHandover[]
+  surcharges        BookingSurcharge[]
   depositSettlement BookingDepositSettlement?
 
   @@unique([tenantId, code])
@@ -1003,35 +1066,35 @@ model Booking {
 /// qua OccupancyService — ADR 0006) rồi set `converted_to_booking`. Mọi ghi đi qua
 /// BookingRequestsService; `tenant_id` suy từ xe ở server, không nhận từ client.
 model BookingRequest {
-  id            String    @id @db.Char(26)
-  tenantId      String    @map("tenant_id") @db.Char(26)
-  vehicleId     String    @map("vehicle_id") @db.Char(26)
+  id                    String    @id @db.Char(26)
+  tenantId              String    @map("tenant_id") @db.Char(26)
+  vehicleId             String    @map("vehicle_id") @db.Char(26)
   /// @xeprime/types → BookingRequestStatus
-  status        String    @default("pending_host_approval") @db.VarChar(50)
-  customerName  String    @map("customer_name") @db.VarChar(255)
-  customerPhone String    @map("customer_phone") @db.VarChar(30)
-  customerEmail String?   @map("customer_email") @db.VarChar(255)
+  status                String    @default("pending_host_approval") @db.VarChar(50)
+  customerName          String    @map("customer_name") @db.VarChar(255)
+  customerPhone         String    @map("customer_phone") @db.VarChar(30)
+  customerEmail         String?   @map("customer_email") @db.VarChar(255)
   /// Gắn yêu cầu vào tài khoản khách NẾU khách đang đăng nhập lúc gửi (best-effort). Null với
   /// khách vãng lai. Là móc để gửi thông báo duyệt/từ chối và cho khách đánh giá sau chuyến.
-  customerUserId String?  @map("customer_user_id") @db.Char(26)
+  customerUserId        String?   @map("customer_user_id") @db.Char(26)
   /// @xeprime/types → ServiceType (đơn — một yêu cầu thuộc đúng một dịch vụ). Phải nằm trong
   /// `vehicle.serviceTypes` — service kiểm khi tạo (DB không cross-check được hai bảng).
-  serviceType   String    @default("self_drive") @map("service_type") @db.VarChar(50)
+  serviceType           String    @default("self_drive") @map("service_type") @db.VarChar(50)
   /// @xeprime/types → RouteType — chỉ có nghĩa với with_driver (CHECK ở migration).
-  routeType     String?   @map("route_type") @db.VarChar(30)
+  routeType             String?   @map("route_type") @db.VarChar(30)
   /// Địa chỉ đón khách (with_driver — xe đến đón, khác delivery_address của luồng giao xe).
-  pickupAddress String?   @map("pickup_address") @db.Text
+  pickupAddress         String?   @map("pickup_address") @db.Text
   /// Điểm đến (with_driver liên tỉnh).
-  destination   String?   @db.Text
+  destination           String?   @db.Text
   /// Gói thuê dài hạn khách chọn (tháng lịch 1|2|3|6|9|12). BẮT BUỘC với yêu cầu dài hạn mới;
   /// NULL ở bản ghi dài hạn LEGACY (khách từng tự chọn khoảng ngày) — luồng duyệt bắt gian
   /// hàng chọn gói khi xử lý, migration KHÔNG làm tròn ngầm.
-  longTermPackageMonths Int? @map("long_term_package_months") @db.SmallInt
+  longTermPackageMonths Int?      @map("long_term_package_months") @db.SmallInt
   /// @xeprime/types → PickupPreference (within_7_days | specific_date) — chỉ có nghĩa với dài
   /// hạn. Hai nhánh dữ liệu dưới LOẠI TRỪ nhau (CHECK ở migration).
-  pickupPreference String? @map("pickup_preference") @db.VarChar(30)
+  pickupPreference      String?   @map("pickup_preference") @db.VarChar(30)
   /// Ngày khách muốn nhận (pickup_preference = specific_date) — chỉ NGÀY, giờ chốt khi duyệt.
-  requestedPickupDate DateTime? @map("requested_pickup_date") @db.Date
+  requestedPickupDate   DateTime? @map("requested_pickup_date") @db.Date
   /// Khoảng nhận linh hoạt do SERVER tính lúc nhận yêu cầu (pickup_preference =
   /// within_7_days): từ ngày mai tới hết ngày thứ 7. Client không được tự khai.
   pickupWindowStartDate DateTime? @map("pickup_window_start_date") @db.Date
@@ -1039,32 +1102,32 @@ model BookingRequest {
   /// NULL với yêu cầu DÀI HẠN mô hình gói (chưa có lịch chính xác — gian hàng chốt khi duyệt);
   /// bắt buộc với mọi dịch vụ khác (CHECK ở migration). Lịch đã chốt nằm trên Booking, truy
   /// ngược qua booking_id.
-  pickupAt      DateTime? @map("pickup_at") @db.Timestamptz(3)
-  returnAt      DateTime? @map("return_at") @db.Timestamptz(3)
+  pickupAt              DateTime? @map("pickup_at") @db.Timestamptz(3)
+  returnAt              DateTime? @map("return_at") @db.Timestamptz(3)
   /// Khách yêu cầu giao xe tận nơi (chỉ nhận khi chính sách giao nhận đang bật).
-  deliveryRequested Boolean @default(false) @map("delivery_requested")
-  deliveryAddress   String? @map("delivery_address") @db.Text
+  deliveryRequested     Boolean   @default(false) @map("delivery_requested")
+  deliveryAddress       String?   @map("delivery_address") @db.Text
   /// Báo giá giao nhận của shop (Wave 2): { distanceKm, fee, source: auto|manual, note?,
   /// quotedBy, quotedAt, policyUpdatedAt }. Ghi DUY NHẤT qua BookingRequestsService.
-  deliveryQuote     Json?   @map("delivery_quote_json") @db.JsonB
-  note          String?   @db.Text
-  rejectReason  String?   @map("reject_reason") @db.Text
+  deliveryQuote         Json?     @map("delivery_quote_json") @db.JsonB
+  note                  String?   @db.Text
+  rejectReason          String?   @map("reject_reason") @db.Text
   /// Set khi duyệt → trỏ tới Booking đã tạo (1-1). Postgres cho nhiều NULL nên yêu cầu
   /// chưa duyệt không đụng ràng buộc unique.
-  bookingId     String?   @unique @map("booking_id") @db.Char(26)
+  bookingId             String?   @unique @map("booking_id") @db.Char(26)
   /// Hồ sơ khách trong sổ khách của gian hàng (S-01) — gán ngay lúc nhận yêu cầu, rồi COPY
   /// nguyên vẹn sang Booking khi duyệt (không tra lại theo SĐT: SĐT trên hồ sơ có thể đã được
   /// sửa giữa chừng, tra lại sẽ đẻ ra một khách thứ hai).
-  tenantCustomerId String? @map("tenant_customer_id") @db.Char(26)
-  decidedBy     String?   @map("decided_by") @db.Char(26)
-  decidedAt     DateTime? @map("decided_at") @db.Timestamptz(3)
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  tenantCustomerId      String?   @map("tenant_customer_id") @db.Char(26)
+  decidedBy             String?   @map("decided_by") @db.Char(26)
+  decidedAt             DateTime? @map("decided_at") @db.Timestamptz(3)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicle  Vehicle  @relation(fields: [vehicleId], references: [id])
-  booking  Booking? @relation("request_booking", fields: [bookingId], references: [id])
-  customer User?    @relation("request_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle        Vehicle         @relation(fields: [vehicleId], references: [id])
+  booking        Booking?        @relation("request_booking", fields: [bookingId], references: [id])
+  customer       User?           @relation("request_customer", fields: [customerUserId], references: [id], onDelete: SetNull)
   /// Composite FK (tenant_customer_id, tenant_id) — chặn gắn chéo gian hàng ở tầng DB.
   tenantCustomer TenantCustomer? @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "booking_requests_tenant_customer_fkey")
 
@@ -1082,23 +1145,23 @@ model BookingRequest {
 
 /// Tài xế của gian hàng. Soft-delete: tài xế nghỉ vẫn giữ lịch sử đơn đã chạy.
 model Driver {
-  id         String    @id @db.Char(26)
-  tenantId   String    @map("tenant_id") @db.Char(26)
-  name       String    @db.VarChar(255)
-  phone      String    @db.VarChar(30)
+  id               String    @id @db.Char(26)
+  tenantId         String    @map("tenant_id") @db.Char(26)
+  name             String    @db.VarChar(255)
+  phone            String    @db.VarChar(30)
   /// @xeprime/types → DriverType (staff | collaborator | temporary)
-  driverType String    @default("staff") @map("driver_type") @db.VarChar(30)
-  licenseNo  String?   @map("license_no") @db.VarChar(50)
+  driverType       String    @default("staff") @map("driver_type") @db.VarChar(30)
+  licenseNo        String?   @map("license_no") @db.VarChar(50)
   /// Hạn GPLX — hết hạn (so với thời điểm TRẢ XE của đơn) thì không gán được vào đơn mới;
   /// NULL = chưa khai, không chặn nhưng UI nhắc bổ sung.
   licenseExpiresAt DateTime? @map("license_expires_at") @db.Date
-  idNo       String?   @map("id_no") @db.VarChar(50)
-  note       String?   @db.Text
+  idNo             String?   @map("id_no") @db.VarChar(50)
+  note             String?   @db.Text
   /// @xeprime/types → DriverStatus — `inactive` không gán được vào đơn mới.
-  status     String    @default("active") @db.VarChar(50)
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+  status           String    @default("active") @db.VarChar(50)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bookings Booking[]
@@ -1314,9 +1377,9 @@ model RentalPolicy {
 /// Writer duy nhất: `VehicleSourceService` (apps/api). File hợp đồng trên R2 —
 /// KHÔNG BAO GIỜ xuất hiện ở API public/marketplace.
 model VehicleSourceDetail {
-  id        String @id @db.Char(26)
-  tenantId  String @map("tenant_id") @db.Char(26)
-  vehicleId String @unique @map("vehicle_id") @db.Char(26)
+  id         String @id @db.Char(26)
+  tenantId   String @map("tenant_id") @db.Char(26)
+  vehicleId  String @unique @map("vehicle_id") @db.Char(26)
   /// @xeprime/types → VehicleSourceType
   sourceType String @map("source_type") @db.VarChar(30)
 
@@ -1326,23 +1389,23 @@ model VehicleSourceDetail {
   purchasePlace String?   @map("purchase_place") @db.VarChar(255)
 
   // ── financed: khoản vay mua xe ──
-  bankName          String?  @map("bank_name") @db.VarChar(160)
-  contractNumber    String?  @map("contract_number") @db.VarChar(120)
-  originalPrincipal Decimal? @map("original_principal") @db.Decimal(14, 2)
-  monthlyPrincipal  Decimal? @map("monthly_principal") @db.Decimal(14, 2)
-  monthlyInterest   Decimal? @map("monthly_interest") @db.Decimal(14, 2)
+  bankName            String?  @map("bank_name") @db.VarChar(160)
+  contractNumber      String?  @map("contract_number") @db.VarChar(120)
+  originalPrincipal   Decimal? @map("original_principal") @db.Decimal(14, 2)
+  monthlyPrincipal    Decimal? @map("monthly_principal") @db.Decimal(14, 2)
+  monthlyInterest     Decimal? @map("monthly_interest") @db.Decimal(14, 2)
   /// Lãi suất cố định %/năm — dữ liệu ghi nhận, KHÔNG dựng lịch trả nợ từ đây.
   interestRatePercent Decimal? @map("interest_rate_percent") @db.Decimal(5, 2)
-  termMonths        Int?     @map("term_months")
+  termMonths          Int?     @map("term_months")
   /// @xeprime/types → VehicleFinanceInterestMethod
-  interestMethod    String?  @map("interest_method") @db.VarChar(30)
+  interestMethod      String?  @map("interest_method") @db.VarChar(30)
 
   // ── rented + partnership: bên cho thuê / đối tác ký gửi ──
-  ownerName  String?  @map("owner_name") @db.VarChar(160)
-  ownerPhone String?  @map("owner_phone") @db.VarChar(30)
-  ownerEmail String?  @map("owner_email") @db.VarChar(160)
+  ownerName         String?  @map("owner_name") @db.VarChar(160)
+  ownerPhone        String?  @map("owner_phone") @db.VarChar(30)
+  ownerEmail        String?  @map("owner_email") @db.VarChar(160)
   /// rented: tiền thuê định kỳ hàng tháng.
-  monthlyRent Decimal? @map("monthly_rent") @db.Decimal(14, 2)
+  monthlyRent       Decimal? @map("monthly_rent") @db.Decimal(14, 2)
   /// partnership: % doanh thu chia cho CHỦ XE (0–100). Cơ sở tính: tiền thuê sau giảm giá,
   /// KHÔNG gồm cọc hoàn lại / phí giao nhận / phí quá giờ / phạt / bồi thường (khớp
   /// `rental_policies.discount_tiers_json` — giảm giá chỉ áp lên tiền thuê cơ bản).
@@ -1350,14 +1413,14 @@ model VehicleSourceDetail {
 
   // ── chung cho financed/rented/partnership ──
   /// Ngày trong tháng đến hạn đóng tiền (1–31) — financed/rented.
-  paymentDay Int?      @map("payment_day")
-  startDate  DateTime? @map("start_date") @db.Date
-  endDate    DateTime? @map("end_date") @db.Date
+  paymentDay    Int?      @map("payment_day")
+  startDate     DateTime? @map("start_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
   /// [{ url, name, size? }] — file hợp đồng trên R2 (prefix tenant riêng).
-  contractFiles Json   @default("[]") @map("contract_files_json") @db.JsonB
-  notes      String?   @db.Text
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  contractFiles Json      @default("[]") @map("contract_files_json") @db.JsonB
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
@@ -1395,14 +1458,14 @@ model VehiclePrivateFile {
   completedAt  DateTime? @map("completed_at") @db.Timestamptz(3)
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  tenant                Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle               Vehicle                       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   /// 1:1 — một file chỉ thuộc một phiên bản giấy tờ (unique private_file_id — Wave 5.1).
-  documentVersion VehicleDocumentVersion?
+  documentVersion       VehicleDocumentVersion?
   /// 1:1 — một file chỉ đính vào một phiếu bảo dưỡng (unique private_file_id — Wave 6).
   maintenanceAttachment VehicleMaintenanceAttachment?
   /// 1:1 — một file chỉ là ảnh của một biên bản bàn giao (unique private_file_id — Wave 7).
-  handoverPhoto VehicleHandoverPhoto?
+  handoverPhoto         VehicleHandoverPhoto?
 
   /// Mục tiêu cho composite FK "file cùng tenant + cùng xe" từ vehicle_document_versions (Wave 5.1).
   @@unique([id, tenantId, vehicleId])
@@ -1420,37 +1483,37 @@ model VehiclePrivateFile {
 /// `row_version` cho optimistic concurrency: update phải nộp version đang thấy, lệch → 409.
 /// Composite FK tenant↔xe viết tay ở migration (cùng lý do Wave 4.1).
 model VehicleDocument {
-  id             String    @id @db.Char(26)
-  tenantId       String    @map("tenant_id") @db.Char(26)
-  vehicleId      String    @map("vehicle_id") @db.Char(26)
+  id              String    @id @db.Char(26)
+  tenantId        String    @map("tenant_id") @db.Char(26)
+  vehicleId       String    @map("vehicle_id") @db.Char(26)
   /// @xeprime/types → VehicleDocumentType
-  type           String    @db.VarChar(30)
+  type            String    @db.VarChar(30)
   /// Chỉ có nghĩa khi type = other ("Phù hiệu xe hợp đồng"…) — CHECK ở migration.
-  customTypeName String?   @map("custom_type_name") @db.VarChar(160)
-  documentNumber String?   @map("document_number") @db.VarChar(120)
-  holderName     String?   @map("holder_name") @db.VarChar(160)
-  holderAddress  String?   @map("holder_address") @db.VarChar(255)
-  plateNumber    String?   @map("plate_number") @db.VarChar(50)
-  chassisNumber  String?   @map("chassis_number") @db.VarChar(80)
-  engineNumber   String?   @map("engine_number") @db.VarChar(80)
-  issuedAt       DateTime? @map("issued_at") @db.Date
+  customTypeName  String?   @map("custom_type_name") @db.VarChar(160)
+  documentNumber  String?   @map("document_number") @db.VarChar(120)
+  holderName      String?   @map("holder_name") @db.VarChar(160)
+  holderAddress   String?   @map("holder_address") @db.VarChar(255)
+  plateNumber     String?   @map("plate_number") @db.VarChar(50)
+  chassisNumber   String?   @map("chassis_number") @db.VarChar(80)
+  engineNumber    String?   @map("engine_number") @db.VarChar(80)
+  issuedAt        DateTime? @map("issued_at") @db.Date
   /// NULL = không thời hạn (cà vẹt).
-  expiresAt      DateTime? @map("expires_at") @db.Date
-  notes          String?   @db.Text
-  activeVersionId String?  @unique @map("active_version_id") @db.Char(26)
-  rowVersion     Int       @default(1) @map("row_version")
-  archivedAt     DateTime? @map("archived_at") @db.Timestamptz(3)
-  createdBy      String?   @map("created_by") @db.Char(26)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  expiresAt       DateTime? @map("expires_at") @db.Date
+  notes           String?   @db.Text
+  activeVersionId String?   @unique @map("active_version_id") @db.Char(26)
+  rowVersion      Int       @default(1) @map("row_version")
+  archivedAt      DateTime? @map("archived_at") @db.Timestamptz(3)
+  createdBy       String?   @map("created_by") @db.Char(26)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicle  Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  versions VehicleDocumentVersion[] @relation("document_versions")
+  tenant        Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle       Vehicle                  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  versions      VehicleDocumentVersion[] @relation("document_versions")
   /// FK thật là composite (active_version_id, id) → versions(id, document_id) viết tay ở
   /// migration; ON DELETE NO ACTION (Wave 5.1) — SET NULL trên FK composite sẽ null cả PK.
-  activeVersion VehicleDocumentVersion? @relation("document_active_version", fields: [activeVersionId], references: [id], onDelete: NoAction)
-  ocrJobs  VehicleDocumentOcrJob[]
+  activeVersion VehicleDocumentVersion?  @relation("document_active_version", fields: [activeVersionId], references: [id], onDelete: NoAction)
+  ocrJobs       VehicleDocumentOcrJob[]
 
   @@index([tenantId, vehicleId, type])
   @@map("vehicle_documents")
@@ -1472,11 +1535,11 @@ model VehicleDocumentVersion {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   archivedAt    DateTime? @map("archived_at") @db.Timestamptz(3)
 
-  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicle     Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  document    VehicleDocument     @relation("document_versions", fields: [documentId], references: [id], onDelete: Cascade)
-  privateFile VehiclePrivateFile  @relation(fields: [privateFileId], references: [id])
-  activeOf    VehicleDocument?    @relation("document_active_version")
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle                 @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  document    VehicleDocument         @relation("document_versions", fields: [documentId], references: [id], onDelete: Cascade)
+  privateFile VehiclePrivateFile      @relation(fields: [privateFileId], references: [id])
+  activeOf    VehicleDocument?        @relation("document_active_version")
   ocrJobs     VehicleDocumentOcrJob[]
 
   @@unique([documentId, version])
@@ -1529,25 +1592,25 @@ model VehicleDocumentOcrJob {
 ///
 /// NULL ở `current_odometer_km` nghĩa là CHƯA CÓ SỐ — không phải 0 km (§9: không dùng 0km giả).
 model VehicleMaintenanceProfile {
-  vehicleId              String    @id @map("vehicle_id") @db.Char(26)
-  tenantId               String    @map("tenant_id") @db.Char(26)
+  vehicleId                String    @id @map("vehicle_id") @db.Char(26)
+  tenantId                 String    @map("tenant_id") @db.Char(26)
   /// KM hiện tại đã xác nhận. NULL = chưa từng ghi nhận.
-  currentOdometerKm      Int?      @map("current_odometer_km")
+  currentOdometerKm        Int?      @map("current_odometer_km")
   /// @xeprime/types → OdometerSource. Nguồn của lần ghi tạo ra `current_odometer_km`.
-  currentOdometerSource  String?   @map("current_odometer_source") @db.VarChar(30)
-  currentOdometerAt      DateTime? @map("current_odometer_at") @db.Timestamptz(3)
+  currentOdometerSource    String?   @map("current_odometer_source") @db.VarChar(30)
+  currentOdometerAt        DateTime? @map("current_odometer_at") @db.Timestamptz(3)
   /// Trỏ về bản ghi lịch sử đang là "hiện tại" — để UI truy vết nguồn mà không đoán.
-  currentOdometerReadingId String? @map("current_odometer_reading_id") @db.Char(26)
+  currentOdometerReadingId String?   @map("current_odometer_reading_id") @db.Char(26)
   /// Chu kỳ thay nhớt (KM). NULL = chưa cấu hình → mốc tiếp theo là `Chưa đủ dữ liệu`.
-  oilChangeIntervalKm    Int?      @map("oil_change_interval_km")
+  oilChangeIntervalKm      Int?      @map("oil_change_interval_km")
   /// KM tại lần thay nhớt gần nhất.
-  lastServiceKm          Int?      @map("last_service_km")
-  lastServiceAt          DateTime? @map("last_service_at") @db.Date
-  notes                  String?   @db.Text
+  lastServiceKm            Int?      @map("last_service_km")
+  lastServiceAt            DateTime? @map("last_service_at") @db.Date
+  notes                    String?   @db.Text
   /// Optimistic concurrency cho tab Bảo dưỡng & KM: update phải nộp version đang thấy.
-  rowVersion             Int       @default(1) @map("row_version")
-  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  rowVersion               Int       @default(1) @map("row_version")
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
@@ -1584,8 +1647,8 @@ model VehicleOdometerReading {
   recordedBy  String?  @map("recorded_by") @db.Char(26)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   /// Biên bản bàn giao đã sinh ra lần đọc này (Wave 7.1) — 0..n vì một biên bản có thể được
   /// bổ sung/điều chỉnh KM, mỗi lần thêm một dòng lịch sử mới.
   handovers VehicleHandover[]
@@ -1630,8 +1693,8 @@ model VehicleMaintenanceRecord {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vehicle     Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  tenant      Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle                        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   attachments VehicleMaintenanceAttachment[]
 
   /// Mục tiêu cho composite FK của bảng đính kèm (bản ghi + xe khớp nhau).
@@ -1678,60 +1741,60 @@ model VehicleMaintenanceAttachment {
 /// nhận được để giữ bằng chứng ảnh/tình trạng, nhưng KM có thẩm quyền KHÔNG bị đụng tới cho
 /// tới khi người đủ quyền bổ sung số.
 model VehicleHandover {
-  id             String    @id @db.Char(26)
-  tenantId       String    @map("tenant_id") @db.Char(26)
-  bookingId      String    @map("booking_id") @db.Char(26)
-  vehicleId      String    @map("vehicle_id") @db.Char(26)
+  id                     String    @id @db.Char(26)
+  tenantId               String    @map("tenant_id") @db.Char(26)
+  bookingId              String    @map("booking_id") @db.Char(26)
+  vehicleId              String    @map("vehicle_id") @db.Char(26)
   /// @xeprime/types → HandoverType ('pickup' | 'return') — CHECK ở migration.
-  type           String    @db.VarChar(20)
+  type                   String    @db.VarChar(20)
   /// @xeprime/types → HandoverStatus
-  status         String    @default("draft") @db.VarChar(20)
+  status                 String    @default("draft") @db.VarChar(20)
   /// KM đọc trên đồng hồ. NULL = chưa nhập (nháp) hoặc thiếu KM trả đã xác nhận.
-  odometerKm     Int?      @map("odometer_km")
+  odometerKm             Int?      @map("odometer_km")
   /// Bản ghi lịch sử KM sinh ra lúc xác nhận — móc truy vết, NULL khi thiếu KM trả.
   /// FK thật là composite (odometer_reading_id, tenant_id, vehicle_id) viết tay ở migration
   /// (Wave 7.1): lần đọc phải TỒN TẠI và thuộc đúng tenant + đúng xe của biên bản.
   /// ON DELETE NO ACTION — lịch sử KM là chỉ-thêm, không ai được xoá một lần đọc đang được
   /// biên bản viện dẫn; NO ACTION (không phải RESTRICT) để cascade xoá xe/gian hàng vẫn chạy.
-  odometerReadingId String? @map("odometer_reading_id") @db.Char(26)
+  odometerReadingId      String?   @map("odometer_reading_id") @db.Char(26)
   /// Xác nhận nhưng KHÔNG có KM → task "Thiếu KM trả" chờ người đủ quyền bổ sung.
-  odometerMissing Boolean  @default(false) @map("odometer_missing")
+  odometerMissing        Boolean   @default(false) @map("odometer_missing")
   /// Người vận hành đã thấy cảnh báo KM bất thường và xác nhận vẫn đúng (ghi kèm audit).
-  suspiciousAcknowledged Boolean @default(false) @map("suspicious_acknowledged")
+  suspiciousAcknowledged Boolean   @default(false) @map("suspicious_acknowledged")
   /// @xeprime/types → FuelLevel. Chỉ dùng cho xe động cơ đốt trong.
-  fuelLevel      String?   @map("fuel_level") @db.VarChar(20)
+  fuelLevel              String?   @map("fuel_level") @db.VarChar(20)
   /// % pin cho xe điện (0–100). Loại trừ lẫn nhau với `fuel_level` — CHECK ở migration.
-  batteryPercent Int?      @map("battery_percent")
+  batteryPercent         Int?      @map("battery_percent")
   /// @xeprime/types → HandoverCondition. NULL = chưa ghi nhận (mọi bản ghi trước Wave 10).
   /// Cột riêng chứ không suy từ `condition_note`: "bình thường, có ghi chú" khác "có điểm cần
   /// lưu ý", và cái sau mới là thứ cần lọc ra.
-  condition      String?   @db.VarChar(20)
-  conditionNote  String?   @map("condition_note") @db.Text
+  condition              String?   @db.VarChar(20)
+  conditionNote          String?   @map("condition_note") @db.Text
   /// Hư hỏng/sự cố phát sinh — chỉ có nghĩa ở chiều nhận trả.
-  damageNote     String?   @map("damage_note") @db.Text
-  notes          String?   @db.Text
+  damageNote             String?   @map("damage_note") @db.Text
+  notes                  String?   @db.Text
   /// Khi biên bản được GHI NHẬN — server sinh, không nhận từ client, không sửa được.
-  confirmedAt    DateTime? @map("confirmed_at") @db.Timestamptz(3)
-  confirmedBy    String?   @map("confirmed_by") @db.Char(26)
+  confirmedAt            DateTime? @map("confirmed_at") @db.Timestamptz(3)
+  confirmedBy            String?   @map("confirmed_by") @db.Char(26)
   /// Khi việc giao/nhận THỰC SỰ xảy ra (Wave 10). Tách khỏi `confirmed_at` vì hai mốc này khác
   /// nhau thật: nhân viên giao xe lúc 9h rồi 9h20 mới vào ghi. Client chọn được mốc này (mặc
   /// định `Bây giờ`) nhưng KHÔNG chọn được `confirmed_at` — nhờ vậy vẫn còn một mốc bất biến
   /// để đối soát nếu ai đó khai lùi giờ. NULL = bản ghi cũ trước Wave 10, đọc `confirmed_at`.
-  occurredAt     DateTime? @map("occurred_at") @db.Timestamptz(3)
-  canceledAt     DateTime? @map("canceled_at") @db.Timestamptz(3)
-  canceledBy     String?   @map("canceled_by") @db.Char(26)
+  occurredAt             DateTime? @map("occurred_at") @db.Timestamptz(3)
+  canceledAt             DateTime? @map("canceled_at") @db.Timestamptz(3)
+  canceledBy             String?   @map("canceled_by") @db.Char(26)
   /// Optimistic concurrency — hai nhân viên cùng mở biên bản, người sau phải thấy bản mới.
-  rowVersion     Int       @default(1) @map("row_version")
-  createdBy      String?   @map("created_by") @db.Char(26)
-  updatedBy      String?   @map("updated_by") @db.Char(26)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  rowVersion             Int       @default(1) @map("row_version")
+  createdBy              String?   @map("created_by") @db.Char(26)
+  updatedBy              String?   @map("updated_by") @db.Char(26)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking         Booking                 @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  vehicle         Vehicle                 @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
   odometerReading VehicleOdometerReading? @relation(fields: [odometerReadingId], references: [id], onDelete: NoAction)
-  photos  VehicleHandoverPhoto[]
+  photos          VehicleHandoverPhoto[]
 
   /// Mục tiêu cho composite FK của bảng ảnh (biên bản + tenant + xe khớp nhau).
   @@unique([id, tenantId, vehicleId])
@@ -1779,22 +1842,22 @@ model VehicleHandoverPhoto {
 /// Đây KHÔNG phải sổ tiền: ghi phát sinh không sinh phiếu thu, không đụng `paid_amount`, không
 /// tạo giao dịch. Nó nuôi phép tính đề xuất hoàn cọc và dừng ở đó.
 model BookingSurcharge {
-  id        String   @id @db.Char(26)
-  tenantId  String   @map("tenant_id") @db.Char(26)
-  bookingId String   @map("booking_id") @db.Char(26)
+  id         String    @id @db.Char(26)
+  tenantId   String    @map("tenant_id") @db.Char(26)
+  bookingId  String    @map("booking_id") @db.Char(26)
   /// @xeprime/types → SurchargeCategory
-  category  String   @db.VarChar(30)
+  category   String    @db.VarChar(30)
   /// Không âm — CHECK ở migration. Tiền luôn Decimal, không bao giờ float (ADR 0007).
-  amount    Decimal  @db.Decimal(14, 2)
-  reason    String   @db.Text
+  amount     Decimal   @db.Decimal(14, 2)
+  reason     String    @db.Text
   /// Huỷ MỀM: khoản đã ghi nhầm được gỡ khỏi phép tính nhưng vẫn còn dấu vết ai gỡ, lúc nào.
-  voidedAt  DateTime? @map("voided_at") @db.Timestamptz(3)
-  voidedBy  String?   @map("voided_by") @db.Char(26)
-  voidReason String?  @map("void_reason") @db.Text
-  createdBy String?  @map("created_by") @db.Char(26)
-  updatedBy String?  @map("updated_by") @db.Char(26)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
+  voidedAt   DateTime? @map("voided_at") @db.Timestamptz(3)
+  voidedBy   String?   @map("voided_by") @db.Char(26)
+  voidReason String?   @map("void_reason") @db.Text
+  createdBy  String?   @map("created_by") @db.Char(26)
+  updatedBy  String?   @map("updated_by") @db.Char(26)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   // `map:` khớp đúng tên constraint/index mà migration Wave 10 đã đặt tay (CREATE TABLE viết
   // thẳng SQL). Không có nó, `prisma migrate dev` coi đây là drift và sinh migration đổi tên vô
@@ -1816,18 +1879,18 @@ model BookingSurcharge {
 /// tính lại về sau: thêm một khoản phát sinh sau khi đã hoàn tiền KHÔNG được phép sửa lịch sử
 /// đã hoàn bao nhiêu.
 model BookingDepositSettlement {
-  id        String   @id @db.Char(26)
-  tenantId  String   @map("tenant_id") @db.Char(26)
+  id              String   @id @db.Char(26)
+  tenantId        String   @map("tenant_id") @db.Char(26)
   /// Một đơn một bản ghi — sửa lại thì cập nhật tại chỗ kèm audit before/after, không đẻ bản mới.
-  bookingId String   @unique @map("booking_id") @db.Char(26)
+  bookingId       String   @unique @map("booking_id") @db.Char(26)
   /// Cọc ĐÃ THU tại thời điểm ghi nhận (suy từ `payments.kind = 'deposit'`), không phải số cấu hình.
-  depositReceived Decimal @map("deposit_received") @db.Decimal(14, 2)
+  depositReceived Decimal  @map("deposit_received") @db.Decimal(14, 2)
   /// Tổng phát sinh còn hiệu lực tại thời điểm ghi nhận.
-  surchargeTotal  Decimal @map("surcharge_total") @db.Decimal(14, 2)
+  surchargeTotal  Decimal  @map("surcharge_total") @db.Decimal(14, 2)
   /// Số thực tế đã hoàn — chủ xe có thể ghi khác số đề xuất (CHECK: không âm).
-  refundAmount    Decimal @map("refund_amount") @db.Decimal(14, 2)
+  refundAmount    Decimal  @map("refund_amount") @db.Decimal(14, 2)
   /// @xeprime/types → RefundMethod
-  refundMethod    String  @map("refund_method") @db.VarChar(30)
+  refundMethod    String   @map("refund_method") @db.VarChar(30)
   /// Thời điểm chủ xe THỰC SỰ hoàn tiền (có thể sớm hơn lúc bấm ghi nhận).
   refundedAt      DateTime @map("refunded_at") @db.Timestamptz(3)
   /// Mã giao dịch/tham chiếu do chủ xe nhập — tuỳ chọn.
@@ -1836,8 +1899,8 @@ model BookingDepositSettlement {
   recordedBy      String?  @map("recorded_by") @db.Char(26)
   /// Optimistic concurrency — hai người cùng sửa bản ghi hoàn cọc thì người sau phải thấy bản mới.
   rowVersion      Int      @default(1) @map("row_version")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @default(now()) @map("updated_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   // Xem ghi chú `map:` ở BookingSurcharge — cùng migration Wave 10, cùng lý do.
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "booking_deposit_settlements_tenant_fkey")
@@ -1859,20 +1922,20 @@ model BookingDepositSettlement {
 /// `period` do trigger tự sinh từ pickup/return + buffer — KHÔNG ghi tay.
 /// Mọi ghi/xoá đi qua OccupancyService (CLAUDE.md mục 5).
 model VehicleOccupancy {
-  id         String   @id @db.Char(26)
-  tenantId   String   @map("tenant_id") @db.Char(26)
-  vehicleId  String   @map("vehicle_id") @db.Char(26)
+  id            String                   @id @db.Char(26)
+  tenantId      String                   @map("tenant_id") @db.Char(26)
+  vehicleId     String                   @map("vehicle_id") @db.Char(26)
   /// @xeprime/types → OccupancySourceType
-  sourceType String   @map("source_type") @db.VarChar(30)
-  sourceId   String   @map("source_id") @db.Char(26)
+  sourceType    String                   @map("source_type") @db.VarChar(30)
+  sourceId      String                   @map("source_id") @db.Char(26)
   /// Mốc thật của nghiệp vụ, chưa cộng buffer time.
-  startAt    DateTime @map("start_at") @db.Timestamptz(3)
-  endAt      DateTime @map("end_at") @db.Timestamptz(3)
+  startAt       DateTime                 @map("start_at") @db.Timestamptz(3)
+  endAt         DateTime                 @map("end_at") @db.Timestamptz(3)
   /// Buffer chuẩn bị giữa 2 đơn, lấy từ tenant_settings lúc ghi (ADR 0006).
-  bufferMinutes Int   @default(0) @map("buffer_minutes")
+  bufferMinutes Int                      @default(0) @map("buffer_minutes")
   /// Cột dẫn xuất, trigger ghi. Default rỗng để Prisma create không đòi giá trị.
-  period     Unsupported("tstzrange") @default(dbgenerated("'empty'::tstzrange"))
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  period        Unsupported("tstzrange") @default(dbgenerated("'empty'::tstzrange"))
+  createdAt     DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
 
   tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
@@ -1949,19 +2012,19 @@ model VehicleDailyPrice {
 
 /// CLAUDE.md mục 6, lằn ranh 3: mọi action admin/platform quan trọng phải ghi vào đây.
 model AuditLog {
-  id           String   @id @db.Char(26)
-  tenantId     String?  @map("tenant_id") @db.Char(26)
-  actorUserId  String?  @map("actor_user_id") @db.Char(26)
+  id          String   @id @db.Char(26)
+  tenantId    String?  @map("tenant_id") @db.Char(26)
+  actorUserId String?  @map("actor_user_id") @db.Char(26)
   /// tenant | platform | system
-  actorScope   String   @map("actor_scope") @db.VarChar(50)
-  action       String   @db.VarChar(120)
-  targetType   String   @map("target_type") @db.VarChar(80)
-  targetId     String?  @map("target_id") @db.Char(26)
-  beforeJson   Json?    @map("before_json") @db.JsonB
-  afterJson    Json?    @map("after_json") @db.JsonB
-  ipAddress    String?  @map("ip_address") @db.VarChar(80)
-  userAgent    String?  @map("user_agent") @db.Text
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  actorScope  String   @map("actor_scope") @db.VarChar(50)
+  action      String   @db.VarChar(120)
+  targetType  String   @map("target_type") @db.VarChar(80)
+  targetId    String?  @map("target_id") @db.Char(26)
+  beforeJson  Json?    @map("before_json") @db.JsonB
+  afterJson   Json?    @map("after_json") @db.JsonB
+  ipAddress   String?  @map("ip_address") @db.VarChar(80)
+  userAgent   String?  @map("user_agent") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   actor  User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
@@ -2241,15 +2304,15 @@ model Receipt {
   updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  category    FinanceCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  booking     Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  vehicle     Vehicle?            @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category       FinanceCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  booking        Booking?            @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  vehicle        Vehicle?            @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   /// Composite FK (tenant_customer_id, tenant_id) — cột có từ Phase 6 nhưng tới S-01 mới có
   /// bảng để trỏ tới; từ đây phiếu thu/chi gắn được vào đúng khách của đúng gian hàng.
-  tenantCustomer TenantCustomer? @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "receipts_tenant_customer_fkey")
-  attachments ReceiptAttachment[]
-  payments    Payment[]
+  tenantCustomer TenantCustomer?     @relation(fields: [tenantCustomerId, tenantId], references: [id, tenantId], onDelete: NoAction, onUpdate: NoAction, map: "receipts_tenant_customer_fkey")
+  attachments    ReceiptAttachment[]
+  payments       Payment[]
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
