@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import type { RowAction } from '@/components/data-display/RowActions';
 import { useIsMobile } from '@/hooks/use-media-query';
+import { useTranslations } from 'next-intl';
 import { useVehicleAlerts } from '../hooks/use-vehicle-alerts';
 import { useVehicleCardStats } from '../hooks/use-vehicle-card-stats';
 import type { VehicleListItem } from '../types';
@@ -50,6 +51,8 @@ export function VehicleCardGrid({
   rowActions,
   onPageChange,
 }: VehicleCardGridProps) {
+  const t = useTranslations('Vehicles.list.grid');
+  const tCommon = useTranslations('Common.actions');
   const isMobile = useIsMobile();
   const ids = items.map((item) => item.id);
   const stats = useVehicleCardStats(ids);
@@ -65,8 +68,8 @@ export function VehicleCardGrid({
         <div className={styles.state}>
           <EmptyState
             variant="error"
-            title="Không tải được danh sách xe"
-            description="Có lỗi khi lấy dữ liệu. Vui lòng thử lại."
+            title={t('loadErrorTitle')}
+            description={t('loadErrorBody')}
             onRetry={error.onRetry}
           />
         </div>
@@ -79,7 +82,7 @@ export function VehicleCardGrid({
           className={isMobile ? styles.list : styles.grid}
           role="status"
           aria-busy="true"
-          aria-label="Đang tải danh sách xe"
+          aria-label={t('loading')}
         >
           {Array.from({ length: SKELETON_COUNT }, (_, index) => (
             <div key={index} className={isMobile ? styles.skeletonRow : styles.skeletonCard}>
@@ -96,17 +99,19 @@ export function VehicleCardGrid({
           {filtered ? (
             <EmptyState
               variant="no-results"
-              title="Không tìm thấy kết quả"
-              description="Thử thay đổi bộ lọc hoặc từ khoá."
+              title={t('noResultsTitle')}
+              description={t('noResultsBody')}
               action={
-                onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined
+                onClearFilters ? (
+                  <Button onClick={onClearFilters}>{tCommon('clear')}</Button>
+                ) : undefined
               }
             />
           ) : (
             <EmptyState
               variant="empty"
-              title="Chưa có xe nào"
-              description="Bắt đầu bằng cách thêm xe đầu tiên vào gian hàng của bạn."
+              title={t('emptyTitle')}
+              description={t('emptyBody')}
               action={emptyAction}
             />
           )}
@@ -114,7 +119,7 @@ export function VehicleCardGrid({
       );
     }
 
-    const listProps = { 'aria-label': 'Danh sách xe', 'aria-busy': loading || undefined };
+    const listProps = { 'aria-label': t('ariaLabel'), 'aria-busy': loading || undefined };
     /**
      * Cảnh báo hỏng KHÔNG làm hỏng danh sách xe — nhưng cũng KHÔNG được im lặng: một dải cảnh
      * báo gọn có nút thử lại, dùng `Alert`/`Button` sẵn có (không dựng hệ thống thông báo thứ hai).
@@ -124,11 +129,11 @@ export function VehicleCardGrid({
         type="warning"
         showIcon
         className={styles.alertsBanner}
-        message="Không tải được cảnh báo của xe"
-        description="Danh sách vẫn dùng được, nhưng phần việc cần làm và số KM đang không hiển thị."
+        message={t('alertsErrorTitle')}
+        description={t('alertsErrorBody')}
         action={
           <Button size="small" onClick={alerts.refetch}>
-            Thử lại
+            {tCommon('retry')}
           </Button>
         }
       />
@@ -188,7 +193,7 @@ export function VehicleCardGrid({
       {items.length > 0 ? (
         <div className={styles.footer}>
           <p className={styles.summary}>
-            Hiển thị {from}-{to} của {meta.total} xe
+            {t('showing', { from, to, total: meta.total })}
           </p>
           <Pagination
             current={meta.page}

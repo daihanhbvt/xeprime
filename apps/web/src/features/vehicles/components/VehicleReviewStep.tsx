@@ -1,28 +1,13 @@
 'use client';
 
 import { Button } from 'antd';
-import {
-  VEHICLE_OPERATION_STATUS_META, VEHICLE_SOURCE_TYPE_LABEL, type VehicleOperationStatus, type VehicleSourceType, } from '@xeprime/types';
+import { useTranslations } from 'next-intl';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { useCatalogLabels, type CatalogLabels } from '@/features/catalog/use-catalog';
-import { serviceTypesLabel } from '@xeprime/types';
-import { vehicleTypeLabel } from '../constants';
-import styles from './VehicleReviewStep.module.css';
 import { useAppFormat, type AppFormat } from '@/i18n/use-app-format';
-
-/** Nhãn trạng thái vận hành lấy từ META dùng chung — không khai lại bảng ánh xạ thứ hai. */
-const operationStatusLabel = (value: string): string =>
-  VEHICLE_OPERATION_STATUS_META[value as VehicleOperationStatus]?.label ?? value;
-
-const EMPTY = '—';
-
-function text(value: string | number | null | undefined): string {
-  return value == null || value === '' ? EMPTY : String(value);
-}
-
-function money(value: number | null | undefined, fmt: AppFormat): string {
-  return value == null ? EMPTY : fmt.money(String(value));
-}
+import type { DomainLabel } from '@/i18n/domain';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import styles from './VehicleReviewStep.module.css';
 
 interface ReviewGroup {
   key: string;
@@ -32,92 +17,123 @@ interface ReviewGroup {
   items: { label: string; value: string }[];
 }
 
-function groupsOf(
-  values: VehicleFormValues,
-  labels: CatalogLabels,
-  fmt: AppFormat,
-): ReviewGroup[] {
-  const gallery = values.images?.length ?? 0;
-  const features = values.features?.length ?? 0;
+/** Bộ dịch của `Vehicles.form.review` — chữ ký gọn để `groupsOf` không nhận sáu tham số rời. */
+type ReviewTranslator = ReturnType<typeof useTranslations<'Vehicles.form.review'>>;
+
+interface ReviewDeps {
+  t: ReviewTranslator;
+  labels: CatalogLabels;
+  fmt: AppFormat;
+  domainLabel: DomainLabel;
+  /** `Common.labels.emptyValue` — dấu gạch cho ô chưa có dữ liệu. */
+  empty: string;
+  /** `Common.units.seat` — "5 chỗ" / "5 seats". */
+  seats: (count: number) => string;
+}
+
+/**
+ * Bốn thẻ tổng kết của bước xác nhận.
+ *
+ * Hàm THUẦN (nhận sẵn bộ dịch/định dạng, không gọi hook) nên nó vẫn đọc được như một bảng dữ
+ * liệu thay vì bị xé thành bốn component chỉ để gọi `useTranslations`.
+ */
+function groupsOf(values: VehicleFormValues, deps: ReviewDeps): ReviewGroup[] {
+  const { t, labels, fmt, domainLabel, empty, seats } = deps;
+
+  const text = (value: string | number | null | undefined): string =>
+    value == null || value === '' ? empty : String(value);
+  const money = (value: number | null | undefined): string =>
+    value == null ? empty : fmt.money(String(value));
+
+  const brandAndModel = [labels.brandLabel(values.brand), values.model].filter(Boolean).join(' ');
+  // `bodyTypeLabel` trả `null` khi danh mục chưa nạp xong — khi đó bỏ hẳn phần ngoặc thay vì
+  // in ra một cặp ngoặc rỗng.
+  const bodyTypeLabel = values.bodyType ? labels.bodyTypeLabel(values.bodyType) : null;
 
   return [
     {
       key: 'basic',
-      title: 'Thông tin cơ bản',
+      title: t('groups.basic'),
       step: 0,
       items: [
-        { label: 'Tên xe', value: text(values.name) },
-        { label: 'Mã xe', value: text(values.code) },
+        { label: t('name'), value: text(values.name) },
+        { label: t('code'), value: text(values.code) },
         {
-          label: 'Phân loại / Dịch vụ',
-          value: `${vehicleTypeLabel(values.vehicleType)} / ${serviceTypesLabel(values.serviceTypes)}`,
+          label: t('typeAndService'),
+          value: `${domainLabel('vehicleType', values.vehicleType)} / ${fmt.serviceTypes(values.serviceTypes)}`,
         },
-        { label: 'Vận hành', value: operationStatusLabel(values.operationStatus) },
         {
-          label: 'Nguồn xe',
-          value:
-            VEHICLE_SOURCE_TYPE_LABEL[values.sourceType as VehicleSourceType] ?? values.sourceType,
+          label: t('operationStatus'),
+          value: domainLabel('vehicleOperationStatus', values.operationStatus),
+        },
+        {
+          label: t('sourceType'),
+          value: domainLabel('vehicleSourceType', values.sourceType),
         },
       ],
     },
     {
       key: 'specs',
-      title: 'Thông số vận hành',
+      title: t('groups.specs'),
       step: 0,
       items: [
-        { label: 'Biển số', value: text(values.plateNumber) },
+        { label: t('plateNumber'), value: text(values.plateNumber) },
         {
-          label: 'Hãng & Kiểu dáng',
-          value: [labels.brandLabel(values.brand), values.model].filter(Boolean).join(' ')
-            ? `${[labels.brandLabel(values.brand), values.model].filter(Boolean).join(' ')}${values.bodyType ? ` (${labels.bodyTypeLabel(values.bodyType)})` : ''}`
-            : EMPTY,
+          label: t('brandAndBody'),
+          value: !brandAndModel
+            ? empty
+            : bodyTypeLabel
+              ? t('brandWithBody', { brand: brandAndModel, bodyType: bodyTypeLabel })
+              : brandAndModel,
         },
         {
-          label: 'Số chỗ / Năng lượng',
+          label: t('seatsAndFuel'),
           value:
             [
-              values.seatCount ? `${values.seatCount} chỗ` : null,
+              values.seatCount ? seats(values.seatCount) : null,
               values.fuelType ? labels.fuelTypeLabel(values.fuelType) : null,
             ]
               .filter(Boolean)
-              .join(' / ') || EMPTY,
+              .join(' / ') || empty,
         },
         {
-          label: 'Năm & Màu sắc',
-          value: [values.manufactureYear, values.color].filter(Boolean).join(' / ') || EMPTY,
+          label: t('yearAndColor'),
+          value: [values.manufactureYear, values.color].filter(Boolean).join(' / ') || empty,
         },
       ],
     },
     {
       key: 'pricing',
-      title: 'Giá thuê & Chính sách',
+      title: t('groups.pricing'),
       step: 1,
       items: [
-        { label: 'Đơn giá ngày thường', value: money(values.weekdayPrice, fmt) },
-        { label: 'Giá cuối tuần', value: money(values.weekendPrice, fmt) },
+        { label: t('weekdayPrice'), value: money(values.weekdayPrice) },
+        { label: t('weekendPrice'), value: money(values.weekendPrice) },
         {
-          label: 'Giảm giá',
-          value: values.discountPercent == null ? EMPTY : `-${values.discountPercent}%`,
+          label: t('discount'),
+          value:
+            values.discountPercent == null
+              ? empty
+              : t('discountValue', { percent: values.discountPercent }),
         },
         {
-          label: 'Chính sách',
-          value:
-            [
-              values.deliveryEnabled ? 'Giao tận nơi' : null,
-            ]
-              .filter(Boolean)
-              .join(' · ') || 'Không áp dụng',
+          label: t('policy'),
+          value: values.deliveryEnabled ? t('policyDelivery') : t('policyNone'),
         },
       ],
     },
     {
       key: 'media',
-      title: 'Hình ảnh & Tiện ích',
+      title: t('groups.media'),
       step: 2,
       items: [
         {
-          label: 'Tổng quan',
-          value: `${values.mainImageUrl ? 'Ảnh đại diện đã thiết lập' : 'Chưa có ảnh đại diện'} • ${gallery} ảnh thư viện • ${features} tiện ích được chọn`,
+          label: t('overview'),
+          value: t('overviewValue', {
+            mainImage: values.mainImageUrl ? t('mainImageSet') : t('mainImageMissing'),
+            gallery: values.images?.length ?? 0,
+            features: values.features?.length ?? 0,
+          }),
         },
       ],
     },
@@ -138,18 +154,31 @@ interface VehicleReviewStepProps {
  * `VehicleEditWorkspace` dạng tab, xác nhận nhạy cảm nằm ở dialog của workspace.)
  */
 export function VehicleReviewStep({ values, onEditStep }: VehicleReviewStepProps) {
+  const t = useTranslations('Vehicles.form.review');
+  const tUnits = useTranslations('Common.units');
+  const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
   // Bảng tổng kết phải hiện TÊN hãng/kiểu dáng, không phải key đã lưu.
   const labels = useCatalogLabels();
 
+  const groups = groupsOf(values, {
+    t,
+    labels,
+    fmt,
+    domainLabel,
+    empty: tLabels('emptyValue'),
+    seats: (count) => tUnits('seat', { count }),
+  });
+
   return (
     <div className={styles.groups}>
-      {groupsOf(values, labels, fmt).map((group) => (
+      {groups.map((group) => (
         <section key={group.key} className={styles.group}>
           <header className={styles.groupHeader}>
             <h3 className={styles.groupTitle}>{group.title}</h3>
             <Button type="link" size="small" onClick={() => onEditStep(group.step)}>
-              Chỉnh sửa
+              {t('editStep')}
             </Button>
           </header>
           <dl className={styles.items}>

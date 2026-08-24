@@ -1,11 +1,10 @@
 import {
   VEHICLE_PUBLIC_SENSITIVE_FIELDS,
-  serviceTypesLabel,
   type VehicleSensitiveField,
 } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
-import { vehicleTypeLabel } from './constants';
 import type { AppFormat } from '@/i18n/use-app-format';
+import type { DomainLabel } from '@/i18n/domain';
 
 export interface SensitiveChange {
   field: VehicleSensitiveField;
@@ -15,39 +14,42 @@ export interface SensitiveChange {
 }
 
 /**
- * Nhãn tiếng Việt cho các trường nhạy cảm.
+ * Chữ mà `sensitiveChanges` cần, do nơi gọi (một component) truyền vào.
  *
- * Danh sách trường KHÔNG khai lại ở đây — nó là `VEHICLE_PUBLIC_SENSITIVE_FIELDS` ở
- * `packages/types`, cùng hằng số mà `vehicles.service` dùng để quyết định có đẩy xe về chờ
- * duyệt lại hay không. Chép tay sang FE là mở đường cho hộp xác nhận nói một đằng, backend
- * làm một nẻo.
- *
- * (Figma `193:2297` tóm tắt còn "giá, biển số, loại xe, ảnh đại diện" — đó là câu văn cho người
- * đọc, không phải đặc tả. Các trường còn lại vẫn kích hoạt duyệt lại.)
+ * Module này CỐ Ý không gọi hook: nó là phép so sánh, và phép so sánh phải khớp từng chi tiết
+ * với `hasSensitiveChange` ở backend. Giữ nó thuần để test được mà không cần dựng provider.
  */
-const LABELS: Record<VehicleSensitiveField, string> = {
-  weekdayPrice: 'Giá ngày thường',
-  weekendPrice: 'Giá cuối tuần',
-  hourlyPrice: 'Giá theo giờ',
-  monthlyPrice: 'Giá tháng (thuê dài hạn)',
-  withDriverDailyPrice: 'Giá/ngày có tài xế (nội thành)',
-  withDriverInterCityPrice: 'Giá/ngày có tài xế (liên tỉnh)',
-  withDriverOneWayPrice: 'Giá/ngày có tài xế (1 chiều)',
-  discountPercent: 'Giảm giá',
-  plateNumber: 'Biển số',
-  vehicleType: 'Loại xe',
-  serviceTypes: 'Loại dịch vụ',
-  mainImageUrl: 'Ảnh đại diện',
-};
-
-const EMPTY = 'Chưa có';
+export interface SensitiveChangeLabels {
+  /**
+   * Nhãn của một trường nhạy cảm.
+   *
+   * Danh sách trường KHÔNG khai lại ở đây — nó là `VEHICLE_PUBLIC_SENSITIVE_FIELDS` ở
+   * `packages/types`, cùng hằng số mà `vehicles.service` dùng để quyết định có đẩy xe về chờ
+   * duyệt lại hay không. Chép tay sang FE là mở đường cho hộp xác nhận nói một đằng, backend
+   * làm một nẻo.
+   *
+   * (Figma `193:2297` tóm tắt còn "giá, biển số, loại xe, ảnh đại diện" — đó là câu văn cho
+   * người đọc, không phải đặc tả. Các trường còn lại vẫn kích hoạt duyệt lại.)
+   */
+  field: (field: VehicleSensitiveField) => string;
+  /** Giá trị trống. */
+  empty: string;
+  /** Ảnh đại diện đã có — xem docblock của `display`. */
+  imageSet: string;
+  /** `{value}%` — dấu phần trăm đứng khác bên trong một số ngôn ngữ. */
+  percent: (value: number | string) => string;
+}
 
 function display(
   field: VehicleSensitiveField,
   value: VehicleFormValues[VehicleSensitiveField],
   fmt: AppFormat,
+  domainLabel: DomainLabel,
+  labels: SensitiveChangeLabels,
 ) {
-  if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) return EMPTY;
+  if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) {
+    return labels.empty;
+  }
   switch (field) {
     case 'weekdayPrice':
     case 'weekendPrice':
@@ -58,14 +60,14 @@ function display(
     case 'withDriverOneWayPrice':
       return fmt.money(String(value));
     case 'discountPercent':
-      return `${value}%`;
+      return labels.percent(String(value));
     case 'vehicleType':
-      return vehicleTypeLabel(String(value));
+      return domainLabel('vehicleType', String(value));
     case 'serviceTypes':
-      return serviceTypesLabel(Array.isArray(value) ? value : [String(value)]);
+      return fmt.serviceTypes(Array.isArray(value) ? value : [String(value)]);
     // Ảnh: so URL thì đúng nhưng đọc ra vô nghĩa — chỉ nói CÓ đổi hay không.
     case 'mainImageUrl':
-      return 'Đã đặt ảnh';
+      return labels.imageSet;
     default:
       return String(value);
   }
@@ -92,6 +94,8 @@ export function sensitiveChanges(
   before: VehicleFormValues | undefined,
   after: VehicleFormValues,
   fmt: AppFormat,
+  domainLabel: DomainLabel,
+  labels: SensitiveChangeLabels,
 ): SensitiveChange[] {
   if (!before) return [];
 
@@ -103,9 +107,9 @@ export function sensitiveChanges(
     return [
       {
         field,
-        label: LABELS[field],
-        before: display(field, previous, fmt),
-        after: display(field, next, fmt),
+        label: labels.field(field),
+        before: display(field, previous, fmt, domainLabel, labels),
+        after: display(field, next, fmt, domainLabel, labels),
       },
     ];
   });

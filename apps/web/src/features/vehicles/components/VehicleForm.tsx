@@ -4,18 +4,24 @@ import { Alert, Button, Form } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
 import {
-  SERVICE_TYPE, VEHICLE_OPERATION_STATUS, VEHICLE_SOURCE_TYPE, VEHICLE_TYPE, isVehicleFuelTypeAllowed, } from '@xeprime/types';
+  SERVICE_TYPE,
+  VEHICLE_OPERATION_STATUS,
+  VEHICLE_SOURCE_TYPE,
+  VEHICLE_TYPE,
+  isVehicleFuelTypeAllowed,
+} from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
 import { trailingRequiredMark } from '@/components/form/required-mark';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { discountedPriceVnd } from '../pricing';
 import {
   BasicSection,
-  CREATE_WIZARD_STEPS,
   MediaSection,
   SpecsSection,
   SourceTypeSection,
+  useCreateWizardSteps,
 } from './VehicleFormSections';
 import { VehicleReviewStep } from './VehicleReviewStep';
 import { VehicleWizard } from './VehicleWizard';
@@ -90,6 +96,8 @@ interface VehicleFormProps {
  * đây được nói "đã lưu nháp" giữa chừng.
  */
 export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: VehicleFormProps) {
+  const t = useTranslations('Vehicles.form');
+  const tCommon = useTranslations('Common.actions');
   const fmt = useAppFormat();
 
   const {
@@ -104,7 +112,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
     defaultValues: EMPTY_DEFAULTS,
   });
 
-  const steps = CREATE_WIZARD_STEPS;
+  const steps = useCreateWizardSteps();
   const lastStep = steps.length - 1;
   const [step, setStep] = useState(0);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -163,7 +171,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
         type="info"
         showIcon
         className={styles.pricePreview}
-        message={`Giá hiển thị trên sàn: ${fmt.money(discounted)}`}
+        message={t('wizard.pricePreview', { price: fmt.money(discounted) })}
       />
     ) : null;
 
@@ -221,7 +229,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
         return (
           <div className={styles.sectionStack}>
             <section className={styles.subSection}>
-              <h3 className={styles.subSectionTitle}>Thông tin cơ bản</h3>
+              <h3 className={styles.subSectionTitle}>{t('sections.basic')}</h3>
               <BasicSection
                 {...props}
                 branchOptions={branchOptions}
@@ -230,7 +238,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
               />
             </section>
             <section className={styles.subSection}>
-              <h3 className={styles.subSectionTitle}>Thông số vận hành</h3>
+              <h3 className={styles.subSectionTitle}>{t('sections.operatingSpecs')}</h3>
               <SpecsSection {...props} />
             </section>
             <SourceTypeSection control={control} />
@@ -269,25 +277,25 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
               ? () => setStep(step - 1)
               : () => (isDirty ? setConfirmCancel(true) : onCancel())
           }
-          aria-label={step > 0 ? 'Quay lại bước trước' : undefined}
+          aria-label={step > 0 ? t('wizard.backToStep') : undefined}
         >
-          {step > 0 ? 'Quay lại' : 'Huỷ bỏ'}
+          {step > 0 ? tCommon('back') : t('wizard.cancel')}
         </Button>
         <Button type="primary" htmlType="submit" loading={submitting}>
-          Tiếp tục
+          {tCommon('next')}
         </Button>
       </>
     ) : (
       <>
-        <Button onClick={() => setStep(step - 1)} aria-label="Quay lại bước trước">
-          Quay lại
+        <Button onClick={() => setStep(step - 1)} aria-label={t('wizard.backToStep')}>
+          {tCommon('back')}
         </Button>
         <div className={styles.finalActions}>
           <Button loading={submitting} onClick={() => submitNow({ submitForReview: false })}>
-            Lưu nháp
+            {t('wizard.saveDraft')}
           </Button>
           <Button type="primary" htmlType="submit" loading={submitting}>
-            Lưu & Gửi duyệt
+            {t('wizard.saveAndSubmit')}
           </Button>
         </div>
       </>
@@ -320,7 +328,7 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
                   type="error"
                   showIcon
                   className={styles.alert}
-                  message={`${stepErrors} lỗi cần sửa trước khi tiếp tục`}
+                  message={t('wizard.stepErrors', { count: stepErrors })}
                 />
               ) : null}
             </>

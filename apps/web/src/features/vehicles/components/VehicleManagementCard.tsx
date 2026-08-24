@@ -3,18 +3,24 @@
 import { CarOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import {
-  VEHICLE_OPERATION_STATUS_META, VEHICLE_PUBLIC_STATUS_META, VEHICLE_SOURCE_TYPE, VEHICLE_SOURCE_TYPE_LABEL, type VehicleOperationStatus, type VehiclePublicStatus, type VehicleSourceType, } from '@xeprime/types';
+  VEHICLE_OPERATION_STATUS_META,
+  VEHICLE_PUBLIC_STATUS_META,
+  VEHICLE_SOURCE_TYPE,
+  type VehicleOperationStatus,
+  type VehiclePublicStatus,
+  type VehicleSourceType,
+} from '@xeprime/types';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { isNegativeMoney, subtractMoney } from '@/lib/money';
-import { serviceTypesLabel } from '@xeprime/types';
-import { vehicleTypeLabel } from '../constants';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
 import { VehicleAlertChips } from './VehicleAlerts';
 import styles from './VehicleManagementCard.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
 
 interface VehicleManagementCardProps {
   vehicle: VehicleListItem;
@@ -32,8 +38,6 @@ interface VehicleManagementCardProps {
   alertsFailed?: boolean;
   actions: RowAction[];
 }
-
-const EMPTY = '—';
 
 /**
  * Thẻ xe trong lưới `/manage/vehicles` — dựng theo Figma `236:1778` (`vehicle-list-v2-desktop`),
@@ -60,9 +64,13 @@ export function VehicleManagementCard({
   alertsFailed = false,
   actions,
 }: VehicleManagementCardProps) {
+  const t = useTranslations('Vehicles.list');
+  const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
 
-  const specs = `${vehicleTypeLabel(vehicle.vehicleType)} / ${serviceTypesLabel(vehicle.serviceTypes)}`;
+  const empty = tLabels('emptyValue');
+  const specs = `${domainLabel('vehicleType', vehicle.vehicleType)} / ${fmt.serviceTypes(vehicle.serviceTypes)}`;
   const identity = [vehicle.code, vehicle.plateNumber].filter(Boolean).join(' · ');
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
 
@@ -95,7 +103,9 @@ export function VehicleManagementCard({
             >
               {vehicle.name}
             </Link>
-            <span className={styles.sourceBadge}>{VEHICLE_SOURCE_TYPE_LABEL[sourceType]}</span>
+            <span className={styles.sourceBadge}>
+              {domainLabel('vehicleSourceType', sourceType)}
+            </span>
           </div>
           <p className={styles.meta}>{identity}</p>
         </div>
@@ -106,11 +116,13 @@ export function VehicleManagementCard({
           <span className={styles.statusPair}>
             <StatusTag
               value={vehicle.operationStatus as VehicleOperationStatus}
-              meta={VEHICLE_OPERATION_STATUS_META} group="vehicleOperationStatus"
+              meta={VEHICLE_OPERATION_STATUS_META}
+              group="vehicleOperationStatus"
             />
             <StatusTag
               value={vehicle.publicStatus as VehiclePublicStatus}
-              meta={VEHICLE_PUBLIC_STATUS_META} group="vehiclePublicStatus"
+              meta={VEHICLE_PUBLIC_STATUS_META}
+              group="vehiclePublicStatus"
             />
           </span>
         </div>
@@ -123,7 +135,7 @@ export function VehicleManagementCard({
         {alertsLoading ? (
           <Skeleton active paragraph={{ rows: 1, width: '60%' }} title={false} />
         ) : alertsFailed ? (
-          <p className={styles.metricsUnavailable}>Không tải được cảnh báo</p>
+          <p className={styles.metricsUnavailable}>{t('card.alertsUnavailable')}</p>
         ) : alerts ? (
           <VehicleAlertChips alerts={alerts.alerts} />
         ) : null}
@@ -131,22 +143,28 @@ export function VehicleManagementCard({
         <div className={styles.metrics}>
           <dl className={styles.metricRow}>
             <div>
-              <dt>Giá ngày thường</dt>
-              <dd>{vehicle.weekdayPrice ? fmt.money(vehicle.weekdayPrice) : EMPTY}</dd>
+              <dt>{t('card.weekdayPrice')}</dt>
+              <dd>{vehicle.weekdayPrice ? fmt.money(vehicle.weekdayPrice) : empty}</dd>
             </div>
             <div className={styles.alignEnd}>
-              <dt>Số KM hiện tại</dt>
+              <dt>{t('card.currentOdometer')}</dt>
               {/*
                * Chưa có số thì nói "Chưa có" — KHÔNG dựng "0 km" (docs §9). Gọi hỏng thì nói
                * "Không rõ": khác hẳn "xe chưa từng ghi nhận KM".
                */}
-              <dd>{alertsFailed ? 'Không rõ' : alerts ? fmt.km(alerts.currentOdometerKm) : EMPTY}</dd>
+              <dd>
+                {alertsFailed
+                  ? t('card.odometerUnknown')
+                  : alerts
+                    ? fmt.km(alerts.currentOdometerKm)
+                    : empty}
+              </dd>
             </div>
           </dl>
           <dl className={styles.metricRow}>
             <div>
-              <dt>Giá cuối tuần</dt>
-              <dd>{vehicle.weekendPrice ? fmt.money(vehicle.weekendPrice) : EMPTY}</dd>
+              <dt>{t('card.weekendPrice')}</dt>
+              <dd>{vehicle.weekendPrice ? fmt.money(vehicle.weekendPrice) : empty}</dd>
             </div>
           </dl>
 
@@ -154,17 +172,17 @@ export function VehicleManagementCard({
             <Skeleton active paragraph={{ rows: 2, width: ['100%', '70%'] }} title={false} />
           ) : statsFailed || !stats ? (
             // Thống kê hỏng KHÔNG làm hỏng cả thẻ — xe vẫn xem/sửa/xoá được.
-            <p className={styles.metricsUnavailable}>Không tải được số liệu</p>
+            <p className={styles.metricsUnavailable}>{t('card.statsUnavailable')}</p>
           ) : (
             <>
               <dl className={styles.metricRow}>
                 <div>
-                  <dt>Đang chạy</dt>
-                  <dd>{stats.activeBookings}</dd>
+                  <dt>{t('card.activeBookings')}</dt>
+                  <dd>{fmt.count(stats.activeBookings)}</dd>
                 </div>
                 <div className={styles.alignEnd}>
-                  <dt>Hoàn thành</dt>
-                  <dd>{stats.completedBookings}</dd>
+                  <dt>{t('card.completedBookings')}</dt>
+                  <dd>{fmt.count(stats.completedBookings)}</dd>
                 </div>
               </dl>
 
@@ -172,18 +190,18 @@ export function VehicleManagementCard({
                 <>
                   <dl className={styles.metricRow}>
                     <div>
-                      <dt>Tổng doanh thu</dt>
+                      <dt>{t('card.totalIncome')}</dt>
                       <dd className={styles.income}>{fmt.money(stats.totalIncome)}</dd>
                     </div>
                     <div className={styles.alignEnd}>
-                      <dt>Tổng chi phí</dt>
+                      <dt>{t('card.totalExpense')}</dt>
                       <dd className={styles.expense}>{fmt.money(stats.totalExpense)}</dd>
                     </div>
                   </dl>
 
                   {/* Số mang dấu — Figma `236:2060` hiện "-500.000 đ" đỏ, nhãn giữ nguyên. */}
                   <dl className={styles.profitRow}>
-                    <dt>Lợi nhuận thực tế</dt>
+                    <dt>{t('card.profit')}</dt>
                     <dd className={atLoss ? styles.expense : styles.income}>
                       {fmt.money(profit)}
                     </dd>
@@ -200,7 +218,7 @@ export function VehicleManagementCard({
             maxInline={actions.length}
             align="start"
             variant="filled"
-            overflowLabel={`Thao tác cho ${vehicle.name}`}
+            overflowLabel={t('card.rowActions', { name: vehicle.name })}
           />
         </div>
       </div>

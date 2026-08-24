@@ -21,20 +21,15 @@ import {
 import type { DescriptionsProps } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   BOOKING_STATUS,
-  BOOKING_STATUS_META,
-  ODOMETER_SOURCE_LABEL,
   PERMISSION,
   VEHICLE_ALERT_KIND,
   VEHICLE_OPERATION_STATUS_META,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_PUBLIC_STATUS_META,
   VEHICLE_SOURCE_TYPE,
-  VEHICLE_SOURCE_TYPE_LABEL,
-  TRANSMISSION_TYPE_LABEL,
-  type BookingStatus,
-  type OdometerSource,
   type VehicleOperationStatus,
   type VehiclePublicStatus,
   type VehicleSourceType,
@@ -54,19 +49,32 @@ import { decorativeIcon } from '@/lib/decorative-icon';
 import { toAppTz } from '@/lib/datetime';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { usePermissions } from '@/hooks/use-permissions';
-import { serviceTypesLabel } from '@xeprime/types';
-import { vehicleTypeLabel } from '../constants';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { vehicleSchedulePath } from '../calendar-link';
+import { usePublicationLabels } from '../hooks/use-publication-labels';
 import { useVehicleSource } from '../hooks/use-vehicle-source';
 import { discountedPriceVnd } from '../pricing';
-import { publicStatusPresentation } from '../publication';
 import type { Vehicle360Summary, VehicleBookingBrief, VehicleDetail } from '../types';
 import { VehicleAlertList } from './VehicleAlerts';
 import { VehiclePublicReviewPanel } from './VehiclePublicReviewPanel';
 import styles from './Vehicle360Overview.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
+import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 
-const EMPTY = '—';
+/**
+ * Khoảng ngày RÚT GỌN của thẻ lịch/hoạt động: "25/10 – 27/10" (vi) · "10/25 – 10/27" (en).
+ *
+ * Bỏ năm là cố ý (Figma `236:2374`) — lịch thuê nhìn gần. Mẫu ngày lấy theo NGÔN NGỮ đang xem,
+ * không cứng `DD/MM`: người đọc tiếng Anh đọc `10/25` là 25 tháng 10, còn `25/10` thì không.
+ */
+function useShortRange(): (from: string, to: string) => string {
+  const pattern = useDatePickerPattern();
+  const tUnits = useTranslations('Common.units');
+  return (from, to) =>
+    tUnits('range', {
+      from: toAppTz(from).format(pattern.dayMonth),
+      to: toAppTz(to).format(pattern.dayMonth),
+    });
+}
 
 export interface Vehicle360OverviewProps {
   vehicle: VehicleDetail;
@@ -109,6 +117,8 @@ export function Vehicle360Overview({
   onSchedule,
   onDelete,
 }: Vehicle360OverviewProps) {
+  const t = useTranslations('Vehicles.overview');
+
   return (
     <div className={styles.stack}>
       <ProfileHeader
@@ -162,16 +172,16 @@ export function Vehicle360Overview({
       {canEdit ? (
         <div className={styles.mobileActions}>
           <Button type="primary" size="large" block onClick={onEdit}>
-            Chỉnh sửa xe
+            {t('editMobile')}
           </Button>
           <Button size="large" block onClick={onSchedule}>
-            Xem lịch biểu
+            {t('scheduleMobile')}
           </Button>
         </div>
       ) : (
         <div className={styles.mobileActions}>
           <Button size="large" block onClick={onSchedule}>
-            Xem lịch biểu
+            {t('scheduleMobile')}
           </Button>
         </div>
       )}
@@ -200,7 +210,12 @@ function ProfileHeader({
   onSchedule: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations('Vehicles.overview');
+  const tLabels = useTranslations('Common.labels');
+  const tActions = useTranslations('Common.actions');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const { statusCopy } = usePublicationLabels();
 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const status = vehicle.publicStatus as VehiclePublicStatus;
@@ -212,14 +227,12 @@ function ProfileHeader({
     status === VEHICLE_PUBLIC_STATUS.NEEDS_REVISION ||
     status === VEHICLE_PUBLIC_STATUS.HIDDEN ||
     status === VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW;
-  const banner = needsBanner
-    ? publicStatusPresentation(status, vehicle.latestPublicReview?.reason)
-    : null;
+  const banner = needsBanner ? statusCopy(status, vehicle.latestPublicReview?.reason) : null;
 
-  const menuItems = canDelete ? [{ key: 'delete', danger: true, label: 'Xoá xe' }] : [];
+  const menuItems = canDelete ? [{ key: 'delete', danger: true, label: t('delete') }] : [];
 
   return (
-    <section className={styles.profile} aria-label="Hồ sơ xe">
+    <section className={styles.profile} aria-label={t('profileLabel')}>
       <div className={styles.profileMain}>
         <div className={styles.profileMedia}>
           {vehicle.mainImageUrl ? (
@@ -241,11 +254,15 @@ function ProfileHeader({
             <span className={styles.codeChip}>{vehicle.code}</span>
           </div>
           <p className={styles.plateRow}>
-            Biển số: <b>{vehicle.plateNumber || 'Chưa có'}</b>
+            {t.rich('plate', {
+              value: vehicle.plateNumber || tLabels('notAvailable'),
+              b: (chunks) => <b>{chunks}</b>,
+            })}
             <span className={styles.dot} aria-hidden="true">
               •
             </span>
-            {vehicleTypeLabel(vehicle.vehicleType)} / {serviceTypesLabel(vehicle.serviceTypes)}
+            {domainLabel('vehicleType', vehicle.vehicleType)} /{' '}
+            {fmt.serviceTypes(vehicle.serviceTypes)}
           </p>
           {/*
            * KM có thẩm quyền + NGUỒN của nó (Wave 8). Chưa có số thì nói "Chưa có" —
@@ -253,19 +270,20 @@ function ProfileHeader({
            * chỉnh tay, để người đọc biết tin nó tới đâu.
            */}
           <p className={styles.odometerRow}>
-            Số KM: <b>{fmt.km(summary?.currentOdometerKm ?? null)}</b>
+            {t.rich('odometer', {
+              value: fmt.km(summary?.currentOdometerKm ?? null),
+              b: (chunks) => <b>{chunks}</b>,
+            })}
             {summary?.currentOdometerSource ? (
               <span className={styles.odometerSource}>
                 {' '}
-                ·{' '}
-                {ODOMETER_SOURCE_LABEL[summary.currentOdometerSource as OdometerSource] ??
-                  summary.currentOdometerSource}
+                · {domainLabel('odometerSource', summary.currentOdometerSource)}
               </span>
             ) : null}
           </p>
           <div className={styles.statusRow}>
             <span className={styles.axis}>
-              <span className={styles.axisLabel}>Vận hành</span>
+              <span className={styles.axisLabel}>{t('axisOperation')}</span>
               <StatusTag
                 value={vehicle.operationStatus as VehicleOperationStatus}
                 meta={VEHICLE_OPERATION_STATUS_META}
@@ -273,7 +291,7 @@ function ProfileHeader({
               />
             </span>
             <span className={styles.axis}>
-              <span className={styles.axisLabel}>Public</span>
+              <span className={styles.axisLabel}>{t('axisPublic')}</span>
               <StatusTag
                 value={status}
                 meta={VEHICLE_PUBLIC_STATUS_META}
@@ -286,11 +304,11 @@ function ProfileHeader({
         <div className={styles.profileActions}>
           {canEdit ? (
             <Button type="primary" block onClick={onEdit}>
-              Chỉnh sửa
+              {t('edit')}
             </Button>
           ) : null}
           <Button block onClick={onSchedule}>
-            Xem lịch
+            {t('schedule')}
           </Button>
           {menuItems.length > 0 ? (
             // Xác nhận điều khiển bằng state và neo vào nút ⋮ — mục menu đã biến mất khi menu
@@ -298,11 +316,11 @@ function ProfileHeader({
             <Popconfirm
               open={confirmingDelete}
               trigger={[]}
-              title={`Xoá xe "${vehicle.name}"?`}
-              description="Xe sẽ bị ẩn khỏi danh sách và gỡ khỏi sàn. Đơn thuê, phiếu thu/chi đã có vẫn được giữ để đối soát. Không xoá được nếu xe còn lịch thuê hiện tại hoặc tương lai."
-              okText="Xoá"
+              title={t('deleteConfirmTitle', { name: vehicle.name })}
+              description={t('deleteConfirmBody')}
+              okText={tActions('delete')}
               okButtonProps={{ danger: true, loading: deletePending }}
-              cancelText="Huỷ"
+              cancelText={tActions('cancel')}
               onConfirm={() => {
                 setConfirmingDelete(false);
                 onDelete();
@@ -320,7 +338,7 @@ function ProfileHeader({
               >
                 <Button
                   icon={decorativeIcon(<MoreOutlined />)}
-                  aria-label={`Thao tác khác cho ${vehicle.name}`}
+                  aria-label={t('moreActions', { name: vehicle.name })}
                   loading={deletePending}
                 />
               </Dropdown>
@@ -359,32 +377,24 @@ function TodoCard({
   loading: boolean;
   failed: boolean;
 }) {
+  const t = useTranslations('Vehicles.overview');
   const alerts = summary?.alerts ?? [];
 
   return (
     <Card
-      title="Việc cần làm"
+      title={t('todo.title')}
       extra={alerts.length > 0 ? <Badge count={alerts.length} /> : null}
       className={styles.quickCard}
     >
       {loading ? (
         <Skeleton active title={false} paragraph={{ rows: 2 }} />
       ) : failed || !summary ? (
-        <p className={styles.muted}>Không tải được dữ liệu.</p>
+        <p className={styles.muted}>{t('loadFailed')}</p>
       ) : (
         <VehicleAlertList alerts={alerts} />
       )}
     </Card>
   );
-}
-
-/** "25/10 – 27/10" — dạng ngắn của thẻ lịch (Figma `236:2374`); năm bỏ vì lịch nhìn gần. */
-function shortRange(from: string, to: string): string {
-  return `${toAppTz(from).format('DD/MM')} – ${toAppTz(to).format('DD/MM')}`;
-}
-
-function bookingStatusLabel(status: string): string {
-  return BOOKING_STATUS_META[status as BookingStatus]?.label ?? status;
 }
 
 function ScheduleCard({
@@ -396,25 +406,34 @@ function ScheduleCard({
   loading: boolean;
   failed: boolean;
 }) {
+  const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const shortRange = useShortRange();
 
   return (
-    <Card title="Lịch thuê sắp tới" className={styles.quickCard}>
+    <Card title={t('schedules.title')} className={styles.quickCard}>
       {loading ? (
         <Skeleton active title={false} paragraph={{ rows: 2 }} />
       ) : failed || bookings === undefined ? (
-        <p className={styles.muted}>Không tải được dữ liệu.</p>
+        <p className={styles.muted}>{t('loadFailed')}</p>
       ) : bookings.length === 0 ? (
-        <p className={styles.muted}>Không có lịch thuê sắp tới.</p>
+        <p className={styles.muted}>{t('schedules.empty')}</p>
       ) : (
         <ul className={styles.scheduleList}>
           {bookings.map((booking) => (
             <li key={booking.id} className={styles.scheduleItem}>
               <p className={styles.scheduleTitle}>
-                {booking.customerName} • {shortRange(booking.pickupAt, booking.returnAt)}
+                {t('schedules.item', {
+                  customer: booking.customerName,
+                  range: shortRange(booking.pickupAt, booking.returnAt),
+                })}
               </p>
               <p className={styles.scheduleSub}>
-                {fmt.money(booking.totalAmount)} • {bookingStatusLabel(booking.status)}
+                {t('schedules.sub', {
+                  amount: fmt.money(booking.totalAmount),
+                  status: domainLabel('bookingStatus', booking.status),
+                })}
               </p>
             </li>
           ))}
@@ -433,6 +452,7 @@ function PerformanceCard({
   loading: boolean;
   failed: boolean;
 }) {
+  const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
 
   const stats = summary?.stats;
@@ -441,28 +461,28 @@ function PerformanceCard({
   return (
     // "Luỹ kế" trong tiêu đề là cố ý: backend chưa có chỉ số theo kỳ (xem `VehiclesService.stats`),
     // đặt tên "tháng này" cho một con số từ-trước-tới-nay là nói dối người đọc.
-    <Card title="Hiệu suất luỹ kế" className={styles.quickCard}>
+    <Card title={t('performance.title')} className={styles.quickCard}>
       {loading ? (
         <Skeleton active title={false} paragraph={{ rows: 2 }} />
       ) : failed || !stats ? (
-        <p className={styles.muted}>Không tải được dữ liệu.</p>
+        <p className={styles.muted}>{t('loadFailed')}</p>
       ) : (
         <div className={styles.perf}>
           <dl className={styles.perfRow}>
             {hasFinance ? (
               <div>
-                <dt>Doanh thu</dt>
+                <dt>{t('performance.revenue')}</dt>
                 <dd className={styles.income}>{fmt.money(stats.totalIncome)}</dd>
               </div>
             ) : null}
             <div className={hasFinance ? styles.alignEnd : undefined}>
-              <dt>Lượt thuê</dt>
-              <dd>{stats.completedBookings} chuyến</dd>
+              <dt>{t('performance.rentals')}</dt>
+              <dd>{t('performance.tripCount', { count: stats.completedBookings })}</dd>
             </div>
           </dl>
           <div className={styles.perfFoot}>
-            <span>Đơn đang chạy:</span>
-            <b>{stats.activeBookings} đơn</b>
+            <span>{t('performance.activeLabel')}</span>
+            <b>{t('performance.activeCount', { count: stats.activeBookings })}</b>
           </div>
         </div>
       )}
@@ -473,18 +493,21 @@ function PerformanceCard({
 /* ─── Lưới hai cột ────────────────────────────────────────────────────────── */
 
 function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: boolean }) {
+  const t = useTranslations('Vehicles.overview');
+  const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
 
+  const empty = tLabels('emptyValue');
   const discounted = discountedPriceVnd(vehicle.weekdayPrice, vehicle.discountPercent);
 
   return (
     <Card
-      title="Giá thuê & Chính sách"
+      title={t('pricing.title')}
       extra={
         canEdit ? (
           // Wave 2: giá & chính sách có workspace riêng (kế thừa/ghi đè) — không đi qua wizard.
           <Link href={vehiclePath.pricing(vehicle.id)} className={styles.cardLink}>
-            Chỉnh sửa giá
+            {t('pricing.editLink')}
           </Link>
         ) : null
       }
@@ -492,22 +515,22 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
     >
       <dl className={styles.kvList}>
         <div className={styles.kvRow}>
-          <dt>Ngày thường</dt>
-          <dd>{vehicle.weekdayPrice ? `${fmt.money(vehicle.weekdayPrice)} / ngày` : EMPTY}</dd>
+          <dt>{t('pricing.weekday')}</dt>
+          <dd>{vehicle.weekdayPrice ? fmt.pricePerDay(vehicle.weekdayPrice) : empty}</dd>
         </div>
         <div className={styles.kvRow}>
-          <dt>Cuối tuần</dt>
-          <dd>{vehicle.weekendPrice ? `${fmt.money(vehicle.weekendPrice)} / ngày` : EMPTY}</dd>
+          <dt>{t('pricing.weekend')}</dt>
+          <dd>{vehicle.weekendPrice ? fmt.pricePerDay(vehicle.weekendPrice) : empty}</dd>
         </div>
         {vehicle.hourlyPrice ? (
           <div className={styles.kvRow}>
-            <dt>Theo giờ</dt>
-            <dd>{fmt.money(vehicle.hourlyPrice)} / giờ</dd>
+            <dt>{t('pricing.hourly')}</dt>
+            <dd>{fmt.pricePerHour(vehicle.hourlyPrice)}</dd>
           </div>
         ) : null}
         {vehicle.discountPercent ? (
           <div className={styles.kvRow}>
-            <dt>Giảm giá</dt>
+            <dt>{t('pricing.discount')}</dt>
             <dd>
               <DiscountTag percent={vehicle.discountPercent} />
             </dd>
@@ -515,7 +538,7 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
         ) : null}
         {discounted != null ? (
           <div className={styles.kvRow}>
-            <dt>Giá hiển thị sàn</dt>
+            <dt>{t('pricing.publicPrice')}</dt>
             <dd>{fmt.money(discounted)}</dd>
           </div>
         ) : null}
@@ -525,8 +548,8 @@ function PricingCard({ vehicle, canEdit }: { vehicle: VehicleDetail; canEdit: bo
           cột không ai ghi nữa; chỗ đúng của nó là tab "Giá & chính sách".
         */}
         <div className={styles.kvRow}>
-          <dt>Giao xe tận nơi</dt>
-          <dd>{vehicle.deliveryEnabled ? 'Có hỗ trợ' : 'Không'}</dd>
+          <dt>{t('pricing.delivery')}</dt>
+          <dd>{vehicle.deliveryEnabled ? t('pricing.deliveryOn') : t('pricing.deliveryOff')}</dd>
         </div>
       </dl>
     </Card>
@@ -549,47 +572,48 @@ function ModuleLinks({
   vehicle: VehicleDetail;
   canEdit: boolean;
 }) {
+  const t = useTranslations('Vehicles.overview.links');
   const { has } = usePermissions();
   const links: { href: string; label: string }[] = [];
 
   if (canEdit) {
     links.push(
-      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.INFORMATION), label: 'Thông tin xe' },
-      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MEDIA), label: 'Hình ảnh' },
-      { href: vehiclePath.pricing(vehicleId), label: 'Giá & Chính sách' },
+      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.INFORMATION), label: t('information') },
+      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MEDIA), label: t('media') },
+      { href: vehiclePath.pricing(vehicleId), label: t('pricing') },
     );
     if (has(PERMISSION.FINANCE_VIEW)) {
-      links.push({ href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.SOURCE), label: 'Nguồn xe' });
+      links.push({ href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.SOURCE), label: t('source') });
     }
   }
   if (has(PERMISSION.VEHICLE_DOCUMENT_VIEW)) {
     links.push({
       href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS),
-      label: 'Giấy tờ xe',
+      label: t('documents'),
     });
   }
   if (has(PERMISSION.VEHICLE_MAINTENANCE_VIEW)) {
     links.push(
-      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE), label: 'Bảo dưỡng & KM' },
-      { href: ROUTES.MANAGE.MAINTENANCE, label: 'Trung tâm bảo dưỡng' },
+      { href: vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE), label: t('maintenance') },
+      { href: ROUTES.MANAGE.MAINTENANCE, label: t('maintenanceCenter') },
     );
   }
   if (has(PERMISSION.CALENDAR_VIEW)) {
     // Cùng helper với nút "Xem lịch" và thẻ ở danh sách — một đường dẫn lịch duy nhất.
-    links.push({ href: vehicleSchedulePath(vehicle), label: 'Lịch xe' });
+    links.push({ href: vehicleSchedulePath(vehicle), label: t('calendar') });
   }
   if (has(PERMISSION.BOOKING_VIEW)) {
-    links.push({ href: `${ROUTES.MANAGE.BOOKINGS}?vehicleId=${vehicleId}`, label: 'Đơn thuê' });
+    links.push({ href: `${ROUTES.MANAGE.BOOKINGS}?vehicleId=${vehicleId}`, label: t('bookings') });
   }
   if (has(PERMISSION.FINANCE_VIEW)) {
     // Doanh thu và chi phí của riêng xe này. Từ epic nối tiền, chi phí bảo dưỡng đã tự lên sổ
     // nên đây mới là chỗ trả lời được "xe này lãi thật bao nhiêu".
-    links.push({ href: receiptsPath.filtered({ vehicleId }), label: 'Thu chi của xe' });
+    links.push({ href: receiptsPath.filtered({ vehicleId }), label: t('receipts') });
   }
   if (links.length === 0) return null;
 
   return (
-    <nav className={styles.moduleLinks} aria-label="Liên kết nhanh tới các mục của xe">
+    <nav className={styles.moduleLinks} aria-label={t('ariaLabel')}>
       {links.map((link) => (
         <Link key={link.href} href={link.href} className={styles.moduleLink}>
           {link.label}
@@ -613,6 +637,7 @@ function DocumentsCard({
   vehicleId: string;
   summary: Vehicle360Summary | undefined;
 }) {
+  const t = useTranslations('Vehicles.overview');
   const { has } = usePermissions();
   if (!has(PERMISSION.VEHICLE_DOCUMENT_VIEW)) return null;
 
@@ -622,13 +647,13 @@ function DocumentsCard({
 
   return (
     <Card
-      title="Hồ sơ & Giấy tờ pháp lý"
+      title={t('documents.title')}
       extra={
         <Link
           href={vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.DOCUMENTS)}
           className={styles.cardLink}
         >
-          Quản lý giấy tờ
+          {t('documents.manageLink')}
         </Link>
       }
       className={styles.sectionCard}
@@ -640,9 +665,7 @@ function DocumentsCard({
               <span className={`${styles.todoDot} ${styles.error}`} aria-hidden="true">
                 ●
               </span>
-              <span>
-                {expired.count ?? 1} giấy tờ đã hết hạn — cần xử lý trước khi xe tiếp tục chạy
-              </span>
+              <span>{t('documents.expired', { count: expired.count ?? 1 })}</span>
             </li>
           ) : null}
           {expiring ? (
@@ -650,69 +673,95 @@ function DocumentsCard({
               <span className={`${styles.todoDot} ${styles.warning}`} aria-hidden="true">
                 ●
               </span>
-              <span>{expiring.count ?? 1} giấy tờ sắp hết hạn</span>
+              <span>{t('documents.expiring', { count: expiring.count ?? 1 })}</span>
             </li>
           ) : null}
         </ul>
       ) : summary ? (
-        <p className={styles.muted}>Không có giấy tờ nào quá hạn hoặc sắp hết hạn.</p>
+        <p className={styles.muted}>{t('documents.clear')}</p>
       ) : (
-        <p className={styles.muted}>Chưa có thông tin.</p>
+        <p className={styles.muted}>{t('documents.unknown')}</p>
       )}
     </Card>
   );
 }
 
 function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const t = useTranslations('Vehicles.overview');
+  const tLabels = useTranslations('Common.labels');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
 
   // Xe lưu KEY của danh mục, không lưu nhãn — nhãn tra từ `catalog_items` do admin cấu hình.
   const { brandLabel, bodyTypeLabel, fuelTypeLabel, featureLabel } = useCatalogLabels();
 
+  const empty = tLabels('emptyValue');
+  /**
+   * Số đo kèm đơn vị. Con số đi qua `fmt.count` để dấu phân tách nhóm theo ngôn ngữ đang xem
+   * (`4.630` vi · `4,630` en) — `toLocaleString('vi-VN')` cứng ở đây là bản dịch bị bỏ sót.
+   * Đơn vị (mm/kg/cc/HP/L per 100km) là KÝ HIỆU, không dịch.
+   */
+  const metric = (value: number | string | null | undefined, unit: string): string =>
+    value == null || value === ''
+      ? empty
+      : t('metric', { value: fmt.count(Number(value)), unit });
+
   const specs: DescriptionsProps['items'] = [
-    { key: 'brand', label: 'Hãng xe', children: brandLabel(vehicle.brand) || EMPTY },
-    { key: 'model', label: 'Mẫu xe', children: vehicle.model || EMPTY },
-    { key: 'body', label: 'Kiểu dáng thân xe', children: bodyTypeLabel(vehicle.bodyType) ?? EMPTY },
-    { key: 'year', label: 'Năm sản xuất', children: vehicle.manufactureYear ?? EMPTY },
-    { key: 'seats', label: 'Số chỗ ngồi', children: vehicle.seatCount ?? EMPTY },
+    { key: 'brand', label: t('specs.brand'), children: brandLabel(vehicle.brand) || empty },
+    { key: 'model', label: t('specs.model'), children: vehicle.model || empty },
+    {
+      key: 'body',
+      label: t('specs.bodyType'),
+      children: bodyTypeLabel(vehicle.bodyType) ?? empty,
+    },
+    {
+      key: 'year',
+      label: t('specs.manufactureYear'),
+      children: vehicle.manufactureYear ?? empty,
+    },
+    {
+      key: 'seats',
+      label: t('specs.seatCount'),
+      children: vehicle.seatCount ?? empty,
+    },
     {
       key: 'fuel',
-      label: 'Nguồn năng lượng',
-      children: fuelTypeLabel(vehicle.fuelType) ?? EMPTY,
+      label: t('specs.fuelType'),
+      children: fuelTypeLabel(vehicle.fuelType) ?? empty,
     },
-    { key: 'color', label: 'Màu sắc', children: vehicle.color || EMPTY },
-    { key: 'length', label: 'Chiều dài', children: formatMetric(vehicle.lengthMm, 'mm') },
-    { key: 'width', label: 'Chiều rộng', children: formatMetric(vehicle.widthMm, 'mm') },
-    { key: 'height', label: 'Chiều cao', children: formatMetric(vehicle.heightMm, 'mm') },
+    { key: 'color', label: t('specs.color'), children: vehicle.color || empty },
+    { key: 'length', label: t('specs.length'), children: metric(vehicle.lengthMm, 'mm') },
+    { key: 'width', label: t('specs.width'), children: metric(vehicle.widthMm, 'mm') },
+    { key: 'height', label: t('specs.height'), children: metric(vehicle.heightMm, 'mm') },
     {
       key: 'weight',
-      label: 'Trọng lượng bản thân',
-      children: formatMetric(vehicle.curbWeightKg, 'kg'),
+      label: t('specs.curbWeight'),
+      children: metric(vehicle.curbWeightKg, 'kg'),
     },
     {
       key: 'engine',
-      label: 'Dung tích động cơ',
-      children: formatMetric(vehicle.engineDisplacementCc, 'cc'),
+      label: t('specs.engineDisplacement'),
+      children: metric(vehicle.engineDisplacementCc, 'cc'),
     },
-    { key: 'power', label: 'Công suất', children: formatMetric(vehicle.horsepowerHp, 'HP') },
+    { key: 'power', label: t('specs.horsepower'), children: metric(vehicle.horsepowerHp, 'HP') },
     {
       key: 'transmission',
-      label: 'Hộp số',
+      label: t('specs.transmission'),
       children: vehicle.transmission
-        ? (TRANSMISSION_TYPE_LABEL[vehicle.transmission] ?? vehicle.transmission)
-        : EMPTY,
+        ? domainLabel('transmissionType', vehicle.transmission)
+        : empty,
     },
     {
       key: 'fuel-combined',
-      label: 'Tiêu thụ hỗn hợp',
-      children: formatMetric(vehicle.fuelConsumptionCombined, 'L/100km'),
+      label: t('specs.fuelCombined'),
+      children: metric(vehicle.fuelConsumptionCombined, 'L/100km'),
     },
-    { key: 'created', label: 'Tạo lúc', children: fmt.dateTime(vehicle.createdAt) },
-    { key: 'updated', label: 'Cập nhật', children: fmt.dateTime(vehicle.updatedAt) },
+    { key: 'created', label: t('specs.createdAt'), children: fmt.dateTime(vehicle.createdAt) },
+    { key: 'updated', label: t('specs.updatedAt'), children: fmt.dateTime(vehicle.updatedAt) },
   ];
 
   return (
-    <Card title="Thông số kỹ thuật" className={styles.sectionCard}>
+    <Card title={t('specs.title')} className={styles.sectionCard}>
       <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }} items={specs} />
 
       {vehicle.features.length > 0 ? (
@@ -728,17 +777,14 @@ function SpecsCard({ vehicle }: { vehicle: VehicleDetail }) {
   );
 }
 
-function formatMetric(value: number | string | null | undefined, unit: string): string {
-  if (value == null || value === '') return EMPTY;
-  return `${Number(value).toLocaleString('vi-VN')} ${unit}`;
-}
-
 /**
  * Tóm tắt nguồn xe (Wave 4). Chi tiết tài chính chỉ tải khi người xem có `finance.view` —
  * người không có quyền chỉ thấy hình thức (đã nằm sẵn trên vehicle), không thấy con số.
  */
 function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
 
   const sourceType = (vehicle.sourceType ?? VEHICLE_SOURCE_TYPE.OWNED) as VehicleSourceType;
   const permissions = usePermissions();
@@ -750,27 +796,33 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
     ? [
         detail.bankName,
         detail.ownerName,
-        detail.monthlyTotal ? `${fmt.money(detail.monthlyTotal)}/tháng (gốc + lãi)` : null,
-        detail.monthlyRent ? `${fmt.money(detail.monthlyRent)}/tháng` : null,
-        detail.commissionPercent ? `chia chủ xe ${detail.commissionPercent}%` : null,
-        detail.paymentDay ? `đến hạn ngày ${detail.paymentDay}` : null,
+        detail.monthlyTotal
+          ? t('source.monthlyTotal', { amount: fmt.money(detail.monthlyTotal) })
+          : null,
+        detail.monthlyRent
+          ? t('source.monthlyRent', { amount: fmt.money(detail.monthlyRent) })
+          : null,
+        detail.commissionPercent
+          ? t('source.commission', { percent: detail.commissionPercent })
+          : null,
+        detail.paymentDay ? t('source.paymentDay', { day: detail.paymentDay }) : null,
       ]
         .filter(Boolean)
         .join(' · ')
     : '';
 
   return (
-    <Card title="Nguồn xe & Tài chính" className={styles.sectionCard}>
+    <Card title={t('source.title')} className={styles.sectionCard}>
       <dl className={styles.kvList}>
         <div className={styles.kvRow}>
-          <dt>Hình thức nguồn xe</dt>
+          <dt>{t('source.kind')}</dt>
           <dd>
-            <Tag color="gold">{VEHICLE_SOURCE_TYPE_LABEL[sourceType]}</Tag>
+            <Tag color="gold">{domainLabel('vehicleSourceType', sourceType)}</Tag>
           </dd>
         </div>
         {detail && summary ? (
           <div className={styles.kvRow}>
-            <dt>Tóm tắt</dt>
+            <dt>{t('source.summary')}</dt>
             <dd>{summary}</dd>
           </div>
         ) : null}
@@ -778,12 +830,14 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
       {canViewFinance ? (
         source.isLoading ? null : detail ? (
           <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.SOURCE)} className={styles.muted}>
-            Xem hồ sơ nguồn xe & tài chính →
+            {t('source.detailLink')}
           </Link>
         ) : (
           <p className={styles.muted}>
-            Chưa khai báo hồ sơ nguồn chi tiết.{' '}
-            <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.SOURCE)}>Bổ sung ngay →</Link>
+            {t('source.missing')}{' '}
+            <Link href={vehicleTabPath(vehicle.id, VEHICLE_EDIT_TAB.SOURCE)}>
+              {t('source.missingLink')}
+            </Link>
           </p>
         )
       ) : null}
@@ -792,13 +846,14 @@ function SourceCard({ vehicle }: { vehicle: VehicleDetail }) {
 }
 
 function MediaCard({ vehicle }: { vehicle: VehicleDetail }) {
+  const t = useTranslations('Vehicles.overview');
   if (vehicle.images.length === 0) return null;
 
   return (
-    <Card title="Thư viện ảnh" className={styles.sectionCard}>
+    <Card title={t('media.title')} className={styles.sectionCard}>
       {/* Group: bấm ảnh nào cũng mở trình xem toàn màn hình chung, chuyển ảnh bằng mũi tên. */}
       <PreviewImageGroup>
-        <ul className={styles.gallery} aria-label="Thư viện ảnh">
+        <ul className={styles.gallery} aria-label={t('media.title')}>
           {vehicle.images.map((url) => (
             <li key={url}>
               <PreviewImage src={url} alt="" className={styles.galleryThumb} loading="lazy" />
@@ -835,16 +890,19 @@ function ActivityCard({
   loading: boolean;
   failed: boolean;
 }) {
+  const t = useTranslations('Vehicles.overview');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const shortRange = useShortRange();
 
   return (
-    <Card title="Hoạt động gần đây" className={styles.sectionCard}>
+    <Card title={t('activity.title')} className={styles.sectionCard}>
       {loading ? (
         <Skeleton active title={false} paragraph={{ rows: 3 }} />
       ) : failed || bookings === undefined ? (
-        <p className={styles.muted}>Không tải được dữ liệu.</p>
+        <p className={styles.muted}>{t('loadFailed')}</p>
       ) : bookings.length === 0 ? (
-        <p className={styles.muted}>Chưa có hoạt động nào cho xe này.</p>
+        <p className={styles.muted}>{t('activity.empty')}</p>
       ) : (
         <ul className={styles.activityList}>
           {bookings.map((booking) => (
@@ -855,13 +913,19 @@ function ActivityCard({
               <div className={styles.activityBody}>
                 <div className={styles.activityHead}>
                   <p className={styles.activityTitle}>
-                    Đơn {booking.code} · {bookingStatusLabel(booking.status)}
+                    {t('activity.item', {
+                      code: booking.code,
+                      status: domainLabel('bookingStatus', booking.status),
+                    })}
                   </p>
                   <span className={styles.activityTime}>{fmt.dateTime(booking.updatedAt)}</span>
                 </div>
                 <p className={styles.activitySub}>
-                  {booking.customerName} • {shortRange(booking.pickupAt, booking.returnAt)} •{' '}
-                  {fmt.money(booking.totalAmount)}
+                  {t('activity.sub', {
+                    customer: booking.customerName,
+                    range: shortRange(booking.pickupAt, booking.returnAt),
+                    amount: fmt.money(booking.totalAmount),
+                  })}
                 </p>
               </div>
             </li>

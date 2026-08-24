@@ -1,10 +1,11 @@
 'use client';
 
 import { yupResolver } from '@hookform/resolvers/yup';
-import { Alert, App, Button, Card, Collapse, Form, Skeleton, Tabs, Tag } from 'antd';
+import { Alert, App, Button, Card, Collapse, Form, Skeleton, Tabs } from 'antd';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
 import {
   PERMISSION,
   VEHICLE_OPERATION_STATUS_META,
@@ -16,6 +17,7 @@ import {
   type VehiclePublicStatus,
 } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
+import { StatusTag } from '@/components/data-display/StatusTag';
 import { StickyFormActions } from '@/components/form/StickyFormActions';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { VEHICLE_EDIT_TAB, VEHICLE_EDIT_TAB_VALUES, vehiclePath } from '@/constants/routes';
@@ -26,6 +28,7 @@ import {
   useVehiclePricing,
 } from '@/features/rental-policies/hooks/use-vehicle-pricing';
 import { informationValuesToInput, mediaValuesToInput, vehicleToFormValues } from '../mappers';
+import { useSensitiveChangeLabels } from '../hooks/use-publication-labels';
 import { sensitiveChanges } from '../sensitive-changes';
 import type { UpdateVehicleInput, VehicleDetail } from '../types';
 import {
@@ -45,6 +48,7 @@ import { branchLabel } from '@/features/branches/branch-label';
 import { usePermissions } from '@/hooks/use-permissions';
 import styles from './VehicleEditWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 type EditableTab = 'information' | 'media';
 type WorkspaceTab = EditableTab | 'pricing' | 'source' | 'documents' | 'maintenance';
@@ -112,7 +116,11 @@ export function VehicleEditWorkspace({
   onSave,
   onCancel,
 }: VehicleEditWorkspaceProps) {
+  const t = useTranslations('Vehicles.edit');
+  const tActions = useTranslations('Common.actions');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+  const sensitiveLabels = useSensitiveChangeLabels();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
@@ -164,9 +172,12 @@ export function VehicleEditWorkspace({
   }, [branches.data, vehicle.branch]);
 
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
-  const operationMeta =
-    VEHICLE_OPERATION_STATUS_META[vehicle.operationStatus as VehicleOperationStatus];
-  const publicMeta = VEHICLE_PUBLIC_STATUS_META[vehicle.publicStatus as VehiclePublicStatus];
+  /**
+   * Danh sách thay đổi nhạy cảm — gọi ở HAI chỗ (chặn lưu và liệt kê trong hộp xác nhận), nên
+   * gói lại một lần thay vì truyền năm tham số ở cả hai nơi.
+   */
+  const changesOf = (values: VehicleFormValues) =>
+    sensitiveChanges(initialValues, values, fmt, domainLabel, sensitiveLabels);
   const activeFields = activeTab === 'media' ? MEDIA_FIELDS : INFORMATION_FIELDS;
   const activeErrors = activeFields.filter((field) => errors[field]).length;
 
@@ -213,7 +224,7 @@ export function VehicleEditWorkspace({
       return;
     }
     const values = getValues();
-    if (isPublic && sensitiveChanges(initialValues, values, fmt).length > 0) {
+    if (isPublic && changesOf(values).length > 0) {
       setConfirmSensitive(true);
       return;
     }
@@ -234,16 +245,16 @@ export function VehicleEditWorkspace({
   }
 
   const tabItems = [
-    { key: 'information', label: 'Thông tin xe' },
-    { key: 'media', label: 'Hình ảnh & tiện ích' },
+    { key: 'information', label: t('tabs.information') },
+    { key: 'media', label: t('tabs.media') },
     {
       key: 'pricing',
-      label: 'Giá & chính sách',
+      label: t('tabs.pricing'),
       children: <VehiclePricingTab vehicle={vehicle} />,
     },
     {
       key: 'source',
-      label: 'Nguồn xe & tài chính',
+      label: t('tabs.source'),
       children: (
         <VehicleSourceWorkspace
           key={sourceResetKey}
@@ -254,12 +265,12 @@ export function VehicleEditWorkspace({
     },
     {
       key: 'documents',
-      label: 'Giấy tờ',
+      label: t('tabs.documents'),
       children: <VehicleDocumentsWorkspace vehicle={vehicle} />,
     },
     {
       key: 'maintenance',
-      label: 'Bảo dưỡng & KM',
+      label: t('tabs.maintenance'),
       children: <VehicleMaintenanceWorkspace vehicle={vehicle} />,
     },
   ];
@@ -271,9 +282,18 @@ export function VehicleEditWorkspace({
           <h1>{vehicle.name}</h1>
           <p>{[vehicle.code, vehicle.plateNumber].filter(Boolean).join(' · ')}</p>
         </div>
+        {/* Cùng `StatusTag` với danh sách và Hồ sơ 360 — nhãn theo ngôn ngữ, màu theo META. */}
         <div className={styles.statuses}>
-          <Tag color={operationMeta?.color}>{operationMeta?.label ?? vehicle.operationStatus}</Tag>
-          <Tag color={publicMeta?.color}>{publicMeta?.label ?? vehicle.publicStatus}</Tag>
+          <StatusTag
+            value={vehicle.operationStatus as VehicleOperationStatus}
+            meta={VEHICLE_OPERATION_STATUS_META}
+            group="vehicleOperationStatus"
+          />
+          <StatusTag
+            value={vehicle.publicStatus as VehiclePublicStatus}
+            meta={VEHICLE_PUBLIC_STATUS_META}
+            group="vehiclePublicStatus"
+          />
         </div>
       </header>
 
@@ -294,7 +314,7 @@ export function VehicleEditWorkspace({
                 className={styles.formAlert}
                 type="error"
                 showIcon
-                message={`${activeErrors} lỗi cần sửa trước khi lưu`}
+                message={t('errors', { count: activeErrors })}
               />
             ) : null}
             {isPublic ? (
@@ -302,13 +322,13 @@ export function VehicleEditWorkspace({
                 className={styles.formAlert}
                 type="warning"
                 showIcon
-                message="Xe đang công khai. Thay đổi thông tin nhạy cảm sẽ đưa xe về chờ duyệt lại và tạm ẩn khỏi marketplace."
+                message={t('publicWarning')}
               />
             ) : null}
 
             {activeTab === 'information' ? (
               <div className={styles.sectionStack}>
-                <Card title="Thông tin cơ bản" className={styles.formCard}>
+                <Card title={t('cards.basic')} className={styles.formCard}>
                   <BasicSection
                     control={control}
                     isCar={vehicleType === VEHICLE_TYPE.CAR}
@@ -318,10 +338,10 @@ export function VehicleEditWorkspace({
                     branchDisabled={!canUpdate}
                   />
                 </Card>
-                <Card title="Quản lý trạng thái" className={styles.formCard}>
+                <Card title={t('cards.status')} className={styles.formCard}>
                   <StatusSection control={control} />
                 </Card>
-                <Card title="Thông số kỹ thuật xe" className={styles.formCard}>
+                <Card title={t('cards.specs')} className={styles.formCard}>
                   <SpecsSection control={control} isCar={vehicleType === VEHICLE_TYPE.CAR} />
                 </Card>
                 <Collapse
@@ -336,8 +356,8 @@ export function VehicleEditWorkspace({
                       key: 'advanced-specs',
                       label: (
                         <span>
-                          <strong>Thông số kỹ thuật nâng cao</strong>
-                          <small>Kích thước, động cơ và mức tiêu hao — không bắt buộc</small>
+                          <strong>{t('advanced.title')}</strong>
+                          <small>{t('advanced.hint')}</small>
                         </span>
                       ),
                       children: <AdvancedSpecsSection control={control} />,
@@ -347,10 +367,10 @@ export function VehicleEditWorkspace({
               </div>
             ) : (
               <div className={styles.sectionStack}>
-                <Card title="Hình ảnh xe" className={styles.formCard}>
+                <Card title={t('cards.images')} className={styles.formCard}>
                   <ImagesSection control={control} isCar={vehicleType === VEHICLE_TYPE.CAR} />
                 </Card>
-                <Card title="Tiện ích & mô tả" className={styles.formCard}>
+                <Card title={t('cards.featuresDescription')} className={styles.formCard}>
                   <FeaturesDescriptionSection
                     control={control}
                     isCar={vehicleType === VEHICLE_TYPE.CAR}
@@ -360,8 +380,8 @@ export function VehicleEditWorkspace({
             )}
 
             <StickyFormActions
-              submitLabel="Lưu thay đổi"
-              cancelLabel={isDirty ? 'Hoàn tác' : 'Huỷ bỏ'}
+              submitLabel={tActions('saveChanges')}
+              cancelLabel={isDirty ? t('revert') : tActions('cancel')}
               onCancel={isDirty ? () => reset(initialValues) : onCancel}
               submitting={submitting}
               disabled={!isDirty}
@@ -372,7 +392,7 @@ export function VehicleEditWorkspace({
 
       <ResponsiveDialog
         open={pendingTab !== null}
-        title="Bỏ các thay đổi chưa lưu?"
+        title={t('discard.title')}
         size="sm"
         onClose={() => setPendingTab(null)}
         onOk={() => {
@@ -386,28 +406,29 @@ export function VehicleEditWorkspace({
           setPendingTab(null);
           if (next) goToTab(next);
         }}
-        okText="Bỏ thay đổi"
-        cancelText="Tiếp tục chỉnh sửa"
+        okText={t('discard.ok')}
+        cancelText={t('discard.cancel')}
         destructive
       >
-        Dữ liệu bạn vừa thay đổi trong tab này chưa được lưu.
+        {t('discard.body')}
       </ResponsiveDialog>
 
       <ResponsiveDialog
         open={confirmSensitive}
-        title="Xác nhận thay đổi nhạy cảm"
+        title={t('sensitive.title')}
         size="sm"
         confirmLoading={submitting}
         onClose={() => setConfirmSensitive(false)}
         onOk={() => void submitCurrent(getValues())}
-        okText="Xác nhận & Lưu"
-        cancelText="Huỷ"
+        okText={t('sensitive.ok')}
+        cancelText={tActions('cancel')}
       >
-        <p>Xe sẽ chuyển về trạng thái chờ duyệt lại và tạm ẩn khỏi marketplace.</p>
+        <p>{t('sensitive.body')}</p>
         <ul className={styles.changeList}>
-          {sensitiveChanges(initialValues, getValues(), fmt).map((change) => (
+          {changesOf(getValues()).map((change) => (
             <li key={change.field}>
-              <strong>{change.label}:</strong> {change.before} → {change.after}
+              <strong>{t('sensitive.change', { label: change.label })}</strong> {change.before} →{' '}
+              {change.after}
             </li>
           ))}
         </ul>
@@ -417,6 +438,8 @@ export function VehicleEditWorkspace({
 }
 
 function VehiclePricingTab({ vehicle }: { vehicle: VehicleDetail }) {
+  const t = useTranslations('Vehicles.edit.pricingTab');
+  const tActions = useTranslations('Common.actions');
   const { message } = App.useApp();
   const pricing = useVehiclePricing(vehicle.id);
   const save = useSaveVehiclePricing(vehicle.id);
@@ -428,10 +451,10 @@ function VehiclePricingTab({ vehicle }: { vehicle: VehicleDetail }) {
       <Alert
         type="error"
         showIcon
-        message="Không tải được giá & chính sách"
+        message={t('loadError')}
         description={
           <Button size="small" onClick={() => void pricing.refetch()}>
-            Thử lại
+            {tActions('retry')}
           </Button>
         }
       />
@@ -447,7 +470,7 @@ function VehiclePricingTab({ vehicle }: { vehicle: VehicleDetail }) {
       submitting={save.isPending}
       onSave={(body) =>
         save.mutate(body, {
-          onSuccess: () => message.success('Đã lưu giá & chính sách của xe'),
+          onSuccess: () => message.success(t('saved')),
           onError: (error) => message.error(getErrorMessage(error)),
         })
       }
