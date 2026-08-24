@@ -167,7 +167,7 @@ nhân đôi nếu không chặn trước.
 | --- | --- | --- |
 | `@xeprime/types` | 20 module: 83 nhóm status + META màu · 64 permission + map role→permission mặc định · 48 mã lỗi + envelope `{data,meta}` · ADR 0011 (`addCalendarMonthsVn`, `longTermPackageAmounts`, gói 1/2/3/6/9/12) · `normalizeVnPhone` · danh mục 34 tỉnh + alias · hằng upload (MIME, 10MB) · `api.generated.ts` 195 endpoint | ✅ **Có** — emit CommonJS (`packages/config/tsconfig/lib.json`), Metro đọc được |
 | `@xeprime/validators` | Yup: `vehicleFormSchema`, `vehicleSourceFormSchema`, `vehicleDocumentFormSchema`, `maintenanceProfile*`, `odometerCorrection*`, `bookingPeriodSchema(+MinDays)`, `registerShopSchema`, `branchFormSchema`, `shopProfileSchema`, `accountProfileSchema`, `login/register/forgot/resetSchema` | ⚠️ **Có, nhưng** — 112 message lỗi là tiếng Việt cứng (N2) |
-| `@xeprime/ui` | `export {}` — **rỗng có chủ ý** từ Phase 0 | ❌ Không, và **không bao giờ**: React DOM + AntD |
+| `@xeprime/ui` | Design token (`XP_TOKENS`, 131 token) + `tokens.css`. Export gốc là TS thuần — **luật ranh giới**: component web (nếu có sau này) đi subpath riêng | ✅ **Có** — token đọc được từ RN; màu dùng nguyên, kích thước qua `toPx()` |
 | `@xeprime/config` | tsconfig (base/lib/nest/nextjs) + eslint | ⚠️ Thiếu preset cho RN |
 
 ### 3.2 Bảng Shared Map
@@ -199,7 +199,7 @@ nhân đôi nếu không chặn trước.
 | **Múi giờ + đếm thời lượng thuê** | `packages/domain/src/datetime.ts` | ✅ | ✅ | **Có** ✅ | Xong 24/08/2026 | — |
 | **Bó message vi/en** — TOÀN BỘ 21 namespace | `packages/domain/messages/{vi,en}/` (2.172 khoá) | ✅ | ✅ | **Có** ✅ | Xong 24/08/2026 — dùng chung trọn bộ; `i18n:check` canh parity trên gốc package | — |
 | **Ánh xạ mã lỗi → câu** | `apps/web/src/i18n/use-error-message.ts` | ✅ | ✅ | ❌ | Nên (tách phần thuần khỏi hook React) | P1 |
-| **Design token** (131 token) | `apps/web/src/styles/theme.ts` | ✅ | ✅ (giá trị, không phải CSS) | ❌ | Nên → `@xeprime/tokens` | P2 |
+| **Design token** (131 token) | `packages/ui/src/tokens/` (`XP_TOKENS`) | ✅ | ✅ (giá trị, không phải CSS) | **Có** ✅ | Xong 24/08/2026 — vào `@xeprime/ui` (export gốc platform-free) thay vì package `@xeprime/tokens` mới, vì `packages/ui` rỗng và đã khai sẵn export `./styles.css` | — |
 | **Menu + quyền của menu** | `apps/web/src/constants/nav.ts` | ✅ | ⚠️ một phần | ❌ | Chỉ phần map quyền→mục | P2 |
 | **`usePermissions`** | `apps/web/src/hooks/use-permissions.ts` | ✅ | ✅ | ❌ | Nên | P1 |
 | Filter sống ở URL | `apps/web/src/hooks/use-url-filters.ts` | ✅ | ❌ (mobile không có URL) | ❌ | **Không** — mobile cần bản khác cùng interface | — |
@@ -262,7 +262,7 @@ Không có `next/*`. Không có `antd`. Không có `react-dom`. Đây là lý do
 | `apps/web/src/lib/{money,rental-busy,long-term,odometer,contact,vehicle-label}.ts` | 763 dòng luật nghiệp vụ thuần trong app web | Không có một import UI nào |
 | `apps/web/messages/{vi,en}/{domain,errors,common}.json` | Từ vựng nghiệp vụ + câu lỗi (dùng chung mọi client) nằm trong app web | `domain` + `errors` là **hợp đồng**, `vehicles.json` mới là chuyện riêng của web |
 | `apps/web/scripts/i18n-audit.mjs:33` | Chỉ quét `<web>/src` | ⇒ 112 chuỗi VN ở `packages/validators` vô hình (N2) |
-| `packages/ui/src/index.ts` | Package rỗng tên `ui` | Docblock nói "chờ marketplace cần dùng lại". Với mobile, cái tên này gây hiểu nhầm: **RN sẽ không bao giờ dùng nó** |
+| `packages/ui/src/index.ts` | ~~Package rỗng tên `ui`~~ **ĐÃ ĐỔI 24/08/2026** | Nay chứa design token (export gốc platform-free) — **RN dùng được và NÊN dùng**. Component web nếu có sau này đi subpath riêng |
 
 ### 5.2 Cái KHÔNG sai chỗ (để không sửa nhầm)
 
@@ -386,7 +386,7 @@ nào trong toàn bộ mã nguồn.
 
 **Không phải mã chết** (đã kiểm tra, để không xoá nhầm):
 - `features/catalog/test-catalog.ts` — 4 file test dùng.
-- `packages/ui/src/index.ts` (`export {}`) — rỗng **có chủ ý**, docblock giải thích rõ.
+- `packages/ui/src/index.ts` — hết rỗng từ 24/08/2026: export design token (`./tokens`), docblock ghi luật ranh giới nền tảng.
 - Token `@deprecated` trong `styles/theme.ts` (9 cái) — alias trỏ `var()` về token canonical, có
   đích gỡ ghi ở `docs/design-token-map.md`.
 - `getErrorMessage()` ở `api-client.ts:168` `@deprecated` — vẫn được khu chưa i18n dùng; xoá khi
