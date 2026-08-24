@@ -43,15 +43,24 @@ log và có thể đổi câu chữ bất cứ lúc nào; giao diện tiếng An
 
 ## Xác thực
 
-Đăng nhập bằng Firebase Auth ở client → gửi ID token lên \`POST /auth/session\` → API trả về
-**httpOnly session cookie** (ADR 0002). Không có Bearer token, không có gì đọc được từ
-JavaScript.
+**Hai đường vận chuyển, một nguồn sự thật về quyền.**
 
-Hệ quả khi gọi API:
+**Web** — đăng nhập bằng Firebase Auth ở client → gửi ID token lên \`POST /auth/session\` → API trả
+về **httpOnly session cookie** (ADR 0002). Không có gì đọc được từ JavaScript.
 
 - Từ trình duyệt: đặt \`credentials: 'include'\`, và origin phải nằm trong \`CORS_ORIGINS\`.
 - Từ curl/Postman: giữ cookie jar (\`curl -c jar.txt -b jar.txt\`).
 - Ngay trong trang này: cứ gọi \`POST /auth/session\` một lần, các endpoint sau dùng lại cookie đó.
+
+**App native** — \`Authorization: Bearer <accessToken>\` (ADR 0017). Lấy token ở
+\`POST /auth/mobile/session\` (Firebase ID token) hoặc \`POST /auth/mobile/login\` (mật khẩu).
+
+- Access token sống **15 phút**. Hết hạn trả \`SESSION_EXPIRED\` → gọi \`POST /auth/mobile/refresh\`.
+- Refresh token **dùng một lần**: mỗi lần refresh trả cặp mới và token cũ chết ngay. Gửi lại token
+  đã dùng ⇒ coi là bị đánh cắp ⇒ thu hồi cả phiên của thiết bị đó.
+- \`POST /auth/mobile/logout\` thu hồi phiên phía server. Chỉ xoá token ở máy là chưa đăng xuất.
+
+**Đừng gửi cả cookie lẫn Bearer trong một request** — API trả 401 thay vì đoán bên nào thắng.
 
 Quyền **không** nằm trong token — mỗi request đọc lại vai trò/quyền từ DB. Ổ khoá trên mỗi
 endpoint cho biết endpoint đó có cần đăng nhập không; phần **Truy cập / Phạm vi / Quyền yêu cầu**

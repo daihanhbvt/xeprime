@@ -50,6 +50,22 @@ export class SessionService {
       if (typeof decoded === 'string' || !decoded.sub || !('sid' in decoded)) {
         throw new Error('payload thiếu trường bắt buộc');
       }
+
+      /*
+       * Token của app NATIVE không được đi qua đường cookie — ADR 0017 §5.
+       *
+       * Hai họ token cùng secret và cùng issuer, nên chữ ký của access token native hợp lệ ở
+       * đây. Nhưng đường cookie KHÔNG tra `native_auth_sessions.revoked_at`: nhận nó nghĩa là
+       * một access token của thiết bị ĐÃ ĐĂNG XUẤT vẫn dùng được tới khi hết hạn, chỉ cần
+       * chuyển từ header sang cookie. Đó là đúng thứ việc thu hồi theo thiết bị tồn tại để chặn.
+       *
+       * Nhận diện bằng SỰ CÓ MẶT của `typ`/`aud` — session cookie của web không có cả hai, nên
+       * luật này không đụng token nào đang lưu hành.
+       */
+      if ('typ' in decoded || decoded.aud !== undefined) {
+        throw new Error('token native không dùng được ở đường cookie');
+      }
+
       return { sub: String(decoded.sub), sid: String(decoded.sid) };
     } catch (err) {
       const expired = err instanceof jwt.TokenExpiredError;

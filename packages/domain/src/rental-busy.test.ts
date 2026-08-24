@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { describe, expect, it } from 'vitest';
 
-import type { VehicleBusyDay } from '@/features/booking-requests/types';
+import type { VehicleBusyDay } from './rental-busy';
 
 import {
   buildBusyDayIndex,

@@ -6,6 +6,7 @@ import {
   PERMISSIONS_KEY,
   PLATFORM_ONLY_KEY,
   TENANT_SCOPED_KEY,
+  VERIFIES_CREDENTIALS_KEY,
 } from '../common/decorators';
 
 /** Điều kiện truy cập thật sự của một route, đọc từ metadata mà guard đang dùng. */
@@ -13,6 +14,8 @@ export interface RouteAccess {
   readonly controller: string;
   readonly handler: string;
   readonly isPublic: boolean;
+  /** Public nhưng tự kiểm credential ⇒ trả 401 được. Xem `@VerifiesCredentials`. */
+  readonly verifiesCredentials: boolean;
   readonly permissions: readonly Permission[];
   readonly tenantScoped: boolean;
   readonly platformOnly: boolean;
@@ -53,6 +56,7 @@ export function collectRouteAccess(app: INestApplication): Map<string, RouteAcce
           controller: controller.name,
           handler: handlerName,
           isPublic: readFlag(IS_PUBLIC_KEY, handler, controller),
+          verifiesCredentials: readFlag(VERIFIES_CREDENTIALS_KEY, handler, controller),
           permissions: readPermissions(handler, controller),
           tenantScoped: readFlag(TENANT_SCOPED_KEY, handler, controller),
           platformOnly: readFlag(PLATFORM_ONLY_KEY, handler, controller),

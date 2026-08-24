@@ -183,21 +183,21 @@ nhân đôi nếu không chặn trước.
 | Danh mục tỉnh/thành | `packages/types/src/province.ts` | ✅ | ✅ | **Có** | Giữ nguyên | — |
 | Hằng upload (MIME/size) | `packages/types/src/upload.ts` | ✅ | ✅ | **Có** | Giữ nguyên | — |
 | Yup schema form | `packages/validators/src/` | ✅ | ✅ | **Có** | Giữ + gỡ chữ VN | P1 |
-| **HTTP client + envelope + `ApiClientError`** | `apps/web/src/services/api-client.ts` (190 dòng) | ✅ | ✅ | ❌ | **Nên** → `@xeprime/api-client` | **P0** |
-| **Query key TanStack** | `apps/web/src/services/query-keys.ts` (269 dòng) | ✅ | ✅ | ❌ | **Nên** → `@xeprime/api-client` | **P0** |
+| **HTTP client + envelope + `ApiClientError`** | `packages/api-client/src/client.ts` | ✅ | ✅ | **Có** ✅ | Xong 24/08/2026 | — |
+| **Query key TanStack** | `packages/api-client/src/query-keys.ts` | ✅ | ✅ | **Có** ✅ | Xong 24/08/2026 | — |
 | **`api.ts` của 39 feature** | `apps/web/src/features/*/api.ts` (2.168 dòng) | ✅ | ✅ | ❌ | **Nên** | **P0** |
 | **`types.ts` của feature** (alias từ `components['schemas']`) | `apps/web/src/features/*/types.ts` (801 dòng) | ✅ | ✅ | ❌ | **Nên** | **P0** |
 | **`constants.ts` của feature** | `apps/web/src/features/*/constants.ts` (730 dòng) | ✅ | ✅ | ❌ | **Nên** (trừ 1 file, xem 5.1) | P1 |
 | **`schema.ts` của feature** | `apps/web/src/features/*/schema.ts` (687 dòng) | ✅ | ✅ | ❌ | **Nên** (trừ phần dính `Dayjs`) | P1 |
 | **Hook dữ liệu TanStack** | `apps/web/src/features/*/hooks/` (3.566 dòng, 75 import `@tanstack/react-query`) | ✅ | ✅ | ❌ | **Nên** — chỉ 7 file dính `next/*`/`antd` | P1 |
-| **Tiền: format/cộng trừ trên chuỗi** | `apps/web/src/lib/money.ts` (250 dòng) | ✅ | ✅ | ❌ | **Nên** | P1 |
-| **Lịch bận / xung đột khoảng thuê** | `apps/web/src/lib/rental-busy.ts` (112 dòng) | ✅ | ✅ | ❌ | **Nên** — đây là luật an toàn | **P0** |
-| **Nguyện vọng nhận xe dài hạn** | `apps/web/src/lib/long-term.ts` (53 dòng) | ✅ | ✅ | ❌ | **Nên** — ADR 0011 nói rõ "một hàm duy nhất" | P1 |
+| **Tiền: format/cộng trừ trên chuỗi** | `packages/domain/src/money.ts` | ✅ | ✅ | **Có** ✅ | Xong 24/08/2026 | — |
+| **Lịch bận / xung đột khoảng thuê** | `packages/domain/src/rental-busy.ts` | ✅ | ✅ | **Có** ✅ | Xong 24/08/2026 — luật an toàn, có test đi kèm | — |
+| **Nguyện vọng nhận xe dài hạn** | `packages/domain/src/long-term.ts` | ✅ | ✅ | **Có** ✅ | Xong 24/08/2026 | — |
 | **KM còn lại tới mốc bảo dưỡng** | `apps/web/src/lib/odometer.ts` | ✅ | ✅ | ❌ | Nên | P2 |
 | **Nhãn xe `Tên (biển số)`** | `apps/web/src/lib/vehicle-label.ts` | ✅ | ✅ | ❌ | Nên | P2 |
 | **Link `tel:` / Zalo** | `apps/web/src/lib/contact.ts` | ✅ | ✅ | ❌ | Nên | P2 |
-| **Múi giờ + đếm thời lượng thuê** | `apps/web/src/lib/datetime.ts` (105 dòng, dayjs) | ✅ | ✅ | ❌ | Nên (dayjs chạy được trên RN) | P1 |
-| **Bó message vi/en** (1.596 khoá × 2) | `apps/web/messages/{vi,en}/` | ✅ | ✅ | ❌ | **Nên** — ít nhất `domain` + `errors` + `common` | **P0** |
+| **Múi giờ + đếm thời lượng thuê** | `packages/domain/src/datetime.ts` | ✅ | ✅ | **Có** ✅ | Xong 24/08/2026 | — |
+| **Bó message vi/en** — TOÀN BỘ 21 namespace | `packages/domain/messages/{vi,en}/` (2.172 khoá) | ✅ | ✅ | **Có** ✅ | Xong 24/08/2026 — dùng chung trọn bộ; `i18n:check` canh parity trên gốc package | — |
 | **Ánh xạ mã lỗi → câu** | `apps/web/src/i18n/use-error-message.ts` | ✅ | ✅ | ❌ | Nên (tách phần thuần khỏi hook React) | P1 |
 | **Design token** (131 token) | `apps/web/src/styles/theme.ts` | ✅ | ✅ (giá trị, không phải CSS) | ❌ | Nên → `@xeprime/tokens` | P2 |
 | **Menu + quyền của menu** | `apps/web/src/constants/nav.ts` | ✅ | ⚠️ một phần | ❌ | Chỉ phần map quyền→mục | P2 |
@@ -280,8 +280,8 @@ Không có `next/*`. Không có `antd`. Không có `react-dom`. Đây là lý do
 
 | Domain | API Ready | Web đang dùng | Mobile ready | Vấn đề |
 | --- | --- | --- | --- | --- |
-| **Auth / session** | ✅ 10 endpoint | ✅ | ❌ **KHÔNG** | Chỉ cookie. `auth.guard.ts:36` đọc `req.cookies[...]`, docblock `:17-18` nói rõ "cố ý KHÔNG đọc Bearer". `bootstrap.ts:63` mô tả spec là "không dùng Bearer token" |
-| **Session lifecycle** | ⚠️ | ✅ | ❌ | JWT 7 ngày, **không refresh**, **không sliding renewal** (ADR 0002 §5 chưa làm), **không bảng phiên** ⇒ không revoke thiết bị |
+| **Auth / session** | ✅ 14 endpoint | ✅ | ✅ | Hai đường: cookie (web) + `Authorization: Bearer` (native — ADR 0017). Bốn endpoint mới `/auth/mobile/{session,login,refresh,logout}` |
+| **Session lifecycle** | ⚠️ | ✅ | ✅ | Native: access 15′ + refresh xoay vòng + revoke theo thiết bị (`native_auth_sessions`). **Web vẫn** JWT 7 ngày, không refresh/sliding/revoke — ADR 0017 cố ý không đụng |
 | **RBAC** | ✅ `GET /auth/me`, `/rbac/my-permissions` | ✅ | ✅ | Quyền đọc từ DB mỗi request (ADR 0002) — mobile hưởng nguyên |
 | **Marketplace công khai** | ✅ 13 endpoint `/public/*` | ✅ | ✅ | Có phân trang + facet. Khu chín nhất |
 | **Booking request (khách)** | ✅ | ✅ | ⚠️ | Cổng OTP bắt buộc, mà OTP đang mock (COM-06) |
@@ -315,16 +315,16 @@ Không có `next/*`. Không có `antd`. Không có `react-dom`. Đây là lý do
 
 | ID | Blocker | Bằng chứng | Lời giải đã có sẵn? |
 | --- | --- | --- | --- |
-| **P0-1** | **AuthGuard chỉ nhận cookie** | `apps/api/src/common/guards/auth.guard.ts:36` + docblock `:17-18` | ✅ **ADR 0002 đã chốt**: *"App native sau này: cho AuthGuard chấp nhận thêm nguồn `Authorization: Bearer <session jwt>`. Cùng một session, khác cách vận chuyển."* → chỉ cần một ticket, **không cần ADR mới** |
-| **P0-2** | **Chưa có ADR về mobile** — và tài liệu hiện có nói ngược lại | `docs/xeprime_build_plan_nextjs_nestjs_prod.md:81` "Mobile web \| Responsive PWA trước, chưa build native app vội"; `:751` "Native mobile app \| Chưa làm, ưu tiên PWA responsive". Grep toàn `docs/`: **chỉ 1 file** nhắc tới native | ❌ Cần ADR 0013 |
+| ~~**P0-1**~~ **ĐÃ ĐÓNG** 24/08/2026 | ~~AuthGuard chỉ nhận cookie~~ | `auth.guard.ts` nay nhận hai nguồn; `common/optional-user.ts` cũng vậy | ✅ [ADR 0017](decisions/0017-native-bearer-auth.md) — Bearer access token 15′ + refresh xoay vòng, bảng `native_auth_sessions`. Khác dự kiến của ADR 0002 ở một điểm: **không** dùng lại session JWT 7 ngày (không thu hồi được) |
+| ~~**P0-2**~~ **ĐÃ ĐÓNG** 24/08/2026 | ~~Chưa có ADR về mobile~~ | — | ✅ [ADR 0017](decisions/0017-native-bearer-auth.md). Hai dòng trong `xeprime_build_plan_nextjs_nestjs_prod.md` (`:81`, `:751`) nói "chưa build native" nay **đã lạc hậu** — ADR thắng tài liệu cũ (CLAUDE.md §2) |
 | ~~**P0-3**~~ **ĐÃ GỠ** | ~~PAY-01 chưa có quyết định nghiệp vụ~~ | Đã chốt 21/08/2026 | ✅ [ADR 0013](decisions/0013-no-online-payment-mvp.md) — không làm; luồng mobile dừng ở "đã gửi yêu cầu" |
-| **P0-4** | **Hợp đồng client chưa đóng gói được** — `api-client`, query key, `api.ts` của feature nằm trong `apps/web` | mục 3.2 | ❌ Cần tách package (mục 14) |
+| **P0-4** | **Hợp đồng client chưa đóng gói được** — `api.ts` của 38 feature còn lại vẫn trong `apps/web` | mục 3.2 | ⚠️ **Nền đã xong** 24/08/2026: `@xeprime/api-client` (client + `AuthTransport` + query key + feature `auth`) và `@xeprime/domain` (tiền · ngày giờ · lịch bận · nguyện vọng nhận xe). Còn lại: chuyển từng feature theo §14.1 bước 3–4 |
 
 ### P1 — nên xong trước khi mobile chạm vào luồng tương ứng
 
 | ID | Blocker | Chặn luồng nào | Bằng chứng |
 | --- | --- | --- | --- |
-| P1-1 | Không refresh / sliding / revoke phiên | Toàn bộ — 7 ngày đăng xuất im lặng; mất máy không thu hồi được | N5 |
+| P1-1 | Không refresh / sliding / revoke phiên — **chỉ còn WEB** | Web. Native đã có refresh + revoke theo thiết bị (ADR 0017); ADR đó cố ý không đụng vòng đời cookie của web | N5 |
 | P1-2 | **COM-07 push** — không `device_tokens`, không FCM sender | Thông báo. Không push thì app native gần như vô nghĩa với chủ shop | Excel COM-07 + grep = 0 |
 | P1-3 | **N4 — thông báo là tiếng Việt cứng trong DB** | Push + chuông. Phải sửa **trước** khi làm push, nếu không push ra tiếng Việt vĩnh viễn | `settlement.service.ts:313`, `NotificationBell.tsx:88-89` |
 | P1-4 | **COM-06 eSMS** | BKG-01 — khách THẬT không đặt được xe trên mọi client | Excel BUG-01 |

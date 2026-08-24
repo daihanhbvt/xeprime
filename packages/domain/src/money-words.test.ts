@@ -7,9 +7,7 @@ import { moneyToVietnameseWords } from './money';
  */
 describe('moneyToVietnameseWords', () => {
   it('số trong ảnh chụp màn hình cũ đọc đúng từng chữ', () => {
-    expect(moneyToVietnameseWords('15950000')).toBe(
-      'Mười lăm triệu chín trăm năm mươi nghìn đồng',
-    );
+    expect(moneyToVietnameseWords('15950000')).toBe('Mười lăm triệu chín trăm năm mươi nghìn đồng');
   });
 
   it('hàng đơn vị 1 sau chục ≥ 2 là "mốt", không phải "một"', () => {
