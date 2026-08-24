@@ -5,7 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import { getServerLocale } from '@/i18n/locale';
 import { getServerNavPreferences } from '@/lib/ui-preferences.server';
 import { Providers } from './providers';
-import '@/styles/tokens.css';
+import '@xeprime/ui/styles.css';
 import '@/styles/globals.css';
 
 /**

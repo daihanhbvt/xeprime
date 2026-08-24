@@ -5,6 +5,7 @@ import { Button } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Suspense } from 'react';
+import { useTranslations } from 'next-intl';
 import { PERMISSION } from '@xeprime/types';
 import { ROUTES, vehiclePath } from '@/constants/routes';
 import { useIsMobile } from '@/hooks/use-media-query';
@@ -17,21 +18,26 @@ import { VehicleFiltersBar } from '@/features/vehicles/components/VehicleFilters
 import { VehicleCardGrid } from '@/features/vehicles/components/VehicleCardGrid';
 import { VehicleStatusChips } from '@/features/vehicles/components/VehicleStatusChips';
 import { vehicleSchedulePath } from '@/features/vehicles/calendar-link';
-import { vehicleRowActions } from '@/features/vehicles/row-actions';
+import { useVehicleRowActions } from '@/features/vehicles/hooks/use-vehicle-row-actions';
 import { useVehicleFilters } from '@/features/vehicles/hooks/use-vehicle-filters';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
 import { VEHICLES_DEFAULT_LIMIT } from '@/features/vehicles/api';
 
 export default function VehiclesPage() {
+  const t = useTranslations('Vehicles.list.page');
+
   // useVehicleFilters đọc useSearchParams → cần Suspense trong route tĩnh (Next).
   return (
-    <Suspense fallback={<LoadingState variant="page" label="Đang tải danh sách xe…" />}>
+    <Suspense fallback={<LoadingState variant="page" label={t('loading')} />}>
       <VehiclesView />
     </Suspense>
   );
 }
 
 function VehiclesView() {
+  const t = useTranslations('Vehicles.list.page');
+  const tManage = useTranslations('ManageCommon.permission');
+  const rowActions = useVehicleRowActions();
   const router = useRouter();
   const { has } = usePermissions();
   const isMobile = useIsMobile();
@@ -68,7 +74,7 @@ function VehiclesView() {
       icon={<PlusOutlined />}
       onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
     >
-      Thêm xe đầu tiên
+      {t('addFirstVehicle')}
     </Button>
   ) : undefined;
 
@@ -83,12 +89,10 @@ function VehiclesView() {
     return (
       <PermissionState
         kind="forbidden"
-        title="Không có quyền truy cập"
-        description="Bạn cần quyền dưới đây để xem trang này. Liên hệ quản trị viên để được cấp quyền."
         missingPermissions={[PERMISSION.VEHICLE_VIEW]}
         action={
           <Link href={ROUTES.MANAGE.ROOT}>
-            <Button type="primary">Về trang chủ</Button>
+            <Button type="primary">{tManage('backHome')}</Button>
           </Link>
         }
       />
@@ -98,7 +102,7 @@ function VehiclesView() {
   return (
     <div>
       <ManagePageHeader
-        title="Danh sách xe"
+        title={t('title')}
         extra={
           canCreate ? (
             <Button
@@ -106,7 +110,7 @@ function VehiclesView() {
               icon={<PlusOutlined />}
               onClick={() => router.push(ROUTES.MANAGE.VEHICLE_NEW)}
             >
-              Thêm xe
+              {t('addVehicle')}
             </Button>
           ) : null
         }
@@ -135,7 +139,7 @@ function VehiclesView() {
         onClearFilters={clearFilters}
         emptyAction={emptyAction}
         rowActions={(row, shape) =>
-          vehicleRowActions({
+          rowActions({
             row,
             canEdit,
             compact: shape === 'row',

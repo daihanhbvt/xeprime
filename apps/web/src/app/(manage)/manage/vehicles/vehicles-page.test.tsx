@@ -524,7 +524,9 @@ describe('/manage/vehicles — thiếu quyền xem', () => {
     setQuery({ data: { items: [vehicle()], meta: META } });
     renderPage();
 
-    expect(screen.getByText('Không có quyền truy cập')).toBeTruthy();
+    // Câu chữ mặc định của `PermissionState` (ManageCommon.permission.deniedTitle) — trang
+    // không còn ghi đè `title` bằng một bản sao riêng.
+    expect(screen.getByText('Bạn không có quyền truy cập')).toBeTruthy();
     expect(screen.queryByRole('list', { name: 'Danh sách xe' })).toBeNull();
     // Không dựng tiêu đề/bộ lọc cho một trang không xem được.
     expect(screen.queryByRole('heading', { name: 'Danh sách xe' })).toBeNull();

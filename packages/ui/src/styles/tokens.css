@@ -1,8 +1,9 @@
 /**
  * CSS custom property của XePrime — ADR 0003.
  *
- * Phải khớp 1-1 với `XP_TOKENS` trong `theme.ts` (cả tên lẫn giá trị).
- * `theme.test.ts` là thứ giữ hai file không trôi khỏi nhau.
+ * Phải khớp 1-1 với `XP_TOKENS` trong `../tokens/index.ts` (cả tên lẫn giá trị).
+ * `apps/web/src/styles/theme.test.ts` là thứ giữ hai file không trôi khỏi nhau.
+ * Web nạp file này qua export `@xeprime/ui/styles.css` (app/layout.tsx).
  *
  * Giá trị lấy từ Figma section 01 “XePrime Foundations” (`14:2`) — mã node ghi cạnh từng
  * token. Lý do chọn Foundations thay vì bộ giá trị của các component `XePrime/*`:

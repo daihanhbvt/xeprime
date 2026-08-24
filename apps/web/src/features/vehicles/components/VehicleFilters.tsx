@@ -2,14 +2,9 @@
 
 import { Select } from 'antd';
 import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
-import {
-  OPERATION_STATUS_OPTIONS,
-  PUBLIC_STATUS_OPTIONS,
-  SERVICE_TYPE_OPTIONS,
-  VEHICLE_SORT_OPTIONS,
-  VEHICLE_TYPE_OPTIONS,
-} from '../constants';
+import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import type { VehicleFilters, VehicleSort } from '../types';
 import styles from './VehicleFilters.module.css';
 
@@ -36,31 +31,44 @@ interface VehicleFiltersBarProps {
  *     bốn dropdown lọc một khoảng trống lớn — đúng vai của slot `actions`.
  */
 export function VehicleFiltersBar({ filters, onChange, onClear }: VehicleFiltersBarProps) {
+  const t = useTranslations('Vehicles.list');
+  const options = useVehicleOptions();
+
   const fields: FilterField[] = useMemo(
     () => [
       {
         kind: 'search',
         key: 'q',
-        label: 'Tìm xe',
+        label: t('filters.search'),
         // Ô chỉ rộng 240px ở thanh gọn — Figma `197:1549` rút placeholder còn "Tìm kiếm xe...".
-        placeholder: 'Tìm kiếm xe...',
+        placeholder: t('filters.searchPlaceholder'),
       },
-      { kind: 'select', key: 'vehicleType', label: 'Loại xe', options: VEHICLE_TYPE_OPTIONS },
-      { kind: 'select', key: 'serviceType', label: 'Dịch vụ', options: SERVICE_TYPE_OPTIONS },
+      {
+        kind: 'select',
+        key: 'vehicleType',
+        label: t('filters.vehicleType'),
+        options: options.vehicleType,
+      },
+      {
+        kind: 'select',
+        key: 'serviceType',
+        label: t('filters.serviceType'),
+        options: options.serviceType,
+      },
       {
         kind: 'select',
         key: 'operationStatus',
-        label: 'Vận hành',
-        options: OPERATION_STATUS_OPTIONS,
+        label: t('filters.operationStatus'),
+        options: options.operationStatus,
       },
       {
         kind: 'select',
         key: 'publicStatus',
-        label: 'Công khai',
-        options: PUBLIC_STATUS_OPTIONS,
+        label: t('filters.publicStatus'),
+        options: options.publicStatus,
       },
     ],
-    [],
+    [options, t],
   );
 
   const values: FilterValues = {
@@ -84,11 +92,11 @@ export function VehicleFiltersBar({ filters, onChange, onClear }: VehicleFilters
       actions={
         <Select<VehicleSort>
           className={styles.sort}
-          aria-label="Sắp xếp"
-          placeholder="Sắp xếp"
+          aria-label={t('sort.label')}
+          placeholder={t('sort.label')}
           // Cùng hình thái "Nhãn: Giá trị" với cụm lọc — Figma `186:1665`.
-          labelRender={(item) => `Sắp xếp: ${item.label}`}
-          options={VEHICLE_SORT_OPTIONS as { value: VehicleSort; label: string }[]}
+          labelRender={(item) => t('sort.value', { label: String(item.label) })}
+          options={options.sort}
           value={filters.sort ?? 'newest'}
           onChange={(value) => onChange({ sort: value })}
         />

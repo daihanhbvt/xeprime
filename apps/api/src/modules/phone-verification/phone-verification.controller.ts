@@ -3,10 +3,11 @@ import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PHONE_VERIFICATION_PURPOSE, type PhoneVerificationPurpose } from '@xeprime/types';
 import type { Request, Response } from 'express';
-import { Public } from '../../common/decorators';
+import { Public, VerifiesCredentials } from '../../common/decorators';
 import { resolveOptionalUserId } from '../../common/optional-user';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { NativeSessionService } from '../auth/native-session.service';
 import { SessionService } from '../auth/session.service';
 import { MeDto } from '../auth/dto/auth.dto';
 import {
@@ -33,6 +34,7 @@ export class PhoneVerificationController {
     private readonly service: PhoneVerificationService,
     private readonly auth: AuthService,
     private readonly sessions: SessionService,
+    private readonly nativeSessions: NativeSessionService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -57,7 +59,12 @@ export class PhoneVerificationController {
   @ApiOperation({ summary: 'Xác nhận mã OTP' })
   @ApiOkResponse({ type: VerifyOtpResultDto })
   async verifyOtp(@Body() dto: VerifyOtpDto, @Req() req: Request): Promise<VerifyOtpResultDto> {
-    const userId = await resolveOptionalUserId(req, this.sessions, this.prisma);
+    const userId = await resolveOptionalUserId(
+      req,
+      this.sessions,
+      this.prisma,
+      this.nativeSessions,
+    );
     await this.service.verifyOtp(
       dto.phone,
       dto.purpose as PhoneVerificationPurpose,
@@ -68,6 +75,7 @@ export class PhoneVerificationController {
   }
 
   @Public()
+  @VerifiesCredentials()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('login')
   @HttpCode(HttpStatus.OK)

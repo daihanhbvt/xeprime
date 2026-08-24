@@ -10,6 +10,11 @@
  * Tên file kebab-case ↔ tên namespace PascalCase. Thêm namespace = thêm ở đây + tạo file JSON
  * cho CẢ HAI ngôn ngữ + khai báo ở hai file `index.ts`; `pnpm i18n:check` fail nếu lệch.
  *
+ * **MỘT GỐC, và gốc đó là `@xeprime/domain/messages`** (quyết định 24/08/2026): toàn bộ bó
+ * message dùng chung cho web và app native — một khoá chỉ có một bản dịch để hai client không
+ * bao giờ nói khác nhau. `apps/web/messages/<locale>/index.ts` chỉ còn là bảng gom của web;
+ * `i18n:check` đối chiếu parity vi↔en trên gốc package và CHẶN file JSON mọc lại ở gốc web cũ.
+ *
  * Danh sách này lớn dần theo tiến độ i18n hoá: namespace của một tính năng được thêm ĐÚNG LÚC
  * tính năng đó được chuyển sang `t(...)`, không tạo sẵn file rỗng. Một namespace rỗng là chuỗi
  * chết nằm trong bundle và là lời hứa suông rằng khu vực đó đã dịch xong — `i18n:check` từ chối
@@ -19,9 +24,9 @@
 export const MESSAGE_NAMESPACES = [
   // — Dùng chung mọi nơi —
   { file: 'common', namespace: 'Common' },
-  { file: 'navigation', namespace: 'Navigation' },
   { file: 'domain', namespace: 'Domain' },
   { file: 'errors', namespace: 'Errors' },
+  { file: 'navigation', namespace: 'Navigation' },
 
   // — Khu công khai / khách hàng —
   { file: 'auth', namespace: 'Auth' },

@@ -1,14 +1,17 @@
 /**
- * `@xeprime/ui` — component dùng chung giữa `(public)` marketplace và `(manage)` portal.
+ * `@xeprime/ui` — hệ thiết kế dùng chung của XePrime.
  *
- * Cố ý để trống ở Phase 0.
+ * Hôm nay package này chứa DESIGN TOKEN (`src/tokens/`) + bản CSS custom property của chúng
+ * (`src/styles/tokens.css`, export `@xeprime/ui/styles.css`). Nguồn giá trị: Figma section 01
+ * "XePrime Foundations" — hợp đồng ở `docs/design-token-map.md`.
  *
- * Đẩy component vào package dùng chung khi mới có một nơi sử dụng là nợ kỹ thuật: nó tạo
- * ranh giới API phải duy trì trước khi biết ranh giới đó nên nằm ở đâu. Component hiện
- * sống ở `apps/web/src/components`; khi marketplace (Phase 3) thật sự cần dùng lại cái gì
- * thì chuyển sang đây.
+ * ── Luật ranh giới nền tảng ─────────────────────────────────────────────────────────────
+ * Export GỐC (`@xeprime/ui`) phải chạy được trên CẢ web lẫn React Native: chỉ TypeScript
+ * thuần, không `antd`, không `react`, không DOM. App native import token từ đây; một dòng
+ * import trình duyệt lọt vào là vỡ bundle Metro.
  *
- * Quy ước khi thêm: chỉ nhận props thuần, không gọi API, không đọc Redux — nếu cần dữ liệu
- * thì nhận qua props để dùng được ở cả hai app.
+ * Component web dùng chung (dự định gốc của package, Phase 0) khi xuất hiện sẽ đi qua một
+ * SUBPATH riêng (`@xeprime/ui/react`) với peerDeps khai ở đó — không bao giờ qua export gốc.
+ * Quy ước cũ vẫn giữ: component chỉ nhận props thuần, không gọi API, không đọc Redux.
  */
-export {};
+export * from './tokens';

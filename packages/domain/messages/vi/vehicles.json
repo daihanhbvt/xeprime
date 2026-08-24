@@ -1,0 +1,649 @@
+{
+  "detail": {
+    "title": "Hồ sơ chi tiết xe",
+    "openPage": "Mở trang đầy đủ",
+    "deleted": "Đã xoá xe",
+    "forbiddenTitle": "Không có quyền xem xe",
+    "forbiddenBody": "Bạn cần quyền dưới đây để xem thông tin xe. Liên hệ quản trị viên để được cấp quyền.",
+    "home": "Về trang chủ",
+    "loading": "Đang tải thông tin xe…",
+    "notFoundTitle": "Không tìm thấy xe",
+    "notFoundBody": "Xe có thể đã bị xoá hoặc không thuộc gian hàng này.",
+    "loadErrorTitle": "Không tải được thông tin xe",
+    "loadErrorBody": "Có lỗi khi lấy dữ liệu. Vui lòng thử lại.",
+    "pageSubtitle": "Thông tin vận hành, giá thuê và trạng thái công khai của phương tiện",
+    "backToList": "Về danh sách"
+  },
+  "list": {
+    "filters": {
+      "search": "Tìm xe",
+      "searchPlaceholder": "Tìm kiếm xe...",
+      "vehicleType": "Loại xe",
+      "serviceType": "Dịch vụ",
+      "operationStatus": "Vận hành",
+      "publicStatus": "Công khai"
+    },
+    "sort": {
+      "label": "Sắp xếp",
+      "value": "Sắp xếp: {label}",
+      "newest": "Mới nhất",
+      "name_asc": "Tên A → Z",
+      "code_asc": "Mã tăng dần",
+      "price_asc": "Giá thấp → cao",
+      "price_desc": "Giá cao → thấp"
+    },
+    "statusChips": {
+      "ariaLabel": "Lọc theo trạng thái vận hành"
+    },
+    "summary": {
+      "loading": "Đang tải chỉ số đội xe",
+      "ariaLabel": "Chỉ số đội xe",
+      "total": "Tổng số xe",
+      "available": "Sẵn sàng",
+      "renting": "Đang thuê",
+      "vehicleCount": "{count, plural, other {# xe}}"
+    },
+    "grid": {
+      "ariaLabel": "Danh sách xe",
+      "loading": "Đang tải danh sách xe",
+      "loadErrorTitle": "Không tải được danh sách xe",
+      "loadErrorBody": "Có lỗi khi lấy dữ liệu. Vui lòng thử lại.",
+      "noResultsTitle": "Không tìm thấy kết quả",
+      "noResultsBody": "Thử thay đổi bộ lọc hoặc từ khoá.",
+      "emptyTitle": "Chưa có xe nào",
+      "emptyBody": "Bắt đầu bằng cách thêm xe đầu tiên vào gian hàng của bạn.",
+      "alertsErrorTitle": "Không tải được cảnh báo của xe",
+      "alertsErrorBody": "Danh sách vẫn dùng được, nhưng phần việc cần làm và số KM đang không hiển thị.",
+      "showing": "Hiển thị {from}-{to} của {total, plural, other {# xe}}"
+    },
+    "card": {
+      "weekdayPrice": "Giá ngày thường",
+      "weekendPrice": "Giá cuối tuần",
+      "currentOdometer": "Số KM hiện tại",
+      "odometerUnknown": "Không rõ",
+      "activeBookings": "Đang chạy",
+      "completedBookings": "Hoàn thành",
+      "totalIncome": "Tổng doanh thu",
+      "totalExpense": "Tổng chi phí",
+      "profit": "Lợi nhuận thực tế",
+      "statsUnavailable": "Không tải được số liệu",
+      "alertsUnavailable": "Không tải được cảnh báo",
+      "rowActions": "Thao tác cho {name}"
+    },
+    "row": {
+      "odometer": "KM hiện tại: {value}",
+      "bookings": "Đơn: <n>{active}</n> đang / <n>{done}</n> xong",
+      "income": "Thu: <n>{value}</n>",
+      "profit": "Lãi: <n>{value}</n>",
+      "loss": "Lỗ: <n>{value}</n>"
+    },
+    "actions": {
+      "view": "Xem chi tiết",
+      "viewShort": "Xem",
+      "edit": "Sửa",
+      "schedule": "Lịch"
+    },
+    "page": {
+      "title": "Danh sách xe",
+      "loading": "Đang tải danh sách xe…",
+      "addVehicle": "Thêm xe",
+      "addFirstVehicle": "Thêm xe đầu tiên"
+    }
+  },
+  "alerts": {
+    "chipsLabel": "Cảnh báo của xe",
+    "severityWithTitle": "{severity}: {title}",
+    "empty": "Không có việc cần làm.",
+    "viewAll": "Xem tất cả ({count})"
+  },
+  "completeness": {
+    "publishRequiredSr": " (cần cho duyệt công khai)",
+    "legendTitle": "Mô hình hoàn thiện thông tin xe hai giai đoạn",
+    "requiredItem": "Thông tin bắt buộc (cần thiết để lưu xe nội bộ)",
+    "publishItem": "Cần bổ sung trước khi gửi duyệt công khai lên sàn"
+  },
+  "form": {
+    "sections": {
+      "basic": "Thông tin cơ bản",
+      "specs": "Thông số kỹ thuật",
+      "pricing": "Giá thuê & chính sách",
+      "media": "Hình ảnh, tiện ích & mô tả",
+      "operatingSpecs": "Thông số vận hành"
+    },
+    "wizard": {
+      "basic": {
+        "title": "Cơ bản",
+        "shortTitle": "Cơ bản",
+        "heading": "1. Thông tin cơ bản của xe"
+      },
+      "pricing": {
+        "title": "Giá & chính sách",
+        "shortTitle": "Giá",
+        "heading": "2. Giá thuê & chính sách"
+      },
+      "media": {
+        "title": "Hình ảnh",
+        "shortTitle": "Hình ảnh",
+        "heading": "3. Hình ảnh, tiện ích & mô tả xe"
+      },
+      "review": {
+        "title": "Xác nhận",
+        "shortTitle": "Xác nhận",
+        "heading": "4. Xác nhận thông tin hồ sơ xe"
+      },
+      "backToStep": "Quay lại bước trước",
+      "cancel": "Huỷ bỏ",
+      "saveDraft": "Lưu nháp",
+      "saveAndSubmit": "Lưu & Gửi duyệt",
+      "stepErrors": "{count, plural, other {# lỗi}} cần sửa trước khi tiếp tục",
+      "pricePreview": "Giá hiển thị trên sàn: {price}",
+      "cancelWizard": {
+        "title": "Huỷ thông tin xe đang nhập?",
+        "ok": "Huỷ và thoát",
+        "cancel": "Tiếp tục nhập",
+        "body": "Các thay đổi chưa lưu trong wizard sẽ bị mất."
+      }
+    },
+    "basic": {
+      "name": "Tên xe",
+      "namePlaceholder": "Nhập tên xe (Ví dụ: Toyota Vios 2023)",
+      "code": "Mã xe",
+      "codePlaceholder": "Hệ thống tự sinh nếu bỏ trống",
+      "codeHelp": "Mã định danh nội bộ, duy nhất trong gian hàng",
+      "branch": "Chi nhánh giữ xe",
+      "branchHelp": "Quyết định xe hiển thị ở tỉnh/thành nào trên marketplace.",
+      "vehicleType": "Loại xe",
+      "serviceTypes": "Loại dịch vụ",
+      "serviceTypesHelp": "Chọn được nhiều loại — khai giá riêng cho dài hạn/có tài xế ở bước giá thuê"
+    },
+    "warnings": {
+      "typePolicyTitle": "Đổi loại xe sang {label}: xe sẽ kế thừa chính sách thuê mặc định của loại mới",
+      "typePolicyBody": "Cọc, phí giao nhận, quá giờ và ưu đãi theo cấu hình của loại xe mới sẽ áp cho các lượt đặt tiếp theo (trừ khi xe đã có chính sách riêng).",
+      "priceRemovalTitle": "Bỏ dịch vụ sẽ xoá {losses} khi lưu",
+      "priceRemovalBody": "Thêm lại dịch vụ sau này sẽ phải nhập giá lại từ đầu.",
+      "lossMonthly": "giá tháng thuê dài hạn",
+      "lossWithDriver": "bảng giá xe có tài xế",
+      "lossJoin": "{first} và {second}"
+    },
+    "status": {
+      "operationStatus": "Trạng thái vận hành"
+    },
+    "source": {
+      "legend": "Hình thức nguồn xe *",
+      "description": "Xác định phương thức quản lý tài chính và phân chia lợi nhuận của xe",
+      "hint": "Bạn sẽ hoàn thiện thông tin tài chính chi tiết sau khi tạo xe thành công.",
+      "owned": "Xe thuộc quyền sở hữu của bạn",
+      "financed": "Đang trả góp qua ngân hàng",
+      "rented": "Thuê từ chủ xe khác để kinh doanh",
+      "partnership": "Chủ xe ký gửi, chia doanh thu"
+    },
+    "advanced": {
+      "dimensionsTitle": "Kích thước & Trọng lượng",
+      "engineTitle": "Động cơ & Vận hành",
+      "consumptionTitle": "Mức tiêu thụ nhiên liệu (L/100km)",
+      "lengthMm": "Chiều dài (mm)",
+      "lengthPlaceholder": "VD: 4630",
+      "widthMm": "Chiều rộng (mm)",
+      "widthPlaceholder": "VD: 1780",
+      "heightMm": "Chiều cao (mm)",
+      "heightPlaceholder": "VD: 1435",
+      "curbWeightKg": "Trọng lượng bản thân (kg)",
+      "curbWeightPlaceholder": "VD: 1250",
+      "engineDisplacementCc": "Dung tích động cơ (cc)",
+      "enginePlaceholder": "VD: 1798",
+      "horsepowerHp": "Công suất cực đại (HP)",
+      "horsepowerPlaceholder": "VD: 138",
+      "transmission": "Hộp số",
+      "transmissionPlaceholder": "Chọn hộp số",
+      "consumptionCity": "Trong đô thị",
+      "consumptionCityPlaceholder": "VD: 8.5",
+      "consumptionHighway": "Ngoài đô thị",
+      "consumptionHighwayPlaceholder": "VD: 5.2",
+      "consumptionCombined": "Kết hợp",
+      "consumptionCombinedPlaceholder": "VD: 6.5",
+      "hint": "Các thông số kỹ thuật giúp tăng khả năng tìm thấy xe; bạn có thể cập nhật sau."
+    },
+    "specs": {
+      "plateNumber": "Biển số xe",
+      "platePlaceholder": "VD: 51K-123.45",
+      "plateHelp": "Cần có trước khi gửi duyệt công khai lên sàn",
+      "brand": "Hãng xe",
+      "brandPlaceholder": "Chọn hãng xe",
+      "model": "Dòng xe (Model)",
+      "modelPlaceholder": "VD: Vios",
+      "manufactureYear": "Năm sản xuất",
+      "seatCount": "Số chỗ ngồi",
+      "seatPlaceholder": "VD: 5",
+      "fuelType": "Nhiên liệu",
+      "fuelPlaceholderCar": "Xăng, dầu, điện hoặc hybrid",
+      "fuelPlaceholderMotorbike": "Xăng hoặc điện",
+      "color": "Màu sắc",
+      "colorPlaceholder": "VD: Trắng",
+      "bodyType": "Kiểu dáng xe",
+      "bodyTypeHint": "Giúp khách lọc xe trên chợ. Bấm lại để bỏ chọn."
+    },
+    "prices": {
+      "weekday": "Giá ngày thường",
+      "weekdayPlaceholder": "VD: 600.000",
+      "weekdayHelp": "Giá cho ngày trong tuần. Cần có trước khi gửi duyệt.",
+      "weekend": "Giá cuối tuần",
+      "weekendPlaceholder": "VD: 750.000",
+      "weekendHelp": "Để trống nếu cùng giá ngày thường",
+      "hourly": "Giá thuê theo giờ",
+      "hourlyPlaceholder": "Bỏ trống nếu không cho thuê giờ",
+      "discountPercent": "Giảm giá đang chạy",
+      "discountPlaceholder": "VD: 10",
+      "discountHelp": "Giá sau giảm sẽ hiển thị trên marketplace",
+      "monthly": "Giá tháng (thuê dài hạn)",
+      "monthlyPlaceholder": "VD: 9.000.000",
+      "monthlyHelp": "Ước tính cho khách = số ngày × giá tháng ÷ 30. Cần có trước khi gửi duyệt.",
+      "withDriverDaily": "Giá/ngày có tài xế — nội thành",
+      "withDriverDailyPlaceholder": "VD: 1.500.000",
+      "withDriverDailyHelp": "Đã gồm tài xế (giá cơ bản). Cần có trước khi gửi duyệt.",
+      "withDriverInterCity": "Giá/ngày có tài xế — liên tỉnh",
+      "withDriverInterCityPlaceholder": "VD: 1.800.000",
+      "withDriverInterCityHelp": "Khứ hồi; bỏ trống = tạm tính theo giá nội thành",
+      "withDriverOneWay": "Giá/ngày có tài xế — 1 chiều",
+      "withDriverOneWayPlaceholder": "VD: 2.200.000",
+      "withDriverOneWayHelp": "Liên tỉnh một chiều; bỏ trống = tạm tính theo bậc gần nhất"
+    },
+    "policies": {
+      "delivery": "Giao xe tận nơi",
+      "deliveryDescription": "Khách trên marketplace lọc được xe có hỗ trợ giao nhận"
+    },
+    "media": {
+      "mainImage": "Ảnh đại diện",
+      "gallery": "Thư viện ảnh",
+      "features": "Tiện ích trên xe",
+      "description": "Mô tả",
+      "descriptionPlaceholder": "Mô tả tình trạng, trang bị, điều kiện thuê…"
+    },
+    "pricingStep": {
+      "shopPolicyTitle": "Chính sách giá chung của gian hàng",
+      "shopPolicyBody": "Xe mới tự động kế thừa tiền cọc, giao nhận, phí quá giờ và ưu đãi của gian hàng.",
+      "noPolicyTitle": "Gian hàng chưa có chính sách thuê chung",
+      "noPolicyAction": "Thiết lập chính sách gian hàng",
+      "vehiclePriceTitle": "Giá thuê tham chiếu của xe",
+      "vehiclePriceBody": "Giá thuê là thuộc tính riêng của từng xe. Sau khi tạo, bạn có thể thiết lập giá và chính sách riêng cho xe này tại tab Giá & chính sách.",
+      "previewTitle": "Xem trước bảng giá áp dụng",
+      "previewSource": "Theo chính sách gian hàng",
+      "previewSourceLink": "Xem chi tiết",
+      "deposit": "Tiền thế chấp (cọc)",
+      "delivery": "Giao nhận tận nơi",
+      "deliveryOn": "Bật",
+      "deliveryOnRadius": "Bật (Bán kính {km}km)",
+      "deliveryOff": "Tắt",
+      "overtime": "Phí quá giờ trả xe",
+      "notConfigured": "Chưa cấu hình",
+      "discountsLabel": "Ưu đãi cam kết thời hạn (thuê dài hạn)",
+      "packageChip": "Gói {label}"
+    },
+    "review": {
+      "editStep": "Chỉnh sửa",
+      "groups": {
+        "basic": "Thông tin cơ bản",
+        "specs": "Thông số vận hành",
+        "pricing": "Giá thuê & Chính sách",
+        "media": "Hình ảnh & Tiện ích"
+      },
+      "name": "Tên xe",
+      "code": "Mã xe",
+      "typeAndService": "Phân loại / Dịch vụ",
+      "operationStatus": "Vận hành",
+      "sourceType": "Nguồn xe",
+      "plateNumber": "Biển số",
+      "brandAndBody": "Hãng & Kiểu dáng",
+      "seatsAndFuel": "Số chỗ / Năng lượng",
+      "yearAndColor": "Năm & Màu sắc",
+      "weekdayPrice": "Đơn giá ngày thường",
+      "weekendPrice": "Giá cuối tuần",
+      "discount": "Giảm giá",
+      "discountValue": "-{percent}%",
+      "policy": "Chính sách",
+      "policyDelivery": "Giao tận nơi",
+      "policyNone": "Không áp dụng",
+      "overview": "Tổng quan",
+      "mainImageSet": "Ảnh đại diện đã thiết lập",
+      "mainImageMissing": "Chưa có ảnh đại diện",
+      "overviewValue": "{mainImage} • {gallery, plural, other {# ảnh thư viện}} • {features, plural, other {# tiện ích được chọn}}",
+      "brandWithBody": "{brand} ({bodyType})"
+    },
+    "success": {
+      "title": "Tạo xe thành công!",
+      "submitted": "Hồ sơ xe đã được lưu và gửi đi duyệt công khai.",
+      "draft": "Phương tiện đã được lưu vào cơ sở dữ liệu nội bộ ở trạng thái lưu nháp.",
+      "cardLabel": "Xe vừa tạo",
+      "checklistTitle": "Hoàn thiện hồ sơ xe",
+      "checklistBody": "Cần bổ sung các thông tin cốt lõi trước khi đăng công khai lên sàn dịch vụ.",
+      "checkInfo": "Kiểm tra thông tin và thông số xe",
+      "checkInfoLink": "Tab Thông tin →",
+      "checkMedia": "Thêm ảnh thực tế và tiện ích",
+      "checkMediaLink": "Tab Hình ảnh →",
+      "checkPricing": "Kiểm tra giá, cọc và chính sách thuê",
+      "checkPricingLink": "Giá & chính sách →",
+      "checkSource": "Hoàn thiện thông tin nguồn xe & tài chính",
+      "checkSourceLink": "Tab Nguồn xe →",
+      "checkFuture": "Giấy tờ xe và bảo dưỡng",
+      "checkFutureNote": "Sẽ mở ở các wave tiếp theo",
+      "viewDetail": "Xem hồ sơ xe chi tiết",
+      "createAnother": "Thêm xe khác"
+    }
+  },
+  "publish": {
+    "requirements": {
+      "selfDrivePrice": "Giá tự lái (ngày thường)",
+      "longTermPrice": "Giá tháng thuê dài hạn",
+      "withDriverPrice": "Giá/ngày có tài xế",
+      "mainImage": "Ảnh đại diện",
+      "plateNumber": "Biển số",
+      "description": "Mô tả xe"
+    },
+    "status": {
+      "pending": {
+        "message": "Đang chờ nền tảng duyệt công khai",
+        "description": "Xe sẽ hiển thị trên chợ ngay sau khi được duyệt."
+      },
+      "approved": {
+        "message": "Xe đang hiển thị trên chợ",
+        "description": "Sửa giá, biển số, loại xe hoặc ảnh đại diện sẽ cần duyệt lại."
+      },
+      "rejected": {
+        "message": "Xe bị từ chối",
+        "description": "Hãy chỉnh sửa theo yêu cầu của nền tảng rồi gửi duyệt lại."
+      },
+      "needsRevision": {
+        "message": "Cần bổ sung thông tin",
+        "description": "Hãy bổ sung thông tin còn thiếu rồi gửi duyệt lại."
+      },
+      "hidden": {
+        "message": "Xe đang bị ẩn khỏi chợ",
+        "description": "Gửi duyệt lại để xe hiển thị trở lại trên marketplace."
+      },
+      "draft": {
+        "message": "Xe chưa đăng lên chợ",
+        "description": "Gửi duyệt để khách hàng thấy xe trên marketplace."
+      }
+    },
+    "sensitive": {
+      "empty": "Chưa có",
+      "imageSet": "Đã đặt ảnh",
+      "percent": "{value}%",
+      "fields": {
+        "weekdayPrice": "Giá ngày thường",
+        "weekendPrice": "Giá cuối tuần",
+        "hourlyPrice": "Giá theo giờ",
+        "monthlyPrice": "Giá tháng (thuê dài hạn)",
+        "withDriverDailyPrice": "Giá/ngày có tài xế (nội thành)",
+        "withDriverInterCityPrice": "Giá/ngày có tài xế (liên tỉnh)",
+        "withDriverOneWayPrice": "Giá/ngày có tài xế (1 chiều)",
+        "discountPercent": "Giảm giá",
+        "plateNumber": "Biển số",
+        "vehicleType": "Loại xe",
+        "serviceTypes": "Loại dịch vụ",
+        "mainImageUrl": "Ảnh đại diện"
+      }
+    },
+    "panel": {
+      "title": "Tiến trình gửi duyệt công khai",
+      "met": "Đã có",
+      "unmet": "Chưa có",
+      "submit": "Gửi duyệt công khai",
+      "resubmit": "Gửi duyệt lại",
+      "submitted": "Đã gửi xe đi duyệt công khai"
+    }
+  },
+  "overview": {
+    "profileLabel": "Hồ sơ xe",
+    "plate": "Biển số: <b>{value}</b>",
+    "odometer": "Số KM: <b>{value}</b>",
+    "axisOperation": "Vận hành",
+    "axisPublic": "Public",
+    "edit": "Chỉnh sửa",
+    "schedule": "Xem lịch",
+    "editMobile": "Chỉnh sửa xe",
+    "scheduleMobile": "Xem lịch biểu",
+    "delete": "Xoá xe",
+    "deleteConfirmTitle": "Xoá xe \"{name}\"?",
+    "deleteConfirmBody": "Xe sẽ bị ẩn khỏi danh sách và gỡ khỏi sàn. Đơn thuê, phiếu thu/chi đã có vẫn được giữ để đối soát. Không xoá được nếu xe còn lịch thuê hiện tại hoặc tương lai.",
+    "moreActions": "Thao tác khác cho {name}",
+    "loadFailed": "Không tải được dữ liệu.",
+    "metric": "{value} {unit}",
+    "todo": {
+      "title": "Việc cần làm"
+    },
+    "schedules": {
+      "title": "Lịch thuê sắp tới",
+      "empty": "Không có lịch thuê sắp tới.",
+      "item": "{customer} • {range}",
+      "sub": "{amount} • {status}"
+    },
+    "performance": {
+      "title": "Hiệu suất luỹ kế",
+      "revenue": "Doanh thu",
+      "rentals": "Lượt thuê",
+      "tripCount": "{count, plural, other {# chuyến}}",
+      "activeLabel": "Đơn đang chạy:",
+      "activeCount": "{count, plural, other {# đơn}}"
+    },
+    "pricing": {
+      "title": "Giá thuê & Chính sách",
+      "editLink": "Chỉnh sửa giá",
+      "weekday": "Ngày thường",
+      "weekend": "Cuối tuần",
+      "hourly": "Theo giờ",
+      "discount": "Giảm giá",
+      "publicPrice": "Giá hiển thị sàn",
+      "delivery": "Giao xe tận nơi",
+      "deliveryOn": "Có hỗ trợ",
+      "deliveryOff": "Không"
+    },
+    "links": {
+      "ariaLabel": "Liên kết nhanh tới các mục của xe",
+      "information": "Thông tin xe",
+      "media": "Hình ảnh",
+      "pricing": "Giá & Chính sách",
+      "source": "Nguồn xe",
+      "documents": "Giấy tờ xe",
+      "maintenance": "Bảo dưỡng & KM",
+      "maintenanceCenter": "Trung tâm bảo dưỡng",
+      "calendar": "Lịch xe",
+      "bookings": "Đơn thuê",
+      "receipts": "Thu chi của xe"
+    },
+    "documents": {
+      "title": "Hồ sơ & Giấy tờ pháp lý",
+      "manageLink": "Quản lý giấy tờ",
+      "expired": "{count, plural, other {# giấy tờ}} đã hết hạn — cần xử lý trước khi xe tiếp tục chạy",
+      "expiring": "{count, plural, other {# giấy tờ}} sắp hết hạn",
+      "clear": "Không có giấy tờ nào quá hạn hoặc sắp hết hạn.",
+      "unknown": "Chưa có thông tin."
+    },
+    "specs": {
+      "title": "Thông số kỹ thuật",
+      "brand": "Hãng xe",
+      "model": "Mẫu xe",
+      "bodyType": "Kiểu dáng thân xe",
+      "manufactureYear": "Năm sản xuất",
+      "seatCount": "Số chỗ ngồi",
+      "fuelType": "Nguồn năng lượng",
+      "color": "Màu sắc",
+      "length": "Chiều dài",
+      "width": "Chiều rộng",
+      "height": "Chiều cao",
+      "curbWeight": "Trọng lượng bản thân",
+      "engineDisplacement": "Dung tích động cơ",
+      "horsepower": "Công suất",
+      "transmission": "Hộp số",
+      "fuelCombined": "Tiêu thụ hỗn hợp",
+      "createdAt": "Tạo lúc",
+      "updatedAt": "Cập nhật"
+    },
+    "source": {
+      "title": "Nguồn xe & Tài chính",
+      "kind": "Hình thức nguồn xe",
+      "summary": "Tóm tắt",
+      "monthlyTotal": "{amount}/tháng (gốc + lãi)",
+      "monthlyRent": "{amount}/tháng",
+      "commission": "chia chủ xe {percent}%",
+      "paymentDay": "đến hạn ngày {day}",
+      "detailLink": "Xem hồ sơ nguồn xe & tài chính →",
+      "missing": "Chưa khai báo hồ sơ nguồn chi tiết.",
+      "missingLink": "Bổ sung ngay →"
+    },
+    "media": {
+      "title": "Thư viện ảnh"
+    },
+    "activity": {
+      "title": "Hoạt động gần đây",
+      "empty": "Chưa có hoạt động nào cho xe này.",
+      "item": "Đơn {code} · {status}",
+      "sub": "{customer} • {range} • {amount}"
+    },
+    "dateRange": "{from} – {to}"
+  },
+  "edit": {
+    "tabs": {
+      "information": "Thông tin xe",
+      "media": "Hình ảnh & tiện ích",
+      "pricing": "Giá & chính sách",
+      "source": "Nguồn xe & tài chính",
+      "documents": "Giấy tờ",
+      "maintenance": "Bảo dưỡng & KM"
+    },
+    "errors": "{count, plural, other {# lỗi}} cần sửa trước khi lưu",
+    "publicWarning": "Xe đang công khai. Thay đổi thông tin nhạy cảm sẽ đưa xe về chờ duyệt lại và tạm ẩn khỏi marketplace.",
+    "cards": {
+      "basic": "Thông tin cơ bản",
+      "status": "Quản lý trạng thái",
+      "specs": "Thông số kỹ thuật xe",
+      "images": "Hình ảnh xe",
+      "featuresDescription": "Tiện ích & mô tả"
+    },
+    "advanced": {
+      "title": "Thông số kỹ thuật nâng cao",
+      "hint": "Kích thước, động cơ và mức tiêu hao — không bắt buộc"
+    },
+    "revert": "Hoàn tác",
+    "discard": {
+      "title": "Bỏ các thay đổi chưa lưu?",
+      "body": "Dữ liệu bạn vừa thay đổi trong tab này chưa được lưu.",
+      "ok": "Bỏ thay đổi",
+      "cancel": "Tiếp tục chỉnh sửa"
+    },
+    "sensitive": {
+      "title": "Xác nhận thay đổi nhạy cảm",
+      "body": "Xe sẽ chuyển về trạng thái chờ duyệt lại và tạm ẩn khỏi marketplace.",
+      "ok": "Xác nhận & Lưu",
+      "change": "{label}:"
+    },
+    "pricingTab": {
+      "loadError": "Không tải được giá & chính sách",
+      "saved": "Đã lưu giá & chính sách của xe"
+    },
+    "branchInactive": "{label} (đã ngừng)"
+  },
+  "source": {
+    "noPermission": "Bạn không có quyền xem thông tin tài chính của xe này. Vui lòng liên hệ chủ gian hàng hoặc quản trị viên hệ thống để được cấp quyền.",
+    "loadError": "Không tải được hồ sơ nguồn xe",
+    "banner": {
+      "kind": "Hình thức sở hữu xe: {label}",
+      "owned": "Xe của bạn",
+      "financed": "Đang vay nợ",
+      "rented": "Đang thuê xe",
+      "partnership": "Hợp tác kinh doanh"
+    },
+    "cardHint": {
+      "owned": "Xe thuộc sở hữu trực tiếp của bạn",
+      "financed": "Đang mua xe trả góp qua ngân hàng",
+      "rented": "Thuê xe từ bên thứ ba để kinh doanh",
+      "partnership": "Hợp tác khai thác xe ăn chia doanh thu"
+    },
+    "readOnly": "Bạn đang xem ở chế độ chỉ đọc. Liên hệ quản lý để chỉnh sửa.",
+    "errors": "{count, plural, other {# lỗi}} cần sửa trước khi lưu",
+    "noDetailTitle": "Xe chưa có hồ sơ nguồn chi tiết",
+    "noDetailBody": "Bổ sung thông tin bên dưới để đồng bộ với phân hệ kế toán và tính toán chi phí vận hành.",
+    "typeCard": "Hình thức nguồn xe",
+    "revert": "Hoàn tác",
+    "saved": "Đã lưu hồ sơ nguồn xe",
+    "confirmType": {
+      "title": "Đổi hình thức sở hữu xe?",
+      "ok": "Xác nhận & Lưu",
+      "body": "Đổi từ <b>{from}</b> sang <b>{to}</b> sẽ thay thế toàn bộ hồ sơ tài chính hiện tại của xe.",
+      "note": "Lưu ý: việc này có thể làm thay đổi các bảng tính dòng tiền và khấu hao hiện tại. Hồ sơ cũ không thể khôi phục sau khi lưu."
+    },
+    "contract": {
+      "titleOptional": "Hồ sơ đính kèm (tùy chọn)",
+      "title": "Hồ sơ hợp đồng",
+      "fileFinanced": "Hợp đồng vay (đã tải lên)",
+      "fileRented": "Hợp đồng thuê xe (bản scan)",
+      "filePartnership": "Hợp đồng hợp tác kinh doanh (mẫu đã ký)",
+      "fileOwned": "Giấy tờ mua bán / hoá đơn (nếu có)",
+      "notes": "Ghi chú thêm",
+      "notesPlaceholder": "Nhập ghi chú hoặc thông tin bổ sung về nguồn gốc xe…"
+    },
+    "owned": {
+      "title": "Thông tin mua xe (tùy chọn)",
+      "purchaseDate": "Ngày mua xe",
+      "purchasePrice": "Giá trị xe (VND)",
+      "purchasePricePlaceholder": "VD: 560.000.000",
+      "purchasePlace": "Nơi mua / Đại lý bàn giao",
+      "purchasePlacePlaceholder": "VD: Toyota Đông Sài Gòn"
+    },
+    "financed": {
+      "title": "Thông tin khoản vay mua xe",
+      "bankName": "Ngân hàng / Tổ chức tín dụng",
+      "bankPlaceholder": "VD: VPBank",
+      "contractNumber": "Số hợp đồng tín dụng",
+      "contractNumberPlaceholder": "VD: VPBL-2024-00123",
+      "originalPrincipal": "Dư nợ gốc ban đầu",
+      "originalPrincipalPlaceholder": "VD: 450.000.000",
+      "startDate": "Ngày giải ngân",
+      "termMonths": "Thời hạn vay (Tháng)",
+      "termMonthsPlaceholder": "VD: 60",
+      "interestRate": "Lãi suất cố định năm",
+      "interestRatePlaceholder": "VD: 8.5",
+      "paymentDay": "Ngày đến hạn đóng tiền hàng tháng",
+      "paymentDayPlaceholder": "VD: 15",
+      "monthlyPrincipal": "Nợ gốc cần trả mỗi tháng",
+      "monthlyPrincipalPlaceholder": "VD: 7.500.000",
+      "monthlyInterest": "Lãi phát sinh mỗi tháng",
+      "monthlyInterestPlaceholder": "VD: 3.187.500",
+      "endDate": "Ngày kết thúc hợp đồng (nếu biết)",
+      "interestMethod": "Phương pháp tính lãi",
+      "monthlyTotal": "Tổng phải đóng mỗi tháng (gốc + lãi): {amount}"
+    },
+    "rented": {
+      "ownerTitle": "Thông tin chủ xe (Bên cho thuê)",
+      "ownerName": "Tên chủ xe / Doanh nghiệp",
+      "ownerNamePlaceholder": "VD: Nguyễn Văn A",
+      "ownerPhone": "Số điện thoại liên hệ",
+      "ownerPhonePlaceholder": "VD: 0909 123 456",
+      "ownerEmail": "Email chủ xe (Tùy chọn)",
+      "ownerEmailPlaceholder": "VD: nguyenvana@gmail.com",
+      "contractTitle": "Thông tin hợp đồng thuê",
+      "monthlyRent": "Tiền thuê định kỳ (VND)",
+      "monthlyRentPlaceholder": "VD: 12.000.000",
+      "monthlyRentHelp": "Chu kỳ thanh toán theo tháng",
+      "paymentDay": "Ngày thanh toán hàng chu kỳ",
+      "paymentDayPlaceholder": "VD: 5",
+      "startDate": "Ngày bắt đầu hợp đồng",
+      "endDate": "Ngày kết thúc hợp đồng"
+    },
+    "partnership": {
+      "ownerTitle": "Thông tin đối tác (Chủ xe ký gửi)",
+      "ownerName": "Họ tên đối tác sở hữu",
+      "ownerNamePlaceholder": "VD: Trần Thị B",
+      "ownerPhone": "Số điện thoại",
+      "ownerPhonePlaceholder": "VD: 0912 999 888",
+      "ownerEmail": "Địa chỉ email nhận đối soát",
+      "ownerEmailPlaceholder": "VD: tranthib@gmail.com",
+      "termsTitle": "Điều khoản hợp tác & Phân chia doanh thu",
+      "commission": "Tỷ lệ chia sẻ doanh thu cho chủ xe",
+      "commissionPlaceholder": "VD: 30",
+      "shopShare": "Phần giữ lại của gian hàng: <b>{percent}</b>",
+      "startDate": "Ngày hợp đồng bắt đầu có hiệu lực",
+      "endDate": "Ngày kết thúc hợp đồng",
+      "formula": "Công thức tính: Doanh thu được chia = tiền thuê sau giảm giá. Không bao gồm: tiền cọc hoàn lại, phí giao nhận, phí quá giờ, phạt/phí bồi thường hư hỏng và các khoản thu hộ khác."
+    }
+  }
+}

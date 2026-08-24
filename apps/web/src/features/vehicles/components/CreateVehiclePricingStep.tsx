@@ -2,6 +2,7 @@
 
 import { Alert, Card, Skeleton } from 'antd';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { Control } from 'react-hook-form';
 import { VEHICLE_TYPE } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
@@ -24,16 +25,15 @@ export function CreateVehiclePricingStep({
   isCar,
   pricePreview,
 }: CreateVehiclePricingStepProps) {
+  const t = useTranslations('Vehicles.form.pricingStep');
   // Chính sách kế thừa theo ĐÚNG loại xe đang tạo (17/08) — ô tô/xe máy hai bộ riêng.
   const policy = useShopPolicy(isCar ? VEHICLE_TYPE.CAR : VEHICLE_TYPE.MOTORBIKE);
   const values = policy.data?.policy ?? null;
 
   return (
     <div className={styles.stack}>
-      <Card title="Chính sách giá chung của gian hàng" className={styles.card}>
-        <p className={styles.description}>
-          Xe mới tự động kế thừa tiền cọc, giao nhận, phí quá giờ và ưu đãi của gian hàng.
-        </p>
+      <Card title={t('shopPolicyTitle')} className={styles.card}>
+        <p className={styles.description}>{t('shopPolicyBody')}</p>
         {policy.isLoading ? (
           <Skeleton active paragraph={{ rows: 3 }} />
         ) : values ? (
@@ -42,19 +42,16 @@ export function CreateVehiclePricingStep({
           <Alert
             type="warning"
             showIcon
-            message="Gian hàng chưa có chính sách thuê chung"
+            message={t('noPolicyTitle')}
             description={
-              <Link href={ROUTES.MANAGE.SHOP_POLICIES}>Thiết lập chính sách gian hàng</Link>
+              <Link href={ROUTES.MANAGE.SHOP_POLICIES}>{t('noPolicyAction')}</Link>
             }
           />
         )}
       </Card>
 
-      <Card title="Giá thuê tham chiếu của xe" className={styles.card}>
-        <p className={styles.description}>
-          Giá thuê là thuộc tính riêng của từng xe. Sau khi tạo, bạn có thể thiết lập giá và chính
-          sách riêng cho xe này tại tab Giá &amp; chính sách.
-        </p>
+      <Card title={t('vehiclePriceTitle')} className={styles.card}>
+        <p className={styles.description}>{t('vehiclePriceBody')}</p>
         <PricingSection control={control} isCar={isCar} pricePreview={pricePreview} />
       </Card>
     </div>
@@ -67,49 +64,52 @@ export function CreateVehiclePricingStep({
  * Chỉ hiển thị — mọi giá trị hiệu lực do backend quyết khi dựng báo giá (ADR 0008).
  */
 function PolicyPreview({ values }: { values: RentalPolicyValues }) {
+  const t = useTranslations('Vehicles.form.pricingStep');
+  const tUnits = useTranslations('Common.units');
   const fmt = useAppFormat();
 
   const deliveryValue = values.deliveryEnabled
     ? values.deliveryMaxRadiusKm
-      ? `Bật (Bán kính ${values.deliveryMaxRadiusKm}km)`
-      : 'Bật'
-    : 'Tắt';
+      ? t('deliveryOnRadius', { km: values.deliveryMaxRadiusKm })
+      : t('deliveryOn')
+    : t('deliveryOff');
 
   return (
     <div className={styles.preview}>
       <div className={styles.previewHeader}>
-        <strong>Xem trước bảng giá áp dụng</strong>
+        <strong>{t('previewTitle')}</strong>
         <span className={styles.previewSource}>
-          Theo chính sách gian hàng <Link href={ROUTES.MANAGE.SHOP_POLICIES}>Xem chi tiết</Link>
+          {t('previewSource')}{' '}
+          <Link href={ROUTES.MANAGE.SHOP_POLICIES}>{t('previewSourceLink')}</Link>
         </span>
       </div>
       <dl className={styles.previewGrid}>
         <div className={styles.previewItem}>
-          <dt>Tiền thế chấp (cọc)</dt>
+          <dt>{t('deposit')}</dt>
           <dd>{fmt.money(values.depositAmount)}</dd>
         </div>
         <div className={styles.previewItem}>
-          <dt>Giao nhận tận nơi</dt>
+          <dt>{t('delivery')}</dt>
           <dd className={values.deliveryEnabled ? styles.previewOn : undefined}>{deliveryValue}</dd>
         </div>
         <div className={styles.previewItem}>
-          <dt>Phí quá giờ trả xe</dt>
+          <dt>{t('overtime')}</dt>
           <dd>
             {values.overtimeFeePerHour
-              ? `${fmt.money(values.overtimeFeePerHour)}/giờ`
-              : 'Chưa cấu hình'}
+              ? tUnits('perHour', { value: fmt.money(values.overtimeFeePerHour) })
+              : t('notConfigured')}
           </dd>
         </div>
       </dl>
       {values.discountEnabled && values.discountTiers.length > 0 ? (
         <div className={styles.previewDiscounts}>
-          <span className={styles.previewDiscountsLabel}>
-            Ưu đãi cam kết thời hạn (thuê dài hạn)
-          </span>
+          <span className={styles.previewDiscountsLabel}>{t('discountsLabel')}</span>
           <span className={styles.previewChips}>
             {values.discountTiers.map((tier) => (
               <span key={tier.minMonths} className={styles.previewChip}>
-                Gói {tier.minMonths} tháng <DiscountTag percent={tier.percent} size="sm" />
+                {/* Nhãn "N tháng" đi qua `packageLabel` (ADR 0011) — không tự ghép chữ "tháng". */}
+                {t('packageChip', { label: fmt.packageLabel(tier.minMonths) ?? '' })}{' '}
+                <DiscountTag percent={tier.percent} size="sm" />
               </span>
             ))}
           </span>

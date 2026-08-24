@@ -22,7 +22,13 @@ import { fileURLToPath } from 'node:url';
 import { parse } from '@formatjs/icu-messageformat-parser';
 
 const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+/** Thư mục của web — nay CHỈ chứa `index.ts` (bảng gom). JSON nào mọc lại ở đây là bản sao lạc. */
 const MESSAGES_DIR = path.join(WEB_ROOT, 'messages');
+/**
+ * Gốc DUY NHẤT của mọi bó message: `@xeprime/domain` (quyết định 24/08/2026 — web và app native
+ * dùng chung toàn bộ, một khoá một bản dịch). Script này là lưới parity vi↔en cho cả hai client.
+ */
+const SHARED_MESSAGES_DIR = path.resolve(WEB_ROOT, '../../packages/domain/messages');
 const NAMESPACES_FILE = path.join(WEB_ROOT, 'src/i18n/namespaces.ts');
 const CONFIG_FILE = path.join(WEB_ROOT, 'src/i18n/config.ts');
 
@@ -52,9 +58,11 @@ if (!/LOCALE_COOKIE_NAME = 'XP_LOCALE'/.test(configSource ?? '')) {
 
 // ── 2. Danh sách namespace ────────────────────────────────────────────────────
 const namespacesSource = read(NAMESPACES_FILE) ?? '';
-const declared = [...namespacesSource.matchAll(/\{ file: '([^']+)', namespace: '([^']+)' \}/g)].map(
+const declared = [...namespacesSource.matchAll(/{ file: '([^']+)', namespace: '([^']+)' }/g)].map(
   (m) => ({ file: m[1], namespace: m[2] }),
 );
+
+const labelFor = (entry, locale) => `packages/domain/messages/${locale}/${entry.file}.json`;
 
 if (declared.length === 0) {
   fail('namespaces', `Không đọc được namespace nào từ ${rel(NAMESPACES_FILE)}`);
@@ -77,15 +85,34 @@ for (const locale of locales) {
     continue;
   }
 
-  // File JSON có mặt trong thư mục nhưng KHÔNG khai báo ⇒ chuỗi chết, không ai nạp.
+  /*
+   * File JSON có mặt nhưng KHÔNG khai báo ⇒ chuỗi chết, không ai nạp. Quét trên gốc package.
+   */
+  const sharedDir = path.join(SHARED_MESSAGES_DIR, locale);
+  if (!fs.existsSync(sharedDir)) {
+    fail(locale, `Thiếu thư mục packages/domain/messages/${locale}`);
+    continue;
+  }
   const onDisk = fs
-    .readdirSync(dir)
+    .readdirSync(sharedDir)
     .filter((f) => f.endsWith('.json'))
-    .map((f) => f.replace(/\.json$/, ''));
+    .map((f) => f.replace(/.json$/, ''));
   for (const orphan of onDisk.filter((f) => !declared.some((d) => d.file === f))) {
     fail(
       locale,
-      `messages/${locale}/${orphan}.json không có trong namespaces.ts (không bao giờ được nạp).`,
+      `packages/domain/messages/${locale}/${orphan}.json không có trong namespaces.ts (không bao giờ được nạp).`,
+    );
+  }
+
+  /*
+   * Gốc web cũ phải RỖNG JSON. Một `vehicles.json` mọc lại ở đây (merge cũ, sinh nhầm chỗ) sẽ
+   * không được ai nạp nhưng trông y như bản thật — người sửa nó tưởng đã dịch xong mà màn hình
+   * không đổi. Bắt ngay tại cổng thay vì để hai bản trôi khỏi nhau.
+   */
+  for (const stray of fs.readdirSync(dir).filter((f) => f.endsWith('.json'))) {
+    fail(
+      locale,
+      `messages/${locale}/${stray} đã chuyển sang packages/domain/messages — xoá bản sao này.`,
     );
   }
 
@@ -100,11 +127,12 @@ for (const locale of locales) {
   }
 
   const bundle = {};
-  for (const { file, namespace } of declared) {
-    const jsonPath = path.join(dir, `${file}.json`);
+  for (const entry of declared) {
+    const { file, namespace } = entry;
+    const jsonPath = path.join(SHARED_MESSAGES_DIR, locale, `${file}.json`);
     const raw = read(jsonPath);
     if (raw === null) {
-      fail(locale, `Thiếu file messages/${locale}/${file}.json`);
+      fail(locale, `Thiếu file ${labelFor(entry, locale)}`);
       continue;
     }
     try {

@@ -6,28 +6,33 @@
  *
  * Danh sách namespace phải khớp `src/i18n/namespaces.ts`; `pnpm i18n:check` fail nếu lệch.
  * File này SINH RA THỦ CÔNG nhưng có test giữ — đừng sửa lệch một bên.
+ *
+ * TOÀN BỘ 21 namespace đến từ `@xeprime/domain/messages` — quyết định 24/08/2026: bó message
+ * dùng chung cho web và app native, một bản dịch duy nhất cho mỗi khoá. File này chỉ còn là
+ * BẢNG GOM của web (import tĩnh để bundler tách đúng chunk theo ngôn ngữ); mobile sẽ có bảng
+ * gom riêng của nó trỏ vào cùng các file JSON đó.
  */
-import common from './common.json';
-import navigation from './navigation.json';
-import domain from './domain.json';
-import errors from './errors.json';
-import auth from './auth.json';
-import homeSearch from './home-search.json';
-import marketplace from './marketplace.json';
-import listings from './listings.json';
-import shops from './shops.json';
-import chat from './chat.json';
-import trips from './trips.json';
-import account from './account.json';
-import manageCommon from './manage-common.json';
-import dashboard from './dashboard.json';
-import shopOnboarding from './shop-onboarding.json';
-import shop from './shop.json';
-import bookingRequests from './booking-requests.json';
-import bookings from './bookings.json';
-import vehicles from './vehicles.json';
-import customers from './customers.json';
-import finance from './finance.json';
+import common from '@xeprime/domain/messages/vi/common.json';
+import navigation from '@xeprime/domain/messages/vi/navigation.json';
+import domain from '@xeprime/domain/messages/vi/domain.json';
+import errors from '@xeprime/domain/messages/vi/errors.json';
+import auth from '@xeprime/domain/messages/vi/auth.json';
+import homeSearch from '@xeprime/domain/messages/vi/home-search.json';
+import marketplace from '@xeprime/domain/messages/vi/marketplace.json';
+import listings from '@xeprime/domain/messages/vi/listings.json';
+import shops from '@xeprime/domain/messages/vi/shops.json';
+import chat from '@xeprime/domain/messages/vi/chat.json';
+import trips from '@xeprime/domain/messages/vi/trips.json';
+import account from '@xeprime/domain/messages/vi/account.json';
+import manageCommon from '@xeprime/domain/messages/vi/manage-common.json';
+import dashboard from '@xeprime/domain/messages/vi/dashboard.json';
+import shopOnboarding from '@xeprime/domain/messages/vi/shop-onboarding.json';
+import shop from '@xeprime/domain/messages/vi/shop.json';
+import bookingRequests from '@xeprime/domain/messages/vi/booking-requests.json';
+import bookings from '@xeprime/domain/messages/vi/bookings.json';
+import vehicles from '@xeprime/domain/messages/vi/vehicles.json';
+import customers from '@xeprime/domain/messages/vi/customers.json';
+import finance from '@xeprime/domain/messages/vi/finance.json';
 
 const messages = {
   Common: common,

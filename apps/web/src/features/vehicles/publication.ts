@@ -2,6 +2,18 @@ import { SERVICE_TYPE, VEHICLE_PUBLIC_STATUS, type VehiclePublicStatus } from '@
 import type { VehicleDetail } from './types';
 
 /**
+ * Khoá của một điều kiện lên chợ. Đây là MÃ nội bộ, không phải chữ hiện ra — nhãn tương ứng nằm
+ * ở `Vehicles.publish.requirements.<key>` trong cả hai ngôn ngữ.
+ */
+export type PublishRequirementKey =
+  | 'selfDrivePrice'
+  | 'longTermPrice'
+  | 'withDriverPrice'
+  | 'mainImage'
+  | 'plateNumber'
+  | 'description';
+
+/**
  * Điều kiện tối thiểu để xe được lên chợ — khớp `missingPublicFields` ở backend và cột
  * "Publish Req" của ma trận trường Figma `65:4844`.
  *
@@ -12,30 +24,34 @@ import type { VehicleDetail } from './types';
  * Giá kiểm THEO DỊCH VỤ xe đăng (17/08): đăng dịch vụ nào phải có giá chuyên biệt của dịch vụ
  * đó — không lấy giá tự lái trưng như giá có tài xế/dài hạn. `applies` = điều kiện có hiệu lực
  * với xe này không (điều kiện không áp dụng thì không hiện trong checklist).
+ *
+ * Bảng này chỉ mang LOGIC và KHOÁ, không mang chữ: nó là hằng module scope, mà một hằng module
+ * scope được tính đúng một lần cho cả tiến trình — nhãn nằm trong đó sẽ đóng băng ở ngôn ngữ
+ * của request đầu tiên (ADR 0012).
  */
 export const PUBLISH_REQUIREMENTS: readonly {
+  key: PublishRequirementKey;
   applies: (v: VehicleDetail) => boolean;
   present: (v: VehicleDetail) => boolean;
-  label: string;
 }[] = [
   {
+    key: 'selfDrivePrice',
     applies: (v) => (v.serviceTypes ?? []).includes(SERVICE_TYPE.SELF_DRIVE),
     present: (v) => Boolean(v.weekdayPrice),
-    label: 'Giá tự lái (ngày thường)',
   },
   {
+    key: 'longTermPrice',
     applies: (v) => (v.serviceTypes ?? []).includes(SERVICE_TYPE.LONG_TERM),
     present: (v) => Boolean(v.monthlyPrice),
-    label: 'Giá tháng thuê dài hạn',
   },
   {
+    key: 'withDriverPrice',
     applies: (v) => (v.serviceTypes ?? []).includes(SERVICE_TYPE.WITH_DRIVER),
     present: (v) => Boolean(v.withDriverDailyPrice),
-    label: 'Giá/ngày có tài xế',
   },
-  { applies: () => true, present: (v) => Boolean(v.mainImageUrl), label: 'Ảnh đại diện' },
-  { applies: () => true, present: (v) => Boolean(v.plateNumber), label: 'Biển số' },
-  { applies: () => true, present: (v) => Boolean(v.description), label: 'Mô tả xe' },
+  { key: 'mainImage', applies: () => true, present: (v) => Boolean(v.mainImageUrl) },
+  { key: 'plateNumber', applies: () => true, present: (v) => Boolean(v.plateNumber) },
+  { key: 'description', applies: () => true, present: (v) => Boolean(v.description) },
 ];
 
 /** Các điều kiện CÓ HIỆU LỰC với xe này (checklist chỉ hiện điều kiện áp dụng). */
@@ -43,60 +59,40 @@ export function applicablePublishRequirements(vehicle: VehicleDetail) {
   return PUBLISH_REQUIREMENTS.filter((item) => item.applies(vehicle));
 }
 
-/** Nhãn các điều kiện public còn thiếu của một xe — rỗng nghĩa là đủ điều kiện gửi duyệt. */
-export function missingPublishRequirements(vehicle: VehicleDetail): string[] {
+/** Khoá các điều kiện public còn thiếu của một xe — rỗng nghĩa là đủ điều kiện gửi duyệt. */
+export function missingPublishRequirements(vehicle: VehicleDetail): PublishRequirementKey[] {
   return applicablePublishRequirements(vehicle)
     .filter((item) => !item.present(vehicle))
-    .map((item) => item.label);
+    .map((item) => item.key);
 }
 
+/**
+ * Cách trình bày trạng thái public cho chủ xe — dùng chung cho alert panel và banner Hồ sơ 360.
+ *
+ * Trả về `type` (màu) + KHOÁ message, không trả câu chữ: nơi gọi đã có bộ dịch của request và
+ * dịch một chỗ. `reason` là câu do người duyệt viết — nó đi qua nguyên văn, không dịch được.
+ */
 export interface PublicStatusPresentation {
   type: 'success' | 'info' | 'warning' | 'error';
-  message: string;
-  description: string;
+  /** Khoá trong `Vehicles.publish.status`. */
+  key: 'pending' | 'approved' | 'rejected' | 'needsRevision' | 'hidden' | 'draft';
+  /** `true` = phần mô tả ưu tiên dùng `reason` của người duyệt nếu có. */
+  useReason: boolean;
 }
 
-/** Cách trình bày trạng thái public cho chủ xe — dùng chung cho alert panel và banner Hồ sơ 360. */
-export function publicStatusPresentation(
-  status: VehiclePublicStatus,
-  reason: string | null | undefined,
-): PublicStatusPresentation {
+export function publicStatusPresentation(status: VehiclePublicStatus): PublicStatusPresentation {
   switch (status) {
     case VEHICLE_PUBLIC_STATUS.PENDING_PUBLIC_REVIEW:
-      return {
-        type: 'info',
-        message: 'Đang chờ nền tảng duyệt công khai',
-        description: 'Xe sẽ hiển thị trên chợ ngay sau khi được duyệt.',
-      };
+      return { type: 'info', key: 'pending', useReason: false };
     case VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC:
-      return {
-        type: 'success',
-        message: 'Xe đang hiển thị trên chợ',
-        description: 'Sửa giá, biển số, loại xe hoặc ảnh đại diện sẽ cần duyệt lại.',
-      };
+      return { type: 'success', key: 'approved', useReason: false };
     case VEHICLE_PUBLIC_STATUS.REJECTED:
-      return {
-        type: 'error',
-        message: 'Xe bị từ chối',
-        description: reason ?? 'Hãy chỉnh sửa theo yêu cầu của nền tảng rồi gửi duyệt lại.',
-      };
+      return { type: 'error', key: 'rejected', useReason: true };
     case VEHICLE_PUBLIC_STATUS.NEEDS_REVISION:
-      return {
-        type: 'warning',
-        message: 'Cần bổ sung thông tin',
-        description: reason ?? 'Hãy bổ sung thông tin còn thiếu rồi gửi duyệt lại.',
-      };
+      return { type: 'warning', key: 'needsRevision', useReason: true };
     case VEHICLE_PUBLIC_STATUS.HIDDEN:
-      return {
-        type: 'warning',
-        message: 'Xe đang bị ẩn khỏi chợ',
-        description: 'Gửi duyệt lại để xe hiển thị trở lại trên marketplace.',
-      };
+      return { type: 'warning', key: 'hidden', useReason: false };
     default:
-      return {
-        type: 'info',
-        message: 'Xe chưa đăng lên chợ',
-        description: 'Gửi duyệt để khách hàng thấy xe trên marketplace.',
-      };
+      return { type: 'info', key: 'draft', useReason: false };
   }
 }

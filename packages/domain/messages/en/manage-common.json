@@ -17,7 +17,8 @@
     "readOnlyTitle": "You have view-only access",
     "deniedBody": "Contact an administrator if you need access to this section.",
     "readOnlyBody": "You can view the data but cannot make changes.",
-    "requires": "Requires:"
+    "requires": "Requires:",
+    "backHome": "Back to home"
   },
   "support": {
     "title": "Help centre",

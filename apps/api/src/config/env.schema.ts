@@ -36,6 +36,17 @@ export const envSchema = z
     SESSION_COOKIE_SECURE: booleanish.default(false),
     SESSION_COOKIE_DOMAIN: z.string().optional(),
 
+    // --- Phiên app native (ADR 0017) ---
+    // Access token JWT ngắn hạn. Khoảng 10–15 phút là RÀNG BUỘC của ADR, không phải gợi ý: nó là
+    // cửa sổ mà một access token bị lộ còn dùng được sau khi phiên đã bị thu hồi. Chặn ở đây để
+    // một biến env đặt sai không âm thầm biến 15 phút thành 15 ngày.
+    MOBILE_ACCESS_TTL_MINUTES: z.coerce.number().int().min(10).max(15).default(15),
+    // Refresh token opaque, xoay mỗi lần dùng. Dài hơn nhiều vì nó thu hồi được tức thì.
+    MOBILE_REFRESH_TTL_DAYS: z.coerce.number().int().positive().max(180).default(60),
+    // Claim `aud` của access token — cùng với `typ=access` là thứ chặn session JWT của web đi
+    // lẫn sang đường Bearer.
+    MOBILE_JWT_AUDIENCE: z.string().min(1).default('xeprime-mobile'),
+
     // --- Auth provider ---
     AUTH_MODE: z.enum(['mock', 'firebase']).default('mock'),
     FIREBASE_PROJECT_ID: z.string().optional(),

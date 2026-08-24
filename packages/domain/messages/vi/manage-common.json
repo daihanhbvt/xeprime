@@ -17,7 +17,8 @@
     "readOnlyTitle": "Bạn chỉ có quyền xem",
     "deniedBody": "Liên hệ quản trị viên nếu bạn cần quyền cho mục này.",
     "readOnlyBody": "Bạn xem được dữ liệu nhưng không thực hiện được thay đổi.",
-    "requires": "Cần quyền:"
+    "requires": "Cần quyền:",
+    "backHome": "Về trang chủ"
   },
   "support": {
     "title": "Trung tâm hỗ trợ",

@@ -1,6 +1,7 @@
 'use client';
 
-import { OPERATION_STATUS_OPTIONS } from '../constants';
+import { useTranslations } from 'next-intl';
+import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import styles from './VehicleStatusChips.module.css';
 
 interface VehicleStatusChipsProps {
@@ -14,13 +15,17 @@ interface VehicleStatusChipsProps {
  *
  * Cùng một filter URL với dropdown "Vận hành" trong `FilterBar` (ADR 0004) — đây chỉ là lối
  * vào một-chạm cho bộ lọc dùng nhiều nhất, không phải một state thứ hai. Cuộn ngang một hàng,
- * không wrap; nhãn lấy từ `VEHICLE_OPERATION_STATUS_META` (ADR 0005).
+ * không wrap; nhãn lấy từ `Domain.vehicleOperationStatus` (ADR 0005).
  */
 export function VehicleStatusChips({ value, onChange }: VehicleStatusChipsProps) {
-  const options = [{ value: '', label: 'Tất cả' }, ...OPERATION_STATUS_OPTIONS];
+  const t = useTranslations('Vehicles.list.statusChips');
+  const tCommon = useTranslations('Common.labels');
+  const { operationStatus } = useVehicleOptions();
+
+  const options = [{ value: '', label: tCommon('all') }, ...operationStatus];
 
   return (
-    <div className={styles.row} role="group" aria-label="Lọc theo trạng thái vận hành">
+    <div className={styles.row} role="group" aria-label={t('ariaLabel')}>
       {options.map((option) => {
         const active = (value ?? '') === option.value;
         return (

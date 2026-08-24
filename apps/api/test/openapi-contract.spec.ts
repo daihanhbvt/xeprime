@@ -194,13 +194,32 @@ describe('OpenAPI · nhánh lỗi', () => {
     expect(missing.map((r) => r.label)).toEqual([]);
   });
 
-  it('route công khai KHÔNG mô tả 401 (nhánh không tồn tại)', () => {
+  /*
+   * Bất biến CŨ là "route công khai KHÔNG bao giờ mô tả 401", và nó SAI về mặt sự kiện: sáu
+   * endpoint dưới `/auth` là `@Public()` (guard không chạy) nhưng TỰ kiểm credential trong
+   * handler — `loginWithPassword` ném `INVALID_CREDENTIALS`, `rotate` ném `SESSION_EXPIRED`.
+   * Với `/auth/mobile/refresh`, 401 chính là nhánh app native phải code theo.
+   *
+   * Bất biến MỚI thu hẹp lại đúng chỗ, và kiểm CẢ HAI CHIỀU nên marker không thể trôi khỏi sự
+   * thật: gắn `@VerifiesCredentials` mà spec thiếu 401 là fail, và public không gắn marker mà
+   * spec có 401 cũng fail.
+   */
+  it('route công khai KHÔNG tự kiểm credential thì KHÔNG mô tả 401', () => {
     const access = collectRouteAccess(app);
     const spurious = routes.filter((r) => {
       const route = access.get(r.operation.operationId ?? '');
-      return route?.isPublic && Boolean(r.operation.responses['401']);
+      return route?.isPublic && !route.verifiesCredentials && Boolean(r.operation.responses['401']);
     });
     expect(spurious.map((r) => r.label)).toEqual([]);
+  });
+
+  it('route @VerifiesCredentials đều mô tả 401', () => {
+    const access = collectRouteAccess(app);
+    const missing = routes.filter((r) => {
+      const route = access.get(r.operation.operationId ?? '');
+      return route?.verifiesCredentials && !r.operation.responses['401'];
+    });
+    expect(missing.map((r) => r.label)).toEqual([]);
   });
 
   it('route đòi quyền đều mô tả 403', () => {

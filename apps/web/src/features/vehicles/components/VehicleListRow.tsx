@@ -3,18 +3,22 @@
 import { CarOutlined } from '@ant-design/icons';
 import { Skeleton } from 'antd';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import {
-  VEHICLE_OPERATION_STATUS_META, VEHICLE_PUBLIC_STATUS_META, type VehicleOperationStatus, type VehiclePublicStatus, } from '@xeprime/types';
+  VEHICLE_OPERATION_STATUS_META,
+  VEHICLE_PUBLIC_STATUS_META,
+  type VehicleOperationStatus,
+  type VehiclePublicStatus,
+} from '@xeprime/types';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { vehiclePath } from '@/constants/routes';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { absoluteMoney, isNegativeMoney, subtractMoney } from '@/lib/money';
-import { serviceTypesLabel } from '@xeprime/types';
-import { vehicleTypeLabel } from '../constants';
 import type { VehicleAlertGroup, VehicleListItem, VehicleStats } from '../types';
 import { VehicleAlertChips } from './VehicleAlerts';
 import styles from './VehicleListRow.module.css';
-import { useAppFormat } from '@/i18n/use-app-format';
 
 interface VehicleListRowProps {
   vehicle: VehicleListItem;
@@ -45,12 +49,14 @@ export function VehicleListRow({
   alertsFailed = false,
   actions,
 }: VehicleListRowProps) {
+  const t = useTranslations('Vehicles.list');
   const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
 
   const meta = [
     vehicle.code,
     vehicle.plateNumber,
-    `${vehicleTypeLabel(vehicle.vehicleType)} / ${serviceTypesLabel(vehicle.serviceTypes)}`,
+    `${domainLabel('vehicleType', vehicle.vehicleType)} / ${fmt.serviceTypes(vehicle.serviceTypes)}`,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -79,7 +85,8 @@ export function VehicleListRow({
           </Link>
           <StatusTag
             value={vehicle.operationStatus as VehicleOperationStatus}
-            meta={VEHICLE_OPERATION_STATUS_META} group="vehicleOperationStatus"
+            meta={VEHICLE_OPERATION_STATUS_META}
+            group="vehicleOperationStatus"
           />
         </div>
 
@@ -88,7 +95,8 @@ export function VehicleListRow({
         <div className={styles.statusRow}>
           <StatusTag
             value={vehicle.publicStatus as VehiclePublicStatus}
-            meta={VEHICLE_PUBLIC_STATUS_META} group="vehiclePublicStatus"
+            meta={VEHICLE_PUBLIC_STATUS_META}
+            group="vehiclePublicStatus"
           />
         </div>
 
@@ -96,11 +104,13 @@ export function VehicleListRow({
         {alertsLoading ? (
           <Skeleton active paragraph={{ rows: 1, width: '60%' }} title={false} />
         ) : alertsFailed ? (
-          <p className={styles.metricsUnavailable}>Không tải được cảnh báo</p>
+          <p className={styles.metricsUnavailable}>{t('card.alertsUnavailable')}</p>
         ) : alerts ? (
           <>
             <VehicleAlertChips alerts={alerts.alerts} />
-            <p className={styles.odometer}>KM hiện tại: {fmt.km(alerts.currentOdometerKm)}</p>
+            <p className={styles.odometer}>
+              {t('row.odometer', { value: fmt.km(alerts.currentOdometerKm) })}
+            </p>
           </>
         ) : null}
 
@@ -111,24 +121,33 @@ export function VehicleListRow({
         {statsLoading ? (
           <Skeleton active paragraph={{ rows: 1, width: '80%' }} title={false} />
         ) : statsFailed || !stats ? (
-          <p className={styles.metricsUnavailable}>Không tải được số liệu</p>
+          <p className={styles.metricsUnavailable}>{t('card.statsUnavailable')}</p>
         ) : (
           <p className={styles.metrics}>
             <span>
-              Đơn: <b>{stats.activeBookings}</b> đang / <b>{stats.completedBookings}</b> xong
+              {t.rich('row.bookings', {
+                active: stats.activeBookings,
+                done: stats.completedBookings,
+                n: (chunks) => <b>{chunks}</b>,
+              })}
             </span>
             {hasFinance ? (
               <>
                 <span aria-hidden="true">·</span>
                 <span>
-                  Thu: <b>{fmt.moneyCompact(stats.totalIncome)}</b>
+                  {t.rich('row.income', {
+                    value: fmt.moneyCompact(stats.totalIncome),
+                    n: (chunks) => <b>{chunks}</b>,
+                  })}
                 </span>
                 <span aria-hidden="true">·</span>
                 <span>
-                  {atLoss ? 'Lỗ' : 'Lãi'}:{' '}
-                  <b className={atLoss ? styles.expense : styles.income}>
-                    {fmt.moneyCompact(absoluteMoney(profit))}
-                  </b>
+                  {t.rich(atLoss ? 'row.loss' : 'row.profit', {
+                    value: fmt.moneyCompact(absoluteMoney(profit)),
+                    n: (chunks) => (
+                      <b className={atLoss ? styles.expense : styles.income}>{chunks}</b>
+                    ),
+                  })}
                 </span>
               </>
             ) : null}
@@ -141,7 +160,7 @@ export function VehicleListRow({
             maxInline={actions.length}
             align="start"
             variant="filled"
-            overflowLabel={`Thao tác cho ${vehicle.name}`}
+            overflowLabel={t('card.rowActions', { name: vehicle.name })}
           />
         </div>
       </div>

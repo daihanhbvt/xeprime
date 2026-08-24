@@ -2,6 +2,7 @@
 
 import { CheckCircleFilled, CloseCircleOutlined, CloudUploadOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Card } from 'antd';
+import { useTranslations } from 'next-intl';
 import {
   PERMISSION,
   VEHICLE_PUBLIC_STATUS,
@@ -12,7 +13,8 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { decorativeIcon } from '@/lib/decorative-icon';
 import { getErrorMessage } from '@/services/api-client';
 import { useSubmitVehiclePublic } from '../hooks/use-vehicle-mutations';
-import { applicablePublishRequirements, publicStatusPresentation } from '../publication';
+import { usePublicationLabels } from '../hooks/use-publication-labels';
+import { applicablePublishRequirements } from '../publication';
 import type { VehicleDetail } from '../types';
 import styles from './VehiclePublicReviewPanel.module.css';
 
@@ -25,7 +27,9 @@ import styles from './VehiclePublicReviewPanel.module.css';
  * Gửi duyệt đi qua luồng nền tảng (ADR 0008) — client không tự set `approved_public`.
  */
 export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }) {
+  const t = useTranslations('Vehicles.publish.panel');
   const { message } = App.useApp();
+  const { requirement, statusCopy } = usePublicationLabels();
   const { has } = usePermissions();
   const submit = useSubmitVehiclePublic(vehicle.id);
 
@@ -34,22 +38,23 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
     has(PERMISSION.VEHICLE_SUBMIT_PUBLIC) && VEHICLE_PUBLIC_STATUS_SUBMITTABLE.includes(status);
   // Checklist chỉ gồm điều kiện ÁP DỤNG với xe này — giá kiểm theo dịch vụ xe đăng (17/08).
   const checklist = applicablePublishRequirements(vehicle).map((item) => ({
-    label: item.label,
+    key: item.key,
+    label: requirement(item.key),
     met: item.present(vehicle),
   }));
   const missingCount = checklist.filter((item) => !item.met).length;
   const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
-  const presentation = publicStatusPresentation(status, vehicle.latestPublicReview?.reason);
+  const presentation = statusCopy(status, vehicle.latestPublicReview?.reason);
 
   function onSubmit() {
     submit.mutate(undefined, {
-      onSuccess: () => message.success('Đã gửi xe đi duyệt công khai'),
+      onSuccess: () => message.success(t('submitted')),
       onError: (err) => message.error(getErrorMessage(err)),
     });
   }
 
   return (
-    <Card title="Tiến trình gửi duyệt công khai" className={styles.panel}>
+    <Card title={t('title')} className={styles.panel}>
       <Alert
         type={presentation.type}
         showIcon
@@ -61,13 +66,13 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
         <>
           <ul className={styles.checklist}>
             {checklist.map((item) => (
-              <li key={item.label} className={item.met ? styles.met : styles.unmet}>
+              <li key={item.key} className={item.met ? styles.met : styles.unmet}>
                 {item.met
                   ? decorativeIcon(<CheckCircleFilled />)
                   : decorativeIcon(<CloseCircleOutlined />)}
                 <span>{item.label}</span>
                 {/* Chữ mang nghĩa, không phải icon — icon là trang trí nên trình đọc bỏ qua. */}
-                <span className={styles.state}>{item.met ? 'Đã có' : 'Chưa có'}</span>
+                <span className={styles.state}>{item.met ? t('met') : t('unmet')}</span>
               </li>
             ))}
           </ul>
@@ -80,7 +85,7 @@ export function VehiclePublicReviewPanel({ vehicle }: { vehicle: VehicleDetail }
             disabled={missingCount > 0}
             onClick={onSubmit}
           >
-            {isResubmit ? 'Gửi duyệt lại' : 'Gửi duyệt công khai'}
+            {isResubmit ? t('resubmit') : t('submit')}
           </Button>
         </>
       ) : null}
