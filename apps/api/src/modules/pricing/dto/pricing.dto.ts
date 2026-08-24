@@ -2,6 +2,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   COLLATERAL_ASSET_TYPE_VALUES,
   COLLATERAL_MODE_VALUES,
+  DELIVERY_DISTANCE_STATUS_VALUES,
+  type DeliveryDistanceStatus,
   DELIVERY_QUOTE_SOURCE_VALUES,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   POLICY_SOURCE_VALUES,
@@ -585,4 +587,71 @@ export class BookingPriceSnapshotDto {
   @ApiProperty() depositAmount!: string;
   @ApiPropertyOptional({ type: SnapshotPolicyDto, nullable: true })
   policy!: SnapshotPolicyDto | null;
+}
+
+// ---------------------------------------------------------------------------
+// Khoảng cách giao xe tận nơi — tra từ bản đồ (24/08/2026)
+// ---------------------------------------------------------------------------
+
+/** Một điểm trên bản đồ. Toạ độ là `number` chứ không phải tiền — ADR 0007 không áp ở đây. */
+export class GeoPointDto {
+  @ApiProperty({ example: 10.7721 }) lat!: number;
+  @ApiProperty({ example: 106.698 }) lng!: number;
+}
+
+export class DeliveryDistanceQueryDto {
+  @ApiProperty({
+    description: 'Địa chỉ khách muốn nhận xe — chuỗi tự do, server tự tra toạ độ',
+    example: '12 Nguyễn Huệ, Quận 1, TP.HCM',
+  })
+  @IsString()
+  @MaxLength(300)
+  address!: string;
+}
+
+/**
+ * Kết quả tra khoảng cách giao xe — **luôn 200**, kể cả khi không tra được.
+ *
+ * Đây là tiện ích ước lượng chứ không phải một bước bắt buộc của luồng đặt xe: ném lỗi sẽ biến
+ * "bản đồ tạm không tra được" thành "không đặt được xe". Mọi ngả hỏng đều là một giá trị
+ * `status` (`@xeprime/types` → `DELIVERY_DISTANCE_STATUS`), và giao diện đọc MÃ đó chứ không
+ * đọc câu chữ (ADR 0012).
+ *
+ * Con số ở đây là **dự kiến**: chủ xe vẫn là người chốt phí trên đơn (ADR 0014 — nền tảng không
+ * đứng giữa). Không endpoint nào ghi `bookings.delivery_fee` từ kết quả này.
+ */
+export class DeliveryDistanceDto {
+  @ApiProperty({ enum: DELIVERY_DISTANCE_STATUS_VALUES })
+  status!: DeliveryDistanceStatus;
+
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Khoảng cách đường bộ MỘT CHIỀU (km). Null khi không tra được.',
+  })
+  distanceKm!: number | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "Phí giao dự kiến (VND dạng chuỗi). Chỉ khác null khi status = 'auto'.",
+  })
+  fee!: string | null;
+
+  @ApiPropertyOptional({
+    type: GeoPointDto,
+    nullable: true,
+    description: 'Điểm giao xe đi — chi nhánh giữ xe. Null khi chi nhánh chưa có toạ độ.',
+  })
+  origin!: GeoPointDto | null;
+
+  @ApiPropertyOptional({ type: GeoPointDto, nullable: true, description: 'Địa chỉ khách nhập' })
+  destination!: GeoPointDto | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Địa chỉ bản đồ hiểu ra — hiện lại để khách xác nhận đúng chỗ',
+  })
+  formattedAddress!: string | null;
 }

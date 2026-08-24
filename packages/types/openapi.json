@@ -5869,6 +5869,121 @@
         "description": "**Truy cập:** công khai — không cần đăng nhập."
       }
     },
+    "/public/listings/{id}/delivery-distance": {
+      "get": {
+        "operationId": "PublicQuoteController_deliveryDistance",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "address",
+            "required": true,
+            "in": "query",
+            "description": "Địa chỉ khách muốn nhận xe — chuỗi tự do, server tự tra toạ độ",
+            "schema": {
+              "example": "12 Nguyễn Huệ, Quận 1, TP.HCM",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DeliveryDistanceDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Khoảng cách giao xe tận nơi + phí dự kiến theo bậc của gian hàng",
+        "tags": [
+          "public-listings"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập."
+      }
+    },
     "/vehicles/{id}/daily-prices": {
       "get": {
         "operationId": "VehicleDailyPricesController_list",
@@ -38349,6 +38464,14 @@
             "type": "string",
             "nullable": true,
             "description": "SĐT chi nhánh"
+          },
+          "latitude": {
+            "type": "number",
+            "nullable": true
+          },
+          "longitude": {
+            "type": "number",
+            "nullable": true
           }
         },
         "required": [
@@ -39119,6 +39242,76 @@
         "required": [
           "breakdown",
           "delivery"
+        ]
+      },
+      "GeoPointDto": {
+        "type": "object",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "example": 10.7721
+          },
+          "lng": {
+            "type": "number",
+            "example": 106.698
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
+      },
+      "DeliveryDistanceDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "manual",
+              "unsupported",
+              "address_not_found",
+              "unavailable"
+            ]
+          },
+          "distanceKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "Khoảng cách đường bộ MỘT CHIỀU (km). Null khi không tra được."
+          },
+          "fee": {
+            "type": "string",
+            "nullable": true,
+            "description": "Phí giao dự kiến (VND dạng chuỗi). Chỉ khác null khi status = 'auto'."
+          },
+          "origin": {
+            "nullable": true,
+            "description": "Điểm giao xe đi — chi nhánh giữ xe. Null khi chi nhánh chưa có toạ độ.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GeoPointDto"
+              }
+            ]
+          },
+          "destination": {
+            "nullable": true,
+            "description": "Địa chỉ khách nhập",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/GeoPointDto"
+              }
+            ]
+          },
+          "formattedAddress": {
+            "type": "string",
+            "nullable": true,
+            "description": "Địa chỉ bản đồ hiểu ra — hiện lại để khách xác nhận đúng chỗ"
+          }
+        },
+        "required": [
+          "status"
         ]
       },
       "VehicleDailyPriceDto": {

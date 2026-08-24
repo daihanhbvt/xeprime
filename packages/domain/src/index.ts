@@ -56,6 +56,14 @@ export {
 } from './long-term';
 
 export {
+  haversineKm,
+  isValidGeoPoint,
+  normalizeAddressKey,
+  roundCoord,
+  type GeoPoint,
+} from './geo';
+
+export {
   EMPTY_BUSY_INDEX,
   busyDayKey,
   buildBusyDayIndex,

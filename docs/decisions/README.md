@@ -22,6 +22,8 @@ Quy tắc: ADR ở đây **thắng** mọi tài liệu khác trong `docs/` khi c
 | [0014](0014-owner-and-shop-single-role.md) | Chủ xe và chủ gian hàng là MỘT vai; năng lực đến từ GÓI, không từ role; nền tảng không đứng giữa quan hệ khách ↔ gian hàng | Accepted 21/08/2026 |
 | [0015](0015-vehicle-slot-billing.md) | Cước theo CHỖ XE, trả trước, kỳ tính bằng THÁNG LỊCH; hết hạn thì gỡ khỏi chợ — **sửa ADR 0010** | Accepted 21/08/2026 |
 | [0016](0016-sepay-bank-reconciliation.md) | SePay đối soát chuyển khoản tự động cho tiền GÓI — **sửa phạm vi ADR 0013** | Accepted 21/08/2026 |
+| [0017](0017-native-bearer-auth.md) | App native xác thực bằng Bearer access token 15 phút + refresh token opaque xoay vòng; web giữ nguyên cookie | Accepted 24/08/2026 |
+| [0018](0018-map-delivery-distance.md) | Bản đồ tính khoảng cách giao xe: số tự động là ƯỚC LƯỢNG (chủ xe vẫn chốt), một chiều theo đường bộ, provider trung lập, không tra được không phải lỗi | Accepted 24/08/2026 |
 
 ## Khi nào viết ADR mới
 

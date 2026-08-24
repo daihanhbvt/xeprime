@@ -354,7 +354,7 @@ Hai lỗi tìm thấy và đã sửa: lệch design token `--xp-focus-ring-width
 > không, cả mảng backend Vehicle 360 sẽ xanh giả.
 
 **Hoãn có chủ đích (§5)** — provider OCR thật · chữ ký điện tử · trích nợ ngân hàng tự động ·
-kế toán/thuế · bản đồ tự tính khoảng cách · tự động chặn/ẩn xe vì giấy tờ hết hạn · phụ phí quyết
+kế toán/thuế · ~~bản đồ tự tính khoảng cách~~ (**ĐÃ LÀM 24/08** — ADR 0018) · tự động chặn/ẩn xe vì giấy tờ hết hạn · phụ phí quyết
 toán chưa nối Finance · trang `/manage/finance/vehicle-obligations`.
 
 ➡️ ~~Epic kế tiếp đề xuất: nối quyết toán đơn thuê vào Finance~~ — **ĐÃ LÀM 19/08** (xem đầu file).

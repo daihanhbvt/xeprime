@@ -19,7 +19,7 @@ Git: **thư mục này là repo** (remote `https://github.com/daihanhbvt/xeprime
 ## 2. Tài liệu — đọc theo thứ tự
 
 Nguồn sống (đọc trước, luôn đúng hiện tại):
-1. `docs/decisions/` — **17 ADR (0001–0017), thắng mọi tài liệu khác khi mâu thuẫn**
+1. `docs/decisions/` — **18 ADR (0001–0018), thắng mọi tài liệu khác khi mâu thuẫn**
 2. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu"
 3. `docs/completion-roadmap.md` — **"đang ở đâu / làm gì tiếp"** (tiến độ thực tế + milestone). Đóng xong phase thì cập nhật file này.
 4. File này (CLAUDE.md)
@@ -58,6 +58,7 @@ Tài liệu tham chiếu (5–9) có vài quyết định kỹ thuật đã bị
 | [0015](docs/decisions/0015-vehicle-slot-billing.md) | Cước theo **CHỖ XE**, trả trước, kỳ tính bằng **THÁNG LỊCH**; hết hạn → gỡ khỏi chợ (không khoá tenant) — **sửa ADR 0010** |
 | [0016](docs/decisions/0016-sepay-bank-reconciliation.md) | **SePay** đối soát chuyển khoản tự động, CHỈ cho tiền GÓI — **sửa phạm vi ADR 0013** |
 | [0017](docs/decisions/0017-native-bearer-auth.md) | App native xác thực bằng **Bearer access token 15 phút** + refresh token opaque xoay vòng, thu hồi theo thiết bị. Web **giữ nguyên** cookie httpOnly. Quyền/tenant/PII không bao giờ là claim JWT |
+| [0018](docs/decisions/0018-map-delivery-distance.md) | Bản đồ tính khoảng cách giao xe tận nơi: số tự động là **ƯỚC LƯỢNG** (chủ xe vẫn chốt phí — ADR 0014), khoảng cách **một chiều theo đường bộ**, provider trung lập, và **không tra được không phải một lỗi** |
 
 ### Công cụ Claude (`.claude/`)
 
@@ -181,6 +182,7 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 | **`nest build` chỉ emit 1 file** | Tắt `incremental` trong `nest.json` (deleteOutDir không xoá `.tsbuildinfo`) |
 | **tsx/esbuild không emit decorator metadata** | `openapi.ts` chạy từ bản compiled (`nest build && node dist/openapi.js`) + `NestFactory.create(AppModule, { preview: true })` để né DB, kèm `dotenv` vì ConfigModule validate env lúc load |
 | **pnpm 11 chặn build script** | `pnpm-workspace.yaml`: `onlyBuiltDependencies` + `verifyDepsBeforeRun: false` (không thì `pnpm exec` tự chạy lại install và fail) |
+| **`next build` nổ ở `/_global-error`** | `Cannot read properties of null (reading useContext)` — do `.env` đặt `NODE_ENV=development` mà script build nạp chính file đó qua dotenv. Next trộn React dev với React production trong bundle server ⇒ dispatcher null. Script web ghi đè: `dotenv -e ../../.env -v NODE_ENV=production -- next build`. KHÔNG phải bug code app, và không có bản Next nào (16.2.11/16.2.12/16.3.2) sửa được |
 | Docker daemon | Bật rồi tắt bất thường; nếu `up` treo là đang kéo image lần đầu. Gặp network/container mồ côi thì `docker compose down --remove-orphans` + xoá network trùng tên |
 
 Base Phase 0 (đã commit `0a76adf`): 11 bảng lõi + `vehicle_occupancies` (schema + constraint từ Phase 0, logic đầy đủ Phase 4 — ADR 0006); API/pages tối thiểu. Chi tiết tiến độ các phase sau: `docs/completion-roadmap.md`.

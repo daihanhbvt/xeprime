@@ -40,7 +40,11 @@
     "description": "Description",
     "descriptionEmpty": "This shop has not written a description.",
     "serviceSelector": "Choose a rental service",
-    "serviceLabel": "Service"
+    "serviceLabel": "Service",
+    "pickupPoint": {
+      "title": "Pickup location",
+      "mapTitle": "Map of the pickup location"
+    }
   },
   "reviews": {
     "title": "Reviews",

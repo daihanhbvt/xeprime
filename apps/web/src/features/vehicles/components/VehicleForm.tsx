@@ -98,6 +98,7 @@ interface VehicleFormProps {
 export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: VehicleFormProps) {
   const t = useTranslations('Vehicles.form');
   const tCommon = useTranslations('Common.actions');
+  const tBranches = useTranslations('Branches');
   const fmt = useAppFormat();
 
   const {
@@ -125,9 +126,10 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
    */
   const branches = useActiveBranches();
   const branchId = useWatch({ control, name: 'branchId' });
+  const noProvince = tBranches('labels.noProvince');
   const branchOptions = useMemo(
-    () => (branches.data?.items ?? []).map((b) => ({ value: b.id, label: branchLabel(b) })),
-    [branches.data],
+    () => (branches.data?.items ?? []).map((b) => ({ value: b.id, label: branchLabel(b, noProvince) })),
+    [branches.data, noProvince],
   );
   useEffect(() => {
     if (branchId) return;

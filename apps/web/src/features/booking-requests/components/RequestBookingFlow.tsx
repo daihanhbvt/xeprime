@@ -21,6 +21,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import {
   addDateKeyDays,
   API_ERROR_CODE,
+  DELIVERY_DISTANCE_STATUS,
   LONG_TERM_PACKAGE_MONTHS,
   longTermReturnAt,
   PICKUP_PREFERENCE,
@@ -50,12 +51,16 @@ import { verifyOtp } from '@/features/phone-verification/api';
 import { OtpCodeInput } from '@/features/phone-verification/components/OtpCodeInput';
 import { usePhoneVerify } from '@/features/phone-verification/hooks/use-phone-verify';
 import { maskPhone } from '@/features/phone-verification/mask';
-import { fetchPublicQuote } from '@/features/rental-policies/api';
+import { fetchDeliveryDistance, fetchPublicQuote } from '@/features/rental-policies/api';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
+import { EmbedMap } from '@/components/data-display/EmbedMap';
 import { cx } from '@/lib/cx';
+import { isZeroMoney } from '@/lib/money';
+import { mapDirectionsUrl } from '@/lib/map-embed';
 import { buildBusyDayIndex } from '@/lib/rental-busy';
 import { getErrorCode } from '@/services/api-client';
 import { queryKeys } from '@/services/query-keys';
@@ -70,6 +75,15 @@ import { BookingPriceSummary } from './BookingPriceSummary';
 import { BookingSteps, type BookingStepItem, type BookingStepKey } from './BookingSteps';
 import { VehicleSummaryPanel } from './VehicleSummaryPanel';
 import styles from './RequestBookingFlow.module.css';
+
+/**
+ * Chưa đủ dài thì KHÔNG hỏi bản đồ.
+ *
+ * "12 Ng" vừa tra sai chắc chắn vừa tốn một request có tính tiền. Ngưỡng này cùng với debounce
+ * 900ms là hai thứ giữ cho một lần gõ địa chỉ tốn ĐÚNG một lượt tra, không phải một lượt cho
+ * mỗi ký tự.
+ */
+const MIN_DELIVERY_ADDRESS_LENGTH = 12;
 
 interface RequestBookingFlowProps {
   vehicleId: string;
@@ -116,10 +130,15 @@ interface RequestBookingFlowProps {
  * vừa hết hạn) backend trả `PHONE_NOT_VERIFIED` và flow tự lùi về OTP, giữ nguyên mọi thứ đã
  * nhập.
  *
- * **Giao xe tận nơi (Wave 9)**: chỉ hỏi địa chỉ. Phí giao nhận luôn `Miễn phí` lúc gửi yêu cầu —
- * không hỏi khoảng cách, không báo giá, không có trạng thái chờ khách duyệt phí. Chủ xe thống
- * nhất phí ngoài ứng dụng rồi cập nhật vào đơn sau khi duyệt. Lựa chọn này chỉ hiện khi CHÍNH
- * SÁCH hiệu lực cho phép (`listing.deliveryAvailable`), không phải khi hồ sơ xe gắn chip tiện ích.
+ * **Giao xe tận nơi**: chỉ hỏi địa chỉ. Lựa chọn này chỉ hiện khi CHÍNH SÁCH hiệu lực cho phép
+ * (`listing.deliveryAvailable`), không phải khi hồ sơ xe gắn chip tiện ích.
+ *
+ * Từ 24/08 (ADR 0018) màn hình hiện thêm **quãng đường và phí dự kiến** tra từ bản đồ. Đó là
+ * ƯỚC LƯỢNG và chỉ có thế: nó KHÔNG đi vào payload, KHÔNG cộng vào tổng tiền, và không sinh ra
+ * trạng thái chờ khách duyệt phí nào. Yêu cầu vẫn gửi đi với phí giao 0 như Wave 9 đã chốt, chủ
+ * xe thống nhất phí với khách rồi cập nhật vào đơn sau khi duyệt. Chưa cấu hình bản đồ, địa chỉ
+ * quá ngắn hay tra không ra thì phần ước lượng đơn giản không hiện — luồng đặt xe không đổi một
+ * bước nào.
  *
  * Tiền hiển thị đều LẤY TỪ SERVER (`/public/listings/:id/quote`) và chỉ do `BookingPriceSummary`
  * dựng: DÒNG TỔNG dính đáy cột phải (luôn thấy được), còn BẢNG CHI TIẾT mở ra ở cuối thân bước
@@ -305,6 +324,32 @@ export function RequestBookingFlow({
     staleTime: 60_000,
   });
   const busyDays = useMemo(() => buildBusyDayIndex(busyDaysQ.data?.days), [busyDaysQ.data]);
+
+  /*
+   * Quãng đường giao xe + phí dự kiến.
+   *
+   * Địa chỉ debounce 900ms và phải đủ dài trước khi hỏi: mỗi lượt trượt cache là một request có
+   * tính tiền tới nhà cung cấp bản đồ, và một địa chỉ đang gõ dở ("12 Ng") vừa tốn hạn mức vừa
+   * chắc chắn tra sai. Ba lớp cache xếp chồng nhau — TanStack ở đây, `geocode_cache` và
+   * `geo_route_cache` ở backend — nên khách sửa qua sửa lại rồi quay về địa chỉ cũ không tốn gì.
+   *
+   * Query KHÔNG bao giờ ném: mọi ngả không tra được về dưới dạng `status`, nên không có nhánh
+   * lỗi nào chặn khách bấm gửi yêu cầu.
+   */
+  const watchedDeliveryAddress = useWatch({ control, name: 'deliveryAddress' });
+  const debouncedDeliveryAddress = useDebouncedValue(watchedDeliveryAddress?.trim() ?? '', 900);
+  const deliveryQ = useQuery({
+    queryKey: queryKeys.marketplace.deliveryDistance(vehicleId, debouncedDeliveryAddress),
+    queryFn: () => fetchDeliveryDistance(vehicleId, debouncedDeliveryAddress),
+    enabled:
+      isDelivery &&
+      deliveryAvailable &&
+      debouncedDeliveryAddress.length >= MIN_DELIVERY_ADDRESS_LENGTH,
+    // Vị trí một địa chỉ không đổi trong một phiên đặt xe — không có lý do gì hỏi lại.
+    staleTime: 10 * 60_000,
+    retry: false,
+  });
+  const delivery = deliveryQ.data ?? null;
 
   const quoteQ = useQuery({
     queryKey: queryKeys.marketplace.quote(vehicleId, quoteParams ?? {}),
@@ -1020,11 +1065,57 @@ export function RequestBookingFlow({
                   placeholder={t('pickup.addressPlaceholder')}
                   autoComplete="street-address"
                 />
-                <div className={styles.deliveryFeeRow}>
-                  <span>{t('pickup.feeLabel')}</span>
-                  <b className={styles.freeTag}>{t('pickup.feeFree')}</b>
-                </div>
-                <p className={styles.deliveryNote}>{t('pickup.feeNote')}</p>
+                {/*
+                  Quãng đường + phí DỰ KIẾN. Chủ xe vẫn là người chốt (ADR 0014), nên mọi nhãn ở
+                  đây nói "dự kiến" và con số này KHÔNG được cộng vào tổng tiền của báo giá.
+
+                  Chưa cấu hình bản đồ, chưa gõ đủ địa chỉ, hay tra không ra — tất cả rơi về đúng
+                  dòng chữ cũ ("hai bên trao đổi trực tiếp"). Luồng đặt xe không đổi hành vi khi
+                  bản đồ vắng mặt, nó chỉ mất phần ước lượng.
+                */}
+                {deliveryQ.isFetching ? (
+                  <p className={styles.deliveryNote} role="status">
+                    {t('pickup.estimating')}
+                  </p>
+                ) : delivery?.status === DELIVERY_DISTANCE_STATUS.AUTO ? (
+                  <>
+                    <div className={styles.deliveryFeeRow}>
+                      <span>{t('pickup.feeLabel')}</span>
+                      <b className={isZeroMoney(delivery.fee ?? '0') ? styles.freeTag : undefined}>
+                        {isZeroMoney(delivery.fee ?? '0')
+                          ? t('pickup.feeFree')
+                          : fmt.money(delivery.fee ?? '0')}
+                      </b>
+                    </div>
+                    <p className={styles.deliveryNote}>
+                      {t('pickup.estimatedDistance', {
+                        distance: fmt.distanceKm(delivery.distanceKm),
+                      })}
+                    </p>
+                  </>
+                ) : delivery?.status === DELIVERY_DISTANCE_STATUS.MANUAL ? (
+                  <p className={styles.deliveryNote}>
+                    {delivery.distanceKm != null
+                      ? t('pickup.manualWithDistance', {
+                          distance: fmt.distanceKm(delivery.distanceKm),
+                        })
+                      : t('pickup.feeNote')}
+                  </p>
+                ) : delivery?.status === DELIVERY_DISTANCE_STATUS.ADDRESS_NOT_FOUND ? (
+                  <p className={styles.deliveryNote}>{t('pickup.addressNotFound')}</p>
+                ) : (
+                  <p className={styles.deliveryNote}>{t('pickup.feeNote')}</p>
+                )}
+                {delivery?.formattedAddress ? (
+                  <p className={styles.deliveryNote}>
+                    {t('pickup.resolvedAddress', { address: delivery.formattedAddress })}
+                  </p>
+                ) : null}
+                <EmbedMap
+                  src={mapDirectionsUrl(delivery?.origin, delivery?.destination)}
+                  title={t('pickup.mapTitle')}
+                  height={200}
+                />
               </div>
             ) : null}
 

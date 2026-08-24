@@ -118,6 +118,7 @@ export function VehicleEditWorkspace({
 }: VehicleEditWorkspaceProps) {
   const t = useTranslations('Vehicles.edit');
   const tActions = useTranslations('Common.actions');
+  const tBranches = useTranslations('Branches');
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const sensitiveLabels = useSensitiveChangeLabels();
@@ -159,20 +160,22 @@ export function VehicleEditWorkspace({
   const permissions = usePermissions();
   const canUpdate = permissions.has(PERMISSION.VEHICLE_UPDATE);
   const branches = useActiveBranches();
+  // Nhãn "chưa có tỉnh/thành" thuộc về màn Chi nhánh — một khoá, một bản dịch.
+  const noProvince = tBranches('labels.noProvince');
   const branchOptions = useMemo(() => {
     const options = (branches.data?.items ?? []).map((b) => ({
       value: b.id,
-      label: branchLabel(b),
+      label: branchLabel(b, noProvince),
     }));
     const current = vehicle.branch;
     if (current && !options.some((o) => o.value === current.id)) {
       options.unshift({
         value: current.id,
-        label: t('branchInactive', { label: branchLabel(current) }),
+        label: t('branchInactive', { label: branchLabel(current, noProvince) }),
       });
     }
     return options;
-  }, [branches.data, t, vehicle.branch]);
+  }, [branches.data, t, noProvince, vehicle.branch]);
 
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
   /**

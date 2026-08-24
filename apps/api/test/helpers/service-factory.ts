@@ -4,6 +4,8 @@ import { AuditService } from '../../src/modules/audit/audit.service';
 import { BillingService } from '../../src/modules/billing/billing.service';
 import { BranchesService } from '../../src/modules/branches/branches.service';
 import { CatalogService } from '../../src/modules/catalog/catalog.service';
+import { GeoNotConfiguredProvider } from '../../src/modules/geo/geo-provider';
+import { GeoService } from '../../src/modules/geo/geo.service';
 import { ProvincesService } from '../../src/modules/locations/provinces.service';
 import { ListingsService } from '../../src/modules/public-listings/listings.service';
 import { PublicListingsService } from '../../src/modules/public-listings/public-listings.service';
@@ -25,7 +27,20 @@ export function makeBranchesService(prisma: PrismaService): BranchesService {
     new ProvincesService(prisma, audit),
     new ListingsService(prisma),
     audit,
+    makeDisabledGeoService(prisma),
   );
+}
+
+/**
+ * `GeoService` với nhà cung cấp CHƯA CẤU HÌNH — đúng thứ spec cần.
+ *
+ * Test tích hợp không được gọi ra Internet: nó sẽ chậm, sẽ đỏ khi mất mạng, và sẽ đốt hạn mức
+ * tính tiền của bản đồ mỗi lần CI chạy. Provider "chưa cấu hình" khiến `geo.enabled = false`,
+ * nên `BranchesService` bỏ qua bước tra toạ độ — đúng nhánh mà production cũng chạy khi chưa
+ * cấu hình key.
+ */
+export function makeDisabledGeoService(prisma: PrismaService): GeoService {
+  return new GeoService(prisma, new GeoNotConfiguredProvider());
 }
 
 /**

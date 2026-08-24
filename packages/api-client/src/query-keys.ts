@@ -241,6 +241,13 @@ export const queryKeys = {
     /** Báo giá công khai theo khoảng ngày — nguồn PricingService, FE không tự cộng trừ. */
     quote: (vehicleId: string, params: QueryParams) =>
       ['marketplace', 'quote', vehicleId, params] as const,
+    /**
+     * Khoảng cách giao xe tới một địa chỉ. Địa chỉ nằm TRONG key có chủ đích: mỗi địa chỉ là một
+     * câu trả lời riêng, và cache của TanStack Query ở đây là lớp chắn thứ hai (sau cache ở
+     * backend) cho hạn mức bản đồ — khách sửa qua sửa lại rồi quay về địa chỉ cũ không tốn gì.
+     */
+    deliveryDistance: (vehicleId: string, address: string) =>
+      ['marketplace', 'delivery-distance', vehicleId, address] as const,
     destinations: (params: QueryParams) => ['marketplace', 'destinations', params] as const,
     shops: (params: QueryParams) => ['marketplace', 'shops', params] as const,
   },

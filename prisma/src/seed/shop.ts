@@ -178,6 +178,10 @@ export async function buildShop(spec: ShopSpec, deps: ShopBuildDeps): Promise<Sh
       provinceCode: branch.provinceCode,
       address: branch.address,
       phone: branch.phone,
+      // Toạ độ khai TRONG seed thay vì để geocode lúc chạy: seed phải chạy được offline, tất
+      // định, và không tốn hạn mức bản đồ mỗi lần ai đó dựng lại dữ liệu demo (ADR 0018).
+      latitude: branch.latitude,
+      longitude: branch.longitude,
       isDefault: branch.isDefault ?? false,
       status: branch.status ?? BRANCH_STATUS.ACTIVE,
     };

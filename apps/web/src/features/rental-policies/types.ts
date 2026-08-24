@@ -16,6 +16,8 @@ export type SaveVehiclePricingInput = components['schemas']['SaveVehiclePricingD
 export type PriceBreakdownRow = components['schemas']['PriceBreakdownRowDto'];
 export type QuoteBreakdown = components['schemas']['QuoteBreakdownDto'];
 export type PublicQuote = components['schemas']['PublicQuoteDto'];
+/** Khoảng cách giao xe + phí dự kiến tra từ bản đồ — luôn 200, mọi ngả hỏng là một `status`. */
+export type DeliveryDistance = components['schemas']['DeliveryDistanceDto'];
 /**
  * LỊCH SỬ (Wave 9): báo giá giao nhận theo khoảng cách đã bị bỏ. Kiểu này chỉ còn để ĐỌC dữ
  * liệu của các yêu cầu tạo trước đó — không có đường ghi mới. Phí giao nhận nay chốt trên ĐƠN

@@ -1,0 +1,85 @@
+{
+  "page": {
+    "title": "Branches",
+    "subtitle": "Where your vehicles are parked. A branch decides which province your vehicles appear in on the marketplace.",
+    "add": "Add branch",
+    "needsReview": "{count, plural, one {# branch has} other {# branches have}} no province",
+    "needsReviewHint": "Vehicles at these branches are NOT shown on the marketplace until you add a province."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Search by name, code or address",
+    "searchLabel": "Search branches",
+    "summary": "{total, plural, one {# branch} other {# branches}} · {active} active",
+    "activeOnly": "Active only"
+  },
+  "columns": {
+    "branch": "Branch",
+    "province": "Province",
+    "address": "Address",
+    "phone": "Phone",
+    "vehicleCount": "Vehicles"
+  },
+  "labels": {
+    "default": "Default",
+    "noProvince": "No province yet",
+    "vehicles": "{count, plural, one {# vehicle} other {# vehicles}}"
+  },
+  "actions": {
+    "setDefault": "Set as default",
+    "deactivate": "Deactivate",
+    "activate": "Reactivate"
+  },
+  "blocked": {
+    "edit": "You do not have permission to edit branches",
+    "manage": "You do not have permission to manage branches",
+    "inactive": "This branch is not active",
+    "noProvince": "This branch has no province yet",
+    "isDefault": "The default branch cannot be deactivated — set another branch as default first"
+  },
+  "confirmDeactivate": {
+    "title": "Deactivate this branch?",
+    "description": "The branch will stop accepting new vehicles. Vehicles and running bookings must be moved or completed first."
+  },
+  "table": {
+    "label": "Branch list",
+    "loadError": "Could not load the branch list",
+    "noPermission": "You do not have permission to view branches",
+    "noPermissionHint": "Ask the shop owner to grant you access.",
+    "empty": "No branches yet",
+    "emptyHint": "Add a branch to record where your vehicles are parked.",
+    "noResults": "No branches match these filters",
+    "noResultsHint": "Try clearing the search or the status filter."
+  },
+  "form": {
+    "createTitle": "Add branch",
+    "editTitle": "Edit {name}",
+    "createOk": "Create branch",
+    "noProvinceTitle": "This branch has no province yet",
+    "noProvinceLegacy": "The old data recorded \"{value}\" — pick the matching province so this branch's vehicles appear on the marketplace again.",
+    "noProvinceHint": "Pick a province so this branch's vehicles appear on the marketplace.",
+    "provincesLoadError": "Could not load the list of provinces",
+    "nameLabel": "Branch name",
+    "namePlaceholder": "e.g. Da Nang branch",
+    "provinceLabel": "Province",
+    "provinceLoading": "Loading provinces…",
+    "provincePlaceholder": "Select a province",
+    "provinceHelp": "Decides which province this branch's vehicles appear in on the marketplace.",
+    "addressLabel": "Address",
+    "addressPlaceholder": "Street number, street, ward",
+    "phoneLabel": "Phone number",
+    "phonePlaceholder": "0901234567"
+  },
+  "map": {
+    "title": "Location on the map",
+    "frameTitle": "Map of the branch location",
+    "hint": "The location is derived automatically from the address above. It is the starting point for delivery fees — if the pin is in the wrong place, write a more detailed address and save again.",
+    "pending": "We could not derive a location from this address. Add the street number, street name and ward, then save again so the system can retry.",
+    "addressFirst": "Enter an address and save so the system can place this branch on the map."
+  },
+  "scope": {
+    "all": "All branches",
+    "defaultOption": "{label} (default)",
+    "single": "Your shop has only one branch",
+    "label": "Branch in view"
+  }
+}

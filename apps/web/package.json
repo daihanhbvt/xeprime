@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "dotenv -e ../../.env -- next dev --port 3000",
-    "build": "dotenv -e ../../.env -- next build",
+    "build": "dotenv -e ../../.env -v NODE_ENV=production -- next build",
     "start": "next start --port 3000",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

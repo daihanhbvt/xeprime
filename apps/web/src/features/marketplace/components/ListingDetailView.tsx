@@ -11,7 +11,9 @@ import { RequestBookingButton } from '@/features/booking-requests/components/Req
 import { catalogLabel, type CatalogMap } from '@/features/catalog/types';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
+import { EmbedMap } from '@/components/data-display/EmbedMap';
 import { shopPath } from '@/constants/routes';
+import { mapPlaceUrl, toGeoPoint } from '@/lib/map-embed';
 import { applyDiscountPercent } from '@/lib/money';
 import type { PublicListingDetail } from '../types';
 import { ListingGallery } from './ListingGallery';
@@ -306,6 +308,36 @@ export async function ListingDetailView({
         <section className={styles.bottomCard}>
           <ListingReviews vehicleId={listing.id} />
         </section>
+        {/*
+          Điểm nhận xe: địa chỉ là thông tin CHÍNH, bản đồ chỉ minh hoạ. Khối vẫn hiện đầy đủ khi
+          chưa có toạ độ hoặc chưa cấu hình key nhúng — `EmbedMap` tự biến mất, phần chữ ở lại.
+          Trải hết chiều ngang (`pickupCard`) để không đẻ ra một ô trống cạnh nó trong lưới 2 cột.
+        */}
+        {listing.pickupPoint ? (
+          <section
+            className={`${styles.bottomCard} ${styles.pickupCard}`}
+            aria-labelledby="pickup-point-heading"
+          >
+            <h2 id="pickup-point-heading" className={styles.descTitle}>
+              {t('pickupPoint.title')}
+            </h2>
+            <p className={styles.pickupAddress}>
+              {[listing.pickupPoint.branchName, listing.pickupPoint.address]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+            {listing.pickupPoint.provinceName ? (
+              <p className={styles.pickupMeta}>{listing.pickupPoint.provinceName}</p>
+            ) : null}
+            <EmbedMap
+              src={mapPlaceUrl(
+                toGeoPoint(listing.pickupPoint.latitude, listing.pickupPoint.longitude),
+              )}
+              title={t('pickupPoint.mapTitle')}
+              height={260}
+            />
+          </section>
+        ) : null}
       </div>
     </div>
   );

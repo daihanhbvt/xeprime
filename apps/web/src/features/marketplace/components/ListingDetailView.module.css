@@ -279,6 +279,23 @@
   border-radius: 14px;
 }
 
+/* Thẻ Điểm nhận xe trải hết chiều ngang lưới 2 cột — bản đồ hẹp một nửa thì vô dụng. */
+.pickupCard {
+  grid-column: 1 / -1;
+}
+
+.pickupAddress {
+  margin: 0 0 2px;
+  color: var(--xp-color-text);
+  line-height: 1.6;
+}
+
+.pickupMeta {
+  margin: 0 0 12px;
+  color: var(--xp-color-text-secondary);
+  font-size: 13px;
+}
+
 .descBody {
   margin: 0;
   color: var(--xp-color-text-secondary);

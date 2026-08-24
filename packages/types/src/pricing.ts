@@ -112,6 +112,35 @@ export const DELIVERY_QUOTE_SOURCE_META: Readonly<Record<DeliveryQuoteSource, St
   [DELIVERY_QUOTE_SOURCE.MANUAL]: { label: 'Thủ công', color: STATUS_COLOR.WAITING },
 };
 
+/**
+ * Kết quả tra khoảng cách giao xe từ bản đồ (`GET /public/listings/:id/delivery-distance`).
+ *
+ * Endpoint này **luôn trả 200** — nó là tiện ích ước lượng, không phải một bước bắt buộc của
+ * luồng đặt xe. Mọi ngả không tính được đều là một trạng thái ở đây chứ không phải một lỗi:
+ * ném lỗi sẽ biến "bản đồ tạm không tra được" thành "không đặt xe được", điều không đúng.
+ */
+export const DELIVERY_DISTANCE_STATUS = {
+  /** Trong bán kính tự báo — có cả khoảng cách lẫn phí theo bậc. */
+  AUTO: 'auto',
+  /** Đo được khoảng cách nhưng ngoài bán kính tự báo — chủ xe sẽ trao đổi phí trực tiếp. */
+  MANUAL: 'manual',
+  /** Chính sách hiệu lực của xe không bật giao xe tận nơi. */
+  UNSUPPORTED: 'unsupported',
+  /** Không định vị được địa chỉ khách nhập — mời gõ rõ hơn. Đây là việc NGƯỜI DÙNG sửa được. */
+  ADDRESS_NOT_FOUND: 'address_not_found',
+  /**
+   * Hệ thống không tra được: chưa cấu hình nhà cung cấp bản đồ, chi nhánh chưa có toạ độ, hoặc
+   * nhà cung cấp lỗi/timeout. Giao diện im lặng rơi về luồng cũ — không đổ lỗi cho khách.
+   */
+  UNAVAILABLE: 'unavailable',
+} as const;
+
+export type DeliveryDistanceStatus =
+  (typeof DELIVERY_DISTANCE_STATUS)[keyof typeof DELIVERY_DISTANCE_STATUS];
+export const DELIVERY_DISTANCE_STATUS_VALUES = Object.values(
+  DELIVERY_DISTANCE_STATUS,
+) as DeliveryDistanceStatus[];
+
 /** Cấu trúc `booking_requests.delivery_quote_json` — ghi duy nhất qua BookingRequestsService. */
 export interface BookingRequestDeliveryQuote {
   /** Khoảng cách một chiều shop xác nhận (km). */

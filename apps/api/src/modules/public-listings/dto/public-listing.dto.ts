@@ -336,6 +336,16 @@ export class PickupPointDto {
 
   @ApiPropertyOptional({ type: String, nullable: true, description: 'SĐT chi nhánh' })
   phone!: string | null;
+
+  /**
+   * Toạ độ điểm nhận, để trang xe ghim lên bản đồ. Null khi chi nhánh chưa có toạ độ hoặc khi
+   * địa chỉ rơi về hồ sơ gian hàng — không ghim bừa một điểm khác với dòng địa chỉ hiển thị.
+   */
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  latitude!: number | null;
+
+  @ApiPropertyOptional({ type: Number, nullable: true })
+  longitude!: number | null;
 }
 
 /** Chi tiết một xe trên marketplace — cho trang `/listings/[id]`. */

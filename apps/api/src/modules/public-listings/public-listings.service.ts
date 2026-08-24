@@ -737,11 +737,15 @@ export class PublicListingsService {
         tenantId: true,
         name: true,
         // `name`/`address`/`phone`: chi nhánh giữ xe CHÍNH LÀ chỗ khách tới nhận khi tự lấy xe.
+        // Toạ độ để trang xe ghim được điểm nhận lên bản đồ — cùng mức công khai với địa chỉ
+        // vốn đã hiện ở đó, không mở thêm gì về quyền riêng tư.
         branch: {
           select: {
             name: true,
             address: true,
             phone: true,
+            latitude: true,
+            longitude: true,
             province: { select: { code: true, name: true } },
           },
         },
@@ -820,6 +824,19 @@ export class PublicListingsService {
           address: pickupAddress,
           provinceName: v.branch?.province?.name ?? v.tenant.profile?.provinceName ?? null,
           phone: v.branch?.phone ?? null,
+          /*
+           * Toạ độ CHỈ đi kèm khi địa chỉ đến từ chính chi nhánh đó. Địa chỉ rơi về hồ sơ gian
+           * hàng mà vẫn ghim toạ độ chi nhánh là ghim sai chỗ — trang xe sẽ chỉ khách tới một
+           * điểm không phải nơi ghi trong dòng địa chỉ ngay bên trên.
+           */
+          latitude:
+            v.branch?.address?.trim() && v.branch.latitude != null
+              ? Number(v.branch.latitude)
+              : null,
+          longitude:
+            v.branch?.address?.trim() && v.branch.longitude != null
+              ? Number(v.branch.longitude)
+              : null,
         }
       : null;
 

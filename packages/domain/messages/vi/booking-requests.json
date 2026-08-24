@@ -174,7 +174,13 @@
       "addressPlaceholder": "123 Nguyễn Văn Linh, Q. Hải Châu, Đà Nẵng",
       "feeLabel": "Phí giao nhận",
       "feeFree": "Miễn phí",
-      "feeNote": "Nếu có chi phí phát sinh, chủ xe sẽ trao đổi trực tiếp với bạn trước khi cập nhật đơn thuê."
+      "feeNote": "Nếu có chi phí phát sinh, chủ xe sẽ trao đổi trực tiếp với bạn trước khi cập nhật đơn thuê.",
+      "estimating": "Đang tính quãng đường…",
+      "estimatedDistance": "Quãng đường giao xe khoảng {distance} (một chiều). Phí trên là DỰ KIẾN theo bảng giá của gian hàng — chủ xe chốt lại khi duyệt yêu cầu.",
+      "manualWithDistance": "Địa chỉ của bạn cách điểm giao xe khoảng {distance} (một chiều), ngoài phạm vi báo giá tự động. Chủ xe sẽ trao đổi phí giao trực tiếp với bạn.",
+      "addressNotFound": "Chưa xác định được địa chỉ này trên bản đồ. Bạn thử ghi rõ hơn (số nhà, tên đường, phường/xã) để xem phí giao dự kiến.",
+      "resolvedAddress": "Bản đồ hiểu là: {address}",
+      "mapTitle": "Bản đồ đường đi tới địa chỉ giao xe"
     },
     "driver": {
       "pickupAddressLabel": "Địa chỉ đón",

@@ -74,6 +74,13 @@ export interface AppFormat {
 
   /** `45.230 km`; thiếu số ⇒ "Chưa có" (không phải `0 km`). */
   km: (value: number | null | undefined) => string;
+  /**
+   * Quãng đường GIAO XE: `3,4 km` · `3.4 km`. Một chữ số thập phân, không ép `,0`.
+   *
+   * Tách khỏi {@link km} vì hai con số khác bản chất: `km` là số trên đồng hồ (hàng chục nghìn,
+   * phần lẻ vô nghĩa), còn cái này cắt bậc phí ở đúng 3 km và 5 km nên phần lẻ là thông tin.
+   */
+  distanceKm: (value: number | null | undefined) => string;
   /** Số KM không kèm đơn vị — cho ô nhập và chỗ đã có nhãn "km" riêng. */
   kmNumber: (value: number | null | undefined) => string;
   /** `Còn 2.000 km` · `Quá hạn 500 km` · `Chưa đủ dữ liệu`. */
@@ -255,6 +262,10 @@ export function createAppFormat(
       value == null
         ? t('labels.notAvailable')
         : t('units.km', { value: format.number(value, 'integer') }),
+    distanceKm: (value) =>
+      value == null
+        ? t('labels.notAvailable')
+        : t('units.km', { value: format.number(value, 'distance') }),
     kmNumber: (value) =>
       value == null ? t('labels.notAvailable') : format.number(value, 'integer'),
     remainingKm: (value) => {

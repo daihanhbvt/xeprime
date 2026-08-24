@@ -2,6 +2,7 @@
 
 import { EnvironmentOutlined } from '@ant-design/icons';
 import { Select, Tooltip } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useMemo } from 'react';
 import { branchLabel } from '../branch-label';
 import { useBranchScope } from '../hooks/use-branch-scope';
@@ -20,17 +21,19 @@ const ALL = '__all__';
  * Lựa chọn CHỈ thu hẹp dữ liệu trong gian hàng hiện tại; tenant scope vẫn do backend quyết định.
  */
 export function BranchScopeSelector() {
+  const t = useTranslations('Branches');
   const scope = useBranchScope();
+  const noProvince = t('labels.noProvince');
 
   const options = useMemo(
     () => [
-      { value: ALL, label: 'Tất cả chi nhánh' },
-      ...scope.options.map((b) => ({
-        value: b.id,
-        label: b.isDefault ? `${branchLabel(b)} (mặc định)` : branchLabel(b),
-      })),
+      { value: ALL, label: t('scope.all') },
+      ...scope.options.map((b) => {
+        const label = branchLabel(b, noProvince);
+        return { value: b.id, label: b.isDefault ? t('scope.defaultOption', { label }) : label };
+      }),
     ],
-    [scope.options],
+    [scope.options, t, noProvince],
   );
 
   if (scope.isLoading) return null;
@@ -40,10 +43,10 @@ export function BranchScopeSelector() {
     const only = scope.options[0];
     if (!only) return null;
     return (
-      <Tooltip title="Gian hàng của bạn chỉ có một chi nhánh">
+      <Tooltip title={t('scope.single')}>
         <span className={styles.single}>
           <EnvironmentOutlined aria-hidden />
-          <span className={styles.singleName}>{branchLabel(only)}</span>
+          <span className={styles.singleName}>{branchLabel(only, noProvince)}</span>
         </span>
       </Tooltip>
     );
@@ -58,7 +61,7 @@ export function BranchScopeSelector() {
       variant="filled"
       suffixIcon={<EnvironmentOutlined aria-hidden />}
       popupMatchSelectWidth={false}
-      aria-label="Chi nhánh đang xem"
+      aria-label={t('scope.label')}
     />
   );
 }
