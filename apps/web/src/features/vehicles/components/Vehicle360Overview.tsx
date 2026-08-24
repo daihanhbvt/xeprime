@@ -65,12 +65,15 @@ import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
  *
  * Bỏ năm là cố ý (Figma `236:2374`) — lịch thuê nhìn gần. Mẫu ngày lấy theo NGÔN NGỮ đang xem,
  * không cứng `DD/MM`: người đọc tiếng Anh đọc `10/25` là 25 tháng 10, còn `25/10` thì không.
+ *
+ * Có khoá riêng chứ KHÔNG dùng `Common.units.range`: khoá chung nối bằng mũi tên (`→`, cho một
+ * chuyển tiếp trạng thái), còn khoảng ngày ở đây thiết kế vẽ gạch ngang (`–`).
  */
 function useShortRange(): (from: string, to: string) => string {
   const pattern = useDatePickerPattern();
-  const tUnits = useTranslations('Common.units');
+  const t = useTranslations('Vehicles.overview');
   return (from, to) =>
-    tUnits('range', {
+    t('dateRange', {
       from: toAppTz(from).format(pattern.dayMonth),
       to: toAppTz(to).format(pattern.dayMonth),
     });

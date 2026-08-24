@@ -121,7 +121,7 @@ describe('VehicleSourceWorkspace — Wave 4 tab Nguồn xe & tài chính', () =>
   it('thiếu finance.view: hiện màn không có quyền và KHÔNG bật query', () => {
     permissions.granted = new Set([PERMISSION.VEHICLE_UPDATE]);
     renderTab();
-    expect(screen.getByText('Không có quyền truy cập')).toBeTruthy();
+    expect(screen.getByText('Bạn không có quyền truy cập')).toBeTruthy();
     expect(sourceQuery.enabled).toBe(false);
     expect(screen.queryByLabelText(/Ngân hàng/)).toBeNull();
   });

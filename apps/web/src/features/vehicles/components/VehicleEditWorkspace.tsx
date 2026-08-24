@@ -166,10 +166,13 @@ export function VehicleEditWorkspace({
     }));
     const current = vehicle.branch;
     if (current && !options.some((o) => o.value === current.id)) {
-      options.unshift({ value: current.id, label: `${branchLabel(current)} (đã ngừng)` });
+      options.unshift({
+        value: current.id,
+        label: t('branchInactive', { label: branchLabel(current) }),
+      });
     }
     return options;
-  }, [branches.data, vehicle.branch]);
+  }, [branches.data, t, vehicle.branch]);
 
   const isPublic = vehicle.publicStatus === VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC;
   /**

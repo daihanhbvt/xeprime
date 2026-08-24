@@ -136,7 +136,13 @@
       "saveDraft": "Lưu nháp",
       "saveAndSubmit": "Lưu & Gửi duyệt",
       "stepErrors": "{count, plural, other {# lỗi}} cần sửa trước khi tiếp tục",
-      "pricePreview": "Giá hiển thị trên sàn: {price}"
+      "pricePreview": "Giá hiển thị trên sàn: {price}",
+      "cancelWizard": {
+        "title": "Huỷ thông tin xe đang nhập?",
+        "ok": "Huỷ và thoát",
+        "cancel": "Tiếp tục nhập",
+        "body": "Các thay đổi chưa lưu trong wizard sẽ bị mất."
+      }
     },
     "basic": {
       "name": "Tên xe",
@@ -492,7 +498,8 @@
       "empty": "Chưa có hoạt động nào cho xe này.",
       "item": "Đơn {code} · {status}",
       "sub": "{customer} • {range} • {amount}"
-    }
+    },
+    "dateRange": "{from} – {to}"
   },
   "edit": {
     "tabs": {
@@ -532,7 +539,8 @@
     "pricingTab": {
       "loadError": "Không tải được giá & chính sách",
       "saved": "Đã lưu giá & chính sách của xe"
-    }
+    },
+    "branchInactive": "{label} (đã ngừng)"
   },
   "source": {
     "noPermission": "Bạn không có quyền xem thông tin tài chính của xe này. Vui lòng liên hệ chủ gian hàng hoặc quản trị viên hệ thống để được cấp quyền.",

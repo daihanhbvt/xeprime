@@ -341,15 +341,15 @@ export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: Ve
 
       <ResponsiveDialog
         open={confirmCancel}
-        title="Huỷ thông tin xe đang nhập?"
+        title={t('wizard.cancelWizard.title')}
         size="sm"
         onClose={() => setConfirmCancel(false)}
         onOk={onCancel}
-        okText="Huỷ và thoát"
-        cancelText="Tiếp tục nhập"
+        okText={t('wizard.cancelWizard.ok')}
+        cancelText={t('wizard.cancelWizard.cancel')}
         destructive
       >
-        Các thay đổi chưa lưu trong wizard sẽ bị mất.
+        {t('wizard.cancelWizard.body')}
       </ResponsiveDialog>
     </Form>
   );
