@@ -5,14 +5,14 @@ import { ScreenMessage } from '@/components/state/ScreenMessage';
 
 export default function NotFoundScreen() {
   const router = useRouter();
-  const t = useTranslations('Common');
+  const t = useTranslations('MobileShell');
 
   return (
     <Screen scroll={false} centered>
       <ScreenMessage
         title={t('notFound.title')}
         description={t('notFound.description')}
-        actionLabel={t('actions.backHome')}
+        actionLabel={t('nav.backHome')}
         onAction={() => router.replace('/')}
       />
     </Screen>

@@ -24,7 +24,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | **Ngày date-only** (`YYYY-MM-DD` ↔ cột `@db.Date`) | `apps/api/src/common/date-only.ts` | — |
 | **Chuẩn hoá SĐT Việt Nam** (`09…`/`84…`/`+84…` → `84…`) — định danh khách trong sổ khách | `packages/types/src/phone.ts` · re-export `apps/api/src/common/phone.ts` | — |
 | **Ngôn ngữ giao diện** — danh sách locale, cookie `XP_LOCALE`, bản đồ `Intl`, múi giờ | `apps/web/src/i18n/config.ts` | 0012 |
-| **Chuỗi giao diện** (vi/en) — chia theo namespace tính năng | `packages/domain/messages/{vi,en}/*.json` — TOÀN BỘ 21 namespace dùng chung web + app native (24/08/2026). Bảng gom của web: `apps/web/messages/<locale>/index.ts`. Danh sách ở `apps/web/src/i18n/namespaces.ts` | 0012 |
+| **Chuỗi giao diện** (vi/en) — chia theo namespace tính năng | `packages/domain/messages/{vi,en}/*.json` — TOÀN BỘ 22 namespace dùng chung web + app native (24/08/2026). Bảng gom: web `apps/web/messages/<locale>/index.ts`, native `apps/mobile/src/i18n/messages.ts` (tập con). Danh sách ở `apps/web/src/i18n/namespaces.ts` | 0012 |
+| **Design token** — màu, khoảng cách, cỡ chữ, bóng | `packages/ui/src/tokens/` (`XP_TOKENS`) — web qua `tokens.css` + AntD theme, app native qua `apps/mobile/src/theme/tokens.ts` (gỡ `var()`, đổi `px` → số) | 0003 |
 
 ## Backend (`apps/api/src`)
 

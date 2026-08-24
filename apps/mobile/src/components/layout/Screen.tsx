@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
-import { colors } from '@/theme/colors';
+import { colors, space } from '@/theme/tokens';
 
 interface ScreenProps {
   children: ReactNode;
@@ -70,8 +70,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   padded: {
-    gap: 16,
-    padding: 24,
+    gap: space.md,
+    padding: space.lg,
   },
   centered: {
     justifyContent: 'center',

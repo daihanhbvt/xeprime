@@ -6,76 +6,79 @@ import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { Screen } from '@/components/layout/Screen';
 import { Button } from '@/components/ui/Button';
 import { getApiBaseUrl } from '@/lib/api-client';
-import { colors } from '@/theme/colors';
 import { elevation } from '@/theme/elevation';
+import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const t = useTranslations('Home');
-  const tCommon = useTranslations('Common.actions');
+  const t = useTranslations('MobileShell');
 
   return (
     <Screen>
       <View style={styles.header}>
         <Image source={images.logo} style={styles.logo} resizeMode="contain" />
         <View style={styles.headerText}>
-          <Text style={styles.title}>{t('title')}</Text>
+          <Text style={styles.title}>{t('home.title')}</Text>
           <Text style={styles.apiUrl}>{getApiBaseUrl()}</Text>
         </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t('placeholder.title')}</Text>
-        <Text style={styles.muted}>{t('placeholder.description')}</Text>
+        <Text style={styles.cardTitle}>{t('home.placeholderTitle')}</Text>
+        <Text style={styles.muted}>{t('home.placeholderDescription')}</Text>
       </View>
 
       <LocaleSwitcher />
 
-      <Button label={tCommon('goToLogin')} variant="secondary" onPress={() => router.replace('/login')} />
+      <Button
+        label={t('nav.goToLogin')}
+        variant="secondary"
+        onPress={() => router.replace('/login')}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   logo: {
-    borderRadius: 10,
+    borderRadius: radius.md,
     height: 48,
     width: 48,
   },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: 12,
+    gap: space.sm,
   },
   headerText: {
     flexShrink: 1,
-    gap: 4,
+    gap: space.xs,
   },
   title: {
     color: colors.text,
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: fontSize.h2,
+    fontWeight: fontWeight.bold,
   },
   apiUrl: {
     color: colors.textMuted,
-    fontSize: 12,
+    fontSize: fontSize.bodySm,
   },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: radius.md,
     borderWidth: 1,
-    gap: 12,
-    padding: 16,
+    gap: space.sm,
+    padding: space.md,
     ...elevation.card,
   },
   cardTitle: {
     color: colors.text,
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: fontSize.h3,
+    fontWeight: fontWeight.semibold,
   },
   muted: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: fontSize.body,
   },
 });

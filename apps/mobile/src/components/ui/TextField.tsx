@@ -1,6 +1,6 @@
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
-import { colors } from '@/theme/colors';
+import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 interface TextFieldProps<T extends FieldValues> {
   control: Control<T>;
@@ -44,29 +44,28 @@ export function TextField<T extends FieldValues>({
 
 const styles = StyleSheet.create({
   field: {
-    gap: 6,
+    gap: space.xs,
   },
   label: {
-    color: colors.textLabel,
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.text,
+    fontSize: fontSize.body,
+    fontWeight: fontWeight.semibold,
   },
   input: {
     backgroundColor: colors.surface,
     borderColor: colors.borderInput,
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
     color: colors.text,
-    fontSize: 16,
-    // Vùng chạm tối thiểu 44pt.
-    minHeight: 48,
-    paddingHorizontal: 14,
+    fontSize: fontSize.bodyLg,
+    minHeight: sizing.touchTarget,
+    paddingHorizontal: space.md,
   },
   inputError: {
     borderColor: colors.danger,
   },
   errorText: {
     color: colors.danger,
-    fontSize: 13,
+    fontSize: fontSize.bodySm,
   },
 });

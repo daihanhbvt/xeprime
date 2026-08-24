@@ -6,7 +6,7 @@ import { LoginForm } from '@/features/auth/components/LoginForm';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const t = useTranslations('Common.actions');
+  const t = useTranslations('MobileShell.nav');
 
   // `replace` chứ không `push`: hai màn của base là hai điểm vào ngang hàng, không xếp chồng.
   const goHome = () => router.replace('/home');

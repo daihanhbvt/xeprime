@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
-import { colors } from '@/theme/colors';
+import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 
 interface ScreenMessageProps {
   title: string;
@@ -25,19 +25,19 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     flex: 1,
-    gap: 12,
+    gap: space.sm,
     justifyContent: 'center',
-    padding: 24,
+    padding: space.lg,
   },
   title: {
     color: colors.text,
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: fontSize.h3,
+    fontWeight: fontWeight.semibold,
     textAlign: 'center',
   },
   description: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: fontSize.body,
     textAlign: 'center',
   },
 });

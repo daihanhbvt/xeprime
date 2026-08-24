@@ -1,0 +1,19 @@
+{
+  "home": {
+    "title": "XePrime Mobile",
+    "placeholderTitle": "Base source is running",
+    "placeholderDescription": "This screen does not call the API yet. Real content replaces it when the feature ships."
+  },
+  "appError": {
+    "title": "The app hit an error"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This route does not exist or has been removed."
+  },
+  "nav": {
+    "backHome": "Back to home",
+    "goToHome": "Go to home",
+    "goToLogin": "Back to sign in"
+  }
+}

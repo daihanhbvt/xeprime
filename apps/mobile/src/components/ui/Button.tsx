@@ -1,5 +1,5 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, type PressableProps } from 'react-native';
-import { colors } from '@/theme/colors';
+import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 interface ButtonProps {
   label: string;
@@ -35,7 +35,15 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={secondary ? colors.text : colors.onPrimary} />
       ) : (
-        <Text style={[styles.label, secondary ? styles.labelSecondary : null]}>{label}</Text>
+        <Text
+          style={[
+            styles.label,
+            secondary ? styles.labelSecondary : null,
+            blocked && !secondary ? styles.labelBlocked : null,
+          ]}
+        >
+          {label}
+        </Text>
       )}
     </Pressable>
   );
@@ -44,11 +52,10 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: radius.md,
     justifyContent: 'center',
-    // Vùng chạm tối thiểu 44pt.
-    minHeight: 48,
-    paddingHorizontal: 16,
+    minHeight: sizing.touchTarget,
+    paddingHorizontal: space.md,
   },
   primary: {
     backgroundColor: colors.primary,
@@ -62,14 +69,18 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   blocked: {
-    backgroundColor: colors.disabled,
+    backgroundColor: colors.surfaceMuted,
   },
   label: {
     color: colors.onPrimary,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: fontSize.bodyLg,
+    fontWeight: fontWeight.semibold,
   },
   labelSecondary: {
     color: colors.text,
+  },
+  // Nền disabled là xám nhạt — chữ `onPrimary` (đen trên gold) trên đó tưởng như còn bấm được.
+  labelBlocked: {
+    color: colors.textDisabled,
   },
 });

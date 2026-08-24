@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+﻿import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { API_ERROR_CODE } from '@xeprime/types';
 import type { ReactElement } from 'react';
@@ -51,10 +51,10 @@ describe('LoginForm', () => {
     const view = await renderLoginForm(onSuccess);
 
     await fireEvent.changeText(
-      view.getByPlaceholderText('ban@congty.vn'),
+      view.getByPlaceholderText('Nhập email hoặc số điện thoại'),
       '  owner@xeprime.test  ',
     );
-    await fireEvent.changeText(view.getByPlaceholderText('••••••••'), 'Abcd1234');
+    await fireEvent.changeText(view.getByPlaceholderText('Mật khẩu'), 'Abcd1234');
     await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
 
     // Schema trim `identifier` — server không phải nhận khoảng trắng thừa của bàn phím ảo.
@@ -72,8 +72,8 @@ describe('LoginForm', () => {
     );
     const view = await renderLoginForm();
 
-    await fireEvent.changeText(view.getByPlaceholderText('ban@congty.vn'), 'owner@xeprime.test');
-    await fireEvent.changeText(view.getByPlaceholderText('••••••••'), 'saibet123');
+    await fireEvent.changeText(view.getByPlaceholderText('Nhập email hoặc số điện thoại'), 'owner@xeprime.test');
+    await fireEvent.changeText(view.getByPlaceholderText('Mật khẩu'), 'saibet123');
     await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
 
     expect(await view.findByText('Email/số điện thoại hoặc mật khẩu không đúng.')).toBeTruthy();

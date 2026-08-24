@@ -17,7 +17,8 @@ Never reinvent logic that is already canonical in the monorepo:
 * **API Contracts & Types**: Always import generated types and status enums from `@xeprime/types` (e.g. `BOOKING_STATUS`, `VEHICLE_STATUS`, `api.generated.ts`). Never hand-craft DTO types or use raw status strings.
 * **Shared Logic**: Consume domain helpers (`rental-busy.ts`, `long-term.ts`, `money.ts`, `datetime.ts`) from `@xeprime/domain` or `@xeprime/types`.
 * **API Client**: Consume endpoints and TanStack Query keys from `@xeprime/api-client`.
-* **Design Tokens**: Use design tokens from `@xeprime/tokens` (colors, typography, radii, spacing) mapped directly from the XePrime design system.
+* **Design Tokens**: `XP_TOKENS` in `@xeprime/ui` is the SINGLE source for colors, typography, radii, spacing and shadows across every client (ADR 0003). On native, consume them through `src/theme/tokens.ts` (`colors`, `space`, `radius`, `fontSize`, `fontWeight`, `sizing`) and `src/theme/elevation.ts` — those files translate CSS-flavoured token values into React Native ones. Never write a hex code or a raw size into a component, and never start a local palette: the last one drifted until native primary was black while web was gold.
+* **UI Strings**: The message root is `@xeprime/domain/messages/{vi,en}`, shared verbatim with `apps/web` — one key, one translation. `src/i18n/messages.ts` is only a gather table; add the namespace a feature already owns (`bookings`, `vehicles`, …) rather than copying strings. `mobile-shell` is for the native shell alone (app-level error, not-found, root navigation). Declare new namespaces in `apps/web/src/i18n/namespaces.ts` and run `pnpm --filter @xeprime/web i18n:check`.
 
 ```
 apps/mobile/
@@ -36,7 +37,8 @@ apps/mobile/
 │   ├── components/ (Shared mobile UI components: Button, Input, Modal, Card, StatusBadge)
 │   ├── hooks/ (usePermissions, useNetworkState, useAuth)
 │   ├── services/ (Notification, Storage/R2, Camera)
-│   └── i18n/ (i18next / next-intl mobile wrapper with vi/en)
+│   ├── i18n/ (use-intl provider + gather table over @xeprime/domain/messages)
+│   └── theme/ (native adapter over XP_TOKENS from @xeprime/ui)
 ```
 
 ---

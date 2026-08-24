@@ -3,9 +3,10 @@ import { useTranslations } from 'use-intl';
 import { Button } from '@/components/ui/Button';
 import { LOCALES } from '@/i18n/config';
 import { useAppLocale } from '@/i18n/I18nProvider';
+import { space } from '@/theme/tokens';
 
 export function LocaleSwitcher() {
-  const t = useTranslations('Common.language');
+  const t = useTranslations('Common.locale');
   const { locale, setLocale } = useAppLocale();
 
   return (
@@ -26,7 +27,7 @@ export function LocaleSwitcher() {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    gap: 8,
+    gap: space.sm,
   },
   item: {
     flex: 1,

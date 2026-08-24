@@ -6,17 +6,16 @@ import { useTranslations } from 'use-intl';
 import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { useLogin } from '@/features/auth/hooks/use-auth';
-import { useAuthErrorMessage } from '@/features/auth/hooks/use-auth-error-message';
-import { colors } from '@/theme/colors';
+import { useErrorMessage } from '@/i18n/use-error-message';
+import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 interface LoginFormProps {
   onSuccess: () => void;
 }
 
 export function LoginForm({ onSuccess }: LoginFormProps) {
-  const t = useTranslations('Auth.login');
-  const tCommon = useTranslations('Common.actions');
-  const authErrorMessage = useAuthErrorMessage();
+  const t = useTranslations('Auth');
+  const errorMessage = useErrorMessage();
   const login = useLogin();
 
   const { control, handleSubmit } = useForm<LoginValues>({
@@ -31,15 +30,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   return (
     <View style={styles.form}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t('title')}</Text>
-        <Text style={styles.subtitle}>{t('subtitle')}</Text>
+        <Text style={styles.title}>{t('modal.loginTitle')}</Text>
+        <Text style={styles.subtitle}>{t('modal.loginSub')}</Text>
       </View>
 
       <TextField
         control={control}
         name="identifier"
-        label={t('identifierLabel')}
-        placeholder={t('identifierPlaceholder')}
+        label={t('login.identifier')}
+        placeholder={t('login.identifierPlaceholder')}
         autoCapitalize="none"
         autoComplete="username"
         keyboardType="email-address"
@@ -49,8 +48,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       <TextField
         control={control}
         name="password"
-        label={t('passwordLabel')}
-        placeholder={t('passwordPlaceholder')}
+        label={t('login.password')}
+        placeholder={t('login.passwordPlaceholder')}
         secureTextEntry
         autoCapitalize="none"
         autoComplete="password"
@@ -59,35 +58,35 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         editable={!login.isPending}
       />
 
-      {login.isError ? <Text style={styles.error}>{authErrorMessage(login.error)}</Text> : null}
+      {login.isError ? <Text style={styles.error}>{errorMessage(login.error)}</Text> : null}
 
-      <Button label={tCommon('login')} onPress={onSubmit} loading={login.isPending} />
+      <Button label={t('login.submit')} onPress={onSubmit} loading={login.isPending} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   form: {
-    gap: 16,
+    gap: space.md,
   },
   header: {
-    gap: 4,
-    marginBottom: 8,
+    gap: space.xs,
+    marginBottom: space.sm,
   },
   title: {
     color: colors.text,
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: fontSize.h1,
+    fontWeight: fontWeight.bold,
   },
   subtitle: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: fontSize.body,
   },
   error: {
     backgroundColor: colors.dangerSurface,
-    borderRadius: 8,
-    color: colors.dangerText,
-    fontSize: 14,
-    padding: 12,
+    borderRadius: radius.sm,
+    color: colors.danger,
+    fontSize: fontSize.body,
+    padding: space.sm,
   },
 });

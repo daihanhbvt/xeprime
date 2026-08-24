@@ -2,6 +2,8 @@
   "fallback": "Đã có lỗi xảy ra. Vui lòng thử lại.",
   "network": "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
   "code": {
+    "CLIENT_NETWORK_ERROR": "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+    "CLIENT_TIMEOUT": "Máy chủ phản hồi quá lâu. Thử lại giúp bạn nhé.",
     "UNAUTHENTICATED": "Bạn cần đăng nhập để tiếp tục.",
     "SESSION_EXPIRED": "Phiên đăng nhập đã hết hạn. Đăng nhập lại giúp mình nhé.",
     "INVALID_ID_TOKEN": "Không xác thực được tài khoản. Thử đăng nhập lại.",

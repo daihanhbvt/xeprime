@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { colors } from '@/theme/colors';
+import { colors, fontSize, space } from '@/theme/tokens';
 
 export function ScreenLoading({ label }: { label?: string }) {
   return (
@@ -14,12 +14,12 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     flex: 1,
-    gap: 12,
+    gap: space.sm,
     justifyContent: 'center',
-    padding: 24,
+    padding: space.lg,
   },
   label: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: fontSize.body,
   },
 });

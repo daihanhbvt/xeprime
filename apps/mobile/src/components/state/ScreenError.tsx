@@ -14,7 +14,7 @@ export function ScreenError({ error, title, onRetry }: ScreenErrorProps) {
 
   return (
     <ScreenMessage
-      title={title ?? t('error.title')}
+      title={title ?? t('states.error')}
       description={errorMessage(error)}
       {...(onRetry ? { actionLabel: t('actions.retry'), onAction: onRetry } : {})}
     />

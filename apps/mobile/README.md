@@ -249,13 +249,17 @@ server là tạo bản ghi trùng.
 ## 7. Đa ngữ (ADR 0012)
 
 Hai ngôn ngữ `vi` (mặc định) / `en` qua **`use-intl`** — chính là lõi mà `next-intl` bên web
-bọc lên, nên tên namespace và khoá giữ nguyên quy ước để ngày gộp chung hai bó message không
-phải sửa lời gọi nào.
+bọc lên, nên tên namespace và khoá giống hệt web.
+
+**Gốc message là `@xeprime/domain/messages`, DÙNG CHUNG với `apps/web`** (24/08/2026): app
+native không có file chữ nào của riêng nó. `src/i18n/messages.ts` chỉ là *bảng gom* chọn
+namespace nào vào bundle — Metro không tách chunk theo màn hình nên danh sách đó là tập con có
+chủ đích, mở tính năng nào thì thêm namespace của tính năng đó.
 
 | Việc                            | Ở đâu                                                          |
 | ------------------------------- | -------------------------------------------------------------- |
 | Hằng locale, `APP_TIME_ZONE`    | [src/i18n/config.ts](src/i18n/config.ts)                       |
-| Nạp message, kiểu `AppMessages` | [src/i18n/messages.ts](src/i18n/messages.ts)                   |
+| Bảng gom, kiểu `AppMessages`    | [src/i18n/messages.ts](src/i18n/messages.ts)                   |
 | Provider + `useAppLocale()`     | [src/i18n/I18nProvider.tsx](src/i18n/I18nProvider.tsx)         |
 | Trạng thái locale               | [src/i18n/locale.slice.ts](src/i18n/locale.slice.ts)           |
 | Lỗi API → chữ                   | [src/i18n/use-error-message.ts](src/i18n/use-error-message.ts) |
@@ -264,8 +268,17 @@ Khoá `t()` **được kiểm lúc biên dịch**: [src/i18n/use-intl.d.ts](src/
 message vào `use-intl`, nên `t('Common.actions.rerty')` là lỗi typecheck chứ không phải chuỗi
 lạ lọt ra bản phát hành.
 
-Thêm chuỗi mới: sửa **cả** `messages/vi/*.json` và `messages/en/*.json`, khai namespace trong
-`MESSAGES`. [messages.test.ts](src/i18n/messages.test.ts) chặn lệch khoá vi↔en và chuỗi rỗng.
+Thêm chuỗi mới: sửa **cả** `packages/domain/messages/vi/*.json` và `.../en/*.json`, khai
+namespace ở [apps/web/src/i18n/namespaces.ts](../web/src/i18n/namespaces.ts) rồi thêm vào
+`MESSAGES`. Hai hàng rào: `pnpm --filter @xeprime/web i18n:check` (parity vi↔en, ICU, và canh
+luôn bảng gom của app native) và [messages.test.ts](src/i18n/messages.test.ts) (bó THẬT SỰ vào
+bundle native).
+
+⚠️ Namespace chia theo **TÍNH NĂNG, không theo client**: mở màn booking trên app thì dùng lại
+`bookings`/`booking-requests` như web. `mobile-shell` chỉ dành cho VỎ app native (màn lỗi cấp
+app, not-found, điều hướng gốc) — chép chuỗi tính năng vào đó là tạo bản dịch thứ hai cho cùng
+một khoá, đúng thứ gốc chung sinh ra để chặn.
+
 Chữ hiện cho người dùng không được viết thẳng trong component; chữ chỉ vào log thì để tiếng
 Anh. Thông báo lỗi chọn theo **MÃ**, không theo `message` của backend.
 
@@ -277,14 +290,26 @@ Anh. Thông báo lỗi chọn theo **MÃ**, không theo `message` của backend.
 
 Base cố ý **không đầu tư vào UI** — nó chỉ đủ để chứng minh kiến trúc chạy.
 
-- Style bằng `StyleSheet.create`, màu lấy từ [src/theme/colors.ts](src/theme/colors.ts).
+- Style bằng `StyleSheet.create`. Màu/khoảng cách/bo góc/cỡ chữ lấy từ
+  [src/theme/tokens.ts](src/theme/tokens.ts) — file này **không giữ giá trị nào**, nó đọc
+  `XP_TOKENS` của [`@xeprime/ui`](../../packages/ui), đúng nguồn web dựng `tokens.css` và AntD
+  theme (ADR 0003). Không gõ hex hay số đo thẳng vào component: gõ một lần là app native lặng
+  lẽ trôi khỏi web, y như hồi `theme/colors.ts` để primary màu đen trong khi web màu gold.
+  Token viết bằng ngôn ngữ CSS nên `tokens.ts` gánh phần dịch sang native: gỡ bí danh
+  `var(--xp-…)`, đổi `'16px'` → `16`, và **ném lỗi** nếu gặp hàm CSS (`color-mix`,
+  `linear-gradient`) mà RN không hiểu.
   Palette hiện **chỉ có bản sáng**, nên `app.json` khoá `userInterfaceStyle: "light"` — mở
-  `"automatic"` cùng lúc với việc bổ sung palette tối, không sớm hơn.
+  `"automatic"` cùng lúc với việc bổ sung palette tối *ở `@xeprime/ui`*, không sớm hơn.
 - Mọi màn bọc bằng [`<Screen>`](src/components/layout/Screen.tsx) — safe area, tránh bàn phím,
   `keyboardShouldPersistTaps` gom một chỗ. Màn danh sách tràn viền đặt `padded={false}` để giữ
   phần cấu trúc mà bỏ lề trang.
-- Đổ bóng dùng `elevation.card` ([src/theme/elevation.ts](src/theme/elevation.ts)); iOS và
-  Android dùng hai bộ thuộc tính khác nhau, viết tay ở từng component là quên một bên.
+- Đổ bóng dùng `elevation.card` / `.raised` / `.overlay`
+  ([src/theme/elevation.ts](src/theme/elevation.ts)); iOS và Android dùng hai bộ thuộc tính
+  khác nhau, viết tay ở từng component là quên một bên. Giá trị parse từ token `shadow-*` của
+  `@xeprime/ui` nên bóng của app và của web là một.
+- [src/theme/tokens.test.ts](src/theme/tokens.test.ts) canh cả hai bộ chuyển đổi trên: chúng
+  chỉ chạy lúc nạp module trên thiết bị, nên sai một dạng giá trị là màn hình trắng chứ không
+  phải test đỏ. Đổi token ở `@xeprime/ui` mà dạng giá trị lệch thì hỏng ở test trước.
 - Khác biệt nền tảng **nhỏ** → `Platform.select` tại chỗ. Khác biệt **lớn** (cả cây JSX, API
   native riêng) → tách `<Tên>.ios.tsx` / `<Tên>.android.tsx`, import vẫn viết không có đuôi.
 - Mọi màn phải đủ trạng thái **loading / rỗng / lỗi** — dùng `src/components/state/`.

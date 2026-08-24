@@ -26,14 +26,15 @@ export function AppErrorScreen({ error, onRetry }: AppErrorScreenProps) {
 }
 
 function AppErrorBody({ error, onRetry }: AppErrorScreenProps) {
-  const t = useTranslations('Common');
+  const t = useTranslations('MobileShell');
+  const tCommon = useTranslations('Common');
 
   return (
     <Screen scroll={false} centered>
       <ScreenMessage
         title={t('appError.title')}
         description={error.message}
-        actionLabel={t('actions.retry')}
+        actionLabel={tCommon('actions.retry')}
         onAction={onRetry}
       />
     </Screen>
