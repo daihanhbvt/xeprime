@@ -1,6 +1,7 @@
 'use client';
 
 import { Skeleton } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useFleetSummary } from '../hooks/use-fleet-summary';
 import styles from './FleetSummaryBar.module.css';
 
@@ -14,13 +15,14 @@ import styles from './FleetSummaryBar.module.css';
  * Hỏng thì tự ẩn: dải chỉ số là phụ trợ, không được chặn danh sách phía dưới.
  */
 export function FleetSummaryBar({ enabled }: { enabled: boolean }) {
+  const t = useTranslations('Vehicles.list.summary');
   const { data, isLoading, isError } = useFleetSummary(enabled);
 
   if (!enabled || isError) return null;
 
   if (isLoading) {
     return (
-      <div className={styles.bar} role="status" aria-label="Đang tải chỉ số đội xe">
+      <div className={styles.bar} role="status" aria-label={t('loading')}>
         <Skeleton active title={false} paragraph={{ rows: 1, width: '100%' }} />
       </div>
     );
@@ -29,20 +31,20 @@ export function FleetSummaryBar({ enabled }: { enabled: boolean }) {
   if (!data) return null;
 
   return (
-    <dl className={styles.bar} aria-label="Chỉ số đội xe">
+    <dl className={styles.bar} aria-label={t('ariaLabel')}>
       <div className={styles.item}>
-        <dt>Tổng số xe</dt>
-        <dd>{data.total} xe</dd>
+        <dt>{t('total')}</dt>
+        <dd>{t('vehicleCount', { count: data.total })}</dd>
       </div>
       <div className={styles.divider} aria-hidden="true" />
       <div className={styles.item}>
-        <dt>Sẵn sàng</dt>
-        <dd className={styles.available}>{data.available} xe</dd>
+        <dt>{t('available')}</dt>
+        <dd className={styles.available}>{t('vehicleCount', { count: data.available })}</dd>
       </div>
       <div className={styles.divider} aria-hidden="true" />
       <div className={styles.item}>
-        <dt>Đang thuê</dt>
-        <dd className={styles.renting}>{data.renting} xe</dd>
+        <dt>{t('renting')}</dt>
+        <dd className={styles.renting}>{t('vehicleCount', { count: data.renting })}</dd>
       </div>
     </dl>
   );

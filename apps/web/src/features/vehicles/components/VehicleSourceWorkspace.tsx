@@ -11,14 +11,12 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Button, Card, Col, Form, Radio, Row, Skeleton, Tag } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
 import {
   PERMISSION,
   STATUS_COLOR,
-  VEHICLE_FINANCE_INTEREST_METHOD_LABEL,
   VEHICLE_FINANCE_INTEREST_METHOD_VALUES,
   VEHICLE_SOURCE_TYPE,
-  VEHICLE_SOURCE_TYPE_DESCRIPTION,
-  VEHICLE_SOURCE_TYPE_LABEL,
   VEHICLE_SOURCE_TYPE_VALUES,
   type VehicleSourceType,
 } from '@xeprime/types';
@@ -44,6 +42,7 @@ import {
 import type { VehicleDetail, VehicleSource } from '../types';
 import styles from './VehicleSourceWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 const SOURCE_ICON: Record<VehicleSourceType, React.ReactNode> = {
   [VEHICLE_SOURCE_TYPE.OWNED]: <HomeOutlined />,
@@ -52,20 +51,35 @@ const SOURCE_ICON: Record<VehicleSourceType, React.ReactNode> = {
   [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: <TeamOutlined />,
 };
 
-const SOURCE_CARD_HINT: Record<VehicleSourceType, string> = {
-  [VEHICLE_SOURCE_TYPE.OWNED]: 'Xe thuộc sở hữu trực tiếp của bạn',
-  [VEHICLE_SOURCE_TYPE.FINANCED]: 'Đang mua xe trả góp qua ngân hàng',
-  [VEHICLE_SOURCE_TYPE.RENTED]: 'Thuê xe từ bên thứ ba để kinh doanh',
-  [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: 'Hợp tác khai thác xe ăn chia doanh thu',
-};
+/**
+ * Hai bảng chữ theo hình thức nguồn xe: gợi ý trên thẻ chọn, và nhãn dải trạng thái đầu tab
+ * (thiết kế: "Đang vay nợ" / "Xe của bạn"…).
+ *
+ * Dựng lúc CHẠY trong một hook, không phải hằng module scope: hằng module scope tính một lần
+ * cho cả tiến trình và sẽ đóng băng ngôn ngữ của request đầu tiên (ADR 0012). Liệt kê cả bốn
+ * nhánh tường minh nên thêm một hình thức mới là lỗi biên dịch, không phải ô chữ trống.
+ */
+function useSourceCopy(): {
+  cardHint: Record<VehicleSourceType, string>;
+  statusTag: Record<VehicleSourceType, string>;
+} {
+  const t = useTranslations('Vehicles.source');
 
-/** Nhãn dải trạng thái đầu tab (thiết kế: "Đang vay nợ" / "Xe của bạn"…). */
-const SOURCE_STATUS_TAG: Record<VehicleSourceType, string> = {
-  [VEHICLE_SOURCE_TYPE.OWNED]: 'Xe của bạn',
-  [VEHICLE_SOURCE_TYPE.FINANCED]: 'Đang vay nợ',
-  [VEHICLE_SOURCE_TYPE.RENTED]: 'Đang thuê xe',
-  [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: 'Hợp tác kinh doanh',
-};
+  return {
+    cardHint: {
+      [VEHICLE_SOURCE_TYPE.OWNED]: t('cardHint.owned'),
+      [VEHICLE_SOURCE_TYPE.FINANCED]: t('cardHint.financed'),
+      [VEHICLE_SOURCE_TYPE.RENTED]: t('cardHint.rented'),
+      [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: t('cardHint.partnership'),
+    },
+    statusTag: {
+      [VEHICLE_SOURCE_TYPE.OWNED]: t('banner.owned'),
+      [VEHICLE_SOURCE_TYPE.FINANCED]: t('banner.financed'),
+      [VEHICLE_SOURCE_TYPE.RENTED]: t('banner.rented'),
+      [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: t('banner.partnership'),
+    },
+  };
+}
 
 interface VehicleSourceWorkspaceProps {
   vehicle: VehicleDetail;
@@ -82,6 +96,8 @@ interface VehicleSourceWorkspaceProps {
  *  - đủ cả hai → chỉnh sửa đầy đủ.
  */
 export function VehicleSourceWorkspace({ vehicle, onDirtyChange }: VehicleSourceWorkspaceProps) {
+  const t = useTranslations('Vehicles.source');
+  const tActions = useTranslations('Common.actions');
   const permissions = usePermissions();
   const canView = permissions.has(PERMISSION.FINANCE_VIEW);
   const canEdit = canView && permissions.has(PERMISSION.VEHICLE_UPDATE);
@@ -90,8 +106,7 @@ export function VehicleSourceWorkspace({ vehicle, onDirtyChange }: VehicleSource
   if (!canView) {
     return (
       <PermissionState
-        title="Không có quyền truy cập"
-        description="Bạn không có quyền xem thông tin tài chính của xe này. Vui lòng liên hệ chủ gian hàng hoặc quản trị viên hệ thống để được cấp quyền."
+        description={t('noPermission')}
         missingPermissions={[PERMISSION.FINANCE_VIEW]}
       />
     );
@@ -104,10 +119,10 @@ export function VehicleSourceWorkspace({ vehicle, onDirtyChange }: VehicleSource
       <Alert
         type="error"
         showIcon
-        message="Không tải được hồ sơ nguồn xe"
+        message={t('loadError')}
         description={
           <Button size="small" onClick={() => void source.refetch()}>
-            Thử lại
+            {tActions('retry')}
           </Button>
         }
       />
@@ -135,6 +150,10 @@ function VehicleSourceForm({
   canEdit: boolean;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
+  const t = useTranslations('Vehicles.source');
+  const tActions = useTranslations('Common.actions');
+  const domainLabel = useDomainLabel();
+  const { cardHint, statusTag } = useSourceCopy();
   const { message } = App.useApp();
   const save = useSaveVehicleSource(vehicle.id);
   const initialValues = useMemo(
@@ -218,7 +237,7 @@ function VehicleSourceForm({
           : emptySourceFormValues(next.sourceType),
       );
       setConfirmTypeChange(null);
-      message.success('Đã lưu hồ sơ nguồn xe');
+      message.success(t('saved'));
     } catch (err) {
       // Giữ nguyên form để sửa/thử lại — giá trị đã nhập không được mất vì một lần lưu hỏng.
       message.error(getErrorMessage(err));
@@ -256,12 +275,12 @@ function VehicleSourceForm({
             </span>
             <div className={styles.statusCopy}>
               <strong>
-                Hình thức sở hữu xe: {VEHICLE_SOURCE_TYPE_LABEL[savedType]}{' '}
+                {t('banner.kind', { label: domainLabel('vehicleSourceType', savedType) })}{' '}
                 <Tag className={styles.statusTag} color={STATUS_COLOR.WAITING}>
-                  {SOURCE_STATUS_TAG[savedType]}
+                  {statusTag[savedType]}
                 </Tag>
               </strong>
-              <small>{VEHICLE_SOURCE_TYPE_DESCRIPTION[savedType]}</small>
+              <small>{cardHint[savedType]}</small>
             </div>
             <InfoCircleOutlined className={styles.statusInfo} aria-hidden="true" />
           </div>
@@ -270,24 +289,24 @@ function VehicleSourceForm({
             <Alert
               type="info"
               showIcon
-              message="Bạn đang xem ở chế độ chỉ đọc. Liên hệ quản lý để chỉnh sửa."
+              message={t('readOnly')}
             />
           ) : null}
 
           {errorCount > 0 ? (
-            <Alert type="error" showIcon message={`${errorCount} lỗi cần sửa trước khi lưu`} />
+            <Alert type="error" showIcon message={t('errors', { count: errorCount })} />
           ) : null}
 
           {!source.detail ? (
             <Alert
               type="warning"
               showIcon
-              message="Xe chưa có hồ sơ nguồn chi tiết"
-              description="Bổ sung thông tin bên dưới để đồng bộ với phân hệ kế toán và tính toán chi phí vận hành."
+              message={t('noDetailTitle')}
+              description={t('noDetailBody')}
             />
           ) : null}
 
-          <Card title="Hình thức nguồn xe" className={styles.card}>
+          <Card title={t('typeCard')} className={styles.card}>
             <Controller
               control={control}
               name="sourceType"
@@ -302,9 +321,9 @@ function VehicleSourceForm({
                     <Radio key={value} value={value} className={styles.typeOption}>
                       <span className={styles.typeHead}>
                         <span aria-hidden="true">{SOURCE_ICON[value]}</span>
-                        <strong>{VEHICLE_SOURCE_TYPE_LABEL[value]}</strong>
+                        <strong>{domainLabel('vehicleSourceType', value)}</strong>
                       </span>
-                      <small>{SOURCE_CARD_HINT[value]}</small>
+                      <small>{cardHint[value]}</small>
                     </Radio>
                   ))}
                 </Radio.Group>
@@ -333,8 +352,8 @@ function VehicleSourceForm({
             <Card
               title={
                 sourceType === VEHICLE_SOURCE_TYPE.OWNED
-                  ? 'Hồ sơ đính kèm (tùy chọn)'
-                  : 'Hồ sơ hợp đồng'
+                  ? t('contract.titleOptional')
+                  : t('contract.title')
               }
               className={styles.card}
             >
@@ -343,12 +362,12 @@ function VehicleSourceForm({
                 name="contractFiles"
                 label={
                   sourceType === VEHICLE_SOURCE_TYPE.FINANCED
-                    ? 'Hợp đồng vay (đã tải lên)'
+                    ? t('contract.fileFinanced')
                     : sourceType === VEHICLE_SOURCE_TYPE.RENTED
-                      ? 'Hợp đồng thuê xe (bản scan)'
+                      ? t('contract.fileRented')
                       : sourceType === VEHICLE_SOURCE_TYPE.PARTNERSHIP
-                        ? 'Hợp đồng hợp tác kinh doanh (mẫu đã ký)'
-                        : 'Giấy tờ mua bán / hoá đơn (nếu có)'
+                        ? t('contract.filePartnership')
+                        : t('contract.fileOwned')
                 }
                 upload={uploadContract}
                 getDownloadUrl={contractDownloadUrl}
@@ -357,8 +376,8 @@ function VehicleSourceForm({
               <TextAreaField
                 control={control}
                 name="notes"
-                label="Ghi chú thêm"
-                placeholder="Nhập ghi chú hoặc thông tin bổ sung về nguồn gốc xe…"
+                label={t('contract.notes')}
+                placeholder={t('contract.notesPlaceholder')}
                 rows={3}
                 maxLength={4000}
               />
@@ -368,8 +387,8 @@ function VehicleSourceForm({
 
         {canEdit ? (
           <StickyFormActions
-            submitLabel="Lưu thay đổi"
-            cancelLabel={isDirty ? 'Hoàn tác' : 'Huỷ bỏ'}
+            submitLabel={tActions('saveChanges')}
+            cancelLabel={isDirty ? t('revert') : tActions('cancel')}
             onCancel={() => reset(initialValues)}
             submitting={save.isPending}
             disabled={!isDirty}
@@ -378,28 +397,25 @@ function VehicleSourceForm({
 
         <ResponsiveDialog
           open={confirmTypeChange !== null}
-          title="Đổi hình thức sở hữu xe?"
+          title={t('confirmType.title')}
           size="sm"
           confirmLoading={save.isPending}
           onClose={() => setConfirmTypeChange(null)}
           onOk={() => confirmTypeChange && void persist(confirmTypeChange)}
-          okText="Xác nhận & Lưu"
-          cancelText="Huỷ"
+          okText={t('confirmType.ok')}
+          cancelText={tActions('cancel')}
           destructive
         >
           <p>
-            Đổi từ <strong>{VEHICLE_SOURCE_TYPE_LABEL[savedType]}</strong> sang{' '}
-            <strong>
-              {confirmTypeChange
-                ? VEHICLE_SOURCE_TYPE_LABEL[confirmTypeChange.sourceType as VehicleSourceType]
-                : ''}
-            </strong>{' '}
-            sẽ thay thế toàn bộ hồ sơ tài chính hiện tại của xe.
+            {t.rich('confirmType.body', {
+              from: domainLabel('vehicleSourceType', savedType),
+              to: confirmTypeChange
+                ? domainLabel('vehicleSourceType', confirmTypeChange.sourceType)
+                : '',
+              b: (chunks) => <strong>{chunks}</strong>,
+            })}
           </p>
-          <p>
-            Lưu ý: việc này có thể làm thay đổi các bảng tính dòng tiền và khấu hao hiện tại. Hồ sơ
-            cũ không thể khôi phục sau khi lưu.
-          </p>
+          <p>{t('confirmType.note')}</p>
         </ResponsiveDialog>
       </form>
     </Form>
@@ -412,28 +428,35 @@ type SectionProps = {
 };
 
 function OwnedSection({ control, disabled }: SectionProps) {
+  const t = useTranslations('Vehicles.source.owned');
+
   return (
-    <Card title="Thông tin mua xe (tùy chọn)" className={styles.card}>
+    <Card title={t('title')} className={styles.card}>
       <Row gutter={16}>
         <Col xs={24} sm={12}>
-          <DateTimeField control={control} name="purchaseDate" label="Ngày mua xe" dateOnly />
+          <DateTimeField
+            control={control}
+            name="purchaseDate"
+            label={t('purchaseDate')}
+            dateOnly
+          />
         </Col>
         <Col xs={24} sm={12}>
           <NumberField
             control={control}
             name="purchasePrice"
-            label="Giá trị xe (VND)"
+            label={t('purchasePrice')}
             money
             min={0}
-            placeholder="VD: 560.000.000"
+            placeholder={t('purchasePricePlaceholder')}
           />
         </Col>
         <Col xs={24}>
           <TextField
             control={control}
             name="purchasePlace"
-            label="Nơi mua / Đại lý bàn giao"
-            placeholder="VD: Toyota Đông Sài Gòn"
+            label={t('purchasePlace')}
+            placeholder={t('purchasePlacePlaceholder')}
             disabled={disabled}
           />
         </Col>
@@ -447,17 +470,18 @@ function FinancedSection({
   disabled,
   monthlyTotal,
 }: SectionProps & { monthlyTotal: number | null }) {
+  const t = useTranslations('Vehicles.source.financed');
   const fmt = useAppFormat();
 
   return (
-    <Card title="Thông tin khoản vay mua xe" className={styles.card}>
+    <Card title={t('title')} className={styles.card}>
       <Row gutter={16}>
         <Col xs={24} sm={12}>
           <TextField
             control={control}
             name="bankName"
-            label="Ngân hàng / Tổ chức tín dụng"
-            placeholder="VD: VPBank"
+            label={t('bankName')}
+            placeholder={t('bankPlaceholder')}
             required
             disabled={disabled}
           />
@@ -466,8 +490,8 @@ function FinancedSection({
           <TextField
             control={control}
             name="contractNumber"
-            label="Số hợp đồng tín dụng"
-            placeholder="VD: VPBL-2024-00123"
+            label={t('contractNumber')}
+            placeholder={t('contractNumberPlaceholder')}
             disabled={disabled}
           />
         </Col>
@@ -475,70 +499,70 @@ function FinancedSection({
           <NumberField
             control={control}
             name="originalPrincipal"
-            label="Dư nợ gốc ban đầu"
+            label={t('originalPrincipal')}
             money
             min={0}
-            placeholder="VD: 450.000.000"
+            placeholder={t('originalPrincipalPlaceholder')}
           />
         </Col>
         <Col xs={24} sm={12}>
-          <DateTimeField control={control} name="startDate" label="Ngày giải ngân" dateOnly />
+          <DateTimeField control={control} name="startDate" label={t('startDate')} dateOnly />
         </Col>
         <Col xs={24} sm={8}>
           <NumberField
             control={control}
             name="termMonths"
-            label="Thời hạn vay (Tháng)"
+            label={t('termMonths')}
             min={1}
             max={600}
-            placeholder="VD: 60"
+            placeholder={t('termMonthsPlaceholder')}
           />
         </Col>
         <Col xs={24} sm={8}>
           <NumberField
             control={control}
             name="interestRatePercent"
-            label="Lãi suất cố định năm"
+            label={t('interestRate')}
             percent
             precision={2}
-            placeholder="VD: 8.5"
+            placeholder={t('interestRatePlaceholder')}
           />
         </Col>
         <Col xs={24} sm={8}>
           <NumberField
             control={control}
             name="paymentDay"
-            label="Ngày đến hạn đóng tiền hàng tháng"
+            label={t('paymentDay')}
             min={1}
             max={31}
-            placeholder="VD: 15"
+            placeholder={t('paymentDayPlaceholder')}
           />
         </Col>
         <Col xs={24} sm={12}>
           <NumberField
             control={control}
             name="monthlyPrincipal"
-            label="Nợ gốc cần trả mỗi tháng"
+            label={t('monthlyPrincipal')}
             money
             min={0}
-            placeholder="VD: 7.500.000"
+            placeholder={t('monthlyPrincipalPlaceholder')}
           />
         </Col>
         <Col xs={24} sm={12}>
           <NumberField
             control={control}
             name="monthlyInterest"
-            label="Lãi phát sinh mỗi tháng"
+            label={t('monthlyInterest')}
             money
             min={0}
-            placeholder="VD: 3.187.500"
+            placeholder={t('monthlyInterestPlaceholder')}
           />
         </Col>
         <Col xs={24} sm={12}>
           <DateTimeField
             control={control}
             name="endDate"
-            label="Ngày kết thúc hợp đồng (nếu biết)"
+            label={t('endDate')}
             dateOnly
           />
         </Col>
@@ -551,7 +575,7 @@ function FinancedSection({
           type="info"
           showIcon
           className={styles.totalPreview}
-          message={`Tổng phải đóng mỗi tháng (gốc + lãi): ${fmt.money(String(monthlyTotal))}`}
+          message={t('monthlyTotal', { amount: fmt.money(String(monthlyTotal)) })}
         />
       ) : null}
     </Card>
@@ -559,6 +583,9 @@ function FinancedSection({
 }
 
 function InterestMethodField({ control, disabled }: SectionProps) {
+  const t = useTranslations('Vehicles.source.financed');
+  const domainLabel = useDomainLabel();
+
   return (
     <Controller
       control={control}
@@ -566,7 +593,7 @@ function InterestMethodField({ control, disabled }: SectionProps) {
       render={({ field }) => (
         <div className={styles.methodBlock}>
           <div className={styles.methodLabel} id="vehicle-source-interest-method">
-            Phương pháp tính lãi
+            {t('interestMethod')}
           </div>
           <Radio.Group
             aria-labelledby="vehicle-source-interest-method"
@@ -576,7 +603,7 @@ function InterestMethodField({ control, disabled }: SectionProps) {
           >
             {VEHICLE_FINANCE_INTEREST_METHOD_VALUES.map((value) => (
               <Radio key={value} value={value}>
-                {VEHICLE_FINANCE_INTEREST_METHOD_LABEL[value]}
+                {domainLabel('vehicleFinanceInterestMethod', value)}
               </Radio>
             ))}
           </Radio.Group>
@@ -587,16 +614,18 @@ function InterestMethodField({ control, disabled }: SectionProps) {
 }
 
 function RentedSection({ control, disabled }: SectionProps) {
+  const t = useTranslations('Vehicles.source.rented');
+
   return (
     <>
-      <Card title="Thông tin chủ xe (Bên cho thuê)" className={styles.card}>
+      <Card title={t('ownerTitle')} className={styles.card}>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <TextField
               control={control}
               name="ownerName"
-              label="Tên chủ xe / Doanh nghiệp"
-              placeholder="VD: Nguyễn Văn A"
+              label={t('ownerName')}
+              placeholder={t('ownerNamePlaceholder')}
               required
               disabled={disabled}
             />
@@ -605,8 +634,8 @@ function RentedSection({ control, disabled }: SectionProps) {
             <TextField
               control={control}
               name="ownerPhone"
-              label="Số điện thoại liên hệ"
-              placeholder="VD: 0909 123 456"
+              label={t('ownerPhone')}
+              placeholder={t('ownerPhonePlaceholder')}
               disabled={disabled}
             />
           </Col>
@@ -614,43 +643,43 @@ function RentedSection({ control, disabled }: SectionProps) {
             <TextField
               control={control}
               name="ownerEmail"
-              label="Email chủ xe (Tùy chọn)"
+              label={t('ownerEmail')}
               type="email"
-              placeholder="VD: nguyenvana@gmail.com"
+              placeholder={t('ownerEmailPlaceholder')}
               disabled={disabled}
             />
           </Col>
         </Row>
       </Card>
-      <Card title="Thông tin hợp đồng thuê" className={styles.card}>
+      <Card title={t('contractTitle')} className={styles.card}>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <NumberField
               control={control}
               name="monthlyRent"
-              label="Tiền thuê định kỳ (VND)"
+              label={t('monthlyRent')}
               money
               min={0}
               required
-              placeholder="VD: 12.000.000"
-              help="Chu kỳ thanh toán theo tháng"
+              placeholder={t('monthlyRentPlaceholder')}
+              help={t('monthlyRentHelp')}
             />
           </Col>
           <Col xs={24} sm={12}>
             <NumberField
               control={control}
               name="paymentDay"
-              label="Ngày thanh toán hàng chu kỳ"
+              label={t('paymentDay')}
               min={1}
               max={31}
-              placeholder="VD: 5"
+              placeholder={t('paymentDayPlaceholder')}
             />
           </Col>
           <Col xs={24} sm={12}>
             <DateTimeField
               control={control}
               name="startDate"
-              label="Ngày bắt đầu hợp đồng"
+              label={t('startDate')}
               dateOnly
             />
           </Col>
@@ -658,7 +687,7 @@ function RentedSection({ control, disabled }: SectionProps) {
             <DateTimeField
               control={control}
               name="endDate"
-              label="Ngày kết thúc hợp đồng"
+              label={t('endDate')}
               dateOnly
             />
           </Col>
@@ -673,16 +702,19 @@ function PartnershipSection({
   disabled,
   commissionPercent,
 }: SectionProps & { commissionPercent: number | null }) {
+  const t = useTranslations('Vehicles.source.partnership');
+  const tLabels = useTranslations('Common.labels');
+
   return (
     <>
-      <Card title="Thông tin đối tác (Chủ xe ký gửi)" className={styles.card}>
+      <Card title={t('ownerTitle')} className={styles.card}>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <TextField
               control={control}
               name="ownerName"
-              label="Họ tên đối tác sở hữu"
-              placeholder="VD: Trần Thị B"
+              label={t('ownerName')}
+              placeholder={t('ownerNamePlaceholder')}
               required
               disabled={disabled}
             />
@@ -691,8 +723,8 @@ function PartnershipSection({
             <TextField
               control={control}
               name="ownerPhone"
-              label="Số điện thoại"
-              placeholder="VD: 0912 999 888"
+              label={t('ownerPhone')}
+              placeholder={t('ownerPhonePlaceholder')}
               disabled={disabled}
             />
           </Col>
@@ -700,37 +732,42 @@ function PartnershipSection({
             <TextField
               control={control}
               name="ownerEmail"
-              label="Địa chỉ email nhận đối soát"
+              label={t('ownerEmail')}
               type="email"
-              placeholder="VD: tranthib@gmail.com"
+              placeholder={t('ownerEmailPlaceholder')}
               disabled={disabled}
             />
           </Col>
         </Row>
       </Card>
-      <Card title="Điều khoản hợp tác & Phân chia doanh thu" className={styles.card}>
+      <Card title={t('termsTitle')} className={styles.card}>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <NumberField
               control={control}
               name="commissionPercent"
-              label="Tỷ lệ chia sẻ doanh thu cho chủ xe"
+              label={t('commission')}
               percent
               required
-              placeholder="VD: 30"
+              placeholder={t('commissionPlaceholder')}
             />
           </Col>
           <Col xs={24} sm={12}>
             <div className={styles.shopShare}>
-              Phần giữ lại của gian hàng:{' '}
-              <strong>{commissionPercent == null ? '—' : `${100 - commissionPercent}%`}</strong>
+              {t.rich('shopShare', {
+                percent:
+                  commissionPercent == null
+                    ? tLabels('emptyValue')
+                    : `${100 - commissionPercent}%`,
+                b: (chunks) => <strong>{chunks}</strong>,
+              })}
             </div>
           </Col>
           <Col xs={24} sm={12}>
             <DateTimeField
               control={control}
               name="startDate"
-              label="Ngày hợp đồng bắt đầu có hiệu lực"
+              label={t('startDate')}
               dateOnly
             />
           </Col>
@@ -738,7 +775,7 @@ function PartnershipSection({
             <DateTimeField
               control={control}
               name="endDate"
-              label="Ngày kết thúc hợp đồng"
+              label={t('endDate')}
               dateOnly
             />
           </Col>
@@ -752,7 +789,7 @@ function PartnershipSection({
           type="info"
           showIcon
           className={styles.totalPreview}
-          message="Công thức tính: Doanh thu được chia = tiền thuê sau giảm giá. Không bao gồm: tiền cọc hoàn lại, phí giao nhận, phí quá giờ, phạt/phí bồi thường hư hỏng và các khoản thu hộ khác."
+          message={t('formula')}
         />
       </Card>
     </>

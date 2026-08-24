@@ -13,5 +13,637 @@
     "loadErrorBody": "Something went wrong while fetching the data. Please try again.",
     "pageSubtitle": "Operating details, rental pricing and public listing status for this vehicle",
     "backToList": "Back to list"
+  },
+  "list": {
+    "filters": {
+      "search": "Search vehicles",
+      "searchPlaceholder": "Search vehicles...",
+      "vehicleType": "Vehicle type",
+      "serviceType": "Service",
+      "operationStatus": "Operation",
+      "publicStatus": "Listing"
+    },
+    "sort": {
+      "label": "Sort",
+      "value": "Sort: {label}",
+      "newest": "Newest",
+      "name_asc": "Name A → Z",
+      "code_asc": "Code ascending",
+      "price_asc": "Price low → high",
+      "price_desc": "Price high → low"
+    },
+    "statusChips": {
+      "ariaLabel": "Filter by operating status"
+    },
+    "summary": {
+      "loading": "Loading fleet figures",
+      "ariaLabel": "Fleet figures",
+      "total": "Total vehicles",
+      "available": "Available",
+      "renting": "On rent",
+      "vehicleCount": "{count, plural, one {# vehicle} other {# vehicles}}"
+    },
+    "grid": {
+      "ariaLabel": "Vehicle list",
+      "loading": "Loading the vehicle list",
+      "loadErrorTitle": "Could not load the vehicle list",
+      "loadErrorBody": "Something went wrong while fetching the data. Please try again.",
+      "noResultsTitle": "No results found",
+      "noResultsBody": "Try changing the filters or the search term.",
+      "emptyTitle": "No vehicles yet",
+      "emptyBody": "Start by adding the first vehicle to your shop.",
+      "alertsErrorTitle": "Could not load vehicle alerts",
+      "alertsErrorBody": "The list still works, but the to-do items and odometer readings are not showing.",
+      "showing": "Showing {from}-{to} of {total, plural, one {# vehicle} other {# vehicles}}"
+    },
+    "card": {
+      "weekdayPrice": "Weekday price",
+      "weekendPrice": "Weekend price",
+      "currentOdometer": "Current odometer",
+      "odometerUnknown": "Unknown",
+      "activeBookings": "In progress",
+      "completedBookings": "Completed",
+      "totalIncome": "Total revenue",
+      "totalExpense": "Total cost",
+      "profit": "Net profit",
+      "statsUnavailable": "Could not load the figures",
+      "alertsUnavailable": "Could not load the alerts",
+      "rowActions": "Actions for {name}"
+    },
+    "row": {
+      "odometer": "Odometer: {value}",
+      "bookings": "Bookings: <n>{active}</n> active / <n>{done}</n> done",
+      "income": "Revenue: <n>{value}</n>",
+      "profit": "Profit: <n>{value}</n>",
+      "loss": "Loss: <n>{value}</n>"
+    },
+    "actions": {
+      "view": "View details",
+      "viewShort": "View",
+      "edit": "Edit",
+      "schedule": "Calendar"
+    },
+    "page": {
+      "title": "Vehicles",
+      "loading": "Loading the vehicle list…",
+      "addVehicle": "Add vehicle",
+      "addFirstVehicle": "Add the first vehicle"
+    }
+  },
+  "alerts": {
+    "chipsLabel": "Vehicle alerts",
+    "severityWithTitle": "{severity}: {title}",
+    "empty": "Nothing to do.",
+    "viewAll": "View all ({count})"
+  },
+  "completeness": {
+    "publishRequiredSr": " (required before public review)",
+    "legendTitle": "Two-stage vehicle information model",
+    "requiredItem": "Required information (needed to save the vehicle internally)",
+    "publishItem": "Needed before submitting the vehicle for public review"
+  },
+  "form": {
+    "sections": {
+      "basic": "Basic information",
+      "specs": "Technical specifications",
+      "pricing": "Pricing & policies",
+      "media": "Photos, features & description",
+      "operatingSpecs": "Operating specifications"
+    },
+    "wizard": {
+      "basic": {
+        "title": "Basics",
+        "shortTitle": "Basics",
+        "heading": "1. Basic vehicle information"
+      },
+      "pricing": {
+        "title": "Pricing & policies",
+        "shortTitle": "Pricing",
+        "heading": "2. Pricing & policies"
+      },
+      "media": {
+        "title": "Photos",
+        "shortTitle": "Photos",
+        "heading": "3. Photos, features & description"
+      },
+      "review": {
+        "title": "Review",
+        "shortTitle": "Review",
+        "heading": "4. Review the vehicle profile"
+      },
+      "backToStep": "Back to the previous step",
+      "cancel": "Discard",
+      "saveDraft": "Save as draft",
+      "saveAndSubmit": "Save & submit for review",
+      "stepErrors": "{count, plural, one {# error} other {# errors}} to fix before continuing",
+      "pricePreview": "Price shown on the marketplace: {price}",
+      "cancelWizard": {
+        "title": "Discard the vehicle you are entering?",
+        "ok": "Discard and leave",
+        "cancel": "Keep entering",
+        "body": "Unsaved changes in the wizard will be lost."
+      }
+    },
+    "basic": {
+      "name": "Vehicle name",
+      "namePlaceholder": "Enter the vehicle name (e.g. Toyota Vios 2023)",
+      "code": "Vehicle code",
+      "codePlaceholder": "Generated automatically if left blank",
+      "codeHelp": "Internal identifier, unique within the shop",
+      "branch": "Branch holding the vehicle",
+      "branchHelp": "Determines which province the vehicle appears in on the marketplace.",
+      "vehicleType": "Vehicle type",
+      "serviceTypes": "Service type",
+      "serviceTypesHelp": "You can pick several — set the long-term and with-driver prices in the pricing step"
+    },
+    "warnings": {
+      "typePolicyTitle": "Changing the vehicle type to {label}: the vehicle will inherit the default rental policy of the new type",
+      "typePolicyBody": "The deposit, delivery fee, overtime fee and discounts configured for the new vehicle type will apply to future bookings (unless the vehicle has its own policy).",
+      "priceRemovalTitle": "Dropping the service will delete {losses} when you save",
+      "priceRemovalBody": "Adding the service back later means entering the prices again from scratch.",
+      "lossMonthly": "the long-term monthly price",
+      "lossWithDriver": "the with-driver price list",
+      "lossJoin": "{first} and {second}"
+    },
+    "status": {
+      "operationStatus": "Operating status"
+    },
+    "source": {
+      "legend": "Ownership type *",
+      "description": "Determines how the vehicle's finances and profit sharing are managed",
+      "hint": "You can complete the detailed financial information after the vehicle is created.",
+      "owned": "The vehicle belongs to you",
+      "financed": "Being paid off through a bank",
+      "rented": "Rented from another owner to rent out",
+      "partnership": "Consigned by the owner, revenue shared"
+    },
+    "advanced": {
+      "dimensionsTitle": "Dimensions & weight",
+      "engineTitle": "Engine & performance",
+      "consumptionTitle": "Fuel consumption (L/100km)",
+      "lengthMm": "Length (mm)",
+      "lengthPlaceholder": "e.g. 4630",
+      "widthMm": "Width (mm)",
+      "widthPlaceholder": "e.g. 1780",
+      "heightMm": "Height (mm)",
+      "heightPlaceholder": "e.g. 1435",
+      "curbWeightKg": "Curb weight (kg)",
+      "curbWeightPlaceholder": "e.g. 1250",
+      "engineDisplacementCc": "Engine displacement (cc)",
+      "enginePlaceholder": "e.g. 1798",
+      "horsepowerHp": "Peak power (HP)",
+      "horsepowerPlaceholder": "e.g. 138",
+      "transmission": "Transmission",
+      "transmissionPlaceholder": "Select a transmission",
+      "consumptionCity": "City",
+      "consumptionCityPlaceholder": "e.g. 8.5",
+      "consumptionHighway": "Highway",
+      "consumptionHighwayPlaceholder": "e.g. 5.2",
+      "consumptionCombined": "Combined",
+      "consumptionCombinedPlaceholder": "e.g. 6.5",
+      "hint": "Technical specifications make the vehicle easier to find; you can fill them in later."
+    },
+    "specs": {
+      "plateNumber": "Licence plate",
+      "platePlaceholder": "e.g. 51K-123.45",
+      "plateHelp": "Required before submitting the vehicle for public review",
+      "brand": "Make",
+      "brandPlaceholder": "Select a make",
+      "model": "Model",
+      "modelPlaceholder": "e.g. Vios",
+      "manufactureYear": "Year of manufacture",
+      "seatCount": "Seats",
+      "seatPlaceholder": "e.g. 5",
+      "fuelType": "Fuel",
+      "fuelPlaceholderCar": "Petrol, diesel, electric or hybrid",
+      "fuelPlaceholderMotorbike": "Petrol or electric",
+      "color": "Colour",
+      "colorPlaceholder": "e.g. White",
+      "bodyType": "Body type",
+      "bodyTypeHint": "Helps customers filter vehicles on the marketplace. Click again to deselect."
+    },
+    "prices": {
+      "weekday": "Weekday price",
+      "weekdayPlaceholder": "e.g. 600,000",
+      "weekdayHelp": "Price for weekdays. Required before submitting for review.",
+      "weekend": "Weekend price",
+      "weekendPlaceholder": "e.g. 750,000",
+      "weekendHelp": "Leave blank to use the weekday price",
+      "hourly": "Hourly price",
+      "hourlyPlaceholder": "Leave blank if you do not rent by the hour",
+      "discountPercent": "Active discount",
+      "discountPlaceholder": "e.g. 10",
+      "discountHelp": "The discounted price is what appears on the marketplace",
+      "monthly": "Monthly price (long-term rental)",
+      "monthlyPlaceholder": "e.g. 9,000,000",
+      "monthlyHelp": "Customer estimate = days × monthly price ÷ 30. Required before submitting for review.",
+      "withDriverDaily": "With-driver day rate — in city",
+      "withDriverDailyPlaceholder": "e.g. 1,500,000",
+      "withDriverDailyHelp": "Driver included (base rate). Required before submitting for review.",
+      "withDriverInterCity": "With-driver day rate — intercity",
+      "withDriverInterCityPlaceholder": "e.g. 1,800,000",
+      "withDriverInterCityHelp": "Round trip; blank = estimated from the in-city rate",
+      "withDriverOneWay": "With-driver day rate — one way",
+      "withDriverOneWayPlaceholder": "e.g. 2,200,000",
+      "withDriverOneWayHelp": "Intercity one way; blank = estimated from the nearest tier"
+    },
+    "policies": {
+      "delivery": "Vehicle delivery",
+      "deliveryDescription": "Marketplace customers can filter for vehicles that offer delivery"
+    },
+    "media": {
+      "mainImage": "Cover photo",
+      "gallery": "Photo gallery",
+      "features": "Vehicle features",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe the condition, equipment and rental terms…"
+    },
+    "pricingStep": {
+      "shopPolicyTitle": "Shop-wide pricing policy",
+      "shopPolicyBody": "New vehicles automatically inherit the shop's deposit, delivery, overtime fee and discounts.",
+      "noPolicyTitle": "This shop has no shared rental policy yet",
+      "noPolicyAction": "Set up the shop policy",
+      "vehiclePriceTitle": "Reference rental price for this vehicle",
+      "vehiclePriceBody": "The rental price belongs to each vehicle. After creating it, you can set a price and policy specific to this vehicle on the Pricing & policies tab.",
+      "previewTitle": "Preview of the applied price list",
+      "previewSource": "From the shop policy",
+      "previewSourceLink": "View details",
+      "deposit": "Security deposit",
+      "delivery": "Delivery & pickup",
+      "deliveryOn": "On",
+      "deliveryOnRadius": "On (within {km}km)",
+      "deliveryOff": "Off",
+      "overtime": "Late-return fee",
+      "notConfigured": "Not configured",
+      "discountsLabel": "Commitment discounts (long-term rental)",
+      "packageChip": "{label} package"
+    },
+    "review": {
+      "editStep": "Edit",
+      "groups": {
+        "basic": "Basic information",
+        "specs": "Operating specifications",
+        "pricing": "Pricing & policies",
+        "media": "Photos & features"
+      },
+      "name": "Vehicle name",
+      "code": "Vehicle code",
+      "typeAndService": "Type / Service",
+      "operationStatus": "Operation",
+      "sourceType": "Ownership",
+      "plateNumber": "Licence plate",
+      "brandAndBody": "Make & body type",
+      "seatsAndFuel": "Seats / Fuel",
+      "yearAndColor": "Year & colour",
+      "weekdayPrice": "Weekday rate",
+      "weekendPrice": "Weekend price",
+      "discount": "Discount",
+      "discountValue": "-{percent}%",
+      "policy": "Policies",
+      "policyDelivery": "Delivery",
+      "policyNone": "None",
+      "overview": "Overview",
+      "mainImageSet": "Cover photo set",
+      "mainImageMissing": "No cover photo yet",
+      "overviewValue": "{mainImage} • {gallery, plural, one {# gallery photo} other {# gallery photos}} • {features, plural, one {# feature selected} other {# features selected}}",
+      "brandWithBody": "{brand} ({bodyType})"
+    },
+    "success": {
+      "title": "Vehicle created!",
+      "submitted": "The vehicle profile has been saved and submitted for public review.",
+      "draft": "The vehicle has been saved to your internal records as a draft.",
+      "cardLabel": "The vehicle you just created",
+      "checklistTitle": "Complete the vehicle profile",
+      "checklistBody": "A few core details are still needed before the vehicle can go public on the marketplace.",
+      "checkInfo": "Check the vehicle information and specifications",
+      "checkInfoLink": "Information tab →",
+      "checkMedia": "Add real photos and features",
+      "checkMediaLink": "Photos tab →",
+      "checkPricing": "Check the price, deposit and rental policy",
+      "checkPricingLink": "Pricing & policies →",
+      "checkSource": "Complete the ownership & finance details",
+      "checkSourceLink": "Ownership tab →",
+      "checkFuture": "Vehicle documents and maintenance",
+      "checkFutureNote": "Coming in a later wave",
+      "viewDetail": "View the full vehicle profile",
+      "createAnother": "Add another vehicle"
+    }
+  },
+  "publish": {
+    "requirements": {
+      "selfDrivePrice": "Self-drive price (weekday)",
+      "longTermPrice": "Long-term monthly price",
+      "withDriverPrice": "With-driver day rate",
+      "mainImage": "Cover photo",
+      "plateNumber": "Licence plate",
+      "description": "Vehicle description"
+    },
+    "status": {
+      "pending": {
+        "message": "Waiting for platform review",
+        "description": "The vehicle appears on the marketplace as soon as it is approved."
+      },
+      "approved": {
+        "message": "Live on the marketplace",
+        "description": "Changing the price, licence plate, vehicle type or cover photo requires another review."
+      },
+      "rejected": {
+        "message": "Vehicle rejected",
+        "description": "Make the changes the platform asked for, then submit it again."
+      },
+      "needsRevision": {
+        "message": "More information needed",
+        "description": "Fill in the missing information, then submit it again."
+      },
+      "hidden": {
+        "message": "Hidden from the marketplace",
+        "description": "Submit it for review again to make it visible on the marketplace."
+      },
+      "draft": {
+        "message": "Not listed on the marketplace yet",
+        "description": "Submit it for review so customers can find it on the marketplace."
+      }
+    },
+    "sensitive": {
+      "empty": "Not set",
+      "imageSet": "Photo set",
+      "percent": "{value}%",
+      "fields": {
+        "weekdayPrice": "Weekday price",
+        "weekendPrice": "Weekend price",
+        "hourlyPrice": "Hourly price",
+        "monthlyPrice": "Monthly price (long-term rental)",
+        "withDriverDailyPrice": "With-driver day rate (in city)",
+        "withDriverInterCityPrice": "With-driver day rate (intercity)",
+        "withDriverOneWayPrice": "With-driver day rate (one way)",
+        "discountPercent": "Discount",
+        "plateNumber": "Licence plate",
+        "vehicleType": "Vehicle type",
+        "serviceTypes": "Service type",
+        "mainImageUrl": "Cover photo"
+      }
+    },
+    "panel": {
+      "title": "Public review progress",
+      "met": "Done",
+      "unmet": "Missing",
+      "submit": "Submit for public review",
+      "resubmit": "Submit again",
+      "submitted": "The vehicle has been submitted for public review"
+    }
+  },
+  "overview": {
+    "profileLabel": "Vehicle profile",
+    "plate": "Licence plate: <b>{value}</b>",
+    "odometer": "Odometer: <b>{value}</b>",
+    "axisOperation": "Operation",
+    "axisPublic": "Listing",
+    "edit": "Edit",
+    "schedule": "View calendar",
+    "editMobile": "Edit vehicle",
+    "scheduleMobile": "View calendar",
+    "delete": "Delete vehicle",
+    "deleteConfirmTitle": "Delete \"{name}\"?",
+    "deleteConfirmBody": "The vehicle will be hidden from the list and removed from the marketplace. Existing bookings and receipts are kept for reconciliation. It cannot be deleted while it still has current or future rentals.",
+    "moreActions": "More actions for {name}",
+    "loadFailed": "Could not load the data.",
+    "metric": "{value} {unit}",
+    "todo": {
+      "title": "To do"
+    },
+    "schedules": {
+      "title": "Upcoming rentals",
+      "empty": "No upcoming rentals.",
+      "item": "{customer} • {range}",
+      "sub": "{amount} • {status}"
+    },
+    "performance": {
+      "title": "All-time performance",
+      "revenue": "Revenue",
+      "rentals": "Rentals",
+      "tripCount": "{count, plural, one {# trip} other {# trips}}",
+      "activeLabel": "Bookings in progress:",
+      "activeCount": "{count, plural, one {# booking} other {# bookings}}"
+    },
+    "pricing": {
+      "title": "Pricing & policies",
+      "editLink": "Edit pricing",
+      "weekday": "Weekday",
+      "weekend": "Weekend",
+      "hourly": "Hourly",
+      "discount": "Discount",
+      "publicPrice": "Marketplace price",
+      "delivery": "Vehicle delivery",
+      "deliveryOn": "Available",
+      "deliveryOff": "Not available"
+    },
+    "links": {
+      "ariaLabel": "Quick links to this vehicle's sections",
+      "information": "Vehicle information",
+      "media": "Photos",
+      "pricing": "Pricing & policies",
+      "source": "Ownership",
+      "documents": "Vehicle documents",
+      "maintenance": "Maintenance & odometer",
+      "maintenanceCenter": "Maintenance centre",
+      "calendar": "Vehicle calendar",
+      "bookings": "Bookings",
+      "receipts": "Vehicle receipts"
+    },
+    "documents": {
+      "title": "Legal documents",
+      "manageLink": "Manage documents",
+      "expired": "{count, plural, one {# document has} other {# documents have}} expired — resolve this before the vehicle goes back on the road",
+      "expiring": "{count, plural, one {# document is} other {# documents are}} expiring soon",
+      "clear": "No documents are expired or expiring soon.",
+      "unknown": "No information yet."
+    },
+    "specs": {
+      "title": "Technical specifications",
+      "brand": "Make",
+      "model": "Model",
+      "bodyType": "Body type",
+      "manufactureYear": "Year of manufacture",
+      "seatCount": "Seats",
+      "fuelType": "Fuel",
+      "color": "Colour",
+      "length": "Length",
+      "width": "Width",
+      "height": "Height",
+      "curbWeight": "Curb weight",
+      "engineDisplacement": "Engine displacement",
+      "horsepower": "Power",
+      "transmission": "Transmission",
+      "fuelCombined": "Combined consumption",
+      "createdAt": "Created",
+      "updatedAt": "Updated"
+    },
+    "source": {
+      "title": "Ownership & finance",
+      "kind": "Ownership type",
+      "summary": "Summary",
+      "monthlyTotal": "{amount}/month (principal + interest)",
+      "monthlyRent": "{amount}/month",
+      "commission": "{percent}% to the owner",
+      "paymentDay": "due on day {day}",
+      "detailLink": "View the ownership & finance record →",
+      "missing": "No detailed ownership record yet.",
+      "missingLink": "Add it now →"
+    },
+    "media": {
+      "title": "Photo gallery"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "No activity for this vehicle yet.",
+      "item": "Booking {code} · {status}",
+      "sub": "{customer} • {range} • {amount}"
+    },
+    "dateRange": "{from} – {to}"
+  },
+  "edit": {
+    "tabs": {
+      "information": "Vehicle information",
+      "media": "Photos & features",
+      "pricing": "Pricing & policies",
+      "source": "Ownership & finance",
+      "documents": "Documents",
+      "maintenance": "Maintenance & odometer"
+    },
+    "errors": "{count, plural, one {# error} other {# errors}} to fix before saving",
+    "publicWarning": "This vehicle is live. Changing sensitive information sends it back for review and temporarily hides it from the marketplace.",
+    "cards": {
+      "basic": "Basic information",
+      "status": "Status management",
+      "specs": "Vehicle specifications",
+      "images": "Vehicle photos",
+      "featuresDescription": "Features & description"
+    },
+    "advanced": {
+      "title": "Advanced specifications",
+      "hint": "Dimensions, engine and consumption — optional"
+    },
+    "revert": "Revert",
+    "discard": {
+      "title": "Discard unsaved changes?",
+      "body": "The changes you made on this tab have not been saved.",
+      "ok": "Discard changes",
+      "cancel": "Keep editing"
+    },
+    "sensitive": {
+      "title": "Confirm sensitive changes",
+      "body": "The vehicle will go back to pending review and be temporarily hidden from the marketplace.",
+      "ok": "Confirm & save",
+      "change": "{label}:"
+    },
+    "pricingTab": {
+      "loadError": "Could not load the pricing & policies",
+      "saved": "The vehicle pricing & policies have been saved"
+    },
+    "branchInactive": "{label} (inactive)"
+  },
+  "source": {
+    "noPermission": "You do not have permission to view this vehicle's financial information. Contact the shop owner or a system administrator to request access.",
+    "loadError": "Could not load the ownership record",
+    "banner": {
+      "kind": "Ownership type: {label}",
+      "owned": "Yours",
+      "financed": "Under loan",
+      "rented": "Rented in",
+      "partnership": "Partnership"
+    },
+    "cardHint": {
+      "owned": "The vehicle is owned directly by you",
+      "financed": "Being bought in instalments through a bank",
+      "rented": "Rented from a third party to rent out",
+      "partnership": "Operated in partnership with revenue sharing"
+    },
+    "readOnly": "You are viewing in read-only mode. Contact a manager to make changes.",
+    "errors": "{count, plural, one {# error} other {# errors}} to fix before saving",
+    "noDetailTitle": "This vehicle has no detailed ownership record",
+    "noDetailBody": "Fill in the information below so it syncs with accounting and operating-cost calculations.",
+    "typeCard": "Ownership type",
+    "revert": "Revert",
+    "saved": "The ownership record has been saved",
+    "confirmType": {
+      "title": "Change the ownership type?",
+      "ok": "Confirm & save",
+      "body": "Changing from <b>{from}</b> to <b>{to}</b> replaces the vehicle's entire current financial record.",
+      "note": "Note: this can change the current cash-flow and depreciation calculations. The old record cannot be restored once you save."
+    },
+    "contract": {
+      "titleOptional": "Attachments (optional)",
+      "title": "Contract documents",
+      "fileFinanced": "Loan agreement (uploaded)",
+      "fileRented": "Rental agreement (scan)",
+      "filePartnership": "Partnership agreement (signed copy)",
+      "fileOwned": "Purchase papers / invoice (if any)",
+      "notes": "Additional notes",
+      "notesPlaceholder": "Add notes or extra information about where the vehicle came from…"
+    },
+    "owned": {
+      "title": "Purchase information (optional)",
+      "purchaseDate": "Purchase date",
+      "purchasePrice": "Vehicle value (VND)",
+      "purchasePricePlaceholder": "e.g. 560,000,000",
+      "purchasePlace": "Place of purchase / delivering dealer",
+      "purchasePlacePlaceholder": "e.g. Toyota Dong Sai Gon"
+    },
+    "financed": {
+      "title": "Vehicle loan information",
+      "bankName": "Bank / lender",
+      "bankPlaceholder": "e.g. VPBank",
+      "contractNumber": "Credit agreement number",
+      "contractNumberPlaceholder": "e.g. VPBL-2024-00123",
+      "originalPrincipal": "Original principal",
+      "originalPrincipalPlaceholder": "e.g. 450,000,000",
+      "startDate": "Disbursement date",
+      "termMonths": "Loan term (months)",
+      "termMonthsPlaceholder": "e.g. 60",
+      "interestRate": "Fixed annual interest rate",
+      "interestRatePlaceholder": "e.g. 8.5",
+      "paymentDay": "Monthly payment due day",
+      "paymentDayPlaceholder": "e.g. 15",
+      "monthlyPrincipal": "Principal due each month",
+      "monthlyPrincipalPlaceholder": "e.g. 7,500,000",
+      "monthlyInterest": "Interest accrued each month",
+      "monthlyInterestPlaceholder": "e.g. 3,187,500",
+      "endDate": "Contract end date (if known)",
+      "interestMethod": "Interest calculation method",
+      "monthlyTotal": "Total due each month (principal + interest): {amount}"
+    },
+    "rented": {
+      "ownerTitle": "Owner information (lessor)",
+      "ownerName": "Owner / business name",
+      "ownerNamePlaceholder": "e.g. Nguyen Van A",
+      "ownerPhone": "Contact phone number",
+      "ownerPhonePlaceholder": "e.g. 0909 123 456",
+      "ownerEmail": "Owner email (optional)",
+      "ownerEmailPlaceholder": "e.g. nguyenvana@gmail.com",
+      "contractTitle": "Rental contract information",
+      "monthlyRent": "Recurring rent (VND)",
+      "monthlyRentPlaceholder": "e.g. 12,000,000",
+      "monthlyRentHelp": "Billed monthly",
+      "paymentDay": "Payment day each cycle",
+      "paymentDayPlaceholder": "e.g. 5",
+      "startDate": "Contract start date",
+      "endDate": "Contract end date"
+    },
+    "partnership": {
+      "ownerTitle": "Partner information (consigning owner)",
+      "ownerName": "Owning partner's full name",
+      "ownerNamePlaceholder": "e.g. Tran Thi B",
+      "ownerPhone": "Phone number",
+      "ownerPhonePlaceholder": "e.g. 0912 999 888",
+      "ownerEmail": "Email address for reconciliation",
+      "ownerEmailPlaceholder": "e.g. tranthib@gmail.com",
+      "termsTitle": "Partnership terms & revenue sharing",
+      "commission": "Share of revenue paid to the owner",
+      "commissionPlaceholder": "e.g. 30",
+      "shopShare": "The shop keeps: <b>{percent}</b>",
+      "startDate": "Contract effective date",
+      "endDate": "Contract end date",
+      "formula": "Formula: shared revenue = rent after discount. Excludes refundable deposits, delivery fees, overtime fees, damage penalties and other amounts collected on behalf of others."
+    }
   }
 }

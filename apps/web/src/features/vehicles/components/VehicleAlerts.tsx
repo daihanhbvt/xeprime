@@ -3,15 +3,14 @@
 import { Tag } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   VEHICLE_ALERT_PRIMARY_LIMIT,
   VEHICLE_ALERT_SEVERITY,
   VEHICLE_ALERT_SEVERITY_COLOR,
-  VEHICLE_ALERT_SEVERITY_LABEL,
-  VEHICLE_ALERT_SHORT_LABEL,
-  type VehicleAlertKind,
   type VehicleAlertSeverity,
 } from '@xeprime/types';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import type { VehicleAlertItem } from '../types';
 import styles from './VehicleAlerts.module.css';
 
@@ -24,12 +23,18 @@ import styles from './VehicleAlerts.module.css';
  * Màu không bao giờ là kênh thông tin duy nhất: mỗi mục đều có NHÃN CHỮ, và mức nghiêm trọng
  * còn được nói ra trong tên khả truy cập. Vàng là màu thương hiệu/hành động của XePrime nên
  * `warning` dùng cam — xem `VEHICLE_ALERT_SEVERITY_COLOR`.
+ *
+ * `title`/`detail` của cảnh báo là CÂU do backend dựng (tiếng Việt) — chúng đi qua đây nguyên
+ * văn. Nhãn ngắn và mức nghiêm trọng thì dịch được, vì đó là từ vựng đóng nằm ở `Domain`.
  */
 export function VehicleAlertChips({ alerts }: { alerts: VehicleAlertItem[] }) {
+  const t = useTranslations('Vehicles.alerts');
+  const domainLabel = useDomainLabel();
+
   if (alerts.length === 0) return null;
 
   return (
-    <ul className={styles.chips} aria-label="Cảnh báo của xe">
+    <ul className={styles.chips} aria-label={t('chipsLabel')}>
       {alerts.map((alert) => {
         const severity = alert.severity as VehicleAlertSeverity;
         return (
@@ -38,9 +43,12 @@ export function VehicleAlertChips({ alerts }: { alerts: VehicleAlertItem[] }) {
               color={VEHICLE_ALERT_SEVERITY_COLOR[severity]}
               className={styles.chip}
               // Nhãn ngắn cho mắt, nhãn đầy đủ cho trình đọc màn hình.
-              aria-label={`${VEHICLE_ALERT_SEVERITY_LABEL[severity]}: ${alert.title}`}
+              aria-label={t('severityWithTitle', {
+                severity: domainLabel('vehicleAlertSeverity', severity),
+                title: alert.title,
+              })}
             >
-              {VEHICLE_ALERT_SHORT_LABEL[alert.kind as VehicleAlertKind] ?? alert.title}
+              {domainLabel('vehicleAlertShort', alert.kind, alert.title)}
               {alert.count && alert.count > 1 ? ` (${alert.count})` : ''}
             </Tag>
           </li>
@@ -55,10 +63,12 @@ export function VehicleAlertChips({ alerts }: { alerts: VehicleAlertItem[] }) {
  * `Xem tất cả` (§3 Wave 8). Ba việc đó luôn là ba việc ưu tiên cao nhất vì server đã sắp sẵn.
  */
 export function VehicleAlertList({ alerts }: { alerts: VehicleAlertItem[] }) {
+  const t = useTranslations('Vehicles.alerts');
+  const domainLabel = useDomainLabel();
   const [expanded, setExpanded] = useState(false);
 
   if (alerts.length === 0) {
-    return <p className={styles.empty}>Không có việc cần làm.</p>;
+    return <p className={styles.empty}>{t('empty')}</p>;
   }
 
   const visible = expanded ? alerts : alerts.slice(0, VEHICLE_ALERT_PRIMARY_LIMIT);
@@ -89,7 +99,9 @@ export function VehicleAlertList({ alerts }: { alerts: VehicleAlertItem[] }) {
                   ) : null}
                 </span>
                 {/* Mức nghiêm trọng nói bằng CHỮ, không chỉ bằng màu chấm. */}
-                <span className={styles.severity}>{VEHICLE_ALERT_SEVERITY_LABEL[severity]}</span>
+                <span className={styles.severity}>
+                  {domainLabel('vehicleAlertSeverity', severity)}
+                </span>
                 {alert.detail ? <span className={styles.detail}>{alert.detail}</span> : null}
               </span>
             </li>
@@ -98,7 +110,7 @@ export function VehicleAlertList({ alerts }: { alerts: VehicleAlertItem[] }) {
       </ul>
       {hidden > 0 ? (
         <button type="button" className={styles.moreButton} onClick={() => setExpanded(true)}>
-          Xem tất cả ({alerts.length})
+          {t('viewAll', { count: alerts.length })}
         </button>
       ) : null}
     </>

@@ -84,6 +84,14 @@ export interface AppFormat {
   /** Câu mô tả nguyện vọng nhận xe của khách thuê dài hạn. */
   pickupWish: (wish: PickupWish) => string;
 
+  /**
+   * Danh sách dịch vụ của một xe: `Tự lái · Có tài xế` · `Self-drive · With driver`.
+   *
+   * Thay cho `serviceTypesLabel` của `@xeprime/types` ở phía web — hàm đó trả nhãn tiếng Việt
+   * cố định (apps/api vẫn dùng nó cho email/thông báo). Mã trong mảng KHÔNG đổi, chỉ nhãn dịch.
+   */
+  serviceTypes: (values: readonly string[] | null | undefined) => string;
+
   /** Số nguyên có phân tách nhóm. */
   count: (value: number) => string;
   /** Điểm đánh giá một chữ số thập phân: `4,8` · `4.8`. */
@@ -105,6 +113,12 @@ export const DATE_PATTERN: Readonly<
   vi: { date: 'DD/MM/YYYY', dateTime: 'DD/MM/YYYY HH:mm', dayMonth: 'DD/MM' },
   en: { date: 'MM/DD/YYYY', dateTime: 'MM/DD/YYYY HH:mm', dayMonth: 'MM/DD' },
 };
+
+/**
+ * Dấu ngăn giữa các nhãn dịch vụ. Là KÝ HIỆU, không phải chữ — giống nhau ở mọi ngôn ngữ, nên
+ * nó nằm trong mã chứ không nằm trong bó message (dịch một dấu chấm giữa là việc vô nghĩa).
+ */
+const SERVICE_SEPARATOR = ' · ';
 
 /** Hoa chữ cái đầu theo luật của chính chuỗi đó — `toLocaleUpperCase` an toàn với tiếng Việt. */
 function capitalizeFirst(text: string): string {
@@ -272,6 +286,11 @@ export function createAppFormat(
         });
       }
       return t('units.pickupWishShopDecides');
+    },
+
+    serviceTypes: (values) => {
+      if (!values || values.length === 0) return t('labels.emptyValue');
+      return values.map((value) => domainLabel('serviceType', value)).join(SERVICE_SEPARATOR);
     },
 
     count: (value) => format.number(value, 'integer'),

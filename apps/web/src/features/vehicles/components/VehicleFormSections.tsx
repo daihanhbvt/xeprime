@@ -3,19 +3,17 @@
 import { BankOutlined, HomeOutlined, KeyOutlined, TeamOutlined } from '@ant-design/icons';
 import { Alert, Checkbox, Col, Radio, Row, Skeleton } from 'antd';
 import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Controller, useFormState, useWatch, type Control } from 'react-hook-form';
 import {
   CATALOG_TYPE,
   SERVICE_TYPE,
-  TRANSMISSION_TYPE_LABEL,
   TRANSMISSION_TYPE_VALUES,
   VEHICLE_TYPE,
-  VEHICLE_TYPE_LABEL,
   VEHICLE_SOURCE_TYPE,
-  VEHICLE_SOURCE_TYPE_LABEL,
   VEHICLE_SOURCE_TYPE_VALUES,
   vehicleFuelTypesFor,
-  type VehicleType,
+  type VehicleSourceType,
 } from '@xeprime/types';
 import type { VehicleFormValues } from '@xeprime/validators';
 import { CatalogCardPicker } from '@/features/catalog/components/CatalogCardPicker';
@@ -28,9 +26,10 @@ import { SelectField } from '@/components/form/SelectField';
 import { SwitchField } from '@/components/form/SwitchField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { presignVehicleImage } from '@/services/upload';
-import { OPERATION_STATUS_OPTIONS, SERVICE_TYPE_OPTIONS, VEHICLE_TYPE_OPTIONS } from '../constants';
-import { publishRequiredLabel } from './VehicleCompleteness';
+import { useVehicleOptions } from '../hooks/use-vehicle-options';
+import { PublishRequiredLabel } from './VehicleCompleteness';
 import styles from './VehicleForm.module.css';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -44,15 +43,16 @@ export type VehicleSectionKey = 'basic' | 'specs' | 'pricing' | 'media';
  * `fields` là danh sách tên trường của từng phần, dùng để validate **riêng bước đang mở** trước
  * khi cho đi tiếp. Không có nó thì "Tiếp tục" phải validate cả schema và người dùng bị chặn bởi
  * lỗi của một phần chưa mở ra.
+ *
+ * Chỉ có `fields` — tiêu đề của phần nằm ở message (`Vehicles.form.wizard.*` cho wizard tạo,
+ * `Vehicles.form.sections.*` cho các nhóm trong bước): một hằng module scope không dịch được.
  */
 export const VEHICLE_SECTIONS: ReadonlyArray<{
   key: VehicleSectionKey;
-  title: string;
   fields: ReadonlyArray<keyof VehicleFormValues>;
 }> = [
   {
     key: 'basic',
-    title: 'Thông tin cơ bản',
     fields: [
       'code',
       'name',
@@ -75,7 +75,6 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
   },
   {
     key: 'specs',
-    title: 'Thông số kỹ thuật',
     fields: [
       'lengthMm',
       'widthMm',
@@ -91,7 +90,6 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
   },
   {
     key: 'pricing',
-    title: 'Giá thuê & chính sách',
     fields: [
       'weekdayPrice',
       'weekendPrice',
@@ -104,7 +102,6 @@ export const VEHICLE_SECTIONS: ReadonlyArray<{
   },
   {
     key: 'media',
-    title: 'Hình ảnh, tiện ích & mô tả',
     fields: ['mainImageUrl', 'images', 'features', 'description'],
   },
 ];
@@ -130,37 +127,46 @@ const FIELDS_OF = Object.fromEntries(
  * không bắt chủ xe đi qua một bước tuỳ chọn trong lúc onboarding.
  *
  * Bước xác nhận không có trường nào để validate: nó tổng kết ba bước trước rồi gửi.
+ *
+ * Là HOOK, không hằng: cả ba nhãn của mỗi bước đều là chữ hiện cho người dùng.
  */
-export const CREATE_WIZARD_STEPS: readonly VehicleWizardStep[] = [
-  {
-    key: 'basic',
-    title: 'Cơ bản',
-    shortTitle: 'Cơ bản',
-    heading: '1. Thông tin cơ bản của xe',
-    fields: FIELDS_OF.basic,
-  },
-  {
-    key: 'pricing',
-    title: 'Giá & chính sách',
-    shortTitle: 'Giá',
-    heading: '2. Giá thuê & chính sách',
-    fields: FIELDS_OF.pricing,
-  },
-  {
-    key: 'media',
-    title: 'Hình ảnh',
-    shortTitle: 'Hình ảnh',
-    heading: '3. Hình ảnh, tiện ích & mô tả xe',
-    fields: FIELDS_OF.media,
-  },
-  {
-    key: 'review',
-    title: 'Xác nhận',
-    shortTitle: 'Xác nhận',
-    heading: '4. Xác nhận thông tin hồ sơ xe',
-    fields: [],
-  },
-];
+export function useCreateWizardSteps(): readonly VehicleWizardStep[] {
+  const t = useTranslations('Vehicles.form.wizard');
+
+  return useMemo(
+    () => [
+      {
+        key: 'basic',
+        title: t('basic.title'),
+        shortTitle: t('basic.shortTitle'),
+        heading: t('basic.heading'),
+        fields: FIELDS_OF.basic,
+      },
+      {
+        key: 'pricing',
+        title: t('pricing.title'),
+        shortTitle: t('pricing.shortTitle'),
+        heading: t('pricing.heading'),
+        fields: FIELDS_OF.pricing,
+      },
+      {
+        key: 'media',
+        title: t('media.title'),
+        shortTitle: t('media.shortTitle'),
+        heading: t('media.heading'),
+        fields: FIELDS_OF.media,
+      },
+      {
+        key: 'review',
+        title: t('review.title'),
+        shortTitle: t('review.shortTitle'),
+        heading: t('review.heading'),
+        fields: [],
+      },
+    ],
+    [t],
+  );
+}
 
 export interface SectionProps {
   control: Control<VehicleFormValues>;
@@ -184,6 +190,9 @@ export function BasicSection({
   branchLoading = false,
   branchDisabled = false,
 }: SectionProps) {
+  const t = useTranslations('Vehicles.form.basic');
+  const options = useVehicleOptions();
+
   return (
     <Row gutter={24}>
       {/* Thứ tự và nhãn theo Figma `193:1617`: Tên xe TRÁI, Mã xe PHẢI. */}
@@ -191,8 +200,8 @@ export function BasicSection({
         <TextField
           control={control}
           name="name"
-          label="Tên xe"
-          placeholder="Nhập tên xe (Ví dụ: Toyota Vios 2023)"
+          label={t('name')}
+          placeholder={t('namePlaceholder')}
           required
         />
       </Col>
@@ -200,9 +209,9 @@ export function BasicSection({
         <TextField
           control={control}
           name="code"
-          label="Mã xe"
-          placeholder="Hệ thống tự sinh nếu bỏ trống"
-          help="Mã định danh nội bộ, duy nhất trong gian hàng"
+          label={t('code')}
+          placeholder={t('codePlaceholder')}
+          help={t('codeHelp')}
           disabled={codeReadOnly}
         />
       </Col>
@@ -215,13 +224,13 @@ export function BasicSection({
         <SelectField
           control={control}
           name="branchId"
-          label="Chi nhánh giữ xe"
+          label={t('branch')}
           options={branchOptions}
           loading={branchLoading}
           disabled={branchDisabled}
           showSearch
           required
-          help="Quyết định xe hiển thị ở tỉnh/thành nào trên marketplace."
+          help={t('branchHelp')}
         />
       </Col>
       <Col xs={24} sm={12}>
@@ -233,8 +242,8 @@ export function BasicSection({
         <SelectField
           control={control}
           name="vehicleType"
-          label="Loại xe"
-          options={VEHICLE_TYPE_OPTIONS}
+          label={t('vehicleType')}
+          options={options.vehicleType}
           required
         />
       </Col>
@@ -243,11 +252,11 @@ export function BasicSection({
         <SelectField
           control={control}
           name="serviceTypes"
-          label="Loại dịch vụ"
-          options={SERVICE_TYPE_OPTIONS}
+          label={t('serviceTypes')}
+          options={options.serviceType}
           mode="multiple"
           required
-          help="Chọn được nhiều loại — khai giá riêng cho dài hạn/có tài xế ở bước giá thuê"
+          help={t('serviceTypesHelp')}
         />
       </Col>
       <Col xs={24}>
@@ -265,6 +274,8 @@ export function BasicSection({
  * định tách theo loại xe). Xe có chính sách riêng thì không ảnh hưởng — nói rõ cả hai vế.
  */
 function VehicleTypePolicyWarning({ control }: Pick<SectionProps, 'control'>) {
+  const t = useTranslations('Vehicles.form.warnings');
+  const domainLabel = useDomainLabel();
   const vehicleType = useWatch({ control, name: 'vehicleType' });
   const { defaultValues } = useFormState({ control });
   const initial = defaultValues?.vehicleType;
@@ -274,8 +285,8 @@ function VehicleTypePolicyWarning({ control }: Pick<SectionProps, 'control'>) {
     <Alert
       type="info"
       showIcon
-      message={`Đổi loại xe sang ${VEHICLE_TYPE_LABEL[vehicleType as VehicleType] ?? vehicleType}: xe sẽ kế thừa chính sách thuê mặc định của loại mới`}
-      description="Cọc, phí giao nhận, quá giờ và ưu đãi theo cấu hình của loại xe mới sẽ áp cho các lượt đặt tiếp theo (trừ khi xe đã có chính sách riêng)."
+      message={t('typePolicyTitle', { label: domainLabel('vehicleType', vehicleType) })}
+      description={t('typePolicyBody')}
     />
   );
 }
@@ -286,6 +297,7 @@ function VehicleTypePolicyWarning({ control }: Pick<SectionProps, 'control'>) {
  * báo trước; nút Lưu bấm sau khi đã thấy cảnh báo chính là xác nhận.
  */
 function ServicePriceRemovalWarning({ control }: Pick<SectionProps, 'control'>) {
+  const t = useTranslations('Vehicles.form.warnings');
   const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
   const monthlyPrice = useWatch({ control, name: 'monthlyPrice' });
   const withDriverDailyPrice = useWatch({ control, name: 'withDriverDailyPrice' });
@@ -294,7 +306,7 @@ function ServicePriceRemovalWarning({ control }: Pick<SectionProps, 'control'>) 
 
   const losses: string[] = [];
   if (!serviceTypes.includes(SERVICE_TYPE.LONG_TERM) && monthlyPrice != null) {
-    losses.push('giá tháng thuê dài hạn');
+    losses.push(t('lossMonthly'));
   }
   if (
     !serviceTypes.includes(SERVICE_TYPE.WITH_DRIVER) &&
@@ -302,16 +314,25 @@ function ServicePriceRemovalWarning({ control }: Pick<SectionProps, 'control'>) 
       withDriverInterCityPrice != null ||
       withDriverOneWayPrice != null)
   ) {
-    losses.push('bảng giá xe có tài xế');
+    losses.push(t('lossWithDriver'));
   }
   if (losses.length === 0) return null;
+
+  /*
+   * Nối bằng MESSAGE, không bằng `losses.join(' và ')`: liên từ là chữ, và tiếng Anh dùng
+   * "and" ở đúng chỗ này. Chỉ có tối đa hai mục nên không cần `Intl.ListFormat`.
+   */
+  const summary =
+    losses.length === 1
+      ? losses[0]!
+      : t('lossJoin', { first: losses[0]!, second: losses[1]! });
 
   return (
     <Alert
       type="warning"
       showIcon
-      message={`Bỏ dịch vụ sẽ xoá ${losses.join(' và ')} khi lưu`}
-      description="Thêm lại dịch vụ sau này sẽ phải nhập giá lại từ đầu."
+      message={t('priceRemovalTitle', { losses: summary })}
+      description={t('priceRemovalBody')}
     />
   );
 }
@@ -323,14 +344,17 @@ function ServicePriceRemovalWarning({ control }: Pick<SectionProps, 'control'>) 
  * client không bao giờ tự đặt `approved_public`, phải đi qua duyệt (lằn ranh bảo mật số 2).
  */
 export function StatusSection({ control }: Pick<SectionProps, 'control'>) {
+  const t = useTranslations('Vehicles.form.status');
+  const options = useVehicleOptions();
+
   return (
     <Row gutter={24}>
       <Col xs={24} sm={12}>
         <SelectField
           control={control}
           name="operationStatus"
-          label="Trạng thái vận hành"
-          options={OPERATION_STATUS_OPTIONS}
+          label={t('operationStatus')}
+          options={options.operationStatus}
           required
         />
       </Col>
@@ -340,19 +364,32 @@ export function StatusSection({ control }: Pick<SectionProps, 'control'>) {
 
 /** Wave 3 chỉ lưu loại nguồn xe. Các form tài chính/hợp đồng chi tiết thuộc tab Nguồn xe ở Wave 4. */
 export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
-  const iconOf = (value: (typeof VEHICLE_SOURCE_TYPE_VALUES)[number]) => {
+  const t = useTranslations('Vehicles.form.source');
+  const domainLabel = useDomainLabel();
+
+  const iconOf = (value: VehicleSourceType) => {
     if (value === VEHICLE_SOURCE_TYPE.OWNED) return <HomeOutlined />;
     if (value === VEHICLE_SOURCE_TYPE.FINANCED) return <BankOutlined />;
     if (value === VEHICLE_SOURCE_TYPE.RENTED) return <KeyOutlined />;
     return <TeamOutlined />;
   };
 
+  /*
+   * Bảng mô tả dựng TRONG component: nó cần bộ dịch của request. Liệt kê tường minh cả bốn
+   * nhánh (thay cho chuỗi ba toán tử ba ngôi trước đây) nên thêm một hình thức nguồn xe mới là
+   * lỗi biên dịch ngay tại đây, không phải một ô mô tả trống lúc chạy.
+   */
+  const description: Record<VehicleSourceType, string> = {
+    [VEHICLE_SOURCE_TYPE.OWNED]: t('owned'),
+    [VEHICLE_SOURCE_TYPE.FINANCED]: t('financed'),
+    [VEHICLE_SOURCE_TYPE.RENTED]: t('rented'),
+    [VEHICLE_SOURCE_TYPE.PARTNERSHIP]: t('partnership'),
+  };
+
   return (
     <fieldset className={styles.sourceFieldset}>
-      <legend className={styles.sourceLegend}>Hình thức nguồn xe *</legend>
-      <p className={styles.sourceDescription}>
-        Xác định phương thức quản lý tài chính và phân chia lợi nhuận của xe
-      </p>
+      <legend className={styles.sourceLegend}>{t('legend')}</legend>
+      <p className={styles.sourceDescription}>{t('description')}</p>
       <Controller
         control={control}
         name="sourceType"
@@ -369,16 +406,8 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
                     {iconOf(value)}
                   </span>
                   <span className={styles.sourceCopy}>
-                    <strong>{VEHICLE_SOURCE_TYPE_LABEL[value]}</strong>
-                    <small>
-                      {value === VEHICLE_SOURCE_TYPE.OWNED
-                        ? 'Xe thuộc quyền sở hữu của bạn'
-                        : value === VEHICLE_SOURCE_TYPE.FINANCED
-                          ? 'Đang trả góp qua ngân hàng'
-                          : value === VEHICLE_SOURCE_TYPE.RENTED
-                            ? 'Thuê từ chủ xe khác để kinh doanh'
-                            : 'Chủ xe ký gửi, chia doanh thu'}
-                    </small>
+                    <strong>{domainLabel('vehicleSourceType', value)}</strong>
+                    <small>{description[value]}</small>
                   </span>
                 </Radio>
               ))}
@@ -389,35 +418,34 @@ export function SourceTypeSection({ control }: Pick<SectionProps, 'control'>) {
           </>
         )}
       />
-      <Alert
-        className={styles.sourceHint}
-        type="info"
-        showIcon
-        message="Bạn sẽ hoàn thiện thông tin tài chính chi tiết sau khi tạo xe thành công."
-      />
+      <Alert className={styles.sourceHint} type="info" showIcon message={t('hint')} />
     </fieldset>
   );
 }
 
 /** Thông số mở rộng là tuỳ chọn và chỉ xuất hiện trong vùng thu gọn của workspace chỉnh sửa. */
 export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>) {
+  const t = useTranslations('Vehicles.form.advanced');
+  const tCommon = useTranslations('Common.labels');
+  const domainLabel = useDomainLabel();
+
   const transmissionOptions = TRANSMISSION_TYPE_VALUES.map((value) => ({
     value,
-    label: TRANSMISSION_TYPE_LABEL[value],
+    label: domainLabel('transmissionType', value),
   }));
 
   return (
     <div className={styles.advancedStack}>
       <section className={styles.subSection}>
-        <h3 className={styles.subSectionTitle}>Kích thước & Trọng lượng</h3>
-        <p className={styles.fieldHint}>Không bắt buộc</p>
+        <h3 className={styles.subSectionTitle}>{t('dimensionsTitle')}</h3>
+        <p className={styles.fieldHint}>{tCommon('optional')}</p>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <NumberField
               control={control}
               name="lengthMm"
-              label="Chiều dài (mm)"
-              placeholder="VD: 4630"
+              label={t('lengthMm')}
+              placeholder={t('lengthPlaceholder')}
               min={1}
             />
           </Col>
@@ -425,8 +453,8 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
             <NumberField
               control={control}
               name="widthMm"
-              label="Chiều rộng (mm)"
-              placeholder="VD: 1780"
+              label={t('widthMm')}
+              placeholder={t('widthPlaceholder')}
               min={1}
             />
           </Col>
@@ -434,8 +462,8 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
             <NumberField
               control={control}
               name="heightMm"
-              label="Chiều cao (mm)"
-              placeholder="VD: 1435"
+              label={t('heightMm')}
+              placeholder={t('heightPlaceholder')}
               min={1}
             />
           </Col>
@@ -443,22 +471,22 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
             <NumberField
               control={control}
               name="curbWeightKg"
-              label="Trọng lượng bản thân (kg)"
-              placeholder="VD: 1250"
+              label={t('curbWeightKg')}
+              placeholder={t('curbWeightPlaceholder')}
               min={1}
             />
           </Col>
         </Row>
       </section>
       <section className={styles.subSection}>
-        <h3 className={styles.subSectionTitle}>Động cơ & Vận hành</h3>
+        <h3 className={styles.subSectionTitle}>{t('engineTitle')}</h3>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <NumberField
               control={control}
               name="engineDisplacementCc"
-              label="Dung tích động cơ (cc)"
-              placeholder="VD: 1798"
+              label={t('engineDisplacementCc')}
+              placeholder={t('enginePlaceholder')}
               min={1}
             />
           </Col>
@@ -466,8 +494,8 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
             <NumberField
               control={control}
               name="horsepowerHp"
-              label="Công suất cực đại (HP)"
-              placeholder="VD: 138"
+              label={t('horsepowerHp')}
+              placeholder={t('horsepowerPlaceholder')}
               min={1}
             />
           </Col>
@@ -475,23 +503,23 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
             <SelectField
               control={control}
               name="transmission"
-              label="Hộp số"
+              label={t('transmission')}
               options={transmissionOptions}
               allowClear
-              placeholder="Chọn hộp số"
+              placeholder={t('transmissionPlaceholder')}
             />
           </Col>
         </Row>
       </section>
       <section className={styles.subSection}>
-        <h3 className={styles.subSectionTitle}>Mức tiêu thụ nhiên liệu (L/100km)</h3>
+        <h3 className={styles.subSectionTitle}>{t('consumptionTitle')}</h3>
         <Row gutter={16}>
           <Col xs={24} sm={8}>
             <NumberField
               control={control}
               name="fuelConsumptionCity"
-              label="Trong đô thị"
-              placeholder="VD: 8.5"
+              label={t('consumptionCity')}
+              placeholder={t('consumptionCityPlaceholder')}
               min={0}
             />
           </Col>
@@ -499,8 +527,8 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
             <NumberField
               control={control}
               name="fuelConsumptionHighway"
-              label="Ngoài đô thị"
-              placeholder="VD: 5.2"
+              label={t('consumptionHighway')}
+              placeholder={t('consumptionHighwayPlaceholder')}
               min={0}
             />
           </Col>
@@ -508,45 +536,48 @@ export function AdvancedSpecsSection({ control }: Pick<SectionProps, 'control'>)
             <NumberField
               control={control}
               name="fuelConsumptionCombined"
-              label="Kết hợp"
-              placeholder="VD: 6.5"
+              label={t('consumptionCombined')}
+              placeholder={t('consumptionCombinedPlaceholder')}
               min={0}
             />
           </Col>
         </Row>
       </section>
-      <Alert
-        type="info"
-        showIcon
-        message="Các thông số kỹ thuật giúp tăng khả năng tìm thấy xe; bạn có thể cập nhật sau."
-      />
+      <Alert type="info" showIcon message={t('hint')} />
     </div>
   );
 }
 
 export function SpecsSection({ control, isCar }: SectionProps) {
+  const t = useTranslations('Vehicles.form.specs');
+
   return (
     <Row gutter={16}>
       <Col xs={24} sm={12}>
         <TextField
           control={control}
           name="plateNumber"
-          label={publishRequiredLabel('Biển số xe')}
-          placeholder="VD: 51K-123.45"
-          help="Cần có trước khi gửi duyệt công khai lên sàn"
+          label={<PublishRequiredLabel label={t('plateNumber')} />}
+          placeholder={t('platePlaceholder')}
+          help={t('plateHelp')}
         />
       </Col>
       <Col xs={24} sm={12}>
         <BrandSelect control={control} />
       </Col>
       <Col xs={24} sm={12}>
-        <TextField control={control} name="model" label="Dòng xe (Model)" placeholder="VD: Vios" />
+        <TextField
+          control={control}
+          name="model"
+          label={t('model')}
+          placeholder={t('modelPlaceholder')}
+        />
       </Col>
       <Col xs={24} sm={12}>
         <NumberField
           control={control}
           name="manufactureYear"
-          label="Năm sản xuất"
+          label={t('manufactureYear')}
           placeholder={String(CURRENT_YEAR)}
           min={1980}
           max={CURRENT_YEAR + 1}
@@ -556,8 +587,8 @@ export function SpecsSection({ control, isCar }: SectionProps) {
         <NumberField
           control={control}
           name="seatCount"
-          label="Số chỗ ngồi"
-          placeholder="VD: 5"
+          label={t('seatCount')}
+          placeholder={t('seatPlaceholder')}
           min={1}
           max={64}
         />
@@ -572,8 +603,8 @@ export function SpecsSection({ control, isCar }: SectionProps) {
         <TextField
           control={control}
           name="color"
-          label="Màu sắc"
-          placeholder="VD: Trắng"
+          label={t('color')}
+          placeholder={t('colorPlaceholder')}
         />
       </Col>
       {isCar ? (
@@ -592,15 +623,16 @@ export function SpecsSection({ control, isCar }: SectionProps) {
  * "toyota " và "TOYOTA" thành ba hãng khác nhau. Giá trị lưu xuống là `key` của danh mục.
  */
 function BrandSelect({ control }: Pick<SectionProps, 'control'>) {
+  const t = useTranslations('Vehicles.form.specs');
   const current = useWatch({ control, name: 'brand' });
   const options = useCatalogOptions(CATALOG_TYPE.VEHICLE_BRAND, current);
   return (
     <SelectField
       control={control}
       name="brand"
-      label="Hãng xe"
+      label={t('brand')}
       options={options}
-      placeholder="Chọn hãng xe"
+      placeholder={t('brandPlaceholder')}
       allowClear
       showSearch
     />
@@ -611,6 +643,7 @@ function FuelTypeSelect({
   control,
   vehicleType,
 }: Pick<SectionProps, 'control'> & { vehicleType: string }) {
+  const t = useTranslations('Vehicles.form.specs');
   const current = useWatch({ control, name: 'fuelType' });
   const allOptions = useCatalogOptions(CATALOG_TYPE.FUEL_TYPE, current);
   const allowed = vehicleFuelTypesFor(vehicleType);
@@ -619,23 +652,16 @@ function FuelTypeSelect({
     <SelectField
       control={control}
       name="fuelType"
-      label="Nhiên liệu"
+      label={t('fuelType')}
       options={options}
       placeholder={
-        vehicleType === VEHICLE_TYPE.CAR ? 'Xăng, dầu, điện hoặc hybrid' : 'Xăng hoặc điện'
+        vehicleType === VEHICLE_TYPE.CAR ? t('fuelPlaceholderCar') : t('fuelPlaceholderMotorbike')
       }
       allowClear
     />
   );
 }
 
-/**
- * Kiểu dáng xe — thẻ có ảnh thay vì dropdown chữ.
- *
- * Đây chính là chiều "Loại xe" khách dùng để lọc ngoài chợ, nên chọn sai là xe không ai tìm
- * thấy; ảnh minh hoạ làm việc chọn tường minh hơn hẳn danh sách "CUV / SUV / MPV" bằng chữ.
- * Cùng component với bộ lọc marketplace (`CatalogCardPicker`) nên hai màn không thể lệch ảnh.
- */
 /** Tiện ích — cùng danh mục `vehicle_feature` mà bộ lọc ngoài chợ dùng. */
 function FeaturesSelect({ control }: Pick<SectionProps, 'control'>) {
   const { items } = useCatalogItems(CATALOG_TYPE.VEHICLE_FEATURE);
@@ -665,15 +691,23 @@ function FeaturesSelect({ control }: Pick<SectionProps, 'control'>) {
   );
 }
 
+/**
+ * Kiểu dáng xe — thẻ có ảnh thay vì dropdown chữ.
+ *
+ * Đây chính là chiều "Loại xe" khách dùng để lọc ngoài chợ, nên chọn sai là xe không ai tìm
+ * thấy; ảnh minh hoạ làm việc chọn tường minh hơn hẳn danh sách "CUV / SUV / MPV" bằng chữ.
+ * Cùng component với bộ lọc marketplace (`CatalogCardPicker`) nên hai màn không thể lệch ảnh.
+ */
 function BodyTypePicker({ control }: Pick<SectionProps, 'control'>) {
+  const t = useTranslations('Vehicles.form.specs');
   const { items, isLoading } = useCatalogItems(CATALOG_TYPE.BODY_TYPE);
 
   return (
     <div className={styles.galleryBlock}>
       <div className={styles.fieldLabel} id="vehicle-body-type-label">
-        Kiểu dáng xe
+        {t('bodyType')}
       </div>
-      <div className={styles.fieldHint}>Giúp khách lọc xe trên chợ. Bấm lại để bỏ chọn.</div>
+      <div className={styles.fieldHint}>{t('bodyTypeHint')}</div>
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 2 }} title={false} />
       ) : (
@@ -682,7 +716,7 @@ function BodyTypePicker({ control }: Pick<SectionProps, 'control'>) {
           name="bodyType"
           render={({ field }) => (
             <CatalogCardPicker
-              ariaLabel="Kiểu dáng xe"
+              ariaLabel={t('bodyType')}
               items={items}
               value={field.value ? [field.value] : []}
               onChange={(next) => field.onChange(next[0] ?? null)}
@@ -718,6 +752,7 @@ export function PricesSection({
   control,
   pricePreview,
 }: SectionProps & { pricePreview: React.ReactNode }) {
+  const t = useTranslations('Vehicles.form.prices');
   // Ô giá dài hạn/có tài xế chỉ hiện khi xe ĐĂNG dịch vụ đó (bước Cơ bản) — không bắt shop
   // nhìn hai ô giá vô nghĩa với xe chỉ tự lái.
   const serviceTypes = useWatch({ control, name: 'serviceTypes' }) ?? [];
@@ -734,30 +769,30 @@ export function PricesSection({
           <NumberField
             control={control}
             name="weekdayPrice"
-            label={publishRequiredLabel('Giá ngày thường')}
-            placeholder="VD: 600.000"
+            label={<PublishRequiredLabel label={t('weekday')} />}
+            placeholder={t('weekdayPlaceholder')}
             min={0}
             money
-            help="Giá cho ngày trong tuần. Cần có trước khi gửi duyệt."
+            help={t('weekdayHelp')}
           />
         </Col>
         <Col xs={24} sm={12}>
           <NumberField
             control={control}
             name="weekendPrice"
-            label="Giá cuối tuần"
-            placeholder="VD: 750.000"
+            label={t('weekend')}
+            placeholder={t('weekendPlaceholder')}
             min={0}
             money
-            help="Để trống nếu cùng giá ngày thường"
+            help={t('weekendHelp')}
           />
         </Col>
         <Col xs={24} sm={12}>
           <NumberField
             control={control}
             name="hourlyPrice"
-            label="Giá thuê theo giờ"
-            placeholder="Bỏ trống nếu không cho thuê giờ"
+            label={t('hourly')}
+            placeholder={t('hourlyPlaceholder')}
             min={0}
             money
           />
@@ -766,10 +801,10 @@ export function PricesSection({
           <NumberField
             control={control}
             name="discountPercent"
-            label="Giảm giá đang chạy"
-            placeholder="VD: 10"
+            label={t('discountPercent')}
+            placeholder={t('discountPlaceholder')}
             percent
-            help="Giá sau giảm sẽ hiển thị trên marketplace"
+            help={t('discountHelp')}
           />
         </Col>
         {offersLongTerm ? (
@@ -778,11 +813,11 @@ export function PricesSection({
               <NumberField
                 control={control}
                 name="monthlyPrice"
-                label={publishRequiredLabel('Giá tháng (thuê dài hạn)')}
-                placeholder="VD: 9.000.000"
+                label={<PublishRequiredLabel label={t('monthly')} />}
+                placeholder={t('monthlyPlaceholder')}
                 min={0}
                 money
-                help="Ước tính cho khách = số ngày × giá tháng ÷ 30. Cần có trước khi gửi duyệt."
+                help={t('monthlyHelp')}
               />
             </Col>
             <Col xs={24}>
@@ -801,33 +836,33 @@ export function PricesSection({
               <NumberField
                 control={control}
                 name="withDriverDailyPrice"
-                label={publishRequiredLabel('Giá/ngày có tài xế — nội thành')}
-                placeholder="VD: 1.500.000"
+                label={<PublishRequiredLabel label={t('withDriverDaily')} />}
+                placeholder={t('withDriverDailyPlaceholder')}
                 min={0}
                 money
-                help="Đã gồm tài xế (giá cơ bản). Cần có trước khi gửi duyệt."
+                help={t('withDriverDailyHelp')}
               />
             </Col>
             <Col xs={24} sm={12}>
               <NumberField
                 control={control}
                 name="withDriverInterCityPrice"
-                label="Giá/ngày có tài xế — liên tỉnh"
-                placeholder="VD: 1.800.000"
+                label={t('withDriverInterCity')}
+                placeholder={t('withDriverInterCityPlaceholder')}
                 min={0}
                 money
-                help="Khứ hồi; bỏ trống = tạm tính theo giá nội thành"
+                help={t('withDriverInterCityHelp')}
               />
             </Col>
             <Col xs={24} sm={12}>
               <NumberField
                 control={control}
                 name="withDriverOneWayPrice"
-                label="Giá/ngày có tài xế — 1 chiều"
-                placeholder="VD: 2.200.000"
+                label={t('withDriverOneWay')}
+                placeholder={t('withDriverOneWayPlaceholder')}
                 min={0}
                 money
-                help="Liên tỉnh một chiều; bỏ trống = tạm tính theo bậc gần nhất"
+                help={t('withDriverOneWayHelp')}
               />
             </Col>
           </>
@@ -840,13 +875,15 @@ export function PricesSection({
 }
 
 export function PoliciesSection({ control }: SectionProps) {
+  const t = useTranslations('Vehicles.form.policies');
+
   return (
     <div className={styles.policyBlock}>
       <SwitchField
         control={control}
         name="deliveryEnabled"
-        label="Giao xe tận nơi"
-        description="Khách trên marketplace lọc được xe có hỗ trợ giao nhận"
+        label={t('delivery')}
+        description={t('deliveryDescription')}
       />
     </div>
   );
@@ -863,19 +900,21 @@ export function MediaSection({ control, isCar }: SectionProps) {
 }
 
 export function ImagesSection({ control }: SectionProps) {
+  const t = useTranslations('Vehicles.form.media');
+
   return (
     <>
       <ImageUploadField
         control={control}
         name="mainImageUrl"
-        label={publishRequiredLabel('Ảnh đại diện')}
+        label={<PublishRequiredLabel label={t('mainImage')} />}
         presign={presignVehicleImage}
       />
 
       <ImageGalleryField
         control={control}
         name="images"
-        label="Thư viện ảnh"
+        label={t('gallery')}
         presign={presignVehicleImage}
         max={20}
       />
@@ -884,11 +923,13 @@ export function ImagesSection({ control }: SectionProps) {
 }
 
 export function FeaturesDescriptionSection({ control }: SectionProps) {
+  const t = useTranslations('Vehicles.form.media');
+
   return (
     <>
       <div className={styles.galleryBlock}>
         <div className={styles.fieldLabel} id="vehicle-features-label">
-          Tiện ích trên xe
+          {t('features')}
         </div>
         <FeaturesSelect control={control} />
       </div>
@@ -897,53 +938,12 @@ export function FeaturesDescriptionSection({ control }: SectionProps) {
         <TextAreaField
           control={control}
           name="description"
-          label={publishRequiredLabel('Mô tả')}
-          placeholder="Mô tả tình trạng, trang bị, điều kiện thuê…"
+          label={<PublishRequiredLabel label={t('description')} />}
+          placeholder={t('descriptionPlaceholder')}
           maxLength={4000}
           rows={5}
         />
       </div>
     </>
   );
-}
-
-/** Dòng tóm tắt của phần đã điền, hiện ở hàng thu gọn (Figma `60:219`). */
-export function sectionSummary(
-  key: VehicleSectionKey,
-  values: VehicleFormValues,
-  labels: { vehicleType: string; serviceType: string; bodyType: string; fuelType: string },
-): string {
-  const join = (parts: Array<string | number | null | undefined>) =>
-    parts.filter((part) => part !== null && part !== undefined && part !== '').join(' · ');
-
-  switch (key) {
-    case 'basic':
-      return join([
-        values.name,
-        values.code && `Mã: ${values.code}`,
-        labels.vehicleType,
-        labels.serviceType,
-      ]);
-    case 'specs':
-      return (
-        join([
-          values.plateNumber,
-          labels.bodyType,
-          values.seatCount ? `${values.seatCount} chỗ` : null,
-          labels.fuelType,
-        ]) || 'Chưa nhập thông tin kỹ thuật'
-      );
-    case 'pricing':
-      return (
-        join([
-          values.weekdayPrice ? `${values.weekdayPrice.toLocaleString('vi-VN')} ₫/ngày` : null,
-          values.discountPercent ? `giảm ${values.discountPercent}%` : null,
-        ]) || 'Chưa nhập giá'
-      );
-    default:
-      return join([
-        values.mainImageUrl ? 'Có ảnh đại diện' : 'Chưa có ảnh đại diện',
-        `${values.images?.length ?? 0} ảnh thư viện`,
-      ]);
-  }
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
 import styles from './VehicleCompleteness.module.css';
@@ -30,32 +31,39 @@ export function PublishRequiredMark() {
  * Dấu `●` là `aria-hidden`, nên phần chữ trong ngoặc mới là thứ trình đọc màn hình đọc được —
  * không được bỏ nó đi để "cho gọn", nếu không người dùng screen reader mất hoàn toàn thông tin
  * mà người dùng nhìn thấy đang có.
+ *
+ * Là COMPONENT, không phải hàm trả `ReactNode`: phần chữ cho trình đọc màn hình phải dịch
+ * được, và chỉ component mới gọi được hook dịch. Nơi gọi truyền `label` đã dịch sẵn.
  */
-export function publishRequiredLabel(label: string): ReactNode {
+export function PublishRequiredLabel({ label }: { label: ReactNode }) {
+  const t = useTranslations('Vehicles.completeness');
+
   return (
     <span className={styles.label}>
       {label}
       <PublishRequiredMark />
-      <span className={styles.srOnly}> (cần cho duyệt công khai)</span>
+      <span className={styles.srOnly}>{t('publishRequiredSr')}</span>
     </span>
   );
 }
 
 /** Chú giải hai giai đoạn, đặt đầu form tạo/sửa (Figma `60:70`). */
 export function CompletenessLegend() {
+  const t = useTranslations('Vehicles.completeness');
+
   return (
     <div className={styles.legend}>
-      <p className={styles.legendTitle}>Mô hình hoàn thiện thông tin xe hai giai đoạn</p>
+      <p className={styles.legendTitle}>{t('legendTitle')}</p>
       <ul className={styles.legendItems}>
         <li>
           <span className={styles.required} aria-hidden="true">
             *
           </span>
-          Thông tin bắt buộc (cần thiết để lưu xe nội bộ)
+          {t('requiredItem')}
         </li>
         <li>
           <PublishRequiredMark />
-          Cần bổ sung trước khi gửi duyệt công khai lên sàn
+          {t('publishItem')}
         </li>
       </ul>
     </div>
