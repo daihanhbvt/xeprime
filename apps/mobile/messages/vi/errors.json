@@ -1,0 +1,20 @@
+{
+  "fallback": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+  "code": {
+    "CLIENT_NETWORK_ERROR": "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+    "CLIENT_TIMEOUT": "Máy chủ phản hồi quá lâu. Thử lại giúp bạn nhé.",
+    "UNAUTHENTICATED": "Bạn cần đăng nhập để tiếp tục.",
+    "SESSION_EXPIRED": "Phiên đăng nhập đã hết hạn. Đăng nhập lại giúp bạn nhé.",
+    "INVALID_CREDENTIALS": "Email/số điện thoại hoặc mật khẩu không đúng.",
+    "ACCOUNT_LOCKED": "Tài khoản đang bị khoá. Liên hệ hỗ trợ để mở lại.",
+    "FORBIDDEN": "Bạn không có quyền thực hiện thao tác này.",
+    "MISSING_PERMISSION": "Bạn không có quyền thực hiện thao tác này.",
+    "NO_TENANT_SCOPE": "Tài khoản chưa thuộc gian hàng nào.",
+    "TENANT_NOT_ACTIVE": "Gian hàng chưa được kích hoạt.",
+    "VALIDATION_FAILED": "Dữ liệu chưa hợp lệ. Kiểm tra lại các ô đã nhập.",
+    "NOT_FOUND": "Không tìm thấy dữ liệu.",
+    "CONFLICT": "Dữ liệu vừa thay đổi ở nơi khác. Tải lại rồi thử lại.",
+    "RATE_LIMITED": "Bạn thao tác quá nhanh. Đợi một lát rồi thử lại.",
+    "INTERNAL_ERROR": "Máy chủ đang gặp sự cố. Thử lại sau giúp bạn nhé."
+  }
+}

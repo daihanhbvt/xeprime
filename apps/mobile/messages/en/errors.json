@@ -1,0 +1,20 @@
+{
+  "fallback": "Something went wrong. Please try again.",
+  "code": {
+    "CLIENT_NETWORK_ERROR": "Cannot reach the server. Check your connection and try again.",
+    "CLIENT_TIMEOUT": "The server took too long to respond. Please try again.",
+    "UNAUTHENTICATED": "You need to sign in to continue.",
+    "SESSION_EXPIRED": "Your session has expired. Please sign in again.",
+    "INVALID_CREDENTIALS": "That email/phone or password is incorrect.",
+    "ACCOUNT_LOCKED": "This account is locked. Contact support to unlock it.",
+    "FORBIDDEN": "You do not have permission to do this.",
+    "MISSING_PERMISSION": "You do not have permission to do this.",
+    "NO_TENANT_SCOPE": "This account does not belong to any shop yet.",
+    "TENANT_NOT_ACTIVE": "This shop is not active yet.",
+    "VALIDATION_FAILED": "Some fields are not valid. Please review them.",
+    "NOT_FOUND": "Data not found.",
+    "CONFLICT": "This data just changed elsewhere. Reload and try again.",
+    "RATE_LIMITED": "You are going too fast. Wait a moment and try again.",
+    "INTERNAL_ERROR": "The server is having trouble. Please try again later."
+  }
+}

@@ -3,6 +3,8 @@ dist
 build
 .next
 .turbo
+.expo
+apps/mobile/expo-env.d.ts
 coverage
 pnpm-lock.yaml
 prisma/generated
