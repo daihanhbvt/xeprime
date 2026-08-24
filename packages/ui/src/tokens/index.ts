@@ -1,0 +1,334 @@
+/**
+ * Design token của XePrime — nguồn DUY NHẤT cho mọi client (ADR 0003).
+ *
+ * File này thuần TypeScript, không import gì của trình duyệt hay React: web tiêu thụ qua
+ * `antdTheme` + `tokens.css` (cùng package), app native (Expo/RN) đọc thẳng giá trị —
+ * màu là chuỗi hex/rgba dùng được nguyên vẹn trong StyleSheet, kích thước `px` quy về số
+ * bằng `toPx()` (đúng cách `XP_METRICS`/`XP_BREAKPOINTS` đang làm).
+ *
+ * Chuyển từ `apps/web/src/styles/theme.ts` ngày 24/08/2026 — nội dung giữ NGUYÊN VĂN để
+ * không đổi một giá trị nào đang hiển thị. Docblock gốc bên dưới.
+ */
+
+/**
+ * Nguồn chốt cho design token của XePrime — ADR 0003.
+ *
+ * Giá trị lấy từ **Figma section 01 “XePrime Foundations”** (`14:2`), đọc ở cấp node trong
+ * Wave 1A. File Figma KHÔNG dùng Figma Variables — mỗi token là một swatch frame tự ghi mã màu.
+ *
+ * ⚠️ Trong cùng file Figma tồn tại HAI bộ giá trị (xem `docs/design-token-map.md`
+ * §21 P15): Foundations `14:*` và các component `XePrime/*` cấp page. Hợp đồng nguồn sự thật ở
+ * `docs/design-token-map.md` §21 P15 quy định **Foundations thắng về GIÁ TRỊ
+ * token**, component definition chỉ thắng về hợp đồng biến thể. Không tự đổi sang bộ kia.
+ *
+ * Mỗi key ở đây tương ứng đúng một CSS custom property `--xp-<key>` trong `tokens.css`.
+ * `theme.test.ts` so sánh hai file: lệch một token là test đỏ, không phải đợi phát hiện
+ * bằng mắt trên UI. Giá trị luôn là chuỗi CSS; chỗ AntD cần number thì đi qua `toPx()`.
+ *
+ * Token nào đánh dấu DEPRECATED ở cuối file là bí danh giữ cho code cũ — chúng trỏ bằng
+ * `var()` về token canonical, nên KHÔNG có hai nguồn giá trị. Đích gỡ bỏ ghi ở
+ * `docs/design-token-map.md`.
+ */
+export const XP_TOKENS = {
+  // ─── Thương hiệu ──────────────────────────────────────────────────────────
+  // Gold XePrime. `primary-active` tái dùng sắc gold đậm đã có trong hệ (không có
+  // trong Foundations, và không tự chế màu mới).
+  'color-primary': '#d6a02c', // 14:9
+  'color-primary-hover': '#c4920f', // 14:13
+  'color-primary-active': '#a9761a',
+  'color-primary-light': '#fdf6e3', // 14:17 — nền gold rất nhạt
+  'color-primary-contrast': '#2a2318', // 14:21 — chữ ĐEN trên nền gold, không phải trắng
+
+  // ─── Bề mặt ───────────────────────────────────────────────────────────────
+  'color-bg': '#faf9f7', // 14:26 — nền trang
+  'color-bg-container': '#ffffff',
+  'color-bg-elevated': '#ffffff', // 14:30
+  'color-bg-muted': '#f5f3ef', // 14:34 — header bảng, ô disabled
+  'color-bg-selected': '#fdf6e3',
+  'color-bg-overlay': 'rgba(26, 26, 26, 0.45)', // lớp phủ sau modal/drawer
+
+  // ─── Chữ ──────────────────────────────────────────────────────────────────
+  'color-text': '#1a1a1a', // 14:46
+  'color-text-secondary': '#6b6560', // 14:50
+  'color-text-tertiary': '#9e9890', // 14:54
+  // Foundations không định nghĩa màu chữ disabled. Dùng đúng tỉ lệ AntD áp cho
+  // `colorTextBase` (25%) để CSS Module và AntD ra cùng một màu.
+  'color-text-disabled': 'rgba(26, 26, 26, 0.25)',
+  'color-text-inverse': '#e8e4dd', // 14:96 — chữ trên bề mặt tối
+  // Figma Foundations KHÔNG định nghĩa màu link. Hai token này soi lại đúng giá trị AntD
+  // đang dẫn xuất từ `colorInfo` — tức hành vi hiện tại, không phải quyết định thiết kế mới.
+  // Vì vậy `antdTheme` cố tình KHÔNG set `colorLink`: AntD vẫn là nơi dẫn xuất. Xem P19.
+  'color-link': '#2563eb',
+  'color-link-hover': '#7aadff',
+
+  // ─── Viền ─────────────────────────────────────────────────────────────────
+  'color-border': '#e8e4dd', // 14:38
+  'color-border-strong': '#d4cfc6', // 14:42
+  // Foundations chỉ có 2 bậc viền. Bậc “mảnh hơn” tái dùng tông `color-bg-muted`
+  // (14:34) thay vì chế giá trị mới — ghi ở docs/design-token-map.md §2.
+  'color-border-subtle': '#f5f3ef',
+  'color-border-focus': '#d6a02c',
+  'color-border-disabled': '#e8e4dd',
+
+  // ─── Tương tác ────────────────────────────────────────────────────────────
+  'color-bg-hover': 'rgba(120, 90, 20, 0.05)',
+  'color-bg-active': 'rgba(120, 90, 20, 0.1)',
+  'disabled-opacity': '0.6', // 14:199 — “60% opacity + muted bg + no pointer events”
+
+  // ─── Trạng thái nghiệp vụ ─────────────────────────────────────────────────
+  // Bốn màu này TÁCH KHỎI gold thương hiệu: gold không bao giờ mang nghĩa
+  // success/warning/error (CLAUDE.md §5, quy tắc Wave 1A §8).
+  'color-success': '#16a34a', // 14:59
+  'color-success-bg': '#f0fdf4', // 14:63
+  'color-warning': '#e07b26', // 14:67
+  'color-warning-bg': '#fff7ed', // 14:71
+  'color-error': '#dc2626', // 14:75
+  'color-error-bg': '#fef2f2', // 14:79
+  'color-info': '#2563eb', // 14:83
+  'color-info-bg': '#eff6ff', // 14:87
+  'color-neutral': '#6b6560',
+  'color-neutral-bg': '#f5f3ef',
+  // Cam san hô dành riêng cho tag khuyến mãi — giảm giá không mang nghĩa error/warning.
+  'color-discount': '#ff5a2c',
+  'color-discount-contrast': '#ffffff',
+  /**
+   * Màu của SỐ TIỀN khách phải trả — một màu duy nhất cho mọi giá cuối cùng trong app
+   * (tổng dự kiến, giá niêm yết của xe, tổng đơn…).
+   *
+   * Trước đây mỗi màn tự chọn: bảng breakdown tô tổng bằng `color-success` (xanh = "thành
+   * công", không phải "tiền"), overlay đặt xe để tổng màu chữ thường, còn thẻ xe lại dùng
+   * gold. Cùng một con số mang ba nghĩa màu khác nhau.
+   *
+   * Dẫn xuất từ `color-primary-active` chứ không phải `color-primary`: gold sáng #d6a02c chỉ
+   * đạt 2.4:1 trên nền trắng — không đọc nổi ở cỡ chữ tiền. Gold đậm đạt 3.9:1, qua ngưỡng
+   * AA cho chữ lớn/đậm, mà vẫn là sắc thương hiệu.
+   *
+   * KHÔNG dùng cho: giá gạch ngang (khuyến mãi), số tiền phụ/tham chiếu, và tiền mang nghĩa
+   * thu/chi ở tuyến tài chính — những chỗ đó màu đang nói một điều khác.
+   */
+  'color-price': 'var(--xp-color-primary-active)',
+
+  // ─── Vỏ portal ────────────────────────────────────────────────────────────
+  // P1 đã chốt "TỐI" (07/08/2026) và Wave 1D-B đã áp dụng.
+  'shell-sidebar-bg': '#1e1b16', // 14:92
+  'shell-sidebar-text': '#e8e4dd', // 14:96
+  'shell-sidebar-active': '#d6a02c', // 14:100
+  // Dẫn xuất, KHÔNG phải màu mới: Foundations chỉ cho 3 màu sidebar, nền tối còn cần
+  // hover / nền mục chọn / chữ mờ / đường kẻ. Giữ `color-mix` thay vì hex tính sẵn để
+  // ba màu gốc vẫn là nguồn duy nhất. Tương phản của cả bốn đã đo trong `theme.test.ts`.
+  'shell-sidebar-hover':
+    'color-mix(in srgb, var(--xp-shell-sidebar-text) 8%, var(--xp-shell-sidebar-bg))',
+  'shell-sidebar-selected-bg':
+    'color-mix(in srgb, var(--xp-shell-sidebar-active) 14%, var(--xp-shell-sidebar-bg))',
+  'shell-sidebar-muted':
+    'color-mix(in srgb, var(--xp-shell-sidebar-text) 62%, var(--xp-shell-sidebar-bg))',
+  'shell-sidebar-border':
+    'color-mix(in srgb, var(--xp-shell-sidebar-text) 14%, var(--xp-shell-sidebar-bg))',
+  'shell-topbar-bg': '#ffffff', // 14:104
+  'shell-topbar-border': '#e8e4dd', // 14:108
+
+  // ─── Màu riêng của thanh event trên lịch ──────────────────────────────────
+  // Không có trong Foundations — giữ nguyên bộ đang chạy.
+  'color-event-booking': '#2563eb',
+  'color-event-request': '#d6a02c',
+  'color-event-blocked': '#8c8069',
+  'color-event-maintenance': '#7c3aed',
+
+  // ─── Typography ───────────────────────────────────────────────────────────
+  // Be Vietnam Pro + Playfair Display tự host qua next/font (biến đặt trên <html>).
+  'font-family':
+    "var(--font-be-vietnam), 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif",
+  'font-family-display': "var(--font-playfair), Georgia, 'Times New Roman', serif",
+
+  // Thang chữ Figma `14:113`–`14:140`. Cặp size/line-height đi liền nhau.
+  'font-size-display': '48px', // 14:113 · Bold · hero
+  'line-height-display': '56px',
+  'font-size-h1': '32px', // 14:116 · Bold · tiêu đề trang
+  'line-height-h1': '40px',
+  'font-size-h2': '24px', // 14:119 · SemiBold · tiêu đề section
+  'line-height-h2': '32px',
+  'font-size-h3': '20px', // 14:122 · SemiBold · tiêu đề card / modal
+  'line-height-h3': '28px',
+  'font-size-h4': '16px', // 14:125 · SemiBold · subsection, header bảng
+  'line-height-h4': '24px',
+  'font-size-body-lg': '16px', // 14:128 · Regular
+  'line-height-body-lg': '24px',
+  'font-size-body': '14px', // 14:131 · Regular · ô bảng, label form
+  'line-height-body': '20px',
+  'font-size-body-sm': '12px', // 14:134 · Regular · caption, help text
+  'line-height-body-sm': '16px',
+  'font-size-label': '12px', // 14:137 · Medium · badge, chip, tag
+  'line-height-label': '16px',
+  'font-size-overline': '11px', // 14:140 · Medium · section kicker
+  'line-height-overline': '16px',
+
+  'font-weight-regular': '400',
+  'font-weight-medium': '500',
+  'font-weight-semibold': '600',
+  'font-weight-bold': '700',
+
+  // Cỡ chữ mặc định của body + line-height toàn cục.
+  // ⚠️ `line-height` (1.5714 → 22px) là giá trị AntD đang chạy, KHÁC `line-height-body`
+  // (20px) của Figma. Đổi nó làm lệch chiều cao mọi hàng bảng và mọi form → hoãn sang
+  // wave có QA thị giác. Nợ kỹ thuật ghi ở docs/design-token-map.md §5.
+  'font-size': '14px',
+  'font-size-sm': '12px',
+  'line-height': '1.5714',
+
+  // ─── Khoảng cách ──────────────────────────────────────────────────────────
+  // Figma `14:143`: “4 · 8 · 16 · 24 · 32 px only”.
+  'space-xs': '4px',
+  'space-sm': '8px',
+  'space-md': '16px',
+  'space-lg': '24px',
+  'space-xl': '32px',
+
+  // ─── Bo góc ───────────────────────────────────────────────────────────────
+  'border-radius-sm': '6px', // 14:160 · chip, badge, phần tử trong
+  'border-radius': '10px', // 14:164 · card, input, modal
+  'border-radius-lg': '10px',
+  'border-radius-pill': '999px', // 14:168 · pill, avatar
+
+  // ─── Đổ bóng ──────────────────────────────────────────────────────────────
+  // Figma `14:173`/`14:176`/`14:179` — tông nâu ấm `rgba(41,31,15,…)`, không phải đen.
+  'shadow-card': '0 2px 4px 0 rgba(41, 31, 15, 0.06)', // Elevation 1 · card nghỉ
+  'shadow-raised': '0 4px 12px 0 rgba(41, 31, 15, 0.08)', // Elevation 2 · hover, dropdown
+  'shadow-overlay': '0 8px 24px 0 rgba(41, 31, 15, 0.12)', // Elevation 3 · modal, drawer
+
+  /**
+   * Nền tối phía sau khu hero của trang chủ — hiện khi banner chưa tải xong hoặc không có
+   * banner nào đang bật. KHÔNG có node Figma riêng (Figma chỉ vẽ trạng thái CÓ banner); giá
+   * trị là sắc nâu tối cùng họ với `color-primary-contrast`. Trước đây gõ tay giống hệt nhau ở
+   * cả `HomeHero.module.css` lẫn `BannerCarousel.module.css` — hai khối nằm CHỒNG nhau trên
+   * cùng một chỗ của trang, nên lệch một mã màu là thấy đường nối ngay khi banner tải xong.
+   */
+  'hero-backdrop': 'linear-gradient(120deg, #241d12, #3a2f1a)',
+
+  // ─── Focus ────────────────────────────────────────────────────────────────
+  // Figma `14:197` vẽ ring 3px; hạ xuống 2px theo góp ý review UI 12/08/2026 (ring 3px
+  // trên control 32px trông quá dày). Border focus vẫn 2px.
+  'focus-outline-width': '2px',
+  'focus-ring-width': '2px',
+  'color-focus-ring': 'rgba(214, 160, 44, 0.25)',
+
+  // ─── Breakpoint ───────────────────────────────────────────────────────────
+  // Figma `14:183`–`14:192`. CSS custom property KHÔNG dùng được trong `@media`
+  // (xem docs/design-token-map.md §21 P8) — nguồn dùng cho JS là `XP_BREAKPOINTS` bên dưới;
+  // các token này phục vụ `max-width`/container query và tài liệu.
+  'bp-mobile': '640px', // ≤640 · 4 cột · gutter 16
+  'bp-tablet': '1024px', // 641–1024 · 8 cột · gutter 24
+  'bp-desktop': '1440px', // 1025–1440 · 12 cột · gutter 24; >1440 = wide
+
+  // ─── Tầng z ───────────────────────────────────────────────────────────────
+  // XePrime chỉ sở hữu tầng của vỏ app. Tầng overlay (modal/drawer/dropdown/toast)
+  // do AntD sở hữu qua `zIndexPopupBase` — `z-popup-base` chỉ soi lại con số đó để
+  // CSS Module định vị tương đối mà không phải đoán. KHÔNG tạo nguồn thứ hai.
+  'z-sidebar': '110',
+  'z-topbar': '100',
+  // Popover neo trong canvas lịch — phải trên mọi lớp dính của lịch (chúng là anh em cùng
+  // stacking context), vẫn dưới topbar/sidebar.
+  'z-calendar-popover': '40',
+  'z-calendar-header': '30',
+  'z-calendar-sticky-col': '20',
+  'z-popup-base': '1000',
+
+  // ─── Kích thước component dùng chung ──────────────────────────────────────
+  // Wave 1A CHỈ khai báo. Áp vào component là việc của các wave sau.
+  // `control-height` = 32px là chiều cao AntD đang chạy; Figma `125:1571`/`125:2691`
+  // vẽ control 40px (= AntD size="large"). Chênh này ghi ở P16. Review UI 12/08/2026 chốt:
+  // form field dùng cỡ MẶC ĐỊNH 32px (bỏ size="large"), 40px chỉ còn cho nút CTA.
+  'control-height-sm': '24px',
+  'control-height': '32px',
+  'control-height-lg': '40px',
+  'touch-target-min': '44px',
+  'modal-width-sm': '400px', // 125:1611 size=SM
+  'modal-width': '560px', // 125:1611 size=MD
+  'modal-width-lg': '720px', // 125:1611 size=LG
+  // Overlay hai cột (yêu cầu thuê xe): cột trái hồ sơ xe + cột phải luồng thao tác. Vượt 720px
+  // là có chủ đích — nhồi hai cột vào LG làm cả hai cột hẹp tới mức không đọc được.
+  'modal-width-xl': '1180px',
+  'drawer-width': '560px',
+  'drawer-width-lg': '720px',
+  // Figma `117:1203` (Pagination/Desktop) · `127:2060` vẽ vùng nội dung 1200. Chốt 14/08/2026:
+  // nới lên 1280 cho MỌI trang (marketplace lẫn portal) — 1200/1120 để lại quá nhiều lề chết
+  // trên màn 1440. Đây là nguồn duy nhất của bề rộng trang; không gõ số ở CSS Module.
+  'container-max-width': '1280px',
+
+  // ─── Khung app ────────────────────────────────────────────────────────────
+  'shell-topbar-height': '56px', // 14:1498
+  // Header marketplace công khai (MarketHeader). Thanh tìm kiếm thu gọn của trang chủ neo ngay
+  // dưới nó, và IntersectionObserver lấy đúng số này làm rootMargin — một nguồn cho CSS lẫn JS.
+  'market-header-height': '60px',
+  'shell-sidebar-width': '232px', // 14:1424 (Foundations sở hữu giá trị; 47:5 = 240 lệch nhịp)
+  'shell-sidebar-collapsed-width': '64px', // 14:1532 = 47:77
+  'shell-bottom-nav-height': '64px', // 14:1641
+  'shell-drawer-width': '280px', // 14:1662
+  // 60:69 (FormColumn thụt 64px so với workspace). Đi theo `container-max-width`: 1280 − 64.
+  'shell-form-max-width': '1216px',
+
+  // ─── Lịch resource timeline ───────────────────────────────────────────────
+  'calendar-resource-col-width': '220px',
+  'calendar-day-col-width': '56px',
+  'calendar-row-height': '44px',
+  'calendar-header-height': '56px',
+
+  // ─── DEPRECATED — bí danh giữ cho code cũ ─────────────────────────────────
+  // Mỗi cái trỏ `var()` về token canonical: không có giá trị nào bị nhân đôi.
+  // Số consumer + wave gỡ bỏ: docs/design-token-map.md §14.
+  /** @deprecated → `--xp-color-bg` */
+  'color-bg-layout': 'var(--xp-color-bg)',
+  /** @deprecated → `--xp-color-border-subtle` */
+  'color-border-secondary': 'var(--xp-color-border-subtle)',
+  /** @deprecated → `--xp-color-primary-active` */
+  'gold-deep': 'var(--xp-color-primary-active)',
+  /** @deprecated → `--xp-color-primary-light` */
+  'gold-wash': 'var(--xp-color-primary-light)',
+  /** @deprecated dùng cho thanh cuộn; chưa có token canonical tương ứng ở Figma */
+  'gold-soft': '#f1dba4',
+  /** @deprecated → `--xp-color-primary-light` */
+  'color-bg-sand': 'var(--xp-color-primary-light)',
+  /** @deprecated → `--xp-shadow-card` */
+  'shadow-sm': 'var(--xp-shadow-card)',
+  /** @deprecated → `--xp-shadow-raised` */
+  'shadow-md': 'var(--xp-shadow-raised)',
+  /** @deprecated → `--xp-shadow-overlay` */
+  'shadow-lg': 'var(--xp-shadow-overlay)',
+} as const;
+
+export type XpTokenName = keyof typeof XP_TOKENS;
+
+/** Dùng trong `.module.css` thì viết thẳng `var(--xp-...)`; hàm này cho chỗ cần dựng từ TS. */
+export function cssVar(name: XpTokenName): string {
+  return `var(--xp-${name})`;
+}
+
+export function toPx(value: string): number {
+  return Number.parseFloat(value);
+}
+
+/**
+ * Kích thước lịch mà JS cần biết (virtualizer, tính vị trí event bar).
+ *
+ * Phải suy ra từ token thay vì gõ lại số, nếu không lưới CSS và toạ độ JS sẽ lệch nhau
+ * đúng vào lúc ai đó chỉnh chiều cao hàng.
+ */
+export const XP_METRICS = {
+  calendarRowHeight: toPx(XP_TOKENS['calendar-row-height']),
+  calendarDayColWidth: toPx(XP_TOKENS['calendar-day-col-width']),
+  calendarResourceColWidth: toPx(XP_TOKENS['calendar-resource-col-width']),
+  calendarHeaderHeight: toPx(XP_TOKENS['calendar-header-height']),
+} as const;
+
+/**
+ * Thang breakpoint dùng cho JS (`useMediaQuery`).
+ *
+ * CSS custom property không dùng được trong `@media`, nên đây là nơi duy nhất giữ CON SỐ.
+ * `.module.css` vẫn phải viết số trong `@media`, nhưng CHỈ được viết đúng ba số này —
+ * `theme.test.ts` có test chặn giá trị lạ. Bộ breakpoint cũ (~20 giá trị rời rạc) được dời
+ * dần khi chạm vào từng file, theo khuyến nghị design-brief 00 §9.4, không dời hàng loạt.
+ */
+export const XP_BREAKPOINTS = {
+  mobile: toPx(XP_TOKENS['bp-mobile']),
+  tablet: toPx(XP_TOKENS['bp-tablet']),
+  desktop: toPx(XP_TOKENS['bp-desktop']),
+} as const;

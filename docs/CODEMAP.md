@@ -105,7 +105,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Badge trạng thái (đọc meta từ types) | `components/data-display/StatusTag.tsx` | 0005 |
 | Menu theo quyền · route constant | `constants/nav.ts` · `constants/routes.ts` | — |
 | Provider (AntD/Redux/Query) | `app/providers.tsx` | — |
-| Design token · CSS Modules · token.css↔theme.ts | `styles/theme.ts` · `styles/tokens.css` | ADR 0003 |
+| Design token — nguồn DÙNG CHUNG web + app native | `packages/ui/src/tokens/` (`XP_TOKENS`) · `packages/ui/src/styles/tokens.css` (nạp qua `@xeprime/ui/styles.css`). Web: `apps/web/src/styles/theme.ts` chỉ còn `antdTheme` + re-export; parity giữ bởi `apps/web/src/styles/theme.test.ts` | ADR 0003 |
 | Lịch (resource timeline) | `features/calendar/` | ADR 0006 |
 | Marketplace + trang gian hàng `/shops/[slug]` (thẻ xe, chi tiết, hồ sơ shop) | `features/marketplace/` · `app/(public)/shops/[slug]/` | ADR 0008 |
 | Trang chủ: Hero · gợi ý xe · địa điểm · gian hàng nổi bật · 4 bước · CTA · tab bar mobile | `features/marketplace/components/{HomeHero,VehiclePreview,FeaturedLocations,FeaturedHosts,RentalSteps,OwnerCta,MobileTabBar}.tsx` | Nội dung tĩnh ở `features/marketplace/constants.ts` |

@@ -13,7 +13,9 @@ import { XP_BREAKPOINTS, XP_TOKENS, antdTheme } from './theme';
  * Dùng cwd (= apps/web khi vitest chạy) thay cho import.meta.url: Turbopack/vitest có thể
  * không cấp URL scheme `file:` cho import.meta.url, làm fileURLToPath ném lỗi.
  */
-const CSS_PATH = resolve(process.cwd(), 'src/styles/tokens.css');
+// tokens.css đã theo XP_TOKENS sang packages/ui (24/08/2026) — test ở lại web vì nó còn kiểm
+// cả `antdTheme` (phần buộc phải biết antd, không vào package dùng chung được).
+const CSS_PATH = resolve(process.cwd(), '../../packages/ui/src/styles/tokens.css');
 const DECLARATION_RE = /^\s*(--xp-[a-z0-9-]+)\s*:\s*([^;]+);/gm;
 
 /** Độ sáng tương đối theo WCAG 2.x. Nhận cả `#rgb` lẫn `#rrggbb` (AntD trả `#fff`). */
@@ -149,7 +151,6 @@ describe('design token', () => {
     expect(derived.colorPrimary).toBe(XP_TOKENS['color-primary']);
     expect(derived.controlHeight).toBe(32);
   });
-
 
   /**
    * Thứ tự TẦNG Z. Các lớp dính của lịch (header ngày, cột xe, hàng "Xe còn trống") và popover

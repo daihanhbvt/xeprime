@@ -8,7 +8,10 @@
 
 > **Trạng thái: Wave 1A ĐÃ TRIỂN KHAI** · Cập nhật 06/08/2026 (bản Wave 0B là kế hoạch; bản này là hiện trạng đã code).
 > **Nguồn Figma**: section 01 “XePrime Foundations” (`14:2`), đọc ở cấp node. File **không dùng Figma Variables** (`get_variable_defs` trên `14:2` trả `{}`) — giá trị nằm trong fill/text của swatch.
-> **Nguồn code**: [tokens.css](../apps/web/src/styles/tokens.css) ↔ [theme.ts](../apps/web/src/styles/theme.ts), giữ đồng bộ bởi [theme.test.ts](../apps/web/src/styles/theme.test.ts) (19 test).
+> **Nguồn code** (từ 24/08/2026 token sống ở package dùng chung cho web + app native):
+> [tokens/index.ts](../packages/ui/src/tokens/index.ts) ↔ [tokens.css](../packages/ui/src/styles/tokens.css)
+> (`@xeprime/ui`), giữ đồng bộ bởi [theme.test.ts](../apps/web/src/styles/theme.test.ts) (19 test).
+> Web ánh xạ sang AntD ở [theme.ts](../apps/web/src/styles/theme.ts) (`antdTheme` + re-export API cũ).
 
 ## 0. Hợp đồng
 
