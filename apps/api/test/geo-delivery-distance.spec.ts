@@ -1,3 +1,4 @@
+import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import type { GeoPoint } from '@xeprime/domain';
 import {
@@ -10,6 +11,7 @@ import {
 import { AuditService } from '../src/modules/audit/audit.service';
 import { GeoService } from '../src/modules/geo/geo.service';
 import { GeoNotConfiguredProvider, type GeoProvider } from '../src/modules/geo/geo-provider';
+import { GoogleGeoProvider } from '../src/modules/geo/google-geo.provider';
 import { DeliveryDistanceService } from '../src/modules/pricing/delivery-distance.service';
 import type { SaveRentalPolicyDto } from '../src/modules/pricing/dto/pricing.dto';
 import { PricingService } from '../src/modules/pricing/pricing.service';
@@ -397,5 +399,95 @@ describe('DeliveryDistanceService — năm trạng thái, không trạng thái n
       where: { id: vehicleId },
       data: { publicStatus: 'approved_public' },
     });
+  });
+});
+
+/**
+ * Toàn chuỗi với NHÀ CUNG CẤP THẬT — trả lời đúng câu "cắm key vào thì có chạy không".
+ *
+ * Khác mọi test ở trên: `GoogleGeoProvider` thật, `GeoService` thật, `PricingService` thật, dữ
+ * liệu trên PostgreSQL thật. Thứ DUY NHẤT bị thay là máy chủ của Google — `fetch` trả về đúng
+ * hình response mà API của họ trả (hình đó được khoá riêng ở `google-geo-provider.spec.ts`).
+ *
+ * Nói cách khác: nếu suite này xanh, phần còn thiếu để tính năng chạy thật đúng bằng một chuỗi
+ * ký tự trong `.env`.
+ */
+describe('cắm nhà cung cấp thật vào — chuỗi đầy đủ, chỉ máy chủ Google là giả', () => {
+  const FAKE_KEY = 'e2e-test-key';
+  const realFetch = global.fetch;
+  let fetchCalls = 0;
+
+  /** Trả response theo ĐÚNG hình của Geocoding API và Routes API. */
+  function stubGoogle(): void {
+    fetchCalls = 0;
+    global.fetch = ((url: string | URL) => {
+      fetchCalls += 1;
+      const href = String(url);
+      if (href.includes('geocode/json')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              status: 'OK',
+              results: [
+                {
+                  geometry: { location: { lat: NEAR_POINT.lat, lng: NEAR_POINT.lng } },
+                  formatted_address: '12 Nguyễn Huệ, Bến Nghé, Quận 1, TP.HCM',
+                  place_id: 'ChIJ_e2e',
+                },
+              ],
+            }),
+        } as Response);
+      }
+      // Routes API: 3421 m → 3.42 km → rơi vào bậc >3–5 km = 30.000₫.
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ routes: [{ distanceMeters: 3421 }] }),
+      } as Response);
+    }) as typeof fetch;
+  }
+
+  afterAll(() => {
+    global.fetch = realFetch;
+  });
+
+  maybe('địa chỉ khách → toạ độ → km đường bộ → đúng bậc phí, và ghi cả hai bảng cache', async () => {
+    await clearGeoCache();
+    stubGoogle();
+
+    const config = { get: () => FAKE_KEY, getOrThrow: () => FAKE_KEY } as unknown as ConfigService;
+    const liveGeo = new GeoService(asService, new GoogleGeoProvider(config));
+    const liveDistance = new DeliveryDistanceService(asService, pricing, liveGeo);
+
+    const res = await liveDistance.forListing(vehicleId, NEAR_ADDRESS);
+
+    expect(res.status).toBe(DELIVERY_DISTANCE_STATUS.AUTO);
+    expect(res.distanceKm).toBe(3.42);
+    // 3,42 km nằm trong bậc >3–5 km. Con số này đi ra từ `PricingService.deliveryFeeFor` đọc
+    // chính sách THẬT trong DB — không phải một hằng số viết trong test.
+    expect(res.fee).toBe('30000');
+    expect(res.origin).toEqual(BRANCH_POINT);
+    expect(res.destination).toEqual(NEAR_POINT);
+    expect(res.formattedAddress).toContain('Bến Nghé');
+
+    // Đúng hai lượt gọi ra ngoài cho một lần tra: 1 geocode + 1 routes.
+    expect(fetchCalls).toBe(2);
+
+    const geocodeRow = await prisma.geocodeCache.findFirst({ where: { provider: 'google' } });
+    expect(geocodeRow?.placeId).toBe('ChIJ_e2e');
+    const routeRow = await prisma.geoRouteCache.findFirst({ where: { provider: 'google' } });
+    expect(Number(routeRow?.distanceKm)).toBe(3.42);
+
+    // Lần thứ hai đọc sạch từ cache — KHÔNG một request nào nữa. Đây là thứ quyết định hạn mức
+    // 10k/tháng có đủ dùng hay không, nên nó phải đúng với provider thật chứ không chỉ provider giả.
+    const again = await liveDistance.forListing(vehicleId, NEAR_ADDRESS);
+    expect(again.status).toBe(DELIVERY_DISTANCE_STATUS.AUTO);
+    expect(again.fee).toBe('30000');
+    expect(fetchCalls).toBe(2);
+
+    await prisma.geocodeCache.deleteMany({ where: { provider: 'google' } });
+    await prisma.geoRouteCache.deleteMany({ where: { provider: 'google' } });
   });
 });

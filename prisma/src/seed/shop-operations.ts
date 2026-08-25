@@ -417,6 +417,24 @@ export async function buildBookings(
   const plans = planBookings(units, customers);
   const results: BookingResult[] = [];
 
+  /*
+   * Gỡ tài xế khỏi MỌI đơn của gian hàng trước khi gán lại.
+   *
+   * Không phải dọn dẹp cho gọn — đây là điều kiện để seed chạy lại được vào một NGÀY KHÁC.
+   * Mốc thời gian của đơn neo vào ngày chạy seed, còn vòng lặp dưới đây upsert từng đơn một.
+   * Giữa chừng vòng lặp, đơn vừa nhận ngày MỚI phải sống chung với đơn chưa tới lượt còn giữ
+   * ngày CŨ; hai đơn của cùng một tài xế chồng giờ nhau ở đúng khoảnh khắc đó là đủ để
+   * `bookings_driver_schedule_excl` bắn, dù trạng thái cuối cùng hoàn toàn hợp lệ.
+   *
+   * Gỡ trước rồi gán lại nghĩa là vòng lặp luôn viết lên một lịch tài xế TRỐNG. Cùng lý do
+   * `vehicle_occupancies` bị xoá-dựng-lại ở `shop.ts` — khác ở chỗ đơn thì KHÔNG xoá: lịch sử
+   * thuê là dữ liệu demo có giá trị, chỉ mỗi mối nối tài xế là thứ dựng lại được.
+   */
+  await prisma.booking.updateMany({
+    where: { tenantId: deps.tenantId, driverId: { not: null } },
+    data: { driverId: null },
+  });
+
   for (const [n, plan] of plans.entries()) {
     const code = `DH-${String(n + 1).padStart(4, '0')}`;
     const bookingId = seedId(`${spec.key}:booking:${code}`);
