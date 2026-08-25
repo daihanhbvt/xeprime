@@ -48,6 +48,14 @@ export const formats = {
     integer: { maximumFractionDigits: 0 },
     /** Điểm đánh giá `4,8` / `4.8`. */
     rating: { minimumFractionDigits: 1, maximumFractionDigits: 1 },
+    /**
+     * Quãng đường giao xe: một chữ số thập phân, KHÔNG ép tối thiểu (`5 km` chứ không `5,0 km`).
+     *
+     * Khác `integer` — vốn dành cho số KM trên đồng hồ, nơi phần lẻ là nhiễu. Ở đây phần lẻ là
+     * thông tin: bậc phí giao nhận cắt ở đúng 3 km và 5 km, nên làm tròn 3,4 km thành "3 km"
+     * sẽ hiện một quãng đường mâu thuẫn với mức phí ngay bên cạnh nó.
+     */
+    distance: { maximumFractionDigits: 1 },
     percent: { style: 'percent', maximumFractionDigits: 0 },
   },
 } satisfies Formats;

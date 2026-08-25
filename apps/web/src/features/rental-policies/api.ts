@@ -1,5 +1,6 @@
 import { apiGet, apiPut } from '@/services/api-client';
 import type {
+  DeliveryDistance,
   PublicQuote,
   SaveRentalPolicyInput,
   SaveVehiclePricingInput,
@@ -39,3 +40,18 @@ export const fetchPublicQuote = (
   vehicleId: string,
   params: PublicQuoteParams,
 ): Promise<PublicQuote> => apiGet<PublicQuote>(`/public/listings/${vehicleId}/quote`, params);
+
+/**
+ * Khoảng cách giao xe tận nơi + phí dự kiến, tra từ bản đồ ở backend.
+ *
+ * KHÔNG ném khi không tra được — mọi ngả hỏng về dưới dạng `status` (`@xeprime/types` →
+ * `DELIVERY_DISTANCE_STATUS`), nên nơi gọi đọc MÃ chứ không bắt lỗi.
+ *
+ * Con số trả về là DỰ KIẾN: chủ xe vẫn chốt phí trên đơn (ADR 0014). Đừng cộng nó vào tổng tiền
+ * hiển thị như một khoản đã chốt.
+ */
+export const fetchDeliveryDistance = (
+  vehicleId: string,
+  address: string,
+): Promise<DeliveryDistance> =>
+  apiGet<DeliveryDistance>(`/public/listings/${vehicleId}/delivery-distance`, { address });

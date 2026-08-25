@@ -517,7 +517,7 @@ Cần thêm: `packages/config/tsconfig/react-native.json` (chưa có).
 | S4 | Mở rộng `i18n:audit` quét cả `packages/` | P1 |
 | S5 | `@xeprime/tokens` (131 design token, không phụ thuộc AntD/CSS) | P2 |
 | S6 | `packages/config/tsconfig/react-native.json` | P2 |
-| S7 | Đổi tên `@xeprime/ui` → `@xeprime/web-ui` (hoặc ghi rõ docblock) để mobile dev không tưởng dùng được | P3 |
+| S7 | ~~Đổi tên `@xeprime/ui` → `@xeprime/web-ui`~~ — **giải quyết khác, 24/08/2026**: token nằm ở export gốc và gốc đã platform-free (`tsconfig` extends `lib.json` ⇒ DOM API fail typecheck); component web sau này đi qua subpath `@xeprime/ui/react` | ✅ |
 
 ---
 
@@ -552,7 +552,7 @@ Cần thêm: `packages/config/tsconfig/react-native.json` (chưa có).
 | MA-25 | Backend | CSRF double-submit token | Chỉ có comment | Có middleware | Backend | **P2** | — | TODO |
 | MA-26 | Web | Xoá 2 file mã chết (`AutoCompleteField`, `PhoneVerifyControl`) | 181 dòng không ai gọi | Xoá | Web | **P3** | — | NEEDS REVIEW |
 | MA-27 | Docs | Xoá `docs/claude-i18n-prompt.txt`; đổi tên 4 plan file hỏng dấu | 144K không tra cứu được | Dọn | Web | **P3** | — | NEEDS REVIEW |
-| MA-28 | Shared | Đổi tên `@xeprime/ui` → `@xeprime/web-ui` | Tên gây hiểu nhầm với mobile | Rõ nghĩa | Web | **P3** | MA-04 | TODO |
+| MA-28 | Shared | ~~Đổi tên `@xeprime/ui` → `@xeprime/web-ui`~~ | Viết khi package còn rỗng; nay export gốc đã platform-free | Giải quyết bằng ranh giới compiler, không đổi tên | Web | **P3** | MA-04 | **DONE 24/08/2026** |
 | MA-29 | Excel | Thêm 8 dòng đề xuất (SYS-10, BUG-21→27) sau khi Leader duyệt | Chưa có trong file | Excel cập nhật | Leader | **P2** | — | NEEDS REVIEW |
 
 ---

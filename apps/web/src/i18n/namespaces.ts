@@ -46,6 +46,7 @@ export const MESSAGE_NAMESPACES = [
   { file: 'booking-requests', namespace: 'BookingRequests' },
   { file: 'bookings', namespace: 'Bookings' },
   { file: 'vehicles', namespace: 'Vehicles' },
+  { file: 'branches', namespace: 'Branches' },
   { file: 'customers', namespace: 'Customers' },
   // Mới có màn Công nợ; sổ Thu-Chi vẫn còn chuỗi thô — xem `i18n:audit`.
   { file: 'finance', namespace: 'Finance' },

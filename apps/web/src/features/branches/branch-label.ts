@@ -8,9 +8,16 @@ import type { Branch } from './types';
  *
  * Chi nhánh chưa có tỉnh nói thẳng ra, vì đó là việc người dùng cần xử lý (xe của nó không lên
  * chợ được), không phải chi tiết để giấu đi.
+ *
+ * `noProvinceLabel` truyền vào chứ không gọi `t()` ở đây: file này là hàm thuần, dùng được cả
+ * trong Server Component lẫn client, và nó không được biết `next-intl` tồn tại. Nơi gọi lấy
+ * chuỗi từ `Branches.labels.noProvince`.
  */
-export function branchLabel(branch: Pick<Branch, 'name' | 'provinceName'>): string {
+export function branchLabel(
+  branch: Pick<Branch, 'name' | 'provinceName'>,
+  noProvinceLabel: string,
+): string {
   return branch.provinceName
     ? `${branch.name} · ${branch.provinceName}`
-    : `${branch.name} · chưa có tỉnh/thành`;
+    : `${branch.name} · ${noProvinceLabel}`;
 }

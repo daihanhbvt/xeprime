@@ -1,7 +1,12 @@
 {
-  "extends": "../config/tsconfig/nextjs.json",
+  /* `lib.json` chứ KHÔNG phải `nextjs.json`: export gốc của package này phải chạy được trên
+     React Native (xem docblock `src/index.ts`). `nextjs.json` kéo theo `lib: ["DOM"]`, nghĩa là
+     một `document.*` lọt vào token vẫn typecheck xanh rồi vỡ ở bundle Metro. Bỏ DOM đi thì
+     compiler chính là thứ canh biên giới, không phải comment.
+     Component web sau này đi qua subpath `@xeprime/ui/react` với tsconfig riêng của nó. */
+  "extends": "../config/tsconfig/lib.json",
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.ts"]
 }

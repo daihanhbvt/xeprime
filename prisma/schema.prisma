@@ -2466,3 +2466,64 @@ model TenantSubscription {
   @@index([tenantId, createdAt])
   @@map("tenant_subscriptions")
 }
+
+// ---------------------------------------------------------------------------
+// Bản đồ — cache tra cứu vị trí (tích hợp 24/08/2026)
+// ---------------------------------------------------------------------------
+
+/// Địa chỉ chữ → toạ độ, đã tra một lần rồi nhớ.
+///
+/// Vì sao cần bảng: hạn mức miễn phí của nhà cung cấp bản đồ đếm theo REQUEST chứ không theo
+/// địa chỉ khác nhau. Địa chỉ ở Việt Nam lặp lại rất nhiều (chung cư, toà nhà, sân bay, cùng
+/// một khách bấm lại vài lần) nên cache biến phần lớn lượt tra thành 0 request.
+///
+/// `latitude`/`longitude` NULL = nhà cung cấp trả "không tìm thấy". Cache CẢ ca thất bại có chủ
+/// đích: người gõ sai địa chỉ thường sửa rồi bấm lại nhiều lần, không nhớ ca hỏng thì mỗi lần
+/// bấm đốt một request thật.
+///
+/// ⚠ `fetched_at` KHÔNG phải cột trang trí. Điều khoản của nhà cung cấp giới hạn thời gian được
+/// lưu toạ độ, nên `GeoService` coi bản ghi quá hạn là MISS và tra lại. Đừng bỏ điều kiện đó.
+///
+/// Không có `tenant_id`: đây là dữ liệu về THẾ GIỚI (một địa chỉ nằm ở một chỗ), không phải dữ
+/// liệu của gian hàng nào. Ghi duy nhất qua `GeoService`.
+model GeocodeCache {
+  /// SHA-256 của `provider` + địa chỉ đã chuẩn hoá (`normalizeAddressKey` ở @xeprime/domain).
+  /// Gộp provider vào khoá để đổi nhà cung cấp không đọc nhầm kết quả của nhà cũ.
+  addressHash      String   @id @map("address_hash") @db.Char(64)
+  provider         String   @db.VarChar(30)
+  /// Địa chỉ gốc người dùng gõ — giữ để đọc được khi debug, KHÔNG dùng làm khoá.
+  query            String   @db.Text
+  latitude         Decimal? @db.Decimal(10, 7)
+  longitude        Decimal? @db.Decimal(10, 7)
+  /// Địa chỉ nhà cung cấp hiểu ra — hiện lại cho người dùng xác nhận "đúng chỗ này chưa".
+  formattedAddress String?  @map("formatted_address") @db.Text
+  /// Mã địa điểm của nhà cung cấp — ổn định hơn toạ độ và được phép lưu lâu hơn.
+  placeId          String?  @map("place_id") @db.VarChar(255)
+  fetchedAt        DateTime @default(now()) @map("fetched_at") @db.Timestamptz(3)
+
+  /// Dọn bản ghi quá hạn theo lô.
+  @@index([fetchedAt])
+  @@map("geocode_cache")
+}
+
+/// Khoảng cách ĐƯỜNG BỘ MỘT CHIỀU giữa hai toạ độ, đã tra một lần rồi nhớ.
+///
+/// Toạ độ trong khoá đã làm tròn về lưới ~110m (`roundCoord`) trước khi băm, nên mọi lần hỏi
+/// lại cùng một chuyến giao đều trúng cache. Bậc phí tính theo km nên sai số lưới đó không bao
+/// giờ đủ để nhảy bậc.
+///
+/// `distance_km` NULL = không có đường đi (đảo, sai toạ độ) — nhớ luôn để khỏi hỏi lại.
+model GeoRouteCache {
+  /// SHA-256 của `provider` + bốn toạ độ đã làm tròn.
+  routeHash  String   @id @map("route_hash") @db.Char(64)
+  provider   String   @db.VarChar(30)
+  originLat  Decimal  @map("origin_lat") @db.Decimal(10, 7)
+  originLng  Decimal  @map("origin_lng") @db.Decimal(10, 7)
+  destLat    Decimal  @map("dest_lat") @db.Decimal(10, 7)
+  destLng    Decimal  @map("dest_lng") @db.Decimal(10, 7)
+  distanceKm Decimal? @map("distance_km") @db.Decimal(8, 2)
+  fetchedAt  DateTime @default(now()) @map("fetched_at") @db.Timestamptz(3)
+
+  @@index([fetchedAt])
+  @@map("geo_route_cache")
+}

@@ -40,7 +40,11 @@
     "description": "Mô tả",
     "descriptionEmpty": "Gian hàng chưa viết mô tả.",
     "serviceSelector": "Chọn dịch vụ thuê",
-    "serviceLabel": "Dịch vụ"
+    "serviceLabel": "Dịch vụ",
+    "pickupPoint": {
+      "title": "Điểm nhận xe",
+      "mapTitle": "Bản đồ điểm nhận xe"
+    }
   },
   "reviews": {
     "title": "Đánh giá",

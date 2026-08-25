@@ -608,6 +608,19 @@ export async function buildDailyPrices(
   ownerUserId: string,
   units: readonly VehicleUnit[],
 ): Promise<number> {
+  /*
+   * Xoá rồi dựng lại — cùng lý do với `vehicle_occupancies` ở `shop.ts`, và bắt buộc phải làm
+   * chứ không phải cho gọn.
+   *
+   * Mỗi bản ghi neo vào NGÀY chạy seed (`dateOnlyFromToday`), trong khi `id` của nó là seedId
+   * tất định KHÔNG chứa ngày. Chạy lại vào hôm khác thì `upsert` tra theo `(vehicleId, date)`
+   * không thấy hàng nào — nên nó đi nhánh `create` với đúng cái `id` mà lần chạy trước đã dùng
+   * cho một ngày khác, và đâm thẳng vào khoá chính.
+   *
+   * Giá cao điểm là dữ liệu minh hoạ thuần, dựng lại được trọn vẹn; không có lịch sử nào để mất.
+   */
+  await prisma.vehicleDailyPrice.deleteMany({ where: { tenantId } });
+
   let count = 0;
   for (const unit of units) {
     if (unit.index % 8 !== 3) continue;

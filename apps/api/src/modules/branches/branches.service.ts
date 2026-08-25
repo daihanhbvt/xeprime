@@ -9,6 +9,7 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { ProvincesService } from '../locations/provinces.service';
 import { ListingsService } from '../public-listings/listings.service';
+import { GeoService } from '../geo/geo.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   BranchDto,
@@ -57,7 +58,30 @@ export class BranchesService {
     private readonly provinces: ProvincesService,
     private readonly listings: ListingsService,
     private readonly audit: AuditService,
+    private readonly geo: GeoService,
   ) {}
+
+  /**
+   * Toạ độ cho một chi nhánh — tra từ địa chỉ, best-effort.
+   *
+   * Toạ độ do người dùng gửi lên THẮNG (họ vừa nhìn bản đồ và chỉnh); chỉ khi không có mới đi
+   * hỏi. Địa chỉ ghép thêm tên tỉnh vì địa chỉ chi nhánh hay được gõ cụt ("12 Nguyễn Huệ") và
+   * tên đường đó tồn tại ở hàng chục tỉnh.
+   *
+   * Không tra được thì trả null và LƯU BÌNH THƯỜNG. Chặn lưu chi nhánh vì bản đồ không hiểu
+   * một cái hẻm là lấy một tiện ích ước lượng ra làm điều kiện của một thao tác quản trị.
+   */
+  private async resolveCoords(
+    address: string | null | undefined,
+    provinceName: string | null,
+  ): Promise<{ latitude: number; longitude: number } | null> {
+    const trimmed = address?.trim();
+    if (!trimmed || !this.geo.enabled) return null;
+    const query =
+      provinceName && !trimmed.includes(provinceName) ? `${trimmed}, ${provinceName}` : trimmed;
+    const resolved = await this.geo.geocode(query);
+    return resolved ? { latitude: resolved.point.lat, longitude: resolved.point.lng } : null;
+  }
 
   async list(tenantId: string, query: BranchListQueryDto): Promise<BranchListDto> {
     const where: Prisma.TenantBranchWhereInput = {
@@ -117,6 +141,14 @@ export class BranchesService {
   async create(tenantId: string, userId: string, dto: CreateBranchDto): Promise<BranchDto> {
     const province = await this.provinces.assertSelectable(dto.provinceCode);
 
+    // Tra toạ độ TRƯỚC transaction: đây là một lượt gọi mạng có timeout, và giữ một transaction
+    // Postgres mở trong lúc chờ Internet là cách chắc chắn để một sự cố bên ngoài thành một
+    // hàng đợi khoá bên trong.
+    const geocoded =
+      dto.latitude == null || dto.longitude == null
+        ? await this.resolveCoords(dto.address, province.name)
+        : null;
+
     const branch = await this.prisma.$transaction(async (tx) => {
       const code = await nextBranchCode(tx, tenantId);
       // Gian hàng chưa có chi nhánh nào (dữ liệu lạ) → chi nhánh đầu tiên thành mặc định luôn,
@@ -134,8 +166,8 @@ export class BranchesService {
           provinceCode: province.code,
           address: dto.address ?? null,
           phone: dto.phone ?? null,
-          latitude: dto.latitude ?? null,
-          longitude: dto.longitude ?? null,
+          latitude: dto.latitude ?? geocoded?.latitude ?? null,
+          longitude: dto.longitude ?? geocoded?.longitude ?? null,
           isDefault: hasDefault === 0,
           status: BRANCH_STATUS.ACTIVE,
           createdBy: userId,
@@ -170,7 +202,27 @@ export class BranchesService {
     const before = await this.findOwned(tenantId, id);
     const provinceChanged =
       dto.provinceCode !== undefined && dto.provinceCode !== before.provinceCode;
-    if (provinceChanged) await this.provinces.assertSelectable(dto.provinceCode!);
+    const nextProvince = provinceChanged
+      ? await this.provinces.assertSelectable(dto.provinceCode!)
+      : null;
+
+    /*
+     * Tra lại toạ độ chỉ khi VỊ TRÍ thật sự đổi — đổi tên hay số điện thoại chi nhánh thì không.
+     * Tra lại mọi lần lưu là tự đốt hạn mức bản đồ bằng những lần sửa không liên quan.
+     *
+     * Ca thứ hai (địa chỉ không đổi nhưng chưa có toạ độ) là đường vá dữ liệu cũ: chi nhánh
+     * tạo từ trước khi có bản đồ chỉ cần chủ shop mở ra bấm Lưu một lần là có vị trí.
+     */
+    const addressChanged = dto.address !== undefined && dto.address !== before.address;
+    const missingCoords = before.latitude == null || before.longitude == null;
+    const geocoded =
+      (dto.latitude == null || dto.longitude == null) &&
+      (addressChanged || provinceChanged || missingCoords)
+        ? await this.resolveCoords(
+            dto.address ?? before.address,
+            nextProvince?.name ?? before.province?.name ?? null,
+          )
+        : null;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.tenantBranch.update({
@@ -185,6 +237,9 @@ export class BranchesService {
           ...(dto.phone !== undefined ? { phone: dto.phone } : {}),
           ...(dto.latitude !== undefined ? { latitude: dto.latitude } : {}),
           ...(dto.longitude !== undefined ? { longitude: dto.longitude } : {}),
+          // Chỉ ghi khi tra ĐƯỢC. Tra hụt mà ghi null sẽ xoá mất toạ độ đang đúng chỉ vì lần
+          // này bản đồ trả lời chậm — im lặng giữ nguyên là hành vi đúng.
+          ...(geocoded ? { latitude: geocoded.latitude, longitude: geocoded.longitude } : {}),
         },
         select: BRANCH_SELECT,
       });

@@ -31,6 +31,7 @@ import shop from '@xeprime/domain/messages/en/shop.json';
 import bookingRequests from '@xeprime/domain/messages/en/booking-requests.json';
 import bookings from '@xeprime/domain/messages/en/bookings.json';
 import vehicles from '@xeprime/domain/messages/en/vehicles.json';
+import branches from '@xeprime/domain/messages/en/branches.json';
 import customers from '@xeprime/domain/messages/en/customers.json';
 import finance from '@xeprime/domain/messages/en/finance.json';
 
@@ -54,6 +55,7 @@ const messages = {
   BookingRequests: bookingRequests,
   Bookings: bookings,
   Vehicles: vehicles,
+  Branches: branches,
   Customers: customers,
   Finance: finance,
 };

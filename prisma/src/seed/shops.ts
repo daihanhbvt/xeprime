@@ -17,6 +17,15 @@ export interface BranchSpec {
   provinceCode: string;
   address: string;
   phone: string;
+  /**
+   * Toạ độ điểm giao xe đi — điểm xuất phát của mọi phép tính phí giao tận nơi (ADR 0018).
+   *
+   * Khai sẵn trong seed, KHÔNG geocode lúc chạy: seed phải tất định và chạy được offline. Đây là
+   * vị trí XẤP XỈ của địa chỉ demo, đủ đúng để quãng đường ra con số hợp lý — không phải toạ độ
+   * đo đạc, và cũng không cần chính xác hơn thế cho dữ liệu minh hoạ.
+   */
+  latitude: number;
+  longitude: number;
   isDefault?: boolean;
   status?: string;
 }
@@ -128,6 +137,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         provinceCode: '79',
         address: '123 Nguyễn Văn Cừ, Quận 5, TP. Hồ Chí Minh',
         phone: '02839001234',
+        latitude: 10.7595,
+        longitude: 106.682,
         isDefault: true,
       },
       {
@@ -136,6 +147,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         provinceCode: '01',
         address: '88 Trần Thái Tông, Cầu Giấy, Hà Nội',
         phone: '02439001234',
+        latitude: 21.0313,
+        longitude: 105.7873,
       },
       {
         code: 'CN03',
@@ -143,6 +156,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         provinceCode: '48',
         address: '215 Nguyễn Văn Linh, Hải Châu, Đà Nẵng',
         phone: '02363001234',
+        latitude: 16.0605,
+        longitude: 108.2145,
       },
       {
         code: 'CN04',
@@ -150,6 +165,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         provinceCode: '92',
         address: '45 đường 30/4, Ninh Kiều, Cần Thơ',
         phone: '02923001234',
+        latitude: 10.0299,
+        longitude: 105.77,
       },
     ],
     fleet: [
@@ -236,6 +253,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         provinceCode: '01',
         address: '12 Lê Văn Lương, Thanh Xuân, Hà Nội',
         phone: '02438887777',
+        latitude: 21.0027,
+        longitude: 105.802,
         isDefault: true,
       },
       {
@@ -244,6 +263,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         provinceCode: '31',
         address: '77 Tô Hiệu, Lê Chân, Hải Phòng',
         phone: '02258887777',
+        latitude: 20.843,
+        longitude: 106.672,
       },
     ],
     fleet: [
@@ -298,6 +319,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         provinceCode: '48',
         address: '30 Nguyễn Chí Thanh, Hải Châu, Đà Nẵng',
         phone: '0904000001',
+        latitude: 16.0715,
+        longitude: 108.22,
         isDefault: true,
       },
     ],
@@ -344,6 +367,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         provinceCode: '92',
         address: 'Ninh Kiều, Cần Thơ',
         phone: '0905000001',
+        latitude: 10.034,
+        longitude: 105.783,
         isDefault: true,
       },
     ],
@@ -384,6 +409,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
         provinceCode: '46',
         address: '5 Lê Lợi, TP. Huế',
         phone: '0906000001',
+        latitude: 16.464,
+        longitude: 107.593,
         isDefault: true,
         status: BRANCH_STATUS.ACTIVE,
       },

@@ -896,6 +896,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/listings/{id}/delivery-distance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Khoảng cách giao xe tận nơi + phí dự kiến theo bậc của gian hàng
+         * @description **Truy cập:** công khai — không cần đăng nhập.
+         */
+        get: operations["PublicQuoteController_deliveryDistance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/vehicles/{id}/daily-prices": {
         parameters: {
             query?: never;
@@ -5506,6 +5526,8 @@ export interface components {
             provinceName?: string | null;
             /** @description SĐT chi nhánh */
             phone?: string | null;
+            latitude?: number | null;
+            longitude?: number | null;
         };
         ListingCollateralDto: {
             /** @enum {string} */
@@ -5731,6 +5753,26 @@ export interface components {
         PublicQuoteDto: {
             breakdown: components["schemas"]["QuoteBreakdownDto"];
             delivery: components["schemas"]["DeliverySummaryDto"];
+        };
+        GeoPointDto: {
+            /** @example 10.7721 */
+            lat: number;
+            /** @example 106.698 */
+            lng: number;
+        };
+        DeliveryDistanceDto: {
+            /** @enum {string} */
+            status: "auto" | "manual" | "unsupported" | "address_not_found" | "unavailable";
+            /** @description Khoảng cách đường bộ MỘT CHIỀU (km). Null khi không tra được. */
+            distanceKm?: number | null;
+            /** @description Phí giao dự kiến (VND dạng chuỗi). Chỉ khác null khi status = 'auto'. */
+            fee?: string | null;
+            /** @description Điểm giao xe đi — chi nhánh giữ xe. Null khi chi nhánh chưa có toạ độ. */
+            origin?: components["schemas"]["GeoPointDto"] | null;
+            /** @description Địa chỉ khách nhập */
+            destination?: components["schemas"]["GeoPointDto"] | null;
+            /** @description Địa chỉ bản đồ hiểu ra — hiện lại để khách xác nhận đúng chỗ */
+            formattedAddress?: string | null;
         };
         VehicleDailyPriceDto: {
             vehicleId: string;
@@ -14770,6 +14812,117 @@ export interface operations {
                 content: {
                     "application/json": {
                         data: components["schemas"]["PublicQuoteDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    PublicQuoteController_deliveryDistance: {
+        parameters: {
+            query: {
+                /** @description Địa chỉ khách muốn nhận xe — chuỗi tự do, server tự tra toạ độ */
+                address: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["DeliveryDistanceDto"];
                     };
                 };
             };

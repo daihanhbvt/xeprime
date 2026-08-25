@@ -174,7 +174,13 @@
       "addressPlaceholder": "123 Nguyen Van Linh, Hai Chau, Da Nang",
       "feeLabel": "Delivery fee",
       "feeFree": "Free",
-      "feeNote": "If any extra cost applies, the host will discuss it with you before updating the booking."
+      "feeNote": "If any extra cost applies, the host will discuss it with you before updating the booking.",
+      "estimating": "Calculating the distance…",
+      "estimatedDistance": "The delivery distance is about {distance} one way. The fee above is an ESTIMATE from the shop's price list — the owner confirms it when approving your request.",
+      "manualWithDistance": "Your address is about {distance} one way from the pickup point, outside the automatic quote range. The owner will discuss the delivery fee with you directly.",
+      "addressNotFound": "We could not locate this address on the map. Try adding more detail (street number, street name, ward) to see the estimated delivery fee.",
+      "resolvedAddress": "The map reads this as: {address}",
+      "mapTitle": "Map of the route to the delivery address"
     },
     "driver": {
       "pickupAddressLabel": "Pick-up address",

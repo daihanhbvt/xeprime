@@ -83,7 +83,26 @@ const quote = vi.hoisted(() => ({ data: null as unknown }));
 vi.mock('@/features/rental-policies/api', () => ({
   fetchPublicQuote: () =>
     quote.data ? Promise.resolve(quote.data) : Promise.reject(new Error('quote offline (test)')),
+  fetchDeliveryDistance: (...args: unknown[]) => deliveryDistance.fn(...args),
 }));
+
+/**
+ * Tra khoảng cách giao xe. Mặc định là `unavailable` — tức CHƯA cấu hình bản đồ, đúng trạng thái
+ * của một môi trường không có key. Test nào cần trạng thái khác thì gán lại `fn` trong chính nó,
+ * nên phần lớn suite vẫn kiểm được luồng đặt xe khi bản đồ vắng mặt.
+ */
+const deliveryDistance = {
+  fn: vi.fn(() =>
+    Promise.resolve({
+      status: 'unavailable',
+      distanceKm: null,
+      fee: null,
+      origin: null,
+      destination: null,
+      formattedAddress: null,
+    }),
+  ) as unknown as (...args: unknown[]) => Promise<unknown>,
+};
 
 /**
  * Nút "Nhắn chủ xe" thật cần `AuthModalProvider` (nó tự mở modal đăng nhập khi khách chưa
@@ -544,11 +563,15 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       expect(screen.queryByLabelText('Địa chỉ giao xe')).toBeNull();
     });
 
-    it('chọn giao tận nơi → hiện ô địa chỉ, ghi Miễn phí và câu giải thích', async () => {
+    /**
+     * Chưa cấu hình bản đồ (mặc định của mock) — màn hình phải giữ NGUYÊN hành vi trước đây:
+     * hỏi địa chỉ, nói hai bên tự trao đổi phí. Đây là bài kiểm quan trọng nhất của cả nhóm này,
+     * vì nó khoá lời hứa "bản đồ vắng mặt không làm gãy luồng đặt xe".
+     */
+    it('chưa cấu hình bản đồ → hiện ô địa chỉ và câu giải thích như cũ', async () => {
       renderModal();
       await chooseDelivery();
 
-      expect(screen.getByText('Miễn phí')).toBeTruthy();
       expect(
         screen.getByText(
           'Nếu có chi phí phát sinh, chủ xe sẽ trao đổi trực tiếp với bạn trước khi cập nhật đơn thuê.',
@@ -556,11 +579,66 @@ describe('RequestBookingModal — luồng đặt xe', () => {
       ).toBeTruthy();
     });
 
-    it('KHÔNG có khoảng cách, báo giá hay bước khách duyệt phí', async () => {
+    it('KHÔNG hỏi bản đồ khi địa chỉ còn quá ngắn — hạn mức không bị đốt vì gõ dở', async () => {
       renderModal();
       await chooseDelivery();
 
-      expect(screen.queryByLabelText(/Khoảng cách/i)).toBeNull();
+      fireEvent.change(screen.getByLabelText('Địa chỉ giao xe'), { target: { value: '12 Ng' } });
+      await new Promise((r) => setTimeout(r, 1100));
+
+      expect(deliveryDistance.fn).not.toHaveBeenCalled();
+    });
+
+    it('trong bán kính → hiện quãng đường một chiều và phí DỰ KIẾN', async () => {
+      deliveryDistance.fn = vi.fn(() =>
+        Promise.resolve({
+          status: 'auto',
+          distanceKm: 3.4,
+          fee: '30000',
+          origin: { lat: 10.7721, lng: 106.698 },
+          destination: { lat: 10.79, lng: 106.71 },
+          formattedAddress: '12 Nguyễn Huệ, Bến Nghé, Quận 1, TP.HCM',
+        }),
+      ) as unknown as (...args: unknown[]) => Promise<unknown>;
+
+      renderModal();
+      await chooseDelivery();
+      fireEvent.change(screen.getByLabelText('Địa chỉ giao xe'), {
+        target: { value: '12 Nguyễn Huệ, Quận 1, TP.HCM' },
+      });
+
+      // Quãng đường giữ một chữ số thập phân: bậc phí cắt ở đúng 3 km, làm tròn thành "3 km"
+      // sẽ hiện một con số mâu thuẫn với mức phí ngay cạnh nó.
+      expect(await screen.findByText(/3,4 km/)).toBeTruthy();
+      expect(screen.getByText(/12 Nguyễn Huệ, Bến Nghé/)).toBeTruthy();
+    });
+
+    it('ngoài bán kính → nói chủ xe sẽ báo phí, KHÔNG hiện một con số nào', async () => {
+      deliveryDistance.fn = vi.fn(() =>
+        Promise.resolve({
+          status: 'manual',
+          distanceKm: 42.5,
+          fee: null,
+          origin: { lat: 10.7721, lng: 106.698 },
+          destination: { lat: 11.2, lng: 106.9 },
+          formattedAddress: null,
+        }),
+      ) as unknown as (...args: unknown[]) => Promise<unknown>;
+
+      renderModal();
+      await chooseDelivery();
+      fireEvent.change(screen.getByLabelText('Địa chỉ giao xe'), {
+        target: { value: 'Khu công nghiệp Sóng Thần, Dĩ An, Bình Dương' },
+      });
+
+      expect(await screen.findByText(/ngoài phạm vi báo giá tự động/)).toBeTruthy();
+      expect(screen.queryByText(/^30\.000/)).toBeNull();
+    });
+
+    it('KHÔNG có bước khách duyệt phí — con số là dự kiến, chủ xe vẫn chốt', async () => {
+      renderModal();
+      await chooseDelivery();
+
       expect(screen.queryByText(/Chờ chủ xe báo giá/i)).toBeNull();
       expect(screen.queryByRole('button', { name: /Xác nhận phí/i })).toBeNull();
     });

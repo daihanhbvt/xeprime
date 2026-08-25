@@ -92,6 +92,19 @@ export const envSchema = z
      */
     R2_PRIVATE_BUCKET: z.string().optional(),
 
+    /*
+     * --- Bản đồ: geocode địa chỉ + khoảng cách giao xe (24/08/2026) ---
+     *
+     * Đây là **server key**, khoá theo IP trên Cloud Console và chỉ bật Geocoding API + Routes
+     * API. Nó KHÔNG phải key nhúng bản đồ của web (`NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY`, chỉ bật
+     * Maps Embed API, khoá theo referrer): key nhúng nằm lộ thiên trong HTML, nên dùng chung
+     * một key là mở hạn mức tính tiền cho bất kỳ ai xem trang.
+     *
+     * Optional có chủ đích, kể cả ở production: thiếu key thì phí giao dự kiến đơn giản không
+     * hiện và hai bên tự thoả thuận như trước — không có gì gãy, nên không đáng chặn boot.
+     */
+    GOOGLE_MAPS_SERVER_KEY: z.string().optional(),
+
     // --- Web + Email (cho link đặt lại mật khẩu) ---
     APP_WEB_URL: z.string().default('http://localhost:3000'),
     // SMTP tuỳ chọn: chưa cấu hình thì EmailService in link ra log (dev), không gửi thật.

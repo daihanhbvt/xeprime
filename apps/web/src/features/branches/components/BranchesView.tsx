@@ -9,6 +9,7 @@ import {
   PlusOutlined,
 } from '@ant-design/icons';
 import { Alert, Button, Tag } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
 import {
   BRANCH_STATUS,
@@ -23,6 +24,7 @@ import { RowActions, type RowAction } from '@/components/data-display/RowActions
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useAppFormat } from '@/i18n/use-app-format';
 import { getErrorMessage } from '@/services/api-client';
 import { useBranchAction, useBranches } from '../hooks/use-branches';
 import type { Branch } from '../types';
@@ -40,6 +42,9 @@ import styles from './BranchesView.module.css';
  * lỗi / thiếu quyền / lọc không ra) đã nằm trong component đó — không dựng lại ở đây.
  */
 export function BranchesView() {
+  const t = useTranslations('Branches');
+  const tc = useTranslations('Common');
+  const fmt = useAppFormat();
   // Chỉ ẩn/hiện UI — guard backend mới là lớp chặn thật (CLAUDE.md mục 6).
   const permissions = usePermissions();
   const canManage = permissions.has(PERMISSION.BRANCH_MANAGE);
@@ -77,10 +82,10 @@ export function BranchesView() {
     const list: RowAction[] = [
       {
         key: 'edit',
-        label: 'Sửa',
+        label: tc('actions.edit'),
         icon: <EditOutlined />,
         disabled: !canManage,
-        disabledReason: 'Bạn không có quyền sửa chi nhánh',
+        disabledReason: t('blocked.edit'),
         onClick: () => openEdit(branch),
       },
     ];
@@ -88,15 +93,15 @@ export function BranchesView() {
     if (!branch.isDefault) {
       list.push({
         key: 'set-default',
-        label: 'Đặt làm mặc định',
+        label: t('actions.setDefault'),
         icon: <CheckCircleOutlined />,
         disabled: !canManage || branch.status !== BRANCH_STATUS.ACTIVE || !branch.provinceCode,
         disabledReason:
           branch.status !== BRANCH_STATUS.ACTIVE
-            ? 'Chi nhánh đang ngừng hoạt động'
+            ? t('blocked.inactive')
             : !branch.provinceCode
-              ? 'Chi nhánh chưa có tỉnh/thành'
-              : 'Bạn không có quyền quản lý chi nhánh',
+              ? t('blocked.noProvince')
+              : t('blocked.manage'),
         onClick: () => action.mutate({ id: branch.id, action: 'set-default' }),
       });
     }
@@ -105,26 +110,23 @@ export function BranchesView() {
       branch.status === BRANCH_STATUS.ACTIVE
         ? {
             key: 'deactivate',
-            label: 'Ngừng hoạt động',
+            label: t('actions.deactivate'),
             icon: <PauseCircleOutlined />,
             danger: true,
             disabled: !canManage || branch.isDefault,
-            disabledReason: branch.isDefault
-              ? 'Chi nhánh mặc định không thể ngừng — đặt chi nhánh khác làm mặc định trước'
-              : 'Bạn không có quyền quản lý chi nhánh',
+            disabledReason: branch.isDefault ? t('blocked.isDefault') : t('blocked.manage'),
             confirm: {
-              title: 'Ngừng hoạt động chi nhánh?',
-              description:
-                'Chi nhánh sẽ không nhận xe mới. Xe và đơn đang chạy phải được chuyển/hoàn tất trước.',
+              title: t('confirmDeactivate.title'),
+              description: t('confirmDeactivate.description'),
             },
             onClick: () => action.mutate({ id: branch.id, action: 'deactivate' }),
           }
         : {
             key: 'activate',
-            label: 'Bật lại',
+            label: t('actions.activate'),
             icon: <PlayCircleOutlined />,
             disabled: !canManage,
-            disabledReason: 'Bạn không có quyền quản lý chi nhánh',
+            disabledReason: t('blocked.manage'),
             onClick: () => action.mutate({ id: branch.id, action: 'activate' }),
           },
     );
@@ -134,44 +136,56 @@ export function BranchesView() {
 
   const columns: DataTableColumn<Branch>[] = [
     {
-      title: 'Chi nhánh',
+      title: t('columns.branch'),
       dataIndex: 'name',
       width: 220,
       render: (_v, row) => (
         <div className={styles.identity}>
           <span className={styles.name}>{row.name}</span>
           <span className={styles.code}>{row.code}</span>
-          {row.isDefault ? <Tag color={STATUS_COLOR.WAITING}>Mặc định</Tag> : null}
+          {row.isDefault ? <Tag color={STATUS_COLOR.WAITING}>{t('labels.default')}</Tag> : null}
         </div>
       ),
     },
     {
-      title: 'Tỉnh/thành',
+      title: t('columns.province'),
       dataIndex: 'provinceName',
       width: 180,
       render: (_v, row) =>
         row.provinceName ? (
           <span>{row.provinceName}</span>
         ) : (
-          <Tag color={STATUS_COLOR.WARNING}>Chưa có tỉnh/thành</Tag>
+          <Tag color={STATUS_COLOR.WARNING}>{t('labels.noProvince')}</Tag>
         ),
     },
-    { title: 'Địa chỉ', dataIndex: 'address', width: 280, render: (v: string | null) => v || '—' },
-    { title: 'Điện thoại', dataIndex: 'phone', width: 140, render: (v: string | null) => v || '—' },
     {
-      title: 'Số xe',
+      title: t('columns.address'),
+      dataIndex: 'address',
+      width: 280,
+      render: (v: string | null) => v || tc('labels.emptyValue'),
+    },
+    {
+      title: t('columns.phone'),
+      dataIndex: 'phone',
+      width: 140,
+      render: (v: string | null) => v || tc('labels.emptyValue'),
+    },
+    {
+      title: t('columns.vehicleCount'),
       dataIndex: 'vehicleCount',
       width: 90,
       align: 'right',
     },
     {
-      title: 'Trạng thái',
+      title: tc('labels.status'),
       dataIndex: 'status',
       width: 150,
-      render: (v: BranchStatus) => <StatusTag value={v} meta={BRANCH_STATUS_META} group="branchStatus" />,
+      render: (v: BranchStatus) => (
+        <StatusTag value={v} meta={BRANCH_STATUS_META} group="branchStatus" />
+      ),
     },
     {
-      title: 'Thao tác',
+      title: tc('labels.actions'),
       key: 'actions',
       width: 420,
       // Cột hành động ghim mép phải: bảng cuộn ngang thì nút vẫn ở trong tầm với.
@@ -184,11 +198,11 @@ export function BranchesView() {
   return (
     <div className={styles.page}>
       <ManagePageHeader
-        title="Chi nhánh"
-        subtitle="Nơi xe của bạn đang đỗ. Chi nhánh quyết định xe hiển thị ở tỉnh/thành nào trên marketplace."
+        title={t('page.title')}
+        subtitle={t('page.subtitle')}
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} disabled={!canManage}>
-            Thêm chi nhánh
+            {t('page.add')}
           </Button>
         }
       />
@@ -199,22 +213,25 @@ export function BranchesView() {
           showIcon
           className={styles.alert}
           icon={<EnvironmentOutlined />}
-          message={`${needsReview} chi nhánh chưa có tỉnh/thành`}
-          description="Xe thuộc các chi nhánh này KHÔNG hiển thị trên marketplace cho tới khi bạn bổ sung tỉnh/thành."
+          message={t('page.needsReview', { count: needsReview })}
+          description={t('page.needsReviewHint')}
         />
       ) : null}
 
       <div className={styles.toolbar}>
         <AutoSearchInput
-          placeholder="Tìm theo tên, mã hoặc địa chỉ"
+          placeholder={t('toolbar.searchPlaceholder')}
           value={search}
           onSearch={setSearch}
           className={styles.search}
-          aria-label="Tìm chi nhánh"
+          aria-label={t('toolbar.searchLabel')}
         />
         <div className={styles.summary}>
           <span>
-            {query.data?.total ?? 0} chi nhánh · {query.data?.activeCount ?? 0} đang hoạt động
+            {t('toolbar.summary', {
+              total: query.data?.total ?? 0,
+              active: fmt.count(query.data?.activeCount ?? 0),
+            })}
           </span>
           <Button
             size="small"
@@ -223,13 +240,13 @@ export function BranchesView() {
               setStatusFilter((v) => (v === BRANCH_STATUS.ACTIVE ? '' : BRANCH_STATUS.ACTIVE))
             }
           >
-            Chỉ đang hoạt động
+            {t('toolbar.activeOnly')}
           </Button>
         </div>
       </div>
 
       <DataTable<Branch>
-        label="Danh sách chi nhánh"
+        label={t('table.label')}
         columns={columns}
         items={items}
         onRowClick={canManage ? openEdit : undefined}
@@ -238,7 +255,7 @@ export function BranchesView() {
         error={
           query.isError && !query.data
             ? {
-                title: 'Không tải được danh sách chi nhánh',
+                title: t('table.loadError'),
                 description: getErrorMessage(query.error),
                 onRetry: () => void query.refetch(),
               }
@@ -248,37 +265,43 @@ export function BranchesView() {
           canView
             ? null
             : {
-                title: 'Bạn không có quyền xem chi nhánh',
-                description: 'Liên hệ chủ gian hàng để được cấp quyền.',
+                title: t('table.noPermission'),
+                description: t('table.noPermissionHint'),
               }
         }
         filtered={Boolean(search || statusFilter)}
         empty={{
-          title: 'Chưa có chi nhánh nào',
-          description: 'Thêm chi nhánh để khai báo nơi xe của bạn đang đỗ.',
+          title: t('table.empty'),
+          description: t('table.emptyHint'),
           action: canManage ? (
             <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-              Thêm chi nhánh
+              {t('page.add')}
             </Button>
           ) : undefined,
         }}
         noResults={{
-          title: 'Không có chi nhánh khớp bộ lọc',
-          description: 'Thử xoá từ khoá hoặc bỏ lọc trạng thái.',
+          title: t('table.noResults'),
+          description: t('table.noResultsHint'),
         }}
         renderCard={(row) => (
           <div className={styles.card}>
             <div className={styles.cardHead}>
               <span className={styles.name}>{row.name}</span>
-              {row.isDefault ? <Tag color={STATUS_COLOR.WAITING}>Mặc định</Tag> : null}
-              <StatusTag value={row.status as BranchStatus} meta={BRANCH_STATUS_META} group="branchStatus" />
+              {row.isDefault ? <Tag color={STATUS_COLOR.WAITING}>{t('labels.default')}</Tag> : null}
+              <StatusTag
+                value={row.status as BranchStatus}
+                meta={BRANCH_STATUS_META}
+                group="branchStatus"
+              />
             </div>
             <div className={styles.cardMeta}>
               <EnvironmentOutlined />
-              <span>{row.provinceName ?? 'Chưa có tỉnh/thành'}</span>
+              <span>{row.provinceName ?? t('labels.noProvince')}</span>
             </div>
             {row.address ? <div className={styles.cardMeta}>{row.address}</div> : null}
-            <div className={styles.cardMeta}>{row.vehicleCount} xe</div>
+            <div className={styles.cardMeta}>
+              {t('labels.vehicles', { count: row.vehicleCount })}
+            </div>
             <RowActions actions={actionsOf(row)} align="start" maxInline={2} variant="filled" />
           </div>
         )}
