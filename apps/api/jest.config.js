@@ -16,6 +16,9 @@ module.exports = {
   // số kết nối = workers × pool và vượt max_connections khi repo thêm suite (fail hàng loạt
   // kiểu ECONNRESET dù từng suite chạy riêng vẫn xanh).
   maxWorkers: 4,
+  // Cổng vào chạy MỘT lần trước cả run: với REQUIRE_DB=1 thì thiếu PostgreSQL là ĐỎ, không phải
+  // 51 spec lặng lẽ bỏ qua rồi báo xanh. Lý do đầy đủ ở đầu test/global-setup.ts.
+  globalSetup: '<rootDir>/test/global-setup.ts',
   // Nest DI đọc metadata do emitDecoratorMetadata sinh ra; thiếu import này thì
   // provider không resolve được và lỗi chỉ hiện lúc chạy test, rất khó đọc.
   // `setup-test-db` PHẢI đứng trước: nó chốt `DATABASE_URL` trước khi spec gọi

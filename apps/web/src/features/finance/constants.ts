@@ -35,6 +35,33 @@ export const RECEIPT_PERIOD_VALUES = [
 export { RECEIPT_TYPE, RECEIPT_SOURCE, isAutoReceipt };
 
 /**
+ * Phiếu tay gắn vào CÁI GÌ — lựa chọn đầu tiên của form, vì nó quyết định các ô còn lại.
+ *
+ * Ba phương án là ba loại khoản chi/thu có thật trong sổ, không phải ba cách bấm:
+ *  - `BOOKING` — tiền của một chuyến (thu nốt, phụ phí). Xe suy từ đơn.
+ *  - `VEHICLE` — tiền của một chiếc xe ngoài chuyến nào (rửa xe, vá lốp, gửi bãi).
+ *  - `NONE` — tiền của gian hàng (marketing, văn phòng, lương) — đúng phần
+ *    `unassignedCost`/`unassignedRevenue` mà báo cáo phải giải thích được.
+ *
+ * Đây là trạng thái CỦA FORM, không phải giá trị nghiệp vụ đi trên dây: API vẫn chỉ nhận
+ * `bookingId`/`vehicleId`, nên hằng này sống ở feature chứ không ở `@xeprime/types`.
+ */
+export const RECEIPT_LINK_MODE = {
+  NONE: 'none',
+  BOOKING: 'booking',
+  VEHICLE: 'vehicle',
+} as const;
+
+export type ReceiptLinkMode = (typeof RECEIPT_LINK_MODE)[keyof typeof RECEIPT_LINK_MODE];
+
+/** Thứ tự hiện trên nhóm chọn — mặc định trước, rồi tới hai lựa chọn có liên kết. */
+export const RECEIPT_LINK_MODE_VALUES = [
+  RECEIPT_LINK_MODE.NONE,
+  RECEIPT_LINK_MODE.BOOKING,
+  RECEIPT_LINK_MODE.VEHICLE,
+] as const satisfies readonly ReceiptLinkMode[];
+
+/**
  * Kỳ xem nhanh của màn TỔNG QUAN DOANH THU — rộng hơn sổ Thu-Chi.
  *
  * Sổ là nơi tra một phiếu cụ thể nên bốn kỳ ngắn là đủ; tổng quan là nơi hỏi "quý này lãi

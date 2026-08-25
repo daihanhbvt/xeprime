@@ -1,0 +1,62 @@
+.card {
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  overflow: hidden;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+}
+
+.tag {
+  flex: none;
+}
+
+/*
+ * Dải chân tách nền để đọc như CHÚ THÍCH của thẻ, không như một dòng nội dung nữa: bối cảnh
+ * (chi nhánh, khách đang thuê, còn nợ) là thứ giúp xác nhận, không phải thứ đang được chọn.
+ */
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  padding: var(--xp-space-xs) var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+  min-width: 0;
+}
+
+.fact {
+  white-space: nowrap;
+}
+
+.factLabel {
+  color: var(--xp-color-text-tertiary);
+}
+
+.factLabel::after {
+  content: ': ';
+}
+
+.detail {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  flex: none;
+  font-size: var(--xp-font-size-body-sm);
+}

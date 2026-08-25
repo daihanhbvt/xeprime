@@ -2362,7 +2362,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Presign upload ảnh minh chứng phiếu thu/chi lên R2
+         * Presign upload chứng từ phiếu thu/chi (ảnh hoặc PDF) lên R2
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
@@ -2512,6 +2512,30 @@ export interface paths {
          *     **Quyền yêu cầu:** `receipts.create` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["ReceiptsController_bookingOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/receipts/vehicle-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Xe gợi ý để gắn phiếu (tìm theo mã xe / tên / biển số)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `receipts.create` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["ReceiptsController_vehicleOptions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7111,6 +7135,17 @@ export interface components {
             /** @description Giây còn hiệu lực của uploadUrl */
             expiresIn: number;
         };
+        PresignDocumentDto: {
+            /**
+             * @description Tên file gốc (chỉ để đặt key, đã sanitize)
+             * @example hoa-don-thue-mat-bang.pdf
+             */
+            fileName: string;
+            /** @enum {string} */
+            contentType: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+            /** @description Dung lượng file (byte), tối đa 10485760 */
+            fileSize: number;
+        };
         FinanceCategoryDto: {
             id: string;
             /** @enum {string} */
@@ -7185,9 +7220,13 @@ export interface components {
             customerName: string;
             customerPhone?: string | null;
             tenantCustomerId?: string | null;
+            /** @description @xeprime/types → BookingStatus */
+            status: string;
             vehicleId: string;
             vehicleName: string;
             plateNumber?: string | null;
+            /** @description Ảnh đại diện xe */
+            vehicleImageUrl?: string | null;
             /** @description Tiền dạng string — ADR 0007 */
             totalAmount: string;
             paidAmount: string;
@@ -7196,6 +7235,27 @@ export interface components {
         };
         ReceiptBookingOptionListDto: {
             data: components["schemas"]["ReceiptBookingOptionDto"][];
+        };
+        ReceiptVehicleOptionDto: {
+            id: string;
+            /** @description Mã xe nội bộ của gian hàng */
+            code: string;
+            name: string;
+            plateNumber?: string | null;
+            imageUrl?: string | null;
+            /** @description @xeprime/types → VehicleOperationStatus */
+            operationStatus: string;
+            branchId?: string | null;
+            branchName?: string | null;
+            /** @description Đơn thuê đang chạy */
+            currentBookingId?: string | null;
+            currentBookingCode?: string | null;
+            currentCustomerName?: string | null;
+            /** @description Còn nợ của chuyến đang chạy — tiền dạng string (ADR 0007) */
+            currentDebtAmount?: string | null;
+        };
+        ReceiptVehicleOptionListDto: {
+            data: components["schemas"]["ReceiptVehicleOptionDto"][];
         };
         ReceiptDetailDto: {
             id: string;
@@ -7256,7 +7316,7 @@ export interface components {
             categoryId?: string;
             /** @description Đơn thuê liên quan (ULID) */
             bookingId?: string;
-            /** @description Xe liên quan (ULID) */
+            /** @description Xe liên quan (ULID). Gắn được MỘT MÌNH — chi phí của một chiếc xe (rửa, vá lốp, gửi bãi) không thuộc chuyến nào. Gửi kèm `bookingId` thì phải là ĐÚNG xe của đơn đó, nếu không server trả `RECEIPT_BOOKING_VEHICLE_MISMATCH`; bỏ trống mà có `bookingId` thì server tự suy từ đơn. */
             vehicleId?: string;
             /** @description Ngày tiền phát sinh (ISO hoặc YYYY-MM-DD); mặc định bây giờ. Nhập bù cho hôm trước thì đặt đúng ngày đó. */
             occurredAt?: string;
@@ -26528,7 +26588,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PresignImageDto"];
+                "application/json": components["schemas"]["PresignDocumentDto"];
             };
         };
         responses: {
@@ -27767,6 +27827,136 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReceiptBookingOptionListDto"];
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ReceiptsController_vehicleOptions: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo mã xe / tên xe / biển số */
+                q?: string;
+                /** @description Luôn kèm xe này trong kết quả (ULID) — xe đang chọn sẵn */
+                includeId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptVehicleOptionListDto"];
                 };
             };
             /**

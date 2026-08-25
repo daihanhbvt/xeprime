@@ -26,6 +26,8 @@ import {
   ReceiptListItemDto,
   ReceiptBookingOptionDto,
   ReceiptListQueryDto,
+  ReceiptVehicleOptionDto,
+  ReceiptVehicleOptionQueryDto,
   RECEIPT_DEFAULT_LIMIT,
   RECEIPT_MAX_LIMIT,
   ReceiptSummaryDto,
@@ -255,13 +257,14 @@ export class ReceiptsService {
       select: {
         id: true,
         code: true,
+        status: true,
         customerName: true,
         customerPhone: true,
         tenantCustomerId: true,
         vehicleId: true,
         totalAmount: true,
         paidAmount: true,
-        vehicle: { select: { name: true, plateNumber: true } },
+        vehicle: { select: { name: true, plateNumber: true, mainImageUrl: true } },
       },
     });
 
@@ -269,17 +272,132 @@ export class ReceiptsService {
       .map((r) => ({
         id: r.id,
         code: r.code,
+        status: r.status,
         customerName: r.customerName,
         customerPhone: r.customerPhone,
         tenantCustomerId: r.tenantCustomerId,
         vehicleId: r.vehicleId,
         vehicleName: r.vehicle?.name ?? '',
         plateNumber: r.vehicle?.plateNumber ?? null,
+        vehicleImageUrl: r.vehicle?.mainImageUrl ?? null,
         totalAmount: r.totalAmount.toString(),
         paidAmount: r.paidAmount.toString(),
         debtAmount: bookingDebt(r.totalAmount, r.paidAmount).toString(),
       }))
       .sort((a, b) => Number(b.debtAmount) - Number(a.debtAmount));
+  }
+
+  /**
+   * Xe gợi ý cho ô "Liên kết xe" của form tạo phiếu.
+   *
+   * Đứng riêng với `GET /vehicles` chứ không bắt form gọi sang đó: danh sách xe đòi
+   * `vehicle.view`, mà người giữ sổ (`finance_admin`) chỉ có `receipts.create` — dùng chung
+   * endpoint là ép thêm quyền xem đội xe cho một việc chỉ cần biết tên xe, hoặc tệ hơn, nới
+   * quyền của endpoint kia. Ở đây quyền là quyền của chính việc đang làm.
+   *
+   * Chặn 20 dòng và tìm ở SERVER: một đội xe 40 chiếc vẫn vừa, nhưng gian hàng lớn thì không, và
+   * `vehicles_search_trgm_idx` đã đánh index đúng ba cột này.
+   */
+  async vehicleOptions(
+    tenantId: string,
+    query: ReceiptVehicleOptionQueryDto,
+  ): Promise<ReceiptVehicleOptionDto[]> {
+    const term = query.q?.trim();
+    const select = {
+      id: true,
+      code: true,
+      name: true,
+      plateNumber: true,
+      mainImageUrl: true,
+      operationStatus: true,
+      branchId: true,
+      branch: { select: { name: true } },
+    } satisfies Prisma.VehicleSelect;
+
+    const rows = await this.prisma.vehicle.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        ...(term
+          ? {
+              OR: [
+                { code: { contains: term, mode: 'insensitive' } },
+                { name: { contains: term, mode: 'insensitive' } },
+                { plateNumber: { contains: term, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ name: 'asc' }],
+      take: VEHICLE_OPTION_LIMIT,
+      select,
+    });
+
+    // Xe đang chọn sẵn phải có mặt kể cả khi nó không khớp từ khoá đang gõ — nếu không, gõ tìm
+    // một xe khác sẽ làm ô chọn quên mất nhãn của xe đã chọn và hiện lại id thô.
+    const pinned =
+      query.includeId && !rows.some((r) => r.id === query.includeId)
+        ? await this.prisma.vehicle.findFirst({
+            where: { id: query.includeId, tenantId, deletedAt: null },
+            select,
+          })
+        : null;
+
+    const vehicles = [...(pinned ? [pinned] : []), ...rows];
+    const current = await this.currentBookingsOf(
+      tenantId,
+      vehicles.map((v) => v.id),
+    );
+
+    return vehicles.map((r) => {
+      const booking = current.get(r.id) ?? null;
+      return {
+        id: r.id,
+        code: r.code,
+        name: r.name,
+        plateNumber: r.plateNumber,
+        imageUrl: r.mainImageUrl,
+        operationStatus: r.operationStatus,
+        branchId: r.branchId,
+        branchName: r.branch?.name ?? null,
+        currentBookingId: booking?.id ?? null,
+        currentBookingCode: booking?.code ?? null,
+        currentCustomerName: booking?.customerName ?? null,
+        currentDebtAmount: booking ? bookingDebt(booking.totalAmount, booking.paidAmount).toString() : null,
+      };
+    });
+  }
+
+  /**
+   * Chuyến ĐANG CHẠY của một lô xe — MỘT truy vấn cho cả lô, không phải một truy vấn mỗi xe.
+   *
+   * 20 dòng × một lần `findFirst` là 20 lượt đi-về database cho một ô chọn; ở đây là một lần
+   * quét theo `(tenant_id, vehicle_id)` rồi gom trong bộ nhớ. Xe nào cũng chỉ có tối đa một
+   * chuyến `active` — `vehicle_occupancies` + `EXCLUDE USING gist` bảo đảm điều đó (ADR 0006),
+   * nên không cần chọn "cái nào" khi có nhiều.
+   */
+  private async currentBookingsOf(tenantId: string, vehicleIds: string[]) {
+    if (vehicleIds.length === 0) return new Map<string, CurrentBookingRow>();
+    const rows = await this.prisma.booking.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        vehicleId: { in: vehicleIds },
+        status: BOOKING_STATUS.ACTIVE,
+      },
+      orderBy: [{ pickupAt: 'desc' }],
+      select: {
+        id: true,
+        code: true,
+        vehicleId: true,
+        customerName: true,
+        totalAmount: true,
+        paidAmount: true,
+      },
+    });
+    const byVehicle = new Map<string, CurrentBookingRow>();
+    for (const row of rows) if (!byVehicle.has(row.vehicleId)) byVehicle.set(row.vehicleId, row);
+    return byVehicle;
   }
 
   private async actorNames(ids: (string | null)[]): Promise<Map<string, string>> {
@@ -304,19 +422,41 @@ export class ReceiptsService {
      *
      * Khách của phiếu thì SUY từ đơn, không nhận từ body: client không được tự gắn phiếu vào
      * một khách bất kỳ (CLAUDE.md §5).
+     *
+     * KHÔNG bắt buộc phải có đơn hay xe: chi phí marketing, thuê văn phòng, lương không thuộc
+     * chuyến nào và cũng không thuộc chiếc xe nào — `unassignedCost`/`unassignedRevenue` ở
+     * `FinanceSummaryDto` tồn tại chính vì tập phiếu đó có thật.
      */
     let tenantCustomerId: string | null = null;
+    let vehicleId = dto.vehicleId ?? null;
+
     if (dto.bookingId) {
       const booking = await this.prisma.booking.findFirst({
         where: { id: dto.bookingId, tenantId, deletedAt: null },
-        select: { tenantCustomerId: true },
+        select: { tenantCustomerId: true, vehicleId: true },
       });
       if (!booking) throw notFoundBooking();
       tenantCustomerId = booking.tenantCustomerId;
+
+      /*
+       * Đơn và xe phải KHỚP NHAU.
+       *
+       * Hai ô đều hợp lệ khi xét riêng, nên không có tầng nào bên dưới bắt được cặp sai: DB chỉ
+       * có hai FK độc lập. Ghi lọt một phiếu gắn đơn của xe A mà cột `vehicle_id` trỏ xe B thì
+       * `/finance/by-vehicle` cộng tiền vào xe B trong khi sổ của đơn kể chuyện xe A — và không
+       * có cách nào biết bên nào đúng để sửa về sau.
+       *
+       * Client bỏ trống xe thì SUY từ đơn thay vì để null: mọi khoản tiền của một chuyến đều là
+       * tiền của chiếc xe chạy chuyến đó, và một phiếu gắn đơn mà không gắn xe sẽ tự rơi khỏi
+       * báo cáo hiệu quả theo xe.
+       */
+      if (vehicleId && vehicleId !== booking.vehicleId) throw bookingVehicleMismatch();
+      vehicleId = booking.vehicleId;
     }
-    if (dto.vehicleId) {
+
+    if (vehicleId) {
       const vehicle = await this.prisma.vehicle.findFirst({
-        where: { id: dto.vehicleId, tenantId, deletedAt: null },
+        where: { id: vehicleId, tenantId, deletedAt: null },
         select: { id: true },
       });
       if (!vehicle) throw notFoundVehicle();
@@ -331,7 +471,7 @@ export class ReceiptsService {
           type: dto.type as ReceiptType,
           categoryId: dto.categoryId ?? null,
           bookingId: dto.bookingId ?? null,
-          vehicleId: dto.vehicleId ?? null,
+          vehicleId,
           tenantCustomerId,
           amount: dto.amount,
           paymentMethod: dto.paymentMethod as PaymentMethod,
@@ -581,6 +721,19 @@ export class ReceiptsService {
 /** Ô gợi ý đơn: đủ để chọn mà không biến thành một danh sách phải cuộn. */
 const BOOKING_OPTION_LIMIT = 20;
 
+/** Chuyến đang chạy kèm theo một xe trong ô chọn — chỉ những cột thẻ liên kết thật sự vẽ ra. */
+type CurrentBookingRow = {
+  id: string;
+  code: string;
+  vehicleId: string;
+  customerName: string;
+  totalAmount: Prisma.Decimal;
+  paidAmount: Prisma.Decimal;
+};
+
+/** Cùng trần với ô chọn đơn — một danh sách dài hơn thì phải gõ tìm chứ không cuộn. */
+const VEHICLE_OPTION_LIMIT = 20;
+
 /** UTC+7 — cùng hằng số với `common/day-range.ts`; `Asia/Ho_Chi_Minh` không có DST. */
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 
@@ -656,6 +809,19 @@ function notFoundBooking(): NotFoundException {
   return new NotFoundException({
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy đơn thuê để gắn phiếu',
+  });
+}
+
+/**
+ * Đơn có thật, xe có thật, nhưng đơn đó không chạy chiếc xe đó.
+ *
+ * 409 chứ không phải 400: không ô nào sai định dạng, thứ xung đột là quan hệ giữa hai lựa chọn —
+ * và lối đi tiếp là bỏ chọn một trong hai, không phải nhập lại.
+ */
+function bookingVehicleMismatch(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.RECEIPT_BOOKING_VEHICLE_MISMATCH,
+    message: 'Đơn thuê đã chọn không chạy chiếc xe đã chọn',
   });
 }
 

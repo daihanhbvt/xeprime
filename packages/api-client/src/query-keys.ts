@@ -192,6 +192,7 @@ export const queryKeys = {
     categories: (params: QueryParams) => ['receipts', 'categories', params] as const,
     summary: (params: QueryParams) => ['receipts', 'summary', params] as const,
     bookingOptions: (params: QueryParams) => ['receipts', 'booking-options', params] as const,
+    vehicleOptions: (params: QueryParams) => ['receipts', 'vehicle-options', params] as const,
   },
   payments: {
     all: ['payments'] as const,

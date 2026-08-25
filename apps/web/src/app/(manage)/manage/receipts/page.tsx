@@ -72,13 +72,30 @@ function ReceiptsView() {
   // Danh mục nạp sẵn cho ô lọc: người dùng phải THẤY có những nhóm chi nào rồi mới chọn được.
   const { data: categories } = useFinanceCategories();
 
-  const [formOpen, setFormOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
 
   const canView = has(PERMISSION.FINANCE_VIEW);
   const canCreate = has(PERMISSION.RECEIPT_CREATE);
   const canApprove = has(PERMISSION.RECEIPT_APPROVE);
+
+  /**
+   * Form mở bằng state cục bộ, nhưng URL MỞ ĐƯỢC nó.
+   *
+   * `?create=1` là ý định mang sang từ hồ sơ xe — nút "Tạo phiếu thu/chi" ở đó là một đường dẫn
+   * thường, nên nó vừa lọc sổ về xe đó vừa mở sẵn form, và vẫn gửi/quay lại được. Tham số chỉ là
+   * giá trị KHỞI TẠO: đẩy hẳn trạng thái mở/đóng lên URL thì mỗi lần bấm là một `router.replace`,
+   * và một drawer mở sau một vòng chuyển trang thì cảm giác như bấm hụt.
+   *
+   * Đóng lại thì gỡ `create` khỏi URL — F5 không mở lại một form người dùng vừa bỏ. `resetPage:
+   * false` vì đóng form không phải là đổi bộ lọc, không được cuốn họ về trang 1 đang đọc.
+   */
+  const [formOpen, setFormOpen] = useState(Boolean(filters.create) && canCreate);
+
+  function closeForm() {
+    setFormOpen(false);
+    if (filters.create) setFilters({ create: undefined }, { resetPage: false });
+  }
 
   const periodOptions = useMemo(
     () => RECEIPT_PERIOD_VALUES.map((value) => ({ value, label: t(`periods.${value}`) })),
@@ -252,7 +269,22 @@ function ReceiptsView() {
           setDetailId(null);
         }}
       />
-      <ReceiptFormDrawer open={formOpen} onClose={() => setFormOpen(false)} />
+      <ReceiptFormDrawer
+        /*
+         * Đổi xe đang lọc là đổi GIÁ TRỊ KHỞI TẠO của form, nên phải dựng lại cây.
+         *
+         * `defaultValues` của RHF chỉ đọc một lần lúc mount, mà drawer này sống suốt vòng đời
+         * trang. Cách còn lại là một effect ghi đè sau khi đã render — thứ vừa vi phạm
+         * `react-hooks/set-state-in-effect` vừa có nguy cơ đè lên đúng ô người dùng đang gõ.
+         */
+        key={filters.vehicleId ?? 'no-vehicle'}
+        open={formOpen}
+        onClose={closeForm}
+        // Xe đang lọc CŨNG là xe của phiếu sắp tạo — đó chính là ngữ cảnh người dùng mang sang từ
+        // hồ sơ xe. Đọc từ filter chứ không phải một tham số thứ hai: hai nguồn cho cùng một chiếc
+        // xe là hai nguồn sẽ trôi khỏi nhau.
+        initialVehicleId={filters.vehicleId ?? null}
+      />
       <CategoryManagerModal open={categoriesOpen} onClose={() => setCategoriesOpen(false)} />
     </div>
   );

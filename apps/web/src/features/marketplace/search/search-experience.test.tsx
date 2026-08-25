@@ -86,6 +86,18 @@ async function renderExperience() {
   };
 }
 
+/**
+ * Landmark của THẺ HERO. Mọi truy vấn nhóm chọn phải neo vào đây.
+ *
+ * `screen.getByRole('tablist', …)` quét cả `document.body`, mà panel chỉnh sửa (dialog) cũng
+ * chứa tablist TRÙNG TÊN — dialog lại đóng có hoạt cảnh nên đôi lúc còn trong DOM ở câu lệnh
+ * kế tiếp. Đó là nguồn `getMultipleElementsFoundError` không tái lập đều được. Neo phạm vi làm
+ * truy vấn tất định dù dialog hay thanh thu gọn đang hiện; KHÔNG đổi `role` của sản phẩm.
+ */
+function heroCard(): HTMLElement {
+  return screen.getByRole('search', { name: 'Tìm xe cho thuê' });
+}
+
 /** Hero: vùng form có `role="tabpanel"`. Thanh thu gọn: landmark `search` riêng của nó. */
 function hero(): HTMLElement {
   return screen.getByRole('tabpanel');
@@ -131,8 +143,8 @@ describe('phân tầng: loại xe → dịch vụ → form', () => {
   it('hai nhóm chọn đứng TRƯỚC hàng ô nhập, không trộn vào cùng một hàng với địa điểm/ngày', async () => {
     await renderExperience();
 
-    const vehicleGroup = screen.getByRole('tablist', { name: 'Loại xe' });
-    const serviceGroup = screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
+    const vehicleGroup = within(heroCard()).getByRole('tablist', { name: 'Loại xe' });
+    const serviceGroup = within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
 
     expect(within(vehicleGroup).getAllByRole('tab')).toHaveLength(2);
     expect(within(serviceGroup).getAllByRole('tab')).toHaveLength(3);
@@ -143,7 +155,7 @@ describe('phân tầng: loại xe → dịch vụ → form', () => {
 
   it('mỗi nhóm là MỘT điểm dừng Tab, đi trong nhóm bằng mũi tên (roving tabindex)', async () => {
     await renderExperience();
-    const serviceGroup = screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
+    const serviceGroup = within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
     const tabs = within(serviceGroup).getAllByRole('tab');
 
     expect(tabs.filter((tab) => tab.getAttribute('tabindex') === '0')).toHaveLength(1);
@@ -177,7 +189,7 @@ describe('tự lái', () => {
     fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
     const before = submittedQuery();
 
-    clickTab(screen.getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
+    clickTab(within(heroCard()).getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
     fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
     const after = submittedQuery();
 
@@ -191,10 +203,11 @@ describe('tự lái', () => {
 describe('xe máy không có dịch vụ CÓ TÀI XẾ', () => {
   it('chọn Xe máy thì tab "Xe có tài xế" biến mất, hai tab còn lại giữ nguyên', async () => {
     await renderExperience();
-    const services = () => screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
+    const services = () =>
+      within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
     expect(within(services()).getAllByRole('tab')).toHaveLength(3);
 
-    clickTab(screen.getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
+    clickTab(within(heroCard()).getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
 
     expect(within(services()).queryByRole('tab', { name: 'Xe có tài xế' })).toBeNull();
     expect(within(services()).getByRole('tab', { name: 'Xe tự lái' })).toBeTruthy();
@@ -203,8 +216,11 @@ describe('xe máy không có dịch vụ CÓ TÀI XẾ', () => {
 
   it('đang ở tab Có tài xế mà đổi sang Xe máy thì rơi về Tự lái, không để lại tab chết', async () => {
     await renderExperience();
-    clickTab(screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }), 'Xe có tài xế');
-    clickTab(screen.getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
+    clickTab(
+      within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
+      'Xe có tài xế',
+    );
+    clickTab(within(heroCard()).getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
 
     fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
     const query = submittedQuery();
@@ -218,7 +234,10 @@ describe('xe máy không có dịch vụ CÓ TÀI XẾ', () => {
 describe('có tài xế', () => {
   it('chỉ phát lộ trình ĐANG được hợp đồng hỗ trợ, không đẻ trường mới', async () => {
     await renderExperience();
-    clickTab(screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }), 'Xe có tài xế');
+    clickTab(
+      within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
+      'Xe có tài xế',
+    );
 
     fireEvent.click(within(hero()).getByRole('radio', { name: ROUTE_TYPE_LABEL.inter_city }));
     fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
@@ -235,7 +254,10 @@ describe('có tài xế', () => {
 describe('thuê dài hạn — chỉ tìm XE (ADR 0011)', () => {
   async function openLongTerm() {
     await renderExperience();
-    clickTab(screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }), 'Thuê xe dài hạn');
+    clickTab(
+      within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
+      'Thuê xe dài hạn',
+    );
   }
 
   it('không có ô thời gian thuê, không có ngày trả, không có bộ chọn gói', async () => {
@@ -299,12 +321,12 @@ describe('thuê dài hạn — chỉ tìm XE (ADR 0011)', () => {
 describe('đổi dịch vụ giữ ngữ cảnh tương thích', () => {
   it('tự lái → dài hạn giữ loại xe và địa điểm; quay lại tự lái có ngay khoảng thuê cũ', async () => {
     await renderExperience();
-    clickTab(screen.getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
+    clickTab(within(heroCard()).getByRole('tablist', { name: 'Loại xe' }), 'Xe máy');
     pickProvince(hero(), /Địa điểm nhận xe/, 'Hà Nội');
     fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
     const selfDrive = submittedQuery();
 
-    const services = screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
+    const services = within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' });
     clickTab(services, 'Thuê xe dài hạn');
     fireEvent.click(within(hero()).getByRole('button', { name: 'Tìm xe' }));
     const longTerm = submittedQuery();
@@ -346,7 +368,7 @@ describe('hero ↔ thanh thu gọn — một trạng thái, hai trình bày', ()
     );
 
     // Hero (đang ngoài màn hình) phản ánh ngay: nhóm chọn của nó cũng đổi theo.
-    const heroVehicle = screen.getAllByRole('tablist', { name: 'Loại xe' })[0]!;
+    const heroVehicle = within(heroCard()).getByRole('tablist', { name: 'Loại xe' });
     expect(within(heroVehicle).getByRole('tab', { name: 'Xe máy' })).toHaveProperty(
       'ariaSelected',
       'true',
@@ -378,7 +400,10 @@ describe('hero ↔ thanh thu gọn — một trạng thái, hai trình bày', ()
 
   it('thanh thu gọn của dài hạn không hiện ô thời gian', async () => {
     await renderExperience();
-    clickTab(screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }), 'Thuê xe dài hạn');
+    clickTab(
+      within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
+      'Thuê xe dài hạn',
+    );
     await scrollHeroOutOfView();
 
     expect(within(sticky()).queryByRole('button', { name: /Thời gian thuê/ })).toBeNull();
@@ -453,7 +478,10 @@ describe('URL bị KHỐI KHÁC trên trang chủ đổi', () => {
 
   it('nhưng khi khách ĐÃ chọn dịch vụ rồi thì ngữ cảnh mới được ghi lên URL', async () => {
     await renderExperience();
-    clickTab(screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }), 'Xe có tài xế');
+    clickTab(
+      within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' }),
+      'Xe có tài xế',
+    );
 
     const query = homeUrlQuery();
     expect(query.get('serviceType')).toBe(SERVICE_TYPE.WITH_DRIVER);
@@ -483,9 +511,12 @@ describe('nạp lại ngữ cảnh từ URL', () => {
     await renderExperience();
 
     expect(
-      within(screen.getByRole('tablist', { name: 'Loại dịch vụ thuê xe' })).getByRole('tab', {
-        name: 'Thuê xe dài hạn',
-      }),
+      within(within(heroCard()).getByRole('tablist', { name: 'Loại dịch vụ thuê xe' })).getByRole(
+        'tab',
+        {
+          name: 'Thuê xe dài hạn',
+        },
+      ),
     ).toHaveProperty('ariaSelected', 'true');
     expect(within(hero()).getByRole('button', { name: 'Địa điểm nhận xe: Đà Nẵng' })).toBeTruthy();
     expect(within(hero()).queryByRole('button', { name: /Thời gian thuê/ })).toBeNull();

@@ -8,6 +8,7 @@ export type ReceiptDetail = Schemas['ReceiptDetailDto'];
 export type CreateReceiptInput = Schemas['CreateReceiptDto'];
 export type ReceiptSummary = Schemas['ReceiptSummaryDto'];
 export type ReceiptBookingOption = Schemas['ReceiptBookingOptionDto'];
+export type ReceiptVehicleOption = Schemas['ReceiptVehicleOptionDto'];
 export type FinanceCategory = Schemas['FinanceCategoryDto'];
 export type CreateCategoryInput = Schemas['CreateCategoryDto'];
 export type DebtItem = Schemas['DebtItemDto'];
@@ -48,6 +49,16 @@ export interface ReceiptFilters {
   to?: string;
   page?: number;
   limit?: number;
+  /**
+   * Ý ĐỊNH mở form tạo phiếu (`create=1`) — không phải một filter, và cố ý không nằm trong
+   * `RECEIPT_FILTER_KEYS` nên không tính vào "đang lọc" và không xuống API.
+   *
+   * Nó ở trên URL vì nút "Tạo phiếu thu/chi" ở hồ sơ xe là một đường dẫn thường: một cú bấm phải
+   * vừa đưa sang sổ đã lọc theo xe đó, vừa mở sẵn form với xe đã chọn. Truyền qua state thì link
+   * đó không gửi được và không sống sót qua reload. Form đóng lại thì tham số bị gỡ khỏi URL —
+   * để F5 không mở lại một form người dùng vừa bỏ.
+   */
+  create?: string;
 }
 
 // --- Báo cáo doanh thu (`/manage/finance`) ---------------------------------

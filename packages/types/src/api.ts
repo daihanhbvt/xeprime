@@ -101,6 +101,15 @@ export const API_ERROR_CODE = {
    * bảo dưỡng). `details` mang `{ source, sourceRefId, bookingId }` để FE dựng đúng đường quay về.
    */
   RECEIPT_SOURCE_LOCKED: 'RECEIPT_SOURCE_LOCKED',
+  /**
+   * Phiếu tay gửi lên gắn CẢ đơn thuê lẫn xe, nhưng đơn đó không chạy chiếc xe đó.
+   *
+   * Mã riêng thay vì `VALIDATION_FAILED`: hai ô đều hợp lệ khi xét riêng, thứ sai là quan hệ
+   * giữa chúng — nên câu trả lời đúng cho người dùng là "bỏ chọn một trong hai", không phải
+   * "dữ liệu chưa hợp lệ". Ghi sai cặp này làm sổ theo xe và sổ theo đơn kể hai câu chuyện
+   * khác nhau về cùng một khoản tiền.
+   */
+  RECEIPT_BOOKING_VEHICLE_MISMATCH: 'RECEIPT_BOOKING_VEHICLE_MISMATCH',
 
   // Xác thực SĐT / OTP (Phase 4)
   PHONE_NOT_VERIFIED: 'PHONE_NOT_VERIFIED',

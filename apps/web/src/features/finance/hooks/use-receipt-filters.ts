@@ -35,6 +35,8 @@ export function useReceiptFilters() {
     to: sp.get('to') ?? undefined,
     page: positiveIntParam(sp, 'page'),
     limit: positiveIntParam(sp, 'limit'),
+    // Ý định mở form, không phải filter — xem ghi chú ở `ReceiptFilters.create`.
+    create: sp.get('create') ?? undefined,
   }));
 }
 

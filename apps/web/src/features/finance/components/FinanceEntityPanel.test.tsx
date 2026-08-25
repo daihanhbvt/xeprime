@@ -126,9 +126,41 @@ describe('FinanceEntityPanel — hồ sơ xe', () => {
     expect(href).toContain('to=2026-08-31');
     expect(href).not.toContain('granularity');
   });
+
+  /*
+   * Lối GHI, đứng cạnh lối ĐỌC.
+   *
+   * Phí rửa xe / vá lốp / gửi bãi không thuộc chuyến nào, nên trước đây chúng không có đường vào
+   * từ hồ sơ xe. Hai khẳng định quan trọng ở đây: link mang `create=1` (mở sẵn form), và KHÔNG
+   * mang kỳ đang xem — phiếu sắp ghi mặc định là hôm nay, kéo `from`/`to` sang sẽ mở ra một sổ
+   * không chứa chính phiếu vừa tạo.
+   */
+  it('có quyền ghi: lối tạo phiếu mang xe + cờ mở form, KHÔNG mang kỳ đang xem', () => {
+    render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" canCreateReceipt />);
+
+    const href = screen.getByText('Tạo phiếu thu/chi').getAttribute('href') ?? '';
+    expect(href).toContain('vehicleId=v1');
+    expect(href).toContain('create=1');
+    expect(href).not.toContain('from=');
+    expect(href).not.toContain('status=');
+  });
+
+  it('không có quyền ghi: chỉ còn lối đọc sổ', () => {
+    render(<FinanceEntityPanel scope={{ vehicleId: 'v1' }} kind="vehicle" />);
+
+    expect(screen.queryByText('Tạo phiếu thu/chi')).toBeNull();
+    expect(screen.getByText('Xem trên sổ Thu-Chi')).toBeTruthy();
+  });
 });
 
 describe('FinanceEntityPanel — hồ sơ khách', () => {
+  // Một khoản thu/chi gắn thẳng vào KHÁCH không tồn tại trong sổ — tiền của khách luôn đi qua
+  // một chuyến, nên lối ghi không có nghĩa ở đây kể cả khi người xem đủ quyền.
+  it('khách KHÔNG có lối tạo phiếu, kể cả khi đủ quyền', () => {
+    render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} kind="customer" canCreateReceipt />);
+    expect(screen.queryByText('Tạo phiếu thu/chi')).toBeNull();
+  });
+
   it('khách hiện doanh thu · còn nợ · số chuyến, KHÔNG hiện chi phí/lợi nhuận', () => {
     render(<FinanceEntityPanel scope={{ tenantCustomerId: 'c1' }} kind="customer" />);
 

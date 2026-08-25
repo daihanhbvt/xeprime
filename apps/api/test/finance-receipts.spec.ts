@@ -1,6 +1,7 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
+  BOOKING_STATUS,
   FINANCE_CATEGORY_TYPE,
   MEMBERSHIP_STATUS,
   PAYMENT_METHOD,
@@ -8,6 +9,7 @@ import {
   RECEIPT_TYPE,
   TENANT_ROLE,
   TENANT_STATUS,
+  VEHICLE_TYPE,
 } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { FinanceCategoriesService } from '../src/modules/finance/finance-categories.service';
@@ -34,6 +36,12 @@ let otherTenantId: string;
  * đã seed và đỏ trên một database test sạch. Test phải tự dựng đủ điều kiện của nó.
  */
 let ownedSystemCategoryId: string | null = null;
+/** Hai xe + một đơn của tenant chính, và một xe của tenant KHÁC — bộ tối thiểu để kiểm cặp đơn↔xe. */
+let vehicleId: string;
+let otherVehicleId: string;
+let foreignVehicleId: string;
+let bookingId: string;
+let foreignBookingId: string;
 
 beforeAll(async () => {
   try {
@@ -73,6 +81,51 @@ beforeAll(async () => {
     },
   });
 
+  // Xe + đơn thuê: cặp `bookingId`/`vehicleId` của phiếu tay là thứ spec này kiểm, nên nó phải
+  // có xe thật của CẢ HAI gian hàng — kiểm "xe của tenant khác bị từ chối" bằng một id bịa ra chỉ
+  // chứng minh được rằng id bịa không tồn tại.
+  const vehicles: [string, string, string][] = [];
+  vehicleId = newId();
+  otherVehicleId = newId();
+  foreignVehicleId = newId();
+  vehicles.push([vehicleId, tenantId, 'Vios'], [otherVehicleId, tenantId, 'Xpander']);
+  vehicles.push([foreignVehicleId, otherTenantId, 'Fortuner nhà khác']);
+  for (const [id, owner, name] of vehicles) {
+    await prisma.vehicle.create({
+      data: {
+        id,
+        tenantId: owner,
+        code: `XE-${id.slice(-6)}`,
+        name,
+        plateNumber: `51A-${id.slice(-5)}`,
+        vehicleType: VEHICLE_TYPE.CAR,
+      },
+    });
+  }
+
+  bookingId = newId();
+  foreignBookingId = newId();
+  for (const [id, owner, vehicle] of [
+    [bookingId, tenantId, vehicleId],
+    [foreignBookingId, otherTenantId, foreignVehicleId],
+  ] as const) {
+    await prisma.booking.create({
+      data: {
+        id,
+        tenantId: owner,
+        vehicleId: vehicle,
+        code: `BK-${id.slice(-6)}`,
+        customerName: 'Khách A',
+        status: BOOKING_STATUS.COMPLETED,
+        pickupAt: new Date('2026-08-01T02:00:00Z'),
+        returnAt: new Date('2026-08-03T02:00:00Z'),
+        baseAmount: '2000000',
+        totalAmount: '2000000',
+        paidAmount: '500000',
+      },
+    });
+  }
+
   // Danh mục hệ thống (tenantId = null) là dữ liệu NỀN, không thuộc tenant nào. Trên database
   // đã seed thì đã có; trên database test sạch thì chưa — tự tạo một cái để phần khẳng định
   // "hệ thống hiển thị + không xoá được" luôn có đối tượng để kiểm.
@@ -99,6 +152,8 @@ afterAll(async () => {
   if (dbAvailable) {
     for (const id of [tenantId, otherTenantId]) {
       await prisma.receipt.deleteMany({ where: { tenantId: id } });
+      await prisma.booking.deleteMany({ where: { tenantId: id } });
+      await prisma.vehicle.deleteMany({ where: { tenantId: id } });
       await prisma.financeCategory.deleteMany({ where: { tenantId: id } });
       await prisma.tenantMembership.deleteMany({ where: { tenantId: id } });
       await prisma.tenant.deleteMany({ where: { id } });
@@ -175,6 +230,143 @@ describe('Thu/Chi — receipts + categories (Slice D)', () => {
     await expect(receipts.getOne(otherTenantId, r.id)).rejects.toMatchObject({
       response: { code: API_ERROR_CODE.NOT_FOUND },
     });
+  });
+
+  // --- Gắn phiếu vào đơn / vào xe -----------------------------------------
+  //
+  // Cặp `booking_id`/`vehicle_id` không có ràng buộc nào ở DB (hai FK độc lập, và FK của chúng
+  // là khoá đơn chứ không phải composite kèm `tenant_id`). Toàn bộ bảo đảm nằm ở service, nên
+  // toàn bộ nó phải được kiểm ở đây.
+
+  maybe('gắn THẲNG vào xe, không cần đơn — chi phí của xe không thuộc chuyến nào', async () => {
+    const r = await receipts.create(tenantId, ownerId, {
+      type: RECEIPT_TYPE.EXPENSE,
+      amount: '250000',
+      paymentMethod: PAYMENT_METHOD.CASH,
+      vehicleId,
+      description: 'Vá lốp',
+    });
+    expect(r.vehicleId).toBe(vehicleId);
+    expect(r.bookingId).toBeNull();
+    expect(r.vehicleName).toBe('Vios');
+    // Không có đơn thì không có khách — client KHÔNG được tự gắn khách vào phiếu.
+    expect(r.tenantCustomerId).toBeNull();
+  });
+
+  maybe('không gắn gì cả vẫn tạo được — chi phí marketing/văn phòng là có thật', async () => {
+    const r = await createExpense();
+    expect(r.bookingId).toBeNull();
+    expect(r.vehicleId).toBeNull();
+  });
+
+  maybe('gắn đơn mà bỏ trống xe → server SUY xe từ đơn, không để null', async () => {
+    const r = await receipts.create(tenantId, ownerId, {
+      type: RECEIPT_TYPE.INCOME,
+      amount: '500000',
+      paymentMethod: PAYMENT_METHOD.CASH,
+      bookingId,
+    });
+    expect(r.bookingId).toBe(bookingId);
+    expect(r.vehicleId).toBe(vehicleId);
+  });
+
+  maybe('gắn đơn + đúng xe của đơn → nhận', async () => {
+    const r = await receipts.create(tenantId, ownerId, {
+      type: RECEIPT_TYPE.INCOME,
+      amount: '500000',
+      paymentMethod: PAYMENT_METHOD.CASH,
+      bookingId,
+      vehicleId,
+    });
+    expect(r.bookingId).toBe(bookingId);
+    expect(r.vehicleId).toBe(vehicleId);
+  });
+
+  maybe('gắn đơn + xe KHÁC xe của đơn → 409 RECEIPT_BOOKING_VEHICLE_MISMATCH', async () => {
+    await expect(
+      receipts.create(tenantId, ownerId, {
+        type: RECEIPT_TYPE.EXPENSE,
+        amount: '100000',
+        paymentMethod: PAYMENT_METHOD.CASH,
+        bookingId,
+        vehicleId: otherVehicleId,
+      }),
+    ).rejects.toMatchObject({
+      response: { code: API_ERROR_CODE.RECEIPT_BOOKING_VEHICLE_MISMATCH },
+    });
+  });
+
+  maybe('đơn của gian hàng KHÁC → 404, không lộ là đơn có tồn tại', async () => {
+    await expect(
+      receipts.create(tenantId, ownerId, {
+        type: RECEIPT_TYPE.INCOME,
+        amount: '100000',
+        paymentMethod: PAYMENT_METHOD.CASH,
+        bookingId: foreignBookingId,
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
+  });
+
+  maybe('xe của gian hàng KHÁC → 404', async () => {
+    await expect(
+      receipts.create(tenantId, ownerId, {
+        type: RECEIPT_TYPE.EXPENSE,
+        amount: '100000',
+        paymentMethod: PAYMENT_METHOD.CASH,
+        vehicleId: foreignVehicleId,
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
+  });
+
+  maybe('đơn + xe mỗi cái một gian hàng → chặn ở vế đơn trước, vẫn 404', async () => {
+    await expect(
+      receipts.create(tenantId, ownerId, {
+        type: RECEIPT_TYPE.INCOME,
+        amount: '100000',
+        paymentMethod: PAYMENT_METHOD.CASH,
+        bookingId: foreignBookingId,
+        vehicleId,
+      }),
+    ).rejects.toMatchObject({ response: { code: API_ERROR_CODE.NOT_FOUND } });
+  });
+
+  // --- Ô chọn xe của form -------------------------------------------------
+
+  maybe('vehicle-options: chỉ xe của gian hàng này', async () => {
+    const list = await receipts.vehicleOptions(tenantId, {});
+    const ids = list.map((v) => v.id);
+    expect(ids).toContain(vehicleId);
+    expect(ids).toContain(otherVehicleId);
+    expect(ids).not.toContain(foreignVehicleId);
+    expect(list.find((v) => v.id === vehicleId)).toMatchObject({ name: 'Vios' });
+  });
+
+  maybe('vehicle-options: tìm theo tên, mã xe và biển số', async () => {
+    const byName = await receipts.vehicleOptions(tenantId, { q: 'xpand' });
+    expect(byName.map((v) => v.id)).toEqual([otherVehicleId]);
+
+    const plate = `51A-${vehicleId.slice(-5)}`;
+    expect((await receipts.vehicleOptions(tenantId, { q: plate })).map((v) => v.id)).toEqual([
+      vehicleId,
+    ]);
+
+    const code = `XE-${vehicleId.slice(-6)}`;
+    expect((await receipts.vehicleOptions(tenantId, { q: code })).map((v) => v.id)).toEqual([
+      vehicleId,
+    ]);
+  });
+
+  maybe('vehicle-options: includeId giữ xe đang chọn dù không khớp từ khoá', async () => {
+    const list = await receipts.vehicleOptions(tenantId, { q: 'xpand', includeId: vehicleId });
+    expect(list[0]?.id).toBe(vehicleId);
+    // Không nhân đôi khi xe đang chọn vốn đã nằm trong kết quả tìm.
+    const dedup = await receipts.vehicleOptions(tenantId, { q: 'xpand', includeId: otherVehicleId });
+    expect(dedup.filter((v) => v.id === otherVehicleId)).toHaveLength(1);
+  });
+
+  maybe('vehicle-options: includeId trỏ xe gian hàng khác → không trả về', async () => {
+    const list = await receipts.vehicleOptions(tenantId, { includeId: foreignVehicleId });
+    expect(list.map((v) => v.id)).not.toContain(foreignVehicleId);
   });
 
   maybe('danh mục: hệ thống hiển thị + không xoá được; custom tạo/xoá được', async () => {

@@ -20,6 +20,7 @@ import type {
   ReceiptDetail,
   ReceiptFilters,
   ReceiptBookingOption,
+  ReceiptVehicleOption,
   ReceiptSummary,
   FinanceCategoryBreakdown,
   FinanceOverviewFilters,
@@ -74,6 +75,16 @@ export const fetchReceiptSummary = (filters: ReceiptFilters): Promise<ReceiptSum
 /** Đơn gợi ý cho ô "Liên kết đơn thuê" — server đã sắp đơn còn nợ lên trước. */
 export const fetchBookingOptions = (q?: string): Promise<ReceiptBookingOption[]> =>
   apiGet<ReceiptBookingOption[]>('/receipts/booking-options', { q: q?.trim() || null });
+
+/**
+ * Xe gợi ý cho ô "Liên kết xe". `includeId` giữ xe đang chọn sẵn trong kết quả kể cả khi nó
+ * không khớp từ khoá đang gõ — không có nó, gõ tìm xe khác sẽ làm ô chọn hiện lại id thô.
+ */
+export const fetchVehicleOptions = (q?: string, includeId?: string | null): Promise<ReceiptVehicleOption[]> =>
+  apiGet<ReceiptVehicleOption[]>('/receipts/vehicle-options', {
+    q: q?.trim() || null,
+    includeId: includeId || null,
+  });
 
 export const createReceipt = (body: CreateReceiptInput): Promise<ReceiptDetail> =>
   apiPost<ReceiptDetail>('/receipts', body);

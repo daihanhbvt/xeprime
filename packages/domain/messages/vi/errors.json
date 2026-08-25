@@ -51,7 +51,8 @@
     "UPLOADS_NOT_CONFIGURED": "Chức năng tải tệp chưa được cấu hình.",
     "UPLOAD_FAILED": "Tải tệp lên thất bại. Thử lại giúp mình nhé.",
     "TRIP_CANCEL_NOT_ALLOWED": "Chuyến này không còn huỷ được nữa. Vui lòng liên hệ chủ xe.",
-    "PROFILE_INCOMPLETE": "Hồ sơ gian hàng còn thiếu thông tin bắt buộc nên chưa gửi duyệt được."
+    "PROFILE_INCOMPLETE": "Hồ sơ gian hàng còn thiếu thông tin bắt buộc nên chưa gửi duyệt được.",
+    "RECEIPT_BOOKING_VEHICLE_MISMATCH": "Đơn thuê đã chọn không chạy chiếc xe đã chọn. Bỏ chọn một trong hai giúp mình nhé."
   },
   "upload": {
     "imageType": "Chỉ nhận ảnh JPG, PNG hoặc WebP",

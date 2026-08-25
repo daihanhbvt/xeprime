@@ -1,0 +1,136 @@
+/*
+ * Một dải ô vuông nhỏ: chứng từ đã nộp trước, ô "thêm" cuối cùng.
+ *
+ * Ô "thêm" đứng CUỐI chứ không đứng đầu — thứ tự đọc khớp thứ tự việc làm (nộp rồi, còn nộp nữa
+ * không?), và nó không nhảy chỗ sau mỗi tệp.
+ */
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}
+
+.tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.failed {
+  border-color: var(--xp-color-error);
+  background: var(--xp-color-error-bg);
+}
+
+/* Ảnh phủ kín ô — `PreviewImage` mang lại hình học của vỏ cho `<img>` bên trong. */
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* PDF không có ảnh thu nhỏ: icon + tên bị cắt hai dòng, tên đầy đủ nằm ở `title`. */
+.doc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-xs);
+  width: 100%;
+  height: 100%;
+  padding: var(--xp-space-xs);
+  text-align: center;
+}
+
+.docIcon {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-h3);
+}
+
+.docName {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+/*
+ * Nút gỡ nổi ở góc ô. Nền đục chứ không trong suốt: đặt trên một tấm ảnh hoá đơn sáng, một dấu
+ * X không nền sẽ biến mất hoàn toàn.
+ */
+.remove,
+.retry {
+  position: absolute;
+  top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--xp-color-bg-overlay);
+  color: var(--xp-color-text-inverse);
+  font-size: var(--xp-font-size-body-sm);
+  cursor: pointer;
+}
+
+.remove {
+  right: 4px;
+}
+
+.retry {
+  right: 30px;
+}
+
+.remove:hover,
+.retry:hover {
+  background: var(--xp-color-error);
+}
+
+/* AntD bọc `<Upload>` bằng một span — cho nó cùng hình học với các ô còn lại. */
+.add,
+.add :global(.ant-upload) {
+  display: block;
+  width: 96px;
+  height: 96px;
+}
+
+.addTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--xp-space-xs);
+  width: 100%;
+  height: 100%;
+  padding: var(--xp-space-xs);
+  border: 1px dashed var(--xp-color-border-strong);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  cursor: pointer;
+}
+
+.addTile:hover {
+  border-color: var(--xp-color-primary);
+  color: var(--xp-color-primary);
+}
+
+.addTile :global(.anticon) {
+  font-size: var(--xp-font-size-h3);
+}

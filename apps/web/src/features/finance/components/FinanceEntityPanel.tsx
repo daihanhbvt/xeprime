@@ -31,6 +31,15 @@ interface FinanceEntityPanelProps {
    * hai ô nhiễu giả vờ mang thông tin. Thay vào đó khách hiện phần thực sự của họ: còn nợ.
    */
   kind: 'vehicle' | 'customer';
+  /**
+   * Người đang xem có quyền ghi phiếu không — quyết định lối "Tạo phiếu thu/chi" có mặt hay không.
+   *
+   * Là PROP chứ không phải một `usePermissions()` bên trong: khối này là một bảng số, và kéo
+   * `useCurrentUser` vào nó khiến mọi nơi nhúng nó phải có sẵn `QueryClientProvider` chỉ để hiện
+   * một cái link. Nơi gọi vốn đã phải kiểm quyền để quyết định có dựng khối này hay không, nên
+   * câu trả lời đã nằm sẵn ở đó. Ẩn link KHÔNG phải là bảo vệ — guard backend mới là (CLAUDE.md §6).
+   */
+  canCreateReceipt?: boolean;
 }
 
 /**
@@ -44,7 +53,11 @@ interface FinanceEntityPanelProps {
  * Kỳ nằm trên URL (`?from=&to=`) chứ không phải state cục bộ: một đường dẫn tới hồ sơ xe kèm kỳ
  * đang xem phải gửi được cho đồng nghiệp và sống sót qua F5.
  */
-export function FinanceEntityPanel({ scope, kind }: FinanceEntityPanelProps) {
+export function FinanceEntityPanel({
+  scope,
+  kind,
+  canCreateReceipt = false,
+}: FinanceEntityPanelProps) {
   const t = useTranslations('Finance.entity');
   const fmt = useAppFormat();
   const { filters, setFilters } = useFinancePeriodFilters();
@@ -87,18 +100,39 @@ export function FinanceEntityPanel({ scope, kind }: FinanceEntityPanelProps) {
     <section className={styles.panel} aria-label={t(`title.${kind}`)}>
       <div className={styles.header}>
         <h2 className={styles.title}>{t(`title.${kind}`)}</h2>
-        <Link
-          className={styles.ledgerLink}
-          href={receiptsPath.filtered({
-            ...scope,
-            status: RECEIPT_STATUS.APPROVED,
-            // CHỈ hai đầu kỳ — `granularity` là chuyện của biểu đồ, sổ không hiểu nó.
-            from: filters.from,
-            to: filters.to,
-          })}
-        >
-          {t('openLedger')}
-        </Link>
+        <div className={styles.headerLinks}>
+          {/*
+            * Ghi một khoản THẲNG cho chiếc xe này — phí rửa, vá lốp, gửi bãi không thuộc chuyến
+            * nào, nên trước đây chúng không có lối vào từ hồ sơ xe và chỉ ghi được bằng cách mở
+            * sổ rồi tự tìm lại đúng chiếc xe vừa xem.
+            *
+            * Chỉ ở hồ sơ XE: một khoản thu/chi gắn thẳng vào KHÁCH không tồn tại trong sổ — tiền
+            * của khách luôn đi qua một chuyến.
+            *
+            * Không đi kèm khoảng kỳ: kỳ đang xem là bộ lọc để ĐỌC, còn phiếu sắp ghi thì mặc định
+            * là hôm nay. Mang `from`/`to` sang sẽ khiến sổ mở ra không chứa chính phiếu vừa tạo.
+            */}
+          {kind === 'vehicle' && scope.vehicleId && canCreateReceipt ? (
+            <Link
+              className={styles.ledgerLink}
+              href={receiptsPath.filtered({ vehicleId: scope.vehicleId, create: true })}
+            >
+              {t('createReceipt')}
+            </Link>
+          ) : null}
+          <Link
+            className={styles.ledgerLink}
+            href={receiptsPath.filtered({
+              ...scope,
+              status: RECEIPT_STATUS.APPROVED,
+              // CHỈ hai đầu kỳ — `granularity` là chuyện của biểu đồ, sổ không hiểu nó.
+              from: filters.from,
+              to: filters.to,
+            })}
+          >
+            {t('openLedger')}
+          </Link>
+        </div>
       </div>
 
       <div className={styles.periods}>
