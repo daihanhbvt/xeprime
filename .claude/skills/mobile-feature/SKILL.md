@@ -27,7 +27,8 @@ redesign it.
   Never in what the data means or what the user is allowed to do.
 * **Two exceptions ARE by design**, each isolated to one file: the auth transport (native sends
   `Authorization: Bearer` per ADR 0017, web sends an httpOnly session cookie per ADR 0002) and
-  the API base URL.
+  the API base URL. The transport difference is why auth has its own `/auth/mobile/*` endpoints —
+  see §3C. It changes how the session travels, **not** who may log in or what they may then do.
 
 ---
 
@@ -108,7 +109,31 @@ Certain web patterns must be re-architected for touchscreens and small viewports
 * **Web**: `<input type="file">`.
 * **Mobile**: Native Camera with instant preview, corner guides for vehicle exterior angles (Front, Rear, Left, Right, Interior, Odometer), client-side JPEG compression, and direct upload to Cloudflare R2 via presigned URLs.
 
-### C. Authentication (AUTH-01 → AUTH-04)
+### C. Authentication — the ONE endpoint family that differs from web
+
+Everything else in this app calls the **same endpoints as web**. Auth is the single exception,
+and it is an exception about **transport, not about rules**: web carries the session in an
+httpOnly cookie (ADR 0002), native carries it in `Authorization: Bearer` (ADR 0017). Same users,
+same passwords, same permissions, same lockout rules, same error codes — a different envelope.
+
+Because a cookie cannot be set for a native app and a token must not be handed to a browser, the
+two need separate endpoints. They are pairs, not alternatives:
+
+| Việc | Web | Native |
+| --- | --- | --- |
+| Đăng nhập mật khẩu | `POST /auth/login` → đặt cookie | `POST /auth/mobile/login` → trả `{ tokens, user }` |
+| Đăng nhập Firebase (Google/Apple) | `POST /auth/session` | `POST /auth/mobile/session` |
+| Gia hạn phiên | cookie tự gia hạn | `POST /auth/mobile/refresh` — xoay refresh token |
+| Đăng xuất | `DELETE /auth/session` | `POST /auth/mobile/logout` — thu hồi theo thiết bị |
+| Hồ sơ + quyền | `GET /auth/me` | **cùng endpoint**, đọc DB mỗi lần gọi |
+
+`GET /auth/me` dùng chung là chi tiết quan trọng: quyền và tenant scope **không bao giờ** là claim
+trong token, ở cả hai nền tảng. Thu hồi quyền phải có hiệu lực ngay mà không cần đăng nhập lại.
+
+Never call the web endpoints from native — `/auth/login` sets a cookie React Native's fetch will
+not persist reliably, so it looks like it worked and then the session vanishes on next launch.
+The reverse is worse: `/auth/mobile/*` returns tokens in the body, and a browser has no
+`httpOnly` to protect them with.
 
 **Already built — do not reimplement it per feature.** `src/lib/auth-session.ts` owns the token
 lifecycle and `src/lib/api-client.ts` wires it into the shared client. A feature calls `apiGet`;
