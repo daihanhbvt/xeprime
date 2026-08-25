@@ -6,64 +6,6 @@
   margin-bottom: var(--xp-space-md);
 }
 
-.card {
-  padding: var(--xp-space-md);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  min-width: 0;
-}
-
-.label {
-  display: block;
-  font-size: var(--xp-font-size-label);
-  color: var(--xp-color-text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: var(--xp-space-xs);
-}
-
-.value {
-  display: block;
-  font-size: var(--xp-font-size-h3);
-  font-weight: 700;
-  line-height: 1.25;
-  /* Số tiền dài không được đẩy vỡ lưới — cắt ở đây, số đầy đủ vẫn ở bảng bên dưới. */
-  overflow-wrap: anywhere;
-}
-
-.income {
-  color: var(--xp-color-success);
-}
-
-.expense {
-  color: var(--xp-color-error);
-}
-
-.negative {
-  color: var(--xp-color-error);
-}
-
-.neutral {
-  color: var(--xp-color-text);
-}
-
-.breakdown {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--xp-space-xs) var(--xp-space-sm);
-  margin-top: var(--xp-space-xs);
-  font-size: var(--xp-font-size-body-sm);
-  color: var(--xp-color-text-tertiary);
-}
-
-.skeleton {
-  display: block;
-  height: 24px;
-  border-radius: var(--xp-border-radius-sm);
-  background: var(--xp-color-bg-muted);
-}
-
 .error {
   margin-bottom: var(--xp-space-md);
 }

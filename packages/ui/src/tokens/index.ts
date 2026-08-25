@@ -108,6 +108,45 @@ export const XP_TOKENS = {
    */
   'color-price': 'var(--xp-color-primary-active)',
 
+  // ─── Màu dữ liệu (data-viz) ───────────────────────────────────────────────
+  /**
+   * Dải màu cho BIỂU ĐỒ, tách hẳn khỏi màu ngữ nghĩa — nợ thiết kế X-02, brand guide §3.3.
+   *
+   * Vì sao không mượn `color-error`/`color-success`: một cột "Chi phí" màu đỏ bị đọc thành
+   * "có lỗi", và cột "Doanh thu" màu xanh lá bị đọc thành "đạt chỉ tiêu". Màu ở biểu đồ nói
+   * *cái này là series nào*, không nói *tốt hay xấu*.
+   *
+   * **NĂM bậc, không phải sáu** như brand guide phác ra. Năm bậc này qua trọn bộ kiểm màu
+   * (dải sáng · sàn chroma · tách được dưới mù màu deutan/tritan · tách được với mắt thường ·
+   * tương phản ≥ 3:1 trên nền trắng) ở chế độ **so mọi cặp**, không chỉ cặp liền kề. Không
+   * tìm được bậc thứ sáu nào giữ nguyên được điều đó: thêm nó vào là bán một lời hứa
+   * "sáu series phân biệt được" mà người mù màu không nhận được.
+   *
+   * Dùng THEO THỨ TỰ 1→5, không bao giờ xoay vòng. Cần quá 5 nhóm thì gộp "Khác", tách
+   * biểu đồ nhỏ, hoặc bỏ hẳn màu định danh và dán nhãn thẳng lên từng dòng — đó chính là
+   * cách bảng cơ cấu danh mục đang làm.
+   *
+   * ⚠️ Dark theme cần bộ giá trị RIÊNG, không phải lật sáng-tối: trên nền `shell-sidebar-bg`
+   * thì `viz-4`/`viz-5` tụt dưới 3:1. Chọn lại và chạy lại bộ kiểm khi increment dark tới.
+   */
+  'color-viz-1': '#00998c',
+  'color-viz-2': '#7c3aed',
+  'color-viz-3': '#b45309',
+  'color-viz-4': '#0369a1',
+  'color-viz-5': '#9d174d',
+  /**
+   * Ba VAI của biểu đồ tài chính, trỏ về dải trên.
+   *
+   * Component không gọi thẳng `viz-1`: "doanh thu" là một khái niệm nghiệp vụ, và nếu ba màn
+   * cùng tự chọn số thứ tự thì doanh thu sẽ đổi màu giữa các màn. Ánh xạ ở đây một lần.
+   */
+  'color-viz-revenue': 'var(--xp-color-viz-1)',
+  'color-viz-cost': 'var(--xp-color-viz-3)',
+  'color-viz-profit': 'var(--xp-color-viz-2)',
+  /** Lưới và trục của biểu đồ — phải LÙI lại phía sau dữ liệu, không cạnh tranh với nó. */
+  'color-viz-grid': '#ece8e1',
+  'color-viz-axis': '#9e9890',
+
   // ─── Vỏ portal ────────────────────────────────────────────────────────────
   // P1 đã chốt "TỐI" (07/08/2026) và Wave 1D-B đã áp dụng.
   'shell-sidebar-bg': '#1e1b16', // 14:92

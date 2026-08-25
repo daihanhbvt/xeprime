@@ -182,5 +182,173 @@
         "title": "No outstanding debt matches these filters"
       }
     }
+  },
+  "overview": {
+    "page": {
+      "title": "Revenue overview",
+      "subtitle": "Whether this period made money, how much cash you are holding, and which vehicles earn it."
+    },
+    "periods": {
+      "label": "Quick period",
+      "today": "Today",
+      "this_week": "This week",
+      "this_month": "This month",
+      "last_month": "Last month",
+      "this_quarter": "This quarter",
+      "this_year": "This year"
+    },
+    "filters": {
+      "dateRange": "Date range"
+    },
+    "forbidden": {
+      "title": "No permission to view financial figures",
+      "description": "You need the permission below to open this page. Ask the shop owner to grant it.",
+      "home": "Back to home"
+    },
+    "cards": {
+      "error": "Could not load financial figures",
+      "business": {
+        "title": "Business result",
+        "revenue": "Revenue",
+        "cost": "Costs",
+        "profit": "Profit",
+        "margin": "{value}% margin",
+        "marginUnknown": "No revenue yet to compute a margin",
+        "unassigned": "Of which {value} is not tied to a vehicle",
+        "note": "Deposits are excluded from both sides. This is cash profit from the ledger — before depreciation, loan interest or vehicle lease payments."
+      },
+      "cash": {
+        "title": "Cash flow",
+        "in": "Cash in",
+        "out": "Cash out",
+        "balance": "Net",
+        "note": "Includes deposits taken and refunded — this is the money that actually changed hands this period."
+      },
+      "now": {
+        "title": "Right now",
+        "depositHeld": "Deposits held",
+        "debt": "Customers owe",
+        "bookings": "{count, plural, one {# booking} other {# bookings}}",
+        "note": "These two figures do not depend on the selected period."
+      }
+    },
+    "chart": {
+      "title": "Income · costs · profit over time",
+      "description": "Bars are revenue and costs, the line is profit. Deposits excluded.",
+      "revenue": "Revenue",
+      "cost": "Costs",
+      "profit": "Profit",
+      "error": "Could not load the chart",
+      "empty": "No income or costs in this period",
+      "emptyHint": "Record a voucher in the ledger or take payment on a booking and the figures will show up here.",
+      "every": {
+        "label": "Chart granularity",
+        "day": "Daily",
+        "week": "Weekly",
+        "month": "Monthly"
+      }
+    },
+    "categories": {
+      "incomeTitle": "Revenue by category",
+      "expenseTitle": "Costs by category",
+      "share": "{percent}%",
+      "count": "{count, plural, one {# voucher} other {# vouchers}}",
+      "uncategorized": "Uncategorised",
+      "error": "Could not load the category breakdown",
+      "empty": "No figures for this period",
+      "emptyHint": "Pick another period, or record more vouchers in the ledger.",
+      "system": {
+        "booking_payment": "Booking payment",
+        "deposit": "Deposit",
+        "deposit_refund": "Deposit refund",
+        "maintenance": "Servicing / oil change",
+        "repair": "Incident repair"
+      }
+    },
+    "vehicles": {
+      "title": "Performance by vehicle",
+      "total": "{count, plural, one {# vehicle} other {# vehicles}}",
+      "marginValue": "{value}%",
+      "cardLine": "In {revenue} · Out {cost} · {trips, plural, one {# trip} other {# trips}}",
+      "unassigned": "Shared costs not tied to a vehicle: {value}. This is not included in any row above.",
+      "error": "Could not load performance by vehicle",
+      "empty": "No vehicle activity in this period",
+      "emptyHint": "Vehicles with a trip or a voucher in this period will appear here.",
+      "columns": {
+        "vehicle": "Vehicle",
+        "trips": "Trips",
+        "revenue": "Revenue",
+        "cost": "Costs",
+        "profit": "Profit",
+        "margin": "Margin"
+      },
+      "sort": {
+        "label": "Sort by",
+        "profit": "Highest profit",
+        "revenue": "Highest revenue",
+        "cost": "Highest cost",
+        "trips": "Most trips"
+      }
+    },
+    "customers": {
+      "title": "Revenue by customer",
+      "total": "{count, plural, one {# customer} other {# customers}}",
+      "share": "{value}%",
+      "cardLine": "{trips, plural, one {# trip} other {# trips}} · {share} of period revenue",
+      "unassigned": "Not tied to a customer: {value}. Manual vouchers with no linked booking do not belong to any row above.",
+      "error": "Could not load revenue by customer",
+      "empty": "No customer activity in this period",
+      "emptyHint": "Customers with a trip or a payment in this period will appear here.",
+      "columns": {
+        "customer": "Customer",
+        "trips": "Trips",
+        "revenue": "Revenue",
+        "share": "Share"
+      },
+      "sort": {
+        "label": "Sort by",
+        "revenue": "Highest revenue",
+        "trips": "Most trips"
+      }
+    }
+  },
+  "entity": {
+    "title": {
+      "vehicle": "This vehicle's money",
+      "customer": "Revenue from this customer"
+    },
+    "note": {
+      "vehicle": "Summed from approved vouchers, deposits excluded. Before depreciation, loan interest or vehicle lease payments.",
+      "customer": "Summed from money ACTUALLY received in the period — different from \"Total rental value\" at the top of the profile, which counts agreed booking value."
+    },
+    "periods": {
+      "label": "Quick period",
+      "today": "Today",
+      "this_week": "This week",
+      "this_month": "This month",
+      "last_month": "Last month",
+      "this_quarter": "This quarter",
+      "this_year": "This year"
+    },
+    "every": {
+      "label": "Chart granularity",
+      "day": "Daily",
+      "week": "Weekly",
+      "month": "Monthly"
+    },
+    "revenue": "Revenue",
+    "cost": "Costs",
+    "profit": "Profit",
+    "margin": "{value}% margin",
+    "marginUnknown": "No revenue yet to compute a margin",
+    "debt": "Outstanding",
+    "debtBookings": "{count, plural, one {# booking} other {# bookings}}",
+    "trips": "Trips",
+    "openLedger": "Open in the ledger",
+    "error": "Could not load the figures",
+    "chartTitle": "Over time",
+    "chartError": "Could not load the chart",
+    "chartEmpty": "Nothing in this period",
+    "chartEmptyHint": "Pick another period, or record a voucher in the ledger."
   }
 }

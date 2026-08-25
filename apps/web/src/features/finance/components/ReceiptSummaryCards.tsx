@@ -2,6 +2,7 @@
 
 import { Alert } from 'antd';
 import { useTranslations } from 'next-intl';
+import { MoneyStat } from '@/components/data-display/MoneyStat';
 import { isNegativeMoney } from '@/lib/money';
 import { useAppFormat } from '@/i18n/use-app-format';
 import type { ReceiptSummary } from '../types';
@@ -34,75 +35,41 @@ export function ReceiptSummaryCards({ data, loading, error, filtered }: ReceiptS
   }
 
   const showSkeleton = loading && !data;
-  const balanceNegative = isNegativeMoney(data?.balance);
 
   return (
     <div className={styles.grid}>
-      <Card
+      <MoneyStat
         label={t('income')}
         value={data ? fmt.money(data.totalIncome) : null}
-        tone={styles.income}
+        tone="positive"
         loading={showSkeleton}
-        breakdown={
-          data
-            ? [
-                t('cash', { value: fmt.money(data.incomeCash) }),
-                t('transfer', { value: fmt.money(data.incomeTransfer) }),
-              ]
-            : undefined
+        hint={
+          data ? (
+            <>
+              <span>{t('cash', { value: fmt.money(data.incomeCash) })}</span>
+              <span>{t('transfer', { value: fmt.money(data.incomeTransfer) })}</span>
+            </>
+          ) : undefined
         }
       />
-      <Card
+      <MoneyStat
         label={t('expense')}
         value={data ? fmt.money(data.totalExpense) : null}
-        tone={styles.expense}
+        tone="negative"
         loading={showSkeleton}
       />
-      <Card
+      <MoneyStat
         label={t('balance')}
         value={data ? fmt.money(data.balance) : null}
-        tone={balanceNegative ? styles.negative : styles.income}
+        tone={isNegativeMoney(data?.balance) ? 'negative' : 'positive'}
         loading={showSkeleton}
       />
-      <Card
+      <MoneyStat
         label={t('approvedCount')}
         value={data ? fmt.count(data.approvedCount) : null}
-        tone={styles.neutral}
         loading={showSkeleton}
-        breakdown={data ? [filtered ? t('inFilter') : t('wholeBook')] : undefined}
+        hint={data ? <span>{filtered ? t('inFilter') : t('wholeBook')}</span> : undefined}
       />
-    </div>
-  );
-}
-
-function Card({
-  label,
-  value,
-  tone,
-  loading,
-  breakdown,
-}: {
-  label: string;
-  value: string | null;
-  tone: string | undefined;
-  loading: boolean;
-  breakdown?: string[];
-}) {
-  return (
-    <div className={styles.card}>
-      <span className={styles.label}>{label}</span>
-      {loading ? (
-        <span className={styles.skeleton} aria-hidden />
-      ) : (
-        <span className={`${styles.value} ${tone}`}>{value ?? '—'}</span>
-      )}
-      {breakdown && !loading ? (
-        <div className={styles.breakdown}>
-          {breakdown.map((line) => (
-            <span key={line}>{line}</span>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }

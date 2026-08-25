@@ -33,3 +33,19 @@
   font-size: var(--xp-font-size-body-sm);
   overflow-wrap: anywhere;
 }
+
+.receipts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding-top: var(--xp-space-sm);
+  /* Đường kẻ tách hai TẦNG khác nhau: số của kỳ ở trên, bằng chứng từng phiếu ở dưới. */
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.listTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: 600;
+  color: var(--xp-color-text-secondary);
+}

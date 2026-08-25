@@ -12,8 +12,6 @@ import {
   API_ERROR_CODE,
   BOOKING_STATUS,
   POLICY_SOURCE,
-  HELD_FUNDS_RECEIPT_SOURCES,
-  RECEIPT_STATUS,
   RECEIPT_TYPE,
   SERVICE_TYPE,
   TENANT_STATUS,
@@ -33,6 +31,7 @@ import { CatalogService } from '../catalog/catalog.service';
 import { policyData, PricingService } from '../pricing/pricing.service';
 import { SaveVehiclePricingDto, VehiclePricingDto } from '../pricing/dto/pricing.dto';
 import { ListingsService } from '../public-listings/listings.service';
+import { businessWhere } from '../../common/finance-period';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateVehicleDto,
@@ -170,16 +169,11 @@ export class VehiclesService {
       canViewFinance
         ? this.prisma.receipt.groupBy({
             by: ['vehicleId', 'type'],
-            where: {
-              tenantId,
-              vehicleId: { in: ids },
-              status: RECEIPT_STATUS.APPROVED,
-              deletedAt: null,
-              // Loại TIỀN GIỮ HỘ khỏi doanh thu/chi phí của xe. Từ khi thu cọc và hoàn cọc lên sổ
-              // (epic nối tiền), cọc cũng là phiếu thu gắn xe — cộng vào thì "Doanh thu" của xe
-              // phình đúng bằng số cọc đang cầm, dù chưa đồng nào là của gian hàng.
-              source: { notIn: [...HELD_FUNDS_RECEIPT_SOURCES] },
-            },
+            // `businessWhere` mang sẵn "đã duyệt + chưa xoá + loại tiền giữ hộ" — cùng một vị từ
+            // với `/finance/summary`, nên doanh thu một chiếc xe ở đây và doanh thu của kỳ ở
+            // dashboard không thể trôi khỏi nhau. Trước đây chỗ này tự viết `source: notIn`, và
+            // đó chính là bản thứ hai đã làm hai màn nói hai con số.
+            where: { ...businessWhere(tenantId, undefined, undefined), vehicleId: { in: ids } },
             _sum: { amount: true },
           })
         : Promise.resolve([]),

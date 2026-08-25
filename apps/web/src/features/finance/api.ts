@@ -11,6 +11,7 @@ import { RECEIPTS_DEFAULT_LIMIT } from './constants';
 import type {
   CreateCategoryInput,
   CreateReceiptInput,
+  CustomerRevenue,
   DebtFilters,
   DebtItem,
   FinanceCategory,
@@ -20,6 +21,12 @@ import type {
   ReceiptFilters,
   ReceiptBookingOption,
   ReceiptSummary,
+  FinanceCategoryBreakdown,
+  FinanceOverviewFilters,
+  FinancePeriodFilters,
+  FinanceScope,
+  FinanceSeries,
+  VehicleProfit,
 } from './types';
 
 export type ReceiptListResult = Paged<Receipt>;
@@ -30,6 +37,7 @@ export function filtersToParams(filters: ReceiptFilters): QueryParams {
     status: filters.status ?? null,
     categoryId: filters.categoryId ?? null,
     source: filters.source ?? null,
+    sourceGroup: filters.sourceGroup ?? null,
     paymentMethod: filters.paymentMethod ?? null,
     bookingId: filters.bookingId ?? null,
     vehicleId: filters.vehicleId ?? null,
@@ -105,5 +113,90 @@ export function debtFiltersToParams(filters: DebtFilters): QueryParams {
 export const fetchDebts = (filters: DebtFilters): Promise<DebtListResult> =>
   fetchPage<DebtItem>('/debts', debtFiltersToParams(filters), RECEIPTS_DEFAULT_LIMIT);
 
-export const fetchFinanceSummary = (from?: string, to?: string): Promise<FinanceSummary> =>
-  apiGet<FinanceSummary>('/finance/summary', { from: from ?? null, to: to ?? null });
+export const fetchFinanceSummary = (
+  filters: FinancePeriodFilters,
+  scope?: FinanceScope,
+): Promise<FinanceSummary> =>
+  apiGet<FinanceSummary>('/finance/summary', overviewRangeParams(filters, scope));
+
+// --- Báo cáo doanh thu -----------------------------------------------------
+
+/**
+ * Ba endpoint báo cáo cùng nhận `from`/`to`; mỗi cái thêm đúng tham số của riêng nó.
+ *
+ * Tách hàm dựng tham số ra khỏi hàm gọi để query key và request dùng CHUNG một object — key lệch
+ * tham số là cách sinh ra cache không bao giờ trúng, và người dùng thấy spinner mỗi lần bấm.
+ */
+export function overviewRangeParams(
+  filters: FinancePeriodFilters,
+  scope: FinanceScope = {},
+): QueryParams {
+  return {
+    from: filters.from ?? null,
+    to: filters.to ?? null,
+    // Phạm vi đi CÙNG bộ tham số kỳ, không tách riêng: khoá cache và request phải dựng từ đúng
+    // một object, nếu không hồ sơ xe A sẽ đọc trúng cache của xe B.
+    vehicleId: scope.vehicleId ?? null,
+    tenantCustomerId: scope.tenantCustomerId ?? null,
+  };
+}
+
+export const fetchFinanceSeries = (
+  filters: FinancePeriodFilters,
+  scope?: FinanceScope,
+): Promise<FinanceSeries> =>
+  apiGet<FinanceSeries>('/finance/series', {
+    ...overviewRangeParams(filters, scope),
+    granularity: filters.granularity ?? null,
+  });
+
+export const fetchFinanceByCategory = (
+  filters: FinancePeriodFilters,
+  type: string,
+  scope?: FinanceScope,
+): Promise<FinanceCategoryBreakdown> =>
+  apiGet<FinanceCategoryBreakdown>('/finance/by-category', {
+    ...overviewRangeParams(filters, scope),
+    type,
+  });
+
+export type VehicleProfitResult = Paged<VehicleProfit>;
+
+export function vehicleProfitParams(filters: FinanceOverviewFilters): QueryParams {
+  return {
+    ...overviewRangeParams(filters),
+    sort: filters.sort ?? null,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? RECEIPTS_DEFAULT_LIMIT,
+  };
+}
+
+export const fetchVehicleProfit = (filters: FinanceOverviewFilters): Promise<VehicleProfitResult> =>
+  fetchPage<VehicleProfit>('/finance/by-vehicle', vehicleProfitParams(filters), RECEIPTS_DEFAULT_LIMIT);
+
+export type CustomerRevenueResult = Paged<CustomerRevenue>;
+
+/**
+ * Bảng doanh thu theo khách có phân trang/sắp xếp RIÊNG với bảng theo xe.
+ *
+ * Trên URL chúng mang tiền tố khác nhau (`customerSort`/`customerPage`), nhưng xuống API thì cả
+ * hai đều là `sort`/`page` — tiền tố là chuyện của một trang có hai bảng, không phải của endpoint.
+ */
+export function customerRevenueParams(filters: FinanceOverviewFilters): QueryParams {
+  return {
+    from: filters.from ?? null,
+    to: filters.to ?? null,
+    sort: filters.customerSort ?? null,
+    page: filters.customerPage ?? 1,
+    limit: filters.customerLimit ?? RECEIPTS_DEFAULT_LIMIT,
+  };
+}
+
+export const fetchCustomerRevenue = (
+  filters: FinanceOverviewFilters,
+): Promise<CustomerRevenueResult> =>
+  fetchPage<CustomerRevenue>(
+    '/finance/by-customer',
+    customerRevenueParams(filters),
+    RECEIPTS_DEFAULT_LIMIT,
+  );

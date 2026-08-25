@@ -76,7 +76,8 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Duyệt hồ sơ nền tảng (approval task) + **quản lý gian hàng (list + khoá/mở khoá)** | `modules/platform-admin/` (`platform-approval.service.ts`, `platform-tenants.service.ts`) | CLAUDE §6; khoá đổi `Tenant.status` (ADR 0008) |
 | **Giám sát toàn hệ thống** (xe / đơn thuê / khách thuê — không tenant-scope) | `modules/platform-admin/` (`platform-vehicles.*`, `platform-bookings.*`, `platform-customers.*`) | Phase 7 §11.1; xe: ẩn/bỏ ẩn gọi `ListingsService` (ADR 0008); đơn & khách CHỈ ĐỌC |
 | **Masking PII** (`maskPhone` / `maskEmail`) — endpoint giám sát luôn trả bản đã che | `common/mask.ts` | bỏ che qua `POST .../:id/contact`, quyền `platform.customers.view_pii`, ghi audit từng lần |
-| Công nợ đơn = `max(0, total − paid)` — một định nghĩa duy nhất | `common/money.ts` (`bookingDebt`) | Phase 6: không denormalize cột công nợ |
+| **Công nợ đơn — MỘT định nghĩa duy nhất** (`phảiThu = total + phụ phí`, `đãThu = paid + phiếu tay đã duyệt + min(phụ phí, cọc đã thu)`) | `common/booking-money.ts` (bản TS `bookingMoney()` + bản SQL `SQL_AMOUNT_DUE`/`SQL_COLLECTED`/`SQL_DEBT`) | epic 19/08: KHÔNG dùng `bookingDebt()` của `common/money.ts` cho màn mới — nó là `total − paid` và bỏ sót phụ phí |
+| **Doanh thu / chi phí — MỘT định nghĩa duy nhất**: `ledgerWhere` (dòng tiền quỹ, gồm cọc) ↔ `businessWhere` (kết quả kinh doanh, đã loại tiền giữ hộ); `FinanceScope` thu hẹp về MỘT xe / MỘT khách | `common/finance-period.ts` | ADR 0013 §3; `/finance/*` và `VehiclesService.stats` dùng CHUNG. Doanh thu của một thực thể = CÙNG câu truy vấn + một mệnh đề lọc — đừng viết endpoint riêng, và đừng viết lại `source: notIn` ở nơi thứ ba |
 | **Audit — GHI** (`AuditService.record(entry, tx)`) · **ĐỌC** ở `platform-audit.service.ts` | `modules/audit/` | CLAUDE §6.3 |
 | Upload R2 (presign) · Firebase admin | `modules/storage/` · `modules/firebase/` | ADR 0009 |
 | Env validate (zod) | `config/env.schema.ts` | OTP_MODE/AUTH_MODE/OTP_MAX_ATTEMPTS… |
@@ -121,7 +122,11 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Đặt xe khách (bottom-sheet/modal, từng bước) | `features/booking-requests/` (`RequestBookingFlow`, `RequestBookingModal`) | `guest-booking-passwordless.md` |
 | Đơn thuê (list/table/detail drawer, thu tiền) · Yêu cầu thuê inbox | `features/bookings/` · inbox ở `features/booking-requests/` | Phase 4/6 |
 | **Sổ khách của gian hàng** (danh sách + hồ sơ `/manage/customers/[id]`) | `features/customers/` · `app/(manage)/manage/customers/` | S-01; KHÁC `admin-customers` (giám sát nền tảng). Filter ở URL (ADR 0004) |
-| Thu-Chi · Payments · Công nợ · Dashboard tài chính | `features/finance/` · `features/payments/` | Phase 6 |
+| Thu-Chi · Payments · Công nợ | `features/finance/` · `features/payments/` | Phase 6 |
+| **Tổng quan doanh thu** (ba lớp tiền · biểu đồ thời gian · cơ cấu danh mục · lãi/lỗ theo xe) | `app/(manage)/manage/finance/` · `features/finance/components/{FinanceOverviewCards,CategoryBreakdown,VehicleProfitTable}.tsx` | epic 25/08; mọi con số bấm được về sổ đã lọc (`receiptsPath.filtered` mang `sourceGroup` + `status`) |
+| **Bảng xếp hạng tiền** (hiệu quả theo xe · doanh thu theo khách) | `features/finance/components/{VehicleProfitTable,CustomerRevenueTable}.tsx` | epic 25/08 đợt 1+3; hai bảng phân trang ĐỘC LẬP (`customerSort`/`customerPage`), dùng chung stylesheet để trông y hệt nhau; phần không gắn xe/khách nằm ở `summary.unassignedCost`/`unassignedRevenue` |
+| **Tiền của MỘT xe / MỘT khách** (kỳ · thẻ số · xu hướng · link ra sổ đã lọc) | `features/finance/components/FinanceEntityPanel.tsx` — nhúng ở `Vehicle360Overview` và tab Thu-Chi của sổ khách | epic 25/08 đợt 2; bộ số khác nhau theo loại thực thể — khách KHÔNG có chi phí/lợi nhuận |
+| **Biểu đồ — nơi DUY NHẤT import `recharts`** (khung + tooltip + theme + ranh giới chuỗi→số) | `components/chart/` | giữ recharts trong chunk lazy của `(manage)`, không đụng ngân sách 180KB của marketplace |
 | Hợp đồng thuê (xem/in `window.print`, print CSS toàn cục `[data-print-root]`) | `features/contracts/` · `app/(manage)/manage/contracts/[id]/` | Phase 6 §11.7 |
 | Thông báo · Đánh giá · Chat · Thành viên · Duyệt hồ sơ · Xe · Tổng quan | `features/{notifications,reviews,chat,members,approvals,vehicles,dashboard}/` | Phase 2–6 |
 | **Hồ sơ 360 của xe** (chỉ số + việc cần làm + đơn gần đây) · **Dải cảnh báo** dùng chung | `features/vehicles/components/{Vehicle360Overview,VehicleAlerts}.tsx` | Wave 8; KHÔNG suy lại cảnh báo ở client — đọc thẳng từ server |

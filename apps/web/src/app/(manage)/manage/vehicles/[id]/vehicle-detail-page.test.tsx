@@ -124,6 +124,16 @@ vi.mock('@/hooks/use-permissions', () => ({
   }),
 }));
 
+/**
+ * Khối tiền của xe có bề mặt và test riêng (`FinanceEntityPanel`); ở đây chỉ cần chứng minh nó
+ * được dựng hay không theo quyền. Mock luôn tránh phải bọc `QueryClientProvider` cho test trang.
+ */
+vi.mock('@/features/finance/components/FinanceEntityPanel', () => ({
+  FinanceEntityPanel: ({ scope }: { scope: { vehicleId?: string } }) => (
+    <div data-testid="vehicle-finance-panel">{scope.vehicleId}</div>
+  ),
+}));
+
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,
   useIsTablet: () => false,
@@ -472,13 +482,20 @@ describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
     expect(screen.getByText('Đơn DH0002 · Hoàn thành')).toBeTruthy();
   });
 
-  it('hiệu suất luỹ kế: doanh thu, lượt thuê và đơn đang chạy từ stats', () => {
+  /**
+   * Thẻ "Hiệu suất" nay CHỈ nói chuyện vận hành.
+   *
+   * Doanh thu từng nằm ở đây dưới dạng một con số luỹ kế; nó đã dời sang `FinanceEntityPanel`
+   * (có kỳ). Giữ cả hai nghĩa là đặt hai số tiền với hai ý nghĩa thời gian khác nhau trên cùng
+   * một màn — test này khoá lại chuyện đó không quay về.
+   */
+  it('hiệu suất luỹ kế: lượt thuê và đơn đang chạy, KHÔNG còn dòng tiền', () => {
     renderPage();
 
     const card = screen.getByText('Hiệu suất luỹ kế').closest('.ant-card') as HTMLElement;
-    expect(within(card).getByText('12.750.000 ₫')).toBeTruthy();
     expect(within(card).getByText('12 chuyến')).toBeTruthy();
     expect(within(card).getByText('1 đơn')).toBeTruthy();
+    expect(within(card).queryByText('12.750.000 ₫')).toBeNull();
   });
 
   it('thiếu quyền đơn thuê: backend bỏ hai danh sách → hai khối đó KHÔNG dựng', () => {
@@ -491,15 +508,22 @@ describe('/manage/vehicles/[id] — khối tổng hợp (summary)', () => {
     expect(screen.getByText('Hiệu suất luỹ kế')).toBeTruthy();
   });
 
-  it('thiếu quyền tài chính: khối hiệu suất không dựng dòng doanh thu', () => {
+  it('thiếu quyền tài chính: KHÔNG dựng khối tiền của xe', () => {
     summary.data = summaryOf({
       stats: { vehicleId: 'v1', activeBookings: 1, completedBookings: 12 },
     });
     renderPage();
 
-    const card = screen.getByText('Hiệu suất luỹ kế').closest('.ant-card') as HTMLElement;
-    expect(within(card).queryByText('Doanh thu')).toBeNull();
-    expect(within(card).getByText('12 chuyến')).toBeTruthy();
+    expect(screen.queryByTestId('vehicle-finance-panel')).toBeNull();
+    // Phần vận hành vẫn còn — thiếu quyền tiền không được làm mất chỉ số không phải tiền.
+    expect(screen.getByText('12 chuyến')).toBeTruthy();
+  });
+
+  it('có `finance.view`: khối tiền của xe được dựng, thu hẹp đúng xe đang xem', () => {
+    grant(PERMISSION.FINANCE_VIEW);
+    renderPage();
+
+    expect(screen.getByTestId('vehicle-finance-panel').textContent).toBe('v1');
   });
 
   it('tổng hợp hỏng: hồ sơ vẫn hiển thị, từng khối báo "Không tải được"', () => {

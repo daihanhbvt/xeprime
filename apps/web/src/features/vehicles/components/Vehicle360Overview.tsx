@@ -37,6 +37,7 @@ import {
 import { PreviewImage, PreviewImageGroup } from '@/components/data-display/PreviewImage';
 import { DiscountTag } from '@/components/data-display/DiscountTag';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
 import { VehicleMaintenanceCard } from '@/features/vehicle-maintenance/components/VehicleMaintenanceCard';
 import {
   ROUTES,
@@ -105,7 +106,8 @@ export interface Vehicle360OverviewProps {
  * `docs/design/12` §12):
  *  - Header hiển thị loại nguồn xe đã chọn; chi tiết tài chính của nguồn xe vẫn thuộc Wave 4.
  *  - Giấy tờ và bảo dưỡng giữ trạng thái chưa có dữ liệu cho tới wave tương ứng, không bịa dữ liệu mẫu.
- *  - "Hiệu suất" là số LUỸ KẾ (backend không có chỉ số theo tháng) — tiêu đề nói thẳng điều đó.
+ *  - "Hiệu suất" giữ số chuyến LUỸ KẾ; TIỀN đã tách hẳn sang khối `FinanceEntityPanel` theo kỳ,
+ *    để một màn hình không mang hai con số tiền với hai ý nghĩa thời gian khác nhau.
  *  - Banner cảnh báo lấy từ trạng thái duyệt công khai (dữ liệu thật) thay vì hạn đăng kiểm.
  */
 export function Vehicle360Overview({
@@ -121,6 +123,7 @@ export function Vehicle360Overview({
   onDelete,
 }: Vehicle360OverviewProps) {
   const t = useTranslations('Vehicles.overview');
+  const { has } = usePermissions();
 
   return (
     <div className={styles.stack}>
@@ -148,6 +151,17 @@ export function Vehicle360Overview({
       </div>
 
       <ModuleLinks vehicleId={vehicle.id} vehicle={vehicle} canEdit={canEdit} />
+
+      {/*
+        Tiền của riêng chiếc xe này, THEO KỲ. Trước đây hồ sơ xe chỉ có một con số luỹ kế và một
+        đường dẫn ra sổ — không trả lời được "tháng này xe có nuôi nổi nó không".
+
+        Gác `finance.view` ở đây là gác HIỂN THỊ; chặn thật vẫn là guard backend, và khi thiếu
+        quyền thì truy vấn cũng không được bắn đi (cùng luật với `VehiclesService.stats`).
+      */}
+      {has(PERMISSION.FINANCE_VIEW) ? (
+        <FinanceEntityPanel scope={{ vehicleId: vehicle.id }} kind="vehicle" />
+      ) : null}
 
       <div className={styles.columns}>
         <div className={styles.column}>
@@ -456,14 +470,18 @@ function PerformanceCard({
   failed: boolean;
 }) {
   const t = useTranslations('Vehicles.overview');
-  const fmt = useAppFormat();
 
   const stats = summary?.stats;
-  const hasFinance = stats?.totalIncome != null;
 
   return (
-    // "Luỹ kế" trong tiêu đề là cố ý: backend chưa có chỉ số theo kỳ (xem `VehiclesService.stats`),
-    // đặt tên "tháng này" cho một con số từ-trước-tới-nay là nói dối người đọc.
+    /*
+     * Thẻ này CHỈ nói chuyện vận hành: xe đã chạy bao nhiêu chuyến, đang có mấy đơn.
+     *
+     * Doanh thu từng nằm ở đây dưới dạng một con số LUỸ KẾ. Từ khi `FinanceEntityPanel` có mặt
+     * ngay bên dưới với đầy đủ kỳ, giữ lại con số đó nghĩa là đặt hai số tiền cạnh nhau trên
+     * cùng một màn hình với hai ý nghĩa thời gian khác nhau — cách chắc chắn để người đọc lấy
+     * nhầm số. Một màn, một bề mặt tiền.
+     */
     <Card title={t('performance.title')} className={styles.quickCard}>
       {loading ? (
         <Skeleton active title={false} paragraph={{ rows: 2 }} />
@@ -472,13 +490,7 @@ function PerformanceCard({
       ) : (
         <div className={styles.perf}>
           <dl className={styles.perfRow}>
-            {hasFinance ? (
-              <div>
-                <dt>{t('performance.revenue')}</dt>
-                <dd className={styles.income}>{fmt.money(stats.totalIncome)}</dd>
-              </div>
-            ) : null}
-            <div className={hasFinance ? styles.alignEnd : undefined}>
+            <div>
               <dt>{t('performance.rentals')}</dt>
               <dd>{t('performance.tripCount', { count: stats.completedBookings })}</dd>
             </div>

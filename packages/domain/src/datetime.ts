@@ -77,7 +77,15 @@ export function rentalDurationParts(from: Dayjs, to: Dayjs): RentalDurationParts
  * này". Ép tường minh thay vì `startOf('week')` để không phụ thuộc locale toàn cục (thứ mà repo
  * này cấm đụng tới).
  */
-export function buildPeriodRange(period: 'today' | 'this_week' | 'this_month' | 'last_month'): {
+export type PeriodKey =
+  | 'today'
+  | 'this_week'
+  | 'this_month'
+  | 'last_month'
+  | 'this_quarter'
+  | 'this_year';
+
+export function buildPeriodRange(period: PeriodKey): {
   from: string;
   to: string;
 } {
@@ -98,6 +106,14 @@ export function buildPeriodRange(period: 'today' | 'this_week' | 'this_month' | 
       const prev = now.subtract(1, 'month');
       return { from: fmt(prev.startOf('month')), to: fmt(prev.endOf('month')) };
     }
+    case 'this_quarter': {
+      // Không dùng plugin `quarterOfYear` cho một phép tính ba dòng: quý = tháng chia 3.
+      const startMonth = Math.floor(now.month() / 3) * 3;
+      const start = now.month(startMonth).startOf('month');
+      return { from: fmt(start), to: fmt(start.add(2, 'month').endOf('month')) };
+    }
+    case 'this_year':
+      return { from: fmt(now.startOf('year')), to: fmt(now.endOf('year')) };
   }
 }
 

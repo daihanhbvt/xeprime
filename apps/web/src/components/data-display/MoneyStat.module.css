@@ -1,0 +1,77 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.link {
+  color: inherit;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.link:hover,
+.link:focus-visible {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-muted);
+}
+
+.label {
+  display: block;
+  margin-bottom: var(--xp-space-xs);
+  font-size: var(--xp-font-size-label);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--xp-color-text-tertiary);
+}
+
+.value {
+  display: block;
+  font-size: var(--xp-font-size-h3);
+  font-weight: 700;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  /* Số tiền dài không được đẩy vỡ lưới — cắt xuống dòng ở đây, số đầy đủ vẫn ở bảng bên dưới. */
+  overflow-wrap: anywhere;
+}
+
+.compact {
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.positive {
+  color: var(--xp-color-success);
+}
+
+.negative {
+  color: var(--xp-color-error);
+}
+
+.neutral {
+  color: var(--xp-color-text);
+}
+
+.accent {
+  color: var(--xp-color-price);
+}
+
+.hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+  margin-top: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.skeleton {
+  display: block;
+  height: 24px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}

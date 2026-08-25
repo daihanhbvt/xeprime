@@ -3,8 +3,10 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BOOKING_STATUS,
+  HELD_FUNDS_RECEIPT_SOURCES,
   PAYMENT_METHOD,
   RECEIPT_SOURCE,
+  RECEIPT_SOURCE_GROUP,
   RECEIPT_STATUS,
   RECEIPT_TYPE,
   isAutoReceipt,
@@ -137,13 +139,14 @@ export class ReceiptsService {
     // Lọc theo NGÀY PHÁT SINH, không phải lúc nhập — và qua `dayRangeFilter` để `YYYY-MM-DD` từ
     // FilterBar nghĩa là trọn một ngày Việt Nam, không phải từ 07:00 (xem common/day-range.ts).
     const occurredAt = dayRangeFilter(query.from, query.to);
+    const source = sourceFilterOf(query);
 
     return {
       tenantId,
       deletedAt: null,
       ...(query.type ? { type: query.type } : {}),
       ...(query.status ? { status: query.status } : {}),
-      ...(query.source ? { source: query.source } : {}),
+      ...(source ? { source } : {}),
       ...(query.paymentMethod ? { paymentMethod: query.paymentMethod } : {}),
       ...(query.categoryId ? { categoryId: query.categoryId } : {}),
       ...(query.bookingId ? { bookingId: query.bookingId } : {}),
@@ -661,4 +664,29 @@ function notFoundVehicle(): NotFoundException {
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy xe để gắn phiếu',
   });
+}
+
+/**
+ * Vị từ `source` của một truy vấn sổ — gộp `source` (một nguồn cụ thể) và `sourceGroup`
+ * (tiền thật của gian hàng ↔ tiền giữ hộ).
+ *
+ * `sourceGroup` tồn tại để một thẻ tổng ở `/manage/finance` bấm sang được đúng tập phiếu đã
+ * sinh ra nó. Không có nó, "Doanh thu 82,5tr" mở ra một sổ cộng 96,5tr vì sổ vẫn kể cả tiền cọc.
+ *
+ * Hai tham số cùng có thì áp CẢ HAI (`equals` + `in`/`notIn`) — một yêu cầu tự mâu thuẫn
+ * (`source=deposit` trong nhóm `business`) trả về rỗng, đúng nghĩa đen của câu hỏi, thay vì
+ * âm thầm bỏ qua một vế.
+ */
+function sourceFilterOf(query: ReceiptListQueryDto): Prisma.StringFilter | string | undefined {
+  const held = [...HELD_FUNDS_RECEIPT_SOURCES];
+  const group =
+    query.sourceGroup === RECEIPT_SOURCE_GROUP.BUSINESS
+      ? { notIn: held }
+      : query.sourceGroup === RECEIPT_SOURCE_GROUP.HELD_FUNDS
+        ? { in: held }
+        : undefined;
+
+  if (query.source && group) return { equals: query.source, ...group };
+  if (query.source) return query.source;
+  return group;
 }

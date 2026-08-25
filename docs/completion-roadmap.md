@@ -30,6 +30,105 @@ cho tới khi ngày trong test tính theo `now` thay vì cố định.
 không đổi từ 18/08. Mock `IntersectionObserver` dùng mảng cấp module. Hướng xử lý là ổn định
 test, **không** phải đổi `role` của sản phẩm.
 
+> **25/08 (đợt 3) — BẢNG DOANH THU THEO KHÁCH ở `/manage/finance`.** Đợt 2 đã dựng màn chi tiết
+> cho từng khách; đợt này thêm bảng XẾP HẠNG ở trang tổng quan, song song với bảng hiệu quả theo xe.
+> **`GET /finance/by-customer`** — cùng khuôn `by-vehicle`: tập dòng là HỢP của "khách có phát sinh
+> tiền" và "khách có chuyến" (khách thuê cả tháng mà tiền chưa lên sổ vẫn phải hiện — đó là dấu hiệu
+> cần đi thu tiền), `COUNT(*) OVER ()` thay câu đếm thứ hai, `ORDER BY` từ union đã validate.
+> **`unassignedRevenue` vào `FinanceSummaryDto`** — đối xứng với `unassignedCost`: phiếu thu tay
+> không liên kết đơn thì không thuộc về khách nào, và thiếu con số này thì tổng các dòng nhỏ hơn thẻ
+> "Doanh thu" mà phần chênh không có chỗ giải thích.
+> **Tỷ trọng tính ở SERVER trên NUMERIC**, mẫu số là doanh thu CẢ KỲ kể cả phần chưa gắn khách —
+> tức cùng mẫu số với thẻ "Doanh thu". Bản đầu tôi viết `Number(a)/Number(b)` ở client: vừa vi phạm
+> ADR 0007, vừa (nếu lấy tổng của TRANG làm mẫu số) cho ra bộ % cộng tròn 100% ở mọi trang — nghe
+> hợp lý và sai hoàn toàn. Có test khoá đúng mẫu số này.
+> **Không có cột "còn nợ"**: công nợ là số TẠI THỜI ĐIỂM NÀY còn bảng là của một KỲ; trộn hai đơn vị
+> thời gian vào một bảng là mời người đọc so hai thứ không so được. `/manage/debts` mới trả lời
+> "ai đang nợ tôi".
+> **Hai bảng phân trang ĐỘC LẬP** (`customerSort`/`customerPage` trên URL): dùng chung một cặp
+> `sort`/`page` thì bấm sang trang ở bảng này kéo luôn bảng kia. Có test khoá.
+> Tên khách chỉ thành liên kết khi có `customers.view` — thiếu quyền thì vẫn đọc được tên (đúng mức
+> phơi bày mà `/manage/debts` đã có với `finance.view`) nhưng không mở được hồ sơ.
+> Verify: **jest 30/30** (`finance-reports.spec.ts`, +8 spec) · **vitest 1672/1672 (114 file)** ·
+> typecheck api+web sạch · lint 0 error · `i18n:check` 2378 khoá parity · `next build` xanh ·
+> không migration.
+
+> **25/08 (đợt 2) — DOANH THU THEO TỪNG XE / TỪNG KHÁCH.** Câu hỏi của user: hai chiều này "chưa
+> có". Đúng một nửa — bảng tổng hợp theo xe vừa dựng ở đợt 1, còn *màn chi tiết của MỘT thực thể*
+> thì chưa: hồ sơ xe chỉ có một con số **luỹ kế** + link ra sổ, sổ khách có *Tổng giá trị thuê /
+> Đã thu / Còn nợ* nhưng **tính trên `bookings`**, khác cơ sở với màn tài chính (tính trên
+> `receipts`) ⇒ hai màn ra hai số cho cùng một khách.
+> **Chốt với user:** "user" = **khách thuê** · bề mặt = **màn chi tiết từng thực thể** · cơ sở =
+> **tiền THẬT đã thu**.
+> **Cách làm — KHÔNG viết endpoint mới.** Ba endpoint báo cáo nhận thêm `vehicleId`/`tenantCustomerId`
+> (`FinanceScope` ở `common/finance-period.ts`, hai bản: `sqlReceiptScope` cho tiền, `sqlBookingScope`
+> cho số chuyến/cọc/công nợ vì chúng nằm ở `bookings`). Một endpoint riêng cho "doanh thu một chiếc
+> xe" sẽ là **bản thứ hai của cùng phép tính**, và bản thứ hai luôn trôi khỏi bản đầu; thu hẹp vị từ
+> thay vì nhân đôi nó nghĩa là con số ở hồ sơ xe **không thể** lệch dòng của nó ở bảng tổng quan —
+> có test khoá đúng đẳng thức đó.
+> **`FinanceSummaryDto` += `trips`** (số chuyến có ngày NHẬN XE trong kỳ) — mẫu số của mọi câu hỏi
+> về doanh thu, và đúng nghĩa ở mọi phạm vi.
+> **FE:** `FinanceEntityPanel` dùng chung, nhúng vào **hồ sơ xe** (sau `ModuleLinks`, gác
+> `finance.view`) và **tab Thu-Chi của sổ khách** (khối số theo kỳ ở trên, danh sách phiếu làm bằng
+> chứng ở dưới). Bộ số **khác nhau theo loại thực thể**: xe có doanh thu·chi phí·lợi nhuận·biên; khách
+> có doanh thu·còn nợ — chi phí gian hàng không gắn vào khách nên "Chi phí 0 ₫ · Lợi nhuận = Doanh
+> thu" chỉ là hai ô giả vờ mang thông tin. Kỳ nằm trên URL (`?from=&to=`) nên link gửi được.
+> **Gỡ bỏ có chủ đích:** dòng "Doanh thu (luỹ kế)" trong thẻ *Hiệu suất* của hồ sơ xe — từ khi khối
+> tiền theo kỳ nằm ngay dưới, giữ lại là đặt hai số tiền với hai ý nghĩa thời gian khác nhau trên
+> cùng một màn. Thẻ đó nay chỉ nói chuyện vận hành; khoá `Vehicles.overview.performance.revenue` đã
+> xoá khỏi cả hai ngôn ngữ, và test lật sang khẳng định dòng tiền KHÔNG còn ở đó.
+> **Dọn kèm:** `use-finance-summary.ts` (hook cũ nhận `from`/`to` rời) bị `useFinanceSummaryOverview`
+> thay thế hoàn toàn ⇒ xoá; `useFinancePeriodFilters` tách ra từ `useFinanceOverviewFilters` để khối
+> nhúng và màn tổng quan dùng chung một cách đọc kỳ.
+> **Nhắc lại ranh giới:** ba thẻ *Tổng giá trị thuê / Đã thu / Còn nợ* ở đầu hồ sơ khách **giữ nguyên
+> cơ sở `bookings`** — đó là bề mặt đi ĐÒI NỢ và nó phải tính trên đơn. Khối mới tính trên tiền thật
+> đã thu. Hai câu hỏi khác nhau nên hai con số, và nhãn của từng khối nói thẳng điều đó.
+> Verify: **jest 22/22** (`finance-reports.spec.ts`, +6 spec phạm vi) · **vitest 1667/1667 (114 file,
+> +9 spec `FinanceEntityPanel`)** · typecheck api+web sạch · lint 0 error · `i18n:check` 2363 khoá
+> parity · `i18n:audit` **0 chuỗi thô** trong file mới (khu `customers` 183→176 nhờ chuyển
+> `CustomerReceiptsPanel`) · `next build` xanh, recharts vẫn nằm trong chunk lazy riêng · không migration.
+
+> **25/08 — epic TỔNG QUAN DOANH THU (`/manage/finance`).** Trang 89 dòng gồm 4 thẻ `Statistic`
+> thành màn báo cáo thật, và đóng luôn một **mâu thuẫn định nghĩa** đã ghi nợ ở plan 19/08 §5.1:
+> `FinanceOverviewService.summary` cộng CẢ tiền cọc vào "Tổng thu" trong khi `VehiclesService.stats`
+> đã loại — cùng một gian hàng, hai màn hai con số. **Cách đóng: `apps/api/src/common/finance-period.ts`**
+> (cùng vai trò `booking-money.ts` giữ cho công nợ) — `ledgerWhere` = dòng tiền quỹ, `businessWhere`
+> = kết quả kinh doanh đã loại tiền giữ hộ theo ADR 0013 §3; `VehiclesService.stats` bỏ bản sao
+> `source: notIn` của nó và dùng chung.
+> **Ba lớp tiền trên giao diện, không trộn:** Kết quả kinh doanh (doanh thu · chi phí · lợi nhuận +
+> biên) · Dòng tiền quỹ (vào · ra · cân đối, GỒM cọc) · Tại thời điểm này (**cọc đang giữ** — bề mặt
+> đầu tiên cho thứ `screen_spec` §7.7 đòi cho cả 5 vai — và công nợ). Lý do tách: ba câu hỏi khác
+> nhau, hai đơn vị thời gian khác nhau; xếp chung một hàng là mời người đọc cộng trừ hai thứ không
+> cộng trừ được.
+> **Bốn endpoint mới** (`finance-overview.controller.ts`, đều `FINANCE_VIEW`): `/finance/summary`
+> mở rộng (+`revenue`/`cost`/`profit`/`profitMarginPercent`/`unassignedCost`/`depositHeld`),
+> `/finance/series` (`date_trunc` **theo giờ VN** + `generate_series` điền bucket rỗng + server tự
+> nâng bậc độ mịn rồi TRẢ LẠI giá trị đã dùng), `/finance/by-category`, `/finance/by-vehicle`
+> (`COUNT(*) OVER ()`, tập dòng là HỢP của "xe có tiền" và "xe có chuyến"). **Không migration** —
+> `receipts_tenant_occurred_idx` đã đủ.
+> **Drill-down khớp từng đồng:** `ReceiptListQueryDto` += `sourceGroup` (`business`|`held_funds`).
+> Không có nó, bấm thẻ "Doanh thu 82,5tr" mở ra một sổ cộng 96,5tr — thẻ nói một số, danh sách nó
+> dẫn tới nói số khác. Có test khoá chặt hai vế bằng nhau.
+> **Biểu đồ, lần đầu trong repo:** `recharts` 3.10.1 (SVG nên series đọc được `var(--xp-color-viz-*)`;
+> canvas thì không) bọc sau `components/chart/` — build xác nhận nó nằm trong **chunk lazy riêng**,
+> không vào `rootMainFiles`, nên ngân sách 180KB của marketplace không bị đụng.
+> **Trả nợ thiết kế X-02:** dải data-viz `--xp-color-viz-1..5` + ba bí danh vai
+> (`revenue`/`cost`/`profit`). **NĂM bậc chứ không sáu** như brand guide phác: năm bậc này qua trọn
+> bộ kiểm màu (dải sáng · chroma · mù màu deutan/tritan · mắt thường · tương phản ≥3:1) ở chế độ
+> **so MỌI CẶP**; không tìm được bậc thứ sáu nào giữ được điều đó, và thêm một bậc hỏng là bán một
+> lời hứa mà người mù màu không nhận được. Dark theme cần bộ giá trị RIÊNG — đã ghi tại chỗ.
+> **Dọn kèm:** `MoneyStat` (`components/data-display/`) — `ReceiptSummaryCards` đang giữ một bản
+> `Card` nội bộ và bản thứ hai sắp mọc; `buildPeriodRange` += `this_quarter`/`this_year` (+ type
+> `PeriodKey`), sổ Thu-Chi **giữ nguyên 4 lựa chọn** của nó.
+> **Cố ý KHÔNG làm:** so kỳ trước (delta %) · nối hai thẻ `—` ở `/manage` · xuất CSV ·
+> `/manage/finance/vehicle-obligations`. Còn thiếu đã biết: biểu đồ chưa có **bảng số liệu tương
+> đương** cho trình đọc màn hình (số theo từng bucket chỉ có trên hình).
+> Verify: **jest 16/16 spec mới** (`finance-reports.spec.ts`, PostgreSQL thật — khoá cả bẫy bucket
+> 05:00 giờ VN, bucket rỗng, nâng bậc độ mịn, cọc ngoài doanh thu, `unassignedCost`) · **vitest
+> 1657/1657 (113 file)** · typecheck api+web sạch · lint 0 error · `i18n:check` 2328 khoá parity ·
+> `i18n:audit` **0 chuỗi thô** trong mọi file mới · `migrate status` up to date, không migration.
+> Kế hoạch: `docs/plans/ph-n-t-ch-ch-c-n-ng-hazy-sky.md`.
+
 > **21/08 — ADR 0014/0015/0016 + wave A1 (khung `/account`).** Chốt bằng ADR ba câu hỏi đã treo:
 > **(0014)** chủ xe và chủ gian hàng là **MỘT vai** `shop_owner`, một tenant — `tenants.tenant_type`
 > (đã có từ Phase 0 nhưng chưa điều khiển gì) từ nay **chỉ là NHÃN hiển thị**, năng lực đọc từ GÓI;
@@ -362,9 +461,13 @@ Thu cọc, hoàn cọc và chi phí bảo dưỡng nay tự lên sổ Thu-Chi. *
 (là khoản ĐÒI, không phải tiền đổi tay — phiếu hoàn cọc đã là số ròng); phần **thu `additionalDue`
 khi phụ phí vượt cọc** là việc còn lại của mảng này.
 
+➡️ ~~báo cáo tài chính (lãi/lỗ theo xe)~~ — **ĐÃ LÀM 25/08** (xem đầu file): `/manage/finance` nay là
+màn báo cáo có biểu đồ, cơ cấu theo danh mục và lãi/lỗ theo xe. **Xuất CSV vẫn chưa** — đó là phần
+còn lại của mảng này.
+
 Kế tiếp chọn một trong: nốt §11.1 (**support tickets** · **invoice cho gói**) · retrofit gate SĐT
-(§5) · báo cáo tài chính (lãi/lỗ theo xe, xuất CSV — dữ liệu nay đã đủ vì chi phí xe đã vào sổ) ·
-Phase 8 (migration Firestore) · Phase 9 (QA/hardening).
+(§5) · xuất CSV báo cáo tài chính · `/manage/finance/vehicle-obligations` (trả góp / thuê lại /
+hoa hồng ký gửi — món cuối của tuyến tiền) · Phase 8 (migration Firestore) · Phase 9 (QA/hardening).
 
 ---
 
