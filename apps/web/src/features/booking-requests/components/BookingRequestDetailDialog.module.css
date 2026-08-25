@@ -160,3 +160,11 @@
   flex-wrap: wrap;
   gap: var(--xp-space-xs);
 }
+
+/* Câu thay cho hàng nút quyết định khi yêu cầu đã quá hạn phản hồi (xem BookingRequestCard). */
+.expiredHint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

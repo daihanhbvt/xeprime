@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  bookingRequestRespondBy,
   BOOKING_REQUEST_STATUS,
   MEMBERSHIP_STATUS,
   POLICY_SOURCE,
@@ -376,6 +377,8 @@ describe('giao nhận miễn phí lúc duyệt + cập nhật phí sau + snapsho
     requestId = newId();
     await prisma.bookingRequest.create({
       data: {
+        // Hạn phản hồi 60 phút (25/08) — cột NOT NULL, server luôn tự đặt.
+        respondBy: bookingRequestRespondBy(new Date()),
         id: requestId,
         tenantId,
         vehicleId,
@@ -866,6 +869,8 @@ describe('giá theo DỊCH VỤ (17/08 — dài hạn giá tháng / có tài x�
       const requestId = newId();
       await prisma.bookingRequest.create({
         data: {
+          // Hạn phản hồi 60 phút (25/08) — cột NOT NULL, server luôn tự đặt.
+          respondBy: bookingRequestRespondBy(new Date()),
           id: requestId,
           tenantId,
           vehicleId,

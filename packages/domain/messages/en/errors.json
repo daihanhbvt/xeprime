@@ -51,7 +51,10 @@
     "UPLOADS_NOT_CONFIGURED": "File uploads aren't configured.",
     "UPLOAD_FAILED": "The upload failed. Please try again.",
     "TRIP_CANCEL_NOT_ALLOWED": "This trip can no longer be cancelled. Please contact the host.",
-    "PROFILE_INCOMPLETE": "Your shop profile is still missing required details, so it cannot be submitted for review."
+    "PROFILE_INCOMPLETE": "Your shop profile is still missing required details, so it cannot be submitted for review.",
+    "RECEIPT_BOOKING_VEHICLE_MISMATCH": "The booking you picked does not run the vehicle you picked. Clear one of the two.",
+    "BOOKING_REQUEST_EXPIRED": "This request passed its 60-minute response deadline and closed itself.",
+    "BOOKING_NO_SHOW_NOT_ALLOWED": "Can't mark a no-show yet — it is less than 30 minutes past pickup time, or the vehicle was already handed over."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",

@@ -3,6 +3,7 @@
 import { App, Button } from 'antd';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
   HANDOVER_TYPE,
@@ -21,31 +22,39 @@ import { BookingReceiptList } from '@/features/finance/components/BookingReceipt
 import { PaymentHistory } from '@/features/payments/components/PaymentHistory';
 import { RecordPaymentModal } from '@/features/payments/components/RecordPaymentModal';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { isZeroMoney } from '@/lib/money';
-import { getErrorMessage } from '@/services/api-client';
 import { BookingFormDialog } from './BookingFormDialog';
+import { BookingStatusActions } from './BookingStatusActions';
 import type { BookingDetail } from '../types';
 import styles from './BookingActionBar.module.css';
-
-/** Lý do nút bị khoá — nói một lần, dùng cho mọi nút ghi trên đơn đã khép. */
-const CLOSED_HINT = 'Đơn đã kết thúc nên không sửa được nữa';
 
 /**
  * Thanh hành động ở CHÂN thẻ chi tiết đơn — **một hành động chính duy nhất**, mọi thứ khác lùi
  * về sau.
  *
- * Bố cục cố định theo thiết kế: mọi thao tác phụ (hợp đồng, lịch sử thu, sửa đơn, phí giao
- * nhận, thu tiền) bày thẳng bên trái; CTA theo trạng thái đứng riêng ngoài cùng bên phải. Nhờ
+ * Bố cục cố định theo thiết kế: mọi thao tác phụ (quyết định trạng thái, hợp đồng, lịch sử thu,
+ * sửa đơn, thu tiền) bày thẳng bên trái; CTA theo trạng thái đứng riêng ngoài cùng bên phải. Nhờ
  * vậy mắt người dùng luôn rơi vào đúng một chỗ dù đơn đang ở chặng nào.
  *
  * CTA suy từ ngữ cảnh bàn giao (`useHandoverContext`) — dùng CHUNG query với khối `Quản lý
  * chuyến đi`, nên hai nơi không bao giờ kể hai câu chuyện khác nhau và cũng không tốn thêm một
- * request. Không có nút đổi trạng thái chung: trạng thái đơn chỉ đổi như hệ quả của một lần
- * xác nhận bàn giao thật (Wave 10).
+ * request.
+ *
+ * **Không có bộ đổi trạng thái tự do**, nhưng CÓ hai quyết định khép đơn được kiểm soát
+ * (`BookingStatusActions`: hủy đơn · ghi nhận khách không đến). Ranh giới nằm ở chỗ: `active`
+ * và `completed` không bao giờ đặt được bằng một cú bấm trên thanh này — chúng là HỆ QUẢ của
+ * một lần xác nhận bàn giao thật, với giờ giao/nhận và KM đi kèm (Wave 10). Một dropdown "đổi
+ * trạng thái" xoá đúng ranh giới đó.
+ *
+ * Cũng KHÔNG có "Xác nhận đơn": sự xác nhận của gian hàng đã xảy ra ở `Duyệt & giữ xe` trên
+ * yêu cầu thuê — đó là thứ tạo ra chính đơn này.
  */
 export function BookingActionBar({ booking }: { booking: BookingDetail }) {
+  const t = useTranslations('Bookings.actionBar');
   const router = useRouter();
   const { message } = App.useApp();
+  const errorMessage = useErrorMessage();
   const { has } = usePermissions();
 
   const canViewHandover = has(PERMISSION.HANDOVER_VIEW);
@@ -74,9 +83,9 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
   /** Hành động chính DUY NHẤT, suy từ trạng thái đơn — backend vẫn là nơi chốt. */
   const primary =
     handover?.canStartPickup && !handover.pickup?.confirmedAt
-      ? { type: HANDOVER_TYPE.PICKUP, label: 'Xác nhận đã giao xe' }
+      ? { type: HANDOVER_TYPE.PICKUP, label: t('confirmPickup') }
       : handover?.canStartReturn && !handover.return?.confirmedAt
-        ? { type: HANDOVER_TYPE.RETURN, label: 'Xác nhận đã nhận xe' }
+        ? { type: HANDOVER_TYPE.RETURN, label: t('confirmReturn') }
         : null;
 
   return (
@@ -94,17 +103,26 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
           sửa ở khối chi phí.
         */}
         <div className={styles.secondary}>
+          {/*
+            Quyết định trạng thái đứng ĐẦU hàng: chúng là việc phải làm với đơn, còn phần còn
+            lại của hàng là tra cứu. Tự ẩn khi đơn không còn quyết định nào (đang thuê / đã khép),
+            nên chỗ này không cần biết gì về máy trạng thái.
+          */}
+          <BookingStatusActions
+            booking={booking}
+            pickupConfirmed={Boolean(handover?.pickup?.confirmedAt)}
+          />
           {canContract ? (
             <Button
               loading={createContract.isPending}
               onClick={() =>
                 createContract.mutate(booking.id, {
                   onSuccess: (contract) => router.push(contractPath.detail(contract.id)),
-                  onError: (err) => message.error(getErrorMessage(err)),
+                  onError: (err) => message.error(errorMessage(err)),
                 })
               }
             >
-              Hợp đồng
+              {t('contract')}
             </Button>
           ) : null}
           {/*
@@ -112,7 +130,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
             phiếu của ĐƠN, còn "sổ" là cuốn sổ Thu-Chi của cả gian hàng — hai thứ khác nhau mà
             gọi cùng một chữ thì người dùng tưởng mình đang mở nhầm chỗ.
           */}
-          <Button onClick={() => setHistoryOpen(true)}>Lịch sử tiền</Button>
+          <Button onClick={() => setHistoryOpen(true)}>{t('moneyHistory')}</Button>
           {/*
             Đơn đã khép thì server từ chối mọi lần ghi (Wave 12). Nút vẫn đứng nguyên chỗ nhưng
             mờ đi và nói lý do — biến mất thì hàng nút nhảy chỗ giữa các đơn, còn để bấm được
@@ -121,16 +139,16 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
           {canUpdate ? (
             <Button
               disabled={closed}
-              title={closed ? CLOSED_HINT : undefined}
+              title={closed ? t('closedHint') : undefined}
               onClick={() => setEditOpen(true)}
             >
-              Sửa đơn
+              {t('edit')}
             </Button>
           ) : null}
           {canRecordPayment ? (
             // Hết nợ thì nút vẫn đứng nguyên chỗ nhưng nói rõ là không còn gì để thu.
             <Button disabled={!hasDebt} onClick={() => setPayOpen(true)}>
-              {hasDebt ? 'Thu tiền' : 'Đã thu đủ'}
+              {hasDebt ? t('collect') : t('collected')}
             </Button>
           ) : null}
           {/*
@@ -139,7 +157,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
             lại trong điện thoại nhân viên mãi mãi. Chỉ hiện khi thật sự đã có biên bản.
           */}
           {canManageHandover && hasHandover ? (
-            <Button onClick={() => setSupplementOpen(true)}>Ảnh bàn giao</Button>
+            <Button onClick={() => setSupplementOpen(true)}>{t('handoverPhotos')}</Button>
           ) : null}
         </div>
 
@@ -151,7 +169,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
               className={styles.cta}
               disabled={!canConfirm}
               // Nút mờ mà không nói vì sao là chỗ người dùng đứng lại lâu nhất.
-              title={canConfirm ? undefined : 'Cần quyền handovers.confirm để xác nhận bàn giao'}
+              title={canConfirm ? undefined : t('confirmPermissionHint')}
               onClick={() => setDialogType(primary.type)}
             >
               {primary.label}
@@ -182,7 +200,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
       ) : null}
 
       <ResponsiveDialog
-        title="Lịch sử tiền của đơn"
+        title={t('moneyHistoryTitle')}
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
         size="md"
@@ -202,7 +220,7 @@ export function BookingActionBar({ booking }: { booking: BookingDetail }) {
               href={receiptsPath.filtered({ bookingId: booking.id })}
               className={styles.ledgerLink}
             >
-              Mở ở sổ Thu-Chi của gian hàng →
+              {t('openLedger')}
             </Link>
           </>
         ) : null}

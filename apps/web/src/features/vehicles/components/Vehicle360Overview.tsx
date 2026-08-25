@@ -160,7 +160,11 @@ export function Vehicle360Overview({
         quyền thì truy vấn cũng không được bắn đi (cùng luật với `VehiclesService.stats`).
       */}
       {has(PERMISSION.FINANCE_VIEW) ? (
-        <FinanceEntityPanel scope={{ vehicleId: vehicle.id }} kind="vehicle" />
+        <FinanceEntityPanel
+          scope={{ vehicleId: vehicle.id }}
+          kind="vehicle"
+          canCreateReceipt={has(PERMISSION.RECEIPT_CREATE)}
+        />
       ) : null}
 
       <div className={styles.columns}>

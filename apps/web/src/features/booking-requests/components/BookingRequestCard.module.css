@@ -18,7 +18,9 @@
   border-radius: var(--xp-border-radius);
   background: var(--xp-color-bg-container);
   box-shadow: var(--xp-shadow-card);
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .card:hover {
@@ -372,8 +374,10 @@
 
 .state {
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
+  /* Chip trạng thái + đồng hồ đếm ngược xếp dọc, cùng canh phải với phần còn lại của cột. */
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--xp-space-xs);
   grid-area: state;
 }
 
@@ -622,4 +626,16 @@
     align-items: flex-end;
     text-align: end;
   }
+}
+
+/*
+ * Câu thay cho hàng nút quyết định khi yêu cầu đã quá hạn phản hồi. Trung tính, không đỏ:
+ * không ai làm sai điều gì — chỉ là hết giờ, và việc cần làm bây giờ nằm ngoài màn hình này.
+ */
+.expiredHint {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  text-align: right;
 }

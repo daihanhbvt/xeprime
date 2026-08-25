@@ -3,7 +3,7 @@ import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { API_ERROR_CODE, PERMISSION } from '@xeprime/types';
 import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
-import { PresignImageDto, UploadPresignDto } from './dto/storage.dto';
+import { PresignDocumentDto, PresignImageDto, UploadPresignDto } from './dto/storage.dto';
 import { R2Service } from './r2.service';
 
 /**
@@ -58,17 +58,17 @@ export class StorageController {
   }
 
   /**
-   * Ảnh minh chứng (bill/hoá đơn) của phiếu thu-chi. Bucket CÔNG KHAI, cùng mức phơi bày với ảnh
-   * xe — không phải kho riêng tư như hợp đồng nguồn xe: đây là ảnh hoá đơn xăng, rửa xe, biên lai
-   * chuyển khoản, không mang giấy tờ tuỳ thân.
+   * Chứng từ (bill/hoá đơn/hợp đồng) của phiếu thu-chi — ảnh HOẶC PDF. Bucket CÔNG KHAI, cùng mức
+   * phơi bày với ảnh xe — không phải kho riêng tư như hợp đồng nguồn xe: đây là hoá đơn xăng, rửa
+   * xe, biên lai chuyển khoản, không mang giấy tờ tuỳ thân.
    */
   @Post('receipt-attachments/presign')
   @RequirePermissions(PERMISSION.RECEIPT_CREATE)
-  @ApiOperation({ summary: 'Presign upload ảnh minh chứng phiếu thu/chi lên R2' })
+  @ApiOperation({ summary: 'Presign upload chứng từ phiếu thu/chi (ảnh hoặc PDF) lên R2' })
   @ApiCreatedResponse({ type: UploadPresignDto })
   presignReceiptAttachment(
     @CurrentTenant() tenant: TenantContext,
-    @Body() dto: PresignImageDto,
+    @Body() dto: PresignDocumentDto,
   ): Promise<UploadPresignDto> {
     this.assertConfigured();
     return this.r2.presignUpload({

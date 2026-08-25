@@ -192,7 +192,13 @@ export class CreateReceiptDto {
   @Length(26, 26)
   bookingId?: string;
 
-  @ApiPropertyOptional({ description: 'Xe liên quan (ULID)' })
+  @ApiPropertyOptional({
+    description:
+      'Xe liên quan (ULID). Gắn được MỘT MÌNH — chi phí của một chiếc xe (rửa, vá lốp, gửi bãi) ' +
+      'không thuộc chuyến nào. Gửi kèm `bookingId` thì phải là ĐÚNG xe của đơn đó, nếu không ' +
+      'server trả `RECEIPT_BOOKING_VEHICLE_MISMATCH`; bỏ trống mà có `bookingId` thì server tự ' +
+      'suy từ đơn.',
+  })
   @IsOptional()
   @IsString()
   @Length(26, 26)
@@ -722,9 +728,12 @@ export class ReceiptBookingOptionDto {
   @ApiProperty() customerName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) customerPhone!: string | null;
   @ApiPropertyOptional({ type: String, nullable: true }) tenantCustomerId!: string | null;
+  @ApiProperty({ description: '@xeprime/types → BookingStatus' }) status!: string;
   @ApiProperty() vehicleId!: string;
   @ApiProperty() vehicleName!: string;
   @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Ảnh đại diện xe' })
+  vehicleImageUrl!: string | null;
   @ApiProperty({ description: 'Tiền dạng string — ADR 0007' }) totalAmount!: string;
   @ApiProperty() paidAmount!: string;
   @ApiProperty({ description: 'Còn nợ = max(0, tổng − đã trả)' }) debtAmount!: string;
@@ -732,4 +741,67 @@ export class ReceiptBookingOptionDto {
 
 export class ReceiptBookingOptionListDto {
   @ApiProperty({ type: [ReceiptBookingOptionDto] }) data!: ReceiptBookingOptionDto[];
+}
+
+export class ReceiptVehicleOptionQueryDto {
+  @ApiPropertyOptional({ description: 'Tìm theo mã xe / tên xe / biển số' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
+  /**
+   * Xe phải CÓ MẶT trong kết quả dù không lọt danh sách gợi ý.
+   *
+   * Form mở từ hồ sơ xe mang sẵn một `vehicleId`; xe đó có thể không nằm trong 20 xe gợi ý đầu
+   * tiên, và một ô chọn hiện id thô 26 ký tự thay vì tên xe là một ô chọn hỏng. Đây cũng là cách
+   * client phân biệt "xe không lọt danh sách" với "xe đã xoá / không thuộc gian hàng này": xin
+   * đích danh mà không thấy trả về thì đúng là xe đó không còn.
+   */
+  @ApiPropertyOptional({ description: 'Luôn kèm xe này trong kết quả (ULID) — xe đang chọn sẵn' })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  includeId?: string;
+}
+
+/**
+ * Đủ để người dùng nhận ra ĐÚNG chiếc xe trước khi ghi tiền vào nó.
+ *
+ * Không chỉ mã + tên: một gian hàng có bốn chiếc Vios cùng màu, và thẻ chỉ hiện chữ thì thao tác
+ * xác nhận trở thành đọc-lướt-rồi-bấm. Ảnh, trạng thái vận hành và chuyến đang chạy là ba thứ
+ * làm người dùng DỪNG LẠI khi chọn nhầm.
+ */
+export class ReceiptVehicleOptionDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ description: 'Mã xe nội bộ của gian hàng' }) code!: string;
+  @ApiProperty() name!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) imageUrl!: string | null;
+  @ApiProperty({ description: '@xeprime/types → VehicleOperationStatus' })
+  operationStatus!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) branchId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) branchName!: string | null;
+
+  /*
+   * Chuyến ĐANG CHẠY của xe, nếu có.
+   *
+   * Có mặt ở đây vì nó đổi ý nghĩa của việc đang làm: ghi một khoản chi cho chiếc xe đang có
+   * khách trên đường không giống ghi cho chiếc đang nằm bãi, và số còn nợ của chuyến đó thường
+   * chính là lý do người dùng mở form. Rỗng khi xe không chạy chuyến nào — KHÔNG phải lỗi.
+   */
+  @ApiPropertyOptional({ type: String, nullable: true, description: 'Đơn thuê đang chạy' })
+  currentBookingId!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) currentBookingCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) currentCustomerName!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Còn nợ của chuyến đang chạy — tiền dạng string (ADR 0007)',
+  })
+  currentDebtAmount!: string | null;
+}
+
+export class ReceiptVehicleOptionListDto {
+  @ApiProperty({ type: [ReceiptVehicleOptionDto] }) data!: ReceiptVehicleOptionDto[];
 }

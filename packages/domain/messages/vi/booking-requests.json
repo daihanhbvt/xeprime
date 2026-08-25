@@ -75,7 +75,7 @@
     "decidedAt": "Xử lý lúc"
   },
   "actions": {
-    "approve": "Duyệt",
+    "approve": "Duyệt & giữ xe",
     "reject": "Từ chối",
     "message": "Nhắn tin",
     "messageAria": "Nhắn tin cho {name} trên XePrime",
@@ -86,19 +86,20 @@
     "zaloAria": "Mở Zalo với {name} theo số {phone}"
   },
   "approve": {
-    "title": "Duyệt và tạo đơn thuê?",
+    "title": "Duyệt và giữ xe cho khách?",
     "vehicle": "Xe",
     "customer": "Khách",
     "schedule": "Lịch thuê",
-    "effect": "Duyệt sẽ tạo đơn thuê và GIỮ CHỖ lịch của xe trong khoảng này. Giá chốt theo chính sách đang hiệu lực.",
+    "effect": "Duyệt sẽ tạo đơn thuê ở trạng thái Đã giữ xe và CHIẾM CHỖ lịch của xe trong khoảng này. Giá chốt theo chính sách đang hiệu lực.",
     "deliveryNote": "Yêu cầu có giao xe tận nơi. Phí giao nhận để 0₫ khi tạo đơn — cập nhật lại trên đơn sau khi thoả thuận với khách.",
-    "confirm": "Duyệt và tạo đơn",
-    "success": "Đã duyệt — đã tạo đơn thuê",
-    "successLongTerm": "Đã duyệt — đã tạo đơn thuê dài hạn",
-    "scheduleConflict": "Xe đã bận khung giờ này — chọn ngày giờ nhận khác hoặc từ chối yêu cầu."
+    "confirm": "Duyệt & giữ xe",
+    "success": "Đã giữ xe — đã tạo đơn thuê",
+    "successLongTerm": "Đã giữ xe — đã tạo đơn thuê dài hạn",
+    "scheduleConflict": "Xe đã bận khung giờ này — chọn ngày giờ nhận khác hoặc từ chối yêu cầu.",
+    "expired": "Yêu cầu đã quá hạn phản hồi 60 phút — không duyệt được nữa. Hãy gọi cho khách."
   },
   "longTerm": {
-    "title": "Duyệt yêu cầu thuê dài hạn",
+    "title": "Duyệt và giữ xe — thuê dài hạn",
     "customer": "Khách",
     "vehicle": "Xe",
     "pickupWish": "Nguyện vọng nhận xe",
@@ -113,7 +114,7 @@
     "returnHint": "Độ dài đơn bằng đúng gói khách mua — không sửa tay được.",
     "quoteTitle": "Giá gói {package}",
     "quoteUnavailable": "Chưa tải được giá gói — kiểm tra giá thuê dài hạn của xe trước khi duyệt.",
-    "confirm": "Duyệt và tạo đơn",
+    "confirm": "Duyệt & giữ xe",
     "wishLegacy": "Yêu cầu cũ — khách chưa nêu nguyện vọng theo mẫu mới"
   },
   "reject": {
@@ -327,5 +328,12 @@
     "next": "Việc tiếp theo: liên hệ khách để hẹn giờ nhận xe, thu cọc nếu có, rồi xác nhận giao xe ngay trên đơn.",
     "viewBooking": "Xem chi tiết đơn",
     "close": "Đóng"
+  },
+  "deadline": {
+    "label": "Hạn phản hồi",
+    "remaining": "Còn",
+    "expired": "Đã quá hạn phản hồi",
+    "pastDueHint": "Quá 60 phút chưa phản hồi nên yêu cầu đã đóng. Gọi cho khách nếu vẫn muốn nhận chuyến này.",
+    "hint": "Gian hàng có 60 phút để trả lời. Quá hạn, yêu cầu tự đóng và khách được báo để chọn xe khác."
   }
 }

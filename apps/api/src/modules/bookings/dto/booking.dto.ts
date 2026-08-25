@@ -1,16 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  BOOKING_STATUS,
   BOOKING_STATUS_VALUES,
   ROUTE_TYPE_VALUES,
   SERVICE_TYPE,
   LONG_TERM_PACKAGE_MONTHS_VALUES,
   SERVICE_TYPE_VALUES,
 } from '@xeprime/types';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsDateString,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Length,
@@ -120,7 +122,9 @@ export class BookingListItemDto {
   returnAt!: string;
   @ApiProperty({ description: 'Giá thuê đã chốt, KHÔNG gồm phụ phí. Tiền dạng string — ADR 0007' })
   totalAmount!: string;
-  @ApiProperty({ description: 'Tiền thuê đã thu (`payments`) — writer duy nhất là PaymentsService' })
+  @ApiProperty({
+    description: 'Tiền thuê đã thu (`payments`) — writer duy nhất là PaymentsService',
+  })
   paidAmount!: string;
   @ApiProperty({ description: 'Tổng phụ phí còn hiệu lực (quá giờ, vệ sinh, hư hại)' })
   surchargeTotal!: string;
@@ -392,11 +396,57 @@ export class AssignBookingDriverDto {
   driverId!: string | null;
 }
 
+/**
+ * Trạng thái đích nào BẮT BUỘC phải nêu lý do.
+ *
+ * Hai kết thúc tiêu cực (`cancelled`, `no_show`) khép đơn lại vĩnh viễn và nhả lịch xe ngay —
+ * sáu tháng sau, khi khách gọi hỏi "vì sao đơn của tôi bị huỷ", thứ duy nhất còn lại là dòng
+ * audit. Một dòng audit không có lý do trả lời được "ai" và "lúc nào" nhưng không trả lời được
+ * câu người ta thật sự hỏi. `confirmed` thì ngược lại: nó là bước đi tới bình thường của quy
+ * trình, bắt gõ lý do ở đó chỉ tạo ra những chữ "ok" vô nghĩa trong sổ.
+ */
+const TRANSITION_REASON_REQUIRED: readonly string[] = [
+  BOOKING_STATUS.CANCELLED,
+  BOOKING_STATUS.NO_SHOW,
+];
+
+function transitionNeedsReason(status: string): boolean {
+  return TRANSITION_REASON_REQUIRED.includes(status);
+}
+
 /** Chuyển trạng thái đơn — server validate bằng canTransitionBooking(), không tin client. */
 export class TransitionBookingDto {
   @ApiProperty({ enum: BOOKING_STATUS_VALUES, description: 'Trạng thái đích' })
   @IsIn(BOOKING_STATUS_VALUES)
   status!: string;
+
+  /**
+   * Lý do — BẮT BUỘC khi huỷ đơn hoặc ghi nhận khách không đến, tuỳ chọn ở các bước khác.
+   *
+   * Trim TRƯỚC khi kiểm: một ô toàn dấu cách là ô trống, và để nó lọt qua thì luật này chỉ còn
+   * chặn được người dùng cẩu thả chứ không chặn được cái nó sinh ra để chặn.
+   *
+   * Điều kiện `|| reason !== undefined` giữ trần 500 ký tự có hiệu lực cả ở bước KHÔNG bắt
+   * buộc — `@ValidateIf` sai là bỏ qua TOÀN BỘ validator của trường, nên nếu chỉ đặt điều kiện
+   * "đang huỷ" thì một `reason` dài 100k ký tự đi kèm `confirmed` sẽ không ai kiểm.
+   *
+   * Lý do KHÔNG vào `booking.note`: `note` là nội dung của đơn (nhân viên viết cho nhau đọc khi
+   * phục vụ chuyến), còn đây là lịch sử của một quyết định. Trộn hai thứ là để lời giải thích
+   * cho việc huỷ bị người sau sửa đè mất.
+   */
+  @ApiPropertyOptional({
+    description:
+      'Lý do — BẮT BUỘC khi status = cancelled/no_show. Ghi vào audit (afterJson.reason), KHÔNG ghi vào note của đơn',
+    maxLength: 500,
+  })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @ValidateIf(
+    (o: TransitionBookingDto) => transitionNeedsReason(o.status) || o.reason !== undefined,
+  )
+  @IsString()
+  @IsNotEmpty({ message: 'Cần nêu lý do khi huỷ đơn hoặc ghi nhận khách không đến' })
+  @MaxLength(500)
+  reason?: string;
 
   @ApiPropertyOptional({ description: 'Thời điểm nhận xe thực tế (khi → active)' })
   @IsOptional()

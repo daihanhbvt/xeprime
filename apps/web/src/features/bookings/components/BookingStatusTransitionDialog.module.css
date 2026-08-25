@@ -1,0 +1,55 @@
+/**
+ * Hộp xác nhận hủy đơn / ghi nhận khách không đến.
+ *
+ * Thứ tự đọc cố ý: câu hậu quả → đơn nào → tiền đang cầm → ô lý do. Người vận hành phải đi qua
+ * "chuyện gì xảy ra" trước khi tới chỗ gõ, chứ không thấy ô nhập đầu tiên rồi điền cho xong.
+ */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.lead {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Tóm tắt đơn: nền chìm để đọc như thông tin tham chiếu, không như một khối cần thao tác. */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  font-size: var(--xp-font-size-sm);
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.row dt {
+  color: var(--xp-color-text-secondary);
+  white-space: nowrap;
+}
+
+.row dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+  text-align: right;
+  /* Tên xe và tên khách dài tuỳ ý — cho xuống dòng thay vì đẩy nhãn ra khỏi hộp. */
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -104,8 +104,12 @@
     "form": {
       "title": "Tạo phiếu thu/chi",
       "occurredAt": "Ngày phát sinh",
-      "type": "Loại phiếu",
-      "linkHint": "Chọn đơn thuê để tự điền khách, xe và số tiền còn nợ.",
+      "type": "Loại giao dịch",
+      "linkHint": {
+        "none": "Khoản chung, không liên kết",
+        "booking": "Chi phí phát sinh cho đơn thuê",
+        "vehicle": "Chi phí phát sinh cho xe"
+      },
       "booking": "Liên kết đơn thuê",
       "bookingPlaceholder": "Tìm mã đơn, tên khách hoặc biển số",
       "category": "Danh mục",
@@ -114,15 +118,53 @@
       "amount": "Số tiền",
       "referenceCode": "Mã tra soát (tuỳ chọn)",
       "referenceCodePlaceholder": "VD: mã giao dịch CK",
-      "description": "Diễn giải / lý do",
-      "attachments": "Ảnh minh chứng (bill / hoá đơn)",
-      "submit": "Tạo phiếu",
+      "description": "Diễn giải / Lý do",
+      "attachments": {
+        "label": "Đính kèm chứng từ",
+        "add": "Thêm tệp",
+        "hint": "JPG, PNG, PDF · tối đa {maxMb}MB",
+        "remove": "Gỡ {name}",
+        "retry": "Tải lại {name}",
+        "uploading": "Đang tải {name}",
+        "tooMany": "Tối đa {max} tệp"
+      },
+      "submit": {
+        "income": "Tạo khoản thu",
+        "expense": "Tạo khoản chi"
+      },
       "success": "Đã tạo phiếu — chờ duyệt",
-      "picked": {
-        "customer": "Khách: ",
-        "vehicle": "Xe: ",
-        "debt": "Còn nợ: "
-      }
+      "linkMode": {
+        "label": "Khoản này là",
+        "none": "Không gắn",
+        "booking": "Đơn thuê",
+        "vehicle": "Xe"
+      },
+      "bookingEmpty": "Không tìm thấy đơn thuê nào khớp.",
+      "bookingError": "Không tải được danh sách đơn thuê. Thử lại hoặc gõ tìm lại.",
+      "vehicle": "Liên kết xe",
+      "vehiclePlaceholder": "Tìm mã xe, tên xe hoặc biển số",
+      "vehicleEmpty": "Không tìm thấy xe nào khớp.",
+      "vehicleError": "Không tải được danh sách xe. Thử lại hoặc gõ tìm lại.",
+      "vehicleGone": "Xe này không còn trong gian hàng (đã xoá hoặc đã chuyển đi). Chọn xe khác giúp mình nhé.",
+      "errors": {
+        "type": "Chọn loại phiếu",
+        "occurredAt": "Chọn ngày phát sinh",
+        "amountType": "Nhập số tiền",
+        "amountMin": "Số tiền phải ≥ 0",
+        "method": "Chọn hình thức",
+        "bookingRequired": "Chọn đơn thuê để gắn phiếu",
+        "vehicleRequired": "Chọn xe để gắn phiếu",
+        "description": "Nhập diễn giải / lý do"
+      },
+      "link": {
+        "label": "Liên kết với",
+        "detail": "Xem chi tiết",
+        "branch": "Chi nhánh",
+        "customer": "Khách",
+        "debt": "Còn nợ"
+      },
+      "keepOpen": "Tạo và tiếp tục nhập mới",
+      "cancel": "Huỷ"
     },
     "summary": {
       "error": "Không tải được số tổng — danh sách bên dưới vẫn đúng",
@@ -349,6 +391,7 @@
     "chartTitle": "Theo thời gian",
     "chartError": "Không tải được biểu đồ",
     "chartEmpty": "Kỳ này chưa có khoản nào",
-    "chartEmptyHint": "Chọn kỳ khác, hoặc ghi phiếu ở sổ Thu-Chi."
+    "chartEmptyHint": "Chọn kỳ khác, hoặc ghi phiếu ở sổ Thu-Chi.",
+    "createReceipt": "Tạo phiếu thu/chi"
   }
 }

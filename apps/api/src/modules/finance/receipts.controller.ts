@@ -12,6 +12,8 @@ import {
   ReceiptListQueryDto,
   ReceiptPageDto,
   ReceiptSummaryDto,
+  ReceiptVehicleOptionListDto,
+  ReceiptVehicleOptionQueryDto,
 } from './dto/finance.dto';
 import { ReceiptsService } from './receipts.service';
 
@@ -63,6 +65,23 @@ export class ReceiptsController {
     @Query() query: ReceiptBookingOptionQueryDto,
   ): Promise<ReceiptBookingOptionListDto> {
     return { data: await this.receipts.bookingOptions(tenant.tenantId, query.q) };
+  }
+
+  /**
+   * Nguồn cho ô "Liên kết xe" ở form tạo phiếu — phiếu gắn THẲNG vào một chiếc xe, không qua đơn.
+   *
+   * Quyền là `receipts.create`, không phải `vehicle.view`: người giữ sổ phải chọn được xe để ghi
+   * phí rửa/vá lốp mà không cần quyền xem cả đội xe. Cũng phải đứng trước `:id`.
+   */
+  @Get('vehicle-options')
+  @RequirePermissions(PERMISSION.RECEIPT_CREATE)
+  @ApiOperation({ summary: 'Xe gợi ý để gắn phiếu (tìm theo mã xe / tên / biển số)' })
+  @ApiOkResponse({ type: ReceiptVehicleOptionListDto })
+  async vehicleOptions(
+    @CurrentTenant() tenant: TenantContext,
+    @Query() query: ReceiptVehicleOptionQueryDto,
+  ): Promise<ReceiptVehicleOptionListDto> {
+    return { data: await this.receipts.vehicleOptions(tenant.tenantId, query) };
   }
 
   @Get(':id')

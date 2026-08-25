@@ -1112,6 +1112,16 @@ model BookingRequest {
   deliveryQuote         Json?     @map("delivery_quote_json") @db.JsonB
   note                  String?   @db.Text
   rejectReason          String?   @map("reject_reason") @db.Text
+  /// HẠN PHẢN HỒI của gian hàng — `created_at + BOOKING_REQUEST_RESPOND_WINDOW_MINUTES` (60').
+  /// SERVER tính lúc nhận yêu cầu; client không gửi được giá trị này. Quá hạn mà chưa ai trả
+  /// lời thì worker chuyển sang `expired` — yêu cầu chờ duyệt KHÔNG chiếm lịch xe (ADR 0006)
+  /// nên không có occupancy nào phải nhả.
+  respondBy             DateTime  @map("respond_by") @db.Timestamptz(3)
+  /// Hai mốc nhắc (20' và 45'). Đặt trên chính bản ghi thay vì một bảng job riêng vì chúng LÀ
+  /// trạng thái của yêu cầu, và vì worker claim từng mốc bằng `updateMany` có điều kiện cột
+  /// còn NULL — một lần nhắc, dù chạy bao nhiêu instance hay bao nhiêu lượt lặp.
+  firstRemindedAt       DateTime? @map("first_reminded_at") @db.Timestamptz(3)
+  finalRemindedAt       DateTime? @map("final_reminded_at") @db.Timestamptz(3)
   /// Set khi duyệt → trỏ tới Booking đã tạo (1-1). Postgres cho nhiều NULL nên yêu cầu
   /// chưa duyệt không đụng ràng buộc unique.
   bookingId             String?   @unique @map("booking_id") @db.Char(26)
@@ -1136,6 +1146,13 @@ model BookingRequest {
   @@index([createdAt])
   @@index([customerUserId])
   @@index([tenantId, tenantCustomerId])
+  /// Worker quét yêu cầu quá hạn theo cột này. Bản THẬT trong DB là index **một phần**
+  /// (`WHERE status = 'pending_host_approval'`) — Prisma không diễn đạt được mệnh đề `WHERE`,
+  /// nên nó được viết tay ở migration `20260825000000_booking_request_respond_deadline` với
+  /// ĐÚNG cái tên Prisma sinh ra cho dòng này, và datamodel không báo lệch.
+  /// Một phần chứ không toàn bảng vì 99% hàng sẽ là yêu cầu ĐÃ xử lý — worker không bao giờ
+  /// hỏi tới chúng, và một index toàn bảng bắt mọi lần ghi phải bảo trì phần vô ích đó.
+  @@index([respondBy])
   @@map("booking_requests")
 }
 

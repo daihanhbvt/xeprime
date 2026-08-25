@@ -99,10 +99,42 @@ export function isBookingFinal(status: BookingStatus): boolean {
 }
 
 export const BOOKING_STATUS_META: Readonly<Record<BookingStatus, StatusMeta>> = {
-  [BOOKING_STATUS.RESERVED]: { label: 'Đã đặt trước', color: STATUS_COLOR.WAITING },
+  // "Đã giữ xe", không phải "Đã đặt trước": đơn `reserved` sinh ra ở đúng một chỗ — gian hàng
+  // bấm `Duyệt & giữ xe` — và tác dụng thật của nó là CHIẾM chỗ trên lịch chiếc xe đó
+  // (ADR 0006). "Đặt trước" nghe như một nguyện vọng chưa ai xác nhận, mà nguyện vọng thì đã có
+  // tên riêng rồi: `booking_requests.pending_host_approval`.
+  [BOOKING_STATUS.RESERVED]: { label: 'Đã giữ xe', color: STATUS_COLOR.WAITING },
   [BOOKING_STATUS.CONFIRMED]: { label: 'Đã xác nhận', color: STATUS_COLOR.INFO },
   [BOOKING_STATUS.ACTIVE]: { label: 'Đang thuê', color: STATUS_COLOR.PROCESSING },
   [BOOKING_STATUS.COMPLETED]: { label: 'Hoàn thành', color: STATUS_COLOR.SUCCESS },
   [BOOKING_STATUS.CANCELLED]: { label: 'Đã hủy', color: STATUS_COLOR.NEUTRAL },
   [BOOKING_STATUS.NO_SHOW]: { label: 'Khách không đến', color: STATUS_COLOR.DANGER },
 };
+
+// ── Ghi nhận khách không đến ────────────────────────────────────────────────
+
+/**
+ * Ân hạn trước khi được ghi nhận `no_show`, tính từ giờ NHẬN XE theo đơn.
+ *
+ * Vì sao phải có: `no_show` là một kết thúc tiêu cực đi vào lịch sử của khách và nhả lịch xe
+ * ngay (ADR 0006). Cho phép bấm nó lúc 09:59 cho một chuyến hẹn 10:00 biến một cú tắc đường
+ * thành một vết đen vĩnh viễn. Ba mươi phút là khoảng người ta thật sự gọi điện hỏi nhau.
+ *
+ * Sống ở đây vì hai phía phải nói cùng một con số: server từ chối trước mốc, và web không được
+ * bày ra một nút chắc chắn nhận 409.
+ */
+export const BOOKING_NO_SHOW_GRACE_MINUTES = 30;
+
+/** Thời điểm sớm nhất được ghi nhận khách không đến cho một chuyến hẹn nhận lúc `pickupAt`. */
+export function noShowAllowedFrom(pickupAt: Date | string): Date {
+  const at = pickupAt instanceof Date ? pickupAt : new Date(pickupAt);
+  return new Date(at.getTime() + BOOKING_NO_SHOW_GRACE_MINUTES * 60_000);
+}
+
+/**
+ * Đã qua ân hạn chưa. KHÔNG xét trạng thái đơn hay biên bản bàn giao — hai điều kiện đó là
+ * việc của nơi gọi (`canTransitionBooking` và bản ghi giao xe), gộp vào đây sẽ giấu mất chúng.
+ */
+export function isNoShowGracePassed(pickupAt: Date | string, now: Date = new Date()): boolean {
+  return now.getTime() >= noShowAllowedFrom(pickupAt).getTime();
+}

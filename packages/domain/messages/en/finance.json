@@ -104,8 +104,12 @@
     "form": {
       "title": "New cash book entry",
       "occurredAt": "Date incurred",
-      "type": "Entry type",
-      "linkHint": "Pick a booking to auto-fill the customer, vehicle and outstanding balance.",
+      "type": "Transaction type",
+      "linkHint": {
+        "none": "A shop-wide amount, not linked to anything",
+        "booking": "A cost or payment on a booking",
+        "vehicle": "A cost or payment on a vehicle"
+      },
       "booking": "Linked booking",
       "bookingPlaceholder": "Search booking code, customer or plate",
       "category": "Category",
@@ -114,15 +118,53 @@
       "amount": "Amount",
       "referenceCode": "Reference (optional)",
       "referenceCodePlaceholder": "e.g. bank transfer reference",
-      "description": "Details / reason",
-      "attachments": "Proof photos (bill / invoice)",
-      "submit": "Create entry",
+      "description": "Description / reason",
+      "attachments": {
+        "label": "Supporting documents",
+        "add": "Add file",
+        "hint": "JPG, PNG, PDF · up to {maxMb}MB",
+        "remove": "Remove {name}",
+        "retry": "Retry {name}",
+        "uploading": "Uploading {name}",
+        "tooMany": "At most {max} files"
+      },
+      "submit": {
+        "income": "Create income entry",
+        "expense": "Create expense entry"
+      },
       "success": "Entry created — awaiting approval",
-      "picked": {
-        "customer": "Customer: ",
-        "vehicle": "Vehicle: ",
-        "debt": "Balance: "
-      }
+      "linkMode": {
+        "label": "This amount is",
+        "none": "Not linked",
+        "booking": "A booking",
+        "vehicle": "A vehicle"
+      },
+      "bookingEmpty": "No booking matches that search.",
+      "bookingError": "Could not load bookings. Try again or search once more.",
+      "vehicle": "Linked vehicle",
+      "vehiclePlaceholder": "Search by vehicle code, name or plate",
+      "vehicleEmpty": "No vehicle matches that search.",
+      "vehicleError": "Could not load vehicles. Try again or search once more.",
+      "vehicleGone": "This vehicle is no longer in the shop (deleted or transferred). Please pick another one.",
+      "errors": {
+        "type": "Choose a voucher type",
+        "occurredAt": "Choose the date it occurred",
+        "amountType": "Enter an amount",
+        "amountMin": "Amount must be ≥ 0",
+        "method": "Choose a payment method",
+        "bookingRequired": "Choose the booking to link this voucher to",
+        "vehicleRequired": "Choose the vehicle to link this voucher to",
+        "description": "Enter a description or reason"
+      },
+      "link": {
+        "label": "Linked to",
+        "detail": "View details",
+        "branch": "Branch",
+        "customer": "Customer",
+        "debt": "Outstanding"
+      },
+      "keepOpen": "Save and start another",
+      "cancel": "Cancel"
     },
     "summary": {
       "error": "Could not load the totals — the list below is still correct",
@@ -349,6 +391,7 @@
     "chartTitle": "Over time",
     "chartError": "Could not load the chart",
     "chartEmpty": "Nothing in this period",
-    "chartEmptyHint": "Pick another period, or record a voucher in the ledger."
+    "chartEmptyHint": "Pick another period, or record a voucher in the ledger.",
+    "createReceipt": "New income/expense voucher"
   }
 }

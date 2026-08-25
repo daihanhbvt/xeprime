@@ -44,6 +44,19 @@ const asService = prisma as unknown as PrismaService;
 
 const PDF_MAGIC = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0, 0, 0, 0]);
 
+/**
+ * Ngày `YYYY-MM-DD` cách hôm nay `days` ngày (âm = quá khứ), tính trên UTC — CÙNG cơ sở với
+ * `vehicle-documents.service.ts` (`new Date().toISOString().slice(0, 10)`).
+ *
+ * Ngưỡng "hết hạn" / "sắp hết hạn" là nghiệp vụ theo QUÃNG. Ngày tuyệt đối trong test chỉ đúng
+ * tới ngày đó rồi đỏ mãi mãi — bản trước dùng `'2026-08-20'` kèm chú thích "còn 8 ngày" (viết
+ * khi hôm nay là 12/08) và đã đỏ từ 21/08. Chỉ dùng ngày tuyệt đối cho những assert KHÔNG so
+ * với hôm nay (thứ tự issuedAt ↔ expiresAt, ngày không tồn tại, giá trị OCR echo lại).
+ */
+function dayFromToday(days: number): string {
+  return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+}
+
 const fakeR2 = {
   privateEnabled: true,
   objects: new Map<string, { size: number; contentType: string | null; prefix: Uint8Array }>(),
@@ -341,8 +354,8 @@ describe('Giấy tờ xe (Wave 5) — vòng đời & isolation', () => {
     const v = await createVehicle('DOC-EXP');
     const doc = await documents.create(tenantId, v.id, ownerId, {
       type: VEHICLE_DOCUMENT_TYPE.INSURANCE,
-      issuedAt: '2025-07-01',
-      expiresAt: '2026-07-01', // đã qua (hôm nay 2026-08-12)
+      issuedAt: dayFromToday(-400),
+      expiresAt: dayFromToday(-30), // đã qua
     });
     await attachFile(v.id, doc.id, 'bhtnds.pdf');
 
@@ -375,7 +388,7 @@ describe('Giấy tờ xe (Wave 5) — vòng đời & isolation', () => {
     const v = await createVehicle('DOC-WARN');
     const doc = await documents.create(tenantId, v.id, ownerId, {
       type: VEHICLE_DOCUMENT_TYPE.INSPECTION,
-      expiresAt: '2026-08-20', // còn 8 ngày
+      expiresAt: dayFromToday(8), // còn 8 ngày → dưới ngưỡng 10 ngày đặt bên dưới
     });
     await attachFile(v.id, doc.id, 'dang-kiem.pdf');
 

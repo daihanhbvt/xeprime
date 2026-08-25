@@ -100,3 +100,67 @@ export const BOOKING_REQUEST_STATUS_META: Readonly<Record<BookingRequestStatus, 
     color: STATUS_COLOR.SUCCESS,
   },
 };
+
+// ── Hạn phản hồi của gian hàng ──────────────────────────────────────────────
+
+/**
+ * Gian hàng có **60 phút** để trả lời một yêu cầu thuê.
+ *
+ * Vì sao có hạn: yêu cầu chờ duyệt KHÔNG chiếm lịch xe (`BOOKING_REQUEST_STATUS_OCCUPYING`),
+ * nên một yêu cầu nằm im vô thời hạn không khoá gì cả — nó chỉ khoá KHÁCH, người đang chờ một
+ * câu trả lời để còn đi tìm xe khác. Hạn phản hồi là lời hứa với khách, không phải một cơ chế
+ * dọn dữ liệu.
+ *
+ * Số này sống ở `packages/types` vì cả ba phía phải nói cùng một con số: API tính `respondBy`
+ * lúc nhận yêu cầu, worker expire theo đúng mốc đó, và web đếm ngược tới đúng nó.
+ */
+export const BOOKING_REQUEST_RESPOND_WINDOW_MINUTES = 60;
+
+/**
+ * Hai mốc nhắc gian hàng, tính từ lúc khách gửi.
+ *
+ * Nhắc TRƯỚC khi hết hạn chứ không phải sau: mục đích là để yêu cầu được trả lời, không phải
+ * để báo cáo rằng nó đã chết. `FINAL` cách hạn 15 phút — đủ để mở máy và bấm, không đủ để quên.
+ */
+export const BOOKING_REQUEST_REMINDER_MINUTES = {
+  FIRST: 20,
+  FINAL: 45,
+} as const;
+
+/** Phút còn lại tại mốc nhắc cuối — dùng cho câu "còn {n} phút" của thông báo. */
+export const BOOKING_REQUEST_FINAL_REMINDER_REMAINING_MINUTES =
+  BOOKING_REQUEST_RESPOND_WINDOW_MINUTES - BOOKING_REQUEST_REMINDER_MINUTES.FINAL;
+
+const MS_PER_MINUTE = 60_000;
+
+/** Hạn phản hồi của một yêu cầu gửi lúc `from`. SERVER tính — client không gửi giá trị này. */
+export function bookingRequestRespondBy(from: Date): Date {
+  return new Date(from.getTime() + BOOKING_REQUEST_RESPOND_WINDOW_MINUTES * MS_PER_MINUTE);
+}
+
+/**
+ * Yêu cầu đã quá hạn phản hồi chưa — so mốc, không so trạng thái.
+ *
+ * Trạng thái `expired` do worker ghi, nên luôn có một cửa sổ (tới một nhịp worker) mà yêu cầu
+ * đã quá hạn nhưng vẫn còn `pending_host_approval` trong DB. Endpoint duyệt/từ chối phải hỏi
+ * hàm này chứ không phải hỏi cột `status`, nếu không cửa sổ đó là một lỗ để duyệt yêu cầu đã
+ * chết.
+ */
+export function isBookingRequestPastDue(
+  respondBy: Date | string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!respondBy) return false;
+  const due = respondBy instanceof Date ? respondBy : new Date(respondBy);
+  return due.getTime() <= now.getTime();
+}
+
+/** Mili-giây còn lại tới hạn (0 khi đã quá hạn hoặc không có hạn) — nuôi đồng hồ đếm ngược. */
+export function bookingRequestRemainingMs(
+  respondBy: Date | string | null | undefined,
+  now: Date = new Date(),
+): number {
+  if (!respondBy) return 0;
+  const due = respondBy instanceof Date ? respondBy : new Date(respondBy);
+  return Math.max(0, due.getTime() - now.getTime());
+}

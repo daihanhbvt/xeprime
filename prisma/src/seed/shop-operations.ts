@@ -15,6 +15,7 @@
 import {
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
+  bookingRequestRespondBy,
   CONTRACT_STATUS,
   CUSTOMER_DOCUMENT_STATUS,
   CUSTOMER_DOCUMENT_TYPE,
@@ -253,7 +254,10 @@ function serviceTypeFor(unit: VehicleUnit, seq: number): string {
  * Lịch đơn của cả đội xe. Cửa sổ thời gian được chia sẵn để không chiếc nào có hai khoảng
  * chồng nhau — xem ghi chú đầu file.
  */
-function planBookings(units: readonly VehicleUnit[], customers: readonly ShopCustomer[]): PlannedBooking[] {
+function planBookings(
+  units: readonly VehicleUnit[],
+  customers: readonly ShopCustomer[],
+): PlannedBooking[] {
   const plans: PlannedBooking[] = [];
   const pickCustomer = (n: number): ShopCustomer => customers[n % customers.length]!;
 
@@ -455,9 +459,16 @@ export async function buildBookings(
       tenantCustomerId: plan.customer.id,
       status: plan.status,
       serviceType: plan.serviceType,
-      routeType: withDriver ? pick([ROUTE_TYPE.IN_CITY, ROUTE_TYPE.INTER_CITY, ROUTE_TYPE.INTER_CITY_ONE_WAY], plan.unit.index) : null,
+      routeType: withDriver
+        ? pick(
+            [ROUTE_TYPE.IN_CITY, ROUTE_TYPE.INTER_CITY, ROUTE_TYPE.INTER_CITY_ONE_WAY],
+            plan.unit.index,
+          )
+        : null,
       pickupAddress: withDriver ? `${spec.profile.address} (đón tại sảnh)` : null,
-      destination: withDriver ? pick(['Vũng Tàu', 'Đà Lạt', 'Phan Thiết', 'Nội thành'], plan.unit.index) : null,
+      destination: withDriver
+        ? pick(['Vũng Tàu', 'Đà Lạt', 'Phan Thiết', 'Nội thành'], plan.unit.index)
+        : null,
       longTermPackageMonths: plan.longTermPackageMonths,
       pickupAt: plan.pickupAt,
       returnAt: plan.returnAt,
@@ -542,7 +553,10 @@ export async function buildContracts(
             name: `${b.plan.unit.spec.model} ${b.plan.unit.year}`,
             plateNumber: b.plan.unit.plate,
           },
-          period: { pickupAt: b.plan.pickupAt.toISOString(), returnAt: b.plan.returnAt.toISOString() },
+          period: {
+            pickupAt: b.plan.pickupAt.toISOString(),
+            returnAt: b.plan.returnAt.toISOString(),
+          },
           amounts: {
             totalAmount: vnd(b.money.totalAmount),
             depositAmount: vnd(b.money.depositAmount),
@@ -672,7 +686,9 @@ export async function buildHandovers(
         fuelLevel: isElectric ? null : FUEL_LEVEL.THREE_QUARTER,
         batteryPercent: isElectric ? 62 : null,
         condition: attention ? HANDOVER_CONDITION.ATTENTION : HANDOVER_CONDITION.NORMAL,
-        conditionNote: attention ? 'Có vết xước nhẹ cản sau, đã chụp ảnh.' : 'Xe về đủ đồ, không sự cố.',
+        conditionNote: attention
+          ? 'Có vết xước nhẹ cản sau, đã chụp ảnh.'
+          : 'Xe về đủ đồ, không sự cố.',
         damageNote: attention ? 'Xước cản sau khoảng 8cm.' : null,
         notes: missingKm ? 'Nhân viên quên ghi số KM lúc nhận xe — chờ bổ sung.' : null,
         confirmedAt: b.plan.returnAt,
@@ -954,13 +970,55 @@ export async function buildMoney(
 
   // ── Vài phiếu NHẬP TAY ───────────────────────────────────────────────────
   // Sổ thu chi thật không chỉ có phiếu tự động: rửa xe, đổ xăng, tiền quảng cáo đều gõ tay.
-  const manual: ReadonlyArray<{ type: string; category: string; amount: number; desc: string; day: number }> = [
-    { type: RECEIPT_TYPE.EXPENSE, category: 'Rửa xe', amount: 450_000, desc: 'Rửa xe cả đội cuối tuần', day: -7 },
-    { type: RECEIPT_TYPE.EXPENSE, category: 'Đổ xăng', amount: 2_800_000, desc: 'Đổ xăng đội xe', day: -5 },
-    { type: RECEIPT_TYPE.EXPENSE, category: 'Chi phí marketing', amount: 3_000_000, desc: 'Quảng cáo Facebook tháng này', day: -14 },
-    { type: RECEIPT_TYPE.EXPENSE, category: 'Chi phí văn phòng', amount: 1_200_000, desc: 'Văn phòng phẩm và nước uống', day: -20 },
-    { type: RECEIPT_TYPE.INCOME, category: 'Phí quá giờ', amount: 350_000, desc: 'Khách trả xe trễ 3 giờ', day: -9 },
-    { type: RECEIPT_TYPE.INCOME, category: 'Thu khác', amount: 500_000, desc: 'Bán lại lốp cũ', day: -16 },
+  const manual: ReadonlyArray<{
+    type: string;
+    category: string;
+    amount: number;
+    desc: string;
+    day: number;
+  }> = [
+    {
+      type: RECEIPT_TYPE.EXPENSE,
+      category: 'Rửa xe',
+      amount: 450_000,
+      desc: 'Rửa xe cả đội cuối tuần',
+      day: -7,
+    },
+    {
+      type: RECEIPT_TYPE.EXPENSE,
+      category: 'Đổ xăng',
+      amount: 2_800_000,
+      desc: 'Đổ xăng đội xe',
+      day: -5,
+    },
+    {
+      type: RECEIPT_TYPE.EXPENSE,
+      category: 'Chi phí marketing',
+      amount: 3_000_000,
+      desc: 'Quảng cáo Facebook tháng này',
+      day: -14,
+    },
+    {
+      type: RECEIPT_TYPE.EXPENSE,
+      category: 'Chi phí văn phòng',
+      amount: 1_200_000,
+      desc: 'Văn phòng phẩm và nước uống',
+      day: -20,
+    },
+    {
+      type: RECEIPT_TYPE.INCOME,
+      category: 'Phí quá giờ',
+      amount: 350_000,
+      desc: 'Khách trả xe trễ 3 giờ',
+      day: -9,
+    },
+    {
+      type: RECEIPT_TYPE.INCOME,
+      category: 'Thu khác',
+      amount: 500_000,
+      desc: 'Bán lại lốp cũ',
+      day: -16,
+    },
   ];
   for (const [i, m] of manual.entries()) {
     await upsertReceipt(spec, deps, {
@@ -1065,6 +1123,16 @@ export async function buildBookingRequests(
   const longTerm = publicUnits.find((u) => u.serviceTypes.includes(SERVICE_TYPE.LONG_TERM));
   let count = 0;
 
+  /*
+   * Hạn phản hồi tính bằng CHÍNH hàm mà API dùng (`bookingRequestRespondBy`, 60 phút) — seed
+   * không được có công thức riêng, nếu không dữ liệu demo sẽ minh hoạ một luật không tồn tại.
+   *
+   * Yêu cầu CHỜ DUYỆT lấy mốc từ lúc chạy seed, nên vừa seed xong là còn đúng một giờ để bấm
+   * duyệt. Sau một giờ chúng thành quá hạn thật — đó là luật, không phải lỗi seed; chạy lại
+   * `pnpm db:seed` KHÔNG làm mới mốc (upsert giữ nguyên hàng cũ, như mọi trường khác).
+   */
+  const sentNow = new Date();
+
   if (selfDrive) {
     const customer = customers[0]!;
     const id = seedId(`${spec.key}:request:pending`);
@@ -1083,6 +1151,8 @@ export async function buildBookingRequests(
         serviceType: SERVICE_TYPE.SELF_DRIVE,
         pickupAt: daysFromToday(15, 3),
         returnAt: daysFromToday(17, 5),
+        createdAt: sentNow,
+        respondBy: bookingRequestRespondBy(sentNow),
         deliveryRequested: true,
         deliveryAddress: '25 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh',
         note: 'Cho mình xin xe màu sáng nếu còn nhé.',
@@ -1108,6 +1178,7 @@ export async function buildBookingRequests(
         pickupAt: daysFromToday(-6, 3),
         returnAt: daysFromToday(-4, 5),
         rejectReason: 'Xe đã có khách đặt trước trong khoảng thời gian này.',
+        respondBy: bookingRequestRespondBy(daysFromToday(-8, 3)),
         decidedBy: deps.ownerUserId,
         decidedAt: daysFromToday(-8, 4),
       },
@@ -1138,6 +1209,8 @@ export async function buildBookingRequests(
         pickupPreference: PICKUP_PREFERENCE.WITHIN_7_DAYS,
         pickupWindowStartDate: dateOnlyFromToday(1),
         pickupWindowEndDate: dateOnlyFromToday(LONG_TERM_PICKUP_WINDOW_DAYS),
+        createdAt: sentNow,
+        respondBy: bookingRequestRespondBy(sentNow),
         note: 'Thuê cho nhân viên đi làm, cần xuất hoá đơn theo tháng.',
       },
     });
@@ -1166,6 +1239,7 @@ export async function buildBookingRequests(
         pickupAt: converted.plan.pickupAt,
         returnAt: converted.plan.returnAt,
         bookingId: converted.id,
+        respondBy: bookingRequestRespondBy(daysFromToday(-1, 3)),
         decidedBy: deps.ownerUserId,
         decidedAt: daysFromToday(-1, 4),
       },

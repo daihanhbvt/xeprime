@@ -22,6 +22,9 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   'booking_request.approve': 'Duyệt yêu cầu đặt xe',
   'booking_request.reject': 'Từ chối yêu cầu đặt xe',
   'booking_request.cancel': 'Khách huỷ yêu cầu đặt xe',
+  // Do WORKER ghi với `actorScope: system` — lọc theo cặp (hành động, phạm vi Hệ thống) là cách
+  // trả lời "có bao nhiêu yêu cầu tuột mất vì gian hàng không kịp trả lời".
+  'booking_request.expire': 'Yêu cầu quá hạn phản hồi (hệ thống)',
   'receipt.create': 'Tạo phiếu thu/chi',
   'receipt.approve': 'Duyệt phiếu',
   'receipt.cancel': 'Huỷ phiếu',

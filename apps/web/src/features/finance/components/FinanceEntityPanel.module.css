@@ -20,6 +20,14 @@
   color: var(--xp-color-text);
 }
 
+/* Hai lối đi cạnh nhau (ghi phiếu · đọc sổ) — xuống dòng gọn khi hồ sơ xe hẹp. */
+.headerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--xp-space-xs) var(--xp-space-md);
+}
+
 .ledgerLink {
   font-size: var(--xp-font-size-body-sm);
 }

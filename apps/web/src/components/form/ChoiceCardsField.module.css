@@ -1,0 +1,104 @@
+/*
+ * Ba thẻ đứng ngang trên PC; hẹp dần thì tự xuống dòng chứ không co chữ mô tả xuống mức không
+ * đọc được — mô tả CHÍNH LÀ giá trị của dạng thẻ này.
+ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.card:hover {
+  border-color: var(--xp-color-primary-hover);
+}
+
+/* Ô radio thật vẫn nằm trong cây — chỉ giấu khỏi mắt, không khỏi bàn phím hay trình đọc màn hình. */
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Vòng focus vẽ trên THẺ vì ô radio đã bị giấu — không có nó thì đi bằng Tab là đi trong bóng tối. */
+.card:focus-within {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.checked {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
+.disabled {
+  cursor: not-allowed;
+  opacity: var(--xp-disabled-opacity);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.checked .icon {
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  /* Chừa chỗ cho dấu tích ở góc để nhãn dài không chui xuống dưới nó. */
+  padding-right: var(--xp-space-md);
+}
+
+.label {
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+  line-height: var(--xp-line-height-body);
+}
+
+.description {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.check {
+  position: absolute;
+  top: var(--xp-space-sm);
+  right: var(--xp-space-sm);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-lg);
+}

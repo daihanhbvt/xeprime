@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import {
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_META,
+  isBookingRequestPastDue,
   ROUTE_TYPE,
   SERVICE_TYPE,
   STATUS_COLOR,
@@ -69,6 +70,9 @@ function DetailBody({
   const domainLabel = useDomainLabel();
 
   const isPending = request.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
+  // Cùng vị từ với thẻ ở danh sách và với server: hết hạn phản hồi thì không còn quyết định nào.
+  const pastDue = isBookingRequestPastDue(request.respondBy);
+  const decidable = isPending && !pastDue;
   const busy = pendingAction !== null;
 
   const pickup = request.pickupAt ? toAppTz(request.pickupAt) : null;
@@ -259,6 +263,9 @@ function DetailBody({
 
       <dl className={styles.facts}>
         <Fact label={t('detail.createdAt')}>{fmt.dateTime(request.createdAt)}</Fact>
+        {isPending ? (
+          <Fact label={t('deadline.label')}>{fmt.dateTime(request.respondBy)}</Fact>
+        ) : null}
         {request.decidedAt ? (
           <Fact label={t('detail.decidedAt')}>{fmt.dateTime(request.decidedAt)}</Fact>
         ) : null}
@@ -266,8 +273,10 @@ function DetailBody({
 
       <div className={styles.footer}>
         <Button onClick={onClose}>{tCommon('actions.close')}</Button>
-        {isPending && canApprove ? (
+        {decidable && canApprove ? (
           <RowActions actions={decisionActions} variant="filled" maxInline={2} />
+        ) : isPending && pastDue ? (
+          <p className={styles.expiredHint}>{t('deadline.pastDueHint')}</p>
         ) : null}
       </div>
     </div>

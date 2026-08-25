@@ -87,12 +87,31 @@ vi.mock('@/features/finance/hooks/use-receipt-mutations', () => ({
 }));
 
 /** Hai overlay của trang đã có test riêng — stub để test này chỉ nói về trang danh sách. */
-const overlays = vi.hoisted(() => ({ formOpen: false, categoriesOpen: false }));
+const overlays = vi.hoisted(() => ({
+  formOpen: false,
+  categoriesOpen: false,
+  formVehicleId: null as string | null,
+}));
 
 vi.mock('@/features/finance/components/ReceiptFormDrawer', () => ({
-  ReceiptFormDrawer: ({ open }: { open: boolean }) => {
+  ReceiptFormDrawer: ({
+    open,
+    onClose,
+    initialVehicleId,
+  }: {
+    open: boolean;
+    onClose: () => void;
+    initialVehicleId?: string | null;
+  }) => {
     overlays.formOpen = open;
-    return open ? <div data-testid="receipt-form" /> : null;
+    overlays.formVehicleId = initialVehicleId ?? null;
+    return open ? (
+      <div data-testid="receipt-form">
+        <button type="button" onClick={onClose}>
+          Đóng form
+        </button>
+      </div>
+    ) : null;
   },
 }));
 
@@ -215,6 +234,7 @@ beforeEach(() => {
   cancel.mutate.mockReset();
   overlays.formOpen = false;
   overlays.categoriesOpen = false;
+  overlays.formVehicleId = null;
   setQuery();
   grant();
 });
@@ -631,5 +651,75 @@ describe('/manage/receipts — filter và phân trang', () => {
     // Backend đã chặn bằng `RECEIPT_SOURCE_LOCKED`; ẩn nút để người dùng không bấm vào một hành
     // động chắc chắn thất bại.
     expect(screen.queryByRole('button', { name: 'Huỷ' })).toBeNull();
+  });
+});
+
+/* ------------------------------------------------- mở form từ hồ sơ xe (?create=1) */
+
+/**
+ * Một cú bấm ở hồ sơ xe phải làm CẢ HAI việc: lọc sổ về xe đó, và mở sẵn form với xe đã chọn.
+ *
+ * `create` là ý định, không phải bộ lọc — nên nó không xuống lớp dữ liệu, không tính vào "đang
+ * lọc", và bị gỡ khỏi URL ngay khi form đóng (F5 không được mở lại thứ người dùng vừa bỏ).
+ */
+describe('/manage/receipts — mở form từ hồ sơ xe', () => {
+  it('?vehicleId=…&create=1 mở sẵn form với xe đã chọn, vẫn giữ bộ lọc theo xe', () => {
+    grant(PERMISSION.RECEIPT_CREATE);
+    nav.params = new URLSearchParams('vehicleId=v-9&create=1&page=3');
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    expect(screen.getByTestId('receipt-form')).toBeTruthy();
+    expect(overlays.formVehicleId).toBe('v-9');
+    // Bộ lọc và trang đang đọc không bị cú mở form nào cuốn đi.
+    expect(query.lastFilters).toMatchObject({ vehicleId: 'v-9', page: 3 });
+  });
+
+  it('`create` KHÔNG đi xuống API — nó là ý định giao diện, không phải bộ lọc', () => {
+    grant(PERMISSION.RECEIPT_CREATE);
+    nav.params = new URLSearchParams('create=1');
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    // Sổ vẫn ở trạng thái "chưa lọc gì": mở form không được biến bảng thành kết-quả-rỗng.
+    expect(screen.queryByText(/Không có phiếu nào khớp/)).toBeNull();
+  });
+
+  it('đóng form gỡ create khỏi URL nhưng GIỮ nguyên bộ lọc và trang', () => {
+    grant(PERMISSION.RECEIPT_CREATE);
+    nav.params = new URLSearchParams('vehicleId=v-9&create=1&page=3');
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Đóng form' }));
+
+    expect(screen.queryByTestId('receipt-form')).toBeNull();
+    expect(nav.replace).toHaveBeenCalledTimes(1);
+    const url = lastReplacedUrl();
+    expect(url).not.toContain('create');
+    expect(url).toContain('vehicleId=v-9');
+    expect(url).toContain('page=3');
+  });
+
+  it('thiếu quyền tạo: create=1 trên URL cũng không mở được form', () => {
+    // Ẩn form là chuyện giao diện; chặn thật là guard `receipts.create` ở backend.
+    nav.params = new URLSearchParams('create=1');
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    expect(screen.queryByTestId('receipt-form')).toBeNull();
+  });
+
+  it('bấm "Tạo phiếu" trong sổ đang lọc theo xe thì xe đó được chọn sẵn', () => {
+    grant(PERMISSION.RECEIPT_CREATE);
+    nav.params = new URLSearchParams('vehicleId=v-9');
+    setQuery({ data: { items: [receipt()], meta: META } });
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /Tạo phiếu/ }));
+    expect(screen.getByTestId('receipt-form')).toBeTruthy();
+    expect(overlays.formVehicleId).toBe('v-9');
+    // Mở bằng nút là state cục bộ — không đẩy thêm một lần chuyển trang nào.
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 });

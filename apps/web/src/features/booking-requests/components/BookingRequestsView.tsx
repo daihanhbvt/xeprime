@@ -132,11 +132,19 @@ export function BookingRequestsView() {
     return action === 'approve' || action === 'reject' ? action : null;
   }
 
-  /** Trùng lịch là câu chuyện riêng — nói rõ phải làm gì thay vì một dòng lỗi chung. */
-  function approveErrorText(err: unknown): string {
-    return getErrorCode(err) === API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT
-      ? t('approve.scheduleConflict')
-      : errorMessage(err);
+  /**
+   * Hai lỗi có LỐI ĐI TIẾP riêng, nên chúng không được rơi vào câu chung:
+   *
+   *  - trùng lịch (409, từ constraint DB — ADR 0006): chọn khung giờ khác hoặc xe khác;
+   *  - quá hạn phản hồi: không còn gì để bấm, việc cần làm là gọi cho khách.
+   *
+   * Dùng chung cho cả duyệt và từ chối vì cả hai đều qua cùng cửa `claimPending` ở server.
+   */
+  function decisionErrorText(err: unknown): string {
+    const code = getErrorCode(err);
+    if (code === API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT) return t('approve.scheduleConflict');
+    if (code === API_ERROR_CODE.BOOKING_REQUEST_EXPIRED) return t('approve.expired');
+    return errorMessage(err);
   }
 
   /**
@@ -165,7 +173,7 @@ export function BookingRequestsView() {
           setApprovedResult(approved);
         },
         // Trùng lịch (409): GIỮ hộp thoại mở để chọn giờ khác, không mất dữ liệu đã nhập.
-        onError: (err) => setApproveError(approveErrorText(err)),
+        onError: (err) => setApproveError(decisionErrorText(err)),
       },
     );
   }
@@ -181,7 +189,7 @@ export function BookingRequestsView() {
           setRejectTarget(null);
         },
         // Hộp thoại ở lại: lý do vừa gõ là công sức thật, không được nuốt mất vì một lần lỗi.
-        onError: (err) => setRejectError(errorMessage(err)),
+        onError: (err) => setRejectError(decisionErrorText(err)),
       },
     );
   }

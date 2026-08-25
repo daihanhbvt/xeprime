@@ -75,7 +75,7 @@
     "decidedAt": "Handled at"
   },
   "actions": {
-    "approve": "Approve",
+    "approve": "Approve & hold vehicle",
     "reject": "Reject",
     "message": "Message",
     "messageAria": "Message {name} on XePrime",
@@ -86,19 +86,20 @@
     "zaloAria": "Open Zalo with {name} at {phone}"
   },
   "approve": {
-    "title": "Approve and create the booking?",
+    "title": "Approve and hold the vehicle?",
     "vehicle": "Vehicle",
     "customer": "Customer",
     "schedule": "Schedule",
-    "effect": "Approving creates a booking and RESERVES this vehicle's schedule for the period below. Pricing follows your active policy.",
+    "effect": "Approving creates a booking in the Vehicle held state and takes this slot on the vehicle calendar. Pricing follows the policy in force.",
     "deliveryNote": "This request asks for delivery. The booking starts with a 0₫ delivery fee — update it on the booking once you agree with the guest.",
-    "confirm": "Approve and create booking",
-    "success": "Approved — booking created",
-    "successLongTerm": "Approved — long-term booking created",
-    "scheduleConflict": "The vehicle is already booked for this period — pick another pickup time or reject the request."
+    "confirm": "Approve & hold vehicle",
+    "success": "Vehicle held — booking created",
+    "successLongTerm": "Vehicle held — long-term booking created",
+    "scheduleConflict": "The vehicle is already booked for this period — pick another pickup time or reject the request.",
+    "expired": "This request passed its 60-minute response deadline and can no longer be approved. Call the customer."
   },
   "longTerm": {
-    "title": "Approve long-term rental request",
+    "title": "Approve & hold — long-term rental",
     "customer": "Customer",
     "vehicle": "Vehicle",
     "pickupWish": "Preferred pickup",
@@ -113,7 +114,7 @@
     "returnHint": "The booking lasts exactly as long as the package the guest bought — it cannot be edited by hand.",
     "quoteTitle": "{package} package price",
     "quoteUnavailable": "Could not load the package price — check this vehicle's long-term pricing before approving.",
-    "confirm": "Approve and create booking",
+    "confirm": "Approve & hold vehicle",
     "wishLegacy": "Legacy request — the guest did not state a preference"
   },
   "reject": {
@@ -327,5 +328,12 @@
     "next": "Next: contact the renter to agree on a pick-up time, collect the deposit if any, then confirm handover right on the booking.",
     "viewBooking": "View booking",
     "close": "Close"
+  },
+  "deadline": {
+    "label": "Response deadline",
+    "remaining": "Left",
+    "expired": "Response deadline passed",
+    "pastDueHint": "No answer within 60 minutes, so this request closed itself. Call the customer if you still want the trip.",
+    "hint": "The shop has 60 minutes to answer. After that the request closes itself and the customer is told to pick another vehicle."
   }
 }

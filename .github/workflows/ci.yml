@@ -1,0 +1,116 @@
+# CI của XePrime.
+#
+# Điều quan trọng nhất ở đây là biến `REQUIRE_DB=1` trong job `api`. 51/58 spec API tự bọc mình
+# bằng `dbAvailable` + `catch { return }`: không có PostgreSQL thì chúng bỏ qua trong im lặng và
+# báo XANH. Trên máy dev đó là DX tốt; trên CI đó là nói dối — và mọi luật quan trọng nhất của hệ
+# thống (EXCLUDE USING gist của ADR 0006, unique chống ghi kép phiếu thu, composite FK sở hữu)
+# đều chỉ sống trong đúng những spec đó. `test/global-setup.ts` biến thiếu DB thành lỗi cứng.
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (PostgreSQL thật)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # Phải khớp ADR 0001 — PostgreSQL 16. Bản khác có thể xử lý `EXCLUDE USING gist` hay
+        # `gin_trgm_ops` khác đi, và khi đó CI xanh không nói gì về production.
+        image: postgres:16
+        env:
+          POSTGRES_USER: xeprime
+          POSTGRES_PASSWORD: xeprime_dev_pw
+          POSTGRES_DB: xeprime_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U xeprime -d xeprime_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      # Mọi script db/api đều chạy qua `dotenv -e ../../.env`, nên file này phải có TRƯỚC bước
+      # build đầu tiên (`prisma generate` cũng đọc nó).
+      #
+      # DATABASE_URL và TEST_DATABASE_URL cùng trỏ một chỗ là CÓ CHỦ ĐÍCH: luật
+      # "phải có TEST_DATABASE_URL riêng" sinh ra để bảo vệ database dev của người đang code,
+      # còn ở đây database là container dùng một lần của đúng run này.
+      - name: Dựng .env cho CI
+        run: |
+          cp .env.example .env
+          DB='postgresql://xeprime:xeprime_dev_pw@localhost:5432/xeprime_test?schema=public'
+          sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"$DB\"|"           .env
+          sed -i "s|^TEST_DATABASE_URL=.*|TEST_DATABASE_URL=\"$DB\"|" .env
+
+      # BẮT BUỘC trước typecheck/test: `dist/` bị gitignore mà mọi package dùng chung đều
+      # resolve về đó (`main: ./dist/index.js`). Thiếu bước này thì CI đỏ vì module-not-found,
+      # không phải vì nghiệp vụ sai. Nháy quanh `./packages/*` là bắt buộc — không có nó shell
+      # glob-expand thành từng thư mục và làm hỏng cờ --filter.
+      - run: pnpm --filter @xeprime/prisma --filter "./packages/*" -r build
+
+      - run: pnpm db:deploy
+      - name: Seed dữ liệu nền
+        # Chỉ quyền/role/danh mục — KHÔNG dựng 5 gian hàng demo. Spec tự tạo dữ liệu của nó;
+        # seed demo chỉ làm run chậm và làm mờ ranh giới "test này dựng gì".
+        run: SEED_MODE=system pnpm db:seed
+
+      - name: Test API — thiếu DB là ĐỎ
+        run: pnpm --filter @xeprime/api test
+        env:
+          REQUIRE_DB: '1'
+
+      - run: pnpm --filter @xeprime/api typecheck
+      - run: pnpm --filter @xeprime/api lint
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: corepack enable
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env
+      # BẮT BUỘC trước typecheck/test: `dist/` bị gitignore mà mọi package dùng chung đều
+      # resolve về đó (`main: ./dist/index.js`). Thiếu bước này thì CI đỏ vì module-not-found,
+      # không phải vì nghiệp vụ sai. Nháy quanh `./packages/*` là bắt buộc — không có nó shell
+      # glob-expand thành từng thư mục và làm hỏng cờ --filter.
+      - run: pnpm --filter @xeprime/prisma --filter "./packages/*" -r build
+
+      - run: pnpm --filter @xeprime/web test
+      - run: pnpm --filter @xeprime/web typecheck
+      - run: pnpm --filter @xeprime/web lint
+      # Parity vi↔en + ICU + không giá trị rỗng. Rẻ và chặn đúng thứ review của người hay bỏ sót.
+      - run: pnpm --filter @xeprime/web i18n:check
+      - run: pnpm --filter @xeprime/types test

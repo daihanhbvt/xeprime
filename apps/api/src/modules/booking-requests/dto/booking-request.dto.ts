@@ -396,6 +396,16 @@ export class BookingRequestDto {
   @ApiPropertyOptional({ type: String, nullable: true, description: 'Booking đã tạo khi duyệt' })
   bookingId!: string | null;
   @ApiProperty({ description: 'ISO-8601 UTC' }) createdAt!: string;
+  /**
+   * HẠN PHẢN HỒI của gian hàng (`created_at + 60'`). Web đếm ngược tới đúng mốc này và ẩn hai
+   * nút quyết định khi nó đã trôi qua — cùng một mốc mà server dùng để từ chối, nên giao diện
+   * không bao giờ mời người dùng bấm một nút chắc chắn nhận 409.
+   *
+   * Vẫn trả về ở yêu cầu ĐÃ xử lý: nó là dữ kiện của bản ghi ("shop có bao lâu"), không phải
+   * một cái đồng hồ chỉ chạy khi còn chờ.
+   */
+  @ApiProperty({ description: 'ISO-8601 UTC — hạn gian hàng phải phản hồi (server tính)' })
+  respondBy!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,

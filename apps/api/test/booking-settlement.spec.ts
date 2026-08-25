@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  bookingRequestRespondBy,
   BOOKING_STATUS,
   DEPOSIT_STATUS,
   MEMBERSHIP_STATUS,
@@ -181,6 +182,8 @@ async function createBookingWithCustomer(
   });
   await prisma.bookingRequest.create({
     data: {
+      // Hạn phản hồi 60 phút (25/08) — cột NOT NULL, server luôn tự đặt.
+      respondBy: bookingRequestRespondBy(new Date()),
       id: newId(),
       tenantId,
       vehicleId,
@@ -663,8 +666,14 @@ describe('Hoàn cọc → phiếu chi trong sổ', () => {
   const refundReceipts = (bookingId: string) =>
     prisma.receipt.findMany({
       where: { tenantId, bookingId, source: RECEIPT_SOURCE.DEPOSIT_REFUND },
-      select: { id: true, amount: true, type: true, status: true, occurredAt: true,
-                category: { select: { systemKey: true } } },
+      select: {
+        id: true,
+        amount: true,
+        type: true,
+        status: true,
+        occurredAt: true,
+        category: { select: { systemKey: true } },
+      },
     });
 
   maybe('ghi nhận hoàn sinh đúng MỘT phiếu chi, danh mục "Hoàn cọc"', async () => {
@@ -696,7 +705,10 @@ describe('Hoàn cọc → phiếu chi trong sổ', () => {
       refundMethod: REFUND_METHOD.CASH,
     });
 
-    const all = await prisma.receipt.findMany({ where: { tenantId, bookingId }, select: { source: true, amount: true } });
+    const all = await prisma.receipt.findMany({
+      where: { tenantId, bookingId },
+      select: { source: true, amount: true },
+    });
     // Đúng hai dòng: thu cọc (do helper tạo tay nên KHÔNG có phiếu) → chỉ còn phiếu hoàn.
     const refunds = all.filter((r) => r.source === RECEIPT_SOURCE.DEPOSIT_REFUND);
     expect(refunds).toHaveLength(1);

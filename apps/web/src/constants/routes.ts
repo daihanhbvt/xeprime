@@ -169,9 +169,19 @@ export const receiptsPath = {
     sourceGroup?: string;
     from?: string;
     to?: string;
+    /**
+     * Mở sẵn form tạo phiếu khi tới nơi (`create=1`) — không phải một bộ lọc.
+     *
+     * Cho phép một cú bấm ở hồ sơ xe vừa lọc sổ về xe đó vừa mở form với xe đã chọn, mà vẫn là
+     * một đường dẫn thường: gửi được, quay lại được, sống sót qua reload.
+     */
+    create?: boolean;
   }): string => {
+    // `create` là boolean; `String(true)` cho ra `create=true`, mà URL quy ước ở đây là cờ `1`.
     const query = new URLSearchParams(
-      Object.entries(params).filter(([, value]) => Boolean(value)) as [string, string][],
+      Object.entries(params)
+        .filter(([, value]) => Boolean(value))
+        .map(([key, value]) => [key, value === true ? '1' : String(value)]),
     ).toString();
     return query ? `${ROUTES.MANAGE.RECEIPTS}?${query}` : ROUTES.MANAGE.RECEIPTS;
   },

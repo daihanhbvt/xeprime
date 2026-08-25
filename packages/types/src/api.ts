@@ -69,7 +69,24 @@ export const API_ERROR_CODE = {
    * (xem chuyến / nhắn chủ xe), khác hẳn một alert lỗi thường.
    */
   BOOKING_REQUEST_DUPLICATE: 'BOOKING_REQUEST_DUPLICATE',
+  /**
+   * Yêu cầu đã quá **hạn phản hồi 60 phút** — không duyệt và không từ chối được nữa.
+   *
+   * Mã riêng thay vì `INVALID_STATUS_TRANSITION`: trạng thái trong DB có thể vẫn còn
+   * `pending_host_approval` (worker chạy theo nhịp, không tức thời), nên câu "yêu cầu này đã
+   * được xử lý" là sai và gây hoang mang. Điều cần nói là "hết giờ rồi" — và việc cần làm là
+   * gọi cho khách, không phải bấm lại.
+   */
+  BOOKING_REQUEST_EXPIRED: 'BOOKING_REQUEST_EXPIRED',
   INVALID_STATUS_TRANSITION: 'INVALID_STATUS_TRANSITION',
+  /**
+   * Ghi nhận khách không đến quá sớm — chưa qua ân hạn `BOOKING_NO_SHOW_GRACE_MINUTES` kể từ
+   * giờ nhận theo đơn, hoặc xe đã thực sự được giao (đã có biên bản giao xe).
+   *
+   * Mã riêng vì hai lối đi tiếp khác nhau hẳn: chưa tới giờ thì CHỜ, còn đã giao xe rồi thì
+   * chuyến đang chạy và việc cần làm là nhận lại xe.
+   */
+  BOOKING_NO_SHOW_NOT_ALLOWED: 'BOOKING_NO_SHOW_NOT_ALLOWED',
   /**
    * ĐÃ NGHỈ HƯU (Wave 9) — **không endpoint nào còn trả mã này**.
    *
@@ -101,6 +118,15 @@ export const API_ERROR_CODE = {
    * bảo dưỡng). `details` mang `{ source, sourceRefId, bookingId }` để FE dựng đúng đường quay về.
    */
   RECEIPT_SOURCE_LOCKED: 'RECEIPT_SOURCE_LOCKED',
+  /**
+   * Phiếu tay gửi lên gắn CẢ đơn thuê lẫn xe, nhưng đơn đó không chạy chiếc xe đó.
+   *
+   * Mã riêng thay vì `VALIDATION_FAILED`: hai ô đều hợp lệ khi xét riêng, thứ sai là quan hệ
+   * giữa chúng — nên câu trả lời đúng cho người dùng là "bỏ chọn một trong hai", không phải
+   * "dữ liệu chưa hợp lệ". Ghi sai cặp này làm sổ theo xe và sổ theo đơn kể hai câu chuyện
+   * khác nhau về cùng một khoản tiền.
+   */
+  RECEIPT_BOOKING_VEHICLE_MISMATCH: 'RECEIPT_BOOKING_VEHICLE_MISMATCH',
 
   // Xác thực SĐT / OTP (Phase 4)
   PHONE_NOT_VERIFIED: 'PHONE_NOT_VERIFIED',

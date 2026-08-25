@@ -8,8 +8,11 @@ import { newId, Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
+  BOOKING_NO_SHOW_GRACE_MINUTES,
   BOOKING_STATUS,
   BOOKING_STATUS_META,
+  HANDOVER_TYPE,
+  isNoShowGracePassed,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
@@ -26,11 +29,7 @@ import {
   type BookingStatus,
   type PaginationMeta,
 } from '@xeprime/types';
-import {
-  bookingMoney,
-  emptyMoneySides,
-  loadBookingMoneySides,
-} from '../../common/booking-money';
+import { bookingMoney, emptyMoneySides, loadBookingMoneySides } from '../../common/booking-money';
 import { bookingDebt } from '../../common/money';
 import { normalizeRouteContext } from '../../common/route-context';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -672,6 +671,7 @@ export class BookingsService {
       this.transitionWithinTx(tx, tenantId, id, userId, from, to, {
         actualPickupAt: dto.actualPickupAt,
         actualReturnAt: dto.actualReturnAt,
+        reason: dto.reason,
       }),
     );
 
@@ -709,6 +709,14 @@ export class BookingsService {
        * viên shop huỷ đơn của khách — đúng thứ mà cuốn sổ này tồn tại để phân định.
        */
       actorScope?: AuditActorScope;
+      /**
+       * Lý do của quyết định — đi vào `afterJson` của audit CẠNH status, không vào `booking.note`.
+       *
+       * Tuỳ chọn ở tầng này có chủ đích: cửa bắt buộc nằm ở DTO của `POST /bookings/:id/transition`
+       * (huỷ/no_show phải có lý do). Các đường gọi nội bộ — bàn giao xe, khách tự huỷ chuyến —
+       * đã tự mang ngữ cảnh của chúng, ép thêm một chuỗi ở đây chỉ sinh ra lý do bịa.
+       */
+      reason?: string;
     } = {},
   ): Promise<BookingDetailRow> {
     if (from === to || !canTransitionBooking(from, to)) {
@@ -716,6 +724,12 @@ export class BookingsService {
         code: API_ERROR_CODE.INVALID_STATUS_TRANSITION,
         message: `Không thể chuyển đơn từ "${from}" sang "${to}"`,
       });
+    }
+
+    // Máy trạng thái cho phép `reserved|confirmed → no_show`, nhưng nó không biết gì về ĐỒNG HỒ
+    // và về việc xe đã ra khỏi bãi hay chưa. Hai điều kiện đó ở ngay dưới đây, TRƯỚC lệnh ghi.
+    if (to === BOOKING_STATUS.NO_SHOW) {
+      await this.assertNoShowAllowed(tx, tenantId, id);
     }
 
     // Điều kiện `status: from` trong WHERE: nếu ai đó vừa chuyển trạng thái xen vào giữa thì
@@ -758,7 +772,9 @@ export class BookingsService {
         targetType: 'booking',
         targetId: id,
         before: { status: from },
-        after: { status: to },
+        // Lý do đi CÙNG status trong một `afterJson`: đọc audit là đọc trọn quyết định, không
+        // phải ghép hai dòng lại với nhau. Không có lý do thì không bịa ra khoá rỗng.
+        after: { status: to, ...(opts.reason ? { reason: opts.reason } : {}) },
       },
       tx,
     );
@@ -779,13 +795,21 @@ export class BookingsService {
       );
 
       /*
-       * Khách cũng phải biết chuyến của mình bắt đầu và kết thúc (Wave 11). Chỉ hai mốc đó —
-       * `reserved → confirmed` là bút toán nội bộ, khách không có việc gì với nó.
+       * Khách cũng phải biết chuyến của mình bắt đầu, kết thúc, hay BỊ KHÉP LẠI (Wave 11 +
+       * 25/08). `reserved → confirmed` vẫn là bút toán nội bộ, khách không có việc gì với nó.
+       *
+       * Hai kết thúc tiêu cực được thêm vào vì chúng thay đổi kế hoạch của khách: xe vừa được
+       * nhả ra cho người khác đặt, nên im lặng ở đây là để một người ra bến chờ một chiếc xe
+       * không còn tồn tại. Ngoại lệ duy nhất là chính KHÁCH bấm huỷ (`actorScope: customer`) —
+       * báo cho người ta biết việc họ vừa làm là tiếng ồn.
        *
        * Dùng lại đúng loại thông báo và kho thông báo đã có; trỏ thẳng vào chuyến để bấm là
        * tới nơi. Khách vãng lai chưa có tài khoản thì không có gì để gửi.
        */
-      if (to === BOOKING_STATUS.ACTIVE || to === BOOKING_STATUS.COMPLETED) {
+      const customerFacing = CUSTOMER_FACING_TRANSITIONS[to];
+      const byCustomer =
+        (opts.actorScope ?? AUDIT_ACTOR_SCOPE.TENANT) === AUDIT_ACTOR_SCOPE.CUSTOMER;
+      if (customerFacing && !byCustomer) {
         const request = await tx.bookingRequest.findFirst({
           where: { bookingId: id },
           select: { customerUserId: true },
@@ -795,14 +819,8 @@ export class BookingsService {
             request.customerUserId,
             {
               type: NOTIFICATION_TYPE.BOOKING_STATUS_CHANGED,
-              title:
-                to === BOOKING_STATUS.ACTIVE
-                  ? 'Hành trình của bạn đã bắt đầu'
-                  : 'Chuyến đi đã hoàn thành',
-              body:
-                to === BOOKING_STATUS.ACTIVE
-                  ? `${updated.vehicle.name} · chúc bạn một chuyến đi an toàn`
-                  : `${updated.vehicle.name} · cảm ơn bạn đã đồng hành cùng XePrime`,
+              title: customerFacing.title,
+              body: `${updated.vehicle.name} · ${customerFacing.body}`,
               tenantId,
               targetType: NOTIFICATION_TARGET_TYPE.BOOKING,
               targetId: id,
@@ -815,7 +833,85 @@ export class BookingsService {
 
     return updated;
   }
+
+  /**
+   * Ghi nhận khách không đến có được phép ở THỜI ĐIỂM NÀY không.
+   *
+   * Máy trạng thái (`canTransitionBooking`) đã cho phép `reserved|confirmed → no_show`, nhưng
+   * nó chỉ biết về trạng thái. Hai điều kiện còn lại là về thế giới thật:
+   *
+   *  1. **Đã qua ân hạn** `BOOKING_NO_SHOW_GRACE_MINUTES` kể từ giờ nhận theo đơn. Không có nó,
+   *     một cú tắc đường mười phút thành một vết đen vĩnh viễn trong sổ khách của gian hàng.
+   *  2. **Chưa hề giao xe.** Một biên bản giao xe ĐÃ XÁC NHẬN là bằng chứng khách đã tới và
+   *     cầm chìa khoá; gọi họ là "không đến" sau đó vừa sai sự thật vừa nhả lịch một chiếc xe
+   *     đang chạy ngoài đường. Trong đời sống bình thường lần xác nhận đó đã đẩy đơn sang
+   *     `active` (và máy trạng thái tự chặn), nhưng biên bản có thể tồn tại mà đơn chưa kịp
+   *     theo — nên vẫn phải hỏi thẳng bảng biên bản, không suy từ `status`.
+   *
+   * Đọc trong CÙNG transaction với lệnh ghi: kiểm ngoài rồi mới mở transaction là để lại đúng
+   * cái khe hở mà `updateMany` có điều kiện đang đóng lại.
+   */
+  private async assertNoShowAllowed(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+  ): Promise<void> {
+    const booking = await tx.booking.findFirstOrThrow({
+      where: { id, tenantId },
+      select: { pickupAt: true },
+    });
+
+    if (!isNoShowGracePassed(booking.pickupAt)) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.BOOKING_NO_SHOW_NOT_ALLOWED,
+        message: `Chỉ ghi nhận khách không đến sau giờ nhận xe ${BOOKING_NO_SHOW_GRACE_MINUTES} phút`,
+      });
+    }
+
+    const handedOver = await tx.vehicleHandover.findFirst({
+      where: {
+        bookingId: id,
+        tenantId,
+        type: HANDOVER_TYPE.PICKUP,
+        confirmedAt: { not: null },
+      },
+      select: { id: true },
+    });
+    if (handedOver) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.BOOKING_NO_SHOW_NOT_ALLOWED,
+        message: 'Đơn này đã có biên bản giao xe — khách đã nhận xe, không ghi nhận không đến được',
+      });
+    }
+  }
 }
+
+/**
+ * Chuyển trạng thái nào KHÁCH cần biết, và nói gì.
+ *
+ * Bảng thay vì chuỗi `if`: thêm một trạng thái mới vào `BOOKING_STATUS` mà quên nghĩ tới khách
+ * thì ở đây là một khoá thiếu nhìn thấy được, chứ không phải một nhánh `else` im lặng.
+ * `reserved`/`confirmed` cố ý vắng mặt — chúng là bút toán nội bộ của gian hàng.
+ */
+const CUSTOMER_FACING_TRANSITIONS: Partial<Record<BookingStatus, { title: string; body: string }>> =
+  {
+    [BOOKING_STATUS.ACTIVE]: {
+      title: 'Hành trình của bạn đã bắt đầu',
+      body: 'chúc bạn một chuyến đi an toàn',
+    },
+    [BOOKING_STATUS.COMPLETED]: {
+      title: 'Chuyến đi đã hoàn thành',
+      body: 'cảm ơn bạn đã đồng hành cùng XePrime',
+    },
+    [BOOKING_STATUS.CANCELLED]: {
+      title: 'Gian hàng đã huỷ chuyến của bạn',
+      body: 'chuyến đã bị huỷ — liên hệ gian hàng nếu bạn cần biết thêm',
+    },
+    [BOOKING_STATUS.NO_SHOW]: {
+      title: 'Chuyến của bạn đã bị đóng: khách không đến',
+      body: 'gian hàng ghi nhận bạn không tới nhận xe',
+    },
+  };
 
 function money(v: string | undefined): Prisma.Decimal {
   return new Prisma.Decimal(v ?? '0');

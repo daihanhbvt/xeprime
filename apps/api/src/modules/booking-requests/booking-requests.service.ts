@@ -10,6 +10,8 @@ import {
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_VALUES,
+  bookingRequestRespondBy,
+  isBookingRequestPastDue,
   isLongTermPackageMonths,
   vnDateKey,
   vnDayStart,
@@ -81,6 +83,7 @@ const SELECT = {
   bookingId: true,
   tenantCustomerId: true,
   createdAt: true,
+  respondBy: true,
   decidedAt: true,
   /**
    * `customerUserId` được chọn để suy ra `canMessageOnPlatform` — nó KHÔNG bao giờ đi ra DTO
@@ -410,6 +413,15 @@ export class BookingRequestsService {
             note: dto.note ?? null,
             deliveryRequested,
             deliveryAddress: deliveryRequested ? dto.deliveryAddress!.trim() : null,
+            /*
+             * Hạn phản hồi do SERVER đặt, luôn luôn. DTO không có trường này nên client không
+             * gửi được, và không có nhánh nào đọc một giá trị từ ngoài vào: một khách tự nới
+             * hạn của mình sẽ biến lời hứa "60 phút" thành thứ vô nghĩa.
+             *
+             * Vẫn KHÔNG chiếm lịch xe ở bước này (ADR 0006) — đây mới là "chờ shop trả lời",
+             * chưa phải một chỗ đã giữ.
+             */
+            respondBy: bookingRequestRespondBy(new Date()),
           },
         });
 
@@ -756,19 +768,29 @@ export class BookingRequestsService {
         req.tenantCustomerId,
       );
 
-      const updated = await tx.bookingRequest.update({
-        where: { id },
-        data: {
-          status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
-          bookingId: booking.id,
-          // Yêu cầu dài hạn được sinh ra KHÔNG có lịch; sau khi duyệt nó phải giữ chính lịch
-          // đã chốt để inbox/lịch sử đọc được mà không phải join sang đơn.
-          pickupAt: schedule.pickupAt,
-          returnAt: schedule.returnAt,
-          longTermPackageMonths: schedule.packageMonths,
-          decidedBy: userId,
-          decidedAt: new Date(),
-        },
+      /*
+       * Chiếm quyền quyết định SAU khi đơn đã được tạo, không phải trước.
+       *
+       * Thứ tự này quan trọng: nếu worker vừa expire yêu cầu ở mili-giây trước, `claimPending`
+       * ném lỗi và cả transaction quay đầu — đơn vừa tạo cùng bản ghi giữ lịch của nó biến mất
+       * sạch. Đảo thứ tự lại (chiếm trước, tạo đơn sau) cũng đúng về mặt đua, nhưng khi ấy một
+       * đơn tạo hỏng sẽ để lại một yêu cầu đã đánh dấu `converted_to_booking` mà không có đơn
+       * nào — trạng thái không tồn tại trong nghiệp vụ.
+       */
+      await this.claimPending(tx, tenantId, id, {
+        status: BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING,
+        bookingId: booking.id,
+        // Yêu cầu dài hạn được sinh ra KHÔNG có lịch; sau khi duyệt nó phải giữ chính lịch
+        // đã chốt để inbox/lịch sử đọc được mà không phải join sang đơn.
+        pickupAt: schedule.pickupAt,
+        returnAt: schedule.returnAt,
+        longTermPackageMonths: schedule.packageMonths,
+        decidedBy: userId,
+        decidedAt: new Date(),
+      });
+
+      const updated = await tx.bookingRequest.findFirstOrThrow({
+        where: { id, tenantId },
         select: SELECT,
       });
 
@@ -902,14 +924,17 @@ export class BookingRequestsService {
     const req = await this.loadPending(tenantId, id);
 
     const row = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.bookingRequest.update({
-        where: { id },
-        data: {
-          status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
-          rejectReason: reason ?? null,
-          decidedBy: userId,
-          decidedAt: new Date(),
-        },
+      // Cùng cửa chiếm quyền với `approve`: từ chối một yêu cầu đã quá hạn cũng sai như duyệt
+      // nó — khách đã nhận tin "gian hàng không phản hồi" và đang đi tìm xe khác.
+      await this.claimPending(tx, tenantId, id, {
+        status: BOOKING_REQUEST_STATUS.REJECTED_BY_HOST,
+        rejectReason: reason ?? null,
+        decidedBy: userId,
+        decidedAt: new Date(),
+      });
+
+      const updated = await tx.bookingRequest.findFirstOrThrow({
+        where: { id, tenantId },
         select: SELECT,
       });
 
@@ -946,7 +971,17 @@ export class BookingRequestsService {
     return toDto(row);
   }
 
-  /** Nạp yêu cầu đang chờ duyệt; đã quyết định rồi thì chặn (không duyệt/từ chối hai lần). */
+  /**
+   * Nạp yêu cầu CÒN xử lý được: đang chờ duyệt **và** chưa quá hạn phản hồi.
+   *
+   * Hai điều kiện, hai mã lỗi khác nhau có chủ đích. Trạng thái `expired` do worker ghi theo
+   * nhịp, nên luôn tồn tại một cửa sổ mà `respond_by` đã trôi qua nhưng cột `status` vẫn còn
+   * `pending_host_approval`. Nếu chỉ nhìn `status` thì cửa sổ đó là một lỗ để duyệt một yêu cầu
+   * đã chết — và tệ hơn, khách đã được báo là gian hàng không phản hồi.
+   *
+   * Đây vẫn chỉ là cửa ĐỌC TRƯỚC để báo lỗi cho đúng. Chốt chặn thật nằm ở lệnh `updateMany`
+   * có điều kiện của `approve`/`reject`: giữa lúc đọc và lúc ghi, worker vẫn có thể chen vào.
+   */
   private async loadPending(tenantId: string, id: string): Promise<PendingRequestRow> {
     const req = await this.prisma.bookingRequest.findFirst({
       where: { id, tenantId },
@@ -959,7 +994,41 @@ export class BookingRequestsService {
         message: 'Yêu cầu này đã được xử lý',
       });
     }
+    if (isBookingRequestPastDue(req.respondBy)) throw requestExpired();
     return req;
+  }
+
+  /**
+   * Chiếm quyền quyết định một yêu cầu — lệnh ghi DUY NHẤT được phép đổi trạng thái một yêu
+   * cầu đang chờ, dùng chung cho duyệt và từ chối.
+   *
+   * `updateMany` với điều kiện `status = pending AND respond_by > now` là chỗ cuộc đua kết
+   * thúc: worker expire và nhân viên bấm duyệt cùng lúc thì đúng MỘT bên khớp điều kiện, bên
+   * kia nhận `count = 0`. Không có `SELECT … FOR UPDATE`, không có khoá ở tầng ứng dụng — điều
+   * kiện nằm ngay trong câu `UPDATE`, nên không có khe hở nào giữa đọc và ghi.
+   *
+   * `count = 0` được dịch thành "quá hạn": trong luồng này chỉ có hai kẻ chen ngang khả dĩ —
+   * worker (quá hạn) hoặc một nhân viên khác vừa quyết định xong — và cả hai đều được `loadPending`
+   * gạn trước đó vài mili-giây. Câu "hết giờ, gọi cho khách" đúng cho cả hai.
+   */
+  private async claimPending(
+    tx: Prisma.TransactionClient,
+    tenantId: string,
+    id: string,
+    // `Unchecked…` chứ không phải `…UpdateManyMutationInput`: bản kia loại hết cột khoá ngoại
+    // ra khỏi kiểu, mà `bookingId` — thứ duyệt phải ghi — chính là một trong số đó.
+    data: Prisma.BookingRequestUncheckedUpdateManyInput,
+  ): Promise<void> {
+    const claimed = await tx.bookingRequest.updateMany({
+      where: {
+        id,
+        tenantId,
+        status: BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL,
+        respondBy: { gt: new Date() },
+      },
+      data,
+    });
+    if (claimed.count === 0) throw requestExpired();
   }
 }
 
@@ -967,6 +1036,7 @@ export class BookingRequestsService {
 const PENDING_SELECT = {
   id: true,
   status: true,
+  respondBy: true,
   vehicleId: true,
   customerName: true,
   customerPhone: true,
@@ -1055,6 +1125,7 @@ function toDto(r: BookingRequestRow): BookingRequestDto {
     rejectReason: r.rejectReason,
     bookingId: r.bookingId,
     createdAt: r.createdAt as unknown as string,
+    respondBy: r.respondBy as unknown as string,
     decidedAt: (r.decidedAt as unknown as string | null) ?? null,
   };
 }
@@ -1096,6 +1167,19 @@ function notFound(): NotFoundException {
   return new NotFoundException({
     code: API_ERROR_CODE.NOT_FOUND,
     message: 'Không tìm thấy yêu cầu đặt xe',
+  });
+}
+
+/**
+ * Hết hạn phản hồi — MỘT câu cho cả hai lớp (đọc trước và `updateMany` có điều kiện).
+ *
+ * Cố ý KHÔNG dùng `INVALID_STATUS_TRANSITION`: cột `status` trong DB có thể vẫn còn
+ * `pending_host_approval` khi câu này được ném, nên "yêu cầu đã được xử lý" là một câu sai.
+ */
+function requestExpired(): ConflictException {
+  return new ConflictException({
+    code: API_ERROR_CODE.BOOKING_REQUEST_EXPIRED,
+    message: 'Yêu cầu đã quá hạn phản hồi 60 phút — hãy liên hệ lại với khách',
   });
 }
 

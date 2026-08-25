@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  bookingRequestRespondBy,
   BOOKING_REQUEST_STATUS,
   MEMBERSHIP_STATUS,
   PICKUP_PREFERENCE,
@@ -383,6 +384,8 @@ describe('yêu cầu dài hạn LEGACY (chưa có gói)', () => {
     const pickupAt = new Date(atVn(dayFromToday(400), '09:00'));
     await prisma.bookingRequest.create({
       data: {
+        // Hạn phản hồi 60 phút (25/08) — cột NOT NULL, server luôn tự đặt.
+        respondBy: bookingRequestRespondBy(new Date()),
         id: legacyId,
         tenantId,
         vehicleId,

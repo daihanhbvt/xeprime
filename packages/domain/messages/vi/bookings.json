@@ -3,5 +3,45 @@
     "title": "Đơn thuê",
     "titleWithCode": "Đơn hàng {code}",
     "openPage": "Mở trang chi tiết"
+  },
+  "actionBar": {
+    "contract": "Hợp đồng",
+    "moneyHistory": "Lịch sử tiền",
+    "moneyHistoryTitle": "Lịch sử tiền của đơn",
+    "openLedger": "Mở ở sổ Thu-Chi của gian hàng →",
+    "edit": "Sửa đơn",
+    "closedHint": "Đơn đã kết thúc nên không sửa được nữa",
+    "collect": "Thu tiền",
+    "collected": "Đã thu đủ",
+    "handoverPhotos": "Ảnh bàn giao",
+    "confirmPickup": "Xác nhận đã giao xe",
+    "confirmReturn": "Xác nhận đã nhận xe",
+    "confirmPermissionHint": "Cần quyền handovers.confirm để xác nhận bàn giao"
+  },
+  "statusActions": {
+    "cancel": "Hủy đơn",
+    "noShow": "Ghi nhận khách không đến",
+    "dialog": {
+      "cancelTitle": "Hủy đơn {code}",
+      "noShowTitle": "Ghi nhận khách không đến — đơn {code}",
+      "cancelLead": "Đơn đã hủy không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất.",
+      "noShowLead": "Ghi nhận khách không đến sẽ khép đơn lại và không mở lại được. Xe được nhả lịch ngay, nên khung giờ này có thể bị người khác đặt mất.",
+      "cancelOk": "Hủy đơn",
+      "noShowOk": "Ghi nhận không đến",
+      "keep": "Giữ nguyên đơn",
+      "customer": "Khách",
+      "vehicle": "Xe",
+      "period": "Thời gian thuê",
+      "reasonLabel": "Lý do",
+      "reasonPlaceholder": "Ví dụ: khách báo hủy qua điện thoại, xe hỏng đột xuất…",
+      "reasonHelp": "Lý do được lưu vào nhật ký của đơn để đối chiếu về sau; khách không nhìn thấy.",
+      "reasonRequired": "Nhập lý do trước khi tiếp tục",
+      "reasonTooLong": "Tối đa 500 ký tự",
+      "paidTitle": "Đơn đã ghi nhận {amount} tiền đã thu",
+      "paidDescription": "XePrime không tự hoàn tiền và cũng không xóa khoản đã ghi nhận. Nếu cần trả lại cho khách, hãy chuyển tiền bên ngoài rồi ghi một phiếu chi ở sổ Thu-Chi.",
+      "cancelSuccess": "Đã hủy đơn {code}",
+      "noShowSuccess": "Đã ghi nhận khách không đến cho đơn {code}"
+    },
+    "noShowHint": "Chỉ ghi nhận được sau giờ nhận xe {minutes} phút, và chỉ khi chưa giao xe."
   }
 }

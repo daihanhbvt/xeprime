@@ -1,6 +1,7 @@
 import type { ConfigService } from '@nestjs/config';
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  bookingRequestRespondBy,
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
   BRANCH_STATUS,
@@ -256,6 +257,8 @@ async function seedRequest(overrides: {
   const pickupAt = overrides.pickupAt ?? at(3);
   await prisma.bookingRequest.create({
     data: {
+      // Hạn phản hồi 60 phút (25/08) — cột NOT NULL, server luôn tự đặt.
+      respondBy: bookingRequestRespondBy(new Date()),
       id,
       tenantId: overrides.tenantId,
       vehicleId: overrides.vehicleId,

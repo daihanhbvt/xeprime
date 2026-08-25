@@ -4,7 +4,9 @@ import {
   CalendarOutlined,
   CarOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
   CloseCircleOutlined,
+  HourglassOutlined,
   RollbackOutlined,
   ShopOutlined,
   StarOutlined,
@@ -23,6 +25,9 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.BOOKING_REQUEST_REJECTED]: <CloseCircleOutlined />,
   // Khách RÚT lại yêu cầu — khác chiều với shop từ chối, nên khác icon.
   [NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED]: <RollbackOutlined />,
+  // Hạn phản hồi 60 phút: đồng hồ cho lời nhắc, đồng hồ-đã-dừng cho lúc hết giờ.
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING]: <ClockCircleOutlined />,
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED]: <HourglassOutlined />,
   [NOTIFICATION_TYPE.SHOP_APPROVED]: <ShopOutlined />,
   [NOTIFICATION_TYPE.SHOP_REJECTED]: <ShopOutlined />,
   [NOTIFICATION_TYPE.VEHICLE_APPROVED]: <CarOutlined />,

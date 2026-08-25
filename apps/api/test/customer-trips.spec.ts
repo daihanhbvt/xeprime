@@ -1,5 +1,6 @@
 import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
+  bookingRequestRespondBy,
   API_ERROR_CODE,
   AUDIT_ACTOR_SCOPE,
   BOOKING_REQUEST_STATUS,
@@ -126,6 +127,8 @@ async function seedTrip(
 
   await prisma.bookingRequest.create({
     data: {
+      // Hạn phản hồi 60 phút (25/08) — cột NOT NULL, server luôn tự đặt.
+      respondBy: bookingRequestRespondBy(new Date()),
       id: requestId,
       tenantId,
       vehicleId,
@@ -813,9 +816,9 @@ describe('Khách tự huỷ chuyến', () => {
     const after = await trips.cancel(customerId, requestId);
 
     expect(after.stage).toBe(CUSTOMER_TRIP_STAGE.CANCELLED);
-    expect(
-      (await prisma.booking.findUniqueOrThrow({ where: { id: bookingId! } })).status,
-    ).toBe(BOOKING_STATUS.CANCELLED);
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: bookingId! } })).status).toBe(
+      BOOKING_STATUS.CANCELLED,
+    );
     // Xe phải trống lại ngay — nếu không, huỷ xong mà lịch vẫn kẹt là mất doanh thu thật.
     expect(
       await prisma.vehicleOccupancy.count({
@@ -824,13 +827,16 @@ describe('Khách tự huỷ chuyến', () => {
     ).toBe(0);
   });
 
-  maybe('huỷ đơn KHÔNG đụng trạng thái yêu cầu — lịch sử converted_to_booking giữ nguyên', async () => {
-    const { requestId } = await seedTrip({ bookingStatus: BOOKING_STATUS.RESERVED });
-    await trips.cancel(customerId, requestId);
+  maybe(
+    'huỷ đơn KHÔNG đụng trạng thái yêu cầu — lịch sử converted_to_booking giữ nguyên',
+    async () => {
+      const { requestId } = await seedTrip({ bookingStatus: BOOKING_STATUS.RESERVED });
+      await trips.cancel(customerId, requestId);
 
-    const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
-    expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
-  });
+      const row = await prisma.bookingRequest.findUniqueOrThrow({ where: { id: requestId } });
+      expect(row.status).toBe(BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING);
+    },
+  );
 
   maybe('ĐÃ GIAO XE thì không huỷ được nữa', async () => {
     const { requestId } = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
