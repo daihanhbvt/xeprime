@@ -2624,7 +2624,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Tổng quan tài chính: thu/chi/cân đối/công nợ theo kỳ
+         * Ba lớp tiền của một kỳ: kết quả kinh doanh, dòng tiền quỹ, cọc đang giữ + công nợ
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
@@ -2632,6 +2632,102 @@ export interface paths {
          *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
          */
         get: operations["FinanceOverviewController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Chuỗi thu-chi theo ngày/tuần/tháng — đã điền bucket rỗng, gộp theo giờ VN
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["FinanceOverviewController_series"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/by-category": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cơ cấu doanh thu hoặc chi phí theo danh mục thu/chi
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["FinanceOverviewController_byCategory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/by-vehicle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lãi/lỗ theo từng xe trong kỳ. Chi phí chung chưa gắn xe nằm ở `/finance/summary` (`unassignedCost`) — nó là số của KỲ, không đổi theo trang
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["FinanceOverviewController_byVehicle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/by-customer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Doanh thu theo từng khách trong kỳ — tiền THẬT đã thu. Phần không gắn khách nào nằm ở `/finance/summary` (`unassignedRevenue`)
+         * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
+         *
+         *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
+         *
+         *     **Quyền yêu cầu:** `finance.view` (đọc từ DB mỗi request, không nằm trong session).
+         */
+        get: operations["FinanceOverviewController_byCustomer"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7196,16 +7292,109 @@ export interface components {
             meta: components["schemas"]["PaginationMetaDto"];
         };
         FinanceSummaryDto: {
-            /** @description Tổng thu (phiếu income đã duyệt), string */
+            /** @description DÒNG TIỀN QUỸ — tổng thu mọi phiếu đã duyệt, GỒM cọc. String */
             totalIncome: string;
-            /** @description Tổng chi (phiếu expense đã duyệt), string */
+            /** @description DÒNG TIỀN QUỸ — tổng chi mọi phiếu đã duyệt, GỒM hoàn cọc */
             totalExpense: string;
-            /** @description Cân đối = thu − chi, string */
+            /** @description Cân đối quỹ = thu − chi, string */
             balance: string;
-            /** @description Tổng công nợ các đơn còn nợ, string */
+            /** @description KINH DOANH — doanh thu, đã LOẠI tiền giữ hộ (ADR 0013 §3) */
+            revenue: string;
+            /** @description KINH DOANH — chi phí, đã loại hoàn cọc */
+            cost: string;
+            /** @description Phần của `cost` KHÔNG gắn xe nào (marketing, văn phòng…). Bảng hiệu quả theo xe cần nó để giải thích vì sao tổng chi phí các dòng nhỏ hơn thẻ "Chi phí" — đây là số của KỲ, không đổi theo trang, nên nó ở đây chứ không nằm trong trang dữ liệu. */
+            unassignedCost: string;
+            /** @description Phần của `revenue` KHÔNG gắn khách nào — phiếu thu tay không liên kết đơn thuê. Bảng doanh thu theo khách cần nó vì cùng lý do: thiếu con số này thì tổng các dòng nhỏ hơn thẻ "Doanh thu" và phần chênh không có chỗ nào giải thích. */
+            unassignedRevenue: string;
+            /** @description KINH DOANH — lãi TIỀN MẶT theo sổ = doanh thu − chi phí. CHƯA trừ khấu hao/lãi vay */
+            profit: string;
+            /** @description Biên lợi nhuận %. `null` khi chưa có doanh thu — không phải 0 */
+            profitMarginPercent?: number | null;
+            /** @description TẠI THỜI ĐIỂM NÀY — cọc đã thu chưa hoàn, không lọc theo kỳ. String */
+            depositHeld: string;
+            /** @description Số đơn còn giữ cọc */
+            depositHeldBookings: number;
+            /** @description TẠI THỜI ĐIỂM NÀY — tổng công nợ các đơn còn nợ, string */
             totalDebt: string;
             /** @description Số đơn còn nợ */
             debtBookings: number;
+            /** @description Số chuyến có ngày NHẬN XE rơi trong kỳ (không tính đơn đã huỷ). Đi cùng ba lớp tiền vì "kỳ này chạy bao nhiêu chuyến" là mẫu số của mọi câu hỏi về doanh thu. */
+            trips: number;
+        };
+        FinanceSeriesBucketDto: {
+            /** @description Mốc đầu bucket, `YYYY-MM-DD` theo NGÀY LỊCH VIỆT NAM */
+            bucket: string;
+            /** @description Doanh thu trong bucket (đã loại cọc), string */
+            revenue: string;
+            /** @description Chi phí trong bucket (đã loại hoàn cọc), string */
+            cost: string;
+            /** @description revenue − cost, string */
+            profit: string;
+            /** @description Tiền vào quỹ, GỒM cọc, string */
+            cashIn: string;
+            /** @description Tiền ra quỹ, GỒM hoàn cọc, string */
+            cashOut: string;
+        };
+        FinanceSeriesDto: {
+            /**
+             * @description Độ mịn THỰC SỰ đã dùng — có thể khác thứ client xin nếu kỳ quá dài
+             * @enum {string}
+             */
+            granularity: "day" | "week" | "month";
+            /** @description Đủ mọi bucket trong kỳ, kể cả bucket không có phiếu nào (giá trị 0) */
+            buckets: components["schemas"]["FinanceSeriesBucketDto"][];
+        };
+        FinanceCategoryBreakdownItemDto: {
+            /** @description `null` = phiếu chưa gán danh mục — gom thành một dòng "Chưa phân loại" */
+            categoryId?: string | null;
+            /** @description Tên trong DB (tiếng Việt). `null` với dòng chưa phân loại */
+            name?: string | null;
+            /** @description Khoá danh mục hệ thống — web dịch NHÃN từ khoá này, không dịch `name` */
+            systemKey?: string | null;
+            /** @description Tổng tiền của danh mục trong kỳ, string */
+            amount: string;
+            /** @description Số phiếu đã duyệt được cộng */
+            count: number;
+            /** @description Tỷ trọng % trên tổng của cùng chiều tiền */
+            sharePercent: number;
+        };
+        FinanceCategoryBreakdownDto: {
+            /** @description Tổng của cả chiều tiền — khớp `revenue`/`cost` ở summary */
+            total: string;
+            items: components["schemas"]["FinanceCategoryBreakdownItemDto"][];
+        };
+        VehicleProfitItemDto: {
+            vehicleId: string;
+            vehicleName: string;
+            plateNumber?: string | null;
+            /** @description Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ */
+            trips: number;
+            /** @description Doanh thu gắn xe trong kỳ (đã loại cọc), string */
+            revenue: string;
+            /** @description Chi phí gắn xe trong kỳ, string */
+            cost: string;
+            /** @description revenue − cost, string */
+            profit: string;
+            /** @description Biên %. `null` khi xe chưa có doanh thu trong kỳ */
+            profitMarginPercent?: number | null;
+        };
+        VehicleProfitPageDto: {
+            data: components["schemas"]["VehicleProfitItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
+        };
+        CustomerRevenueItemDto: {
+            tenantCustomerId: string;
+            fullName: string;
+            /** @description Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ */
+            trips: number;
+            /** @description Tiền THẬT đã thu của khách này trong kỳ (phiếu đã duyệt, đã loại tiền cọc). KHÁC "tổng giá trị thuê" ở sổ khách — con số đó tính trên giá trị đơn đã chốt, kể cả phần chưa thu. */
+            revenue: string;
+            /** @description Tỷ trọng % trên doanh thu CẢ KỲ (kể cả phần chưa gắn khách) — cùng mẫu số với thẻ "Doanh thu". `null` khi kỳ chưa có doanh thu nào. */
+            sharePercent?: number | null;
+        };
+        CustomerRevenuePageDto: {
+            data: components["schemas"]["CustomerRevenueItemDto"][];
+            meta: components["schemas"]["PaginationMetaDto"];
         };
         BookingDriverSummaryDto: {
             id: string;
@@ -27114,6 +27303,8 @@ export interface operations {
                 categoryId?: string;
                 /** @description Lọc theo nguồn sinh phiếu */
                 source?: "manual" | "payment" | "deposit" | "deposit_refund" | "maintenance";
+                /** @description `business` = tiền thật của gian hàng (loại thu/hoàn cọc) · `held_funds` = chỉ tiền giữ hộ. Đây là thứ làm thẻ tổng ở `/manage/finance` khớp từng đồng với danh sách nó dẫn tới. */
+                sourceGroup?: "business" | "held_funds";
                 /** @description Lọc theo hình thức */
                 paymentMethod?: "cash" | "bank_transfer" | "qr" | "card" | "other";
                 /** @description Lọc theo đơn thuê */
@@ -27414,6 +27605,8 @@ export interface operations {
                 categoryId?: string;
                 /** @description Lọc theo nguồn sinh phiếu */
                 source?: "manual" | "payment" | "deposit" | "deposit_refund" | "maintenance";
+                /** @description `business` = tiền thật của gian hàng (loại thu/hoàn cọc) · `held_funds` = chỉ tiền giữ hộ. Đây là thứ làm thẻ tổng ở `/manage/finance` khớp từng đồng với danh sách nó dẫn tới. */
+                sourceGroup?: "business" | "held_funds";
                 /** @description Lọc theo hình thức */
                 paymentMethod?: "cash" | "bank_transfer" | "qr" | "card" | "other";
                 /** @description Lọc theo đơn thuê */
@@ -28317,6 +28510,10 @@ export interface operations {
                 from?: string;
                 /** @description Đến ngày (ISO) */
                 to?: string;
+                /** @description Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một mệnh đề lọc — nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan. */
+                vehicleId?: string;
+                /** @description Thu hẹp báo cáo về MỘT khách của gian hàng. */
+                tenantCustomerId?: string;
             };
             header?: never;
             path?: never;
@@ -28333,6 +28530,550 @@ export interface operations {
                     "application/json": {
                         data: components["schemas"]["FinanceSummaryDto"];
                     };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    FinanceOverviewController_series: {
+        parameters: {
+            query?: {
+                /** @description Từ ngày — `YYYY-MM-DD` (trọn ngày giờ VN) hoặc ISO đầy đủ */
+                from?: string;
+                /** @description Đến ngày — cùng quy ước với `from` */
+                to?: string;
+                /** @description Độ mịn MONG MUỐN. Server tự nâng bậc khi kỳ quá dài và trả lại giá trị đã dùng ở `granularity`. */
+                granularity?: "day" | "week" | "month";
+                /** @description Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một mệnh đề lọc — nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan. */
+                vehicleId?: string;
+                /** @description Thu hẹp báo cáo về MỘT khách của gian hàng. */
+                tenantCustomerId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["FinanceSeriesDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    FinanceOverviewController_byCategory: {
+        parameters: {
+            query: {
+                /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
+                from?: string;
+                /** @description Đến ngày */
+                to?: string;
+                /** @description Cơ cấu doanh thu hay cơ cấu chi phí */
+                type: "income" | "expense";
+                /** @description Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một mệnh đề lọc — nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan. */
+                vehicleId?: string;
+                /** @description Thu hẹp báo cáo về MỘT khách của gian hàng. */
+                tenantCustomerId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["FinanceCategoryBreakdownDto"];
+                    };
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    FinanceOverviewController_byVehicle: {
+        parameters: {
+            query?: {
+                /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
+                from?: string;
+                /** @description Đến ngày */
+                to?: string;
+                /** @description Luôn giảm dần — câu hỏi của bảng này là "xe nào nhất" */
+                sort?: "profit" | "revenue" | "cost" | "trips";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleProfitPageDto"];
+                };
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             *
+             *     Mã lỗi: `UNAUTHENTICATED`
+             */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.
+             *
+             *     Mã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "MISSING_PERMISSION",
+                     *         "message": "Tài khoản không có quyền thực hiện thao tác này"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    FinanceOverviewController_byCustomer: {
+        parameters: {
+            query?: {
+                /** @description Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ */
+                from?: string;
+                /** @description Đến ngày */
+                to?: string;
+                /** @description Luôn giảm dần — câu hỏi của bảng này là "khách nào nhất" */
+                sort?: "revenue" | "trips";
+                page?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Thành công */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerRevenuePageDto"];
                 };
             };
             /**

@@ -89,7 +89,7 @@
 | # | Khoảng trống | Vì sao quan trọng | Mức | Công |
 | --- | --- | --- | --- | --- |
 | X-01 | **Dark theme cho portal** | Ops làm ca tối; UI cũ vốn dark. Token đã sẵn kiến trúc | P1 | M |
-| X-02 | **Thang màu ngữ nghĩa + màu data-viz** | Đang pha `rgba()` tại chỗ; biểu đồ mượn màu trạng thái gây hiểu nhầm | P1 | S |
+| X-02 | **Thang màu ngữ nghĩa + màu data-viz** | 🟡 **Phần data-viz ĐÃ TRẢ 25/08**: `--xp-color-viz-1..5` + ba bí danh vai (`revenue`/`cost`/`profit`), năm bậc đã qua bộ kiểm so-mọi-cặp (không tìm được bậc thứ sáu giữ được điều đó). **Còn lại**: thang `-bg`/`-border`/`-text` cho màu ngữ nghĩa, và bộ giá trị viz RIÊNG cho dark (viz-4/viz-5 tụt dưới 3:1 trên nền tối) | P1 | S |
 | X-03 | **Bảng dữ liệu dùng chung** | Mỗi feature tự dựng bảng + filter; `use-url-filters`/`common/pagination` mới dùng ở 3 slice, 10 hook + 19 service cũ vẫn giữ bản copy | P1 | M |
 | X-04 | **Command palette (⌘K)** | 15+ mục menu, nghiệp vụ lặp lại hằng ngày. Đây là thứ khiến Linear nhanh | P2 | M |
 | X-05 | **Trạng thái rỗng có dạy việc** | Nhiều màn rỗng chỉ nói "không có dữ liệu" | P1 | S |

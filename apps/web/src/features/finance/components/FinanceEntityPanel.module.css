@@ -1,0 +1,43 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.ledgerLink {
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.periods {
+  /* Sáu kỳ không đứng vừa hồ sơ xe ở màn hẹp — cuộn ngang thay vì xuống dòng lởm chởm. */
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}

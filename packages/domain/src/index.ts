@@ -45,6 +45,7 @@ export {
   buildPeriodRange,
   dayjs,
   type Dayjs,
+  type PeriodKey,
   type RentalDurationParts,
 } from './datetime';
 

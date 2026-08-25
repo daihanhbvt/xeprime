@@ -1,4 +1,5 @@
 import { RECEIPT_SOURCE, RECEIPT_TYPE, isAutoReceipt } from '@xeprime/types';
+import type { PeriodKey } from '@/lib/datetime';
 import { DEFAULT_PAGE_SIZE } from '@/constants/filters';
 
 export const RECEIPTS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
@@ -32,3 +33,30 @@ export const RECEIPT_PERIOD_VALUES = [
 ] as const satisfies readonly ReceiptPeriod[];
 
 export { RECEIPT_TYPE, RECEIPT_SOURCE, isAutoReceipt };
+
+/**
+ * Kỳ xem nhanh của màn TỔNG QUAN DOANH THU — rộng hơn sổ Thu-Chi.
+ *
+ * Sổ là nơi tra một phiếu cụ thể nên bốn kỳ ngắn là đủ; tổng quan là nơi hỏi "quý này lãi
+ * bao nhiêu", nên có thêm quý và năm. Cùng một hàm `buildPeriodRange`, khác tập lựa chọn —
+ * không đẻ ra bảng ngày thứ hai.
+ */
+export const FINANCE_OVERVIEW_PERIOD_VALUES = [
+  RECEIPT_PERIOD.TODAY,
+  RECEIPT_PERIOD.THIS_WEEK,
+  RECEIPT_PERIOD.THIS_MONTH,
+  RECEIPT_PERIOD.LAST_MONTH,
+  'this_quarter',
+  'this_year',
+] as const satisfies readonly PeriodKey[];
+
+/**
+ * Kỳ mặc định khi URL chưa có `from`/`to`.
+ *
+ * Một biểu đồ KHÔNG CÓ BIÊN là một biểu đồ không vẽ được (`generate_series` cần hai đầu), và
+ * "toàn bộ lịch sử" cũng không phải câu hỏi ai hỏi khi mở màn tài chính buổi sáng.
+ */
+export const FINANCE_OVERVIEW_DEFAULT_PERIOD: PeriodKey = RECEIPT_PERIOD.THIS_MONTH;
+
+/** Số dòng mỗi trang của bảng hiệu quả theo xe — một đội xe vài chục chiếc vừa đúng một trang. */
+export const VEHICLE_PROFIT_PAGE_SIZE = 10;

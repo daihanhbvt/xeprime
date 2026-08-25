@@ -72,6 +72,22 @@
    */
   --xp-color-price: var(--xp-color-primary-active);
 
+  /* ─── Màu dữ liệu (data-viz) ──────────────────────────────────────────────
+     Tách hẳn khỏi màu ngữ nghĩa: cột "Chi phí" màu đỏ sẽ bị đọc thành "có lỗi".
+     Năm bậc đã qua bộ kiểm (dải sáng · chroma · mù màu · mắt thường · tương phản)
+     ở chế độ so MỌI CẶP. Dùng theo thứ tự 1→5, không xoay vòng — lý do đầy đủ và
+     ghi chú cho dark theme nằm ở `XP_TOKENS` trong ../tokens/index.ts. */
+  --xp-color-viz-1: #00998c;
+  --xp-color-viz-2: #7c3aed;
+  --xp-color-viz-3: #b45309;
+  --xp-color-viz-4: #0369a1;
+  --xp-color-viz-5: #9d174d;
+  --xp-color-viz-revenue: var(--xp-color-viz-1);
+  --xp-color-viz-cost: var(--xp-color-viz-3);
+  --xp-color-viz-profit: var(--xp-color-viz-2);
+  --xp-color-viz-grid: #ece8e1;
+  --xp-color-viz-axis: #9e9890;
+
   /* ─── Vỏ portal (sidebar tối — P1 chốt "tối", áp dụng ở Wave 1D-B) ───── */
   --xp-shell-sidebar-bg: #1e1b16;
   --xp-shell-sidebar-text: #e8e4dd;

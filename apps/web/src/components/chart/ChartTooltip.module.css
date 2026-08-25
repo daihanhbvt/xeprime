@@ -1,0 +1,53 @@
+.tooltip {
+  min-width: 180px;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  background: var(--xp-color-bg-elevated);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  box-shadow: var(--xp-shadow-md);
+}
+
+.title {
+  margin-bottom: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--xp-font-size-body-sm);
+  /* Chữ mang MỰC thường, không mang màu series — màu đã nằm ở chấm bên trái. */
+  color: var(--xp-color-text-secondary);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--xp-swatch);
+}
+
+.value {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}

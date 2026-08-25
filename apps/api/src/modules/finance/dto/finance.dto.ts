@@ -1,11 +1,18 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   BOOKING_STATUS_VALUES,
+  CUSTOMER_REVENUE_SORT_VALUES,
+  DEFAULT_CUSTOMER_REVENUE_SORT,
+  DEFAULT_VEHICLE_PROFIT_SORT,
   FINANCE_CATEGORY_TYPE_VALUES,
+  FINANCE_GRANULARITY,
+  FINANCE_GRANULARITY_VALUES,
   PAYMENT_METHOD_VALUES,
+  RECEIPT_SOURCE_GROUP_VALUES,
   RECEIPT_SOURCE_VALUES,
   RECEIPT_STATUS_VALUES,
   RECEIPT_TYPE_VALUES,
+  VEHICLE_PROFIT_SORT_VALUES,
 } from '@xeprime/types';
 import { Type } from 'class-transformer';
 import {
@@ -88,6 +95,16 @@ export class ReceiptListQueryDto {
   @IsOptional()
   @IsIn(RECEIPT_SOURCE_VALUES)
   source?: string;
+
+  @ApiPropertyOptional({
+    enum: RECEIPT_SOURCE_GROUP_VALUES,
+    description:
+      '`business` = tiền thật của gian hàng (loại thu/hoàn cọc) · `held_funds` = chỉ tiền giữ hộ. ' +
+      'Đây là thứ làm thẻ tổng ở `/manage/finance` khớp từng đồng với danh sách nó dẫn tới.',
+  })
+  @IsOptional()
+  @IsIn(RECEIPT_SOURCE_GROUP_VALUES)
+  sourceGroup?: string;
 
   @ApiPropertyOptional({ enum: PAYMENT_METHOD_VALUES, description: 'Lọc theo hình thức' })
   @IsOptional()
@@ -340,14 +357,335 @@ export class FinanceSummaryQueryDto {
   @IsOptional()
   @IsDateString()
   to?: string;
+  @ApiPropertyOptional({
+    description:
+      'Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một ' +
+      'mệnh đề lọc — nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan.',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  vehicleId?: string;
+
+  @ApiPropertyOptional({ description: 'Thu hẹp báo cáo về MỘT khách của gian hàng.' })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  tenantCustomerId?: string;
 }
 
+/**
+ * Ba lớp tiền của một kỳ — cùng một sổ, ba câu hỏi khác nhau.
+ *
+ * ```
+ * DÒNG TIỀN QUỸ       totalIncome / totalExpense / balance   "tôi cầm bao nhiêu tiền trong kỳ"
+ * KẾT QUẢ KINH DOANH  revenue / cost / profit                "kỳ này tôi lãi bao nhiêu"
+ * TẠI THỜI ĐIỂM NÀY   depositHeld / totalDebt                không phụ thuộc kỳ đã chọn
+ * ```
+ *
+ * Lớp một GỒM tiền cọc — tiền có vào két thật, nên con số đó không sai. Lớp hai LOẠI tiền cọc
+ * theo ADR 0013 §3: cọc là tài sản giữ hộ, cộng vào doanh thu thì doanh thu phình đúng bằng số
+ * cọc đang cầm.
+ *
+ * Giữ nguyên tên ba trường cũ (`totalIncome`/`totalExpense`/`balance`) vì nghĩa của chúng vẫn
+ * đúng — thứ sai trước đây là NHÃN trên giao diện gọi chúng là "doanh thu".
+ */
 export class FinanceSummaryDto {
-  @ApiProperty({ description: 'Tổng thu (phiếu income đã duyệt), string' }) totalIncome!: string;
-  @ApiProperty({ description: 'Tổng chi (phiếu expense đã duyệt), string' }) totalExpense!: string;
-  @ApiProperty({ description: 'Cân đối = thu − chi, string' }) balance!: string;
-  @ApiProperty({ description: 'Tổng công nợ các đơn còn nợ, string' }) totalDebt!: string;
+  @ApiProperty({ description: 'DÒNG TIỀN QUỸ — tổng thu mọi phiếu đã duyệt, GỒM cọc. String' })
+  totalIncome!: string;
+  @ApiProperty({ description: 'DÒNG TIỀN QUỸ — tổng chi mọi phiếu đã duyệt, GỒM hoàn cọc' })
+  totalExpense!: string;
+  @ApiProperty({ description: 'Cân đối quỹ = thu − chi, string' }) balance!: string;
+
+  @ApiProperty({ description: 'KINH DOANH — doanh thu, đã LOẠI tiền giữ hộ (ADR 0013 §3)' })
+  revenue!: string;
+  @ApiProperty({ description: 'KINH DOANH — chi phí, đã loại hoàn cọc' }) cost!: string;
+  @ApiProperty({
+    description:
+      'Phần của `cost` KHÔNG gắn xe nào (marketing, văn phòng…). Bảng hiệu quả theo xe cần nó để ' +
+      'giải thích vì sao tổng chi phí các dòng nhỏ hơn thẻ "Chi phí" — đây là số của KỲ, không ' +
+      'đổi theo trang, nên nó ở đây chứ không nằm trong trang dữ liệu.',
+  })
+  unassignedCost!: string;
+  @ApiProperty({
+    description:
+      'Phần của `revenue` KHÔNG gắn khách nào — phiếu thu tay không liên kết đơn thuê. Bảng doanh ' +
+      'thu theo khách cần nó vì cùng lý do: thiếu con số này thì tổng các dòng nhỏ hơn thẻ ' +
+      '"Doanh thu" và phần chênh không có chỗ nào giải thích.',
+  })
+  unassignedRevenue!: string;
+  @ApiProperty({
+    description:
+      'KINH DOANH — lãi TIỀN MẶT theo sổ = doanh thu − chi phí. CHƯA trừ khấu hao/lãi vay',
+  })
+  profit!: string;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Biên lợi nhuận %. `null` khi chưa có doanh thu — không phải 0',
+  })
+  profitMarginPercent!: number | null;
+
+  @ApiProperty({
+    description: 'TẠI THỜI ĐIỂM NÀY — cọc đã thu chưa hoàn, không lọc theo kỳ. String',
+  })
+  depositHeld!: string;
+  @ApiProperty({ description: 'Số đơn còn giữ cọc' }) depositHeldBookings!: number;
+
+  @ApiProperty({ description: 'TẠI THỜI ĐIỂM NÀY — tổng công nợ các đơn còn nợ, string' })
+  totalDebt!: string;
   @ApiProperty({ description: 'Số đơn còn nợ' }) debtBookings!: number;
+
+  @ApiProperty({
+    description:
+      'Số chuyến có ngày NHẬN XE rơi trong kỳ (không tính đơn đã huỷ). Đi cùng ba lớp tiền vì ' +
+      '"kỳ này chạy bao nhiêu chuyến" là mẫu số của mọi câu hỏi về doanh thu.',
+  })
+  trips!: number;
+}
+
+// --- Báo cáo doanh thu -----------------------------------------------------
+
+export class FinanceSeriesQueryDto {
+  @ApiPropertyOptional({ description: 'Từ ngày — `YYYY-MM-DD` (trọn ngày giờ VN) hoặc ISO đầy đủ' })
+  @IsOptional()
+  @IsDateString()
+  from?: string;
+
+  @ApiPropertyOptional({ description: 'Đến ngày — cùng quy ước với `from`' })
+  @IsOptional()
+  @IsDateString()
+  to?: string;
+
+  @ApiPropertyOptional({
+    enum: FINANCE_GRANULARITY_VALUES,
+    default: FINANCE_GRANULARITY.DAY,
+    description:
+      'Độ mịn MONG MUỐN. Server tự nâng bậc khi kỳ quá dài và trả lại giá trị đã dùng ở `granularity`.',
+  })
+  @IsOptional()
+  @IsIn(FINANCE_GRANULARITY_VALUES)
+  granularity?: string;
+  @ApiPropertyOptional({
+    description:
+      'Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một ' +
+      'mệnh đề lọc — nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan.',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  vehicleId?: string;
+
+  @ApiPropertyOptional({ description: 'Thu hẹp báo cáo về MỘT khách của gian hàng.' })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  tenantCustomerId?: string;
+}
+
+export class FinanceSeriesBucketDto {
+  @ApiProperty({ description: 'Mốc đầu bucket, `YYYY-MM-DD` theo NGÀY LỊCH VIỆT NAM' })
+  bucket!: string;
+  @ApiProperty({ description: 'Doanh thu trong bucket (đã loại cọc), string' }) revenue!: string;
+  @ApiProperty({ description: 'Chi phí trong bucket (đã loại hoàn cọc), string' }) cost!: string;
+  @ApiProperty({ description: 'revenue − cost, string' }) profit!: string;
+  @ApiProperty({ description: 'Tiền vào quỹ, GỒM cọc, string' }) cashIn!: string;
+  @ApiProperty({ description: 'Tiền ra quỹ, GỒM hoàn cọc, string' }) cashOut!: string;
+}
+
+export class FinanceSeriesDto {
+  @ApiProperty({
+    enum: FINANCE_GRANULARITY_VALUES,
+    description: 'Độ mịn THỰC SỰ đã dùng — có thể khác thứ client xin nếu kỳ quá dài',
+  })
+  granularity!: string;
+  @ApiProperty({
+    type: [FinanceSeriesBucketDto],
+    description: 'Đủ mọi bucket trong kỳ, kể cả bucket không có phiếu nào (giá trị 0)',
+  })
+  buckets!: FinanceSeriesBucketDto[];
+}
+
+export class FinanceCategoryBreakdownQueryDto {
+  @ApiPropertyOptional({ description: 'Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ' })
+  @IsOptional()
+  @IsDateString()
+  from?: string;
+
+  @ApiPropertyOptional({ description: 'Đến ngày' })
+  @IsOptional()
+  @IsDateString()
+  to?: string;
+
+  @ApiProperty({ enum: RECEIPT_TYPE_VALUES, description: 'Cơ cấu doanh thu hay cơ cấu chi phí' })
+  @IsIn(RECEIPT_TYPE_VALUES)
+  type!: string;
+  @ApiPropertyOptional({
+    description:
+      'Thu hẹp báo cáo về MỘT chiếc xe. Cùng phép tính với báo cáo toàn gian hàng, chỉ thêm một ' +
+      'mệnh đề lọc — nên con số ở hồ sơ xe không thể lệch dòng tương ứng ở bảng tổng quan.',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  vehicleId?: string;
+
+  @ApiPropertyOptional({ description: 'Thu hẹp báo cáo về MỘT khách của gian hàng.' })
+  @IsOptional()
+  @IsString()
+  @Length(26, 26)
+  tenantCustomerId?: string;
+}
+
+export class FinanceCategoryBreakdownItemDto {
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: '`null` = phiếu chưa gán danh mục — gom thành một dòng "Chưa phân loại"',
+  })
+  categoryId!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Tên trong DB (tiếng Việt). `null` với dòng chưa phân loại',
+  })
+  name!: string | null;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Khoá danh mục hệ thống — web dịch NHÃN từ khoá này, không dịch `name`',
+  })
+  systemKey!: string | null;
+  @ApiProperty({ description: 'Tổng tiền của danh mục trong kỳ, string' }) amount!: string;
+  @ApiProperty({ description: 'Số phiếu đã duyệt được cộng' }) count!: number;
+  @ApiProperty({ description: 'Tỷ trọng % trên tổng của cùng chiều tiền' }) sharePercent!: number;
+}
+
+export class FinanceCategoryBreakdownDto {
+  @ApiProperty({ description: 'Tổng của cả chiều tiền — khớp `revenue`/`cost` ở summary' })
+  total!: string;
+  @ApiProperty({ type: [FinanceCategoryBreakdownItemDto] })
+  items!: FinanceCategoryBreakdownItemDto[];
+}
+
+export class VehicleProfitQueryDto {
+  @ApiPropertyOptional({ description: 'Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ' })
+  @IsOptional()
+  @IsDateString()
+  from?: string;
+
+  @ApiPropertyOptional({ description: 'Đến ngày' })
+  @IsOptional()
+  @IsDateString()
+  to?: string;
+
+  @ApiPropertyOptional({
+    enum: VEHICLE_PROFIT_SORT_VALUES,
+    default: DEFAULT_VEHICLE_PROFIT_SORT,
+    description: 'Luôn giảm dần — câu hỏi của bảng này là "xe nào nhất"',
+  })
+  @IsOptional()
+  @IsIn(VEHICLE_PROFIT_SORT_VALUES)
+  sort?: string;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: DEFAULT_LIMIT, minimum: 1, maximum: MAX_LIMIT })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_LIMIT)
+  limit?: number;
+}
+
+export class VehicleProfitItemDto {
+  @ApiProperty() vehicleId!: string;
+  @ApiProperty() vehicleName!: string;
+  @ApiPropertyOptional({ type: String, nullable: true }) plateNumber!: string | null;
+  @ApiProperty({ description: 'Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ' })
+  trips!: number;
+  @ApiProperty({ description: 'Doanh thu gắn xe trong kỳ (đã loại cọc), string' }) revenue!: string;
+  @ApiProperty({ description: 'Chi phí gắn xe trong kỳ, string' }) cost!: string;
+  @ApiProperty({ description: 'revenue − cost, string' }) profit!: string;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description: 'Biên %. `null` khi xe chưa có doanh thu trong kỳ',
+  })
+  profitMarginPercent!: number | null;
+}
+
+export class VehicleProfitPageDto {
+  @ApiProperty({ type: [VehicleProfitItemDto] }) data!: VehicleProfitItemDto[];
+  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
+}
+
+export class CustomerRevenueQueryDto {
+  @ApiPropertyOptional({ description: 'Từ ngày — `YYYY-MM-DD` hoặc ISO đầy đủ' })
+  @IsOptional()
+  @IsDateString()
+  from?: string;
+
+  @ApiPropertyOptional({ description: 'Đến ngày' })
+  @IsOptional()
+  @IsDateString()
+  to?: string;
+
+  @ApiPropertyOptional({
+    enum: CUSTOMER_REVENUE_SORT_VALUES,
+    default: DEFAULT_CUSTOMER_REVENUE_SORT,
+    description: 'Luôn giảm dần — câu hỏi của bảng này là "khách nào nhất"',
+  })
+  @IsOptional()
+  @IsIn(CUSTOMER_REVENUE_SORT_VALUES)
+  sort?: string;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: DEFAULT_LIMIT, minimum: 1, maximum: MAX_LIMIT })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_LIMIT)
+  limit?: number;
+}
+
+export class CustomerRevenueItemDto {
+  @ApiProperty() tenantCustomerId!: string;
+  @ApiProperty() fullName!: string;
+  @ApiProperty({ description: 'Số chuyến có ngày NHẬN XE rơi trong kỳ, không tính đơn đã huỷ' })
+  trips!: number;
+  @ApiProperty({
+    description:
+      'Tiền THẬT đã thu của khách này trong kỳ (phiếu đã duyệt, đã loại tiền cọc). KHÁC "tổng ' +
+      'giá trị thuê" ở sổ khách — con số đó tính trên giá trị đơn đã chốt, kể cả phần chưa thu.',
+  })
+  revenue!: string;
+  @ApiPropertyOptional({
+    type: Number,
+    nullable: true,
+    description:
+      'Tỷ trọng % trên doanh thu CẢ KỲ (kể cả phần chưa gắn khách) — cùng mẫu số với thẻ ' +
+      '"Doanh thu". `null` khi kỳ chưa có doanh thu nào.',
+  })
+  sharePercent!: number | null;
+}
+
+export class CustomerRevenuePageDto {
+  @ApiProperty({ type: [CustomerRevenueItemDto] }) data!: CustomerRevenueItemDto[];
+  @ApiProperty({ type: PaginationMetaDto }) meta!: PaginationMetaDto;
 }
 
 /**

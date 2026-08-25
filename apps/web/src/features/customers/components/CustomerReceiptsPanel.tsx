@@ -2,6 +2,7 @@
 
 import { Alert, Button, List, Skeleton } from 'antd';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import {
   RECEIPT_SOURCE_META,
   RECEIPT_STATUS_META,
@@ -11,6 +12,7 @@ import {
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { receiptsPath } from '@/constants/routes';
+import { FinanceEntityPanel } from '@/features/finance/components/FinanceEntityPanel';
 import { ReceiptAmount } from '@/features/finance/components/ReceiptAmount';
 import { useReceipts } from '@/features/finance/hooks/use-receipts';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -20,84 +22,91 @@ import styles from './CustomerReceiptsPanel.module.css';
 const PREVIEW_LIMIT = 10;
 
 /**
- * Thu chi của MỘT khách — tab thật, không phải một đường dẫn.
+ * Tiền của MỘT khách — tab thật, không phải một đường dẫn.
  *
- * Khác chi tiết đơn và hồ sơ xe (đã có bề mặt tiền riêng nên chỉ cần link), sổ khách trước nay
- * **không có chỗ nào** nói về tiền của khách đó ngoài các con số tổng. Cột `receipts.tenant_customer_id`
- * và index của nó có từ S-01 mà không đường ghi nào điền — epic nối tiền điền, và đây là nơi nó
- * trả lại giá trị.
+ * Hai tầng, cố ý xếp theo thứ tự này:
+ *  1. **Doanh thu theo kỳ** (`FinanceEntityPanel`) — "khách này mang lại bao nhiêu tiền THẬT
+ *     trong kỳ", cộng trên phiếu đã duyệt, cùng phép tính với màn Tổng quan doanh thu.
+ *  2. **Danh sách phiếu gần nhất** — bằng chứng đằng sau con số đó.
+ *
+ * Con số ở đây KHÁC ba thẻ "Tổng giá trị thuê / Đã thu / Còn nợ" phía trên hồ sơ, và khác một
+ * cách có chủ đích: ba thẻ đó tính trên ĐƠN (luỹ kế, để đi đòi nợ), còn khối này tính trên TIỀN
+ * THẬT ĐÃ VÀO theo kỳ. Hai câu hỏi khác nhau nên hai con số — nhãn của từng khối nói rõ điều đó.
  *
  * Gác quyền `finance.view` ở nơi gọi: tiền là quyền RIÊNG trong sổ khách (luật của S-01).
  */
 export function CustomerReceiptsPanel({ customerId }: { customerId: string }) {
+  const t = useTranslations('Customers.finance');
   const fmt = useAppFormat();
   const { data, isLoading, isError, refetch } = useReceipts({
     tenantCustomerId: customerId,
     limit: PREVIEW_LIMIT,
   });
 
-  if (isLoading) return <Skeleton active paragraph={{ rows: 4 }} title={false} />;
-
-  if (isError) {
-    return (
-      <Alert
-        type="error"
-        showIcon
-        message="Không tải được phiếu thu chi của khách"
-        action={
-          <Button size="small" onClick={() => void refetch()}>
-            Thử lại
-          </Button>
-        }
-      />
-    );
-  }
-
   const items = data?.items ?? [];
   const total = data?.meta.total ?? 0;
 
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        variant="empty"
-        title="Chưa có phiếu thu chi nào gắn với khách này"
-        description="Phiếu sẽ tự xuất hiện ở đây khi bạn thu tiền, thu cọc hoặc hoàn cọc cho đơn của khách."
-      />
-    );
-  }
-
   return (
     <div className={styles.panel}>
-      <List
-        size="small"
-        dataSource={items}
-        renderItem={(row) => (
-          <List.Item>
-            <div className={styles.row}>
-              <ReceiptAmount type={row.type} amount={row.amount} />
-              <span className={styles.meta}>
-                {fmt.date(row.occurredAt)} · {row.categoryName ?? 'Chưa phân loại'}
-                {row.bookingCode ? ` · ${row.bookingCode}` : ''}
-              </span>
-              <StatusTag
-                value={row.source as ReceiptSource}
-                meta={RECEIPT_SOURCE_META}
-                group="receiptSource"
-              />
-              <StatusTag
-                value={row.status as ReceiptStatus}
-                meta={RECEIPT_STATUS_META}
-                group="receiptStatus"
-              />
-            </div>
-          </List.Item>
+      <FinanceEntityPanel scope={{ tenantCustomerId: customerId }} kind="customer" />
+
+      <section className={styles.receipts} aria-label={t('list.title')}>
+        <h3 className={styles.listTitle}>{t('list.title')}</h3>
+
+        {isLoading ? (
+          <Skeleton active paragraph={{ rows: 4 }} title={false} />
+        ) : isError ? (
+          <Alert
+            type="error"
+            showIcon
+            message={t('list.error')}
+            action={
+              <Button size="small" onClick={() => void refetch()}>
+                {t('list.retry')}
+              </Button>
+            }
+          />
+        ) : items.length === 0 ? (
+          <EmptyState
+            variant="empty"
+            title={t('list.emptyTitle')}
+            description={t('list.emptyHint')}
+          />
+        ) : (
+          <>
+            <List
+              size="small"
+              dataSource={items}
+              renderItem={(row) => (
+                <List.Item>
+                  <div className={styles.row}>
+                    <ReceiptAmount type={row.type} amount={row.amount} />
+                    <span className={styles.meta}>
+                      {fmt.date(row.occurredAt)} · {row.categoryName ?? t('list.uncategorized')}
+                      {row.bookingCode ? ` · ${row.bookingCode}` : ''}
+                    </span>
+                    <StatusTag
+                      value={row.source as ReceiptSource}
+                      meta={RECEIPT_SOURCE_META}
+                      group="receiptSource"
+                    />
+                    <StatusTag
+                      value={row.status as ReceiptStatus}
+                      meta={RECEIPT_STATUS_META}
+                      group="receiptStatus"
+                    />
+                  </div>
+                </List.Item>
+              )}
+            />
+            {total > items.length ? (
+              <Link href={receiptsPath.filtered({ tenantCustomerId: customerId })}>
+                <Button type="link">{t('list.viewAll', { count: total })}</Button>
+              </Link>
+            ) : null}
+          </>
         )}
-      />
-      {total > items.length ? (
-        <Link href={receiptsPath.filtered({ tenantCustomerId: customerId })}>
-          <Button type="link">Xem tất cả {total} phiếu</Button>
-        </Link>
-      ) : null}
+      </section>
     </div>
   );
 }

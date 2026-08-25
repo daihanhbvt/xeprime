@@ -204,6 +204,11 @@ export const queryKeys = {
   finance: {
     all: ['finance'] as const,
     summary: (params: QueryParams) => ['finance', 'summary', params] as const,
+    /** Chuỗi thu-chi theo thời gian — khoá mang cả độ mịn vì đổi độ mịn là đổi dữ liệu. */
+    series: (params: QueryParams) => ['finance', 'series', params] as const,
+    byCategory: (params: QueryParams) => ['finance', 'by-category', params] as const,
+    byVehicle: (params: QueryParams) => ['finance', 'by-vehicle', params] as const,
+    byCustomer: (params: QueryParams) => ['finance', 'by-customer', params] as const,
   },
   dashboard: {
     all: ['dashboard'] as const,

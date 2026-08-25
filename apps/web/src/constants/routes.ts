@@ -149,16 +149,26 @@ export const contractPath = {
 };
 
 /**
- * Sổ Thu-Chi đã LỌC SẴN — đường đi từ một đơn / một xe / một khách sang phần tiền của nó.
+ * Sổ Thu-Chi đã LỌC SẴN — đường đi từ một đơn / một xe / một khách / một con số tổng sang đúng
+ * tập phiếu sinh ra nó.
  *
- * Ba tham số này không có ô nào trên thanh lọc: chúng chỉ đến từ đây. Dựng chuỗi ở một chỗ để
- * ba màn nguồn không tự ghép query khác nhau rồi lệch tên tham số với backend.
+ * Ba tham số đối tượng (`bookingId`/`vehicleId`/`tenantCustomerId`) không có ô nào trên thanh
+ * lọc: chúng chỉ đến từ đây. Bốn tham số còn lại có ô, nhưng thẻ tổng ở `/manage/finance` phải
+ * ghi CHÍNH XÁC bộ đó — nhất là `sourceGroup` và `status`: thiếu chúng, bấm vào thẻ "Doanh thu"
+ * sẽ mở ra một sổ cộng cả tiền cọc lẫn phiếu chưa duyệt, tức thẻ nói một số và danh sách nó dẫn
+ * tới nói số khác. Dựng chuỗi ở một chỗ để không màn nào tự ghép query rồi lệch tên tham số.
  */
 export const receiptsPath = {
   filtered: (params: {
     bookingId?: string;
     vehicleId?: string;
     tenantCustomerId?: string;
+    categoryId?: string;
+    type?: string;
+    status?: string;
+    sourceGroup?: string;
+    from?: string;
+    to?: string;
   }): string => {
     const query = new URLSearchParams(
       Object.entries(params).filter(([, value]) => Boolean(value)) as [string, string][],

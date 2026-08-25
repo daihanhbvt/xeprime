@@ -1,0 +1,49 @@
+.frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-md);
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.title {
+  font-size: var(--xp-font-size-h4);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.description {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.body {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Khối chờ chiếm đúng chỗ của biểu đồ để nội dung dưới không nhảy khi dữ liệu về (CLS). */
+.skeleton {
+  width: 100% !important;
+  height: 260px !important;
+}

@@ -117,6 +117,79 @@ export function isHeldFundsSource(source: string): boolean {
   return HELD_FUNDS_RECEIPT_SOURCES.includes(source as ReceiptSource);
 }
 
+/**
+ * NHÓM nguồn phiếu — bộ lọc để một danh sách phiếu cộng ra ĐÚNG con số của một thẻ tổng.
+ *
+ * `HELD_FUNDS_RECEIPT_SOURCES` nói được "khoản này có phải tiền giữ hộ không", nhưng bộ lọc của
+ * `/receipts` chỉ nhận MỘT `source`. Không có nhóm này thì bấm vào thẻ "Doanh thu" sẽ mở ra một
+ * sổ cộng cả tiền cọc — thẻ nói một số, danh sách sinh ra nó nói số khác, và người dùng thôi tin
+ * cả hai.
+ */
+export const RECEIPT_SOURCE_GROUP = {
+  /** Tiền THẬT của gian hàng: doanh thu và chi phí. Loại `deposit`/`deposit_refund`. */
+  BUSINESS: 'business',
+  /** Chỉ tiền giữ hộ — thu cọc và hoàn cọc. Dùng cho thẻ "Cọc đang giữ". */
+  HELD_FUNDS: 'held_funds',
+} as const;
+
+export type ReceiptSourceGroup = (typeof RECEIPT_SOURCE_GROUP)[keyof typeof RECEIPT_SOURCE_GROUP];
+export const RECEIPT_SOURCE_GROUP_VALUES = Object.values(
+  RECEIPT_SOURCE_GROUP,
+) as ReceiptSourceGroup[];
+
+/**
+ * Độ mịn của biểu đồ thu-chi theo thời gian.
+ *
+ * SERVER là bên chốt giá trị cuối: một kỳ 400 ngày vẽ theo `day` là 400 cột không đọc được và
+ * một câu truy vấn vô ích, nên server tự nâng bậc rồi TRẢ LẠI giá trị đã dùng. Client hiển thị
+ * đúng thứ server trả, không tự suy.
+ */
+export const FINANCE_GRANULARITY = {
+  DAY: 'day',
+  WEEK: 'week',
+  MONTH: 'month',
+} as const;
+
+export type FinanceGranularity = (typeof FINANCE_GRANULARITY)[keyof typeof FINANCE_GRANULARITY];
+export const FINANCE_GRANULARITY_VALUES = Object.values(
+  FINANCE_GRANULARITY,
+) as FinanceGranularity[];
+
+/** Trần số cột của một biểu đồ — quá ngưỡng thì server nâng bậc độ mịn. */
+export const FINANCE_MAX_BUCKETS = 92;
+
+/** Cách sắp xếp bảng "Hiệu quả theo xe" — luôn giảm dần (câu hỏi là "xe nào nhất"). */
+export const VEHICLE_PROFIT_SORT = {
+  PROFIT: 'profit',
+  REVENUE: 'revenue',
+  COST: 'cost',
+  TRIPS: 'trips',
+} as const;
+
+export type VehicleProfitSort = (typeof VEHICLE_PROFIT_SORT)[keyof typeof VEHICLE_PROFIT_SORT];
+export const VEHICLE_PROFIT_SORT_VALUES = Object.values(
+  VEHICLE_PROFIT_SORT,
+) as VehicleProfitSort[];
+export const DEFAULT_VEHICLE_PROFIT_SORT: VehicleProfitSort = VEHICLE_PROFIT_SORT.PROFIT;
+/**
+ * Cách sắp xếp bảng "Doanh thu theo khách" — luôn giảm dần (câu hỏi là "khách nào nhất").
+ *
+ * Cố ý KHÔNG có "còn nợ": công nợ là con số TẠI THỜI ĐIỂM NÀY, còn bảng này là của một KỲ. Trộn
+ * hai đơn vị thời gian vào cùng một bảng là mời người đọc so hai thứ không so được — ai muốn hỏi
+ * "ai đang nợ tôi" thì `/manage/debts` mới là chỗ trả lời.
+ */
+export const CUSTOMER_REVENUE_SORT = {
+  REVENUE: 'revenue',
+  TRIPS: 'trips',
+} as const;
+
+export type CustomerRevenueSort =
+  (typeof CUSTOMER_REVENUE_SORT)[keyof typeof CUSTOMER_REVENUE_SORT];
+export const CUSTOMER_REVENUE_SORT_VALUES = Object.values(
+  CUSTOMER_REVENUE_SORT,
+) as CustomerRevenueSort[];
+export const DEFAULT_CUSTOMER_REVENUE_SORT: CustomerRevenueSort = CUSTOMER_REVENUE_SORT.REVENUE;
+
 /** Hình thức thanh toán. */
 export const PAYMENT_METHOD = {
   CASH: 'cash',

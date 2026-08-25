@@ -419,7 +419,6 @@
     },
     "performance": {
       "title": "Hiệu suất luỹ kế",
-      "revenue": "Doanh thu",
       "rentals": "Lượt thuê",
       "tripCount": "{count, plural, other {# chuyến}}",
       "activeLabel": "Đơn đang chạy:",

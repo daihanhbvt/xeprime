@@ -419,7 +419,6 @@
     },
     "performance": {
       "title": "All-time performance",
-      "revenue": "Revenue",
       "rentals": "Rentals",
       "tripCount": "{count, plural, one {# trip} other {# trips}}",
       "activeLabel": "Bookings in progress:",

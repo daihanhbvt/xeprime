@@ -182,5 +182,173 @@
         "title": "Không có khoản nợ khớp bộ lọc"
       }
     }
+  },
+  "overview": {
+    "page": {
+      "title": "Tổng quan doanh thu",
+      "subtitle": "Kỳ này lãi hay lỗ, tiền đang cầm bao nhiêu, và xe nào đang làm ra tiền."
+    },
+    "periods": {
+      "label": "Kỳ xem nhanh",
+      "today": "Hôm nay",
+      "this_week": "Tuần này",
+      "this_month": "Tháng này",
+      "last_month": "Tháng trước",
+      "this_quarter": "Quý này",
+      "this_year": "Năm nay"
+    },
+    "filters": {
+      "dateRange": "Khoảng ngày"
+    },
+    "forbidden": {
+      "title": "Không có quyền xem số liệu tài chính",
+      "description": "Bạn cần quyền dưới đây để xem trang này. Liên hệ chủ gian hàng để được cấp quyền.",
+      "home": "Về trang chủ"
+    },
+    "cards": {
+      "error": "Không tải được số liệu tài chính",
+      "business": {
+        "title": "Kết quả kinh doanh",
+        "revenue": "Doanh thu",
+        "cost": "Chi phí",
+        "profit": "Lợi nhuận",
+        "margin": "Biên {value}%",
+        "marginUnknown": "Chưa có doanh thu để tính biên",
+        "unassigned": "Trong đó {value} chưa gắn xe",
+        "note": "Đã loại tiền cọc ra khỏi cả hai vế. Đây là lãi tiền mặt theo sổ — chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ."
+      },
+      "cash": {
+        "title": "Dòng tiền quỹ",
+        "in": "Tiền vào",
+        "out": "Tiền ra",
+        "balance": "Cân đối",
+        "note": "Gồm cả tiền cọc thu và hoàn — đây là số tiền thực sự đi qua tay trong kỳ."
+      },
+      "now": {
+        "title": "Tại thời điểm này",
+        "depositHeld": "Cọc đang giữ",
+        "debt": "Khách còn nợ",
+        "bookings": "{count, plural, other {# đơn}}",
+        "note": "Hai số này không phụ thuộc kỳ đã chọn."
+      }
+    },
+    "chart": {
+      "title": "Thu · chi · lợi nhuận theo thời gian",
+      "description": "Cột là doanh thu và chi phí, đường là lợi nhuận. Đã loại tiền cọc.",
+      "revenue": "Doanh thu",
+      "cost": "Chi phí",
+      "profit": "Lợi nhuận",
+      "error": "Không tải được biểu đồ",
+      "empty": "Kỳ này chưa có khoản thu chi nào",
+      "emptyHint": "Ghi phiếu ở sổ Thu-Chi hoặc thu tiền trên đơn thuê, số liệu sẽ hiện ở đây.",
+      "every": {
+        "label": "Độ mịn biểu đồ",
+        "day": "Ngày",
+        "week": "Tuần",
+        "month": "Tháng"
+      }
+    },
+    "categories": {
+      "incomeTitle": "Doanh thu theo danh mục",
+      "expenseTitle": "Chi phí theo danh mục",
+      "share": "{percent}%",
+      "count": "{count, plural, other {# phiếu}}",
+      "uncategorized": "Chưa phân loại",
+      "error": "Không tải được cơ cấu theo danh mục",
+      "empty": "Kỳ này chưa có số liệu",
+      "emptyHint": "Chọn kỳ khác hoặc ghi thêm phiếu ở sổ Thu-Chi.",
+      "system": {
+        "booking_payment": "Thanh toán đơn",
+        "deposit": "Tiền cọc",
+        "deposit_refund": "Hoàn cọc",
+        "maintenance": "Bảo dưỡng/Thay nhớt",
+        "repair": "Sửa chữa sự cố"
+      }
+    },
+    "vehicles": {
+      "title": "Hiệu quả theo xe",
+      "total": "{count, plural, other {# xe}}",
+      "marginValue": "{value}%",
+      "cardLine": "Thu {revenue} · Chi {cost} · {trips, plural, other {# chuyến}}",
+      "unassigned": "Chi phí chung chưa gắn xe: {value}. Số này không nằm trong dòng nào của bảng.",
+      "error": "Không tải được hiệu quả theo xe",
+      "empty": "Kỳ này chưa có xe nào phát sinh",
+      "emptyHint": "Xe có chuyến hoặc có phiếu thu chi trong kỳ sẽ hiện ở đây.",
+      "columns": {
+        "vehicle": "Xe",
+        "trips": "Chuyến",
+        "revenue": "Doanh thu",
+        "cost": "Chi phí",
+        "profit": "Lợi nhuận",
+        "margin": "Biên"
+      },
+      "sort": {
+        "label": "Sắp xếp",
+        "profit": "Lợi nhuận cao nhất",
+        "revenue": "Doanh thu cao nhất",
+        "cost": "Chi phí cao nhất",
+        "trips": "Nhiều chuyến nhất"
+      }
+    },
+    "customers": {
+      "title": "Doanh thu theo khách",
+      "total": "{count, plural, other {# khách}}",
+      "share": "{value}%",
+      "cardLine": "{trips, plural, other {# chuyến}} · {share} doanh thu kỳ",
+      "unassigned": "Chưa gắn khách nào: {value}. Phiếu thu tay không liên kết đơn nên không thuộc về dòng nào ở trên.",
+      "error": "Không tải được doanh thu theo khách",
+      "empty": "Kỳ này chưa có khách nào phát sinh",
+      "emptyHint": "Khách có chuyến hoặc có phiếu thu trong kỳ sẽ hiện ở đây.",
+      "columns": {
+        "customer": "Khách",
+        "trips": "Chuyến",
+        "revenue": "Doanh thu",
+        "share": "Tỷ trọng"
+      },
+      "sort": {
+        "label": "Sắp xếp",
+        "revenue": "Doanh thu cao nhất",
+        "trips": "Nhiều chuyến nhất"
+      }
+    }
+  },
+  "entity": {
+    "title": {
+      "vehicle": "Tiền của xe này",
+      "customer": "Doanh thu từ khách này"
+    },
+    "note": {
+      "vehicle": "Cộng trên phiếu đã duyệt, đã loại tiền cọc. Chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ.",
+      "customer": "Cộng trên tiền THẬT đã thu trong kỳ — khác \"Tổng giá trị thuê\" ở đầu hồ sơ, vốn tính trên giá trị đơn đã chốt."
+    },
+    "periods": {
+      "label": "Kỳ xem nhanh",
+      "today": "Hôm nay",
+      "this_week": "Tuần này",
+      "this_month": "Tháng này",
+      "last_month": "Tháng trước",
+      "this_quarter": "Quý này",
+      "this_year": "Năm nay"
+    },
+    "every": {
+      "label": "Độ mịn biểu đồ",
+      "day": "Ngày",
+      "week": "Tuần",
+      "month": "Tháng"
+    },
+    "revenue": "Doanh thu",
+    "cost": "Chi phí",
+    "profit": "Lợi nhuận",
+    "margin": "Biên {value}%",
+    "marginUnknown": "Chưa có doanh thu để tính biên",
+    "debt": "Còn nợ",
+    "debtBookings": "{count, plural, other {# đơn}}",
+    "trips": "Số chuyến",
+    "openLedger": "Xem trên sổ Thu-Chi",
+    "error": "Không tải được số liệu",
+    "chartTitle": "Theo thời gian",
+    "chartError": "Không tải được biểu đồ",
+    "chartEmpty": "Kỳ này chưa có khoản nào",
+    "chartEmptyHint": "Chọn kỳ khác, hoặc ghi phiếu ở sổ Thu-Chi."
   }
 }

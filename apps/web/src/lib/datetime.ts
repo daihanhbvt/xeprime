@@ -16,5 +16,6 @@ export {
   startOfAppDay,
   toAppTz,
   type Dayjs,
+  type PeriodKey,
   type RentalDurationParts,
 } from '@xeprime/domain';
