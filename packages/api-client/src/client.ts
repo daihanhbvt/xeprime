@@ -1,5 +1,5 @@
 import { API_ERROR_CODE, type ApiSuccess, type PaginationMeta } from '@xeprime/types';
-import { ApiClientError, toApiClientError } from './errors';
+import { ApiClientError, toApiClientError, toNetworkError } from './errors';
 import { platformFetch, type AbortSignalLike, type FetchLike, type FetchResponse } from './http';
 import { buildUrl, normalizeBaseUrl, type QueryParams } from './url';
 import { webAuthTransport, type AuthTransport } from './transport';
@@ -34,8 +34,30 @@ export interface ApiClientOptions {
   baseUrl: string;
   /** Mặc định: web transport (cookie httpOnly — ADR 0002). */
   transport?: AuthTransport;
-  /** Ghi đè `fetch` — cho test, hoặc cho môi trường phải polyfill. */
+  /**
+   * Ghi đè `fetch` — cho test, cho môi trường phải polyfill, và cho CHÍNH SÁCH của từng app.
+   *
+   * Trần thời gian đi qua đây chứ không thành một tuỳ chọn của package: `setTimeout` và
+   * `AbortController` không nằm trong `lib: ES2023` mà package này nhắm tới, và "bao lâu là quá
+   * lâu" khác nhau giữa một tab trình duyệt và một máy đang chuyển từ 4G sang wifi. App bọc
+   * `fetch` của nó rồi ném `ApiClientError` — client giữ nguyên mã đó, không bọc lại.
+   */
   fetch?: FetchLike;
+  /**
+   * Cơ hội LÀM MỚI DANH TÍNH khi server trả 401, trước khi lỗi đi tiếp lên chỗ gọi.
+   *
+   * Trả `true` = đã có danh tính mới ⇒ client gửi lại request **đúng một lần**. Trả `false` =
+   * hết đường ⇒ ném 401 lên như bình thường. Lần gửi lại không gọi lại hook, kể cả khi nó cũng
+   * 401, nên không có vòng lặp.
+   *
+   * Vì sao cần, dù app đã tự làm mới token theo `exp`: app chỉ biết token hết hạn theo ĐỒNG HỒ
+   * MÁY. Server từ chối sớm hơn thế khi đồng hồ máy chạy nhanh, khi người dùng đổi mật khẩu,
+   * đăng xuất từ thiết bị khác, hay bị admin khoá — và 401 là tin duy nhất app nhận được.
+   *
+   * ⚠️ KHÔNG cắm vào client dùng để đăng nhập/refresh: 401 ở đó là câu trả lời cuối cùng, và
+   * tự gọi lại chính mình là vòng lặp.
+   */
+  onUnauthorized?: (error: ApiClientError) => Promise<boolean> | boolean;
 }
 
 export interface ApiClient {
@@ -89,27 +111,35 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   const baseUrl = normalizeBaseUrl(options.baseUrl);
   const transport = options.transport ?? webAuthTransport();
   const fetchImpl = options.fetch;
+  const onUnauthorized = options.onUnauthorized;
 
-  async function request<TData>(
+  async function attempt<TData>(
     path: string,
-    requestOptions: ApiRequestOptions = {},
+    requestOptions: ApiRequestOptions,
   ): Promise<ApiSuccess<TData>> {
     const { method = 'GET', query, body, headers, signal } = requestOptions;
     const auth = await transport.credentials();
     const doFetch = fetchImpl ?? platformFetch();
 
-    const response = await doFetch(buildUrl(baseUrl, path, query), {
-      method,
-      headers: {
-        Accept: 'application/json',
-        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        ...auth.headers,
-        ...headers,
-      },
-      ...(auth.credentials ? { credentials: auth.credentials } : {}),
-      ...(signal ? { signal } : {}),
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
+    let response: FetchResponse;
+    try {
+      response = await doFetch(buildUrl(baseUrl, path, query), {
+        method,
+        headers: {
+          Accept: 'application/json',
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          ...auth.headers,
+          ...headers,
+        },
+        ...(auth.credentials ? { credentials: auth.credentials } : {}),
+        ...(signal ? { signal } : {}),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    } catch (cause) {
+      // Bản `fetch` do app truyền vào đã phân loại rồi (trần thời gian → `CLIENT_TIMEOUT`) —
+      // bọc lại lần nữa sẽ nuốt mất mã chính xác hơn của nó.
+      throw cause instanceof ApiClientError ? cause : toNetworkError(path, cause);
+    }
 
     const payload = await readBody(response);
 
@@ -135,6 +165,28 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       status: response.status,
       details: payload,
     });
+  }
+
+  /**
+   * Một request, cộng ĐÚNG MỘT lần gửi lại nếu `onUnauthorized` làm mới được danh tính.
+   *
+   * Lần gửi lại đi qua `attempt` chứ không qua `request`, nên nó không gọi lại hook — đó là thứ
+   * chặn vòng lặp, chắc chắn hơn bất kỳ cờ trạng thái nào ở tầng trên. Nó cũng chạy lại
+   * `transport.credentials()` nên tự lấy danh tính mới.
+   */
+  async function request<TData>(
+    path: string,
+    requestOptions: ApiRequestOptions = {},
+  ): Promise<ApiSuccess<TData>> {
+    try {
+      return await attempt<TData>(path, requestOptions);
+    } catch (error) {
+      if (!onUnauthorized || !(error instanceof ApiClientError) || error.status !== 401) {
+        throw error;
+      }
+      if (!(await onUnauthorized(error))) throw error;
+      return attempt<TData>(path, requestOptions);
+    }
   }
 
   return {

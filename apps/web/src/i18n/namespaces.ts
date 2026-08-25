@@ -50,6 +50,17 @@ export const MESSAGE_NAMESPACES = [
   { file: 'customers', namespace: 'Customers' },
   // Mới có màn Công nợ; sổ Thu-Chi vẫn còn chuỗi thô — xem `i18n:audit`.
   { file: 'finance', namespace: 'Finance' },
+  // ⚠️ `mobile-shell` là VỎ app native (màn lỗi cấp app, not-found, điều hướng gốc), KHÔNG
+  // phải "mọi chữ của mobile". Namespace vẫn chia theo TÍNH NĂNG, không theo client: màn
+  // booking trên app dùng lại `bookings`/`booking-requests` như web, chuỗi xe dùng lại
+  // `vehicles`. Chép chúng sang đây là tạo bản dịch thứ hai cho cùng một khoá — đúng thứ
+  // gốc chung sinh ra để chặn.
+  { file: 'mobile-shell', namespace: 'MobileShell', web: false },
 ] as const;
 
 export type MessageNamespace = (typeof MESSAGE_NAMESPACES)[number]['namespace'];
+
+/** Bó của web — bảng gom `messages/<locale>/index.ts` phải khớp đúng danh sách này. */
+export const WEB_MESSAGE_NAMESPACES = MESSAGE_NAMESPACES.filter(
+  (entry) => !('web' in entry && entry.web === false),
+);

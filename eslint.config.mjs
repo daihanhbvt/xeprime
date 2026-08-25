@@ -1,5 +1,11 @@
 import base from './packages/config/eslint/base.mjs';
-import react from './packages/config/eslint/react.mjs';
+import { reactOverlays } from './packages/config/eslint/react.mjs';
+
+const REACT_FILES = [
+  'apps/web/**/*.{ts,tsx}',
+  'apps/mobile/**/*.{ts,tsx}',
+  'packages/ui/**/*.{ts,tsx}',
+];
 
 /**
  * Root flat config. ESLint walks up from each file, so running `eslint .` inside
@@ -8,11 +14,8 @@ import react from './packages/config/eslint/react.mjs';
 export default [
   ...base,
 
-  // Frontend gets the extra restricted-import rules.
-  {
-    files: ['apps/web/**/*.{ts,tsx}', 'packages/ui/**/*.{ts,tsx}'],
-    ...react[react.length - 1],
-  },
+  // Code React (web + mobile): react-hooks + các thư viện bị cấm theo ADR.
+  ...reactOverlays.map((overlay) => ({ files: REACT_FILES, ...overlay })),
 
   // Seed và script CLI được phép in tiến trình ra stdout.
   {

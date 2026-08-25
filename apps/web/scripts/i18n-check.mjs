@@ -8,8 +8,11 @@
  * Việc script này làm:
  *   1. Mọi namespace khai báo ở `src/i18n/namespaces.ts` phải có file JSON ở CẢ HAI ngôn ngữ,
  *      đọc được và parse được.
- *   2. Hai file `messages/<locale>/index.ts` phải liệt kê đúng bộ namespace đó — không thừa,
- *      không thiếu (nếu lệch, một namespace có file nhưng không bao giờ được nạp).
+ *   2. Hai file `messages/<locale>/index.ts` phải liệt kê đúng bộ namespace của WEB — không
+ *      thừa, không thiếu (nếu lệch, một namespace có file nhưng không bao giờ được nạp).
+ *      Namespace đánh `web: false` là của riêng app native, không vào bảng gom của web; bảng
+ *      gom của app native (`apps/mobile/src/i18n/messages.ts`) chỉ cần là TẬP CON hợp lệ —
+ *      nó i18n hoá theo tiến độ riêng, nhưng không được trỏ vào namespace không tồn tại.
  *   3. Parity HAI CHIỀU tuyệt đối giữa vi và en. Tiếng Việt là cấu trúc chuẩn.
  *   4. Không giá trị rỗng/chỉ khoảng trắng; không nhánh lá là mảng/số/null.
  *   5. Cú pháp ICU hợp lệ ở cả hai ngôn ngữ, và tập BIẾN của một khoá phải giống nhau ở hai
@@ -31,6 +34,8 @@ const MESSAGES_DIR = path.join(WEB_ROOT, 'messages');
 const SHARED_MESSAGES_DIR = path.resolve(WEB_ROOT, '../../packages/domain/messages');
 const NAMESPACES_FILE = path.join(WEB_ROOT, 'src/i18n/namespaces.ts');
 const CONFIG_FILE = path.join(WEB_ROOT, 'src/i18n/config.ts');
+/** Bảng gom của app native — client thứ hai đọc cùng gốc message. */
+const MOBILE_MESSAGES_FILE = path.resolve(WEB_ROOT, '../mobile/src/i18n/messages.ts');
 
 /** Tiếng Việt là bó CHUẨN về cấu trúc; tiếng Anh phải khớp nó (và ngược lại). */
 const CANONICAL_LOCALE = 'vi';
@@ -58,9 +63,9 @@ if (!/LOCALE_COOKIE_NAME = 'XP_LOCALE'/.test(configSource ?? '')) {
 
 // ── 2. Danh sách namespace ────────────────────────────────────────────────────
 const namespacesSource = read(NAMESPACES_FILE) ?? '';
-const declared = [...namespacesSource.matchAll(/{ file: '([^']+)', namespace: '([^']+)' }/g)].map(
-  (m) => ({ file: m[1], namespace: m[2] }),
-);
+const declared = [
+  ...namespacesSource.matchAll(/{ file: '([^']+)', namespace: '([^']+)'(?:, web: (false))? }/g),
+].map((m) => ({ file: m[1], namespace: m[2], web: m[3] !== 'false' }));
 
 const labelFor = (entry, locale) => `packages/domain/messages/${locale}/${entry.file}.json`;
 
@@ -119,11 +124,18 @@ for (const locale of locales) {
   const indexSource = read(path.join(dir, 'index.ts')) ?? '';
   const mapped = [...indexSource.matchAll(/^ {2}([A-Za-z]+): \w+,$/gm)].map((m) => m[1]);
   const declaredNs = declared.map((d) => d.namespace);
-  for (const missing of declaredNs.filter((n) => !mapped.includes(n))) {
+  const webNs = declared.filter((d) => d.web).map((d) => d.namespace);
+  for (const missing of webNs.filter((n) => !mapped.includes(n))) {
     fail(locale, `messages/${locale}/index.ts thiếu namespace '${missing}'.`);
   }
   for (const extra of mapped.filter((n) => !declaredNs.includes(n))) {
     fail(locale, `messages/${locale}/index.ts khai báo namespace lạ '${extra}'.`);
+  }
+  for (const nativeOnly of mapped.filter((n) => declaredNs.includes(n) && !webNs.includes(n))) {
+    fail(
+      locale,
+      `messages/${locale}/index.ts nạp '${nativeOnly}' — namespace này khai 'web: false' (chỉ app native).`,
+    );
   }
 
   const bundle = {};
@@ -150,6 +162,49 @@ for (const locale of locales) {
     }
   }
   bundles[locale] = bundle;
+}
+
+// ── 3b. Bảng gom của app native ───────────────────────────────────────────────
+/*
+ * Script này sống ở `apps/web` nhưng canh GỐC CHUNG, nên nó phải nhìn cả client thứ hai:
+ * nếu không, `apps/mobile/src/i18n/messages.ts` trỏ vào một namespace bị đổi tên hay bị xoá
+ * và lỗi chỉ nổ lúc bundle Metro chạy trên máy người khác.
+ *
+ * Mobile i18n hoá theo tiến độ riêng nên bảng gom của nó là TẬP CON — chỉ kiểm "không trỏ vào
+ * namespace lạ" và "hai ngôn ngữ gom đúng cùng một bộ", không ép đủ.
+ */
+const mobileSource = read(MOBILE_MESSAGES_FILE);
+if (mobileSource === null) {
+  fail('mobile', `Không đọc được ${rel(MOBILE_MESSAGES_FILE)}`);
+} else {
+  const declaredNs = declared.map((d) => d.namespace);
+  const perLocale = Object.fromEntries(
+    locales.map((locale) => [
+      locale,
+      [...mobileSource.matchAll(new RegExp(`^  ${locale}: \\{([^}]*)\\}`, 'gm'))]
+        .flatMap((m) => [...m[1].matchAll(/([A-Za-z]+):/g)])
+        .map((m) => m[1]),
+    ]),
+  );
+
+  for (const locale of locales) {
+    for (const unknown of perLocale[locale].filter((n) => !declaredNs.includes(n))) {
+      fail('mobile', `messages.ts gom namespace lạ '${unknown}' cho ${locale} — không có ở gốc.`);
+    }
+  }
+
+  const [first, ...rest] = locales;
+  for (const locale of rest) {
+    const a = [...perLocale[first]].sort();
+    const b = [...perLocale[locale]].sort();
+    if (a.join() !== b.join()) {
+      fail('mobile', `messages.ts gom khác nhau giữa ${first} (${a.join(', ')}) và ${locale} (${b.join(', ')}).`);
+    }
+  }
+
+  if (perLocale[CANONICAL_LOCALE].length === 0) {
+    fail('mobile', 'messages.ts không gom namespace nào — regex bảng gom đã lệch, sửa script.');
+  }
 }
 
 // ── 4. Parity + giá trị + ICU ─────────────────────────────────────────────────

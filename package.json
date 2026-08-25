@@ -35,6 +35,7 @@
     "@firebase/rules-unit-testing": "4.0.1",
     "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "firebase": "11.1.0",
     "firebase-tools": "13.29.1",
     "husky": "9.1.7",

@@ -1,0 +1,13 @@
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native — sinh bởi `expo prebuild`, không commit
+/android
+/ios
+.kotlin/
+
+# Metro
+.metro-health-check*

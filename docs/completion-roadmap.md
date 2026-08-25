@@ -17,7 +17,7 @@ không phải trạng thái hiện tại. Bảng này mới là trạng thái hi
 | `pnpm --filter @xeprime/api test` | **665/666** — 1 đỏ, xem dưới |
 | `pnpm --filter @xeprime/web lint` | 0 error · 11 warning |
 | `pnpm --filter @xeprime/api lint` | sạch |
-| `pnpm --filter @xeprime/web i18n:check` | OK — 21 namespace × 2 ngôn ngữ, 1683 khoá, parity khớp |
+| `pnpm --filter @xeprime/web i18n:check` | OK — 22 namespace × 2 ngôn ngữ, 2183 khoá, parity khớp |
 
 **Một test đỏ, là BOM HẸN GIỜ chứ không phải hồi quy.**
 [`vehicle-documents.spec.ts`](../apps/api/test/vehicle-documents.spec.ts) hardcode
