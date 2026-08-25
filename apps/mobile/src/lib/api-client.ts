@@ -1,11 +1,13 @@
 import { bearerAuthTransport, configureApiClient } from '@xeprime/api-client';
 import { resolveApiBaseUrl } from './api-base-url';
-import { getFreshAccessToken } from './auth-session';
+import { getFreshAccessToken, recoverFromUnauthorized } from './auth-session';
 import { fetchWithTimeout } from './fetch-with-timeout';
- 
+
 configureApiClient({
   baseUrl: resolveApiBaseUrl(),
   transport: bearerAuthTransport(getFreshAccessToken),
+  // Server thu hồi phiên sớm hơn `exp` thì 401 là tin duy nhất app nhận được.
+  onUnauthorized: recoverFromUnauthorized,
   fetch: fetchWithTimeout,
 });
 

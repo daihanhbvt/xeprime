@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+﻿import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 /**
@@ -21,7 +21,19 @@ export type SecureKey = (typeof SECURE_KEY)[keyof typeof SECURE_KEY];
  */
 const isWeb = Platform.OS === 'web';
 
+/**
+ * ADR 0017: refresh token chỉ sống ở Keychain/Keystore. Nó đổi được thành phiên đầy đủ, mà mọi
+ * script trên trang đều đọc được `localStorage`. Thà `expo start --web` không đăng nhập được
+ * (nó chỉ để xem giao diện) còn hơn có một đường rò chỉ tồn tại ở nhánh web.
+ */
+const NEVER_ON_WEB: readonly SecureKey[] = [SECURE_KEY.REFRESH_TOKEN];
+
+function blockedOnWeb(key: SecureKey): boolean {
+  return isWeb && NEVER_ON_WEB.includes(key);
+}
+
 export async function getSecureItem(key: SecureKey): Promise<string | null> {
+  if (blockedOnWeb(key)) return null;
   if (isWeb) return globalThis.localStorage?.getItem(key) ?? null;
 
   // Keychain/Keystore có thể từ chối đọc khi thiết bị vừa khởi động và chưa mở khoá lần nào.
@@ -34,6 +46,7 @@ export async function getSecureItem(key: SecureKey): Promise<string | null> {
 }
 
 export async function setSecureItem(key: SecureKey, value: string): Promise<void> {
+  if (blockedOnWeb(key)) return;
   if (isWeb) {
     globalThis.localStorage?.setItem(key, value);
     return;
@@ -45,6 +58,7 @@ export async function setSecureItem(key: SecureKey, value: string): Promise<void
 }
 
 export async function deleteSecureItem(key: SecureKey): Promise<void> {
+  if (blockedOnWeb(key)) return;
   if (isWeb) {
     globalThis.localStorage?.removeItem(key);
     return;

@@ -10,6 +10,27 @@ Your primary objective is to replicate the business logic, UI capabilities, and 
 
 ---
 
+## 0. What this app IS
+
+**`apps/mobile` is `apps/web` ported to native — the SAME product, not a second one.** Every
+screen, rule, status transition, permission check, price calculation, and validation message is
+already decided in the web app and the ADRs. Your job is to render that on native, not to
+redesign it.
+
+* **Do not change business logic.** If the web flow requires an approval step, the mobile flow
+  has that step. When mobile seems to need different rules, that is a signal you misread the web
+  flow — read `apps/web/src/features/<same-feature>` before writing anything.
+* **Read the web feature first.** Its `api.ts`, `types.ts`, and hooks are the specification.
+  Port them; do not re-derive them from the API docs.
+* **Differences are allowed only in PRESENTATION and PLATFORM affordances** — navigation shape,
+  touch targets, camera/biometrics/push, offline behaviour, infinite scroll instead of a pager.
+  Never in what the data means or what the user is allowed to do.
+* **Two exceptions ARE by design**, each isolated to one file: the auth transport (native sends
+  `Authorization: Bearer` per ADR 0017, web sends an httpOnly session cookie per ADR 0002) and
+  the API base URL.
+
+---
+
 ## 1. Core Architecture & Monorepo Reuse
 
 Never reinvent logic that is already canonical in the monorepo:
@@ -79,9 +100,24 @@ Certain web patterns must be re-architected for touchscreens and small viewports
 * **Mobile**: Native Camera with instant preview, corner guides for vehicle exterior angles (Front, Rear, Left, Right, Interior, Odometer), client-side JPEG compression, and direct upload to Cloudflare R2 via presigned URLs.
 
 ### C. Authentication (AUTH-01 → AUTH-04)
-* Securely store session JWT in iOS Keychain / Android Keystore (`expo-secure-store`).
-* Pass session as `Authorization: Bearer <token>` header in all API requests.
-* Support **Apple Sign-In** on iOS and Google Sign-In, alongside Phone + OTP.
+
+**Already built — do not reimplement it per feature.** `src/lib/auth-session.ts` owns the token
+lifecycle and `src/lib/api-client.ts` wires it into the shared client. A feature calls `apiGet`;
+the Bearer header, the refresh and the retry happen underneath.
+
+* Native sends **`Authorization: Bearer <accessToken>`** — never a session cookie (that is the
+  web transport, ADR 0002).
+* **Access token in memory only** (15 min). **Refresh token only in Keychain/Keystore** via
+  `expo-secure-store` — never `AsyncStorage`, `localStorage`, or redux-persist.
+* Refresh is **rotating and single-flight**: parallel 401s must produce exactly ONE call to
+  `/auth/mobile/refresh`, or the server sees a reused refresh token, treats it as theft, and
+  revokes the whole session.
+* **A 401 is routine, not a logout** — it happens every 15 minutes. Two layers handle it:
+  proactive (refresh before `exp`) and reactive (`onUnauthorized` retries once when the server
+  rejects earlier than the device clock expects). Logout happens only when the refresh itself is
+  rejected. A network error during refresh must NOT clear the session.
+* Support **Apple Sign-In** on iOS and Google Sign-In, alongside Phone + OTP — these exchange a
+  Firebase ID token at `POST /auth/mobile/session`.
 
 ### D. Push Notifications (COM-07)
 * Integrate Firebase Cloud Messaging (FCM) / APNs.

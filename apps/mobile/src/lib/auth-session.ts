@@ -78,6 +78,25 @@ export function getFreshAccessToken(): Promise<string | null> {
   return inFlightRefresh;
 }
 
+/**
+ * Server trả 401 dù token còn hạn theo đồng hồ máy → thử xoay một vòng.
+ *
+ * `getFreshAccessToken` chỉ biết `exp`; phiên có thể chết sớm hơn (đồng hồ máy chạy nhanh, đổi
+ * mật khẩu, đăng xuất từ thiết bị khác, admin khoá). Trả `true` thì client gửi lại đúng một lần.
+ */
+export async function recoverFromUnauthorized(): Promise<boolean> {
+  // Đang có lần xoay chạy dở thì chỉ cần đợi kết quả của nó: vô hiệu token lúc này sẽ xoá đúng
+  // cái vừa được làm mới cho request khác, và ta xoay thừa một vòng.
+  if (!inFlightRefresh) {
+    accessToken = null;
+    accessExpiresAt = 0;
+  }
+
+  // Lỗi mạng lúc refresh không phải "hết phiên" — để request gốc hỏng như một lỗi mạng.
+  const token = await getFreshAccessToken().catch(() => null);
+  return token !== null;
+}
+
 export async function signInWithPassword(
   identifier: string,
   password: string,

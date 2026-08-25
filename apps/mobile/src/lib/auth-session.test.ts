@@ -1,6 +1,7 @@
 import { API_ERROR_CODE } from '@xeprime/types';
 import {
   getFreshAccessToken,
+  recoverFromUnauthorized,
   resetAuthSessionForTest,
   signInWithPassword,
   signOut,
@@ -193,6 +194,73 @@ describe('phiên chết', () => {
 
     expect(ended).not.toHaveBeenCalled();
     await expect(getSecureItem(SECURE_KEY.REFRESH_TOKEN)).resolves.toBe('refresh-1');
+  });
+});
+
+/**
+ * Làm mới theo `exp` chỉ bắt được lúc token hết hạn theo ĐỒNG HỒ MÁY. Server từ chối sớm hơn thế
+ * khi đồng hồ máy chạy nhanh, khi đổi mật khẩu, đăng xuất từ thiết bị khác, hay bị admin khoá —
+ * và khi đó 401 là tin duy nhất app nhận được.
+ */
+describe('phục hồi sau 401 dù token còn hạn', () => {
+  it('xoay token rồi báo cho client gửi lại', async () => {
+    const fetchMock = mockFetch(loginResponse('1'), { status: 200, body: { data: tokens('2') } });
+    await signInWithPassword('owner@xeprime.test', 'matkhau');
+
+    await expect(recoverFromUnauthorized()).resolves.toBe(true);
+
+    expect(callsTo(fetchMock, '/auth/mobile/refresh')).toHaveLength(1);
+    await expect(getFreshAccessToken()).resolves.toBe('access-2');
+    await expect(getSecureItem(SECURE_KEY.REFRESH_TOKEN)).resolves.toBe('refresh-2');
+  });
+
+  it('refresh token cũng chết thì trả false và kết thúc phiên', async () => {
+    mockFetch(loginResponse('1'), sessionExpired);
+    await signInWithPassword('owner@xeprime.test', 'matkhau');
+    const ended = jest.fn();
+    subscribeSessionEnded(ended);
+
+    await expect(recoverFromUnauthorized()).resolves.toBe(false);
+
+    expect(ended).toHaveBeenCalledTimes(1);
+    await expect(getSecureItem(SECURE_KEY.REFRESH_TOKEN)).resolves.toBeNull();
+  });
+
+  // Mất mạng không phải mất phiên: token phải còn nguyên cho lần thử sau.
+  it('lỗi mạng thì trả false nhưng giữ nguyên phiên', async () => {
+    mockFetch(loginResponse('1'), { status: 0, reject: new TypeError('Network request failed') });
+    await signInWithPassword('owner@xeprime.test', 'matkhau');
+    const ended = jest.fn();
+    subscribeSessionEnded(ended);
+
+    await expect(recoverFromUnauthorized()).resolves.toBe(false);
+
+    expect(ended).not.toHaveBeenCalled();
+    await expect(getSecureItem(SECURE_KEY.REFRESH_TOKEN)).resolves.toBe('refresh-1');
+  });
+
+  // Nhiều request cùng nhận 401 một lúc: chỉ được đúng MỘT lần xoay, nếu không server coi
+  // refresh token dùng lại là dấu hiệu bị trộm và thu hồi cả phiên.
+  it('ba request cùng phục hồi chỉ tạo một lần refresh', async () => {
+    const fetchMock = mockFetch(loginResponse('1'), { status: 200, body: { data: tokens('2') } });
+    await signInWithPassword('owner@xeprime.test', 'matkhau');
+
+    const results = await Promise.all([
+      recoverFromUnauthorized(),
+      recoverFromUnauthorized(),
+      recoverFromUnauthorized(),
+    ]);
+
+    expect(results).toEqual([true, true, true]);
+    expect(callsTo(fetchMock, '/auth/mobile/refresh')).toHaveLength(1);
+  });
+
+  it('chưa đăng nhập thì không gọi gì cả', async () => {
+    const fetchMock = mockFetch();
+
+    await expect(recoverFromUnauthorized()).resolves.toBe(false);
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
