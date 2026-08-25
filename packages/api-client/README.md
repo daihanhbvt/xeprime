@@ -1,7 +1,7 @@
 # `@xeprime/api-client`
 
-MỘT client HTTP cho mọi client của XePrime: `apps/web` hôm nay, `apps/mobile` (Expo/React Native)
-sau này.
+MỘT client HTTP cho mọi client của XePrime — `apps/web` và `apps/mobile` (Expo/React Native) đều
+chạy trên đúng bản này.
 
 Không `next/*`, không `antd`, không React, không DOM API. Emit CommonJS
 (`packages/config/tsconfig/lib.json`) nên Metro đọc được trực tiếp.
@@ -18,7 +18,7 @@ interface AuthTransport {
 
 |            | Web                                                                                    | Native                                                                             |
 | ---------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Transport  | `webAuthTransport()`                                                                   | `bearerAuthTransport(getAccessToken)`                                              |
+| Transport  | `webAuthTransport()`                                                                   | `bearerAuthTransport(getFreshAccessToken)`                                         |
 | Trả về     | `{ credentials: 'include' }`                                                           | `{ headers: { Authorization: 'Bearer …' } }`                                       |
 | Credential | httpOnly session cookie — [ADR 0002](../../docs/decisions/0002-auth-session-cookie.md) | access token 15 phút — [ADR 0017](../../docs/decisions/0017-native-bearer-auth.md) |
 
@@ -44,112 +44,115 @@ sẵn nền tảng cho người dùng nó.
 
 ## Cấu hình ở app native (Expo)
 
-```ts
-// app/lib/api.ts — gọi MỘT lần lúc khởi động
-import * as SecureStore from 'expo-secure-store';
-import Constants from 'expo-constants';
-import {
-  anonymousAuthTransport,
-  bearerAuthTransport,
-  configureApiClient,
-  createApiClient,
-  getErrorCode,
-  mobileAuthApi,
-  type MobileTokenPair,
-} from '@xeprime/api-client';
-import { API_ERROR_CODE } from '@xeprime/types';
+**Đã xong** — `apps/mobile` chạy trên chính client này. Ba file, mỗi file một việc:
 
-/** Client chính — mọi request nghiệp vụ đi qua đây. */
+| File                                        | Việc                                                                        |
+| ------------------------------------------- | ----------------------------------------------------------------------------- |
+| `apps/mobile/src/lib/api-client.ts`         | `configureApiClient()` một lần lúc khởi động, rồi xuất lại mọi ký hiệu       |
+| `apps/mobile/src/lib/auth-session.ts`       | Kho token: đọc/ghi Keychain, làm mới single-flight, phát "phiên kết thúc"    |
+| `apps/mobile/src/lib/fetch-with-timeout.ts` | `fetch` có trần thời gian, cắm qua `ApiClientOptions.fetch`                  |
+
+```ts
 configureApiClient({
-  baseUrl: Constants.expoConfig?.extra?.apiUrl as string,
-  // Nhận HÀM, không nhận token: package không bao giờ giữ bí mật của một người dùng.
-  transport: bearerAuthTransport(() => getFreshAccessToken()),
+  baseUrl: resolveApiBaseUrl(),
+  // Nhận HÀM, không nhận token: package không bao giờ giữ bí mật của một người dùng ở
+  // trạng thái module. Token sống trong Keychain/Keystore và app quyết định khi nào làm mới.
+  transport: bearerAuthTransport(getFreshAccessToken),
+  // Server có thể từ chối SỚM HƠN `exp` — xem "Hai lớp làm mới" bên dưới.
+  onUnauthorized: recoverFromUnauthorized,
+  fetch: fetchWithTimeout,
 });
 
 /**
- * Client KHÔNG kèm danh tính — dùng riêng cho đăng nhập và refresh.
+ * Client KHÔNG kèm danh tính — dùng riêng cho `/auth/mobile/*`.
  *
- * Đăng nhập thì chưa có token; refresh thì token đã hết hạn. Đi qua client chính sẽ kéo theo một
- * lần đọc SecureStore vô nghĩa, và nếu app có interceptor tự refresh thì thành vòng lặp.
+ * KHÔNG cắm `onUnauthorized` ở đây: 401 từ `/auth/mobile/refresh` là câu trả lời cuối cùng, và
+ * tự gọi lại chính mình là vòng lặp.
+ *
+ * Đăng nhập thì chưa có token; refresh thì token đã hết hạn. Đi qua client chính — cái đang cắm
+ * `bearerAuthTransport` — là tự gọi lại `getFreshAccessToken` từ bên trong chính nó.
  */
-export const authClient = createApiClient({
-  baseUrl: Constants.expoConfig?.extra?.apiUrl as string,
+const authClient = createApiClient({
+  baseUrl: resolveApiBaseUrl(),
   transport: anonymousAuthTransport(),
+  fetch: fetchWithTimeout,
 });
 ```
 
-Vòng đời token — năm quy tắc, cả năm đến từ ADR 0017:
+### Trần thời gian: chính sách của app, không của package
+
+`setTimeout`/`AbortController` không nằm trong `lib: ES2023` mà package này nhắm tới, và "bao
+lâu là quá lâu" khác nhau giữa một tab trình duyệt và một máy đang chuyển từ 4G sang wifi. App
+bọc `fetch` của nó rồi ném `ApiClientError` — client giữ nguyên mã đó, **không bọc lại**. Mọi
+lỗi `fetch` khác thành `CLIENT_ERROR_CODE.NETWORK_ERROR` với `status: 0`, và `isRetriableError()`
+đọc đúng `status` đó. Cả hai mã `CLIENT_*` đã có bản dịch sẵn ở `Errors.code` của gốc message
+dùng chung.
+
+### Hai lớp làm mới, và vì sao cần cả hai
+
+**Chủ động** — `getFreshAccessToken()` xoay token trước khi `exp` tới. Bắt được hầu hết trường
+hợp, nhưng nó chỉ biết **đồng hồ của máy**.
+
+**Bị động** — `onUnauthorized` chạy khi server trả 401 dù token còn hạn theo máy. Server từ chối
+sớm hơn `exp` khi đồng hồ máy chạy nhanh, khi người dùng đổi mật khẩu, đăng xuất từ thiết bị
+khác, hay bị admin khoá. Chỉ có lớp chủ động thì những ca đó thành lỗi hiển thị trên màn hình
+dù refresh token vẫn còn tốt.
+
+Hợp đồng: trả `true` ⇒ client gửi lại request **đúng một lần**; trả `false` ⇒ ném 401 lên như
+bình thường. Lần gửi lại **không** gọi lại hook, kể cả khi nó cũng 401 — đó là thứ chặn vòng
+lặp, chắc chắn hơn bất kỳ cờ trạng thái nào ở tầng trên, và nó chạy lại `transport.credentials()`
+nên tự lấy token mới. Hook là tuỳ chọn: web không cắm nên hành vi không đổi.
+
+`recoverFromUnauthorized()` phía app phải tôn trọng promise refresh đang chạy — nhiều request
+cùng nhận 401 mà mỗi cái tự xoay là quay lại đúng bẫy replay ở quy tắc 3.
+
+### Vòng đời token — năm quy tắc, cả năm đến từ ADR 0017
+
+Bản đầy đủ ở `apps/mobile/src/lib/auth-session.ts`; đây là phần phải giữ nguyên nếu viết lại
+cho một client native khác.
 
 ```ts
-const REFRESH_KEY = 'xp_refresh_token';
-let accessToken: string | null = null;
-let accessExpiresAt = 0;
-/**
- * 5. SINGLE-FLIGHT. Đây không phải tối ưu, nó là điều kiện đúng đắn.
- *
- * Refresh token dùng MỘT lần. Nếu ba request cùng thấy access token hết hạn và cùng gọi
- * `/auth/mobile/refresh` với cùng một refresh token, server cho đúng một cái thắng và trả 401 cho
- * hai cái còn lại — và nếu app coi 401-khi-refresh là "phiên chết" thì người dùng bị đá ra ngoài
- * dù chẳng có gì sai. Một promise dùng chung làm trường hợp đó không thể xảy ra.
- */
-let inFlight: Promise<string | null> | null = null;
-
-async function login(identifier: string, password: string) {
-  const { tokens, user } = await mobileAuthApi.login(authClient, {
-    identifier,
-    password,
-  });
-  await storeTokens(tokens);
-  return user;
-}
-
 async function storeTokens(tokens: MobileTokenPair) {
+  // 1. Access token ở BỘ NHỚ. Nó sống 15 phút; ghi xuống đĩa chỉ thêm một chỗ để rò.
   accessToken = tokens.accessToken;
   accessExpiresAt = Date.now() + tokens.accessTokenExpiresIn * 1000;
-  // 1. Refresh token CHỈ ở Keychain/Keystore. Không AsyncStorage, không file, không redux-persist.
-  await SecureStore.setItemAsync(REFRESH_KEY, tokens.refreshToken);
+  // 2. Refresh token CHỈ ở Keychain/Keystore. Không AsyncStorage, không file, không redux-persist.
+  await setSecureItem(SECURE_KEY.REFRESH_TOKEN, tokens.refreshToken);
 }
 
 function getFreshAccessToken(): Promise<string | null> {
-  // 2. Access token ở MEMORY. Nó sống 15 phút; ghi xuống đĩa chỉ thêm một chỗ để rò.
-  if (accessToken && Date.now() < accessExpiresAt - 30_000)
+  if (accessToken && Date.now() < accessExpiresAt - REFRESH_SKEW_MS) {
     return Promise.resolve(accessToken);
-  inFlight ??= refreshOnce().finally(() => {
-    inFlight = null;
+  }
+  /**
+   * 3. SINGLE-FLIGHT. Đây không phải tối ưu, nó là điều kiện đúng đắn.
+   *
+   * Refresh token dùng MỘT lần. Nếu ba request cùng thấy access token hết hạn và cùng gọi
+   * `/auth/mobile/refresh` với cùng một refresh token, server cho đúng một cái thắng và trả
+   * 401 cho hai cái còn lại — người dùng bị đá ra ngoài dù chẳng có gì sai.
+   */
+  inFlightRefresh ??= refreshOnce().finally(() => {
+    inFlightRefresh = null;
   });
-  return inFlight;
+  return inFlightRefresh;
 }
 
 async function refreshOnce(): Promise<string | null> {
-  const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
+  const refreshToken = await getSecureItem(SECURE_KEY.REFRESH_TOKEN);
   if (!refreshToken) return null;
 
   try {
     const next = await mobileAuthApi.refresh(authClient, { refreshToken });
-    // 3. Refresh XOAY: token cũ chết ngay. Không ghi đè token mới = lần refresh sau bị coi là
-    //    replay và cả phiên bị thu hồi.
+    // 4. Refresh XOAY: token cũ chết ngay. Không ghi đè token mới = lần sau bị coi là replay
+    //    và cả phiên bị thu hồi.
     await storeTokens(next);
     return next.accessToken;
   } catch (error) {
-    // Server đã nói phiên chết (`SESSION_EXPIRED`). Đừng retry: nếu nó chết vì phát hiện replay
-    // thì retry chỉ làm ồn. Xoá sạch và đưa về màn đăng nhập.
-    if (getErrorCode(error) === API_ERROR_CODE.SESSION_EXPIRED)
-      await clearSession();
+    // 5. Server đã nói phiên chết (`SESSION_EXPIRED`) thì xoá sạch. Lỗi MẠNG thì giữ nguyên —
+    //    mất sóng không phải phiên chết.
+    if (getErrorCode(error) === API_ERROR_CODE.SESSION_EXPIRED) await endSession();
     throw error;
   }
-}
-
-async function logout() {
-  const refreshToken = await SecureStore.getItemAsync(REFRESH_KEY);
-  // 4. Gọi logout để thu hồi phía SERVER. Chỉ xoá local là để phiên sống tiếp 60 ngày trên server.
-  if (refreshToken) await mobileAuthApi.logout(authClient, { refreshToken });
-  await clearSession();
-}
-
-async function clearSession() {
-  accessToken = null;
-  accessExpiresAt = 0;
-  await SecureStore.deleteItemAsync(REFRESH_KEY);
 }
 ```
 
@@ -159,7 +162,9 @@ Ba lỗi hay gặp, đều làm người dùng bị đăng xuất oan:
 | ----------------------------------------------- | --------------------------------------------------------------------- |
 | Không single-flight                             | Nhiều request song song → mỗi cái một lần refresh → cái thua nhận 401 |
 | Không lưu refresh token MỚI sau mỗi lần refresh | Lần sau gửi token cũ ⇒ server coi là replay ⇒ **thu hồi cả phiên**    |
-| Retry khi refresh trả `SESSION_EXPIRED`         | Phiên đã chết; retry chỉ tạo thêm log và trì hoãn màn đăng nhập       |
+| Bắt 401 để logout                               | Access token hết hạn mỗi 15 phút là chuyện thường — client tự làm mới, chỉ refresh HỎNG mới là phiên chết |
+| Chỉ làm mới theo `exp`, bỏ qua 401              | Đồng hồ máy lệch vài giây ⇒ request hỏng hẳn dù refresh token còn tốt |
+| Cắm `onUnauthorized` vào client dùng để refresh | 401 ở `/auth/mobile/refresh` kích hoạt chính nó ⇒ vòng lặp |
 
 ## Quyền và tenant scope
 
@@ -180,7 +185,8 @@ TanStack Query **không** là dependency — `queryKeys` chỉ là object hằng
 
 ## Trạng thái chuyển đổi
 
-Hôm nay package có: client runtime, transport, query key, và feature `auth`.
+Hôm nay package có: client runtime, transport, query key, và feature `auth` — đủ để app native
+đăng nhập, làm mới token và gọi mọi endpoint bằng Bearer (ADR 0017).
 
 38 feature `api.ts`/`types.ts` còn lại vẫn ở `apps/web/src/features/*` và sẽ chuyển **từng cái
 một** theo [`docs/mobile-readiness-audit.md`](../../docs/mobile-readiness-audit.md) §14.1 bước 3–4.

@@ -207,7 +207,7 @@ server trước khi render.
 | --- | --- |
 | Hằng locale, cookie, bản đồ `Intl` | `apps/web/src/i18n/config.ts` |
 | Đọc locale (server) | `src/i18n/locale.ts` · Server Action ghi cookie: `src/i18n/actions.ts` |
-| Message — **một gốc dùng chung** | TOÀN BỘ 21 namespace ở `packages/domain/messages/{vi,en}/` — web và app native dùng chung, một khoá một bản dịch (24/08/2026). `apps/web/messages/<locale>/index.ts` chỉ là bảng gom của web. Danh sách ở `src/i18n/namespaces.ts`; `i18n:check` quét gốc package và CHẶN JSON mọc lại ở gốc web cũ |
+| Message — **một gốc dùng chung** | TOÀN BỘ 22 namespace ở `packages/domain/messages/{vi,en}/` — web và app native dùng chung, một khoá một bản dịch (24/08/2026). Chia theo TÍNH NĂNG, không theo client: app native dùng lại `bookings`/`vehicles`… như web; `mobile-shell` (cờ `web: false`) chỉ là VỎ app native. Hai bảng gom: `apps/web/messages/<locale>/index.ts` và `apps/mobile/src/i18n/messages.ts` (tập con). Danh sách ở `apps/web/src/i18n/namespaces.ts`; `i18n:check` quét gốc package, canh cả hai bảng gom và CHẶN JSON mọc lại ở gốc web cũ |
 | Định dạng tiền/ngày/quãng đường | `useAppFormat()` (client) · `getAppFormat()` (server) |
 | Nhãn status/role/enum | `useDomainLabel()` + namespace `Domain` |
 | Lỗi API | `useErrorMessage()` + namespace `Errors` (ánh xạ từ MÃ) |

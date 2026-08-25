@@ -528,7 +528,7 @@ Cần thêm: `packages/config/tsconfig/react-native.json` (chưa có).
 | ~~MA-01~~ | Leader | ~~Chốt PAY-01 có/không thanh toán online~~ | ✅ **DONE 21/08** — [ADR 0013](decisions/0013-no-online-payment-mvp.md) | ADR hoặc quyết định ghi vào roadmap | Leader | ~~P0~~ | — | DONE |
 | MA-02 | Leader | ADR 0013 — Mobile native (stack, phạm vi, auth) | `build_plan:751` nói ngược | ADR merged | Leader | **P0** | — | TODO |
 | MA-03 | Backend | `AuthGuard` nhận `Authorization: Bearer` | `auth.guard.ts:36` chỉ đọc cookie | Cả hai nguồn, cùng một session | Backend | **P0** | MA-02 | TODO |
-| MA-04 | Shared | Tạo `@xeprime/api-client` (client + query key + api/types của feature) | Nằm trong `apps/web` | Package độc lập, web import ngược | Web + Mobile | **P0** | L4 duyệt | TODO |
+| ~~MA-04~~ | Shared | Tạo `@xeprime/api-client` (client + query key + api/types của feature) | ✅ **DONE 24–25/08** — package chạy cho cả web lẫn native (§14.1) | Package độc lập, hai app import | Web + Mobile | ~~P0~~ | — | DONE (còn api/types của 38 feature) |
 | MA-05 | Shared | Tạo `@xeprime/domain` (message vi/en + luật nghiệp vụ thuần) | `apps/web/messages` + `apps/web/src/lib` | Package độc lập | Web | **P0** | L4 duyệt | TODO |
 | MA-06 | Web | Chạy lại vitest + i18n:audit, chốt số baseline | 1609/1612 và 2.993 (đo 20/08) | Số của hôm nay | Web | **P0** | — | TODO |
 | MA-07 | Backend | Notification: khoá + tham số thay cho văn xuôi VN | 18 chỗ ghi câu VN vào DB | `type` + `dataJson`, client dịch | Backend | **P1** | MA-05 | TODO |
@@ -566,6 +566,15 @@ re-export** tại chỗ cũ, nên mọi `import { fetchBookings } from './api'` 
 ### 14.1 `@xeprime/api-client` (P0)
 
 **Mục tiêu**: một client duy nhất, hai app (rồi ba) dùng chung, không ai bóc `{data}` lần thứ hai.
+
+> **Cập nhật 25/08/2026 — bước 1–2 xong cho CẢ HAI app.** `apps/mobile` không còn client riêng:
+> bản tự viết 261 dòng ở `src/lib/api-client.ts` (cùng `http-interceptors.ts`) đã bị xoá, thay bằng
+> `configureApiClient({ baseUrl, transport: bearerAuthTransport(getFreshAccessToken), fetch })`.
+> Kho token native ở `apps/mobile/src/lib/auth-session.ts` (ADR 0017: access 15′ trong bộ nhớ,
+> refresh xoay vòng single-flight trong Keychain/Keystore, `/auth/mobile/*`), trần thời gian ở
+> `fetch-with-timeout.ts`. Package nhận thêm `CLIENT_ERROR_CODE` + `isRetriableError` và bọc lỗi
+> `fetch` thành `ApiClientError` — web dùng chung, hành vi cũ giữ nguyên. Còn lại: bước 3–4 (chuyển
+> `types.ts`/`api.ts` của 38 feature).
 
 ```
 packages/api-client/

@@ -24,7 +24,16 @@ export {
   type Paged,
 } from './client';
 
-export { ApiClientError, toApiClientError, getErrorCode, isUnauthenticated } from './errors';
+export {
+  ApiClientError,
+  CLIENT_ERROR_CODE,
+  getErrorCode,
+  isRetriableError,
+  isUnauthenticated,
+  toApiClientError,
+  toNetworkError,
+  type ClientErrorCode,
+} from './errors';
 
 export {
   anonymousAuthTransport,

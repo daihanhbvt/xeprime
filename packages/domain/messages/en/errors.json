@@ -2,6 +2,8 @@
   "fallback": "Something went wrong. Please try again.",
   "network": "Couldn't reach the server. Check your connection and try again.",
   "code": {
+    "CLIENT_NETWORK_ERROR": "Cannot reach the server. Check your connection and try again.",
+    "CLIENT_TIMEOUT": "The server took too long to respond. Please try again.",
     "UNAUTHENTICATED": "Please sign in to continue.",
     "SESSION_EXPIRED": "Your session has expired. Please sign in again.",
     "INVALID_ID_TOKEN": "We couldn't verify your account. Try signing in again.",

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  /* Không extends packages/config/tsconfig/*: Expo cần `moduleResolution: bundler` +
+     `customConditions: ["react-native"]`, và preset dùng chung không resolve được
+     `expo/tsconfig.base`. Cờ strict của repo lặp lại tường minh ở dưới. */
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* @expo/metro-config đọc baseUrl + paths này nên alias chạy cả ở Metro, không chỉ tsc. */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+}

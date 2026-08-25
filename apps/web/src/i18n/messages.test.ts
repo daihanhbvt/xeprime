@@ -5,7 +5,7 @@ import enMessages from '../../messages/en';
 import viMessages from '../../messages/vi';
 import { SUPPORTED_LOCALES } from './config';
 import { loadMessages } from './messages';
-import { MESSAGE_NAMESPACES } from './namespaces';
+import { WEB_MESSAGE_NAMESPACES } from './namespaces';
 
 /**
  * Toàn vẹn của hai bó message.
@@ -32,7 +32,8 @@ describe('cấu trúc bó message', () => {
   it('mỗi namespace khai báo đều có mặt ở cả hai ngôn ngữ', () => {
     for (const locale of SUPPORTED_LOCALES) {
       const bundle = BUNDLES[locale] as Record<string, unknown>;
-      const declared = MESSAGE_NAMESPACES.map((n) => n.namespace);
+      // Bó của WEB: namespace `web: false` (chỉ app native) cố tình không có ở đây.
+      const declared = WEB_MESSAGE_NAMESPACES.map((n) => n.namespace);
       expect(Object.keys(bundle).sort()).toEqual([...declared].sort());
     }
   });

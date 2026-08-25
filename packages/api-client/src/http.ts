@@ -16,10 +16,13 @@ export type FetchCredentials = 'omit' | 'same-origin' | 'include';
 
 /**
  * `AbortSignal` ở dạng cấu trúc. Client chỉ CHUYỂN TIẾP nó xuống `fetch`, không đọc thuộc tính
- * nào, nên một trường `aborted` là đủ để phân biệt nó với `unknown`.
+ * nào — hai phương thức lắng nghe là để một bản `fetch` do app truyền vào (bọc trần thời gian, ghi
+ * log) gộp được signal này với signal của nó mà không phải ép kiểu.
  */
 export interface AbortSignalLike {
   readonly aborted: boolean;
+  addEventListener?(type: 'abort', listener: () => void): void;
+  removeEventListener?(type: 'abort', listener: () => void): void;
 }
 
 export interface FetchInit {
