@@ -78,8 +78,17 @@ Adhere strictly to the state architecture:
    * Use `react-hook-form` paired with `@hookform/resolvers/yup` and schemas from `@xeprime/validators`.
    * Form state is strictly local to the active screen/modal; never persist raw form inputs to global state.
 
-3. **Client UI State (Zustand / Redux Toolkit)**:
-   * Only persist global app shell state: auth session tokens (in SecureStore), user profile preview, current tenant scope, active locale, and transient filter selections.
+3. **Client UI State (Redux Toolkit)**:
+   * Redux only, not Zustand — ADR 0004 keeps Redux for this app.
+   * It holds UI state the user chose and nothing else: active locale today, later things like a
+     collapsed panel or a selected view mode. Each slice is owned by the feature that created it.
+   * **Never put tokens in Redux.** The access token lives in a module variable inside
+     `src/lib/auth-session.ts` (memory only, 15 min) and the refresh token only in
+     Keychain/Keystore — ADR 0017. A store is serialisable, inspectable and often persisted;
+     every one of those properties is wrong for a credential.
+   * **Never mirror server data into Redux** — the user profile, permissions and tenant scope come
+     from `useCurrentUser()` (TanStack Query), which re-reads them from the API. Copying them into
+     a store creates a second truth that goes stale exactly when permissions are revoked.
 
 4. **Screen Filters & Search State**:
    * On mobile, there is no browser URL bar. Store active filter states in local screen state or navigation params (`route.params`), allowing state to preserve when navigating backward.
@@ -128,12 +137,25 @@ the Bearer header, the refresh and the retry happen underneath.
 
 ## 4. UI & Ergonomics Guidelines
 
-* **Touch Targets**: Minimum interactive area of 44x44 points for all buttons, chips, and list items.
-* **Safe Area**: Respect `SafeAreaView` / `react-native-safe-area-context` on all screens (Notch, Dynamic Island, Home Indicator).
-* **Feedback & States**:
-  * Every screen must handle **Loading** (Skeleton screens, pull-to-refresh), **Empty** (helpful message + call-to-action), and **Error** (clear message + retry button).
-  * Use haptic feedback (`expo-haptics`) for key user actions (confirming booking, approving request, submitting handover).
-* **Keyboard Handling**: Wrap input screens in `KeyboardAvoidingView` / `react-native-keyboard-aware-scroll-view` with auto-dismiss on tap outside.
+The base already solves the three things every screen gets wrong — use them, don't rebuild them:
+
+* **Wrap every screen in [`<Screen>`](../../../apps/mobile/src/components/layout/Screen.tsx).** It
+  gathers safe area, keyboard avoidance and `keyboardShouldPersistTaps` in one place; miss one and
+  you get text under the notch, a keyboard covering the input, or taps that need two presses. Pass
+  `padded={false}` for edge-to-edge lists.
+* **Loading / empty / error come from `src/components/state/`** — `ScreenLoading`, `ScreenMessage`,
+  `ScreenError`. `ScreenError` already maps an API error to translated copy by CODE, so never print
+  a backend `message`.
+* **Sizes and colors come from `src/theme/tokens.ts`** (`space`, `radius`, `fontSize`,
+  `fontWeight`, `sizing`, `colors`). `sizing.touchTarget` is the 44pt/48dp floor — use it rather
+  than typing a number.
+
+Beyond that:
+
+* **Haptics**: use `expo-haptics` for consequential actions (confirming a booking, approving a
+  request, submitting a handover) — not for ordinary navigation.
+* **Platform differences**: small ones use `Platform.select` inline; large ones (different JSX
+  tree, separate native API) split into `<Name>.ios.tsx` / `<Name>.android.tsx`.
 
 ---
 
@@ -198,8 +220,15 @@ export const queryClient = new QueryClient({
 ## 7. Pre-Commit Verification Checklist
 
 Before considering a mobile feature complete:
-1. `pnpm --filter @xeprime/mobile typecheck`: 0 TypeScript errors.
-2. `pnpm --filter @xeprime/mobile lint`: 0 lint errors.
-3. Test all 4 screen states: Loading skeleton, Populated list, Empty state, Network Error.
-4. Test keyboard interaction and safe area insets on both iOS and Android simulators.
-5. Verify that API contracts match `@xeprime/types/src/api.generated.ts`.
+
+1. `pnpm --filter @xeprime/mobile typecheck` — 0 TypeScript errors.
+2. `pnpm --filter @xeprime/mobile lint` — 0 lint errors.
+3. `pnpm --filter @xeprime/mobile test` — green.
+4. **If you touched `packages/*`, run the web suite too**: `pnpm --filter @xeprime/web test`. The
+   API client, design tokens and message root are shared — a change that looks mobile-only can
+   break 1600 web tests.
+5. **If you added or changed user-facing text**: `pnpm --filter @xeprime/web i18n:check`. It
+   checks vi↔en parity across the shared root and validates the native gather table.
+6. Test all 4 screen states: loading, populated, empty, network error.
+7. Test keyboard interaction and safe area insets on both iOS and Android.
+8. Verify API contracts against `@xeprime/types/src/api.generated.ts` — never hand-write a DTO.

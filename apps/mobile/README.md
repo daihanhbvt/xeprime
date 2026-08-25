@@ -23,7 +23,7 @@ Rồi bấm `a` (Android), `i` (iOS) hoặc `w` (web preview).
 | ---------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `start`                                  | build package phụ thuộc rồi mở Expo dev server                                                |
 | `android` / `ios`                        | `expo run:*` — build native                                                                   |
-| `web`                                    | bản web của Expo, **chỉ để xem giao diện** (SecureStore lùi về `localStorage`, không an toàn) |
+| `web`                                    | bản web của Expo, **chỉ để xem giao diện** — SecureStore lùi về `localStorage` nên refresh token bị chặn hẳn ở đó (ADR 0017), tức **không đăng nhập được** |
 | `lint` · `typecheck` · `test`            | ESLint chung của repo · `tsc --noEmit` · Jest (`jest-expo`)                                   |
 | `exec jest src/lib/live-bearer.test.ts`   | **Test sống** — gọi API thật, chứng minh app gửi đúng Bearer. Cần `XP_LIVE_API=1` + API ở cổng 4000 + DB đã seed; không đặt cờ thì suite tự bỏ qua |
 
@@ -134,7 +134,7 @@ flowchart TD
   A["SafeAreaProvider<br/>initialMetrics — lấy inset ĐỒNG BỘ"] --> B["ReduxProvider"]
   B --> C["I18nProvider<br/>cần store để đọc locale"]
   C --> D["QueryClientProvider"]
-  D --> E["SessionBoundary<br/>đăng ký errorInterceptor 401"]
+  D --> E["SessionBoundary<br/>nghe sự kiện phiên kết thúc"]
   E --> F["Stack — điều hướng"]
   F --> G["/ → Redirect"]
   G --> I["/login"]
@@ -180,13 +180,14 @@ sequenceDiagram
   H-->>C: data / isPending / error
 ```
 
-Ba chỗ — và chỉ ba chỗ — app native khác web, cả ba nằm trong lời gọi `configureApiClient()`:
+Bốn chỗ — và chỉ bốn chỗ — app native khác web, cả bốn nằm trong lời gọi `configureApiClient()`:
 
-| Chỗ         | Web                            | Native                                                                        |
-| ----------- | ------------------------------ | ----------------------------------------------------------------------------- |
-| `baseUrl`   | `NEXT_PUBLIC_API_URL`          | [`resolveApiBaseUrl()`](src/lib/api-base-url.ts) — suy từ Expo dev server     |
-| `transport` | cookie httpOnly (ADR 0002)     | `bearerAuthTransport` → `Authorization: Bearer` (ADR 0017)                    |
-| `fetch`     | `fetch` của trình duyệt        | [`fetchWithTimeout`](src/lib/fetch-with-timeout.ts) — mạng di động treo, không báo lỗi |
+| Chỗ              | Web                        | Native                                                                                |
+| ---------------- | -------------------------- | ------------------------------------------------------------------------------------- |
+| `baseUrl`        | `NEXT_PUBLIC_API_URL`      | [`resolveApiBaseUrl()`](src/lib/api-base-url.ts) — suy từ Expo dev server              |
+| `transport`      | cookie httpOnly (ADR 0002) | `bearerAuthTransport` → `Authorization: Bearer` (ADR 0017)                             |
+| `fetch`          | `fetch` của trình duyệt    | [`fetchWithTimeout`](src/lib/fetch-with-timeout.ts) — mạng di động treo, không báo lỗi |
+| `onUnauthorized` | không cắm                  | `recoverFromUnauthorized` — xoay token khi server từ chối sớm hơn `exp`                |
 
 Không gọi `fetch` trần ở feature. Sai envelope `{ data }` là **ném lỗi**, không đoán mò
 (ADR 0007). Lỗi phát sinh **phía client** mang tiền tố riêng để nhìn log là biết ngay lỗi nằm ở
@@ -216,6 +217,11 @@ flowchart TD
   G -->|"còn hạn (trừ 30s)"| H["gắn Authorization: Bearer"]
   G -->|"hết hạn"| F["POST /auth/mobile/refresh<br/>SINGLE-FLIGHT"]
   F -->|"cặp token mới"| H
+  H --> V{"server trả 401?"}
+  V -->|không| OK["kết quả về màn hình"]
+  V -->|"có — thu hồi sớm hơn exp"| U["onUnauthorized<br/>recoverFromUnauthorized()"]
+  U --> F
+  U -->|"xoay xong"| RETRY["gửi lại ĐÚNG một lần"]
   F -->|"SESSION_EXPIRED"| E["phát sự kiện phiên kết thúc"]
   O["Người dùng đăng xuất"] --> E
   E --> B["SessionBoundary<br/>resetSessionScopedCache()"]
@@ -231,7 +237,7 @@ flowchart TD
 | Quyết định                 | [use-session-gate.ts](src/features/auth/hooks/use-session-gate.ts) | Trả về `loading \| unauthenticated \| unreachable \| ready` — kiểm thử được mà không cần router |
 | Điều hướng (chưa nối)      | [app/(app)/_layout.tsx](<app/(app)/_layout.tsx>)                   | Nơi **duy nhất** gọi `<Redirect>`                                                               |
 
-Sáu luật đi kèm, đừng phá:
+Bảy luật đi kèm, đừng phá:
 
 1. **Refresh token CHỈ ở Keychain/Keystore.** Không `AsyncStorage`, không redux-persist, không
    log. Access token sống 15 phút nên nó ở **bộ nhớ** — ghi xuống đĩa chỉ thêm một chỗ để rò.
@@ -243,9 +249,13 @@ Sáu luật đi kèm, đừng phá:
 4. **401 một mình KHÔNG phải phiên chết.** Access token hết hạn mỗi 15 phút là chuyện thường,
    client tự làm mới rồi đi tiếp. Chỉ hai việc mới kết thúc phiên: refresh bị từ chối
    (`SESSION_EXPIRED`) và người dùng đăng xuất. Đừng dựng lại interceptor bắt 401 để logout.
-5. **Lỗi mạng khi refresh thì GIỮ phiên.** Mất sóng không phải phiên chết; xoá token vì đi qua
+5. **Nhưng 401 phải được THỬ CỨU một lần.** Làm mới theo `exp` chỉ bắt được lúc token hết hạn
+   theo **đồng hồ máy**; server từ chối sớm hơn thế khi đồng hồ lệch, khi đổi mật khẩu, đăng
+   xuất từ thiết bị khác hay bị admin khoá. `onUnauthorized` xoay một vòng rồi gửi lại **đúng
+   một lần** — lần gửi lại không gọi lại hook, đó là thứ chặn vòng lặp.
+6. **Lỗi mạng khi refresh thì GIỮ phiên.** Mất sóng không phải phiên chết; xoá token vì đi qua
    thang máy là bắt người dùng đăng nhập lại vô cớ.
-6. **Đăng xuất phải gọi server.** Chỉ xoá ở máy là để phiên sống tiếp trên server tới 60 ngày.
+7. **Đăng xuất phải gọi server.** Chỉ xoá ở máy là để phiên sống tiếp trên server tới 60 ngày.
    Ngược lại, server không trả lời cũng vẫn xoá ở máy — người dùng đã bấm rồi.
 
 Kèm theo: **màn hình KHÔNG tự kiểm 401**; chúng nằm sau guard và dùng

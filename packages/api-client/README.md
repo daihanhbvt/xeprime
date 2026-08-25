@@ -58,11 +58,16 @@ configureApiClient({
   // Nhận HÀM, không nhận token: package không bao giờ giữ bí mật của một người dùng ở
   // trạng thái module. Token sống trong Keychain/Keystore và app quyết định khi nào làm mới.
   transport: bearerAuthTransport(getFreshAccessToken),
+  // Server có thể từ chối SỚM HƠN `exp` — xem "Hai lớp làm mới" bên dưới.
+  onUnauthorized: recoverFromUnauthorized,
   fetch: fetchWithTimeout,
 });
 
 /**
  * Client KHÔNG kèm danh tính — dùng riêng cho `/auth/mobile/*`.
+ *
+ * KHÔNG cắm `onUnauthorized` ở đây: 401 từ `/auth/mobile/refresh` là câu trả lời cuối cùng, và
+ * tự gọi lại chính mình là vòng lặp.
  *
  * Đăng nhập thì chưa có token; refresh thì token đã hết hạn. Đi qua client chính — cái đang cắm
  * `bearerAuthTransport` — là tự gọi lại `getFreshAccessToken` từ bên trong chính nó.
@@ -82,6 +87,24 @@ bọc `fetch` của nó rồi ném `ApiClientError` — client giữ nguyên mã
 lỗi `fetch` khác thành `CLIENT_ERROR_CODE.NETWORK_ERROR` với `status: 0`, và `isRetriableError()`
 đọc đúng `status` đó. Cả hai mã `CLIENT_*` đã có bản dịch sẵn ở `Errors.code` của gốc message
 dùng chung.
+
+### Hai lớp làm mới, và vì sao cần cả hai
+
+**Chủ động** — `getFreshAccessToken()` xoay token trước khi `exp` tới. Bắt được hầu hết trường
+hợp, nhưng nó chỉ biết **đồng hồ của máy**.
+
+**Bị động** — `onUnauthorized` chạy khi server trả 401 dù token còn hạn theo máy. Server từ chối
+sớm hơn `exp` khi đồng hồ máy chạy nhanh, khi người dùng đổi mật khẩu, đăng xuất từ thiết bị
+khác, hay bị admin khoá. Chỉ có lớp chủ động thì những ca đó thành lỗi hiển thị trên màn hình
+dù refresh token vẫn còn tốt.
+
+Hợp đồng: trả `true` ⇒ client gửi lại request **đúng một lần**; trả `false` ⇒ ném 401 lên như
+bình thường. Lần gửi lại **không** gọi lại hook, kể cả khi nó cũng 401 — đó là thứ chặn vòng
+lặp, chắc chắn hơn bất kỳ cờ trạng thái nào ở tầng trên, và nó chạy lại `transport.credentials()`
+nên tự lấy token mới. Hook là tuỳ chọn: web không cắm nên hành vi không đổi.
+
+`recoverFromUnauthorized()` phía app phải tôn trọng promise refresh đang chạy — nhiều request
+cùng nhận 401 mà mỗi cái tự xoay là quay lại đúng bẫy replay ở quy tắc 3.
 
 ### Vòng đời token — năm quy tắc, cả năm đến từ ADR 0017
 
@@ -140,6 +163,8 @@ Ba lỗi hay gặp, đều làm người dùng bị đăng xuất oan:
 | Không single-flight                             | Nhiều request song song → mỗi cái một lần refresh → cái thua nhận 401 |
 | Không lưu refresh token MỚI sau mỗi lần refresh | Lần sau gửi token cũ ⇒ server coi là replay ⇒ **thu hồi cả phiên**    |
 | Bắt 401 để logout                               | Access token hết hạn mỗi 15 phút là chuyện thường — client tự làm mới, chỉ refresh HỎNG mới là phiên chết |
+| Chỉ làm mới theo `exp`, bỏ qua 401              | Đồng hồ máy lệch vài giây ⇒ request hỏng hẳn dù refresh token còn tốt |
+| Cắm `onUnauthorized` vào client dùng để refresh | 401 ở `/auth/mobile/refresh` kích hoạt chính nó ⇒ vòng lặp |
 
 ## Quyền và tenant scope
 
