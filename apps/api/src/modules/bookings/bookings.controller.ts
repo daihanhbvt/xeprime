@@ -113,7 +113,10 @@ export class BookingsController {
 
   @Post(':id/transition')
   @RequirePermissions(PERMISSION.BOOKING_UPDATE)
-  @ApiOperation({ summary: 'Chuyển trạng thái đơn (validate canTransitionBooking)' })
+  @ApiOperation({
+    summary:
+      'Chuyển trạng thái đơn (validate canTransitionBooking; huỷ/no_show bắt buộc có lý do, ghi vào audit)',
+  })
   @ApiOkResponse({ type: BookingDetailDto })
   transition(
     @CurrentTenant() tenant: TenantContext,

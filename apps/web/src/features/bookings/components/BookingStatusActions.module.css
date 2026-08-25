@@ -1,0 +1,20 @@
+/**
+ * Hành động trạng thái trên thanh chi tiết đơn.
+ *
+ * Chỉ định nghĩa cấp BA. Hai cấp trên (nút viền, nút danger) dùng nguyên hình thái của AntD theo
+ * token — vẽ lại chúng ở đây là tách một thanh hành động ra khỏi phần còn lại của sản phẩm.
+ */
+
+/*
+ * `Ghi nhận khách không đến` là mục cấp ba (UX guidelines §3): chữ, không viền, màu phụ — đứng
+ * cạnh hai nút kia mà không cạnh tranh với chúng. Vùng chạm vẫn do `BookingActionBar` áp cho
+ * mọi `.ant-btn` bên trong (`--xp-touch-target-min`), nên "nhẹ" chỉ là màu, không phải kích thước.
+ *
+ * Nhân đôi tên lớp để đủ trọng số đè `.ant-btn` (0,1,0). AntD 6 chèn CSS-in-JS lúc chạy, tức là
+ * SAU stylesheet tĩnh — một lớp đơn thua vì thứ tự, không phải vì trọng số, và đó là kiểu hỏng
+ * chỉ lộ ra trên bản build.
+ */
+.tertiary.tertiary {
+  padding-inline: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+}

@@ -18,6 +18,20 @@ export const NOTIFICATION_TYPE = {
    * chối ↔ khách rút), và nhân viên đang xử lý hộp thư cần biết ngay là không phải bấm gì nữa.
    */
   BOOKING_REQUEST_CANCELLED: 'booking_request_cancelled',
+  /**
+   * Nhắc gian hàng: một yêu cầu sắp hết hạn phản hồi (mốc 20' và 45' của cửa sổ 60').
+   *
+   * Loại riêng chứ không mượn `BOOKING_REQUEST_SUBMITTED`: hai tin cùng loại nằm cạnh nhau
+   * trong chuông trông như một tin trùng, và người trực sẽ học cách bỏ qua cả hai.
+   */
+  BOOKING_REQUEST_EXPIRING: 'booking_request_expiring',
+  /**
+   * Hết hạn phản hồi — gửi cho CẢ KHÁCH lẫn gian hàng, với hai câu khác nhau.
+   *
+   * Khách là người cần tin này nhất: họ đang chờ, và câu trả lời "gian hàng không phản hồi" là
+   * tín hiệu để đi chọn xe khác. Gian hàng nhận nó như một việc đã tuột mất.
+   */
+  BOOKING_REQUEST_EXPIRED: 'booking_request_expired',
   SHOP_APPROVED: 'shop_approved',
   SHOP_REJECTED: 'shop_rejected',
   VEHICLE_APPROVED: 'vehicle_approved',
@@ -87,6 +101,14 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   },
   [NOTIFICATION_TYPE.BOOKING_REQUEST_CANCELLED]: {
     label: 'Khách đã huỷ yêu cầu',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRING]: {
+    label: 'Yêu cầu sắp hết hạn',
+    color: STATUS_COLOR.WARNING,
+  },
+  [NOTIFICATION_TYPE.BOOKING_REQUEST_EXPIRED]: {
+    label: 'Yêu cầu quá hạn phản hồi',
     color: STATUS_COLOR.NEUTRAL,
   },
   [NOTIFICATION_TYPE.SHOP_APPROVED]: { label: 'Gian hàng được duyệt', color: STATUS_COLOR.SUCCESS },

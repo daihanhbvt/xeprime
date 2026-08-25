@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  bookingRequestRespondBy,
   API_ERROR_CODE,
   BOOKING_REQUEST_STATUS,
   MEMBERSHIP_STATUS,
@@ -153,6 +154,8 @@ beforeAll(async () => {
   });
   await prisma.bookingRequest.create({
     data: {
+      // Hạn phản hồi 60 phút (25/08) — cột NOT NULL, server luôn tự đặt.
+      respondBy: bookingRequestRespondBy(new Date()),
       id: requestId,
       tenantId,
       vehicleId,
@@ -216,10 +219,12 @@ describe('Platform customers (Phase 7)', () => {
   maybe('tra SĐT tìm được dù hỗ trợ gõ `09…` còn DB lưu `84…`', async () => {
     // Đây là chỗ dễ hỏng nhất của màn này: khách đọc số kiểu `09…`, `users.phone` lưu `84…`.
     expect((await service.list({ phone: localPhone })).data.map((c) => c.id)).toEqual([customerId]);
-    expect((await service.list({ phone: storedPhone })).data.map((c) => c.id)).toEqual([customerId]);
-    expect((await service.list({ phone: `+84${localPhone.slice(1)}` })).data.map((c) => c.id)).toEqual(
-      [customerId],
-    );
+    expect((await service.list({ phone: storedPhone })).data.map((c) => c.id)).toEqual([
+      customerId,
+    ]);
+    expect(
+      (await service.list({ phone: `+84${localPhone.slice(1)}` })).data.map((c) => c.id),
+    ).toEqual([customerId]);
   });
 
   maybe('tra SĐT/email khớp CHÍNH XÁC, không cho dò tiền tố', async () => {

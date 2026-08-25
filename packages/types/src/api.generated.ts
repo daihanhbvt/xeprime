@@ -2882,7 +2882,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Chuyển trạng thái đơn (validate canTransitionBooking)
+         * Chuyển trạng thái đơn (validate canTransitionBooking; huỷ/no_show bắt buộc có lý do, ghi vào audit)
          * @description **Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).
          *
          *     **Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.
@@ -5230,7 +5230,7 @@ export interface components {
         NotificationDto: {
             id: string;
             /** @enum {string} */
-            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "booking_request_cancelled" | "shop_approved" | "shop_rejected" | "vehicle_approved" | "vehicle_rejected" | "review_received";
+            type: "booking_created" | "booking_status_changed" | "booking_request_submitted" | "booking_request_approved" | "booking_request_rejected" | "booking_request_cancelled" | "booking_request_expiring" | "booking_request_expired" | "shop_approved" | "shop_rejected" | "vehicle_approved" | "vehicle_rejected" | "review_received";
             title: string;
             body?: string | null;
             /** @description Loại đối tượng để dựng link */
@@ -7676,6 +7676,8 @@ export interface components {
              * @enum {string}
              */
             status: "reserved" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
+            /** @description Lý do — BẮT BUỘC khi status = cancelled/no_show. Ghi vào audit (afterJson.reason), KHÔNG ghi vào note của đơn */
+            reason?: string;
             /** @description Thời điểm nhận xe thực tế (khi → active) */
             actualPickupAt?: string;
             /** @description Thời điểm trả xe thực tế (khi → completed) */
@@ -8283,6 +8285,8 @@ export interface components {
             bookingId?: string | null;
             /** @description ISO-8601 UTC */
             createdAt: string;
+            /** @description ISO-8601 UTC — hạn gian hàng phải phản hồi (server tính) */
+            respondBy: string;
             /** @description ISO-8601 UTC — thời điểm gian hàng duyệt/từ chối; null khi còn chờ */
             decidedAt?: string | null;
         };

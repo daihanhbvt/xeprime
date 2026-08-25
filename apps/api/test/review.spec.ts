@@ -1,5 +1,6 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import {
+  bookingRequestRespondBy,
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   MEMBERSHIP_STATUS,
@@ -58,6 +59,8 @@ async function seedBooking(status: string): Promise<string> {
   // Yêu cầu gốc gắn khách — chứng minh quyền sở hữu để đánh giá.
   await prisma.bookingRequest.create({
     data: {
+      // Hạn phản hồi 60 phút (25/08) — cột NOT NULL, server luôn tự đặt.
+      respondBy: bookingRequestRespondBy(new Date()),
       id: newId(),
       tenantId,
       vehicleId,

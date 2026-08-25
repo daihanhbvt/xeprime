@@ -18,6 +18,7 @@ import { useTranslations } from 'next-intl';
 import {
   BOOKING_REQUEST_STATUS,
   BOOKING_REQUEST_STATUS_META,
+  isBookingRequestPastDue,
   ROUTE_TYPE,
   SERVICE_TYPE,
   STATUS_COLOR,
@@ -37,6 +38,7 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { telHref, zaloHref } from '@/lib/contact';
 import { openOverlayOnPlainClick } from '@/lib/modal-link';
 import { toAppTz } from '@/lib/datetime';
+import { RespondDeadline } from './RespondDeadline';
 import type { BookingRequestItem } from '../types';
 import styles from './BookingRequestCard.module.css';
 
@@ -104,6 +106,16 @@ export function BookingRequestCard({
   const [noteExpanded, setNoteExpanded] = useState(false);
 
   const isPending = request.status === BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL;
+  /*
+   * Quá hạn phản hồi thì KHÔNG còn quyết định nào — server từ chối cả duyệt lẫn từ chối
+   * (`BOOKING_REQUEST_EXPIRED`), nên bày nút ra là mời người dùng bấm một thứ chắc chắn hỏng.
+   *
+   * Hỏi `respondBy` chứ không hỏi `status`: trạng thái `expired` do worker ghi theo nhịp, nên
+   * có một cửa sổ mà bản ghi vẫn còn `pending_host_approval` trong khi giờ đã hết. Đây chính
+   * là vị từ mà server dùng, nên hai phía không bao giờ nói hai câu khác nhau.
+   */
+  const pastDue = isBookingRequestPastDue(request.respondBy);
+  const decidable = isPending && !pastDue;
   // Bất kỳ thao tác nào đang chạy đều khoá CẢ HAI quyết định: duyệt và từ chối cùng lúc trên
   // một yêu cầu là hai kết cục loại trừ nhau, và cái tới sau chỉ nhận được lỗi khó hiểu.
   const busy = pendingAction !== null;
@@ -162,6 +174,9 @@ export function BookingRequestCard({
     },
     {
       key: 'approve',
+      // "Duyệt & giữ xe", không phải "Duyệt": đây là hành động DUY NHẤT tạo đơn từ một yêu
+      // cầu, và tác dụng đáng nói nhất của nó là chiếm chỗ trên lịch chiếc xe (ADR 0006). Người
+      // trực cần biết mình sắp khoá một khung giờ, không chỉ "đồng ý" một cách chung chung.
       label: t('actions.approve'),
       icon: <CheckCircleOutlined />,
       showLabel: true,
@@ -175,10 +190,10 @@ export function BookingRequestCard({
   const isWithDriver = request.serviceType === SERVICE_TYPE.WITH_DRIVER;
   const hasExtras = Boolean(
     (isWithDriver && (routeType || request.pickupAddress || request.destination)) ||
-      request.deliveryRequested ||
-      request.note ||
-      request.rejectReason ||
-      showRisk,
+    request.deliveryRequested ||
+    request.note ||
+    request.rejectReason ||
+    showRisk,
   );
 
   return (
@@ -282,6 +297,12 @@ export function BookingRequestCard({
             meta={BOOKING_REQUEST_STATUS_META}
             group="bookingRequestStatus"
           />
+          {/*
+            Đồng hồ đứng ngay dưới chip trạng thái vì nó TRẢ LỜI cùng một câu hỏi ("yêu cầu này
+            đang ở đâu"), chỉ khác là theo trục thời gian. Chỉ hiện khi còn chờ: một đơn đã
+            thành đơn thuê rồi thì hạn phản hồi là chuyện đã qua.
+          */}
+          {isPending ? <RespondDeadline respondBy={request.respondBy} /> : null}
         </div>
 
         {/*
@@ -525,22 +546,25 @@ export function BookingRequestCard({
           ) : null}
         </div>
 
-        {/* Quyết định chỉ có ở yêu cầu CHỜ DUYỆT và chỉ với người có quyền duyệt. */}
-        {isPending && canApprove ? (
+        {/*
+          Quyết định chỉ có ở yêu cầu CÒN XỬ LÝ ĐƯỢC (chờ duyệt + chưa quá hạn) và chỉ với người
+          có quyền duyệt. Quá hạn thì hàng nút biến mất hẳn thay vì mờ đi: không có điều kiện
+          nào để chờ nữa, và một nút xám vĩnh viễn chỉ làm người ta thử bấm.
+        */}
+        {decidable && canApprove ? (
           <div className={styles.decision}>
             <RowActions actions={decisionActions} variant="filled" maxInline={2} />
           </div>
+        ) : isPending && pastDue ? (
+          // Nói vì sao không còn nút, và việc cần làm tiếp — im lặng ở đây đọc như một lỗi tải.
+          <p className={styles.expiredHint}>{t('deadline.pastDueHint')}</p>
         ) : hasBookingLink ? (
           /*
            * MỞ MODAL, không điều hướng: người trực đang quét cả hộp thư, nhảy sang một trang
            * khác là mất chỗ đang đọc và mất luôn bộ lọc/trang hiện tại. Trang chi tiết vẫn còn
            * (link chia sẻ nằm trong chính modal).
            */
-          <Button
-            type="link"
-            className={styles.bookingLink}
-            onClick={() => onOpenDetail(request)}
-          >
+          <Button type="link" className={styles.bookingLink} onClick={() => onOpenDetail(request)}>
             {t('trace.viewBooking')} <RightOutlined aria-hidden="true" />
           </Button>
         ) : null}

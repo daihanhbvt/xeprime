@@ -130,6 +130,9 @@ function request(overrides: Partial<BookingRequestItem> = {}): BookingRequestIte
     rejectReason: null,
     bookingId: null,
     createdAt: '2026-08-18T02:00:00.000Z',
+    // Hạn phản hồi CÒN HẠN (25/08): quá hạn thì thẻ giấu hết nút quyết định, và cả khối test
+    // duyệt/từ chối dưới đây sẽ không còn gì để bấm.
+    respondBy: new Date(Date.now() + 30 * 60_000).toISOString(),
     decidedAt: null,
     ...overrides,
   } as BookingRequestItem;
@@ -476,10 +479,10 @@ describe('/manage/booking-requests — quyết định duyệt/từ chối', () 
     fireEvent.click(within(cardFor('Kia Carnival 2025')).getByRole('button', { name: /Duyệt/ }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/Duyệt sẽ tạo đơn thuê và GIỮ CHỖ lịch/)).toBeTruthy();
+    expect(within(dialog).getByText(/CHIẾM CHỖ lịch của xe/)).toBeTruthy();
     expect(within(dialog).getByText('Kia Carnival 2025 · 51A-123.45')).toBeTruthy();
 
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Duyệt và tạo đơn' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Duyệt & giữ xe' }));
     expect(mutations.approve.mutate).toHaveBeenCalledWith(
       { id: 'req-1', body: undefined },
       expect.anything(),
@@ -502,7 +505,7 @@ describe('/manage/booking-requests — quyết định duyệt/từ chối', () 
     fireEvent.click(within(cardFor('Kia Carnival 2025')).getByRole('button', { name: /Duyệt/ }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Duyệt yêu cầu thuê dài hạn')).toBeTruthy();
+    expect(within(dialog).getByText('Duyệt và giữ xe — thuê dài hạn')).toBeTruthy();
     expect(within(dialog).getByText('Ngày và giờ nhận xe (bắt buộc)')).toBeTruthy();
     expect(mutations.approve.mutate).not.toHaveBeenCalled();
   });
@@ -704,7 +707,7 @@ describe('/manage/booking-requests — trạng thái màn hình', () => {
 
     // Chi tiết đóng lại, nhường chỗ cho hộp xác nhận duyệt.
     const confirm = await screen.findByRole('dialog');
-    fireEvent.click(within(confirm).getByRole('button', { name: 'Duyệt và tạo đơn' }));
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Duyệt & giữ xe' }));
     expect(mutations.approve.mutate).toHaveBeenCalledWith(
       { id: 'req-1', body: undefined },
       expect.anything(),

@@ -36,7 +36,7 @@
     "converted_to_booking": "Đã tạo đơn thuê"
   },
   "bookingStatus": {
-    "reserved": "Đã đặt trước",
+    "reserved": "Đã giữ xe",
     "confirmed": "Đã xác nhận",
     "active": "Đang thuê",
     "completed": "Hoàn thành",
