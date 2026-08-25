@@ -192,6 +192,9 @@ importers:
       '@tanstack/react-query':
         specifier: 5.101.4
         version: 5.101.4(react@19.2.3)
+      '@xeprime/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@xeprime/domain':
         specifier: workspace:*
         version: link:../../packages/domain

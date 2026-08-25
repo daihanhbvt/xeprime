@@ -13,8 +13,9 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Convention response `{data,meta}` / error code | `packages/types/src/api.ts` | 0007 |
 | Type FE sinh từ OpenAPI (KHÔNG sửa tay) | `packages/types/src/api.generated.ts` | 0007 |
 | Yup schema dùng chung | `packages/validators/src/` | — |
-| **Client HTTP + envelope `{data,meta}` + `ApiClientError` + query key** — MỘT bản cho web và app native | `packages/api-client/src/` (`client.ts`, `transport.ts`, `query-keys.ts`); web cấu hình ở `apps/web/src/services/api-client.ts` | 0007 · 0017 |
+| **Client HTTP + envelope `{data,meta}` + `ApiClientError` + query key** — MỘT bản cho web và app native | `packages/api-client/src/` (`client.ts`, `transport.ts`, `query-keys.ts`); cấu hình: web `apps/web/src/services/api-client.ts`, native `apps/mobile/src/lib/api-client.ts` | 0007 · 0017 |
 | **Đường vận chuyển danh tính** — web trả `credentials: 'include'`, native trả `Authorization: Bearer` | `packages/api-client/src/transport.ts` (`AuthTransport`) | 0002 · 0017 |
+| **Kho token app native** — access 15′ trong bộ nhớ, refresh xoay vòng single-flight ở Keychain/Keystore, phát sự kiện "phiên kết thúc" | `apps/mobile/src/lib/auth-session.ts` (+ `secure-storage.ts`); dọn cache ở `features/auth/SessionBoundary.tsx` | 0017 |
 | **Luật nghiệp vụ thuần dùng chung** — tiền trên chuỗi · múi giờ + thời lượng thuê · lịch bận · nguyện vọng nhận xe | `packages/domain/src/` (re-export shim ở `apps/web/src/lib/{money,datetime,rental-busy,long-term}.ts`) | 0006 · 0007 · 0011 |
 | **Danh mục lọc** (hãng xe / kiểu dáng / nhiên liệu / tiện ích) — nội dung ở **DB**, không phải hằng số | bảng `catalog_items` · `apps/api/src/modules/catalog/` · FE `apps/web/src/features/catalog/` | — |
 | **Banner hero trang chủ** — platform admin quản lý, public lấy tối đa 3 | bảng `marketplace_banners` · `apps/api/src/modules/banners/` · FE `apps/web/src/features/banners/` + `BannerCarousel` | — |

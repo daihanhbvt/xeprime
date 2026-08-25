@@ -45,7 +45,7 @@ describe('LoginForm', () => {
     expect(login).not.toHaveBeenCalled();
   });
 
-  it('gọi /auth/login với giá trị đã nhập rồi báo thành công', async () => {
+  it('gọi /auth/mobile/login với giá trị đã nhập rồi báo thành công', async () => {
     const login = jest.spyOn(authApi, 'loginWithPassword').mockResolvedValue(DEMO_USER);
     const onSuccess = jest.fn();
     const view = await renderLoginForm(onSuccess);

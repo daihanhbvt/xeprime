@@ -4,9 +4,12 @@ import { Platform } from 'react-native';
 /**
  * Khoá trong Keychain (iOS) / Keystore (Android). Khai báo tập trung vì `expo-secure-store`
  * chỉ nhận `[A-Za-z0-9._-]` — ký tự khác ném lỗi lúc CHẠY, không phải lúc biên dịch.
+ *
+ * `REFRESH_TOKEN` là bí mật DUY NHẤT được ghi xuống đĩa (ADR 0017): access token sống 15 phút
+ * và ở lại trong bộ nhớ, ghi nó xuống chỉ thêm một chỗ để rò.
  */
 export const SECURE_KEY = {
-  SESSION_TOKEN: 'xp.session.token',
+  REFRESH_TOKEN: 'xp.refresh.token',
   LOCALE: 'xp.locale',
 } as const;
 

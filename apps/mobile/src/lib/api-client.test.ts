@@ -1,86 +1,70 @@
 import { API_ERROR_CODE } from '@xeprime/types';
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
 import {
   ApiClientError,
   apiGet,
   apiPost,
   apiRequest,
   CLIENT_ERROR_CODE,
-  getApiBaseUrl,
   isRetriableError,
   isUnauthenticated,
 } from './api-client';
-import {
-  addErrorInterceptor,
-  addRequestInterceptor,
-  type HttpRequestContext,
-} from './http-interceptors';
+import { resetAuthSessionForTest, signInWithPassword } from './auth-session';
 
-jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: null } }));
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { hostUri: 'localhost:8081', version: '1.2.3' } },
+}));
 
-const constantsMock = Constants as { expoConfig: { hostUri?: string } | null };
+interface StubResponse {
+  status: number;
+  body?: unknown;
+}
 
-function mockFetch(status: number, body: unknown): jest.Mock {
-  const response = {
-    ok: status >= 200 && status < 300,
-    status,
-    text: async () => (body === undefined ? '' : JSON.stringify(body)),
-  };
-  const fetchMock = jest.fn().mockResolvedValue(response);
+/**
+ * Hàng đợi response chứ không một giá trị cố định: các ca thật ở đây gồm NHIỀU request nối
+ * nhau (đăng nhập rồi mới gọi API), và một mock trả mãi một thứ sẽ làm ca sai vẫn xanh.
+ */
+function mockFetch(...responses: StubResponse[]): jest.Mock {
+  const queue = [...responses];
+  const fetchMock = jest.fn(async () => {
+    const next = queue.shift();
+    if (!next) throw new Error('mockFetch: gọi nhiều request hơn số response đã khai');
+    return {
+      ok: next.status >= 200 && next.status < 300,
+      status: next.status,
+      text: async () => (next.body === undefined ? '' : JSON.stringify(next.body)),
+    };
+  });
   globalThis.fetch = fetchMock as unknown as typeof fetch;
   return fetchMock;
 }
 
-describe('getApiBaseUrl', () => {
-  it('suy host từ Expo dev server để thiết bị thật gọi được máy dev', () => {
-    constantsMock.expoConfig = { hostUri: '192.168.1.7:8081' };
-    expect(getApiBaseUrl()).toBe('http://192.168.1.7:4000');
-  });
+function headersOf(fetchMock: jest.Mock, callIndex: number): Record<string, string> {
+  const init = fetchMock.mock.calls[callIndex]?.[1] as { headers?: Record<string, string> };
+  return init?.headers ?? {};
+}
 
-  it('lùi về localhost khi không chạy qua dev server', () => {
-    constantsMock.expoConfig = null;
-    expect(getApiBaseUrl()).toBe('http://localhost:4000');
-  });
+const TOKENS = {
+  accessToken: 'access-1',
+  accessTokenExpiresIn: 900,
+  refreshToken: 'refresh-1',
+  refreshTokenExpiresAt: '2026-10-24T00:00:00.000Z',
+};
 
-  it('đổi loopback thành 10.0.2.2 trên emulator Android — localhost ở đó là chính máy ảo', () => {
-    constantsMock.expoConfig = { hostUri: 'localhost:8081' };
-    jest.replaceProperty(Platform, 'OS', 'android');
-
-    expect(getApiBaseUrl()).toBe('http://10.0.2.2:4000');
-  });
-
-  it('giữ nguyên IP LAN trên Android (thiết bị thật, không phải emulator)', () => {
-    constantsMock.expoConfig = { hostUri: '192.168.1.183:8081' };
-    jest.replaceProperty(Platform, 'OS', 'android');
-
-    expect(getApiBaseUrl()).toBe('http://192.168.1.183:4000');
-  });
+beforeEach(() => {
+  resetAuthSessionForTest();
 });
 
 describe('apiRequest', () => {
-  beforeEach(() => {
-    constantsMock.expoConfig = { hostUri: 'localhost:8081' };
-  });
-
   it('bóc lớp bọc { data } của ADR 0007', async () => {
-    mockFetch(200, { data: { id: 'u1' } });
+    mockFetch({ status: 200, body: { data: { id: 'u1' } } });
     await expect(apiGet<{ id: string }>('/auth/me')).resolves.toEqual({ id: 'u1' });
   });
 
-  // CHÚ Ý: test này KHÔNG chứng minh cookie phiên được gửi đi. React Native bỏ qua
-  // `credentials` — cookie do cookie store của hệ điều hành quyết định (Android
-  // ForwardingCookieHandler, iOS NSHTTPCookieStorage). Nó chỉ chốt rằng wrapper không
-  // đánh rơi cờ này khi chạy trên `expo start --web`, nơi `credentials` mới có tác dụng.
-  it('truyền cờ credentials để bản web của Expo gửi kèm cookie', async () => {
-    const fetchMock = mockFetch(200, { data: null });
-    await apiGet('/auth/me');
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ credentials: 'include' });
-  });
-
   it('ném ApiClientError mang MÃ lỗi của backend', async () => {
-    mockFetch(401, {
-      error: { code: API_ERROR_CODE.INVALID_CREDENTIALS, message: 'Sai mật khẩu' },
+    mockFetch({
+      status: 401,
+      body: { error: { code: API_ERROR_CODE.INVALID_CREDENTIALS, message: 'Sai mật khẩu' } },
     });
 
     const error = await apiPost('/auth/login', {}).catch((err: unknown) => err);
@@ -91,13 +75,87 @@ describe('apiRequest', () => {
   });
 
   it('coi response không có { data } là vi phạm hợp đồng', async () => {
-    mockFetch(200, { id: 'u1' });
+    mockFetch({ status: 200, body: { id: 'u1' } });
     await expect(apiGet('/auth/me')).rejects.toThrow(/does not follow the \{ data \} envelope/);
   });
 
   it('trả undefined cho 204 No Content', async () => {
-    mockFetch(204, undefined);
-    await expect(apiGet('/auth/session')).resolves.toBeUndefined();
+    mockFetch({ status: 204 });
+    await expect(apiGet('/auth/mobile/logout')).resolves.toBeUndefined();
+  });
+});
+
+describe('Bearer — ADR 0017', () => {
+  it('gắn access token vào mọi request sau khi đăng nhập', async () => {
+    const fetchMock = mockFetch(
+      { status: 200, body: { data: { tokens: TOKENS, user: { id: 'u1' } } } },
+      { status: 200, body: { data: { id: 'u1' } } },
+    );
+
+    await signInWithPassword('owner@xeprime.test', 'matkhau');
+    await apiGet('/auth/me');
+
+    expect(headersOf(fetchMock, 1)).toMatchObject({ Authorization: 'Bearer access-1' });
+  });
+
+  // Web dùng cookie httpOnly (ADR 0002); RN không có cookie jar đáng tin nên native KHÔNG gửi cờ
+  // này — gửi kèm là mở đường cho một nguồn danh tính thứ hai mà `AuthGuard` sẽ từ chối.
+  it('không gửi cờ credentials của cookie', async () => {
+    const fetchMock = mockFetch({ status: 200, body: { data: null } });
+
+    await apiGet('/auth/me');
+
+    expect(fetchMock.mock.calls[0]?.[1]).not.toHaveProperty('credentials');
+  });
+
+  it('chưa đăng nhập thì đi request trần — endpoint @Public() vẫn phục vụ được', async () => {
+    const fetchMock = mockFetch({ status: 200, body: { data: [] } });
+
+    await apiGet('/listings');
+
+    expect(headersOf(fetchMock, 0)).not.toHaveProperty('Authorization');
+  });
+
+  it('endpoint đăng nhập KHÔNG kèm danh tính — nó là chỗ danh tính được cấp', async () => {
+    const fetchMock = mockFetch({
+      status: 200,
+      body: { data: { tokens: TOKENS, user: { id: 'u1' } } },
+    });
+
+    await signInWithPassword('owner@xeprime.test', 'matkhau');
+
+    expect(headersOf(fetchMock, 0)).not.toHaveProperty('Authorization');
+  });
+});
+
+describe('lỗi phía client', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('lỗi mạng mang mã CLIENT_NETWORK_ERROR và status 0', async () => {
+    globalThis.fetch = jest.fn().mockRejectedValue(new TypeError('Network request failed'));
+
+    const error = await apiGet('/auth/me').catch((err: unknown) => err);
+
+    expect(error).toMatchObject({ code: CLIENT_ERROR_CODE.NETWORK_ERROR, status: 0 });
+  });
+
+  it('huỷ request quá hạn và ném mã CLIENT_TIMEOUT', async () => {
+    jest.useFakeTimers();
+    globalThis.fetch = jest.fn(
+      (_url: unknown, init: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          init.signal.addEventListener('abort', () => reject(new Error('Aborted')));
+        }),
+    ) as unknown as typeof fetch;
+
+    const pending = apiRequest('/slow').catch((err: unknown) => err);
+    // `advanceTimersByTimeAsync` chứ không bản đồng bộ: request chạy qua vài `await` (đọc token)
+    // trước khi hẹn giờ được đặt, bản đồng bộ nhảy thời gian trước lúc đó.
+    await jest.advanceTimersByTimeAsync(15_000);
+
+    expect(await pending).toMatchObject({ code: CLIENT_ERROR_CODE.TIMEOUT, status: 0 });
   });
 });
 
@@ -117,76 +175,6 @@ describe('isUnauthenticated', () => {
     });
     expect(isUnauthenticated(other)).toBe(false);
     expect(isUnauthenticated(new Error('mạng'))).toBe(false);
-  });
-});
-
-describe('interceptor', () => {
-  it('request interceptor sửa được header trước khi fetch chạy', async () => {
-    const fetchMock = mockFetch(200, { data: null });
-    addRequestInterceptor((request) => ({
-      ...request,
-      headers: { ...request.headers, 'X-Client': 'mobile' },
-    }));
-
-    await apiGet('/auth/me');
-
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
-      headers: expect.objectContaining({ 'X-Client': 'mobile' }),
-    });
-  });
-
-  it('error interceptor nhận ApiClientError kèm path đã gọi', async () => {
-    mockFetch(403, { error: { code: API_ERROR_CODE.FORBIDDEN, message: 'Không có quyền' } });
-    const seen = jest.fn();
-    addErrorInterceptor(seen);
-
-    await apiGet('/vehicles').catch(() => undefined);
-
-    expect(seen).toHaveBeenCalledWith(
-      expect.objectContaining({ code: API_ERROR_CODE.FORBIDDEN }),
-      expect.objectContaining({ path: '/vehicles', method: 'GET' }),
-    );
-  });
-
-  it('gỡ đăng ký rồi thì interceptor không chạy nữa', async () => {
-    mockFetch(200, { data: null });
-    const spy = jest.fn((request: HttpRequestContext) => request);
-    addRequestInterceptor(spy)();
-
-    await apiGet('/auth/me');
-
-    expect(spy).not.toHaveBeenCalled();
-  });
-});
-
-describe('timeout', () => {
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  it('huỷ request quá hạn và ném mã CLIENT_TIMEOUT', async () => {
-    jest.useFakeTimers();
-    globalThis.fetch = jest.fn(
-      (_url: unknown, init: { signal: AbortSignal }) =>
-        new Promise((_resolve, reject) => {
-          init.signal.addEventListener('abort', () => reject(new Error('Aborted')));
-        }),
-    ) as unknown as typeof fetch;
-
-    const pending = apiRequest('/slow', { timeoutMs: 5_000 }).catch((err: unknown) => err);
-    // `advanceTimersByTimeAsync` chứ không bản đồng bộ: `apiRequest` chạy qua vài `await`
-    // (interceptor) trước khi hẹn giờ được đặt, bản đồng bộ nhảy thời gian trước lúc đó.
-    await jest.advanceTimersByTimeAsync(5_000);
-
-    expect(await pending).toMatchObject({ code: CLIENT_ERROR_CODE.TIMEOUT, status: 0 });
-  });
-
-  it('lỗi mạng (không phải quá hạn) mang mã CLIENT_NETWORK_ERROR', async () => {
-    globalThis.fetch = jest.fn().mockRejectedValue(new TypeError('Network request failed'));
-
-    const error = await apiGet('/auth/me').catch((err: unknown) => err);
-
-    expect(error).toMatchObject({ code: CLIENT_ERROR_CODE.NETWORK_ERROR, status: 0 });
   });
 });
 

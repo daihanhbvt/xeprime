@@ -1,5 +1,5 @@
 import { API_ERROR_CODE, type ApiSuccess, type PaginationMeta } from '@xeprime/types';
-import { ApiClientError, toApiClientError } from './errors';
+import { ApiClientError, toApiClientError, toNetworkError } from './errors';
 import { platformFetch, type AbortSignalLike, type FetchLike, type FetchResponse } from './http';
 import { buildUrl, normalizeBaseUrl, type QueryParams } from './url';
 import { webAuthTransport, type AuthTransport } from './transport';
@@ -34,7 +34,14 @@ export interface ApiClientOptions {
   baseUrl: string;
   /** Mặc định: web transport (cookie httpOnly — ADR 0002). */
   transport?: AuthTransport;
-  /** Ghi đè `fetch` — cho test, hoặc cho môi trường phải polyfill. */
+  /**
+   * Ghi đè `fetch` — cho test, cho môi trường phải polyfill, và cho CHÍNH SÁCH của từng app.
+   *
+   * Trần thời gian đi qua đây chứ không thành một tuỳ chọn của package: `setTimeout` và
+   * `AbortController` không nằm trong `lib: ES2023` mà package này nhắm tới, và "bao lâu là quá
+   * lâu" khác nhau giữa một tab trình duyệt và một máy đang chuyển từ 4G sang wifi. App bọc
+   * `fetch` của nó rồi ném `ApiClientError` — client giữ nguyên mã đó, không bọc lại.
+   */
   fetch?: FetchLike;
 }
 
@@ -98,18 +105,25 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     const auth = await transport.credentials();
     const doFetch = fetchImpl ?? platformFetch();
 
-    const response = await doFetch(buildUrl(baseUrl, path, query), {
-      method,
-      headers: {
-        Accept: 'application/json',
-        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-        ...auth.headers,
-        ...headers,
-      },
-      ...(auth.credentials ? { credentials: auth.credentials } : {}),
-      ...(signal ? { signal } : {}),
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    });
+    let response: FetchResponse;
+    try {
+      response = await doFetch(buildUrl(baseUrl, path, query), {
+        method,
+        headers: {
+          Accept: 'application/json',
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          ...auth.headers,
+          ...headers,
+        },
+        ...(auth.credentials ? { credentials: auth.credentials } : {}),
+        ...(signal ? { signal } : {}),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    } catch (cause) {
+      // Bản `fetch` do app truyền vào đã phân loại rồi (trần thời gian → `CLIENT_TIMEOUT`) —
+      // bọc lại lần nữa sẽ nuốt mất mã chính xác hơn của nó.
+      throw cause instanceof ApiClientError ? cause : toNetworkError(path, cause);
+    }
 
     const payload = await readBody(response);
 

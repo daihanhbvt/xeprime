@@ -3,6 +3,7 @@ import { render, waitFor } from '@testing-library/react-native';
 import { API_ERROR_CODE } from '@xeprime/types';
 import { Text } from 'react-native';
 import { apiGet } from '@/lib/api-client';
+import { resetAuthSessionForTest, signInWithPassword } from '@/lib/auth-session';
 import { SessionBoundary } from './SessionBoundary';
 import { useSessionGate } from './hooks/use-session-gate';
 
@@ -22,32 +23,75 @@ function GateProbe() {
   return <Text>{status}</Text>;
 }
 
+beforeEach(() => {
+  resetAuthSessionForTest();
+});
+
 /**
- * Hợp đồng thật của tầng 401: một endpoint BẤT KỲ trả 401 thì `useCurrentUser` phải tự chạy
- * lại và cổng chuyển sang `unauthenticated`. Test này chứng minh cả chuỗi, không chỉ việc
- * cache bị xoá.
+ * Hợp đồng thật của tầng phiên: refresh token bị server từ chối thì cổng phải chuyển sang
+ * `unauthenticated` — không cần màn hình nào tự kiểm 401. Test này chứng minh cả chuỗi, không
+ * chỉ việc cache bị xoá.
  */
 describe('phục hồi sau khi phiên hết hạn', () => {
-  it('401 ở endpoint khác kéo cổng về unauthenticated', async () => {
-    const calls: string[] = [];
+  it('refresh bị từ chối kéo cổng về unauthenticated', async () => {
+    let sessionAlive = true;
+
     globalThis.fetch = jest.fn((url: string) => {
-      calls.push(url);
-      if (url.includes('/auth/me')) {
-        // Lần đầu còn phiên; sau khi phiên hỏng thì chính /auth/me cũng 401.
+      if (url.includes('/auth/mobile/login')) {
+        // `accessTokenExpiresIn: 0` — request kế tiếp buộc phải đi qua đường refresh.
         return Promise.resolve(
-          calls.filter((c) => c.includes('/auth/me')).length === 1
+          jsonResponse(200, {
+            data: {
+              tokens: {
+                accessToken: 'access-1',
+                accessTokenExpiresIn: 0,
+                refreshToken: 'refresh-1',
+                refreshTokenExpiresAt: '2026-10-24T00:00:00.000Z',
+              },
+              user: USER,
+            },
+          }),
+        );
+      }
+
+      if (url.includes('/auth/mobile/refresh')) {
+        if (!sessionAlive) {
+          return Promise.resolve(
+            jsonResponse(401, {
+              error: { code: API_ERROR_CODE.SESSION_EXPIRED, message: 'hết phiên' },
+            }),
+          );
+        }
+        return Promise.resolve(
+          jsonResponse(200, {
+            data: {
+              accessToken: 'access-2',
+              accessTokenExpiresIn: 0,
+              refreshToken: 'refresh-2',
+              refreshTokenExpiresAt: '2026-10-24T00:00:00.000Z',
+            },
+          }),
+        );
+      }
+
+      // Phiên chết thì `/auth/me` đi không kèm Bearer (không còn token để làm mới) và
+      // backend trả 401 — đúng như thật.
+      if (url.includes('/auth/me')) {
+        return Promise.resolve(
+          sessionAlive
             ? jsonResponse(200, { data: USER })
             : jsonResponse(401, {
-                error: { code: API_ERROR_CODE.UNAUTHENTICATED, message: 'hết phiên' },
+                error: { code: API_ERROR_CODE.UNAUTHENTICATED, message: 'chưa đăng nhập' },
               }),
         );
       }
+
       return Promise.resolve(
-        jsonResponse(401, {
-          error: { code: API_ERROR_CODE.UNAUTHENTICATED, message: 'hết phiên' },
-        }),
+        jsonResponse(401, { error: { code: API_ERROR_CODE.UNAUTHENTICATED, message: 'hết phiên' } }),
       );
     }) as unknown as typeof fetch;
+
+    await signInWithPassword('owner@xeprime.test', 'matkhau');
 
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const view = await render(
@@ -60,9 +104,11 @@ describe('phục hồi sau khi phiên hết hạn', () => {
 
     await waitFor(() => expect(view.getByText('ready')).toBeTruthy());
 
+    // Phiên bị thu hồi ở server (đăng xuất từ máy khác, phát hiện replay): lời gọi tiếp theo
+    // không làm mới token được nữa.
+    sessionAlive = false;
     await apiGet('/vehicles').catch(() => undefined);
 
     await waitFor(() => expect(view.getByText('unauthenticated')).toBeTruthy());
-    expect(calls.filter((c) => c.includes('/auth/me')).length).toBeGreaterThan(1);
   });
 });

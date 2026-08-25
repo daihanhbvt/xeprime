@@ -25,6 +25,7 @@ Rồi bấm `a` (Android), `i` (iOS) hoặc `w` (web preview).
 | `android` / `ios`                        | `expo run:*` — build native                                                                   |
 | `web`                                    | bản web của Expo, **chỉ để xem giao diện** (SecureStore lùi về `localStorage`, không an toàn) |
 | `lint` · `typecheck` · `test`            | ESLint chung của repo · `tsc --noEmit` · Jest (`jest-expo`)                                   |
+| `exec jest src/lib/live-bearer.test.ts`   | **Test sống** — gọi API thật, chứng minh app gửi đúng Bearer. Cần `XP_LIVE_API=1` + API ở cổng 4000 + DB đã seed; không đặt cờ thì suite tự bỏ qua |
 
 `build:deps` chạy trước mọi lệnh start vì app import `@xeprime/types` /
 `@xeprime/validators` ở dạng **đã build**, không phải source. Thiếu bước này thì clone mới sẽ
@@ -32,7 +33,7 @@ Rồi bấm `a` (Android), `i` (iOS) hoặc `w` (web preview).
 
 ### Base URL của API
 
-Không cần cấu hình gì: [src/lib/api-client.ts](src/lib/api-client.ts) suy host từ Expo dev
+Không cần cấu hình gì: [src/lib/api-base-url.ts](src/lib/api-base-url.ts) suy host từ Expo dev
 server — thiết bị thật lấy IP LAN của máy chạy Metro, emulator Android đổi `localhost` thành
 `10.0.2.2`. Chỉ đặt `EXPO_PUBLIC_API_URL` trong `.env` khi API **không** nằm ở cổng 4000 của
 chính máy đang chạy Metro. Expo chỉ inline biến có tiền tố `EXPO_PUBLIC_`, và inline **lúc
@@ -60,12 +61,15 @@ flowchart LR
   subgraph shared[Package dùng chung]
     types["@xeprime/types<br/>api.generated.ts · status · RBAC"]
     val["@xeprime/validators<br/>Yup schema"]
+    client["@xeprime/api-client<br/>client HTTP · transport · query key"]
+    dom["@xeprime/domain<br/>tiền · ngày giờ · lịch bận · message"]
+    ui["@xeprime/ui<br/>XP_TOKENS"]
   end
   api["apps/api<br/>NestJS"]
   db[("PostgreSQL 16")]
 
-  web --> types & val
-  mob --> types & val
+  web --> types & val & client & dom & ui
+  mob --> types & val & client & dom & ui
   web -- "HTTP {data} / {error}" --> api
   mob -- "HTTP {data} / {error}" --> api
   api -- "sinh OpenAPI" --> types
@@ -73,7 +77,8 @@ flowchart LR
 ```
 
 Hệ quả thực tế: **đổi DTO ở backend thì phải chạy `pnpm contract` ở gốc repo**, nếu không type
-của mobile lệch so với API thật (ADR 0007). Mobile không có DTO viết tay.
+của mobile lệch so với API thật (ADR 0007). Mobile không có DTO viết tay, và cũng không có bản
+thứ hai của client HTTP — hai app khác nhau đúng ở `AuthTransport` (mục 4).
 
 ### Thư mục
 
@@ -101,7 +106,7 @@ apps/mobile/
     ├── features/<miền>/          # api.ts · hooks/ · components/ — cắt theo NGHIỆP VỤ
     ├── hooks/                    # hook dùng chung không thuộc miền nào
     ├── i18n/                     # config · provider · messages · locale.slice · useErrorMessage
-    ├── lib/                      # api-client · http-interceptors · secure-storage · logger
+    ├── lib/                      # api-client · auth-session · fetch-with-timeout · secure-storage · logger
     ├── queries/                  # queryClient · queryKeys · reset-session-cache
     ├── store/                    # Redux Toolkit — chỉ ĐĂNG KÝ reducer, slice thuộc về feature
     ├── theme/                    # colors · elevation
@@ -147,84 +152,128 @@ Locale lấy theo thứ tự: ngôn ngữ máy (`expo-localization`, đọc **đ
 
 ## 4. Luồng một request
 
+**Client HTTP là `@xeprime/api-client`, dùng CHUNG với web.** App native không có bản thứ hai
+của hợp đồng API: envelope `{ data, meta }`, `ApiClientError`, 48 mã lỗi, query string, phân
+trang đều nằm ở package đó. [src/lib/api-client.ts](src/lib/api-client.ts) chỉ cấu hình nó một
+lần rồi xuất lại — đối xứng với `apps/web/src/services/api-client.ts`.
+
 ```mermaid
 sequenceDiagram
   participant C as Component
   participant H as hook (TanStack Query)
   participant A as features/*/api.ts
-  participant X as apiRequest
-  participant I as interceptors
+  participant X as apiGet (@xeprime/api-client)
+  participant T as bearerAuthTransport
+  participant V as lib/auth-session
   participant S as NestJS
 
   C->>H: useCurrentUser()
   H->>A: fetchCurrentUser()
-  A->>X: apiGet('/auth/me')
-  X->>I: applyRequestInterceptors
-  I-->>X: header đã bổ sung
-  X->>S: fetch (timeout 15s, credentials)
+  A->>X: authApi.me()
+  X->>T: credentials()
+  T->>V: getFreshAccessToken()
+  V-->>T: access token (tự refresh nếu sắp hết hạn)
+  T-->>X: { Authorization: 'Bearer …' }
+  X->>S: fetch (trần thời gian 15s)
   S-->>X: {data} hoặc {error}
-  X->>I: applyResponse / applyErrorInterceptors
   X-->>H: data đã bóc envelope · hoặc ApiClientError
   H-->>C: data / isPending / error
 ```
 
-Không gọi `fetch` trần ở feature. `apiRequest` lo sẵn: dựng URL + query, kiểm envelope
-`{ data }` của ADR 0007 (sai envelope là **ném lỗi**, không đoán mò), `credentials: 'include'`
-cho session cookie httpOnly (ADR 0002), trần thời gian 15s, và biến mọi lỗi thành
-`ApiClientError` có `code` / `status` / `details`.
+Ba chỗ — và chỉ ba chỗ — app native khác web, cả ba nằm trong lời gọi `configureApiClient()`:
 
-Lỗi phát sinh **phía client** mang tiền tố riêng để nhìn log là biết ngay lỗi nằm ở đâu:
-`CLIENT_ERROR_CODE.NETWORK_ERROR`, `CLIENT_ERROR_CODE.TIMEOUT`. Chúng cố ý **không** nằm trong
-`API_ERROR_CODE` của backend — backend không bao giờ phát chúng vì request còn chưa tới nơi.
+| Chỗ         | Web                            | Native                                                                        |
+| ----------- | ------------------------------ | ----------------------------------------------------------------------------- |
+| `baseUrl`   | `NEXT_PUBLIC_API_URL`          | [`resolveApiBaseUrl()`](src/lib/api-base-url.ts) — suy từ Expo dev server     |
+| `transport` | cookie httpOnly (ADR 0002)     | `bearerAuthTransport` → `Authorization: Bearer` (ADR 0017)                    |
+| `fetch`     | `fetch` của trình duyệt        | [`fetchWithTimeout`](src/lib/fetch-with-timeout.ts) — mạng di động treo, không báo lỗi |
 
-Cắm hành vi ngang (header phiên, request-id, app version, báo cáo crash) qua
-[src/lib/http-interceptors.ts](src/lib/http-interceptors.ts); mỗi hàm `add*Interceptor` trả về
-hàm gỡ đăng ký.
+Không gọi `fetch` trần ở feature. Sai envelope `{ data }` là **ném lỗi**, không đoán mò
+(ADR 0007). Lỗi phát sinh **phía client** mang tiền tố riêng để nhìn log là biết ngay lỗi nằm ở
+đâu: `CLIENT_ERROR_CODE.NETWORK_ERROR`, `CLIENT_ERROR_CODE.TIMEOUT` — chúng cố ý **không** nằm
+trong `API_ERROR_CODE` của backend, vì backend không bao giờ phát chúng.
+
+> Trần thời gian sống ở app chứ không trong package dùng chung: `setTimeout`/`AbortController`
+> không nằm trong `lib: ES2023` mà package đó nhắm tới, và "bao lâu là quá lâu" là chính sách của
+> từng client. Cần trần khác (upload/tải file dài) thì `createFetchWithTimeout(ms)` một client riêng.
 
 ---
 
-## 5. Luồng phiên đăng nhập
+## 5. Luồng phiên đăng nhập — ADR 0017
 
-> **Đang TẮT ở base.** `(app)/_layout.tsx` hiện chỉ render `Stack`; `/home` vào thẳng bằng
-> nút, không màn nào gọi `/auth/me`. Toàn bộ hook, tầng 401 và test bên dưới **vẫn nguyên
-> vẹn** — bật lại chỉ là thay thân `AppLayout` bằng `useSessionGate()`. Phần này mô tả thiết
-> kế để không ai vô tình xây lại theo kiểu khác.
+> **Guard route đang TẮT ở base.** `(app)/_layout.tsx` hiện chỉ render `Stack`; `/home` vào
+> thẳng bằng nút. Phần dưới đây **đã chạy thật** (đăng nhập/refresh/đăng xuất gọi API thật) —
+> bật guard chỉ là thay thân `AppLayout` bằng `useSessionGate()`.
 
-Đây là phần dễ làm sai nhất, nên nó được tách làm **hai tầng** và có test đầu-cuối.
+Native KHÔNG dùng cookie: trên React Native cookie do cookie store của OS quản và Android không
+flush xuống đĩa, nên kill app là mất phiên. Thay vào đó là **Bearer access token 15 phút +
+refresh token opaque xoay vòng**, thu hồi được theo thiết bị.
 
 ```mermaid
 flowchart TD
-  E["Endpoint BẤT KỲ trả 401"] --> B["SessionBoundary<br/>(errorInterceptor)"]
-  B -->|"path thuộc AUTH_PATHS"| Z["bỏ qua — chống lặp vô hạn"]
-  B -->|"path khác"| R["resetSessionScopedCache()<br/>queryClient.resetQueries()"]
-  R --> Q["useCurrentUser fetch lại → 401"]
-  Q --> G["useSessionGate() → 'unauthenticated'"]
-  G --> N["(app)/_layout: Redirect '/login'"]
+  L["POST /auth/mobile/login"] --> T["lib/auth-session<br/>access token → BỘ NHỚ · refresh token → Keychain/Keystore"]
+  R["Request bất kỳ"] --> G["getFreshAccessToken()"]
+  G -->|"còn hạn (trừ 30s)"| H["gắn Authorization: Bearer"]
+  G -->|"hết hạn"| F["POST /auth/mobile/refresh<br/>SINGLE-FLIGHT"]
+  F -->|"cặp token mới"| H
+  F -->|"SESSION_EXPIRED"| E["phát sự kiện phiên kết thúc"]
+  O["Người dùng đăng xuất"] --> E
+  E --> B["SessionBoundary<br/>resetSessionScopedCache()"]
+  B --> Q["useCurrentUser fetch lại → 401"]
+  Q --> S["useSessionGate() → 'unauthenticated'"]
+  S --> N["(app)/_layout: Redirect '/login'"]
 ```
 
 | Tầng                       | Ở đâu                                                              | Việc                                                                                            |
 | -------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| Phát hiện + dọn trạng thái | [SessionBoundary.tsx](src/features/auth/SessionBoundary.tsx)       | Nằm ngoài cây điều hướng nên **không** gọi được `useRouter` — nó chỉ dọn cache                  |
+| Kho token                  | [src/lib/auth-session.ts](src/lib/auth-session.ts)                 | Nơi DUY NHẤT biết token; đọc/ghi Keychain, làm mới, phát sự kiện "phiên kết thúc"                |
+| Dọn trạng thái             | [SessionBoundary.tsx](src/features/auth/SessionBoundary.tsx)       | Nằm ngoài cây điều hướng nên **không** gọi được `useRouter` — nó chỉ dọn cache                  |
 | Quyết định                 | [use-session-gate.ts](src/features/auth/hooks/use-session-gate.ts) | Trả về `loading \| unauthenticated \| unreachable \| ready` — kiểm thử được mà không cần router |
 | Điều hướng (chưa nối)      | [app/(app)/_layout.tsx](<app/(app)/_layout.tsx>)                   | Nơi **duy nhất** gọi `<Redirect>`                                                               |
 
-Ba luật đi kèm, đừng phá:
+Sáu luật đi kèm, đừng phá:
 
-1. **Màn hình KHÔNG tự kiểm 401.** Chúng nằm sau guard và dùng
-   [`useAuthenticatedUser()`](src/features/auth/hooks/use-authenticated-user.ts) — hook này
-   **ném lỗi** nếu không có phiên, để lỗi định tuyến nổ ra ở ErrorBoundary thay vì thành màn
-   trắng im lặng.
-2. **`AUTH_PATHS` phải loại trừ chính endpoint auth.** Không có nó thì `/auth/me` trả 401 sẽ
-   tự làm mình chạy lại → vòng lặp vô hạn.
-3. **Dùng `resetQueries()`, KHÔNG `clear()`.** `clear()` gỡ hẳn query khỏi cache nên observer
-   đang mounted giữ nguyên dữ liệu cũ và không ai bảo nó chạy lại — người dùng hết phiên vẫn
-   nhìn thấy dữ liệu của phiên đã chết và **không bao giờ bị đẩy về đăng nhập**. Đây là bug
-   thật đã xảy ra; [session-recovery.test.tsx](src/features/auth/session-recovery.test.tsx)
-   khoá lại đúng ca đó.
+1. **Refresh token CHỈ ở Keychain/Keystore.** Không `AsyncStorage`, không redux-persist, không
+   log. Access token sống 15 phút nên nó ở **bộ nhớ** — ghi xuống đĩa chỉ thêm một chỗ để rò.
+2. **SINGLE-FLIGHT khi làm mới.** Đây không phải tối ưu. Refresh token dùng MỘT lần: ba request
+   song song cùng gửi một token thì server cho một cái thắng và coi hai cái sau là **replay** —
+   thu hồi cả phiên, người dùng bị đá ra dù chẳng làm gì sai.
+3. **Ghi đè cặp token mới sau MỖI lần refresh.** Giữ lại token cũ = lần sau gửi token đã chết =
+   cũng bị coi là replay.
+4. **401 một mình KHÔNG phải phiên chết.** Access token hết hạn mỗi 15 phút là chuyện thường,
+   client tự làm mới rồi đi tiếp. Chỉ hai việc mới kết thúc phiên: refresh bị từ chối
+   (`SESSION_EXPIRED`) và người dùng đăng xuất. Đừng dựng lại interceptor bắt 401 để logout.
+5. **Lỗi mạng khi refresh thì GIỮ phiên.** Mất sóng không phải phiên chết; xoá token vì đi qua
+   thang máy là bắt người dùng đăng nhập lại vô cớ.
+6. **Đăng xuất phải gọi server.** Chỉ xoá ở máy là để phiên sống tiếp trên server tới 60 ngày.
+   Ngược lại, server không trả lời cũng vẫn xoá ở máy — người dùng đã bấm rồi.
 
-> Còn thiếu: redirect chưa nhớ đích đến (hết phiên giữa chừng thì đăng nhập xong về `/`), và
-> nhóm `(auth)` không chặn người đã đăng nhập — đang cố ý để nút chuyển màn dùng khi kiểm thử.
+Kèm theo: **màn hình KHÔNG tự kiểm 401**; chúng nằm sau guard và dùng
+[`useAuthenticatedUser()`](src/features/auth/hooks/use-authenticated-user.ts) — hook này **ném
+lỗi** nếu không có phiên, để lỗi định tuyến nổ ra ở ErrorBoundary thay vì thành màn trắng im
+lặng. Và dùng `resetQueries()`, **KHÔNG** `clear()`: `clear()` gỡ hẳn query khỏi cache nên
+observer đang mounted giữ nguyên dữ liệu cũ và không ai bảo nó chạy lại — người dùng hết phiên
+vẫn nhìn thấy dữ liệu của phiên đã chết và **không bao giờ bị đẩy về đăng nhập**. Đây là bug
+thật đã xảy ra; [session-recovery.test.tsx](src/features/auth/session-recovery.test.tsx) khoá
+lại đúng ca đó.
 
+### Chứng minh trên dây
+
+Unit test chạy với `fetch` giả nên chúng chứng minh được ý ĐỊNH, không phải byte đi ra.
+[live-bearer.test.ts](src/lib/live-bearer.test.ts) gọi API thật và ghi lại header của từng
+request — đăng nhập → `/auth/me` kèm Bearer → xoay token → đăng xuất → phiên bị từ chối:
+
+```bash
+XP_LIVE_API=1 pnpm --filter @xeprime/mobile exec jest src/lib/live-bearer.test.ts
+```
+
+Nó cắm `node:http` vào khe `globalThis.fetch` (polyfill `whatwg-fetch` của jest-expo chạy trên
+`XMLHttpRequest` đã bị mock nên không đi mạng được); mọi tầng còn lại là code thật của app. Không
+có `XP_LIVE_API=1` thì suite tự bỏ qua, nên `pnpm test` vẫn chạy được khi không có API.
+
+> Còn thiếu: redirect chưa nhớ đích đến (hết phiên giữa chừng thì đăng nhập xong về `/`), nhóm
+> `(auth)` không chặn người đã đăng nhập, và chưa có màn "thiết bị đang đăng nhập" dù backend đã
+> lưu `deviceName`/`devicePlatform`/`appVersion` của từng phiên.
 ---
 
 ## 6. Ranh giới trạng thái (giống `apps/web`, ADR 0004)
@@ -329,25 +378,27 @@ Base cố ý **không đầu tư vào UI** — nó chỉ đủ để chứng min
 | [babel.config.js](babel.config.js)             | **KHÔNG** thêm tay `react-native-worklets/plugin` — `babel-preset-expo` tự nạp khi package có trong dependency; khai lần hai là worklet transform hai lần                                                                                                                                                                  |
 | [jest.config.js](jest.config.js)               | `transformIgnorePatterns: []` và preset babel khai **tường minh**. Whitelist theo tên của jest-expo không dùng được với pnpm, và Babel chỉ áp config gốc cho file nằm trong `root` — dependency ở workspace root thì nằm ngoài. Bỏ hai thứ này là `SyntaxError: Unexpected token 'export'` từ trong lòng thư viện ESM-only |
 | [tsconfig.json](tsconfig.json)                 | Cố ý **không** extends `packages/config/tsconfig/*`: Expo cần `moduleResolution: bundler` + `customConditions: ["react-native"]`. Cờ strict của repo lặp lại tường minh ở đây                                                                                                                                              |
-| [src/lib/api-client.ts](src/lib/api-client.ts) | Không dùng `AbortSignal.any` / `AbortSignal.timeout` — Hermes không đảm bảo có ở mọi bản RN, và lỗi chỉ lộ trên máy thật chứ không phải trong Jest (chạy trên Node)                                                                                                                                                        |
+| [src/lib/fetch-with-timeout.ts](src/lib/fetch-with-timeout.ts) | Không dùng `AbortSignal.any` / `AbortSignal.timeout` — Hermes không đảm bảo có ở mọi bản RN, và lỗi chỉ lộ trên máy thật chứ không phải trong Jest (chạy trên Node)                                                                                                              |
 | [app/_layout.tsx](app/_layout.tsx)             | `ErrorBoundary` phải là **export tên**; nó nằm NGOÀI các provider nên `AppErrorScreen` tự dựng lại provider nó cần. `SafeAreaProvider` phải có `initialMetrics`, thiếu thì frame đầu render với inset = 0 rồi nhảy                                                                                                         |
 | `react-native-reanimated`                      | Side-effect import ở `_layout.tsx`, **không xoá** dù trông như import thừa — expo-router dùng nó cho animation của navigator                                                                                                                                                                                               |
-| [jest.setup.js](jest.setup.js)                 | Registry interceptor là state toàn cục — `resetInterceptors()` chạy sau mỗi test, bỏ đi là lỗi hiện ra ở file test không liên quan                                                                                                                                                                                         |
+| [jest.setup.js](jest.setup.js)                 | Mock `expo-secure-store` là bản **trong bộ nhớ**, không phải mock từng lời gọi — test vòng đời token cần "ghi rồi đọc lại được". CỐ Ý không require `@/lib/auth-session` ở đây: nạp nó trong setup là chạy trước `jest.mock('expo-constants')` của file test              |
 | Test RNTL v14                                  | `render`, `fireEvent`, `renderHook` đều **async** — thiếu `await` là `result` chưa tồn tại                                                                                                                                                                                                                                 |
 
 ---
 
 ## 10. Trạng thái hiện tại
 
-**Đã có:** điều hướng theo nhóm, tầng phiên 401 hai lớp có test đầu-cuối (đã dựng, chưa nối vào route), tầng
-HTTP + interceptor + timeout + retry policy, SecureStore, logger, đa ngữ vi/en type-safe, bộ
-component trạng thái/UI tối thiểu, và feature `auth` (đăng nhập / `me` / đăng xuất) làm khuôn
-mẫu cho các miền còn lại. 6 test suite / 40 case.
+**Đã có:** điều hướng theo nhóm, **xác thực Bearer đầy đủ theo ADR 0017** (access token 15 phút
++ refresh xoay vòng single-flight + thu hồi theo thiết bị) trên `@xeprime/api-client` dùng chung
+với web, tầng phiên có test đầu-cuối (đã dựng, chưa nối guard vào route), timeout + retry policy,
+SecureStore, logger, đa ngữ vi/en type-safe, bộ component trạng thái/UI tối thiểu, và feature
+`auth` (đăng nhập / `me` / đăng xuất) làm khuôn mẫu cho các miền còn lại. 8 test suite / 74 case,
+cộng một suite **chạy với API thật** (mục 5) đã xác nhận Bearer đi đúng trên dây.
 
 Hai màn hiện có là **khung rỗng có chủ đích**: `/login` (form thật, submit gọi API) và `/home`
 (nội dung hardcode, không gọi API). Không đầu tư UI ở giai đoạn này.
 
-**Chưa có:** quyết định cách mang phiên trên native (xem mục 12), iOS chưa build lần nào,
+**Chưa có:** guard route chưa bật (xem mục 12), iOS chưa build lần nào,
 `app.config.ts` tách dev/staging/prod, `@xeprime/tokens` (spacing/typography vẫn là số rải
 trong từng `StyleSheet`), refetch theo `AppState`/NetInfo, push notification, chat, và các miền
 nghiệp vụ còn lại. Lộ trình chung: `docs/completion-roadmap.md`.
@@ -362,7 +413,7 @@ năng chưa". Cập nhật sau đợt xử lý vòng đời phiên.
 | Hạng mục             | Điểm | Nhận xét                                                                                                                                                                                                                  |
 | -------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Vòng đời phiên       | 9.0  | Hai tầng tách bạch (phát hiện / quyết định / điều hướng), có test **đầu-cuối**. Chính test đó đã bắt được một bug thật: `clear()` không kéo được cổng về `unauthenticated`, người dùng hết phiên vẫn thấy dữ liệu cũ      |
-| Tầng HTTP            | 9.5  | Envelope ADR 0007 kiểm chặt (sai envelope là ném lỗi, không đoán), timeout tự dựng thay vì tin `AbortSignal.timeout` trên Hermes, `CLIENT_ERROR_CODE` tách khỏi mã backend, interceptor có chỗ cắm và **đã có người cắm** |
+| Tầng HTTP            | 9.5  | **Một client cho cả hai app** (`@xeprime/api-client`) — envelope ADR 0007 kiểm chặt (sai envelope là ném lỗi, không đoán), `CLIENT_ERROR_CODE` tách khỏi mã backend, timeout tự dựng thay vì tin `AbortSignal.timeout` trên Hermes |
 | Chiều phụ thuộc      | 9.0  | Một chiều `store → feature`; slice sống cùng chủ sở hữu. Không barrel file, không abstraction thừa                                                                                                                        |
 | Xử lý lỗi            | 9.0  | `useAuthenticatedUser()` ném lỗi thay vì trả `undefined` — lỗi định tuyến nổ ở ErrorBoundary chứ không thành màn trắng im lặng. Logger có chỗ đứng, `no-console` giữ được                                                 |
 | Ranh giới trạng thái | 9.0  | Query / RHF / Redux / SecureStore phân vai rõ. Mutation không retry, retry chỉ với 5xx/mạng — hai quyết định nhiều base bỏ sót                                                                                            |
@@ -390,11 +441,9 @@ chưa làm** — xem mục 12.
 
 ## 12. Ba việc nên làm TRƯỚC khi mở feature mới
 
-1. **Chốt cách mang phiên trên native.** Cookie httpOnly là quyết định của web (ADR 0002). Trên
-   React Native, cookie do cookie store của OS quản và **Android không flush xuống đĩa** — kill
-   app là mất phiên. Chỗ cắm đã sẵn: `addRequestInterceptor` + `SECURE_KEY.SESSION_TOKEN` (khai
-   rồi, chưa dùng). Cần một ADR riêng cho mobile vì skill `mobile-feature` §3C đang nói ngược
-   với ADR 0002.
+1. **Bật guard route.** Xác thực đã chạy thật (ADR 0017 — xem mục 5), nhưng `(app)/_layout.tsx`
+   vẫn cho vào thẳng. Bật = thay thân `AppLayout` bằng `useSessionGate()`, kèm việc nhớ đích đến
+   khi hết phiên giữa chừng và chặn người đã đăng nhập vào lại nhóm `(auth)`.
 2. **Đưa `tenantId` vào `queryKeys`.** Người dùng nhiều gian hàng là chuyện chắc chắn xảy ra;
    key không mang scope thì cache của tenant này hiện cho tenant kia, và lúc đó phải sửa từng
    hook một.

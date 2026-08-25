@@ -20,17 +20,15 @@ export function useLogin() {
     mutationFn: (values: { identifier: string; password: string }) =>
       loginWithPassword(values.identifier, values.password),
     onSuccess: (user) => {
+      // Dọn dữ liệu của người dùng TRƯỚC đó rồi mới gieo hồ sơ mới — đăng nhập bằng tài khoản
+      // khác trên cùng máy không được kế thừa cache của tài khoản cũ.
       resetSessionScopedCache(queryClient);
       queryClient.setQueryData(queryKeys.auth.me(), user);
     },
   });
 }
 
+/** Dọn cache do `SessionBoundary` lo — đăng xuất phát ra đúng sự kiện "phiên kết thúc" như khi refresh hỏng. */
 export function useLogout() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: destroySession,
-    onSuccess: () => resetSessionScopedCache(queryClient),
-  });
+  return useMutation({ mutationFn: destroySession });
 }

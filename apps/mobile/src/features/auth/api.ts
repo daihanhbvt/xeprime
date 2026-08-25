@@ -1,28 +1,25 @@
-import type { components } from '@xeprime/types';
-import { apiDelete, apiGet, apiPost } from '@/lib/api-client';
+import { authApi, type CurrentUser } from '@xeprime/api-client';
+import { signInWithPassword, signOut } from '@/lib/auth-session';
+// Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định được cấu hình, và
+// `authApi.me()` bên dưới dùng chính client đó.
+import '@/lib/api-client';
 
-type Schemas = components['schemas'];
+export type { CurrentUser };
 
-export type CurrentUser = Schemas['MeDto'];
-export type CurrentTenantSummary = Schemas['CurrentTenantSummaryDto'];
-
-const LOGIN_PATH = '/auth/login';
-const ME_PATH = '/auth/me';
-const SESSION_PATH = '/auth/session';
-
-/** 401 từ chính các đường này là câu trả lời, không phải dấu hiệu phiên vừa hết — xem SessionBoundary. */
-export const AUTH_PATHS: readonly string[] = [LOGIN_PATH, ME_PATH, SESSION_PATH];
-
-/** `identifier` là email HOẶC số điện thoại; backend trả về cookie phiên. */
+/** `identifier` là email HOẶC số điện thoại. Token đi thẳng vào Keychain/Keystore, không qua đây. */
 export function loginWithPassword(identifier: string, password: string): Promise<CurrentUser> {
-  return apiPost<CurrentUser>(LOGIN_PATH, { identifier, password });
+  return signInWithPassword(identifier, password);
 }
 
+/**
+ * Quyền và tenant scope KHÔNG nằm trong access token (ADR 0017 §1) — đây là chỗ duy nhất trả
+ * chúng, và nó đọc DB mỗi lần gọi.
+ */
 export function fetchCurrentUser(): Promise<CurrentUser> {
-  return apiGet<CurrentUser>(ME_PATH);
+  return authApi.me();
 }
 
-/** Phải gọi server: cookie httpOnly nên client không tự xoá được. */
+/** Thu hồi phiên ở SERVER rồi mới xoá token ở máy — xoá mỗi ở máy là để phiên sống tiếp 60 ngày. */
 export function destroySession(): Promise<void> {
-  return apiDelete<void>(SESSION_PATH);
+  return signOut();
 }
