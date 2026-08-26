@@ -33,7 +33,7 @@ function productionEnv(overrides: Record<string, string> = {}): Record<string, s
     OTP_PEPPER: 'production-pepper-value-0001',
     CORS_ORIGINS: 'https://xeprime.vn,https://www.xeprime.vn',
     APP_WEB_URL: 'https://xeprime.vn',
-    AUTH_MODE: 'firebase',
+    API_PUBLIC_URL: 'https://api.xeprime.vn',
     FIREBASE_PROJECT_ID: 'p',
     FIREBASE_CLIENT_EMAIL: 'p@p.iam.gserviceaccount.com',
     FIREBASE_PRIVATE_KEY: 'k',
@@ -70,7 +70,9 @@ describe('env: mặc định dev vẫn chạy được', () => {
     const env = validateEnv(baseEnv());
     expect(env.CORS_ORIGINS).toEqual(['http://localhost:3000']);
     expect(env.SESSION_COOKIE_SECURE).toBe(false);
-    expect(env.AUTH_MODE).toBe('mock');
+    // Không provider mạng xã hội nào bắt buộc — nút Google/Facebook trả SOCIAL_NOT_CONFIGURED,
+    // ba đường đăng nhập còn lại vẫn chạy (ADR 0019).
+    expect(env.GOOGLE_OAUTH_CLIENT_ID).toBeUndefined();
   });
 
   it('CORS_ORIGINS tách theo dấu phẩy và bỏ khoảng trắng — origin LAN dùng được', () => {
@@ -100,8 +102,10 @@ describe('env: cửa chặn production', () => {
       .toContain('OTP_PEPPER');
   });
 
-  it('chặn AUTH_MODE=mock — guard mock nhận token giả', () => {
-    expect(validationError(productionEnv({ AUTH_MODE: 'mock' }))).toContain('AUTH_MODE');
+  it('chặn API_PUBLIC_URL trỏ localhost — redirect_uri của OAuth dựng từ đây', () => {
+    expect(validationError(productionEnv({ API_PUBLIC_URL: 'http://localhost:4000' }))).toContain(
+      'API_PUBLIC_URL',
+    );
   });
 
   it('chặn OTP_MODE=mock — mã OTP chỉ nằm trong log, không có SMS nào được gửi', () => {
@@ -151,6 +155,36 @@ describe('env: cửa chặn production', () => {
     const message = validationError(productionEnv({ SESSION_JWT_SECRET: secret }));
     expect(message).toContain('SESSION_JWT_SECRET');
     expect(message).not.toContain(secret);
+  });
+});
+
+/**
+ * ADR 0019. Không provider nào bắt buộc — nhưng khai NỬA cặp thì luôn là gõ thiếu, và nó phải
+ * gãy lúc boot chứ không thành "nút Google im lặng không hoạt động".
+ */
+describe('env: cặp client id/secret của đăng nhập mạng xã hội', () => {
+  it('bỏ trống cả hai là hợp lệ ở mọi môi trường — provider chỉ đơn giản là tắt', () => {
+    expect(() => validateEnv(baseEnv())).not.toThrow();
+    expect(() => validateEnv(productionEnv())).not.toThrow();
+  });
+
+  it('khai đủ cặp là hợp lệ', () => {
+    expect(() =>
+      validateEnv(
+        baseEnv({ GOOGLE_OAUTH_CLIENT_ID: 'id.apps.googleusercontent.com', GOOGLE_OAUTH_CLIENT_SECRET: 's' }),
+      ),
+    ).not.toThrow();
+  });
+
+  it('chặn khai nửa cặp — cả hai chiều, cả hai provider', () => {
+    expect(validationError(baseEnv({ GOOGLE_OAUTH_CLIENT_ID: 'id' }))).toContain(
+      'GOOGLE_OAUTH_CLIENT_SECRET',
+    );
+    expect(validationError(baseEnv({ GOOGLE_OAUTH_CLIENT_SECRET: 's' }))).toContain(
+      'GOOGLE_OAUTH_CLIENT_ID',
+    );
+    expect(validationError(baseEnv({ FACEBOOK_APP_ID: 'id' }))).toContain('FACEBOOK_APP_SECRET');
+    expect(validationError(baseEnv({ FACEBOOK_APP_SECRET: 's' }))).toContain('FACEBOOK_APP_ID');
   });
 });
 

@@ -13,17 +13,21 @@
 /** Múi giờ ứng dụng — định nghĩa gốc nằm ở `lib/datetime`, re-export để hạ tầng i18n có một cửa. */
 export { APP_TIME_ZONE } from '@/lib/datetime';
 
-/** Thứ tự ở đây cũng là thứ tự hiện trong bộ chuyển ngôn ngữ. */
-export const SUPPORTED_LOCALES = ['vi', 'en'] as const;
-
-export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
-
 /**
- * Tiếng Việt là mặc định VÀ là bản dự phòng: khách lần đầu (chưa có cookie) luôn thấy tiếng
- * Việt, kể cả khi trình duyệt khai báo `Accept-Language: en`. Đây là quyết định SEO — trang
- * công khai được index bằng tiếng Việt trên cùng một URL.
+ * Danh sách locale, mặc định và hàm hợp lệ hoá sống ở `@xeprime/types` từ ADR 0019 — `apps/api`
+ * cũng cần chúng để chuyển tiếp ngôn ngữ cho màn đồng ý của Google/Facebook. Re-export ở đây để
+ * ~80 chỗ `import … from '@/i18n/config'` không phải đổi, và để hạ tầng i18n của web vẫn có
+ * đúng MỘT cửa.
  */
-export const DEFAULT_LOCALE: AppLocale = 'vi';
+export {
+  SUPPORTED_LOCALES,
+  DEFAULT_LOCALE,
+  isAppLocale,
+  resolveAppLocale,
+  type AppLocale,
+} from '@xeprime/types';
+
+import type { AppLocale } from '@xeprime/types';
 
 export const LOCALE_COOKIE_NAME = 'XP_LOCALE';
 
@@ -64,12 +68,3 @@ export const FORMAT_LOCALE: Readonly<Record<AppLocale, string>> = {
  * hiệu tiền theo ngôn ngữ giao diện là cách nhanh nhất để một con số bị hiểu sai.
  */
 export const APP_CURRENCY = 'VND';
-
-export function isAppLocale(value: unknown): value is AppLocale {
-  return typeof value === 'string' && (SUPPORTED_LOCALES as readonly string[]).includes(value);
-}
-
-/** Giá trị thô (cookie, tham số Server Action) → locale hợp lệ. Không hợp lệ ⇒ tiếng Việt. */
-export function resolveAppLocale(value: unknown): AppLocale {
-  return isAppLocale(value) ? value : DEFAULT_LOCALE;
-}

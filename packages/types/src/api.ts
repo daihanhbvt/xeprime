@@ -42,13 +42,34 @@ export const API_ERROR_CODE = {
   // Auth / session (ADR 0002)
   UNAUTHENTICATED: 'UNAUTHENTICATED',
   SESSION_EXPIRED: 'SESSION_EXPIRED',
-  INVALID_ID_TOKEN: 'INVALID_ID_TOKEN',
   // Đăng nhập/đăng ký bằng định danh + mật khẩu
   EMAIL_TAKEN: 'EMAIL_TAKEN',
   PHONE_TAKEN: 'PHONE_TAKEN',
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   INVALID_RESET_TOKEN: 'INVALID_RESET_TOKEN',
   ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+
+  /*
+   * Đăng nhập mạng xã hội — ADR 0019.
+   *
+   * Bốn mã này KHÔNG bao giờ đi trong một response JSON: cả hai route `/auth/social/*` là
+   * điều hướng trình duyệt, nên chúng về web dưới dạng `?authError=<mã>` và web tra bảng chữ
+   * đúng như với mọi mã lỗi khác (ADR 0012 — dịch từ MÃ, không hiện `message` của backend).
+   */
+  /** Provider chưa có client id/secret trong env — nút vẫn hiện, bấm vào thì báo mã này. */
+  SOCIAL_NOT_CONFIGURED: 'SOCIAL_NOT_CONFIGURED',
+  /**
+   * `state` sai, đã hết hạn, hoặc đã dùng rồi.
+   *
+   * Gộp ba nguyên nhân vào MỘT mã là cố ý: phân biệt "sai" với "đã dùng" cho kẻ tấn công biết
+   * mình đoán trúng một `state` có thật. Với người dùng thật thì lối đi tiếp giống hệt nhau —
+   * bấm đăng nhập lại.
+   */
+  SOCIAL_STATE_INVALID: 'SOCIAL_STATE_INVALID',
+  /** Người dùng bấm huỷ ở màn đồng ý của provider (`error=access_denied`). Không phải sự cố. */
+  SOCIAL_CANCELLED: 'SOCIAL_CANCELLED',
+  /** Đổi code thất bại, `debug_token` không khớp app, hoặc `id_token` không hợp lệ. */
+  SOCIAL_EXCHANGE_FAILED: 'SOCIAL_EXCHANGE_FAILED',
 
   // Phân quyền
   FORBIDDEN: 'FORBIDDEN',

@@ -1,38 +1,38 @@
 import { Global, Module } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { MobileAuthController } from './mobile-auth.controller';
 import { AuthService } from './auth.service';
 import { EmailService } from './email.service';
 import { NativeSessionService } from './native-session.service';
 import { SessionService } from './session.service';
-import { FirebaseIdTokenVerifier, IdTokenVerifier, MockIdTokenVerifier } from './token-verifier';
+import { OauthStateService } from './social/oauth-state.service';
+import { SocialAuthController } from './social/social-auth.controller';
+import { SocialAuthService } from './social/social-auth.service';
 
 /**
- * ADR 0002: chọn verifier theo `AUTH_MODE`. Guard, session và phần còn lại của app không
- * biết Firebase tồn tại — đổi nhà cung cấp chỉ thêm một implementation ở đây.
+ * Ba controller, ba họ endpoint, MỘT `AuthService`.
  *
- * Hai controller, hai họ endpoint (ADR 0017): `AuthController` phát session cookie cho web,
- * `MobileAuthController` phát cặp access/refresh token cho app native. Cùng `AuthService`, nên
- * luật xác thực người dùng (mật khẩu, khoá tài khoản, upsert từ ID token) chỉ có một bản.
+ *  - `AuthController` — mật khẩu + phiên cookie của web (ADR 0002);
+ *  - `MobileAuthController` — cặp access/refresh token của app native (ADR 0017);
+ *  - `SocialAuthController` — Google/Facebook do backend chủ trì (ADR 0019).
+ *
+ * Luật xác thực người dùng (mật khẩu, khoá tài khoản, tìm/tạo user từ danh tính) chỉ có một bản
+ * ở `AuthService`; ba controller khác nhau đúng ở chỗ phát ra loại phiên nào.
+ *
+ * Từ ADR 0019 module này KHÔNG còn provider nào phụ thuộc Firebase. `firebase-admin` vẫn ở lại
+ * repo nhưng chỉ phục vụ chat realtime (`FirebaseAppService`, ADR 0009).
  */
 @Global()
 @Module({
-  controllers: [AuthController, MobileAuthController],
+  controllers: [AuthController, MobileAuthController, SocialAuthController],
   providers: [
     AuthService,
     SessionService,
     NativeSessionService,
     EmailService,
-    {
-      provide: IdTokenVerifier,
-      inject: [ConfigService],
-      useFactory: (config: ConfigService): IdTokenVerifier =>
-        config.getOrThrow<string>('AUTH_MODE') === 'firebase'
-          ? new FirebaseIdTokenVerifier(config)
-          : new MockIdTokenVerifier(),
-    },
+    OauthStateService,
+    SocialAuthService,
   ],
-  exports: [SessionService, NativeSessionService, AuthService],
+  exports: [SessionService, NativeSessionService, AuthService, OauthStateService],
 })
 export class AuthModule {}

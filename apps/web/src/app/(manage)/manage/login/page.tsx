@@ -4,10 +4,12 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Suspense } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { ROUTES } from '@/constants/routes';
 import { AuthPanel } from '@/features/auth/components/AuthPanel';
+import { AUTH_ERROR_PARAM } from '@/features/auth/components/AuthModalProvider';
 import { useAuthCache } from '@/features/auth/hooks/use-auth-actions';
 import {
   AUTH_INTENT,
@@ -36,6 +38,7 @@ export default function PortalLoginPage() {
 }
 
 function PortalLoginView() {
+  const t = useTranslations('Auth.portal');
   const router = useRouter();
   const search = useSearchParams();
   const { refreshAfterAuth } = useAuthCache();
@@ -43,6 +46,12 @@ function PortalLoginView() {
   const intent = search.get('intent');
   const next = search.get('next');
   const isOwnerIntent = intent === AUTH_INTENT.OWNER;
+  /*
+   * Đăng nhập Google/Facebook RỜI TRANG rồi quay lại (ADR 0019), nên lỗi của nó về đây trong
+   * URL chứ không trong một promise. Trang này đọc trực tiếp — nó không nằm trong
+   * `AuthModalProvider` (đó là chuyện của khu `(public)`).
+   */
+  const authError = search.get(AUTH_ERROR_PARAM);
 
   async function handleAuthenticated(user: CurrentUser) {
     // Điều hướng theo SCOPE THẬT lấy từ `/auth/me` sau khi làm mới cache — không đoán từ form.
@@ -54,9 +63,7 @@ function PortalLoginView() {
     <div className={styles.page}>
       <section className={styles.aside} aria-hidden="true">
         <Logo size="lg" tone="light" />
-        <p className={styles.asideText}>
-          Quản lý xe, lịch thuê, đơn hàng và tài chính của gian hàng ở một nơi.
-        </p>
+        <p className={styles.asideText}>{t('asideText')}</p>
       </section>
 
       <section className={styles.formSide}>
@@ -64,30 +71,27 @@ function PortalLoginView() {
           <div className={styles.head}>
             <Logo size="md" />
             <div>
-              <h1 className={styles.title}>Đăng nhập cổng quản lý</h1>
-              <p className={styles.sub}>
-                Dành cho chủ xe, nhân viên gian hàng và quản trị viên XePrime.
-              </p>
+              <h1 className={styles.title}>{t('title')}</h1>
+              <p className={styles.sub}>{t('subtitle')}</p>
             </div>
           </div>
 
-          {isOwnerIntent ? (
-            <div className={styles.intentNote}>
-              Đăng nhập để tiếp tục đăng ký gian hàng. Chưa có tài khoản? Tạo tài khoản ở bước
-              đăng nhập bên dưới rồi quay lại đây.
-            </div>
-          ) : null}
+          {isOwnerIntent ? <div className={styles.intentNote}>{t('ownerIntent')}</div> : null}
 
-          <AuthPanel mode={AUTH_MODE.LOGIN} onAuthenticated={handleAuthenticated} />
+          <AuthPanel
+            mode={AUTH_MODE.LOGIN}
+            onAuthenticated={handleAuthenticated}
+            initialErrorCode={authError}
+          />
 
           <div className={styles.foot}>
             <Link href={ROUTES.HOME} className={styles.backLink}>
-              <ArrowLeftOutlined /> Quay lại tìm xe
+              <ArrowLeftOutlined /> {t('backToSearch')}
             </Link>
             {!isOwnerIntent ? (
               <Link href={ROUTES.MANAGE.ONBOARDING}>
                 <Button type="link" className={styles.ownerCta}>
-                  Đăng ký trở thành chủ xe
+                  {t('becomeOwner')}
                 </Button>
               </Link>
             ) : null}

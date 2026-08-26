@@ -5,6 +5,13 @@ Ngày: 24/08/2026 · Trạng thái: Accepted
 Liên quan: [ADR 0002](0002-auth-session-cookie.md) (session cookie của web — **không bị thay đổi**),
 [docs/mobile-readiness-audit.md](../mobile-readiness-audit.md) §7 P0-1, P0-2, P1-1.
 
+> **Cập nhật 26/08/2026 — [ADR 0019](0019-backend-led-social-oauth.md).** `POST /auth/mobile/session`
+> (đổi Firebase ID token lấy cặp token) **đã bị gỡ** cùng với toàn bộ đường Firebase Auth; chưa
+> client nào từng gọi nó. Cơ chế phiên native mô tả dưới đây — access token 15′, refresh token
+> opaque xoay vòng, thu hồi theo thiết bị — **không đổi một chữ**; chỉ cửa vào là khác:
+> `POST /auth/mobile/login` (mật khẩu) là cửa duy nhất hôm nay, và đăng nhập mạng xã hội cho native
+> sẽ vào qua `/auth/social/*` + one-time code (ADR 0019 mục "Chỗ cắm cho app native").
+
 ## Bối cảnh
 
 ADR 0002 chốt web dùng httpOnly session cookie, và đã dự phòng đúng hình cho native:

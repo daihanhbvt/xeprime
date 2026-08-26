@@ -6,7 +6,6 @@ import type { AuthenticatedUser } from '../../common/types/request-context';
 import { AuthService } from './auth.service';
 import { SessionService } from './session.service';
 import {
-  CreateSessionDto,
   ForgotPasswordDto,
   LoginDto,
   MeDto,
@@ -22,28 +21,6 @@ export class AuthController {
     private readonly auth: AuthService,
     private readonly sessions: SessionService,
   ) {}
-
-  /**
-   * ADR 0002 — thay cho `POST /auth/sync-firebase-user` mà tài liệu cũ mô tả.
-   *
-   * Đây là endpoint DUY NHẤT nhận ID token của Firebase. Sau lời gọi này, client không
-   * bao giờ gửi token nữa; mọi request đi bằng session cookie.
-   */
-  @Public()
-  @VerifiesCredentials()
-  @Post('session')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Đăng nhập: đổi ID token lấy session cookie httpOnly' })
-  @ApiOkResponse({ type: MeDto })
-  async createSession(
-    @Body() dto: CreateSessionDto,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<MeDto> {
-    const { userId } = await this.auth.upsertUserFromIdToken(dto.idToken);
-    const { token } = this.sessions.issue(userId);
-    this.sessions.attach(res, token);
-    return this.auth.me(userId);
-  }
 
   @Public()
   @Post('register')

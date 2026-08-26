@@ -34,6 +34,12 @@ const MESSAGES_DIR = path.join(WEB_ROOT, 'messages');
 const SHARED_MESSAGES_DIR = path.resolve(WEB_ROOT, '../../packages/domain/messages');
 const NAMESPACES_FILE = path.join(WEB_ROOT, 'src/i18n/namespaces.ts');
 const CONFIG_FILE = path.join(WEB_ROOT, 'src/i18n/config.ts');
+/**
+ * Danh sách locale sống ở `@xeprime/types` từ ADR 0019 — `apps/api` cũng cần nó để chuyển tiếp
+ * ngôn ngữ cho màn đồng ý của Google/Facebook. `src/i18n/config.ts` chỉ re-export, nên đọc bản
+ * gốc ở đây; phần cookie (chuyện của trình duyệt) vẫn kiểm trên file web.
+ */
+const LOCALE_SOURCE_FILE = path.resolve(WEB_ROOT, '../../packages/types/src/locale.ts');
 /** Bảng gom của app native — client thứ hai đọc cùng gốc message. */
 const MOBILE_MESSAGES_FILE = path.resolve(WEB_ROOT, '../mobile/src/i18n/messages.ts');
 
@@ -45,17 +51,25 @@ const fail = (scope, message) => problems.push({ scope, message });
 
 // ── 1. Cấu hình locale ────────────────────────────────────────────────────────
 const configSource = read(CONFIG_FILE);
-const localeTuple = configSource?.match(/SUPPORTED_LOCALES = \[([^\]]+)\]/)?.[1];
+const localeSource = read(LOCALE_SOURCE_FILE);
+const localeTuple = localeSource?.match(/SUPPORTED_LOCALES = \[([^\]]+)\]/)?.[1];
 const locales = localeTuple ? [...localeTuple.matchAll(/'([a-z-]+)'/g)].map((m) => m[1]) : [];
 
 if (locales.length < 2) {
-  fail('config', `Không đọc được SUPPORTED_LOCALES từ ${rel(CONFIG_FILE)}`);
+  fail('config', `Không đọc được SUPPORTED_LOCALES từ ${rel(LOCALE_SOURCE_FILE)}`);
 }
 if (!locales.includes(CANONICAL_LOCALE)) {
   fail('config', `SUPPORTED_LOCALES phải chứa '${CANONICAL_LOCALE}' (ngôn ngữ mặc định).`);
 }
-if (!/DEFAULT_LOCALE: AppLocale = 'vi'/.test(configSource ?? '')) {
+if (!/DEFAULT_LOCALE: AppLocale = 'vi'/.test(localeSource ?? '')) {
   fail('config', "DEFAULT_LOCALE phải là 'vi' — khách chưa có cookie luôn thấy tiếng Việt.");
+}
+/*
+ * Web phải LẤY danh sách locale từ gốc, không tự khai lại. Hai danh sách rời nhau là cách web
+ * và api âm thầm bất đồng về việc `en` có tồn tại hay không.
+ */
+if (!/SUPPORTED_LOCALES,[\s\S]*?\} from '@xeprime\/types'/.test(configSource ?? '')) {
+  fail('config', `${rel(CONFIG_FILE)} phải re-export SUPPORTED_LOCALES từ '@xeprime/types'.`);
 }
 if (!/LOCALE_COOKIE_NAME = 'XP_LOCALE'/.test(configSource ?? '')) {
   fail('config', "LOCALE_COOKIE_NAME phải là 'XP_LOCALE'.");

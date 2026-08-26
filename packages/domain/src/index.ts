@@ -56,6 +56,8 @@ export {
   type PickupWishParts,
 } from './long-term';
 
+export { isSafeNextPath, safeNextPath } from './safe-path';
+
 export {
   haversineKm,
   isValidGeoPoint,

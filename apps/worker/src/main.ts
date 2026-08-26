@@ -11,19 +11,22 @@ import { withAdvisoryLock } from './lib/advisory-lock';
 import { pumpOutbox } from './jobs/outbox-pump';
 import { runRetention } from './jobs/retention';
 import { sweepBookingRequestDeadlines } from './jobs/booking-request-deadlines';
+import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
 import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/holiday-sync';
 
 /**
  * Worker XePrime — mọi việc chạy theo ĐỒNG HỒ, không theo request của người dùng.
  *
- * Ba nhóm việc, và chúng độc lập với nhau:
+ * Bốn nhóm việc, và chúng độc lập với nhau:
  *
  *  1. **Hạn phản hồi yêu cầu thuê** (25/08) — nhắc gian hàng ở phút 20/45 và đóng yêu cầu ở
  *     phút 60. Đây là việc NGHIỆP VỤ LÕI: nó chạy ở mọi cấu hình, kể cả khi chat Firestore tắt.
  *  2. **Đồng bộ ngày lễ Việt Nam** (26/08) — mỗi ngày một lần, từ Google Calendar. Cũng là
  *     việc nghiệp vụ nên KHÔNG phụ thuộc `FIRESTORE_ENABLED`; nó chỉ cần một API key, và
  *     thiếu key thì vòng lặp đơn giản không được đăng ký.
- *  3. **Đồng bộ chat Postgres → Firestore** (Phase 5, ADR 0009) — chỉ khi `FIRESTORE_ENABLED`.
+ *  3. **Dọn `oauth_states`** (26/08, ADR 0019) — mỗi giờ một lần, xoá hàng đã hết hạn của
+ *     những lần bấm "Đăng nhập với Google/Facebook" dở dang. Cũng chạy ở mọi cấu hình.
+ *  4. **Đồng bộ chat Postgres → Firestore** (Phase 5, ADR 0009) — chỉ khi `FIRESTORE_ENABLED`.
  *
  * Ràng buộc chung: idempotent + `pg_try_advisory_lock` chống hai instance chạy chồng nhau.
  * Chạy polling loop (không kéo cả Nest runtime vào worker).
@@ -36,11 +39,17 @@ const RETENTION_INTERVAL_MS = 60 * 60 * 1_000;
  * lặp bận trên một bảng mà 99% thời gian không có gì để làm (index một phần lo phần còn lại).
  */
 const DEADLINE_INTERVAL_MS = 60 * 1_000;
+/**
+ * Nhịp dọn `oauth_states` (ADR 0019). Hàng sống 10 phút, nên một giờ một lần là quá đủ: đây là
+ * việc giữ bảng khỏi phình, không phải việc có hạn chót.
+ */
+const OAUTH_STATE_INTERVAL_MS = 60 * 60 * 1_000;
 
 const LOCK_PUMP = 4_201;
 const LOCK_RETENTION = 4_202;
 const LOCK_DEADLINES = 4_203;
 const LOCK_HOLIDAYS = 4_204;
+const LOCK_OAUTH_STATES = 4_205;
 
 const prisma = createPrismaClient();
 let stopping = false;
@@ -72,6 +81,15 @@ async function main(): Promise<void> {
           `yêu cầu thuê: nhắc ${result.firstReminders} + ${result.finalReminders}, quá hạn ${result.expired}`,
         );
       }
+    }),
+    /*
+     * Dọn `oauth_states` — ADR 0019. Chạy ở MỌI cấu hình, giống hạn phản hồi: nó là việc dọn dẹp
+     * của một bảng mà đăng nhập ghi vào, không liên quan gì tới chat hay ngày lễ.
+     */
+    loop('dọn oauth_states', LOCK_OAUTH_STATES, OAUTH_STATE_INTERVAL_MS, async () => {
+      const purged = await purgeExpiredOauthStates(prisma);
+      // Chỉ log khi có việc — mỗi giờ một dòng "0" là nhiễu, không phải dấu hiệu sống.
+      if (purged) console.log(`oauth_states: dọn ${purged} hàng hết hạn`);
     }),
   ];
 

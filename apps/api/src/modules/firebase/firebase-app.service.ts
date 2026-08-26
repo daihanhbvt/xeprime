@@ -4,9 +4,9 @@ import { ConfigService } from '@nestjs/config';
 /**
  * Khởi tạo (một lần) Firebase Admin app dùng chung cho Chat (ADR 0009).
  *
- * Dùng chung credential `FIREBASE_*` với `token-verifier.ts`: cả hai gọi `getApps()[0] ?? init`
- * nên chỉ có MỘT default app ở runtime, ai chạm trước thì init. Service này lo phần chat cần:
- * mint custom token cho web đăng nhập Firebase (để Firestore Security Rules kiểm `request.auth.uid`).
+ * Từ ADR 0019 đây là chỗ DUY NHẤT trong API còn đụng tới Firebase — đăng nhập đã tự chủ hoàn
+ * toàn, `firebase-admin` chỉ còn phục vụ chat. Service này mint custom token để web
+ * `signInWithCustomToken` (Firestore Security Rules kiểm `request.auth.uid`).
  * Việc GHI Firestore đi qua outbox → worker (ADR 0009 §3), không nằm ở đây.
  */
 @Injectable()

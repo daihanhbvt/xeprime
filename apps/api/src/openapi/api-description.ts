@@ -45,15 +45,21 @@ log và có thể đổi câu chữ bất cứ lúc nào; giao diện tiếng An
 
 **Hai đường vận chuyển, một nguồn sự thật về quyền.**
 
-**Web** — đăng nhập bằng Firebase Auth ở client → gửi ID token lên \`POST /auth/session\` → API trả
-về **httpOnly session cookie** (ADR 0002). Không có gì đọc được từ JavaScript.
+**Web** — mọi đường đăng nhập đều kết thúc bằng **httpOnly session cookie** (ADR 0002). Không có
+gì đọc được từ JavaScript.
 
+- \`POST /auth/login\` (email/SĐT + mật khẩu) · \`POST /auth/register\` · \`POST /auth/phone/login\`
+  (SĐT + OTP, passwordless).
+- **Google/Facebook**: trình duyệt điều hướng tới \`GET /auth/social/{provider}\`; vòng OAuth chạy
+  hoàn toàn ở SERVER và callback tự đặt cookie rồi redirect về web (ADR 0019). Hai route đó trả
+  **302**, không trả JSON — đừng gọi chúng bằng XHR.
 - Từ trình duyệt: đặt \`credentials: 'include'\`, và origin phải nằm trong \`CORS_ORIGINS\`.
 - Từ curl/Postman: giữ cookie jar (\`curl -c jar.txt -b jar.txt\`).
-- Ngay trong trang này: cứ gọi \`POST /auth/session\` một lần, các endpoint sau dùng lại cookie đó.
+- Ngay trong trang này: cứ gọi \`POST /auth/login\` một lần, các endpoint sau dùng lại cookie đó.
 
 **App native** — \`Authorization: Bearer <accessToken>\` (ADR 0017). Lấy token ở
-\`POST /auth/mobile/session\` (Firebase ID token) hoặc \`POST /auth/mobile/login\` (mật khẩu).
+\`POST /auth/mobile/login\` (mật khẩu). Đăng nhập mạng xã hội cho native chưa làm — xem ADR 0019
+mục "Chỗ cắm cho app native".
 
 - Access token sống **15 phút**. Hết hạn trả \`SESSION_EXPIRED\` → gọi \`POST /auth/mobile/refresh\`.
 - Refresh token **dùng một lần**: mỗi lần refresh trả cặp mới và token cũ chết ngay. Gửi lại token

@@ -4,30 +4,6 @@
  */
 
 export interface paths {
-    "/auth/session": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Đăng nhập: đổi ID token lấy session cookie httpOnly
-         * @description **Truy cập:** công khai — không cần đăng nhập.
-         */
-        post: operations["AuthController_createSession"];
-        /**
-         * Đăng xuất: xoá session cookie
-         * @description **Truy cập:** công khai — không cần đăng nhập.
-         */
-        delete: operations["AuthController_logout"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/auth/register": {
         parameters: {
             query?: never;
@@ -128,6 +104,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Đăng xuất: xoá session cookie
+         * @description **Truy cập:** công khai — không cần đăng nhập.
+         */
+        delete: operations["AuthController_logout"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/me": {
         parameters: {
             query?: never;
@@ -142,26 +138,6 @@ export interface paths {
         get: operations["AuthController_me"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/mobile/session": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Native: đổi Firebase ID token lấy access + refresh token
-         * @description **Truy cập:** công khai — không cần đăng nhập.
-         */
-        post: operations["MobileAuthController_createSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -222,6 +198,50 @@ export interface paths {
          * @description **Truy cập:** công khai — không cần đăng nhập.
          */
         post: operations["MobileAuthController_logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/social/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bắt đầu đăng nhập mạng xã hội — chuyển hướng sang Google/Facebook
+         * @description Trình duyệt điều hướng thẳng tới đây (không phải XHR). Luôn trả 302: sang provider nếu cấu hình đủ, hoặc về web kèm `?authError=SOCIAL_NOT_CONFIGURED`.
+         *
+         *     **Truy cập:** công khai — không cần đăng nhập.
+         */
+        get: operations["SocialAuthController_begin"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/social/{provider}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Provider gọi về sau khi người dùng đồng ý — phát session cookie rồi về web
+         * @description Chỉ provider điều hướng tới đây. Luôn trả 302 về `APP_WEB_URL`; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).
+         *
+         *     **Truy cập:** công khai — không cần đăng nhập.
+         */
+        get: operations["SocialAuthController_callback"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5304,12 +5324,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        CreateSessionDto: {
-            /**
-             * @description ID token từ Firebase Auth (hoặc `mock:<uid>:<email>:<tên>` khi AUTH_MODE=mock). Chỉ gửi đúng một lần lúc đăng nhập — sau đó dùng session cookie.
-             * @example mock:demo-owner:owner@xeprime.test:Chủ shop demo
-             */
-            idToken: string;
+        RegisterDto: {
+            /** @example matkhau123 */
+            password: string;
+            /** @example Nguyễn Văn A */
+            displayName: string;
+            /** @example 0901234567 */
+            phone: string;
         };
         CurrentTenantSummaryDto: {
             id: string;
@@ -5335,14 +5356,6 @@ export interface components {
             /** @description Xem PlatformRole trong @xeprime/types */
             platformRole: string | null;
             permissions: string[];
-        };
-        RegisterDto: {
-            /** @example matkhau123 */
-            password: string;
-            /** @example Nguyễn Văn A */
-            displayName: string;
-            /** @example 0901234567 */
-            phone: string;
         };
         LoginDto: {
             /**
@@ -5374,12 +5387,13 @@ export interface components {
             /** @example 1.0.0 */
             appVersion?: string;
         };
-        MobileSessionExchangeDto: {
+        MobileLoginDto: {
             /**
-             * @description ID token từ Firebase Auth (hoặc `mock:<uid>:<email>:<tên>` khi AUTH_MODE=mock). Chỉ gửi đúng một lần lúc đăng nhập.
-             * @example mock:demo-owner:owner@xeprime.test:Chủ shop demo
+             * @description Email hoặc số điện thoại
+             * @example ban@congty.vn
              */
-            idToken: string;
+            identifier: string;
+            password: string;
             device?: components["schemas"]["MobileDeviceDto"];
         };
         MobileTokenPairDto: {
@@ -5398,15 +5412,6 @@ export interface components {
         MobileSessionDto: {
             tokens: components["schemas"]["MobileTokenPairDto"];
             user: components["schemas"]["MeDto"];
-        };
-        MobileLoginDto: {
-            /**
-             * @description Email hoặc số điện thoại
-             * @example ban@congty.vn
-             */
-            identifier: string;
-            password: string;
-            device?: components["schemas"]["MobileDeviceDto"];
         };
         MobileRefreshDto: {
             /** @description Refresh token opaque nhận được từ lần đăng nhập/refresh trước */
@@ -9773,218 +9778,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    AuthController_createSession: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateSessionDto"];
-            };
-        };
-        responses: {
-            /** @description Thành công */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["MeDto"];
-                    };
-                };
-            };
-            /**
-             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
-             *
-             *     Mã lỗi: `VALIDATION_FAILED`
-             */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "VALIDATION_FAILED",
-                     *         "message": "Dữ liệu gửi lên không hợp lệ"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Thông tin đăng nhập không hợp lệ, hoặc phiên đã hết hạn.
-             *
-             *     Mã lỗi: `INVALID_CREDENTIALS` · `SESSION_EXPIRED` · `ACCOUNT_LOCKED`
-             */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "INVALID_CREDENTIALS",
-                     *         "message": "Email/số điện thoại hoặc mật khẩu không đúng"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
-             *
-             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "CONFLICT",
-                     *         "message": "Dữ liệu đã tồn tại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Vượt giới hạn 120 request / 60 giây.
-             *
-             *     Mã lỗi: `RATE_LIMITED`
-             */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "RATE_LIMITED",
-                     *         "message": "Vượt giới hạn số request"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Lỗi không lường trước phía server.
-             *
-             *     Mã lỗi: `INTERNAL_ERROR`
-             */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "INTERNAL_ERROR",
-                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    AuthController_logout: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Thành công, không có nội dung trả về */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
-             *
-             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "CONFLICT",
-                     *         "message": "Dữ liệu đã tồn tại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Vượt giới hạn 120 request / 60 giây.
-             *
-             *     Mã lỗi: `RATE_LIMITED`
-             */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "RATE_LIMITED",
-                     *         "message": "Vượt giới hạn số request"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Lỗi không lường trước phía server.
-             *
-             *     Mã lỗi: `INTERNAL_ERROR`
-             */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "INTERNAL_ERROR",
-                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
     AuthController_register: {
         parameters: {
             query?: never;
@@ -10565,7 +10358,7 @@ export interface operations {
             };
         };
     };
-    AuthController_me: {
+    AuthController_logout: {
         parameters: {
             query?: never;
             header?: never;
@@ -10574,23 +10367,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Thành công */
-            200: {
+            /** @description Thành công, không có nội dung trả về */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": {
-                        data: components["schemas"]["MeDto"];
-                    };
-                };
+                content?: never;
             };
             /**
-             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
+             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
              *
-             *     Mã lỗi: `UNAUTHENTICATED`
+             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
              */
-            401: {
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -10598,8 +10387,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "UNAUTHENTICATED",
-                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                     *         "code": "CONFLICT",
+                     *         "message": "Dữ liệu đã tồn tại"
                      *       }
                      *     }
                      */
@@ -10650,18 +10439,14 @@ export interface operations {
             };
         };
     };
-    MobileAuthController_createSession: {
+    AuthController_me: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MobileSessionExchangeDto"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Thành công */
             200: {
@@ -10670,35 +10455,14 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["MobileSessionDto"];
+                        data: components["schemas"]["MeDto"];
                     };
                 };
             };
             /**
-             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             * @description Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.
              *
-             *     Mã lỗi: `VALIDATION_FAILED`
-             */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "VALIDATION_FAILED",
-                     *         "message": "Dữ liệu gửi lên không hợp lệ"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Thông tin đăng nhập không hợp lệ, hoặc phiên đã hết hạn.
-             *
-             *     Mã lỗi: `INVALID_CREDENTIALS` · `SESSION_EXPIRED` · `ACCOUNT_LOCKED`
+             *     Mã lỗi: `UNAUTHENTICATED`
              */
             401: {
                 headers: {
@@ -10708,29 +10472,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "error": {
-                     *         "code": "INVALID_CREDENTIALS",
-                     *         "message": "Email/số điện thoại hoặc mật khẩu không đúng"
-                     *       }
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /**
-             * @description Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.
-             *
-             *     Mã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "error": {
-                     *         "code": "CONFLICT",
-                     *         "message": "Dữ liệu đã tồn tại"
+                     *         "code": "UNAUTHENTICATED",
+                     *         "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
                      *       }
                      *     }
                      */
@@ -11099,6 +10842,226 @@ export interface operations {
                      *       "error": {
                      *         "code": "CONFLICT",
                      *         "message": "Dữ liệu đã tồn tại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    SocialAuthController_begin: {
+        parameters: {
+            query?: {
+                /** @description Đường dẫn nội bộ để quay về sau khi đăng nhập. Không an toàn (có scheme, protocol-relative…) thì bị bỏ qua và về trang chủ. */
+                next?: string;
+                /** @description Ngôn ngữ cho màn đồng ý của provider (màn đó do Google/Facebook render, không phải XePrime). */
+                locale?: "vi" | "en";
+            };
+            header?: never;
+            path: {
+                provider: "google" | "facebook";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chuyển hướng tới màn đồng ý của provider. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Vượt giới hạn 120 request / 60 giây.
+             *
+             *     Mã lỗi: `RATE_LIMITED`
+             */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "RATE_LIMITED",
+                     *         "message": "Vượt giới hạn số request"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Lỗi không lường trước phía server.
+             *
+             *     Mã lỗi: `INTERNAL_ERROR`
+             */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "INTERNAL_ERROR",
+                     *         "message": "Có lỗi xảy ra, vui lòng thử lại"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    SocialAuthController_callback: {
+        parameters: {
+            query?: {
+                /** @description Authorization code, có khi người dùng đã đồng ý. */
+                code?: string;
+                /** @description Giá trị `state` đã phát ở bước bắt đầu. */
+                state?: string;
+                /** @description Mã lỗi của provider. `access_denied` = người dùng bấm huỷ. */
+                error?: string;
+            };
+            header?: never;
+            path: {
+                provider: "google" | "facebook";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chuyển hướng về web, kèm Set-Cookie khi thành công. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).
+             *
+             *     Mã lỗi: `VALIDATION_FAILED`
+             */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "VALIDATION_FAILED",
+                     *         "message": "Dữ liệu gửi lên không hợp lệ"
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /**
+             * @description Không tìm thấy bản ghi tương ứng.
+             *
+             *     Mã lỗi: `NOT_FOUND`
+             */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": {
+                     *         "code": "NOT_FOUND",
+                     *         "message": "Không tìm thấy dữ liệu"
                      *       }
                      *     }
                      */

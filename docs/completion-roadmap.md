@@ -30,6 +30,32 @@ cho tới khi ngày trong test tính theo `now` thay vì cố định.
 không đổi từ 18/08. Mock `IntersectionObserver` dùng mảng cấp module. Hướng xử lý là ổn định
 test, **không** phải đổi `role` của sản phẩm.
 
+> **26/08 — ĐĂNG NHẬP GOOGLE/FACEBOOK TỰ CHỦ (ADR 0019).** Vòng OAuth chuyển từ trình duyệt về
+> SERVER: `GET /auth/social/:provider` + `/callback`, cả hai trả **302 chứ không JSON** — một lỗi
+> JSON ở đây là trang trắng giữa luồng đăng nhập. `state` + PKCE nằm ở bảng mới `oauth_states`,
+> tiêu thụ bằng **một câu `UPDATE` có điều kiện** rồi kiểm `count === 1` (đọc-rồi-ghi sẽ cho hai
+> callback song song cùng đi tiếp — có test chạy `Promise.allSettled` khoá đúng điều đó).
+> **Facebook không phải OIDC**: không có chữ ký để kiểm, nên bắt buộc `debug_token` + đối chiếu
+> `app_id`; bỏ bước đó là token substitution. **Google thì không kiểm chữ ký** — token đến thẳng
+> từ endpoint của Google qua TLS trong chính lời gọi đó (OIDC Core §3.1.3.7), và `nonce` từ
+> `oauth_states` mới là chốt chặn replay thật sự.
+> **`AuthService.upsertUserFromIdentity`** tách ra từ `upsertUserFromIdToken`, thân hàm giữ NGUYÊN
+> — 5 test luật nối tài khoản còn xanh là bằng chứng đổi nguồn không kéo theo đổi hành vi.
+> Đã gỡ: `token-verifier.ts`, `POST /auth/session`, `POST /auth/mobile/session`,
+> `firebase-social-auth.ts`, `AUTH_MODE`. Firebase chỉ còn phục vụ chat (ADR 0009).
+> Web đổi đúng 4 file; nút social giờ **chuyển trang cả tab** (popup bị chặn trong webview
+> Facebook/Zalo), và `next` phải lọc bỏ `auth`/`next`/`authError` — không lọc thì đăng nhập xong
+> hộp đăng nhập mở lại. Trang `/manage/login` i18n hoá luôn (namespace `Auth.portal`).
+> `SUPPORTED_LOCALES` chuyển về `@xeprime/types` vì API cũng cần để chuyển tiếp ngôn ngữ cho màn
+> đồng ý của provider.
+> `apps/worker` thêm vòng lặp thứ tư dọn `oauth_states` mỗi giờ — bảng chỉ có ghi và xoá, phần
+> lớn hàng không bao giờ được tiêu thụ (người bỏ giữa chừng, bot quét endpoint công khai), nên
+> không dọn là phình vô hạn mà không màn hình nào để lộ ra.
+> Verify: **jest api 866/866 (64 suite)** · `openapi-contract` 18/18 · **vitest web 1775/1775
+> (120 file)** · worker 24/24 · typecheck 17/17 task · lint api/worker sạch, web 0 error ·
+> `i18n:check` 2684 khoá parity · migration `20260826140000_oauth_states` đã áp, đối chiếu `\d`
+> và `migrate diff` vẫn đúng 25 câu chênh lệch cố ý.
+
 > **25/08 (đợt 3) — BẢNG DOANH THU THEO KHÁCH ở `/manage/finance`.** Đợt 2 đã dựng màn chi tiết
 > cho từng khách; đợt này thêm bảng XẾP HẠNG ở trang tổng quan, song song với bảng hiệu quả theo xe.
 > **`GET /finance/by-customer`** — cùng khuôn `by-vehicle`: tập dòng là HỢP của "khách có phát sinh
@@ -473,7 +499,8 @@ hoa hồng ký gửi — món cuối của tuyến tiền) · Phase 8 (migration
 
 ## 3. Đã xong — chi tiết đủ để không làm lại
 
-- **Phase 1–2:** `modules/auth` (session cookie ADR 0002, verifier theo `AUTH_MODE`), `modules/rbac`,
+- **Phase 1–2:** `modules/auth` (session cookie ADR 0002; social OAuth do backend chủ trì từ
+  26/08/2026 — ADR 0019, `modules/auth/social/`), `modules/rbac`,
   `modules/tenants`, `modules/members`, guards (Auth/TenantScope/Permission), `modules/vehicles`
   (+ submit public review), `modules/platform-admin` (approval task).
 - **Phase 3:** `modules/public-listings` — `ListingsService.syncFromVehicle` là **writer DUY NHẤT**

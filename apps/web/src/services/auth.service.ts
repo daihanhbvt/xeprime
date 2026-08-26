@@ -1,10 +1,7 @@
 import { authApi } from '@xeprime/api-client';
 import { apiPost } from './api-client';
 import type { CurrentTenantSummary, CurrentUser } from '@/hooks/use-current-user';
-import { getFirebaseProviderIdToken } from '@/features/auth/lib/firebase-social-auth';
 export { AUTH_PROVIDER, AUTH_PROVIDER_LABEL, type AuthProvider } from '@/features/auth/constants';
-import type { AuthProvider } from '@/features/auth/constants';
-import type { AppLocale } from '@/i18n/config';
 
 export interface RegisterInput {
   displayName: string;
@@ -18,26 +15,13 @@ export interface RegisterInput {
  */
 export type { CurrentTenantSummary, CurrentUser };
 
-/**
- * ADR 0002: Firebase chỉ dùng đúng một lần để lấy ID token, phần còn lại của hệ thống không
- * biết Firebase tồn tại.
- */
-export function getProviderIdToken(provider: AuthProvider, locale: AppLocale): Promise<string> {
-  return getFirebaseProviderIdToken(provider, locale);
-}
-
 /*
- * Tám hàm dưới đây uỷ quyền cho `authApi` ở `@xeprime/api-client`.
+ * Bảy hàm dưới đây uỷ quyền cho `authApi` ở `@xeprime/api-client`.
  *
  * Giữ nguyên TÊN và CHỮ KÝ cũ để chỗ gọi không phải đổi; phần gọi HTTP thì chỉ còn một bản, và
  * app native dùng đúng bản đó (`docs/mobile-readiness-audit.md` §14.1 bước 4 — feature `auth` là
  * feature đầu tiên được chuyển).
  */
-
-/** POST /auth/session — backend verify ID token rồi Set-Cookie httpOnly (ADR 0002). */
-export function createSession(idToken: string): Promise<CurrentUser> {
-  return authApi.createSession({ idToken });
-}
 
 /** DELETE /auth/session — backend xoá cookie. Client không tự xoá được vì cookie httpOnly. */
 export function destroySession(): Promise<void> {

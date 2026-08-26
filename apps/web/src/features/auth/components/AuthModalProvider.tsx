@@ -18,6 +18,13 @@ import { currentPathWithQuery, isSafeNextPath } from '../safe-next';
 /** Tham số URL điều khiển modal. */
 export const AUTH_PARAM = 'auth';
 export const NEXT_PARAM = 'next';
+/**
+ * Mã lỗi mang về sau một lần đăng nhập mạng xã hội hỏng — ADR 0019.
+ *
+ * Nằm trong URL vì luồng đó RỜI TRANG: backend redirect về `…?auth=login&authError=<mã>`, nên
+ * lỗi phải sống sót qua một vòng điều hướng. State của React thì không.
+ */
+export const AUTH_ERROR_PARAM = 'authError';
 
 export interface OpenAuthOptions {
   mode?: AuthMode;
@@ -36,13 +43,15 @@ interface AuthModalContextValue {
   isOpen: boolean;
   mode: AuthMode;
   next: string | null;
+  /** Mã lỗi từ `?authError=`, để `AuthPanel` hiện đúng câu theo ngôn ngữ đang dùng. */
+  errorCode: string | null;
   open: (options?: OpenAuthOptions) => void;
   close: () => void;
   setMode: (mode: AuthMode) => void;
   /** Lấy và xoá callback tiếp-nối-hành-động (chỉ chạy đúng một lần). */
   takePendingAction: () => ((user: CurrentUser) => void) | null;
   /** Chỉ dành cho `AuthUrlSync` — đồng bộ trạng thái từ URL vào provider. */
-  syncFromUrl: (state: { mode: AuthMode; next: string | null } | null) => void;
+  syncFromUrl: (state: OpenState | null) => void;
 }
 
 const AuthModalContext = createContext<AuthModalContextValue | null>(null);
@@ -50,6 +59,7 @@ const AuthModalContext = createContext<AuthModalContextValue | null>(null);
 interface OpenState {
   mode: AuthMode;
   next: string | null;
+  errorCode: string | null;
 }
 
 /**
@@ -82,6 +92,14 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
         if (patch.next && isSafeNextPath(patch.next)) params.set(NEXT_PARAM, patch.next);
         else params.delete(NEXT_PARAM);
       }
+      /*
+       * `authError` LUÔN bị xoá ở mọi lần ghi URL, không có nhánh giữ lại.
+       *
+       * Nó là dấu vết của một lần đăng nhập đã hỏng. Người dùng vừa bấm mở lại hộp, đổi tab, hay
+       * đóng nó đi — mọi thao tác đó đều đã ghi nhận thông báo cũ. Để nó nằm lại trong URL nghĩa
+       * là F5 hay chia sẻ link sẽ dựng lại một lỗi không còn thật.
+       */
+      params.delete(AUTH_ERROR_PARAM);
       const qs = params.toString();
       return qs ? `${pathname}?${qs}` : pathname;
     },
@@ -93,8 +111,8 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
       pendingAction.current = options.onSuccess ?? null;
       const mode = options.mode ?? AUTH_MODE.LOGIN;
       const next = options.next ?? null;
-      // Mở ngay (không đợi router) để nút bấm phản hồi tức thì; `AuthUrlSync` sẽ xác nhận lại.
-      setState({ mode, next });
+      // Mở ngay (không đợi router) để nút bấm phản hồi tức thì; AuthUrlSync sẽ xác nhận lại.
+      setState({ mode, next, errorCode: null });
       // `push` để nút Back đóng modal thay vì rời trang.
       router.push(buildUrl({ auth: mode, next }), { scroll: false });
     },
@@ -110,7 +128,10 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
 
   const setMode = useCallback(
     (mode: AuthMode) => {
-      setState((prev) => (prev ? { ...prev, mode } : { mode, next: null }));
+      // Đổi tab = một lần thử mới. Xoá lỗi cũ để nó không treo lơ lửng trên form khác.
+      setState((prev) =>
+        prev ? { ...prev, mode, errorCode: null } : { mode, next: null, errorCode: null },
+      );
       // `replace`: Back vẫn phải đóng modal, không phải quay về tab kia.
       router.replace(buildUrl({ auth: mode }), { scroll: false });
     },
@@ -126,7 +147,14 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   const syncFromUrl = useCallback((urlState: OpenState | null) => {
     setState((prev) => {
       if (urlState === null) return prev === null ? prev : null;
-      if (prev && prev.mode === urlState.mode && prev.next === urlState.next) return prev;
+      if (
+        prev &&
+        prev.mode === urlState.mode &&
+        prev.next === urlState.next &&
+        prev.errorCode === urlState.errorCode
+      ) {
+        return prev;
+      }
       return urlState;
     });
   }, []);
@@ -136,6 +164,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
       isOpen: state !== null,
       mode: state?.mode ?? AUTH_MODE.LOGIN,
       next: state?.next ?? null,
+      errorCode: state?.errorCode ?? null,
       open,
       close,
       setMode,
@@ -149,9 +178,9 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * Đọc `?auth=`/`?next=` và đẩy vào provider. Là component RIÊNG (leaf, tự bọc Suspense ở chỗ
- * dùng) đúng vì lý do nêu trong docblock của provider: `useSearchParams` không được nằm trên
- * đường đi của `children`.
+ * Đọc `?auth=`/`?next=`/`?authError=` và đẩy vào provider. Là component RIÊNG (leaf, tự bọc
+ * Suspense ở chỗ dùng) đúng vì lý do nêu trong docblock của provider: `useSearchParams` không
+ * được nằm trên đường đi của `children`.
  */
 export function AuthUrlSync() {
   const searchParams = useSearchParams();
@@ -159,14 +188,19 @@ export function AuthUrlSync() {
 
   const rawMode = searchParams.get(AUTH_PARAM);
   const rawNext = searchParams.get(NEXT_PARAM);
+  const rawError = searchParams.get(AUTH_ERROR_PARAM);
 
   useEffect(() => {
     if (!isAuthMode(rawMode)) {
       syncFromUrl(null);
       return;
     }
-    syncFromUrl({ mode: rawMode, next: isSafeNextPath(rawNext) ? rawNext : null });
-  }, [rawMode, rawNext, syncFromUrl]);
+    syncFromUrl({
+      mode: rawMode,
+      next: isSafeNextPath(rawNext) ? rawNext : null,
+      errorCode: rawError,
+    });
+  }, [rawMode, rawNext, rawError, syncFromUrl]);
 
   return null;
 }

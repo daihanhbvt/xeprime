@@ -1,48 +1,13 @@
 /**
- * Kiểm tra `?next=` trước khi điều hướng — chống open redirect.
+ * Chống open redirect cho `?next=`.
  *
- * `next` đến từ URL nên là dữ liệu của kẻ tấn công: một link
- * `xeprime.vn/login?next=https://evil.example` mà được redirect thẳng sẽ biến chính domain của
- * mình thành bàn đạp phishing (người dùng thấy link xeprime.vn, click, và hạ cánh ở trang giả).
- *
- * Chỉ chấp nhận đường dẫn NỘI BỘ tuyệt đối. Các dạng bị từ chối:
- *  - `https://evil.example` — có scheme;
- *  - `//evil.example` — protocol-relative, trình duyệt hiểu là host khác;
- *  - `/\evil.example` và `\\evil.example` — một số trình duyệt coi `\` như `/`;
- *  - `trips` — tương đối, không xác định được đích;
- *  - chuỗi có ký tự điều khiển/khoảng trắng, dùng để lách kiểm tra tiền tố.
+ * Luật kiểm nay sống ở `@xeprime/domain` (`safe-path.ts`) vì API cũng phải kiểm đúng tham số đó
+ * ở `GET /auth/social/:provider` — ADR 0019. File này giữ lại phần chỉ web cần (dựng URL), và
+ * re-export hai hàm kia để 30+ chỗ gọi không phải đổi import.
  */
+export { isSafeNextPath, safeNextPath } from '@xeprime/domain';
 
-/**
- * Có ký tự điều khiển (C0 + DEL) hoặc khoảng trắng không.
- *
- * Duyệt theo mã ký tự thay vì regex: regex chứa ký tự điều khiển bị `no-control-regex` chặn,
- * còn viết bằng escape thì khó đọc và dễ sót khoảng.
- */
-function hasControlOrSpace(value: string): boolean {
-  for (const char of value) {
-    const code = char.codePointAt(0) ?? 0;
-    if (code <= 0x20 || code === 0x7f) return true;
-  }
-  return false;
-}
-
-export function isSafeNextPath(value: string | null | undefined): value is string {
-  if (!value) return false;
-  if (hasControlOrSpace(value)) return false;
-  // Phải bắt đầu bằng ĐÚNG MỘT dấu `/` và ký tự kế tiếp không phải `/` hay `\`.
-  if (!value.startsWith('/')) return false;
-  if (value.startsWith('//') || value.startsWith('/\\')) return false;
-  return true;
-}
-
-/**
- * Trả về `next` nếu an toàn, ngược lại trả `fallback`.
- * Luôn dùng hàm này thay vì tự viết `next.startsWith('/')` tại chỗ gọi.
- */
-export function safeNextPath(value: string | null | undefined, fallback: string): string {
-  return isSafeNextPath(value) ? value : fallback;
-}
+import { isSafeNextPath } from '@xeprime/domain';
 
 /** Ghép `?next=` vào một route, bỏ qua nếu `next` không an toàn. */
 export function withNext(route: string, next: string | null | undefined): string {

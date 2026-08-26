@@ -43,3 +43,25 @@ export function useErrorMessage(): (error: unknown) => string {
     [t],
   );
 }
+
+/**
+ * Cùng bảng chữ, nhưng vào bằng MÃ TRẦN thay vì một đối tượng lỗi.
+ *
+ * Cần thiết vì không phải mã nào cũng đến từ một lời gọi `fetch`: đăng nhập mạng xã hội là một
+ * lần rời trang, nên lỗi của nó quay về trong `?authError=<mã>` chứ không phải trong một
+ * `ApiClientError` (ADR 0019). Vẫn đọc đúng namespace `Errors` — hai đường vào, một bảng chữ.
+ */
+export function useErrorCodeMessage(): (code: string | null | undefined) => string {
+  const t = useTranslations('Errors');
+
+  return useCallback(
+    (code: string | null | undefined) => {
+      if (code) {
+        const key = `code.${code}` as ErrorKey;
+        if (t.has(key)) return t(key);
+      }
+      return t('fallback');
+    },
+    [t],
+  );
+}

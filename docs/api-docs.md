@@ -49,7 +49,7 @@ API có **hai đường xác thực**, và Swagger UI chỉ tiện cho đường
 
 **Không có nút "Authorize" nào để dán token vào** — cookie không phải thứ dán tay được.
 
-1. Mở `auth` → `POST /auth/session` → **Try it out** → gửi ID token Firebase.
+1. Mở `auth` → `POST /auth/login` → **Try it out** → gửi email/SĐT + mật khẩu.
 2. Trình duyệt tự giữ cookie. Mọi endpoint sau đó dùng lại cookie đó, không cần thao tác gì thêm.
 
 Cấu hình `withCredentials` đã bật sẵn ở [main.ts](../apps/api/src/main.ts) — không bật thì mọi
@@ -58,19 +58,22 @@ lần "Try it out" đều trả 401 dù đã đăng nhập.
 Gọi bằng curl thì phải giữ cookie jar:
 
 ```bash
-curl -c jar.txt -b jar.txt -X POST http://localhost:4000/auth/session \
-  -H 'Content-Type: application/json' -d '{"idToken":"..."}'
+curl -c jar.txt -b jar.txt -X POST http://localhost:4000/auth/login \
+  -H 'Content-Type: application/json' -d '{"identifier":"owner@xeprime.test","password":"Abcd1234"}'
 curl -b jar.txt http://localhost:4000/bookings?page=1
 ```
 
+**Google/Facebook không thử được trong Swagger** — `GET /auth/social/{provider}` và
+`/callback` là hai chặng của một lần ĐIỀU HƯỚNG TRÌNH DUYỆT và trả `302`, không trả JSON
+(ADR 0019). Mở thẳng `http://localhost:4000/auth/social/google?next=/` trên thanh địa chỉ để thử.
+
 ### 2.2 App native — `Authorization: Bearer` (ADR 0017)
 
-Bốn endpoint dưới nhóm `auth`, tiền tố `/auth/mobile`:
+Ba endpoint dưới nhóm `auth`, tiền tố `/auth/mobile`:
 
 | Endpoint | Trả về | Ghi chú |
 | --- | --- | --- |
-| `POST /auth/mobile/session` | `MobileSessionDto` (tokens + `MeDto`) | Đổi Firebase ID token lấy cặp token |
-| `POST /auth/mobile/login` | `MobileSessionDto` | Email/SĐT + mật khẩu. Throttle 5 req/phút |
+| `POST /auth/mobile/login` | `MobileSessionDto` (tokens + `MeDto`) | Email/SĐT + mật khẩu. Throttle 5 req/phút |
 | `POST /auth/mobile/refresh` | `MobileTokenPairDto` | **Xoay**: trả cặp mới, token cũ chết ngay |
 | `POST /auth/mobile/logout` | 204 | Thu hồi phiên của thiết bị. Luôn 204, kể cả token lạ |
 

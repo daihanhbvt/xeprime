@@ -13,8 +13,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
 import { normalizePhone, toLocalPhone } from '../../common/phone';
 import { EmailService } from './email.service';
-import { IdTokenVerifier } from './token-verifier';
 import type { MeDto } from './dto/auth.dto';
+import type { VerifiedIdentity } from './social/identity';
 
 const BCRYPT_ROUNDS = 12;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 giờ
@@ -23,7 +23,6 @@ const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 giờ
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly verifier: IdTokenVerifier,
     private readonly rbac: RbacService,
     private readonly email: EmailService,
     private readonly config: ConfigService,
@@ -221,14 +220,17 @@ export class AuthService {
   }
 
   /**
-   * Đổi ID token của provider lấy user trong DB — ADR 0002 bước 2.
+   * Tìm hoặc tạo user từ một danh tính ĐÃ được nhà cung cấp xác minh — ADR 0002 bước 2.
    *
    * Idempotent: đăng nhập lại bằng cùng provider không tạo user mới. Khoá tra cứu là
    * `(provider, providerUserId)` chứ không phải email — email đổi được, và tin email
    * để nhận diện là cách hai tài khoản khác nhau bị gộp làm một.
+   *
+   * Nhận `VerifiedIdentity` chứ không nhận token (ADR 0019): việc xác minh là chuyện riêng của
+   * từng provider và đã xong trước khi vào đây. Nhờ vậy hàm này không biết Google, Facebook hay
+   * Apple tồn tại — thêm provider mới không chạm một dòng nào ở đây.
    */
-  async upsertUserFromIdToken(idToken: string): Promise<{ userId: string }> {
-    const identity = await this.verifier.verify(idToken);
+  async upsertUserFromIdentity(identity: VerifiedIdentity): Promise<{ userId: string }> {
     const providerEmail = identity.email?.trim().toLowerCase() ?? null;
 
     const existing = await this.prisma.userIdentity.findUnique({

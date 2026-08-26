@@ -1,6 +1,17 @@
 # ADR 0002 — Session bằng httpOnly cookie do NestJS phát
 
-Ngày: 22/07/2026 · Trạng thái: Accepted
+Ngày: 22/07/2026 · Trạng thái: Accepted (phần "Firebase là provider" đã bị **[ADR 0019](0019-backend-led-social-oauth.md)** ghi đè — 26/08/2026)
+
+> ⚠️ **Phần còn đúng nguyên vẹn:** session là httpOnly cookie do NestJS phát, quyền không nằm
+> trong token, và Firebase chỉ được phép xuất hiện sau một interface.
+>
+> **Phần đã đổi:** vòng OAuth không còn chạy trong trình duyệt. Không còn
+> `signInWithPopup`, không còn `POST /auth/session`, không còn `AUTH_MODE`. Backend tự chạy
+> authorization code + PKCE ở `GET /auth/social/:provider` và đặt cookie ngay tại chặng callback
+> — xem ADR 0019. Firebase nay chỉ phục vụ chat realtime (ADR 0009).
+>
+> Đoạn "Luồng" bên dưới giữ nguyên như bản gốc để đọc được lịch sử quyết định; nó **không** mô tả
+> hệ thống hiện tại.
 
 ## Bối cảnh
 
