@@ -23,7 +23,9 @@ import styles from './RentalRangePanel.module.css';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 import { useLocale } from 'next-intl';
 
-export type RentalMode = 'daily' | 'hourly';
+/** Định nghĩa gốc ở `@xeprime/domain` (search-draft) — bản nháp tìm kiếm mang chính giá trị này. */
+export type { RentalMode } from '@xeprime/domain';
+import type { RentalMode } from '@xeprime/domain';
 
 export interface RentalRangeDraft {
   pickupAt: Dayjs | null;

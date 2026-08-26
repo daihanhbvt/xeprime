@@ -9,5 +9,10 @@ expo-env.d.ts
 /ios
 .kotlin/
 
+# Tamagui — cache bóc tách style do `@tamagui/babel-plugin` sinh ra mỗi lần build; nội dung
+# mang đường dẫn tuyệt đối của máy nên commit lên là mỗi người một bản.
+# KHÔNG phải nguồn: `src/theme/tamagui.config.ts` mới là cấu hình, và nó vẫn được commit.
+.tamagui/
+
 # Metro
 .metro-health-check*

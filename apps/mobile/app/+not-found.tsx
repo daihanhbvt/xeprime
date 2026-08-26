@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { ROUTES } from '@/navigation/routes';
 
 export default function NotFoundScreen() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function NotFoundScreen() {
         title={t('notFound.title')}
         description={t('notFound.description')}
         actionLabel={t('nav.backHome')}
-        onAction={() => router.replace('/')}
+        onAction={() => router.replace(ROUTES.root.index())}
       />
     </Screen>
   );

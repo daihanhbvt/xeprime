@@ -1,43 +1,45 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Text, YStack } from 'tamagui';
 import { Button } from '@/components/ui/Button';
-import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
+import type { IconName } from '@/components/ui/Chip';
+import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 interface ScreenMessageProps {
   title: string;
   description?: string;
+  icon?: IconName;
   actionLabel?: string;
   onAction?: () => void;
 }
 
-export function ScreenMessage({ title, description, actionLabel, onAction }: ScreenMessageProps) {
+/** Trạng thái rỗng của cả một màn: biểu tượng, một câu nói rõ chuyện gì, và một lối đi tiếp. */
+export function ScreenMessage({
+  title,
+  description,
+  icon = 'file-tray-outline',
+  actionLabel,
+  onAction,
+}: ScreenMessageProps) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
-      {description ? <Text style={styles.description}>{description}</Text> : null}
+    <YStack f={1} ai="center" jc="center" gap={space.md} p={space.lg}>
+      <YStack w={72} h={72} br={radius.pill} bg={colors.surfaceMuted} ai="center" jc="center">
+        <Ionicons name={icon} size={30} color={colors.placeholder} />
+      </YStack>
+
+      <YStack ai="center" gap={space.xs}>
+        <Text col={colors.text} fos={fontSize.h4} fow={fontWeight.semibold} ta="center">
+          {title}
+        </Text>
+        {description ? (
+          <Text col={colors.textMuted} fos={fontSize.body} ta="center">
+            {description}
+          </Text>
+        ) : null}
+      </YStack>
+
       {actionLabel && onAction ? (
-        <Button label={actionLabel} variant="secondary" onPress={onAction} />
+        <Button label={actionLabel} variant="secondary" block={false} onPress={onAction} />
       ) : null}
-    </View>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    flex: 1,
-    gap: space.sm,
-    justifyContent: 'center',
-    padding: space.lg,
-  },
-  title: {
-    color: colors.text,
-    fontSize: fontSize.h3,
-    fontWeight: fontWeight.semibold,
-    textAlign: 'center',
-  },
-  description: {
-    color: colors.textMuted,
-    fontSize: fontSize.body,
-    textAlign: 'center',
-  },
-});

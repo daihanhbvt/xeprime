@@ -1,6 +1,12 @@
 import { LISTING_SORT_VALUES } from '@xeprime/types';
-import type { QueryParams } from '@/services/api-client';
+import { toListingQueryParams } from '@xeprime/api-client';
 import type { ListingSort, MarketplaceFilters } from './types';
+
+/**
+ * Serialize filter → query API sống ở `@xeprime/api-client` (native gọi cùng endpoint với cùng
+ * bộ tham số); parse/ghi URL bên dưới thì ở lại đây vì chỉ web có thanh địa chỉ.
+ */
+export { toListingQueryParams };
 
 /**
  * Đọc/ghi filter marketplace ↔ URL searchParams (ADR 0004) — thuần hàm, không đụng
@@ -100,33 +106,4 @@ export function applyFilterPatch(
     }
   }
   if (!('page' in patch)) params.delete('page');
-}
-
-/**
- * Filter → query param gửi API (`/public/listings` và `/public/listings/facets`) — cùng quy ước
- * CSV/boolean với URL, một chỗ duy nhất để hai hook không lệch nhau.
- */
-export function toListingQueryParams(filters: MarketplaceFilters): QueryParams {
-  return {
-    vehicleType: filters.vehicleType ?? null,
-    serviceType: filters.serviceType ?? null,
-    // Tham số chuẩn là MÃ. `province` (tên) chỉ gửi kèm khi chưa có mã — backend quy nó về mã
-    // qua bảng bí danh, và URL sinh ra từ đó luôn mang mã.
-    provinceCode: filters.provinceCode ?? null,
-    province: filters.provinceCode ? null : (filters.province ?? null),
-    brand: filters.brand?.length ? filters.brand.join(',') : null,
-    bodyType: filters.bodyType?.length ? filters.bodyType.join(',') : null,
-    seats: filters.seats?.length ? filters.seats.join(',') : null,
-    fuelType: filters.fuelType?.length ? filters.fuelType.join(',') : null,
-    features: filters.features?.length ? filters.features.join(',') : null,
-    hourly: filters.hourly ? '1' : null,
-    delivery: filters.delivery ? '1' : null,
-    noCollateral: filters.noCollateral ? '1' : null,
-    discount: filters.discount ? '1' : null,
-    minSeats: filters.minSeats ?? null,
-    priceMin: filters.priceMin ?? null,
-    priceMax: filters.priceMax ?? null,
-    pickupAt: filters.pickupAt ?? null,
-    returnAt: filters.returnAt ?? null,
-  };
 }

@@ -11,6 +11,7 @@
  */
 export * from './status/index';
 export * from './catalog';
+export * from './marketplace';
 export * from './phone';
 export * from './long-term';
 export * from './pricing';

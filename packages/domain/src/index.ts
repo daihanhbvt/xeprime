@@ -127,3 +127,19 @@ export {
   type DayHolidayLookup,
   type VehicleDayBasePrice,
 } from './bulk-day';
+/**
+ * Ngữ cảnh tìm kiếm marketplace — luật "dịch vụ nào phát tham số nào", dùng chung web ↔ native.
+ * Nằm ở domain vì nó là NGHIỆP VỤ (ADR 0011 nằm trong đó), không phải chuyện gọi HTTP.
+ */
+export {
+  SEARCH_OWNED_KEYS,
+  defaultRentalRange,
+  draftFromFilters,
+  draftToFilterPatch,
+  resolveServiceType,
+  serviceTypesFor,
+  serviceUsesRentalRange,
+  type RentalMode,
+  type SearchDraft,
+  type SearchFilterPatch,
+} from './search-draft';

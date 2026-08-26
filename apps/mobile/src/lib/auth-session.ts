@@ -1,12 +1,4 @@
-import {
-  anonymousAuthTransport,
-  createApiClient,
-  getErrorCode,
-  mobileAuthApi,
-  type CurrentUser,
-  type MobileLoginInput,
-  type MobileTokenPair,
-} from '@xeprime/api-client';
+import { anonymousAuthTransport, createApiClient, getErrorCode, mobileAuthApi, type CurrentUser, type MobileLoginInput, type MobileTokenPair } from '@xeprime/api-client';
 import { API_ERROR_CODE } from '@xeprime/types';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';

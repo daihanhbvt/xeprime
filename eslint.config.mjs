@@ -26,9 +26,12 @@ export default [
       // Script CLI của từng app (vd `apps/worker/src/scripts/sync-holidays.ts`) — người vận
       // hành gõ tay và đọc kết quả ngay trên terminal, nên stdout LÀ giao diện của chúng.
       'apps/*/src/scripts/**/*.ts',
+      // Script sinh mã/tài nguyên chạy bằng Node thuần (`node scripts/*.mjs`).
+      '**/scripts/**/*.mjs',
       'apps/*/src/main.ts',
       'apps/*/src/openapi.ts',
     ],
+    languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
     rules: { 'no-console': 'off' },
   },
 

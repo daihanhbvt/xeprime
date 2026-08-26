@@ -185,10 +185,24 @@ TanStack Query **không** là dependency — `queryKeys` chỉ là object hằng
 
 ## Trạng thái chuyển đổi
 
-Hôm nay package có: client runtime, transport, query key, và feature `auth` — đủ để app native
-đăng nhập, làm mới token và gọi mọi endpoint bằng Bearer (ADR 0017).
+Hôm nay package có: client runtime, transport, query key, feature `auth` — đủ để app native đăng
+nhập, làm mới token và gọi mọi endpoint bằng Bearer (ADR 0017) — và feature `marketplace`.
 
-38 feature `api.ts`/`types.ts` còn lại vẫn ở `apps/web/src/features/*` và sẽ chuyển **từng cái
+`marketplace` ở đây CHỈ có phần gọi API: `marketplaceApi` và `toListingQueryParams`. Hai thứ đó
+phải dùng chung chứ không chép, vì chúng giữ quy ước serialize filter (mảng → CSV, boolean → `1`,
+có `provinceCode` thì bỏ `province`) và cái bẫy `/public/listings/:id/reviews` — endpoint đó trả
+**sẵn** phong bì `{ summary, data, meta }` nên phải gọi qua `request`, dùng `get` là bóc mất
+`summary`.
+
+Hai thứ KHÔNG ở đây, có chủ đích:
+
+| Thứ | Ở đâu | Vì sao |
+| --- | --- | --- |
+| Shape công khai (`PublicListing`, `MarketplaceFilters`…) | `@xeprime/types` (`marketplace.ts`) | Kiểu sinh từ OpenAPI (ADR 0007). Backend cũng đọc được, mà không kéo theo client HTTP |
+| Luật thẻ tìm kiếm (`draftToFilterPatch`, `serviceTypesFor`…) | `@xeprime/domain` (`search-draft.ts`) | Đó là NGHIỆP VỤ — "dịch vụ nào phát tham số nào", ADR 0011 nằm trong đó — không phải chuyện gọi HTTP |
+
+Phần đọc/ghi URL searchParams ở lại `apps/web` vì chỉ web có thanh địa chỉ.
+
+37 feature `api.ts`/`types.ts` còn lại vẫn ở `apps/web/src/features/*` và sẽ chuyển **từng cái
 một** theo [`docs/mobile-readiness-audit.md`](../../docs/mobile-readiness-audit.md) §14.1 bước 3–4.
-Không chuyển hàng loạt: mỗi feature là một bước tự verify được, và `marketplace`/`trips` (khu có 16
-file test) là chỗ nên bắt đầu.
+Không chuyển hàng loạt: mỗi feature là một bước tự verify được.

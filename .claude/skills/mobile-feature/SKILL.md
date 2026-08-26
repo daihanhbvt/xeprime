@@ -96,6 +96,40 @@ Adhere strictly to the state architecture:
 
 ---
 
+## 2b. Navigation — one route map, one namespace per domain
+
+Route paths live in the `app/` file tree, so a raw `router.push('/listings/...')` scattered across
+components is an untyped string that silently breaks when a file is renamed. **Never write a route
+path literal in a component.** Every destination comes from `apps/mobile/src/navigation/routes.ts`:
+
+```ts
+export const ROUTES = {
+  explore: {
+    home: (): Href => '/explore',
+    listingDetail: (vehicleId: string, serviceType?: string): Href => ...,
+  },
+  booking: { list: (): Href => '/trips' },
+  account: { home: (): Href => '/account', login: (): Href => '/login' },
+} as const;
+```
+
+Rules:
+
+* **One namespace per domain** — `explore`, `booking`, `chat`, `account`, `vehicles`, `calendar`,
+  `finance`, ... matching `src/features/<domain>`. Adding a domain means adding a namespace, never
+  appending to a flat object: flat stops being readable after two phases, and nobody can tell which
+  screen belongs to which feature.
+* **Each entry is a function returning `Href`**, not a string constant. Params go through the
+  function signature so they cannot be forgotten, and the params shape is built in exactly one
+  place. Param types (e.g. `ExploreSearchParams`) live next to the namespace that uses them.
+* **Call it from every navigation site** — `router.push`, `router.replace`, `<Redirect href>`,
+  `<Link href>`, and `useNavigateOnce()`. Pushes still go through `useNavigateOnce` (§4): the route
+  map decides WHERE, that hook decides HOW MANY TIMES.
+* **Adding a screen = adding a file under `app/` AND an entry in its namespace** in the same
+  change. A route that exists only as a file is one the rest of the app has no typed way to reach.
+
+---
+
 ## 3. Mobile-Specific Adaptations (Web vs Mobile)
 
 Certain web patterns must be re-architected for touchscreens and small viewports:
@@ -164,13 +198,19 @@ the Bearer header, the refresh and the retry happen underneath.
 
 The base already solves the three things every screen gets wrong — use them, don't rebuild them:
 
+* **Thanh trên đi qua [`<AppHeader>`](../../../apps/mobile/src/components/layout/AppHeader.tsx)** —
+  header DÙNG CHUNG của toàn app. Đừng dựng một hàng `XStack` riêng cho màn của bạn: thiếu biến
+  thể thì thêm vào chính file đó. Nó tự cộng safe-area trên, nên `<Screen>` bên dưới phải khai
+  `edges={['left', 'right', 'bottom']}`. Nền header không dùng màu thương hiệu — gold dành cho
+  hành động, xem docblock trong file.
 * **Wrap every screen in [`<Screen>`](../../../apps/mobile/src/components/layout/Screen.tsx).** It
   gathers safe area, keyboard avoidance and `keyboardShouldPersistTaps` in one place; miss one and
   you get text under the notch, a keyboard covering the input, or taps that need two presses. Pass
   `padded={false}` for edge-to-edge lists.
 * **Loading / empty / error come from `src/components/state/`** — `ScreenLoading`, `ScreenMessage`,
   `ScreenError`. `ScreenError` already maps an API error to translated copy by CODE, so never print
-  a backend `message`.
+  a backend `message`. But read §4b before reaching for `ScreenLoading`: it is the EXCEPTION, not
+  the default.
 * **Sizes and colors come from `src/theme/tokens.ts`** (`space`, `radius`, `fontSize`,
   `fontWeight`, `sizing`, `colors`). `sizing.touchTarget` is the 44pt/48dp floor — use it rather
   than typing a number.
@@ -183,6 +223,81 @@ Beyond that:
   tree, separate native API) split into `<Name>.ios.tsx` / `<Name>.android.tsx`.
 
 ---
+
+## 4b. Skeletons — every screen whose shape you already know
+
+A spinner says "wait"; a skeleton says "this is what is coming, and it will land HERE". On a screen
+whose layout is known before the data arrives — which is nearly all of them — the spinner is the
+worse choice twice over: it tells the user nothing, and the page jumps when real content replaces
+a 24px circle with a 600px body.
+
+**Rule: a screen or section that fetches ships a skeleton in the same change as its happy path.**
+A pull request that adds a fetching surface without one is incomplete, exactly like one missing its
+empty state. `ScreenLoading` (a spinner) is reserved for the rare surface whose shape genuinely
+cannot be known in advance.
+
+Skeletons live in [`src/components/ui/Skeleton.tsx`](../../../apps/mobile/src/components/ui/Skeleton.tsx):
+
+| Piece | For |
+| --- | --- |
+| `Skeleton` | One block. `width`/`height`/`round` — the primitive the rest are built from |
+| `SkeletonText` | A paragraph: lines of uneven width, last one short |
+| `VehicleCardSkeleton` | A vehicle card, same photo ratio and line count as the real one |
+| `ListRowSkeleton` | A list row (province, shop) |
+| `ListingDetailSkeleton` | The vehicle detail page |
+| `ProfileSkeleton` | Account: avatar + identity + setting rows |
+
+Writing a new one:
+
+* **Match the real layout, not a generic grey rectangle.** Same heights, same gaps, same number of
+  rows. The point is that nothing MOVES when data lands. If the skeleton and the real component
+  drift apart, the page jumps — so build the skeleton next to the component it stands in for, and
+  update both together (§7).
+* **Add it to `Skeleton.tsx`**, do not inline it in the screen. The next screen with that shape
+  reuses it, and the pulse timing stays identical everywhere.
+* **Remote images need their OWN waiting state**, separate from the API call. A list arriving does
+  not mean its images arrived: `<Image>` with a remote `uri` paints an empty box until the last
+  byte lands, which on a full-width banner reads as a broken white screen. Keep a skeleton under
+  the image until `onLoad`, and clear it on `onError` too — a pulse that never stops promises a
+  picture that is never coming. See `BannerSlide` in `HomeHero.tsx`.
+* **Pagination footers** use the skeleton of the row being appended, not a spinner: the next page
+  is vehicle cards, so say so.
+
+---
+
+## 4c. Motion — durations from tokens, transitions from the navigator
+
+Timings come from [`src/theme/motion.ts`](../../../apps/mobile/src/theme/motion.ts) — `duration`
+(`fast` / `base` / `slow` / `pulse`) and `easing.standard`. Never type a raw millisecond count:
+scattered numbers is how one screen ends up a third slower than the next for no reason.
+
+* **Screen transitions belong to the navigator, not to screens.** Configured once in
+  `app/_layout.tsx`: `ios_from_right` for pushes (direction teaches depth — in from the right,
+  back to the left), `slide_from_bottom` for `login` (a task that interrupts and returns, not a
+  level deeper), `fade` into `(tabs)`. Tabs cross-fade rather than slide: tabs are PEERS, and a
+  horizontal slide would imply a swipeable strip that does not exist.
+* **`ios_from_right`, not `slide_from_right`** — the difference is the OUTGOING screen, and it
+  shows up on BACK. `slide_from_right` holds the old screen still while the new one slides over
+  it, so popping snaps the underlying screen back in one piece and reads as a flicker.
+  `ios_from_right` moves both with parallax and a dim, so the motion is continuous end to end.
+  The name means "iOS-style", not "iOS-only". Do not set `animationDuration` on it: it follows the
+  platform curve, and forcing a linear timing on top makes it worse.
+* **Do NOT set `freezeOnBlur` — on the Stack OR on the Tabs.** It sounds free (a covered screen
+  stops rendering), but the bill arrives on BACK: the screen underneath rebuilds its whole tree in
+  one frame in the middle of the pop animation. That is the exact signature — push smooth, pop
+  janky. Tabs are not exempt: the `(tabs)` group IS the screen sitting underneath when you push a
+  detail screen from a tab, so freezing there moves the thaw one level down without removing it.
+* **Push smooth + pop janky is never the animation curve** — it is work happening as the screen
+  underneath comes back. Isolate before changing anything: set `animation: 'none'` for one run.
+  Still janky means it is render cost (a thaw, a refetch, a layout pass), and no amount of tuning
+  the transition will fix it.
+* **Touch feedback animates over time.** Flipping `opacity` in `style={({pressed}) => …}` is a
+  jump cut; on a large surface it reads as the screen blinking. `Card` presses in and springs back
+  on the UI thread — reuse `Card` rather than re-deriving this per screen.
+* **Reanimated only, never `Animated` from `react-native`.** The JS-thread driver stutters exactly
+  when the thread is busy — which is precisely when an animation is running.
+* **Judge smoothness on a release build.** A dev bundle runs unoptimised with Metro attached; jank
+  there is not evidence of jank in production.
 
 ## 5. Security & Domain Invariants
 
@@ -260,6 +375,7 @@ changed, update the row that applies:
 | What you changed | Also update |
 | --- | --- |
 | Added / deleted / renamed a module in `src/lib` or `src/features/*` | `apps/mobile/README.md` — folder table **and** any mermaid diagram naming it · `docs/CODEMAP.md` |
+| Added a variant to `AppHeader`, or a component to `src/components/ui/` | `apps/mobile/README.md` §8 · §4 of this skill — nếu không, màn tiếp theo sẽ dựng lại chính thứ bạn vừa thêm |
 | How the API client is configured, or what `@xeprime/api-client` exposes | `packages/api-client/README.md` · `apps/mobile/README.md` §4 · §1 of this skill |
 | The auth / token / session flow | `apps/mobile/README.md` §5 — diagram **and** the numbered rules · `packages/api-client/README.md` · §3C of this skill |
 | A state boundary (what belongs in Redux vs TanStack Query vs RHF) | §2 of this skill |
