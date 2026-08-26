@@ -1,7 +1,7 @@
 import type { Dayjs } from 'dayjs';
 import type { components } from '@xeprime/types';
 
-import { DAY_PARAM_FORMAT, dayjs } from './datetime';
+import { DAY_PARAM_FORMAT, dayjs, toAppTz } from './datetime';
 
 /**
  * Một ngày bận như BACKEND trả về.
@@ -53,7 +53,14 @@ export function buildBusyDayIndex(days: readonly VehicleBusyDay[] | undefined): 
       {
         date: d.date,
         fullyBusy: d.fullyBusy,
-        periods: d.periods.map((p) => ({ startAt: dayjs(p.startAt), endAt: dayjs(p.endAt) })),
+        // `toAppTz`, KHÔNG phải `dayjs(iso)`: hai mốc này được in ra thành "08:00–12:00" cho
+        // người dùng đọc, mà giờ hiển thị của sản phẩm luôn là `Asia/Ho_Chi_Minh` bất kể máy
+        // đang đặt múi giờ nào (CLAUDE.md §9). Với `dayjs(iso)` thì cùng một quãng bận hiện
+        // "08:00–12:00" trên máy Việt Nam và "01:00–05:00" trên máy UTC.
+        //
+        // Phép SO SÁNH ở `rangeBusyConflict` không đổi: dayjs so mốc tuyệt đối, không so
+        // wall-clock, nên gắn múi giờ chỉ đổi cách in chứ không đổi kết quả đối chiếu.
+        periods: d.periods.map((p) => ({ startAt: toAppTz(p.startAt), endAt: toAppTz(p.endAt) })),
       },
     ]),
   );
