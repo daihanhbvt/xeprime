@@ -23,6 +23,15 @@
     var(--xp-color-bg-container)
   );
   --xp-cal-zebra-bg: color-mix(in srgb, var(--xp-color-bg-muted) 45%, var(--xp-color-bg-container));
+
+  /*
+   * Nền cột ngày lễ. Đỏ ngữ nghĩa vì lịch Việt Nam đọc ngày nghỉ bằng màu đỏ — nhưng PHA RẤT
+   * NHẠT (8%) có chủ đích: lớp này phải yếu hơn cả nền hôm nay lẫn thanh event, vì nó chỉ là
+   * ngữ cảnh. Một nền đậm ở đây sẽ nuốt mất thứ người dùng thật sự vào lịch để đọc — xe nào
+   * đang bận. Vì thế ngày lễ còn có thêm một CỜ nhìn thấy được ở header: khi nền phải nhạt tới
+   * mức này thì màu không còn là một tín hiệu đủ.
+   */
+  --xp-cal-holiday-bg: color-mix(in srgb, var(--xp-color-error) 8%, var(--xp-color-bg-container));
 }
 
 .inlineAlert {
@@ -154,6 +163,58 @@
 
 .dayHeaderCell.weekend {
   background: var(--xp-cal-weekend-bg);
+}
+
+/* Ngày lễ: thắng nền cuối tuần, THUA nền hôm nay (khai báo trước `.today` — cùng độ đặc hiệu
+   nên thứ tự nguồn quyết định). Hôm nay là mốc điều hướng; ngày lễ chỉ là ngữ cảnh. */
+.dayHeaderCell.holiday {
+  background: var(--xp-cal-holiday-bg);
+  /* Chữ đỏ theo đúng cách lịch Việt Nam in ngày nghỉ — cùng với lá cờ, đây là tín hiệu KHÔNG
+     phụ thuộc nền (nền cố ý rất nhạt để không nuốt thanh event). */
+  color: var(--xp-color-error);
+}
+
+/* Nhãn thứ có màu xám riêng — phải kế thừa sắc đỏ, nếu không cột lễ chỉ đỏ một nửa. */
+.dayHeaderCell.holiday .weekdayLabel {
+  color: inherit;
+}
+
+.dayHeaderCell.holiday .dayNumber {
+  font-weight: 700;
+}
+
+/* Nút mở thẻ ngày lễ: phủ trọn ô để vùng bấm bằng cả cột, không phải một chấm nhỏ. */
+.holidayTrigger {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.holidayTrigger:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
+}
+
+/* Dấu hiệu KHÔNG-CHỈ-MÀU: nền ngày lễ cố ý rất nhạt, nên cờ này mới là thứ nhìn thấy được —
+   kể cả với người không phân biệt được sắc đỏ. */
+.holidayFlag {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--xp-color-error);
 }
 
 /* Cột hôm nay: nhấn gold ngữ nghĩa (token primary), thắng nền cuối tuần. */
@@ -330,6 +391,11 @@
 
 .cell.weekend {
   background: var(--xp-cal-weekend-bg);
+}
+
+/* Thứ tự khai báo LÀ luật ưu tiên ở đây (cùng độ đặc hiệu): cuối tuần < ngày lễ < hôm nay. */
+.cell.holidayColumn {
+  background: var(--xp-cal-holiday-bg);
 }
 
 .cell.today {
@@ -537,6 +603,10 @@
   color: var(--xp-color-success);
 }
 
+.summaryCell.holidayColumn {
+  background: var(--xp-cal-holiday-bg);
+}
+
 .summaryCell.today {
   background: var(--xp-color-primary-light);
 }
@@ -706,6 +776,12 @@
   background: var(--xp-color-primary);
 }
 
+/* Cùng nền với cột thật + viền đỏ để ô mẫu 12px không biến mất trên nền trắng. */
+.legendHoliday {
+  background: var(--xp-cal-holiday-bg);
+  border-color: color-mix(in srgb, var(--xp-color-error) 40%, var(--xp-color-bg-container));
+}
+
 /* ── Mobile ────────────────────────────────────────────────────────────── */
 
 @media (max-width: 640px) {
@@ -744,4 +820,215 @@
     padding: 0 4px;
     font-size: 11px;
   }
+}
+
+/* ── Bảng hành động của một ngày ──────────────────────────────────────────
+ * Mở bằng CLICK từ header; Popover neo vào CHÍNH nút của cột nên nó bám đúng ngày kể cả khi
+ * người dùng cuộn ngang. Bố cục theo bản thiết kế: tiêu đề ngày · tên lễ + thẻ loại · hành động.
+ */
+
+.dayPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 300px;
+  max-width: 360px;
+}
+
+.dayPanelHead {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.dayPanelHeadIcon {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+}
+
+.dayPanelDate {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-text-secondary);
+}
+
+.dayPanelClose {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--xp-border-radius-sm);
+  background: transparent;
+  color: var(--xp-color-text-tertiary);
+  cursor: pointer;
+}
+
+.dayPanelClose:hover {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-text);
+}
+
+.dayPanelClose:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 1px;
+}
+
+.dayPanelHoliday {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Tên lễ và thẻ loại nằm cùng hàng, thẻ dính mép phải và không bị bóp. */
+.dayPanelHolidayTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.dayPanelHolidayName {
+  margin: 0;
+  /* h4 chứ không h3: popover chỉ rộng 360px, và tên lễ là NHÃN của thẻ chứ không phải tiêu đề
+     của một trang — 20px làm nó át cả hai hành động bên dưới. */
+  font-size: var(--xp-font-size-h4);
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.dayPanelTag {
+  flex: none;
+  margin: 0;
+}
+
+.dayPanelHolidayType {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ── Hành động ───────────────────────────────────────────────────────────
+ * Thẻ khoá xe có VIỀN vì nó chứa hai đích bấm chồng nhau — viền là thứ nói cho người dùng biết
+ * cả khối này là một đơn vị, còn công tắc bên trong là một thao tác riêng. */
+
+.dayCard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+/*
+ * Đường vào hộp nhiều ngày là một LIÊN KẾT CHỮ, không phải cả thẻ.
+ *
+ * Bản trước cho cả thẻ bấm được (mẫu "stretched link") và đặt công tắc chồng lên — chạy được,
+ * nhưng người dùng không đoán nổi ranh giới giữa "gạt để khoá ngay" và "bấm để mở hộp". Một
+ * chữ xanh gạch chân tự nói ra đích của nó, và phần còn lại của thẻ trở về đúng vai trò: nhãn.
+ */
+.dayCardLink {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.dayCardLink:hover {
+  color: var(--xp-color-link-hover);
+}
+
+.dayCardLink:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.dayCardSwitch {
+  flex: none;
+}
+
+/* Hàng hành động thường (giá riêng): không viền, chỉ một đích bấm. */
+.dayRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 0;
+  border-radius: var(--xp-border-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dayRow:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.dayRow:focus-visible {
+  outline: 2px solid var(--xp-color-primary);
+  outline-offset: -2px;
+}
+
+/* Chip icon — vuông bo tròn, phân biệt hai hành động bằng cả HÌNH lẫn màu. */
+.dayChip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--xp-border-radius);
+  font-size: 15px;
+}
+
+.dayChipNeutral {
+  background: var(--xp-color-neutral-bg);
+  color: var(--xp-color-neutral);
+}
+
+.dayChipGold {
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+}
+
+.dayActionTexts {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.dayActionLabel {
+  font-weight: 600;
+}
+
+.dayActionHint {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.dayActionChevron {
+  flex: none;
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
 }

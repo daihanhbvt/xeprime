@@ -16,6 +16,8 @@ export const formats = {
     short: { day: '2-digit', month: '2-digit', year: 'numeric' },
     /** Ngày có tên tháng, cho tiêu đề và câu văn. */
     long: { day: 'numeric', month: 'long', year: 'numeric' },
+    /** Chỉ TÊN THỨ: `Chủ Nhật` · `Sunday`. Ghép với ngày số cho tiêu đề thẻ một ngày lịch. */
+    weekdayLong: { weekday: 'long' },
     /** Ngày đầy đủ kèm THỨ — nhãn "hôm nay" ở dashboard, tiêu đề một ô lịch. */
     fullDate: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
     /**

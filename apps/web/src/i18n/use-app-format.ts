@@ -2,11 +2,7 @@
 
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useMemo } from 'react';
-import {
-  DATE_PATTERN,
-  createAppFormat,
-  type AppFormat,
-} from './app-format';
+import { DATE_PATTERN, createAppFormat, type AppFormat } from './app-format';
 import type { AppLocale } from './config';
 import { useDomainLabel } from './use-domain-label';
 

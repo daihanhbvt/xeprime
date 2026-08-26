@@ -17,12 +17,8 @@ import type { useTranslations } from 'next-intl';
  *   type ServiceKey = Parameters<ReturnType<typeof useTranslations<'HomeSearch.service'>>>[0];
  */
 export type NavigationKey = Parameters<ReturnType<typeof useTranslations<'Navigation'>>>[0];
-export type PublicNavKey = Parameters<
-  ReturnType<typeof useTranslations<'Navigation.public'>>
->[0];
+export type PublicNavKey = Parameters<ReturnType<typeof useTranslations<'Navigation.public'>>>[0];
 export type ServiceLabelKey = Parameters<
   ReturnType<typeof useTranslations<'HomeSearch.service'>>
 >[0];
-export type FooterKey = Parameters<
-  ReturnType<typeof useTranslations<'Marketplace.footer'>>
->[0];
+export type FooterKey = Parameters<ReturnType<typeof useTranslations<'Marketplace.footer'>>>[0];

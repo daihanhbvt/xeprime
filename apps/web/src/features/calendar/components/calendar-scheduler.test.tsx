@@ -2,6 +2,7 @@ import { App } from 'antd';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PERMISSION, type Permission } from '@xeprime/types';
+import { renderWithIntl } from '@/i18n/test-utils';
 
 import { CalendarScheduler } from './CalendarScheduler';
 import type { CalendarEvent, CalendarResource } from '../types/calendar.types';
@@ -77,6 +78,36 @@ vi.mock('./MaintenanceEventDialog', () => ({
     open ? <div data-testid="maintenance-dialog">{recordId}</div> : null,
 }));
 
+/** Hai dialog hàng loạt mock thành marker — test scheduler chỉ cần biết ĐÚNG cái nào mở ra. */
+vi.mock('./BulkDayBlockDialog', () => ({
+  BulkDayBlockDialog: ({ state }: { state: { date: string } | null }) =>
+    state ? <div data-testid="bulk-block-dialog">{state.date}</div> : null,
+}));
+vi.mock('./BulkDayPriceDialog', () => ({
+  BulkDayPriceDialog: ({ state }: { state: { date: string } | null }) =>
+    state ? <div data-testid="bulk-price-dialog">{state.date}</div> : null,
+}));
+
+const bulk = vi.hoisted(() => ({
+  activeBatchId: null as string | null,
+  vehicles: [] as Array<{ vehicleId: string; busyDates: string[] }>,
+  release: vi.fn(),
+  block: vi.fn(),
+}));
+vi.mock('../hooks/use-bulk-day', () => ({
+  useBulkDayPreview: () => ({
+    data: {
+      activeBlockBatchId: bulk.activeBatchId,
+      vehicles: bulk.vehicles,
+      dayCount: 1,
+    },
+    isLoading: false,
+    isError: false,
+  }),
+  useReleaseBulkBlock: () => ({ mutate: bulk.release, isPending: false }),
+  useBulkBlockDay: () => ({ mutate: bulk.block, isPending: false }),
+}));
+
 const data = vi.hoisted(() => ({
   resources: [] as unknown[],
   eventsByResource: new Map<string, unknown[]>(),
@@ -103,6 +134,15 @@ vi.mock('../hooks/use-calendar-data', async (importOriginal) => ({
     filters: { from: '2026-10-12', days: 3, vehicleType: null, q: null },
     ...data,
   }),
+}));
+
+/**
+ * Ngày lễ nạp RIÊNG (`useCalendarHolidays`), và mock riêng ở đây cũng là một khẳng định: lịch
+ * phải dựng được mà không cần lớp ngày lễ nào — mặc định là bản đồ RỖNG cho mọi test cũ.
+ */
+const holidays = vi.hoisted(() => ({ byDay: new Map<string, unknown>() }));
+vi.mock('../hooks/use-calendar-holidays', () => ({
+  useCalendarHolidays: () => holidays.byDay,
 }));
 
 function resource(over: Partial<CalendarResource> = {}): CalendarResource {
@@ -163,6 +203,14 @@ beforeEach(() => {
   data.isLoading = false;
   data.isFetching = false;
   data.error = null;
+  holidays.byDay = new Map();
+  bulk.activeBatchId = null;
+  bulk.vehicles = [
+    { vehicleId: 'veh-1', busyDates: [] },
+    { vehicleId: 'veh-2', busyDates: [] },
+  ];
+  bulk.release = vi.fn();
+  bulk.block = vi.fn();
 });
 afterEach(cleanup);
 
@@ -348,6 +396,266 @@ describe('CalendarScheduler — lưới điều phối đội xe', () => {
     permissions.granted = new Set();
     renderScheduler();
     expect(screen.getByText('Không có quyền xem lịch xe')).toBeTruthy();
+  });
+});
+
+/**
+ * Lớp ngày lễ — một lớp THÔNG TIN chồng lên lưới.
+ *
+ * Hai điều được khoá, và điều thứ hai quan trọng hơn điều thứ nhất:
+ *  - ngày lễ phải nhận ra được bằng thứ KHÁC màu nền (nhãn trợ năng + cờ), vì nền cột cố ý rất nhạt;
+ *  - ngày lễ KHÔNG được chặn bất cứ thao tác nào — ô vẫn mở bộ chọn hành động như mọi ngày khác.
+ */
+describe('CalendarScheduler — lớp ngày lễ', () => {
+  const QUOC_KHANH = {
+    id: 'hol-1',
+    startDate: '2026-10-13',
+    endDate: '2026-10-13',
+    name: 'Ngày lễ thử',
+    description: 'Ngày lễ công cộng',
+    eventType: 'public_holiday',
+    source: 'google_calendar',
+    syncedAt: '2026-10-12T01:00:00.000Z',
+  };
+
+  it('header cột ngày lễ nói ra bằng NHÃN TRỢ NĂNG, không chỉ bằng màu', () => {
+    holidays.byDay = new Map([['2026-10-13', QUOC_KHANH]]);
+    renderScheduler();
+
+    expect(screen.getByLabelText(/^Ngày lễ: Ngày lễ thử, ngày 13\/10\/2026/)).toBeTruthy();
+  });
+
+  it('không có ngày lễ thì header KHÔNG mọc thêm nút nào', () => {
+    renderScheduler();
+
+    expect(screen.queryByLabelText(/^Ngày lễ:/)).toBeNull();
+  });
+
+  it('thẻ ngày lễ chỉ còn TÊN và LOẠI — ngày/nguồn/thời điểm đồng bộ đã bỏ theo thiết kế mới', async () => {
+    holidays.byDay = new Map([['2026-10-13', QUOC_KHANH]]);
+    renderScheduler();
+
+    fireEvent.click(screen.getByLabelText(/^Ngày lễ: Ngày lễ thử/));
+
+    expect(await screen.findByText('Ngày lễ thử')).toBeTruthy();
+    expect(screen.getByText('Nghỉ lễ chính thức')).toBeTruthy();
+    // Ba dòng của bản cũ đã đi hẳn: chúng đẩy hai hành động thật xuống dưới nếp gấp.
+    expect(screen.queryByText('13/10/2026')).toBeNull();
+    expect(screen.queryByText('Lịch Google')).toBeNull();
+  });
+
+  it('ngày lễ KHÔNG chặn thao tác: ô vẫn mở bộ chọn hành động như mọi ngày khác', () => {
+    holidays.byDay = new Map([['2026-10-13', QUOC_KHANH]]);
+    renderScheduler();
+
+    fireEvent.click(screen.getByLabelText(/Tạo lịch cho Toyota Vios 2023 ngày 13\/10/));
+
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByText('Đặt xe')).toBeTruthy();
+    expect(within(menu).getByText('Khóa xe')).toBeTruthy();
+  });
+
+  it('ô của cột ngày lễ mang thêm ngữ cảnh trong nhãn, giữ nguyên phần cũ', () => {
+    holidays.byDay = new Map([['2026-10-13', QUOC_KHANH]]);
+    renderScheduler();
+
+    expect(
+      screen.getByLabelText('Tạo lịch cho Toyota Vios 2023 ngày 13/10 · ngày lễ: Ngày lễ thử'),
+    ).toBeTruthy();
+  });
+
+  it('chú giải có mục Ngày lễ', () => {
+    renderScheduler();
+
+    const legend = screen.getByLabelText('Chú giải lịch');
+    expect(within(legend).getByText('Ngày lễ')).toBeTruthy();
+  });
+});
+
+/**
+ * Bản TIẾNG ANH của chính màn này.
+ *
+ * Vì sao đáng một khối test riêng: mọi test phía trên chạy ở tiếng Việt, và tiếng Việt là
+ * ngôn ngữ mà chuỗi được CHÉP NGUYÊN VĂN từ mã sang bó message — nên chúng vẫn xanh kể cả khi
+ * bản `en` thiếu khoá, sai biến ICU, hoặc chưa được dịch. Cái duy nhất chứng minh màn hình
+ * dùng được ở tiếng Anh là dựng nó bằng tiếng Anh và đọc kết quả.
+ */
+/**
+ * Bảng hành động của một ngày — thay cho thẻ ngày lễ chỉ-đọc trước đây.
+ *
+ * Khoá bốn hợp đồng, và cả bốn đều là yêu cầu tường minh của người dùng:
+ *  - mở bằng CLICK, không phải hover (bảng có hành động thật, hover thì không thao tác được);
+ *  - chỉ hiện TÊN + LOẠI lễ, không còn mô tả/nguồn/thời điểm đồng bộ;
+ *  - không còn nút "Xem chi tiết";
+ *  - hai hành động đi theo QUYỀN, và ngày thường cũng bấm được (khoá/đặt giá là việc quanh năm).
+ */
+describe('CalendarScheduler — bảng hành động của một ngày', () => {
+  const HOLIDAY = {
+    id: 'hol-1',
+    startDate: '2026-10-13',
+    endDate: '2026-10-13',
+    name: 'Ngày lễ thử',
+    description: 'Ngày lễ',
+    eventType: 'public_holiday',
+    source: 'google_calendar',
+    syncedAt: '2026-10-12T01:00:00.000Z',
+  };
+
+  it('bấm header ngày lễ mở bảng — HOVER thì không', async () => {
+    holidays.byDay = new Map([['2026-10-13', HOLIDAY]]);
+    renderScheduler();
+
+    const trigger = screen.getByLabelText(/^Ngày lễ: Ngày lễ thử/);
+    fireEvent.mouseEnter(trigger);
+    expect(screen.queryByText('Khóa xe nhanh')).toBeNull();
+
+    fireEvent.click(trigger);
+    expect(await screen.findByText('Khóa xe nhanh')).toBeTruthy();
+  });
+
+  it('chỉ hiện TÊN và LOẠI lễ — không mô tả, nguồn, thời điểm đồng bộ, không nút Xem chi tiết', async () => {
+    holidays.byDay = new Map([['2026-10-13', HOLIDAY]]);
+    renderScheduler();
+    fireEvent.click(screen.getByLabelText(/^Ngày lễ: Ngày lễ thử/));
+
+    expect(await screen.findByText('Ngày lễ thử')).toBeTruthy();
+    expect(screen.getByText('Nghỉ lễ chính thức')).toBeTruthy();
+
+    expect(screen.queryByText('Nguồn')).toBeNull();
+    expect(screen.queryByText('Cập nhật')).toBeNull();
+    expect(screen.queryByText('Xem chi tiết')).toBeNull();
+  });
+
+  it('NGÀY THƯỜNG cũng mở được bảng — khoá xe và đặt giá là việc quanh năm', async () => {
+    renderScheduler();
+
+    fireEvent.click(screen.getByLabelText('Thao tác cho ngày 12/10/2026'));
+
+    expect(await screen.findByText('Khóa xe nhanh')).toBeTruthy();
+    expect(screen.getByText('Giá riêng toàn bộ xe')).toBeTruthy();
+  });
+
+  it('chọn "Giá riêng toàn bộ xe" mở dialog đặt giá đúng ngày', async () => {
+    renderScheduler();
+    fireEvent.click(screen.getByLabelText('Thao tác cho ngày 12/10/2026'));
+
+    fireEvent.click(await screen.findByText('Giá riêng toàn bộ xe'));
+
+    expect(screen.getByTestId('bulk-price-dialog').textContent).toBe('2026-10-12');
+  });
+
+  it('gạt công tắc KHOÁ NGAY — không bắt đi qua modal', async () => {
+    renderScheduler();
+    fireEvent.click(screen.getByLabelText('Thao tác cho ngày 12/10/2026'));
+
+    fireEvent.click(await screen.findByRole('switch', { name: 'Khóa xe nhanh' }));
+
+    // Khoá thẳng: gửi đúng ngày đó và đúng những xe đang rảnh.
+    expect(bulk.block).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: '2026-10-12',
+        to: '2026-10-12',
+        vehicleIds: ['veh-1', 'veh-2'],
+      }),
+      expect.anything(),
+    );
+    // KHÔNG mở modal — đó là đường của mũi tên, không phải của công tắc.
+    expect(screen.queryByTestId('bulk-block-dialog')).toBeNull();
+  });
+
+  it('không xe nào rảnh thì công tắc không gửi lệnh rỗng', async () => {
+    bulk.vehicles = [{ vehicleId: 'veh-1', busyDates: ['2026-10-12'] }];
+    renderScheduler();
+    fireEvent.click(screen.getByLabelText('Thao tác cho ngày 12/10/2026'));
+
+    fireEvent.click(await screen.findByRole('switch', { name: 'Khóa xe nhanh' }));
+
+    expect(bulk.block).not.toHaveBeenCalled();
+  });
+
+  it('bấm liên kết "Khóa nhiều ngày" mở MODAL, KHÔNG khoá thẳng', async () => {
+    renderScheduler();
+    fireEvent.click(screen.getByLabelText('Thao tác cho ngày 12/10/2026'));
+
+    fireEvent.click(await screen.findByText('Khóa nhiều ngày'));
+
+    expect(screen.getByTestId('bulk-block-dialog').textContent).toBe('2026-10-12');
+    expect(bulk.block).not.toHaveBeenCalled();
+  });
+
+  it('thiếu cả hai quyền thì ngày THƯỜNG không phải nút', () => {
+    permissions.granted = new Set([PERMISSION.CALENDAR_VIEW]);
+    renderScheduler();
+
+    expect(screen.queryByLabelText('Thao tác cho ngày 12/10/2026')).toBeNull();
+  });
+
+  it('thiếu quyền khoá thì bảng chỉ mời Đặt giá', async () => {
+    permissions.granted = new Set([PERMISSION.CALENDAR_VIEW, PERMISSION.VEHICLE_UPDATE]);
+    renderScheduler();
+    fireEvent.click(screen.getByLabelText('Thao tác cho ngày 12/10/2026'));
+
+    expect(await screen.findByText('Giá riêng toàn bộ xe')).toBeTruthy();
+    expect(screen.queryByRole('switch', { name: 'Khóa xe nhanh' })).toBeNull();
+  });
+});
+
+describe('CalendarScheduler — bản tiếng Anh', () => {
+  function renderEnglish() {
+    return renderWithIntl(
+      <App>
+        <CalendarScheduler />
+      </App>,
+      { locale: 'en' },
+    );
+  }
+
+  it('chữ của lưới và chú giải ra tiếng Anh, không rơi về khoá message', () => {
+    renderEnglish();
+
+    expect(screen.getByLabelText('Vehicle rental calendar by day')).toBeTruthy();
+    const legend = screen.getByLabelText('Calendar legend');
+    expect(within(legend).getByText('Booking')).toBeTruthy();
+    expect(within(legend).getByText('Holiday')).toBeTruthy();
+
+    // Khoá chưa dịch sẽ hiện nguyên dạng `Calendar.legend.booking` — chặn đúng lỗi đó.
+    expect(document.body.textContent).not.toMatch(/Calendar\.[a-z]/i);
+  });
+
+  it('số nhiều ICU đúng ở tiếng Anh: 1 xe khác 3 xe', () => {
+    data.availableByDay = new Map([
+      ['2026-10-12', 1],
+      ['2026-10-13', 3],
+    ]);
+    renderEnglish();
+
+    expect(screen.getByLabelText('Day 12: 1 vehicle available')).toBeTruthy();
+    expect(screen.getByLabelText('Day 13: 3 vehicles available')).toBeTruthy();
+  });
+
+  it('bảng ngày tiếng Anh lấy nhãn loại lễ từ namespace Domain', async () => {
+    holidays.byDay = new Map([
+      [
+        '2026-10-13',
+        {
+          id: 'hol-1',
+          startDate: '2026-10-13',
+          endDate: '2026-10-13',
+          name: 'Test holiday',
+          description: 'Ngày lễ',
+          eventType: 'public_holiday',
+          source: 'google_calendar',
+          syncedAt: '2026-10-12T01:00:00.000Z',
+        },
+      ],
+    ]);
+    renderEnglish();
+
+    fireEvent.click(screen.getByLabelText(/^Holiday: Test holiday, on 13\/10\/2026/));
+
+    expect(await screen.findByText('Official public holiday')).toBeTruthy();
+    expect(screen.getByText('Quick block')).toBeTruthy();
+    expect(screen.getByText('Fleet-wide custom price')).toBeTruthy();
   });
 });
 

@@ -62,6 +62,8 @@ export interface AppFormat {
 
   /** Thứ viết tắt: `T6` (vi) · `Fri` (en). */
   weekdayShort: (value: Dayjs) => string;
+  /** Thứ viết đầy đủ: `Chủ Nhật` · `Sunday` — tiêu đề thẻ một ngày trên lịch. */
+  weekdayLong: (value: Dayjs) => string;
   /**
    * Một MỐC thuê xe: `T6, 08/08 · 10:00`.
    *
@@ -243,6 +245,7 @@ export function createAppFormat(
     dateKey: (value) => (value ? format.dateTime(asCalendarDate(value), 'short') : empty),
 
     weekdayShort: (value) => weekday(value),
+    weekdayLong: (value) => format.dateTime(value.toDate(), 'weekdayLong'),
     rentalPoint: (value, opts) => {
       const base = t('units.rentalPoint', {
         weekday: weekday(value),

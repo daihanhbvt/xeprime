@@ -65,6 +65,32 @@ export {
 } from './geo';
 
 export {
+  HOLIDAY_MAX_SPAN_DAYS,
+  HOLIDAY_SYNC_YEARS_AFTER,
+  HOLIDAY_SYNC_YEARS_BEFORE,
+  classifyHolidayEventType,
+  daysBetweenDateKeys,
+  expandHolidaysByDay,
+  googleAllDayEndToInclusive,
+  holidayDateKeyOfInstant,
+  holidaySyncWindow,
+  normalizeGoogleHolidayEvent,
+  normalizeGoogleHolidayEvents,
+  planHolidaySync,
+  shiftDateKey,
+  type ExistingHolidayRow,
+  type GoogleCalendarEventLike,
+  type HolidayDateKey,
+  type HolidayLike,
+  type HolidaySyncPlan,
+  type HolidaySyncWindow,
+  type HolidayUpdate,
+  type NormalizeHolidaysResult,
+  type NormalizedHoliday,
+  type SkippedHolidayEvent,
+} from './holidays';
+
+export {
   EMPTY_BUSY_INDEX,
   busyDayKey,
   buildBusyDayIndex,
@@ -78,3 +104,26 @@ export {
   type BusyPeriod,
   type VehicleBusyDay,
 } from './rental-busy';
+
+export {
+  BULK_PRICE_MODE,
+  PRICE_PERCENT_MAX,
+  PRICE_PERCENT_MIN,
+  PRICE_ROUND_STEPS,
+  PRICE_ROUND_STEP_DEFAULT,
+  PRICE_SPREAD_WARN_RATIO,
+  applyPercentToPrice,
+  holidayRunAround,
+  isWeekendDateKey,
+  listDateKeys,
+  listedPriceForDay,
+  planBulkDayPrices,
+  priceSpreadRatio,
+  roundPriceTo,
+  type BulkPriceInput,
+  type BulkPriceMode,
+  type BulkPricePlanOptions,
+  type BulkPriceRow,
+  type DayHolidayLookup,
+  type VehicleDayBasePrice,
+} from './bulk-day';

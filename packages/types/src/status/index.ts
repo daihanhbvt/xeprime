@@ -28,4 +28,5 @@ export * from './review';
 export * from './chat';
 export * from './misc';
 export * from './finance';
+export * from './holiday';
 export * from './onboarding';

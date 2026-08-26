@@ -23,6 +23,9 @@ export default [
       'prisma/src/seed.ts',
       'prisma/src/cleanup-test-data.ts',
       'scripts/**/*.ts',
+      // Script CLI của từng app (vd `apps/worker/src/scripts/sync-holidays.ts`) — người vận
+      // hành gõ tay và đọc kết quả ngay trên terminal, nên stdout LÀ giao diện của chúng.
+      'apps/*/src/scripts/**/*.ts',
       'apps/*/src/main.ts',
       'apps/*/src/openapi.ts',
     ],

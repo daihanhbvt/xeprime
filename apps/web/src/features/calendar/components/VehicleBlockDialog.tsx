@@ -2,11 +2,11 @@
 
 import { Alert, App, Button, Form, Input, Select } from 'antd';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useQuery } from '@tanstack/react-query';
 import {
   API_ERROR_CODE,
   VEHICLE_BLOCK_REASON,
-  VEHICLE_BLOCK_REASON_META,
   VEHICLE_BLOCK_REASON_VALUES,
   type VehicleBlockReason,
 } from '@xeprime/types';
@@ -15,6 +15,7 @@ import {
   type RentalMode,
 } from '@/components/form/RentalDateTimeRangeField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { checkConflict } from '@/features/bookings/api';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
@@ -28,11 +29,6 @@ export type VehicleBlockDialogState =
   | { mode: 'create'; vehicleId: string; vehicleName: string; date: string }
   | { mode: 'edit'; block: VehicleBlock }
   | null;
-
-const REASON_OPTIONS = VEHICLE_BLOCK_REASON_VALUES.map((value) => ({
-  value,
-  label: VEHICLE_BLOCK_REASON_META[value].label,
-}));
 
 /**
  * Khoá xe — nghiệp vụ THẬT: block + occupancy ghi cùng transaction ở backend (ADR 0006).
@@ -48,6 +44,7 @@ export function VehicleBlockDialog({
   state: VehicleBlockDialogState;
   onClose: () => void;
 }) {
+  const t = useTranslations('Calendar');
   return (
     <ResponsiveDialog
       open={state !== null}
@@ -55,7 +52,7 @@ export function VehicleBlockDialog({
       size="md"
       mobileMode="fullscreen"
       footer={null}
-      title={state?.mode === 'edit' ? 'Sửa lịch khoá xe' : 'Khóa xe'}
+      title={t(state?.mode === 'edit' ? 'block.editTitle' : 'block.createTitle')}
     >
       {state ? (
         <BlockForm
@@ -75,6 +72,9 @@ function BlockForm({
   state: NonNullable<VehicleBlockDialogState>;
   onClose: () => void;
 }) {
+  const t = useTranslations('Calendar');
+  const tCommon = useTranslations('Common');
+  const domainLabel = useDomainLabel();
   const { message } = App.useApp();
   const editing = state.mode === 'edit' ? state.block : null;
   const vehicleId = editing ? editing.vehicleId : state.mode === 'create' ? state.vehicleId : '';
@@ -133,11 +133,11 @@ function BlockForm({
   function save() {
     setConflict(false);
     if (!range.pickupAt || !range.returnAt) {
-      setRangeError('Chọn khoảng thời gian khoá');
+      setRangeError(t('block.errors.rangeRequired'));
       return;
     }
     if (!range.returnAt.isAfter(range.pickupAt)) {
-      setRangeError('Thời điểm kết thúc phải sau thời điểm bắt đầu');
+      setRangeError(t('block.errors.rangeOrder'));
       return;
     }
     setRangeError(null);
@@ -150,7 +150,7 @@ function BlockForm({
       }
     };
     const onSuccess = () => {
-      message.success(editing ? 'Đã cập nhật lịch khoá' : 'Đã khoá xe');
+      message.success(t(editing ? 'block.updated' : 'block.created'));
       onClose();
     };
 
@@ -177,25 +177,25 @@ function BlockForm({
           type="error"
           showIcon
           className={styles.alert}
-          message="Xe đã bận trong khoảng này"
-          description="Đổi thời gian, hoặc xử lý đơn/lịch đang chiếm chỗ trước."
+          message={t('block.conflictTitle')}
+          description={t('block.conflictDescription')}
         />
       ) : previewConflict ? (
         <Alert
           type="warning"
           showIcon
           className={styles.alert}
-          message="Xe có thể đã bận khoảng này"
-          description="Cảnh báo sớm — hệ thống vẫn kiểm tra lại khi lưu."
+          message={t('block.previewConflictTitle')}
+          description={t('block.previewConflictDescription')}
         />
       ) : null}
 
-      <Form.Item label="Xe">
+      <Form.Item label={t('block.vehicle')}>
         <Input value={vehicleName} disabled />
       </Form.Item>
 
       <Form.Item
-        label="Thời gian khoá"
+        label={t('block.period')}
         required
         validateStatus={rangeError ? 'error' : ''}
         help={rangeError}
@@ -205,37 +205,40 @@ function BlockForm({
           onChange={setRange}
           mode={mode}
           onModeChange={setMode}
-          labels={{ start: 'Bắt đầu', end: 'Kết thúc' }}
+          labels={{ start: t('block.periodStart'), end: t('block.periodEnd') }}
           variant="labelled"
-          ariaLabel="Thời gian khoá xe"
+          ariaLabel={t('block.periodAriaLabel')}
         />
       </Form.Item>
 
-      <Form.Item label="Lý do" required>
+      <Form.Item label={t('block.reason')} required>
         <Select<VehicleBlockReason>
           value={reason}
           onChange={setReason}
-          options={REASON_OPTIONS}
-          aria-label="Lý do khoá xe"
+          options={VEHICLE_BLOCK_REASON_VALUES.map((value) => ({
+            value,
+            label: domainLabel('vehicleBlockReason', value),
+          }))}
+          aria-label={t('block.reasonAriaLabel')}
         />
       </Form.Item>
 
-      <Form.Item label="Ghi chú">
+      <Form.Item label={t('block.note')}>
         <Input.TextArea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={3}
           maxLength={2000}
-          placeholder="Bảo dưỡng, sửa chữa, không cho thuê…"
+          placeholder={t('block.notePlaceholder')}
         />
       </Form.Item>
 
       <div className={styles.actions}>
         <Button onClick={onClose} disabled={pending}>
-          Huỷ
+          {tCommon('actions.cancel')}
         </Button>
         <Button type="primary" htmlType="submit" loading={pending}>
-          {editing ? 'Lưu thay đổi' : 'Khoá xe'}
+          {t(editing ? 'block.submitEdit' : 'block.submitCreate')}
         </Button>
       </div>
     </Form>

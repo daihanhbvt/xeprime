@@ -2,6 +2,7 @@
 
 import { CalendarOutlined, DollarOutlined, LockOutlined } from '@ant-design/icons';
 import { useEffect, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
@@ -19,10 +20,14 @@ export interface CellActionTarget {
   anchor: { left: number; top: number };
 }
 
-const ACTION_META: Record<CellActionKey, { label: string; hint: string; icon: React.ReactNode }> = {
-  booking: { label: 'Đặt xe', hint: 'Tạo đơn thuê cho khách', icon: <CalendarOutlined /> },
-  block: { label: 'Khóa xe', hint: 'Không nhận đặt trong một khoảng', icon: <LockOutlined /> },
-  price: { label: 'Đặt giá', hint: 'Giá riêng cho ngày này', icon: <DollarOutlined /> },
+/**
+ * Chỉ ICON nằm ở đây. Nhãn và câu gợi ý đọc từ `Calendar.cellActions.<key>` — mã hành động
+ * (`booking`/`block`/`price`) là DỮ LIỆU, chữ hiện ra mới là thứ đổi theo ngôn ngữ.
+ */
+const ACTION_ICON: Record<CellActionKey, React.ReactNode> = {
+  booking: <CalendarOutlined />,
+  block: <LockOutlined />,
+  price: <DollarOutlined />,
 };
 
 /**
@@ -45,6 +50,7 @@ export function CalendarCellActions({
   onClose: () => void;
 }) {
   const fmt = useAppFormat();
+  const t = useTranslations('Calendar');
   const isMobile = useIsMobile();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -81,11 +87,11 @@ export function CalendarCellActions({
       onClick={() => onSelect(key)}
     >
       <span className={styles.icon} aria-hidden>
-        {ACTION_META[key].icon}
+        {ACTION_ICON[key]}
       </span>
       <span className={styles.texts}>
-        <span className={styles.label}>{ACTION_META[key].label}</span>
-        <span className={styles.hint}>{ACTION_META[key].hint}</span>
+        <span className={styles.label}>{t(`cellActions.${key}.label`)}</span>
+        <span className={styles.hint}>{t(`cellActions.${key}.hint`)}</span>
       </span>
     </button>
   ));
@@ -96,10 +102,10 @@ export function CalendarCellActions({
         open
         onClose={onClose}
         size="sm"
-        title={`${target.vehicleName} · ${dateLabel}`}
+        title={t('cellActions.sheetTitle', { vehicle: target.vehicleName, date: dateLabel })}
         footer={null}
       >
-        <div role="menu" aria-label="Chọn thao tác cho ô lịch" className={styles.sheetList}>
+        <div role="menu" aria-label={t('cellActions.menuAriaLabel')} className={styles.sheetList}>
           {items}
         </div>
       </ResponsiveDialog>
@@ -110,7 +116,7 @@ export function CalendarCellActions({
     <div
       ref={panelRef}
       role="menu"
-      aria-label={`Thao tác cho ${target.vehicleName} ngày ${dateLabel}`}
+      aria-label={t('cellActions.panelAriaLabel', { vehicle: target.vehicleName, date: dateLabel })}
       className={styles.panel}
       // Toạ độ chỉ biết lúc runtime (vị trí ô trong lưới) — ngoại lệ hợp lệ của ADR 0003.
       style={

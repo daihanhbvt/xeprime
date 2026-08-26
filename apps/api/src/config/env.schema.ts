@@ -1,4 +1,4 @@
-import { SESSION_COOKIE_NAME_DEFAULT } from '@xeprime/types';
+import { GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT, SESSION_COOKIE_NAME_DEFAULT } from '@xeprime/types';
 import { z } from 'zod';
 
 /**
@@ -104,6 +104,27 @@ export const envSchema = z
      * hiện và hai bên tự thoả thuận như trước — không có gì gãy, nên không đáng chặn boot.
      */
     GOOGLE_MAPS_SERVER_KEY: z.string().optional(),
+
+    /*
+     * --- Ngày lễ Việt Nam: đồng bộ từ Google Calendar (26/08/2026) ---
+     *
+     * Hai biến này do **`apps/worker`** dùng, không phải API — API chỉ ĐỌC bảng
+     * `public_holidays` và không biết Google tồn tại. Khai ở đây vì cả repo dùng chung một
+     * `.env`: một biến không được khai báo là một biến không ai kiểm được chính tả, và người
+     * gõ nhầm `GOOGLE_HOLIDAYS_API_KEY` sẽ không hiểu vì sao lịch mãi không có ngày lễ.
+     *
+     * Key RIÊNG, KHÔNG dùng lại `GOOGLE_MAPS_SERVER_KEY` ở trên: khác API được bật trên Cloud
+     * Console (Calendar API vs Geocoding + Routes), khác hạn mức, và khác cả kiểu khoá — key
+     * bản đồ khoá theo IP của API server, còn key này gọi từ máy chạy worker.
+     *
+     * Optional kể cả ở production, cùng logic với `GOOGLE_MAPS_SERVER_KEY` và bộ `R2_*` phía
+     * hiển thị: thiếu key thì lịch xe đơn giản không có lớp ngày lễ. Không có gì gãy, nên không
+     * đáng chặn boot — vì vậy KHÔNG có điều kiện nào cho chúng ở `superRefine` bên dưới.
+     */
+    GOOGLE_HOLIDAY_API_KEY: z.string().optional(),
+    // Lịch nghỉ lễ VN công khai của Google. Mặc định lấy từ `@xeprime/types` để API và worker
+    // không thể mô tả hai lịch khác nhau.
+    GOOGLE_HOLIDAY_CALENDAR_ID: z.string().min(1).default(GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT),
 
     // --- Web + Email (cho link đặt lại mật khẩu) ---
     APP_WEB_URL: z.string().default('http://localhost:3000'),

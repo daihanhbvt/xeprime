@@ -44,6 +44,25 @@ export const queryKeys = {
     /** Bản ghi đè giá theo ngày của MỘT xe (dialog đặt giá). */
     vehicleDailyPrices: (vehicleId: string, params: QueryParams) =>
       ['calendar', 'vehicle-daily-prices', vehicleId, params] as const,
+    /**
+     * Xem trước thao tác hàng loạt cho một khoảng ngày (khoá / đặt giá cả đội xe).
+     *
+     * Nằm DƯỚI nhánh `calendar` — khác hẳn `holidays`: nội dung của nó (xe nào bận ngày nào)
+     * đổi ngay sau mỗi lần tạo đơn hay khoá xe, nên nó PHẢI được làm mới cùng lưới lịch.
+     */
+    bulkDayPreview: (params: QueryParams) => ['calendar', 'bulk-day-preview', params] as const,
+  },
+  /**
+   * Lịch nghỉ lễ Việt Nam — nhánh RIÊNG, cố ý không nằm dưới `calendar.*`.
+   *
+   * Ngày lễ là dữ liệu TOÀN NỀN TẢNG, không thuộc gian hàng nào và không đổi khi ai đó tạo đơn
+   * hay khoá xe. Nhét nó vào nhánh `calendar` nghĩa là mỗi lần
+   * `invalidateQueries({ queryKey: queryKeys.calendar.all })` chạy sau một mutation lịch, nó
+   * cũng nạp lại một danh mục vốn chỉ đổi mỗi ngày một lần.
+   */
+  holidays: {
+    all: ['holidays'] as const,
+    range: (from: string, to: string) => ['holidays', 'range', from, to] as const,
   },
   /**
    * Danh mục hành chính (tỉnh/thành). Bản chọn-được (`provinces`) và bản quản trị (`admin`) nằm

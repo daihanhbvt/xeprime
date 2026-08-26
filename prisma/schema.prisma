@@ -1979,6 +1979,12 @@ model VehicleBlock {
   note       String?  @db.Text
   /// Optimistic concurrency như phiếu bảo dưỡng — hai người cùng sửa thì người sau bị 409.
   rowVersion Int      @default(1) @map("row_version")
+  /// Mã LÔ khi block sinh ra từ thao tác "khoá toàn bộ xe trong ngày"; NULL = khoá lẻ từng xe.
+  ///
+  /// Tồn tại để GỠ LẠI ĐƯỢC. Công tắc trên lịch phải bật/tắt được, mà tắt thì phải biết chính
+  /// xác gỡ những dòng nào. Không có mã lô thì cách duy nhất là đoán theo (ngày + lý do) — và
+  /// đoán sai nghĩa là gỡ nhầm một lịch khoá ai đó đặt tay vì lý do thật.
+  bulkBatchId String?  @map("bulk_batch_id") @db.Char(26)
   createdBy  String?  @map("created_by") @db.Char(26)
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -1989,6 +1995,8 @@ model VehicleBlock {
 
   @@index([tenantId, vehicleId, startAt])
   @@index([tenantId, startAt])
+  /// Gỡ trọn một lô: `WHERE tenant_id = ? AND bulk_batch_id = ?`.
+  @@index([tenantId, bulkBatchId])
   @@map("vehicle_blocks")
 }
 
@@ -2543,4 +2551,91 @@ model GeoRouteCache {
 
   @@index([fetchedAt])
   @@map("geo_route_cache")
+}
+
+// ---------------------------------------------------------------------------
+// Ngày lễ Việt Nam (26/08/2026) — dữ liệu TOÀN NỀN TẢNG, chỉ để hiển thị
+// ---------------------------------------------------------------------------
+
+/// Một EVENT trong lịch nghỉ lễ — MỘT DÒNG MỖI EVENT, không phải mỗi ngày.
+///
+/// Tết là một dòng `start_date=17/02, end_date=23/02`, không phải bảy dòng: nguồn dữ liệu
+/// (Google Calendar) mô tả nó như một sự kiện, và tách ra bảy dòng ở tầng lưu trữ nghĩa là
+/// mỗi lần Google dời lịch nghỉ ta phải tự đoán dòng nào thuộc sự kiện nào. Việc mở ra từng
+/// ngày để tô lưới lịch là của `expandHolidaysByDay` ở @xeprime/domain, lúc hiển thị.
+///
+/// KHÔNG có `tenant_id`: ngày lễ là dữ kiện của quốc gia, không phải dữ liệu của gian hàng.
+///
+/// Bảng này KHÔNG có hiệu lực nghiệp vụ nào — không khoá xe, không đổi giá, không sinh
+/// `vehicle_occupancies` (ADR 0006 vẫn là đường duy nhất giữ chỗ lịch). Ai định cho ngày lễ
+/// chặn đặt xe thì đó là một quyết định của gian hàng (ADR 0014), không phải của bảng này.
+model PublicHoliday {
+  id String @id @db.Char(26)
+
+  /// Khoá của event bên Google — mỏ neo để đồng bộ nhận ra "vẫn là ngày lễ đó" sau khi đổi tên.
+  /// NULL cho dòng `source = manual`: dòng người vận hành tự khai không có event Google nào cả,
+  /// và nhét một id giả vào một cột tên là `google_event_id` là nói dối trong chính lược đồ.
+  googleEventId String? @unique @map("google_event_id") @db.VarChar(255)
+
+  startDate DateTime @map("start_date") @db.Date
+  /// Ngày CUỐI CÙNG của kỳ nghỉ — **INCLUSIVE**.
+  ///
+  /// Đây là chỗ lệch một ngày dễ xảy ra nhất trong toàn hệ thống: Google trả `end.date`
+  /// END-EXCLUSIVE (ngày 30/04 về với `end.date = 2026-05-01`). Giá trị lưu ở đây ĐÃ trừ một
+  /// ngày (`googleAllDayEndToInclusive`). Truy vấn overlap vì thế là `start_date <= :to AND
+  /// end_date >= :from`, không có `- 1` nào ở tầng đọc.
+  endDate DateTime @map("end_date") @db.Date
+
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+
+  /// `HolidayEventType` ở @xeprime/types (ADR 0005 — status là String, union type ở types).
+  eventType String @map("event_type") @db.VarChar(30)
+  /// `HolidaySource`: `google_calendar` | `manual`. Đồng bộ CHỈ được xoá dòng của chính nó.
+  source String @db.VarChar(30)
+
+  /// Lần sửa gần nhất phía Google — dùng để diff, KHÔNG lộ ra API công khai.
+  googleUpdatedAt DateTime? @map("google_updated_at") @db.Timestamptz(3)
+  /// Lượt đồng bộ gần nhất chạm tới dòng này — trưng cho người dùng biết dữ liệu mới tới đâu.
+  syncedAt DateTime @map("synced_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  /// Truy vấn duy nhất của API là overlap theo khoảng ngày.
+  @@index([startDate, endDate])
+  @@index([syncedAt])
+  @@map("public_holidays")
+}
+
+/// Sổ chạy của luồng đồng bộ ngày lễ — nhỏ, giữ nguyên lịch sử, không tự dọn.
+///
+/// Vì sao cần một bảng riêng thay vì đọc log: worker không có endpoint nào để hỏi "đồng bộ
+/// còn chạy không". Cổng chạy mỗi ngày một lần (§7) đọc CHÍNH bảng này để biết hôm nay đã
+/// thành công chưa — nên nó vừa là nhật ký vừa là trạng thái, và phải nằm trong DB chứ không
+/// phải trong bộ nhớ tiến trình (restart là mất).
+model HolidaySyncRun {
+  id String @id @db.Char(26)
+
+  startedAt  DateTime  @map("started_at") @db.Timestamptz(3)
+  finishedAt DateTime? @map("finished_at") @db.Timestamptz(3)
+
+  /// `HolidaySyncStatus`: `success` | `failed`.
+  status String @db.VarChar(20)
+  /// `HolidaySyncTrigger`: `scheduled` (vòng lặp worker) | `manual` (script CLI).
+  trigger String @db.VarChar(20)
+
+  eventsFound   Int @default(0) @map("events_found")
+  eventsCreated Int @default(0) @map("events_created")
+  eventsUpdated Int @default(0) @map("events_updated")
+  eventsDeleted Int @default(0) @map("events_deleted")
+
+  /// Lý do thất bại, ĐÃ che bí mật. Key API không bao giờ được rơi vào cột này.
+  errorMessage String? @map("error_message") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  /// "Hôm nay đã đồng bộ thành công chưa" + đọc lịch sử gần nhất.
+  @@index([startedAt])
+  @@map("holiday_sync_runs")
 }

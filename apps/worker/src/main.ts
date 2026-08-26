@@ -1,18 +1,29 @@
 import { createPrismaClient } from '@xeprime/prisma';
-import { FIRESTORE_ENABLED, assertWorkerEnv } from './lib/env';
+import { HOLIDAY_SYNC_STATUS } from '@xeprime/types';
+import {
+  FIRESTORE_ENABLED,
+  GOOGLE_HOLIDAY_API_KEY,
+  GOOGLE_HOLIDAY_CALENDAR_ID,
+  HOLIDAY_SYNC_ENABLED,
+  assertWorkerEnv,
+} from './lib/env';
 import { withAdvisoryLock } from './lib/advisory-lock';
 import { pumpOutbox } from './jobs/outbox-pump';
 import { runRetention } from './jobs/retention';
 import { sweepBookingRequestDeadlines } from './jobs/booking-request-deadlines';
+import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/holiday-sync';
 
 /**
  * Worker XePrime — mọi việc chạy theo ĐỒNG HỒ, không theo request của người dùng.
  *
- * Hai nhóm việc, và chúng độc lập với nhau:
+ * Ba nhóm việc, và chúng độc lập với nhau:
  *
  *  1. **Hạn phản hồi yêu cầu thuê** (25/08) — nhắc gian hàng ở phút 20/45 và đóng yêu cầu ở
  *     phút 60. Đây là việc NGHIỆP VỤ LÕI: nó chạy ở mọi cấu hình, kể cả khi chat Firestore tắt.
- *  2. **Đồng bộ chat Postgres → Firestore** (Phase 5, ADR 0009) — chỉ khi `FIRESTORE_ENABLED`.
+ *  2. **Đồng bộ ngày lễ Việt Nam** (26/08) — mỗi ngày một lần, từ Google Calendar. Cũng là
+ *     việc nghiệp vụ nên KHÔNG phụ thuộc `FIRESTORE_ENABLED`; nó chỉ cần một API key, và
+ *     thiếu key thì vòng lặp đơn giản không được đăng ký.
+ *  3. **Đồng bộ chat Postgres → Firestore** (Phase 5, ADR 0009) — chỉ khi `FIRESTORE_ENABLED`.
  *
  * Ràng buộc chung: idempotent + `pg_try_advisory_lock` chống hai instance chạy chồng nhau.
  * Chạy polling loop (không kéo cả Nest runtime vào worker).
@@ -29,6 +40,7 @@ const DEADLINE_INTERVAL_MS = 60 * 1_000;
 const LOCK_PUMP = 4_201;
 const LOCK_RETENTION = 4_202;
 const LOCK_DEADLINES = 4_203;
+const LOCK_HOLIDAYS = 4_204;
 
 const prisma = createPrismaClient();
 let stopping = false;
@@ -62,6 +74,43 @@ async function main(): Promise<void> {
       }
     }),
   ];
+
+  /*
+   * Ngày lễ là việc NGHIỆP VỤ, không phải tuỳ chọn của chat — nó chạy độc lập với
+   * `FIRESTORE_ENABLED`, giống hạn phản hồi ở trên. Thứ duy nhất nó cần là một API key.
+   *
+   * Thiếu key ⇒ KHÔNG đăng ký vòng lặp, và nói ra đúng MỘT dòng lúc boot. Không đăng ký rồi
+   * bỏ qua trong im lặng mỗi 15 phút: người vận hành phải biết vì sao lịch không có ngày lễ,
+   * và họ chỉ đọc log lúc khởi động.
+   */
+  if (HOLIDAY_SYNC_ENABLED) {
+    jobs.push(
+      loop('đồng bộ ngày lễ', LOCK_HOLIDAYS, HOLIDAY_INTERVAL_MS, async () => {
+        // Cổng "mỗi ngày một lần" nằm TRONG job (worker không có cron). Chưa tới lượt thì
+        // return ngay — không log, không gọi Google.
+        if (!(await shouldRunHolidaySync(prisma, new Date()))) return;
+
+        const result = await syncHolidays(prisma, {
+          calendarId: GOOGLE_HOLIDAY_CALENDAR_ID,
+          apiKey: GOOGLE_HOLIDAY_API_KEY,
+        });
+
+        // Một lượt/ngày nên log cả lượt 0/0/0: ở tần suất này nó là dấu hiệu sống, không phải
+        // nhiễu — khác hẳn vòng lặp hạn phản hồi chạy mỗi phút.
+        if (result.status === HOLIDAY_SYNC_STATUS.FAILED) {
+          console.error(`ngày lễ: đồng bộ thất bại — ${result.errorMessage ?? 'không rõ'}`);
+        } else {
+          console.log(
+            `ngày lễ: ${result.found} sự kiện · thêm ${result.created}, sửa ${result.updated}, xoá ${result.deleted}`,
+          );
+        }
+      }),
+    );
+  } else {
+    console.log(
+      'XePrime worker: GOOGLE_HOLIDAY_API_KEY chưa đặt → không đồng bộ ngày lễ. Lịch xe chạy bình thường, chỉ không có lớp ngày lễ.',
+    );
+  }
 
   /*
    * Chat là TÙY CHỌN — trước đây worker tự kết thúc khi `FIRESTORE_ENABLED=false`, vì lúc đó nó

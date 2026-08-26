@@ -12,7 +12,13 @@ import type {
   CalendarEvent,
   CalendarQuote,
   CalendarResource,
+  BulkDayBlockInput,
+  BulkDayBlockResult,
+  BulkDayPreview,
+  BulkDayPriceInput,
+  BulkDayPriceResult,
   CreateVehicleBlockInput,
+  HolidayList,
   SaveDailyPricesInput,
   UpdateVehicleBlockInput,
   VehicleBlock,
@@ -100,3 +106,33 @@ export const deleteVehicleDailyPrices = (
   apiDelete<{ deleted: number }>(
     `/vehicles/${vehicleId}/daily-prices?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
   );
+
+// ── Ngày lễ (dữ liệu toàn nền tảng, chỉ để hiển thị) ───────────────────────
+
+/**
+ * Ngày lễ giao với khoảng đang xem. Endpoint công khai, KHÔNG mang tenant — bảng nguồn không
+ * có `tenant_id` vì ngày lễ là dữ kiện của quốc gia, không phải dữ liệu của gian hàng.
+ */
+export const fetchHolidays = (from: string, to: string): Promise<HolidayList> =>
+  apiGet<HolidayList>('/holidays', { from, to });
+
+// ── Thao tác hàng loạt cho một khoảng ngày ────────────────────────────────
+
+/**
+ * Tập xe bị ảnh hưởng + giá niêm yết + ngày bận. MỘT endpoint cho cả hai dialog (khoá và giá)
+ * vì chúng hỏi cùng một câu; tách đôi chỉ tạo thêm một chỗ để hai bên lệch nhau.
+ */
+export const fetchBulkDayPreview = (query: QueryParams): Promise<BulkDayPreview> =>
+  apiGet<BulkDayPreview>('/calendar/bulk-day/preview', query);
+
+export const bulkBlockDay = (body: BulkDayBlockInput): Promise<BulkDayBlockResult> =>
+  apiPost<BulkDayBlockResult>('/calendar/bulk-day/blocks', body);
+
+export const releaseBulkBlockBatch = (batchId: string): Promise<{ released: number }> =>
+  apiDelete<{ released: number }>(`/calendar/bulk-day/blocks/${batchId}`);
+
+export const bulkPriceDay = (body: BulkDayPriceInput): Promise<BulkDayPriceResult> =>
+  apiPut<BulkDayPriceResult>('/calendar/bulk-day/prices', body);
+
+export const bulkRestoreDayPrices = (body: BulkDayPriceInput): Promise<BulkDayPriceResult> =>
+  apiPost<BulkDayPriceResult>('/calendar/bulk-day/prices/restore', body);

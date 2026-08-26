@@ -172,6 +172,16 @@
     "pickup": "Vehicle pickup",
     "return": "Vehicle return"
   },
+  "holidayEventType": {
+    "public_holiday": "Official public holiday",
+    "observance": "Observance",
+    "season": "Seasonal marker",
+    "other": "Notable day"
+  },
+  "holidaySource": {
+    "google_calendar": "Google Calendar",
+    "manual": "Entered manually"
+  },
   "inviteStatus": {
     "pending": "Pending",
     "accepted": "Joined",

@@ -3,14 +3,13 @@
 import { App, Button, Descriptions, Skeleton } from 'antd';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   MAINTENANCE_STATUS,
   MAINTENANCE_STATUS_META,
   MAINTENANCE_TYPE,
-  MAINTENANCE_TYPE_LABEL,
   PERMISSION,
   type MaintenanceStatus,
-  type MaintenanceType,
 } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -18,6 +17,7 @@ import { PermissionState } from '@/components/feedback/PermissionState';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { VEHICLE_EDIT_TAB, vehicleTabPath } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { getErrorMessage } from '@/services/api-client';
 import {
   cancelMaintenanceRecord,
@@ -56,6 +56,9 @@ export function MaintenanceEventDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations('Calendar');
+  const tCommon = useTranslations('Common');
+  const domainLabel = useDomainLabel();
   const fmt = useAppFormat();
 
   const { has } = usePermissions();
@@ -81,7 +84,7 @@ export function MaintenanceEventDialog({
     try {
       await startMaintenanceRecord(vehicleId, current.id, current.rowVersion);
       invalidate();
-      message.success('Đã bắt đầu bảo dưỡng');
+      message.success(t('maintenance.started'));
     } catch (error) {
       message.error(getErrorMessage(error));
     } finally {
@@ -91,16 +94,16 @@ export function MaintenanceEventDialog({
 
   function confirmCancel(current: MaintenanceRecord) {
     modal.confirm({
-      title: 'Hủy lịch bảo dưỡng?',
-      content: 'Chỗ đã giữ trên lịch xe sẽ được nhả ra cho đơn thuê.',
-      okText: 'Hủy lịch',
+      title: t('maintenance.confirmCancelTitle'),
+      content: t('maintenance.confirmCancelContent'),
+      okText: t('maintenance.confirmCancelOk'),
       okButtonProps: { danger: true },
-      cancelText: 'Không',
+      cancelText: t('maintenance.confirmCancelCancel'),
       onOk: async () => {
         try {
           await cancelMaintenanceRecord(vehicleId, current.id, current.rowVersion);
           invalidate();
-          message.success('Đã hủy lịch bảo dưỡng');
+          message.success(t('maintenance.canceled'));
           onClose();
         } catch (error) {
           message.error(getErrorMessage(error));
@@ -112,7 +115,7 @@ export function MaintenanceEventDialog({
   const typeLabel = record
     ? record.type === MAINTENANCE_TYPE.OTHER && record.customTypeName
       ? record.customTypeName
-      : MAINTENANCE_TYPE_LABEL[record.type as MaintenanceType]
+      : domainLabel('maintenanceType', record.type)
     : '';
 
   return (
@@ -121,13 +124,13 @@ export function MaintenanceEventDialog({
         open={open}
         onClose={onClose}
         size="md"
-        title="Lịch bảo dưỡng"
+        title={t('maintenance.title')}
         footer={null}
       >
         {!canView ? (
           <PermissionState
             kind="forbidden"
-            title="Không có quyền xem bảo dưỡng"
+            title={t('maintenance.forbiddenTitle')}
             missingPermissions={[PERMISSION.VEHICLE_MAINTENANCE_VIEW]}
           />
         ) : records.isLoading ? (
@@ -135,9 +138,9 @@ export function MaintenanceEventDialog({
         ) : !record ? (
           <EmptyState
             variant="empty"
-            title="Không tìm thấy phiếu bảo dưỡng"
-            description="Phiếu có thể vừa bị hủy — lưới lịch sẽ tự cập nhật."
-            action={<Button onClick={onClose}>Đóng</Button>}
+            title={t('maintenance.notFoundTitle')}
+            description={t('maintenance.notFoundDescription')}
+            action={<Button onClick={onClose}>{tCommon('actions.close')}</Button>}
           />
         ) : (
           <>
@@ -145,14 +148,14 @@ export function MaintenanceEventDialog({
               column={1}
               size="small"
               items={[
-                { key: 'vehicle', label: 'Xe', children: vehicleName },
-                { key: 'type', label: 'Hạng mục', children: typeLabel },
+                { key: 'vehicle', label: t('maintenance.vehicle'), children: vehicleName },
+                { key: 'type', label: t('maintenance.type'), children: typeLabel },
                 ...(record.title
-                  ? [{ key: 'title', label: 'Tiêu đề', children: record.title }]
+                  ? [{ key: 'title', label: t('maintenance.recordTitle'), children: record.title }]
                   : []),
                 {
                   key: 'status',
-                  label: 'Trạng thái',
+                  label: t('maintenance.status'),
                   children: (
                     <StatusTag
                       value={record.status as MaintenanceStatus}
@@ -163,55 +166,76 @@ export function MaintenanceEventDialog({
                 },
                 {
                   key: 'period',
-                  label: 'Thời gian dự kiến',
+                  label: t('maintenance.plannedPeriod'),
                   children:
                     record.plannedStartAt && record.plannedEndAt
-                      ? `${formatDateTime(record.plannedStartAt)} → ${formatDateTime(record.plannedEndAt)}`
-                      : 'Chưa đặt lịch',
+                      ? t('maintenance.plannedPeriodValue', {
+                          start: formatDateTime(record.plannedStartAt),
+                          end: formatDateTime(record.plannedEndAt),
+                        })
+                      : t('maintenance.notScheduled'),
                 },
                 ...(record.odometerKm != null
-                  ? [{ key: 'km', label: 'KM ghi nhận', children: fmt.km(record.odometerKm) }]
+                  ? [
+                      {
+                        key: 'km',
+                        label: t('maintenance.odometer'),
+                        children: fmt.km(record.odometerKm),
+                      },
+                    ]
                   : []),
                 ...(record.providerName
-                  ? [{ key: 'provider', label: 'Đơn vị thực hiện', children: record.providerName }]
+                  ? [
+                      {
+                        key: 'provider',
+                        label: t('maintenance.provider'),
+                        children: record.providerName,
+                      },
+                    ]
                   : []),
                 // Chi phí là quyền RIÊNG — thiếu quyền thì dòng vắng mặt hẳn, không hiện 0đ giả.
                 ...(canViewCost && record.cost != null
-                  ? [{ key: 'cost', label: 'Chi phí', children: fmt.money(record.cost) }]
+                  ? [
+                      {
+                        key: 'cost',
+                        label: t('maintenance.cost'),
+                        children: fmt.money(record.cost),
+                      },
+                    ]
                   : []),
                 ...(record.notes
-                  ? [{ key: 'notes', label: 'Ghi chú', children: record.notes }]
+                  ? [{ key: 'notes', label: t('maintenance.notes'), children: record.notes }]
                   : []),
               ]}
             />
 
             <div className={styles.actions}>
               <Link href={vehicleTabPath(vehicleId, VEHICLE_EDIT_TAB.MAINTENANCE)}>
-                <Button>Xem hồ sơ bảo dưỡng</Button>
+                <Button>{t('maintenance.openProfile')}</Button>
               </Link>
               {canManage && status === MAINTENANCE_STATUS.SCHEDULED ? (
                 <>
                   <Button danger onClick={() => confirmCancel(record)}>
-                    Hủy lịch
+                    {t('maintenance.cancel')}
                   </Button>
                   <Button onClick={() => setRecordDialog({ mode: 'edit', record })}>
-                    Dời lịch
+                    {t('maintenance.reschedule')}
                   </Button>
                   <Button type="primary" loading={pendingAction} onClick={() => void start(record)}>
-                    Bắt đầu bảo dưỡng
+                    {t('maintenance.start')}
                   </Button>
                 </>
               ) : null}
               {canManage && status === MAINTENANCE_STATUS.IN_PROGRESS ? (
                 <>
                   <Button danger onClick={() => confirmCancel(record)}>
-                    Hủy lịch
+                    {t('maintenance.cancel')}
                   </Button>
                   <Button
                     type="primary"
                     onClick={() => setRecordDialog({ mode: 'complete', record })}
                   >
-                    Đánh dấu hoàn thành
+                    {t('maintenance.complete')}
                   </Button>
                 </>
               ) : null}

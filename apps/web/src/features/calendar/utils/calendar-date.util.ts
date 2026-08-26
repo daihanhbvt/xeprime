@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import type { CalendarRange } from '../types/calendar.types';
 
 /**
@@ -27,11 +27,20 @@ export function buildRange(fromIsoDate: string, days: number): CalendarRange {
   };
 }
 
-/** Danh sách cột ngày để render header. */
+/**
+ * Danh sách cột ngày để render header.
+ *
+ * Trả `at` (mốc Dayjs của cột) chứ KHÔNG trả nhãn thứ: nhãn thứ đổi theo ngôn ngữ, mà hàm này
+ * là hàm thuần không có bộ dịch của request. Component gọi `fmt.weekdayShort(day.at)` —
+ * `Common.weekdayShort` đã là từ vựng dùng chung của cả app, không chép lại vào lịch.
+ *
+ * `dayjs.locale(...)` không phải lựa chọn thay thế: nó đổi trạng thái toàn tiến trình và rò
+ * ngôn ngữ giữa các request SSR chạy song song (CLAUDE.md mục 5).
+ */
 export function listDays(range: CalendarRange): Array<{
   key: string;
+  at: Dayjs;
   dayOfMonth: number;
-  weekdayLabel: string;
   isToday: boolean;
   isWeekend: boolean;
 }> {
@@ -43,15 +52,13 @@ export function listDays(range: CalendarRange): Array<{
     const weekday = day.day();
     return {
       key: day.format('YYYY-MM-DD'),
+      at: day,
       dayOfMonth: day.date(),
-      weekdayLabel: WEEKDAY_LABELS[weekday] ?? '',
       isToday: day.isSame(today, 'day'),
       isWeekend: weekday === 0 || weekday === 6,
     };
   });
 }
-
-const WEEKDAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'] as const;
 
 /** Hiển thị mốc thời gian UTC theo giờ Việt Nam. */
 export function formatDateTime(isoUtc: string): string {
@@ -60,6 +67,18 @@ export function formatDateTime(isoUtc: string): string {
 
 export function formatDate(isoUtc: string): string {
   return dayjs(isoUtc).tz(DISPLAY_TIMEZONE).format('DD/MM/YYYY');
+}
+
+/**
+ * `YYYY-MM-DD` → `DD/MM/YYYY`. Khác `formatDate` ở ĐẦU VÀO, và khác biệt đó là điểm chính.
+ *
+ * Khoá ngày trần không mang múi giờ, nên đưa nó qua `dayjs().tz()` là mượn một múi giờ mà dữ
+ * liệu không có — `2026-04-30` sẽ được đọc như nửa đêm UTC rồi dịch sang giờ VN và ra ngày
+ * 30/04 07:00, đúng lần này nhưng sai ở bất kỳ đầu vào nào lệch biên. Cắt chuỗi là phép đổi
+ * TRUNG THỰC với thứ đang có trong tay.
+ */
+export function formatDateKey(dateKey: string): string {
+  return `${dateKey.slice(8, 10)}/${dateKey.slice(5, 7)}/${dateKey.slice(0, 4)}`;
 }
 
 /** Số ngày thuê, làm tròn lên — thuê 25 tiếng tính 2 ngày. */
