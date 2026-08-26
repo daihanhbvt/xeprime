@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OTP_PROVIDER, otpProviderFactory } from './otp-provider';
+import { MobilePhoneAuthController } from './mobile-phone-auth.controller';
 import { PhoneVerificationController } from './phone-verification.controller';
 import { PhoneVerificationService } from './phone-verification.service';
 
@@ -9,7 +10,7 @@ import { PhoneVerificationService } from './phone-verification.service';
  * Export service để BookingRequests gate `submitPublic`.
  */
 @Module({
-  controllers: [PhoneVerificationController],
+  controllers: [PhoneVerificationController, MobilePhoneAuthController],
   providers: [
     PhoneVerificationService,
     {

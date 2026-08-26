@@ -3,6 +3,7 @@ import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nes
 import { Throttle } from '@nestjs/throttler';
 import { Public, VerifiesCredentials } from '../../common/decorators';
 import { AuthService } from './auth.service';
+import { NativeAuthCodeService } from './social/native-auth-code.service';
 import {
   NativeSessionService,
   type NativeDeviceInfo,
@@ -14,6 +15,7 @@ import {
   MobileLogoutDto,
   MobileRefreshDto,
   MobileSessionDto,
+  MobileSocialExchangeDto,
   MobileTokenPairDto,
 } from './dto/mobile-auth.dto';
 
@@ -34,6 +36,7 @@ export class MobileAuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly nativeSessions: NativeSessionService,
+    private readonly nativeCodes: NativeAuthCodeService,
   ) {}
 
   /**
@@ -51,6 +54,30 @@ export class MobileAuthController {
   @ApiOkResponse({ type: MobileSessionDto })
   async login(@Body() dto: MobileLoginDto): Promise<MobileSessionDto> {
     const { userId } = await this.auth.loginWithPassword(dto.identifier, dto.password);
+    return this.buildSession(userId, dto.device);
+  }
+
+  /**
+   * Đổi one-time code của luồng đăng nhập mạng xã hội lấy cặp token — ADR 0019.
+   *
+   * Tương ứng chặng `Set-Cookie` của web, khác ở chỗ web nhận cookie ngay trong lần điều hướng
+   * còn app phải đổi thêm một bước. Bước thừa đó là có lý do: deep link đi qua hệ điều hành và
+   * nằm lại trong log của nó, nên thứ đi qua đó phải là một mã sống 60 giây chứ không phải một
+   * refresh token 60 ngày.
+   *
+   * `@Public()` vì đây CHÍNH LÀ lúc app chưa có phiên — `code` + `codeVerifier` là bằng chứng.
+   * 10 lần/phút: mã sống 60 giây và dùng một lần, nên đây không phải cửa dò, nhưng vẫn siết để
+   * một app hỏng không bơm được vào bảng `native_auth_codes`.
+   */
+  @Public()
+  @VerifiesCredentials()
+  @Post('social/exchange')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Native: đổi one-time code của social login lấy access + refresh token' })
+  @ApiOkResponse({ type: MobileSessionDto })
+  async exchangeSocialCode(@Body() dto: MobileSocialExchangeDto): Promise<MobileSessionDto> {
+    const { userId } = await this.nativeCodes.consume(dto.code, dto.codeVerifier);
     return this.buildSession(userId, dto.device);
   }
 

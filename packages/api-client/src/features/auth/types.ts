@@ -27,3 +27,9 @@ export type MobileTokenPair = Schemas['MobileTokenPairDto'];
 
 /** Kết quả đăng nhập native: cặp token + hồ sơ người dùng đã giải sẵn. */
 export type MobileSession = Schemas['MobileSessionDto'];
+
+/** `POST /auth/mobile/social/exchange` — đổi one-time code (deep link) lấy cặp token (ADR 0019). */
+export type MobileSocialExchangeInput = Schemas['MobileSocialExchangeDto'];
+
+/** `POST /auth/mobile/phone/login` — SĐT + OTP, bản trả token thay vì cookie. */
+export type MobilePhoneLoginInput = Schemas['MobilePhoneLoginDto'];

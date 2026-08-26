@@ -48,6 +48,26 @@ export const envSchema = z
     MOBILE_JWT_AUDIENCE: z.string().min(1).default('xeprime-mobile'),
 
     /*
+     * Deep link được phép nhận one-time code sau khi app native đăng nhập mạng xã hội (ADR 0019).
+     *
+     * Là ALLOWLIST, và app phải gửi lên một giá trị NẰM TRONG danh sách — không phải app muốn
+     * gửi gì cũng được. Redirect tới một URI do client tự khai là cách one-time code được giao
+     * thẳng cho kẻ tấn công.
+     *
+     * Nhiều giá trị vì môi trường dev khác production: Expo dev build trả `exp://192.168.x.x:8081/--/…`
+     * chứ không phải scheme của app đã cài. Thêm URI dev vào đây, đừng nới lỏng luật.
+     */
+    MOBILE_AUTH_REDIRECT_URIS: z
+      .string()
+      .default('xeprime://auth/callback')
+      .transform((v) =>
+        v
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      ),
+
+    /*
      * --- Đăng nhập mạng xã hội (ADR 0019) ---
      *
      * Vòng OAuth chạy hoàn toàn ở SERVER: client secret dưới đây không bao giờ rời tiến trình

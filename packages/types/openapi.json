@@ -793,6 +793,128 @@
         "description": "**Truy cập:** công khai — không cần đăng nhập."
       }
     },
+    "/auth/mobile/social/exchange": {
+      "post": {
+        "operationId": "MobileAuthController_exchangeSocialCode",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileSocialExchangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MobileSessionDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thông tin đăng nhập không hợp lệ, hoặc phiên đã hết hạn.\n\nMã lỗi: `INVALID_CREDENTIALS` · `SESSION_EXPIRED` · `ACCOUNT_LOCKED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INVALID_CREDENTIALS",
+                    "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Native: đổi one-time code của social login lấy access + refresh token",
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập."
+      }
+    },
     "/auth/mobile/refresh": {
       "post": {
         "operationId": "MobileAuthController_refresh",
@@ -1024,13 +1146,31 @@
             }
           },
           {
-            "name": "next",
+            "name": "redirect_uri",
             "required": false,
             "in": "query",
-            "description": "Đường dẫn nội bộ để quay về sau khi đăng nhập. Không an toàn (có scheme, protocol-relative…) thì bị bỏ qua và về trang chủ.",
+            "description": "Deep link nhận one-time code. Phải nằm trong allowlist `MOBILE_AUTH_REDIRECT_URIS`. Chỉ dùng khi `client=native`.",
             "schema": {
-              "maxLength": 512,
-              "example": "/xe/01HZX9",
+              "example": "xeprime://auth/callback"
+            }
+          },
+          {
+            "name": "code_challenge",
+            "required": false,
+            "in": "query",
+            "description": "PKCE S256 challenge của APP. Chỉ dùng khi `client=native`.",
+            "schema": {}
+          },
+          {
+            "name": "client",
+            "required": false,
+            "in": "query",
+            "description": "Bỏ trống = web (callback đặt cookie httpOnly). `native` = app (callback trả one-time code về deep link) — khi đó `code_challenge` và `redirect_uri` là BẮT BUỘC.",
+            "schema": {
+              "enum": [
+                "web",
+                "native"
+              ],
               "type": "string"
             }
           },
@@ -1038,14 +1178,22 @@
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Ngôn ngữ cho màn đồng ý của provider (màn đó do Google/Facebook render, không phải XePrime).",
+            "description": "Ngôn ngữ cho màn đồng ý của provider (màn đó do Google/Facebook render, không phải XePrime). Giá trị lạ rơi về `vi`.",
             "schema": {
-              "example": "vi",
-              "type": "string",
               "enum": [
                 "vi",
                 "en"
-              ]
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "next",
+            "required": false,
+            "in": "query",
+            "description": "Đường dẫn nội bộ để quay về sau khi đăng nhập. Không an toàn (có scheme, protocol-relative…) thì bị bỏ qua và về trang chủ.",
+            "schema": {
+              "example": "/xe/01HZX9"
             }
           }
         ],
@@ -1127,7 +1275,7 @@
     },
     "/auth/social/{provider}/callback": {
       "get": {
-        "description": "Chỉ provider điều hướng tới đây. Luôn trả 302 về `APP_WEB_URL`; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).\n\n**Truy cập:** công khai — không cần đăng nhập.",
+        "description": "Chỉ provider điều hướng tới đây, và nó tự gắn thêm tham số riêng (`iss`, `scope`, `authuser`, `prompt`…) — endpoint cố ý bỏ qua mọi tham số ngoài ba cái dưới đây. Luôn trả 302 về `APP_WEB_URL`; hỏng thì kèm `?authError=<mã>` (`SOCIAL_STATE_INVALID` · `SOCIAL_CANCELLED` · `SOCIAL_EXCHANGE_FAILED` · `CONFLICT` · `ACCOUNT_LOCKED`).\n\n**Truy cập:** công khai — không cần đăng nhập.",
         "operationId": "SocialAuthController_callback",
         "parameters": [
           {
@@ -1143,12 +1291,12 @@
             }
           },
           {
-            "name": "code",
+            "name": "error",
             "required": false,
             "in": "query",
-            "description": "Authorization code, có khi người dùng đã đồng ý.",
+            "description": "Mã lỗi của provider. `access_denied` = người dùng bấm huỷ.",
             "schema": {
-              "type": "string"
+              "example": "access_denied"
             }
           },
           {
@@ -1156,19 +1304,14 @@
             "required": false,
             "in": "query",
             "description": "Giá trị `state` đã phát ở bước bắt đầu.",
-            "schema": {
-              "type": "string"
-            }
+            "schema": {}
           },
           {
-            "name": "error",
+            "name": "code",
             "required": false,
             "in": "query",
-            "description": "Mã lỗi của provider. `access_denied` = người dùng bấm huỷ.",
-            "schema": {
-              "example": "access_denied",
-              "type": "string"
-            }
+            "description": "Authorization code khi người dùng đã đồng ý.",
+            "schema": {}
           }
         ],
         "responses": {
@@ -30889,6 +31032,128 @@
         "description": "**Truy cập:** công khai — không cần đăng nhập."
       }
     },
+    "/auth/mobile/phone/login": {
+      "post": {
+        "operationId": "MobilePhoneAuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobilePhoneLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MobileSessionDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thông tin đăng nhập không hợp lệ, hoặc phiên đã hết hạn.\n\nMã lỗi: `INVALID_CREDENTIALS` · `SESSION_EXPIRED` · `ACCOUNT_LOCKED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INVALID_CREDENTIALS",
+                    "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Native: đăng nhập bằng SĐT + OTP (tự tạo tài khoản nếu chưa có)",
+        "tags": [
+          "phone-verification"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập."
+      }
+    },
     "/trips": {
       "get": {
         "operationId": "CustomerTripsController_list",
@@ -38961,6 +39226,26 @@
         "required": [
           "tokens",
           "user"
+        ]
+      },
+      "MobileSocialExchangeDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "One-time code nhận được ở deep link. Sống 60 giây, dùng một lần."
+          },
+          "codeVerifier": {
+            "type": "string",
+            "description": "PKCE code_verifier mà app đã sinh trước khi mở trình duyệt. Phải khớp `code_challenge` đã gửi ở bước bắt đầu."
+          },
+          "device": {
+            "$ref": "#/components/schemas/MobileDeviceDto"
+          }
+        },
+        "required": [
+          "code",
+          "codeVerifier"
         ]
       },
       "MobileRefreshDto": {
@@ -49697,6 +49982,28 @@
             "example": "123456",
             "minLength": 6,
             "maxLength": 6
+          }
+        },
+        "required": [
+          "phone",
+          "code"
+        ]
+      },
+      "MobilePhoneLoginDto": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "0901234567"
+          },
+          "code": {
+            "type": "string",
+            "example": "123456",
+            "minLength": 6,
+            "maxLength": 6
+          },
+          "device": {
+            "$ref": "#/components/schemas/MobileDeviceDto"
           }
         },
         "required": [

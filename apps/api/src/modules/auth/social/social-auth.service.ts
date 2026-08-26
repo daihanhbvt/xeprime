@@ -15,10 +15,13 @@ import { OauthStateService } from './oauth-state.service';
 import { SocialAuthFailure, socialErrorCode } from './social-auth.error';
 import type { SocialProvider } from './social-provider';
 
-/** Client nào đang đăng nhập. Đợt ADR 0019 chỉ có `web`; `native` là chỗ cắm của ADR 0017. */
+/** Client nào đang đăng nhập — quyết định callback phát cookie hay phát one-time code. */
 export const SOCIAL_CLIENT = {
   WEB: 'web',
+  NATIVE: 'native',
 } as const;
+
+export type SocialClient = (typeof SOCIAL_CLIENT)[keyof typeof SOCIAL_CLIENT];
 
 /**
  * Kết quả của chặng callback — union tường minh thay vì "trả về hoặc ném".
@@ -29,8 +32,25 @@ export const SOCIAL_CLIENT = {
  * không hiểu vì sao mình ở đó.
  */
 export type SocialCallbackResult =
-  | { ok: true; userId: string; redirectNext: string | null }
-  | { ok: false; errorCode: string; redirectNext: string | null };
+  | {
+      ok: true;
+      userId: string;
+      redirectNext: string | null;
+      /** Khác null ⇒ client là APP NATIVE: đừng phát cookie, hãy redirect về deep link này. */
+      native: NativeCallbackTarget | null;
+    }
+  | {
+      ok: false;
+      errorCode: string;
+      redirectNext: string | null;
+      native: NativeCallbackTarget | null;
+    };
+
+/** Đích trả kết quả cho app native — deep link đã qua allowlist + PKCE challenge của app. */
+export interface NativeCallbackTarget {
+  redirectUri: string;
+  codeChallenge: string;
+}
 
 /**
  * Điều phối đăng nhập mạng xã hội — ADR 0019.
@@ -75,12 +95,22 @@ export class SocialAuthService {
     provider: AuthProvider;
     next: string | null;
     locale: string | null;
+    /** Có ⇒ luồng của APP NATIVE. Đã kiểm allowlist ở `resolveNativeContext`. */
+    native?: NativeCallbackTarget | undefined;
   }): Promise<string> {
     const provider = this.requireProvider(params.provider);
     const { state, codeChallenge, nonce } = await this.states.issue({
       provider: params.provider,
       redirectNext: isSafeNextPath(params.next) ? params.next : null,
-      client: SOCIAL_CLIENT.WEB,
+      client: params.native ? SOCIAL_CLIENT.NATIVE : SOCIAL_CLIENT.WEB,
+      ...(params.native
+        ? {
+            native: {
+              codeChallenge: params.native.codeChallenge,
+              redirectUri: params.native.redirectUri,
+            },
+          }
+        : {}),
     });
 
     return provider.authorizeUrl({
@@ -106,9 +136,15 @@ export class SocialAuthService {
   }): Promise<SocialCallbackResult> {
     const provider = this.requireProvider(params.provider);
 
-    // Trước khi tiêu thụ `state` thì chưa biết `next`, nên lỗi ở đây buộc phải về trang chủ.
+    // Trước khi tiêu thụ `state` thì chưa biết `next` lẫn deep link, nên lỗi ở đây buộc phải về
+    // web. App native gặp ca này sẽ thấy trình duyệt dừng ở một trang web — không đẹp, nhưng đó
+    // là hệ quả không tránh được của việc `state` hỏng: ta không biết app nào đã mở nó.
     const stored = await this.states.consume(params.state);
     const { redirectNext } = stored;
+    const native: NativeCallbackTarget | null =
+      stored.client === SOCIAL_CLIENT.NATIVE && stored.appRedirectUri && stored.appCodeChallenge
+        ? { redirectUri: stored.appRedirectUri, codeChallenge: stored.appCodeChallenge }
+        : null;
 
     try {
       // `state` phát cho Google mà quay về ở callback của Facebook là dấu hiệu bị ghép URL bằng
@@ -128,12 +164,63 @@ export class SocialAuthService {
       });
 
       const { userId } = await this.auth.upsertUserFromIdentity(identity);
-      return { ok: true, userId, redirectNext };
+      return { ok: true, userId, redirectNext, native };
     } catch (error) {
-      // Bắt ở ĐÂY chứ không ở controller: đây là chỗ cuối cùng còn cầm `redirectNext`.
+      // Bắt ở ĐÂY chứ không ở controller: đây là chỗ cuối cùng còn cầm `redirectNext` + deep link.
       this.logFailure(params.provider, error);
-      return { ok: false, errorCode: socialErrorCode(error), redirectNext };
+      return { ok: false, errorCode: socialErrorCode(error), redirectNext, native };
     }
+  }
+
+  /**
+   * Đối chiếu tham số native của app với allowlist — trả `null` nếu đây không phải luồng native.
+   *
+   * `redirect_uri` do CLIENT gửi, nên nó là dữ liệu của kẻ tấn công cho tới khi khớp một giá trị
+   * trong `MOBILE_AUTH_REDIRECT_URIS`. Không có bước này thì một link
+   * `…/auth/social/google?client=native&redirect_uri=evil://x` sẽ giao one-time code thẳng cho
+   * app của kẻ tấn công — cùng loại lỗ hổng mà `isSafeNextPath` chặn ở phía web.
+   *
+   * Ném `SocialAuthFailure` chứ không im lặng rơi về web: app gọi sai tham số phải biết mình sai,
+   * không phải chờ mãi một deep link không bao giờ tới.
+   */
+  resolveNativeContext(params: {
+    client: string | undefined;
+    codeChallenge: string | undefined;
+    redirectUri: string | undefined;
+  }): NativeCallbackTarget | null {
+    if (params.client !== SOCIAL_CLIENT.NATIVE) return null;
+
+    const allowed = this.config.getOrThrow<string[]>('MOBILE_AUTH_REDIRECT_URIS');
+    if (!params.redirectUri || !allowed.includes(params.redirectUri)) {
+      throw new SocialAuthFailure(
+        API_ERROR_CODE.SOCIAL_STATE_INVALID,
+        'redirect_uri không nằm trong MOBILE_AUTH_REDIRECT_URIS',
+      );
+    }
+
+    // PKCE S256: challenge là base64url của 32 byte băm ⇒ đúng 43 ký tự. Kiểm độ dài để một app
+    // gửi chuỗi rỗng không tạo ra một "PKCE" mà mọi verifier đều khớp.
+    if (!params.codeChallenge || params.codeChallenge.length < 43) {
+      throw new SocialAuthFailure(
+        API_ERROR_CODE.SOCIAL_STATE_INVALID,
+        'thiếu code_challenge hợp lệ (PKCE S256 bắt buộc với client native)',
+      );
+    }
+
+    return { redirectUri: params.redirectUri, codeChallenge: params.codeChallenge };
+  }
+
+  /**
+   * URL deep link trả kết quả về app.
+   *
+   * Dùng `URL` để ghép tham số thay vì nối chuỗi: scheme tuỳ biến (`xeprime://`) vẫn parse được,
+   * và tham số được encode đúng.
+   */
+  nativeRedirect(target: NativeCallbackTarget, params: { code?: string; error?: string }): string {
+    const url = new URL(target.redirectUri);
+    if (params.code) url.searchParams.set('code', params.code);
+    if (params.error) url.searchParams.set('error', params.error);
+    return url.toString();
   }
 
   /**

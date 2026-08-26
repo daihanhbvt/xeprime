@@ -173,6 +173,8 @@ describe('OauthStateService — `state` dùng đúng một lần', () => {
         ok: false,
         errorCode: API_ERROR_CODE.SOCIAL_EXCHANGE_FAILED,
         redirectNext: '/manage/login',
+        // Luồng web ⇒ không có deep link nào để trả về.
+        native: null,
       });
       expect(service.webRedirect(result.redirectNext, 'X')).toContain('/manage/login');
     } finally {
