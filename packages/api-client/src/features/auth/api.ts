@@ -7,6 +7,7 @@ import type {
   MobileLogoutInput,
   MobileRefreshInput,
   MobilePhoneLoginInput,
+  MobileRegisterInput,
   MobileSession,
   MobileSocialExchangeInput,
   MobileTokenPair,
@@ -55,6 +56,15 @@ export const mobileAuthApi = {
   /** Đăng nhập bằng email/SĐT + mật khẩu. */
   login: (client: ApiClient, body: MobileLoginInput): Promise<MobileSession> =>
     client.post<MobileSession>('/auth/mobile/login', body),
+  /**
+   * Đăng ký bằng SĐT + mật khẩu.
+   *
+   * ⚠️ SĐT ở đây CHƯA được xác thực. Muốn chắc số là thật thì dùng `phoneLogin` — nó tự tạo tài
+   * khoản khi SĐT chưa có, và người dùng đặt mật khẩu sau bằng `POST /auth/password/set`
+   * (`MeDto.hasPassword` cho biết có nên hỏi hay không).
+   */
+  register: (client: ApiClient, body: MobileRegisterInput): Promise<MobileSession> =>
+    client.post<MobileSession>('/auth/mobile/register', body),
   /**
    * Đăng nhập bằng SĐT + OTP. Hai bước trước đó (`/auth/phone/send-otp`, `verify-otp`) dùng
    * chung với web — chúng trả JSON thuần, không đụng cookie.

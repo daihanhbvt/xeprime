@@ -33,3 +33,6 @@ export type MobileSocialExchangeInput = Schemas['MobileSocialExchangeDto'];
 
 /** `POST /auth/mobile/phone/login` — SĐT + OTP, bản trả token thay vì cookie. */
 export type MobilePhoneLoginInput = Schemas['MobilePhoneLoginDto'];
+
+/** `POST /auth/mobile/register` — SĐT + mật khẩu, bản trả token thay vì cookie. */
+export type MobileRegisterInput = Schemas['MobileRegisterDto'];

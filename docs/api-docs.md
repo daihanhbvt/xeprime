@@ -69,18 +69,29 @@ curl -b jar.txt http://localhost:4000/bookings?page=1
 
 ### 2.2 App native — `Authorization: Bearer` (ADR 0017)
 
-Năm endpoint dưới nhóm `auth`, tiền tố `/auth/mobile`:
+Sáu endpoint dưới nhóm `auth`, tiền tố `/auth/mobile`:
 
 | Endpoint | Trả về | Ghi chú |
 | --- | --- | --- |
 | `POST /auth/mobile/login` | `MobileSessionDto` (tokens + `MeDto`) | Email/SĐT + mật khẩu. Throttle 5 req/phút |
+| `POST /auth/mobile/register` | `MobileSessionDto` | SĐT + mật khẩu. **SĐT chưa xác thực** — xem ghi chú dưới bảng |
 | `POST /auth/mobile/phone/login` | `MobileSessionDto` | SĐT + OTP. Hai bước trước (`/auth/phone/send-otp`, `verify-otp`) dùng chung với web |
 | `POST /auth/mobile/social/exchange` | `MobileSessionDto` | Đổi one-time code của Google/Facebook. Xem §2.3 |
 | `POST /auth/mobile/refresh` | `MobileTokenPairDto` | **Xoay**: trả cặp mới, token cũ chết ngay |
 | `POST /auth/mobile/logout` | 204 | Thu hồi phiên của thiết bị. Luôn 204, kể cả token lạ |
 
-**Ba đường đăng nhập, một loại phiên.** Mọi endpoint trên đều trả cùng `MobileSessionDto` — app
-không cần biết người dùng đã vào bằng cách nào.
+**Bốn cửa vào, một loại phiên.** Mọi endpoint trên đều trả cùng `MobileSessionDto` — app không
+cần biết người dùng đã vào bằng cách nào.
+
+**Cửa thứ năm nằm ngoài nhóm `auth`:** `POST /public/booking-requests` gửi kèm `client: "native"`
+trả `receipt.session` (cùng `MobileSessionDto`) khi khách vãng lai được tự tạo tài khoản từ SĐT đã
+xác thực OTP. Bỏ `client` đi thì nó phát cookie như web và app **không nhận được gì**.
+
+> **`register` vs `phone/login` — chọn cái nào.** `register` nhận SĐT **chưa xác thực**, y hệt web:
+> nhanh, nhưng số có thể là số của người khác. `phone/login` đi qua OTP nên số chắc chắn là thật,
+> và nó **tự tạo tài khoản** khi SĐT chưa có — người dùng đặt mật khẩu sau bằng
+> `POST /auth/password/set`, và `MeDto.hasPassword` cho app biết có nên hỏi hay không. Trên mobile,
+> đường OTP thường là lựa chọn đúng.
 
 ```bash
 # Đăng nhập → lấy access token

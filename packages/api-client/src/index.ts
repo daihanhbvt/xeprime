@@ -85,6 +85,7 @@ export type {
   MobileLogoutInput,
   MobileRefreshInput,
   MobilePhoneLoginInput,
+  MobileRegisterInput,
   MobileSession,
   MobileSocialExchangeInput,
   MobileTokenPair,

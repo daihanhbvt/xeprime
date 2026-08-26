@@ -30,6 +30,7 @@ import {
 import { DATE_ONLY_PATTERN } from '../../../common/date-only';
 import { PaginationMetaDto } from '../../../common/dto/api-response.dto';
 import { BookingRequestDeliveryQuoteDto } from '../../pricing/dto/pricing.dto';
+import { MobileDeviceDto, MobileSessionDto } from '../../auth/dto/mobile-auth.dto';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -42,6 +43,27 @@ export class CreateBookingRequestDto {
   @IsString()
   @Length(26, 26)
   vehicleId!: string;
+
+  /*
+   * Client nào đang gửi — quyết định phiên được cấp KIỂU GÌ khi khách vãng lai được tự đăng nhập.
+   *
+   * Bỏ trống = web: `Set-Cookie` httpOnly như trước, `session` trong receipt để trống. `native` =
+   * app: cặp access/refresh token đi trong `session`, KHÔNG cookie nào được phát (ADR 0017 — app
+   * không có chỗ chứa cookie, và một token trả cho trình duyệt thì mất `httpOnly` bảo vệ).
+   */
+  @ApiPropertyOptional({
+    enum: ['web', 'native'],
+    description: 'Bỏ trống = web (nhận cookie). `native` = app (nhận cặp token trong `session`).',
+  })
+  @IsOptional()
+  @IsIn(['web', 'native'])
+  client?: string;
+
+  /** Chỉ dùng khi `client = 'native'` — để phiên hiện đúng tên máy ở màn "thiết bị đang đăng nhập". */
+  @ApiPropertyOptional({ type: MobileDeviceDto })
+  @IsOptional()
+  @Type(() => MobileDeviceDto)
+  device?: MobileDeviceDto;
 
   @ApiProperty({ example: 'Nguyễn Văn A' })
   @IsString()
@@ -452,4 +474,17 @@ export class BookingRequestReceiptDto {
       'Sau khi gửi, khách đã có phiên đăng nhập (passwordless qua SĐT) — FE chuyển tới /trips.',
   })
   authenticated!: boolean;
+
+  /**
+   * Phiên vừa cấp cho app native — CHỈ có khi request gửi kèm `client: 'native'`.
+   *
+   * Vì sao một receipt đặt xe lại mang theo phiên: khách vãng lai đã xác thực SĐT bằng OTP
+   * `purpose=booking`, và bước đó vừa chứng minh sở hữu số vừa tạo tài khoản. Bắt họ làm thêm
+   * một vòng OTP `purpose=login` chỉ để lấy token là hỏi cùng một câu hai lần.
+   *
+   * Web nhận đúng thứ này qua `Set-Cookie`; ở đây nó hiện ra trong body vì app không có cookie
+   * jar. Trống ⇒ hoặc client là web, hoặc khách đã đăng nhập sẵn (không cần cấp phiên mới).
+   */
+  @ApiPropertyOptional({ type: MobileSessionDto })
+  session?: MobileSessionDto;
 }

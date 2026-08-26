@@ -1,5 +1,11 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public, VerifiesCredentials } from '../../common/decorators';
 import { AuthService } from './auth.service';
@@ -14,6 +20,7 @@ import {
   MobileLoginDto,
   MobileLogoutDto,
   MobileRefreshDto,
+  MobileRegisterDto,
   MobileSessionDto,
   MobileSocialExchangeDto,
   MobileTokenPairDto,
@@ -54,6 +61,32 @@ export class MobileAuthController {
   @ApiOkResponse({ type: MobileSessionDto })
   async login(@Body() dto: MobileLoginDto): Promise<MobileSessionDto> {
     const { userId } = await this.auth.loginWithPassword(dto.identifier, dto.password);
+    return this.buildSession(userId, dto.device);
+  }
+
+  /**
+   * Đăng ký bằng SĐT + mật khẩu — ADR 0017.
+   *
+   * Tương ứng `POST /auth/register` của web, khác đúng một chỗ: trả token trong body thay vì đặt
+   * cookie. Cùng `AuthService.register`, nên luật mật khẩu, chuẩn hoá SĐT và nhánh `PHONE_TAKEN`
+   * chỉ có một bản.
+   *
+   * 5 lần/phút, bằng với `login`: đây cũng là một cửa dò — gửi liên tiếp nhiều SĐT để biết số nào
+   * đã có tài khoản (`PHONE_TAKEN`) là việc làm được nếu không siết.
+   *
+   * ⚠️ SĐT ở đây CHƯA được xác thực — giống hệt web. Đường có xác thực SĐT là
+   * `POST /auth/mobile/phone/login` (OTP, tự tạo tài khoản nếu chưa có); nếu sản phẩm cần chắc
+   * chắn số là thật thì dùng đường đó, không phải đường này.
+   */
+  @Public()
+  @VerifiesCredentials()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Native: đăng ký bằng số điện thoại + mật khẩu' })
+  @ApiCreatedResponse({ type: MobileSessionDto })
+  async register(@Body() dto: MobileRegisterDto): Promise<MobileSessionDto> {
+    const { userId } = await this.auth.register(dto);
     return this.buildSession(userId, dto.device);
   }
 
