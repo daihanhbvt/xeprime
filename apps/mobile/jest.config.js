@@ -26,6 +26,11 @@ const [scriptPattern, [transformerPath, transformerOptions]] = scriptTransform;
  */
 const babelConfig = require('./babel.config.js')({ cache: () => undefined });
 
+// `intl-messageformat` (qua `use-intl`) có `static { … }` trong class: Babel 7 phải được BẢO mới
+// parse được, nếu không cả suite chết lúc parse. Chỉ ở đây — Metro đi đường transform riêng.
+const nodeModulesSyntaxPlugins = [require.resolve('@babel/plugin-transform-class-static-block')];
+
+
 module.exports = {
   ...expoPreset,
   // jest-expo tự đọc `paths` của tsconfig cho moduleNameMapper — đừng khai lại, sẽ mất alias.
@@ -52,6 +57,7 @@ module.exports = {
       {
         ...transformerOptions,
         ...babelConfig,
+        plugins: [...(babelConfig.plugins ?? []), ...nodeModulesSyntaxPlugins],
         root: workspaceRoot,
         configFile: false,
         babelrc: false,

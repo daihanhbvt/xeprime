@@ -39,6 +39,35 @@ server — thiết bị thật lấy IP LAN của máy chạy Metro, emulator An
 chính máy đang chạy Metro. Expo chỉ inline biến có tiền tố `EXPO_PUBLIC_`, và inline **lúc
 build** — đổi giá trị phải khởi động lại Metro.
 
+### Điện thoại thật không gọi được API
+
+`localhost` trên điện thoại là CHÍNH chiếc điện thoại, không phải máy dev. Hai cách, chọn một:
+
+```bash
+# A. adb reverse — không cần quyền admin, không cần mở firewall (máy nối cáp USB)
+adb reverse tcp:4000 tcp:4000
+#    → EXPO_PUBLIC_API_URL="http://localhost:4000"   (localhost lúc này là ĐÚNG)
+#    Rút cáp là mất, phải chạy lại. Tệ hơn: Expo/Metro reset bảng reverse mỗi lần start/reload
+#    và chỉ tự dựng lại 8081 của nó, nên tcp:4000 biến mất giữa chừng ngay cả khi cáp còn cắm.
+
+# B. Qua Wi-Fi — cần mở firewall MỘT lần, ở PowerShell Administrator
+New-NetFirewallRule -DisplayName "XePrime API dev (TCP 4000)" -Direction Inbound `
+  -Protocol TCP -LocalPort 4000 -Action Allow -Profile Private -RemoteAddress LocalSubnet
+Set-NetConnectionProfile -InterfaceAlias 'Wi-Fi' -NetworkCategory Private   # rule Private chỉ ăn khi mạng là Private
+#    → EXPO_PUBLIC_API_URL="http://<IP LAN máy dev>:4000", hoặc để trống cho app tự suy từ Expo dev server
+```
+
+**Máy dev hiện tại đang dùng cách B** (`.env` trỏ `http://192.168.1.183:4000`, rule firewall
+trên đã tạo, Wi-Fi đã đặt Private) vì cách A đứt liên tục theo mô tả ở trên. Đổi mạng hoặc
+router cấp lại DHCP thì IP đó sai — lấy IP mới bằng `ipconfig` rồi sửa `.env`.
+
+Triệu chứng phân biệt: `{"code":"UNKNOWN"}` = sai host (đang trỏ `localhost` mà không có
+reverse). `{"code":"CLIENT_TIMEOUT"}` sau ~15s = host ĐÚNG nhưng firewall chặn — Windows chặn
+mọi kết nối vào khi profile mạng là **Public**, và Wi-Fi thường mặc định Public.
+
+⚠️ Expo nội suy `EXPO_PUBLIC_*` **lúc build bundle**, không đọc lại lúc chạy: sửa `.env` xong
+phải khởi động lại Metro (`expo start --clear`), bấm `r` để reload là vẫn giá trị cũ.
+
 ### Build Android trên máy dev Windows
 
 `apps/mobile/android/` do `expo prebuild` sinh ra và bị gitignore. Máy dev cần **JDK 21** (JDK
@@ -90,26 +119,28 @@ apps/mobile/
 │   ├── +not-found.tsx            #   route lạ / deep link hỏng
 │   ├── (app)/                    #   nhóm CẦN đăng nhập (guard đang TẮT — xem mục 5)
 │   │   ├── _layout.tsx
-│   │   └── home.tsx              #     "/home" — màn chủ
+│   │   └── home.tsx              #     "/home" — trang chủ Marketplace (MKT-01)
 │   └── (auth)/
 │       ├── _layout.tsx
 │       └── login.tsx             #     "/login"
 ├── assets/images/                # ảnh tĩnh (icon/splash khai ở app.json, phải là PNG vuông)
-├── messages/{vi,en}/*.json       # chuỗi giao diện, một file = một namespace
+├── docs/trackingProject/*.html   # bảng theo dõi task (nguồn ưu tiên P0→P3 của app)
 └── src/
     ├── assets.ts                 # registry ảnh — Metro cần đường dẫn HẰNG
     ├── components/
+    │   ├── layout/AppHeader.tsx  #   ⚠️ HEADER DÙNG CHUNG — mọi màn reuse, đừng dựng riêng
     │   ├── layout/Screen.tsx     #   khung màn: safe area + bàn phím + cuộn
     │   ├── state/                #   ScreenLoading · ScreenError · ScreenMessage · AppErrorScreen
-    │   ├── ui/                   #   Button · TextField
+    │   ├── ui/                   #   Button · TextField · Card · Chip · IconButton · Avatar · Skeleton
     │   └── i18n/LocaleSwitcher.tsx
     ├── features/<miền>/          # api.ts · hooks/ · components/ — cắt theo NGHIỆP VỤ
     ├── hooks/                    # hook dùng chung không thuộc miền nào
-    ├── i18n/                     # config · provider · messages · locale.slice · useErrorMessage
+    ├── i18n/                     # config · formats · provider · messages · intl-polyfill
+    │                             #   app-format/domain: BẢN SAO của apps/web (xem §7)
     ├── lib/                      # api-client · auth-session · fetch-with-timeout · secure-storage · logger
     ├── queries/                  # queryClient · queryKeys · reset-session-cache
     ├── store/                    # Redux Toolkit — chỉ ĐĂNG KÝ reducer, slice thuộc về feature
-    ├── theme/                    # colors · elevation
+    ├── theme/                    # tokens · elevation · tamagui.config (Tamagui đọc chính tokens)
     └── utils/
 ```
 
@@ -347,9 +378,31 @@ Anh. Thông báo lỗi chọn theo **MÃ**, không theo `message` của backend.
 
 ## 8. Giao diện & khác biệt nền tảng
 
-Base cố ý **không đầu tư vào UI** — nó chỉ đủ để chứng minh kiến trúc chạy.
+Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.config.ts)).
 
-- Style bằng `StyleSheet.create`. Màu/khoảng cách/bo góc/cỡ chữ lấy từ
+> `antd-mobile` KHÔNG dùng được ở đây: peer dependency của nó là `react-dom`, tức nó render ra
+> DOM. Nó chỉ chạy ở `expo start --web`, không chạy trên thiết bị.
+
+- Tamagui đọc **chính** bảng token native bên dưới, không có bảng màu thứ hai: `$primary` trong
+  một component Tamagui và `colors.primary` trong một `StyleSheet` phải luôn ra cùng mã màu.
+  Đổi màu/khoảng cách thì sửa ở `@xeprime/ui`, không sửa `tamagui.config.ts`.
+- Component Tamagui dùng ở mức **primitive** (`YStack`/`XStack`/`Text`). Widget dựng sẵn của
+  Tamagui giả định thang size `$1…$12` của config mặc định, còn thang ở đây là token XePrime —
+  trộn vào là kích thước loạn.
+- Màn hình KHÔNG dựng thẻ/viên/nút từ `XStack` trần: dùng `src/components/ui/` (`Card`, `Chip`,
+  `Button`, `IconButton`, `Avatar`, `TextField`, `Skeleton`). Đó là chỗ độ nổi, bo góc và vùng
+  chạm được quyết định MỘT lần — dựng tay ở từng màn là mỗi màn một kiểu.
+- **Thanh trên của mọi màn đi qua [`<AppHeader>`](src/components/layout/AppHeader.tsx)**, không
+  dựng `XStack` riêng. Hai biến thể: `solid` (nền đặc, kẻ dưới) và `overlay` (nổi trên ảnh tràn
+  viền). Thiếu thứ bạn cần thì **thêm biến thể vào chính file đó**, đừng rẽ nhánh ở màn hình.
+  Header TỰ cộng safe-area trên ⇒ `<Screen>` đặt dưới nó phải khai
+  `edges={['left', 'right', 'bottom']}`, nếu không phần trên đệm hai lần.
+- **Nền header KHÔNG dùng màu thương hiệu.** Gold là màu HÀNH ĐỘNG (nút chính, chip đang chọn,
+  giá thuê); tô nó lên dải rộng nhất màn hình thì mọi CTA gold bên dưới mất sức nặng. Header nhận
+  diện bằng thương hiệu + thứ bậc chữ. `tone="brand"` có sẵn nhưng là NGOẠI LỆ.
+- Chỗ đã biết trước hình dạng nội dung dùng `Skeleton` thay `ActivityIndicator`: khung xám đúng
+  kích thước giữ nguyên bố cục nên trang không nhảy khi dữ liệu về.
+- Style còn lại bằng `StyleSheet.create`. Màu/khoảng cách/bo góc/cỡ chữ lấy từ
   [src/theme/tokens.ts](src/theme/tokens.ts) — file này **không giữ giá trị nào**, nó đọc
   `XP_TOKENS` của [`@xeprime/ui`](../../packages/ui), đúng nguồn web dựng `tokens.css` và AntD
   theme (ADR 0003). Không gõ hex hay số đo thẳng vào component: gõ một lần là app native lặng
@@ -388,8 +441,10 @@ Base cố ý **không đầu tư vào UI** — nó chỉ đủ để chứng min
 | [babel.config.js](babel.config.js)             | **KHÔNG** thêm tay `react-native-worklets/plugin` — `babel-preset-expo` tự nạp khi package có trong dependency; khai lần hai là worklet transform hai lần                                                                                                                                                                  |
 | [jest.config.js](jest.config.js)               | `transformIgnorePatterns: []` và preset babel khai **tường minh**. Whitelist theo tên của jest-expo không dùng được với pnpm, và Babel chỉ áp config gốc cho file nằm trong `root` — dependency ở workspace root thì nằm ngoài. Bỏ hai thứ này là `SyntaxError: Unexpected token 'export'` từ trong lòng thư viện ESM-only |
 | [tsconfig.json](tsconfig.json)                 | Cố ý **không** extends `packages/config/tsconfig/*`: Expo cần `moduleResolution: bundler` + `customConditions: ["react-native"]`. Cờ strict của repo lặp lại tường minh ở đây                                                                                                                                              |
+| [src/i18n/intl-polyfill.ts](src/i18n/intl-polyfill.ts) | Import **đầu tiên** ở `app/_layout.tsx`, và thứ tự các polyfill bên trong **không được sắp lại**. Hermes trên Android thiếu `Intl.PluralRules` và bảng múi giờ: thiếu polyfill thì mọi message ICU `{count, plural, …}` in ra ĐƯỜNG DẪN KHOÁ (`Marketplace.available.count`) còn khoá thường vẫn đúng — trông y như "vài chỗ chưa dịch" chứ không như một lỗi runtime |
 | [src/lib/fetch-with-timeout.ts](src/lib/fetch-with-timeout.ts) | Không dùng `AbortSignal.any` / `AbortSignal.timeout` — Hermes không đảm bảo có ở mọi bản RN, và lỗi chỉ lộ trên máy thật chứ không phải trong Jest (chạy trên Node)                                                                                                              |
 | [app/_layout.tsx](app/_layout.tsx)             | `ErrorBoundary` phải là **export tên**; nó nằm NGOÀI các provider nên `AppErrorScreen` tự dựng lại provider nó cần. `SafeAreaProvider` phải có `initialMetrics`, thiếu thì frame đầu render với inset = 0 rồi nhảy                                                                                                         |
+| [src/theme/tamagui.config.ts](src/theme/tamagui.config.ts) | Phải có **`export default`** (hoặc `export const config`). `@tamagui/babel-plugin` nạp chính file này lúc build; export đặt tên khác thì nó báo `Missing "themes"… Got config: null` và **làm chết jest worker** — lỗi hiện ra là "worker crashed for an unknown reason", không hề nhắc tới Tamagui |
 | `react-native-reanimated`                      | Side-effect import ở `_layout.tsx`, **không xoá** dù trông như import thừa — expo-router dùng nó cho animation của navigator                                                                                                                                                                                               |
 | [jest.setup.js](jest.setup.js)                 | Mock `expo-secure-store` là bản **trong bộ nhớ**, không phải mock từng lời gọi — test vòng đời token cần "ghi rồi đọc lại được". CỐ Ý không require `@/lib/auth-session` ở đây: nạp nó trong setup là chạy trước `jest.mock('expo-constants')` của file test              |
 | Test RNTL v14                                  | `render`, `fireEvent`, `renderHook` đều **async** — thiếu `await` là `result` chưa tồn tại                                                                                                                                                                                                                                 |

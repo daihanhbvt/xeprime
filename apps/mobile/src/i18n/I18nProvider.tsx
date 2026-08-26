@@ -4,6 +4,7 @@ import { getSecureItem, SECURE_KEY, setSecureItem } from '@/lib/secure-storage';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { localeChanged } from '@/i18n/locale.slice';
 import { APP_TIME_ZONE, isAppLocale, type AppLocale } from './config';
+import { formats } from './formats';
 import { MESSAGES } from './messages';
 
 export function I18nProvider({ children }: { children: ReactNode }) {
@@ -23,7 +24,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, [dispatch]);
 
   return (
-    <IntlProvider locale={locale} messages={MESSAGES[locale]} timeZone={APP_TIME_ZONE}>
+    <IntlProvider
+      locale={locale}
+      messages={MESSAGES[locale]}
+      timeZone={APP_TIME_ZONE}
+      formats={formats}
+    >
       {children}
     </IntlProvider>
   );

@@ -14,6 +14,7 @@ export function ScreenError({ error, title, onRetry }: ScreenErrorProps) {
 
   return (
     <ScreenMessage
+      icon="alert-circle-outline"
       title={title ?? t('states.error')}
       description={errorMessage(error)}
       {...(onRetry ? { actionLabel: t('actions.retry'), onAction: onRetry } : {})}

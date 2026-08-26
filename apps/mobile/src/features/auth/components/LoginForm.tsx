@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { TextField } from '@/components/ui/TextField';
 import { useLogin } from '@/features/auth/hooks/use-auth';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, fontSize, radius, space } from '@/theme/tokens';
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -29,16 +29,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
   return (
     <View style={styles.form}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('modal.loginTitle')}</Text>
-        <Text style={styles.subtitle}>{t('modal.loginSub')}</Text>
-      </View>
-
       <TextField
         control={control}
         name="identifier"
         label={t('login.identifier')}
         placeholder={t('login.identifierPlaceholder')}
+        icon="person-outline"
         autoCapitalize="none"
         autoComplete="username"
         keyboardType="email-address"
@@ -50,6 +46,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         name="password"
         label={t('login.password')}
         placeholder={t('login.passwordPlaceholder')}
+        icon="lock-closed-outline"
         secureTextEntry
         autoCapitalize="none"
         autoComplete="password"
@@ -68,19 +65,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 const styles = StyleSheet.create({
   form: {
     gap: space.md,
-  },
-  header: {
-    gap: space.xs,
-    marginBottom: space.sm,
-  },
-  title: {
-    color: colors.text,
-    fontSize: fontSize.h1,
-    fontWeight: fontWeight.bold,
-  },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: fontSize.body,
   },
   error: {
     backgroundColor: colors.dangerSurface,

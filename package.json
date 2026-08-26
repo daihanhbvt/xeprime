@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:no-turbo": "pnpm -r --parallel --filter @xeprime/api --filter @xeprime/web --filter @xeprime/worker run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -31,11 +32,16 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@babel/generator": "7.29.7",
+    "@babel/plugin-transform-class-static-block": "7.29.7",
+    "@babel/traverse": "7.29.7",
+    "@babel/types": "7.29.7",
     "@eslint/js": "9.39.5",
     "@firebase/rules-unit-testing": "4.0.1",
+    "@resvg/resvg-js": "^2.6.2",
     "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
-    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-hooks": "7.1.1",
     "firebase": "11.1.0",
     "firebase-tools": "13.29.1",
     "husky": "9.1.7",

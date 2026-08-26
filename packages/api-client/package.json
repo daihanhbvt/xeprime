@@ -20,6 +20,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@xeprime/domain": "workspace:*",
     "@xeprime/types": "workspace:*"
   },
   "devDependencies": {

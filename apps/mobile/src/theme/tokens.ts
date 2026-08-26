@@ -72,6 +72,26 @@ export const colors = {
   onPrimary: resolve('color-primary-contrast'),
   danger: resolve('color-error'),
   dangerSurface: resolve('color-error-bg'),
+  primaryHover: resolve('color-primary-hover'),
+  primaryActive: resolve('color-primary-active'),
+  primaryLight: resolve('color-primary-light'),
+  surfaceElevated: resolve('color-bg-elevated'),
+  surfaceSelected: resolve('color-bg-selected'),
+  /** Lớp phủ sau modal/sheet. */
+  overlay: resolve('color-bg-overlay'),
+  borderSubtle: resolve('color-border-subtle'),
+  textInverse: resolve('color-text-inverse'),
+  link: resolve('color-link'),
+  success: resolve('color-success'),
+  successSurface: resolve('color-success-bg'),
+  warning: resolve('color-warning'),
+  warningSurface: resolve('color-warning-bg'),
+  info: resolve('color-info'),
+  infoSurface: resolve('color-info-bg'),
+  /** Giá thuê có token riêng — web tô giá bằng chính màu này, không phải màu chữ thường. */
+  price: resolve('color-price'),
+  discount: resolve('color-discount'),
+  onDiscount: resolve('color-discount-contrast'),
 } as const;
 
 /** Thang khoảng cách Figma: 4 · 8 · 16 · 24 · 32, không có giá trị nào khác. */
@@ -86,6 +106,7 @@ export const space = {
 export const radius = {
   sm: px('border-radius-sm'),
   md: px('border-radius'),
+  lg: px('border-radius-lg'),
   pill: px('border-radius-pill'),
 } as const;
 
@@ -97,6 +118,7 @@ export const fontSize = {
   bodyLg: px('font-size-body-lg'),
   body: px('font-size-body'),
   bodySm: px('font-size-body-sm'),
+  label: px('font-size-label'),
 } as const;
 
 /**

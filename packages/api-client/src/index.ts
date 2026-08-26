@@ -62,6 +62,20 @@ export {
 
 export { queryKeys } from './query-keys';
 
+export {
+  catalogApi,
+  catalogLabel,
+  groupCatalog,
+  EMPTY_CATALOG,
+  type CatalogItem,
+  type CatalogMap,
+} from './features/catalog';
+
+export {
+  marketplaceApi,
+  toListingQueryParams,
+  DEFAULT_LISTING_LIMIT,
+} from './features/marketplace/api';
 export { authApi, mobileAuthApi } from './features/auth/api';
 export type {
   CreateSessionInput,
