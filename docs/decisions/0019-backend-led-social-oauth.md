@@ -151,10 +151,22 @@ thiếu chỉ là các endpoint **phát phiên** — chúng trả cookie, thứ 
 | Đường | Web | Native |
 | --- | --- | --- |
 | Mật khẩu | `POST /auth/login` | `POST /auth/mobile/login` |
+| Đăng ký | `POST /auth/register` | **`POST /auth/mobile/register`** |
 | SĐT + OTP | `POST /auth/phone/login` | **`POST /auth/mobile/phone/login`** |
 | Google/Facebook | `GET /auth/social/:provider` → cookie | **`…?client=native` → one-time code → `POST /auth/mobile/social/exchange`** |
+| Khách vãng lai đặt xe | `POST /public/booking-requests` → cookie | **cùng route + `client: "native"` → `receipt.session`** |
 
 Hai bước OTP trước đó (`send-otp`, `verify-otp`) dùng chung: chúng trả JSON thuần, không đụng cookie.
+
+Hai dòng cuối là chỗ dễ sót nhất khi rà, vì cả hai **cấp phiên kèm theo một hành động khác** —
+đăng ký, và gửi yêu cầu thuê. Bỏ sót nghĩa là app gọi thành công, nhận `201`, mà người dùng vẫn
+chưa đăng nhập: hỏng im lặng, không lỗi nào để lần.
+`test/mobile-register-and-guest-session.spec.ts` khoá lại bằng khẳng định `set-cookie` phải VẮNG
+MẶT — một cookie gửi cho app native là một phiên rơi vào hư không.
+
+Ở `/public/booking-requests` **không có nhánh đoán từ header**: đúng lời gọi đó khách chưa có
+credential nào để mà đoán, nên client phải tự khai `client: "native"`. Giá trị lạ bị từ chối chứ
+không âm thầm rơi về web — rơi về web ở đây nghĩa là phát một cookie mà app không đọc được.
 
 ### Vì sao deep link mang MÃ chứ không mang token
 

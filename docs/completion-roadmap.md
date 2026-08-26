@@ -30,6 +30,19 @@ cho tới khi ngày trong test tính theo `now` thay vì cố định.
 không đổi từ 18/08. Mock `IntersectionObserver` dùng mảng cấp module. Hướng xử lý là ổn định
 test, **không** phải đổi `role` của sản phẩm.
 
+> **26/08 (đợt 3) — HAI CỬA CẤP PHIÊN CÒN SÓT.** Rà lại toàn bộ `sessions.attach` thì còn đúng
+> hai chỗ chỉ trả cookie, và cả hai **cấp phiên kèm theo một hành động khác** nên rất dễ sót:
+> **`POST /auth/mobile/register`** (mới, kế thừa `RegisterDto` của web nên luật mật khẩu chỉ có
+> một bản) và **`POST /public/booking-requests` + `client: "native"`** → cặp token đi trong
+> `receipt.session` thay vì `Set-Cookie`.
+> Không có nhánh "đoán từ header" ở chỗ thứ hai: đúng lời gọi đó khách chưa có credential nào để
+> mà đoán, nên client phải tự khai; `client` lạ bị từ chối chứ không âm thầm rơi về web.
+> `test/mobile-register-and-guest-session.spec.ts` (9 test) khoá bằng khẳng định **`set-cookie`
+> phải vắng mặt** — cookie gửi cho app native là một phiên rơi vào hư không, và app vẫn nhận 201
+> nên nó hỏng im lặng.
+> Verify: **jest api 897/897 (67 suite)** · vitest web 1775/1775 · typecheck 17/17 · lint sạch ·
+> không migration.
+
 > **26/08 (đợt 2) — BA ĐƯỜNG ĐĂNG NHẬP CHO APP NATIVE (ADR 0019 §8).** Guard toàn cục vốn đã
 > nhận cả cookie lẫn `Authorization: Bearer`, nên API nghiệp vụ không thiếu gì; chỗ hổng là các
 > endpoint **phát phiên** — chúng trả cookie, thứ app native không có chỗ chứa.

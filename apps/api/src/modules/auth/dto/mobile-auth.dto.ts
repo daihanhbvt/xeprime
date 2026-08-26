@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { MeDto } from './auth.dto';
+import { MeDto, RegisterDto } from './auth.dto';
 
 /**
  * DTO của bốn endpoint `/auth/mobile/*` — ADR 0017.
@@ -144,6 +144,21 @@ export class MobileSocialExchangeDto {
   @MaxLength(128)
   codeVerifier!: string;
 
+  @ApiPropertyOptional({ type: MobileDeviceDto })
+  @IsOptional()
+  @Type(() => MobileDeviceDto)
+  device?: MobileDeviceDto;
+}
+
+/**
+ * `POST /auth/mobile/register` — bản NATIVE của đăng ký SĐT + mật khẩu.
+ *
+ * Kế thừa `RegisterDto` của web nên luật mật khẩu và chuẩn hoá SĐT chỉ có MỘT bản: nới lỏng ở
+ * một phía mà quên phía kia là cách hai client chấp nhận hai bộ mật khẩu khác nhau.
+ *
+ * Khác biệt duy nhất nằm ở ĐẦU RA — web nhận cookie httpOnly, native nhận cặp token.
+ */
+export class MobileRegisterDto extends RegisterDto {
   @ApiPropertyOptional({ type: MobileDeviceDto })
   @IsOptional()
   @Type(() => MobileDeviceDto)

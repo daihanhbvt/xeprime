@@ -156,6 +156,8 @@ two need separate endpoints. They are pairs, not alternatives:
 | Việc | Web | Native |
 | --- | --- | --- |
 | Đăng nhập mật khẩu | `POST /auth/login` → đặt cookie | `POST /auth/mobile/login` → trả `{ tokens, user }` |
+| Đăng ký | `POST /auth/register` → đặt cookie | `POST /auth/mobile/register` → trả `{ tokens, user }` |
+| Khách vãng lai đặt xe (tự đăng nhập) | `POST /public/booking-requests` → đặt cookie | cùng route + `client: "native"` → `receipt.session` |
 | Đăng nhập SĐT + OTP | `POST /auth/phone/login` → đặt cookie | `POST /auth/mobile/phone/login` → trả `{ tokens, user }` |
 | Đăng nhập Google/Facebook | `GET /auth/social/:provider` → đặt cookie | cùng route + `?client=native&code_challenge=…&redirect_uri=…` → one-time code ở deep link → `POST /auth/mobile/social/exchange` |
 | Gia hạn phiên | cookie tự gia hạn | `POST /auth/mobile/refresh` — xoay refresh token |

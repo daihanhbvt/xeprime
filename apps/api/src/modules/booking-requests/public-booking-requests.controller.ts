@@ -4,7 +4,9 @@ import type { Request, Response } from 'express';
 import { Public } from '../../common/decorators';
 import { resolveOptionalUserId } from '../../common/optional-user';
 import { PrismaService } from '../../prisma/prisma.service';
-import { NativeSessionService } from '../auth/native-session.service';
+import { AuthService } from '../auth/auth.service';
+import type { MobileDeviceDto } from '../auth/dto/mobile-auth.dto';
+import { NativeSessionService, type NativeDeviceInfo } from '../auth/native-session.service';
 import { SessionService } from '../auth/session.service';
 import {
   BookingRequestReceiptDto,
@@ -23,8 +25,13 @@ import { BookingRequestsService } from './booking-requests.service';
  * limit toàn cục (ThrottlerGuard) chặn spam. Không giữ chỗ lịch — mới là yêu cầu.
  *
  * Passwordless: khách vãng lai đã xác thực SĐT (OTP purpose=booking) được service tạo/đăng nhập
- * tài khoản theo SĐT; controller cấp session cookie httpOnly (ADR 0002) để khách vào thẳng
- * /trips + chat mà không phải nhập mật khẩu. Khách đang đăng nhập giữ nguyên phiên.
+ * tài khoản theo SĐT, rồi controller cấp phiên để khách vào thẳng /trips + chat mà không phải
+ * nhập mật khẩu. Khách đang đăng nhập giữ nguyên phiên.
+ *
+ * Phiên đó có HAI dạng, theo `client` trong body: web nhận cookie httpOnly (ADR 0002), app native
+ * nhận cặp token trong `receipt.session` (ADR 0017). Đây là chỗ DUY NHẤT ngoài `modules/auth` cấp
+ * phiên, và nó cấp vì cùng một lý do: OTP `purpose=booking` đã chứng minh sở hữu SĐT rồi, hỏi lại
+ * bằng một vòng OTP `purpose=login` nữa là hỏi cùng một câu hai lần.
  */
 @ApiTags('public-booking-requests')
 @Controller('public/booking-requests')
@@ -33,6 +40,7 @@ export class PublicBookingRequestsController {
     private readonly requests: BookingRequestsService,
     private readonly sessions: SessionService,
     private readonly nativeSessions: NativeSessionService,
+    private readonly auth: AuthService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -52,10 +60,37 @@ export class PublicBookingRequestsController {
       this.nativeSessions,
     );
     const { receipt, loginUserId } = await this.requests.submitPublic(dto, customerUserId);
-    if (loginUserId) {
-      const { token } = this.sessions.issue(loginUserId);
-      this.sessions.attach(res, token);
+    if (!loginUserId) return receipt;
+
+    /*
+     * Khách vãng lai vừa được tạo tài khoản từ SĐT đã xác thực — cấp phiên luôn, và cấp ĐÚNG
+     * LOẠI phiên mà client dùng được.
+     *
+     * Web: cookie httpOnly như trước. Native: cặp token trong body — app không có cookie jar, nên
+     * một `Set-Cookie` ở đây là phiên rơi vào hư không và khách vừa đặt xe xong bị coi như chưa
+     * đăng nhập (ADR 0017).
+     *
+     * Không có nhánh "đoán từ header": ở đúng lời gọi này khách CHƯA có credential nào để mà
+     * đoán. Client phải tự khai bằng `client: 'native'`.
+     */
+    if (dto.client === 'native') {
+      const pair = await this.nativeSessions.issueSession(loginUserId, toDeviceInfo(dto.device));
+      return {
+        ...receipt,
+        session: {
+          tokens: {
+            accessToken: pair.accessToken,
+            accessTokenExpiresIn: pair.accessTokenExpiresIn,
+            refreshToken: pair.refreshToken,
+            refreshTokenExpiresAt: pair.refreshTokenExpiresAt.toISOString(),
+          },
+          user: await this.auth.me(loginUserId),
+        },
+      };
     }
+
+    const { token } = this.sessions.issue(loginUserId);
+    this.sessions.attach(res, token);
     return receipt;
   }
 
@@ -81,4 +116,17 @@ export class PublicBookingRequestsController {
   busyDays(@Query() query: VehicleBusyDaysQueryDto): Promise<VehicleBusyDaysDto> {
     return this.requests.listPublicBusyDays(query.vehicleId, query.from, query.to);
   }
+}
+
+/**
+ * `exactOptionalPropertyTypes` bật: `{ deviceName: undefined }` KHÔNG gán được vào
+ * `{ deviceName?: string }`. Chuyển tường minh thay vì spread để trường vắng mặt là vắng mặt thật.
+ */
+function toDeviceInfo(device: MobileDeviceDto | undefined): NativeDeviceInfo {
+  if (!device) return {};
+  return {
+    ...(device.deviceName === undefined ? {} : { deviceName: device.deviceName }),
+    ...(device.devicePlatform === undefined ? {} : { devicePlatform: device.devicePlatform }),
+    ...(device.appVersion === undefined ? {} : { appVersion: device.appVersion }),
+  };
 }

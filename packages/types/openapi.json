@@ -793,6 +793,128 @@
         "description": "**Truy cập:** công khai — không cần đăng nhập."
       }
     },
+    "/auth/mobile/register": {
+      "post": {
+        "operationId": "MobileAuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MobileRegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MobileSessionDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Thông tin đăng nhập không hợp lệ, hoặc phiên đã hết hạn.\n\nMã lỗi: `INVALID_CREDENTIALS` · `SESSION_EXPIRED` · `ACCOUNT_LOCKED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INVALID_CREDENTIALS",
+                    "message": "Email/số điện thoại hoặc mật khẩu không đúng"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Native: đăng ký bằng số điện thoại + mật khẩu",
+        "tags": [
+          "auth"
+        ],
+        "security": [],
+        "description": "**Truy cập:** công khai — không cần đăng nhập."
+      }
+    },
     "/auth/mobile/social/exchange": {
       "post": {
         "operationId": "MobileAuthController_exchangeSocialCode",
@@ -39228,6 +39350,32 @@
           "user"
         ]
       },
+      "MobileRegisterDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "example": "matkhau123"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Nguyễn Văn A"
+          },
+          "phone": {
+            "type": "string",
+            "example": "0901234567"
+          },
+          "device": {
+            "$ref": "#/components/schemas/MobileDeviceDto"
+          }
+        },
+        "required": [
+          "password",
+          "displayName",
+          "phone"
+        ]
+      },
       "MobileSocialExchangeDto": {
         "type": "object",
         "properties": {
@@ -49399,6 +49547,17 @@
             "type": "string",
             "description": "ID xe (ULID) trên marketplace"
           },
+          "client": {
+            "type": "string",
+            "enum": [
+              "web",
+              "native"
+            ],
+            "description": "Bỏ trống = web (nhận cookie). `native` = app (nhận cặp token trong `session`)."
+          },
+          "device": {
+            "$ref": "#/components/schemas/MobileDeviceDto"
+          },
           "customerName": {
             "type": "string",
             "example": "Nguyễn Văn A"
@@ -49503,6 +49662,9 @@
           "authenticated": {
             "type": "boolean",
             "description": "Sau khi gửi, khách đã có phiên đăng nhập (passwordless qua SĐT) — FE chuyển tới /trips."
+          },
+          "session": {
+            "$ref": "#/components/schemas/MobileSessionDto"
           }
         },
         "required": [
