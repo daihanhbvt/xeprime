@@ -42,24 +42,6 @@ export class MobileDeviceDto {
   appVersion?: string;
 }
 
-/** `POST /auth/mobile/session` — đổi ID token của Firebase lấy cặp token native. */
-export class MobileSessionExchangeDto {
-  @ApiProperty({
-    description:
-      'ID token từ Firebase Auth (hoặc `mock:<uid>:<email>:<tên>` khi AUTH_MODE=mock). ' +
-      'Chỉ gửi đúng một lần lúc đăng nhập.',
-    example: 'mock:demo-owner:owner@xeprime.test:Chủ shop demo',
-  })
-  @IsString()
-  @MinLength(1)
-  idToken!: string;
-
-  @ApiPropertyOptional({ type: MobileDeviceDto })
-  @IsOptional()
-  @Type(() => MobileDeviceDto)
-  device?: MobileDeviceDto;
-}
-
 /** `POST /auth/mobile/login` — email/SĐT + mật khẩu. */
 export class MobileLoginDto {
   @ApiProperty({ description: 'Email hoặc số điện thoại', example: 'ban@congty.vn' })

@@ -47,8 +47,38 @@ export const envSchema = z
     // lẫn sang đường Bearer.
     MOBILE_JWT_AUDIENCE: z.string().min(1).default('xeprime-mobile'),
 
-    // --- Auth provider ---
-    AUTH_MODE: z.enum(['mock', 'firebase']).default('mock'),
+    /*
+     * --- Đăng nhập mạng xã hội (ADR 0019) ---
+     *
+     * Vòng OAuth chạy hoàn toàn ở SERVER: client secret dưới đây không bao giờ rời tiến trình
+     * này, và trình duyệt cũng không bao giờ cầm access token của provider.
+     *
+     * Không provider nào là bắt buộc, kể cả ở production — cùng logic với `GOOGLE_MAPS_SERVER_KEY`:
+     * thiếu cấu hình thì nút Google/Facebook trả `SOCIAL_NOT_CONFIGURED`, còn ba đường đăng nhập
+     * còn lại (mật khẩu, OTP, và đăng ký) không hề gãy. Nhưng có MỘT NỬA của một cặp thì fail
+     * lúc boot: đó luôn là cấu hình gõ thiếu, không phải một lựa chọn.
+     */
+    GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
+    GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
+    FACEBOOK_APP_ID: z.string().optional(),
+    FACEBOOK_APP_SECRET: z.string().optional(),
+
+    /*
+     * URL công khai của chính API này — dùng dựng `redirect_uri` tuyệt đối cho OAuth.
+     *
+     * KHÔNG suy ra từ header của request: `Host`/`X-Forwarded-Host` do client gửi, và một
+     * `redirect_uri` dựng từ dữ liệu client là cách `code` bị gửi tới máy của người khác. Provider
+     * đối chiếu giá trị này với danh sách đã khai trong console, nên nó phải là hằng số.
+     */
+    API_PUBLIC_URL: z.string().default('http://localhost:4000'),
+
+    /*
+     * --- Firebase Admin: CHỈ còn phục vụ chat realtime (ADR 0009) ---
+     *
+     * Từ ADR 0019, Firebase KHÔNG còn nằm trên đường đăng nhập. Ba biến này chỉ được đọc bởi
+     * `FirebaseAppService` (mint custom token cho Firestore) và bởi `apps/worker` (đẩy projection).
+     * Chúng bắt buộc khi và chỉ khi `FIRESTORE_ENABLED=true`.
+     */
     FIREBASE_PROJECT_ID: z.string().optional(),
     FIREBASE_CLIENT_EMAIL: z.string().optional(),
     FIREBASE_PRIVATE_KEY: z.string().optional(),
@@ -72,9 +102,9 @@ export const envSchema = z
     OTP_PEPPER: z.string().min(16).default('xeprime-dev-otp-pepper-change-me'),
 
     // --- Chat realtime (ADR 0009) ---
-    // Bật Firestore projection cho chat. Độc lập với AUTH_MODE: có thể AUTH_MODE=mock mà vẫn
-    // dùng Firestore cho chat (dùng chung 3 FIREBASE_* ở trên). Tắt (mặc định) thì chat chỉ
-    // chạy trên Postgres, không đẩy realtime.
+    // Bật Firestore projection cho chat. Từ ADR 0019 đây là công dụng DUY NHẤT còn lại của
+    // Firebase trong repo — đăng nhập không còn đi qua nó. Tắt (mặc định) thì chat chỉ chạy
+    // trên Postgres, không đẩy realtime.
     FIRESTORE_ENABLED: booleanish.default(false),
 
     // --- Chat attachments: Cloudflare R2 (S3-compatible) ---
@@ -136,15 +166,19 @@ export const envSchema = z
     SMTP_FROM: z.string().default('XePrime <no-reply@xeprime.local>'),
   })
   .superRefine((env, ctx) => {
-    if (env.AUTH_MODE === 'firebase') {
-      for (const key of ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'] as const) {
-        if (!env[key]) {
-          ctx.addIssue({
-            code: 'custom',
-            path: [key],
-            message: `${key} là bắt buộc khi AUTH_MODE=firebase`,
-          });
-        }
+    // Một cặp id/secret khai nửa vời là cấu hình gõ thiếu. Fail lúc boot chứ đừng để nó thành
+    // "nút Google im lặng không hoạt động" mà không ai biết vì sao.
+    const socialPairs = [
+      ['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET'],
+      ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET'],
+    ] as const;
+    for (const [idKey, secretKey] of socialPairs) {
+      if (Boolean(env[idKey]) !== Boolean(env[secretKey])) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [env[idKey] ? secretKey : idKey],
+          message: `${idKey} và ${secretKey} phải khai cùng nhau (hoặc bỏ trống cả hai để tắt provider)`,
+        });
       }
     }
 
@@ -223,16 +257,22 @@ export const envSchema = z
 
     // ── Cửa chặn production ────────────────────────────────────────────────
     // Mọi luật dưới đây đều là "mặc định tiện cho dev nhưng NGUY HIỂM ở production".
-    // Chúng phải fail lúc BOOT: một API production chạy với `AUTH_MODE=mock` hay ghi link đặt
-    // lại mật khẩu ra log là sự cố an ninh, không phải cấu hình sai vặt.
+    // Chúng phải fail lúc BOOT: một API production ghi link đặt lại mật khẩu ra log, hay gửi
+    // `redirect_uri` OAuth trỏ localhost, là sự cố an ninh chứ không phải cấu hình sai vặt.
     if (env.NODE_ENV !== 'production') return;
 
-    // Guard `mock` nhận token giả — bất kỳ ai cũng đăng nhập được thành bất kỳ ai.
-    if (env.AUTH_MODE === 'mock') {
+    // `redirect_uri` của OAuth dựng từ đây và phải trùng từng ký tự với giá trị đã khai trong
+    // Google/Facebook console. Trỏ localhost ở production nghĩa là provider sẽ gửi `code` về máy
+    // của chính người dùng — luồng đăng nhập hỏng 100%.
+    if (
+      !env.API_PUBLIC_URL.startsWith('https://') ||
+      /localhost|127\.0\.0\.1/.test(env.API_PUBLIC_URL)
+    ) {
       ctx.addIssue({
         code: 'custom',
-        path: ['AUTH_MODE'],
-        message: 'AUTH_MODE=mock chấp nhận token giả — production phải dùng firebase',
+        path: ['API_PUBLIC_URL'],
+        message:
+          'API_PUBLIC_URL phải là URL https của tên miền thật ở production (redirect_uri của OAuth dựng từ đây)',
       });
     }
 

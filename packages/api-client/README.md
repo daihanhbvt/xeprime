@@ -169,9 +169,9 @@ Ba lỗi hay gặp, đều làm người dùng bị đăng xuất oan:
 ## Quyền và tenant scope
 
 Không nằm trong token — cả web lẫn native. `GET /auth/me` là chỗ duy nhất trả chúng, và nó đọc DB
-mỗi lần gọi (ADR 0002 ràng buộc 1, ADR 0017 §1). Với native, `POST /auth/mobile/login` và
-`/auth/mobile/session` trả kèm `user` để app không phải gọi thêm ngay sau khi đăng nhập; đó là
-CÙNG `MeDto` với web, không phải một shape thứ hai.
+mỗi lần gọi (ADR 0002 ràng buộc 1, ADR 0017 §1). Với native, `POST /auth/mobile/login` trả kèm
+`user` để app không phải gọi thêm ngay sau khi đăng nhập; đó là CÙNG `MeDto` với web, không phải
+một shape thứ hai.
 
 Đừng cache quyền quá một phiên làm việc: thu hồi quyền phải có hiệu lực mà không cần đăng nhập lại.
 

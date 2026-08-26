@@ -88,7 +88,8 @@ model User {
 model UserIdentity {
   id             String   @id @db.Char(26)
   userId         String   @map("user_id") @db.Char(26)
-  /// google | facebook | firebase_phone | password | custom_token
+  /// @xeprime/types → AuthProvider (`google` | `facebook`), hoặc `password` (định danh + mật khẩu).
+  /// Dạng NGẮN, không phải `google.com` — ADR 0019 chuẩn hoá sau khi bỏ Firebase khỏi luồng login.
   provider       String   @db.VarChar(50)
   providerUserId String   @map("provider_user_id") @db.VarChar(255)
   providerEmail  String?  @map("provider_email") @db.VarChar(255)
@@ -330,6 +331,48 @@ model PasswordResetToken {
   @@unique([tokenHash])
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+/// Một lần bấm "Đăng nhập với Google/Facebook" đang dở dang — ADR 0019.
+///
+/// Vì sao phải có BẢNG chứ không phải cookie hay bộ nhớ tiến trình: giữa lúc phát `state` và
+/// lúc provider gọi callback, request đi qua một trang web của bên thứ ba. Cookie thì bị
+/// `SameSite` chặn ở chặng quay về (callback là điều hướng từ google.com sang api.xeprime.vn),
+/// còn bộ nhớ tiến trình thì chết khi API chạy nhiều instance. Bảng là chỗ duy nhất cả hai
+/// chặng cùng nhìn thấy.
+///
+/// `code_verifier` (PKCE) nằm ở đây và KHÔNG bao giờ rời server — nó là thứ chứng minh
+/// callback này thuộc về đúng lần bấm nút đã phát ra `state`.
+model OauthState {
+  id String @id @db.Char(26)
+
+  /// @xeprime/types → AuthProvider (`google` | `facebook`)
+  provider String @db.VarChar(20)
+
+  /// Tham số `state` gửi cho provider. @unique là điều kiện để `consume()` dùng-một-lần đúng:
+  /// nó cho phép `updateMany(where: { state, consumedAt: null })` là một thao tác atomic.
+  state        String @unique @db.VarChar(64)
+  codeVerifier String @map("code_verifier") @db.VarChar(128)
+  /// Chống replay id_token của Google (OIDC). Facebook không có khái niệm này — vẫn sinh và lưu
+  /// để hai provider đi chung một đường code, chỉ là không đối chiếu.
+  nonce        String @db.VarChar(64)
+
+  /// `?next=` đã qua `isSafeNextPath` TRƯỚC khi ghi. Lưu bản đã kiểm, không phải bản thô:
+  /// một giá trị chưa kiểm nằm trong DB là một open redirect chờ ai đó tin nó.
+  redirectNext String? @map("redirect_next") @db.VarChar(512)
+
+  /// `web` | `native`. Đợt ADR 0019 luôn là `web` (callback đặt cookie httpOnly). Cột có sẵn để
+  /// app native (ADR 0017) chỉ là thêm nhánh phát one-time code, không phải một migration nữa.
+  client String @default("web") @db.VarChar(10)
+
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  /// Khác null = đã đổi lấy phiên. Gửi lại cùng `state` ⇒ SOCIAL_STATE_INVALID.
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  /// Dọn hàng hết hạn theo lô. Bảng này chỉ có ghi và xoá, không có màn hình nào đọc nó.
+  @@index([expiresAt])
+  @@map("oauth_states")
 }
 
 /// Phiên đăng nhập của MỘT thiết bị native — ADR 0017.

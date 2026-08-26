@@ -6,7 +6,7 @@ import { PhoneVerificationService } from './phone-verification.service';
 
 /**
  * Xác thực SĐT bằng OTP (Phase 4). Provider chọn theo OTP_MODE (mock/eSMS) — cùng khuôn mẫu
- * AuthModule chọn verifier theo AUTH_MODE. Export service để BookingRequests gate `submitPublic`.
+ * Export service để BookingRequests gate `submitPublic`.
  */
 @Module({
   controllers: [PhoneVerificationController],

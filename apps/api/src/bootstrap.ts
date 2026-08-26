@@ -88,8 +88,10 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
       in: 'cookie',
       name: SESSION_COOKIE_NAME_DEFAULT,
       description:
-        'Cookie phiên do `POST /auth/session` phát. httpOnly — JavaScript KHÔNG đọc được, ' +
-        'trình duyệt tự đính kèm. Gọi từ máy khác origin thì cần `credentials: "include"`.',
+        'Cookie phiên do `POST /auth/login`, `POST /auth/register`, `POST /auth/phone/login` ' +
+        'hoặc callback OAuth (`GET /auth/social/{provider}/callback`) phát. httpOnly — ' +
+        'JavaScript KHÔNG đọc được, trình duyệt tự đính kèm. Gọi từ máy khác origin thì cần ' +
+        '`credentials: "include"`.',
     })
     .build();
 

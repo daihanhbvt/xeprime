@@ -330,7 +330,7 @@ Không có `next/*`. Không có `antd`. Không có `react-dom`. Đây là lý do
 | P1-4 | **COM-06 eSMS** | BKG-01 — khách THẬT không đặt được xe trên mọi client | Excel BUG-01 |
 | P1-5 | Message lỗi VN cứng trong `@xeprime/validators` | Mọi form mobile ở tiếng Anh | N2 |
 | P1-6 | **BKG-14 chưa có PDF phía server** | Hợp đồng — app không có `Ctrl+P` | Excel BUG-12 |
-| P1-7 | **AUTH-04 chưa có Apple Sign-In** | **Chặn phát hành iOS** (không chặn dev) | `firebase-social-auth.ts:106-115` |
+| P1-7 | **AUTH-04 chưa có Apple Sign-In** | **Chặn phát hành iOS** (không chặn dev). Từ ADR 0019 việc này rẻ hơn hẳn: thêm một `SocialProvider` vào `modules/auth/social/`, không sửa `AuthService` | `apps/api/src/modules/auth/social/social-provider.ts` |
 | P1-8 | D1/D2 — nhãn + câu lỗi hai nguồn | Mọi màn hình mobile | N3 |
 
 ### P2 — làm song song được, không chặn

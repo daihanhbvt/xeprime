@@ -23,8 +23,8 @@ const config = {
   },
 } as unknown as ConfigService;
 
-// resolveOrCreateUserByPhone chỉ dùng this.prisma — verifier/rbac/email không được chạm tới.
-const auth = new AuthService(asService, null as never, null as never, null as never, config);
+// resolveOrCreateUserByPhone chỉ dùng this.prisma — rbac/email không được chạm tới.
+const auth = new AuthService(asService, null as never, null as never, config);
 
 let dbAvailable = false;
 const usedPhones = new Set<string>();

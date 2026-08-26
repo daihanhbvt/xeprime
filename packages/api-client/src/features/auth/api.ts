@@ -1,6 +1,5 @@
 import { apiDelete, apiGet, apiPost, type ApiClient } from '../../client';
 import type {
-  CreateSessionInput,
   CurrentUser,
   ForgotPasswordInput,
   LoginInput,
@@ -8,7 +7,6 @@ import type {
   MobileLogoutInput,
   MobileRefreshInput,
   MobileSession,
-  MobileSessionExchangeInput,
   MobileTokenPair,
   RegisterInput,
   ResetPasswordInput,
@@ -29,9 +27,6 @@ import type {
  * chúng, và nó đọc DB mỗi lần gọi.
  */
 export const authApi = {
-  /** Web: đổi ID token của Firebase lấy session cookie. */
-  createSession: (body: CreateSessionInput): Promise<CurrentUser> =>
-    apiPost<CurrentUser>('/auth/session', body),
   /** Web: xoá session cookie. 204, không body. */
   destroySession: (): Promise<void> => apiDelete<void>('/auth/session'),
   register: (body: RegisterInput): Promise<CurrentUser> =>
@@ -55,9 +50,6 @@ export const authApi = {
  * Truyền client vào làm chỗ gọi phải nghĩ, đúng một lần, mình đang gọi bằng danh tính nào.
  */
 export const mobileAuthApi = {
-  /** Đổi ID token của Firebase lấy cặp token native. */
-  exchangeSession: (client: ApiClient, body: MobileSessionExchangeInput): Promise<MobileSession> =>
-    client.post<MobileSession>('/auth/mobile/session', body),
   /** Đăng nhập bằng email/SĐT + mật khẩu. */
   login: (client: ApiClient, body: MobileLoginInput): Promise<MobileSession> =>
     client.post<MobileSession>('/auth/mobile/login', body),

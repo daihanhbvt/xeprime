@@ -156,7 +156,7 @@ two need separate endpoints. They are pairs, not alternatives:
 | Việc | Web | Native |
 | --- | --- | --- |
 | Đăng nhập mật khẩu | `POST /auth/login` → đặt cookie | `POST /auth/mobile/login` → trả `{ tokens, user }` |
-| Đăng nhập Firebase (Google/Apple) | `POST /auth/session` | `POST /auth/mobile/session` |
+| Đăng nhập Google/Facebook | `GET /auth/social/:provider` (302, backend chủ trì — ADR 0019) | **chưa làm** — cùng route + `client=native` + one-time code |
 | Gia hạn phiên | cookie tự gia hạn | `POST /auth/mobile/refresh` — xoay refresh token |
 | Đăng xuất | `DELETE /auth/session` | `POST /auth/mobile/logout` — thu hồi theo thiết bị |
 | Hồ sơ + quyền | `GET /auth/me` | **cùng endpoint**, đọc DB mỗi lần gọi |
@@ -184,8 +184,13 @@ the Bearer header, the refresh and the retry happen underneath.
   proactive (refresh before `exp`) and reactive (`onUnauthorized` retries once when the server
   rejects earlier than the device clock expects). Logout happens only when the refresh itself is
   rejected. A network error during refresh must NOT clear the session.
-* Support **Apple Sign-In** on iOS and Google Sign-In, alongside Phone + OTP — these exchange a
-  Firebase ID token at `POST /auth/mobile/session`.
+* Social sign-in (Google/Facebook, plus **Apple Sign-In — mandatory for iOS App Store review**)
+  goes through the backend-led OAuth flow, not a provider SDK: open
+  `GET /auth/social/:provider?client=native` in `expo-web-browser`, receive a one-time code on the
+  deep link, exchange it for the native token pair. **PKCE between app and backend is required** —
+  on Android a custom scheme is not exclusive, so a stolen code without the verifier must be
+  useless. See ADR 0019, "Chỗ cắm cho app native". Firebase is NOT part of this — it only serves
+  chat (ADR 0009).
 
 ### D. Push Notifications (COM-07)
 * Integrate Firebase Cloud Messaging (FCM) / APNs.

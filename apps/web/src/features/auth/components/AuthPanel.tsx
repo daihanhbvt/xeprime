@@ -24,20 +24,20 @@ import { PhoneLoginForm } from '@/features/phone-verification/components/PhoneLo
 import {
   AUTH_PROVIDER,
   AUTH_PROVIDER_LABEL,
-  createSession,
-  getProviderIdToken,
   loginWithPassword,
   registerWithPassword,
   type AuthProvider,
   type CurrentUser,
 } from '@/services/auth.service';
 import { AUTH_MODE, type AuthMode } from '../post-auth-destination';
+import { startSocialLogin } from '../lib/social-auth-url';
 import { SetPasswordPrompt } from './SetPasswordPrompt';
 import { SocialProviderLogo } from './SocialProviderLogo';
 import styles from './AuthPanel.module.css';
+import { usePathname } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { useErrorMessage } from '@/i18n/use-error-message';
-import { SocialAuthError } from '../lib/firebase-social-auth';
+import { resolveAppLocale } from '@/i18n/config';
+import { useErrorCodeMessage, useErrorMessage } from '@/i18n/use-error-message';
 
 export interface AuthPanelProps {
   mode: AuthMode;
@@ -49,6 +49,14 @@ export interface AuthPanelProps {
   showSocial?: boolean;
   /** Tự focus ô đầu tiên — modal bật, trang portal để trình duyệt quyết. */
   autoFocus?: boolean;
+  /**
+   * Mã lỗi (`API_ERROR_CODE`) mang về từ `?authError=` sau một lần đăng nhập mạng xã hội hỏng.
+   *
+   * Đăng nhập social là một lần RỜI TRANG (ADR 0019), nên lỗi của nó không thể là state của
+   * component như lỗi của form — nó phải sống sót qua một vòng điều hướng, và URL là chỗ duy
+   * nhất làm được điều đó.
+   */
+  initialErrorCode?: string | null;
 }
 
 /**
@@ -59,38 +67,43 @@ export interface AuthPanelProps {
  * lý, và cũng không tự điều hướng — nó chỉ gọi `onAuthenticated`. Đó là điều giữ cho hai
  * presentation không trôi thành hai bộ logic đăng nhập khác nhau.
  */
-/** Khoá hợp lệ của `Auth.*` — xem `i18n/keys.ts` về việc không dùng generic. */
-type AuthKey = Parameters<ReturnType<typeof useTranslations<'Auth'>>>[0];
-
 export function AuthPanel({
   mode,
   onModeChange,
   onAuthenticated,
   showSocial = true,
   autoFocus = false,
+  initialErrorCode = null,
 }: AuthPanelProps) {
   const t = useTranslations('Auth');
   const locale = useLocale();
+  const pathname = usePathname();
   const apiErrorMessage = useErrorMessage();
+  const errorCodeMessage = useErrorCodeMessage();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   // Đăng nhập OTP mà tài khoản chưa có mật khẩu → gợi ý đặt (có "Bỏ qua").
   const [passwordPrompt, setPasswordPrompt] = useState<CurrentUser | null>(null);
+  // Mã `?authError=` đã được chuyển thành thông báo rồi — để nó không quay lại sau mỗi lần
+  // người dùng thao tác tiếp.
+  const [consumedErrorCode, setConsumedErrorCode] = useState<string | null>(null);
 
   const busy = pending !== null;
 
-  /**
-   * Lỗi ở màn đăng nhập đến từ HAI nguồn: API của XePrime (mã trong `API_ERROR_CODE`) và
-   * popup của Firebase (mã `auth/...`, đã quy về `SocialAuthError`). Cả hai đều nói bằng MÃ,
-   * nên chỗ này chỉ việc chọn đúng bảng chữ.
+  /*
+   * Nạp mã lỗi từ URL NGAY TRONG RENDER, không qua `useEffect`.
+   *
+   * Không dùng initializer của `useState`: mã đến từ `?authError=`, mà `AuthUrlSync` đọc URL
+   * trong một effect — nên ở modal, `AuthPanel` mount TRƯỚC khi mã tới, và initializer (chạy đúng
+   * một lần) sẽ đọc `null` rồi thông báo lỗi biến mất.
+   *
+   * Không dùng `useEffect` vì đây không phải đồng bộ với hệ thống bên ngoài — đó là mẫu "điều
+   * chỉnh state khi prop đổi" mà React khuyến nghị: setState trong render làm React render lại
+   * ngay, không commit lần dở dang, nên không có nháy màn hình và không có render dây chuyền.
    */
-  function describeError(err: unknown): string {
-    if (err instanceof SocialAuthError) {
-      return t(`socialError.${err.key}` as AuthKey, {
-        provider: err.provider ? AUTH_PROVIDER_LABEL[err.provider] : '',
-      });
-    }
-    return apiErrorMessage(err);
+  if (initialErrorCode && initialErrorCode !== consumedErrorCode) {
+    setConsumedErrorCode(initialErrorCode);
+    setError(errorCodeMessage(initialErrorCode));
   }
 
   async function finish(user: CurrentUser, justRegistered: boolean) {
@@ -108,7 +121,7 @@ export function AuthPanel({
       const user = await action();
       await finish(user, justRegistered);
     } catch (err) {
-      setError(describeError(err));
+      setError(apiErrorMessage(err));
       setPending(null);
     }
   }
@@ -194,7 +207,7 @@ export function AuthPanel({
                 size="large"
                 loading={pending === provider}
                 disabled={busy && pending !== provider}
-                onClick={() => void signIn(provider)}
+                onClick={() => signIn(provider)}
               >
                 {t('social.continueWith', { provider: AUTH_PROVIDER_LABEL[provider] })}
               </Button>
@@ -235,10 +248,21 @@ export function AuthPanel({
     </div>
   );
 
-  async function signIn(provider: AuthProvider) {
-    await run(provider, async () => {
-      const idToken = await getProviderIdToken(provider, locale);
-      return createSession(idToken);
+  /**
+   * Đăng nhập mạng xã hội = RỜI TRANG (ADR 0019), không phải một lời gọi API.
+   *
+   * Vì thế nó không đi qua `run()`: không có promise nào để `await`, không có lỗi nào để bắt, và
+   * `finish()` sẽ không bao giờ chạy — khi quay lại, đây là một lần tải trang mới đã có cookie
+   * phiên. Trạng thái `pending` vẫn đặt để nút khoá lại trong lúc trình duyệt điều hướng.
+   */
+  function signIn(provider: AuthProvider) {
+    if (busy) return;
+    setPending(provider);
+    setError(null);
+    startSocialLogin(provider, {
+      pathname,
+      search: window.location.search,
+      locale: resolveAppLocale(locale),
     });
   }
 }

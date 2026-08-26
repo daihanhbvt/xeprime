@@ -43,7 +43,7 @@ pnpm dev            # web :3000 · api :4000 · swagger :4000/docs
 | Platform admin | `PLATFORM_ADMIN_EMAIL` (mặc định `admin@xeprime.vn`) | `PLATFORM_ADMIN_PASSWORD`                   |
 | Chủ shop demo  | `owner@xeprime.test`                                 | `DEMO_OWNER_PASSWORD` (mặc định `Abcd1234`) |
 
-Đặt mật khẩu trong `.env` trước khi seed. Google/Facebook sẽ hoạt động sau khi cấu hình Firebase (`AUTH_MODE=firebase`).
+Đặt mật khẩu trong `.env` trước khi seed. Google/Facebook hoạt động sau khi khai `GOOGLE_OAUTH_*` / `FACEBOOK_APP_*` và `API_PUBLIC_URL` (ADR 0019) — chưa khai thì nút vẫn hiện nhưng báo "cách đăng nhập này chưa dùng được", còn mật khẩu và OTP chạy bình thường.
 
 ---
 

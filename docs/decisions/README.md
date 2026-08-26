@@ -7,7 +7,7 @@ Quy tắc: ADR ở đây **thắng** mọi tài liệu khác trong `docs/` khi c
 | ADR | Nội dung | Trạng thái |
 | --- | --- | --- |
 | [0001](0001-database-postgresql.md) | Database engine: PostgreSQL 16 thay cho MySQL 8 | Accepted 22/07/2026 |
-| [0002](0002-auth-session-cookie.md) | Session bằng httpOnly cookie do NestJS phát | Accepted 22/07/2026 |
+| [0002](0002-auth-session-cookie.md) | Session bằng httpOnly cookie do NestJS phát | Accepted 22/07/2026 · phần provider bị [0019](0019-backend-led-social-oauth.md) ghi đè |
 | [0003](0003-styling-css-modules.md) | Styling: AntD token + CSS Modules, bỏ styled-components | Accepted 22/07/2026 |
 | [0004](0004-client-state.md) | Giữ Redux Toolkit, filter đẩy ra URL searchParams | Accepted 22/07/2026 |
 | [0005](0005-status-enums.md) | Nguồn chốt duy nhất cho status enum | Accepted 22/07/2026 |
@@ -24,6 +24,7 @@ Quy tắc: ADR ở đây **thắng** mọi tài liệu khác trong `docs/` khi c
 | [0016](0016-sepay-bank-reconciliation.md) | SePay đối soát chuyển khoản tự động cho tiền GÓI — **sửa phạm vi ADR 0013** | Accepted 21/08/2026 |
 | [0017](0017-native-bearer-auth.md) | App native xác thực bằng Bearer access token 15 phút + refresh token opaque xoay vòng; web giữ nguyên cookie | Accepted 24/08/2026 |
 | [0018](0018-map-delivery-distance.md) | Bản đồ tính khoảng cách giao xe: số tự động là ƯỚC LƯỢNG (chủ xe vẫn chốt), một chiều theo đường bộ, provider trung lập, không tra được không phải lỗi | Accepted 24/08/2026 |
+| [0019](0019-backend-led-social-oauth.md) | Đăng nhập Google/Facebook do BACKEND chủ trì (authorization code + PKCE chạy ở server, client không cầm token của provider); Firebase rút về đúng vai chat realtime — **ghi đè phần "Firebase là provider" của ADR 0002** | Accepted 26/08/2026 |
 
 ## Khi nào viết ADR mới
 

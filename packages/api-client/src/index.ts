@@ -78,7 +78,6 @@ export {
 } from './features/marketplace/api';
 export { authApi, mobileAuthApi } from './features/auth/api';
 export type {
-  CreateSessionInput,
   CurrentUser,
   ForgotPasswordInput,
   LoginInput,
@@ -86,7 +85,6 @@ export type {
   MobileLogoutInput,
   MobileRefreshInput,
   MobileSession,
-  MobileSessionExchangeInput,
   MobileTokenPair,
   RegisterInput,
   ResetPasswordInput,

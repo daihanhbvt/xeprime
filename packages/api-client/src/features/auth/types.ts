@@ -12,14 +12,12 @@ type Schemas = components['schemas'];
 export type CurrentUser = Schemas['MeDto'];
 export type LoginInput = Schemas['LoginDto'];
 export type RegisterInput = Schemas['RegisterDto'];
-export type CreateSessionInput = Schemas['CreateSessionDto'];
 export type SetPasswordInput = Schemas['SetPasswordDto'];
 export type ForgotPasswordInput = Schemas['ForgotPasswordDto'];
 export type ResetPasswordInput = Schemas['ResetPasswordDto'];
 
 /* ── Native (Bearer) — ADR 0017 ─────────────────────────────────────────────────────────── */
 
-export type MobileSessionExchangeInput = Schemas['MobileSessionExchangeDto'];
 export type MobileLoginInput = Schemas['MobileLoginDto'];
 export type MobileRefreshInput = Schemas['MobileRefreshDto'];
 export type MobileLogoutInput = Schemas['MobileLogoutDto'];

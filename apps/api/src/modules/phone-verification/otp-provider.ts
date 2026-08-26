@@ -60,7 +60,7 @@ export class EsmsOtpProvider implements OtpProvider {
   }
 }
 
-/** Chọn provider theo OTP_MODE (mẫu chọn token-verifier theo AUTH_MODE). */
+/** Chọn provider theo OTP_MODE. */
 export function otpProviderFactory(config: ConfigService): OtpProvider {
   return config.get<string>('OTP_MODE') === 'esms'
     ? new EsmsOtpProvider(config)

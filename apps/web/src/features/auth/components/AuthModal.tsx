@@ -31,7 +31,7 @@ export function AuthModal() {
   const tCommon = useTranslations('Common');
   const router = useRouter();
   const isMobile = useIsMobile();
-  const { isOpen, mode, next, close, setMode, takePendingAction } = useAuthModal();
+  const { isOpen, mode, next, errorCode, close, setMode, takePendingAction } = useAuthModal();
   const { refreshAfterAuth } = useAuthCache();
   const [registered, setRegistered] = useState<CurrentUser | null>(null);
 
@@ -105,6 +105,7 @@ export function AuthModal() {
         onModeChange={setMode}
         onAuthenticated={handleAuthenticated}
         autoFocus={!isMobile}
+        initialErrorCode={errorCode}
       />
     </>
   );

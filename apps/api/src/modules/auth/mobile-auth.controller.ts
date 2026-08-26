@@ -14,7 +14,6 @@ import {
   MobileLogoutDto,
   MobileRefreshDto,
   MobileSessionDto,
-  MobileSessionExchangeDto,
   MobileTokenPairDto,
 } from './dto/mobile-auth.dto';
 
@@ -36,24 +35,6 @@ export class MobileAuthController {
     private readonly auth: AuthService,
     private readonly nativeSessions: NativeSessionService,
   ) {}
-
-  /**
-   * Đổi ID token của Firebase lấy cặp token native.
-   *
-   * Tương ứng `POST /auth/session` của web, khác đúng một chỗ: trả token trong body thay vì đặt
-   * cookie. Web KHÔNG bao giờ được gọi endpoint này — nó không có `httpOnly` để bảo vệ.
-   */
-  @Public()
-  @VerifiesCredentials()
-  @Post('session')
-  @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Native: đổi Firebase ID token lấy access + refresh token' })
-  @ApiOkResponse({ type: MobileSessionDto })
-  async createSession(@Body() dto: MobileSessionExchangeDto): Promise<MobileSessionDto> {
-    const { userId } = await this.auth.upsertUserFromIdToken(dto.idToken);
-    return this.buildSession(userId, dto.device);
-  }
 
   /**
    * Đăng nhập bằng email/SĐT + mật khẩu.

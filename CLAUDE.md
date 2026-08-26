@@ -59,6 +59,7 @@ Tài liệu tham chiếu (5–9) có vài quyết định kỹ thuật đã bị
 | [0016](docs/decisions/0016-sepay-bank-reconciliation.md) | **SePay** đối soát chuyển khoản tự động, CHỈ cho tiền GÓI — **sửa phạm vi ADR 0013** |
 | [0017](docs/decisions/0017-native-bearer-auth.md) | App native xác thực bằng **Bearer access token 15 phút** + refresh token opaque xoay vòng, thu hồi theo thiết bị. Web **giữ nguyên** cookie httpOnly. Quyền/tenant/PII không bao giờ là claim JWT |
 | [0018](docs/decisions/0018-map-delivery-distance.md) | Bản đồ tính khoảng cách giao xe tận nơi: số tự động là **ƯỚC LƯỢNG** (chủ xe vẫn chốt phí — ADR 0014), khoảng cách **một chiều theo đường bộ**, provider trung lập, và **không tra được không phải một lỗi** |
+| [0019](docs/decisions/0019-backend-led-social-oauth.md) | Google/Facebook: vòng OAuth chạy ở **SERVER** (authorization code + PKCE, `GET /auth/social/:provider` trả 302). Client không cầm client secret cũng không cầm token của provider. **Firebase rút về đúng vai chat realtime** — ghi đè phần "Firebase là provider" của ADR 0002 |
 
 ### Công cụ Claude (`.claude/`)
 
@@ -93,7 +94,8 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | Backend | NestJS modular monolith (KHÔNG microservices), Express adapter |
 | DB | **PostgreSQL 16** + Prisma — ADR 0001. ID `String @id @db.Char(26)` (ULID), snake_case `@@map`/`@map`, tiền `Decimal @db.Decimal(14,2)`, thời gian `@db.Timestamptz(3)`, JSON dùng `jsonb`, status là String (union type ở `packages/types` — ADR 0005) |
 | Chống trùng lịch | Bảng `vehicle_occupancies` + `EXCLUDE USING gist` — ADR 0006. **Không** dựa vào check ở tầng app |
-| Auth (web) | Firebase Auth chỉ là provider login → NestJS verify ID token → phát **httpOnly session cookie** — ADR 0002 |
+| Auth (web) | Mật khẩu + OTP tự làm; Google/Facebook đi qua **OAuth do backend chủ trì** (`GET /auth/social/:provider`, authorization code + PKCE ở server — ADR 0019). Mọi đường đều kết thúc bằng **httpOnly session cookie** do NestJS phát — ADR 0002 |
+| Firebase | **CHỈ** chat realtime (custom token + Firestore projection — ADR 0009) và `apps/worker`. KHÔNG còn nằm trên đường đăng nhập |
 | Auth (native) | `Authorization: Bearer <accessToken>` — access token JWT 15 phút, refresh token opaque xoay vòng, phiên thu hồi được theo thiết bị. Endpoint `/auth/mobile/*` — ADR 0017 |
 | Client HTTP | `@xeprime/api-client` — MỘT client cho web và native; hai app khác nhau đúng một chỗ: `AuthTransport` (web `credentials: 'include'`, native header Bearer). Web cấu hình ở `apps/web/src/services/api-client.ts` |
 | Logic nghiệp vụ dùng chung | `@xeprime/domain` — tiền trên chuỗi · múi giờ + thời lượng thuê · lịch bận · nguyện vọng nhận xe. Framework-free, Metro đọc được; `apps/web/src/lib/*` là re-export shim |
@@ -243,7 +245,8 @@ chưa chuyển vẫn dùng chuỗi tiếng Việt trong mã; `i18n:audit` là b�
 | pnpm | 11.1.3 (qua corepack) |
 | Docker | CLI + daemon 20.10.13 — **đã chạy** (xác nhận 22/07/2026, `docker version` trả cả client lẫn server) |
 | `psql` client | Chưa cài (không bắt buộc nếu dùng Docker: `docker compose exec db psql`) |
-| Firebase Admin credential | **Chưa xác nhận có service account JSON**. Nếu chưa có → `AuthGuard` dùng mock token local + adapter để cắm Firebase Admin sau, không phải sửa guard |
+| Firebase Admin credential | Chỉ cần khi bật chat realtime (`FIRESTORE_ENABLED=true`). Đăng nhập KHÔNG dùng tới nó nữa (ADR 0019) |
+| OAuth client Google/Facebook | Chưa khai thì nút social trả `SOCIAL_NOT_CONFIGURED`; mật khẩu và OTP vẫn chạy. Dev cần thật thì tạo OAuth client Web với redirect URI `http://localhost:4000/auth/social/google/callback` (Google cho phép `http://localhost`) |
 
 ## 11. Lộ trình 9 phase
 

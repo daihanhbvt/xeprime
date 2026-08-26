@@ -62,18 +62,6 @@ export class ResetPasswordDto extends PasswordField {
   token!: string;
 }
 
-export class CreateSessionDto {
-  @ApiProperty({
-    description:
-      'ID token từ Firebase Auth (hoặc `mock:<uid>:<email>:<tên>` khi AUTH_MODE=mock). ' +
-      'Chỉ gửi đúng một lần lúc đăng nhập — sau đó dùng session cookie.',
-    example: 'mock:demo-owner:owner@xeprime.test:Chủ shop demo',
-  })
-  @IsString()
-  @MinLength(1)
-  idToken!: string;
-}
-
 export class CurrentTenantSummaryDto {
   @ApiProperty() id!: string;
   @ApiProperty() name!: string;
