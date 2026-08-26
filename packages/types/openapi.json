@@ -30399,6 +30399,275 @@
         ]
       }
     },
+    "/trips/{id}/handover-evidence": {
+      "get": {
+        "description": "Chỉ biên bản ĐÃ XÁC NHẬN (nháp / chờ xác nhận / đã huỷ không bao giờ ra tới đây). Trả tối đa hai bản theo thứ tự giao xe → nhận lại; chuyến chưa được duyệt thì mảng rỗng. Ảnh mở qua endpoint download theo GÓC CHỤP — không có `fileId` nào trong payload này.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).",
+        "operationId": "CustomerTripsController_handoverEvidence",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CustomerTripHandoverEvidenceDto"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Biên bản giao/nhận xe đã xác nhận của chuyến này",
+        "tags": [
+          "customer-trips"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/trips/{id}/handover-evidence/{type}/photos/{slot}/download": {
+      "get": {
+        "description": "Khoá là (chuyến của tôi, chiều bàn giao, góc chụp) — không phải id file, nên không có định danh nào cầm đi thử ở chuyến khác được.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).",
+        "operationId": "CustomerTripsController_handoverEvidencePhoto",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slot",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SourceContractDownloadDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Phát signed URL ngắn hạn xem một ảnh hiện trạng của chuyến mình",
+        "tags": [
+          "customer-trips"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/trips/{id}/cancel": {
       "post": {
         "description": "Huỷ được khi yêu cầu còn chờ gian hàng trả lời, hoặc khi đơn đã duyệt nhưng CHƯA giao xe. Đã giao xe rồi thì 409 `TRIP_CANCEL_NOT_ALLOWED` — việc cần làm lúc đó là liên hệ chủ xe. Trả về chính chuyến đó sau khi huỷ để giao diện không phải gọi thêm một lượt.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).",
@@ -48940,6 +49209,87 @@
           "canReview",
           "hasReview",
           "createdAt"
+        ]
+      },
+      "CustomerTripHandoverEvidencePhotoDto": {
+        "type": "object",
+        "properties": {
+          "slot": {
+            "type": "string",
+            "enum": [
+              "front",
+              "rear",
+              "left",
+              "right",
+              "odometer"
+            ],
+            "description": "@xeprime/types → HandoverPhotoSlot. Mã, không phải nhãn — client tự dịch"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "description": "ISO-8601 UTC — thời điểm ảnh được tải lên"
+          },
+          "addedAfterConfirmation": {
+            "type": "boolean",
+            "description": "Ảnh thêm sau mốc xác nhận — giao diện phải nói rõ"
+          }
+        },
+        "required": [
+          "slot",
+          "uploadedAt",
+          "addedAfterConfirmation"
+        ]
+      },
+      "CustomerTripHandoverEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "pickup",
+              "return"
+            ],
+            "description": "@xeprime/types → HandoverType (`pickup` = giao xe, `return` = nhận lại xe)"
+          },
+          "occurredAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "confirmedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO-8601 UTC"
+          },
+          "odometerKm": {
+            "type": "number",
+            "nullable": true,
+            "description": "Chỉ số Odo đọc trên đồng hồ. `null` = CHƯA GHI NHẬN, tuyệt đối không phải 0 km"
+          },
+          "odometerMissing": {
+            "type": "boolean",
+            "description": "Biên bản đã xác nhận nhưng không có chỉ số Odo"
+          },
+          "condition": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "normal",
+              "attention"
+            ],
+            "description": "@xeprime/types → HandoverCondition. `null` = gian hàng chưa đánh giá hiện trạng"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerTripHandoverEvidencePhotoDto"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "odometerMissing",
+          "photos"
         ]
       },
       "RecordPaymentDto": {

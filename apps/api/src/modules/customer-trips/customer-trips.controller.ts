@@ -1,8 +1,11 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, Header, Param, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators';
 import type { AuthenticatedUser } from '../../common/types/request-context';
+import { handoverPhotoSlotParam, handoverTypeParam } from '../bookings/handovers/handover-params';
+import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
 import { CustomerTripsService } from './customer-trips.service';
+import { CustomerTripHandoverEvidenceDto } from './dto/customer-trip-evidence.dto';
 import {
   CustomerTripDetailDto,
   CustomerTripListQueryDto,
@@ -47,6 +50,58 @@ export class CustomerTripsController {
     @Param('id') id: string,
   ): Promise<CustomerTripDetailDto> {
     return this.trips.detail(user.id, id);
+  }
+
+  /**
+   * Bằng chứng bàn giao — bề mặt RIÊNG của khách, cố ý không dùng lại route tenant
+   * `/bookings/:id/handovers`.
+   *
+   * Route kia gác bằng `@TenantScoped()` + bốn quyền của gian hàng, và trả `HandoverDto` đầy đủ
+   * (ghi chú nội bộ, tên người xác nhận, `fileId`, `rowVersion`). Nới nó ra cho khách nghĩa là
+   * hoặc thêm một nhánh "nếu là khách thì bỏ bớt trường" vào giữa lớp bảo vệ của gian hàng,
+   * hoặc phát cho khách một scope tenant mà họ không có. Hai đường đều sai; đây là đường thứ ba.
+   */
+  @Get(':id/handover-evidence')
+  @ApiOperation({
+    summary: 'Biên bản giao/nhận xe đã xác nhận của chuyến này',
+    description:
+      'Chỉ biên bản ĐÃ XÁC NHẬN (nháp / chờ xác nhận / đã huỷ không bao giờ ra tới đây). Trả ' +
+      'tối đa hai bản theo thứ tự giao xe → nhận lại; chuyến chưa được duyệt thì mảng rỗng. ' +
+      'Ảnh mở qua endpoint download theo GÓC CHỤP — không có `fileId` nào trong payload này.',
+  })
+  @ApiOkResponse({ type: CustomerTripHandoverEvidenceDto, isArray: true })
+  handoverEvidence(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<CustomerTripHandoverEvidenceDto[]> {
+    return this.trips.handoverEvidence(user.id, id);
+  }
+
+  /**
+   * Ảnh hiện trạng nằm trong kho RIÊNG TƯ: không có URL công khai, mỗi lần xem là một URL ký
+   * sống vài phút. `no-store` để cái vé đó không nằm lại trong cache của trình duyệt hay proxy.
+   */
+  @Get(':id/handover-evidence/:type/photos/:slot/download')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary: 'Phát signed URL ngắn hạn xem một ảnh hiện trạng của chuyến mình',
+    description:
+      'Khoá là (chuyến của tôi, chiều bàn giao, góc chụp) — không phải id file, nên không có ' +
+      'định danh nào cầm đi thử ở chuyến khác được.',
+  })
+  @ApiOkResponse({ type: SourceContractDownloadDto })
+  handoverEvidencePhoto(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Param('type') type: string,
+    @Param('slot') slot: string,
+  ): Promise<SourceContractDownloadDto> {
+    return this.trips.handoverEvidencePhotoUrl(
+      user.id,
+      id,
+      handoverTypeParam(type),
+      handoverPhotoSlotParam(slot),
+    );
   }
 
   @Post(':id/cancel')

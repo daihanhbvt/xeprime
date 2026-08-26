@@ -221,6 +221,41 @@ export function canAttachHandoverPhoto(status: HandoverStatus): boolean {
 /** Trần ảnh mỗi biên bản — 5 slot cố định, phần dư là ảnh hư hỏng chụp thêm. */
 export const HANDOVER_MAX_PHOTOS = 12;
 
+/**
+ * Mốc THỰC TẾ của một biên bản, cho mọi bề mặt đọc lại nó (vận hành lẫn khách).
+ *
+ * `occurred_at` chỉ có từ Wave 10 trở đi; bản ghi cũ hơn không có mốc nào ngoài lúc GHI NHẬN,
+ * nên `confirmed_at` là thứ gần sự thật nhất còn lại. Viết thành hàm vì cùng một quy tắc lùi
+ * phải đúng ở nhiều nơi đọc khác nhau — mỗi nơi tự `??` một lần là mỗi nơi một cơ hội quên.
+ *
+ * Generic trên kiểu mốc: backend cầm `Date`, client cầm chuỗi ISO — quy tắc vẫn là một.
+ */
+export function handoverOccurredAt<T>(
+  occurredAt: T | null | undefined,
+  confirmedAt: T | null | undefined,
+): T | null {
+  return occurredAt ?? confirmedAt ?? null;
+}
+
+/**
+ * Ảnh này được đính SAU khi biên bản đã xác nhận?
+ *
+ * Hệ quả trực tiếp của {@link HANDOVER_PHOTO_ATTACHABLE_STATUS}: đã cố ý cho phép bổ sung ảnh
+ * sau khi xác nhận thì bù lại bản ghi phải TRUNG THỰC về thời điểm. Một tấm chụp ba ngày sau
+ * không được đọc như bằng chứng hiện trạng lúc bàn giao, nên mọi bề mặt trưng ảnh phải hỏi
+ * được câu này thay vì tự so hai mốc theo cách riêng.
+ *
+ * Biên bản chưa xác nhận (`confirmedAt` rỗng) thì không có mốc nào để mà "sau" — trả `false`,
+ * chứ không phải đánh dấu mọi ảnh của bản nháp là bổ sung muộn.
+ */
+export function isHandoverPhotoAddedAfterConfirmation(
+  uploadedAt: Date,
+  confirmedAt: Date | null | undefined,
+): boolean {
+  if (!confirmedAt) return false;
+  return uploadedAt.getTime() > confirmedAt.getTime();
+}
+
 // ── Đối soát KM ──────────────────────────────────────────────────────────────
 
 /**

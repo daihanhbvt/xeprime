@@ -39,6 +39,7 @@ import type { CustomerTripDetail } from '../types';
 import { CancelTripDialog } from './CancelTripDialog';
 import { CustomerTripTimeline } from './CustomerTripTimeline';
 import { TripFinanceCard } from './TripFinanceCard';
+import { TripHandoverEvidence } from './TripHandoverEvidence';
 import styles from './TripDetailView.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
@@ -325,6 +326,20 @@ export function TripDetailView({ tripId }: { tripId: string }) {
             </section>
           ) : null}
 
+          {/*
+            Bằng chứng bàn giao đứng NGAY SAU mốc thực tế: hai khối trả lời cùng một câu hỏi
+            ("chuyến đã diễn ra thế nào"), chỉ khác độ sâu — mốc giờ ở trên, biên bản + ảnh +
+            Odo ở dưới. Tách chúng ra hai đầu trang là bắt khách cuộn qua lại để đối chiếu.
+
+            Chỉ gọi API khi chuyến ĐÃ có mốc bàn giao thật. `actualPickupAt`/`actualReturnAt`
+            do chính lần xác nhận bàn giao ghi (cùng transaction), nên "chưa có mốc nào" đồng
+            nghĩa "chưa có biên bản nào đã xác nhận" — không cần một lượt gọi để biết là rỗng.
+          */}
+          <TripHandoverEvidence
+            tripId={tripId}
+            enabled={Boolean(data.actualPickupAt || data.actualReturnAt)}
+          />
+
           {data.customerNote ? (
             <section className={styles.block}>
               <h2 className={styles.blockTitle}>{t('detail.noteBlock')}</h2>
@@ -462,9 +477,7 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
   }
 
   if (stage === CUSTOMER_TRIP_STAGE.NO_SHOW) {
-    return (
-      <Alert type="error" showIcon message={t('noShowTitle')} description={t('noShowBody')} />
-    );
+    return <Alert type="error" showIcon message={t('noShowTitle')} description={t('noShowBody')} />;
   }
 
   return null;

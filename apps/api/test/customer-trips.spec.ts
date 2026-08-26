@@ -8,12 +8,18 @@ import {
   CUSTOMER_TRIP_FILTER,
   CUSTOMER_TRIP_STAGE,
   DEPOSIT_STATUS,
+  HANDOVER_CONDITION,
+  HANDOVER_PHOTO_SLOT,
+  HANDOVER_STATUS,
+  HANDOVER_TYPE,
   MEMBERSHIP_STATUS,
   NOTIFICATION_TYPE,
   OCCUPANCY_SOURCE_TYPE,
   PAYMENT_KIND,
   PAYMENT_METHOD,
   PAYMENT_STATUS,
+  PRIVATE_FILE_PURPOSE,
+  PRIVATE_FILE_STATUS,
   REFUND_METHOD,
   SURCHARGE_CATEGORY,
   TENANT_ROLE,
@@ -31,6 +37,8 @@ import { NotificationService } from '../src/modules/notification/notification.se
 import { ListingsService } from '../src/modules/public-listings/listings.service';
 import { PricingService } from '../src/modules/pricing/pricing.service';
 import { SettlementService } from '../src/modules/bookings/settlement/settlement.service';
+import { VehicleContractsService } from '../src/modules/vehicles/vehicle-contracts.service';
+import type { R2Service } from '../src/modules/storage/r2.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 
 /**
@@ -60,7 +68,25 @@ const bookings = new BookingsService(
   new DriversService(asService, audit),
   new CustomersService(asService, audit),
 );
-const trips = new CustomerTripsService(asService, settlement, bookings, notifications, audit);
+/**
+ * R2 giả — chỉ cần đủ để `downloadFor` ký được một vé. Bài kiểm ở đây là ĐIỀU KIỆN nào cho
+ * phép ký, không phải chữ ký trông ra sao (`r2-private.spec.ts` lo phần đó).
+ */
+const fakeR2 = {
+  privateEnabled: true,
+  async presignPrivateDownload() {
+    return { downloadUrl: 'https://r2.local/signed-get', expiresIn: 120 };
+  },
+};
+const files = new VehicleContractsService(asService, fakeR2 as unknown as R2Service, audit);
+const trips = new CustomerTripsService(
+  asService,
+  settlement,
+  bookings,
+  files,
+  notifications,
+  audit,
+);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -290,6 +316,282 @@ describe('Chiếu trạng thái sang chặng của khách', () => {
     const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
     const viaBooking = await trips.detail(customerId, bookingId!);
     expect(viaBooking.id).toBe(requestId);
+  });
+});
+
+/**
+ * Một biên bản bàn giao + ảnh của nó, dựng THẲNG vào bảng.
+ *
+ * Cố ý không đi qua `HandoversService.confirm`: bài kiểm ở đây là bề mặt KHÁCH đọc được gì từ
+ * một hàng dữ liệu, kể cả những hàng mà luồng hiện tại không sinh ra được (bản ghi trước Wave 10
+ * thiếu `occurred_at`, ảnh đính sau mốc xác nhận). Ràng buộc bàn giao có bài kiểm riêng ở
+ * `booking-handovers.spec.ts`.
+ */
+async function seedHandover(opts: {
+  bookingId: string;
+  type: string;
+  status?: string;
+  odometerKm?: number | null;
+  condition?: string | null;
+  occurredAt?: Date | null;
+  confirmedAt?: Date | null;
+  /** Ảnh: góc chụp + thời điểm tải lên. */
+  photos?: { slot: string; uploadedAt: Date }[];
+}): Promise<string> {
+  const handoverId = newId();
+  const confirmedAt = opts.confirmedAt === undefined ? hours(1) : opts.confirmedAt;
+
+  await prisma.vehicleHandover.create({
+    data: {
+      id: handoverId,
+      tenantId,
+      bookingId: opts.bookingId,
+      vehicleId,
+      type: opts.type,
+      status: opts.status ?? HANDOVER_STATUS.CONFIRMED,
+      odometerKm: opts.odometerKm === undefined ? 45_230 : opts.odometerKm,
+      odometerMissing: (opts.odometerKm === undefined ? 45_230 : opts.odometerKm) === null,
+      condition: opts.condition === undefined ? HANDOVER_CONDITION.NORMAL : opts.condition,
+      conditionNote: 'Xước nhẹ cản sau — ghi chú NỘI BỘ của gian hàng',
+      damageNote: 'Ghi chú hư hỏng nội bộ',
+      notes: 'Ghi chú nội bộ',
+      occurredAt: opts.occurredAt === undefined ? hours(0.5) : opts.occurredAt,
+      confirmedAt,
+      confirmedBy: ownerId,
+    },
+  });
+
+  for (const photo of opts.photos ?? []) {
+    const fileId = newId();
+    await prisma.vehiclePrivateFile.create({
+      data: {
+        id: fileId,
+        tenantId,
+        vehicleId,
+        purpose: PRIVATE_FILE_PURPOSE.HANDOVER_PHOTO,
+        objectKey: `tenants/${tenantId}/vehicles/${vehicleId}/handovers/${handoverId}/${fileId}.jpg`,
+        originalName: 'IMG_0042.jpg',
+        mimeType: 'image/jpeg',
+        sizeBytes: 12_345,
+        status: PRIVATE_FILE_STATUS.READY,
+        completedAt: photo.uploadedAt,
+      },
+    });
+    await prisma.vehicleHandoverPhoto.create({
+      data: {
+        id: newId(),
+        tenantId,
+        vehicleId,
+        handoverId,
+        privateFileId: fileId,
+        slot: photo.slot,
+        createdBy: ownerId,
+        createdAt: photo.uploadedAt,
+      },
+    });
+  }
+
+  return handoverId;
+}
+
+describe('Bằng chứng bàn giao', () => {
+  maybe('chưa có đơn thì chưa có gì để xem — rỗng, không phải lỗi', async () => {
+    const { requestId } = await seedTrip({ bookingStatus: null });
+    await expect(trips.handoverEvidence(customerId, requestId)).resolves.toEqual([]);
+  });
+
+  maybe('chỉ biên bản ĐÃ XÁC NHẬN mới tới tay khách', async () => {
+    const a = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
+    // Nháp và "chờ xác nhận" chưa có hiệu lực nghiệp vụ nào; bản huỷ không còn là hồ sơ chuyến.
+    await seedHandover({
+      bookingId: a.bookingId!,
+      type: HANDOVER_TYPE.PICKUP,
+      status: HANDOVER_STATUS.DRAFT,
+    });
+    await expect(trips.handoverEvidence(customerId, a.requestId)).resolves.toEqual([]);
+
+    const b = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
+    await seedHandover({
+      bookingId: b.bookingId!,
+      type: HANDOVER_TYPE.PICKUP,
+      status: HANDOVER_STATUS.READY,
+    });
+    await seedHandover({
+      bookingId: b.bookingId!,
+      type: HANDOVER_TYPE.RETURN,
+      status: HANDOVER_STATUS.CANCELED,
+    });
+    await expect(trips.handoverEvidence(customerId, b.requestId)).resolves.toEqual([]);
+  });
+
+  maybe('giao xe hiện trước, nhận lại hiện sau — theo thứ tự chuyện xảy ra', async () => {
+    const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.COMPLETED });
+    // Ghi bản NHẬN LẠI trước để chứng minh thứ tự đến từ luật, không từ thứ tự chèn bảng.
+    await seedHandover({ bookingId: bookingId!, type: HANDOVER_TYPE.RETURN, odometerKm: 45_900 });
+    await seedHandover({ bookingId: bookingId!, type: HANDOVER_TYPE.PICKUP, odometerKm: 45_230 });
+
+    const evidence = await trips.handoverEvidence(customerId, requestId);
+    expect(evidence.map((row) => row.type)).toEqual([HANDOVER_TYPE.PICKUP, HANDOVER_TYPE.RETURN]);
+  });
+
+  maybe('không rò ghi chú nội bộ, người xác nhận hay id file', async () => {
+    const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
+    await seedHandover({
+      bookingId: bookingId!,
+      type: HANDOVER_TYPE.PICKUP,
+      photos: [{ slot: HANDOVER_PHOTO_SLOT.FRONT, uploadedAt: hours(0.5) }],
+    });
+
+    const [pickup] = await trips.handoverEvidence(customerId, requestId);
+    expect(pickup).toBeDefined();
+    // Khẳng định trên CHUỖI JSON: một trường nội bộ lọt vào qua bất kỳ đường nào cũng bị bắt,
+    // kể cả khi nó không nằm trong danh sách khoá mình nghĩ ra hôm nay.
+    const payload = JSON.stringify(pickup!);
+    expect(payload).not.toContain('NỘI BỘ');
+    expect(payload).not.toContain('Ghi chú');
+    expect(payload).not.toContain(ownerId);
+    expect(payload).not.toContain('IMG_0042');
+    expect(payload).not.toContain('tenants/');
+    expect(Object.keys(pickup!.photos[0]!).sort()).toEqual([
+      'addedAfterConfirmation',
+      'slot',
+      'uploadedAt',
+    ]);
+  });
+
+  maybe('thiếu Odo là null + cờ báo thiếu, KHÔNG bao giờ là 0 km', async () => {
+    const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.COMPLETED });
+    await seedHandover({
+      bookingId: bookingId!,
+      type: HANDOVER_TYPE.RETURN,
+      odometerKm: null,
+    });
+
+    const [ret] = await trips.handoverEvidence(customerId, requestId);
+    expect(ret).toBeDefined();
+    expect(ret!.odometerKm).toBeNull();
+    expect(ret!.odometerMissing).toBe(true);
+  });
+
+  maybe('bản ghi cũ không có occurredAt thì lùi về mốc xác nhận', async () => {
+    const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
+    const confirmedAt = hours(3);
+    await seedHandover({
+      bookingId: bookingId!,
+      type: HANDOVER_TYPE.PICKUP,
+      occurredAt: null,
+      confirmedAt,
+    });
+
+    const [pickup] = await trips.handoverEvidence(customerId, requestId);
+    expect(pickup!.occurredAt).toBe(confirmedAt.toISOString());
+    expect(pickup!.confirmedAt).toBe(confirmedAt.toISOString());
+  });
+
+  maybe(
+    'ảnh thêm SAU mốc xác nhận bị đánh dấu, ảnh chụp trong lúc bàn giao thì không',
+    async () => {
+      const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
+      const confirmedAt = hours(2);
+      await seedHandover({
+        bookingId: bookingId!,
+        type: HANDOVER_TYPE.PICKUP,
+        confirmedAt,
+        photos: [
+          { slot: HANDOVER_PHOTO_SLOT.FRONT, uploadedAt: hours(1.9) },
+          { slot: HANDOVER_PHOTO_SLOT.REAR, uploadedAt: confirmedAt },
+          { slot: HANDOVER_PHOTO_SLOT.LEFT, uploadedAt: hours(50) },
+        ],
+      });
+
+      const [pickup] = await trips.handoverEvidence(customerId, requestId);
+      const flags = Object.fromEntries(
+        pickup!.photos.map((photo) => [photo.slot, photo.addedAfterConfirmation]),
+      );
+      expect(flags[HANDOVER_PHOTO_SLOT.FRONT]).toBe(false);
+      // Đúng mốc xác nhận KHÔNG phải "sau" — so sánh phải là chặt, không phải >=.
+      expect(flags[HANDOVER_PHOTO_SLOT.REAR]).toBe(false);
+      expect(flags[HANDOVER_PHOTO_SLOT.LEFT]).toBe(true);
+      // Thứ tự ô ảnh theo GÓC CHỤP, không theo lúc tải lên.
+      expect(pickup!.photos.map((photo) => photo.slot)).toEqual([
+        HANDOVER_PHOTO_SLOT.FRONT,
+        HANDOVER_PHOTO_SLOT.REAR,
+        HANDOVER_PHOTO_SLOT.LEFT,
+      ]);
+    },
+  );
+
+  maybe('biên bản của khách khác: không đọc được, không mở được ảnh', async () => {
+    const { requestId, bookingId } = await seedTrip({
+      bookingStatus: BOOKING_STATUS.ACTIVE,
+      customerUserId: strangerId,
+    });
+    await seedHandover({
+      bookingId: bookingId!,
+      type: HANDOVER_TYPE.PICKUP,
+      photos: [{ slot: HANDOVER_PHOTO_SLOT.FRONT, uploadedAt: hours(0.5) }],
+    });
+
+    // Cả hai cách gọi tên chuyến đều phải im lặng như nhau — 404, không phải 403.
+    await expect(trips.handoverEvidence(customerId, requestId)).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(trips.handoverEvidence(customerId, bookingId!)).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(
+      trips.handoverEvidencePhotoUrl(
+        customerId,
+        requestId,
+        HANDOVER_TYPE.PICKUP,
+        HANDOVER_PHOTO_SLOT.FRONT,
+      ),
+    ).rejects.toMatchObject({ status: 404 });
+
+    // Chính chủ vẫn mở được — chứng minh 404 ở trên đến từ quyền sở hữu, không phải seed hỏng.
+    await expect(
+      trips.handoverEvidencePhotoUrl(
+        strangerId,
+        requestId,
+        HANDOVER_TYPE.PICKUP,
+        HANDOVER_PHOTO_SLOT.FRONT,
+      ),
+    ).resolves.toMatchObject({ downloadUrl: expect.any(String) });
+  });
+
+  maybe('góc chụp trống và biên bản chưa xác nhận đều không ký được URL', async () => {
+    const { requestId, bookingId } = await seedTrip({ bookingStatus: BOOKING_STATUS.ACTIVE });
+    await seedHandover({
+      bookingId: bookingId!,
+      type: HANDOVER_TYPE.PICKUP,
+      photos: [{ slot: HANDOVER_PHOTO_SLOT.FRONT, uploadedAt: hours(0.5) }],
+    });
+    await seedHandover({
+      bookingId: bookingId!,
+      type: HANDOVER_TYPE.RETURN,
+      status: HANDOVER_STATUS.DRAFT,
+      photos: [{ slot: HANDOVER_PHOTO_SLOT.FRONT, uploadedAt: hours(0.5) }],
+    });
+
+    // Góc chưa có ảnh.
+    await expect(
+      trips.handoverEvidencePhotoUrl(
+        customerId,
+        requestId,
+        HANDOVER_TYPE.PICKUP,
+        HANDOVER_PHOTO_SLOT.ODOMETER,
+      ),
+    ).rejects.toMatchObject({ status: 404 });
+
+    // Ảnh CÓ TỒN TẠI nhưng nằm trên bản nháp — bản nháp không phải bằng chứng.
+    await expect(
+      trips.handoverEvidencePhotoUrl(
+        customerId,
+        requestId,
+        HANDOVER_TYPE.RETURN,
+        HANDOVER_PHOTO_SLOT.FRONT,
+      ),
+    ).rejects.toMatchObject({ status: 404 });
   });
 });
 

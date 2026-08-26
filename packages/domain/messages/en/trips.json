@@ -64,6 +64,23 @@
     "priceBlock": "Price details",
     "priceEmpty": "The final price appears as soon as the host accepts your request."
   },
+  "evidence": {
+    "title": "Handover records",
+    "lead": "Condition photos and odometer readings the shop recorded at pickup and at return.",
+    "empty": "The shop has not confirmed any handover record for this trip yet.",
+    "recordedAt": "Recorded in the system",
+    "odometer": "Odometer",
+    "odometerMissing": "No odometer reading recorded",
+    "condition": "Vehicle condition",
+    "noPhotos": "The shop did not keep condition photos for this handover.",
+    "photoAlt": "Condition photo: {slot}",
+    "photoUnavailable": "Photo can't be opened",
+    "uploadedAt": "Uploaded {time}",
+    "addedLate": "Added after the handover was confirmed",
+    "addedLateHint": "This photo was uploaded after the shop confirmed the handover, so it was not taken at the moment of handover.",
+    "disclaimer": "This record was made by the shop. If anything looks different, please contact the shop directly.",
+    "errorTitle": "Couldn't load the handover records"
+  },
   "subtitle": {
     "pending_approval": "Your rental request has been sent to the host",
     "ready": "The host has confirmed your rental request",

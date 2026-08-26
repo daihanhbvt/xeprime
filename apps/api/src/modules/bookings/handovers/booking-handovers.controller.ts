@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -12,14 +11,7 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import {
-  API_ERROR_CODE,
-  HANDOVER_PHOTO_SLOT_VALUES,
-  HANDOVER_TYPE_VALUES,
-  PERMISSION,
-  type HandoverPhotoSlot,
-  type HandoverType,
-} from '@xeprime/types';
+import { PERMISSION, type HandoverPhotoSlot } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
@@ -41,6 +33,7 @@ import {
   ResolveHandoverOdometerDto,
   SaveHandoverDto,
 } from './dto/handover.dto';
+import { handoverPhotoSlotParam, handoverTypeParam } from './handover-params';
 import { HandoversService, type HandoverViewScope } from './handovers.service';
 
 /**
@@ -87,7 +80,7 @@ export class BookingHandoversController {
     return this.handovers.saveDraft(
       tenant.tenantId,
       bookingId,
-      handoverType(type),
+      handoverTypeParam(type),
       user.id,
       dto,
       scopeOf(tenant),
@@ -111,7 +104,7 @@ export class BookingHandoversController {
     return this.handovers.confirm(
       tenant.tenantId,
       bookingId,
-      handoverType(type),
+      handoverTypeParam(type),
       user.id,
       dto,
       scopeOf(tenant),
@@ -133,7 +126,7 @@ export class BookingHandoversController {
     return this.handovers.cancel(
       tenant.tenantId,
       bookingId,
-      handoverType(type),
+      handoverTypeParam(type),
       user.id,
       dto,
       scopeOf(tenant),
@@ -159,7 +152,7 @@ export class BookingHandoversController {
     return this.handovers.resolveOdometer(
       tenant.tenantId,
       bookingId,
-      handoverType(type),
+      handoverTypeParam(type),
       user.id,
       dto,
       { canDecrease: tenant.permissions.includes(PERMISSION.VEHICLE_ODOMETER_DECREASE) },
@@ -181,7 +174,7 @@ export class BookingHandoversController {
     return this.handovers.presignPhoto(
       tenant.tenantId,
       bookingId,
-      handoverType(type),
+      handoverTypeParam(type),
       user.id,
       dto,
     );
@@ -202,7 +195,7 @@ export class BookingHandoversController {
     return this.handovers.attachPhoto(
       tenant.tenantId,
       bookingId,
-      handoverType(type),
+      handoverTypeParam(type),
       user.id,
       dto.fileId,
       dto.slot as HandoverPhotoSlot,
@@ -224,9 +217,9 @@ export class BookingHandoversController {
     return this.handovers.removePhoto(
       tenant.tenantId,
       bookingId,
-      handoverType(type),
+      handoverTypeParam(type),
       user.id,
-      photoSlot(slot),
+      handoverPhotoSlotParam(slot),
       scopeOf(tenant),
     );
   }
@@ -243,34 +236,16 @@ export class BookingHandoversController {
     @Param('type') type: string,
     @Param('fileId') fileId: string,
   ): Promise<SourceContractDownloadDto> {
-    return this.handovers.downloadPhoto(tenant.tenantId, bookingId, handoverType(type), fileId);
+    return this.handovers.downloadPhoto(
+      tenant.tenantId,
+      bookingId,
+      handoverTypeParam(type),
+      fileId,
+    );
   }
 }
 
 /** Người gọi thấy được gì — đọc từ scope của request, KHÔNG bao giờ từ body. */
 export function scopeOf(tenant: TenantContext): HandoverViewScope {
   return { canViewFiles: tenant.permissions.includes(PERMISSION.HANDOVER_FILE_VIEW) };
-}
-
-/** Tham số đường dẫn cũng là đầu vào của client — validate như mọi đầu vào khác. */
-function handoverType(value: string): HandoverType {
-  if (!(HANDOVER_TYPE_VALUES as string[]).includes(value)) {
-    throw new BadRequestException({
-      code: API_ERROR_CODE.VALIDATION_FAILED,
-      message: 'Chiều bàn giao không hợp lệ',
-      details: { allowed: HANDOVER_TYPE_VALUES },
-    });
-  }
-  return value as HandoverType;
-}
-
-function photoSlot(value: string): HandoverPhotoSlot {
-  if (!(HANDOVER_PHOTO_SLOT_VALUES as string[]).includes(value)) {
-    throw new BadRequestException({
-      code: API_ERROR_CODE.VALIDATION_FAILED,
-      message: 'Góc chụp không hợp lệ',
-      details: { allowed: HANDOVER_PHOTO_SLOT_VALUES },
-    });
-  }
-  return value as HandoverPhotoSlot;
 }
