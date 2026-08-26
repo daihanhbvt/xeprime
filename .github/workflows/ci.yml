@@ -16,6 +16,17 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Runner của GitHub chạy UTC; sản phẩm thì chỉ có MỘT múi giờ và nó là `Asia/Ho_Chi_Minh`
+# (CLAUDE.md §9, ADR 0012 — tiền luôn VND, giờ luôn giờ Việt Nam). Để runner ở UTC nghĩa là CI
+# kiểm một cấu hình không người dùng nào có, và mọi test dính ngày giờ trở thành đỏ/xanh tuỳ máy.
+#
+# ⚠️ Đây KHÔNG phải giấy phép cho code phụ thuộc giờ máy. Hiển thị phải đi qua `toAppTz`/`fmt.*`
+# để đúng ở mọi múi giờ; dòng này chỉ làm cho CI mô phỏng đúng môi trường thật. Phần ĐẦU VÀO
+# (giá trị `DatePicker` → `.toISOString()`, ~20 chỗ) hiện vẫn diễn giải theo giờ máy — nợ đã ghi
+# ở `docs/completion-roadmap.md`, và nó là lý do bỏ dòng này ra sẽ đỏ ngay.
+env:
+  TZ: Asia/Ho_Chi_Minh
+
 jobs:
   api:
     name: API (PostgreSQL thật)

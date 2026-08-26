@@ -556,6 +556,7 @@ chính khớp dữ liệu · in/xuất hợp đồng tối thiểu chạy.
 | **Chưa có writer cho `blocked_range`** | `OCCUPANCY_SOURCE_TYPE` có 3 giá trị, `booking` + `maintenance` đã có writer; `blocked_range` và quyền `vehicles.block_schedule` vẫn treo — chủ xe chưa tự khoá lịch được |
 | `operationStatus = maintenance` đặt tay vẫn chỉ là nhãn | Chặn lịch thật đi qua **phiếu bảo dưỡng** (có occupancy). Nhãn đặt tay và availability có thể lệch nhau |
 | Rác R2 khi thay ảnh/file | Thay ảnh xe hoặc file riêng tư để lại object mồ côi — chưa có đường xoá |
+| **Giá trị `DatePicker` diễn giải theo giờ MÁY, không phải giờ VN** | ~20 chỗ làm `values.x?.toISOString()` trên giá trị picker (đặt xe, bảo dưỡng, banner, gói). Trên máy đặt sai múi giờ, mốc gửi lên lệch đúng phần chênh — người dùng chọn 12:00 mà server nhận 12:00Z thay vì 05:00Z. Không phải sự cố đang chạy (người dùng ở VN), nhưng trái CLAUDE.md §9. Cần một helper "wall-clock → `Asia/Ho_Chi_Minh`" rồi thay cả cụm; đây là lý do `ci.yml` phải ghim `TZ`. Phần HIỂN THỊ đã đúng (`toAppTz`/`fmt.*`) sau khi sửa `rental-busy.ts` ngày 25/08 |
 | Page stub `pickup-areas`, `trash` | Vỏ 5-dòng, làm ở phase liên quan sau |
 
 ---
