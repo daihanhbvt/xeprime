@@ -273,6 +273,14 @@ export const queryKeys = {
     all: ['trips'] as const,
     list: (params: QueryParams) => ['trips', 'list', params] as const,
     detail: (id: string) => ['trips', 'detail', id] as const,
+    /** Biên bản bàn giao của MỘT chuyến — nhánh con của chi tiết, huỷ chuyến cũng dọn theo. */
+    handoverEvidence: (id: string) => ['trips', 'detail', id, 'handover-evidence'] as const,
+    /**
+     * URL ký để hiện ẢNH THU NHỎ của biên bản. Tách khỏi `handoverEvidence` vì vòng đời khác
+     * hẳn: biên bản là dữ liệu ổn định, còn URL ký sống ~2 phút nên phải tự làm mới.
+     */
+    handoverPhotos: (id: string, slots: readonly string[]) =>
+      ['trips', 'detail', id, 'handover-photos', slots] as const,
   },
   chat: {
     all: ['chat'] as const,

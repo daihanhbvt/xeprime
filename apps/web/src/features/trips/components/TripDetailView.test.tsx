@@ -32,6 +32,16 @@ const cancelMutation = vi.hoisted(() => ({
 vi.mock('../hooks', () => ({
   useTrip: () => query,
   useCancelTrip: () => cancelMutation,
+  // Khối bằng chứng bàn giao có test riêng (`TripHandoverEvidence.test.tsx`); ở đây chỉ cần
+  // nó im lặng để không kéo một truy vấn thật vào test của trang.
+  useTripHandoverEvidence: () => ({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    error: undefined,
+  }),
+  useTripHandoverPhotos: () => ({ data: undefined, isFetching: false }),
+  photoKey: (type: string, slot: string) => type + ':' + slot,
 }));
 
 vi.mock('next/navigation', () => ({

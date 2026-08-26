@@ -64,6 +64,23 @@
     "priceBlock": "Chi tiết giá",
     "priceEmpty": "Giá chính thức sẽ hiển thị ngay khi chủ xe xác nhận yêu cầu của bạn."
   },
+  "evidence": {
+    "title": "Biên bản bàn giao",
+    "lead": "Ảnh hiện trạng và chỉ số Odo gian hàng đã ghi nhận khi giao và khi nhận lại xe.",
+    "empty": "Gian hàng chưa xác nhận biên bản bàn giao nào cho chuyến này.",
+    "recordedAt": "Ghi nhận trên hệ thống",
+    "odometer": "Chỉ số Odo",
+    "odometerMissing": "Chưa ghi nhận chỉ số Odo",
+    "condition": "Hiện trạng xe",
+    "noPhotos": "Gian hàng không lưu ảnh hiện trạng cho lần bàn giao này.",
+    "photoAlt": "Ảnh hiện trạng: {slot}",
+    "photoUnavailable": "Không mở được ảnh",
+    "uploadedAt": "Tải lên {time}",
+    "addedLate": "Bổ sung sau khi xác nhận bàn giao",
+    "addedLateHint": "Ảnh này được tải lên sau thời điểm gian hàng xác nhận bàn giao, nên không phải ảnh chụp tại thời điểm bàn giao.",
+    "disclaimer": "Đây là biên bản do gian hàng ghi nhận. Nếu có khác biệt, hãy liên hệ trực tiếp với gian hàng.",
+    "errorTitle": "Không tải được biên bản bàn giao"
+  },
   "subtitle": {
     "pending_approval": "Yêu cầu thuê xe của bạn đã được gửi tới chủ xe",
     "ready": "Yêu cầu thuê xe đã được chủ xe xác nhận thành công",

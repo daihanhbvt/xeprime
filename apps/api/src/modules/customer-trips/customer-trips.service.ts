@@ -6,17 +6,25 @@ import {
   BOOKING_REQUEST_STATUS,
   BOOKING_STATUS,
   CUSTOMER_TRIP_FILTER,
+  HANDOVER_PHOTO_SLOT_VALUES,
+  HANDOVER_STATUS,
+  HANDOVER_TYPE,
   NOTIFICATION_TARGET_TYPE,
   NOTIFICATION_TYPE,
   PAYMENT_KIND,
   PAYMENT_STATUS,
+  PRIVATE_FILE_PURPOSE,
   canCustomerCancelTrip,
   customerTripStage,
+  handoverOccurredAt,
   isCustomerTripFilter,
+  isHandoverPhotoAddedAfterConfirmation,
   type BookingRequestStatus,
   type BookingStatus,
   type CustomerTripFilter,
   type CustomerTripStage,
+  type HandoverPhotoSlot,
+  type HandoverType,
   type PaginationMeta,
 } from '@xeprime/types';
 import { fromDateOnly } from '../../common/date-only';
@@ -25,6 +33,12 @@ import { AuditService } from '../audit/audit.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { NotificationService } from '../notification/notification.service';
 import { SettlementService } from '../bookings/settlement/settlement.service';
+import { SourceContractDownloadDto } from '../vehicles/dto/vehicle-source.dto';
+import { VehicleContractsService } from '../vehicles/vehicle-contracts.service';
+import {
+  CustomerTripHandoverEvidenceDto,
+  CustomerTripHandoverEvidencePhotoDto,
+} from './dto/customer-trip-evidence.dto';
 import {
   CUSTOMER_TRIP_DEFAULT_LIMIT,
   CUSTOMER_TRIP_MAX_LIMIT,
@@ -62,6 +76,12 @@ export class CustomerTripsService {
     private readonly prisma: PrismaService,
     private readonly settlement: SettlementService,
     private readonly bookings: BookingsService,
+    /**
+     * Lõi phát signed URL của kho riêng tư (Wave 4.1) — mượn, không dựng lại. Nó đã khoá sẵn
+     * điều kiện tenant + xe + mục đích + trạng thái `ready` trong CHÍNH câu truy vấn, nên một
+     * đường phát URL thứ hai ở đây chỉ là cơ hội để quên mất một trong bốn điều kiện đó.
+     */
+    private readonly files: VehicleContractsService,
     private readonly notifications: NotificationService,
     private readonly audit: AuditService,
   ) {}
@@ -244,6 +264,112 @@ export class CustomerTripsService {
     });
 
     return this.detail(customerUserId, id);
+  }
+
+  // ── Bằng chứng bàn giao ───────────────────────────────────────────────────
+
+  /**
+   * Biên bản giao / nhận lại xe của CHÍNH chuyến này — chỉ đọc.
+   *
+   * Ba lằn ranh:
+   *
+   *  - **Chỉ biên bản ĐÃ XÁC NHẬN.** Nháp và "chờ xác nhận" chưa có hiệu lực nghiệp vụ nào
+   *    (KM chưa vào hồ sơ xe, đơn chưa đổi trạng thái) nên trưng chúng ra là mời khách đối
+   *    chiếu với thứ gian hàng còn đang gõ dở; bản đã huỷ thì không còn là hồ sơ của chuyến
+   *    nào. Vì thế biên bản giao xe xuất hiện đúng lúc shop bấm xác nhận giao, biên bản nhận
+   *    lại xuất hiện đúng lúc shop bấm xác nhận nhận — không sớm hơn một giây nào.
+   *  - **Quyền sở hữu nằm trong WHERE.** `requireTrip` buộc chuyến thuộc người đang đăng
+   *    nhập, rồi mọi truy vấn sau đó khoá theo `bookingId` + `tenantId` lấy TỪ chuyến đó.
+   *    Đoán được id biên bản của người khác cũng không có đường nào đi vào đây.
+   *  - **DTO là hàng rào.** Ghi chú nội bộ, tên người xác nhận, id file riêng tư không có mặt
+   *    trong `CustomerTripHandoverEvidenceDto` — xem chú thích ở chính DTO đó.
+   *
+   * Không phân trang: mỗi chuyến tối đa HAI biên bản, mỗi biên bản tối đa `HANDOVER_MAX_PHOTOS`
+   * ảnh. Trần đó là ràng buộc nghiệp vụ có sẵn, không phải may rủi.
+   */
+  async handoverEvidence(
+    customerUserId: string,
+    id: string,
+  ): Promise<CustomerTripHandoverEvidenceDto[]> {
+    const trip = await this.requireTrip(customerUserId, id);
+    // Yêu cầu chưa được duyệt thì chưa có đơn, chưa có chuyến để mà bàn giao. Rỗng, không lỗi.
+    if (!trip.bookingId || !trip.tenantId) return [];
+
+    const rows = await this.prisma.vehicleHandover.findMany({
+      where: {
+        bookingId: trip.bookingId,
+        tenantId: trip.tenantId,
+        status: HANDOVER_STATUS.CONFIRMED,
+      },
+      select: EVIDENCE_SELECT,
+    });
+
+    // Thứ tự KỂ CHUYỆN, không phải thứ tự ghi vào bảng: giao xe trước, nhận lại sau.
+    return EVIDENCE_ORDER.flatMap((type) => {
+      const row = rows.find((candidate) => candidate.type === type);
+      return row ? [toEvidence(row)] : [];
+    });
+  }
+
+  /**
+   * URL ký ngắn hạn cho MỘT ảnh hiện trạng, mở theo GÓC CHỤP.
+   *
+   * Khoá là `(chuyến của tôi, chiều bàn giao, góc chụp)` — đúng bộ ba khách nhìn thấy trên màn
+   * hình — chứ KHÔNG phải `fileId`. Nhờ vậy không định danh file nào rời khỏi server, và không
+   * tham số nào cầm đi thử ở chuyến khác được: đổi `:id` sang chuyến của người khác thì
+   * `requireTrip` đã trả 404 trước khi có gì được ký.
+   *
+   * Ảnh vắng mặt và ảnh của chuyến người khác trả CÙNG một lỗi 404 — phân biệt hai cái đó là
+   * cách lịch sự để xác nhận "có tấm ảnh đó đấy, chỉ là không phải của bạn".
+   */
+  async handoverEvidencePhotoUrl(
+    customerUserId: string,
+    id: string,
+    type: HandoverType,
+    slot: HandoverPhotoSlot,
+  ): Promise<SourceContractDownloadDto> {
+    const trip = await this.requireTrip(customerUserId, id);
+    if (!trip.bookingId || !trip.tenantId) throw evidencePhotoNotFound();
+
+    const handover = await this.prisma.vehicleHandover.findFirst({
+      where: {
+        bookingId: trip.bookingId,
+        tenantId: trip.tenantId,
+        type,
+        status: HANDOVER_STATUS.CONFIRMED,
+      },
+      select: {
+        tenantId: true,
+        vehicleId: true,
+        // `@@unique([handoverId, slot])` — một góc chụp đúng một ảnh, nên đây luôn 0 hoặc 1.
+        photos: { where: { slot }, select: { privateFileId: true } },
+      },
+    });
+
+    const privateFileId = handover?.photos[0]?.privateFileId;
+    if (!handover || !privateFileId) throw evidencePhotoNotFound();
+
+    return this.files.downloadFor(
+      handover.tenantId,
+      handover.vehicleId,
+      privateFileId,
+      PRIVATE_FILE_PURPOSE.HANDOVER_PHOTO,
+    );
+  }
+
+  /**
+   * Chuyến của CHÍNH người đang đăng nhập, rút còn hai định danh mà mọi truy vấn phụ cần.
+   *
+   * `tenantId` lấy từ ĐƠN chứ không từ yêu cầu: đơn mới là thứ các bảng vận hành (bàn giao,
+   * ảnh, file riêng tư) khoá theo, nên trùng khớp hai bên phải là ĐIỀU KIỆN, không phải giả định.
+   */
+  private async requireTrip(customerUserId: string, id: string) {
+    const row = await this.prisma.bookingRequest.findFirst({
+      where: { customerUserId, OR: [{ id }, { bookingId: id }] },
+      select: { bookingId: true, booking: { select: { tenantId: true } } },
+    });
+    if (!row) throw tripNotFound();
+    return { bookingId: row.bookingId, tenantId: row.booking?.tenantId ?? null };
   }
 
   // ── Tiền ──────────────────────────────────────────────────────────────────
@@ -545,6 +671,78 @@ function cancelNotAllowed(stage: CustomerTripStage): ConflictException {
     code: API_ERROR_CODE.TRIP_CANCEL_NOT_ALLOWED,
     message: 'Chuyến này không còn huỷ được nữa',
     details: { stage },
+  });
+}
+
+// ── Bằng chứng bàn giao ──────────────────────────────────────────────────────
+
+/** Hai chiều của chuyến, theo đúng thứ tự chúng xảy ra. */
+const EVIDENCE_ORDER: readonly HandoverType[] = [HANDOVER_TYPE.PICKUP, HANDOVER_TYPE.RETURN];
+
+/**
+ * Cột được đọc cho bề mặt khách — danh sách CHO PHÉP, không phải "lấy hết rồi bỏ bớt". Thêm
+ * một cột nội bộ vào bảng bàn giao sau này sẽ không tự động rò ra đây.
+ */
+const EVIDENCE_SELECT = {
+  type: true,
+  odometerKm: true,
+  condition: true,
+  occurredAt: true,
+  confirmedAt: true,
+  photos: { select: { slot: true, createdAt: true } },
+} satisfies Prisma.VehicleHandoverSelect;
+
+type EvidenceRow = Prisma.VehicleHandoverGetPayload<{ select: typeof EVIDENCE_SELECT }>;
+
+/** Thứ tự ô ảnh trên màn: theo GÓC CHỤP cố định, không theo lúc tải lên. */
+const SLOT_RANK = new Map<string, number>(
+  HANDOVER_PHOTO_SLOT_VALUES.map((slot, index) => [slot as string, index]),
+);
+
+function toEvidence(row: EvidenceRow): CustomerTripHandoverEvidenceDto {
+  const confirmedAt = row.confirmedAt;
+
+  const photos: CustomerTripHandoverEvidencePhotoDto[] = [...row.photos]
+    .sort(
+      (a, b) =>
+        slotRank(a.slot) - slotRank(b.slot) || a.createdAt.getTime() - b.createdAt.getTime(),
+    )
+    .map((photo) => ({
+      slot: photo.slot,
+      uploadedAt: photo.createdAt.toISOString(),
+      addedAfterConfirmation: isHandoverPhotoAddedAfterConfirmation(photo.createdAt, confirmedAt),
+    }));
+
+  return {
+    type: row.type,
+    occurredAt: handoverOccurredAt(row.occurredAt, confirmedAt)?.toISOString() ?? null,
+    confirmedAt: confirmedAt?.toISOString() ?? null,
+    /*
+     * `null` nghĩa là "chưa ai đọc chỉ số này" và phải đi tới giao diện nguyên vẹn. Ép về 0 ở
+     * đây là bịa ra một con số đồng hồ chưa từng tồn tại — đúng thứ design 14 §7 cấm.
+     */
+    odometerKm: row.odometerKm,
+    // Suy từ chính con số, không đọc cờ `odometer_missing`: cờ và số không được phép nói
+    // ngược nhau trên màn của khách, kể cả khi một bản ghi cũ nào đó lệch.
+    odometerMissing: row.odometerKm === null,
+    condition: row.condition,
+    photos,
+  };
+}
+
+/** Góc lạ (dữ liệu cũ, hoặc slot thêm về sau) rơi xuống CUỐI thay vì trộn vào giữa lưới. */
+function slotRank(slot: string): number {
+  return SLOT_RANK.get(slot) ?? SLOT_RANK.size;
+}
+
+/**
+ * Ảnh không tồn tại VÀ ảnh của chuyến người khác trả về cùng một lỗi — cùng lý do với
+ * {@link tripNotFound}.
+ */
+function evidencePhotoNotFound(): NotFoundException {
+  return new NotFoundException({
+    code: API_ERROR_CODE.NOT_FOUND,
+    message: 'Không tìm thấy ảnh hiện trạng của chuyến này',
   });
 }
 
