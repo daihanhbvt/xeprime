@@ -50,29 +50,40 @@ export async function createApp(): Promise<INestApplication> {
     credentials: true,
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: { enableImplicitConversion: false },
-      // Giữ nguyên convention lỗi. PHẢI throw một HttpException, không trả plain object —
-      // trả object khiến exception filter không nhận ra và rơi vào INTERNAL_ERROR.
-      exceptionFactory: (errors) =>
-        new BadRequestException({
-          code: API_ERROR_CODE.VALIDATION_FAILED,
-          message: 'Dữ liệu gửi lên không hợp lệ',
-          details: errors.map((e) => ({
-            field: e.property,
-            constraints: Object.values(e.constraints ?? {}),
-          })),
-        }),
-    }),
-  );
+  app.useGlobalPipes(createValidationPipe());
 
   app.useGlobalFilters(new AllExceptionsFilter(isProduction));
 
   return app;
+}
+
+/**
+ * Pipe validate TOÀN CỤC — tách thành hàm để test dựng được đúng cấu hình này.
+ *
+ * Chép lại cấu hình trong test là cách test báo xanh cho một luật mà production không còn dùng.
+ * Chuyện đó đã xảy ra thật: `forbidNonWhitelisted` ở đây là lý do `GET /auth/social/:provider/callback`
+ * KHÔNG được gắn DTO vào `@Query()` — pipe toàn cục luôn chạy, `@UsePipes` ở method chỉ THÊM chứ
+ * không thay thế, nên mọi tham số mà Google tự gắn (`iss`, `scope`, `authuser`, `prompt`) đều
+ * thành 400. Test khoá điều đó phải dùng chính hàm này, không phải một bản sao.
+ */
+export function createValidationPipe(): ValidationPipe {
+  return new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+    transformOptions: { enableImplicitConversion: false },
+    // Giữ nguyên convention lỗi. PHẢI throw một HttpException, không trả plain object —
+    // trả object khiến exception filter không nhận ra và rơi vào INTERNAL_ERROR.
+    exceptionFactory: (errors) =>
+      new BadRequestException({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Dữ liệu gửi lên không hợp lệ',
+        details: errors.map((e) => ({
+          field: e.property,
+          constraints: Object.values(e.constraints ?? {}),
+        })),
+      }),
+  });
 }
 
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {

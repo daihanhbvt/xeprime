@@ -156,7 +156,8 @@ two need separate endpoints. They are pairs, not alternatives:
 | Việc | Web | Native |
 | --- | --- | --- |
 | Đăng nhập mật khẩu | `POST /auth/login` → đặt cookie | `POST /auth/mobile/login` → trả `{ tokens, user }` |
-| Đăng nhập Google/Facebook | `GET /auth/social/:provider` (302, backend chủ trì — ADR 0019) | **chưa làm** — cùng route + `client=native` + one-time code |
+| Đăng nhập SĐT + OTP | `POST /auth/phone/login` → đặt cookie | `POST /auth/mobile/phone/login` → trả `{ tokens, user }` |
+| Đăng nhập Google/Facebook | `GET /auth/social/:provider` → đặt cookie | cùng route + `?client=native&code_challenge=…&redirect_uri=…` → one-time code ở deep link → `POST /auth/mobile/social/exchange` |
 | Gia hạn phiên | cookie tự gia hạn | `POST /auth/mobile/refresh` — xoay refresh token |
 | Đăng xuất | `DELETE /auth/session` | `POST /auth/mobile/logout` — thu hồi theo thiết bị |
 | Hồ sơ + quyền | `GET /auth/me` | **cùng endpoint**, đọc DB mỗi lần gọi |
@@ -185,12 +186,19 @@ the Bearer header, the refresh and the retry happen underneath.
   rejects earlier than the device clock expects). Logout happens only when the refresh itself is
   rejected. A network error during refresh must NOT clear the session.
 * Social sign-in (Google/Facebook, plus **Apple Sign-In — mandatory for iOS App Store review**)
-  goes through the backend-led OAuth flow, not a provider SDK: open
-  `GET /auth/social/:provider?client=native` in `expo-web-browser`, receive a one-time code on the
-  deep link, exchange it for the native token pair. **PKCE between app and backend is required** —
-  on Android a custom scheme is not exclusive, so a stolen code without the verifier must be
-  useless. See ADR 0019, "Chỗ cắm cho app native". Firebase is NOT part of this — it only serves
-  chat (ADR 0009).
+  goes through the backend-led OAuth flow, not a provider SDK — it is **built and ready**:
+  1. generate PKCE, keep `codeVerifier` in memory (never on disk);
+  2. `WebBrowser.openAuthSessionAsync(…/auth/social/:provider?client=native&code_challenge=…&redirect_uri=…)`;
+  3. read `?code=` off the deep link, then `mobileAuthApi.exchangeSocialCode(authClient, { code, codeVerifier })`.
+
+  The deep link carries a **one-time code, not tokens** — deep links are logged by the OS, and a
+  60-day refresh token there is a long-lived secret written to disk. The code lives 60 seconds,
+  is single-use, and a wrong `codeVerifier` burns it. `redirect_uri` must be in the API's
+  `MOBILE_AUTH_REDIRECT_URIS` allowlist — Expo dev builds use `exp://…`, so that URI has to be
+  added to the dev API's env; it is not accepted automatically. Errors come back on the same deep
+  link as `?error=<code>`: read both, or the app freezes when the user cancels. Details in
+  `docs/api-docs.md` §2.3 and ADR 0019 §8. Firebase is NOT part of this — it only serves chat
+  (ADR 0009).
 
 ### D. Push Notifications (COM-07)
 * Integrate Firebase Cloud Messaging (FCM) / APNs.

@@ -24,8 +24,8 @@ import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/
  *  2. **Đồng bộ ngày lễ Việt Nam** (26/08) — mỗi ngày một lần, từ Google Calendar. Cũng là
  *     việc nghiệp vụ nên KHÔNG phụ thuộc `FIRESTORE_ENABLED`; nó chỉ cần một API key, và
  *     thiếu key thì vòng lặp đơn giản không được đăng ký.
- *  3. **Dọn `oauth_states`** (26/08, ADR 0019) — mỗi giờ một lần, xoá hàng đã hết hạn của
- *     những lần bấm "Đăng nhập với Google/Facebook" dở dang. Cũng chạy ở mọi cấu hình.
+ *  3. **Dọn phiên OAuth dở dang** (26/08, ADR 0019) — mỗi giờ một lần, xoá `oauth_states` và
+ *     `native_auth_codes` đã hết hạn. Cũng chạy ở mọi cấu hình.
  *  4. **Đồng bộ chat Postgres → Firestore** (Phase 5, ADR 0009) — chỉ khi `FIRESTORE_ENABLED`.
  *
  * Ràng buộc chung: idempotent + `pg_try_advisory_lock` chống hai instance chạy chồng nhau.
@@ -86,10 +86,14 @@ async function main(): Promise<void> {
      * Dọn `oauth_states` — ADR 0019. Chạy ở MỌI cấu hình, giống hạn phản hồi: nó là việc dọn dẹp
      * của một bảng mà đăng nhập ghi vào, không liên quan gì tới chat hay ngày lễ.
      */
-    loop('dọn oauth_states', LOCK_OAUTH_STATES, OAUTH_STATE_INTERVAL_MS, async () => {
+    loop('dọn phiên OAuth dở dang', LOCK_OAUTH_STATES, OAUTH_STATE_INTERVAL_MS, async () => {
       const purged = await purgeExpiredOauthStates(prisma);
-      // Chỉ log khi có việc — mỗi giờ một dòng "0" là nhiễu, không phải dấu hiệu sống.
-      if (purged) console.log(`oauth_states: dọn ${purged} hàng hết hạn`);
+      // Chỉ log khi có việc — mỗi giờ một dòng "0/0" là nhiễu, không phải dấu hiệu sống.
+      if (purged.states || purged.nativeCodes) {
+        console.log(
+          `oauth: dọn ${purged.states} state + ${purged.nativeCodes} one-time code hết hạn`,
+        );
+      }
     }),
   ];
 

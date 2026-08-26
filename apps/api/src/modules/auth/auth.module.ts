@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { EmailService } from './email.service';
 import { NativeSessionService } from './native-session.service';
 import { SessionService } from './session.service';
+import { NativeAuthCodeService } from './social/native-auth-code.service';
 import { OauthStateService } from './social/oauth-state.service';
 import { SocialAuthController } from './social/social-auth.controller';
 import { SocialAuthService } from './social/social-auth.service';
@@ -31,8 +32,9 @@ import { SocialAuthService } from './social/social-auth.service';
     NativeSessionService,
     EmailService,
     OauthStateService,
+    NativeAuthCodeService,
     SocialAuthService,
   ],
-  exports: [SessionService, NativeSessionService, AuthService, OauthStateService],
+  exports: [SessionService, NativeSessionService, AuthService, OauthStateService, NativeAuthCodeService],
 })
 export class AuthModule {}

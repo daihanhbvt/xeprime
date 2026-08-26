@@ -6,7 +6,9 @@ import type {
   MobileLoginInput,
   MobileLogoutInput,
   MobileRefreshInput,
+  MobilePhoneLoginInput,
   MobileSession,
+  MobileSocialExchangeInput,
   MobileTokenPair,
   RegisterInput,
   ResetPasswordInput,
@@ -53,6 +55,27 @@ export const mobileAuthApi = {
   /** Đăng nhập bằng email/SĐT + mật khẩu. */
   login: (client: ApiClient, body: MobileLoginInput): Promise<MobileSession> =>
     client.post<MobileSession>('/auth/mobile/login', body),
+  /**
+   * Đăng nhập bằng SĐT + OTP. Hai bước trước đó (`/auth/phone/send-otp`, `verify-otp`) dùng
+   * chung với web — chúng trả JSON thuần, không đụng cookie.
+   */
+  phoneLogin: (client: ApiClient, body: MobilePhoneLoginInput): Promise<MobileSession> =>
+    client.post<MobileSession>('/auth/mobile/phone/login', body),
+  /**
+   * Đổi one-time code của đăng nhập mạng xã hội lấy cặp token — ADR 0019.
+   *
+   * Luồng đầy đủ ở phía app:
+   *  1. sinh PKCE (`codeVerifier` + `codeChallenge`), GIỮ verifier trong bộ nhớ;
+   *  2. mở `GET {API}/auth/social/{provider}?client=native&code_challenge=…&redirect_uri=…`
+   *     bằng `expo-web-browser` (ASWebAuthenticationSession / Custom Tabs);
+   *  3. nhận `?code=` ở deep link rồi gọi hàm này kèm `codeVerifier`.
+   *
+   * Mã sống **60 giây** và dùng **một lần** — hỏng thì bắt đầu lại từ bước 1, đừng retry cùng mã.
+   */
+  exchangeSocialCode: (
+    client: ApiClient,
+    body: MobileSocialExchangeInput,
+  ): Promise<MobileSession> => client.post<MobileSession>('/auth/mobile/social/exchange', body),
   /**
    * Xoay refresh token. Trả cặp MỚI; token cũ chết ngay lập tức.
    *

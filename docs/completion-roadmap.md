@@ -30,6 +30,24 @@ cho tới khi ngày trong test tính theo `now` thay vì cố định.
 không đổi từ 18/08. Mock `IntersectionObserver` dùng mảng cấp module. Hướng xử lý là ổn định
 test, **không** phải đổi `role` của sản phẩm.
 
+> **26/08 (đợt 2) — BA ĐƯỜNG ĐĂNG NHẬP CHO APP NATIVE (ADR 0019 §8).** Guard toàn cục vốn đã
+> nhận cả cookie lẫn `Authorization: Bearer`, nên API nghiệp vụ không thiếu gì; chỗ hổng là các
+> endpoint **phát phiên** — chúng trả cookie, thứ app native không có chỗ chứa.
+> Thêm **`POST /auth/mobile/phone/login`** (SĐT + OTP, controller riêng ở module
+> `phone-verification` để không tạo phụ thuộc vòng với `AuthModule`) và
+> **`GET /auth/social/:provider?client=native` → one-time code → `POST /auth/mobile/social/exchange`**.
+> **Deep link mang MÃ chứ không mang token**: deep link nằm lại trong log của hệ điều hành, nên
+> một refresh token 60 ngày ở đó là bí mật dài hạn ghi ra đĩa. Mã sống 60 giây, dùng một lần,
+> và đoán sai `code_verifier` thì **đốt luôn mã**.
+> Ba lớp chặn: **PKCE app↔backend** (tách hẳn PKCE backend↔provider — Android custom scheme
+> không độc quyền), **allowlist `MOBILE_AUTH_REDIRECT_URIS`** (`redirect_uri` do client gửi ⇒ là
+> dữ liệu của kẻ tấn công cho tới khi khớp env; là danh sách vì Expo dev trả `exp://…`), và
+> **CHECK ở DB** buộc `client='native'` phải có đủ hai cột.
+> Migration `20260826170000_native_social_auth` — bảng `native_auth_codes` + 2 cột ở `oauth_states`.
+> Worker dọn cả hai bảng mỗi giờ.
+> Verify: **jest api 888/888 (66 suite)** · worker 24/24 · typecheck 17/17 · lint sạch ·
+> `migrate diff` vẫn đúng 25 câu chênh lệch cố ý.
+
 > **26/08 — ĐĂNG NHẬP GOOGLE/FACEBOOK TỰ CHỦ (ADR 0019).** Vòng OAuth chuyển từ trình duyệt về
 > SERVER: `GET /auth/social/:provider` + `/callback`, cả hai trả **302 chứ không JSON** — một lỗi
 > JSON ở đây là trang trắng giữa luồng đăng nhập. `state` + PKCE nằm ở bảng mới `oauth_states`,

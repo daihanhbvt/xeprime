@@ -69,13 +69,18 @@ curl -b jar.txt http://localhost:4000/bookings?page=1
 
 ### 2.2 App native — `Authorization: Bearer` (ADR 0017)
 
-Ba endpoint dưới nhóm `auth`, tiền tố `/auth/mobile`:
+Năm endpoint dưới nhóm `auth`, tiền tố `/auth/mobile`:
 
 | Endpoint | Trả về | Ghi chú |
 | --- | --- | --- |
 | `POST /auth/mobile/login` | `MobileSessionDto` (tokens + `MeDto`) | Email/SĐT + mật khẩu. Throttle 5 req/phút |
+| `POST /auth/mobile/phone/login` | `MobileSessionDto` | SĐT + OTP. Hai bước trước (`/auth/phone/send-otp`, `verify-otp`) dùng chung với web |
+| `POST /auth/mobile/social/exchange` | `MobileSessionDto` | Đổi one-time code của Google/Facebook. Xem §2.3 |
 | `POST /auth/mobile/refresh` | `MobileTokenPairDto` | **Xoay**: trả cặp mới, token cũ chết ngay |
 | `POST /auth/mobile/logout` | 204 | Thu hồi phiên của thiết bị. Luôn 204, kể cả token lạ |
+
+**Ba đường đăng nhập, một loại phiên.** Mọi endpoint trên đều trả cùng `MobileSessionDto` — app
+không cần biết người dùng đã vào bằng cách nào.
 
 ```bash
 # Đăng nhập → lấy access token
@@ -101,6 +106,42 @@ Quyền và tenant scope **không** nằm trong token ở cả hai đường —
 chúng, và nó đọc DB mỗi lần gọi.
 
 Cách app native cấu hình client: [`packages/api-client/README.md`](../packages/api-client/README.md).
+
+### 2.3 App native — đăng nhập Google/Facebook (ADR 0019)
+
+App **không** mở `/auth/social/:provider` như web: web kết thúc bằng `Set-Cookie`, còn app không
+có chỗ chứa cookie. Thêm `client=native` thì callback phát một **one-time code** rồi trả về deep
+link, và app đổi mã đó lấy cặp token.
+
+```ts
+// 1. PKCE — GIỮ verifier trong bộ nhớ, đừng ghi ra đĩa
+const codeVerifier = base64UrlEncode(randomBytes(32));
+const codeChallenge = base64UrlEncode(sha256(codeVerifier));
+
+// 2. Mở trình duyệt hệ thống (ASWebAuthenticationSession / Custom Tabs)
+const result = await WebBrowser.openAuthSessionAsync(
+  `${API}/auth/social/google?client=native` +
+    `&code_challenge=${codeChallenge}` +
+    `&redirect_uri=${encodeURIComponent('xeprime://auth/callback')}`,
+  'xeprime://auth/callback',
+);
+
+// 3. Đổi mã lấy phiên
+const code = new URL(result.url).searchParams.get('code');
+const session = await mobileAuthApi.exchangeSocialCode(authClient, { code, codeVerifier });
+```
+
+Bốn điều dễ vấp:
+
+- **`redirect_uri` phải nằm trong `MOBILE_AUTH_REDIRECT_URIS`** (env của API). Không khớp ⇒ trình
+  duyệt dừng ở trang web kèm `?authError=SOCIAL_STATE_INVALID`, không phải ở deep link — vì một
+  `redirect_uri` chưa qua allowlist thì không đáng tin để redirect tới.
+- **Expo dev build dùng scheme khác.** `exp://192.168.x.x:8081/--/auth/callback` phải được thêm
+  vào allowlist của API dev; nó không tự động được chấp nhận.
+- **Mã sống 60 giây, dùng một lần.** Hỏng thì làm lại từ bước 1 — đừng retry cùng một mã. Gửi sai
+  `codeVerifier` cũng **đốt luôn mã**.
+- **Lỗi cũng về deep link**: `xeprime://auth/callback?error=<mã>`. App phải đọc cả `code` lẫn
+  `error`, nếu không nó sẽ đứng im khi người dùng bấm huỷ ở màn đồng ý.
 
 
 ## 3. Đọc gì trên mỗi endpoint

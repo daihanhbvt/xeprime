@@ -53,6 +53,7 @@ model User {
   phoneVerifications         PhoneVerification[]
   passwordResets             PasswordResetToken[]
   nativeAuthSessions         NativeAuthSession[]
+  nativeAuthCodes            NativeAuthCode[]
   tenantMemberships          TenantMembership[]        @relation("membership_user")
   invitedMemberships         TenantMembership[]        @relation("membership_inviter")
   platformMemberships        PlatformMembership[]      @relation("platform_membership_user")
@@ -361,9 +362,21 @@ model OauthState {
   /// một giá trị chưa kiểm nằm trong DB là một open redirect chờ ai đó tin nó.
   redirectNext String? @map("redirect_next") @db.VarChar(512)
 
-  /// `web` | `native`. Đợt ADR 0019 luôn là `web` (callback đặt cookie httpOnly). Cột có sẵn để
-  /// app native (ADR 0017) chỉ là thêm nhánh phát one-time code, không phải một migration nữa.
+  /// `web` | `native`. `web` → callback đặt cookie httpOnly. `native` → callback phát one-time
+  /// code rồi redirect về deep link của app (ADR 0017 + 0019).
   client String @default("web") @db.VarChar(10)
+
+  /// PKCE của APP (không phải của ta với provider) — chỉ có khi `client = 'native'`.
+  ///
+  /// Hai lớp PKCE khác nhau và cần cả hai: `code_verifier` ở trên bảo vệ chặng XePrime ↔ Google,
+  /// còn cột này bảo vệ chặng APP ↔ XePrime. Trên Android custom scheme không độc quyền, nên một
+  /// app khác đăng ký `xeprime://` có thể cướp one-time code ở deep link — cướp được mà không có
+  /// `code_verifier` của app thì mã đó vô dụng.
+  appCodeChallenge String? @map("app_code_challenge") @db.VarChar(128)
+
+  /// Deep link để trả one-time code về app. ĐÃ đối chiếu allowlist `MOBILE_AUTH_REDIRECT_URIS`
+  /// trước khi ghi — giá trị chưa kiểm nằm trong DB là một open redirect chờ ai đó tin nó.
+  appRedirectUri String? @map("app_redirect_uri") @db.VarChar(512)
 
   expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
   /// Khác null = đã đổi lấy phiên. Gửi lại cùng `state` ⇒ SOCIAL_STATE_INVALID.
@@ -373,6 +386,36 @@ model OauthState {
   /// Dọn hàng hết hạn theo lô. Bảng này chỉ có ghi và xoá, không có màn hình nào đọc nó.
   @@index([expiresAt])
   @@map("oauth_states")
+}
+
+/// One-time code trả về app native sau khi OAuth xong — ADR 0019 + 0017.
+///
+/// Vì sao app KHÔNG nhận thẳng cặp token ở deep link: deep link đi qua hệ điều hành và nằm lại
+/// trong log của nó. Một refresh token 60 ngày ở đó là một bí mật dài hạn bị ghi ra đĩa. One-time
+/// code sống 60 giây, dùng một lần, và **chỉ đổi được nếu có `code_verifier` mà app giữ trong bộ
+/// nhớ** — thứ không bao giờ rời tiến trình app.
+///
+/// Lưu HASH của code, không lưu code trần (cùng kỷ luật với `native_refresh_tokens`): DB rò rỉ
+/// trong 60 giây đó cũng không đổi được phiên của ai.
+model NativeAuthCode {
+  id     String @id @db.Char(26)
+  userId String @map("user_id") @db.Char(26)
+
+  /// SHA-256 hex của code. @unique là điều kiện để `consume()` dùng-một-lần đúng cách.
+  codeHash String @map("code_hash") @db.Char(64)
+
+  /// PKCE S256 challenge do app gửi lúc bắt đầu. Đổi code phải kèm `code_verifier` khớp nó.
+  codeChallenge String @map("code_challenge") @db.VarChar(128)
+
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([codeHash])
+  @@index([expiresAt])
+  @@map("native_auth_codes")
 }
 
 /// Phiên đăng nhập của MỘT thiết bị native — ADR 0017.

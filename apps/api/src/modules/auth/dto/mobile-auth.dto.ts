@@ -121,3 +121,31 @@ export class MobileSessionDto {
   @ApiProperty({ type: MeDto })
   user!: MeDto;
 }
+
+/**
+ * `POST /auth/mobile/social/exchange` — đổi one-time code (nhận ở deep link) lấy cặp token.
+ *
+ * Đây là chặng cuối của luồng đăng nhập mạng xã hội cho app native (ADR 0019). App KHÔNG nhận
+ * token ở deep link: deep link nằm lại trong log của hệ điều hành, còn `codeVerifier` thì chỉ
+ * tồn tại trong bộ nhớ tiến trình app — nên chỉ app thật đổi được mã.
+ */
+export class MobileSocialExchangeDto {
+  @ApiProperty({ description: 'One-time code nhận được ở deep link. Sống 60 giây, dùng một lần.' })
+  @IsString()
+  @MinLength(1)
+  code!: string;
+
+  @ApiProperty({
+    description:
+      'PKCE code_verifier mà app đã sinh trước khi mở trình duyệt. Phải khớp `code_challenge` đã gửi ở bước bắt đầu.',
+  })
+  @IsString()
+  @MinLength(43)
+  @MaxLength(128)
+  codeVerifier!: string;
+
+  @ApiPropertyOptional({ type: MobileDeviceDto })
+  @IsOptional()
+  @Type(() => MobileDeviceDto)
+  device?: MobileDeviceDto;
+}

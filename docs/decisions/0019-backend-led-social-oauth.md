@@ -50,6 +50,17 @@ client secret, **không** cầm access token của provider, **không** chạy S
 Auth0/Cognito/tự làm chỉ cần viết một implementation mới." Bản mới là `SocialProvider`, và
 `AuthService.upsertUserFromIdentity` không đổi một dòng.
 
+> **Bẫy đã sập một lần, ghi lại để không sập nữa.** Query của chặng callback do PROVIDER soạn:
+> Google tự gắn `iss`, `scope`, `authuser`, `prompt`; Facebook gắn `error_reason`,
+> `error_description`. `bootstrap.ts` cài `ValidationPipe({ forbidNonWhitelisted: true })` ở phạm
+> vi **toàn cục**, mà pipe toàn cục của NestJS **luôn chạy** — `@UsePipes` ở method chỉ THÊM pipe
+> chứ không thay thế. Nên gắn một DTO vào `@Query()` của hai route này là 400 ngay lần đăng nhập
+> Google thật đầu tiên, và người dùng thấy một trang JSON.
+>
+> Cách đúng: đọc từng tham số bằng `@Query('ten')`. Metatype là `String` nên `ValidationPipe` bỏ
+> qua, và tham số lạ đơn giản là không được đọc tới. `test/social-auth-callback.spec.ts` khoá
+> điều này bằng chính `createValidationPipe()` của production, không phải một bản sao cấu hình.
+
 ### 2. Web chuyển trang cả tab, không popup
 
 Popup bị chặn mặc định ở nhiều trình duyệt và **hoàn toàn không dùng được** trong webview
@@ -131,25 +142,61 @@ xác minh (**Facebook luôn**, vì Graph API không cam kết gì về việc em
   `SOCIAL_EXCHANGE_FAILED`) về web qua `?authError=` và được dịch từ MÃ như mọi lỗi API khác
   (ADR 0012). Chúng không bao giờ đi trong một body JSON.
 
-## Chỗ cắm cho app native (chưa làm)
+## 8. App native: cả ba đường đăng nhập đều trả TOKEN, không trả cookie
 
-Thiết kế trên để mobile là phần THÊM VÀO, không phải sửa lại — cột `oauth_states.client` đã có sẵn:
+Bổ sung 26/08/2026, cùng ngày. Guard toàn cục (`auth.guard.ts`) vốn đã nhận cả cookie lẫn
+`Authorization: Bearer`, nên **toàn bộ API nghiệp vụ đã dùng được với Bearer từ trước**. Chỗ
+thiếu chỉ là các endpoint **phát phiên** — chúng trả cookie, thứ app native không có chỗ chứa.
 
-1. App mở `WebBrowser.openAuthSessionAsync(.../auth/social/google?client=native&code_challenge=…)`.
+| Đường | Web | Native |
+| --- | --- | --- |
+| Mật khẩu | `POST /auth/login` | `POST /auth/mobile/login` |
+| SĐT + OTP | `POST /auth/phone/login` | **`POST /auth/mobile/phone/login`** |
+| Google/Facebook | `GET /auth/social/:provider` → cookie | **`…?client=native` → one-time code → `POST /auth/mobile/social/exchange`** |
+
+Hai bước OTP trước đó (`send-otp`, `verify-otp`) dùng chung: chúng trả JSON thuần, không đụng cookie.
+
+### Vì sao deep link mang MÃ chứ không mang token
+
+Deep link đi qua hệ điều hành và **nằm lại trong log của nó**. Một refresh token 60 ngày ở đó là
+một bí mật dài hạn bị ghi ra đĩa. Thứ đi qua deep link vì thế là một mã trong `native_auth_codes`:
+sống **60 giây**, dùng **một lần**, và chỉ đổi được khi kèm `code_verifier` mà app giữ trong bộ
+nhớ tiến trình.
+
+Luồng đầy đủ:
+
+1. App sinh PKCE, GIỮ `codeVerifier`, mở
+   `WebBrowser.openAuthSessionAsync(.../auth/social/google?client=native&code_challenge=…&redirect_uri=…)`.
    `expo-web-browser` dùng `ASWebAuthenticationSession` (iOS) / Custom Tabs (Android) — **không
    cần native module cho phần auth**.
-2. Callback thấy `client=native` → thay vì `Set-Cookie`, mint one-time code (TTL 60s) và redirect
-   về deep link.
-3. `POST /auth/social/exchange { code, code_verifier }` → `MobileSessionDto`, dùng lại
-   `NativeSessionService.issueSession` không sửa gì.
+2. Callback thấy `client=native` → thay vì `Set-Cookie`, phát one-time code rồi redirect về deep link.
+3. `POST /auth/mobile/social/exchange { code, codeVerifier, device? }` → `MobileSessionDto`, dùng
+   lại `NativeSessionService.issueSession` không sửa một dòng.
 
-Ba điều bắt buộc khi làm bước đó:
+### Ba lớp bảo vệ, và tại sao cần cả ba
 
-- **PKCE giữa app ↔ backend**, không chỉ backend ↔ provider. Trên Android custom scheme không độc
-  quyền: app khác đăng ký `xeprime://` có thể cướp one-time code. Code bị cướp mà không có
-  `code_verifier` thì vô dụng.
+- **PKCE app ↔ backend** (`oauth_states.app_code_challenge`), tách hẳn PKCE backend ↔ provider.
+  Trên Android custom scheme không độc quyền: app khác đăng ký `xeprime://` nhận được cùng deep
+  link. Nó có `code`, nhưng không có `code_verifier`. Đoán sai verifier **đốt luôn mã** — không
+  cho thử lần hai.
+- **Allowlist `MOBILE_AUTH_REDIRECT_URIS`.** `redirect_uri` do client gửi, nên nó là dữ liệu của
+  kẻ tấn công cho tới khi khớp danh sách trong env. Thiếu bước này thì
+  `…?client=native&redirect_uri=evil://x` giao one-time code thẳng cho app của kẻ tấn công — cùng
+  loại lỗ hổng mà `isSafeNextPath` chặn ở phía web. Là danh sách vì Expo dev build trả
+  `exp://192.168.x.x:8081/--/…` chứ không phải scheme của app đã cài.
+- **CHECK ở DB** buộc `client='native'` phải có đủ cả hai cột, và `web` thì phải không có cái nào.
+  Một hàng `native` thiếu `app_redirect_uri` là một luồng đăng nhập không có đường về: app treo ở
+  trình duyệt, không lỗi nào để đọc.
+
+Lỗi ở chặng **bắt đầu** luôn về web, kể cả khi app gọi — nhánh lỗi phổ biến nhất ở đó chính là
+`redirect_uri` không qua allowlist, và redirect về một deep link chưa kiểm để "báo lỗi cho tử tế"
+là tự mở đúng lỗ hổng vừa chặn. Từ chặng **callback** trở đi thì lỗi về deep link, vì lúc đó
+`redirect_uri` đã được kiểm và app cần biết luồng đã hỏng.
+
+### Còn lại cho app (chưa làm)
+
 - **Android App Links / iOS Universal Links** thay custom scheme — hệ điều hành xác minh quyền sở
-  hữu domain.
+  hữu domain. Backend không phải đổi gì: chỉ thêm URL `https://…` vào `MOBILE_AUTH_REDIRECT_URIS`.
 - **Sign in with Apple**: App Store từ chối duyệt app iOS có Google/Facebook mà không có Apple. Là
   OIDC chuẩn nên chỉ thêm một `SocialProvider`. Lưu ý Apple chỉ trả tên/email ở **lần đăng nhập
   đầu tiên** — không lưu ngay là mất vĩnh viễn.

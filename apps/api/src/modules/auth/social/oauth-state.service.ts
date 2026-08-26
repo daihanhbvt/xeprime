@@ -20,6 +20,17 @@ export interface ConsumedOauthState {
   nonce: string;
   redirectNext: string | null;
   client: string;
+  /** Chỉ khác null khi `client = 'native'` — xem `NativeAuthCodeService`. */
+  appCodeChallenge: string | null;
+  appRedirectUri: string | null;
+}
+
+/** Ngữ cảnh riêng của app native, đi kèm khi mở luồng từ app (ADR 0019 + 0017). */
+export interface NativeOauthContext {
+  /** PKCE S256 challenge do APP sinh — khác `codeVerifier` mà ta dùng với provider. */
+  codeChallenge: string;
+  /** Deep link nhận one-time code. ĐÃ đối chiếu allowlist trước khi gọi tới đây. */
+  redirectUri: string;
 }
 
 export interface IssuedOauthState {
@@ -54,6 +65,8 @@ export class OauthStateService {
     provider: AuthProvider;
     redirectNext: string | null;
     client: string;
+    /** Bắt buộc khi `client = 'native'`; CHECK ở DB từ chối hàng thiếu nó. */
+    native?: NativeOauthContext | undefined;
   }): Promise<IssuedOauthState> {
     const state = base64Url(randomBytes(32));
     const codeVerifier = base64Url(randomBytes(32));
@@ -68,6 +81,8 @@ export class OauthStateService {
         nonce,
         redirectNext: params.redirectNext,
         client: params.client,
+        appCodeChallenge: params.native?.codeChallenge ?? null,
+        appRedirectUri: params.native?.redirectUri ?? null,
         expiresAt: new Date(Date.now() + STATE_TTL_MS),
       },
     });
@@ -111,6 +126,8 @@ export class OauthStateService {
         nonce: true,
         redirectNext: true,
         client: true,
+        appCodeChallenge: true,
+        appRedirectUri: true,
       },
     });
 
