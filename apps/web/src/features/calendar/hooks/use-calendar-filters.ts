@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import type { CalendarFilters } from '../types/calendar.types';
+import type { CalendarFilters, CalendarSort } from '../types/calendar.types';
 import { todayIsoDate } from '../utils/calendar-date.util';
 
 const DEFAULT_DAYS = 14;
@@ -10,15 +10,18 @@ const MIN_DAYS = 1;
 const MAX_DAYS = 62;
 
 /**
- * Các kiểu sắp xếp hàng xe — nhãn cho toolbar, value khớp `CALENDAR_SORT_VALUES` của backend.
+ * Các kiểu sắp xếp hàng xe — MÃ, khớp `CALENDAR_SORT_VALUES` của backend.
  * Mặc định `next_booking`: xe có lịch đang chạy/sắp tới gần nhất lên đầu.
+ *
+ * Cố ý KHÔNG mang nhãn: mã đi trong URL và lên API là dữ liệu, còn chữ hiện ra đổi theo ngôn
+ * ngữ. Toolbar tra nhãn ở `Calendar.toolbar.sort.<value>` — hook này không được biết tới chữ.
  */
-export const CALENDAR_SORT_OPTIONS = [
-  { value: 'next_booking', label: 'Lịch gần nhất' },
-  { value: 'name', label: 'Tên xe' },
-  { value: 'price_asc', label: 'Giá thấp → cao' },
-  { value: 'price_desc', label: 'Giá cao → thấp' },
-] as const;
+export const CALENDAR_SORT_VALUES = [
+  'next_booking',
+  'name',
+  'price_asc',
+  'price_desc',
+] as const satisfies readonly CalendarSort[];
 
 /**
  * Filter lịch sống ở URL, KHÔNG ở Redux — ADR 0004.
@@ -53,7 +56,7 @@ export function useCalendarFilters(): {
       vehicleType: searchParams.get('vehicleType'),
       q: searchParams.get('q'),
       // Giá trị lạ trên URL rơi về mặc định — backend cũng validate lại (IsIn).
-      sort: CALENDAR_SORT_OPTIONS.some((o) => o.value === rawSort)
+      sort: CALENDAR_SORT_VALUES.some((value) => value === rawSort)
         ? (rawSort as CalendarFilters['sort'])
         : 'next_booking',
     };

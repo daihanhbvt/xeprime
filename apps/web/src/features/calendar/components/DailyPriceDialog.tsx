@@ -3,6 +3,7 @@
 import { Alert, App, Button, DatePicker, Descriptions, Form, Input } from 'antd';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { MoneyInput } from '@/components/form/MoneyInput';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
@@ -42,6 +43,8 @@ export function DailyPriceDialog({
   state: DailyPriceDialogState | null;
   onClose: () => void;
 }) {
+  const t = useTranslations('Calendar');
+
   return (
     <ResponsiveDialog
       open={state !== null}
@@ -49,7 +52,7 @@ export function DailyPriceDialog({
       size="md"
       mobileMode="fullscreen"
       footer={null}
-      title="Đặt giá theo ngày"
+      title={t('dailyPrice.title')}
     >
       {state ? (
         <PriceForm key={`${state.vehicleId}-${state.date}`} state={state} onClose={onClose} />
@@ -59,6 +62,8 @@ export function DailyPriceDialog({
 }
 
 function PriceForm({ state, onClose }: { state: DailyPriceDialogState; onClose: () => void }) {
+  const t = useTranslations('Calendar');
+  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
 
   const { message, modal } = App.useApp();
@@ -104,11 +109,11 @@ function PriceForm({ state, onClose }: { state: DailyPriceDialogState; onClose: 
   function submit() {
     setFormError(null);
     if (rangeDays < 1 || rangeDays > MAX_RANGE_DAYS) {
-      setFormError(`Khoảng ngày tối đa ${MAX_RANGE_DAYS} ngày`);
+      setFormError(t('dailyPrice.errors.rangeTooLong', { max: MAX_RANGE_DAYS }));
       return;
     }
     if (dailyPrice == null && hourlyPrice == null) {
-      setFormError('Nhập ít nhất một giá (theo ngày hoặc theo giờ)');
+      setFormError(t('dailyPrice.errors.priceRequired'));
       return;
     }
     save.mutate(
@@ -123,7 +128,7 @@ function PriceForm({ state, onClose }: { state: DailyPriceDialogState; onClose: 
       },
       {
         onSuccess: () => {
-          message.success('Đã lưu giá riêng');
+          message.success(t('dailyPrice.saved'));
           onClose();
         },
         onError: (error) => message.error(getErrorMessage(error)),
@@ -133,19 +138,23 @@ function PriceForm({ state, onClose }: { state: DailyPriceDialogState; onClose: 
 
   function confirmRestore() {
     modal.confirm({
-      title: 'Khôi phục giá mặc định?',
-      content: `Xoá giá riêng của ${state.vehicleName} trong khoảng ${range[0].format('DD/MM')} – ${range[1].format('DD/MM')}. Giá thường/cuối tuần sẽ áp trở lại.`,
-      okText: 'Khôi phục',
+      title: t('dailyPrice.confirmRestoreTitle'),
+      content: t('dailyPrice.confirmRestoreContent', {
+        vehicle: state.vehicleName,
+        from: range[0].format('DD/MM'),
+        to: range[1].format('DD/MM'),
+      }),
+      okText: t('dailyPrice.confirmRestoreOk'),
       okButtonProps: { danger: true },
-      cancelText: 'Huỷ',
+      cancelText: tCommon('actions.cancel'),
       onOk: () =>
         remove
           .mutateAsync({ vehicleId: state.vehicleId, from, to })
           .then(({ deleted }) => {
             message.success(
               deleted > 0
-                ? `Đã khôi phục giá mặc định (${deleted} ngày)`
-                : 'Không có giá riêng nào trong khoảng này',
+                ? t('dailyPrice.restored', { count: deleted })
+                : t('dailyPrice.restoredNone'),
             );
             onClose();
           })
@@ -165,18 +174,23 @@ function PriceForm({ state, onClose }: { state: DailyPriceDialogState; onClose: 
         column={1}
         size="small"
         items={[
-          { key: 'vehicle', label: 'Xe', children: state.vehicleName },
+          { key: 'vehicle', label: t('dailyPrice.vehicle'), children: state.vehicleName },
           {
             key: 'normal',
-            label: 'Giá mặc định',
-            children: state.weekdayPrice
-              ? `${fmt.money(state.weekdayPrice)}/ngày${state.hourlyPrice ? ` · ${fmt.money(state.hourlyPrice)}/giờ` : ''}`
-              : 'Chưa cấu hình giá',
+            label: t('dailyPrice.defaultPrice'),
+            children: !state.weekdayPrice
+              ? t('dailyPrice.noDefaultPrice')
+              : state.hourlyPrice
+                ? t('dailyPrice.defaultPriceValueWithHourly', {
+                    daily: fmt.money(state.weekdayPrice),
+                    hourly: fmt.money(state.hourlyPrice),
+                  })
+                : t('dailyPrice.defaultPriceValue', { daily: fmt.money(state.weekdayPrice) }),
           },
         ]}
       />
 
-      <Form.Item label="Áp dụng cho" required>
+      <Form.Item label={t('dailyPrice.appliesTo')} required>
         <DatePicker.RangePicker
           value={range}
           format="DD/MM/YYYY"
@@ -187,53 +201,50 @@ function PriceForm({ state, onClose }: { state: DailyPriceDialogState; onClose: 
         />
       </Form.Item>
 
-      <Form.Item
-        label="Giá theo ngày"
-        tooltip="Thay cả giá thường lẫn giá cuối tuần của đúng các ngày này"
-      >
+      <Form.Item label={t('dailyPrice.daily')} tooltip={t('dailyPrice.dailyTooltip')}>
         <MoneyInput
           value={dailyPrice ?? undefined}
           onChange={(v) => setDailyPrice(v ?? null)}
           min={0}
           step={50000}
-          addonAfter="đ/ngày"
+          addonAfter={t('dailyPrice.dailyAddon')}
           className={styles.moneyInput}
         />
       </Form.Item>
 
       {state.hourlyPrice != null ? (
-        <Form.Item label="Giá theo giờ">
+        <Form.Item label={t('dailyPrice.hourly')}>
           <MoneyInput
             value={hourlyPrice ?? undefined}
             onChange={(v) => setHourlyPrice(v ?? null)}
             min={0}
             step={10000}
-            addonAfter="đ/giờ"
+            addonAfter={t('dailyPrice.hourlyAddon')}
             className={styles.moneyInput}
           />
         </Form.Item>
       ) : null}
 
-      <Form.Item label="Ghi chú">
+      <Form.Item label={t('dailyPrice.note')}>
         <Input
           value={note}
           onChange={(e) => setNote(e.target.value)}
           maxLength={255}
-          placeholder="Vd: Giá lễ 2/9"
+          placeholder={t('dailyPrice.notePlaceholder')}
         />
       </Form.Item>
 
       <div className={styles.actions}>
         {hasOverrides ? (
           <Button danger loading={remove.isPending} onClick={confirmRestore}>
-            Khôi phục giá mặc định
+            {t('dailyPrice.restore')}
           </Button>
         ) : null}
         <Button onClick={onClose} disabled={save.isPending}>
-          Huỷ
+          {tCommon('actions.cancel')}
         </Button>
         <Button type="primary" htmlType="submit" loading={save.isPending}>
-          Lưu giá
+          {t('dailyPrice.submit')}
         </Button>
       </div>
     </Form>

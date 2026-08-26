@@ -73,6 +73,12 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
         description: 'Danh mục hãng/dòng xe dùng chung khi đăng xe và khi lọc tìm kiếm.',
       },
       { name: 'locations', description: 'Tỉnh/thành và khu vực dùng cho địa chỉ và bộ lọc.' },
+      {
+        name: 'holidays',
+        description:
+          'Lịch nghỉ lễ Việt Nam, đồng bộ mỗi ngày từ Google Calendar bởi `apps/worker`. CHỈ ĐỌC ' +
+          'và chỉ để HIỂN THỊ: ngày lễ không khoá xe, không đổi giá, không chặn đặt xe (ADR 0014).',
+      },
     ],
   },
   {

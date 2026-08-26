@@ -1,17 +1,23 @@
 'use client';
 
 import { Button, Segmented, Select, Tooltip } from 'antd';
-import { ArrowLeftOutlined, LeftOutlined, RightOutlined, SortAscendingOutlined } from '@ant-design/icons';
+import {
+  ArrowLeftOutlined,
+  LeftOutlined,
+  RightOutlined,
+  SortAscendingOutlined,
+} from '@ant-design/icons';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { VEHICLE_TYPE, VEHICLE_TYPE_LABEL } from '@xeprime/types';
+import { VEHICLE_TYPE } from '@xeprime/types';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { isSafeNextPath } from '@/features/auth/safe-next';
 import { CALENDAR_BACK_PARAM } from '@/features/vehicles/calendar-link';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
-import { CALENDAR_SORT_OPTIONS, useCalendarFilters } from '../hooks/use-calendar-filters';
+import { CALENDAR_SORT_VALUES, useCalendarFilters } from '../hooks/use-calendar-filters';
 import type { CalendarSort } from '../types/calendar.types';
 import { todayIsoDate } from '../utils/calendar-date.util';
 import styles from './CalendarToolbar.module.css';
@@ -30,6 +36,8 @@ export function CalendarToolbar() {
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const tCommon = useTranslations('Common');
+  const t = useTranslations('Calendar');
+  const domainLabel = useDomainLabel();
 
   /*
    * Đường quay lại chỗ vừa đi ra (hộp thư yêu cầu thuê, hồ sơ xe…). Chỉ hiện khi người dùng
@@ -51,42 +59,40 @@ export function CalendarToolbar() {
     setFilters({ from: start.add(direction * filters.days, 'day').format('YYYY-MM-DD') });
 
   // Mobile: thêm khoảng 3 ngày (ô rất rộng, xem cận cảnh) và bỏ 30 ngày (không đọc nổi ở 390px).
-  const dayOptions = isMobile
-    ? [
-        { label: '3 ngày', value: 3 },
-        { label: '7 ngày', value: 7 },
-        { label: '14 ngày', value: 14 },
-      ]
-    : [
-        { label: '7 ngày', value: 7 },
-        { label: '14 ngày', value: 14 },
-        { label: '30 ngày', value: 30 },
-      ];
+  const dayOptions = (isMobile ? [3, 7, 14] : [7, 14, 30]).map((value) => ({
+    label: t('toolbar.dayRange', { count: value }),
+    value,
+  }));
 
   return (
     <div className={styles.toolbar}>
       <div className={styles.filters}>
         {backHref ? (
           <Link href={backHref} className={styles.back}>
-            <Button icon={<ArrowLeftOutlined aria-hidden="true" />}>{tCommon('actions.back')}</Button>
+            <Button icon={<ArrowLeftOutlined aria-hidden="true" />}>
+              {tCommon('actions.back')}
+            </Button>
           </Link>
         ) : null}
 
         <AutoSearchInput
-          placeholder="Tìm xe, mã hoặc biển số"
+          placeholder={t('toolbar.searchPlaceholder')}
           value={filters.q ?? ''}
           onSearch={(value) => setFilters({ q: value || null })}
           className={styles.search}
-          aria-label="Tìm xe trên lịch"
+          aria-label={t('toolbar.searchAriaLabel')}
         />
 
         <Segmented
           value={filters.vehicleType ?? ALL}
           onChange={(value) => setFilters({ vehicleType: value === ALL ? null : String(value) })}
           options={[
-            { label: 'Tất cả', value: ALL },
-            { label: VEHICLE_TYPE_LABEL[VEHICLE_TYPE.CAR], value: VEHICLE_TYPE.CAR },
-            { label: VEHICLE_TYPE_LABEL[VEHICLE_TYPE.MOTORBIKE], value: VEHICLE_TYPE.MOTORBIKE },
+            { label: t('toolbar.allVehicleTypes'), value: ALL },
+            { label: domainLabel('vehicleType', VEHICLE_TYPE.CAR), value: VEHICLE_TYPE.CAR },
+            {
+              label: domainLabel('vehicleType', VEHICLE_TYPE.MOTORBIKE),
+              value: VEHICLE_TYPE.MOTORBIKE,
+            },
           ]}
         />
 
@@ -94,10 +100,13 @@ export function CalendarToolbar() {
         <Select<CalendarSort>
           value={filters.sort}
           onChange={(value) => setFilters({ sort: value === 'next_booking' ? null : value })}
-          options={[...CALENDAR_SORT_OPTIONS]}
+          options={CALENDAR_SORT_VALUES.map((value) => ({
+            value,
+            label: t(`toolbar.sort.${value}`),
+          }))}
           prefix={<SortAscendingOutlined />}
           className={styles.sortSelect}
-          aria-label="Sắp xếp hàng xe"
+          aria-label={t('toolbar.sortAriaLabel')}
         />
       </div>
 
@@ -108,21 +117,21 @@ export function CalendarToolbar() {
           options={dayOptions}
         />
 
-        <Button onClick={() => setFilters({ from: todayIsoDate() })}>Hôm nay</Button>
+        <Button onClick={() => setFilters({ from: todayIsoDate() })}>{t('toolbar.today')}</Button>
 
-        <span className={styles.pager} role="group" aria-label="Điều hướng khoảng xem">
-          <Tooltip title={`Lùi ${filters.days} ngày`}>
+        <span className={styles.pager} role="group" aria-label={t('toolbar.pagerAriaLabel')}>
+          <Tooltip title={t('toolbar.previousRange', { count: filters.days })}>
             <Button
               icon={<LeftOutlined />}
               onClick={() => shift(-1)}
-              aria-label={`Lùi ${filters.days} ngày`}
+              aria-label={t('toolbar.previousRange', { count: filters.days })}
             />
           </Tooltip>
-          <Tooltip title={`Tiến ${filters.days} ngày`}>
+          <Tooltip title={t('toolbar.nextRange', { count: filters.days })}>
             <Button
               icon={<RightOutlined />}
               onClick={() => shift(1)}
-              aria-label={`Tiến ${filters.days} ngày`}
+              aria-label={t('toolbar.nextRange', { count: filters.days })}
             />
           </Tooltip>
         </span>

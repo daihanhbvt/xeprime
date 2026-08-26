@@ -2,6 +2,7 @@
 
 import { App, Button, Descriptions, Skeleton } from 'antd';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { PERMISSION, VEHICLE_BLOCK_REASON_META, type VehicleBlockReason } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -34,6 +35,8 @@ export function VehicleBlockDetailDialog({
   onEdit: (block: VehicleBlock) => void;
 }) {
   const { has } = usePermissions();
+  const t = useTranslations('Calendar');
+  const tCommon = useTranslations('Common');
   const { modal, message } = App.useApp();
   const canManage = has(PERMISSION.VEHICLE_BLOCK_SCHEDULE);
   const remove = useDeleteVehicleBlock();
@@ -47,15 +50,15 @@ export function VehicleBlockDetailDialog({
 
   function confirmDelete(data: VehicleBlock) {
     modal.confirm({
-      title: 'Gỡ khoá xe?',
-      content: `${data.vehicleName} sẽ nhận đặt lại trong khoảng thời gian này.`,
-      okText: 'Gỡ khoá',
+      title: t('blockDetail.confirmReleaseTitle'),
+      content: t('blockDetail.confirmReleaseContent', { vehicle: data.vehicleName }),
+      okText: t('blockDetail.release'),
       okButtonProps: { danger: true },
-      cancelText: 'Huỷ',
+      cancelText: tCommon('actions.cancel'),
       onOk: () =>
         remove.mutateAsync(data.id).then(
           () => {
-            message.success('Đã gỡ khoá xe');
+            message.success(t('blockDetail.released'));
             onClose();
           },
           (error: unknown) => {
@@ -68,15 +71,21 @@ export function VehicleBlockDetailDialog({
   const data = block.data;
 
   return (
-    <ResponsiveDialog open={open} onClose={onClose} size="md" title="Lịch khoá xe" footer={null}>
+    <ResponsiveDialog
+      open={open}
+      onClose={onClose}
+      size="md"
+      title={t('blockDetail.title')}
+      footer={null}
+    >
       {block.isLoading ? (
         <Skeleton active paragraph={{ rows: 4 }} />
       ) : block.isError || !data ? (
         <EmptyState
           variant="empty"
-          title="Không tìm thấy lịch khoá"
-          description="Lịch khoá có thể vừa được gỡ — lưới lịch sẽ tự cập nhật."
-          action={<Button onClick={onClose}>Đóng</Button>}
+          title={t('blockDetail.notFoundTitle')}
+          description={t('blockDetail.notFoundDescription')}
+          action={<Button onClick={onClose}>{tCommon('actions.close')}</Button>}
         />
       ) : (
         <>
@@ -86,43 +95,52 @@ export function VehicleBlockDetailDialog({
             items={[
               {
                 key: 'vehicle',
-                label: 'Xe',
+                label: t('blockDetail.vehicle'),
                 children: data.vehiclePlate
                   ? `${data.vehicleName} · ${data.vehiclePlate}`
                   : data.vehicleName,
               },
               {
                 key: 'period',
-                label: 'Thời gian',
-                children: `${formatDateTime(data.startAt)} → ${formatDateTime(data.endAt)}`,
+                label: t('blockDetail.period'),
+                children: t('blockDetail.periodValue', {
+                  start: formatDateTime(data.startAt),
+                  end: formatDateTime(data.endAt),
+                }),
               },
               {
                 key: 'reason',
-                label: 'Lý do',
+                label: t('blockDetail.reason'),
                 children: (
                   <StatusTag
                     value={data.reason as VehicleBlockReason}
-                    meta={VEHICLE_BLOCK_REASON_META} group="vehicleBlockReason"
+                    meta={VEHICLE_BLOCK_REASON_META}
+                    group="vehicleBlockReason"
                   />
                 ),
               },
-              ...(data.note ? [{ key: 'note', label: 'Ghi chú', children: data.note }] : []),
+              ...(data.note
+                ? [{ key: 'note', label: t('blockDetail.note'), children: data.note }]
+                : []),
               {
                 key: 'created',
-                label: 'Tạo bởi',
-                children: `${data.createdByName ?? 'Không rõ'} · ${formatDateTime(data.createdAt)}`,
+                label: t('blockDetail.createdBy'),
+                children: t('blockDetail.createdByValue', {
+                  name: data.createdByName ?? t('blockDetail.unknownAuthor'),
+                  at: formatDateTime(data.createdAt),
+                }),
               },
             ]}
           />
           <div className={styles.actions}>
-            <Button onClick={onClose}>Đóng</Button>
+            <Button onClick={onClose}>{tCommon('actions.close')}</Button>
             {canManage ? (
               <>
                 <Button danger loading={remove.isPending} onClick={() => confirmDelete(data)}>
-                  Gỡ khoá
+                  {t('blockDetail.release')}
                 </Button>
                 <Button type="primary" onClick={() => onEdit(data)}>
-                  Sửa
+                  {t('blockDetail.edit')}
                 </Button>
               </>
             ) : null}

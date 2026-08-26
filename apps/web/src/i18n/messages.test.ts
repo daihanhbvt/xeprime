@@ -89,7 +89,13 @@ describe('cú pháp ICU', () => {
     const en = flatten(enMessages);
     const variables = (message: string) => {
       const names = new Set<string>();
-      const walk = (nodes: readonly { type: number; value?: unknown; options?: Record<string, { value: unknown }> }[]) => {
+      const walk = (
+        nodes: readonly {
+          type: number;
+          value?: unknown;
+          options?: Record<string, { value: unknown }>;
+        }[],
+      ) => {
         for (const node of nodes) {
           if (node.type !== 0 && typeof node.value === 'string') names.add(node.value);
           if (node.options) {
@@ -104,7 +110,7 @@ describe('cú pháp ICU', () => {
     };
 
     const mismatched = Object.keys(vi).filter(
-      (key) => variables(String(vi[key])) .join() !== variables(String(en[key])).join(),
+      (key) => variables(String(vi[key])).join() !== variables(String(en[key])).join(),
     );
     expect(mismatched).toEqual([]);
   });

@@ -172,6 +172,16 @@
     "pickup": "Giao xe",
     "return": "Nhận xe trả"
   },
+  "holidayEventType": {
+    "public_holiday": "Nghỉ lễ chính thức",
+    "observance": "Ngày kỷ niệm",
+    "season": "Tiết trong năm",
+    "other": "Ngày đặc biệt"
+  },
+  "holidaySource": {
+    "google_calendar": "Lịch Google",
+    "manual": "Nhập tay"
+  },
   "inviteStatus": {
     "pending": "Đang chờ",
     "accepted": "Đã tham gia",

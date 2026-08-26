@@ -109,6 +109,52 @@ export class OccupancyService {
   }
 
   /**
+   * Cặp (xe, ngày) ĐANG BẬN trong một khoảng, cho cả một nhóm xe cùng lúc.
+   *
+   * Dùng cho thao tác "khoá toàn bộ xe trong ngày": nó phải biết TRƯỚC xe nào ngày nào không
+   * khoá được, vừa để hiện bảng xem trước trung thực, vừa để chỉ ghi những dòng có cơ hội thành
+   * công — một `INSERT` vi phạm `EXCLUDE USING gist` sẽ huỷ trọn transaction, kéo theo cả những
+   * xe hoàn toàn rảnh.
+   *
+   * ADR 0006 vẫn nguyên vẹn: đây KHÔNG phải cơ chế bảo vệ, chỉ là cách CHỌN ứng viên. Constraint
+   * vẫn chạy trên từng dòng ghi, và nếu có ai đặt xen vào giữa preview và lúc lưu thì transaction
+   * rollback — không có trạng thái ghi dở.
+   *
+   * Trả về khoá `"<vehicleId>|<YYYY-MM-DD>"` (ngày local Việt Nam) để caller tra O(1).
+   */
+  async listBusyVehicleDays(
+    tenantId: string,
+    vehicleIds: readonly string[],
+    startAt: Date,
+    endAt: Date,
+  ): Promise<Set<string>> {
+    if (vehicleIds.length === 0) return new Set();
+
+    /*
+     * `generate_series` cắt khoảng bận thành từng NGÀY LOCAL: một đơn thuê 3 ngày chặn đúng 3 ô
+     * lịch, không phải một ô. Ép về `Asia/Ho_Chi_Minh` ngay trong SQL vì ranh giới ngày là ranh
+     * giới của người dùng, không phải của UTC.
+     */
+    const rows = await this.prisma.$queryRaw<Array<{ key: string }>>`
+      SELECT DISTINCT o.vehicle_id || '|' || to_char(d.day, 'YYYY-MM-DD') AS key
+      FROM vehicle_occupancies o
+      CROSS JOIN LATERAL generate_series(
+        date_trunc('day', greatest(lower(o.period), ${startAt}) AT TIME ZONE 'Asia/Ho_Chi_Minh'),
+        date_trunc(
+          'day',
+          (least(upper(o.period), ${endAt}) - interval '1 microsecond') AT TIME ZONE 'Asia/Ho_Chi_Minh'
+        ),
+        interval '1 day'
+      ) AS d(day)
+      WHERE o.tenant_id = ${tenantId}
+        AND o.vehicle_id = ANY(${[...vehicleIds]}::char(26)[])
+        AND o.period && tstzrange(${startAt}, ${endAt}, '[)')
+    `;
+
+    return new Set(rows.map((r) => r.key));
+  }
+
+  /**
    * Preview trùng lịch cho UX (`POST /calendar/check-conflict`).
    *
    * ADR 0006: đây KHÔNG phải cơ chế bảo vệ. Kết quả có thể cũ ngay khi vừa trả về —

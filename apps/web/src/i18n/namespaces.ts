@@ -45,6 +45,7 @@ export const MESSAGE_NAMESPACES = [
   { file: 'shop', namespace: 'Shop' },
   { file: 'booking-requests', namespace: 'BookingRequests' },
   { file: 'bookings', namespace: 'Bookings' },
+  { file: 'calendar', namespace: 'Calendar' },
   { file: 'vehicles', namespace: 'Vehicles' },
   { file: 'branches', namespace: 'Branches' },
   { file: 'customers', namespace: 'Customers' },

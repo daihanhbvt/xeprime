@@ -37,6 +37,30 @@ export type SaveDailyPricesInput = Schemas['SaveDailyPricesDto'];
 /** Báo giá nội bộ (`/calendar/quote`) — cùng shape với báo giá công khai. */
 export type CalendarQuote = Schemas['QuoteBreakdownDto'];
 
+/**
+ * Thao tác HÀNG LOẠT cho một khoảng ngày — khoá hoặc đặt giá cả đội xe từ thẻ ngày trên lịch.
+ *
+ * `BulkDayPreview` là nguồn dữ liệu của CẢ hai dialog: nó trả giá NIÊM YẾT của từng xe chứ
+ * không trả giá đã tính, vì phép tính nằm ở `planBulkDayPrices` (@xeprime/domain) mà cả client
+ * lẫn server cùng gọi — bảng xem trước và dòng ghi xuống DB do đó không thể lệch nhau.
+ */
+export type BulkDayPreview = Schemas['BulkDayPreviewDto'];
+export type BulkDayVehicle = Schemas['BulkDayVehicleDto'];
+export type BulkDayBlockResult = Schemas['BulkDayBlockResultDto'];
+export type BulkDayPriceResult = Schemas['BulkDayPriceResultDto'];
+export type BulkDayBlockInput = Schemas['BulkDayBlockDto'];
+export type BulkDayPriceInput = Schemas['BulkDayPriceDto'];
+
+/**
+ * Ngày lễ — lớp thông tin chồng lên lưới, KHÔNG phải một loại event.
+ *
+ * Cố ý không gộp vào `CalendarEvent`: event chiếm chỗ của một chiếc xe cụ thể và có thể mở ra
+ * chi tiết; ngày lễ chỉ tô một cột và không thuộc xe nào. `endDate` là ngày CUỐI CÙNG
+ * (inclusive) — backend đã xử lý bẫy end-exclusive của nguồn dữ liệu.
+ */
+export type Holiday = Schemas['HolidayDto'];
+export type HolidayList = Schemas['HolidayListDto'];
+
 /** Khoảng ngày đang hiển thị. Nửa mở `[start, end)` giống ADR 0006. */
 export interface CalendarRange {
   startAt: Date;

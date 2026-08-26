@@ -8154,6 +8154,753 @@
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session)."
       }
     },
+    "/calendar/bulk-day/preview": {
+      "get": {
+        "description": "Trả giá NIÊM YẾT của từng xe và những ngày xe đang bận. Phép tính giá mới nằm ở hàm thuần `planBulkDayPrices` của @xeprime/domain — client và server dùng chung, nên bảng xem trước và dòng ghi xuống DB không thể lệch nhau.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `calendar.view` (đọc từ DB mỗi request, không nằm trong session).",
+        "operationId": "BulkDayController_preview",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Ngày đầu khoảng (YYYY-MM-DD, giờ VN)",
+            "schema": {
+              "example": "2026-08-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Ngày cuối khoảng, INCLUSIVE",
+            "schema": {
+              "example": "2026-09-02",
+              "type": "string"
+            }
+          },
+          {
+            "name": "vehicleType",
+            "required": false,
+            "in": "query",
+            "description": "Lọc theo loại xe, khớp bộ lọc trên lưới lịch",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "branchId",
+            "required": false,
+            "in": "query",
+            "description": "Chi nhánh đang chọn ở thanh trên",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Từ khoá tên/biển số/mã xe",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BulkDayPreviewDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Xem trước tập xe bị ảnh hưởng bởi một thao tác hàng loạt",
+        "tags": [
+          "calendar"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/calendar/bulk-day/blocks": {
+      "post": {
+        "description": "Chỉ khoá những cặp (xe, ngày) đang RẢNH — xe có đơn thì bỏ qua đúng ngày đó (ADR 0006). Kết quả nói rõ bao nhiêu xe khoá đủ, khoá một phần, hoặc không khoá được ngày nào. Mọi dòng mang chung một `batchId` để gỡ lại được.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session).",
+        "operationId": "BulkDayController_blockAll",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDayBlockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BulkDayBlockResultDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Khoá mọi xe được chọn trong khoảng ngày",
+        "tags": [
+          "calendar"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/calendar/bulk-day/blocks/{batchId}": {
+      "delete": {
+        "description": "Gỡ ĐÚNG những dòng lô đó tạo ra. Lịch khoá do người dùng đặt tay không bị đụng tới.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `vehicles.block_schedule` (đọc từ DB mỗi request, không nằm trong session).",
+        "operationId": "BulkDayController_releaseBatch",
+        "parameters": [
+          {
+            "name": "batchId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BulkDayReleaseResultDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi tương ứng.\n\nMã lỗi: `NOT_FOUND`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy dữ liệu"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Gỡ trọn một lô khoá hàng loạt",
+        "tags": [
+          "calendar"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/calendar/bulk-day/prices": {
+      "put": {
+        "description": "`percent` tính trên giá niêm yết của TỪNG xe cho ĐÚNG ngày đó (giá cuối tuần nếu là T7/CN), và luôn lấy giá niêm yết làm gốc — nên bấm nhiều lần không cộng dồn. Xe chưa cấu hình giá bị bỏ qua thay vì bị đặt thành 0₫.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).",
+        "operationId": "BulkDayController_priceAll",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDayPriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BulkDayPriceResultDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Đặt giá riêng cho mọi xe được chọn trong khoảng ngày",
+        "tags": [
+          "calendar"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/calendar/bulk-day/prices/restore": {
+      "post": {
+        "description": "Xoá bản ghi đè theo ngày; giá thường/cuối tuần áp trở lại ngay ở mọi báo giá.\n\n**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** gian hàng — `tenantId` lấy từ membership của phiên đăng nhập, KHÔNG nhận từ body/query.\n\n**Quyền yêu cầu:** `vehicles.update` (đọc từ DB mỗi request, không nằm trong session).",
+        "operationId": "BulkDayController_restorePrices",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDayPriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BulkDayPriceResultDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa đăng nhập, session cookie thiếu hoặc đã hết hạn.\n\nMã lỗi: `UNAUTHENTICATED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "UNAUTHENTICATED",
+                    "message": "Chưa đăng nhập hoặc phiên đã hết hạn"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Đã đăng nhập nhưng không đủ quyền hoặc sai phạm vi.\n\nMã lỗi: `MISSING_PERMISSION` · `NO_TENANT_SCOPE` · `FORBIDDEN`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "MISSING_PERMISSION",
+                    "message": "Tài khoản không có quyền thực hiện thao tác này"
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Xung đột dữ liệu — trùng bản ghi đã có, hoặc trùng lịch xe với đơn khác.\n\nMã lỗi: `CONFLICT` · `BOOKING_SCHEDULE_CONFLICT`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "CONFLICT",
+                    "message": "Dữ liệu đã tồn tại"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Khôi phục giá mặc định cho mọi xe được chọn trong khoảng ngày",
+        "tags": [
+          "calendar"
+        ],
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/vehicles": {
       "get": {
         "operationId": "VehiclesController_list",
@@ -37628,6 +38375,107 @@
         ],
         "description": "**Truy cập:** cần đăng nhập (httpOnly session cookie, ADR 0002).\n\n**Phạm vi:** nền tảng — chỉ tài khoản `platform_admin` / `platform_staff`.\n\n**Quyền yêu cầu:** `platform.banners.manage` (đọc từ DB mỗi request, không nằm trong session)."
       }
+    },
+    "/holidays": {
+      "get": {
+        "description": "Lọc theo OVERLAP: một kỳ nghỉ nhiều ngày vắt qua biên khoảng vẫn được trả về. `endDate` là ngày CUỐI CÙNG (inclusive). Chưa cấu hình đồng bộ thì `items` rỗng, không phải lỗi.\n\n**Truy cập:** công khai — không cần đăng nhập.",
+        "operationId": "HolidaysController_list",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Ngày đầu khoảng (YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-04-25",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Ngày cuối khoảng, INCLUSIVE (YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-05-05",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/HolidayListDto"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu gửi lên không hợp lệ (chi tiết ở `error.details`).\n\nMã lỗi: `VALIDATION_FAILED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "VALIDATION_FAILED",
+                    "message": "Dữ liệu gửi lên không hợp lệ"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn 120 request / 60 giây.\n\nMã lỗi: `RATE_LIMITED`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "RATE_LIMITED",
+                    "message": "Vượt giới hạn số request"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Lỗi không lường trước phía server.\n\nMã lỗi: `INTERNAL_ERROR`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorDto"
+                },
+                "example": {
+                  "error": {
+                    "code": "INTERNAL_ERROR",
+                    "message": "Có lỗi xảy ra, vui lòng thử lại"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ngày lễ giao với một khoảng ngày",
+        "tags": [
+          "holidays"
+        ],
+        "security": []
+      }
     }
   },
   "info": {
@@ -37680,6 +38528,10 @@
     {
       "name": "locations",
       "description": "Tỉnh/thành và khu vực dùng cho địa chỉ và bộ lọc."
+    },
+    {
+      "name": "holidays",
+      "description": "Lịch nghỉ lễ Việt Nam, đồng bộ mỗi ngày từ Google Calendar bởi `apps/worker`. CHỈ ĐỌC và chỉ để HIỂN THỊ: ngày lễ không khoá xe, không đổi giá, không chặn đặt xe (ADR 0014)."
     },
     {
       "name": "tenants",
@@ -40881,6 +41733,234 @@
           "endAt",
           "reason",
           "expectedRowVersion"
+        ]
+      },
+      "BulkDayVehicleDto": {
+        "type": "object",
+        "properties": {
+          "vehicleId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plateNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "vehicleType": {
+            "type": "string"
+          },
+          "weekdayPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá ngày thường (chuỗi, ADR 0007)"
+          },
+          "weekendPrice": {
+            "type": "string",
+            "nullable": true,
+            "description": "Giá cuối tuần; null = dùng giá thường"
+          },
+          "busyDates": {
+            "description": "Những ngày (YYYY-MM-DD) xe đang BẬN trong khoảng — không khoá được",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "vehicleId",
+          "name",
+          "vehicleType",
+          "busyDates"
+        ]
+      },
+      "BulkDayPreviewDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "dayCount": {
+            "type": "number",
+            "description": "Số ngày trong khoảng"
+          },
+          "vehicles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkDayVehicleDto"
+            }
+          },
+          "activeBlockBatchId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Mã lô khoá hàng loạt đang phủ ĐÚNG khoảng này — công tắc trên lịch đang BẬT nếu khác null"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "dayCount",
+          "vehicles"
+        ]
+      },
+      "BulkDayBlockDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "example": "2026-08-31"
+          },
+          "to": {
+            "type": "string",
+            "example": "2026-09-02"
+          },
+          "vehicleIds": {
+            "description": "ID xe; backend vẫn kiểm từng chiếc thuộc gian hàng",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "unplanned_maintenance",
+              "repair",
+              "internal_use",
+              "not_for_rent",
+              "other"
+            ]
+          },
+          "note": {
+            "type": "string",
+            "description": "Ghi chú áp cho mọi dòng của lô"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "vehicleIds",
+          "reason"
+        ]
+      },
+      "BulkDayBlockResultDto": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "description": "Mã lô — dùng để GỠ lại đúng những dòng vừa tạo"
+          },
+          "blockedDays": {
+            "type": "number",
+            "description": "Số dòng khoá đã tạo (một dòng cho mỗi cặp xe × ngày)"
+          },
+          "fullyBlockedVehicles": {
+            "type": "number",
+            "description": "Số xe được khoá đủ MỌI ngày trong khoảng"
+          },
+          "partiallyBlockedVehicles": {
+            "type": "number",
+            "description": "Số xe chỉ khoá được một phần số ngày"
+          },
+          "skippedVehicles": {
+            "type": "number",
+            "description": "Số xe không khoá được ngày nào (bận trọn khoảng)"
+          }
+        },
+        "required": [
+          "batchId",
+          "blockedDays",
+          "fullyBlockedVehicles",
+          "partiallyBlockedVehicles",
+          "skippedVehicles"
+        ]
+      },
+      "BulkDayReleaseResultDto": {
+        "type": "object",
+        "properties": {
+          "released": {
+            "type": "number",
+            "description": "Số dòng khoá đã gỡ"
+          }
+        },
+        "required": [
+          "released"
+        ]
+      },
+      "BulkDayPriceDto": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "example": "2026-08-31"
+          },
+          "to": {
+            "type": "string",
+            "example": "2026-09-02"
+          },
+          "vehicleIds": {
+            "description": "ID xe; backend vẫn kiểm từng chiếc thuộc gian hàng",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "percent",
+              "fixed"
+            ],
+            "description": "`percent` = tăng/giảm theo giá niêm yết của TỪNG xe (mặc định của giao diện). `fixed` = một con số cho mọi xe — chỉ hợp lý khi nhóm chọn hẹp."
+          },
+          "percent": {
+            "type": "number",
+            "description": "Dùng với mode=percent. Âm = giảm giá.",
+            "minimum": -90,
+            "maximum": 500
+          },
+          "fixedPrice": {
+            "type": "string",
+            "description": "Dùng với mode=fixed. Chuỗi số nguyên VND (ADR 0007)."
+          },
+          "roundStep": {
+            "type": "number",
+            "description": "Bước làm tròn, mặc định 10000",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "vehicleIds",
+          "mode"
+        ]
+      },
+      "BulkDayPriceResultDto": {
+        "type": "object",
+        "properties": {
+          "updatedDays": {
+            "type": "number",
+            "description": "Số bản ghi đè giá đã ghi (xe × ngày)"
+          },
+          "updatedVehicles": {
+            "type": "number",
+            "description": "Số xe thực sự được đặt giá"
+          },
+          "skippedVehicles": {
+            "type": "number",
+            "description": "Số xe bị bỏ qua vì chưa cấu hình giá gốc"
+          }
+        },
+        "required": [
+          "updatedDays",
+          "updatedVehicles",
+          "skippedVehicles"
         ]
       },
       "VehicleBranchSummaryDto": {
@@ -51834,6 +52914,77 @@
           }
         }
       },
+      "HolidayDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01K3V9B0000000000000000000"
+          },
+          "startDate": {
+            "type": "string",
+            "example": "2026-04-30",
+            "description": "Ngày đầu tiên (YYYY-MM-DD, giờ Việt Nam)"
+          },
+          "endDate": {
+            "type": "string",
+            "example": "2026-04-30",
+            "description": "Ngày CUỐI CÙNG của kỳ nghỉ — INCLUSIVE. Một ngày lễ đúng một ngày có startDate = endDate."
+          },
+          "name": {
+            "type": "string",
+            "example": "Ngày Giải phóng miền Nam"
+          },
+          "description": {
+            "type": "string",
+            "example": "Ngày lễ công cộng",
+            "nullable": true
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "public_holiday",
+              "observance",
+              "season",
+              "other"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "google_calendar",
+              "manual"
+            ]
+          },
+          "syncedAt": {
+            "type": "string",
+            "description": "Lượt đồng bộ gần nhất chạm tới bản ghi này (ISO-8601 UTC)"
+          }
+        },
+        "required": [
+          "id",
+          "startDate",
+          "endDate",
+          "name",
+          "eventType",
+          "source",
+          "syncedAt"
+        ]
+      },
+      "HolidayListDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HolidayDto"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
       "ApiErrorBodyDto": {
         "type": "object",
         "properties": {
@@ -51892,7 +53043,8 @@
         "public-reviews",
         "public-banners",
         "catalog",
-        "locations"
+        "locations",
+        "holidays"
       ]
     },
     {

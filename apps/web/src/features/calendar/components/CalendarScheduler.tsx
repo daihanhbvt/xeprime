@@ -1,27 +1,54 @@
 'use client';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Alert, Button, Popover, Skeleton } from 'antd';
+import { Alert, App, Button, Popover, Skeleton, Switch, Tag } from 'antd';
 import {
-  CarOutlined, CloseOutlined, LeftOutlined, LockOutlined, RightOutlined, ToolOutlined, } from '@ant-design/icons';
+  CalendarOutlined,
+  CarOutlined,
+  CloseOutlined,
+  DollarOutlined,
+  FlagFilled,
+  LeftOutlined,
+  LockOutlined,
+  RightOutlined,
+  ToolOutlined,
+} from '@ant-design/icons';
 import { useLayoutEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
-  BOOKING_STATUS_META, OCCUPANCY_SOURCE_TYPE, OCCUPANCY_SOURCE_TYPE_META, PERMISSION, VEHICLE_BLOCK_REASON_META, VEHICLE_OPERATION_STATUS, VEHICLE_OPERATION_STATUS_META, type BookingStatus, type OccupancySourceType, type VehicleBlockReason, } from '@xeprime/types';
+  BOOKING_STATUS_META,
+  HOLIDAY_EVENT_TYPE_META,
+  OCCUPANCY_SOURCE_TYPE,
+  OCCUPANCY_SOURCE_TYPE_META,
+  PERMISSION,
+  VEHICLE_BLOCK_REASON,
+  VEHICLE_BLOCK_REASON_META,
+  VEHICLE_OPERATION_STATUS,
+  VEHICLE_OPERATION_STATUS_META,
+  type BookingStatus,
+  type HolidayEventType,
+  type OccupancySourceType,
+  type VehicleBlockReason,
+} from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { StaffBookingDialog } from '@/features/booking-requests/components/StaffBookingDialog';
 import { useIsMobile } from '@/hooks/use-media-query';
 import { usePermissions } from '@/hooks/use-permissions';
-import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
+import { APP_TIME_ZONE, dayjs, type Dayjs } from '@/lib/datetime';
 import { getErrorMessage } from '@/services/api-client';
 import { priceMarkerKey, useCalendarData } from '../hooks/use-calendar-data';
-import { formatDateTime, listDays } from '../utils/calendar-date.util';
+import { holidayRunAround } from '@xeprime/domain';
+import { useCalendarHolidays } from '../hooks/use-calendar-holidays';
+import { useBulkBlockDay, useBulkDayPreview, useReleaseBulkBlock } from '../hooks/use-bulk-day';
+import { formatDateKey, formatDateTime, listDays } from '../utils/calendar-date.util';
 import { assignPixelLanes, computeEventPosition } from '../utils/calendar-position.util';
 import type {
   CalendarEvent,
   CalendarRange,
   CalendarResource,
+  Holiday,
   VehicleBlock,
 } from '../types/calendar.types';
 import { BookingDetailDialog } from '@/features/bookings/components/BookingDetailDialog';
@@ -30,6 +57,8 @@ import {
   type CellActionKey,
   type CellActionTarget,
 } from './CalendarCellActions';
+import { BulkDayBlockDialog, type BulkDayBlockState } from './BulkDayBlockDialog';
+import { BulkDayPriceDialog, type BulkDayPriceState } from './BulkDayPriceDialog';
 import { CalendarToolbar } from './CalendarToolbar';
 import { DailyPriceDialog, type DailyPriceDialogState } from './DailyPriceDialog';
 import { MaintenanceEventDialog } from './MaintenanceEventDialog';
@@ -37,6 +66,7 @@ import { VehicleBlockDetailDialog } from './VehicleBlockDetailDialog';
 import { VehicleBlockDialog, type VehicleBlockDialogState } from './VehicleBlockDialog';
 import styles from './CalendarScheduler.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 /** Giờ nhận xe mặc định khi tạo đơn từ ô lịch (giờ Việt Nam). */
 const DEFAULT_PICKUP_HOUR = 8;
@@ -54,6 +84,9 @@ const MIN_DAY_W_DESKTOP = 64;
 const MIN_DAY_W_MOBILE = 46;
 /** Bề ngang panel chọn hành động — dùng để kẹp neo không tràn mép phải. */
 const CELL_MENU_W = 250;
+
+/** Hai thao tác cả-đội-xe mở từ thẻ ngày. Mã, không phải chữ. */
+type DayActionKey = 'block' | 'price';
 
 /** Overlay đang mở — đúng MỘT overlay một lúc, tất cả đi qua state này. */
 type DialogState =
@@ -107,6 +140,7 @@ export function CalendarScheduler() {
     refetch,
   } = useCalendarData();
   const { has } = usePermissions();
+  const t = useTranslations('Calendar');
 
   const canView = has(PERMISSION.CALENDAR_VIEW);
   const canCreate = has(PERMISSION.BOOKING_CREATE);
@@ -156,6 +190,83 @@ export function CalendarScheduler() {
   const days = useMemo(() => listDays(range), [range]);
   const canvasWidth = resourceW + days.length * dayWidth;
 
+  /*
+   * Lớp ngày lễ — nạp RIÊNG, cố ý không đi qua `useCalendarData`. Nó chỉ tô màu và mở một thẻ
+   * thông tin: hỏng thì bản đồ rỗng và lưới chạy y như cũ, không Alert, không skeleton.
+   */
+  const holidaysByDay = useCalendarHolidays(range);
+
+  /**
+   * Bảng hành động của một ngày (mở từ header) — và hai dialog nó dẫn tới.
+   *
+   * Giữ ở đây chứ không trong `DayHeaderCell` vì mỗi lúc chỉ MỘT ngày được mở, và vì hai dialog
+   * phải sống ngoài cột: cột nằm trong vùng cuộn ngang, còn dialog thì không.
+   */
+  const [dayPanel, setDayPanel] = useState<{ day: DayCell; holiday: Holiday | undefined } | null>(
+    null,
+  );
+  const [bulkBlock, setBulkBlock] = useState<BulkDayBlockState | null>(null);
+  const [bulkPrice, setBulkPrice] = useState<BulkDayPriceState | null>(null);
+
+  /** Thao tác cả-đội-xe dùng ĐÚNG quyền của thao tác lẻ tương ứng — làm hàng loạt không mở thêm quyền. */
+  const dayActions = useMemo<DayActionKey[]>(
+    () => [...(canBlock ? (['block'] as const) : []), ...(canPrice ? (['price'] as const) : [])],
+    [canBlock, canPrice],
+  );
+
+  /*
+   * Trạng thái công tắc "đã khoá cả ngày chưa" — chỉ hỏi khi bảng đang mở, vì nó là một câu
+   * query thật và 30 cột ngày không được phép sinh ra 30 request lúc lưới vừa render.
+   */
+  const panelDate = dayPanel?.day.key ?? '';
+  const panelPreview = useBulkDayPreview(panelDate, panelDate, dayPanel !== null);
+  const releaseBatch = useReleaseBulkBlock();
+  const quickBlock = useBulkBlockDay();
+  const { message } = App.useApp();
+
+  /**
+   * Khoá NGAY mọi xe rảnh trong đúng ngày này — thao tác một-chạm của công tắc.
+   *
+   * Chỉ gửi những xe đang rảnh: xe có đơn thì `EXCLUDE USING gist` từ chối (ADR 0006), và một
+   * lệnh gồm cả chúng sẽ hỏng trọn lô. Thông báo nói ra con số THẬT (`đã khoá 32 xe`) chứ không
+   * phải "đã khoá toàn bộ" — người trực cần biết còn 8 chiếc vẫn nhận đơn được.
+   */
+  function runQuickBlock(dateKey: string) {
+    const free = (panelPreview.data?.vehicles ?? []).filter((v) => v.busyDates.length === 0);
+    if (free.length === 0) {
+      message.warning(t('dayPanel.quickBlockNothing'));
+      return;
+    }
+    quickBlock.mutate(
+      {
+        from: dateKey,
+        to: dateKey,
+        reason: VEHICLE_BLOCK_REASON.NOT_FOR_RENT,
+        vehicleIds: free.map((v) => v.vehicleId),
+      },
+      {
+        onSuccess: (result) => {
+          const skipped = (panelPreview.data?.vehicles.length ?? 0) - result.fullyBlockedVehicles;
+          message.success(
+            skipped > 0
+              ? t('dayPanel.quickBlockedPartial', {
+                  count: result.fullyBlockedVehicles,
+                  skipped,
+                })
+              : t('dayPanel.quickBlocked', { count: result.fullyBlockedVehicles }),
+          );
+        },
+        onError: (error) => message.error(getErrorMessage(error)),
+      },
+    );
+  }
+
+  /** Cụm ngày lễ liền kề chứa ngày đang mở — khoảng gợi ý cho chế độ nhiều ngày. */
+  const suggestedRange = useMemo(
+    () => (panelDate ? holidayRunAround(holidaysByDay, panelDate) : { from: '', to: '' }),
+    [holidaysByDay, panelDate],
+  );
+
   const rowVirtualizer = useVirtualizer({
     count: resources.length,
     getScrollElement: () => viewportEl,
@@ -177,8 +288,8 @@ export function CalendarScheduler() {
     return (
       <PermissionState
         kind="forbidden"
-        title="Không có quyền xem lịch xe"
-        description="Liên hệ quản trị viên nếu bạn cần quyền này."
+        title={t('states.forbiddenTitle')}
+        description={t('states.forbiddenDescription')}
         missingPermissions={[PERMISSION.CALENDAR_VIEW]}
       />
     );
@@ -278,11 +389,11 @@ export function CalendarScheduler() {
           type="error"
           showIcon
           className={styles.inlineAlert}
-          message="Không tải được lịch"
+          message={t('states.loadFailed')}
           description={getErrorMessage(error)}
           action={
             <Button size="small" onClick={refetch}>
-              Thử lại
+              {t('states.retry')}
             </Button>
           }
         />
@@ -292,23 +403,23 @@ export function CalendarScheduler() {
         // Khoảng đang xem chưa có lịch nào: nói nhỏ một dòng, lưới VẪN hiện và bấm được —
         // không dựng thẻ rỗng chặn lên vùng thao tác.
         <div className={styles.emptyHint} role="status">
-          Chưa có lịch trong khoảng này{cellsInteractive ? ' — chọn ngày trống để tạo lịch' : ''}.
+          {t(cellsInteractive ? 'states.noEventsInRangeActionable' : 'states.noEventsInRange')}
         </div>
       ) : null}
 
       {isLoading ? (
-        <div className={styles.loadingBlock} aria-busy="true" aria-label="Đang tải lịch">
+        <div
+          className={styles.loadingBlock}
+          aria-busy="true"
+          aria-label={t('grid.loadingAriaLabel')}
+        >
           <Skeleton active paragraph={{ rows: 8 }} />
         </div>
       ) : resources.length === 0 && !error ? (
         <EmptyState
           variant={filtered ? 'no-results' : 'empty'}
-          title={filtered ? 'Không có xe nào khớp bộ lọc' : 'Chưa có xe nào'}
-          description={
-            filtered
-              ? 'Thử đổi từ khoá hoặc loại xe.'
-              : 'Thêm xe vào gian hàng để bắt đầu xếp lịch.'
-          }
+          title={t(filtered ? 'states.noMatchTitle' : 'states.noVehiclesTitle')}
+          description={t(filtered ? 'states.noMatchDescription' : 'states.noVehiclesDescription')}
         />
       ) : resources.length > 0 ? (
         <div
@@ -317,7 +428,7 @@ export function CalendarScheduler() {
             .filter(Boolean)
             .join(' ')}
           role="region"
-          aria-label="Lịch thuê xe theo ngày"
+          aria-label={t('grid.ariaLabel')}
           aria-busy={isFetching || undefined}
           tabIndex={0}
           style={
@@ -337,37 +448,68 @@ export function CalendarScheduler() {
             <div className={styles.headerRow}>
               <div className={styles.cornerCell}>
                 {resourceCollapsed ? null : (
-                  <span className={styles.cornerLabel}>Phương tiện ({resources.length})</span>
+                  <span className={styles.cornerLabel}>
+                    {t('grid.resourceHeader', { count: resources.length })}
+                  </span>
                 )}
                 <button
                   type="button"
                   className={styles.collapseToggle}
-                  aria-label={
-                    resourceCollapsed ? 'Mở rộng cột phương tiện' : 'Thu gọn cột phương tiện'
-                  }
+                  aria-label={t(resourceCollapsed ? 'grid.expandColumn' : 'grid.collapseColumn')}
                   aria-expanded={!resourceCollapsed}
-                  title={resourceCollapsed ? 'Mở rộng cột phương tiện' : 'Thu gọn cột phương tiện'}
+                  title={t(resourceCollapsed ? 'grid.expandColumn' : 'grid.collapseColumn')}
                   onClick={() => setResourceCollapsed((v) => !v)}
                 >
                   {resourceCollapsed ? <RightOutlined /> : <LeftOutlined />}
                 </button>
               </div>
               <div className={styles.dayHeaderTrack}>
-                {days.map((day) => (
-                  <div
-                    key={day.key}
-                    className={[
-                      styles.dayHeaderCell,
-                      day.isWeekend ? styles.weekend : '',
-                      day.isToday ? styles.today : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    <span className={styles.weekdayLabel}>{day.weekdayLabel}</span>
-                    <span className={styles.dayNumber}>{day.dayOfMonth}</span>
-                  </div>
-                ))}
+                {days.map((day) => {
+                  const holiday = holidaysByDay.get(day.key);
+                  const isOpen = dayPanel?.day.key === day.key;
+                  return (
+                    <DayHeaderCell
+                      key={day.key}
+                      day={day}
+                      holiday={holiday}
+                      actions={dayActions}
+                      panel={
+                        isOpen ? (
+                          <DayActionPanel
+                            day={day}
+                            holiday={holiday}
+                            actions={dayActions}
+                            blockState={{
+                              batchId: panelPreview.data?.activeBlockBatchId ?? null,
+                              loading: panelPreview.isLoading,
+                              busy: quickBlock.isPending || releaseBatch.isPending,
+                            }}
+                            onClose={() => setDayPanel(null)}
+                            onQuickBlock={runQuickBlock}
+                            onRelease={(batchId) =>
+                              releaseBatch.mutate(batchId, {
+                                onSuccess: () => message.success(t('bulkBlock.released')),
+                              })
+                            }
+                            onOpenBlockDialog={() => {
+                              setBulkBlock({ date: day.key, suggestedRange });
+                              setDayPanel(null);
+                            }}
+                            onPrice={() => {
+                              setBulkPrice({ date: day.key, suggestedRange });
+                              setDayPanel(null);
+                            }}
+                          />
+                        ) : null
+                      }
+                      onToggle={(d, h) =>
+                        setDayPanel((current) =>
+                          current?.day.key === d.key ? null : { day: d, holiday: h },
+                        )
+                      }
+                    />
+                  );
+                })}
               </div>
             </div>
 
@@ -396,6 +538,7 @@ export function CalendarScheduler() {
                       range={range}
                       dayWidth={dayWidth}
                       priceMarkers={priceMarkers}
+                      holidaysByDay={holidaysByDay}
                       cellsInteractive={cellsInteractive}
                       onCellClick={(dayIndex) => openCellMenu(resource, dayIndex, virtualRow.start)}
                       onOpenEvent={(event) => openEvent(event, resource)}
@@ -408,7 +551,7 @@ export function CalendarScheduler() {
             {/* ── Hàng "Xe còn trống" (sticky đáy) — số đếm từ BACKEND ───── */}
             <div className={styles.summaryRow}>
               <div className={styles.summaryLabel}>
-                {resourceCollapsed ? 'Trống' : 'Xe còn trống'}
+                {t(resourceCollapsed ? 'grid.availableRowShort' : 'grid.availableRow')}
               </div>
               <div className={styles.summaryTrack}>
                 {days.map((day) => {
@@ -418,12 +561,17 @@ export function CalendarScheduler() {
                       key={day.key}
                       className={[
                         styles.summaryCell,
+                        holidaysByDay.has(day.key) ? styles.holidayColumn : '',
                         day.isToday ? styles.today : '',
                         count === 0 ? styles.summaryNone : '',
                       ]
                         .filter(Boolean)
                         .join(' ')}
-                      aria-label={`Ngày ${day.dayOfMonth}: ${count ?? '—'} xe còn trống`}
+                      aria-label={
+                        count === undefined
+                          ? t('grid.availableCellPending', { day: day.dayOfMonth })
+                          : t('grid.availableCell', { day: day.dayOfMonth, count })
+                      }
                     >
                       {count ?? '—'}
                     </div>
@@ -472,6 +620,9 @@ export function CalendarScheduler() {
           }
         />
       ) : null}
+      <BulkDayBlockDialog state={bulkBlock} onClose={() => setBulkBlock(null)} />
+      <BulkDayPriceDialog state={bulkPrice} onClose={() => setBulkPrice(null)} />
+
       <DailyPriceDialog
         state={dialog?.kind === 'price' ? dialog.state : null}
         onClose={() => setDialog(null)}
@@ -489,6 +640,219 @@ export function CalendarScheduler() {
   );
 }
 
+/**
+ * Một cột ngày ở header — và là ĐƯỜNG VÀO các thao tác cả-đội-xe cho ngày đó.
+ *
+ * Mở bằng CLICK, không phải hover. Đây là thay đổi có chủ đích: thẻ này chứa hành động thật
+ * (khoá xe, đặt giá) chứ không còn chỉ hiện thông tin, và một bảng điều khiển tự bung ra khi
+ * con trỏ lướt qua rồi biến mất khi nhích chuột là thứ không thao tác được — chưa kể trên cảm
+ * ứng thì không có "hover" nào cả.
+ *
+ * Ngày lễ được đánh dấu bằng HAI thứ, không chỉ màu nền: một cờ nhỏ nhìn thấy được và một
+ * `aria-label` nói thẳng "Ngày lễ" — nền cột cố ý rất nhạt, nên màu một mình không đủ.
+ *
+ * Mọi ngày đều bấm được, không riêng ngày lễ: khoá xe và đặt giá là việc của mọi ngày trong
+ * năm. Ngày lễ chỉ là ngày mà người ta NHỚ ra mình cần làm việc đó.
+ */
+function DayHeaderCell({
+  day,
+  holiday,
+  actions,
+  panel,
+  onToggle,
+}: {
+  day: DayCell;
+  holiday: Holiday | undefined;
+  /** Rỗng = người dùng không có quyền thao tác nào ⇒ cột không phải nút. */
+  actions: readonly DayActionKey[];
+  /** Nội dung bảng, chỉ dựng cho cột ĐANG mở — 30 cột không được sinh 30 bảng. */
+  panel: React.ReactNode | null;
+  onToggle: (day: DayCell, holiday: Holiday | undefined) => void;
+}) {
+  const t = useTranslations('Calendar');
+  const fmt = useAppFormat();
+
+  const className = [
+    styles.dayHeaderCell,
+    day.isWeekend ? styles.weekend : '',
+    holiday ? styles.holiday : '',
+    day.isToday ? styles.today : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const label = (
+    <>
+      <span className={styles.weekdayLabel}>{fmt.weekdayShort(day.at)}</span>
+      <span className={styles.dayNumber}>{day.dayOfMonth}</span>
+      {holiday ? <FlagFilled className={styles.holidayFlag} aria-hidden /> : null}
+    </>
+  );
+
+  // Không quyền nào và không phải ngày lễ ⇒ không có gì để mở, đừng mời người dùng bấm.
+  if (actions.length === 0 && !holiday) return <div className={className}>{label}</div>;
+
+  const ariaLabel = holiday
+    ? t('dayPanel.triggerHoliday', { name: holiday.name, date: formatDateKey(day.key) })
+    : t('dayPanel.trigger', { date: formatDateKey(day.key) });
+
+  /*
+   * Popover neo vào CHÍNH nút của cột này.
+   *
+   * Bản trước neo vào một điểm rỗng đặt ở giữa canvas, và hậu quả đúng như ảnh chụp: bấm cột
+   * 31/08 thì bảng bung ra ở giữa lưới, chẳng liên quan gì tới ngày vừa bấm. Neo vào phần tử
+   * thật cũng là thứ giữ bảng bám đúng cột khi người dùng cuộn ngang.
+   */
+  return (
+    <div className={className}>
+      <Popover
+        open={panel !== null}
+        trigger={[]}
+        placement="bottom"
+        content={panel}
+        onOpenChange={(next) => {
+          if (!next) onToggle(day, holiday);
+        }}
+      >
+        <button
+          type="button"
+          className={styles.holidayTrigger}
+          aria-haspopup="dialog"
+          aria-expanded={panel !== null}
+          aria-label={ariaLabel}
+          onClick={() => onToggle(day, holiday)}
+        >
+          {label}
+        </button>
+      </Popover>
+    </div>
+  );
+}
+
+/**
+ * Bảng của một ngày: nhận diện ngày + các thao tác cả-đội-xe.
+ *
+ * Bố cục theo bản thiết kế: tiêu đề `thứ, ngày` · tên ngày lễ làm heading kèm THẺ loại · rồi
+ * tới các hành động. Nội dung cố ý gọn — mô tả, nguồn dữ liệu và thời điểm đồng bộ đã bỏ vì
+ * chúng đẩy hành động thật xuống dưới nếp gấp.
+ *
+ * Hàng "Khoá xe nhanh" có HAI đích bấm nằm chồng nhau, và đó là chủ đích:
+ *  - **Công tắc** = khoá NGAY mọi xe rảnh trong đúng ngày này, lý do mặc định. Một chạm cho
+ *    việc hay làm nhất; gạt ngược lại gỡ đúng lô vừa tạo.
+ *  - **Phần còn lại của thẻ** = mở hộp đầy đủ (nhiều ngày, đổi lý do, ghi chú, xem trước).
+ *
+ * Kỹ thuật: nút mở hộp phủ trọn thẻ bằng `::after` (mẫu "stretched link") thay vì lồng
+ * `<button>` trong `<button>` — lồng control là HTML không hợp lệ và trình đọc màn hình sẽ bỏ
+ * qua cái bên trong. Công tắc nằm trên nhờ `z-index`, nên nó nhận cú bấm của chính nó.
+ */
+function DayActionPanel({
+  day,
+  holiday,
+  actions,
+  blockState,
+  onClose,
+  onQuickBlock,
+  onRelease,
+  onOpenBlockDialog,
+  onPrice,
+}: {
+  day: DayCell;
+  holiday: Holiday | undefined;
+  actions: readonly DayActionKey[];
+  /** Lô khoá hàng loạt đang phủ ngày này — quyết định công tắc bật hay tắt. */
+  blockState: { batchId: string | null; loading: boolean; busy: boolean };
+  onClose: () => void;
+  onQuickBlock: (dateKey: string) => void;
+  onRelease: (batchId: string) => void;
+  onOpenBlockDialog: () => void;
+  onPrice: () => void;
+}) {
+  const t = useTranslations('Calendar');
+  const tCommon = useTranslations('Common');
+  const fmt = useAppFormat();
+  const domainLabel = useDomainLabel();
+
+  const typeMeta = holiday
+    ? HOLIDAY_EVENT_TYPE_META[holiday.eventType as HolidayEventType]
+    : undefined;
+  const typeLabel = holiday
+    ? domainLabel('holidayEventType', holiday.eventType, typeMeta?.label)
+    : null;
+
+  return (
+    <div className={styles.dayPanel}>
+      <div className={styles.dayPanelHead}>
+        <CalendarOutlined className={styles.dayPanelHeadIcon} aria-hidden />
+        <span className={styles.dayPanelDate}>
+          {t('dayPanel.heading', {
+            weekday: fmt.weekdayLong(day.at),
+            date: formatDateKey(day.key),
+          })}
+        </span>
+        <button
+          type="button"
+          className={styles.dayPanelClose}
+          aria-label={tCommon('actions.close')}
+          onClick={onClose}
+        >
+          <CloseOutlined />
+        </button>
+      </div>
+
+      {holiday ? (
+        <div className={styles.dayPanelHoliday}>
+          <div className={styles.dayPanelHolidayTop}>
+            <h3 className={styles.dayPanelHolidayName}>{holiday.name}</h3>
+            <Tag color={typeMeta?.color} className={styles.dayPanelTag}>
+              {t('dayPanel.holidayBadge')}
+            </Tag>
+          </div>
+          {typeLabel ? <p className={styles.dayPanelHolidayType}>{typeLabel}</p> : null}
+        </div>
+      ) : null}
+
+      {actions.includes('block') ? (
+        <div className={styles.dayCard}>
+          <span className={[styles.dayChip, styles.dayChipNeutral].join(' ')} aria-hidden>
+            <LockOutlined />
+          </span>
+          <span className={styles.dayActionTexts}>
+            <span className={styles.dayActionLabel}>{t('dayPanel.blockAll')}</span>
+            {/* Đường vào hộp nhiều ngày. Là chữ chứ không phải cả thẻ: người dùng cần thấy rõ
+                đâu là "gạt để khoá ngay" và đâu là "mở hộp để chọn khoảng". */}
+            <button type="button" className={styles.dayCardLink} onClick={onOpenBlockDialog}>
+              {t('dayPanel.blockMultiDay')}
+            </button>
+          </span>
+          <Switch
+            className={styles.dayCardSwitch}
+            checked={blockState.batchId !== null}
+            loading={blockState.loading || blockState.busy}
+            aria-label={t('dayPanel.blockAll')}
+            onChange={(next) => {
+              if (next) onQuickBlock(day.key);
+              else if (blockState.batchId) onRelease(blockState.batchId);
+            }}
+          />
+        </div>
+      ) : null}
+
+      {actions.includes('price') ? (
+        <button type="button" className={styles.dayRow} onClick={onPrice}>
+          <span className={[styles.dayChip, styles.dayChipGold].join(' ')} aria-hidden>
+            <DollarOutlined />
+          </span>
+          <span className={styles.dayActionTexts}>
+            <span className={styles.dayActionLabel}>{t('dayPanel.priceAll')}</span>
+            <span className={styles.dayActionHint}>{t('dayPanel.priceAllHint')}</span>
+          </span>
+          <RightOutlined className={styles.dayActionChevron} aria-hidden />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 /** Vỏ chung của thẻ xem nhanh: hàng đầu + nút X đóng tường minh (chạm mobile không có "rời chuột"). */
 function QuickCardShell({
   head,
@@ -499,6 +863,7 @@ function QuickCardShell({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const tCommon = useTranslations('Common');
   return (
     <div className={styles.quickCard}>
       <div className={styles.quickHead}>
@@ -506,7 +871,7 @@ function QuickCardShell({
         <button
           type="button"
           className={styles.quickClose}
-          aria-label="Đóng"
+          aria-label={tCommon('actions.close')}
           onClick={(e) => {
             e.stopPropagation();
             onClose();
@@ -526,6 +891,8 @@ function QuickCardShell({
  */
 function ResourceCell({ resource, collapsed }: { resource: CalendarResource; collapsed: boolean }) {
   const fmt = useAppFormat();
+  const t = useTranslations('Calendar');
+  const domainLabel = useDomainLabel();
 
   const [infoOpen, setInfoOpen] = useState(false);
   const showStatus =
@@ -539,36 +906,38 @@ function ResourceCell({ resource, collapsed }: { resource: CalendarResource; col
   const info = (
     <QuickCardShell
       onClose={() => setInfoOpen(false)}
-      head={<span className={styles.quickType}>Thông tin xe</span>}
+      head={<span className={styles.quickType}>{t('vehicleCard.heading')}</span>}
     >
       <div className={styles.quickTitle}>{resource.name}</div>
       <dl className={styles.quickRows}>
         <div className={styles.quickRow}>
-          <dt>Mã xe</dt>
+          <dt>{t('vehicleCard.code')}</dt>
           <dd>{resource.code}</dd>
         </div>
         {resource.plateNumber ? (
           <div className={styles.quickRow}>
-            <dt>Biển số</dt>
+            <dt>{t('vehicleCard.plate')}</dt>
             <dd>{resource.plateNumber}</dd>
           </div>
         ) : null}
         {resource.weekdayPrice ? (
           <div className={styles.quickRow}>
-            <dt>Giá ngày</dt>
+            <dt>{t('vehicleCard.dailyPrice')}</dt>
             <dd>{fmt.money(resource.weekdayPrice)}</dd>
           </div>
         ) : null}
         {resource.hourlyPrice ? (
           <div className={styles.quickRow}>
-            <dt>Giá giờ</dt>
+            <dt>{t('vehicleCard.hourlyPrice')}</dt>
             <dd>{fmt.money(resource.hourlyPrice)}</dd>
           </div>
         ) : null}
         {statusMeta ? (
           <div className={styles.quickRow}>
-            <dt>Vận hành</dt>
-            <dd>{statusMeta.label}</dd>
+            <dt>{t('vehicleCard.operationStatus')}</dt>
+            <dd>
+              {domainLabel('vehicleOperationStatus', resource.operationStatus, statusMeta.label)}
+            </dd>
           </div>
         ) : null}
       </dl>
@@ -592,7 +961,7 @@ function ResourceCell({ resource, collapsed }: { resource: CalendarResource; col
         <button
           type="button"
           className={styles.resourceInfoTrigger}
-          aria-label={`Thông tin xe ${resource.name}`}
+          aria-label={t('vehicleCard.trigger', { vehicle: resource.name })}
         >
           {resource.mainImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- ảnh R2, host cấu hình theo môi trường
@@ -615,12 +984,19 @@ function ResourceCell({ resource, collapsed }: { resource: CalendarResource; col
               <span className={styles.resourceMeta}>
                 {resource.plateNumber ?? resource.code}
                 {showStatus && statusMeta ? (
-                  <span className={styles.resourceStatus}> · {statusMeta.label}</span>
+                  <span className={styles.resourceStatus}>
+                    {' · '}
+                    {domainLabel(
+                      'vehicleOperationStatus',
+                      resource.operationStatus,
+                      statusMeta.label,
+                    )}
+                  </span>
                 ) : null}
               </span>
               {resource.weekdayPrice ? (
                 <span className={styles.resourcePrice}>
-                  {fmt.money(resource.weekdayPrice)}/ngày
+                  {t('vehicleCard.pricePerDay', { price: fmt.money(resource.weekdayPrice) })}
                 </span>
               ) : null}
             </span>
@@ -634,11 +1010,16 @@ function ResourceCell({ resource, collapsed }: { resource: CalendarResource; col
 /** Chấm giá riêng trong ô — chỉ là DẤU (giá không chiếm lịch); chi tiết mở qua "Đặt giá". */
 function PriceMarker({ daily }: { daily: string | null }) {
   const fmt = useAppFormat();
+  const t = useTranslations('Calendar');
 
   return (
     <span
       className={styles.priceMarker}
-      title={daily ? `Giá riêng: ${fmt.money(daily)}/ngày` : 'Có giá riêng theo giờ'}
+      title={
+        daily
+          ? t('cell.customPriceMarkerDaily', { price: fmt.money(daily) })
+          : t('cell.customPriceMarkerHourly')
+      }
       aria-hidden
     />
   );
@@ -649,8 +1030,8 @@ const EVENT_MIN_W = 46;
 
 interface DayCell {
   key: string;
+  at: Dayjs;
   dayOfMonth: number;
-  weekdayLabel: string;
   isToday: boolean;
   isWeekend: boolean;
 }
@@ -670,6 +1051,7 @@ function EventTrack({
   range,
   dayWidth,
   priceMarkers,
+  holidaysByDay,
   cellsInteractive,
   onCellClick,
   onOpenEvent,
@@ -680,10 +1062,12 @@ function EventTrack({
   range: CalendarRange;
   dayWidth: number;
   priceMarkers: ReadonlyMap<string, { dailyPrice: string | null; hourlyPrice: string | null }>;
+  holidaysByDay: ReadonlyMap<string, Holiday>;
   cellsInteractive: boolean;
   onCellClick: (dayIndex: number) => void;
   onOpenEvent: (event: CalendarEvent) => void;
 }) {
+  const t = useTranslations('Calendar');
   const trackW = days.length * dayWidth;
   const bars = events
     .map((event) => ({ event, position: computeEventPosition(event, range) }))
@@ -712,15 +1096,35 @@ function EventTrack({
     <div className={styles.rowTrack}>
       {days.map((day, dayIndex) => {
         const marker = priceMarkers.get(priceMarkerKey(resource.vehicleId, day.key));
+        const holiday = holidaysByDay.get(day.key);
         const cellClass = [
           styles.cell,
           day.isWeekend ? styles.weekend : '',
+          // Nền ngày lễ đứng TRƯỚC `today` trong file CSS: cùng độ đặc hiệu nên thứ tự nguồn
+          // quyết định, và cột hôm nay phải thắng — nó là mốc điều hướng, ngày lễ chỉ là ngữ cảnh.
+          holiday ? styles.holidayColumn : '',
           day.isToday ? styles.today : '',
           cellsInteractive ? styles.cellInteractive : '',
         ]
           .filter(Boolean)
           .join(' ');
-        const label = `Tạo lịch cho ${resource.name} ngày ${day.key.slice(8, 10)}/${day.key.slice(5, 7)}${marker ? ' · đang có giá riêng' : ''}`;
+        /*
+         * Ô vẫn là "tạo lịch" y như mọi ngày khác — ngày lễ KHÔNG chặn thao tác nào, nó chỉ
+         * thêm một câu ngữ cảnh vào nhãn để người dùng bàn phím biết mình đang ở cột nào.
+         *
+         * Ghép bằng mã chứ không bằng một khoá message có sẵn hai chỗ trống: hai ghi chú này
+         * độc lập nhau (có thể có một, cả hai, hoặc không có), và ` · ` là quy ước TRÌNH BÀY
+         * chứ không phải chữ — nó giống nhau ở mọi ngôn ngữ.
+         */
+        const notes = [
+          marker ? t('cell.customPriceNote') : null,
+          holiday ? t('cell.holidayNote', { name: holiday.name }) : null,
+        ].filter(Boolean);
+        const label =
+          t('cell.action', {
+            vehicle: resource.name,
+            date: `${day.key.slice(8, 10)}/${day.key.slice(5, 7)}`,
+          }) + notes.map((note) => ` · ${note}`).join('');
 
         return cellsInteractive ? (
           <button
@@ -779,6 +1183,8 @@ function EventQuickCard({
   onClose: () => void;
 }) {
   const fmt = useAppFormat();
+  const t = useTranslations('Calendar');
+  const domainLabel = useDomainLabel();
 
   const isBooking = event.type === OCCUPANCY_SOURCE_TYPE.BOOKING;
   const typeMeta = OCCUPANCY_SOURCE_TYPE_META[event.type as OccupancySourceType];
@@ -788,9 +1194,17 @@ function EventQuickCard({
 
   const statusNode =
     isBooking && event.status ? (
-      <StatusTag value={event.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
+      <StatusTag
+        value={event.status as BookingStatus}
+        meta={BOOKING_STATUS_META}
+        group="bookingStatus"
+      />
     ) : event.type === OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE && event.status ? (
-      <StatusTag value={event.status as VehicleBlockReason} meta={VEHICLE_BLOCK_REASON_META} group="vehicleBlockReason" />
+      <StatusTag
+        value={event.status as VehicleBlockReason}
+        meta={VEHICLE_BLOCK_REASON_META}
+        group="vehicleBlockReason"
+      />
     ) : null;
 
   return (
@@ -799,7 +1213,9 @@ function EventQuickCard({
       head={
         <>
           <span className={styles.quickType}>
-            {isBooking ? 'Chi tiết nhanh đơn đặt' : typeMeta?.label}
+            {isBooking
+              ? t('eventCard.bookingHeading')
+              : domainLabel('occupancySourceType', event.type, typeMeta?.label)}
           </span>
           {statusNode}
         </>
@@ -809,23 +1225,23 @@ function EventQuickCard({
       {code ? <div className={styles.quickCode}>{code}</div> : null}
       <dl className={styles.quickRows}>
         <div className={styles.quickRow}>
-          <dt>Xe</dt>
+          <dt>{t('eventCard.vehicle')}</dt>
           <dd>{vehicleName}</dd>
         </div>
         <div className={styles.quickRow}>
-          <dt>{isBooking ? 'Nhận xe' : 'Bắt đầu'}</dt>
+          <dt>{t(isBooking ? 'eventCard.pickupAt' : 'eventCard.startAt')}</dt>
           <dd>{formatDateTime(event.startAt)}</dd>
         </div>
         <div className={styles.quickRow}>
-          <dt>{isBooking ? 'Trả xe' : 'Kết thúc'}</dt>
+          <dt>{t(isBooking ? 'eventCard.returnAt' : 'eventCard.endAt')}</dt>
           <dd>{formatDateTime(event.endAt)}</dd>
         </div>
         <div className={styles.quickRow}>
-          <dt>Thời lượng</dt>
+          <dt>{t('eventCard.duration')}</dt>
           <dd>{fmt.rentalDuration(dayjs(event.startAt), dayjs(event.endAt))}</dd>
         </div>
       </dl>
-      <div className={styles.quickHint}>Bấm vào thanh lịch để xem chi tiết</div>
+      <div className={styles.quickHint}>{t('eventCard.openHint')}</div>
     </QuickCardShell>
   );
 }
@@ -855,17 +1271,26 @@ function EventBar({
   onOpen: () => void;
 }) {
   /** Controlled để nút X trong thẻ đóng được — hover ra ngoài vẫn tự tắt qua onOpenChange. */
+  const t = useTranslations('Calendar');
+  const domainLabel = useDomainLabel();
   const [tipOpen, setTipOpen] = useState(false);
   const toneClass = eventToneClass(event);
   const typeMeta = OCCUPANCY_SOURCE_TYPE_META[event.type as OccupancySourceType];
   const statusLabel =
     event.type === OCCUPANCY_SOURCE_TYPE.BOOKING && event.status
-      ? BOOKING_STATUS_META[event.status as BookingStatus]?.label
+      ? domainLabel(
+          'bookingStatus',
+          event.status,
+          BOOKING_STATUS_META[event.status as BookingStatus]?.label,
+        )
       : undefined;
   const ariaLabel = [
-    typeMeta?.label ?? event.type,
+    domainLabel('occupancySourceType', event.type, typeMeta?.label ?? event.type),
     event.title,
-    `từ ${formatDateTime(event.startAt)} đến ${formatDateTime(event.endAt)}`,
+    t('eventCard.barAriaRange', {
+      start: formatDateTime(event.startAt),
+      end: formatDateTime(event.endAt),
+    }),
     statusLabel,
   ]
     .filter(Boolean)
@@ -925,27 +1350,33 @@ function EventBar({
 
 /** Chú giải gọn — cùng META màu với thanh event, để lưới không cần tooltip mới hiểu được. */
 function CalendarLegend() {
+  const t = useTranslations('Calendar');
+
   return (
-    <div className={styles.legend} aria-label="Chú giải lịch">
+    <div className={styles.legend} aria-label={t('legend.ariaLabel')}>
       <span className={styles.legendItem}>
         <i className={[styles.legendSwatch, styles.legendBooking].join(' ')} aria-hidden />
-        Đơn thuê
+        {t('legend.booking')}
       </span>
       <span className={styles.legendItem}>
         <i className={[styles.legendSwatch, styles.legendActive].join(' ')} aria-hidden />
-        Đang thuê
+        {t('legend.active')}
       </span>
       <span className={styles.legendItem}>
         <i className={[styles.legendSwatch, styles.legendMaintenance].join(' ')} aria-hidden />
-        Bảo dưỡng
+        {t('legend.maintenance')}
       </span>
       <span className={styles.legendItem}>
         <i className={[styles.legendSwatch, styles.legendBlocked].join(' ')} aria-hidden />
-        Xe bị khóa
+        {t('legend.blocked')}
       </span>
       <span className={styles.legendItem}>
         <i className={[styles.legendSwatch, styles.legendPrice].join(' ')} aria-hidden />
-        Giá riêng
+        {t('legend.customPrice')}
+      </span>
+      <span className={styles.legendItem}>
+        <i className={[styles.legendSwatch, styles.legendHoliday].join(' ')} aria-hidden />
+        {t('legend.holiday')}
       </span>
     </div>
   );
