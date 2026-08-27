@@ -1,64 +1,81 @@
-import { Image } from 'react-native';
+import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
-import { images } from '@/assets';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { type CurrentUser } from '@/features/auth/api';
+import { LOGIN_METHOD, type LoginMethod } from './post-login-destination';
 import { Screen } from '@/components/layout/Screen';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, fontSize, space } from '@/theme/tokens';
+import { AUTH_METHOD, AuthMethodTabs, type AuthMethod } from './components/AuthMethodTabs';
 import { LoginForm } from './components/LoginForm';
+import { OtpLoginForm } from './components/OtpLoginForm';
+import { SocialButtons } from './components/SocialButtons';
 
 /**
- * Màn đăng nhập (AUTH-01).
+ * Màn đăng nhập (AUTH-01/03/04) — ba đường vào, một tài khoản.
  *
  * Web trình bày đăng nhập bằng modal đè lên marketplace; native phải là màn hình độc lập — một
  * hộp thoại có ô nhập trên điện thoại vừa bị bàn phím che vừa không có chỗ cho nút quay lại.
  *
- * Nghiệp vụ KHÔNG đổi: cùng người dùng, cùng mật khẩu, cùng quy tắc khoá, cùng mã lỗi. Khác
- * đúng một chỗ và nằm gọn trong `lib/auth-session.ts` — native gửi `Authorization: Bearer`
- * (ADR 0017) thay cho session cookie của web (ADR 0002).
+ * Nghiệp vụ KHÔNG đổi so với `AuthPanel` của web: cùng hai tab (mật khẩu / OTP), cùng hai
+ * provider, cùng quy tắc khoá, cùng mã lỗi. Khác đúng một chỗ và nằm gọn trong
+ * `lib/auth-session.ts` — native nhận cặp Bearer (ADR 0017) thay cho session cookie (ADR 0002).
  *
- * Đăng ký (AUTH-02), OTP (AUTH-03) và đăng nhập mạng xã hội (AUTH-04) là các task riêng.
+ * Logo chỉ xuất hiện MỘT lần, ở header. Trước đây màn này còn một logo 56px canh giữa ngay
+ * trong nội dung — hai lần cùng một dấu hiệu cách nhau 80px, và cái thứ hai không nói thêm gì.
+ *
+ * Đăng ký (AUTH-02) và quên mật khẩu (AUTH-05) là các task riêng.
  */
 export function LoginScreen({
   onSuccess,
   onCancel,
 }: {
-  onSuccess: () => void;
+  /** Nhận hồ sơ + đường đã dùng — route quyết định đi đâu, màn này không biết luật đó. */
+  onSuccess: (user: CurrentUser, method: LoginMethod) => void;
   onCancel: () => void;
 }) {
   const t = useTranslations('Auth');
+  const [method, setMethod] = useState<AuthMethod>(AUTH_METHOD.PASSWORD);
 
   return (
     <>
-      {/* Header dùng chung của app — xem `components/layout/AppHeader.tsx`, đừng dựng riêng. */}
+      {/* Header giữ BrandMark — đó là lần DUY NHẤT logo xuất hiện trên màn này. */}
       <AppHeader onBack={onCancel} />
 
-      {/* Header đã cộng inset trên; `Screen` chỉ còn giữ ba cạnh còn lại. */}
+      {/* Header tự cộng inset trên, nên `Screen` chỉ giữ ba cạnh còn lại. */}
       <Screen edges={['left', 'right', 'bottom']}>
-        <YStack f={1} jc="center" gap={space.xl} pb={space.xl}>
-        <YStack ai="center" gap={space.md}>
-          <Image
-            source={images.logo}
-            style={{ width: 56, height: 56, borderRadius: radius.md }}
-            resizeMode="contain"
-          />
-          <YStack ai="center" gap={space.xs}>
-            <Text col={colors.text} fos={fontSize.h2} fow={fontWeight.bold}>
-              {t('modal.loginTitle')}
+        <YStack gap={space.xl}>
+          <YStack gap={space.xs}>
+            {/*
+              Tên thương hiệu không đi qua i18n — giống nhau ở mọi ngôn ngữ, đúng lý do
+              `AUTH_PROVIDER_LABEL` giữ "Google"/"Facebook" ở dạng hằng.
+
+              `primaryActive` chứ không `primary`: `primary` trên nền trắng chỉ đạt ~2.1:1,
+              dưới ngưỡng đọc được.
+            */}
+            <Text col={colors.text} fontFamily="$heading" fos={fontSize.h2}>
+              {t('modal.loginTitle')} <Text col={colors.primaryActive}>XePrime</Text>
             </Text>
-            <Text col={colors.textMuted} fos={fontSize.body} ta="center">
+            <Text col={colors.textMuted} fos={fontSize.body}>
               {t('modal.loginSub')}
             </Text>
           </YStack>
-        </YStack>
 
-        {/*
-          Chưa có "Quên mật khẩu?" (AUTH-05) và đăng ký (AUTH-02) ở đây: cả hai là task riêng,
-          và một liên kết dẫn về chính màn này thì tệ hơn hẳn việc chưa có nó.
-        */}
-          <LoginForm onSuccess={onSuccess} />
+          <YStack gap={space.md}>
+            <AuthMethodTabs value={method} onChange={setMethod} />
+
+            {/* Đổi tab là dựng lại form: state của tab kia nói về một lần đăng nhập khác. */}
+            {method === AUTH_METHOD.PASSWORD ? (
+              <LoginForm onSuccess={(user) => onSuccess(user, LOGIN_METHOD.PASSWORD)} />
+            ) : (
+              <OtpLoginForm onSuccess={(user) => onSuccess(user, LOGIN_METHOD.OTP)} />
+            )}
+          </YStack>
+
+          <SocialButtons onSuccess={(user) => onSuccess(user, LOGIN_METHOD.SOCIAL)} />
         </YStack>
       </Screen>
     </>
   );
 }
+

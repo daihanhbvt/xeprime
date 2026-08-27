@@ -145,7 +145,7 @@ function HomeContent() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
-      <YStack onLayout={onHeaderLayout}>
+      <YStack onLayout={onHeaderLayout} zi={20}>
         <MarketHeader />
       </YStack>
 
@@ -153,7 +153,14 @@ function HomeContent() {
         Thanh thu gọn nằm ĐÈ lên nội dung (`position: absolute`) và trượt vào từ trên, nên nó
         không chiếm chỗ trong dòng chảy — thêm/bớt nó không đẩy nội dung nhảy một nấc.
       */}
-      <YStack pos="absolute" top={headerBottom} left={0} right={0} zi={10}>
+      <YStack
+        pos="absolute"
+        top={headerBottom}
+        left={0}
+        right={0}
+        zi={10}
+        pointerEvents="box-none"
+      >
         <StickySearchBar onSubmit={openSearch} progress={progress} />
       </YStack>
 

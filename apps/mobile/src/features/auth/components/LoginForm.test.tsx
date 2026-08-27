@@ -4,7 +4,7 @@ import { API_ERROR_CODE } from '@xeprime/types';
 import type { ReactElement } from 'react';
 import * as authApi from '@/features/auth/api';
 import { withIntl } from '@/i18n/test-utils';
-import { ApiClientError } from '@/lib/api-client';
+import { ApiClientError, CLIENT_ERROR_CODE } from '@/lib/api-client';
 import { LoginForm } from './LoginForm';
 
 // Shape lấy từ contract OpenAPI — thiếu field nào là typecheck báo, không phải test đỏ lúc chạy.
@@ -34,15 +34,32 @@ function renderLoginForm(onSuccess = jest.fn()) {
 }
 
 describe('LoginForm', () => {
-  it('chặn submit rỗng bằng thông báo từ loginSchema của @xeprime/validators', async () => {
+  it('khoá nút khi form chưa hợp lệ, mở ra khi đã đủ — không gọi API ở giữa', async () => {
     const login = jest.spyOn(authApi, 'loginWithPassword');
     const view = await renderLoginForm();
 
-    await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
+    /*
+     * Hợp đồng là KHOÁ NÚT, không phải hiện lỗi sau khi bấm: `mode: 'onChange'` cho `isValid`
+     * đúng ngay từ lần gõ đầu, nên người dùng không bao giờ gửi được một form rỗng — và cũng
+     * không bị mắng vì một việc họ chưa làm.
+     */
+    const submit = view.getByRole('button', { name: 'Đăng nhập' });
+    expect(submit.props.accessibilityState.disabled).toBe(true);
 
-    expect(await view.findByText('Vui lòng nhập email hoặc số điện thoại')).toBeTruthy();
-    expect(view.getByText('Vui lòng nhập mật khẩu')).toBeTruthy();
+    await fireEvent.press(submit);
     expect(login).not.toHaveBeenCalled();
+
+    await fireEvent.changeText(
+      view.getByPlaceholderText('Nhập email hoặc số điện thoại'),
+      'owner@xeprime.test',
+    );
+    await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu'), 'Abcd1234');
+
+    await waitFor(() =>
+      expect(
+        view.getByRole('button', { name: 'Đăng nhập' }).props.accessibilityState.disabled,
+      ).toBe(false),
+    );
   });
 
   it('gọi /auth/mobile/login với giá trị đã nhập rồi báo thành công', async () => {
@@ -54,7 +71,7 @@ describe('LoginForm', () => {
       view.getByPlaceholderText('Nhập email hoặc số điện thoại'),
       '  owner@xeprime.test  ',
     );
-    await fireEvent.changeText(view.getByPlaceholderText('Mật khẩu'), 'Abcd1234');
+    await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu'), 'Abcd1234');
     await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
 
     // Schema trim `identifier` — server không phải nhận khoảng trắng thừa của bàn phím ảo.
@@ -62,7 +79,49 @@ describe('LoginForm', () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
   });
 
-  it('hiện thông báo theo mã lỗi khi sai mật khẩu', async () => {
+  it('hiện nhãn dạng câu kèm dấu bắt buộc, KHÔNG viết hoa toàn bộ', async () => {
+    const view = await renderLoginForm();
+
+    /*
+     * Chuỗi so sánh gồm cả dấu sao: nó là một `Text` LỒNG bên trong nhãn, nên nội dung phẳng ra
+     * thành "Mật khẩu *" chứ không phải hai node rời.
+     */
+    expect(view.getByText('Email hoặc số điện thoại *')).toBeTruthy();
+    expect(view.getByText('Mật khẩu *')).toBeTruthy();
+
+    // `TextField` từng gọi `toLocaleUpperCase()` lên chuỗi dịch — đây là chốt chặn cho việc đó.
+    expect(view.queryByText('EMAIL HOẶC SỐ ĐIỆN THOẠI *')).toBeNull();
+    expect(view.queryByText('MẬT KHẨU *')).toBeNull();
+  });
+
+  it('lỗi MẠNG thì dịch từ mã, KHÔNG hiện chuỗi log của client', async () => {
+    /*
+     * `status: 0` = request chưa từng tới server, nên `message` là chuỗi log do chính client
+     * dựng ("Request to /auth/mobile/login failed"). Web hiện luôn chuỗi đó; app thì không.
+     */
+    jest.spyOn(authApi, 'loginWithPassword').mockRejectedValue(
+      new ApiClientError({
+        code: CLIENT_ERROR_CODE.NETWORK_ERROR,
+        message: 'Request to /auth/mobile/login failed',
+        status: 0,
+      }),
+    );
+    const view = await renderLoginForm();
+
+    await fireEvent.changeText(
+      view.getByPlaceholderText('Nhập email hoặc số điện thoại'),
+      'owner@xeprime.test',
+    );
+    await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu'), 'Abcd1234');
+    await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
+
+    expect(
+      await view.findByText('Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.'),
+    ).toBeTruthy();
+    expect(view.queryByText(/Request to/)).toBeNull();
+  });
+
+  it('hiện NGUYÊN VĂN câu của backend khi sai mật khẩu — giống getErrorMessage của web', async () => {
     jest.spyOn(authApi, 'loginWithPassword').mockRejectedValue(
       new ApiClientError({
         code: API_ERROR_CODE.INVALID_CREDENTIALS,
@@ -73,9 +132,9 @@ describe('LoginForm', () => {
     const view = await renderLoginForm();
 
     await fireEvent.changeText(view.getByPlaceholderText('Nhập email hoặc số điện thoại'), 'owner@xeprime.test');
-    await fireEvent.changeText(view.getByPlaceholderText('Mật khẩu'), 'saibet123');
+    await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu'), 'saibet123');
     await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
 
-    expect(await view.findByText('Email/số điện thoại hoặc mật khẩu không đúng.')).toBeTruthy();
+    expect(await view.findByText('Sai thông tin đăng nhập')).toBeTruthy();
   });
 });

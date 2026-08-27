@@ -1,7 +1,15 @@
-import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient, type UseQueryResult } from '@tanstack/react-query';
+import type { AuthProvider } from '@xeprime/types';
 import { queryKeys } from '@/queries/query-keys';
 import { resetSessionScopedCache } from '@/queries/reset-session-cache';
-import { destroySession, fetchCurrentUser, loginWithPassword, type CurrentUser } from '../api';
+import {
+  destroySession,
+  fetchCurrentUser,
+  loginWithOtp,
+  loginWithPassword,
+  loginWithSocial,
+  type CurrentUser,
+} from '../api';
 
 export function useCurrentUser(): UseQueryResult<CurrentUser> {
   return useQuery({
@@ -13,17 +21,39 @@ export function useCurrentUser(): UseQueryResult<CurrentUser> {
   });
 }
 
+function seedSession(queryClient: QueryClient, user: CurrentUser): void {
+  resetSessionScopedCache(queryClient);
+  queryClient.setQueryData(queryKeys.auth.me(), user);
+}
+
 export function useLogin() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (values: { identifier: string; password: string }) =>
       loginWithPassword(values.identifier, values.password),
+    onSuccess: (user) => seedSession(queryClient, user),
+  });
+}
+
+export function useOtpLogin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (values: { phone: string; code: string }) =>
+      loginWithOtp(values.phone, values.code),
+    onSuccess: (user) => seedSession(queryClient, user),
+  });
+}
+
+export function useSocialLogin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (values: { provider: AuthProvider; locale: string }) =>
+      loginWithSocial(values.provider, values.locale),
     onSuccess: (user) => {
-      // Dọn dữ liệu của người dùng TRƯỚC đó rồi mới gieo hồ sơ mới — đăng nhập bằng tài khoản
-      // khác trên cùng máy không được kế thừa cache của tài khoản cũ.
-      resetSessionScopedCache(queryClient);
-      queryClient.setQueryData(queryKeys.auth.me(), user);
+      if (user) seedSession(queryClient, user);
     },
   });
 }

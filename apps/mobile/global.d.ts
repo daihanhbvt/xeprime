@@ -24,3 +24,9 @@ declare module '*.gif' {
   const source: import('react-native').ImageSourcePropType;
   export default source;
 }
+
+/** Font đi qua `expo-font`, không phải `ImageSourcePropType` — nó là một module asset. */
+declare module '*.ttf' {
+  const source: number;
+  export default source;
+}

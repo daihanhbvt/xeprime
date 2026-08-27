@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { Pressable, TextInput, type TextInputProps } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 interface TextFieldProps<T extends FieldValues> {
@@ -12,6 +12,22 @@ interface TextFieldProps<T extends FieldValues> {
   label: string;
   icon?: IconName;
   placeholder?: string;
+  /**
+   * Dòng chú thích dưới ô — luật nhập, định dạng mong đợi, hệ quả của việc điền.
+   *
+   * Đây là chỗ của những câu như "Tối thiểu 8 ký tự, có cả chữ và số". Nhét chúng vào
+   * `placeholder` là hỏng hai lần: chữ biến mất ngay khi người dùng gõ ký tự đầu — đúng lúc họ
+   * cần nó nhất — và ô nhập mất luôn ví dụ về thứ cần điền.
+   *
+   * Lỗi ĐÈ LÊN chú thích chứ không xếp thêm dưới: hai dòng nhỏ chồng nhau dưới một ô thì mắt
+   * đọc dòng trên trước, mà dòng cần đọc là dòng lỗi.
+   */
+  hint?: string;
+  /**
+   * Hiện dấu `*` sau nhãn. THUẦN hiển thị — ràng buộc thật nằm ở schema yup của form và ở
+   * DTO backend; đánh dấu ở đây mà quên ở schema thì ô vẫn gửi rỗng được.
+   */
+  required?: boolean;
   secureTextEntry?: boolean;
   editable?: boolean;
   autoCapitalize?: TextInputProps['autoCapitalize'];
@@ -27,39 +43,64 @@ export function TextField<T extends FieldValues>({
   name,
   label,
   icon,
+  hint,
+  required = false,
   secureTextEntry,
   ...inputProps
 }: TextFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
+  const inputRef = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const error = fieldState.error?.message;
 
-  const borderColor = error
-    ? colors.danger
-    : focused
-      ? colors.primary
-      : colors.border;
+  const borderColor = error ? colors.danger : focused ? colors.primary : colors.border;
 
   return (
     <YStack gap={space.xs}>
-      <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.semibold}>
-        {label.toLocaleUpperCase()}
+      {/*
+        Nhãn giữ nguyên dạng của chuỗi dịch — đừng `toUpperCase` ở tầng component: tiếng Việt
+        viết hoa hết thì dấu thanh chồng lên nhau ở cỡ chữ nhỏ.
+      */}
+      <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
+        {label}
+        {/* Lồng trong cùng `Text` để dấu sao xuống dòng cùng nhãn, không ở lại dòng trên. */}
+        {required ? <Text col={colors.danger}> *</Text> : null}
       </Text>
 
+      {/*
+        `onPress` chuyển focus TƯỜNG MINH vào ô của khung này. Chạm vào đệm/icon/khoảng trống
+        không trúng `TextInput`, và Android khi đó trao focus cho ô focusable KẾ TIẾP — chạm
+        "Email hoặc số điện thoại" lại mở bàn phím ở "Mật khẩu".
+
+        CỐ Ý không gắn bóng động vào khung: đổi `style` theo state trên component tamagui làm nó
+        dựng lại cây con, mà `TextInput` nằm trong đó — focus mất ngay khi vừa chạm.
+      */}
+      {/*
+        Nền xám nhạt, KHÔNG viền lúc nghỉ — viền chỉ xuất hiện khi focus hoặc lỗi.
+        
+        Một đường viền quanh mọi ô là thứ làm form trông nặng: bốn ô xếp dọc thành bốn khung
+        đóng. Bỏ nó đi thì ô vẫn tách khỏi trang nhờ nền, mà bớt hẳn một lớp nét — và lúc focus,
+        viền gold xuất hiện từ chỗ trống nên đọc rõ hơn hẳn so với việc đổi màu một viền có sẵn.
+
+        Chiều cao GIỮ `sizing.touchTarget`: đó là sàn chạm 48dp của Android (xem `theme/tokens`).
+        Ô thấp hơn trông thon hơn trên máy thiết kế và khó bấm hơn trên tay.
+      */}
       <XStack
         ai="center"
         gap={space.sm}
         bg={colors.surfaceMuted}
-        br={radius.md}
+        br={radius.sm}
         bw={1}
-        bc={borderColor}
-        px={space.md}
+        bc={focused || error ? borderColor : 'transparent'}
+        px={space.sm}
         minHeight={sizing.touchTarget}
+        onPress={() => inputRef.current?.focus()}
       >
-        {icon ? <Ionicons name={icon} size={18} color={colors.textMuted} /> : null}
+        {icon ? <Ionicons name={icon} size={iconSize.sm} color={colors.textMuted} /> : null}
 
         <TextInput
+          ref={inputRef}
           value={String(field.value ?? '')}
           onChangeText={field.onChange}
           onBlur={() => {
@@ -90,7 +131,7 @@ export function TextField<T extends FieldValues>({
           >
             <Ionicons
               name={revealed ? 'eye-off-outline' : 'eye-outline'}
-              size={18}
+              size={iconSize.sm}
               color={colors.textMuted}
             />
           </Pressable>
@@ -99,11 +140,15 @@ export function TextField<T extends FieldValues>({
 
       {error ? (
         <XStack ai="center" gap={space.xs}>
-          <Ionicons name="alert-circle" size={13} color={colors.danger} />
+          <Ionicons name="alert-circle" size={iconSize.xs} color={colors.danger} />
           <Text col={colors.danger} fos={fontSize.bodySm}>
             {error}
           </Text>
         </XStack>
+      ) : hint ? (
+        <Text col={colors.textMuted} fos={fontSize.bodySm}>
+          {hint}
+        </Text>
       ) : null}
     </YStack>
   );
