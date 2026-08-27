@@ -1,0 +1,3 @@
+# Cấu hình máy kéo backup: chứa IP máy chủ, đường dẫn khoá SSH và token bot Telegram.
+# Đặt cạnh file nó bảo vệ chứ không nhét vào .gitignore gốc — ai mở thư mục này là thấy ngay.
+config.json

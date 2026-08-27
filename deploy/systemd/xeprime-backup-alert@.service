@@ -1,0 +1,14 @@
+# Gọi khi `xeprime-backup@%i.service` thất bại. Tồn tại vì `OnFailure=` chỉ kích hoạt được một
+# unit, không chạy được một dòng lệnh.
+#
+# Bản thân backup-db.sh đã tự cảnh báo cho những lỗi nó lường trước. Unit này bắt phần CÒN LẠI:
+# script bị OOM killer bắn, chạm RuntimeMaxSec, hoặc chết trước khi kịp cài trap.
+[Unit]
+Description=XePrime — cảnh báo sao lưu thất bại (%i)
+
+[Service]
+Type=oneshot
+User=xeprime
+Group=xeprime
+WorkingDirectory=/opt/xeprime
+ExecStart=/bin/bash -c '/opt/xeprime/deploy/scripts/notify.sh --env %i "❌ Unit xeprime-backup@%i.service THẤT BẠI. Xem: journalctl -u xeprime-backup@%i -n 50"'

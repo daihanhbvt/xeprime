@@ -8,9 +8,16 @@
 name: CI
 
 on:
+  # CỐ Ý chỉ có `develop`, KHÔNG có `staging`/`main`: push vào hai nhánh đó chạy `deploy.yml`,
+  # mà `deploy.yml` gọi lại chính file này ở job `verify`. Liệt kê chúng ở đây nữa là chạy trọn
+  # bộ kiểm tra HAI LẦN cho mỗi lần phát hành — gấp đôi thời gian chờ và gấp đôi hoá đơn Actions.
   push:
-    branches: [main, develop]
+    branches: [develop]
   pull_request:
+  # `deploy.yml` gọi lại workflow này làm CỔNG CHẶN trước khi đẩy image lên GHCR. Gọi lại chứ
+  # không chép sang file kia: hai bản kiểm tra chép nhau sẽ trôi lệch, và chỗ trôi lệch đầu tiên
+  # luôn là chỗ nguy hiểm nhất.
+  workflow_call:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -125,3 +132,46 @@ jobs:
       # Parity vi↔en + ICU + không giá trị rỗng. Rẻ và chặn đúng thứ review của người hay bỏ sót.
       - run: pnpm --filter @xeprime/web i18n:check
       - run: pnpm --filter @xeprime/types test
+
+  # ---------------------------------------------------------------------------
+  # Build image — CỔNG CHẶN, không đẩy đi đâu.
+  #
+  # Hai job trên chạy test/typecheck/lint; KHÔNG job nào chạy `next build` hay `nest build`.
+  # Đó là khoảng hở thật: một lỗi chỉ lộ ra lúc build (import vòng, `use client` thiếu, biến
+  # NEXT_PUBLIC_* dùng ở chỗ không có) sẽ đi lọt qua CI xanh và nổ giữa lúc deploy — lúc đó
+  # stack đã migrate xong và đang chờ container không bao giờ lên.
+  #
+  # Build ở đây cũng HÂM NÓNG cache GHA cho job đẩy image của deploy.yml: cùng `type=gha`, nên
+  # lần build thật sau đó gần như chỉ còn tải layer về và push.
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build image (gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build (không push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # `NEXT_PUBLIC_*` bị Next NHÚNG CỨNG vào bundle lúc build, nên chúng là một phần của
+          # định danh layer. Lấy từ repository Variables (không phải Environment — job này chạy
+          # cả trên PR, nơi không có Environment nào) để giá trị KHỚP với lần build đẩy lên
+          # GHCR; lệch một ký tự là cache miss toàn bộ tầng build web.
+          #
+          # Không có gì bí mật ở đây theo đúng nghĩa đen: mọi giá trị này nằm lộ thiên trong
+          # file JS mà trình duyệt tải về.
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://api-stg.xeprime.vn' }}
+            NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME || 'XePrime' }}
+            NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY=${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY }}
+            NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+            NEXT_PUBLIC_FIREBASE_APP_ID=${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+            SESSION_COOKIE_NAME=${{ vars.SESSION_COOKIE_NAME || 'xp_session' }}

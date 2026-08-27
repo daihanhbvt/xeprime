@@ -174,8 +174,23 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Reverse proxy + TLS tự động (Let's Encrypt) | `deploy/Caddyfile` |
 | Mẫu biến môi trường production — đối chiếu `apps/api/src/config/env.schema.ts` | `deploy/env.production.example` |
 | Dựng VPS trắng: swap · Docker · ufw · user ứng dụng | `deploy/scripts/vps-bootstrap.sh` |
-| Deploy: sao lưu → build → migrate → khởi động lại (`--env staging` cho môi trường thứ hai) | `deploy/scripts/deploy.sh` |
-| Sao lưu / khôi phục PostgreSQL | `deploy/scripts/backup-db.sh` · `deploy/scripts/restore-db.sh` |
+| Deploy: sao lưu → build HOẶC pull → migrate → khởi động lại (`--env staging`, `--image <ref>`) | `deploy/scripts/deploy.sh` |
+| **CD**: push `staging`/`main` → deploy · Run workflow → chọn môi trường/ref · `image_tag` → rollback | `.github/workflows/deploy.yml` |
+| Cổng chặn dùng chung (api · web · build image), gọi lại được bằng `workflow_call` | `.github/workflows/ci.yml` |
+| Bảng Variables vs Secrets của GitHub Environment | [`docs/deployment.md`](deployment.md) §9.2 |
+
+### Sao lưu
+
+| Cần gì | Ở đâu |
+| --- | --- |
+| Kiến trúc sao lưu + **quy trình khôi phục từng bước** (đọc TRƯỚC khi cần) | [`docs/backup-and-restore.md`](backup-and-restore.md) |
+| `pg_dump` hằng đêm: flock · kiểm đĩa · xác minh archive · checksum · cảnh báo | `deploy/scripts/backup-db.sh` |
+| Khôi phục (xác minh SHA-256 → dừng app → `pg_restore` → migrate → khởi động lại) | `deploy/scripts/restore-db.sh` |
+| Cảnh báo Telegram bằng `curl` — không cài thêm service nào | `deploy/scripts/notify.sh` |
+| Hẹn giờ: unit có tham số môi trường, `Persistent=true`, `OnFailure=` | `deploy/systemd/` · `deploy/scripts/install-backup-timer.sh` |
+| Lối SFTP **chỉ đọc** cho máy công ty kéo bản sao về (chống ransomware) | `deploy/scripts/setup-backup-user.sh` |
+| Máy Windows: kéo về · so checksum · retention 12 tuần · dead-man switch | `tools/backup-pull/` |
+| `Invoke-Native` — lớp bọc BẮT BUỘC cho lệnh ngoài trong PowerShell 5.1 | `tools/backup-pull/Common.ps1` |
 
 ## Tham chiếu nghiệp vụ (đọc để hiểu "cái gì đang chạy", KHÔNG copy pattern)
 

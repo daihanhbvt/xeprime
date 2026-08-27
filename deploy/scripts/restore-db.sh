@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Khôi phục PostgreSQL từ một file dump. Chạy từ GỐC REPO trên VPS.
 #
-#   ./deploy/scripts/restore-db.sh ~/xeprime-backups/xeprime-production-20260901-030000.dump
-#   ./deploy/scripts/restore-db.sh --env staging ~/xeprime-backups/xeprime-staging-....dump
+#   ./deploy/scripts/restore-db.sh /var/backups/xeprime/production/daily/xeprime-production-20260901-030000.dump
+#   ./deploy/scripts/restore-db.sh --env staging /var/backups/xeprime/staging/daily/xeprime-staging-….dump
 #
 # ⚠️ GHI ĐÈ dữ liệu hiện có. Script dừng api/web/worker trước để không có ai ghi vào giữa
 # chừng — khôi phục trong lúc ứng dụng vẫn nhận đơn là cách tạo ra một database không khớp
@@ -36,7 +36,7 @@ export XP_ENV_FILE="$ENV_FILE"
 
 DB_USER="${POSTGRES_USER:-xeprime}"
 DB_NAME="${POSTGRES_DB:-xeprime}"
-COMPOSE=(docker compose -p "xeprime-$XP_ENV" -f docker-compose.prod.yml --env-file "$ENV_FILE")
+COMPOSE=(docker compose -p "xeprime-$XP_ENV" -f docker-compose.prod.yml --profile tools --env-file "$ENV_FILE")
 
 # Tên môi trường nằm trong tên file dump (backup-db.sh đặt như vậy). Cảnh báo khi hai thứ lệch
 # nhau — khôi phục dump staging đè lên production là loại tai nạn không có nút hoàn tác.
@@ -44,6 +44,18 @@ case "$(basename "$DUMP")" in
   "xeprime-$XP_ENV-"*) ;;
   *) echo "⚠ Tên file KHÔNG mang nhãn '$XP_ENV'. Đọc kỹ trước khi gõ YES." >&2 ;;
 esac
+
+# Xác minh checksum TRƯỚC khi dừng ứng dụng. `backup-db.sh` ghi kèm một file `.sha256`, và một
+# dump đi qua đường truyền (máy công ty pull về rồi mang ngược lên) có thể hỏng mà kích thước
+# vẫn đúng. Phát hiện ở đây thì mất 5 giây; phát hiện sau khi `--clean` đã xoá schema cũ thì
+# database đang trống và bản dump trong tay là bản hỏng.
+if [[ -f "$DUMP.sha256" ]]; then
+  echo '==> Xác minh checksum'
+  ( cd "$(dirname "$DUMP")" && sha256sum -c "$(basename "$DUMP").sha256" ) \
+    || { echo '✗ Checksum KHÔNG khớp — file dump đã hỏng. DỪNG.' >&2; exit 1; }
+else
+  echo "⚠ Không có $(basename "$DUMP").sha256 — bỏ qua bước xác minh checksum." >&2
+fi
 
 read -rp "Ghi đè database '$DB_NAME' của môi trường '$XP_ENV' bằng $(basename "$DUMP")? Gõ 'YES': " CONFIRM
 [[ "$CONFIRM" == 'YES' ]] || { echo 'Đã huỷ.'; exit 1; }

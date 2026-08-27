@@ -27,8 +27,10 @@
 | **Staging** | 4 vCPU / **6 GB** / 50 GB | Dư cho một stack. Lưu lượng bằng không, database bé |
 | **Production** | 4 vCPU đời mới + NVMe / **8 GB** / ≥ 80 GB | 8 GB cho runtime 2,7 GB + đỉnh build 3,5 GB + đệm cho lưu lượng thật. Đĩa lớn hơn vì ảnh, dump 14 ngày và các lớp image chồng lên nhau |
 
-> Nếu sau này chuyển việc build sang GitHub Actions rồi VPS chỉ `docker compose pull` (§8), đỉnh
-> 3,5 GB biến mất và production 4–6 GB là đủ. Chừng nào còn build tại chỗ thì đừng xuống dưới 8 GB.
+> **Việc build ĐÃ chuyển sang GitHub Actions** (§9): VPS chỉ `docker compose pull`, nên đỉnh
+> 3,5 GB không còn xuất hiện trong vận hành thường ngày và production 4–6 GB là đủ. Con số 8 GB
+> ở trên chỉ còn cần cho đường build TẠI CHỖ — thứ vẫn phải dùng được khi GitHub không truy cập
+> được. Mua dư 8 GB là mua lại đúng khả năng đó.
 
 **Mua staging trước, production sau là thứ tự đúng** — quy trình deploy được shake-out trên máy
 rẻ, và khi dựng production bạn đã gõ đúng các bước này một lần rồi.
@@ -61,9 +63,13 @@ kiến trúc hiện tại đã đúng như vậy, và đẩy ảnh qua VPS là c
 Backup của nhà cung cấp là ảnh chụp **cả máy ảo, mỗi 7 ngày**. Với một sản phẩm đang ghi đơn
 thuê, phiếu thu chi và hợp đồng thì trường hợp xấu nhất là **mất 7 ngày dữ liệu**.
 
-`deploy/scripts/backup-db.sh` chạy `pg_dump` **hằng đêm** và đẩy ra Cloudflare R2 — hạ tầng dự
-án đã có, R2 không tính phí egress, vài GB gần như miễn phí. Nhanh hơn, rẻ hơn, và khôi phục
-được *một bảng* thay vì phải dựng lại cả máy ảo.
+`deploy/scripts/backup-db.sh` chạy `pg_dump` **hằng đêm**, và máy tại công ty kéo bản sao về
+**hằng tuần** qua SFTP chỉ-đọc (§6). Nhanh hơn, và khôi phục được *một bảng* thay vì phải dựng
+lại cả máy ảo.
+
+⚠️ Nhưng nhớ con số: `pg_dump` hằng đêm nghĩa là **RPO 24 giờ** — sự cố lúc 22h làm mất 19 giờ
+đơn thuê, phiếu thu chi và hợp đồng. Đó là đánh đổi đã chấp nhận khi chưa làm PITR (§8), không
+phải chuyện bị bỏ sót.
 
 ### 1.5 Cần chuẩn bị TRƯỚC ngày deploy
 
@@ -294,13 +300,51 @@ ssh root@<ip-vps>
 apt-get update && apt-get install -y git
 git clone https://github.com/daihanhbvt/xeprime.git /opt/xeprime
 cd /opt/xeprime
+git checkout staging                      # `main` trên máy production
 bash deploy/scripts/vps-bootstrap.sh      # swap 4GB · Docker · ufw · user xeprime
 chown -R xeprime:xeprime /opt/xeprime
 ```
 
 Rồi đăng nhập lại bằng user thường: `ssh xeprime@<ip-vps>`.
 
+**Khoá SSH riêng cho GitHub Actions** — tách khỏi khoá cá nhân để thu hồi được độc lập:
+
+```bash
+# TRÊN MÁY BẠN, không phải trên VPS:
+ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/xeprime_deploy -N ""
+ssh-keyscan -H <ip-vps>                   # → Secret VPS_KNOWN_HOSTS
+cat ~/.ssh/xeprime_deploy                 # → Secret VPS_SSH_KEY (cả dòng BEGIN/END)
+cat ~/.ssh/xeprime_deploy.pub             # → thêm vào /home/xeprime/.ssh/authorized_keys
+```
+
+> `vps-bootstrap.sh` chép `authorized_keys` của root sang user `xeprime`, nên khoá bạn dùng để
+> đăng nhập root đã dùng được luôn cho `xeprime`. Khoá deploy ở trên là khoá **thứ hai**, riêng
+> cho máy móc — mất nó thì thu hồi một dòng, không phải đổi cả khoá cá nhân.
+
+Swap 4GB vẫn cần dù build đã chuyển sang Actions: Postgres + ba tiến trình Node trên máy 6GB mà
+không có swap là một lần OOM killer bắn nhầm.
+
 ### 3.3 Cấu hình
+
+**Đường chính: khai ở GitHub, không nano trên VPS.** Workflow sinh `.env.<môi trường>` mỗi lần
+deploy và `scp` lên máy — danh sách Variables/Secrets đầy đủ ở §9.2. Sinh ba bí mật:
+
+```bash
+openssl rand -hex 32                                                             # POSTGRES_PASSWORD
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"   # SESSION_JWT_SECRET
+openssl rand -base64 32                                                          # OTP_PEPPER
+```
+
+> `-hex` chứ không `-base64` cho `POSTGRES_PASSWORD`: mật khẩu này đi vào phần userinfo của
+> `DATABASE_URL`, mà `base64` sinh ra `/` và `+` — những ký tự phải URL-encode. Workflow có
+> encode, nhưng một mật khẩu không cần encode thì không có gì để encode sai.
+>
+> `DATABASE_URL` **không khai** — workflow tự ghép từ `POSTGRES_*`. Khai riêng nghĩa là mật khẩu
+> nằm hai chỗ, và khi chúng lệch nhau thì container `db` lên bình thường còn API báo lỗi xác
+> thực — triệu chứng không hề chỉ về nguyên nhân.
+
+<details>
+<summary>Đường dựng TAY (khi chưa có CI, hoặc GitHub không truy cập được)</summary>
 
 ```bash
 cd /opt/xeprime
@@ -309,17 +353,10 @@ chmod 600 .env.production
 nano .env.production          # điền hết; chú thích trong file nói rõ cái nào bắt buộc
 ```
 
-Sinh ba bí mật:
+Ở đường này `POSTGRES_PASSWORD` xuất hiện **hai lần** và phải khớp: ở chính nó và bên trong
+`DATABASE_URL`.
 
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"   # SESSION_JWT_SECRET
-openssl rand -base64 32                                                          # OTP_PEPPER
-openssl rand -base64 32                                                          # POSTGRES_PASSWORD
-```
-
-> `POSTGRES_PASSWORD` xuất hiện **hai lần** và phải khớp: ở chính nó và bên trong `DATABASE_URL`.
-> Lệch nhau thì container `db` lên bình thường còn API báo lỗi xác thực — triệu chứng không hề
-> chỉ về nguyên nhân.
+</details>
 
 ### 3.4 Deploy
 
@@ -365,10 +402,17 @@ lỗi CORS** (có lỗi ⇒ `CORS_ORIGINS` chưa khớp origin thật).
 
 ## 4. Deploy các lần sau
 
+**Đường chính là GitHub Actions — không SSH.** Merge vào `staging` hoặc `main` là deploy tự
+động; xem §9. Hai lệnh dưới đây là đường THỦ CÔNG, dùng khi CI không dùng được (mất mạng
+GitHub, hoặc đang gỡ lỗi ngay trên máy):
+
 ```bash
-cd /opt/xeprime && ./deploy/scripts/deploy.sh                  # máy production
-cd /opt/xeprime && ./deploy/scripts/deploy.sh --env staging    # máy staging
+cd /opt/xeprime && ./deploy/scripts/deploy.sh                  # máy production — BUILD tại chỗ
+cd /opt/xeprime && ./deploy/scripts/deploy.sh --env staging    # máy staging  — BUILD tại chỗ
 ```
+
+> Build tại chỗ ngốn ~3,5GB RAM và 10–20 phút trên E5 v4. Đường CI (§9) truyền thêm
+> `--image <ref>` và VPS chỉ `docker compose pull` — khoảng 1–2 phút.
 
 Thứ tự trong script là cố định và **không được đổi**:
 
@@ -407,34 +451,67 @@ docker stats --no-stream     # RAM/CPU thật của từng container
 
 ## 6. Sao lưu tự động
 
-Cron 03:00 giờ VN hằng ngày, đặt bằng user `xeprime` (không phải root):
+Kiến trúc đầy đủ, quy trình khôi phục và cách xử lý sự cố: **`docs/backup-and-restore.md`**.
+Đây chỉ là phần cài đặt.
+
+```
+   VPS                                       Máy tại công ty (Windows)
+   systemd timer, 03:00 VN hằng ngày         Task Scheduler, CN 04:00 hằng tuần
+   pg_dump → xác minh → .sha256              sftp PULL (chỉ đọc) → so SHA-256
+   giữ 14 ngày                               giữ 12 tuần
+   thất bại → Telegram                       bản mới nhất > 8 ngày → Telegram
+```
+
+**Máy công ty PULL, VPS không PUSH.** VPS là thứ dễ bị chiếm nhất trong hệ thống. Nếu nó cầm
+khoá ghi được vào mạng công ty thì kẻ chiếm nó xoá luôn bản sao lưu — đúng kịch bản ransomware.
+Chiều pull thì VPS không cầm bí mật nào của phía bên kia.
+
+### 6.1 Trên VPS
 
 ```bash
-crontab -e
+cd /opt/xeprime
+sudo ./deploy/scripts/install-backup-timer.sh                 # production
+sudo ./deploy/scripts/install-backup-timer.sh --env staging   # nếu muốn giữ dữ liệu test
+
+# Chạy thử ngay một lượt, đừng chờ tới 03:00
+sudo systemctl start xeprime-backup@production
+journalctl -u xeprime-backup@production -n 50 --no-pager
 ```
 
-```cron
-# Máy production:
-0 3 * * * cd /opt/xeprime && ./deploy/scripts/backup-db.sh >> /home/xeprime/xeprime-backup.log 2>&1
-# Máy staging (nếu muốn giữ dữ liệu test):
-# 0 3 * * * cd /opt/xeprime && ./deploy/scripts/backup-db.sh --env staging >> /home/xeprime/xeprime-backup.log 2>&1
-```
+systemd timer chứ không phải một dòng crontab, vì bốn thứ cron không cho sẵn: `Persistent=true`
+(chạy bù khi máy tắt qua giờ hẹn — cron im lặng bỏ qua), `OnFailure=` (gọi thẳng unit cảnh báo),
+`RuntimeMaxSec=` (trần thời gian ở cấp hệ thống), và `journalctl` (log có sẵn, có xoay vòng).
 
-Đẩy bản sao ra R2 — bản sao nằm cùng ổ đĩa với dữ liệu gốc thì không phải bản sao lưu:
+Cảnh báo qua Telegram: khai `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (Secrets của Environment,
+§9). Bỏ trống thì `notify.sh` im lặng bỏ qua.
+
+### 6.2 Lối kéo về cho máy tại công ty
 
 ```bash
-curl https://rclone.org/install.sh | sudo bash
-rclone config     # loại "s3" → provider Cloudflare → endpoint R2 → đặt tên remote là `r2`
-# rồi trong .env.production:  BACKUP_RCLONE_REMOTE=r2:xeprime-backup
+sudo ./deploy/scripts/setup-backup-user.sh --pubkey "ssh-ed25519 AAAA... xeprime-backup-pull"
 ```
 
-**Diễn tập khôi phục một lần ngay sau khi dựng xong.** Một bản sao lưu chưa từng được khôi phục
-thử thì chưa phải bản sao lưu:
+Tạo user `xpbackup`, dựng `/var/backups` đúng quyền, và khoá phiên SSH của user đó lại thành
+**SFTP chỉ đọc ở cấp máy chủ** (`ForceCommand internal-sftp -R` + `ChrootDirectory`). Khoá của
+máy công ty rò rỉ thì kẻ cầm nó cũng chỉ tải được đúng thư mục dump — không mở được shell,
+không xoá được gì, không dùng VPS làm bàn đạp.
 
-```bash
-# Tên file mang nhãn môi trường; script cảnh báo nếu nhãn không khớp `--env`.
-./deploy/scripts/restore-db.sh ~/xeprime-backups/xeprime-production-<stamp>.dump
-```
+Phía Windows: **`tools/backup-pull/README.md`**.
+
+### 6.3 Hai thứ phải làm ngay, không để sau
+
+1. **Kiểm khoá pull KHÔNG mở được shell.** Nếu `ssh -i <khoá> xpbackup@<ip> "whoami"` chạy
+   được thì cả mô hình chống ransomware ở trên vô nghĩa. Cách kiểm: `tools/backup-pull/README.md` §3.
+2. **Diễn tập khôi phục.** Một bản sao lưu chưa từng được khôi phục thử thì chưa phải bản sao lưu:
+
+   ```bash
+   # Tên file mang nhãn môi trường; script cảnh báo nếu nhãn không khớp `--env`.
+   ./deploy/scripts/restore-db.sh --env staging \
+     /var/backups/xeprime/staging/daily/xeprime-staging-<stamp>.dump
+   ```
+
+   **Bấm giờ lần đó** và ghi con số vào `docs/backup-and-restore.md`. Khi sự cố thật xảy ra,
+   câu hỏi đầu tiên phải trả lời được là "bao lâu thì xong" — và lúc đó không phải lúc đi đo.
 
 ---
 
@@ -453,6 +530,9 @@ thử thì chưa phải bản sao lưu:
 | `docker compose ps` trả về rỗng dù stack đang chạy | Thiếu `-p xeprime-<môi trường>` — compose đang nhìn vào một project khác (§5) |
 | Đăng nhập staging xong thì production đăng xuất | `SESSION_COOKIE_NAME` giống nhau giữa hai môi trường (§2.3) |
 | Deploy xong nhưng database trống trơn | `--env` lệch với `.env.<tên>` ⇒ project khác ⇒ volume khác. Kiểm `docker volume ls` |
+| Job deploy đỏ ở bước "Thiếu giá trị bắt buộc" | Chưa khai Variable/Secret đó ở Environment tương ứng (§9.2) |
+| Deploy xanh nhưng web hiện dữ liệu của môi trường kia | Image bị dùng chéo. `NEXT_PUBLIC_API_URL` nhúng cứng lúc build, nên tag `staging-*` **không** chạy được ở production (§9.3) |
+| `./deploy/scripts/deploy.sh: Permission denied` | Bit thực thi chưa có trong index git. `git update-index --chmod=+x deploy/scripts/*.sh` rồi commit |
 
 ---
 
@@ -460,13 +540,155 @@ thử thì chưa phải bản sao lưu:
 
 Ghi ra để không ai tưởng là đã có:
 
+- **RPO 24 giờ.** `pg_dump` hằng đêm nghĩa là sự cố lúc 22h làm mất 19 giờ ghi. Chưa làm PITR
+  (WAL archiving) vì nó thêm một thành phần phải vận hành cho một sản phẩm chưa có lượng đơn
+  đủ lớn. Khi 19 giờ trở thành không chấp nhận được: `pgBackRest` archive WAL vào chính
+  `/var/backups`, máy công ty vẫn pull như cũ — kiến trúc hiện tại không cản đường nó.
+- **Bản sao ngoài VPS nằm trên một máy trạm.** Máy đó vừa dùng hằng ngày vừa giữ bản sao. Nên
+  chuyển sang NAS, hoặc thêm một ổ ngoài quay vòng cất ngoài phòng máy.
+- **R2 không được sao lưu.** `pg_dump` chỉ phủ PostgreSQL; ảnh xe và giấy tờ nằm ở R2. Bật
+  Object Versioning cho hai bucket đó.
 - **Không có CDN trước Caddy.** Asset `_next/static` phục vụ thẳng từ VPS. Khi lưu lượng lớn,
   đặt Cloudflare phía trước (bật proxy SAU khi đã có chứng chỉ).
 - **Không có zero-downtime deploy.** `deploy.sh` gián đoạn ~10–30 giây lúc đổi container. Chấp
   nhận được ở MVP; muốn bỏ thì cần hai bản api chạy song song + Caddy load balance.
 - **Không có giám sát ngoài `/health`.** Nên cắm uptime monitor miễn phí (UptimeRobot, Better
   Stack) vào `https://api.xeprime.vn/health` và `https://xeprime.vn`.
-- **Build chạy trên chính VPS.** Đơn giản, không cần registry; đổi lại là ~15 phút CPU cao mỗi
-  lần deploy. Khi thấy phiền: build ở GitHub Actions → đẩy image lên GHCR → VPS chỉ
-  `docker compose pull && up -d`.
 - **Redis chưa dùng** — giữ sau profile `worker-queue` trong `docker-compose.prod.yml`.
+- **`apps/mobile` chưa có trong CI.** Đã có code nhưng chưa có job lint/typecheck/test, và chưa
+  có `eas.json`. App native **không** deploy lên VPS (§9.5) — đây là việc riêng.
+
+---
+
+## 9. CD — deploy bằng GitHub Actions
+
+`.github/workflows/deploy.yml`. **Một file cho cả hai môi trường**, không phải hai file chép
+nhau: hai bản chép nhau sẽ trôi lệch, và chỗ trôi lệch đầu tiên luôn là bước nguy hiểm nhất —
+migrate.
+
+### 9.1 Ba đường vào
+
+| Cách | Xảy ra gì |
+| --- | --- |
+| Merge `develop` → **`staging`** | verify → build → push GHCR → deploy staging. Tự động, không phê duyệt |
+| Merge `staging` → **`main`** | y hệt, nhưng dừng ở cổng **Required reviewers** trước khi chạm production |
+| **Run workflow** (thủ công) | Chọn `environment` + `ref` bất kỳ. Deploy một nhánh/tag/SHA cụ thể |
+| **Run workflow** + `image_tag` | **ROLLBACK.** Bỏ qua verify + build, chỉ bảo VPS pull tag đó — ~2 phút |
+
+Luồng: `resolve` → `verify` (dùng lại `ci.yml` nguyên vẹn) → `deploy` (build + push + ssh).
+
+`verify` cố ý **nằm ngoài** Environment để test chạy xong rồi mới tới lượt người duyệt nhìn.
+Build và deploy nằm **chung một job** vì cả hai đều cần Environment, mà GitHub hỏi phê duyệt
+một lần cho mỗi job — tách đôi là bắt người duyệt bấm hai lần cho một lần deploy.
+
+`concurrency.cancel-in-progress: false` — ngược với `ci.yml`, và cố ý: một deploy bị cắt ngang
+có thể dừng đúng giữa `prisma migrate deploy`.
+
+### 9.2 Environments — Variables vs Secrets
+
+**Settings → Environments** → tạo `staging` và `production`.
+
+| | `staging` | `production` |
+| --- | --- | --- |
+| Deployment branches | chỉ `staging` | chỉ `main` |
+| Required reviewers | **tắt** — staging phải tự động | **bật** |
+
+Nguyên tắc phân loại: **Secret** = giá trị mà lộ ra là phải đi xoay lại. **Variable** = giá trị
+công khai theo bản chất, hoặc suy được từ tên miền. Variable đọc được trong log và trong
+Settings; Secret bị che và không đọc lại được sau khi lưu.
+
+**Variables** (giá trị cột giữa là của staging):
+
+| Biến | staging | Ghi chú |
+| --- | --- | --- |
+| `WEB_DOMAIN` · `API_DOMAIN` | `stg.xeprime.vn` · `api-stg.xeprime.vn` | |
+| `ACME_EMAIL` | email của bạn | nhận cảnh báo chứng chỉ |
+| `POSTGRES_USER` · `POSTGRES_DB` | `xeprime` · `xeprime` | |
+| `APP_ENV` | **`staging`** | §2.3 — `NODE_ENV` KHÔNG khai, workflow luôn ghi `production` |
+| `API_PORT` | `4000` | |
+| `CORS_ORIGINS` | `https://stg.xeprime.vn` | |
+| `TRUST_PROXY_HOPS` | `1` | `2` nếu bật proxy Cloudflare (§2.2) |
+| `API_PUBLIC_URL` · `APP_WEB_URL` | `https://api-stg.xeprime.vn` · `https://stg.xeprime.vn` | |
+| `SESSION_TTL_DAYS` | `7` | |
+| `SESSION_COOKIE_NAME` | **`xp_session_stg`** | BẮT BUỘC khác production — §2.3 |
+| `SESSION_COOKIE_SECURE` · `SESSION_COOKIE_DOMAIN` | `true` · `.xeprime.vn` | giữ dấu chấm đầu |
+| `MOBILE_ACCESS_TTL_MINUTES` · `MOBILE_REFRESH_TTL_DAYS` | `15` · `60` | |
+| `MOBILE_JWT_AUDIENCE` · `MOBILE_AUTH_REDIRECT_URIS` | `xeprime-mobile` · `xeprime://auth/callback` | |
+| `OTP_MODE` | `mock` | mã in ra log và trả trong response |
+| `OTP_TTL_MINUTES` · `OTP_RESEND_COOLDOWN_SECONDS` · `OTP_MAX_SENDS_PER_HOUR` · `OTP_MAX_ATTEMPTS` | `5` · `60` · `5` · `5` | |
+| `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` | trống | email in ra log |
+| `SMTP_FROM` | `XePrime STG <no-reply@xeprime.vn>` | |
+| `FIRESTORE_ENABLED` | `false` | |
+| `FIREBASE_PROJECT_ID` · `FIREBASE_CLIENT_EMAIL` | trống | là ĐỊNH DANH, không phải bí mật |
+| `GOOGLE_OAUTH_CLIENT_ID` · `FACEBOOK_APP_ID` | trống hoặc thật | client id đi trong URL authorize ⇒ công khai theo thiết kế |
+| `R2_ACCOUNT_ID` · `R2_ENDPOINT` · `R2_BUCKET` · `R2_PRIVATE_BUCKET` · `R2_PUBLIC_BASE_URL` | bucket RIÊNG cho staging | URL `r2.dev` là đủ |
+| `GOOGLE_HOLIDAY_CALENDAR_ID` | `vi.vietnamese#holiday@group.v.calendar.google.com` | |
+| `BACKUP_KEEP_DAYS` | `14` | |
+| `NEXT_PUBLIC_API_URL` | `https://api-stg.xeprime.vn` | |
+| `NEXT_PUBLIC_APP_NAME` | `XePrime STG` | nhãn khác giúp không nhầm tab |
+| `NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY` · `NEXT_PUBLIC_FIREBASE_*` (4) | | nằm lộ thiên trong bundle JS ⇒ **không bao giờ** là Secret |
+| `VPS_USER` · `VPS_PATH` · `VPS_SSH_PORT` | `xeprime` · `/opt/xeprime` · `22` | |
+
+**Secrets:**
+
+| Secret | Sinh bằng |
+| --- | --- |
+| `POSTGRES_PASSWORD` | `openssl rand -hex 32` |
+| `SESSION_JWT_SECRET` | `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"` — schema từ chối giá trị mẫu |
+| `OTP_PEPPER` | `openssl rand -base64 32` |
+| `GOOGLE_OAUTH_CLIENT_SECRET` · `FACEBOOK_APP_SECRET` | console provider; trống ⇒ nút social trả `SOCIAL_NOT_CONFIGURED` |
+| `ESMS_API_KEY` · `ESMS_SECRET_KEY` · `ESMS_BRANDNAME` | trống ở staging |
+| `SMTP_PASS` | trống ở staging |
+| `R2_ACCESS_KEY_ID` · `R2_SECRET_ACCESS_KEY` | trống ⇒ endpoint upload trả 503, phần còn lại vẫn chạy |
+| `FIREBASE_PRIVATE_KEY` | một dòng, xuống dòng viết `\n` |
+| `GOOGLE_MAPS_SERVER_KEY` · `GOOGLE_HOLIDAY_API_KEY` | key **server** ⇒ Secret, khác hẳn key embed ở bảng trên |
+| `VPS_HOST` | IP VPS — Secret cho đỡ bị quét, không phải vì nó bí mật thật |
+| `VPS_SSH_KEY` | private key cặp khoá deploy (§3.2) |
+| `VPS_KNOWN_HOSTS` | `ssh-keyscan -H <ip>` |
+| `TELEGRAM_BOT_TOKEN` · `TELEGRAM_CHAT_ID` | cảnh báo backup (§6) |
+
+**KHÔNG khai `DATABASE_URL`.** Workflow tự ghép từ `POSTGRES_*` và URL-encode mật khẩu. §3.3 nói
+rõ vì sao: mật khẩu nằm hai chỗ thì sớm muộn lệch nhau, và triệu chứng không hề chỉ về nguyên
+nhân. `openssl rand -hex` ở bảng trên (thay cho `-base64`) cũng vì lý do đó — `base64` sinh ra
+`/` và `+`, những ký tự phải encode trong phần userinfo của URL.
+
+Ngoài ra khai **thêm một bản `NEXT_PUBLIC_*` ở cấp repository** (Settings → Secrets and
+variables → Actions → Variables). Job `build` của `ci.yml` chạy trên PR, nơi không có
+Environment nào — cùng giá trị thì layer cache khớp với lần build thật và tiết kiệm gần trọn
+thời gian build web. Variables của Environment đè lên Variables của repository.
+
+### 9.3 Image mang nhãn môi trường — không dùng chéo
+
+`ghcr.io/daihanhbvt/xeprime:staging-<sha>` và `:production-<sha>`.
+
+**Không phải để cho gọn.** Next **nhúng cứng `NEXT_PUBLIC_API_URL` vào bundle lúc build**, nên
+image build cho staging trỏ vĩnh viễn vào `api-stg`. Đem nó chạy production là cả site gọi sang
+staging — mà nhìn bên ngoài thì mọi thứ vẫn "chạy".
+
+Hệ quả khi rollback: chỉ chọn tag mang đúng tiền tố môi trường đang deploy.
+
+### 9.4 File env trên VPS được SINH TỰ ĐỘNG
+
+Mỗi lần deploy, workflow dựng `.env.<môi trường>` từ Variables + Secrets rồi `scp` lên, `chmod
+600`. **Sửa tay trên VPS sẽ bị ghi đè ở lần deploy kế tiếp** — đổi giá trị thì đổi ở GitHub.
+
+`deploy/env.production.example` vẫn là tài liệu tham chiếu cho từng biến, và là đường dựng tay
+khi cần chạy stack ngay trên máy.
+
+Workflow cũng `git checkout --detach <sha>` trên VPS thay vì `git pull`: compose và Caddyfile
+trên máy khớp **chính xác** commit đã sinh ra image.
+
+### 9.5 App native KHÔNG deploy lên VPS
+
+`apps/mobile` là Expo / React Native, và nó **cố ý bị loại khỏi image Docker**: `deploy/Dockerfile`
+lọc `--filter @xeprime/{api,web,worker,prisma}...` rồi `rm -rf apps/mobile` (~1 GB Expo/RN),
+`.dockerignore` cũng gạt `apps/mobile/{android,ios,.expo}`.
+
+App không phải thứ "deploy" — nó là file `.apk`/`.ipa` build qua **EAS Build** rồi phát hành qua
+TestFlight / Google Play. Nó chỉ *gọi* tới VPS. Để app dùng được staging cần đúng ba việc, và cả
+ba nằm ngoài phạm vi tài liệu này:
+
+1. `EXPO_PUBLIC_API_URL=https://api-stg.xeprime.vn` — biến duy nhất app cần.
+2. Thêm `https://api-stg.xeprime.vn/auth/social/google/callback` vào danh sách redirect URI
+   trong console Google/Facebook — chúng là *danh sách*, không phải một giá trị.
+3. Muốn build tự động thì tạo `eas.json` (hiện chưa có) + một workflow riêng.
