@@ -149,15 +149,23 @@ thứ hai của client HTTP — hai app khác nhau đúng ở `AuthTransport` (m
 ```
 apps/mobile/
 ├── app/                          # route file-based của expo-router (tên file = URL)
-│   ├── _layout.tsx               #   provider gốc + ErrorBoundary toàn app
-│   ├── index.tsx                 #   "/" — điểm vào, chuyển thẳng sang /login
+│   ├── _layout.tsx               #   provider gốc + ErrorBoundary toàn app + chuyển cảnh
+│   ├── index.tsx                 #   "/" — điểm vào, chuyển thẳng sang /explore (khách xem được)
 │   ├── +not-found.tsx            #   route lạ / deep link hỏng
-│   ├── (app)/                    #   nhóm CẦN đăng nhập (guard đang TẮT — xem mục 5)
+│   ├── (tabs)/                   #   thanh tab đáy; ba mục cần đăng nhập tự ẩn khi chưa có phiên
 │   │   ├── _layout.tsx
-│   │   └── home.tsx              #     "/home" — trang chủ Marketplace (MKT-01)
-│   └── (auth)/
-│       ├── _layout.tsx
-│       └── login.tsx             #     "/login"
+│   │   ├── explore.tsx           #     "/explore" — Marketplace, CÔNG KHAI
+│   │   ├── chat.tsx              #     "/chat"    — sau <RequireSession>
+│   │   ├── trips.tsx             #     "/trips"   — sau <RequireSession>
+│   │   └── account.tsx           #     "/account" — sau <RequireSession>
+│   ├── login.tsx                 #   AUTH-01/03/04 — mật khẩu · OTP · social
+│   ├── register.tsx              #   AUTH-02 — SĐT + mật khẩu
+│   ├── forgot-password.tsx       #   AUTH-05 bước 1 — xin liên kết qua email
+│   ├── reset-password.tsx        #   AUTH-05 bước 2 — ĐÍCH DEEP LINK, đọc ?token=
+│   ├── set-password.tsx          #   gợi ý đặt mật khẩu sau khi đăng nhập OTP
+│   ├── auth/callback.tsx         #   chặng quay về của OAuth (ADR 0019)
+│   ├── search.tsx                #   kết quả tìm xe
+│   └── listings/[id].tsx         #   chi tiết xe
 ├── assets/images/                # ảnh tĩnh (icon/splash khai ở app.json, phải là PNG vuông)
 ├── docs/trackingProject/*.html   # bảng theo dõi task (nguồn ưu tiên P0→P3 của app)
 └── src/
@@ -167,21 +175,26 @@ apps/mobile/
     │   ├── layout/Screen.tsx     #   khung màn: safe area + bàn phím + cuộn
     │   ├── feedback/             #   ⚠️ TOAST DÙNG CHUNG — AppToastProvider + useAppToast()
     │   ├── state/                #   ScreenLoading · ScreenError · ScreenMessage · AppErrorScreen
-    │   ├── ui/                   #   Button · TextField · Card · Chip · IconButton · Avatar · Skeleton
+    │   ├── ui/                   #   Button · TextField · Card · Chip · IconButton · Avatar · Skeleton · StatusIcon
     │   └── i18n/LocaleSwitcher.tsx
     ├── features/<miền>/          # api.ts · hooks/ · components/ — cắt theo NGHIỆP VỤ
     ├── hooks/                    # hook dùng chung không thuộc miền nào
     ├── i18n/                     # config · formats · provider · messages · intl-polyfill
     │                             #   app-format/domain: BẢN SAO của apps/web (xem §7)
     ├── lib/                      # api-client · auth-session · pkce · fetch-with-timeout · secure-storage · logger
+    ├── navigation/               # routes.ts (bản đồ đường đi) · go-back-or.ts
     ├── queries/                  # queryClient · queryKeys · reset-session-cache
     ├── store/                    # Redux Toolkit — chỉ ĐĂNG KÝ reducer, slice thuộc về feature
     ├── theme/                    # tokens · elevation · tamagui.config (Tamagui đọc chính tokens)
     └── utils/
 ```
 
-Tên nhóm trong ngoặc (`(app)`, `(auth)`) **không xuất hiện trong URL** — route thật là `/`,
-`/login`, `/home`. Nhóm chỉ để gắn layout và guard.
+Tên nhóm trong ngoặc (`(tabs)`) **không xuất hiện trong URL** — route thật là `/explore`,
+`/account`. Nhóm chỉ để gắn layout.
+
+**Đừng viết chuỗi đường dẫn thẳng trong component**: mọi đích đi qua
+[src/navigation/routes.ts](src/navigation/routes.ts), một namespace cho mỗi miền. Thêm màn hình
+= thêm file trong `app/` **và** một entry trong namespace tương ứng, cùng một thay đổi.
 
 Alias `@/*` → `src/*`, khai ở [tsconfig.json](tsconfig.json) và được `@expo/metro-config` đọc
 lại nên chạy cả ở Metro lẫn `tsc`.
@@ -193,20 +206,22 @@ Không viết gọi API hay business logic thẳng trong file route.
 
 ## 3. Luồng khởi động
 
-Thứ tự provider không tuỳ tiện — mỗi lớp cần lớp trước nó. Base **không gọi API nào lúc khởi
-động**: mở app là vào thẳng `/login`, sang `/home` bằng nút.
+Thứ tự provider không tuỳ tiện — mỗi lớp cần lớp trước nó. Mở app là vào thẳng **Marketplace ở
+chế độ khách**: khu công khai không dựng tường đăng nhập trước cửa (web cũng vậy).
 
 ```mermaid
 flowchart TD
   A["SafeAreaProvider<br/>initialMetrics — lấy inset ĐỒNG BỘ"] --> B["ReduxProvider"]
   B --> C["I18nProvider<br/>cần store để đọc locale"]
   C --> D["QueryClientProvider"]
-  D --> E["SessionBoundary<br/>nghe sự kiện phiên kết thúc"]
+  D --> AT["AppToastProvider<br/>sống ngoài Stack để toast qua được điều hướng"]
+  AT --> E["SessionBoundary<br/>nghe sự kiện phiên kết thúc"]
   E --> F["Stack — điều hướng"]
   F --> G["/ → Redirect"]
-  G --> I["/login"]
-  I -->|"nút (hardcode)"| J["/home"]
-  J -->|nút| I
+  G --> J["/explore — khách xem được"]
+  J -->|"nút Đăng nhập"| I["/login ⇄ /register"]
+  I -->|"phiên đã cấp"| K["enterApp() — dismissAll()"]
+  K --> J
 ```
 
 `ErrorBoundary` của expo-router nằm **ngoài** toàn bộ khối này (lỗi có thể đến từ chính các
@@ -269,20 +284,17 @@ trong `API_ERROR_CODE` của backend, vì backend không bao giờ phát chúng.
 
 ## 5. Luồng phiên đăng nhập — ADR 0017
 
-> **Guard route đang TẮT ở base.** `(app)/_layout.tsx` hiện chỉ render `Stack`; `/home` vào
-> thẳng bằng nút. Phần dưới đây **đã chạy thật** (đăng nhập/refresh/đăng xuất gọi API thật) —
-> bật guard chỉ là thay thân `AppLayout` bằng `useSessionGate()`.
-
 Native KHÔNG dùng cookie: trên React Native cookie do cookie store của OS quản và Android không
 flush xuống đĩa, nên kill app là mất phiên. Thay vào đó là **Bearer access token 15 phút +
 refresh token opaque xoay vòng**, thu hồi được theo thiết bị.
 
-**Ba đường vào, một kho token.** Mật khẩu, OTP và mạng xã hội đều kết thúc ở cùng
+**Bốn đường vào, một kho token.** Đăng ký, mật khẩu, OTP và mạng xã hội đều kết thúc ở cùng
 `storeTokens()` của `lib/auth-session.ts`; phần còn lại của app không phân biệt được người dùng
 đã đăng nhập bằng cách nào, và đó là điều kiện để refresh/đăng xuất chỉ có một bản.
 
 ```mermaid
 flowchart TD
+  L0["POST /auth/mobile/register<br/>họ tên + SĐT + mật khẩu (AUTH-02)"] --> T
   L1["POST /auth/mobile/login<br/>email/SĐT + mật khẩu"] --> T
   L2["POST /auth/mobile/phone/login<br/>SĐT + OTP"] --> T
   L3["GET /auth/social/:provider?client=native<br/>→ deep link ?code= →<br/>POST /auth/mobile/social/exchange"] --> T
@@ -301,8 +313,15 @@ flowchart TD
   E --> B["SessionBoundary<br/>resetSessionScopedCache()"]
   B --> Q["useCurrentUser fetch lại → 401"]
   Q --> S["useSessionGate() → 'unauthenticated'"]
-  S --> N["(app)/_layout: Redirect '/login'"]
+  S --> N["RequireSession: mời đăng nhập<br/>(thay nội dung, KHÔNG tự điều hướng)"]
 ```
+
+**Đặt lại mật khẩu (AUTH-05) đứng NGOÀI sơ đồ này** — nó không phát phiên. `POST
+/auth/password/forgot` và `POST /auth/password/reset` dùng chung endpoint với web, và đổi mật
+khẩu xong người dùng vẫn phải đăng nhập lại; đó là hành vi của web, giữ nguyên. Liên kết trong
+email trỏ tới `APP_WEB_URL/reset-password?token=…`, nên `app/reset-password.tsx` chỉ nhận được
+lượt mở khi máy đã bật App Links / Universal Links (hoặc qua scheme `xeprime://`); chưa bật thì
+trình duyệt mở trang web, và cả hai đường gọi cùng một endpoint.
 
 | Tầng                       | Ở đâu                                                              | Việc                                                                                            |
 | -------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
@@ -310,7 +329,8 @@ flowchart TD
 | PKCE app ↔ backend         | [src/lib/pkce.ts](src/lib/pkce.ts)                                 | Sinh `code_verifier`/`code_challenge` cho social; verifier chỉ ở bộ nhớ (ADR 0019)             |
 | Dọn trạng thái             | [SessionBoundary.tsx](src/features/auth/SessionBoundary.tsx)       | Nằm ngoài cây điều hướng nên **không** gọi được `useRouter` — nó chỉ dọn cache                  |
 | Quyết định                 | [use-session-gate.ts](src/features/auth/hooks/use-session-gate.ts) | Trả về `loading \| unauthenticated \| unreachable \| ready` — kiểm thử được mà không cần router |
-| Điều hướng (chưa nối)      | [app/(app)/_layout.tsx](<app/(app)/_layout.tsx>)                   | Nơi **duy nhất** gọi `<Redirect>`                                                               |
+| Cổng vào màn               | [RequireSession.tsx](src/features/auth/RequireSession.tsx)         | Bọc màn CẦN đăng nhập (`chat`, `trips`, `account`). Thay nội dung theo bốn trạng thái trên; deep link không lách qua được |
+| Quyền (RBAC)               | [use-permissions.ts](src/features/auth/hooks/use-permissions.ts) · [use-tenant-scope.ts](src/features/auth/hooks/use-tenant-scope.ts) | Đọc `permissions`/`tenant` từ `GET /auth/me` — CHỈ để ẩn/hiện UI, guard backend mới là bảo vệ thật |
 
 Chín luật đi kèm, đừng phá:
 
@@ -362,9 +382,11 @@ Nó cắm `node:http` vào khe `globalThis.fetch` (polyfill `whatwg-fetch` của
 `XMLHttpRequest` đã bị mock nên không đi mạng được); mọi tầng còn lại là code thật của app. Không
 có `XP_LIVE_API=1` thì suite tự bỏ qua, nên `pnpm test` vẫn chạy được khi không có API.
 
-> Còn thiếu: redirect chưa nhớ đích đến (hết phiên giữa chừng thì đăng nhập xong về `/`), nhóm
-> `(auth)` không chặn người đã đăng nhập, và chưa có màn "thiết bị đang đăng nhập" dù backend đã
-> lưu `deviceName`/`devicePlatform`/`appVersion` của từng phiên.
+> Còn thiếu: `RequireSession` chưa nhớ đích đến (hết phiên giữa màn `trips` thì đăng nhập xong
+> về Khám phá, không quay lại `trips`); `login`/`register` không chặn người đã đăng nhập; chưa có
+> màn "thiết bị đang đăng nhập" dù backend đã lưu `deviceName`/`devicePlatform`/`appVersion` của
+> từng phiên; và `app/reset-password.tsx` chưa nhận được liên kết email cho tới khi App Links /
+> Universal Links được cấu hình (cần `.well-known/assetlinks.json` + fingerprint chứng chỉ ký).
 ---
 
 ## 5b. Thông báo — MỘT hệ toast cho toàn app
@@ -466,7 +488,7 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
   Tamagui giả định thang size `$1…$12` của config mặc định, còn thang ở đây là token XePrime —
   trộn vào là kích thước loạn.
 - Màn hình KHÔNG dựng thẻ/viên/nút từ `XStack` trần: dùng `src/components/ui/` (`Card`, `Chip`,
-  `Button`, `IconButton`, `Avatar`, `TextField`, `Skeleton`). Đó là chỗ độ nổi, bo góc và vùng
+  `Button`, `IconButton`, `Avatar`, `TextField`, `Skeleton`, `StatusIcon`). Đó là chỗ độ nổi, bo góc và vùng
   chạm được quyết định MỘT lần — dựng tay ở từng màn là mỗi màn một kiểu.
 - **Thanh trên của mọi màn đi qua [`<AppHeader>`](src/components/layout/AppHeader.tsx)**, không
   dựng `XStack` riêng. Hai biến thể: `solid` (nền đặc, kẻ dưới) và `overlay` (nổi trên ảnh tràn
@@ -529,20 +551,24 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 
 ## 10. Trạng thái hiện tại
 
-**Đã có:** điều hướng theo nhóm, **xác thực Bearer đầy đủ theo ADR 0017** (access token 15 phút
-+ refresh xoay vòng single-flight + thu hồi theo thiết bị) trên `@xeprime/api-client` dùng chung
-với web, tầng phiên có test đầu-cuối (đã dựng, chưa nối guard vào route), timeout + retry policy,
-SecureStore, logger, đa ngữ vi/en type-safe, bộ component trạng thái/UI tối thiểu, và feature
-`auth` (đăng nhập / `me` / đăng xuất) làm khuôn mẫu cho các miền còn lại. 8 test suite / 74 case,
-cộng một suite **chạy với API thật** (mục 5) đã xác nhận Bearer đi đúng trên dây.
+**Đã có:**
 
-Hai màn hiện có là **khung rỗng có chủ đích**: `/login` (form thật, submit gọi API) và `/home`
-(nội dung hardcode, không gọi API). Không đầu tư UI ở giai đoạn này.
+- **Xác thực Bearer đầy đủ theo ADR 0017** (access token 15 phút + refresh xoay vòng
+  single-flight + thu hồi theo thiết bị) trên `@xeprime/api-client` dùng chung với web, kèm một
+  suite **chạy với API thật** (mục 5) xác nhận Bearer đi đúng trên dây.
+- **Auth trọn bộ khu khách**: AUTH-01/03/04 đăng nhập (mật khẩu · OTP · Google/Facebook),
+  **AUTH-02** đăng ký SĐT + mật khẩu, **AUTH-05** quên/đặt lại mật khẩu, **AUTH-07** RBAC +
+  cổng phiên (`RequireSession`) + đăng xuất thu hồi ở server.
+- **Marketplace khu công khai** (MKT): trang chủ, tìm kiếm, chi tiết xe.
+- Hạ tầng: timeout + retry policy, SecureStore, logger, đa ngữ vi/en type-safe trên **gốc
+  message dùng chung với web**, bộ component trạng thái/UI + skeleton, hệ toast một mối.
 
-**Chưa có:** guard route chưa bật (xem mục 12), iOS chưa build lần nào,
-`app.config.ts` tách dev/staging/prod, `@xeprime/tokens` (spacing/typography vẫn là số rải
-trong từng `StyleSheet`), refetch theo `AppState`/NetInfo, push notification, chat, và các miền
-nghiệp vụ còn lại. Lộ trình chung: `docs/completion-roadmap.md`.
+22 test suite / 162 case (+ suite live-bearer chỉ chạy khi có `XP_LIVE_API=1`).
+
+**Chưa có:** iOS chưa build lần nào, `app.config.ts` tách dev/staging/prod, App Links /
+Universal Links (liên kết đặt lại mật khẩu trong email vì thế mở ở trình duyệt), refetch theo
+`AppState`/NetInfo, push notification, chat thật, đặt xe, và toàn bộ cổng quản lý. Lộ trình
+chung: `docs/completion-roadmap.md`.
 
 ---
 
@@ -560,8 +586,8 @@ năng chưa". Cập nhật sau đợt xử lý vòng đời phiên.
 | Ranh giới trạng thái | 9.0  | Query / RHF / Redux / SecureStore phân vai rõ. Mutation không retry, retry chỉ với 5xx/mạng — hai quyết định nhiều base bỏ sót                                                                                            |
 | Đa ngữ               | 8.5  | `use-intl` giữ nguyên API `t()` của web nên hai bó message hợp nhất được sau; khoá `t()` kiểm lúc **biên dịch**; `messages.test.ts` chặn lệch vi↔en. Trừ vì `@xeprime/validators` vẫn trả message tiếng Việt cứng         |
 | Tương thích monorepo | 8.5  | Chỗ khó nhất của Expo + pnpm (Metro resolve, ESM-only trong Jest, babel root, tsconfig không extends được preset) đã giải xong và **ghi lý do ngay tại chỗ** — thứ tiết kiệm nhiều ngày công nhất về sau                  |
-| Kiểm thử             | 8.5  | 40 case đặt đúng chỗ rủi ro, không có test trang trí. Trừ vì chưa có test cho `Screen` và cho luồng điều hướng                                                                                                            |
-| Điều hướng           | 8.0  | Route group + guard tập trung, URL không đổi. Trừ vì redirect chưa nhớ đích đến và `(auth)` chưa chặn người đã đăng nhập                                                                                                  |     |
+| Kiểm thử             | 8.5  | 162 case đặt đúng chỗ rủi ro, không có test trang trí. Trừ vì chưa có test cho `Screen` và cho luồng điều hướng                                                                                                           |
+| Điều hướng           | 8.5  | Bản đồ route tập trung (`navigation/routes.ts`, một namespace mỗi miền) + cổng phiên một mối (`RequireSession`). Trừ vì cổng chưa nhớ đích đến và `login`/`register` chưa chặn người đã đăng nhập                          |     |
 | Cấu hình môi trường  | 5.0  | Một biến `EXPO_PUBLIC_API_URL`. `app.json` tĩnh nên chưa tách được dev/staging/prod                                                                                                                                       |
 | Sẵn sàng phát hành   | 4.5  | Chưa có `icon` / `splash` / `adaptiveIcon`, chưa có EAS profile, chưa có CI build, chưa có `expo-updates`. **iOS chưa build lần nào**                                                                                     |
 
@@ -582,9 +608,9 @@ chưa làm** — xem mục 12.
 
 ## 12. Ba việc nên làm TRƯỚC khi mở feature mới
 
-1. **Bật guard route.** Xác thực đã chạy thật (ADR 0017 — xem mục 5), nhưng `(app)/_layout.tsx`
-   vẫn cho vào thẳng. Bật = thay thân `AppLayout` bằng `useSessionGate()`, kèm việc nhớ đích đến
-   khi hết phiên giữa chừng và chặn người đã đăng nhập vào lại nhóm `(auth)`.
+1. **Cho cổng phiên nhớ đích đến.** `RequireSession` đã chặn (mục 5), nhưng hết phiên giữa màn
+   `trips` thì đăng nhập xong về Khám phá. Cần mang đường đang mở theo sang `/login` và quay lại
+   sau khi có phiên — kèm việc chặn người đã đăng nhập mở lại `login`/`register`.
 2. **Đưa `tenantId` vào `queryKeys`.** Người dùng nhiều gian hàng là chuyện chắc chắn xảy ra;
    key không mang scope thì cache của tenant này hiện cho tenant kia, và lúc đó phải sửa từng
    hook một.

@@ -1,28 +1,31 @@
 import { isUnauthenticated } from '@/lib/api-client';
 import { useCurrentUser } from './use-auth';
 
-export type SessionStatus = 'loading' | 'unauthenticated' | 'unreachable' | 'ready';
+export const SESSION_STATUS = {
+  LOADING: 'loading',
+  UNAUTHENTICATED: 'unauthenticated',
+  UNREACHABLE: 'unreachable',
+  READY: 'ready',
+} as const;
 
-/**
- * Quyết định "được vào hay không" tách khỏi việc điều hướng.
- *
- * Layout chỉ còn là bảng ánh xạ trạng thái → màn hình, nên luật vào cổng kiểm thử được mà
- * không cần dựng cả router.
- */
-export function useSessionGate(): {
+export type SessionStatus = (typeof SESSION_STATUS)[keyof typeof SESSION_STATUS];
+
+export interface SessionGate {
   status: SessionStatus;
   error: unknown;
   retry: () => void;
-} {
+}
+
+export function useSessionGate(): SessionGate {
   const me = useCurrentUser();
 
   const status: SessionStatus = me.isPending
-    ? 'loading'
+    ? SESSION_STATUS.LOADING
     : !me.isError
-      ? 'ready'
+      ? SESSION_STATUS.READY
       : isUnauthenticated(me.error)
-        ? 'unauthenticated'
-        : 'unreachable';
+        ? SESSION_STATUS.UNAUTHENTICATED
+        : SESSION_STATUS.UNREACHABLE;
 
   return { status, error: me.error, retry: () => void me.refetch() };
 }

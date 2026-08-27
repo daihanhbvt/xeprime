@@ -1,7 +1,7 @@
 import { yupResolver } from '@hookform/resolvers/yup';
 import { loginSchema, type LoginValues } from '@xeprime/validators';
 import { useForm } from 'react-hook-form';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
@@ -9,14 +9,15 @@ import { TextField } from '@/components/ui/TextField';
 import { type CurrentUser } from '@/features/auth/api';
 import { useLogin } from '@/features/auth/hooks/use-auth';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, space } from '@/theme/tokens';
 
 interface LoginFormProps {
   /** Nhận cả hồ sơ: đích sau đăng nhập phụ thuộc `hasPassword`, và chỉ nơi gọi mới biết đi đâu. */
   onSuccess: (user: CurrentUser) => void;
+  onForgotPassword: () => void;
 }
 
-export function LoginForm({ onSuccess }: LoginFormProps) {
+export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
   const t = useTranslations('Auth');
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
@@ -27,11 +28,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     handleSubmit,
     formState: { isValid },
   } = useForm<LoginValues>({
-    /*
-     * `onChange` chứ không phải mặc định `onSubmit`: nút "Đăng nhập" khoá theo `isValid`, mà ở
-     * chế độ mặc định `isValid` chỉ đúng SAU lần submit đầu tiên — nút sẽ khoá vĩnh viễn và
-     * người dùng không có cách nào mở nó ra.
-     */
     mode: 'onChange',
     resolver: yupResolver(loginSchema),
     defaultValues: { identifier: '', password: '' },
@@ -40,13 +36,6 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const onSubmit = handleSubmit((values) => {
     login.mutate(values, {
       onSuccess,
-      /*
-       * Lỗi đăng nhập đi bằng TOAST, không phải dải đỏ trong form.
-       *
-       * Nó là lỗi của một LẦN GỬI, không phải của một ô: dải đỏ nằm lại giữa hai ô nhập, đẩy
-       * bố cục xuống một nấc, và vẫn ở đó sau khi người dùng đã sửa mật khẩu. Lỗi theo TỪNG Ô
-       * thì vẫn nằm dưới ô đó, do `TextField` lo.
-       */
       onError: (error) => toast.showError(errorMessage(error)),
     });
   });
@@ -81,6 +70,17 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         editable={!login.isPending}
       />
 
+      <Pressable
+        onPress={onForgotPassword}
+        disabled={login.isPending}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: login.isPending }}
+        hitSlop={space.sm}
+        style={styles.forgot}
+      >
+        <Text style={styles.forgotLabel}>{t('login.forgot')}</Text>
+      </Pressable>
+
       {/*
         Trạng thái nút đọc THẲNG từ react-hook-form và TanStack Query — không có `useState` nào
         phản chiếu lại chúng. Một cờ `isButtonDisabled` tự nuôi là một nguồn sự thật thứ hai, và
@@ -99,5 +99,14 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 const styles = StyleSheet.create({
   form: {
     gap: space.md,
+  },
+  forgot: {
+    alignSelf: 'flex-end',
+    marginTop: -space.xs,
+  },
+  forgotLabel: {
+    color: colors.primaryActive,
+    fontSize: fontSize.bodySm,
+    fontWeight: fontWeight.semibold,
   },
 });

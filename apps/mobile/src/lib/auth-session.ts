@@ -1,4 +1,4 @@
-import { ApiClientError, anonymousAuthTransport, createApiClient, getErrorCode, mobileAuthApi, type CurrentUser, type MobileLoginInput, type MobileTokenPair } from '@xeprime/api-client';
+import { ApiClientError, anonymousAuthTransport, createApiClient, getErrorCode, mobileAuthApi, type CurrentUser, type MobileLoginInput, type MobileRegisterInput, type MobileTokenPair } from '@xeprime/api-client';
 import { API_ERROR_CODE, type AuthProvider } from '@xeprime/types';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
@@ -113,6 +113,25 @@ export async function signInWithPassword(
   await storeTokens(session.tokens);
   // `user` là CÙNG `MeDto` với `GET /auth/me`, kèm sẵn quyền + tenant scope đọc từ DB — app
   // không phải gọi thêm một vòng ngay sau khi đăng nhập.
+  return session.user;
+}
+
+/**
+ * Tạo tài khoản bằng SĐT + mật khẩu (AUTH-02) và cấp phiên ngay — cùng nghiệp vụ với
+ * `POST /auth/register` của web, chỉ khác envelope: cặp Bearer thay cho cookie (ADR 0017).
+ *
+ * SĐT ở đây CHƯA xác thực; `MeDto.phoneVerified` vẫn là `false` cho tới khi người dùng đi qua
+ * luồng OTP. Đó là hành vi của web, không phải thiếu sót của app — đừng chèn thêm một bước OTP
+ * ở đây, vì làm vậy là hai nền tảng có hai luật đăng ký khác nhau.
+ */
+export async function signUpWithPassword(
+  input: Omit<MobileRegisterInput, 'device'>,
+): Promise<CurrentUser> {
+  const session = await mobileAuthApi.register(authClient, {
+    ...input,
+    device: describeDevice(),
+  });
+  await storeTokens(session.tokens);
   return session.user;
 }
 

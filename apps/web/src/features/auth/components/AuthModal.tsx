@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Logo } from '@/components/brand/Logo';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { APP_NAME } from '@/constants/app-name';
 import { ROUTES } from '@/constants/routes';
 import { useIsMobile } from '@/hooks/use-media-query';
 import type { CurrentUser } from '@/hooks/use-current-user';
@@ -93,7 +94,7 @@ export function AuthModal() {
         <div>
           <div className={styles.title}>
             {mode === AUTH_MODE.LOGIN ? t('loginTitle') : t('registerTitle')}{' '}
-            <span className={styles.brandName}>XePrime</span>
+            <span className={styles.brandName}>{APP_NAME}</span>
           </div>
           <div className={styles.sub}>
             {mode === AUTH_MODE.LOGIN ? t('loginSub') : t('registerSub')}

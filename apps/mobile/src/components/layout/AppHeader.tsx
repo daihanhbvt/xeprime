@@ -5,6 +5,7 @@ import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { images } from '@/assets';
 import { IconButton } from '@/components/ui/IconButton';
+import { APP_NAME } from '@/lib/app-name';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
 /**
@@ -158,29 +159,26 @@ export function AppHeader({
   );
 }
 
+/** Ô logo cạnh tên thương hiệu — cao xấp xỉ một dòng chữ `body` để hai thứ cùng đường chân. */
+const BRAND_LOGO = 26;
+
 /** Logo + tên. Ở biến thể nổi trên ảnh thì ẩn — ảnh xe đã là nhân vật chính ở đó. */
 function BrandMark({ tone }: { tone: Tone }) {
-  const brand = tone === 'brand';
-
   return (
     <XStack ai="center" gap={space.xs}>
       <Image
         source={images.logo}
-        style={{ width: 26, height: 26, borderRadius: radius.sm }}
+        style={{ width: BRAND_LOGO, height: BRAND_LOGO, borderRadius: radius.sm }}
         resizeMode="contain"
       />
-      <XStack ai="baseline">
-        <Text
-          col={brand ? colors.onPrimary : colors.primaryActive}
-          fos={fontSize.body}
-          fow={fontWeight.bold}
-        >
-          xe
-        </Text>
-        <Text col={brand ? colors.onPrimary : colors.text} fos={fontSize.body}>
-          prime
-        </Text>
-      </XStack>
+      {/* Một `Text`, một style: tên đọc từ env nên không cắt được thành hai nửa cố định. */}
+      <Text
+        col={tone === 'brand' ? colors.onPrimary : colors.text}
+        fos={fontSize.body}
+        fow={fontWeight.bold}
+      >
+        {APP_NAME}
+      </Text>
     </XStack>
   );
 }

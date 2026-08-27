@@ -30,6 +30,26 @@ cho tới khi ngày trong test tính theo `now` thay vì cố định.
 không đổi từ 18/08. Mock `IntersectionObserver` dùng mảng cấp module. Hướng xử lý là ổn định
 test, **không** phải đổi `role` của sản phẩm.
 
+> **27/08 — APP NATIVE: ĐĂNG KÝ, QUÊN MẬT KHẨU, RBAC + CỔNG PHIÊN (AUTH-02/05/07).** Backend đã
+> có đủ endpoint từ hai đợt 26/08; đây là phần client. Nghiệp vụ clone 100% từ `apps/web`, khác
+> đúng ở trình bày và ở envelope phiên (ADR 0017).
+> **AUTH-02**: `signUpWithPassword` → `POST /auth/mobile/register`, dùng chung `registerSchema`
+> của `@xeprime/validators`; `confirmPassword` là ràng buộc của FORM, không gửi lên server. Sau
+> khi tạo xong hiện màn "chọn đi đâu" thay vì đẩy vào một khu nào đó — giữ đúng luật của web là
+> khách được MỜI, không bị bắt, trở thành chủ xe (ADR 0014). Nút "Trở thành chủ xe" chưa có vì
+> cổng quản lý chưa port; thêm cùng đợt đó.
+> **AUTH-05**: hai màn, dùng chung endpoint `/auth/password/{forgot,reset}` với web (chúng không
+> phát phiên nên không có bản `/auth/mobile/*`). Màn "đã gửi" báo thành công cho MỌI email hợp lệ
+> — đó là chống dò tài khoản của backend, có test khoá lại. `app/reset-password.tsx` đọc `?token=`
+> từ deep link; liên kết trong email vẫn trỏ `APP_WEB_URL`, nên nó chỉ nhận lượt mở sau khi cấu
+> hình App Links / Universal Links — **việc còn treo**, ghi ở README mục 5.
+> **AUTH-07**: `usePermissions` + `useTenantScope` (bản port của web, đọc từ `GET /auth/me` nên
+> thu hồi quyền có hiệu lực ngay, không cần đăng nhập lại), và `<RequireSession>` bọc ba tab cần
+> đăng nhập. Ẩn tab KHÔNG phải chặn: `xeprime://trips` mở thẳng màn đó. Cổng phân biệt đủ **bốn**
+> trạng thái — mất mạng cho THỬ LẠI chứ không đá người dùng ra đăng nhập lại.
+> Verify: mobile typecheck sạch · lint sạch · **jest mobile 162/162 (22 suite)** · vitest web
+> 1775/1775 (gốc message dùng chung) · `i18n:check` OK 24 namespace / 2703 khoá · không migration.
+
 > **26/08 (đợt 3) — HAI CỬA CẤP PHIÊN CÒN SÓT.** Rà lại toàn bộ `sessions.attach` thì còn đúng
 > hai chỗ chỉ trả cookie, và cả hai **cấp phiên kèm theo một hành động khác** nên rất dễ sót:
 > **`POST /auth/mobile/register`** (mới, kế thừa `RegisterDto` của web nên luật mật khẩu chỉ có

@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Logo } from '@/components/brand/Logo';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
+import { APP_NAME } from '@/constants/app-name';
 import { ROUTES } from '@/constants/routes';
 import { useAuthModal, useNextFromCurrentPath } from '@/features/auth/components/AuthModalProvider';
 import { useMarketLogout } from '@/features/auth/hooks/use-market-logout';
@@ -39,7 +40,7 @@ export function MarketHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <Link href={ROUTES.HOME} className={styles.brand} aria-label="XePrime">
+        <Link href={ROUTES.HOME} className={styles.brand} aria-label={APP_NAME}>
           <Logo size="sm" />
         </Link>
 
