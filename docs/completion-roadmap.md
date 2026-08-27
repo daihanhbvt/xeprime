@@ -358,7 +358,7 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 | **6** | **Finance / Thu-Chi / Công nợ / Hợp đồng** | ✅ **S1 + S2 + S3 Contracts XONG** — migration đã áp, verify sạch → **đóng milestone "vận hành đủ tiền"** |
 | 7 | Admin platform đầy đủ | ✅ **Lõi xong 31/07 (commit `262801b`)** — approval · gian hàng khoá/mở · dashboard · audit-view · nhân sự · gói-hạn (ADR 0010). ✅ **04/08: 3 màn giám sát** all-vehicles / all-bookings / all-customers (CHƯA commit). Còn lại §11.1: **support tickets · invoice cho gói** |
 | 8 | Migration từ Firestore + chạy song song | ❌ Sau |
-| 9 | QA / hardening / production | 🟡 **Hạ tầng deploy đã dựng 27/08** (`docs/deployment.md`, `deploy/`, `docker-compose.prod.yml`) — phần QA/hardening còn nguyên |
+| 9 | QA / hardening / production | 🟡 **Hạ tầng deploy 27/08 + CD và sao lưu 27/08** (`docs/deployment.md`, `docs/backup-and-restore.md`, `deploy/`, `.github/workflows/deploy.yml`, `tools/backup-pull/`) — phần QA/hardening còn nguyên |
 | — | **Epic Vehicle 360** (ngoài lịch phase) | ✅ **Xong 13/08/2026** — 8 wave, Release Gate PASS. Chi tiết §2.1 |
 
 > **27/08 — HẠ TẦNG TRIỂN KHAI (chưa commit).** Repo trước đó không có gì cho production: chỉ có
@@ -451,8 +451,35 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 >
 > Không đụng DTO/controller nên hợp đồng OpenAPI không đổi (`openapi-contract` 18/18 xanh).
 >
-> **Chưa deploy lên máy thật lần nào** — §8 của `deployment.md` ghi các nợ có chủ đích (không
-> CDN, không zero-downtime, build chạy trên chính VPS).
+> **Chưa deploy lên máy thật lần nào** — §8 của `deployment.md` ghi các nợ có chủ đích.
+
+> **27/08 — CD + SAO LƯU (chưa commit).** Đã đóng hai khoảng hở lớn nhất của hạ tầng bên trên.
+>
+> **CD (`.github/workflows/deploy.yml`).** Merge `develop`→`staging`→`main` là deploy tự động;
+> Run workflow cho phép chọn môi trường/ref, và điền `image_tag` để **rollback** về image cũ
+> trong ~2 phút. Build chuyển hẳn sang GitHub Actions → GHCR, VPS chỉ `docker compose pull`
+> (`deploy.sh --image <ref>`, neo `x-app-image` trong compose) — nợ "build chạy trên chính VPS"
+> đã trả. `ci.yml` thêm job `build` và `workflow_call` để làm cổng chặn dùng chung.
+>
+> ⚠️ Image mang nhãn MÔI TRƯỜNG (`:staging-<sha>`) vì `NEXT_PUBLIC_API_URL` bị Next nhúng cứng
+> lúc build — **không dùng chéo giữa hai môi trường**. File `.env.<môi trường>` trên VPS được
+> sinh tự động từ GitHub Environment mỗi lần deploy, nên sửa tay trên máy sẽ bị ghi đè.
+>
+> **Sao lưu (`docs/backup-and-restore.md`).** `backup-db.sh` viết lại: flock (deploy trùng cron
+> không còn chạy hai `pg_dump`), kiểm đĩa TRƯỚC khi ghi, dọn retention TRƯỚC khi dump, timeout,
+> `pg_restore --list` để bắt file cụt, `.sha256`, và `mv` nguyên tử để máy pull không bao giờ
+> đọc phải file dở. Hẹn giờ bằng systemd timer (`Persistent=true` chạy bù, `OnFailure=` cảnh
+> báo) thay cron. Cảnh báo qua Telegram bằng `curl`.
+>
+> **Đưa bản sao ra khỏi máy: máy tại công ty PULL qua SFTP chỉ-đọc**, VPS không push và không
+> cầm khoá ghi vào mạng công ty — `ForceCommand internal-sftp -R` + chroot
+> (`setup-backup-user.sh`). Phía Windows ở `tools/backup-pull/`: tải bù mọi bản còn thiếu, so
+> SHA-256, giữ 12 tuần, và dead-man switch cảnh báo khi bản mới nhất quá 8 ngày — lớp duy nhất
+> bắt được việc chính VPS đã chết. Kèm `Test-XePrimeRestore.ps1`: hằng tháng `pg_restore` thật
+> vào một Postgres dùng-một-lần rồi đếm bản ghi.
+>
+> **Cố ý KHÔNG làm:** PITR/WAL archiving và cloud object storage. Hệ quả phải biết: **RPO 24
+> giờ** — sự cố lúc 22h mất 19 giờ đơn thuê/phiếu thu chi. Ghi ở `deployment.md` §8.
 >
 > **Việc chèn ngoài phase (29–30/07):** đặt xe passwordless + đăng nhập SĐT + điều chỉnh UX là
 > feature do user yêu cầu, KHÔNG nằm trong lịch phase — làm xong nhưng **milestone chưa nhích**
@@ -709,6 +736,10 @@ chính khớp dữ liệu · in/xuất hợp đồng tối thiểu chạy.
 | Rác R2 khi thay ảnh/file | Thay ảnh xe hoặc file riêng tư để lại object mồ côi — chưa có đường xoá |
 | **Giá trị `DatePicker` diễn giải theo giờ MÁY, không phải giờ VN** | ~20 chỗ làm `values.x?.toISOString()` trên giá trị picker (đặt xe, bảo dưỡng, banner, gói). Trên máy đặt sai múi giờ, mốc gửi lên lệch đúng phần chênh — người dùng chọn 12:00 mà server nhận 12:00Z thay vì 05:00Z. Không phải sự cố đang chạy (người dùng ở VN), nhưng trái CLAUDE.md §9. Cần một helper "wall-clock → `Asia/Ho_Chi_Minh`" rồi thay cả cụm; đây là lý do `ci.yml` phải ghim `TZ`. Phần HIỂN THỊ đã đúng (`toAppTz`/`fmt.*`) sau khi sửa `rental-busy.ts` ngày 25/08 |
 | Page stub `pickup-areas`, `trash` | Vỏ 5-dòng, làm ở phase liên quan sau |
+| **RPO 24 giờ** | `pg_dump` hằng đêm ⇒ sự cố lúc 22h mất 19 giờ ghi. Cố ý chưa làm PITR. Khi cần: `pgBackRest` archive WAL vào `/var/backups`, máy công ty vẫn pull như cũ |
+| **Bản sao ngoài VPS nằm trên một máy trạm** | Máy đó vừa dùng hằng ngày vừa giữ bản sao. Chuyển sang NAS hoặc ổ ngoài quay vòng trong 1–2 tháng |
+| **R2 không được sao lưu** | `pg_dump` chỉ phủ PostgreSQL; ảnh xe và giấy tờ ở R2. Bật Object Versioning cho hai bucket |
+| **`apps/mobile` chưa có trong CI** | Đã có code nhưng chưa có job lint/typecheck/test, chưa có `eas.json`. App native KHÔNG deploy lên VPS (`deployment.md` §9.5) |
 
 ---
 

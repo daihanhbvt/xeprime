@@ -19,18 +19,19 @@ Git: **thư mục này là repo** (remote `https://github.com/daihanhbvt/xeprime
 ## 2. Tài liệu — đọc theo thứ tự
 
 Nguồn sống (đọc trước, luôn đúng hiện tại):
-1. `docs/decisions/` — **18 ADR (0001–0018), thắng mọi tài liệu khác khi mâu thuẫn**
+1. `docs/decisions/` — **19 ADR (0001–0019), thắng mọi tài liệu khác khi mâu thuẫn**
 2. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu"
 3. `docs/completion-roadmap.md` — **"đang ở đâu / làm gì tiếp"** (tiến độ thực tế + milestone). Đóng xong phase thì cập nhật file này.
 4. File này (CLAUDE.md)
-5. `docs/deployment.md` — đưa lên production (1 VPS, Docker Compose + Caddy). Đọc khi đụng `deploy/`, `docker-compose.prod.yml`, hoặc thêm biến env mà production cần.
+5. `docs/deployment.md` — đưa lên production (1 VPS, Docker Compose + Caddy) **và CD qua GitHub Actions** (§9). Đọc khi đụng `deploy/`, `docker-compose.prod.yml`, `.github/workflows/`, hoặc thêm biến env mà production cần — **biến env mới phải khai thêm ở GitHub Environment, nếu không deploy đỏ**.
+6. `docs/backup-and-restore.md` — sao lưu và khôi phục PostgreSQL. Đọc khi đụng `deploy/scripts/backup-db.sh`, `deploy/systemd/`, `tools/backup-pull/`.
 
 Tham chiếu nghiệp vụ (viết 22/07/2026, **không sửa lại**, phần công nghệ đã bị ADR ghi đè — giá trị ở phần domain):
-6. `docs/xeprime_screen_spec_by_role_before_db.md` — màn hình/chức năng theo role
-7. `docs/xeprime_overall_user_flow_next_node.md` — user flow
-8. `docs/xeprime_database_design.md` — thiết kế đầy đủ các bảng (nhiều bảng làm phase sau)
-9. `docs/xeprime_build_plan_nextjs_nestjs_prod.md` — lộ trình 9 phase
-10. `docs/xeprime_fe_base_stack_calendar.md` — màn lịch (phase 4)
+7. `docs/xeprime_screen_spec_by_role_before_db.md` — màn hình/chức năng theo role
+8. `docs/xeprime_overall_user_flow_next_node.md` — user flow
+9. `docs/xeprime_database_design.md` — thiết kế đầy đủ các bảng (nhiều bảng làm phase sau)
+10. `docs/xeprime_build_plan_nextjs_nestjs_prod.md` — lộ trình 9 phase
+11. `docs/xeprime_fe_base_stack_calendar.md` — màn lịch (phase 4)
 
 > Plan mode ghi vào `docs/plans/` (cấu hình ở `.claude/settings.json`) — plan đi theo repo, không rơi ra ngoài.
 > Dọn docs 23/07/2026: đã xóa `_archive_`, mọi `.docx`, và 3 doc "prompt để build base" (base đã xong). Chi tiết ở `docs/README.md`.
@@ -105,7 +106,10 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | Thuê dài hạn | **Gói cố định** 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** (server tính, client không gửi); khách nêu nguyện vọng ngày nhận, gian hàng chốt lịch khi duyệt; ưu đãi cam kết thời hạn theo THÁNG, không cộng dồn — ADR 0011 |
 | Đa ngữ | `next-intl` KHÔNG locale routing; hai ngôn ngữ `vi`/`en` dùng CHUNG url; locale ở cookie `XP_LOCALE` (httpOnly) đọc phía server; tiền luôn VND, múi giờ luôn `Asia/Ho_Chi_Minh` — ADR 0012 |
 | Chat | **PostgreSQL là source of truth** (mọi tin/thành viên/đính kèm/đã đọc); Firestore chỉ là projection realtime ~30–50 tin gần nhất; đồng bộ outbox/retry; attachment ở Cloudflare R2 — ADR 0009 |
-| Deploy MVP | 1 VPS 4GB RAM / 40GB SSD |
+| Deploy MVP | 1 VPS mỗi môi trường (staging 6GB, production ≥8GB) — `docs/deployment.md` §1 |
+| CD | Merge `develop`→`staging`→`main` là deploy tự động. Build ở GitHub Actions → GHCR → VPS chỉ `pull`. Image mang nhãn MÔI TRƯỜNG vì `NEXT_PUBLIC_*` nhúng cứng lúc build ⇒ **không dùng chéo giữa hai môi trường**. Chi tiết: `docs/deployment.md` §9 |
+| Env production | Sinh tự động từ GitHub Environment mỗi lần deploy. **Sửa tay trên VPS sẽ bị ghi đè** |
+| Sao lưu | `pg_dump` hằng đêm trên VPS (giữ 14 ngày) · máy công ty PULL hằng tuần qua SFTP chỉ-đọc (giữ 12 tuần). KHÔNG dùng cloud object storage, KHÔNG PITR ở giai đoạn này — `docs/backup-and-restore.md` |
 
 ## 4. Quyết định package (chốt trong session 22/07/2026)
 
@@ -152,6 +156,12 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ `dayjs.locale(...)` ở bất kỳ đâu — nó đổi trạng thái toàn tiến trình và rò ngôn ngữ giữa các request SSR
 - ❌ Hiện `message` tiếng Việt của backend làm chữ chính ở giao diện tiếng Anh — ánh xạ từ MÃ lỗi (ADR 0012)
 - ❌ Dịch mã đi trên dây (status/permission/serviceType…) — mã là dữ liệu, chỉ NHÃN mới dịch
+- ❌ Sửa tay `.env.production` / `.env.staging` trên VPS — nó bị workflow ghi đè ở lần deploy kế tiếp; đổi giá trị ở GitHub Environment (`docs/deployment.md` §9.2)
+- ❌ Thêm biến env mà quên khai ở GitHub Environment — job deploy dừng ngay ở bước "Thiếu giá trị bắt buộc"
+- ❌ Deploy image `staging-*` lên production (hoặc ngược lại) — `NEXT_PUBLIC_API_URL` nhúng cứng lúc build, cả site sẽ gọi sang môi trường kia mà nhìn bên ngoài vẫn "chạy"
+- ❌ Commit thẳng vào `staging`/`main` — mỗi lần merge vào chúng là một lần DEPLOY (`docs/git-workflow.md`)
+- ❌ Đẩy ngược lịch sử git để lùi phiên bản — rollback là Run workflow + `image_tag` (`docs/deployment.md` §9.1)
+- ❌ Đưa sao lưu lên cloud object storage, hay để VPS PUSH backup vào mạng công ty — VPS bị chiếm là mất luôn bản sao (`docs/backup-and-restore.md` §2)
 - ❌ Tạo microservices sớm
 - ❌ `any` tràn lan — nếu bắt buộc phải có comment lý do
 
