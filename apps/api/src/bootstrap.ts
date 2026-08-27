@@ -24,6 +24,22 @@ export async function createApp(): Promise<INestApplication> {
   const isProduction = config.getOrThrow<string>('NODE_ENV') === 'production';
 
   app.useLogger(app.get(Logger));
+
+  /*
+   * Sau reverse proxy, IP thật của client chỉ còn nằm trong `X-Forwarded-For` — và Express chỉ
+   * đọc header đó khi được bảo tin bao nhiêu lớp proxy. Không đặt: `req.ip` là IP container
+   * Caddy cho MỌI request, nên @nestjs/throttler và các giới hạn theo IP (gửi OTP, thử mật
+   * khẩu) đếm cả hệ thống như một người dùng duy nhất.
+   *
+   * Số lớp lấy từ env chứ không suy từ `NODE_ENV`: "có proxy hay không" là chuyện của TRIỂN
+   * KHAI, không phải của chế độ build — dev sau ngrok thì cần bật, còn production chạy trần
+   * (nếu có ngày đó) mà bật là cho phép ai cũng tự khai IP của mình.
+   */
+  const trustProxyHops = config.getOrThrow<number>('TRUST_PROXY_HOPS');
+  if (trustProxyHops > 0) {
+    app.getHttpAdapter().getInstance().set('trust proxy', trustProxyHops);
+  }
+
   app.use(
     helmet({
       contentSecurityPolicy: {

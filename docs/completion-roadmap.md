@@ -358,9 +358,102 @@ Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_pr
 | **6** | **Finance / Thu-Chi / Công nợ / Hợp đồng** | ✅ **S1 + S2 + S3 Contracts XONG** — migration đã áp, verify sạch → **đóng milestone "vận hành đủ tiền"** |
 | 7 | Admin platform đầy đủ | ✅ **Lõi xong 31/07 (commit `262801b`)** — approval · gian hàng khoá/mở · dashboard · audit-view · nhân sự · gói-hạn (ADR 0010). ✅ **04/08: 3 màn giám sát** all-vehicles / all-bookings / all-customers (CHƯA commit). Còn lại §11.1: **support tickets · invoice cho gói** |
 | 8 | Migration từ Firestore + chạy song song | ❌ Sau |
-| 9 | QA / hardening / production | ❌ Sau |
+| 9 | QA / hardening / production | 🟡 **Hạ tầng deploy đã dựng 27/08** (`docs/deployment.md`, `deploy/`, `docker-compose.prod.yml`) — phần QA/hardening còn nguyên |
 | — | **Epic Vehicle 360** (ngoài lịch phase) | ✅ **Xong 13/08/2026** — 8 wave, Release Gate PASS. Chi tiết §2.1 |
 
+> **27/08 — HẠ TẦNG TRIỂN KHAI (chưa commit).** Repo trước đó không có gì cho production: chỉ có
+> `docker-compose.yml` dựng PostgreSQL cho dev. Đã thêm `deploy/` (Dockerfile · Caddyfile · mẫu
+> env · 4 script vận hành), `docker-compose.prod.yml`, `.dockerignore` và
+> [`docs/deployment.md`](deployment.md) — trong đó có cả phần chọn cấu hình VPS và bản đồ tên miền.
+>
+> **Một image duy nhất** chạy cả api/web/worker/migrate: cắt nhỏ cây `node_modules` symlink của
+> pnpm cho từng service là chỗ hỏng lúc 2 giờ sáng chứ không phải chỗ tiết kiệm, và
+> `prisma migrate deploy` vốn cần Prisma CLI (một devDependency).
+>
+> **Tên miền (deployment.md §2.1–2.3).** Ba giao diện dùng CHUNG một origin — `xeprime.vn` cho
+> `/` + `/manage` + `/manage/admin`. Không tách `manage.`/`admin.` vì 275 lượt `ROUTES.*` trong
+> 91 file đang là đường dẫn tương đối, và ADR 0014 coi chủ shop với khách là cùng một con người.
+> Mọi hostname giữ ở 2 cấp (`api-stg` chứ không `api.stg`) vì Universal SSL của Cloudflare chỉ
+> phủ một cấp. Hai môi trường = hai VPS: chỉ MỘT Caddy bind được 80/443.
+>
+> **BA bug thật, cả ba do việc build/chạy image bắt được:**
+>
+> 1. **`trust proxy` chưa bao giờ được đặt** (`bootstrap.ts`). Sau reverse proxy, `req.ip` là IP
+>    của Caddy cho MỌI request ⇒ @nestjs/throttler gộp toàn bộ người dùng vào chung hạn mức 120
+>    req/phút và giới hạn gửi OTP theo IP mất tác dụng. Thêm `TRUST_PROXY_HOPS` — một CON SỐ (số
+>    lớp proxy) chứ không phải cờ bật/tắt: bật khi không có proxy là để ai cũng tự khai IP.
+>    Sau Cloudflare (mây cam) giá trị đúng là 2, không phải 1.
+>
+> 2. **`.dockerignore` bỏ sót `**/*.tsbuildinfo`** — mẫu không có `**/` chỉ khớp ở gốc context.
+>    `base.json` bật `incremental: true`, nên buildinfo của máy dev lọt vào image trong khi
+>    `dist/` bị loại: tsc kết luận "không có gì đổi", **emit 0 file và thoát 0**, rồi
+>    `@xeprime/domain` chết với TS2307 "Cannot find module". Xanh trên CI (checkout sạch), đỏ
+>    trên máy dev. Sửa hai lớp: mẫu `**/` + một bước `find -delete` trong builder.
+>
+> 3. **`SESSION_COOKIE_NAME` được đọc lúc CHẠY, không phải lúc build** — và cả `proxy.ts` lẫn
+>    `packages/types/src/session.ts` đều ghi chú ngược lại. Next 16 + Turbopack chỉ nhúng cứng
+>    `NEXT_PUBLIC_*`. Đo trực tiếp: build image với tên cookie khác mặc định, gọi
+>    `/manage/vehicles` kèm cookie tên đó vẫn nhận **307**, còn cookie tên mặc định lại **200**.
+>    Hệ quả: mọi triển khai đổi tên cookie — tức là **staging**, vì hai môi trường BẮT BUỘC phải
+>    khác tên (cookie domain `.xeprime.vn` gửi lẫn sang nhau) — sẽ có proxy không bao giờ thấy
+>    phiên: người đã đăng nhập bị đá về `/manage/login` thành vòng lặp, không một dòng lỗi nào.
+>    Sửa: service `web` nhận đúng MỘT biến runtime qua `environment:` (không nạp cả `.env` vào
+>    tiến trình render nội dung người dùng), và 4 chỗ ghi chú sai đã viết lại theo hành vi đo
+>    được. Sau sửa, cùng stack, chỉ recreate container `web`: cookie staging → **200**, cookie
+>    mặc định → **307**. Lưu ý cho người sửa sau: `env-session-cors.spec.ts` cấm MỌI literal tên
+>    cookie trong `proxy.ts`, luật đó bắt cả comment.
+>
+> **Hai môi trường, một file compose.** `deploy.sh --env <tên>` đặt đồng thời `-p xeprime-<tên>`,
+> `--env-file .env.<tên>` và biến `XP_ENV_FILE`; lệch một trong ba là stack tách đôi trong im
+> lặng (volume mới, database rỗng, không ai báo lỗi). `container_name` cố định bị **bỏ hẳn** để
+> Docker tự đặt theo project — nhìn `docker ps` là biết máy đang chạy môi trường nào.
+> `backup-db.sh`/`restore-db.sh` nhận cùng cờ, tên file dump mang nhãn môi trường, và restore
+> cảnh báo khi nhãn không khớp: khôi phục dump staging đè lên production là tai nạn không có nút
+> hoàn tác.
+>
+> **Hai bẫy cú pháp đã trả giá, ghi lại để khỏi vấp lần hai:** `env_file: [${VAR:-default}]`
+> không parse được — trong YAML flow sequence, dấu ngoặc nhọn sau ký hiệu đô-la mở một flow
+> mapping; phải nháy đơn. Và trong Node, `String.replace(a, b)` diễn giải các chuỗi đặc biệt
+> trong `b` (`$&`, dấu đô-la + backtick, dấu đô-la + nháy đơn) — chính ghi chú này từng chèn
+> nguyên phần đầu tài liệu vào giữa file vì lý do đó. Truyền HÀM thay vì chuỗi.
+>
+> **Verify:** build image đầy đủ PASS (2,62 GB) · smoke stack thật ở CẢ HAI đường
+> (mặc định và `--env staging`): `migrate deploy` áp toàn bộ migration trong container →
+> `/health` trả `{"status":"ok","database":"up"}` → `/docs` trả 404 (Swagger tắt đúng ở
+> production) → web trả 200 → worker boot đúng → `down -v` dọn sạch · `caddy validate` sạch ·
+> `docker compose config` hợp lệ và volume tách đúng cho cả hai project · `bash -n` cả 4 script ·
+> api typecheck + lint sạch · web + types typecheck sạch · vitest web **1775/1775** · jest
+> `env-session-cors` **25/25** (thêm 3 test khoá `TRUST_PROXY_HOPS`).
+>
+> **`APP_ENV` — tách "môi trường đã triển khai" khỏi "kiểu build" (27/08, đợt 3).** User muốn lên
+> staging ngay, chưa mua eSMS. Nhưng staging BẮT BUỘC chạy `NODE_ENV=production` (nếu không Next
+> trộn bản React dev vào bundle), mà `NODE_ENV=production` đang kéo theo một nhóm luật thuộc loại
+> khác hẳn — "tính năng phải chạy THẬT": bắt buộc eSMS, SMTP, đủ bộ R2. Trên staging ba luật đó
+> chỉ có nghĩa là tốn tiền tin nhắn để test một luồng đặt xe giả.
+>
+> Thêm `APP_ENV: production | staging` và tách `superRefine` làm hai tầng:
+> **BẢO MẬT** (https · cookie Secure · secret không còn giá trị mẫu · CORS toàn https) áp cho MỌI
+> môi trường đã triển khai — staging KHÔNG được miễn, nó cũng nằm trên Internet công khai và cũng
+> phát cookie phiên thật. **NĂNG LỰC** (eSMS · SMTP · R2) chỉ production; thiếu thì suy giảm có
+> kiểm soát (OTP vào log, email vào log, upload 503) chứ app không gãy.
+> Mặc định là `production` — giá trị nghiêm ngặt nhất; nới lỏng phải tường minh, không phải thứ
+> rơi vào vì quên khai. 8 test khoá đúng luật đó, trong đó 4 test khẳng định staging VẪN bị chặn
+> bởi từng luật bảo mật (cái bẫy hiển nhiên khi thêm một môi trường "dễ tính hơn" là nới luôn cả
+> nhóm kia).
+>
+> **Đánh đổi đã ghi rõ:** `devCode` (mã OTP trong response) mở cho staging — điều kiện là
+> `NODE_ENV=production` **và** `APP_ENV=production` mới khoá, chứ không chỉ `NODE_ENV` như trước;
+> chỉ xét `NODE_ENV` là khoá luôn staging và biến mọi lần test luồng đặt xe thành một lần đi đọc
+> `docker compose logs api`. Hệ quả: trên staging ai gọi được endpoint gửi OTP cũng xác thực được
+> SĐT bất kỳ ⇒ **không đưa dữ liệu khách hàng thật lên staging**. `main.ts` in cảnh báo lúc boot
+> liệt kê đúng những gì đang suy giảm — đó là thứ phát hiện việc chép nhầm file env sang máy
+> production ngay từ giây khởi động đầu tiên.
+>
+> Không đụng DTO/controller nên hợp đồng OpenAPI không đổi (`openapi-contract` 18/18 xanh).
+>
+> **Chưa deploy lên máy thật lần nào** — §8 của `deployment.md` ghi các nợ có chủ đích (không
+> CDN, không zero-downtime, build chạy trên chính VPS).
+>
 > **Việc chèn ngoài phase (29–30/07):** đặt xe passwordless + đăng nhập SĐT + điều chỉnh UX là
 > feature do user yêu cầu, KHÔNG nằm trong lịch phase — làm xong nhưng **milestone chưa nhích**
 > (S3 Contracts vẫn là việc đóng Phase 6). Ghi ở mục Phase 4 (30/07).

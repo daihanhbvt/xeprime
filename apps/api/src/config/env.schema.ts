@@ -14,6 +14,28 @@ const booleanish = z
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+
+    /*
+     * MÔI TRƯỜNG ĐÃ TRIỂN KHAI — khác `NODE_ENV`, và sự khác nhau đó là cả điểm của biến này.
+     *
+     * `NODE_ENV` trả lời "build kiểu gì": staging PHẢI là `production`, nếu không Next trộn bản
+     * React dev vào bundle server và app không giống thật nữa. Nhưng `NODE_ENV=production` cũng
+     * đang kéo theo một nhóm luật thuộc loại khác hẳn — "tính năng phải chạy THẬT": bắt buộc
+     * eSMS, bắt buộc SMTP, bắt buộc đủ bộ R2. Ở staging chúng chỉ có nghĩa là tốn tiền tin nhắn
+     * để test một luồng đặt xe giả.
+     *
+     * Vì vậy `APP_ENV` trả lời "đây là môi trường nào", và cửa chặn tách làm hai nhóm ở
+     * `superRefine` dưới:
+     *   • BẢO MẬT (https, cookie Secure, secret không còn giá trị mẫu, CORS) — áp cho MỌI môi
+     *     trường đã triển khai, staging KHÔNG được miễn. Staging có đăng nhập thật, cookie thật,
+     *     và nằm trên Internet công khai như production.
+     *   • NĂNG LỰC (eSMS · SMTP · R2) — chỉ production. Thiếu thì tính năng tương ứng suy giảm
+     *     một cách có kiểm soát (mã OTP vào log, email vào log, upload trả 503), app vẫn chạy.
+     *
+     * Mặc định là `production` — giá trị NGHIÊM NGẶT nhất. Nới lỏng phải là một hành động tường
+     * minh trong file env, không phải thứ rơi vào vì quên khai.
+     */
+    APP_ENV: z.enum(['production', 'staging']).default('production'),
     API_PORT: z.coerce.number().int().positive().default(4000),
 
     DATABASE_URL: z.string().min(1, 'DATABASE_URL là bắt buộc'),
@@ -27,6 +49,20 @@ export const envSchema = z
           .map((s) => s.trim())
           .filter(Boolean),
       ),
+
+    /*
+     * Số lớp reverse proxy đứng TRƯỚC API — giá trị truyền thẳng cho `trust proxy` của Express.
+     *
+     * Mặc định 0 (dev chạy trần, không có proxy). Ở production sau Caddy/nginx thì đúng bằng 1.
+     *
+     * Nó không phải một tuỳ chọn cho vui: `X-Forwarded-For` là header do người GỌI gửi, nên khi
+     * `trust proxy` = 0, Express bỏ qua nó và `req.ip` là IP của proxy — cùng MỘT giá trị cho
+     * mọi người dùng. Hệ quả là @nestjs/throttler gộp cả thế giới vào chung hạn mức 120
+     * request/phút, và giới hạn gửi OTP theo IP mất tác dụng. Chiều ngược lại cũng thật: bật
+     * khi KHÔNG có proxy nghĩa là ai cũng tự khai được IP của mình và đi vòng qua chính các
+     * giới hạn đó. Vì vậy con số này phải bằng đúng số proxy có thật, không phải một cờ bật/tắt.
+     */
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
 
     // --- Session (ADR 0002) ---
     SESSION_JWT_SECRET: z.string().min(32, 'SESSION_JWT_SECRET phải ít nhất 32 ký tự'),
@@ -275,10 +311,11 @@ export const envSchema = z
       });
     }
 
-    // ── Cửa chặn production ────────────────────────────────────────────────
-    // Mọi luật dưới đây đều là "mặc định tiện cho dev nhưng NGUY HIỂM ở production".
-    // Chúng phải fail lúc BOOT: một API production ghi link đặt lại mật khẩu ra log, hay gửi
-    // `redirect_uri` OAuth trỏ localhost, là sự cố an ninh chứ không phải cấu hình sai vặt.
+    // ── Cửa chặn cho MỌI môi trường đã triển khai (kể cả staging) ─────────
+    // Nhóm này là BẢO MẬT, và staging không được miễn: nó cũng nằm trên Internet công khai, cũng
+    // phát cookie phiên thật. Chúng phải fail lúc BOOT — một API ghi link đặt lại mật khẩu ra
+    // log, hay gửi `redirect_uri` OAuth trỏ localhost, là sự cố an ninh chứ không phải cấu hình
+    // sai vặt.
     if (env.NODE_ENV !== 'production') return;
 
     // `redirect_uri` của OAuth dựng từ đây và phải trùng từng ký tự với giá trị đã khai trong
@@ -294,27 +331,6 @@ export const envSchema = z
         message:
           'API_PUBLIC_URL phải là URL https của tên miền thật ở production (redirect_uri của OAuth dựng từ đây)',
       });
-    }
-
-    // OTP_MODE=mock ở production nghĩa là KHÔNG có SMS nào được gửi và mã 6 số chỉ nằm trong
-    // log server — vừa hỏng luồng đăng nhập vừa là rò rỉ mã.
-    if (env.OTP_MODE !== 'esms') {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['OTP_MODE'],
-        message: 'OTP_MODE=mock không gửi SMS và chỉ in mã ra log — production phải dùng esms',
-      });
-    }
-
-    // Thiếu SMTP thì EmailService in NGUYÊN link đặt lại mật khẩu (kèm token) ra log.
-    for (const key of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS'] as const) {
-      if (!env[key]) {
-        ctx.addIssue({
-          code: 'custom',
-          path: [key],
-          message: `${key} là bắt buộc ở production — thiếu SMTP thì link đặt lại mật khẩu (kèm token) bị ghi ra log`,
-        });
-      }
     }
 
     // CORS: '*' không đi được với credentials, và origin http để lộ cookie phiên trên đường truyền.
@@ -339,8 +355,37 @@ export const envSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['APP_WEB_URL'],
-        message: 'APP_WEB_URL phải là URL https của tên miền thật ở production (link đặt lại mật khẩu dựng từ đây)',
+        message:
+          'APP_WEB_URL phải là URL https của tên miền thật ở production (link đặt lại mật khẩu dựng từ đây)',
       });
+    }
+
+    // ── Từ đây trở xuống: CHỈ production ──────────────────────────────────
+    // Nhóm NĂNG LỰC. Thiếu chúng, app vẫn boot và vẫn chạy, chỉ là ba tính năng suy giảm một
+    // cách có kiểm soát: mã OTP vào log thay vì SMS, email đặt lại mật khẩu vào log thay vì hộp
+    // thư, endpoint upload trả 503 `UPLOADS_NOT_CONFIGURED`. Ở production đó là ba sự cố; ở
+    // staging đó là ba khoản chi phí không có lý do tồn tại.
+    if (env.APP_ENV !== 'production') return;
+
+    // OTP_MODE=mock ở production nghĩa là KHÔNG có SMS nào được gửi và mã 6 số chỉ nằm trong
+    // log server — vừa hỏng luồng đăng nhập vừa là rò rỉ mã.
+    if (env.OTP_MODE !== 'esms') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['OTP_MODE'],
+        message: 'OTP_MODE=mock không gửi SMS và chỉ in mã ra log — production phải dùng esms',
+      });
+    }
+
+    // Thiếu SMTP thì EmailService in NGUYÊN link đặt lại mật khẩu (kèm token) ra log.
+    for (const key of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS'] as const) {
+      if (!env[key]) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} là bắt buộc ở production — thiếu SMTP thì link đặt lại mật khẩu (kèm token) bị ghi ra log`,
+        });
+      }
     }
 
     // Ảnh xe/gian hàng (bucket public) và tài liệu xe (bucket riêng tư) đều là chức năng đã phát

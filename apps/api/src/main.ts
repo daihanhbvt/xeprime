@@ -33,6 +33,34 @@ async function bootstrap(): Promise<void> {
   app.enableShutdownHooks();
   await app.listen(port);
 
+  /*
+   * Một môi trường không-production PHẢI tự khai điều đó ra log lúc boot.
+   *
+   * `APP_ENV=staging` nới ba luật (eSMS · SMTP · R2) và mở `devCode` trong response OTP. Đó là
+   * cấu hình đúng cho staging và là sự cố cho production — nên nếu có ngày ai đó chép nhầm file
+   * env sang máy production, dòng dưới đây là thứ nói ra ngay từ giây khởi động đầu tiên, thay
+   * vì để phát hiện qua việc mã OTP của khách bị trả về trong response.
+   */
+  const appEnv = config.getOrThrow<string>('APP_ENV');
+  if (appEnv !== 'production') {
+    const degraded = [
+      `OTP: ${config.getOrThrow<string>('OTP_MODE')}` +
+        (config.getOrThrow<string>('OTP_MODE') === 'esms'
+          ? ''
+          : ' (KHÔNG gửi SMS — mã in ra log và trả trong response)'),
+      config.get<string>('SMTP_HOST') ? 'SMTP: đã cấu hình' : 'SMTP: TRỐNG (email in ra log)',
+      config.get<string>('R2_BUCKET') ? 'R2: đã cấu hình' : 'R2: TRỐNG (upload trả 503)',
+    ];
+    console.warn(
+      [
+        '',
+        `⚠  APP_ENV=${appEnv} — KHÔNG phải production. Đang chạy suy giảm:`,
+        ...degraded.map((line) => `   • ${line}`),
+        '',
+      ].join('\n'),
+    );
+  }
+
   console.log(`XePrime API: http://localhost:${port}`);
   console.log(
     docsEnabled

@@ -23,20 +23,21 @@ Nguồn sống (đọc trước, luôn đúng hiện tại):
 2. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu"
 3. `docs/completion-roadmap.md` — **"đang ở đâu / làm gì tiếp"** (tiến độ thực tế + milestone). Đóng xong phase thì cập nhật file này.
 4. File này (CLAUDE.md)
+5. `docs/deployment.md` — đưa lên production (1 VPS, Docker Compose + Caddy). Đọc khi đụng `deploy/`, `docker-compose.prod.yml`, hoặc thêm biến env mà production cần.
 
 Tham chiếu nghiệp vụ (viết 22/07/2026, **không sửa lại**, phần công nghệ đã bị ADR ghi đè — giá trị ở phần domain):
-5. `docs/xeprime_screen_spec_by_role_before_db.md` — màn hình/chức năng theo role
-6. `docs/xeprime_overall_user_flow_next_node.md` — user flow
-7. `docs/xeprime_database_design.md` — thiết kế đầy đủ các bảng (nhiều bảng làm phase sau)
-8. `docs/xeprime_build_plan_nextjs_nestjs_prod.md` — lộ trình 9 phase
-9. `docs/xeprime_fe_base_stack_calendar.md` — màn lịch (phase 4)
+6. `docs/xeprime_screen_spec_by_role_before_db.md` — màn hình/chức năng theo role
+7. `docs/xeprime_overall_user_flow_next_node.md` — user flow
+8. `docs/xeprime_database_design.md` — thiết kế đầy đủ các bảng (nhiều bảng làm phase sau)
+9. `docs/xeprime_build_plan_nextjs_nestjs_prod.md` — lộ trình 9 phase
+10. `docs/xeprime_fe_base_stack_calendar.md` — màn lịch (phase 4)
 
 > Plan mode ghi vào `docs/plans/` (cấu hình ở `.claude/settings.json`) — plan đi theo repo, không rơi ra ngoài.
 > Dọn docs 23/07/2026: đã xóa `_archive_`, mọi `.docx`, và 3 doc "prompt để build base" (base đã xong). Chi tiết ở `docs/README.md`.
 
 ### ⚠️ ADR thắng tài liệu cũ
 
-Tài liệu tham chiếu (5–9) có vài quyết định kỹ thuật đã bị ghi đè, và 3 chỗ tự mâu thuẫn nhau.
+Tài liệu tham chiếu (6–10) có vài quyết định kỹ thuật đã bị ghi đè, và 3 chỗ tự mâu thuẫn nhau.
 
 `docs/decisions/` là các ADR ghi quyết định kèm lý do. **Khi ADR mâu thuẫn với tài liệu cũ, ADR thắng.**
 

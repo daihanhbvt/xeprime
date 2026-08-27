@@ -87,6 +87,113 @@ describe('env: mặc định dev vẫn chạy được', () => {
   });
 });
 
+describe('env: APP_ENV — staging được miễn NĂNG LỰC, KHÔNG được miễn BẢO MẬT', () => {
+  /**
+   * Bộ env của một máy staging thật: `NODE_ENV=production` (bắt buộc — bundle phải giống thật)
+   * nhưng chưa có eSMS, chưa có SMTP, chưa có R2.
+   */
+  function stagingEnv(overrides: Record<string, string> = {}): Record<string, string> {
+    return baseEnv({
+      NODE_ENV: 'production',
+      APP_ENV: 'staging',
+      SESSION_COOKIE_SECURE: 'true',
+      SESSION_JWT_SECRET: 's'.repeat(48),
+      OTP_PEPPER: 'staging-pepper-value-0001',
+      CORS_ORIGINS: 'https://stg.xeprime.vn',
+      APP_WEB_URL: 'https://stg.xeprime.vn',
+      API_PUBLIC_URL: 'https://api-stg.xeprime.vn',
+      ...overrides,
+    });
+  }
+
+  it('staging boot được KHÔNG cần eSMS / SMTP / R2 — đó là cả lý do biến này tồn tại', () => {
+    const env = validateEnv(stagingEnv());
+    expect(env.APP_ENV).toBe('staging');
+    expect(env.OTP_MODE).toBe('mock');
+    expect(env.SMTP_HOST).toBeUndefined();
+    expect(env.R2_BUCKET).toBeUndefined();
+  });
+
+  /*
+   * Bốn test dưới là phần QUAN TRỌNG của describe này. Cái bẫy hiển nhiên khi thêm một môi
+   * trường "dễ tính hơn" là nới luôn cả nhóm bảo mật — và staging thì cũng nằm trên Internet
+   * công khai, cũng phát cookie phiên thật, cũng nhận đăng nhập thật.
+   */
+  it('staging VẪN bị chặn khi cookie phiên không Secure', () => {
+    expect(validationError(stagingEnv({ SESSION_COOKIE_SECURE: 'false' }))).toContain(
+      'SESSION_COOKIE_SECURE',
+    );
+  });
+
+  it('staging VẪN bị chặn khi CORS có origin http hoặc "*"', () => {
+    expect(validationError(stagingEnv({ CORS_ORIGINS: 'http://stg.xeprime.vn' }))).toContain(
+      'CORS_ORIGINS',
+    );
+    expect(validationError(stagingEnv({ CORS_ORIGINS: '*' }))).toContain('CORS_ORIGINS');
+  });
+
+  it('staging VẪN bị chặn khi URL công khai trỏ localhost', () => {
+    expect(validationError(stagingEnv({ API_PUBLIC_URL: 'http://localhost:4000' }))).toContain(
+      'API_PUBLIC_URL',
+    );
+    expect(validationError(stagingEnv({ APP_WEB_URL: 'http://localhost:3000' }))).toContain(
+      'APP_WEB_URL',
+    );
+  });
+
+  it('staging VẪN bị chặn khi secret còn là giá trị mẫu', () => {
+    const err = validationError(
+      stagingEnv({ SESSION_JWT_SECRET: 'change-me-dev-only-do-not-use-in-production-00' }),
+    );
+    expect(err).toContain('SESSION_JWT_SECRET');
+  });
+
+  /*
+   * Mặc định phải là giá trị NGHIÊM NGẶT nhất. Nếu một ngày ai đó đổi default thành `staging`
+   * "cho tiện", mọi máy production quên khai biến này sẽ âm thầm chạy mock OTP và trả mã 6 số
+   * thẳng trong response.
+   */
+  it('bỏ trống APP_ENV = production: vẫn đòi đủ eSMS / SMTP / R2', () => {
+    const err = validationError(stagingEnv({ APP_ENV: '' }));
+    expect(err).toContain('APP_ENV');
+
+    const { APP_ENV: _omitted, ...withoutAppEnv } = stagingEnv();
+    const strict = validationError(withoutAppEnv);
+    expect(strict).toContain('OTP_MODE');
+    expect(strict).toContain('SMTP_HOST');
+    expect(strict).toContain('R2_BUCKET');
+  });
+
+  it('production đầy đủ vẫn hợp lệ và APP_ENV mặc định là production', () => {
+    const env = validateEnv(productionEnv());
+    expect(env.APP_ENV).toBe('production');
+  });
+
+  it('giá trị lạ bị từ chối — không có môi trường thứ ba nào được suy diễn ra', () => {
+    expect(validationError(stagingEnv({ APP_ENV: 'dev' }))).toContain('APP_ENV');
+  });
+});
+
+describe('env: TRUST_PROXY_HOPS — số lớp proxy, không phải cờ bật/tắt', () => {
+  /*
+   * Mặc định 0 phải giữ nguyên cho dev chạy trần. Nếu một ngày ai đó đổi default thành 1 "cho
+   * tiện production" thì mọi môi trường không có proxy sẽ tin `X-Forwarded-For` do client tự
+   * gửi — tức là ai cũng khai được IP của mình và đi vòng qua rate limit theo IP.
+   */
+  it('mặc định là 0 — dev không có proxy thì không được tin X-Forwarded-For', () => {
+    expect(validateEnv(baseEnv()).TRUST_PROXY_HOPS).toBe(0);
+  });
+
+  it('nhận số lớp proxy dạng chuỗi (env luôn là chuỗi)', () => {
+    expect(validateEnv(baseEnv({ TRUST_PROXY_HOPS: '1' })).TRUST_PROXY_HOPS).toBe(1);
+  });
+
+  it('chặn giá trị âm và giá trị không phải số — cả hai đều là cấu hình gõ sai', () => {
+    expect(validationError(baseEnv({ TRUST_PROXY_HOPS: '-1' }))).toContain('TRUST_PROXY_HOPS');
+    expect(validationError(baseEnv({ TRUST_PROXY_HOPS: 'true' }))).toContain('TRUST_PROXY_HOPS');
+  });
+});
+
 describe('env: cửa chặn production', () => {
   it('chặn cookie phiên không Secure', () => {
     expect(validationError(productionEnv({ SESSION_COOKIE_SECURE: 'false' }))).toContain(
@@ -98,8 +205,9 @@ describe('env: cửa chặn production', () => {
     expect(
       validationError(productionEnv({ SESSION_JWT_SECRET: `change-me-${'0'.repeat(40)}` })),
     ).toContain('SESSION_JWT_SECRET');
-    expect(validationError(productionEnv({ OTP_PEPPER: 'xeprime-dev-otp-pepper-change-me' })))
-      .toContain('OTP_PEPPER');
+    expect(
+      validationError(productionEnv({ OTP_PEPPER: 'xeprime-dev-otp-pepper-change-me' })),
+    ).toContain('OTP_PEPPER');
   });
 
   it('chặn API_PUBLIC_URL trỏ localhost — redirect_uri của OAuth dựng từ đây', () => {
@@ -120,9 +228,9 @@ describe('env: cửa chặn production', () => {
 
   it('chặn CORS "*" và origin không phải https', () => {
     expect(validationError(productionEnv({ CORS_ORIGINS: '*' }))).toContain('CORS_ORIGINS');
-    expect(
-      validationError(productionEnv({ CORS_ORIGINS: 'http://xeprime.vn' })),
-    ).toContain('CORS_ORIGINS');
+    expect(validationError(productionEnv({ CORS_ORIGINS: 'http://xeprime.vn' }))).toContain(
+      'CORS_ORIGINS',
+    );
   });
 
   it('chặn APP_WEB_URL trỏ localhost (email đặt lại mật khẩu sẽ vô dụng)', () => {
@@ -141,9 +249,9 @@ describe('env: cửa chặn production', () => {
   });
 
   it('chặn bucket riêng tư TRÙNG bucket công khai — ở mọi môi trường', () => {
-    expect(
-      validationError(productionEnv({ R2_PRIVATE_BUCKET: 'xeprime-public' })),
-    ).toContain('R2_PRIVATE_BUCKET');
+    expect(validationError(productionEnv({ R2_PRIVATE_BUCKET: 'xeprime-public' }))).toContain(
+      'R2_PRIVATE_BUCKET',
+    );
     // Dev cũng chặn: trùng bucket là tài liệu riêng tư nằm sau URL công khai, không phụ thuộc môi trường.
     expect(
       validationError(baseEnv({ R2_BUCKET: 'same-bucket', R2_PRIVATE_BUCKET: 'same-bucket' })),
@@ -171,7 +279,10 @@ describe('env: cặp client id/secret của đăng nhập mạng xã hội', () 
   it('khai đủ cặp là hợp lệ', () => {
     expect(() =>
       validateEnv(
-        baseEnv({ GOOGLE_OAUTH_CLIENT_ID: 'id.apps.googleusercontent.com', GOOGLE_OAUTH_CLIENT_SECRET: 's' }),
+        baseEnv({
+          GOOGLE_OAUTH_CLIENT_ID: 'id.apps.googleusercontent.com',
+          GOOGLE_OAUTH_CLIENT_SECRET: 's',
+        }),
       ),
     ).not.toThrow();
   });
@@ -201,9 +312,9 @@ describe('tên cookie phiên: một nguồn duy nhất', () => {
     expect(resolveSessionCookieName({ SESSION_COOKIE_NAME: 'xp_session_stg' })).toBe(
       'xp_session_stg',
     );
-    expect(validateEnv(baseEnv({ SESSION_COOKIE_NAME: 'xp_session_stg' })).SESSION_COOKIE_NAME).toBe(
-      resolveSessionCookieName({ SESSION_COOKIE_NAME: 'xp_session_stg' }),
-    );
+    expect(
+      validateEnv(baseEnv({ SESSION_COOKIE_NAME: 'xp_session_stg' })).SESSION_COOKIE_NAME,
+    ).toBe(resolveSessionCookieName({ SESSION_COOKIE_NAME: 'xp_session_stg' }));
   });
 
   it('proxy.ts KHÔNG gõ thẳng tên cookie', () => {

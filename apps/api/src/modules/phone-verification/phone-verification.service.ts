@@ -33,7 +33,8 @@ export class PhoneVerificationService {
   /**
    * Gửi mã OTP cho (SĐT, mục đích). Chống spam: cooldown giữa 2 lần gửi + trần số lần/giờ theo
    * SĐT. Mã 6 số được hash (SHA-256 + pepper) trước khi lưu — DB rò rỉ không suy ra được mã.
-   * Trả `devCode` CHỈ ở dev (OTP_MODE=mock) để FE/test tự điền; production luôn null.
+   * Trả `devCode` khi provider là mock VÀ đây không phải triển khai production (dev + staging) —
+   * để FE/test tự điền. Triển khai production luôn null; xem giải thích ở chỗ tính giá trị.
    */
   async sendOtp(
     rawPhone: string,
@@ -98,10 +99,27 @@ export class PhoneVerificationService {
 
     await this.provider.send(phone, code);
 
-    const isMockDev =
-      this.config.get<string>('OTP_MODE') !== 'esms' &&
-      this.config.get<string>('NODE_ENV') !== 'production';
-    return { expiresAt, devCode: isMockDev ? code : null };
+    /*
+     * `devCode` trả mã 6 số THẲNG trong response — chỉ khi đây KHÔNG phải một triển khai
+     * production.
+     *
+     * "Triển khai production" = `NODE_ENV=production` VÀ `APP_ENV=production`. Hai điều kiện chứ
+     * không một: staging cũng chạy `NODE_ENV=production` (bắt buộc, để bundle giống thật), nên
+     * chỉ xét `NODE_ENV` là khoá luôn cả staging và biến mọi lần test luồng đặt xe thành một lần
+     * đi đọc `docker compose logs api`.
+     *
+     * ⚠️ Đánh đổi đã biết: trên staging, ai gọi được endpoint này cũng lấy được mã của SĐT bất kỳ,
+     * tức xác thực được SĐT bất kỳ. Chấp nhận được vì staging chứa dữ liệu test — và đó cũng là
+     * lý do KHÔNG đưa dữ liệu khách hàng thật lên staging.
+     *
+     * `OTP_MODE !== 'esms'` là lớp thứ hai: với luật ở `env.schema.ts`, một triển khai production
+     * không thể chạy mock. Giữ cả hai vế để lớp này không phụ thuộc vào việc luật kia còn đúng.
+     */
+    const isProductionDeployment =
+      this.config.getOrThrow<string>('NODE_ENV') === 'production' &&
+      this.config.getOrThrow<string>('APP_ENV') === 'production';
+    const isMockProvider = this.config.get<string>('OTP_MODE') !== 'esms';
+    return { expiresAt, devCode: isMockProvider && !isProductionDeployment ? code : null };
   }
 
   /**
@@ -170,7 +188,11 @@ export class PhoneVerificationService {
     await this.prisma.$transaction(async (tx) => {
       await tx.phoneVerification.update({
         where: { id: row.id },
-        data: { status: PHONE_VERIFICATION_STATUS.VERIFIED, verifiedAt: now, userId: userId ?? null },
+        data: {
+          status: PHONE_VERIFICATION_STATUS.VERIFIED,
+          verifiedAt: now,
+          userId: userId ?? null,
+        },
       });
 
       if (userId) {

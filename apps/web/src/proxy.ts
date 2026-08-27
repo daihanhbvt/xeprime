@@ -24,8 +24,21 @@ import { isSafeNextPath } from '@/features/auth/safe-next';
  * đăng nhập bị đá về trang login mà không có lỗi nào để lần.
  */
 const SESSION_COOKIE = resolveSessionCookieName({
-  // Next thay biểu thức này bằng giá trị lúc BUILD (proxy chạy ở Edge, không có process.env
-  // thật) — script build web đã nạp `.env` gốc repo nên biến có mặt.
+  /*
+   * Đọc lúc CHẠY, không phải lúc build.
+   *
+   * Comment trước ở đây nói ngược lại ("Next thay biểu thức này bằng giá trị lúc BUILD") và
+   * điều đó KHÔNG đúng với Next 16 + Turbopack: chỉ `NEXT_PUBLIC_*` mới được nhúng cứng. Đo
+   * trực tiếp ngày 27/08/2026 khi dựng môi trường staging: build image với một
+   * `SESSION_COOKIE_NAME` KHÁC mặc định trong `.env`, rồi gọi `/manage/vehicles` kèm cookie mang
+   * tên đó thì vẫn nhận 307, còn cookie mang tên MẶC ĐỊNH lại được cho qua — tức giá trị lúc
+   * build không hề đi vào bundle.
+   *
+   * Hệ quả cho triển khai: tiến trình chạy `next start` PHẢI có biến này trong môi trường của
+   * nó. Thiếu, mà cookie lại không mang tên mặc định, thì proxy không bao giờ thấy phiên và mọi
+   * người đã đăng nhập bị đá về `/manage/login` — vòng lặp, không có lỗi nào để lần.
+   * Xem `docker-compose.prod.yml` (service `web` → `environment`).
+   */
   SESSION_COOKIE_NAME: process.env.SESSION_COOKIE_NAME,
 });
 
