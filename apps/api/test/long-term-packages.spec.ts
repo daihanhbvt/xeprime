@@ -2,6 +2,7 @@ import { createPrismaClient, newId, Prisma } from '@xeprime/prisma';
 import {
   bookingRequestRespondBy,
   BOOKING_REQUEST_STATUS,
+  longTermReturnAt,
   MEMBERSHIP_STATUS,
   PICKUP_PREFERENCE,
   SERVICE_TYPE,
@@ -311,19 +312,15 @@ describe('duyệt yêu cầu dài hạn — gian hàng chốt giờ nhận, serv
     });
     expect(booking.longTermPackageMonths).toBe(3);
     expect(vnDateKey(booking.pickupAt)).toBe(wanted);
-    // Cộng THÁNG LỊCH, giữ nguyên giờ nhận.
-    const expectedReturn = new Date(atVn(wanted, '08:30'));
-    expectedReturn.setUTCMonth(expectedReturn.getUTCMonth()); // giữ tham chiếu rõ ràng
+    // Cộng THÁNG LỊCH, giữ nguyên giờ nhận — qua `longTermReturnAt`, hàm DUY NHẤT được phép
+    // suy ngày trả của một gói dài hạn (ADR 0011).
+    //
+    // KHÔNG tự dựng lại phép cộng bằng `Date.UTC(y, m + 3, d)`: JS cho tháng TRÀN, nên
+    // 31/08 + 3 tháng ra 01/12. Còn tháng lịch thì KẸP về ngày cuối tháng đích — 30/11.
+    // Hai cách chỉ khác nhau đúng vào những ngày cuối tháng, nên bản tự tính chạy xanh quanh
+    // năm rồi đỏ vài ngày (đã đỏ thật ngày 27/08/2026, khi `dayFromToday(4)` rơi vào 31/08).
     expect(booking.returnAt.toISOString()).toBe(
-      new Date(
-        Date.UTC(
-          new Date(atVn(wanted, '08:30')).getUTCFullYear(),
-          new Date(atVn(wanted, '08:30')).getUTCMonth() + 3,
-          new Date(atVn(wanted, '08:30')).getUTCDate(),
-          new Date(atVn(wanted, '08:30')).getUTCHours(),
-          30,
-        ),
-      ).toISOString(),
+      longTermReturnAt(new Date(atVn(wanted, '08:30')), 3).toISOString(),
     );
 
     // 12tr × 3 = 36tr, mốc 3 tháng giảm 15% → 30,6tr. Khuyến mãi tự lái 10% KHÔNG áp.
