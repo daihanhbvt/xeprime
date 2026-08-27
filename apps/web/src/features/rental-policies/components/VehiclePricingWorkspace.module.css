@@ -1,0 +1,374 @@
+/* Tab Giá & chính sách theo xe — Figma `236:3495` / mobile `247:1645`, `247:1706`. */
+
+.stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-md);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.cardHeader > div:first-child {
+  min-width: 0;
+}
+
+.cardHeader .desc {
+  margin-top: 4px;
+}
+
+.summaryActions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.cardTitleRow,
+.promoTitleRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.desc {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.sourceRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  cursor: pointer;
+  gap: var(--xp-space-sm);
+}
+
+.sourceLabel {
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sourceCustom {
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.inheritBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-sm);
+  border-radius: 8px;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm);
+}
+
+.inheritBanner > span {
+  min-width: 0;
+  flex: 1;
+}
+
+.inheritLink {
+  color: var(--xp-color-info);
+  font-weight: var(--xp-font-weight-bold);
+  white-space: nowrap;
+}
+
+.inheritBadge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--xp-color-success-bg);
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+  white-space: nowrap;
+}
+
+.missingPolicyBadge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold);
+  white-space: nowrap;
+}
+
+.resetRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.priceRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+}
+
+.priceRow > * {
+  min-width: 260px;
+  flex: 1;
+}
+
+/* Khuyến mãi trực tiếp + preview đúng ngữ cảnh marketplace. */
+.promoCard {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 12px;
+  background: var(--xp-color-bg-container);
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+}
+
+.promoSettings,
+.pricePreview {
+  min-width: 0;
+  padding: var(--xp-space-lg);
+}
+
+.promoSettings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.promoHeadingRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.promoHeadingRow > div {
+  min-width: 0;
+}
+
+.promoTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+.promoOffHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.55;
+}
+
+.promoInput {
+  max-width: 320px;
+}
+
+.promoOffHint {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: 8px;
+  background: var(--xp-color-bg-muted);
+}
+
+.pricePreview {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-left: 1px solid var(--xp-color-border);
+  background: linear-gradient(145deg, var(--xp-color-primary-light), var(--xp-color-bg-container));
+  gap: 6px;
+}
+
+.previewEyebrow {
+  color: var(--xp-color-primary-active);
+  font-size: 11px;
+  font-weight: var(--xp-font-weight-bold);
+  letter-spacing: 0.06em;
+}
+
+.previewLabel,
+.previewEmpty {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.previewPriceLine {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.previewOldPrice {
+  color: var(--xp-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  text-decoration: line-through;
+}
+
+.previewFinalPrice {
+  color: var(--xp-color-primary-active);
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-bold);
+  line-height: 1.2;
+}
+
+.previewFinalPrice small {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.previewSaving {
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.previewSecondary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  margin-top: var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-md);
+}
+
+.previewSecondary strong {
+  color: var(--xp-color-text);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+/* ─── Bảng kế thừa read-only ──────────────────────────────────────────────── */
+
+.summaryList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.summaryRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--xp-space-sm) 0;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+  gap: var(--xp-space-md);
+}
+
+.summaryRow:last-child {
+  border-bottom: none;
+}
+
+.summaryRow dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.summaryRow dd {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+  text-align: end;
+}
+
+.summaryOn {
+  color: var(--xp-color-success);
+}
+
+.summaryHighlight {
+  padding: var(--xp-space-sm);
+  border-bottom: none;
+  border-radius: 8px;
+  background: var(--xp-color-primary-light);
+}
+
+.summaryHighlight dt,
+.summaryHighlight dd {
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-bold);
+}
+
+@media (max-width: 900px) {
+  .promoCard {
+    grid-template-columns: 1fr;
+  }
+
+  .pricePreview {
+    border-top: 1px solid var(--xp-color-border);
+    border-left: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  .promoSettings,
+  .pricePreview {
+    padding: var(--xp-space-md);
+  }
+
+  .promoHeadingRow,
+  .cardHeader,
+  .previewSecondary {
+    align-items: flex-start;
+  }
+
+  .cardHeader {
+    flex-direction: column;
+  }
+
+  .summaryActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .summaryActions :global(.ant-btn) {
+    flex: 1;
+  }
+
+  .previewSecondary {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .previewSecondary strong {
+    text-align: start;
+  }
+
+  .summaryRow {
+    align-items: flex-start;
+  }
+}

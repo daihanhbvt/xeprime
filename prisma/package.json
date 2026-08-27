@@ -23,6 +23,7 @@
     "validate": "prisma validate --schema ./schema.prisma",
     "studio": "dotenv -e ../.env -- prisma studio --schema ./schema.prisma",
     "seed": "dotenv -e ../.env -- tsx ./src/seed.ts",
+    "cleanup:test-data": "dotenv -e ../.env -- tsx ./src/cleanup-test-data.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },

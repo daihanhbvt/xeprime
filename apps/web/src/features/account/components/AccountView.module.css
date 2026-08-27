@@ -1,0 +1,61 @@
+.card {
+  border-radius: var(--xp-border-radius);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+.avatar {
+  flex: none;
+  background: var(--xp-color-primary);
+  font-size: 26px;
+}
+
+.name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+}
+
+.contactRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--xp-color-text-secondary);
+}
+
+.verified {
+  margin-inline-start: 2px;
+}
+
+.form {
+  margin-top: 22px;
+}
+
+.readonlyNote {
+  margin-bottom: 18px;
+}
+
+.center {
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  min-height: 240px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .identity {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,49 @@
+/**
+ * Đồng hồ đếm ngược hạn phản hồi trên thẻ yêu cầu.
+ *
+ * Ba sắc thái = ba tình huống thật, không phải ba mức trang trí: còn nhiều thời gian (trung
+ * tính), còn dưới 15 phút (cảnh báo — đúng mốc worker gửi lần nhắc cuối), và đã hết giờ (kết
+ * thúc, hàng nút quyết định biến mất cùng lúc).
+ */
+
+.base {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.normal {
+  composes: base;
+  color: var(--xp-color-text-secondary);
+}
+
+/*
+ * Nền nhạt + viền cùng tông, KHÔNG chỉ đổi màu chữ: một con số đỏ lọt giữa các dòng chữ xám
+ * vẫn đọc như chữ thường với người mù màu (UX guidelines §8, cùng luật với chip trạng thái).
+ */
+.urgent {
+  composes: base;
+  padding: 2px var(--xp-space-sm);
+  border: 1px solid var(--xp-color-warning);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.expired {
+  composes: base;
+  color: var(--xp-color-text-tertiary);
+}
+
+/*
+ * `tabular-nums`: không có nó, chiều rộng chữ số đổi mỗi giây và cả dòng nhấp nháy sang trái
+ * phải suốt một phút — thứ khó chịu nhất trên một màn hình người ta phải nhìn lâu.
+ */
+.clock {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+}

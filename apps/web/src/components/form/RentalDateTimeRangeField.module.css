@@ -1,0 +1,120 @@
+/* Trạng thái đóng: hai đầu Nhận/Trả của CÙNG một khoảng, nối bằng mũi tên. */
+.trigger {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font: inherit;
+  gap: 6px;
+  text-align: left;
+}
+
+.endpoint {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-size: 15px;
+  font-weight: var(--xp-font-weight-semibold, 600);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trigger:disabled,
+.trigger:disabled .endpoint {
+  color: var(--xp-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.prefix {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+.sep {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+}
+
+/* --- Biến thể `labelled`: mỗi đầu có nhãn riêng + viên thời lượng --- */
+
+.triggerLabelled {
+  gap: var(--xp-space-sm);
+}
+
+.endpointLabelled {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  align-items: baseline;
+  gap: var(--xp-space-xs);
+  overflow: hidden;
+}
+
+.endpointLabel {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.endpointValue {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold, 600);
+  text-overflow: ellipsis;
+  /* Mốc thời gian không được ngắt dòng giữa chừng — "T6, 08/08 · 10:00" là một cụm. */
+  white-space: nowrap;
+}
+
+/* Vạch ngăn hai đầu: rẻ hơn một mũi tên và không gợi ý "kéo từ A sang B". */
+.divider {
+  width: 1px;
+  height: 20px;
+  flex: none;
+  background: var(--xp-color-border);
+}
+
+.durationPill {
+  flex: none;
+  padding: 2px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-sm);
+  font-weight: var(--xp-font-weight-semibold, 600);
+  white-space: nowrap;
+}
+
+/* Màn hẹp: hai đầu xuống hàng, viên thời lượng về cuối — không cuộn ngang. */
+@media (max-width: 640px) {
+  .triggerLabelled {
+    flex-wrap: wrap;
+    row-gap: var(--xp-space-xs);
+  }
+
+  .triggerLabelled .divider {
+    display: none;
+  }
+
+  .endpointLabelled {
+    flex: 1 1 100%;
+  }
+}
+
+/* Lịch đôi 2×360 + lề — khoá bề rộng để Popover không co giãn theo nội dung từng tháng. */
+.popoverBody {
+  width: 700px;
+  max-width: calc(100vw - 32px);
+}
+
+.drawerBody {
+  /* Chừa khoảng an toàn cho máy có notch/thanh gạt — nút Áp dụng không bị che. */
+  padding-bottom: calc(var(--xp-space-md) + env(safe-area-inset-bottom, 0px)) !important;
+}

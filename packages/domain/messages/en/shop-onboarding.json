@@ -1,0 +1,61 @@
+{
+  "page": {
+    "title": "Become a host",
+    "subtitle": "Create a shop to list and manage your rental vehicles. XePrime reviews your shop profile before your vehicles go live on the marketplace.",
+    "back": "Back to marketplace",
+    "homeAriaLabel": "Go to the XePrime home page"
+  },
+  "guide": {
+    "trigger": "Guide",
+    "title": "Open your shop in 4 steps",
+    "steps": {
+      "create": "Create the shop: name, business type, province and contacts.",
+      "complete": "Complete the profile, then press Submit for review — XePrime only looks at it once you submit.",
+      "prepare": "While you wait, you can already add vehicles and get your data ready.",
+      "publish": "Once approved: your vehicles go live on the marketplace and you start taking bookings."
+    }
+  },
+  "form": {
+    "title": "Create your shop",
+    "intro": "This step only creates a draft. Next you will land on your shop profile to finish the details and submit for review.",
+    "submit": "Create shop",
+    "fields": {
+      "name": {
+        "label": "Shop name",
+        "placeholder": "e.g. Binh Minh Car Rental"
+      },
+      "tenantType": {
+        "label": "Business type"
+      },
+      "province": {
+        "label": "Province / city",
+        "placeholder": "Select a province / city",
+        "help": "Where your first branch sits — customers will find your vehicles in this province.",
+        "loading": "Loading provinces…",
+        "empty": "No province is open for registration yet — please contact support.",
+        "loadError": "Could not load the province list"
+      },
+      "address": {
+        "label": "Address",
+        "placeholder": "Street number, street, ward"
+      },
+      "phone": {
+        "label": "Phone number",
+        "placeholder": "0901234567"
+      },
+      "email": {
+        "label": "Contact email",
+        "placeholder": "contact@yourshop.vn"
+      }
+    }
+  },
+  "tips": {
+    "title": "Good to know",
+    "accuracy": "Accurate details get your profile approved faster.",
+    "editable": "Everything here can be changed after the shop is created."
+  },
+  "privacy": {
+    "title": "Your data is safe",
+    "body": "Your details are kept private and used only to verify your shop."
+  }
+}

@@ -1,0 +1,156 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.card {
+  border-color: var(--xp-color-border);
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.rowIcon {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-bg-layout);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.rowBody {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.rowHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.rowMeta {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.fileName {
+  overflow: hidden;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+}
+
+.rowAlert {
+  margin-top: var(--xp-space-xs);
+}
+
+.uploadProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.uploadActions {
+  display: inline-flex;
+  gap: var(--xp-space-xs);
+}
+
+.rowActions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs);
+  max-width: 40%;
+}
+
+.ocrNote {
+  border-color: var(--xp-color-info);
+}
+
+/* ── Form nhập tay ── */
+/* Ô nhập co được trong cột hẹp — không chống đẩy làm hộp thoại tràn ngang. */
+.metaForm {
+  min-width: 0;
+}
+
+.metaForm :global(.ant-form-item),
+.metaForm :global(.ant-col) {
+  min-width: 0;
+}
+
+/* ── Đối soát OCR ── */
+.reviewStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+/* Giá trị dài (địa chỉ, số khung) cuộn TRONG khung này — hộp thoại/trang không cuộn ngang. */
+.reviewTableWrap {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.reviewTable {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: collapse;
+}
+
+.reviewTable th,
+.reviewTable td {
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  text-align: left;
+  vertical-align: top;
+}
+
+.reviewTable th {
+  color: var(--xp-color-text-tertiary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.currentValue {
+  color: var(--xp-color-text-secondary);
+}
+
+.ocrValue {
+  color: var(--xp-color-info);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.confidenceTag {
+  margin-inline-start: var(--xp-space-xs);
+}
+
+@media (max-width: 640px) {
+  .row {
+    flex-wrap: wrap;
+  }
+
+  .rowActions {
+    width: 100%;
+    max-width: none;
+    justify-content: flex-start;
+  }
+}

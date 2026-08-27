@@ -1,0 +1,13 @@
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.pageLink {
+  font-size: var(--xp-font-size-sm);
+  font-weight: 500;
+  color: var(--xp-color-primary);
+}

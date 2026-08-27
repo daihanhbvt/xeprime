@@ -1,10 +1,51 @@
 .sections {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 16px;
-  /* Bù phần thẻ tìm kiếm tràn xuống khỏi hero (transform translateY ở HeroSearch). */
-  padding-top: 48px;
   display: flex;
+  max-width: var(--xp-container-max-width);
   flex-direction: column;
-  gap: 44px;
+  padding: 40px 16px 24px;
+  margin: 0 auto;
+  gap: 48px;
+}
+
+/*
+ * Cùng footprint với `.cardOuter` của `SearchCard` để island gắn vào không xê dịch trang.
+ * Chiều cao bám đúng thẻ thật: hai tầng chọn (loại xe · dịch vụ) + một hàng ô nhập.
+ */
+.searchFallback {
+  position: relative;
+  z-index: 2;
+  max-width: var(--xp-container-max-width);
+  padding: 0 var(--xp-space-md);
+  margin: -119px auto 0;
+}
+
+/* Shimmer thuần CSS — fallback này render trong Server Component nên không dùng Skeleton antd. */
+.searchFallbackInner {
+  height: 222px;
+  border-radius: var(--xp-border-radius);
+  animation: search-fallback-pulse 1.4s ease-in-out infinite;
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-overlay);
+}
+
+@keyframes search-fallback-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@media (max-width: 760px) {
+  .searchFallback {
+    margin-top: -40px;
+  }
+
+  /* Mobile xếp dọc: ba tầng chiếm trọn bề ngang, ô nhập nằm dọc — cao hơn bậc thang desktop. */
+  .searchFallbackInner {
+    height: 358px;
+  }
 }

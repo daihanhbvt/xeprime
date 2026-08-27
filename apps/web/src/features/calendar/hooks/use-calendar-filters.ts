@@ -2,12 +2,26 @@
 
 import { useCallback, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import type { CalendarFilters } from '../types/calendar.types';
+import type { CalendarFilters, CalendarSort } from '../types/calendar.types';
 import { todayIsoDate } from '../utils/calendar-date.util';
 
 const DEFAULT_DAYS = 14;
 const MIN_DAYS = 1;
 const MAX_DAYS = 62;
+
+/**
+ * Các kiểu sắp xếp hàng xe — MÃ, khớp `CALENDAR_SORT_VALUES` của backend.
+ * Mặc định `next_booking`: xe có lịch đang chạy/sắp tới gần nhất lên đầu.
+ *
+ * Cố ý KHÔNG mang nhãn: mã đi trong URL và lên API là dữ liệu, còn chữ hiện ra đổi theo ngôn
+ * ngữ. Toolbar tra nhãn ở `Calendar.toolbar.sort.<value>` — hook này không được biết tới chữ.
+ */
+export const CALENDAR_SORT_VALUES = [
+  'next_booking',
+  'name',
+  'price_asc',
+  'price_desc',
+] as const satisfies readonly CalendarSort[];
 
 /**
  * Filter lịch sống ở URL, KHÔNG ở Redux — ADR 0004.
@@ -18,9 +32,12 @@ const MAX_DAYS = 62;
  *   - nút Back hoàn tác filter thay vì văng khỏi trang
  *   - F5 không mất filter
  */
+/** `null` = xoá tham số khỏi URL (về mặc định) — dùng cho filter có default như `sort`. */
+type CalendarFilterPatch = { [K in keyof CalendarFilters]?: CalendarFilters[K] | null };
+
 export function useCalendarFilters(): {
   filters: CalendarFilters;
-  setFilters: (patch: Partial<CalendarFilters>) => void;
+  setFilters: (patch: CalendarFilterPatch) => void;
   reset: () => void;
 } {
   const router = useRouter();
@@ -29,6 +46,7 @@ export function useCalendarFilters(): {
 
   const filters = useMemo<CalendarFilters>(() => {
     const rawDays = Number(searchParams.get('days'));
+    const rawSort = searchParams.get('sort');
     return {
       from: searchParams.get('from') ?? todayIsoDate(),
       days:
@@ -37,11 +55,15 @@ export function useCalendarFilters(): {
           : DEFAULT_DAYS,
       vehicleType: searchParams.get('vehicleType'),
       q: searchParams.get('q'),
+      // Giá trị lạ trên URL rơi về mặc định — backend cũng validate lại (IsIn).
+      sort: CALENDAR_SORT_VALUES.some((value) => value === rawSort)
+        ? (rawSort as CalendarFilters['sort'])
+        : 'next_booking',
     };
   }, [searchParams]);
 
   const setFilters = useCallback(
-    (patch: Partial<CalendarFilters>) => {
+    (patch: CalendarFilterPatch) => {
       const next = new URLSearchParams(searchParams.toString());
 
       for (const [key, value] of Object.entries(patch)) {

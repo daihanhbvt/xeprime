@@ -1,0 +1,98 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.card {
+  border-color: var(--xp-color-border);
+}
+
+.description {
+  margin-top: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+/* Panel "Xem trước bảng giá áp dụng" — khối nền nhạt tách khỏi thân thẻ. */
+.preview {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-bg-layout);
+}
+
+.previewHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-xs) var(--xp-space-sm);
+}
+
+.previewSource {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.previewGrid {
+  display: grid;
+  margin: 0;
+  gap: var(--xp-space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.previewItem dt {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.previewItem dd {
+  margin: 2px 0 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.previewOn.previewOn {
+  color: var(--xp-color-success);
+}
+
+.previewDiscounts {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  margin-top: var(--xp-space-md);
+  gap: var(--xp-space-xs);
+}
+
+.previewDiscountsLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.previewChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.previewChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+@media (max-width: 640px) {
+  .previewGrid {
+    grid-template-columns: 1fr;
+    gap: var(--xp-space-sm);
+  }
+}

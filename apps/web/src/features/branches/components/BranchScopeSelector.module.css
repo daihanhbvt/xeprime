@@ -1,0 +1,36 @@
+/*
+ * Bộ chọn chi nhánh trên thanh trên. Bề rộng có trần để tên chi nhánh dài không đẩy chuông/chat
+ * ra khỏi thanh; tên bị cắt vẫn đọc đủ nhờ tooltip của chính `Select`.
+ */
+.select {
+  min-width: 180px;
+  max-width: 260px;
+}
+
+/* Gian hàng một chi nhánh: đọc như ngữ cảnh, cùng nhịp với ô tên gian hàng ngay bên cạnh. */
+.single {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  max-width: 220px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.singleName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Dưới 1024px thanh trên chật: giấu ô chọn, khu quản lý vẫn lọc được ở từng trang. */
+@media (max-width: 1024px) {
+  .select {
+    min-width: 140px;
+    max-width: 160px;
+  }
+
+  .single {
+    display: none;
+  }
+}

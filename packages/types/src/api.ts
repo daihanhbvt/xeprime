@@ -42,12 +42,34 @@ export const API_ERROR_CODE = {
   // Auth / session (ADR 0002)
   UNAUTHENTICATED: 'UNAUTHENTICATED',
   SESSION_EXPIRED: 'SESSION_EXPIRED',
-  INVALID_ID_TOKEN: 'INVALID_ID_TOKEN',
-  // Đăng nhập/đăng ký email-mật khẩu
+  // Đăng nhập/đăng ký bằng định danh + mật khẩu
   EMAIL_TAKEN: 'EMAIL_TAKEN',
+  PHONE_TAKEN: 'PHONE_TAKEN',
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   INVALID_RESET_TOKEN: 'INVALID_RESET_TOKEN',
   ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+
+  /*
+   * Đăng nhập mạng xã hội — ADR 0019.
+   *
+   * Bốn mã này KHÔNG bao giờ đi trong một response JSON: cả hai route `/auth/social/*` là
+   * điều hướng trình duyệt, nên chúng về web dưới dạng `?authError=<mã>` và web tra bảng chữ
+   * đúng như với mọi mã lỗi khác (ADR 0012 — dịch từ MÃ, không hiện `message` của backend).
+   */
+  /** Provider chưa có client id/secret trong env — nút vẫn hiện, bấm vào thì báo mã này. */
+  SOCIAL_NOT_CONFIGURED: 'SOCIAL_NOT_CONFIGURED',
+  /**
+   * `state` sai, đã hết hạn, hoặc đã dùng rồi.
+   *
+   * Gộp ba nguyên nhân vào MỘT mã là cố ý: phân biệt "sai" với "đã dùng" cho kẻ tấn công biết
+   * mình đoán trúng một `state` có thật. Với người dùng thật thì lối đi tiếp giống hệt nhau —
+   * bấm đăng nhập lại.
+   */
+  SOCIAL_STATE_INVALID: 'SOCIAL_STATE_INVALID',
+  /** Người dùng bấm huỷ ở màn đồng ý của provider (`error=access_denied`). Không phải sự cố. */
+  SOCIAL_CANCELLED: 'SOCIAL_CANCELLED',
+  /** Đổi code thất bại, `debug_token` không khớp app, hoặc `id_token` không hợp lệ. */
+  SOCIAL_EXCHANGE_FAILED: 'SOCIAL_EXCHANGE_FAILED',
 
   // Phân quyền
   FORBIDDEN: 'FORBIDDEN',
@@ -62,12 +84,170 @@ export const API_ERROR_CODE = {
 
   // Nghiệp vụ lịch (ADR 0006)
   BOOKING_SCHEDULE_CONFLICT: 'BOOKING_SCHEDULE_CONFLICT',
+  /**
+   * Đã có một yêu cầu thuê y hệt (cùng xe + SĐT + khung giờ) đang chờ shop phản hồi.
+   * Mã riêng thay vì `CONFLICT` chung: FE hiện hộp "Yêu cầu trùng lặp" có lối đi tiếp
+   * (xem chuyến / nhắn chủ xe), khác hẳn một alert lỗi thường.
+   */
+  BOOKING_REQUEST_DUPLICATE: 'BOOKING_REQUEST_DUPLICATE',
+  /**
+   * Yêu cầu đã quá **hạn phản hồi 60 phút** — không duyệt và không từ chối được nữa.
+   *
+   * Mã riêng thay vì `INVALID_STATUS_TRANSITION`: trạng thái trong DB có thể vẫn còn
+   * `pending_host_approval` (worker chạy theo nhịp, không tức thời), nên câu "yêu cầu này đã
+   * được xử lý" là sai và gây hoang mang. Điều cần nói là "hết giờ rồi" — và việc cần làm là
+   * gọi cho khách, không phải bấm lại.
+   */
+  BOOKING_REQUEST_EXPIRED: 'BOOKING_REQUEST_EXPIRED',
   INVALID_STATUS_TRANSITION: 'INVALID_STATUS_TRANSITION',
+  /**
+   * Ghi nhận khách không đến quá sớm — chưa qua ân hạn `BOOKING_NO_SHOW_GRACE_MINUTES` kể từ
+   * giờ nhận theo đơn, hoặc xe đã thực sự được giao (đã có biên bản giao xe).
+   *
+   * Mã riêng vì hai lối đi tiếp khác nhau hẳn: chưa tới giờ thì CHỜ, còn đã giao xe rồi thì
+   * chuyến đang chạy và việc cần làm là nhận lại xe.
+   */
+  BOOKING_NO_SHOW_NOT_ALLOWED: 'BOOKING_NO_SHOW_NOT_ALLOWED',
+  /**
+   * ĐÃ NGHỈ HƯU (Wave 9) — **không endpoint nào còn trả mã này**.
+   *
+   * Trước đây: yêu cầu có giao tận nơi mà chưa báo giá thì không duyệt được. Vòng báo giá đã bị
+   * bỏ; giao nhận miễn phí lúc duyệt và chủ xe chốt phí trên đơn sau khi thoả thuận với khách.
+   * Giữ khoá lại để log/audit cũ vẫn đọc được — đừng ném lại mã này.
+   */
+  DELIVERY_QUOTE_REQUIRED: 'DELIVERY_QUOTE_REQUIRED',
+  /** Khách yêu cầu giao tận nơi nhưng chính sách hiệu lực của xe không bật giao nhận. */
+  DELIVERY_NOT_SUPPORTED: 'DELIVERY_NOT_SUPPORTED',
+  /**
+   * Khách bấm huỷ chuyến ở chặng không còn huỷ được (xe đã giao, chuyến đã xong, hoặc yêu cầu
+   * đã bị từ chối/huỷ trước đó).
+   *
+   * Mã riêng thay vì `CONFLICT` chung để FE nói đúng lối đi tiếp — sau khi đã nhận xe thì việc
+   * cần làm là liên hệ chủ xe, không phải thử lại.
+   */
+  TRIP_CANCEL_NOT_ALLOWED: 'TRIP_CANCEL_NOT_ALLOWED',
+
+  // Gói/hạn (ADR 0010)
+  PLAN_LIMIT_REACHED: 'PLAN_LIMIT_REACHED',
+
+  // Sổ Thu-Chi (Phase 6 · epic nối tiền)
+  /**
+   * Phiếu sinh TỰ ĐỘNG từ một nghiệp vụ — không huỷ trực tiếp được.
+   *
+   * Huỷ thẳng phiếu thu của một lần thu tiền làm sổ báo ít hơn thực tế trong khi đơn vẫn ghi đã
+   * thu. Đảo phải đi qua chính nghiệp vụ gốc (hoàn giao dịch / sửa bản ghi hoàn cọc / sửa phiếu
+   * bảo dưỡng). `details` mang `{ source, sourceRefId, bookingId }` để FE dựng đúng đường quay về.
+   */
+  RECEIPT_SOURCE_LOCKED: 'RECEIPT_SOURCE_LOCKED',
+  /**
+   * Phiếu tay gửi lên gắn CẢ đơn thuê lẫn xe, nhưng đơn đó không chạy chiếc xe đó.
+   *
+   * Mã riêng thay vì `VALIDATION_FAILED`: hai ô đều hợp lệ khi xét riêng, thứ sai là quan hệ
+   * giữa chúng — nên câu trả lời đúng cho người dùng là "bỏ chọn một trong hai", không phải
+   * "dữ liệu chưa hợp lệ". Ghi sai cặp này làm sổ theo xe và sổ theo đơn kể hai câu chuyện
+   * khác nhau về cùng một khoản tiền.
+   */
+  RECEIPT_BOOKING_VEHICLE_MISMATCH: 'RECEIPT_BOOKING_VEHICLE_MISMATCH',
+
+  // Xác thực SĐT / OTP (Phase 4)
   PHONE_NOT_VERIFIED: 'PHONE_NOT_VERIFIED',
+  OTP_INVALID: 'OTP_INVALID',
+  OTP_EXPIRED: 'OTP_EXPIRED',
+  OTP_COOLDOWN: 'OTP_COOLDOWN',
+  OTP_TOO_MANY: 'OTP_TOO_MANY',
+  /** Nhập sai mã quá số lần cho phép — mã bị khoá, phải gửi lại mã mới. */
+  OTP_LOCKED: 'OTP_LOCKED',
+
+  // OCR giấy tờ xe (Wave 5)
+  /** Chưa cấu hình nhà cung cấp OCR — trích xuất tự động không khả dụng, mời nhập tay. */
+  OCR_NOT_CONFIGURED: 'OCR_NOT_CONFIGURED',
+  /** Đang có job OCR chạy trên phiên bản này — không tạo job trùng. */
+  OCR_PROCESSING: 'OCR_PROCESSING',
+  /** Ảnh mờ/không đúng định dạng — không trích xuất được, mời nhập tay hoặc tải ảnh khác. */
+  OCR_UNREADABLE: 'OCR_UNREADABLE',
+  OCR_FAILED: 'OCR_FAILED',
+
+  // Bảo dưỡng & KM (Wave 6)
+  /**
+   * KM mới thấp hơn KM hiện tại. Mã riêng thay vì `VALIDATION_FAILED` vì FE có lối đi tiếp
+   * hẳn hoi: người đủ quyền cao thấy hộp xác nhận giảm KM kèm lý do, người không đủ quyền
+   * thấy hướng dẫn xin phê duyệt — không phải một alert lỗi thường.
+   */
+  ODOMETER_DECREASE_FORBIDDEN: 'ODOMETER_DECREASE_FORBIDDEN',
+
+  // Bàn giao xe (Wave 7)
+  /**
+   * KM trả nhỏ hơn KM lúc giao. Mã riêng vì FE hiển thị được CHÍNH mốc phải vượt qua
+   * (`details.pickupKm`) ngay tại ô nhập, thay vì một dòng "dữ liệu không hợp lệ".
+   */
+  HANDOVER_ODOMETER_BELOW_PICKUP: 'HANDOVER_ODOMETER_BELOW_PICKUP',
+  /**
+   * Quãng đường phát sinh thấp bất thường so với ngưỡng gian hàng cấu hình. KHÔNG phải lỗi:
+   * người vận hành có thể xác nhận "vẫn đúng" và gửi lại kèm `acknowledgeSuspicious`.
+   */
+  HANDOVER_ODOMETER_SUSPICIOUS: 'HANDOVER_ODOMETER_SUSPICIOUS',
+  /**
+   * Đơn không còn ở trạng thái mở được chiều bàn giao này (đã hủy, đã hoàn thành, hoặc
+   * người khác vừa xác nhận). FE tải lại đơn thay vì hiện lỗi chung.
+   */
+  HANDOVER_NOT_ELIGIBLE: 'HANDOVER_NOT_ELIGIBLE',
+
+  // Sổ khách của gian hàng (S-01)
+  /**
+   * SĐT đã thuộc một khách khác TRONG CÙNG gian hàng (so trên dạng đã chuẩn hoá, nên `09…` và
+   * `+849…` là trùng). Mã riêng vì FE có lối đi tiếp hẳn hoi: mở hồ sơ đang giữ số đó
+   * (`details.customerId`), chứ không phải một alert lỗi thường. TUYỆT ĐỐI không tự gộp hai hồ
+   * sơ — gộp khách là việc có chủ đích, không phải hệ quả phụ của một lần sửa SĐT.
+   */
+  CUSTOMER_PHONE_DUPLICATE: 'CUSTOMER_PHONE_DUPLICATE',
+  /** Hồ sơ khách đã lưu trữ — khôi phục trước khi sửa / ghi chú / gắn giấy tờ. */
+  CUSTOMER_ARCHIVED: 'CUSTOMER_ARCHIVED',
+  /**
+   * Gian hàng đã đánh dấu khách này là "từ chối phục vụ".
+   *
+   * Mã này chỉ tới được NGƯỜI TRONG SHOP (lập đơn tại quầy, duyệt yêu cầu). Đường công khai
+   * (khách gửi yêu cầu từ Marketplace) KHÔNG bao giờ trả mã này — nó trả `CONFLICT` kèm thông
+   * điệp trung tính, vì khách không được biết mình nằm trong danh sách nội bộ nào.
+   */
+  CUSTOMER_BLOCKED: 'CUSTOMER_BLOCKED',
+
+  // Chat (ADR 0009)
+  /**
+   * Khách của yêu cầu/đơn này KHÔNG có tài khoản trên nền tảng (khách vãng lai gửi yêu cầu
+   * bằng SĐT đã xác thực OTP, chưa từng đăng nhập). Không có tài khoản thì không có phía bên
+   * kia để mở hội thoại — gian hàng phải gọi điện hoặc nhắn Zalo.
+   *
+   * Mã riêng thay vì `NOT_FOUND`: đây KHÔNG phải lỗi tra cứu mà là một sự thật về dữ liệu, và
+   * FE dùng nó để vô hiệu hoá nút "Nhắn tin" kèm lời giải thích thay vì hiện một alert lỗi.
+   */
+  CHAT_CUSTOMER_UNAVAILABLE: 'CHAT_CUSTOMER_UNAVAILABLE',
+
+  /**
+   * Chi nhánh còn ràng buộc nên chưa ngừng/đổi được: `details` liệt kê CHÍNH XÁC cái gì đang
+   * giữ nó (số xe, số đơn đang chạy/sắp tới) để người dùng biết phải chuyển gì trước.
+   */
+  BRANCH_HAS_DEPENDENCIES: 'BRANCH_HAS_DEPENDENCIES',
+  /** Chi nhánh mặc định không được ngừng hoạt động — gian hàng luôn phải có một nơi nhận xe. */
+  BRANCH_DEFAULT_IMMUTABLE: 'BRANCH_DEFAULT_IMMUTABLE',
+  /** Xe/chi nhánh chưa có tỉnh hợp lệ nên không thể đưa lên marketplace. */
+  BRANCH_LOCATION_REQUIRED: 'BRANCH_LOCATION_REQUIRED',
+
+  // Duyệt hồ sơ gian hàng
+  /**
+   * Hồ sơ gian hàng còn thiếu thông tin BẮT BUỘC nên chưa gửi duyệt được
+   * (`missingShopProfileRequirements` ở `shop-profile.ts` là quy tắc dùng chung hai phía).
+   *
+   * Mã riêng thay vì `VALIDATION_FAILED`: `details.missing[]` mang đúng danh sách khoá
+   * `SHOP_PROFILE_REQUIREMENT`, nên FE chỉ thẳng vào ô còn trống thay vì hiện một dòng "dữ liệu
+   * chưa hợp lệ" rồi để người dùng tự đi tìm.
+   */
+  PROFILE_INCOMPLETE: 'PROFILE_INCOMPLETE',
 
   // Hạ tầng
   RATE_LIMITED: 'RATE_LIMITED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  /** Upload ảnh cần đủ bộ env R2 — thiếu thì endpoint presign trả 503 kèm mã này. */
+  UPLOADS_NOT_CONFIGURED: 'UPLOADS_NOT_CONFIGURED',
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODE)[keyof typeof API_ERROR_CODE];

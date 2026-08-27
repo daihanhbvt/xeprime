@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "XePrime",
+    "slug": "xeprime-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "xeprime",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "vn.xeprime.mobile",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "vn.xeprime.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": ["expo-router", "expo-localization"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

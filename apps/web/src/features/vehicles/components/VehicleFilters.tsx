@@ -1,104 +1,106 @@
 'use client';
 
-import { SearchOutlined } from '@ant-design/icons';
-import { Input, Select } from 'antd';
-import { useEffect, useState } from 'react';
-import {
-  OPERATION_STATUS_OPTIONS,
-  PUBLIC_STATUS_OPTIONS,
-  SERVICE_TYPE_OPTIONS,
-  VEHICLE_SORT_OPTIONS,
-  VEHICLE_TYPE_OPTIONS,
-} from '../constants';
+import { Select } from 'antd';
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
+import { useVehicleOptions } from '../hooks/use-vehicle-options';
 import type { VehicleFilters, VehicleSort } from '../types';
 import styles from './VehicleFilters.module.css';
 
 interface VehicleFiltersBarProps {
   filters: VehicleFilters;
   onChange: (patch: Partial<VehicleFilters>) => void;
+  /** Xoá 5 tham số lọc — KHÔNG đụng `sort` (xem docblock). */
+  onClear?: () => void;
 }
 
-const SEARCH_DEBOUNCE_MS = 400;
-
 /**
- * Thanh lọc danh sách xe. Ô tìm kiếm gõ tới đâu debounce tới đó rồi mới đẩy vào URL, tránh
- * đổi searchParams (và gọi API) theo từng phím. Các select đổi là áp ngay.
+ * Bộ lọc danh sách xe.
+ *
+ * Đây là **composition của Fleet**, không phải một thanh lọc thứ hai: bố cục, debounce và hình
+ * thái bottom-sheet ở mobile đều thuộc `FilterBar` dùng chung (Wave 1C). File này chỉ khai
+ * **định nghĩa filter riêng của Fleet** — 5 trường lọc + ô sắp xếp.
+ *
+ * **Vì sao `sort` KHÔNG phải một `field` của `FilterBar`:**
+ *  1. nó không lọc dữ liệu, chỉ đổi thứ tự — gộp vào sẽ làm `countActiveFilters` luôn đếm ≥1
+ *     (giá trị mặc định `newest` là chuỗi khác rỗng), nút "Xoá bộ lọc" hiện vĩnh viễn và huy
+ *     hiệu số trên nút "Bộ lọc" ở mobile luôn sai;
+ *  2. "Xoá bộ lọc" phải giữ nguyên sắp xếp — hành vi đã có test khoá từ Wave 1C;
+ *  3. Figma đặt nó **tách khỏi cụm lọc**: `186:1665` nằm ở lề phải hàng filter `186:1643`, cách
+ *     bốn dropdown lọc một khoảng trống lớn — đúng vai của slot `actions`.
  */
-export function VehicleFiltersBar({ filters, onChange }: VehicleFiltersBarProps) {
-  const [search, setSearch] = useState(filters.q ?? '');
+export function VehicleFiltersBar({ filters, onChange, onClear }: VehicleFiltersBarProps) {
+  const t = useTranslations('Vehicles.list');
+  const options = useVehicleOptions();
 
-  // Đồng bộ khi filter đổi từ ngoài (nút xoá lọc, back/forward): so với giá trị render trước
-  // và chỉnh state ngay trong render — pattern React chính thống ("lưu thông tin render trước"),
-  // không setState-trong-effect, không mutate ref lúc render.
-  const [prevQ, setPrevQ] = useState(filters.q);
-  if (prevQ !== filters.q) {
-    setPrevQ(filters.q);
-    setSearch(filters.q ?? '');
-  }
+  const fields: FilterField[] = useMemo(
+    () => [
+      {
+        kind: 'search',
+        key: 'q',
+        label: t('filters.search'),
+        // Ô chỉ rộng 240px ở thanh gọn — Figma `197:1549` rút placeholder còn "Tìm kiếm xe...".
+        placeholder: t('filters.searchPlaceholder'),
+      },
+      {
+        kind: 'select',
+        key: 'vehicleType',
+        label: t('filters.vehicleType'),
+        options: options.vehicleType,
+      },
+      {
+        kind: 'select',
+        key: 'serviceType',
+        label: t('filters.serviceType'),
+        options: options.serviceType,
+      },
+      {
+        kind: 'select',
+        key: 'operationStatus',
+        label: t('filters.operationStatus'),
+        options: options.operationStatus,
+      },
+      {
+        kind: 'select',
+        key: 'publicStatus',
+        label: t('filters.publicStatus'),
+        options: options.publicStatus,
+      },
+    ],
+    [options, t],
+  );
 
-  // Debounce: gõ tới đâu chờ tới đó rồi mới đẩy vào URL.
-  useEffect(() => {
-    const current = filters.q ?? '';
-    if (search === current) return;
-    const timer = setTimeout(() => onChange({ q: search || undefined }), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [search, filters.q, onChange]);
+  const values: FilterValues = {
+    q: filters.q,
+    vehicleType: filters.vehicleType,
+    serviceType: filters.serviceType,
+    operationStatus: filters.operationStatus,
+    publicStatus: filters.publicStatus,
+  };
 
   return (
-    <div className={styles.bar}>
-      <Input
-        className={styles.search}
-        size="large"
-        allowClear
-        prefix={<SearchOutlined />}
-        placeholder="Tìm theo tên, mã, biển số, hãng…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-      <Select
-        className={styles.select}
-        size="large"
-        allowClear
-        placeholder="Loại xe"
-        options={VEHICLE_TYPE_OPTIONS as { value: string; label: string }[]}
-        value={filters.vehicleType ?? undefined}
-        onChange={(value: string | undefined) => onChange({ vehicleType: value })}
-      />
-      <Select
-        className={styles.select}
-        size="large"
-        allowClear
-        placeholder="Dịch vụ"
-        options={SERVICE_TYPE_OPTIONS as { value: string; label: string }[]}
-        value={filters.serviceType ?? undefined}
-        onChange={(value: string | undefined) => onChange({ serviceType: value })}
-      />
-      <Select
-        className={styles.select}
-        size="large"
-        allowClear
-        placeholder="Vận hành"
-        options={OPERATION_STATUS_OPTIONS as { value: string; label: string }[]}
-        value={filters.operationStatus ?? undefined}
-        onChange={(value: string | undefined) => onChange({ operationStatus: value })}
-      />
-      <Select
-        className={styles.select}
-        size="large"
-        allowClear
-        placeholder="Trạng thái public"
-        options={PUBLIC_STATUS_OPTIONS as { value: string; label: string }[]}
-        value={filters.publicStatus ?? undefined}
-        onChange={(value: string | undefined) => onChange({ publicStatus: value })}
-      />
-      <Select
-        className={styles.select}
-        size="large"
-        placeholder="Sắp xếp"
-        options={VEHICLE_SORT_OPTIONS as { value: string; label: string }[]}
-        value={filters.sort ?? 'newest'}
-        onChange={(value: VehicleSort) => onChange({ sort: value })}
-      />
-    </div>
+    <FilterBar
+      fields={fields}
+      values={values}
+      onChange={(patch) => onChange(patch as Partial<VehicleFilters>)}
+      onClear={onClear}
+      // Figma `188:4514`: filter đang bật hiện thành chip gỡ được từng cái.
+      showActiveChips
+      // Figma `186:1639`: một hàng — tìm kiếm 240px, gạch dọc, pill mang sẵn nhãn, sắp xếp dồn phải.
+      compactFields
+      actions={
+        <Select<VehicleSort>
+          className={styles.sort}
+          aria-label={t('sort.label')}
+          placeholder={t('sort.label')}
+          // Cùng hình thái "Nhãn: Giá trị" với cụm lọc — Figma `186:1665`.
+          labelRender={(item) => t('sort.value', { label: String(item.label) })}
+          options={options.sort}
+          value={filters.sort ?? 'newest'}
+          onChange={(value) => onChange({ sort: value })}
+        />
+      }
+    />
   );
 }

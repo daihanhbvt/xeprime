@@ -1,0 +1,57 @@
+/* Dải CTA sáng — Figma `18:4`: nền cát, chữ trái, nút viền phải. */
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-lg) var(--xp-space-xl);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-sand);
+  gap: var(--xp-space-md);
+}
+
+.body {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 18px;
+  font-weight: var(--xp-font-weight-bold, 700);
+}
+
+.desc {
+  margin: 6px 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+}
+
+.button {
+  flex: none;
+  padding: 10px 20px;
+  border: 1px solid var(--xp-color-primary-active);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold, 600);
+  white-space: nowrap;
+}
+
+.button:hover {
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+@media (max-width: 640px) {
+  .cta {
+    padding: var(--xp-space-md);
+  }
+
+  .button {
+    width: 100%;
+    text-align: center;
+  }
+}

@@ -1,0 +1,184 @@
+/*
+ * Thanh tìm kiếm thu gọn — neo ngay dưới header marketplace.
+ *
+ * `fixed` chứ không `sticky`: nó không nằm trong luồng của trang nên hiện/ẩn không đẩy nội dung
+ * (không layout shift, không nhảy vị trí cuộn). Tầng z DƯỚI header đúng một bậc.
+ */
+.bar {
+  position: fixed;
+  z-index: calc(var(--xp-z-topbar) - 1);
+  top: var(--xp-market-header-height);
+  right: 0;
+  left: 0;
+  border-bottom: 1px solid var(--xp-color-border);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-raised);
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out;
+}
+
+.barIn {
+  opacity: 1;
+  transform: none;
+}
+
+/*
+ * Dải điều khiển GỌN, canh GIỮA — không kéo hết bề ngang trang.
+ *
+ * Thanh này chỉ còn ba việc (ngữ cảnh kế thừa · địa điểm · ngày giờ) nên trải chúng ra 1280px
+ * biến mỗi ô thành một vùng trống mênh mông, và mắt phải quét cả màn hình để đọc một dòng thông
+ * tin ngắn. `fit-content` + trần 880px giữ cụm lại quanh trục giữa, ngang tầm nhìn.
+ */
+.inner {
+  display: flex;
+  width: fit-content;
+  max-width: min(880px, 100%);
+  align-items: center;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  margin: 0 auto;
+  gap: var(--xp-space-sm);
+}
+
+/* --- Viên ngữ cảnh (loại xe · dịch vụ, lộ trình) ---------------------------------------- */
+
+.chip {
+  composes: chip from './search-chip.module.css';
+}
+
+/* Viên ngữ cảnh chính đậm hơn — nó là thứ nói "bạn đang tìm gì". */
+.modeChip {
+  border-color: var(--xp-color-border-strong);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Vạch ngăn ngữ cảnh KẾ THỪA với các ô đang thực sự chỉnh ở đây. */
+.divider {
+  width: 1px;
+  height: 24px;
+  flex: none;
+  background: var(--xp-color-border);
+}
+
+.chipValue {
+  overflow: hidden;
+  min-width: 0;
+  font-size: var(--xp-font-size-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chipIcon {
+  flex: none;
+  color: var(--xp-color-primary-active);
+}
+
+.caret {
+  flex: none;
+  color: var(--xp-color-text-tertiary);
+  font-size: 10px;
+}
+
+/* Địa điểm và ngày giờ là hai ô CHÍNH — cho chúng bề rộng đủ đọc, không co lại thành viên nhỏ. */
+.location {
+  min-width: 150px;
+  flex: 1 1 auto;
+}
+
+/*
+ * Ô thời gian dùng chung `RentalDateTimeRangeField`, khoác vỏ viên cho vừa thanh thu gọn.
+ * `min-width` bám đúng chuỗi dài nhất nó phải hiện (`19/08 10:00 → 27/08 10:00`) — hụt một chút
+ * là hai đầu bị cắt thành `…` và ô mất hết ý nghĩa.
+ */
+.dateChip {
+  min-width: 250px;
+  flex: 1 1 auto;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+}
+
+.dateChip:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+.dateChip:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 1px;
+}
+
+.submit {
+  flex: none;
+  height: 38px !important;
+  border-radius: var(--xp-border-radius-pill) !important;
+  font-weight: var(--xp-font-weight-semibold) !important;
+}
+
+/* --- Panel của các viên ------------------------------------------------------------------ */
+
+.panelStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.routeGroup {
+  display: flex !important;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.routeHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+/*
+ * Mobile: ĐÚNG MỘT HÀNG — địa điểm · ngày giờ · nút biểu tượng.
+ *
+ * Ngữ cảnh loại xe/dịch vụ không render ở đây (xem component): nhồi thêm một viên nữa là thanh
+ * xuống hai hàng, mà đây là lớp cố định đè lên nội dung đang đọc. Nút tìm thu về biểu tượng vì
+ * hai chữ "Tìm xe" ăn mất chỗ của chính hai ô người dùng cần bấm.
+ */
+@media (max-width: 640px) {
+  .inner {
+    width: auto;
+    max-width: none;
+    padding: 6px 12px;
+    gap: 6px;
+  }
+
+  .location,
+  .dateChip {
+    /* Chia đôi phần còn lại sau nút; `min-width: 0` để chữ dài cắt gọn chứ không tràn ngang. */
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .dateChip {
+    min-height: 36px;
+    padding: 0 10px;
+  }
+
+  .submit {
+    width: 38px;
+    height: 36px !important;
+    padding: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transform: none;
+    transition-property: opacity;
+  }
+
+  .barIn {
+    transform: none;
+  }
+}

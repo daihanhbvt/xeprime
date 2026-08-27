@@ -1110,6 +1110,8 @@ Status: `new`, `linked`, `notified_customer`, `paid`, `dismissed`.
 
 ## 15. Chat hybrid Firebase + MySQL
 
+> ⚠️ **Chi tiết realtime + nguồn sự thật theo [ADR 0009](decisions/0009-chat-firestore-projection.md)** (thắng phần công nghệ ở mục này). Chốt lại: DB là **PostgreSQL** (ADR 0001, không phải MySQL); **PostgreSQL là single source of truth** cho `conversations`/thành viên/**toàn bộ** tin/đính kèm/đã đọc; Firestore chỉ là **projection realtime ~30–50 tin gần nhất** (rebuildable); đồng bộ PG→Firestore bằng **outbox/retry**, chỉ backend Node ghi; Security Rules + emulator test; đính kèm ở **Cloudflare R2**. Cấu trúc bảng dưới vẫn dùng (dịch type sang convention Postgres ở ADR 0001); riêng vai trò Firestore/nguồn-sự-thật đọc theo ADR 0009.
+
 ### 15.1 Luồng dữ liệu chat
 
 Firestore giữ:

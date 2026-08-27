@@ -1,45 +1,9 @@
-import type { QueryParams } from './api-client';
-
 /**
- * Query key tập trung một chỗ để `invalidateQueries` không phải đoán chuỗi.
+ * Query key của TanStack Query — đã chuyển sang `@xeprime/api-client`.
  *
- * Quy ước: key luôn bắt đầu bằng tên domain, tham số nằm ở phần tử cuối dạng object —
- * nhờ vậy `invalidateQueries({ queryKey: queryKeys.calendar.all })` xoá được cả nhánh.
+ * Giữ lại một dòng re-export ở đúng đường dẫn cũ để 67 chỗ `import { queryKeys } from
+ * '@/services/query-keys'` không phải sửa (`docs/mobile-readiness-audit.md` §14.1 bước 2).
+ * Key phải dùng chung với app native: hai app cùng gọi một endpoint mà đặt key khác nhau thì
+ * `invalidateQueries` sau một lần ghi sẽ chỉ làm mới một nửa.
  */
-export const queryKeys = {
-  auth: {
-    all: ['auth'] as const,
-    me: () => ['auth', 'me'] as const,
-  },
-  tenants: {
-    all: ['tenants'] as const,
-    current: () => ['tenants', 'current'] as const,
-  },
-  shop: {
-    all: ['shop'] as const,
-    current: () => ['shop', 'current'] as const,
-  },
-  approvals: {
-    all: ['approvals'] as const,
-    list: (params: QueryParams) => ['approvals', 'list', params] as const,
-    detail: (id: string) => ['approvals', 'detail', id] as const,
-  },
-  calendar: {
-    all: ['calendar'] as const,
-    resources: (params: QueryParams) => ['calendar', 'resources', params] as const,
-    events: (params: QueryParams) => ['calendar', 'events', params] as const,
-  },
-  vehicles: {
-    all: ['vehicles'] as const,
-    list: (params: QueryParams) => ['vehicles', 'list', params] as const,
-    detail: (id: string) => ['vehicles', 'detail', id] as const,
-  },
-  bookings: {
-    all: ['bookings'] as const,
-    list: (params: QueryParams) => ['bookings', 'list', params] as const,
-  },
-  marketplace: {
-    all: ['marketplace'] as const,
-    listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,
-  },
-} as const;
+export { queryKeys } from '@xeprime/api-client';

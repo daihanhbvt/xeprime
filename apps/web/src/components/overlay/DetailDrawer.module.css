@@ -1,0 +1,33 @@
+/**
+ * Panel chi tiết — Figma `130:1563` quy tắc 3 (Desktop Drawer → Mobile Full-Screen).
+ * Mọi giá trị lấy từ token Wave 1A.
+ */
+
+.body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  padding: var(--xp-space-md);
+}
+
+/* 640px = `--xp-bp-mobile`; CSS var không dùng được trong `@media` (P8, Wave 1A). */
+@media (max-width: 640px) {
+  .footer {
+    justify-content: stretch;
+  }
+
+  .footer > * {
+    flex: 1;
+  }
+
+  .footer :global(.ant-btn) {
+    width: 100%;
+    min-height: var(--xp-touch-target-min);
+  }
+}

@@ -1,0 +1,272 @@
+import { App } from 'antd';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { PERMISSION, type Permission } from '@xeprime/types';
+import type { ShopRentalPolicy } from '@/features/rental-policies/types';
+
+import ShopPoliciesPage from './page';
+
+/**
+ * Đặc tả trang Chính sách thuê mặc định (Wave 2 — Figma `237:1557`).
+ *
+ * Khoá các hợp đồng: gate quyền, chip phạm vi áp dụng lấy số từ API, trạng thái null-policy,
+ * thanh "thay đổi chưa lưu", validation chéo đúng CÂU CHỮ server ("khoảng trống cấu hình"),
+ * và bước xác nhận nhạy cảm trước khi lưu (payload đã hoá chuỗi tiền — ADR 0007).
+ */
+const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
+vi.mock('@/hooks/use-permissions', () => ({
+  usePermissions: () => ({
+    has: (p: string) => perms.granted.has(p),
+    hasAny: (...ps: string[]) => ps.some((p) => perms.granted.has(p)),
+    isLoading: false,
+  }),
+}));
+
+const query = vi.hoisted(() => ({
+  data: undefined as ShopRentalPolicy | undefined,
+  isLoading: false,
+  isError: false,
+  refetch: vi.fn(),
+}));
+const save = vi.hoisted(() => ({ mutate: vi.fn(), isPending: false }));
+
+vi.mock('@/features/rental-policies/hooks/use-shop-policy', () => ({
+  useShopPolicy: () => query,
+  useSaveShopPolicy: () => save,
+}));
+
+function policyFixture(over: Partial<ShopRentalPolicy> = {}): ShopRentalPolicy {
+  return {
+    policy: {
+      collateralMode: 'cash',
+      collateralAssetTypes: [],
+      depositAmount: '5000000',
+      deliveryEnabled: true,
+      deliveryMaxRadiusKm: 10,
+      deliveryTiers: [
+        { toKm: 3, fee: '0' },
+        { toKm: 5, fee: '30000' },
+        { toKm: 10, fee: '50000' },
+      ],
+      overtimeFeePerHour: '100000',
+      overtimeGraceMinutes: null,
+      overtimeRoundingMinutes: null,
+      discountEnabled: true,
+      discountTiers: [{ minMonths: 1, percent: 5, note: 'Ưu đãi cam kết 1 tháng' }],
+      legacyDiscountTiers: [],
+      updatedAt: '2026-08-01T00:00:00.000Z',
+    },
+    inheritingVehicles: 12,
+    overriddenVehicles: 3,
+    ...over,
+  };
+}
+
+function grant(...permissions: Permission[]) {
+  perms.granted = new Set<string>(permissions);
+}
+
+function renderPage() {
+  return render(
+    <App>
+      <ShopPoliciesPage />
+    </App>,
+  );
+}
+
+beforeEach(() => {
+  query.data = policyFixture();
+  query.isLoading = false;
+  query.isError = false;
+  query.refetch.mockReset();
+  save.mutate.mockReset();
+  save.isPending = false;
+  grant(PERMISSION.TENANT_VIEW, PERMISSION.TENANT_UPDATE);
+});
+
+afterEach(cleanup);
+
+describe('/manage/shop/policies — quyền và trạng thái tải', () => {
+  it('thiếu tenant.view: thay TOÀN BỘ trang bằng khối quyền', () => {
+    grant();
+    renderPage();
+    expect(screen.getByText('Không có quyền truy cập')).toBeTruthy();
+    expect(screen.queryByText('Chính sách thuê mặc định')).toBeNull();
+  });
+
+  it('lỗi tải: có nút thử lại gọi refetch', () => {
+    query.data = undefined;
+    query.isError = true;
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }));
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('/manage/shop/policies — dữ liệu và null-policy', () => {
+  it('chip phạm vi lấy số từ API, đếm theo loại xe của tab: 12 kế thừa / 3 ghi đè', () => {
+    renderPage();
+    // Tab mặc định là Ô tô; số xe ghi đè nằm trong ghi chú để toolbar không bị quá tải.
+    expect(screen.getByText('Đã áp dụng cho 12 ô tô')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Giải thích phạm vi áp dụng chính sách' }));
+    expect(screen.getByText(/3 xe đang dùng chính sách riêng/)).toBeTruthy();
+    expect(screen.getByText('12 xe đang dùng mức cọc này')).toBeTruthy();
+  });
+
+  it('có đủ hai tab Ô tô / Xe máy — mỗi loại một bộ chính sách riêng', () => {
+    renderPage();
+    expect(screen.getByRole('tab', { name: 'Ô tô' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Xe máy' })).toBeTruthy();
+  });
+
+  it('hiển thị đủ 4 khối chính sách với giá trị từ API', () => {
+    renderPage();
+    expect((screen.getByLabelText('Số tiền cọc mặc định') as HTMLInputElement).value).toBe(
+      '5.000.000',
+    );
+    expect(screen.getByText('Không có khoảng trống hoặc chồng lấn')).toBeTruthy();
+    expect(
+      screen.getByText(
+        '0–3 km: Miễn phí · >3–5 km: 30.000đ · >5–10 km: 50.000đ · >10 km: Báo giá thủ công theo thỏa thuận',
+      ),
+    ).toBeTruthy();
+    expect((screen.getByLabelText('Phí mỗi giờ phát sinh') as HTMLInputElement).value).toBe(
+      '100.000',
+    );
+    // Hai ô quá giờ chưa cấu hình — placeholder đúng thiết kế, không bịa số 0.
+    expect(screen.getByLabelText('Thời gian miễn phí tối đa').getAttribute('placeholder')).toBe(
+      'Cần cấu hình',
+    );
+  });
+
+  it('chưa có chính sách (null-policy): thông báo + form trống, không bịa mặc định', () => {
+    query.data = policyFixture({ policy: null, inheritingVehicles: 0, overriddenVehicles: 0 });
+    renderPage();
+    expect(screen.getByText('Gian hàng chưa cấu hình chính sách thuê')).toBeTruthy();
+    expect((screen.getByLabelText('Số tiền cọc mặc định') as HTMLInputElement).value).toBe('');
+  });
+});
+
+describe('/manage/shop/policies — sửa, validate, xác nhận lưu', () => {
+  it('sửa một giá trị → thanh "thay đổi chưa lưu" hiện, Hủy bỏ thì biến mất', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Số tiền cọc mặc định'), {
+      target: { value: '4000000' },
+    });
+    expect(await screen.findByText('Bạn có các thay đổi chưa được áp dụng')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hủy bỏ' }));
+    await waitFor(() =>
+      expect(screen.queryByText('Bạn có các thay đổi chưa được áp dụng')).toBeNull(),
+    );
+  });
+
+  it('bán kính lệch mốc cuối → đúng câu chữ server "khoảng trống cấu hình", KHÔNG gửi API', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Bán kính hỗ trợ tối đa tự giao'), {
+      target: { value: '12' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu chính sách' }));
+
+    expect(
+      await screen.findByText(/Có khoảng trống cấu hình giữa mốc 10 km và 12 km/),
+    ).toBeTruthy();
+    expect(save.mutate).not.toHaveBeenCalled();
+  });
+
+  it('lưu hợp lệ: xác nhận nêu phạm vi 12 xe kế thừa + cam kết đơn cũ giữ nguyên → gửi payload chuỗi tiền', async () => {
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Số tiền cọc mặc định'), {
+      target: { value: '4000000' },
+    });
+    // Chỉ còn nút sticky cuối form; không lặp một nút lưu ở toolbar phía trên.
+    const saveButton = screen.getByRole('button', { name: 'Lưu chính sách' });
+    expect(saveButton.getAttribute('form')).toBeNull();
+    fireEvent.click(saveButton);
+
+    // AntD render modal kèm bản sao motion → luôn dùng findAll/getAll khi soi nội dung modal.
+    expect(
+      (await screen.findAllByText('Xác nhận thay đổi chính sách thuê?')).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/12 xe đang kế thừa/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/vẫn giữ nguyên mức giá và tiền cọc cũ/).length).toBeGreaterThan(0);
+
+    const okButtons = screen.getAllByRole('button', { name: 'Xác nhận thay đổi' });
+    fireEvent.click(okButtons[okButtons.length - 1]!);
+    await waitFor(() => expect(save.mutate).toHaveBeenCalledTimes(1));
+
+    const body = save.mutate.mock.calls[0]![0] as {
+      depositAmount: string;
+      deliveryTiers: unknown[];
+    };
+    // ADR 0007: tiền rời form là CHUỖI, tiers giữ nguyên cấu trúc.
+    expect(body.depositAmount).toBe('4000000');
+    expect(body.deliveryTiers).toEqual([
+      { toKm: 3, fee: '0' },
+      { toKm: 5, fee: '30000' },
+      { toKm: 10, fee: '50000' },
+    ]);
+  });
+
+  it('thiếu tenant.update: xem được nhưng nút Lưu bị khoá', () => {
+    grant(PERMISSION.TENANT_VIEW);
+    renderPage();
+    expect(
+      screen
+        .getAllByRole('button', { name: 'Lưu chính sách' })
+        .every((button) => (button as HTMLButtonElement).disabled),
+    ).toBe(true);
+    expect((screen.getByLabelText('Số tiền cọc mặc định') as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it('các ghi chú section mở bằng click và đóng bằng Escape', async () => {
+    renderPage();
+    const infoButton = screen.getByRole('button', { name: 'Giải thích phí quá giờ' });
+
+    fireEvent.click(infoButton);
+    expect(infoButton.getAttribute('aria-expanded')).toBe('true');
+    expect(await screen.findByText(/Phí quá giờ được tính khi bàn trả xe/)).toBeTruthy();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('false'));
+  });
+
+  it('ghi chú của field nằm ở label và không lặp lại thành khối mô tả dưới input', async () => {
+    renderPage();
+    const infoButton = screen.getByRole('button', { name: 'Giải thích số tiền cọc mặc định' });
+
+    expect(screen.queryByText(/Cọc thế chấp là số tiền cố định bằng VND/)).toBeNull();
+    fireEvent.click(infoButton);
+    expect(await screen.findByText(/Mức tiền cố định bằng VND/)).toBeTruthy();
+  });
+
+  it('ghi chú cũng mở khi hover hoặc focus bằng bàn phím', async () => {
+    renderPage();
+    const infoButton = screen.getByRole('button', { name: 'Giải thích yêu cầu bảo đảm' });
+
+    fireEvent.mouseEnter(infoButton);
+    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('true'));
+    fireEvent.mouseLeave(infoButton);
+    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('false'));
+
+    fireEvent.focus(infoButton);
+    await waitFor(() => expect(infoButton.getAttribute('aria-expanded')).toBe('true'));
+  });
+
+  it('select mốc ưu đãi chỉ có đúng sáu gói thuê dài hạn cố định', async () => {
+    renderPage();
+    fireEvent.mouseDown(screen.getByLabelText('Mốc gói của bậc 1'));
+
+    for (const label of ['1 tháng', '2 tháng', '3 tháng', '6 tháng', '9 tháng', '12 tháng']) {
+      expect((await screen.findAllByText(label)).length).toBeGreaterThan(0);
+    }
+    expect(screen.queryByText('4 tháng')).toBeNull();
+  });
+
+  it('bảng mobile có nhãn gộp khoảng cách và nút xoá vẫn có tên truy cập', () => {
+    renderPage();
+    expect(screen.getByText('Khoảng cách')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Xóa bậc 1' })).toBeTruthy();
+  });
+});

@@ -1,37 +1,347 @@
+/*
+ * Cột form đơn, **căn giữa** vùng nội dung.
+ *
+ * Figma `60:69` đặt FormColumn thụt 64px so với workspace (nay là 1216 trong 1280), tức chiếm
+ * gần hết vùng nội dung chứ không giới hạn 960px như bản trước Wave 3A. Ở 1440px nó vừa khít
+ * nên trông như căn trái; ở màn 1900px thì không — thiếu `margin-inline: auto`, form dính lì
+ * mép trái và bỏ trống gần một nửa màn hình.
+ */
 .form {
-  max-width: 960px;
+  max-width: var(--xp-shell-form-max-width);
+  margin-inline: auto;
 }
 
 .section {
-  margin-bottom: 16px;
+  margin-bottom: var(--xp-space-md);
 }
 
 .alert {
-  margin-bottom: 16px;
+  margin-bottom: var(--xp-space-md);
 }
 
 .descBlock {
-  margin-top: 12px;
+  margin-top: var(--xp-space-sm);
 }
 
-.preview {
-  margin-top: 8px;
-  max-width: 100%;
-  max-height: 180px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1px solid var(--xp-border, rgba(0, 0, 0, 0.08));
+.galleryBlock {
+  margin-top: var(--xp-space-md);
 }
 
-.actions {
+.fieldLabel {
+  margin-bottom: var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+}
+
+/* Dòng gợi ý dưới nhãn của khối không phải input (bộ chọn thẻ) — input thường đã có `help`. */
+.fieldHint {
+  margin-top: calc(-1 * var(--xp-space-xs));
+  margin-bottom: var(--xp-space-sm);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* Ba nhóm của bước 1 luồng tạo xếp dọc, cách đều — khoảng cách do stack quyết, không do margin lẻ. */
+.sectionStack {
   display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--xp-space-md);
 }
 
-@media (max-width: 576px) {
-  .actions {
+.sourceFieldset {
+  padding: 20px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-lg);
+  margin: 0;
+}
+
+.sourceLegend {
+  padding: 0 var(--xp-space-xs);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.sourceDescription {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.sourceGrid.sourceGrid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.sourceOption.sourceOption {
+  position: relative;
+  display: flex;
+  height: auto;
+  width: 100%;
+  min-height: 72px;
+  align-items: center;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  padding-right: 42px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-md);
+  margin-inline-end: 0;
+  background: var(--xp-color-bg-container);
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.sourceOption.sourceOption :global(.ant-radio) {
+  position: absolute;
+  right: var(--xp-space-md);
+}
+
+.sourceIcon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-right: var(--xp-space-sm);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.sourceCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.sourceCopy small {
+  margin-top: 2px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.sourceOption.sourceOption:global(.ant-radio-wrapper-checked) {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+}
+
+.sourceHint {
+  margin-top: var(--xp-space-sm);
+}
+
+.fieldError {
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.featuresGrid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-sm) var(--xp-space-lg);
+}
+
+.featureOption.featureOption {
+  min-width: 0;
+  margin-inline-start: 0;
+  color: var(--xp-color-text);
+}
+
+.advancedStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.subSection {
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.subSectionTitle {
+  margin: 0 0 var(--xp-space-md);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+/*
+ * Nhóm radio "Loại phương tiện" (Figma `60:101`).
+ *
+ * `fieldset`/`legend` chứ không phải `div`/`label`: một nhóm radio cần tên chung, và chỉ
+ * `fieldset` mới cho trình đọc màn hình đọc tên nhóm trước từng lựa chọn. Bỏ viền mặc định của
+ * `fieldset` để nó nằm gọn trong hàng cùng các `Form.Item` khác.
+ */
+.fieldset {
+  padding: 0;
+  border: 0;
+  margin: 0 0 14px;
+}
+
+.fieldsetLegend {
+  padding: 0;
+  margin-bottom: var(--xp-space-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+/* Giá sau khuyến mãi — chỉ hiển thị, không phải giá trị được lưu. */
+.pricePreview {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * Hai toggle chính sách thuê (giao tận nơi / miễn thế chấp) dưới hàng giá.
+ *
+ * Có `max-width`: `SwitchField` đẩy công tắc về mép phải, nên không giới hạn bề rộng thì công
+ * tắc bay ra tận cạnh card, cách nhãn cả nghìn pixel — Figma `62:1560` vẽ Policy Toggle chỉ
+ * rộng 200px. (Bản Wave 3A lỡ bỏ mất giới hạn này.)
+ */
+.policyBlock {
+  display: flex;
+  max-width: 480px;
+  flex-direction: column;
+  padding-top: var(--xp-space-xs);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  margin-top: var(--xp-space-xs);
+}
+
+/* ─── Wizard tạo mới (Figma `60:213` đã đi qua · `60:128` chưa tới) ─────────────────── */
+
+.stepDone,
+.stepFuture {
+  margin-bottom: var(--xp-space-md);
+}
+
+.stepDoneRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-md);
+}
+
+.stepDoneIcon {
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-body-lg);
+  line-height: 1;
+}
+
+.stepDoneText {
+  flex: 1;
+  min-width: 0;
+}
+
+.stepDoneTitle {
+  margin: 0;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.stepDoneSummary {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Phần chưa tới bị làm mờ để mắt bỏ qua, nhưng KHÔNG ẩn — người dùng cần thấy còn mấy bước. */
+.stepFuture {
+  opacity: 0.65;
+}
+
+.stepFutureRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.stepFutureTitle {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Hai hành động cuối wizard tạo: "Lưu nháp" + "Lưu & Gửi duyệt" (Figma `193:2135`). */
+.finalActions {
+  display: flex;
+  gap: var(--xp-space-sm);
+}
+
+@media (max-width: 900px) {
+  .featuresGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .finalActions {
+    min-width: 0;
+    flex: 2;
+  }
+
+  .finalActions > button {
+    min-width: 0;
+    flex: 1;
+    padding-inline: var(--xp-space-xs);
+  }
+
+  .sourceFieldset,
+  .subSection {
+    padding: var(--xp-space-md);
+  }
+
+  /*
+   * Mobile GIỮ lưới 2×2 (thiết kế 390px vẫn hai cột) — chỉ nén đệm/icon cho vừa.
+   * Cao tối thiểu 64px giữ vùng chạm ≥44px.
+   */
+  .sourceGrid.sourceGrid {
+    gap: var(--xp-space-xs);
+  }
+
+  .sourceOption.sourceOption {
+    min-height: 64px;
+    align-items: flex-start;
+    padding: var(--xp-space-xs) var(--xp-space-sm);
+    padding-right: 30px;
+  }
+
+  .sourceOption.sourceOption :global(.ant-radio) {
+    top: var(--xp-space-sm);
+    right: var(--xp-space-xs);
+  }
+
+  .sourceIcon {
+    width: 22px;
+    height: 22px;
+    flex-basis: 22px;
+    margin-top: 2px;
+    font-size: var(--xp-font-size-body);
+  }
+
+  .featuresGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--xp-space-sm);
+  }
+
+  .finalActions {
     flex-direction: column-reverse;
+  }
+}
+
+/* Chỉ khi hai cột không còn đọc nổi (máy rất hẹp) mới xuống một cột. */
+@media (max-width: 379px) {
+  .sourceGrid.sourceGrid {
+    grid-template-columns: 1fr;
   }
 }

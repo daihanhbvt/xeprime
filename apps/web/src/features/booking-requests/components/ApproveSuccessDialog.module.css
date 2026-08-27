@@ -1,0 +1,88 @@
+/**
+ * Kết quả duyệt yêu cầu — cùng nhịp thông tin với hộp xác nhận duyệt, thêm một dấu tích và
+ * lối đi tiếp sang chính đơn vừa tạo.
+ */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+}
+
+/*
+ * Màu là NỀN của thẻ bọc, không phải `currentColor` của glyph: style runtime của AntD tiêm sau
+ * stylesheet CSS Module nên một class đơn không chắc thắng, và dấu tích ra màu chữ (gần đen).
+ */
+.badge {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--xp-color-success);
+  color: var(--xp-color-text-inverse);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.lead {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.row dt {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.row dd {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.next {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Hộp tự dựng hành động (footer={null}) — việc tiếp theo đứng trên, "Đóng" đứng dưới. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}

@@ -1,0 +1,255 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  /* Cùng trần bề rộng với các trang /manage khác (chi tiết đơn, chính sách thuê) —
+   * không đặt số mới, và mọi con là `min-width: 0` để không gì đẩy thân cuộn ngang. */
+  width: 100%;
+  max-width: var(--xp-shell-form-max-width);
+  /* Căn giữa như `/manage/bookings/[id]` và `/manage/shop/policies` — `max-width` một mình
+   * chỉ cắt bề rộng, không đẩy khối vào giữa, nên trang dính mép trái ở màn rộng. */
+  margin-inline: auto;
+  min-width: 0;
+}
+
+/* SĐT + nút chép + email trên một hàng, xuống dòng gọn khi hẹp. */
+.headerSub {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  overflow-wrap: anywhere;
+}
+
+.headerEmail {
+  color: var(--xp-color-text-secondary);
+}
+
+.headerExtra {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.headerTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.banner {
+  margin: 0;
+}
+
+.bannerHint {
+  margin-top: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* ── Thẻ chỉ số ─────────────────────────────────────────────────────────── */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.summaryCard {
+  min-width: 0;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.summaryLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.summaryValue,
+.summaryValueDanger {
+  margin-top: 2px;
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.summaryValueDanger {
+  color: var(--xp-color-error);
+}
+
+.labelWithHint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+/* Icon giải thích nằm CẠNH nhãn, không bao giờ trong/đè lên ô nhập. */
+.hintIcon {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* ── Thân: cột chính + hồ sơ phụ ────────────────────────────────────────── */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: var(--xp-space-md);
+  align-items: start;
+}
+
+.main,
+.side {
+  min-width: 0;
+}
+
+.profileCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  min-width: 0;
+}
+
+.profileList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.profileList > div {
+  min-width: 0;
+}
+
+.profileList dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.profileList dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+/* Giá trị + nút chép: nút không được đẩy giá trị dài ra khỏi thẻ. */
+.copyRow {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.copyRow > a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.sectionTitle {
+  margin: 0 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size-h4);
+  line-height: var(--xp-line-height-h4);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.recent {
+  min-width: 0;
+}
+
+.recentList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.recentItem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  align-items: baseline;
+  padding: var(--xp-space-xs) 0;
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  min-width: 0;
+}
+
+.recentCode {
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.recentVehicle {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  color: var(--xp-color-text-secondary);
+}
+
+@media (max-width: 1024px) {
+  /* Một cột: thẻ hồ sơ chuyển vào tab Tổng quan để không đẩy nội dung chính xuống đáy. */
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Cột phụ do JS quyết (useIsDesktop) — thẻ hồ sơ chỉ tồn tại MỘT bản trong DOM. */
+}
+
+@media (max-width: 640px) {
+  .headerExtra {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/*
+ * Biến thể NHÚNG (modal hồ sơ khách): bỏ trần bề rộng và căn giữa của trang — overlay đã tự
+ * quyết bề rộng, áp thêm `max-width` ở đây sẽ tạo hai lớp giới hạn chồng nhau.
+ */
+.embedded {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.embedded > * {
+  min-width: 0;
+}
+
+/* Dải liên hệ + hành động thay cho `ManagePageHeader` khi nhúng trong modal. */
+.embeddedHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}

@@ -1,0 +1,1156 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { newId, Prisma } from '@xeprime/prisma';
+import {
+  API_ERROR_CODE,
+  COLLATERAL_MODE,
+  discountTierFromStored,
+  legacyDiscountTierFromStored,
+  LONG_TERM_PACKAGE_MONTHS,
+  longTermTierFor,
+  isLongTermPackageMonths,
+  longTermPackageLabel,
+  POLICY_SOURCE,
+  PRICE_ROW,
+  ROUTE_TYPE,
+  routeTypeLabel,
+  SERVICE_TYPE,
+  TENANT_STATUS,
+  VEHICLE_PUBLIC_STATUS,
+  type BookingPriceSnapshot,
+  type CollateralAssetType,
+  type CollateralMode,
+  type DeliveryTier,
+  type DiscountTier,
+  type LegacyDiscountTier,
+  type PolicySource,
+} from '@xeprime/types';
+import { AuditService } from '../audit/audit.service';
+import { ListingsService } from '../public-listings/listings.service';
+import { PrismaService } from '../../prisma/prisma.service';
+import {
+  DeliverySummaryDto,
+  LongTermPackageOptionDto,
+  PriceBreakdownRowDto,
+  PublicQuoteDto,
+  QuoteBreakdownDto,
+  RentalPolicyValuesDto,
+  SaveRentalPolicyDto,
+  ShopRentalPolicyDto,
+} from './dto/pricing.dto';
+import { SaveDailyPricesDto, VehicleDailyPriceDto } from './dto/vehicle-daily-price.dto';
+
+const POLICY_SELECT = {
+  id: true,
+  vehicleId: true,
+  vehicleType: true,
+  collateralMode: true,
+  collateralAssetTypes: true,
+  depositAmount: true,
+  deliveryEnabled: true,
+  deliveryMaxRadiusKm: true,
+  deliveryTiers: true,
+  overtimeFeePerHour: true,
+  overtimeGraceMinutes: true,
+  overtimeRoundingMinutes: true,
+  discountEnabled: true,
+  discountTiers: true,
+  updatedAt: true,
+} satisfies Prisma.RentalPolicySelect;
+
+type PolicyRow = Prisma.RentalPolicyGetPayload<{ select: typeof POLICY_SELECT }>;
+
+/** Chính sách hiệu lực của một xe: bản ghi đè thắng mặc định gian hàng. */
+export interface EffectivePolicy {
+  values: RentalPolicyValuesDto;
+  source: PolicySource;
+}
+
+/** Kết quả tra phí giao nhận theo khoảng cách. */
+export type DeliveryFeeResult =
+  { kind: 'auto'; fee: string } | { kind: 'manual_required' } | { kind: 'disabled' };
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+/** Asia/Ho_Chi_Minh = UTC+7 cố định (không DST) — đủ để phân loại ngày cuối tuần. */
+const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
+
+/**
+ * Nguồn tính giá DUY NHẤT của hệ thống (Wave 2 — B2).
+ *
+ * Public quote (marketplace), preview báo giá giao nhận và duyệt yêu cầu → tạo đơn đều đi qua
+ * đây — không nơi nào tự cộng trừ tiền thuê. Quy tắc đã chốt:
+ *
+ *   - Cọc là số CỐ ĐỊNH, không nằm trong tổng khách trả, không chịu giảm giá.
+ *   - Giảm giá theo mốc ngày thuê CHỈ áp lên tiền thuê cơ bản.
+ *   - Phí giao nhận tính MỘT CHIỀU theo bậc khoảng cách; ngoài bán kính → báo giá thủ công.
+ *   - Phí quá giờ chỉ là cấu hình ở Wave 2 (tính tiền thật ở luồng trả xe sau).
+ *
+ * Toàn bộ số học chạy trên Prisma.Decimal — không bao giờ dùng float cho tiền.
+ */
+@Injectable()
+export class PricingService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+    private readonly listings: ListingsService,
+  ) {}
+
+  // -------------------------------------------------------------------------
+  // Chính sách mặc định của gian hàng
+  // -------------------------------------------------------------------------
+
+  /**
+   * Chính sách mặc định của gian hàng THEO LOẠI XE (17/08). `vehicleType` bắt buộc từ UI hai
+   * tab Ô tô/Xe máy; chưa có hàng theo loại thì trả hàng LEGACY toàn gian hàng (tương thích) —
+   * người dùng vẫn thấy đúng thông số đang áp cho loại xe đó. Số xe kế thừa/ghi đè đếm theo
+   * đúng loại xe của tab.
+   */
+  async getShopPolicy(tenantId: string, vehicleType?: string): Promise<ShopRentalPolicyDto> {
+    const vehicleScope = {
+      tenantId,
+      deletedAt: null,
+      ...(vehicleType ? { vehicleType } : {}),
+    };
+    const [rows, totalVehicles, overridden] = await this.prisma.$transaction([
+      this.prisma.rentalPolicy.findMany({
+        where: {
+          tenantId,
+          vehicleId: null,
+          vehicleType: vehicleType ? { in: [vehicleType] } : null,
+        },
+        select: POLICY_SELECT,
+      }),
+      this.prisma.vehicle.count({ where: vehicleScope }),
+      this.prisma.rentalPolicy.count({
+        where: { tenantId, vehicleId: { not: null }, vehicle: vehicleScope },
+      }),
+    ]);
+
+    let row = rows[0] ?? null;
+    if (!row && vehicleType) {
+      // Chưa có hàng theo loại → đọc hàng legacy làm giá trị đang áp (fallback tương thích).
+      row = await this.prisma.rentalPolicy.findFirst({
+        where: { tenantId, vehicleId: null, vehicleType: null },
+        select: POLICY_SELECT,
+      });
+    }
+
+    return {
+      policy: row ? toValues(row) : null,
+      inheritingVehicles: Math.max(0, totalVehicles - overridden),
+      overriddenVehicles: overridden,
+    };
+  }
+
+  /** Upsert chính sách mặc định (theo loại xe nếu có) + audit before/after trong một transaction. */
+  async saveShopPolicy(
+    tenantId: string,
+    userId: string,
+    dto: SaveRentalPolicyDto,
+    vehicleType?: string,
+  ): Promise<ShopRentalPolicyDto> {
+    this.validatePolicy(dto);
+
+    await this.prisma.$transaction(async (tx) => {
+      const current = await tx.rentalPolicy.findFirst({
+        where: { tenantId, vehicleId: null, vehicleType: vehicleType ?? null },
+        select: POLICY_SELECT,
+      });
+
+      const data = policyData(dto);
+      if (current) {
+        await tx.rentalPolicy.update({ where: { id: current.id }, data });
+      } else {
+        // Partial unique (shop_default / type_default) là chốt chặn nếu hai request đua.
+        await tx.rentalPolicy.create({
+          data: {
+            id: newId(),
+            tenantId,
+            vehicleId: null,
+            vehicleType: vehicleType ?? null,
+            ...data,
+          },
+        });
+      }
+
+      /*
+       * Nhãn "Miễn thế chấp" trên sàn là hệ quả của chính sách này (ADR 0008 — ghi qua writer
+       * duy nhất). Không đồng bộ ở đây thì sàn hiển thị sai cho tới lần sửa xe kế tiếp, tức là
+       * có thể sai vô thời hạn. Cùng transaction: chính sách và snapshot không được lệch nhau.
+       */
+      await this.listings.syncCollateralForPolicy(tenantId, tx);
+
+      // Thay đổi nhạy cảm (ảnh hưởng giá mọi lượt đặt mới của cả gian hàng) → audit đầy đủ.
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'rental_policy.update',
+          targetType: 'rental_policy',
+          targetId: current?.id ?? null,
+          before: current ? auditShape(current) : null,
+          after: { ...(vehicleType ? { vehicleType } : {}), ...auditShape(data) },
+        },
+        tx,
+      );
+    });
+
+    return this.getShopPolicy(tenantId, vehicleType);
+  }
+
+  // -------------------------------------------------------------------------
+  // Chính sách hiệu lực + tra cứu
+  // -------------------------------------------------------------------------
+
+  /**
+   * Chính sách hiệu lực của một xe — precedence 17/08:
+   *   1. bản ghi đè riêng của xe;
+   *   2. mặc định theo LOẠI XE (car/motorbike) của gian hàng;
+   *   3. mặc định legacy toàn gian hàng (giai đoạn tương thích).
+   * null khi cả ba đều chưa có. Loại xe đọc từ CHÍNH chiếc xe, không tin tham số ngoài.
+   */
+  async effectivePolicy(
+    tenantId: string,
+    vehicleId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<EffectivePolicy | null> {
+    const db = tx ?? this.prisma;
+    const [vehicle, rows] = await Promise.all([
+      db.vehicle.findFirst({
+        where: { id: vehicleId, tenantId },
+        select: { vehicleType: true },
+      }),
+      db.rentalPolicy.findMany({
+        where: { tenantId, OR: [{ vehicleId }, { vehicleId: null }] },
+        select: POLICY_SELECT,
+      }),
+    ]);
+    const override = rows.find((r) => r.vehicleId === vehicleId);
+    if (override) return { values: toValues(override), source: POLICY_SOURCE.VEHICLE };
+    const typed = vehicle
+      ? rows.find((r) => r.vehicleId === null && r.vehicleType === vehicle.vehicleType)
+      : undefined;
+    if (typed) return { values: toValues(typed), source: POLICY_SOURCE.SHOP };
+    const legacy = rows.find((r) => r.vehicleId === null && r.vehicleType === null);
+    if (legacy) return { values: toValues(legacy), source: POLICY_SOURCE.SHOP };
+    return null;
+  }
+
+  /** Chính sách mặc định gian hàng (đối chiếu trên màn giá theo xe) — theo loại xe nếu có. */
+  async shopPolicyValues(
+    tenantId: string,
+    vehicleType?: string,
+  ): Promise<RentalPolicyValuesDto | null> {
+    const rows = await this.prisma.rentalPolicy.findMany({
+      where: { tenantId, vehicleId: null },
+      select: POLICY_SELECT,
+    });
+    const typed = vehicleType ? rows.find((r) => r.vehicleType === vehicleType) : undefined;
+    const legacy = rows.find((r) => r.vehicleType === null);
+    const row = typed ?? legacy ?? null;
+    return row ? toValues(row) : null;
+  }
+
+  // -------------------------------------------------------------------------
+  // Hợp lệ hoá cấu hình (ràng buộc chéo — class-validator không mô tả được)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Ném VALIDATION_FAILED với thông điệp CỤ THỂ (thiết kế State C hiển thị đích danh lỗi):
+   * bậc trùng/không tăng dần, bán kính hở khoảng so với mốc cuối, mốc ưu đãi trùng.
+   */
+  validatePolicy(dto: SaveRentalPolicyDto): void {
+    /*
+     * Bảo đảm: ba chế độ LOẠI TRỪ nhau. CHECK ở DB là chốt chặn thật (hai request đua nhau vẫn
+     * không lọt), còn ở đây để người dùng nhận đúng câu lỗi thay vì một lỗi ràng buộc thô.
+     */
+    const deposit = Number(dto.depositAmount);
+    const assets = dto.collateralAssetTypes.length;
+    if (dto.collateralMode === COLLATERAL_MODE.CASH) {
+      if (!(deposit > 0)) throw invalid('Chọn "Cọc tiền" thì phải nhập số tiền cọc lớn hơn 0');
+      if (assets > 0) throw invalid('Chế độ "Cọc tiền" không nhận loại tài sản thế chấp');
+    } else if (dto.collateralMode === COLLATERAL_MODE.ASSET) {
+      if (assets === 0) throw invalid('Chọn "Cọc tài sản" thì phải chọn ít nhất một loại tài sản');
+      if (deposit !== 0) throw invalid('Chế độ "Cọc tài sản" không thu tiền cọc — để số tiền là 0');
+      if (new Set(dto.collateralAssetTypes).size !== assets) {
+        throw invalid('Loại tài sản thế chấp bị trùng');
+      }
+    } else {
+      if (deposit !== 0) throw invalid('Chế độ "Miễn thế chấp" không được giữ tiền cọc');
+      if (assets > 0) throw invalid('Chế độ "Miễn thế chấp" không nhận loại tài sản thế chấp');
+    }
+
+    if (dto.deliveryEnabled) {
+      if (dto.deliveryTiers.length === 0) {
+        throw invalid('Bật giao nhận thì phải có ít nhất một bậc khoảng cách');
+      }
+      if (dto.deliveryMaxRadiusKm == null) {
+        throw invalid('Bật giao nhận thì phải nhập bán kính hỗ trợ tối đa');
+      }
+      for (let i = 1; i < dto.deliveryTiers.length; i++) {
+        const prev = dto.deliveryTiers[i - 1]!.toKm;
+        const curr = dto.deliveryTiers[i]!.toKm;
+        if (curr <= prev) {
+          throw invalid(
+            `Các mốc khoảng cách phải tăng dần — mốc ${formatKm(curr)} km đứng sau mốc ${formatKm(prev)} km`,
+          );
+        }
+      }
+      const last = dto.deliveryTiers[dto.deliveryTiers.length - 1]!.toKm;
+      if (dto.deliveryMaxRadiusKm !== last) {
+        // Bán kính lệch mốc cuối = có đoạn không bậc nào phủ (hở khoảng) hoặc bậc vượt bán kính.
+        throw invalid(
+          dto.deliveryMaxRadiusKm > last
+            ? `Có khoảng trống cấu hình giữa mốc ${formatKm(last)} km và ${formatKm(dto.deliveryMaxRadiusKm)} km`
+            : `Bậc ${formatKm(last)} km vượt quá bán kính hỗ trợ ${formatKm(dto.deliveryMaxRadiusKm)} km`,
+        );
+      }
+    }
+
+    /*
+     * Mốc ưu đãi CAM KẾT THỜI HẠN (ADR 0011): chỉ nhận đúng các gói hợp lệ, tăng dần theo
+     * tháng, và % KHÔNG được giảm khi thời hạn tăng — cam kết dài hơn mà ưu đãi thấp hơn là
+     * cấu hình vô nghĩa với khách và sinh nghịch lý "thuê lâu hơn đắt hơn".
+     */
+    if (dto.discountEnabled && dto.discountTiers.length === 0) {
+      throw invalid('Bật ưu đãi thì phải có ít nhất một mốc giảm giá');
+    }
+    if (dto.discountTiers.length > LONG_TERM_PACKAGE_MONTHS.length) {
+      throw invalid(`Tối đa ${LONG_TERM_PACKAGE_MONTHS.length} mốc ưu đãi`);
+    }
+    for (let i = 0; i < dto.discountTiers.length; i++) {
+      const tier = dto.discountTiers[i]!;
+      if (!isLongTermPackageMonths(tier.minMonths)) {
+        throw invalid(
+          `Mốc ưu đãi phải là một gói thuê hợp lệ (${LONG_TERM_PACKAGE_MONTHS.join(', ')} tháng)`,
+        );
+      }
+      if (i === 0) continue;
+      const prev = dto.discountTiers[i - 1]!;
+      if (tier.minMonths <= prev.minMonths) {
+        throw invalid(
+          tier.minMonths === prev.minMonths
+            ? `Trùng mốc ưu đãi "${longTermPackageLabel(tier.minMonths)}"`
+            : 'Các mốc ưu đãi phải theo số tháng tăng dần',
+        );
+      }
+      if (tier.percent < prev.percent) {
+        throw invalid(
+          `Ưu đãi ${longTermPackageLabel(tier.minMonths)} (${tier.percent}%) không được thấp hơn mốc ` +
+            `${longTermPackageLabel(prev.minMonths)} (${prev.percent}%)`,
+        );
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Giá riêng theo ngày (`vehicle_daily_prices`) — writer duy nhất là service này
+  // -------------------------------------------------------------------------
+
+  /** Bản ghi đè trong [from, to] (ngày local, bao gồm hai đầu) của một xe. */
+  async listDailyPrices(
+    tenantId: string,
+    vehicleId: string,
+    from: string,
+    to: string,
+  ): Promise<VehicleDailyPriceDto[]> {
+    assertDateRange(from, to);
+    const rows = await this.prisma.vehicleDailyPrice.findMany({
+      where: { tenantId, vehicleId, date: { gte: localDate(from), lte: localDate(to) } },
+      orderBy: { date: 'asc' },
+      select: {
+        vehicleId: true,
+        date: true,
+        dailyPrice: true,
+        hourlyPrice: true,
+        note: true,
+        updatedAt: true,
+      },
+    });
+    return rows.map(toDailyPriceDto);
+  }
+
+  /**
+   * Upsert giá riêng cho từng ngày trong `dto.dates` — mô hình tất định: mỗi ngày đúng một dòng
+   * (unique `(vehicle_id, date)`), lần lưu sau THAY THẾ trọn giá trị của lần trước cho ngày đó.
+   * Một audit record cho cả lô (ai đổi giá những ngày nào thành bao nhiêu).
+   */
+  async saveDailyPrices(
+    tenantId: string,
+    vehicleId: string,
+    userId: string,
+    dto: SaveDailyPricesDto,
+  ): Promise<VehicleDailyPriceDto[]> {
+    if (dto.dailyPrice == null && dto.hourlyPrice == null) {
+      throw invalid('Nhập ít nhất một giá (theo ngày hoặc theo giờ)');
+    }
+    await this.assertVehicle(tenantId, vehicleId);
+
+    const dates = [...new Set(dto.dates)].sort();
+    const daily = dto.dailyPrice != null ? new Prisma.Decimal(dto.dailyPrice) : null;
+    const hourly = dto.hourlyPrice != null ? new Prisma.Decimal(dto.hourlyPrice) : null;
+    const note = dto.note?.trim() || null;
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const date of dates) {
+        await tx.vehicleDailyPrice.upsert({
+          where: { vehicleId_date: { vehicleId, date: localDate(date) } },
+          create: {
+            id: newId(),
+            tenantId,
+            vehicleId,
+            date: localDate(date),
+            dailyPrice: daily,
+            hourlyPrice: hourly,
+            note,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+          update: { dailyPrice: daily, hourlyPrice: hourly, note, updatedBy: userId },
+        });
+      }
+
+      // Giá ảnh hưởng mọi báo giá mới của xe → audit đầy đủ (lằn ranh 3, CLAUDE.md mục 6).
+      await this.audit.record(
+        {
+          tenantId,
+          actorUserId: userId,
+          actorScope: 'tenant',
+          action: 'vehicle.daily_price.save',
+          targetType: 'vehicle',
+          targetId: vehicleId,
+          after: {
+            dates,
+            dailyPrice: daily?.toFixed(0) ?? null,
+            hourlyPrice: hourly?.toFixed(0) ?? null,
+            ...(note ? { note } : {}),
+          },
+        },
+        tx,
+      );
+    });
+
+    return this.listDailyPrices(tenantId, vehicleId, dates[0]!, dates[dates.length - 1]!);
+  }
+
+  /** Khôi phục giá mặc định cho [from, to]: xoá bản ghi đè — giá thường/cuối tuần áp trở lại. */
+  async deleteDailyPrices(
+    tenantId: string,
+    vehicleId: string,
+    userId: string,
+    from: string,
+    to: string,
+  ): Promise<number> {
+    assertDateRange(from, to);
+    await this.assertVehicle(tenantId, vehicleId);
+
+    return this.prisma.$transaction(async (tx) => {
+      const result = await tx.vehicleDailyPrice.deleteMany({
+        where: { tenantId, vehicleId, date: { gte: localDate(from), lte: localDate(to) } },
+      });
+      if (result.count > 0) {
+        await this.audit.record(
+          {
+            tenantId,
+            actorUserId: userId,
+            actorScope: 'tenant',
+            action: 'vehicle.daily_price.delete',
+            targetType: 'vehicle',
+            targetId: vehicleId,
+            before: { from, to, count: result.count },
+          },
+          tx,
+        );
+      }
+      return result.count;
+    });
+  }
+
+  /**
+   * Map `ngày local → giá NGÀY ghi đè` cho khoảng thuê — nạp một lần rồi đưa vào `buildQuote`.
+   * Ngày chỉ ghi đè giá GIỜ (dailyPrice null) không vào map: quote hiện tại tính theo ngày.
+   */
+  async dailyOverridesFor(
+    vehicleId: string,
+    pickupAt: Date,
+    returnAt: Date,
+  ): Promise<ReadonlyMap<string, string>> {
+    const days = this.chargedDays(pickupAt, returnAt);
+    const keys = Array.from({ length: days }, (_, i) => localDayKey(pickupAt, i));
+    const rows = await this.prisma.vehicleDailyPrice.findMany({
+      where: { vehicleId, date: { in: keys.map(localDate) }, dailyPrice: { not: null } },
+      select: { date: true, dailyPrice: true },
+    });
+    return new Map(rows.map((r) => [r.date.toISOString().slice(0, 10), r.dailyPrice!.toFixed(0)]));
+  }
+
+  private async assertVehicle(tenantId: string, vehicleId: string): Promise<void> {
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: { id: vehicleId, tenantId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!vehicle) {
+      throw new NotFoundException({ code: API_ERROR_CODE.NOT_FOUND, message: 'Không tìm thấy xe' });
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Tính giá
+  // -------------------------------------------------------------------------
+
+  /**
+   * Số ngày tính tiền: mỗi 24h (kể cả lẻ) là một ngày, tối thiểu 1 — đúng thông lệ thuê xe
+   * tự lái theo ngày của tài liệu nghiệp vụ.
+   */
+  chargedDays(pickupAt: Date, returnAt: Date): number {
+    return Math.max(1, Math.ceil((returnAt.getTime() - pickupAt.getTime()) / MS_PER_DAY));
+  }
+
+  /**
+   * Tra phí giao nhận theo khoảng cách một chiều. Mốc biên thuộc về bậc đó (≤ toKm).
+   *
+   * **Wave 9: KHÔNG còn đường gọi nào trong luồng nghiệp vụ.** Vòng "báo giá theo khoảng cách
+   * rồi mới duyệt" đã bỏ — giao nhận miễn phí lúc duyệt, chủ xe chốt phí đã thoả thuận trên đơn
+   * (`BookingsService.updateDeliveryFee`). Giữ lại hàm cùng cấu hình bậc phí trong chính sách
+   * gian hàng vì cấu hình đó vẫn sửa được và vẫn là dữ liệu của shop; nó chỉ đang không nuôi
+   * quyết định nào. Đừng nối lại vào luồng duyệt mà không có quyết định sản phẩm mới.
+   */
+  deliveryFeeFor(policy: RentalPolicyValuesDto | null, distanceKm: number): DeliveryFeeResult {
+    if (!policy?.deliveryEnabled) return { kind: 'disabled' };
+    if (policy.deliveryMaxRadiusKm == null || distanceKm > policy.deliveryMaxRadiusKm) {
+      return { kind: 'manual_required' };
+    }
+    const tier = policy.deliveryTiers.find((t) => distanceKm <= t.toKm);
+    if (!tier) return { kind: 'manual_required' };
+    return { kind: 'auto', fee: tier.fee };
+  }
+
+  /**
+   * Breakdown giá cho một khoảng thuê tính THEO NGÀY — tự lái và có tài xế.
+   *
+   * Thuê dài hạn KHÔNG đi qua đây (ADR 0011): nó tính theo GÓI tháng lịch ở
+   * {@link buildLongTermPackageQuote}, không có khái niệm "số ngày tính tiền".
+   *
+   * Giao nhận truyền vào dạng đã-biết-phí (bậc tự động hoặc báo giá thủ công) — hàm này không
+   * tự quyết phí ngoài bán kính.
+   */
+  buildDailyQuote(input: {
+    weekdayPrice: string | null;
+    weekendPrice: string | null;
+    pickupAt: Date;
+    returnAt: Date;
+    policy: EffectivePolicy | null;
+    delivery?: { fee: string; label: string } | null;
+    /** `ngày local (YYYY-MM-DD) → giá NGÀY ghi đè` — nạp qua `dailyOverridesFor`. */
+    dailyOverrides?: ReadonlyMap<string, string>;
+    /** Dịch vụ của chuyến — self_drive (mặc định) hoặc with_driver. */
+    serviceType?: string;
+    /** Lộ trình chuyến CÓ TÀI XẾ — quyết định cột giá route nào được áp. */
+    routeType?: string | null;
+    /** Giá/ngày đã gồm tài xế, lộ trình nội thành/cơ bản — chỉ dùng khi with_driver. */
+    withDriverDailyPrice?: string | null;
+    /** Giá/ngày có tài xế liên tỉnh (khứ hồi) — NULL rơi về giá cơ bản kèm ghi chú. */
+    withDriverInterCityPrice?: string | null;
+    /** Giá/ngày có tài xế liên tỉnh 1 chiều — fallback: liên tỉnh → cơ bản. */
+    withDriverOneWayPrice?: string | null;
+    /** Khuyến mãi trực tiếp cho TIỀN THUÊ TỰ LÁI; không áp cho dịch vụ khác/phụ phí/cọc. */
+    discountPercent?: number | null;
+  }): QuoteBreakdownDto {
+    if (!(input.returnAt.getTime() > input.pickupAt.getTime())) {
+      throw invalid('Thời điểm trả xe phải sau thời điểm nhận xe');
+    }
+
+    const days = this.chargedDays(input.pickupAt, input.returnAt);
+    const serviceType = input.serviceType ?? SERVICE_TYPE.SELF_DRIVE;
+    if (serviceType === SERVICE_TYPE.LONG_TERM) {
+      // Bảo vệ lập trình: dài hạn tính theo GÓI; gọi nhầm vào đây sẽ ra con số theo ngày sai bản chất.
+      throw invalid('Thuê dài hạn tính theo gói tháng — dùng buildLongTermPackageQuote');
+    }
+
+    /*
+     * Giá có tài xế theo LỘ TRÌNH (17/08): nội thành ăn giá cơ bản; liên tỉnh/1 chiều ăn cột
+     * giá route riêng, CHƯA NIÊM YẾT thì rơi về bậc gần nhất (1 chiều → liên tỉnh → cơ bản)
+     * kèm `estimateNote` — tổng lúc đó là TẠM TÍNH, không được trưng như giá chốt.
+     */
+    let driverRate: Prisma.Decimal | null = null;
+    let driverRouteLabel: string | null = null;
+    let estimateNote: string | null = null;
+    if (serviceType === SERVICE_TYPE.WITH_DRIVER && input.withDriverDailyPrice) {
+      const basePrice = new Prisma.Decimal(input.withDriverDailyPrice);
+      const interCity = input.withDriverInterCityPrice
+        ? new Prisma.Decimal(input.withDriverInterCityPrice)
+        : null;
+      const oneWay = input.withDriverOneWayPrice
+        ? new Prisma.Decimal(input.withDriverOneWayPrice)
+        : null;
+      const route = input.routeType ?? null;
+      if (route === ROUTE_TYPE.INTER_CITY) {
+        driverRate = interCity ?? basePrice;
+        if (!interCity) {
+          estimateNote =
+            'Giá lộ trình liên tỉnh chưa niêm yết — tạm tính theo giá cơ bản, gian hàng xác nhận phụ phí khi duyệt';
+        }
+      } else if (route === ROUTE_TYPE.INTER_CITY_ONE_WAY) {
+        driverRate = oneWay ?? interCity ?? basePrice;
+        if (!oneWay) {
+          estimateNote =
+            'Giá lộ trình 1 chiều chưa niêm yết — tạm tính theo bậc gần nhất, gian hàng xác nhận phụ phí khi duyệt';
+        }
+      } else {
+        driverRate = basePrice;
+      }
+      driverRouteLabel = route ? routeTypeLabel(route) : null;
+    }
+
+    let base: Prisma.Decimal;
+    let baseSublabel: string;
+
+    if (driverRate) {
+      base = driverRate.mul(days);
+      baseSublabel = `${days} ngày × ${vnd(driverRate)}/ngày · đã gồm tài xế${
+        driverRouteLabel ? ` · ${driverRouteLabel}` : ''
+      }`;
+    } else {
+      // Máy giá ngày là FALLBACK cho dịch vụ chưa niêm yết giá chuyên biệt — tổng chỉ là
+      // tạm tính, FE không được trưng như giá chốt của dịch vụ đó.
+      if (serviceType === SERVICE_TYPE.WITH_DRIVER) {
+        estimateNote = 'Chưa gồm phí tài xế — gian hàng báo giá chính thức khi duyệt';
+      }
+      if (!input.weekdayPrice) {
+        throw invalid('Xe chưa có giá thuê theo ngày — cấu hình giá trước khi báo giá');
+      }
+      const weekday = new Prisma.Decimal(input.weekdayPrice);
+      const weekend = input.weekendPrice ? new Prisma.Decimal(input.weekendPrice) : weekday;
+
+      // Phân loại từng ngày tính tiền theo ngày bắt đầu của nó (giờ Việt Nam). Ngày có giá riêng
+      // (`vehicle_daily_prices`) lấy ĐÚNG giá đó — thay cả giá thường lẫn cuối tuần của ngày ấy.
+      let weekendDays = 0;
+      let overrideDays = 0;
+      base = new Prisma.Decimal(0);
+      for (let i = 0; i < days; i++) {
+        const override = input.dailyOverrides?.get(localDayKey(input.pickupAt, i));
+        if (override != null) {
+          overrideDays += 1;
+          base = base.plus(new Prisma.Decimal(override));
+          continue;
+        }
+        const dow = new Date(input.pickupAt.getTime() + i * MS_PER_DAY + TZ_OFFSET_MS).getUTCDay();
+        const isWeekend = dow === 0 || dow === 6;
+        if (isWeekend) weekendDays += 1;
+        base = base.plus(isWeekend ? weekend : weekday);
+      }
+      const weekdayDays = days - weekendDays - overrideDays;
+      const splitRates = weekendDays > 0 && !weekend.equals(weekday);
+
+      baseSublabel = overrideDays
+        ? `${days} ngày · trong đó ${overrideDays} ngày áp giá riêng`
+        : splitRates
+          ? `${weekdayDays} ngày thường × ${vnd(weekday)} · ${weekendDays} ngày cuối tuần × ${vnd(weekend)}`
+          : `${days} ngày × ${vnd(weekday)}/ngày`;
+    }
+
+    const rows: PriceBreakdownRowDto[] = [
+      {
+        key: PRICE_ROW.BASE,
+        label: 'Tiền thuê gốc',
+        sublabel: baseSublabel,
+        amount: base.toFixed(0),
+      },
+    ];
+
+    // Khuyến mãi trực tiếp CHỈ áp lên tiền thuê cơ bản của dịch vụ TỰ LÁI; không giảm phụ
+    // phí/cọc và không bao giờ đụng giá thuê dài hạn — ưu đãi của dài hạn là mốc cam kết thời
+    // hạn, tính trong buildLongTermPackageQuote (ADR 0011).
+    const policy = input.policy?.values ?? null;
+    let discount = new Prisma.Decimal(0);
+    const directDiscountPercent =
+      serviceType === SERVICE_TYPE.SELF_DRIVE &&
+      input.discountPercent != null &&
+      input.discountPercent > 0
+        ? Math.min(100, Math.trunc(input.discountPercent))
+        : null;
+    if (directDiscountPercent) {
+      discount = base
+        .mul(directDiscountPercent)
+        .div(100)
+        .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+      rows.push({
+        key: PRICE_ROW.DISCOUNT,
+        label: `Khuyến mãi trực tiếp (${directDiscountPercent}%)`,
+        sublabel: 'Áp dụng cho tiền thuê tự lái',
+        amount: discount.negated().toFixed(0),
+      });
+      rows.push({
+        key: PRICE_ROW.SUBTOTAL,
+        label: 'Giá sau khuyến mãi',
+        sublabel: null,
+        amount: base.minus(discount).toFixed(0),
+      });
+    }
+
+    let deliveryFee = new Prisma.Decimal(0);
+    if (input.delivery) {
+      deliveryFee = new Prisma.Decimal(input.delivery.fee);
+      rows.push({
+        key: PRICE_ROW.DELIVERY,
+        label: 'Phí giao nhận xe',
+        sublabel: input.delivery.label,
+        amount: deliveryFee.toFixed(0),
+      });
+    }
+
+    // Hai dòng 0đ có chủ đích (thiết kế breakdown): tại thời điểm chốt đơn chưa phát sinh.
+    rows.push({
+      key: PRICE_ROW.OVERTIME,
+      label: 'Phí phát sinh ngoài giờ',
+      sublabel: null,
+      amount: '0',
+    });
+    rows.push({ key: PRICE_ROW.EXTRAS, label: 'Dịch vụ cộng thêm', sublabel: null, amount: '0' });
+
+    const total = base.minus(discount).plus(deliveryFee);
+
+    return {
+      days,
+      longTerm: null,
+      rows,
+      totalAmount: total.toFixed(0),
+      depositAmount: policy ? new Prisma.Decimal(policy.depositAmount).toFixed(0) : '0',
+      policySource: input.policy?.source ?? null,
+      policyUpdatedAt: policy?.updatedAt ?? null,
+      // Khác null = tổng chỉ là TẠM TÍNH (giá chuyên biệt/giá route chưa niêm yết) — FE đổi
+      // nhãn tổng và hiện ghi chú, không trưng như giá chốt.
+      estimateNote,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Thuê dài hạn — GÓI cố định theo tháng lịch (ADR 0011)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Con số của MỘT gói. Bảng chọn gói và breakdown của gói đang chọn cùng gọi hàm này, nên giá
+   * trên nút và giá trong breakdown không thể lệch nhau.
+   */
+  private longTermAmounts(
+    monthly: Prisma.Decimal,
+    months: number,
+    tier: DiscountTier | null,
+  ): LongTermPackageOptionDto {
+    const basePackage = monthly.mul(months).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP);
+    const discount = tier
+      ? basePackage.mul(tier.percent).div(100).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+      : new Prisma.Decimal(0);
+    const finalPackage = basePackage.minus(discount);
+    return {
+      packageMonths: months,
+      baseMonthlyPrice: monthly.toFixed(0),
+      basePackageAmount: basePackage.toFixed(0),
+      durationDiscountPercent: tier ? tier.percent : null,
+      durationDiscountAmount: discount.toFixed(0),
+      finalPackageAmount: finalPackage.toFixed(0),
+      effectiveMonthlyAmount: finalPackage
+        .div(months)
+        .toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+        .toFixed(0),
+    };
+  }
+
+  /** Mốc ưu đãi áp cho một gói theo chính sách hiệu lực — tắt ưu đãi ⇒ không mốc nào. */
+  private longTermTier(policy: EffectivePolicy | null, months: number): DiscountTier | null {
+    const values = policy?.values;
+    if (!values?.discountEnabled) return null;
+    return longTermTierFor(values.discountTiers, months);
+  }
+
+  /**
+   * Giá đủ SÁU gói cho bảng chọn gói. Mảng rỗng khi xe chưa niêm yết giá tháng — FE hiện
+   * "liên hệ báo giá" thay vì bịa số. Đây là đường DUY NHẤT frontend lấy giá gói: client không
+   * bao giờ tự nhân giá tháng với số tháng.
+   */
+  longTermPackages(
+    monthlyPrice: string | null,
+    policy: EffectivePolicy | null,
+  ): LongTermPackageOptionDto[] {
+    if (!monthlyPrice) return [];
+    const monthly = new Prisma.Decimal(monthlyPrice);
+    return LONG_TERM_PACKAGE_MONTHS.map((months) =>
+      this.longTermAmounts(monthly, months, this.longTermTier(policy, months)),
+    );
+  }
+
+  /**
+   * Breakdown của một GÓI thuê dài hạn.
+   *
+   *   basePackageAmount      = monthlyPrice × packageMonths
+   *   durationDiscountAmount = basePackageAmount × tier% / 100   (mốc cao nhất gói đạt tới)
+   *   finalPackageAmount     = base − discount
+   *
+   * Không có "số ngày tính tiền" và không cần ngày trả (ngày trả suy từ gói khi gian hàng chốt
+   * giờ nhận). KHÔNG bao giờ áp vehicle.discountPercent — khuyến mãi trực tiếp đó thuộc tự lái.
+   */
+  buildLongTermPackageQuote(input: {
+    monthlyPrice: string | null;
+    packageMonths: number;
+    policy: EffectivePolicy | null;
+    delivery?: { fee: string; label: string } | null;
+  }): QuoteBreakdownDto {
+    if (!isLongTermPackageMonths(input.packageMonths)) {
+      throw invalid(`Gói thuê dài hạn phải là ${LONG_TERM_PACKAGE_MONTHS.join(', ')} tháng`);
+    }
+    if (!input.monthlyPrice) {
+      throw invalid(
+        'Xe chưa niêm yết giá thuê dài hạn theo tháng — cấu hình giá trước khi báo giá',
+      );
+    }
+    const months = input.packageMonths;
+    const monthly = new Prisma.Decimal(input.monthlyPrice);
+    const tier = this.longTermTier(input.policy, months);
+    const amounts = this.longTermAmounts(monthly, months, tier);
+
+    const rows: PriceBreakdownRowDto[] = [
+      {
+        key: PRICE_ROW.BASE,
+        label: `Giá cơ sở gói ${longTermPackageLabel(months)}`,
+        sublabel: `${months} tháng × ${vnd(monthly)}/tháng`,
+        amount: amounts.basePackageAmount,
+      },
+    ];
+    if (tier) {
+      rows.push({
+        key: PRICE_ROW.DISCOUNT,
+        label: `Ưu đãi cam kết ${longTermPackageLabel(months)} (${tier.percent}%)`,
+        sublabel: tier.note ?? `Mốc ưu đãi từ ${longTermPackageLabel(tier.minMonths)}`,
+        amount: `-${amounts.durationDiscountAmount}`,
+      });
+      rows.push({
+        key: PRICE_ROW.SUBTOTAL,
+        label: 'Giá gói sau ưu đãi',
+        sublabel: null,
+        amount: amounts.finalPackageAmount,
+      });
+    }
+
+    let deliveryFee = new Prisma.Decimal(0);
+    if (input.delivery) {
+      deliveryFee = new Prisma.Decimal(input.delivery.fee);
+      rows.push({
+        key: PRICE_ROW.DELIVERY,
+        label: 'Phí giao nhận xe',
+        sublabel: input.delivery.label,
+        amount: deliveryFee.toFixed(0),
+      });
+    }
+
+    const policy = input.policy?.values ?? null;
+    return {
+      days: null,
+      longTerm: amounts,
+      rows,
+      totalAmount: new Prisma.Decimal(amounts.finalPackageAmount).plus(deliveryFee).toFixed(0),
+      depositAmount: policy ? new Prisma.Decimal(policy.depositAmount).toFixed(0) : '0',
+      policySource: input.policy?.source ?? null,
+      policyUpdatedAt: policy?.updatedAt ?? null,
+      estimateNote: null,
+    };
+  }
+
+  /** Snapshot bất biến ghi vào `bookings.price_snapshot_json` lúc tạo đơn từ báo giá. */
+  buildSnapshot(
+    breakdown: QuoteBreakdownDto,
+    policy: EffectivePolicy | null,
+  ): BookingPriceSnapshot {
+    return {
+      calculatedAt: new Date().toISOString(),
+      source: 'quote',
+      currency: 'VND',
+      ...(breakdown.days != null ? { days: breakdown.days } : {}),
+      // Đơn dài hạn đóng băng ĐỦ cấu tạo giá gói (gói, giá tháng cơ sở, mốc ưu đãi, tiền giảm)
+      // để về sau giải thích được con số mà không phải tra lại chính sách hiện hành.
+      ...(breakdown.longTerm ? { longTerm: breakdown.longTerm } : {}),
+      rows: breakdown.rows.map((r) => ({
+        key: r.key as BookingPriceSnapshot['rows'][number]['key'],
+        label: r.label,
+        ...(r.sublabel ? { sublabel: r.sublabel } : {}),
+        amount: r.amount,
+      })),
+      totalAmount: breakdown.totalAmount,
+      depositAmount: breakdown.depositAmount,
+      policy: policy
+        ? {
+            source: policy.source,
+            updatedAt: policy.values.updatedAt,
+            // Điều kiện bảo đảm lúc chốt: khách đặt khi shop nhận cà vẹt thì về sau shop đổi
+            // sang cọc tiền cũng không được viết lại quá khứ của đơn.
+            collateralMode: policy.values.collateralMode as CollateralMode,
+            collateralAssetTypes: policy.values.collateralAssetTypes as CollateralAssetType[],
+            depositAmount: policy.values.depositAmount,
+            deliveryEnabled: policy.values.deliveryEnabled,
+            deliveryMaxRadiusKm: policy.values.deliveryMaxRadiusKm,
+            deliveryTiers: policy.values.deliveryTiers,
+            overtimeFeePerHour: policy.values.overtimeFeePerHour,
+            overtimeGraceMinutes: policy.values.overtimeGraceMinutes,
+            overtimeRoundingMinutes: policy.values.overtimeRoundingMinutes,
+            discountEnabled: policy.values.discountEnabled,
+            // Đóng băng ĐỦ mốc đang lưu (canonical + legacy chưa dọn) — snapshot phải giải
+            // thích được cấu hình tại thời điểm chốt, kể cả phần máy giá đã bỏ qua.
+            discountTiers: [...policy.values.discountTiers, ...policy.values.legacyDiscountTiers],
+          }
+        : null,
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // Public quote (marketplace)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Báo giá công khai cho một xe đã duyệt — CHƯA gồm phí giao nhận (phụ thuộc khoảng cách).
+   *
+   * Dài hạn đi nhánh GÓI: chỉ cần `packageMonths`, KHÔNG cần (và không tin) ngày trả do client
+   * gửi lên. Dịch vụ khác giữ nguyên hợp đồng ngày nhận–ngày trả.
+   */
+  async publicQuote(
+    vehicleId: string,
+    query: {
+      pickupAt?: string;
+      returnAt?: string;
+      serviceType?: string;
+      routeType?: string;
+      packageMonths?: number;
+    },
+  ): Promise<PublicQuoteDto> {
+    const { serviceType, routeType } = query;
+    const vehicle = await this.prisma.vehicle.findFirst({
+      where: {
+        id: vehicleId,
+        deletedAt: null,
+        publicStatus: VEHICLE_PUBLIC_STATUS.APPROVED_PUBLIC,
+        tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        weekdayPrice: true,
+        weekendPrice: true,
+        serviceTypes: true,
+        monthlyPrice: true,
+        withDriverDailyPrice: true,
+        withDriverInterCityPrice: true,
+        withDriverOneWayPrice: true,
+        discountPercent: true,
+      },
+    });
+    if (!vehicle) {
+      throw new NotFoundException({
+        code: API_ERROR_CODE.NOT_FOUND,
+        message: 'Xe không khả dụng để báo giá',
+      });
+    }
+    // Báo giá cho dịch vụ xe KHÔNG phục vụ là con số vô nghĩa — chặn sớm thay vì trả giá sai.
+    if (serviceType && !vehicle.serviceTypes.includes(serviceType)) {
+      throw invalid('Xe không phục vụ loại dịch vụ này');
+    }
+
+    const policy = await this.effectivePolicy(vehicle.tenantId, vehicle.id);
+    const delivery: DeliverySummaryDto = policy?.values.deliveryEnabled
+      ? {
+          enabled: true,
+          maxRadiusKm: policy.values.deliveryMaxRadiusKm,
+          tiers: policy.values.deliveryTiers,
+        }
+      : { enabled: false, maxRadiusKm: null, tiers: [] };
+
+    if (serviceType === SERVICE_TYPE.LONG_TERM) {
+      if (query.packageMonths == null) {
+        throw invalid('Chọn gói thuê dài hạn để xem giá');
+      }
+      return {
+        breakdown: this.buildLongTermPackageQuote({
+          monthlyPrice: decimalToString(vehicle.monthlyPrice),
+          packageMonths: query.packageMonths,
+          policy,
+          delivery: null,
+        }),
+        delivery,
+      };
+    }
+
+    if (!query.pickupAt || !query.returnAt) {
+      throw invalid('Thiếu thời gian nhận/trả xe');
+    }
+    const pickupAt = query.pickupAt;
+    const returnAt = query.returnAt;
+    // Giá riêng theo ngày áp vào MỌI báo giá — khách ngoài chợ và shop duyệt yêu cầu phải
+    // nhìn cùng một con số.
+    const dailyOverrides = await this.dailyOverridesFor(
+      vehicle.id,
+      new Date(pickupAt),
+      new Date(returnAt),
+    );
+    const breakdown = this.buildDailyQuote({
+      weekdayPrice: decimalToString(vehicle.weekdayPrice),
+      weekendPrice: decimalToString(vehicle.weekendPrice),
+      pickupAt: new Date(pickupAt),
+      returnAt: new Date(returnAt),
+      policy,
+      delivery: null,
+      dailyOverrides,
+      serviceType,
+      // Lộ trình chỉ có nghĩa với chuyến có tài xế — dịch vụ khác bỏ qua để không lệch giá.
+      routeType: serviceType === SERVICE_TYPE.WITH_DRIVER ? (routeType ?? null) : null,
+      withDriverDailyPrice: decimalToString(vehicle.withDriverDailyPrice),
+      withDriverInterCityPrice: decimalToString(vehicle.withDriverInterCityPrice),
+      withDriverOneWayPrice: decimalToString(vehicle.withDriverOneWayPrice),
+      discountPercent: vehicle.discountPercent,
+    });
+
+    return { breakdown, delivery };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Helpers thuần
+// ---------------------------------------------------------------------------
+
+function toValues(row: PolicyRow): RentalPolicyValuesDto {
+  return {
+    collateralMode: row.collateralMode,
+    collateralAssetTypes: row.collateralAssetTypes,
+    depositAmount: row.depositAmount.toFixed(0),
+    deliveryEnabled: row.deliveryEnabled,
+    deliveryMaxRadiusKm: row.deliveryMaxRadiusKm ? Number(row.deliveryMaxRadiusKm) : null,
+    deliveryTiers: (row.deliveryTiers as unknown as DeliveryTier[]) ?? [],
+    overtimeFeePerHour: row.overtimeFeePerHour ? row.overtimeFeePerHour.toFixed(0) : null,
+    overtimeGraceMinutes: row.overtimeGraceMinutes,
+    overtimeRoundingMinutes: row.overtimeRoundingMinutes,
+    discountEnabled: row.discountEnabled,
+    // jsonb chứa CẢ hai đời dữ liệu: mốc theo tháng (canonical) và mốc cũ theo ngày không quy
+    // đổi được. Chỉ mốc canonical đi vào máy giá; mốc legacy trả riêng để màn cấu hình nhắc chủ
+    // xe chọn lại — không bao giờ remap ngầm (ADR 0011).
+    discountTiers: storedTiers(row.discountTiers)
+      .map(discountTierFromStored)
+      .filter((t): t is DiscountTier => t !== null),
+    legacyDiscountTiers: storedTiers(row.discountTiers)
+      .map(legacyDiscountTierFromStored)
+      .filter((t): t is LegacyDiscountTier => t !== null),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * Payload Prisma từ DTO đã validate — tiers ghi nguyên trạng (đã qua class-validator + chéo).
+ * Export cho VehiclesService (writer của bản ghi đè theo xe) dùng chung mapping, không chép tay.
+ */
+export function policyData(dto: SaveRentalPolicyDto) {
+  return {
+    collateralMode: dto.collateralMode,
+    collateralAssetTypes: dto.collateralAssetTypes,
+    depositAmount: new Prisma.Decimal(dto.depositAmount),
+    deliveryEnabled: dto.deliveryEnabled,
+    deliveryMaxRadiusKm: dto.deliveryEnabled ? new Prisma.Decimal(dto.deliveryMaxRadiusKm!) : null,
+    deliveryTiers: dto.deliveryTiers as unknown as Prisma.InputJsonValue,
+    overtimeFeePerHour:
+      dto.overtimeFeePerHour != null ? new Prisma.Decimal(dto.overtimeFeePerHour) : null,
+    overtimeGraceMinutes: dto.overtimeGraceMinutes ?? null,
+    overtimeRoundingMinutes: dto.overtimeRoundingMinutes ?? null,
+    discountEnabled: dto.discountEnabled,
+    discountTiers: dto.discountTiers as unknown as Prisma.InputJsonValue,
+  };
+}
+
+/** Bản ghi audit gọn — Decimal → string để jsonb không mang object lạ. */
+function auditShape(data: {
+  collateralMode: string;
+  collateralAssetTypes: string[];
+  depositAmount: Prisma.Decimal;
+  deliveryEnabled: boolean;
+  deliveryMaxRadiusKm: Prisma.Decimal | null;
+  deliveryTiers: unknown;
+  overtimeFeePerHour: Prisma.Decimal | null;
+  overtimeGraceMinutes: number | null;
+  overtimeRoundingMinutes: number | null;
+  discountEnabled: boolean;
+  discountTiers: unknown;
+}): Record<string, unknown> {
+  return {
+    collateralMode: data.collateralMode,
+    collateralAssetTypes: data.collateralAssetTypes,
+    depositAmount: data.depositAmount.toFixed(0),
+    deliveryEnabled: data.deliveryEnabled,
+    deliveryMaxRadiusKm: data.deliveryMaxRadiusKm ? Number(data.deliveryMaxRadiusKm) : null,
+    deliveryTiers: data.deliveryTiers,
+    overtimeFeePerHour: data.overtimeFeePerHour ? data.overtimeFeePerHour.toFixed(0) : null,
+    overtimeGraceMinutes: data.overtimeGraceMinutes,
+    overtimeRoundingMinutes: data.overtimeRoundingMinutes,
+    discountEnabled: data.discountEnabled,
+    discountTiers: data.discountTiers,
+  };
+}
+
+/** Phần tử thô của `discount_tiers_json` — jsonb có thể null/không phải mảng ở dữ liệu cũ. */
+function storedTiers(raw: unknown): unknown[] {
+  return Array.isArray(raw) ? raw : [];
+}
+
+function decimalToString(value: Prisma.Decimal | null): string | null {
+  return value ? value.toFixed(0) : null;
+}
+
+/**
+ * Khoá ngày LOCAL (YYYY-MM-DD, giờ VN) của ngày tính tiền thứ `i` kể từ lúc nhận xe — cùng
+ * phép quy chiếu UTC+7 cố định mà buildQuote dùng để phân loại cuối tuần.
+ */
+function localDayKey(pickupAt: Date, dayIndex: number): string {
+  return new Date(pickupAt.getTime() + dayIndex * MS_PER_DAY + TZ_OFFSET_MS)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** `YYYY-MM-DD` → giá trị cho cột `@db.Date` (Prisma nhận Date ở nửa đêm UTC). */
+function localDate(isoDate: string): Date {
+  return new Date(`${isoDate}T00:00:00.000Z`);
+}
+
+/** Trần 366 ngày cho các truy vấn theo khoảng — lịch xem tối đa 62 ngày, chừa dư cho báo cáo. */
+function assertDateRange(from: string, to: string): void {
+  const fromMs = localDate(from).getTime();
+  const toMs = localDate(to).getTime();
+  if (Number.isNaN(fromMs) || Number.isNaN(toMs) || toMs < fromMs) {
+    throw invalid('Khoảng ngày không hợp lệ');
+  }
+  if (toMs - fromMs > 366 * MS_PER_DAY) {
+    throw invalid('Khoảng ngày tối đa 366 ngày');
+  }
+}
+
+function toDailyPriceDto(row: {
+  vehicleId: string;
+  date: Date;
+  dailyPrice: Prisma.Decimal | null;
+  hourlyPrice: Prisma.Decimal | null;
+  note: string | null;
+  updatedAt: Date;
+}): VehicleDailyPriceDto {
+  return {
+    vehicleId: row.vehicleId,
+    date: row.date.toISOString().slice(0, 10),
+    dailyPrice: row.dailyPrice ? row.dailyPrice.toFixed(0) : null,
+    hourlyPrice: row.hourlyPrice ? row.hourlyPrice.toFixed(0) : null,
+    note: row.note,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+/** '800000' → '800.000đ' — chỉ dùng cho sublabel của snapshot/breakdown (tài liệu tự đọc). */
+function vnd(value: Prisma.Decimal): string {
+  return `${new Intl.NumberFormat('vi-VN').format(BigInt(value.toFixed(0)))}đ`;
+}
+
+function formatKm(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function invalid(message: string): BadRequestException {
+  return new BadRequestException({ code: API_ERROR_CODE.VALIDATION_FAILED, message });
+}

@@ -1,0 +1,51 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.phoneRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.phoneField {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Nút "Gửi mã" canh với ô input (Form.Item có label phía trên + margin-bottom 14px). */
+.sendBtn {
+  margin-top: 30px;
+  flex-shrink: 0;
+}
+
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 34px;
+  font-weight: 600;
+  color: var(--xp-color-success);
+  white-space: nowrap;
+}
+
+.otpRow {
+  display: flex;
+  gap: 8px;
+  margin-top: -6px;
+}
+
+.devHint {
+  font-size: 13px;
+  color: var(--xp-color-text-tertiary);
+  background: var(--xp-color-bg-sand);
+  border: 1px dashed var(--xp-color-border-secondary);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.err {
+  margin-top: 2px;
+}

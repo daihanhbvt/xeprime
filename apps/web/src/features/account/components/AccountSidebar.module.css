@@ -1,0 +1,144 @@
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--xp-border-radius);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  line-height: 1.35;
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.item:hover {
+  background: var(--xp-color-bg-hover);
+  color: var(--xp-color-text);
+}
+
+.active,
+.active:hover {
+  background: var(--xp-color-bg-selected);
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.disabled,
+.disabled:hover {
+  background: none;
+  color: var(--xp-color-text-tertiary);
+  cursor: not-allowed;
+}
+
+.icon {
+  flex: none;
+  font-size: 17px;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+}
+
+.soonTag {
+  flex: none;
+  margin: 0;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  line-height: 1.6;
+}
+
+.logout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: var(--xp-space-sm);
+  padding: 11px 14px;
+  border: 0;
+  border-top: 1px solid var(--xp-color-border-subtle);
+  border-radius: 0 0 var(--xp-border-radius) var(--xp-border-radius);
+  background: none;
+  color: var(--xp-color-error);
+  font-family: inherit;
+  font-size: var(--xp-font-size);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: start;
+  cursor: pointer;
+}
+
+.logout:hover {
+  background: var(--xp-color-error-bg);
+}
+
+/*
+ * Mobile: dải cuộn ngang. Menu vẫn là MỘT cây dữ liệu — chỉ đổi cách bày.
+ * `scroll-snap` giữ mục dừng gọn ở mép, không cắt ngang chữ.
+ */
+@media (max-width: 900px) {
+  .nav {
+    gap: 0;
+  }
+
+  .list {
+    flex-direction: row;
+    gap: var(--xp-space-xs);
+    overflow-x: auto;
+    padding-bottom: var(--xp-space-xs);
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .item {
+    width: auto;
+    padding: 8px 14px;
+    border: 1px solid var(--xp-color-border);
+    border-radius: var(--xp-border-radius-pill);
+    white-space: nowrap;
+    scroll-snap-align: start;
+  }
+
+  .active,
+  .active:hover {
+    border-color: var(--xp-color-primary);
+  }
+
+  .label {
+    flex: none;
+  }
+
+  /* Nhãn "Sắp có" tốn hết bề ngang trên dải ngang — mục mờ đã đủ nói lên điều đó. */
+  .soonTag {
+    display: none;
+  }
+
+  .logout {
+    margin-top: var(--xp-space-md);
+    border-top: 1px solid var(--xp-color-border-subtle);
+    border-radius: 0;
+  }
+}

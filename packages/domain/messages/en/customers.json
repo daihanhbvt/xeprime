@@ -1,0 +1,17 @@
+{
+  "detail": {
+    "title": "Customer profile",
+    "openPage": "Open full page"
+  },
+  "finance": {
+    "list": {
+      "title": "Recent vouchers",
+      "error": "Could not load this customer's vouchers",
+      "retry": "Try again",
+      "emptyTitle": "No vouchers linked to this customer yet",
+      "emptyHint": "Vouchers appear here automatically when you take payment, take a deposit or refund one on this customer's bookings.",
+      "uncategorized": "Uncategorised",
+      "viewAll": "View all {count, plural, one {# voucher} other {# vouchers}}"
+    }
+  }
+}

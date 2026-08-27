@@ -1,36 +1,119 @@
+/**
+ * Thẻ tài khoản ở chân sidebar — nay là một NÚT mở menu tài khoản, không còn là một khối tĩnh
+ * kèm nút đăng xuất. Vì vậy phải gỡ hết trang trí mặc định của `<button>` và tự dựng lại.
+ */
 .card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: none;
   border-top: 1px solid var(--xp-color-border);
+  background: transparent;
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+  flex: none;
 }
 
-.avatar {
+.card:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.card:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: -2px;
+}
+
+/* Thu gọn: chỉ còn avatar, căn giữa cột 64px. */
+.cardCollapsed {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+/**
+ * `.card .avatar` chứ không phải class đơn: AntD đặt nền của `.ant-avatar` ở
+ * `:where(.css-<hash>).ant-avatar`. `:where()` khiến phần hash có độ đặc hiệu 0 ⇒ luật của
+ * AntD là (0,1,0), bằng đúng một class CSS Module. Hoà thì thứ tự chèn quyết định, và AntD
+ * chèn `<style>` lúc chạy nên luôn đứng sau. Hai class nâng lên (0,2,0) và thắng.
+ */
+.card .avatar {
   flex: none;
   background: linear-gradient(150deg, var(--xp-color-primary), var(--xp-gold-deep));
-  color: #fff;
+  color: var(--xp-color-primary-contrast);
   font-weight: 700;
 }
 
 .info {
   min-width: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
+/* Tên người dùng có thể rất dài — cắt bằng ellipsis, không cho đẩy rộng sidebar. */
 .name {
+  max-width: 100%;
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--xp-font-size-body);
   color: var(--xp-color-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* Huy hiệu vai trò (Figma `14:1495`). Gold ở đây là NHẤN THƯƠNG HIỆU/ngữ cảnh, không phải
+   tín hiệu trạng thái — cảnh báo/thành công/lỗi vẫn dùng token semantic riêng. */
 .role {
-  font-size: 12px;
-  color: var(--xp-color-text-tertiary);
+  max-width: 100%;
+  padding: 1px var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-pill);
+  /* ĐO ĐƯỢC: gold-deep trên gold-wash chỉ 3.68 — trượt AA. Gold đặc + chữ contrast đạt 6.60,
+     và giống hệt biến thể nền tối nên hai tone không lệch nhau. */
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-overline);
+  font-weight: 700;
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Mũi tên "còn nữa": nhỏ và mờ — nó chỉ báo rằng thẻ mở ra được, không mời gọi bấm vào nó. */
+.caret {
+  flex: none;
+  font-size: 10px;
+  color: var(--xp-color-text-tertiary);
+}
+
+/* ─── Nền tối (Sidebar desktop + Drawer mobile) ─────────────────────────────
+   Tương phản đã đo trên `--xp-shell-sidebar-bg`: tên 13.54 · huy hiệu vai trò 6.60 ·
+   mũi tên 5.96. Không dùng lại `--xp-color-text-secondary` (2.99).                  */
+.dark {
+  border-top-color: var(--xp-shell-sidebar-border);
+}
+
+.dark:hover {
+  background: var(--xp-shell-sidebar-hover);
+}
+
+.dark:focus-visible {
+  outline-color: var(--xp-shell-sidebar-active);
+}
+
+.dark .name {
+  color: var(--xp-shell-sidebar-text);
+}
+
+.dark .role {
+  background: var(--xp-shell-sidebar-active);
+  color: var(--xp-color-primary-contrast);
+}
+
+.dark .caret {
+  color: var(--xp-shell-sidebar-muted);
 }

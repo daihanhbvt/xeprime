@@ -1,0 +1,156 @@
+/*
+ * Hộp thư yêu cầu thuê — cùng trần bề rộng và cùng cách căn giữa với các trang /manage khác.
+ *
+ * Màu nhấn là GOLD của thương hiệu. Bản vẽ dùng xanh cho gạch tab, badge và link; ở đây chúng
+ * lấy `--xp-color-primary*` để màn này không đẻ ra một màu nhấn thứ hai chỉ sống ở đúng đây.
+ */
+.page {
+  width: 100%;
+  max-width: var(--xp-shell-form-max-width);
+  margin-inline: auto;
+  min-width: 0;
+}
+
+/* Mọi con co lại được: không gì được đẩy THÂN TRANG cuộn ngang. */
+.page > * {
+  min-width: 0;
+}
+
+/* ── Hai con số tóm tắt ở góc phải tiêu đề ──────────────────────────────── */
+
+.stats {
+  display: flex;
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  margin: 0;
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-md);
+}
+
+.stat {
+  display: flex;
+  min-width: 72px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Đường kẻ dọc giữa hai chỉ số — dựng bằng viền của chỉ số sau, không thêm một phần tử rỗng. */
+.stat + .stat {
+  padding-inline-start: var(--xp-space-md);
+  border-inline-start: 1px solid var(--xp-color-border);
+}
+
+.statLabel {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-overline);
+  font-weight: var(--xp-font-weight-semibold);
+  letter-spacing: 0.06em;
+  line-height: var(--xp-line-height-overline);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.statValue {
+  margin: 0;
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-h3);
+  font-weight: var(--xp-font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--xp-line-height-h3);
+}
+
+/* ── Tab trạng thái ─────────────────────────────────────────────────────── */
+
+.tabs {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * Thanh lọc nằm trong khe phải của hàng tab: khoảng cách dưới là việc của hàng tab, không phải
+ * của nó — giữ lại thì gạch chân tab bị đẩy lệch khỏi chữ.
+ *
+ * Ở mobile nó xuống hàng riêng nên khoảng cách quay lại; đó là lý do quy tắc nằm trong media
+ * query của desktop chứ không đặt vô điều kiện.
+ */
+@media (min-width: 641px) {
+  /*
+   * Nhân đôi class để chắc chắn thắng `.wrapper` của `FilterBar.module.css`: hai selector một
+   * class có specificity BẰNG nhau, nên nếu không nhân đôi thì ai thắng phụ thuộc thứ tự
+   * stylesheet được gộp — thứ có thể đổi theo thứ tự import ở lần build sau.
+   */
+  .tabFilters.tabFilters {
+    margin-bottom: 0;
+  }
+}
+
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+/*
+ * Con số của tab đang KHÔNG mở là chữ xám trần — trong mẫu chỉ tab đang mở mới đeo viên tròn,
+ * và làm đúng vậy giữ cho hàng tab không thành một dãy sáu viên tròn tranh nhau.
+ */
+.tabCount {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.tabs :global(.ant-tabs-tab-active) .tabCount {
+  display: inline-flex;
+  min-width: 22px;
+  padding: 0 6px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-weight: var(--xp-font-weight-semibold);
+  justify-content: center;
+  line-height: 18px;
+}
+
+/* ── Danh sách ──────────────────────────────────────────────────────────── */
+
+.list {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-md);
+  list-style: none;
+}
+
+/*
+ * Làm mới NỀN: giữ nguyên các thẻ đang đọc, chỉ mờ nhẹ và chặn bấm. Thay danh sách bằng
+ * skeleton mỗi lần refetch là làm người dùng mất chỗ đang đọc — đúng thứ Figma 134:2011 R4
+ * cấm với bảng, và một hộp thư thì càng đúng.
+ */
+.listBusy {
+  composes: list;
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--xp-space-md);
+}
+
+@media (max-width: 640px) {
+  .stats {
+    width: 100%;
+    justify-content: space-around;
+  }
+
+  .pagination {
+    justify-content: center;
+  }
+}

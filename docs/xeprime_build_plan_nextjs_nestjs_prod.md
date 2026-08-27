@@ -78,7 +78,7 @@ Sau đó tách `packages` khi code bắt đầu lặp lại.
 | Table/list admin | AntD Table + custom filters |
 | Lịch thuê xe | Custom scheduler bằng TanStack Virtual + dnd-kit |
 | Icons | lucide-react hoặc AntD icons |
-| Mobile web | Responsive PWA trước, chưa build native app vội |
+| Mobile web | ~~Responsive PWA trước, chưa build native app vội~~ — **SUPERSEDED 21/08/2026**: dự án đang chuẩn bị làm **app native (React Native)**, xem ghi chú cuối bảng "Chưa làm ở MVP" |
 | Map | Leaflet/OpenStreetMap hoặc provider đang dùng |
 | Firebase client | Auth, Firestore chat, Storage |
 
@@ -439,13 +439,15 @@ Mục tiêu: giữ chat realtime hoạt động nhưng không tốn chi phí vô
 
 ### 9.3 Chat cost rules
 
+> ⚠️ **Ghi đè bởi ADR 0009** (`docs/decisions/0009-chat-firestore-projection.md`) — chốt kiến trúc realtime cuối cùng. Bảng dưới giữ nguyên tinh thần "không listen toàn bộ", nhưng chi tiết đúng hiện tại: **PostgreSQL là source of truth** (không phải MySQL), Firestore chỉ là **projection realtime ~30–50 tin gần nhất**; lịch sử cũ phân trang **cursor từ Postgres**; đồng bộ PG→Firestore bằng **outbox/retry**; **chỉ backend Node ghi**, kèm **Firestore Security Rules + emulator test**; đính kèm ở **Cloudflare R2** (metadata ở PG + Firestore). Notification + Review của Phase 5 đã làm; Chat để đợt sau.
+
 | Rule | Cách làm |
 | --- | --- |
-| Không listen toàn bộ message | Chỉ listen conversation list và thread đang mở |
-| Message recent | Firestore giữ 30-100 tin mới nhất |
-| Metadata | MySQL giữ `conversations` |
-| Archive | Job chuyển tin cũ sang `message_archive` |
-| File chat | Storage, Firestore chỉ lưu URL |
+| Không listen toàn bộ message | Chỉ listen conversation list và thread đang mở (~30–50 tin) |
+| Message recent | Firestore giữ ~30–50 tin mới nhất (projection realtime, rebuildable) |
+| Metadata & source of truth | **PostgreSQL** giữ `conversations` + toàn bộ tin/thành viên/đã đọc (ADR 0009) |
+| Archive/retention | Job định kỳ theo retention cấu hình; lịch sử phân trang cursor từ Postgres |
+| File chat | **Cloudflare R2**; PG + Firestore chỉ lưu metadata (URL…) |
 
 ### 9.4 Done khi
 
@@ -746,7 +748,7 @@ Không được tự đổi kiến trúc nếu chưa nêu lý do và xin xác nh
 | --- | --- |
 | AI trợ lý | Để sau khi core ổn |
 | Phạt nguội nâng cao | Để sau MVP, chỉ migrate data nếu có |
-| Native mobile app | Chưa làm, ưu tiên PWA responsive |
+| Native mobile app | ~~Chưa làm, ưu tiên PWA responsive~~ — **SUPERSEDED 21/08/2026**. Dự án đang chuẩn bị nhận React Native developer; app native là việc SẼ làm, không phải việc đã loại. Điều kiện kỹ thuật + thứ tự clone: `docs/mobile-readiness-audit.md`. Stack và phạm vi chờ ADR 0013 (chưa viết) |
 | Payment online phức tạp | Chuẩn bị bảng, làm manual trước |
 | Full support ticket | Làm sau, trước mắt admin notes + chat view |
 | Full BI dashboard | Sau production, trước mắt dashboard cơ bản |

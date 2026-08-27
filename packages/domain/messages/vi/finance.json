@@ -1,0 +1,397 @@
+{
+  "receipts": {
+    "page": {
+      "title": "Thu chi",
+      "subtitle": "Mọi khoản tiền của gian hàng — thu tiền đơn, cọc, hoàn cọc và chi phí xe đều tự lên sổ."
+    },
+    "periods": {
+      "label": "Kỳ xem nhanh",
+      "today": "Hôm nay",
+      "this_week": "Tuần này",
+      "this_month": "Tháng này",
+      "last_month": "Tháng trước"
+    },
+    "filters": {
+      "searchLabel": "Tìm phiếu",
+      "searchPlaceholder": "Mã phiếu, mã tra soát, mã đơn…",
+      "type": "Loại",
+      "status": "Trạng thái",
+      "category": "Danh mục",
+      "source": "Nguồn",
+      "paymentMethod": "Hình thức",
+      "dateRange": "Khoảng ngày"
+    },
+    "actions": {
+      "categories": "Danh mục",
+      "create": "Tạo phiếu",
+      "createFirst": "Tạo phiếu đầu tiên"
+    },
+    "toast": {
+      "approved": "Đã duyệt phiếu",
+      "cancelled": "Đã huỷ phiếu"
+    },
+    "forbidden": {
+      "title": "Không có quyền xem sổ thu chi",
+      "description": "Bạn cần quyền dưới đây để xem trang này. Liên hệ chủ gian hàng để được cấp quyền.",
+      "home": "Về trang chủ"
+    },
+    "table": {
+      "label": "Danh sách phiếu thu chi",
+      "totalLabel": "{count, plural, other {# phiếu}}",
+      "columns": {
+        "receipt": "Phiếu",
+        "type": "Loại",
+        "source": "Nguồn",
+        "category": "Danh mục",
+        "subject": "Đối tượng",
+        "description": "Diễn giải",
+        "amount": "Số tiền",
+        "method": "Hình thức"
+      },
+      "actions": {
+        "cancel": "Huỷ",
+        "approveConfirm": "Duyệt phiếu này?",
+        "cancelConfirm": "Huỷ phiếu này?",
+        "cancelOk": "Huỷ phiếu"
+      },
+      "error": {
+        "title": "Không tải được danh sách phiếu"
+      },
+      "empty": {
+        "title": "Chưa có phiếu thu/chi nào"
+      },
+      "noResults": {
+        "title": "Không có phiếu khớp bộ lọc"
+      },
+      "uncategorized": "Chưa phân loại"
+    },
+    "detail": {
+      "title": "Chi tiết phiếu",
+      "ariaLabel": "Chi tiết phiếu thu chi",
+      "errorTitle": "Không tải được phiếu",
+      "auto": {
+        "title": "Phiếu tự động",
+        "body": "Phiếu này sinh từ {source} nên không sửa/huỷ trực tiếp được — sổ sẽ lệch với đơn. Muốn đảo thì thao tác ở chính nghiệp vụ đó",
+        "openBooking": "mở đơn thuê",
+        "openVehicle": "mở hồ sơ xe"
+      },
+      "sections": {
+        "info": "Thông tin phiếu",
+        "related": "Liên quan",
+        "attachments": "Ảnh minh chứng",
+        "trace": "Dấu vết"
+      },
+      "rows": {
+        "occurredAt": "Ngày phát sinh",
+        "category": "Danh mục",
+        "method": "Hình thức",
+        "referenceCode": "Mã tra soát",
+        "description": "Diễn giải",
+        "booking": "Đơn thuê",
+        "vehicle": "Xe",
+        "customer": "Khách hàng",
+        "createdBy": "Người tạo",
+        "approvedBy": "Người duyệt",
+        "cancelledBy": "Người huỷ"
+      },
+      "copyReference": "Chép mã",
+      "viewBooking": "Xem đơn",
+      "viewVehicle": "Xem xe",
+      "viewCustomer": "Xem khách",
+      "attachmentAlt": "Ảnh minh chứng",
+      "cancelAction": "Huỷ phiếu"
+    },
+    "form": {
+      "title": "Tạo phiếu thu/chi",
+      "occurredAt": "Ngày phát sinh",
+      "type": "Loại giao dịch",
+      "linkHint": {
+        "none": "Khoản chung, không liên kết",
+        "booking": "Chi phí phát sinh cho đơn thuê",
+        "vehicle": "Chi phí phát sinh cho xe"
+      },
+      "booking": "Liên kết đơn thuê",
+      "bookingPlaceholder": "Tìm mã đơn, tên khách hoặc biển số",
+      "category": "Danh mục",
+      "categoryPlaceholder": "Chọn danh mục",
+      "method": "Hình thức",
+      "amount": "Số tiền",
+      "referenceCode": "Mã tra soát (tuỳ chọn)",
+      "referenceCodePlaceholder": "VD: mã giao dịch CK",
+      "description": "Diễn giải / Lý do",
+      "attachments": {
+        "label": "Đính kèm chứng từ",
+        "add": "Thêm tệp",
+        "hint": "JPG, PNG, PDF · tối đa {maxMb}MB",
+        "remove": "Gỡ {name}",
+        "retry": "Tải lại {name}",
+        "uploading": "Đang tải {name}",
+        "tooMany": "Tối đa {max} tệp"
+      },
+      "submit": {
+        "income": "Tạo khoản thu",
+        "expense": "Tạo khoản chi"
+      },
+      "success": "Đã tạo phiếu — chờ duyệt",
+      "linkMode": {
+        "label": "Khoản này là",
+        "none": "Không gắn",
+        "booking": "Đơn thuê",
+        "vehicle": "Xe"
+      },
+      "bookingEmpty": "Không tìm thấy đơn thuê nào khớp.",
+      "bookingError": "Không tải được danh sách đơn thuê. Thử lại hoặc gõ tìm lại.",
+      "vehicle": "Liên kết xe",
+      "vehiclePlaceholder": "Tìm mã xe, tên xe hoặc biển số",
+      "vehicleEmpty": "Không tìm thấy xe nào khớp.",
+      "vehicleError": "Không tải được danh sách xe. Thử lại hoặc gõ tìm lại.",
+      "vehicleGone": "Xe này không còn trong gian hàng (đã xoá hoặc đã chuyển đi). Chọn xe khác giúp mình nhé.",
+      "errors": {
+        "type": "Chọn loại phiếu",
+        "occurredAt": "Chọn ngày phát sinh",
+        "amountType": "Nhập số tiền",
+        "amountMin": "Số tiền phải ≥ 0",
+        "method": "Chọn hình thức",
+        "bookingRequired": "Chọn đơn thuê để gắn phiếu",
+        "vehicleRequired": "Chọn xe để gắn phiếu",
+        "description": "Nhập diễn giải / lý do"
+      },
+      "link": {
+        "label": "Liên kết với",
+        "detail": "Xem chi tiết",
+        "branch": "Chi nhánh",
+        "customer": "Khách",
+        "debt": "Còn nợ"
+      },
+      "keepOpen": "Tạo và tiếp tục nhập mới",
+      "cancel": "Huỷ"
+    },
+    "summary": {
+      "error": "Không tải được số tổng — danh sách bên dưới vẫn đúng",
+      "income": "Tổng thu",
+      "expense": "Tổng chi",
+      "balance": "Cân đối (thu − chi)",
+      "approvedCount": "Phiếu đã duyệt",
+      "cash": "Tiền mặt {value}",
+      "transfer": "Chuyển khoản {value}",
+      "inFilter": "Trong bộ lọc đang xem",
+      "wholeBook": "Toàn bộ sổ · phiếu chờ duyệt chưa tính"
+    },
+    "categories": {
+      "title": "Danh mục thu/chi",
+      "typeLabel": "Loại danh mục",
+      "namePlaceholder": "Tên danh mục mới",
+      "added": "Đã thêm danh mục",
+      "system": "Hệ thống",
+      "delete": "Xoá danh mục"
+    }
+  },
+  "debts": {
+    "page": {
+      "title": "Công nợ"
+    },
+    "filters": {
+      "searchLabel": "Tìm khoản nợ",
+      "searchPlaceholder": "Mã đơn, tên khách, SĐT, biển số…",
+      "groupLabel": "Nhóm theo hạn trả",
+      "overdue": "Quá hạn",
+      "upcoming": "Sắp đến hạn",
+      "unpaid": "Chưa thu"
+    },
+    "table": {
+      "label": "Danh sách công nợ",
+      "totalLabel": "{count, plural, other {# đơn còn nợ}}",
+      "columns": {
+        "booking": "Đơn",
+        "vehicle": "Xe",
+        "returnAt": "Đến hạn trả",
+        "total": "Tổng",
+        "paid": "Đã trả",
+        "debt": "Còn nợ"
+      },
+      "actions": {
+        "view": "Xem đơn",
+        "collect": "Thu tiền"
+      },
+      "error": {
+        "title": "Không tải được công nợ",
+        "description": "Có lỗi khi lấy dữ liệu. Vui lòng thử lại."
+      },
+      "empty": {
+        "title": "Không có đơn nào còn nợ"
+      },
+      "noResults": {
+        "title": "Không có khoản nợ khớp bộ lọc"
+      }
+    }
+  },
+  "overview": {
+    "page": {
+      "title": "Tổng quan doanh thu",
+      "subtitle": "Kỳ này lãi hay lỗ, tiền đang cầm bao nhiêu, và xe nào đang làm ra tiền."
+    },
+    "periods": {
+      "label": "Kỳ xem nhanh",
+      "today": "Hôm nay",
+      "this_week": "Tuần này",
+      "this_month": "Tháng này",
+      "last_month": "Tháng trước",
+      "this_quarter": "Quý này",
+      "this_year": "Năm nay"
+    },
+    "filters": {
+      "dateRange": "Khoảng ngày"
+    },
+    "forbidden": {
+      "title": "Không có quyền xem số liệu tài chính",
+      "description": "Bạn cần quyền dưới đây để xem trang này. Liên hệ chủ gian hàng để được cấp quyền.",
+      "home": "Về trang chủ"
+    },
+    "cards": {
+      "error": "Không tải được số liệu tài chính",
+      "business": {
+        "title": "Kết quả kinh doanh",
+        "revenue": "Doanh thu",
+        "cost": "Chi phí",
+        "profit": "Lợi nhuận",
+        "margin": "Biên {value}%",
+        "marginUnknown": "Chưa có doanh thu để tính biên",
+        "unassigned": "Trong đó {value} chưa gắn xe",
+        "note": "Đã loại tiền cọc ra khỏi cả hai vế. Đây là lãi tiền mặt theo sổ — chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ."
+      },
+      "cash": {
+        "title": "Dòng tiền quỹ",
+        "in": "Tiền vào",
+        "out": "Tiền ra",
+        "balance": "Cân đối",
+        "note": "Gồm cả tiền cọc thu và hoàn — đây là số tiền thực sự đi qua tay trong kỳ."
+      },
+      "now": {
+        "title": "Tại thời điểm này",
+        "depositHeld": "Cọc đang giữ",
+        "debt": "Khách còn nợ",
+        "bookings": "{count, plural, other {# đơn}}",
+        "note": "Hai số này không phụ thuộc kỳ đã chọn."
+      }
+    },
+    "chart": {
+      "title": "Thu · chi · lợi nhuận theo thời gian",
+      "description": "Cột là doanh thu và chi phí, đường là lợi nhuận. Đã loại tiền cọc.",
+      "revenue": "Doanh thu",
+      "cost": "Chi phí",
+      "profit": "Lợi nhuận",
+      "error": "Không tải được biểu đồ",
+      "empty": "Kỳ này chưa có khoản thu chi nào",
+      "emptyHint": "Ghi phiếu ở sổ Thu-Chi hoặc thu tiền trên đơn thuê, số liệu sẽ hiện ở đây.",
+      "every": {
+        "label": "Độ mịn biểu đồ",
+        "day": "Ngày",
+        "week": "Tuần",
+        "month": "Tháng"
+      }
+    },
+    "categories": {
+      "incomeTitle": "Doanh thu theo danh mục",
+      "expenseTitle": "Chi phí theo danh mục",
+      "share": "{percent}%",
+      "count": "{count, plural, other {# phiếu}}",
+      "uncategorized": "Chưa phân loại",
+      "error": "Không tải được cơ cấu theo danh mục",
+      "empty": "Kỳ này chưa có số liệu",
+      "emptyHint": "Chọn kỳ khác hoặc ghi thêm phiếu ở sổ Thu-Chi.",
+      "system": {
+        "booking_payment": "Thanh toán đơn",
+        "deposit": "Tiền cọc",
+        "deposit_refund": "Hoàn cọc",
+        "maintenance": "Bảo dưỡng/Thay nhớt",
+        "repair": "Sửa chữa sự cố"
+      }
+    },
+    "vehicles": {
+      "title": "Hiệu quả theo xe",
+      "total": "{count, plural, other {# xe}}",
+      "marginValue": "{value}%",
+      "cardLine": "Thu {revenue} · Chi {cost} · {trips, plural, other {# chuyến}}",
+      "unassigned": "Chi phí chung chưa gắn xe: {value}. Số này không nằm trong dòng nào của bảng.",
+      "error": "Không tải được hiệu quả theo xe",
+      "empty": "Kỳ này chưa có xe nào phát sinh",
+      "emptyHint": "Xe có chuyến hoặc có phiếu thu chi trong kỳ sẽ hiện ở đây.",
+      "columns": {
+        "vehicle": "Xe",
+        "trips": "Chuyến",
+        "revenue": "Doanh thu",
+        "cost": "Chi phí",
+        "profit": "Lợi nhuận",
+        "margin": "Biên"
+      },
+      "sort": {
+        "label": "Sắp xếp",
+        "profit": "Lợi nhuận cao nhất",
+        "revenue": "Doanh thu cao nhất",
+        "cost": "Chi phí cao nhất",
+        "trips": "Nhiều chuyến nhất"
+      }
+    },
+    "customers": {
+      "title": "Doanh thu theo khách",
+      "total": "{count, plural, other {# khách}}",
+      "share": "{value}%",
+      "cardLine": "{trips, plural, other {# chuyến}} · {share} doanh thu kỳ",
+      "unassigned": "Chưa gắn khách nào: {value}. Phiếu thu tay không liên kết đơn nên không thuộc về dòng nào ở trên.",
+      "error": "Không tải được doanh thu theo khách",
+      "empty": "Kỳ này chưa có khách nào phát sinh",
+      "emptyHint": "Khách có chuyến hoặc có phiếu thu trong kỳ sẽ hiện ở đây.",
+      "columns": {
+        "customer": "Khách",
+        "trips": "Chuyến",
+        "revenue": "Doanh thu",
+        "share": "Tỷ trọng"
+      },
+      "sort": {
+        "label": "Sắp xếp",
+        "revenue": "Doanh thu cao nhất",
+        "trips": "Nhiều chuyến nhất"
+      }
+    }
+  },
+  "entity": {
+    "title": {
+      "vehicle": "Tiền của xe này",
+      "customer": "Doanh thu từ khách này"
+    },
+    "note": {
+      "vehicle": "Cộng trên phiếu đã duyệt, đã loại tiền cọc. Chưa trừ khấu hao, lãi vay hay tiền thuê xe của chủ.",
+      "customer": "Cộng trên tiền THẬT đã thu trong kỳ — khác \"Tổng giá trị thuê\" ở đầu hồ sơ, vốn tính trên giá trị đơn đã chốt."
+    },
+    "periods": {
+      "label": "Kỳ xem nhanh",
+      "today": "Hôm nay",
+      "this_week": "Tuần này",
+      "this_month": "Tháng này",
+      "last_month": "Tháng trước",
+      "this_quarter": "Quý này",
+      "this_year": "Năm nay"
+    },
+    "every": {
+      "label": "Độ mịn biểu đồ",
+      "day": "Ngày",
+      "week": "Tuần",
+      "month": "Tháng"
+    },
+    "revenue": "Doanh thu",
+    "cost": "Chi phí",
+    "profit": "Lợi nhuận",
+    "margin": "Biên {value}%",
+    "marginUnknown": "Chưa có doanh thu để tính biên",
+    "debt": "Còn nợ",
+    "debtBookings": "{count, plural, other {# đơn}}",
+    "trips": "Số chuyến",
+    "openLedger": "Xem trên sổ Thu-Chi",
+    "error": "Không tải được số liệu",
+    "chartTitle": "Theo thời gian",
+    "chartError": "Không tải được biểu đồ",
+    "chartEmpty": "Kỳ này chưa có khoản nào",
+    "chartEmptyHint": "Chọn kỳ khác, hoặc ghi phiếu ở sổ Thu-Chi.",
+    "createReceipt": "Tạo phiếu thu/chi"
+  }
+}

@@ -9,19 +9,40 @@ import { PermissionGuard } from './common/guards/permission.guard';
 import { TenantScopeGuard } from './common/guards/tenant-scope.guard';
 import { PlatformScopeGuard } from './common/guards/platform-scope.guard';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { HttpCacheInterceptor } from './common/http-cache';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RbacModule } from './modules/rbac/rbac.module';
 import { HealthModule } from './modules/health/health.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
+import { LocationsModule } from './modules/locations/locations.module';
+import { BranchesModule } from './modules/branches/branches.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { FirebaseModule } from './modules/firebase/firebase.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { PublicListingsModule } from './modules/public-listings/public-listings.module';
 import { VehiclesModule } from './modules/vehicles/vehicles.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
+import { BookingRequestsModule } from './modules/booking-requests/booking-requests.module';
+import { CustomerTripsModule } from './modules/customer-trips/customer-trips.module';
+import { PhoneVerificationModule } from './modules/phone-verification/phone-verification.module';
+import { FinanceModule } from './modules/finance/finance.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { ContractsModule } from './modules/contracts/contracts.module';
+import { MembersModule } from './modules/members/members.module';
+import { ReviewModule } from './modules/review/review.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { StorageModule } from './modules/storage/storage.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
+import { BillingModule } from './modules/billing/billing.module';
+import { BannersModule } from './modules/banners/banners.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
+import { PricingModule } from './modules/pricing/pricing.module';
+import { DriversModule } from './modules/drivers/drivers.module';
+import { CustomersModule } from './modules/customers/customers.module';
+import { HolidaysModule } from './modules/holidays/holidays.module';
 
 @Module({
   imports: [
@@ -29,13 +50,30 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
 
     LoggerModule.forRoot({
       pinoHttp: {
-        // Redact trước khi ghi: CLAUDE.md/security rules cấm log token.
+        // Redact TRƯỚC khi ghi: CLAUDE.md/security rules cấm log token.
+        //
+        // Danh sách này là mọi đường một bí mật có thể lọt vào log. `req.body.*` là phòng xa
+        // (serializer mặc định của pino-http không ghi body) — nhưng "mặc định" là thứ người
+        // sau có thể đổi, còn danh sách redact thì ở lại.
         redact: {
           paths: [
             'req.headers.cookie',
             'req.headers.authorization',
+            'req.headers["x-api-key"]',
             'res.headers["set-cookie"]',
+            // Đăng nhập / đổi mật khẩu / OTP / đặt lại mật khẩu.
             'req.body.idToken',
+            'req.body.password',
+            'req.body.newPassword',
+            'req.body.currentPassword',
+            'req.body.code',
+            'req.body.token',
+            // Presign R2: URL đã ký CHÍNH LÀ quyền truy cập file.
+            'req.body.uploadUrl',
+            'req.body.downloadUrl',
+            // Token đặt lại mật khẩu đi trong body; link `?token=…` là URL của WEB, không bao
+            // giờ chạm API, nên `req.url` không phải đường rò rỉ ở đây.
+            'req.query.token',
           ],
           remove: true,
         },
@@ -49,16 +87,36 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     AuthModule,
     RbacModule,
     AuditModule,
+    NotificationModule,
+    FirebaseModule,
 
     HealthModule,
     UsersModule,
+    LocationsModule,
     TenantsModule,
+    BranchesModule,
     CalendarModule,
     PublicListingsModule,
     VehiclesModule,
     BookingsModule,
+    BookingRequestsModule,
+    CustomerTripsModule,
+    PhoneVerificationModule,
+    FinanceModule,
+    PaymentsModule,
+    ContractsModule,
+    MembersModule,
+    ReviewModule,
     ChatModule,
+    StorageModule,
     PlatformAdminModule,
+    BillingModule,
+    CatalogModule,
+    BannersModule,
+    PricingModule,
+    DriversModule,
+    CustomersModule,
+    HolidaysModule,
   ],
   providers: [
     // Thứ tự quan trọng (guard global chạy theo đúng thứ tự khai báo): Throttler chặn trước
@@ -72,6 +130,7 @@ import { PlatformAdminModule } from './modules/platform-admin/platform-admin.mod
     { provide: APP_GUARD, useClass: PlatformScopeGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: HttpCacheInterceptor },
   ],
 })
 export class AppModule {}

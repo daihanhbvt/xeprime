@@ -1,0 +1,249 @@
+/*
+ * Biên bản bàn giao trong chi tiết chuyến của khách.
+ *
+ * Là một PANEL THU GỌN mang vỏ của các khối khác trên trang (`TripDetailView.module.css` →
+ * `.block`): hồ sơ để đối chiếu khi có chuyện, không phải thứ khách mở trang ra để xem, nên nó
+ * không được chiếm chỗ của phần tiền và cụm hỗ trợ ở mọi chuyến đã xong.
+ *
+ * Bên trong là danh sách BIÊN BẢN chứ không phải một bảng phẳng: mỗi chiều bàn giao là một thẻ
+ * có mốc thời gian riêng, vì trộn số liệu lúc giao và lúc nhận vào chung một danh sách là cách
+ * chắc chắn nhất để khách đọc nhầm chỉ số của chiều này thành của chiều kia.
+ */
+
+/*
+ * Vỏ thẻ y hệt các khối khác của trang — nền trắng + viền nhạt + bo góc.
+ *
+ * Selector đôi (`.block.block`) là cố ý: `ghost` của AntD chỉ để bỏ khung và vạch chia mặc
+ * định của Collapse, nhưng nó kéo theo `.ant-collapse-ghost { background-color: transparent }`
+ * — cùng specificity (0,1,0) với class của CSS Module và được inject SAU, nên nó thắng và khối
+ * này trôi lơ lửng trên nền xám của trang. Nhân đôi class nâng lên (0,2,0) để thắng lại mà
+ * không phải rải `!important`.
+ */
+.block.block {
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  min-width: 0;
+}
+
+/* Vùng bấm mở/đóng ăn trọn bề ngang thẻ, không thụt lề mặc định của AntD. */
+.block :global(.ant-collapse-header) {
+  align-items: flex-start !important;
+  padding: var(--xp-space-md) !important;
+}
+
+.block :global(.ant-collapse-content-box) {
+  padding: 0 var(--xp-space-md) var(--xp-space-md) !important;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.lead {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-regular);
+  overflow-wrap: anywhere;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.empty {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.record {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
+  min-width: 0;
+}
+
+.recordHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.recordType {
+  font-weight: var(--xp-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.recordTime {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  white-space: nowrap;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.row dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.row dd {
+  margin: 0;
+  font-weight: var(--xp-font-weight-medium);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* Thiếu số không được trông giống một con số — nhạt đi và nghiêng để mắt không đọc nó là dữ liệu. */
+.missing {
+  color: var(--xp-color-text-tertiary);
+  font-style: italic;
+  font-weight: var(--xp-font-weight-regular);
+}
+
+.noPhotos {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/*
+ * `auto-fill` + `minmax`: 5 góc chụp xếp thành một hàng trên desktop và tự gãy xuống 2 cột ở
+ * màn hẹp, không cần media query riêng cho từng bậc. `auto-fill` (không phải `auto-fit`) để
+ * một biên bản chỉ có MỘT ảnh không phình tấm đó ra hết chiều ngang thẻ.
+ */
+.photoGrid {
+  display: grid;
+  gap: var(--xp-space-sm);
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.photo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* Khung ảnh tỉ lệ cố định: ảnh dọc hay ngang thì lưới vẫn thẳng hàng. */
+.thumb {
+  display: grid;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  place-items: center;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-tertiary);
+}
+
+.thumbImage {
+  width: 100%;
+  height: 100%;
+  cursor: zoom-in;
+  object-fit: cover;
+}
+
+.thumbFallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--xp-space-xs);
+  text-align: center;
+}
+
+.thumbFallbackText {
+  font-size: var(--xp-font-size-sm);
+  line-height: 1.3;
+}
+
+.photoLabel {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Thời điểm tải lên được XUỐNG DÒNG chứ không cắt bằng `…`.
+ *
+ * Ô ảnh chỉ rộng ~128px nên một dòng không đủ cho `Tải lên 26/08/2026 08:38`, và một cái mốc
+ * thời gian bị cắt mất phần giờ thì không còn là bằng chứng — nó là thứ khách đọc để đối chiếu
+ * với ảnh bên trên. Thà cao thêm một dòng.
+ */
+.photoMeta {
+  max-width: 100%;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-sm);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Nhãn cảnh báo, không phải nhãn trang trí: nó thay đổi ý nghĩa của tấm ảnh bên trên, nên dùng
+ * tông cảnh báo và nằm ngay dưới ô — không thu vào biểu tượng nhỏ, không giấu sau hover.
+ */
+.lateBadge {
+  display: block;
+  margin-top: 2px;
+  padding: 2px var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-warning-bg);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-sm);
+  line-height: 1.4;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  overflow-wrap: anywhere;
+}

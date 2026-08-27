@@ -1,0 +1,72 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.title {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 20px;
+  font-weight: var(--xp-font-weight-bold, 700);
+}
+
+/* MỘT thẻ chia cột bằng vạch dọc — Figma `18:4`, không phải bốn thẻ rời. */
+.card {
+  display: grid;
+  padding: var(--xp-space-lg) 0;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  margin: 0;
+  background: var(--xp-color-bg-container);
+  grid-template-columns: 1fr;
+  list-style: none;
+}
+
+.step {
+  padding: 10px var(--xp-space-lg);
+}
+
+.stepHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.no {
+  display: flex;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-bold, 700);
+}
+
+.stepTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: 15px;
+  font-weight: var(--xp-font-weight-semibold, 600);
+}
+
+.desc {
+  margin: 8px 0 0 36px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+@media (min-width: 760px) {
+  .card {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .step + .step {
+    border-left: 1px solid var(--xp-color-border-secondary);
+  }
+}

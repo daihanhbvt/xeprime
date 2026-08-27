@@ -8,11 +8,14 @@
     "start": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"@xeprime/worker: skeleton, chưa có test cho tới Phase 5\""
+    "test": "dotenv -e ../../.env -- node --import tsx --test \"test/**/*.test.ts\"",
+    "holidays:sync": "dotenv -e ../../.env -- tsx src/scripts/sync-holidays.ts"
   },
   "dependencies": {
+    "@xeprime/domain": "workspace:*",
     "@xeprime/prisma": "workspace:*",
-    "@xeprime/types": "workspace:*"
+    "@xeprime/types": "workspace:*",
+    "firebase-admin": "14.2.0"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

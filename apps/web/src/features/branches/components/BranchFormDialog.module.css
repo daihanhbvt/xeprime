@@ -1,0 +1,33 @@
+/*
+ * Alert cảnh báo trong hộp thoại thêm/sửa chi nhánh (thiếu tỉnh/thành, không tải được danh
+ * sách tỉnh). Trước đây là `style={{ marginBottom: 14 }}` gõ hai lần trong TSX — CLAUDE.md §5
+ * cấm inline style, và 14px không nằm trên thang khoảng cách của hệ thiết kế.
+ */
+.notice {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * Khối bản đồ xác nhận vị trí (24/08/2026). Ngăn với biểu mẫu bằng một đường kẻ vì nó KHÔNG
+ * phải trường nhập: chủ shop không sửa được gì ở đây, chỉ kiểm lại xem hệ thống đặt ghim đúng
+ * chỗ chưa.
+ */
+.mapBlock {
+  margin-top: var(--xp-space-md);
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+.mapTitle {
+  margin: 0 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-bold);
+  color: var(--xp-color-text);
+}
+
+.mapHint {
+  margin: var(--xp-space-sm) 0 0;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}

@@ -1,0 +1,238 @@
+
+
+/* ── Hộp thoại ── */
+.dialogBody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+/* Ô nhập co được trong cột hẹp — không chống đẩy làm hộp thoại tràn ngang ở 390px. */
+.dialogBody :global(.ant-form-item),
+.dialogBody :global(.ant-col) {
+  min-width: 0;
+}
+
+.inlineAlert {
+  margin: 0;
+}
+
+.summaryBox,
+.reviewBox {
+  display: flex;
+  flex-direction: column;
+  padding: var(--xp-space-sm);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-bg-layout);
+  gap: 2px;
+}
+
+.summaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-xs);
+}
+
+.summaryLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.summaryValue {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  text-align: end;
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-color-error);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.mobileFooter :global(.ant-space-item) {
+  width: 100%;
+}
+
+/* ── Lưới ảnh hiện trạng ── */
+.photoBlock {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.photoTitle {
+  margin: 0;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* auto-fit + minmax: 4 ô trên desktop, tự rớt xuống 2 ô ở 390px mà không cần media query. */
+.slotGrid {
+  display: grid;
+  gap: var(--xp-space-xs);
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+}
+
+/**
+ * Lưới chỉ có MỘT ô (ảnh đồng hồ KM).
+ *
+ * `auto-fit` với một phần tử gộp về đúng một track `1fr` = trải hết bề ngang, rồi
+ * `aspect-ratio: 4/3` kéo chiều cao theo — ô đồng hồ phình to gấp mấy lần một ô ngoại thất
+ * và chiếm gần trọn hộp thoại. Trần `160px` giữ nó bằng cỡ các ô kia; `start` để nó nằm sát
+ * trái thay vì trôi ra giữa.
+ */
+.slotGridSingle {
+  grid-template-columns: repeat(auto-fit, minmax(84px, 160px));
+  justify-content: start;
+}
+
+.slot {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slotBox {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px dashed var(--xp-color-border);
+  border-radius: var(--xp-border-radius-md);
+  aspect-ratio: 4 / 3;
+  background: var(--xp-color-bg-layout);
+}
+
+.slotFilled {
+  border-style: solid;
+  border-color: var(--xp-color-border-secondary);
+}
+
+.slotError {
+  border-color: var(--xp-color-error);
+  background: var(--xp-color-error-bg);
+}
+
+.slotImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slotBox :global(.ant-upload) {
+  width: 100%;
+  height: 100%;
+}
+
+.slotAction,
+.slotStatus {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 44px; /* vùng chạm tối thiểu trên mobile (docs §12.7) */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--xp-space-xs);
+  border: 0;
+  gap: 2px;
+  background: none;
+  color: var(--xp-color-text-tertiary);
+  cursor: pointer;
+  font: inherit;
+}
+
+.slotStatus {
+  cursor: default;
+}
+
+.slotActionText {
+  font-size: var(--xp-font-size-body-sm);
+  text-align: center;
+}
+
+.slotDoneIcon {
+  color: var(--xp-color-success);
+}
+
+.slotErrorIcon {
+  color: var(--xp-color-error);
+}
+
+.slotOverlay {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+}
+
+/* Ảnh neo của trình xem toàn màn hình (điều khiển bằng state) — không chiếm chỗ trong lưới. */
+.hiddenPreviewAnchor {
+  display: none;
+}
+
+.slotIconBtn {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+}
+
+.slotIconBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.slotLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  text-align: center;
+}
+
+.slotErrorText {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  /* Vùng chạm 44px cho MỌI nút thao tác trên mobile. */
+  .panelActions :global(.ant-btn),
+  .mobileFooter :global(.ant-btn) {
+    min-height: 44px;
+  }
+
+  .slotIconBtn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .deltaGood,
+  .deltaBad {
+    margin-top: 30px;
+  }
+}

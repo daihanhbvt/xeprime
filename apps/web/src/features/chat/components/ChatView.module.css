@@ -1,0 +1,258 @@
+.wrap {
+  display: flex;
+  height: calc(100vh - 168px);
+  min-height: 420px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  overflow: hidden;
+  background: var(--xp-color-bg-container);
+}
+
+.listPane {
+  width: 320px;
+  max-width: 40%;
+  border-right: 1px solid var(--xp-color-border);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.threadPane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.centerPane {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+}
+
+.error {
+  color: var(--xp-color-error);
+  font-size: 13px;
+}
+
+.hint {
+  color: var(--xp-color-text-tertiary);
+  font-size: 13px;
+}
+
+/* --- Conversation list --- */
+.convList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.convItem {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  border-bottom: 1px solid var(--xp-color-border);
+  padding: 11px 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background 0.12s ease;
+}
+
+.convItem:hover {
+  background: var(--xp-color-bg-sand, var(--xp-gold-soft));
+}
+
+.convActive {
+  background: var(--xp-gold-wash);
+}
+
+.convTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.convParty {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.convTime {
+  font-size: 11px;
+  color: var(--xp-color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.convBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.convPreview {
+  font-size: 12.5px;
+  color: var(--xp-color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Thread --- */
+.thread {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.threadHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--xp-color-border);
+  flex-shrink: 0;
+}
+
+.threadTitleWrap {
+  min-width: 0;
+}
+
+.threadTitle {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+}
+
+.threadSub {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.backBtn {
+  display: none;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.loadOlder {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 6px;
+}
+
+.bubbleRow {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.bubbleRowMine {
+  justify-content: flex-end;
+}
+
+.bubble {
+  max-width: 74%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 11px;
+  border-radius: 12px;
+  background: var(--xp-color-bg-sand, var(--xp-gold-soft));
+  border: 1px solid var(--xp-color-border);
+}
+
+.bubbleMine {
+  background: var(--xp-gold-soft);
+  border-color: var(--xp-gold-soft);
+}
+
+.bubbleText {
+  font-size: 13.5px;
+  color: var(--xp-color-text);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bubbleTime {
+  font-size: 10.5px;
+  color: var(--xp-color-text-tertiary);
+  align-self: flex-end;
+}
+
+.attachImageLink {
+  display: block;
+}
+
+.attachImage {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.attachFile {
+  font-size: 12.5px;
+  color: var(--xp-gold-deep);
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+/* --- Composer --- */
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--xp-color-border);
+  flex-shrink: 0;
+}
+
+.composerInput {
+  flex: 1;
+}
+
+/* --- Mobile: một cột --- */
+@media (max-width: 768px) {
+  .wrap {
+    height: calc(100vh - 140px);
+  }
+
+  .listPane {
+    width: 100%;
+    max-width: 100%;
+    border-right: none;
+  }
+
+  .listHiddenMobile {
+    display: none;
+  }
+
+  .threadHiddenMobile {
+    display: none;
+  }
+
+  .backBtn {
+    display: inline-flex;
+  }
+
+  .bubble {
+    max-width: 84%;
+  }
+}

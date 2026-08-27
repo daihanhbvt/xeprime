@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
-import { createVehicle, deleteVehicle, updateVehicle } from '../api';
+import { createVehicle, deleteVehicle, submitVehiclePublic, updateVehicle } from '../api';
 import type { CreateVehicleInput, UpdateVehicleInput } from '../types';
 
 /** Sau mỗi mutation, invalidate nhánh `vehicles` để mọi danh sách/chi tiết đang mở tự tải lại. */
@@ -30,5 +30,17 @@ export function useDeleteVehicle() {
   return useMutation({
     mutationFn: (id: string) => deleteVehicle(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all }),
+  });
+}
+
+/** Gửi xe đi duyệt công khai; cập nhật chi tiết + làm mới danh sách (badge trạng thái đổi). */
+export function useSubmitVehiclePublic(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => submitVehiclePublic(id),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.vehicles.detail(id), updated);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.vehicles.all });
+    },
   });
 }

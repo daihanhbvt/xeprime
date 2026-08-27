@@ -1,0 +1,126 @@
+/* `flex-end` để cụm nút bám mép phải của cột — cột hành động khai `align: 'right'`, giữ đúng
+   cách 14 bảng đang hiển thị hôm nay (Figma 127:1725 ghi Center — chênh lệch đã ghi backlog). */
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--xp-space-xs);
+}
+
+/*
+ * `align="start"`: cụm nút chiếm trọn một hàng (thẻ xe) thay vì một ô cuối hàng bảng.
+ * `flex-wrap` là lưới an toàn — nhãn dài bất thường xuống dòng thay vì bị cắt cụt.
+ */
+.alignStart {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+/*
+ * Nút thao tác có hình khối rõ trên cả nền trắng và nền zebra của bảng. Màu vẫn lấy hoàn toàn
+ * từ token; CSS chỉ củng cố viền, độ nổi và chuyển động tương tác quanh variant của AntD.
+ */
+.filled {
+  gap: var(--xp-space-sm);
+}
+
+.filled :global(.ant-btn) {
+  min-height: 34px;
+  padding-inline: 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--xp-color-text) 10%, transparent);
+  font-weight: 600;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.filled :global(.ant-btn:not(:disabled):hover) {
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--xp-color-text) 14%, transparent);
+  transform: translateY(-1px);
+}
+
+.filled :global(.ant-btn:not(:disabled):active) {
+  box-shadow: none;
+  transform: translateY(0);
+}
+
+/*
+ * Chỉ chỉnh MÀU CHỮ; nền vẫn để AntD lo (kể cả hover/disabled/loading).
+ *
+ * Hai chỗ AntD lệch khỏi Figma:
+ *  - hành động thường lấy màu chữ chính `#1a1a1a`, Figma dùng sắc phụ `#615c54`;
+ *  - hành động chính lấy gold `#d6a02c`, Figma dùng gold đậm `#a8871c` — và đây còn là vấn đề
+ *    tương phản: gold nhạt trên nền kem chỉ đạt ~2.2:1, không đọc nổi.
+ *
+ * Class nhân đôi để thắng specificity của AntD (bẫy D19); phải khai cả `:hover` vì nếu không,
+ * quy tắc nền của AntD lúc hover sẽ kéo màu chữ về mặc định.
+ */
+.tonePrimary.tonePrimary:not(:disabled) {
+  border-color: color-mix(in srgb, var(--xp-color-primary) 42%, var(--xp-color-border));
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+}
+
+.tonePrimary.tonePrimary:not(:disabled):hover {
+  border-color: var(--xp-color-primary);
+  background: color-mix(in srgb, var(--xp-color-primary) 18%, var(--xp-color-primary-light));
+  color: var(--xp-color-primary-active);
+}
+
+.toneNeutral.toneNeutral:not(:disabled) {
+  border-color: var(--xp-color-border-strong);
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text-secondary);
+}
+
+.toneNeutral.toneNeutral:not(:disabled):hover {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+}
+
+.toneDanger.toneDanger:not(:disabled) {
+  border-color: color-mix(in srgb, var(--xp-color-error) 30%, var(--xp-color-border));
+  background: var(--xp-color-error-bg);
+  color: var(--xp-color-error);
+}
+
+.toneDanger.toneDanger:not(:disabled):hover {
+  border-color: var(--xp-color-error);
+  background: color-mix(in srgb, var(--xp-color-error) 12%, var(--xp-color-error-bg));
+  color: var(--xp-color-error);
+}
+
+.overflowButton {
+  flex: 0 0 auto;
+}
+
+/* Popconfirm cần một phần tử nhận ref; `span` này chỉ để bọc, không tạo hình. */
+.confirmWrap {
+  display: inline-flex;
+}
+
+/* Nút disabled không nhận sự kiện chuột, nên tooltip phải bám vào lớp bọc này mới hiện được. */
+.disabledWrap {
+  display: inline-flex;
+  cursor: not-allowed;
+}
+
+/* Vùng chạm tối thiểu trên mobile (WCAG 2.5.5 · Figma 130:1692 "44x44px"). Chỉ áp ở màn nhỏ để
+   không làm cao hàng bảng trên desktop. */
+@media (max-width: 640px) {
+  /* Nút có icon tự thu gọn trên mobile; nhãn vẫn là accessible name qua `aria-label`. */
+  .responsiveLabel {
+    display: none;
+  }
+
+  .root :global(.ant-btn) {
+    min-width: var(--xp-touch-target-min);
+    min-height: var(--xp-touch-target-min);
+    padding-inline: 11px;
+  }
+}

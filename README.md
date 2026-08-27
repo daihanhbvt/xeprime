@@ -2,17 +2,18 @@
 
 Nền tảng cho thuê xe: Marketplace cho khách thuê + Management Portal cho gian hàng và quản trị nền tảng.
 
-Next.js 16 · NestJS 11 · PostgreSQL 16 · Prisma 7 · pnpm workspace · Turborepo
+Next.js 16 · Expo 57 (React Native) · NestJS 11 · PostgreSQL 16 · Prisma 7 · pnpm workspace · Turborepo
 
 ---
 
 ## Đọc trước khi code
 
-| Thứ tự | Tài liệu | Vì sao |
-| --- | --- | --- |
-| 1 | [`../CLAUDE.md`](../CLAUDE.md) | Bản đồ workspace, kiến trúc đã chốt, điều cấm |
-| 2 | [`docs/decisions/`](docs/decisions/) | **Quyết định kỹ thuật kèm lý do. Thắng mọi tài liệu khác khi mâu thuẫn.** |
-| 3 | [`docs/`](docs/) | Đặc tả nghiệp vụ: màn hình theo role, user flow, thiết kế DB |
+| Thứ tự | Tài liệu                                                   | Vì sao                                                                    |
+| ------ | ---------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1      | [`CLAUDE.md`](CLAUDE.md)                                   | Bản đồ repo, kiến trúc đã chốt, điều cấm                                  |
+| 1b     | [`docs/completion-roadmap.md`](docs/completion-roadmap.md) | **Đang ở đâu / làm gì tiếp** (tiến độ thực tế + milestone)                |
+| 2      | [`docs/decisions/`](docs/decisions/)                       | **Quyết định kỹ thuật kèm lý do. Thắng mọi tài liệu khác khi mâu thuẫn.** |
+| 3      | [`docs/`](docs/)                                           | Đặc tả nghiệp vụ: màn hình theo role, user flow, thiết kế DB              |
 
 Bộ tài liệu trong `docs/` viết ngày 22/07/2026 và không được sửa lại. Có 3 chỗ các file tự mâu thuẫn nhau (trạng thái xe/đơn/yêu cầu đặt xe) và 4 lỗ hổng kỹ thuật lớn không đề cập — cả 7 đều được xử lý trong `docs/decisions/`.
 
@@ -37,12 +38,12 @@ pnpm dev            # web :3000 · api :4000 · swagger :4000/docs
 
 Đăng nhập bằng **email + mật khẩu** tại http://localhost:3000/login (tài khoản do `pnpm db:seed` tạo, đọc từ `.env`):
 
-| Vai trò | Email | Mật khẩu (mặc định) |
-| --- | --- | --- |
-| Platform admin | `PLATFORM_ADMIN_EMAIL` (mặc định `admin@xeprime.vn`) | `PLATFORM_ADMIN_PASSWORD` |
-| Chủ shop demo | `owner@xeprime.test` | `DEMO_OWNER_PASSWORD` (mặc định `Abcd1234`) |
+| Vai trò        | Email                                                | Mật khẩu (mặc định)                         |
+| -------------- | ---------------------------------------------------- | ------------------------------------------- |
+| Platform admin | `PLATFORM_ADMIN_EMAIL` (mặc định `admin@xeprime.vn`) | `PLATFORM_ADMIN_PASSWORD`                   |
+| Chủ shop demo  | `owner@xeprime.test`                                 | `DEMO_OWNER_PASSWORD` (mặc định `Abcd1234`) |
 
-Đặt mật khẩu trong `.env` trước khi seed. Google/Facebook sẽ hoạt động sau khi cấu hình Firebase (`AUTH_MODE=firebase`).
+Đặt mật khẩu trong `.env` trước khi seed. Google/Facebook hoạt động sau khi khai `GOOGLE_OAUTH_*` / `FACEBOOK_APP_*` và `API_PUBLIC_URL` (ADR 0019) — chưa khai thì nút vẫn hiện nhưng báo "cách đăng nhập này chưa dùng được", còn mật khẩu và OTP chạy bình thường.
 
 ---
 
@@ -51,16 +52,39 @@ pnpm dev            # web :3000 · api :4000 · swagger :4000/docs
 ```text
 apps/
   web/       Next.js App Router — (public) marketplace · (auth) · (manage) portal
+  mobile/    Expo + Expo Router — app di động, cùng API và cùng ADR với web
   api/       NestJS modular monolith
   worker/    Background jobs — skeleton, chạy từ Phase 5
 packages/
   types/     Status union, role, permission, convention response  ← ADR 0005
-  validators/  Yup schema dùng chung cho form
+  validators/  Yup schema dùng chung cho form (web + mobile)
   config/    tsconfig + eslint preset
   ui/        Component dùng chung web ↔ marketplace (trống ở Phase 0, có chủ ý)
 prisma/      schema.prisma · migrations · seed
 docs/        Đặc tả nghiệp vụ + ADR
 ```
+
+---
+
+### Ba client, một hợp đồng
+
+```mermaid
+flowchart LR
+  web["apps/web<br/>Next.js"] --> api
+  mob["apps/mobile<br/>Expo"] --> api
+  api["apps/api<br/>NestJS"] --> db[("PostgreSQL 16")]
+  api -- "openapi.json → openapi-typescript" --> types["@xeprime/types"]
+  types --> web
+  types --> mob
+```
+
+Web và mobile là hai client **ngang hàng**: cùng backend, cùng envelope `{ data } / { error }`,
+cùng bộ ADR. Không bên nào có DTO viết tay — type sinh từ OpenAPI của chính API.
+
+Vì vậy: **đổi DTO ở backend thì phải chạy `pnpm contract`**, nếu không type của cả hai client
+lệch so với API thật (ADR 0007). CI kiểm bằng cách sinh lại rồi so `git diff`.
+
+Chi tiết riêng của từng app: [`apps/mobile/README.md`](apps/mobile/README.md).
 
 ---
 
@@ -99,13 +123,14 @@ DB lưu `String` nên TypeScript là lớp duy nhất chặn được typo. Mọ
 
 ## Lệnh hay dùng
 
-| Lệnh | Việc |
-| --- | --- |
-| `pnpm dev` | Chạy web + api song song |
-| `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build` | Kiểm tra toàn workspace |
-| `pnpm contract` | Sinh lại OpenAPI spec → type frontend (chạy sau khi đổi DTO backend) |
-| `pnpm db:migrate` · `pnpm db:seed` · `pnpm db:studio` · `pnpm db:reset` | Thao tác DB |
-| `pnpm db:up` · `pnpm db:down` | Bật/tắt PostgreSQL |
+| Lệnh                                                                    | Việc                                                                 |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `pnpm dev`                                                              | Chạy web + api song song                                             |
+| `pnpm --filter @xeprime/mobile start`                                   | Metro + Expo dev server (API phải đang chạy ở :4000)                 |
+| `pnpm lint` · `pnpm typecheck` · `pnpm test` · `pnpm build`             | Kiểm tra toàn workspace                                              |
+| `pnpm contract`                                                         | Sinh lại OpenAPI spec → type frontend (chạy sau khi đổi DTO backend) |
+| `pnpm db:migrate` · `pnpm db:seed` · `pnpm db:studio` · `pnpm db:reset` | Thao tác DB                                                          |
+| `pnpm db:up` · `pnpm db:down`                                           | Bật/tắt PostgreSQL                                                   |
 
 Sau khi đổi DTO ở backend, **phải** chạy `pnpm contract` — nếu không, type frontend sẽ lệch so với API thật (ADR 0007). CI kiểm tra bằng cách sinh lại và so `git diff`.
 
@@ -113,8 +138,4 @@ Sau khi đổi DTO ở backend, **phải** chạy `pnpm contract` — nếu khô
 
 ## Trạng thái
 
-Phase 0 (base source). Nghiệp vụ thuê xe chưa implement — lộ trình 9 phase ở `CLAUDE.md` mục 11.
-
-API đã có: `GET /health` · `POST|DELETE /auth/session` · `GET /auth/me` · `GET /users/me` · `PATCH /users/me` · `GET /rbac/my-permissions` · `GET /tenants/current` · `GET /calendar/resources` · `GET /calendar/events`
-
-Màn đã có: `/` · `/login` · `/manage` · `/manage/calendar` (chạy thật với dữ liệu seed) · `/manage/vehicles` · `/manage/bookings` · `/manage/admin` (placeholder)
+**Tiến độ thực tế + milestone + việc kế tiếp: [`docs/completion-roadmap.md`](docs/completion-roadmap.md)** (cập nhật mỗi khi đóng một phase). Lộ trình 9 phase ở `CLAUDE.md` mục 11.

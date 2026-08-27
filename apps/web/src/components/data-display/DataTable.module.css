@@ -1,0 +1,158 @@
+/* Cuộn ngang phải nằm TRONG vùng bảng, không đẩy `<body>` cuộn theo
+   (Figma 127:2097 R3 · 07 §4.1 "không cuộn ngang ở body"). */
+.tableRoot {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.rowClickable {
+  cursor: pointer;
+}
+
+/*
+ * Cột hành động dính phải phải ĐỤC (Figma 127:2060 R3) — trong suốt thì cột dữ liệu chạy bên dưới
+ * sẽ lộ ra khi cuộn ngang. AntD có tô nền mặc định, nhưng hàng đang hover lấy màu khác, nên khai
+ * lại cả hai trạng thái để không có kẽ hở.
+ *
+ * ⚠️ Tên class là `-fix-end`, KHÔNG phải `-fix-right`: AntD 6 đổi sang thuật ngữ logical
+ * (start/end) để hợp hướng viết RTL. Đã xác minh bằng cách đọc DOM thật trong test — bản đầu của
+ * file này viết `-fix-right` và không khớp gì cả.
+ *
+ * Đây là một trong số ít chỗ được `:global` vào class của AntD: không token nào chạm tới ô fixed,
+ * và ADR 0003 chọn CSS Module làm lối thoát cho đúng loại việc này.
+ */
+.tableRoot :global(.ant-table-cell-fix-end) {
+  background: var(--xp-color-bg-container);
+}
+
+.tableRoot :global(.ant-table-row:hover) :global(.ant-table-cell-fix-end) {
+  background: var(--xp-color-bg-hover);
+}
+
+/* ---------------------------------------------------------------- zebra hàng (mặc định bật)
+ *
+ * Nền dẫn xuất từ token bằng color-mix (không hex tự chế — ADR 0003) và là MÀU ĐỤC, nên ô
+ * hành động dính phải kế thừa đúng nền của hàng mình mà không hở cột chạy phía dưới khi cuộn
+ * ngang. Hover khai SAU zebra (cùng specificity) để trạng thái tương tác luôn thắng; các nền
+ * chọn/lỗi của AntD nằm trên `td` với specificity cao hơn nên không bị đụng. */
+.tableRoot {
+  --xp-table-zebra-bg: color-mix(
+    in srgb,
+    var(--xp-color-bg-muted) 45%,
+    var(--xp-color-bg-container)
+  );
+}
+
+.tableRoot :global(.ant-table-tbody) .rowStriped > :global(td.ant-table-cell) {
+  background: var(--xp-table-zebra-bg);
+}
+
+.tableRoot .rowStriped :global(.ant-table-cell-fix-end) {
+  background: var(--xp-table-zebra-bg);
+}
+
+/* Hover thắng zebra — khai sau để cùng specificity vẫn đè theo thứ tự nguồn. */
+.tableRoot :global(.ant-table-tbody) .rowStriped > :global(td.ant-table-cell-row-hover),
+.tableRoot .rowStriped:global(.ant-table-row:hover) :global(.ant-table-cell-fix-end) {
+  background: var(--xp-color-bg-hover);
+}
+
+/* Padding trái tách cột hành động khỏi cột dữ liệu cuối (R5: 16px). */
+.actionsCell {
+  padding-left: var(--xp-space-md) !important;
+}
+
+/* ---------------------------------------------------------------- chế độ thẻ (≤640px) */
+
+.cardsRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* 12px giữa các thẻ (Figma 127:2257 R10). Bỏ bullet vì đây là danh sách bản ghi, không phải văn bản. */
+.cards {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  gap: var(--xp-space-sm);
+  list-style: none;
+}
+
+.card {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.cardClickable {
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.cardClickable:hover {
+  border-color: var(--xp-color-primary);
+  box-shadow: var(--xp-shadow-raised);
+}
+
+.cardClickable:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-primary);
+  outline-offset: 2px;
+}
+
+.autoCard {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.autoCardPrimary {
+  min-width: 0;
+  padding-bottom: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.autoCardFields {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  gap: var(--xp-space-xs);
+}
+
+.autoCardField {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(96px, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+  gap: var(--xp-space-sm);
+}
+
+.autoCardField dt {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.autoCardField dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.autoCardActions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.cardsPagination {
+  display: flex;
+  justify-content: center;
+}

@@ -1,0 +1,18 @@
+/* Cùng nhịp tiêu đề với `BookingDetailDialog` — hai modal chi tiết phải trông như một bộ. */
+.titleRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.pageLink {
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.pageLink:hover {
+  color: var(--xp-color-primary);
+}

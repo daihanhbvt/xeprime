@@ -1,0 +1,14 @@
+{
+  "header": {
+    "noRating": "Chưa có đánh giá",
+    "rating": "{avg} · {count, plural, other {# đánh giá}}",
+    "call": "Gọi {phone}"
+  },
+  "vehicles": {
+    "sectionLabel": "Xe của gian hàng",
+    "title": "Xe đang cho thuê",
+    "titleWithCount": "Xe đang cho thuê ({count})",
+    "loadError": "Không tải được danh sách xe",
+    "empty": "Gian hàng chưa có xe công khai."
+  }
+}

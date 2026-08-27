@@ -1,0 +1,106 @@
+.card {
+  display: flex;
+  container-type: inline-size;
+  flex-direction: column;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius-lg);
+  margin-bottom: var(--xp-space-md);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-md);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+}
+
+.title {
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text);
+}
+
+.progress {
+  flex: none;
+  line-height: 0;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.groupLabel,
+.groupLabelDone {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  text-transform: none;
+}
+
+.groupLabel {
+  color: var(--xp-color-text-secondary);
+}
+
+/* Đủ điều kiện gửi duyệt là một cột mốc — nói bằng màu, không chỉ bằng chữ. */
+.groupLabelDone {
+  color: var(--xp-color-success);
+}
+
+.list {
+  display: grid;
+  padding: 0;
+  margin: 0;
+  gap: 2px;
+  grid-template-columns: 1fr;
+  list-style: none;
+}
+
+@container (min-width: 520px) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--xp-space-md);
+  }
+}
+
+.row,
+.rowDone {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.row {
+  color: var(--xp-color-text);
+}
+
+/* Mục đã xong lùi về hàng hai — thứ cần đọc là những dòng CÒN LẠI. */
+.rowDone {
+  color: var(--xp-color-text-tertiary);
+}
+
+.label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.iconDone {
+  flex: none;
+  color: var(--xp-color-success);
+}
+
+.iconTodo {
+  flex: none;
+  color: var(--xp-color-warning);
+}
+
+.iconMuted {
+  flex: none;
+  color: var(--xp-color-text-disabled);
+}
+

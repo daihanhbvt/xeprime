@@ -1,0 +1,29 @@
+/**
+ * Form sửa đơn — một cột, dựng trên `DialogForm` (khuôn chung của mọi hộp CRUD trong kho).
+ * Ở đây chỉ còn hai thứ riêng: dải cảnh báo trùng lịch và hàng tổng tiền.
+ */
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * Tổng tiền là số SUY RA, không phải một ô nhập — nên nó nằm ngoài cột nhãn/ô của form và được
+ * tô nền để đọc như một kết luận. Server vẫn tính lại khi lưu (ADR 0007).
+ */
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  margin-bottom: var(--xp-space-md);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-gold-wash);
+  color: var(--xp-color-text-secondary);
+}
+
+.total strong {
+  color: var(--xp-color-price);
+  font-size: var(--xp-font-size-h4);
+}

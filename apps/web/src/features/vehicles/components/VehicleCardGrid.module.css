@@ -1,0 +1,160 @@
+/*
+ * Khung danh sách xe — Figma `186:1670` `grid-outer-container`.
+ *
+ * Lưới, các trạng thái và chân phân trang đều sống trong MỘT khung có viền; đó là lý do khối
+ * nội dung giữ nguyên bề ngoài khi chuyển giữa "có dữ liệu", "đang tải" và "rỗng".
+ */
+.plate {
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+/* Padding 20px của `grid-inner` (`186:1671`). */
+.inner {
+  padding: var(--xp-space-lg);
+}
+
+/*
+ * Dải báo "không tải được cảnh báo" (Wave 8.1) — đứng TRÊN lưới, gọn một dòng, không đẩy
+ * lưới xuống đáng kể. Danh sách xe vẫn dùng được khi cảnh báo hỏng.
+ */
+.alertsBanner {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * Lưới thẻ — bản chỉnh Figma 11/08/2026: desktop **5 cột** thẻ gọn (~207px ở khung 1116px của
+ * màn 1440), tablet giữ 2 cột thẻ rộng như bản `236:1777`.
+ *
+ * Sàn track là số LỚN HƠN giữa hai đại lượng:
+ *  - `--card-min` — dưới mức này khối nhãn–số của thẻ vỡ chữ, nên màn hẹp phải bớt cột;
+ *  - một-phần-`--card-max-cols` bề rộng khung — trên màn rộng, đây mới là số lớn hơn, và nó
+ *    chặn cột thừa xuất hiện. Thẻ nở ra thay vì lưới thêm cột.
+ *
+ * `align-items: start` vì Figma để thẻ cao tự nhiên, không kéo bằng nhau.
+ */
+.grid {
+  --card-gap: 20px;
+  --card-min: 280px;
+  --card-max-cols: 3;
+
+  display: grid;
+  padding: 0;
+  margin: 0;
+  align-items: start;
+  gap: var(--card-gap);
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(
+      max(
+        var(--card-min),
+        calc((100% - (var(--card-max-cols) - 1) * var(--card-gap)) / var(--card-max-cols))
+      ),
+      1fr
+    )
+  );
+  list-style: none;
+}
+
+/*
+ * Desktop (sidebar đầy đủ): 5 thẻ một hàng. Sàn 200px vì (1116 − 4×20) / 5 ≈ 207px — đặt cao
+ * hơn là hàng 5 không bao giờ đạt được; thẻ đã co chữ/nhãn để sống được ở bề rộng này.
+ * Dưới 1025px quay về sàn 280px của khối trên: tablet 2 cột thẻ rộng, không nhồi 3 cột hẹp.
+ */
+@media (min-width: 1025px) {
+  .grid {
+    --card-min: 200px;
+    --card-max-cols: 5;
+  }
+}
+
+/*
+ * `<li>` là ô lưới, thẻ bên trong phải chiếm trọn ô.
+ *
+ * Thiếu `flex: 1` thì thẻ là flex item cỡ theo nội dung: đo được chênh 6px giữa thẻ có ảnh và
+ * thẻ dùng ảnh dự phòng, tức các cột không còn bằng nhau dù `grid-template-columns` đã chia đều.
+ */
+.cell {
+  display: flex;
+  min-width: 0;
+}
+
+.cell > * {
+  min-width: 0;
+  flex: 1;
+}
+
+/* ─── Mobile: danh sách hàng ngang (Figma `186:2407`) ─────────────────────── */
+
+.list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.list > li:last-child > * {
+  border-bottom: none;
+}
+
+/* ─── Trạng thái ──────────────────────────────────────────────────────────── */
+
+/*
+ * Figma `188:1553` canh trạng thái vào giữa một vùng cao ~780px. Dùng `min-height` thay vì chiều
+ * cao cố định: nội dung dài hơn (danh sách quyền còn thiếu) vẫn nở ra được.
+ */
+.state {
+  display: flex;
+  min-height: 420px;
+  align-items: center;
+  justify-content: center;
+}
+
+.skeletonCard {
+  min-height: 300px;
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+}
+
+.skeletonRow {
+  padding: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+/* ─── Chân khung ──────────────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-md) var(--xp-space-lg);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  gap: var(--xp-space-md);
+}
+
+.summary {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+@media (max-width: 640px) {
+  /* Hàng tự có padding riêng — khung không thêm lề, đúng như Figma vẽ tràn viền. */
+  .inner {
+    padding: 0;
+  }
+
+  .state {
+    min-height: 320px;
+    padding: var(--xp-space-lg);
+  }
+
+  /* Đếm số trước, phân trang sau, cả hai vào giữa (Figma `186:2539`). */
+  .footer {
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--xp-space-sm);
+  }
+}

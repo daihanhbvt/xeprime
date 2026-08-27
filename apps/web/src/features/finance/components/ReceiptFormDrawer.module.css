@@ -1,0 +1,53 @@
+/* Hai cột trên PC, một cột trên điện thoại — form tiền ngắn, không đáng cuộn dài. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0 var(--xp-space-md);
+}
+
+/* Trường trải hết bề ngang: chọn lối liên kết, thẻ đối tượng, diễn giải, chứng từ. */
+.wide {
+  grid-column: 1 / -1;
+}
+
+/*
+ * Số tiền bằng chữ — chỗ duy nhất người dùng bắt được lỗi thừa/thiếu một số 0.
+ *
+ * Kéo lên sát đáy ô nhập (`margin-top` âm) vì nó là CHÚ THÍCH của ô đó, không phải một dòng
+ * nội dung riêng; `min-height` giữ chỗ sẵn để bố cục không giật một dòng khi bắt đầu gõ số.
+ */
+.words {
+  margin: calc(-1 * var(--xp-space-sm)) 0 var(--xp-space-sm);
+  font-size: var(--xp-font-size-body-sm);
+  font-style: italic;
+  color: var(--xp-color-text-tertiary);
+  min-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Dải hành động: công tắc "nhập tiếp" bên trái, Huỷ/Tạo bên phải.
+ *
+ * Ô tick ở đây chứ không nằm trong thân form vì nó không mô tả PHIẾU — nó mô tả điều xảy ra sau
+ * khi bấm nút ngay cạnh nó, nên nó phải đọc được cùng lúc với nút đó.
+ */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+/* Form.Item của ô tick mang margin-bottom mặc định — thừa khi nó đứng trên một hàng ngang. */
+.actions :global(.ant-form-item) {
+  margin-bottom: 0;
+}
+
+.buttons {
+  display: flex;
+  gap: var(--xp-space-sm);
+  margin-left: auto;
+}

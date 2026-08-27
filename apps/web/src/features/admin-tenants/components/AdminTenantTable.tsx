@@ -1,0 +1,106 @@
+'use client';
+
+import { EyeOutlined } from '@ant-design/icons';
+import { Button } from 'antd';
+import {
+  TENANT_STATUS_META, TENANT_TYPE_LABEL, type PaginationMeta, type TenantStatus, type TenantType, } from '@xeprime/types';
+import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
+import { StatusTag } from '@/components/data-display/StatusTag';
+import type { AdminTenant } from '../types';
+import styles from './AdminTenantTable.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+
+interface AdminTenantTableProps {
+  items: AdminTenant[];
+  meta: PaginationMeta;
+  loading: boolean;
+  error?: { onRetry: () => void } | null;
+  filtered?: boolean;
+  onClearFilters?: () => void;
+  onView: (id: string) => void;
+  onPageChange: (page: number, pageSize: number) => void;
+}
+
+/** Suy từ tổng bề rộng cột (P25 — Figma `127:1725` không đặc tả cột cho bảng gian hàng). */
+const MIN_TABLE_WIDTH = 950;
+
+export function AdminTenantTable({
+  items,
+  meta,
+  loading,
+  error = null,
+  filtered = false,
+  onClearFilters,
+  onView,
+  onPageChange,
+}: AdminTenantTableProps) {
+  const fmt = useAppFormat();
+
+  const columns: DataTableColumn<AdminTenant>[] = [
+    {
+      title: 'Gian hàng',
+      key: 'name',
+      width: 230,
+      render: (_, r) => (
+        <div>
+          <div className={styles.name}>{r.name}</div>
+          <div className={styles.meta}>
+            {r.code}
+            {r.provinceName ? ` · ${r.provinceName}` : ''}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: 'Chủ shop',
+      key: 'owner',
+      width: 180,
+      render: (_, r) => (
+        <div>
+          <div>{r.ownerName ?? '—'}</div>
+          {r.phone ? <div className={styles.meta}>{r.phone}</div> : null}
+        </div>
+      ),
+    },
+    {
+      title: 'Loại',
+      key: 'type',
+      width: 120,
+      render: (_, r) => TENANT_TYPE_LABEL[r.tenantType as TenantType] ?? r.tenantType,
+    },
+    { title: 'Xe', key: 'vehicles', align: 'right', width: 80, render: (_, r) => r.vehicleCount },
+    {
+      title: 'Trạng thái',
+      key: 'status',
+      width: 130,
+      render: (_, r) => <StatusTag value={r.status as TenantStatus} meta={TENANT_STATUS_META} group="tenantStatus" />,
+    },
+    { title: 'Ngày tạo', key: 'createdAt', width: 120, render: (_, r) => fmt.date(r.createdAt) },
+    actionColumn<AdminTenant>((row) => [
+      { key: 'view', label: 'Xem chi tiết', icon: <EyeOutlined />, onClick: () => onView(row.id) },
+    ]),
+  ];
+
+  return (
+    <DataTable<AdminTenant>
+      label="Danh sách gian hàng"
+      columns={columns}
+      items={items}
+      onRowClick={(row) => onView(row.id)}
+      minWidth={MIN_TABLE_WIDTH}
+      loading={loading}
+      error={error ? { title: 'Không tải được danh sách gian hàng', onRetry: error.onRetry } : null}
+      filtered={filtered}
+      empty={{ title: 'Chưa có gian hàng nào' }}
+      noResults={{
+        title: 'Không có gian hàng khớp bộ lọc',
+        action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
+      }}
+      pagination={{
+        meta,
+        onChange: onPageChange,
+        totalLabel: (total) => `${total} gian hàng`,
+      }}
+    />
+  );
+}

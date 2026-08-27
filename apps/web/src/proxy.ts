@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { resolveSessionCookieName } from '@xeprime/types';
 import { ROUTES } from '@/constants/routes';
+import { AUTH_INTENT, AUTH_MODE } from '@/features/auth/post-auth-destination';
+import { isSafeNextPath } from '@/features/auth/safe-next';
 
 /**
  * Chặn route theo phiên đăng nhập — ADR 0002.
@@ -11,37 +14,93 @@ import { ROUTES } from '@/constants/routes';
  *
  * Ở đây chỉ kiểm tra CÓ cookie hay không — đủ để điều hướng UX. Việc xác thực token và phân
  * quyền thật vẫn nằm ở API (guard) và ở khung /manage khi gọi `/auth/me`; proxy không giữ
- * secret để verify JWT, và cũng không nên là nơi quyết định quyền.
+ * secret để verify JWT, và cũng không nên là nơi quyết định quyền. Cụ thể: proxy KHÔNG biết
+ * user có phải nhân sự nền tảng không, nên nó chỉ giữ nguyên đích `/manage/admin/...` trong
+ * `next` — việc từ chối (403) do layout admin + guard backend làm.
  */
-const SESSION_COOKIE = 'xp_session';
+/**
+ * Tên cookie lấy từ CÙNG một nguồn với backend (`@xeprime/types`), không gõ tay ở đây: API phát
+ * cookie theo `SESSION_COOKIE_NAME`; nếu đổi biến đó mà proxy vẫn tìm tên cũ thì mọi người đã
+ * đăng nhập bị đá về trang login mà không có lỗi nào để lần.
+ */
+const SESSION_COOKIE = resolveSessionCookieName({
+  /*
+   * Đọc lúc CHẠY, không phải lúc build.
+   *
+   * Comment trước ở đây nói ngược lại ("Next thay biểu thức này bằng giá trị lúc BUILD") và
+   * điều đó KHÔNG đúng với Next 16 + Turbopack: chỉ `NEXT_PUBLIC_*` mới được nhúng cứng. Đo
+   * trực tiếp ngày 27/08/2026 khi dựng môi trường staging: build image với một
+   * `SESSION_COOKIE_NAME` KHÁC mặc định trong `.env`, rồi gọi `/manage/vehicles` kèm cookie mang
+   * tên đó thì vẫn nhận 307, còn cookie mang tên MẶC ĐỊNH lại được cho qua — tức giá trị lúc
+   * build không hề đi vào bundle.
+   *
+   * Hệ quả cho triển khai: tiến trình chạy `next start` PHẢI có biến này trong môi trường của
+   * nó. Thiếu, mà cookie lại không mang tên mặc định, thì proxy không bao giờ thấy phiên và mọi
+   * người đã đăng nhập bị đá về `/manage/login` — vòng lặp, không có lỗi nào để lần.
+   * Xem `docker-compose.prod.yml` (service `web` → `environment`).
+   */
+  SESSION_COOKIE_NAME: process.env.SESSION_COOKIE_NAME,
+});
 
 export function proxy(request: NextRequest): NextResponse {
   const hasSession = request.cookies.has(SESSION_COOKIE);
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
+  const target = `${pathname}${search}`;
 
-  const isManage = pathname === ROUTES.MANAGE.ROOT || pathname.startsWith(`${ROUTES.MANAGE.ROOT}/`);
-  const isLogin = pathname === ROUTES.LOGIN;
+  // Trang đăng nhập cổng quản lý là CÔNG KHAI. Không chặn, và cũng không đá người đã có cookie
+  // về /manage: cookie có thể đã hết hạn, đá đi rồi shell lại đá về đây là vòng lặp.
+  if (pathname === ROUTES.MANAGE.LOGIN) {
+    return NextResponse.next();
+  }
 
-  // Vào khu quản lý mà chưa đăng nhập → về trang login, giữ lại đích để quay lại sau.
-  if (isManage && !hasSession) {
+  if (isManagePath(pathname) && !hasSession) {
     const url = request.nextUrl.clone();
-    url.pathname = ROUTES.LOGIN;
-    url.searchParams.set('next', pathname);
+    url.pathname = ROUTES.MANAGE.LOGIN;
+    url.search = '';
+    // Giữ nguyên đường đang muốn vào (kể cả route con của /manage/admin và query của nó).
+    url.searchParams.set('next', target);
+    // Vào thẳng onboarding = ý định làm chủ xe; giữ ý định đó qua bước đăng nhập.
+    if (pathname === ROUTES.MANAGE.ONBOARDING) {
+      url.searchParams.set('intent', AUTH_INTENT.OWNER);
+    }
     return NextResponse.redirect(url);
   }
 
-  // Đã đăng nhập mà mở lại trang login → đưa thẳng vào khu quản lý.
-  if (isLogin && hasSession) {
+  // `/login` và `/register` là route CŨ (link/bookmark đã phát ra ngoài). Giờ đăng nhập của
+  // khách là modal ngay trên marketplace, nên chuyển về trang chủ và mở sẵn modal đúng chế độ.
+  // KHÔNG đưa về /manage như trước — đó chính là lỗi khiến khách bị đẩy vào khu quản lý.
+  const legacyMode = legacyAuthMode(pathname);
+  if (legacyMode) {
+    const rawNext = request.nextUrl.searchParams.get('next');
     const url = request.nextUrl.clone();
-    url.pathname = ROUTES.MANAGE.ROOT;
+    url.pathname = ROUTES.HOME;
     url.search = '';
+
+    if (hasSession) {
+      // Đã đăng nhập thì không có gì để đăng nhập nữa: về `next` an toàn hoặc trang chủ.
+      if (isSafeNextPath(rawNext)) return NextResponse.redirect(new URL(rawNext, request.url));
+      return NextResponse.redirect(url);
+    }
+
+    url.searchParams.set('auth', legacyMode);
+    if (isSafeNextPath(rawNext)) url.searchParams.set('next', rawNext);
     return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
 }
 
+function isManagePath(pathname: string): boolean {
+  return pathname === ROUTES.MANAGE.ROOT || pathname.startsWith(`${ROUTES.MANAGE.ROOT}/`);
+}
+
+function legacyAuthMode(pathname: string): string | null {
+  if (pathname === ROUTES.LOGIN) return AUTH_MODE.LOGIN;
+  if (pathname === ROUTES.REGISTER) return AUTH_MODE.REGISTER;
+  return null;
+}
+
 export const config = {
   // Chỉ chạy trên các route cần bảo vệ/điều hướng, không đụng asset tĩnh.
-  matcher: ['/manage/:path*', '/login'],
+  matcher: ['/manage/:path*', '/login', '/register'],
 };

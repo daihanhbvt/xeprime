@@ -4,6 +4,7 @@ import { Alert, Button } from 'antd';
 import { CheckCircleFilled, MailOutlined } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { forgotPasswordSchema, type ForgotPasswordValues } from '@xeprime/validators';
@@ -11,10 +12,12 @@ import { Logo } from '@/components/brand/Logo';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
 import { forgotPassword } from '@/services/auth.service';
-import { getErrorMessage } from '@/services/api-client';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import styles from '../auth-card.module.css';
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations('Auth');
+  const errorMessage = useErrorMessage();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -32,7 +35,7 @@ export default function ForgotPasswordPage() {
       // Luôn báo thành công dù email có tồn tại hay không (backend cũng vậy).
       setSentTo(values.email);
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(errorMessage(err));
     } finally {
       setPending(false);
     }
@@ -44,14 +47,20 @@ export default function ForgotPasswordPage() {
         <div className={styles.success}>
           <Logo size="lg" />
           <CheckCircleFilled className={styles.successIcon} />
-          <div className={styles.title}>Kiểm tra email của bạn</div>
+          <div className={styles.title}>{t('forgotPassword.sentTitle')}</div>
+          {/*
+            Câu có phần in đậm ở GIỮA — dựng bằng rich text của ICU, không nối ba mảnh
+            chuỗi: vị trí của địa chỉ email trong câu khác nhau giữa hai ngôn ngữ.
+          */}
           <p className={styles.sub}>
-            Nếu <b>{sentTo}</b> có tài khoản, chúng tôi đã gửi liên kết đặt lại mật khẩu. Liên kết
-            hết hạn sau 1 giờ.
+            {t.rich('forgotPassword.sentBody', {
+              email: sentTo,
+              strong: (chunks) => <b>{chunks}</b>,
+            })}
           </p>
         </div>
         <div className={styles.footer}>
-          <Link href={ROUTES.LOGIN}>Quay lại đăng nhập</Link>
+          <Link href={ROUTES.LOGIN}>{t('links.backToLogin')}</Link>
         </div>
       </div>
     );
@@ -62,22 +71,22 @@ export default function ForgotPasswordPage() {
       <div className={styles.head}>
         <Logo size="lg" />
         <div>
-          <div className={styles.title}>Quên mật khẩu</div>
-          <div className={styles.sub}>Nhập email, chúng tôi gửi liên kết đặt lại mật khẩu</div>
+          <div className={styles.title}>{t('forgotPassword.title')}</div>
+          <div className={styles.sub}>{t('forgotPassword.subtitle')}</div>
         </div>
       </div>
 
       {error ? (
-        <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />
+        <Alert type="error" showIcon message={error} className={styles.alert} />
       ) : null}
 
       <form onSubmit={onSubmit} noValidate>
         <TextField
           control={control}
           name="email"
-          label="Email"
+          label={t('fields.email')}
           type="email"
-          placeholder="ban@congty.vn"
+          placeholder={t('fields.emailPlaceholder')}
           autoComplete="email"
           prefix={<MailOutlined />}
           autoFocus
@@ -90,12 +99,12 @@ export default function ForgotPasswordPage() {
           className={styles.submit}
           loading={pending}
         >
-          Gửi liên kết đặt lại
+          {t('forgotPassword.submit')}
         </Button>
       </form>
 
       <div className={styles.footer}>
-        <Link href={ROUTES.LOGIN}>Quay lại đăng nhập</Link>
+        <Link href={ROUTES.LOGIN}>{t('links.backToLogin')}</Link>
       </div>
     </div>
   );

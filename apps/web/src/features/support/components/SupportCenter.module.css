@@ -1,0 +1,115 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-lg);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+/* Tự xuống hàng theo bề rộng thật thay vì đếm cột: cùng một khai báo chạy đúng ở 360px lẫn
+   1440px, không cần media query nào. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--xp-space-md);
+}
+
+.cardLink {
+  display: block;
+  color: inherit;
+  border-radius: var(--xp-border-radius);
+}
+
+.cardLink:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 2px;
+}
+
+.cardLink .card {
+  height: 100%;
+  border-radius: var(--xp-border-radius);
+  transition: border-color 120ms ease;
+}
+
+.cardLink:hover .card {
+  border-color: var(--xp-color-primary);
+}
+
+.cardLink .card :global(.ant-card-body) {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+}
+
+.cardIcon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-gold-wash);
+  color: var(--xp-gold-deep);
+}
+
+.icon {
+  font-size: var(--xp-font-size-h4);
+}
+
+.cardBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardTitle {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.cardText {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.cardArrow {
+  flex: none;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.faq {
+  background: var(--xp-color-bg-container);
+  border-radius: var(--xp-border-radius);
+}
+
+.answer {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+}
+
+.contact {
+  border-radius: var(--xp-border-radius);
+}
+
+.contactTitle {
+  margin: 0 0 var(--xp-space-xs);
+  font-size: var(--xp-font-size-body);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}

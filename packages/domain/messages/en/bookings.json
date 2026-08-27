@@ -1,0 +1,47 @@
+{
+  "detail": {
+    "title": "Booking",
+    "titleWithCode": "Booking {code}",
+    "openPage": "Open full page"
+  },
+  "actionBar": {
+    "contract": "Contract",
+    "moneyHistory": "Payment history",
+    "moneyHistoryTitle": "Payment history for this booking",
+    "openLedger": "Open in the shop ledger →",
+    "edit": "Edit booking",
+    "closedHint": "This booking is closed and can no longer be edited",
+    "collect": "Collect payment",
+    "collected": "Fully collected",
+    "handoverPhotos": "Handover photos",
+    "confirmPickup": "Confirm vehicle handed over",
+    "confirmReturn": "Confirm vehicle returned",
+    "confirmPermissionHint": "The handovers.confirm permission is required to confirm a handover"
+  },
+  "statusActions": {
+    "cancel": "Cancel booking",
+    "noShow": "Mark as no-show",
+    "dialog": {
+      "cancelTitle": "Cancel booking {code}",
+      "noShowTitle": "Mark as no-show — booking {code}",
+      "cancelLead": "A cancelled booking cannot be reopened. The vehicle is freed immediately, so someone else may take this slot.",
+      "noShowLead": "Marking a no-show closes the booking for good. The vehicle is freed immediately, so someone else may take this slot.",
+      "cancelOk": "Cancel booking",
+      "noShowOk": "Mark as no-show",
+      "keep": "Keep the booking",
+      "customer": "Customer",
+      "vehicle": "Vehicle",
+      "period": "Rental period",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "e.g. customer cancelled by phone, vehicle broke down…",
+      "reasonHelp": "The reason is kept in the booking log for later reference; the customer never sees it.",
+      "reasonRequired": "Enter a reason before continuing",
+      "reasonTooLong": "500 characters maximum",
+      "paidTitle": "{amount} has already been recorded as collected",
+      "paidDescription": "XePrime does not refund automatically and does not delete what has been recorded. To pay the customer back, transfer the money outside the app and then record an expense in the shop ledger.",
+      "cancelSuccess": "Booking {code} cancelled",
+      "noShowSuccess": "Booking {code} marked as no-show"
+    },
+    "noShowHint": "Available only {minutes} minutes past pickup time, and only while the vehicle has not been handed over."
+  }
+}

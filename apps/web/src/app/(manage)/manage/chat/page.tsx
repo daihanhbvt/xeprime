@@ -1,5 +1,11 @@
-import { PlaceholderPage } from '@/components/common/PlaceholderPage';
+import { ChatView } from '@/features/chat/components/ChatView';
 
-export default function ChatPage() {
-  return <PlaceholderPage title="Trò chuyện" />;
+/** Tin nhắn khu quản lý (shop). `?c=<id>` để mở sẵn một hội thoại. */
+export default async function ManageChatPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ c?: string }>;
+}) {
+  const { c } = await searchParams;
+  return <ChatView initialConversationId={c ?? null} />;
 }

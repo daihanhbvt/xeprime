@@ -1,0 +1,39 @@
+.banner {
+  margin-bottom: var(--xp-space-md);
+  align-items: flex-start;
+}
+
+/*
+ * Thông tin RIÊNG của lần gửi này (thời điểm đã gửi, nguyên văn lý do đội duyệt viết) xuống
+ * hàng riêng: nó là thứ người dùng vào đây để đọc, không phải phần đuôi của câu hướng dẫn.
+ */
+.extra {
+  display: block;
+  margin-top: var(--xp-space-xs);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+/* Nút hành động canh giữa theo chiều dọc kể cả khi dải chỉ có một dòng chữ. */
+.banner :global(.ant-alert-actions) {
+  display: flex;
+  align-items: center;
+  margin-inline-start: var(--xp-space-md);
+}
+
+@media (max-width: 640px) {
+  /* Nút xuống hàng riêng, chiếm hết bề ngang — không bóp chữ trạng thái còn hai từ mỗi dòng. */
+  .banner {
+    flex-wrap: wrap;
+  }
+
+  .banner :global(.ant-alert-actions) {
+    width: 100%;
+    margin-block-start: var(--xp-space-sm);
+    margin-inline-start: 0;
+  }
+
+  .banner :global(.ant-alert-actions .ant-btn) {
+    width: 100%;
+    min-height: var(--xp-touch-target-min);
+  }
+}

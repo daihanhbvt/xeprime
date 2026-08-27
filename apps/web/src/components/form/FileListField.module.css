@@ -1,0 +1,89 @@
+.item {
+  margin-bottom: var(--xp-space-md);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  align-items: flex-start;
+}
+
+.row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+}
+
+.failedRow {
+  border-color: var(--xp-color-error);
+}
+
+/* Bản ghi Wave 4 cũ — nhắc tải lên lại, không link, không thao tác. */
+.legacyRow {
+  border-color: var(--xp-color-warning);
+  background: var(--xp-color-warning-bg);
+}
+
+.legacyNote {
+  flex: none;
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.fileIcon {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-lg);
+}
+
+.fileName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--xp-color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.download {
+  flex: none;
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.progress {
+  flex: 0 0 40%;
+  margin: 0;
+}
+
+.removeBtn,
+.retryBtn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: var(--xp-space-xs);
+  border: 0;
+  background: none;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  gap: var(--xp-space-xs);
+}
+
+.retryBtn {
+  color: var(--xp-color-primary-active);
+}
+
+.removeBtn:hover {
+  color: var(--xp-color-error);
+}
+
+@media (max-width: 640px) {
+  .progress {
+    flex-basis: 30%;
+  }
+}

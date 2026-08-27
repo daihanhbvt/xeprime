@@ -1,0 +1,46 @@
+{
+  "card": {
+    "searchLabel": "Tìm xe cho thuê",
+    "stickyLabel": "Tìm kiếm nhanh",
+    "vehicleTypeLabel": "Loại xe",
+    "serviceTypeLabel": "Loại dịch vụ thuê xe",
+    "panelLabel": "Tìm {vehicle} {service}",
+    "submit": "Tìm xe",
+    "longTermHint": "Chọn xe trước, sau đó chọn gói thuê và nguyện vọng ngày nhận. Gian hàng xác nhận ngày giờ nhận chính xác khi duyệt yêu cầu."
+  },
+  "service": {
+    "selfDrive": "Xe tự lái",
+    "selfDriveShort": "Tự lái",
+    "withDriver": "Xe có tài xế",
+    "withDriverShort": "Có tài xế",
+    "longTerm": "Thuê xe dài hạn",
+    "longTermShort": "Dài hạn"
+  },
+  "mode": {
+    "title": "Loại xe và dịch vụ",
+    "summary": "{vehicle} · {service}",
+    "triggerLabel": "Loại xe và dịch vụ: {summary}"
+  },
+  "route": {
+    "label": "Lộ trình",
+    "triggerLabel": "Lộ trình: {value}"
+  },
+  "rental": {
+    "label": "Thời gian thuê"
+  },
+  "location": {
+    "label": "Địa điểm",
+    "panelTitle": "Bạn muốn thuê xe ở đâu?",
+    "triggerLabel": "Địa điểm nhận xe: {value}",
+    "searchPlaceholder": "Tìm tỉnh/thành phố",
+    "searchAriaLabel": "Tìm tỉnh hoặc thành phố",
+    "popular": "Địa điểm phổ biến",
+    "all": "Tất cả tỉnh/thành",
+    "nationwide": "Toàn quốc",
+    "nationwideHint": "Xem xe ở mọi tỉnh/thành",
+    "unavailable": "Địa điểm không còn khả dụng",
+    "loadError": "Không tải được danh sách địa điểm",
+    "vehicleCount": "{count, plural, other {# xe}}",
+    "noMatch": "Không có tỉnh/thành nào khớp “{query}”. Thử tên khác hoặc chọn Toàn quốc."
+  }
+}

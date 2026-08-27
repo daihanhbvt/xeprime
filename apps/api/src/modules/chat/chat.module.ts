@@ -1,11 +1,18 @@
 import { Module } from '@nestjs/common';
+import { StorageModule } from '../storage/storage.module';
+import { ChatController } from './chat.controller';
+import { ConversationsController } from './conversations.controller';
+import { ChatService } from './chat.service';
 
 /**
- * Skeleton — Phase 5.
- *
- * Kiến trúc đã chốt: Postgres giữ `conversations` metadata + archive, Firestore chỉ giữ
- * 30–100 tin gần nhất cho realtime. Client chỉ listen danh sách hội thoại và thread đang
- * mở — listen toàn bộ là nguồn chi phí Firestore lớn nhất.
+ * Chat (Phase 5, ADR 0009). PostgreSQL là source of truth; realtime đẩy qua outbox → worker →
+ * Firestore. FirebaseAppService (@Global) mint custom token; R2Service (StorageModule) presign
+ * đính kèm. PrismaService/ConfigService là global nên không cần import.
  */
-@Module({})
+@Module({
+  imports: [StorageModule],
+  controllers: [ConversationsController, ChatController],
+  providers: [ChatService],
+  exports: [ChatService],
+})
 export class ChatModule {}

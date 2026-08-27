@@ -1,0 +1,48 @@
+/* Hộp thoại từ chối yêu cầu — cùng nhịp với hộp thoại duyệt dài hạn. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.context {
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border-radius: var(--xp-border-radius-sm);
+  margin: 0;
+  background: var(--xp-color-bg-muted);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+  overflow-wrap: anywhere;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.label {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.hint {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.error {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

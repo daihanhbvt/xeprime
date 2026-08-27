@@ -1,0 +1,67 @@
+/**
+ * Nhãn khối: chữ nhỏ, in hoa, thưa chữ, màu mờ — nó là BIỂN CHỈ ĐƯỜNG, không phải một mục
+ * bấm được ngang hàng với "Xe của tôi". Trọng lượng thị giác thấp hơn hẳn mục menu là thứ tạo
+ * ra thứ bậc mà sidebar cũ (18 mục cùng cỡ chữ) không có.
+ *
+ * Màu chữ do `ManageMenu.module.css` đặt qua `.ant-menu-item-group-title`, ở đây chỉ lo hình
+ * dáng và hành vi của nút gập.
+ */
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  width: 100%;
+  font-size: var(--xp-font-size-overline);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: inherit;
+}
+
+.toggle {
+  /* Nút thật, nhưng trông như một nhãn: bỏ hết trang trí mặc định của <button>. */
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.toggle:hover .text,
+.toggle:hover .chevron {
+  color: var(--xp-shell-sidebar-text);
+}
+
+.toggle:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-shell-sidebar-active);
+  outline-offset: 3px;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  flex: none;
+  font-size: 10px;
+  transition: transform 120ms ease;
+}
+
+/* Gập lại: mũi tên chỉ sang phải (hướng "mở ra"), quay từ hướng xuống. */
+.chevronClosed {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}

@@ -1,0 +1,190 @@
+/**
+ * Khối tiền của luồng đặt xe, hai hình thái đặt ở hai chỗ khác nhau của cùng một cột:
+ *
+ * - `.bar` — dòng tổng dính đáy cùng hàng nút (vị trí `sticky` do `.dock` trong
+ *   `RequestBookingFlow.module.css` quyết định, ở đây chỉ lo hình thức).
+ * - `.detail` — bảng chi tiết nằm CUỐI thân bước, cuộn chung mạch với phần nhập liệu. Nó
+ *   KHÔNG có vùng cuộn riêng: một vùng cuộn lồng trong vùng cuộn là chỗ bánh xe chuột dừng
+ *   lại giữa chừng, và đó chính là lỗi bản trước.
+ */
+
+.bar {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-sm) var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.barLabel {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.barLead {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--xp-space-xs);
+}
+
+/* Tiền khách phải trả — cùng một màu ở mọi nơi trong app (`--xp-color-price`). */
+.barAmount {
+  font-size: var(--xp-font-size-h4);
+  font-weight: 700;
+  color: var(--xp-color-price);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.barUnit,
+.barHint {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+/* Gợi ý "chọn thời gian để xem tạm tính" là phần nhường chỗ đầu tiên khi cột hẹp. */
+.barHint {
+  overflow: hidden;
+  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggle,
+.toggleWide {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--xp-gold-deep);
+  cursor: pointer;
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+}
+
+.toggle {
+  margin-left: auto;
+  flex: none;
+}
+
+/* Nút thu nằm dưới bảng, trải hết bề ngang — đích chạm rộng, không phải một chữ nhỏ ở góc. */
+.toggleWide {
+  justify-content: center;
+  width: 100%;
+  min-height: var(--xp-touch-target-min);
+}
+
+.toggle:hover,
+.toggleWide:hover {
+  text-decoration: underline;
+}
+
+/*
+ * Bảng chi tiết trong mạch cuộn của bước. Không `max-height`, không `overflow` — nó dài bao
+ * nhiêu thì thân bước cuộn bấy nhiêu, đúng như mọi khối khác trong bước.
+ */
+.detail {
+  min-width: 0;
+}
+
+/* Chờ báo giá trong lúc bảng đang mở — giữ đúng chỗ bảng vừa đứng, không sụp về một dòng. */
+.detailLoading {
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.savings {
+  display: block;
+  color: var(--xp-color-success);
+  font-size: var(--xp-font-size-sm);
+}
+
+.note {
+  display: block;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* ── Bảng giá niêm yết (chưa chọn thời gian/gói) ───────────────────────── */
+
+.unitCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.unitHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.unitTitle {
+  margin: 0;
+  font-size: var(--xp-font-size);
+  font-weight: 600;
+}
+
+.unitRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+}
+
+.unitRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.unitRow dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.unitRow dd {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0;
+}
+
+/* Giá niêm yết vẫn là giá khách trả → cùng màu tiền. */
+.unitAmount {
+  color: var(--xp-color-price);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Giá gạch ngang là giá CŨ — cố tình mờ, không mang màu tiền. */
+.strike {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.unit {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+  font-weight: 400;
+}
+
+.unitNote {
+  margin: 0;
+}

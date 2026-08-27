@@ -1,0 +1,54 @@
+{
+  "card": {
+    "viewDetail": "View details for {name}",
+    "save": "Save vehicle",
+    "newVehicle": "New",
+    "ratingCount": "{count, plural, one {# review} other {# reviews}}",
+    "completedTrips": "{count, plural, one {# trip} other {# trips}}",
+    "owner": "Owner",
+    "seats": "{count, plural, one {# seat} other {# seats}}",
+    "delivery": "Delivery",
+    "noCollateral": "No collateral",
+    "includesDriver": "driver included",
+    "contactForQuote": "Contact for a quote",
+    "extraServices": "+{count}",
+    "priceDaily": "<amount>{value}</amount><unit>/day</unit>",
+    "priceMonthly": "<amount>{value}</amount><unit>/month</unit>",
+    "perDayUnit": "/day",
+    "perMonthUnit": "/month"
+  },
+  "detail": {
+    "specs": {
+      "vehicleType": "Vehicle type",
+      "bodyType": "Body type",
+      "seats": "Seats",
+      "fuelType": "Fuel type",
+      "year": "Year",
+      "color": "Colour",
+      "brand": "Brand"
+    },
+    "collateralTitle": "Security & required documents",
+    "collateralDeposit": "Cash deposit of {amount}",
+    "collateralAsset": "Collateral held: {types}",
+    "collateralNone": "No deposit or collateral required",
+    "collateralDocuments": "Documents checked at pickup: {documents}",
+    "longTermQuote": "Contact for a long-term quote",
+    "withDriverQuote": "Contact for a chauffeured quote",
+    "delivery": "Vehicle delivery",
+    "noCollateral": "No collateral",
+    "shopVerified": "Verified shop",
+    "description": "Description",
+    "descriptionEmpty": "This shop has not written a description.",
+    "serviceSelector": "Choose a rental service",
+    "serviceLabel": "Service",
+    "pickupPoint": {
+      "title": "Pickup location",
+      "mapTitle": "Map of the pickup location"
+    }
+  },
+  "reviews": {
+    "title": "Reviews",
+    "count": "{count, plural, one {# review} other {# reviews}}",
+    "empty": "No reviews for this vehicle yet."
+  }
+}

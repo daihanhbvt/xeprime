@@ -1,0 +1,149 @@
+/**
+ * Vỏ overlay tác vụ — Figma `130:1563` (Overlay Responsive Mapping) + `122:3705`.
+ * Mọi giá trị lấy từ token Wave 1A; không có số/màu trần.
+ */
+
+.body {
+  /* Thân cuộn được; header và footer của AntD nằm ngoài vùng cuộn này. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/**
+ * TRẦN chiều cao của thân modal desktop — thiếu nó thì `overflow-y: auto` ở trên vô tác dụng.
+ *
+ * Không có trần, modal cứ cao theo nội dung: nó vượt quá màn hình, `centered` đẩy phần đầu ra
+ * ngoài tầm nhìn, và thứ cuộn được là TRANG NỀN chứ không phải thân modal — người dùng cuộn thì
+ * nội dung bên trong đứng yên, còn header/footer thì trôi đi mất. Đúng triệu chứng đã gặp ở hộp
+ * xác nhận bàn giao khi mở vùng ảnh.
+ *
+ * `max-height` (không phải `height`) để hộp ngắn vẫn ôm sát nội dung. `dvh` vì thanh công cụ
+ * trình duyệt di động co giãn. Trừ đi chỗ của header, footer và lề trên/dưới của AntD.
+ */
+.modalBody {
+  max-height: calc(100dvh - var(--xp-space-xl) * 6);
+  min-height: 0;
+}
+
+/**
+ * Modal `xl` — trần chiều cao theo viewport, CAO hơn `.modalBody` vì overlay `xl` vốn dành cho
+ * nội dung dày. `dvh` vì thanh công cụ trình duyệt co giãn.
+ *
+ * Mặc định thân TỰ CUỘN (`overflow-y: auto` thừa kế từ `.body`) và dùng `max-height` chứ không
+ * `height`: nội dung ngắn thì hộp vẫn ôm sát, nội dung dài thì có thanh cuộn để với tới hàng
+ * nút cuối. Đây là hành vi đúng cho mọi overlay MỘT LUỒNG (chi tiết đơn, hồ sơ khách, hồ sơ xe).
+ */
+.xlBody {
+  /* Chừa chỗ cho header của modal và lề trên/dưới của AntD. */
+  max-height: calc(100dvh - var(--xp-space-xl) * 5);
+  min-height: 0;
+}
+
+/**
+ * Biến thể cho bố cục NHIỀU CỘT tự cuộn (`bodyScroll="content"`): mỗi cột có thanh cuộn riêng
+ * nên thân phải khoá cuộn, nếu không sẽ thành hai lớp cuộn lồng nhau và hàng nút dính đáy cột
+ * phải sẽ trôi theo lớp ngoài. Ở đây `height` cố định là ĐÚNG — các cột con cần một chiều cao
+ * xác định để `flex: 1; min-height: 0` của chúng tính ra vùng cuộn.
+ *
+ * Chỉ dùng khi bên trong THẬT SỰ có vùng cuộn. Đặt nhầm cho nội dung một luồng thì phần dư bị
+ * cắt cụt và không có cách nào cuộn tới — không thanh cuộn, không dấu hiệu.
+ */
+.xlBodyContained {
+  height: calc(100dvh - var(--xp-space-xl) * 5);
+  max-height: calc(100dvh - var(--xp-space-xl) * 5);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/**
+ * Tiêu đề chỉ dành cho trình đọc màn hình: overlay tự dựng heading trong thân vẫn phải có
+ * tên khả truy cập. Ẩn bằng clip thay vì `display: none` — `display: none` gỡ luôn khỏi cây
+ * khả truy cập, tức mất đúng thứ ta đang cố giữ.
+ */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Header chỉ còn nút đóng: bỏ đường kẻ và khoảng đệm thừa để thân sát mép trên. */
+.bareHeader {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.footer {
+  /* Footer dính đáy sheet/modal — quy tắc 7 Figma: "sticky action buttons". */
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  padding-top: var(--xp-space-md);
+}
+
+/* --- Mobile --- */
+
+/**
+ * Chừa safe-area đáy trên máy có notch / thanh gesture — nếu không, hàng nút cuối sheet nằm
+ * dưới thanh home của iOS và bấm không tới. Áp cho mọi overlay mobile, không phải việc của
+ * từng feature tự nhớ.
+ */
+.mobileRoot :global(.ant-drawer-body) {
+  padding: var(--xp-space-md);
+  padding-bottom: calc(var(--xp-space-md) + env(safe-area-inset-bottom));
+}
+
+.mobileRoot :global(.ant-drawer-footer) {
+  padding-bottom: calc(var(--xp-space-md) + env(safe-area-inset-bottom));
+}
+
+/* Bottom sheet: bo hai góc trên + thanh nắm kéo, theo quy tắc 7 Figma. */
+.sheetRoot :global(.ant-drawer-content) {
+  border-top-left-radius: var(--xp-border-radius);
+  border-top-right-radius: var(--xp-border-radius);
+}
+
+.sheetRoot :global(.ant-drawer-header) {
+  position: relative;
+  padding-top: var(--xp-space-lg);
+}
+
+.sheetRoot :global(.ant-drawer-header)::before {
+  content: '';
+  position: absolute;
+  top: var(--xp-space-sm);
+  left: 50%;
+  transform: translateX(-50%);
+  width: var(--xp-space-xl);
+  height: var(--xp-space-xs);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-border-strong);
+}
+
+/**
+ * Footer full-width trên mobile: vùng chạm đủ lớn, không phải ngắm nút nhỏ ở góc.
+ *
+ * 640px = `--xp-bp-mobile`. CSS custom property KHÔNG dùng được trong `@media` (quyết định
+ * P8, Wave 1A), nên con số phải viết thẳng — nhưng CHỈ được dùng một trong ba giá trị
+ * breakpoint chuẩn (640 / 1024 / 1440). Đây không phải điểm gãy tự chế.
+ */
+@media (max-width: 640px) {
+  .footer {
+    justify-content: stretch;
+  }
+
+  .footer > * {
+    flex: 1;
+  }
+
+  .footer :global(.ant-btn) {
+    width: 100%;
+    min-height: var(--xp-touch-target-min);
+  }
+}

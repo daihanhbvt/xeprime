@@ -1,0 +1,19 @@
+.stars {
+  display: inline-flex;
+  gap: 1px;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.stars.sm {
+  font-size: 12.5px;
+}
+
+.on {
+  color: var(--xp-gold-deep);
+}
+
+.off {
+  color: var(--xp-color-border);
+}

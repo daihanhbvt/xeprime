@@ -1,0 +1,240 @@
+.form {
+  min-width: 0;
+}
+
+/*
+ * Thanh tiêu đề DÍNH, vì nút Lưu sống trong đó.
+ *
+ * `top` = chiều cao topbar của vỏ quản lý: topbar cũng `sticky; top: 0`, nên thanh này phải bắt
+ * đầu đúng ở mép dưới của nó, không thì hai thanh chồng lên nhau khi cuộn.
+ *
+ * `z-index` cố tình THẤP hơn `--xp-z-topbar` (100): thanh của trang chui xuống dưới topbar, chứ
+ * không phải ngược lại.
+ *
+ * Nền đục là bắt buộc — thiếu nó thì chữ trong form trôi xuyên qua tiêu đề khi cuộn.
+ */
+.headerBar {
+  position: sticky;
+  z-index: 5;
+  top: var(--xp-shell-topbar-height);
+  padding-top: var(--xp-space-sm);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  margin-top: calc(var(--xp-space-sm) * -1);
+  background: var(--xp-color-bg-layout);
+}
+
+/* Nhãn trạng thái đi CÙNG tên gian hàng: câu trả lời cho "shop tôi đang ở đâu" nằm ngay tiêu đề. */
+.titleRow {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+.shopName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * "Chưa lưu" đứng ngay cạnh nút Lưu vừa sáng lên — nút đổi trạng thái là tín hiệu, còn dòng này
+ * là lời giải thích. Chỉ hiện khi form thật sự có thay đổi, nên nó không bao giờ là chữ trang trí.
+ */
+.dirtyHint {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.dirtyDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.alert {
+  margin-bottom: var(--xp-space-md);
+}
+
+.fieldset {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+/*
+ * Cột trái = thông tin CÔNG KHAI, cột phải = thông tin NỘI BỘ (chủ gian hàng).
+ *
+ * `grid-template-areas` chứ không phải hai thẻ `div` lồng: nhờ vậy thứ tự trong DOM là thứ tự
+ * ĐỌC trên mobile (giới thiệu → chủ gian hàng → địa chỉ → tài khoản) mà desktop vẫn hai cột,
+ * không cần render hai cây khác nhau theo bề rộng.
+ */
+.grid {
+  display: grid;
+  min-width: 0;
+  align-items: start;
+  grid-template-areas:
+    'display owner'
+    'address owner'
+    'bank owner';
+  grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+  gap: var(--xp-space-md);
+}
+
+.displayCard {
+  grid-area: display;
+}
+
+.ownerCard {
+  grid-area: owner;
+}
+
+.addressCard {
+  grid-area: address;
+}
+
+.bankCard {
+  grid-area: bank;
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: var(--xp-space-lg);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-card);
+}
+
+.cardHeader {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  margin-bottom: var(--xp-space-md);
+  gap: var(--xp-space-sm);
+}
+
+.cardIcon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary-active);
+  font-size: 17px;
+  place-items: center;
+}
+
+.cardTitle {
+  min-width: 0;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-bold);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.cardHint {
+  margin: calc(var(--xp-space-md) * -1 + 2px) 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body);
+}
+
+/* Hai ô cùng hàng trên desktop, xuống dòng khi cột hẹp — dùng cho cả địa chỉ lẫn tài khoản. */
+.pairRow,
+.imageRow {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--xp-space-md);
+}
+
+.inputIcon {
+  color: var(--xp-color-text-tertiary);
+}
+
+.helpLink {
+  color: var(--xp-color-link);
+  white-space: nowrap;
+}
+
+/*
+ * Ghi chú "chỉ đội ngũ XePrime đọc" — nằm NGAY DƯỚI ba ô nó nói về, không phải cuối trang, vì
+ * đó là lúc người dùng đang phân vân có nên gõ số điện thoại thật vào hay không.
+ */
+.privacy {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px var(--xp-space-md);
+  border: 1px solid var(--xp-gold-soft);
+  border-radius: var(--xp-border-radius);
+  margin: var(--xp-space-xs) 0 0;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm);
+  line-height: 1.6;
+}
+
+.privacyIcon {
+  margin-top: 2px;
+  color: var(--xp-color-primary);
+  font-size: 16px;
+}
+
+.privacyTitle {
+  display: block;
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.privacyBody {
+  display: block;
+}
+
+@media (max-width: 1180px) {
+  .grid {
+    grid-template-areas:
+      'display'
+      'owner'
+      'address'
+      'bank';
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  /*
+   * Mobile: thôi dính. Ở bề ngang này tiêu đề + nhãn + các nút xuống thành ba dòng, và một thanh
+   * dính cao chừng ấy ăn mất phần màn hình vốn đã ít — người dùng cuộn để ĐỌC form, không phải
+   * để ngắm tiêu đề.
+   */
+  .headerBar {
+    position: static;
+    padding-top: 0;
+    border-bottom: 0;
+    margin-top: 0;
+  }
+
+  .card {
+    padding: var(--xp-space-md);
+  }
+
+  .pairRow,
+  .imageRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

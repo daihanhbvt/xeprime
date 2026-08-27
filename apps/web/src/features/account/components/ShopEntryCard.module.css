@@ -1,0 +1,74 @@
+.card {
+  margin-bottom: var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: linear-gradient(
+    100deg,
+    var(--xp-color-primary-light) 0%,
+    var(--xp-color-bg-container) 62%
+  );
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-md);
+  padding: 18px 20px;
+}
+
+.badge {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-primary-active);
+  font-size: 20px;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-bold);
+  /* Tên gian hàng do người dùng đặt — dài bao nhiêu cũng không được đẩy nút ra khỏi thẻ. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.body {
+  margin: 2px 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.5;
+}
+
+.action {
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .inner {
+    flex-wrap: wrap;
+    padding: 16px;
+  }
+
+  .text {
+    /* Giữ chữ cạnh biểu tượng, đẩy nút xuống dòng riêng cho đủ bề ngang chạm. */
+    flex-basis: 0;
+  }
+
+  .action {
+    flex-basis: 100%;
+  }
+
+  .action > :global(.ant-btn) {
+    width: 100%;
+  }
+}

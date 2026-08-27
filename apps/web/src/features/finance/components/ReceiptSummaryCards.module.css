@@ -1,0 +1,11 @@
+.grid {
+  display: grid;
+  /* Bốn thẻ trên PC, hai trên tablet, một trên điện thoại — không cần media query nào. */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--xp-space-md);
+  margin-bottom: var(--xp-space-md);
+}
+
+.error {
+  margin-bottom: var(--xp-space-md);
+}

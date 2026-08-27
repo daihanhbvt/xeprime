@@ -1,39 +1,30 @@
-import type { PaginationMeta } from '@xeprime/types';
-import { apiGet, apiPost, apiRequest, type QueryParams } from '@/services/api-client';
+import { APPROVAL_STATUS } from '@xeprime/types';
+import { DEFAULT_PAGE_SIZE, pickFilter } from '@/constants/filters';
+import {
+  apiGet,
+  apiPost,
+  fetchPage,
+  type Paged,
+  type QueryParams,
+} from '@/services/api-client';
 import type { ApprovalDetail, ApprovalFilters, ApprovalTask } from './types';
 
-export const APPROVALS_DEFAULT_LIMIT = 20;
+export const APPROVALS_DEFAULT_LIMIT = DEFAULT_PAGE_SIZE;
 
-export interface ApprovalListResult {
-  items: ApprovalTask[];
-  meta: PaginationMeta;
-}
+export type ApprovalListResult = Paged<ApprovalTask>;
 
 export function filtersToParams(filters: ApprovalFilters): QueryParams {
-  const status = filters.status ?? 'pending';
   return {
-    // 'all' = xem mọi trạng thái → bỏ tham số (BE chỉ nhận giá trị status hợp lệ).
-    status: status === 'all' ? null : status,
+    // Mặc định chỉ xem hàng đợi CHỜ DUYỆT — đó là việc phải làm, không phải toàn bộ lịch sử.
+    status: pickFilter(filters.status ?? APPROVAL_STATUS.PENDING),
     targetType: filters.targetType ?? null,
     page: filters.page ?? 1,
     limit: filters.limit ?? APPROVALS_DEFAULT_LIMIT,
   };
 }
 
-export async function fetchApprovals(filters: ApprovalFilters): Promise<ApprovalListResult> {
-  const res = await apiRequest<ApprovalTask[]>('/platform/approvals', {
-    query: filtersToParams(filters),
-  });
-  return {
-    items: res.data,
-    meta: (res.meta as PaginationMeta | undefined) ?? {
-      page: 1,
-      limit: APPROVALS_DEFAULT_LIMIT,
-      total: res.data.length,
-      hasNext: false,
-    },
-  };
-}
+export const fetchApprovals = (filters: ApprovalFilters): Promise<ApprovalListResult> =>
+  fetchPage<ApprovalTask>('/platform/approvals', filtersToParams(filters), APPROVALS_DEFAULT_LIMIT);
 
 export const fetchApproval = (id: string): Promise<ApprovalDetail> =>
   apiGet<ApprovalDetail>(`/platform/approvals/${id}`);

@@ -1,0 +1,26 @@
+.page {
+  /* Cùng trần bề rộng với các trang /manage khác (chi tiết đơn, chính sách thuê) —
+   * không đặt số mới, và mọi con là `min-width: 0` để không gì đẩy thân cuộn ngang. */
+  width: 100%;
+  max-width: var(--xp-shell-form-max-width);
+  /* Căn giữa như `/manage/bookings/[id]` và `/manage/shop/policies` — `max-width` một mình
+   * chỉ cắt bề rộng, không đẩy khối vào giữa, nên trang dính mép trái ở màn rộng. */
+  margin-inline: auto;
+  min-width: 0;
+}
+
+.page > * {
+  min-width: 0;
+}
+
+.hint {
+  margin: calc(-1 * var(--xp-space-sm)) 0 var(--xp-space-md);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.state {
+  display: block;
+  margin: var(--xp-space-xl) auto;
+}

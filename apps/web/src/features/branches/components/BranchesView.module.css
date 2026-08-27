@@ -1,0 +1,79 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.alert {
+  margin-bottom: var(--xp-space-sm);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.search {
+  max-width: 320px;
+  flex: 1 1 220px;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.name {
+  font-weight: 600;
+}
+
+.code {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+/* Thẻ mobile: thông tin chính đọc được mà không phải cuộn ngang (DataTable đổi sang thẻ ở ≤640). */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-sm);
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search {
+    max-width: 100%;
+  }
+}

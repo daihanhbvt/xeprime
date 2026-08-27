@@ -24,7 +24,25 @@ export interface VehicleFilters {
   serviceType?: string;
   operationStatus?: string;
   publicStatus?: string;
+  /** Chi nhánh giữ xe — ghép từ bộ chọn ở thanh trên, không phải một ô lọc riêng trên trang. */
+  branchId?: string;
   sort?: VehicleSort;
   page?: number;
   limit?: number;
 }
+
+export type VehicleSource = Schemas['VehicleSourceDto'];
+export type VehicleSourceDetail = Schemas['VehicleSourceDetailDto'];
+export type VehicleSourceContractFile = Schemas['VehicleSourceContractFileDto'];
+export type SaveVehicleSourceInput = Schemas['SaveVehicleSourceDto'];
+export type SourceContractPresign = Schemas['SourceContractPresignDto'];
+export type SourceContractDownload = Schemas['SourceContractDownloadDto'];
+
+export type VehicleStats = Schemas['VehicleStatsDto'];
+export type FleetSummary = Schemas['FleetSummaryDto'];
+export type Vehicle360Summary = Schemas['Vehicle360SummaryDto'];
+
+/** Việc cần làm + KM hiện tại của một xe (Wave 8) — server tính, FE chỉ hiển thị. */
+export type VehicleAlertGroup = Schemas['VehicleAlertsDto'];
+export type VehicleAlertItem = Schemas['VehicleAlertDto'];
+export type VehicleBookingBrief = Schemas['VehicleBookingBriefDto'];

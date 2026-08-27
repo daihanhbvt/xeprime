@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { API_ERROR_CODE, type ApiErrorCode } from '@xeprime/types';
 import type { Response } from 'express';
+import { NO_STORE_CACHE_CONTROL } from '../http-cache';
 
 /** Hình dạng tối thiểu của một lỗi Prisma đã biết. */
 interface PrismaKnownError {
@@ -48,6 +49,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const res = host.switchToHttp().getResponse<Response>();
+    // Response LỖI không bao giờ được cache. `@PublicCache` đã chỉ set header khi handler thành
+    // công, nhưng dòng này là bảo hiểm cho MỌI đường set header khác (hiện tại và tương lai):
+    // thiếu nó, một cú 500 thoáng qua mang `s-maxage` sẽ được CDN giữ làm bản "tốt" suốt TTL.
+    res.setHeader('Cache-Control', NO_STORE_CACHE_CONTROL);
     const { status, code, message, details } = this.translate(exception);
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
@@ -145,13 +150,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
 }
 
 /**
- * `$queryRaw` không bọc lỗi thành PrismaClientKnownRequestError — mã Postgres nằm thẳng
- * trên object lỗi. OccupancyService ghi bằng raw SQL nên nhánh này mới là nhánh chạy thật.
+ * Nhận diện vi phạm exclusion constraint (23P01) — cơ chế chống trùng lịch (ADR 0006).
+ *
+ * Ba đường lỗi phải bắt hết:
+ *  - `$queryRaw`: mã Postgres nằm thẳng trên `code`/`meta.code`.
+ *  - Prisma ORM `.create()` (OccupancyService.reserve dùng đường này): Prisma KHÔNG mô hình hoá
+ *    exclusion constraint nên bọc thành Unknown error — mã `23P01` chỉ còn trong `message`.
  */
 function isRawExclusionViolation(exception: unknown): boolean {
   if (typeof exception !== 'object' || exception === null) return false;
-  const e = exception as { code?: unknown; meta?: { code?: unknown } };
-  return e.code === '23P01' || e.meta?.code === '23P01';
+  const e = exception as { code?: unknown; meta?: { code?: unknown }; message?: unknown };
+  if (e.code === '23P01' || e.meta?.code === '23P01') return true;
+  return typeof e.message === 'string' && e.message.includes('23P01');
 }
 
 function defaultCodeForStatus(status: number): ApiErrorCode {

@@ -1,0 +1,42 @@
+.sectionTitle {
+  margin: 20px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--xp-color-text-tertiary);
+}
+
+.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.debt {
+  font-weight: 600;
+  color: var(--xp-color-error);
+}
+
+.note {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--xp-gold-wash);
+  font-size: 13.5px;
+  color: var(--xp-color-text-secondary);
+  white-space: pre-wrap;
+}
+
+.footer {
+  margin-top: 20px;
+  font-size: 12.5px;
+  color: var(--xp-color-text-tertiary);
+}

@@ -1,0 +1,63 @@
+.form {
+  --dialog-form-label-width: 148px;
+}
+
+.label-sm {
+  --dialog-form-label-width: 112px;
+}
+
+.label-md {
+  --dialog-form-label-width: 148px;
+}
+
+.label-lg {
+  --dialog-form-label-width: 184px;
+}
+
+/* Cố định điểm bắt đầu của control; nhãn dài chỉ tăng chiều cao chính hàng đó. */
+.form :global(.ant-form-item-row) {
+  flex-flow: row nowrap;
+  align-items: flex-start;
+}
+
+.form :global(.ant-form-item-label) {
+  flex: 0 0 var(--dialog-form-label-width);
+  max-width: var(--dialog-form-label-width);
+  padding: 0 var(--xp-space-md) 0 0;
+  text-align: left;
+  white-space: normal;
+}
+
+.form :global(.ant-form-item-label > label) {
+  width: 100%;
+  min-height: 32px;
+  height: auto;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.form :global(.ant-form-item-control) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .form :global(.ant-form-item-row) {
+    flex-direction: column;
+  }
+
+  .form :global(.ant-form-item-label) {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    padding: 0 0 var(--xp-space-xs);
+  }
+
+  .form :global(.ant-form-item-label > label) {
+    min-height: auto;
+  }
+
+  .form :global(.ant-form-item-control) {
+    width: 100%;
+  }
+}

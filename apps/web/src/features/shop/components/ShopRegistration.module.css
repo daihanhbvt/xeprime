@@ -1,29 +1,190 @@
+/*
+ * Thẻ đăng ký gian hàng — hai khoang: giới thiệu (trái) + form (phải), theo mẫu UI onboarding.
+ *
+ * Điểm gãy 900px chọn theo NỘI DUNG chứ không theo breakpoint thiết bị: dưới mức đó, hai cột ô
+ * nhập cạnh nhau còn ~200px mỗi cột và nhãn "Số điện thoại" bắt đầu xuống dòng.
+ */
 .card {
+  display: grid;
+  grid-template-columns: 1fr;
   width: 100%;
-  max-width: 480px;
+  overflow: hidden;
+  border: 1px solid var(--xp-color-border);
+  border-radius: 16px;
+  background: var(--xp-color-bg-container);
+  box-shadow: var(--xp-shadow-raised);
 }
 
-.head {
+@media (min-width: 900px) {
+  .card {
+    grid-template-columns: minmax(260px, 320px) 1fr;
+  }
+}
+
+/* ─── Khoang giới thiệu ──────────────────────────────────────────────────── */
+
+.intro {
   display: flex;
-  gap: 14px;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--xp-space-xl) var(--xp-space-lg);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+  background: var(--xp-color-bg-container);
+  text-align: center;
+}
+
+@media (min-width: 900px) {
+  .intro {
+    border-right: 1px solid var(--xp-color-border-subtle);
+    border-bottom: none;
+  }
+}
+
+.introIcon {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-primary);
+  font-size: 30px;
+}
+
+.introTitle {
+  margin: var(--xp-space-md) 0 var(--xp-space-sm);
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+.introText {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: 1.6;
+}
+
+.tips {
+  margin-top: var(--xp-space-lg);
+  width: 100%;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-gold-soft);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-primary-light);
+  text-align: left;
+}
+
+.tipsTitle {
+  display: flex;
+  margin: 0 0 var(--xp-space-sm);
+  align-items: center;
+  gap: 6px;
+  color: var(--xp-color-primary-active);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.tipsList {
+  display: flex;
+  margin: 0;
+  flex-direction: column;
+  padding: 0;
+  gap: var(--xp-space-sm);
+  list-style: none;
+}
+
+.tipsList li {
+  display: flex;
   align-items: flex-start;
-  margin-bottom: 20px;
+  gap: 6px;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.6;
 }
 
-.icon {
-  font-size: 32px;
-  color: var(--xp-gold, #d6a02c);
+.tipsList li :global(.anticon) {
+  margin-top: 3px;
   flex-shrink: 0;
+  color: var(--xp-color-primary);
 }
 
-.title {
-  margin: 0 0 4px !important;
+/* ─── Khoang form ────────────────────────────────────────────────────────── */
+
+.form {
+  padding: var(--xp-space-lg);
+}
+
+@media (min-width: 900px) {
+  .form {
+    padding: var(--xp-space-xl);
+  }
 }
 
 .alert {
-  margin-bottom: 16px;
+  margin-bottom: var(--xp-space-md);
 }
 
-.submit {
-  margin-top: 8px;
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 0 var(--xp-space-lg);
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/*
+ * Chiều cao và bo góc ô nhập KHÔNG ghi đè ở đây — `<Form size="large">` đã lấy đúng
+ * `controlHeightLG`/`borderRadius` từ theme. Hai điều chỉnh còn lại là thứ theme không có:
+ * icon đứng trước ô nhập phải nhạt như placeholder, và nhãn đậm hơn mặc định (theo mẫu).
+ *
+ * Nhân đôi class để lên (0,2,0): sheet của AntD tiêm vào `<head>` LÚC CHẠY, tức là sau sheet
+ * CSS Module — hoà specificity thì AntD thắng (bẫy đã ghi ở field.module.css).
+ */
+.form.form :global(.ant-input-prefix .anticon) {
+  color: var(--xp-color-text-tertiary);
+}
+
+.form.form :global(.ant-form-item-label > label) {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.privacy {
+  display: flex;
+  margin: var(--xp-space-sm) 0 var(--xp-space-lg);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 12px var(--xp-space-md);
+  border: 1px solid var(--xp-gold-soft);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-primary-light);
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1.6;
+}
+
+.privacyIcon {
+  color: var(--xp-color-primary);
+  font-size: 16px;
+}
+
+.privacyTitle {
+  color: var(--xp-color-primary-active);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Nút chốt của cả trang — cao hơn `controlHeightLG` một bậc để nó là điểm nhấn, đúng mẫu. */
+.submit.submit {
+  height: 48px;
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
 }

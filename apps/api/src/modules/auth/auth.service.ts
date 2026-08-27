@@ -5,15 +5,16 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { newId } from '@xeprime/prisma';
+import { newId, Prisma } from '@xeprime/prisma';
 import { API_ERROR_CODE, MEMBERSHIP_STATUS, USER_STATUS, type Permission } from '@xeprime/types';
 import bcrypt from 'bcryptjs';
 import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
+import { normalizePhone, toLocalPhone } from '../../common/phone';
 import { EmailService } from './email.service';
-import { IdTokenVerifier } from './token-verifier';
 import type { MeDto } from './dto/auth.dto';
+import type { VerifiedIdentity } from './social/identity';
 
 const BCRYPT_ROUNDS = 12;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 giờ
@@ -22,84 +23,101 @@ const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 giờ
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly verifier: IdTokenVerifier,
     private readonly rbac: RbacService,
     private readonly email: EmailService,
     private readonly config: ConfigService,
   ) {}
 
-  // ---- Đăng ký / đăng nhập email-mật khẩu -----------------------------------
+  // ---- Đăng ký / đăng nhập bằng định danh + mật khẩu ------------------------
 
   /**
-   * Đăng ký bằng email + mật khẩu. Email lưu chữ thường để tra cứu nhất quán.
+   * Đăng ký bằng SĐT + mật khẩu. SĐT được chuẩn hoá về dạng `84xxxxxxxxx` trước khi lưu.
    * Tạo user + identity(provider='password') trong một transaction.
    */
   async register(input: {
-    email: string;
+    phone: string;
     password: string;
     displayName: string;
   }): Promise<{ userId: string }> {
-    const email = input.email.trim().toLowerCase();
+    const phone = normalizePhone(input.phone);
 
     const existing = await this.prisma.user.findFirst({
-      where: { email, deletedAt: null },
+      where: { phone, deletedAt: null },
       select: { id: true },
     });
     if (existing) {
       throw new ConflictException({
-        code: API_ERROR_CODE.EMAIL_TAKEN,
-        message: 'Email này đã được đăng ký',
+        code: API_ERROR_CODE.PHONE_TAKEN,
+        message: 'Số điện thoại này đã được đăng ký',
       });
     }
 
     const passwordHash = await bcrypt.hash(input.password, BCRYPT_ROUNDS);
     const userId = newId();
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.user.create({
-        data: {
-          id: userId,
-          email,
-          displayName: input.displayName.trim(),
-          passwordHash,
-          status: USER_STATUS.ACTIVE,
-          lastLoginAt: new Date(),
-        },
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.create({
+          data: {
+            id: userId,
+            phone,
+            displayName: input.displayName.trim(),
+            passwordHash,
+            status: USER_STATUS.ACTIVE,
+            lastLoginAt: new Date(),
+          },
+        });
+        await tx.userIdentity.create({
+          data: {
+            id: newId(),
+            userId,
+            provider: 'password',
+            providerUserId: phone,
+            providerPhone: phone,
+          },
+        });
       });
-      await tx.userIdentity.create({
-        data: {
-          id: newId(),
-          userId,
-          provider: 'password',
-          providerUserId: email,
-          providerEmail: email,
-        },
-      });
-    });
+    } catch (err) {
+      // Hai request cùng SĐT có thể cùng vượt qua pre-check. Unique constraint là chốt thật;
+      // đổi P2002 thành lỗi nghiệp vụ ổn định thay vì để lộ lỗi DB 500.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException({
+          code: API_ERROR_CODE.PHONE_TAKEN,
+          message: 'Số điện thoại này đã được đăng ký',
+        });
+      }
+      throw err;
+    }
 
     return { userId };
   }
 
   /**
-   * Đăng nhập email + mật khẩu.
+   * Đăng nhập bằng **email HOẶC số điện thoại** + mật khẩu. Có `@` → tra email (lowercase);
+   * ngược lại chuẩn hoá SĐT rồi tra `users.phone` (@unique, lưu dạng `84...`).
    *
-   * Lỗi luôn chung chung (INVALID_CREDENTIALS) dù sai email hay sai mật khẩu — không tiết lộ
-   * email nào tồn tại. So khớp bcrypt kể cả khi không có user (giảm timing attack).
+   * Lỗi luôn chung chung (INVALID_CREDENTIALS) dù sai định danh hay sai mật khẩu — không tiết lộ
+   * tài khoản nào tồn tại. So khớp bcrypt kể cả khi không có user (giảm timing attack). Tài khoản
+   * tạo bằng SĐT/OTP có `passwordHash` null → chưa đặt mật khẩu thì không đăng nhập kiểu này được.
    */
-  async loginWithPassword(rawEmail: string, password: string): Promise<{ userId: string }> {
-    const email = rawEmail.trim().toLowerCase();
+  async loginWithPassword(rawIdentifier: string, password: string): Promise<{ userId: string }> {
+    const identifier = rawIdentifier.trim();
+    const where = identifier.includes('@')
+      ? { email: identifier.toLowerCase(), deletedAt: null }
+      : { phone: normalizePhone(identifier), deletedAt: null };
     const user = await this.prisma.user.findFirst({
-      where: { email, deletedAt: null },
+      where,
       select: { id: true, passwordHash: true, status: true },
     });
 
-    const hash = user?.passwordHash ?? '$2a$12$0000000000000000000000000000000000000000000000000000';
+    const hash =
+      user?.passwordHash ?? '$2a$12$0000000000000000000000000000000000000000000000000000';
     const ok = await bcrypt.compare(password, hash);
 
     if (!user || !user.passwordHash || !ok) {
       throw new UnauthorizedException({
         code: API_ERROR_CODE.INVALID_CREDENTIALS,
-        message: 'Email hoặc mật khẩu không đúng',
+        message: 'Email/số điện thoại hoặc mật khẩu không đúng',
       });
     }
     if (user.status !== USER_STATUS.ACTIVE) {
@@ -111,6 +129,26 @@ export class AuthService {
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     return { userId: user.id };
+  }
+
+  /**
+   * Đặt mật khẩu cho tài khoản **chưa có mật khẩu** (tạo bằng SĐT/OTP). Cần đã đăng nhập.
+   * Nếu đã có mật khẩu → `CONFLICT` (đổi mật khẩu là luồng khác, cần mật khẩu cũ) — endpoint này
+   * chỉ để bổ sung mật khẩu lần đầu, không phải cửa hậu ghi đè.
+   */
+  async setPassword(userId: string, newPassword: string): Promise<void> {
+    const user = await this.prisma.user.findFirstOrThrow({
+      where: { id: userId, deletedAt: null },
+      select: { passwordHash: true },
+    });
+    if (user.passwordHash) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.CONFLICT,
+        message: 'Tài khoản đã có mật khẩu',
+      });
+    }
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
   }
 
   // ---- Quên / đặt lại mật khẩu ----------------------------------------------
@@ -182,14 +220,18 @@ export class AuthService {
   }
 
   /**
-   * Đổi ID token của provider lấy user trong DB — ADR 0002 bước 2.
+   * Tìm hoặc tạo user từ một danh tính ĐÃ được nhà cung cấp xác minh — ADR 0002 bước 2.
    *
    * Idempotent: đăng nhập lại bằng cùng provider không tạo user mới. Khoá tra cứu là
    * `(provider, providerUserId)` chứ không phải email — email đổi được, và tin email
    * để nhận diện là cách hai tài khoản khác nhau bị gộp làm một.
+   *
+   * Nhận `VerifiedIdentity` chứ không nhận token (ADR 0019): việc xác minh là chuyện riêng của
+   * từng provider và đã xong trước khi vào đây. Nhờ vậy hàm này không biết Google, Facebook hay
+   * Apple tồn tại — thêm provider mới không chạm một dòng nào ở đây.
    */
-  async upsertUserFromIdToken(idToken: string): Promise<{ userId: string }> {
-    const identity = await this.verifier.verify(idToken);
+  async upsertUserFromIdentity(identity: VerifiedIdentity): Promise<{ userId: string }> {
+    const providerEmail = identity.email?.trim().toLowerCase() ?? null;
 
     const existing = await this.prisma.userIdentity.findUnique({
       where: {
@@ -198,10 +240,16 @@ export class AuthService {
           providerUserId: identity.providerUserId,
         },
       },
-      select: { userId: true },
+      select: { userId: true, user: { select: { status: true } } },
     });
 
     if (existing) {
+      if (existing.user.status !== USER_STATUS.ACTIVE) {
+        throw new UnauthorizedException({
+          code: API_ERROR_CODE.ACCOUNT_LOCKED,
+          message: 'Tài khoản đã bị khoá',
+        });
+      }
       await this.prisma.user.update({
         where: { id: existing.userId },
         data: { lastLoginAt: new Date() },
@@ -209,14 +257,30 @@ export class AuthService {
       return { userId: existing.userId };
     }
 
-    // Chưa có identity: nối vào user cùng email nếu có, để một người đăng nhập bằng
-    // Google rồi Facebook không thành hai tài khoản.
-    const linkedUser = identity.email
+    // Email từ provider không đáng tin như nhau. Chỉ provider đã xác minh email mới được nối tự
+    // động vào tài khoản XePrime có sẵn; nếu không, kẻ khác có thể tự khai cùng email để chiếm tài khoản.
+    const emailUser = providerEmail
       ? await this.prisma.user.findFirst({
-          where: { email: identity.email, deletedAt: null },
-          select: { id: true },
+          where: { email: providerEmail, deletedAt: null },
+          select: { id: true, status: true },
         })
       : null;
+
+    if (emailUser && !identity.emailVerified) {
+      throw new ConflictException({
+        code: API_ERROR_CODE.CONFLICT,
+        message:
+          'Email này đã có tài khoản XePrime. Hãy đăng nhập bằng phương thức đã dùng trước đó.',
+      });
+    }
+
+    const linkedUser = identity.emailVerified ? emailUser : null;
+    if (linkedUser && linkedUser.status !== USER_STATUS.ACTIVE) {
+      throw new UnauthorizedException({
+        code: API_ERROR_CODE.ACCOUNT_LOCKED,
+        message: 'Tài khoản đã bị khoá',
+      });
+    }
 
     const userId = linkedUser?.id ?? newId();
 
@@ -225,10 +289,10 @@ export class AuthService {
         await tx.user.create({
           data: {
             id: userId,
-            email: identity.email,
+            email: providerEmail,
             emailVerifiedAt: identity.emailVerified ? new Date() : null,
             phone: identity.phone,
-            displayName: identity.displayName ?? identity.email ?? 'Người dùng mới',
+            displayName: identity.displayName ?? providerEmail ?? 'Người dùng mới',
             avatarUrl: identity.avatarUrl,
             status: USER_STATUS.ACTIVE,
             lastLoginAt: new Date(),
@@ -244,13 +308,88 @@ export class AuthService {
           userId,
           provider: identity.provider,
           providerUserId: identity.providerUserId,
-          providerEmail: identity.email,
+          providerEmail,
           providerPhone: identity.phone,
         },
       });
     });
 
     return { userId };
+  }
+
+  /**
+   * Passwordless: tìm hoặc tạo user theo SĐT đã xác thực (OTP) — dùng cho đăng nhập bằng SĐT và
+   * cho luồng đặt xe của khách vãng lai. KHÔNG tự kiểm OTP: người gọi phải chứng minh sở hữu SĐT
+   * trước (verifyOtp cho login, assertPhoneVerifiedForBooking cho đặt xe).
+   *
+   * Idempotent theo `users.phone` (@unique). Chống đua khi nhiều request cùng SĐT vào cùng lúc:
+   * bắt P2002 rồi đọc lại. User tạo bằng SĐT có `passwordHash = null` (như tài khoản Google/FB) —
+   * sau này người dùng có thể tự đặt mật khẩu / liên kết Google mà không chặn luồng đặt xe.
+   */
+  async resolveOrCreateUserByPhone(
+    rawPhone: string,
+    displayNameFallback?: string | null,
+  ): Promise<{ userId: string; created: boolean }> {
+    const phone = normalizePhone(rawPhone);
+    const now = new Date();
+
+    const existing = await this.prisma.user.findFirst({
+      where: { phone, deletedAt: null },
+      select: { id: true, status: true, phoneVerifiedAt: true },
+    });
+    if (existing) {
+      if (existing.status !== USER_STATUS.ACTIVE) {
+        throw new UnauthorizedException({
+          code: API_ERROR_CODE.ACCOUNT_LOCKED,
+          message: 'Tài khoản đã bị khoá',
+        });
+      }
+      await this.prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          lastLoginAt: now,
+          ...(existing.phoneVerifiedAt ? {} : { phoneVerifiedAt: now }),
+        },
+      });
+      return { userId: existing.id, created: false };
+    }
+
+    const userId = newId();
+    const displayName = (displayNameFallback ?? '').trim() || defaultPhoneName(phone);
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.user.create({
+          data: {
+            id: userId,
+            phone,
+            phoneVerifiedAt: now,
+            displayName,
+            status: USER_STATUS.ACTIVE,
+            lastLoginAt: now,
+          },
+        });
+        await tx.userIdentity.create({
+          data: {
+            id: newId(),
+            userId,
+            provider: 'phone_otp',
+            providerUserId: phone,
+            providerPhone: phone,
+          },
+        });
+      });
+      return { userId, created: true };
+    } catch (err) {
+      // Đua unique(phone): một request khác vừa tạo user cùng SĐT — đọc lại và dùng chung.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        const raced = await this.prisma.user.findFirst({
+          where: { phone, deletedAt: null },
+          select: { id: true },
+        });
+        if (raced) return { userId: raced.id, created: false };
+      }
+      throw err;
+    }
   }
 
   async me(userId: string): Promise<MeDto> {
@@ -261,7 +400,9 @@ export class AuthService {
         displayName: true,
         email: true,
         avatarUrl: true,
+        phone: true,
         phoneVerifiedAt: true,
+        passwordHash: true,
       },
     });
 
@@ -301,7 +442,12 @@ export class AuthService {
       displayName: user.displayName,
       email: user.email,
       avatarUrl: user.avatarUrl,
+      // Dạng nội địa `0xxxxxxxxx` — đây là số của CHÍNH người đang đăng nhập, dùng để điền sẵn ô
+      // liên hệ khi đặt xe. DB lưu `84xxxxxxxxx`; trả nguyên dạng đó thì người dùng nhìn vào
+      // tưởng số lạ.
+      phone: user.phone ? toLocalPhone(user.phone) : null,
       phoneVerified: user.phoneVerifiedAt !== null,
+      hasPassword: user.passwordHash !== null,
       tenant: membership
         ? {
             id: membership.tenant.id,
@@ -315,4 +461,10 @@ export class AuthService {
       permissions: [...new Set([...tenantPermissions, ...platformPermissions])],
     };
   }
+}
+
+/** Tên hiển thị mặc định cho tài khoản tạo bằng SĐT (chưa nhập tên): "Khách 4567". */
+function defaultPhoneName(normalizedPhone: string): string {
+  const last4 = normalizedPhone.slice(-4);
+  return `Khách ${last4}`;
 }

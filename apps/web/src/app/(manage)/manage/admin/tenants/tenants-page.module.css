@@ -1,0 +1,21 @@
+.state {
+  display: block;
+  margin: 64px auto;
+  text-align: center;
+}
+
+.search {
+  width: 260px;
+  max-width: 100%;
+}
+
+.statusSelect {
+  width: 190px;
+}
+
+@media (max-width: 560px) {
+  .search,
+  .statusSelect {
+    width: 100%;
+  }
+}

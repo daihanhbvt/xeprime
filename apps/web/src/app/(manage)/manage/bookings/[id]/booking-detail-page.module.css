@@ -1,0 +1,20 @@
+/**
+ * Vỏ TRANG chi tiết đơn thuê — nội dung thật ở `BookingDetailContent` (dùng chung với modal
+ * trên lịch), ở đây chỉ còn bề rộng đọc và căn giữa của route.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+  /*
+   * Bề mặt ĐỌC, không phải bảng dữ liệu: kéo hết 1920px thì nhãn và giá trị của cùng một dòng
+   * cách nhau cả gang tay và mắt mất dấu khi rà ngang. Dùng chung mốc với các workspace form
+   * khác trong shell để chi tiết đơn không lệch bề ngang so với màn sửa xe.
+   */
+  max-width: var(--xp-shell-form-max-width);
+  /* Cùng cách canh với `VehicleEditWorkspace` — hai workspace không lệch nhau khi chuyển màn. */
+  margin-inline: auto;
+  width: 100%;
+}

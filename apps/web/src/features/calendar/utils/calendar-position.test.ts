@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignLanes, computeEventPosition } from './calendar-position.util';
+import { assignLanes, assignPixelLanes, computeEventPosition } from './calendar-position.util';
 import type { CalendarRange } from '../types/calendar.types';
 
 /** 01/07 → 08/07 UTC, 7 ngày. */
@@ -104,5 +104,46 @@ describe('assignLanes', () => {
       { startAt: '2026-07-03T00:00:00.000Z', endAt: '2026-07-06T00:00:00.000Z' },
     ]);
     expect(lanes.map((l) => l.lane).sort()).toEqual([0, 1, 2]);
+  });
+});
+
+describe('assignPixelLanes — xếp tầng theo vị trí PIXEL đã nới', () => {
+  it('hai thanh rời nhau trên màn hình cùng tầng', () => {
+    expect(
+      assignPixelLanes([
+        { left: 0, width: 46 },
+        { left: 60, width: 46 },
+      ]),
+    ).toEqual([0, 0]);
+  });
+
+  it('hai thanh KHÔNG chồng giờ nhưng chồng chỗ (đã nới sàn bề rộng) phải tách tầng', () => {
+    // Đơn 2h lúc 8:00 và đơn 2h lúc 11:00 cùng ngày: trên lưới 64px/ngày cả hai bị nới lên
+    // 46px và đè nhau — xếp theo giờ sẽ cho cùng tầng, xếp theo pixel thì không.
+    expect(
+      assignPixelLanes([
+        { left: 20, width: 46 },
+        { left: 28, width: 46 },
+      ]),
+    ).toEqual([0, 1]);
+  });
+
+  it('lane trả về theo ĐÚNG thứ tự mảng vào, kể cả khi vào không theo left tăng dần', () => {
+    expect(
+      assignPixelLanes([
+        { left: 100, width: 46 },
+        { left: 0, width: 46 },
+        { left: 110, width: 46 },
+      ]),
+    ).toEqual([0, 0, 1]);
+  });
+
+  it('chạm mép nhau vẫn cùng tầng', () => {
+    expect(
+      assignPixelLanes([
+        { left: 0, width: 46 },
+        { left: 46, width: 46 },
+      ]),
+    ).toEqual([0, 0]);
   });
 });

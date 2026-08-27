@@ -1,0 +1,23 @@
+/**
+ * Huy hiệu "cần xử lý": nhỏ, một màu, đứng cuối dòng.
+ *
+ * Dùng gold thương hiệu chứ không phải đỏ cảnh báo — đây là việc đang chờ, không phải sự cố.
+ * Chữ trên nền gold lấy `--xp-color-primary-contrast` (đo được 6.60 — đạt AA), giống hệt huy
+ * hiệu vai trò ở thẻ người dùng nên hai chỗ không lệch tông.
+ */
+.badge {
+  flex: none;
+  min-width: 20px;
+  height: 18px;
+  padding-inline: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+  font-size: var(--xp-font-size-overline);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}

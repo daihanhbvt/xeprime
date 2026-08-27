@@ -1,0 +1,30 @@
+.state {
+  display: block;
+  margin: 64px auto;
+  text-align: center;
+}
+
+.search {
+  width: 260px;
+}
+
+.select {
+  width: 180px;
+}
+
+.typeSelect {
+  width: 140px;
+}
+
+.quickRow {
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+@media (max-width: 560px) {
+  .search,
+  .select,
+  .typeSelect {
+    width: 100%;
+  }
+}

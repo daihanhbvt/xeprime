@@ -7,13 +7,24 @@ Quy tắc: ADR ở đây **thắng** mọi tài liệu khác trong `docs/` khi c
 | ADR | Nội dung | Trạng thái |
 | --- | --- | --- |
 | [0001](0001-database-postgresql.md) | Database engine: PostgreSQL 16 thay cho MySQL 8 | Accepted 22/07/2026 |
-| [0002](0002-auth-session-cookie.md) | Session bằng httpOnly cookie do NestJS phát | Accepted 22/07/2026 |
+| [0002](0002-auth-session-cookie.md) | Session bằng httpOnly cookie do NestJS phát | Accepted 22/07/2026 · phần provider bị [0019](0019-backend-led-social-oauth.md) ghi đè |
 | [0003](0003-styling-css-modules.md) | Styling: AntD token + CSS Modules, bỏ styled-components | Accepted 22/07/2026 |
 | [0004](0004-client-state.md) | Giữ Redux Toolkit, filter đẩy ra URL searchParams | Accepted 22/07/2026 |
 | [0005](0005-status-enums.md) | Nguồn chốt duy nhất cho status enum | Accepted 22/07/2026 |
 | [0006](0006-booking-concurrency.md) | Cơ chế chống trùng lịch | Accepted 22/07/2026 |
 | [0007](0007-api-type-contract.md) | Hợp đồng type FE ↔ BE sinh từ OpenAPI | Accepted 22/07/2026 |
 | [0008](0008-public-listings-sync.md) | Quy tắc đồng bộ `public_listings` | Accepted 22/07/2026 |
+| [0009](0009-chat-firestore-projection.md) | Chat: Firestore là projection realtime, PostgreSQL là nguồn sự thật | Accepted 27/07/2026 |
+| [0010](0010-billing-plans-subscriptions.md) | Gói/thuê bao: history append-only, "hết hạn" suy ra, quota tối thiểu | Accepted 31/07/2026 |
+| [0011](0011-long-term-fixed-packages.md) | Thuê dài hạn: gói cố định 1/2/3/6/9/12 THÁNG LỊCH, khách nêu nguyện vọng — gian hàng chốt lịch khi duyệt | Accepted 18/08/2026 |
+| [0012](0012-i18n-shared-url-cookie-locale.md) | Đa ngữ vi/en: MỘT url cho cả hai ngôn ngữ, locale ở cookie `XP_LOCALE` đọc phía server; mã nghiệp vụ không dịch | Accepted 19/08/2026 |
+| [0013](0013-no-online-payment-mvp.md) | **Không làm thanh toán trực tuyến** ở giai đoạn này; module `payments` là ghi sổ thủ công | Accepted 21/08/2026 |
+| [0014](0014-owner-and-shop-single-role.md) | Chủ xe và chủ gian hàng là MỘT vai; năng lực đến từ GÓI, không từ role; nền tảng không đứng giữa quan hệ khách ↔ gian hàng | Accepted 21/08/2026 |
+| [0015](0015-vehicle-slot-billing.md) | Cước theo CHỖ XE, trả trước, kỳ tính bằng THÁNG LỊCH; hết hạn thì gỡ khỏi chợ — **sửa ADR 0010** | Accepted 21/08/2026 |
+| [0016](0016-sepay-bank-reconciliation.md) | SePay đối soát chuyển khoản tự động cho tiền GÓI — **sửa phạm vi ADR 0013** | Accepted 21/08/2026 |
+| [0017](0017-native-bearer-auth.md) | App native xác thực bằng Bearer access token 15 phút + refresh token opaque xoay vòng; web giữ nguyên cookie | Accepted 24/08/2026 |
+| [0018](0018-map-delivery-distance.md) | Bản đồ tính khoảng cách giao xe: số tự động là ƯỚC LƯỢNG (chủ xe vẫn chốt), một chiều theo đường bộ, provider trung lập, không tra được không phải lỗi | Accepted 24/08/2026 |
+| [0019](0019-backend-led-social-oauth.md) | Đăng nhập Google/Facebook do BACKEND chủ trì (authorization code + PKCE chạy ở server, client không cầm token của provider); Firebase rút về đúng vai chat realtime — **ghi đè phần "Firebase là provider" của ADR 0002** | Accepted 26/08/2026 |
 
 ## Khi nào viết ADR mới
 

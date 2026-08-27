@@ -1,0 +1,61 @@
+{
+  "page": {
+    "title": "Trở thành chủ xe",
+    "subtitle": "Tạo gian hàng để đăng và quản lý xe cho thuê. Hồ sơ gian hàng cần được XePrime duyệt trước khi xe của bạn xuất hiện công khai trên marketplace.",
+    "back": "Quay lại marketplace",
+    "homeAriaLabel": "Về trang chủ XePrime"
+  },
+  "guide": {
+    "trigger": "Hướng dẫn",
+    "title": "Mở gian hàng trong 4 bước",
+    "steps": {
+      "create": "Tạo gian hàng: tên, loại hình, tỉnh/thành và liên hệ.",
+      "complete": "Hoàn thiện hồ sơ rồi bấm Gửi duyệt — XePrime chỉ xem hồ sơ sau khi bạn gửi.",
+      "prepare": "Trong lúc chờ duyệt, bạn vẫn thêm xe và chuẩn bị dữ liệu bình thường.",
+      "publish": "Hồ sơ được duyệt: xe lên marketplace và bắt đầu nhận đơn."
+    }
+  },
+  "form": {
+    "title": "Tạo gian hàng",
+    "intro": "Bước này chỉ tạo bản nháp. Tạo xong bạn sẽ được đưa tới hồ sơ gian hàng để điền nốt thông tin và gửi duyệt.",
+    "submit": "Tạo gian hàng",
+    "fields": {
+      "name": {
+        "label": "Tên gian hàng",
+        "placeholder": "VD: Cho thuê xe Bình Minh"
+      },
+      "tenantType": {
+        "label": "Loại hình"
+      },
+      "province": {
+        "label": "Tỉnh/thành",
+        "placeholder": "Chọn tỉnh/thành",
+        "help": "Nơi đặt chi nhánh đầu tiên — khách sẽ tìm thấy xe của bạn ở tỉnh/thành này.",
+        "loading": "Đang tải tỉnh/thành…",
+        "empty": "Chưa có tỉnh/thành nào mở đăng ký — liên hệ hỗ trợ.",
+        "loadError": "Không tải được danh sách tỉnh/thành"
+      },
+      "address": {
+        "label": "Địa chỉ",
+        "placeholder": "Số nhà, đường, phường/xã"
+      },
+      "phone": {
+        "label": "Số điện thoại",
+        "placeholder": "0901234567"
+      },
+      "email": {
+        "label": "Email liên hệ",
+        "placeholder": "lienhe@gianhang.vn"
+      }
+    }
+  },
+  "tips": {
+    "title": "Lưu ý",
+    "accuracy": "Thông tin chính xác giúp tăng tỷ lệ duyệt hồ sơ.",
+    "editable": "Mọi thông tin ở đây đều sửa lại được sau khi tạo gian hàng."
+  },
+  "privacy": {
+    "title": "Bảo mật thông tin",
+    "body": "Thông tin của bạn được bảo mật và chỉ dùng để xác minh gian hàng."
+  }
+}

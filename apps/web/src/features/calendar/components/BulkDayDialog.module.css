@@ -1,0 +1,58 @@
+/**
+ * Hai dialog thao tác hàng loạt mở từ thẻ ngày trên lịch (khoá xe / đặt giá).
+ *
+ * Dùng chung một file vì chúng là một cặp: cùng bố cục, cùng hàng nút, cùng cách trình bày
+ * cảnh báo. Tách đôi chỉ tạo ra hai bản sao trôi dần khỏi nhau.
+ */
+
+/**
+ * Ép bề rộng cho control AntD.
+ *
+ * Một `.fullWidth { width: 100% }` trần KHÔNG đủ: `.ant-input-number` có `width: 90px` mặc định
+ * với cùng độ đặc hiệu (0,1,0), và CSS của AntD được tiêm lúc chạy nên thường nằm SAU file này
+ * — nó thắng. Kết quả là ô "Giá áp cho mọi xe" co lại còn 90px và cắt cụt số tiền.
+ *
+ * Ghép thêm chính class của AntD nâng độ đặc hiệu lên (0,2,0) và thắng dứt điểm, không phụ
+ * thuộc thứ tự tiêm.
+ */
+.fullWidth,
+.fullWidth:global(.ant-input-number),
+.fullWidth:global(.ant-picker),
+.fullWidth:global(.ant-select) {
+  width: 100%;
+}
+
+/* Hai ô cạnh nhau (phần trăm + bước làm tròn) — xuống dòng trên màn hẹp. */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+}
+
+.grow {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.note {
+  margin-bottom: var(--xp-space-md);
+}
+
+.summary {
+  margin-bottom: var(--xp-space-md);
+}
+
+.hint {
+  margin-top: 4px;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+}
+
+/* Bảng xem trước — hàng nút nằm ở FOOTER của modal nên bảng dài bao nhiêu cũng không che nó. */
+.table {
+  margin-bottom: var(--xp-space-md);
+}

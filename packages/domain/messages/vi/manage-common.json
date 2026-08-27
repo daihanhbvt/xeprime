@@ -1,0 +1,85 @@
+{
+  "shell": {
+    "navLabel": "Điều hướng cổng quản lý",
+    "expandMenu": "Mở rộng menu",
+    "collapseMenu": "Thu gọn menu",
+    "expandSection": "Mở nhóm {name}",
+    "collapseSection": "Thu gọn nhóm {name}",
+    "needsAction": "{count, plural, other {# việc cần xử lý}}",
+    "accountMenu": "Menu tài khoản",
+    "profile": "Hồ sơ",
+    "shopSettings": "Cài đặt gian hàng",
+    "back": "Quay lại",
+    "logout": "Đăng xuất"
+  },
+  "permission": {
+    "deniedTitle": "Bạn không có quyền truy cập",
+    "readOnlyTitle": "Bạn chỉ có quyền xem",
+    "deniedBody": "Liên hệ quản trị viên nếu bạn cần quyền cho mục này.",
+    "readOnlyBody": "Bạn xem được dữ liệu nhưng không thực hiện được thay đổi.",
+    "requires": "Cần quyền:",
+    "backHome": "Về trang chủ"
+  },
+  "support": {
+    "title": "Trung tâm hỗ trợ",
+    "subtitle": "Hướng dẫn nhanh và câu hỏi thường gặp khi vận hành gian hàng cho thuê xe trên XePrime.",
+    "quickStart": {
+      "title": "Bắt đầu nhanh",
+      "vehicles": {
+        "title": "Thêm xe cho thuê",
+        "body": "Khai báo thông tin, ảnh và giấy tờ để xe sẵn sàng lên marketplace."
+      },
+      "policies": {
+        "title": "Đặt chính sách thuê",
+        "body": "Cọc, giao nhận, phí quá giờ và ưu đãi dùng chung cho cả gian hàng."
+      },
+      "requests": {
+        "title": "Duyệt yêu cầu đặt xe",
+        "body": "Yêu cầu của khách chờ bạn xác nhận trước khi trở thành đơn thuê."
+      },
+      "calendar": {
+        "title": "Xem lịch thuê",
+        "body": "Toàn bộ xe và khoảng thời gian đã bị chiếm trên cùng một lưới."
+      },
+      "finance": {
+        "title": "Ghi thu chi",
+        "body": "Sổ thu chi và công nợ của gian hàng nằm trong mục Tài chính."
+      },
+      "members": {
+        "title": "Mời nhân viên",
+        "body": "Thêm người dùng và phân quyền theo vai trò trong gian hàng."
+      }
+    },
+    "faq": {
+      "title": "Câu hỏi thường gặp",
+      "publish": {
+        "q": "Vì sao xe của tôi chưa hiện trên marketplace?",
+        "a": "Xe chỉ lên marketplace sau khi hồ sơ gian hàng và xe được nền tảng duyệt. Trong lúc chờ, bạn vẫn quản lý xe và nhận đơn bình thường."
+      },
+      "requestVsBooking": {
+        "q": "Yêu cầu đặt xe khác đơn thuê thế nào?",
+        "a": "Yêu cầu đặt xe là đề nghị khách gửi lên và chưa chiếm lịch của xe. Khi bạn duyệt, nó trở thành đơn thuê và khoá khoảng thời gian đó."
+      },
+      "conflict": {
+        "q": "Vì sao không tạo được hai đơn trùng giờ cho cùng một xe?",
+        "a": "Hệ thống chống trùng lịch ngay ở tầng dữ liệu, nên một xe không thể có hai khoảng thuê chồng nhau. Hãy đổi khung giờ hoặc chọn xe khác."
+      },
+      "longTerm": {
+        "q": "Thuê dài hạn tính ngày trả xe thế nào?",
+        "a": "Gói dài hạn tính theo tháng lịch: ngày trả bằng ngày nhận cộng số tháng của gói, do hệ thống tính chứ không nhân 30 ngày."
+      },
+      "maintenance": {
+        "q": "Bảo dưỡng xe nằm ở đâu?",
+        "a": "Trong nhóm Quản lý, mục Xe của tôi: 'Bảo dưỡng' là bảng theo dõi cả đội xe, còn lịch sử của một xe nằm trong hồ sơ xe đó."
+      },
+      "missingMenu": {
+        "q": "Vì sao tôi không thấy một mục trong menu?",
+        "a": "Menu hiện theo quyền của tài khoản. Nếu thiếu mục bạn cần dùng, hãy nhờ chủ gian hàng cấp quyền ở Người dùng & phân quyền."
+      }
+    },
+    "contact": {
+      "title": "Chưa tìm thấy câu trả lời?",
+      "body": "Liên hệ chủ gian hàng hoặc quản trị viên của bạn để được cấp quyền và hướng dẫn thêm."
+    }
+  }
+}

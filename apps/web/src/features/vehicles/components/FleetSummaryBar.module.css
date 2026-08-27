@@ -1,0 +1,47 @@
+/* Dải chỉ số đội xe (mobile) — Figma `236:4648`: khung trắng viền, ba ô cách nhau gạch dọc. */
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  margin: 0 0 var(--xp-space-sm);
+  background: var(--xp-color-bg-container);
+  gap: var(--xp-space-sm);
+}
+
+.item {
+  min-width: 0;
+}
+
+.item dt {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+.item dd {
+  margin: 2px 0 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h3);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-bold);
+  line-height: 1.2;
+}
+
+.divider {
+  width: 1px;
+  height: 32px;
+  flex: none;
+  background: var(--xp-color-border);
+}
+
+/* Màu NGỮ NGHĨA của trạng thái vận hành — khớp màu chip `StatusTag` tương ứng. */
+.available {
+  color: var(--xp-color-success);
+}
+
+.renting {
+  color: var(--xp-color-info);
+}

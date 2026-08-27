@@ -1,0 +1,205 @@
+/*
+ * Vỏ wizard — số đo lấy từ Figma `193:1553` (khung nội dung 1116px, thẻ padding 32,
+ * thanh bước cao 60, hàng nút cao 74).
+ */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/*
+ * Nền thanh bước rộng rãi — nó là bản đồ của cả wizard, không được dính sát nội dung.
+ *
+ * Đệm đặt vào `.ant-card-body` chứ KHÔNG vào root: root đệm bao nhiêu cũng bị hoà
+ * specificity với style của Card và thua theo thứ tự tiêm (bẫy D19). Nhân đôi class
+ * module + class body của AntD = (0,3,0), thắng `.ant-card .ant-card-body` (0,2,0).
+ */
+.stepperCard.stepperCard :global(.ant-card-body) {
+  padding: 20px 28px;
+}
+
+/*
+ * Thiết kế lại thanh bước trên đúng "khớp" của AntD 6: Steps v6 vẽ mọi thứ qua CSS var
+ * `--ant-cmp-steps-*` (kích thước icon, cỡ chữ, đường nối rail, màu theo trạng thái).
+ * Ghi đè VAR thay vì ghi đè thuộc tính: căn giữa số, vị trí rail, chiều cao hàng đều do
+ * AntD tự tính lại theo var — không còn cảnh icon đổi cỡ mà đường nối lệch tâm.
+ *
+ * Nhân đôi class để chắc chắn thắng specificity nơi AntD đặt cùng var (bẫy D19).
+ */
+.steps.steps {
+  --ant-cmp-steps-icon-size: 30px;
+  --ant-cmp-steps-title-font-size: var(--xp-font-size-body);
+  --ant-cmp-steps-rail-size: 2px;
+}
+
+.steps.steps :global(.ant-steps-item-icon) {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * Var MÀU ICON theo trạng thái phải ở (0,4,0): AntD đặt cùng var trong khối variant
+ * `.ant-steps.ant-steps-filled .ant-steps-item-…` = (0,3,0), hoà là thua theo thứ tự tiêm.
+ * Nên nhân BA class module + một class global.
+ */
+
+/* Bước ĐÃ QUA: tròn tối đặc, dấu tick sáng — phần đường đã đi in rõ dấu. */
+.steps.steps.steps :global(.ant-steps-item-finish) {
+  --ant-cmp-steps-item-icon-bg-color: var(--xp-color-text);
+  --ant-cmp-steps-item-icon-border-color: transparent;
+  --ant-cmp-steps-item-icon-text-color: var(--xp-color-bg-container);
+  --ant-cmp-steps-item-icon-bg-hover-color: var(--xp-color-text-secondary);
+  --ant-cmp-steps-item-icon-border-hover-color: transparent;
+  --ant-cmp-steps-item-icon-text-hover-color: var(--xp-color-bg-container);
+  --ant-cmp-steps-item-title-color: var(--xp-color-text);
+}
+
+/*
+ * Bước ĐANG LÀM: vàng thương hiệu + quầng sáng nhẹ quanh icon.
+ * Số dùng `color-primary-contrast` (chữ tối trên nền gold, 6.60:1) — cùng lý do Button
+ * primary phải đổi màu chữ ở theme.ts, chữ trắng trên gold chỉ đạt 2.35:1.
+ */
+.steps.steps.steps :global(.ant-steps-item-process) {
+  --ant-cmp-steps-item-icon-bg-color: var(--xp-color-primary);
+  --ant-cmp-steps-item-icon-border-color: transparent;
+  --ant-cmp-steps-item-icon-text-color: var(--xp-color-primary-contrast);
+  --ant-cmp-steps-item-title-color: var(--xp-color-text);
+}
+
+.steps.steps :global(.ant-steps-item-process .ant-steps-item-icon) {
+  box-shadow: 0 0 0 4px var(--xp-color-primary-light);
+}
+
+.steps.steps :global(.ant-steps-item-process .ant-steps-item-title) {
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Bước CHƯA TỚI: viền mảnh, số và nhãn lùi về sắc phụ — mắt bám vào bước hiện tại. */
+.steps.steps.steps :global(.ant-steps-item-wait) {
+  --ant-cmp-steps-item-icon-bg-color: var(--xp-color-bg-container);
+  --ant-cmp-steps-item-icon-border-color: var(--xp-color-border);
+  --ant-cmp-steps-item-icon-text-color: var(--xp-color-text-tertiary);
+  --ant-cmp-steps-item-title-color: var(--xp-color-text-tertiary);
+}
+
+/* Đường nối: đoạn đã đi nhuộm vàng, đoạn chưa đi là nét mảnh trung tính. */
+.steps.steps :global(.ant-steps-item-rail-finish) {
+  --ant-cmp-steps-item-solid-line-color: var(--xp-color-primary);
+}
+
+.steps.steps :global(.ant-steps-item-rail-process),
+.steps.steps :global(.ant-steps-item-rail-wait) {
+  --ant-cmp-steps-item-solid-line-color: var(--xp-color-border-subtle);
+}
+
+.contentCard {
+  padding: 8px;
+}
+
+.heading {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-h4);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-h4);
+}
+
+.description {
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.body {
+  margin-top: var(--xp-space-lg);
+}
+
+/*
+ * Hàng nút nằm TRONG thẻ, ngăn bằng một đường kẻ (Figma `193:1654`).
+ * Huỷ/Quay lại bên trái, hành động chính dồn phải.
+ */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--xp-space-lg);
+  border-top: 1px solid var(--xp-color-border-secondary);
+  margin-top: var(--xp-space-lg);
+  gap: var(--xp-space-sm);
+}
+
+/*
+ * Mobile: bốn bước nằm gọn MỘT hàng ngang nhờ nhãn rút gọn + số đặt trên nhãn.
+ * Không cuộn ngang, không `min-width` — bản trước phải cuộn vì còn dùng nhãn dài của desktop.
+ */
+@media (max-width: 640px) {
+  .root {
+    gap: var(--xp-space-sm);
+  }
+
+  .stepperCard {
+    overflow: hidden;
+  }
+
+  /* Mobile ưu tiên diện tích cho form: thanh bước nén hết mức còn đọc được (~56px). */
+  .stepperCard.stepperCard :global(.ant-card-body) {
+    padding: var(--xp-space-sm);
+  }
+
+  /*
+   * Chế độ `titlePlacement="vertical"` của v6 đã tự chia bốn bước bằng nhau
+   * (`flex: 1 1 0%`) và neo rail giữa các icon — chỉ cần thu nhỏ var kích thước.
+   * `title-vertical-row-gap` là khoảng số ↔ nhãn, mặc định 12px — quá hào phóng ở 390px.
+   */
+  .steps.steps {
+    width: 100%;
+    --ant-cmp-steps-icon-size: 22px;
+    --ant-cmp-steps-title-font-size: 10px;
+    --ant-cmp-steps-title-vertical-row-gap: 2px;
+  }
+
+  .steps.steps :global(.ant-steps-item) {
+    min-width: 0;
+  }
+
+  .steps.steps :global(.ant-steps-item-title) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Quầng sáng thu theo icon — 4px trên icon 22px trông như phao. */
+  .steps.steps :global(.ant-steps-item-process .ant-steps-item-icon) {
+    box-shadow: 0 0 0 2px var(--xp-color-primary-light);
+  }
+
+  .contentCard {
+    padding: 0;
+  }
+
+  .heading {
+    font-size: var(--xp-font-size-body-lg);
+    line-height: var(--xp-line-height-body-lg);
+  }
+
+  .body {
+    margin-top: var(--xp-space-md);
+  }
+
+  /* Giữ Quay lại/Tiếp theo trên một hàng như frame mobile; mỗi nút vẫn cao đủ vùng chạm. */
+  .footer {
+    position: sticky;
+    z-index: 2;
+    bottom: 0;
+    flex-direction: row;
+    align-items: center;
+    padding: var(--xp-space-sm) 0 0;
+    background: var(--xp-color-bg-container);
+  }
+
+  .footer > button {
+    min-width: 0;
+    flex: 1;
+  }
+}

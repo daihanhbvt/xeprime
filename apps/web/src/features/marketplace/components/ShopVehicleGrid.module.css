@@ -1,0 +1,41 @@
+.section {
+  max-width: var(--xp-container-max-width);
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+.title {
+  margin: 0 0 16px;
+  font-family: var(--font-playfair), serif;
+  font-size: 22px;
+  color: var(--xp-color-text);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.skeleton {
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: var(--xp-border-radius);
+  padding: 12px;
+  background: var(--xp-color-bg-container);
+}
+
+.skeletonImg {
+  width: 100% !important;
+  height: 150px !important;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+.empty {
+  padding: 48px 0;
+}
+
+.pager {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}

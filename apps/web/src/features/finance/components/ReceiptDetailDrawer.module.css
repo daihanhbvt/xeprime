@@ -1,0 +1,80 @@
+.amount {
+  font-size: var(--xp-font-size-h1);
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.income {
+  color: var(--xp-color-success);
+}
+
+.expense {
+  color: var(--xp-color-error);
+}
+
+.words {
+  margin-top: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  font-style: italic;
+  color: var(--xp-color-text-tertiary);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+  margin: var(--xp-space-sm) 0 var(--xp-space-md);
+}
+
+.section {
+  margin-bottom: var(--xp-space-lg);
+}
+
+.sectionTitle {
+  font-size: var(--xp-font-size-label);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--xp-color-text-tertiary);
+  margin-bottom: var(--xp-space-sm);
+}
+
+.rows {
+  display: grid;
+  /* Nhãn co theo nội dung, giá trị chiếm phần còn lại — tên xe dài không đẩy nhãn xuống dòng. */
+  grid-template-columns: minmax(96px, max-content) 1fr;
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  margin: 0;
+}
+
+.rowLabel {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.rowValue {
+  margin: 0;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.attachments {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--xp-space-sm);
+}
+
+.thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--xp-border-radius-sm);
+  border: 1px solid var(--xp-color-border);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--xp-space-sm);
+}

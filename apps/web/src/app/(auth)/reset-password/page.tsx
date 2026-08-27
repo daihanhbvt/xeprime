@@ -5,6 +5,7 @@ import { CheckCircleFilled, LockOutlined } from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { resetPasswordSchema, type ResetPasswordValues } from '@xeprime/validators';
@@ -12,7 +13,7 @@ import { Logo } from '@/components/brand/Logo';
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
 import { resetPassword } from '@/services/auth.service';
-import { getErrorMessage } from '@/services/api-client';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import styles from '../auth-card.module.css';
 
 export default function ResetPasswordPage() {
@@ -25,6 +26,8 @@ export default function ResetPasswordPage() {
 }
 
 function ResetPasswordForm() {
+  const t = useTranslations('Auth');
+  const errorMessage = useErrorMessage();
   const token = useSearchParams().get('token');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -43,7 +46,7 @@ function ResetPasswordForm() {
       await resetPassword(token, values.password);
       setDone(true);
     } catch (err) {
-      setError(getErrorMessage(err));
+      setError(errorMessage(err));
       setPending(false);
     }
   });
@@ -55,13 +58,13 @@ function ResetPasswordForm() {
         <div className={styles.head}>
           <Logo size="lg" />
           <div>
-            <div className={styles.title}>Liên kết không hợp lệ</div>
-            <div className={styles.sub}>Thiếu mã đặt lại. Hãy yêu cầu liên kết mới.</div>
+            <div className={styles.title}>{t('resetPassword.invalidTitle')}</div>
+            <div className={styles.sub}>{t('resetPassword.invalidSubtitle')}</div>
           </div>
         </div>
         <Link href={ROUTES.FORGOT_PASSWORD}>
           <Button type="primary" block size="large" className={styles.submit}>
-            Yêu cầu liên kết mới
+            {t('resetPassword.requestNew')}
           </Button>
         </Link>
       </div>
@@ -74,12 +77,12 @@ function ResetPasswordForm() {
         <div className={styles.success}>
           <Logo size="lg" />
           <CheckCircleFilled className={styles.successIcon} />
-          <div className={styles.title}>Đã đổi mật khẩu</div>
-          <p className={styles.sub}>Bạn có thể đăng nhập bằng mật khẩu mới.</p>
+          <div className={styles.title}>{t('resetPassword.doneTitle')}</div>
+          <p className={styles.sub}>{t('resetPassword.doneSubtitle')}</p>
         </div>
         <Link href={ROUTES.LOGIN}>
           <Button type="primary" block size="large" className={styles.submit}>
-            Đăng nhập
+            {t('links.login')}
           </Button>
         </Link>
       </div>
@@ -91,22 +94,22 @@ function ResetPasswordForm() {
       <div className={styles.head}>
         <Logo size="lg" />
         <div>
-          <div className={styles.title}>Đặt mật khẩu mới</div>
-          <div className={styles.sub}>Nhập mật khẩu mới cho tài khoản của bạn</div>
+          <div className={styles.title}>{t('resetPassword.title')}</div>
+          <div className={styles.sub}>{t('resetPassword.subtitle')}</div>
         </div>
       </div>
 
       {error ? (
-        <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />
+        <Alert type="error" showIcon message={error} className={styles.alert} />
       ) : null}
 
       <form onSubmit={onSubmit} noValidate>
         <TextField
           control={control}
           name="password"
-          label="Mật khẩu mới"
+          label={t('resetPassword.newPassword')}
           type="password"
-          placeholder="Tối thiểu 8 ký tự, có chữ và số"
+          placeholder={t('resetPassword.newPasswordPlaceholder')}
           autoComplete="new-password"
           prefix={<LockOutlined />}
           autoFocus
@@ -114,9 +117,9 @@ function ResetPasswordForm() {
         <TextField
           control={control}
           name="confirmPassword"
-          label="Nhập lại mật khẩu"
+          label={t('resetPassword.confirmPassword')}
           type="password"
-          placeholder="Nhập lại mật khẩu"
+          placeholder={t('resetPassword.confirmPasswordPlaceholder')}
           autoComplete="new-password"
           prefix={<LockOutlined />}
         />
@@ -128,12 +131,12 @@ function ResetPasswordForm() {
           className={styles.submit}
           loading={pending}
         >
-          Đặt lại mật khẩu
+          {t('resetPassword.submit')}
         </Button>
       </form>
 
       <div className={styles.footer}>
-        <Link href={ROUTES.LOGIN}>Quay lại đăng nhập</Link>
+        <Link href={ROUTES.LOGIN}>{t('links.backToLogin')}</Link>
       </div>
     </div>
   );

@@ -1,0 +1,138 @@
+/** Hoá đơn + cọc phía khách. Một thẻ, các khối con phân tách bằng nền và đường kẻ. */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: 700;
+}
+
+.subTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-overline);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--xp-color-text-secondary);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.row dt {
+  color: var(--xp-color-text-secondary);
+  min-width: 0;
+}
+
+.row dd {
+  margin: 0;
+  text-align: right;
+  /* Tiền không ngắt dòng giữa cụm số. */
+  white-space: nowrap;
+}
+
+.paidLabel {
+  color: var(--xp-color-text-secondary);
+}
+
+/* Lý do phụ phí xuống dòng dưới tên khoản — khách cần biết vì sao mới đối chiếu được. */
+.surchargeLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.surchargeReason {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-tertiary);
+  overflow-wrap: anywhere;
+}
+
+.discount {
+  color: var(--xp-color-error);
+}
+
+.free {
+  color: var(--xp-color-success);
+  font-weight: 600;
+}
+
+.total,
+.depositTotal {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  font-weight: 700;
+  min-width: 0;
+}
+
+.totalValue {
+  color: var(--xp-color-price);
+  font-size: var(--xp-font-size-h4);
+  white-space: nowrap;
+}
+
+.deposit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+  min-width: 0;
+}
+
+.depositHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.depositNote {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/** 640px = `--xp-bp-mobile`; custom property không dùng được trong `@media` (quyết định P8). */
+@media (max-width: 640px) {
+  .row dd {
+    /* Vẫn giữ tiền nguyên cụm; chỉ nhãn bên trái được phép co. */
+    white-space: nowrap;
+  }
+
+  .totalValue {
+    font-size: var(--xp-font-size-body-lg);
+  }
+}

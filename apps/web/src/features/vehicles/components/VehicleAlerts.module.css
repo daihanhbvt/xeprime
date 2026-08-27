@@ -1,0 +1,106 @@
+/* Việc cần làm của xe (Wave 8) — CSS Modules + token (ADR 0003). */
+
+.chips {
+  display: flex;
+  padding: 0;
+  margin: 0;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+}
+
+/* Chip trên thẻ xe phải gọn: một dòng, cắt bằng ellipsis thay vì kéo cao thẻ. */
+.chip {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list {
+  display: flex;
+  padding: 0;
+  margin: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  margin-top: 6px;
+}
+
+.dotCritical {
+  background: var(--xp-color-error);
+}
+
+.dotWarning {
+  background: var(--xp-color-warning);
+}
+
+.dotInfo {
+  background: var(--xp-color-info);
+}
+
+.itemBody {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.itemTitle {
+  color: var(--xp-color-text);
+}
+
+.itemLink {
+  color: inherit;
+}
+
+.itemLink:hover {
+  color: var(--xp-color-primary);
+}
+
+.count {
+  color: var(--xp-color-text-secondary);
+}
+
+.severity,
+.detail {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.empty {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.moreButton {
+  padding: 0;
+  border: 0;
+  margin-top: var(--xp-space-xs);
+  background: none;
+  color: var(--xp-color-primary);
+  cursor: pointer;
+  font: inherit;
+}
+
+@media (max-width: 640px) {
+  /* Vùng chạm 44px cho nút mở rộng trên mobile. */
+  .moreButton {
+    min-height: 44px;
+  }
+}

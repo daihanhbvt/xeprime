@@ -1,0 +1,20 @@
+.code {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.meta {
+  font-size: 12.5px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.tenantName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.debt {
+  font-weight: 600;
+  color: var(--xp-color-error);
+}

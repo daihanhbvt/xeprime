@@ -1,0 +1,12 @@
+.centered {
+  display: grid;
+  place-items: center;
+  padding: 64px 0;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}

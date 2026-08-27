@@ -1,8 +1,16 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
 import { Public } from '../../common/decorators';
+import { PublicCache } from '../../common/http-cache';
 import { PublicListingsService } from './public-listings.service';
-import { PublicListingPageDto, PublicListingQueryDto } from './dto/public-listing.dto';
+import {
+  ListingFacetsDto,
+  ListingFacetsQueryDto,
+  PublicListingDetailDto,
+  PublicListingPageDto,
+  PublicListingQueryDto,
+} from './dto/public-listing.dto';
 
 /**
  * Marketplace công khai — không cần đăng nhập (@Public).
@@ -17,9 +25,29 @@ export class PublicListingsController {
 
   @Public()
   @Get()
+  @PublicCache(PUBLIC_CACHE_SECONDS.listing)
   @ApiOperation({ summary: 'Tìm xe trên Marketplace (phân trang, filter, sort)' })
   @ApiOkResponse({ type: PublicListingPageDto })
   search(@Query() query: PublicListingQueryDto): Promise<PublicListingPageDto> {
     return this.listings.search(query) as Promise<PublicListingPageDto>;
+  }
+
+  // Route tĩnh PHẢI đứng trước `:id`, nếu không 'facets' bị bắt làm listing id → 404.
+  @Public()
+  @Get('facets')
+  @PublicCache(PUBLIC_CACHE_SECONDS.facets)
+  @ApiOperation({ summary: 'Facet counts cho panel Bộ lọc (đếm theo từng chiều filter)' })
+  @ApiOkResponse({ type: ListingFacetsDto })
+  facets(@Query() query: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
+    return this.listings.facets(query);
+  }
+
+  @Public()
+  @Get(':id')
+  @PublicCache(PUBLIC_CACHE_SECONDS.listing)
+  @ApiOperation({ summary: 'Chi tiết một xe trên Marketplace' })
+  @ApiOkResponse({ type: PublicListingDetailDto })
+  getById(@Param('id') id: string): Promise<PublicListingDetailDto> {
+    return this.listings.getById(id);
   }
 }

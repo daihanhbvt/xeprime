@@ -1,0 +1,38 @@
+.panel {
+  margin: 0;
+}
+
+/* Danh sách điều kiện gửi duyệt (Figma `65:3754`). */
+.checklist {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: var(--xp-space-md) 0;
+  gap: var(--xp-space-sm);
+  list-style: none;
+}
+
+.checklist li {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+}
+
+/* Nhãn điều kiện đẩy trạng thái về mép phải mà không cần thêm phần tử bọc. */
+.checklist li > span:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+
+.state {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.met {
+  color: var(--xp-color-success);
+}
+
+.unmet {
+  color: var(--xp-color-text-secondary);
+}

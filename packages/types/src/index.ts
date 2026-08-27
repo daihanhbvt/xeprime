@@ -10,8 +10,21 @@
  * OpenAPI spec của backend. Chạy `pnpm contract` để sinh lại.
  */
 export * from './status/index';
+export * from './auth-provider';
+export * from './cache';
+export * from './locale';
+export * from './catalog';
+export * from './marketplace';
+export * from './phone';
+export * from './long-term';
+export * from './pricing';
+export * from './shop-profile';
 export * from './rbac';
+export * from './notifications';
 export * from './api';
+export * from './province';
+export * from './session';
+export * from './upload';
 
 /**
  * Type sinh từ OpenAPI (ADR 0007) — nguồn sự thật cho shape request/response.

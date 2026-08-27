@@ -1,6 +1,7 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { VN_PHONE_PATTERN } from '@xeprime/types';
 
 const PASSWORD_MIN = 8;
 
@@ -22,23 +23,30 @@ export class RegisterDto extends PasswordField {
   @MaxLength(255)
   displayName!: string;
 
-  @ApiProperty({ example: 'ban@congty.vn' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
-  @IsEmail({}, { message: 'Email không hợp lệ' })
-  email!: string;
+  @ApiProperty({ example: '0901234567' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Matches(VN_PHONE_PATTERN, { message: 'Số điện thoại không hợp lệ' })
+  phone!: string;
 }
 
 export class LoginDto {
-  @ApiProperty({ example: 'ban@congty.vn' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
-  @IsEmail({}, { message: 'Email không hợp lệ' })
-  email!: string;
+  @ApiProperty({
+    description: 'Email hoặc số điện thoại',
+    example: 'ban@congty.vn',
+  })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(1, { message: 'Vui lòng nhập email hoặc số điện thoại' })
+  identifier!: string;
 
   @ApiProperty()
   @IsString()
   @MinLength(1, { message: 'Vui lòng nhập mật khẩu' })
   password!: string;
 }
+
+/** Đặt mật khẩu cho tài khoản CHƯA có mật khẩu (vd tạo bằng SĐT/OTP). Cần đăng nhập. */
+export class SetPasswordDto extends PasswordField {}
 
 export class ForgotPasswordDto {
   @ApiProperty({ example: 'ban@congty.vn' })
@@ -54,18 +62,6 @@ export class ResetPasswordDto extends PasswordField {
   token!: string;
 }
 
-export class CreateSessionDto {
-  @ApiProperty({
-    description:
-      'ID token từ Firebase Auth (hoặc `mock:<uid>:<email>:<tên>` khi AUTH_MODE=mock). ' +
-      'Chỉ gửi đúng một lần lúc đăng nhập — sau đó dùng session cookie.',
-    example: 'mock:demo-owner:owner@xeprime.test:Chủ shop demo',
-  })
-  @IsString()
-  @MinLength(1)
-  idToken!: string;
-}
-
 export class CurrentTenantSummaryDto {
   @ApiProperty() id!: string;
   @ApiProperty() name!: string;
@@ -77,16 +73,36 @@ export class CurrentTenantSummaryDto {
 export class MeDto {
   @ApiProperty() id!: string;
   @ApiProperty() displayName!: string;
-  @ApiPropertyOptional({ nullable: true }) email!: string | null;
-  @ApiPropertyOptional({ nullable: true }) avatarUrl!: string | null;
+  // Các field dưới LUÔN có mặt trong response, chỉ có thể mang giá trị null → `@ApiProperty`
+  // + `nullable`, KHÔNG phải `@ApiPropertyOptional` (optional nghĩa là "có thể vắng mặt", và
+  // nó khiến frontend phải xử lý thêm nhánh `undefined` không bao giờ xảy ra).
+  // `type: String` cũng bắt buộc: thiếu nó openapi-typescript sinh ra `Record<string, never>`.
+  @ApiProperty({ type: String, nullable: true }) email!: string | null;
+  @ApiProperty({ type: String, nullable: true }) avatarUrl!: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'SĐT của chính tài khoản, dạng nội địa `0xxxxxxxxx` — để điền sẵn ô liên hệ',
+  })
+  phone!: string | null;
 
   @ApiProperty({ description: 'Đã xác thực SĐT chưa — gate cho việc đặt xe/mở shop' })
   phoneVerified!: boolean;
 
-  @ApiPropertyOptional({ type: CurrentTenantSummaryDto, nullable: true })
+  @ApiProperty({
+    description: 'Đã có mật khẩu chưa — false với tài khoản tạo bằng SĐT/OTP (gợi ý đặt mật khẩu)',
+  })
+  hasPassword!: boolean;
+
+  @ApiProperty({ type: CurrentTenantSummaryDto, nullable: true })
   tenant!: CurrentTenantSummaryDto | null;
 
-  @ApiPropertyOptional({ nullable: true, description: 'Xem PlatformRole trong @xeprime/types' })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'Xem PlatformRole trong @xeprime/types',
+  })
   platformRole!: string | null;
 
   @ApiProperty({ isArray: true, type: String })

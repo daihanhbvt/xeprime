@@ -1,0 +1,411 @@
+/**
+ * Chi tiết chuyến của khách.
+ *
+ * Desktop: hai cột — hành trình bên trái, tiền + hành động bên phải. Mobile: một cột, khối tiền
+ * và hành động rơi xuống cuối. Cùng bộ khối, khác cách xếp — không có luồng riêng cho mobile.
+ */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  width: 100%;
+  max-width: var(--xp-container-max-width);
+  margin-inline: auto;
+  padding: var(--xp-space-lg) var(--xp-space-md);
+  min-width: 0;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-primary);
+  white-space: nowrap;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.headings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--xp-font-size-h1);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--xp-space-md);
+  align-items: start;
+  min-width: 0;
+}
+
+.main,
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  min-width: 0;
+}
+
+.blockTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-overline);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--xp-color-text-secondary);
+}
+
+/* Khối "đang diễn ra": nền nhấn để mắt rơi vào đúng thứ đang cần theo dõi. */
+.highlight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-success);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-success-bg);
+  min-width: 0;
+}
+
+.highlightTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-overline);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--xp-color-success);
+}
+
+.highlightLead {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.highlightNote {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.vehicle {
+  display: flex;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.vehicleImage {
+  flex: none;
+  width: 120px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+}
+
+.vehicleBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.vehicleName {
+  font-size: var(--xp-font-size-h4);
+  font-weight: 700;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.vehicleName:hover {
+  color: var(--xp-color-primary);
+}
+
+.vehicleSpecs {
+  margin: 0;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.plate {
+  margin: 0;
+  font-weight: 600;
+  color: var(--xp-color-primary);
+}
+
+.shop {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  min-width: 0;
+}
+
+.shopAvatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--xp-color-primary-light);
+  font-weight: 700;
+  color: var(--xp-color-primary);
+}
+
+.shopBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.shopName {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.shopMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  flex-wrap: wrap;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.shopLink {
+  flex: none;
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-primary);
+  white-space: nowrap;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.row dt {
+  color: var(--xp-color-text-secondary);
+  min-width: 0;
+}
+
+.row dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pickupMethod {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-xs);
+  margin: 0;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  min-width: 0;
+}
+
+.address {
+  display: block;
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.actions :global(.ant-btn) {
+  min-height: var(--xp-touch-target-min);
+}
+
+/** 1024px = `--xp-bp-tablet`; custom property không dùng được trong `@media` (quyết định P8). */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/** 640px = `--xp-bp-mobile`. */
+@media (max-width: 640px) {
+  .page {
+    padding: var(--xp-space-md) var(--xp-space-sm) var(--xp-space-xl);
+  }
+
+  /* Nút quay lại và dòng thời gian xếp dọc; dòng thời gian vẫn một hàng ngang của riêng nó. */
+  .topBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--xp-space-sm);
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .heading {
+    font-size: var(--xp-font-size-h3);
+  }
+
+  .vehicleImage {
+    width: 96px;
+    height: 72px;
+  }
+
+  .row dd {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ── Cụm hỗ trợ chuyến ─────────────────────────────────────────────────────
+ *
+ * Ba nút full-width xếp chồng cùng cỡ (bản trước) không nói được cái nào là việc chính, và
+ * "Gọi 0900000000" thì nhãn dài quá khổ nên tràn ở cột hẹp. Ở đây: một thẻ có tiêu đề, nút
+ * NHẮN TIN là hành động chính chiếm trọn hàng, còn Gọi/Đánh giá là hai ô phụ chia đôi hàng
+ * dưới — số điện thoại và tên xe xuống dòng phụ nên nhãn luôn ngắn và đọc được.
+ */
+
+.support {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+  background: var(--xp-color-bg-container);
+}
+
+.supportTitle {
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/*
+ * `1fr 1fr` chứ không phải flex-wrap: khi chỉ còn MỘT ô (chuyến chưa cho đánh giá) nó vẫn giữ
+ * đúng nửa hàng thay vì phình ra full-width — hai chuyến cạnh nhau không nhảy bố cục.
+ */
+.supportRow {
+  display: grid;
+  gap: var(--xp-space-sm);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.supportAction {
+  display: flex;
+  min-height: var(--xp-touch-target-min);
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  cursor: pointer;
+  text-align: center;
+}
+
+.supportAction:hover {
+  border-color: var(--xp-gold-deep);
+  color: var(--xp-gold-deep);
+}
+
+.supportLabel {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Số điện thoại / tên xe: dòng phụ, cắt bớt thay vì đẩy ô rộng ra. */
+.supportMeta {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

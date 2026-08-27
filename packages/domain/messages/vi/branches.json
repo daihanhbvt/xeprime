@@ -1,0 +1,85 @@
+{
+  "page": {
+    "title": "Chi nhánh",
+    "subtitle": "Nơi xe của bạn đang đỗ. Chi nhánh quyết định xe hiển thị ở tỉnh/thành nào trên marketplace.",
+    "add": "Thêm chi nhánh",
+    "needsReview": "{count, plural, other {# chi nhánh}} chưa có tỉnh/thành",
+    "needsReviewHint": "Xe thuộc các chi nhánh này KHÔNG hiển thị trên marketplace cho tới khi bạn bổ sung tỉnh/thành."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Tìm theo tên, mã hoặc địa chỉ",
+    "searchLabel": "Tìm chi nhánh",
+    "summary": "{total, plural, other {# chi nhánh}} · {active} đang hoạt động",
+    "activeOnly": "Chỉ đang hoạt động"
+  },
+  "columns": {
+    "branch": "Chi nhánh",
+    "province": "Tỉnh/thành",
+    "address": "Địa chỉ",
+    "phone": "Điện thoại",
+    "vehicleCount": "Số xe"
+  },
+  "labels": {
+    "default": "Mặc định",
+    "noProvince": "Chưa có tỉnh/thành",
+    "vehicles": "{count, plural, other {# xe}}"
+  },
+  "actions": {
+    "setDefault": "Đặt làm mặc định",
+    "deactivate": "Ngừng hoạt động",
+    "activate": "Bật lại"
+  },
+  "blocked": {
+    "edit": "Bạn không có quyền sửa chi nhánh",
+    "manage": "Bạn không có quyền quản lý chi nhánh",
+    "inactive": "Chi nhánh đang ngừng hoạt động",
+    "noProvince": "Chi nhánh chưa có tỉnh/thành",
+    "isDefault": "Chi nhánh mặc định không thể ngừng — đặt chi nhánh khác làm mặc định trước"
+  },
+  "confirmDeactivate": {
+    "title": "Ngừng hoạt động chi nhánh?",
+    "description": "Chi nhánh sẽ không nhận xe mới. Xe và đơn đang chạy phải được chuyển/hoàn tất trước."
+  },
+  "table": {
+    "label": "Danh sách chi nhánh",
+    "loadError": "Không tải được danh sách chi nhánh",
+    "noPermission": "Bạn không có quyền xem chi nhánh",
+    "noPermissionHint": "Liên hệ chủ gian hàng để được cấp quyền.",
+    "empty": "Chưa có chi nhánh nào",
+    "emptyHint": "Thêm chi nhánh để khai báo nơi xe của bạn đang đỗ.",
+    "noResults": "Không có chi nhánh khớp bộ lọc",
+    "noResultsHint": "Thử xoá từ khoá hoặc bỏ lọc trạng thái."
+  },
+  "form": {
+    "createTitle": "Thêm chi nhánh",
+    "editTitle": "Sửa {name}",
+    "createOk": "Tạo chi nhánh",
+    "noProvinceTitle": "Chi nhánh này chưa có tỉnh/thành",
+    "noProvinceLegacy": "Dữ liệu cũ ghi \"{value}\" — chọn tỉnh/thành tương ứng để xe của chi nhánh hiển thị lại trên marketplace.",
+    "noProvinceHint": "Chọn tỉnh/thành để xe của chi nhánh hiển thị trên marketplace.",
+    "provincesLoadError": "Không tải được danh sách tỉnh/thành",
+    "nameLabel": "Tên chi nhánh",
+    "namePlaceholder": "VD: Chi nhánh Đà Nẵng",
+    "provinceLabel": "Tỉnh/thành",
+    "provinceLoading": "Đang tải tỉnh/thành…",
+    "provincePlaceholder": "Chọn tỉnh/thành",
+    "provinceHelp": "Quyết định xe của chi nhánh hiển thị ở tỉnh/thành nào trên marketplace.",
+    "addressLabel": "Địa chỉ",
+    "addressPlaceholder": "Số nhà, đường, phường/xã",
+    "phoneLabel": "Số điện thoại",
+    "phonePlaceholder": "0901234567"
+  },
+  "map": {
+    "title": "Vị trí trên bản đồ",
+    "frameTitle": "Bản đồ vị trí chi nhánh",
+    "hint": "Hệ thống tự xác định vị trí từ địa chỉ ở trên. Vị trí này là điểm xuất phát để tính phí giao xe tận nơi — nếu ghim sai chỗ, hãy ghi địa chỉ chi tiết hơn rồi lưu lại.",
+    "pending": "Chưa xác định được vị trí từ địa chỉ này. Ghi rõ số nhà, tên đường và phường/xã rồi lưu lại để hệ thống thử lại.",
+    "addressFirst": "Nhập địa chỉ rồi lưu để hệ thống xác định vị trí trên bản đồ."
+  },
+  "scope": {
+    "all": "Tất cả chi nhánh",
+    "defaultOption": "{label} (mặc định)",
+    "single": "Gian hàng của bạn chỉ có một chi nhánh",
+    "label": "Chi nhánh đang xem"
+  }
+}

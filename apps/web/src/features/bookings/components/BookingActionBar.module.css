@@ -1,0 +1,69 @@
+/**
+ * Thanh hành động chân thẻ chi tiết đơn (Wave 10).
+ *
+ * Desktop: mọi thao tác phụ nằm trái (không giấu sau menu), hành động chính đứng riêng bên
+ * phải. Mobile: xếp dọc và CTA lên TRƯỚC — ngón tay ở gần cạnh dưới, thứ quan trọng nhất không
+ * được nằm sau một hàng nút tra cứu.
+ */
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding-top: var(--xp-space-md);
+  margin-top: var(--xp-space-md);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  min-width: 0;
+}
+
+.secondary,
+.primary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.bar :global(.ant-btn) {
+  min-height: var(--xp-touch-target-min);
+}
+
+.cta {
+  font-weight: 600;
+}
+
+/** 640px = `--xp-bp-mobile`; custom property không dùng được trong `@media` (quyết định P8). */
+@media (max-width: 640px) {
+  .bar {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  /* Hai nút một hàng: nhãn tiếng Việt dài, ép năm nút vào một hàng là cắt chữ. */
+  .secondary :global(.ant-btn) {
+    flex: 1 1 calc(50% - var(--xp-space-sm));
+  }
+
+  .cta {
+    flex: 1;
+  }
+}
+
+/*
+ * Đường sang sổ Thu-Chi, nằm TRONG hộp lịch sử tiền chứ không phải một nút trên thanh hành
+ * động: nó chỉ có nghĩa khi người dùng đang xem tiền của đơn và muốn xem rộng hơn.
+ */
+.ledgerLink {
+  display: inline-block;
+  margin-top: var(--xp-space-sm);
+  color: var(--xp-gold-deep);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.ledgerLink:hover {
+  text-decoration: underline;
+}

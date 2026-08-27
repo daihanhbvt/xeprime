@@ -1,0 +1,397 @@
+{
+  "receipts": {
+    "page": {
+      "title": "Cash book",
+      "subtitle": "Every đồng that moves through your shop — booking payments, deposits, refunds and vehicle costs all land here automatically."
+    },
+    "periods": {
+      "label": "Quick period",
+      "today": "Today",
+      "this_week": "This week",
+      "this_month": "This month",
+      "last_month": "Last month"
+    },
+    "filters": {
+      "searchLabel": "Search entries",
+      "searchPlaceholder": "Entry no., reference, booking code…",
+      "type": "Type",
+      "status": "Status",
+      "category": "Category",
+      "source": "Source",
+      "paymentMethod": "Method",
+      "dateRange": "Date range"
+    },
+    "actions": {
+      "categories": "Categories",
+      "create": "New entry",
+      "createFirst": "Create the first entry"
+    },
+    "toast": {
+      "approved": "Entry approved",
+      "cancelled": "Entry cancelled"
+    },
+    "forbidden": {
+      "title": "You cannot view the cash book",
+      "description": "You need the permission below to open this page. Ask the shop owner to grant it.",
+      "home": "Back to dashboard"
+    },
+    "table": {
+      "label": "Cash book entries",
+      "totalLabel": "{count, plural, one {# entry} other {# entries}}",
+      "columns": {
+        "receipt": "Entry",
+        "type": "Type",
+        "source": "Source",
+        "category": "Category",
+        "subject": "Related to",
+        "description": "Details",
+        "amount": "Amount",
+        "method": "Method"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "approveConfirm": "Approve this entry?",
+        "cancelConfirm": "Cancel this entry?",
+        "cancelOk": "Cancel entry"
+      },
+      "error": {
+        "title": "Could not load the entry list"
+      },
+      "empty": {
+        "title": "No cash book entry yet"
+      },
+      "noResults": {
+        "title": "No entry matches these filters"
+      },
+      "uncategorized": "Uncategorised"
+    },
+    "detail": {
+      "title": "Entry detail",
+      "ariaLabel": "Cash book entry detail",
+      "errorTitle": "Could not load the entry",
+      "auto": {
+        "title": "Automatic entry",
+        "body": "This entry came from {source}, so it cannot be edited or cancelled here — the book would drift from the booking. Reverse it in that flow instead",
+        "openBooking": "open the booking",
+        "openVehicle": "open the vehicle"
+      },
+      "sections": {
+        "info": "Entry information",
+        "related": "Related records",
+        "attachments": "Proof photos",
+        "trace": "Audit trail"
+      },
+      "rows": {
+        "occurredAt": "Date incurred",
+        "category": "Category",
+        "method": "Method",
+        "referenceCode": "Reference",
+        "description": "Details",
+        "booking": "Booking",
+        "vehicle": "Vehicle",
+        "customer": "Customer",
+        "createdBy": "Created by",
+        "approvedBy": "Approved by",
+        "cancelledBy": "Cancelled by"
+      },
+      "copyReference": "Copy reference",
+      "viewBooking": "View booking",
+      "viewVehicle": "View vehicle",
+      "viewCustomer": "View customer",
+      "attachmentAlt": "Proof photo",
+      "cancelAction": "Cancel entry"
+    },
+    "form": {
+      "title": "New cash book entry",
+      "occurredAt": "Date incurred",
+      "type": "Transaction type",
+      "linkHint": {
+        "none": "A shop-wide amount, not linked to anything",
+        "booking": "A cost or payment on a booking",
+        "vehicle": "A cost or payment on a vehicle"
+      },
+      "booking": "Linked booking",
+      "bookingPlaceholder": "Search booking code, customer or plate",
+      "category": "Category",
+      "categoryPlaceholder": "Pick a category",
+      "method": "Method",
+      "amount": "Amount",
+      "referenceCode": "Reference (optional)",
+      "referenceCodePlaceholder": "e.g. bank transfer reference",
+      "description": "Description / reason",
+      "attachments": {
+        "label": "Supporting documents",
+        "add": "Add file",
+        "hint": "JPG, PNG, PDF · up to {maxMb}MB",
+        "remove": "Remove {name}",
+        "retry": "Retry {name}",
+        "uploading": "Uploading {name}",
+        "tooMany": "At most {max} files"
+      },
+      "submit": {
+        "income": "Create income entry",
+        "expense": "Create expense entry"
+      },
+      "success": "Entry created — awaiting approval",
+      "linkMode": {
+        "label": "This amount is",
+        "none": "Not linked",
+        "booking": "A booking",
+        "vehicle": "A vehicle"
+      },
+      "bookingEmpty": "No booking matches that search.",
+      "bookingError": "Could not load bookings. Try again or search once more.",
+      "vehicle": "Linked vehicle",
+      "vehiclePlaceholder": "Search by vehicle code, name or plate",
+      "vehicleEmpty": "No vehicle matches that search.",
+      "vehicleError": "Could not load vehicles. Try again or search once more.",
+      "vehicleGone": "This vehicle is no longer in the shop (deleted or transferred). Please pick another one.",
+      "errors": {
+        "type": "Choose a voucher type",
+        "occurredAt": "Choose the date it occurred",
+        "amountType": "Enter an amount",
+        "amountMin": "Amount must be ≥ 0",
+        "method": "Choose a payment method",
+        "bookingRequired": "Choose the booking to link this voucher to",
+        "vehicleRequired": "Choose the vehicle to link this voucher to",
+        "description": "Enter a description or reason"
+      },
+      "link": {
+        "label": "Linked to",
+        "detail": "View details",
+        "branch": "Branch",
+        "customer": "Customer",
+        "debt": "Outstanding"
+      },
+      "keepOpen": "Save and start another",
+      "cancel": "Cancel"
+    },
+    "summary": {
+      "error": "Could not load the totals — the list below is still correct",
+      "income": "Total in",
+      "expense": "Total out",
+      "balance": "Net (in − out)",
+      "approvedCount": "Approved entries",
+      "cash": "Cash {value}",
+      "transfer": "Bank transfer {value}",
+      "inFilter": "Within the current filters",
+      "wholeBook": "Whole book · pending entries not counted"
+    },
+    "categories": {
+      "title": "Income & expense categories",
+      "typeLabel": "Category type",
+      "namePlaceholder": "New category name",
+      "added": "Category added",
+      "system": "System",
+      "delete": "Delete category"
+    }
+  },
+  "debts": {
+    "page": {
+      "title": "Outstanding debts"
+    },
+    "filters": {
+      "searchLabel": "Search debts",
+      "searchPlaceholder": "Booking code, customer, phone, plate…",
+      "groupLabel": "Group by due date",
+      "overdue": "Overdue",
+      "upcoming": "Due soon",
+      "unpaid": "Nothing collected"
+    },
+    "table": {
+      "label": "Outstanding debt list",
+      "totalLabel": "{count, plural, one {# booking with a balance} other {# bookings with a balance}}",
+      "columns": {
+        "booking": "Booking",
+        "vehicle": "Vehicle",
+        "returnAt": "Return due",
+        "total": "Total",
+        "paid": "Collected",
+        "debt": "Balance"
+      },
+      "actions": {
+        "view": "View booking",
+        "collect": "Collect"
+      },
+      "error": {
+        "title": "Could not load outstanding debts",
+        "description": "Something went wrong while fetching the data. Please try again."
+      },
+      "empty": {
+        "title": "No booking has an outstanding balance"
+      },
+      "noResults": {
+        "title": "No outstanding debt matches these filters"
+      }
+    }
+  },
+  "overview": {
+    "page": {
+      "title": "Revenue overview",
+      "subtitle": "Whether this period made money, how much cash you are holding, and which vehicles earn it."
+    },
+    "periods": {
+      "label": "Quick period",
+      "today": "Today",
+      "this_week": "This week",
+      "this_month": "This month",
+      "last_month": "Last month",
+      "this_quarter": "This quarter",
+      "this_year": "This year"
+    },
+    "filters": {
+      "dateRange": "Date range"
+    },
+    "forbidden": {
+      "title": "No permission to view financial figures",
+      "description": "You need the permission below to open this page. Ask the shop owner to grant it.",
+      "home": "Back to home"
+    },
+    "cards": {
+      "error": "Could not load financial figures",
+      "business": {
+        "title": "Business result",
+        "revenue": "Revenue",
+        "cost": "Costs",
+        "profit": "Profit",
+        "margin": "{value}% margin",
+        "marginUnknown": "No revenue yet to compute a margin",
+        "unassigned": "Of which {value} is not tied to a vehicle",
+        "note": "Deposits are excluded from both sides. This is cash profit from the ledger — before depreciation, loan interest or vehicle lease payments."
+      },
+      "cash": {
+        "title": "Cash flow",
+        "in": "Cash in",
+        "out": "Cash out",
+        "balance": "Net",
+        "note": "Includes deposits taken and refunded — this is the money that actually changed hands this period."
+      },
+      "now": {
+        "title": "Right now",
+        "depositHeld": "Deposits held",
+        "debt": "Customers owe",
+        "bookings": "{count, plural, one {# booking} other {# bookings}}",
+        "note": "These two figures do not depend on the selected period."
+      }
+    },
+    "chart": {
+      "title": "Income · costs · profit over time",
+      "description": "Bars are revenue and costs, the line is profit. Deposits excluded.",
+      "revenue": "Revenue",
+      "cost": "Costs",
+      "profit": "Profit",
+      "error": "Could not load the chart",
+      "empty": "No income or costs in this period",
+      "emptyHint": "Record a voucher in the ledger or take payment on a booking and the figures will show up here.",
+      "every": {
+        "label": "Chart granularity",
+        "day": "Daily",
+        "week": "Weekly",
+        "month": "Monthly"
+      }
+    },
+    "categories": {
+      "incomeTitle": "Revenue by category",
+      "expenseTitle": "Costs by category",
+      "share": "{percent}%",
+      "count": "{count, plural, one {# voucher} other {# vouchers}}",
+      "uncategorized": "Uncategorised",
+      "error": "Could not load the category breakdown",
+      "empty": "No figures for this period",
+      "emptyHint": "Pick another period, or record more vouchers in the ledger.",
+      "system": {
+        "booking_payment": "Booking payment",
+        "deposit": "Deposit",
+        "deposit_refund": "Deposit refund",
+        "maintenance": "Servicing / oil change",
+        "repair": "Incident repair"
+      }
+    },
+    "vehicles": {
+      "title": "Performance by vehicle",
+      "total": "{count, plural, one {# vehicle} other {# vehicles}}",
+      "marginValue": "{value}%",
+      "cardLine": "In {revenue} · Out {cost} · {trips, plural, one {# trip} other {# trips}}",
+      "unassigned": "Shared costs not tied to a vehicle: {value}. This is not included in any row above.",
+      "error": "Could not load performance by vehicle",
+      "empty": "No vehicle activity in this period",
+      "emptyHint": "Vehicles with a trip or a voucher in this period will appear here.",
+      "columns": {
+        "vehicle": "Vehicle",
+        "trips": "Trips",
+        "revenue": "Revenue",
+        "cost": "Costs",
+        "profit": "Profit",
+        "margin": "Margin"
+      },
+      "sort": {
+        "label": "Sort by",
+        "profit": "Highest profit",
+        "revenue": "Highest revenue",
+        "cost": "Highest cost",
+        "trips": "Most trips"
+      }
+    },
+    "customers": {
+      "title": "Revenue by customer",
+      "total": "{count, plural, one {# customer} other {# customers}}",
+      "share": "{value}%",
+      "cardLine": "{trips, plural, one {# trip} other {# trips}} · {share} of period revenue",
+      "unassigned": "Not tied to a customer: {value}. Manual vouchers with no linked booking do not belong to any row above.",
+      "error": "Could not load revenue by customer",
+      "empty": "No customer activity in this period",
+      "emptyHint": "Customers with a trip or a payment in this period will appear here.",
+      "columns": {
+        "customer": "Customer",
+        "trips": "Trips",
+        "revenue": "Revenue",
+        "share": "Share"
+      },
+      "sort": {
+        "label": "Sort by",
+        "revenue": "Highest revenue",
+        "trips": "Most trips"
+      }
+    }
+  },
+  "entity": {
+    "title": {
+      "vehicle": "This vehicle's money",
+      "customer": "Revenue from this customer"
+    },
+    "note": {
+      "vehicle": "Summed from approved vouchers, deposits excluded. Before depreciation, loan interest or vehicle lease payments.",
+      "customer": "Summed from money ACTUALLY received in the period — different from \"Total rental value\" at the top of the profile, which counts agreed booking value."
+    },
+    "periods": {
+      "label": "Quick period",
+      "today": "Today",
+      "this_week": "This week",
+      "this_month": "This month",
+      "last_month": "Last month",
+      "this_quarter": "This quarter",
+      "this_year": "This year"
+    },
+    "every": {
+      "label": "Chart granularity",
+      "day": "Daily",
+      "week": "Weekly",
+      "month": "Monthly"
+    },
+    "revenue": "Revenue",
+    "cost": "Costs",
+    "profit": "Profit",
+    "margin": "{value}% margin",
+    "marginUnknown": "No revenue yet to compute a margin",
+    "debt": "Outstanding",
+    "debtBookings": "{count, plural, one {# booking} other {# bookings}}",
+    "trips": "Trips",
+    "openLedger": "Open in the ledger",
+    "error": "Could not load the figures",
+    "chartTitle": "Over time",
+    "chartError": "Could not load the chart",
+    "chartEmpty": "Nothing in this period",
+    "chartEmptyHint": "Pick another period, or record a voucher in the ledger.",
+    "createReceipt": "New income/expense voucher"
+  }
+}

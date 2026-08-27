@@ -1,0 +1,92 @@
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+  padding: var(--xp-space-md);
+  background: var(--xp-color-bg-container);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-lg);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  color: inherit;
+}
+
+.link:hover .name,
+.link:focus-visible .name {
+  text-decoration: underline;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--xp-font-size-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--xp-color-text);
+}
+
+.amount {
+  flex: none;
+  font-size: var(--xp-font-size-body);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}
+
+.track {
+  height: 8px;
+  border-radius: var(--xp-border-radius-sm);
+  background: var(--xp-color-bg-muted);
+  overflow: hidden;
+}
+
+/* Thanh bo 4px ở ĐẦU DỮ LIỆU, chân vuông vì nó neo vào mốc 0 bên trái. */
+.barRevenue,
+.barCost {
+  width: var(--xp-bar-width);
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0 var(--xp-border-radius-sm) var(--xp-border-radius-sm) 0;
+}
+
+.barRevenue {
+  background: var(--xp-color-viz-revenue);
+}
+
+.barCost {
+  background: var(--xp-color-viz-cost);
+}
+
+.meta {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}

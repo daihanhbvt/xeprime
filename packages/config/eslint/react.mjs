@@ -1,15 +1,22 @@
+import reactHooks from 'eslint-plugin-react-hooks';
+
 import base from './base.mjs';
 
 /**
- * Frontend rules layered on top of the base config.
+ * Rule cho code React, dùng chung cho apps/web và apps/mobile.
  *
- * `eslint-config-next` is applied by apps/web itself (it needs to resolve the Next
- * plugin relative to that app), so this file only carries the XePrime-specific rules.
+ * Tách rời khỏi `base` và CỐ Ý không gắn `files`: root config áp chúng cho nhiều app với
+ * glob khác nhau, còn `eslint.config.mjs` của từng app dùng bản `default` bên dưới. Đừng
+ * đọc mảng này bằng chỉ số — thêm một overlay là mọi chỉ số cứng lệch đi trong im lặng.
+ *
+ * `eslint-config-next` cũng nạp react-hooks cho apps/web, nhưng apps/mobile thì không có
+ * gì cả — thiếu overlay này là `exhaustive-deps` không chạy ở toàn bộ code React Native.
  */
-export default [
-  ...base,
+export const reactOverlays = [
+  // `configs.flat.*` chứ không `configs.recommended` — bản không có `flat` vẫn là định dạng
+  // eslintrc (`plugins` là mảng chuỗi) và ESLint 9 từ chối nạp.
+  reactHooks.configs.flat['recommended-latest'],
   {
-    files: ['**/*.{ts,tsx}'],
     rules: {
       // ADR 0003 + CLAUDE.md mục 5: styling đi qua CSS Modules + AntD token.
       'no-restricted-imports': [
@@ -43,4 +50,9 @@ export default [
       ],
     },
   },
+];
+
+export default [
+  ...base,
+  ...reactOverlays.map((overlay) => ({ files: ['**/*.{ts,tsx}'], ...overlay })),
 ];

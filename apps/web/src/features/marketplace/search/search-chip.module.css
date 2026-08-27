@@ -1,0 +1,43 @@
+/*
+ * Viên bấm-để-mở-panel của thẻ tìm kiếm — hình dáng dùng chung cho ô địa điểm ở thanh thu gọn
+ * và các viên ngữ cảnh (loại xe · dịch vụ, lộ trình).
+ *
+ * Một định nghĩa, `composes:` từ hai file: chỉnh bo góc hay trạng thái mở ở đây là cả hai bề mặt
+ * đi theo. Trước đó hai file giữ hai bản gần giống nhau — chỉ chờ một lần chỉnh là lệch.
+ */
+.chip {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font: inherit;
+  gap: 6px;
+  text-align: left;
+}
+
+.chip:hover {
+  border-color: var(--xp-color-border-strong);
+}
+
+/* Đang mở panel: viền vàng + nền nhạt, để mắt nối được viên với panel vừa bung ra. */
+.chip[aria-expanded='true'] {
+  border-color: var(--xp-color-border-focus);
+  background: var(--xp-color-primary-light);
+}
+
+.chip:focus-visible {
+  outline: var(--xp-focus-outline-width) solid var(--xp-color-border-focus);
+  outline-offset: 1px;
+}
+
+@media (max-width: 640px) {
+  .chip {
+    min-height: 36px;
+  }
+}

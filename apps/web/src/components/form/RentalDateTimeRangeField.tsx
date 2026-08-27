@@ -1,0 +1,232 @@
+'use client';
+
+import { Drawer, Popover } from 'antd';
+import type { Dayjs } from 'dayjs';
+import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { useIsMobile } from '@/hooks/use-media-query';
+import { cx } from '@/lib/cx';
+import type { BusyDayIndex } from '@/lib/rental-busy';
+import { RentalRangePanel, type RentalMode } from './RentalRangePanel';
+import styles from './RentalDateTimeRangeField.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+
+export type { RentalMode } from './RentalRangePanel';
+
+export interface RentalRange {
+  pickupAt: Dayjs | null;
+  returnAt: Dayjs | null;
+}
+
+interface RentalDateTimeRangeFieldProps {
+  value: RentalRange;
+  onChange: (next: RentalRange) => void;
+  /** Độ mịn chọn giờ (tab Thuê theo ngày/giờ) — parent giữ để còn ghi ra URL. */
+  mode: RentalMode;
+  onModeChange: (mode: RentalMode) => void;
+  /** Nhãn hai đầu ở trạng thái đóng — mặc định "Nhận xe"/"Trả xe" theo ngôn ngữ đang dùng. */
+  labels?: { start: string; end: string };
+  disabled?: boolean;
+  className?: string;
+  ariaLabel?: string;
+  /** Icon nằm trong cùng vùng bấm; dùng để toàn bộ viền control đều mở lịch. */
+  prefix?: ReactNode;
+  /** Sàn số ngày thuê (17/08 — dài hạn truyền LONG_TERM_MIN_DAYS); xuyên xuống RentalRangePanel. */
+  minDays?: number;
+  /**
+   * Lịch bận của chiếc xe đang chọn — có thì lịch khoá ngày bận và tô riêng ngày bận một phần
+   * (20/08). Bỏ trống ở những chỗ chưa gắn với một xe cụ thể (thanh tìm kiếm marketplace).
+   */
+  busyDays?: BusyDayIndex;
+  busyLoading?: boolean;
+  /**
+   * `compact` (mặc định): hai giá trị nối bằng mũi tên — cho ô hẹp trong thanh tìm kiếm, nơi đã
+   * có nhãn "Thời gian thuê" ở ngoài.
+   *
+   * `labelled`: mỗi đầu mang nhãn riêng ("Nhận xe: …") ngăn bằng vạch đứng, kèm viên thời lượng
+   * bên phải. Dùng ở chỗ rộng, khi ô này là control chính của màn và không được phép mơ hồ đầu
+   * nào là nhận / đầu nào là trả.
+   */
+  variant?: 'compact' | 'labelled';
+  /**
+   * Bỏ THỨ trong tuần ở trạng thái đóng: `19/08 10:00` thay vì `T4, 19/08 · 10:00`.
+   *
+   * Dành cho ô rất hẹp (thanh tìm kiếm thu gọn) — ở đó bản đầy đủ bị cắt cụt thành `T4, 19/08 ·
+   * 10:…`, mà giờ nhận mới là thứ người dùng cần đọc. Chỗ rộng vẫn giữ thứ: "T7" nói được nhiều
+   * hơn "22/08" khi đang cân nhắc cuối tuần.
+   */
+  compactPoint?: boolean;
+  /**
+   * Nơi render lịch. Mặc định `<body>`; ô nằm trong thanh `position: fixed` phải truyền chính
+   * thanh đó vào, nếu không lịch đứng theo toạ độ tài liệu và trôi khỏi ô khi cuộn.
+   */
+  getPopupContainer?: () => HTMLElement;
+}
+
+/**
+ * Khoảng thời gian thuê — MỘT giá trị `{ pickupAt, returnAt }`, dùng chung cho hero trang chủ
+ * và mọi chỗ cần chọn khoảng thuê.
+ *
+ * Trạng thái đóng hiện HAI đầu "Nhận xe"/"Trả xe" của cùng một khoảng — bấm đầu nào cũng mở
+ * CÙNG một hộp lịch. Trong hộp, chọn range theo ngữ nghĩa CHUẨN (bấm mới = bắt đầu range mới):
+ * luật "đầu đang sửa" tự chế trước đây chính là nguồn bug lịch tô một đằng giá trị một nẻo (10/08).
+ *
+ * Overlay: desktop là Popover ngay dưới ô (Figma `177:1657` — lịch đôi); mobile là Drawer đáy
+ * màn một tháng. Giá trị chỉ commit khi bấm "Áp dụng" — đóng ngang chừng không phá khoảng cũ.
+ */
+export function RentalDateTimeRangeField({
+  value,
+  onChange,
+  mode,
+  onModeChange,
+  labels,
+  disabled,
+  className,
+  ariaLabel,
+  prefix,
+  minDays,
+  busyDays,
+  busyLoading,
+  variant = 'compact',
+  compactPoint = false,
+  getPopupContainer,
+}: RentalDateTimeRangeFieldProps) {
+  const fmt = useAppFormat();
+  const t = useTranslations('Common');
+
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<RentalRange>(value);
+
+  // Mặc định phải nằm SAU hook: tham số mặc định được tính trước khi `t` tồn tại.
+  const endpointLabels = labels ?? {
+    start: t('components.rentalRange.pickup'),
+    end: t('components.rentalRange.return'),
+  };
+  const fieldLabel = ariaLabel ?? t('components.rentalRange.ariaLabel');
+
+  function openPanel() {
+    if (disabled) return;
+    setDraft(value);
+    setOpen(true);
+  }
+
+  function apply() {
+    onChange(draft);
+    setOpen(false);
+  }
+
+  /**
+   * `T6, 08/08 · 10:00` — có THỨ, không có năm (xem `formatRentalPoint`). Chế độ theo ngày vẫn
+   * hiện giờ vì giờ nhận/trả là thứ quyết định ngày tính tiền, không phải chi tiết phụ.
+   *
+   * `compactPoint` bỏ thứ cho ô hẹp; GIỜ thì không bao giờ bỏ — cắt mất giờ nhận là cắt đúng
+   * thông tin quyết định số ngày tính tiền.
+   */
+  const pointText = (d: Dayjs | null, fallback: string) =>
+    d ? (compactPoint ? d.format('DD/MM HH:mm') : fmt.rentalPoint(d)) : fallback;
+
+  const complete = Boolean(value.pickupAt && value.returnAt);
+  const notSelected = t('components.rentalRange.notSelected');
+  const ariaValue = t('components.rentalRange.ariaValue', {
+    label: fieldLabel,
+    start: pointText(value.pickupAt, notSelected),
+    end: pointText(value.returnAt, notSelected),
+  });
+
+  const trigger =
+    variant === 'labelled' ? (
+      <button
+        type="button"
+        className={cx(styles.trigger, styles.triggerLabelled, className)}
+        disabled={disabled}
+        onClick={openPanel}
+        aria-label={ariaValue}
+      >
+        {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
+        <span className={styles.endpointLabelled}>
+          <span className={styles.endpointLabel}>{endpointLabels.start}:</span>
+          <span className={styles.endpointValue}>
+            {pointText(value.pickupAt, t('components.rentalRange.pickDateTime'))}
+          </span>
+        </span>
+        <span className={styles.divider} aria-hidden />
+        <span className={styles.endpointLabelled}>
+          <span className={styles.endpointLabel}>{endpointLabels.end}:</span>
+          <span className={styles.endpointValue}>
+            {pointText(value.returnAt, t('components.rentalRange.pickDateTime'))}
+          </span>
+        </span>
+        {complete ? (
+          <span className={styles.durationPill}>
+            {fmt.rentalDuration(value.pickupAt!, value.returnAt!)}
+          </span>
+        ) : null}
+      </button>
+    ) : (
+      <button
+        type="button"
+        className={cx(styles.trigger, className)}
+        disabled={disabled}
+        onClick={openPanel}
+        aria-label={ariaValue}
+      >
+        {prefix ? <span className={styles.prefix}>{prefix}</span> : null}
+        <span className={styles.endpoint}>{pointText(value.pickupAt, endpointLabels.start)}</span>
+        <span className={styles.sep} aria-hidden>
+          →
+        </span>
+        <span className={styles.endpoint}>{pointText(value.returnAt, endpointLabels.end)}</span>
+      </button>
+    );
+
+  const panel = (
+    <RentalRangePanel
+      value={draft}
+      onChange={setDraft}
+      mode={mode}
+      onModeChange={onModeChange}
+      months={isMobile ? 1 : 2}
+      minDays={minDays}
+      busyDays={busyDays}
+      busyLoading={busyLoading}
+      onApply={apply}
+      onCancel={() => setOpen(false)}
+    />
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        {trigger}
+        <Drawer
+          title={t('components.rentalRange.drawerTitle')}
+          placement="bottom"
+          size="auto"
+          open={open}
+          onClose={() => setOpen(false)}
+          classNames={{ body: styles.drawerBody }}
+        >
+          {panel}
+        </Drawer>
+      </>
+    );
+  }
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        // Chỉ nhận tín hiệu ĐÓNG (Esc/bấm ra ngoài) — mở luôn đi qua openPanel để nạp draft mới.
+        if (!next) setOpen(false);
+      }}
+      trigger={['click']}
+      placement="bottomLeft"
+      getPopupContainer={getPopupContainer}
+      content={<div className={styles.popoverBody}>{panel}</div>}
+    >
+      {trigger}
+    </Popover>
+  );
+}

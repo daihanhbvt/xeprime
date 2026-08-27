@@ -1,0 +1,59 @@
+# Reverse proxy + TLS tự động cho XePrime.
+#
+# Caddy xin và gia hạn chứng chỉ Let's Encrypt một mình — không cron certbot, không tay chân.
+# Điều kiện: cổng 80 và 443 mở, và A record của cả hai tên miền đã trỏ về IP VPS TRƯỚC khi
+# container này khởi động lần đầu (ACME xác minh qua HTTP-01).
+#
+# Vì sao HAI tên miền chứ không phải `/api` trên cùng một host:
+#   `redirect_uri` của Google/Facebook (ADR 0019) dựng từ `API_PUBLIC_URL` và phải TRÙNG TỪNG
+#   KÝ TỰ với giá trị khai trong console của provider. Một host riêng cho API giữ đường dẫn đó
+#   ổn định và không phụ thuộc vào luật rewrite của proxy. Cookie phiên vẫn dùng chung được vì
+#   `SESSION_COOKIE_DOMAIN` đặt ở tên miền gốc (`.xeprime.vn`), và `sameSite: lax` coi hai
+#   subdomain là CÙNG site (ADR 0002).
+
+{
+	email {$ACME_EMAIL}
+	# Log của Caddy đi ra stdout để `docker compose logs caddy` là chỗ duy nhất phải nhìn.
+}
+
+(common) {
+	encode zstd gzip
+
+	header {
+		# HSTS: một khi đã có TLS thì đừng để trình duyệt thử http lần nào nữa.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Xoá dấu vết phiên bản server — không phải bảo mật thật, nhưng không có lý do để khoe.
+		-Server
+	}
+}
+
+# --- Web (Next.js) ---------------------------------------------------------
+{$WEB_DOMAIN} {
+	import common
+	reverse_proxy web:3000
+}
+
+# --- www -> tên miền gốc ------------------------------------------------------
+# BỎ COMMENT sau khi đã tạo bản ghi A cho `www`. Không bật sẵn: Caddy xin chứng chỉ ngay lúc
+# khởi động, và nếu bản ghi chưa tồn tại thì nó thử lại liên tục rồi lấp đầy log bằng lỗi ACME.
+#
+# Chuyển hướng 301 chứ không phục vụ song song hai tên miền: hai URL cho cùng một nội dung là
+# nội dung trùng lặp dưới mắt công cụ tìm kiếm, và là hai origin khác nhau dưới mắt trình duyệt.
+# Vì đã 301, origin mà trình duyệt gửi lên LUÔN là tên miền gốc — nên KHÔNG cần thêm www vào
+# `CORS_ORIGINS`.
+#
+# www.{$WEB_DOMAIN} {
+#	redir https://{$WEB_DOMAIN}{uri} permanent
+# }
+
+# --- API (NestJS) ----------------------------------------------------------
+{$API_DOMAIN} {
+	import common
+
+	# `X-Forwarded-For` / `X-Forwarded-Proto` do Caddy tự thêm. Chúng chỉ có tác dụng khi API
+	# tin proxy: xem `TRUST_PROXY_HOPS` trong .env.production — thiếu nó thì rate limit
+	# (@nestjs/throttler) đếm MỌI người dùng chung một IP, tức là IP của container này.
+	reverse_proxy api:4000
+}

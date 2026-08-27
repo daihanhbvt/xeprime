@@ -15,6 +15,12 @@ export type ThemeMode = (typeof THEME_MODE)[keyof typeof THEME_MODE];
 
 export interface AppState {
   sidebarCollapsed: boolean;
+  /**
+   * Khối menu (`NavSection.key`) người dùng đã GẬP LẠI — lưu phía phủ định để mặc định
+   * "chưa chọn gì" là mọi khối mở, và để khối mới thêm về sau không bị ẩn mất vì nó không có
+   * trong danh sách đã lưu của người dùng cũ.
+   */
+  navSectionsCollapsed: string[];
   /** Sidebar dạng Drawer trên màn hình hẹp. */
   mobileNavOpen: boolean;
   themeMode: ThemeMode;
@@ -22,6 +28,7 @@ export interface AppState {
 
 const initialState: AppState = {
   sidebarCollapsed: false,
+  navSectionsCollapsed: [],
   mobileNavOpen: false,
   themeMode: THEME_MODE.LIGHT,
 };
@@ -36,6 +43,13 @@ const appSlice = createSlice({
     setSidebarCollapsed(state, action: PayloadAction<boolean>) {
       state.sidebarCollapsed = action.payload;
     },
+    /** Gập/mở một khối menu. Khối chứa trang đang mở vẫn luôn được bung ra lúc render. */
+    toggleNavSection(state, action: PayloadAction<string>) {
+      const key = action.payload;
+      state.navSectionsCollapsed = state.navSectionsCollapsed.includes(key)
+        ? state.navSectionsCollapsed.filter((item) => item !== key)
+        : [...state.navSectionsCollapsed, key];
+    },
     setMobileNavOpen(state, action: PayloadAction<boolean>) {
       state.mobileNavOpen = action.payload;
     },
@@ -45,7 +59,12 @@ const appSlice = createSlice({
   },
 });
 
-export const { toggleSidebar, setSidebarCollapsed, setMobileNavOpen, setThemeMode } =
-  appSlice.actions;
+export const {
+  toggleSidebar,
+  setSidebarCollapsed,
+  toggleNavSection,
+  setMobileNavOpen,
+  setThemeMode,
+} = appSlice.actions;
 
 export const appReducer = appSlice.reducer;

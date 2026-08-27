@@ -1,4 +1,4 @@
-import type { StatusMeta } from './meta';
+import { STATUS_COLOR, type StatusMeta } from './meta';
 
 /**
  * Trạng thái yêu cầu đặt xe từ Marketplace (ADR 0005).
@@ -36,11 +36,131 @@ export const BOOKING_REQUEST_STATUS_OCCUPYING: readonly BookingRequestStatus[] =
   BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
 ];
 
-export const BOOKING_REQUEST_STATUS_META: Readonly<Record<BookingRequestStatus, StatusMeta>> = {
-  [BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL]: { label: 'Chờ chủ shop duyệt', color: 'gold' },
-  [BOOKING_REQUEST_STATUS.APPROVED_BY_HOST]: { label: 'Chủ shop đã duyệt', color: 'green' },
-  [BOOKING_REQUEST_STATUS.REJECTED_BY_HOST]: { label: 'Chủ shop từ chối', color: 'red' },
-  [BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER]: { label: 'Khách đã hủy', color: 'default' },
-  [BOOKING_REQUEST_STATUS.EXPIRED]: { label: 'Quá hạn phản hồi', color: 'default' },
-  [BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING]: { label: 'Đã tạo đơn thuê', color: 'cyan' },
+/**
+ * Lộ trình của yêu cầu thuê XE CÓ TÀI XẾ (mô hình 3 lộ trình — plan 17/08).
+ *
+ * Là NGỮ CẢNH để shop báo giá đúng khi duyệt (phụ phí 1 chiều/lưu đêm...), KHÔNG phải chiều
+ * lọc marketplace — xe không khai "lộ trình phục vụ" nên lọc theo nó chỉ tạo kết quả rỗng giả.
+ */
+export const ROUTE_TYPE = {
+  IN_CITY: 'in_city',
+  INTER_CITY: 'inter_city',
+  INTER_CITY_ONE_WAY: 'inter_city_one_way',
+} as const;
+
+export type RouteType = (typeof ROUTE_TYPE)[keyof typeof ROUTE_TYPE];
+export const ROUTE_TYPE_VALUES = Object.values(ROUTE_TYPE) as RouteType[];
+
+export const ROUTE_TYPE_LABEL: Readonly<Record<RouteType, string>> = {
+  [ROUTE_TYPE.IN_CITY]: 'Nội thành',
+  [ROUTE_TYPE.INTER_CITY]: 'Liên tỉnh',
+  [ROUTE_TYPE.INTER_CITY_ONE_WAY]: 'Liên tỉnh (1 chiều)',
 };
+
+/** Mô tả ngắn dưới radio lộ trình — hero tìm kiếm và bước gửi yêu cầu dùng chung. */
+export const ROUTE_TYPE_DESCRIPTION: Readonly<Record<RouteType, string>> = {
+  [ROUTE_TYPE.IN_CITY]: 'Di chuyển trong nội thành hoặc lân cận, lộ trình tự do',
+  [ROUTE_TYPE.INTER_CITY]: 'Đi tỉnh/thành khác và quay về điểm đón (khứ hồi)',
+  [ROUTE_TYPE.INTER_CITY_ONE_WAY]:
+    'Đi tỉnh/thành khác một chiều — gian hàng có thể báo thêm phụ phí',
+};
+
+export function isRouteType(value: unknown): value is RouteType {
+  return typeof value === 'string' && (ROUTE_TYPE_VALUES as string[]).includes(value);
+}
+
+/** Nhãn một lộ trình, chịu được giá trị lạ trong dữ liệu cũ — không bao giờ in mã thô. */
+export function routeTypeLabel(value: string): string {
+  return (ROUTE_TYPE_LABEL as Readonly<Record<string, string>>)[value] ?? value;
+}
+
+export const BOOKING_REQUEST_STATUS_META: Readonly<Record<BookingRequestStatus, StatusMeta>> = {
+  [BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL]: {
+    label: 'Chờ chủ shop duyệt',
+    color: STATUS_COLOR.WAITING,
+  },
+  [BOOKING_REQUEST_STATUS.APPROVED_BY_HOST]: {
+    label: 'Chủ shop đã duyệt',
+    color: STATUS_COLOR.SUCCESS,
+  },
+  [BOOKING_REQUEST_STATUS.REJECTED_BY_HOST]: {
+    label: 'Chủ shop từ chối',
+    color: STATUS_COLOR.DANGER,
+  },
+  [BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER]: {
+    label: 'Khách đã hủy',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [BOOKING_REQUEST_STATUS.EXPIRED]: {
+    label: 'Quá hạn phản hồi',
+    color: STATUS_COLOR.NEUTRAL,
+  },
+  [BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING]: {
+    label: 'Đã tạo đơn thuê',
+    color: STATUS_COLOR.SUCCESS,
+  },
+};
+
+// ── Hạn phản hồi của gian hàng ──────────────────────────────────────────────
+
+/**
+ * Gian hàng có **60 phút** để trả lời một yêu cầu thuê.
+ *
+ * Vì sao có hạn: yêu cầu chờ duyệt KHÔNG chiếm lịch xe (`BOOKING_REQUEST_STATUS_OCCUPYING`),
+ * nên một yêu cầu nằm im vô thời hạn không khoá gì cả — nó chỉ khoá KHÁCH, người đang chờ một
+ * câu trả lời để còn đi tìm xe khác. Hạn phản hồi là lời hứa với khách, không phải một cơ chế
+ * dọn dữ liệu.
+ *
+ * Số này sống ở `packages/types` vì cả ba phía phải nói cùng một con số: API tính `respondBy`
+ * lúc nhận yêu cầu, worker expire theo đúng mốc đó, và web đếm ngược tới đúng nó.
+ */
+export const BOOKING_REQUEST_RESPOND_WINDOW_MINUTES = 60;
+
+/**
+ * Hai mốc nhắc gian hàng, tính từ lúc khách gửi.
+ *
+ * Nhắc TRƯỚC khi hết hạn chứ không phải sau: mục đích là để yêu cầu được trả lời, không phải
+ * để báo cáo rằng nó đã chết. `FINAL` cách hạn 15 phút — đủ để mở máy và bấm, không đủ để quên.
+ */
+export const BOOKING_REQUEST_REMINDER_MINUTES = {
+  FIRST: 20,
+  FINAL: 45,
+} as const;
+
+/** Phút còn lại tại mốc nhắc cuối — dùng cho câu "còn {n} phút" của thông báo. */
+export const BOOKING_REQUEST_FINAL_REMINDER_REMAINING_MINUTES =
+  BOOKING_REQUEST_RESPOND_WINDOW_MINUTES - BOOKING_REQUEST_REMINDER_MINUTES.FINAL;
+
+const MS_PER_MINUTE = 60_000;
+
+/** Hạn phản hồi của một yêu cầu gửi lúc `from`. SERVER tính — client không gửi giá trị này. */
+export function bookingRequestRespondBy(from: Date): Date {
+  return new Date(from.getTime() + BOOKING_REQUEST_RESPOND_WINDOW_MINUTES * MS_PER_MINUTE);
+}
+
+/**
+ * Yêu cầu đã quá hạn phản hồi chưa — so mốc, không so trạng thái.
+ *
+ * Trạng thái `expired` do worker ghi, nên luôn có một cửa sổ (tới một nhịp worker) mà yêu cầu
+ * đã quá hạn nhưng vẫn còn `pending_host_approval` trong DB. Endpoint duyệt/từ chối phải hỏi
+ * hàm này chứ không phải hỏi cột `status`, nếu không cửa sổ đó là một lỗ để duyệt yêu cầu đã
+ * chết.
+ */
+export function isBookingRequestPastDue(
+  respondBy: Date | string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!respondBy) return false;
+  const due = respondBy instanceof Date ? respondBy : new Date(respondBy);
+  return due.getTime() <= now.getTime();
+}
+
+/** Mili-giây còn lại tới hạn (0 khi đã quá hạn hoặc không có hạn) — nuôi đồng hồ đếm ngược. */
+export function bookingRequestRemainingMs(
+  respondBy: Date | string | null | undefined,
+  now: Date = new Date(),
+): number {
+  if (!respondBy) return 0;
+  const due = respondBy instanceof Date ? respondBy : new Date(respondBy);
+  return Math.max(0, due.getTime() - now.getTime());
+}

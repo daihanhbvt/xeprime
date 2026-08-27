@@ -1,0 +1,99 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 0;
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+/* Tiền căn phải + chữ số đều bề rộng để mắt so hàng dọc được (gap analysis §6.5). */
+.money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.debt {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.meta {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.muted {
+  color: var(--xp-color-text-tertiary);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+/* ── Thẻ mobile ─────────────────────────────────────────────────────────────
+ * Không đặt bề rộng cố định ở đâu và `min-width: 0` ở mọi con của flex/grid:
+ * một tên khách rất dài hoặc một số tiền lớn không được phép làm thân trang cuộn ngang.
+ */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+.cardHead > * {
+  min-width: 0;
+}
+
+.cardMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--xp-space-sm);
+  margin: 0;
+  padding: var(--xp-space-sm) 0;
+  border-top: 1px solid var(--xp-color-border-subtle);
+  border-bottom: 1px solid var(--xp-color-border-subtle);
+}
+
+.cardMetrics > div {
+  min-width: 0;
+}
+
+.cardMetrics dt {
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  color: var(--xp-color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardMetrics dd {
+  margin: 2px 0 0;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Vùng chạm ≥ 44px — ràng buộc WCAG 2.5.5, không phải thứ để nén cho gọn. */
+.cardAction {
+  min-height: var(--xp-touch-target-min);
+}

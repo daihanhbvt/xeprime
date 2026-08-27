@@ -1,53 +1,97 @@
 'use client';
 
-import { PictureOutlined } from '@ant-design/icons';
+import { PictureOutlined, RightOutlined } from '@ant-design/icons';
+import { Alert, Skeleton } from 'antd';
+import { useState } from 'react';
+import { getErrorMessage } from '@/services/api-client';
+import { useDestinations } from '../hooks/use-destinations';
 import { useMarketplaceFilters } from '../hooks/use-marketplace-filters';
-import { FEATURED_LOCATIONS } from '../constants';
 import styles from './FeaturedLocations.module.css';
+import { useTranslations } from 'next-intl';
+
+/** Số ô hiện ban đầu; "Xem tất cả" mở hết phần đã tải. */
+const PREVIEW_COUNT = 5;
+const FETCH_LIMIT = 12;
 
 /**
- * Địa điểm nổi bật — bám xeprime.vn. Bấm một thành phố sẽ lọc danh sách gợi ý và cuộn xuống.
- * Ảnh dùng placeholder cho tới khi có asset thật.
+ * "Địa điểm nổi bật" — tỉnh/thành ĐANG có xe, số xe đếm thật ở backend (`/public/destinations`).
+ * Bấm một địa điểm sẽ lọc danh sách gợi ý theo tỉnh đó rồi cuộn xuống.
  */
 export function FeaturedLocations() {
+  const t = useTranslations('Marketplace.locations');
   const { setFilters } = useMarketplaceFilters();
+  const { data, isLoading, isError, error } = useDestinations(FETCH_LIMIT);
+  const [expanded, setExpanded] = useState(false);
 
-  function pick(province: string) {
-    // TODO(Phase 3): backend lọc theo `province` khi public_listings có cột đó. Hiện chỉ cuộn.
-    setFilters({});
+  function pick(provinceCode: string) {
+    // Lọc theo MÃ tỉnh (khớp chính xác). Xoá luôn tham số tên cũ nếu URL đang mang nó.
+    setFilters({ provinceCode, province: undefined });
     document.getElementById('recommendations')?.scrollIntoView({ behavior: 'smooth' });
-    void province;
   }
+
+  const all = data ?? [];
+  const shown = expanded ? all : all.slice(0, PREVIEW_COUNT);
+
+  // Chưa có xe nào công khai → ẩn hẳn khối, không hiện khung rỗng vô nghĩa.
+  if (!isLoading && !isError && all.length === 0) return null;
 
   return (
     <section className={styles.section} aria-labelledby="loc-title">
       <header className={styles.head}>
         <div>
           <h2 id="loc-title" className={styles.title}>
-            Địa điểm nổi bật
+            {t('title')}
           </h2>
-          <p className={styles.sub}>Khám phá xe thuê tại các điểm đến phổ biến</p>
+          <p className={styles.sub}>{t('subtitle')}</p>
         </div>
+        {all.length > PREVIEW_COUNT ? (
+          <button type="button" className={styles.seeAll} onClick={() => setExpanded((v) => !v)}>
+            {expanded ? t('collapse') : t('expand')} <RightOutlined />
+          </button>
+        ) : null}
       </header>
 
-      <div className={styles.grid}>
-        {FEATURED_LOCATIONS.map((loc, i) => (
-          <button
-            key={loc.province}
-            type="button"
-            className={i === 0 || i === 4 ? styles.tileWide : styles.tile}
-            onClick={() => pick(loc.province)}
-          >
-            <span className={styles.overlay} aria-hidden="true">
-              <PictureOutlined />
-            </span>
-            <span className={styles.meta}>
-              <span className={styles.name}>{loc.name}</span>
-              <span className={styles.count}>{loc.count} xe có sẵn</span>
-            </span>
-          </button>
-        ))}
-      </div>
+      {isError ? (
+        <Alert
+          type="error"
+          showIcon
+          message={t('loadError')}
+          description={getErrorMessage(error)}
+        />
+      ) : isLoading ? (
+        <div className={styles.grid}>
+          {Array.from({ length: PREVIEW_COUNT }).map((_, i) => (
+            <div key={i} className={styles.tile}>
+              <Skeleton.Node active className={styles.skeleton} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={styles.grid}>
+          {shown.map((loc) => (
+            <button
+              key={loc.provinceCode}
+              type="button"
+              className={styles.tile}
+              onClick={() => pick(loc.provinceCode)}
+            >
+              {loc.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- ảnh từ storage ngoài, chưa qua next/image
+                <img src={loc.imageUrl} alt="" className={styles.photo} />
+              ) : (
+                <span className={styles.placeholder} aria-hidden="true">
+                  <PictureOutlined />
+                </span>
+              )}
+              <span className={styles.shade} aria-hidden="true" />
+              <span className={styles.meta}>
+                <span className={styles.name}>{loc.provinceName}</span>
+                <span className={styles.count}>{t('available', { count: loc.vehicleCount })}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

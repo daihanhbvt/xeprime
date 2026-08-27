@@ -1,0 +1,178 @@
+{
+  "page": {
+    "subtitle": "Thông tin khách nhìn thấy trên marketplace, và thông tin nội bộ để XePrime duyệt hồ sơ.",
+    "viewPublicPage": "Xem gian hàng",
+    "loadError": "Không tải được hồ sơ gian hàng",
+    "forbidden": {
+      "title": "Không có quyền truy cập",
+      "description": "Bạn cần quyền dưới đây để xem hồ sơ gian hàng.",
+      "backHome": "Về trang chủ"
+    }
+  },
+  "noTenant": {
+    "title": "Bạn chưa có gian hàng",
+    "description": "Tài khoản hiện tại vẫn có thể dùng để tìm và đặt xe. Bạn chỉ cần đăng ký gian hàng nếu muốn cho thuê xe.",
+    "register": "Đăng ký trở thành chủ xe",
+    "backToSearch": "Quay lại tìm xe"
+  },
+  "status": {
+    "submit": "Gửi duyệt",
+    "resubmit": "Gửi lại duyệt",
+    "submitted": "Đã gửi hồ sơ cho nền tảng duyệt",
+    "incomplete": "{count, plural, other {Còn # mục chưa điền đúng}} — con trỏ đã nhảy tới mục đầu tiên.",
+    "reason": "Đội duyệt ghi: {reason}",
+    "submitConfirm": {
+      "title": "Gửi hồ sơ cho nền tảng duyệt?",
+      "description": "Sau khi gửi, bạn không sửa hồ sơ cho tới khi có kết quả.",
+      "descriptionWithSave": "Thay đổi chưa lưu sẽ được lưu trước rồi mới gửi. Sau khi gửi, bạn không sửa hồ sơ cho tới khi có kết quả.",
+      "ok": "Gửi duyệt"
+    },
+    "action": {
+      "complete": "Hoàn thiện hồ sơ",
+      "view": "Xem hồ sơ",
+      "revise": "Bổ sung ngay",
+      "reason": "Xem lý do",
+      "support": "Liên hệ hỗ trợ",
+      "addVehicle": "Thêm xe"
+    },
+    "draft": {
+      "title": "Hồ sơ chưa được gửi duyệt",
+      "body": "Điền đủ các mục bắt buộc bên dưới rồi bấm Gửi duyệt. Xe chỉ hiển thị công khai sau khi hồ sơ được duyệt.",
+      "shell": "Xe của bạn chưa lên marketplace. Hoàn thiện hồ sơ rồi gửi duyệt để bắt đầu nhận đơn."
+    },
+    "pending": {
+      "title": "Hồ sơ đang chờ nền tảng duyệt",
+      "body": "Trong lúc chờ, bạn vẫn thêm xe và chuẩn bị dữ liệu bình thường.",
+      "submittedAt": "Đã gửi lúc {at}.",
+      "shell": "XePrime đang xem hồ sơ của bạn. Xe sẽ lên marketplace ngay khi được duyệt."
+    },
+    "needsRevision": {
+      "title": "Nền tảng yêu cầu bổ sung",
+      "body": "Cập nhật theo yêu cầu rồi bấm Gửi lại duyệt.",
+      "shell": "XePrime cần bạn bổ sung thông tin trước khi duyệt gian hàng."
+    },
+    "rejected": {
+      "title": "Hồ sơ bị từ chối",
+      "body": "Chỉnh lại theo lý do bên dưới rồi gửi lại — hồ sơ vẫn gửi lại được.",
+      "shell": "Hồ sơ gian hàng chưa được duyệt. Xem lý do rồi chỉnh lại và gửi lại."
+    },
+    "active": {
+      "title": "Gian hàng đang hoạt động",
+      "body": "Xe đã duyệt của bạn đang hiển thị trên marketplace.",
+      "shell": "Gian hàng đang hoạt động."
+    },
+    "suspended": {
+      "title": "Gian hàng đang bị khoá",
+      "body": "Xe của bạn tạm ẩn khỏi marketplace và không nhận được đơn mới. Liên hệ đội ngũ XePrime để biết chi tiết.",
+      "shell": "Gian hàng đang bị khoá: xe tạm ẩn khỏi marketplace và không nhận đơn mới."
+    },
+    "expired": {
+      "title": "Gói dịch vụ đã hết hạn",
+      "body": "Gia hạn gói để xe hiển thị trở lại trên marketplace.",
+      "shell": "Gói dịch vụ đã hết hạn nên xe tạm ẩn khỏi marketplace."
+    }
+  },
+  "form": {
+    "saved": "Đã lưu thông tin gian hàng",
+    "submit": "Lưu thông tin",
+    "reset": "Huỷ bỏ",
+    "unsaved": "Chưa lưu",
+    "lockedWhilePending": "Hồ sơ đang chờ duyệt nên tạm khoá chỉnh sửa.",
+    "readOnly": "Bạn chỉ có quyền xem hồ sơ gian hàng.",
+    "display": {
+      "title": "Thông tin hiển thị",
+      "displayName": {
+        "label": "Tên hiển thị",
+        "placeholder": "Tên hiện trên marketplace"
+      },
+      "bio": {
+        "label": "Giới thiệu",
+        "placeholder": "Mô tả ngắn về gian hàng…"
+      },
+      "logo": {
+        "label": "Logo gian hàng",
+        "hint": "Kích thước đề xuất: 800×800px."
+      },
+      "cover": {
+        "label": "Ảnh bìa (trang gian hàng công khai)",
+        "hint": "Kích thước đề xuất: 1600×600px."
+      }
+    },
+    "owner": {
+      "title": "Thông tin chủ gian hàng",
+      "fullName": {
+        "label": "Họ và tên",
+        "placeholder": "VD: Nguyễn Văn A"
+      },
+      "phone": {
+        "label": "Số điện thoại",
+        "placeholder": "0901234567"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "chugianhang@xeprime.vn"
+      },
+      "privacy": {
+        "title": "Bảo mật thông tin",
+        "body": "Thông tin chủ gian hàng chỉ hiển thị với đội ngũ XePrime và không công khai với khách hàng."
+      }
+    },
+    "address": {
+      "title": "Địa chỉ & pháp lý",
+      "address": {
+        "label": "Địa chỉ",
+        "placeholder": "Số nhà, đường, phường/xã"
+      },
+      "province": {
+        "label": "Tỉnh / Thành",
+        "placeholder": "Chọn tỉnh/thành",
+        "loading": "Đang tải tỉnh/thành…",
+        "loadError": "Không tải được danh sách tỉnh/thành",
+        "help": "Vị trí của chi nhánh mặc định — xe thuộc chi nhánh này sẽ hiển thị ở tỉnh/thành đã chọn.",
+        "branchLink": "Quản lý chi nhánh"
+      },
+      "taxCode": {
+        "label": "Mã số thuế",
+        "placeholder": "Nếu có"
+      },
+      "businessLicenseNo": {
+        "label": "Số giấy phép KD",
+        "placeholder": "Nếu có"
+      }
+    },
+    "bank": {
+      "title": "Tài khoản nhận tiền",
+      "hint": "Tài khoản XePrime dùng để đối soát và chuyển tiền cho gian hàng.",
+      "bankName": {
+        "label": "Ngân hàng",
+        "placeholder": "VD: Vietcombank"
+      },
+      "accountNo": {
+        "label": "Số tài khoản",
+        "placeholder": "Số tài khoản nhận tiền"
+      },
+      "accountName": {
+        "label": "Chủ tài khoản",
+        "placeholder": "Tên chủ tài khoản"
+      }
+    }
+  },
+  "checklist": {
+    "title": "Hoàn thiện hồ sơ",
+    "requiredTitle": "Bắt buộc để gửi duyệt",
+    "requiredDone": "Đã đủ điều kiện gửi duyệt",
+    "suggestedTitle": "Nên có — giúp khách chọn gian hàng của bạn",
+    "goToField": "Điền",
+    "items": {
+      "displayName": "Tên hiển thị của gian hàng",
+      "province": "Tỉnh/thành đặt gian hàng",
+      "ownerName": "Họ tên chủ gian hàng",
+      "ownerPhone": "Số điện thoại chủ gian hàng",
+      "logo": "Logo gian hàng",
+      "bio": "Giới thiệu gian hàng",
+      "address": "Địa chỉ gian hàng",
+      "cover": "Ảnh bìa trang gian hàng",
+      "bank": "Tài khoản nhận tiền"
+    }
+  }
+}

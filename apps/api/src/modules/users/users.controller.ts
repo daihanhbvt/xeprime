@@ -23,9 +23,11 @@ export class UpdateMeDto {
 export class UserProfileDto {
   @ApiProperty() id!: string;
   @ApiProperty() displayName!: string;
-  @ApiPropertyOptional({ nullable: true }) email!: string | null;
-  @ApiPropertyOptional({ nullable: true }) phone!: string | null;
-  @ApiPropertyOptional({ nullable: true }) avatarUrl!: string | null;
+  // Luôn có mặt, chỉ nullable → `@ApiProperty` + `nullable` (không phải Optional).
+  // `type: String` bắt buộc, thiếu nó contract sinh ra `Record<string, never>`.
+  @ApiProperty({ type: String, nullable: true }) email!: string | null;
+  @ApiProperty({ type: String, nullable: true }) phone!: string | null;
+  @ApiProperty({ type: String, nullable: true }) avatarUrl!: string | null;
   @ApiProperty() phoneVerified!: boolean;
 }
 

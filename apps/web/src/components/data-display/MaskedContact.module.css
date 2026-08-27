@@ -1,0 +1,16 @@
+.row {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.masked {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--xp-color-text-secondary);
+}
+
+.revealed {
+  font-variant-numeric: tabular-nums;
+  color: var(--xp-color-text);
+}

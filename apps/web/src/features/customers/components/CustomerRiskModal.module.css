@@ -1,0 +1,10 @@
+/*
+ * Giải thích hệ quả đặt NGAY DƯỚI ô quyết định, không phải một đoạn dài lơ lửng cuối form —
+ * người dùng đọc nó đúng lúc đang chọn.
+ */
+.hint {
+  margin: calc(-1 * var(--xp-space-sm)) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

@@ -1,0 +1,339 @@
+{
+  "page": {
+    "title": "Rental requests",
+    "subtitle": "Your shop's request inbox: see which vehicle a guest asked for, when they need it, then approve or decline right here.",
+    "listLabel": "Rental request list",
+    "totalLabel": "{count, plural, one {# request} other {# requests}}"
+  },
+  "stats": {
+    "pending": "Pending",
+    "converted": "Completed"
+  },
+  "tabs": {
+    "ariaLabel": "Filter requests by status",
+    "needsAction": "Needs action",
+    "converted": "Booking created",
+    "rejected": "Rejected",
+    "cancelled": "Cancelled",
+    "expired": "Expired",
+    "all": "All"
+  },
+  "filters": {
+    "searchLabel": "Search requests",
+    "searchPlaceholder": "Customer, phone, vehicle, plate…",
+    "serviceType": "Service"
+  },
+  "vehicle": {
+    "heading": "Requested vehicle",
+    "openDetail": "Open the profile for {name}",
+    "noImage": "No vehicle photo yet",
+    "viewSchedule": "Vehicle schedule",
+    "viewScheduleFor": "View the rental schedule for {vehicle}"
+  },
+  "customer": {
+    "heading": "Customer",
+    "openProfile": "Open the customer profile for {name}",
+    "noProfile": "Not in your customer book yet",
+    "riskWarning": "{level} — double-check before approving"
+  },
+  "schedule": {
+    "heading": "Rental request",
+    "pickup": "Pickup",
+    "return": "Return",
+    "duration": "Duration",
+    "package": "Package",
+    "packageMissing": "No package (legacy request)",
+    "pickupWish": "Preferred pickup",
+    "pickupWishHint": "The exact pickup time is finalized when you approve.",
+    "route": "Route",
+    "pickupAddress": "Pickup address",
+    "destination": "Destination",
+    "handoverHeading": "Handover",
+    "handoverAtShop": "Pickup at meeting point",
+    "handoverDelivery": "Vehicle delivery",
+    "deliveryAddress": "Delivery address",
+    "deliveryFeeHint": "The delivery fee is set on the booking once you and the guest agree."
+  },
+  "note": {
+    "label": "Customer note",
+    "expand": "Show full note",
+    "collapse": "Show less"
+  },
+  "trace": {
+    "createdAt": "Submitted {value}",
+    "decidedAt": "Handled {value}",
+    "rejectReason": "Reason for rejection",
+    "viewBooking": "View booking",
+    "viewBookingFor": "View the booking for {vehicle}"
+  },
+  "detail": {
+    "title": "Rental request detail",
+    "openVehicle": "View vehicle profile",
+    "openCustomer": "View customer profile",
+    "phone": "Phone number",
+    "createdAt": "Submitted at",
+    "decidedAt": "Handled at"
+  },
+  "actions": {
+    "approve": "Approve & hold vehicle",
+    "reject": "Reject",
+    "message": "Message",
+    "messageAria": "Message {name} on XePrime",
+    "messageUnavailable": "This guest requested by phone and has no XePrime account — call them or reach out on Zalo instead.",
+    "call": "Call",
+    "callAria": "Call {name} at {phone}",
+    "zalo": "Zalo",
+    "zaloAria": "Open Zalo with {name} at {phone}"
+  },
+  "approve": {
+    "title": "Approve and hold the vehicle?",
+    "vehicle": "Vehicle",
+    "customer": "Customer",
+    "schedule": "Schedule",
+    "effect": "Approving creates a booking in the Vehicle held state and takes this slot on the vehicle calendar. Pricing follows the policy in force.",
+    "deliveryNote": "This request asks for delivery. The booking starts with a 0₫ delivery fee — update it on the booking once you agree with the guest.",
+    "confirm": "Approve & hold vehicle",
+    "success": "Vehicle held — booking created",
+    "successLongTerm": "Vehicle held — long-term booking created",
+    "scheduleConflict": "The vehicle is already booked for this period — pick another pickup time or reject the request.",
+    "expired": "This request passed its 60-minute response deadline and can no longer be approved. Call the customer."
+  },
+  "longTerm": {
+    "title": "Approve & hold — long-term rental",
+    "customer": "Customer",
+    "vehicle": "Vehicle",
+    "pickupWish": "Preferred pickup",
+    "legacyPackageLabel": "Package (legacy request has none)",
+    "legacyPackagePlaceholder": "Choose a package",
+    "legacyPackageHint": "This request was submitted before packages existed, so it carries none. Pick the package you agreed with the guest — the system deliberately does not infer one from the old date range.",
+    "chosenPackageLabel": "Package chosen by the guest",
+    "pickupLabel": "Pickup date and time (required)",
+    "pickupPlaceholder": "Choose the pickup date and time",
+    "pickupHint": "You can only pick within what the guest asked for. For any other date, reject the request and agree on a new one with them.",
+    "returnLabel": "Return date (calculated in calendar months)",
+    "returnHint": "The booking lasts exactly as long as the package the guest bought — it cannot be edited by hand.",
+    "quoteTitle": "{package} package price",
+    "quoteUnavailable": "Could not load the package price — check this vehicle's long-term pricing before approving.",
+    "confirm": "Approve & hold vehicle",
+    "wishLegacy": "Legacy request — the guest did not state a preference"
+  },
+  "reject": {
+    "title": "Reject rental request",
+    "context": "{customer} · {vehicle}",
+    "reasonLabel": "Reason for rejection (sent to the guest)",
+    "reasonPlaceholder": "Briefly explain why you cannot take this request",
+    "reasonRequired": "Enter a reason so the guest knows why the request was rejected",
+    "reasonHint": "The guest reads this in their notification, so write enough for them to know what to do next.",
+    "presetLabel": "Pick a quick reason",
+    "presets": {
+      "vehicleUnavailable": "The vehicle is not available for this period.",
+      "scheduleUnavailable": "We cannot accommodate the requested schedule.",
+      "requirementsUnsuitable": "The rental requirements do not fit our shop's policy.",
+      "other": "Other reason"
+    },
+    "confirm": "Reject request",
+    "success": "Request rejected"
+  },
+  "states": {
+    "loading": "Loading rental requests…",
+    "emptyPendingTitle": "No requests need action",
+    "emptyPendingBody": "New requests from the marketplace show up here right away.",
+    "emptyFilteredTitle": "No requests in this status",
+    "emptyFilteredBody": "Switch to another tab to see the remaining requests.",
+    "emptySearchTitle": "No request found",
+    "emptySearchBody": "Try a shorter keyword, or drop a filter to see the whole inbox again.",
+    "errorTitle": "Could not load the request list",
+    "refreshing": "Refreshing the list…"
+  },
+  "flow": {
+    "title": "Rental request",
+    "steps": {
+      "trip": "Your trip",
+      "review": "Review"
+    },
+    "service": {
+      "label": "Service",
+      "routeLabel": "Route"
+    },
+    "time": {
+      "label": "Rental period",
+      "empty": "Tap the field above to open the calendar and pick your dates.",
+      "modeDaily": "Daily rental",
+      "modeHourly": "Hourly rental",
+      "changeHint": "tap the field to change",
+      "unavailable": "This car is already booked for that period. Please pick another time."
+    },
+    "pickup": {
+      "legend": "How you get the car",
+      "groupLabel": "How you get the car",
+      "self": "Pick up at the meeting point",
+      "selfHint": "Collect the car yourself at the host's location",
+      "selfOnly": "This car can only be collected at the host's meeting point.",
+      "delivery": "Delivered to you",
+      "deliveryHint": "The host brings the car to your address",
+      "addressLabel": "Delivery address",
+      "addressPlaceholder": "123 Nguyen Van Linh, Hai Chau, Da Nang",
+      "feeLabel": "Delivery fee",
+      "feeFree": "Free",
+      "feeNote": "If any extra cost applies, the host will discuss it with you before updating the booking.",
+      "estimating": "Calculating the distance…",
+      "estimatedDistance": "The delivery distance is about {distance} one way. The fee above is an ESTIMATE from the shop's price list — the owner confirms it when approving your request.",
+      "manualWithDistance": "Your address is about {distance} one way from the pickup point, outside the automatic quote range. The owner will discuss the delivery fee with you directly.",
+      "addressNotFound": "We could not locate this address on the map. Try adding more detail (street number, street name, ward) to see the estimated delivery fee.",
+      "resolvedAddress": "The map reads this as: {address}",
+      "mapTitle": "Map of the route to the delivery address"
+    },
+    "driver": {
+      "pickupAddressLabel": "Pick-up address",
+      "pickupAddressPlaceholder": "123 Nguyen Van Linh, Hai Chau, Da Nang",
+      "destinationLabel": "Destination",
+      "destinationPlaceholder": "e.g. Da Lat, Lam Dong",
+      "note": "Route: {route} — {description}. Any surcharge is agreed with the host before the booking is confirmed."
+    },
+    "contact": {
+      "heading": "Contact details",
+      "nameLabel": "Full name",
+      "namePlaceholder": "Enter your full name",
+      "phoneLabel": "Phone number",
+      "phonePlaceholder": "Enter your phone number",
+      "verified": "Verified",
+      "change": "Change"
+    },
+    "otp": {
+      "title": "Enter the verification code",
+      "hint": "We sent a 6-digit code to {phone}. XePrime uses this number so the host can reach you and you can track your request.",
+      "devCode": "Dev code: {code} — shown in development only.",
+      "editPhone": "Change phone number",
+      "resend": "Resend code",
+      "resendIn": "Resend ({seconds}s)",
+      "sessionExpired": "Your session has expired. Please verify your phone number again."
+    },
+    "review": {
+      "vehicle": "Car",
+      "renter": "Renter",
+      "service": "Service",
+      "pickupAt": "Pick-up",
+      "returnAt": "Return",
+      "mode": "Rental type",
+      "package": "Package",
+      "pickupPreference": "Preferred pick-up",
+      "expectedReturn": "Expected return",
+      "expectedReturnValue": "{date} · exact time confirmed on approval",
+      "driverPickupAddress": "Pick-up address",
+      "destination": "Destination",
+      "deliveryAddress": "Delivery address"
+    },
+    "price": {
+      "estimateTitle": "Estimate for the selected period",
+      "detailTitle": "Price details (estimated)",
+      "packageTitle": "Price details · {months, plural, one {# month} other {# months}} package",
+      "subtotal": "Estimate",
+      "total": "Estimated total",
+      "expand": "Details",
+      "collapse": "Hide",
+      "unitTitle": "Rental price · {service}",
+      "fromUnit": "From {price}",
+      "chooseTime": "Pick a period to see the estimate",
+      "choosePackage": "Pick a package to see the price",
+      "perDay": "/day",
+      "perHour": "/hour",
+      "perMonth": "/month",
+      "weekday": "Weekdays",
+      "weekend": "Weekends",
+      "hourly": "Hourly",
+      "longTermBase": "Long-term base price",
+      "withDriverInCity": "In-city (driver included)",
+      "withDriverInterCity": "Intercity (round trip)",
+      "withDriverOneWay": "Intercity (one way)",
+      "onRequest": "Price on request",
+      "savings": "You save {amount} with the {months, plural, one {# month} other {# months}} commitment discount.",
+      "finalNote": "The final price is confirmed by the host when they approve your request.",
+      "deliveryNote": "Delivery fee: Free.",
+      "loadError": "We couldn't load the estimate. You can still continue; the host will confirm the price."
+    },
+    "done": {
+      "title": "Request sent",
+      "requestCode": "Request code: {code}",
+      "body": "The host will review your request and get back to you. You can follow its status under your trips.",
+      "time": "Period",
+      "pickupMethod": "Getting the car",
+      "driverPickup": "Pick-up at: {address}",
+      "notReserved": "The car is not held yet. Your request needs the host's approval first.",
+      "myTrips": "My trips",
+      "chatShop": "Message the host",
+      "close": "Back"
+    },
+    "duplicate": {
+      "title": "Duplicate request",
+      "body": "You already sent a request for this car with the same period. Please wait for the host to reply before sending another one.",
+      "viewTrips": "View my trips",
+      "close": "Close"
+    },
+    "panel": {
+      "specYear": "Year",
+      "specSeats": "Seats",
+      "seatCount": "{count, plural, one {# seat} other {# seats}}",
+      "specBody": "Body type",
+      "specFuel": "Fuel",
+      "viewShop": "View host",
+      "ratingSummary": "{avg} · {count, plural, one {# review} other {# reviews}}"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "back": "Back",
+      "continue": "Continue",
+      "checking": "Checking…",
+      "verify": "Verify",
+      "submit": "Send rental request"
+    },
+    "packageMonths": "{months, plural, one {# month} other {# months}}",
+    "route": {
+      "description": {
+        "in_city": "Driving within the city or nearby, route up to you",
+        "inter_city": "Travel to another province and return to the pick-up point (round trip)",
+        "inter_city_one_way": "One way to another province — the host may add a surcharge"
+      }
+    },
+    "longTerm": {
+      "chooseTitle": "Choose a package",
+      "chooseLabel": "Choose your rental length",
+      "groupLabel": "Long-term packages",
+      "noPrice": "This car has no long-term price listed yet — the host will quote after receiving your request.",
+      "wishTitle": "When would you like to collect the car?",
+      "wishGroupLabel": "Preferred pick-up",
+      "wishValueLabel": "{preference}: {date}",
+      "dateLabel": "Preferred pick-up date",
+      "hint": {
+        "within_7_days": "The host will confirm the exact pick-up date and time within the next 7 days.",
+        "specific_date": "The host will confirm the pick-up time."
+      },
+      "trust": {
+        "processTitle": "Quick paperwork",
+        "processDesc": "Fast application review",
+        "paymentTitle": "Flexible payment",
+        "paymentDesc": "Several payment methods",
+        "supportTitle": "24/7 support",
+        "supportDesc": "Help whenever you need it"
+      },
+      "windowValue": "{start} – {end}"
+    },
+    "cta": "Select this car",
+    "stepsLabel": "Booking progress",
+    "stepDone": "(done)"
+  },
+  "approved": {
+    "title": "Booking created",
+    "lead": "The request is approved and the booking is created. The vehicle schedule is now held for this period.",
+    "leadLongTerm": "The request is approved and the long-term booking is created on the schedule you just set.",
+    "next": "Next: contact the renter to agree on a pick-up time, collect the deposit if any, then confirm handover right on the booking.",
+    "viewBooking": "View booking",
+    "close": "Close"
+  },
+  "deadline": {
+    "label": "Response deadline",
+    "remaining": "Left",
+    "expired": "Response deadline passed",
+    "pastDueHint": "No answer within 60 minutes, so this request closed itself. Call the customer if you still want the trip.",
+    "hint": "The shop has 60 minutes to answer. After that the request closes itself and the customer is told to pick another vehicle."
+  }
+}

@@ -1,0 +1,12 @@
+/*
+ * Cố ý KHÔNG khai `font-size` ở đây: class này nằm THẲNG trên `.ant-breadcrumb`, mà luật
+ * `font-size` của AntD cũng chỉ (0,1,0) — hoà độ đặc hiệu thì AntD thắng vì `<style>` của nó
+ * chèn sau. Cỡ chữ đã đúng sẵn (token `fontSize` toàn cục = `--xp-font-size-body`), nên bỏ
+ * hẳn khai báo tranh chấp thay vì đẩy độ đặc hiệu lên chỉ để ra cùng một giá trị.
+ */
+.crumb {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

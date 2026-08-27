@@ -1,0 +1,193 @@
+/* ── Dải tab việc-cần-làm ── */
+.summaryTabs {
+  display: flex;
+  overflow-x: auto;
+  min-width: 0;
+  gap: var(--xp-space-xs);
+  padding-bottom: 2px;
+  /* Một hàng ngang, cuộn khi tràn — KHÔNG wrap (docs §4.2/§12.7). */
+  flex-wrap: nowrap;
+  scroll-snap-type: x proximity;
+}
+
+.summaryTab {
+  display: inline-flex;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-xs) var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  scroll-snap-align: start;
+  white-space: nowrap;
+}
+
+.summaryTabActive {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary-bg);
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.summaryCount {
+  padding-inline: 6px;
+  border-radius: 999px;
+  background: var(--xp-color-fill-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryDot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+}
+
+.dotOverdue {
+  background: var(--xp-color-error);
+}
+
+.dotDueSoon {
+  background: var(--xp-color-warning);
+}
+
+.dotInProgress {
+  background: var(--xp-color-info);
+}
+
+.dotMissing {
+  background: var(--xp-color-text-tertiary);
+}
+
+/* ── Ô trong bảng ── */
+.vehicleLink {
+  color: inherit;
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.dueCell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dueText {
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.overdue {
+  color: var(--xp-color-error);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.activeCell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.clearButton {
+  border: none;
+  background: none;
+  color: var(--xp-color-primary);
+  cursor: pointer;
+  font: inherit;
+}
+
+/* ── Thẻ trên Hồ sơ 360 ── */
+.overviewCard {
+  border-color: var(--xp-color-border);
+}
+
+.overviewAlert {
+  margin-bottom: var(--xp-space-sm);
+}
+
+/* ── Thẻ mobile ── */
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  padding: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-inline-start: 3px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-bg-container);
+}
+
+.cardOverdue {
+  border-inline-start-color: var(--xp-color-error);
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--xp-space-xs);
+}
+
+.cardTitle {
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-strong);
+}
+
+.cardSub,
+.cardBody {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.cardActions {
+  display: flex;
+  gap: var(--xp-space-xs);
+}
+
+.cardButton,
+.cardButtonPrimary {
+  min-height: 44px; /* touch target tối thiểu (docs §12.7) */
+  flex: 1;
+  padding-inline: var(--xp-space-sm);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius-md);
+  background: var(--xp-color-bg-container);
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.cardButtonPrimary {
+  border-color: var(--xp-color-primary);
+  background: var(--xp-color-primary);
+  color: var(--xp-color-text-light-solid);
+}
+
+/*
+ * Skeleton phải CAO ĐÚNG bằng hàng tab thật, nếu không nội dung bên dưới nhảy một nhịp khi
+ * dữ liệu về. Trước đây là `style={{ height: 44 }}` (CLAUDE.md §5 cấm inline style).
+ */
+.tabsSkeleton {
+  height: 44px;
+}
+
+.tabsSkeleton :global(.ant-skeleton-input) {
+  height: 44px;
+  min-width: 0;
+}

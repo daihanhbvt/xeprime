@@ -1,0 +1,105 @@
+/*
+ * Khoảng cách dọc giữa các field của form — dùng chung cho MỌI `Form.Item` của bộ field
+ * (CLAUDE.md §5 cấm inline style).
+ *
+ * Đã gom đủ 21/08/2026: `AutoCompleteField`, `ImageUploadField`, `ImageGalleryField` là ba
+ * chỗ cuối còn `style={{ marginBottom: 14 }}`, và `FileListField.module.css` là bản thứ tư
+ * của cùng con số viết bằng CSS. Cả bốn nay đi qua `--xp-space-md`.
+ *
+ * Lưu ý khi review: 14px KHÔNG nằm trên thang 4·8·16·24 của hệ thiết kế, nên bốn chỗ đó đang
+ * lệch nhịp so với các field còn lại. Chuyển sang token là **đổi 14px → 16px** trên desktop
+ * (12px trên mobile) — có thay đổi thị giác, và đó chính là mục đích: một nhịp cho cả form.
+ */
+.item.item {
+  margin-bottom: var(--xp-space-md);
+}
+
+/*
+ * Ô nhập số phải rộng hết cột (Figma `60:270`, `60:276`) — mặc định của AntD là 90px.
+ *
+ * ⚠️ Nhân đôi class để lên (0,2,0). Đây lại là bẫy D19: rule `.ant-input-number { width: 90px }`
+ * của AntD cũng là (0,1,0), mà AntD tiêm `<style>` vào `<head>` LÚC CHẠY — tức là sau sheet của
+ * CSS Module. Hoà specificity thì thứ tự tiêm quyết định, và AntD luôn thắng. Một class đơn ở
+ * đây từng khiến ô "Giá ngày thường" hẹp 90px và cắt mất chữ số ("300.00" thay vì "300.000").
+ */
+.control.control {
+  width: 100%;
+}
+
+/* Có `addonAfter` (₫, %) thì AntD bọc thêm một lớp group; bề rộng phải đi qua cả hai lớp. */
+.control.control :global(.ant-input-number) {
+  width: 100%;
+}
+
+.fieldWithAccessory {
+  min-width: 0;
+}
+
+.customLabelRow {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 2px;
+}
+
+.customLabel {
+  min-width: 0;
+  color: var(--xp-color-text);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  overflow-wrap: anywhere;
+}
+
+.requiredMark {
+  margin-inline-end: 4px;
+  color: var(--xp-color-error);
+}
+
+.requiredMark::before {
+  content: '*';
+}
+
+/* Dấu bắt buộc đặt SAU nhãn — dùng bởi `trailingRequiredMark`. */
+.requiredMarkAfter {
+  margin-inline-start: var(--xp-space-xs);
+  color: var(--xp-color-error);
+}
+
+/* ── Radio / Checkbox group xếp dọc (RadioGroupField, CheckboxGroupField) ─────────────── */
+
+.radioStack,
+.checkboxStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  width: 100%;
+}
+
+/*
+ * AntD dựng `<label><span.ant-radio/><span>nội dung</span></label>` với `align-items: center`.
+ * Lựa chọn có mô tả hai dòng thì nút tròn bị đẩy xuống giữa khối chữ — kéo nó về đầu dòng đầu.
+ */
+.radioStack :global(.ant-radio-wrapper),
+.checkboxStack :global(.ant-checkbox-wrapper) {
+  align-items: flex-start;
+  margin-inline-end: 0;
+}
+
+.radioStack :global(.ant-radio),
+.checkboxStack :global(.ant-checkbox) {
+  margin-block-start: 2px;
+}
+
+.choiceLabel {
+  display: block;
+  font-weight: 500;
+}
+
+.choiceDescription {
+  display: block;
+  margin-block-start: 2px;
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}

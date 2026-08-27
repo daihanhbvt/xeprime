@@ -1,36 +1,18 @@
-import type { MoneyString } from '@xeprime/types';
-
 /**
- * Shape của một listing marketplace — khớp `PublicListingDto` ở backend.
- *
- * TODO(ADR 0007): thay bằng type sinh từ OpenAPI sau khi `pnpm contract` bổ sung
- * `GET /public/listings`. Giữ tay tạm để dựng UI trước.
+ * Shape marketplace sống ở `@xeprime/types` (sinh từ OpenAPI — ADR 0007) vì `apps/mobile` dựng
+ * đúng những màn này trên cùng contract; hai bản sao sẽ lệch đúng lúc backend đổi DTO.
+ * File này chỉ là lối vào quen thuộc cho code web.
  */
-export interface PublicListing {
-  id: string;
-  name: string;
-  vehicleType: string;
-  serviceType: string;
-  brand: string | null;
-  model: string | null;
-  seatCount: number | null;
-  fuelType: string | null;
-  mainImageUrl: string | null;
-  weekdayPrice: MoneyString | null;
-  weekendPrice: MoneyString | null;
-  shopName: string;
-  shopSlug: string;
-}
-
-export type ListingSort = 'newest' | 'price_asc' | 'price_desc';
-
-export interface MarketplaceFilters {
-  vehicleType?: string;
-  serviceType?: string;
-  brand?: string;
-  minSeats?: number;
-  q?: string;
-  sort?: ListingSort;
-  page?: number;
-  limit?: number;
-}
+export type {
+  ListingSort,
+  MarketplaceFilters,
+  PublicDestination,
+  PublicListing,
+  PublicListingDetail,
+  PublicListingFacets,
+  PublicShop,
+  PublicShopSummary,
+  ReviewItem,
+  ReviewPage,
+  ReviewSummary,
+} from '@xeprime/types';

@@ -1,0 +1,74 @@
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--xp-font-size-h4);
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.sort {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+}
+
+.sortLabel {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+/* Cột tiền căn phải + `tabular-nums` để chữ số thẳng hàng — brand guide §4. */
+.money,
+.moneyStrong,
+.moneyNegative {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.moneyStrong {
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.moneyNegative {
+  font-weight: 600;
+  color: var(--xp-color-error);
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.cardMoney {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.cardMeta {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.footnote {
+  margin: 0;
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}

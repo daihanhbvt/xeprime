@@ -1,43 +1,276 @@
-.wrap :global(.ant-menu) {
+/**
+ * Ghi đè giao diện của AntD Menu cho điều hướng cổng quản lý.
+ *
+ * ⚠️ **Vì sao mọi selector dưới đây đều có `.ant-menu-root.ant-menu-light`** — đây là lỗi đã
+ * xảy ra thật (mục menu tàng hình trên sidebar tối), không phải phòng xa:
+ *
+ * AntD 6 sinh CSS dạng `:where(.css-<hash>).ant-menu-light .ant-menu-item { color: … }`.
+ * `:where()` làm phần hash có độ đặc hiệu **BẰNG 0**, nên luật đó chỉ là **(0,2,0)** — đúng
+ * bằng `.dark :global(.ant-menu-item)`. Hoà độ đặc hiệu thì **thứ tự trong tài liệu** quyết
+ * định, mà AntD chèn `<style>` vào `<head>` lúc chạy, tức là SAU file CSS Module. Kết quả:
+ * AntD luôn thắng, màu chữ rơi về `--ant-menu-item-color` ≈ `#1a1a1a` — gần như đen trên nền
+ * `#1e1b16`.
+ *
+ * Thêm `.ant-menu-root.ant-menu-light` nâng luật của ta lên **(0,4,0)**, thắng dứt điểm và
+ * KHÔNG phụ thuộc thứ tự chèn. Với `:hover`, AntD dùng chuỗi `:not()` lên tới (0,5,0) nên
+ * luật hover ở đây phải giữ đủ `:not(.ant-menu-item-selected)` để đạt (0,6,0).
+ *
+ * Hai lối khác đã cân nhắc và loại:
+ *  - `!important` cho từng khai báo màu: thắng nhưng rải rác và che mất lý do thật;
+ *  - `ConfigProvider` với `components.Menu`: bám tên token nội bộ của AntD — đúng thứ
+ *    CLAUDE.md mục 3 cấm ("vỡ qua mỗi lần nâng cấp").
+ */
+
+.wrap {
+  /* Ba số đo của thang điều hướng, khai một chỗ để mục lá, mục cha và popup không lệch nhau. */
+  --xp-nav-item-height: 40px;
+  --xp-nav-icon-size: 18px;
+  --xp-nav-gap: var(--xp-space-sm);
+}
+
+/* ─── Nền chung ─────────────────────────────────────────────────────────────── */
+.wrap :global(.ant-menu-root.ant-menu-light) {
   border-inline-end: none;
   background: transparent;
 }
 
-/* Nhãn nhóm: chữ nhỏ, in hoa, thưa — như "TỔNG QUAN / QUẢN LÝ / CÀI ĐẶT" bản cũ. */
-.wrap :global(.ant-menu-item-group-title) {
-  padding: 10px 10px 4px;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--xp-color-text-tertiary);
+/* Menu con dạng thả xuống (mục cha đang bung) không có nền riêng — nó vẫn là một phần của cột. */
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-sub.ant-menu-inline) {
+  background: transparent;
 }
 
-.wrap :global(.ant-menu-item) {
-  height: 36px;
-  line-height: 36px;
-  margin-block: 1px;
-  border-radius: 8px;
-  font-size: 13.5px;
+/**
+ * Nhãn khối. Chữ và mũi tên do `SidebarSectionTitle` lo; ở đây chỉ đặt khoảng cách và màu.
+ *
+ * `padding-block` trên cùng lớn hơn dưới: khối cách khối bằng khoảng trắng chứ không bằng
+ * đường kẻ — bớt một nét vẽ mà thứ bậc vẫn rõ.
+ */
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item-group-title) {
+  padding: var(--xp-space-md) var(--xp-space-sm) var(--xp-space-xs);
+  color: var(--xp-color-text-tertiary);
+  line-height: 1.4;
+}
+
+/* Khối đầu tiên không cần khoảng đệm trên — nó đã nằm ngay dưới khối thương hiệu. */
+.wrap :global(.ant-menu-root.ant-menu-light > .ant-menu-item-group:first-child > .ant-menu-item-group-title) {
+  padding-top: var(--xp-space-xs);
+}
+
+/* ─── Mục menu (mục lá và mục cha dùng chung một thang) ─────────────────────── */
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item),
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-title) {
+  height: var(--xp-nav-item-height);
+  line-height: var(--xp-nav-item-height);
+  margin-block: 2px;
+  border-radius: var(--xp-border-radius-sm);
+  font-size: var(--xp-font-size-body);
   color: var(--xp-color-text-secondary);
 }
 
-.wrap :global(.ant-menu-item .anticon) {
-  font-size: 16px;
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item .anticon),
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-title .anticon) {
+  font-size: var(--xp-nav-icon-size);
 }
 
-.wrap :global(.ant-menu-item:hover) {
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item:not(.ant-menu-item-selected):hover),
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-title:hover) {
   color: var(--xp-color-text);
   background: var(--xp-color-bg-hover);
 }
 
-/* Mục đang chọn: nền cream rất nhạt, chữ + icon gold đậm — giống highlight "Dashboard". */
-.wrap :global(.ant-menu-item-selected) {
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item-selected) {
   background: var(--xp-gold-wash);
   color: var(--xp-gold-deep);
   font-weight: 600;
 }
 
-.wrap :global(.ant-menu-item-selected a) {
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-item-selected a) {
   color: var(--xp-gold-deep);
+}
+
+/* Mục cha đang chứa trang hiện tại: đủ để nhận ra, không tranh chấp với chính mục con. */
+.wrap :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title) {
+  color: var(--xp-color-text);
+  font-weight: 600;
+}
+
+/* Nhãn dài không được đẩy rộng sidebar — cắt bằng ellipsis. */
+.wrap :global(.ant-menu-title-content) {
+  overflow: hidden;
+}
+
+/* ─── Dòng chữ trong một mục: nhãn co giãn, huy hiệu đứng cuối ──────────────── */
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-nav-gap);
+  min-width: 0;
+  /* Màu chữ do <li> quyết định; thẻ <a> chỉ thừa kế, nếu không phải khai báo hai lần. */
+  color: inherit;
+}
+
+.linkText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/**
+ * Chấm báo trên biểu tượng — chỉ dùng ở chế độ thu gọn (xem `iconOf` trong `useManageNav`).
+ *
+ * Viền cùng màu nền sidebar tách chấm khỏi nét biểu tượng bên dưới; không có nó, chấm gold
+ * dính vào icon và đọc thành một phần của hình.
+ */
+.iconDotted {
+  position: relative;
+  display: inline-flex;
+}
+
+.iconDotted::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  inset-inline-end: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--xp-border-radius-pill);
+  background: var(--xp-color-primary);
+  box-shadow: 0 0 0 2px var(--xp-shell-sidebar-bg);
+}
+
+/* ─── Nền tối (Sidebar desktop + Drawer mobile) ──────────────────────────────
+   Tương phản đã ĐO trên `--xp-shell-sidebar-bg`: nhãn khối 5.96 · chữ mục 13.54 ·
+   chữ trên hover 11.12 · chữ mục đang chọn 10.54 · icon gold 5.67. Bộ token nền sáng ở
+   khối trên KHÔNG dùng lại được: `--xp-color-text-secondary` chỉ 2.99, `--xp-gold-deep` 4.33. */
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item-group-title) {
+  color: var(--xp-shell-sidebar-muted);
+}
+
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item),
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-title) {
+  color: var(--xp-shell-sidebar-text);
+}
+
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item:not(.ant-menu-item-selected):hover),
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-title:hover) {
+  color: var(--xp-shell-sidebar-text);
+  background: var(--xp-shell-sidebar-hover);
+}
+
+/**
+ * Mục đang mở: nền ấm sáng hơn + vạch gold bên trái + icon gold.
+ *
+ * Vạch dùng `box-shadow: inset` chứ không phải `border-left`: border sẽ ăn vào bề rộng và đẩy
+ * chữ lệch 3px so với các mục khác, còn shadow vẽ đè lên nên mọi dòng vẫn thẳng hàng.
+ */
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item-selected) {
+  background: var(--xp-shell-sidebar-selected-bg);
+  color: var(--xp-shell-sidebar-text);
+  box-shadow: inset 3px 0 0 var(--xp-shell-sidebar-active);
+}
+
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item-selected a) {
+  color: var(--xp-shell-sidebar-text);
+}
+
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item-selected .anticon) {
+  color: var(--xp-shell-sidebar-active);
+}
+
+/**
+ * Mục cha đang chứa trang mở: chữ phải sáng lên, KHÔNG được rơi về màu nền sáng.
+ *
+ * Luật ở khối trên (`.wrap … .ant-menu-submenu-selected > .ant-menu-submenu-title`) đặt
+ * `--xp-color-text` ≈ `#1a1a1a` — trên `--xp-shell-sidebar-bg` nó gần như tàng hình. Trước
+ * đây khối `.dark` chỉ chỉnh lại màu ICON của mục cha, nên khi chọn một mục con (ví dụ
+ * "Bảo dưỡng") thì tên mục cha ("Xe của tôi") biến mất. Đây là luật còn thiếu.
+ *
+ * `.dark` + 4 class = (0,5,0), thắng luật (0,4,0) của khối nền sáng bất kể thứ tự chèn.
+ */
+.dark
+  :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title) {
+  color: var(--xp-shell-sidebar-text);
+}
+
+.dark
+  :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title .anticon) {
+  color: var(--xp-shell-sidebar-active);
+}
+
+/* Mũi tên bung/gập của mục cha — cùng độ mờ với chữ, không tranh chú ý với huy hiệu. */
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-arrow) {
+  color: var(--xp-shell-sidebar-muted);
+}
+
+/* Viền focus phải nhìn thấy được TRÊN NỀN TỐI — mặc định của AntD tính cho nền sáng. */
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-item a:focus-visible),
+.dark :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-title:focus-visible) {
+  outline: var(--xp-focus-outline-width) solid var(--xp-shell-sidebar-active);
+  outline-offset: 2px;
+  border-radius: var(--xp-border-radius-sm);
+}
+
+/* ─── Thu gọn ────────────────────────────────────────────────────────────────
+   AntD ẩn phần chữ; icon phải ở đúng tâm cột 64px để không nhảy khi đóng/mở.        */
+.collapsed :global(.ant-menu-inline-collapsed) {
+  /* Mặc định AntD cố định 80px cho menu thu gọn; cột của XePrime là 64px (Figma
+     `14:1532` = `47:77`), nên phải để menu ăn theo bề rộng cột. */
+  width: 100%;
+}
+
+/**
+ * Nhãn khối biến mất hẳn khi thu gọn — kể cả nút gập.
+ *
+ * `display: none` chứ không phải `opacity: 0`: nút vô hình vẫn nằm trong luồng Tab, và người
+ * dùng bàn phím sẽ dừng ở sáu nút không đọc được tên. Ở chế độ này mọi khối luôn bung (xem
+ * `useManageNav`) nên không mất lối vào mục nào.
+ */
+.collapsed :global(.ant-menu-root.ant-menu-light .ant-menu-item-group-title) {
+  display: none;
+}
+
+.collapsed :global(.ant-menu-root.ant-menu-light .ant-menu-item),
+.collapsed :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-title) {
+  /* `!important` là bắt buộc, không phải để cho tiện: AntD tính `padding-inline` của mục
+     thu gọn bằng `calc(50% - fontSize/2)` cho cột 80px của nó, và đặt qua style nội tuyến
+     trên chính phần tử. Với cột 64px, giá trị đó lệch tâm. */
+  padding-inline: 0 !important;
+  text-align: center;
+}
+
+.collapsed :global(.ant-menu-root.ant-menu-light .ant-menu-item .ant-menu-item-icon),
+.collapsed :global(.ant-menu-root.ant-menu-light .ant-menu-submenu-title .ant-menu-item-icon) {
+  margin-inline-end: 0;
+}
+
+/* ─── Bảng thả nổi của mục cha khi thu gọn ───────────────────────────────────
+   Popup của AntD render qua portal, NGOÀI `.wrap` — nên nó nhận class riêng
+   (`popupClassName` ở `useManageNav`) thay vì thừa hưởng khối `.dark` ở trên.      */
+.popup :global(.ant-menu) {
+  background: var(--xp-shell-sidebar-bg);
+  border-radius: var(--xp-border-radius);
+  padding: var(--xp-space-xs);
+}
+
+.popup :global(.ant-menu .ant-menu-item) {
+  height: var(--xp-nav-item-height, 40px);
+  line-height: var(--xp-nav-item-height, 40px);
+  border-radius: var(--xp-border-radius-sm);
+  color: var(--xp-shell-sidebar-text);
+}
+
+.popup :global(.ant-menu .ant-menu-item:not(.ant-menu-item-selected):hover) {
+  color: var(--xp-shell-sidebar-text);
+  background: var(--xp-shell-sidebar-hover);
+}
+
+.popup :global(.ant-menu .ant-menu-item-selected) {
+  background: var(--xp-shell-sidebar-selected-bg);
+  color: var(--xp-shell-sidebar-text);
+}
+
+.popup :global(.ant-menu .ant-menu-item-selected .anticon) {
+  color: var(--xp-shell-sidebar-active);
 }

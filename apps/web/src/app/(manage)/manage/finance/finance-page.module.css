@@ -1,0 +1,22 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.periods {
+  /* Sáu kỳ không đứng vừa màn hình hẹp — cho cuộn ngang thay vì xuống dòng lởm chởm. */
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.breakdowns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--xp-space-md);
+}
+
+.state {
+  display: block;
+  margin: var(--xp-space-xl) auto;
+}

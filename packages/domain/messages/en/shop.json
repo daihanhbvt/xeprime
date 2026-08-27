@@ -1,0 +1,178 @@
+{
+  "page": {
+    "subtitle": "What renters see on the marketplace, plus the internal details XePrime uses to review your shop.",
+    "viewPublicPage": "View shop page",
+    "loadError": "Couldn't load your shop profile",
+    "forbidden": {
+      "title": "You don't have access",
+      "description": "You need the permission below to view the shop profile.",
+      "backHome": "Back to dashboard"
+    }
+  },
+  "noTenant": {
+    "title": "You don't have a shop yet",
+    "description": "You can still use this account to search for and book vehicles. You only need a shop if you want to rent your vehicles out.",
+    "register": "Become a host",
+    "backToSearch": "Back to search"
+  },
+  "status": {
+    "submit": "Submit for review",
+    "resubmit": "Resubmit for review",
+    "submitted": "Profile submitted for review",
+    "incomplete": "{count, plural, one {# item still needs attention} other {# items still need attention}} — we moved the cursor to the first one.",
+    "reason": "The review team wrote: {reason}",
+    "submitConfirm": {
+      "title": "Submit this profile for review?",
+      "description": "Once submitted, you cannot edit the profile until we get back to you.",
+      "descriptionWithSave": "Your unsaved changes will be saved first, then submitted. Once submitted, you cannot edit the profile until we get back to you.",
+      "ok": "Submit"
+    },
+    "action": {
+      "complete": "Complete profile",
+      "view": "View profile",
+      "revise": "Add the details",
+      "reason": "See the reason",
+      "support": "Contact support",
+      "addVehicle": "Add a vehicle"
+    },
+    "draft": {
+      "title": "This profile has not been submitted yet",
+      "body": "Fill in the required items below, then press Submit for review. Your vehicles only go public once the profile is approved.",
+      "shell": "Your vehicles are not on the marketplace yet. Complete your profile and submit it for review to start taking bookings."
+    },
+    "pending": {
+      "title": "Your profile is waiting for review",
+      "body": "While you wait, you can already add vehicles and get your data ready.",
+      "submittedAt": "Submitted at {at}.",
+      "shell": "XePrime is reviewing your profile. Your vehicles go live as soon as it is approved."
+    },
+    "needsRevision": {
+      "title": "We need more information",
+      "body": "Update what was asked for, then press Resubmit for review.",
+      "shell": "XePrime needs more information from you before your shop can be approved."
+    },
+    "rejected": {
+      "title": "Profile rejected",
+      "body": "Fix what the reason below mentions and send it again — you can still resubmit.",
+      "shell": "Your shop profile was not approved. Read the reason, fix it and submit again."
+    },
+    "active": {
+      "title": "Your shop is live",
+      "body": "Your approved vehicles are showing on the marketplace.",
+      "shell": "Your shop is live."
+    },
+    "suspended": {
+      "title": "Your shop is locked",
+      "body": "Your vehicles are hidden from the marketplace and cannot take new bookings. Contact the XePrime team for details.",
+      "shell": "Your shop is locked: vehicles are hidden from the marketplace and cannot take new bookings."
+    },
+    "expired": {
+      "title": "Your plan has expired",
+      "body": "Renew your plan to put your vehicles back on the marketplace.",
+      "shell": "Your plan has expired, so your vehicles are hidden from the marketplace."
+    }
+  },
+  "form": {
+    "saved": "Shop details saved",
+    "submit": "Save details",
+    "reset": "Discard",
+    "unsaved": "Unsaved",
+    "lockedWhilePending": "Editing is locked while the profile is under review.",
+    "readOnly": "You have view-only access to the shop profile.",
+    "display": {
+      "title": "Public details",
+      "displayName": {
+        "label": "Display name",
+        "placeholder": "The name shown on the marketplace"
+      },
+      "bio": {
+        "label": "About the shop",
+        "placeholder": "A short description of your shop…"
+      },
+      "logo": {
+        "label": "Shop logo",
+        "hint": "Recommended size: 800×800px."
+      },
+      "cover": {
+        "label": "Cover image (public shop page)",
+        "hint": "Recommended size: 1600×600px."
+      }
+    },
+    "owner": {
+      "title": "Shop owner",
+      "fullName": {
+        "label": "Full name",
+        "placeholder": "e.g. Nguyễn Văn A"
+      },
+      "phone": {
+        "label": "Phone number",
+        "placeholder": "0901234567"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "owner@yourshop.vn"
+      },
+      "privacy": {
+        "title": "Kept private",
+        "body": "Owner details are visible only to the XePrime team and are never shown to renters."
+      }
+    },
+    "address": {
+      "title": "Address & legal",
+      "address": {
+        "label": "Address",
+        "placeholder": "Street number, street, ward"
+      },
+      "province": {
+        "label": "Province / City",
+        "placeholder": "Select a province or city",
+        "loading": "Loading provinces…",
+        "loadError": "Couldn't load the list of provinces",
+        "help": "Where your default branch sits — vehicles at that branch are listed in this province.",
+        "branchLink": "Manage branches"
+      },
+      "taxCode": {
+        "label": "Tax code",
+        "placeholder": "If you have one"
+      },
+      "businessLicenseNo": {
+        "label": "Business licence no.",
+        "placeholder": "If you have one"
+      }
+    },
+    "bank": {
+      "title": "Payout account",
+      "hint": "XePrime uses this account to reconcile and pay out to your shop.",
+      "bankName": {
+        "label": "Bank",
+        "placeholder": "e.g. Vietcombank"
+      },
+      "accountNo": {
+        "label": "Account number",
+        "placeholder": "Payout account number"
+      },
+      "accountName": {
+        "label": "Account holder",
+        "placeholder": "Name on the account"
+      }
+    }
+  },
+  "checklist": {
+    "title": "Complete your profile",
+    "requiredTitle": "Required before you can submit",
+    "requiredDone": "Ready to submit for review",
+    "suggestedTitle": "Recommended — helps renters pick your shop",
+    "goToField": "Fill in",
+    "items": {
+      "displayName": "Shop display name",
+      "province": "Province the shop is based in",
+      "ownerName": "Shop owner name",
+      "ownerPhone": "Shop owner phone number",
+      "logo": "Shop logo",
+      "bio": "Shop description",
+      "address": "Shop address",
+      "cover": "Shop page cover image",
+      "bank": "Payout account"
+    }
+  }
+}

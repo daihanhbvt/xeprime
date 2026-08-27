@@ -36,6 +36,17 @@
   color: var(--xp-color-text-secondary);
 }
 
+/* Nền tối: chữ trắng, riêng "xe" giữ vàng nhạt để vẫn nhận ra thương hiệu. */
+.light .word {
+  color: #fff;
+}
+.light .word b {
+  color: var(--xp-gold-soft);
+}
+.light .word span {
+  color: rgba(255, 255, 255, 0.82);
+}
+
 /* --- Kích thước: áp lên .mark (khi variant=mark) hoặc .logo (khi full) --- */
 .sm.mark,
 .sm .mark {

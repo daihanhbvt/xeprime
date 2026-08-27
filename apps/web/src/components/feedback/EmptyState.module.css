@@ -1,0 +1,53 @@
+/* `min-height` giữ chỗ để bảng không co sập khi chuyển giữa có-dữ-liệu và rỗng
+   (Figma 134:2011 R3 — tránh nhảy bố cục). */
+.root {
+  display: flex;
+  min-height: 220px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--xp-space-xl) var(--xp-space-md);
+  text-align: center;
+}
+
+.icon,
+.iconError {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.icon {
+  color: var(--xp-color-text-secondary);
+}
+
+.iconError {
+  color: var(--xp-color-error);
+}
+
+.title {
+  margin: var(--xp-space-md) 0 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-lg);
+  font-weight: var(--xp-font-weight-semibold);
+  line-height: var(--xp-line-height-body-lg);
+}
+
+/*
+ * Cố ý dùng `text-secondary` chứ không `text-tertiary`: tỉ lệ tương phản của tertiary đo được
+ * 2.72 — trượt AA (backlog P18). Dòng này mang thông tin nên phải đọc được.
+ */
+.description {
+  max-width: 42ch;
+  margin: var(--xp-space-xs) 0 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body);
+  line-height: var(--xp-line-height-body);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--xp-space-sm);
+  margin-top: var(--xp-space-md);
+}

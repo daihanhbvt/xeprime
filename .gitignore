@@ -36,6 +36,18 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
+# claude: settings.json (plansDirectory…) commit; settings.local.json là allowlist cá nhân
+.claude/settings.local.json
+
 # secrets — never commit service account keys
 *serviceAccount*.json
 firebase-adminsdk-*.json
+
+# git worktree phụ (agent) — không được để `git add -A` nuốt vào commit
+.codex-worktrees/
+
+# Project tracking - local only
+XePrime_Project_Tracking.xlsx
+
+# office lock file (~$Book.xlsx)
+~$*

@@ -1,0 +1,242 @@
+/**
+ * Nội dung chi tiết đơn thuê (Wave 10, tách dùng chung ở Wave lịch).
+ *
+ * Thẻ chi tiết ĐẦY ĐỦ trải ngang trên cùng, hành động ở chân thẻ; hai khối vận hành xếp cạnh
+ * nhau bên dưới. Mobile: mọi thứ về một cột, thứ tự đọc giữ nguyên. Bề rộng/căn giữa của
+ * TRANG nằm ở route (`booking-detail-page.module.css`) — modal trên lịch không cần chúng.
+ */
+
+.stackGap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.card {
+  min-width: 0;
+}
+
+.createdAt {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+  white-space: nowrap;
+}
+
+/* Hai cột thông tin trong thẻ chi tiết — không phải hai cột của trang. */
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-lg);
+  min-width: 0;
+}
+
+.block,
+.panel,
+.blockWide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-sm);
+  min-width: 0;
+}
+
+/*
+ * Khối SỐ LIỆU (thời gian, tiền) nằm trên nền riêng: hai cột nhãn–giá trị cách nhau xa cần một
+ * đường bao để mắt biết dòng nào thuộc khối nào. Khối nhận-diện (xe, khách) thì không — chúng
+ * đọc theo cụm chứ không rà ngang, đóng khung chỉ thêm nhiễu.
+ */
+.panel {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.blockWide {
+  grid-column: 1 / -1;
+}
+
+.blockTitle {
+  margin: 0;
+  font-size: var(--xp-font-size-overline);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--xp-color-text-secondary);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.vehicle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+/* Kích thước cố định để dòng chữ bên cạnh không nhảy khi ảnh tải xong. */
+.vehicleImage {
+  flex: none;
+  width: 96px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-muted);
+}
+
+.strong {
+  font-weight: 700;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.plate {
+  font-weight: 600;
+  color: var(--xp-color-primary);
+}
+
+.meta {
+  font-size: var(--xp-font-size-sm);
+  color: var(--xp-color-text-secondary);
+}
+
+.link {
+  font-size: var(--xp-font-size-sm);
+  font-weight: 600;
+  color: var(--xp-color-primary);
+  overflow-wrap: anywhere;
+}
+
+.note {
+  margin: 0;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  margin: 0;
+}
+
+.row,
+.rowTotal {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.row dt,
+.rowTotal dt {
+  flex: none;
+  color: var(--xp-color-text-secondary);
+}
+
+.row dd,
+.rowTotal dd {
+  margin: 0;
+  text-align: right;
+  color: var(--xp-color-text);
+  /* Tiền và mốc thời gian không ngắt dòng giữa chừng. */
+  white-space: nowrap;
+}
+
+.rowTotal {
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+  font-weight: 700;
+}
+
+/* Tổng phải thu = giá cuối của đơn → màu tiền dùng chung, như mọi tổng khác trong app. */
+.rowTotal dd {
+  color: var(--xp-color-price);
+}
+
+.negative {
+  color: var(--xp-color-error);
+}
+
+/* Diễn biến chuyến + quyết toán: hai khối ngang hàng, không khối nào là "phụ". */
+.layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--xp-space-md);
+  align-items: start;
+  min-width: 0;
+}
+
+/** 1024px = `--xp-bp-tablet`; custom property không dùng được trong `@media` (quyết định P8). */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/** 640px = `--xp-bp-mobile`. */
+@media (max-width: 640px) {
+  .detailGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--xp-space-md);
+  }
+
+  .row dd,
+  .rowTotal dd {
+    /* Màn hẹp: cho phép xuống dòng ở mốc thời gian dài, nhưng tiền vẫn nguyên cụm. */
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Dòng giải thích nằm dưới một dòng tổng — thụt vào, chữ nhỏ, không phải một mục ngang hàng. */
+.rowSub {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+  padding-left: var(--xp-space-md);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-tertiary);
+}
+
+.rowSub dt,
+.rowSub dd {
+  margin: 0;
+}
+
+/*
+ * Ô giá trị có nút sửa ngay bên cạnh — dùng cho phí giao nhận, con số hai bên thoả thuận ngoài
+ * ứng dụng rồi ghi lại. Nút là chữ, không phải `<Button>`: nó phải nhẹ hơn con số nó đứng cạnh.
+ */
+.editableValue {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--xp-space-sm);
+}
+
+.editValueBtn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--xp-gold-deep);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.editValueBtn:hover {
+  text-decoration: underline;
+}
+
+/* Nút thao tác đứng cạnh dữ liệu trong khối chi tiết — không kéo giãn theo chiều ngang. */
+.inlineAction {
+  align-self: flex-start;
+  margin-block-start: var(--xp-space-xs);
+}

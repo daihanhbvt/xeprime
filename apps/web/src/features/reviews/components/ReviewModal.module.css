@@ -1,0 +1,24 @@
+.field {
+  margin-bottom: 14px;
+}
+
+.label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+  margin-bottom: 6px;
+}
+
+.err {
+  color: var(--xp-color-error);
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

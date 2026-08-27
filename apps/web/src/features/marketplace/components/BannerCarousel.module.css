@@ -1,0 +1,84 @@
+/*
+ * Hero carousel — chiều cao KHOÁ theo viewport (không theo ảnh) để ba slide tỉ lệ khác nhau
+ * không làm trang nhảy layout, và lúc ảnh chưa về khung vẫn giữ nguyên chỗ.
+ */
+/*
+ * Khung dùng ASPECT-RATIO đúng tỉ lệ chuẩn của từng slot (banner-media.ts) thay vì chiều cao
+ * cố định — ảnh đúng slot thì mọi bề rộng trong dải chỉ SCALE, không crop. max-height chặn
+ * màn siêu rộng (>1920px thì bắt đầu crop nhẹ hai bên, chấp nhận).
+ */
+.carousel {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1440 / 300;
+  max-height: 400px;
+  background: var(--xp-hero-backdrop);
+}
+
+@media (max-width: 1024px) {
+  .carousel {
+    aspect-ratio: 1024 / 320;
+    max-height: none;
+  }
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.slideActive {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.slideLink {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Thông điệp của banner nằm mép TRÁI (cả ba artwork hiện có) — crop thì crop bên phải. */
+  object-position: left center;
+}
+
+/* Chấm chuyển slide — Figma đặt góc dưới trái vùng hero. */
+.dots {
+  position: absolute;
+  bottom: 18px;
+  left: 64px;
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+}
+
+.dotActive {
+  background: var(--xp-color-primary);
+}
+
+@media (max-width: 640px) {
+  .carousel {
+    aspect-ratio: 780 / 390;
+  }
+
+  .dots {
+    left: 16px;
+    bottom: 10px;
+  }
+}

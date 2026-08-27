@@ -1,5 +1,11 @@
 import base from './packages/config/eslint/base.mjs';
-import react from './packages/config/eslint/react.mjs';
+import { reactOverlays } from './packages/config/eslint/react.mjs';
+
+const REACT_FILES = [
+  'apps/web/**/*.{ts,tsx}',
+  'apps/mobile/**/*.{ts,tsx}',
+  'packages/ui/**/*.{ts,tsx}',
+];
 
 /**
  * Root flat config. ESLint walks up from each file, so running `eslint .` inside
@@ -8,15 +14,24 @@ import react from './packages/config/eslint/react.mjs';
 export default [
   ...base,
 
-  // Frontend gets the extra restricted-import rules.
-  {
-    files: ['apps/web/**/*.{ts,tsx}', 'packages/ui/**/*.{ts,tsx}'],
-    ...react[react.length - 1],
-  },
+  // Code React (web + mobile): react-hooks + các thư viện bị cấm theo ADR.
+  ...reactOverlays.map((overlay) => ({ files: REACT_FILES, ...overlay })),
 
   // Seed và script CLI được phép in tiến trình ra stdout.
   {
-    files: ['prisma/src/seed.ts', 'scripts/**/*.ts', 'apps/*/src/main.ts', 'apps/*/src/openapi.ts'],
+    files: [
+      'prisma/src/seed.ts',
+      'prisma/src/cleanup-test-data.ts',
+      'scripts/**/*.ts',
+      // Script CLI của từng app (vd `apps/worker/src/scripts/sync-holidays.ts`) — người vận
+      // hành gõ tay và đọc kết quả ngay trên terminal, nên stdout LÀ giao diện của chúng.
+      'apps/*/src/scripts/**/*.ts',
+      // Script sinh mã/tài nguyên chạy bằng Node thuần (`node scripts/*.mjs`).
+      '**/scripts/**/*.mjs',
+      'apps/*/src/main.ts',
+      'apps/*/src/openapi.ts',
+    ],
+    languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
     rules: { 'no-console': 'off' },
   },
 

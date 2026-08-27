@@ -1,0 +1,383 @@
+'use client';
+
+import { Button, Card, Skeleton } from 'antd';
+import { useState } from 'react';
+import Link from 'next/link';
+import {
+  isBookingFinal,
+  longTermPackageLabel,
+  PERMISSION,
+  routeTypeLabel,
+  SERVICE_TYPE,
+  type BookingStatus,
+} from '@xeprime/types';
+import { PreviewImage } from '@/components/data-display/PreviewImage';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { PermissionState } from '@/components/feedback/PermissionState';
+import { vehiclePath } from '@/constants/routes';
+import { usePermissions } from '@/hooks/use-permissions';
+import { dayjs } from '@/lib/datetime';
+import { isNegativeMoney, isZeroMoney, subtractMoney } from '@/lib/money';
+import { getErrorMessage } from '@/services/api-client';
+import { SettlementCard } from '@/features/settlement/components/SettlementCard';
+import { useBooking } from '../hooks/use-booking';
+import { serviceTypeLabel } from '../constants';
+import { BookingActionBar } from './BookingActionBar';
+import { BookingCustomerDocumentsDialog } from './BookingCustomerDocumentsDialog';
+import { BookingDriverSection } from './BookingDriverSection';
+import { BookingOperationPanel } from './BookingOperationPanel';
+import { UpdateDeliveryFeeModal } from './UpdateDeliveryFeeModal';
+import styles from './BookingDetailContent.module.css';
+import { useAppFormat } from '@/i18n/use-app-format';
+
+/**
+ * Toàn bộ nội dung có thẩm quyền của MỘT đơn thuê: thẻ chi tiết (xe · khách · thời gian · tiền)
+ * + thanh hành động + diễn biến chuyến + quyết toán.
+ *
+ * Tách khỏi route `/manage/bookings/[id]` để modal chi tiết trên LỊCH dùng CHUNG — hai bề mặt
+ * một nguồn (bài học Wave 10: hai bản chi tiết là một bản bị bỏ quên). Mutation nào cũng đi qua
+ * đúng các component con đã có (`BookingActionBar`, `BookingOperationPanel`, `SettlementCard`)
+ * nên quyền và invalidation không nhân bản.
+ *
+ * PII: khách (tên/SĐT) chỉ hiện khi có `bookings.view` — thiếu quyền thì cả component chặn từ
+ * ngoài, người chỉ có `calendar.view` không nhìn được gì ở đây (guard backend vẫn là lớp thật).
+ */
+export function BookingDetailContent({
+  bookingId,
+  onNotFoundAction,
+}: {
+  bookingId: string;
+  /** Nút thoát khi đơn không còn (trang: về danh sách · modal: đóng). */
+  onNotFoundAction?: { label: string; onClick: () => void };
+}) {
+  const fmt = useAppFormat();
+
+  const { has } = usePermissions();
+  const canView = has(PERMISSION.BOOKING_VIEW);
+  const canUpdate = has(PERMISSION.BOOKING_UPDATE);
+  const { data, isLoading, isError, error, refetch } = useBooking(canView ? bookingId : null);
+  /** Sửa phí giao nhận — mở từ chính dòng phí ở khối chi phí, xem ghi chú tại chỗ đó. */
+  const [feeOpen, setFeeOpen] = useState(false);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
+
+  if (!canView) {
+    return (
+      <PermissionState
+        kind="forbidden"
+        title="Không có quyền xem đơn thuê"
+        description="Liên hệ quản trị viên nếu bạn cần quyền này."
+        missingPermissions={[PERMISSION.BOOKING_VIEW]}
+      />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className={styles.stackGap}>
+        <Skeleton active paragraph={{ rows: 2 }} />
+        <Skeleton active paragraph={{ rows: 6 }} />
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    // Đơn bị xoá và lỗi mạng là hai chuyện khác nhau — không mời "thử lại" cho cái đã biến mất.
+    const notFound = getErrorMessage(error).includes('Không tìm thấy');
+    return (
+      <EmptyState
+        variant={notFound ? 'empty' : 'error'}
+        title={notFound ? 'Không tìm thấy đơn thuê' : 'Không tải được đơn thuê'}
+        description={notFound ? 'Đơn có thể đã bị xoá.' : getErrorMessage(error)}
+        action={
+          notFound && onNotFoundAction ? (
+            <Button onClick={onNotFoundAction.onClick}>{onNotFoundAction.label}</Button>
+          ) : !notFound ? (
+            <Button type="primary" onClick={() => void refetch()}>
+              Thử lại
+            </Button>
+          ) : undefined
+        }
+      />
+    );
+  }
+
+  const hasDebt = !isZeroMoney(data.debtAmount);
+  const hasDeposit = !isZeroMoney(data.depositAmount);
+  // Thu vượt = đã thu − phải thu, chỉ khi dương. Tính trên CHUỖI tiền (ADR 0007), không Number.
+  const excess = subtractMoney(data.collectedAmount, data.amountDue);
+  const overCollected = isNegativeMoney(excess) || isZeroMoney(excess) ? null : excess;
+  /*
+   * Cùng luật với server (`isBookingFinal`): đơn đã khép thì mọi đường ghi đều bị từ chối.
+   *
+   * Tên `closed` phải được khai báo TƯỜNG MINH ở đây — bỏ quên thì TypeScript lặng lẽ nối vào
+   * `window.closed` của DOM lib (cũng kiểu `boolean`), typecheck vẫn xanh còn lúc chạy thì luôn
+   * ra `false` và nút sửa hiện cả trên đơn đã đóng.
+   */
+  const closed = isBookingFinal(data.status as BookingStatus);
+
+  return (
+    <div className={styles.stackGap}>
+      <Card
+        title="Chi tiết đơn đặt xe"
+        className={styles.card}
+        extra={<span className={styles.createdAt}>Lập lúc {fmt.dateTime(data.createdAt)}</span>}
+      >
+        <div className={styles.detailGrid}>
+          <section className={styles.block}>
+            <h3 className={styles.blockTitle}>Thông tin phương tiện</h3>
+            <div className={styles.vehicle}>
+              {/*
+                Ảnh chỉ hiện khi xe THẬT SỰ có — không dựng khung xám giả làm chỗ trống trông
+                như đang tải mãi. `next/image` cần host được khai báo, còn ảnh xe đến từ R2 theo
+                cấu hình từng môi trường, nên dùng thẻ ảnh thường.
+              */}
+              {data.vehicleImageUrl ? (
+                <PreviewImage
+                  src={data.vehicleImageUrl}
+                  alt={data.vehicleName}
+                  className={styles.vehicleImage}
+                  loading="lazy"
+                />
+              ) : null}
+              <div className={styles.stack}>
+                <span className={styles.strong}>{data.vehicleName}</span>
+                {data.vehiclePlate ? (
+                  <span className={styles.plate}>{data.vehiclePlate}</span>
+                ) : null}
+                <span className={styles.meta}>{serviceTypeLabel(data.serviceType)}</span>
+                {has(PERMISSION.VEHICLE_VIEW) ? (
+                  <Link href={vehiclePath.detail(data.vehicleId)} className={styles.link}>
+                    Xem hồ sơ xe
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.block}>
+            <h3 className={styles.blockTitle}>Khách hàng đặt xe</h3>
+            <div className={styles.stack}>
+              <span className={styles.strong}>{data.customerName}</span>
+              {data.customerPhone ? (
+                // Vận hành gọi khách ngay từ đây — trên điện thoại là một chạm.
+                <a href={`tel:${data.customerPhone}`} className={styles.link}>
+                  {data.customerPhone}
+                </a>
+              ) : (
+                <span className={styles.meta}>Không có số điện thoại</span>
+              )}
+              {/*
+                Nút đứng CẠNH dữ liệu nó thao tác, không dồn lên thanh hành động (cùng luật với
+                nút "Sửa" của phí giao nhận bên dưới).
+
+                Ẩn khi đơn cũ không khớp được khách trong sổ (`tenantCustomerId` null) — không có
+                hồ sơ thì không có chỗ nào để đính giấy tờ vào.
+
+                Quyền là quyền GIẤY TỜ, không phải quyền đơn: nhân viên xem được đơn không đương
+                nhiên được mở kho giấy tờ tuỳ thân của khách.
+              */}
+              {data.tenantCustomerId && has(PERMISSION.CUSTOMER_DOCUMENT_MANAGE) ? (
+                <Button
+                  size="small"
+                  onClick={() => setDocumentsOpen(true)}
+                  className={styles.inlineAction}
+                >
+                  Bổ sung giấy tờ
+                </Button>
+              ) : null}
+            </div>
+          </section>
+
+          {/* Hành trình chuyến CÓ TÀI XẾ (17/08) — copy từ yêu cầu khi duyệt / nhập khi lập tay. */}
+          {data.serviceType === SERVICE_TYPE.WITH_DRIVER ? (
+            <section className={styles.panel}>
+              <h3 className={styles.blockTitle}>Hành trình</h3>
+              <dl className={styles.rows}>
+                <div className={styles.row}>
+                  <dt>Lộ trình</dt>
+                  <dd>{data.routeType ? routeTypeLabel(data.routeType) : 'Chưa có thông tin'}</dd>
+                </div>
+                <div className={styles.row}>
+                  <dt>Địa chỉ đón</dt>
+                  <dd>{data.pickupAddress ?? 'Chưa có thông tin'}</dd>
+                </div>
+                {data.destination ? (
+                  <div className={styles.row}>
+                    <dt>Điểm đến</dt>
+                    <dd>{data.destination}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
+          ) : null}
+
+          {/* Tài xế (17/08) — gán/bỏ gán; đơn with_driver chưa phân công được nhắc rõ. */}
+          <BookingDriverSection booking={data} canUpdate={has(PERMISSION.BOOKING_UPDATE)} />
+
+          <section className={styles.panel}>
+            <h3 className={styles.blockTitle}>Thời gian thuê</h3>
+            <dl className={styles.rows}>
+              <div className={styles.row}>
+                <dt>Nhận xe</dt>
+                <dd>{fmt.rentalPoint(dayjs(data.pickupAt))}</dd>
+              </div>
+              <div className={styles.row}>
+                <dt>Trả xe</dt>
+                <dd>{fmt.rentalPoint(dayjs(data.returnAt))}</dd>
+              </div>
+              <div className={styles.row}>
+                <dt>Thời lượng</dt>
+                <dd>
+                  {/*
+                    Đơn THUÊ DÀI HẠN dài đúng bằng GÓI (tháng lịch — ADR 0011). Nói "92 ngày" cho
+                    gói 3 tháng là đúng số nhưng sai đơn vị nghiệp vụ: gói mới là thứ hai bên ký.
+                  */}
+                  {data.longTermPackageMonths
+                    ? `Gói ${longTermPackageLabel(data.longTermPackageMonths)}`
+                    : fmt.rentalDuration(dayjs(data.pickupAt), dayjs(data.returnAt))}
+                </dd>
+              </div>
+              {/*
+                Mốc THỰC TẾ chỉ hiện khi đã có — chưa giao xe mà bày một dòng trống là mời người
+                đọc tự điền lấy một giả định.
+              */}
+              {data.actualPickupAt ? (
+                <div className={styles.row}>
+                  <dt>Giao thực tế</dt>
+                  <dd>{fmt.rentalPoint(dayjs(data.actualPickupAt))}</dd>
+                </div>
+              ) : null}
+              {data.actualReturnAt ? (
+                <div className={styles.row}>
+                  <dt>Nhận lại thực tế</dt>
+                  <dd>{fmt.rentalPoint(dayjs(data.actualReturnAt))}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </section>
+
+          <section className={styles.panel}>
+            <h3 className={styles.blockTitle}>Tổng hợp chi phí &amp; đặt cọc</h3>
+            <dl className={styles.rows}>
+              <div className={styles.row}>
+                <dt>Tiền thuê</dt>
+                <dd>{fmt.money(data.baseAmount)}</dd>
+              </div>
+              {!isZeroMoney(data.discountAmount) ? (
+                <div className={styles.row}>
+                  <dt>Khuyến mãi</dt>
+                  <dd className={styles.negative}>−{fmt.money(data.discountAmount)}</dd>
+                </div>
+              ) : null}
+              <div className={styles.row}>
+                <dt>Phí giao nhận</dt>
+                <dd className={styles.editableValue}>
+                  {isZeroMoney(data.deliveryFee) ? 'Miễn phí' : fmt.money(data.deliveryFee)}
+                  {/*
+                    Nút sửa đứng CẠNH con số nó sửa, không phải một nút riêng trên thanh hành
+                    động của đơn. Phí giao nhận là số hai bên thoả thuận ngoài ứng dụng rồi ghi
+                    lại (Wave 9) — người dùng nghĩ tới nó khi đang NHÌN nó, và việc ghi lại kèm
+                    ghi chú nội bộ vào audit nên nó không nhập được vào form Sửa đơn chung.
+                  */}
+                  {canUpdate && !closed ? (
+                    <button
+                      type="button"
+                      className={styles.editValueBtn}
+                      onClick={() => setFeeOpen(true)}
+                    >
+                      Sửa
+                    </button>
+                  ) : null}
+                </dd>
+              </div>
+              <div className={styles.row}>
+                <dt>Tiền thuê</dt>
+                <dd>{fmt.money(data.totalAmount)}</dd>
+              </div>
+              {/* Phụ phí cuối chuyến (quá giờ, vệ sinh, hư hại) LÀ tiền khách phải trả thêm —
+                  từ nay nó vào thẳng "phải thu", không còn nằm riêng ở khối quyết toán cọc. */}
+              {!isZeroMoney(data.surchargeTotal) ? (
+                <div className={styles.row}>
+                  <dt>Phát sinh</dt>
+                  <dd>+{fmt.money(data.surchargeTotal)}</dd>
+                </div>
+              ) : null}
+              <div className={styles.rowTotal}>
+                <dt>Phải thu</dt>
+                <dd>{fmt.money(data.amountDue)}</dd>
+              </div>
+              <div className={styles.row}>
+                <dt>Đã thu</dt>
+                <dd>{fmt.money(data.collectedAmount)}</dd>
+              </div>
+              {/* Khoản thu ghi thẳng ở sổ Thu-Chi (phiếu tay gắn đơn). Tách ra vì nếu chỉ cộng
+                  vào "đã thu" thì con số nhảy lên mà không ai biết nó từ đâu. */}
+              {!isZeroMoney(data.otherCollected) ? (
+                <div className={styles.rowSub}>
+                  <dt>trong đó thu ở sổ Thu-Chi</dt>
+                  <dd>{fmt.money(data.otherCollected)}</dd>
+                </div>
+              ) : null}
+              {hasDebt ? (
+                <div className={styles.row}>
+                  <dt>Còn nợ</dt>
+                  <dd className={styles.negative}>{fmt.money(data.debtAmount)}</dd>
+                </div>
+              ) : null}
+              {/* Thu nhiều hơn phải thu: gần như luôn là một khoản phát sinh đã thu tiền nhưng
+                  chưa ghi nhận trên đơn. Nói thẳng thay vì để hai con số lệch nhau không lời. */}
+              {overCollected ? (
+                <div className={styles.row}>
+                  <dt>Thu vượt</dt>
+                  <dd>{fmt.money(overCollected)}</dd>
+                </div>
+              ) : null}
+              {hasDeposit ? (
+                <div className={styles.row}>
+                  {/*
+                    Đây là cọc THEO ĐƠN (cấu hình), không phải tiền đã cầm. Việc đã thu được
+                    chưa nằm ở thẻ `Phát sinh & Tiền cọc` — hai con số khác nhau, không gộp.
+                  */}
+                  <dt>Đặt cọc tài sản</dt>
+                  <dd>{fmt.money(data.depositAmount)}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </section>
+
+          {data.note ? (
+            <section className={styles.blockWide}>
+              <h3 className={styles.blockTitle}>Ghi chú</h3>
+              <p className={styles.note}>{data.note}</p>
+            </section>
+          ) : null}
+        </div>
+
+        <BookingActionBar booking={data} />
+      </Card>
+
+      {feeOpen ? (
+        <UpdateDeliveryFeeModal
+          bookingId={data.id}
+          currentFee={data.deliveryFee}
+          open
+          onClose={() => setFeeOpen(false)}
+        />
+      ) : null}
+
+      {documentsOpen && data.tenantCustomerId ? (
+        <BookingCustomerDocumentsDialog
+          customerId={data.tenantCustomerId}
+          customerName={data.customerName}
+          open
+          onClose={() => setDocumentsOpen(false)}
+        />
+      ) : null}
+
+      <div className={styles.layout}>
+        <BookingOperationPanel bookingId={data.id} bookingStatus={data.status} />
+        <SettlementCard bookingId={data.id} canView={canView} />
+      </div>
+    </div>
+  );
+}

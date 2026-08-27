@@ -1,0 +1,18 @@
+.scheduleRow {
+  display: grid;
+  gap: var(--xp-space-sm);
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 480px) {
+  .scheduleRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--xp-space-md);
+  gap: var(--xp-space-sm);
+}

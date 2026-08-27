@@ -1,0 +1,59 @@
+/* Dấu "cần cho duyệt công khai" — cùng màu nhấn với trạng thái chờ duyệt (Figma `60:76`). */
+.mark {
+  margin-left: var(--xp-space-xs);
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: 1;
+}
+
+.required {
+  margin-right: var(--xp-space-xs);
+  color: var(--xp-color-error);
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Chữ chỉ dành cho trình đọc màn hình — dấu `●` là aria-hidden nên phần này mang nghĩa. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.legend {
+  padding: var(--xp-space-md);
+  margin-bottom: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-layout);
+}
+
+.legendTitle {
+  margin: 0 0 var(--xp-space-sm);
+  font-weight: var(--xp-font-weight-semibold);
+}
+
+.legendItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-xs) var(--xp-space-lg);
+  padding: 0;
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+  list-style: none;
+}
+
+.legendItems li {
+  display: flex;
+  align-items: center;
+}

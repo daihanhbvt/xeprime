@@ -1,0 +1,46 @@
+{
+  "card": {
+    "searchLabel": "Search vehicles for rent",
+    "stickyLabel": "Quick search",
+    "vehicleTypeLabel": "Vehicle type",
+    "serviceTypeLabel": "Rental service",
+    "panelLabel": "Search {vehicle} {service}",
+    "submit": "Search",
+    "longTermHint": "Choose a vehicle first, then select a rental package and your preferred pickup date. The shop confirms the exact pickup date and time when it approves your request."
+  },
+  "service": {
+    "selfDrive": "Self-drive",
+    "selfDriveShort": "Self-drive",
+    "withDriver": "With driver",
+    "withDriverShort": "With driver",
+    "longTerm": "Long-term rental",
+    "longTermShort": "Long-term"
+  },
+  "mode": {
+    "title": "Vehicle and service",
+    "summary": "{vehicle} · {service}",
+    "triggerLabel": "Vehicle and service: {summary}"
+  },
+  "route": {
+    "label": "Route",
+    "triggerLabel": "Route: {value}"
+  },
+  "rental": {
+    "label": "Rental period"
+  },
+  "location": {
+    "label": "Location",
+    "panelTitle": "Where would you like to rent?",
+    "triggerLabel": "Pickup location: {value}",
+    "searchPlaceholder": "Search province or city",
+    "searchAriaLabel": "Search province or city",
+    "popular": "Popular locations",
+    "all": "All provinces",
+    "nationwide": "Nationwide",
+    "nationwideHint": "See vehicles in every province",
+    "unavailable": "This location is no longer available",
+    "loadError": "Couldn't load the list of locations",
+    "vehicleCount": "{count, plural, one {# vehicle} other {# vehicles}}",
+    "noMatch": "No province matches “{query}”. Try another name or pick Nationwide."
+  }
+}

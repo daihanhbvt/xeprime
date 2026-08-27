@@ -1,0 +1,44 @@
+/* Dòng chỉ-đọc trong form: cùng nhịp với hàng nhãn–ô nhập của DialogForm. */
+.readonlyRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+  align-items: baseline;
+  min-width: 0;
+}
+
+.readonlyLabel {
+  color: var(--xp-color-text-secondary);
+}
+
+.readonlyValue {
+  font-weight: var(--xp-font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.duplicate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--xp-space-sm);
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-warning);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-warning-bg);
+}
+
+.duplicateHint {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  line-height: var(--xp-line-height-body-sm);
+}
+
+/* Hành động nằm TRONG form (footer của dialog tắt) — nút "Thêm khách" là submit thật,
+ * nên Enter trong ô nhập cũng gửi được form. */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-subtle);
+}

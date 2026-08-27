@@ -1,228 +1,358 @@
 'use client';
 
-import { Alert, Button, Card, Col, Row } from 'antd';
+import { Alert, Button, Form } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useTranslations } from 'next-intl';
 import {
   SERVICE_TYPE,
   VEHICLE_OPERATION_STATUS,
+  VEHICLE_SOURCE_TYPE,
   VEHICLE_TYPE,
+  isVehicleFuelTypeAllowed,
 } from '@xeprime/types';
 import { vehicleFormSchema, type VehicleFormValues } from '@xeprime/validators';
-import { NumberField } from '@/components/form/NumberField';
-import { SelectField } from '@/components/form/SelectField';
-import { TextAreaField } from '@/components/form/TextAreaField';
-import { TextField } from '@/components/form/TextField';
+import { trailingRequiredMark } from '@/components/form/required-mark';
+import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { discountedPriceVnd } from '../pricing';
 import {
-  FUEL_TYPE_OPTIONS,
-  OPERATION_STATUS_OPTIONS,
-  SERVICE_TYPE_OPTIONS,
-  VEHICLE_TYPE_OPTIONS,
-} from '../constants';
+  BasicSection,
+  MediaSection,
+  SpecsSection,
+  SourceTypeSection,
+  useCreateWizardSteps,
+} from './VehicleFormSections';
+import { VehicleReviewStep } from './VehicleReviewStep';
+import { VehicleWizard } from './VehicleWizard';
+import { CreateVehiclePricingStep } from './CreateVehiclePricingStep';
+import { useActiveBranches } from '@/features/branches/hooks/use-branches';
+import { branchLabel } from '@/features/branches/branch-label';
 import styles from './VehicleForm.module.css';
-
-const CURRENT_YEAR = new Date().getFullYear();
+import { useAppFormat } from '@/i18n/use-app-format';
 
 /** Mặc định khi tạo mới: chọn sẵn giá trị hợp lệ để select bắt buộc không rỗng. */
 const EMPTY_DEFAULTS: VehicleFormValues = {
   code: '',
   name: '',
+  // Chọn sẵn ở runtime bằng chi nhánh MẶC ĐỊNH của gian hàng (xem `useEffect` bên dưới) — hằng số
+  // này không thể biết id chi nhánh của một gian hàng cụ thể.
+  branchId: '',
   vehicleType: VEHICLE_TYPE.CAR,
-  serviceType: SERVICE_TYPE.SELF_DRIVE,
+  serviceTypes: [SERVICE_TYPE.SELF_DRIVE],
+  monthlyPrice: null,
+  withDriverDailyPrice: null,
+  withDriverInterCityPrice: null,
+  withDriverOneWayPrice: null,
+  sourceType: VEHICLE_SOURCE_TYPE.OWNED,
   operationStatus: VEHICLE_OPERATION_STATUS.AVAILABLE,
   plateNumber: '',
   brand: '',
   model: '',
   color: '',
   fuelType: null,
+  bodyType: null,
   manufactureYear: null,
   seatCount: null,
+  lengthMm: null,
+  widthMm: null,
+  heightMm: null,
+  curbWeightKg: null,
+  engineDisplacementCc: null,
+  horsepowerHp: null,
+  transmission: null,
+  fuelConsumptionCity: null,
+  fuelConsumptionHighway: null,
+  fuelConsumptionCombined: null,
   weekdayPrice: null,
   weekendPrice: null,
+  hourlyPrice: null,
+  deliveryEnabled: false,
+  discountPercent: null,
   description: '',
   mainImageUrl: null,
+  images: [],
+  features: [],
 };
 
+export interface VehicleSubmitOptions {
+  /** Bấm "Lưu & Gửi duyệt" thay vì "Lưu nháp" — trang quyết định gọi thêm `submit-public`. */
+  submitForReview: boolean;
+}
+
 interface VehicleFormProps {
-  initialValues?: VehicleFormValues;
-  submitLabel: string;
   submitting: boolean;
   errorMessage?: string | null;
-  onSubmit: (values: VehicleFormValues) => void;
+  onSubmit: (values: VehicleFormValues, options: VehicleSubmitOptions) => void;
   onCancel: () => void;
 }
 
-export function VehicleForm({
-  initialValues,
-  submitLabel,
-  submitting,
-  errorMessage,
-  onSubmit,
-  onCancel,
-}: VehicleFormProps) {
-  const { control, handleSubmit } = useForm<VehicleFormValues>({
+/**
+ * Wizard tạo xe — Figma `236:2953`, `236:3176`, `236:3334` và responsive `241:2043`…`241:2733`.
+ * Route chỉnh sửa cố ý dùng `VehicleEditWorkspace` dạng tab, không đi qua wizard này.
+ *
+ * ⚠️ Wizard là **thuần client**: mọi bước giữ giá trị trong cùng một form React Hook Form và chỉ
+ * gọi API **một lần** ở bước cuối. Backend không có endpoint lưu từng phần, nên không chỗ nào ở
+ * đây được nói "đã lưu nháp" giữa chừng.
+ */
+export function VehicleForm({ submitting, errorMessage, onSubmit, onCancel }: VehicleFormProps) {
+  const t = useTranslations('Vehicles.form');
+  const tCommon = useTranslations('Common.actions');
+  const tBranches = useTranslations('Branches');
+  const fmt = useAppFormat();
+
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    trigger,
+    getValues,
+    formState: { errors, isDirty },
+  } = useForm<VehicleFormValues>({
     resolver: yupResolver(vehicleFormSchema),
-    defaultValues: initialValues ?? EMPTY_DEFAULTS,
+    defaultValues: EMPTY_DEFAULTS,
   });
 
-  const imageUrl = useWatch({ control, name: 'mainImageUrl' });
+  const steps = useCreateWizardSteps();
+  const lastStep = steps.length - 1;
+  const [step, setStep] = useState(0);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
-  const submit = handleSubmit((values) => onSubmit(values));
+  /**
+   * Chi nhánh: chọn sẵn cái MẶC ĐỊNH để thao tác vẫn một bước như trước, nhưng vẫn là một trường
+   * thật trên form — người dùng thấy xe sẽ nằm ở đâu và đổi được ngay tại đây.
+   *
+   * Chỉ điền khi ô còn trống: người dùng đã chọn tay rồi thì dữ liệu tới muộn không được ghi đè.
+   */
+  const branches = useActiveBranches();
+  const branchId = useWatch({ control, name: 'branchId' });
+  const noProvince = tBranches('labels.noProvince');
+  const branchOptions = useMemo(
+    () => (branches.data?.items ?? []).map((b) => ({ value: b.id, label: branchLabel(b, noProvince) })),
+    [branches.data, noProvince],
+  );
+  useEffect(() => {
+    if (branchId) return;
+    const preferred =
+      branches.data?.items.find((b) => b.isDefault) ?? branches.data?.items[0] ?? null;
+    if (preferred) setValue('branchId', preferred.id, { shouldValidate: true });
+  }, [branchId, branches.data, setValue]);
+
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      event.preventDefault();
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [isDirty]);
+
+  // Kiểu dáng thân xe chỉ có nghĩa với ô tô. Nguồn năng lượng cũng phụ thuộc loại phương tiện:
+  // xe máy chỉ nhận xăng/điện, nên đổi từ ô tô dầu/hybrid phải xoá lựa chọn không còn hợp lệ.
+  const vehicleType = useWatch({ control, name: 'vehicleType' });
+  const fuelType = useWatch({ control, name: 'fuelType' });
+  const isCar = vehicleType === VEHICLE_TYPE.CAR;
+  useEffect(() => {
+    if (!isCar) setValue('bodyType', null);
+    if (!isVehicleFuelTypeAllowed(vehicleType, fuelType)) {
+      setValue('fuelType', null, { shouldValidate: true });
+    }
+  }, [fuelType, isCar, setValue, vehicleType]);
+
+  // Giá hiển thị trên sàn sau khi trừ khuyến mãi. Chỉ để xem — KHÔNG gửi lên API, backend tự
+  // tính lại khi dựng `public_listings` (ADR 0008).
+  const weekdayPrice = useWatch({ control, name: 'weekdayPrice' });
+  const discountPercent = useWatch({ control, name: 'discountPercent' });
+  const discounted = discountedPriceVnd(
+    weekdayPrice == null ? null : String(weekdayPrice),
+    discountPercent,
+  );
+  const pricePreview =
+    discounted != null ? (
+      <Alert
+        type="info"
+        showIcon
+        className={styles.pricePreview}
+        message={t('wizard.pricePreview', { price: fmt.money(discounted) })}
+      />
+    ) : null;
+
+  /** Lỗi của RIÊNG bước đang mở — dùng cho dải tổng hợp đầu thẻ (Figma `193:2687`). */
+  const stepErrors = steps[step]!.fields.filter((field) => errors[field]).length;
+
+  const values = getValues();
+  function submitNow(options: VehicleSubmitOptions) {
+    void handleSubmit(
+      (formValues) => onSubmit(formValues, options),
+      /*
+       * Gửi mà schema không hợp lệ → **nhảy về bước chứa lỗi đầu tiên**.
+       *
+       * Bắt buộc phải có khi thanh bước cho nhảy tự do (luồng sửa): người dùng có thể bỏ trống
+       * một trường ở bước 1 rồi nhảy thẳng tới bước xác nhận, và nếu không đưa họ về đúng chỗ thì màn
+       * xác nhận chỉ đứng im không giải thích gì.
+       */
+      (formErrors) => {
+        const target = steps.findIndex((candidate) =>
+          candidate.fields.some((field) => formErrors[field]),
+        );
+        if (target >= 0) setStep(target);
+      },
+    )();
+  }
+
+  /**
+   * Bước chưa phải bước cuối thì nút chính **đi tiếp**, không gửi API.
+   *
+   * Vẫn đi qua `onSubmit` của thẻ `<form>` để phím Enter trong ô nhập cũng đi tiếp — nếu gắn
+   * `onClick` lên nút thì Enter sẽ gửi form và tạo xe ngay từ bước 1.
+   */
+  async function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    // Chặn gửi trùng: nút `loading` chỉ nuốt sự kiện chuột, không chặn Enter.
+    if (submitting) return;
+
+    if (step < lastStep) {
+      // Chỉ validate trường của BƯỚC ĐANG MỞ — validate cả schema sẽ chặn người dùng bằng lỗi
+      // của phần họ còn chưa nhìn thấy.
+      const valid = await trigger([...steps[step]!.fields]);
+      if (valid) setStep(step + 1);
+      return;
+    }
+
+    submitNow({ submitForReview: true });
+  }
+
+  function renderStep() {
+    const props = { control, isCar };
+    switch (steps[step]!.key) {
+      case 'basic':
+        // Ba nhóm có tiêu đề riêng theo thiết kế: Thông tin cơ bản → Thông số vận hành →
+        // Hình thức nguồn xe. Trạng thái vận hành KHÔNG hỏi lúc tạo (mặc định "Sẵn sàng").
+        return (
+          <div className={styles.sectionStack}>
+            <section className={styles.subSection}>
+              <h3 className={styles.subSectionTitle}>{t('sections.basic')}</h3>
+              <BasicSection
+                {...props}
+                branchOptions={branchOptions}
+                branchLoading={branches.isLoading}
+                branchDisabled={branches.isError}
+              />
+            </section>
+            <section className={styles.subSection}>
+              <h3 className={styles.subSectionTitle}>{t('sections.operatingSpecs')}</h3>
+              <SpecsSection {...props} />
+            </section>
+            <SourceTypeSection control={control} />
+          </div>
+        );
+      case 'pricing':
+        return (
+          <CreateVehiclePricingStep control={control} isCar={isCar} pricePreview={pricePreview} />
+        );
+      case 'media':
+        return <MediaSection {...props} />;
+      default:
+        return <VehicleReviewStep values={values} onEditStep={setStep} />;
+    }
+  }
+
+  /**
+   * Hàng nút cuối thẻ.
+   *
+   * Bước cuối của luồng TẠO có hai hành động (Figma `193:2132`): "Lưu nháp" tạo xe ở trạng thái
+   * nháp, "Lưu & Gửi duyệt" tạo rồi gửi đi duyệt. Cả hai đều là hành vi backend có thật —
+   * `POST /vehicles` rồi `POST /vehicles/:id/submit-public`.
+   */
+  const footer =
+    step < lastStep ? (
+      <>
+        {/*
+          Chữ hiện ra là "Quay lại" đúng Figma `193:2134`, nhưng TÊN KHẢ TRUY CẬP phải khác:
+          `ManagePageHeader` đã dựng sẵn một nút "Quay lại" để rời trang, và hai nút trùng tên
+          trên một màn khiến người dùng trình đọc màn hình không phân biệt được lùi bước với
+          thoát trang.
+        */}
+        <Button
+          onClick={
+            step > 0
+              ? () => setStep(step - 1)
+              : () => (isDirty ? setConfirmCancel(true) : onCancel())
+          }
+          aria-label={step > 0 ? t('wizard.backToStep') : undefined}
+        >
+          {step > 0 ? tCommon('back') : t('wizard.cancel')}
+        </Button>
+        <Button type="primary" htmlType="submit" loading={submitting}>
+          {tCommon('next')}
+        </Button>
+      </>
+    ) : (
+      <>
+        <Button onClick={() => setStep(step - 1)} aria-label={t('wizard.backToStep')}>
+          {tCommon('back')}
+        </Button>
+        <div className={styles.finalActions}>
+          <Button loading={submitting} onClick={() => submitNow({ submitForReview: false })}>
+            {t('wizard.saveDraft')}
+          </Button>
+          <Button type="primary" htmlType="submit" loading={submitting}>
+            {t('wizard.saveAndSubmit')}
+          </Button>
+        </div>
+      </>
+    );
 
   return (
-    <form onSubmit={submit} noValidate className={styles.form}>
-      {errorMessage ? (
-        <Alert type="error" showIcon message={errorMessage} className={styles.alert} />
-      ) : null}
+    /*
+     * `<Form component={false}>` chỉ cấp NGỮ CẢNH bố cục cho `Form.Item`, không dựng thêm thẻ
+     * `<form>` — form thật vẫn là thẻ dưới đây với `onSubmit` của React Hook Form (ADR 0004:
+     * state form ở RHF, AntD chỉ lo trình bày).
+     *
+     * Không có ngữ cảnh này, `Form.Item` rơi về layout NGANG mặc định: nhãn nằm bên trái kèm dấu
+     * hai chấm và ô nhập co lại theo phần thừa — sai hẳn Figma (nhãn NẰM TRÊN ô nhập).
+     */
+    <Form component={false} layout="vertical" colon={false} requiredMark={trailingRequiredMark}>
+      <form onSubmit={handleFormSubmit} noValidate>
+        <VehicleWizard
+          steps={steps}
+          current={step}
+          onStepChange={setStep}
+          navigation="sequential"
+          heading={steps[step]!.heading}
+          notice={
+            <>
+              {errorMessage ? (
+                <Alert type="error" showIcon message={errorMessage} className={styles.alert} />
+              ) : null}
+              {stepErrors > 0 ? (
+                <Alert
+                  type="error"
+                  showIcon
+                  className={styles.alert}
+                  message={t('wizard.stepErrors', { count: stepErrors })}
+                />
+              ) : null}
+            </>
+          }
+          footer={footer}
+        >
+          {renderStep()}
+        </VehicleWizard>
+      </form>
 
-      <Card title="Thông tin cơ bản" className={styles.section}>
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <TextField control={control} name="code" label="Mã xe" placeholder="VD: XE-001" />
-          </Col>
-          <Col xs={24} sm={12}>
-            <TextField
-              control={control}
-              name="name"
-              label="Tên xe"
-              placeholder="VD: Toyota Vios 2022"
-            />
-          </Col>
-          <Col xs={24} sm={8}>
-            <SelectField
-              control={control}
-              name="vehicleType"
-              label="Loại xe"
-              options={VEHICLE_TYPE_OPTIONS}
-            />
-          </Col>
-          <Col xs={24} sm={8}>
-            <SelectField
-              control={control}
-              name="serviceType"
-              label="Loại dịch vụ"
-              options={SERVICE_TYPE_OPTIONS}
-            />
-          </Col>
-          <Col xs={24} sm={8}>
-            <SelectField
-              control={control}
-              name="operationStatus"
-              label="Trạng thái vận hành"
-              options={OPERATION_STATUS_OPTIONS}
-            />
-          </Col>
-        </Row>
-      </Card>
-
-      <Card title="Chi tiết xe" className={styles.section}>
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <TextField
-              control={control}
-              name="plateNumber"
-              label="Biển số"
-              placeholder="VD: 51K-123.45"
-            />
-          </Col>
-          <Col xs={24} sm={12}>
-            <SelectField
-              control={control}
-              name="fuelType"
-              label="Nhiên liệu"
-              options={FUEL_TYPE_OPTIONS}
-              placeholder="Chọn nhiên liệu"
-              allowClear
-            />
-          </Col>
-          <Col xs={24} sm={12}>
-            <TextField control={control} name="brand" label="Hãng" placeholder="VD: Toyota" />
-          </Col>
-          <Col xs={24} sm={12}>
-            <TextField control={control} name="model" label="Dòng xe" placeholder="VD: Vios" />
-          </Col>
-          <Col xs={24} sm={8}>
-            <NumberField
-              control={control}
-              name="manufactureYear"
-              label="Đời xe"
-              placeholder={String(CURRENT_YEAR)}
-              min={1980}
-              max={CURRENT_YEAR + 1}
-            />
-          </Col>
-          <Col xs={24} sm={8}>
-            <NumberField
-              control={control}
-              name="seatCount"
-              label="Số chỗ"
-              placeholder="VD: 5"
-              min={1}
-              max={64}
-            />
-          </Col>
-          <Col xs={24} sm={8}>
-            <TextField control={control} name="color" label="Màu sắc" placeholder="VD: Trắng" />
-          </Col>
-        </Row>
-      </Card>
-
-      <Card title="Giá thuê" className={styles.section}>
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="weekdayPrice"
-              label="Giá ngày thường"
-              placeholder="VD: 600.000"
-              min={0}
-              money
-            />
-          </Col>
-          <Col xs={24} sm={12}>
-            <NumberField
-              control={control}
-              name="weekendPrice"
-              label="Giá cuối tuần"
-              placeholder="VD: 750.000"
-              min={0}
-              money
-            />
-          </Col>
-        </Row>
-      </Card>
-
-      <Card title="Hình ảnh & mô tả" className={styles.section}>
-        <TextField
-          control={control}
-          name="mainImageUrl"
-          label="Ảnh đại diện (URL)"
-          placeholder="https://..."
-        />
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- ảnh ngoài từ URL người dùng nhập, không tối ưu qua next/image
-          <img src={imageUrl} alt="Xem trước ảnh xe" className={styles.preview} />
-        ) : null}
-        <div className={styles.descBlock}>
-          <TextAreaField
-            control={control}
-            name="description"
-            label="Mô tả"
-            placeholder="Mô tả tình trạng, trang bị, điều kiện thuê…"
-            maxLength={4000}
-            rows={5}
-          />
-        </div>
-      </Card>
-
-      <div className={styles.actions}>
-        <Button size="large" onClick={onCancel} disabled={submitting}>
-          Huỷ
-        </Button>
-        <Button type="primary" size="large" htmlType="submit" loading={submitting}>
-          {submitLabel}
-        </Button>
-      </div>
-    </form>
+      <ResponsiveDialog
+        open={confirmCancel}
+        title={t('wizard.cancelWizard.title')}
+        size="sm"
+        onClose={() => setConfirmCancel(false)}
+        onOk={onCancel}
+        okText={t('wizard.cancelWizard.ok')}
+        cancelText={t('wizard.cancelWizard.cancel')}
+        destructive
+      >
+        {t('wizard.cancelWizard.body')}
+      </ResponsiveDialog>
+    </Form>
   );
 }

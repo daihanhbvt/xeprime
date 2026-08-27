@@ -1,0 +1,326 @@
+/*
+ * Ruột hộp chọn khoảng thuê — số đo bám Figma `177:1657` (lịch đôi 2×360, ô ngày 36px).
+ * Biến --rdp-* là API theming chính thức của react-day-picker v10.
+ */
+.panel {
+  display: flex;
+  max-width: 100%;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+/* Tab "Thuê theo ngày / Thuê theo giờ" — Figma `177:1652`: gạch chân vàng cho tab đang chọn. */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--xp-color-border);
+  gap: var(--xp-space-sm);
+}
+
+.tab {
+  padding: 8px 16px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--xp-color-text-secondary);
+  cursor: pointer;
+  font-size: var(--xp-font-size-body);
+  font-weight: var(--xp-font-weight-medium);
+}
+
+.tabActive {
+  border-bottom-color: var(--xp-color-primary);
+  color: var(--xp-color-text);
+}
+
+.dayPicker {
+  --rdp-accent-color: var(--xp-color-primary);
+  --rdp-accent-background-color: var(--xp-color-bg-selected);
+  --rdp-day-width: 44px;
+  --rdp-day-height: 38px;
+  --rdp-day_button-width: 40px;
+  --rdp-day_button-height: 34px;
+  --rdp-day_button-border-radius: var(--xp-border-radius-sm);
+  --rdp-range_middle-background: var(--xp-color-bg-selected);
+  --rdp-range_start-date-background-color: var(--xp-color-primary);
+  --rdp-range_end-date-background-color: var(--xp-color-primary);
+  --rdp-today-color: var(--xp-color-primary-active);
+  --rdp-selected-font: inherit;
+  margin: 0;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body);
+}
+
+/* Hai đầu khoảng: nền vàng đặc chữ tối — khớp Figma, không dựa mỗi viền. */
+.dayPicker :global(.rdp-range_start .rdp-day_button),
+.dayPicker :global(.rdp-range_end .rdp-day_button) {
+  background: var(--xp-color-primary);
+  color: var(--xp-color-primary-contrast);
+}
+
+.footer {
+  padding-top: var(--xp-space-sm);
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+.timeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+}
+
+.timeField {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 150px;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timeLabel {
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+.timeSelect {
+  width: 100%;
+}
+
+.summaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--xp-space-sm);
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  color: var(--xp-color-text);
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-medium);
+  gap: 2px;
+}
+
+.duration {
+  color: var(--xp-color-text-secondary);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.invalid {
+  color: var(--xp-color-error);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.placeholder {
+  color: var(--xp-color-text-tertiary);
+  font-weight: var(--xp-font-weight-regular, 400);
+}
+
+.actions {
+  display: flex;
+  gap: var(--xp-space-sm);
+}
+
+/* Mobile: một tháng, ô ngày giãn đều bề ngang; hàng nút dàn hết chiều rộng cho dễ chạm. */
+@media (max-width: 640px) {
+  .dayPicker {
+    --rdp-day-width: 100%;
+    --rdp-day-height: 40px;
+  }
+
+  .dayPicker :global(.rdp-month_grid) {
+    width: 100%;
+  }
+
+  .summaryRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+  }
+}
+
+/* --- Thuê theo giờ (mockup 10/08) --- */
+.hourly {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+}
+
+.hourlyRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-md);
+}
+
+/* Danh sách thời lượng — hộp cuộn, mỗi dòng radio + giờ kết thúc tính sẵn. */
+.durationList {
+  overflow-y: auto;
+  max-height: 220px;
+  border: 1px solid var(--xp-color-border);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.durationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  gap: var(--xp-space-sm);
+}
+
+.durationRow + .durationRow {
+  border-top: 1px solid var(--xp-color-border-subtle);
+}
+
+.durationRow:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.durationActive {
+  background: var(--xp-color-bg-selected);
+}
+
+.durationLeft {
+  display: flex;
+  align-items: center;
+  color: var(--xp-color-text);
+  font-weight: var(--xp-font-weight-medium);
+  gap: 8px;
+}
+
+.durationEnd {
+  color: var(--xp-color-text-tertiary);
+  font-size: var(--xp-font-size-body-sm);
+  white-space: nowrap;
+}
+
+.durationActive .durationEnd {
+  color: var(--xp-color-primary-active);
+}
+
+/* "Thời gian thuê: 7 giờ" — giá trị nhấn xanh như mockup. */
+.durationValue {
+  color: var(--xp-color-success);
+}
+
+/* .timeField mang flex-basis 150px (đặt cho HÀNG ngang) — trong cột dọc của tab giờ, basis đó
+   thành chiều cao 150px và đẻ ra khe trống lớn. Tắt flex khi nằm dọc. */
+.hourly > .timeField {
+  flex: none;
+}
+
+/* --- Lịch bận (20/08) -----------------------------------------------------------------
+ *
+ * Gạch chéo chứ không phải chỉ đổi màu: ô ngày đã dùng hết bảng màu vàng cho "đã chọn /
+ * trong khoảng", nên thêm một sắc độ nữa là bắt người đọc phân biệt hai thứ na ná nhau. Vân
+ * gạch khác HÌNH DẠNG, đọc được cả khi in đen trắng lẫn với mắt loạn sắc.
+ *
+ * Vân dựng bằng `color-mix` trên token, không phải hex rời — đổi token là vân đổi theo.
+ */
+.busyFull,
+.busyPartial {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 3px,
+    var(--xp-busy-stripe) 3px 6px
+  );
+  background-clip: content-box;
+}
+
+/* Bận trọn ngày: xám, và đã `disabled` nên rdp tự làm mờ chữ. */
+.busyFull {
+  --xp-busy-stripe: color-mix(in srgb, var(--xp-color-text-tertiary) 45%, transparent);
+}
+
+/* Bận vài giờ: vẫn chọn được → vân cam cảnh báo, chữ giữ nguyên độ đậm. */
+.busyPartial {
+  --xp-busy-stripe: color-mix(in srgb, var(--xp-color-warning) 35%, transparent);
+}
+
+/* Hai đầu khoảng đã tô nền vàng đặc — vân gạch chồng lên chỉ làm bẩn, bỏ hẳn ở đó. */
+.dayPicker :global(.rdp-range_start).busyPartial,
+.dayPicker :global(.rdp-range_end).busyPartial {
+  background-image: none;
+}
+
+/* Chú giải màu — Figma 20/08: bốn ô mẫu nằm cùng hàng với cặp nút. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 0 var(--xp-space-sm);
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  font-size: var(--xp-font-size-body-sm);
+  gap: var(--xp-space-sm) var(--xp-space-md);
+  list-style: none;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 18px;
+  height: 14px;
+  border-radius: var(--xp-border-radius-sm);
+  background-clip: padding-box;
+}
+
+.selected {
+  background: var(--xp-color-primary);
+}
+
+.inRange {
+  background: var(--xp-color-bg-selected);
+  box-shadow: inset 0 0 0 1px var(--xp-color-border);
+}
+
+.full {
+  background-color: var(--xp-color-bg-muted);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 3px,
+    color-mix(in srgb, var(--xp-color-text-tertiary) 45%, transparent) 3px 6px
+  );
+}
+
+.partial {
+  background-color: var(--xp-color-warning-bg);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 3px,
+    color-mix(in srgb, var(--xp-color-warning) 35%, transparent) 3px 6px
+  );
+}
+
+/* Lý do "Áp dụng" bị tắt — phải ĐỌC được, không chỉ hiện khi rê chuột lên nút. */
+.conflict {
+  padding-top: var(--xp-space-sm);
+  margin: 0;
+  color: var(--xp-color-warning);
+  font-size: var(--xp-font-size-body-sm);
+}
+
+/* Thời lượng thuê giờ đụng lịch bận: mờ đi nhưng vẫn đọc được lý do ở cột phải. */
+.durationBusy {
+  cursor: not-allowed;
+  opacity: var(--xp-disabled-opacity);
+}
+
+.durationBusy .durationEnd {
+  color: var(--xp-color-warning);
+}
+
+.durationBusy:hover {
+  background: none;
+}

@@ -1,0 +1,68 @@
+/** Danh sách `Chuyến của tôi` — một cột thẻ, cùng bề rộng nội dung với các trang khu khách. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  width: 100%;
+  max-width: var(--xp-container-max-width);
+  margin-inline: auto;
+  padding: var(--xp-space-lg) var(--xp-space-md);
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-xs);
+  min-width: 0;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--xp-font-size-h1);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  margin: 0;
+  color: var(--xp-color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xp-space-md);
+  min-width: 0;
+}
+
+.skeleton {
+  padding: var(--xp-space-md);
+  border: 1px solid var(--xp-color-border-subtle);
+  border-radius: var(--xp-border-radius);
+  background: var(--xp-color-bg-container);
+}
+
+.pager {
+  display: flex;
+  justify-content: center;
+}
+
+.refreshing {
+  align-self: center;
+}
+
+/** 640px = `--xp-bp-mobile`; custom property không dùng được trong `@media` (quyết định P8). */
+@media (max-width: 640px) {
+  .page {
+    padding: var(--xp-space-md) var(--xp-space-sm);
+    /* Thanh tab dưới cùng của khu khách che mất thẻ cuối nếu không chừa chỗ. */
+    padding-bottom: var(--xp-space-xl);
+  }
+
+  .heading {
+    font-size: var(--xp-font-size-h2);
+  }
+}

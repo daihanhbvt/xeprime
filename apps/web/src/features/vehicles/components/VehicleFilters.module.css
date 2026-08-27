@@ -1,24 +1,8 @@
-.bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.search {
-  flex: 1 1 240px;
-  min-width: 200px;
-}
-
-.select {
-  min-width: 150px;
-  flex: 0 1 auto;
-}
-
-@media (max-width: 576px) {
-  .select {
-    flex: 1 1 45%;
-    min-width: 0;
-  }
+/*
+ * Chỉ còn MỘT khai báo: bố cục, xuống dòng và hình thái bottom-sheet ở mobile đều thuộc
+ * `FilterBar` dùng chung. Trước Pilot Wave 2, file này dựng lại toàn bộ hàng lọc (flex-wrap,
+ * bề rộng ô tìm kiếm, breakpoint 576px riêng) — tức là một bản sao của FilterBar.
+ */
+.sort {
+  min-width: 170px;
 }

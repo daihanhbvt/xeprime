@@ -1,0 +1,339 @@
+{
+  "page": {
+    "title": "Yêu cầu thuê xe",
+    "subtitle": "Hộp thư yêu cầu của gian hàng: xem khách hỏi xe nào, lịch ra sao, rồi duyệt hoặc từ chối ngay tại đây.",
+    "listLabel": "Danh sách yêu cầu thuê",
+    "totalLabel": "{count, plural, other {# yêu cầu}}"
+  },
+  "stats": {
+    "pending": "Chờ duyệt",
+    "converted": "Hoàn thành"
+  },
+  "tabs": {
+    "ariaLabel": "Lọc yêu cầu theo trạng thái",
+    "needsAction": "Cần xử lý",
+    "converted": "Đã tạo đơn",
+    "rejected": "Đã từ chối",
+    "cancelled": "Khách đã huỷ",
+    "expired": "Quá hạn",
+    "all": "Tất cả"
+  },
+  "filters": {
+    "searchLabel": "Tìm yêu cầu",
+    "searchPlaceholder": "Tên khách, SĐT, tên xe, biển số…",
+    "serviceType": "Dịch vụ"
+  },
+  "vehicle": {
+    "heading": "Xe được yêu cầu",
+    "openDetail": "Mở hồ sơ xe {name}",
+    "noImage": "Xe chưa có ảnh",
+    "viewSchedule": "Xem lịch xe",
+    "viewScheduleFor": "Xem lịch thuê của {vehicle}"
+  },
+  "customer": {
+    "heading": "Khách hàng",
+    "openProfile": "Mở hồ sơ khách {name}",
+    "noProfile": "Chưa có hồ sơ trong sổ khách",
+    "riskWarning": "{level} — kiểm tra lại trước khi duyệt"
+  },
+  "schedule": {
+    "heading": "Yêu cầu thuê",
+    "pickup": "Nhận xe",
+    "return": "Trả xe",
+    "duration": "Thời lượng",
+    "package": "Gói thuê",
+    "packageMissing": "Chưa có gói (yêu cầu cũ)",
+    "pickupWish": "Nguyện vọng nhận xe",
+    "pickupWishHint": "Giờ nhận chính xác do gian hàng chốt khi duyệt.",
+    "route": "Lộ trình",
+    "pickupAddress": "Điểm đón khách",
+    "destination": "Điểm đến",
+    "handoverHeading": "Hình thức nhận xe",
+    "handoverAtShop": "Khách tự đến nhận",
+    "handoverDelivery": "Giao xe tận nơi",
+    "deliveryAddress": "Địa chỉ giao xe",
+    "deliveryFeeHint": "Phí giao nhận chốt trên đơn sau khi hai bên thống nhất."
+  },
+  "note": {
+    "label": "Ghi chú của khách",
+    "expand": "Xem đầy đủ",
+    "collapse": "Thu gọn"
+  },
+  "trace": {
+    "createdAt": "Khách gửi lúc {value}",
+    "decidedAt": "Xử lý lúc {value}",
+    "rejectReason": "Lý do từ chối",
+    "viewBooking": "Xem chi tiết đơn thuê",
+    "viewBookingFor": "Xem chi tiết đơn thuê của {vehicle}"
+  },
+  "detail": {
+    "title": "Chi tiết yêu cầu thuê",
+    "openVehicle": "Xem hồ sơ xe",
+    "openCustomer": "Xem hồ sơ khách",
+    "phone": "Số điện thoại",
+    "createdAt": "Khách gửi lúc",
+    "decidedAt": "Xử lý lúc"
+  },
+  "actions": {
+    "approve": "Duyệt & giữ xe",
+    "reject": "Từ chối",
+    "message": "Nhắn tin",
+    "messageAria": "Nhắn tin cho {name} trên XePrime",
+    "messageUnavailable": "Khách gửi yêu cầu bằng số điện thoại và chưa có tài khoản XePrime — hãy gọi điện hoặc nhắn Zalo.",
+    "call": "Gọi",
+    "callAria": "Gọi {name} theo số {phone}",
+    "zalo": "Zalo",
+    "zaloAria": "Mở Zalo với {name} theo số {phone}"
+  },
+  "approve": {
+    "title": "Duyệt và giữ xe cho khách?",
+    "vehicle": "Xe",
+    "customer": "Khách",
+    "schedule": "Lịch thuê",
+    "effect": "Duyệt sẽ tạo đơn thuê ở trạng thái Đã giữ xe và CHIẾM CHỖ lịch của xe trong khoảng này. Giá chốt theo chính sách đang hiệu lực.",
+    "deliveryNote": "Yêu cầu có giao xe tận nơi. Phí giao nhận để 0₫ khi tạo đơn — cập nhật lại trên đơn sau khi thoả thuận với khách.",
+    "confirm": "Duyệt & giữ xe",
+    "success": "Đã giữ xe — đã tạo đơn thuê",
+    "successLongTerm": "Đã giữ xe — đã tạo đơn thuê dài hạn",
+    "scheduleConflict": "Xe đã bận khung giờ này — chọn ngày giờ nhận khác hoặc từ chối yêu cầu.",
+    "expired": "Yêu cầu đã quá hạn phản hồi 60 phút — không duyệt được nữa. Hãy gọi cho khách."
+  },
+  "longTerm": {
+    "title": "Duyệt và giữ xe — thuê dài hạn",
+    "customer": "Khách",
+    "vehicle": "Xe",
+    "pickupWish": "Nguyện vọng nhận xe",
+    "legacyPackageLabel": "Gói thuê (yêu cầu cũ chưa có gói)",
+    "legacyPackagePlaceholder": "Chọn gói thuê",
+    "legacyPackageHint": "Yêu cầu gửi trước khi chuyển sang mô hình gói nên không mang gói nào. Chọn gói đã thoả thuận với khách — hệ thống cố ý không tự suy từ khoảng ngày cũ.",
+    "chosenPackageLabel": "Gói khách đã chọn",
+    "pickupLabel": "Ngày và giờ nhận xe (bắt buộc)",
+    "pickupPlaceholder": "Chọn ngày giờ nhận xe",
+    "pickupHint": "Chỉ chọn được trong nguyện vọng khách đã nêu. Muốn ngày khác thì từ chối yêu cầu và trao đổi lại với khách.",
+    "returnLabel": "Ngày trả (tự tính theo tháng lịch)",
+    "returnHint": "Độ dài đơn bằng đúng gói khách mua — không sửa tay được.",
+    "quoteTitle": "Giá gói {package}",
+    "quoteUnavailable": "Chưa tải được giá gói — kiểm tra giá thuê dài hạn của xe trước khi duyệt.",
+    "confirm": "Duyệt & giữ xe",
+    "wishLegacy": "Yêu cầu cũ — khách chưa nêu nguyện vọng theo mẫu mới"
+  },
+  "reject": {
+    "title": "Từ chối yêu cầu thuê",
+    "context": "{customer} · {vehicle}",
+    "reasonLabel": "Lý do từ chối (gửi cho khách)",
+    "reasonPlaceholder": "Nói ngắn gọn vì sao chưa nhận được yêu cầu này",
+    "reasonRequired": "Nhập lý do để khách biết vì sao yêu cầu bị từ chối",
+    "reasonHint": "Khách đọc được câu này trong thông báo, nên viết đủ để họ biết nên làm gì tiếp.",
+    "presetLabel": "Chọn nhanh một lý do",
+    "presets": {
+      "vehicleUnavailable": "Xe hiện không sẵn sàng cho khoảng thời gian này.",
+      "scheduleUnavailable": "Lịch khách yêu cầu không sắp xếp được.",
+      "requirementsUnsuitable": "Điều kiện thuê chưa phù hợp với chính sách của gian hàng.",
+      "other": "Lý do khác"
+    },
+    "confirm": "Từ chối yêu cầu",
+    "success": "Đã từ chối yêu cầu"
+  },
+  "states": {
+    "loading": "Đang tải yêu cầu thuê…",
+    "emptyPendingTitle": "Không có yêu cầu nào cần xử lý",
+    "emptyPendingBody": "Khách gửi yêu cầu mới từ marketplace sẽ hiện ngay ở đây.",
+    "emptyFilteredTitle": "Không có yêu cầu nào ở trạng thái này",
+    "emptyFilteredBody": "Đổi sang tab khác để xem các yêu cầu còn lại.",
+    "emptySearchTitle": "Không tìm thấy yêu cầu nào",
+    "emptySearchBody": "Thử từ khoá ngắn hơn, hoặc bỏ bớt bộ lọc để xem lại toàn bộ hộp thư.",
+    "errorTitle": "Không tải được danh sách yêu cầu",
+    "refreshing": "Đang cập nhật danh sách…"
+  },
+  "flow": {
+    "title": "Yêu cầu thuê xe",
+    "steps": {
+      "trip": "Chuyến đi",
+      "review": "Xác nhận"
+    },
+    "service": {
+      "label": "Dịch vụ",
+      "routeLabel": "Lộ trình"
+    },
+    "time": {
+      "label": "Thời gian thuê",
+      "empty": "Bấm vào ô trên để mở lịch và chọn khoảng thuê.",
+      "modeDaily": "Thuê theo ngày",
+      "modeHourly": "Thuê theo giờ",
+      "changeHint": "bấm vào ô để đổi",
+      "unavailable": "Xe đã có lịch trong khung giờ này. Vui lòng chọn thời gian khác."
+    },
+    "pickup": {
+      "legend": "Hình thức nhận xe",
+      "groupLabel": "Hình thức nhận xe",
+      "self": "Nhận tại điểm hẹn",
+      "selfHint": "Tự tới nhận xe tại địa điểm của chủ xe",
+      "selfOnly": "Xe này chỉ nhận tại điểm hẹn của chủ xe.",
+      "delivery": "Giao xe tận nơi",
+      "deliveryHint": "Chủ xe mang xe tới địa chỉ của bạn",
+      "addressLabel": "Địa chỉ giao xe",
+      "addressPlaceholder": "123 Nguyễn Văn Linh, Q. Hải Châu, Đà Nẵng",
+      "feeLabel": "Phí giao nhận",
+      "feeFree": "Miễn phí",
+      "feeNote": "Nếu có chi phí phát sinh, chủ xe sẽ trao đổi trực tiếp với bạn trước khi cập nhật đơn thuê.",
+      "estimating": "Đang tính quãng đường…",
+      "estimatedDistance": "Quãng đường giao xe khoảng {distance} (một chiều). Phí trên là DỰ KIẾN theo bảng giá của gian hàng — chủ xe chốt lại khi duyệt yêu cầu.",
+      "manualWithDistance": "Địa chỉ của bạn cách điểm giao xe khoảng {distance} (một chiều), ngoài phạm vi báo giá tự động. Chủ xe sẽ trao đổi phí giao trực tiếp với bạn.",
+      "addressNotFound": "Chưa xác định được địa chỉ này trên bản đồ. Bạn thử ghi rõ hơn (số nhà, tên đường, phường/xã) để xem phí giao dự kiến.",
+      "resolvedAddress": "Bản đồ hiểu là: {address}",
+      "mapTitle": "Bản đồ đường đi tới địa chỉ giao xe"
+    },
+    "driver": {
+      "pickupAddressLabel": "Địa chỉ đón",
+      "pickupAddressPlaceholder": "123 Nguyễn Văn Linh, Q. Hải Châu, Đà Nẵng",
+      "destinationLabel": "Điểm đến",
+      "destinationPlaceholder": "VD: TP. Đà Lạt, Lâm Đồng",
+      "note": "Lộ trình: {route} — {description}. Phụ phí (nếu có) do chủ xe trao đổi trước khi chốt đơn."
+    },
+    "contact": {
+      "heading": "Thông tin liên hệ",
+      "nameLabel": "Họ và tên",
+      "namePlaceholder": "Nhập họ tên của bạn",
+      "phoneLabel": "Số điện thoại",
+      "phonePlaceholder": "Nhập số điện thoại của bạn",
+      "verified": "Đã xác thực",
+      "change": "Đổi"
+    },
+    "otp": {
+      "title": "Nhập mã xác thực",
+      "hint": "Mã gồm 6 số đã được gửi đến {phone}. XePrime dùng số này để chủ xe phản hồi và giúp bạn theo dõi yêu cầu thuê.",
+      "devCode": "Mã dev: {code} — chỉ hiện ở môi trường phát triển.",
+      "editPhone": "Sửa số điện thoại",
+      "resend": "Gửi lại mã",
+      "resendIn": "Gửi lại ({seconds}s)",
+      "sessionExpired": "Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại số điện thoại."
+    },
+    "review": {
+      "vehicle": "Xe",
+      "renter": "Người thuê",
+      "service": "Dịch vụ",
+      "pickupAt": "Nhận xe",
+      "returnAt": "Trả xe",
+      "mode": "Hình thức",
+      "package": "Gói thuê",
+      "pickupPreference": "Nguyện vọng nhận xe",
+      "expectedReturn": "Dự kiến trả xe",
+      "expectedReturnValue": "{date} · giờ chốt khi gian hàng duyệt",
+      "driverPickupAddress": "Địa chỉ đón",
+      "destination": "Điểm đến",
+      "deliveryAddress": "Địa chỉ giao"
+    },
+    "price": {
+      "estimateTitle": "Tạm tính cho khoảng thời gian đã chọn",
+      "detailTitle": "Chi tiết giá thuê (dự kiến)",
+      "packageTitle": "Chi tiết giá gói {months, plural, other {# tháng}}",
+      "subtotal": "Tạm tính",
+      "total": "Tổng dự kiến",
+      "expand": "Chi tiết",
+      "collapse": "Thu gọn",
+      "unitTitle": "Giá thuê xe · {service}",
+      "fromUnit": "Từ {price}",
+      "chooseTime": "Chọn thời gian để xem tạm tính",
+      "choosePackage": "Chọn gói để xem giá",
+      "perDay": "/ngày",
+      "perHour": "/giờ",
+      "perMonth": "/tháng",
+      "weekday": "Ngày thường",
+      "weekend": "Cuối tuần",
+      "hourly": "Thuê theo giờ",
+      "longTermBase": "Giá dài hạn cơ sở",
+      "withDriverInCity": "Nội thành (đã gồm tài xế)",
+      "withDriverInterCity": "Liên tỉnh (khứ hồi)",
+      "withDriverOneWay": "Liên tỉnh 1 chiều",
+      "onRequest": "Liên hệ báo giá",
+      "savings": "Tiết kiệm {amount} nhờ ưu đãi thời hạn {months, plural, other {# tháng}}.",
+      "finalNote": "Giá chốt cuối cùng do chủ xe xác nhận khi duyệt yêu cầu.",
+      "deliveryNote": "Phí giao nhận: Miễn phí.",
+      "loadError": "Chưa tải được giá tạm tính. Bạn vẫn tiếp tục được; chủ xe sẽ xác nhận giá."
+    },
+    "done": {
+      "title": "Yêu cầu đã được gửi",
+      "requestCode": "Mã yêu cầu: {code}",
+      "body": "Chủ xe sẽ xem xét và phản hồi yêu cầu của bạn. Bạn có thể theo dõi trạng thái trong mục chuyến đi của mình.",
+      "time": "Thời gian",
+      "pickupMethod": "Nhận xe",
+      "driverPickup": "Đón tại: {address}",
+      "notReserved": "Xe chưa được giữ chỗ. Yêu cầu cần được chủ xe chấp thuận trước.",
+      "myTrips": "Chuyến của tôi",
+      "chatShop": "Nhắn chủ xe",
+      "close": "Quay lại"
+    },
+    "duplicate": {
+      "title": "Yêu cầu trùng lặp",
+      "body": "Bạn đã gửi một yêu cầu thuê xe này với cùng khung giờ. Vui lòng đợi chủ xe phản hồi trước khi gửi yêu cầu mới.",
+      "viewTrips": "Xem chuyến của tôi",
+      "close": "Đóng"
+    },
+    "panel": {
+      "specYear": "Đời xe",
+      "specSeats": "Số chỗ",
+      "seatCount": "{count, plural, other {# chỗ}}",
+      "specBody": "Kiểu dáng",
+      "specFuel": "Năng lượng",
+      "viewShop": "Xem gian hàng",
+      "ratingSummary": "{avg} · {count, plural, other {# đánh giá}}"
+    },
+    "actions": {
+      "cancel": "Huỷ",
+      "back": "Quay lại",
+      "continue": "Tiếp tục",
+      "checking": "Đang kiểm tra…",
+      "verify": "Xác thực",
+      "submit": "Gửi yêu cầu thuê"
+    },
+    "packageMonths": "{months, plural, other {# tháng}}",
+    "route": {
+      "description": {
+        "in_city": "Di chuyển trong nội thành hoặc lân cận, lộ trình tự do",
+        "inter_city": "Đi tỉnh/thành khác và quay về điểm đón (khứ hồi)",
+        "inter_city_one_way": "Đi tỉnh/thành khác một chiều — gian hàng có thể báo thêm phụ phí"
+      }
+    },
+    "longTerm": {
+      "chooseTitle": "Chọn gói thuê",
+      "chooseLabel": "Chọn thời gian thuê",
+      "groupLabel": "Gói thuê dài hạn",
+      "noPrice": "Xe chưa niêm yết giá thuê dài hạn — gian hàng sẽ báo giá sau khi nhận yêu cầu.",
+      "wishTitle": "Bạn muốn nhận xe khi nào?",
+      "wishGroupLabel": "Nguyện vọng nhận xe",
+      "wishValueLabel": "{preference}: {date}",
+      "dateLabel": "Ngày muốn nhận xe",
+      "hint": {
+        "within_7_days": "Gian hàng sẽ xác nhận ngày và giờ nhận xe trong 7 ngày tới.",
+        "specific_date": "Gian hàng sẽ xác nhận giờ nhận xe."
+      },
+      "trust": {
+        "processTitle": "Thủ tục nhanh gọn",
+        "processDesc": "Duyệt hồ sơ nhanh chóng",
+        "paymentTitle": "Thanh toán linh hoạt",
+        "paymentDesc": "Nhiều hình thức thanh toán",
+        "supportTitle": "Hỗ trợ 24/7",
+        "supportDesc": "Tư vấn mọi lúc, mọi nơi"
+      },
+      "windowValue": "{start} – {end}"
+    },
+    "cta": "Chọn thuê",
+    "stepsLabel": "Tiến trình đặt xe",
+    "stepDone": "(đã xong)"
+  },
+  "approved": {
+    "title": "Đã tạo đơn thuê",
+    "lead": "Yêu cầu đã được duyệt và đơn thuê đã được tạo. Lịch của xe đã được giữ chỗ trong khoảng thời gian này.",
+    "leadLongTerm": "Yêu cầu đã được duyệt và đơn thuê dài hạn đã được tạo theo lịch bạn vừa chốt.",
+    "next": "Việc tiếp theo: liên hệ khách để hẹn giờ nhận xe, thu cọc nếu có, rồi xác nhận giao xe ngay trên đơn.",
+    "viewBooking": "Xem chi tiết đơn",
+    "close": "Đóng"
+  },
+  "deadline": {
+    "label": "Hạn phản hồi",
+    "remaining": "Còn",
+    "expired": "Đã quá hạn phản hồi",
+    "pastDueHint": "Quá 60 phút chưa phản hồi nên yêu cầu đã đóng. Gọi cho khách nếu vẫn muốn nhận chuyến này.",
+    "hint": "Gian hàng có 60 phút để trả lời. Quá hạn, yêu cầu tự đóng và khách được báo để chọn xe khác."
+  }
+}
