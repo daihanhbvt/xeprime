@@ -57,9 +57,15 @@ export async function generateMetadata(): Promise<Metadata> {
  * ngôn ngữ. Để Next dựng "vỏ tĩnh" cho những route này là tạo ra đúng thứ ADR 0012 cấm — một
  * khung HTML đóng băng ở một ngôn ngữ.
  *
- * Cache DỮ LIỆU không bị ảnh hưởng và vẫn dùng chung giữa hai ngôn ngữ: `fetchBannersServer`
- * và catalog khai `cache: 'force-cache'` + `next.revalidate` tường minh, nên chúng vẫn được
- * cache theo URL bất kể route là dynamic.
+ * **Đừng chuyển cờ này xuống từng route group để "cứu vài trang tĩnh" — không có trang nào được
+ * cứu.** Chính layout gốc gọi `getServerLocale()`, tức `cookies()`, nên Next bỏ prerender ngay
+ * tại đây cho MỌI route bên dưới; cờ ở gốc chỉ nói thành lời điều vốn đã đúng. (Và cũng không có
+ * trang nào thật sự tĩnh để cứu: mọi trang công khai hoặc đọc dữ liệu, hoặc là màn cá nhân.)
+ *
+ * Vậy đòn bẩy hiệu năng duy nhất còn lại là cache DỮ LIỆU — và nó KHÔNG bị `force-dynamic` ảnh
+ * hưởng: mỗi lời gọi `fetch` phía server khai `cache: 'force-cache'` + `next.revalidate` tường
+ * minh nên vẫn cache theo URL, dùng chung cho cả hai ngôn ngữ. Các mốc thời gian gom ở
+ * `@/constants/cache`; phía API có `Cache-Control` khớp cặp (`common/http-cache.ts`).
  *
  * Nếu sau này đặt CDN trước web: `XP_LOCALE` PHẢI nằm trong cache key của HTML.
  */

@@ -24,6 +24,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 
@@ -137,9 +138,12 @@ export class PublicListingQueryDto {
   @Max(64)
   minSeats?: number;
 
-  @ApiPropertyOptional({ description: 'Tìm theo tên/hãng/model' })
+  // Có trần: không ai gõ câu tìm kiếm 100 ký tự, còn chuỗi dài tự do thì vừa phình khoá cache
+  // (facets dùng query làm khoá) vừa là chi phí ILIKE vô ích trên toàn bảng.
+  @ApiPropertyOptional({ description: 'Tìm theo tên/hãng/model', maxLength: 100 })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   q?: string;
 
   /**

@@ -1,6 +1,8 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
 import { Public } from '../../common/decorators';
+import { PublicCache } from '../../common/http-cache';
 import { PublicListingsService } from './public-listings.service';
 import { PublicDestinationDto, PublicDestinationQueryDto } from './dto/public-listing.dto';
 
@@ -17,6 +19,7 @@ export class PublicDestinationsController {
 
   @Public()
   @Get()
+  @PublicCache(PUBLIC_CACHE_SECONDS.catalog)
   @ApiOperation({ summary: 'Tỉnh/thành đang có xe cho thuê, kèm số xe và ảnh đại diện' })
   @ApiOkResponse({ type: [PublicDestinationDto] })
   list(@Query() query: PublicDestinationQueryDto): Promise<PublicDestinationDto[]> {

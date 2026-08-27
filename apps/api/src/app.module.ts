@@ -9,6 +9,7 @@ import { PermissionGuard } from './common/guards/permission.guard';
 import { TenantScopeGuard } from './common/guards/tenant-scope.guard';
 import { PlatformScopeGuard } from './common/guards/platform-scope.guard';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { HttpCacheInterceptor } from './common/http-cache';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RbacModule } from './modules/rbac/rbac.module';
@@ -129,6 +130,7 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     { provide: APP_GUARD, useClass: PlatformScopeGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: HttpCacheInterceptor },
   ],
 })
 export class AppModule {}

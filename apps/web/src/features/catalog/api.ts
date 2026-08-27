@@ -1,3 +1,4 @@
+import { REVALIDATE_CATALOG_SECONDS } from '@/constants/cache';
 import { apiGet, getApiBaseUrl } from '@/services/api-client';
 import { EMPTY_CATALOG, groupCatalog, type CatalogItem, type CatalogMap } from './types';
 
@@ -22,7 +23,7 @@ export async function fetchCatalogServer(): Promise<CatalogMap> {
      */
     const res = await fetch(`${getApiBaseUrl()}/catalog`, {
       cache: 'force-cache',
-      next: { revalidate: 300 },
+      next: { revalidate: REVALIDATE_CATALOG_SECONDS },
     });
     if (!res.ok) return EMPTY_CATALOG;
     const body = (await res.json()) as { data: CatalogItem[] };

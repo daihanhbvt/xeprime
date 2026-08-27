@@ -3,10 +3,9 @@ import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   BOOKING_STATUS,
-  LISTING_STATUS,
   PROVINCE_CODES,
+  PUBLIC_CACHE_SECONDS,
   REVIEW_STATUS,
-  SEAT_BUCKET_RANGE,
   SEAT_BUCKET_VALUES,
   SERVICE_TYPE,
   TENANT_STATUS,
@@ -32,9 +31,38 @@ import type {
   ShopListingQueryDto,
 } from './dto/public-listing.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { stableCacheKey, TtlCache } from '../../common/ttl-cache';
+import {
+  buildListingWhere,
+  buildListingWhereSql,
+  publicListingScope,
+  seatBucketOf,
+} from './listing-filter';
 
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 48;
+
+/**
+ * Facet sống 60 giây trong bộ nhớ tiến trình.
+ *
+ * Đây là đầu ra ĐẮT NHẤT của marketplace: một lần mở panel Bộ lọc là 11 phép gộp gần như quét
+ * trọn `public_listings`, và panel gọi lại sau mỗi lần khách chạm một ô (đã debounce). Nội dung
+ * thì hoàn toàn công khai — không đọc cookie, không phụ thuộc người đang xem — nên hai khách
+ * cùng bộ lọc đang bắt Postgres tính lại y hệt nhau.
+ *
+ * 60 giây là khoảng mà không ai nhận ra: con số facet vốn đã không đồng bộ tuyệt đối với danh
+ * sách (chúng chạy `Promise.all`, không chung một transaction — xem docblock `facets`). Đổi lại,
+ * duyệt/ẩn một xe cần tới một phút mới thấy số đếm nhúc nhích; `search` KHÔNG cache nên bản
+ * thân danh sách xe vẫn tức thì.
+ *
+ * Trần 500 khoá: mỗi tổ hợp filter là một khoá, và tổ hợp thì vô hạn — không có trần thì đây là
+ * một chỗ rò bộ nhớ chờ ngày phát tác.
+ *
+ * TTL lấy từ `PUBLIC_CACHE_SECONDS.facets` — CÙNG con số với header `Cache-Control` của endpoint
+ * facets và `next.revalidate` phía web, để "facet cũ tối đa bao lâu" chỉ có một câu trả lời.
+ */
+const FACETS_CACHE_TTL_MS = PUBLIC_CACHE_SECONDS.facets * 1000;
+const FACETS_CACHE_MAX_ENTRIES = 500;
 
 /**
  * Mã không thuộc danh mục — dùng khi tên tỉnh cũ không quy được về mã nào.
@@ -134,167 +162,6 @@ function listingOrderBy(sort: string | undefined): Prisma.PublicListingOrderByWi
 }
 
 /**
- * Lọc dịch vụ theo NĂNG LỰC phục vụ: `service_types` là MẢNG (một xe đăng nhiều dịch vụ),
- * filter là "mảng CÓ CHỨA dịch vụ đang tìm" — GIN index phục vụ `has`. Giá trị `both` cũ đã
- * khai tử từ 17/08 (backfill thành ['self_drive','with_driver'] ở migration).
- */
-function serviceTypeFilter(serviceType: string): Prisma.PublicListingWhereInput {
-  return { serviceTypes: { has: serviceType } };
-}
-
-/** Lọc khoảng giá thuê/ngày. Listing chưa có giá không lọt khi có ràng buộc giá. */
-function priceFilter(min?: number, max?: number): Prisma.PublicListingWhereInput {
-  if (min == null && max == null) return {};
-  return {
-    weekdayPrice: {
-      ...(min != null ? { gte: min } : {}),
-      ...(max != null ? { lte: max } : {}),
-    },
-  };
-}
-
-/**
- * Một chiều của bộ lọc facet. Khi đếm facet cho chiều nào thì bỏ chính filter của chiều đó
- * (semantics chuẩn — chọn SUV vẫn thấy Sedan còn bao nhiêu xe nếu đổi lựa chọn).
- */
-type FacetDimension =
-  | 'bodyType'
-  | 'brand'
-  | 'seats'
-  | 'fuelType'
-  | 'features'
-  | 'price'
-  | 'hourly'
-  | 'delivery'
-  | 'noCollateral'
-  | 'discount';
-
-/** Bộ filter dùng chung giữa search và facets (facets không có sort/paging). */
-type ListingFilterQuery = Omit<PublicListingQueryDto, 'sort' | 'page' | 'limit'>;
-
-/** Bucket số chỗ của một seatCount cụ thể (mỗi giá trị rơi vào đúng một bucket). */
-function seatBucketOf(seatCount: number | null): SeatBucket | null {
-  if (seatCount == null) return null;
-  for (const bucket of SEAT_BUCKET_VALUES) {
-    const { min, max } = SEAT_BUCKET_RANGE[bucket];
-    if ((min == null || seatCount >= min) && (max == null || seatCount <= max)) return bucket;
-  }
-  return null;
-}
-
-/**
- * Where-clause marketplace duy nhất cho cả search lẫn facets. Mọi fragment đẩy vào `AND` để
- * không giẫm key (cả `q` lẫn bucket số chỗ đều dùng `OR` — spread phẳng sẽ ghi đè nhau).
- * `exclude` bỏ đúng một chiều khi đếm facet cho chiều đó.
- */
-function buildListingWhere(
-  query: ListingFilterQuery,
-  exclude?: FacetDimension,
-): Prisma.PublicListingWhereInput {
-  const and: Prisma.PublicListingWhereInput[] = [];
-
-  // Lọc theo MÃ tỉnh, khớp chính xác.
-  //
-  // Trước đây chỗ này là `provinceName contains … insensitive`, và nó sai theo hai hướng cùng
-  // lúc: "Hà Nam" khớp luôn mọi tên chứa nó, còn "TP.HCM" thì không khớp "Hồ Chí Minh" dù là
-  // một nơi. Tên tỉnh còn đổi được; mã thì không. Tham số `province` (tên) vẫn nhận được nhưng
-  // controller đã quy nó về mã qua bảng bí danh TRƯỚC khi tới đây.
-  if (query.provinceCode) {
-    and.push({ provinceCode: query.provinceCode });
-  }
-  if (query.vehicleType) and.push({ vehicleType: query.vehicleType });
-  if (query.serviceType) and.push(serviceTypeFilter(query.serviceType));
-  if (query.minSeats) and.push({ seatCount: { gte: query.minSeats } });
-  const availability = availabilityFilter(query.pickupAt, query.returnAt);
-  if (Object.keys(availability).length > 0) and.push(availability);
-  if (query.q) {
-    and.push({
-      OR: [
-        { title: { contains: query.q, mode: 'insensitive' } },
-        { brand: { contains: query.q, mode: 'insensitive' } },
-        { model: { contains: query.q, mode: 'insensitive' } },
-      ],
-    });
-  }
-
-  if (exclude !== 'bodyType' && query.bodyType?.length) {
-    and.push({ bodyType: { in: query.bodyType } });
-  }
-  // Hãng khớp đúng tên đã lưu (facet trả về giá trị thật từ DB); insensitive đỡ lệch hoa thường.
-  if (exclude !== 'brand' && query.brand?.length) {
-    and.push({ brand: { in: query.brand, mode: 'insensitive' } });
-  }
-  if (exclude !== 'seats' && query.seats?.length) {
-    const ranges = query.seats
-      .map((b) => SEAT_BUCKET_RANGE[b as SeatBucket])
-      .filter((r): r is { min?: number; max?: number } => r != null)
-      .map(({ min, max }) => ({
-        seatCount: {
-          ...(min != null ? { gte: min } : {}),
-          ...(max != null ? { lte: max } : {}),
-        },
-      }));
-    if (ranges.length > 0) and.push({ OR: ranges });
-  }
-  if (exclude !== 'fuelType' && query.fuelType?.length) {
-    and.push({ fuelType: { in: query.fuelType } });
-  }
-  // Tính năng là AND (xe phải có ĐỦ các tiện ích đã chọn) — GIN index phục vụ hasEvery.
-  if (exclude !== 'features' && query.features?.length) {
-    and.push({ features: { hasEvery: query.features } });
-  }
-  if (exclude !== 'price') {
-    const price = priceFilter(query.priceMin, query.priceMax);
-    if (Object.keys(price).length > 0) and.push(price);
-  }
-  if (exclude !== 'hourly' && query.hourly) and.push({ hourlyPrice: { not: null } });
-  if (exclude !== 'delivery' && query.delivery) and.push({ deliveryEnabled: true });
-  if (exclude !== 'noCollateral' && query.noCollateral) and.push({ noCollateral: true });
-  if (exclude !== 'discount' && query.discount) and.push({ discountPercent: { gt: 0 } });
-
-  return { ...publicListingScope(), AND: and };
-}
-
-/**
- * Điều kiện để một snapshot ĐƯỢC PHÉP xuất hiện công khai — dùng chung cho search, facets,
- * điểm đến, trang gian hàng và chi tiết xe.
- *
- * Gom một chỗ vì đây là ranh giới an toàn: thiếu một vế ở một endpoint là tỉnh đã ẩn vẫn tra
- * được bằng cách gõ tay tham số, hoặc xe của gian hàng bị khoá vẫn hiện ở trang shop.
- *
- * Bốn vế:
- *   1. listing đang `active`;
- *   2. gian hàng đang hoạt động và chưa xoá (join, KHÔNG denormalize — ADR 0008 §3);
- *   3. có tỉnh hợp lệ — xe chưa gán vị trí thì không biết xếp vào đâu;
- *   4. tỉnh đó đang được phép hiển thị công khai (`isPublicVisible`).
- *
- * `branch` KHÔNG lọc theo `status`: chi nhánh ngừng hoạt động chỉ ngăn GẮN XE MỚI, nó không có
- * nghĩa là những xe đang cho thuê ở đó biến mất khỏi chợ giữa chừng.
- */
-function publicListingScope(): Prisma.PublicListingWhereInput {
-  return {
-    status: LISTING_STATUS.ACTIVE,
-    tenant: { status: TENANT_STATUS.ACTIVE, deletedAt: null },
-    provinceCode: { not: null },
-    province: { isPublicVisible: true },
-  };
-}
-
-/**
- * Lọc xe RẢNH trong [pickupAt, returnAt): loại listing có xe bận (occupancy chồng lấn — đọc
- * `vehicle_occupancies` qua quan hệ, ADR 0006 chỉ ĐỌC; preview khả dụng, KHÔNG phải guard đặt xe).
- * Hai mốc phải hợp lệ và return > pickup, nếu không thì bỏ qua lọc.
- */
-function availabilityFilter(pickupAt?: string, returnAt?: string): Prisma.PublicListingWhereInput {
-  if (!pickupAt || !returnAt) return {};
-  const start = new Date(pickupAt);
-  const end = new Date(returnAt);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return {};
-  // Chồng lấn khi occ.startAt < end VÀ occ.endAt > start.
-  return { vehicle: { occupancies: { none: { startAt: { lt: end }, endAt: { gt: start } } } } };
-}
-
-/**
  * Nguồn dữ liệu marketplace (ADR 0008).
  *
  * `search`/`listShopVehicles` đọc snapshot `public_listings` (status=`active`) và LUÔN join
@@ -306,6 +173,20 @@ function availabilityFilter(pickupAt?: string, returnAt?: string): Prisma.Public
  */
 @Injectable()
 export class PublicListingsService {
+  /**
+   * Cache facet của RIÊNG instance này (service là singleton nên thực tế là một cache cho cả
+   * tiến trình). Để ở instance thay vì module-scope để mỗi service dựng trong test có cache
+   * riêng — không spec nào ăn phải số đếm của spec khác.
+   *
+   * Không có đường "đẩy" vô hiệu hoá từ `ListingsService`: nó phải ở lại module LÁ (ADR 0008,
+   * xem `ListingsSyncModule`), nên gọi ngược lên đây là dựng lại đúng vòng phụ thuộc đã gỡ.
+   * Hết hạn theo TTL là cách duy nhất, và đó là lý do TTL để ngắn.
+   */
+  private readonly facetsCache = new TtlCache<ListingFacetsDto>({
+    ttlMs: FACETS_CACHE_TTL_MS,
+    maxEntries: FACETS_CACHE_MAX_ENTRIES,
+  });
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly provinces: ProvincesService,
@@ -362,13 +243,34 @@ export class PublicListingsService {
   /**
    * Facet counts cho panel Bộ lọc: total (mọi filter), biên giá (bỏ filter giá → slider không
    * tự co khi kéo), groupBy cho từng chiều scalar (bỏ chính chiều đó), 4 count tiện ích.
+   *
+   * Có cache (xem `facetsCache`) vì đây là đầu ra đắt nhất của marketplace và panel gọi lại sau
+   * mỗi thao tác lọc. Phần tính thật nằm ở `computeFacets`.
+   */
+  async facets(rawQuery: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
+    const query = await this.withResolvedProvince(rawQuery);
+    /*
+     * Khoá bỏ `province` (tên) vì `provinceCode` đã là kết quả quy đổi của nó — giữ cả hai thì
+     * "?province=TP.HCM" và "?provinceCode=79" thành hai khoá cho cùng một câu trả lời.
+     */
+    const key = stableCacheKey({ ...query, province: undefined });
+    return this.facetsCache.wrap(key, () => this.computeFacets(query));
+  }
+
+  /** Bỏ toàn bộ facet đã cache. Có mặt để test không phải chờ TTL. */
+  clearFacetsCache(): void {
+    this.facetsCache.clear();
+  }
+
+  /**
+   * Phần tính thật của `facets` — 11 phép gộp, mỗi chiều bỏ chính filter của nó.
+   *
    * Tính năng nằm trong mảng `features` nên đếm riêng bằng raw unnest (Prisma groupBy không
    * bung được phần tử mảng). Dùng Promise.all thay vì `$transaction([...])` dạng mảng vì
    * overload transaction-mảng của groupBy mất literal type (`_count` suy về union) — số đếm
    * facet là dữ liệu hiển thị, lệch một nhịp giữa các query không sao.
    */
-  async facets(rawQuery: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
-    const query = await this.withResolvedProvince(rawQuery);
+  private async computeFacets(query: ListingFacetsQueryDto): Promise<ListingFacetsDto> {
     const [
       total,
       priceAgg,
@@ -380,6 +282,7 @@ export class PublicListingsService {
       deliveryCount,
       noCollateralCount,
       discountCount,
+      features,
     ] = await Promise.all([
       this.prisma.publicListing.count({ where: buildListingWhere(query) }),
       this.prisma.publicListing.aggregate({
@@ -419,6 +322,9 @@ export class PublicListingsService {
       this.prisma.publicListing.count({
         where: { AND: [buildListingWhere(query, 'discount'), { discountPercent: { gt: 0 } }] },
       }),
+      // Phần tử thứ 11 nằm TRONG Promise.all: đây là phép gộp đắt nhất (raw unnest), để nó chạy
+      // nối tiếp sau 10 phép kia là cộng thẳng thời gian của nó vào p95 của endpoint.
+      this.featureFacets(query),
     ]);
 
     // Gom seatCount thô về bucket (4 / 5 / 7 / 7+) ở JS — mỗi giá trị rơi đúng một bucket.
@@ -449,7 +355,7 @@ export class PublicListingsService {
       fuelType: fuelRows
         .filter((r): r is typeof r & { fuelType: string } => r.fuelType != null)
         .map((r) => ({ key: r.fuelType, count: r._count._all })),
-      features: await this.featureFacets(query),
+      features,
       amenities: {
         hourly: hourlyCount,
         delivery: deliveryCount,
@@ -460,22 +366,22 @@ export class PublicListingsService {
   }
 
   /**
-   * Đếm listing theo từng key tính năng: lấy id khớp filter (bỏ chiều features) rồi unnest mảng
-   * `features` bằng raw SQL — cách duy nhất groupBy theo phần tử mảng; GIN index không giúp
-   * unnest nhưng tập id đã được filter thu hẹp trước.
+   * Đếm listing theo từng key tính năng — MỘT câu, lọc và gộp đều nằm lại trong Postgres.
+   *
+   * Trước đây chỗ này chạy hai lượt: Prisma lấy `id` của mọi listing khớp filter, rồi nối chúng
+   * thành `IN (...)` cho câu unnest. Lập luận "tập id đã được filter thu hẹp trước" đúng ở mọi
+   * trường hợp TRỪ trường hợp hay xảy ra nhất — mở chợ mà chưa lọc gì, khi đó tập id là toàn bộ
+   * bảng. Ở quy mô vài chục nghìn xe, mỗi lần mở trang là kéo ngần ấy ULID về Node rồi gửi ngược
+   * lại một câu SQL vài MB để Postgres parse lại từ đầu.
+   *
+   * `unnest` không dùng được GIN index, nhưng cái giá đó là một lượt quét `public_listings` đã
+   * lọc sẵn — rẻ hơn nhiều lần so với việc vận chuyển tập id qua lại.
    */
   private async featureFacets(query: ListingFacetsQueryDto): Promise<FacetBucketDto[]> {
-    const rows = await this.prisma.publicListing.findMany({
-      where: buildListingWhere(query, 'features'),
-      select: { id: true },
-    });
-    if (rows.length === 0) return [];
-
-    const ids = rows.map((r) => r.id);
     const counted = await this.prisma.$queryRaw<Array<{ key: string; count: number }>>`
       SELECT f AS key, COUNT(*)::int AS count
       FROM "public_listings" pl, LATERAL unnest(pl."features") AS f
-      WHERE pl."id" IN (${Prisma.join(ids)})
+      WHERE ${buildListingWhereSql(query, 'features')}
       GROUP BY f
     `;
     return counted

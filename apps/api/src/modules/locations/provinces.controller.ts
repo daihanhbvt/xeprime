@@ -1,6 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
 import { Public } from '../../common/decorators';
+import { PublicCache } from '../../common/http-cache';
 import { ProvinceListDto } from './dto/province.dto';
 import { ProvincesService } from './provinces.service';
 
@@ -21,6 +23,7 @@ export class ProvincesController {
 
   @Get()
   @Public()
+  @PublicCache(PUBLIC_CACHE_SECONDS.provinces)
   @ApiOperation({ summary: 'Danh mục tỉnh/thành đang mở cho đăng ký & tạo chi nhánh' })
   @ApiOkResponse({ type: ProvinceListDto })
   async list(): Promise<ProvinceListDto> {

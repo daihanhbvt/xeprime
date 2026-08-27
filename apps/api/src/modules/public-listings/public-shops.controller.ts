@@ -1,6 +1,8 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
 import { Public } from '../../common/decorators';
+import { PublicCache } from '../../common/http-cache';
 import { PublicListingsService } from './public-listings.service';
 import {
   PublicListingPageDto,
@@ -21,8 +23,11 @@ import {
 export class PublicShopsController {
   constructor(private readonly listings: PublicListingsService) {}
 
+  // `shop` (60s) chứ không phải `catalog` (300s): hồ sơ gian hàng do chủ shop TỰ SỬA, và giai
+  // đoạn đầu gian hàng đăng ký/duyệt liên tục — cũ 5 phút là chủ shop tưởng lưu không ăn.
   @Public()
   @Get()
+  @PublicCache(PUBLIC_CACHE_SECONDS.shop)
   @ApiOperation({ summary: 'Danh sách gian hàng công khai (phân trang, sắp theo đánh giá)' })
   @ApiOkResponse({ type: PublicShopPageDto })
   listShops(@Query() query: PublicShopListQueryDto): Promise<PublicShopPageDto> {
@@ -31,6 +36,7 @@ export class PublicShopsController {
 
   @Public()
   @Get(':slug')
+  @PublicCache(PUBLIC_CACHE_SECONDS.shop)
   @ApiOperation({ summary: 'Hồ sơ công khai của một gian hàng theo slug' })
   @ApiOkResponse({ type: PublicShopDto })
   getShop(@Param('slug') slug: string): Promise<PublicShopDto> {
@@ -39,6 +45,7 @@ export class PublicShopsController {
 
   @Public()
   @Get(':slug/listings')
+  @PublicCache(PUBLIC_CACHE_SECONDS.listing)
   @ApiOperation({ summary: 'Danh sách xe công khai của một gian hàng (phân trang)' })
   @ApiOkResponse({ type: PublicListingPageDto })
   getShopListings(

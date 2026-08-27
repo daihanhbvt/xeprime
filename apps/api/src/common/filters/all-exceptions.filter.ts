@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { API_ERROR_CODE, type ApiErrorCode } from '@xeprime/types';
 import type { Response } from 'express';
+import { NO_STORE_CACHE_CONTROL } from '../http-cache';
 
 /** Hình dạng tối thiểu của một lỗi Prisma đã biết. */
 interface PrismaKnownError {
@@ -48,6 +49,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const res = host.switchToHttp().getResponse<Response>();
+    // Response LỖI không bao giờ được cache. `@PublicCache` đã chỉ set header khi handler thành
+    // công, nhưng dòng này là bảo hiểm cho MỌI đường set header khác (hiện tại và tương lai):
+    // thiếu nó, một cú 500 thoáng qua mang `s-maxage` sẽ được CDN giữ làm bản "tốt" suốt TTL.
+    res.setHeader('Cache-Control', NO_STORE_CACHE_CONTROL);
     const { status, code, message, details } = this.translate(exception);
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
