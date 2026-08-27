@@ -1,0 +1,39 @@
+# Sao lưu PostgreSQL của XePrime cho MỘT môi trường.
+#   systemctl start xeprime-backup@production
+#
+# Unit có tham số (`@`) chứ không phải hai file: staging và production chạy đúng một logic, và
+# chép thành hai unit là hai chỗ để trôi lệch. `%i` là phần sau dấu @.
+[Unit]
+Description=XePrime — sao lưu PostgreSQL (%i)
+Documentation=file:///opt/xeprime/docs/backup-and-restore.md
+# Docker phải sẵn sàng: script gọi `docker compose exec db`. Thiếu dòng này thì lần chạy đầu
+# sau mỗi lần khởi động lại máy sẽ hỏng vì daemon chưa lên.
+Requires=docker.service
+# `Wants=` chứ không chỉ `After=`: `After` một mình KHÔNG kéo network-online.target vào
+# transaction, nên nó có thể không bao giờ được kích hoạt và thứ tự trở thành vô nghĩa.
+Wants=network-online.target
+After=docker.service network-online.target
+
+# Job đỏ thì kéo unit cảnh báo. `%i` truyền tiếp để tin nhắn nói đúng môi trường nào hỏng.
+OnFailure=xeprime-backup-alert@%i.service
+
+[Service]
+Type=oneshot
+User=xeprime
+Group=xeprime
+WorkingDirectory=/opt/xeprime
+ExecStart=/opt/xeprime/deploy/scripts/backup-db.sh --env %i
+
+# Trần cứng ở cấp systemd. `timeout` bên trong script chỉ phủ tiến trình `pg_dump`; cái này phủ
+# cả những chỗ script có thể treo mà `timeout` không với tới (docker CLI chờ daemon, chẳng hạn).
+#
+# `TimeoutStartSec` chứ KHÔNG phải `RuntimeMaxSec`: với `Type=oneshot`, systemd coi toàn bộ
+# thời gian chạy là thời gian KHỞI ĐỘNG, và `RuntimeMaxSec` không áp dụng (systemd.service(5)).
+TimeoutStartSec=2700
+
+# Ưu tiên thấp: máy 6GB chạy chung DB + 3 tiến trình Node, và 03:00 vẫn có thể có người dùng.
+Nice=10
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=multi-user.target

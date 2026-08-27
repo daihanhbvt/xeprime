@@ -23,6 +23,13 @@
 # `-p` > COMPOSE_PROJECT_NAME > `name:` > tên thư mục).
 name: xeprime-production
 
+# MỘT image cho cả bốn tiến trình, và HAI đường lấy nó:
+#   • không đặt XP_IMAGE → `xeprime-app:latest` do `docker compose build api` dựng TẠI CHỖ
+#   • đặt XP_IMAGE       → tag từ registry (GHCR), `deploy.sh --image <ref>` pull về
+# Neo YAML chứ không chép chuỗi bốn lần: bốn service PHẢI chạy đúng một artifact, và cách chắc
+# chắn nhất để chúng không bao giờ lệch nhau là chỉ có một chỗ viết ra giá trị đó.
+x-app-image: &app_image ${XP_IMAGE:-xeprime-app:latest}
+
 services:
   # -------------------------------------------------------------------------
   # PostgreSQL 16 (ADR 0001)
@@ -100,7 +107,7 @@ services:
   # migrate — one-shot. `deploy.sh` chạy service này TRƯỚC khi api/web khởi động lại.
   # -------------------------------------------------------------------------
   migrate:
-    image: xeprime-app:latest
+    image: *app_image
     # `profiles` giữ nó ngoài `docker compose up -d` — migration là một BƯỚC có thứ tự, không
     # phải một service luôn chạy.
     profiles: ['tools']
@@ -115,10 +122,13 @@ services:
   # API — NestJS (ADR 0002/0017: phát session cookie + Bearer token)
   # -------------------------------------------------------------------------
   api:
-    image: xeprime-app:latest
-    # CHỈ service này khai `build`, dù cả bốn dùng chung `xeprime-app:latest`. Khai bốn lần là
-    # bốn lần BuildKit dựng lại graph cho cùng một artifact; khai một lần thì `docker compose
-    # build` sinh đúng một image và ba service kia nhặt nó theo tag.
+    image: *app_image
+    # CHỈ service này khai `build`, dù cả bốn dùng chung một image. Khai bốn lần là bốn lần
+    # BuildKit dựng lại graph cho cùng một artifact; khai một lần thì `docker compose build`
+    # sinh đúng một image và ba service kia nhặt nó theo tag.
+    #
+    # Khối này KHÔNG mâu thuẫn với `XP_IMAGE`: đặt biến đó thì `deploy.sh` pull thay vì build,
+    # nên `build:` chỉ còn là đường dự phòng dựng tại chỗ khi không có registry.
     build:
       context: .
       dockerfile: deploy/Dockerfile
@@ -153,7 +163,7 @@ services:
   # nó không gọi API server-side và không cần thấy `api` qua mạng nội bộ.
   # -------------------------------------------------------------------------
   web:
-    image: xeprime-app:latest
+    image: *app_image
     restart: unless-stopped
     # CỐ Ý không có `env_file` — khai TỪNG biến. Nạp cả `.env.production` vào đây là đem mật
     # khẩu database, SMTP và eSMS đặt vào tiến trình render nội dung do người dùng gửi lên,
@@ -182,7 +192,7 @@ services:
   # scale service này).
   # -------------------------------------------------------------------------
   worker:
-    image: xeprime-app:latest
+    image: *app_image
     restart: unless-stopped
     env_file: ['${XP_ENV_FILE:-.env.production}']
     working_dir: /app/apps/worker

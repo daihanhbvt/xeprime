@@ -15,3 +15,14 @@
 pnpm-lock.yaml linguist-generated=true -diff
 packages/types/openapi.json linguist-generated=true
 packages/types/src/api.generated.ts linguist-generated=true
+
+# Script shell chạy trên VPS: BẮT BUỘC LF. Một ký tự CR ở cuối dòng shebang làm Linux báo
+# "bad interpreter: /usr/bin/env bash^M" — thông báo không hề chỉ về nguyên nhân.
+*.sh text eol=lf
+deploy/systemd/* text eol=lf
+
+# Script PowerShell chạy trên Windows: CRLF cho tự nhiên khi mở bằng trình soạn thảo của
+# Windows. Nội dung phải giữ BOM UTF-8 — PowerShell 5.1 đọc file KHÔNG BOM theo bảng mã ANSI,
+# và mọi chữ tiếng Việt trong script biến thành ký tự lạ (kể cả bên trong chuỗi, làm hỏng cả
+# cú pháp). `text` chỉ đụng tới line-ending, BOM được giữ nguyên.
+*.ps1 text eol=crlf

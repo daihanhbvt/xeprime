@@ -1,0 +1,548 @@
+# Triển khai XePrime lên VPS.
+#
+# MỘT file cho CẢ HAI môi trường, không phải hai file chép nhau. Hai bản chép nhau sẽ trôi lệch,
+# và chỗ trôi lệch đầu tiên luôn là bước nguy hiểm nhất — migrate. Production khác staging đúng
+# ba thứ: tên Environment, bộ secret, và một cổng phê duyệt (Settings → Environments).
+#
+# TỰ ĐỘNG:  push `staging` → deploy staging · push `main` → deploy production
+# THỦ CÔNG: Run workflow → chọn environment, và chọn nhánh/tag ở ô "Use workflow from"
+#           (KHÔNG có input `ref` riêng: `uses: ./.github/workflows/ci.yml` luôn chạy ở SHA của
+#           chính run này, nên một input ref riêng sẽ kiểm commit NÀY mà ship commit KHÁC —
+#           xanh, và sai. Ô "Use workflow from" đặt đúng cả hai cùng lúc.)
+#
+# ROLLBACK: điền `image_tag` bằng một tag đã có trên GHCR (ví dụ `production-a1b2c3d`). Workflow
+# bỏ qua toàn bộ verify + build, chỉ bảo VPS pull tag đó — khoảng 2 phút thay vì 20.
+#
+# Vì sao build ở đây mà không phải trên VPS: `next build` ngốn ~3,5GB RAM và 10–20 phút CPU đơn
+# luồng trên E5 v4. Chạy nó trên chính máy đang phục vụ người dùng là tự tạo một cửa sổ nghẽn
+# mỗi lần deploy. Runner của GitHub làm việc đó rồi VPS chỉ `docker compose pull`.
+#
+# Vì sao build và deploy nằm CHUNG một job: cả hai đều cần Environment (build cần `NEXT_PUBLIC_*`
+# riêng theo môi trường, deploy cần secret). Mà GitHub hỏi phê duyệt MỘT LẦN CHO MỖI JOB tham
+# chiếu tới một Environment được bảo vệ — tách đôi là bắt người duyệt bấm hai lần cho một lần
+# deploy. `verify` cố ý nằm ngoài để test chạy xong rồi mới đến lượt người duyệt nhìn.
+name: Deploy
+
+on:
+  push:
+    branches: [staging, main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Môi trường đích
+        type: choice
+        options: [staging, production]
+        default: staging
+      image_tag:
+        description: 'ROLLBACK: tag GHCR có sẵn, ví dụ production-a1b2c3d. Bỏ trống = build mới.'
+        type: string
+        required: false
+
+# `cancel-in-progress: false` là CỐ Ý, và ngược với ci.yml. Một deploy bị cắt ngang có thể dừng
+# đúng giữa `prisma migrate deploy` — schema đổi một nửa, không ai dọn, và lần deploy sau bắt
+# đầu từ một trạng thái không tên. Xếp hàng chậm hơn nhưng luôn kết thúc ở trạng thái xác định.
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || (github.ref_name == 'main' && 'production' || 'staging') }}
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Chốt "deploy cái gì, đi đâu" MỘT LẦN. Rải logic này ra từng job là cách một lần chạy build
+  # image cho staging rồi deploy nó lên production.
+  # ---------------------------------------------------------------------------
+  resolve:
+    name: Xác định môi trường
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.r.outputs.environment }}
+      rollback: ${{ steps.r.outputs.rollback }}
+      rollback_tag: ${{ steps.r.outputs.rollback_tag }}
+    steps:
+      - id: r
+        env:
+          IN_ENV: ${{ github.event.inputs.environment }}
+          IN_TAG: ${{ github.event.inputs.image_tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ -n "${IN_ENV:-}" ]; then
+            ENVIRONMENT="$IN_ENV"
+          elif [ "$REF_NAME" = 'main' ]; then
+            ENVIRONMENT=production
+          else
+            ENVIRONMENT=staging
+          fi
+
+          if [ -n "${IN_TAG:-}" ]; then
+            ROLLBACK=true
+          else
+            ROLLBACK=false
+          fi
+
+          {
+            echo "environment=$ENVIRONMENT"
+            echo "rollback=$ROLLBACK"
+            echo "rollback_tag=${IN_TAG:-}"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Deploy"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Môi trường | \`$ENVIRONMENT\` |"
+            echo "| Ref | \`$REF_NAME\` |"
+            echo "| Rollback | \`${IN_TAG:-không}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Cổng chặn — dùng lại ci.yml NGUYÊN VẸN (api + web + build image).
+  # Nằm ngoài Environment để test chạy xong rồi mới tới lượt người duyệt nhìn.
+  # Rollback bỏ qua: tag đó đã đi qua đúng cổng này ở lần deploy sinh ra nó.
+  # ---------------------------------------------------------------------------
+  verify:
+    name: Kiểm tra
+    needs: resolve
+    if: needs.resolve.outputs.rollback != 'true'
+    uses: ./.github/workflows/ci.yml
+
+  # ---------------------------------------------------------------------------
+  # Build + đẩy image + deploy. Một job, một cổng phê duyệt.
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy ${{ needs.resolve.outputs.environment }}
+    needs: [resolve, verify]
+    # `always()` để nhánh rollback (verify bị `skipped`) vẫn chạy. Điều kiện sau đó nói rõ: hoặc
+    # là rollback, hoặc verify phải XANH — `skipped` không được tính là đạt, nếu không một cổng
+    # chặn hỏng sẽ tự biến thành cổng mở.
+    if: >-
+      always()
+      && needs.resolve.result == 'success'
+      && (needs.resolve.outputs.rollback == 'true' || needs.verify.result == 'success')
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve.outputs.environment }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      # Không truyền `ref:` — mặc định là chính SHA đã kích hoạt run này, tức là đúng SHA mà
+      # job `verify` vừa kiểm. Đó là bất biến quan trọng nhất của file này.
+      - uses: actions/checkout@v4
+
+      # --- Tên image ------------------------------------------------------
+      - id: img
+        env:
+          REPO: ${{ github.repository }}
+          XP_ENV: ${{ needs.resolve.outputs.environment }}
+          ROLLBACK_TAG: ${{ needs.resolve.outputs.rollback_tag }}
+        run: |
+          set -euo pipefail
+          # GHCR từ chối tham chiếu có chữ hoa, mà `github.repository` giữ nguyên cách viết của
+          # chủ repo.
+          REPO_LC="$(printf '%s' "$REPO" | tr '[:upper:]' '[:lower:]')"
+
+          if [ -n "${ROLLBACK_TAG:-}" ]; then
+            IMAGE="ghcr.io/${REPO_LC}:${ROLLBACK_TAG}"
+            # SHA lấy từ ĐUÔI TAG, không phải HEAD. Tag do chính workflow này đặt, dạng
+            # `<môi trường>-<sha7>`. Dùng HEAD ở đây là để VPS checkout mã nguồn MỚI trong khi
+            # chạy image CŨ — tức là compose/Caddyfile/deploy.sh của đúng bản deploy mà bạn
+            # đang cố lùi lại. Nếu chính chúng là thứ làm hỏng thì rollback không sửa được gì.
+            SHA="${ROLLBACK_TAG##*-}"
+            case "$SHA" in
+              ''|*[!0-9a-f]*)
+                echo "::error::image_tag phải có dạng <môi trường>-<sha>, ví dụ production-a1b2c3d. Nhận được: $ROLLBACK_TAG"
+                exit 1
+                ;;
+            esac
+          else
+            IMAGE="ghcr.io/${REPO_LC}:${XP_ENV}-$(git rev-parse --short=7 HEAD)"
+            SHA="$(git rev-parse HEAD)"
+          fi
+
+          {
+            echo "sha=$SHA"
+            echo "repo_lc=$REPO_LC"
+            echo "image=$IMAGE"
+            echo "moving=ghcr.io/${REPO_LC}:${XP_ENV}"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+        if: needs.resolve.outputs.rollback != 'true'
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ⚠️ Image mang nhãn MÔI TRƯỜNG chứ không chỉ SHA, và đó không phải để cho gọn:
+      # `NEXT_PUBLIC_API_URL` bị Next nhúng cứng vào bundle lúc build, nên image build cho
+      # staging trỏ vĩnh viễn vào `api-stg`. Đem nó chạy production là cả site gọi sang staging.
+      - name: Build & push image
+        if: needs.resolve.outputs.rollback != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.img.outputs.image }}
+            ${{ steps.img.outputs.moving }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_APP_NAME=${{ vars.NEXT_PUBLIC_APP_NAME }}
+            NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY=${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY }}
+            NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+            NEXT_PUBLIC_FIREBASE_APP_ID=${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+            SESSION_COOKIE_NAME=${{ vars.SESSION_COOKIE_NAME }}
+
+      # Rollback: xác nhận tag CÓ THẬT trước khi đụng vào VPS. Không có bước này thì một tag gõ
+      # nhầm chỉ lộ ra sau khi stack đã dừng để đổi container.
+      - name: Kiểm tra tag rollback tồn tại
+        if: needs.resolve.outputs.rollback == 'true'
+        run: |
+          set -euo pipefail
+          IMG='${{ steps.img.outputs.image }}'
+          docker manifest inspect "$IMG" > /dev/null \
+            || { echo "::error::Không tìm thấy image $IMG trên GHCR."; exit 1; }
+          echo "Đã xác nhận: $IMG"
+
+      # --- File env -------------------------------------------------------
+      # Secret đi qua khối `env:` rồi mới vào script, KHÔNG nội suy `${{ secrets.X }}` thẳng vào
+      # thân lệnh: nội suy là GitHub dán nguyên văn giá trị vào mã nguồn shell, nên một secret
+      # chứa dấu nháy hay xuống dòng vừa làm hỏng script vừa có thể lộ ra qua thông báo lỗi.
+      - name: Dựng .env.${{ needs.resolve.outputs.environment }}
+        env:
+          XP_ENV: ${{ needs.resolve.outputs.environment }}
+          V_WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
+          V_API_DOMAIN: ${{ vars.API_DOMAIN }}
+          V_ACME_EMAIL: ${{ vars.ACME_EMAIL }}
+          V_POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+          V_POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+          V_APP_ENV: ${{ vars.APP_ENV }}
+          V_API_PORT: ${{ vars.API_PORT }}
+          V_CORS_ORIGINS: ${{ vars.CORS_ORIGINS }}
+          V_TRUST_PROXY_HOPS: ${{ vars.TRUST_PROXY_HOPS }}
+          V_API_PUBLIC_URL: ${{ vars.API_PUBLIC_URL }}
+          V_APP_WEB_URL: ${{ vars.APP_WEB_URL }}
+          V_SESSION_TTL_DAYS: ${{ vars.SESSION_TTL_DAYS }}
+          V_SESSION_COOKIE_NAME: ${{ vars.SESSION_COOKIE_NAME }}
+          V_SESSION_COOKIE_SECURE: ${{ vars.SESSION_COOKIE_SECURE }}
+          V_SESSION_COOKIE_DOMAIN: ${{ vars.SESSION_COOKIE_DOMAIN }}
+          V_MOBILE_ACCESS_TTL_MINUTES: ${{ vars.MOBILE_ACCESS_TTL_MINUTES }}
+          V_MOBILE_REFRESH_TTL_DAYS: ${{ vars.MOBILE_REFRESH_TTL_DAYS }}
+          V_MOBILE_JWT_AUDIENCE: ${{ vars.MOBILE_JWT_AUDIENCE }}
+          V_MOBILE_AUTH_REDIRECT_URIS: ${{ vars.MOBILE_AUTH_REDIRECT_URIS }}
+          V_GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+          V_FACEBOOK_APP_ID: ${{ vars.FACEBOOK_APP_ID }}
+          V_OTP_MODE: ${{ vars.OTP_MODE }}
+          V_OTP_TTL_MINUTES: ${{ vars.OTP_TTL_MINUTES }}
+          V_OTP_RESEND_COOLDOWN_SECONDS: ${{ vars.OTP_RESEND_COOLDOWN_SECONDS }}
+          V_OTP_MAX_SENDS_PER_HOUR: ${{ vars.OTP_MAX_SENDS_PER_HOUR }}
+          V_OTP_MAX_ATTEMPTS: ${{ vars.OTP_MAX_ATTEMPTS }}
+          V_SMTP_HOST: ${{ vars.SMTP_HOST }}
+          V_SMTP_PORT: ${{ vars.SMTP_PORT }}
+          V_SMTP_USER: ${{ vars.SMTP_USER }}
+          V_SMTP_FROM: ${{ vars.SMTP_FROM }}
+          V_FIRESTORE_ENABLED: ${{ vars.FIRESTORE_ENABLED }}
+          V_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+          V_FIREBASE_CLIENT_EMAIL: ${{ vars.FIREBASE_CLIENT_EMAIL }}
+          V_GOOGLE_HOLIDAY_CALENDAR_ID: ${{ vars.GOOGLE_HOLIDAY_CALENDAR_ID }}
+          V_R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
+          V_R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          V_R2_BUCKET: ${{ vars.R2_BUCKET }}
+          V_R2_PRIVATE_BUCKET: ${{ vars.R2_PRIVATE_BUCKET }}
+          V_R2_PUBLIC_BASE_URL: ${{ vars.R2_PUBLIC_BASE_URL }}
+          V_BACKUP_KEEP_DAYS: ${{ vars.BACKUP_KEEP_DAYS }}
+          V_NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          V_NEXT_PUBLIC_APP_NAME: ${{ vars.NEXT_PUBLIC_APP_NAME }}
+          V_NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY: ${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY }}
+          V_NEXT_PUBLIC_FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          V_NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          V_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          V_NEXT_PUBLIC_FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          S_POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          S_SESSION_JWT_SECRET: ${{ secrets.SESSION_JWT_SECRET }}
+          S_OTP_PEPPER: ${{ secrets.OTP_PEPPER }}
+          S_GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+          S_FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
+          S_ESMS_API_KEY: ${{ secrets.ESMS_API_KEY }}
+          S_ESMS_SECRET_KEY: ${{ secrets.ESMS_SECRET_KEY }}
+          S_ESMS_BRANDNAME: ${{ secrets.ESMS_BRANDNAME }}
+          S_SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          S_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          S_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          S_FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          S_GOOGLE_MAPS_SERVER_KEY: ${{ secrets.GOOGLE_MAPS_SERVER_KEY }}
+          S_GOOGLE_HOLIDAY_API_KEY: ${{ secrets.GOOGLE_HOLIDAY_API_KEY }}
+          S_TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          S_TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          set -euo pipefail
+          umask 077
+          F=.env.render
+          MISSING=0
+          req() {
+            if [ -z "${2:-}" ]; then
+              echo "::error::Thiếu giá trị bắt buộc: $1 (Settings → Environments → $XP_ENV)"
+              MISSING=1
+            fi
+          }
+          req WEB_DOMAIN          "${V_WEB_DOMAIN:-}"
+          req API_DOMAIN          "${V_API_DOMAIN:-}"
+          req ACME_EMAIL          "${V_ACME_EMAIL:-}"
+          req APP_ENV             "${V_APP_ENV:-}"
+          req CORS_ORIGINS        "${V_CORS_ORIGINS:-}"
+          req API_PUBLIC_URL      "${V_API_PUBLIC_URL:-}"
+          req APP_WEB_URL         "${V_APP_WEB_URL:-}"
+          req NEXT_PUBLIC_API_URL "${V_NEXT_PUBLIC_API_URL:-}"
+          req POSTGRES_PASSWORD   "${S_POSTGRES_PASSWORD:-}"
+          req SESSION_JWT_SECRET  "${S_SESSION_JWT_SECRET:-}"
+          # OTP_PEPPER có `.default()` trong schema, nhưng default đó chứa `change-me` và bị
+          # chặn khi NODE_ENV=production. Quên nó = API crash-loop SAU khi migrate đã chạy;
+          # bắt ở đây là bắt trước khi có gì chạm vào database.
+          req OTP_PEPPER          "${S_OTP_PEPPER:-}"
+          # KHÔNG để mặc định `xp_session` cho staging. `SESSION_COOKIE_DOMAIN=.xeprime.vn` gửi
+          # cookie tới MỌI subdomain, nên staging mang tên cookie của production sẽ GHI ĐÈ phiên
+          # production của chính bạn và đẩy token staging sang đó. Một biến bị quên không được
+          # phép âm thầm rơi vào đúng trạng thái đó.
+          req SESSION_COOKIE_NAME "${V_SESSION_COOKIE_NAME:-}"
+          [ "$MISSING" -eq 0 ] || exit 1
+
+          PG_USER="${V_POSTGRES_USER:-xeprime}"
+          PG_DB="${V_POSTGRES_DB:-xeprime}"
+
+          # DATABASE_URL được GHÉP ở đây, KHÔNG khai làm secret riêng. docs/deployment.md §3.3
+          # cảnh báo đúng bẫy này: mật khẩu nằm hai chỗ thì sớm muộn lệch nhau, và triệu chứng
+          # (container db khoẻ, API báo lỗi xác thực) không hề chỉ về nguyên nhân.
+          #
+          # URL-encode mật khẩu: `openssl rand -base64` sinh ra cả `+`, `/` và `=`, mà `/` trong
+          # phần userinfo của URL là ký tự phân cách — không encode thì chuỗi kết nối gãy ở MỘT
+          # PHẦN các mật khẩu, tức là hỏng ngẫu nhiên theo mỗi lần xoay secret.
+          PG_USER_ENC="$(printf '%s' "$PG_USER"           | jq -sRr @uri)"
+          PG_PASS_ENC="$(printf '%s' "$S_POSTGRES_PASSWORD" | jq -sRr @uri)"
+
+          # Giá trị bọc trong NHÁY ĐƠN, và BỎ HẲN key khi rỗng. Cả hai đều là sửa lỗi thật, đã đo:
+          #
+          # 1. File này bị HAI parser đọc. Compose `env_file` đọc nó, NHƯNG backup-db.sh,
+          #    restore-db.sh và notify.sh đều `set -a; . .env.<env>` bằng BASH. Không quote thì
+          #    `SMTP_FROM=XePrime STG <no-reply@xeprime.vn>` là LỖI CÚ PHÁP bash: source dừng
+          #    giữa chừng, các biến sau đó rỗng, và backup-db.sh chết TRƯỚC khi kịp cài trap —
+          #    không status, không cảnh báo. deploy.sh thấy sao lưu fail rồi huỷ MỌI lần deploy
+          #    sau đó, với thông báo trỏ vào sao lưu chứ không phải vào file env.
+          #    Compose cũng cần quote vì lý do riêng: không quote thì ` #` bị coi là chú thích
+          #    (giá trị bị cắt cụt) và `$` bị nội suy.
+          #
+          # 2. Với zod, `''` KHÔNG PHẢI `undefined`: `.optional()` từ chối nó, `.min(n)` từ chối
+          #    nó, và `.default()` không áp dụng cho nó. Ghi `SMTP_PORT=` là API crash-loop với
+          #    "Too small: expected number to be >0" — sau khi migrate đã chạy xong. Bỏ key đi
+          #    thì default của chính schema mới có cơ hội làm việc của nó.
+          #
+          # Nháy ĐƠN chứ không nháy kép: nháy kép để compose nội suy `$`. Đổi lại là không có
+          # cách nào escape một dấu nháy đơn nằm trong giá trị cho CẢ HAI parser (compose-go từ
+          # chối `'\''` của POSIX), nên gặp trường hợp đó thì dừng và nói rõ.
+          BAD=0
+          kv() {
+            local k=$1 v=${2:-}
+            [ -n "$v" ] || return 0
+            case "$v" in
+              *"'"*)
+                echo "::error::Giá trị của $k chứa dấu nháy đơn — compose và bash escape nó theo hai cách loại trừ nhau. Đổi giá trị ở Settings → Environments → $XP_ENV."
+                BAD=1
+                return 0
+                ;;
+            esac
+            printf "%s='%s'\n" "$k" "$v" >> "$F"
+          }
+
+          : > "$F"
+          printf '# Sinh tự động bởi .github/workflows/deploy.yml — ĐỪNG sửa tay trên VPS.\n' >> "$F"
+          printf '# Nguồn sự thật: Settings -> Environments -> %s\n\n' "$XP_ENV" >> "$F"
+
+          kv WEB_DOMAIN "${V_WEB_DOMAIN:-}"
+          kv API_DOMAIN "${V_API_DOMAIN:-}"
+          kv ACME_EMAIL "${V_ACME_EMAIL:-}"
+
+          kv POSTGRES_USER "$PG_USER"
+          kv POSTGRES_PASSWORD "${S_POSTGRES_PASSWORD:-}"
+          kv POSTGRES_DB "$PG_DB"
+          kv DATABASE_URL "postgresql://${PG_USER_ENC}:${PG_PASS_ENC}@db:5432/${PG_DB}?schema=public"
+
+          # NODE_ENV=production ở CẢ HAI môi trường — nếu không, Next trộn bản React dev vào
+          # bundle server và build chết ở `/_global-error` (CLAUDE.md §8). `APP_ENV` mới là thứ
+          # tách "môi trường" khỏi "kiểu build".
+          kv NODE_ENV production
+          kv APP_ENV "${V_APP_ENV:-}"
+          kv API_PORT "${V_API_PORT:-4000}"
+          kv CORS_ORIGINS "${V_CORS_ORIGINS:-}"
+          kv TRUST_PROXY_HOPS "${V_TRUST_PROXY_HOPS:-1}"
+          kv API_PUBLIC_URL "${V_API_PUBLIC_URL:-}"
+          kv APP_WEB_URL "${V_APP_WEB_URL:-}"
+
+          kv SESSION_JWT_SECRET "${S_SESSION_JWT_SECRET:-}"
+          kv SESSION_TTL_DAYS "${V_SESSION_TTL_DAYS:-7}"
+          kv SESSION_COOKIE_NAME "${V_SESSION_COOKIE_NAME:-}"
+          kv SESSION_COOKIE_SECURE "${V_SESSION_COOKIE_SECURE:-true}"
+          kv SESSION_COOKIE_DOMAIN "${V_SESSION_COOKIE_DOMAIN:-}"
+          kv MOBILE_ACCESS_TTL_MINUTES "${V_MOBILE_ACCESS_TTL_MINUTES:-15}"
+          kv MOBILE_REFRESH_TTL_DAYS "${V_MOBILE_REFRESH_TTL_DAYS:-60}"
+          kv MOBILE_JWT_AUDIENCE "${V_MOBILE_JWT_AUDIENCE:-xeprime-mobile}"
+          kv MOBILE_AUTH_REDIRECT_URIS "${V_MOBILE_AUTH_REDIRECT_URIS:-xeprime://auth/callback}"
+
+          kv GOOGLE_OAUTH_CLIENT_ID "${V_GOOGLE_OAUTH_CLIENT_ID:-}"
+          kv GOOGLE_OAUTH_CLIENT_SECRET "${S_GOOGLE_OAUTH_CLIENT_SECRET:-}"
+          kv FACEBOOK_APP_ID "${V_FACEBOOK_APP_ID:-}"
+          kv FACEBOOK_APP_SECRET "${S_FACEBOOK_APP_SECRET:-}"
+
+          kv OTP_MODE "${V_OTP_MODE:-mock}"
+          kv ESMS_API_KEY "${S_ESMS_API_KEY:-}"
+          kv ESMS_SECRET_KEY "${S_ESMS_SECRET_KEY:-}"
+          kv ESMS_BRANDNAME "${S_ESMS_BRANDNAME:-}"
+          kv OTP_TTL_MINUTES "${V_OTP_TTL_MINUTES:-5}"
+          kv OTP_RESEND_COOLDOWN_SECONDS "${V_OTP_RESEND_COOLDOWN_SECONDS:-60}"
+          kv OTP_MAX_SENDS_PER_HOUR "${V_OTP_MAX_SENDS_PER_HOUR:-5}"
+          kv OTP_MAX_ATTEMPTS "${V_OTP_MAX_ATTEMPTS:-5}"
+          kv OTP_PEPPER "${S_OTP_PEPPER:-}"
+
+          kv SMTP_HOST "${V_SMTP_HOST:-}"
+          kv SMTP_PORT "${V_SMTP_PORT:-}"
+          kv SMTP_USER "${V_SMTP_USER:-}"
+          kv SMTP_PASS "${S_SMTP_PASS:-}"
+          kv SMTP_FROM "${V_SMTP_FROM:-}"
+
+          kv R2_ACCOUNT_ID "${V_R2_ACCOUNT_ID:-}"
+          kv R2_ACCESS_KEY_ID "${S_R2_ACCESS_KEY_ID:-}"
+          kv R2_SECRET_ACCESS_KEY "${S_R2_SECRET_ACCESS_KEY:-}"
+          kv R2_BUCKET "${V_R2_BUCKET:-}"
+          kv R2_ENDPOINT "${V_R2_ENDPOINT:-}"
+          kv R2_PUBLIC_BASE_URL "${V_R2_PUBLIC_BASE_URL:-}"
+          kv R2_PRIVATE_BUCKET "${V_R2_PRIVATE_BUCKET:-}"
+
+          kv FIRESTORE_ENABLED "${V_FIRESTORE_ENABLED:-false}"
+          kv FIREBASE_PROJECT_ID "${V_FIREBASE_PROJECT_ID:-}"
+          kv FIREBASE_CLIENT_EMAIL "${V_FIREBASE_CLIENT_EMAIL:-}"
+          kv FIREBASE_PRIVATE_KEY "${S_FIREBASE_PRIVATE_KEY:-}"
+          kv GOOGLE_MAPS_SERVER_KEY "${S_GOOGLE_MAPS_SERVER_KEY:-}"
+          kv GOOGLE_HOLIDAY_API_KEY "${S_GOOGLE_HOLIDAY_API_KEY:-}"
+          kv GOOGLE_HOLIDAY_CALENDAR_ID "${V_GOOGLE_HOLIDAY_CALENDAR_ID:-}"
+
+          # Nhóm NEXT_PUBLIC_* đã nhúng cứng vào image lúc build. Ghi vào file env chỉ để
+          # `docker compose build` còn dùng được nếu có ngày phải build tay ngay trên máy.
+          kv NEXT_PUBLIC_API_URL "${V_NEXT_PUBLIC_API_URL:-}"
+          kv NEXT_PUBLIC_APP_NAME "${V_NEXT_PUBLIC_APP_NAME:-XePrime}"
+          kv NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY "${V_NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY:-}"
+          kv NEXT_PUBLIC_FIREBASE_API_KEY "${V_NEXT_PUBLIC_FIREBASE_API_KEY:-}"
+          kv NEXT_PUBLIC_FIREBASE_PROJECT_ID "${V_NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}"
+          kv NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN "${V_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}"
+          kv NEXT_PUBLIC_FIREBASE_APP_ID "${V_NEXT_PUBLIC_FIREBASE_APP_ID:-}"
+
+          kv BACKUP_KEEP_DAYS "${V_BACKUP_KEEP_DAYS:-14}"
+          kv TELEGRAM_BOT_TOKEN "${S_TELEGRAM_BOT_TOKEN:-}"
+          kv TELEGRAM_CHAT_ID "${S_TELEGRAM_CHAT_ID:-}"
+
+          [ "$BAD" -eq 0 ] || exit 1
+          echo "Đã dựng $(wc -l < "$F") dòng env cho [$XP_ENV]."
+
+      # --- SSH ------------------------------------------------------------
+      # `known_hosts` khai tường minh. Đường lùi duy nhất là `StrictHostKeyChecking=no`, tức là
+      # chấp nhận bất kỳ máy nào trả lời ở địa chỉ đó — và phiên đó mang theo cả file env.
+      - name: Chuẩn bị SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SSH_KEY:-}" ] || [ -z "${KNOWN_HOSTS:-}" ]; then
+            echo '::error::Thiếu secret VPS_SSH_KEY hoặc VPS_KNOWN_HOSTS.'
+            exit 1
+          fi
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy lên VPS
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USER_NAME: ${{ vars.VPS_USER }}
+          PORT: ${{ vars.VPS_SSH_PORT }}
+          APP_PATH: ${{ vars.VPS_PATH }}
+          XP_ENV: ${{ needs.resolve.outputs.environment }}
+          IMAGE: ${{ steps.img.outputs.image }}
+          SHA: ${{ steps.img.outputs.sha }}
+          ACTOR: ${{ github.actor }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          [ -n "${HOST:-}" ] || { echo '::error::Thiếu secret VPS_HOST.'; exit 1; }
+          U="${USER_NAME:-xeprime}"
+          P="${PORT:-22}"
+          A="${APP_PATH:-/opt/xeprime}"
+          SSH=(ssh -i "$HOME/.ssh/id_deploy" -p "$P" -o BatchMode=yes "$U@$HOST")
+
+          echo "::group::Chép file env"
+          scp -i "$HOME/.ssh/id_deploy" -P "$P" -o BatchMode=yes \
+            .env.render "$U@$HOST:$A/.env.$XP_ENV"
+          "${SSH[@]}" "chmod 600 '$A/.env.$XP_ENV'"
+          echo "::endgroup::"
+
+          # `checkout --detach <sha>` chứ không `git pull`: VPS không cần nằm trên nhánh nào, và
+          # compose/Caddyfile trên máy khớp CHÍNH XÁC commit đã sinh ra image. `git pull` trên
+          # một nhánh vừa nhận thêm commit là cách chạy image cũ với file cấu hình mới.
+          echo "::group::Đồng bộ mã nguồn về $SHA"
+          "${SSH[@]}" "cd '$A' && git fetch --prune origin && git checkout --detach '$SHA'"
+          echo "::endgroup::"
+
+          # Đăng nhập GHCR bằng GITHUB_TOKEN của chính run này — hết hạn khi job kết thúc, nên
+          # không có PAT dài hạn nào nằm lại trên VPS. `--password-stdin` để token không đi qua
+          # danh sách tham số (`ps` đọc được).
+          echo "::group::deploy.sh --env $XP_ENV --image $IMAGE"
+          printf '%s' "$GH_TOKEN" | "${SSH[@]}" "docker login ghcr.io -u '$ACTOR' --password-stdin"
+          set +e
+          "${SSH[@]}" "cd '$A' && ./deploy/scripts/deploy.sh --env '$XP_ENV' --no-pull --image '$IMAGE'"
+          RC=$?
+          set -e
+          "${SSH[@]}" 'docker logout ghcr.io' || true
+          echo "::endgroup::"
+          [ "$RC" -eq 0 ] || { echo "::error::deploy.sh trả mã $RC"; exit "$RC"; }
+
+      # Smoke test từ BÊN NGOÀI. `deploy.sh` đã chờ healthcheck, nhưng healthcheck chạy trong
+      # mạng nội bộ của compose — nó không nói gì về Caddy, chứng chỉ TLS, hay DNS.
+      - name: Smoke test
+        env:
+          API_DOMAIN: ${{ vars.API_DOMAIN }}
+          WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
+        run: |
+          set -euo pipefail
+          echo "GET https://$API_DOMAIN/health"
+          curl -fsS --retry 5 --retry-delay 6 --retry-all-errors --max-time 20 \
+            "https://$API_DOMAIN/health" | tee /dev/stderr | grep -q '"status":"ok"'
+          echo
+          CODE="$(curl -sS --retry 5 --retry-delay 6 --retry-all-errors --max-time 20 \
+            -o /dev/null -w '%{http_code}' "https://$WEB_DOMAIN/")"
+          echo "GET https://$WEB_DOMAIN/ -> $CODE"
+          case "$CODE" in 2*|3*) ;; *) echo "::error::Web trả $CODE"; exit 1 ;; esac
+
+      - name: Dọn file env trên runner
+        if: always()
+        run: rm -f .env.render
+
+      - name: Tóm tắt
+        if: always()
+        run: |
+          {
+            echo "### Kết quả"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Môi trường | \`${{ needs.resolve.outputs.environment }}\` |"
+            echo "| Image | \`${{ steps.img.outputs.image }}\` |"
+            echo "| Commit | \`${{ steps.img.outputs.sha }}\` |"
+            echo "| Web | https://${{ vars.WEB_DOMAIN }} |"
+            echo "| API | https://${{ vars.API_DOMAIN }}/health |"
+            echo ""
+            echo "Rollback: Run workflow → environment \`${{ needs.resolve.outputs.environment }}\`, image_tag = tag của lần deploy trước."
+          } >> "$GITHUB_STEP_SUMMARY"

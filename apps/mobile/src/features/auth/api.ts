@@ -1,15 +1,27 @@
-import { authApi, type CurrentUser } from '@xeprime/api-client';
+import { authApi, type CurrentUser, type MobileRegisterInput } from '@xeprime/api-client';
 import type { AuthProvider } from '@xeprime/types';
-import { signInWithOtp, signInWithPassword, signInWithSocial, signOut } from '@/lib/auth-session';
+import {
+  signInWithOtp,
+  signInWithPassword,
+  signInWithSocial,
+  signOut,
+  signUpWithPassword,
+} from '@/lib/auth-session';
 // Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định được cấu hình, và
 // `authApi.me()` bên dưới dùng chính client đó.
 import '@/lib/api-client';
 
 export type { CurrentUser };
 
+export type RegisterInput = Omit<MobileRegisterInput, 'device'>;
+
 /** `identifier` là email HOẶC số điện thoại. Token đi thẳng vào Keychain/Keystore, không qua đây. */
 export function loginWithPassword(identifier: string, password: string): Promise<CurrentUser> {
   return signInWithPassword(identifier, password);
+}
+
+export function registerWithPassword(input: RegisterInput): Promise<CurrentUser> {
+  return signUpWithPassword(input);
 }
 
 export function loginWithOtp(phone: string, code: string): Promise<CurrentUser> {
@@ -26,6 +38,14 @@ export function loginWithSocial(
 
 export function setAccountPassword(password: string): Promise<void> {
   return authApi.setPassword({ password });
+}
+
+export function requestPasswordReset(email: string): Promise<void> {
+  return authApi.forgotPassword({ email });
+}
+
+export function resetPasswordWithToken(token: string, password: string): Promise<void> {
+  return authApi.resetPassword({ token, password });
 }
 
 /**

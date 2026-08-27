@@ -1,0 +1,22 @@
+{
+  "_": "Chép thành config.json rồi điền. config.json bị .gitignore chặn vì nó chứa IP máy chủ và token bot.",
+  "_paths": "Dùng dấu / cho đường dẫn Windows. .NET hiểu, và nó bỏ hẳn lớp escape \\\\ mà JSON bắt buộc với dấu \\ — một chỗ để gõ sai không vì lý do gì.",
+
+  "vpsHost": "203.0.113.10",
+  "sshPort": 22,
+  "sftpUser": "xpbackup",
+  "sshKeyPath": "%USERPROFILE%/.ssh/xeprime_pull",
+
+  "_destRoot": "Nên nằm trên Ổ KHÁC ổ hệ điều hành. Máy này vừa là máy dev vừa là nơi giữ bản sao — ổ C hỏng thì mất cả hai.",
+  "destRoot": "D:/XePrimeBackups",
+
+  "_keepWeeks": "Số tuần giữ tại công ty. VPS chỉ giữ 14 ngày, nên đây mới là kho dài hạn.",
+  "keepWeeks": 12,
+
+  "_staleAfterDays": "Bản mới nhất quá số ngày này thì cảnh báo. Đây là lớp DUY NHẤT bắt được việc sao lưu trên VPS đã ngừng chạy — cảnh báo phát TỪ VPS không bao giờ bắt được trường hợp chính VPS đó chết.",
+  "staleAfterDays": 8,
+
+  "_telegram": "Cùng bot với VPS được. Bỏ trống = không gửi cảnh báo.",
+  "telegramBotToken": "",
+  "telegramChatId": ""
+}

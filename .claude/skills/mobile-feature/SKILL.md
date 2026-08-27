@@ -289,6 +289,12 @@ The base already solves the three things every screen gets wrong — use them, d
   `fontWeight`, `iconSize`, `sizing`, `colors`). `sizing.touchTarget` is the 44pt/48dp floor — use
   it rather than typing a number. `iconSize` (`xs`/`sm`/`md`/`lg`) is the icon scale: named by ROLE,
   not by pixel count.
+* **A screen that needs a session is wrapped in
+  [`<RequireSession>`](../../../apps/mobile/src/features/auth/RequireSession.tsx)** — never
+  hand-rolled `if (!user) return …` inside the screen. Hiding a tab is not blocking it: a deep
+  link or a push notification opens the screen directly. The guard renders the skeleton you pass
+  as `fallback`, the sign-in invite on 401, and a retry on a network failure — three states a
+  per-screen check reliably gets wrong. Behind it, read the user with `useAuthenticatedUser()`.
 
 Beyond that:
 

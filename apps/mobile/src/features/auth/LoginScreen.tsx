@@ -5,8 +5,10 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { type CurrentUser } from '@/features/auth/api';
 import { LOGIN_METHOD, type LoginMethod } from './post-login-destination';
 import { Screen } from '@/components/layout/Screen';
+import { APP_NAME } from '@/lib/app-name';
 import { colors, fontSize, space } from '@/theme/tokens';
 import { AUTH_METHOD, AuthMethodTabs, type AuthMethod } from './components/AuthMethodTabs';
+import { AuthSwitchLink } from './components/AuthSwitchLink';
 import { LoginForm } from './components/LoginForm';
 import { OtpLoginForm } from './components/OtpLoginForm';
 import { SocialButtons } from './components/SocialButtons';
@@ -24,14 +26,19 @@ import { SocialButtons } from './components/SocialButtons';
  * Logo chỉ xuất hiện MỘT lần, ở header. Trước đây màn này còn một logo 56px canh giữa ngay
  * trong nội dung — hai lần cùng một dấu hiệu cách nhau 80px, và cái thứ hai không nói thêm gì.
  *
- * Đăng ký (AUTH-02) và quên mật khẩu (AUTH-05) là các task riêng.
+ * Đăng ký (AUTH-02) và quên mật khẩu (AUTH-05) là hai màn RIÊNG; màn này chỉ dẫn sang, y như
+ * web dẫn sang `/register` và `/forgot-password`.
  */
 export function LoginScreen({
   onSuccess,
+  onForgotPassword,
+  onSwitchToRegister,
   onCancel,
 }: {
   /** Nhận hồ sơ + đường đã dùng — route quyết định đi đâu, màn này không biết luật đó. */
   onSuccess: (user: CurrentUser, method: LoginMethod) => void;
+  onForgotPassword: () => void;
+  onSwitchToRegister: () => void;
   onCancel: () => void;
 }) {
   const t = useTranslations('Auth');
@@ -54,7 +61,7 @@ export function LoginScreen({
               dưới ngưỡng đọc được.
             */}
             <Text col={colors.text} fontFamily="$heading" fos={fontSize.h2}>
-              {t('modal.loginTitle')} <Text col={colors.primaryActive}>XePrime</Text>
+              {t('modal.loginTitle')} <Text col={colors.primaryActive}>{APP_NAME}</Text>
             </Text>
             <Text col={colors.textMuted} fos={fontSize.body}>
               {t('modal.loginSub')}
@@ -66,13 +73,22 @@ export function LoginScreen({
 
             {/* Đổi tab là dựng lại form: state của tab kia nói về một lần đăng nhập khác. */}
             {method === AUTH_METHOD.PASSWORD ? (
-              <LoginForm onSuccess={(user) => onSuccess(user, LOGIN_METHOD.PASSWORD)} />
+              <LoginForm
+                onSuccess={(user) => onSuccess(user, LOGIN_METHOD.PASSWORD)}
+                onForgotPassword={onForgotPassword}
+              />
             ) : (
               <OtpLoginForm onSuccess={(user) => onSuccess(user, LOGIN_METHOD.OTP)} />
             )}
           </YStack>
 
           <SocialButtons onSuccess={(user) => onSuccess(user, LOGIN_METHOD.SOCIAL)} />
+
+          <AuthSwitchLink
+            prompt={t('switchMode.noAccount')}
+            actionLabel={t('switchMode.toRegister')}
+            onPress={onSwitchToRegister}
+          />
         </YStack>
       </Screen>
     </>

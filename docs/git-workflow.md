@@ -2,6 +2,32 @@
 
 Quy ước: branch gốc là `develop`. Không commit thẳng vào `main`. `/commit` push branch vừa làm lên `origin`, nhưng **không bao giờ** merge và không bao giờ push thẳng `develop`/`main`.
 
+## Ba nhánh = ba môi trường
+
+```
+feature/*  →  develop  →  staging  →  main
+   PR          PR/merge     merge      merge (có phê duyệt)
+              (dev)        (stg)      (production)
+```
+
+| Nhánh | Môi trường | Nhận commit thế nào |
+| --- | --- | --- |
+| `feature/*` `fix/*` `refactor/*` `chore/*` | máy dev | `/commit` |
+| `develop` | máy dev | chỉ merge từ nhánh việc, qua PR |
+| `staging` | `stg.xeprime.vn` | **chỉ merge từ `develop`** |
+| `main` | `xeprime.vn` | **chỉ merge từ `staging`** |
+
+`staging` và `main` **không bao giờ nhận commit trực tiếp**. Mỗi lần merge vào chúng là **một
+lần deploy tự động** (`.github/workflows/deploy.yml`) — nên một commit vá vội đẩy thẳng lên
+`staging` là một lần deploy chưa ai xem qua PR.
+
+Chỉ thăng cấp lên `main` thứ **đã chạy thật trên staging**. Đó là lý do `staging` tồn tại; bỏ
+qua nó thì nó chỉ còn là một nhánh tốn tiền VPS.
+
+> Deploy một commit cụ thể, hoặc lùi về bản trước, thì **không** dùng git — dùng Run workflow ở
+> tab Actions (`docs/deployment.md` §9.1). Đẩy ngược lịch sử để lùi phiên bản là cách làm hỏng
+> cả hai thứ cùng lúc.
+
 ## Khi đang code
 
 Code bình thường. Claude **không** tự commit.
@@ -59,6 +85,7 @@ Push gãy thì commit vẫn nằm ở local, không mất gì:
 | `non-fast-forward` (remote đã đi trước branch của bạn) | Dừng và báo. Không force, không tự `pull`/`rebase` — bạn quyết |
 
 Merge vào `develop` vẫn làm tay (hoặc qua Pull Request) — `/commit` không tạo PR, không merge.
+Merge `develop` → `staging` → `main` cũng vậy, và mỗi lần merge đó là một lần deploy.
 
 ## Những gì `/commit` cố tình KHÔNG làm
 

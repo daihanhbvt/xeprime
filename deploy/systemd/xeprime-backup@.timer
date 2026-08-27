@@ -1,0 +1,19 @@
+# Hẹn giờ sao lưu — 03:00 giờ Việt Nam hằng ngày.
+[Unit]
+Description=XePrime — hẹn giờ sao lưu PostgreSQL (%i)
+
+[Timer]
+Unit=xeprime-backup@%i.service
+
+# Giờ VN tường minh: máy có thể đang để UTC, và "03:00" ở UTC là 10:00 giờ VN — đúng giờ cao
+# điểm thay vì giờ thấp điểm.
+OnCalendar=*-*-* 03:00:00 Asia/Ho_Chi_Minh
+Persistent=true
+
+# Máy vừa khởi động lại lúc 03:05 thì `Persistent=true` bắn ngay lập tức. Trải 0–15 phút để lần
+# chạy bù không rơi đúng lúc máy còn đang dựng lại toàn bộ container.
+RandomizedDelaySec=900
+AccuracySec=1m
+
+[Install]
+WantedBy=timers.target

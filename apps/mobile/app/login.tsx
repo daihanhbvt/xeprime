@@ -8,6 +8,7 @@ import {
   postLoginDestination,
   type LoginMethod,
 } from '@/features/auth/post-login-destination';
+import { goBackOr } from '@/navigation/go-back-or';
 import { ROUTES } from '@/navigation/routes';
 
 export default function LoginRoute() {
@@ -35,7 +36,9 @@ export default function LoginRoute() {
   return (
     <LoginScreen
       onSuccess={finish}
-      onCancel={() => (router.canGoBack() ? router.back() : router.replace(ROUTES.explore.home()))}
+      onForgotPassword={() => router.push(ROUTES.account.forgotPassword())}
+      onSwitchToRegister={() => router.replace(ROUTES.account.register())}
+      onCancel={() => goBackOr(router, ROUTES.explore.home())}
     />
   );
 }
