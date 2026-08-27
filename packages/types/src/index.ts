@@ -11,6 +11,7 @@
  */
 export * from './status/index';
 export * from './auth-provider';
+export * from './cache';
 export * from './locale';
 export * from './catalog';
 export * from './marketplace';

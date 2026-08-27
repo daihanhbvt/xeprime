@@ -3,12 +3,15 @@ import {
   BODY_TYPE,
   COLLATERAL_MODE,
   FUEL_TYPE,
+  OCCUPANCY_SOURCE_TYPE,
   REVIEW_STATUS,
+  SERVICE_TYPE,
   TENANT_STATUS,
   VEHICLE_PUBLIC_STATUS,
   VEHICLE_TYPE,
 } from '@xeprime/types';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
+import { buildListingWhereSql } from '../src/modules/public-listings/listing-filter';
 import type {
   ListingFacetsQueryDto,
   PublicListingQueryDto,
@@ -127,6 +130,15 @@ const sq = (extra: Partial<PublicListingQueryDto> = {}): PublicListingQueryDto =
 
 const countOf = (buckets: Array<{ key: string; count: number }>, key: string): number =>
   buckets.find((b) => b.key === key)?.count ?? 0;
+
+/*
+ * Facet được cache 60 giây trong service (xem `FACETS_CACHE_TTL_MS`). Spec seed một lần rồi hỏi
+ * nhiều bộ lọc khác nhau nên gần như không đụng nhau, nhưng dọn trước mỗi test là cách để một
+ * test thêm về sau không đỏ vì lý do chẳng liên quan gì tới thứ nó đang kiểm.
+ */
+beforeEach(() => {
+  service.clearFacetsCache();
+});
 
 beforeAll(async () => {
   try {
@@ -303,5 +315,125 @@ describe('Facets marketplace (đếm theo chiều + filter CSV)', () => {
 
     // Xe không tồn tại/không có listing → không nổ.
     await expect(listings.refreshRating(newId())).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * Bộ lọc marketplace có HAI hiện thực: `buildListingWhere` (Prisma, cho search + phần lớn facet)
+ * và `buildListingWhereSql` (raw SQL, cho facet tính năng vì phải `unnest` mảng). Bản sao đó là
+ * có chủ đích và được giải thích ở `listing-filter.ts` — nhưng bản sao nào cũng lệch được.
+ *
+ * Phép so khớp dưới đây là thứ khiến việc lệch KHÔNG âm thầm: cùng một bộ query chạy qua cả hai
+ * đường và phải trả về đúng cùng một tập xe. Thiếu nó, một vế filter quên cập nhật ở bản SQL sẽ
+ * biểu hiện thành "số đếm tính năng hơi sai" — thứ không ai nhìn ra khi review.
+ *
+ * Đi qua `service.search` (chứ không gọi thẳng hàm private) nên phía Prisma được kiểm đúng như
+ * production dùng nó.
+ */
+describe('buildListingWhereSql khớp buildListingWhere (chống lệch hai bản)', () => {
+  /** vehicle_id khớp bộ lọc, đi đường raw SQL. */
+  async function idsViaSql(query: PublicListingQueryDto): Promise<string[]> {
+    const rows = await prisma.$queryRaw<Array<{ vehicle_id: string }>>`
+      SELECT pl."vehicle_id" FROM "public_listings" pl
+      WHERE ${buildListingWhereSql(query)}
+    `;
+    return rows.map((r) => r.vehicle_id.trim()).sort();
+  }
+
+  /** vehicle_id khớp bộ lọc, đi đường Prisma (chính là đường `search` dùng). */
+  async function idsViaPrisma(query: PublicListingQueryDto): Promise<string[]> {
+    const res = await service.search(query);
+    return res.data.map((v) => v.id).sort();
+  }
+
+  const CASES: Array<[string, PublicListingQueryDto]> = [
+    ['không filter', sq()],
+    ['bodyType', sq({ bodyType: [BODY_TYPE.SUV, BODY_TYPE.SEDAN] })],
+    ['brand (khác hoa thường)', sq({ brand: ['toyota', 'MAZDA'] })],
+    ['fuelType', sq({ fuelType: [FUEL_TYPE.GASOLINE] })],
+    ['seats nhiều bucket', sq({ seats: ['4', '7'] })],
+    ['minSeats', sq({ minSeats: 5 })],
+    ['features hasEvery', sq({ features: ['bluetooth', 'camera_360'] })],
+    ['features một cái', sq({ features: ['gps'] })],
+    ['khoảng giá', sq({ priceMin: 500_000, priceMax: 1_000_000 })],
+    ['tiện ích: theo giờ', sq({ hourly: true })],
+    ['tiện ích: giao xe', sq({ delivery: true })],
+    ['tiện ích: miễn thế chấp', sq({ noCollateral: true })],
+    ['tiện ích: đang giảm giá', sq({ discount: true })],
+    ['tìm chữ (q)', sq({ q: 'VinFast' })],
+    ['tìm chữ không khớp gì', sq({ q: 'khong-ton-tai-xyz' })],
+    ['vehicleType', sq({ vehicleType: VEHICLE_TYPE.CAR })],
+    ['serviceType', sq({ serviceType: SERVICE_TYPE.SELF_DRIVE })],
+    ['tỉnh không tồn tại', sq({ provinceCode: '00' })],
+    [
+      'gộp nhiều chiều',
+      sq({
+        bodyType: [BODY_TYPE.SUV, BODY_TYPE.CUV],
+        fuelType: [FUEL_TYPE.DIESEL, FUEL_TYPE.ELECTRIC],
+        priceMin: 800_000,
+        delivery: true,
+      }),
+    ],
+  ];
+
+  for (const [name, query] of CASES) {
+    maybe(name, async () => {
+      const [viaSql, viaPrisma] = await Promise.all([idsViaSql(query), idsViaPrisma(query)]);
+      expect(viaSql).toEqual(viaPrisma);
+    });
+  }
+
+  maybe('lọc rảnh theo khoảng thời gian (occupancy)', async () => {
+    // Chiếm vSuv trong một khoảng rồi hỏi đúng khoảng đó — cả hai bản phải cùng loại nó ra.
+    const occupancyId = newId();
+    const startAt = new Date('2027-03-01T02:00:00.000Z');
+    const endAt = new Date('2027-03-05T02:00:00.000Z');
+    await prisma.vehicleOccupancy.create({
+      data: {
+        id: occupancyId,
+        tenantId,
+        vehicleId: vSuv,
+        sourceType: OCCUPANCY_SOURCE_TYPE.BLOCKED_RANGE,
+        sourceId: occupancyId,
+        startAt,
+        endAt,
+      },
+    });
+    try {
+      const query = sq({
+        pickupAt: '2027-03-02T02:00:00.000Z',
+        returnAt: '2027-03-03T02:00:00.000Z',
+      });
+      const [viaSql, viaPrisma] = await Promise.all([idsViaSql(query), idsViaPrisma(query)]);
+      expect(viaPrisma).not.toContain(vSuv);
+      expect(viaSql).toEqual(viaPrisma);
+    } finally {
+      await prisma.vehicleOccupancy.deleteMany({ where: { id: occupancyId } });
+    }
+  });
+
+  maybe('gian hàng bị tạm ngưng thì cả hai bản cùng loại xe khỏi chợ', async () => {
+    await prisma.tenant.update({ where: { id: tenantId }, data: { status: TENANT_STATUS.SUSPENDED } });
+    try {
+      const [viaSql, viaPrisma] = await Promise.all([idsViaSql(sq()), idsViaPrisma(sq())]);
+      expect(viaPrisma).toEqual([]);
+      expect(viaSql).toEqual([]);
+    } finally {
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { status: TENANT_STATUS.ACTIVE },
+      });
+    }
+  });
+
+  maybe('tỉnh bị ẩn công khai thì cả hai bản cùng loại xe khỏi chợ', async () => {
+    await prisma.province.update({ where: { code: PROV }, data: { isPublicVisible: false } });
+    try {
+      const [viaSql, viaPrisma] = await Promise.all([idsViaSql(sq()), idsViaPrisma(sq())]);
+      expect(viaPrisma).toEqual([]);
+      expect(viaSql).toEqual([]);
+    } finally {
+      await prisma.province.update({ where: { code: PROV }, data: { isPublicVisible: true } });
+    }
   });
 });

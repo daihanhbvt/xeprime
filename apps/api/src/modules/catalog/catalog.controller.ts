@@ -1,6 +1,8 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
 import { Public } from '../../common/decorators';
+import { PublicCache } from '../../common/http-cache';
 import { CatalogService } from './catalog.service';
 import { CatalogItemDto, CatalogQueryDto } from './dto/catalog.dto';
 
@@ -21,6 +23,7 @@ export class CatalogController {
 
   @Public()
   @Get()
+  @PublicCache(PUBLIC_CACHE_SECONDS.catalog)
   @ApiOperation({ summary: 'Danh mục lọc đang bật (hãng xe / kiểu dáng / nhiên liệu / tiện ích)' })
   @ApiOkResponse({ type: [CatalogItemDto] })
   list(@Query() query: CatalogQueryDto): Promise<CatalogItemDto[]> {

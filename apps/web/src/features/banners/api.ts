@@ -1,3 +1,4 @@
+import { REVALIDATE_BANNER_SECONDS } from '@/constants/cache';
 import { getApiBaseUrl } from '@/services/api-client';
 import type { PublicBanner } from './types';
 
@@ -16,7 +17,7 @@ export async function fetchBannersServer(): Promise<PublicBanner[]> {
      */
     const res = await fetch(`${getApiBaseUrl()}/public/banners`, {
       cache: 'force-cache',
-      next: { revalidate: 60 },
+      next: { revalidate: REVALIDATE_BANNER_SECONDS },
     });
     if (!res.ok) return [];
     const body = (await res.json()) as { data: PublicBanner[] };

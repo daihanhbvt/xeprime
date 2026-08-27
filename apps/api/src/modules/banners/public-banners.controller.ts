@@ -1,6 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { PUBLIC_CACHE_SECONDS } from '@xeprime/types';
 import { Public } from '../../common/decorators';
+import { PublicCache } from '../../common/http-cache';
 import { BannersService } from './banners.service';
 import { PublicBannerDto } from './dto/banner.dto';
 
@@ -17,6 +19,7 @@ export class PublicBannersController {
 
   @Public()
   @Get()
+  @PublicCache(PUBLIC_CACHE_SECONDS.banner)
   @ApiOperation({ summary: 'Tối đa 3 banner đang hiển thị cho hero trang chủ' })
   @ApiOkResponse({ type: [PublicBannerDto] })
   list(): Promise<PublicBannerDto[]> {
