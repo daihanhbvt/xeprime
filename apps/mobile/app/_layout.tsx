@@ -11,10 +11,12 @@ import { TamaguiProvider } from 'tamagui';
 import 'react-native-reanimated';
 
 import { AppErrorScreen } from '@/components/state/AppErrorScreen';
+import { AppToastProvider } from '@/components/feedback/AppToast';
 import { SessionBoundary } from '@/features/auth/SessionBoundary';
 import { I18nProvider } from '@/i18n/I18nProvider';
 import { queryClient } from '@/queries/query-client';
 import { store } from '@/store';
+import { useAppFonts } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { tamaguiConfig } from '@/theme/tamagui.config';
 import { duration } from '@/theme/motion';
@@ -29,6 +31,9 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 }
 
 export default function RootLayout() {
+  // Không chặn render theo kết quả: chữ hiện ngay bằng font hệ thống rồi đổi mặt — xem docblock.
+  useAppFonts();
+
   return (
     // `initialMetrics` lấy inset đồng bộ lúc khởi động; thiếu nó thì frame đầu render với
     // inset = 0 rồi nhảy khi giá trị thật về từ native.
@@ -37,6 +42,12 @@ export default function RootLayout() {
         <ReduxProvider store={store}>
           <I18nProvider>
             <QueryClientProvider client={queryClient}>
+              {/*
+                Trong `SafeAreaProvider` (viewport cần inset thật) và BAO NGOÀI `Stack`: toast
+                phải sống sót qua điều hướng — bắn một thông báo rồi `router.replace` mà provider
+                nằm trong màn hình thì nó bị tháo cùng màn đó và người dùng không kịp đọc gì.
+              */}
+              <AppToastProvider>
               <SessionBoundary>
                 <Stack
                   screenOptions={{
@@ -56,9 +67,16 @@ export default function RootLayout() {
                     name="login"
                     options={{ animation: 'slide_from_bottom', animationDuration: duration.slow }}
                   />
+                  {/*
+                    Chặng quay về của đăng nhập mạng xã hội. `animation: none` vì màn này chỉ
+                    tồn tại vài trăm mili giây trước khi `enterApp()` đóng nó — một cú trượt
+                    ở đây là chuyển động cho một thứ người dùng không cần thấy.
+                  */}
+                  <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
                   <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
                 </Stack>
               </SessionBoundary>
+              </AppToastProvider>
             </QueryClientProvider>
           </I18nProvider>
         </ReduxProvider>

@@ -72,6 +72,7 @@ export function StickySearchBar({
   const barStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: (progress.value - 1) * STICKY_BAR_HEIGHT }],
     opacity: progress.value,
+    pointerEvents: progress.value > 0.99 ? 'auto' : 'none',
   }));
 
   return (

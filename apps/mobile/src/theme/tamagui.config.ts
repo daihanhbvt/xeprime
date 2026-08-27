@@ -1,4 +1,7 @@
+import { createAnimations } from '@tamagui/animations-react-native';
 import { createTamagui, createFont, createTokens } from 'tamagui';
+import { FONT_FAMILY } from './fonts';
+import { duration } from './motion';
 import { colors, fontSize, fontWeight, radius, sizing, space } from './tokens';
 
 /**
@@ -51,12 +54,14 @@ const light = {
   shadowColor: 'rgba(0,0,0,0.12)',
 };
 
-/**
- * Font hệ thống, KHÔNG nhúng file font: mỗi face nhúng thêm ~200KB vào bundle và phải chờ
- * `expo-font` nạp xong mới render được chữ đầu tiên. Cỡ và trọng lượng vẫn là token chung.
- */
 const bodyFont = createFont({
-  family: 'System',
+  family: FONT_FAMILY.body,
+  face: {
+    [fontWeight.regular]: { normal: FONT_FAMILY.body },
+    [fontWeight.medium]: { normal: FONT_FAMILY.medium },
+    [fontWeight.semibold]: { normal: FONT_FAMILY.semibold },
+    [fontWeight.bold]: { normal: FONT_FAMILY.bold },
+  },
   size: {
     1: fontSize.label,
     2: fontSize.bodySm,
@@ -89,10 +94,25 @@ const bodyFont = createFont({
   },
 });
 
+const animations = createAnimations({
+  fast: { type: 'timing', duration: duration.fast },
+  medium: { type: 'timing', duration: duration.base },
+  slow: { type: 'timing', duration: duration.slow },
+});
+
+const displayFont = createFont({
+  family: FONT_FAMILY.display,
+  face: { [fontWeight.bold]: { normal: FONT_FAMILY.display } },
+  size: bodyFont.size,
+  lineHeight: bodyFont.lineHeight,
+  weight: { true: fontWeight.bold },
+});
+
 export const tamaguiConfig = createTamagui({
+  animations,
   tokens,
   themes: { light, dark: light },
-  fonts: { body: bodyFont, heading: bodyFont },
+  fonts: { body: bodyFont, heading: displayFont },
   defaultTheme: 'light',
   shorthands: {
     bg: 'backgroundColor',

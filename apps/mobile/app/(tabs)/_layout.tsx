@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslations } from 'use-intl';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
-import { colors, fontSize, fontWeight, sizing, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { duration } from '@/theme/motion';
 
 /**
@@ -15,8 +16,22 @@ import { duration } from '@/theme/motion';
  * `href: null` gỡ hẳn một màn khỏi thanh tab nhưng GIỮ nó trong navigator, nên sau khi đăng
  * nhập không phải dựng lại cây điều hướng — thanh tab chỉ hiện ra.
  */
+/*
+ * Cố ý KHÔNG dùng `size` mà navigator truyền vào: giá trị đó đổi theo nền tảng và theo bản
+ * react-navigation, nên thanh tab cao thấp khác nhau giữa hai máy mà không dòng code nào giải
+ * thích được.
+ */
+
+/**
+ * Chiều cao phần NHÌN THẤY của thanh, CHƯA gồm safe area.
+ *
+ * Vẫn trên sàn chạm 48dp: 4 (đệm trên) + 20 (icon) + 16 (nhãn 12px × 1.3) + đệm dưới.
+ */
+const TAB_BAR_HEIGHT = 56;
+
 export default function TabsLayout() {
   const t = useTranslations('Navigation.public');
+  const insets = useSafeAreaInsets();
   const { data: user } = useCurrentUser();
 
   /** Màn của khách chưa đăng nhập: ẩn khỏi thanh tab cho tới khi có phiên. */
@@ -39,9 +54,20 @@ export default function TabsLayout() {
               backgroundColor: colors.surface,
               borderTopColor: colors.borderSubtle,
               borderTopWidth: 1,
-              height: sizing.touchTarget + 26,
+              /*
+               * Chiều cao PHẢI cộng `insets.bottom`, và đệm dưới cũng vậy.
+               *
+               * Expo SDK 54 bật edge-to-edge mặc định trên Android (targetSdk 36): app vẽ xuống
+               * tận đáy màn, dưới cả thanh điều hướng cử chỉ. Một `height` cứng nghĩa là hàng
+               * icon nằm ĐÚNG chỗ thanh điều hướng đang chiếm — nhãn bị cắt và cú chạm rơi vào
+               * hệ thống thay vì vào tab.
+               *
+               * Trên máy có phím cứng hoặc iPhone không tai thỏ, `insets.bottom` là 0 và công
+               * thức tự thu về đúng chiều cao gốc — không cần rẽ nhánh theo nền tảng.
+               */
+              height: TAB_BAR_HEIGHT + insets.bottom,
               paddingTop: space.xs,
-              paddingBottom: space.xs,
+              paddingBottom: insets.bottom + space.xs,
             }
           : // Guest chỉ có một màn — một thanh tab đúng một mục là thanh trang trí chiếm chỗ.
             { display: 'none' },
@@ -49,15 +75,20 @@ export default function TabsLayout() {
           fontSize: fontSize.label,
           fontWeight: fontWeight.medium,
         },
-        tabBarItemStyle: { paddingVertical: space.xs },
+        /*
+         * KHÔNG đệm dọc ở đây nữa. Nó cộng dồn với `paddingTop`/`paddingBottom` của thanh, đẩy
+         * tổng chiều cao vượt quá `height` đã khai — react-navigation khi đó cắt bớt, và thứ bị
+         * cắt luôn là nhãn ở dưới cùng. Đó chính là cái "vỡ" nhìn thấy trên máy.
+         */
+        tabBarItemStyle: { paddingVertical: 0 },
       }}
     >
       <Tabs.Screen
         name="explore"
         options={{
           title: t('explore'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="compass-outline" color={color} size={size} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="compass-outline" color={color} size={iconSize.lg} />
           ),
         }}
       />
@@ -66,8 +97,8 @@ export default function TabsLayout() {
         options={{
           ...authOnly,
           title: t('chat'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="chatbubble-ellipses-outline" color={color} size={iconSize.lg} />
           ),
         }}
       />
@@ -76,8 +107,8 @@ export default function TabsLayout() {
         options={{
           ...authOnly,
           title: t('tripsShort'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" color={color} size={size} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="calendar-outline" color={color} size={iconSize.lg} />
           ),
         }}
       />
@@ -86,8 +117,8 @@ export default function TabsLayout() {
         options={{
           ...authOnly,
           title: t('account'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="person-outline" color={color} size={iconSize.lg} />
           ),
         }}
       />

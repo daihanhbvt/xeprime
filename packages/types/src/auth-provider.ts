@@ -31,3 +31,8 @@ export const AUTH_PROVIDER_LABEL: Readonly<Record<AuthProvider, string>> = {
   [AUTH_PROVIDER.GOOGLE]: 'Google',
   [AUTH_PROVIDER.FACEBOOK]: 'Facebook',
 };
+
+export const AUTH_PROVIDER_BRAND_COLOR: Readonly<Record<AuthProvider, string>> = {
+  [AUTH_PROVIDER.GOOGLE]: '#EA4335',
+  [AUTH_PROVIDER.FACEBOOK]: '#1877F2',
+};
