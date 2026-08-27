@@ -68,6 +68,41 @@ mọi kết nối vào khi profile mạng là **Public**, và Wi-Fi thường m�
 ⚠️ Expo nội suy `EXPO_PUBLIC_*` **lúc build bundle**, không đọc lại lúc chạy: sửa `.env` xong
 phải khởi động lại Metro (`expo start --clear`), bấm `r` để reload là vẫn giá trị cũ.
 
+### Đăng nhập Google/Facebook trên máy thật CẦN cách A, không thay được bằng B
+
+Đây là ngoại lệ của khuyến nghị ngay trên, và nó không hiển nhiên: luồng social có **hai chặng
+mạng khác nhau**, đi bằng hai đường khác nhau.
+
+| Chặng | Ai gọi | URL dựng từ |
+| --- | --- | --- |
+| App → API (mọi request thường) | `fetch` trong app | `EXPO_PUBLIC_API_URL` — IP LAN, cách B, chạy tốt |
+| Provider → API (chặng callback) | **trình duyệt trên điện thoại** | `API_PUBLIC_URL` ở `.env` gốc |
+
+Google chỉ chấp nhận `redirect_uri` dạng `http` khi host là `localhost`/`127.0.0.1`; mọi host
+khác phải là `https` với tên miền thật. Nên `API_PUBLIC_URL` **không đổi sang IP LAN được** —
+đưa `http://192.168.1.183:4000` vào Google Console sẽ bị từ chối thẳng.
+
+Hệ quả: trên máy thật, trình duyệt được đưa về `http://localhost:4000/auth/social/…` và
+`localhost` lúc đó là chính chiếc điện thoại. Triệu chứng là trang lỗi "không truy cập được"
+NGAY SAU khi bấm đồng ý ở Google — trong khi mọi thứ khác của app vẫn chạy bình thường, nên rất
+dễ đi tìm nhầm chỗ.
+
+```bash
+adb reverse tcp:4000 tcp:4000    # để localhost:4000 trên máy trỏ về máy dev
+adb reverse --list               # kiểm tra: phải thấy cả tcp:8081 lẫn tcp:4000
+```
+
+Chạy lại lệnh đó **sau mỗi lần khởi động Metro** — Metro dựng lại bảng reverse và chỉ tự khôi
+phục 8081 của nó. Giữ nguyên `EXPO_PUBLIC_API_URL` ở IP LAN: hai chặng dùng hai đường, không
+xung đột.
+
+Trên **emulator** thì không gặp: `10.0.2.2` và `localhost` đều đã trỏ về máy host.
+
+Triệu chứng phân biệt, không cần log: trình duyệt mở ra rồi **đứng ở trang lỗi** ngay sau khi
+bấm đồng ý ⇒ chặng callback không tới được máy dev (thiếu `adb reverse`). Trình duyệt **tự đóng**
+mà app không đăng nhập ⇒ lỗi ở bước đổi mã, xem response của
+`POST /auth/mobile/social/exchange`.
+
 ### Build Android trên máy dev Windows
 
 `apps/mobile/android/` do `expo prebuild` sinh ra và bị gitignore. Máy dev cần **JDK 21** (JDK
@@ -130,6 +165,7 @@ apps/mobile/
     ├── components/
     │   ├── layout/AppHeader.tsx  #   ⚠️ HEADER DÙNG CHUNG — mọi màn reuse, đừng dựng riêng
     │   ├── layout/Screen.tsx     #   khung màn: safe area + bàn phím + cuộn
+    │   ├── feedback/             #   ⚠️ TOAST DÙNG CHUNG — AppToastProvider + useAppToast()
     │   ├── state/                #   ScreenLoading · ScreenError · ScreenMessage · AppErrorScreen
     │   ├── ui/                   #   Button · TextField · Card · Chip · IconButton · Avatar · Skeleton
     │   └── i18n/LocaleSwitcher.tsx
@@ -137,7 +173,7 @@ apps/mobile/
     ├── hooks/                    # hook dùng chung không thuộc miền nào
     ├── i18n/                     # config · formats · provider · messages · intl-polyfill
     │                             #   app-format/domain: BẢN SAO của apps/web (xem §7)
-    ├── lib/                      # api-client · auth-session · fetch-with-timeout · secure-storage · logger
+    ├── lib/                      # api-client · auth-session · pkce · fetch-with-timeout · secure-storage · logger
     ├── queries/                  # queryClient · queryKeys · reset-session-cache
     ├── store/                    # Redux Toolkit — chỉ ĐĂNG KÝ reducer, slice thuộc về feature
     ├── theme/                    # tokens · elevation · tamagui.config (Tamagui đọc chính tokens)
@@ -241,9 +277,16 @@ Native KHÔNG dùng cookie: trên React Native cookie do cookie store của OS q
 flush xuống đĩa, nên kill app là mất phiên. Thay vào đó là **Bearer access token 15 phút +
 refresh token opaque xoay vòng**, thu hồi được theo thiết bị.
 
+**Ba đường vào, một kho token.** Mật khẩu, OTP và mạng xã hội đều kết thúc ở cùng
+`storeTokens()` của `lib/auth-session.ts`; phần còn lại của app không phân biệt được người dùng
+đã đăng nhập bằng cách nào, và đó là điều kiện để refresh/đăng xuất chỉ có một bản.
+
 ```mermaid
 flowchart TD
-  L["POST /auth/mobile/login"] --> T["lib/auth-session<br/>access token → BỘ NHỚ · refresh token → Keychain/Keystore"]
+  L1["POST /auth/mobile/login<br/>email/SĐT + mật khẩu"] --> T
+  L2["POST /auth/mobile/phone/login<br/>SĐT + OTP"] --> T
+  L3["GET /auth/social/:provider?client=native<br/>→ deep link ?code= →<br/>POST /auth/mobile/social/exchange"] --> T
+  T["lib/auth-session<br/>access token → BỘ NHỚ · refresh token → Keychain/Keystore"]
   R["Request bất kỳ"] --> G["getFreshAccessToken()"]
   G -->|"còn hạn (trừ 30s)"| H["gắn Authorization: Bearer"]
   G -->|"hết hạn"| F["POST /auth/mobile/refresh<br/>SINGLE-FLIGHT"]
@@ -264,11 +307,12 @@ flowchart TD
 | Tầng                       | Ở đâu                                                              | Việc                                                                                            |
 | -------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
 | Kho token                  | [src/lib/auth-session.ts](src/lib/auth-session.ts)                 | Nơi DUY NHẤT biết token; đọc/ghi Keychain, làm mới, phát sự kiện "phiên kết thúc"                |
+| PKCE app ↔ backend         | [src/lib/pkce.ts](src/lib/pkce.ts)                                 | Sinh `code_verifier`/`code_challenge` cho social; verifier chỉ ở bộ nhớ (ADR 0019)             |
 | Dọn trạng thái             | [SessionBoundary.tsx](src/features/auth/SessionBoundary.tsx)       | Nằm ngoài cây điều hướng nên **không** gọi được `useRouter` — nó chỉ dọn cache                  |
 | Quyết định                 | [use-session-gate.ts](src/features/auth/hooks/use-session-gate.ts) | Trả về `loading \| unauthenticated \| unreachable \| ready` — kiểm thử được mà không cần router |
 | Điều hướng (chưa nối)      | [app/(app)/_layout.tsx](<app/(app)/_layout.tsx>)                   | Nơi **duy nhất** gọi `<Redirect>`                                                               |
 
-Bảy luật đi kèm, đừng phá:
+Chín luật đi kèm, đừng phá:
 
 1. **Refresh token CHỈ ở Keychain/Keystore.** Không `AsyncStorage`, không redux-persist, không
    log. Access token sống 15 phút nên nó ở **bộ nhớ** — ghi xuống đĩa chỉ thêm một chỗ để rò.
@@ -288,6 +332,12 @@ Bảy luật đi kèm, đừng phá:
    thang máy là bắt người dùng đăng nhập lại vô cớ.
 7. **Đăng xuất phải gọi server.** Chỉ xoá ở máy là để phiên sống tiếp trên server tới 60 ngày.
    Ngược lại, server không trả lời cũng vẫn xoá ở máy — người dùng đã bấm rồi.
+8. **`code_verifier` của social KHÔNG bao giờ chạm đĩa.** Nó sống vài giây trong bộ nhớ giữa lúc
+   mở trình duyệt và lúc đổi mã ([lib/pkce.ts](src/lib/pkce.ts)). Ghi nó vào Keychain "cho chắc"
+   là tự tạo ra thứ để đánh cắp — nó tồn tại chính vì one-time code trên deep link không an toàn.
+9. **Người dùng đóng trình duyệt social ⇒ `null`, không phải lỗi.** `signInWithSocial` trả
+   `null` cho cả `type !== 'success'` lẫn `?error=SOCIAL_CANCELLED`. Ném lỗi ở đây nghĩa là mọi
+   nơi gọi phải nhớ lọc riêng một mã để không hiện dải đỏ cho một người chỉ đổi ý.
 
 Kèm theo: **màn hình KHÔNG tự kiểm 401**; chúng nằm sau guard và dùng
 [`useAuthenticatedUser()`](src/features/auth/hooks/use-authenticated-user.ts) — hook này **ném
@@ -316,6 +366,32 @@ có `XP_LIVE_API=1` thì suite tự bỏ qua, nên `pnpm test` vẫn chạy đư
 > `(auth)` không chặn người đã đăng nhập, và chưa có màn "thiết bị đang đăng nhập" dù backend đã
 > lưu `deviceName`/`devicePlatform`/`appVersion` của từng phiên.
 ---
+
+## 5b. Thông báo — MỘT hệ toast cho toàn app
+
+Mọi thao tác gọi API phải kết thúc bằng một phản hồi nhìn thấy được: đang chạy (nút loading +
+khoá), rồi thành công hoặc lỗi. Phần "thành công/lỗi" đi qua toast, và **chỉ có một hệ**.
+
+| Tầng | Ở đâu | Việc |
+| --- | --- | --- |
+| Provider | [AppToast.tsx](src/components/feedback/AppToast.tsx) — `AppToastProvider` | Gói `ToastProvider` + viewport + component render làm một. Nằm ở `app/_layout.tsx`, **ngoài** `Stack` |
+| Hiển thị | cùng file — `AppToast` | MỘT component cho cả ba preset; `PRESET_SKIN` là chỗ duy nhất quyết định màu/icon |
+| Gọi | [use-app-toast.ts](src/components/feedback/use-app-toast.ts) — `useAppToast()` | `showSuccess` · `showError` · `showInfo` |
+
+Luật:
+
+1. **Màn hình không import `useToastController` của Tamagui.** Đi thẳng nghĩa là mỗi nơi tự chọn
+   `duration` và tự nhớ đặt `customData.preset` — quên một lần thì lỗi hiện ra màu xanh.
+2. **Không dựng hệ toast thứ hai cho một feature.** Preset mới, nếu thật sự cần, thêm vào
+   `TOAST_PRESET` + `PRESET_SKIN`.
+3. **Provider nằm NGOÀI `Stack`.** Bắn toast rồi `router.replace` — đặt trong màn hình thì
+   provider bị tháo cùng màn đó và người dùng không đọc được gì.
+4. **`message` là chuỗi ĐÃ DỊCH.** Lỗi API đi qua `useErrorMessage()` để dịch từ MÃ (ADR 0012);
+   không bao giờ hiện `message` tiếng Việt cố định của backend, không bao giờ hiện lỗi thô.
+5. **Lỗi của một LẦN GỬI dùng toast; lỗi của một Ô dùng chỗ dưới ô đó.** Dải đỏ giữa form đẩy bố
+   cục xuống một nấc và vẫn nằm đó sau khi người dùng đã sửa.
+6. **`native={false}`** — toast dựng bằng JS để iOS/Android/web giống nhau theo hệ thiết kế.
+   Toast native (`burnt`) mỗi nền tảng một kiểu và không nhận token màu của app.
 
 ## 6. Ranh giới trạng thái (giống `apps/web`, ADR 0004)
 

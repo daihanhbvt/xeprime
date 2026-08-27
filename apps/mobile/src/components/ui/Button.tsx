@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable } from 'react-native';
 import { Text, XStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import type { IconName } from './Chip';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -38,8 +38,16 @@ export function Button({
 }: ButtonProps) {
   const blocked = disabled || loading;
   const skin = VARIANT[variant];
-  // Nền disabled là xám nhạt — giữ màu chữ của biến thể trên đó thì nút vẫn trông bấm được.
-  const fg = blocked ? colors.textDisabled : skin.fg;
+  /*
+   * Chữ của nút bị khoá dùng `textMuted`, KHÔNG dùng `textDisabled`.
+   *
+   * `textDisabled` là `rgba(26,26,26,.25)` — đặt lên nền `surfaceMuted` (#f5f3ef) thì tương
+   * phản chỉ ~1.6:1, tức nhãn gần như biến mất. Người dùng không đọc được nút đang nói gì, và
+   * trạng thái khoá đọc thành "màn hình lỗi" thay vì "chưa nhập đủ".
+   *
+   * Cái phân biệt khoá với bấm được là NỀN (be xám so với gold), không phải độ mờ của chữ.
+   */
+  const fg = blocked ? colors.textMuted : skin.fg;
 
   return (
     <Pressable
@@ -67,7 +75,7 @@ export function Button({
           <ActivityIndicator color={fg} size="small" />
         ) : (
           <>
-            {icon ? <Ionicons name={icon} size={18} color={fg} /> : null}
+            {icon ? <Ionicons name={icon} size={iconSize.md} color={fg} /> : null}
             <Text
               col={fg}
               fos={size === 'lg' ? fontSize.bodyLg : fontSize.body}

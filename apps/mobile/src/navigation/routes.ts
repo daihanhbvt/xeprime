@@ -41,6 +41,7 @@ export const ROUTES = {
   account: {
     home: (): Href => '/account',
     login: (): Href => '/login',
+    setPassword: (): Href => '/set-password',
   },
 
   /** Gốc app — chỉ dùng cho fallback khi không có màn nào để lui về. */

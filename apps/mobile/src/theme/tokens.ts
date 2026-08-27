@@ -132,6 +132,13 @@ export const fontWeight = {
   bold: resolve('font-weight-bold') as '700',
 } as const;
 
+export const iconSize = {
+  xs: 13,
+  sm: 16,
+  md: 18,
+  lg: 20,
+} as const;
+
 export const sizing = {
   /**
    * Vùng chạm tối thiểu của cả hai nền tảng (44pt iOS / 48dp Android) — token `touch-target-min`

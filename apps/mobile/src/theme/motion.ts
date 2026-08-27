@@ -12,6 +12,11 @@ export const duration = {
   pulse: 800,
 } as const;
 
+export const dwell = {
+  toast: 3200,
+  toastError: 5000,
+} as const;
+
 export const easing = {
   /** Bezier chuẩn Material — vào nhanh, ra chậm. */
   standard: [0.2, 0, 0, 1] as const,

@@ -30,6 +30,11 @@ export const loginSchema = yup.object({
 });
 export type LoginValues = yup.InferType<typeof loginSchema>;
 
+export const otpLoginSchema = yup.object({
+  phone: requiredPhoneSchema,
+});
+export type OtpLoginValues = yup.InferType<typeof otpLoginSchema>;
+
 export const registerSchema = yup.object({
   displayName: yup.string().trim().required('Vui lòng nhập họ tên').max(255),
   phone: requiredPhoneSchema,

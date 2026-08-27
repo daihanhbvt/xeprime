@@ -8,6 +8,21 @@ packages:
 # thiết) và làm hỏng mọi lệnh con. Deps đã cài đủ nên tắt là an toàn.
 verifyDepsBeforeRun: false
 
+# GHIM expo-font về bản của Expo SDK 54.
+#
+# `@expo/vector-icons@15.1.1` khai peer `expo-font: ">=14.0.4"` — một range MỞ, nên pnpm chọn
+# `expo-font@57.0.1` (của SDK 57) và dựng một biến thể vector-icons trỏ vào đó. Ở tầng JS không
+# ai thấy gì; ở tầng NATIVE thì `FontLoaderModule` của bản 57 gọi
+# `ReturnTypeKt.getDirectConverter` — API mà `expo-modules-core@3.0.30` của SDK 54 chưa có.
+#
+# Triệu chứng là app Android CHẾT NGAY khi mở, `NoSuchMethodError` trong logcat và **không có
+# một dòng lỗi JS nào** ở Metro — vì nó chết trước khi runtime JS kịp chạy. Chỉ lộ ra sau một
+# lần `expo prebuild` + build lại, nên rất dễ đổ oan cho thay đổi code gần nhất.
+#
+# Bỏ dòng này thì phải kiểm lại `pnpm why expo-font` chỉ còn MỘT phiên bản.
+overrides:
+  expo-font: 14.0.12
+
 # Giữ lại cho pnpm 10; pnpm 11 bỏ qua khóa này và đọc `allowBuilds` ở cuối file.
 onlyBuiltDependencies:
   - '@prisma/client'

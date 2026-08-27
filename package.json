@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "turbo run dev",
-    "dev:no-turbo": "pnpm -r --parallel --filter @xeprime/api --filter @xeprime/web --filter @xeprime/worker run dev",
+    "packages:build": "pnpm -r --filter \"./packages/*\" --filter @xeprime/prisma run build",
+    "dev:no-turbo": "pnpm run packages:build && pnpm -r --parallel --filter @xeprime/api --filter @xeprime/web --filter @xeprime/worker run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
