@@ -1,8 +1,9 @@
+import { APP_NAME } from '@/constants/app-name';
 import { cx } from '@/lib/cx';
 import styles from './Logo.module.css';
 
 /**
- * Logo XePrime.
+ * Logo thương hiệu.
  *
  * ⚠️ TẠM: đây là bản mô phỏng (car glyph + wordmark) vẽ lại từ ảnh brand, CHƯA phải file
  * thật. Khi có logo chính thức: thả SVG vào `apps/web/public/brand/` rồi thay phần `<Mark/>`
@@ -40,12 +41,11 @@ export function Logo({ variant = 'full', size = 'md', tone = 'default', classNam
   return (
     <span
       className={cx(styles.logo, styles[size], tone === 'light' && styles.light, className)}
-      aria-label="XePrime"
+      aria-label={APP_NAME}
     >
       <Mark />
-      <span className={styles.word}>
-        <b>xe</b> <span>prime</span>
-      </span>
+      {/* Một `<span>`, một style: tên đọc từ env nên không cắt được thành hai nửa cố định. */}
+      <span className={styles.word}>{APP_NAME}</span>
     </span>
   );
 }

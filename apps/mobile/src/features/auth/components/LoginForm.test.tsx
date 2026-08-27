@@ -27,7 +27,7 @@ function renderLoginForm(onSuccess = jest.fn()) {
   const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   const ui: ReactElement = withIntl(
     <QueryClientProvider client={queryClient}>
-      <LoginForm onSuccess={onSuccess} />
+      <LoginForm onSuccess={onSuccess} onForgotPassword={jest.fn()} />
     </QueryClientProvider>,
   );
   return render(ui);

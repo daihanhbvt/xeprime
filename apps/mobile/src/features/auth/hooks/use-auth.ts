@@ -8,7 +8,9 @@ import {
   loginWithOtp,
   loginWithPassword,
   loginWithSocial,
+  registerWithPassword,
   type CurrentUser,
+  type RegisterInput,
 } from '../api';
 
 export function useCurrentUser(): UseQueryResult<CurrentUser> {
@@ -32,6 +34,15 @@ export function useLogin() {
   return useMutation({
     mutationFn: (values: { identifier: string; password: string }) =>
       loginWithPassword(values.identifier, values.password),
+    onSuccess: (user) => seedSession(queryClient, user),
+  });
+}
+
+export function useRegister() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (values: RegisterInput) => registerWithPassword(values),
     onSuccess: (user) => seedSession(queryClient, user),
   });
 }

@@ -26,25 +26,9 @@
   white-space: nowrap;
 }
 
-.word b {
-  color: var(--xp-gold-deep);
-  font-weight: 600;
-}
-
-.word span {
-  font-weight: 300;
-  color: var(--xp-color-text-secondary);
-}
-
-/* Nền tối: chữ trắng, riêng "xe" giữ vàng nhạt để vẫn nhận ra thương hiệu. */
+/* Nền tối (hero, CTA chủ xe). */
 .light .word {
   color: #fff;
-}
-.light .word b {
-  color: var(--xp-gold-soft);
-}
-.light .word span {
-  color: rgba(255, 255, 255, 0.82);
 }
 
 /* --- Kích thước: áp lên .mark (khi variant=mark) hoặc .logo (khi full) --- */
