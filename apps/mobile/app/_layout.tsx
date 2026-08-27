@@ -68,6 +68,15 @@ export default function RootLayout() {
                     options={{ animation: 'slide_from_bottom', animationDuration: duration.slow }}
                   />
                   {/*
+                    Đăng ký dùng CÙNG chuyển cảnh với đăng nhập: hai màn là hai chế độ của một
+                    việc (web dựng chúng trong cùng một modal), và chúng thay thế nhau bằng
+                    `replace` — một đường cong khác ở đây sẽ đọc thành "đi sâu thêm một nấc".
+                  */}
+                  <Stack.Screen
+                    name="register"
+                    options={{ animation: 'slide_from_bottom', animationDuration: duration.slow }}
+                  />
+                  {/*
                     Chặng quay về của đăng nhập mạng xã hội. `animation: none` vì màn này chỉ
                     tồn tại vài trăm mili giây trước khi `enterApp()` đóng nó — một cú trượt
                     ở đây là chuyển động cho một thứ người dùng không cần thấy.

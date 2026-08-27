@@ -31,7 +31,8 @@ import { colors, fontSize, space } from '@/theme/tokens';
  * là "Bỏ qua" hoặc đặt mật khẩu — cả hai đều dẫn vào app.
  */
 export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
-  const t = useTranslations('Auth.setPassword');
+  const t = useTranslations('Auth');
+  const tSet = useTranslations('Auth.setPassword');
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
 
@@ -48,7 +49,7 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
   const save = useMutation({
     mutationFn: (values: ResetPasswordValues) => setAccountPassword(values.password),
     onSuccess: () => {
-      toast.showSuccess(t('done'));
+      toast.showSuccess(tSet('done'));
       onDone();
     },
     onError: (error) => toast.showError(errorMessage(error)),
@@ -64,10 +65,10 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
         <YStack gap={space.xl}>
           <YStack gap={space.xs}>
             <Text col={colors.text} fontFamily="$heading" fos={fontSize.h2}>
-              {t('title')}
+              {tSet('title')}
             </Text>
             <Text col={colors.textMuted} fos={fontSize.body}>
-              {t('body')}
+              {tSet('body')}
             </Text>
           </YStack>
 
@@ -76,9 +77,9 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
               control={control}
               name="password"
               required
-              label={t('newPassword')}
-              placeholder={t('newPasswordPlaceholderApp')}
-              hint={t('rule')}
+              label={tSet('newPassword')}
+              placeholder={tSet('newPasswordPlaceholderApp')}
+              hint={t('passwordRule')}
               icon="lock-closed-outline"
               secureTextEntry
               autoCapitalize="none"
@@ -90,8 +91,8 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
               control={control}
               name="confirmPassword"
               required
-              label={t('confirmPassword')}
-              placeholder={t('confirmPasswordPlaceholder')}
+              label={tSet('confirmPassword')}
+              placeholder={tSet('confirmPasswordPlaceholder')}
               icon="lock-closed-outline"
               secureTextEntry
               autoCapitalize="none"
@@ -105,7 +106,7 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
 
           <YStack gap={space.sm}>
             <Button
-              label={t('submit')}
+              label={tSet('submit')}
               onPress={onSubmit}
               loading={save.isPending}
               disabled={!isValid}
@@ -113,7 +114,7 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
 
             {/* "Bỏ qua" là LỐI RA, không phụ thuộc `isValid` — chỉ khoá lúc đang lưu. */}
             <Button
-              label={t('skip')}
+              label={tSet('skip')}
               variant="ghost"
               onPress={onDone}
               disabled={save.isPending}

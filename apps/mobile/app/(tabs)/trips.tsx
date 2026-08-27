@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useTranslations } from 'use-intl';
 import { Screen } from '@/components/layout/Screen';
 import { ScreenMessage } from '@/components/state/ScreenMessage';
+import { RequireSession } from '@/features/auth/RequireSession';
 import { ROUTES } from '@/navigation/routes';
 
 /**
@@ -15,14 +16,16 @@ export default function TripsRoute() {
   const router = useRouter();
 
   return (
-    <Screen scroll={false}>
-      <ScreenMessage
-        icon="calendar-outline"
-        title={t('emptyTitle')}
-        description={t('emptyAllBody')}
-        actionLabel={t('findVehicle')}
-        onAction={() => router.replace(ROUTES.explore.home())}
-      />
-    </Screen>
+    <RequireSession>
+      <Screen scroll={false}>
+        <ScreenMessage
+          icon="calendar-outline"
+          title={t('emptyTitle')}
+          description={t('emptyAllBody')}
+          actionLabel={t('findVehicle')}
+          onAction={() => router.replace(ROUTES.explore.home())}
+        />
+      </Screen>
+    </RequireSession>
   );
 }

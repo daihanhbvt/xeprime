@@ -5,6 +5,7 @@
   "memberBadge": "Member",
   "signInRequired": "Please sign in to view your account.",
   "signIn": "Sign in",
+  "logoutConfirm": "You will need to sign in again on this device.",
   "saved": "Account updated",
   "noEmail": "No email yet",
   "noPhone": "No phone number yet",
