@@ -14,12 +14,12 @@ export const SESSION_COOKIE_NAME_DEFAULT = 'xp_session';
 /**
  * Giải tên cookie phiên từ env, có default dùng chung.
  *
- * Ở `apps/web` hàm này chạy trong proxy (Edge) — Next thay `process.env.SESSION_COOKIE_NAME`
- * bằng giá trị lúc build, nên biến phải có mặt khi build web (script build đã nạp `.env` gốc).
+ * Ở `apps/web` hàm này chạy trong proxy, và ở đó `process.env.SESSION_COOKIE_NAME` được đọc lúc
+ * CHẠY chứ không bị nhúng cứng lúc build — Next chỉ nhúng `NEXT_PUBLIC_*` (đo trực tiếp trên Next
+ * 16 + Turbopack, 27/08/2026). Nghĩa là tiến trình `next start` phải có biến này trong môi trường
+ * của nó, không phải chỉ máy build có là đủ.
  */
-export function resolveSessionCookieName(
-  env: { SESSION_COOKIE_NAME?: string } = {},
-): string {
+export function resolveSessionCookieName(env: { SESSION_COOKIE_NAME?: string } = {}): string {
   const raw = env.SESSION_COOKIE_NAME?.trim();
   return raw && raw.length > 0 ? raw : SESSION_COOKIE_NAME_DEFAULT;
 }

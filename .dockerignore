@@ -1,0 +1,54 @@
+# Build context của `deploy/Dockerfile` là GỐC REPO (monorepo pnpm), nên mọi thứ nặng phải
+# bị loại ở đây — không thì `docker build` copy vài GB node_modules của máy dev (Windows,
+# binary sai nền tảng) vào image Linux.
+node_modules
+**/node_modules
+.pnpm-store
+
+# Kết quả build của máy dev. Image tự build lại từ nguồn; copy vào chỉ làm bẩn và có nguy cơ
+# `next start` chạy một bundle cũ.
+#
+# ⚠️ Mẫu KHÔNG có `**/` chỉ khớp ở gốc context — đó là lý do phải viết cả hai dòng cho mỗi thứ.
+# `**/*.tsbuildinfo` là dòng quan trọng nhất ở đây và nó đã từng thiếu: `base.json` bật
+# `incremental: true`, nên `packages/types/tsconfig.build.tsbuildinfo` của máy dev lọt vào image
+# trong khi `dist/` bị loại. tsc đọc file đó, kết luận "không có gì đổi", **emit đúng 0 file và
+# thoát 0** — rồi `@xeprime/domain` chết với TS2307 "Cannot find module '@xeprime/types'". Build
+# xanh trên CI (checkout sạch) và đỏ trên máy dev, đúng loại lỗi mất cả buổi để lần.
+dist
+**/dist
+.next
+**/.next
+.turbo
+**/.turbo
+*.tsbuildinfo
+**/*.tsbuildinfo
+prisma/generated
+
+# Bí mật: `.env` KHÔNG bao giờ đi vào image — kể cả `.env` của app native. Giá trị build-time
+# của web truyền bằng --build-arg (xem deploy/Dockerfile); giá trị runtime do compose nạp qua
+# env_file. Builder tự sinh một `.env` chỉ chứa giá trị công khai.
+.env
+.env.*
+**/.env
+**/.env.*
+*serviceAccount*.json
+**/*serviceAccount*.json
+firebase-adminsdk-*.json
+
+.git
+.github
+.husky
+.codex-worktrees
+.claude
+coverage
+**/coverage
+*.log
+**/*.log
+
+# App native không tham gia deploy web/api.
+apps/mobile/android
+apps/mobile/ios
+apps/mobile/.expo
+
+XePrime_Project_Tracking.xlsx
+~$*

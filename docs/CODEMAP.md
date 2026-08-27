@@ -162,6 +162,19 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | Seed — dựng gian hàng · đội xe · vận hành                                                                                                                                                                                                                                      | `prisma/src/seed/shop.ts` · `shop-fleet.ts` · `shop-operations.ts`                                                      |
 | Cấu hình CLI Prisma 7                                                                                                                                                                                                                                                          | `prisma/prisma.config.ts`                                                                                               |
 
+## Triển khai (production trên 1 VPS)
+
+| Cần gì | Ở đâu |
+| --- | --- |
+| Hướng dẫn deploy đầu-cuối — chọn VPS · DNS · seed · sao lưu · sự cố thường gặp | [`docs/deployment.md`](deployment.md) |
+| Định nghĩa service production (db · redis · migrate · api · web · worker · caddy) | `docker-compose.prod.yml` |
+| Image dùng chung cho api/web/worker/migrate — kèm lý do chỉ có MỘT image | `deploy/Dockerfile` |
+| Reverse proxy + TLS tự động (Let's Encrypt) | `deploy/Caddyfile` |
+| Mẫu biến môi trường production — đối chiếu `apps/api/src/config/env.schema.ts` | `deploy/env.production.example` |
+| Dựng VPS trắng: swap · Docker · ufw · user ứng dụng | `deploy/scripts/vps-bootstrap.sh` |
+| Deploy: sao lưu → build → migrate → khởi động lại (`--env staging` cho môi trường thứ hai) | `deploy/scripts/deploy.sh` |
+| Sao lưu / khôi phục PostgreSQL | `deploy/scripts/backup-db.sh` · `deploy/scripts/restore-db.sh` |
+
 ## Tham chiếu nghiệp vụ (đọc để hiểu "cái gì đang chạy", KHÔNG copy pattern)
 
 | Cần gì                                                  | Ở đâu                                                   |

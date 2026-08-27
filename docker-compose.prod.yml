@@ -1,0 +1,225 @@
+# XePrime — production trên MỘT VPS (CLAUDE.md §3: "Deploy MVP: 1 VPS").
+#
+# Chạy: xem `docs/deployment.md`. Lệnh thường dùng gói trong `deploy/scripts/deploy.sh`.
+#
+# KHÁC docker-compose.yml (file dev) ở ba điểm quan trọng:
+#   1. `db` và `redis` KHÔNG publish cổng ra host — chúng chỉ tồn tại trong mạng nội bộ của
+#      compose. Publish 5432 ra Internet là cách một VPS bị quét và chiếm trong vòng vài giờ.
+#   2. Mọi service có `mem_limit`. Trên máy 6GB dùng chung cho DB + 3 tiến trình Node, một
+#      `next build` hay một truy vấn lỗi không có trần sẽ kéo OOM killer bắn nhầm Postgres.
+#   3. TLS do Caddy tự lo (Let's Encrypt), không cần certbot cron.
+#   4. Tên project mang hậu tố môi trường (`xeprime-production`, `xeprime-staging`). KHÔNG phải để
+#      cho đẹp: nếu trùng tên project với stack dev (`docker-compose.yml`, project mặc định =
+#      tên thư mục `xeprime`) thì một lệnh `down -v` chạy nhầm file sẽ **xoá luôn volume
+#      database dev**. Tách tên là thứ chặn tai nạn đó ở cấp Docker chứ không phải ở cấp trí nhớ.
+#
+# HAI MÔI TRƯỜNG, MỘT FILE. `deploy/scripts/deploy.sh --env staging` đổi ba thứ cùng lúc: tên
+# project (`-p`), file env dùng để nội suy (`--env-file`), và file env nạp vào container
+# (`XP_ENV_FILE`). Không có `container_name` cố định ở đây chính là vì thế — Docker tự đặt tên
+# theo project (`xeprime-staging-api-1`), nên nhìn `docker ps` là biết ngay máy đang chạy môi
+# trường nào, và hai stack không thể giẫm tên nhau nếu có ngày ở chung một máy.
+
+# Chỉ là MẶC ĐỊNH — `-p` của deploy.sh đè lên giá trị này (thứ tự ưu tiên của compose:
+# `-p` > COMPOSE_PROJECT_NAME > `name:` > tên thư mục).
+name: xeprime-production
+
+services:
+  # -------------------------------------------------------------------------
+  # PostgreSQL 16 (ADR 0001)
+  # -------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER chưa đặt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD chưa đặt}
+      POSTGRES_DB: ${POSTGRES_DB:-xeprime}
+      # UTC cố ý, và KHÁC các container app (Asia/Ho_Chi_Minh): dữ liệu lưu UTC timestamptz,
+      # còn giờ Việt Nam là chuyện của tầng hiển thị (CLAUDE.md §9, ADR 0001).
+      TZ: UTC
+      PGTZ: UTC
+    # Tinh chỉnh bằng cờ `-c` chứ KHÔNG mount một postgresql.conf thay thế: khi `config_file`
+    # nằm ngoài PGDATA, Postgres đi tìm `pg_hba.conf` cạnh nó và không thấy — server không
+    # khởi động được, và thông báo lỗi không nói gì về nguyên nhân. Cách này giữ nguyên config
+    # do initdb sinh ra và chỉ đè đúng những giá trị cần đổi.
+    #
+    # Số liệu cho VPS 6GB dùng chung với API + web + worker (≈2GB dành cho Postgres):
+    command:
+      - postgres
+      # ~25% RAM cấp cho DB. Cao hơn thì tranh RAM với Node, thấp hơn thì mọi truy vấn đi đĩa.
+      - -c
+      - shared_buffers=512MB
+      # Ước lượng tổng bộ nhớ HỆ ĐIỀU HÀNH có thể cache — chỉ là gợi ý cho planner, không cấp phát.
+      - -c
+      - effective_cache_size=2GB
+      # Mỗi node sort/hash của MỖI truy vấn. 8MB × vài chục kết nối vẫn an toàn dưới trần 2GB.
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=192MB
+      # SSD: đọc ngẫu nhiên gần bằng đọc tuần tự. Để nguyên 4.0 (mặc định cho đĩa quay) là ép
+      # planner chọn seq scan thay vì các index GIN trigram vừa thêm cho ô tìm kiếm nền tảng.
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      # Prisma mở pool riêng cho api/worker/migrate; 100 là dư và vẫn nằm trong mem_limit.
+      - -c
+      - max_connections=100
+      # Ghi log mọi truy vấn > 1s để có cái mà nhìn khi màn hình chậm.
+      - -c
+      - log_min_duration_statement=1000
+      - -c
+      - timezone=UTC
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-xeprime}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    mem_limit: 2g
+    networks: [internal]
+
+  # -------------------------------------------------------------------------
+  # Redis — CHƯA dùng. Giữ sau `profiles` để bật mà không phải sửa file này.
+  # (docker-compose.yml dev cũng để nguyên hình thức đó.)
+  # -------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    profiles: ['worker-queue']
+    command: ['redis-server', '--maxmemory', '192mb', '--maxmemory-policy', 'allkeys-lru']
+    volumes:
+      - redisdata:/data
+    mem_limit: 256m
+    networks: [internal]
+
+  # -------------------------------------------------------------------------
+  # migrate — one-shot. `deploy.sh` chạy service này TRƯỚC khi api/web khởi động lại.
+  # -------------------------------------------------------------------------
+  migrate:
+    image: xeprime-app:latest
+    # `profiles` giữ nó ngoài `docker compose up -d` — migration là một BƯỚC có thứ tự, không
+    # phải một service luôn chạy.
+    profiles: ['tools']
+    env_file: ['${XP_ENV_FILE:-.env.production}']
+    working_dir: /app/prisma
+    command: ['node_modules/.bin/prisma', 'migrate', 'deploy', '--schema', './schema.prisma']
+    depends_on:
+      db: { condition: service_healthy }
+    networks: [internal]
+
+  # -------------------------------------------------------------------------
+  # API — NestJS (ADR 0002/0017: phát session cookie + Bearer token)
+  # -------------------------------------------------------------------------
+  api:
+    image: xeprime-app:latest
+    # CHỈ service này khai `build`, dù cả bốn dùng chung `xeprime-app:latest`. Khai bốn lần là
+    # bốn lần BuildKit dựng lại graph cho cùng một artifact; khai một lần thì `docker compose
+    # build` sinh đúng một image và ba service kia nhặt nó theo tag.
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL chưa đặt}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-XePrime}
+        NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY:-}
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-}
+        SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-xp_session}
+    restart: unless-stopped
+    env_file: ['${XP_ENV_FILE:-.env.production}']
+    working_dir: /app/apps/api
+    command: ['node', 'dist/main.js']
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      # `/health` ping cả PostgreSQL, không chỉ trả 200 cho có
+      # (apps/api/src/modules/health/health.controller.ts).
+      test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:4000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    mem_limit: 1200m
+    networks: [internal]
+
+  # -------------------------------------------------------------------------
+  # Web — Next.js. Mọi màn hình fetch dữ liệu ở CLIENT, nên tiến trình này chỉ render vỏ:
+  # nó không gọi API server-side và không cần thấy `api` qua mạng nội bộ.
+  # -------------------------------------------------------------------------
+  web:
+    image: xeprime-app:latest
+    restart: unless-stopped
+    # CỐ Ý không có `env_file` — khai TỪNG biến. Nạp cả `.env.production` vào đây là đem mật
+    # khẩu database, SMTP và eSMS đặt vào tiến trình render nội dung do người dùng gửi lên,
+    # trong khi web chỉ cần đúng một biến. `NEXT_PUBLIC_*` đã nhúng cứng lúc build,
+    # `NODE_ENV`/`TZ` nằm sẵn trong image.
+    environment:
+      # BẮT BUỘC. `proxy.ts` đọc biến này lúc CHẠY (Next 16 chỉ nhúng cứng `NEXT_PUBLIC_*`),
+      # nên thiếu nó là proxy quay về tên mặc định `xp_session` trong khi API phát cookie tên
+      # khác — mọi người đã đăng nhập bị đá về `/manage/login` thành vòng lặp, không có lỗi nào
+      # trong log để lần. Đo trực tiếp 27/08/2026 khi dựng môi trường staging.
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-xp_session}
+    working_dir: /app/apps/web
+    command: ['node_modules/.bin/next', 'start', '--port', '3000']
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', '-o', '/dev/null', 'http://127.0.0.1:3000/']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    mem_limit: 900m
+    networks: [internal]
+
+  # -------------------------------------------------------------------------
+  # Worker — việc chạy theo ĐỒNG HỒ: hạn phản hồi yêu cầu thuê, ngày lễ, dọn oauth_states,
+  # đẩy chat sang Firestore. Một instance duy nhất (advisory lock vẫn bảo vệ, nhưng đừng
+  # scale service này).
+  # -------------------------------------------------------------------------
+  worker:
+    image: xeprime-app:latest
+    restart: unless-stopped
+    env_file: ['${XP_ENV_FILE:-.env.production}']
+    working_dir: /app/apps/worker
+    command: ['node', 'dist/main.js']
+    depends_on:
+      db: { condition: service_healthy }
+    mem_limit: 512m
+    networks: [internal]
+
+  # -------------------------------------------------------------------------
+  # Caddy — reverse proxy + TLS tự động. Là tiến trình DUY NHẤT publish cổng ra Internet.
+  # -------------------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp' # HTTP/3
+    environment:
+      WEB_DOMAIN: ${WEB_DOMAIN:?WEB_DOMAIN chưa đặt}
+      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN chưa đặt}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL chưa đặt}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # chứng chỉ — MẤT volume này là phải xin lại chứng chỉ
+      - caddy_config:/config
+    depends_on: [api, web]
+    mem_limit: 256m
+    networks: [internal]
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    driver: bridge
