@@ -25,13 +25,14 @@ Nguồn sống (đọc trước, luôn đúng hiện tại):
 4. File này (CLAUDE.md)
 5. `docs/deployment.md` — đưa lên production (1 VPS, Docker Compose + Caddy) **và CD qua GitHub Actions** (§9). Đọc khi đụng `deploy/`, `docker-compose.prod.yml`, `.github/workflows/`, hoặc thêm biến env mà production cần — **biến env mới phải khai thêm ở GitHub Environment, nếu không deploy đỏ**.
 6. `docs/backup-and-restore.md` — sao lưu và khôi phục PostgreSQL. Đọc khi đụng `deploy/scripts/backup-db.sh`, `deploy/systemd/`, `tools/backup-pull/`.
+7. `docs/third-party-keys.md` — tạo key Google/Facebook/R2/Maps/Firebase/SMTP/eSMS: bật API nào, `redirect_uri` chính xác, khoá key thế nào, thiếu thì hỏng ra sao. Đọc khi cắm một dịch vụ ngoài.
 
 Tham chiếu nghiệp vụ (viết 22/07/2026, **không sửa lại**, phần công nghệ đã bị ADR ghi đè — giá trị ở phần domain):
-7. `docs/xeprime_screen_spec_by_role_before_db.md` — màn hình/chức năng theo role
-8. `docs/xeprime_overall_user_flow_next_node.md` — user flow
-9. `docs/xeprime_database_design.md` — thiết kế đầy đủ các bảng (nhiều bảng làm phase sau)
-10. `docs/xeprime_build_plan_nextjs_nestjs_prod.md` — lộ trình 9 phase
-11. `docs/xeprime_fe_base_stack_calendar.md` — màn lịch (phase 4)
+8. `docs/xeprime_screen_spec_by_role_before_db.md` — màn hình/chức năng theo role
+9. `docs/xeprime_overall_user_flow_next_node.md` — user flow
+10. `docs/xeprime_database_design.md` — thiết kế đầy đủ các bảng (nhiều bảng làm phase sau)
+11. `docs/xeprime_build_plan_nextjs_nestjs_prod.md` — lộ trình 9 phase
+12. `docs/xeprime_fe_base_stack_calendar.md` — màn lịch (phase 4)
 
 > Plan mode ghi vào `docs/plans/` (cấu hình ở `.claude/settings.json`) — plan đi theo repo, không rơi ra ngoài.
 > Dọn docs 23/07/2026: đã xóa `_archive_`, mọi `.docx`, và 3 doc "prompt để build base" (base đã xong). Chi tiết ở `docs/README.md`.
