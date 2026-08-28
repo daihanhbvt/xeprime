@@ -178,6 +178,7 @@ Chỉ mục để nhảy thẳng tới nơi cần, không quét mù. `navigator`
 | **CD**: push `staging`/`main` → deploy · Run workflow → chọn môi trường/ref · `image_tag` → rollback | `.github/workflows/deploy.yml` |
 | Cổng chặn dùng chung (api · web · build image), gọi lại được bằng `workflow_call` | `.github/workflows/ci.yml` |
 | Bảng Variables vs Secrets của GitHub Environment | [`docs/deployment.md`](deployment.md) §9.2 |
+| Tạo key bên thứ ba (OAuth · R2 · Maps · Firebase · SMTP) — endpoint và scope lấy từ code | [`docs/third-party-keys.md`](third-party-keys.md) |
 
 ### Sao lưu
 
