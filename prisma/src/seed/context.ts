@@ -18,7 +18,22 @@ export const prisma = createPrismaClient();
  */
 export const SEED_MODE: 'system' | 'demo' = process.env.SEED_MODE === 'system' ? 'system' : 'demo';
 
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+/**
+ * HAI câu hỏi khác nhau, và gộp chúng làm một là lý do staging từng không seed demo được.
+ *
+ * `IS_DEPLOYED` — "đây có phải một máy nằm trên Internet không?" Đúng với CẢ staging lẫn
+ * production, vì cả hai đều chạy `NODE_ENV=production` (bắt buộc: thiếu nó Next trộn bản React
+ * dev vào bundle). Đây là tầng BẢO MẬT — mật khẩu mẫu không được phép sống ở đây.
+ *
+ * `IS_PRODUCTION_DATA` — "database này có dữ liệu khách hàng thật không?" Chỉ đúng với
+ * production. Đây là tầng DỮ LIỆU — nơi duy nhất phải từ chối gian hàng demo.
+ *
+ * Cùng cách chia mà `apps/api/src/config/env.schema.ts` đã dùng: tầng bảo mật theo `NODE_ENV`,
+ * tầng còn lại theo `APP_ENV`. `APP_ENV` mặc định `production` nên QUÊN khai biến vẫn an toàn —
+ * chốt chặt lại, không lỏng ra.
+ */
+const IS_DEPLOYED = process.env.NODE_ENV === 'production';
+const IS_PRODUCTION_DATA = (process.env.APP_ENV ?? 'production') === 'production';
 
 export const BCRYPT_ROUNDS = 12;
 
@@ -31,22 +46,29 @@ export const PLATFORM_ADMIN_PASSWORD = process.env.PLATFORM_ADMIN_PASSWORD ?? DE
 export const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? DEFAULT_DEV_PASSWORD;
 
 /**
- * Chặn hai tai nạn kinh điển trước khi ghi bất cứ dòng nào:
- *  1. đổ gian hàng demo + tài khoản `@xeprime.test` vào database production;
- *  2. tạo tài khoản platform admin production với mật khẩu mẫu.
+ * Chặn ba tai nạn trước khi ghi bất cứ dòng nào:
+ *  1. đổ gian hàng demo + tài khoản `@xeprime.test` vào database PRODUCTION;
+ *  2. tạo tài khoản platform admin bằng mật khẩu mẫu trên một máy nằm trên Internet;
+ *  3. đổ 19 tài khoản demo dùng mật khẩu mẫu ĐÃ CÔNG KHAI TRONG REPO lên một máy như vậy.
  *
- * Không có cờ "force": muốn dữ liệu nền ở production thì chạy `SEED_MODE=system` — đó là cách
- * đúng, không phải cách vòng.
+ * Không có cờ "force". Muốn dữ liệu nền ở production thì chạy `SEED_MODE=system` — đó là cách
+ * đúng, không phải cách vòng. Và KHÔNG lách bằng `-e NODE_ENV=development`: một lệnh như thế
+ * bị chép nhầm sang production là đổ gian hàng giả vào dữ liệu thật.
  */
 export function assertSeedTargetIsSafe(): void {
-  if (!IS_PRODUCTION) return;
-
-  if (SEED_MODE === 'demo') {
+  // Tầng DỮ LIỆU — chỉ production mới có dữ liệu khách hàng để làm hỏng.
+  if (IS_PRODUCTION_DATA && SEED_MODE === 'demo') {
     throw new Error(
-      'NODE_ENV=production: từ chối seed dữ liệu DEMO. Dùng SEED_MODE=system nếu chỉ cần ' +
-        'permission/role/danh mục/gói dịch vụ.',
+      'APP_ENV=production: từ chối seed dữ liệu DEMO. Dùng SEED_MODE=system nếu chỉ cần ' +
+        'permission/role/danh mục/gói dịch vụ. (Staging đặt APP_ENV=staging thì seed demo được.)',
     );
   }
+
+  // Tầng BẢO MẬT — áp cho MỌI máy đã triển khai, staging cũng như production. Staging nằm trên
+  // Internet công khai và cũng phát cookie phiên thật, nên một mật khẩu in sẵn trong repo ở đó
+  // là một tài khoản quản trị ai cũng đăng nhập được.
+  if (!IS_DEPLOYED) return;
+
   if (!process.env.PLATFORM_ADMIN_PASSWORD) {
     throw new Error(
       'NODE_ENV=production: PLATFORM_ADMIN_PASSWORD là bắt buộc — không dùng mật khẩu mẫu.',
@@ -54,6 +76,12 @@ export function assertSeedTargetIsSafe(): void {
   }
   if (PLATFORM_ADMIN_PASSWORD === DEFAULT_DEV_PASSWORD) {
     throw new Error('NODE_ENV=production: PLATFORM_ADMIN_PASSWORD vẫn là mật khẩu mẫu.');
+  }
+  if (SEED_MODE === 'demo' && DEMO_PASSWORD === DEFAULT_DEV_PASSWORD) {
+    throw new Error(
+      'NODE_ENV=production: seed DEMO cần DEMO_PASSWORD riêng — mật khẩu mẫu nằm công khai ' +
+        'trong repo, và 19 tài khoản demo dùng nó trên một máy công khai là 19 lối vào.',
+    );
   }
 }
 
