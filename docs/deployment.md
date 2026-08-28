@@ -373,12 +373,73 @@ hơn nhiều nhờ cache layer.
 gian hàng demo.
 
 ```bash
-# Đổi `production` thành `staging` ở CẢ HAI chỗ khi chạy trên máy staging.
-XP_ENV_FILE=.env.production docker compose -p xeprime-production \
-  -f docker-compose.prod.yml --env-file .env.production run --rm \
-  -e SEED_MODE=system -w /app/prisma migrate \
-  node_modules/.bin/tsx ./src/seed.ts
+# Đổi `production` → `staging` ở MỌI chỗ khi chạy trên máy staging.
+cd /opt/xeprime
+export XP_ENV_FILE=.env.production
+
+# BẮT BUỘC khi image đến từ GHCR (đường CD, §9). Thiếu nó thì compose rơi về
+# `xeprime-app:latest` — cái tag chỉ tồn tại khi build TẠI CHỖ — và báo
+# "pull access denied for xeprime-app". Lấy thẳng tag đang chạy để không gõ sai sha:
+export XP_IMAGE="$(docker compose -p xeprime-production -f docker-compose.prod.yml \
+  --env-file .env.production ps --format '{{.Image}}' api | head -1)"
+
+# `read -rs` không hiện mật khẩu ra màn hình và không để nó lại trong lịch sử shell.
+read -rsp 'Mật khẩu platform admin: ' PLATFORM_ADMIN_PASSWORD; echo
+
+docker compose -p xeprime-production -f docker-compose.prod.yml --profile tools \
+  --env-file .env.production run --rm \
+  -e SEED_MODE=system -e PLATFORM_ADMIN_PASSWORD="$PLATFORM_ADMIN_PASSWORD" \
+  -w /app/prisma migrate node_modules/.bin/tsx ./src/seed.ts
+
+unset PLATFORM_ADMIN_PASSWORD
 ```
+
+> `PLATFORM_ADMIN_PASSWORD` là **bắt buộc** khi `NODE_ENV=production` (tức là ở cả hai môi
+> trường): `prisma/src/seed/context.ts` từ chối tạo tài khoản quản trị bằng mật khẩu mẫu. Seed
+> dựng `admin@xeprime.vn` với mật khẩu bạn nhập — đổi email bằng `PLATFORM_ADMIN_EMAIL`.
+>
+> `--profile tools` cũng bắt buộc: `migrate` nằm sau profile đó trong compose.
+
+#### Dữ liệu DEMO — chỉ trên staging
+
+`SEED_MODE=demo` dựng 5 gian hàng khác quy mô, 19 tài khoản, 54 xe, 107 đơn và 273 phiếu thu chi
+— đủ để test toàn bộ luồng nghiệp vụ mà không phải bấm tay.
+
+Chốt an toàn chia làm HAI tầng, và biết ranh giới đó là biết vì sao lệnh dưới đây chạy được ở
+staging mà không chạy được ở production:
+
+| Tầng | Đọc biến | Áp cho | Chặn gì |
+| --- | --- | --- | --- |
+| **Dữ liệu** | `APP_ENV` | chỉ production | `SEED_MODE=demo` — nơi duy nhất có dữ liệu khách hàng thật để làm hỏng |
+| **Bảo mật** | `NODE_ENV` | staging **và** production | mật khẩu mẫu: `PLATFORM_ADMIN_PASSWORD` và `DEMO_PASSWORD` phải khai thật |
+
+`APP_ENV` mặc định là `production`, nên **quên khai biến vẫn an toàn** — chốt chặt lại chứ không
+lỏng ra. Cùng cách chia mà `apps/api/src/config/env.schema.ts` đã dùng.
+
+```bash
+# CHỈ chạy trên máy STAGING. Trên production lệnh này bị từ chối, và đó là chủ đích.
+cd /opt/xeprime
+export XP_ENV_FILE=.env.staging
+export XP_IMAGE="$(docker compose -p xeprime-staging -f docker-compose.prod.yml \
+  --env-file .env.staging ps --format '{{.Image}}' api | head -1)"
+
+read -rsp 'Mật khẩu platform admin: ' PW_ADMIN; echo
+read -rsp 'Mật khẩu chung cho tài khoản demo: ' PW_DEMO; echo
+
+docker compose -p xeprime-staging -f docker-compose.prod.yml --profile tools \
+  --env-file .env.staging run --rm \
+  -e SEED_MODE=demo -e PLATFORM_ADMIN_PASSWORD="$PW_ADMIN" -e DEMO_PASSWORD="$PW_DEMO" \
+  -w /app/prisma migrate node_modules/.bin/tsx ./src/seed.ts
+
+unset PW_ADMIN PW_DEMO
+```
+
+> `DEMO_PASSWORD` bắt buộc vì mật khẩu mẫu nằm **công khai trong repo**: 19 tài khoản demo dùng
+> nó trên một máy có mặt trên Internet là 19 lối vào. Seed idempotent trên toàn bộ 63 bảng nên
+> chạy lại nhiều lần không nhân đôi dữ liệu.
+>
+> ⚠️ **Đừng đưa dữ liệu khách hàng thật lên staging** — `APP_ENV=staging` khiến endpoint gửi OTP
+> trả kèm `devCode` (§2.3).
 
 > ❌ **Không bao giờ chạy `SEED_MODE=demo` trên production** — nó tạo 19 tài khoản và 5 gian hàng
 > giả ngay trong database thật. `prisma/src/seed/context.ts` đã chặn sẵn (`NODE_ENV=production`
