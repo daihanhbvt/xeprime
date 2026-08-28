@@ -23,7 +23,7 @@ Rồi bấm `a` (Android), `i` (iOS) hoặc `w` (web preview).
 | ---------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `start`                                  | build package phụ thuộc rồi mở Expo dev server                                                |
 | `android` / `ios`                        | `expo run:*` — build native                                                                   |
-| `web`                                    | bản web của Expo, **chỉ để xem giao diện** — SecureStore lùi về `localStorage` nên refresh token bị chặn hẳn ở đó (ADR 0017), tức **không đăng nhập được** |
+| `web`                                    | bản web của Expo, **chỉ để xem giao diện** — đăng nhập được trong một phiên, nhưng refresh token bị chặn hẳn ở đó (ADR 0017: SecureStore lùi về `localStorage`) nên **tải lại trang là mất phiên**. Muốn dùng API staging từ web thì xem mục proxy bên dưới |
 | `lint` · `typecheck` · `test`            | ESLint chung của repo · `tsc --noEmit` · Jest (`jest-expo`)                                   |
 | `exec jest src/lib/live-bearer.test.ts`   | **Test sống** — gọi API thật, chứng minh app gửi đúng Bearer. Cần `XP_LIVE_API=1` + API ở cổng 4000 + DB đã seed; không đặt cờ thì suite tự bỏ qua |
 
@@ -38,6 +38,42 @@ server — thiết bị thật lấy IP LAN của máy chạy Metro, emulator An
 `10.0.2.2`. Chỉ đặt `EXPO_PUBLIC_API_URL` trong `.env` khi API **không** nằm ở cổng 4000 của
 chính máy đang chạy Metro. Expo chỉ inline biến có tiền tố `EXPO_PUBLIC_`, và inline **lúc
 build** — đổi giá trị phải khởi động lại Metro.
+
+### Chạy app trên API + database của staging
+
+Native không vướng gì: `fetch` của iOS/Android không có origin, nên trỏ thẳng là xong.
+
+```bash
+EXPO_PUBLIC_API_URL="https://api-stg.xeprime.vn"
+```
+
+Bản **web** (`expo start --web`, `localhost:8081`) thì không: nó chạy trong trình duyệt nên
+request là cross-origin, và staging **không mở CORS cho localhost được** — `env.schema.ts` từ
+chối mọi origin không phải https khi `NODE_ENV=production`, mà staging chạy đúng như vậy. Thêm
+`http://localhost:8081` vào `CORS_ORIGINS` của staging là làm API staging không boot.
+
+Đường đi đúng là proxy dev của Metro (`scripts/stg-proxy-middleware.js`) — bản song sinh của
+`apps/web/src/app/api/stg/[...path]/route.ts`. Với trình duyệt mọi thứ là same-origin; chặng
+`Metro → staging` là server-to-server, nơi CORS không tồn tại. **Không phải sửa gì trên staging.**
+
+```bash
+# apps/mobile/.env
+STG_PROXY_TARGET="https://api-stg.xeprime.vn"
+EXPO_PUBLIC_API_URL="/api/stg"        # bắt đầu bằng "/" = đường dẫn trên chính Metro dev server
+```
+
+Một giá trị đó chạy cho cả ba nền tảng: web dùng `http://localhost:8081/api/stg`, máy
+thật/emulator dùng `http://<host Metro>:8081/api/stg`. Không cần API local, không cần Docker,
+không cần Postgres.
+
+| Vẫn không chạy được trên web | Vì sao |
+| --- | --- |
+| Đăng nhập Google/Facebook | Vòng OAuth kết thúc bằng deep link về app, không phải về tab trình duyệt. Dùng mật khẩu hoặc OTP — staging đang `OTP_MODE=mock` nên mã trả luôn trong response |
+| Giữ phiên qua F5 | Bản web CỐ Ý không lưu refresh token (`src/lib/secure-storage.ts`, ADR 0017). Tải lại trang là đăng nhập lại — giới hạn sẵn có, không liên quan tới proxy |
+| Upload ảnh | Trình duyệt `PUT` thẳng lên R2 bằng presigned URL, không đi qua proxy. Muốn chạy thì thêm `http://localhost:8081` vào CORS policy của bucket R2 |
+
+Triệu chứng nhận biết cấu hình thiếu: response `{"error":{"code":"STG_PROXY_NOT_CONFIGURED"}}` =
+chưa đặt `STG_PROXY_TARGET`; `STG_PROXY_UNREACHABLE` = đặt rồi nhưng máy dev không gọi được đích.
 
 ### Điện thoại thật không gọi được API
 
