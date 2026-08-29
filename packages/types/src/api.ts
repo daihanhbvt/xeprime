@@ -140,6 +140,25 @@ export const API_ERROR_CODE = {
    */
   PLAN_INCENTIVE_INVALID: 'PLAN_INCENTIVE_INVALID',
 
+  // Năng lực theo gói (ADR 0027) — TRỤC THỨ HAI, độc lập với MISSING_PERMISSION.
+  /**
+   * Gian hàng KHÔNG có tính năng này trong gói hiện hành và cũng chưa từng dùng nó
+   * (`hidden` — ADR 0027 điều 3). Người dùng không thiếu quyền; GIAN HÀNG thiếu tính năng, nên
+   * lối đi tiếp là xem gói chứ không phải liên hệ quản trị viên.
+   *
+   * `details` mang `{ feature }`. Trả **403**, không phải 402: toàn bộ máy sinh tài liệu và
+   * `openapi-contract` coi 403 là nhánh phân quyền, và 402 bị proxy xử lý mỗi nơi một kiểu.
+   */
+  FEATURE_NOT_IN_PLAN: 'FEATURE_NOT_IN_PLAN',
+  /**
+   * Gói hết hạn nhưng gian hàng ĐÃ CÓ dữ liệu của tính năng này (`read_only` — ADR 0027 điều 3):
+   * mọi endpoint ĐỌC vẫn trả dữ liệu bình thường, chỉ đường GHI bị chặn.
+   *
+   * `details` mang `{ feature, planEndsAt }` để FE hiện đúng mốc hết hạn kèm nút gia hạn.
+   * Không ai được mất quyền XEM sổ sách của chính mình vì hết hạn gói.
+   */
+  FEATURE_READ_ONLY: 'FEATURE_READ_ONLY',
+
   // Khoản giữ chỗ — tuyến hoa hồng (ADR 0021)
   /**
    * Xe này ở tuyến hoa hồng: phải chuyển khoản giữ chỗ trước khi có đơn.

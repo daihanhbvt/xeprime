@@ -1,0 +1,10 @@
+.notice {
+  margin-bottom: var(--xp-space-md);
+}
+
+/* Hai nút cạnh nhau, xuống dòng ở màn hẹp thay vì tràn ra khỏi băng. */
+.actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--xp-space-sm);
+}

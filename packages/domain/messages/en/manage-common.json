@@ -20,6 +20,17 @@
     "requires": "Requires:",
     "backHome": "Back to home"
   },
+  "feature": {
+    "expiredTitle": "{feature}: plan expired, now view-only",
+    "expiredBody": "All of your existing data is untouched and still readable. Renew your plan to keep adding and editing.",
+    "expiredBodyWithDate": "Your plan expired on {date}. All existing data is untouched and still readable — renew to keep adding and editing.",
+    "renewCta": "Renew plan",
+    "refreshCta": "I've renewed — refresh",
+    "readOnlyTooltip": "Your plan expired, so this feature is view-only. Renew to continue.",
+    "upsellTitle": "{feature} is part of a paid plan",
+    "upsellBody": "Your shop doesn't have this feature yet. Browse the plans to unlock it — nothing you use today is affected.",
+    "viewPlansCta": "View plans"
+  },
   "support": {
     "title": "Help centre",
     "subtitle": "Quick guides and frequent questions for running a car rental shop on XePrime.",

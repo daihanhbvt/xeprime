@@ -12,8 +12,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
 import { normalizePhone, toLocalPhone } from '../../common/phone';
+import { currentSubscriptionWhere, resolveTenantFeatures } from '../../common/plan/feature-state';
 import { EmailService } from './email.service';
-import type { MeDto } from './dto/auth.dto';
+import type { CurrentTenantSummaryDto, MeDto } from './dto/auth.dto';
 import type { VerifiedIdentity } from './social/identity';
 
 const BCRYPT_ROUNDS = 12;
@@ -412,7 +413,24 @@ export class AuthService {
         select: {
           roleKey: true,
           roleId: true,
-          tenant: { select: { id: true, name: true, slug: true, status: true } },
+          // Trục năng lực (ADR 0027) đi kèm luôn — `select` phải khớp `TenantScopeGuard`, vì cả
+          // hai gọi cùng `resolveTenantFeatures`. Menu của web đọc từ đây ở LẦN VẼ ĐẦU, nên tách
+          // ra một query riêng là menu nhấp nháy.
+          tenant: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              status: true,
+              usedFeatures: true,
+              subscriptions: {
+                where: currentSubscriptionWhere(new Date()),
+                orderBy: { endsAt: 'desc' },
+                take: 1,
+                select: { endsAt: true, plan: { select: { code: true, limitsJson: true } } },
+              },
+            },
+          },
         },
         orderBy: { createdAt: 'asc' },
       }),
@@ -448,19 +466,44 @@ export class AuthService {
       phone: user.phone ? toLocalPhone(user.phone) : null,
       phoneVerified: user.phoneVerifiedAt !== null,
       hasPassword: user.passwordHash !== null,
-      tenant: membership
-        ? {
-            id: membership.tenant.id,
-            name: membership.tenant.name,
-            slug: membership.tenant.slug,
-            status: membership.tenant.status,
-            roleKey: membership.roleKey,
-          }
-        : null,
+      tenant: membership ? toTenantSummary(membership) : null,
       platformRole: platformMembership?.roleKey ?? null,
       permissions: [...new Set([...tenantPermissions, ...platformPermissions])],
     };
   }
+}
+
+/**
+ * Gian hàng hiện hành cho `MeDto` — kèm trục NĂNG LỰC (ADR 0027).
+ *
+ * `features` LUÔN đủ 8 cờ kể cả `hidden`: web dựng menu từ nó ở lần vẽ đầu, và một cờ vắng mặt
+ * không phân biệt được với "backend cũ chưa biết cờ này".
+ */
+function toTenantSummary(membership: {
+  roleKey: string;
+  tenant: {
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    usedFeatures: string[];
+    subscriptions: { endsAt: Date; plan: { code: string; limitsJson: unknown } }[];
+  };
+}): CurrentTenantSummaryDto {
+  const plan = resolveTenantFeatures(
+    membership.tenant.subscriptions[0] ?? null,
+    membership.tenant.usedFeatures,
+  );
+  return {
+    id: membership.tenant.id,
+    name: membership.tenant.name,
+    slug: membership.tenant.slug,
+    status: membership.tenant.status,
+    roleKey: membership.roleKey,
+    features: Object.entries(plan.features).map(([feature, state]) => ({ feature, state })),
+    planCode: plan.planCode,
+    planEndsAt: plan.planEndsAt?.toISOString() ?? null,
+  };
 }
 
 /** Tên hiển thị mặc định cho tài khoản tạo bằng SĐT (chưa nhập tên): "Khách 4567". */

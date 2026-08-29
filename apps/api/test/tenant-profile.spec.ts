@@ -6,10 +6,8 @@ import {
   TENANT_ROLE,
   TENANT_STATUS,
 } from '@xeprime/types';
-import { AuditService } from '../src/modules/audit/audit.service';
-import { TenantsService } from '../src/modules/tenants/tenants.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
-import { makeBranchesService, makeProvincesService } from './helpers/service-factory';
+import { makeBranchesService, makeTenantsService } from './helpers/service-factory';
 
 /**
  * Hồ sơ gian hàng (`PATCH /tenants/current/profile`) — chạy trên PostgreSQL THẬT.
@@ -25,12 +23,7 @@ import { makeBranchesService, makeProvincesService } from './helpers/service-fac
 const prisma = createPrismaClient();
 const asService = prisma as unknown as PrismaService;
 const branches = makeBranchesService(asService);
-const tenants = new TenantsService(
-  asService,
-  new AuditService(asService),
-  makeProvincesService(asService),
-  branches,
-);
+const tenants = makeTenantsService(asService);
 
 const HCM = '79';
 const DANANG = '48';

@@ -20,6 +20,17 @@
     "requires": "Cần quyền:",
     "backHome": "Về trang chủ"
   },
+  "feature": {
+    "expiredTitle": "{feature}: gói đã hết hạn, đang ở chế độ chỉ xem",
+    "expiredBody": "Toàn bộ dữ liệu cũ vẫn còn nguyên và xem lại được. Gia hạn gói để nhập và chỉnh sửa tiếp.",
+    "expiredBodyWithDate": "Gói hết hạn ngày {date}. Toàn bộ dữ liệu cũ vẫn còn nguyên và xem lại được — gia hạn để nhập và chỉnh sửa tiếp.",
+    "renewCta": "Gia hạn gói",
+    "refreshCta": "Tôi đã gia hạn — tải lại",
+    "readOnlyTooltip": "Gói đã hết hạn nên tính năng này chỉ xem được. Gia hạn để thao tác tiếp.",
+    "upsellTitle": "{feature} thuộc gói dịch vụ",
+    "upsellBody": "Gian hàng của bạn chưa có tính năng này. Xem các gói để mở khoá — dữ liệu và thao tác hiện tại không bị ảnh hưởng.",
+    "viewPlansCta": "Xem các gói"
+  },
   "support": {
     "title": "Trung tâm hỗ trợ",
     "subtitle": "Hướng dẫn nhanh và câu hỏi thường gặp khi vận hành gian hàng cho thuê xe trên XePrime.",

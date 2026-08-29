@@ -29,6 +29,14 @@
     "used": "Đã dùng {used}/{allowance} lượt",
     "explain": "Hai đơn đầu tiên miễn phí hoàn toàn — nền tảng không thu gì. Hết lượt, đơn mới sẽ tính hoa hồng trên mỗi chuyến trừ khi gian hàng có gói theo chỗ."
   },
+  "features": {
+    "title": "Tính năng theo gói",
+    "included": "Gói hiện tại đang mở",
+    "upgrade": "Nâng cấp để mở thêm",
+    "readOnlyHint": "đang chỉ xem",
+    "allIncluded": "Gói hiện tại đã mở toàn bộ tính năng nâng cao.",
+    "upgradeCta": "Xem gói cao hơn"
+  },
   "invoices": {
     "title": "Lịch sử hoá đơn",
     "empty": "Chưa có hoá đơn nào",

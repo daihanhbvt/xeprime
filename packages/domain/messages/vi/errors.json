@@ -27,6 +27,8 @@
     "INVALID_STATUS_TRANSITION": "Không chuyển được sang trạng thái này.",
     "DELIVERY_NOT_SUPPORTED": "Xe này không hỗ trợ giao xe tận nơi.",
     "PLAN_LIMIT_REACHED": "Gói dịch vụ hiện tại đã đạt giới hạn.",
+    "FEATURE_NOT_IN_PLAN": "Tính năng này thuộc gói dịch vụ mà gian hàng chưa có. Xem các gói để mở khoá.",
+    "FEATURE_READ_ONLY": "Gói đã hết hạn nên tính năng này đang ở chế độ chỉ xem. Dữ liệu cũ vẫn còn nguyên — gia hạn để nhập tiếp.",
     "PLAN_INCENTIVE_INVALID": "Mức giá này làm gói rẻ hơn hoa hồng ngay cả với quy mô nhỏ hơn số chỗ gồm sẵn. Tăng phí nền, giảm số chỗ gồm sẵn, hoặc kiểm tra lại giả định doanh thu.",
     "HOLD_REQUIRED": "Cần chuyển khoản giữ chỗ trước khi xác nhận chuyến này.",
     "HOLD_EXPIRED": "Đã quá hạn chuyển khoản giữ chỗ nên xe được mở lại cho khách khác. Bạn có thể đặt lại.",

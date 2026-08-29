@@ -27,6 +27,8 @@
     "INVALID_STATUS_TRANSITION": "That status change isn't allowed.",
     "DELIVERY_NOT_SUPPORTED": "This vehicle doesn't offer delivery.",
     "PLAN_LIMIT_REACHED": "Your current plan has reached its limit.",
+    "FEATURE_NOT_IN_PLAN": "This feature belongs to a plan your shop doesn't have yet. Browse the plans to unlock it.",
+    "FEATURE_READ_ONLY": "Your plan expired, so this feature is view-only. Your existing data is untouched — renew to keep adding.",
     "PLAN_INCENTIVE_INVALID": "This pricing makes the plan cheaper than commission even below its included slots. Raise the base fee, lower the included slots, or review the revenue assumptions.",
     "HOLD_REQUIRED": "Send the reservation payment to confirm this trip.",
     "HOLD_EXPIRED": "The reservation payment window closed, so the car was released to other guests. You can book again.",

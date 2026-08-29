@@ -12,12 +12,13 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  RequiresFeature,
 } from '../../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../../common/types/request-context';
 import { SourceContractDownloadDto, SourceContractPresignDto } from '../dto/vehicle-source.dto';
@@ -51,6 +52,7 @@ import { OdometerService } from './odometer.service';
 @ApiTags('vehicle-maintenance')
 @Controller('vehicles/:id/maintenance')
 @TenantScoped()
+@RequiresFeature(PLAN_FEATURE.MAINTENANCE)
 export class VehicleMaintenanceController {
   constructor(
     private readonly maintenance: MaintenanceService,

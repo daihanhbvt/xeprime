@@ -130,6 +130,13 @@ model Tenant {
   freeTripsUsed Int     @default(0) @map("free_trips_used")
   /// Claim của job vòng đời: đã sinh hoá đơn chào gói + nhắc khi tiêu hết lượt (ADR 0026 điều 4).
   freeTripsOfferedAt DateTime? @map("free_trips_offered_at") @db.Timestamptz(3)
+  /// Tính năng nâng cao tenant ĐÃ TỪNG dùng (ADR 0027 điều 3) — @xeprime/types → PlanFeature[],
+  /// DB canh bằng CHECK `used_features <@ ARRAY[...]` (thêm cờ thứ 9 ⇒ phải nới constraint).
+  ///
+  /// ⚠️ KHÔNG BAO GIỜ cấp quyền từ cột này: nó chỉ chọn giữa `read_only` và `hidden` — cả hai
+  /// đều là "gói hiện hành KHÔNG có cờ". Quyền dùng đến từ `plans.limits_json.features`.
+  /// Ghi bởi `FeatureUsageInterceptor` sau một lượt GHI thành công; append-only.
+  usedFeatures String[] @default([]) @map("used_features")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)

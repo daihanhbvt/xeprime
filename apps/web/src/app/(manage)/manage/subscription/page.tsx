@@ -16,6 +16,7 @@ import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { useUrlFilters, positiveIntParam } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { PlanFeatureList } from '@/features/subscription/components/PlanFeatureList';
 import { PurchaseModal } from '@/features/subscription/components/PurchaseModal';
 import {
   useMySubscription,
@@ -186,6 +187,9 @@ export default function SubscriptionPage() {
           </div>
           <div className={styles.meta}>{t('freeTrips.explain')}</div>
         </Card>
+
+        {/* "Nâng cấp được thêm gì" — ADR 0027 §Hệ quả: chỗ bán hàng thật sự của màn này. */}
+        <PlanFeatureList onUpgrade={() => setPurchaseOpen(true)} />
       </div>
 
       <h2 className={styles.sectionTitle}>{t('invoices.title')}</h2>

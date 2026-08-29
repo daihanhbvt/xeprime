@@ -4,7 +4,7 @@ import {
   UnauthorizedException,
   type ExecutionContext,
 } from '@nestjs/common';
-import type { Permission } from '@xeprime/types';
+import type { Permission, PlanFeature } from '@xeprime/types';
 import { API_ERROR_CODE } from '@xeprime/types';
 import type { AuthenticatedUser, RequestContext, TenantContext } from '../types/request-context';
 
@@ -48,6 +48,30 @@ export const PlatformOnly = () => SetMetadata(PLATFORM_ONLY_KEY, true);
  */
 export const TENANT_SCOPED_KEY = 'xeprime:tenantScoped';
 export const TenantScoped = () => SetMetadata(TENANT_SCOPED_KEY, true);
+
+/**
+ * Tính năng NÂNG CAO mà endpoint thuộc về — trục thứ hai, độc lập với `@RequirePermissions`
+ * (ADR 0027 điều 2). `PlanFeatureGuard` đọc metadata này.
+ *
+ * Gắn ở tầng CLASS cho cả controller là mặc định: ADR 0027 ràng buộc 3 nói một cờ gác cả một
+ * NHÓM endpoint, không phải từng cái. Gắn ở method chỉ khi controller ôm nhiều nhóm (ví dụ
+ * `finance-overview` vừa có báo cáo thu chi vừa có công nợ) hoặc khi cần CHỪA một ngoại lệ.
+ *
+ * Không gắn = bậc cơ bản, không gói nào chặn được — y như `@TenantScoped()`, đây là OPT-IN.
+ */
+export const PLAN_FEATURE_KEY = 'xeprime:planFeature';
+export const RequiresFeature = (feature: PlanFeature) => SetMetadata(PLAN_FEATURE_KEY, feature);
+
+/**
+ * Route hình-ĐỌC nhưng không phải `GET` — cho qua ở trạng thái `read_only`.
+ *
+ * Guard suy đọc/ghi từ `req.method`, và ở đợt này mọi route hình-đọc của 7 nhóm bị gác đều là
+ * `GET` (đã đối chiếu từng route), nên marker này CHƯA dùng ở đâu. Nó tồn tại để khi có một
+ * `POST /receipts/export` hay `POST /finance/report` — thứ chắc chắn sẽ tới — lối thoát đã sẵn
+ * và tường minh, thay vì ai đó nới `read_only` cho toàn bộ POST.
+ */
+export const FEATURE_READ_SAFE_KEY = 'xeprime:featureReadSafe';
+export const FeatureReadSafe = () => SetMetadata(FEATURE_READ_SAFE_KEY, true);
 
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthenticatedUser => {

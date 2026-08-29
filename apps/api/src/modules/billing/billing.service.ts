@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { newId, Prisma } from '@xeprime/prisma';
@@ -10,6 +11,7 @@ import {
   API_ERROR_CODE,
   BANK_MATCH_TARGET_TYPE,
   BILLING_MODE,
+  COMMISSION_TRACK_TERM_MONTHS,
   FREE_TRIP_ALLOWANCE,
   PLAN_STATUS,
   SUBSCRIPTION_INVOICE_STATUS,
@@ -50,6 +52,7 @@ import {
   UpdatePlanDto,
 } from './dto/billing.dto';
 import { paginationMeta, resolvePaging } from '../../common/pagination';
+import { currentSubscriptionWhere } from '../../common/plan/feature-state';
 import { newReferenceCode } from '../../common/reference-code';
 
 const PLAN_SELECT = {
@@ -120,6 +123,8 @@ const SUB_SELECT = {
  */
 @Injectable()
 export class BillingService {
+  private readonly logger = new Logger(BillingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -502,6 +507,55 @@ export class BillingService {
       return sub;
     });
     return toSubscriptionDto(row);
+  }
+
+  /**
+   * Gán GÓI MẶC ĐỊNH cho một gian hàng vừa mở — ADR 0015 điều 9, chạy trong transaction của
+   * `registerShop`.
+   *
+   * Vì sao bắt buộc, không phải tiện ích: từ ADR 0027, cờ năng lực đọc từ **gói hiện hành**. Một
+   * tenant không có gói nào có tập cờ RỖNG, nên ngày bật cổng chặn họ mất sạch tính năng nâng
+   * cao — kể cả quyền ĐỌC. "Không có gói" phải là trạng thái không tồn tại, chứ không phải một
+   * trạng thái được xử lý tử tế.
+   *
+   * Gói mặc định = bậc `commission` đang bán có `sortOrder` nhỏ nhất (tuyến hoa hồng — ADR 0020:
+   * vào miễn phí, chỉ trả khi có doanh thu). Không có bậc nào như vậy ⇒ KHÔNG ném: chặn người ta
+   * mở gian hàng vì danh mục gói cấu hình thiếu là đổi một lỗi vận hành lấy một lỗi người dùng.
+   * Ghi log để người vận hành sửa danh mục, rồi migration/job sẽ vá phần còn lại.
+   *
+   * Không sinh hoá đơn (0đ) và không ghi audit `platform`: đây là hệ quả tự động của việc đăng
+   * ký, không phải một hành động quản trị.
+   */
+  async assignDefaultPlanWithinTx(tx: Prisma.TransactionClient, tenantId: string): Promise<void> {
+    const plan = await tx.plan.findFirst({
+      where: { status: PLAN_STATUS.ACTIVE, billingMode: BILLING_MODE.COMMISSION },
+      orderBy: { sortOrder: 'asc' },
+      select: { id: true, commissionPercent: true },
+    });
+    if (!plan) {
+      this.logger.error(
+        'Không có bậc gói tuyến hoa hồng nào đang bán — gian hàng mới mở KHÔNG có gói hiện hành. ' +
+          'Tạo/mở lại một gói commission ở màn quản trị gói.',
+      );
+      return;
+    }
+
+    const now = new Date();
+    await tx.tenantSubscription.create({
+      data: {
+        id: newId(),
+        tenantId,
+        planId: plan.id,
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        price: 0,
+        termMonths: COMMISSION_TRACK_TERM_MONTHS,
+        billingMode: BILLING_MODE.COMMISSION,
+        commissionPercent: plan.commissionPercent,
+        startsAt: now,
+        endsAt: addCalendarMonthsVn(now, COMMISSION_TRACK_TERM_MONTHS),
+        note: 'Gói mặc định khi mở gian hàng (ADR 0015 điều 9).',
+      },
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -1120,12 +1174,9 @@ export class BillingService {
   private findCurrent(tenantId: string, now: Date, tx?: Prisma.TransactionClient) {
     const client = tx ?? this.prisma;
     return client.tenantSubscription.findFirst({
-      where: {
-        tenantId,
-        status: SUBSCRIPTION_STATUS.ACTIVE,
-        startsAt: { lte: now },
-        endsAt: { gt: now },
-      },
+      // Điều kiện "gói hiện hành" dùng CHUNG với TenantScopeGuard/AuthService.me (ADR 0027):
+      // hai định nghĩa trôi khỏi nhau là menu mở mà API trả 403.
+      where: { tenantId, ...currentSubscriptionWhere(now) },
       orderBy: { endsAt: 'desc' },
       select: SUB_SELECT,
     });

@@ -1,0 +1,50 @@
+.groupTitle {
+  font-size: var(--xp-font-size-body-sm);
+  font-weight: var(--xp-font-weight-semibold);
+  color: var(--xp-color-text-secondary);
+  margin-bottom: var(--xp-space-xs);
+}
+
+.groupTitle:not(:first-child) {
+  margin-top: var(--xp-space-md);
+}
+
+.list {
+  list-style: none;
+  margin: 0 0 var(--xp-space-sm);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item,
+.itemLocked {
+  display: flex;
+  align-items: center;
+  gap: var(--xp-space-xs);
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text);
+}
+
+/* Mục chưa mở làm nhạt đi — vẫn đọc được, nhưng không cạnh tranh với mục đang dùng. */
+.itemLocked {
+  color: var(--xp-color-text-secondary);
+}
+
+.iconOn {
+  color: var(--xp-color-success, #52c41a);
+}
+
+.iconOff {
+  color: var(--xp-color-text-tertiary, var(--xp-color-text-secondary));
+}
+
+.hint {
+  color: var(--xp-color-warning, #faad14);
+}
+
+.allIncluded {
+  font-size: var(--xp-font-size-body-sm);
+  color: var(--xp-color-text-secondary);
+}

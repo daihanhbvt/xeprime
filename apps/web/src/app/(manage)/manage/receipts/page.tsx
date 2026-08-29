@@ -5,7 +5,8 @@ import { App, Button, Segmented, Space, Spin } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Suspense, useMemo, useState } from 'react';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import { FeatureWriteTooltip } from '@/components/feedback/FeatureWriteTooltip';
 import { FilterBar, type FilterField, type FilterValues } from '@/components/filter/FilterBar';
 import { PermissionState } from '@/components/feedback/PermissionState';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
@@ -226,9 +227,18 @@ function ReceiptsView() {
               {t('actions.categories')}
             </Button>
             {canCreate ? (
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
-                {t('actions.create')}
-              </Button>
+              <FeatureWriteTooltip feature={PLAN_FEATURE.FINANCE}>
+                {(disabled) => (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    disabled={disabled}
+                    onClick={() => setFormOpen(true)}
+                  >
+                    {t('actions.create')}
+                  </Button>
+                )}
+              </FeatureWriteTooltip>
             ) : null}
           </Space>
         }
@@ -245,9 +255,18 @@ function ReceiptsView() {
         onClearFilters={() => setFilters(clearedReceiptFilters())}
         emptyAction={
           canCreate ? (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
-              {t('actions.createFirst')}
-            </Button>
+            <FeatureWriteTooltip feature={PLAN_FEATURE.FINANCE}>
+              {(disabled) => (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  disabled={disabled}
+                  onClick={() => setFormOpen(true)}
+                >
+                  {t('actions.createFirst')}
+                </Button>
+              )}
+            </FeatureWriteTooltip>
           ) : undefined
         }
         onOpen={setDetailId}

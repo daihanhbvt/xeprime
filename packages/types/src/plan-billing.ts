@@ -37,10 +37,17 @@ export const SUBSCRIPTION_INVOICE_TTL_HOURS = 72;
 export const SUBSCRIPTION_RENEWAL_REMINDER_DAYS = 7;
 
 /**
- * Kỳ hạn của dòng thuê bao TUYẾN HOA HỒNG mà job vòng đời tự gán khi gói hết hạn + ân hạn
- * (ADR 0020 điều 5). 12 tháng để job không phải tự gia hạn mỗi tháng — 0đ, không hoá đơn.
+ * Kỳ hạn của một dòng thuê bao TUYẾN HOA HỒNG do hệ thống tự gán — 0đ, không hoá đơn.
+ *
+ * Dùng ở HAI đường, và cả hai đều là "tenant phải luôn có một gói hiện hành" (ADR 0015 điều 9):
+ *  - `registerShop` gán gói mặc định ngay lúc mở gian hàng;
+ *  - job vòng đời gán lại khi gói hết hạn + ân hạn (ADR 0020 điều 5).
+ *
+ * 12 tháng để không đường nào phải tự gia hạn mỗi tháng. Không có gói hiện hành là trạng thái
+ * KHÔNG được phép tồn tại: guard năng lực (ADR 0027) đọc cờ từ gói, nên tenant không gói sẽ mất
+ * sạch tính năng nâng cao ngay ngày bật cổng chặn.
  */
-export const LAPSED_COMMISSION_TERM_MONTHS = 12;
+export const COMMISSION_TRACK_TERM_MONTHS = 12;
 
 // ── Hình dạng limits_json ───────────────────────────────────────────────────
 

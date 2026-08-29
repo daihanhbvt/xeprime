@@ -50,6 +50,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   [API_ERROR_CODE.MISSING_PERMISSION]: 'Tài khoản không có quyền thực hiện thao tác này',
   [API_ERROR_CODE.FORBIDDEN]: 'Không có quyền truy cập',
   [API_ERROR_CODE.NO_TENANT_SCOPE]: 'Tài khoản không thuộc gian hàng nào',
+  [API_ERROR_CODE.FEATURE_NOT_IN_PLAN]: 'Tính năng này thuộc gói dịch vụ mà gian hàng chưa có',
+  [API_ERROR_CODE.FEATURE_READ_ONLY]: 'Gói đã hết hạn — tính năng đang ở chế độ chỉ xem',
   [API_ERROR_CODE.NOT_FOUND]: 'Không tìm thấy dữ liệu',
   [API_ERROR_CODE.CONFLICT]: 'Dữ liệu đã tồn tại',
   [API_ERROR_CODE.BOOKING_SCHEDULE_CONFLICT]: 'Xe đã có lịch khác trùng khoảng thời gian này',
@@ -262,6 +264,12 @@ function collectForbiddenCodes(route: RouteAccess): string[] {
   if (route.permissions.length > 0) codes.push(API_ERROR_CODE.MISSING_PERMISSION);
   if (route.tenantScoped) codes.push(API_ERROR_CODE.NO_TENANT_SCOPE);
   if (route.platformOnly || route.permissions.length > 0) codes.push(API_ERROR_CODE.FORBIDDEN);
+  // Trục năng lực theo gói (ADR 0027) — cùng nhánh 403 với quyền, xem docblock của hai mã.
+  // `FEATURE_READ_ONLY` chỉ xuất hiện ở route GHI: `read_only` cho mọi lượt đọc đi qua.
+  if (route.feature) {
+    codes.push(API_ERROR_CODE.FEATURE_NOT_IN_PLAN);
+    codes.push(API_ERROR_CODE.FEATURE_READ_ONLY);
+  }
   return [...new Set(codes)];
 }
 

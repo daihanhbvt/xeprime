@@ -29,6 +29,14 @@
     "used": "Used {used}/{allowance}",
     "explain": "Your first two bookings are completely free — the platform takes nothing. Once used up, new bookings pay a per-trip commission unless the shop has a slot-based plan."
   },
+  "features": {
+    "title": "Plan features",
+    "included": "Open on your current plan",
+    "upgrade": "Upgrade to unlock",
+    "readOnlyHint": "view-only",
+    "allIncluded": "Your current plan already includes every advanced feature.",
+    "upgradeCta": "See higher plans"
+  },
   "invoices": {
     "title": "Invoice history",
     "empty": "No invoices yet",

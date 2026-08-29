@@ -6,8 +6,10 @@ import { LoggerModule } from 'nestjs-pino';
 import { validateEnv } from './config/env.schema';
 import { AuthGuard } from './common/guards/auth.guard';
 import { PermissionGuard } from './common/guards/permission.guard';
+import { PlanFeatureGuard } from './common/guards/plan-feature.guard';
 import { TenantScopeGuard } from './common/guards/tenant-scope.guard';
 import { PlatformScopeGuard } from './common/guards/platform-scope.guard';
+import { FeatureUsageInterceptor } from './common/interceptors/feature-usage.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { HttpCacheInterceptor } from './common/http-cache';
 import { PrismaModule } from './prisma/prisma.module';
@@ -129,8 +131,18 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
     { provide: APP_GUARD, useClass: TenantScopeGuard },
     { provide: APP_GUARD, useClass: PlatformScopeGuard },
     { provide: APP_GUARD, useClass: PermissionGuard },
+    /*
+     * PlanFeatureGuard đứng CUỐI, sau PermissionGuard — quyết định về THÔNG TIN, không phải về
+     * hiệu năng: một shop_staff không có `finance.view` ở gian hàng chưa mua gói phải nhận
+     * MISSING_PERMISSION, KHÔNG phải FEATURE_NOT_IN_PLAN. Tình trạng gói của gian hàng không
+     * phải thứ một người không có quyền được biết (ADR 0027 điều 2).
+     */
+    { provide: APP_GUARD, useClass: PlanFeatureGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     { provide: APP_INTERCEPTOR, useClass: HttpCacheInterceptor },
+    // Ghi `used_features` SAU khi handler trả 2xx — xem docblock của interceptor về việc vì sao
+    // đây không thể là một guard.
+    { provide: APP_INTERCEPTOR, useClass: FeatureUsageInterceptor },
   ],
 })
 export class AppModule {}

@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { VN_PHONE_PATTERN } from '@xeprime/types';
+import { FEATURE_STATE_VALUES, PLAN_FEATURE_VALUES, VN_PHONE_PATTERN } from '@xeprime/types';
 
 const PASSWORD_MIN = 8;
 
@@ -62,12 +62,36 @@ export class ResetPasswordDto extends PasswordField {
   token!: string;
 }
 
+/**
+ * Trạng thái MỘT tính năng nâng cao với gian hàng đang đăng nhập (ADR 0027 điều 3).
+ *
+ * Mảng cặp `{feature, state}` chứ không phải object khoá cố định: cờ là snake_case, và thêm cờ
+ * thứ 9 không nên buộc phải sửa class DTO.
+ */
+export class TenantFeatureStateDto {
+  @ApiProperty({ enum: PLAN_FEATURE_VALUES }) feature!: string;
+  @ApiProperty({ enum: FEATURE_STATE_VALUES }) state!: string;
+}
+
 export class CurrentTenantSummaryDto {
   @ApiProperty() id!: string;
   @ApiProperty() name!: string;
   @ApiProperty() slug!: string;
   @ApiProperty({ description: 'Xem TenantStatus trong @xeprime/types' }) status!: string;
   @ApiProperty({ description: 'Xem TenantRole trong @xeprime/types' }) roleKey!: string;
+
+  /**
+   * LUÔN đủ 8 cờ, kể cả `hidden` — vắng mặt ≠ hidden: client phải phân biệt được "cờ này ẩn"
+   * với "backend cũ chưa biết cờ này" (ADR 0027 điều 3).
+   */
+  @ApiProperty({ type: [TenantFeatureStateDto] })
+  features!: TenantFeatureStateDto[];
+
+  @ApiProperty({ type: String, nullable: true, description: 'Mã gói hiện hành; null = không có' })
+  planCode!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: 'ISO-8601 UTC — băng hết hạn đọc ngày này' })
+  planEndsAt!: string | null;
 }
 
 export class MeDto {
