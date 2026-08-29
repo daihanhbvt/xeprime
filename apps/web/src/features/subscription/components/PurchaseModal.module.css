@@ -1,0 +1,98 @@
+.center {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+  padding: 8px 0;
+}
+
+.planSelect {
+  width: 100%;
+}
+
+/* Kỳ hạn + số chỗ: nhãn trái, ô nhập phải — cùng khuôn AssignPlanModal phía admin. */
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--xp-color-text);
+}
+
+.hint {
+  font-size: 12.5px;
+  color: var(--xp-color-text-secondary);
+}
+
+.total {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--xp-color-fill-quaternary, rgba(0, 0, 0, 0.03));
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ── Màn "chuyển khoản" sau khi hoá đơn tạo xong ── */
+.payment {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.paymentFields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paymentRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.paymentRow dt {
+  font-size: 13px;
+  color: var(--xp-color-text-secondary);
+}
+
+.paymentRow dd {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Mã đối soát phải đọc lại được từng ký tự — font đơn cách, cỡ nhỉnh hơn. */
+.code {
+  font-family: var(--xp-font-mono, ui-monospace, monospace);
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+.expires {
+  font-size: 12.5px;
+  color: var(--xp-color-text-secondary);
+}

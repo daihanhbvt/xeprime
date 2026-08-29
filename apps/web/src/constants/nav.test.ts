@@ -59,7 +59,7 @@ function hrefsOf(sections: typeof SHOP_NAV): string[] {
 }
 
 describe('nav — cấu trúc khối', () => {
-  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 19 mục lá', () => {
+  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 20 mục lá', () => {
     expect(SHOP_NAV.map((section) => section.key)).toEqual([
       'overview',
       'operations',
@@ -68,7 +68,8 @@ describe('nav — cấu trúc khối', () => {
       'settings',
       'support',
     ]);
-    expect(flattenLeaves(SHOP_NAV)).toHaveLength(19);
+    // 20 từ W2: thêm "Gói của tôi" (subscription.view — ADR 0015/0026).
+    expect(flattenLeaves(SHOP_NAV)).toHaveLength(20);
   });
 
   it('Tổng quan và Hỗ trợ luôn hiện (`pinned`), bốn khối giữa gập được', () => {
@@ -212,16 +213,16 @@ describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
 });
 
 describe('nav — vai trò gian hàng nhìn thấy gì', () => {
-  it('shop_owner thấy đủ 19 mục', () => {
+  it('shop_owner thấy đủ 20 mục', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false),
-    ).toHaveLength(19);
+    ).toHaveLength(20);
   });
 
-  it('shop_manager cũng thấy đủ 19 mục (có MEMBER_VIEW và FINANCE_VIEW)', () => {
+  it('shop_manager cũng thấy đủ 20 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_MANAGER], false),
-    ).toHaveLength(19);
+    ).toHaveLength(20);
   });
 
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {

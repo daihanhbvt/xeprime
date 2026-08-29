@@ -1,18 +1,19 @@
 .wrap {
-  max-width: 1180px;
+  max-width: 1220px;
   margin: 0 auto;
-  padding: var(--xp-space-lg) var(--xp-space-md)
+  padding: var(--xp-space-xl) var(--xp-space-md)
     calc(var(--xp-space-xl) + env(safe-area-inset-bottom));
 }
 
 .head {
-  margin-bottom: var(--xp-space-lg);
+  max-width: 640px;
+  margin-bottom: var(--xp-space-xl);
 }
 
 .title {
   margin: 0;
   color: var(--xp-color-text);
-  font-size: var(--xp-font-size-h2);
+  font-size: var(--xp-font-size-h1);
   font-weight: var(--xp-font-weight-bold);
 }
 
@@ -24,7 +25,7 @@
 
 .body {
   display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-columns: 232px minmax(0, 1fr);
   align-items: start;
   gap: var(--xp-space-lg);
 }
@@ -33,11 +34,8 @@
   position: sticky;
   /* Header marketplace dính trên cùng — menu phải dừng dưới nó, không chui xuống gầm. */
   top: 84px;
-  padding: var(--xp-space-sm);
-  border: 1px solid var(--xp-color-border);
-  border-radius: var(--xp-border-radius);
-  background: var(--xp-color-bg-container);
-  box-shadow: var(--xp-shadow-card);
+  padding: var(--xp-space-sm) 0;
+  border-right: 1px solid var(--xp-color-border);
 }
 
 .content {
@@ -61,9 +59,8 @@
 
   .aside {
     position: static;
-    padding: 0;
-    border: 0;
-    background: none;
-    box-shadow: none;
+    padding: 0 0 var(--xp-space-sm);
+    border-right: 0;
+    border-bottom: 1px solid var(--xp-color-border);
   }
 }

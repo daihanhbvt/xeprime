@@ -13,8 +13,26 @@
   "displayName": "Họ tên hiển thị",
   "displayNamePlaceholder": "Nguyễn Văn A",
   "avatarUrl": "Ảnh đại diện (đường dẫn)",
+  "avatarUrlPlaceholder": "https://…",
   "identityLockedTitle": "Email và số điện thoại chưa đổi được",
   "identityLockedBody": "Hai thông tin này dùng để đăng nhập nên cần một luồng xác thực riêng. Liên hệ hỗ trợ nếu bạn cần đổi.",
+  "sidebar": {
+    "personal": "Cá nhân",
+    "rental": "Thuê xe",
+    "preferences": "Thiết lập"
+  },
+  "profile": {
+    "eyebrow": "Hồ sơ cá nhân",
+    "title": "Thông tin tài khoản",
+    "description": "Cập nhật tên hiển thị và ảnh đại diện của bạn.",
+    "accountLabel": "Tài khoản XePrime",
+    "email": "Email",
+    "phone": "Số điện thoại",
+    "unverified": "Chưa xác thực",
+    "securityTitle": "Thông tin đăng nhập",
+    "securityDescription": "Email và số điện thoại là thông tin nhận diện. Việc thay đổi cần một luồng xác thực riêng để giữ an toàn cho tài khoản.",
+    "edit": "Chỉnh sửa hồ sơ"
+  },
   "comingSoon": {
     "badge": "Sắp có",
     "title": "Phần này đang được xây dựng",

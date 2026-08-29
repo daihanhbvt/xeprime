@@ -65,6 +65,8 @@ export const ROUTES = {
     /** Chính sách thuê mặc định của gian hàng (Wave 2 — cọc/giao nhận/quá giờ/ưu đãi). */
     SHOP_POLICIES: '/manage/shop/policies',
     MEMBERS: '/manage/members',
+    /** "Gói của tôi" — gói hiện hành, hạn mức chỗ, lượt miễn phí, mua gói (W2, ADR 0015/0026). */
+    SUBSCRIPTION: '/manage/subscription',
     PICKUP_AREAS: '/manage/pickup-areas',
     DRIVERS: '/manage/drivers',
     CHAT: '/manage/chat',

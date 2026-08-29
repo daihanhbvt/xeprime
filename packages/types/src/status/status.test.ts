@@ -11,7 +11,11 @@ import {
 } from './booking';
 import { VEHICLE_PUBLIC_STATUS, VEHICLE_PUBLIC_STATUS_META } from './vehicle';
 import { TENANT_STATUS, TENANT_STATUS_META } from './tenant';
-import { BOOKING_REQUEST_STATUS, BOOKING_REQUEST_STATUS_META } from './booking-request';
+import {
+  BOOKING_REQUEST_STATUS,
+  BOOKING_REQUEST_STATUS_META,
+  BOOKING_REQUEST_STATUS_OCCUPYING,
+} from './booking-request';
 import { REVIEW_STATUS, REVIEW_STATUS_META, isReviewStatus } from './review';
 import {
   CONVERSATION_STATUS,
@@ -126,6 +130,28 @@ describe('ADR 0006 — trạng thái chiếm lịch', () => {
     expect(occupiesSchedule(BOOKING_STATUS.COMPLETED)).toBe(false);
     expect(occupiesSchedule(BOOKING_STATUS.CANCELLED)).toBe(false);
     expect(occupiesSchedule(BOOKING_STATUS.NO_SHOW)).toBe(false);
+  });
+
+  /**
+   * `BOOKING_REQUEST_STATUS_OCCUPYING` là một MẢNG, nên TypeScript không bắt được việc quên khai
+   * một trạng thái chiếm lịch mới — và hậu quả là bán trùng xe, im lặng (ADR 0021 hệ quả).
+   * Test này là cái backstop duy nhất. Nếu nó đỏ vì bạn vừa thêm một trạng thái: hãy quyết định
+   * TƯỜNG MINH trạng thái đó có giữ chỗ hay không, đừng chỉ sửa con số cho xanh.
+   */
+  it('yêu cầu chiếm lịch: chỉ approved_by_host và awaiting_hold', () => {
+    expect([...BOOKING_REQUEST_STATUS_OCCUPYING].sort()).toEqual([
+      'approved_by_host',
+      'awaiting_hold',
+    ]);
+  });
+
+  it('yêu cầu chờ duyệt và hết hạn giữ chỗ KHÔNG giữ lịch', () => {
+    expect(
+      BOOKING_REQUEST_STATUS_OCCUPYING.includes(BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL),
+    ).toBe(false);
+    expect(BOOKING_REQUEST_STATUS_OCCUPYING.includes(BOOKING_REQUEST_STATUS.HOLD_EXPIRED)).toBe(
+      false,
+    );
   });
 });
 

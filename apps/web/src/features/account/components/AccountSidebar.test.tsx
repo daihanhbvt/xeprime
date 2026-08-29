@@ -33,6 +33,9 @@ describe('AccountSidebar', () => {
   it('hiện đủ các mục của menu tài khoản', () => {
     render(<AccountSidebar />);
 
+    expect(screen.getByRole('heading', { name: 'Cá nhân' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Thuê xe' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Thiết lập' })).toBeTruthy();
     expect(screen.getByText('Tài khoản của tôi')).toBeTruthy();
     expect(screen.getByText('Chuyến của tôi')).toBeTruthy();
     expect(screen.getByText('Giấy tờ & Xác minh')).toBeTruthy();

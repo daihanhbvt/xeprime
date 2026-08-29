@@ -19,7 +19,7 @@ Git: **thư mục này là repo** (remote `https://github.com/daihanhbvt/xeprime
 ## 2. Tài liệu — đọc theo thứ tự
 
 Nguồn sống (đọc trước, luôn đúng hiện tại):
-1. `docs/decisions/` — **19 ADR (0001–0019), thắng mọi tài liệu khác khi mâu thuẫn**
+1. `docs/decisions/` — **27 ADR (0001–0027), thắng mọi tài liệu khác khi mâu thuẫn**
 2. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu"
 3. `docs/completion-roadmap.md` — **"đang ở đâu / làm gì tiếp"** (tiến độ thực tế + milestone). Đóng xong phase thì cập nhật file này.
 4. File này (CLAUDE.md)
@@ -63,6 +63,14 @@ Tài liệu tham chiếu (6–10) có vài quyết định kỹ thuật đã b�
 | [0017](docs/decisions/0017-native-bearer-auth.md) | App native xác thực bằng **Bearer access token 15 phút** + refresh token opaque xoay vòng, thu hồi theo thiết bị. Web **giữ nguyên** cookie httpOnly. Quyền/tenant/PII không bao giờ là claim JWT |
 | [0018](docs/decisions/0018-map-delivery-distance.md) | Bản đồ tính khoảng cách giao xe tận nơi: số tự động là **ƯỚC LƯỢNG** (chủ xe vẫn chốt phí — ADR 0014), khoảng cách **một chiều theo đường bộ**, provider trung lập, và **không tra được không phải một lỗi** |
 | [0019](docs/decisions/0019-backend-led-social-oauth.md) | Google/Facebook: vòng OAuth chạy ở **SERVER** (authorization code + PKCE, `GET /auth/social/:provider` trả 302). Client không cầm client secret cũng không cầm token của provider. **Firebase rút về đúng vai chat realtime** — ghi đè phần "Firebase là provider" của ADR 0002 |
+| [0020](docs/decisions/0020-two-revenue-tracks-one-marketplace.md) | **HAI tuyến doanh thu trên MỘT chợ**: tenant chưa mua gói trả **hoa hồng % phía chủ xe**; tenant có gói trả cước theo chỗ và **0đ trên chuyến**. **Giá hiển thị = ĐÚNG giá chủ xe niêm yết**, không cộng phí/bảo hiểm/thuế lên đầu khách. Hết hạn gói ⇒ **rơi về tuyến hoa hồng, KHÔNG gỡ xe khỏi chợ** — sửa ADR 0014 điều 5 và ADR 0015 điều 6 |
+| [0021](docs/decisions/0021-booking-hold-is-the-commission.md) | **Khoản giữ chỗ LÀ hoa hồng**: khách chuyển online cho nền tảng (nền tảng giữ luôn), phần còn lại trả thẳng chủ xe khi nhận xe ⇒ **không cần đường chuyển trả**. Bảng riêng `booking_holds`, KHÔNG dùng `payments`. `BOOKING_STATUS` không thêm giá trị nào — thu hẹp ADR 0013 ràng buộc 2 |
+| [0022](docs/decisions/0022-sepay-customer-money.md) | SePay đối soát **mọi khoản VÀO** tài khoản nền tảng: **MỘT** bảng `bank_transactions`, hai loại đích, phân loại bằng **tiền tố mã** (`XPG`/`XPH`). **KHÔNG nối FK `payments.subscription_id`** — mở rộng ADR 0016 điều 1, huỷ ADR 0015 điều 5 câu cuối |
+| [0023](docs/decisions/0023-wallet-refund-and-compensation.md) | Ví **chỉ** chứa tiền hoàn (khách) và bồi thường huỷ muộn (gian hàng). Sổ cái append-only, chống cộng đôi bằng constraint DB. **Không nạp, không thanh toán bằng ví, không rút tự động** |
+| [0024](docs/decisions/0024-billing-mode-from-plan-frozen-on-booking.md) | Chế độ thu phí đọc từ **GÓI hiện hành** (không bao giờ từ `tenant_type`), snapshot lên subscription, **ĐÓNG BĂNG vào đơn lúc tạo**. Nâng cấp giữa chuyến **không cần xử lý** — mở rộng ADR 0014 điều 3 và ADR 0015 điều 4 |
+| [0025](docs/decisions/0025-shop-escrow-hold-and-payout.md) | Gian hàng tuyến gói **bật được thu cọc qua sàn** ⇒ nền tảng **GIỮ TIỀN HỘ** và phải chuyển trả. Hold có cột `purpose` (`commission` = tiền nền tảng · `escrow` = tiền gian hàng, không bao giờ giữ lại). Ví thành **sổ công nợ phải trả**; rút tiền có cam kết thời gian; đối chiếu phải **tách quỹ nền tảng khỏi tiền giữ hộ** |
+| [0026](docs/decisions/0026-first-trips-free-then-commission.md) | **Hai đơn đầu miễn phí** (0% hoa hồng, không thu giữ chỗ, đếm theo ĐƠN TẠO); từ đơn thứ ba rơi về tuyến hoa hồng + sinh sẵn hoá đơn gói. **Không bao giờ kích hoạt gói chưa trả tiền** — thay ADR 0015 điều 9 |
+| [0027](docs/decisions/0027-feature-tiers-basic-owner-vs-shop.md) | **Hai bậc NĂNG LỰC, trục độc lập với quyền theo vai**: chủ xe = xe/lịch/đơn/giao nhận/sổ khách; gian hàng mở thêm thu chi · công nợ · báo cáo · bảo dưỡng · nhân viên · chi nhánh · tài xế · hợp đồng. Ba trạng thái `enabled`/`read_only`/`hidden` — hết hạn gói **không bao giờ** làm mất quyền XEM sổ sách của chính mình. Cờ đọc từ gói HIỆN HÀNH (không đóng băng vào đơn) |
 
 ### Công cụ Claude (`.claude/`)
 
@@ -105,6 +113,9 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | API type | FE import từ `packages/types/src/api.generated.ts` sinh bằng `openapi-typescript` — ADR 0007 |
 | RBAC | Role/permission lưu DB, **guard backend là nguồn bảo vệ chính** |
 | Thuê dài hạn | **Gói cố định** 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** (server tính, client không gửi); khách nêu nguyện vọng ngày nhận, gian hàng chốt lịch khi duyệt; ưu đãi cam kết thời hạn theo THÁNG, không cộng dồn — ADR 0011 |
+| Doanh thu | **Hai tuyến trên MỘT chợ** — ADR 0020. Tuyến A (chưa mua gói): hoa hồng % phía chủ xe, thu qua **khoản giữ chỗ khách chuyển online = chính khoản hoa hồng** (ADR 0021), 90% còn lại trả tay chủ xe ⇒ **không có đường payout**. Tuyến B (có gói): cước theo chỗ trả trước (ADR 0015), **0đ trên chuyến**. Chế độ đọc từ gói và **đóng băng vào đơn** (ADR 0024) |
+| Tiền vào nền tảng | SePay đối soát **mọi khoản VÀO**, MỘT bảng `bank_transactions`, phân loại bằng tiền tố mã `XPG`(gói)/`XPH`(giữ chỗ) — ADR 0022. Webhook công khai không session: khoá API time-safe, idempotent bằng unique DB, trả 200 khi trùng |
+| Ví | `wallets`/`wallet_entries`/`withdrawal_requests`, một bộ dùng chung cho khách và tenant (`owner_type`). CHỈ chứa tiền hoàn và bồi thường huỷ muộn; sổ cái append-only; rút bằng chuyển khoản admin tay — ADR 0023 |
 | Đa ngữ | `next-intl` KHÔNG locale routing; hai ngôn ngữ `vi`/`en` dùng CHUNG url; locale ở cookie `XP_LOCALE` (httpOnly) đọc phía server; tiền luôn VND, múi giờ luôn `Asia/Ho_Chi_Minh` — ADR 0012 |
 | Chat | **PostgreSQL là source of truth** (mọi tin/thành viên/đính kèm/đã đọc); Firestore chỉ là projection realtime ~30–50 tin gần nhất; đồng bộ outbox/retry; attachment ở Cloudflare R2 — ADR 0009 |
 | Deploy MVP | 1 VPS mỗi môi trường (staging 6GB, production ≥8GB) — `docs/deployment.md` §1 |
@@ -127,7 +138,12 @@ Tài liệu để mở một số chỗ, đã chốt như sau:
 | Styling | CSS Modules | AntD v5 đã có CSS-in-JS riêng; thêm styled-components là 2 runtime chồng nhau và ép `'use client'` khắp nơi — ADR 0003 |
 
 Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
-`turbo` (task runner monorepo) · `@nestjs/terminus` (health ping DB) · `@nestjs/throttler` + `helmet` (rate limit/CORS theo production checklist) · `nestjs-pino` + `pino-http` (log có cấu trúc + request-id) · `ulid` (sinh ID char(26)) · `husky` + `lint-staged` · `@tanstack/react-query-devtools` · `cookie-parser` (ADR 0002) · `openapi-typescript` (ADR 0007) · `@testcontainers/postgresql` (test đụng lịch cần Postgres thật — ADR 0006).
+`turbo` (task runner monorepo) · `@nestjs/terminus` (health ping DB) · `@nestjs/throttler` + `helmet` (rate limit/CORS theo production checklist) · `nestjs-pino` + `pino-http` (log có cấu trúc + request-id) · `ulid` (sinh ID char(26)) · `husky` + `lint-staged` · `@tanstack/react-query-devtools` · `cookie-parser` (ADR 0002) · `openapi-typescript` (ADR 0007).
+
+> ⚠️ Sửa 29/08/2026: bản trước ghi `@testcontainers/postgresql`. **Gói đó chưa bao giờ được cài và
+> không có dòng code nào dùng.** Test `apps/api` chạy trên một Postgres THẬT ở `TEST_DATABASE_URL`
+> (`apps/api/test/setup-test-db.ts`); `REQUIRE_DB=1` làm test đỏ khi thiếu DB, không có thì spec tự
+> bỏ qua. Đừng đi tìm container.
 
 ## 5. Cấm tuyệt đối
 
@@ -152,6 +168,25 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Dùng `number` cho tiền — `Decimal` ở BE, string ở JSON (ADR 0007)
 - ❌ Nhân `số tháng × 30` để suy lịch hay giá gói thuê dài hạn — dùng `addCalendarMonthsVn` / `longTermPackages` (ADR 0011)
 - ❌ Trưng chênh lệch giá dài hạn ↔ giá ngày như một khuyến mãi, hay hiện `discountPercent` (của TỰ LÁI) khi khách đang chọn dài hạn (ADR 0011)
+- ❌ Cộng bất kỳ khoản phí nào lên **giá khách phải trả** — phí nền tảng luôn trừ PHÍA CHỦ XE. Giá trên chợ = đúng giá chủ xe niêm yết (ADR 0020)
+- ❌ Thêm hoa hồng vào `PRICE_ROW` / `rows` của `BookingPriceSnapshot` — `rows` là hoá đơn của KHÁCH và `total = Σ rows`. Hoa hồng đi ở field `platformFee?` (ADR 0021)
+- ❌ Sửa `buildDailyQuote`/`buildLongTermPackageQuote` vì lý do hoa hồng — giá khách không phụ thuộc chế độ thu phí của chủ xe (ADR 0021)
+- ❌ Ghi khoản giữ chỗ vào `payments` hay `booking.paid_amount` — nó không phải thu nhập của gian hàng; bảng riêng `booking_holds` (ADR 0021)
+- ❌ Gọi khoản giữ chỗ là "cọc", hay gọi ví là "ví tiền" trên giao diện — sai tên là bước đầu của hoàn nhầm khoản (ADR 0021, 0023)
+- ❌ Thêm trạng thái "chờ thanh toán" vào `BOOKING_STATUS` — trạng thái chờ tiền sống ở `booking_holds` và `booking_requests` (ADR 0013 ràng buộc 2 · ADR 0021)
+- ❌ Thu 10% của một con số tạm tính (`estimateNote != null`) hay của đơn dài hạn chưa chốt giờ nhận (ADR 0021)
+- ❌ Tính mốc huỷ miễn phí ở client, hay suy `pickupAt − 4h` lúc đọc — `free_cancel_until` là CỘT lưu, chốt một lần lúc tạo hold (ADR 0021)
+- ❌ Đọc `tenants.tenant_type` để quyết định chế độ thu phí — nguồn duy nhất là gói hiện hành (ADR 0014 điều 2 · ADR 0024)
+- ❌ Tính lại giá/hoa hồng của một đơn đã tạo — mọi thứ đóng băng lúc tạo (ADR 0024)
+- ❌ Nối FK `payments.subscription_id` — sẽ tự sinh phiếu thu cho tenant, biến tiền gói thành thu nhập của chính họ (ADR 0022 điều 6)
+- ❌ Khớp giao dịch ngân hàng TỰ ĐỘNG theo số tiền khi không rút được mã — chỉ gợi ý cho admin (ADR 0022)
+- ❌ Chống ghi đôi tiền bằng check ở tầng app — luôn bằng constraint DB (`provider_tx_id`, `(wallet, source_type, source_ref_id)`) — ADR 0022, 0023
+- ❌ Cho ví nạp tiền / thanh toán / rút tự động — nó chỉ là sổ ghi có tiền hoàn và bồi thường (ADR 0023)
+- ❌ Nhét cờ tính năng vào bảng permission, hay suy quyền của một người từ GÓI — hai trục độc lập, kiểm tra nối tiếp (ADR 0027 điều 2)
+- ❌ Ẩn menu mà không chặn endpoint ở server — ẩn nút chỉ là trang trí (ADR 0027 điều 4)
+- ❌ Để tenant hết hạn gói MẤT QUYỀN XEM sổ thu chi/công nợ/bảo dưỡng của chính họ — hết hạn là `read_only`, không phải `hidden` (ADR 0027 điều 3)
+- ❌ Dựng báo cáo tổng hợp thu chi cho bậc cơ bản — chủ xe thấy tiền của TỪNG đơn, sổ tổng hợp là tính năng của gói (ADR 0027 điều 1)
+- ❌ Đẩy hạng tìm kiếm theo tuyến, hay "san bằng" chênh lệch giá giữa xe hoa hồng và xe gian hàng — chênh lệch đó LÀ tín hiệu nâng cấp (ADR 0027)
 - ❌ Tiền tố ngôn ngữ trong URL (`/en`, `/vi`), `app/[locale]`, hay tham số `?lang=`/`?locale=` — ADR 0012
 - ❌ Chuỗi giao diện viết thẳng trong component ở khu ĐÃ i18n hoá — dùng `t()` + `messages/<locale>/*.json`
 - ❌ `dayjs.locale(...)` ở bất kỳ đâu — nó đổi trạng thái toàn tiến trình và rò ngôn ngữ giữa các request SSR

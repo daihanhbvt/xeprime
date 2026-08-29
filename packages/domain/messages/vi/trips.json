@@ -83,6 +83,7 @@
   },
   "subtitle": {
     "pending_approval": "Yêu cầu thuê xe của bạn đã được gửi tới chủ xe",
+    "awaiting_hold": "Chuyển khoản giữ chỗ để giữ xe này cho bạn",
     "ready": "Yêu cầu thuê xe đã được chủ xe xác nhận thành công",
     "active": "Bạn đang trong thời gian thuê xe này. Vui lòng di chuyển an toàn",
     "completed": "Chuyến đi đã kết thúc tốt đẹp. Cảm ơn bạn đã đồng hành cùng XePrime!",

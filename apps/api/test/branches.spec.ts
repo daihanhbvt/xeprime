@@ -12,12 +12,10 @@ import {
 } from '@xeprime/types';
 import { BranchesService } from '../src/modules/branches/branches.service';
 import { ListingsService } from '../src/modules/public-listings/listings.service';
-import { TenantsService } from '../src/modules/tenants/tenants.service';
-import { AuditService } from '../src/modules/audit/audit.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
 import {
   makeBranchesService,
-  makeProvincesService,
+  makeTenantsService,
   makeVehiclesService,
   vehicleCreator,
 } from './helpers/service-factory';
@@ -36,12 +34,7 @@ const branches: BranchesService = makeBranchesService(asService);
 const vehicles = makeVehiclesService(asService);
 const createVehicle = vehicleCreator(vehicles, asService);
 const listings = new ListingsService(asService);
-const tenants = new TenantsService(
-  asService,
-  new AuditService(asService),
-  makeProvincesService(asService),
-  branches,
-);
+const tenants = makeTenantsService(asService);
 
 let dbAvailable = false;
 let ownerId: string;
@@ -382,6 +375,38 @@ describe('Vị trí công khai bám theo chi nhánh', () => {
 });
 
 describe('Đăng ký gian hàng tạo chi nhánh mặc định', () => {
+  maybe(
+    'gán GÓI MẶC ĐỊNH cùng transaction (ADR 0015 điều 9) — không tenant nào ra đời mà không có gói',
+    async () => {
+      const userId = newId();
+      await prisma.user.create({
+        data: { id: userId, displayName: 'Chủ có gói', email: `plan-${userId}@xeprime.test` },
+      });
+
+      const shop = await tenants.registerShop(userId, { name: 'Gian hàng có gói', provinceCode: DANANG });
+
+      const now = new Date();
+      const sub = await prisma.tenantSubscription.findFirst({
+        where: { tenantId: shop.id, status: 'active', startsAt: { lte: now }, endsAt: { gt: now } },
+        select: { billingMode: true, price: true, termMonths: true, plan: { select: { limitsJson: true } } },
+      });
+      // Điều kiện an toàn của ADR 0027: gói hiện hành PHẢI có, và phải mang cờ năng lực —
+      // không có gói nghĩa là mất sạch tính năng nâng cao ngày bật cổng chặn.
+      expect(sub).not.toBeNull();
+      expect(sub?.billingMode).toBe('commission');
+      expect(sub?.price.toString()).toBe('0');
+      expect(sub?.termMonths).toBe(12);
+      expect((sub?.plan.limitsJson as { features?: string[] })?.features ?? []).toContain('finance');
+
+      await prisma.tenantSubscription.deleteMany({ where: { tenantId: shop.id } });
+      await prisma.tenantBranch.deleteMany({ where: { tenantId: shop.id } });
+      await prisma.tenantProfile.deleteMany({ where: { tenantId: shop.id } });
+      await prisma.tenantMembership.deleteMany({ where: { tenantId: shop.id } });
+      await prisma.tenant.delete({ where: { id: shop.id } });
+      await prisma.user.delete({ where: { id: userId } });
+    },
+  );
+
   maybe('một transaction: tenant + membership + hồ sơ + chi nhánh mặc định', async () => {
     const userId = newId();
     await prisma.user.create({
@@ -403,6 +428,7 @@ describe('Đăng ký gian hàng tạo chi nhánh mặc định', () => {
     expect(rows[0]?.isDefault).toBe(true);
     expect(rows[0]?.address).toBe('12 Bạch Đằng');
 
+    await prisma.tenantSubscription.deleteMany({ where: { tenantId: shop.id } });
     await prisma.tenantBranch.deleteMany({ where: { tenantId: shop.id } });
     await prisma.tenantProfile.deleteMany({ where: { tenantId: shop.id } });
     await prisma.tenantMembership.deleteMany({ where: { tenantId: shop.id } });

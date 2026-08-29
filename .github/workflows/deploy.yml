@@ -239,6 +239,7 @@ jobs:
           V_GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
           V_FACEBOOK_APP_ID: ${{ vars.FACEBOOK_APP_ID }}
           V_OTP_MODE: ${{ vars.OTP_MODE }}
+          V_PLAN_FEATURE_ENFORCEMENT: ${{ vars.PLAN_FEATURE_ENFORCEMENT }}
           V_OTP_TTL_MINUTES: ${{ vars.OTP_TTL_MINUTES }}
           V_OTP_RESEND_COOLDOWN_SECONDS: ${{ vars.OTP_RESEND_COOLDOWN_SECONDS }}
           V_OTP_MAX_SENDS_PER_HOUR: ${{ vars.OTP_MAX_SENDS_PER_HOUR }}
@@ -398,6 +399,10 @@ jobs:
           kv FACEBOOK_APP_SECRET "${S_FACEBOOK_APP_SECRET:-}"
 
           kv OTP_MODE "${V_OTP_MODE:-mock}"
+          # Trục năng lực theo gói (ADR 0027). Mặc định "warn": ghi log ai SẼ bị chặn nhưng vẫn
+          # cho qua. Lật sang "on" là một lần deploy RIÊNG, không kèm thay đổi nào khác — nhờ
+          # vậy rollback là sửa một biến ở GitHub Environment, không phải revert code.
+          kv PLAN_FEATURE_ENFORCEMENT "${V_PLAN_FEATURE_ENFORCEMENT:-warn}"
           kv ESMS_API_KEY "${S_ESMS_API_KEY:-}"
           kv ESMS_SECRET_KEY "${S_ESMS_SECRET_KEY:-}"
           kv ESMS_BRANDNAME "${S_ESMS_BRANDNAME:-}"

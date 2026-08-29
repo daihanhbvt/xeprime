@@ -13,6 +13,15 @@ export const BOOKING_REQUEST_STATUS = {
   CANCELLED_BY_CUSTOMER: 'cancelled_by_customer',
   EXPIRED: 'expired',
   CONVERTED_TO_BOOKING: 'converted_to_booking',
+  /**
+   * Tuyến hoa hồng: khách đã bấm đặt, đang chờ chuyển khoản giữ chỗ (ADR 0021).
+   *
+   * **CHIẾM LỊCH** — khác hẳn `pending_host_approval`. Không có bước chủ xe duyệt: đủ tiền là
+   * đơn thuê được tạo ngay trong transaction của webhook.
+   */
+  AWAITING_HOLD: 'awaiting_hold',
+  /** Quá cửa sổ chuyển khoản mà chưa đủ tiền — worker ghi, nhả lịch. Kết thúc. */
+  HOLD_EXPIRED: 'hold_expired',
 } as const;
 
 export type BookingRequestStatus =
@@ -31,9 +40,20 @@ export function isBookingRequestStatus(value: unknown): value is BookingRequestS
  *
  * `pending_host_approval` cố ý KHÔNG chiếm lịch: nhiều khách được phép cùng hỏi một xe
  * cùng khung giờ, ai được duyệt trước thì được xe. Chỉ khi shop duyệt mới giữ chỗ.
+ *
+ * `awaiting_hold` thì NGƯỢC LẠI, và đó là chủ ý (ADR 0021 điều 6). Lập luận ở đoạn trên nói về
+ * việc **hỏi**; trả tiền là chuyện khác. Nếu đợi tiền về mới chiếm lịch thì hai khách cùng
+ * chuyển khoản cho một chỗ và nền tảng buộc phải hoàn một người — phá đúng cái đơn giản hoá
+ * "không cần đường chuyển trả" mà cả mô hình dựa vào. Khoá mềm 15 phút
+ * (`HOLD_PAYMENT_WINDOW_MINUTES`) là mặt rẻ của đánh đổi đó.
+ *
+ * ⚠️ Mảng này **không có kiểm tra vét cạn của compiler**: thêm một trạng thái chiếm lịch mà quên
+ * khai ở đây là bán trùng xe, im lặng. `status.test.ts` khoá danh sách này — nếu bạn đang sửa
+ * mảng và test đỏ, hãy chắc chắn bạn thật sự muốn đổi ngữ nghĩa chiếm lịch.
  */
 export const BOOKING_REQUEST_STATUS_OCCUPYING: readonly BookingRequestStatus[] = [
   BOOKING_REQUEST_STATUS.APPROVED_BY_HOST,
+  BOOKING_REQUEST_STATUS.AWAITING_HOLD,
 ];
 
 /**
@@ -98,6 +118,14 @@ export const BOOKING_REQUEST_STATUS_META: Readonly<Record<BookingRequestStatus, 
   [BOOKING_REQUEST_STATUS.CONVERTED_TO_BOOKING]: {
     label: 'Đã tạo đơn thuê',
     color: STATUS_COLOR.SUCCESS,
+  },
+  [BOOKING_REQUEST_STATUS.AWAITING_HOLD]: {
+    label: 'Chờ chuyển giữ chỗ',
+    color: STATUS_COLOR.WAITING,
+  },
+  [BOOKING_REQUEST_STATUS.HOLD_EXPIRED]: {
+    label: 'Hết hạn chuyển giữ chỗ',
+    color: STATUS_COLOR.NEUTRAL,
   },
 };
 

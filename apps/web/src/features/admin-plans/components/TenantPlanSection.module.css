@@ -80,3 +80,20 @@
 .planSelect {
   width: 100%;
 }
+
+/* Kỳ hạn + số chỗ của lượt gán (ADR 0015): nhãn trái, ô nhập phải, xếp dọc trong drawer hẹp. */
+.assignFields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.assignField {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--xp-color-text);
+}

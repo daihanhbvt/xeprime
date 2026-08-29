@@ -473,6 +473,12 @@ async function buildSubscription(
       planId: plan.id,
       status: SUBSCRIPTION_STATUS.ACTIVE,
       price: plan.price,
+      // Kỳ 1 tháng + snapshot chế độ thu phí từ gói (ADR 0015/0024) — cùng hình dạng dòng
+      // mà BillingService.assign ghi, để dữ liệu demo không khác dữ liệu thật.
+      termMonths: 1,
+      slotsJson: plan.slots,
+      billingMode: plan.billingMode,
+      commissionPercent: plan.commissionPercent,
       startsAt: daysFromToday(-15, 0),
       endsAt: daysFromToday(15, 0),
       note: 'Gói đang hiệu lực (seed demo).',

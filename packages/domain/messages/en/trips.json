@@ -83,6 +83,7 @@
   },
   "subtitle": {
     "pending_approval": "Your rental request has been sent to the host",
+    "awaiting_hold": "Send the reservation payment to hold this car for you",
     "ready": "The host has confirmed your rental request",
     "active": "You have this car right now — drive safely",
     "completed": "The trip is complete. Thanks for riding with XePrime!",

@@ -1,7 +1,12 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped } from '../../../common/decorators';
+import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import {
+  CurrentTenant,
+  RequirePermissions,
+  RequiresFeature,
+  TenantScoped,
+} from '../../../common/decorators';
 import type { TenantContext } from '../../../common/types/request-context';
 import {
   MaintenanceBoardListDto,
@@ -21,6 +26,7 @@ import { scopeOf } from './vehicle-maintenance.controller';
 @ApiTags('maintenance')
 @Controller('maintenance')
 @TenantScoped()
+@RequiresFeature(PLAN_FEATURE.MAINTENANCE)
 export class MaintenanceBoardController {
   constructor(private readonly maintenance: MaintenanceService) {}
 

@@ -25,6 +25,14 @@ Quy tắc: ADR ở đây **thắng** mọi tài liệu khác trong `docs/` khi c
 | [0017](0017-native-bearer-auth.md) | App native xác thực bằng Bearer access token 15 phút + refresh token opaque xoay vòng; web giữ nguyên cookie | Accepted 24/08/2026 |
 | [0018](0018-map-delivery-distance.md) | Bản đồ tính khoảng cách giao xe: số tự động là ƯỚC LƯỢNG (chủ xe vẫn chốt), một chiều theo đường bộ, provider trung lập, không tra được không phải lỗi | Accepted 24/08/2026 |
 | [0019](0019-backend-led-social-oauth.md) | Đăng nhập Google/Facebook do BACKEND chủ trì (authorization code + PKCE chạy ở server, client không cầm token của provider); Firebase rút về đúng vai chat realtime — **ghi đè phần "Firebase là provider" của ADR 0002** | Accepted 26/08/2026 |
+| [0020](0020-two-revenue-tracks-one-marketplace.md) | Hai đường doanh thu trên MỘT chợ: hoa hồng phía chủ xe (chưa mua gói) và gói theo chỗ; giá hiển thị = ĐÚNG giá chủ xe niêm yết — **sửa ADR 0014 điều 5 và ADR 0015 điều 6** | Accepted 28/08/2026 |
+| [0021](0021-booking-hold-is-the-commission.md) | Khoản giữ chỗ **LÀ** hoa hồng: khách chuyển online cho nền tảng, phần còn lại trả thẳng chủ xe ⇒ không cần đường chuyển trả — **thu hẹp ADR 0013 ràng buộc 2** | Accepted 28/08/2026 |
+| [0022](0022-sepay-customer-money.md) | SePay mở sang tiền của KHÁCH: một sổ giao dịch ngân hàng, hai loại đích, phân loại bằng tiền tố mã — **mở rộng ADR 0016 điều 1, huỷ ADR 0015 điều 5 câu cuối** | Accepted 28/08/2026 |
+| [0023](0023-wallet-refund-and-compensation.md) | Ví chỉ chứa tiền hoàn (khách) và tiền bồi thường huỷ muộn (gian hàng); sổ cái append-only, rút bằng chuyển khoản admin thủ công | Accepted 28/08/2026 |
+| [0024](0024-billing-mode-from-plan-frozen-on-booking.md) | Chế độ thu phí do GÓI quyết định và ĐÓNG BĂNG vào đơn lúc tạo; nâng cấp giữa chuyến là chuyện không cần xử lý — **mở rộng ADR 0014 điều 3 và ADR 0015 điều 4** | Accepted 28/08/2026 |
+| [0025](0025-shop-escrow-hold-and-payout.md) | Gian hàng bật thu cọc qua sàn: nền tảng **giữ tiền hộ** và có đường chuyển trả; hold có `purpose` commission/escrow; cam kết thời gian rút tiền — **thu hẹp ADR 0021 điều 1, viết lại ADR 0023 điều 1–2** | Accepted 29/08/2026 |
+| [0026](0026-first-trips-free-then-commission.md) | Hai đơn đầu của một tenant **miễn phí hoàn toàn**; từ đơn thứ ba rơi về tuyến hoa hồng và được sinh sẵn hoá đơn gói — **thay ADR 0015 điều 9** | Accepted 29/08/2026 |
+| [0027](0027-feature-tiers-basic-owner-vs-shop.md) | **Hai bậc năng lực**: chủ xe dùng bộ cơ bản (đăng xe, lịch, đơn, giao nhận); gian hàng mở thêm thu chi, công nợ, báo cáo, bảo dưỡng, nhân viên, chi nhánh, tài xế, hợp đồng. Hết hạn gói ⇒ **chỉ đọc**, không mất dữ liệu — **cụ thể hoá ADR 0014 điều 3** | Accepted 29/08/2026 |
 
 ## Khi nào viết ADR mới
 

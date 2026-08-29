@@ -1,7 +1,13 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, CurrentUser, RequirePermissions, TenantScoped } from '../../common/decorators';
+import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import {
+  CurrentTenant,
+  CurrentUser,
+  RequirePermissions,
+  RequiresFeature,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   CancelReceiptDto,
@@ -24,6 +30,7 @@ import { ReceiptsService } from './receipts.service';
 @ApiTags('receipts')
 @Controller('receipts')
 @TenantScoped()
+@RequiresFeature(PLAN_FEATURE.FINANCE)
 export class ReceiptsController {
   constructor(private readonly receipts: ReceiptsService) {}
 

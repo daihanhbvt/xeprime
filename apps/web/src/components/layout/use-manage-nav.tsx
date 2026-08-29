@@ -19,7 +19,9 @@ import {
   type NavSection,
 } from '@/constants/nav';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useFeatureStates } from '@/hooks/use-feature';
 import { usePermissions } from '@/hooks/use-permissions';
+import { FEATURE_STATE, isFeatureVisible } from '@xeprime/types';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { toggleNavSection } from '@/store/slices/app.slice';
 import { NavBadge } from './NavBadge';
@@ -73,7 +75,24 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
   const collapsedSections = useAppSelector((s) => s.app.navSectionsCollapsed);
   const { data: user } = useCurrentUser();
   const { has } = usePermissions();
+  const featureStates = useFeatureStates();
   const badges = useNavBadges();
+
+  /**
+   * MỘT vị từ "người dùng có thấy mục này không", dùng ở BA chỗ: dựng mục lá, và hai phép dồn
+   * huy hiệu (mục cha đóng, khối gập).
+   *
+   * Hai trục độc lập kiểm NỐI TIẾP nhau (ADR 0027 điều 2): `permission` trả lời "anh là ai",
+   * `feature` trả lời "gian hàng này có gì". Thiếu một trong hai phép dồn thì nhánh/khối thu gọn
+   * sẽ đếm việc-cần-xử-lý cho mục người dùng KHÔNG thấy — một con số chỉ vào hư không.
+   *
+   * Cờ vắng trong cache ⇒ coi như `enabled`: xem docblock của `useFeature` về việc vì sao mặc
+   * định phải là "cho qua".
+   */
+  const canSeeLeaf = (leaf: NavLeaf): boolean =>
+    has(leaf.permission) &&
+    (leaf.feature === undefined ||
+      isFeatureVisible(featureStates[leaf.feature] ?? FEATURE_STATE.ENABLED));
 
   const sections = navForScope(Boolean(user?.platformRole));
   const selectedKey = matchSelectedKey(pathname, flattenLeaves(sections));
@@ -112,7 +131,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
   }
 
   function buildLeaf(leaf: NavLeaf): MenuItem | null {
-    if (!has(leaf.permission)) return null;
+    if (!canSeeLeaf(leaf)) return null;
     const label = t(leaf.labelKey);
     const count = badgeCountOf(leaf);
     // Huy hiệu phải nói được thành lời: người dùng trình đọc màn hình nghe "Yêu cầu đặt xe, 3
@@ -156,7 +175,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
     const hiddenCount = isOpen
       ? 0
       : branch.children
-          .filter((leaf) => has(leaf.permission))
+          .filter(canSeeLeaf)
           .reduce((sum, leaf) => sum + badgeCountOf(leaf), 0);
 
     return {
@@ -198,7 +217,7 @@ export function useManageNav(options: UseManageNavOptions = {}): ManageNav {
     const hiddenCount = expanded
       ? 0
       : leavesOfSection(section)
-          .filter((leaf) => has(leaf.permission))
+          .filter(canSeeLeaf)
           .reduce((sum, leaf) => sum + badgeCountOf(leaf), 0);
 
     return {

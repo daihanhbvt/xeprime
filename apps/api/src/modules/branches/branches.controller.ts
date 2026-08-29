@@ -1,10 +1,11 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
+  RequiresFeature,
   TenantScoped,
 } from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -23,6 +24,20 @@ import {
  *
  * Không có `DELETE`: chi nhánh còn xe/đơn là dữ liệu lịch sử của những chuyến đã đi. Vòng đời
  * đúng là `deactivate` (ngừng nhận xe mới) — xoá cứng bị FK chặn ở DB.
+ *
+ * ⚠️ `@RequiresFeature(BRANCHES)` gắn THEO TỪNG ROUTE, không gắn ở class — và đó là chủ đích.
+ *
+ * Tính năng bán được là **nhiều chi nhánh**, không phải "có chi nhánh". Một gian hàng bậc cơ bản
+ * luôn có đúng MỘT chi nhánh mặc định do `registerShop` tạo, và địa chỉ của nó là **địa chỉ công
+ * khai của họ trên chợ** — khoá lại là khoá một thứ thuộc bộ cơ bản (ADR 0027 điều 1).
+ *
+ * Nên ba route dưới đây CỐ Ý không có marker:
+ *   GET /branches · GET /branches/:id — không đọc được thì không có form nào để sửa;
+ *   PATCH /branches/:id              — sửa địa chỉ chi nhánh của chính mình.
+ *
+ * Ngoại lệ nằm ở METADATA chứ không giấu trong service: nó hiện trong `route-access`, và
+ * `plan-feature-coverage.spec.ts` khai đúng ba route này thành danh sách chờ — thêm bớt một
+ * route ở đây là đỏ CI, không phải một thay đổi im lặng.
  */
 @ApiTags('branches')
 @Controller('branches')
@@ -42,6 +57,7 @@ export class BranchesController {
   }
 
   @Post()
+  @RequiresFeature(PLAN_FEATURE.BRANCHES)
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
   @ApiOperation({ summary: 'Tạo chi nhánh mới (mã CNxx sinh ở server)' })
   @ApiCreatedResponse({ type: BranchDto })
@@ -75,6 +91,7 @@ export class BranchesController {
   }
 
   @Post(':id/set-default')
+  @RequiresFeature(PLAN_FEATURE.BRANCHES)
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
   @ApiOperation({ summary: 'Đặt làm chi nhánh mặc định của gian hàng' })
   @ApiOkResponse({ type: BranchDto })
@@ -87,6 +104,7 @@ export class BranchesController {
   }
 
   @Post(':id/deactivate')
+  @RequiresFeature(PLAN_FEATURE.BRANCHES)
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
   @ApiOperation({ summary: 'Ngừng hoạt động (chặn nếu còn xe hoặc đơn đang chạy/sắp tới)' })
   @ApiOkResponse({ type: BranchDto })
@@ -99,6 +117,7 @@ export class BranchesController {
   }
 
   @Post(':id/activate')
+  @RequiresFeature(PLAN_FEATURE.BRANCHES)
   @RequirePermissions(PERMISSION.BRANCH_MANAGE)
   @ApiOperation({ summary: 'Bật lại chi nhánh đã ngừng hoạt động' })
   @ApiOkResponse({ type: BranchDto })

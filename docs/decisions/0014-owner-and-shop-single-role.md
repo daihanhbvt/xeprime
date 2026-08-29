@@ -2,6 +2,17 @@
 
 Ngày: 21/08/2026 · Trạng thái: Accepted
 
+> ⚠️ **Hai điều khoản đã được sửa (28/08/2026):**
+>
+> - **Điều 3** — [ADR 0024](0024-billing-mode-from-plan-frozen-on-booking.md) mở rộng: `plans`
+>   quyết định **năng lực VÀ chế độ thu phí**.
+> - **Điều 5** — [ADR 0020](0020-two-revenue-tracks-one-marketplace.md) thêm **đúng một dòng**
+>   vào cột *"VẪN đứng giữa"*: **phí dịch vụ của chính nền tảng**. Mọi dòng khác ở nguyên chỗ —
+>   đặc biệt *"Giá, điều kiện thuê, cọc"* vẫn thuộc cột *"KHÔNG đứng giữa"*.
+>
+> **Điều 1** (mọi xe thuộc một tenant) và **điều 2** (`tenant_type` chỉ là nhãn hiển thị, không
+> bao giờ dùng cho quyền/hạn mức/tiền) **giữ nguyên hiệu lực tuyệt đối**.
+
 ## Bối cảnh
 
 Sản phẩm phục vụ hai nhóm người cho thuê: cá nhân có 1–3 xe tự khai thác, và gian hàng có đội xe
