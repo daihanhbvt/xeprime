@@ -1,4 +1,5 @@
 import type { DiscountTier, LegacyDiscountTier } from './long-term';
+import type { BillingMode } from './status/billing';
 import { STATUS_COLOR, type StatusMeta } from './status/meta';
 
 /**
@@ -189,6 +190,38 @@ export interface PriceBreakdownRow {
 }
 
 /**
+ * Phần phía CHỦ XE của một chuyến — ADR 0021 điều 9.
+ *
+ * **Cố ý KHÔNG phải một `PRICE_ROW`.** Hai lý do cứng, và cả hai đều đắt nếu bỏ qua:
+ *
+ *  1. `totalAmount` được định nghĩa là *tổng các dòng*, và có code đọc từng dòng theo khoá. Thêm
+ *     một dòng hoa hồng thì hoặc đổi tổng khách phải trả — sai, vì "giá trên sàn = đúng giá chủ
+ *     xe niêm yết" là toàn bộ lời hứa của sản phẩm (ADR 0020 điều 2) — hoặc phá bất biến
+ *     `total = Σ rows`.
+ *  2. `rows` là hoá đơn của **KHÁCH**. Hoa hồng là chuyện phía chủ xe. Nhét vào đó là cách để
+ *     sáu tháng nữa ai đó vô tình cộng phí lên đầu khách và không ai nhận ra.
+ *
+ * Hệ quả: `buildDailyQuote` / `buildLongTermPackageQuote` **không đổi một dòng nào** vì lý do hoa
+ * hồng — chúng tính giá khách, mà giá khách không phụ thuộc chế độ thu phí của chủ xe.
+ */
+export interface PlatformFeeSnapshot {
+  /** Chế độ thu phí đã đóng băng lúc tạo đơn (ADR 0024 điều 4). */
+  billingMode: BillingMode;
+  /** % hoa hồng đã áp. */
+  percent: number;
+  /** Mẫu số = `totalAmount` tại thời điểm chốt. */
+  baseAmount: string;
+  /** = round(base × percent / 100, HALF_UP). Giữ để giải thích khi sàn có hiệu lực. */
+  computedAmount: string;
+  /** Số khách THỰC CHUYỂN online = max(computed, HOLD_MIN_AMOUNT). */
+  holdAmount: string;
+  /** Khách trả TAY chủ xe lúc nhận xe = base − holdAmount. */
+  payAtHandoverAmount: string;
+  /** Chủ xe THỰC NHẬN. Bằng `payAtHandoverAmount`; giữ hai tên vì là hai câu hỏi khác nhau. */
+  ownerNetAmount: string;
+}
+
+/**
  * Snapshot giá BẤT BIẾN trên `bookings.price_snapshot_json` — chốt lúc tạo đơn, đủ để giải
  * thích số tiền về sau. Đổi chính sách sau đó KHÔNG được ghi lại field này.
  */
@@ -218,6 +251,14 @@ export interface BookingPriceSnapshot {
   totalAmount: string;
   /** Cọc thế chấp — hoàn trả, KHÔNG nằm trong totalAmount. */
   depositAmount: string;
+  /**
+   * Phần PHÍA CHỦ XE của chuyến — khoản nền tảng khấu trừ (ADR 0021 điều 9).
+   *
+   * Vắng mặt ⇒ tuyến gói: 0 hoa hồng. Snapshot chốt TRƯỚC 28/08/2026 cũng không có trường này;
+   * đọc ra `undefined` nghĩa là **"không biết"** và **KHÔNG được suy ngược từ `totalAmount`** —
+   * cùng cảnh báo đã ghi cho `policy.collateralMode` ở dưới.
+   */
+  platformFee?: PlatformFeeSnapshot;
   /** Chính sách hiệu lực lúc chốt (bản sao nguyên trạng) — null khi source = manual. */
   policy: {
     source: PolicySource;

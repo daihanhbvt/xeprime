@@ -35,6 +35,8 @@ import vehicles from '@xeprime/domain/messages/en/vehicles.json';
 import branches from '@xeprime/domain/messages/en/branches.json';
 import customers from '@xeprime/domain/messages/en/customers.json';
 import finance from '@xeprime/domain/messages/en/finance.json';
+import adminPlans from '@xeprime/domain/messages/en/admin-plans.json';
+import subscription from '@xeprime/domain/messages/en/subscription.json';
 
 const messages = {
   Common: common,
@@ -60,6 +62,8 @@ const messages = {
   Branches: branches,
   Customers: customers,
   Finance: finance,
+  AdminPlans: adminPlans,
+  Subscription: subscription,
 };
 
 export default messages;

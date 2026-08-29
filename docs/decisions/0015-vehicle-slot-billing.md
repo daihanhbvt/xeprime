@@ -2,6 +2,31 @@
 
 Ngày: 21/08/2026 · Trạng thái: Accepted · **Sửa [ADR 0010](0010-billing-plans-subscriptions.md)**
 
+> ⚠️ **Ba chỗ đã được sửa (28/08/2026)** khi mô hình chuyển sang hai tuyến doanh thu
+> ([ADR 0020](0020-two-revenue-tracks-one-marketplace.md)):
+>
+> - **Điều 5, câu cuối** (*"`payments.subscription_id` nay nối FK"*) — **HUỶ** bởi
+>   [ADR 0022 điều 6](0022-sepay-customer-money.md). Một dòng `payments` có `tenant_id` tự sinh
+>   phiếu thu đã duyệt cho tenant đó, tức là tiền nền tảng thu *của* gian hàng sẽ hiện lên báo
+>   cáo tài chính của **chính gian hàng** như khoản thu của họ. Tiền gói ghi ở
+>   `subscription_invoices.paid_amount` + `bank_transactions`.
+> - **Điều 6** (*"hết hạn → gỡ xe khỏi chợ"*) — **SỬA** bởi
+>   [ADR 0020 điều 5](0020-two-revenue-tracks-one-marketplace.md): hết hạn thì **rơi về tuyến hoa
+>   hồng**, xe **ở lại chợ**. Gỡ xe là đúng khi chưa có tuyến thay thế; nay nó vừa giết nguồn
+>   cung vừa bỏ mất doanh thu của chính những xe đó.
+> - **Kiểm điểm giao ở mục "Hệ quả"** (*"giá gói ở mốc N xe phải ≥ giá cá nhân cùng N xe"*) — phát
+>   biểu lại ở [ADR 0020](0020-two-revenue-tracks-one-marketplace.md) vì "giá cá nhân" nay là một
+>   **phần trăm doanh thu**, không phải giá theo chỗ; và nó chuyển từ quy trình thành **code**.
+>
+> Mục *"Hoãn có chủ đích → Hoa hồng theo đơn"* đã được mở, đúng như nó dự liệu:
+> [ADR 0021](0021-booking-hold-is-the-commission.md).
+> **Điều 1–4 và 7–10 giữ nguyên hiệu lực.**
+>
+> ⚠️ **Điều 9 (gói miễn phí có ngày hết hạn) bị THAY (29/08/2026)** bởi
+> [ADR 0026](0026-first-trips-free-then-commission.md): ưu đãi khởi đầu nay đếm theo **SỐ CHUYẾN**
+> (hai đơn đầu miễn phí), không theo ngày. Phần còn lại của điều 9 — `registerShop` tự gán gói,
+> backfill tenant cũ — giữ nguyên.
+
 ## Bối cảnh
 
 Mô hình kinh doanh đã chốt: chủ xe cá nhân dùng miễn phí ~6 tháng đầu sau khi mở sàn, sau đó trả

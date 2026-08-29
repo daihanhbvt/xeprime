@@ -5,6 +5,14 @@ Ngày: 21/08/2026 · Trạng thái: Accepted
 > ⚠️ **Đã được [ADR 0016](0016-sepay-bank-reconciliation.md) mở một KHE HẸP (21/08/2026):** tiền
 > GÓI theo chiều gian hàng → nền tảng được đối soát tự động qua SePay. Lệnh cấm ở đây **vẫn giữ
 > nguyên** cho tiền thuê xe (khách ↔ gian hàng).
+>
+> ⚠️ **[ADR 0021](0021-booking-hold-is-the-commission.md) thu hẹp RÀNG BUỘC ĐIỀU 2 (28/08/2026):**
+> listing chế độ `commission` có thêm bước chuyển khoản GIỮ CHỖ, và trạng thái "chờ tiền" nằm
+> trên `booking_holds` — **không** trên `bookings`. Khoản đó là **phí dịch vụ của chính nền
+> tảng**, không phải tiền giữ hộ, nên **lý do gốc ở mục "Lý do" bên dưới không bị phá**. Tiền
+> thuê xe (khách ↔ gian hàng) **vẫn nằm nguyên trong lệnh cấm**; ràng buộc 1, 3, 4 giữ nguyên.
+> Điều kiện xem lại ở cuối trang (*"đổi mô hình sang thu phí nền tảng trên mỗi đơn"*) chính là
+> điều đã xảy ra — xem [ADR 0020](0020-two-revenue-tracks-one-marketplace.md).
 
 ## Bối cảnh
 

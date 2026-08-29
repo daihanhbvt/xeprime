@@ -1,7 +1,8 @@
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { renderWithIntl } from '@/i18n/test-utils';
 import type { Plan } from '@/features/admin-plans/types';
 
 import AdminPlansPage from './page';
@@ -62,12 +63,30 @@ function plan(over: Partial<Plan> = {}): Plan {
     code: 'BASIC',
     name: 'Gói cơ bản',
     description: 'Cho shop nhỏ',
+    billingMode: 'package',
+    commissionPercent: null,
+    basePriceMonthly: '500000',
+    assumedMonthlyGmv: null,
+    limits: {
+      perVehiclePrice: { car: '120000', motorbike: null },
+      includedCars: 5,
+      includedMotorbikes: 0,
+      maxCars: 10,
+      maxMotorbikes: null,
+      maxMembers: null,
+      maxBranches: null,
+      terms: [],
+      graceDays: 7,
+      features: [],
+    },
     price: '500000',
+    currency: 'VND',
     durationDays: 30,
     maxVehicles: 10,
     subscriptionCount: 3,
     status: 'active',
     sortOrder: 1,
+    createdAt: '2026-08-01T00:00:00.000Z',
     ...over,
   } as Plan;
 }
@@ -86,7 +105,7 @@ function setQuery(over: Partial<typeof query> = {}) {
 }
 
 function renderPage() {
-  return render(
+  return renderWithIntl(
     <App>
       <AdminPlansPage />
     </App>,
@@ -158,16 +177,30 @@ describe('/manage/admin/plans — bảng không phân trang', () => {
     expect(screen.getByText('BASIC · Cho shop nhỏ')).toBeTruthy();
   });
 
-  it('giá hiển thị qua formatMoneyVnd', () => {
-    renderPageWith([plan({ price: '500000' })]);
+  it('phí nền / tháng của gói tuyến package hiển thị qua formatMoneyVnd', () => {
+    renderPageWith([plan({ basePriceMonthly: '500000' })]);
 
     expect(screen.getByText('500.000 ₫')).toBeTruthy();
   });
 
-  it('giới hạn xe rỗng nghĩa là không giới hạn', () => {
-    renderPageWith([plan({ maxVehicles: null })]);
+  it('gói tuyến hoa hồng hiện nhãn chế độ + % thay cho phí nền', () => {
+    renderPageWith([
+      plan({
+        billingMode: 'commission',
+        commissionPercent: 10,
+        basePriceMonthly: '0',
+      }),
+    ]);
 
-    expect(screen.getByText('Không giới hạn')).toBeTruthy();
+    expect(screen.getByText('Hoa hồng theo chuyến')).toBeTruthy();
+    expect(screen.getByText('10% / chuyến')).toBeTruthy();
+  });
+
+  it('trần chỗ rỗng nghĩa là không giới hạn', () => {
+    renderPageWith([plan()]);
+
+    // maxMotorbikes null trong fixture → dòng xe máy hiện "Không giới hạn".
+    expect(screen.getAllByText(/Không giới hạn/).length).toBeGreaterThan(0);
   });
 
   it('trạng thái hiển thị bằng StatusTag', () => {

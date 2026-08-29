@@ -247,6 +247,13 @@ export const queryKeys = {
     subscriptions: (tenantId: string, page: number) =>
       ['billing', 'subscriptions', tenantId, page] as const,
   },
+  /** "Gói của tôi" — tenant-scoped (W2, ADR 0015/0026). Tách nhánh khỏi `billing` (platform). */
+  subscription: {
+    all: ['subscription'] as const,
+    me: () => ['subscription', 'me'] as const,
+    plans: () => ['subscription', 'plans'] as const,
+    invoices: (page: number) => ['subscription', 'invoices', page] as const,
+  },
   marketplace: {
     all: ['marketplace'] as const,
     listings: (params: QueryParams) => ['marketplace', 'listings', params] as const,

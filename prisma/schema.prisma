@@ -125,6 +125,11 @@ model Tenant {
   email       String?   @db.VarChar(255)
   ratingAvg   Decimal   @default(0) @map("rating_avg") @db.Decimal(3, 2)
   ratingCount Int       @default(0) @map("rating_count")
+  /// Số lượt MIỄN PHÍ đã tiêu (ADR 0026 điều 8) — CỘT, không phải phép đếm lúc đọc: tăng trong
+  /// cùng transaction tạo đơn, CHECK >= 0 ở DB. So với `FREE_TRIP_ALLOWANCE` (@xeprime/types).
+  freeTripsUsed Int     @default(0) @map("free_trips_used")
+  /// Claim của job vòng đời: đã sinh hoá đơn chào gói + nhắc khi tiêu hết lượt (ADR 0026 điều 4).
+  freeTripsOfferedAt DateTime? @map("free_trips_offered_at") @db.Timestamptz(3)
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
@@ -153,6 +158,7 @@ model Tenant {
   payments                      Payment[]
   contracts                     Contract[]
   subscriptions                 TenantSubscription[]
+  subscriptionInvoices          SubscriptionInvoice[]
   rentalPolicies                RentalPolicy[]
   vehicleSourceDetails          VehicleSourceDetail[]
   vehiclePrivateFiles           VehiclePrivateFile[]
@@ -2459,8 +2465,11 @@ model ReceiptAttachment {
 ///
 /// `PaymentsService` là ĐƯỜNG GHI DUY NHẤT của `booking.paid_amount`: mỗi payment cập nhật
 /// paid_amount trong cùng transaction bằng increment/decrement (khoá ở DB, chống lost-update).
-/// `subscription_id`/`payer_user_id` để trần (bảng subscriptions chưa có; payer có thể là khách
-/// vãng lai) — chưa FK.
+/// `subscription_id` CỐ Ý không FK và không bao giờ nối (ADR 0022 điều 6): một dòng `payments`
+/// có `tenant_id` tự sinh phiếu thu ĐÃ DUYỆT cho tenant đó — tiền nền tảng thu CỦA gian hàng sẽ
+/// hiện trên báo cáo tài chính của CHÍNH gian hàng như khoản thu của họ. Tiền gói ghi ở
+/// `subscription_invoices.paid_amount` + `bank_transactions`, không đi qua bảng này.
+/// `payer_user_id` để trần (payer có thể là khách vãng lai) — chưa FK.
 model Payment {
   id                    String    @id @db.Char(26)
   tenantId              String?   @map("tenant_id") @db.Char(26)
@@ -2534,13 +2543,31 @@ model Plan {
   code         String   @unique @db.VarChar(50)
   name         String   @db.VarChar(255)
   description  String?  @db.Text
+  /// ⚠ Cột của mô hình gói phẳng ADR 0010 — thay bằng `basePriceMonthly` + `limitsJson.perVehiclePrice`
+  /// (ADR 0015). Giữ lại ở bước expand; drop ở đợt contract sau khi không còn code nào đọc.
   price        Decimal  @default(0) @db.Decimal(14, 2)
   currency     String   @default("VND") @db.VarChar(10)
+  /// ⚠ ADR 0015 điều 2: kỳ hạn nay tính bằng THÁNG LỊCH ở `tenant_subscriptions.term_months`.
+  /// Cột này chỉ còn cho dữ liệu cũ — drop ở đợt contract.
   durationDays Int      @map("duration_days")
-  /// NULL = không giới hạn số xe (ADR 0010).
+  /// ⚠ NULL = không giới hạn (ADR 0010). Thay bằng `limitsJson.maxCars`/`maxMotorbikes` (ADR 0015) —
+  /// drop ở đợt contract.
   maxVehicles  Int?     @map("max_vehicles")
-  /// Giới hạn tương lai — thêm key không cần migrate.
+  /// Núm vặn của bậc gói (ADR 0015 điều 4): { perVehiclePrice: {car, motorbike}, includedCars,
+  /// includedMotorbikes, maxCars, maxMotorbikes, maxMembers, maxBranches,
+  /// terms: [{months, discountPercent}], graceDays, features: [...] }.
+  /// Giá / % / số chỗ là DỮ LIỆU admin sửa được; QUY TẮC nằm trong code.
   limitsJson   Json?    @map("limits_json") @db.JsonB
+  /// Phí nền mỗi tháng của bậc gói (ADR 0020): phải đủ lớn để gói chỉ có lợi từ một số xe
+  /// nhất định trở lên — `base_price_monthly = 0` giết vai trò phễu của tuyến hoa hồng.
+  basePriceMonthly Decimal @default(0) @map("base_price_monthly") @db.Decimal(14, 2)
+  /// @xeprime/types → BillingMode (commission | package) — ADR 0020. DB canh bằng CHECK.
+  billingMode  String   @default("commission") @map("billing_mode") @db.VarChar(30)
+  /// BẮT BUỘC (1–20, CHECK) khi `billing_mode = 'commission'`; NULL khi `package`.
+  commissionPercent Decimal? @map("commission_percent") @db.Decimal(5, 2)
+  /// Doanh thu giả định mỗi xe mỗi tháng, admin nhập — đầu vào của phép KIỂM ĐIỂM GIAO
+  /// (ADR 0020): điểm hoà vốn so với tuyến hoa hồng không được nằm dưới `includedCars`.
+  assumedMonthlyGmvJson Json? @map("assumed_monthly_gmv_json") @db.JsonB
   /// @xeprime/types → PlanStatus (active | archived)
   status       String   @default("active") @db.VarChar(50)
   sortOrder    Int      @default(0) @map("sort_order")
@@ -2564,18 +2591,85 @@ model TenantSubscription {
   status    String   @default("active") @db.VarChar(50)
   /// Snapshot giá lúc gán.
   price     Decimal  @db.Decimal(14, 2)
+  /// Kỳ hạn THÁNG LỊCH chọn lúc mua (ADR 0015 điều 2–3): 1|3|6|12, CHECK ở DB.
+  /// `ends_at = addCalendarMonthsVn(starts_at, term_months)`. NULL tạm ở bước expand —
+  /// backfill xong siết NOT NULL ở đợt contract.
+  termMonths Int?    @map("term_months")
+  /// Số chỗ đã mua theo loại xe (ADR 0015 điều 1), vd { car: 5, motorbike: 10 }.
+  /// Số chỗ đã mua CHÍNH LÀ hạn mức xe — không có bước đếm xe cuối kỳ.
+  slotsJson  Json?   @map("slots_json") @db.JsonB
+  /// SNAPSHOT chế độ thu phí lúc gán (ADR 0024 điều 2) — KHÔNG đọc xuyên qua `plans`:
+  /// admin sửa bậc gói không được lật chế độ của tenant giữa kỳ.
+  billingMode String? @map("billing_mode") @db.VarChar(30)
+  /// SNAPSHOT % hoa hồng lúc gán, đi cùng `billing_mode` (ADR 0024 điều 2).
+  commissionPercent Decimal? @map("commission_percent") @db.Decimal(5, 2)
   startsAt  DateTime @map("starts_at") @db.Timestamptz(3)
   endsAt    DateTime @map("ends_at") @db.Timestamptz(3)
+  /// Ba cột CLAIM của job vòng đời (cùng khuôn `booking_requests.first_reminded_at`):
+  /// nhắc sắp hết hạn · báo hết hạn/ân hạn · đã chuyển tuyến hoa hồng khi hết ân hạn.
+  renewalRemindedAt DateTime? @map("renewal_reminded_at") @db.Timestamptz(3)
+  expiryNotifiedAt  DateTime? @map("expiry_notified_at") @db.Timestamptz(3)
+  lapseHandledAt    DateTime? @map("lapse_handled_at") @db.Timestamptz(3)
   note      String?  @db.Text
   createdBy String?  @map("created_by") @db.Char(26)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan     Plan                  @relation(fields: [planId], references: [id], onDelete: Restrict)
+  invoices SubscriptionInvoice[]
 
   @@index([tenantId, endsAt])
   @@index([tenantId, createdAt])
+  @@index([status, endsAt])
   @@map("tenant_subscriptions")
+}
+
+/// Hoá đơn gói — ADR 0015 điều 5. Sinh tại thời điểm mua / gia hạn / mua thêm chỗ, snapshot
+/// từng dòng vào `lines_json` ({ planId, planCode, termMonths, slots, lines: [...] }).
+///
+/// `subscription_id` NULL tới khi KÍCH HOẠT: gói chỉ bật khi tiền đã về (ADR 0026 điều 4 —
+/// webhook SePay hoặc admin gán tay); admin gán tay tạo hoá đơn `paid` + subscription trong
+/// cùng transaction. `code` (tiền tố `XPG`) UNIQUE TOÀN SÀN — webhook chỉ có chuỗi nội dung
+/// chuyển khoản, không có ngữ cảnh tenant để thu hẹp (ADR 0022 điều 3).
+///
+/// KHÔNG nối `payments.subscription_id` (ADR 0022 điều 6): một dòng `payments` có `tenant_id`
+/// tự sinh phiếu thu cho tenant — tiền gói sẽ hiện trên báo cáo của CHÍNH gian hàng như khoản
+/// thu của họ. Tiền gói ghi ở `paid_amount` + `bank_transactions` (W4).
+///
+/// Writer: `BillingService` (mua/gia hạn/mua thêm chỗ) và — ngoại lệ có tên — job
+/// `subscription-lifecycle` của worker cho hoá đơn CHÀO gói khi tiêu hết lượt miễn phí
+/// (ADR 0026 điều 4; worker không import được service của api — cùng tiền lệ `lib/notify.ts`,
+/// hình dạng hàng khoá bằng `@xeprime/types`). Không có người ghi thứ ba.
+model SubscriptionInvoice {
+  id             String    @id @db.Char(26)
+  tenantId       String    @map("tenant_id") @db.Char(26)
+  subscriptionId String?   @map("subscription_id") @db.Char(26)
+  /// Mã đối soát `XPG` + 8 ký tự (ADR 0016 điều 5 — bảng chữ bỏ 0/O/1/I).
+  code           String    @unique @db.VarChar(20)
+  periodFrom     DateTime  @map("period_from") @db.Timestamptz(3)
+  periodTo       DateTime  @map("period_to") @db.Timestamptz(3)
+  /// Snapshot lượt mua: { planId, planCode, termMonths, slots, lines: [{kind, vehicleType?,
+  /// quantity, months, unitPrice, amount}] } — hoá đơn phải tự giải thích được không cần join.
+  linesJson      Json      @map("lines_json") @db.JsonB
+  subtotal       Decimal   @db.Decimal(14, 2)
+  discountAmount Decimal   @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  totalAmount    Decimal   @map("total_amount") @db.Decimal(14, 2)
+  /// Cộng dồn tiền đã về (ADR 0016 điều 6: thiếu thì `partially_paid`, KHÔNG kích hoạt gói).
+  paidAmount     Decimal   @default(0) @map("paid_amount") @db.Decimal(14, 2)
+  /// @xeprime/types → SubscriptionInvoiceStatus; DB canh bằng CHECK.
+  status         String    @default("issued") @db.VarChar(50)
+  paidAt         DateTime? @map("paid_at") @db.Timestamptz(3)
+  /// Hạn chuyển khoản của hoá đơn `issued`; quá hạn job lật `void`. NULL = không hết hạn (đã trả).
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscription TenantSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([status, expiresAt])
+  @@map("subscription_invoices")
 }
 
 // ---------------------------------------------------------------------------

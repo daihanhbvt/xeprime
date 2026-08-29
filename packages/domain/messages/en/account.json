@@ -13,8 +13,26 @@
   "displayName": "Display name",
   "displayNamePlaceholder": "Jane Doe",
   "avatarUrl": "Avatar image URL",
+  "avatarUrlPlaceholder": "https://…",
   "identityLockedTitle": "Email and phone number can't be changed here",
   "identityLockedBody": "Both are used to sign in, so changing them needs a separate verification flow. Contact support if you need to change them.",
+  "sidebar": {
+    "personal": "Personal",
+    "rental": "Rentals",
+    "preferences": "Settings"
+  },
+  "profile": {
+    "eyebrow": "Personal profile",
+    "title": "Account details",
+    "description": "Update your display name and profile photo.",
+    "accountLabel": "XePrime account",
+    "email": "Email",
+    "phone": "Phone number",
+    "unverified": "Not verified",
+    "securityTitle": "Sign-in details",
+    "securityDescription": "Your email and phone number identify your account. Changing either needs a separate verification flow to keep your account secure.",
+    "edit": "Edit profile"
+  },
   "comingSoon": {
     "badge": "Coming soon",
     "title": "This section is being built",

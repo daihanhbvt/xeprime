@@ -280,6 +280,15 @@ export const SHOP_NAV: readonly NavSection[] = [
         icon: SafetyCertificateOutlined,
       },
       {
+        // "Gói của tôi" (W2, ADR 0015/0026): quyền RIÊNG `subscription.view` — xem gói/hạn mức
+        // là việc điều hành, mua gói (`subscription.purchase`) server chặn riêng.
+        key: 'subscription',
+        labelKey: 'manage.subscription',
+        href: ROUTES.MANAGE.SUBSCRIPTION,
+        permission: PERMISSION.SUBSCRIPTION_VIEW,
+        icon: CreditCardOutlined,
+      },
+      {
         key: 'pickup-areas',
         labelKey: 'manage.pickupAreas',
         href: ROUTES.MANAGE.PICKUP_AREAS,

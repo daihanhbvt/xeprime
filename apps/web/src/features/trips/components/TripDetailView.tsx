@@ -493,6 +493,7 @@ function TerminalNotice({ trip, stage }: { trip: CustomerTripDetail; stage: Cust
  */
 const SUBTITLE_KEY = {
   [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL]: 'subtitle.pending_approval',
+  [CUSTOMER_TRIP_STAGE.AWAITING_HOLD]: 'subtitle.awaiting_hold',
   [CUSTOMER_TRIP_STAGE.READY]: 'subtitle.ready',
   [CUSTOMER_TRIP_STAGE.ACTIVE]: 'subtitle.active',
   [CUSTOMER_TRIP_STAGE.COMPLETED]: 'subtitle.completed',

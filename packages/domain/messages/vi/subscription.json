@@ -1,0 +1,71 @@
+{
+  "page": {
+    "title": "Gói của tôi",
+    "loadError": "Không tải được thông tin gói"
+  },
+  "current": {
+    "title": "Gói hiện hành",
+    "none": "Chưa có gói — gian hàng đang ở tuyến hoa hồng theo chuyến.",
+    "noneHint": "Mua gói theo chỗ để không mất phí trên từng chuyến.",
+    "expires": "Hết hạn {date}",
+    "commissionSummary": "Hoa hồng {percent}% trên mỗi chuyến, thu qua khoản giữ chỗ của khách.",
+    "packageSummary": "Trả trước theo chỗ xe — không thu gì trên chuyến.",
+    "slotsSummary": "{car} chỗ ô tô · {motorbike} chỗ xe máy",
+    "purchaseButton": "Mua gói",
+    "renewButton": "Gia hạn / đổi gói"
+  },
+  "usage": {
+    "title": "Chỗ xe đang dùng",
+    "car": "Chỗ ô tô",
+    "motorbike": "Chỗ xe máy",
+    "fleet": "Đội xe",
+    "onMarketplace": "Trên chợ",
+    "ofLimit": "{used} / {limit}",
+    "unlimited": "Không giới hạn"
+  },
+  "freeTrips": {
+    "title": "Lượt miễn phí",
+    "left": "{left, plural, =0 {Đã dùng hết lượt miễn phí} other {Còn # lượt miễn phí}}",
+    "used": "Đã dùng {used}/{allowance} lượt",
+    "explain": "Hai đơn đầu tiên miễn phí hoàn toàn — nền tảng không thu gì. Hết lượt, đơn mới sẽ tính hoa hồng trên mỗi chuyến trừ khi gian hàng có gói theo chỗ."
+  },
+  "invoices": {
+    "title": "Lịch sử hoá đơn",
+    "empty": "Chưa có hoá đơn nào",
+    "loadError": "Không tải được lịch sử hoá đơn",
+    "columns": {
+      "code": "Mã đối soát",
+      "period": "Kỳ",
+      "total": "Số tiền",
+      "status": "Trạng thái",
+      "createdAt": "Ngày tạo"
+    },
+    "copyCode": "Sao chép mã đối soát"
+  },
+  "purchase": {
+    "title": "Mua / gia hạn gói",
+    "planLabel": "Chọn gói",
+    "planOption": "{name} — {price}/tháng",
+    "term": "Kỳ hạn",
+    "termOption": "{months} tháng",
+    "termOptionDiscount": "{months} tháng · giảm {percent}%",
+    "carSlots": "Số chỗ ô tô",
+    "motorbikeSlots": "Số chỗ xe máy",
+    "includedHint": "Phí nền đã gồm {car} chỗ ô tô · {motorbike} chỗ xe máy",
+    "total": "Tổng cả kỳ: {amount}",
+    "unavailable": "Gói không bán thêm loại chỗ này — giảm số chỗ về mức gồm sẵn.",
+    "submit": "Tạo hoá đơn",
+    "empty": "Chưa có gói nào đang bán.",
+    "loadError": "Không tải được danh sách gói"
+  },
+  "payment": {
+    "title": "Chuyển khoản để kích hoạt gói",
+    "intro": "Hoá đơn đã tạo. Chuyển khoản ĐÚNG số tiền với ĐÚNG nội dung bên dưới — gói kích hoạt khi nền tảng nhận được tiền, không kích hoạt trước.",
+    "amount": "Số tiền",
+    "code": "Nội dung chuyển khoản (mã đối soát)",
+    "expires": "Hạn chuyển khoản: {date}",
+    "copyAmount": "Sao chép số tiền",
+    "copyCode": "Sao chép mã",
+    "done": "Đã hiểu"
+  }
+}

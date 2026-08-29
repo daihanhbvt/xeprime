@@ -37,6 +37,19 @@ export const NOTIFICATION_TYPE = {
   VEHICLE_APPROVED: 'vehicle_approved',
   VEHICLE_REJECTED: 'vehicle_rejected',
   REVIEW_RECEIVED: 'review_received',
+
+  // Vòng đời gói (W2, ADR 0015/0020/0026) — job `subscription-lifecycle` phát.
+  /** Gói sắp hết hạn — nhắc gia hạn trước N ngày. */
+  SUBSCRIPTION_EXPIRING: 'subscription_expiring',
+  /** Gói đã hết hạn, đang trong ân hạn — chưa chuyển tuyến. */
+  SUBSCRIPTION_EXPIRED: 'subscription_expired',
+  /**
+   * Hết ân hạn: gian hàng ĐÃ chuyển về tuyến hoa hồng (ADR 0020 điều 5). Xe vẫn ở trên chợ —
+   * câu chữ của tin phải nói rõ điều đó, vì "hết gói" nghe như "bị gỡ".
+   */
+  SUBSCRIPTION_LAPSED: 'subscription_lapsed',
+  /** Tiêu hết lượt miễn phí (ADR 0026 điều 4) — kèm hoá đơn gói sinh sẵn. */
+  FREE_TRIPS_EXHAUSTED: 'free_trips_exhausted',
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];
@@ -119,4 +132,20 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   },
   [NOTIFICATION_TYPE.VEHICLE_REJECTED]: { label: 'Xe bị từ chối', color: STATUS_COLOR.DANGER },
   [NOTIFICATION_TYPE.REVIEW_RECEIVED]: { label: 'Đánh giá mới', color: STATUS_COLOR.SPECIAL },
+  [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING]: {
+    label: 'Gói sắp hết hạn',
+    color: STATUS_COLOR.WARNING,
+  },
+  [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRED]: {
+    label: 'Gói đã hết hạn',
+    color: STATUS_COLOR.DANGER,
+  },
+  [NOTIFICATION_TYPE.SUBSCRIPTION_LAPSED]: {
+    label: 'Đã chuyển sang tính hoa hồng',
+    color: STATUS_COLOR.PROCESSING,
+  },
+  [NOTIFICATION_TYPE.FREE_TRIPS_EXHAUSTED]: {
+    label: 'Hết lượt miễn phí',
+    color: STATUS_COLOR.WARNING,
+  },
 };

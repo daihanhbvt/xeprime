@@ -1,0 +1,71 @@
+{
+  "page": {
+    "title": "My plan",
+    "loadError": "Couldn't load your plan"
+  },
+  "current": {
+    "title": "Current plan",
+    "none": "No plan yet — this shop is on the per-trip commission track.",
+    "noneHint": "Buy a slot-based plan to stop paying per trip.",
+    "expires": "Expires {date}",
+    "commissionSummary": "{percent}% commission per trip, collected through the guest's reservation hold.",
+    "packageSummary": "Prepaid per vehicle slot — nothing charged per trip.",
+    "slotsSummary": "{car} car slots · {motorbike} motorbike slots",
+    "purchaseButton": "Buy a plan",
+    "renewButton": "Renew / change plan"
+  },
+  "usage": {
+    "title": "Vehicle slots in use",
+    "car": "Car slots",
+    "motorbike": "Motorbike slots",
+    "fleet": "Fleet",
+    "onMarketplace": "On the marketplace",
+    "ofLimit": "{used} / {limit}",
+    "unlimited": "Unlimited"
+  },
+  "freeTrips": {
+    "title": "Free trips",
+    "left": "{left, plural, =0 {No free trips left} other {# free trips left}}",
+    "used": "Used {used}/{allowance}",
+    "explain": "Your first two bookings are completely free — the platform takes nothing. Once used up, new bookings pay a per-trip commission unless the shop has a slot-based plan."
+  },
+  "invoices": {
+    "title": "Invoice history",
+    "empty": "No invoices yet",
+    "loadError": "Couldn't load the invoice history",
+    "columns": {
+      "code": "Reference code",
+      "period": "Period",
+      "total": "Amount",
+      "status": "Status",
+      "createdAt": "Created"
+    },
+    "copyCode": "Copy reference code"
+  },
+  "purchase": {
+    "title": "Buy / renew a plan",
+    "planLabel": "Choose a plan",
+    "planOption": "{name} — {price}/month",
+    "term": "Term",
+    "termOption": "{months} months",
+    "termOptionDiscount": "{months} months · {percent}% off",
+    "carSlots": "Car slots",
+    "motorbikeSlots": "Motorbike slots",
+    "includedHint": "The base fee already includes {car} car slots · {motorbike} motorbike slots",
+    "total": "Total for the term: {amount}",
+    "unavailable": "This plan doesn't sell that slot type — lower the count to the included amount.",
+    "submit": "Create invoice",
+    "empty": "No plans on sale yet.",
+    "loadError": "Couldn't load the plan list"
+  },
+  "payment": {
+    "title": "Transfer to activate your plan",
+    "intro": "Your invoice is ready. Transfer the EXACT amount with the EXACT reference below — the plan activates when the platform receives the money, never before.",
+    "amount": "Amount",
+    "code": "Transfer reference (matching code)",
+    "expires": "Transfer deadline: {date}",
+    "copyAmount": "Copy amount",
+    "copyCode": "Copy code",
+    "done": "Got it"
+  }
+}

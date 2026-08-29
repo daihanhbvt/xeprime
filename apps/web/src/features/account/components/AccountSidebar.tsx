@@ -11,6 +11,16 @@ import { useMarketLogout } from '@/features/auth/hooks/use-market-logout';
 
 import styles from './AccountSidebar.module.css';
 
+const NAV_GROUPS = [
+  { key: 'personal', labelKey: 'sidebar.personal', itemKeys: ['profile'] },
+  { key: 'rental', labelKey: 'sidebar.rental', itemKeys: ['trips', 'payments', 'favorites'] },
+  {
+    key: 'preferences',
+    labelKey: 'sidebar.preferences',
+    itemKeys: ['addresses', 'documents', 'notifications', 'support', 'settings'],
+  },
+] as const;
+
 /**
  * Menu khu tài khoản.
  *
@@ -34,40 +44,49 @@ export function AccountSidebar() {
 
   return (
     <nav className={styles.nav} aria-label={t('menuLabel')}>
-      <ul className={styles.list}>
-        {ACCOUNT_NAV.map((item) => {
-          const Icon = item.icon;
-          const active = item.key === activeKey;
-          const label = t(item.labelKey);
+      <div className={styles.groups}>
+        {NAV_GROUPS.map((group) => (
+          <section key={group.key} className={styles.group} aria-label={tAccount(group.labelKey)}>
+            <h2 className={styles.groupTitle}>{tAccount(group.labelKey)}</h2>
+            <ul className={styles.list}>
+              {ACCOUNT_NAV.filter((item) =>
+                (group.itemKeys as readonly string[]).includes(item.key),
+              ).map((item) => {
+                const Icon = item.icon;
+                const active = item.key === activeKey;
+                const label = t(item.labelKey);
 
-          if (item.comingSoon) {
-            return (
-              <li key={item.key}>
-                <span className={`${styles.item} ${styles.disabled}`} aria-disabled="true">
-                  <Icon className={styles.icon} />
-                  <span className={styles.label}>{label}</span>
-                  <Tag className={styles.soonTag} bordered={false}>
-                    {tAccount('comingSoon.badge')}
-                  </Tag>
-                </span>
-              </li>
-            );
-          }
+                if (item.comingSoon) {
+                  return (
+                    <li key={item.key}>
+                      <span className={`${styles.item} ${styles.disabled}`} aria-disabled="true">
+                        <Icon className={styles.icon} />
+                        <span className={styles.label}>{label}</span>
+                        <Tag className={styles.soonTag} variant="filled">
+                          {tAccount('comingSoon.badge')}
+                        </Tag>
+                      </span>
+                    </li>
+                  );
+                }
 
-          return (
-            <li key={item.key}>
-              <Link
-                href={item.href}
-                className={`${styles.item} ${active ? styles.active : ''}`}
-                aria-current={active ? 'page' : undefined}
-              >
-                <Icon className={styles.icon} />
-                <span className={styles.label}>{label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+                return (
+                  <li key={item.key}>
+                    <Link
+                      href={item.href}
+                      className={`${styles.item} ${active ? styles.active : ''}`}
+                      aria-current={active ? 'page' : undefined}
+                    >
+                      <Icon className={styles.icon} />
+                      <span className={styles.label}>{label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
 
       <button type="button" className={styles.logout} onClick={() => void logout()}>
         <LogoutOutlined className={styles.icon} />

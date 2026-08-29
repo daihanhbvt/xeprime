@@ -183,6 +183,13 @@ export const PERMISSION = {
   // Lịch
   CALENDAR_VIEW: 'calendar.view',
 
+  // Gói dịch vụ của gian hàng (ADR 0015/0020 — W2). Tách view/purchase vì mua gói là quyết
+  // định TIỀN của chủ gian hàng; quản lý xem được tình trạng gói nhưng không tự tiêu tiền.
+  /** Xem màn "Gói của tôi": gói hiện hành, số chỗ, lượt miễn phí, lịch sử hoá đơn. */
+  SUBSCRIPTION_VIEW: 'subscription.view',
+  /** Mua / gia hạn gói — sinh hoá đơn và mã đối soát chuyển khoản. */
+  SUBSCRIPTION_PURCHASE: 'subscription.purchase',
+
   // Tài chính
   FINANCE_VIEW: 'finance.view',
   RECEIPT_CREATE: 'receipts.create',
@@ -285,6 +292,8 @@ export const DEFAULT_TENANT_ROLE_PERMISSIONS: Readonly<Record<TenantRole, readon
       PERMISSION.CUSTOMER_DOCUMENT_MANAGE,
       PERMISSION.CUSTOMER_DOCUMENT_FILE_VIEW,
       PERMISSION.CALENDAR_VIEW,
+      // Xem tình trạng gói/hạn mức để điều hành đội xe; MUA gói vẫn là việc của chủ gian hàng.
+      PERMISSION.SUBSCRIPTION_VIEW,
       PERMISSION.FINANCE_VIEW,
       PERMISSION.RECEIPT_CREATE,
       PERMISSION.RECEIPT_APPROVE,

@@ -2,6 +2,13 @@
 
 Ngày: 21/08/2026 · Trạng thái: Accepted · **Sửa phạm vi [ADR 0013](0013-no-online-payment-mvp.md)**
 
+> ⚠️ **[ADR 0022](0022-sepay-customer-money.md) mở rộng ĐIỀU 1 (28/08/2026):** phạm vi không còn
+> là *"chỉ tiền GÓI, chỉ chiều gian hàng → nền tảng"* mà là **mọi khoản VÀO tài khoản nền tảng**,
+> từ hai nguồn (hoá đơn gói và khoản giữ chỗ của khách), phân loại bằng **tiền tố mã đối soát**
+> (`XPG…` / `XPH…`). **Điều 2, 3, 4, 5 giữ nguyên câu chữ** và áp cho cả hai nguồn.
+> Điều 6 giữ nguyên với hoá đơn gói; riêng khoản giữ chỗ **không có "kỳ sau"** để ghi có tiền
+> thừa — xem [ADR 0022 điều 5](0022-sepay-customer-money.md).
+
 ## Bối cảnh
 
 [ADR 0015](0015-vehicle-slot-billing.md) mở bán gói theo kỳ, kể cả kỳ 1 tháng. Với đơn giá cỡ

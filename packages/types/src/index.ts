@@ -17,6 +17,8 @@ export * from './catalog';
 export * from './marketplace';
 export * from './phone';
 export * from './long-term';
+export * from './plan-billing';
+export * from './holds';
 export * from './pricing';
 export * from './shop-profile';
 export * from './rbac';

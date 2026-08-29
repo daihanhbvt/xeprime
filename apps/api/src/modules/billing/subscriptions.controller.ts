@@ -5,6 +5,7 @@ import { CurrentUser, PlatformOnly, RequirePermissions } from '../../common/deco
 import type { AuthenticatedUser } from '../../common/types/request-context';
 import { BillingService } from './billing.service';
 import {
+  AddSlotsDto,
   AssignSubscriptionDto,
   SubscriptionDto,
   SubscriptionListQueryDto,
@@ -41,6 +42,21 @@ export class SubscriptionsController {
     @Body() dto: AssignSubscriptionDto,
   ): Promise<SubscriptionDto> {
     return this.billing.assign(tenantId, user.id, dto);
+  }
+
+  @Post('add-slots')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Mua thêm chỗ giữa kỳ (đã thu tiền): huỷ dòng hiện hành + chèn dòng mới cùng ends_at, prorate tròn tháng (ADR 0015 điều 8)',
+  })
+  @ApiOkResponse({ type: SubscriptionDto })
+  addSlots(
+    @Param('tenantId') tenantId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: AddSlotsDto,
+  ): Promise<SubscriptionDto> {
+    return this.billing.addSlots(tenantId, user.id, dto);
   }
 
   @Post(':id/cancel')
