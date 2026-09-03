@@ -1,12 +1,18 @@
 import { useRef, useState } from 'react';
-import { Pressable, TextInput } from 'react-native';
+import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { Text, XStack } from 'tamagui';
 import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 export const OTP_LENGTH = 6;
 
+const styles = StyleSheet.create({
+  stretch: { alignSelf: 'stretch' },
+  /* Ô nhập THẬT nằm trong suốt phủ trọn hàng — sáu ô kia chỉ là hình vẽ của giá trị. */
+  hiddenInput: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0 },
+});
+
 /** Cao hơn sàn chạm rõ rệt: ô mã là trọng tâm của bước này, không phải một ô nhập phụ. */
-const OTP_BOX_HEIGHT = sizing.touchTarget + 16;
+const OTP_BOX_HEIGHT = sizing.touchTarget + space.md;
 
 interface OtpCodeInputProps {
   value: string;
@@ -40,12 +46,24 @@ export function OtpCodeInput({
   }
 
   return (
+    /*
+      `alignSelf: 'stretch'` nằm ở ĐÂY, không phải ở nơi gọi.
+
+      Sáu ô con chia đều bằng `f={1}`, nên chúng chỉ có bề rộng khi hàng có bề rộng. Đặt control
+      này vào một cột canh giữa (`YStack ai="center"` — đúng bố cục của bước xác thực trong
+      luồng thuê xe) thì trục ngang KHÔNG kéo giãn: hàng co về đúng bề rộng nội dung, mà nội dung
+      lúc chưa gõ là sáu chuỗi RỖNG. Kết quả là sáu ô bẹp dí — đó là cái "vỡ" nhìn thấy trên màn.
+
+      Sửa ở component thay vì bắt mỗi nơi gọi nhớ bọc thêm một `YStack alignSelf="stretch"`: một
+      hàng sáu ô mã thì không có ngữ cảnh nào muốn nó hẹp hơn dòng.
+    */
     <Pressable
       onPress={() => inputRef.current?.focus()}
       disabled={disabled}
       accessibilityRole="none"
+      style={styles.stretch}
     >
-      <XStack gap={space.sm} jc="space-between">
+      <XStack gap={space.sm}>
         {digits.map((digit, index) => (
           <XStack
             key={index}
@@ -83,14 +101,7 @@ export function OtpCodeInput({
         maxLength={OTP_LENGTH}
         caretHidden
         accessibilityLabel="OTP"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          opacity: 0,
-        }}
+        style={styles.hiddenInput}
       />
     </Pressable>
   );

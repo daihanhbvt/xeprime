@@ -43,7 +43,9 @@
     "print": "In",
     "restore": "Khôi phục",
     "done": "Xong",
-    "agree": "Đồng ý"
+    "agree": "Đồng ý",
+    "choose": "Chọn…",
+    "now": "Bây giờ"
   },
   "states": {
     "loading": "Đang tải…",
@@ -59,7 +61,8 @@
     "noResults": "Không có kết quả nào khớp",
     "loadMore": "Tải thêm",
     "endOfList": "Đã hết danh sách",
-    "loadError": "Không tải được dữ liệu"
+    "loadError": "Không tải được dữ liệu",
+    "featureComingSoon": "Chức năng đang được phát triển."
   },
   "labels": {
     "yes": "Có",
@@ -116,7 +119,10 @@
     "total": "{count, plural, other {# mục}}",
     "range": "{from}–{to} trên {total}",
     "page": "Trang {page}",
-    "rowsPerPage": "Số dòng mỗi trang"
+    "rowsPerPage": "Số dòng mỗi trang",
+    "previous": "Trang trước",
+    "next": "Trang sau",
+    "goToPage": "Tới trang {page}"
   },
   "locale": {
     "switchLabel": "Ngôn ngữ",
@@ -183,6 +189,9 @@
       "returnBeforePickup": "Giờ trả phải sau giờ nhận",
       "placeholder": "Chọn ngày nhận và ngày trả xe",
       "placeholderMinDays": "Chọn ngày nhận và ngày trả xe (tối thiểu {count, plural, other {# ngày}})",
+      "momentDrawerTitle": "Chọn thời điểm nhận xe",
+      "momentPlaceholder": "Chọn ngày và giờ nhận xe",
+      "pickTime": "Chọn giờ",
       "busy": {
         "loading": "Đang tải lịch xe…",
         "legendSelected": "Đã chọn",
@@ -195,6 +204,21 @@
         "conflict": "Khoảng đã chọn trùng giờ xe bận ({period} ngày {date}). Chọn giờ khác giúp bạn.",
         "hourlyUnavailable": "Trùng giờ xe bận"
       }
+    },
+    "moment": {
+      "hour": "Giờ",
+      "minute": "Phút",
+      "date": "Ngày",
+      "time": "Giờ"
     }
+  },
+  "filters": {
+    "title": "Bộ lọc",
+    "activeCount": "{count, plural, other {# bộ lọc đang bật}}",
+    "reset": "Xoá lọc",
+    "open": "Mở bộ lọc",
+    "subtitle": "Chọn tiêu chí để thu hẹp danh sách",
+    "chip": "{label}: {value}",
+    "none": "Chưa áp dụng bộ lọc nào"
   }
 }

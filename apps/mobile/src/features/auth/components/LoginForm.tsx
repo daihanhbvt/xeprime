@@ -1,7 +1,10 @@
+import { useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { loginSchema, type LoginValues } from '@xeprime/validators';
+import { buildLoginSchema, type LoginValues } from '@xeprime/validators';
+import { useAuthSchemaLabels } from '../use-auth-schema-labels';
 import { useForm } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
+import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
@@ -23,13 +26,21 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
   const toast = useAppToast();
   const login = useLogin();
 
+  /*
+   * Dựng lại schema khi ngôn ngữ đổi — LUẬT ở `@xeprime/validators`, chỉ câu chữ đi vào từ đây.
+   * `useMemo` vì `yupResolver` nhận object mới mỗi nhịp thì RHF xác thực lại toàn form sau từng
+   * phím gõ.
+   */
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildLoginSchema(labels), [labels]);
+
   const {
     control,
     handleSubmit,
     formState: { isValid },
   } = useForm<LoginValues>({
     mode: 'onChange',
-    resolver: yupResolver(loginSchema),
+    resolver: yupResolver(schema),
     defaultValues: { identifier: '', password: '' },
   });
 
@@ -41,7 +52,7 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
   });
 
   return (
-    <View style={styles.form}>
+    <YStack gap={space.md}>
       <TextField
         control={control}
         name="identifier"
@@ -70,6 +81,10 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
         editable={!login.isPending}
       />
 
+      {/*
+        `Pressable` bọc ngoài chứ không phải `onPress` thẳng trên stack Tamagui: `accessibilityRole`
+        đặt trên stack Tamagui KHÔNG tới được cây trợ năng, nên trình đọc màn hình mất hẳn nút này.
+      */}
       <Pressable
         onPress={onForgotPassword}
         disabled={login.isPending}
@@ -78,7 +93,9 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
         hitSlop={space.sm}
         style={styles.forgot}
       >
-        <Text style={styles.forgotLabel}>{t('login.forgot')}</Text>
+        <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
+          {t('login.forgot')}
+        </Text>
       </Pressable>
 
       {/*
@@ -92,21 +109,20 @@ export function LoginForm({ onSuccess, onForgotPassword }: LoginFormProps) {
         loading={login.isPending}
         disabled={!isValid}
       />
-    </View>
+    </YStack>
   );
 }
 
+/*
+  `alignSelf`/`marginTop` ở lại `StyleSheet`: chúng là style của chính `Pressable` (một view
+  React Native), không phải của `Text` bên trong — Tamagui không chạm tới được.
+
+  `marginTop` ÂM để kéo dòng "Quên mật khẩu" sát ô mật khẩu: nó thuộc về ô đó, không phải một
+  mục ngang hàng trong khoảng cách `space.md` của cột.
+*/
 const styles = StyleSheet.create({
-  form: {
-    gap: space.md,
-  },
   forgot: {
     alignSelf: 'flex-end',
     marginTop: -space.xs,
-  },
-  forgotLabel: {
-    color: colors.primaryActive,
-    fontSize: fontSize.bodySm,
-    fontWeight: fontWeight.semibold,
   },
 });

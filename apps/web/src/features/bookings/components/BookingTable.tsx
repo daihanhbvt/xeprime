@@ -8,6 +8,7 @@ import { StatusTag } from '@/components/data-display/StatusTag';
 import type { BookingListItem } from '../types';
 import styles from './BookingTable.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 interface BookingTableProps {
   items: BookingListItem[];
@@ -37,6 +38,7 @@ export function BookingTable({
   onPageChange,
 }: BookingTableProps) {
   const fmt = useAppFormat();
+  const tList = useTranslations('Bookings.list');
 
   const columns: DataTableColumn<BookingListItem>[] = [
     {
@@ -119,9 +121,9 @@ export function BookingTable({
           : null
       }
       filtered={filtered}
-      empty={{ title: 'Gian hàng chưa có đơn thuê nào', action: emptyAction }}
+      empty={{ title: tList('emptyTitle'), action: emptyAction }}
       noResults={{
-        title: 'Không tìm thấy đơn khớp bộ lọc',
+        title: tList('emptyFilteredTitle'),
         action: onClearFilters ? <Button onClick={onClearFilters}>Xoá bộ lọc</Button> : undefined,
       }}
       onRowClick={(row) => onView(row.id)}

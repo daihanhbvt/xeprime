@@ -23,6 +23,19 @@ verifyDepsBeforeRun: false
 overrides:
   expo-font: 14.0.12
 
+# KHAI PEER `react`/`react-native` cho react-native-calendars.
+#
+# Package đó không khai peerDependencies nào cả, nên pnpm chẳng có gì để nối và phép resolve
+# của Node leo lên `.pnpm/node_modules` — nơi đang treo `react@19.2.x` của `apps/web`, trong khi
+# `apps/mobile` chạy `react@19.1.x`. Hai bản React trong một cây là dispatcher `null`:
+# `Cannot read properties of null (reading 'useState')` ném ra từ trong lòng thư viện, không
+# phải từ code app.
+packageExtensions:
+  react-native-calendars:
+    peerDependencies:
+      react: '*'
+      react-native: '*'
+
 # Giữ lại cho pnpm 10; pnpm 11 bỏ qua khóa này và đọc `allowBuilds` ở cuối file.
 onlyBuiltDependencies:
   - '@prisma/client'

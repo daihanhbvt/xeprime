@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { CATALOG_TYPE } from '@xeprime/types';
-import { catalogApi, catalogLabel, EMPTY_CATALOG, type CatalogMap } from '@xeprime/api-client';
+import { catalogApi, catalogLabel, type CatalogMap, EMPTY_CATALOG, STALE_TIME } from '@xeprime/api-client';
 import { queryKeys } from '@/queries/query-keys';
 // Side-effect import, KHÔNG xoá: nạp module này là lúc client mặc định được cấu hình.
 import '@/lib/api-client';
@@ -12,14 +12,14 @@ import '@/lib/api-client';
  * Cùng query key với web nên là MỘT request cho cả phiên, và nhãn trên thẻ xe của app khớp
  * từng chữ với web — cả hai đọc chính bảng admin cấu hình, không ai có bảng dịch riêng.
  *
- * `staleTime` 5 phút: đây là dữ liệu cấu hình, không phải dữ liệu giao dịch.
+ * `STALE_TIME.REFERENCE`: đây là dữ liệu cấu hình, không phải dữ liệu giao dịch.
  */
 export function useCatalog(): { catalog: CatalogMap; isLoading: boolean } {
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.catalog.list(),
     // Lỗi danh mục KHÔNG được làm hỏng thẻ xe: map rỗng ⇒ nhãn rơi về key thô.
     queryFn: () => catalogApi.list().catch(() => EMPTY_CATALOG),
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIME.REFERENCE,
   });
   return { catalog: data ?? EMPTY_CATALOG, isLoading };
 }

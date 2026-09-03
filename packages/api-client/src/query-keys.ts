@@ -167,6 +167,23 @@ export const queryKeys = {
      * `bookings` để xác nhận trả xe (đổi trạng thái đơn) tự làm mới luôn thẻ cọc.
      */
     settlement: (id: string) => ['bookings', 'settlement', id] as const,
+    /**
+     * Báo giá NỘI BỘ cho luồng đặt hộ tại quầy. Khoá theo nguyên bộ tham số vì giá đổi theo
+     * xe, dịch vụ, lộ trình VÀ khoảng thời gian — bỏ sót một chiều là hiện lại giá của lần
+     * chọn trước.
+     */
+    quote: (params: QueryParams) => ['bookings', 'quote', params] as const,
+    /**
+     * URL ký để hiện ẢNH của biên bản bàn giao. Tách khỏi `handovers` vì vòng đời khác hẳn: biên
+     * bản là dữ liệu ổn định, còn URL ký sống ~2 phút nên phải tự làm mới.
+     */
+    handoverPhotoUrl: (id: string, type: string, fileId: string) =>
+      ['bookings', 'handovers', id, 'photo-url', type, fileId] as const,
+  },
+  /** Hợp đồng là BẢN CHỤP đông cứng — nhánh riêng, không invalidate theo đơn. */
+  contracts: {
+    all: ['contracts'] as const,
+    detail: (id: string) => ['contracts', 'detail', id] as const,
   },
   bookingRequests: {
     all: ['booking-requests'] as const,

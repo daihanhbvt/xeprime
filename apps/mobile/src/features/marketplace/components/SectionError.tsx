@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useErrorMessage } from '@/i18n/use-error-message';
 
 /**
@@ -30,7 +30,7 @@ export function SectionError({
       gap={space.sm}
       accessibilityRole="alert"
     >
-      <Ionicons name="alert-circle-outline" size={20} color={colors.danger} />
+      <Ionicons name="alert-circle-outline" size={iconSize.lg} color={colors.danger} />
       <YStack f={1} gap={2}>
         <Text col={colors.danger} fos={fontSize.bodySm} fow={fontWeight.semibold}>
           {title}
@@ -43,9 +43,18 @@ export function SectionError({
             onPress={action.onPress}
             accessibilityRole="button"
             hitSlop={space.xs}
-            style={{ alignSelf: 'flex-start', minHeight: sizing.touchTarget, justifyContent: 'center' }}
+            style={{
+              alignSelf: 'flex-start',
+              minHeight: sizing.touchTarget,
+              justifyContent: 'center',
+            }}
           >
-            <Text col={colors.danger} fos={fontSize.bodySm} fow={fontWeight.semibold} textDecorationLine="underline">
+            <Text
+              col={colors.danger}
+              fos={fontSize.bodySm}
+              fow={fontWeight.semibold}
+              textDecorationLine="underline"
+            >
               {action.label}
             </Text>
           </Pressable>

@@ -1,4 +1,4 @@
-import { Image } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { vehicleBrandKey } from '@xeprime/types';
 import { colors, fontSize, fontWeight, radius } from '@/theme/tokens';
@@ -16,11 +16,15 @@ const SIZE = 18;
  *
  * Hãng do shop tự nhập (ngoài danh mục) vì thế vẫn hiện tử tế thay vì một ô trống.
  */
+const styles = StyleSheet.create({
+  art: { width: SIZE, height: SIZE },
+});
+
 export function BrandMark({ brand }: { brand: string }) {
   const key = vehicleBrandKey(brand);
   const art = key ? BRAND_ART[key] : undefined;
 
-  if (art) return <Image source={art} style={{ width: SIZE, height: SIZE }} resizeMode="contain" />;
+  if (art) return <Image source={art} style={styles.art} resizeMode="contain" />;
 
   return (
     <YStack w={SIZE} h={SIZE} br={radius.pill} bg={colors.primaryLight} ai="center" jc="center">

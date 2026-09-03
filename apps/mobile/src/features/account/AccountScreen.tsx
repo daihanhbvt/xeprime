@@ -1,17 +1,19 @@
+import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import { LocaleSwitcher } from '@/components/i18n/LocaleSwitcher';
 import { Screen } from '@/components/layout/Screen';
 import { Avatar } from '@/components/ui/Avatar';
+import { AlertDialog } from '@/components/ui/AlertDialog';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { useLogout } from '@/features/auth/hooks/use-auth';
 import { useAuthenticatedUser } from '@/features/auth/hooks/use-authenticated-user';
 import { useTenantScope } from '@/features/auth/hooks/use-tenant-scope';
+import { ShopEntryCard } from '@/features/shell/ShopEntryCard';
 import { useDomainLabel } from '@/i18n/domain';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
 import { ROUTES } from '@/navigation/routes';
@@ -32,6 +34,7 @@ export function AccountScreen() {
   const { tenant } = useTenantScope();
   const domainLabel = useDomainLabel();
   const logout = useLogout();
+  const [confirmingLogout, setConfirmingLogout] = useState(false);
 
   const roleLabel = user.platformRole
     ? domainLabel('platformRole', user.platformRole)
@@ -39,22 +42,9 @@ export function AccountScreen() {
       ? domainLabel('tenantRole', tenant.roleKey)
       : null;
 
-  function confirmLogout() {
-    Alert.alert(tNav('logout'), t('logoutConfirm'), [
-      { text: tCommon('cancel'), style: 'cancel' },
-      {
-        text: tNav('logout'),
-        style: 'destructive',
-        onPress: () =>
-          logout.mutate(undefined, {
-            onSettled: () => router.replace(ROUTES.explore.home()),
-          }),
-      },
-    ]);
-  }
-
   return (
-    <Screen>
+    // Màn gốc của tab: thanh tab đã nuốt `insets.bottom` — xem ghi chú ở `TripsScreen`.
+    <Screen edges={['left', 'right']}>
       <YStack gap={space.lg}>
         <XStack ai="center" gap={space.md}>
           <Avatar name={user.displayName} url={user.avatarUrl} size={64} />
@@ -75,6 +65,8 @@ export function AccountScreen() {
           </XStack>
         ) : null}
 
+        <ShopEntryCard />
+
         <Card lift="flat" padded={false}>
           <XStack ai="center" jc="space-between" gap={space.sm} p={space.md}>
             <XStack ai="center" gap={space.sm} f={1}>
@@ -92,9 +84,26 @@ export function AccountScreen() {
           variant="danger"
           icon="log-out-outline"
           loading={logout.isPending}
-          onPress={confirmLogout}
+          onPress={() => setConfirmingLogout(true)}
         />
       </YStack>
+
+      {/* Đăng xuất là thao tác không hỏi lại được sau khi làm — hỏi trước, bằng hộp của app. */}
+      <AlertDialog
+        open={confirmingLogout}
+        title={tNav('logout')}
+        message={t('logoutConfirm')}
+        confirmLabel={tNav('logout')}
+        cancelLabel={tCommon('cancel')}
+        destructive
+        loading={logout.isPending}
+        onCancel={() => setConfirmingLogout(false)}
+        onConfirm={() =>
+          logout.mutate(undefined, {
+            onSettled: () => router.replace(ROUTES.explore.home()),
+          })
+        }
+      />
     </Screen>
   );
 }

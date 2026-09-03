@@ -1,23 +1,14 @@
 'use client';
 
 import { InputNumber, type InputNumberProps } from 'antd';
+import { CURRENCY_SUFFIX, formatMoneyInput, parseMoneyInput } from '@xeprime/domain';
 
-/**
- * Định dạng số tiền khi đang nhập theo quy ước Việt Nam: `1000000` → `1.000.000`.
- *
- * Đây là formatter của Ô NHẬP, khác `formatMoneyVnd`: không thêm đơn vị vào chuỗi giá trị và
- * không biến dữ liệu form thành chuỗi đã format. Giá trị trả qua `onChange` vẫn là `number | null`.
+/*
+ * Hai hàm này sống ở `@xeprime/domain` chứ không ở đây: app native cũng có ô nhập tiền, và định
+ * dạng lúc nhập là MỘT quy ước cho cả hai nền tảng — hai bản sao sẽ lệch nhau ở lần sửa đầu.
+ * Re-export để mọi nơi đang import từ file này không phải đổi.
  */
-export function formatMoneyInput(value: string | number | undefined): string {
-  const digits = String(value ?? '').replace(/\D/g, '');
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
-
-/** Bỏ mọi ký tự phân nhóm/đơn vị khỏi ô tiền; xoá trắng trả về `null`, không tự biến thành 0. */
-export function parseMoneyInput(value: string | undefined): number | null {
-  const digits = (value ?? '').replace(/\D/g, '');
-  return digits === '' ? null : Number(digits);
-}
+export { formatMoneyInput, parseMoneyInput };
 
 export type MoneyInputProps = Omit<
   InputNumberProps<number>,
@@ -30,7 +21,7 @@ export type MoneyInputProps = Omit<
  * Mọi nơi nhập tiền phải đi qua component này (hoặc `NumberField money`, vốn dùng component này)
  * để không còn nơi có dấu chấm hàng nghìn, nơi lại là chuỗi số thô.
  */
-export function MoneyInput({ addonAfter = '₫', ...props }: MoneyInputProps) {
+export function MoneyInput({ addonAfter = CURRENCY_SUFFIX, ...props }: MoneyInputProps) {
   return (
     <InputNumber<number>
       {...props}

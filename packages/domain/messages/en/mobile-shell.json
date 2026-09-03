@@ -15,5 +15,41 @@
     "backHome": "Back to home",
     "goToHome": "Go to home",
     "goToLogin": "Back to sign in"
+  },
+  "scope": {
+    "sheetTitle": "You are in",
+    "customerTitle": "Find & rent a car",
+    "customerSubtitle": "Customer mode",
+    "manageSubtitle": "Shop management · {role}",
+    "enterManage": "Open shop management",
+    "switcherA11y": "Currently in shop {shop}. Tap to switch mode",
+    "lostAccess": "You no longer have access to this shop.",
+    "signInRequired": "Sign in to manage your shop",
+    "signIn": "Sign in"
+  },
+  "manageNav": {
+    "home": "Overview",
+    "requests": "Requests",
+    "bookings": "Bookings",
+    "more": "More",
+    "openMenu": "Open management menu"
+  },
+  "manageHome": {
+    "greeting": "Hello, {name}",
+    "shopStatus": "Shop status",
+    "quickActions": "Everyday tasks",
+    "openRequests": "Request inbox",
+    "openBookings": "Booking list",
+    "newBooking": "New counter booking",
+    "inactiveTitle": "Shop is not live yet",
+    "inactiveBody": "Your vehicles are not listed on the marketplace. You can still view and manage existing data.",
+    "expiredTitle": "Subscription expired",
+    "expiredBody": "Your vehicles were removed from the marketplace. Renew to list them again; bookings and vehicle data are untouched.",
+    "contactSupport": "Contact support"
+  },
+  "more": {
+    "title": "More",
+    "switchScope": "Switch to customer mode",
+    "comingSoon": "More management sections open up in later waves."
   }
 }

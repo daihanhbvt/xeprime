@@ -3,6 +3,7 @@
 import { App, Alert, Collapse, DatePicker, Radio } from 'antd';
 import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@/lib/datetime';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   HANDOVER_CONDITION,
   HANDOVER_TYPE,
@@ -80,6 +81,7 @@ export function ConfirmHandoverDialog({
 
   const { message } = App.useApp();
   const { has } = usePermissions();
+  const tHandover = useTranslations('Bookings.handover');
   const copy = COPY[type];
   const invalidate = useInvalidateHandovers(context.bookingId, context.vehicleId);
   const canManage = has(PERMISSION.HANDOVER_MANAGE);
@@ -237,7 +239,7 @@ export function ConfirmHandoverDialog({
                   </label>
 
                   <div className={styles.field}>
-                    <span className={styles.label}>Tình trạng xe</span>
+                    <span className={styles.label}>{tHandover('condition.label')}</span>
                     <Radio.Group
                       value={condition}
                       onChange={(e) => setCondition(e.target.value as HandoverCondition)}
@@ -250,7 +252,7 @@ export function ConfirmHandoverDialog({
                   </div>
 
                   <label className={styles.field}>
-                    <span className={styles.label}>Ghi chú</span>
+                    <span className={styles.label}>{tHandover('notes.label')}</span>
                     <textarea
                       className={styles.textarea}
                       rows={2}

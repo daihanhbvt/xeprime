@@ -70,7 +70,19 @@ export function usePhoneVerify(purpose: PhoneVerificationPurpose) {
     verifying: verifyMutation.isPending,
     send: (phone: string) => sendMutation.mutate(phone),
     sendAsync: (phone: string) => sendMutation.mutateAsync(phone),
-    verify: (phone: string, code: string) => verifyMutation.mutate({ phone, code }),
+    /**
+     * `options` xuyên thẳng xuống `mutate` để nơi gọi bắn được toast lỗi.
+     *
+     * Có nó vì `error` trong state chỉ hợp với chỗ hiện lỗi TẠI CHỖ; app native báo lỗi thao tác
+     * bằng toast (`useAppToast`), mà toast là một SỰ KIỆN — treo nó vào một `useEffect` theo dõi
+     * `error` thì cùng một lỗi lặp lại (nhập sai mã hai lần liên tiếp) không bắn lần thứ hai vì
+     * giá trị state không đổi.
+     */
+    verify: (
+      phone: string,
+      code: string,
+      options?: { onError?: (error: unknown) => void; onSuccess?: () => void },
+    ) => verifyMutation.mutate({ phone, code }, options),
     clearError: () => setError(null),
     reset,
   };

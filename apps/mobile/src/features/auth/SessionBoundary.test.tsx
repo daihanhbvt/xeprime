@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, waitFor } from '@testing-library/react-native';
+import { Provider as ReduxProvider } from 'react-redux';
+import { store } from '@/store';
 import { API_ERROR_CODE } from '@xeprime/types';
 import { Text } from 'react-native';
 import { apiGet } from '@/lib/api-client';
@@ -49,11 +51,13 @@ async function mountBoundary() {
   const reset = jest.spyOn(queryClient, 'resetQueries');
 
   await render(
-    <QueryClientProvider client={queryClient}>
-      <SessionBoundary>
-        <Text>nội dung</Text>
-      </SessionBoundary>
-    </QueryClientProvider>,
+    <ReduxProvider store={store}>
+      <QueryClientProvider client={queryClient}>
+        <SessionBoundary>
+          <Text>nội dung</Text>
+        </SessionBoundary>
+      </QueryClientProvider>
+    </ReduxProvider>,
   );
 
   return { reset };

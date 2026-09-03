@@ -35,39 +35,41 @@ export function RentalSteps() {
           sách xe để không tranh sự chú ý với phần người dùng thật sự thao tác. */}
       <Card tone="muted" lift="flat">
         <YStack>
-        {STEPS.map((step, index) => {
-          const last = index === STEPS.length - 1;
+          {STEPS.map((step, index) => {
+            const last = index === STEPS.length - 1;
 
-          return (
-            <XStack key={step.key} gap={space.md}>
-              <YStack ai="center">
-                <XStack
-                  ai="center"
-                  gap={space.xs}
-                  h={BADGE_HEIGHT}
-                  px={space.sm}
-                  br={radius.pill}
-                  bg={colors.primary}
-                >
-                  <Ionicons name={step.icon} size={15} color={colors.onPrimary} />
-                  <Text col={colors.onPrimary} fos={fontSize.bodySm} fow={fontWeight.bold}>
-                    {index + 1}.
+            return (
+              <XStack key={step.key} gap={space.md}>
+                <YStack ai="center">
+                  <XStack
+                    ai="center"
+                    gap={space.xs}
+                    h={BADGE_HEIGHT}
+                    px={space.sm}
+                    br={radius.pill}
+                    bg={colors.primary}
+                  >
+                    <Ionicons name={step.icon} size={15} color={colors.onPrimary} />
+                    <Text col={colors.onPrimary} fos={fontSize.bodySm} fow={fontWeight.bold}>
+                      {index + 1}.
+                    </Text>
+                  </XStack>
+
+                  {/* Đường nối chạy tới viên kế tiếp; bước cuối không có gì để nối. */}
+                  {last ? null : (
+                    <YStack w={2} f={1} bg={colors.primaryLight} minHeight={space.sm} />
+                  )}
+                </YStack>
+
+                <YStack f={1} gap={2} pb={last ? 0 : space.md}>
+                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
+                    {t(`${step.key}.title` as never)}
                   </Text>
-                </XStack>
-
-                {/* Đường nối chạy tới viên kế tiếp; bước cuối không có gì để nối. */}
-                {last ? null : <YStack w={2} f={1} bg={colors.primaryLight} minHeight={space.sm} />}
-              </YStack>
-
-              <YStack f={1} gap={2} pb={last ? 0 : space.md}>
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold}>
-                  {t(`${step.key}.title` as never)}
-                </Text>
-                <Text col={colors.textMuted} fos={fontSize.bodySm}>
-                  {t(`${step.key}.desc` as never)}
-                </Text>
-              </YStack>
-            </XStack>
+                  <Text col={colors.textMuted} fos={fontSize.bodySm}>
+                    {t(`${step.key}.desc` as never)}
+                  </Text>
+                </YStack>
+              </XStack>
             );
           })}
         </YStack>

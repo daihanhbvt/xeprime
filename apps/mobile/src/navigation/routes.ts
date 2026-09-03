@@ -27,9 +27,19 @@ export const ROUTES = {
         : { pathname: '/listings/[id]', params: { id: vehicleId } },
   },
 
-  /** Đơn thuê của khách. */
+  /** Chuyến của khách — yêu cầu thuê và đơn thuê là HAI GIAI ĐOẠN của cùng một chuyến. */
   booking: {
     list: (): Href => '/trips',
+    /**
+     * `GET /trips/:id` nhận CẢ id yêu cầu lẫn id đơn, nên một route phục vụ cả hai giai đoạn của
+     * cùng một chuyến — không phải đoán loại id trước khi điều hướng.
+     */
+    detail: (tripId: string): Href => ({ pathname: '/trips/[id]', params: { id: tripId } }),
+    /** Wizard gửi yêu cầu thuê một chiếc xe (BKG-01) — CÔNG KHAI, khách vãng lai vào được. */
+    request: (vehicleId: string, serviceType?: string): Href =>
+      serviceType
+        ? { pathname: '/listings/[id]/request', params: { id: vehicleId, serviceType } }
+        : { pathname: '/listings/[id]/request', params: { id: vehicleId } },
   },
 
   /** Trò chuyện với gian hàng. */
@@ -46,6 +56,43 @@ export const ROUTES = {
     forgotPassword: (): Href => '/forgot-password',
     resetPassword: (token?: string): Href =>
       token ? { pathname: '/reset-password', params: { token } } : '/reset-password',
+  },
+
+  /** Khu vận hành gian hàng — sau `ScopeGuard`, chỉ thành viên có quyền vào được. */
+  manage: {
+    home: (): Href => '/manage',
+    more: (): Href => '/manage/more',
+    requests: (): Href => '/manage/requests',
+    bookings: (): Href => '/manage/bookings',
+    bookingCreate: (): Href => '/manage/bookings/new',
+    bookingDetail: (bookingId: string): Href => ({
+      pathname: '/manage/bookings/[id]',
+      params: { id: bookingId },
+    }),
+    /** `type` là `HANDOVER_TYPE.PICKUP` / `.RETURN` — không truyền chuỗi trần (ADR 0005). */
+    handover: (bookingId: string, type: string): Href => ({
+      pathname: '/manage/bookings/[id]/handover/[type]',
+      params: { id: bookingId, type },
+    }),
+    /** Bổ sung ẢNH cho biên bản đã lập — chỉ ảnh, không sửa KM hay giờ (xem màn hình). */
+    handoverPhotos: (bookingId: string): Href => ({
+      pathname: '/manage/bookings/[id]/handover-photos',
+      params: { id: bookingId },
+    }),
+    payments: (bookingId: string): Href => ({
+      pathname: '/manage/bookings/[id]/payments',
+      params: { id: bookingId },
+    }),
+    settlement: (bookingId: string): Href => ({
+      pathname: '/manage/bookings/[id]/settlement',
+      params: { id: bookingId },
+    }),
+    /** Hợp đồng của một đơn — id của HỢP ĐỒNG, không phải của đơn (server tạo idempotent). */
+    contract: (contractId: string): Href => ({
+      pathname: '/manage/contracts/[id]',
+      params: { id: contractId },
+    }),
+    missingOdometer: (): Href => '/manage/handovers/missing-odometer',
   },
 
   /** Gốc app — chỉ dùng cho fallback khi không có màn nào để lui về. */

@@ -84,6 +84,53 @@ export function ListRowSkeleton() {
   );
 }
 
+/** Khung chờ cho một thẻ chuyến — ảnh vuông trái, ba dòng phải, hàng tiền dưới cùng. */
+export function TripCardSkeleton() {
+  return (
+    <YStack
+      bg={colors.surface}
+      br={radius.lg}
+      bw={1}
+      bc={colors.border}
+      p={space.md}
+      gap={space.sm}
+    >
+      <XStack gap={space.md}>
+        <Skeleton width={72} height={72} />
+        <YStack f={1} gap={space.xs}>
+          <Skeleton width="35%" height={14} />
+          <Skeleton width="80%" height={18} />
+          <Skeleton width="50%" height={12} />
+        </YStack>
+      </XStack>
+      <Skeleton width="65%" height={14} />
+      <Skeleton width="40%" height={16} />
+    </YStack>
+  );
+}
+
+/** Khung chờ cho một thẻ đơn/yêu cầu ở khu quản lý — hàng trạng thái + hai cột thông tin. */
+export function RecordCardSkeleton() {
+  return (
+    <YStack
+      bg={colors.surface}
+      br={radius.lg}
+      bw={1}
+      bc={colors.border}
+      p={space.md}
+      gap={space.sm}
+    >
+      <XStack jc="space-between" gap={space.sm}>
+        <Skeleton width="30%" height={14} />
+        <Skeleton width="22%" height={14} />
+      </XStack>
+      <Skeleton width="70%" height={18} />
+      <Skeleton width="55%" height={13} />
+      <Skeleton width="45%" height={13} />
+    </YStack>
+  );
+}
+
 /** Khung chờ cho trang chi tiết xe — dựng đúng hình dạng thật để nội dung về không đẩy trang. */
 export function ListingDetailSkeleton() {
   return (
@@ -110,7 +157,14 @@ export function ListingDetailSkeleton() {
           <Skeleton width="30%" height={36} round />
         </XStack>
 
-        <YStack bg={colors.surface} br={radius.lg} bw={1} bc={colors.border} p={space.md} gap={space.sm}>
+        <YStack
+          bg={colors.surface}
+          br={radius.lg}
+          bw={1}
+          bc={colors.border}
+          p={space.md}
+          gap={space.sm}
+        >
           <Skeleton width="40%" height={26} />
           <Skeleton width="65%" height={14} />
         </YStack>
@@ -155,7 +209,14 @@ export function ProfileSkeleton() {
       </XStack>
 
       {Array.from({ length: 3 }, (_, i) => (
-        <YStack key={i} bg={colors.surface} br={radius.lg} bw={1} bc={colors.borderSubtle} p={space.md}>
+        <YStack
+          key={i}
+          bg={colors.surface}
+          br={radius.lg}
+          bw={1}
+          bc={colors.borderSubtle}
+          p={space.md}
+        >
           <XStack ai="center" jc="space-between" gap={space.sm}>
             <Skeleton width="40%" height={16} />
             <Skeleton width={72} height={28} round />

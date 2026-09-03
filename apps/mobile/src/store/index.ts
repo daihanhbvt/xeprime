@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { localeReducer } from '@/i18n/locale.slice';
+import { shellScopeReducer } from '@/features/shell/shell-scope.slice';
 
 /**
  * Store chỉ đăng ký reducer; slice thuộc quyền sở hữu của chính tính năng sinh ra nó. Nhờ vậy
@@ -8,6 +9,7 @@ import { localeReducer } from '@/i18n/locale.slice';
 export const store = configureStore({
   reducer: {
     locale: localeReducer,
+    shellScope: shellScopeReducer,
   },
 });
 

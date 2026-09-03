@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslations } from 'use-intl';
+import { AppTopBar } from '@/components/layout/AppTopBar';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { colors, fontSize, fontWeight, iconSize, space } from '@/theme/tokens';
-import { duration } from '@/theme/motion';
 
 /**
  * Thanh tab dưới đáy — chỉ tồn tại khi ĐÃ đăng nhập.
@@ -38,90 +38,88 @@ export default function TabsLayout() {
   const authOnly = user ? {} : { href: null };
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        // Tab là những nơi NGANG HÀNG — trượt ngang sẽ hứa một dải vuốt qua lại không có thật.
-        animation: 'fade',
-        transitionSpec: {
-          animation: 'timing',
-          config: { duration: duration.fast },
-        },
-        tabBarActiveTintColor: colors.primaryActive,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: user
-          ? {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.borderSubtle,
-              borderTopWidth: 1,
-              /*
-               * Chiều cao PHẢI cộng `insets.bottom`, và đệm dưới cũng vậy.
-               *
-               * Expo SDK 54 bật edge-to-edge mặc định trên Android (targetSdk 36): app vẽ xuống
-               * tận đáy màn, dưới cả thanh điều hướng cử chỉ. Một `height` cứng nghĩa là hàng
-               * icon nằm ĐÚNG chỗ thanh điều hướng đang chiếm — nhãn bị cắt và cú chạm rơi vào
-               * hệ thống thay vì vào tab.
-               *
-               * Trên máy có phím cứng hoặc iPhone không tai thỏ, `insets.bottom` là 0 và công
-               * thức tự thu về đúng chiều cao gốc — không cần rẽ nhánh theo nền tảng.
-               */
-              height: TAB_BAR_HEIGHT + insets.bottom,
-              paddingTop: space.xs,
-              paddingBottom: insets.bottom + space.xs,
-            }
-          : // Guest chỉ có một màn — một thanh tab đúng một mục là thanh trang trí chiếm chỗ.
-            { display: 'none' },
-        tabBarLabelStyle: {
-          fontSize: fontSize.label,
-          fontWeight: fontWeight.medium,
-        },
-        /*
-         * KHÔNG đệm dọc ở đây nữa. Nó cộng dồn với `paddingTop`/`paddingBottom` của thanh, đẩy
-         * tổng chiều cao vượt quá `height` đã khai — react-navigation khi đó cắt bớt, và thứ bị
-         * cắt luôn là nhãn ở dưới cùng. Đó chính là cái "vỡ" nhìn thấy trên máy.
-         */
-        tabBarItemStyle: { paddingVertical: 0 },
-      }}
-    >
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: t('explore'),
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="compass-outline" color={color} size={iconSize.lg} />
-          ),
+    <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background, flex: 1 }}>
+      <AppTopBar />
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          animation: 'none',
+          tabBarActiveTintColor: colors.primaryActive,
+          tabBarInactiveTintColor: colors.textMuted,
+          tabBarStyle: user
+            ? {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.borderSubtle,
+                borderTopWidth: 1,
+                /*
+                 * Chiều cao PHẢI cộng `insets.bottom`, và đệm dưới cũng vậy.
+                 *
+                 * Expo SDK 54 bật edge-to-edge mặc định trên Android (targetSdk 36): app vẽ xuống
+                 * tận đáy màn, dưới cả thanh điều hướng cử chỉ. Một `height` cứng nghĩa là hàng
+                 * icon nằm ĐÚNG chỗ thanh điều hướng đang chiếm — nhãn bị cắt và cú chạm rơi vào
+                 * hệ thống thay vì vào tab.
+                 *
+                 * Trên máy có phím cứng hoặc iPhone không tai thỏ, `insets.bottom` là 0 và công
+                 * thức tự thu về đúng chiều cao gốc — không cần rẽ nhánh theo nền tảng.
+                 */
+                height: TAB_BAR_HEIGHT + insets.bottom,
+                paddingTop: space.xs,
+                paddingBottom: insets.bottom + space.xs,
+              }
+            : // Guest chỉ có một màn — một thanh tab đúng một mục là thanh trang trí chiếm chỗ.
+              { display: 'none' },
+          tabBarLabelStyle: {
+            fontSize: fontSize.label,
+            fontWeight: fontWeight.medium,
+          },
+          /*
+           * KHÔNG đệm dọc ở đây nữa. Nó cộng dồn với `paddingTop`/`paddingBottom` của thanh, đẩy
+           * tổng chiều cao vượt quá `height` đã khai — react-navigation khi đó cắt bớt, và thứ bị
+           * cắt luôn là nhãn ở dưới cùng. Đó chính là cái "vỡ" nhìn thấy trên máy.
+           */
+          tabBarItemStyle: { paddingVertical: 0 },
         }}
-      />
-      <Tabs.Screen
-        name="chat"
-        options={{
-          ...authOnly,
-          title: t('chat'),
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="chatbubble-ellipses-outline" color={color} size={iconSize.lg} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="trips"
-        options={{
-          ...authOnly,
-          title: t('tripsShort'),
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="calendar-outline" color={color} size={iconSize.lg} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="account"
-        options={{
-          ...authOnly,
-          title: t('account'),
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="person-outline" color={color} size={iconSize.lg} />
-          ),
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="explore"
+          options={{
+            title: t('explore'),
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="compass-outline" color={color} size={iconSize.lg} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="chat"
+          options={{
+            ...authOnly,
+            title: t('chat'),
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="chatbubble-ellipses-outline" color={color} size={iconSize.lg} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="trips"
+          options={{
+            ...authOnly,
+            title: t('tripsShort'),
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="calendar-outline" color={color} size={iconSize.lg} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="account"
+          options={{
+            ...authOnly,
+            title: t('account'),
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="person-outline" color={color} size={iconSize.lg} />
+            ),
+          }}
+        />
+      </Tabs>
+    </SafeAreaView>
   );
 }

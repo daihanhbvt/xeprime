@@ -17,6 +17,19 @@ export const dwell = {
   toastError: 5000,
 } as const;
 
+/**
+ * Nhịp bắn sự kiện cuộn của `ScrollView`/`FlatList`, tính bằng mili-giây.
+ *
+ * Header co giãn theo cuộn cần `frame`; hiệu ứng thưa hơn (ảnh mở đầu trôi) dùng `half` để rẻ đi
+ * một nửa số lần React phải chạy.
+ */
+export const scrollThrottle = {
+  /** Mỗi khung hình ở 60fps. */
+  frame: 16,
+  /** Nửa nhịp — mỗi khung hình ở 30fps. */
+  half: 32,
+} as const;
+
 export const easing = {
   /** Bezier chuẩn Material — vào nhanh, ra chậm. */
   standard: [0.2, 0, 0, 1] as const,

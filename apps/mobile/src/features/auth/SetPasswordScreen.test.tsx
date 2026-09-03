@@ -36,10 +36,7 @@ describe('SetPasswordScreen', () => {
 
     expect(submit().props.accessibilityState.disabled).toBe(true);
 
-    await fireEvent.changeText(
-      view.getByPlaceholderText('Nhập mật khẩu mới'),
-      'Abcd1234',
-    );
+    await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu mới'), 'Abcd1234');
     // Nhập lại KHÁC — schema chặn, nút vẫn khoá.
     await fireEvent.changeText(view.getByPlaceholderText('Nhập lại mật khẩu'), 'Abcd9999');
     await waitFor(() => expect(submit().props.accessibilityState.disabled).toBe(true));
@@ -53,10 +50,7 @@ describe('SetPasswordScreen', () => {
     const onDone = jest.fn();
     const view = await renderScreen(onDone);
 
-    await fireEvent.changeText(
-      view.getByPlaceholderText('Nhập mật khẩu mới'),
-      'Abcd1234',
-    );
+    await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu mới'), 'Abcd1234');
     await fireEvent.changeText(view.getByPlaceholderText('Nhập lại mật khẩu'), 'Abcd1234');
     await fireEvent.press(view.getByRole('button', { name: 'Đặt mật khẩu' }));
 
@@ -75,10 +69,7 @@ describe('SetPasswordScreen', () => {
     const onDone = jest.fn();
     const view = await renderScreen(onDone);
 
-    await fireEvent.changeText(
-      view.getByPlaceholderText('Nhập mật khẩu mới'),
-      'Abcd1234',
-    );
+    await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu mới'), 'Abcd1234');
     await fireEvent.changeText(view.getByPlaceholderText('Nhập lại mật khẩu'), 'Abcd1234');
     await fireEvent.press(view.getByRole('button', { name: 'Đặt mật khẩu' }));
 

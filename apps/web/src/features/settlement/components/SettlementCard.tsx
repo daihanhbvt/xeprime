@@ -24,6 +24,7 @@ import { RecordRefundDialog } from './RecordRefundDialog';
 import { SurchargeDialog } from './SurchargeDialog';
 import styles from './SettlementCard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useTranslations } from 'next-intl';
 
 /**
  * Thẻ "Phát sinh & Tiền cọc" trên chi tiết đơn (Wave 10).
@@ -35,6 +36,7 @@ import { useAppFormat } from '@/i18n/use-app-format';
  * Hoàn cọc là việc THEO DÕI, không chặn hoàn tất chuyến: đơn đã `Hoàn tất` từ lúc nhận xe.
  */
 export function SettlementCard({ bookingId, canView }: { bookingId: string; canView: boolean }) {
+  const tSettlement = useTranslations('Bookings.settlement');
   const fmt = useAppFormat();
 
   const { has } = usePermissions();
@@ -185,7 +187,7 @@ export function SettlementCard({ bookingId, canView }: { bookingId: string; canV
               type="warning"
               showIcon
               message={`Cần thu thêm ${fmt.money(data.additionalDue)}`}
-              description="Phát sinh vượt quá tiền cọc đã nhận. Phần chênh lệch thu trực tiếp với khách."
+              description={tSettlement('additionalDueHint')}
             />
           ) : null}
 

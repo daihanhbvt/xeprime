@@ -132,21 +132,17 @@ export function AppToastProvider({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
 
   return (
-    <ToastProvider native={false} duration={dwell.toast} swipeDirection="down">
+    <ToastProvider native={false} duration={dwell.toast} swipeDirection="up">
       {children}
 
       <AppToast />
 
       {/*
-        Neo ở ĐÁY, không phải đỉnh.
-        
-        Ở đỉnh nó đè lên `AppHeader` — chip thông báo phủ đúng lên logo và nút lui, thấy rõ trong
-        mọi màn có header. Đáy màn thì luôn trống, gần ngón cái hơn, và là chỗ người dùng đã quen
-        tìm thông báo tạm.
+ 
       */}
       <ToastViewport
         pos="absolute"
-        bottom={insets.bottom + space.md}
+        top={insets.top + space.xs}
         left={space.md}
         right={space.md}
       />

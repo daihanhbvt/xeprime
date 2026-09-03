@@ -1,4 +1,4 @@
-import { Image } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 import { Text, XStack, YStack } from 'tamagui';
 import { useState } from 'react';
 import { useTranslations } from 'use-intl';
@@ -9,6 +9,10 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
 import { SectionError } from './SectionError';
 import { SectionHeader } from './SectionHeader';
+
+const styles = StyleSheet.create({
+  photo: { width: '100%', height: '100%' },
+});
 
 /** Số ô hiện ban đầu; "Xem tất cả" mở hết phần đã tải — cùng con số với web. */
 const PREVIEW_COUNT = 5;
@@ -89,14 +93,19 @@ export function FeaturedLocations({ onPicked }: { onPicked?: () => void }) {
                   {item.imageUrl ? (
                     <Image
                       source={{ uri: item.imageUrl }}
-                      style={{ width: '100%', height: '100%' }}
+                      style={styles.photo}
                       resizeMode="cover"
                     />
                   ) : null}
                 </YStack>
 
                 <YStack f={1} gap={2}>
-                  <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
+                  <Text
+                    col={colors.text}
+                    fos={fontSize.body}
+                    fow={fontWeight.semibold}
+                    numberOfLines={1}
+                  >
                     {item.provinceName}
                   </Text>
                   <Text col={colors.textMuted} fos={fontSize.bodySm}>

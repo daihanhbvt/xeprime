@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import { STALE_TIME } from '@xeprime/api-client';
 import type { PaginationMeta } from '@xeprime/types';
+import { FIRST_PAGE } from '@/queries/use-clamped-page';
 import { queryKeys } from '@/queries/query-keys';
-
-/** Số đánh giá tiêu biểu hiện ở trang chi tiết — cùng con số web dùng. */
-const REVIEW_LIMIT = 5;
 import {
   marketplaceApi,
   toListingQueryParams,
@@ -14,6 +13,9 @@ import {
   type PublicListing,
   type PublicShopSummary,
 } from '../api';
+
+/** Số đánh giá tiêu biểu hiện ở trang chi tiết — cùng con số web dùng. */
+const REVIEW_LIMIT = 5;
 
 /**
  * Server data của marketplace — TanStack Query (ADR 0004).
@@ -34,7 +36,7 @@ export function usePublicListings(filters: MarketplaceFilters) {
   const params = {
     ...toListingQueryParams(filters),
     sort: filters.sort ?? null,
-    page: filters.page ?? 1,
+    page: filters.page ?? FIRST_PAGE,
     limit: filters.limit ?? DEFAULT_LISTING_LIMIT,
   };
 
@@ -52,7 +54,7 @@ export function useDestinations(limit: number) {
     queryKey: queryKeys.marketplace.destinations({ limit }),
     queryFn: (): Promise<PublicDestination[]> => marketplaceApi.destinations(limit),
     // Số liệu tổng hợp, đổi chậm — không cần refetch liên tục.
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIME.REFERENCE,
   });
 }
 
@@ -63,12 +65,12 @@ export interface FeaturedShopsResult {
 
 export function useFeaturedShops(limit: number) {
   return useQuery({
-    queryKey: queryKeys.marketplace.shops({ page: 1, limit }),
+    queryKey: queryKeys.marketplace.shops({ page: FIRST_PAGE, limit }),
     queryFn: async (): Promise<FeaturedShopsResult> => {
       const { items, meta } = await marketplaceApi.shops(limit);
       return { shops: items, meta };
     },
-    staleTime: 5 * 60_000,
+    staleTime: STALE_TIME.REFERENCE,
   });
 }
 
@@ -101,6 +103,6 @@ export function useBanners() {
   return useQuery({
     queryKey: queryKeys.banners.list(),
     queryFn: (): Promise<PublicBanner[]> => marketplaceApi.banners().catch(() => []),
-    staleTime: 60_000,
+    staleTime: STALE_TIME.STANDARD,
   });
 }

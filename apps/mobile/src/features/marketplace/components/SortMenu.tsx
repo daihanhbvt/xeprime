@@ -11,7 +11,8 @@ import {
   type ListingSort,
 } from '@xeprime/types';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { appStyles } from '@/theme/styles';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /**
  * Bộ chọn thứ tự sắp xếp — **menu**, không phải hàng chip.
@@ -38,8 +39,7 @@ export function SortMenu({
   const [open, setOpen] = useState(false);
 
   const current = value ?? DEFAULT_LISTING_SORT;
-  const labelOf = (key: ListingSort) =>
-    domainLabel('listingSort', key, LISTING_SORT_LABEL[key]);
+  const labelOf = (key: ListingSort) => domainLabel('listingSort', key, LISTING_SORT_LABEL[key]);
 
   return (
     <>
@@ -67,17 +67,14 @@ export function SortMenu({
           >
             {labelOf(current)}
           </Text>
-          <Ionicons name="chevron-down" size={13} color={colors.textMuted} />
+          <Ionicons name="chevron-down" size={iconSize.xs} color={colors.textMuted} />
         </XStack>
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         {/* Lớp phủ là ANH EM của tấm menu — bọc ngoài thì nó nuốt luôn cú chạm chọn mục. */}
         <YStack f={1}>
-          <Pressable
-            style={{ flex: 1, backgroundColor: colors.overlay }}
-            onPress={() => setOpen(false)}
-          />
+          <Pressable style={appStyles.scrim} onPress={() => setOpen(false)} />
           <YStack
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
@@ -120,7 +117,7 @@ export function SortMenu({
                         {labelOf(option)}
                       </Text>
                       {active ? (
-                        <Ionicons name="checkmark" size={18} color={colors.primary} />
+                        <Ionicons name="checkmark" size={iconSize.md} color={colors.primary} />
                       ) : null}
                     </XStack>
                   </Pressable>

@@ -1,4 +1,4 @@
-import { ApiClientError, anonymousAuthTransport, createApiClient, getErrorCode, mobileAuthApi, type CurrentUser, type MobileLoginInput, type MobileRegisterInput, type MobileTokenPair } from '@xeprime/api-client';
+import { ApiClientError, anonymousAuthTransport, createApiClient, getErrorCode, mobileAuthApi, type CurrentUser, type MobileLoginInput, type MobileRegisterInput, type MobileSession, type MobileTokenPair } from '@xeprime/api-client';
 import { API_ERROR_CODE, type AuthProvider } from '@xeprime/types';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
@@ -272,6 +272,22 @@ async function refreshOnce(): Promise<string | null> {
     throw error;
   }
 }
+
+/**
+ * Nhận một phiên do endpoint KHÁC phát ra — hiện chỉ có một: `POST /public/booking-requests`
+ * với `client: 'native'`, khi khách vãng lai vừa được tạo tài khoản từ SĐT đã xác thực.
+ *
+ * Có hàm này để luồng đó KHÔNG tự chế đường lưu token thứ hai: access token vẫn chỉ ở bộ nhớ,
+ * refresh token vẫn chỉ ở Keychain/Keystore, và mọi thứ đi qua đúng `storeTokens` (ADR 0017).
+ * Không nạp phiên thì khách vừa đặt xe xong bị coi như chưa đăng nhập.
+ */
+export async function adoptSession(session: MobileSession): Promise<CurrentUser> {
+  await storeTokens(session.tokens);
+  return session.user;
+}
+
+/** Thông tin thiết bị gửi kèm khi một endpoint khác phát phiên cho app. */
+export { describeDevice };
 
 /**
  * Thông tin thiết bị CHỈ để người dùng nhận ra máy nào trong màn "thiết bị đang đăng nhập" —

@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { registerSchema, type RegisterValues } from '@xeprime/validators';
+import { YStack } from 'tamagui';
+import { buildRegisterSchema, type RegisterValues } from '@xeprime/validators';
+import { useAuthSchemaLabels } from '../use-auth-schema-labels';
 import { useForm } from 'react-hook-form';
-import { StyleSheet, View } from 'react-native';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import { Button } from '@/components/ui/Button';
@@ -24,13 +26,21 @@ export function RegisterForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
   const toast = useAppToast();
   const register = useRegister();
 
+  /*
+   * Dựng lại schema khi ngôn ngữ đổi — LUẬT ở `@xeprime/validators`, chỉ câu chữ đi vào từ đây.
+   * `useMemo` vì `yupResolver` nhận object mới mỗi nhịp thì RHF xác thực lại toàn form sau từng
+   * phím gõ.
+   */
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildRegisterSchema(labels), [labels]);
+
   const {
     control,
     handleSubmit,
     formState: { isValid },
   } = useForm<RegisterValues>({
     mode: 'onChange',
-    resolver: yupResolver(registerSchema),
+    resolver: yupResolver(schema),
     defaultValues: { displayName: '', phone: '', password: '', confirmPassword: '' },
   });
 
@@ -45,7 +55,7 @@ export function RegisterForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
   });
 
   return (
-    <View style={styles.form}>
+    <YStack gap={space.md}>
       <TextField
         control={control}
         name="displayName"
@@ -105,12 +115,6 @@ export function RegisterForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
         loading={register.isPending}
         disabled={!isValid}
       />
-    </View>
+    </YStack>
   );
 }
-
-const styles = StyleSheet.create({
-  form: {
-    gap: space.md,
-  },
-});
