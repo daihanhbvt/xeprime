@@ -11,7 +11,7 @@ import {
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Alert, Button, Radio, Skeleton } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
+import { appWallClockToInstant, appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
@@ -236,8 +236,9 @@ export function StaffBookingFlow({
       // Đến từ hồ sơ khách thì không bắt nhân viên gõ lại tên + SĐT đã có trong sổ.
       customerName: customerName ?? '',
       customerPhone: customerPhone ?? '',
-      pickupAt: pickupAt ? dayjs(pickupAt) : null,
-      returnAt: returnAt ? dayjs(returnAt) : null,
+      // Mốc từ ô lịch là UTC; ô chọn phải hiện GIỜ VIỆT NAM (CLAUDE.md §9).
+      pickupAt: pickupAt ? toAppTz(pickupAt) : null,
+      returnAt: returnAt ? toAppTz(returnAt) : null,
       pickupMethod: PICKUP_METHOD.SELF,
       deliveryAddress: '',
       routeType: ROUTE_TYPE.IN_CITY,
@@ -258,7 +259,7 @@ export function StaffBookingFlow({
   /** Ngày trả suy từ gói — chỉ để HIỂN THỊ; con số ghi vào đơn do server tính lại. */
   const derivedReturnAt =
     isLongTerm && packageMonths != null && watchedPickup
-      ? dayjs(longTermReturnAt(watchedPickup.toDate(), packageMonths))
+      ? toAppTz(longTermReturnAt(appWallClockToInstant(watchedPickup).toDate(), packageMonths))
       : null;
   // Chuyến có tài xế: xe đến ĐÓN khách — "giao xe tận nơi" không có nghĩa.
   const isDelivery = !isWithDriver && pickupMethod === PICKUP_METHOD.DELIVERY;
@@ -276,8 +277,8 @@ export function StaffBookingFlow({
       ? { vehicleId, serviceType, packageMonths: packageMonths! }
       : {
           vehicleId,
-          pickupAt: watchedPickup!.toISOString(),
-          returnAt: watchedReturn!.toISOString(),
+          pickupAt: appWallClockToIso(watchedPickup!),
+          returnAt: appWallClockToIso(watchedReturn!),
           // Giá theo DỊCH VỤ + LỘ TRÌNH (17/08) — staff thấy đúng số khách sẽ trả.
           serviceType,
           ...(isWithDriver ? { routeType: watchedRoute } : {}),
@@ -297,9 +298,14 @@ export function StaffBookingFlow({
       const v = getValues();
       return checkConflict({
         vehicleId,
-        startAt: v.pickupAt?.toISOString() ?? '',
+        startAt: v.pickupAt ? appWallClockToIso(v.pickupAt) : '',
         // Dài hạn: khoảng cần kiểm là [nhận, nhận + gói tháng lịch) — chính khoảng đơn sẽ chiếm.
-        endAt: (derivedReturnAt ?? v.returnAt)?.toISOString() ?? '',
+        // `derivedReturnAt` đã là mốc tuyệt đối xem theo giờ VN, `v.returnAt` là giờ trên ô
+        // chọn — `appWallClockToIso` đọc đúng cả hai vì nó luôn đọc MẶT ĐỒNG HỒ.
+        endAt: (() => {
+          const end = derivedReturnAt ?? v.returnAt;
+          return end ? appWallClockToIso(end) : '';
+        })(),
       });
     },
     onSuccess: (res) => {
@@ -380,11 +386,11 @@ export function StaffBookingFlow({
               ...(v.routeType !== ROUTE_TYPE.IN_CITY ? { destination: v.destination.trim() } : {}),
             }
           : {}),
-        pickupAt: v.pickupAt!.toISOString(),
+        pickupAt: appWallClockToIso(v.pickupAt!),
         // Dài hạn: KHÔNG gửi ngày trả — server suy từ gói bằng tháng lịch (ADR 0011).
         ...(isLongTerm
           ? { longTermPackageMonths: packageMonths ?? undefined }
-          : { returnAt: v.returnAt!.toISOString() }),
+          : { returnAt: appWallClockToIso(v.returnAt!) }),
         // Tiền từ báo giá server (đã gồm giá riêng theo ngày); giảm giá là dòng âm → tách dương.
         baseAmount: quote
           ? (rowAmount(quote, PRICE_ROW.BASE) ?? quote.totalAmount)

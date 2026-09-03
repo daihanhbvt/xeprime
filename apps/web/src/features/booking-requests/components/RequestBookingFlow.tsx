@@ -13,7 +13,7 @@ import {
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Radio, Segmented } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
+
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -59,6 +59,13 @@ import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { EmbedMap } from '@/components/data-display/EmbedMap';
 import { cx } from '@/lib/cx';
+import {
+  appWallClockToInstant,
+  appWallClockToIso,
+  nowInAppTz,
+  toAppTz,
+  type Dayjs,
+} from '@/lib/datetime';
 import { isZeroMoney } from '@/lib/money';
 import { mapDirectionsUrl } from '@/lib/map-embed';
 import { buildBusyDayIndex } from '@/lib/rental-busy';
@@ -214,8 +221,9 @@ export function RequestBookingFlow({
       routeType: isRouteType(routeTypeContext) ? routeTypeContext : ROUTE_TYPE.IN_CITY,
       pickupAddress: '',
       destination: '',
-      pickupAt: pickupAt ? dayjs(pickupAt) : null,
-      returnAt: returnAt ? dayjs(returnAt) : null,
+      // Mốc từ URL là UTC; ô chọn phải hiện GIỜ VIỆT NAM (CLAUDE.md §9).
+      pickupAt: pickupAt ? toAppTz(pickupAt) : null,
+      returnAt: returnAt ? toAppTz(returnAt) : null,
       // Thuê dài hạn: chọn sẵn gói NHỎ NHẤT và nguyện vọng linh hoạt nhất — khách thấy ngay
       // một mức giá thật để so, thay vì một bảng trống phải bấm mới có số.
       longTermPackageMonths: LONG_TERM_PACKAGE_MONTHS[0],
@@ -298,8 +306,8 @@ export function RequestBookingFlow({
       : null
     : watchedPickup && watchedReturn
       ? {
-          pickupAt: watchedPickup.toISOString(),
-          returnAt: watchedReturn.toISOString(),
+          pickupAt: appWallClockToIso(watchedPickup),
+          returnAt: appWallClockToIso(watchedReturn),
           serviceType: watchedService,
           ...(isWithDriver ? { routeType: watchedRoute } : {}),
         }
@@ -400,8 +408,8 @@ export function RequestBookingFlow({
       const v = getValues();
       return checkAvailability({
         vehicleId,
-        pickupAt: v.pickupAt?.toISOString() ?? '',
-        returnAt: v.returnAt?.toISOString() ?? '',
+        pickupAt: v.pickupAt ? appWallClockToIso(v.pickupAt) : '',
+        returnAt: v.returnAt ? appWallClockToIso(v.returnAt) : '',
       });
     },
     onSuccess: (res) => {
@@ -438,8 +446,8 @@ export function RequestBookingFlow({
                 : {}),
             }
           : {
-              pickupAt: v.pickupAt?.toISOString() ?? '',
-              returnAt: v.returnAt?.toISOString() ?? '',
+              pickupAt: v.pickupAt ? appWallClockToIso(v.pickupAt) : '',
+              returnAt: v.returnAt ? appWallClockToIso(v.returnAt) : '',
             }),
         // Có tài xế: lộ trình + địa chỉ đón (+ điểm đến khi liên tỉnh); backend validate lại.
         ...(withDriver
@@ -516,7 +524,6 @@ export function RequestBookingFlow({
     if (!priceExpanded) return;
     priceDetailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [priceExpanded]);
-
 
   /** Rời bước Chuyến đi: SĐT đã xác thực thì sang thẳng Xác nhận, chưa thì dựng OTP. */
   async function afterTripStep() {
@@ -644,7 +651,9 @@ export function RequestBookingFlow({
   /** Ngày trả DỰ KIẾN của gói khi khách đã chọn ngày nhận cụ thể — giờ chốt khi gian hàng duyệt. */
   const expectedReturnDate =
     watchedPackage != null && watchedRequestedDate
-      ? dayjs(longTermReturnAt(watchedRequestedDate.toDate(), watchedPackage))
+      ? toAppTz(
+          longTermReturnAt(appWallClockToInstant(watchedRequestedDate).toDate(), watchedPackage),
+        )
       : null;
 
   const steps: BookingStepItem[] = [
@@ -775,15 +784,18 @@ export function RequestBookingFlow({
                   {quoteQ.data.breakdown.estimateNote ? t('price.subtotal') : t('price.total')}
                 </dt>
                 {/* Tiền LUÔN qua bộ format — `1800000` trần là con số thô lọt ra ngoài. */}
-                <dd className={styles.doneMoney}>
-                  {fmt.money(quoteQ.data.breakdown.totalAmount)}
-                </dd>
+                <dd className={styles.doneMoney}>{fmt.money(quoteQ.data.breakdown.totalAmount)}</dd>
               </div>
             ) : null}
           </dl>
 
           {/* Nói rõ đây MỚI là yêu cầu — xe chưa bị giữ chỗ (pending không chiếm lịch). */}
-          <Alert type="warning" showIcon className={styles.doneNote} message={t('done.notReserved')} />
+          <Alert
+            type="warning"
+            showIcon
+            className={styles.doneNote}
+            message={t('done.notReserved')}
+          />
 
           <div className={cx(styles.doneActions, styles.doneActionsRow)}>
             <Button
@@ -1155,7 +1167,13 @@ export function RequestBookingFlow({
               <Alert type="error" showIcon message={vp.error} className={styles.err} />
             ) : null}
             {stepError ? (
-              <Alert type="warning" showIcon message={stepError} className={styles.err} role="alert" />
+              <Alert
+                type="warning"
+                showIcon
+                message={stepError}
+                className={styles.err}
+                role="alert"
+              />
             ) : null}
 
             {priceDetail}
@@ -1178,7 +1196,13 @@ export function RequestBookingFlow({
               <div className={styles.devHint}>{t('otp.devCode', { code: vp.devCode })}</div>
             ) : null}
             {stepError ? (
-              <Alert type="error" showIcon message={stepError} className={styles.err} role="alert" />
+              <Alert
+                type="error"
+                showIcon
+                message={stepError}
+                className={styles.err}
+                role="alert"
+              />
             ) : null}
             <div className={styles.otpLinks}>
               <button type="button" className={styles.linkBtn} onClick={() => backToTrip(true)}>
@@ -1256,8 +1280,8 @@ export function RequestBookingFlow({
                       {watchedPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && watchedRequestedDate
                         ? ` · ${watchedRequestedDate.format('DD/MM/YYYY')}`
                         : ` · ${t('longTerm.windowValue', {
-                            start: dayjs().add(1, 'day').format('DD/MM'),
-                            end: dayjs().add(7, 'day').format('DD/MM/YYYY'),
+                            start: nowInAppTz().add(1, 'day').format('DD/MM'),
+                            end: nowInAppTz().add(7, 'day').format('DD/MM/YYYY'),
                           })}`}
                     </dd>
                   </div>
@@ -1330,7 +1354,13 @@ export function RequestBookingFlow({
             </dl>
 
             {stepError ? (
-              <Alert type="error" showIcon message={stepError} className={styles.err} role="alert" />
+              <Alert
+                type="error"
+                showIcon
+                message={stepError}
+                className={styles.err}
+                role="alert"
+              />
             ) : null}
 
             {priceDetail}

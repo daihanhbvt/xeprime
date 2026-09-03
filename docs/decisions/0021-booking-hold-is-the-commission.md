@@ -1,6 +1,6 @@
 # ADR 0021 — Khoản giữ chỗ **LÀ** hoa hồng: khách chuyển online cho nền tảng, phần còn lại trả thẳng chủ xe
 
-Ngày: 28/08/2026 · Trạng thái: Accepted · **Thu hẹp [ADR 0013](0013-no-online-payment-mvp.md) ràng buộc điều 2**
+Ngày: 28/08/2026 · Trạng thái: **Superseded bởi [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)** — hold và phí dịch vụ nay là hai khái niệm độc lập.
 
 > ⚠️ **[ADR 0025](0025-shop-escrow-hold-and-payout.md) thu hẹp ĐIỀU 1 (29/08/2026):** câu *“nền
 > tảng giữ luôn, không cần đường chuyển trả”* chỉ còn đúng cho khoản giữ chỗ mang

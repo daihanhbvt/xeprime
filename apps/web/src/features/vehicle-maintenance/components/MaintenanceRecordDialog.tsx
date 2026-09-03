@@ -6,14 +6,18 @@ import { Alert, App, Col, Form, List, Row } from 'antd';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
-  MAINTENANCE_TYPE, MAINTENANCE_TYPE_LABEL, MAINTENANCE_TYPE_VALUES, type MaintenanceType, } from '@xeprime/types';
+  MAINTENANCE_TYPE,
+  MAINTENANCE_TYPE_LABEL,
+  MAINTENANCE_TYPE_VALUES,
+  type MaintenanceType,
+} from '@xeprime/types';
 import { DateTimeField } from '@/components/form/DateTimeField';
 import { NumberField } from '@/components/form/NumberField';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
-import { dayjs } from '@/lib/datetime';
+import { appWallClockToIso, toAppTz } from '@/lib/datetime';
 import { getErrorCode } from '@/services/api-client';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import type { ApiClientError } from '@/services/api-client';
@@ -22,10 +26,7 @@ import {
   createMaintenanceRecord,
   updateMaintenanceRecord,
 } from '../api';
-import {
-  makeMaintenanceRecordFormSchema,
-  type MaintenanceRecordFormValues,
-} from '../schema';
+import { makeMaintenanceRecordFormSchema, type MaintenanceRecordFormValues } from '../schema';
 import type { MaintenanceRecord } from '../types';
 import styles from './VehicleMaintenanceWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -36,9 +37,7 @@ const TYPE_OPTIONS = MAINTENANCE_TYPE_VALUES.map((value) => ({
 }));
 
 type DialogState =
-  | { mode: 'create' }
-  | { mode: 'edit' | 'complete'; record: MaintenanceRecord }
-  | null;
+  { mode: 'create' } | { mode: 'edit' | 'complete'; record: MaintenanceRecord } | null;
 
 interface ScheduleConflict {
   sourceType: string;
@@ -72,7 +71,10 @@ export function MaintenanceRecordDialog({
   const { message } = App.useApp();
   const t = useTranslations('Maintenance');
   const tCommon = useTranslations('Common');
-  const recordSchema = useMemo(() => makeMaintenanceRecordFormSchema(t as (key: string) => string), [t]);
+  const recordSchema = useMemo(
+    () => makeMaintenanceRecordFormSchema(t as (key: string) => string),
+    [t],
+  );
   const errorMessage = useErrorMessage();
   const [saving, setSaving] = useState(false);
   const [conflicts, setConflicts] = useState<ScheduleConflict[]>([]);
@@ -84,9 +86,10 @@ export function MaintenanceRecordDialog({
       type: (record?.type ?? MAINTENANCE_TYPE.OIL_CHANGE) as MaintenanceRecordFormValues['type'],
       customTypeName: record?.customTypeName ?? '',
       title: record?.title ?? '',
-      // ISO từ API → Dayjs cho DatePicker; chiều ngược lại serialize lúc gửi.
-      plannedStartAt: record?.plannedStartAt ? dayjs(record.plannedStartAt) : null,
-      plannedEndAt: record?.plannedEndAt ? dayjs(record.plannedEndAt) : null,
+      // ISO (mốc UTC) từ API → giờ VIỆT NAM cho DatePicker; chiều gửi đi là
+      // `appWallClockToIso`, vì giờ người dùng chọn luôn hiểu theo giờ VN (CLAUDE.md §9).
+      plannedStartAt: record?.plannedStartAt ? toAppTz(record.plannedStartAt) : null,
+      plannedEndAt: record?.plannedEndAt ? toAppTz(record.plannedEndAt) : null,
       odometerKm: record?.odometerKm ?? null,
       providerName: record?.providerName ?? '',
       // `cost` vắng mặt khi thiếu quyền tiền — không dựng số 0 giả vào form.
@@ -133,8 +136,8 @@ export function MaintenanceRecordDialog({
             values.type === MAINTENANCE_TYPE.OTHER ? text(values.customTypeName) : null,
           title: text(values.title),
           // API nhận ISO 8601 (UTC) — CLAUDE.md §9: lưu UTC, hiển thị Asia/Ho_Chi_Minh.
-          plannedStartAt: values.plannedStartAt?.toISOString() ?? null,
-          plannedEndAt: values.plannedEndAt?.toISOString() ?? null,
+          plannedStartAt: values.plannedStartAt ? appWallClockToIso(values.plannedStartAt) : null,
+          plannedEndAt: values.plannedEndAt ? appWallClockToIso(values.plannedEndAt) : null,
           odometerKm: values.odometerKm,
           providerName: text(values.providerName),
           cost: values.cost != null ? String(values.cost) : null,
@@ -157,7 +160,8 @@ export function MaintenanceRecordDialog({
       const code = getErrorCode(err);
       if (code === 'BOOKING_SCHEDULE_CONFLICT') {
         // Giữ nguyên form: người dùng chỉ cần đổi ngày, không phải nhập lại.
-        const details = (err as ApiClientError).details as { conflicts?: ScheduleConflict[] } | undefined;
+        const details = (err as ApiClientError).details as
+          { conflicts?: ScheduleConflict[] } | undefined;
         setConflicts(details?.conflicts ?? []);
         message.error(t('toast.scheduleConflict'));
       } else if (code === 'CONFLICT') {
@@ -249,15 +253,21 @@ export function MaintenanceRecordDialog({
                   />
                 </Col>
                 <Col xs={24} sm={12}>
-                  <DateTimeField control={control} name="plannedStartAt" label={t('record.plannedStart')} />
+                  <DateTimeField
+                    control={control}
+                    name="plannedStartAt"
+                    label={t('record.plannedStart')}
+                  />
                 </Col>
                 <Col xs={24} sm={12}>
-                  <DateTimeField control={control} name="plannedEndAt" label={t('record.plannedEnd')} />
+                  <DateTimeField
+                    control={control}
+                    name="plannedEndAt"
+                    label={t('record.plannedEnd')}
+                  />
                 </Col>
                 <Col xs={24}>
-                  <p className={styles.attachmentNote}>
-                    {t('record.scheduleHoldNote')}
-                  </p>
+                  <p className={styles.attachmentNote}>{t('record.scheduleHoldNote')}</p>
                 </Col>
                 <Col xs={24} sm={12}>
                   <TextField
@@ -303,13 +313,7 @@ export function MaintenanceRecordDialog({
           </Row>
         </Form>
 
-        {completing ? (
-          <Alert
-            type="info"
-            showIcon
-            message={t('record.completeHint')}
-          />
-        ) : null}
+        {completing ? <Alert type="info" showIcon message={t('record.completeHint')} /> : null}
         {record && canViewFiles && record.attachmentCount > 0 ? (
           <p className={styles.attachmentNote}>
             {t('record.attachments', { count: record.attachmentCount })}

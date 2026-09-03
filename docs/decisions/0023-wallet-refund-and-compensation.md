@@ -1,6 +1,6 @@
 # ADR 0023 — Ví chỉ chứa tiền HOÀN và tiền BỒI THƯỜNG; rút bằng chuyển khoản admin thủ công
 
-Ngày: 28/08/2026 · Trạng thái: Accepted
+Ngày: 28/08/2026 · Trạng thái: **Superseded bởi [ADR 0025](0025-shop-escrow-hold-and-payout.md) và [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)** — giữ nguyên các nguyên tắc ledger append-only/idempotency.
 
 > ⚠️ **[ADR 0025](0025-shop-escrow-hold-and-payout.md) VIẾT LẠI điều 1–2 (29/08/2026).** Câu
 > *“ví chỉ chứa tiền hoàn và bồi thường”* và *“không phải escrow”* **không còn đúng** cho tuyến

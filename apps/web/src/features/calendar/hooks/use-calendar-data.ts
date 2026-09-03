@@ -35,6 +35,8 @@ export function useCalendarData() {
 
   const branchScope = useBranchScopeParams();
   const query = {
+    // `buildRange` trả `Date` — mốc TUYỆT ĐỐI dựng từ ranh giới ngày giờ VN, không phải giá trị
+    // ô chọn; `.toISOString()` ở đây là phép serialize đúng, không phải chỗ cần `appWallClockToIso`.
     startAt: range.startAt.toISOString(),
     endAt: range.endAt.toISOString(),
     ...(filters.vehicleType ? { vehicleType: filters.vehicleType } : {}),

@@ -14,7 +14,14 @@ import {
 import { PriceBreakdown } from '@/components/data-display/PriceBreakdown';
 import { fetchCalendarQuote } from '@/features/calendar/api';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
-import { dayjs, startOfAppDay, toAppTz, type Dayjs } from '@/lib/datetime';
+import {
+  appWallClockToInstant,
+  appWallClockToIso,
+  nowInAppTz,
+  startOfAppDay,
+  toAppTz,
+  type Dayjs,
+} from '@/lib/datetime';
 import { queryKeys } from '@/services/query-keys';
 import type { ApproveBookingRequestInput, BookingRequestItem } from '../types';
 
@@ -80,7 +87,7 @@ function ApproveLongTermForm({
   const returnAt = useMemo(
     () =>
       pickupAt && effectivePackage != null
-        ? toAppTz(longTermReturnAt(pickupAt.toDate(), effectivePackage))
+        ? toAppTz(longTermReturnAt(appWallClockToInstant(pickupAt).toDate(), effectivePackage))
         : null,
     [pickupAt, effectivePackage],
   );
@@ -106,7 +113,10 @@ function ApproveLongTermForm({
    * bước duyệt — hoặc chốt đúng nguyện vọng, hoặc từ chối để hai bên thoả thuận lại.
    */
   function disabledDate(current: Dayjs): boolean {
-    if (request.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE && request.requestedPickupDate) {
+    if (
+      request.pickupPreference === PICKUP_PREFERENCE.SPECIFIC_DATE &&
+      request.requestedPickupDate
+    ) {
       return !current.isSame(startOfAppDay(request.requestedPickupDate), 'day');
     }
     if (
@@ -119,7 +129,7 @@ function ApproveLongTermForm({
       return current.isBefore(start) || current.isAfter(end);
     }
     // Yêu cầu LEGACY (hoặc thiếu dữ liệu nguyện vọng): chỉ chặn ngày quá khứ.
-    return current.isBefore(dayjs().startOf('day'));
+    return current.isBefore(nowInAppTz().startOf('day'));
   }
 
   /*
@@ -142,7 +152,7 @@ function ApproveLongTermForm({
       onOk={() =>
         pickupAt && effectivePackage != null
           ? onConfirm({
-              scheduledPickupAt: pickupAt.toISOString(),
+              scheduledPickupAt: appWallClockToIso(pickupAt),
               // Chỉ gửi gói khi yêu cầu chưa có — không được đổi gói khách đã chọn.
               ...(requestPackage == null ? { longTermPackageMonths: effectivePackage } : {}),
             })
@@ -204,9 +214,7 @@ function ApproveLongTermForm({
 
         <div className={styles.field}>
           <span className={styles.label}>{t('longTerm.returnLabel')}</span>
-          <strong>
-            {returnAt ? fmt.rentalPoint(returnAt) : tCommon('labels.emptyValue')}
-          </strong>
+          <strong>{returnAt ? fmt.rentalPoint(returnAt) : tCommon('labels.emptyValue')}</strong>
           <span className={styles.hint}>{t('longTerm.returnHint')}</span>
         </div>
 
@@ -218,7 +226,9 @@ function ApproveLongTermForm({
               rows={quoteQ.data.rows}
               totalAmount={quoteQ.data.totalAmount}
               depositAmount={quoteQ.data.depositAmount}
-              title={t('longTerm.quoteTitle', { package: fmt.packageLabel(effectivePackage) ?? '' })}
+              title={t('longTerm.quoteTitle', {
+                package: fmt.packageLabel(effectivePackage) ?? '',
+              })}
             />
           ) : (
             <Alert type="warning" showIcon message={t('longTerm.quoteUnavailable')} />

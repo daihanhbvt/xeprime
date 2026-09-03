@@ -21,7 +21,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
-import { dayjs } from '@/lib/datetime';
+import { nowInAppTz, startOfAppDay } from '@/lib/datetime';
 import { DRIVERS_DEFAULT_LIMIT } from '@/features/drivers/api';
 import { DriverFormModal } from '@/features/drivers/components/DriverFormModal';
 import { useDeleteDriver, useDrivers, useUpdateDriver } from '@/features/drivers/hooks/use-drivers';
@@ -42,13 +42,21 @@ function LicenseExpiryTag({ licenseExpiresAt }: { licenseExpiresAt: string | nul
   const fmt = useAppFormat();
   if (!licenseExpiresAt) return null;
 
-  const expiry = dayjs(licenseExpiresAt).endOf('day');
-  const daysLeft = expiry.diff(dayjs(), 'day');
+  /*
+   * `licenseExpiresAt` là NGÀY LỊCH `YYYY-MM-DD` (cột `@db.Date`, API trả qua `fromDateOnly`),
+   * không phải mốc thời gian. Đưa nó qua `dayjs(value)` là mượn nửa đêm THEO MÁY rồi in lại
+   * theo giờ VN — trên máy đặt ở UTC, hạn 03/09 hiện thành 04/09.
+   *
+   * Ranh giới "hết hạn" thì phải là mốc thật để đếm ngày còn lại: hết ngày đó theo giờ VN.
+   */
+  const expiry = startOfAppDay(licenseExpiresAt).endOf('day');
+  const daysLeft = expiry.diff(nowInAppTz(), 'day');
   // Ngày qua `useAppFormat` — định dạng theo ngôn ngữ, không format cứng ở call site.
-  const date = fmt.date(expiry.toISOString());
+  const date = fmt.dateKey(licenseExpiresAt);
 
   if (daysLeft < 0) return <Tag color="red">{t('license.expired', { date })}</Tag>;
-  if (daysLeft <= LICENSE_WARN_DAYS) return <Tag color="orange">{t('license.expired', { date })}</Tag>;
+  if (daysLeft <= LICENSE_WARN_DAYS)
+    return <Tag color="orange">{t('license.expired', { date })}</Tag>;
   return <span className={styles.meta}>{t('license.validUntil', { date })}</span>;
 }
 
@@ -171,8 +179,7 @@ export default function DriversPage() {
       render: (_, row) => (
         <div>
           <span className={styles.meta}>
-            {[row.licenseNo, row.idNo].filter(Boolean).join(' · ') ||
-              tCommon('labels.emptyValue')}
+            {[row.licenseNo, row.idNo].filter(Boolean).join(' · ') || tCommon('labels.emptyValue')}
           </span>
           <LicenseExpiryTag licenseExpiresAt={row.licenseExpiresAt ?? null} />
         </div>
@@ -194,7 +201,11 @@ export default function DriversPage() {
       key: 'status',
       width: 150,
       render: (_, row) => (
-        <StatusTag value={row.status as DriverStatus} meta={DRIVER_STATUS_META} group="driverStatus" />
+        <StatusTag
+          value={row.status as DriverStatus}
+          meta={DRIVER_STATUS_META}
+          group="driverStatus"
+        />
       ),
     },
     actionColumn<Driver>((row) => [

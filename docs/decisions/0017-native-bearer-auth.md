@@ -2,8 +2,8 @@
 
 Ngày: 24/08/2026 · Trạng thái: Accepted
 
-Liên quan: [ADR 0002](0002-auth-session-cookie.md) (session cookie của web — **không bị thay đổi**),
-[docs/mobile-readiness-audit.md](../mobile-readiness-audit.md) §7 P0-1, P0-2, P1-1.
+Liên quan: [ADR 0002](0002-auth-session-cookie.md) (session cookie của web — **không bị thay đổi**) và
+[`apps/mobile/README.md`](../../apps/mobile/README.md) (kiến trúc/trạng thái client native hiện hành).
 
 > **Cập nhật 26/08/2026 — [ADR 0019](0019-backend-led-social-oauth.md).** `POST /auth/mobile/session`
 > (đổi Firebase ID token lấy cặp token) **đã bị gỡ** cùng với toàn bộ đường Firebase Auth; chưa

@@ -1,219 +1,159 @@
 # 07 — Information Architecture
 
-> Ngày: 04/08/2026 · Chủ sở hữu: Product Director
-> Nguồn kỹ thuật: `apps/web/src/constants/routes.ts` · `constants/nav.ts` · `apps/web/src/proxy.ts`.
-> Ký hiệu: ✅ đã có · 🟡 có nhưng là stub/chưa đủ · 🆕 đề xuất mới.
+> Cập nhật: 03/09/2026
+> Trạng thái: **Canonical — cấu trúc trải nghiệm mục tiêu**
 
----
+## 1. Bốn bề mặt, một hệ thống
 
-## 1. Mô hình gốc: hai cánh cửa, một sản phẩm
+```text
+Marketplace công khai
+└─ Customer account
 
-```
-                    xeprime.vn
-                         │
-        ┌────────────────┴────────────────┐
-        │                                 │
-   MARKETPLACE  /                    PORTAL  /manage
-   khách thuê · công khai · SEO      vận hành · sau đăng nhập · noindex
-        │                                 │
-   ┌────┴────┐                    ┌───────┴───────┐
-   │         │                    │               │
- guest   customer            tenant scope    platform scope
-                             (gian hàng)      (nền tảng)
+Owner workspace
+├─ Owner Lite — gói cơ bản
+└─ Manage — gian hàng thuê bao
+
+Platform Admin
 ```
 
-**Quy tắc phân định** — điều gì thuộc cánh cửa nào:
+Các bề mặt dùng chung tài khoản, API, vehicle, calendar và booking. Không tách database và không clone feature/source chỉ vì menu khác nhau.
 
-| Thuộc marketplace | Thuộc portal |
+## 2. Marketplace và Customer
+
+### Công khai
+
+| Nhóm | Màn chính |
 | --- | --- |
-| Mọi thứ khách thuê cần: tìm, xem, đặt, theo dõi chuyến, nhắn tin, hồ sơ cá nhân | Mọi thứ để *kinh doanh* xe: xe, đơn, lịch, tiền, nhân sự, duyệt |
-| Không cần đăng nhập để xem | Cần đăng nhập, luôn |
-| `/account` — hồ sơ **khách thuê** | `/manage/shop` — hồ sơ **gian hàng** |
+| Khám phá | Trang chủ, tìm kiếm/lọc, kết quả, chi tiết xe |
+| Niềm tin | Trang gian hàng/chủ xe, review, chính sách, lịch trống, breakdown giá |
+| Chuyển đổi | Đặt xe, xác thực điện thoại, khoản giữ chỗ/thanh toán |
+| Pháp lý | Quy chế sàn, Terms, Privacy, chính sách hủy/hoàn, bảo hiểm |
 
-> Hai cái trên từng bị nhầm là một. Chúng không phải. Một người có thể có cả hai và chúng không liên quan nhau.
+### Sau đăng nhập
 
----
-
-## 2. Sitemap — Marketplace
-
-| Route | Trạng thái | Vai trò | Ghi chú |
-| --- | --- | --- | --- |
-| `/` | ✅ | Trang chủ: hero tìm kiếm, gợi ý xe, địa điểm, gian hàng nổi bật, 4 bước | Static render — **không được phá** (SEO) |
-| `/search` | 🆕 | Kết quả tìm kiếm đầy đủ với bộ lọc, tách khỏi trang chủ | Hiện kết quả nằm ngay trên `/`; tách ra để có URL chia sẻ được, phân trang và SEO theo tỉnh/loại xe |
-| `/listings/[id]` | ✅ | Chi tiết xe | Cần bổ sung: lịch còn trống (C-02), bảng giá (C-03), chính sách (C-04) |
-| `/shops/[slug]` | ✅ | Trang gian hàng công khai | |
-| `/trips` | ✅ | Chuyến của tôi + đánh giá sau chuyến | Cần dòng thời gian trạng thái yêu cầu (C-10) |
-| `/trips/[id]` | 🆕 | Chi tiết một chuyến: dòng thời gian, hợp đồng, liên hệ shop, khiếu nại | Hiện chỉ có danh sách |
-| `/chat` | ✅ | Tin nhắn với gian hàng | |
-| `/account` | ✅ | Hồ sơ khách thuê | |
-| `/account/saved` | 🆕 | Xe đã lưu | Hoặc **gỡ icon trái tim** đang chết trên thẻ xe (C-05) |
-| `/help`, `/terms`, `/privacy` | 🆕 | Trang tĩnh — chân trang hiện trỏ tất cả về `/` | Link chết trong footer là lỗi tin cậy |
-| `?auth=login` / `?auth=register` | ✅ | Auth modal trên chính trang đang xem | Không phải route riêng — đúng thiết kế 04/08 |
-| `/login`, `/register` | ✅ | Chuyển hướng tương thích về `/?auth=…` | Giữ cho link cũ |
-
----
-
-## 3. Sitemap — Portal gian hàng
-
-### 3.1 Vấn đề của menu hiện tại
-
-`SHOP_NAV` có **15 mục trong 3 nhóm** (Tổng quan · Quản lý 9 mục · Cài đặt 6 mục), trong đó 4 mục là stub `comingSoon`. Ba vấn đề:
-
-1. Nhóm "Quản lý" gom lẫn ba loại việc khác nhau (điều hành hằng ngày, tài sản, tiền) nên không có nhóm nào tra được nhanh.
-2. Tài chính bị chẻ làm ba mục cạnh nhau (**Tài chính · Thu chi · Công nợ**) — người dùng phải nhớ tiền nằm ở mục nào.
-3. Menu hứa 4 thứ chưa có.
-
-### 3.2 IA đề xuất — 4 nhóm theo *câu hỏi của người dùng*
-
-| Nhóm | Câu hỏi nó trả lời | Mục |
-| --- | --- | --- |
-| **Tổng quan** | "Hôm nay tôi phải làm gì?" | `/manage` |
-| **Điều hành** | "Xe đang ở đâu, ai đang thuê?" | Lịch thuê xe · Yêu cầu thuê · Đơn thuê · Bàn giao 🆕 |
-| **Tài sản & khách** | "Tôi có gì, ai là khách của tôi?" | Xe · Khách hàng 🟡 · Tài xế 🟡 · Khu vực nhận xe 🟡 |
-| **Tiền** | "Tháng này lãi hay lỗ, ai còn nợ?" | Tổng quan tài chính · Thu chi · Công nợ · Hợp đồng |
-| **Cài đặt** | "Cấu hình gian hàng" | Gian hàng · Người dùng · Gói dịch vụ 🆕 · Thùng rác 🟡 |
-| *(ngoài nav)* | | Trò chuyện → icon ở topbar cùng thông báo |
-
-**Ba thay đổi cụ thể**:
-- **"Cửa hàng" → "Gian hàng"** (thống nhất từ vựng, `01` §9).
-- **Trò chuyện rời khỏi nav** lên topbar cạnh chuông thông báo — nó là kênh liên lạc, không phải một khu vực nghiệp vụ, và ở đó mới thấy được badge chưa đọc mọi lúc.
-- **Mục stub không nằm trong nav.** Thay bằng: khi người dùng cần chức năng đó (ví dụ chọn khu vực nhận xe lúc tạo đơn) thì có link "Quản lý khu vực nhận xe" tại chỗ. Menu hứa ít, giao đủ.
-
-### 3.3 Bảng route
-
-| Route | Trạng thái | Ghi chú |
-| --- | --- | --- |
-| `/manage` | ✅ | Tổng quan — cần đổi thành "việc hôm nay" (S-04) |
-| `/manage/login` | ✅ | Công khai, không bị proxy đẩy về `/manage` |
-| `/manage/onboarding` | ✅ | Nơi **duy nhất** render form tạo gian hàng |
-| `/manage/calendar` | ✅ | Cần bản mobile riêng (`05` §6) |
-| `/manage/booking-requests` | ✅ | Yêu cầu thuê từ marketplace |
-| `/manage/bookings` · `/manage/bookings/[id]` | ✅ / 🆕 | Chi tiết đang là drawer; cần URL riêng để chia sẻ được |
-| `/manage/handovers` | 🆕 | Bàn giao xe có bằng chứng (S-03) |
-| `/manage/vehicles` · `/new` · `/[id]` · `/[id]/edit` | ✅ | |
-| `/manage/maintenance` | 🆕 | Trung tâm bảo dưỡng/KM toàn đội xe; chi tiết record dùng drawer |
-| `/manage/customers` · `/[id]` | 🟡 / 🆕 | Khách hàng **của shop** (S-01) — khác `/manage/admin/customers` |
-| `/manage/drivers`, `/manage/pickup-areas`, `/manage/trash` | 🟡 | Stub |
-| `/manage/finance` · `/receipts` · `/debts` | ✅ | Gom thành nhóm "Tiền" |
-| `/manage/finance/vehicle-obligations` | 🆕 | Kỳ trả góp, thuê lại và quyết toán hợp tác theo xe |
-| `/manage/contracts/[id]` | ✅ | Xem/in hợp đồng |
-| `/manage/shop` | ✅ | Hồ sơ gian hàng |
-| `/manage/members` | ✅ | Người dùng của gian hàng |
-| `/manage/settings/rental-policies` | 🆕 | Mặc định cọc, giao nhận, quá giờ và giảm giá của gian hàng |
-| `/manage/subscription` | 🆕 | Gói của **chính gian hàng này** + hoá đơn (G-02). Hiện gói chỉ quản lý từ phía nền tảng |
-
----
-
-## 4. Sitemap — Portal nền tảng
-
-| Route | Trạng thái | Ghi chú |
-| --- | --- | --- |
-| `/manage` (scope nền tảng) | ✅ | Dashboard nền tảng — chọn theo `platformRole` |
-| `/manage/admin` | ✅ | Duyệt hồ sơ. Cần checklist chất lượng (G-04) + hiện lý do ẩn trước đó (G-03) |
-| `/manage/admin/tenants` | ✅ | Gian hàng: khoá/mở, gói/hạn |
-| `/manage/admin/vehicles` | ✅ | Xe toàn hệ thống, ẩn/bỏ ẩn |
-| `/manage/admin/bookings` | ✅ | Đơn toàn hệ thống — **chỉ đọc** |
-| `/manage/admin/customers` | ✅ | Khách thuê, PII che sẵn |
-| `/manage/admin/staff` | ✅ | Nhân sự nền tảng |
-| `/manage/admin/plans` | ✅ | Gói dịch vụ |
-| `/manage/admin/audit` | ✅ | Nhật ký hệ thống |
-| `/manage/admin/tickets` | 🆕 | Hỗ trợ/khiếu nại (G-01 + C-09) |
-| `/manage/admin/invoices` | 🆕 | Hoá đơn gói (G-02) |
-| `/manage/admin/reports` | 🆕 | Báo cáo nền tảng (G-05) |
-
-Khu `/manage/admin/*` có layout riêng trả **403 có giải thích** khi thiếu `platformRole` — không đẩy sang onboarding gian hàng.
-
----
-
-## 5. Quy ước URL
-
-| Loại | Quy ước | Ví dụ |
-| --- | --- | --- |
-| Bộ lọc, phân trang, khoảng thời gian, tab | **Query param** (ADR 0004) | `/manage/bookings?status=active&page=2&from=2026-08-01` |
-| Trạng thái UI tạm (drawer đang mở, chọn nhiều) | Redux/local, **không** vào URL | |
-| Định danh bản ghi | Path segment | `/listings/01KZ…` |
-| Ý định | Query param | `?auth=login&next=/trips`, `?intent=owner` |
-| Nội dung công khai có SEO | Slug | `/shops/gian-hang-demo` |
-
-**`next` luôn phải qua `isSafeNextPath`** (`features/auth/safe-next.ts`): chỉ nội bộ, đúng một `/` đầu, chặn `//evil.example` và URL tuyệt đối.
-
-**Nguyên tắc chia sẻ được**: bất kỳ trạng thái nào người dùng có thể muốn gửi cho đồng nghiệp ("xem đơn này giúp anh") phải có URL. Đây là lý do chi tiết đơn thuê cần `/manage/bookings/[id]` chứ không chỉ là drawer.
-
----
-
-## 6. Mô hình khái niệm người dùng nhìn thấy
-
-Người dùng không cần biết 35 bảng. Họ cần thấy **sáu** danh từ và quan hệ giữa chúng:
-
-```
-GIAN HÀNG ──┬── XE ──── LỊCH (dải thời gian bận)
-            │            ▲
-            ├── YÊU CẦU THUÊ ──duyệt──► ĐƠN THUÊ ──┬── PHIẾU THU/CHI
-            │        ▲                              ├── HỢP ĐỒNG
-            │        │                              └── CÔNG NỢ (= tổng − đã trả)
-            └── KHÁCH THUÊ ───────────────────────────┘
-```
-
-**Hệ quả cho điều hướng chéo** — từ mỗi thực thể phải đi được tới thực thể kề nó **trong một chạm**:
-
-| Đang xem | Phải tới được |
+| Nhóm | Màn chính |
 | --- | --- |
-| Đơn thuê | Xe · Khách · Lịch · Phiếu thu · Hợp đồng |
-| Xe | Lịch của xe · Đơn thuê của xe · Doanh thu của xe |
-| Khách | Lịch sử đơn · Công nợ · Cuộc trò chuyện |
-| Yêu cầu thuê | Xe · Lịch (kiểm tra trùng) · Khách |
+| Chuyến | Danh sách, chi tiết, timeline, hủy, nhận/trả và review |
+| Thanh toán | Khoản giữ chỗ, lịch sử, biên nhận, hoàn tiền |
+| Tin nhắn | Chat theo chủ xe/booking |
+| Tài khoản | Hồ sơ, xác minh, địa chỉ/tài liệu khi thực sự triển khai |
+| Hỗ trợ | Ticket/tranh chấp gắn booking |
 
-Hiện tại nhiều liên kết trong số này chưa có — đó là lý do người dùng phải quay ra menu và tìm lại từ đầu.
+Mục chưa có luồng thật phải ẩn khỏi navigation; không dùng menu như backlog.
 
----
+## 3. Owner Lite — chủ xe cơ bản
 
-## 7. Tìm kiếm và điều hướng nhanh
+Owner Lite là một vỏ đơn giản của `/manage`, lọc theo capability của gói. Không dựng một bộ route/API song sinh.
 
-| Cấp | Cơ chế | Phạm vi |
+| Thứ tự | Nhóm | Nội dung |
 | --- | --- | --- |
-| Trong màn | Ô tìm kiếm của danh sách đó | Chỉ danh sách đang xem |
-| Toàn portal | **⌘K / Ctrl+K** 🆕 (X-04) | Nhảy màn hình · tìm đơn theo mã/SĐT · tìm xe theo biển số · tìm khách theo tên/SĐT · hành động nhanh ("Tạo đơn") |
-| Marketplace | Hero search | Xe công khai |
+| 1 | Tổng quan | Việc cần làm, chuyến sắp tới, thu nhập ròng dự kiến |
+| 2 | Xe của tôi | Hồ sơ xe, ảnh/giấy tờ, giá, lịch và trạng thái listing |
+| 3 | Yêu cầu & chuyến | Request, booking, bàn giao, nhận lại, hủy |
+| 4 | Tiền của tôi | Breakdown, số dư, lịch sử, yêu cầu rút |
+| 5 | Tin nhắn | Chat với khách |
+| 6 | Tài khoản chủ xe | Danh tính, thuế, ngân hàng, điều khoản |
+| 7 | Nâng cấp | So sánh và mua gói gian hàng |
+| 8 | Hỗ trợ | Ticket/tranh chấp |
 
-⌘K là thứ khiến 15 mục menu không còn là vấn đề: người dùng thành thạo gõ, người mới bấm menu. Không có nó, mọi tính năng mới đều phải giành chỗ trong nav.
+Nguyên tắc: chủ xe cơ bản phải hoàn thành được một chuyến từ đầu tới cuối. Feature gating không được chặn nhận tiền, rút tiền, xem lịch sử hoặc cung cấp bằng chứng.
 
----
+## 4. Manage — gian hàng thuê bao
 
-## 8. Thông báo
+| Nhóm | Nội dung |
+| --- | --- |
+| Tổng quan | KPI, việc cần làm, cảnh báo và onboarding |
+| Vận hành | Xe + bảo dưỡng, lịch, yêu cầu, booking, khách hàng |
+| Giao tiếp | Chat và thông báo |
+| Tài chính | Doanh thu, thu chi, công nợ, số dư/đối soát nếu dùng tiền qua XePrime |
+| Mặt tiền | Hồ sơ gian hàng, listing, chất lượng và hiệu quả hiển thị |
+| Tổ chức | Chi nhánh, tài xế, thành viên/phân quyền |
+| Cấu hình | Chính sách thuê, nhận xe, gói dịch vụ, thanh toán |
+| Hỗ trợ | FAQ, ticket và trạng thái sự cố |
 
-Một trung tâm thông báo duy nhất ở topbar, phân loại theo **mức độ cần hành động**:
+`pickup-areas` và `trash` không ở nav cho tới khi có hành vi thật. Advanced feature ở trạng thái `read_only` vẫn cho xem dữ liệu đã tạo trước khi hết gói; tenant mới chưa có dữ liệu thì ẩn.
 
-| Loại | Ví dụ | Hành vi |
+## 5. Platform Admin
+
+Menu hiện tại cần được nhóm lại theo công việc, thay vì một danh sách phẳng.
+
+| Nhóm | Đã có | Cần bổ sung |
 | --- | --- | --- |
-| Cần xử lý | Yêu cầu thuê mới · đơn quá hạn thu · hồ sơ chờ duyệt | Có badge số, tồn tại đến khi xử lý xong |
-| Đã xảy ra | Khách huỷ · xe được duyệt public | Đánh dấu đã đọc là xong |
-| Hệ thống | Gói sắp hết hạn | Có ngày hết hạn rõ |
+| Tổng quan | Dashboard cơ bản | Funnel, GMV, doanh thu, nợ phải trả, SLA |
+| Kiểm duyệt | Approval, vehicles, tenants | Seller KYC/tax/bank, listing quality, resubmission reason |
+| Giao dịch | Bookings, customers | Holds, payments, refunds, disputes |
+| Tài chính | Plans | Invoices, bank transactions, reconciliation, owner balances, withdrawals |
+| Marketplace | Banners, catalog, locations | Ranking/featured policy, sponsored label, performance |
+| Con người | Platform staff | Scope switch, least privilege, case-linked PII reveal |
+| Kiểm soát | Audit | Risk flags, incident trail, maker–checker |
+| Hỗ trợ | Chưa có | Tickets, queues, SLA, templates |
 
-Thông báo luôn **liên kết thẳng tới đối tượng**, không phải tới danh sách chứa nó.
+### Navigation mục tiêu
 
----
+```text
+Tổng quan
 
-## 9. Trần IA — luật giữ sản phẩm không phình
+Người bán & nội dung
+├─ Hồ sơ cần duyệt
+├─ Chủ xe / Gian hàng
+├─ Xe & listing
+└─ Xác minh danh tính · thuế · ngân hàng
 
-1. Nav gian hàng **tối đa 5 nhóm × 5 mục**. Muốn thêm mục thứ 6 vào một nhóm thì phải bỏ một mục.
-2. **Không đưa stub vào nav.** Chức năng chưa có thì không có chỗ trong menu.
-3. Tính năng chỉ dùng bởi < 20% gian hàng vào **cài đặt**, không vào nav.
-4. Mọi màn hình mới phải trả lời được: nó thuộc nhóm nào, thay thế/gộp với màn nào.
-5. Marketplace tối đa **5 tab** ở mobile.
+Giao dịch
+├─ Booking
+├─ Thanh toán & khoản giữ chỗ
+├─ Hoàn tiền
+└─ Tranh chấp
 
----
+Tài chính
+├─ Gói & hóa đơn
+├─ Giao dịch ngân hàng
+├─ Số dư chủ xe
+├─ Yêu cầu rút
+└─ Đối chiếu quỹ
 
-## 10. Việc cần làm cho IA
+Marketplace
+├─ Banner
+├─ Danh mục
+├─ Địa điểm
+└─ Ưu tiên hiển thị
 
-| # | Việc | Mức |
+Vận hành
+├─ Ticket hỗ trợ
+├─ Nhân sự
+├─ Audit log
+└─ Cấu hình chính sách
+```
+
+## 6. Role và capability
+
+| Persona | Scope | Nguồn quyết định |
 | --- | --- | --- |
-| IA-1 | Tách `/search` khỏi trang chủ | P1 |
-| IA-2 | Gom 3 mục tiền thành nhóm "Tiền"; đổi "Cửa hàng" → "Gian hàng" | P0 |
-| IA-3 | Đưa Trò chuyện lên topbar, bỏ khỏi nav | P1 |
-| IA-4 | Gỡ 4 mục stub khỏi nav, thay bằng link tại chỗ | P0 |
-| IA-5 | Thêm URL cho chi tiết đơn thuê / khách / chuyến | P1 |
-| IA-6 | Bổ sung liên kết chéo theo bảng §6 | P1 |
-| IA-7 | ⌘K | P2 |
-| IA-8 | Trang tĩnh `/help`, `/terms`, `/privacy` (footer đang trỏ link chết) | P1 |
+| Customer | Dữ liệu cá nhân/chuyến của mình | Quyền sở hữu resource |
+| Basic owner | Tenant của mình, bộ năng lực tối thiểu | Membership + permission + plan capability |
+| Subscription shop | Tenant của mình, bộ năng lực đầy đủ | Membership + permission + plan capability |
+| Platform staff | Toàn sàn trong phạm vi role | Platform role + permission |
 
-Liên quan: `03_PRODUCT_GAP_ANALYSIS.md` · `09_PAGE_DESIGN_ORDER.md`.
+Role không biểu diễn gói. `shop_owner` ở basic và subscription vẫn là cùng role; khác biệt đến từ plan capability.
+
+Nếu một user vừa có platform role vừa có tenant membership, shell phải cho chọn scope. Trước khi có scope switch, quy định vận hành là dùng tài khoản platform riêng.
+
+## 7. Giao dịch trong và ngoài nền tảng
+
+| Loại | XePrime ghi nhận | Bảo vệ có thể cam kết |
+| --- | --- | --- |
+| On-platform | Quote, booking, tiền, bằng chứng, hủy/hoàn | Theo policy và dữ liệu hệ thống |
+| Liên hệ trên XePrime, trả tiền trực tiếp | Booking và giao nhận nếu hai bên vẫn cập nhật | Không bảo đảm đối soát khoản thanh toán ngoài hệ thống |
+| Hai bên tự giao dịch hoàn toàn bên ngoài | Chỉ có lead/contact event | Không cam kết hoàn tiền hoặc phân xử phần không có chứng cứ |
+
+Trước khi mở thông tin liên hệ, UI phải cho khách hiểu sự khác nhau này. Không được mô tả một giao dịch ngoài nền tảng như giao dịch được XePrime bảo vệ đầy đủ.
+
+## 8. Quy tắc điều hướng
+
+1. Navigation phản ánh việc người dùng làm hôm nay, không phản ánh toàn bộ bảng database.
+2. Không có stub trong nav.
+3. Feature ít dùng nằm trong Cấu hình hoặc contextual link.
+4. Mỗi trang có loading/rỗng/lỗi/forbidden rõ ràng.
+5. 403 nói thiếu quyền/capability nào và ai có thể giải quyết.
+6. Platform Admin và tenant Manage không tự động thay thế nhau; người có hai scope phải chủ động chuyển.
+7. Web responsive là bề mặt Owner/Manage chính. App native trước mắt chỉ cần Customer parity.

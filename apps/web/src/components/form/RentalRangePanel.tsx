@@ -3,13 +3,18 @@
 import 'react-day-picker/style.css';
 
 import { Button, DatePicker, Radio, Select, Tooltip } from 'antd';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DayPicker, type DateRange, type DayButtonProps } from 'react-day-picker';
 import { enUS, vi } from 'react-day-picker/locale';
 import { cx } from '@/lib/cx';
+import {
+  appWallClockToCalendarDate,
+  calendarDateToAppWallClock,
+  dayjs,
+  nowInAppTz,
+  type Dayjs,
+} from '@/lib/datetime';
 import {
   busyLevelOf,
   busyPeriodsOf,
@@ -130,7 +135,9 @@ export function RentalRangePanel({
   const datePattern = useDatePickerPattern();
   const t = useTranslations('Common');
 
-  const [month, setMonth] = useState<Date>(() => (value.pickupAt ?? dayjs()).toDate());
+  const [month, setMonth] = useState<Date>(() =>
+    appWallClockToCalendarDate(value.pickupAt ?? nowInAppTz()),
+  );
 
   /** Số ngày TÍNH TIỀN — trùng công thức `PricingService.chargedDays` để hai tầng không lệch. */
   const chargedDays = (a: Dayjs, b: Dayjs) => Math.max(1, Math.ceil(b.diff(a, 'minute') / 1440));
@@ -145,10 +152,16 @@ export function RentalRangePanel({
       end: p.endAt.format('HH:mm'),
     });
 
-  /** Gắn giờ đang chọn (hoặc mặc định) vào một ngày trên lịch. */
+  /**
+   * Gắn giờ đang chọn (hoặc mặc định) vào một ngày trên lịch.
+   *
+   * `Date` của react-day-picker mang ngày lịch theo GIỜ MÁY; giá trị khoảng thuê thì luôn là
+   * giờ Việt Nam (CLAUDE.md §9). `calendarDateToAppWallClock` là chỗ duy nhất bắc cầu hai thứ
+   * đó — `dayjs(day)` trần sẽ để cả hộp chọn trôi theo múi giờ của máy khách.
+   */
   const withTime = (day: Date, current: Dayjs | null): Dayjs => {
     const [h, m] = timeOf(current).split(':').map(Number);
-    return dayjs(day)
+    return calendarDateToAppWallClock(day)
       .hour(h ?? DEFAULT_HOUR)
       .minute(m ?? 0)
       .second(0)
@@ -164,7 +177,7 @@ export function RentalRangePanel({
    * Lịch controlled theo `value` nên phần tô sáng và tóm tắt không bao giờ lệch nhau.
    */
   function handleSelect(_suggested: DateRange | undefined, triggerDate: Date) {
-    const clickedDay = dayjs(triggerDate).startOf('day');
+    const clickedDay = calendarDateToAppWallClock(triggerDate).startOf('day');
 
     if (!value.pickupAt || (value.pickupAt && value.returnAt)) {
       onChange({ pickupAt: withTime(triggerDate, value.pickupAt), returnAt: null });
@@ -179,7 +192,10 @@ export function RentalRangePanel({
       returnAt = value.pickupAt.add(Math.max(1, minDays), 'day');
     // Lưới an toàn cho ca lệch giờ — lịch đã khoá các ngày dưới sàn (xem `dailyDisabled`).
     else if (chargedDays(value.pickupAt, returnAt) < minDays) {
-      returnAt = withTime(value.pickupAt.add(minDays, 'day').toDate(), value.returnAt);
+      returnAt = withTime(
+        appWallClockToCalendarDate(value.pickupAt.add(minDays, 'day')),
+        value.returnAt,
+      );
     }
     onChange({ pickupAt: value.pickupAt, returnAt });
   }
@@ -200,7 +216,8 @@ export function RentalRangePanel({
 
   // --- Thuê theo giờ: giờ trả = bắt đầu + thời lượng ---------------------------------------
   const hourlyStart =
-    value.pickupAt ?? dayjs().add(1, 'day').hour(DEFAULT_HOUR).minute(0).second(0).millisecond(0);
+    value.pickupAt ??
+    nowInAppTz().add(1, 'day').hour(DEFAULT_HOUR).minute(0).second(0).millisecond(0);
   const hourlyDuration = (() => {
     if (!value.pickupAt || !value.returnAt) return DEFAULT_HOURLY_DURATION;
     const h = Math.round(value.returnAt.diff(value.pickupAt, 'minute') / 60);
@@ -238,18 +255,18 @@ export function RentalRangePanel({
   // Đã chọn ngày nhận, đang chờ ngày trả + có sàn: khoá các ngày trả dưới sàn ngay trên lịch
   // (bấm TRƯỚC ngày nhận vẫn được — đó là chọn lại ngày nhận).
   const dailyDisabled = [
-    { before: dayjs().startOf('day').toDate() },
+    { before: appWallClockToCalendarDate(nowInAppTz().startOf('day')) },
     // Ngày bận trọn không bao giờ nhận/trả được, ở bất kỳ pha chọn nào.
     (day: Date) => busyLevelOf(busyDays, day) === 'full',
     ...(minDays > 1 && value.pickupAt && !value.returnAt
       ? [
           {
-            after: value.pickupAt.startOf('day').toDate(),
-            before: value.pickupAt.startOf('day').add(minDays, 'day').toDate(),
+            after: appWallClockToCalendarDate(value.pickupAt.startOf('day')),
+            before: appWallClockToCalendarDate(value.pickupAt.startOf('day').add(minDays, 'day')),
           },
         ]
       : []),
-    ...(returnCeiling ? [{ after: returnCeiling.startOf('day').toDate() }] : []),
+    ...(returnCeiling ? [{ after: appWallClockToCalendarDate(returnCeiling.startOf('day')) }] : []),
   ];
 
   const dayModifiers = {
@@ -321,7 +338,10 @@ export function RentalRangePanel({
             month={month}
             onMonthChange={setMonth}
             numberOfMonths={months}
-            selected={{ from: value.pickupAt?.toDate(), to: value.returnAt?.toDate() }}
+            selected={{
+              from: value.pickupAt ? appWallClockToCalendarDate(value.pickupAt) : undefined,
+              to: value.returnAt ? appWallClockToCalendarDate(value.returnAt) : undefined,
+            }}
             onSelect={handleSelect}
             disabled={dailyDisabled}
             modifiers={dayModifiers}
@@ -392,7 +412,7 @@ export function RentalRangePanel({
                 inputReadOnly
                 // Quá khứ và ngày bận trọn đều không thuê được — cùng một ô chặn.
                 disabledDate={(current) =>
-                  current.isBefore(dayjs().startOf('day')) ||
+                  current.isBefore(nowInAppTz().startOf('day')) ||
                   busyLevelOf(busyDays, current) === 'full'
                 }
                 className={styles.timeSelect}

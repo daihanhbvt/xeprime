@@ -1,6 +1,6 @@
 # ADR 0015 — Cước theo CHỖ XE, trả trước, kỳ tính bằng THÁNG LỊCH; hết hạn thì gỡ khỏi chợ
 
-Ngày: 21/08/2026 · Trạng thái: Accepted · **Sửa [ADR 0010](0010-billing-plans-subscriptions.md)**
+Ngày: 21/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0020](0020-two-revenue-tracks-one-marketplace.md) và [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)** · Phần slot billing trả trước vẫn còn hiệu lực; pricing/kỳ hạn/ứng xử marketplace theo policy mới.
 
 > ⚠️ **Ba chỗ đã được sửa (28/08/2026)** khi mô hình chuyển sang hai tuyến doanh thu
 > ([ADR 0020](0020-two-revenue-tracks-one-marketplace.md)):

@@ -18,7 +18,7 @@ import {
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useVehicles } from '@/features/vehicles/hooks/use-vehicles';
-import { dayjs } from '@/lib/datetime';
+import { appWallClockToIso, toAppTz } from '@/lib/datetime';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
 import { SERVICE_TYPE_OPTIONS } from '../constants';
 import { checkConflict } from '../api';
@@ -59,8 +59,10 @@ function toDefaults(editing: BookingDetail | null): BookingFormValues {
     routeType: (editing.routeType ?? ROUTE_TYPE.IN_CITY) as BookingFormValues['routeType'],
     pickupAddress: editing.pickupAddress ?? '',
     destination: editing.destination ?? '',
-    pickupAt: dayjs(editing.pickupAt),
-    returnAt: dayjs(editing.returnAt),
+    // Mốc UTC từ API → giờ VIỆT NAM cho ô chọn (CLAUDE.md §9). `dayjs(iso)` trần sẽ hiện giờ
+    // của máy đang mở trình duyệt, và người sửa đơn tưởng lịch đã đổi.
+    pickupAt: toAppTz(editing.pickupAt),
+    returnAt: toAppTz(editing.returnAt),
     baseAmount: numOrNull(editing.baseAmount),
     // Phí giao nhận KHÔNG sửa ở form này — xem docblock component. Giữ nguyên giá trị đang lưu.
     deliveryFee: numOrNull(editing.deliveryFee),
@@ -167,15 +169,15 @@ function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDon
     queryKey: [
       'check-conflict',
       vehicleId,
-      pickupAt?.toISOString(),
-      returnAt?.toISOString(),
+      pickupAt ? appWallClockToIso(pickupAt) : null,
+      returnAt ? appWallClockToIso(returnAt) : null,
       editing?.id ?? null,
     ],
     queryFn: () =>
       checkConflict({
         vehicleId,
-        startAt: pickupAt!.toISOString(),
-        endAt: returnAt!.toISOString(),
+        startAt: appWallClockToIso(pickupAt!),
+        endAt: appWallClockToIso(returnAt!),
         ...(editing?.id ? { excludeSourceId: editing.id } : {}),
       }),
     enabled: canCheck,
@@ -197,8 +199,10 @@ function BookingForm({ editing, onDone }: { editing: BookingDetail | null; onDon
       customerName: values.customerName.trim(),
       customerPhone: values.customerPhone || undefined,
       serviceType: values.serviceType,
-      pickupAt: values.pickupAt!.toISOString(),
-      returnAt: values.returnAt!.toISOString(),
+      // Giờ trên ô chọn LÀ giờ Việt Nam — xem `appWallClockToIso`. Cùng phép quy đổi với
+      // preview trùng lịch ngay trên, nên hai lần hỏi server nói về đúng một khoảng.
+      pickupAt: appWallClockToIso(values.pickupAt!),
+      returnAt: appWallClockToIso(values.returnAt!),
       baseAmount: values.baseAmount === null ? undefined : String(values.baseAmount),
       deliveryFee: values.deliveryFee === null ? undefined : String(values.deliveryFee),
       discountAmount: values.discountAmount === null ? undefined : String(values.discountAmount),

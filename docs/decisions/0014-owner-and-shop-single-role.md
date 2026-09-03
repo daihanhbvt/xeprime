@@ -1,6 +1,6 @@
 # ADR 0014 — Chủ xe và chủ gian hàng là MỘT vai; năng lực đến từ GÓI, không từ role
 
-Ngày: 21/08/2026 · Trạng thái: Accepted
+Ngày: 21/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0020](0020-two-revenue-tracks-one-marketplace.md) và [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)**. Nguyên tắc một role/capability từ gói vẫn còn hiệu lực; phạm vi XePrime đứng giữa giao dịch đã đổi.
 
 > ⚠️ **Hai điều khoản đã được sửa (28/08/2026):**
 >

@@ -8,8 +8,7 @@ import {
   SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { Alert, DatePicker, Skeleton } from 'antd';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
+import { nowInAppTz, type Dayjs } from '@/lib/datetime';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import {
@@ -196,7 +195,7 @@ export function LongTermPackageStep({
                     className={styles.datePickerAnchor}
                     popupAlign={{ points: ['tl', 'bl'], offset: [0, 4] }}
                     // Nhận xe trong quá khứ là vô nghĩa; server kiểm lại từ ngày mai trở đi.
-                    disabledDate={(current) => current.isBefore(dayjs().endOf('day'))}
+                    disabledDate={(current) => current.isBefore(nowInAppTz().endOf('day'))}
                   />
                 ) : null}
               </div>

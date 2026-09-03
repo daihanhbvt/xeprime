@@ -6,6 +6,10 @@
 >
 > Bản này viết cho **staging** (`stg.xeprime.vn` / `api-stg.xeprime.vn`). Production lặp lại đúng
 > các bước với bộ key **riêng** — §9.
+>
+> **Cập nhật 03/09/2026:** tài liệu này chỉ ghi dịch vụ đã có biến/đường gọi trong code. SePay,
+> đối tác thu hộ/chi hộ và bảo hiểm chuyến đi nằm trong roadmap nhưng chưa có cấu hình thật;
+> không tạo key hay viết tên biến đoán trước khi implementation và hợp đồng đối tác được chốt.
 
 ## 0. Cần cái nào trước
 

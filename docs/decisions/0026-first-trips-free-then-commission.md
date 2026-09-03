@@ -1,6 +1,6 @@
 # ADR 0026 — Hai chuyến đầu miễn phí; từ chuyến thứ ba rơi về tuyến hoa hồng và được chào gói
 
-Ngày: 29/08/2026 · Trạng thái: Accepted · **Mở rộng [ADR 0020](0020-two-revenue-tracks-one-marketplace.md) và [ADR 0024](0024-billing-mode-from-plan-frozen-on-booking.md)**
+Ngày: 29/08/2026 · Trạng thái: **Superseded bởi [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)** — hai chuyến miễn phí không còn là mặc định; có thể quay lại như campaign có phiên bản.
 
 ## Bối cảnh
 

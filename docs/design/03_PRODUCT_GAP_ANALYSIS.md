@@ -1,147 +1,190 @@
 # 03 — Product Gap Analysis
 
-> Ngày: 04/08/2026 · Chủ sở hữu: Product Director
-> Đối chiếu **sản phẩm lý tưởng** (`02_PRODUCT_VISION.md`) với **sản phẩm đang có** (`docs/completion-roadmap.md`, code trong `apps/`).
-> Mọi mục đều dẫn file/route thật. Không có mục nào là phỏng đoán về code chưa đọc.
+> Cập nhật: 03/09/2026
+> Trạng thái: **Canonical — backlog sản phẩm theo hiện trạng source**
+> Không phải cam kết ngày phát hành; thứ tự thực thi nằm ở [`../completion-roadmap.md`](../completion-roadmap.md).
 
----
+## 1. Kết luận hiện trạng
 
-## 0. Ảnh chụp hiện trạng
+XePrime đã ở mức **functional alpha / web pilot-ready có kiểm soát**. Chuỗi vận hành web từ onboarding gian hàng đến booking, bàn giao, trả xe và ghi nhận tài chính đã có hình hài hoàn chỉnh. Phần còn thiếu lớn nhất không phải thêm màn quản lý xe, mà là:
 
-| Phase | Nội dung | Trạng thái |
+- Đóng vòng tiền của marketplace.
+- Vận hành tài chính và hỗ trợ cho platform admin.
+- Tạo trải nghiệm quản lý rút gọn đúng nghĩa cho chủ xe cơ bản.
+- Hoàn thiện tính minh bạch/pháp lý trước khi giữ tiền thật.
+- Chứng minh hệ thống chịu được pilot thật bằng E2E, monitoring và UAT.
+
+## 2. Bản đồ đã có và còn thiếu
+
+| Khu vực | Đã có trong source | Khoảng trống quan trọng |
 | --- | --- | --- |
-| 0–3 | Base · Auth/RBAC/Tenant · Shop approval + Vehicle · Public listing + Marketplace | ✅ |
-| 4 | Booking request + Booking + Calendar + gate OTP | ✅ |
-| 5 | Notification ✅ · Review ✅ · Chat (dựng, realtime sau cờ `FIRESTORE_ENABLED`) | 🟡 |
-| 6 | Finance / Thu-Chi / Công nợ / Hợp đồng | ✅ (đóng milestone "vận hành đủ tiền") |
-| 7 | Admin nền tảng | 🟡 lõi + 3 màn giám sát xong; còn support ticket, invoice |
-| 8–9 | Migration Firestore · QA/hardening | ❌ |
-| — | Kiến trúc auth (modal khách / portal login / onboarding tách route) | ✅ 04/08 |
+| Marketplace | Tìm kiếm/lọc, chi tiết xe/shop, lịch bận, báo giá, booking request, review, chat | Giữ chỗ có tiền, breakdown phí/thuế/bảo hiểm, thanh toán, hoàn tiền, support/dispute |
+| Customer | Auth mật khẩu/OTP/social, profile, trips, trip detail, cancel | Phương thức thanh toán, địa chỉ/tài liệu, thông báo, hỗ trợ, xóa tài khoản/dữ liệu |
+| Manage | Xe, lịch, yêu cầu, booking, bàn giao/trả, khách, thu chi, công nợ, tài chính, hợp đồng, bảo trì, thành viên, chi nhánh, tài xế, gói | Dashboard tiền thật, trải nghiệm basic owner, số dư/rút tiền, payment/reconciliation, invitation thật |
+| Platform admin | Dashboard, approval, tenant, vehicle, booking, customer, staff, plan, banner, catalog, location, audit | Finance operations, KYC/tax/bank, withdrawal, reconciliation, refunds, disputes, fee policy versioning, ranking operations |
+| Billing | Gói theo slot, invoice, feature guard, trang subscription | SePay end-to-end, QR/thông tin nhận tiền hoàn chỉnh, kích hoạt tự động, grace/downgrade production |
+| Mobile | Auth và marketplace discovery/listing detail | Booking, payment, trips thật, chat, push, release pipeline; chưa cần portal gian hàng native |
+| Production | CI, Docker/CD/backup docs, health endpoint, structured log | Deploy proof, browser E2E, error tracking, uptime monitor, product analytics, compliance/UAT |
 
-**Đọc một câu**: bộ xương nghiệp vụ đã đủ và đúng. Khoảng cách còn lại **không nằm ở "thiếu tính năng lớn"** mà ở ba chỗ: (a) những mảnh khiến vòng tiền chưa khép, (b) chất lượng trải nghiệm ở các màn dùng hằng ngày, (c) các trang mới có vỏ.
+## 3. Platform Admin — nên làm tiếp
 
----
+### P0 — trước khi nhận tiền khách thật
 
-## 1. Cách chấm điểm
+#### A. Seller compliance
 
-**Mức độ**
-`P0` — chặn tầm nhìn chặng 2, phải làm · `P1` — làm sản phẩm tốt lên rõ rệt · `P2` — nên có, chưa gấp
+- Hồ sơ xác minh chủ xe/gian hàng: danh tính, mã số thuế/số định danh, loại chủ thể, tài khoản ngân hàng và người thụ hưởng.
+- Trạng thái kiểm tra riêng cho chủ thể, xe và tài khoản nhận tiền.
+- Lưu phiên bản tài liệu/đồng ý điều khoản; lịch sử ai duyệt, duyệt lúc nào, dựa trên hồ sơ nào.
+- Hàng đợi hồ sơ hết hạn hoặc cần bổ sung.
 
-**Công sức** `S` ≤ 3 ngày · `M` 1–2 tuần · `L` > 2 tuần
+#### B. Money Operations
 
----
+- Danh sách giao dịch ngân hàng vào, trạng thái tự khớp/chưa khớp/khớp tay/hoàn.
+- Trang chi tiết một giao dịch với raw payload, đích dự kiến, lịch sử xử lý và audit.
+- Hàng đợi invoice gói chưa thanh toán, thanh toán thiếu/thừa và giao dịch không rõ nội dung.
+- Hàng đợi khoản giữ chỗ, hoàn tiền và booking cần quyết toán.
+- Sổ **Số dư chủ xe** và yêu cầu rút; hiển thị tuổi yêu cầu và SLA.
+- Maker–checker cho khoản tiền lớn hoặc thao tác sửa/đảo bút toán: người tạo không phải người duyệt cuối.
+- Đối chiếu hàng ngày:
 
-## 2. Khoảng trống — Khách thuê (Marketplace)
+```text
+Số dư ngân hàng
+= tiền thuộc XePrime
++ tiền đang giữ/phải trả chủ xe hoặc khách
++ chênh lệch chưa xử lý
+```
 
-| # | Khoảng trống | Hiện trạng | Mức | Công | Ghi chú |
-| --- | --- | --- | --- | --- | --- |
-| C-01 | ~~**Thanh toán / cọc online**~~ · **ĐÃ QUYẾT KHÔNG LÀM 21/08/2026 — [ADR 0013](../decisions/0013-no-online-payment-mvp.md)** | Không có. Cọc ghi tay ở phiếu thu — và đó là thiết kế, không phải thiếu sót | ~~P0~~ → Out of scope | ~~L~~ | Chặn "đặt xe là chắc chắn". Cần chọn cổng (VNPay/Momo/ZaloPay), thiết kế trạng thái tiền-đang-giữ, hoàn cọc. Kéo theo bảng mới ⇒ migration |
-| C-02 | **Lịch còn trống ngay trên trang chi tiết xe** | Chỉ biết trống/không sau khi bấm "Tìm xe khả dụng" hoặc ở bước chọn ngày | P0 | M | Đây là điểm rơi lớn nhất của phễu. API đã có (`OccupancyService.findOverlapping`); cần endpoint đọc dải ngày bận công khai + lịch tháng ở `features/marketplace/components/ListingDetailView.tsx` |
-| C-03 | **Bảng giá minh bạch trước khi gửi yêu cầu** | Thẻ xe hiện giá/ngày; tổng tiền, phí giao xe, cọc, chính sách huỷ chỉ rõ khi shop báo lại | P0 | M | "Giá đổi ở bước cuối" là lý do số một khách bỏ sàn. Cần khối tính giá: số ngày × đơn giá + phí giao − giảm giá = tổng, và cọc dự kiến |
-| C-04 | **Chính sách huỷ & thế chấp hiển thị chuẩn hoá** | Nằm trong mô tả tự do của shop, mỗi nơi viết một kiểu | P0 | M | Chuẩn hoá thành trường có cấu trúc (3–4 mẫu chính sách) để hiển thị và so sánh được ⇒ migration nhỏ |
-| C-05 | **Yêu thích / lưu xe** | Có icon trái tim trên thẻ xe nhưng **không có chức năng** | P1 | S | Icon chết còn tệ hơn không có icon. Hoặc làm, hoặc gỡ |
-| C-06 | **So sánh xe** | Không có (UI cũ từng có nút "So sánh") | P2 | M | Chờ mật độ xe/tỉnh đủ lớn |
-| C-07 | **Tìm theo bản đồ / bán kính** | Chỉ lọc theo tỉnh/thành | P1 | L | Cần toạ độ điểm nhận xe ⇒ migration + thư viện bản đồ |
-| C-08 | **Hồ sơ định danh khách (GPLX/CCCD)** | Không có phía khách; shop chụp giấy tờ lúc giao xe | P1 | L | Là điều kiện để mở "đặt xe là chắc chắn" và giảm rủi ro cho shop |
-| C-09 | **Khiếu nại / hỗ trợ chuyến** | Không có. Khách chỉ có chat với shop | P1 | M | Ghép với S-01 (ticket) — một hệ, hai lối vào |
-| C-10 | **Theo dõi trạng thái yêu cầu thuê** | `/trips` có, nhưng không có dòng thời gian "đã gửi → shop xem → duyệt/từ chối" | P1 | S | Rẻ, giảm mạnh lượng câu hỏi "shop nhận chưa?" |
-| C-11 | **Chuẩn ảnh & chất lượng listing** | Đang có thẻ xe dùng ảnh phong cảnh/ảnh chụp màn hình | P0 | M | Xem G-04. Ảnh hỏng phá cả brand lẫn chuyển đổi |
-| C-12 | **Upload ảnh thật (R2)** | Ảnh nhập bằng **URL** (`completion-roadmap` §5) | P0 | M | Không thể yêu cầu chủ shop tự đi host ảnh. `modules/storage` presign đã có, thiếu luồng FE + presign cho avatar khách |
+- Không cho xóa bút toán; chỉ cho reversal có lý do và tham chiếu.
 
----
+#### C. Policy and pricing
 
-## 3. Khoảng trống — Gian hàng (Portal vận hành)
+- Cấu hình phiên bản phí dịch vụ, giá gói theo loại xe, thuế, hai lớp bảo hiểm, khoản giữ chỗ, trần cọc, tối thiểu rút và SLA.
+- `effectiveFrom/effectiveTo`; không sửa hồi tố booking cũ.
+- Preview tác động trước khi publish chính sách.
+- Audit đầy đủ mọi thay đổi giá/phí và yêu cầu xác nhận lần hai với thay đổi có ảnh hưởng tiền.
+- Phân biệt rõ giá trị “giả thuyết” với chính sách production đã duyệt.
 
-| # | Khoảng trống | Hiện trạng | Mức | Công | Ghi chú |
-| --- | --- | --- | --- | --- | --- |
-| S-01 | **Khách hàng của shop** | `/manage/customers` là **stub 5 dòng**; menu có `comingSoon` | P0 | M | Shop không có nơi xem "khách này thuê 6 lần, còn nợ 2tr, từng trả xe muộn". Đây là tài sản chính của shop và là lý do họ ở lại. Màn 04/08 là của **nền tảng**, không thay thế |
-| S-02 | **Vận hành trên điện thoại** | Có `MobileNav` + tab bar, nhưng lịch, bảng đơn, form tạo đơn đều thiết kế cho desktop | P0 | L | Persona chính làm việc ngoài bãi xe. Xem `05_MOBILE_FIRST_GUIDELINES.md` |
-| S-03 | **Bàn giao xe có bằng chứng** | Không có: không ảnh tình trạng xe, không số km/xăng lúc giao–nhận, không chữ ký | P0 | L | UI cũ có "KM nhận/trả"; bản mới chưa có luồng bàn giao. Đây là nơi tranh chấp thực sự xảy ra ⇒ migration (bảng handover + ảnh) |
-| S-04 | **Nhắc việc trong ngày** | Dashboard có số liệu, không có "hôm nay giao 3 xe, nhận 2 xe, 4 đơn quá hạn thu" | P0 | S | Rẻ nhất trong nhóm P0 và thay đổi thói quen mở app hằng ngày |
-| S-05 | **Khu vực nhận xe** | Stub (`/manage/pickup-areas`) nhưng **đã dùng** trong luồng đặt xe | P1 | S | Đang là dữ liệu không quản lý được |
-| S-06 | **Tài xế** | Stub. Dịch vụ "có tài xế" đã bán trên sàn | P1 | M | Bán một dịch vụ mà không quản lý được nguồn lực của nó |
-| S-07 | **Thùng rác / khôi phục** | Stub, trong khi `deleted_at` đã có ở schema | P1 | S | Xoá nhầm đơn/xe hiện không có đường lùi trên UI |
-| S-08 | **Báo cáo & xuất dữ liệu** | Dashboard tài chính có; không xuất được CSV/PDF | P1 | M | UI cũ có "Xuất CSV" — chủ shop cần đưa cho kế toán |
-| S-09 | **Nhiều chi nhánh** | Selector "Tất cả chi nhánh" tồn tại trong UI cũ; bản mới chưa có mô hình chi nhánh | P2 | L | Chặng 3. Đừng nửa vời: hoặc mô hình đúng, hoặc bỏ selector |
-| S-10 | **Nhắc nợ tự động** | Công nợ có màn hình; không có nhắc | P1 | M | Cần `apps/worker` + template thông báo |
-| S-11 | **Onboarding gian hàng mới** | Tạo xong gian hàng là thả vào dashboard rỗng | P1 | S | Checklist 5 bước: thêm xe → ảnh → giá → khu vực nhận → gửi duyệt public |
-| S-12 | **Sửa/huỷ đơn có kiểm soát** | Có chuyển trạng thái; chưa có quy tắc "ai được sửa gì sau khi đã thu tiền" | P1 | M | Nguồn thất thoát kinh điển. Cần khoá trường sau thanh toán + lý do sửa vào audit |
-| S-13 | **Chat realtime** | Dựng xong, chờ cờ `FIRESTORE_ENABLED` (ADR 0009) | P1 | M | Khách chờ trả lời là khách mất |
-| S-14 | **SMS OTP thật** | `OTP_MODE=mock` | P0 | S | Chặn go-live. Chỉ là cấu hình + tài khoản eSMS |
+#### D. Support and disputes
 
----
+- Ticket/case có mã, loại vấn đề, booking liên quan, người phụ trách, SLA và timeline.
+- Luồng tranh chấp: nhận bằng chứng → phân loại → tạm giữ quyết toán → kết luận → hoàn/chuyển tiền.
+- Mọi lần reveal PII phải gắn với case hoặc lý do nghiệp vụ cụ thể.
+- Mẫu thông báo cho khách/chủ xe khi tiền bị giữ, hoàn hoặc yêu cầu bổ sung hồ sơ.
 
-## 4. Khoảng trống — Nền tảng
+### P1 — trước controlled pilot mở rộng
 
-| # | Khoảng trống | Hiện trạng | Mức | Công | Ghi chú |
-| --- | --- | --- | --- | --- | --- |
-| G-01 | **Support ticket** | Chưa có (§11.1 còn lại) | P1 | M | Gộp với C-09 |
-| G-02 | **Hoá đơn cho gói dịch vụ** | Gói/hạn có (ADR 0010), invoice chưa | P1 | M | Cần để thu tiền thuê bao đúng nghĩa |
-| G-03 | **Lý do ẩn xe không tới tay reviewer** | Đã ghi nhận: lý do chỉ nằm trong `audit_logs`, shop gửi duyệt lại thì reviewer không thấy | P0 | S | Bug quy trình đã biết. Rẻ, sửa ngay |
-| G-04 | **Gate chất lượng khi duyệt public** | Phiếu duyệt là duyệt/từ chối, không có tiêu chí | P0 | M | Checklist: ảnh đạt chuẩn · giá hợp lý · mô tả đủ · giấy tờ. Đây là đòn bẩy chất lượng sàn mạnh nhất |
-| G-05 | **Báo cáo nền tảng** | Dashboard tổng quan có; chưa có báo cáo theo tỉnh/hạng shop/thời gian | P2 | M | |
-| G-06 | **Impersonate có kiểm soát** | Không có | P2 | M | Support cần để hỗ trợ; **bắt buộc** audit + banner cảnh báo khi đang mượn phiên |
+- Dashboard funnel: chủ xe đăng ký → duyệt → đăng xe → listing active → booking đầu tiên.
+- Dashboard tiền: GMV, doanh thu phí dịch vụ, doanh thu subscription, thuế giữ hộ/nộp thay, bảo hiểm thu hộ, nợ phải trả và chênh lệch.
+- Risk flags: cùng tài khoản ngân hàng/định danh dùng cho nhiều hồ sơ, tỷ lệ hủy/no-show cao, thay đổi thông tin nhận tiền sát yêu cầu rút.
+- Chất lượng listing: checklist, lý do ẩn, lịch sử sửa và quy trình gửi duyệt lại có hiển thị lý do cũ.
+- Quản trị ưu tiên hiển thị: hệ số, thời gian hiệu lực, nhãn tài trợ và báo cáo tác động.
+- Export phục vụ kế toán/đối soát; dữ liệu export cũng phải áp dụng masking và audit.
 
----
+### P2 — khi có volume
 
-## 5. Khoảng trống xuyên suốt (thiết kế & nền tảng)
+- Chi trả tự động qua đối tác được phép.
+- Fraud scoring và cảnh báo theo cụm tài khoản/thiết bị.
+- Promotion/referral.
+- SLA workforce dashboard và phân ca support/finance.
+- Data warehouse/BI nếu báo cáo giao dịch bắt đầu làm chậm database vận hành.
 
-| # | Khoảng trống | Vì sao quan trọng | Mức | Công |
-| --- | --- | --- | --- | --- |
-| X-01 | **Dark theme cho portal** | Ops làm ca tối; UI cũ vốn dark. Token đã sẵn kiến trúc | P1 | M |
-| X-02 | **Thang màu ngữ nghĩa + màu data-viz** | 🟡 **Phần data-viz ĐÃ TRẢ 25/08**: `--xp-color-viz-1..5` + ba bí danh vai (`revenue`/`cost`/`profit`), năm bậc đã qua bộ kiểm so-mọi-cặp (không tìm được bậc thứ sáu giữ được điều đó). **Còn lại**: thang `-bg`/`-border`/`-text` cho màu ngữ nghĩa, và bộ giá trị viz RIÊNG cho dark (viz-4/viz-5 tụt dưới 3:1 trên nền tối) | P1 | S |
-| X-03 | **Bảng dữ liệu dùng chung** | Mỗi feature tự dựng bảng + filter; `use-url-filters`/`common/pagination` mới dùng ở 3 slice, 10 hook + 19 service cũ vẫn giữ bản copy | P1 | M |
-| X-04 | **Command palette (⌘K)** | 15+ mục menu, nghiệp vụ lặp lại hằng ngày. Đây là thứ khiến Linear nhanh | P2 | M |
-| X-05 | **Trạng thái rỗng có dạy việc** | Nhiều màn rỗng chỉ nói "không có dữ liệu" | P1 | S |
-| X-06 | **A11y toàn diện** | Đã sửa `TextField` (`useId` + `htmlFor`); chưa rà tổng thể focus/keyboard/contrast | P1 | M |
-| X-07 | **PWA / cài lên màn hình chính** | Chủ shop mở app hàng chục lần/ngày | P2 | S |
-| X-08 | **Ngân sách hiệu năng** | Chưa có ngưỡng LCP/bundle được theo dõi | P1 | S |
-| X-09 | **In ấn ngoài hợp đồng** | Print CSS mới có cho hợp đồng; phiếu thu/biên bản bàn giao cần in | P2 | S |
+## 4. Manage — gian hàng thuê bao
 
----
+### Phần đang đủ cho pilot
 
-## 6. Nợ trải nghiệm quan sát được trong UI hiện tại
+- Quản lý xe và Vehicle 360.
+- Lịch, khóa lịch, giá theo ngày và ngày lễ.
+- Booking request, booking lifecycle, bàn giao/trả xe và phụ phí.
+- Khách hàng, ghi chú/rủi ro, thu chi, công nợ, báo cáo, hợp đồng.
+- Bảo trì, chi nhánh, tài xế, thành viên và phân quyền cố định.
+- Trang gói và feature gating.
 
-Không phải "thiếu tính năng" — là **cách hiện tại làm sẽ không mở rộng được**:
+### Phần cần hoàn thiện
 
-1. **Hai bản sắc thị giác cùng tồn tại.** Portal cũ (Firebase) là dark, dày, nút màu khối; bản mới là light, thoáng. Người dùng đang chuyển tiếp giữa hai nơi. Phải chốt **một** hệ, và bản mới là hệ đó.
-2. **Nút hành động dạng khối màu đặc trong danh sách** (Duyệt xanh / Từ chối đỏ / Gọi / Zalo / Nhắn tin — mỗi hàng 5 khối). Với 50 hàng thì màn hình toàn màu và không còn chỗ nào là quan trọng. Cần: 1 hành động chính + phần còn lại gom vào menu.
-3. **Bảng không có thứ bậc thị giác.** Bảng đơn thuê để mọi cột cùng trọng số; mắt không biết bám vào đâu. Cần cột neo (khách + xe), cột số căn phải tabular, trạng thái là chip, meta xuống dòng phụ.
-4. **Modal nhiều tab chứa cả một quy trình** (Tạo đơn thuê: Chi tiết / Thanh toán / Dịch vụ / Hình ảnh / Nhật ký). Trên mobile là bất khả dụng. Cần: form một luồng, phần nâng cao mở sau, hoặc trang riêng.
-5. **Số tiền không thẳng cột** và trộn nhiều màu (đỏ/xanh/vàng trong cùng một bảng) khiến "còn nợ" và "lỗi" trông giống nhau.
-6. **Menu 15+ mục phẳng** trong đó nhiều mục là stub. Menu đang hứa nhiều hơn sản phẩm giao.
+1. Dashboard phải có doanh thu, tiền cọc/giữ chỗ, việc cần làm và cảnh báo thật; không để KPI `—`.
+2. Màn gói cần so sánh rõ basic với gian hàng, chi phí theo số xe/kỳ hạn, ngày hiệu lực và quyền lợi khi hết hạn.
+3. Luồng mua gói phải có VietQR/thông tin nhận tiền, trạng thái đối soát và hóa đơn rõ ràng.
+4. Nếu gian hàng nhận cọc trực tiếp, booking cần lưu `paymentMethod`, người xác nhận, thời điểm và chứng từ; không chỉ là ghi chú tự do.
+5. Nếu gian hàng dùng luồng qua XePrime, phải dùng chung hold/refund/ledger với chủ xe cơ bản, không xây hệ tài chính thứ hai.
+6. “Mời thành viên” hiện chỉ thêm người đã có tài khoản. Hoặc đổi đúng tên, hoặc làm invitation token + hết hạn + accept/decline.
+7. Tài khoản có cả platform role và tenant membership cần scope switch rõ; trước mắt có thể quy định dùng tài khoản tách biệt.
 
----
+## 5. Owner Lite — chủ xe cơ bản
 
-## 7. Thứ tự đề xuất
+Không clone source của portal. Tạo một capability profile `owner_basic` và dựng vỏ điều hướng nhẹ trên cùng feature/API.
 
-### Đợt A — Khép vòng (P0 chặn go-live)
-`S-14` SMS thật · `C-12` upload ảnh R2 · `G-03` lý do ẩn xe · `S-04` nhắc việc trong ngày · `X-05` empty state
+### Menu đề xuất
 
-> Rẻ, phần lớn là `S`, gỡ đúng những chỗ đang chặn.
+| Nhóm | Màn |
+| --- | --- |
+| Tổng quan | Việc cần làm, lịch hôm nay, số tiền dự kiến nhận |
+| Xe của tôi | Danh sách xe, hồ sơ tối thiểu, ảnh/giấy tờ, giá và lịch trống |
+| Yêu cầu & chuyến | Yêu cầu thuê, booking, bàn giao, nhận lại |
+| Tiền của tôi | Breakdown từng chuyến, số dư phải trả, lịch sử và yêu cầu rút |
+| Tin nhắn | Chat với người thuê |
+| Tài khoản chủ xe | Danh tính, thuế, tài khoản ngân hàng, điều khoản |
+| Nâng cấp gian hàng | So sánh chi phí và công cụ được mở thêm |
+| Hỗ trợ | Ticket/tranh chấp |
 
-### Đợt B — Tin cậy của sàn (P0 chuyển đổi)
-`C-02` lịch trống trên trang xe · `C-03` bảng giá minh bạch · `C-04` chính sách chuẩn hoá · `C-11`+`G-04` gate chất lượng ảnh/listing
+### Không hiện cho basic owner
 
-> Đây là đợt làm marketplace thực sự bán được hàng.
+- Sổ thu chi tổng hợp và công nợ nhiều khách.
+- Báo cáo quản trị theo kỳ/xe/nhân viên.
+- Thành viên và phân quyền.
+- Chi nhánh và tài xế.
+- Trung tâm bảo trì nâng cao.
+- Hợp đồng mẫu và các cấu hình dành cho đội xe.
 
-### Đợt C — Giữ chân shop (P0 vận hành)
-`S-01` khách hàng của shop · `S-02` mobile ops · `S-03` bàn giao có bằng chứng · `X-03` bảng dữ liệu dùng chung
+Không được khóa các thao tác tối thiểu để hoàn thành một booking hoặc rút số tiền thuộc về chủ xe.
 
-### Đợt D — Tiền và hỗ trợ
-~~`C-01` thanh toán online~~ (bỏ — [ADR 0013](../decisions/0013-no-online-payment-mvp.md)) · `G-02` invoice · `G-01`+`C-09` ticket · `S-10` nhắc nợ
+## 6. Customer — khoảng trống để khép giao dịch
 
-### Đợt E — Hoàn thiện
-`X-01` dark theme · `S-05`–`S-08` các stub · `X-04` ⌘K · `X-06` a11y · `X-07` PWA
+### P0
 
----
+- Báo giá cuối có breakdown: giá thuê, giao xe/phụ phí, khoản giữ chỗ, phí dịch vụ, thuế, bảo hiểm và số còn lại.
+- Giải thích ai thu từng khoản và hoàn trong trường hợp nào.
+- Bảo vệ xe được thể hiện là bắt buộc khi policy áp dụng và phí nằm trong net earning của chủ xe; bảo hiểm chuyến đi chỉ cộng vào tổng của người thuê khi giữ lựa chọn, có thể bỏ chọn rõ ràng, không cản trở checkout và phải lưu consent/opt-out.
+- Thanh toán giữ chỗ, trạng thái chờ/thiếu/thừa/hết hạn.
+- Chính sách hủy và số tiền hoàn được tính từ snapshot server.
+- Trang chi tiết bảo hiểm: nhà cung cấp, phạm vi, loại trừ và cách yêu cầu bồi thường.
+- Support/dispute gắn booking.
+- Biên nhận và lịch sử thanh toán/hoàn tiền.
 
-## 8. Điều tuyệt đối không được làm khi lấp các khoảng trống
+### P1
 
-- Không tạo tenant tự động, không gán role shop tự động khi đăng ký user (bài học 04/08).
-- Không thêm module ghi vào `public_listings` ngoài `ListingsService` (ADR 0008), hay `vehicle_occupancies` ngoài `OccupancyService` (ADR 0006).
-- Không thay ràng buộc DB bằng kiểm tra tầng app cho bất kỳ tính năng lịch nào.
-- Không thêm màn hình mới vào nav khi nó còn là stub — trần IA ở `07`.
-- Không sửa hàng loạt 10 hook + 19 service cũ trong một diff không liên quan (`completion-roadmap` §5): dời dần khi chạm tới.
+- Favorites, địa chỉ nhận xe và tài liệu người thuê.
+- Notification center và tùy chọn nhận thông báo.
+- Luồng đổi/xác minh lại email, SĐT và tài khoản.
+- Xóa tài khoản/yêu cầu dữ liệu.
 
-Liên quan: `09_PAGE_DESIGN_ORDER.md` (thứ tự thiết kế màn) · `02_PRODUCT_VISION.md` §7 (lộ trình).
+Các mục P1 chưa làm không nên xuất hiện như menu hoạt động trong pilot.
+
+## 7. Những gì đang thừa hoặc nên hoãn
+
+- Mục nav placeholder `pickup-areas`, `trash` và các mục account `comingSoon`: ẩn khỏi menu cho tới khi có luồng thật.
+- Custom role builder: bốn role tenant cố định đủ cho pilot.
+- Native manage portal: ưu tiên web responsive; app native tập trung khách thuê.
+- OCR nâng cao, e-signature, PDF server, dark mode và command palette: chỉ làm khi có nhu cầu đo được.
+- Ví có nạp/chuyển/thanh toán nội bộ: ngoài phạm vi.
+- Chi trả tự động: hoãn đến khi luồng thủ công có volume và đã chọn đối tác phù hợp.
+- Hai chuyến đầu miễn phí trong ADR 0026: không còn là chính sách mặc định; chỉ quay lại dưới dạng campaign có ngày hiệu lực nếu dữ liệu acquisition chứng minh cần.
+
+## 8. Release gate còn thiếu
+
+| Gate | Điều kiện tối thiểu |
+| --- | --- |
+| Gói thuê bao | SePay/invoice đối soát được, activation idempotent, có xử lý thiếu/thừa/sai mã |
+| Tiền khách | Legal/payment review xong; price allocation, refund, ledger và reconciliation được test end-to-end |
+| Bảo hiểm | Có hợp đồng với PVI hoặc đối tác hợp pháp khác; hai policy, biểu phí, consent/opt-out, certificate và claims flow thật |
+| Thuế | Xác định loại chủ thể/dịch vụ, dữ liệu định danh thuế và báo cáo/nộp thay |
+| Pilot | Production OTP/email/storage/chat, monitoring, support contact, Terms/Privacy và UAT |
+| Public launch | Browser E2E, restore drill, incident runbook, product analytics và không còn dead link quan trọng |
+
+## 9. Quy tắc chấp nhận xuyên suốt
+
+- Mọi số tiền có đơn vị, chủ sở hữu, nguồn và trạng thái.
+- Booking lưu snapshot giá/phí/chính sách; thay đổi cấu hình không sửa lịch sử.
+- Webhook/job chạy lại không cộng tiền hai lần.
+- Tiền thuộc XePrime và tiền phải trả người khác được đối chiếu tách biệt.
+- Chức năng bị giới hạn phải chặn ở server; ẩn menu chỉ là UX.
+- Off-platform phải được đánh dấu và không được quảng bá với mức bảo vệ giống giao dịch on-platform.

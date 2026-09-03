@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { RentalMode } from '@xeprime/domain';
-import { dayjs, type Dayjs } from '@xeprime/domain';
+import { nowInAppTz, type Dayjs } from '@xeprime/domain';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
@@ -81,7 +81,9 @@ export function RentalRangeSheet({
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  const [month, setMonth] = useState<Dayjs>(() => (value.pickupAt ?? dayjs()).startOf('month'));
+  const [month, setMonth] = useState<Dayjs>(() =>
+    (value.pickupAt ?? nowInAppTz()).startOf('month'),
+  );
   const [timeSheet, setTimeSheet] = useState<'pickupAt' | 'returnAt' | null>(null);
   /** Lịch của tab theo giờ có đang bung không. */
   const [dateOpen, setDateOpen] = useState(false);
@@ -146,7 +148,8 @@ export function RentalRangeSheet({
 
   // --- Thuê theo giờ: giờ trả = bắt đầu + thời lượng ---------------------------------------
   const hourlyStart =
-    value.pickupAt ?? dayjs().add(1, 'day').hour(DEFAULT_HOUR).minute(0).second(0).millisecond(0);
+    value.pickupAt ??
+    nowInAppTz().add(1, 'day').hour(DEFAULT_HOUR).minute(0).second(0).millisecond(0);
 
   const hourlyDuration = (() => {
     if (!value.pickupAt || !value.returnAt) return DEFAULT_HOURLY_DURATION;
@@ -165,8 +168,7 @@ export function RentalRangeSheet({
 
   const complete = Boolean(value.pickupAt && value.returnAt);
   const ordered = Boolean(value.pickupAt && value.returnAt?.isAfter(value.pickupAt));
-  const meetsMin =
-    complete && ordered && chargedDays(value.pickupAt!, value.returnAt!) >= minDays;
+  const meetsMin = complete && ordered && chargedDays(value.pickupAt!, value.returnAt!) >= minDays;
 
   const hourly = mode === 'hourly';
 
@@ -185,9 +187,9 @@ export function RentalRangeSheet({
     complete && ordered ? fmt.rentalDuration(value.pickupAt!, value.returnAt!) : '';
 
   const weeks = useMemo(() => buildMonthGrid(month), [month]);
-  const today = dayjs().startOf('day');
+  // "Hôm nay" là ngày Việt Nam (CLAUDE.md §9) — không phải ngày trên máy của khách.
+  const today = nowInAppTz().startOf('day');
   const canGoBack = month.isAfter(today.startOf('month'));
-
 
   /**
    * Lịch tháng — DÙNG CHUNG cho cả hai tab.
@@ -208,53 +210,53 @@ export function RentalRangeSheet({
   }) {
     return (
       <YStack gap={space.md}>
-      <XStack ai="center" jc="space-between">
-        <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
-          {fmt.monthYear(month.toDate())}
-        </Text>
-        <XStack gap={space.xs}>
-          <IconButton
-            icon="chevron-back"
-            label={tCommon('actions.previous')}
-            onPress={() => setMonth((m) => m.subtract(1, 'month'))}
-            disabled={!canGoBack}
-            size={18}
-          />
-          <IconButton
-            icon="chevron-forward"
-            label={tCommon('actions.next')}
-            onPress={() => setMonth((m) => m.add(1, 'month'))}
-            size={18}
-          />
-        </XStack>
-      </XStack>
-
-      <XStack>
-        {[0, 1, 2, 3, 4, 5, 6].map((weekday) => (
-          <YStack key={weekday} f={1} ai="center">
-            <Text col={colors.textMuted} fos={fontSize.label}>
-              {tCommon(`weekdayShort.${weekday}` as never)}
-            </Text>
-          </YStack>
-        ))}
-      </XStack>
-
-      <YStack>
-        {weeks.map((week, row) => (
-          <XStack key={row}>
-            {week.map((cell) => (
-              <DayCell
-                key={cell.date.toISOString()}
-                cell={cell}
-                pickupAt={selected}
-                returnAt={range ? value.returnAt : null}
-                today={today}
-                onPress={onDay}
-              />
-            ))}
+        <XStack ai="center" jc="space-between">
+          <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
+            {fmt.monthYear(month.toDate())}
+          </Text>
+          <XStack gap={space.xs}>
+            <IconButton
+              icon="chevron-back"
+              label={tCommon('actions.previous')}
+              onPress={() => setMonth((m) => m.subtract(1, 'month'))}
+              disabled={!canGoBack}
+              size={18}
+            />
+            <IconButton
+              icon="chevron-forward"
+              label={tCommon('actions.next')}
+              onPress={() => setMonth((m) => m.add(1, 'month'))}
+              size={18}
+            />
           </XStack>
-        ))}
-      </YStack>
+        </XStack>
+
+        <XStack>
+          {[0, 1, 2, 3, 4, 5, 6].map((weekday) => (
+            <YStack key={weekday} f={1} ai="center">
+              <Text col={colors.textMuted} fos={fontSize.label}>
+                {tCommon(`weekdayShort.${weekday}` as never)}
+              </Text>
+            </YStack>
+          ))}
+        </XStack>
+
+        <YStack>
+          {weeks.map((week, row) => (
+            <XStack key={row}>
+              {week.map((cell) => (
+                <DayCell
+                  key={cell.date.toISOString()}
+                  cell={cell}
+                  pickupAt={selected}
+                  returnAt={range ? value.returnAt : null}
+                  today={today}
+                  onPress={onDay}
+                />
+              ))}
+            </XStack>
+          ))}
+        </YStack>
       </YStack>
     );
   }
@@ -510,11 +512,7 @@ export function RentalRangeSheet({
                   />
                 </YStack>
                 <YStack f={1}>
-                  <Button
-                    label={tCommon('actions.apply')}
-                    onPress={onApply}
-                    disabled={!meetsMin}
-                  />
+                  <Button label={tCommon('actions.apply')} onPress={onApply} disabled={!meetsMin} />
                 </YStack>
               </XStack>
             </YStack>
@@ -525,7 +523,11 @@ export function RentalRangeSheet({
       {timeSheet ? (
         <TimeSheet
           title={timeSheet === 'pickupAt' ? t('pickupTime') : t('returnTime')}
-          current={timeSheet === 'pickupAt' ? timeOf(hourly ? hourlyStart : value.pickupAt) : timeOf(value.returnAt)}
+          current={
+            timeSheet === 'pickupAt'
+              ? timeOf(hourly ? hourlyStart : value.pickupAt)
+              : timeOf(value.returnAt)
+          }
           onClose={() => setTimeSheet(null)}
           onSelect={(hhmm) => {
             if (hourly) {
