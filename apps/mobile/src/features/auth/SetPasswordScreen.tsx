@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { resetPasswordSchema, type ResetPasswordValues } from '@xeprime/validators';
+import { buildResetPasswordSchema, type ResetPasswordValues } from '@xeprime/validators';
+import { useAuthSchemaLabels } from './use-auth-schema-labels';
 import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
@@ -36,13 +38,21 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
 
+  /*
+   * Dựng lại schema khi ngôn ngữ đổi — LUẬT ở `@xeprime/validators`, chỉ câu chữ đi vào từ đây.
+   * `useMemo` vì `yupResolver` nhận object mới mỗi nhịp thì RHF xác thực lại toàn form sau từng
+   * phím gõ.
+   */
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildResetPasswordSchema(labels), [labels]);
+
   const {
     control,
     handleSubmit,
     formState: { isValid },
   } = useForm<ResetPasswordValues>({
     mode: 'onChange',
-    resolver: yupResolver(resetPasswordSchema),
+    resolver: yupResolver(schema),
     defaultValues: { password: '', confirmPassword: '' },
   });
 
@@ -101,7 +111,6 @@ export function SetPasswordScreen({ onDone }: { onDone: () => void }) {
               onSubmitEditing={onSubmit}
               editable={!save.isPending}
             />
-
           </YStack>
 
           <YStack gap={space.sm}>

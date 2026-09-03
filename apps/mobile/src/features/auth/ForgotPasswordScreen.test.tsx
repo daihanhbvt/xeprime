@@ -33,9 +33,7 @@ describe('ForgotPasswordScreen', () => {
   });
 
   it('gửi xong thì hiện màn "kiểm tra email" kèm chính địa chỉ vừa nhập', async () => {
-    const request = jest
-      .spyOn(authApi, 'requestPasswordReset')
-      .mockResolvedValue(undefined);
+    const request = jest.spyOn(authApi, 'requestPasswordReset').mockResolvedValue(undefined);
     const view = await renderScreen();
 
     await fireEvent.changeText(view.getByPlaceholderText('ban@congty.vn'), 'ai@xeprime.test');
@@ -56,7 +54,10 @@ describe('ForgotPasswordScreen', () => {
     jest.spyOn(authApi, 'requestPasswordReset').mockResolvedValue(undefined);
     const view = await renderScreen();
 
-    await fireEvent.changeText(view.getByPlaceholderText('ban@congty.vn'), 'khong-ton-tai@xeprime.test');
+    await fireEvent.changeText(
+      view.getByPlaceholderText('ban@congty.vn'),
+      'khong-ton-tai@xeprime.test',
+    );
     await fireEvent.press(view.getByRole('button', { name: 'Gửi liên kết đặt lại' }));
 
     expect(await view.findByText('Kiểm tra email của bạn')).toBeTruthy();

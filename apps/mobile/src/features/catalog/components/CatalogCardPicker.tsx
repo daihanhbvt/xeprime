@@ -6,16 +6,6 @@ import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 import { BODY_TYPE_ART } from '../body-type-art';
 
 /**
- * Bộ chọn danh mục dạng THẺ CÓ ẢNH — bản native của `CatalogCardPicker` bên web.
- *
- * Kiểu dáng xe là thứ người ta nhận ra bằng hình chứ không bằng chữ: "CUV" và "MPV" đọc lên
- * gần như nhau, nhìn hình thì khác hẳn. Vì vậy đây là thẻ có ảnh, không phải một hàng chip
- * như các chiều lọc còn lại.
- *
- * Lưới BA cột như web. Chỗ cho chữ hẹp nên nhãn và dòng mô tả được phép xuống dòng thay vì cắt
- * cụt — kiểu dáng là thứ chọn bằng hình, chữ chỉ để xác nhận.
- */
-/**
  * Chiều cao CỐ ĐỊNH của mọi thẻ.
  *
  * Để thẻ tự co theo nội dung thì mục có mô tả cao hơn mục không có, và cả lưới thành răng cưa.
@@ -24,6 +14,13 @@ import { BODY_TYPE_ART } from '../body-type-art';
  */
 const CARD_HEIGHT = 134;
 
+/**
+ * Bộ chọn danh mục dạng THẺ CÓ ẢNH — bản native của `CatalogCardPicker` bên web.
+ *
+ * Kiểu dáng xe là thứ người ta nhận ra bằng hình chứ không bằng chữ: "CUV" và "MPV" đọc lên gần
+ * như nhau, nhìn hình thì khác hẳn. Lưới BA cột như web; nhãn và mô tả được phép xuống dòng thay
+ * vì cắt cụt.
+ */
 export function CatalogCardPicker({
   items,
   value,
@@ -49,7 +46,10 @@ export function CatalogCardPicker({
         const active = value.includes(item.key);
         const count = countOf?.(item.key);
         const art = BODY_TYPE_ART[item.key];
-        const meta = [item.description, count !== undefined && countSuffix ? `${count} ${countSuffix}` : null]
+        const meta = [
+          item.description,
+          count !== undefined && countSuffix ? `${count} ${countSuffix}` : null,
+        ]
           .filter(Boolean)
           .join(' · ');
 

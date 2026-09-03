@@ -38,7 +38,7 @@ export function SocialButtons({ onSuccess }: { onSuccess: (user: CurrentUser) =>
   const socialLogin = useSocialLogin();
   const [pending, setPending] = useState<AuthProvider | null>(null);
 
-  function signIn(provider: AuthProvider)  {
+  function signIn(provider: AuthProvider) {
     setPending(provider);
     socialLogin.mutate(
       { provider, locale },

@@ -1,16 +1,29 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, useWindowDimensions } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
 import type { RentalMode } from '@xeprime/domain';
-import { nowInAppTz, type Dayjs } from '@xeprime/domain';
+import {
+  busyLevelOf,
+  chargedDays,
+  DAY_PARAM_FORMAT,
+  EMPTY_BUSY_INDEX,
+  nowInAppTz,
+  rangeBusyConflict,
+  type BusyDayIndex,
+  type BusyLevel,
+  type Dayjs,
+} from '@xeprime/domain';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
+import { StripePattern } from '@/components/ui/StripePattern';
+import { MonthGrid, useDayAccessibilityLabel, visibleDays } from '@/components/ui/MonthGrid';
 import { useAppFormat, useDatePickerPattern } from '@/i18n/use-app-format';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { appStyles } from '@/theme/styles';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 
 /** Giờ theo bước 30 phút — cùng `TIME_OPTIONS` của web. */
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
@@ -21,11 +34,60 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
 /** Thời lượng thuê giờ 1–24h — quá 24h thì chuyển tab "Thuê theo ngày" mới hợp lý. */
 const HOURLY_DURATIONS = Array.from({ length: 24 }, (_, i) => i + 1);
 
+/**
+ * Màu vân của ngày bận, khớp `.busyFull` / `.busyPartial` bên web.
+ *
+ * Web viết bằng `color-mix(… 45%, transparent)`; RN không có hàm đó nhưng hiểu hex 8 số, nên độ
+ * mờ đi ở hai chữ số cuối: 45% ≈ `73`, 35% ≈ `59`. Vân phải MỜ — nó nằm dưới con số ngày, đậm
+ * lên là số hết đọc được.
+ */
+const BUSY_STRIPE = {
+  full: `${colors.placeholder}73`,
+  partial: `${colors.warning}59`,
+} as const;
+
 const DEFAULT_HOUR = 10;
 const DEFAULT_HOURLY_DURATION = 4;
 
 /** Tấm trượt chiếm 3/4 chiều cao — vẫn thấy trang phía sau, cùng cách với bộ chọn địa điểm. */
 const SHEET_RATIO = 0.85;
+
+/** Tấm trượt chọn giờ thấp hơn: 48 mục một cột, cao hơn nữa thì lớp phủ gần như biến mất. */
+const TIME_SHEET_RATIO = 0.6;
+
+const rangeStyles = StyleSheet.create({
+  /** `dayContainer` của thư viện canh giữa theo chiều ngang — ô phải TRÀN cột, nếu không dải
+      ngày đang chọn đứt thành bảy chấm rời thay vì một thanh liền. */
+  cell: { alignSelf: 'stretch' },
+});
+
+/**
+ * Trạng thái vẽ của MỘT ô ngày.
+ *
+ * Đi qua `markedDates` của lịch nên phải PHẲNG và so sâu được: thư viện dùng chính nó để quyết
+ * định ô nào cần vẽ lại (xem docblock `MonthGrid`). Thứ gì ảnh hưởng hình hài của ô mà thiếu ở
+ * đây thì ô sẽ đứng yên với trạng thái cũ.
+ */
+interface RentalDayMark {
+  busy: BusyLevel;
+  /** Quá khứ hoặc bận TRỌN ngày. Bận MỘT PHẦN vẫn bấm được — trả xe trước giờ bận là hợp lệ. */
+  disabled: boolean;
+  edge: 'start' | 'end' | 'both' | null;
+  inRange: boolean;
+}
+
+const timeOf = (d: Dayjs | null) =>
+  d ? d.format('HH:mm') : `${String(DEFAULT_HOUR).padStart(2, '0')}:00`;
+
+/** Gắn giờ đang chọn (hoặc mặc định) vào một ngày trên lịch. */
+const withTime = (day: Dayjs, current: Dayjs | null): Dayjs => {
+  const [h, m] = timeOf(current).split(':').map(Number);
+  return day
+    .hour(h ?? DEFAULT_HOUR)
+    .minute(m ?? 0)
+    .second(0)
+    .millisecond(0);
+};
 
 export interface RentalRangeDraft {
   pickupAt: Dayjs | null;
@@ -45,6 +107,15 @@ interface RentalRangeSheetProps {
    * giờ" — thuê dài hạn không có ngữ nghĩa giờ.
    */
   minDays?: number;
+  /**
+   * Lịch bận của MỘT chiếc xe. Bỏ trống ở thẻ tìm kiếm trang chủ — lịch bận chỉ có nghĩa khi
+   * khách đã chọn xe (trang chi tiết / luồng gửi yêu cầu).
+   *
+   * Đây là PREVIEW cho UX, không phải lớp bảo vệ: quyết định thật là exclusion constraint lúc
+   * ghi (ADR 0006). Vì thế ngày bận trọn bị khoá, còn ngày bận một phần vẫn bấm được — trả xe
+   * trước giờ bận là hợp lệ, và khoá nó đi là từ chối một khoảng khả thi.
+   */
+  busyDays?: BusyDayIndex;
 }
 
 /**
@@ -59,8 +130,8 @@ interface RentalRangeSheetProps {
  * - **Thuê theo giờ**: ngày bắt đầu + giờ nhận + THỜI LƯỢNG; giờ trả là giá trị DẪN XUẤT
  *   (bắt đầu + thời lượng), khách không phải tự cộng giờ.
  *
- * Không nhận `busyDays`: thẻ tìm kiếm trang chủ của web cũng không truyền — lịch bận chỉ có
- * nghĩa khi đã chọn một chiếc xe cụ thể (trang chi tiết).
+ * `busyDays` là TUỲ CHỌN: thẻ tìm kiếm trang chủ không truyền (lịch bận chỉ có nghĩa khi đã
+ * chọn một chiếc xe cụ thể), còn luồng gửi yêu cầu thuê thì có.
  *
  * Tất cả chỉ là preview (ADR 0006): quyết định thật là exclusion constraint lúc ghi.
  */
@@ -73,6 +144,7 @@ export function RentalRangeSheet({
   onApply,
   onCancel,
   minDays = 1,
+  busyDays = EMPTY_BUSY_INDEX,
 }: RentalRangeSheetProps) {
   const t = useTranslations('Common.components.rentalRange');
   const tCommon = useTranslations('Common');
@@ -81,6 +153,7 @@ export function RentalRangeSheet({
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
+  // Tháng mở đầu theo ngày VIỆT NAM — khách ở múi giờ khác không được thấy lịch lệch một tháng.
   const [month, setMonth] = useState<Dayjs>(() =>
     (value.pickupAt ?? nowInAppTz()).startOf('month'),
   );
@@ -89,48 +162,35 @@ export function RentalRangeSheet({
   const [dateOpen, setDateOpen] = useState(false);
   const [durationOpen, setDurationOpen] = useState(false);
 
-  /** Số ngày TÍNH TIỀN — trùng công thức `PricingService.chargedDays` để hai tầng không lệch. */
-  const chargedDays = (a: Dayjs, b: Dayjs) => Math.max(1, Math.ceil(b.diff(a, 'minute') / 1440));
-
-  const timeOf = (d: Dayjs | null) =>
-    d ? d.format('HH:mm') : `${String(DEFAULT_HOUR).padStart(2, '0')}:00`;
-
-  /** Gắn giờ đang chọn (hoặc mặc định) vào một ngày trên lịch. */
-  const withTime = (day: Dayjs, current: Dayjs | null): Dayjs => {
-    const [h, m] = timeOf(current).split(':').map(Number);
-    return day
-      .hour(h ?? DEFAULT_HOUR)
-      .minute(m ?? 0)
-      .second(0)
-      .millisecond(0);
-  };
-
   /**
    * Luật chọn dải kiểu đặt phòng, tính từ NGÀY VỪA BẤM:
    *   - dải đã đủ hai đầu → cú bấm mới BẮT ĐẦU dải mới (ngày bấm = nhận, chờ chọn trả);
    *   - mới có ngày nhận → bấm sau nó = ngày trả; bấm trước nó = chọn lại ngày nhận.
    */
-  function selectDay(clicked: Dayjs) {
-    const clickedDay = clicked.startOf('day');
+  const selectDay = useCallback(
+    (clicked: Dayjs) => {
+      const clickedDay = clicked.startOf('day');
 
-    if (!value.pickupAt || (value.pickupAt && value.returnAt)) {
-      onChange({ pickupAt: withTime(clicked, value.pickupAt), returnAt: null });
-      return;
-    }
-    if (clickedDay.isBefore(value.pickupAt.startOf('day'))) {
-      onChange({ pickupAt: withTime(clicked, value.pickupAt), returnAt: null });
-      return;
-    }
+      if (!value.pickupAt || (value.pickupAt && value.returnAt)) {
+        onChange({ pickupAt: withTime(clicked, value.pickupAt), returnAt: null });
+        return;
+      }
+      if (clickedDay.isBefore(value.pickupAt.startOf('day'))) {
+        onChange({ pickupAt: withTime(clicked, value.pickupAt), returnAt: null });
+        return;
+      }
 
-    let returnAt = withTime(clicked, value.returnAt);
-    if (!returnAt.isAfter(value.pickupAt)) {
-      returnAt = value.pickupAt.add(Math.max(1, minDays), 'day');
-    } else if (chargedDays(value.pickupAt, returnAt) < minDays) {
-      // Lưới an toàn cho ca lệch giờ — lịch đã khoá các ngày trả dưới sàn.
-      returnAt = withTime(value.pickupAt.add(minDays, 'day'), value.returnAt);
-    }
-    onChange({ pickupAt: value.pickupAt, returnAt });
-  }
+      let returnAt = withTime(clicked, value.returnAt);
+      if (!returnAt.isAfter(value.pickupAt)) {
+        returnAt = value.pickupAt.add(Math.max(1, minDays), 'day');
+      } else if (chargedDays(value.pickupAt, returnAt) < minDays) {
+        // Lưới an toàn cho ca lệch giờ — lịch đã khoá các ngày trả dưới sàn.
+        returnAt = withTime(value.pickupAt.add(minDays, 'day'), value.returnAt);
+      }
+      onChange({ pickupAt: value.pickupAt, returnAt });
+    },
+    [value, minDays, onChange],
+  );
 
   function setTime(which: 'pickupAt' | 'returnAt', hhmm: string) {
     const base = value[which];
@@ -147,18 +207,31 @@ export function RentalRangeSheet({
   }
 
   // --- Thuê theo giờ: giờ trả = bắt đầu + thời lượng ---------------------------------------
-  const hourlyStart =
-    value.pickupAt ??
-    nowInAppTz().add(1, 'day').hour(DEFAULT_HOUR).minute(0).second(0).millisecond(0);
+  /*
+   * `useMemo` ở đây KHÔNG phải để tiết kiệm phép tính — nó để giữ THAM CHIẾU.
+   *
+   * Khi chưa chọn ngày, `hourlyStart` là một mốc MỚI mỗi lần render, và nó đi vào tham số
+   * của `selectHourlyDay` rồi xuống tận `DayCell`. Tham chiếu đổi mỗi render thì `memo` của 42 ô
+   * lịch trượt sạch.
+   */
+  const hourlyStart = useMemo(
+    () =>
+      value.pickupAt ??
+      nowInAppTz().add(1, 'day').hour(DEFAULT_HOUR).minute(0).second(0).millisecond(0),
+    [value.pickupAt],
+  );
 
-  const hourlyDuration = (() => {
+  const hourlyDuration = useMemo(() => {
     if (!value.pickupAt || !value.returnAt) return DEFAULT_HOURLY_DURATION;
     const h = Math.round(value.returnAt.diff(value.pickupAt, 'minute') / 60);
     return h >= 1 && h <= 24 ? h : DEFAULT_HOURLY_DURATION;
-  })();
+  }, [value.pickupAt, value.returnAt]);
 
-  const setHourly = (start: Dayjs, duration: number) =>
-    onChange({ pickupAt: start, returnAt: start.add(duration, 'hour') });
+  const setHourly = useCallback(
+    (start: Dayjs, duration: number) =>
+      onChange({ pickupAt: start, returnAt: start.add(duration, 'hour') }),
+    [onChange],
+  );
 
   function switchMode(next: RentalMode) {
     onModeChange(next);
@@ -169,6 +242,15 @@ export function RentalRangeSheet({
   const complete = Boolean(value.pickupAt && value.returnAt);
   const ordered = Boolean(value.pickupAt && value.returnAt?.isAfter(value.pickupAt));
   const meetsMin = complete && ordered && chargedDays(value.pickupAt!, value.returnAt!) >= minDays;
+
+  /**
+   * Quãng bận ĐẦU TIÊN mà khoảng đang chọn đụng phải.
+   *
+   * Hai đầu khoảng rảnh KHÔNG có nghĩa là cả khoảng rảnh: 21→27/08 mà 25/08 bận thì bất khả
+   * thi. `rangeBusyConflict` so bằng mốc tuyệt đối và nửa mở `[)` giống hệt exclusion
+   * constraint, nên lời cảnh báo trên màn khớp đúng thứ server sẽ từ chối (ADR 0006).
+   */
+  const conflict = rangeBusyConflict(busyDays, value.pickupAt, value.returnAt);
 
   const hourly = mode === 'hourly';
 
@@ -186,10 +268,73 @@ export function RentalRangeSheet({
   const durationLabel =
     complete && ordered ? fmt.rentalDuration(value.pickupAt!, value.returnAt!) : '';
 
-  const weeks = useMemo(() => buildMonthGrid(month), [month]);
-  // "Hôm nay" là ngày Việt Nam (CLAUDE.md §9) — không phải ngày trên máy của khách.
-  const today = nowInAppTz().startOf('day');
-  const canGoBack = month.isAfter(today.startOf('month'));
+  /**
+   * Mốc "hôm nay" — ngày VIỆT NAM (CLAUDE.md §9), không phải ngày trên máy khách.
+   *
+   * `useMemo` vì nó phải ĐỨNG YÊN: nó đi vào `marks`, mà một mốc mới mỗi lần render sẽ làm
+   * `memo` của 42 ô lịch trượt sạch.
+   */
+  const today = useMemo(() => nowInAppTz().startOf('day'), []);
+
+  /*
+   * Chỉ đổi NGÀY, giữ nguyên giờ bắt đầu và thời lượng — đúng như web:
+   * `d.hour(hourlyStart.hour()).minute(hourlyStart.minute())`.
+   */
+  const selectHourlyDay = useCallback(
+    (day: Dayjs) => {
+      setHourly(
+        day.hour(hourlyStart.hour()).minute(hourlyStart.minute()).second(0).millisecond(0),
+        hourlyDuration,
+      );
+      setDateOpen(false);
+    },
+    [setHourly, hourlyStart, hourlyDuration],
+  );
+
+  /**
+   * Trạng thái vẽ của cả trang lịch.
+   *
+   * Tab theo giờ chỉ có MỘT ngày, tab theo ngày có cả dải — hai tab không bao giờ hiện cùng lúc
+   * nên chỉ dựng `marks` cho tab đang mở.
+   */
+  const rangeStart = hourly ? hourlyStart : value.pickupAt;
+  const rangeEnd = hourly ? null : value.returnAt;
+  const startAt = rangeStart?.valueOf() ?? null;
+  const endAt = rangeEnd?.valueOf() ?? null;
+
+  const marks = useMemo(() => {
+    const out: Record<string, RentalDayMark> = {};
+    for (const day of visibleDays(month)) {
+      const busy = busyLevelOf(busyDays, day);
+      const isPickup = Boolean(rangeStart && day.isSame(rangeStart, 'day'));
+      const isReturn = Boolean(rangeEnd && day.isSame(rangeEnd, 'day'));
+      out[day.format(DAY_PARAM_FORMAT)] = {
+        busy,
+        disabled: day.isBefore(today, 'day') || busy === 'full',
+        edge: isPickup && isReturn ? 'both' : isPickup ? 'start' : isReturn ? 'end' : null,
+        inRange: Boolean(
+          rangeStart && rangeEnd && day.isAfter(rangeStart, 'day') && day.isBefore(rangeEnd, 'day'),
+        ),
+      };
+    }
+    return out;
+    // Theo dõi hai đầu dải bằng MỐC: `Dayjs` là đối tượng mới sau mỗi lần render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [month, busyDays, today, startAt, endAt]);
+
+  /** Tham chiếu phải ĐỨNG YÊN, và ô chỉ được vẽ từ đối số — xem docblock `MonthGrid`. */
+  const renderDay = useCallback(
+    ({
+      day,
+      mark,
+      onPress,
+    }: {
+      day: Dayjs;
+      mark: RentalDayMark | undefined;
+      onPress: () => void;
+    }) => <DayCell day={day} mark={mark} onPress={onPress} />,
+    [],
+  );
 
   /**
    * Lịch tháng — DÙNG CHUNG cho cả hai tab.
@@ -198,68 +343,30 @@ export function RentalRangeSheet({
    * nữa mà bung chính lịch này ngay dưới ô "Ngày bắt đầu" — cùng dữ liệu, cùng luật chặn ngày,
    * chỉ khác cách trưng ra.
    */
-  function renderCalendar({
-    selected,
-    range,
-    onDay,
-  }: {
-    selected: Dayjs | null;
-    /** Có tô dải tới ngày trả hay không — tab theo giờ chỉ có một ngày. */
-    range: boolean;
-    onDay: (day: Dayjs) => void;
-  }) {
-    return (
-      <YStack gap={space.md}>
-        <XStack ai="center" jc="space-between">
-          <Text col={colors.text} fos={fontSize.bodyLg} fow={fontWeight.bold}>
-            {fmt.monthYear(month.toDate())}
-          </Text>
-          <XStack gap={space.xs}>
-            <IconButton
-              icon="chevron-back"
-              label={tCommon('actions.previous')}
-              onPress={() => setMonth((m) => m.subtract(1, 'month'))}
-              disabled={!canGoBack}
-              size={18}
+  const calendar = (
+    <MonthGrid
+      month={month}
+      onMonthChange={setMonth}
+      marks={marks}
+      onDayPress={hourly ? selectHourlyDay : selectDay}
+      renderDay={renderDay}
+      legend={
+        /* Bốn ô mẫu, đúng bốn mục và đúng thứ tự của `.legend` bên web. */
+        busyDays.size > 0 ? (
+          <XStack flexWrap="wrap" columnGap={space.md} rowGap={space.xs} ai="center">
+            <LegendItem label={t('busy.legendSelected')} fill={colors.primary} />
+            <LegendItem label={t('busy.legendInRange')} fill={colors.surfaceSelected} bordered />
+            <LegendItem
+              label={t('busy.legendFull')}
+              fill={colors.surfaceMuted}
+              stripe={BUSY_STRIPE.full}
             />
-            <IconButton
-              icon="chevron-forward"
-              label={tCommon('actions.next')}
-              onPress={() => setMonth((m) => m.add(1, 'month'))}
-              size={18}
-            />
+            <LegendItem label={t('busy.legendPartial')} stripe={BUSY_STRIPE.partial} bordered />
           </XStack>
-        </XStack>
-
-        <XStack>
-          {[0, 1, 2, 3, 4, 5, 6].map((weekday) => (
-            <YStack key={weekday} f={1} ai="center">
-              <Text col={colors.textMuted} fos={fontSize.label}>
-                {tCommon(`weekdayShort.${weekday}` as never)}
-              </Text>
-            </YStack>
-          ))}
-        </XStack>
-
-        <YStack>
-          {weeks.map((week, row) => (
-            <XStack key={row}>
-              {week.map((cell) => (
-                <DayCell
-                  key={cell.date.toISOString()}
-                  cell={cell}
-                  pickupAt={selected}
-                  returnAt={range ? value.returnAt : null}
-                  today={today}
-                  onPress={onDay}
-                />
-              ))}
-            </XStack>
-          ))}
-        </YStack>
-      </YStack>
-    );
-  }
+        ) : null
+      }
+    />
+  );
 
   return (
     <Modal visible={open} transparent animationType="slide" onRequestClose={onCancel}>
@@ -271,7 +378,7 @@ export function RentalRangeSheet({
         Tách ra thì chạm vào tấm trượt không bao giờ tới lớp phủ, mà cũng chẳng có gì chặn cuộn.
       */}
       <YStack f={1}>
-        <Pressable style={{ flex: 1, backgroundColor: colors.overlay }} onPress={onCancel} />
+        <Pressable style={appStyles.scrim} onPress={onCancel} />
         <YStack>
           <YStack
             maxHeight={height * SHEET_RATIO}
@@ -325,7 +432,11 @@ export function RentalRangeSheet({
                           <Text f={1} col={colors.text} fos={fontSize.body}>
                             {hourlyStart.format(pattern.date)}
                           </Text>
-                          <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
+                          <Ionicons
+                            name="calendar-outline"
+                            size={iconSize.sm}
+                            color={colors.textMuted}
+                          />
                         </Box>
                       </Pressable>
                     </Field>
@@ -350,25 +461,7 @@ export function RentalRangeSheet({
                       p={space.sm}
                       accessibilityLabel={t('startDate')}
                     >
-                      {renderCalendar({
-                        selected: hourlyStart,
-                        range: false,
-                        onDay: (day) => {
-                          /*
-                           * Chỉ đổi NGÀY, giữ nguyên giờ bắt đầu và thời lượng — đúng như web:
-                           * `d.hour(hourlyStart.hour()).minute(hourlyStart.minute())`.
-                           */
-                          setHourly(
-                            day
-                              .hour(hourlyStart.hour())
-                              .minute(hourlyStart.minute())
-                              .second(0)
-                              .millisecond(0),
-                            hourlyDuration,
-                          );
-                          setDateOpen(false);
-                        },
-                      })}
+                      {calendar}
                     </YStack>
                   ) : null}
 
@@ -441,7 +534,7 @@ export function RentalRangeSheet({
                 </YStack>
               ) : (
                 <YStack gap={space.md}>
-                  {renderCalendar({ selected: value.pickupAt, range: true, onDay: selectDay })}
+                  {calendar}
 
                   <XStack gap={space.sm}>
                     <Field label={t('pickupTime')} grow>
@@ -484,7 +577,7 @@ export function RentalRangeSheet({
                   <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
                     {fmt.rentalPoint(value.pickupAt!)} – {fmt.rentalPoint(value.returnAt!)}
                   </Text>
-                  <XStack gap={4}>
+                  <XStack gap={space.xs}>
                     <Text col={colors.textMuted} fos={fontSize.bodySm}>
                       {t('duration')}:
                     </Text>
@@ -503,6 +596,26 @@ export function RentalRangeSheet({
                 </Text>
               )}
 
+              {conflict ? (
+                <XStack ai="flex-start" gap={space.xs}>
+                  <Ionicons name="alert-circle" size={iconSize.sm} color={colors.danger} />
+                  <Text f={1} col={colors.danger} fos={fontSize.bodySm}>
+                    {/*
+                      `fmt.rentalPoint`, không phải `fmt.dateKey` — cùng bộ định dạng với web
+                      ("T2, 31/08 · 00:00"). `dateKey` chỉ in ngày trần, mất mất GIỜ, mà giờ mới
+                      là thứ đang đụng nhau ở đây.
+                    */}
+                    {t('busy.conflict', {
+                      period: t('busy.period', {
+                        start: conflict.startAt.format('HH:mm'),
+                        end: conflict.endAt.format('HH:mm'),
+                      }),
+                      date: fmt.rentalPoint(conflict.startAt),
+                    })}
+                  </Text>
+                </XStack>
+              ) : null}
+
               <XStack gap={space.sm}>
                 <YStack f={1}>
                   <Button
@@ -512,7 +625,11 @@ export function RentalRangeSheet({
                   />
                 </YStack>
                 <YStack f={1}>
-                  <Button label={tCommon('actions.apply')} onPress={onApply} disabled={!meetsMin} />
+                  <Button
+                    label={tCommon('actions.apply')}
+                    onPress={onApply}
+                    disabled={!meetsMin || conflict !== null}
+                  />
                 </YStack>
               </XStack>
             </YStack>
@@ -551,6 +668,43 @@ export function RentalRangeSheet({
   );
 }
 
+/**
+ * Một mục chú giải: ô mẫu 18×14 + nhãn, cùng kích thước `.swatch` của web.
+ *
+ * Ô mẫu vẽ ĐÚNG thứ ô ngày vẽ (nền + vân), không phải một biểu tượng gợi ý — chú giải chỉ có
+ * ích khi mẫu và vật thật là một.
+ */
+function LegendItem({
+  label,
+  fill,
+  stripe,
+  bordered = false,
+}: {
+  label: string;
+  fill?: string;
+  stripe?: string;
+  bordered?: boolean;
+}) {
+  return (
+    <XStack ai="center" gap={6}>
+      <YStack
+        w={18}
+        h={14}
+        br={radius.sm}
+        ov="hidden"
+        bg={fill ?? 'transparent'}
+        bw={bordered ? 1 : 0}
+        bc={colors.border}
+      >
+        {stripe ? <StripePattern color={stripe} size={40} /> : null}
+      </YStack>
+      <Text col={colors.textMuted} fos={fontSize.label}>
+        {label}
+      </Text>
+    </XStack>
+  );
+}
+
 /** Tab chế độ. Gạch dưới ở tab đang chọn — cùng cách web phân biệt hai cách tính thời gian. */
 function ModeTab({
   label,
@@ -581,59 +735,87 @@ function ModeTab({
   );
 }
 
-/** Một ô ngày. Hai đầu dải tô đậm, ngày ở giữa tô nhạt — cùng cách web đọc một khoảng. */
+/**
+ * Một ô ngày. Hai đầu dải tô đậm, ngày ở giữa tô nhạt — cùng cách web đọc một khoảng.
+ *
+ * Không cần `memo`: `Day` của thư viện đã so sâu `mark` và bỏ qua ô không đổi (docblock
+ * `MonthGrid`). Mọi thứ ô này vẽ đều đọc từ `mark`, nên phép so đó là đủ và đúng.
+ *
+ * Ngày của tháng KỀ vẫn CHỌN ĐƯỢC — cùng luật với web, nơi `.rdp-outside` không có rule nào: ô
+ * chỉ mờ đi khi thật sự bị khoá (quá khứ / bận trọn). Vì thế `state` mà thư viện gán cho ô ngoài
+ * tháng (`'disabled'`) bị BỎ QUA ở đây; tô mờ chúng thì 1–5/9 nhìn hệt 26–31/7 đã qua, trong khi
+ * một bên chọn được còn một bên không.
+ */
 function DayCell({
-  cell,
-  pickupAt,
-  returnAt,
-  today,
+  day,
+  mark,
   onPress,
 }: {
-  cell: GridDay;
-  pickupAt: Dayjs | null;
-  returnAt: Dayjs | null;
-  today: Dayjs;
-  onPress: (day: Dayjs) => void;
+  day: Dayjs;
+  mark: RentalDayMark | undefined;
+  onPress: () => void;
 }) {
-  const day = cell.date;
+  const dayLabel = useDayAccessibilityLabel();
+  const tBusy = useTranslations('Common.components.rentalRange.busy');
 
-  // Ngày của tháng kề chỉ để lấp tuần — bấm được thì lịch nhảy tháng ngay dưới ngón tay.
-  const past = cell.outside || day.isBefore(today, 'day');
-  const isPickup = Boolean(pickupAt && day.isSame(pickupAt, 'day'));
-  const isReturn = Boolean(returnAt && day.isSame(returnAt, 'day'));
-  const inRange = Boolean(
-    pickupAt && returnAt && day.isAfter(pickupAt, 'day') && day.isBefore(returnAt, 'day'),
-  );
+  const busy = mark?.busy ?? 'free';
+  const disabled = mark?.disabled ?? false;
+  const inRange = mark?.inRange ?? false;
+  const isPickup = mark?.edge === 'start' || mark?.edge === 'both';
+  const isReturn = mark?.edge === 'end' || mark?.edge === 'both';
   const edge = isPickup || isReturn;
+
+  /** Màu vân của ô, `null` = ngày rảnh. Cùng hai tông với `.busyFull` / `.busyPartial` của web. */
+  const stripe =
+    busy === 'full' ? BUSY_STRIPE.full : busy === 'partial' ? BUSY_STRIPE.partial : null;
+
+  /*
+   * `accessibilityState` lo phần trạng thái chọn/khoá; phần CHỮ gánh những gì state không diễn
+   * đạt được: NGÀY NÀO, và VÌ SAO khoá (bận cả ngày) hay cần lưu ý (bận một phần).
+   */
+  const note =
+    busy === 'full' ? tBusy('legendFull') : busy === 'partial' ? tBusy('legendPartial') : undefined;
 
   return (
     <Pressable
-      disabled={past}
-      onPress={() => onPress(day)}
-      style={{ flex: 1 }}
+      disabled={disabled}
+      onPress={onPress}
+      style={rangeStyles.cell}
       accessibilityRole="button"
-      accessibilityState={{ selected: edge || inRange, disabled: past }}
+      accessibilityLabel={dayLabel(day, note)}
+      accessibilityState={{ selected: edge || inRange, disabled }}
     >
       <YStack
         h={sizing.touchTarget}
         ai="center"
         jc="center"
-        bg={edge ? colors.primary : inRange ? colors.primaryLight : 'transparent'}
+        ov="hidden"
+        bg={
+          edge
+            ? colors.primary
+            : inRange
+              ? colors.surfaceSelected
+              : busy === 'full'
+                ? colors.surfaceMuted
+                : 'transparent'
+        }
         borderTopLeftRadius={isPickup ? radius.md : 0}
         borderBottomLeftRadius={isPickup ? radius.md : 0}
         borderTopRightRadius={isReturn ? radius.md : 0}
         borderBottomRightRadius={isReturn ? radius.md : 0}
       >
+        {/*
+          Vân gạch chéo, cùng hai tông với web: bận TRỌN ngày là vân xám trên nền `bg-muted`,
+          bận VÀI GIỜ là vân cam cảnh báo trên nền trong suốt (ngày đó vẫn chọn được — nhận hoặc
+          trả ngoài khung bận là hợp lệ).
+
+          Hai đầu khoảng đã tô nền vàng đặc nên bỏ hẳn vân ở đó, y như `.rdp-range_start.busyPartial`
+          của web — vân chồng lên nền đặc chỉ làm bẩn.
+        */}
+        {stripe && !edge ? <StripePattern color={stripe} /> : null}
+
         <Text
-          col={
-            cell.outside
-              ? colors.border
-              : past
-                ? colors.textDisabled
-                : edge
-                  ? colors.onPrimary
-                  : colors.text
-          }
+          col={edge ? colors.onPrimary : disabled ? colors.textDisabled : colors.text}
           fos={fontSize.bodySm}
           fow={edge ? fontWeight.bold : fontWeight.regular}
         >
@@ -663,10 +845,10 @@ function TimeSheet({
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       {/* Lớp phủ là ANH EM của tấm trượt, không phải cha — xem ghi chú ở tấm trượt chính. */}
       <YStack f={1}>
-        <Pressable style={{ flex: 1, backgroundColor: colors.overlay }} onPress={onClose} />
+        <Pressable style={appStyles.scrim} onPress={onClose} />
         <YStack>
           <YStack
-            maxHeight={height * 0.6}
+            maxHeight={height * TIME_SHEET_RATIO}
             bg={colors.surface}
             borderTopLeftRadius={radius.lg}
             borderTopRightRadius={radius.lg}
@@ -754,39 +936,4 @@ function Box({ children, muted = false }: { children: React.ReactNode; muted?: b
       {children}
     </XStack>
   );
-}
-
-interface GridDay {
-  date: Dayjs;
-  /** Thuộc tháng TRƯỚC hoặc SAU — hiện để lấp đầy tuần, không chọn được. */
-  outside: boolean;
-}
-
-/**
- * Lưới 7 cột của một tháng, hai đầu lấp bằng ngày của tháng KỀ.
- *
- * Không để ô trống: một tuần cụt ở hai đầu làm lịch trông như dữ liệu bị thiếu, và mắt mất chỗ
- * bám khi dò cột thứ. Web (react-day-picker) cũng hiện những ngày này — đây là cách một cuốn
- * lịch giấy vẫn in.
- *
- * `day()` của Day.js: 0 = Chủ nhật, khớp thứ tự nhãn `Common.weekdayShort.0…6`.
- */
-function buildMonthGrid(month: Dayjs): GridDay[][] {
-  const first = month.startOf('month');
-  const cells: GridDay[] = [];
-
-  // Đầu tuần đầu tiên: đếm ngược từ ngày 1 sang tháng trước.
-  for (let i = first.day(); i > 0; i -= 1) {
-    cells.push({ date: first.subtract(i, 'day'), outside: true });
-  }
-  for (let date = 1; date <= month.daysInMonth(); date += 1) {
-    cells.push({ date: first.date(date), outside: false });
-  }
-  // Đuôi tuần cuối: đếm tiếp sang tháng sau cho tròn 7 cột.
-  const last = first.endOf('month');
-  for (let i = 1; cells.length % 7 !== 0; i += 1) {
-    cells.push({ date: last.add(i, 'day'), outside: true });
-  }
-
-  return Array.from({ length: cells.length / 7 }, (_, row) => cells.slice(row * 7, row * 7 + 7));
 }

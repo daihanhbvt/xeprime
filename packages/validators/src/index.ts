@@ -27,7 +27,13 @@ import {
   VN_PHONE_PATTERN,
 } from '@xeprime/types';
 
-export { phoneSchema, requiredPhoneSchema } from './phone';
+export {
+  phoneSchema,
+  requiredPhoneSchema,
+  buildPhoneSchema,
+  buildRequiredPhoneSchema,
+  type PhoneSchemaLabels,
+} from './phone';
 
 export const emailSchema = yup.string().trim().email('Email không hợp lệ');
 

@@ -131,7 +131,10 @@ describe('LoginForm', () => {
     );
     const view = await renderLoginForm();
 
-    await fireEvent.changeText(view.getByPlaceholderText('Nhập email hoặc số điện thoại'), 'owner@xeprime.test');
+    await fireEvent.changeText(
+      view.getByPlaceholderText('Nhập email hoặc số điện thoại'),
+      'owner@xeprime.test',
+    );
     await fireEvent.changeText(view.getByPlaceholderText('Nhập mật khẩu'), 'saibet123');
     await fireEvent.press(view.getByRole('button', { name: 'Đăng nhập' }));
 

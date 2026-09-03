@@ -1,7 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { resetPasswordSchema, type ResetPasswordValues } from '@xeprime/validators';
-import { useState, type ReactNode } from 'react';
+import { buildResetPasswordSchema, type ResetPasswordValues } from '@xeprime/validators';
+import { useAuthSchemaLabels } from './use-auth-schema-labels';
+import { useState, type ReactNode, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -61,7 +62,7 @@ export function ResetPasswordScreen({
     return (
       // Không có nút lui: mật khẩu đã đổi, và lui lại chính là gửi lại một token đã chết.
       <Outcome
-        icon="checkmark-circle"
+        icon="checkmark"
         tone={STATUS_TONE.SUCCESS}
         title={t('resetPassword.doneTitle')}
         body={t('resetPassword.doneSubtitle')}
@@ -71,9 +72,7 @@ export function ResetPasswordScreen({
     );
   }
 
-  return (
-    <ResetPasswordForm token={token} onBack={onBackToLogin} onDone={() => setDone(true)} />
-  );
+  return <ResetPasswordForm token={token} onBack={onBackToLogin} onDone={() => setDone(true)} />;
 }
 
 function ResetPasswordForm({
@@ -89,13 +88,21 @@ function ResetPasswordForm({
   const errorMessage = useErrorMessage();
   const toast = useAppToast();
 
+  /*
+   * Dựng lại schema khi ngôn ngữ đổi — LUẬT ở `@xeprime/validators`, chỉ câu chữ đi vào từ đây.
+   * `useMemo` vì `yupResolver` nhận object mới mỗi nhịp thì RHF xác thực lại toàn form sau từng
+   * phím gõ.
+   */
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildResetPasswordSchema(labels), [labels]);
+
   const {
     control,
     handleSubmit,
     formState: { isValid },
   } = useForm<ResetPasswordValues>({
     mode: 'onChange',
-    resolver: yupResolver(resetPasswordSchema),
+    resolver: yupResolver(schema),
     defaultValues: { password: '', confirmPassword: '' },
   });
 

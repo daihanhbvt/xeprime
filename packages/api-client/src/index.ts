@@ -6,6 +6,8 @@
  *
  * Cách cấu hình ở mỗi app: xem `README.md` của package.
  */
+export { STALE_TIME } from './cache';
+
 export {
   createApiClient,
   configureApiClient,
@@ -74,7 +76,12 @@ export {
 export {
   marketplaceApi,
   toListingQueryParams,
+  publicQuote,
+  deliveryDistance,
   DEFAULT_LISTING_LIMIT,
+  type PublicQuote,
+  type PublicQuoteParams,
+  type DeliveryDistance,
 } from './features/marketplace/api';
 export { authApi, mobileAuthApi } from './features/auth/api';
 export type {
@@ -93,3 +100,112 @@ export type {
   ResetPasswordInput,
   SetPasswordInput,
 } from './features/auth/types';
+
+// Booking / Rental (BKG-01 → 16, FIN-05/06)
+export {
+  bookingRequestsApi,
+  bookingRequestFiltersToParams,
+  BOOKING_REQUESTS_DEFAULT_LIMIT,
+  BOOKING_REQUEST_STATUS_ALL,
+  BUSY_DAYS_LOOKAHEAD,
+  type ApproveBookingRequestInput,
+  type BookingRequestConversation,
+  type BookingRequestFilters,
+  type BookingRequestItem,
+  type BookingRequestListMeta,
+  type BookingRequestListResult,
+  type BookingRequestReceipt,
+  type BookingRequestStatusCount,
+  type CheckAvailabilityInput,
+  type CheckAvailabilityResult,
+  type CreateBookingRequestInput,
+  type VehicleBusyDays,
+} from './features/booking-requests/api';
+
+export {
+  tripsApi,
+  tripsToParams,
+  TRIPS_DEFAULT_LIMIT,
+  type CustomerSurcharge,
+  type CustomerTrip,
+  type CustomerTripCounts,
+  type CustomerTripDetail,
+  type CustomerTripFinance,
+  type CustomerTripHandoverEvidence,
+  type CustomerTripHandoverEvidencePhoto,
+  type CustomerTripReview,
+  type PrivateFileTicket,
+  type TripsResult,
+} from './features/trips/api';
+
+export {
+  bookingsApi,
+  bookingFiltersToParams,
+  BOOKINGS_DEFAULT_LIMIT,
+  type BookingDetail,
+  type BookingDriverSummary,
+  type BookingFilters,
+  type BookingListItem,
+  type BookingSort,
+  type CheckConflictInput,
+  type QuoteBreakdown,
+  type StaffQuoteParams,
+  type CheckConflictResult,
+  type CreateBookingInput,
+  type TransitionBookingInput,
+  type UpdateBookingInput,
+  type UpdateDeliveryFeeInput,
+} from './features/bookings/api';
+
+export {
+  driversApi,
+  type AssignableDriver,
+  type AssignableWindow,
+  type Driver,
+} from './features/drivers/api';
+
+export {
+  contractsApi,
+  type Contract,
+  type ContractSnapshot,
+} from './features/contracts/api';
+
+export {
+  handoversApi,
+  type ConfirmHandoverInput,
+  type Handover,
+  type HandoverBelowPickupDetails,
+  type HandoverContext,
+  type HandoverDownload,
+  type HandoverPhoto,
+  type HandoverPresign,
+  type HandoverSuspicionDetails,
+  type HandoverUploadMeta,
+  type MissingOdometerItem,
+  type ResolveOdometerInput,
+  type SaveHandoverInput,
+} from './features/handovers/api';
+
+export { paymentsApi, type Payment, type RecordPaymentInput } from './features/payments/api';
+
+export {
+  settlementApi,
+  type BookingSettlement,
+  type BookingSurcharge,
+  type CorrectRefundInput,
+  type DepositRefund,
+  type OvertimeSuggestion,
+  type RecordRefundInput,
+  type SaveSurchargeInput,
+} from './features/settlement/api';
+
+
+export { reviewsApi, type CreateReviewInput } from './features/reviews/api';
+
+export {
+  vehiclesApi,
+  vehicleFiltersToParams,
+  VEHICLES_DEFAULT_LIMIT,
+  type VehicleFilters,
+  type VehicleListItem,
+} from './features/vehicles/api';

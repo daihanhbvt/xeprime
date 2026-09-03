@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useTranslations } from 'use-intl';
 import { useAppToast } from '@/components/feedback/use-app-toast';
 import type { CurrentUser } from '@/features/auth/api';
-import { enterApp } from '@/features/auth/enter-app';
+import { useEnterApp } from '@/features/auth/hooks/use-enter-app';
 import { LoginScreen } from '@/features/auth/LoginScreen';
 import {
   postLoginDestination,
@@ -15,6 +15,7 @@ export default function LoginRoute() {
   const router = useRouter();
   const t = useTranslations('Auth');
   const toast = useAppToast();
+  const enterApp = useEnterApp();
 
   /**
    * Chỗ DUY NHẤT biết "đăng nhập xong thì đi đâu" — đúng vai `finish()` của `AuthPanel` bên web.
@@ -30,7 +31,7 @@ export default function LoginRoute() {
       return;
     }
 
-    enterApp(router);
+    enterApp(user);
   }
 
   return (

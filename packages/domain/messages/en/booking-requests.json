@@ -25,14 +25,12 @@
   },
   "vehicle": {
     "heading": "Requested vehicle",
-    "openDetail": "Open the profile for {name}",
     "noImage": "No vehicle photo yet",
     "viewSchedule": "Vehicle schedule",
     "viewScheduleFor": "View the rental schedule for {vehicle}"
   },
   "customer": {
     "heading": "Customer",
-    "openProfile": "Open the customer profile for {name}",
     "noProfile": "Not in your customer book yet",
     "riskWarning": "{level} — double-check before approving"
   },
@@ -142,8 +140,7 @@
     "emptyFilteredBody": "Switch to another tab to see the remaining requests.",
     "emptySearchTitle": "No request found",
     "emptySearchBody": "Try a shorter keyword, or drop a filter to see the whole inbox again.",
-    "errorTitle": "Could not load the request list",
-    "refreshing": "Refreshing the list…"
+    "errorTitle": "Could not load the request list"
   },
   "flow": {
     "title": "Rental request",
@@ -161,7 +158,8 @@
       "modeDaily": "Daily rental",
       "modeHourly": "Hourly rental",
       "changeHint": "tap the field to change",
-      "unavailable": "This car is already booked for that period. Please pick another time."
+      "unavailable": "This car is already booked for that period. Please pick another time.",
+      "fieldLabel": "Rental period"
     },
     "pickup": {
       "legend": "How you get the car",
@@ -206,7 +204,8 @@
       "editPhone": "Change phone number",
       "resend": "Resend code",
       "resendIn": "Resend ({seconds}s)",
-      "sessionExpired": "Your session has expired. Please verify your phone number again."
+      "sessionExpired": "Your session has expired. Please verify your phone number again.",
+      "editPhoneShort": "Change number"
     },
     "review": {
       "vehicle": "Car",
@@ -315,11 +314,30 @@
         "supportTitle": "24/7 support",
         "supportDesc": "Help whenever you need it"
       },
-      "windowValue": "{start} – {end}"
+      "windowValue": "{start} – {end}",
+      "datePlaceholder": "Pick your preferred pickup date"
     },
     "cta": "Select this car",
     "stepsLabel": "Booking progress",
-    "stepDone": "(done)"
+    "stepDone": "(done)",
+    "validation": {
+      "nameRequired": "Enter your full name",
+      "nameTooLong": "Full name can be at most {max} characters",
+      "phoneRequired": "Enter your phone number",
+      "phoneInvalid": "That phone number is not valid",
+      "emailInvalid": "That email address is not valid",
+      "serviceRequired": "Pick a service",
+      "pickupAtRequired": "Pick a pickup time",
+      "returnAtRequired": "Pick a return time",
+      "packageRequired": "Pick a rental package",
+      "pickupPreferenceRequired": "Pick when you would like the car",
+      "requestedPickupDateRequired": "Pick your preferred pickup date",
+      "routeRequired": "Pick a route type",
+      "pickupAddressRequired": "Enter the pickup address",
+      "destinationRequired": "Enter the destination",
+      "deliveryAddressRequired": "Enter the delivery address",
+      "noteTooLong": "Note can be at most {max} characters"
+    }
   },
   "approved": {
     "title": "Booking created",

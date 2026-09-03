@@ -186,7 +186,7 @@ thứ hai của client HTTP — hai app khác nhau đúng ở `AuthTransport` (m
 apps/mobile/
 ├── app/                          # route file-based của expo-router (tên file = URL)
 │   ├── _layout.tsx               #   provider gốc + ErrorBoundary toàn app + chuyển cảnh
-│   ├── index.tsx                 #   "/" — điểm vào, chuyển thẳng sang /explore (khách xem được)
+│   ├── index.tsx                 #   "/" — BOOTSTRAP: đọc khu đã nhớ + /auth/me → Khách hay Quản lý
 │   ├── +not-found.tsx            #   route lạ / deep link hỏng
 │   ├── (tabs)/                   #   thanh tab đáy; ba mục cần đăng nhập tự ẩn khi chưa có phiên
 │   │   ├── _layout.tsx
@@ -201,7 +201,18 @@ apps/mobile/
 │   ├── set-password.tsx          #   gợi ý đặt mật khẩu sau khi đăng nhập OTP
 │   ├── auth/callback.tsx         #   chặng quay về của OAuth (ADR 0019)
 │   ├── search.tsx                #   kết quả tìm xe
-│   └── listings/[id].tsx         #   chi tiết xe
+│   ├── listings/[id].tsx         #   chi tiết xe
+│   ├── listings/[id]/request.tsx #   BKG-01 — wizard gửi yêu cầu thuê (CÔNG KHAI)
+│   ├── trips/[id].tsx            #   BKG-15/16 — chi tiết chuyến của khách
+│   └── manage/                   #   NAVIGATOR B — khu quản lý gian hàng (segment THẬT, trùng web)
+│       ├── _layout.tsx           #     <Tabs> riêng + <ScopeGuard>
+│       ├── index.tsx             #     "/manage"          — tổng quan + trạng thái gian hàng
+│       ├── requests.tsx          #     BKG-02→05 — hộp thư yêu cầu
+│       ├── bookings/             #     Stack trong tab: danh sách → chi tiết → biên bản/tiền
+│       │   ├── index.tsx         #       BKG-07 — danh sách đơn
+│       │   ├── new.tsx           #       BKG-06 — tạo đơn tại quầy
+│       │   └── [id]/             #       BKG-08/12/13 · BKG-09 · BKG-10/11 · FIN-05/06
+│       └── more.tsx              #     "/manage/more" — đổi khu, ngôn ngữ
 ├── assets/images/                # ảnh tĩnh (icon/splash khai ở app.json, phải là PNG vuông)
 ├── docs/trackingProject/*.html   # bảng theo dõi task (nguồn ưu tiên P0→P3 của app)
 └── src/
@@ -212,8 +223,16 @@ apps/mobile/
     │   ├── feedback/             #   ⚠️ TOAST DÙNG CHUNG — AppToastProvider + useAppToast()
     │   ├── state/                #   ScreenLoading · ScreenError · ScreenMessage · AppErrorScreen
     │   ├── ui/                   #   Button · TextField · Card · Chip · IconButton · Avatar · Skeleton · StatusIcon
+    │   │                         #   ⚠️ BottomSheet · SearchInput · StatusBadge — DÙNG CHUNG,
+    │   │                         #      đừng dựng Modal/ô tìm/nhãn trạng thái riêng cho từng màn
     │   └── i18n/LocaleSwitcher.tsx
     ├── features/<miền>/          # api.ts · hooks/ · components/ — cắt theo NGHIỆP VỤ
+    │   ├── shell/                #   VỎ app: khu Khách ↔ Quản lý (slice · ScopeGuard · switcher)
+    │   ├── booking-requests/     #   BKG-01→05 — wizard gửi yêu cầu + hộp thư duyệt
+    │   ├── bookings/             #   BKG-06→08, 12, 13 — danh sách · chi tiết · tạo tay
+    │   ├── handovers/            #   BKG-09 — biên bản giao/nhận + ảnh hiện trạng (camera)
+    │   ├── settlement/           #   BKG-10/11 + FIN-05/06 — quyết toán · phụ phí · thu tiền
+    │   └── trips/                #   BKG-15/16 — chuyến của khách + đánh giá
     ├── hooks/                    # hook dùng chung không thuộc miền nào
     ├── i18n/                     # config · formats · provider · messages · intl-polyfill
     │                             #   app-format/domain: BẢN SAO của apps/web (xem §7)
@@ -226,7 +245,8 @@ apps/mobile/
 ```
 
 Tên nhóm trong ngoặc (`(tabs)`) **không xuất hiện trong URL** — route thật là `/explore`,
-`/account`. Nhóm chỉ để gắn layout.
+`/account`. Nhóm chỉ để gắn layout. Ngược lại `manage/` **không** có ngoặc: nó là segment thật,
+cố ý trùng web để `xeprime://manage/...` và `https://xeprime.vn/manage/...` ánh xạ 1-1.
 
 **Đừng viết chuỗi đường dẫn thẳng trong component**: mọi đích đi qua
 [src/navigation/routes.ts](src/navigation/routes.ts), một namespace cho mỗi miền. Thêm màn hình
@@ -242,8 +262,8 @@ Không viết gọi API hay business logic thẳng trong file route.
 
 ## 3. Luồng khởi động
 
-Thứ tự provider không tuỳ tiện — mỗi lớp cần lớp trước nó. Mở app là vào thẳng **Marketplace ở
-chế độ khách**: khu công khai không dựng tường đăng nhập trước cửa (web cũng vậy).
+Thứ tự provider không tuỳ tiện — mỗi lớp cần lớp trước nó. Màn `/` là **Bootstrap**: nó hỏi
+`/auth/me` và lựa chọn khu lần trước, rồi mới quyết định vào khu nào.
 
 ```mermaid
 flowchart TD
@@ -251,14 +271,25 @@ flowchart TD
   B --> C["I18nProvider<br/>cần store để đọc locale"]
   C --> D["QueryClientProvider"]
   D --> AT["AppToastProvider<br/>sống ngoài Stack để toast qua được điều hướng"]
-  AT --> E["SessionBoundary<br/>nghe sự kiện phiên kết thúc"]
+  AT --> E["SessionBoundary<br/>nghe phiên kết thúc · refetch /auth/me khi app về tiền cảnh"]
   E --> F["Stack — điều hướng"]
-  F --> G["/ → Redirect"]
-  G --> J["/explore — khách xem được"]
+  F --> G["/ — Bootstrap<br/>khu đã nhớ + /auth/me, TRẦN CHỜ 2.5s"]
+  G -->|"resolveInitialScope"| J["/explore — Navigator A, khách xem được"]
+  G -->|"tenant active + đã nhớ"| M["/manage — Navigator B, sau ScopeGuard"]
+  J <-->|"switcher — replace, không push"| M
   J -->|"nút Đăng nhập"| I["/login ⇄ /register"]
-  I -->|"phiên đã cấp"| K["enterApp() — dismissAll()"]
-  K --> J
+  I -->|"phiên đã cấp"| K["useEnterApp() — cùng luật với Bootstrap"]
+  K --> J & M
 ```
+
+**Khi không chắc, vào Navigator A.** Chưa đăng nhập, mạng hỏng, `/auth/me` quá 2.5 giây — cả ba
+đều dẫn về khu khách: marketplace là khu công khai nên vẫn dùng được, còn đưa nhầm người vào khu
+quản lý là một dashboard rỗng hoặc một loạt 403. Không có trần thời gian thì API treo = app treo
+ở màn mở, và người dùng không có thao tác nào để ra khỏi đó.
+
+Luật suy khu là hàm thuần `resolveInitialScope` ở
+[`@xeprime/domain/app-scope`](../../packages/domain/src/app-scope.ts) — test được mà không cần
+dựng router, và dùng chung một chỗ cho cả lúc mở app lẫn lúc vừa đăng nhập.
 
 `ErrorBoundary` của expo-router nằm **ngoài** toàn bộ khối này (lỗi có thể đến từ chính các
 provider), nên `AppErrorScreen` tự dựng lại `IntlProvider` ở ngôn ngữ mặc định.
@@ -457,8 +488,14 @@ Luật:
 | --------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Dữ liệu server  | **TanStack Query**                                | `src/features/*/hooks/`, key lấy từ `src/queries/query-keys.ts`                                 |
 | Form            | **React Hook Form + Yup** (`@xeprime/validators`) | cục bộ trong màn/modal, không đẩy lên global                                                    |
-| UI/client state | **Redux Toolkit**                                 | slice sống cùng feature sở hữu nó (vd `src/i18n/locale.slice.ts`); `src/store/` chỉ **đăng ký** |
+| UI/client state | **Redux Toolkit**                                 | slice sống cùng feature sở hữu nó (`src/i18n/locale.slice.ts`, `src/features/shell/shell-scope.slice.ts`); `src/store/` chỉ **đăng ký** |
 | Bí mật          | **expo-secure-store**                             | qua `src/lib/secure-storage.ts`, khoá khai trong `SECURE_KEY`                                   |
+
+Khu app đang mở (`shellScope`) là UI state **đúng nghĩa**: người dùng chọn nó. Cái KHÔNG nằm
+trong đó — `tenant`, `permissions`, token — vì chép dữ liệu server vào store là dựng một nguồn
+sự thật thứ hai, và nó ôi đúng vào lúc quyền bị thu hồi. Lựa chọn khu lần trước ghi xuống
+`SECURE_KEY.SHELL_SCOPE` dưới dạng **đúng một chuỗi** `"customer"`/`"manage"` (cùng kiểu với
+`LOCALE`): không tenantId, không quyền, không token.
 
 Slice đặt cạnh feature để phụ thuộc chỉ đi **một chiều** `store → feature`. Đặt hết vào
 `store/slices/` sẽ tạo vòng phụ thuộc ngay khi slice cần hằng số của feature.
@@ -526,6 +563,11 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 - Màn hình KHÔNG dựng thẻ/viên/nút từ `XStack` trần: dùng `src/components/ui/` (`Card`, `Chip`,
   `Button`, `IconButton`, `Avatar`, `TextField`, `Skeleton`, `StatusIcon`). Đó là chỗ độ nổi, bo góc và vùng
   chạm được quyết định MỘT lần — dựng tay ở từng màn là mỗi màn một kiểu.
+- **Mọi lịch tháng đi qua [`<MonthGrid>`](src/components/ui/MonthGrid.tsx)**, dựng trên
+  `react-native-calendars`. Thư viện lo cơ học lịch (trang tháng, ngày của tháng kề, bố cục
+  tuần); tiêu đề · nhãn thứ · cách vẽ một ô là của mình — đúng như web bọc `react-day-picker` và
+  tự viết `DayButton`. Trạng thái từng ngày (bận, đang chọn, khoá) đi qua `marks`, KHÔNG qua
+  closure: `Day` của thư viện chỉ vẽ lại ô có `mark` đổi, nên thứ nằm ngoài `marks` sẽ đứng yên.
 - **Thanh trên của mọi màn đi qua [`<AppHeader>`](src/components/layout/AppHeader.tsx)**, không
   dựng `XStack` riêng. Hai biến thể: `solid` (nền đặc, kẻ dưới) và `overlay` (nổi trên ảnh tràn
   viền). Thiếu thứ bạn cần thì **thêm biến thể vào chính file đó**, đừng rẽ nhánh ở màn hình.
@@ -582,6 +624,8 @@ Thư viện UI là **Tamagui** ([src/theme/tamagui.config.ts](src/theme/tamagui.
 | `react-native-reanimated`                      | Side-effect import ở `_layout.tsx`, **không xoá** dù trông như import thừa — expo-router dùng nó cho animation của navigator                                                                                                                                                                                               |
 | [jest.setup.js](jest.setup.js)                 | Mock `expo-secure-store` là bản **trong bộ nhớ**, không phải mock từng lời gọi — test vòng đời token cần "ghi rồi đọc lại được". CỐ Ý không require `@/lib/auth-session` ở đây: nạp nó trong setup là chạy trước `jest.mock('expo-constants')` của file test              |
 | Test RNTL v14                                  | `render`, `fireEvent`, `renderHook` đều **async** — thiếu `await` là `result` chưa tồn tại                                                                                                                                                                                                                                 |
+| `@tamagui/core`                                | Phải là dependency **tường minh** của app dù không file nào import nó: `@tamagui/babel-plugin` viết lại `import … from 'tamagui'` thành `@tamagui/core` cho những component nó tối ưu được. Với pnpm, core chỉ nằm trong `.pnpm/tamagui@…/node_modules` — nơi Metro không bao giờ leo tới. Triệu chứng: `Unable to resolve module @tamagui/core from …` ở một file trông chẳng liên quan, và chỉ lộ ra khi file đó lọt vào graph |
+| `react-native-calendars`                       | Package **không khai peerDependencies nào**, nên pnpm chẳng có gì để nối và Node/Metro leo lên `.pnpm/node_modules` lấy `react` của `apps/web` (19.2.x) trong khi app chạy 19.1.x. Hai bản React = dispatcher `null`: `Cannot read properties of null (reading 'useState')` ném ra từ trong lòng thư viện. Sửa bằng `packageExtensions` ở [pnpm-workspace.yaml](../../pnpm-workspace.yaml) — **đừng gỡ**, và thư viện native nào khác thiếu peer thì thêm y như vậy |
 
 ---
 
@@ -607,6 +651,28 @@ Universal Links (liên kết đặt lại mật khẩu trong email vì thế m�
 chung: `docs/completion-roadmap.md`.
 
 ---
+
+### Module Booking / Rental (27/08/2026)
+
+Vòng đời một chuyến thuê đã chạy trọn trên app: khách đặt → shop duyệt → giao xe → nhận xe →
+quyết toán → khách đánh giá.
+
+| Phase | Dòng tracking | Ở đâu |
+| --- | --- | --- |
+| P0 vỏ Navigator B | — | `src/features/shell/` · `app/manage/` |
+| P1 khách | BKG-01, 15, 16 · MKT-06 | `src/features/booking-requests/` (wizard) · `src/features/trips/` |
+| P2 hộp thư yêu cầu | BKG-02→05 | `src/features/booking-requests/BookingRequestInboxScreen.tsx` |
+| P3 đơn thuê | BKG-07, 08, 12, 13 | `src/features/bookings/` |
+| P4 biên bản bàn giao | BKG-09 | `src/features/handovers/` |
+| P5 quyết toán & tiền | BKG-10, 11 · FIN-05/06 | `src/features/settlement/` |
+| P6 tạo đơn tại quầy | BKG-06 | `src/features/bookings/CreateBookingScreen.tsx` |
+| P7 hợp đồng | BKG-14 | ⛔ **CHẶN** — cần endpoint xuất PDF ở server |
+
+**Cần dựng lại dev client**: P4 thêm `expo-image-picker` + `expo-image-manipulator` (camera
+cho ảnh hiện trạng), và khai plugin `expo-image-picker` trong `app.json` với hai chuỗi xin quyền.
+Plugin đó KHÔNG phải trang trí: thiếu nó thì iOS crash ngay lúc xin quyền (Info.plist không có
+`NSCameraUsageDescription`) và App Store từ chối bản build. Bản dev client cũ sẽ nổ ở màn biên
+bản bàn giao — `pnpm --filter @xeprime/mobile android` (hoặc `ios`) để dựng lại.
 
 ## 11. Đánh giá kiến trúc — **8.5 / 10**
 

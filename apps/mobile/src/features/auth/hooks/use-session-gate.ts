@@ -16,16 +16,27 @@ export interface SessionGate {
   retry: () => void;
 }
 
+/**
+ * `READY` nghĩa là **ĐÃ CÓ người dùng trong tay**, không phải "truy vấn không lỗi".
+ *
+ * Phân biệt này là hợp đồng mà `useAuthenticatedUser()` dựa vào để được phép NÉM khi thiếu dữ
+ * liệu. Chỉ hỏi `!me.isError` là để hở một cửa sổ: `resetQueries` (đăng xuất · refresh token bị
+ * từ chối · `SessionBoundary`) đưa `auth.me` về `data: undefined`, cổng vẫn đọc ra `READY`, và
+ * màn được bảo vệ gọi `useAuthenticatedUser()` rồi nổ.
+ *
+ * Chưa có dữ liệu thì đó là ĐANG TẢI, không phải sẵn sàng — cả `RequireSession` lẫn `ScopeGuard`
+ * đều nhận cách hiểu đó từ đây.
+ */
 export function useSessionGate(): SessionGate {
   const me = useCurrentUser();
 
-  const status: SessionStatus = me.isPending
-    ? SESSION_STATUS.LOADING
-    : !me.isError
+  const status: SessionStatus = me.isError
+    ? isUnauthenticated(me.error)
+      ? SESSION_STATUS.UNAUTHENTICATED
+      : SESSION_STATUS.UNREACHABLE
+    : me.data
       ? SESSION_STATUS.READY
-      : isUnauthenticated(me.error)
-        ? SESSION_STATUS.UNAUTHENTICATED
-        : SESSION_STATUS.UNREACHABLE;
+      : SESSION_STATUS.LOADING;
 
   return { status, error: me.error, retry: () => void me.refetch() };
 }

@@ -70,9 +70,7 @@ describe('OtpLoginForm', () => {
     // Gõ đủ 6 số là đăng nhập luôn — không bắt bấm thêm nút sau khi đã gõ xong.
     await fireEvent.changeText(await view.findByLabelText('OTP'), '123456');
 
-    await waitFor(() =>
-      expect(login).toHaveBeenCalledWith('0901000003', '123456'),
-    );
+    await waitFor(() => expect(login).toHaveBeenCalledWith('0901000003', '123456'));
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
   });
 
@@ -86,9 +84,7 @@ describe('OtpLoginForm', () => {
 
     await fireEvent.changeText(await view.findByLabelText('OTP'), '123-456');
 
-    await waitFor(() =>
-      expect(login).toHaveBeenCalledWith('0901000003', '123456'),
-    );
+    await waitFor(() => expect(login).toHaveBeenCalledWith('0901000003', '123456'));
   });
 
   it('hiện mã dev khi backend trả devCode', async () => {

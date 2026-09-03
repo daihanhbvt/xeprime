@@ -63,8 +63,19 @@ export function Card({
 
   if (!onPress) return body;
 
-  return <PressableCard onPress={onPress} label={accessibilityLabel}>{body}</PressableCard>;
+  return (
+    <PressableCard onPress={onPress} label={accessibilityLabel}>
+      {body}
+    </PressableCard>
+  );
 }
+
+/** Thẻ lún xuống bao nhiêu khi bị nhấn — đủ để cảm được, không đủ để thành một cú nảy. */
+const PRESS_SCALE_DELTA = 0.02;
+const PRESS_OPACITY_DELTA = 0.12;
+
+/** Lún NHANH hơn lúc bật lại: ấn xuống phải bám ngón tay, thả ra thì thong thả hơn. */
+const PRESS_IN_DURATION_RATIO = 0.6;
 
 /**
  * Phản hồi khi nhấn: lún xuống rồi bật lại, chạy trên UI thread.
@@ -84,8 +95,8 @@ function PressableCard({
   const pressed = useSharedValue(0);
 
   const style = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 - pressed.value * 0.02 }],
-    opacity: 1 - pressed.value * 0.12,
+    transform: [{ scale: 1 - pressed.value * PRESS_SCALE_DELTA }],
+    opacity: 1 - pressed.value * PRESS_OPACITY_DELTA,
   }));
 
   const to = (value: number, ms: number) => {
@@ -100,7 +111,7 @@ function PressableCard({
       onPress={onPress}
       accessibilityRole="button"
       {...(label ? { accessibilityLabel: label } : {})}
-      onPressIn={() => to(1, duration.fast * 0.6)}
+      onPressIn={() => to(1, duration.fast * PRESS_IN_DURATION_RATIO)}
       onPressOut={() => to(0, duration.fast)}
     >
       <Animated.View style={style}>{children}</Animated.View>

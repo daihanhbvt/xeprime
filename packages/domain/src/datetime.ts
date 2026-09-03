@@ -105,6 +105,19 @@ export function startOfAppDay(day: string): Dayjs {
   return dayjs.tz(`${day}T00:00:00`, APP_TIME_ZONE);
 }
 
+const MINUTES_PER_DAY = 1440;
+
+/**
+ * Số ngày TÍNH TIỀN của một khoảng thuê — trùng công thức `PricingService.chargedDays` của server.
+ *
+ * Ở đây chỉ để XEM TRƯỚC: con số có thẩm quyền luôn đến từ báo giá của server. Nó nằm trong
+ * package dùng chung vì web và app native đều phải nói CÙNG một con số — hai bản chép tay là hai
+ * lần cơ hội để chúng lệch nhau.
+ */
+export function chargedDays(from: Dayjs, to: Dayjs): number {
+  return Math.max(1, Math.ceil(to.diff(from, 'minute') / MINUTES_PER_DAY));
+}
+
 /** Phần ngày/giờ của một thời lượng thuê — con số thuần, chưa có chữ. */
 export interface RentalDurationParts {
   readonly days: number;
@@ -123,8 +136,8 @@ export interface RentalDurationParts {
  */
 export function rentalDurationParts(from: Dayjs, to: Dayjs): RentalDurationParts {
   const minutes = Math.max(0, to.diff(from, 'minute'));
-  const days = Math.floor(minutes / 1440);
-  const hours = Math.round((minutes % 1440) / 60);
+  const days = Math.floor(minutes / MINUTES_PER_DAY);
+  const hours = Math.round((minutes % MINUTES_PER_DAY) / 60);
   return days <= 0 ? { days: 0, hours: Math.max(1, hours) } : { days, hours };
 }
 

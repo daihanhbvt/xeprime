@@ -10,7 +10,8 @@ import { ListRowSkeleton } from '@/components/ui/Skeleton';
 import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { appStyles } from '@/theme/styles';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
 import { SectionError } from './SectionError';
 
@@ -108,7 +109,7 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
         Tách ra thì chạm vào tấm trượt không bao giờ tới lớp phủ, mà cũng chẳng có gì chặn cuộn.
       */}
       <YStack f={1}>
-        <Pressable style={{ flex: 1, backgroundColor: colors.overlay }} onPress={onClose} />
+        <Pressable style={appStyles.scrim} onPress={onClose} />
         <YStack>
           <YStack
             h={height * SHEET_RATIO}
@@ -144,7 +145,7 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
                 px={layout.screenX}
                 minHeight={sizing.touchTarget}
               >
-                <Ionicons name="search" size={16} color={colors.textMuted} />
+                <Ionicons name="search" size={iconSize.sm} color={colors.textMuted} />
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
@@ -176,7 +177,10 @@ export function LocationPicker({ open, onClose, onSelect }: LocationPickerProps)
                 data={matches}
                 keyExtractor={provinceKey}
                 keyboardShouldPersistTaps="handled"
-                contentContainerStyle={{ paddingHorizontal: layout.screenX, paddingBottom: space.lg }}
+                contentContainerStyle={{
+                  paddingHorizontal: layout.screenX,
+                  paddingBottom: space.lg,
+                }}
                 ListHeaderComponent={
                   <YStack gap={space.sm}>
                     {popular.length > 0 ? (
@@ -263,7 +267,11 @@ function Row({
         br={radius.md}
         bg={selected ? colors.surfaceSelected : 'transparent'}
       >
-        <Ionicons name={icon} size={17} color={selected ? colors.primaryActive : colors.textMuted} />
+        <Ionicons
+          name={icon}
+          size={17}
+          color={selected ? colors.primaryActive : colors.textMuted}
+        />
         <Text
           f={1}
           col={colors.text}

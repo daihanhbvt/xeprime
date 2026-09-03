@@ -43,7 +43,9 @@
     "print": "Print",
     "restore": "Restore",
     "done": "Done",
-    "agree": "OK"
+    "agree": "OK",
+    "choose": "Select…",
+    "now": "Now"
   },
   "states": {
     "loading": "Loading…",
@@ -59,7 +61,8 @@
     "noResults": "No matching results",
     "loadMore": "Load more",
     "endOfList": "You've reached the end",
-    "loadError": "Couldn't load the data"
+    "loadError": "Couldn't load the data",
+    "featureComingSoon": "This feature is coming soon."
   },
   "labels": {
     "yes": "Yes",
@@ -116,7 +119,10 @@
     "total": "{count, plural, one {# item} other {# items}}",
     "range": "{from}–{to} of {total}",
     "page": "Page {page}",
-    "rowsPerPage": "Rows per page"
+    "rowsPerPage": "Rows per page",
+    "previous": "Previous page",
+    "next": "Next page",
+    "goToPage": "Go to page {page}"
   },
   "locale": {
     "switchLabel": "Language",
@@ -183,6 +189,9 @@
       "returnBeforePickup": "The return time must be after the pick-up time",
       "placeholder": "Choose your pick-up and return dates",
       "placeholderMinDays": "Choose your pick-up and return dates ({count, plural, one {# day} other {# days}} minimum)",
+      "momentDrawerTitle": "Pick pickup date & time",
+      "momentPlaceholder": "Pick the pickup date and time",
+      "pickTime": "Pick a time",
       "busy": {
         "loading": "Loading the vehicle's schedule…",
         "legendSelected": "Selected",
@@ -195,6 +204,21 @@
         "conflict": "Your selection overlaps a booked slot ({period} on {date}). Please pick different hours.",
         "hourlyUnavailable": "Overlaps a booked slot"
       }
+    },
+    "moment": {
+      "hour": "Hour",
+      "minute": "Minute",
+      "date": "Date",
+      "time": "Time"
     }
+  },
+  "filters": {
+    "title": "Filters",
+    "activeCount": "{count, plural, one {# filter active} other {# filters active}}",
+    "reset": "Clear filters",
+    "open": "Open filters",
+    "subtitle": "Narrow the list down by criteria",
+    "chip": "{label}: {value}",
+    "none": "No filters applied yet"
   }
 }

@@ -3,10 +3,9 @@ import { XP_TOKENS, toPx, type XpTokenName } from '@xeprime/ui';
 /**
  * Cầu nối giữa design token dùng chung (`@xeprime/ui`) và StyleSheet của React Native.
  *
- * `XP_TOKENS` là NGUỒN DUY NHẤT cho mọi client (ADR 0003) — web đọc qua CSS custom property,
- * app native đọc thẳng ở đây. Trước đó `theme/colors.ts` giữ một bảng màu xám tự chế: app
- * native hiển thị primary màu đen `#111827` trong khi web hiển thị gold `#d6a02c`, tức hai
- * client cùng thương hiệu mà khác hẳn mặt.
+ * `XP_TOKENS` là NGUỒN DUY NHẤT cho mọi client (ADR 0003) — web đọc qua CSS custom property, app
+ * native đọc thẳng ở đây. Một bảng màu riêng cho native là hai client cùng thương hiệu mà khác
+ * hẳn mặt.
  *
  * Hai việc file này phải làm vì token viết bằng ngôn ngữ CSS:
  *   1. Gỡ bí danh `var(--xp-...)` — một số token trỏ về token khác thay vì giữ giá trị.
@@ -92,6 +91,35 @@ export const colors = {
   price: resolve('color-price'),
   discount: resolve('color-discount'),
   onDiscount: resolve('color-discount-contrast'),
+} as const;
+
+/**
+ * Bảng màu NỀN TỐI của vỏ khu quản lý — sidebar và thanh trên của nó.
+ *
+ * Là một bộ RIÊNG, không phải bảng sáng ở trên tô tối lại: trên `bg` thì `colors.textMuted`
+ * chỉ đạt 2.99:1 và `primaryActive` 4.33:1 — cả hai trượt AA. Web đã đo và chốt bộ này ở
+ * `packages/ui/src/tokens/index.ts` (`shell-sidebar-*`), đây là bản native của đúng nó.
+ *
+ * Bốn giá trị dẫn xuất phải TÍNH SẴN thành hex vì web khai chúng bằng `color-mix()`, thứ
+ * React Native không hiểu (`resolve()` sẽ ném). Công thức và tương phản đo lại giữ nguyên:
+ *
+ * ```
+ * hover      = 8%  text  trên bg
+ * selectedBg = 14% active trên bg   → chữ `text` trên đó đạt 10.54
+ * muted      = 62% text  trên bg    → 5.96
+ * border     = 14% text  trên bg
+ * ```
+ *
+ * Đổi một trong ba màu gốc thì phải tính lại bốn giá trị này — `sidebar.test.ts` khoá chúng.
+ */
+export const sidebar = {
+  bg: resolve('shell-sidebar-bg'),
+  text: resolve('shell-sidebar-text'),
+  active: resolve('shell-sidebar-active'),
+  hover: '#2e2b26',
+  selectedBg: '#382e19',
+  muted: '#9b9891',
+  border: '#3a3732',
 } as const;
 
 /** Thang khoảng cách Figma: 4 · 8 · 16 · 24 · 32, không có giá trị nào khác. */

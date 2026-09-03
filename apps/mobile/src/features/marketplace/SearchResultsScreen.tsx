@@ -1,11 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, type LayoutChangeEvent } from 'react-native';
-import Animated, {
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
+import { Pressable, ScrollView } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -30,11 +26,14 @@ import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { VehicleCardSkeleton } from '@/components/ui/Skeleton';
 import { useCatalog, useCatalogLabels } from '@/features/catalog/use-catalog';
+import { useCollapseOnScroll } from '@/hooks/use-collapse-on-scroll';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
+import { appStyles } from '@/theme/styles';
+import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { scrollThrottle } from '@/theme/motion';
 import { SearchExperienceProvider, useSearchExperience } from './search-context';
 import { useInfinitePublicListings } from './hooks/use-search-results';
 import { FilterSheet } from './components/FilterSheet';
@@ -120,56 +119,23 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
   const results = useInfinitePublicListings(filters);
 
   /*
-   * Khối lọc ẩn khi cuộn XUỐNG, hiện lại khi cuộn LÊN — cùng cử chỉ với thanh tìm kiếm ở trang
-   * chủ. Nó chiếm gần một phần ba màn; giữ nguyên tại chỗ thì đọc danh sách chỉ còn hai thẻ xe
-   * một khung hình.
-   *
-   * Trượt theo CHIỀU cuộn chứ không theo độ sâu: người ta cuộn ngược lên là đang muốn đổi tiêu
-   * chí, phải với tới ngay chứ không phải cuộn hết về đầu trang mới thấy.
+   * Khối lọc ẩn khi cuộn XUỐNG, hiện lại khi cuộn LÊN. Nó chiếm gần một phần ba màn; giữ nguyên
+   * tại chỗ thì đọc danh sách chỉ còn hai thẻ xe một khung hình.
    *
    * Chiều cao đo bằng `onLayout` chứ không đoán: số chip "đang lọc" đổi theo từng lựa chọn nên
    * khối này cao thấp khác nhau, gõ cứng một con số là chừa hụt hoặc chừa thừa.
    */
-  const [filterHeight, setFilterHeight] = useState(0);
-  const lastOffset = useSharedValue(0);
-  /** Đã trượt lên bao nhiêu pixel. 0 = hiện đủ, `filterHeight` = ẩn hẳn. */
-  const shift = useSharedValue(0);
+  const {
+    onScroll,
+    progress,
+    height: filterHeight,
+    heightValue: filterHeightSv,
+    onLayout: onFilterLayout,
+  } = useCollapseOnScroll();
 
-  const onFilterLayout = useCallback(
-    (event: LayoutChangeEvent) => setFilterHeight(event.nativeEvent.layout.height),
-    [],
-  );
-
-  /*
-   * Khối lọc BÁM THEO NGÓN TAY: cuộn xuống bao nhiêu thì nó lùi lên bấy nhiêu, cuộn ngược lại
-   * thì trả ra từng ấy — không hoạt cảnh, không ngưỡng phát hiện chiều.
-   *
-   * Trước đây mỗi sự kiện cuộn gọi một `withTiming` mới về cùng một đích. Mỗi lần gọi là một
-   * ease-out 200ms khởi động lại từ vị trí hiện tại, nên khối chỉ tiệm cận đích chứ không bao
-   * giờ tới: nó đứng lưng chừng và để lại một mảng chắn ngang đầu danh sách. Chặn bằng cách chỉ
-   * chạy khi đích đổi thì hỏng kiểu khác — cuộn chậm, mỗi sự kiện dịch chưa tới ngưỡng, khối
-   * không nhúc nhích lần nào.
-   *
-   * Cộng dồn quãng dịch rồi kẹp trong [0, chiều cao] không có cả hai bệnh đó, và cho cảm giác
-   * đúng của một thanh thu gọn: kéo ngược lại một chút là nó ló ra một chút.
-   */
-  const onScroll = useAnimatedScrollHandler((event) => {
-    const y = event.contentOffset.y;
-    const delta = y - lastOffset.value;
-    lastOffset.value = y;
-
-    // Sát mép trên (kể cả lúc kéo quá đà) thì luôn hiện đủ: ở đó không có gì để nhường chỗ.
-    if (y <= 0) {
-      shift.value = 0;
-      return;
-    }
-    shift.value = Math.min(Math.max(shift.value + delta, 0), filterHeight);
-  });
-
-  const filterBarStyle = useAnimatedStyle(
-    () => ({ transform: [{ translateY: -shift.value }] }),
-    [filterHeight],
-  );
+  const filterBarStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -filterHeightSv.value * (1 - progress.value) }],
+  }));
 
   /*
    * Ba thứ dưới đây phải GIỮ NGUYÊN THAM CHIẾU giữa các lần render, nếu không `memo` trên
@@ -203,13 +169,15 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
   const activeChips = useMemo(() => {
     const chips: { id: string; label: string; clear: () => void }[] = [];
 
-    const listChip = (dim: 'brand' | 'bodyType' | 'seats' | 'fuelType' | 'features', label: (key: string) => string) => {
+    const listChip = (
+      dim: 'brand' | 'bodyType' | 'seats' | 'fuelType' | 'features',
+      label: (key: string) => string,
+    ) => {
       for (const key of filters[dim] ?? []) {
         chips.push({
           id: `${dim}:${key}`,
           label: label(key),
-          clear: () =>
-            setFilters({ [dim]: (filters[dim] ?? []).filter((k) => k !== key) }),
+          clear: () => setFilters({ [dim]: (filters[dim] ?? []).filter((k) => k !== key) }),
         });
       }
     };
@@ -296,7 +264,9 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
 
   // Đọc theo ngữ cảnh ĐÃ ÁP DỤNG, cùng nguồn với các chip ngay dưới; thứ tự và luật "xe máy
   // không có tài xế" lấy từ package dùng chung.
-  const serviceItems = serviceTypesFor((filters.vehicleType as VehicleType | undefined) ?? draft.vehicleType);
+  const serviceItems = serviceTypesFor(
+    (filters.vehicleType as VehicleType | undefined) ?? draft.vehicleType,
+  );
 
   return (
     <YStack f={1} bg={colors.background}>
@@ -308,31 +278,31 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
 
       {/* Tầng tương đối: cả khối trên cùng nằm ĐÈ lên danh sách, không chiếm chỗ trong dòng chảy. */}
       <YStack f={1}>
-      <Animated.View
-        onLayout={onFilterLayout}
-        style={[
-          {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 5,
-            backgroundColor: colors.background,
-          },
-          filterBarStyle,
-        ]}
-      >
-      {/*
+        <Animated.View
+          onLayout={onFilterLayout}
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 5,
+              backgroundColor: colors.background,
+            },
+            filterBarStyle,
+          ]}
+        >
+          {/*
         Thanh tiêu đề trượt đi CÙNG khối lọc.
         
         Để nó đứng lại thì cuộn hết cỡ vẫn còn một dải chiếm chỗ ngang bằng chính nó, mà trên
         màn danh sách thì mỗi dòng pixel đều là một phần thẻ xe. Nút quay lại không mất đi đâu:
         khối bám ngón tay, kéo ngược một chút là nó ló ra ngay.
       */}
-      <AppHeader onBack={onBack} title={t('title')} flushTop />
+          <AppHeader onBack={onBack} title={t('title')} flushTop />
 
-      <YStack px={layout.screenX} pt={space.sm} pb={space.sm} gap={space.sm}>
-        {/*
+          <YStack px={layout.screenX} pt={space.sm} pb={space.sm} gap={space.sm}>
+            {/*
           Thanh tóm tắt ngữ cảnh: chạm vào thân để sửa ĐỊA ĐIỂM, nút lịch bên phải để sửa
           KHOẢNG THUÊ.
 
@@ -340,251 +310,268 @@ function ResultsBody({ onBack }: { onBack: () => void }) {
           bộ chọn địa điểm khi khách đang muốn đổi ngày là bắt đóng ra rồi tìm tiếp. Nút lịch
           vắng mặt ở dịch vụ dài hạn — dịch vụ đó không có khoảng ngày nào để sửa (ADR 0011).
         */}
-        <XStack ai="center" gap={space.sm}>
-          <Pressable
-            onPress={() => setLocationOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel={t('editSearch', { summary })}
-            style={{ flex: 1 }}
-          >
-            <XStack
-              ai="center"
-              gap={space.sm}
-              bg={colors.surface}
-              bw={1}
-              bc={colors.border}
-              br={radius.md}
-              px={space.md}
-              minHeight={sizing.touchTarget}
-            >
-              <Text f={1} col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
-                {summary}
-              </Text>
-              <XStack ai="center" gap={4}>
-                <Ionicons name="create-outline" size={14} color={colors.primaryActive} />
-                <Text col={colors.primaryActive} fos={fontSize.bodySm} fow={fontWeight.semibold}>
-                  {t('edit')}
-                </Text>
-              </XStack>
-            </XStack>
-          </Pressable>
-
-          {serviceUsesRentalRange(draft.serviceType) ? (
-            <Pressable
-              onPress={() => setRangeOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel={t('changeTimeOrPlace')}
-            >
-              <XStack
-                ai="center"
-                jc="center"
-                w={sizing.touchTarget}
-                h={sizing.touchTarget}
-                bg={colors.surface}
-                bw={1}
-                bc={colors.border}
-                br={radius.md}
+            <XStack ai="center" gap={space.sm}>
+              <Pressable
+                onPress={() => setLocationOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t('editSearch', { summary })}
+                style={appStyles.fill}
               >
-                <Ionicons name="calendar-outline" size={18} color={colors.primaryActive} />
-              </XStack>
-            </Pressable>
-          ) : null}
-        </XStack>
+                <XStack
+                  ai="center"
+                  gap={space.sm}
+                  bg={colors.surface}
+                  bw={1}
+                  bc={colors.border}
+                  br={radius.md}
+                  px={space.md}
+                  minHeight={sizing.touchTarget}
+                >
+                  <Text f={1} col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
+                    {summary}
+                  </Text>
+                  <XStack ai="center" gap={space.xs}>
+                    <Ionicons name="create-outline" size={14} color={colors.primaryActive} />
+                    <Text
+                      col={colors.primaryActive}
+                      fos={fontSize.bodySm}
+                      fow={fontWeight.semibold}
+                    >
+                      {t('edit')}
+                    </Text>
+                  </XStack>
+                </XStack>
+              </Pressable>
 
-        {/*
+              {serviceUsesRentalRange(draft.serviceType) ? (
+                <Pressable
+                  onPress={() => setRangeOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('changeTimeOrPlace')}
+                >
+                  <XStack
+                    ai="center"
+                    jc="center"
+                    w={sizing.touchTarget}
+                    h={sizing.touchTarget}
+                    bg={colors.surface}
+                    bw={1}
+                    bc={colors.border}
+                    br={radius.md}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={iconSize.md}
+                      color={colors.primaryActive}
+                    />
+                  </XStack>
+                </Pressable>
+              ) : null}
+            </XStack>
+
+            {/*
           Đếm một hàng, hai điều khiển một hàng.
 
           Nhồi cả ba vào một hàng thì "8 xe khả dụng · 1 bộ lọc" + menu sắp xếp + nút Bộ lọc
           vượt bề ngang điện thoại, và cái bị cắt lại chính là con số — thứ người ta đọc trước.
         */}
-        <XStack ai="baseline" gap={space.xs}>
-          <Text
-            flexShrink={1}
-            numberOfLines={1}
-            col={colors.text}
-            fos={fontSize.h4}
-            fow={fontWeight.bold}
-          >
-            {results.isInitialLoading ? t('searching') : t('available', { count: results.total })}
-          </Text>
-          {filterCount > 0 ? (
-            <Text flexShrink={0} col={colors.textMuted} fos={fontSize.label}>
-              {t('filterCount', { count: filterCount })}
-            </Text>
-          ) : null}
-        </XStack>
-
-        <XStack ai="center" jc="space-between" gap={space.sm}>
-          <SortMenu value={filters.sort} onChange={(sort) => setFilters({ sort })} />
-
-          <Pressable onPress={() => setFilterOpen(true)} accessibilityRole="button">
-            <XStack
-              ai="center"
-              gap={space.xs}
-              bw={1}
-              bc={filterCount > 0 ? colors.primary : colors.border}
-              br={radius.pill}
-              px={space.md}
-              minHeight={sizing.touchTarget - 8}
-            >
-              <Ionicons name="options-outline" size={15} color={colors.text} />
-              <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
-                {t('filters')}
+            <XStack ai="baseline" gap={space.xs}>
+              <Text
+                flexShrink={1}
+                numberOfLines={1}
+                col={colors.text}
+                fos={fontSize.h4}
+                fow={fontWeight.bold}
+              >
+                {results.isInitialLoading
+                  ? t('searching')
+                  : t('available', { count: results.total })}
               </Text>
               {filterCount > 0 ? (
-                <YStack w={16} h={16} br={radius.pill} bg={colors.danger} ai="center" jc="center">
-                  <Text col={colors.onDiscount} fos={9} fow={fontWeight.bold}>
-                    {filterCount}
-                  </Text>
-                </YStack>
+                <Text flexShrink={0} col={colors.textMuted} fos={fontSize.label}>
+                  {t('filterCount', { count: filterCount })}
+                </Text>
               ) : null}
             </XStack>
-          </Pressable>
-        </XStack>
 
-        {/* Chip nhanh: loại xe rồi tới dịch vụ — cùng hai chiều với thẻ tìm kiếm trang chủ. */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: space.xs, paddingRight: layout.screenX }}
-          accessibilityLabel={t('quickChipsLabel')}
-        >
-          {[VEHICLE_TYPE.CAR, VEHICLE_TYPE.MOTORBIKE].map((value) => (
-            <Chip
-              key={value}
-              label={domainLabel('vehicleType', value)}
-              selected={filters.vehicleType === value}
-              onPress={() => setVehicleType(value as VehicleType)}
-              size="sm"
-            />
-          ))}
-          <YStack w={1} bg={colors.border} my={space.xs} />
+            <XStack ai="center" jc="space-between" gap={space.sm}>
+              <SortMenu value={filters.sort} onChange={(sort) => setFilters({ sort })} />
 
-          {/* "Tất cả" = BỎ chiều dịch vụ. Rời "có tài xế" thì lộ trình cũng phải rời theo —
-              nó là ngữ cảnh của riêng dịch vụ đó, giữ lại là một tham số ma. */}
-          <Chip
-            label={t('allServices')}
-            selected={!filters.serviceType}
-            onPress={() => setFilters({ serviceType: undefined, routeType: undefined })}
-            size="sm"
-          />
-          {serviceItems.map((value) => (
-            <Chip
-              key={value}
-              label={domainLabel('serviceType', value)}
-              selected={filters.serviceType === value}
-              onPress={() => {
-                setServiceType(value);
-                if (value !== SERVICE_TYPE.WITH_DRIVER) setFilters({ routeType: undefined });
-              }}
-              size="sm"
-            />
-          ))}
-        </ScrollView>
-
-        {activeChips.length > 0 ? (
-          <XStack gap={space.xs} rowGap={space.xs} flexWrap="wrap" ai="center">
-            {activeChips.map((chip) => (
-              <Pressable
-                key={chip.id}
-                onPress={chip.clear}
-                accessibilityRole="button"
-                accessibilityLabel={t('removeFilter', { label: chip.label })}
-              >
+              <Pressable onPress={() => setFilterOpen(true)} accessibilityRole="button">
                 <XStack
                   ai="center"
-                  gap={4}
-                  bg={colors.primaryLight}
+                  gap={space.xs}
                   bw={1}
-                  bc={colors.primary}
+                  bc={filterCount > 0 ? colors.primary : colors.border}
                   br={radius.pill}
-                  px={space.sm}
-                  py={space.xs}
+                  px={space.md}
+                  minHeight={sizing.touchTarget - 8}
                 >
-                  <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.medium}>
-                    {chip.label}
+                  <Ionicons name="options-outline" size={15} color={colors.text} />
+                  <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.medium}>
+                    {t('filters')}
                   </Text>
-                  <Ionicons name="close" size={12} color={colors.primaryActive} />
+                  {filterCount > 0 ? (
+                    <YStack
+                      w={16}
+                      h={16}
+                      br={radius.pill}
+                      bg={colors.danger}
+                      ai="center"
+                      jc="center"
+                    >
+                      <Text col={colors.onDiscount} fos={9} fow={fontWeight.bold}>
+                        {filterCount}
+                      </Text>
+                    </YStack>
+                  ) : null}
                 </XStack>
               </Pressable>
-            ))}
+            </XStack>
 
-            <Pressable
-              onPress={() =>
+            {/* Chip nhanh: loại xe rồi tới dịch vụ — cùng hai chiều với thẻ tìm kiếm trang chủ. */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: space.xs, paddingRight: layout.screenX }}
+              accessibilityLabel={t('quickChipsLabel')}
+            >
+              {[VEHICLE_TYPE.CAR, VEHICLE_TYPE.MOTORBIKE].map((value) => (
+                <Chip
+                  key={value}
+                  label={domainLabel('vehicleType', value)}
+                  selected={filters.vehicleType === value}
+                  onPress={() => setVehicleType(value as VehicleType)}
+                  size="sm"
+                />
+              ))}
+              <YStack w={1} bg={colors.border} my={space.xs} />
+
+              {/* "Tất cả" = BỎ chiều dịch vụ. Rời "có tài xế" thì lộ trình cũng phải rời theo —
+              nó là ngữ cảnh của riêng dịch vụ đó, giữ lại là một tham số ma. */}
+              <Chip
+                label={t('allServices')}
+                selected={!filters.serviceType}
+                onPress={() => setFilters({ serviceType: undefined, routeType: undefined })}
+                size="sm"
+              />
+              {serviceItems.map((value) => (
+                <Chip
+                  key={value}
+                  label={domainLabel('serviceType', value)}
+                  selected={filters.serviceType === value}
+                  onPress={() => {
+                    setServiceType(value);
+                    if (value !== SERVICE_TYPE.WITH_DRIVER) setFilters({ routeType: undefined });
+                  }}
+                  size="sm"
+                />
+              ))}
+            </ScrollView>
+
+            {activeChips.length > 0 ? (
+              <XStack gap={space.xs} rowGap={space.xs} flexWrap="wrap" ai="center">
+                {activeChips.map((chip) => (
+                  <Pressable
+                    key={chip.id}
+                    onPress={chip.clear}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('removeFilter', { label: chip.label })}
+                  >
+                    <XStack
+                      ai="center"
+                      gap={space.xs}
+                      bg={colors.primaryLight}
+                      bw={1}
+                      bc={colors.primary}
+                      br={radius.pill}
+                      px={space.sm}
+                      py={space.xs}
+                    >
+                      <Text col={colors.primaryActive} fos={fontSize.label} fow={fontWeight.medium}>
+                        {chip.label}
+                      </Text>
+                      <Ionicons name="close" size={12} color={colors.primaryActive} />
+                    </XStack>
+                  </Pressable>
+                ))}
+
+                <Pressable
+                  onPress={() =>
+                    setFilters(Object.fromEntries(FACET_KEYS.map((key) => [key, undefined])))
+                  }
+                  accessibilityRole="button"
+                  hitSlop={space.xs}
+                >
+                  <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.medium}>
+                    {t('clearAll')}
+                  </Text>
+                </Pressable>
+              </XStack>
+            ) : null}
+          </YStack>
+        </Animated.View>
+
+        {results.initialError ? (
+          <YStack f={1} pt={filterHeight}>
+            <ScreenError
+              title={t('loadErrorTitle')}
+              error={results.initialError}
+              onRetry={results.retryInitial}
+            />
+          </YStack>
+        ) : results.isInitialLoading ? (
+          <YStack px={layout.screenX} pt={filterHeight + space.md} gap={layout.block}>
+            {Array.from({ length: 3 }, (_, i) => (
+              <VehicleCardSkeleton key={i} />
+            ))}
+          </YStack>
+        ) : results.listings.length === 0 ? (
+          <YStack f={1} pt={filterHeight}>
+            <Empty
+              filtered={filterCount > 0}
+              onClear={() =>
                 setFilters(Object.fromEntries(FACET_KEYS.map((key) => [key, undefined])))
               }
-              accessibilityRole="button"
-              hitSlop={space.xs}
-            >
-              <Text col={colors.textMuted} fos={fontSize.label} fow={fontWeight.medium}>
-                {t('clearAll')}
-              </Text>
-            </Pressable>
-          </XStack>
-        ) : null}
-      </YStack>
-      </Animated.View>
-
-      {results.initialError ? (
-        <YStack f={1} pt={filterHeight}>
-        <ScreenError
-          title={t('loadErrorTitle')}
-          error={results.initialError}
-          onRetry={results.retryInitial}
-        />
-        </YStack>
-      ) : results.isInitialLoading ? (
-        <YStack px={layout.screenX} pt={filterHeight + space.md} gap={layout.block}>
-          {Array.from({ length: 3 }, (_, i) => (
-            <VehicleCardSkeleton key={i} />
-          ))}
-        </YStack>
-      ) : results.listings.length === 0 ? (
-        <YStack f={1} pt={filterHeight}>
-          <Empty
-            filtered={filterCount > 0}
-            onClear={() =>
-              setFilters(Object.fromEntries(FACET_KEYS.map((key) => [key, undefined])))
-            }
-            onChangeContext={() => setLocationOpen(true)}
-          />
-        </YStack>
-      ) : (
-        <Animated.FlatList
-          data={results.listings}
-          keyExtractor={keyExtractor}
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          contentContainerStyle={listPadding}
-          ItemSeparatorComponent={Separator}
-          renderItem={renderItem}
-          onEndReachedThreshold={0.5}
-          onEndReached={results.fetchNextPage}
-          ListFooterComponent={
-            results.appendError ? (
-              <YStack py={layout.section} gap={space.sm} ai="center">
-                <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
-                  {t('appendError', { reason: '' })}
+              onChangeContext={() => setLocationOpen(true)}
+            />
+          </YStack>
+        ) : (
+          <Animated.FlatList
+            data={results.listings}
+            keyExtractor={keyExtractor}
+            onScroll={onScroll}
+            scrollEventThrottle={scrollThrottle.frame}
+            contentContainerStyle={listPadding}
+            ItemSeparatorComponent={Separator}
+            renderItem={renderItem}
+            onEndReachedThreshold={0.5}
+            onEndReached={results.fetchNextPage}
+            ListFooterComponent={
+              results.appendError ? (
+                <YStack py={layout.section} gap={space.sm} ai="center">
+                  <Text col={colors.textMuted} fos={fontSize.bodySm} ta="center">
+                    {t('appendError', { reason: '' })}
+                  </Text>
+                  <Button
+                    label={t('loadMore')}
+                    variant="secondary"
+                    block={false}
+                    onPress={results.retryNextPage}
+                  />
+                </YStack>
+              ) : results.isFetchingNextPage ? (
+                <YStack pt={layout.block} accessibilityLabel={t('loadingMore')}>
+                  <VehicleCardSkeleton />
+                </YStack>
+              ) : !results.hasNextPage && results.total > 0 ? (
+                <Text col={colors.placeholder} fos={fontSize.label} ta="center" py={layout.section}>
+                  {t('endNote', { count: results.total })}
                 </Text>
-                <Button
-                  label={t('loadMore')}
-                  variant="secondary"
-                  block={false}
-                  onPress={results.retryNextPage}
-                />
-              </YStack>
-            ) : results.isFetchingNextPage ? (
-              <YStack pt={layout.block} accessibilityLabel={t('loadingMore')}>
-                <VehicleCardSkeleton />
-              </YStack>
-            ) : !results.hasNextPage && results.total > 0 ? (
-              <Text col={colors.placeholder} fos={fontSize.label} ta="center" py={layout.section}>
-                {t('endNote', { count: results.total })}
-              </Text>
-            ) : null
-          }
-        />
-      )}
+              ) : null
+            }
+          />
+        )}
       </YStack>
 
       <FilterSheet

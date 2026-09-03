@@ -68,9 +68,7 @@ describe('RegisterForm', () => {
   });
 
   it('gửi đúng ba trường của web — KHÔNG gửi confirmPassword lên server', async () => {
-    const register = jest
-      .spyOn(authApi, 'registerWithPassword')
-      .mockResolvedValue(NEW_USER);
+    const register = jest.spyOn(authApi, 'registerWithPassword').mockResolvedValue(NEW_USER);
     const onSuccess = jest.fn();
     const view = await renderForm(onSuccess);
 

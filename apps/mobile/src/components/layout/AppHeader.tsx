@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Image } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -8,47 +8,8 @@ import { IconButton } from '@/components/ui/IconButton';
 import { APP_NAME } from '@/lib/app-name';
 import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
 
-/**
- * # HEADER DÙNG CHUNG CỦA TOÀN APP — reuse, đừng dựng cái mới
- *
- * Mọi màn có thanh trên đều đi qua đây. Dựng riêng một hàng `XStack` cho từng màn là cách chắc
- * chắn nhất để mỗi màn một chiều cao, một cỡ chữ và một vùng chạm khác nhau — và người dùng
- * cảm nhận ngay dù không chỉ ra được vì sao.
- *
- * Thiếu thứ bạn cần thì **thêm biến thể vào đây**, không rẽ nhánh ở màn hình.
- *
- * ## Màu
- *
- * Nền mặc định là `background`, KHÔNG phải màu thương hiệu. Gold là màu HÀNH ĐỘNG của app (nút
- * chính, chip đang chọn, giá thuê); tô nó lên dải rộng nhất màn hình thì mọi CTA gold bên dưới
- * mất sức nặng. Header nhận diện bằng **thương hiệu và thứ bậc chữ**, không bằng mảng màu.
- *
- * Cần một màn nhấn mạnh thì dùng `tone="brand"` — có sẵn, nhưng hãy coi nó là ngoại lệ.
- *
- * ## Hai biến thể
- *
- * - `solid` (mặc định): nền đặc, kẻ mảnh phía dưới. Dùng cho màn có nội dung cuộn dưới header.
- * - `overlay`: trong suốt, **nổi lên trên** nội dung (`position: absolute`). Dùng cho màn mở
- *   đầu bằng ảnh tràn viền — nút bấm có nền tròn để đọc được trên mọi tấm ảnh.
- *
- * ## Safe area
- *
- * Header TỰ cộng inset trên ở cả hai biến thể. Vì vậy màn dùng nó **không** được bọc thêm một
- * `SafeAreaView` có cạnh `top` bên ngoài, và `<Screen>` đặt dưới header phải khai
- * `edges={['left', 'right', 'bottom']}` — nếu không phần trên bị đệm hai lần.
- *
- * ## Vùng chạm
- *
- * Nút lui và `right` đều là `IconButton`, tức luôn đủ 44pt/48dp. Đừng truyền `<Pressable>` trần
- * vào `right`.
- *
- * @example
- * // Màn thường
- * <AppHeader title={shop.name} onBack={goBack} />
- *
- * // Màn mở đầu bằng ảnh
- * <AppHeader variant="overlay" onBack={goBack} right={<IconButton … />} />
- */
+const APP_HEADER_HEIGHT = 56;
+
 type Variant = 'solid' | 'overlay';
 
 type Tone = 'surface' | 'brand';
@@ -60,6 +21,14 @@ interface AppHeaderProps {
   subtitle?: string;
   /** Khu bên phải — nên là `IconButton` để giữ đúng vùng chạm. */
   right?: ReactNode;
+  /**
+   * Thay chỗ nút lui bằng một nút khác — khu quản lý đặt nút mở Drawer vào đây.
+   *
+   * Không phải "thêm vào bên trái": một thanh vừa có mũi tên lui vừa có nút menu là hai lối đi
+   * ngược nhau nằm cạnh nhau. `onBack` thắng khi cả hai cùng có, vì lui là việc người dùng đang
+   * cần làm ngay.
+   */
+  left?: ReactNode;
   variant?: Variant;
   /** `brand`: nền gold, chữ tối. Ngoại lệ — đọc phần "Màu" ở trên trước khi dùng. */
   tone?: Tone;
@@ -75,8 +44,15 @@ interface AppHeaderProps {
   flushTop?: boolean;
 }
 
+/**
+ * Header dùng chung. Thiếu biến thể thì thêm vào đây, đừng dựng thanh riêng ở màn hình.
+ *
+ * Header TỰ cộng inset trên ở cả hai biến thể, nên `<Screen>` bên dưới phải khai
+ * `edges={['left', 'right', 'bottom']}` — không thì phần trên bị đệm hai lần.
+ */
 export function AppHeader({
   onBack,
+  left,
   title,
   subtitle,
   right,
@@ -106,7 +82,7 @@ export function AppHeader({
       gap={space.xs}
       px={space.sm}
       py={space.xs}
-      minHeight={56}
+      minHeight={APP_HEADER_HEIGHT}
       marginTop={overlay || flushTop ? 0 : insets.top}
       {...(overlay
         ? {}
@@ -124,7 +100,9 @@ export function AppHeader({
           // Nền tròn ở biến thể nổi: mũi tên trần biến mất trên ảnh sáng.
           tone={overlay ? 'surface' : 'plain'}
         />
-      ) : null}
+      ) : (
+        (left ?? null)
+      )}
 
       <YStack f={1} gap={0}>
         {showBrandMark ? (
@@ -162,15 +140,15 @@ export function AppHeader({
 /** Ô logo cạnh tên thương hiệu — cao xấp xỉ một dòng chữ `body` để hai thứ cùng đường chân. */
 const BRAND_LOGO = 26;
 
+const styles = StyleSheet.create({
+  logo: { width: BRAND_LOGO, height: BRAND_LOGO, borderRadius: radius.sm },
+});
+
 /** Logo + tên. Ở biến thể nổi trên ảnh thì ẩn — ảnh xe đã là nhân vật chính ở đó. */
 function BrandMark({ tone }: { tone: Tone }) {
   return (
     <XStack ai="center" gap={space.xs}>
-      <Image
-        source={images.logo}
-        style={{ width: BRAND_LOGO, height: BRAND_LOGO, borderRadius: radius.sm }}
-        resizeMode="contain"
-      />
+      <Image source={images.logo} style={styles.logo} resizeMode="contain" />
       {/* Một `Text`, một style: tên đọc từ env nên không cắt được thành hai nửa cố định. */}
       <Text
         col={tone === 'brand' ? colors.onPrimary : colors.text}

@@ -21,7 +21,8 @@ XePrime đã vượt prototype: web có thể mô phỏng phần lớn vòng đ�
 | SePay subscription W4 | Chưa có | Chưa nên xem purchase flow là self-service hoàn chỉnh |
 | Marketplace money | Chưa có | Hold/payment/refund/owner balance/withdrawal/reconciliation chưa thành module thật |
 | Basic-owner experience | Chưa tách hoàn chỉnh | Capability có nền móng; cần Owner Lite UX và luồng tiền |
-| Mobile customer | Một phần | Auth + discovery; thiếu booking/payment/trips/chat/push |
+| Mobile customer | Một phần | Auth + discovery + gửi yêu cầu thuê + chuyến của tôi + đánh giá; thiếu payment, chat và push |
+| Mobile manage | Một phần | Hộp thư yêu cầu, đơn thuê, biên bản giao/nhận, quyết toán, thu tiền — xem ghi chú ở R6 |
 | Production readiness | Chưa đạt | Chưa có đủ E2E, monitoring, legal/compliance gate và bằng chứng vận hành thật |
 
 Không dùng phần trăm hoàn thành tổng dự án: một màn hình đơn giản và một luồng giữ tiền không có cùng trọng số. Mỗi release chỉ được coi là xong khi vượt gate tương ứng.
@@ -143,6 +144,12 @@ Mục tiêu: app native phục vụ trọn luồng người thuê.
 - Deep links/App Links, environment profiles, iOS build và CI release.
 - Crash/error reporting và analytics đồng nhất web/mobile.
 - Không clone Manage lên native ở giai đoạn này; chủ xe/gian hàng dùng responsive web.
+
+> ⚠️ **Điều cuối cùng đã bị thực tế vượt qua** (gộp nhánh `feature/mobile-booking-rental`,
+> 03/09/2026). Khu Manage trên native đã có: hộp thư yêu cầu, danh sách + chi tiết đơn, biên bản
+> giao/nhận, quyết toán, thu tiền. Dòng trên viết trước khi nhánh đó vào, và nó **chưa được rút
+> lại bằng một quyết định sản phẩm** — hoặc cập nhật lại định hướng ở đây, hoặc chốt rằng phần
+> Manage native chỉ dừng ở mức hiện tại. Đừng để hai chỗ nói ngược nhau lâu hơn mức cần thiết.
 
 ## 4. Thứ tự ưu tiên Admin/Manage
 

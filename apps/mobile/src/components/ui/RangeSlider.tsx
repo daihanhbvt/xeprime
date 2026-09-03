@@ -119,7 +119,12 @@ function RangeSliderImpl({ min, max, step, value, onChange, caption, label }: Ra
    * đầu (trước đó là trần dự phòng). Chỉ canh `value` thì giá trị không đổi nhưng thang đo đã
    * khác, và núm đứng lại ở toạ độ tính theo thang cũ — trôi ra ngoài bề rộng rồi mất hút.
    */
-  const [last, setLast] = useState<[number, number, number, number]>([value[0], value[1], min, max]);
+  const [last, setLast] = useState<[number, number, number, number]>([
+    value[0],
+    value[1],
+    min,
+    max,
+  ]);
   if (
     !dragging &&
     (last[0] !== value[0] || last[1] !== value[1] || last[2] !== min || last[3] !== max)

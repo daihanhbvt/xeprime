@@ -62,9 +62,7 @@ describe('ResetPasswordScreen', () => {
   });
 
   it('gửi token của deep link kèm mật khẩu mới, rồi dẫn về đăng nhập', async () => {
-    const reset = jest
-      .spyOn(authApi, 'resetPasswordWithToken')
-      .mockResolvedValue(undefined);
+    const reset = jest.spyOn(authApi, 'resetPasswordWithToken').mockResolvedValue(undefined);
     const onBackToLogin = jest.fn();
     const { view } = await renderScreen('token-hop-le', { onBackToLogin });
 

@@ -29,6 +29,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
 import { layout } from '@/theme/layout';
+import { appStyles } from '@/theme/styles';
 import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 import { useListingFacets } from '../hooks/use-search-results';
 
@@ -213,7 +214,7 @@ export function FilterSheet({
     <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
       {/* Lớp phủ là ANH EM của tấm trượt — bọc nó bên trong sẽ nuốt cử chỉ cuộn. */}
       <YStack f={1}>
-        <Pressable style={{ flex: 1, backgroundColor: colors.overlay }} onPress={onClose} />
+        <Pressable style={appStyles.scrim} onPress={onClose} />
         <YStack>
           <YStack
             maxHeight={height * SHEET_RATIO}
@@ -229,9 +230,7 @@ export function FilterSheet({
               </Text>
             </XStack>
 
-            <ScrollView
-              contentContainerStyle={{ padding: layout.screenX, gap: layout.section }}
-            >
+            <ScrollView contentContainerStyle={{ padding: layout.screenX, gap: layout.section }}>
               <Group title={t('sort')}>
                 {/*
                   Ô chọn, không phải hàng chip: sắp xếp chỉ có DUY NHẤT một giá trị tại một thời
@@ -357,7 +356,13 @@ export function FilterSheet({
               </Group>
             </ScrollView>
 
-            <XStack gap={space.sm} px={layout.screenX} py={space.md} borderTopWidth={1} bc={colors.borderSubtle}>
+            <XStack
+              gap={space.sm}
+              px={layout.screenX}
+              py={space.md}
+              borderTopWidth={1}
+              bc={colors.borderSubtle}
+            >
               {/*
                 Hai nút KHÔNG chia đôi: "Áp dụng (12 xe)" dài gấp đôi "Xoá bộ lọc" mà lại là
                 thứ phải đọc được trọn vẹn — chia đều thì đúng nó bị cắt thành "Áp dụng (…".
@@ -373,11 +378,7 @@ export function FilterSheet({
                 <Button
                   // Số xe của bản NHÁP, không phải kết quả hiện tại — khách biết trước mình
                   // sắp thấy bao nhiêu xe trước khi đóng tấm.
-                  label={
-                    facets
-                      ? t('applyWithCount', { count: facets.total })
-                      : t('apply')
-                  }
+                  label={facets ? t('applyWithCount', { count: facets.total }) : t('apply')}
                   onPress={() => {
                     onApply(draftToPatch(draft));
                     onClose();
@@ -459,7 +460,11 @@ function AmenityRow({
   onToggle: () => void;
 }) {
   return (
-    <Pressable onPress={onToggle} accessibilityRole="switch" accessibilityState={{ checked: value }}>
+    <Pressable
+      onPress={onToggle}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+    >
       <XStack
         ai="center"
         gap={space.md}
@@ -485,13 +490,7 @@ function AmenityRow({
           jc="center"
           px={3}
         >
-          <YStack
-            w={20}
-            h={20}
-            br={radius.pill}
-            bg={colors.surface}
-            marginLeft={value ? 18 : 0}
-          />
+          <YStack w={20} h={20} br={radius.pill} bg={colors.surface} marginLeft={value ? 18 : 0} />
         </YStack>
       </XStack>
     </Pressable>

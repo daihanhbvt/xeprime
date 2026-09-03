@@ -8,7 +8,7 @@ export default function ChatRoute() {
 
   return (
     <RequireSession>
-      <Screen scroll={false}>
+      <Screen edges={['left', 'right']} scroll={false}>
         <ScreenMessage
           icon="chatbubble-ellipses-outline"
           title={t('empty')}

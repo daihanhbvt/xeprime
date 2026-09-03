@@ -25,14 +25,12 @@
   },
   "vehicle": {
     "heading": "Xe được yêu cầu",
-    "openDetail": "Mở hồ sơ xe {name}",
     "noImage": "Xe chưa có ảnh",
     "viewSchedule": "Xem lịch xe",
     "viewScheduleFor": "Xem lịch thuê của {vehicle}"
   },
   "customer": {
     "heading": "Khách hàng",
-    "openProfile": "Mở hồ sơ khách {name}",
     "noProfile": "Chưa có hồ sơ trong sổ khách",
     "riskWarning": "{level} — kiểm tra lại trước khi duyệt"
   },
@@ -142,8 +140,7 @@
     "emptyFilteredBody": "Đổi sang tab khác để xem các yêu cầu còn lại.",
     "emptySearchTitle": "Không tìm thấy yêu cầu nào",
     "emptySearchBody": "Thử từ khoá ngắn hơn, hoặc bỏ bớt bộ lọc để xem lại toàn bộ hộp thư.",
-    "errorTitle": "Không tải được danh sách yêu cầu",
-    "refreshing": "Đang cập nhật danh sách…"
+    "errorTitle": "Không tải được danh sách yêu cầu"
   },
   "flow": {
     "title": "Yêu cầu thuê xe",
@@ -161,7 +158,8 @@
       "modeDaily": "Thuê theo ngày",
       "modeHourly": "Thuê theo giờ",
       "changeHint": "bấm vào ô để đổi",
-      "unavailable": "Xe đã có lịch trong khung giờ này. Vui lòng chọn thời gian khác."
+      "unavailable": "Xe đã có lịch trong khung giờ này. Vui lòng chọn thời gian khác.",
+      "fieldLabel": "Khoảng thuê"
     },
     "pickup": {
       "legend": "Hình thức nhận xe",
@@ -206,7 +204,8 @@
       "editPhone": "Sửa số điện thoại",
       "resend": "Gửi lại mã",
       "resendIn": "Gửi lại ({seconds}s)",
-      "sessionExpired": "Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại số điện thoại."
+      "sessionExpired": "Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại số điện thoại.",
+      "editPhoneShort": "Đổi số"
     },
     "review": {
       "vehicle": "Xe",
@@ -315,11 +314,30 @@
         "supportTitle": "Hỗ trợ 24/7",
         "supportDesc": "Tư vấn mọi lúc, mọi nơi"
       },
-      "windowValue": "{start} – {end}"
+      "windowValue": "{start} – {end}",
+      "datePlaceholder": "Chọn ngày mong muốn nhận xe"
     },
     "cta": "Chọn thuê",
     "stepsLabel": "Tiến trình đặt xe",
-    "stepDone": "(đã xong)"
+    "stepDone": "(đã xong)",
+    "validation": {
+      "nameRequired": "Vui lòng nhập họ tên",
+      "nameTooLong": "Họ tên tối đa {max} ký tự",
+      "phoneRequired": "Vui lòng nhập số điện thoại",
+      "phoneInvalid": "Số điện thoại không hợp lệ",
+      "emailInvalid": "Email không hợp lệ",
+      "serviceRequired": "Chọn loại dịch vụ",
+      "pickupAtRequired": "Chọn thời gian nhận xe",
+      "returnAtRequired": "Chọn thời gian trả xe",
+      "packageRequired": "Chọn gói thuê",
+      "pickupPreferenceRequired": "Chọn nguyện vọng nhận xe",
+      "requestedPickupDateRequired": "Chọn ngày mong muốn nhận xe",
+      "routeRequired": "Chọn lộ trình",
+      "pickupAddressRequired": "Nhập địa chỉ đón khách",
+      "destinationRequired": "Nhập điểm đến",
+      "deliveryAddressRequired": "Nhập địa điểm giao xe",
+      "noteTooLong": "Ghi chú tối đa {max} ký tự"
+    }
   },
   "approved": {
     "title": "Đã tạo đơn thuê",

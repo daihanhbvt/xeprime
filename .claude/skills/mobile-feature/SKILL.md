@@ -200,6 +200,25 @@ Certain web patterns must be re-architected for touchscreens and small viewports
 * **Mobile**: native camera with instant preview, corner guides for exterior angles (front, rear,
   left, right, interior, odometer), client-side JPEG compression, and direct upload to Cloudflare
   R2 via presigned URLs.
+* **⚠️ The presigned PUT signs `Content-Length` — measure the bytes you are ABOUT TO SEND.**
+
+  The API passes `ContentLength` to `PutObjectCommand`, and `content-length` is a signable header,
+  so it lands in `X-Amz-SignedHeaders`. Declare one number at presign time and send a different
+  one at PUT time and R2 answers **403** — a signature mismatch that reads exactly like a CORS
+  problem, an expired URL, or a permissions bug, and is none of them.
+
+  This bites native and not web, because native COMPRESSES between picking and sending. The size
+  the image picker reports belongs to the original camera file; the bytes on the wire are the
+  compressed ones. Web sends the very `File` it measured, so it never diverges.
+
+  The fix is structural, not arithmetic: **open the file first, presign with `blob.size`, then PUT
+  that same blob.** One read, one number, no second value to drift. See `uploadHandoverPhoto` in
+  `src/features/handovers/photo-upload.ts`; the server then re-checks the size by HEAD before
+  marking the file `ready`, so a wrong number fails twice.
+
+  Related: `ImageManipulator` `resize: { width: N }` means "set to N", not "cap at N". Feeding it
+  an 800px photo UPSCALES to 1600 — larger and blurrier, the opposite of compressing. Resize only
+  when `asset.width > MAX_WIDTH`.
 
 ### C. Authentication — the ONE endpoint family that differs from web
 
@@ -281,14 +300,85 @@ The base already solves the three things every screen gets wrong — use them, d
   gathers safe area, keyboard avoidance and `keyboardShouldPersistTaps` in one place; miss one and
   you get text under the notch, a keyboard covering the input, or taps that need two presses. Pass
   `padded={false}` for edge-to-edge lists.
+
+### The keyboard covers the last input — the one bug that keeps coming back
+
+Any form field low on the screen is a candidate: a note textarea at the end of a step, a reference
+code under three other fields, a reason box at the bottom of a sheet. **Before shipping a form,
+open it on a device and focus its LAST field.** If it hides, the cause is almost always one of two
+things, and both are already solved in the codebase — copy the solved one, do not invent a third.
+
+**A container that does not start at the top of the window.** `KeyboardAvoidingView` lifts content
+by *keyboard height minus the screen below its own frame*. That subtraction is only right when the
+frame starts at the window's top edge. `<AppHeader>` is a SIBLING above `<Screen>`, so `Screen`'s
+frame starts lower and the lift comes up short by exactly the header — the last field stays under
+the keyboard. `Screen` fixes this by MEASURING its own distance from the window top
+(`measureInWindow`) and feeding it to `keyboardVerticalOffset`. Measure; never take it as a prop —
+some screens have a header and some do not, and a flag someone forgets is a silent 56dp error that
+only appears once a keyboard opens.
+
+**A `Modal` is its own OS window.** `Screen`'s `KeyboardAvoidingView` cannot reach inside one, and
+on Android `adjustResize` does not apply there either. So every modal surface needs its OWN
+`KeyboardAvoidingView` inside the `Modal` — that is why [`<BottomSheet>`](../../../apps/mobile/src/components/ui/BottomSheet.tsx)
+carries one. It needs no `keyboardVerticalOffset` because it IS the window root.
+
+Corollary: content inside a `BottomSheet` never needs its own keyboard handling, and content
+inside a `Screen` never should either — if a field is still covered, the container is wrong, not
+the field.
 * **Loading / empty / error come from `src/components/state/`** — `ScreenLoading`, `ScreenMessage`,
   `ScreenError`. `ScreenError` already maps an API error to translated copy by CODE, so never print
   a backend `message`. But read §4b before reaching for `ScreenLoading`: it is the EXCEPTION, not
   the default.
+* **The UI kit is TAMAGUI.** Lay screens out with its primitives — `YStack`, `XStack`, `Text` —
+  and use its style props (`f`, `ai`, `jc`, `gap`, `px`, `br`, `bg`, `col`, `fos`, `fow`) instead
+  of hand-written `StyleSheet` objects. Drop to bare React Native `View`/`StyleSheet` only where
+  Tamagui has no equivalent: `Modal`, `Pressable`, `FlatList`, `ScrollView`, `TextInput`,
+  `Image`, and any style an `Animated` worklet must own.
+
+  Reason: Tamagui compiles those props to flattened native styles, so a stack of them costs no
+  more at runtime than a `StyleSheet` — while a screen that mixes both conventions loses the one
+  thing a design system buys you, which is that every screen is written the same way and reads
+  the same way.
+
+  **⚠️ Anything TAPPABLE keeps a `Pressable` wrapper.** Tamagui stacks accept `onPress` and
+  `pressStyle`, and it is tempting to collapse `<Pressable><XStack/></Pressable>` into one node.
+  Do not: `accessibilityRole` set on a Tamagui stack does not reach the accessibility tree.
+  Collapsing `Button` this way made 27 tests that query `getByRole('button')` fail at once — and
+  what a test cannot find by role, a screen reader cannot announce as a button either.
+
+  So the split is: **Tamagui for the SHAPE, React Native primitives for the INTERACTION.** Put the
+  `Pressable` (with `accessibilityRole` / `accessibilityState` / `accessibilityLabel`) on the
+  outside and the `XStack`/`YStack` carrying the visuals immediately inside it.
+
+  Do NOT introduce a second UI library, and do NOT reach for a native module for something the
+  kit already covers (see the `react-native-svg` note in `StripePattern`/`BrandMark`: a native
+  module absent from the installed dev build crashes at runtime, not at build time).
 * **Sizes and colors come from `src/theme/tokens.ts`** (`space`, `radius`, `fontSize`,
-  `fontWeight`, `iconSize`, `sizing`, `colors`). `sizing.touchTarget` is the 44pt/48dp floor — use
-  it rather than typing a number. `iconSize` (`xs`/`sm`/`md`/`lg`) is the icon scale: named by ROLE,
-  not by pixel count.
+  `fontWeight`, `iconSize`, `sizing`, `colors`) — the native adapter over `XP_TOKENS`, NOT
+  Tamagui's own theme tokens. `sizing.touchTarget` is the 44pt/48dp floor — use it rather than
+  typing a number. `iconSize` (`xs`/`sm`/`md`/`lg`) is the icon scale: named by ROLE, not by
+  pixel count.
+* **Confirmations go through [`<AlertDialog>`](../../../apps/mobile/src/components/ui/AlertDialog.tsx),
+  never `Alert.alert`.** The OS dialog ignores the design tokens, orders its buttons differently
+  on iOS and Android (so the same array yields "Cancel | Delete" on one and the reverse on the
+  other — a real hazard for a destructive action), and has no pending state, so the box closes
+  while the request is still in flight and the user taps again.
+* **A choice is a radio at TWO options, a menu at three or more.**
+
+  | Options | Control |
+  | --- | --- |
+  | 2, mutually exclusive | [`<RadioOption>`](../../../apps/mobile/src/components/ui/RadioOption.tsx) — both laid out, always visible |
+  | 3+, mutually exclusive | [`<SelectField>`](../../../apps/mobile/src/components/ui/SelectField.tsx) (inside RHF) or [`<SelectControl>`](../../../apps/mobile/src/components/ui/SelectControl.tsx) (plain state) |
+  | Any number, multi-select | Checkboxes — a menu cannot show which combination is active |
+
+  Two options cost two lines and let the user read both sides before deciding; hiding them behind
+  a menu makes them open it just to learn what the question is. Three or more laid out flat starts
+  eating the screen, and that is what the menu is for.
+
+  **Never `Chip` for a labelled choice.** `Chip` sets `numberOfLines={1}`, so a label that is a
+  sentence — "Bình thường — xe không có dấu hiệu hư hại mới" — loses the clause that makes the
+  choice decidable. Chips are for short segmented switches (service type, quick filters).
+
 * **A screen that needs a session is wrapped in
   [`<RequireSession>`](../../../apps/mobile/src/features/auth/RequireSession.tsx)** — never
   hand-rolled `if (!user) return …` inside the screen. Hiding a tab is not blocking it: a deep
