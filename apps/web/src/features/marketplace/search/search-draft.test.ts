@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import { appWallClockToIso, toAppTz } from '@/lib/datetime';
 import { describe, expect, it } from 'vitest';
 import { ROUTE_TYPE, SERVICE_TYPE, VEHICLE_TYPE } from '@xeprime/types';
 import type { MarketplaceFilters } from '../types';
@@ -17,7 +17,12 @@ import {
  * lịch và gói thuê đều nằm ở luồng gửi yêu cầu của từng xe.
  */
 
-const NOW = dayjs('2026-08-18T09:00:00.000+07:00');
+/**
+ * `toAppTz`, không phải `dayjs` trần: bản nháp mang GIỜ VIỆT NAM ở mọi máy (CLAUDE.md §9), và
+ * `draftFromFilters` cũng mặc định `nowInAppTz()`. Dựng mốc bằng `dayjs` thô ở đây là dựng một
+ * mặt đồng hồ theo giờ MÁY, và cả file chỉ đúng khi `TZ` được ghim.
+ */
+const NOW = toAppTz('2026-08-18T09:00:00.000+07:00');
 
 function makeDraft(patch: Partial<SearchDraft> = {}): SearchDraft {
   return {
@@ -101,8 +106,8 @@ describe('draftToFilterPatch — tự lái và có tài xế', () => {
     expect(query.get('vehicleType')).toBe(VEHICLE_TYPE.CAR);
     expect(query.get('serviceType')).toBe(SERVICE_TYPE.SELF_DRIVE);
     expect(query.get('provinceCode')).toBe('48');
-    expect(query.get('pickupAt')).toBe(draft.rental.pickupAt?.toISOString());
-    expect(query.get('returnAt')).toBe(draft.rental.returnAt?.toISOString());
+    expect(query.get('pickupAt')).toBe(appWallClockToIso(draft.rental.pickupAt!));
+    expect(query.get('returnAt')).toBe(appWallClockToIso(draft.rental.returnAt!));
     expect(query.has('routeType')).toBe(false);
   });
 
@@ -112,7 +117,7 @@ describe('draftToFilterPatch — tự lái và có tài xế', () => {
 
     expect(query.get('vehicleType')).toBe(VEHICLE_TYPE.MOTORBIKE);
     expect(query.get('provinceCode')).toBe('79');
-    expect(query.get('pickupAt')).toBe(base.rental.pickupAt?.toISOString());
+    expect(query.get('pickupAt')).toBe(appWallClockToIso(base.rental.pickupAt!));
   });
 
   it('chế độ thuê theo giờ đi vào filter `hourly` sẵn có, không đẻ tham số mới', () => {
@@ -192,8 +197,8 @@ describe('đổi dịch vụ — patch XOÁ đúng những tham số hết nghĩ
     const draft = makeDraft({
       serviceType: SERVICE_TYPE.LONG_TERM,
       rental: {
-        pickupAt: dayjs('2026-10-05T03:00:00.000Z'),
-        returnAt: dayjs('2026-10-09T03:00:00.000Z'),
+        pickupAt: toAppTz('2026-10-05T03:00:00.000Z'),
+        returnAt: toAppTz('2026-10-09T03:00:00.000Z'),
         mode: 'daily',
       },
     });

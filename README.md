@@ -1,21 +1,21 @@
 # XePrime
 
-Nền tảng cho thuê xe: Marketplace cho khách thuê + Management Portal cho gian hàng và quản trị nền tảng.
+Chợ đăng/thuê xe kết hợp giải pháp quản lý cho chủ xe và gian hàng.
 
-Next.js 16 · Expo 57 (React Native) · NestJS 11 · PostgreSQL 16 · Prisma 7 · pnpm workspace · Turborepo
+Next.js 16 · Expo 54 (React Native) · NestJS 11 · PostgreSQL 16 · Prisma 7 · pnpm workspace · Turborepo
 
 ---
 
 ## Đọc trước khi code
 
-| Thứ tự | Tài liệu                                                   | Vì sao                                                                    |
-| ------ | ---------------------------------------------------------- | ------------------------------------------------------------------------- |
-| 1      | [`CLAUDE.md`](CLAUDE.md)                                   | Bản đồ repo, kiến trúc đã chốt, điều cấm                                  |
-| 1b     | [`docs/completion-roadmap.md`](docs/completion-roadmap.md) | **Đang ở đâu / làm gì tiếp** (tiến độ thực tế + milestone)                |
-| 2      | [`docs/decisions/`](docs/decisions/)                       | **Quyết định kỹ thuật kèm lý do. Thắng mọi tài liệu khác khi mâu thuẫn.** |
-| 3      | [`docs/`](docs/)                                           | Đặc tả nghiệp vụ: màn hình theo role, user flow, thiết kế DB              |
-
-Bộ tài liệu trong `docs/` viết ngày 22/07/2026 và không được sửa lại. Có 3 chỗ các file tự mâu thuẫn nhau (trạng thái xe/đơn/yêu cầu đặt xe) và 4 lỗ hổng kỹ thuật lớn không đề cập — cả 7 đều được xử lý trong `docs/decisions/`.
+| Thứ tự | Tài liệu | Vì sao |
+| --- | --- | --- |
+| 1 | [`docs/design/02_PRODUCT_VISION.md`](docs/design/02_PRODUCT_VISION.md) | Sản phẩm, persona và hai mô hình doanh thu hiện hành |
+| 2 | [`docs/completion-roadmap.md`](docs/completion-roadmap.md) | Đang ở đâu, release gate và việc tiếp theo |
+| 3 | [`docs/design/03_PRODUCT_GAP_ANALYSIS.md`](docs/design/03_PRODUCT_GAP_ANALYSIS.md) | User/Admin/Manage thiếu hoặc thừa gì |
+| 4 | [`docs/decisions/`](docs/decisions/) | Quyết định kỹ thuật/nghiệp vụ kèm quan hệ ghi đè |
+| 5 | [`CLAUDE.md`](CLAUDE.md) | Bản đồ repo và kỷ luật triển khai |
+| 6 | [`docs/`](docs/) | Chỉ mục toàn bộ tài liệu còn hiệu lực |
 
 ---
 
@@ -54,14 +54,14 @@ apps/
   web/       Next.js App Router — (public) marketplace · (auth) · (manage) portal
   mobile/    Expo + Expo Router — app di động, cùng API và cùng ADR với web
   api/       NestJS modular monolith
-  worker/    Background jobs — skeleton, chạy từ Phase 5
+  worker/    Background jobs — outbox/chat projection, deadline, holiday, subscription lifecycle
 packages/
   types/     Status union, role, permission, convention response  ← ADR 0005
   validators/  Yup schema dùng chung cho form (web + mobile)
   config/    tsconfig + eslint preset
-  ui/        Component dùng chung web ↔ marketplace (trống ở Phase 0, có chủ ý)
+  ui/        Design token và primitive dùng chung web ↔ native
 prisma/      schema.prisma · migrations · seed
-docs/        Đặc tả nghiệp vụ + ADR
+docs/        Product Vision + Roadmap + Gap Analysis + ADR + tài liệu kỹ thuật
 ```
 
 ---
@@ -138,4 +138,4 @@ Sau khi đổi DTO ở backend, **phải** chạy `pnpm contract` — nếu khô
 
 ## Trạng thái
 
-**Tiến độ thực tế + milestone + việc kế tiếp: [`docs/completion-roadmap.md`](docs/completion-roadmap.md)** (cập nhật mỗi khi đóng một phase). Lộ trình 9 phase ở `CLAUDE.md` mục 11.
+**Tiến độ, release gate và việc kế tiếp:** [`docs/completion-roadmap.md`](docs/completion-roadmap.md). Mô hình sản phẩm hiện hành được chốt ở [Product Vision](docs/design/02_PRODUCT_VISION.md) và [ADR 0028](docs/decisions/0028-marketplace-subscription-fees-and-custodied-funds.md).

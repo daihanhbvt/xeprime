@@ -322,6 +322,9 @@ export function CalendarScheduler() {
     if (!target) return;
     const resource = resources.find((r) => r.vehicleId === target.vehicleId);
     if (action === 'booking') {
+      // `.toISOString()` ở đây ĐÚNG và cố ý: `dayjs.tz(dateKey, APP_TIME_ZONE)` đã dựng một
+      // mốc TUYỆT ĐỐI từ ngày lịch của ô vừa bấm, không phải một mặt đồng hồ người dùng chọn —
+      // nên nó không đi qua `appWallClockToIso`.
       const pickupAt = dayjs
         .tz(target.date, APP_TIME_ZONE)
         .hour(DEFAULT_PICKUP_HOUR)

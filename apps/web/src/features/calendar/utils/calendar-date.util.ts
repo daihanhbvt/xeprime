@@ -1,4 +1,11 @@
-import dayjs, { type Dayjs } from 'dayjs';
+import {
+  APP_TIME_ZONE,
+  DAY_PARAM_FORMAT,
+  dayjs,
+  nowInAppTz,
+  toAppTz,
+  type Dayjs,
+} from '@/lib/datetime';
 import type { CalendarRange } from '../types/calendar.types';
 
 /**
@@ -6,8 +13,11 @@ import type { CalendarRange } from '../types/calendar.types';
  *
  * `Asia/Ho_Chi_Minh`, không phải `Asia/Bangkok` như tài liệu cũ ghi. Cùng UTC+7 nên kết
  * quả giống nhau, nhưng dùng đúng tên vùng để sau này không ai phải đoán là cố ý hay nhầm.
+ *
+ * Là ALIAS của `APP_TIME_ZONE` chứ không phải một chuỗi thứ hai: hai hằng cùng nghĩa là hai
+ * chỗ để sửa, và lần quên thứ nhất sẽ làm lưới lịch nói khác phần còn lại của sản phẩm.
  */
-export const DISPLAY_TIMEZONE = 'Asia/Ho_Chi_Minh';
+export const DISPLAY_TIMEZONE = APP_TIME_ZONE;
 
 /**
  * Dựng khoảng hiển thị từ một ngày local.
@@ -44,8 +54,8 @@ export function listDays(range: CalendarRange): Array<{
   isToday: boolean;
   isWeekend: boolean;
 }> {
-  const today = dayjs().tz(DISPLAY_TIMEZONE).startOf('day');
-  const start = dayjs(range.startAt).tz(DISPLAY_TIMEZONE);
+  const today = nowInAppTz().startOf('day');
+  const start = toAppTz(range.startAt);
 
   return Array.from({ length: range.dayCount }, (_, i) => {
     const day = start.add(i, 'day');
@@ -62,11 +72,11 @@ export function listDays(range: CalendarRange): Array<{
 
 /** Hiển thị mốc thời gian UTC theo giờ Việt Nam. */
 export function formatDateTime(isoUtc: string): string {
-  return dayjs(isoUtc).tz(DISPLAY_TIMEZONE).format('HH:mm DD/MM/YYYY');
+  return toAppTz(isoUtc).format('HH:mm DD/MM/YYYY');
 }
 
 export function formatDate(isoUtc: string): string {
-  return dayjs(isoUtc).tz(DISPLAY_TIMEZONE).format('DD/MM/YYYY');
+  return toAppTz(isoUtc).format('DD/MM/YYYY');
 }
 
 /**
@@ -89,5 +99,5 @@ export function rentalDays(startIsoUtc: string, endIsoUtc: string): number {
 
 /** Ngày hôm nay dạng `YYYY-MM-DD` theo giờ VN — giá trị mặc định của filter. */
 export function todayIsoDate(): string {
-  return dayjs().tz(DISPLAY_TIMEZONE).format('YYYY-MM-DD');
+  return nowInAppTz().format(DAY_PARAM_FORMAT);
 }

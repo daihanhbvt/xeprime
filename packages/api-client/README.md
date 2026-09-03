@@ -203,6 +203,5 @@ Hai thứ KHÔNG ở đây, có chủ đích:
 
 Phần đọc/ghi URL searchParams ở lại `apps/web` vì chỉ web có thanh địa chỉ.
 
-37 feature `api.ts`/`types.ts` còn lại vẫn ở `apps/web/src/features/*` và sẽ chuyển **từng cái
-một** theo [`docs/mobile-readiness-audit.md`](../../docs/mobile-readiness-audit.md) §14.1 bước 3–4.
-Không chuyển hàng loạt: mỗi feature là một bước tự verify được.
+Các feature `api.ts`/`types.ts` còn lại trong `apps/web/src/features/*` chỉ chuyển sang package
+dùng chung khi mobile thực sự dùng tới. Không chuyển hàng loạt: mỗi feature là một bước tự verify được.

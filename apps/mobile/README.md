@@ -610,7 +610,7 @@ chung: `docs/completion-roadmap.md`.
 
 ## 11. Đánh giá kiến trúc — **8.5 / 10**
 
-Chấm trên tiêu chí "base này có đỡ nổi 9 phase nghiệp vụ không", **không** phải "đã đủ tính
+Chấm trên tiêu chí "base này có đỡ nổi roadmap nghiệp vụ hiện hành không", **không** phải "đã đủ tính
 năng chưa". Cập nhật sau đợt xử lý vòng đời phiên.
 
 | Hạng mục             | Điểm | Nhận xét                                                                                                                                                                                                                  |

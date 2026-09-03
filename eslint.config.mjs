@@ -1,4 +1,5 @@
 import base from './packages/config/eslint/base.mjs';
+import { noDirectDayjsImport } from './packages/config/eslint/datetime.mjs';
 import { reactOverlays } from './packages/config/eslint/react.mjs';
 
 const REACT_FILES = [
@@ -16,6 +17,19 @@ export default [
 
   // Code React (web + mobile): react-hooks + các thư viện bị cấm theo ADR.
   ...reactOverlays.map((overlay) => ({ files: REACT_FILES, ...overlay })),
+
+  /*
+   * CLAUDE.md §9 — ngày giờ đi qua MỘT cửa (định nghĩa: packages/config/eslint/datetime.mjs).
+   *
+   * apps/web + apps/mobile + packages/ui đã nhận rule này qua `reactOverlays`; ở đây chỉ thêm
+   * `packages/domain` (không phải code React nên không nằm trong REACT_FILES), trừ đúng file
+   * định nghĩa cái cửa đó.
+   */
+  {
+    files: ['packages/domain/src/**/*.ts'],
+    ...noDirectDayjsImport,
+    ignores: [...noDirectDayjsImport.ignores, 'packages/domain/src/datetime.ts'],
+  },
 
   // Seed và script CLI được phép in tiến trình ra stdout.
   {

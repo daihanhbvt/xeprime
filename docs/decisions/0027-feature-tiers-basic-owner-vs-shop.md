@@ -1,6 +1,6 @@
 # ADR 0027 — Hai bậc năng lực: chủ xe dùng bộ cơ bản, gian hàng mở toàn bộ quản lý
 
-Ngày: 29/08/2026 · Trạng thái: Accepted · **Cụ thể hoá [ADR 0014](0014-owner-and-shop-single-role.md) điều 3 · mở rộng [ADR 0024](0024-billing-mode-from-plan-frozen-on-booking.md)**
+Ngày: 29/08/2026 · Trạng thái: Accepted · **Cụ thể hoá [ADR 0014](0014-owner-and-shop-single-role.md) điều 3 · được [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md) làm rõ bằng Owner Lite dùng chung source với Manage**
 
 ## Bối cảnh
 

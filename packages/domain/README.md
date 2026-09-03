@@ -36,7 +36,7 @@ và sẽ rò ngôn ngữ giữa các request render song song trên server (ADR 
 
 ## Cái KHÔNG tách vào đây
 
-Ghi ra để không ai làm nhầm (`docs/mobile-readiness-audit.md` §14.3):
+Ghi ra để không ai làm nhầm; đây là ranh giới package đang có hiệu lực:
 
 | Không tách                                                      | Lý do                                                                                                            |
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -47,7 +47,7 @@ Ghi ra để không ai làm nhầm (`docs/mobile-readiness-audit.md` §14.3):
 
 ## Bó message dùng chung — TOÀN BỘ
 
-`messages/{vi,en}/` chứa **cả 21 namespace** (2.172 khoá × 2 ngôn ngữ). Quyết định 24/08/2026:
+`messages/{vi,en}/` chứa toàn bộ namespace dùng chung của web và app native. Quyết định 24/08/2026:
 web và app native dùng chung toàn bộ bó message — một khoá chỉ có một bản dịch, hai client không
 bao giờ nói khác nhau về cùng một khái niệm.
 

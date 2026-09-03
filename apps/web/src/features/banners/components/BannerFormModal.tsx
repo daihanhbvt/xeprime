@@ -2,8 +2,7 @@
 
 import { App, Button } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
-import dayjs from 'dayjs';
-import type { Dayjs } from 'dayjs';
+import { appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
 import { useForm } from 'react-hook-form';
 import * as yup from 'yup';
 import { DateTimeField } from '@/components/form/DateTimeField';
@@ -80,8 +79,9 @@ export function BannerFormModal({
           altText: banner.altText,
           linkUrl: banner.linkUrl ?? '',
           active: banner.active,
-          startsAt: banner.startsAt ? dayjs(banner.startsAt) : null,
-          endsAt: banner.endsAt ? dayjs(banner.endsAt) : null,
+          // Mốc UTC từ API → giờ VN cho ô chọn; chiều gửi đi dùng `appWallClockToIso`.
+          startsAt: banner.startsAt ? toAppTz(banner.startsAt) : null,
+          endsAt: banner.endsAt ? toAppTz(banner.endsAt) : null,
         }
       : {
           title: '',
@@ -106,8 +106,8 @@ export function BannerFormModal({
       altText: values.altText.trim(),
       linkUrl: values.linkUrl?.trim() || null,
       active: values.active,
-      startsAt: values.startsAt?.toISOString() ?? null,
-      endsAt: values.endsAt?.toISOString() ?? null,
+      startsAt: values.startsAt ? appWallClockToIso(values.startsAt) : null,
+      endsAt: values.endsAt ? appWallClockToIso(values.endsAt) : null,
     };
     const done = {
       onSuccess: () => {

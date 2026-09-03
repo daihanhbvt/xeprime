@@ -39,9 +39,14 @@ const TIME_CONFIG = { format: 'HH:mm', minuteStep: 15 } as const;
  * Ô chọn ngày-giờ nối RHF ↔ AntD DatePicker.
  *
  * **Giá trị giữ nguyên là `Dayjs`, không tự chuyển sang chuỗi hay UTC.** Việc serialize thuộc về
- * feature (`.toISOString()` khi gửi API), đúng như trước Wave 1C-C — component này đổi cách
- * chuyển đổi là làm lệch giờ ở mọi form đặt xe cùng lúc. CLAUDE.md §9: lưu UTC, hiển thị
- * `Asia/Ho_Chi_Minh`; chỗ áp múi giờ là [lib/datetime](../../lib/datetime.ts), không phải ở đây.
+ * feature — component này đổi cách chuyển đổi là làm lệch giờ ở mọi form đặt xe cùng lúc. CLAUDE.md
+ * §9: lưu UTC, hiển thị `Asia/Ho_Chi_Minh`; chỗ áp múi giờ là [lib/datetime](../../lib/datetime.ts),
+ * không phải ở đây.
+ *
+ * ⚠️ Feature serialize bằng **`appWallClockToIso(value)`**, KHÔNG bằng `.toISOString()` trần.
+ * Giá trị ở đây là một MẶT ĐỒNG HỒ người dùng vừa chọn, và mặt đồng hồ đó luôn được hiểu theo
+ * giờ Việt Nam; `.toISOString()` đọc nó theo giờ MÁY và gửi lên một mốc lệch đúng phần chênh
+ * múi giờ. Chiều ngược lại (ISO từ API → giá trị mặc định của ô) là `toAppTz(iso)`.
  *
  * Xoá giá trị: `onChange(null)` của AntD được truyền thẳng thành `null` cho RHF (không hoá
  * `undefined`), để `dirty`/validation của Yup nhìn thấy một giá trị rỗng tường minh.

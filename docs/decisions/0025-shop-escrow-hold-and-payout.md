@@ -1,6 +1,6 @@
 # ADR 0025 — Gian hàng được bật thu cọc qua sàn: nền tảng GIỮ TIỀN HỘ và có đường chuyển trả
 
-Ngày: 29/08/2026 · Trạng thái: Accepted · **Thu hẹp [ADR 0021](0021-booking-hold-is-the-commission.md) điều 1 · viết lại [ADR 0023](0023-wallet-refund-and-compensation.md) điều 1–2**
+Ngày: 29/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)** · Giữ nguyên nguyên tắc tách quỹ/ledger; SLA và phạm vi thu hộ đã đổi.
 
 ## Bối cảnh
 

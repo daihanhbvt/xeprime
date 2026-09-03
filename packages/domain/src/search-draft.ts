@@ -1,4 +1,4 @@
-import { dayjs, type Dayjs } from './datetime';
+import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from './datetime';
 import {
   ROUTE_TYPE,
   SERVICE_TYPE,
@@ -89,8 +89,17 @@ export function serviceUsesRentalRange(serviceType: ServiceType): boolean {
   return serviceType !== SERVICE_TYPE.LONG_TERM;
 }
 
-/** Khoảng thuê mặc định khi chưa có lịch: mai 10:00 → 3 ngày sau, cùng giờ. */
-export function defaultRentalRange(now: Dayjs = dayjs()): { pickupAt: Dayjs; returnAt: Dayjs } {
+/**
+ * Khoảng thuê mặc định khi chưa có lịch: mai 10:00 → 3 ngày sau, cùng giờ.
+ *
+ * "Mai 10:00" là 10:00 **giờ Việt Nam** — mốc mặc định phải giống nhau cho mọi khách, kể cả
+ * khách đang ngồi ở múi giờ khác. Đó là lý do `now` mặc định là {@link nowInAppTz}, không phải
+ * `dayjs()` (giờ máy).
+ */
+export function defaultRentalRange(now: Dayjs = nowInAppTz()): {
+  pickupAt: Dayjs;
+  returnAt: Dayjs;
+} {
   return {
     pickupAt: now.add(1, 'day').hour(10).startOf('hour'),
     returnAt: now.add(4, 'day').hour(10).startOf('hour'),
@@ -121,7 +130,10 @@ export function resolveServiceType(vehicleType: VehicleType, desired: ServiceTyp
  * Filter → bản nháp. Giá trị lạ (link bị sửa tay, dịch vụ đã khai tử) rơi về mặc định thay vì
  * làm hỏng form — trang chủ không được trắng vì một tham số sai.
  */
-export function draftFromFilters(filters: MarketplaceFilters, now: Dayjs = dayjs()): SearchDraft {
+export function draftFromFilters(
+  filters: MarketplaceFilters,
+  now: Dayjs = nowInAppTz(),
+): SearchDraft {
   const fallback = defaultRentalRange(now);
   const vehicleType = isVehicleType(filters.vehicleType) ? filters.vehicleType : VEHICLE_TYPE.CAR;
   return {
@@ -132,8 +144,8 @@ export function draftFromFilters(filters: MarketplaceFilters, now: Dayjs = dayjs
     ),
     provinceCode: filters.provinceCode ?? '',
     rental: {
-      pickupAt: filters.pickupAt ? dayjs(filters.pickupAt) : fallback.pickupAt,
-      returnAt: filters.returnAt ? dayjs(filters.returnAt) : fallback.returnAt,
+      pickupAt: filters.pickupAt ? toAppTz(filters.pickupAt) : fallback.pickupAt,
+      returnAt: filters.returnAt ? toAppTz(filters.returnAt) : fallback.returnAt,
       // Tab "Thuê theo giờ" ánh xạ vào filter `hourly` sẵn có (xe CÓ giá thuê giờ) — chế độ sống
       // bằng đúng hợp đồng hiện tại, không phải một param mới mà backend lơ đi.
       mode: filters.hourly ? 'hourly' : 'daily',
@@ -153,7 +165,9 @@ export function draftFromFilters(filters: MarketplaceFilters, now: Dayjs = dayjs
  * `packageMonths`/`pickupPreference`/`requestedPickupDate`, vì gói và nguyện vọng ngày nhận
  * thuộc luồng gửi yêu cầu của TỪNG xe, không phải bộ lọc marketplace (ADR 0011).
  */
-export type SearchFilterPatch = { [K in keyof MarketplaceFilters]?: MarketplaceFilters[K] | undefined };
+export type SearchFilterPatch = {
+  [K in keyof MarketplaceFilters]?: MarketplaceFilters[K] | undefined;
+};
 
 export function draftToFilterPatch(draft: SearchDraft): SearchFilterPatch {
   const withDriver = draft.serviceType === SERVICE_TYPE.WITH_DRIVER;
@@ -164,8 +178,18 @@ export function draftToFilterPatch(draft: SearchDraft): SearchFilterPatch {
     serviceType: draft.serviceType,
     provinceCode: draft.provinceCode || undefined,
     routeType: withDriver ? draft.routeType : undefined,
-    pickupAt: usesRange ? (draft.rental.pickupAt?.toISOString() ?? undefined) : undefined,
-    returnAt: usesRange ? (draft.rental.returnAt?.toISOString() ?? undefined) : undefined,
+    // Giờ trên ô chọn là giờ VIỆT NAM (CLAUDE.md §9) — `.toISOString()` trần sẽ đọc nó theo
+    // giờ máy và đẩy một link chia sẻ lệch đúng phần chênh múi giờ của người gửi.
+    pickupAt: usesRange
+      ? draft.rental.pickupAt
+        ? appWallClockToIso(draft.rental.pickupAt)
+        : undefined
+      : undefined,
+    returnAt: usesRange
+      ? draft.rental.returnAt
+        ? appWallClockToIso(draft.rental.returnAt)
+        : undefined
+      : undefined,
     hourly: usesRange && draft.rental.mode === 'hourly' ? true : undefined,
   };
 }

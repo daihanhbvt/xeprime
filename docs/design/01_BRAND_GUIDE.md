@@ -1,6 +1,6 @@
 # 01 — Brand Guide
 
-> Ngày: 04/08/2026 · Chủ sở hữu: Creative Director
+> Ngày: 04/08/2026 · Cập nhật định vị: 03/09/2026 · Chủ sở hữu: Creative Director
 > Nguồn sự thật kỹ thuật của token: `apps/web/src/styles/theme.ts` ↔ `tokens.css` (ADR 0003).
 > **Tài liệu này định nghĩa thương hiệu. Khi nó mâu thuẫn với một màu ai đó gõ tay trong CSS, tài liệu này thắng và CSS phải sửa.**
 
@@ -8,7 +8,7 @@
 
 ## 1. Thương hiệu XePrime là gì
 
-XePrime không bán "phần mềm quản lý xe" và cũng không bán "chỗ đăng tin". XePrime bán **sự yên tâm về một tài sản đang chạy ngoài đường**: với khách thuê là yên tâm chiếc xe có thật, giá đúng, người giao đúng hẹn; với chủ xe là yên tâm không trùng lịch, không mất xe, không thất thoát tiền.
+XePrime kết hợp **chợ đăng/thuê xe** với **phần mềm quản lý cho thuê xe**, nhưng lợi ích cuối cùng không phải số màn hình hay số tin đăng. XePrime bán **sự yên tâm về một tài sản đang chạy ngoài đường**: với khách thuê là yên tâm chiếc xe có thật, giá đúng, người giao đúng hẹn; với chủ xe là yên tâm không trùng lịch, không mất xe, không thất thoát tiền.
 
 Mọi quyết định thị giác phải phục vụ cảm giác đó. Đây là lý do brand đi theo hướng **"sang trọng có kiểm soát"**, không phải "rẻ, vui, nhiều màu".
 

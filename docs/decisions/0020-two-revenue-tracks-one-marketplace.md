@@ -1,6 +1,6 @@
 # ADR 0020 — Hai đường doanh thu trên MỘT chợ: hoa hồng phía chủ xe và gói theo chỗ
 
-Ngày: 28/08/2026 · Trạng thái: Accepted · **Sửa [ADR 0014](0014-owner-and-shop-single-role.md) điều 5**
+Ngày: 28/08/2026 · Trạng thái: **Partially superseded bởi [ADR 0028](0028-marketplace-subscription-fees-and-custodied-funds.md)** · Giữ hai tuyến doanh thu; quy tắc xếp hạng và breakdown phí đã đổi.
 
 > ⚠️ **[ADR 0026](0026-first-trips-free-then-commission.md) thêm một bậc TRƯỚC hai tuyến
 > (29/08/2026):** hai đơn đầu của một tenant là **0% hoa hồng, không thu giữ chỗ**; từ đơn thứ ba

@@ -1,13 +1,13 @@
 # 04 — Creative Brief
 
-> Ngày: 04/08/2026 · Chủ sở hữu: Creative Director
+> Ngày: 04/08/2026 · Cập nhật phạm vi: 03/09/2026 · Chủ sở hữu: Creative Director
 > Đây là bản brief giao việc cho thiết kế. Đọc `01_BRAND_GUIDE.md` và `02_PRODUCT_VISION.md` trước.
 
 ---
 
 ## 1. Đề bài
 
-Thiết kế lại trải nghiệm XePrime để nó **được nhận ra là sản phẩm hạng nhất trong ngành cho thuê xe Việt Nam** — mà không đánh mất một dòng nghiệp vụ nào đã dựng được ở 7 phase.
+Thiết kế trải nghiệm XePrime để nó **được nhận ra là sản phẩm hạng nhất trong ngành cho thuê xe Việt Nam** — kết nối một marketplace đáng tin với hai bề mặt vận hành: Owner Lite và Full Manage.
 
 Đây không phải một dự án "làm đẹp giao diện". Sản phẩm đã đúng về nghiệp vụ. Việc cần làm là nâng nó từ *đúng* lên *đáng tin và dùng sướng*, và điều đó chủ yếu được quyết định bởi những thứ không phải màu sắc: thứ bậc thông tin, tốc độ, cách hệ thống nói khi có chuyện.
 
@@ -17,10 +17,10 @@ Thiết kế lại trải nghiệm XePrime để nó **được nhận ra là s�
 
 | Đang có | Ý nghĩa với thiết kế |
 | --- | --- |
-| Nghiệp vụ đủ để một shop bỏ Excel (Phase 0–6) | Không được phá luồng; thiết kế lại *bề mặt*, giữ *xương* |
+| Nghiệp vụ web đủ để một gian hàng thử bỏ Excel | Không được phá luồng; thiết kế lại *bề mặt*, giữ *xương* |
 | Hai bản sắc thị giác song song (portal cũ dark, bản mới light) | Phải chốt một hệ và chuyển dứt điểm |
 | Marketplace đang có thẻ xe dùng ảnh sai | Chất lượng nội dung là bài toán thiết kế, không chỉ là bài toán kiểm duyệt |
-| Chủ shop vận hành từ điện thoại | Mobile là mặt trận chính, không phải bản rút gọn |
+| Chủ xe vận hành nhiều trên điện thoại | Responsive web là mặt trận chính của Owner/Manage; native ưu tiên khách thuê |
 | Ràng buộc kỹ thuật cứng (AntD 6, CSS Modules, token) | Thiết kế phải nằm trong hệ đó — xem `10` |
 
 ---
@@ -29,7 +29,8 @@ Thiết kế lại trải nghiệm XePrime để nó **được nhận ra là s�
 
 | Ai | Ở đâu, lúc nào | Trạng thái tinh thần | Điều họ cần từ thiết kế |
 | --- | --- | --- | --- |
-| Chủ shop | Ngoài bãi xe, điện thoại, một tay | Bận, bị gọi liên tục | Trả lời được câu hỏi trong 5 giây, chạm to, ít bước |
+| Chủ xe cơ bản | Bên cạnh xe, điện thoại, một tay | Muốn đăng xe và xử lý chuyến, không muốn học ERP | Ít menu, biết tiền thực nhận, hoàn thành một chuyến từ đầu đến cuối |
+| Chủ shop | Ngoài bãi xe, điện thoại hoặc quầy | Bận, bị gọi liên tục | Trả lời được câu hỏi trong 5 giây, chạm to, ít bước |
 | Nhân viên | Quầy, laptop, cả ngày | Lặp lại, muốn nhanh | Mật độ cao, phím tắt, không phải chờ |
 | Khách thuê | Điện thoại, tối thứ Năm | So sánh 4 nơi, dễ bỏ đi | Ảnh thật, giá cuối, còn trống thật, ít bước |
 | Nền tảng | Desktop, giờ hành chính | Xử lý hàng loạt, cần chính xác | Danh sách mạnh, filter, bằng chứng, dấu vết |
@@ -98,14 +99,19 @@ Ba hệ quả trực tiếp:
 ### 8.2 Marketplace
 Trang chủ · kết quả tìm + bộ lọc · chi tiết xe (có lịch trống + bảng giá) · trang gian hàng · luồng đặt xe · chuyến của tôi · tài khoản · auth modal
 
-### 8.3 Portal gian hàng
-Tổng quan có nhắc việc · lịch (desktop + mobile) · xe · đơn thuê · yêu cầu thuê · **khách hàng của shop (mới)** · tài chính · thu chi · công nợ · hợp đồng · cài đặt gian hàng · người dùng
+### 8.3 Owner Lite và Portal gian hàng
+
+Owner Lite: tổng quan · xe · lịch · yêu cầu/chuyến · bàn giao/trả · tiền của tôi · chat · nâng cấp.
+
+Full Manage: toàn bộ Owner Lite + khách hàng · tài chính · thu chi · công nợ · báo cáo · bảo trì · hợp đồng · chi nhánh · tài xế · thành viên.
 
 ### 8.4 Portal nền tảng
-Tổng quan · duyệt hồ sơ (có checklist chất lượng) · gian hàng · xe/đơn/khách toàn hệ thống · nhân sự · gói dịch vụ · nhật ký
+
+Tổng quan · duyệt/xác minh người bán · gian hàng · xe/đơn/khách toàn hệ thống · gói/hóa đơn · giao dịch ngân hàng · hoàn tiền · số dư/rút tiền · tranh chấp/support · nhân sự · nhật ký.
 
 ### 8.5 Chuyển thể mobile
-Mọi màn ở 8.2–8.4 đều phải có bản mobile được vẽ, không phải "sẽ co lại".
+
+Mọi màn Owner/Manage/Admin phải có responsive web dùng được. App native trước mắt chỉ thiết kế trọn luồng khách thuê: tìm xe → đặt/giữ chỗ → chuyến → chat → thông báo.
 
 ---
 
@@ -162,4 +168,4 @@ Thiết kế **không được** động tới các bảo đảm nghiệp vụ s
 5. Khách thuê không có gian hàng là **trạng thái hợp lệ**, không phải lỗi cần sửa.
 6. Không có đăng ký quản trị nền tảng công khai.
 
-Liên quan: `06_DESIGN_PRINCIPLES.md` · `08_UX_GUIDELINES.md` · `09_PAGE_DESIGN_ORDER.md`.
+Liên quan: `02_PRODUCT_VISION.md` · `06_DESIGN_PRINCIPLES.md` · `07_INFORMATION_ARCHITECTURE.md` · `08_UX_GUIDELINES.md`.

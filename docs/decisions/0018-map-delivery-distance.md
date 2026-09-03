@@ -4,9 +4,8 @@ Ngày: 24/08/2026 · Trạng thái: Accepted
 
 Liên quan: [ADR 0014](0014-owner-and-shop-single-role.md) (nền tảng không đứng giữa quan hệ khách ↔
 gian hàng), [ADR 0007](0007-api-type-contract.md) (tiền là chuỗi),
-[ADR 0012](0012-i18n-shared-url-cookie-locale.md) (giao diện đọc MÃ, không đọc câu chữ),
-[docs/plans/2026-08-24-tich-hop-map-tinh-phi-giao-xe.md](../plans/2026-08-24-tich-hop-map-tinh-phi-giao-xe.md)
-(hồ sơ phân tích).
+[ADR 0012](0012-i18n-shared-url-cookie-locale.md) (giao diện đọc MÃ, không đọc câu chữ). Hồ sơ
+phân tích triển khai ngày 24/08/2026 đã nghỉ hưu và còn trong lịch sử Git.
 
 ## Bối cảnh
 

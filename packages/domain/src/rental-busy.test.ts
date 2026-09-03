@@ -1,5 +1,6 @@
-import dayjs from 'dayjs';
 import { describe, expect, it } from 'vitest';
+
+import { toAppTz } from './datetime';
 
 import type { VehicleBusyDay } from './rental-busy';
 
@@ -39,7 +40,16 @@ const DAYS: VehicleBusyDay[] = [
 ];
 
 const index = buildBusyDayIndex(DAYS);
-const day = (local: string) => dayjs(at(local));
+
+/**
+ * Mốc tra cứu dựng bằng `toAppTz`, KHÔNG bằng `dayjs` trần.
+ *
+ * `busyDayKey` đọc MẶT ĐỒNG HỒ của giá trị đưa vào, và giá trị mà sản phẩm đưa vào luôn là
+ * giờ `Asia/Ho_Chi_Minh` (ô lịch → `calendarDateToAppWallClock`, khoảng thuê → `toAppTz`).
+ * `dayjs('…+07:00')` cho mặt đồng hồ theo GIỜ MÁY: trên máy đặt ở UTC, `2026-09-10 00:00` giờ
+ * VN thành `2026-09-09 17:00` và tra nhầm sang ngày hôm trước.
+ */
+const day = (local: string) => toAppTz(at(local));
 
 describe('phân mức bận của một ngày', () => {
   it('rảnh / bận một phần / bận trọn ngày', () => {

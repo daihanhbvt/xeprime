@@ -38,6 +38,68 @@ export function toAppTz(value: IsoDateTimeString | number | Date | Dayjs): Dayjs
   return dayjs(value).tz(APP_TIME_ZONE);
 }
 
+/**
+ * Mẫu đọc lại **các thành phần wall-clock** của một `Dayjs` — đủ tới millisecond.
+ *
+ * Không phải mẫu hiển thị, cũng không phải tham số URL: nó chỉ là cầu nối giữa "con số người
+ * dùng đang NHÌN THẤY trên ô chọn" và một mốc thời gian tuyệt đối. Thiếu `.SSS` là mỗi lần quy
+ * đổi lại cắt mất phần mili giây, và round-trip API → picker → API không còn bằng chính nó.
+ */
+const WALL_CLOCK_FORMAT = 'YYYY-MM-DDTHH:mm:ss.SSS';
+
+/** "Bây giờ" theo giờ Việt Nam — giá trị mặc định của mọi ô chọn ngày giờ. */
+export function nowInAppTz(): Dayjs {
+  return dayjs().tz(APP_TIME_ZONE);
+}
+
+/**
+ * **Chiều NGƯỢC của {@link toAppTz}**: giờ người dùng vừa chọn trên `DatePicker` → mốc tuyệt đối.
+ *
+ * `toAppTz` nhận một MỐC và đổi cách nhìn nó; hàm này nhận một MẶT ĐỒNG HỒ (`14:00` — không kèm
+ * múi giờ nào cả, vì ô chọn không hỏi múi giờ) và tuyên bố nó là 14:00 **giờ Việt Nam**.
+ * CLAUDE.md §9: mọi ngày giờ nghiệp vụ người dùng chọn đều theo `Asia/Ho_Chi_Minh`, không theo
+ * múi giờ của cái máy đang mở trình duyệt.
+ *
+ * ⚠️ `toAppTz(pickerValue).toISOString()` KHÔNG thay được hàm này: `.tz()` GIỮ NGUYÊN mốc và chỉ
+ * đổi cách hiển thị, nên trên máy đặt ở UTC nó vẫn gửi đi 14:00Z (= 21:00 giờ VN) thay vì 07:00Z.
+ *
+ * Nhận được CẢ HAI dạng `Dayjs` mà Ant Design phát ra, và không cần biết đang cầm dạng nào:
+ *  - giá trị đã gắn múi giờ (từ `toAppTz`, lúc mở form sửa) — `.format()` trả đúng giờ VN;
+ *  - giá trị theo giờ máy (người dùng gõ tay vào ô, hoặc panel dựng từ `dayjs()`) — `.format()`
+ *    trả đúng thứ đang hiện trên ô.
+ *
+ * Cả hai đều đọc ra ĐÚNG con số người dùng nhìn thấy, nên hàm idempotent với chính nó: quy đổi
+ * hai lần cho cùng một mốc.
+ */
+export function appWallClockToInstant(value: Dayjs): Dayjs {
+  return dayjs.tz(value.format(WALL_CLOCK_FORMAT), APP_TIME_ZONE);
+}
+
+/** {@link appWallClockToInstant} rồi serialize — đúng dạng gửi lên API (ISO 8601 UTC, có `Z`). */
+export function appWallClockToIso(value: Dayjs): IsoDateTimeString {
+  return appWallClockToInstant(value).toISOString();
+}
+
+/**
+ * `Dayjs` (giờ VN) → `Date` cho những API chỉ nói được bằng `Date` **đọc theo giờ máy**:
+ * `react-day-picker` (`selected`, `month`, `disabled`) và `Intl` khi nhận `Date` thô.
+ *
+ * Giữ nguyên MẶT ĐỒNG HỒ chứ không giữ mốc — khác hẳn `.toDate()`. `.toDate()` trả mốc tuyệt
+ * đối, và trên máy đặt ở UTC lịch sẽ tô ô 02/09 cho một mốc 03/09 00:30 giờ VN. Ở đây NGÀY LỊCH
+ * mới là thứ phải đúng: đó là ô người dùng bấm vào.
+ */
+export function appWallClockToCalendarDate(value: Dayjs): Date {
+  return dayjs(value.format(WALL_CLOCK_FORMAT)).toDate();
+}
+
+/**
+ * `Date` do `react-day-picker` phát ra (các trường ngày/giờ của nó là **giờ máy**) → đúng ngày
+ * giờ đó đọc theo giờ Việt Nam. Cặp nghịch đảo của {@link appWallClockToCalendarDate}.
+ */
+export function calendarDateToAppWallClock(date: Date): Dayjs {
+  return appWallClockToInstant(dayjs(date));
+}
+
 /** 00:00 của một ngày `YYYY-MM-DD` theo giờ Việt Nam, trả về mốc thời gian tuyệt đối. */
 export function startOfAppDay(day: string): Dayjs {
   return dayjs.tz(`${day}T00:00:00`, APP_TIME_ZONE);
@@ -78,12 +140,7 @@ export function rentalDurationParts(from: Dayjs, to: Dayjs): RentalDurationParts
  * này cấm đụng tới).
  */
 export type PeriodKey =
-  | 'today'
-  | 'this_week'
-  | 'this_month'
-  | 'last_month'
-  | 'this_quarter'
-  | 'this_year';
+  'today' | 'this_week' | 'this_month' | 'last_month' | 'this_quarter' | 'this_year';
 
 export function buildPeriodRange(period: PeriodKey): {
   from: string;

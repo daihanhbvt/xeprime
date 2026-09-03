@@ -81,8 +81,8 @@ describe('DateTimeField — ngày giờ đơn', () => {
     await vi.waitFor(() => expect(onValues).toHaveBeenCalled());
     const submitted = onValues.mock.calls[0]![0].pickupAt;
     expect(dayjs.isDayjs(submitted)).toBe(true);
-    // Serialize là việc của feature (`.toISOString()`), không phải của field — nếu component tự
-    // chuyển đổi thì mọi form đặt xe lệch giờ cùng lúc.
+    // Serialize là việc của feature (`appWallClockToIso`), không phải của field — nếu component
+    // tự chuyển đổi thì mọi form đặt xe lệch giờ cùng lúc. Field chỉ giữ nguyên MẶT ĐỒNG HỒ.
     expect(submitted.format('YYYY-MM-DDTHH:mm')).toBe('2026-08-07T09:30');
   });
 

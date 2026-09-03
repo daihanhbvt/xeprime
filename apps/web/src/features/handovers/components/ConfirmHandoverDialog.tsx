@@ -1,10 +1,14 @@
 'use client';
 
 import { App, Alert, Collapse, DatePicker, Radio } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
+import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@/lib/datetime';
 import { useState } from 'react';
 import {
-  HANDOVER_CONDITION, HANDOVER_TYPE, type HandoverCondition, type HandoverType, } from '@xeprime/types';
+  HANDOVER_CONDITION,
+  HANDOVER_TYPE,
+  type HandoverCondition,
+  type HandoverType,
+} from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { usePermissions } from '@/hooks/use-permissions';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
@@ -50,8 +54,9 @@ const COPY = {
  * vô nghĩa và server cũng từ chối, nên không đưa người dùng một biểu mẫu sai sẵn từ lúc mở.
  */
 function defaultOccurredAt(scheduledIso: string): Dayjs {
-  const now = dayjs();
-  const scheduled = dayjs(scheduledIso);
+  // Cả hai đầu đọc theo giờ VIỆT NAM: ô chọn hiện giờ nghiệp vụ, không phải giờ máy trực ban.
+  const now = nowInAppTz();
+  const scheduled = toAppTz(scheduledIso);
   return scheduled.isValid() && scheduled.isBefore(now) ? scheduled : now;
 }
 
@@ -122,7 +127,7 @@ export function ConfirmHandoverDialog({
     setSubmitting(true);
     try {
       await confirmHandover(context.bookingId, type, {
-        occurredAt: occurredAt.toISOString(),
+        occurredAt: appWallClockToIso(occurredAt),
         ...(odometerKm.trim() ? { odometerKm: Number(odometerKm) } : {}),
         ...(condition ? { condition } : {}),
         ...(notes.trim() ? { notes: notes.trim() } : {}),
@@ -223,11 +228,11 @@ export function ConfirmHandoverDialog({
                       allowClear={false}
                       className={styles.control}
                       // Ghi cho tương lai là vô nghĩa — server cũng từ chối, chặn sớm cho đỡ mất công.
-                      disabledDate={(current) => current.isAfter(dayjs().endOf('day'))}
+                      disabledDate={(current) => current.isAfter(nowInAppTz().endOf('day'))}
                     />
                     <span className={styles.hint}>
-                      {fmt.rentalPoint(occurredAt)} — mặc định theo giờ hẹn trên đơn, chỉnh lại
-                      nếu giao/nhận lệch giờ.
+                      {fmt.rentalPoint(occurredAt)} — mặc định theo giờ hẹn trên đơn, chỉnh lại nếu
+                      giao/nhận lệch giờ.
                     </span>
                   </label>
 
@@ -268,8 +273,8 @@ export function ConfirmHandoverDialog({
                     <div className={styles.field}>
                       {/* Tiêu đề do chính lưới ảnh dựng — ở đây chỉ nói rõ nó không bắt buộc. */}
                       <span className={styles.hint}>
-                        Chụp lại để có bằng chứng khi đối chiếu cuối chuyến. Không bắt buộc — bỏ
-                        qua vẫn xác nhận được.
+                        Chụp lại để có bằng chứng khi đối chiếu cuối chuyến. Không bắt buộc — bỏ qua
+                        vẫn xác nhận được.
                       </span>
                       <HandoverPhotoGrid
                         bookingId={context.bookingId}
