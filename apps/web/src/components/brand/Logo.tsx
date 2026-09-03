@@ -1,51 +1,60 @@
+import Image from 'next/image';
 import { APP_NAME } from '@/constants/app-name';
 import { cx } from '@/lib/cx';
 import styles from './Logo.module.css';
 
 /**
- * Logo thương hiệu.
+ * Logo thương hiệu — file THẬT ở `apps/web/public/brand/`, không còn bản mô phỏng bằng SVG.
  *
- * ⚠️ TẠM: đây là bản mô phỏng (car glyph + wordmark) vẽ lại từ ảnh brand, CHƯA phải file
- * thật. Khi có logo chính thức: thả SVG vào `apps/web/public/brand/` rồi thay phần `<Mark/>`
- * bằng `<Image>` — chỉ sửa đúng file này, mọi nơi dùng `<Logo/>` không đổi.
+ * Hai file, hai vai trò khác nhau chứ không phải hai kích thước của một thứ:
+ * - `xeprime-logo.png` — lockup ngang (biểu tượng + chữ), dùng ở mọi chỗ có bề ngang.
+ * - `xeprime-mark.png` — biểu tượng vuông bo góc (nền gradient vàng, glyph trắng), dùng khi
+ *   sidebar thu gọn. Cùng một artwork với favicon/app icon ở `src/app/`, nên tab trình duyệt
+ *   và cột 64px hiện đúng một hình.
+ *
+ * Đổi logo về sau: thay file trong `public/brand/` (và bộ icon ở `src/app/`), chỉnh `RATIO` nếu
+ * tỉ lệ khác — mọi nơi dùng `<Logo/>` không phải sửa.
  */
 type LogoSize = 'sm' | 'md' | 'lg';
+type LogoVariant = 'full' | 'mark';
 
 interface LogoProps {
-  /** `full` = mark + chữ; `mark` = chỉ biểu tượng. */
-  variant?: 'full' | 'mark';
+  /** `full` = lockup ngang; `mark` = chỉ biểu tượng vuông. */
+  variant?: LogoVariant;
   size?: LogoSize;
-  /** `light` = đảo chữ sang trắng để đặt trên nền tối (hero, CTA chủ xe). */
-  tone?: 'default' | 'light';
   className?: string;
 }
 
-function Mark({ className }: { className?: string }) {
-  return (
-    <span className={cx(styles.mark, className)} aria-hidden="true">
-      <svg viewBox="0 0 48 48" role="img">
-        <path
-          fill="#fff"
-          d="M8 27h32l-5-10.5A5.5 5.5 0 0 0 30 13H20a5.5 5.5 0 0 0-4 1.8L10 22l-3 3Z"
-        />
-        <rect x="7" y="27" width="34" height="7" rx="3.5" fill="#fff" />
-      </svg>
-    </span>
-  );
-}
+/** Tỉ lệ THẬT của file (rộng ÷ cao) — sai số ở đây là logo bị bóp méo. */
+const RATIO: Record<LogoVariant, number> = {
+  full: 1024 / 331,
+  mark: 1,
+};
 
-export function Logo({ variant = 'full', size = 'md', tone = 'default', className }: LogoProps) {
-  if (variant === 'mark') {
-    return <Mark className={cx(styles[size], className)} />;
-  }
+/** Chiều cao hiển thị; bề ngang suy ra từ `RATIO` để không bao giờ lệch tỉ lệ. */
+const HEIGHT: Record<LogoSize, Record<LogoVariant, number>> = {
+  sm: { full: 30, mark: 30 },
+  md: { full: 38, mark: 38 },
+  lg: { full: 54, mark: 60 },
+};
+
+const SRC: Record<LogoVariant, string> = {
+  full: '/brand/xeprime-logo.png',
+  mark: '/brand/xeprime-mark.png',
+};
+
+export function Logo({ variant = 'full', size = 'md', className }: LogoProps) {
+  const height = HEIGHT[size][variant];
+
   return (
-    <span
-      className={cx(styles.logo, styles[size], tone === 'light' && styles.light, className)}
-      aria-label={APP_NAME}
-    >
-      <Mark />
-      {/* Một `<span>`, một style: tên đọc từ env nên không cắt được thành hai nửa cố định. */}
-      <span className={styles.word}>{APP_NAME}</span>
-    </span>
+    <Image
+      src={SRC[variant]}
+      alt={APP_NAME}
+      width={Math.round(height * RATIO[variant])}
+      height={height}
+      /* Logo nằm ở header/sidebar — lazy load sẽ thành một nhịp trống ngay trên nếp gấp. */
+      loading="eager"
+      className={cx(styles.logo, className)}
+    />
   );
 }

@@ -13,7 +13,6 @@ import {
   branchKeyOf,
   flattenLeaves,
   isNavBranch,
-  leavesOfSection,
   matchSelectedKey,
   mobileTabsForScope,
   navForScope,
@@ -59,7 +58,7 @@ function hrefsOf(sections: typeof SHOP_NAV): string[] {
 }
 
 describe('nav — cấu trúc khối', () => {
-  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 20 mục lá', () => {
+  it('gian hàng: 6 khối theo hành trình chủ xe, tổng 18 mục lá', () => {
     expect(SHOP_NAV.map((section) => section.key)).toEqual([
       'overview',
       'operations',
@@ -68,8 +67,9 @@ describe('nav — cấu trúc khối', () => {
       'settings',
       'support',
     ]);
-    // 20 từ W2: thêm "Gói của tôi" (subscription.view — ADR 0015/0026).
-    expect(flattenLeaves(SHOP_NAV)).toHaveLength(20);
+    // 20 từ W2 (thêm "Gói của tôi"), rồi 18 từ 03/09/2026: gỡ hai mục placeholder
+    // "Khu vực nhận xe" và "Thùng rác" (R1 — ẩn menu chưa có luồng).
+    expect(flattenLeaves(SHOP_NAV)).toHaveLength(18);
   });
 
   it('Tổng quan và Hỗ trợ luôn hiện (`pinned`), bốn khối giữa gập được', () => {
@@ -106,10 +106,8 @@ describe('nav — cấu trúc khối', () => {
       ROUTES.MANAGE.SHOP_BRANCHES,
       ROUTES.MANAGE.SHOP_POLICIES,
       ROUTES.MANAGE.MEMBERS,
-      ROUTES.MANAGE.PICKUP_AREAS,
       ROUTES.MANAGE.DRIVERS,
       ROUTES.MANAGE.CHAT,
-      ROUTES.MANAGE.TRASH,
     ]) {
       expect(hrefsOf(SHOP_NAV)).toContain(href);
     }
@@ -143,11 +141,6 @@ describe('nav — cấu trúc khối', () => {
     ]);
   });
 
-  it('Thùng rác lui về Cấu hình, không nằm giữa các mục vận hành', () => {
-    const settings = SHOP_NAV.find((section) => section.key === 'settings')!;
-    expect(leavesOfSection(settings).map((leaf) => leaf.href)).toContain(ROUTES.MANAGE.TRASH);
-  });
-
   it('mọi mục lá có href riêng — không hai mục cùng đích', () => {
     for (const sections of [SHOP_NAV, PLATFORM_NAV]) {
       const hrefs = hrefsOf(sections);
@@ -162,19 +155,18 @@ describe('nav — cấu trúc khối', () => {
     }
   });
 
-  it('đúng 2 mục gian hàng là placeholder (`comingSoon`)', () => {
-    const coming = flattenLeaves(SHOP_NAV)
-      .filter((leaf) => leaf.comingSoon)
-      .map((leaf) => leaf.key);
-    expect(coming).toEqual(['pickup-areas', 'trash']);
-    // Nền tảng không có mục nào chưa dựng.
-    expect(flattenLeaves(PLATFORM_NAV).some((leaf) => leaf.comingSoon)).toBe(false);
-  });
-
-  it('mục placeholder VẪN nằm trong menu — chủ dự án yêu cầu "chưa làm thì để menu trống"', () => {
-    expect(visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false)).toContain(
-      'manage.trash',
-    );
+  /**
+   * Hai mục 'Khu vực nhận xe' và 'Thùng rác' đã bị GỠ ngày 03/09/2026 (R1 — 'ẩn dead link và
+   * menu placeholder chưa có luồng'). Chúng từng mang cờ `comingSoon` mà `useManageNav` không
+   * bao giờ đọc, nên trên thực tế chúng là hai liên kết bấm được dẫn tới một trang trống.
+   *
+   * Test này khoá lại điều ngược lại của cái nó từng khoá: menu không được chứa mục nào không
+   * dẫn tới đâu.
+   */
+  it('không mục nào trong menu trỏ tới trang chưa dựng', () => {
+    const keys = flattenLeaves(SHOP_NAV).map((leaf) => leaf.key);
+    expect(keys).not.toContain('pickup-areas');
+    expect(keys).not.toContain('trash');
   });
 
   it('chỉ hai mục được phép mang huy hiệu — và đúng là hai việc phải xử lý', () => {
@@ -213,16 +205,16 @@ describe('nav — ranh giới gian hàng ↔ nền tảng', () => {
 });
 
 describe('nav — vai trò gian hàng nhìn thấy gì', () => {
-  it('shop_owner thấy đủ 20 mục', () => {
+  it('shop_owner thấy đủ 18 mục', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_OWNER], false),
-    ).toHaveLength(20);
+    ).toHaveLength(18);
   });
 
-  it('shop_manager cũng thấy đủ 20 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
+  it('shop_manager cũng thấy đủ 18 mục (có MEMBER_VIEW, FINANCE_VIEW và SUBSCRIPTION_VIEW)', () => {
     expect(
       visibleLabels(DEFAULT_TENANT_ROLE_PERMISSIONS[TENANT_ROLE.SHOP_MANAGER], false),
-    ).toHaveLength(20);
+    ).toHaveLength(18);
   });
 
   it('shop_staff KHÔNG thấy tài chính và người dùng', () => {

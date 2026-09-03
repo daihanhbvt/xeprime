@@ -1,0 +1,153 @@
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--xp-color-text);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--xp-color-text-secondary);
+}
+
+.draft {
+  padding: 12px 14px;
+  border: 1px solid var(--xp-color-warning);
+  border-radius: 10px;
+  background: var(--xp-color-warning-bg);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--xp-color-text-secondary);
+}
+
+/* Khối cấp cứu phải đọc được trong hai giây — viền đỏ, không phải một đoạn văn giữa trang. */
+.emergency {
+  padding: 14px 16px;
+  border: 1px solid var(--xp-color-error);
+  border-radius: 12px;
+  background: var(--xp-color-error-bg);
+}
+
+.emergencyTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--xp-color-error);
+}
+
+.emergencyBody {
+  margin-top: 6px;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--xp-color-text);
+}
+
+.block {
+  padding-top: 4px;
+}
+
+.blockTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+}
+
+.channels {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.channel {
+  padding: 14px 16px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 12px;
+  background: var(--xp-color-bg-container);
+}
+
+.channelLabel {
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--xp-color-text-tertiary);
+}
+
+.channelValue {
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+  overflow-wrap: anywhere;
+}
+
+.channelNote {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--xp-color-text-secondary);
+}
+
+.checklist {
+  margin-top: 10px;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: disc;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--xp-color-text-secondary);
+}
+
+.paragraph {
+  margin-top: 8px;
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--xp-color-text-secondary);
+}
+
+.paragraphMuted {
+  margin-top: 8px;
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--xp-color-text-tertiary);
+}
+
+.legalLinks {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.legalLink {
+  font-size: 14.5px;
+  color: var(--xp-color-primary);
+}
+
+.legalLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: 23px;
+  }
+}

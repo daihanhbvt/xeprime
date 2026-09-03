@@ -4,6 +4,7 @@
 > Trạng thái: **Canonical — tiến độ và thứ tự thực hiện**
 > Tầm nhìn: [`design/02_PRODUCT_VISION.md`](design/02_PRODUCT_VISION.md)
 > Khoảng trống chi tiết: [`design/03_PRODUCT_GAP_ANALYSIS.md`](design/03_PRODUCT_GAP_ANALYSIS.md)
+> Bảng theo dõi tương tác và prompt Claude Code: [`roadmap.html`](roadmap.html) — UI hỗ trợ, Markdown này vẫn là nguồn canonical.
 
 ## 1. Dự án đang ở giai đoạn nào
 

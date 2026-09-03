@@ -59,7 +59,6 @@ export function maintenanceTabHref(vehicleId: string): string {
 function DueCell({ row }: { row: MaintenanceBoardItem }) {
   const fmt = useAppFormat();
   const tCommon = useTranslations('Common');
-  const t = useTranslations('Maintenance');
   const status = row.dueStatus as MaintenanceDueStatus;
   if (status === MAINTENANCE_DUE_STATUS.UNKNOWN) {
     return <span className={styles.muted}>{tCommon('labels.insufficientData')}</span>;

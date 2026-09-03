@@ -17,6 +17,13 @@ export const ROUTES = {
   /** Khu tin nhắn của khách (chat với shop). Shop dùng /manage/chat. */
   CHAT: '/chat',
   /**
+   * Trung tâm hỗ trợ CÔNG KHAI — kênh liên hệ thật, không cần đăng nhập.
+   *
+   * Khác `/account/support` (hàng đợi ticket của một người, chưa dựng): người đang gặp sự cố
+   * giữa chuyến thường không đăng nhập được, nên kênh liên hệ phải nằm ngoài tường đăng nhập.
+   */
+  SUPPORT: '/support',
+  /**
    * Khu TÀI KHOẢN của một CON NGƯỜI — khác hoàn toàn hồ sơ gian hàng (`/manage/shop`).
    *
    * ADR 0014: chủ xe, chủ gian hàng và khách thuê là cùng một con người có thể mang nhiều vai,
@@ -67,10 +74,8 @@ export const ROUTES = {
     MEMBERS: '/manage/members',
     /** "Gói của tôi" — gói hiện hành, hạn mức chỗ, lượt miễn phí, mua gói (W2, ADR 0015/0026). */
     SUBSCRIPTION: '/manage/subscription',
-    PICKUP_AREAS: '/manage/pickup-areas',
     DRIVERS: '/manage/drivers',
     CHAT: '/manage/chat',
-    TRASH: '/manage/trash',
     /** Trung tâm hỗ trợ của cổng quản lý — hướng dẫn nhanh + câu hỏi thường gặp. */
     SUPPORT: '/manage/support',
 

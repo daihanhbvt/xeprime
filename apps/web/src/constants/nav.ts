@@ -6,7 +6,6 @@ import {
   CarOutlined,
   CreditCardOutlined,
   DashboardOutlined,
-  DeleteOutlined,
   EnvironmentOutlined,
   FileDoneOutlined,
   FileTextOutlined,
@@ -63,8 +62,6 @@ export type NavBadgeKey = (typeof NAV_BADGE)[keyof typeof NAV_BADGE];
  * Mục menu dẫn tới một trang.
  *
  * `permission` chỉ dùng để ẩn/hiện — guard backend mới chặn thật (CLAUDE.md mục 6).
- * `comingSoon` đánh dấu chức năng chưa làm: menu vẫn hiện nhưng trang là placeholder
- * (yêu cầu của chủ dự án: "chưa làm thì để menu trống").
  */
 export interface NavLeaf {
   readonly type?: 'leaf';
@@ -75,7 +72,6 @@ export interface NavLeaf {
   readonly permission: Permission;
   readonly icon: ComponentType<{ className?: string }>;
   readonly badge?: NavBadgeKey;
-  readonly comingSoon?: boolean;
   /**
    * Tính năng NÂNG CAO mà trang này thuộc về (ADR 0027) — TRỤC THỨ HAI, độc lập với
    * `permission`. Cả hai phải cùng đạt thì mục mới hiện.
@@ -304,14 +300,6 @@ export const SHOP_NAV: readonly NavSection[] = [
         icon: CreditCardOutlined,
       },
       {
-        key: 'pickup-areas',
-        labelKey: 'manage.pickupAreas',
-        href: ROUTES.MANAGE.PICKUP_AREAS,
-        permission: PERMISSION.TENANT_VIEW,
-        icon: EnvironmentOutlined,
-        comingSoon: true,
-      },
-      {
         key: 'shop-branches',
         labelKey: 'manage.shopBranches',
         href: ROUTES.MANAGE.SHOP_BRANCHES,
@@ -334,16 +322,6 @@ export const SHOP_NAV: readonly NavSection[] = [
         permission: PERMISSION.MEMBER_VIEW,
         icon: UsergroupAddOutlined,
         feature: PLAN_FEATURE.MEMBERS,
-      },
-      {
-        // Việc dọn dẹp, không phải việc hằng ngày — nằm cuối Cấu hình chứ không chiếm một
-        // dòng ngang hàng với Xe hay Đơn thuê.
-        key: 'trash',
-        labelKey: 'manage.trash',
-        href: ROUTES.MANAGE.TRASH,
-        permission: PERMISSION.TENANT_VIEW,
-        icon: DeleteOutlined,
-        comingSoon: true,
       },
     ],
   },

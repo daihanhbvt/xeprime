@@ -29,8 +29,27 @@ describe('ACCOUNT_NAV — thành phần', () => {
     const trips = ACCOUNT_NAV.find((i) => i.key === 'trips');
     expect(trips?.href).toBe(ROUTES.TRIPS);
     expect(trips?.external).toBe(true);
-    // Route đã dựng thì không được mang cờ "sắp có" — nó bấm được thật.
-    expect(trips?.comingSoon).toBeUndefined();
+  });
+
+  /**
+   * Bảy mục "Sắp có" đã bị gỡ ngày 03/09/2026 (R1 — ẩn menu placeholder chưa có luồng), và
+   * mục Hỗ trợ được trỏ sang trang `/support` vừa dựng thật.
+   *
+   * Test khoá lại điều kiện chung thay vì đếm số mục: mọi mục còn lại phải dẫn tới một nơi
+   * CÓ THẬT. Thêm mục mới vào menu mà quên dựng trang thì đỏ ở đây.
+   */
+  it('mọi mục đều dẫn tới một route đã dựng — không còn mục "Sắp có"', () => {
+    const built = new Set<string>([ROUTES.ACCOUNT.ROOT, ROUTES.TRIPS, ROUTES.CHAT, ROUTES.SUPPORT]);
+    for (const item of ACCOUNT_NAV) {
+      expect(built.has(item.href)).toBe(true);
+    }
+  });
+
+  it('Hỗ trợ trỏ ra kênh CÔNG KHAI, không phải hàng đợi ticket chưa dựng', () => {
+    const support = ACCOUNT_NAV.find((i) => i.key === 'support');
+    expect(support?.href).toBe(ROUTES.SUPPORT);
+    expect(support?.href).not.toBe(ROUTES.ACCOUNT.SUPPORT);
+    expect(support?.external).toBe(true);
   });
 
   it('mọi mục nằm trong /account đều là route đã khai báo ở ROUTES', () => {
@@ -48,17 +67,19 @@ describe('ACCOUNT_NAV — thành phần', () => {
 
 describe('matchAccountNavKey', () => {
   it('khớp tuyệt đối', () => {
-    expect(matchAccountNavKey(ROUTES.ACCOUNT.DOCUMENTS)).toBe('documents');
+    expect(matchAccountNavKey(ROUTES.SUPPORT)).toBe('support');
   });
 
   it('trang con vẫn sáng mục cha', () => {
-    expect(matchAccountNavKey(`${ROUTES.ACCOUNT.DOCUMENTS}/new`)).toBe('documents');
+    expect(matchAccountNavKey(`${ROUTES.TRIPS}/abc`)).toBe('trips');
   });
 
   it('gốc /account KHÔNG nuốt các trang con', () => {
     // Nếu khớp theo tiền tố thì mọi trang trong khu đều sáng "Tài khoản của tôi".
-    expect(matchAccountNavKey(ROUTES.ACCOUNT.PAYMENTS)).toBe('payments');
     expect(matchAccountNavKey(ROUTES.ACCOUNT.ROOT)).toBe('profile');
+    // `/account/payments` còn route nhưng KHÔNG còn trong menu ⇒ không mục nào sáng. Đó là
+    // đúng: làm sáng một mục người dùng không nhìn thấy còn khó hiểu hơn là không sáng gì.
+    expect(matchAccountNavKey(ROUTES.ACCOUNT.PAYMENTS)).toBeUndefined();
   });
 
   it('đường dẫn ngoài khu thì không mục nào sáng', () => {

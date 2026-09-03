@@ -43,7 +43,7 @@ export function Sidebar() {
       <div className={styles.brand}>
         <div className={styles.brandMark}>
           {/* `mark` khi thu gọn: wordmark không vừa cột 64px và sẽ bị cắt giữa chữ. */}
-          <Logo variant={collapsed ? 'mark' : 'full'} size="sm" tone="light" />
+          <Logo variant={collapsed ? 'mark' : 'full'} size="sm" />
         </div>
 
         {/* Thu gọn thì nút xuống dòng riêng và căn giữa cột — xem `.siderCollapsed .brand`. */}

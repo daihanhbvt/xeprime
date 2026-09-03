@@ -1,7 +1,7 @@
 'use client';
 
 import { App, Alert, Button, InputNumber, Select, Spin } from 'antd';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   SUBSCRIPTION_TERM_MONTHS,
@@ -44,10 +44,19 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
   // Chỉ gói bán được (có khoản phải trả) mới hiện ra — gói 0đ là tuyến hoa hồng mặc định.
   const purchasable = (plans.data ?? []).filter((p) => Number(p.basePriceMonthly) > 0);
   const selected: TenantPlan | undefined = purchasable.find((p) => p.id === planId);
-  const limits: PlanLimitsJson | null = useMemo(
-    () => (selected ? parsePlanLimits(selected.limits) : null),
-    [selected],
-  );
+  /*
+   * Ba giá trị dẫn xuất dưới đây KHÔNG bọc `useMemo`, có chủ đích.
+   *
+   * `selected` đến từ `purchasable.find(...)` trên một mảng `.filter()` dựng mới mỗi lần render,
+   * nên React Compiler không chứng minh được nó ổn định và **bỏ tối ưu cả component** (lỗi
+   * `react-hooks/preserve-manual-memoization`). Ba phép tính này là một lần parse JSON và hai
+   * phép `Math.max` — bỏ memo tay để trình biên dịch tự lo lại rẻ hơn giữ memo tay rồi mất
+   * tối ưu ở mọi thứ còn lại.
+   *
+   * Điều kiện an toàn: không dependency array nào đọc chúng, và không component con nào được
+   * memo theo `slots` — đổi identity mỗi render ở đây không kéo theo render thừa.
+   */
+  const limits: PlanLimitsJson | null = selected ? parsePlanLimits(selected.limits) : null;
 
   function selectPlan(id: string) {
     setPlanId(id);
@@ -58,21 +67,15 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
   }
 
   /** Không dưới mức gồm sẵn — cùng luật backend nâng lên. */
-  const slots = useMemo(
-    () => ({
-      car: Math.max(carSlots ?? 0, limits?.includedCars ?? 0),
-      motorbike: Math.max(motorbikeSlots ?? 0, limits?.includedMotorbikes ?? 0),
-    }),
-    [carSlots, motorbikeSlots, limits],
-  );
+  const slots = {
+    car: Math.max(carSlots ?? 0, limits?.includedCars ?? 0),
+    motorbike: Math.max(motorbikeSlots ?? 0, limits?.includedMotorbikes ?? 0),
+  };
 
-  const total = useMemo(
-    () =>
-      selected && limits
-        ? subscriptionTermTotalPreview(selected.basePriceMonthly, limits, slots, termMonths)
-        : null,
-    [selected, limits, slots, termMonths],
-  );
+  const total =
+    selected && limits
+      ? subscriptionTermTotalPreview(selected.basePriceMonthly, limits, slots, termMonths)
+      : null;
 
   const termOptions = SUBSCRIPTION_TERM_MONTHS.map((months) => {
     const discount = limits ? termDiscountPercent(limits, months) : 0;

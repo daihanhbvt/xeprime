@@ -134,7 +134,6 @@ function HistoryRow({
   onCancel: () => void;
 }) {
   const t = useTranslations('AdminPlans');
-  const tCommon = useTranslations('Common');
   const fmt = useAppFormat();
 
   const now = dayjs();

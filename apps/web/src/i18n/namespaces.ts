@@ -37,6 +37,10 @@ export const MESSAGE_NAMESPACES = [
   { file: 'chat', namespace: 'Chat' },
   { file: 'trips', namespace: 'Trips' },
   { file: 'account', namespace: 'Account' },
+  // Bốn văn bản pháp lý công khai + trang Hỗ trợ. Tách khỏi `marketplace` vì chúng là VĂN BẢN
+  // được viện dẫn (có ngày hiệu lực, sửa là phải dời ngày), không phải chữ trang trí của chợ.
+  { file: 'legal', namespace: 'Legal' },
+  { file: 'support', namespace: 'Support' },
 
   // — Cổng quản lý —
   { file: 'manage-common', namespace: 'ManageCommon' },

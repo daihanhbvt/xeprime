@@ -1,14 +1,4 @@
-import {
-  BellOutlined,
-  CarOutlined,
-  CreditCardOutlined,
-  EnvironmentOutlined,
-  HeartOutlined,
-  QuestionCircleOutlined,
-  SafetyCertificateOutlined,
-  SettingOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { CarOutlined, QuestionCircleOutlined, UserOutlined } from '@ant-design/icons';
 import type { ComponentType } from 'react';
 import type { useTranslations } from 'next-intl';
 
@@ -32,9 +22,6 @@ export type AccountNavLabelKey = Parameters<
  * của một gian hàng — không có quyền nào để kiểm. Cái quyết định thấy hay không là *đã đăng
  * nhập hay chưa*, và điều đó do layout xử lý một lần cho cả khu.
  *
- * `comingSoon` = mục đã có chỗ trong menu nhưng trang chưa dựng. Hiện ra, không bấm được, có
- * nhãn "Sắp có" — quyết định của chủ dự án: thà thấy trước bản đồ đầy đủ còn hơn menu mọc dần.
- *
  * `external` = đích nằm NGOÀI `/account` (Chuyến của tôi, Tin nhắn). Hai route đó có từ trước
  * và đang được thông báo trỏ tới; menu này chỉ dẫn sang chứ không nuốt chúng vào khu tài khoản.
  */
@@ -43,7 +30,6 @@ export interface AccountNavItem {
   readonly labelKey: AccountNavLabelKey;
   readonly href: string;
   readonly icon: ComponentType<{ className?: string }>;
-  readonly comingSoon?: boolean;
   readonly external?: boolean;
 }
 
@@ -73,53 +59,14 @@ export const ACCOUNT_NAV: readonly AccountNavItem[] = [
     external: true,
   },
   {
-    key: 'payments',
-    labelKey: 'payments',
-    href: ROUTES.ACCOUNT.PAYMENTS,
-    icon: CreditCardOutlined,
-    comingSoon: true,
-  },
-  {
-    key: 'favorites',
-    labelKey: 'favorites',
-    href: ROUTES.ACCOUNT.FAVORITES,
-    icon: HeartOutlined,
-    comingSoon: true,
-  },
-  {
-    key: 'addresses',
-    labelKey: 'addresses',
-    href: ROUTES.ACCOUNT.ADDRESSES,
-    icon: EnvironmentOutlined,
-    comingSoon: true,
-  },
-  {
-    key: 'documents',
-    labelKey: 'documents',
-    href: ROUTES.ACCOUNT.DOCUMENTS,
-    icon: SafetyCertificateOutlined,
-    comingSoon: true,
-  },
-  {
-    key: 'notifications',
-    labelKey: 'notifications',
-    href: ROUTES.ACCOUNT.NOTIFICATIONS,
-    icon: BellOutlined,
-    comingSoon: true,
-  },
-  {
+    // Kênh hỗ trợ CÔNG KHAI, đã dựng thật (`/support`) — không phải hàng đợi ticket riêng của
+    // một người (`/account/support`, vẫn chưa có luồng). Menu tài khoản dẫn sang đó như cách
+    // nó đã dẫn sang "Chuyến của tôi" và "Tin nhắn".
     key: 'support',
     labelKey: 'support',
-    href: ROUTES.ACCOUNT.SUPPORT,
+    href: ROUTES.SUPPORT,
     icon: QuestionCircleOutlined,
-    comingSoon: true,
-  },
-  {
-    key: 'settings',
-    labelKey: 'settings',
-    href: ROUTES.ACCOUNT.SETTINGS,
-    icon: SettingOutlined,
-    comingSoon: true,
+    external: true,
   },
 ];
 
