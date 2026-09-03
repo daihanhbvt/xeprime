@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Col, Form, List, Row } from 'antd';
 import { useMemo, useState } from 'react';
@@ -13,7 +14,8 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { dayjs } from '@/lib/datetime';
-import { getErrorCode, getErrorMessage } from '@/services/api-client';
+import { getErrorCode } from '@/services/api-client';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import type { ApiClientError } from '@/services/api-client';
 import {
   completeMaintenanceRecord,
@@ -21,7 +23,7 @@ import {
   updateMaintenanceRecord,
 } from '../api';
 import {
-  maintenanceRecordFormSchema,
+  makeMaintenanceRecordFormSchema,
   type MaintenanceRecordFormValues,
 } from '../schema';
 import type { MaintenanceRecord } from '../types';
@@ -68,6 +70,10 @@ export function MaintenanceRecordDialog({
   const fmt = useAppFormat();
 
   const { message } = App.useApp();
+  const t = useTranslations('Maintenance');
+  const tCommon = useTranslations('Common');
+  const recordSchema = useMemo(() => makeMaintenanceRecordFormSchema(t as (key: string) => string), [t]);
+  const errorMessage = useErrorMessage();
   const [saving, setSaving] = useState(false);
   const [conflicts, setConflicts] = useState<ScheduleConflict[]>([]);
   const record = state && state.mode !== 'create' ? state.record : null;
@@ -93,7 +99,7 @@ export function MaintenanceRecordDialog({
 
   // `values` để RHF tự đồng bộ khi đổi phiếu — không cần effect reset thủ công.
   const { control, handleSubmit, reset } = useForm<MaintenanceRecordFormValues>({
-    resolver: yupResolver(maintenanceRecordFormSchema),
+    resolver: yupResolver(recordSchema),
     defaultValues: defaults,
     values: defaults,
   });
@@ -119,7 +125,7 @@ export function MaintenanceRecordDialog({
           notes: text(values.notes),
           expectedRowVersion: record.rowVersion,
         });
-        message.success('Đã lưu bảo dưỡng thành công!');
+        message.success(t('toast.completed'));
       } else {
         const body = {
           type: values.type,
@@ -140,10 +146,10 @@ export function MaintenanceRecordDialog({
             ...body,
             expectedRowVersion: record.rowVersion,
           });
-          message.success('Đã cập nhật phiếu bảo dưỡng');
+          message.success(t('toast.updated'));
         } else {
           await createMaintenanceRecord(vehicleId, body);
-          message.success('Đã tạo lịch bảo dưỡng');
+          message.success(t('toast.created'));
         }
       }
       onSaved();
@@ -153,13 +159,13 @@ export function MaintenanceRecordDialog({
         // Giữ nguyên form: người dùng chỉ cần đổi ngày, không phải nhập lại.
         const details = (err as ApiClientError).details as { conflicts?: ScheduleConflict[] } | undefined;
         setConflicts(details?.conflicts ?? []);
-        message.error('Khoảng thời gian này đã có lịch khác — hãy chọn thời điểm khác.');
+        message.error(t('toast.scheduleConflict'));
       } else if (code === 'CONFLICT') {
-        message.error('Phiếu vừa được người khác cập nhật — đóng hộp thoại và tải lại trang.');
+        message.error(t('toast.staleRecord'));
       } else if (code === 'ODOMETER_DECREASE_FORBIDDEN') {
-        message.error('Số KM nhập vào thấp hơn KM hiện tại của xe — kiểm tra lại chỉ số.');
+        message.error(t('toast.odometerTooLow'));
       } else {
-        message.error(getErrorMessage(err));
+        message.error(errorMessage(err));
       }
     } finally {
       setSaving(false);
@@ -167,10 +173,10 @@ export function MaintenanceRecordDialog({
   }
 
   const title = completing
-    ? 'Hoàn tất bảo dưỡng'
+    ? t('record.titleComplete')
     : record
-      ? 'Chỉnh sửa bảo dưỡng'
-      : 'Thêm bảo dưỡng';
+      ? t('record.titleEdit')
+      : t('record.titleCreate');
 
   return (
     <ResponsiveDialog
@@ -181,8 +187,10 @@ export function MaintenanceRecordDialog({
       confirmLoading={saving}
       onClose={handleClose}
       onOk={() => void handleSubmit(save)()}
-      okText={completing ? 'Lưu bảo dưỡng' : record ? 'Lưu thay đổi' : 'Tạo lịch'}
-      cancelText="Hủy"
+      okText={
+        completing ? t('record.okComplete') : record ? t('record.okEdit') : t('record.okCreate')
+      }
+      cancelText={tCommon('actions.cancel')}
     >
       <div className={styles.recordForm}>
         {conflicts.length > 0 ? (
@@ -191,7 +199,7 @@ export function MaintenanceRecordDialog({
             showIcon
             role="alert"
             className={styles.conflictAlert}
-            message="Xe đã có lịch khác trùng khoảng thời gian này"
+            message={t('record.conflictAlert')}
             description={
               <List
                 size="small"
@@ -212,7 +220,7 @@ export function MaintenanceRecordDialog({
               <SelectField
                 control={control}
                 name="type"
-                label="Loại bảo dưỡng"
+                label={t('record.type')}
                 options={TYPE_OPTIONS}
                 required
                 disabled={completing}
@@ -223,8 +231,8 @@ export function MaintenanceRecordDialog({
                 <TextField
                   control={control}
                   name="customTypeName"
-                  label="Tên hạng mục"
-                  placeholder="VD: Cân chỉnh thước lái"
+                  label={t('record.customType')}
+                  placeholder={t('record.customTypePlaceholder')}
                   required
                   disabled={completing}
                 />
@@ -236,28 +244,27 @@ export function MaintenanceRecordDialog({
                   <TextField
                     control={control}
                     name="title"
-                    label="Mô tả ngắn"
-                    placeholder="VD: Bảo dưỡng mốc 45.000 km"
+                    label={t('record.title')}
+                    placeholder={t('record.titlePlaceholder')}
                   />
                 </Col>
                 <Col xs={24} sm={12}>
-                  <DateTimeField control={control} name="plannedStartAt" label="Bắt đầu dự kiến" />
+                  <DateTimeField control={control} name="plannedStartAt" label={t('record.plannedStart')} />
                 </Col>
                 <Col xs={24} sm={12}>
-                  <DateTimeField control={control} name="plannedEndAt" label="Kết thúc dự kiến" />
+                  <DateTimeField control={control} name="plannedEndAt" label={t('record.plannedEnd')} />
                 </Col>
                 <Col xs={24}>
                   <p className={styles.attachmentNote}>
-                    Nhập đủ cặp thời gian thì lịch sẽ giữ chỗ thật trên lịch xe — khoảng đó
-                    không nhận đơn thuê được nữa.
+                    {t('record.scheduleHoldNote')}
                   </p>
                 </Col>
                 <Col xs={24} sm={12}>
                   <TextField
                     control={control}
                     name="providerName"
-                    label="Garage / Đơn vị thực hiện"
-                    placeholder="VD: Toyota Đông Sài Gòn"
+                    label={t('record.provider')}
+                    placeholder={t('record.providerPlaceholder')}
                   />
                 </Col>
               </>
@@ -266,29 +273,29 @@ export function MaintenanceRecordDialog({
               <NumberField
                 control={control}
                 name="odometerKm"
-                label="Odo bảo dưỡng"
-                placeholder="45.000"
+                label={t('record.odometer')}
+                placeholder={t('record.odometerPlaceholder')}
                 addonAfter="km"
                 min={0}
-                help={completing ? 'Bỏ trống nếu ghi nhận hồi tố, không muốn đổi KM hiện tại.' : undefined}
+                help={completing ? t('record.odometerHelp') : undefined}
               />
             </Col>
             <Col xs={24} sm={12}>
-              <NumberField control={control} name="cost" label="Chi phí (VNĐ)" money min={0} />
+              <NumberField control={control} name="cost" label={t('record.cost')} money min={0} />
             </Col>
             <Col xs={24} sm={12}>
               <TextField
                 control={control}
                 name="receiptCode"
-                label="Mã phiếu chi / chứng từ"
-                placeholder="VD: CT-40092"
+                label={t('record.receipt')}
+                placeholder={t('record.receiptPlaceholder')}
               />
             </Col>
             <Col xs={24}>
               <TextAreaField
                 control={control}
                 name="notes"
-                label="Ghi chú"
+                label={t('record.notes')}
                 rows={2}
                 maxLength={2000}
               />
@@ -300,12 +307,12 @@ export function MaintenanceRecordDialog({
           <Alert
             type="info"
             showIcon
-            message="Hoàn tất sẽ giải phóng lịch xe và cập nhật KM hiện tại (nếu nhập). Riêng thay nhớt sẽ dời mốc bảo dưỡng tiếp theo."
+            message={t('record.completeHint')}
           />
         ) : null}
         {record && canViewFiles && record.attachmentCount > 0 ? (
           <p className={styles.attachmentNote}>
-            Phiếu này có {record.attachmentCount} chứng từ đính kèm.
+            {t('record.attachments', { count: record.attachmentCount })}
           </p>
         ) : null}
       </div>

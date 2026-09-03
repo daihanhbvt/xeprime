@@ -53,6 +53,9 @@ export const MESSAGE_NAMESPACES = [
   { file: 'finance', namespace: 'Finance' },
   // Quản trị gói dịch vụ (admin nền tảng) — chuyển đợt W1 (ADR 0015/0020).
   { file: 'admin-plans', namespace: 'AdminPlans' },
+  { file: 'members', namespace: 'Members' },
+  { file: 'drivers', namespace: 'Drivers' },
+  { file: 'maintenance', namespace: 'Maintenance' },
   // "Gói của tôi" phía gian hàng — W2 (ADR 0015/0026).
   { file: 'subscription', namespace: 'Subscription' },
   // ⚠️ `mobile-shell` là VỎ app native (màn lỗi cấp app, not-found, điều hướng gốc), KHÔNG

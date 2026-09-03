@@ -1,11 +1,13 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Form } from 'antd';
 import { useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import {
-  ODOMETER_CORRECTION_REASON_LABEL, ODOMETER_CORRECTION_REASON_VALUES, type OdometerCorrectionReason, } from '@xeprime/types';
+  ODOMETER_CORRECTION_REASON_VALUES,
+} from '@xeprime/types';
 import {
   odometerCorrectionFormSchema, type OdometerCorrectionFormValues, } from '@xeprime/validators';
 import { NumberField } from '@/components/form/NumberField';
@@ -17,11 +19,7 @@ import { correctOdometer } from '../api';
 import type { MaintenanceProfile } from '../types';
 import styles from './VehicleMaintenanceWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
-
-const REASON_OPTIONS = ODOMETER_CORRECTION_REASON_VALUES.map((value) => ({
-  value,
-  label: ODOMETER_CORRECTION_REASON_LABEL[value as OdometerCorrectionReason],
-}));
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 /**
  * Điều chỉnh KM thủ công (Wave 6 §9.1).
@@ -50,6 +48,13 @@ export function OdometerCorrectionDialog({
   const fmt = useAppFormat();
 
   const { message } = App.useApp();
+  const t = useTranslations('Maintenance');
+  const tCommon = useTranslations('Common');
+  const domainLabel = useDomainLabel();
+  const reasonOptions = ODOMETER_CORRECTION_REASON_VALUES.map((value) => ({
+    value,
+    label: domainLabel('odometerCorrectionReason', value),
+  }));
   const [saving, setSaving] = useState(false);
   const defaults = useMemo<OdometerCorrectionFormValues>(
     () => ({ odometerKm: null as unknown as number, reasonCode: 'handover_error', reason: '' }),
@@ -82,16 +87,14 @@ export function OdometerCorrectionDialog({
         ...(isDecrease ? { confirmDecrease: true } : {}),
         expectedRowVersion: profile.rowVersion > 0 ? profile.rowVersion : undefined,
       });
-      message.success('Đã cập nhật số KM');
+      message.success(t('odometer.updated'));
       onSaved();
     } catch (err) {
       const code = getErrorCode(err);
       if (code === 'ODOMETER_DECREASE_FORBIDDEN') {
-        message.error(
-          'Giảm KM cần quyền quản trị viên. Hãy liên hệ chủ gian hàng để được cấp quyền hoặc nhờ duyệt thay.',
-        );
+        message.error(t('odometer.decreaseForbidden'));
       } else if (code === 'CONFLICT') {
-        message.error('Số KM vừa được người khác cập nhật — đóng hộp thoại và tải lại trang.');
+        message.error(t('odometer.stale'));
       } else {
         message.error(getErrorMessage(err));
       }
@@ -103,19 +106,19 @@ export function OdometerCorrectionDialog({
   return (
     <ResponsiveDialog
       open={open}
-      title="Điều chỉnh công số"
+      title={t('odometer.title')}
       size="sm"
       mobileMode="fullscreen"
       confirmLoading={saving}
       onClose={handleClose}
       onOk={() => void handleSubmit(save)()}
-      okText={isDecrease && !canDecrease ? 'Gửi yêu cầu phê duyệt' : 'Cập nhật KM'}
+      okText={isDecrease && !canDecrease ? t('odometer.okRequest') : t('odometer.okUpdate')}
       okDisabled={isDecrease && !canDecrease}
-      cancelText="Hủy"
+      cancelText={tCommon('actions.cancel')}
     >
       <div className={styles.correctionStack}>
         <div className={styles.currentBox}>
-          <span className={styles.currentLabel}>CHỈ SỐ HIỆN TẠI</span>
+          <span className={styles.currentLabel}>{t('odometer.currentLabel')}</span>
           <strong className={styles.currentValue}>{fmt.km(currentKm)}</strong>
         </div>
 
@@ -123,8 +126,8 @@ export function OdometerCorrectionDialog({
           <NumberField
             control={control}
             name="odometerKm"
-            label="KM mới"
-            placeholder="Nhập chỉ số KM hiện trạng"
+            label={t('odometer.newKm')}
+            placeholder={t('odometer.newKmPlaceholder')}
             addonAfter="km"
             min={0}
             required
@@ -132,15 +135,15 @@ export function OdometerCorrectionDialog({
           <SelectField
             control={control}
             name="reasonCode"
-            label="Lý do điều chỉnh"
-            options={REASON_OPTIONS}
+            label={t('odometer.reason')}
+            options={reasonOptions}
             required
           />
           <TextAreaField
             control={control}
             name="reason"
-            label="Ghi chú chi tiết"
-            placeholder="Nhập lý do điều chỉnh odo chi tiết…"
+            label={t('odometer.note')}
+            placeholder={t('odometer.notePlaceholder')}
             rows={3}
             maxLength={1000}
             required
@@ -152,18 +155,18 @@ export function OdometerCorrectionDialog({
             type={canDecrease ? 'warning' : 'error'}
             showIcon
             role="alert"
-            message={`KM mới thấp hơn KM hiện tại (${fmt.km(currentKm)}).`}
+            message={t('odometer.decreaseAlert', { current: fmt.km(currentKm) })}
             description={
               canDecrease
-                ? 'Thao tác này sẽ được ghi lại kèm người thực hiện và lý do. Số cũ vẫn giữ nguyên trong lịch sử.'
-                : 'Hành động này cần quyền quản trị viên. Bạn không thể tự thực hiện giảm KM.'
+                ? t('odometer.decreaseAllowed')
+                : t('odometer.decreaseBlocked')
             }
           />
         ) : (
           <Alert
             type="info"
             showIcon
-            message="Mọi điều chỉnh KM đều được ghi vào lịch sử kèm người thực hiện và lý do."
+            message={t('odometer.auditNote')}
           />
         )}
       </div>

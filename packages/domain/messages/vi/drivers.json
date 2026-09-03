@@ -1,0 +1,62 @@
+{
+  "page": {
+    "title": "Tài xế",
+    "tableLabel": "Danh sách tài xế",
+    "loadError": "Không tải được danh sách tài xế",
+    "empty": "Chưa có tài xế nào",
+    "emptyHint": "Thêm tài xế để gán vào các đơn thuê xe có tài xế.",
+    "total": "{count, plural, other {# tài xế}}"
+  },
+  "filters": {
+    "search": "Tìm tài xế",
+    "searchPlaceholder": "Tìm theo tên, SĐT, số GPLX",
+    "status": "Trạng thái",
+    "allStatuses": "Tất cả trạng thái"
+  },
+  "columns": {
+    "driver": "Tài xế",
+    "type": "Loại",
+    "papers": "GPLX / CCCD",
+    "activeBookings": "Đơn đang gán",
+    "status": "Trạng thái"
+  },
+  "license": {
+    "expired": "GPLX hết hạn {date}",
+    "validUntil": "GPLX đến {date}"
+  },
+  "activeBookings": "{count, plural, other {# đơn}}",
+  "actions": {
+    "add": "Thêm tài xế",
+    "deactivate": "Ngừng hoạt động",
+    "activate": "Bật lại",
+    "deactivateConfirm": "Ngừng hoạt động tài xế này? Sẽ không gán được vào đơn mới.",
+    "deactivateOk": "Ngừng",
+    "removeConfirm": "Xoá tài xế này? Đơn cũ vẫn giữ lịch sử; còn đơn chưa hoàn tất sẽ bị chặn."
+  },
+  "toast": {
+    "activated": "Đã bật lại tài xế",
+    "deactivated": "Đã ngừng hoạt động tài xế",
+    "removed": "Đã xoá tài xế",
+    "created": "Đã thêm tài xế",
+    "updated": "Đã cập nhật tài xế"
+  },
+  "form": {
+    "titleCreate": "Thêm tài xế",
+    "titleEdit": "Sửa hồ sơ tài xế",
+    "name": "Họ và tên",
+    "namePlaceholder": "Trần Văn B",
+    "phone": "Số điện thoại",
+    "phonePlaceholder": "0901234567",
+    "type": "Loại tài xế",
+    "licenseNo": "Số GPLX (không bắt buộc)",
+    "licenseExpiresAt": "Hạn GPLX",
+    "licenseExpiresAtPlaceholder": "Hết hạn thì không gán được vào đơn mới",
+    "idNo": "Số CCCD (không bắt buộc)",
+    "note": "Ghi chú",
+    "errors": {
+      "nameRequired": "Nhập tên tài xế",
+      "phoneRequired": "Nhập số điện thoại",
+      "phoneInvalid": "Số điện thoại không hợp lệ"
+    }
+  }
+}

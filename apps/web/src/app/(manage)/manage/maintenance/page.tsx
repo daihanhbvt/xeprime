@@ -2,14 +2,13 @@
 
 import { App } from 'antd';
 import { Suspense, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   MAINTENANCE_BOARD_FILTER,
   MAINTENANCE_BOARD_QUEUE_FILTERS,
-  MAINTENANCE_TYPE_LABEL,
   MAINTENANCE_TYPE_VALUES,
   PERMISSION,
   type MaintenanceBoardFilter,
-  type MaintenanceType,
 } from '@xeprime/types';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
@@ -28,6 +27,7 @@ import {
 } from '@/features/vehicle-maintenance/hooks';
 import type { MaintenanceBoardItem } from '@/features/vehicle-maintenance/types';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useDomainLabel } from '@/i18n/use-domain-label';
 
 /** Đưa mọi bộ lọc về mặc định — `'all'`/`undefined` bị `useUrlFilters` xoá khỏi URL. */
 const CLEARED = {
@@ -39,39 +39,10 @@ const CLEARED = {
   sort: 'remaining_asc',
 } as const;
 
-const TYPE_OPTIONS = [
-  { value: 'all', label: 'Mọi hạng mục' },
-  ...MAINTENANCE_TYPE_VALUES.map((value) => ({
-    value,
-    label: MAINTENANCE_TYPE_LABEL[value as MaintenanceType],
-  })),
-];
-
-const SORT_OPTIONS = [
-  { value: 'remaining_asc', label: 'Gần đến hạn trước' },
-  { value: 'remaining_desc', label: 'Còn nhiều KM trước' },
-  { value: 'name_asc', label: 'Tên xe A→Z' },
-  { value: 'updated_desc', label: 'Cập nhật gần nhất' },
-];
-
-const FILTER_FIELDS: FilterField[] = [
-  { kind: 'search', key: 'q', label: 'Tìm xe', placeholder: 'Tên xe, mã xe hoặc biển số…' },
-  { kind: 'select', key: 'type', label: 'Hạng mục', options: TYPE_OPTIONS },
-  { kind: 'dateRange', fromKey: 'from', toKey: 'to', label: 'Lịch dự kiến' },
-  { kind: 'select', key: 'sort', label: 'Sắp xếp', options: SORT_OPTIONS },
-];
-
-/**
- * Hàng đợi "Thiếu KM trả" chỉ có tìm kiếm: hạng mục/lịch dự kiến/sắp xếp theo KM còn lại đều
- * vô nghĩa với một biên bản bàn giao. Hiện ô lọc không tác dụng là mời người dùng bấm nhầm.
- */
-const QUEUE_FILTER_FIELDS: FilterField[] = [
-  { kind: 'search', key: 'q', label: 'Tìm việc', placeholder: 'Tên xe, biển số hoặc mã đơn…' },
-];
-
 export default function MaintenancePage() {
+  const t = useTranslations('Maintenance');
   return (
-    <Suspense fallback={<LoadingState variant="page" label="Đang tải trung tâm bảo dưỡng…" />}>
+    <Suspense fallback={<LoadingState variant="page" label={t('page.loading')} />}>
       <MaintenanceView />
     </Suspense>
   );
@@ -85,6 +56,8 @@ export default function MaintenancePage() {
  * một view lọc chia sẻ được và sống sót qua reload.
  */
 function MaintenanceView() {
+  const t = useTranslations('Maintenance');
+  const domainLabel = useDomainLabel();
   const { message } = App.useApp();
   const permissions = usePermissions();
   const canView = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
@@ -122,6 +95,46 @@ function MaintenanceView() {
     row: MaintenanceBoardItem;
   } | null>(null);
 
+  const typeOptions = [
+    { value: 'all', label: t('filters.allTypes') },
+    ...MAINTENANCE_TYPE_VALUES.map((value) => ({
+      value,
+      label: domainLabel('maintenanceType', value),
+    })),
+  ];
+
+  const sortOptions = [
+    { value: 'remaining_asc', label: t('filters.sortRemainingAsc') },
+    { value: 'remaining_desc', label: t('filters.sortRemainingDesc') },
+    { value: 'name_asc', label: t('filters.sortNameAsc') },
+    { value: 'updated_desc', label: t('filters.sortUpdatedDesc') },
+  ];
+
+  const filterFields: FilterField[] = [
+    {
+      kind: 'search',
+      key: 'q',
+      label: t('filters.search'),
+      placeholder: t('filters.searchPlaceholder'),
+    },
+    { kind: 'select', key: 'type', label: t('filters.type'), options: typeOptions },
+    { kind: 'dateRange', fromKey: 'from', toKey: 'to', label: t('filters.schedule') },
+    { kind: 'select', key: 'sort', label: t('filters.sort'), options: sortOptions },
+  ];
+
+  /**
+   * Hàng đợi "Thiếu KM trả" chỉ có tìm kiếm: hạng mục/lịch dự kiến/sắp xếp theo KM còn lại đều
+   * vô nghĩa với một biên bản bàn giao. Hiện ô lọc không tác dụng là mời người dùng bấm nhầm.
+   */
+  const queueFilterFields: FilterField[] = [
+    {
+      kind: 'search',
+      key: 'q',
+      label: t('filters.queueSearch'),
+      placeholder: t('filters.queueSearchPlaceholder'),
+    },
+  ];
+
   const items = board.data?.items ?? [];
   const meta = board.data?.meta ?? {
     page: 1,
@@ -140,8 +153,8 @@ function MaintenanceView() {
   return (
     <>
       <ManagePageHeader
-        title="Trung tâm quản lý bảo dưỡng"
-        subtitle="Theo dõi tình trạng hoạt động, lịch trình bảo dưỡng & sửa chữa định kỳ toàn bộ đội xe của bạn."
+        title={t('page.title')}
+        subtitle={t('page.subtitle')}
       />
 
       {canView ? (
@@ -155,7 +168,7 @@ function MaintenanceView() {
       ) : null}
 
       <FilterBar
-        fields={isQueue ? QUEUE_FILTER_FIELDS : FILTER_FIELDS}
+        fields={isQueue ? queueFilterFields : filterFields}
         values={
           isQueue
             ? { q: filters.q }
@@ -219,7 +232,7 @@ function MaintenanceView() {
           setDialog(null);
           void board.refetch();
           void summary.refetch();
-          message.success('Đã cập nhật bảo dưỡng');
+          message.success(t('toast.saved'));
         }}
       />
     </>

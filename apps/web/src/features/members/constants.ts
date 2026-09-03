@@ -2,22 +2,25 @@ import {
   MEMBERSHIP_STATUS,
   STATUS_COLOR,
   TENANT_ROLE,
-  TENANT_ROLE_LABEL,
   TENANT_ROLE_VALUES,
   type MembershipStatus,
   type StatusMeta,
+  type TenantRole,
 } from '@xeprime/types';
 
-/** Vai trò có thể GÁN cho thành viên — bỏ chủ shop (owner là người tạo gian hàng). */
-export const ASSIGNABLE_ROLE_OPTIONS = TENANT_ROLE_VALUES.filter(
+/**
+ * MÃ vai trò, không phải nhãn — nhãn dựng lúc render qua `useDomainLabel('tenantRole', …)`.
+ *
+ * Trước đây hai mảng này mang sẵn `TENANT_ROLE_LABEL[role]`, tức là chữ tiếng Việt đóng băng ở
+ * module scope: giao diện tiếng Anh vẫn hiện "Nhân viên gian hàng", và module scope chạy một lần
+ * cho cả tiến trình nên nó còn đóng băng ngôn ngữ của request ĐẦU TIÊN ở SSR.
+ */
+export const ASSIGNABLE_ROLES: readonly TenantRole[] = TENANT_ROLE_VALUES.filter(
   (role) => role !== TENANT_ROLE.SHOP_OWNER,
-).map((role) => ({ value: role, label: TENANT_ROLE_LABEL[role] }));
+);
 
 /** Toàn bộ vai trò (kèm owner) — dùng cho bộ lọc. */
-export const ALL_ROLE_OPTIONS = TENANT_ROLE_VALUES.map((role) => ({
-  value: role,
-  label: TENANT_ROLE_LABEL[role],
-}));
+export const ALL_ROLES: readonly TenantRole[] = TENANT_ROLE_VALUES;
 
 /** Meta trạng thái thành viên (chưa có trong @xeprime/types) — gói ở FE để StatusTag dùng chung. */
 export const MEMBERSHIP_STATUS_META: Readonly<Record<MembershipStatus, StatusMeta>> = {

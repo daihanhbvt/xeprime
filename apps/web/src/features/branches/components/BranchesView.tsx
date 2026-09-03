@@ -15,17 +15,19 @@ import {
   BRANCH_STATUS,
   BRANCH_STATUS_META,
   PERMISSION,
+  PLAN_FEATURE,
   STATUS_COLOR,
   type BranchStatus,
 } from '@xeprime/types';
 import { DataTable, type DataTableColumn } from '@/components/data-display/DataTable';
+import { FeatureWriteTooltip } from '@/components/feedback/FeatureWriteTooltip';
 import { AutoSearchInput } from '@/components/filter/AutoSearchInput';
 import { RowActions, type RowAction } from '@/components/data-display/RowActions';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useAppFormat } from '@/i18n/use-app-format';
-import { getErrorMessage } from '@/services/api-client';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { useBranchAction, useBranches } from '../hooks/use-branches';
 import type { Branch } from '../types';
 import { BranchFormDialog } from './BranchFormDialog';
@@ -45,6 +47,7 @@ export function BranchesView() {
   const t = useTranslations('Branches');
   const tc = useTranslations('Common');
   const fmt = useAppFormat();
+  const errorMessage = useErrorMessage();
   // Chỉ ẩn/hiện UI — guard backend mới là lớp chặn thật (CLAUDE.md mục 6).
   const permissions = usePermissions();
   const canManage = permissions.has(PERMISSION.BRANCH_MANAGE);
@@ -201,9 +204,20 @@ export function BranchesView() {
         title={t('page.title')}
         subtitle={t('page.subtitle')}
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} disabled={!canManage}>
-            {t('page.add')}
-          </Button>
+          /* Nhiều chi nhánh là tính năng của GÓI (ADR 0027) — hết hạn thì xem/sửa chi nhánh
+             hiện có được, không mở thêm chi nhánh mới. Server chặn ở POST /branches. */
+          <FeatureWriteTooltip feature={PLAN_FEATURE.BRANCHES}>
+            {(locked) => (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={openCreate}
+                disabled={!canManage || locked}
+              >
+                {t('page.add')}
+              </Button>
+            )}
+          </FeatureWriteTooltip>
         }
       />
 
@@ -256,7 +270,7 @@ export function BranchesView() {
           query.isError && !query.data
             ? {
                 title: t('table.loadError'),
-                description: getErrorMessage(query.error),
+                description: errorMessage(query.error),
                 onRetry: () => void query.refetch(),
               }
             : null
@@ -274,9 +288,18 @@ export function BranchesView() {
           title: t('table.empty'),
           description: t('table.emptyHint'),
           action: canManage ? (
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-              {t('page.add')}
-            </Button>
+            <FeatureWriteTooltip feature={PLAN_FEATURE.BRANCHES}>
+              {(locked) => (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={openCreate}
+                  disabled={locked}
+                >
+                  {t('page.add')}
+                </Button>
+              )}
+            </FeatureWriteTooltip>
           ) : undefined,
         }}
         noResults={{

@@ -3,44 +3,30 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, Tag } from 'antd';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   DRIVER_STATUS,
   DRIVER_STATUS_META,
   DRIVER_STATUS_VALUES,
-  DRIVER_TYPE_LABEL,
   PERMISSION,
+  PLAN_FEATURE,
   type DriverStatus,
-  type DriverType,
 } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { FeatureWriteTooltip } from '@/components/feedback/FeatureWriteTooltip';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useAppFormat } from '@/i18n/use-app-format';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { dayjs } from '@/lib/datetime';
-import { getErrorMessage } from '@/services/api-client';
 import { DRIVERS_DEFAULT_LIMIT } from '@/features/drivers/api';
 import { DriverFormModal } from '@/features/drivers/components/DriverFormModal';
 import { useDeleteDriver, useDrivers, useUpdateDriver } from '@/features/drivers/hooks/use-drivers';
 import type { Driver, DriverFilters } from '@/features/drivers/types';
 import styles from './drivers-page.module.css';
-
-const FILTER_FIELDS: FilterField[] = [
-  { kind: 'search', key: 'q', label: 'Tìm tài xế', placeholder: 'Tìm theo tên, SĐT, số GPLX' },
-  {
-    kind: 'select',
-    key: 'status',
-    label: 'Trạng thái',
-    options: [
-      { value: 'all', label: 'Tất cả trạng thái' },
-      ...DRIVER_STATUS_VALUES.map((value) => ({
-        value,
-        label: DRIVER_STATUS_META[value].label,
-      })),
-    ],
-    allowClear: false,
-  },
-];
 
 const MIN_TABLE_WIDTH = 920;
 
@@ -52,16 +38,18 @@ const LICENSE_WARN_DAYS = 30;
  * còn hạn dài thì chỉ hiện ngày. Chưa khai hạn thì không bịa tag.
  */
 function LicenseExpiryTag({ licenseExpiresAt }: { licenseExpiresAt: string | null }) {
+  const t = useTranslations('Drivers');
+  const fmt = useAppFormat();
   if (!licenseExpiresAt) return null;
+
   const expiry = dayjs(licenseExpiresAt).endOf('day');
   const daysLeft = expiry.diff(dayjs(), 'day');
-  if (daysLeft < 0) {
-    return <Tag color="red">GPLX hết hạn {expiry.format('DD/MM/YYYY')}</Tag>;
-  }
-  if (daysLeft <= LICENSE_WARN_DAYS) {
-    return <Tag color="orange">GPLX hết hạn {expiry.format('DD/MM/YYYY')}</Tag>;
-  }
-  return <span className={styles.meta}>GPLX đến {expiry.format('DD/MM/YYYY')}</span>;
+  // Ngày qua `useAppFormat` — định dạng theo ngôn ngữ, không format cứng ở call site.
+  const date = fmt.date(expiry.toISOString());
+
+  if (daysLeft < 0) return <Tag color="red">{t('license.expired', { date })}</Tag>;
+  if (daysLeft <= LICENSE_WARN_DAYS) return <Tag color="orange">{t('license.expired', { date })}</Tag>;
+  return <span className={styles.meta}>{t('license.validUntil', { date })}</span>;
 }
 
 /**
@@ -69,8 +57,12 @@ function LicenseExpiryTag({ licenseExpiresAt }: { licenseExpiresAt: string | nul
  * đơn ở màn chi tiết đơn thuê). Giấy tờ tài xế / lịch bận / chấm công: đợt sau.
  */
 export default function DriversPage() {
+  const t = useTranslations('Drivers');
+  const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const { has } = usePermissions();
+  const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
 
   // Bộ lọc là state cục bộ — cùng hình thái các trang danh sách manage khác (members).
   const [filters, setFilters] = useState<DriverFilters>({});
@@ -86,6 +78,28 @@ export default function DriversPage() {
   const items = data?.items ?? [];
   const meta = data?.meta ?? { page: 1, limit: DRIVERS_DEFAULT_LIMIT, total: 0, hasNext: false };
 
+  const filterFields: FilterField[] = [
+    {
+      kind: 'search',
+      key: 'q',
+      label: t('filters.search'),
+      placeholder: t('filters.searchPlaceholder'),
+    },
+    {
+      kind: 'select',
+      key: 'status',
+      label: t('filters.status'),
+      options: [
+        { value: 'all', label: t('filters.allStatuses') },
+        ...DRIVER_STATUS_VALUES.map((value) => ({
+          value,
+          label: domainLabel('driverStatus', value),
+        })),
+      ],
+      allowClear: false,
+    },
+  ];
+
   function patch(next: Partial<DriverFilters>) {
     setFilters((prev) => ({ ...prev, ...next, ...('page' in next ? {} : { page: 1 }) }));
   }
@@ -98,36 +112,43 @@ export default function DriversPage() {
       {
         onSuccess: () =>
           message.success(
-            next === DRIVER_STATUS.ACTIVE ? 'Đã bật lại tài xế' : 'Đã ngừng hoạt động tài xế',
+            next === DRIVER_STATUS.ACTIVE ? t('toast.activated') : t('toast.deactivated'),
           ),
-        onError: (err) => message.error(getErrorMessage(err)),
+        onError: (err) => message.error(errorMessage(err)),
       },
     );
   }
 
   function handleRemove(row: Driver) {
     remove.mutate(row.id, {
-      onSuccess: () => message.success('Đã xoá tài xế'),
-      onError: (err) => message.error(getErrorMessage(err)),
+      onSuccess: () => message.success(t('toast.removed')),
+      onError: (err) => message.error(errorMessage(err)),
     });
   }
 
+  // Tài xế là tính năng của GÓI (ADR 0027): hết hạn thì xem lại hồ sơ được, không thêm được
+  // người mới. Lớp chặn thật là `PlanFeatureGuard` ở backend.
   const addButton = canManage ? (
-    <Button
-      type="primary"
-      icon={<PlusOutlined />}
-      onClick={() => {
-        setEditing(null);
-        setFormOpen(true);
-      }}
-    >
-      Thêm tài xế
-    </Button>
+    <FeatureWriteTooltip feature={PLAN_FEATURE.DRIVERS}>
+      {(disabled) => (
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          disabled={disabled}
+          onClick={() => {
+            setEditing(null);
+            setFormOpen(true);
+          }}
+        >
+          {t('actions.add')}
+        </Button>
+      )}
+    </FeatureWriteTooltip>
   ) : null;
 
   const columns: DataTableColumn<Driver>[] = [
     {
-      title: 'Tài xế',
+      title: t('columns.driver'),
       key: 'driver',
       width: 240,
       render: (_, row) => (
@@ -138,35 +159,38 @@ export default function DriversPage() {
       ),
     },
     {
-      title: 'Loại',
+      title: t('columns.type'),
       key: 'type',
       width: 140,
-      render: (_, row) => (
-        <Tag>{DRIVER_TYPE_LABEL[row.driverType as DriverType] ?? row.driverType}</Tag>
-      ),
+      render: (_, row) => <Tag>{domainLabel('driverType', row.driverType, row.driverType)}</Tag>,
     },
     {
-      title: 'GPLX / CCCD',
+      title: t('columns.papers'),
       key: 'papers',
       width: 240,
       render: (_, row) => (
         <div>
           <span className={styles.meta}>
-            {[row.licenseNo, row.idNo].filter(Boolean).join(' · ') || '—'}
+            {[row.licenseNo, row.idNo].filter(Boolean).join(' · ') ||
+              tCommon('labels.emptyValue')}
           </span>
           <LicenseExpiryTag licenseExpiresAt={row.licenseExpiresAt ?? null} />
         </div>
       ),
     },
     {
-      title: 'Đơn đang gán',
+      title: t('columns.activeBookings'),
       key: 'active',
       width: 130,
       render: (_, row) =>
-        row.activeBookingCount > 0 ? <Tag color="blue">{row.activeBookingCount} đơn</Tag> : '—',
+        row.activeBookingCount > 0 ? (
+          <Tag color="blue">{t('activeBookings', { count: row.activeBookingCount })}</Tag>
+        ) : (
+          tCommon('labels.emptyValue')
+        ),
     },
     {
-      title: 'Trạng thái',
+      title: t('columns.status'),
       key: 'status',
       width: 150,
       render: (_, row) => (
@@ -176,7 +200,7 @@ export default function DriversPage() {
     actionColumn<Driver>((row) => [
       {
         key: 'edit',
-        label: 'Chỉnh sửa',
+        label: tCommon('actions.edit'),
         icon: <EditOutlined />,
         hidden: !canManage,
         onClick: () => {
@@ -186,30 +210,31 @@ export default function DriversPage() {
       },
       {
         key: 'toggle',
-        label: row.status === DRIVER_STATUS.ACTIVE ? 'Ngừng hoạt động' : 'Bật lại',
+        label:
+          row.status === DRIVER_STATUS.ACTIVE ? t('actions.deactivate') : t('actions.activate'),
         hidden: !canManage,
         loading: update.isPending && update.variables?.id === row.id,
         confirm:
           row.status === DRIVER_STATUS.ACTIVE
             ? {
-                title: 'Ngừng hoạt động tài xế này? Sẽ không gán được vào đơn mới.',
-                okText: 'Ngừng',
-                cancelText: 'Đóng',
+                title: t('actions.deactivateConfirm'),
+                okText: t('actions.deactivateOk'),
+                cancelText: tCommon('actions.close'),
               }
             : undefined,
         onClick: () => toggleStatus(row),
       },
       {
         key: 'remove',
-        label: 'Xoá',
+        label: tCommon('actions.delete'),
         icon: <DeleteOutlined />,
         danger: true,
         hidden: !canManage,
         loading: remove.isPending && remove.variables === row.id,
         confirm: {
-          title: 'Xoá tài xế này? Đơn cũ vẫn giữ lịch sử; còn đơn chưa hoàn tất sẽ bị chặn.',
-          okText: 'Xoá',
-          cancelText: 'Đóng',
+          title: t('actions.removeConfirm'),
+          okText: tCommon('actions.delete'),
+          cancelText: tCommon('actions.close'),
         },
         onClick: () => handleRemove(row),
       },
@@ -218,10 +243,10 @@ export default function DriversPage() {
 
   return (
     <div>
-      <ManagePageHeader title="Tài xế" />
+      <ManagePageHeader title={t('page.title')} />
 
       <FilterBar
-        fields={FILTER_FIELDS}
+        fields={filterFields}
         values={{ q: filters.q, status: filters.status ?? 'all' }}
         onChange={(next) =>
           patch({ q: next.q, status: next.status === 'all' ? undefined : next.status })
@@ -230,26 +255,24 @@ export default function DriversPage() {
       />
 
       <DataTable<Driver>
-        label="Danh sách tài xế"
+        label={t('page.tableLabel')}
         columns={columns}
         items={items}
         rowKey={(row) => row.id}
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
         error={
-          isError && !data
-            ? { title: 'Không tải được danh sách tài xế', onRetry: () => void refetch() }
-            : null
+          isError && !data ? { title: t('page.loadError'), onRetry: () => void refetch() } : null
         }
         empty={{
-          title: 'Chưa có tài xế nào',
-          description: 'Thêm tài xế để gán vào các đơn thuê xe có tài xế.',
+          title: t('page.empty'),
+          description: t('page.emptyHint'),
           action: addButton ?? undefined,
         }}
         pagination={{
           meta,
           onChange: (page, pageSize) => patch({ page, limit: pageSize }),
-          totalLabel: (total) => `${total} tài xế`,
+          totalLabel: (total) => t('page.total', { count: total }),
         }}
       />
 

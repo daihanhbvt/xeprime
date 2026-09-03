@@ -30,8 +30,17 @@ import type { RequestContext, TenantContext } from '../src/common/types/request-
  */
 const reflector = new Reflector();
 
+/**
+ * ConfigService giả trả giá trị CHỈ cho đúng khoá `PLAN_FEATURE_ENFORCEMENT`.
+ *
+ * Không phải chi tiết vụn: guard đọc `config.get(...) ?? 'warn'`, nên gõ sai tên khoá sẽ cho ra
+ * `undefined` → rơi về `warn` → **production không bao giờ chặn ai** trong khi test vẫn xanh.
+ * Một `get: () => mode` trả mọi khoá sẽ che đúng lỗi đó; ràng buộc tên khoá ở đây làm nó đỏ.
+ */
 function makeGuard(mode: 'off' | 'warn' | 'on'): PlanFeatureGuard {
-  const config = { get: () => mode } as unknown as ConfigService;
+  const config = {
+    get: (key: string) => (key === 'PLAN_FEATURE_ENFORCEMENT' ? mode : undefined),
+  } as unknown as ConfigService;
   return new PlanFeatureGuard(reflector, config);
 }
 
