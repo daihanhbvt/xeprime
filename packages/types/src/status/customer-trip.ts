@@ -19,6 +19,15 @@ import { STATUS_COLOR, type StatusMeta } from './meta';
 export const CUSTOMER_TRIP_STAGE = {
   /** Đã gửi yêu cầu, chủ xe chưa trả lời. Chưa có đơn thuê. */
   PENDING_APPROVAL: 'pending_approval',
+  /**
+   * Tuyến hoa hồng: đang chờ CHÍNH KHÁCH chuyển khoản giữ chỗ (ADR 0021).
+   *
+   * Cố ý KHÔNG gộp vào `PENDING_APPROVAL`. Hai chặng nhìn giống nhau ("chưa xong") nhưng
+   * **việc cần làm tiếp thuộc về hai người khác nhau**: ở đây quả bóng đang ở chân khách và
+   * màn hình phải có nút chuyển tiền cùng đồng hồ đếm ngược; ở kia khách chỉ có thể chờ.
+   * Gộp lại là giấu mất việc duy nhất khách phải làm để có xe.
+   */
+  AWAITING_HOLD: 'awaiting_hold',
   /** Chủ xe đã nhận, chưa tới giờ giao xe. */
   READY: 'ready',
   /** Xe đã ở với khách. */
@@ -41,6 +50,10 @@ export const CUSTOMER_TRIP_STAGE_META: Readonly<Record<CustomerTripStage, Status
   [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL]: {
     label: 'Chờ xác nhận',
     color: STATUS_COLOR.WAITING,
+  },
+  [CUSTOMER_TRIP_STAGE.AWAITING_HOLD]: {
+    label: 'Chờ chuyển giữ chỗ',
+    color: STATUS_COLOR.WARNING,
   },
   [CUSTOMER_TRIP_STAGE.READY]: { label: 'Sẵn sàng', color: STATUS_COLOR.INFO },
   [CUSTOMER_TRIP_STAGE.ACTIVE]: { label: 'Đang thuê', color: STATUS_COLOR.PROCESSING },
@@ -82,7 +95,13 @@ export function customerTripStage(input: {
   switch (input.requestStatus) {
     case BOOKING_REQUEST_STATUS.PENDING_HOST_APPROVAL:
       return CUSTOMER_TRIP_STAGE.PENDING_APPROVAL;
+    case BOOKING_REQUEST_STATUS.AWAITING_HOLD:
+      return CUSTOMER_TRIP_STAGE.AWAITING_HOLD;
+    // `hold_expired` xếp cùng `cancelled_by_customer` chứ không phải `REJECTED`: hết hạn chuyển
+    // giữ chỗ là chuyến KHÔNG THÀNH, không ai từ chối khách cả — chỗ chỉ được nhả ra. Xếp vào
+    // `REJECTED` là đổ lỗi cho chủ xe về một việc họ không dính vào.
     case BOOKING_REQUEST_STATUS.CANCELLED_BY_CUSTOMER:
+    case BOOKING_REQUEST_STATUS.HOLD_EXPIRED:
       return CUSTOMER_TRIP_STAGE.CANCELLED;
     case BOOKING_REQUEST_STATUS.REJECTED_BY_HOST:
     case BOOKING_REQUEST_STATUS.EXPIRED:
@@ -165,7 +184,13 @@ export const CUSTOMER_TRIP_FILTER_STAGES: Readonly<
   Record<CustomerTripFilter, readonly CustomerTripStage[]>
 > = {
   [CUSTOMER_TRIP_FILTER.ALL]: CUSTOMER_TRIP_STAGE_VALUES,
-  [CUSTOMER_TRIP_FILTER.PENDING]: [CUSTOMER_TRIP_STAGE.PENDING_APPROVAL],
+  // Tab gom cả hai chặng "chuyến chưa được chốt" — dù việc cần làm thuộc về hai người khác
+  // nhau. Với khách thì đây vẫn là một câu hỏi duy nhất: "chuyến của tôi đã chắc chưa?".
+  // Sự khác biệt (ai phải hành động) do NHÃN CHẶNG trên từng dòng nói, không phải do tab.
+  [CUSTOMER_TRIP_FILTER.PENDING]: [
+    CUSTOMER_TRIP_STAGE.PENDING_APPROVAL,
+    CUSTOMER_TRIP_STAGE.AWAITING_HOLD,
+  ],
   [CUSTOMER_TRIP_FILTER.UPCOMING]: [CUSTOMER_TRIP_STAGE.READY],
   [CUSTOMER_TRIP_FILTER.ACTIVE]: [CUSTOMER_TRIP_STAGE.ACTIVE],
   [CUSTOMER_TRIP_FILTER.COMPLETED]: [CUSTOMER_TRIP_STAGE.COMPLETED],

@@ -19,49 +19,19 @@ Git: **thư mục này là repo** (remote `https://github.com/daihanhbvt/xeprime
 ## 2. Tài liệu — đọc theo thứ tự
 
 Nguồn sống (đọc trước, luôn đúng hiện tại):
-1. `docs/decisions/` — **19 ADR (0001–0019), thắng mọi tài liệu khác khi mâu thuẫn**
-2. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu"
-3. `docs/completion-roadmap.md` — **"đang ở đâu / làm gì tiếp"** (tiến độ thực tế + milestone). Đóng xong phase thì cập nhật file này.
-4. File này (CLAUDE.md)
-5. `docs/deployment.md` — đưa lên production (1 VPS, Docker Compose + Caddy) **và CD qua GitHub Actions** (§9). Đọc khi đụng `deploy/`, `docker-compose.prod.yml`, `.github/workflows/`, hoặc thêm biến env mà production cần — **biến env mới phải khai thêm ở GitHub Environment, nếu không deploy đỏ**.
-6. `docs/backup-and-restore.md` — sao lưu và khôi phục PostgreSQL. Đọc khi đụng `deploy/scripts/backup-db.sh`, `deploy/systemd/`, `tools/backup-pull/`.
+1. `docs/design/02_PRODUCT_VISION.md` — **sản phẩm, persona và mô hình doanh thu hiện hành**.
+2. `docs/completion-roadmap.md` — **đang ở đâu, release gate và việc tiếp theo**.
+3. `docs/design/03_PRODUCT_GAP_ANALYSIS.md` — backlog User/Admin/Manage theo hiện trạng source.
+4. `docs/decisions/` — **28 ADR (0001–0028)**; ADR Accepted mới hơn thắng trong đúng phạm vi ghi đè.
+5. `docs/CODEMAP.md` — chỉ mục "cái gì nằm ở đâu".
+6. File này (CLAUDE.md).
+7. `docs/deployment.md`, `docs/backup-and-restore.md`, `docs/third-party-keys.md` — vận hành và dịch vụ ngoài.
 
-Tham chiếu nghiệp vụ (viết 22/07/2026, **không sửa lại**, phần công nghệ đã bị ADR ghi đè — giá trị ở phần domain):
-7. `docs/xeprime_screen_spec_by_role_before_db.md` — màn hình/chức năng theo role
-8. `docs/xeprime_overall_user_flow_next_node.md` — user flow
-9. `docs/xeprime_database_design.md` — thiết kế đầy đủ các bảng (nhiều bảng làm phase sau)
-10. `docs/xeprime_build_plan_nextjs_nestjs_prod.md` — lộ trình 9 phase
-11. `docs/xeprime_fe_base_stack_calendar.md` — màn lịch (phase 4)
+Không tạo lại `docs/plans/`, file Word hoặc Excel tracking làm nguồn sự thật. Việc ngắn hạn đi qua issue/PR; quyết định lâu dài đi qua ADR; tiến độ chỉ đi vào một roadmap. Lịch sử dọn tài liệu ở `docs/README.md`.
 
-> Plan mode ghi vào `docs/plans/` (cấu hình ở `.claude/settings.json`) — plan đi theo repo, không rơi ra ngoài.
-> Dọn docs 23/07/2026: đã xóa `_archive_`, mọi `.docx`, và 3 doc "prompt để build base" (base đã xong). Chi tiết ở `docs/README.md`.
+### ⚠️ ADR mới thắng trong phạm vi ghi đè
 
-### ⚠️ ADR thắng tài liệu cũ
-
-Tài liệu tham chiếu (6–10) có vài quyết định kỹ thuật đã bị ghi đè, và 3 chỗ tự mâu thuẫn nhau.
-
-`docs/decisions/` là các ADR ghi quyết định kèm lý do. **Khi ADR mâu thuẫn với tài liệu cũ, ADR thắng.**
-
-| ADR | Ghi đè gì |
-| --- | --- |
-| [0001](docs/decisions/0001-database-postgresql.md) | PostgreSQL 16, không phải MySQL 8 |
-| [0002](docs/decisions/0002-auth-session-cookie.md) | httpOnly session cookie (docs không nói gì về session) |
-| [0003](docs/decisions/0003-styling-css-modules.md) | CSS Modules, bỏ styled-components |
-| [0004](docs/decisions/0004-client-state.md) | Giữ Redux; filter lịch/marketplace đẩy ra URL searchParams |
-| [0005](docs/decisions/0005-status-enums.md) | **Bộ status chốt** — giải mâu thuẫn giữa 3 tài liệu |
-| [0006](docs/decisions/0006-booking-concurrency.md) | Chống trùng lịch bằng `EXCLUDE USING gist` |
-| [0007](docs/decisions/0007-api-type-contract.md) | Type FE sinh từ OpenAPI, không viết tay |
-| [0008](docs/decisions/0008-public-listings-sync.md) | Quy tắc đồng bộ `public_listings` |
-| [0009](docs/decisions/0009-chat-firestore-projection.md) | Chat: Firestore projection realtime, **PostgreSQL là source of truth**, outbox/retry, R2 |
-| [0011](docs/decisions/0011-long-term-fixed-packages.md) | Thuê dài hạn = **gói cố định theo THÁNG LỊCH** (1/2/3/6/9/12), khách chỉ nêu nguyện vọng ngày nhận |
-| [0012](docs/decisions/0012-i18n-shared-url-cookie-locale.md) | Đa ngữ vi/en: **một URL cho cả hai ngôn ngữ**, locale ở cookie `XP_LOCALE` đọc phía server |
-| [0013](docs/decisions/0013-no-online-payment-mvp.md) | **KHÔNG làm thanh toán trực tuyến** ở giai đoạn này — module `payments` là ghi sổ thủ công |
-| [0014](docs/decisions/0014-owner-and-shop-single-role.md) | Chủ xe = chủ gian hàng = **MỘT vai** `shop_owner`; `tenant_type` chỉ là NHÃN; năng lực đến từ GÓI. Nền tảng **không đứng giữa** quan hệ khách ↔ gian hàng |
-| [0015](docs/decisions/0015-vehicle-slot-billing.md) | Cước theo **CHỖ XE**, trả trước, kỳ tính bằng **THÁNG LỊCH**; hết hạn → gỡ khỏi chợ (không khoá tenant) — **sửa ADR 0010** |
-| [0016](docs/decisions/0016-sepay-bank-reconciliation.md) | **SePay** đối soát chuyển khoản tự động, CHỈ cho tiền GÓI — **sửa phạm vi ADR 0013** |
-| [0017](docs/decisions/0017-native-bearer-auth.md) | App native xác thực bằng **Bearer access token 15 phút** + refresh token opaque xoay vòng, thu hồi theo thiết bị. Web **giữ nguyên** cookie httpOnly. Quyền/tenant/PII không bao giờ là claim JWT |
-| [0018](docs/decisions/0018-map-delivery-distance.md) | Bản đồ tính khoảng cách giao xe tận nơi: số tự động là **ƯỚC LƯỢNG** (chủ xe vẫn chốt phí — ADR 0014), khoảng cách **một chiều theo đường bộ**, provider trung lập, và **không tra được không phải một lỗi** |
-| [0019](docs/decisions/0019-backend-led-social-oauth.md) | Google/Facebook: vòng OAuth chạy ở **SERVER** (authorization code + PKCE, `GET /auth/social/:provider` trả 302). Client không cầm client secret cũng không cầm token của provider. **Firebase rút về đúng vai chat realtime** — ghi đè phần "Firebase là provider" của ADR 0002 |
+Không duy trì một danh sách ADR thứ hai trong hướng dẫn này. Chỉ mục trạng thái và quan hệ ghi đè nằm ở `docs/decisions/README.md`; mô hình sản phẩm hiện hành nằm ở ADR 0028.
 
 ### Công cụ Claude (`.claude/`)
 
@@ -104,6 +74,9 @@ Skill tự kích hoạt theo mô tả; nếu quên thì gọi tay. `navigator` �
 | API type | FE import từ `packages/types/src/api.generated.ts` sinh bằng `openapi-typescript` — ADR 0007 |
 | RBAC | Role/permission lưu DB, **guard backend là nguồn bảo vệ chính** |
 | Thuê dài hạn | **Gói cố định** 1/2/3/6/9/12 tháng; ngày trả = ngày nhận + N **tháng lịch** (server tính, client không gửi); khách nêu nguyện vọng ngày nhận, gian hàng chốt lịch khi duyệt; ưu đãi cam kết thời hạn theo THÁNG, không cộng dồn — ADR 0011 |
+| Doanh thu | **Hai tuyến trên MỘT chợ** — ADR 0028. Basic Owner: không thuê bao, phí dịch vụ theo chuyến (giả thuyết 10%) + Owner Lite. Gian hàng: gói theo chỗ/kỳ hạn, 0% hoa hồng XePrime/chuyến + Full Manage. Thuế, bảo hiểm và phí dịch vụ là ba dòng riêng; mode/policy đóng băng vào booking |
+| Tiền vào nền tảng | **Mô hình mục tiêu, chưa triển khai W4:** SePay đối soát các khoản vào qua MỘT bảng `bank_transactions`, phân loại đích bằng mã. Webhook công khai không session phải có khoá time-safe, idempotent bằng unique DB và trả 200 khi nhận lại giao dịch — ADR 0022/0028 |
+| Số dư | Mô hình mục tiêu `wallets`/`wallet_entries`/`withdrawal_requests` là **sổ công nợ phải trả**, không phải ví điện tử: không nạp/chuyển/thanh toán nội bộ; ledger append-only; rút về tài khoản ngân hàng qua admin — ADR 0028. Chưa được coi là module đã triển khai |
 | Đa ngữ | `next-intl` KHÔNG locale routing; hai ngôn ngữ `vi`/`en` dùng CHUNG url; locale ở cookie `XP_LOCALE` (httpOnly) đọc phía server; tiền luôn VND, múi giờ luôn `Asia/Ho_Chi_Minh` — ADR 0012 |
 | Chat | **PostgreSQL là source of truth** (mọi tin/thành viên/đính kèm/đã đọc); Firestore chỉ là projection realtime ~30–50 tin gần nhất; đồng bộ outbox/retry; attachment ở Cloudflare R2 — ADR 0009 |
 | Deploy MVP | 1 VPS mỗi môi trường (staging 6GB, production ≥8GB) — `docs/deployment.md` §1 |
@@ -126,7 +99,12 @@ Tài liệu để mở một số chỗ, đã chốt như sau:
 | Styling | CSS Modules | AntD v5 đã có CSS-in-JS riêng; thêm styled-components là 2 runtime chồng nhau và ép `'use client'` khắp nơi — ADR 0003 |
 
 Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
-`turbo` (task runner monorepo) · `@nestjs/terminus` (health ping DB) · `@nestjs/throttler` + `helmet` (rate limit/CORS theo production checklist) · `nestjs-pino` + `pino-http` (log có cấu trúc + request-id) · `ulid` (sinh ID char(26)) · `husky` + `lint-staged` · `@tanstack/react-query-devtools` · `cookie-parser` (ADR 0002) · `openapi-typescript` (ADR 0007) · `@testcontainers/postgresql` (test đụng lịch cần Postgres thật — ADR 0006).
+`turbo` (task runner monorepo) · `@nestjs/terminus` (health ping DB) · `@nestjs/throttler` + `helmet` (rate limit/CORS theo production checklist) · `nestjs-pino` + `pino-http` (log có cấu trúc + request-id) · `ulid` (sinh ID char(26)) · `husky` + `lint-staged` · `@tanstack/react-query-devtools` · `cookie-parser` (ADR 0002) · `openapi-typescript` (ADR 0007).
+
+> ⚠️ Sửa 29/08/2026: bản trước ghi `@testcontainers/postgresql`. **Gói đó chưa bao giờ được cài và
+> không có dòng code nào dùng.** Test `apps/api` chạy trên một Postgres THẬT ở `TEST_DATABASE_URL`
+> (`apps/api/test/setup-test-db.ts`); `REQUIRE_DB=1` làm test đỏ khi thiếu DB, không có thì spec tự
+> bỏ qua. Đừng đi tìm container.
 
 ## 5. Cấm tuyệt đối
 
@@ -151,6 +129,25 @@ Bổ sung ngoài tài liệu, đã thống nhất đưa vào base:
 - ❌ Dùng `number` cho tiền — `Decimal` ở BE, string ở JSON (ADR 0007)
 - ❌ Nhân `số tháng × 30` để suy lịch hay giá gói thuê dài hạn — dùng `addCalendarMonthsVn` / `longTermPackages` (ADR 0011)
 - ❌ Trưng chênh lệch giá dài hạn ↔ giá ngày như một khuyến mãi, hay hiện `discountPercent` (của TỰ LÁI) khi khách đang chọn dài hạn (ADR 0011)
+- ❌ Gọi phí dịch vụ XePrime là thuế/bảo hiểm, hoặc thu bảo hiểm khi chưa có partner + policy + chứng nhận thật — ADR 0028
+- ❌ Dùng một `commissionPercent` để đại diện cả phí dịch vụ, thuế, bảo hiểm và tiền phải trả chủ xe — từng dòng có chủ sở hữu và snapshot riêng (ADR 0028)
+- ❌ Đồng nhất `hold_amount` với `platform_service_fee` — chúng có thể bằng nhau ở một policy nhưng không phải quy tắc (ADR 0028)
+- ❌ Ghi khoản giữ chỗ/tiền giữ hộ vào doanh thu tenant hoặc XePrime trước khi outcome được chốt; dùng bảng/ledger riêng (ADR 0028)
+- ❌ Gọi số dư phải trả là "ví điện tử", cho nạp/chuyển/thanh toán nội bộ — ADR 0028
+- ❌ Thêm trạng thái "chờ thanh toán" vào `BOOKING_STATUS` — trạng thái chờ tiền sống ở payment/hold/request, không phải vòng đời vận hành xe
+- ❌ Thu phần trăm trên một báo giá tạm tính (`estimateNote != null`) hoặc đơn dài hạn chưa chốt giờ nhận
+- ❌ Tính mốc huỷ/hoàn ở client hay tính lại policy lúc đọc — mốc và policy được snapshot ở server
+- ❌ Đọc `tenants.tenant_type` để quyết định chế độ thu phí — nguồn duy nhất là gói hiện hành (ADR 0014 điều 2 · ADR 0024)
+- ❌ Tính lại giá/hoa hồng của một đơn đã tạo — mọi thứ đóng băng lúc tạo (ADR 0024)
+- ❌ Nối FK `payments.subscription_id` — sẽ tự sinh phiếu thu cho tenant, biến tiền gói thành thu nhập của chính họ (ADR 0022 điều 6)
+- ❌ Khớp giao dịch ngân hàng TỰ ĐỘNG theo số tiền khi không rút được mã — chỉ gợi ý cho admin (ADR 0022)
+- ❌ Chống ghi đôi tiền bằng check ở tầng app — luôn bằng constraint DB (`provider_tx_id`, `(ledger, source_type, source_ref_id)`) — ADR 0022/0028
+- ❌ Cho số dư nạp tiền / chuyển ngang / thanh toán nội bộ / chi tự động khi chưa có đối tác và release gate — nó chỉ là sổ công nợ phải trả (ADR 0028)
+- ❌ Nhét cờ tính năng vào bảng permission, hay suy quyền của một người từ GÓI — hai trục độc lập, kiểm tra nối tiếp (ADR 0027 điều 2)
+- ❌ Ẩn menu mà không chặn endpoint ở server — ẩn nút chỉ là trang trí (ADR 0027 điều 4)
+- ❌ Để tenant hết hạn gói MẤT QUYỀN XEM sổ thu chi/công nợ/bảo dưỡng của chính họ — hết hạn là `read_only`, không phải `hidden` (ADR 0027 điều 3)
+- ❌ Dựng báo cáo tổng hợp thu chi cho bậc cơ bản — chủ xe thấy tiền của TỪNG đơn, sổ tổng hợp là tính năng của gói (ADR 0027 điều 1)
+- ❌ Boost xe thuê bao bất chấp độ phù hợp/chất lượng, hoặc không gắn nhãn vị trí tài trợ. Chỉ ưu tiên trong nhóm kết quả tương đương (ADR 0028)
 - ❌ Tiền tố ngôn ngữ trong URL (`/en`, `/vi`), `app/[locale]`, hay tham số `?lang=`/`?locale=` — ADR 0012
 - ❌ Chuỗi giao diện viết thẳng trong component ở khu ĐÃ i18n hoá — dùng `t()` + `messages/<locale>/*.json`
 - ❌ `dayjs.locale(...)` ở bất kỳ đâu — nó đổi trạng thái toàn tiến trình và rò ngôn ngữ giữa các request SSR
@@ -222,7 +219,7 @@ server trước khi render.
 | --- | --- |
 | Hằng locale, cookie, bản đồ `Intl` | `apps/web/src/i18n/config.ts` |
 | Đọc locale (server) | `src/i18n/locale.ts` · Server Action ghi cookie: `src/i18n/actions.ts` |
-| Message — **một gốc dùng chung** | TOÀN BỘ 22 namespace ở `packages/domain/messages/{vi,en}/` — web và app native dùng chung, một khoá một bản dịch (24/08/2026). Chia theo TÍNH NĂNG, không theo client: app native dùng lại `bookings`/`vehicles`… như web; `mobile-shell` (cờ `web: false`) chỉ là VỎ app native. Hai bảng gom: `apps/web/messages/<locale>/index.ts` và `apps/mobile/src/i18n/messages.ts` (tập con). Danh sách ở `apps/web/src/i18n/namespaces.ts`; `i18n:check` quét gốc package, canh cả hai bảng gom và CHẶN JSON mọc lại ở gốc web cũ |
+| Message — **một gốc dùng chung** | TOÀN BỘ 29 namespace ở `packages/domain/messages/{vi,en}/` — web và app native dùng chung, một khoá một bản dịch. Chia theo TÍNH NĂNG, không theo client: app native dùng lại `bookings`/`vehicles`… như web; `mobile-shell` (cờ `web: false`) chỉ là VỎ app native. Hai bảng gom: `apps/web/messages/<locale>/index.ts` và `apps/mobile/src/i18n/messages.ts` (tập con). Danh sách ở `apps/web/src/i18n/namespaces.ts`; `i18n:check` quét gốc package, canh cả hai bảng gom và CHẶN JSON mọc lại ở gốc web cũ |
 | Định dạng tiền/ngày/quãng đường | `useAppFormat()` (client) · `getAppFormat()` (server) |
 | Nhãn status/role/enum | `useDomainLabel()` + namespace `Domain` |
 | Lỗi API | `useErrorMessage()` + namespace `Errors` (ánh xạ từ MÃ) |
@@ -259,20 +256,15 @@ chưa chuyển vẫn dùng chuỗi tiếng Việt trong mã; `i18n:audit` là b�
 | Firebase Admin credential | Chỉ cần khi bật chat realtime (`FIRESTORE_ENABLED=true`). Đăng nhập KHÔNG dùng tới nó nữa (ADR 0019) |
 | OAuth client Google/Facebook | Chưa khai thì nút social trả `SOCIAL_NOT_CONFIGURED`; mật khẩu và OTP vẫn chạy. Dev cần thật thì tạo OAuth client Web với redirect URI `http://localhost:4000/auth/social/google/callback` (Google cho phép `http://localhost`) |
 
-## 11. Lộ trình 9 phase
+## 11. Roadmap sản phẩm
 
-| Phase | Nội dung |
-| --- | --- |
-| 1 | Auth / RBAC / Tenant / Layout |
-| 2 | Shop approval + Vehicle core |
-| 3 | Public listing + Marketplace |
-| 4 | Booking request + Booking core + Calendar |
-| 5 | Notification + Review ✅ · Chat (ADR 0009 — Firestore projection, đợt sau) |
-| 6 | Finance / Thu chi / Công nợ |
-| 7 | Admin platform đầy đủ |
-| 8 | Migration từ Firestore + chạy song song |
-| 9 | QA / hardening / production |
+Roadmap 9 phase cũ đã hoàn thành vai trò bootstrap và bị loại khỏi nguồn sống ngày 03/09/2026. Thứ tự hiện hành là:
 
-Tiến độ thực tế từng phase (đang làm tới đâu): `docs/completion-roadmap.md`.
-Chi tiết nghiệp vụ từng phase: `docs/xeprime_build_plan_nextjs_nestjs_prod.md`.
-Kỷ luật code theo loại việc: `.claude/skills/` (xem bảng mục 2).
+1. Stabilize/pilot UX.
+2. Thu tiền subscription.
+3. Marketplace transaction cho Basic Owner.
+4. Thu hộ đầy đủ + Số dư chủ xe sau legal/payment gate.
+5. Controlled pilot và hardening.
+6. Mobile customer parity + public launch.
+
+Chi tiết, trạng thái và gate: `docs/completion-roadmap.md`. Kỷ luật code theo loại việc: `.claude/skills/`.

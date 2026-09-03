@@ -42,6 +42,13 @@ vi.mock('@/hooks/use-current-user', () => ({
   }),
 }));
 
+const features = vi.hoisted(() => ({ states: {} as Record<string, string> }));
+
+vi.mock('@/hooks/use-feature', () => ({
+  useFeatureStates: () => features.states,
+  usePlanEndsAt: () => null,
+}));
+
 vi.mock('@/services/auth.service', () => ({ destroySession: vi.fn(async () => undefined) }));
 
 // Con của shell không thuộc phạm vi test — chặn để khỏi kéo cả cây menu/chat vào.
@@ -88,6 +95,7 @@ beforeEach(() => {
   nav.pathname = '/manage';
   state.user = null;
   state.isLoading = false;
+  features.states = {};
   state.isError = false;
 });
 
@@ -431,5 +439,47 @@ describe('AppShell — không bọc nhầm khu công khai', () => {
     // `MobileNav` (cổng quản lý) và `MobileTabBar` (marketplace) không được gộp: một cái lọc
     // theo quyền tenant/platform, cái kia mở modal đăng nhập cho khách.
     expect(sourceOf('../../app/(public)/layout.tsx')).not.toContain('<MobileNav');
+  });
+});
+
+describe('AppShell — băng "gói hết hạn" của tính năng đang đọc (ADR 0027 điều 3)', () => {
+  /**
+   * Băng tra `pathname → leaf.feature` từ CHÍNH cây nav, nên test đi qua đúng đường đó: đặt
+   * pathname vào một trang bị gác rồi bật `read_only` cho đúng cờ của trang ấy.
+   */
+  function shellAt(pathname: string) {
+    nav.pathname = pathname;
+    state.user = OWNER;
+    return renderShell();
+  }
+
+  it('trang bị gác + read_only ⇒ hiện băng gia hạn, KHÔNG che nội dung trang', () => {
+    features.states = { finance: 'read_only' };
+    shellAt('/manage/receipts');
+
+    expect(screen.getByText(/đang ở chế độ chỉ xem/)).toBeTruthy();
+    // Băng là một dải, không phải màn chặn — trang vẫn render.
+    expect(screen.getByTestId('page')).toBeTruthy();
+  });
+
+  it('cùng trang đó nhưng enabled ⇒ KHÔNG có băng nào', () => {
+    features.states = { finance: 'enabled' };
+    shellAt('/manage/receipts');
+
+    expect(screen.queryByText(/đang ở chế độ chỉ xem/)).toBeNull();
+  });
+
+  it('trang KHÔNG bị gác ⇒ không băng, dù cờ khác đang read_only', () => {
+    features.states = { finance: 'read_only' };
+    shellAt('/manage/bookings');
+
+    expect(screen.queryByText(/đang ở chế độ chỉ xem/)).toBeNull();
+  });
+
+  it('hidden KHÔNG dựng băng — đó là màn upsell, không phải băng nhắc gia hạn', () => {
+    features.states = { finance: 'hidden' };
+    shellAt('/manage/receipts');
+
+    expect(screen.queryByText(/đang ở chế độ chỉ xem/)).toBeNull();
   });
 });

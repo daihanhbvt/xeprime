@@ -12,6 +12,10 @@
     "system": "Hệ thống",
     "customer": "Khách thuê"
   },
+  "billingMode": {
+    "commission": "Hoa hồng theo chuyến",
+    "package": "Gói theo chỗ"
+  },
   "bodyType": {
     "mini": "Mini car",
     "sedan": "Sedan",
@@ -100,6 +104,7 @@
   },
   "customerTripStage": {
     "pending_approval": "Chờ xác nhận",
+    "awaiting_hold": "Chờ chuyển giữ chỗ",
     "ready": "Sẵn sàng",
     "active": "Đang thuê",
     "completed": "Hoàn thành",
@@ -256,7 +261,11 @@
     "vehicle_approved": "Xe được duyệt công khai",
     "vehicle_rejected": "Xe bị từ chối",
     "review_received": "Đánh giá mới",
-    "booking_request_cancelled": "Khách đã huỷ yêu cầu"
+    "booking_request_cancelled": "Khách đã huỷ yêu cầu",
+    "subscription_expiring": "Gói sắp hết hạn",
+    "subscription_expired": "Gói đã hết hạn",
+    "subscription_lapsed": "Đã chuyển sang tính hoa hồng",
+    "free_trips_exhausted": "Hết lượt miễn phí"
   },
   "occupancySourceType": {
     "booking": "Đơn thuê",
@@ -297,6 +306,16 @@
   "pickupPreference": {
     "within_7_days": "Trong 7 ngày tới",
     "specific_date": "Chọn ngày cụ thể"
+  },
+  "planFeature": {
+    "finance": "Sổ thu chi và báo cáo",
+    "debts": "Theo dõi công nợ",
+    "maintenance": "Lịch bảo dưỡng và chi phí",
+    "members": "Nhân viên và phân quyền",
+    "branches": "Nhiều chi nhánh",
+    "drivers": "Quản lý tài xế",
+    "contracts": "Hợp đồng thuê xe",
+    "escrow_hold": "Thu giữ chỗ qua sàn"
   },
   "planStatus": {
     "active": "Đang bán",
@@ -359,6 +378,13 @@
     "self_drive": "Tự lái",
     "with_driver": "Có tài xế",
     "long_term": "Thuê dài hạn"
+  },
+  "subscriptionInvoiceStatus": {
+    "draft": "Nháp",
+    "issued": "Chờ thanh toán",
+    "partially_paid": "Đã nhận một phần",
+    "paid": "Đã thanh toán",
+    "void": "Đã huỷ"
   },
   "subscriptionStatus": {
     "trial": "Dùng thử",

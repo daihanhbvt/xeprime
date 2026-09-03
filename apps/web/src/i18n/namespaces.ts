@@ -37,6 +37,10 @@ export const MESSAGE_NAMESPACES = [
   { file: 'chat', namespace: 'Chat' },
   { file: 'trips', namespace: 'Trips' },
   { file: 'account', namespace: 'Account' },
+  // Bốn văn bản pháp lý công khai + trang Hỗ trợ. Tách khỏi `marketplace` vì chúng là VĂN BẢN
+  // được viện dẫn (có ngày hiệu lực, sửa là phải dời ngày), không phải chữ trang trí của chợ.
+  { file: 'legal', namespace: 'Legal' },
+  { file: 'support', namespace: 'Support' },
 
   // — Cổng quản lý —
   { file: 'manage-common', namespace: 'ManageCommon' },
@@ -51,6 +55,13 @@ export const MESSAGE_NAMESPACES = [
   { file: 'customers', namespace: 'Customers' },
   // Mới có màn Công nợ; sổ Thu-Chi vẫn còn chuỗi thô — xem `i18n:audit`.
   { file: 'finance', namespace: 'Finance' },
+  // Quản trị gói dịch vụ (admin nền tảng) — chuyển đợt W1 (ADR 0015/0020).
+  { file: 'admin-plans', namespace: 'AdminPlans' },
+  { file: 'members', namespace: 'Members' },
+  { file: 'drivers', namespace: 'Drivers' },
+  { file: 'maintenance', namespace: 'Maintenance' },
+  // "Gói của tôi" phía gian hàng — W2 (ADR 0015/0026).
+  { file: 'subscription', namespace: 'Subscription' },
   // ⚠️ `mobile-shell` là VỎ app native (màn lỗi cấp app, not-found, điều hướng gốc), KHÔNG
   // phải "mọi chữ của mobile". Namespace vẫn chia theo TÍNH NĂNG, không theo client: màn
   // booking trên app dùng lại `bookings`/`booking-requests` như web, chuỗi xe dùng lại

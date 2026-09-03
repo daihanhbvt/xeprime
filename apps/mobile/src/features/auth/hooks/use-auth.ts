@@ -1,4 +1,11 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
+import { STALE_TIME } from '@xeprime/api-client';
 import type { AuthProvider } from '@xeprime/types';
 import { queryKeys } from '@/queries/query-keys';
 import { resetSessionScopedCache } from '@/queries/reset-session-cache';
@@ -19,7 +26,7 @@ export function useCurrentUser(): UseQueryResult<CurrentUser> {
     queryFn: fetchCurrentUser,
     // 401 = chưa đăng nhập, là trạng thái hợp lệ chứ không phải lỗi cần retry.
     retry: false,
-    staleTime: 60_000,
+    staleTime: STALE_TIME.STANDARD,
   });
 }
 

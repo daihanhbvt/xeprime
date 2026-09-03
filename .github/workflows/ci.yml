@@ -27,10 +27,11 @@ concurrency:
 # (CLAUDE.md §9, ADR 0012 — tiền luôn VND, giờ luôn giờ Việt Nam). Để runner ở UTC nghĩa là CI
 # kiểm một cấu hình không người dùng nào có, và mọi test dính ngày giờ trở thành đỏ/xanh tuỳ máy.
 #
-# ⚠️ Đây KHÔNG phải giấy phép cho code phụ thuộc giờ máy. Hiển thị phải đi qua `toAppTz`/`fmt.*`
-# để đúng ở mọi múi giờ; dòng này chỉ làm cho CI mô phỏng đúng môi trường thật. Phần ĐẦU VÀO
-# (giá trị `DatePicker` → `.toISOString()`, ~20 chỗ) hiện vẫn diễn giải theo giờ máy — nợ đã ghi
-# ở `docs/completion-roadmap.md`, và nó là lý do bỏ dòng này ra sẽ đỏ ngay.
+# ⚠️ Đây KHÔNG phải giấy phép cho code phụ thuộc giờ máy — và từ 03/09/2026 nó cũng không còn
+# che được gì. Cả hai chiều đã đi qua module datetime dùng chung (`toAppTz` cho chiều API → ô
+# chọn, `appWallClockToIso` cho chiều ô chọn → API), eslint chặn `import dayjs` trực tiếp trong
+# mã sản phẩm, và job `web` chạy THÊM một lượt `TZ=UTC` cho phần nhạy múi giờ. Dòng này giờ chỉ
+# còn để CI mô phỏng đúng môi trường thật, không phải để giấu lỗi.
 env:
   TZ: Asia/Ho_Chi_Minh
 
@@ -132,6 +133,26 @@ jobs:
       # Parity vi↔en + ICU + không giá trị rỗng. Rẻ và chặn đúng thứ review của người hay bỏ sót.
       - run: pnpm --filter @xeprime/web i18n:check
       - run: pnpm --filter @xeprime/types test
+      - run: pnpm --filter @xeprime/domain test
+
+      # Lượt thứ hai, KHÁC múi giờ máy.
+      #
+      # `env.TZ` ở đầu file ghim runner về giờ Việt Nam để CI giống môi trường thật. Cái giá là
+      # mọi lỗi "diễn giải theo giờ máy" đều vô hình — đúng cách món nợ DatePicker sống sót tới
+      # 03/09/2026. Chạy lại phần nhạy múi giờ với `TZ=UTC` là chỗ nó không trốn được: bộ test
+      # datetime của `@xeprime/domain` tự xoay ba múi giờ, còn ba file web dưới đây là hai đầu
+      # dây thật (hộp chọn khoảng thuê · form đơn thuê · link tìm kiếm).
+      #
+      # Chỉ chạy phần nhạy múi giờ chứ không chạy lại cả bộ web: cả bộ mất vài phút và không
+      # thêm bảo đảm nào mà bốn file này chưa cho.
+      - name: Kiểm lại phần nhạy múi giờ với TZ=UTC
+        env:
+          TZ: UTC
+        run: |
+          pnpm --filter @xeprime/domain test
+          pnpm --filter @xeprime/web test src/components/form/RentalRangePanel.test.tsx
+          pnpm --filter @xeprime/web test src/features/bookings/components/booking-form-timezone.test.tsx
+          pnpm --filter @xeprime/web test src/features/marketplace/search/search-draft.test.ts
 
   # ---------------------------------------------------------------------------
   # Build image — CỔNG CHẶN, không đẩy đi đâu.

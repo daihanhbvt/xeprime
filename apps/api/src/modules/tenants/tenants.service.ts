@@ -14,6 +14,7 @@ import {
   type TenantStatus,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
+import { BillingService } from '../billing/billing.service';
 import { BranchesService } from '../branches/branches.service';
 import { ProvincesService } from '../locations/provinces.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -51,6 +52,7 @@ export class TenantsService {
     private readonly audit: AuditService,
     private readonly provinces: ProvincesService,
     private readonly branches: BranchesService,
+    private readonly billing: BillingService,
   ) {}
 
   /**
@@ -121,6 +123,16 @@ export class TenantsService {
         phone: dto.phone ?? null,
         address: dto.address ?? null,
       });
+      /*
+       * Gói mặc định trong CÙNG transaction (ADR 0015 điều 9) — cùng lý do với chi nhánh và
+       * membership ở trên: một gian hàng nửa vời hỏng theo nhiều kiểu khác nhau.
+       *
+       * Ở đây kiểu hỏng là: từ ADR 0027, cờ năng lực đọc từ gói hiện hành, nên tenant không gói
+       * có tập cờ RỖNG và mất sạch tính năng nâng cao ngày cổng chặn bật. Ghi qua
+       * `BillingService` chứ không tự `tx.tenantSubscription.create` — nó là writer duy nhất của
+       * bảng đó (ADR 0010).
+       */
+      await this.billing.assignDefaultPlanWithinTx(tx, id);
       return id;
     });
 

@@ -1,194 +1,197 @@
 # 02 — Product Vision
 
-> Ngày: 04/08/2026 · Chủ sở hữu: Product Director
-> Tài liệu này trả lời "chúng ta đang xây cái gì và vì sao". Nó **không** thay thế yêu cầu nghiệp vụ đã chốt trong `docs/xeprime_build_plan_nextjs_nestjs_prod.md` và các ADR — nó nói cho biết những yêu cầu đó phục vụ mục tiêu nào.
+> Cập nhật: 03/09/2026
+> Trạng thái: **Canonical — định hướng sản phẩm hiện hành**
+> Quyết định chi tiết về gói, tiền và cách gọi phí: [ADR 0028](../decisions/0028-marketplace-subscription-fees-and-custodied-funds.md).
 
----
+## 1. XePrime là gì
 
-## 1. Tuyên bố tầm nhìn
+XePrime là **chợ đăng và thuê xe** đồng thời là **giải pháp quản lý hoạt động cho thuê xe**.
 
-> **XePrime là hệ điều hành của ngành cho thuê xe Việt Nam — và cánh cửa đáng tin để thuê một chiếc xe từ nó.**
+- Người thuê tìm xe phù hợp, xem giá/lịch/chính sách, đặt xe, thanh toán khoản giữ chỗ và theo dõi chuyến đi.
+- Chủ có một hoặc vài xe có thể bắt đầu bằng bộ công cụ đơn giản, không trả thuê bao và chia sẻ doanh thu theo chuyến.
+- Chủ xe chuyên nghiệp hoặc đơn vị cho thuê có thể nâng cấp thành gian hàng, trả thuê bao cố định để dùng toàn bộ công cụ quản lý và không chịu hoa hồng nền tảng theo chuyến.
+- Xe của mọi nhóm cùng xuất hiện trên một marketplace; không tách thành hai chợ.
 
-Hai vế, một sản phẩm. Vế sau không tồn tại được nếu thiếu vế trước.
+Giá trị cốt lõi là một vòng kín: **nguồn xe thật → lịch thật → đặt xe thật → giao nhận có bằng chứng → tiền và trách nhiệm giải thích được**.
 
----
+## 2. Những người XePrime phục vụ
 
-## 2. Vấn đề thật
+### 2.1 Người thuê xe
 
-Một shop cho thuê xe ở Việt Nam quy mô 10–50 xe hôm nay đang vận hành bằng: một nhóm Zalo, một file Excel, một cuốn sổ, và trí nhớ của chủ. Hệ quả có thể liệt kê chính xác:
+Mục tiêu của họ là tìm được xe đúng nhu cầu, biết tổng tiền và điều kiện trước khi đặt, giữ được lịch, nhận đúng xe và có đường xử lý khi phát sinh sự cố.
 
-| Triệu chứng | Chi phí thật |
-| --- | --- |
-| Trùng lịch một chiếc xe | Mất khách + mất uy tín + đền bù |
-| Không biết ai đang nợ bao nhiêu | Dòng tiền âm mà không biết vì sao |
-| Nhân viên nghỉ mang theo dữ liệu khách | Mất tài sản vô hình |
-| Đăng xe lên 4 nhóm Facebook | Không biết đơn nào đến từ đâu |
-| Không có hợp đồng chuẩn | Tranh chấp không có gì để nói |
+### 2.2 Chủ xe cơ bản
 
-Khách thuê ở phía kia gặp đúng những triệu chứng đó, chỉ khác hình dạng: giá đăng một đằng thu một nẻo, xe trên ảnh khác xe nhận được, "hết xe rồi em" sau khi đã chốt.
+Thường có 1–3 xe, chưa cần một hệ thống vận hành dày. Họ cần:
 
-**Điểm mấu chốt**: cả hai vấn đề là *một* vấn đề — không ai nắm được sự thật về chiếc xe đó đang ở đâu, đã cam kết cho ai, với giá nào. Sản phẩm nào giữ được sự thật đó sẽ đồng thời phục vụ được cả hai phía.
+- Đăng và quản lý xe.
+- Mở/khóa lịch.
+- Nhận và xử lý yêu cầu/đơn thuê.
+- Bàn giao, nhận lại xe và lưu bằng chứng.
+- Biết từng khoản khấu trừ, số tiền thực nhận và trạng thái chuyển tiền.
+- Chat và xử lý hỗ trợ/tranh chấp.
 
----
+Đây là **một trải nghiệm quản lý rút gọn**, không phải một bản source được clone. Cùng module, API và dữ liệu với portal gian hàng; UI chỉ hiện đúng năng lực của gói cơ bản.
 
-## 3. Chiến lược: phần mềm vận hành là hào, marketplace là nhu cầu
+### 2.3 Gian hàng thuê bao
 
-Đây là quyết định chiến lược quan trọng nhất và nó đã được mã hoá vào kiến trúc:
+Có thể là một cá nhân muốn vận hành chuyên nghiệp hoặc doanh nghiệp có nhiều xe/nhân viên/chi nhánh. Họ trả thuê bao để nhận:
 
-```
-Chủ shop dùng XePrime để VẬN HÀNH (lịch, đơn, tiền, hợp đồng)
-        ↓ dữ liệu đúng, real-time, do chính họ nhập vì họ cần nó
-Marketplace hiển thị xe với availability THẬT
-        ↓ khách đặt được vì tin, không bị "hết xe rồi em"
-Đơn từ marketplace rơi thẳng vào hệ vận hành
-        ↓ shop càng dùng, dữ liệu càng đúng
-```
+- Toàn bộ bộ cơ bản.
+- Thu chi, công nợ và báo cáo.
+- Bảo dưỡng và chi phí vòng đời xe.
+- Nhân viên/phân quyền, chi nhánh và tài xế.
+- Hợp đồng và công cụ vận hành nâng cao.
+- Quyền lợi hiển thị/nhận diện gian hàng theo chính sách xếp hạng minh bạch.
+- Không chịu hoa hồng nền tảng theo từng chuyến trong thời gian gói còn hiệu lực.
 
-Vòng lặp này giải thích vì sao `public_listings` là **snapshot** được đồng bộ từ dữ liệu vận hành (ADR 0008) chứ không phải một bảng tin đăng riêng, và vì sao chống trùng lịch nằm ở **constraint database** chứ không ở tầng ứng dụng (ADR 0006). Sự thật chỉ có một bản.
+Một chủ xe có thể nâng cấp hoặc hạ cấp mà không đổi tài khoản, role hay tạo lại dữ liệu.
 
-**Đối thủ chỉ làm marketplace** phải đi xin dữ liệu availability từ shop và không bao giờ có được nó chính xác. **Đối thủ chỉ làm phần mềm** không mang lại đơn hàng nên khó thu tiền. XePrime chọn làm khó: cả hai — nhưng theo đúng thứ tự, vận hành trước.
+### 2.4 Nhân sự nền tảng
 
----
+- `platform_admin`: cấu hình và kiểm soát toàn hệ thống.
+- `reviewer`: xác minh chủ xe/gian hàng và kiểm duyệt xe/listing.
+- `support`: xử lý ticket, sự cố chuyến và tranh chấp.
+- `finance_admin`: đối soát tiền vào, số dư phải trả, hoàn tiền và rút tiền.
+- `platform_staff`: phạm vi vận hành được cấp cụ thể.
 
-## 4. Chúng ta phục vụ ai
+## 3. Hai lựa chọn cho chủ xe
 
-### 4.1 Chủ gian hàng (`shop_owner`) — người trả tiền
-
-Chủ 10–50 xe, 30–45 tuổi, điều hành từ điện thoại trong lúc đang ở bãi xe. Không có phòng IT. Đã từng thử một phần mềm rồi bỏ vì "rắc rối hơn Excel".
-
-- **Việc cần làm**: biết xe nào rảnh, ai nợ tiền, tháng này lãi hay lỗ — trong dưới 10 giây.
-- **Thắng khi**: buổi sáng mở app là biết hôm nay giao/nhận xe nào, không cần hỏi ai.
-- **Thua khi**: phải nhập liệu hai lần, hoặc phải mở laptop mới làm được việc.
-
-### 4.2 Nhân viên gian hàng (`shop_manager` / `shop_staff` / `shop_viewer`) — người dùng nhiều nhất
-
-Người thực sự bấm phần mềm cả ngày. Ít quyền hơn, tốc độ quan trọng hơn.
-
-- **Việc cần làm**: tạo đơn nhanh, thu tiền đúng, không làm sai cái mình không được phép.
-- **Thắng khi**: tạo một đơn thuê hoàn chỉnh dưới 60 giây.
-- **Thua khi**: gặp lỗi "không có quyền" mà không biết phải hỏi ai.
-
-### 4.3 Khách thuê (`customer`) — người quyết định marketplace sống hay chết
-
-Đặt xe cho chuyến đi cuối tuần, so sánh 3–4 nơi, quyết định trong 15 phút, gần như luôn trên điện thoại.
-
-- **Việc cần làm**: tìm được xe thật, còn trống thật, giá cuối cùng rõ, đặt xong dưới 3 phút.
-- **Thắng khi**: đặt xe không cần tạo tài khoản trước (đã có: OTP passwordless — `docs/guest-booking-passwordless.md`).
-- **Thua khi**: bị ép đăng ký, bị hỏi thông tin không liên quan, hoặc thấy giá đổi ở bước cuối.
-
-### 4.4 Nền tảng (`platform_admin`, `reviewer`, `support`, `finance_admin`)
-
-Giữ chất lượng sàn và giải quyết khi có chuyện.
-
-- **Việc cần làm**: duyệt nhanh mà không hạ chuẩn; tra được sự việc; can thiệp có dấu vết.
-- **Thắng khi**: mọi hành động nhạy cảm đều có `audit_logs` và không ai xem PII mà không để lại vết.
-
----
-
-## 5. Nguyên tắc sản phẩm
-
-1. **Sự thật ở một chỗ.** Một chiếc xe, một dòng thời gian. Không có "lịch trong app" và "lịch trong Zalo".
-2. **Ràng buộc thay vì lời nhắc.** Cái không được phép xảy ra thì hệ thống phải làm cho nó *không thể* xảy ra (ADR 0006), chứ không phải cảnh báo rồi cho qua.
-3. **Không ép ai trở thành người khác.** Khách thuê không bị đẩy vào luồng mở gian hàng; chủ shop không bị bắt học vận hành sàn. Đây là bài học đã trả giá — xem báo cáo auth 04/08.
-4. **Tiền không được mơ hồ.** Mọi con số tiền phải truy được về đơn/phiếu sinh ra nó.
-5. **Quyền là thật, không phải trang trí.** Guard backend là nguồn bảo vệ; UI chỉ phản ánh.
-6. **Mobile không phải bản rút gọn.** Chủ shop sống trên điện thoại; màn nào không dùng được trên điện thoại là màn chưa xong.
-7. **Việt Nam trước.** Tiếng Việt, `Asia/Ho_Chi_Minh`, VND, số điện thoại `0…`, biển số, CCCD, chuyển khoản. Quốc tế hoá là chuyện sau và chỉ khi có lý do.
-
----
-
-## 6. Chỉ số Bắc Đẩu
-
-> **Số ngày-xe được vận hành trọn vẹn trên XePrime mỗi tháng**
-> (một "ngày-xe trọn vẹn" = một chiếc xe có đơn thuê trên hệ thống, có thu tiền ghi nhận, và không có xung đột lịch)
-
-Chọn chỉ số này vì nó chỉ tăng khi **cả ba** phía cùng thắng: shop thực sự vận hành trên hệ thống (không dùng song song sổ tay), tiền thực sự đi qua (không "để ngoài"), và chất lượng dữ liệu đủ tốt (không xung đột). Nó không thể bị làm đẹp bằng cách đăng thêm tin hay tạo thêm tài khoản.
-
-### Chỉ số phụ theo persona
-
-| Persona | Chỉ số | Ngưỡng mục tiêu |
+| Nội dung | Chủ xe cơ bản — theo chuyến | Gian hàng — thuê bao |
 | --- | --- | --- |
-| Chủ shop | Ngày hoạt động / tháng | ≥ 20 |
-| Chủ shop | % đơn có phiếu thu khớp | ≥ 90% |
-| Nhân viên | Thời gian tạo một đơn thuê | ≤ 60s |
-| Khách thuê | Tỉ lệ hoàn tất đặt xe từ lúc mở form | ≥ 55% |
-| Khách thuê | % yêu cầu được shop phản hồi < 30 phút | ≥ 80% |
-| Nền tảng | Thời gian duyệt hồ sơ gian hàng | ≤ 24h |
-| Nền tảng | % hành động nhạy cảm có audit | 100% |
+| Phí cố định | 0đ | Theo số chỗ xe và kỳ hạn |
+| Giá pilot | Không áp dụng | 100.000đ/ô tô/tháng; 40.000đ/xe máy/tháng; tối thiểu 3 tháng; **chưa phải giá production** |
+| Hoa hồng XePrime | Giả thuyết 10% doanh thu chuyến, admin cấu hình chung và có hiệu lực theo phiên bản | 0% trong thời gian gói hiệu lực |
+| Thuế | Khấu trừ/nộp thay đúng nghĩa vụ thực tế khi pháp luật yêu cầu | Nghĩa vụ thuế vẫn tồn tại; XePrime có thể tài trợ chi phí như ưu đãi thương mại nhưng không được gọi sai hoặc xóa dấu vết kế toán |
+| Bảo hiểm/bảo vệ | Bảo vệ xe bắt buộc do chủ xe chịu/khấu trừ; bảo hiểm chuyến đi chỉ do người thuê trả khi giữ lựa chọn | Tương tự; gói thuê bao không tự làm nghĩa vụ hoặc phí bảo hiểm thực tế biến mất |
+| Giữ chỗ | Bắt buộc với booking đủ điều kiện | Khách có thể cọc trực tiếp với gian hàng hoặc dùng luồng nền tảng nếu gian hàng bật |
+| Tiền còn lại | Trả trực tiếp chủ xe hoặc thanh toán qua nền tảng khi luồng thu hộ đã đủ điều kiện mở | Có thể giao dịch trực tiếp; nếu qua nền tảng thì áp dụng cùng chuẩn đối soát/hoàn tiền |
+| Công cụ quản lý | Rút gọn | Đầy đủ |
+| Hiển thị | Theo chất lượng, giá, lịch trống và độ phù hợp | Có quyền lợi ưu tiên hợp lý; mọi vị trí trả phí/tài trợ phải có nhãn rõ |
 
----
+Tỷ lệ phí dịch vụ khoảng 10% và giá gói theo loại xe là **policy pilot**, không được hard-code thành sự thật pháp lý hoặc mức giá vĩnh viễn. Admin phải cấu hình chính sách theo loại xe, ngày hiệu lực và booking phải lưu snapshot chính sách lúc tạo.
 
-## 7. Lộ trình 3 chặng
+## 4. Nguyên tắc giá, thuế và bảo hiểm
 
-### Chặng 1 — "Vận hành đủ tiền" ✅ (đã đạt, Phase 0–6)
+### 4.1 Không che nguồn thu của nền tảng
 
-Một shop có thể bỏ Excel: xe → duyệt → marketplace → khách đặt (verify SĐT) → shop duyệt → đơn thuê → lịch → thu/chi/cọc/công nợ/hợp đồng.
-*Câu hỏi đã trả lời được: "phần mềm này có thay được cách tôi đang làm không?"*
+Không đổi tên hoa hồng của XePrime thành “thuế” hoặc “bảo hiểm” nếu tiền không được nộp cho cơ quan thuế hoặc doanh nghiệp bảo hiểm. Cách trình bày đề xuất:
 
-### Chặng 2 — "Đáng để trả tiền hàng tháng" (hiện tại → 6 tháng)
+- **Phí dịch vụ chuyến đi**: khoản XePrime hưởng để vận hành marketplace, thanh toán, hỗ trợ và chống gian lận.
+- **Thuế khấu trừ/nộp thay**: đúng số thực tế theo loại người bán và loại dịch vụ.
+- **Phí bảo hiểm chuyến đi**: đúng phí của sản phẩm bảo hiểm thật, kèm nhà bảo hiểm, quyền lợi và điều kiện loại trừ.
 
-Trọng tâm dịch từ *đủ chức năng* sang **đủ tốt để không ai muốn quay lại Excel**:
+UI có thể gom thành “Các khoản đảm bảo và nghĩa vụ chuyến đi” ở phần tóm tắt, nhưng trước khi xác nhận phải cho người dùng mở breakdown và biết tiền đi đâu.
 
-- Vận hành mượt trên điện thoại (chủ shop ở ngoài bãi, không ở bàn làm việc)
-- Khách hàng của shop trở thành tài sản: lịch sử thuê, khách quen, khách đen
-- Tiền khép vòng: thanh toán/cọc online, đối soát, hoá đơn gói dịch vụ
-- Hỗ trợ có cấu trúc: ticket thay vì chat trôi
-- Ảnh và nội dung đạt chuẩn sàn (xem `03` G-04)
+### 4.2 Cách hiểu thuế ở giai đoạn thiết kế
 
-### Chặng 3 — "Hạ tầng của ngành" (6–18 tháng)
+Theo Nghị định 117/2025/NĐ-CP, nền tảng có chức năng thanh toán thuộc diện có thể phải khấu trừ/nộp thay thuế cho hộ/cá nhân theo từng giao dịch. Tài liệu hướng dẫn của Chính phủ nêu tỷ lệ tham khảo cho **dịch vụ** của cá nhân cư trú là 5% VAT và 2% PIT; việc cho thuê xe của XePrime được phân loại thế nào phải do tư vấn thuế xác nhận trước khi cấu hình production.
 
-- Nhiều chi nhánh/kho xe trong một gian hàng
-- Kết nối bảo hiểm, định danh (eKYC GPLX/CCCD), phạt nguội
-- Dữ liệu định giá: gợi ý giá theo mùa/khu vực dựa trên dữ liệu thật của sàn
-- API/webhook cho shop lớn nối vào hệ thống riêng
+Không dùng một tỷ lệ chung cho mọi chủ thể. Doanh nghiệp, hộ kinh doanh, cá nhân cư trú và không cư trú có thể có cách xử lý khác nhau.
 
----
+### 4.3 Điều kiện để được gọi là bảo hiểm
 
-## 8. Chúng ta cố tình KHÔNG làm
+Định hướng đối tác đầu tiên là **PVI**, nhưng đây chưa phải tuyên bố rằng XePrime và PVI đã ký hợp đồng hay phát hành sản phẩm. Mô hình sản phẩm mong muốn gồm:
 
-| Không làm | Vì sao |
+- **Bảo vệ xe cho chủ xe:** bắt buộc đối với xe tham gia booking thuộc phạm vi áp dụng; phí do chủ xe chịu hoặc được khấu trừ minh bạch vào khoản phải trả. Chủ xe phải thấy rõ quyền lợi, phí, thời hạn và loại trừ.
+- **Bảo hiểm chuyến đi cho người thuê:** tùy chọn và chỉ cộng vào tổng tiền người thuê khi họ giữ lựa chọn; UI có thể chọn sẵn theo định hướng kinh doanh nhưng phải hiển thị riêng giá/quyền lợi và cho khách bỏ chọn dễ dàng trước khi thanh toán. Cách lấy sự đồng ý phải được rà soát pháp lý và UX trước production.
+
+Chỉ bật dòng “bảo hiểm” sau khi có tối thiểu:
+
+- Hợp đồng với PVI hoặc một doanh nghiệp/đối tác bảo hiểm hợp pháp khác.
+- Quy tắc, biểu phí và phạm vi bảo vệ.
+- Cách cấp chứng nhận/hợp đồng cho từng chuyến hoặc từng xe.
+- Quy trình yêu cầu bồi thường và xử lý từ chối.
+- Chứng từ xác nhận khoản phí thực tế.
+
+Nếu chưa có các điều kiện trên, khoản 5–8% không được gọi là bảo hiểm. Có thể thử nghiệm một **phí dịch vụ chuyến đi** minh bạch, nhưng phải tách khỏi thuế và bảo hiểm.
+
+## 5. Luồng tiền mục tiêu
+
+### 5.1 Chủ xe cơ bản
+
+```text
+Khách xác nhận booking
+→ thanh toán khoản giữ chỗ
+→ hệ thống phân bổ theo snapshot:
+   phí dịch vụ XePrime + thuế nộp thay + bảo hiểm thực tế + phải trả chủ xe
+→ phần còn lại:
+   (A) khách trả trực tiếp chủ xe, hoặc
+   (B) nền tảng thu hộ khi luồng này đã được phép mở
+→ chuyến hoàn thành/hủy
+→ quyết toán, hoàn tiền hoặc ghi số dư phải trả
+→ chủ xe yêu cầu rút về tài khoản ngân hàng
+```
+
+### 5.2 Gian hàng thuê bao
+
+```text
+Gian hàng trả phí thuê bao theo số chỗ xe
+→ được mở toàn bộ công cụ và 0% hoa hồng nền tảng/chuyến
+→ khách có thể gửi yêu cầu, liên hệ và cọc trực tiếp
+→ nếu chọn cọc/thanh toán qua XePrime thì tiền vẫn phải đi qua quy trình đối soát, thuế, bảo hiểm và hoàn tiền tương ứng
+```
+
+Giao dịch trực tiếp ngoài nền tảng được phép để tăng cơ hội chốt xe, nhưng phải cảnh báo rõ: XePrime không thể bảo đảm đối soát, hoàn tiền hoặc giải quyết phần giao dịch không được ghi nhận trên hệ thống.
+
+### 5.3 “Số dư chủ xe”, không phải ví điện tử
+
+Tên hiển thị là **Số dư chủ xe** hoặc **Khoản XePrime phải trả**. Đây là sổ cái nội bộ:
+
+- Không cho nạp tiền.
+- Không chuyển giữa người dùng.
+- Không dùng để mua hàng/dịch vụ khác.
+- Không quảng bá như tài khoản tiền gửi hay ví điện tử.
+- Mỗi bút toán chỉ thêm mới; sửa sai bằng bút toán đảo.
+- Yêu cầu rút được admin xử lý thủ công, mục tiêu nội bộ dưới 10 phút khi có người trực và cam kết khách hàng tối đa 2 ngày làm việc.
+
+Việc nền tảng giữ/thu hộ tiền thật chỉ được mở sau khi đã có ý kiến pháp lý và mô hình với ngân hàng/đơn vị thanh toán phù hợp.
+
+## 6. Xếp hạng marketplace
+
+Gói thuê bao có thể nhận ưu tiên hiển thị, nhưng không được làm mất chất lượng tìm kiếm.
+
+Thứ tự đề xuất:
+
+1. Xe khớp địa điểm, thời gian, loại xe và điều kiện khách tìm.
+2. Xe còn lịch, giá cạnh tranh, hồ sơ/ảnh đầy đủ, phản hồi tốt và tỷ lệ hủy thấp.
+3. Trong nhóm tương đương, gian hàng thuê bao được hệ số ưu tiên.
+4. Vị trí quảng bá/đề xuất trả phí phải có nhãn để người thuê không hiểu nhầm là kết quả hoàn toàn tự nhiên.
+
+Không bảo đảm “lên đầu” cho một xe không phù hợp hoặc chất lượng thấp.
+
+## 7. Nguyên tắc sản phẩm
+
+1. Một marketplace, một hồ sơ xe, một lịch và một booking engine.
+2. Gói quyết định năng lực; role quyết định người nào được thao tác trong năng lực đó.
+3. Bản cơ bản phải đủ hoàn thành một chuyến, không phải bản demo bị khóa ngẫu nhiên.
+4. Không clone source giữa Owner và Manage; tái sử dụng theo capability.
+5. Mọi số tiền đã thỏa thuận phải đóng băng vào booking, không tính lại theo cấu hình mới.
+6. Phí, thuế, bảo hiểm, cọc và tiền phải trả chủ xe là các loại tiền khác nhau.
+7. Mọi thao tác admin làm thay đổi tiền hoặc quyền truy cập phải có audit.
+8. Web responsive là bề mặt vận hành chính; mobile native ưu tiên người thuê trước.
+
+## 8. Chỉ số thành công
+
+**North Star:** số ngày-xe được hoàn thành trọn vẹn qua XePrime mỗi tháng.
+
+| Nhóm | Chỉ số |
 | --- | --- |
-| Mô hình P2P kiểu Turo (cá nhân cho thuê xe cá nhân) | Khác hoàn toàn về niềm tin, bảo hiểm, pháp lý. Ta phục vụ shop chuyên nghiệp |
-| Trở thành đơn vị bảo hiểm hay tổ chức thanh toán | Tích hợp, không tự làm |
-| Đặt xe theo giờ dạng scooter-sharing tự động | Vận hành khác hẳn: khoá xe, IoT, bãi |
-| Ứng dụng native ngay | PWA đủ cho chặng 2; native khi cần thông báo đẩy nặng và camera nghiệp vụ |
-| Đa ngôn ngữ ở chặng 1–2 | Khách quốc tế chưa phải phân khúc chính; i18n sớm làm chậm mọi màn hình |
-| Microservices | CLAUDE.md §5 — modular monolith là quyết định đã chốt |
+| Marketplace | Tìm kiếm → xem xe → bắt đầu đặt → đặt thành công |
+| Chủ xe mới | Thời gian từ đăng ký đến xe đầu tiên được duyệt; chuyến đầu tiên |
+| Chủ xe cơ bản | Tỷ lệ booking hoàn thành; thu nhập ròng; thời gian nhận tiền |
+| Gian hàng | Tỷ lệ nâng cấp/gia hạn; số xe active; thời gian xử lý booking |
+| Chất lượng | Tỷ lệ hủy, tranh chấp, hoàn tiền và listing bị ẩn |
+| Vận hành tiền | Tỷ lệ đối soát tự động; yêu cầu rút quá SLA; chênh lệch quỹ |
 
----
+## 9. Những gì chưa cam kết
 
-## 9. Định vị
+- Tỷ lệ thuế chính xác cho hoạt động cho thuê xe và từng loại chủ xe.
+- Hợp đồng/sản phẩm chính thức với PVI, mức phí và phạm vi bảo hiểm của hai lớp bảo vệ.
+- Giá production của gói và chính sách giảm giá theo kỳ hạn sau pilot.
+- Tự động chi tiền về ngân hàng.
+- XePrime tự làm ví điện tử, bảo hiểm hoặc dịch vụ trung gian thanh toán.
+- Cam kết XePrime bảo vệ giao dịch được hai bên thực hiện hoàn toàn ngoài nền tảng.
 
-|  | Marketplace thuần (Mioto, các nhóm FB) | Phần mềm quản lý thuần | **XePrime** |
-| --- | --- | --- | --- |
-| Nguồn khách | ✅ | ❌ | ✅ |
-| Vận hành nội bộ | ❌ | ✅ | ✅ |
-| Availability đúng thật | ❌ (shop tự cập nhật) | — | ✅ (cùng nguồn với lịch vận hành) |
-| Tiền & công nợ | ❌ | ✅ | ✅ |
-| Chi phí cho shop | Hoa hồng/đơn | Thuê bao | Thuê bao + hoa hồng đơn từ sàn |
-
-**Câu định vị một dòng cho shop**: *"Phần mềm quản lý xe của bạn, có sẵn khách thuê đi kèm."*
-**Câu định vị một dòng cho khách**: *"Xe thật, lịch thật, giá thật — vì shop đang dùng chính hệ thống này để chạy việc."*
-
----
-
-## 10. Rủi ro lớn nhất
-
-| Rủi ro | Dấu hiệu sớm | Đối sách |
-| --- | --- | --- |
-| Shop dùng song song với sổ tay → dữ liệu sai → marketplace mất tin | % đơn tạo tay > % đơn từ sàn và tổng đơn/xe thấp | Tối ưu tốc độ nhập liệu trên mobile; đơn tạo từ lịch bằng 1 chạm |
-| Chất lượng listing kém (ảnh sai, mô tả rỗng) | Tỉ lệ chuyển đổi thấp trên trang chi tiết | Gate chất lượng lúc duyệt public + chấm điểm hồ sơ xe |
-| Sàn có xe nhưng không có khách | Yêu cầu thuê/xe/tháng thấp | Chặng 2 dồn vào chuyển đổi, không thêm tính năng vận hành |
-| Sản phẩm phình theo yêu cầu từng shop | Menu vượt 15 mục, nhiều trang stub | `07_INFORMATION_ARCHITECTURE.md` giữ trần IA; tính năng ngách vào cài đặt, không vào nav |
-
----
-
-## 11. Định nghĩa "sản phẩm hoàn thiện" ở XePrime
-
-Trích chuẩn chất lượng đã chốt trong CLAUDE.md §2, nêu lại ở đây vì nó là tiêu chuẩn nghiệm thu thiết kế:
-
-> List lớn → phân trang/filter/sort **server-side** + index. Đủ trạng thái **loading / rỗng / lỗi / không đủ quyền**. Xử lý edge case. Thao tác fail-một-phần bọc transaction. **Không để lại bug đi vá sau.**
-
-Một màn hình chỉ đẹp ở trạng thái có dữ liệu là một màn hình chưa thiết kế xong.
-
-Liên quan: `03_PRODUCT_GAP_ANALYSIS.md` (khoảng cách tới tầm nhìn) · `04_CREATIVE_BRIEF.md` (dịch tầm nhìn thành hướng sáng tạo).
+Các mục này là release gate hoặc giả thuyết cần thử nghiệm, không phải phần đã hoàn thành.

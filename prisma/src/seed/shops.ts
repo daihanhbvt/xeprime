@@ -416,7 +416,11 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
       },
     ],
     fleet: [],
-    planCode: null,
+    // `free` chứ không phải null: từ ADR 0015 điều 9, `registerShop` gán gói mặc định NGAY lúc
+    // mở gian hàng, nên "gian hàng không có gói" là trạng thái không còn tồn tại trong dữ liệu
+    // thật. Giữ null ở đây là dựng một ca test cho một thế giới đã biến mất — và che mất việc
+    // gian hàng chưa duyệt VẪN có gói (gói không phụ thuộc duyệt).
+    planCode: 'free',
     depth: 'none',
     driverCount: 0,
     customerCount: 0,

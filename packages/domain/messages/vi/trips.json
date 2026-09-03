@@ -22,7 +22,8 @@
     "owner": "Chủ xe",
     "total": "Tổng thanh toán",
     "awaitingQuote": "Chờ báo giá",
-    "viewDetail": "Xem chi tiết"
+    "viewDetail": "Xem chi tiết",
+    "viewDetailOf": "Xem chi tiết {name}"
   },
   "pickup": {
     "delivery": "Giao xe tận nơi",
@@ -62,7 +63,8 @@
     "noteBlock": "Ghi chú của bạn",
     "reviewBlock": "Đánh giá của bạn",
     "priceBlock": "Chi tiết giá",
-    "priceEmpty": "Giá chính thức sẽ hiển thị ngay khi chủ xe xác nhận yêu cầu của bạn."
+    "priceEmpty": "Giá chính thức sẽ hiển thị ngay khi chủ xe xác nhận yêu cầu của bạn.",
+    "destination": "Điểm đến"
   },
   "evidence": {
     "title": "Biên bản bàn giao",
@@ -83,6 +85,7 @@
   },
   "subtitle": {
     "pending_approval": "Yêu cầu thuê xe của bạn đã được gửi tới chủ xe",
+    "awaiting_hold": "Chuyển khoản giữ chỗ để giữ xe này cho bạn",
     "ready": "Yêu cầu thuê xe đã được chủ xe xác nhận thành công",
     "active": "Bạn đang trong thời gian thuê xe này. Vui lòng di chuyển an toàn",
     "completed": "Chuyến đi đã kết thúc tốt đẹp. Cảm ơn bạn đã đồng hành cùng XePrime!",
@@ -154,5 +157,20 @@
     "awaitingRefund": "Chủ xe sẽ chuyển lại khoản này và đánh dấu hoàn cọc trên hệ thống. XePrime ghi nhận trạng thái, không thực hiện chuyển tiền.",
     "holding": "Chủ xe đang giữ khoản cọc này trong suốt chuyến. Số tiền hoàn lại sẽ được chốt sau khi bạn trả xe.",
     "settled": "Khoản cọc đã dùng hết cho phụ phí phát sinh ở trên nên không còn tiền hoàn lại."
+  },
+  "review": {
+    "title": "Đánh giá chuyến đi",
+    "ratingLabel": "Bạn hài lòng đến đâu?",
+    "commentLabel": "Nhận xét (không bắt buộc)",
+    "commentPlaceholder": "Xe sạch sẽ, chủ xe hỗ trợ nhiệt tình…",
+    "submit": "Gửi đánh giá",
+    "success": "Cảm ơn bạn đã đánh giá!",
+    "alreadyReviewed": "Bạn đã đánh giá chuyến này rồi.",
+    "starA11y": "{count, plural, other {# sao}}",
+    "validation": {
+      "ratingRequired": "Chọn số sao",
+      "ratingRange": "Chọn từ {min} đến {max} sao",
+      "commentTooLong": "Nhận xét tối đa {max} ký tự"
+    }
   }
 }

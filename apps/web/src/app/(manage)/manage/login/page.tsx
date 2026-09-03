@@ -62,7 +62,7 @@ function PortalLoginView() {
   return (
     <div className={styles.page}>
       <section className={styles.aside} aria-hidden="true">
-        <Logo size="lg" tone="light" />
+        <Logo size="lg" />
         <p className={styles.asideText}>{t('asideText')}</p>
       </section>
 

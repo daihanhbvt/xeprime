@@ -6,7 +6,6 @@ import {
   CarOutlined,
   CreditCardOutlined,
   DashboardOutlined,
-  DeleteOutlined,
   EnvironmentOutlined,
   FileDoneOutlined,
   FileTextOutlined,
@@ -28,7 +27,7 @@ import {
 } from '@ant-design/icons';
 import type { ComponentType } from 'react';
 
-import { PERMISSION, type Permission } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE, type Permission, type PlanFeature } from '@xeprime/types';
 import type { useTranslations } from 'next-intl';
 
 import { ROUTES } from './routes';
@@ -63,8 +62,6 @@ export type NavBadgeKey = (typeof NAV_BADGE)[keyof typeof NAV_BADGE];
  * Mục menu dẫn tới một trang.
  *
  * `permission` chỉ dùng để ẩn/hiện — guard backend mới chặn thật (CLAUDE.md mục 6).
- * `comingSoon` đánh dấu chức năng chưa làm: menu vẫn hiện nhưng trang là placeholder
- * (yêu cầu của chủ dự án: "chưa làm thì để menu trống").
  */
 export interface NavLeaf {
   readonly type?: 'leaf';
@@ -75,7 +72,17 @@ export interface NavLeaf {
   readonly permission: Permission;
   readonly icon: ComponentType<{ className?: string }>;
   readonly badge?: NavBadgeKey;
-  readonly comingSoon?: boolean;
+  /**
+   * Tính năng NÂNG CAO mà trang này thuộc về (ADR 0027) — TRỤC THỨ HAI, độc lập với
+   * `permission`. Cả hai phải cùng đạt thì mục mới hiện.
+   *
+   * `hidden` ⇒ vắng khỏi menu (sản phẩm của chủ xe trông gọn, không trông cụt).
+   * `read_only` ⇒ VẪN hiện — không ai được mất lối vào sổ sách của chính mình vì hết hạn gói.
+   *
+   * Không có cờ = bậc cơ bản, không gói nào ẩn được. Đây cũng là bản đồ `href → feature` mà
+   * `AppShell` tra để dựng băng "hết hạn" — nên nó là nguồn DUY NHẤT, không đẻ bản đồ thứ hai.
+   */
+  readonly feature?: PlanFeature;
 }
 
 /**
@@ -165,6 +172,7 @@ export const SHOP_NAV: readonly NavSection[] = [
             href: ROUTES.MANAGE.MAINTENANCE,
             permission: PERMISSION.VEHICLE_MAINTENANCE_VIEW,
             icon: ToolOutlined,
+            feature: PLAN_FEATURE.MAINTENANCE,
           },
         ],
       },
@@ -236,6 +244,7 @@ export const SHOP_NAV: readonly NavSection[] = [
             href: ROUTES.MANAGE.FINANCE,
             permission: PERMISSION.FINANCE_VIEW,
             icon: LineChartOutlined,
+            feature: PLAN_FEATURE.FINANCE,
           },
           {
             key: 'receipts',
@@ -243,6 +252,7 @@ export const SHOP_NAV: readonly NavSection[] = [
             href: ROUTES.MANAGE.RECEIPTS,
             permission: PERMISSION.FINANCE_VIEW,
             icon: TransactionOutlined,
+            feature: PLAN_FEATURE.FINANCE,
           },
           {
             key: 'debts',
@@ -250,6 +260,7 @@ export const SHOP_NAV: readonly NavSection[] = [
             href: ROUTES.MANAGE.DEBTS,
             permission: PERMISSION.FINANCE_VIEW,
             icon: CreditCardOutlined,
+            feature: PLAN_FEATURE.DEBTS,
           },
         ],
       },
@@ -280,12 +291,13 @@ export const SHOP_NAV: readonly NavSection[] = [
         icon: SafetyCertificateOutlined,
       },
       {
-        key: 'pickup-areas',
-        labelKey: 'manage.pickupAreas',
-        href: ROUTES.MANAGE.PICKUP_AREAS,
-        permission: PERMISSION.TENANT_VIEW,
-        icon: EnvironmentOutlined,
-        comingSoon: true,
+        // "Gói của tôi" (W2, ADR 0015/0026): quyền RIÊNG `subscription.view` — xem gói/hạn mức
+        // là việc điều hành, mua gói (`subscription.purchase`) server chặn riêng.
+        key: 'subscription',
+        labelKey: 'manage.subscription',
+        href: ROUTES.MANAGE.SUBSCRIPTION,
+        permission: PERMISSION.SUBSCRIPTION_VIEW,
+        icon: CreditCardOutlined,
       },
       {
         key: 'shop-branches',
@@ -293,6 +305,7 @@ export const SHOP_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.SHOP_BRANCHES,
         permission: PERMISSION.BRANCH_VIEW,
         icon: ApartmentOutlined,
+        feature: PLAN_FEATURE.BRANCHES,
       },
       {
         key: 'drivers',
@@ -300,6 +313,7 @@ export const SHOP_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.DRIVERS,
         permission: PERMISSION.DRIVER_VIEW,
         icon: SolutionOutlined,
+        feature: PLAN_FEATURE.DRIVERS,
       },
       {
         key: 'members',
@@ -307,16 +321,7 @@ export const SHOP_NAV: readonly NavSection[] = [
         href: ROUTES.MANAGE.MEMBERS,
         permission: PERMISSION.MEMBER_VIEW,
         icon: UsergroupAddOutlined,
-      },
-      {
-        // Việc dọn dẹp, không phải việc hằng ngày — nằm cuối Cấu hình chứ không chiếm một
-        // dòng ngang hàng với Xe hay Đơn thuê.
-        key: 'trash',
-        labelKey: 'manage.trash',
-        href: ROUTES.MANAGE.TRASH,
-        permission: PERMISSION.TENANT_VIEW,
-        icon: DeleteOutlined,
-        comingSoon: true,
+        feature: PLAN_FEATURE.MEMBERS,
       },
     ],
   },
@@ -464,6 +469,11 @@ export interface MobileTab {
   readonly permission: Permission;
   readonly icon: ComponentType<{ className?: string }>;
   readonly badge?: NavBadgeKey;
+  /**
+   * Cùng nghĩa với `NavLeaf.feature` (ADR 0027). Bốn tab hiện tại đều là bậc cơ bản nên chưa tab
+   * nào dùng — trường có mặt để lần sau không ai thêm được một tab bị gác mà quên lọc.
+   */
+  readonly feature?: PlanFeature;
 }
 
 const SHOP_MOBILE_TABS: readonly MobileTab[] = [

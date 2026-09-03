@@ -1,0 +1,2554 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Dashboard roadmap nội bộ của XePrime: theo dõi R0–R6, release gate và sao chép prompt cho Claude Code."
+    />
+    <title>XePrime · Roadmap điều hành</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --canvas: #f3f5ee;
+        --canvas-strong: #e8ede2;
+        --surface: rgba(255, 255, 252, 0.88);
+        --surface-solid: #fffffc;
+        --ink: #132923;
+        --ink-soft: #50635d;
+        --line: rgba(19, 41, 35, 0.14);
+        --brand: #0d6752;
+        --brand-strong: #084c3d;
+        --accent: #d8ff62;
+        --accent-ink: #223300;
+        --warning: #a75e00;
+        --warning-bg: #fff2d6;
+        --danger: #a13b3b;
+        --shadow: 0 22px 60px rgba(23, 45, 38, 0.1);
+        --radius-xl: 28px;
+        --radius-lg: 20px;
+        --radius-md: 14px;
+        --max-width: 1240px;
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --canvas: #0e1714;
+        --canvas-strong: #17231f;
+        --surface: rgba(21, 34, 29, 0.9);
+        --surface-solid: #17231f;
+        --ink: #eef7f1;
+        --ink-soft: #a8b8b1;
+        --line: rgba(238, 247, 241, 0.13);
+        --brand: #68d7b8;
+        --brand-strong: #8be6ca;
+        --accent: #c9f45e;
+        --accent-ink: #162500;
+        --warning: #ffc66d;
+        --warning-bg: #382b16;
+        --danger: #ff9292;
+        --shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background:
+          radial-gradient(circle at 8% 4%, rgba(216, 255, 98, 0.2), transparent 27rem),
+          radial-gradient(circle at 92% 16%, rgba(13, 103, 82, 0.13), transparent 30rem),
+          var(--canvas);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.55;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      button:focus-visible,
+      a:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--brand) 65%, transparent);
+        outline-offset: 3px;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        border-bottom: 1px solid var(--line);
+        background: color-mix(in srgb, var(--canvas) 86%, transparent);
+        backdrop-filter: blur(18px);
+      }
+
+      .topbar__inner {
+        width: min(calc(100% - 32px), var(--max-width));
+        min-height: 68px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+      }
+
+      .brand__mark {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: var(--ink);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: -0.04em;
+      }
+
+      .brand__text strong,
+      .brand__text span {
+        display: block;
+      }
+
+      .brand__text strong {
+        font-size: 14px;
+        letter-spacing: 0.01em;
+      }
+
+      .brand__text span {
+        color: var(--ink-soft);
+        font-size: 11px;
+      }
+
+      .topbar__actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .icon-button,
+      .button {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface-solid);
+        color: var(--ink);
+        cursor: pointer;
+        transition:
+          transform 160ms ease,
+          background 160ms ease,
+          border-color 160ms ease;
+      }
+
+      .icon-button:hover,
+      .button:hover {
+        transform: translateY(-1px);
+        border-color: color-mix(in srgb, var(--brand) 45%, var(--line));
+      }
+
+      .icon-button {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        padding: 0;
+      }
+
+      .button {
+        min-height: 40px;
+        padding: 8px 15px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .button--primary {
+        border-color: var(--brand);
+        background: var(--brand);
+        color: #fff;
+      }
+
+      html[data-theme="dark"] .button--primary {
+        color: #0d211b;
+      }
+
+      .button--accent {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+
+      .button--quiet {
+        background: transparent;
+      }
+
+      .button--danger {
+        color: var(--danger);
+      }
+
+      .desktop-only {
+        display: inline-flex;
+      }
+
+      main {
+        width: min(calc(100% - 32px), var(--max-width));
+        margin: 0 auto;
+        padding: 38px 0 80px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.75fr);
+        gap: 32px;
+        padding: clamp(28px, 5vw, 58px);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: var(--ink);
+        color: #f4fbf7;
+        box-shadow: var(--shadow);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        width: 360px;
+        height: 360px;
+        right: -150px;
+        bottom: -210px;
+        border: 72px solid var(--accent);
+        border-radius: 50%;
+        opacity: 0.13;
+      }
+
+      .eyebrow {
+        margin: 0 0 13px;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin-bottom: 18px;
+        font-size: clamp(37px, 6vw, 72px);
+        line-height: 0.98;
+        letter-spacing: -0.055em;
+      }
+
+      .hero__lead {
+        max-width: 720px;
+        margin-bottom: 26px;
+        color: rgba(244, 251, 247, 0.73);
+        font-size: clamp(15px, 2vw, 18px);
+      }
+
+      .hero__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+      }
+
+      .meta-pill {
+        padding: 7px 11px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .hero__progress {
+        position: relative;
+        z-index: 1;
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 26px;
+        padding: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.07);
+      }
+
+      .progress-number {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+      }
+
+      .progress-number strong {
+        font-size: clamp(46px, 7vw, 74px);
+        line-height: 1;
+        letter-spacing: -0.06em;
+      }
+
+      .progress-number span {
+        color: rgba(255, 255, 255, 0.58);
+        font-size: 15px;
+      }
+
+      .progress-track {
+        height: 9px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      .progress-track__bar {
+        width: 0;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--accent);
+        transition: width 300ms ease;
+      }
+
+      .progress-copy {
+        margin: 10px 0 0;
+        color: rgba(255, 255, 255, 0.66);
+        font-size: 12px;
+      }
+
+      .hero__next {
+        padding-top: 18px;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .hero__next span {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--accent);
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .hero__next strong {
+        font-size: 16px;
+      }
+
+      .section {
+        scroll-margin-top: 92px;
+        margin-top: 64px;
+      }
+
+      .section-heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 22px;
+      }
+
+      .section-heading h2 {
+        margin-bottom: 6px;
+        font-size: clamp(27px, 4vw, 42px);
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+
+      .section-heading p {
+        max-width: 680px;
+        margin-bottom: 0;
+        color: var(--ink-soft);
+      }
+
+      .section-kicker {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--brand);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .source-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .source-links a {
+        padding: 7px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--ink-soft);
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .source-links a:hover {
+        color: var(--brand);
+        border-color: var(--brand);
+      }
+
+      .decision-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .decision-card {
+        min-height: 190px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+      }
+
+      .decision-card__number {
+        width: 31px;
+        height: 31px;
+        margin-bottom: 22px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .decision-card h3 {
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      .decision-card p {
+        margin-bottom: 0;
+        color: var(--ink-soft);
+        font-size: 13px;
+      }
+
+      .toolbar {
+        position: sticky;
+        top: 82px;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 20px;
+        padding: 11px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: color-mix(in srgb, var(--surface-solid) 91%, transparent);
+        box-shadow: 0 12px 40px rgba(21, 48, 39, 0.08);
+        backdrop-filter: blur(16px);
+      }
+
+      .filters {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+
+      .filters::-webkit-scrollbar {
+        display: none;
+      }
+
+      .filter-button {
+        flex: 0 0 auto;
+        min-height: 36px;
+        padding: 7px 12px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: var(--ink-soft);
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .filter-button[aria-pressed="true"] {
+        background: var(--ink);
+        color: var(--accent);
+      }
+
+      .toolbar__right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .search {
+        width: min(260px, 28vw);
+        min-height: 38px;
+        padding: 7px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--canvas);
+        color: var(--ink);
+      }
+
+      .search::placeholder {
+        color: var(--ink-soft);
+      }
+
+      .toggle-label {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--ink-soft);
+        font-size: 12px;
+        font-weight: 750;
+        white-space: nowrap;
+      }
+
+      .toggle-label input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--brand);
+      }
+
+      .release-list {
+        position: relative;
+        display: grid;
+        gap: 16px;
+      }
+
+      .release-card {
+        position: relative;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: 180px minmax(0, 1fr);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: var(--surface);
+        box-shadow: 0 14px 42px rgba(25, 49, 41, 0.055);
+      }
+
+      .release-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 5px;
+        height: 100%;
+        background: var(--line);
+      }
+
+      .release-card[data-state="done"]::before {
+        background: var(--brand);
+      }
+
+      .release-card[data-state="active"]::before,
+      .release-card[data-current="true"]::before {
+        background: var(--accent);
+      }
+
+      .release-card__rail {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 28px;
+        padding: 25px 22px 25px 27px;
+        border-right: 1px solid var(--line);
+        background: color-mix(in srgb, var(--canvas-strong) 66%, transparent);
+      }
+
+      .release-code {
+        display: block;
+        margin-bottom: 7px;
+        color: var(--brand);
+        font-size: 32px;
+        font-weight: 950;
+        letter-spacing: -0.06em;
+      }
+
+      .release-index {
+        color: var(--ink-soft);
+        font-size: 11px;
+        font-weight: 750;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .mini-progress {
+        display: grid;
+        gap: 8px;
+      }
+
+      .mini-progress__label {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: var(--ink-soft);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .mini-progress .progress-track {
+        height: 6px;
+        background: var(--line);
+      }
+
+      .mini-progress .progress-track__bar {
+        background: var(--brand);
+      }
+
+      .release-card__body {
+        padding: 25px clamp(20px, 4vw, 36px) 28px;
+      }
+
+      .release-card__heading {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 20px;
+      }
+
+      .release-card h3 {
+        margin-bottom: 6px;
+        font-size: clamp(20px, 3vw, 28px);
+        line-height: 1.16;
+        letter-spacing: -0.03em;
+      }
+
+      .release-card__objective {
+        max-width: 760px;
+        margin-bottom: 0;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+
+      .status-pill {
+        flex: 0 0 auto;
+        align-self: flex-start;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: var(--canvas-strong);
+        color: var(--ink-soft);
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .status-pill[data-state="done"] {
+        background: color-mix(in srgb, var(--brand) 16%, transparent);
+        color: var(--brand);
+      }
+
+      .status-pill[data-state="active"] {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+
+      .checklist {
+        display: grid;
+        gap: 7px;
+        margin: 0 0 17px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .check-item {
+        position: relative;
+      }
+
+      .check-item label {
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr);
+        gap: 11px;
+        align-items: start;
+        padding: 10px 11px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background 150ms ease;
+      }
+
+      .check-item label:hover {
+        background: color-mix(in srgb, var(--brand) 6%, transparent);
+      }
+
+      .check-item input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .check-box {
+        width: 20px;
+        height: 20px;
+        margin-top: 1px;
+        border: 1.5px solid color-mix(in srgb, var(--ink-soft) 55%, transparent);
+        border-radius: 7px;
+        display: grid;
+        place-items: center;
+        color: transparent;
+        transition:
+          background 150ms ease,
+          border-color 150ms ease,
+          transform 150ms ease;
+      }
+
+      .check-box::after {
+        content: "✓";
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .check-item input:focus-visible + .check-box {
+        outline: 3px solid color-mix(in srgb, var(--brand) 35%, transparent);
+        outline-offset: 2px;
+      }
+
+      .check-item input:checked + .check-box {
+        border-color: var(--brand);
+        background: var(--brand);
+        color: #fff;
+        transform: scale(0.96);
+      }
+
+      .check-label {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .check-label__text {
+        min-width: 0;
+      }
+
+      .check-label__phase {
+        flex: 0 0 auto;
+        margin-top: 1px;
+        padding: 2px 7px;
+        border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--line));
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--brand) 8%, transparent);
+        color: var(--brand);
+        font-size: 9px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .check-item input:checked ~ .check-label .check-label__text {
+        color: var(--ink-soft);
+        text-decoration: line-through;
+        text-decoration-thickness: 1px;
+      }
+
+      .check-item input:indeterminate + .check-box {
+        border-color: var(--warning);
+        background: var(--warning-bg);
+        color: var(--warning);
+      }
+
+      .check-item input:indeterminate + .check-box::after {
+        content: "–";
+      }
+
+      .gate {
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr);
+        gap: 11px;
+        align-items: start;
+        margin-top: 12px;
+        padding: 15px;
+        border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--line));
+        border-radius: 15px;
+        background: var(--warning-bg);
+        cursor: pointer;
+      }
+
+      .gate input {
+        width: 18px;
+        height: 18px;
+        margin: 2px 0 0;
+        accent-color: var(--brand);
+      }
+
+      .gate strong,
+      .gate span {
+        display: block;
+      }
+
+      .gate strong {
+        margin-bottom: 2px;
+        color: var(--warning);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .gate span {
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .gate--readonly {
+        grid-template-columns: 1fr;
+        cursor: default;
+      }
+
+      .release-card__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .empty {
+        padding: 42px 20px;
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-lg);
+        color: var(--ink-soft);
+        text-align: center;
+      }
+
+      .workstream-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .workstream-card {
+        padding: clamp(20px, 4vw, 30px);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: var(--surface);
+      }
+
+      .workstream-card__top {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .workstream-card h3 {
+        margin-bottom: 5px;
+        font-size: 22px;
+        letter-spacing: -0.03em;
+      }
+
+      .workstream-card p {
+        margin-bottom: 0;
+        color: var(--ink-soft);
+        font-size: 13px;
+      }
+
+      .workstream-note {
+        margin-top: 16px;
+        padding: 18px 20px;
+        border: 1px dashed var(--line);
+        border-radius: var(--radius-lg);
+        background: color-mix(in srgb, var(--surface) 78%, transparent);
+      }
+
+      .workstream-note strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 13px;
+      }
+
+      .workstream-note p {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 12px;
+      }
+
+      .score {
+        flex: 0 0 auto;
+        color: var(--brand);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .quality-card {
+        display: grid;
+        grid-template-columns: minmax(240px, 0.65fr) minmax(0, 1.35fr);
+        gap: 28px;
+        padding: clamp(24px, 5vw, 42px);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        background: var(--ink);
+        color: #f4fbf7;
+      }
+
+      .quality-card h3 {
+        margin-bottom: 10px;
+        font-size: 28px;
+        letter-spacing: -0.04em;
+      }
+
+      .quality-card p {
+        color: rgba(244, 251, 247, 0.65);
+        font-size: 13px;
+      }
+
+      .quality-card .checklist {
+        margin-bottom: 0;
+      }
+
+      .quality-card .check-item label:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .quality-card .check-box {
+        border-color: rgba(255, 255, 255, 0.34);
+      }
+
+      .quality-card .check-item input:checked + .check-box {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+
+      .quality-card .check-label {
+        color: rgba(244, 251, 247, 0.9);
+      }
+
+      .quality-card .check-item input:checked ~ .check-label {
+        color: rgba(244, 251, 247, 0.46);
+      }
+
+      .quality-card .button {
+        border-color: rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+      }
+
+      .prompt-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .prompt-card {
+        min-height: 170px;
+        padding: 19px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        background: var(--surface);
+      }
+
+      .prompt-card__code {
+        margin-bottom: 18px;
+        color: var(--brand);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .prompt-card h3 {
+        margin-bottom: 7px;
+        font-size: 16px;
+      }
+
+      .prompt-card p {
+        flex: 1;
+        margin-bottom: 18px;
+        color: var(--ink-soft);
+        font-size: 12px;
+      }
+
+      .prompt-card .button {
+        width: 100%;
+      }
+
+      .utility-panel {
+        margin-top: 56px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        background: var(--surface);
+      }
+
+      .utility-panel__copy strong,
+      .utility-panel__copy span {
+        display: block;
+      }
+
+      .utility-panel__copy strong {
+        margin-bottom: 3px;
+        font-size: 14px;
+      }
+
+      .utility-panel__copy span {
+        color: var(--ink-soft);
+        font-size: 12px;
+      }
+
+      .utility-panel__actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      dialog {
+        width: min(760px, calc(100% - 28px));
+        max-height: min(820px, calc(100vh - 40px));
+        padding: 0;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--surface-solid);
+        color: var(--ink);
+        box-shadow: 0 30px 100px rgba(0, 0, 0, 0.34);
+      }
+
+      dialog::backdrop {
+        background: rgba(5, 14, 11, 0.64);
+        backdrop-filter: blur(6px);
+      }
+
+      .dialog__header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 22px 24px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .dialog__header h2 {
+        margin-bottom: 3px;
+        font-size: 23px;
+        letter-spacing: -0.03em;
+      }
+
+      .dialog__header p {
+        margin-bottom: 0;
+        color: var(--ink-soft);
+        font-size: 12px;
+      }
+
+      .dialog__body {
+        padding: 20px 24px;
+      }
+
+      .prompt-text {
+        width: 100%;
+        min-height: min(510px, 58vh);
+        resize: vertical;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.65;
+      }
+
+      .dialog__footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 24px 22px;
+      }
+
+      .toast {
+        position: fixed;
+        z-index: 100;
+        right: 20px;
+        bottom: 20px;
+        max-width: min(390px, calc(100% - 40px));
+        padding: 12px 16px;
+        border-radius: 14px;
+        background: var(--ink);
+        color: #fff;
+        box-shadow: var(--shadow);
+        font-size: 13px;
+        font-weight: 700;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(12px);
+        transition:
+          opacity 180ms ease,
+          transform 180ms ease;
+      }
+
+      .toast[data-visible="true"] {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .footer {
+        margin-top: 64px;
+        padding-top: 22px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        color: var(--ink-soft);
+        font-size: 11px;
+      }
+
+      @media (max-width: 1000px) {
+        .decision-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .prompt-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 800px) {
+        .hero,
+        .quality-card {
+          grid-template-columns: 1fr;
+        }
+
+        .release-card {
+          grid-template-columns: 110px minmax(0, 1fr);
+        }
+
+        .release-card__rail {
+          padding: 23px 16px 23px 21px;
+        }
+
+        .release-code {
+          font-size: 26px;
+        }
+
+        .workstream-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .toolbar {
+          position: static;
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .toolbar__right,
+        .search {
+          width: 100%;
+        }
+
+        .search {
+          flex: 1;
+        }
+      }
+
+      @media (max-width: 620px) {
+        main,
+        .topbar__inner {
+          width: min(calc(100% - 20px), var(--max-width));
+        }
+
+        main {
+          padding-top: 20px;
+        }
+
+        .desktop-only {
+          display: none;
+        }
+
+        .hero {
+          padding: 26px 21px;
+          border-radius: 22px;
+        }
+
+        h1 {
+          font-size: 42px;
+        }
+
+        .section {
+          margin-top: 48px;
+        }
+
+        .section-heading {
+          align-items: start;
+          flex-direction: column;
+        }
+
+        .decision-grid,
+        .prompt-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .decision-card {
+          min-height: auto;
+        }
+
+        .release-card {
+          grid-template-columns: 1fr;
+          border-radius: 22px;
+        }
+
+        .release-card__rail {
+          flex-direction: row;
+          align-items: end;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .release-card__heading {
+          flex-direction: column;
+        }
+
+        .status-pill {
+          order: -1;
+        }
+
+        .utility-panel,
+        .footer {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .utility-panel__actions {
+          justify-content: stretch;
+        }
+
+        .utility-panel__actions .button {
+          flex: 1 1 45%;
+        }
+
+        .dialog__footer {
+          flex-direction: column-reverse;
+        }
+
+        .dialog__footer .button {
+          width: 100%;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+          color: #111;
+        }
+
+        .topbar,
+        .toolbar,
+        .release-card__actions,
+        .prompt-grid,
+        .utility-panel,
+        .toast {
+          display: none !important;
+        }
+
+        main {
+          width: 100%;
+          padding: 0;
+        }
+
+        .hero {
+          color: #111;
+          background: #fff;
+          box-shadow: none;
+        }
+
+        .hero__lead,
+        .progress-copy {
+          color: #444;
+        }
+
+        .release-card,
+        .decision-card,
+        .workstream-card {
+          break-inside: avoid;
+          box-shadow: none;
+          background: #fff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__inner">
+        <a class="brand" href="#top" aria-label="Về đầu trang">
+          <span class="brand__mark">XP</span>
+          <span class="brand__text">
+            <strong>XePrime Roadmap</strong>
+            <span>Internal delivery board</span>
+          </span>
+        </a>
+        <div class="topbar__actions">
+          <a class="button button--quiet desktop-only" href="./completion-roadmap.md">Mở Markdown</a>
+          <button class="icon-button" id="themeToggle" type="button" aria-label="Đổi giao diện sáng tối">
+            ◐
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="pageTitle">
+        <div>
+          <p class="eyebrow">Functional alpha · Controlled pilot next</p>
+          <h1 id="pageTitle">Từ sản phẩm đã chạy đến marketplace có thể vận hành.</h1>
+          <p class="hero__lead">
+            Một bảng điều hành nội bộ cho R0–R6. Chỉ tick khi có bằng chứng; mỗi gate là điều
+            kiện phát hành, không phải danh sách mong muốn.
+          </p>
+          <div class="hero__meta">
+            <span class="meta-pill">Nguồn: roadmap 03/09/2026</span>
+            <span class="meta-pill">Tiến độ lưu trên trình duyệt này</span>
+            <span class="meta-pill">Prompt Claude Code tích hợp</span>
+          </div>
+        </div>
+        <aside class="hero__progress" aria-label="Tiến độ tổng">
+          <div>
+            <div class="progress-number">
+              <strong id="overallPercent">0</strong>
+              <span>%</span>
+            </div>
+            <div
+              class="progress-track"
+              role="progressbar"
+              aria-label="Tiến độ roadmap"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              id="overallProgress"
+            >
+              <div class="progress-track__bar" id="overallBar"></div>
+            </div>
+            <p class="progress-copy" id="overallCopy">Đang tải checklist…</p>
+          </div>
+          <div class="hero__next">
+            <span>Trọng tâm đề xuất</span>
+            <strong>R1 · Ổn định web pilot và tạo baseline chất lượng mới</strong>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section" id="decisions">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Business guardrails</span>
+            <h2>Năm quyết định đang dẫn đường</h2>
+            <p>
+              Đây là input cố định cho prompt. Giá production, thuế và bảo hiểm vẫn phải qua
+              validation gate trước khi bật cho khách thật.
+            </p>
+          </div>
+          <div class="source-links" aria-label="Tài liệu nguồn">
+            <a href="./design/02_PRODUCT_VISION.md">Product Vision</a>
+            <a href="./decisions/0028-marketplace-subscription-fees-and-custodied-funds.md"
+              >ADR 0028</a
+            >
+          </div>
+        </div>
+        <div class="decision-grid" id="decisionGrid"></div>
+      </section>
+
+      <section class="section" id="releases">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Release roadmap</span>
+            <h2>R0 → R6</h2>
+            <p>
+              Tick một đầu việc khi đã có bằng chứng trong code, test, cấu hình hoặc vận hành.
+              Gate chỉ tick sau khi toàn bộ điều kiện nghiệm thu đã đạt.
+            </p>
+          </div>
+        </div>
+
+        <div class="toolbar" aria-label="Bộ lọc roadmap">
+          <div class="filters" id="filters">
+            <button class="filter-button" type="button" data-filter="all" aria-pressed="true">
+              Tất cả
+            </button>
+            <button class="filter-button" type="button" data-filter="current" aria-pressed="false">
+              Trọng tâm
+            </button>
+            <button class="filter-button" type="button" data-filter="money" aria-pressed="false">
+              Tiền & billing
+            </button>
+            <button class="filter-button" type="button" data-filter="operations" aria-pressed="false">
+              Vận hành
+            </button>
+            <button class="filter-button" type="button" data-filter="mobile" aria-pressed="false">
+              Mobile
+            </button>
+          </div>
+          <div class="toolbar__right">
+            <input
+              class="search"
+              id="roadmapSearch"
+              type="search"
+              placeholder="Tìm release hoặc đầu việc…"
+              aria-label="Tìm trong roadmap"
+            />
+            <label class="toggle-label">
+              <input id="onlyOpen" type="checkbox" />
+              Chưa hoàn tất
+            </label>
+          </div>
+        </div>
+
+        <div class="release-list" id="releaseList"></div>
+      </section>
+
+      <section class="section" id="workstreams">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Cross-release workstreams</span>
+            <h2>Admin và Owner/Manage</h2>
+            <p>
+              Đây không phải hai phase làm riêng. Mỗi đầu việc thuộc R1–R5 và chỉ được hiển thị
+              lại theo vai trò; checkbox đồng bộ với release gốc và không bị cộng tiến độ hai lần.
+            </p>
+          </div>
+          <div class="source-links">
+            <a href="./design/03_PRODUCT_GAP_ANALYSIS.md">Gap Analysis</a>
+            <a href="./design/07_INFORMATION_ARCHITECTURE.md">Information Architecture</a>
+          </div>
+        </div>
+        <div class="workstream-grid" id="workstreamGrid"></div>
+        <div class="workstream-note">
+          <strong>Không nằm trong điều kiện hoàn thiện pilot R1–R5</strong>
+          <p>
+            Auto payout, BI lớn, custom workflow/role, OCR hoặc e-sign nâng cao và native Manage
+            được hoãn. R6 tập trung app cho người thuê, không clone portal quản lý lên native.
+          </p>
+        </div>
+      </section>
+
+      <section class="section" id="quality">
+        <div class="quality-card">
+          <div>
+            <span class="section-kicker" style="color: var(--accent)">Quality debt</span>
+            <h3>Nợ chất lượng cần đóng bằng bằng chứng</h3>
+            <p>
+              Không tick theo cảm giác. Ghi nhận output test, dashboard monitoring, biên bản UAT
+              hoặc restore drill tương ứng.
+            </p>
+            <button class="button" id="qualityPromptButton" type="button">Mở prompt kiểm định</button>
+          </div>
+          <ul class="checklist" id="qualityList"></ul>
+        </div>
+      </section>
+
+      <section class="section" id="prompts">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Prompt library</span>
+            <h2>Giao việc cho Claude Code</h2>
+            <p>
+              Prompt luôn nhắc Claude đọc tài liệu canonical, kiểm tra hiện trạng trước khi sửa,
+              giữ thay đổi của người dùng và xác minh đúng phạm vi.
+            </p>
+          </div>
+        </div>
+        <div class="prompt-grid" id="promptGrid"></div>
+      </section>
+
+      <section class="utility-panel" aria-label="Sao lưu tiến độ">
+        <div class="utility-panel__copy">
+          <strong>Tiến độ chỉ được lưu trong localStorage của trình duyệt.</strong>
+          <span>Export JSON trước khi đổi máy, đổi trình duyệt hoặc xóa dữ liệu website.</span>
+        </div>
+        <div class="utility-panel__actions">
+          <button class="button" id="exportButton" type="button">Export tiến độ</button>
+          <button class="button" id="importButton" type="button">Import tiến độ</button>
+          <button class="button" id="printButton" type="button">In / PDF</button>
+          <button class="button button--danger" id="resetButton" type="button">Khôi phục mặc định</button>
+          <input id="importFile" type="file" accept="application/json,.json" hidden />
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>XePrime · Tài liệu điều hành nội bộ</span>
+        <span>HTML tự chứa · Không gửi dữ liệu ra ngoài</span>
+      </footer>
+    </main>
+
+    <dialog id="promptDialog" aria-labelledby="promptTitle">
+      <div class="dialog__header">
+        <div>
+          <h2 id="promptTitle">Prompt</h2>
+          <p id="promptSubtitle">Sao chép và gửi vào Claude Code tại root repository.</p>
+        </div>
+        <button class="icon-button" id="closeDialogButton" type="button" aria-label="Đóng">×</button>
+      </div>
+      <div class="dialog__body">
+        <textarea class="prompt-text" id="promptText" readonly spellcheck="false"></textarea>
+      </div>
+      <div class="dialog__footer">
+        <button class="button button--quiet" id="selectPromptButton" type="button">Chọn toàn bộ</button>
+        <button class="button button--accent" id="copyPromptButton" type="button">Sao chép prompt</button>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var STORAGE_KEY = "xeprime-roadmap-state-v1";
+        var SOURCE_DATE = "2026-09-03";
+
+        var decisions = [
+          {
+            title: "Thanh toán Basic Owner",
+            text: "R3 trả phần còn lại trực tiếp cho chủ xe; R4 mới mở thu hộ tùy chọn.",
+          },
+          {
+            title: "Giá gói pilot",
+            text: "100.000đ/ô tô/tháng · 40.000đ/xe máy/tháng · tối thiểu 3 tháng.",
+          },
+          {
+            title: "Bảo hiểm dự kiến PVI",
+            text: "Bảo vệ xe bắt buộc do chủ xe chịu; bảo hiểm chuyến đi tùy chọn cho người thuê.",
+          },
+          {
+            title: "Thuế cấu hình động",
+            text: "Tư vấn thuế xác nhận trước production; không hard-code tỷ lệ tham khảo.",
+          },
+          {
+            title: "Ngoài nền tảng",
+            text: "Chỉ hỗ trợ thông tin/listing; không cam kết tiền hoặc hoàn cho phần không ghi nhận.",
+          },
+        ];
+
+        var releases = [
+          {
+            id: "r0",
+            code: "R0",
+            title: "Đồng bộ định hướng và tài liệu",
+            objective: "Tạo một nguồn sự thật duy nhất trước khi tiếp tục triển khai.",
+            group: "foundation",
+            defaultDone: true,
+            tasks: [
+              "Dọn tài liệu lịch sử không còn là nguồn sống.",
+              "Viết lại Product Vision, Gap Analysis, Information Architecture và roadmap.",
+              "Ghi ADR 0028 cho business model marketplace + subscription.",
+              "Đánh dấu ADR cũ bị ghi đè toàn phần hoặc một phần.",
+            ],
+            gate:
+              "Các quyết định sản phẩm hiện hành đã nằm trong tài liệu canonical và không còn liên kết nội bộ hỏng.",
+            promptNotes: [
+              "Đây là một lượt audit tài liệu, không tự ý xây feature mới.",
+              "Đối chiếu code, migration và OpenAPI khi tài liệu nói một tính năng đã tồn tại.",
+              "Nếu phát hiện mâu thuẫn, sửa nguồn canonical hoặc ghi gap; không phục hồi tài liệu cũ.",
+            ],
+          },
+          {
+            id: "r1",
+            code: "R1",
+            title: "Ổn định web pilot và đóng UX",
+            objective: "Có bản web đáng tin để demo/pilot, chưa nhận tiền khách thật.",
+            group: "current",
+            current: true,
+            tasks: [
+              "Review và chạy test/typecheck/build phù hợp sau thay đổi slot billing, i18n và date-time.",
+              "Hoàn thiện dashboard shop bằng dữ liệu thật: doanh thu, giữ/cọc và việc cần làm.",
+              "Ẩn dead links, menu placeholder và màn coming-soon không có luồng.",
+              "Đổi đúng hành vi mời thành viên hoặc làm invitation token + expiry + accept/decline.",
+              "Hoàn thiện Terms, Privacy, quy chế marketplace, hủy và kênh support.",
+              "Cắm OTP/email/R2/chat production cùng error tracking, uptime và product events.",
+              "Rà CSRF, PII reveal, rate limit và audit cho hành động nhạy cảm.",
+              "Chạy UAT happy path theo role trên desktop và mobile web.",
+            ],
+            gate:
+              "3–5 shop chạy request → giao → trả → quyết toán mà không cần sửa dữ liệu trực tiếp.",
+            promptNotes: [
+              "Bắt đầu bằng audit read-only và tạo baseline; không tin trạng thái cũ trong tài liệu.",
+              "Chia công việc thành vertical slice nhỏ. Không biến toàn bộ R1 thành một diff khổng lồ.",
+              "Ưu tiên lỗi chặn pilot, bảo mật và dữ liệu thật trước polish giao diện.",
+            ],
+          },
+          {
+            id: "r2",
+            code: "R2",
+            title: "Thu tiền gói thuê bao",
+            objective: "Đưa nguồn doanh thu đơn giản nhất vào vận hành trước.",
+            group: "money",
+            tasks: [
+              "Hoàn thành SePay/VietQR cho subscription invoice.",
+              "Đối soát idempotent cho đúng, thiếu, thừa, sai mã và webhook trùng.",
+              "Chỉ kích hoạt hoặc gia hạn sau khi tiền đã được xác nhận.",
+              "Admin xử lý invoice/giao dịch chưa khớp theo luồng có audit.",
+              "Định nghĩa grace, read-only và downgrade mà không làm mất dữ liệu.",
+              "Làm trang so sánh Basic Owner và Gian hàng.",
+              "Áp dụng policy pilot: 100.000đ/ô tô/tháng, 40.000đ/xe máy/tháng, tối thiểu 3 tháng.",
+            ],
+            gate:
+              "Một shop tự mua/gia hạn gói và hệ thống đối soát đúng mà admin không sửa database.",
+            promptNotes: [
+              "Giá phải là policy theo loại xe và ngày hiệu lực, không rải magic number.",
+              "Webhook, polling và job phải an toàn khi chạy lặp.",
+              "Không log secret, payload nhạy cảm hoặc thông tin tài khoản ngân hàng đầy đủ.",
+            ],
+          },
+          {
+            id: "r3",
+            code: "R3",
+            title: "Giao dịch Basic Owner",
+            objective: "Thu phí theo chuyến nhưng giới hạn lượng tiền XePrime giữ.",
+            group: "money",
+            tasks: [
+              "Tạo Owner Lite navigation và dashboard trên cùng feature/API với Manage.",
+              "Xác minh người bán, loại chủ thể, thông tin thuế và tài khoản nhận tiền.",
+              "Tạo fee policy có phiên bản và snapshot bất biến trên booking.",
+              "Hiển thị quote breakdown cho khách và net earning cho chủ xe.",
+              "Triển khai khoản giữ chỗ bắt buộc, expiry, cancellation và refund.",
+              "Tích hợp hai lớp bảo hiểm dự kiến PVI sau khi đủ hợp đồng/policy/certificate.",
+              "Tách phí dịch vụ, thuế, bảo hiểm và khoản phải trả chủ xe.",
+              "Tạo support case/dispute gắn booking và evidence.",
+              "Tạo money operations cùng daily reconciliation tối thiểu cho admin.",
+            ],
+            gate:
+              "Tiền vào, hoàn và giữ của mọi case UAT khớp sổ; không có bút toán mồ côi hoặc cộng đôi.",
+            promptNotes: [
+              "R3 mặc định khách trả phần còn lại trực tiếp cho chủ xe.",
+              "Không gọi phí XePrime là thuế/bảo hiểm; không gọi số dư là ví điện tử.",
+              "PVI chỉ là đối tác dự kiến. Không dùng tên/logo hoặc thu phí trước khi có căn cứ thật.",
+              "Bảo vệ xe do chủ xe chịu; bảo hiểm chuyến đi chỉ tính khi người thuê giữ lựa chọn.",
+            ],
+          },
+          {
+            id: "r4",
+            code: "R4",
+            title: "Thu hộ và Số dư chủ xe",
+            objective: "Cho phép trả toàn bộ qua XePrime và rút khoản phải trả một cách kiểm soát.",
+            group: "money",
+            tasks: [
+              "Có ý kiến pháp lý và thỏa thuận với ngân hàng/đơn vị thanh toán phù hợp.",
+              "Triển khai lựa chọn thu toàn bộ tiền chuyến qua nền tảng.",
+              "Tạo ledger append-only, owner balance và withdrawal request.",
+              "Tạo quy trình admin chuyển thủ công, maker–checker và theo dõi SLA.",
+              "Xử lý reversal, failed payout và thay đổi tài khoản nhận tiền có cooldown.",
+              "Đối soát tách tiền XePrime khỏi tiền phải trả người khác.",
+            ],
+            gate:
+              "Số dư ngân hàng khớp ledger hằng ngày và không có yêu cầu rút quá SLA trong pilot.",
+            promptNotes: [
+              "Dừng triển khai tiền thật nếu chưa có legal/payment gate; có thể làm domain model/test sau feature flag.",
+              "Số dư là công nợ nội bộ, không có nạp/chuyển/thanh toán ngang hàng.",
+              "Mọi sửa sai tài chính dùng reversal/compensating entry, không UPDATE lịch sử.",
+            ],
+          },
+          {
+            id: "r5",
+            code: "R5",
+            title: "Controlled marketplace pilot",
+            objective: "Kiểm chứng cung, cầu, vận hành tiền và unit economics bằng dữ liệu thật.",
+            group: "operations",
+            tasks: [
+              "Onboard 5–10 đối tác gồm Basic Owner và Gian hàng.",
+              "Tập trung 50–100 xe thật trong một khu vực đủ mật độ.",
+              "Theo dõi funnel, hủy/no-show, dispute, payout và chi phí support.",
+              "Thử nghiệm cohort giá gói, phí dịch vụ và ranking mà không hồi tố booking.",
+              "Diễn tập restore database, incident response và hoàn tiền.",
+            ],
+            gate:
+              "Có booking lặp lại, reconciliation ổn định, support xử lý được ngoại lệ và unit economics không âm.",
+            promptNotes: [
+              "Không dùng dữ liệu vanity. Mọi metric phải có định nghĩa, nguồn event và owner.",
+              "Không A/B trực tiếp trên policy của booking đang chạy.",
+              "Không mở rộng địa bàn trước khi mật độ cung và tỷ lệ hoàn thành đạt ngưỡng pilot.",
+            ],
+          },
+          {
+            id: "r6",
+            code: "R6",
+            title: "Mobile parity và public launch",
+            objective: "App native phục vụ trọn luồng người thuê và đủ điều kiện public launch.",
+            group: "mobile",
+            tasks: [
+              "Hoàn thiện booking, hold/payment, trips, chat và push trên mobile.",
+              "Thiết lập deep links/App Links, environment profiles, iOS build và CI release.",
+              "Đồng bộ crash/error reporting và analytics giữa web/mobile.",
+              "Giữ Manage trên responsive web; không clone portal chủ xe lên native.",
+            ],
+            gate:
+              "Đạt public-launch gate: E2E, restore drill, incident runbook, analytics và không còn dead link quan trọng.",
+            promptNotes: [
+              "Dùng chung contract, domain rule và design tokens; không copy business logic từ web.",
+              "Ưu tiên customer journey; portal quản lý native nằm ngoài scope release này.",
+              "Kiểm thử deep link, token refresh, offline/error state và app lifecycle trên thiết bị thật.",
+            ],
+          },
+        ];
+
+        var workstreams = [
+          {
+            id: "admin",
+            code: "ADMIN · R1–R5",
+            title: "Platform Admin",
+            objective: "Đủ năng lực vận hành người bán, tiền, hỗ trợ và rủi ro.",
+            mirror: true,
+            tasks: [
+              {
+                label: "Rà CSRF, PII reveal, rate limit và audit cho hành động nhạy cảm.",
+                phase: "R1",
+                refs: ["r1-task-6"],
+              },
+              {
+                label: "SePay/VietQR, bank matching và các trường hợp đối soát ngoại lệ.",
+                phase: "R2",
+                refs: ["r2-task-0", "r2-task-1"],
+              },
+              {
+                label: "Kích hoạt/gia hạn theo tiền thực nhận và hàng đợi giao dịch chưa khớp.",
+                phase: "R2",
+                refs: ["r2-task-2", "r2-task-3"],
+              },
+              {
+                label: "Seller KYC, hồ sơ thuế/ngân hàng và approval queue.",
+                phase: "R3",
+                refs: ["r3-task-1"],
+              },
+              {
+                label: "Fee/tax/insurance policy có phiên bản, snapshot và audit.",
+                phase: "R3",
+                refs: ["r3-task-2", "r3-task-5"],
+              },
+              {
+                label: "Giữ chỗ/refund và support dispute gắn booking/evidence.",
+                phase: "R3",
+                refs: ["r3-task-4", "r3-task-7"],
+              },
+              {
+                label: "Money operations và daily reconciliation tối thiểu.",
+                phase: "R3",
+                refs: ["r3-task-8"],
+              },
+              {
+                label: "Owner balance, withdrawal, maker–checker, reversal và đối soát quỹ.",
+                phase: "R4",
+                refs: ["r4-task-2", "r4-task-3", "r4-task-4", "r4-task-5"],
+              },
+              {
+                label: "Theo dõi risk/operations và thử nghiệm ranking có kiểm soát.",
+                phase: "R5",
+                refs: ["r5-task-2", "r5-task-3"],
+              },
+            ],
+            gate:
+              "Admin xử lý happy path và ngoại lệ mà không sửa DB, không xem PII ngoài nhu cầu và không tạo chênh lệch sổ.",
+            promptNotes: [
+              "Đây là workstream cắt ngang R1–R5, không phải một phase triển khai riêng sau R5.",
+              "Ưu tiên P0 trước: seller compliance, money operations, policy và support.",
+              "Tách quyền admin, finance_admin, support, reviewer và platform_staff.",
+              "Mọi hành động làm đổi tiền hoặc quyền truy cập cần audit và lý do.",
+            ],
+          },
+          {
+            id: "owner",
+            code: "OWNER / MANAGE · R1–R4",
+            title: "Owner Lite và Full Manage",
+            objective: "Hai trải nghiệm theo capability trên cùng source, API và dữ liệu.",
+            mirror: true,
+            tasks: [
+              {
+                label: "Full Manage có dashboard dùng dữ liệu thật và actionable states.",
+                phase: "R1",
+                refs: ["r1-task-1"],
+              },
+              {
+                label: "Ẩn dead link, menu giả và màn coming-soon khỏi trải nghiệm pilot.",
+                phase: "R1",
+                refs: ["r1-task-2"],
+              },
+              {
+                label: "Invitation thật hoặc đổi đúng tên hành vi thêm thành viên.",
+                phase: "R1",
+                refs: ["r1-task-3"],
+              },
+              {
+                label: "UAT theo role/scope trên desktop và mobile web.",
+                phase: "R1",
+                refs: ["r1-task-7"],
+              },
+              {
+                label: "Subscription comparison, purchase, grace và downgrade rõ ràng.",
+                phase: "R2",
+                refs: ["r2-task-4", "r2-task-5"],
+              },
+              {
+                label: "Owner Lite trên cùng feature/API; ẩn chức năng đội xe nâng cao theo capability.",
+                phase: "R3",
+                refs: ["r3-task-0"],
+              },
+              {
+                label: "Quote/net earning và giữ chỗ minh bạch để hoàn thành booking tối thiểu.",
+                phase: "R3",
+                refs: ["r3-task-3", "r3-task-4"],
+              },
+              {
+                label: "Số dư chủ xe, lịch sử và yêu cầu rút tiền.",
+                phase: "R4",
+                refs: ["r4-task-2"],
+              },
+            ],
+            gate:
+              "Capability bị chặn ở server; Owner Lite hoàn tất booking; Full Manage không có menu giả hoặc KPI giả.",
+            promptNotes: [
+              "Đây là workstream nằm trong R1–R4, không tạo backlog độc lập sau các release.",
+              "Không tạo role mới chỉ để phân biệt Basic và Full; dùng feature/capability.",
+              "Không clone source hoặc xây API tài chính thứ hai.",
+              "Mọi giới hạn gói cần empty/upgrade state có lý do và đường nâng cấp.",
+            ],
+          },
+        ];
+
+        var quality = {
+          id: "quality",
+          code: "QUALITY BASELINE",
+          title: "Kiểm định chất lượng và production readiness",
+          objective: "Biến nhận định pilot-ready thành bằng chứng lặp lại được.",
+          tasks: [
+            "Tạo baseline test/typecheck/lint/build mới trên code hiện tại.",
+            "Đưa i18n audit về ngưỡng được chấp nhận và không có chuỗi critical chưa dịch.",
+            "Có browser E2E cho booking và luồng tiền; mobile E2E cho customer journey chính.",
+            "Có deploy proof cho staging và production-like environment.",
+            "Cắm error tracking, uptime monitoring và product analytics.",
+            "Hoàn tất backup/versioning cần thiết và chạy restore drill thành công.",
+          ],
+          gate:
+            "Mỗi bằng chứng có ngày chạy, môi trường, output và người chịu trách nhiệm xử lý khi thất bại.",
+          promptNotes: [
+            "Chỉ sửa lỗi tìm thấy sau khi đã phân loại; không dùng format toàn repo để che diff.",
+            "Chạy kiểm tra scoped trước, sau đó mới mở rộng theo rủi ro.",
+            "Không ghi tài liệu là pass nếu command bị skip do thiếu DB/service.",
+          ],
+        };
+
+        var appState = loadState();
+        var activeFilter = "all";
+        var searchTerm = "";
+        var onlyOpen = false;
+        var toastTimer = null;
+
+        var decisionGrid = document.getElementById("decisionGrid");
+        var releaseList = document.getElementById("releaseList");
+        var workstreamGrid = document.getElementById("workstreamGrid");
+        var qualityList = document.getElementById("qualityList");
+        var promptGrid = document.getElementById("promptGrid");
+        var promptDialog = document.getElementById("promptDialog");
+        var promptText = document.getElementById("promptText");
+        var promptTitle = document.getElementById("promptTitle");
+        var promptSubtitle = document.getElementById("promptSubtitle");
+        var toast = document.getElementById("toast");
+
+        function loadState() {
+          var emptyState = {
+            schema: 1,
+            sourceDate: SOURCE_DATE,
+            checks: {},
+            theme: "light",
+          };
+
+          try {
+            var raw = window.localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+              var parsed = JSON.parse(raw);
+              if (parsed && parsed.checks && typeof parsed.checks === "object") {
+                emptyState.checks = parsed.checks;
+              }
+              if (parsed && parsed.theme === "dark") {
+                emptyState.theme = "dark";
+              }
+              return emptyState;
+            }
+          } catch (error) {
+            window.setTimeout(function () {
+              showToast("Trình duyệt đang chặn localStorage; hãy dùng Export để giữ tiến độ.");
+            }, 500);
+          }
+
+          releases.forEach(function (release) {
+            if (!release.defaultDone) return;
+            release.tasks.forEach(function (_task, index) {
+              emptyState.checks[taskKey(release.id, index)] = true;
+            });
+            emptyState.checks[gateKey(release.id)] = true;
+          });
+          return emptyState;
+        }
+
+        function saveState() {
+          appState.sourceDate = SOURCE_DATE;
+          try {
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+          } catch (error) {
+            showToast("Không thể lưu localStorage. Hãy Export tiến độ để tránh mất dữ liệu.");
+          }
+        }
+
+        function taskKey(sectionId, index) {
+          return sectionId + "-task-" + index;
+        }
+
+        function gateKey(sectionId) {
+          return sectionId + "-gate";
+        }
+
+        function taskLabel(task) {
+          return typeof task === "string" ? task : task.label;
+        }
+
+        function taskRefs(item, index) {
+          var task = item.tasks[index];
+          if (task && typeof task === "object" && Array.isArray(task.refs)) {
+            return task.refs;
+          }
+          return [taskKey(item.id, index)];
+        }
+
+        function taskCompletion(item, index) {
+          var refs = taskRefs(item, index);
+          var completed = refs.filter(function (key) {
+            return Boolean(appState.checks[key]);
+          }).length;
+          return {
+            checked: completed === refs.length,
+            partial: completed > 0 && completed < refs.length,
+          };
+        }
+
+        function getStats(item) {
+          var total = item.tasks.length + (item.gate && !item.mirror ? 1 : 0);
+          var done = 0;
+          item.tasks.forEach(function (_task, index) {
+            if (taskCompletion(item, index).checked) done += 1;
+          });
+          if (item.gate && !item.mirror && appState.checks[gateKey(item.id)]) done += 1;
+          return {
+            done: done,
+            total: total,
+            percent: total ? Math.round((done / total) * 100) : 0,
+          };
+        }
+
+        function getReleaseState(release) {
+          var stats = getStats(release);
+          if (stats.done === stats.total) return "done";
+          if (stats.done > 0 || release.current) return "active";
+          return "queued";
+        }
+
+        function stateLabel(state, current) {
+          if (state === "done") return "Hoàn tất";
+          if (current) return "Nên làm tiếp";
+          if (state === "active") return "Đang làm";
+          return "Chờ";
+        }
+
+        function element(tag, className, textValue) {
+          var node = document.createElement(tag);
+          if (className) node.className = className;
+          if (typeof textValue === "string") node.textContent = textValue;
+          return node;
+        }
+
+        function renderDecisions() {
+          decisionGrid.replaceChildren();
+          decisions.forEach(function (decision, index) {
+            var card = element("article", "decision-card");
+            card.appendChild(element("span", "decision-card__number", String(index + 1)));
+            card.appendChild(element("h3", "", decision.title));
+            card.appendChild(element("p", "", decision.text));
+            decisionGrid.appendChild(card);
+          });
+        }
+
+        function createChecklist(item, listClass) {
+          var list = element("ul", listClass || "checklist");
+          item.tasks.forEach(function (task, index) {
+            var refs = taskRefs(item, index);
+            var completion = taskCompletion(item, index);
+            var li = element("li", "check-item");
+            var label = document.createElement("label");
+            var input = document.createElement("input");
+            var box = element("span", "check-box");
+            var copy = element("span", "check-label");
+            var text = element("span", "check-label__text", taskLabel(task));
+
+            input.type = "checkbox";
+            input.checked = completion.checked;
+            input.indeterminate = completion.partial;
+            input.setAttribute("aria-label", taskLabel(task));
+            input.addEventListener("change", function () {
+              refs.forEach(function (key) {
+                appState.checks[key] = input.checked;
+              });
+              saveState();
+              renderAllProgress();
+            });
+
+            copy.appendChild(text);
+            if (task && typeof task === "object" && task.phase) {
+              copy.appendChild(element("span", "check-label__phase", task.phase));
+              label.title = "Đồng bộ với đầu việc gốc tại " + task.phase;
+            }
+            label.appendChild(input);
+            label.appendChild(box);
+            label.appendChild(copy);
+            li.appendChild(label);
+            list.appendChild(li);
+          });
+          return list;
+        }
+
+        function createGate(item) {
+          var label = element("label", "gate");
+          var input = document.createElement("input");
+          var copy = document.createElement("span");
+          var title = element("strong", "", "Release gate · chỉ tick khi có bằng chứng");
+          var detail = element("span", "", item.gate);
+          var key = gateKey(item.id);
+
+          input.type = "checkbox";
+          input.checked = Boolean(appState.checks[key]);
+          input.setAttribute("aria-label", "Gate: " + item.gate);
+          input.addEventListener("change", function () {
+            appState.checks[key] = input.checked;
+            saveState();
+            renderAllProgress();
+          });
+
+          copy.appendChild(title);
+          copy.appendChild(detail);
+          label.appendChild(input);
+          label.appendChild(copy);
+          return label;
+        }
+
+        function createAcceptance(item) {
+          var wrapper = element("div", "gate gate--readonly");
+          var copy = document.createElement("span");
+          copy.appendChild(element("strong", "", "Điều kiện nghiệm thu của workstream"));
+          copy.appendChild(element("span", "", item.gate));
+          wrapper.appendChild(copy);
+          return wrapper;
+        }
+
+        function createProgress(stats, compact) {
+          var wrapper = element("div", compact ? "mini-progress" : "");
+          var label = element("div", "mini-progress__label");
+          label.appendChild(element("span", "", stats.done + "/" + stats.total + " mục"));
+          label.appendChild(element("span", "", stats.percent + "%"));
+          var track = element("div", "progress-track");
+          var bar = element("div", "progress-track__bar");
+          bar.style.width = stats.percent + "%";
+          track.setAttribute("role", "progressbar");
+          track.setAttribute("aria-valuemin", "0");
+          track.setAttribute("aria-valuemax", "100");
+          track.setAttribute("aria-valuenow", String(stats.percent));
+          track.appendChild(bar);
+          wrapper.appendChild(label);
+          wrapper.appendChild(track);
+          return wrapper;
+        }
+
+        function releaseMatches(release) {
+          if (activeFilter === "current" && !release.current) return false;
+          if (activeFilter !== "all" && activeFilter !== "current" && release.group !== activeFilter) {
+            return false;
+          }
+          if (onlyOpen && getReleaseState(release) === "done") return false;
+          if (!searchTerm) return true;
+          var haystack = [
+            release.code,
+            release.title,
+            release.objective,
+            release.gate,
+            release.tasks.map(taskLabel).join(" "),
+          ]
+            .join(" ")
+            .toLocaleLowerCase("vi");
+          return haystack.indexOf(searchTerm) !== -1;
+        }
+
+        function renderReleases() {
+          releaseList.replaceChildren();
+          var visible = releases.filter(releaseMatches);
+
+          if (!visible.length) {
+            releaseList.appendChild(
+              element("div", "empty", "Không có release phù hợp với bộ lọc hiện tại."),
+            );
+            return;
+          }
+
+          visible.forEach(function (release, index) {
+            var stats = getStats(release);
+            var state = getReleaseState(release);
+            var card = element("article", "release-card");
+            card.dataset.releaseId = release.id;
+            card.dataset.state = state;
+            card.dataset.current = release.current ? "true" : "false";
+
+            var rail = element("aside", "release-card__rail");
+            var railTop = document.createElement("div");
+            railTop.appendChild(element("span", "release-code", release.code));
+            railTop.appendChild(
+              element("span", "release-index", "Mốc " + (releases.indexOf(release) + 1) + "/7"),
+            );
+            rail.appendChild(railTop);
+            rail.appendChild(createProgress(stats, true));
+
+            var body = element("div", "release-card__body");
+            var heading = element("div", "release-card__heading");
+            var headingCopy = document.createElement("div");
+            headingCopy.appendChild(element("h3", "", release.title));
+            headingCopy.appendChild(element("p", "release-card__objective", release.objective));
+            var badge = element("span", "status-pill", stateLabel(state, release.current));
+            badge.dataset.state = state;
+            heading.appendChild(headingCopy);
+            heading.appendChild(badge);
+
+            body.appendChild(heading);
+            body.appendChild(createChecklist(release));
+            body.appendChild(createGate(release));
+
+            var actions = element("div", "release-card__actions");
+            var promptButton = element("button", "button button--primary", "Mở prompt " + release.code);
+            promptButton.type = "button";
+            promptButton.addEventListener("click", function () {
+              openPrompt(release);
+            });
+            var sourceLink = element("a", "button button--quiet", "Xem roadmap nguồn");
+            sourceLink.href = "./completion-roadmap.md";
+            actions.appendChild(promptButton);
+            actions.appendChild(sourceLink);
+            body.appendChild(actions);
+
+            card.appendChild(rail);
+            card.appendChild(body);
+            releaseList.appendChild(card);
+          });
+        }
+
+        function renderWorkstreams() {
+          workstreamGrid.replaceChildren();
+          workstreams.forEach(function (item) {
+            var stats = getStats(item);
+            var card = element("article", "workstream-card");
+            card.dataset.workstreamId = item.id;
+
+            var top = element("div", "workstream-card__top");
+            var copy = document.createElement("div");
+            copy.appendChild(element("span", "section-kicker", item.code));
+            copy.appendChild(element("h3", "", item.title));
+            copy.appendChild(element("p", "", item.objective));
+            top.appendChild(copy);
+            top.appendChild(element("span", "score", stats.done + "/" + stats.total));
+
+            card.appendChild(top);
+            card.appendChild(createProgress(stats, true));
+            card.appendChild(createChecklist(item));
+            card.appendChild(createAcceptance(item));
+
+            var button = element("button", "button button--primary", "Mở prompt " + item.title);
+            button.type = "button";
+            button.addEventListener("click", function () {
+              openPrompt(item);
+            });
+            card.appendChild(button);
+            workstreamGrid.appendChild(card);
+          });
+        }
+
+        function renderQuality() {
+          qualityList.replaceChildren();
+          var checklist = createChecklist(quality);
+          while (checklist.firstChild) qualityList.appendChild(checklist.firstChild);
+          qualityList.appendChild(createGateListItem(quality));
+        }
+
+        function createGateListItem(item) {
+          var li = document.createElement("li");
+          li.appendChild(createGate(item));
+          return li;
+        }
+
+        function renderPrompts() {
+          promptGrid.replaceChildren();
+          var promptItems = releases.concat(workstreams, [quality]);
+          promptItems.forEach(function (item) {
+            var card = element("article", "prompt-card");
+            card.appendChild(element("span", "prompt-card__code", item.code));
+            card.appendChild(element("h3", "", item.title));
+            card.appendChild(element("p", "", item.objective));
+            var button = element("button", "button", "Xem và sao chép");
+            button.type = "button";
+            button.addEventListener("click", function () {
+              openPrompt(item);
+            });
+            card.appendChild(button);
+            promptGrid.appendChild(card);
+          });
+        }
+
+        function renderOverallProgress() {
+          var total = 0;
+          var done = 0;
+          releases.forEach(function (release) {
+            var stats = getStats(release);
+            total += stats.total;
+            done += stats.done;
+          });
+          var percent = total ? Math.round((done / total) * 100) : 0;
+          document.getElementById("overallPercent").textContent = String(percent);
+          document.getElementById("overallBar").style.width = percent + "%";
+          document.getElementById("overallCopy").textContent =
+            done + "/" + total + " đầu việc và release gate đã xác nhận";
+          document.getElementById("overallProgress").setAttribute("aria-valuenow", String(percent));
+        }
+
+        function renderAllProgress() {
+          renderOverallProgress();
+          renderReleases();
+          renderWorkstreams();
+          renderQuality();
+        }
+
+        function buildPrompt(item) {
+          var lines = [
+            "Bạn đang làm việc trong monorepo XePrime tại root repository.",
+            "",
+            "TRƯỚC KHI THAY ĐỔI",
+            "1. Đọc toàn bộ CLAUDE.md và các instruction áp dụng trong repo.",
+            "2. Đọc docs/design/02_PRODUCT_VISION.md, docs/completion-roadmap.md, docs/design/03_PRODUCT_GAP_ANALYSIS.md và docs/decisions/0028-marketplace-subscription-fees-and-custodied-funds.md.",
+            "3. Kiểm tra git status và giữ nguyên mọi thay đổi hiện có của người dùng. Không reset, checkout hoặc ghi đè file ngoài phạm vi.",
+            "4. Audit code, migration, OpenAPI và test hiện có trước khi kết luận đầu việc nào thiếu. Không dựa riêng vào checklist.",
+            "",
+            "HẠNG MỤC: " + item.code + " — " + item.title,
+            "",
+            "MỤC TIÊU",
+            item.objective,
+            "",
+            "PHẠM VI CẦN ĐỐI CHIẾU / TRIỂN KHAI",
+          ];
+
+          item.tasks.forEach(function (task, index) {
+            var phase = task && typeof task === "object" && task.phase ? " [" + task.phase + "]" : "";
+            lines.push(String(index + 1) + "." + phase + " " + taskLabel(task));
+          });
+
+          lines.push(
+            "",
+            item.mirror ? "ĐIỀU KIỆN NGHIỆM THU WORKSTREAM" : "RELEASE GATE",
+            item.gate,
+            "",
+            "RÀNG BUỘC RIÊNG",
+          );
+
+          item.promptNotes.forEach(function (note, index) {
+            lines.push(String(index + 1) + ". " + note);
+          });
+
+          lines.push(
+            "",
+            "NGUYÊN TẮC CHUNG",
+            "- Ưu tiên một vertical slice hoàn chỉnh thay vì tạo nhiều màn/API placeholder.",
+            "- Mọi quyền hạn phải được enforce ở server; ẩn UI không phải kiểm soát truy cập.",
+            "- Mọi giá/phí/chính sách cần cấu hình có phiên bản và ngày hiệu lực; booking lưu snapshot.",
+            "- Không gọi doanh thu XePrime là thuế hoặc bảo hiểm. Không quảng bá số dư chủ xe như ví điện tử.",
+            "- Không dùng tên/logo PVI hoặc mô tả quyền lợi chưa có hợp đồng/policy thật.",
+            "- Không sửa .env, không in secret, không reset database và không thực hiện deploy nếu chưa được yêu cầu rõ.",
+            "- Dùng i18n cho mọi text hiển thị. Không clone business logic giữa web, mobile và API.",
+            "- Bổ sung migration, OpenAPI/types, audit, test và tài liệu khi thay đổi thực sự yêu cầu.",
+            "",
+            "CÁCH THỰC HIỆN",
+            "1. Báo cáo ngắn hiện trạng: đã có / thiếu / sai so với scope.",
+            "2. Lập kế hoạch theo dependency và chọn lát cắt nhỏ nhất có thể nghiệm thu.",
+            "3. Triển khai đến cùng lát cắt đã chọn, gồm error/empty/loading states và authorization.",
+            "4. Chạy test scoped trước; sau đó chạy typecheck/lint/build liên quan theo mức rủi ro. Nêu rõ test bị skip do thiếu DB/service.",
+            "5. Review diff để tìm regression, lộ PII, race/idempotency và sai lệch tiền.",
+            "6. Chỉ cập nhật roadmap khi có bằng chứng gate hoặc checklist thực sự hoàn thành.",
+            "",
+            "ĐẦU RA MONG MUỐN",
+            "- Tóm tắt kết quả theo: đã có, vừa làm, còn thiếu, rủi ro/gate.",
+            "- Danh sách file thay đổi và migration/config/env name mới nếu có; không ghi giá trị secret.",
+            "- Các command kiểm tra đã chạy cùng kết quả.",
+            "- Không tuyên bố hoàn thành toàn bộ " + item.code + " nếu mới chỉ xong một phần.",
+          );
+
+          return lines.join("\n");
+        }
+
+        function openPrompt(item) {
+          promptTitle.textContent = item.code + " · " + item.title;
+          promptSubtitle.textContent = "Prompt được sinh từ checklist và gate hiện hành.";
+          promptText.value = buildPrompt(item);
+          if (typeof promptDialog.showModal === "function") {
+            promptDialog.showModal();
+          } else {
+            promptDialog.setAttribute("open", "");
+          }
+          promptText.scrollTop = 0;
+        }
+
+        function closePrompt() {
+          if (typeof promptDialog.close === "function") {
+            promptDialog.close();
+          } else {
+            promptDialog.removeAttribute("open");
+          }
+        }
+
+        function copyText(textValue) {
+          if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(textValue);
+          }
+
+          return new Promise(function (resolve, reject) {
+            var helper = document.createElement("textarea");
+            helper.value = textValue;
+            helper.setAttribute("readonly", "");
+            helper.style.position = "fixed";
+            helper.style.opacity = "0";
+            document.body.appendChild(helper);
+            helper.select();
+            try {
+              var copied = document.execCommand("copy");
+              document.body.removeChild(helper);
+              if (copied) resolve();
+              else reject(new Error("copy failed"));
+            } catch (error) {
+              document.body.removeChild(helper);
+              reject(error);
+            }
+          });
+        }
+
+        function showToast(message) {
+          if (!toast) return;
+          toast.textContent = message;
+          toast.dataset.visible = "true";
+          window.clearTimeout(toastTimer);
+          toastTimer = window.setTimeout(function () {
+            toast.dataset.visible = "false";
+          }, 2600);
+        }
+
+        function setTheme(theme) {
+          appState.theme = theme === "dark" ? "dark" : "light";
+          document.documentElement.dataset.theme = appState.theme;
+          document.getElementById("themeToggle").setAttribute(
+            "aria-label",
+            appState.theme === "dark" ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối",
+          );
+          saveState();
+        }
+
+        function exportState() {
+          var payload = {
+            schema: 1,
+            sourceDate: SOURCE_DATE,
+            exportedAt: new Date().toISOString(),
+            checks: appState.checks,
+          };
+          var blob = new Blob([JSON.stringify(payload, null, 2)], {
+            type: "application/json",
+          });
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement("a");
+          link.href = url;
+          link.download = "xeprime-roadmap-progress-" + new Date().toISOString().slice(0, 10) + ".json";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.setTimeout(function () {
+            URL.revokeObjectURL(url);
+          }, 0);
+          showToast("Đã export tiến độ.");
+        }
+
+        function importState(file) {
+          var reader = new FileReader();
+          reader.addEventListener("load", function () {
+            try {
+              var parsed = JSON.parse(String(reader.result));
+              if (!parsed || !parsed.checks || typeof parsed.checks !== "object") {
+                throw new Error("invalid roadmap file");
+              }
+              var safeChecks = {};
+              Object.keys(parsed.checks).forEach(function (key) {
+                if (typeof parsed.checks[key] === "boolean") {
+                  safeChecks[key] = parsed.checks[key];
+                }
+              });
+              appState.checks = safeChecks;
+              saveState();
+              renderAllProgress();
+              showToast("Đã import tiến độ.");
+            } catch (error) {
+              showToast("File không đúng định dạng tiến độ XePrime.");
+            }
+          });
+          reader.readAsText(file);
+        }
+
+        function resetState() {
+          var accepted = window.confirm(
+            "Khôi phục checklist mặc định? R0 sẽ được đánh dấu hoàn tất và các mục khác sẽ bị bỏ tick.",
+          );
+          if (!accepted) return;
+          try {
+            window.localStorage.removeItem(STORAGE_KEY);
+          } catch (error) {
+            // State in memory is still reset below.
+          }
+          appState = {
+            schema: 1,
+            sourceDate: SOURCE_DATE,
+            checks: {},
+            theme: appState.theme,
+          };
+          releases[0].tasks.forEach(function (_task, index) {
+            appState.checks[taskKey("r0", index)] = true;
+          });
+          appState.checks[gateKey("r0")] = true;
+          saveState();
+          renderAllProgress();
+          showToast("Đã khôi phục checklist mặc định.");
+        }
+
+        document.getElementById("filters").addEventListener("click", function (event) {
+          var button = event.target.closest("[data-filter]");
+          if (!button) return;
+          activeFilter = button.dataset.filter;
+          document.querySelectorAll("[data-filter]").forEach(function (candidate) {
+            candidate.setAttribute(
+              "aria-pressed",
+              candidate.dataset.filter === activeFilter ? "true" : "false",
+            );
+          });
+          renderReleases();
+        });
+
+        document.getElementById("roadmapSearch").addEventListener("input", function (event) {
+          searchTerm = event.target.value.trim().toLocaleLowerCase("vi");
+          renderReleases();
+        });
+
+        document.getElementById("onlyOpen").addEventListener("change", function (event) {
+          onlyOpen = event.target.checked;
+          renderReleases();
+        });
+
+        document.getElementById("themeToggle").addEventListener("click", function () {
+          setTheme(appState.theme === "dark" ? "light" : "dark");
+        });
+
+        document.getElementById("closeDialogButton").addEventListener("click", closePrompt);
+        document.getElementById("selectPromptButton").addEventListener("click", function () {
+          promptText.focus();
+          promptText.select();
+        });
+        document.getElementById("copyPromptButton").addEventListener("click", function () {
+          copyText(promptText.value)
+            .then(function () {
+              showToast("Đã sao chép prompt.");
+            })
+            .catch(function () {
+              promptText.focus();
+              promptText.select();
+              showToast("Không thể tự sao chép; prompt đã được chọn để bạn copy thủ công.");
+            });
+        });
+        promptDialog.addEventListener("click", function (event) {
+          if (event.target === promptDialog) closePrompt();
+        });
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape" && promptDialog.hasAttribute("open")) closePrompt();
+        });
+
+        document.getElementById("qualityPromptButton").addEventListener("click", function () {
+          openPrompt(quality);
+        });
+        document.getElementById("exportButton").addEventListener("click", exportState);
+        document.getElementById("importButton").addEventListener("click", function () {
+          document.getElementById("importFile").click();
+        });
+        document.getElementById("importFile").addEventListener("change", function (event) {
+          var file = event.target.files && event.target.files[0];
+          if (file) importState(file);
+          event.target.value = "";
+        });
+        document.getElementById("printButton").addEventListener("click", function () {
+          window.print();
+        });
+        document.getElementById("resetButton").addEventListener("click", resetState);
+
+        setTheme(appState.theme);
+        renderDecisions();
+        renderReleases();
+        renderWorkstreams();
+        renderQuality();
+        renderPrompts();
+        renderOverallProgress();
+      })();
+    </script>
+  </body>
+</html>

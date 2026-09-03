@@ -11,7 +11,8 @@
       "supportsTablet": false
     },
     "android": {
-      "package": "vn.xeprime.mobile"
+      "package": "vn.xeprime.mobile",
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "bundler": "metro",
@@ -21,7 +22,14 @@
       "expo-router",
       "expo-localization",
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "XePrime cần quyền truy cập thư viện ảnh để bạn chọn ảnh hiện trạng xe khi lập biên bản bàn giao.",
+          "cameraPermission": "XePrime cần quyền máy ảnh để bạn chụp ảnh hiện trạng xe khi giao và nhận lại xe."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

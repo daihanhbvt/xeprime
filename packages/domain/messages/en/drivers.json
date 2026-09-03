@@ -1,0 +1,62 @@
+{
+  "page": {
+    "title": "Drivers",
+    "tableLabel": "Driver list",
+    "loadError": "Couldn't load the driver list",
+    "empty": "No drivers yet",
+    "emptyHint": "Add a driver so you can assign one to chauffeured bookings.",
+    "total": "{count, plural, one {# driver} other {# drivers}}"
+  },
+  "filters": {
+    "search": "Search drivers",
+    "searchPlaceholder": "Search by name, phone or licence number",
+    "status": "Status",
+    "allStatuses": "All statuses"
+  },
+  "columns": {
+    "driver": "Driver",
+    "type": "Type",
+    "papers": "Licence / ID",
+    "activeBookings": "Assigned bookings",
+    "status": "Status"
+  },
+  "license": {
+    "expired": "Licence expired {date}",
+    "validUntil": "Licence valid to {date}"
+  },
+  "activeBookings": "{count, plural, one {# booking} other {# bookings}}",
+  "actions": {
+    "add": "Add driver",
+    "deactivate": "Deactivate",
+    "activate": "Reactivate",
+    "deactivateConfirm": "Deactivate this driver? They can't be assigned to new bookings.",
+    "deactivateOk": "Deactivate",
+    "removeConfirm": "Delete this driver? Past bookings keep their history; unfinished ones will block the delete."
+  },
+  "toast": {
+    "activated": "Driver reactivated",
+    "deactivated": "Driver deactivated",
+    "removed": "Driver deleted",
+    "created": "Driver added",
+    "updated": "Driver updated"
+  },
+  "form": {
+    "titleCreate": "Add driver",
+    "titleEdit": "Edit driver profile",
+    "name": "Full name",
+    "namePlaceholder": "Tran Van B",
+    "phone": "Phone number",
+    "phonePlaceholder": "0901234567",
+    "type": "Driver type",
+    "licenseNo": "Licence number (optional)",
+    "licenseExpiresAt": "Licence expiry",
+    "licenseExpiresAtPlaceholder": "Once expired, they can't be assigned to new bookings",
+    "idNo": "ID number (optional)",
+    "note": "Notes",
+    "errors": {
+      "nameRequired": "Enter the driver's name",
+      "phoneRequired": "Enter a phone number",
+      "phoneInvalid": "That phone number isn't valid"
+    }
+  }
+}

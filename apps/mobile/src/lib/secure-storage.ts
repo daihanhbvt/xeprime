@@ -11,6 +11,7 @@ import { Platform } from 'react-native';
 export const SECURE_KEY = {
   REFRESH_TOKEN: 'xp.refresh.token',
   LOCALE: 'xp.locale',
+  SHELL_SCOPE: 'xp.shell.scope',
 } as const;
 
 export type SecureKey = (typeof SECURE_KEY)[keyof typeof SECURE_KEY];

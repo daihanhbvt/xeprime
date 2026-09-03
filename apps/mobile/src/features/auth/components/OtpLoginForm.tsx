@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { PHONE_VERIFICATION_PURPOSE } from '@xeprime/types';
-import { otpLoginSchema, type OtpLoginValues } from '@xeprime/validators';
-import { useState } from 'react';
+import { buildOtpLoginSchema, type OtpLoginValues } from '@xeprime/validators';
+import { useAuthSchemaLabels } from '../use-auth-schema-labels';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Text, XStack, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -35,6 +36,14 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
   const vp = usePhoneVerify(PHONE_VERIFICATION_PURPOSE.LOGIN);
   const login = useOtpLogin();
 
+  /*
+   * Dựng lại schema khi ngôn ngữ đổi — LUẬT ở `@xeprime/validators`, chỉ câu chữ đi vào từ đây.
+   * `useMemo` vì `yupResolver` nhận object mới mỗi nhịp thì RHF xác thực lại toàn form sau từng
+   * phím gõ.
+   */
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildOtpLoginSchema(labels), [labels]);
+
   const {
     control,
     handleSubmit,
@@ -43,7 +52,7 @@ export function OtpLoginForm({ onSuccess }: { onSuccess: (user: CurrentUser) => 
   } = useForm<OtpLoginValues>({
     // Xem docblock cùng chỗ ở `LoginForm`: nút khoá theo `isValid` nên phải validate real-time.
     mode: 'onChange',
-    resolver: yupResolver(otpLoginSchema),
+    resolver: yupResolver(schema),
     defaultValues: { phone: '' },
   });
 

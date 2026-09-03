@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, waitFor } from '@testing-library/react-native';
+import { Provider as ReduxProvider } from 'react-redux';
+import { store } from '@/store';
 import { API_ERROR_CODE } from '@xeprime/types';
 import { Text } from 'react-native';
 import { apiGet } from '@/lib/api-client';
@@ -87,7 +89,9 @@ describe('phục hồi sau khi phiên hết hạn', () => {
       }
 
       return Promise.resolve(
-        jsonResponse(401, { error: { code: API_ERROR_CODE.UNAUTHENTICATED, message: 'hết phiên' } }),
+        jsonResponse(401, {
+          error: { code: API_ERROR_CODE.UNAUTHENTICATED, message: 'hết phiên' },
+        }),
       );
     }) as unknown as typeof fetch;
 
@@ -95,11 +99,13 @@ describe('phục hồi sau khi phiên hết hạn', () => {
 
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const view = await render(
-      <QueryClientProvider client={queryClient}>
-        <SessionBoundary>
-          <GateProbe />
-        </SessionBoundary>
-      </QueryClientProvider>,
+      <ReduxProvider store={store}>
+        <QueryClientProvider client={queryClient}>
+          <SessionBoundary>
+            <GateProbe />
+          </SessionBoundary>
+        </QueryClientProvider>
+      </ReduxProvider>,
     );
 
     await waitFor(() => expect(view.getByText('ready')).toBeTruthy());

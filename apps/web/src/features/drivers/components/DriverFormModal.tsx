@@ -2,24 +2,21 @@
 
 import { yupResolver } from '@hookform/resolvers/yup';
 import { App } from 'antd';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import { DRIVER_TYPE, DRIVER_TYPE_LABEL, DRIVER_TYPE_VALUES } from '@xeprime/types';
+import { useTranslations } from 'next-intl';
+import { DRIVER_TYPE, DRIVER_TYPE_VALUES } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { DateTimeField } from '@/components/form/DateTimeField';
 import { DialogForm } from '@/components/form/DialogForm';
 import { SelectField } from '@/components/form/SelectField';
 import { TextAreaField } from '@/components/form/TextAreaField';
 import { TextField } from '@/components/form/TextField';
-import { getErrorMessage } from '@/services/api-client';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { useCreateDriver, useUpdateDriver } from '../hooks/use-drivers';
-import { driverFormSchema, type DriverFormValues } from '../schema';
+import { makeDriverFormSchema, type DriverFormValues } from '../schema';
 import type { Driver } from '../types';
-
-const DRIVER_TYPE_OPTIONS = DRIVER_TYPE_VALUES.map((value) => ({
-  value,
-  label: DRIVER_TYPE_LABEL[value],
-}));
 
 const EMPTY: DriverFormValues = {
   name: '',
@@ -57,15 +54,28 @@ export function DriverFormModal({
   driver: Driver | null;
   onClose: () => void;
 }) {
+  const t = useTranslations('Drivers');
+  const tCommon = useTranslations('Common');
   const { message } = App.useApp();
+  const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
   const create = useCreateDriver();
   const update = useUpdateDriver();
   const saving = create.isPending || update.isPending;
 
+  // Schema dựng trong component để câu lỗi theo đúng ngôn ngữ của request — xem docblock ở
+  // `../schema`.
+  const schema = useMemo(() => makeDriverFormSchema(t as (key: string) => string), [t]);
+
   const { control, handleSubmit, reset } = useForm<DriverFormValues>({
-    resolver: yupResolver(driverFormSchema),
+    resolver: yupResolver(schema),
     defaultValues: EMPTY,
   });
+
+  const driverTypeOptions = DRIVER_TYPE_VALUES.map((value) => ({
+    value,
+    label: domainLabel('driverType', value),
+  }));
 
   // Mỗi lần mở nạp lại đúng hồ sơ đang sửa (hoặc form trống) — bỏ dở lần trước không để lại rác.
   useEffect(() => {
@@ -84,10 +94,10 @@ export function DriverFormModal({
     };
     const done = {
       onSuccess: () => {
-        message.success(driver ? 'Đã cập nhật tài xế' : 'Đã thêm tài xế');
+        message.success(driver ? t('toast.updated') : t('toast.created'));
         onClose();
       },
-      onError: (err: unknown) => message.error(getErrorMessage(err)),
+      onError: (err: unknown) => message.error(errorMessage(err)),
     };
     if (driver) update.mutate({ id: driver.id, body }, done);
     else create.mutate(body, done);
@@ -95,40 +105,45 @@ export function DriverFormModal({
 
   return (
     <ResponsiveDialog
-      title={driver ? 'Sửa hồ sơ tài xế' : 'Thêm tài xế'}
+      title={driver ? t('form.titleEdit') : t('form.titleCreate')}
       open={open}
       size="sm"
-      okText={driver ? 'Lưu' : 'Thêm'}
-      cancelText="Đóng"
+      okText={driver ? tCommon('actions.save') : tCommon('actions.add')}
+      cancelText={tCommon('actions.close')}
       confirmLoading={saving}
       onOk={() => void submit()}
       onClose={onClose}
     >
       <DialogForm onSubmit={submit} labelWidth="lg">
-        <TextField control={control} name="name" label="Họ và tên" placeholder="Trần Văn B" />
+        <TextField
+          control={control}
+          name="name"
+          label={t('form.name')}
+          placeholder={t('form.namePlaceholder')}
+        />
         <TextField
           control={control}
           name="phone"
-          label="Số điện thoại"
-          placeholder="0901234567"
+          label={t('form.phone')}
+          placeholder={t('form.phonePlaceholder')}
           autoComplete="tel"
         />
         <SelectField
           control={control}
           name="driverType"
-          label="Loại tài xế"
-          options={DRIVER_TYPE_OPTIONS}
+          label={t('form.type')}
+          options={driverTypeOptions}
         />
-        <TextField control={control} name="licenseNo" label="Số GPLX (không bắt buộc)" />
+        <TextField control={control} name="licenseNo" label={t('form.licenseNo')} />
         <DateTimeField
           control={control}
           name="licenseExpiresAt"
-          label="Hạn GPLX"
+          label={t('form.licenseExpiresAt')}
           dateOnly
-          placeholder="Hết hạn thì không gán được vào đơn mới"
+          placeholder={t('form.licenseExpiresAtPlaceholder')}
         />
-        <TextField control={control} name="idNo" label="Số CCCD (không bắt buộc)" />
-        <TextAreaField control={control} name="note" label="Ghi chú" rows={3} />
+        <TextField control={control} name="idNo" label={t('form.idNo')} />
+        <TextAreaField control={control} name="note" label={t('form.note')} rows={3} />
       </DialogForm>
     </ResponsiveDialog>
   );

@@ -1,4 +1,4 @@
-import { Image } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 import { Text, YStack } from 'tamagui';
 import { colors, fontWeight, radius } from '@/theme/tokens';
 
@@ -14,6 +14,10 @@ interface AvatarProps {
  * Nền dùng màu thương hiệu ĐẬM chứ không phải bản nhạt: ô nhạt nằm trên thẻ trắng gần như tàng
  * hình, chữ cái bên trong đọc như một vết bẩn hơn là một avatar.
  */
+const styles = StyleSheet.create({
+  image: { width: '100%', height: '100%' },
+});
+
 export function Avatar({ name, url, size = 40 }: AvatarProps) {
   const initial = name.trim().charAt(0).toLocaleUpperCase();
 
@@ -28,7 +32,7 @@ export function Avatar({ name, url, size = 40 }: AvatarProps) {
       ov="hidden"
     >
       {url ? (
-        <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+        <Image source={{ uri: url }} style={styles.image} resizeMode="cover" />
       ) : (
         <Text col={colors.onPrimary} fos={size / 2.5} fow={fontWeight.bold}>
           {initial || '?'}

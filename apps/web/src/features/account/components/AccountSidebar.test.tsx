@@ -33,17 +33,31 @@ describe('AccountSidebar', () => {
   it('hiện đủ các mục của menu tài khoản', () => {
     render(<AccountSidebar />);
 
+    expect(screen.getByRole('heading', { name: 'Cá nhân' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Thuê xe' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Thiết lập' })).toBeTruthy();
     expect(screen.getByText('Tài khoản của tôi')).toBeTruthy();
     expect(screen.getByText('Chuyến của tôi')).toBeTruthy();
-    expect(screen.getByText('Giấy tờ & Xác minh')).toBeTruthy();
+    expect(screen.getByText('Hỗ trợ')).toBeTruthy();
   });
 
-  it('mục chưa dựng KHÔNG phải liên kết và có nhãn "Sắp có"', () => {
-    render(<AccountSidebar />);
+  /**
+   * Đảo ngược bài test cũ ("mục chưa dựng KHÔNG phải liên kết và có nhãn Sắp có").
+   *
+   * Bảy mục "Sắp có" đã bị gỡ ngày 03/09/2026 (R1 — ẩn menu placeholder chưa có luồng). Điều
+   * cần khoá bây giờ mạnh hơn hẳn: menu không được chứa mục nào KHÔNG bấm được. Một mục hiện
+   * ra mà không đi đâu được là một lời hứa, và bảy lời hứa thì không còn là bản đồ.
+   */
+  it('mọi mục trong menu đều là liên kết bấm được — không còn nhãn "Sắp có"', () => {
+    const { container } = render(<AccountSidebar />);
 
-    expect(screen.queryByRole('link', { name: /Lịch sử thanh toán/ })).toBeNull();
-    expect(screen.getByText('Lịch sử thanh toán')).toBeTruthy();
-    expect(screen.getAllByText('Sắp có').length).toBeGreaterThan(0);
+    const items = container.querySelectorAll('nav li');
+    expect(items.length).toBeGreaterThan(0);
+    for (const li of items) {
+      expect(li.querySelector('a')).not.toBeNull();
+    }
+    expect(screen.queryByText('Sắp có')).toBeNull();
+    expect(screen.queryByText('Lịch sử thanh toán')).toBeNull();
   });
 
   it('mục đã dựng là liên kết thật', () => {

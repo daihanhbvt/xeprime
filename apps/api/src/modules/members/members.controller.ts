@@ -1,7 +1,13 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, CurrentUser, RequirePermissions, TenantScoped } from '../../common/decorators';
+import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import {
+  CurrentTenant,
+  CurrentUser,
+  RequirePermissions,
+  RequiresFeature,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import {
   AddMemberDto,
@@ -19,6 +25,7 @@ import { MembersService } from './members.service';
 @ApiTags('members')
 @Controller('members')
 @TenantScoped()
+@RequiresFeature(PLAN_FEATURE.MEMBERS)
 export class MembersController {
   constructor(private readonly members: MembersService) {}
 

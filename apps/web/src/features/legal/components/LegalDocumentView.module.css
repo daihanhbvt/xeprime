@@ -1,0 +1,165 @@
+/*
+ * Văn bản pháp lý là thứ người ta ĐỌC HẾT, không lướt: cột hẹp (~68 ký tự), dòng thưa, và
+ * neo cuộn chừa chỗ cho header dính ở trên.
+ */
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+}
+
+.draft {
+  margin-bottom: 24px;
+  padding: 12px 14px;
+  border: 1px solid var(--xp-color-warning);
+  border-radius: 10px;
+  background: var(--xp-color-warning-bg);
+}
+
+.draftTitle {
+  display: block;
+  font-size: 13.5px;
+  color: var(--xp-color-text);
+}
+
+.draftBody {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--xp-color-text-secondary);
+}
+
+.header {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--xp-color-border-secondary);
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--xp-color-text);
+  letter-spacing: -0.01em;
+}
+
+.summary {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--xp-color-text-secondary);
+}
+
+.effective {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.toc {
+  margin-top: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 12px;
+  background: var(--xp-color-bg-layout);
+}
+
+.tocTitle {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--xp-color-text-tertiary);
+}
+
+.tocList {
+  margin-top: 10px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: decimal;
+}
+
+.tocLink {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--xp-color-text-secondary);
+}
+
+.tocLink:hover {
+  color: var(--xp-color-primary);
+  text-decoration: underline;
+}
+
+.body {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Neo cuộn không được chui xuống dưới header dính. */
+.section {
+  scroll-margin-top: 88px;
+}
+
+.heading {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--xp-color-text);
+}
+
+.paragraph {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--xp-color-text-secondary);
+}
+
+.footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+.printHint {
+  font-size: 13px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.relatedTitle {
+  margin-top: 18px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--xp-color-text-tertiary);
+}
+
+.related {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.relatedLink {
+  font-size: 14.5px;
+  color: var(--xp-color-primary);
+}
+
+.relatedLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: 23px;
+  }
+
+  .paragraph,
+  .summary {
+    font-size: 14.5px;
+  }
+}

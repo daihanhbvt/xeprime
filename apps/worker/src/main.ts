@@ -11,6 +11,7 @@ import { withAdvisoryLock } from './lib/advisory-lock';
 import { pumpOutbox } from './jobs/outbox-pump';
 import { runRetention } from './jobs/retention';
 import { sweepBookingRequestDeadlines } from './jobs/booking-request-deadlines';
+import { sweepSubscriptionLifecycle } from './jobs/subscription-lifecycle';
 import { purgeExpiredOauthStates } from './jobs/oauth-state-cleanup';
 import { HOLIDAY_INTERVAL_MS, shouldRunHolidaySync, syncHolidays } from './jobs/holiday-sync';
 
@@ -44,12 +45,18 @@ const DEADLINE_INTERVAL_MS = 60 * 1_000;
  * việc giữ bảng khỏi phình, không phải việc có hạn chót.
  */
 const OAUTH_STATE_INTERVAL_MS = 60 * 60 * 1_000;
+/**
+ * Nhịp vòng đời gói (ADR 0015 điều 10). Mốc của nó tính bằng NGÀY (nhắc trước 7 ngày, ân hạn
+ * theo ngày) nên một giờ một lần là dư độ mịn; job idempotent, chạy lại ra 0 dòng.
+ */
+const SUBSCRIPTION_LIFECYCLE_INTERVAL_MS = 60 * 60 * 1_000;
 
 const LOCK_PUMP = 4_201;
 const LOCK_RETENTION = 4_202;
 const LOCK_DEADLINES = 4_203;
 const LOCK_HOLIDAYS = 4_204;
 const LOCK_OAUTH_STATES = 4_205;
+const LOCK_SUBSCRIPTION_LIFECYCLE = 4_206;
 
 const prisma = createPrismaClient();
 let stopping = false;
@@ -86,6 +93,26 @@ async function main(): Promise<void> {
      * Dọn `oauth_states` — ADR 0019. Chạy ở MỌI cấu hình, giống hạn phản hồi: nó là việc dọn dẹp
      * của một bảng mà đăng nhập ghi vào, không liên quan gì tới chat hay ngày lễ.
      */
+    /*
+     * Vòng đời gói (W2 — ADR 0015/0020/0026): nhắc hạn, chuyển tuyến hoa hồng khi hết ân hạn
+     * (KHÔNG gỡ xe khỏi chợ), void hoá đơn quá hạn, chào gói khi tiêu hết lượt miễn phí.
+     * Việc nghiệp vụ lõi — chạy ở mọi cấu hình.
+     */
+    loop('vòng đời gói', LOCK_SUBSCRIPTION_LIFECYCLE, SUBSCRIPTION_LIFECYCLE_INTERVAL_MS, async () => {
+      const result = await sweepSubscriptionLifecycle(prisma);
+      if (
+        result.renewalReminders ||
+        result.expiryNotices ||
+        result.lapsed ||
+        result.invoicesVoided ||
+        result.freeTripOffers
+      ) {
+        console.log(
+          `vòng đời gói: nhắc ${result.renewalReminders}, hết hạn ${result.expiryNotices}, ` +
+            `chuyển tuyến ${result.lapsed}, void hoá đơn ${result.invoicesVoided}, chào gói ${result.freeTripOffers}`,
+        );
+      }
+    }),
     loop('dọn phiên OAuth dở dang', LOCK_OAUTH_STATES, OAUTH_STATE_INTERVAL_MS, async () => {
       const purged = await purgeExpiredOauthStates(prisma);
       // Chỉ log khi có việc — mỗi giờ một dòng "0/0" là nhiễu, không phải dấu hiệu sống.

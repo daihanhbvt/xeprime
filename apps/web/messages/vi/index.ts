@@ -24,6 +24,8 @@ import shops from '@xeprime/domain/messages/vi/shops.json';
 import chat from '@xeprime/domain/messages/vi/chat.json';
 import trips from '@xeprime/domain/messages/vi/trips.json';
 import account from '@xeprime/domain/messages/vi/account.json';
+import legal from '@xeprime/domain/messages/vi/legal.json';
+import support from '@xeprime/domain/messages/vi/support.json';
 import manageCommon from '@xeprime/domain/messages/vi/manage-common.json';
 import dashboard from '@xeprime/domain/messages/vi/dashboard.json';
 import shopOnboarding from '@xeprime/domain/messages/vi/shop-onboarding.json';
@@ -35,6 +37,11 @@ import vehicles from '@xeprime/domain/messages/vi/vehicles.json';
 import branches from '@xeprime/domain/messages/vi/branches.json';
 import customers from '@xeprime/domain/messages/vi/customers.json';
 import finance from '@xeprime/domain/messages/vi/finance.json';
+import adminPlans from '@xeprime/domain/messages/vi/admin-plans.json';
+import subscription from '@xeprime/domain/messages/vi/subscription.json';
+import members from '@xeprime/domain/messages/vi/members.json';
+import drivers from '@xeprime/domain/messages/vi/drivers.json';
+import maintenance from '@xeprime/domain/messages/vi/maintenance.json';
 
 const messages = {
   Common: common,
@@ -49,6 +56,8 @@ const messages = {
   Chat: chat,
   Trips: trips,
   Account: account,
+  Legal: legal,
+  Support: support,
   ManageCommon: manageCommon,
   Dashboard: dashboard,
   ShopOnboarding: shopOnboarding,
@@ -60,6 +69,11 @@ const messages = {
   Branches: branches,
   Customers: customers,
   Finance: finance,
+  AdminPlans: adminPlans,
+  Subscription: subscription,
+  Members: members,
+  Drivers: drivers,
+  Maintenance: maintenance,
 };
 
 export default messages;

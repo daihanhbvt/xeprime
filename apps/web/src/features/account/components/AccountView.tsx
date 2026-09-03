@@ -1,9 +1,17 @@
 'use client';
 
-import { CheckCircleFilled, MailOutlined, PhoneOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  CheckCircleFilled,
+  EditOutlined,
+  LockOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  SafetyCertificateOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Alert, App, Avatar, Button, Card, Spin, Tag } from 'antd';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { STATUS_COLOR } from '@xeprime/types';
 import { accountProfileSchema, type AccountProfileValues } from '@xeprime/validators';
@@ -33,8 +41,6 @@ export function AccountView() {
 
   return (
     <>
-      <ShopEntryCard />
-
       {profile.isLoading ? (
         <div className={styles.center}>
           <Spin size="large" />
@@ -45,7 +51,10 @@ export function AccountView() {
           <Button onClick={() => void profile.refetch()}>{tCommon('actions.retry')}</Button>
         </div>
       ) : profile.data ? (
-        <ProfileForm profile={profile.data} />
+        <>
+          <ProfileForm profile={profile.data} />
+          <ShopEntryCard />
+        </>
       ) : null}
     </>
   );
@@ -56,6 +65,7 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const update = useUpdateMyProfile();
+  const [isEditing, setIsEditing] = useState(false);
 
   const { control, handleSubmit, reset, formState } = useForm<AccountProfileValues>({
     resolver: yupResolver(accountProfileSchema),
@@ -80,70 +90,123 @@ function ProfileForm({ profile }: { profile: UserProfile }) {
     update.mutate(
       { displayName: values.displayName, avatarUrl: values.avatarUrl ?? undefined },
       {
-        onSuccess: () => message.success(t('saved')),
+        onSuccess: () => {
+          message.success(t('saved'));
+          setIsEditing(false);
+        },
         onError: (err) => message.error(getErrorMessage(err)),
       },
     );
   });
 
+  function cancelEditing() {
+    reset({ displayName: profile.displayName, avatarUrl: profile.avatarUrl ?? null });
+    setIsEditing(false);
+  }
+
   return (
     <Card className={styles.card}>
-      <div className={styles.identity}>
-        <Avatar size={72} src={avatarUrl || undefined} className={styles.avatar}>
-          {initial(displayName || profile.displayName)}
-        </Avatar>
-        <div>
-          <div className={styles.name}>{displayName || profile.displayName}</div>
-          <div className={styles.contactRow}>
-            <MailOutlined /> {profile.email ?? t('noEmail')}
+      <div className={styles.inner}>
+        <div className={styles.cardHead}>
+          <div>
+            <span className={styles.eyebrow}>
+              <SafetyCertificateOutlined aria-hidden />
+              {t('profile.eyebrow')}
+            </span>
+            <h2 className={styles.title}>{t('profile.title')}</h2>
+            <p className={styles.description}>{t('profile.description')}</p>
           </div>
-          <div className={styles.contactRow}>
-            <PhoneOutlined /> {profile.phone ?? t('noPhone')}
-            {profile.phone && profile.phoneVerified ? (
-              <Tag color={STATUS_COLOR.SUCCESS} className={styles.verified}>
-                <CheckCircleFilled /> {t('verified')}
-              </Tag>
-            ) : null}
+          <Button
+            icon={<EditOutlined />}
+            onClick={() => setIsEditing(true)}
+            disabled={isEditing || update.isPending}
+          >
+            {t('profile.edit')}
+          </Button>
+        </div>
+
+        <div className={styles.profileGrid}>
+          <section className={styles.summary} aria-label={t('profile.accountLabel')}>
+            <Avatar size={104} src={avatarUrl || undefined} className={styles.avatar}>
+              {initial(displayName || profile.displayName)}
+            </Avatar>
+            <div className={styles.name}>{displayName || profile.displayName}</div>
+            <div className={styles.accountLabel}>{t('profile.accountLabel')}</div>
+          </section>
+
+          <dl className={styles.details}>
+            <div className={styles.detailRow}>
+              <dt>
+                <MailOutlined aria-hidden />
+                {t('profile.email')}
+              </dt>
+              <dd>{profile.email ?? t('noEmail')}</dd>
+            </div>
+            <div className={styles.detailRow}>
+              <dt>
+                <PhoneOutlined aria-hidden />
+                {t('profile.phone')}
+              </dt>
+              <dd>
+                {profile.phone ?? t('noPhone')}
+                {profile.phone ? (
+                  <Tag
+                    color={profile.phoneVerified ? STATUS_COLOR.SUCCESS : STATUS_COLOR.WARNING}
+                    className={styles.verified}
+                  >
+                    {profile.phoneVerified ? <CheckCircleFilled /> : null}
+                    {profile.phoneVerified ? t('verified') : t('profile.unverified')}
+                  </Tag>
+                ) : null}
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        {isEditing ? (
+          <form onSubmit={onSubmit} noValidate className={styles.form}>
+            <div className={styles.fields}>
+              <TextField
+                control={control}
+                name="displayName"
+                label={t('displayName')}
+                placeholder={t('displayNamePlaceholder')}
+                autoComplete="name"
+                prefix={<UserOutlined />}
+                disabled={update.isPending}
+              />
+              <TextField
+                control={control}
+                name="avatarUrl"
+                label={t('avatarUrl')}
+                placeholder={t('avatarUrlPlaceholder')}
+                disabled={update.isPending}
+              />
+            </div>
+            <div className={styles.formActions}>
+              <Button onClick={cancelEditing} disabled={update.isPending}>
+                {tCommon('actions.cancel')}
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={update.isPending}
+                disabled={!formState.isDirty && !update.isPending}
+              >
+                {tCommon('actions.saveChanges')}
+              </Button>
+            </div>
+          </form>
+        ) : null}
+
+        <div className={styles.securityNote}>
+          <LockOutlined className={styles.securityIcon} aria-hidden />
+          <div>
+            <h3 className={styles.securityTitle}>{t('profile.securityTitle')}</h3>
+            <p className={styles.securityDescription}>{t('profile.securityDescription')}</p>
           </div>
         </div>
       </div>
-
-      <form onSubmit={onSubmit} noValidate className={styles.form}>
-        <TextField
-          control={control}
-          name="displayName"
-          label={t('displayName')}
-          placeholder={t('displayNamePlaceholder')}
-          autoComplete="name"
-          prefix={<UserOutlined />}
-          disabled={update.isPending}
-        />
-        <TextField
-          control={control}
-          name="avatarUrl"
-          label={t('avatarUrl')}
-          placeholder="https://…"
-          disabled={update.isPending}
-        />
-
-        <Alert
-          type="info"
-          showIcon
-          className={styles.readonlyNote}
-          message={t('identityLockedTitle')}
-          description={t('identityLockedBody')}
-        />
-
-        <Button
-          type="primary"
-          htmlType="submit"
-          size="large"
-          loading={update.isPending}
-          disabled={!formState.isDirty && !update.isPending}
-        >
-          {tCommon('actions.saveChanges')}
-        </Button>
-      </form>
     </Card>
   );
 }

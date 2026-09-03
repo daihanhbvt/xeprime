@@ -7,12 +7,12 @@ import { SERVICE_TYPE, VEHICLE_TYPE_LABEL, type VehicleType } from '@xeprime/typ
 import { applyDiscountPercent } from '@xeprime/domain';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
-import { IconButton } from '@/components/ui/IconButton';
+import { DetailArrow } from '@/components/ui/DetailArrow';
 import type { IconName } from '@/components/ui/Chip';
 import { useCatalogLabels } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
 import type { PublicListing } from '../api';
 
@@ -91,7 +91,9 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
   return (
     <Card
       padded={false}
-      {...(open ? { onPress: open, accessibilityLabel: t('viewDetail', { name: listing.name }) } : {})}
+      {...(open
+        ? { onPress: open, accessibilityLabel: t('viewDetail', { name: listing.name }) }
+        : {})}
     >
       <YStack bg={colors.surfaceMuted} aspectRatio={PHOTO_RATIO}>
         {listing.mainImageUrl ? (
@@ -108,19 +110,16 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
         )}
 
         {/*
-          Mũi tên chỉ là DẤU CHỈ ĐƯỜNG — cả thẻ đã bấm được (thẻ phẳng không tự nói điều đó).
-          `accessible={false}` để trình đọc màn hình không đọc hai lần cùng một đích.
+          Mũi tên GIỮ NGUYÊN chỗ cũ: đè lên ảnh, góc trên-phải. `inset` DƯƠNG vì ảnh không có
+          đệm — lề âm mặc định (dành cho khối chữ đã đệm) sẽ đẩy glyph ra ngoài mép ảnh.
+          Hình dạng thì lấy chuẩn ở thẻ chuyến: glyph trần, không đĩa nền.
         */}
         {open ? (
-          <XStack pos="absolute" top={space.sm} right={space.sm} accessible={false}>
-            <IconButton
-              icon="chevron-forward"
-              label={t('viewDetail', { name: listing.name })}
-              onPress={open}
-              tone="surface"
-              size={18}
-            />
-          </XStack>
+          <DetailArrow
+            label={t('viewDetail', { name: listing.name })}
+            onPress={open}
+            inset={space.sm}
+          />
         ) : null}
 
         <XStack pos="absolute" top={space.sm} left={space.sm} gap={space.xs}>
@@ -147,7 +146,9 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
         </YStack>
 
         <XStack gap={space.md} rowGap={space.md} flexWrap="wrap">
-          {listing.shopProvince ? <Meta icon="location-outline" value={listing.shopProvince} /> : null}
+          {listing.shopProvince ? (
+            <Meta icon="location-outline" value={listing.shopProvince} />
+          ) : null}
           {fuel ? <Meta icon="water-outline" value={fuel} /> : null}
           {listing.seatCount ? (
             <Meta icon="people-outline" value={t('seats', { count: listing.seatCount })} />
@@ -157,7 +158,7 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
         <XStack ai="center" gap={space.xs}>
           {hasRating ? (
             <>
-              <Ionicons name="star" size={13} color={colors.primary} />
+              <Ionicons name="star" size={iconSize.xs} color={colors.primary} />
               <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
                 {fmt.rating(rating)}
               </Text>
@@ -235,8 +236,8 @@ function VehicleCardImpl({ listing, onPress }: VehicleCardProps) {
 
 function Meta({ icon, value }: { icon: IconName; value: string }) {
   return (
-    <XStack ai="center" gap={4}>
-      <Ionicons name={icon} size={13} color={colors.textMuted} />
+    <XStack ai="center" gap={space.xs}>
+      <Ionicons name={icon} size={iconSize.xs} color={colors.textMuted} />
       <Text col={colors.textMuted} fos={fontSize.bodySm}>
         {value}
       </Text>

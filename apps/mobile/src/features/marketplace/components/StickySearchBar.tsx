@@ -8,7 +8,8 @@ import { serviceUsesRentalRange } from '@xeprime/domain';
 import type { Dayjs } from '@xeprime/domain';
 import { useDatePickerPattern } from '@/i18n/use-app-format';
 import { elevation } from '@/theme/elevation';
-import { colors, fontSize, radius, sizing, space } from '@/theme/tokens';
+import { appStyles } from '@/theme/styles';
+import { colors, fontSize, iconSize, radius, sizing, space } from '@/theme/tokens';
 import { useSearchExperience } from '../search-context';
 import { LocationPicker } from './LocationPicker';
 import { RentalRangeSheet } from './RentalRangeSheet';
@@ -104,7 +105,7 @@ export function StickySearchBar({
         >
           <XStack
             ai="center"
-            gap={4}
+            gap={space.xs}
             bg={colors.surfaceMuted}
             br={radius.pill}
             bw={1}
@@ -126,28 +127,28 @@ export function StickySearchBar({
             accessibilityRole="button"
             accessibilityLabel={t('rental.label')}
             hitSlop={{ top: TOUCH_SLOP, bottom: TOUCH_SLOP }}
-            style={{ flex: 1 }}
+            style={appStyles.fill}
           >
-          <XStack
-            ai="center"
-            jc="center"
-            gap={4}
-            bg={colors.surfaceMuted}
-            br={radius.pill}
-            bw={1}
-            bc={colors.border}
-            px={space.sm}
-            h={CONTROL_HEIGHT}
-          >
-            <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-            <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
-              {day(draft.rental.pickupAt)}
-            </Text>
-            <Ionicons name="arrow-forward" size={11} color={colors.textMuted} />
-            <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
-              {day(draft.rental.returnAt)}
-            </Text>
-          </XStack>
+            <XStack
+              ai="center"
+              jc="center"
+              gap={space.xs}
+              bg={colors.surfaceMuted}
+              br={radius.pill}
+              bw={1}
+              bc={colors.border}
+              px={space.sm}
+              h={CONTROL_HEIGHT}
+            >
+              <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+              <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
+                {day(draft.rental.pickupAt)}
+              </Text>
+              <Ionicons name="arrow-forward" size={11} color={colors.textMuted} />
+              <Text col={colors.text} fos={fontSize.bodySm} numberOfLines={1}>
+                {day(draft.rental.returnAt)}
+              </Text>
+            </XStack>
           </Pressable>
         ) : null}
 
@@ -165,7 +166,7 @@ export function StickySearchBar({
             ai="center"
             jc="center"
           >
-            <Ionicons name="search" size={16} color={colors.onPrimary} />
+            <Ionicons name="search" size={iconSize.sm} color={colors.onPrimary} />
           </XStack>
         </Pressable>
 
@@ -209,4 +210,3 @@ export function StickySearchBar({
 export function stickyThreshold(screenWidth: number): number {
   return screenWidth / (780 / 390);
 }
-

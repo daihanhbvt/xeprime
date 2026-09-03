@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import dayjs, { type Dayjs } from 'dayjs';
+import { appWallClockToIso, toAppTz, type Dayjs } from '@/lib/datetime';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { buildBusyDayIndex } from '@/lib/rental-busy';
@@ -14,6 +14,10 @@ import { RentalRangePanel, type RentalMode, type RentalRangeDraft } from './Rent
  * trả về cùng một cặp `{pickupAt, returnAt}` hợp lệ, và tab "Thuê theo giờ" phải TỰ TÍNH giờ trả
  * = giờ nhận + thời lượng (khách không phải nhẩm cộng, và không có đường nào tạo ra giờ trả
  * trước giờ nhận).
+ *
+ * Mọi mốc dựng bằng `toAppTz`, KHÔNG bằng `dayjs('…+07:00')`: giá trị đi vào panel luôn là giờ
+ * `Asia/Ho_Chi_Minh` (CLAUDE.md §9), còn `dayjs` trần cho mặt đồng hồ theo GIỜ MÁY — thứ chỉ
+ * trùng nhau khi `TZ` được ghim, tức là đúng chỗ bộ test thôi kiểm tra được gì.
  */
 afterEach(cleanup);
 
@@ -44,7 +48,7 @@ function lastChange(onChange: ReturnType<typeof vi.fn>): RentalRangeDraft {
 }
 
 describe('RentalRangePanel — thuê theo giờ', () => {
-  const start = dayjs('2026-09-01T10:00:00.000+07:00');
+  const start = toAppTz('2026-09-01T10:00:00.000+07:00');
 
   it('chọn thời lượng → giờ trả = giờ nhận + số giờ, cả hai đều hợp lệ', () => {
     const { onChange } = renderPanel({ pickupAt: start, returnAt: start.add(4, 'hour') });
@@ -69,8 +73,8 @@ describe('RentalRangePanel — thuê theo giờ', () => {
 
   it('chuyển từ tab ngày sang tab giờ chuẩn hoá giá trị thành "bắt đầu + thời lượng"', () => {
     const daily: RentalRangeDraft = {
-      pickupAt: dayjs('2026-09-01T10:00:00.000+07:00'),
-      returnAt: dayjs('2026-09-05T10:00:00.000+07:00'),
+      pickupAt: toAppTz('2026-09-01T10:00:00.000+07:00'),
+      returnAt: toAppTz('2026-09-05T10:00:00.000+07:00'),
     };
     const { onChange, onModeChange } = renderPanel(daily, 'daily');
 
@@ -89,7 +93,7 @@ describe('RentalRangePanel — thuê theo giờ', () => {
 describe('RentalRangePanel — thuê theo ngày', () => {
   it('chưa đủ hai đầu thì KHÔNG cho áp dụng', () => {
     const value: RentalRangeDraft = {
-      pickupAt: dayjs('2026-09-01T10:00:00.000+07:00'),
+      pickupAt: toAppTz('2026-09-01T10:00:00.000+07:00'),
       returnAt: null,
     };
     render(
@@ -111,7 +115,7 @@ describe('RentalRangePanel — thuê theo ngày', () => {
   });
 
   it('giờ trả không sau giờ nhận → nói rõ và chặn áp dụng', () => {
-    const at = dayjs('2026-09-01T10:00:00.000+07:00');
+    const at = toAppTz('2026-09-01T10:00:00.000+07:00');
     const value: RentalRangeDraft = { pickupAt: at, returnAt: at as Dayjs };
     render(
       <RentalRangePanel
@@ -175,7 +179,7 @@ describe('RentalRangePanel — lịch bận của xe', () => {
       .find((b) => b.textContent === label && b.closest('.rdp-day')) as HTMLButtonElement;
 
   it('ngày bận trọn ngày bị khoá và nói rõ lý do; ngày bận vài giờ vẫn bấm được', () => {
-    renderBusy({ pickupAt: dayjs(isoVn('2026-09-05T10:00')), returnAt: null });
+    renderBusy({ pickupAt: toAppTz(isoVn('2026-09-05T10:00')), returnAt: null });
 
     const full = dayButton('11');
     expect(full.disabled).toBe(true);
@@ -187,7 +191,7 @@ describe('RentalRangePanel — lịch bận của xe', () => {
   });
 
   it('ngày TRẢ sau một ngày bận trọn bị khoá — khoảng không đi xuyên qua ngày bận được', () => {
-    renderBusy({ pickupAt: dayjs(isoVn('2026-09-05T10:00')), returnAt: null });
+    renderBusy({ pickupAt: toAppTz(isoVn('2026-09-05T10:00')), returnAt: null });
 
     // 10 (bận một phần) vẫn là ngày trả hợp lệ; 12 nằm SAU ngày bận trọn 11 nên không.
     expect(dayButton('10').disabled).toBe(false);
@@ -202,8 +206,8 @@ describe('RentalRangePanel — lịch bận của xe', () => {
 
   it('khoảng chọn chạm giờ bận → tắt "Áp dụng" và nêu đúng khung giờ', () => {
     renderBusy({
-      pickupAt: dayjs(isoVn('2026-09-10T09:00')),
-      returnAt: dayjs(isoVn('2026-09-12T09:00')),
+      pickupAt: toAppTz(isoVn('2026-09-10T09:00')),
+      returnAt: toAppTz(isoVn('2026-09-12T09:00')),
     });
 
     expect(screen.getByRole('alert').textContent).toContain('08:00–12:00');
@@ -214,8 +218,8 @@ describe('RentalRangePanel — lịch bận của xe', () => {
 
   it('nhận xe ngay khi hết giờ bận thì hợp lệ — không cảnh báo, không chặn', () => {
     renderBusy({
-      pickupAt: dayjs(isoVn('2026-09-10T12:00')),
-      returnAt: dayjs(isoVn('2026-09-10T20:00')),
+      pickupAt: toAppTz(isoVn('2026-09-10T12:00')),
+      returnAt: toAppTz(isoVn('2026-09-10T20:00')),
     });
 
     expect(screen.queryByRole('alert')).toBeNull();
@@ -227,7 +231,7 @@ describe('RentalRangePanel — lịch bận của xe', () => {
   it('không truyền lịch bận thì không khoá gì và không có chú giải', () => {
     render(
       <RentalRangePanel
-        value={{ pickupAt: dayjs(isoVn('2026-09-05T10:00')), returnAt: null }}
+        value={{ pickupAt: toAppTz(isoVn('2026-09-05T10:00')), returnAt: null }}
         onChange={vi.fn()}
         mode="daily"
         onModeChange={vi.fn()}
@@ -239,5 +243,76 @@ describe('RentalRangePanel — lịch bận của xe', () => {
 
     expect(dayButton('11').disabled).toBe(false);
     expect(screen.queryByText('Ngày bận')).toBeNull();
+  });
+});
+
+/**
+ * Múi giờ của MÁY không được rò vào khoảng thuê (nợ kỹ thuật đóng 03/09/2026).
+ *
+ * Panel này nói chuyện với `react-day-picker` bằng `Date` — thứ mang ngày lịch theo GIỜ MÁY.
+ * Trước đợt sửa, một ô lịch bấm trên máy đặt ở UTC sinh ra mốc lệch 7 tiếng và cả luồng đặt xe
+ * gửi lên server một khung giờ khác thứ khách nhìn thấy. `ci.yml` ghim `TZ` nên bộ test cũ
+ * không bao giờ chạm tới chuyện đó; ba múi giờ dưới đây là chỗ nó không trốn được nữa.
+ */
+describe('RentalRangePanel — độc lập với múi giờ máy', () => {
+  const HOST_TIME_ZONES = ['Asia/Ho_Chi_Minh', 'UTC', 'America/New_York'] as const;
+  const ORIGINAL_TZ = process.env.TZ;
+
+  afterEach(() => {
+    process.env.TZ = ORIGINAL_TZ;
+  });
+
+  const dayButton = (label: string) =>
+    screen
+      .getAllByRole('button')
+      .find((b) => b.textContent === label && b.closest('.rdp-day')) as HTMLButtonElement;
+
+  it.each(HOST_TIME_ZONES)('máy đặt ở %s: bấm ô 12/09 cho đúng 12/09 10:00 giờ VN', (hostTz) => {
+    process.env.TZ = hostTz;
+
+    const onChange = vi.fn();
+    render(
+      <RentalRangePanel
+        // 05/09 10:00 giờ VN — đã có ngày nhận, cú bấm tiếp theo là ngày TRẢ.
+        value={{ pickupAt: toAppTz('2026-09-05T03:00:00.000Z'), returnAt: null }}
+        onChange={onChange}
+        mode="daily"
+        onModeChange={vi.fn()}
+        months={1}
+        onApply={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(dayButton('12'));
+
+    const next = lastChange(onChange);
+    expect(next.returnAt?.format('YYYY-MM-DD HH:mm')).toBe('2026-09-12 10:00');
+    // Và đây là con số THẬT SỰ đi lên server.
+    expect(appWallClockToIso(next.returnAt!)).toBe('2026-09-12T03:00:00.000Z');
+  });
+
+  it.each(HOST_TIME_ZONES)('máy đặt ở %s: tab theo giờ giữ nguyên mốc gửi đi', (hostTz) => {
+    process.env.TZ = hostTz;
+
+    const onChange = vi.fn();
+    const start = toAppTz('2026-09-01T03:00:00.000Z'); // 01/09 10:00 giờ VN
+    render(
+      <RentalRangePanel
+        value={{ pickupAt: start, returnAt: start.add(4, 'hour') }}
+        onChange={onChange}
+        mode="hourly"
+        onModeChange={vi.fn()}
+        months={1}
+        onApply={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText('6 giờ'));
+
+    const next = lastChange(onChange);
+    expect(appWallClockToIso(next.pickupAt!)).toBe('2026-09-01T03:00:00.000Z');
+    expect(appWallClockToIso(next.returnAt!)).toBe('2026-09-01T09:00:00.000Z');
   });
 });

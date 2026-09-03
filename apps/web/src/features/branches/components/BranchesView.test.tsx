@@ -19,6 +19,16 @@ const state = vi.hoisted(() => ({
   isError: false,
   error: null as unknown,
 }));
+
+// Nút/hành động ghi bọc theo cờ năng lực (ADR 0027), và hook cờ đọc `/auth/me` qua TanStack
+// Query. Màn này không KIỂM cờ — nó chỉ dùng — nên chặn ở đúng ranh giới đó thay vì dựng
+// QueryClient giả. `enabled` = gian hàng đang có gói, tức là hành vi mặc định.
+vi.mock('@/hooks/use-feature', () => ({
+  useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
+  useFeatureStates: () => ({}),
+  usePlanEndsAt: () => null,
+}));
+
 const action = vi.hoisted(() => ({ mutate: vi.fn() }));
 
 vi.mock('../hooks/use-branches', () => ({

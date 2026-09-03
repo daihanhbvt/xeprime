@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
+import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
 import {
   CurrentTenant,
   CurrentUser,
   RequirePermissions,
   TenantScoped,
+  RequiresFeature,
 } from '../../common/decorators';
 import { OkResultDto } from '../../common/dto/api-response.dto';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
@@ -28,6 +29,7 @@ import {
 @ApiTags('drivers')
 @Controller('drivers')
 @TenantScoped()
+@RequiresFeature(PLAN_FEATURE.DRIVERS)
 export class DriversController {
   constructor(private readonly drivers: DriversService) {}
 

@@ -4,7 +4,7 @@ import { Spin } from 'antd';
 import { BOOKING_STATUS_META, type BookingStatus } from '@xeprime/types';
 import { StatusTag } from '@/components/data-display/StatusTag';
 import type { BookingListItem } from '@/features/bookings/types';
-import styles from './BookingMiniList.module.css';
+import styles from './MiniList.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 
 /**
@@ -48,7 +48,11 @@ export function BookingMiniList({
             </div>
             <div className={styles.right}>
               <span className={styles.price}>{fmt.money(b.totalAmount)}</span>
-              <StatusTag value={b.status as BookingStatus} meta={BOOKING_STATUS_META} group="bookingStatus" />
+              <StatusTag
+                value={b.status as BookingStatus}
+                meta={BOOKING_STATUS_META}
+                group="bookingStatus"
+              />
             </div>
           </button>
         </li>

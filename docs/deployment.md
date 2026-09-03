@@ -676,6 +676,7 @@ Settings; Secret bị che và không đọc lại được sau khi lưu.
 | `MOBILE_ACCESS_TTL_MINUTES` · `MOBILE_REFRESH_TTL_DAYS` | `15` · `60` | |
 | `MOBILE_JWT_AUDIENCE` · `MOBILE_AUTH_REDIRECT_URIS` | `xeprime-mobile` · `xeprime://auth/callback` | |
 | `OTP_MODE` | `mock` | mã in ra log và trả trong response |
+| `PLAN_FEATURE_ENFORCEMENT` | `warn` | trục năng lực theo gói (ADR 0027). Xem §9.4 trước khi đổi sang `on` |
 | `OTP_TTL_MINUTES` · `OTP_RESEND_COOLDOWN_SECONDS` · `OTP_MAX_SENDS_PER_HOUR` · `OTP_MAX_ATTEMPTS` | `5` · `60` · `5` · `5` | |
 | `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` | trống | email in ra log |
 | `SMTP_FROM` | `XePrime STG <no-reply@xeprime.vn>` | |
@@ -738,6 +739,49 @@ khi cần chạy stack ngay trên máy.
 
 Workflow cũng `git checkout --detach <sha>` trên VPS thay vì `git pull`: compose và Caddyfile
 trên máy khớp **chính xác** commit đã sinh ra image.
+
+### 9.4b Bật cổng chặn năng lực theo gói (`PLAN_FEATURE_ENFORCEMENT`)
+
+Biến này quyết định `PlanFeatureGuard` (ADR 0027) chặn thật hay chỉ ghi log. Ba giá trị:
+
+| Giá trị | Hành vi |
+| --- | --- |
+| `off` | bỏ qua hoàn toàn — lối thoát hiểm, không cần revert code |
+| `warn` | **mặc định**: ghi log `plan-feature: sẽ bị chặn khi …` kèm `{tenantId, feature, state, method, path}`, nhưng **cho qua** |
+| `on` | chặn thật: `hidden` → 403 `FEATURE_NOT_IN_PLAN`, `read_only` + ghi → 403 `FEATURE_READ_ONLY` |
+
+**Bật `on` là một lần deploy RIÊNG, không kèm bất kỳ thay đổi nào khác.** Lý do rất cụ thể: nếu
+nó đi chung với một đợt sửa dữ liệu (seed cờ, backfill gói) thì khi sổ sách của gian hàng thật bị
+khoá, không ai biết nên revert cái gì — còn tách riêng thì rollback là đổi lại một biến.
+
+Điều kiện tiên quyết, **cả hai** phải đạt:
+
+1. **Log cảnh báo đã im** qua ít nhất một chu kỳ kinh doanh. Còn hit nghĩa là hoặc gói thiếu cờ,
+   hoặc vị từ backfill `used_features` siết quá tay — sửa dữ liệu, deploy lại, ngâm lại.
+2. **Truy vấn kiểm chứng trả về 0** (chạy trên chính database của môi trường đó):
+
+   ```sql
+   WITH cur AS (
+     SELECT t.id, t.used_features,
+            COALESCE(p.limits_json->'features', '[]'::jsonb) AS pf, p.code
+     FROM tenants t
+     LEFT JOIN LATERAL (
+       SELECT pl.* FROM tenant_subscriptions ts JOIN plans pl ON pl.id = ts.plan_id
+       WHERE ts.tenant_id = t.id AND ts.status = 'active'
+         AND ts.starts_at <= now() AND ts.ends_at > now()
+       ORDER BY ts.ends_at DESC LIMIT 1) p ON true
+     WHERE t.deleted_at IS NULL)
+   SELECT count(*) FROM cur
+   WHERE code IS NULL
+      OR EXISTS (SELECT 1 FROM unnest(used_features) f WHERE NOT (pf ? f));
+   ```
+
+   Khác 0 nghĩa là có gian hàng **không có gói hiện hành** (mất sạch tính năng nâng cao, kể cả
+   quyền đọc) hoặc **đang dùng một cờ mà gói của họ không có**. Hai nguồn kiểm chứng này bổ sung
+   nhau: truy vấn thấy trạng thái đã ghi, log thấy cả những đường dùng mà backfill đoán sai.
+
+Rollback: đổi `PLAN_FEATURE_ENFORCEMENT` về `warn` ở GitHub Environment rồi chạy lại workflow —
+không revert commit nào.
 
 ### 9.5 App native KHÔNG deploy lên VPS
 

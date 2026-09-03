@@ -1,7 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { forgotPasswordSchema, type ForgotPasswordValues } from '@xeprime/validators';
-import { useState } from 'react';
+import { buildForgotPasswordSchema, type ForgotPasswordValues } from '@xeprime/validators';
+import { useAuthSchemaLabels } from './use-auth-schema-labels';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { Text, YStack } from 'tamagui';
 import { useTranslations } from 'use-intl';
@@ -33,13 +34,21 @@ export function ForgotPasswordScreen({ onBackToLogin }: { onBackToLogin: () => v
   const toast = useAppToast();
   const [sentTo, setSentTo] = useState<string | null>(null);
 
+  /*
+   * Dựng lại schema khi ngôn ngữ đổi — LUẬT ở `@xeprime/validators`, chỉ câu chữ đi vào từ đây.
+   * `useMemo` vì `yupResolver` nhận object mới mỗi nhịp thì RHF xác thực lại toàn form sau từng
+   * phím gõ.
+   */
+  const labels = useAuthSchemaLabels();
+  const schema = useMemo(() => buildForgotPasswordSchema(labels), [labels]);
+
   const {
     control,
     handleSubmit,
     formState: { isValid },
   } = useForm<ForgotPasswordValues>({
     mode: 'onChange',
-    resolver: yupResolver(forgotPasswordSchema),
+    resolver: yupResolver(schema),
     defaultValues: { email: '' },
   });
 

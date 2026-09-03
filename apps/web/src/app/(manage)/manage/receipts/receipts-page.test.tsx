@@ -136,6 +136,14 @@ vi.mock('@/hooks/use-permissions', () => ({
     isLoading: false,
   }),
 }));
+// Nút "Tạo phiếu" bọc trong `FeatureWriteTooltip`, và hook cờ năng lực đọc `/auth/me` qua
+// TanStack Query. Trang này không KIỂM cờ — nó chỉ dùng — nên chặn ở đúng ranh giới đó thay vì
+// dựng QueryClient giả. `enabled` = gian hàng đang có gói, tức là hành vi mặc định.
+vi.mock('@/hooks/use-feature', () => ({
+  useFeature: () => ({ state: 'enabled', canWrite: true, isVisible: true, planEndsAt: null }),
+  useFeatureStates: () => ({}),
+  usePlanEndsAt: () => null,
+}));
 
 vi.mock('@/hooks/use-media-query', () => ({
   useIsMobile: () => false,

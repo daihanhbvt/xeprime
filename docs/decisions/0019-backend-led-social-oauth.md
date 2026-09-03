@@ -5,8 +5,8 @@ Ngày: 26/08/2026 · Trạng thái: Accepted
 Liên quan: [ADR 0002](0002-auth-session-cookie.md) (session cookie httpOnly — **ADR này ghi đè
 phần "Firebase là provider"**), [ADR 0009](0009-chat-firestore-projection.md) (Firestore là
 projection của chat), [ADR 0012](0012-i18n-shared-url-cookie-locale.md) (giao diện đọc MÃ lỗi,
-không đọc câu chữ của backend), [ADR 0017](0017-native-bearer-auth.md) (phiên app native),
-[docs/plans/groovy-wibbling-snowglobe.md](../plans/groovy-wibbling-snowglobe.md) (hồ sơ phân tích).
+không đọc câu chữ của backend), [ADR 0017](0017-native-bearer-auth.md) (phiên app native). Hồ sơ
+phân tích triển khai đã nghỉ hưu ngày 03/09/2026 và còn trong lịch sử Git.
 
 ## Bối cảnh
 

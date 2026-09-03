@@ -6,6 +6,8 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  CreditCardOutlined,
+  GiftOutlined,
   HourglassOutlined,
   RollbackOutlined,
   ShopOutlined,
@@ -33,6 +35,11 @@ const ICONS: Readonly<Record<NotificationType, ReactNode>> = {
   [NOTIFICATION_TYPE.VEHICLE_APPROVED]: <CarOutlined />,
   [NOTIFICATION_TYPE.VEHICLE_REJECTED]: <CarOutlined />,
   [NOTIFICATION_TYPE.REVIEW_RECEIVED]: <StarOutlined />,
+  // Vòng đời gói (W2, ADR 0015/0026) — cùng icon thẻ với màn "Gói của tôi".
+  [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRING]: <CreditCardOutlined />,
+  [NOTIFICATION_TYPE.SUBSCRIPTION_EXPIRED]: <CreditCardOutlined />,
+  [NOTIFICATION_TYPE.SUBSCRIPTION_LAPSED]: <CreditCardOutlined />,
+  [NOTIFICATION_TYPE.FREE_TRIPS_EXHAUSTED]: <GiftOutlined />,
 };
 
 export function notificationIcon(type: string): ReactNode {

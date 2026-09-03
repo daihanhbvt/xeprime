@@ -17,9 +17,9 @@ import {
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { checkConflict } from '@/features/bookings/api';
-import { APP_TIME_ZONE, dayjs } from '@/lib/datetime';
+import { APP_TIME_ZONE, appWallClockToIso, dayjs, toAppTz } from '@/lib/datetime';
 import { getErrorCode, getErrorMessage } from '@/services/api-client';
-import type { Dayjs } from 'dayjs';
+import type { Dayjs } from '@/lib/datetime';
 import { useCreateVehicleBlock, useUpdateVehicleBlock } from '../hooks/use-calendar-mutations';
 import type { VehicleBlock } from '../types/calendar.types';
 import styles from './VehicleBlockDialog.module.css';
@@ -87,7 +87,8 @@ function BlockForm({
       : '';
 
   const [range, setRange] = useState<{ pickupAt: Dayjs | null; returnAt: Dayjs | null }>(() => {
-    if (editing) return { pickupAt: dayjs(editing.startAt), returnAt: dayjs(editing.endAt) };
+    // Mốc UTC đang lưu → giờ VIỆT NAM cho hộp chọn khoảng (CLAUDE.md §9).
+    if (editing) return { pickupAt: toAppTz(editing.startAt), returnAt: toAppTz(editing.endAt) };
     const dayStart = dayjs
       .tz(state.mode === 'create' ? state.date : '', APP_TIME_ZONE)
       .startOf('day');
@@ -114,15 +115,15 @@ function BlockForm({
     queryKey: [
       'check-conflict',
       vehicleId,
-      range.pickupAt?.toISOString(),
-      range.returnAt?.toISOString(),
+      range.pickupAt ? appWallClockToIso(range.pickupAt) : null,
+      range.returnAt ? appWallClockToIso(range.returnAt) : null,
       editing?.id ?? null,
     ],
     queryFn: () =>
       checkConflict({
         vehicleId,
-        startAt: range.pickupAt!.toISOString(),
-        endAt: range.returnAt!.toISOString(),
+        startAt: appWallClockToIso(range.pickupAt!),
+        endAt: appWallClockToIso(range.returnAt!),
         ...(editing ? { excludeSourceId: editing.id } : {}),
       }),
     enabled: canCheck,
@@ -155,8 +156,10 @@ function BlockForm({
     };
 
     const body = {
-      startAt: range.pickupAt.toISOString(),
-      endAt: range.returnAt.toISOString(),
+      // CÙNG phép quy đổi với preview ngay trên — hai lần hỏi server phải nói về đúng một
+      // khoảng, nếu không thì cảnh báo "sạch" rồi lưu vẫn dính exclusion constraint.
+      startAt: appWallClockToIso(range.pickupAt),
+      endAt: appWallClockToIso(range.returnAt),
       reason,
       note: note.trim() || undefined,
     };

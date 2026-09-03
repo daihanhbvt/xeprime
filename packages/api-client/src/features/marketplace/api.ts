@@ -2,6 +2,7 @@ import { getApiClient } from '../../client';
 import type { Paged } from '../../client';
 import type { AbortSignalLike } from '../../http';
 import type { QueryParams } from '../../url';
+import { SERVICE_TYPE, type components } from '@xeprime/types';
 import type {
   MarketplaceFilters,
   PublicBanner,
@@ -127,3 +128,46 @@ export const marketplaceApi = {
     return getApiClient().get<PublicBanner[]>('/public/banners');
   },
 };
+
+/**
+ * Hai hình thái tham số, đúng hai mô hình giá: dịch vụ theo NGÀY gửi khoảng nhận–trả; THUÊ DÀI
+ * HẠN gửi `packageMonths` và KHÔNG gửi ngày nào — giá gói không phụ thuộc ngày nhận (ADR 0011).
+ */
+export type PublicQuoteParams =
+  | { serviceType: typeof SERVICE_TYPE.LONG_TERM; packageMonths: number }
+  | { pickupAt: string; returnAt: string; serviceType?: string; routeType?: string };
+
+export type PublicQuote = components['schemas']['PublicQuoteDto'];
+
+/**
+ * Báo giá công khai — CÙNG nguồn tính giá với luồng duyệt của shop.
+ *
+ * Con số hiển thị cho khách phải đến từ đây, không phải từ một phép nhân ở client: giá có bậc
+ * cuối tuần, ngày lễ và ưu đãi cam kết thời hạn, và mọi bản tính lại ở client đều lệch với con
+ * số gian hàng nhìn thấy khi duyệt.
+ */
+export function publicQuote(vehicleId: string, params: PublicQuoteParams): Promise<PublicQuote> {
+  return getApiClient().get<PublicQuote>(
+    `/public/listings/${encodeURIComponent(vehicleId)}/quote`,
+    params as QueryParams,
+  );
+}
+
+export type DeliveryDistance = components['schemas']['DeliveryDistanceDto'];
+
+/**
+ * Khoảng cách giao xe tới một địa chỉ + phí DỰ KIẾN.
+ *
+ * **KHÔNG ném khi không tra được** — mọi ngả hỏng về dưới dạng `status`
+ * (`@xeprime/types` → `DELIVERY_DISTANCE_STATUS`), nên nơi gọi đọc MÃ chứ không bắt lỗi. "Không
+ * tra được không phải một lỗi" là chữ trong ADR 0018.
+ *
+ * Con số trả về là ƯỚC LƯỢNG, một chiều theo đường bộ; chủ xe vẫn chốt phí trên đơn (ADR 0014).
+ * Đừng cộng nó vào tổng tiền hiển thị như một khoản đã chốt.
+ */
+export function deliveryDistance(vehicleId: string, address: string): Promise<DeliveryDistance> {
+  return getApiClient().get<DeliveryDistance>(
+    `/public/listings/${encodeURIComponent(vehicleId)}/delivery-distance`,
+    { address },
+  );
+}

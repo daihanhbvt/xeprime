@@ -81,5 +81,12 @@
     "defaultOption": "{label} (mặc định)",
     "single": "Gian hàng của bạn chỉ có một chi nhánh",
     "label": "Chi nhánh đang xem"
+  },
+  "toast": {
+    "created": "Đã tạo chi nhánh {name}",
+    "updated": "Đã cập nhật chi nhánh",
+    "setDefault": "Đã đặt làm chi nhánh mặc định",
+    "activated": "Đã bật lại chi nhánh",
+    "deactivated": "Đã ngừng hoạt động chi nhánh"
   }
 }

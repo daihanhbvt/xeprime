@@ -22,7 +22,8 @@
     "owner": "Host",
     "total": "Total",
     "awaitingQuote": "Awaiting quote",
-    "viewDetail": "View details"
+    "viewDetail": "View details",
+    "viewDetailOf": "View {name} details"
   },
   "pickup": {
     "delivery": "Delivered to you",
@@ -62,7 +63,8 @@
     "noteBlock": "Your note",
     "reviewBlock": "Your review",
     "priceBlock": "Price details",
-    "priceEmpty": "The final price appears as soon as the host accepts your request."
+    "priceEmpty": "The final price appears as soon as the host accepts your request.",
+    "destination": "Destination"
   },
   "evidence": {
     "title": "Handover records",
@@ -83,6 +85,7 @@
   },
   "subtitle": {
     "pending_approval": "Your rental request has been sent to the host",
+    "awaiting_hold": "Send the reservation payment to hold this car for you",
     "ready": "The host has confirmed your rental request",
     "active": "You have this car right now — drive safely",
     "completed": "The trip is complete. Thanks for riding with XePrime!",
@@ -154,5 +157,20 @@
     "awaitingRefund": "The host will transfer this back and mark the deposit as refunded here. XePrime records the status; it does not move money.",
     "holding": "The host holds this deposit for the whole trip. The refund amount is settled after you return the car.",
     "settled": "The deposit was fully used for the extra charges above, so there is nothing left to refund."
+  },
+  "review": {
+    "title": "Rate this trip",
+    "ratingLabel": "How was it?",
+    "commentLabel": "Comment (optional)",
+    "commentPlaceholder": "Clean car, helpful host…",
+    "submit": "Submit review",
+    "success": "Thanks for your review!",
+    "alreadyReviewed": "You have already reviewed this trip.",
+    "starA11y": "{count, plural, other {# stars}}",
+    "validation": {
+      "ratingRequired": "Pick a star rating",
+      "ratingRange": "Pick between {min} and {max} stars",
+      "commentTooLong": "Comment can be at most {max} characters"
+    }
   }
 }

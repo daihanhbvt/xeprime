@@ -1,12 +1,11 @@
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
-import { draftFromFilters, draftToFilterPatch, resolveServiceType, type RentalMode, type SearchDraft } from '@xeprime/domain';
+  draftFromFilters,
+  draftToFilterPatch,
+  resolveServiceType,
+  type RentalMode,
+  type SearchDraft,
+} from '@xeprime/domain';
 import { type MarketplaceFilters, type PublicDestination } from '@xeprime/types';
 import { PROVINCE_CODES, type RouteType, type ServiceType, type VehicleType } from '@xeprime/types';
 import type { Dayjs } from '@xeprime/domain';
@@ -154,15 +153,11 @@ export function SearchExperienceProvider({
   );
 
   /*
-   * Lịch và chế độ giờ/ngày cũng đi qua `edit` — GIỐNG web.
+   * Lịch và chế độ giờ/ngày cũng đi qua `edit` — GIỐNG web: chọn xong khoảng thuê là "Xe khả
+   * dụng" đổi theo ngay tại trang chủ, không phải chờ bấm "Tìm xe".
    *
-   * Web gọi `edit` cho cả `setRentalRange`/`setRentalMode`, nên chọn xong khoảng thuê là
-   * "Xe khả dụng" đổi theo ngay tại trang chủ. Trước đây bản native giữ hai lối này ở riêng bản
-   * nháp và bắt chờ "Tìm xe": khách bấm Áp dụng xong vẫn thấy y nguyên con số cũ.
-   *
-   * Không sợ nạp lại theo từng cú chạm lịch: một khoảng CHƯA đủ hai đầu thì
-   * `draftToFilterPatch` không phát `pickupAt`/`returnAt`, nên ngữ cảnh chỉ đổi đúng một lần
-   * — lúc khoảng đã trọn.
+   * Không sợ nạp lại theo từng cú chạm lịch: khoảng CHƯA đủ hai đầu thì `draftToFilterPatch`
+   * không phát `pickupAt`/`returnAt`, nên ngữ cảnh chỉ đổi đúng một lần — lúc khoảng đã trọn.
    */
   const setRentalRange = useCallback(
     (next: { pickupAt: Dayjs | null; returnAt: Dayjs | null }) =>
@@ -182,18 +177,15 @@ export function SearchExperienceProvider({
    * khách chưa hề chọn — bấm "Hà Nội" xong danh sách bị lọc theo khoảng đó và tụt từ 8 xe xuống 4.
    * Web làm đúng: `FeaturedLocations` bên đó gọi `setFilters({ provinceCode })`.
    */
-  const pickProvince = useCallback(
-    (next: string) => {
-      setDraft((prev) => ({ ...prev, provinceCode: next }));
-      setFiltersState((prev) => {
-        const result = { ...prev };
-        if (next) result.provinceCode = next;
-        else delete result.provinceCode;
-        return result;
-      });
-    },
-    [],
-  );
+  const pickProvince = useCallback((next: string) => {
+    setDraft((prev) => ({ ...prev, provinceCode: next }));
+    setFiltersState((prev) => {
+      const result = { ...prev };
+      if (next) result.provinceCode = next;
+      else delete result.provinceCode;
+      return result;
+    });
+  }, []);
 
   const submit = useCallback(() => setFiltersState(applied(draft)), [draft]);
 

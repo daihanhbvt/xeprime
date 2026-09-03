@@ -10,6 +10,7 @@ import { ProvincesService } from '../../src/modules/locations/provinces.service'
 import { ListingsService } from '../../src/modules/public-listings/listings.service';
 import { PublicListingsService } from '../../src/modules/public-listings/public-listings.service';
 import { PricingService } from '../../src/modules/pricing/pricing.service';
+import { TenantsService } from '../../src/modules/tenants/tenants.service';
 import { VehiclesService } from '../../src/modules/vehicles/vehicles.service';
 import type { PrismaService } from '../../src/prisma/prisma.service';
 
@@ -61,6 +62,21 @@ export function makeVehiclesService(
     new BillingService(prisma, audit),
     new CatalogService(prisma, audit),
     new PricingService(prisma, audit, new ListingsService(prisma)),
+  );
+}
+
+/**
+ * `TenantsService` — dựng ở hai spec, và nó vừa mọc thêm dependency thứ năm (`BillingService`,
+ * để `registerShop` gán gói mặc định — ADR 0015 điều 9). Đúng ca mà factory này sinh ra để giải.
+ */
+export function makeTenantsService(prisma: PrismaService): TenantsService {
+  const audit = new AuditService(prisma);
+  return new TenantsService(
+    prisma,
+    audit,
+    new ProvincesService(prisma, audit),
+    makeBranchesService(prisma),
+    new BillingService(prisma, audit),
   );
 }
 

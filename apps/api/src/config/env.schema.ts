@@ -212,6 +212,20 @@ export const envSchema = z
     // không thể mô tả hai lịch khác nhau.
     GOOGLE_HOLIDAY_CALENDAR_ID: z.string().min(1).default(GOOGLE_HOLIDAY_CALENDAR_ID_DEFAULT),
 
+    /*
+     * Chế độ THI HÀNH của trục năng lực theo gói (ADR 0027) — `PlanFeatureGuard` đọc biến này.
+     *
+     *   off   — bỏ qua hoàn toàn (thoát hiểm khi sự cố, không cần revert code)
+     *   warn  — MẶC ĐỊNH: ghi log ai SẼ bị chặn, nhưng cho qua
+     *   on    — chặn thật
+     *
+     * Mặc định `warn`, không phải `on`, và đó là điều kiện an toàn của cả đợt: bật chặn trước
+     * khi các bậc gói được seed cờ (hoặc trước khi log cảnh báo im) là khoá sổ thu chi của TOÀN
+     * BỘ gian hàng đang dùng thật trong một lần deploy. Chuyển sang `on` phải là một lần deploy
+     * riêng, không kèm thay đổi nào khác — nhờ vậy rollback là sửa một biến env.
+     */
+    PLAN_FEATURE_ENFORCEMENT: z.enum(['off', 'warn', 'on']).default('warn'),
+
     // --- Web + Email (cho link đặt lại mật khẩu) ---
     APP_WEB_URL: z.string().default('http://localhost:3000'),
     // SMTP tuỳ chọn: chưa cấu hình thì EmailService in link ra log (dev), không gửi thật.

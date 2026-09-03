@@ -81,5 +81,12 @@
     "defaultOption": "{label} (default)",
     "single": "Your shop has only one branch",
     "label": "Branch in view"
+  },
+  "toast": {
+    "created": "Branch {name} created",
+    "updated": "Branch updated",
+    "setDefault": "Set as the default branch",
+    "activated": "Branch reactivated",
+    "deactivated": "Branch deactivated"
   }
 }

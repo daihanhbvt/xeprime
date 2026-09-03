@@ -1,10 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useController, type Control, type FieldValues, type Path } from 'react-hook-form';
 import { Pressable, TextInput, type TextInputProps } from 'react-native';
-import { Text, XStack, YStack } from 'tamagui';
-import { colors, fontSize, fontWeight, iconSize, radius, sizing, space } from '@/theme/tokens';
+import { Text, YStack } from 'tamagui';
+import { FieldLabel, FieldMessage, FieldShell } from './Field';
+import { colors, fontSize, iconSize, sizing, space } from '@/theme/tokens';
 import type { IconName } from './Chip';
+
+/** Chiều cao một dòng của ô nhiều dòng — cùng nhịp với `fontSize.body` × 1.4. */
+const LINE_HEIGHT = 22;
+
+/** Bộ đếm ký tự chỉ hiện khi đã dùng quá phần này của trần — trước đó nó chỉ là nhiễu. */
+const COUNTER_AT = 0.6;
 
 interface TextFieldProps<T extends FieldValues> {
   control: Control<T>;
@@ -29,6 +36,20 @@ interface TextFieldProps<T extends FieldValues> {
    */
   required?: boolean;
   secureTextEntry?: boolean;
+  /**
+   * Ô nhiều dòng — lý do huỷ, ghi chú, nội dung đánh giá.
+   *
+   * Ở đây chứ không phải một component riêng vì nhãn, viền focus, lỗi và chú thích y hệt ô một
+   * dòng; tách ra là hai bản sao của cùng một khung, và chúng trôi khỏi nhau ở lần sửa đầu tiên.
+   */
+  multiline?: boolean;
+  /** Số dòng hiện lúc chưa gõ. Chỉ có tác dụng cùng `multiline`. */
+  rows?: number;
+  /**
+   * Trần ký tự. Hiện luôn bộ đếm ở góc phải chú thích khi vượt quá 60% — nói trước còn hơn để
+   * người dùng gõ xong mới phát hiện bị cắt.
+   */
+  maxLength?: number;
   editable?: boolean;
   autoCapitalize?: TextInputProps['autoCapitalize'];
   autoComplete?: TextInputProps['autoComplete'];
@@ -46,27 +67,37 @@ export function TextField<T extends FieldValues>({
   hint,
   required = false,
   secureTextEntry,
+  multiline = false,
+  rows = 4,
+  maxLength,
   ...inputProps
 }: TextFieldProps<T>) {
   const { field, fieldState } = useController({ control, name });
   const inputRef = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const error = fieldState.error?.message;
 
-  const borderColor = error ? colors.danger : focused ? colors.primary : colors.border;
+  /*
+   * Style của `TextInput` dựng một lần cho mỗi hình dạng ô, không phải mỗi ký tự gõ.
+   *
+   * `useController` render lại component sau từng phím; một object style mới mỗi lần là một lần
+   * `TextInput` nhận prop mới và phải so lại toàn bộ.
+   */
+  const inputStyle = useMemo(
+    () => ({
+      flex: 1,
+      color: colors.text,
+      fontSize: fontSize.body,
+      minHeight: multiline ? rows * LINE_HEIGHT : sizing.touchTarget,
+      paddingVertical: multiline ? space.sm : 0,
+    }),
+    [multiline, rows],
+  );
+  const error = fieldState.error?.message;
 
   return (
     <YStack gap={space.xs}>
-      {/*
-        Nhãn giữ nguyên dạng của chuỗi dịch — đừng `toUpperCase` ở tầng component: tiếng Việt
-        viết hoa hết thì dấu thanh chồng lên nhau ở cỡ chữ nhỏ.
-      */}
-      <Text col={colors.textMuted} fos={fontSize.bodySm} fow={fontWeight.medium}>
-        {label}
-        {/* Lồng trong cùng `Text` để dấu sao xuống dòng cùng nhãn, không ở lại dòng trên. */}
-        {required ? <Text col={colors.danger}> *</Text> : null}
-      </Text>
+      <FieldLabel label={label} required={required} />
 
       {/*
         `onPress` chuyển focus TƯỜNG MINH vào ô của khung này. Chạm vào đệm/icon/khoảng trống
@@ -76,25 +107,10 @@ export function TextField<T extends FieldValues>({
         CỐ Ý không gắn bóng động vào khung: đổi `style` theo state trên component tamagui làm nó
         dựng lại cây con, mà `TextInput` nằm trong đó — focus mất ngay khi vừa chạm.
       */}
-      {/*
-        Nền xám nhạt, KHÔNG viền lúc nghỉ — viền chỉ xuất hiện khi focus hoặc lỗi.
-        
-        Một đường viền quanh mọi ô là thứ làm form trông nặng: bốn ô xếp dọc thành bốn khung
-        đóng. Bỏ nó đi thì ô vẫn tách khỏi trang nhờ nền, mà bớt hẳn một lớp nét — và lúc focus,
-        viền gold xuất hiện từ chỗ trống nên đọc rõ hơn hẳn so với việc đổi màu một viền có sẵn.
-
-        Chiều cao GIỮ `sizing.touchTarget`: đó là sàn chạm 48dp của Android (xem `theme/tokens`).
-        Ô thấp hơn trông thon hơn trên máy thiết kế và khó bấm hơn trên tay.
-      */}
-      <XStack
-        ai="center"
-        gap={space.sm}
-        bg={colors.surfaceMuted}
-        br={radius.sm}
-        bw={1}
-        bc={focused || error ? borderColor : 'transparent'}
-        px={space.sm}
-        minHeight={sizing.touchTarget}
+      <FieldShell
+        focused={focused}
+        invalid={Boolean(error)}
+        align={multiline ? 'flex-start' : 'center'}
         onPress={() => inputRef.current?.focus()}
       >
         {icon ? <Ionicons name={icon} size={iconSize.sm} color={colors.textMuted} /> : null}
@@ -109,13 +125,11 @@ export function TextField<T extends FieldValues>({
           }}
           onFocus={() => setFocused(true)}
           secureTextEntry={secureTextEntry && !revealed}
+          multiline={multiline}
+          {...(maxLength === undefined ? {} : { maxLength })}
+          textAlignVertical={multiline ? 'top' : 'center'}
           placeholderTextColor={colors.placeholder}
-          style={{
-            flex: 1,
-            color: colors.text,
-            fontSize: fontSize.body,
-            minHeight: sizing.touchTarget,
-          }}
+          style={inputStyle}
           {...inputProps}
         />
 
@@ -136,18 +150,13 @@ export function TextField<T extends FieldValues>({
             />
           </Pressable>
         ) : null}
-      </XStack>
+      </FieldShell>
 
-      {error ? (
-        <XStack ai="center" gap={space.xs}>
-          <Ionicons name="alert-circle" size={iconSize.xs} color={colors.danger} />
-          <Text col={colors.danger} fos={fontSize.bodySm}>
-            {error}
-          </Text>
-        </XStack>
-      ) : hint ? (
-        <Text col={colors.textMuted} fos={fontSize.bodySm}>
-          {hint}
+      <FieldMessage error={error} hint={hint} />
+
+      {maxLength !== undefined && String(field.value ?? '').length > maxLength * COUNTER_AT ? (
+        <Text col={colors.textMuted} fos={fontSize.label} ta="right">
+          {String(field.value ?? '').length}/{maxLength}
         </Text>
       ) : null}
     </YStack>

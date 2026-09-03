@@ -15,5 +15,41 @@
     "backHome": "Về trang chủ",
     "goToHome": "Vào trang chủ",
     "goToLogin": "Về màn đăng nhập"
+  },
+  "scope": {
+    "sheetTitle": "Bạn đang ở",
+    "customerTitle": "Tìm & thuê xe",
+    "customerSubtitle": "Chế độ khách hàng",
+    "manageSubtitle": "Quản lý gian hàng · {role}",
+    "enterManage": "Vào khu quản lý gian hàng",
+    "switcherA11y": "Đang ở gian hàng {shop}. Chạm để đổi chế độ",
+    "lostAccess": "Bạn không còn quyền truy cập gian hàng này.",
+    "signInRequired": "Đăng nhập để quản lý gian hàng",
+    "signIn": "Đăng nhập"
+  },
+  "manageNav": {
+    "home": "Tổng quan",
+    "requests": "Yêu cầu",
+    "bookings": "Đơn thuê",
+    "more": "Thêm",
+    "openMenu": "Mở menu quản lý"
+  },
+  "manageHome": {
+    "greeting": "Xin chào, {name}",
+    "shopStatus": "Trạng thái gian hàng",
+    "quickActions": "Việc thường ngày",
+    "openRequests": "Hộp thư yêu cầu",
+    "openBookings": "Danh sách đơn thuê",
+    "newBooking": "Tạo đơn tại quầy",
+    "inactiveTitle": "Gian hàng chưa hoạt động",
+    "inactiveBody": "Xe của bạn chưa hiện trên chợ. Bạn vẫn xem và quản lý được dữ liệu hiện có.",
+    "expiredTitle": "Gói dịch vụ đã hết hạn",
+    "expiredBody": "Xe đã được gỡ khỏi chợ. Gia hạn gói để đăng bán trở lại; dữ liệu đơn và xe vẫn còn nguyên.",
+    "contactSupport": "Liên hệ hỗ trợ"
+  },
+  "more": {
+    "title": "Thêm",
+    "switchScope": "Chuyển sang chế độ khách hàng",
+    "comingSoon": "Các mục quản lý khác sẽ mở dần ở những đợt sau."
   }
 }

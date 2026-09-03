@@ -60,3 +60,10 @@ export function fetchCurrentUser(): Promise<CurrentUser> {
 export function destroySession(): Promise<void> {
   return signOut();
 }
+
+/**
+ * Nạp phiên do `POST /public/booking-requests` phát ra khi khách vãng lai vừa được tạo tài
+ * khoản (`client: 'native'`). Đi qua đúng kho token đang dùng — không có đường thứ hai.
+ */
+export { adoptSession as adoptMobileSession, describeDevice } from '@/lib/auth-session';
+export type { MobileSession } from '@xeprime/api-client';

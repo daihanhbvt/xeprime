@@ -1,7 +1,12 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
+import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import {
+  CurrentTenant,
+  RequirePermissions,
+  RequiresFeature,
+  TenantScoped,
+} from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import {
   CustomerRevenuePageDto,
@@ -32,6 +37,7 @@ export class FinanceOverviewController {
   constructor(private readonly overview: FinanceOverviewService) {}
 
   @Get('debts')
+  @RequiresFeature(PLAN_FEATURE.DEBTS)
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({ summary: 'Danh sách đơn còn công nợ (lọc quá hạn/sắp đến/chưa thu)' })
   @ApiOkResponse({ type: DebtPageDto })
@@ -43,6 +49,7 @@ export class FinanceOverviewController {
   }
 
   @Get('finance/summary')
+  @RequiresFeature(PLAN_FEATURE.FINANCE)
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({
     summary: 'Ba lớp tiền của một kỳ: kết quả kinh doanh, dòng tiền quỹ, cọc đang giữ + công nợ',
@@ -56,6 +63,7 @@ export class FinanceOverviewController {
   }
 
   @Get('finance/series')
+  @RequiresFeature(PLAN_FEATURE.FINANCE)
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({
     summary: 'Chuỗi thu-chi theo ngày/tuần/tháng — đã điền bucket rỗng, gộp theo giờ VN',
@@ -69,6 +77,7 @@ export class FinanceOverviewController {
   }
 
   @Get('finance/by-category')
+  @RequiresFeature(PLAN_FEATURE.FINANCE)
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({ summary: 'Cơ cấu doanh thu hoặc chi phí theo danh mục thu/chi' })
   @ApiOkResponse({ type: FinanceCategoryBreakdownDto })
@@ -80,6 +89,7 @@ export class FinanceOverviewController {
   }
 
   @Get('finance/by-vehicle')
+  @RequiresFeature(PLAN_FEATURE.FINANCE)
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({
     summary:
@@ -95,6 +105,7 @@ export class FinanceOverviewController {
   }
 
   @Get('finance/by-customer')
+  @RequiresFeature(PLAN_FEATURE.FINANCE)
   @RequirePermissions(PERMISSION.FINANCE_VIEW)
   @ApiOperation({
     summary:

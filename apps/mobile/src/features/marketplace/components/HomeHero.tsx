@@ -29,13 +29,7 @@ const BANNER_RATIO = 780 / 390;
  * là phần dành cho SEO (`<h1>` ẩn thị giác), native không có nhu cầu đó, và một dòng chữ lớn
  * nằm giữa chỗ đáng ra là ảnh trông như trang bị lỗi.
  */
-export function HomeHero({
-  banners,
-  isLoading,
-}: {
-  banners: PublicBanner[];
-  isLoading: boolean;
-}) {
+export function HomeHero({ banners, isLoading }: { banners: PublicBanner[]; isLoading: boolean }) {
   const t = useTranslations('Marketplace.banner');
   const { width } = useWindowDimensions();
   const [active, setActive] = useState(0);

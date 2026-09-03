@@ -162,6 +162,13 @@ export const API_TAG_GROUPS: readonly ApiTagGroup[] = [
       { name: 'receipts', description: 'Phiếu thu/phiếu chi của sổ quỹ.' },
       { name: 'finance-categories', description: 'Danh mục hạng mục thu/chi.' },
       { name: 'finance-overview', description: 'Tổng quan dòng tiền và công nợ của gian hàng.' },
+      {
+        name: 'subscription',
+        description:
+          '"Gói của tôi": gói hiện hành, hạn mức chỗ theo loại xe, lượt miễn phí (ADR 0026) và ' +
+          'tự mua gói. Mua = sinh hoá đơn + mã đối soát XPG; gói CHỈ kích hoạt khi tiền đã về ' +
+          '(ADR 0026 điều 4).',
+      },
     ],
   },
   {

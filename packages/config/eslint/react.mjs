@@ -1,6 +1,7 @@
 import reactHooks from 'eslint-plugin-react-hooks';
 
 import base from './base.mjs';
+import { noDirectDayjsImport } from './datetime.mjs';
 
 /**
  * Rule cho code React, dùng chung cho apps/web và apps/mobile.
@@ -50,6 +51,7 @@ export const reactOverlays = [
       ],
     },
   },
+  noDirectDayjsImport,
 ];
 
 export default [

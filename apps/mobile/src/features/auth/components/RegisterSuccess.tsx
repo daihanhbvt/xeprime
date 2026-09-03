@@ -26,7 +26,7 @@ export function RegisterSuccess({
 
   return (
     <YStack ai="center" gap={space.lg}>
-      <StatusIcon icon="checkmark-circle" tone={STATUS_TONE.SUCCESS} />
+      <StatusIcon icon="checkmark" tone={STATUS_TONE.SUCCESS} />
 
       <YStack ai="center" gap={space.xs}>
         <Text col={colors.text} fontFamily="$heading" fos={fontSize.h2} ta="center">

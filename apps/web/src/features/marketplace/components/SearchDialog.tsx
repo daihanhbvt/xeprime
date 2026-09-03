@@ -2,7 +2,7 @@
 
 import { CalendarOutlined, EnvironmentOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Radio, Segmented, Select } from 'antd';
-import dayjs from 'dayjs';
+import { appWallClockToIso, toAppTz } from '@/lib/datetime';
 import {
   LONG_TERM_PACKAGE_MONTHS,
   ROUTE_TYPE,
@@ -22,6 +22,7 @@ import {
 } from '@/components/form/RentalDateTimeRangeField';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { buildProvinceOptions } from '../province-options';
+import { defaultRentalRange } from '../search/search-draft';
 import { useDestinations } from '../hooks/use-destinations';
 import type { MarketplaceFilters } from '../types';
 import styles from './SearchDialog.module.css';
@@ -80,13 +81,13 @@ export function SearchDialog({
   );
   const [mode, setMode] = useState<RentalMode>(initial.hourly ? 'hourly' : 'daily');
   const [range, setRange] = useState<RentalRange>(() => {
-    const pickupAt = initial.pickupAt
-      ? dayjs(initial.pickupAt)
-      : dayjs().add(1, 'day').hour(10).startOf('hour');
-    const returnAt = initial.returnAt
-      ? dayjs(initial.returnAt)
-      : dayjs().add(4, 'day').hour(10).startOf('hour');
-    return { pickupAt, returnAt };
+    // Khoảng mặc định là LUẬT dùng chung (`@xeprime/domain`), không phải hai dòng chép lại ở
+    // đây; và mốc từ URL đọc theo giờ VN như mọi bề mặt khác (CLAUDE.md §9).
+    const fallback = defaultRentalRange();
+    return {
+      pickupAt: initial.pickupAt ? toAppTz(initial.pickupAt) : fallback.pickupAt,
+      returnAt: initial.returnAt ? toAppTz(initial.returnAt) : fallback.returnAt,
+    };
   });
 
   const provinceOptions = useMemo(
@@ -104,8 +105,8 @@ export function SearchDialog({
       provinceCode: province || undefined,
       // Dài hạn KHÔNG mang ngày (Mioto flow — 17/08 đợt 3): chọn xe trước, ngày chọn ở modal
       // gửi yêu cầu (sàn 7 ngày giữ nguyên ở đó + backend).
-      pickupAt: longTerm ? undefined : range.pickupAt?.toISOString(),
-      returnAt: longTerm ? undefined : range.returnAt?.toISOString(),
+      pickupAt: longTerm || !range.pickupAt ? undefined : appWallClockToIso(range.pickupAt),
+      returnAt: longTerm || !range.returnAt ? undefined : appWallClockToIso(range.returnAt),
       hourly: !longTerm && mode === 'hourly' ? true : undefined,
       routeType: withDriver ? routeType : undefined,
     });

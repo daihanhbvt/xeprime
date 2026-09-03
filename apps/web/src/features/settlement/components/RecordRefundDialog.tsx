@@ -1,10 +1,15 @@
 'use client';
 
 import { App, Alert, DatePicker, Input, Radio } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
+import { appWallClockToIso, nowInAppTz, toAppTz, type Dayjs } from '@/lib/datetime';
 import { useState } from 'react';
 import {
-  REFUND_DISCLAIMER, REFUND_METHOD, REFUND_METHOD_LABEL, REFUND_METHOD_VALUES, type RefundMethod, } from '@xeprime/types';
+  REFUND_DISCLAIMER,
+  REFUND_METHOD,
+  REFUND_METHOD_LABEL,
+  REFUND_METHOD_VALUES,
+  type RefundMethod,
+} from '@xeprime/types';
 import { MoneyInput } from '@/components/form/MoneyInput';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { getErrorMessage } from '@/services/api-client';
@@ -59,7 +64,7 @@ export function RecordRefundDialog({
     ((isCorrection && existingRefund?.refundMethod) || REFUND_METHOD.BANK_TRANSFER) as RefundMethod,
   );
   const [refundedAt, setRefundedAt] = useState<Dayjs>(() =>
-    isCorrection && existingRefund ? dayjs(existingRefund.refundedAt) : dayjs(),
+    isCorrection && existingRefund ? toAppTz(existingRefund.refundedAt) : nowInAppTz(),
   );
   const [reference, setReference] = useState(isCorrection ? (existingRefund?.reference ?? '') : '');
   const [note, setNote] = useState(isCorrection ? (existingRefund?.note ?? '') : '');
@@ -80,7 +85,7 @@ export function RecordRefundDialog({
     const body = {
       refundAmount: String(amount),
       refundMethod: method,
-      refundedAt: refundedAt.toISOString(),
+      refundedAt: appWallClockToIso(refundedAt),
       ...(reference.trim() ? { reference: reference.trim() } : {}),
       ...(note.trim() ? { note: note.trim() } : {}),
     };
@@ -162,7 +167,7 @@ export function RecordRefundDialog({
             onChange={(next) => next && setRefundedAt(next)}
             allowClear={false}
             className={styles.control}
-            disabledDate={(current) => current.isAfter(dayjs().endOf('day'))}
+            disabledDate={(current) => current.isAfter(nowInAppTz().endOf('day'))}
           />
         </label>
 

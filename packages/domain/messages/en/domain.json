@@ -12,6 +12,10 @@
     "system": "System",
     "customer": "Renter"
   },
+  "billingMode": {
+    "commission": "Per-trip commission",
+    "package": "Slot-based plan"
+  },
   "bodyType": {
     "mini": "Mini car",
     "sedan": "Sedan",
@@ -100,6 +104,7 @@
   },
   "customerTripStage": {
     "pending_approval": "Awaiting confirmation",
+    "awaiting_hold": "Reservation payment due",
     "ready": "Ready",
     "active": "On rent",
     "completed": "Completed",
@@ -256,7 +261,11 @@
     "vehicle_approved": "Vehicle listed publicly",
     "vehicle_rejected": "Vehicle declined",
     "review_received": "New review",
-    "booking_request_cancelled": "Renter cancelled the request"
+    "booking_request_cancelled": "Renter cancelled the request",
+    "subscription_expiring": "Plan expiring soon",
+    "subscription_expired": "Plan expired",
+    "subscription_lapsed": "Switched to per-trip commission",
+    "free_trips_exhausted": "Free trips used up"
   },
   "occupancySourceType": {
     "booking": "Booking",
@@ -297,6 +306,16 @@
   "pickupPreference": {
     "within_7_days": "Within the next 7 days",
     "specific_date": "Pick a specific date"
+  },
+  "planFeature": {
+    "finance": "Income & expense ledger and reports",
+    "debts": "Debt tracking",
+    "maintenance": "Maintenance schedule and costs",
+    "members": "Staff and permissions",
+    "branches": "Multiple branches",
+    "drivers": "Driver management",
+    "contracts": "Rental contracts",
+    "escrow_hold": "Reservation holds via the platform"
   },
   "planStatus": {
     "active": "On sale",
@@ -359,6 +378,13 @@
     "self_drive": "Self-drive",
     "with_driver": "With driver",
     "long_term": "Long-term"
+  },
+  "subscriptionInvoiceStatus": {
+    "draft": "Draft",
+    "issued": "Awaiting payment",
+    "partially_paid": "Partially received",
+    "paid": "Paid",
+    "void": "Voided"
   },
   "subscriptionStatus": {
     "trial": "Trial",

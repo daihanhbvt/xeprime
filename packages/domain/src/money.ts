@@ -169,21 +169,6 @@ export function applyDiscountPercent(
   return String(Math.round((n * (100 - percent)) / 100));
 }
 
-/**
- * Số tiền ĐỌC BẰNG CHỮ tiếng Việt — "15950000" → "Mười lăm triệu chín trăm năm mươi nghìn đồng".
- *
- * Vì sao có: trên một ô nhập tiền, dòng chữ bên dưới là cách duy nhất người dùng bắt được lỗi
- * thừa/thiếu một số 0. `15.000.000` và `150.000.000` nhìn gần như nhau khi gõ vội; "mười lăm
- * triệu" và "một trăm năm mươi triệu" thì không.
- *
- * Cố ý là hàm THUẦN trên chuỗi (ADR 0007 — tiền không bao giờ đi qua `number`): `Number()` một số
- * 12 chữ số vẫn an toàn, nhưng để tiền chạm `number` ở một chỗ là mở đường cho chỗ thứ hai.
- *
- * Ba quy tắc chính tả tiếng Việt phải đúng, và cả ba đều là lỗi kinh điển khi tự viết:
- *  - hàng đơn vị **1** sau một chục ≥ 2 đọc là "mốt" (hai mươi **mốt**), không phải "một";
- *  - hàng đơn vị **5** sau một chục bất kỳ đọc là "lăm" (mười **lăm**), không phải "năm";
- *  - chục **1** đọc là "mười", chục **0** kèm đơn vị đọc là "lẻ" (một trăm **lẻ** năm).
- */
 /** Hình dạng tiền hợp lệ trên dây (ADR 0007): số nguyên có dấu, tối đa 2 số lẻ. */
 const MONEY_SHAPE = /^-?\d+(\.\d{1,2})?$/;
 
@@ -218,6 +203,21 @@ function readTriple(value: number, full: boolean): string {
   return parts.join(' ');
 }
 
+/**
+ * Số tiền ĐỌC BẰNG CHỮ tiếng Việt — "15950000" → "Mười lăm triệu chín trăm năm mươi nghìn đồng".
+ *
+ * Vì sao có: trên một ô nhập tiền, dòng chữ bên dưới là cách duy nhất người dùng bắt được lỗi
+ * thừa/thiếu một số 0. `15.000.000` và `150.000.000` nhìn gần như nhau khi gõ vội; "mười lăm
+ * triệu" và "một trăm năm mươi triệu" thì không.
+ *
+ * Cố ý là hàm THUẦN trên chuỗi (ADR 0007 — tiền không bao giờ đi qua `number`): `Number()` một số
+ * 12 chữ số vẫn an toàn, nhưng để tiền chạm `number` ở một chỗ là mở đường cho chỗ thứ hai.
+ *
+ * Ba quy tắc chính tả tiếng Việt phải đúng, và cả ba đều là lỗi kinh điển khi tự viết:
+ *  - hàng đơn vị **1** sau một chục ≥ 2 đọc là "mốt" (hai mươi **mốt**), không phải "một";
+ *  - hàng đơn vị **5** sau một chục bất kỳ đọc là "lăm" (mười **lăm**), không phải "năm";
+ *  - chục **1** đọc là "mười", chục **0** kèm đơn vị đọc là "lẻ" (một trăm **lẻ** năm).
+ */
 export function moneyToVietnameseWords(value: MoneyString | null | undefined): string {
   if (value == null || value === '') return '';
   // Chặn TRƯỚC khi gọi `wholeUnits`: nó dựng `BigInt` và ném với chuỗi không phải số. Ô nhập
@@ -247,4 +247,30 @@ export function moneyToVietnameseWords(value: MoneyString | null | undefined): s
   const negative = wholeUnits(value).startsWith('-') ? 'Âm ' : '';
   const text = `${negative}${spoken} đồng`.replace(/\s+/g, ' ').trim();
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * Format số tiền ĐANG NHẬP theo quy ước Việt Nam: `1000000` → `1.000.000`.
+ *
+ * Khác `formatMoneyVnd` ở hai chỗ, và cả hai đều cố ý: không gắn đơn vị vào chuỗi giá trị (đơn
+ * vị là trang trí của ô nhập, không phải nội dung của nó), và chỉ giữ CHỮ SỐ — gõ giữa chuỗi,
+ * dán một giá trị đã có dấu chấm, hay bấm nhầm dấu phẩy đều quy về cùng một kết quả.
+ *
+ * Đây là bản dùng chung cho web (`MoneyInput`) và app native (`MoneyField`): định dạng tiền lúc
+ * nhập là MỘT quy ước, và hai bản sao của nó sẽ lệch nhau ngay ở lần sửa đầu tiên.
+ */
+export function formatMoneyInput(value: string | number | null | undefined): string {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+/**
+ * Bỏ mọi ký tự phân nhóm/đơn vị khỏi ô tiền.
+ *
+ * Xoá trắng trả `null`, KHÔNG tự thành `0`: "chưa nhập" và "miễn phí" là hai ý khác nhau, và
+ * `PATCH` chỉ đổi trường có mặt (ADR 0007).
+ */
+export function parseMoneyInput(value: string | null | undefined): number | null {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  return digits === '' ? null : Number(digits);
 }

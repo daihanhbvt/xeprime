@@ -7,7 +7,14 @@
     "revenue": "Doanh thu",
     "overdue": "Quá hạn trả",
     "overdueValue": "{count, plural, other {# đơn}}",
-    "deposit": "Tiền cọc đang giữ"
+    "deposit": "Tiền cọc đang giữ",
+    "revenueHint": "Tháng này",
+    "depositHint": "{count, plural, other {# đơn còn giữ cọc}}"
+  },
+  "receiptRow": {
+    "expenseAmount": "−{amount}",
+    "incomeAria": "Phiếu thu {amount}",
+    "expenseAria": "Phiếu chi {amount}"
   },
   "panels": {
     "recent": "Đơn gần đây",

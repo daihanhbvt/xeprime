@@ -1,7 +1,12 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, RequirePermissions, TenantScoped } from '../../common/decorators';
+import { PERMISSION, PLAN_FEATURE } from '@xeprime/types';
+import {
+  CurrentTenant,
+  RequirePermissions,
+  RequiresFeature,
+  TenantScoped,
+} from '../../common/decorators';
 import type { TenantContext } from '../../common/types/request-context';
 import {
   CategoryListQueryDto,
@@ -15,6 +20,7 @@ import { FinanceCategoriesService } from './finance-categories.service';
 @ApiTags('finance-categories')
 @Controller('finance/categories')
 @TenantScoped()
+@RequiresFeature(PLAN_FEATURE.FINANCE)
 export class FinanceCategoriesController {
   constructor(private readonly categories: FinanceCategoriesService) {}
 

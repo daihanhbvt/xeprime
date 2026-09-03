@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
+import { AppState } from 'react-native';
 import { subscribeSessionEnded } from '@/lib/auth-session';
 import { logger } from '@/lib/logger';
+import { queryKeys } from '@/queries/query-keys';
 import { resetSessionScopedCache } from '@/queries/reset-session-cache';
 
 /**
@@ -26,6 +28,24 @@ export function SessionBoundary({ children }: { children: ReactNode }) {
       }),
     [queryClient],
   );
+
+  /**
+   * Quyền và gian hàng đọc lại mỗi lần app quay lại tiền cảnh.
+   *
+   * `STALE_TIME.STANDARD` của `useCurrentUser` không đủ: điện thoại nằm trong túi hàng giờ, và
+   * trong lúc đó chủ shop có thể đã gỡ người này khỏi gian hàng. Không có nhịp này thì họ mở
+   * app ra vẫn thấy quyền cũ cho tới khi chạm phải request đầu tiên trả 403.
+   *
+   * `invalidateQueries` chứ không `refetchQueries`: màn nào không đang mounted thì chỉ cần đánh
+   * dấu cũ, khỏi tốn một request cho dữ liệu chưa ai nhìn.
+   */
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      void queryClient.invalidateQueries({ queryKey: queryKeys.auth.me() });
+    });
+    return () => sub.remove();
+  }, [queryClient]);
 
   return children;
 }

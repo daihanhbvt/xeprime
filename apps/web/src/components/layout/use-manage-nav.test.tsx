@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { PERMISSION, type Permission } from '@xeprime/types';
+import { FEATURE_STATE, PERMISSION, type Permission } from '@xeprime/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NAV_BADGE } from '@/constants/nav';
@@ -28,6 +28,8 @@ const nav = vi.hoisted(() => ({ pathname: '/manage' }));
 const user = vi.hoisted(() => ({ platformRole: null as string | null }));
 const perms = vi.hoisted(() => ({ granted: new Set<string>() }));
 const badges = vi.hoisted(() => ({ bookingRequestsPending: 0, chatUnread: 0 }));
+/** Trạng thái cờ năng lực (ADR 0027) — trục THỨ HAI, độc lập với `perms`. */
+const features = vi.hoisted(() => ({ states: {} as Record<string, string> }));
 
 vi.mock('next/navigation', () => ({
   usePathname: () => nav.pathname,
@@ -43,6 +45,10 @@ vi.mock('@/hooks/use-permissions', () => ({
     hasAny: (...ps: string[]) => ps.some((p) => perms.granted.has(p)),
     isLoading: false,
   }),
+}));
+
+vi.mock('@/hooks/use-feature', () => ({
+  useFeatureStates: () => features.states,
 }));
 
 // Nguồn đếm huy hiệu là hai query thật (chat + yêu cầu đặt xe); ở đây chỉ quan tâm menu HIỂN
@@ -103,6 +109,9 @@ beforeEach(() => {
   user.platformRole = null;
   badges.bookingRequestsPending = 0;
   badges.chatUnread = 0;
+  // Mặc định RỖNG = chưa biết cờ nào ⇒ mọi mục hiện. Đó chính là hành vi phải giữ cho cache
+  // `/auth/me` cũ: không khoá ai vì thiếu dữ liệu.
+  features.states = {};
   grant();
 });
 
@@ -127,7 +136,6 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
         'Tổng quan',
         'Cửa hàng',
         'Trò chuyện',
-        'Thùng rác',
         'Trung tâm hỗ trợ',
       ]),
     );
@@ -174,12 +182,14 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
     expect(screen.queryByText('Cấu hình')).toBeNull();
   });
 
-  it('mục placeholder vẫn hiện và vẫn là link thật', () => {
+  // Gỡ ngày 03/09/2026 (R1): 'Khu vực nhận xe' và 'Thùng rác' từng là link thật dẫn tới một
+  // trang trống. Giờ menu không được dựng chúng nữa.
+  it('không dựng mục nào dẫn tới trang chưa có luồng', () => {
     grant(PERMISSION.TENANT_VIEW);
     renderMenu();
 
-    const trash = screen.getByRole('link', { name: 'Thùng rác' });
-    expect(trash.getAttribute('href')).toBe('/manage/trash');
+    expect(screen.queryByRole('link', { name: 'Thùng rác' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Khu vực nhận xe' })).toBeNull();
   });
 });
 
@@ -519,4 +529,77 @@ describe('ManageMenu — trình bày', () => {
 
     expect(screen.getByRole('link', { name: 'Trò chuyện' })).toBeTruthy();
   });
+});
+
+describe('useManageNav — trục NĂNG LỰC theo gói (ADR 0027)', () => {
+  /** Mở mục cha "Tài chính" để thấy ba mục con (AntD chỉ dựng con sau khi submenu bung). */
+  function openFinanceBranch() {
+    fireEvent.click(screen.getByText('Tài chính'));
+  }
+
+  it('cache CŨ (chưa có `features`) KHÔNG khoá ai — mọi mục vẫn hiện', () => {
+    grant(PERMISSION.FINANCE_VIEW, PERMISSION.DRIVER_VIEW, PERMISSION.MEMBER_VIEW);
+    features.states = {};
+    renderMenu();
+
+    expect(itemLabels()).toContain('Tài xế');
+    expect(itemLabels()).toContain('Người dùng & phân quyền');
+  });
+
+  it('hidden ⇒ mục VẮNG khỏi menu dù có đủ quyền — hai trục kiểm nối tiếp nhau', () => {
+    grant(PERMISSION.DRIVER_VIEW, PERMISSION.MEMBER_VIEW);
+    features.states = { drivers: FEATURE_STATE.HIDDEN, members: FEATURE_STATE.HIDDEN };
+    renderMenu();
+
+    expect(itemLabels()).not.toContain('Tài xế');
+    expect(itemLabels()).not.toContain('Người dùng & phân quyền');
+  });
+
+  it('read_only VẪN hiện — không ai mất lối vào sổ sách của chính mình', () => {
+    grant(PERMISSION.DRIVER_VIEW);
+    features.states = { drivers: FEATURE_STATE.READ_ONLY };
+    renderMenu();
+
+    expect(itemLabels()).toContain('Tài xế');
+  });
+
+  it('cả ba mục con của Tài chính hidden ⇒ MỤC CHA biến mất theo', () => {
+    grant(PERMISSION.FINANCE_VIEW);
+    features.states = { finance: FEATURE_STATE.HIDDEN, debts: FEATURE_STATE.HIDDEN };
+    renderMenu();
+
+    expect(screen.queryByText('Tài chính')).toBeNull();
+  });
+
+  it('chỉ Công nợ hidden ⇒ mục cha còn, và mất đúng một mục con', () => {
+    grant(PERMISSION.FINANCE_VIEW);
+    features.states = { debts: FEATURE_STATE.HIDDEN };
+    renderMenu();
+
+    openFinanceBranch();
+    expect(itemLabels()).toContain('Giao dịch thu chi');
+    expect(itemLabels()).not.toContain('Công nợ');
+  });
+
+  it('huy hiệu vẫn dồn lên mục cha đóng cho các mục NHÌN THẤY ĐƯỢC (không hồi quy)', () => {
+    grant(PERMISSION.BOOKING_REQUEST_VIEW, PERMISSION.BOOKING_VIEW);
+    badges.bookingRequestsPending = 4;
+    renderMenu();
+
+    // Mục cha "Đơn thuê" đang đóng (pathname = /manage) ⇒ dồn 4 lên nhãn của nó.
+    expect(screen.getByText('4')).toBeTruthy();
+  });
+
+  /*
+   * KHÔNG test trực tiếp được "phép dồn huy hiệu loại mục hidden": hiện KHÔNG mục nào vừa mang
+   * huy hiệu vừa mang cờ năng lực — huy hiệu chỉ có ở Yêu cầu đặt xe và Trò chuyện, cả hai đều
+   * là bậc cơ bản (`NAV_BADGE` cố ý chỉ có hai giá trị).
+   *
+   * Thứ khoá được, và là thứ thật sự quan trọng: cả BA chỗ đi qua CÙNG một vị từ `canSeeLeaf`.
+   * Test "cả ba mục con của Tài chính hidden ⇒ mục cha biến mất" ở trên chứng minh nhánh dựng
+   * mục đi qua nó; hai phép dồn dùng lại chính hàm đó (`.filter(canSeeLeaf)`), nên chúng không
+   * thể lệch mà không làm hỏng test kia.
+   *
+   * Ngày một mục vừa-badge-vừa-cờ xuất hiện, đây là chỗ thêm khẳng định.
+   */
 });

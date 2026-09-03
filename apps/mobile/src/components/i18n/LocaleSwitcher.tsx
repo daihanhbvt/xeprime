@@ -7,6 +7,7 @@ import { useTranslations } from 'use-intl';
 
 import { LOCALES } from '@/i18n/config';
 import { useAppLocale } from '@/i18n/I18nProvider';
+import { appStyles } from '@/theme/styles';
 import { colors, fontSize, fontWeight, radius, sizing, space } from '@/theme/tokens';
 
 /**
@@ -54,7 +55,7 @@ export function LocaleSwitcher() {
       </Pressable>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable style={{ flex: 1, backgroundColor: colors.overlay }} onPress={() => setOpen(false)}>
+        <Pressable style={appStyles.scrim} onPress={() => setOpen(false)}>
           {/* Chạm ra ngoài để đóng; chặn sự kiện ở tấm nội dung để chạm bên trong không đóng theo. */}
           <Pressable style={{ marginTop: 'auto' }} onPress={() => undefined}>
             <YStack

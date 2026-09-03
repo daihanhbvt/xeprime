@@ -2,18 +2,18 @@ import { draftToFilterPatch } from '@xeprime/domain';
 import { useCallback, useRef, useState, type ComponentProps } from 'react';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { useWindowDimensions, type LayoutChangeEvent, type ScrollView } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { YStack } from 'tamagui';
 import { useCurrentUser } from '@/features/auth/hooks/use-auth';
 import { useNavigateOnce } from '@/hooks/use-navigate-once';
 import { layout } from '@/theme/layout';
 import { colors, space } from '@/theme/tokens';
+import { scrollThrottle } from '@/theme/motion';
 import { SearchExperienceProvider, useSearchExperience } from './search-context';
 import { useBanners } from './hooks/use-marketplace-data';
 import { FeaturedHosts } from './components/FeaturedHosts';
 import { FeaturedLocations } from './components/FeaturedLocations';
 import { HomeHero } from './components/HomeHero';
-import { MarketHeader } from './components/MarketHeader';
 import { RentalSteps } from './components/RentalSteps';
 import { SearchCard } from './components/SearchCard';
 import { StickySearchBar, stickyThreshold } from './components/StickySearchBar';
@@ -61,33 +61,15 @@ function HomeContent() {
    */
   const progress = useSharedValue(0);
 
-  /**
-   * MÉP DƯỚI của header, đo bằng `onLayout`.
-   *
-   * Lấy `y + height` chứ không chỉ `height`: thanh thu gọn định vị tuyệt đối trong cùng khung
-   * với header, mà gốc toạ độ của khung đó phụ thuộc `SafeAreaView` đệm bao nhiêu — con số ấy
-   * khác nhau giữa Android (thanh trạng thái trong suốt hay không) và iOS. Cộng `y` vào là hết
-   * phải đoán: mép dưới header ở đâu thì thanh nằm ngay đó.
-   *
-   * Trước đây dùng `STICKY_BAR_HEIGHT + insets.top` — vừa đoán chiều cao header, vừa cộng lại
-   * một lần inset mà `SafeAreaView` đã đệm, nên thanh nghỉ sai chỗ và đè lên hàng ngôn ngữ.
-   */
-  const [headerBottom, setHeaderBottom] = useState(0);
-  const onHeaderLayout = useCallback((event: LayoutChangeEvent) => {
-    const { y, height } = event.nativeEvent.layout;
-    setHeaderBottom(y + height);
-  }, []);
+  // Thanh thu gọn neo ở `top: 0` được vì thanh trên + safe-area nằm ở layout của `(tabs)`, ngoài
+  // navigator — khung toạ độ của màn bắt đầu ngay dưới nó, khỏi cần `onLayout` đo header.
 
   /**
-   * Sang màn kết quả, mang trọn ngữ cảnh — cùng thứ `buildSearchHref` bên web nhét vào query
-   * string, và cũng dựng từ **bản nháp**.
+   * Dựng params từ BẢN NHÁP, không phải `filters`: `submit()` vừa gọi ngay trên nên `filters` của
+   * render này còn là giá trị cũ, và khách chưa chạm gì vào thẻ thì nó rỗng.
    *
-   * Đọc `filters` ở đây thì sai hai lần: (1) `submit()` vừa gọi ngay trên nên `filters` của
-   * render này vẫn là giá trị CŨ, (2) khách chưa chạm gì vào thẻ thì `filters` còn rỗng — màn
-   * kết quả mở ra không có "Ô tô"/"Tự lái" nào cả, dù thẻ đang hiện đúng hai nhãn đó.
-   *
-   * Duyệt trọn patch thay vì liệt kê tay từng khoá: thêm một chiều vào `draftToFilterPatch`
-   * (ADR 0011 từng thêm `hourly`) mà quên sửa chỗ này là ngữ cảnh rơi mất trên đường sang.
+   * Duyệt trọn patch thay vì liệt kê tay từng khoá — thêm một chiều vào `draftToFilterPatch` mà
+   * quên sửa chỗ này là ngữ cảnh rơi mất trên đường sang.
    */
   const openSearch = useCallback(() => {
     submit();
@@ -101,20 +83,8 @@ function HomeContent() {
     navigateOnce(ROUTES.explore.search(params));
   }, [draft, navigateOnce, submit]);
 
-  /*
-   * Cuộn về khối "Xe khả dụng" sau khi chọn một địa điểm nổi bật.
-   *
-   * Web gọi `scrollIntoView('#recommendations')` vì cùng một lý do: khối kết quả nằm PHÍA TRÊN
-   * danh sách địa điểm, nên đổi bộ lọc mà màn hình đứng im thì cú bấm trông như rơi vào hư không.
-   */
-  /*
-   * Ref THƯỜNG, không phải `useAnimatedRef`.
-   *
-   * `scrollTo` ở đây gọi từ luồng JS (một cú bấm), không phải từ worklet — mà chính vùng cuộn
-   * này đang mang `useAnimatedScrollHandler` điều khiển thanh tìm kiếm thu gọn. Cắm thêm một
-   * animated ref vào cùng node là đưa một thứ mình không cần vào đúng đường đi mảnh nhất.
-   *
-   */
+  // Ref THƯỜNG: `scrollTo` gọi từ luồng JS, không phải worklet — vùng cuộn này đã mang
+  // `useAnimatedScrollHandler`, cắm thêm animated ref là chen thứ thừa vào đường đi mảnh nhất.
   const scrollRef = useRef<ScrollView>(null);
   const [previewY, setPreviewY] = useState(0);
   const onPreviewLayout = useCallback(
@@ -138,29 +108,18 @@ function HomeContent() {
 
   /*
    * Lề đáy: ĐÃ đăng nhập thì thanh tab chiếm phần dưới và tự nuốt inset của hệ thống, nên chỉ
-   * cần một khoảng thở. Là KHÁCH thì không có thanh tab, và `SafeAreaView` ở đây chỉ giữ cạnh
+   * cần một khoảng thở. Là KHÁCH thì không có thanh tab, và layout của `(tabs)` chỉ giữ cạnh
    * trên — nội dung sẽ chui xuống dưới thanh điều hướng nếu không tự cộng inset vào.
    */
   const bottomPadding = layout.section + (user ? 0 : insets.bottom);
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
-      <YStack onLayout={onHeaderLayout} zi={20}>
-        <MarketHeader />
-      </YStack>
-
+    <YStack f={1} bg={colors.background}>
       {/*
         Thanh thu gọn nằm ĐÈ lên nội dung (`position: absolute`) và trượt vào từ trên, nên nó
         không chiếm chỗ trong dòng chảy — thêm/bớt nó không đẩy nội dung nhảy một nấc.
       */}
-      <YStack
-        pos="absolute"
-        top={headerBottom}
-        left={0}
-        right={0}
-        zi={10}
-        pointerEvents="box-none"
-      >
+      <YStack pos="absolute" top={0} left={0} right={0} zi={10} pointerEvents="box-none">
         <StickySearchBar onSubmit={openSearch} progress={progress} />
       </YStack>
 
@@ -170,7 +129,7 @@ function HomeContent() {
         contentContainerStyle={{ paddingBottom: bottomPadding }}
         keyboardShouldPersistTaps="handled"
         onScroll={onScroll}
-        scrollEventThrottle={16}
+        scrollEventThrottle={scrollThrottle.frame}
       >
         <HomeHero banners={banners ?? []} isLoading={bannersLoading} />
 
@@ -197,6 +156,6 @@ function HomeContent() {
           <RentalSteps />
         </YStack>
       </Animated.ScrollView>
-    </SafeAreaView>
+    </YStack>
   );
 }

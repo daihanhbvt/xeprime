@@ -1,8 +1,8 @@
 # 10 — Implementation Constraints
 
-> Ngày: 04/08/2026 · Chủ sở hữu: Product Director (viết cho người thiết kế)
+> Ngày: 04/08/2026 · Cập nhật phạm vi: 03/09/2026 · Chủ sở hữu: Product Director (viết cho người thiết kế)
 > Mục đích: để một bản thiết kế **không** đề xuất thứ mà kiến trúc đã chốt là không làm. Đây không phải danh sách lý do từ chối — nó là bản đồ chi phí, để cùng một ý tưởng được diễn đạt theo cách rẻ hơn 10 lần.
-> Nguồn: `CLAUDE.md` · `docs/decisions/` (ADR 0001–0010).
+> Nguồn: `CLAUDE.md` · `docs/decisions/` (ADR 0001–0028). Product Vision/ADR mới hơn thắng các ví dụ cũ trong file này.
 
 ---
 
@@ -36,7 +36,7 @@
 | Tiền là `Decimal` ở BE → **string** trong JSON | 0007 | Thiết kế không được giả định phép tính tiền ở client |
 | Trạng thái là union trong `@xeprime/types` | 0005 | Mockup **không** được đặt tên trạng thái mới |
 | Type FE sinh từ OpenAPI | 0007 | Thiết kế đòi trường mới ⇒ cần đổi DTO backend, không phải "FE tự thêm" |
-| PII che mặc định, bỏ che ghi audit | Phase 7 | Không thiết kế bảng hiện SĐT đầy đủ sẵn |
+| PII che mặc định, bỏ che ghi audit | Hiện hành | Không thiết kế bảng hiện SĐT đầy đủ sẵn; thao tác nhạy cảm phải có lý do/case |
 | Chat: PostgreSQL là nguồn sự thật, Firestore là projection | 0009 | Không thiết kế tính năng chat phụ thuộc vào tính năng riêng của Firestore |
 
 ---
@@ -91,8 +91,8 @@ Thiết kế đòi những thứ dưới đây ⇒ báo trước, vì chúng thu
 | Lưu xe yêu thích (C-05) | Bảng mới |
 | Tìm theo bản đồ (C-07) | Toạ độ + index không gian |
 | Bàn giao xe có bằng chứng (S-03) | Bảng handover + ảnh |
-| ~~Thanh toán online (C-01)~~ **bỏ khỏi phạm vi 21/08/2026, [ADR 0013](../decisions/0013-no-online-payment-mvp.md)** | ~~Bảng giao dịch + trạng thái + webhook~~ |
-| Nhiều chi nhánh (S-09) | Thay đổi mô hình quan hệ — **đắt nhất trong danh sách** |
+| Thanh toán/giữ chỗ/thu hộ ([ADR 0028](../decisions/0028-marketplace-subscription-fees-and-custodied-funds.md)) | Bank transaction, hold/payment, fee allocation, ledger, refund, withdrawal và reconciliation |
+| Nhiều chi nhánh (S-09) | Đã có mô hình; feature mới phải tiếp tục giữ tenant/branch scope đúng |
 | Ticket hỗ trợ (G-01) | Bảng mới |
 
 Ngược lại, những thứ này **không** cần migration: đổi bố cục, đổi copy, gom/tách màn, thêm bộ lọc trên trường đã có, thêm cách sắp xếp trên trường đã index, dark theme, chuyển bảng thành thẻ ở mobile.
@@ -101,8 +101,7 @@ Ngược lại, những thứ này **không** cần migration: đổi bố cục
 
 ## 7. Bản địa hoá
 
-Chỉ tiếng Việt. Không dựng hạ tầng i18n ở chặng này (`02` §8).
-Nhưng: **không hardcode chuỗi nghiệp vụ trong component** (CLAUDE §5) — nhãn trạng thái/vai trò lấy từ `@xeprime/types`, văn bản tĩnh của một feature để trong `constants.ts` của feature đó. Đây vừa là kỷ luật code, vừa là con đường rẻ nếu sau này cần i18n.
+Hai ngôn ngữ `vi`/`en`, dùng chung URL và nguồn message ở `packages/domain/messages/{vi,en}` theo ADR 0012. **Không hardcode chuỗi giao diện trong component**; nhãn trạng thái/vai trò lấy từ `@xeprime/types`, nội dung lấy qua namespace i18n.
 
 Định dạng: VND · `Asia/Ho_Chi_Minh` · ngày `dd/mm/yyyy` · SĐT Việt Nam (lưu `84…`, hiển thị `09…` — `common/phone.ts`).
 

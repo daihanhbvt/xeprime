@@ -23,6 +23,7 @@ import {
   VEHICLE_TYPE,
   type PaginationMeta,
   type VehiclePublicStatus,
+  type VehicleType,
 } from '@xeprime/types';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
@@ -389,8 +390,8 @@ export class VehiclesService {
   }
 
   async create(tenantId: string, userId: string, dto: CreateVehicleDto): Promise<VehicleDetailDto> {
-    // Quota gói (ADR 0010): chạm max_vehicles của gói hiện hành → PLAN_LIMIT_REACHED.
-    await this.billing.assertVehicleQuota(tenantId);
+    // Hạn mức CHỖ theo loại xe (ADR 0015 điều 7, điểm chặn 1): chạm số chỗ đã mua → PLAN_LIMIT_REACHED.
+    await this.billing.assertVehicleQuota(tenantId, dto.vehicleType as VehicleType);
     const id = newId();
     const code = dto.code?.trim() || `XP-${id.slice(-8).toUpperCase()}`;
     await this.assertCodeFree(tenantId, code);
@@ -853,6 +854,14 @@ export class VehiclesService {
         details: { missing },
       });
     }
+
+    // Điểm chặn THỨ HAI của hạn mức chỗ (ADR 0015 điều 7 — "cái răng thật"): hết chỗ trên chợ
+    // thì không đưa thêm xe lên, kể cả xe đã tạo từ trước khi gói thu nhỏ. Đếm xe đang chiếm
+    // suất (chờ duyệt + đang công khai), trừ chính chiếc này để gửi-lại-duyệt không tự chặn mình.
+    await this.billing.assertVehicleQuota(tenantId, vehicle.vehicleType as VehicleType, {
+      scope: 'marketplace',
+      excludeVehicleId: id,
+    });
 
     const isResubmit = status !== VEHICLE_PUBLIC_STATUS.DRAFT;
 

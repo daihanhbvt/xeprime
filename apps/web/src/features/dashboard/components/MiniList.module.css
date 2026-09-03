@@ -1,0 +1,83 @@
+.center {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+}
+
+.empty {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  color: var(--xp-color-text-tertiary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.row + .row {
+  border-top: 1px solid var(--xp-color-border-secondary);
+}
+
+.rowBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 2px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.rowBtn:hover {
+  background: var(--xp-color-bg-hover);
+}
+
+.info {
+  min-width: 0;
+}
+
+.name {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--xp-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.price {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--xp-color-price);
+  white-space: nowrap;
+}
+
+/*
+ * Tiền CHI hiện khác tiền THU: trên một dòng sổ quỹ, dấu của số mới là thông tin, còn
+ * `--xp-color-price` là màu của "giá" chứ không phải của "dòng tiền ra".
+ */
+.amountOut {
+  color: var(--xp-color-error);
+}

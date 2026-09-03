@@ -1,4 +1,5 @@
 import { SERVICE_TYPE, type ServiceType } from '@xeprime/types';
+import { LEGAL_DOC, legalPath } from '@/constants/legal';
 import { ROUTES } from '@/constants/routes';
 import type { FooterKey, ServiceLabelKey } from '@/i18n/keys';
 
@@ -45,30 +46,38 @@ export const RENTAL_STEPS: ReadonlyArray<{ no: string; key: 'search' | 'request'
   { no: '4', key: 'return' },
 ];
 
-/** Cột liên kết ở chân trang — `href` trỏ route thật khi đã có, nhãn nằm ở `Marketplace.footer`. */
+/**
+ * Cột liên kết ở chân trang.
+ *
+ * **Mọi mục ở đây phải trỏ tới một trang CÓ THẬT.** Trước 03/09/2026, 9 trong 11 mục trỏ về
+ * `ROUTES.HOME` — trong đó có cả "Điều khoản dịch vụ" và "Chính sách bảo mật", tức chân trang
+ * đang hứa hai văn bản mà bấm vào thì quay lại trang chủ. Mục chưa có trang (Giới thiệu, Blog,
+ * Tuyển dụng, Hướng dẫn thuê xe, Bảng giá) đã được GỠ chứ không trỏ tạm: một liên kết dẫn về
+ * chỗ cũ khó chịu hơn hẳn một mục không tồn tại.
+ *
+ * Nhãn nằm ở `Marketplace.footer`.
+ */
 export const FOOTER_COLUMNS: ReadonlyArray<{
   key: string;
   titleKey: FooterKey;
   links: ReadonlyArray<{ key: FooterKey; href: string }>;
 }> = [
   {
-    key: 'about',
-    titleKey: 'columns.about.title',
-    links: [
-      { key: 'columns.about.intro', href: ROUTES.HOME },
-      { key: 'columns.about.blog', href: ROUTES.HOME },
-      { key: 'columns.about.careers', href: ROUTES.HOME },
-      { key: 'columns.about.contact', href: ROUTES.HOME },
-    ],
-  },
-  {
     key: 'support',
     titleKey: 'columns.support.title',
+    links: [{ key: 'columns.support.helpCenter', href: ROUTES.SUPPORT }],
+  },
+  {
+    key: 'legal',
+    titleKey: 'columns.legal.title',
     links: [
-      { key: 'columns.support.helpCenter', href: ROUTES.HOME },
-      { key: 'columns.support.rentalGuide', href: ROUTES.HOME },
-      { key: 'columns.support.terms', href: ROUTES.HOME },
-      { key: 'columns.support.privacy', href: ROUTES.HOME },
+      { key: 'columns.legal.terms', href: legalPath.doc(LEGAL_DOC.TERMS) },
+      { key: 'columns.legal.privacy', href: legalPath.doc(LEGAL_DOC.PRIVACY) },
+      {
+        key: 'columns.legal.marketplaceRules',
+        href: legalPath.doc(LEGAL_DOC.MARKETPLACE_RULES),
+      },
+      { key: 'columns.legal.cancellation', href: legalPath.doc(LEGAL_DOC.CANCELLATION) },
     ],
   },
   {
@@ -79,7 +88,6 @@ export const FOOTER_COLUMNS: ReadonlyArray<{
       // `/manage` — vào đó khi chưa có gian hàng chỉ gặp màn "Bạn chưa có gian hàng".
       { key: 'columns.hosts.listVehicle', href: ROUTES.MANAGE.ONBOARDING },
       { key: 'columns.hosts.manageVehicles', href: ROUTES.MANAGE.VEHICLES },
-      { key: 'columns.hosts.pricing', href: ROUTES.HOME },
     ],
   },
 ];

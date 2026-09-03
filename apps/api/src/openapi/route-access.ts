@@ -1,9 +1,11 @@
 import type { INestApplication } from '@nestjs/common';
 import { ModulesContainer } from '@nestjs/core';
-import type { Permission } from '@xeprime/types';
+import type { Permission, PlanFeature } from '@xeprime/types';
 import {
+  FEATURE_READ_SAFE_KEY,
   IS_PUBLIC_KEY,
   PERMISSIONS_KEY,
+  PLAN_FEATURE_KEY,
   PLATFORM_ONLY_KEY,
   TENANT_SCOPED_KEY,
   VERIFIES_CREDENTIALS_KEY,
@@ -19,6 +21,15 @@ export interface RouteAccess {
   readonly permissions: readonly Permission[];
   readonly tenantScoped: boolean;
   readonly platformOnly: boolean;
+  /**
+   * Tính năng nâng cao gác route này (ADR 0027) — `null` = bậc cơ bản, không gói nào chặn.
+   *
+   * Đây vừa là thứ `PlanFeatureGuard` thi hành lúc chạy, vừa là nguồn sinh nhánh 403 trong tài
+   * liệu, vừa là thứ `plan-feature-coverage.spec.ts` duyệt để bắt một endpoint mới thiếu marker.
+   */
+  readonly feature: PlanFeature | null;
+  /** Route hình-đọc dù không phải GET — xem `@FeatureReadSafe()`. */
+  readonly featureReadSafe: boolean;
 }
 
 /**
@@ -60,6 +71,8 @@ export function collectRouteAccess(app: INestApplication): Map<string, RouteAcce
           permissions: readPermissions(handler, controller),
           tenantScoped: readFlag(TENANT_SCOPED_KEY, handler, controller),
           platformOnly: readFlag(PLATFORM_ONLY_KEY, handler, controller),
+          feature: readFeature(handler, controller),
+          featureReadSafe: readFlag(FEATURE_READ_SAFE_KEY, handler, controller),
         });
       }
     }
@@ -72,6 +85,21 @@ export function collectRouteAccess(app: INestApplication): Map<string, RouteAcce
 function readFlag(key: string, handler: unknown, controller: unknown): boolean {
   return Reflect.getMetadata(key, handler as object) === true ||
     Reflect.getMetadata(key, controller as object) === true;
+}
+
+/**
+ * Marker ở method thắng marker ở class — đúng `getAllAndOverride` của guard.
+ *
+ * Nhờ vậy một controller gắn `@RequiresFeature` ở class vẫn CHỪA được ngoại lệ: route nào cần
+ * mở cho bậc cơ bản thì override ở method. Ngoại lệ nằm ở metadata nên nó hiện trong
+ * `route-access` và bị test coverage nhìn thấy — không giấu được trong service.
+ */
+function readFeature(handler: unknown, controller: unknown): PlanFeature | null {
+  const fromHandler = Reflect.getMetadata(PLAN_FEATURE_KEY, handler as object) as
+    | PlanFeature
+    | undefined;
+  if (fromHandler) return fromHandler;
+  return (Reflect.getMetadata(PLAN_FEATURE_KEY, controller as object) as PlanFeature) ?? null;
 }
 
 function readPermissions(handler: unknown, controller: unknown): readonly Permission[] {

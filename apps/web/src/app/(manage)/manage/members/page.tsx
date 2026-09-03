@@ -3,28 +3,27 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, Select, Tag } from 'antd';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   PERMISSION,
+  PLAN_FEATURE,
   TENANT_ROLE,
-  TENANT_ROLE_LABEL,
   type MembershipStatus,
   type TenantRole,
 } from '@xeprime/types';
 import { DataTable, actionColumn, type DataTableColumn } from '@/components/data-display/DataTable';
 import { EntityIdentity } from '@/components/data-display/EntityIdentity';
 import { StatusTag } from '@/components/data-display/StatusTag';
+import { FeatureWriteTooltip } from '@/components/feedback/FeatureWriteTooltip';
 import { FilterBar, type FilterField } from '@/components/filter/FilterBar';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { usePermissions } from '@/hooks/use-permissions';
-import { getErrorMessage } from '@/services/api-client';
+import { useDomainLabel } from '@/i18n/use-domain-label';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { MEMBERS_DEFAULT_LIMIT } from '@/features/members/api';
 import { AddMemberModal } from '@/features/members/components/AddMemberModal';
-import {
-  ALL_ROLE_OPTIONS,
-  ASSIGNABLE_ROLE_OPTIONS,
-  MEMBERSHIP_STATUS_META,
-} from '@/features/members/constants';
+import { ALL_ROLES, ASSIGNABLE_ROLES, MEMBERSHIP_STATUS_META } from '@/features/members/constants';
 import { useMembers } from '@/features/members/hooks/use-members';
 import {
   useRemoveMember,
@@ -33,23 +32,16 @@ import {
 import type { Member, MemberFilters, UpdateMemberRoleInput } from '@/features/members/types';
 import styles from './members-page.module.css';
 
-const FILTER_FIELDS: FilterField[] = [
-  { kind: 'search', key: 'q', label: 'Tìm thành viên', placeholder: 'Tìm theo tên hoặc email' },
-  {
-    kind: 'select',
-    key: 'roleKey',
-    label: 'Vai trò',
-    options: [{ value: 'all', label: 'Tất cả vai trò' }, ...ALL_ROLE_OPTIONS],
-    allowClear: false,
-  },
-];
-
 /** Suy từ tổng bề rộng cột (P25). Figma `127:1725` ghi 580px cho 5 cột; code có 4. */
 const MIN_TABLE_WIDTH = 720;
 
 export default function MembersPage() {
+  const t = useTranslations('Members');
+  const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const { has } = usePermissions();
+  const domainLabel = useDomainLabel();
+  const errorMessage = useErrorMessage();
   const { data: me } = useCurrentUser();
 
   // Bộ lọc của trang này là state CỤC BỘ (không nằm trên URL) — giữ nguyên, đưa lên URL là
@@ -68,6 +60,26 @@ export default function MembersPage() {
   const items = data?.items ?? [];
   const meta = data?.meta ?? { page: 1, limit: MEMBERS_DEFAULT_LIMIT, total: 0, hasNext: false };
 
+  // Nhãn vai trò dựng lúc render qua `Domain.tenantRole` — mã đi trên dây không đổi theo ngôn ngữ.
+  const roleOptions = (roles: readonly TenantRole[]) =>
+    roles.map((role) => ({ value: role, label: domainLabel('tenantRole', role) }));
+
+  const filterFields: FilterField[] = [
+    {
+      kind: 'search',
+      key: 'q',
+      label: t('filters.search'),
+      placeholder: t('filters.searchPlaceholder'),
+    },
+    {
+      kind: 'select',
+      key: 'roleKey',
+      label: t('filters.role'),
+      options: [{ value: 'all', label: t('filters.allRoles') }, ...roleOptions(ALL_ROLES)],
+      allowClear: false,
+    },
+  ];
+
   function patch(next: Partial<MemberFilters>) {
     setFilters((prev) => ({ ...prev, ...next, ...('page' in next ? {} : { page: 1 }) }));
   }
@@ -76,28 +88,39 @@ export default function MembersPage() {
     updateRole.mutate(
       { userId, roleKey: roleKey as UpdateMemberRoleInput['roleKey'] },
       {
-        onSuccess: () => message.success('Đã đổi vai trò'),
-        onError: (err) => message.error(getErrorMessage(err)),
+        onSuccess: () => message.success(t('toast.roleChanged')),
+        onError: (err) => message.error(errorMessage(err)),
       },
     );
   }
 
   function handleRemove(userId: string) {
     removeMember.mutate(userId, {
-      onSuccess: () => message.success('Đã gỡ thành viên'),
-      onError: (err) => message.error(getErrorMessage(err)),
+      onSuccess: () => message.success(t('toast.removed')),
+      onError: (err) => message.error(errorMessage(err)),
     });
   }
 
+  // Nhân viên & phân quyền là tính năng của GÓI (ADR 0027): hết hạn thì xem được danh sách,
+  // không thêm được người. Lớp chặn thật là `PlanFeatureGuard` ở backend.
   const inviteButton = canInvite ? (
-    <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddOpen(true)}>
-      Thêm thành viên
-    </Button>
+    <FeatureWriteTooltip feature={PLAN_FEATURE.MEMBERS}>
+      {(disabled) => (
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          disabled={disabled}
+          onClick={() => setAddOpen(true)}
+        >
+          {t('actions.invite')}
+        </Button>
+      )}
+    </FeatureWriteTooltip>
   ) : null;
 
   const columns: DataTableColumn<Member>[] = [
     {
-      title: 'Thành viên',
+      title: t('columns.member'),
       key: 'member',
       width: 280,
       render: (_, row) => (
@@ -109,15 +132,15 @@ export default function MembersPage() {
           name={
             <>
               {row.displayName}
-              {row.userId === me?.id ? <span className={styles.you}> (bạn)</span> : null}
+              {row.userId === me?.id ? <span className={styles.you}> {t('you')}</span> : null}
             </>
           }
-          subtitle={row.email ?? '—'}
+          subtitle={row.email ?? tCommon('labels.emptyValue')}
         />
       ),
     },
     {
-      title: 'Vai trò',
+      title: t('columns.role'),
       key: 'role',
       width: 200,
       render: (_, row) => {
@@ -128,9 +151,9 @@ export default function MembersPage() {
           <Select
             size="small"
             className={styles.roleSelect}
-            aria-label={`Vai trò của ${row.displayName}`}
+            aria-label={t('roleSelectAria', { name: row.displayName })}
             value={row.roleKey}
-            options={ASSIGNABLE_ROLE_OPTIONS}
+            options={roleOptions(ASSIGNABLE_ROLES)}
             loading={updateRole.isPending && updateRole.variables?.userId === row.userId}
             onChange={(value: string) => handleRoleChange(row.userId, value)}
           />
@@ -138,13 +161,13 @@ export default function MembersPage() {
           // KHÔNG chuyển sang `StatusTag`: đây là NHÃN VAI TRÒ, không phải trạng thái nghiệp vụ,
           // và `@xeprime/types` không có `TENANT_ROLE_META` — chuyển sẽ phải bịa màu (P5).
           <Tag color={isOwner ? 'gold' : 'default'}>
-            {TENANT_ROLE_LABEL[row.roleKey as TenantRole] ?? row.roleKey}
+            {domainLabel('tenantRole', row.roleKey, row.roleKey)}
           </Tag>
         );
       },
     },
     {
-      title: 'Trạng thái',
+      title: t('columns.status'),
       key: 'status',
       width: 130,
       render: (_, row) => (
@@ -154,13 +177,17 @@ export default function MembersPage() {
     actionColumn<Member>((row) => [
       {
         key: 'remove',
-        label: 'Gỡ thành viên',
+        label: t('actions.remove'),
         icon: <DeleteOutlined />,
         danger: true,
         // Ba điều kiện y hệt trước migrate: có quyền, không phải chủ shop, không phải chính mình.
         hidden: !canRemove || row.roleKey === TENANT_ROLE.SHOP_OWNER || row.userId === me?.id,
         loading: removeMember.isPending && removeMember.variables === row.userId,
-        confirm: { title: 'Gỡ thành viên này?', okText: 'Gỡ', cancelText: 'Đóng' },
+        confirm: {
+          title: t('actions.removeConfirm'),
+          okText: tCommon('actions.remove'),
+          cancelText: tCommon('actions.close'),
+        },
         onClick: () => handleRemove(row.userId),
       },
     ]),
@@ -168,10 +195,10 @@ export default function MembersPage() {
 
   return (
     <div>
-      <ManagePageHeader title="Người dùng" />
+      <ManagePageHeader title={t('page.title')} />
 
       <FilterBar
-        fields={FILTER_FIELDS}
+        fields={filterFields}
         values={{ q: filters.q, roleKey: filters.roleKey ?? 'all' }}
         onChange={(next) =>
           patch({ q: next.q, roleKey: next.roleKey === 'all' ? undefined : next.roleKey })
@@ -180,22 +207,20 @@ export default function MembersPage() {
       />
 
       <DataTable<Member>
-        label="Danh sách thành viên"
+        label={t('page.tableLabel')}
         columns={columns}
         items={items}
         rowKey={(row) => row.userId}
         minWidth={MIN_TABLE_WIDTH}
         loading={isFetching}
         error={
-          isError && !data
-            ? { title: 'Không tải được danh sách thành viên', onRetry: () => void refetch() }
-            : null
+          isError && !data ? { title: t('page.loadError'), onRetry: () => void refetch() } : null
         }
-        empty={{ title: 'Chưa có thành viên nào', action: inviteButton ?? undefined }}
+        empty={{ title: t('page.empty'), action: inviteButton ?? undefined }}
         pagination={{
           meta,
           onChange: (page, pageSize) => patch({ page, limit: pageSize }),
-          totalLabel: (total) => `${total} thành viên`,
+          totalLabel: (total) => t('page.total', { count: total }),
         }}
       />
 

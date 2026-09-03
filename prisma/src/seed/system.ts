@@ -8,10 +8,12 @@
  * là một phần của lược đồ (mọi môi trường có ngay sau `migrate deploy`, không đợi ai chạy seed).
  */
 import {
+  BILLING_MODE,
   DEFAULT_PLATFORM_ROLE_PERMISSIONS,
   DEFAULT_TENANT_ROLE_PERMISSIONS,
   FINANCE_CATEGORY_TYPE,
   PERMISSION_VALUES,
+  PLAN_FEATURE,
   PLAN_STATUS,
   PLATFORM_ROLE,
   PLATFORM_ROLE_LABEL,
@@ -19,7 +21,10 @@ import {
   SYSTEM_FINANCE_CATEGORY,
   TENANT_ROLE,
   TENANT_ROLE_LABEL,
+  type BillingMode,
   type Permission,
+  type PlanAssumedGmvJson,
+  type PlanLimitsJson,
   type SystemFinanceCategoryKey,
 } from '@xeprime/types';
 import { log, photo, prisma, seedId } from './context';
@@ -181,23 +186,103 @@ async function seedFinanceCategories(): Promise<FinanceCategoryIds> {
 }
 
 /**
- * Gói dịch vụ nền tảng (ADR 0010). Không phải dữ liệu demo: màn quản trị gói và màn chọn gói
- * của gian hàng cần danh mục này ở mọi môi trường.
+ * Cờ năng lực backfill cho cả ba gói: ĐỦ 7 cờ đang dùng (trừ `escrow_hold` — ADR 0025 chưa thi
+ * công). Mọi tenant hôm nay không có rào chắn nào; gói thiếu cờ nghĩa là ngày cổng chặn bật
+ * (ADR 0027) họ MẤT quyền — W3 mới là đợt cân chỉnh từng gói, đợt này thà rộng còn siết sau.
  */
-const PLANS = [
+const ALL_CURRENT_FEATURES = [
+  PLAN_FEATURE.FINANCE,
+  PLAN_FEATURE.DEBTS,
+  PLAN_FEATURE.MAINTENANCE,
+  PLAN_FEATURE.MEMBERS,
+  PLAN_FEATURE.BRANCHES,
+  PLAN_FEATURE.DRIVERS,
+  PLAN_FEATURE.CONTRACTS,
+];
+
+/** Bốn kỳ hạn chuẩn (ADR 0015 điều 3) — % giảm là DỮ LIỆU đặt tạm, admin chỉnh ở màn quản trị. */
+const DEFAULT_TERMS = [
+  { months: 1, discountPercent: 0 },
+  { months: 3, discountPercent: 5 },
+  { months: 6, discountPercent: 10 },
+  { months: 12, discountPercent: 15 },
+];
+
+/**
+ * Gói dịch vụ nền tảng (ADR 0015/0020). Không phải dữ liệu demo: màn quản trị gói và màn chọn
+ * gói của gian hàng cần danh mục này ở mọi môi trường.
+ *
+ * RESHAPE ba mã có sẵn, KHÔNG tạo mã mới — đổi mã là mồ côi mọi `tenant_subscriptions` đang trỏ
+ * tới. Giá là DỮ LIỆU đặt tạm cho admin chỉnh sau, nhưng phải qua được kiểm điểm giao
+ * (ADR 0020): phí nền ≥ includedCars × %hoa hồng × doanh thu giả định.
+ *
+ * ⚠️ `free` là gói MẶC ĐỊNH lúc đăng ký — đặt nó vào TUYẾN HOA HỒNG (10%, không phí cố định,
+ * không giới hạn chỗ) là quyết định tiền bạc của ADR 0020: chủ xe nhỏ vào miễn phí và chỉ trả
+ * khi có doanh thu; hai đơn đầu còn được miễn cả hoa hồng (ADR 0026, thi công đợt sau).
+ */
+const PLANS: ReadonlyArray<{
+  code: string;
+  name: string;
+  description: string;
+  billingMode: BillingMode;
+  commissionPercent: number | null;
+  basePriceMonthly: number;
+  assumedMonthlyGmv: PlanAssumedGmvJson | null;
+  limits: PlanLimitsJson;
+  /** Cột cũ ADR 0010 — giữ tới đợt contract. */
+  price: number;
+  durationDays: number;
+  maxVehicles: number | null;
+  sortOrder: number;
+}> = [
   {
     code: 'free',
-    name: 'Dùng thử',
-    description: 'Cho gian hàng mới mở — tối đa 3 xe, đủ để chạy thử toàn bộ quy trình.',
+    name: 'Hoa hồng theo chuyến',
+    description:
+      'Mặc định khi mở gian hàng — không phí cố định, nền tảng thu hoa hồng trên mỗi chuyến qua khoản giữ chỗ.',
+    billingMode: BILLING_MODE.COMMISSION,
+    commissionPercent: 10,
+    basePriceMonthly: 0,
+    assumedMonthlyGmv: null,
+    limits: {
+      perVehiclePrice: { car: null, motorbike: null },
+      includedCars: 0,
+      includedMotorbikes: 0,
+      maxCars: null,
+      maxMotorbikes: null,
+      maxMembers: null,
+      maxBranches: null,
+      terms: DEFAULT_TERMS,
+      graceDays: 7,
+      features: ALL_CURRENT_FEATURES,
+    },
     price: 0,
     durationDays: 30,
-    maxVehicles: 3,
+    maxVehicles: null,
     sortOrder: 0,
   },
   {
     code: 'standard',
     name: 'Tiêu chuẩn',
-    description: 'Gian hàng một chi nhánh — tối đa 20 xe, đủ tính năng vận hành và sổ thu chi.',
+    description:
+      'Gian hàng một chi nhánh — phí nền gồm sẵn 5 chỗ ô tô, 0đ trên chuyến, mua thêm chỗ theo đơn giá.',
+    billingMode: BILLING_MODE.PACKAGE,
+    commissionPercent: null,
+    basePriceMonthly: 990_000,
+    // Ngưỡng kiểm điểm giao: 5 chỗ × 10% × 1.500.000đ = 750.000đ ≤ 990.000đ ✓ (ADR 0020).
+    assumedMonthlyGmv: { monthlyGmvPerCar: '1500000', commissionPercent: 10 },
+    limits: {
+      perVehiclePrice: { car: '120000', motorbike: '40000' },
+      includedCars: 5,
+      includedMotorbikes: 0,
+      maxCars: 20,
+      maxMotorbikes: 20,
+      maxMembers: 5,
+      maxBranches: 1,
+      terms: DEFAULT_TERMS,
+      graceDays: 7,
+      features: ALL_CURRENT_FEATURES,
+    },
     price: 490_000,
     durationDays: 30,
     maxVehicles: 20,
@@ -206,16 +291,44 @@ const PLANS = [
   {
     code: 'pro',
     name: 'Chuyên nghiệp',
-    description: 'Nhiều chi nhánh, không giới hạn số xe, có tài xế và báo cáo nâng cao.',
+    description:
+      'Đội xe lớn, nhiều chi nhánh — đơn giá chỗ rẻ hơn, không trần chỗ, gồm sẵn 12 chỗ ô tô.',
+    billingMode: BILLING_MODE.PACKAGE,
+    commissionPercent: null,
+    basePriceMonthly: 1_990_000,
+    // Ngưỡng: 12 chỗ × 10% × 1.500.000đ = 1.800.000đ ≤ 1.990.000đ ✓.
+    assumedMonthlyGmv: { monthlyGmvPerCar: '1500000', commissionPercent: 10 },
+    limits: {
+      perVehiclePrice: { car: '100000', motorbike: '30000' },
+      includedCars: 12,
+      includedMotorbikes: 0,
+      maxCars: null,
+      maxMotorbikes: null,
+      maxMembers: null,
+      maxBranches: null,
+      terms: DEFAULT_TERMS,
+      graceDays: 7,
+      features: ALL_CURRENT_FEATURES,
+    },
     price: 1_490_000,
     durationDays: 30,
     maxVehicles: null,
     sortOrder: 2,
   },
-] as const;
+];
 
-/** Tra gói theo `code` để gán thuê bao cho gian hàng demo. */
-export type PlanIds = Map<string, { id: string; price: number }>;
+/** Tra gói theo `code` để gán thuê bao cho gian hàng demo (kèm snapshot chế độ — ADR 0024). */
+export type PlanIds = Map<
+  string,
+  {
+    id: string;
+    price: number;
+    billingMode: BillingMode;
+    commissionPercent: number | null;
+    /** Số chỗ mặc định của một lượt gán demo = đúng số gồm sẵn. */
+    slots: { car: number; motorbike: number };
+  }
+>;
 
 async function seedPlans(): Promise<PlanIds> {
   const byCode: PlanIds = new Map();
@@ -224,6 +337,11 @@ async function seedPlans(): Promise<PlanIds> {
     const fields = {
       name: plan.name,
       description: plan.description,
+      billingMode: plan.billingMode,
+      commissionPercent: plan.commissionPercent,
+      basePriceMonthly: plan.basePriceMonthly,
+      assumedMonthlyGmvJson: plan.assumedMonthlyGmv ?? undefined,
+      limitsJson: plan.limits,
       price: plan.price,
       durationDays: plan.durationDays,
       maxVehicles: plan.maxVehicles,
@@ -235,7 +353,13 @@ async function seedPlans(): Promise<PlanIds> {
       create: { id, code: plan.code, status: PLAN_STATUS.ACTIVE, ...fields },
       select: { id: true },
     });
-    byCode.set(plan.code, { id: row.id, price: plan.price });
+    byCode.set(plan.code, {
+      id: row.id,
+      price: plan.price,
+      billingMode: plan.billingMode,
+      commissionPercent: plan.commissionPercent,
+      slots: { car: plan.limits.includedCars, motorbike: plan.limits.includedMotorbikes },
+    });
   }
   return byCode;
 }

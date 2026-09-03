@@ -1,0 +1,43 @@
+{
+  "title": "Trung tâm hỗ trợ",
+  "subtitle": "Gặp sự cố trong chuyến, cần đổi lịch hay khiếu nại? Đây là các kênh liên hệ chính thức của XePrime.",
+  "draftNotice": "Các kênh liên hệ dưới đây còn là chỗ trống — điền số hotline, email và giờ trực thật trước khi mở pilot.",
+  "channels": {
+    "heading": "Liên hệ với chúng tôi",
+    "hotline": {
+      "label": "Tổng đài",
+      "value": "«điền số hotline»",
+      "note": "Dành cho sự cố đang diễn ra trong chuyến: xe hỏng, tai nạn, không liên lạc được với bên kia."
+    },
+    "email": {
+      "label": "Email hỗ trợ",
+      "value": "«điền email hỗ trợ»",
+      "note": "Dành cho khiếu nại, yêu cầu về dữ liệu cá nhân và các việc cần gửi kèm chứng từ."
+    },
+    "hours": {
+      "label": "Giờ trực",
+      "value": "«điền khung giờ trực»",
+      "note": "Ngoài giờ trực, yêu cầu vẫn được ghi nhận và xử lý vào ca kế tiếp."
+    }
+  },
+  "beforeContact": {
+    "heading": "Gửi kèm những thông tin này để được xử lý nhanh",
+    "tripCode": "Mã chuyến hoặc mã đơn thuê",
+    "phone": "Số điện thoại đã đăng ký tài khoản",
+    "evidence": "Ảnh hiện trạng xe, biên bản giao nhận và tin nhắn liên quan",
+    "expectation": "Mong muốn của bạn: đổi lịch, huỷ, hoàn tiền hay hỗ trợ kỹ thuật"
+  },
+  "emergency": {
+    "heading": "Trường hợp khẩn cấp",
+    "body": "Nếu có tai nạn hoặc nguy hiểm tới tính mạng, hãy gọi 113 (công an), 114 (cứu hoả) hoặc 115 (cấp cứu) trước. Báo cho XePrime và chủ xe ngay sau khi đã an toàn."
+  },
+  "scope": {
+    "heading": "XePrime hỗ trợ được tới đâu",
+    "canDo": "Chúng tôi cung cấp hồ sơ chuyến trên hệ thống, hỗ trợ liên lạc giữa hai bên, xử lý vi phạm quy chế và tiếp nhận khiếu nại.",
+    "cannotDo": "Với phần giao dịch hai bên tự thực hiện ngoài nền tảng, chúng tôi không có dữ liệu để đối soát và không cam kết hoàn tiền hay phân xử."
+  },
+  "legal": {
+    "heading": "Điều khoản và chính sách",
+    "body": "Quyền và nghĩa vụ của các bên nằm ở các văn bản dưới đây."
+  }
+}

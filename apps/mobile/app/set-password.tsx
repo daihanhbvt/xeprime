@@ -1,5 +1,4 @@
-import { useRouter } from 'expo-router';
-import { enterApp } from '@/features/auth/enter-app';
+import { useEnterApp } from '@/features/auth/hooks/use-enter-app';
 import { SetPasswordScreen } from '@/features/auth/SetPasswordScreen';
 
 /**
@@ -9,7 +8,7 @@ import { SetPasswordScreen } from '@/features/auth/SetPasswordScreen';
  * Đặt xong hay bỏ qua đều dẫn vào app: đây là một gợi ý, không phải một cổng.
  */
 export default function SetPasswordRoute() {
-  const router = useRouter();
+  const enterApp = useEnterApp();
 
-  return <SetPasswordScreen onDone={() => enterApp(router)} />;
+  return <SetPasswordScreen onDone={() => enterApp()} />;
 }

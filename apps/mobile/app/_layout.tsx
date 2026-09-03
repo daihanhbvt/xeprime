@@ -2,6 +2,8 @@
 // Hermes trên Android thiếu `Intl.PluralRules` và bảng múi giờ. Xem `src/i18n/intl-polyfill.ts`.
 import '@/i18n/intl-polyfill';
 
+import { patchDayjsTimezone } from '@/i18n/dayjs-timezone-fix';
+
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, type ErrorBoundaryProps } from 'expo-router';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -20,6 +22,8 @@ import { useAppFonts } from '@/theme/fonts';
 import { colors } from '@/theme/tokens';
 import { tamaguiConfig } from '@/theme/tamagui.config';
 import { duration } from '@/theme/motion';
+
+patchDayjsTimezone();
 
 /**
  * expo-router bắt lỗi render của cả cây qua export TÊN `ErrorBoundary` ở layout gốc. Nó nằm
@@ -83,6 +87,12 @@ export default function RootLayout() {
                   */}
                   <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
                   <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+                  {/*
+                    Khu quản lý là một KHU khác, không phải một nấc sâu hơn của khu khách — đổi
+                    khu dùng `fade` y như `(tabs)`, để cú chuyển đọc thành "thay cả màn" chứ
+                    không phải "đi tiếp".
+                  */}
+                  <Stack.Screen name="manage" options={{ animation: 'fade' }} />
                 </Stack>
               </SessionBoundary>
               </AppToastProvider>

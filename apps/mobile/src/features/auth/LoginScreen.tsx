@@ -23,8 +23,7 @@ import { SocialButtons } from './components/SocialButtons';
  * provider, cùng quy tắc khoá, cùng mã lỗi. Khác đúng một chỗ và nằm gọn trong
  * `lib/auth-session.ts` — native nhận cặp Bearer (ADR 0017) thay cho session cookie (ADR 0002).
  *
- * Logo chỉ xuất hiện MỘT lần, ở header. Trước đây màn này còn một logo 56px canh giữa ngay
- * trong nội dung — hai lần cùng một dấu hiệu cách nhau 80px, và cái thứ hai không nói thêm gì.
+ * Logo chỉ xuất hiện MỘT lần, ở header.
  *
  * Đăng ký (AUTH-02) và quên mật khẩu (AUTH-05) là hai màn RIÊNG; màn này chỉ dẫn sang, y như
  * web dẫn sang `/register` và `/forgot-password`.
@@ -94,4 +93,3 @@ export function LoginScreen({
     </>
   );
 }
-

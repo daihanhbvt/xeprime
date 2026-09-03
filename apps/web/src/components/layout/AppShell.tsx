@@ -5,11 +5,15 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, type ReactNode } from 'react';
+import { FEATURE_STATE } from '@xeprime/types';
+import { flattenLeaves, matchSelectedKey, navForScope } from '@/constants/nav';
 import { ROUTES } from '@/constants/routes';
+import { FeatureExpiredNotice } from '@/components/feedback/FeatureExpiredNotice';
 import { portalLoginWithNext } from '@/features/auth/post-auth-destination';
 import { NoTenantState } from '@/features/shop/components/NoTenantState';
 import { shopStatusNotice } from '@/features/shop/status-notice';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useFeatureStates, usePlanEndsAt } from '@/hooks/use-feature';
 import { useTenantScope } from '@/hooks/use-tenant-scope';
 import { destroySession } from '@/services/auth.service';
 import { Sidebar } from './Sidebar';
@@ -53,6 +57,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { data: user, isLoading, isError } = useCurrentUser();
   const { hasNoTenant, tenant } = useTenantScope();
+  const featureStates = useFeatureStates();
+  const planEndsAt = usePlanEndsAt();
   // Một chỗ ghi duy nhất cho tuỳ chọn sidebar/khối menu — sidebar desktop và Drawer mobile
   // cùng sửa một state, nên việc lưu không thuộc về riêng cái nào.
   useNavPreferencesSync();
@@ -130,6 +136,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     return notice.showInShell ? notice : null;
   })();
 
+  /**
+   * Băng "gói hết hạn, tính năng chỉ-xem" (ADR 0027 điều 3) — cùng chỗ và cùng lý do với dải
+   * trạng thái gian hàng ở trên: một chỗ sửa phủ cả bảy khu bị gác.
+   *
+   * Bản đồ `pathname → feature` lấy từ CHÍNH cây nav (`leaf.feature`), không đẻ bản đồ thứ hai —
+   * thêm một trang bị gác chỉ phải khai một chỗ. `matchSelectedKey` chạy trên cây CHƯA lọc, nên
+   * băng vẫn tra được ngay cả khi mục đó đã bị ẩn khỏi menu.
+   */
+  const expiredFeature = (() => {
+    if (!tenant) return null;
+    const leaves = flattenLeaves(navForScope(Boolean(user.platformRole)));
+    const href = matchSelectedKey(pathname, leaves);
+    const feature = leaves.find((leaf) => leaf.href === href)?.feature;
+    if (!feature) return null;
+    return featureStates[feature] === FEATURE_STATE.READ_ONLY ? feature : null;
+  })();
+
   return (
     <div
       className={[styles.shell, isViewportPath ? styles.shellViewport : '']
@@ -159,6 +182,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 ) : null
               }
             />
+          ) : null}
+          {expiredFeature ? (
+            <FeatureExpiredNotice feature={expiredFeature} planEndsAt={planEndsAt} />
           ) : null}
           {children}
         </main>

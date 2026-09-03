@@ -1,3 +1,5 @@
+import enBookingRequests from '@xeprime/domain/messages/en/booking-requests.json';
+import enBookings from '@xeprime/domain/messages/en/bookings.json';
 import enChat from '@xeprime/domain/messages/en/chat.json';
 import enTrips from '@xeprime/domain/messages/en/trips.json';
 import enAccount from '@xeprime/domain/messages/en/account.json';
@@ -10,7 +12,10 @@ import enListings from '@xeprime/domain/messages/en/listings.json';
 import enMarketplace from '@xeprime/domain/messages/en/marketplace.json';
 import enMobileShell from '@xeprime/domain/messages/en/mobile-shell.json';
 import enNavigation from '@xeprime/domain/messages/en/navigation.json';
+import enManageCommon from '@xeprime/domain/messages/en/manage-common.json';
 import enShops from '@xeprime/domain/messages/en/shops.json';
+import viBookingRequests from '@xeprime/domain/messages/vi/booking-requests.json';
+import viBookings from '@xeprime/domain/messages/vi/bookings.json';
 import viChat from '@xeprime/domain/messages/vi/chat.json';
 import viTrips from '@xeprime/domain/messages/vi/trips.json';
 import viAccount from '@xeprime/domain/messages/vi/account.json';
@@ -23,6 +28,7 @@ import viListings from '@xeprime/domain/messages/vi/listings.json';
 import viMarketplace from '@xeprime/domain/messages/vi/marketplace.json';
 import viMobileShell from '@xeprime/domain/messages/vi/mobile-shell.json';
 import viNavigation from '@xeprime/domain/messages/vi/navigation.json';
+import viManageCommon from '@xeprime/domain/messages/vi/manage-common.json';
 import viShops from '@xeprime/domain/messages/vi/shops.json';
 import { type AppLocale } from './config';
 
@@ -52,10 +58,13 @@ export const MESSAGES = {
     Navigation: viNavigation,
     Account: viAccount,
     Trips: viTrips,
+    BookingRequests: viBookingRequests,
+    Bookings: viBookings,
     Chat: viChat,
     HomeSearch: viHomeSearch,
     Marketplace: viMarketplace,
     Listings: viListings,
+    ManageCommon: viManageCommon,
     Shops: viShops,
     MobileShell: viMobileShell,
   },
@@ -67,10 +76,13 @@ export const MESSAGES = {
     Navigation: enNavigation,
     Account: enAccount,
     Trips: enTrips,
+    BookingRequests: enBookingRequests,
+    Bookings: enBookings,
     Chat: enChat,
     HomeSearch: enHomeSearch,
     Marketplace: enMarketplace,
     Listings: enListings,
+    ManageCommon: enManageCommon,
     Shops: enShops,
     MobileShell: enMobileShell,
   },

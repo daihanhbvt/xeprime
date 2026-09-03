@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import { fetchBookings, filtersToParams } from '@/features/bookings/api';
 import type { BookingFilters } from '@/features/bookings/types';
-import { dayjs } from '@/lib/datetime';
+import { nowInAppTz } from '@/lib/datetime';
 
 const RECENT_LIMIT = 6;
 const PANEL_LIMIT = 6;
@@ -17,7 +17,9 @@ const PANEL_LIMIT = 6;
  */
 export function useDashboardBookings() {
   const bounds = useMemo(() => {
-    const now = dayjs();
+    // "Hết hôm nay" / "3 ngày tới" là ranh giới NGÀY VIỆT NAM, không phải ngày của máy đang
+    // mở dashboard — nếu không, cùng một đơn lúc thì nằm trong ô "trả hôm nay" lúc thì không.
+    const now = nowInAppTz();
     return {
       now: now.toISOString(),
       endToday: now.endOf('day').toISOString(),
@@ -33,8 +35,19 @@ export function useDashboardBookings() {
     });
 
   const recent = useList({ sort: 'newest', limit: RECENT_LIMIT });
-  const dueToday = useList({ status: 'active', returnTo: bounds.endToday, sort: 'return_asc', limit: PANEL_LIMIT });
-  const upcoming = useList({ status: 'active', returnFrom: bounds.endToday, returnTo: bounds.in3days, sort: 'return_asc', limit: PANEL_LIMIT });
+  const dueToday = useList({
+    status: 'active',
+    returnTo: bounds.endToday,
+    sort: 'return_asc',
+    limit: PANEL_LIMIT,
+  });
+  const upcoming = useList({
+    status: 'active',
+    returnFrom: bounds.endToday,
+    returnTo: bounds.in3days,
+    sort: 'return_asc',
+    limit: PANEL_LIMIT,
+  });
   const active = useList({ status: 'active', limit: 1 });
   const overdue = useList({ status: 'active', returnTo: bounds.now, limit: 1 });
 

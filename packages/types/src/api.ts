@@ -127,8 +127,75 @@ export const API_ERROR_CODE = {
    */
   TRIP_CANCEL_NOT_ALLOWED: 'TRIP_CANCEL_NOT_ALLOWED',
 
-  // Gói/hạn (ADR 0010)
+  // Gói/hạn (ADR 0010 · tách theo loại xe từ ADR 0015 điều 7)
   PLAN_LIMIT_REACHED: 'PLAN_LIMIT_REACHED',
+  /**
+   * Bậc gói `package` vi phạm KIỂM ĐIỂM GIAO (ADR 0020): điểm hoà vốn so với tuyến hoa hồng
+   * nằm DƯỚI `includedCars` của chính bậc đó — tức là chủ xe nhỏ hơn quy mô gói cũng thấy gói
+   * rẻ hơn, và tuyến hoa hồng mất vai trò phễu. Đây là quy tắc trong code, không phải núm vặn.
+   *
+   * Cũng ném khi thiếu dữ liệu để kiểm (`assumed_monthly_gmv_json`, đơn giá chỗ ô tô) —
+   * một bậc gói bán tiền thật không được lưu khi chưa chứng minh được bài toán khuyến khích.
+   * `details` mang `{ reason }` (`'BREAKEVEN_BELOW_INCLUDED'` | `'MISSING_ASSUMPTIONS'`).
+   */
+  PLAN_INCENTIVE_INVALID: 'PLAN_INCENTIVE_INVALID',
+
+  // Năng lực theo gói (ADR 0027) — TRỤC THỨ HAI, độc lập với MISSING_PERMISSION.
+  /**
+   * Gian hàng KHÔNG có tính năng này trong gói hiện hành và cũng chưa từng dùng nó
+   * (`hidden` — ADR 0027 điều 3). Người dùng không thiếu quyền; GIAN HÀNG thiếu tính năng, nên
+   * lối đi tiếp là xem gói chứ không phải liên hệ quản trị viên.
+   *
+   * `details` mang `{ feature }`. Trả **403**, không phải 402: toàn bộ máy sinh tài liệu và
+   * `openapi-contract` coi 403 là nhánh phân quyền, và 402 bị proxy xử lý mỗi nơi một kiểu.
+   */
+  FEATURE_NOT_IN_PLAN: 'FEATURE_NOT_IN_PLAN',
+  /**
+   * Gói hết hạn nhưng gian hàng ĐÃ CÓ dữ liệu của tính năng này (`read_only` — ADR 0027 điều 3):
+   * mọi endpoint ĐỌC vẫn trả dữ liệu bình thường, chỉ đường GHI bị chặn.
+   *
+   * `details` mang `{ feature, planEndsAt }` để FE hiện đúng mốc hết hạn kèm nút gia hạn.
+   * Không ai được mất quyền XEM sổ sách của chính mình vì hết hạn gói.
+   */
+  FEATURE_READ_ONLY: 'FEATURE_READ_ONLY',
+
+  // Khoản giữ chỗ — tuyến hoa hồng (ADR 0021)
+  /**
+   * Xe này ở tuyến hoa hồng: phải chuyển khoản giữ chỗ trước khi có đơn.
+   *
+   * Không phải lỗi của người dùng — nó là tín hiệu để FE mở bước VietQR. Ném khi có ai đó đi
+   * đường tắt tới bước sau mà chưa qua bước tiền.
+   */
+  HOLD_REQUIRED: 'HOLD_REQUIRED',
+  /** Quá cửa sổ chuyển khoản, chỗ đã nhả. Lối đi tiếp là đặt lại, không phải thử lại. */
+  HOLD_EXPIRED: 'HOLD_EXPIRED',
+  /** Khoản giữ chỗ này đã nhận đủ tiền rồi — chặn tạo đơn lần hai từ cùng một hold. */
+  HOLD_ALREADY_PAID: 'HOLD_ALREADY_PAID',
+  /**
+   * Đã qua mốc huỷ miễn phí (`freeCancelUntil`) nên khoản giữ chỗ không hoàn.
+   *
+   * `details` mang `{ freeCancelUntil }` để FE nói đúng mốc đã qua thay vì một câu chung chung.
+   */
+  HOLD_NOT_REFUNDABLE: 'HOLD_NOT_REFUNDABLE',
+  /**
+   * Chuyến này không đặt-ngay được, phải đi luồng gửi yêu cầu (ADR 0021 điều 8).
+   *
+   * Hai nguyên nhân, cả hai đều là "không lấy % của một con số chưa chốt": thuê dài hạn chưa có
+   * giờ nhận (ADR 0011), hoặc báo giá còn là tạm tính (`estimateNote`).
+   * `details` mang `{ reason }`.
+   */
+  INSTANT_BOOK_UNAVAILABLE: 'INSTANT_BOOK_UNAVAILABLE',
+
+  // Ví (ADR 0023)
+  /** Số dư khả dụng không đủ cho yêu cầu rút (đã trừ phần đang bị khoá bởi yêu cầu chờ duyệt). */
+  WALLET_INSUFFICIENT_BALANCE: 'WALLET_INSUFFICIENT_BALANCE',
+
+  // Đối soát ngân hàng (ADR 0022)
+  /**
+   * Webhook SePay sai khoá API. Trả 401 và KHÔNG kèm chi tiết nào —
+   * đây là endpoint công khai duy nhất có quyền ghi tiền.
+   */
+  SEPAY_SIGNATURE_INVALID: 'SEPAY_SIGNATURE_INVALID',
 
   // Sổ Thu-Chi (Phase 6 · epic nối tiền)
   /**

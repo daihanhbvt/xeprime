@@ -21,21 +21,44 @@ import {
 } from '@xeprime/types';
 import { applyDiscountPercent } from '@xeprime/domain';
 import { catalogLabel } from '@xeprime/api-client';
+import { useRouter } from 'expo-router';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { ScreenError } from '@/components/state/ScreenError';
 import { ListingDetailSkeleton } from '@/components/ui/Skeleton';
 import { Avatar } from '@/components/ui/Avatar';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Stars } from '@/components/ui/Stars';
 import type { IconName } from '@/components/ui/Chip';
 import { useCatalog } from '@/features/catalog/use-catalog';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/domain';
+import { elevation } from '@/theme/elevation';
 import { layout } from '@/theme/layout';
-import { colors, fontSize, fontWeight, radius, space } from '@/theme/tokens';
+import { colors, fontSize, fontWeight, iconSize, radius, space } from '@/theme/tokens';
+import { scrollThrottle } from '@/theme/motion';
+import { ROUTES } from '@/navigation/routes';
 import { useListing, useListingReviews } from './hooks/use-marketplace-data';
 import type { PublicListingDetail } from './api';
 import { FeatureChip } from './components/FeatureChip';
 import { ServiceSelector } from './components/ServiceSelector';
+
+/**
+ * Dịch vụ mở sẵn khi vào trang: ngữ cảnh mang từ danh sách sang nếu xe phục vụ được → ưu tiên
+ * tự lái → dịch vụ đầu tiên.
+ *
+ * Là hàm THUẦN ở module scope vì hai nơi cần cùng câu trả lời: khối giá bên trong thân trang và
+ * thanh CTA đáy nằm ngoài vùng cuộn. Hai bản `useState` khởi tạo khác nhau là chỗ trang hiện
+ * giá "có tài xế" trong khi nút mở wizard "tự lái".
+ */
+function defaultServiceOf(
+  services: readonly string[],
+  initialServiceType: string | undefined,
+): string {
+  if (initialServiceType && services.includes(initialServiceType)) return initialServiceType;
+  if (services.includes(SERVICE_TYPE.SELF_DRIVE)) return SERVICE_TYPE.SELF_DRIVE;
+  return services[0] ?? SERVICE_TYPE.SELF_DRIVE;
+}
 
 /** Ảnh 4:3 — cao hơn thẻ ở danh sách vì đây là chỗ khách thật sự ngắm xe. */
 const PHOTO_RATIO = 4 / 3;
@@ -76,6 +99,13 @@ export function ListingDetailScreen({
 }) {
   const listing = useListing(vehicleId);
   const [scrolled, setScrolled] = useState(false);
+  /*
+   * Dịch vụ đang chọn sống ở VỎ, không trong `DetailBody`: thanh CTA đáy màn nằm ngoài vùng
+   * cuộn nên nó không đọc được state bên trong, mà nó phải mở wizard đúng loại khách vừa xem giá.
+   *
+   * `null` = chưa có dữ liệu xe nên chưa suy được mặc định; lúc đó chưa render thanh CTA.
+   */
+  const [chosenService, setChosenService] = useState<string | null>(null);
 
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const passed = event.nativeEvent.contentOffset.y > TITLE_REVEAL;
@@ -110,16 +140,57 @@ export function ListingDetailScreen({
         mất phần đẹp nhất của tấm ảnh. Tiêu đề chỉ hiện sau khi cuộn qua ảnh — lúc đó tên xe ở
         thân trang đã khuất và header mới cần nhắc lại nó.
       */}
-      <AppHeader
-        variant="overlay"
-        onBack={onBack}
-        title={listing.data.name}
-        showTitle={scrolled}
-      />
+      <AppHeader variant="overlay" onBack={onBack} title={listing.data.name} showTitle={scrolled} />
       <DetailBody
         listing={listing.data}
-        initialServiceType={initialServiceType}
+        activeService={
+          chosenService ?? defaultServiceOf(listing.data.serviceTypes ?? [], initialServiceType)
+        }
         onScroll={onScroll}
+        onServiceChange={setChosenService}
+      />
+
+      {/*
+        Thanh hành động DÍNH ĐÁY — lối duy nhất vào luồng gửi yêu cầu thuê.
+        
+        Web đặt nút trong cột phải luôn nhìn thấy; native không có cột phải, nên nút phải nổi
+        trên nội dung. Không có nó thì khách phải cuộn hết trang mới thấy cách đặt xe.
+      */}
+      <RequestBar
+        vehicleId={listing.data.id}
+        serviceType={
+          chosenService ?? defaultServiceOf(listing.data.serviceTypes ?? [], initialServiceType)
+        }
+      />
+    </YStack>
+  );
+}
+
+/**
+ * Thanh CTA đáy màn chi tiết xe.
+ *
+ * Mang theo dịch vụ đang chọn để wizard mở ra đúng loại khách vừa xem giá — mở mặc định "tự
+ * lái" sau khi khách vừa xem giá "có tài xế" là bắt họ chọn lại thứ đã chọn.
+ */
+function RequestBar({ vehicleId, serviceType }: { vehicleId: string; serviceType?: string }) {
+  const t = useTranslations('BookingRequests.flow');
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <YStack
+      px={layout.screenX}
+      pt={space.sm}
+      pb={insets.bottom + space.sm}
+      bg={colors.surface}
+      borderTopWidth={1}
+      borderColor={colors.borderSubtle}
+      style={elevation.raised}
+    >
+      <Button
+        label={t('cta')}
+        size="lg"
+        onPress={() => router.push(ROUTES.booking.request(vehicleId, serviceType))}
       />
     </YStack>
   );
@@ -127,12 +198,15 @@ export function ListingDetailScreen({
 
 function DetailBody({
   listing,
-  initialServiceType,
+  activeService,
   onScroll,
+  onServiceChange,
 }: {
   listing: PublicListingDetail;
-  initialServiceType?: string;
+  /** Dịch vụ đang chọn — do VỎ giữ, vì thanh CTA đáy nằm ngoài vùng cuộn này. */
+  activeService: string;
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onServiceChange: (serviceType: string) => void;
 }) {
   const t = useTranslations('Listings.detail');
   const tCard = useTranslations('Listings.card');
@@ -142,18 +216,6 @@ function DetailBody({
   const insets = useSafeAreaInsets();
 
   const services: readonly string[] = listing.serviceTypes ?? [];
-
-  /*
-   * MỘT `activeService` cho cả trang — selector, khối giá và điều kiện giấy tờ cùng đọc:
-   * dịch vụ mang từ danh sách sang nếu xe phục vụ được → ưu tiên tự lái → dịch vụ đầu tiên.
-   */
-  const [activeService, setActiveService] = useState<string>(
-    initialServiceType && services.includes(initialServiceType)
-      ? initialServiceType
-      : services.includes(SERVICE_TYPE.SELF_DRIVE)
-        ? SERVICE_TYPE.SELF_DRIVE
-        : (services[0] ?? SERVICE_TYPE.SELF_DRIVE),
-  );
 
   // Preview cùng công thức với PricingService; báo giá server vẫn là nguồn chốt.
   const discount = listing.discountPercent ?? 0;
@@ -165,22 +227,50 @@ function DetailBody({
   const hasRating = listing.ratingCount > 0 && Number.isFinite(rating);
 
   const specs: { key: string; label: string; value: string }[] = [
-    { key: 'vehicleType', label: t('specs.vehicleType'), value: domainLabel('vehicleType', listing.vehicleType) },
+    {
+      key: 'vehicleType',
+      label: t('specs.vehicleType'),
+      value: domainLabel('vehicleType', listing.vehicleType),
+    },
     ...(listing.bodyType
-      ? [{ key: 'bodyType', label: t('specs.bodyType'), value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '' }]
+      ? [
+          {
+            key: 'bodyType',
+            label: t('specs.bodyType'),
+            value: catalogLabel(catalog[CATALOG_TYPE.BODY_TYPE], listing.bodyType) ?? '',
+          },
+        ]
       : []),
     ...(listing.seatCount
-      ? [{ key: 'seatCount', label: t('specs.seats'), value: tCard('seats', { count: listing.seatCount }) }]
+      ? [
+          {
+            key: 'seatCount',
+            label: t('specs.seats'),
+            value: tCard('seats', { count: listing.seatCount }),
+          },
+        ]
       : []),
     ...(listing.fuelType
-      ? [{ key: 'fuelType', label: t('specs.fuelType'), value: catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? '' }]
+      ? [
+          {
+            key: 'fuelType',
+            label: t('specs.fuelType'),
+            value: catalogLabel(catalog[CATALOG_TYPE.FUEL_TYPE], listing.fuelType) ?? '',
+          },
+        ]
       : []),
     ...(listing.manufactureYear
       ? [{ key: 'manufactureYear', label: t('specs.year'), value: String(listing.manufactureYear) }]
       : []),
     ...(listing.color ? [{ key: 'color', label: t('specs.color'), value: listing.color }] : []),
     ...(brand
-      ? [{ key: 'brand', label: t('specs.brand'), value: [brand, listing.model].filter(Boolean).join(' ') }]
+      ? [
+          {
+            key: 'brand',
+            label: t('specs.brand'),
+            value: [brand, listing.model].filter(Boolean).join(' '),
+          },
+        ]
       : []),
   ];
 
@@ -190,7 +280,7 @@ function DetailBody({
       // không khối cuối bị thanh điều hướng Android che mất.
       contentContainerStyle={{ paddingBottom: layout.section + insets.bottom }}
       onScroll={onScroll}
-      scrollEventThrottle={32}
+      scrollEventThrottle={scrollThrottle.half}
     >
       <Gallery name={listing.name} mainImageUrl={listing.mainImageUrl} images={listing.images} />
 
@@ -212,8 +302,8 @@ function DetailBody({
 
             <XStack ai="center" gap={space.sm} rowGap={space.sm} flexWrap="wrap">
               {hasRating ? (
-                <XStack ai="center" gap={4}>
-                  <Ionicons name="star" size={13} color={colors.primaryActive} />
+                <XStack ai="center" gap={space.xs}>
+                  <Ionicons name="star" size={iconSize.xs} color={colors.primaryActive} />
                   <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold}>
                     {fmt.rating(rating)}
                   </Text>
@@ -226,7 +316,7 @@ function DetailBody({
               <Text col={colors.placeholder} fos={fontSize.bodySm}>
                 ·
               </Text>
-              <XStack ai="center" gap={4}>
+              <XStack ai="center" gap={space.xs}>
                 <Ionicons name="stats-chart" size={12} color={colors.success} />
                 <Text col={colors.textMuted} fos={fontSize.bodySm}>
                   {tCard('completedTrips', { count: listing.completedTripCount ?? 0 })}
@@ -237,8 +327,8 @@ function DetailBody({
                   <Text col={colors.placeholder} fos={fontSize.bodySm}>
                     ·
                   </Text>
-                  <XStack ai="center" gap={4}>
-                    <Ionicons name="location-outline" size={13} color={colors.textMuted} />
+                  <XStack ai="center" gap={space.xs}>
+                    <Ionicons name="location-outline" size={iconSize.xs} color={colors.textMuted} />
                     <Text col={colors.textMuted} fos={fontSize.bodySm}>
                       {listing.shopProvince}
                     </Text>
@@ -255,7 +345,7 @@ function DetailBody({
               <ServiceSelector
                 services={services}
                 active={activeService}
-                onChange={setActiveService}
+                onChange={onServiceChange}
               />
             </YStack>
           ) : null}
@@ -300,12 +390,18 @@ function DetailBody({
                 <BulletLine
                   text={
                     listing.collateral.mode === COLLATERAL_MODE.CASH
-                      ? t('collateralDeposit', { amount: fmt.money(listing.collateral.depositAmount) })
+                      ? t('collateralDeposit', {
+                          amount: fmt.money(listing.collateral.depositAmount),
+                        })
                       : listing.collateral.mode === COLLATERAL_MODE.ASSET
                         ? t('collateralAsset', {
                             types: listing.collateral.assetTypes
                               .map((type) =>
-                                domainLabel('collateralAssetType', type, COLLATERAL_ASSET_TYPE_LABEL[type]),
+                                domainLabel(
+                                  'collateralAssetType',
+                                  type,
+                                  COLLATERAL_ASSET_TYPE_LABEL[type],
+                                ),
                               )
                               .join(', '),
                           })
@@ -340,7 +436,7 @@ function DetailBody({
               >
                 <Ionicons
                   name={SPEC_ICON[spec.key] ?? 'ellipse-outline'}
-                  size={16}
+                  size={iconSize.sm}
                   color={colors.textMuted}
                 />
                 <Text f={1} col={colors.textMuted} fos={fontSize.bodySm}>
@@ -371,7 +467,12 @@ function DetailBody({
             <Avatar name={listing.shopName} url={listing.shopLogoUrl} size={44} />
             <YStack f={1} gap={2}>
               <XStack ai="center" gap={space.xs}>
-                <Text col={colors.text} fos={fontSize.body} fow={fontWeight.semibold} numberOfLines={1}>
+                <Text
+                  col={colors.text}
+                  fos={fontSize.body}
+                  fow={fontWeight.semibold}
+                  numberOfLines={1}
+                >
                   {listing.shopName}
                 </Text>
                 {/* Xe lên chợ đồng nghĩa gian hàng đã qua duyệt nền tảng — tick nói đúng điều đó. */}
@@ -492,7 +593,7 @@ function PriceBlock({
 
 function PriceRow({ amount, unit }: { amount: string; unit: string }) {
   return (
-    <XStack ai="baseline" gap={4}>
+    <XStack ai="baseline" gap={space.xs}>
       <Text col={colors.price} fos={fontSize.h1} fow={fontWeight.bold}>
         {amount}
       </Text>
@@ -629,7 +730,12 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
               >
                 <XStack ai="center" jc="space-between" gap={space.sm}>
                   <XStack ai="center" gap={space.xs} f={1}>
-                    <Text col={colors.text} fos={fontSize.bodySm} fow={fontWeight.semibold} numberOfLines={1}>
+                    <Text
+                      col={colors.text}
+                      fos={fontSize.bodySm}
+                      fow={fontWeight.semibold}
+                      numberOfLines={1}
+                    >
                       {review.customerName}
                     </Text>
                     <Stars value={review.rating} />
@@ -649,23 +755,6 @@ function Reviews({ vehicleId }: { vehicleId: string }) {
         )}
       </YStack>
     </Card>
-  );
-}
-
-/** Năm sao, tô theo điểm làm tròn — cùng cách `components/data-display/Stars` của web. */
-function Stars({ value }: { value: number }) {
-  const filled = Math.round(value);
-  return (
-    <XStack gap={1}>
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Ionicons
-          key={star}
-          name="star"
-          size={11}
-          color={star <= filled ? colors.primaryActive : colors.border}
-        />
-      ))}
-    </XStack>
   );
 }
 
