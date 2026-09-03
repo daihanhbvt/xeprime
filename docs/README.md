@@ -5,16 +5,19 @@
 
 XePrime là chợ đăng và thuê xe kết hợp giải pháp quản lý cho thuê xe. Bộ tài liệu được giữ gọn theo ba câu hỏi: **đang xây gì**, **đang ở đâu**, và **vì sao chọn cách này**.
 
+Muốn theo dõi trực quan và lấy prompt triển khai cho Claude Code, mở [`roadmap.html`](roadmap.html). Trang này lưu checkbox trong trình duyệt và là lớp hiển thị; khi nội dung khác Markdown thì `completion-roadmap.md` vẫn là nguồn canonical.
+
 ## Đọc theo thứ tự
 
 | Thứ tự | Tài liệu | Trả lời câu hỏi | Trạng thái |
 | --- | --- | --- | --- |
 | 1 | [`design/02_PRODUCT_VISION.md`](design/02_PRODUCT_VISION.md) | Sản phẩm dành cho ai, hai mô hình chủ xe và cách kiếm tiền | Canonical |
 | 2 | [`completion-roadmap.md`](completion-roadmap.md) | Hiện trạng, việc tiếp theo và release gate | Canonical |
-| 3 | [`design/03_PRODUCT_GAP_ANALYSIS.md`](design/03_PRODUCT_GAP_ANALYSIS.md) | User/Admin/Manage đang thiếu hoặc thừa gì | Canonical |
-| 4 | [`decisions/`](decisions/) | Quyết định kiến trúc/nghiệp vụ kèm lý do và quan hệ ghi đè | Canonical |
-| 5 | [`design/07_INFORMATION_ARCHITECTURE.md`](design/07_INFORMATION_ARCHITECTURE.md) | Phân bề mặt Customer/Owner/Shop/Platform | Canonical |
-| 6 | [`CODEMAP.md`](CODEMAP.md) | Khái niệm kỹ thuật đang nằm ở đâu trong source | Sống |
+| 3 | [`roadmap.html`](roadmap.html) | Checklist trực quan, tiến độ cục bộ và thư viện prompt Claude Code | UI theo dõi |
+| 4 | [`design/03_PRODUCT_GAP_ANALYSIS.md`](design/03_PRODUCT_GAP_ANALYSIS.md) | User/Admin/Manage đang thiếu hoặc thừa gì | Canonical |
+| 5 | [`decisions/`](decisions/) | Quyết định kiến trúc/nghiệp vụ kèm lý do và quan hệ ghi đè | Canonical |
+| 6 | [`design/07_INFORMATION_ARCHITECTURE.md`](design/07_INFORMATION_ARCHITECTURE.md) | Phân bề mặt Customer/Owner/Shop/Platform | Canonical |
+| 7 | [`CODEMAP.md`](CODEMAP.md) | Khái niệm kỹ thuật đang nằm ở đâu trong source | Sống |
 
 ## Tài liệu kỹ thuật còn dùng
 
@@ -46,6 +49,7 @@ Khi một tài liệu mâu thuẫn với code nhưng không có quyết định 
 - Mọi tài liệu sống phải có ngày cập nhật và trạng thái.
 - Không tạo thêm file “plan theo phiên làm việc” trong repo. Công việc ngắn hạn đi qua issue/PR; quyết định lâu dài đi qua ADR; tiến độ đi vào một roadmap duy nhất.
 - Khi đóng một milestone, cập nhật `completion-roadmap.md` trong cùng PR.
+- Khi roadmap hoặc release gate đổi, đồng bộ nội dung và prompt trong `roadmap.html`; checkbox cá nhân không được commit làm bằng chứng hoàn thành.
 - Khi thay đổi business model, tạo ADR mới và đánh dấu rõ ADR nào bị ghi đè.
 - Không dùng `.docx` hoặc `.xlsx` làm nguồn sự thật vì không review/diff đáng tin cậy trong Git.
 

@@ -136,7 +136,6 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
         'Tổng quan',
         'Cửa hàng',
         'Trò chuyện',
-        'Thùng rác',
         'Trung tâm hỗ trợ',
       ]),
     );
@@ -183,12 +182,14 @@ describe('useManageNav — hiển thị theo quyền (gian hàng)', () => {
     expect(screen.queryByText('Cấu hình')).toBeNull();
   });
 
-  it('mục placeholder vẫn hiện và vẫn là link thật', () => {
+  // Gỡ ngày 03/09/2026 (R1): 'Khu vực nhận xe' và 'Thùng rác' từng là link thật dẫn tới một
+  // trang trống. Giờ menu không được dựng chúng nữa.
+  it('không dựng mục nào dẫn tới trang chưa có luồng', () => {
     grant(PERMISSION.TENANT_VIEW);
     renderMenu();
 
-    const trash = screen.getByRole('link', { name: 'Thùng rác' });
-    expect(trash.getAttribute('href')).toBe('/manage/trash');
+    expect(screen.queryByRole('link', { name: 'Thùng rác' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Khu vực nhận xe' })).toBeNull();
   });
 });
 

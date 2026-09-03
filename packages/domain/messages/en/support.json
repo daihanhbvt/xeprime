@@ -1,0 +1,43 @@
+{
+  "title": "Support",
+  "subtitle": "Trouble during a trip, need to reschedule, or want to raise a complaint? These are XePrime's official contact channels.",
+  "draftNotice": "The contact details below are still placeholders — fill in the real hotline, email, and staffed hours before the pilot opens.",
+  "channels": {
+    "heading": "Get in touch",
+    "hotline": {
+      "label": "Hotline",
+      "value": "«enter hotline number»",
+      "note": "For incidents happening right now: breakdown, accident, or you cannot reach the other party."
+    },
+    "email": {
+      "label": "Support email",
+      "value": "«enter support email»",
+      "note": "For complaints, personal-data requests, and anything that needs documents attached."
+    },
+    "hours": {
+      "label": "Staffed hours",
+      "value": "«enter staffed hours»",
+      "note": "Outside these hours your request is still logged and picked up on the next shift."
+    }
+  },
+  "beforeContact": {
+    "heading": "Include these so we can help faster",
+    "tripCode": "Your trip or booking code",
+    "phone": "The phone number registered to your account",
+    "evidence": "Vehicle condition photos, the handover report, and related messages",
+    "expectation": "What you want: reschedule, cancel, refund, or technical help"
+  },
+  "emergency": {
+    "heading": "In an emergency",
+    "body": "If there is an accident or a risk to life, call 113 (police), 114 (fire), or 115 (ambulance) first. Tell XePrime and the vehicle owner once you are safe."
+  },
+  "scope": {
+    "heading": "What XePrime can and cannot do",
+    "canDo": "We can provide the trip record held in our system, help the two sides reach each other, act on breaches of the marketplace rules, and receive complaints.",
+    "cannotDo": "For any part of a deal the two sides arranged off the platform, we hold no data to reconcile and cannot promise a refund or adjudicate it."
+  },
+  "legal": {
+    "heading": "Terms and policies",
+    "body": "The rights and obligations of each party are set out in the documents below."
+  }
+}

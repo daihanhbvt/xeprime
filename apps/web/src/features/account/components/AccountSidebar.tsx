@@ -1,7 +1,6 @@
 'use client';
 
 import { LogoutOutlined } from '@ant-design/icons';
-import { Tag } from 'antd';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -13,13 +12,20 @@ import styles from './AccountSidebar.module.css';
 
 const NAV_GROUPS = [
   { key: 'personal', labelKey: 'sidebar.personal', itemKeys: ['profile'] },
-  { key: 'rental', labelKey: 'sidebar.rental', itemKeys: ['trips', 'payments', 'favorites'] },
-  {
-    key: 'preferences',
-    labelKey: 'sidebar.preferences',
-    itemKeys: ['addresses', 'documents', 'notifications', 'support', 'settings'],
-  },
+  { key: 'rental', labelKey: 'sidebar.rental', itemKeys: ['trips'] },
+  { key: 'preferences', labelKey: 'sidebar.preferences', itemKeys: ['support'] },
 ] as const;
+
+const itemsOfGroup = (itemKeys: readonly string[]) =>
+  ACCOUNT_NAV.filter((item) => itemKeys.includes(item.key));
+
+/**
+ * Khối còn ít nhất một mục.
+ *
+ * Tính ở NGOÀI component: `ACCOUNT_NAV` và `NAV_GROUPS` đều là hằng module, nên đây là một
+ * phép lọc chạy đúng một lần lúc nạp — không phải việc của mỗi lần render.
+ */
+const visibleGroups = NAV_GROUPS.filter((group) => itemsOfGroup(group.itemKeys).length > 0);
 
 /**
  * Menu khu tài khoản.
@@ -28,9 +34,12 @@ const NAV_GROUPS = [
  * điện thoại đẩy nội dung thật xuống dưới màn hình đầu tiên, còn Drawer thì giấu mất bản đồ mà
  * cả menu này sinh ra để cho thấy. Một cây dữ liệu (`ACCOUNT_NAV`), hai cách trình bày bằng CSS.
  *
- * Mục `comingSoon` render thành `<span>` chứ KHÔNG phải `<Link>` mờ đi: một liên kết vẫn bấm
- * được, vẫn focus được bằng bàn phím và vẫn dẫn tới trang trống. Không có link thì không có
- * đường tới đó — đúng ý nghĩa "chưa mở".
+ * Menu chỉ liệt kê mục CÓ LUỒNG THẬT (gap analysis §7). Bảy mục "Sắp có" trước đây đã được gỡ
+ * ngày 03/09/2026: một bản đồ đầy đủ nhưng bảy phần chín là chỗ trống thì không phải bản đồ, nó
+ * là bảy lời hứa. Route của chúng vẫn còn cho link đã lỡ phát ra ngoài; chỉ menu là im.
+ *
+ * Khối rỗng bị LOẠI chứ không render tiêu đề trống — mỗi đợt mở tính năng lại đổi số mục trong
+ * một khối, và một tiêu đề không có mục nào dưới nó trông như lỗi tải.
  */
 export function AccountSidebar() {
   const t = useTranslations('Navigation.account');
@@ -45,30 +54,14 @@ export function AccountSidebar() {
   return (
     <nav className={styles.nav} aria-label={t('menuLabel')}>
       <div className={styles.groups}>
-        {NAV_GROUPS.map((group) => (
+        {visibleGroups.map((group) => (
           <section key={group.key} className={styles.group} aria-label={tAccount(group.labelKey)}>
             <h2 className={styles.groupTitle}>{tAccount(group.labelKey)}</h2>
             <ul className={styles.list}>
-              {ACCOUNT_NAV.filter((item) =>
-                (group.itemKeys as readonly string[]).includes(item.key),
-              ).map((item) => {
+              {itemsOfGroup(group.itemKeys).map((item) => {
                 const Icon = item.icon;
                 const active = item.key === activeKey;
                 const label = t(item.labelKey);
-
-                if (item.comingSoon) {
-                  return (
-                    <li key={item.key}>
-                      <span className={`${styles.item} ${styles.disabled}`} aria-disabled="true">
-                        <Icon className={styles.icon} />
-                        <span className={styles.label}>{label}</span>
-                        <Tag className={styles.soonTag} variant="filled">
-                          {tAccount('comingSoon.badge')}
-                        </Tag>
-                      </span>
-                    </li>
-                  );
-                }
 
                 return (
                   <li key={item.key}>

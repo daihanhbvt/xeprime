@@ -114,7 +114,7 @@ export function MobileNav() {
         }}
         size="default"
         rootClassName={styles.drawer}
-        title={<Logo size="sm" tone="light" />}
+        title={<Logo size="sm" />}
         aria-label={t('manage.menuLabel')}
       >
         {/* Vùng landmark có tên riêng: trang mobile có hai <nav> (thanh tab + menu đầy đủ). */}

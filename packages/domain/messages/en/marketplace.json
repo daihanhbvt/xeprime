@@ -9,25 +9,21 @@
       "note": "The app is in development"
     },
     "columns": {
-      "about": {
-        "title": "About us",
-        "intro": "About XePrime",
-        "blog": "Blog",
-        "careers": "Careers",
-        "contact": "Contact"
-      },
       "support": {
         "title": "Support",
-        "helpCenter": "Help centre",
-        "rentalGuide": "How to rent",
-        "terms": "Terms of service",
-        "privacy": "Privacy policy"
+        "helpCenter": "Help centre"
+      },
+      "legal": {
+        "title": "Legal",
+        "terms": "Terms of Service",
+        "privacy": "Privacy Policy",
+        "marketplaceRules": "Marketplace Operating Rules",
+        "cancellation": "Cancellation and Refund Policy"
       },
       "hosts": {
-        "title": "For hosts",
+        "title": "For owners",
         "listVehicle": "List your vehicle",
-        "manageVehicles": "Manage vehicles",
-        "pricing": "Pricing"
+        "manageVehicles": "Manage vehicles"
       }
     }
   },

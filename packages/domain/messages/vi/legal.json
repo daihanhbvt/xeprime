@@ -1,0 +1,203 @@
+{
+  "draftBanner": {
+    "title": "Bản thảo — chưa qua rà soát pháp lý",
+    "body": "Văn bản này được soạn theo đúng cách sản phẩm đang vận hành, nhưng chưa được luật sư rà soát và còn chỗ trống về pháp nhân vận hành. Không công bố cho người dùng thật trước khi hoàn tất hai việc đó."
+  },
+  "entity": {
+    "heading": "Đơn vị vận hành",
+    "body": "Nền tảng XePrime được vận hành bởi «điền tên pháp nhân», mã số doanh nghiệp «điền MST», địa chỉ trụ sở «điền địa chỉ». Mọi liên hệ chính thức gửi về «điền email pháp lý»."
+  },
+  "meta": {
+    "effectiveFrom": "Có hiệu lực từ {date}",
+    "toc": "Nội dung văn bản",
+    "related": "Văn bản liên quan",
+    "backToHome": "Về trang chủ",
+    "printHint": "Bạn có thể lưu hoặc in trang này để giữ bản sao."
+  },
+  "docs": {
+    "terms": {
+      "title": "Điều khoản sử dụng",
+      "summary": "Điều kiện áp dụng cho mọi người dùng XePrime: người thuê xe, chủ xe và gian hàng cho thuê.",
+      "sections": {
+        "scope": {
+          "heading": "1. Phạm vi áp dụng",
+          "body": "Điều khoản này áp dụng khi bạn truy cập website, ứng dụng hoặc bất kỳ dịch vụ nào của XePrime. Việc tạo tài khoản, đăng xe, gửi yêu cầu thuê hoặc tiếp tục sử dụng nền tảng được hiểu là bạn đã đọc và đồng ý. Nếu không đồng ý, vui lòng ngừng sử dụng dịch vụ."
+        },
+        "role": {
+          "heading": "2. XePrime làm gì và không làm gì",
+          "body": "XePrime là sàn kết nối người có nhu cầu thuê xe với chủ xe và gian hàng cho thuê, đồng thời cung cấp phần mềm quản lý hoạt động cho thuê. XePrime không sở hữu xe, không phải bên cho thuê và không phải một bên của hợp đồng thuê xe. Hợp đồng thuê được xác lập trực tiếp giữa người thuê và chủ xe; XePrime cung cấp công cụ, hồ sơ chuyến và kênh hỗ trợ."
+        },
+        "account": {
+          "heading": "3. Tài khoản và bảo mật",
+          "body": "Bạn chịu trách nhiệm về tính chính xác của thông tin đăng ký và về mọi hoạt động phát sinh từ tài khoản của mình. Không chia sẻ mật khẩu hoặc mã OTP cho bất kỳ ai, kể cả người tự xưng là nhân viên XePrime. Khi phát hiện tài khoản bị truy cập trái phép, hãy đổi mật khẩu và báo cho chúng tôi ngay."
+        },
+        "owner": {
+          "heading": "4. Nghĩa vụ của chủ xe và gian hàng",
+          "body": "Bạn cam kết chỉ đăng xe mà mình có quyền cho thuê hợp pháp, kèm giấy tờ còn hiệu lực và thông tin trung thực về tình trạng, giá và điều kiện thuê. Bạn có trách nhiệm giữ lịch xe đúng thực tế, phản hồi yêu cầu thuê trong thời gian hợp lý và bàn giao đúng chiếc xe đã mô tả. Việc tự ý huỷ đơn đã xác nhận, giao xe không đúng mô tả hoặc từ chối khách sau khi đã nhận cam kết có thể dẫn tới hạn chế hiển thị hoặc khoá gian hàng."
+        },
+        "renter": {
+          "heading": "5. Nghĩa vụ của người thuê",
+          "body": "Bạn cam kết cung cấp giấy tờ tuỳ thân và giấy phép lái xe hợp lệ, sử dụng xe đúng mục đích và đúng pháp luật, không cho người khác thuê lại và không dùng xe vào hoạt động bị cấm. Bạn chịu trách nhiệm với thiệt hại, vi phạm giao thông và chi phí phát sinh trong thời gian giữ xe theo thoả thuận với chủ xe."
+        },
+        "fees": {
+          "heading": "6. Phí của XePrime",
+          "body": "XePrime có hai cách thu: phí dịch vụ tính trên chuyến đối với chủ xe không dùng gói thuê bao, và phí thuê bao theo số chỗ xe và kỳ hạn đối với gian hàng. Đây là khoản XePrime hưởng để vận hành sàn, hỗ trợ và chống gian lận — không phải thuế và không phải phí bảo hiểm. Mức phí, kỳ hạn và ngày hiệu lực được công bố trước khi bạn xác nhận; số tiền của một đơn đã tạo không bị tính lại khi chính sách thay đổi sau đó."
+        },
+        "tax": {
+          "heading": "7. Nghĩa vụ thuế",
+          "body": "Nghĩa vụ thuế phát sinh từ hoạt động cho thuê xe thuộc về chủ xe hoặc gian hàng theo quy định pháp luật. Trong trường hợp pháp luật yêu cầu nền tảng khấu trừ và nộp thay, XePrime sẽ hiển thị rõ khoản đó thành một dòng riêng, đúng số thực tế, kèm căn cứ. XePrime không dùng tên gọi thuế cho khoản phí mà mình được hưởng."
+        },
+        "payment": {
+          "heading": "8. Thanh toán",
+          "body": "Ở giai đoạn hiện tại, tiền thuê được người thuê thanh toán trực tiếp cho chủ xe hoặc gian hàng theo thoả thuận giữa hai bên; XePrime không giữ hộ toàn bộ tiền chuyến. Khi XePrime mở luồng thu hộ, phạm vi áp dụng, cách hoàn tiền và cách đối soát sẽ được công bố trước bằng một bản cập nhật của văn bản này. Mọi khoản đã thanh toán ngoài hệ thống đều nằm ngoài khả năng đối soát của XePrime."
+        },
+        "offPlatform": {
+          "heading": "9. Giao dịch trực tiếp ngoài nền tảng",
+          "body": "Gian hàng được phép công khai kênh liên hệ và chốt giao dịch trực tiếp với khách. Tuy nhiên, với phần giao dịch không được ghi nhận trên XePrime, chúng tôi không có dữ liệu để đối soát, không thể xác nhận việc thanh toán và không cam kết hoàn tiền hay phân xử tranh chấp. Hãy cân nhắc điều này trước khi thoả thuận ngoài hệ thống."
+        },
+        "content": {
+          "heading": "10. Nội dung bạn đăng tải",
+          "body": "Bạn giữ quyền đối với ảnh, mô tả và nội dung mình đăng, đồng thời cấp cho XePrime quyền sử dụng chúng để hiển thị, quảng bá tin đăng và vận hành dịch vụ. Bạn cam kết nội dung không vi phạm quyền của bên thứ ba và không sai lệch về xe. XePrime có quyền ẩn hoặc gỡ nội dung vi phạm, kèm lý do gửi tới người đăng."
+        },
+        "liability": {
+          "heading": "11. Giới hạn trách nhiệm",
+          "body": "XePrime chịu trách nhiệm về việc vận hành nền tảng, tính khả dụng của dịch vụ và các cam kết được nêu rõ trong văn bản này. XePrime không chịu trách nhiệm thay cho hành vi của người thuê hoặc chủ xe, tình trạng thực tế của xe, hay thiệt hại phát sinh từ quan hệ thuê giữa hai bên. Điều khoản này không loại trừ trách nhiệm mà pháp luật không cho phép loại trừ."
+        },
+        "suspension": {
+          "heading": "12. Tạm ngừng và chấm dứt",
+          "body": "XePrime có thể tạm ngừng hoặc chấm dứt quyền truy cập khi phát hiện gian lận, thông tin giả mạo, vi phạm pháp luật hoặc vi phạm nghiêm trọng điều khoản này. Trừ trường hợp khẩn cấp hoặc theo yêu cầu của cơ quan có thẩm quyền, chúng tôi sẽ thông báo lý do và cho bạn cơ hội giải trình. Bạn có thể ngừng sử dụng dịch vụ và yêu cầu đóng tài khoản bất cứ lúc nào, sau khi đã hoàn tất các nghĩa vụ đang treo."
+        },
+        "changes": {
+          "heading": "13. Thay đổi điều khoản",
+          "body": "Chúng tôi có thể cập nhật văn bản này khi sản phẩm hoặc quy định pháp luật thay đổi. Bản mới sẽ được công bố tại chính trang này kèm ngày hiệu lực; thay đổi có ảnh hưởng đáng kể tới quyền lợi sẽ được thông báo trước qua email hoặc thông báo trong ứng dụng. Đơn thuê đã tạo tiếp tục áp dụng chính sách tại thời điểm tạo đơn."
+        },
+        "law": {
+          "heading": "14. Luật áp dụng và giải quyết tranh chấp",
+          "body": "Điều khoản này được điều chỉnh bởi pháp luật Việt Nam. Hai bên ưu tiên giải quyết bằng thương lượng thông qua kênh hỗ trợ của XePrime. Trường hợp không đạt được thoả thuận, tranh chấp được giải quyết tại toà án có thẩm quyền theo quy định pháp luật."
+        }
+      }
+    },
+    "privacy": {
+      "title": "Chính sách bảo mật",
+      "summary": "XePrime thu thập dữ liệu gì, dùng vào việc gì, chia sẻ với ai và bạn có quyền gì với dữ liệu của mình.",
+      "sections": {
+        "scope": {
+          "heading": "1. Phạm vi",
+          "body": "Chính sách này mô tả cách XePrime xử lý dữ liệu cá nhân của người thuê, chủ xe, nhân sự gian hàng và khách truy cập. Chính sách áp dụng cho website, ứng dụng và các kênh hỗ trợ của chúng tôi."
+        },
+        "collected": {
+          "heading": "2. Dữ liệu chúng tôi thu thập",
+          "body": "Dữ liệu bạn cung cấp: họ tên, số điện thoại, email, ảnh đại diện, giấy tờ tuỳ thân và giấy phép lái xe khi bạn chủ động tải lên, thông tin xe và giấy tờ xe, nội dung tin nhắn và đánh giá. Dữ liệu phát sinh khi dùng dịch vụ: lịch sử tìm kiếm và đặt xe, thiết bị và trình duyệt, địa chỉ IP, thời điểm truy cập. Chúng tôi không thu thập dữ liệu sinh trắc học và không yêu cầu thông tin thẻ ngân hàng trên nền tảng ở giai đoạn hiện tại."
+        },
+        "purpose": {
+          "heading": "3. Mục đích sử dụng",
+          "body": "Chúng tôi dùng dữ liệu để tạo và bảo vệ tài khoản, hiển thị tin đăng, xử lý yêu cầu thuê và hồ sơ chuyến, liên lạc giữa hai bên, hỗ trợ và xử lý tranh chấp, phát hiện gian lận, và cải thiện sản phẩm. Chúng tôi chỉ gửi thông tin tiếp thị khi bạn đồng ý, và bạn có thể huỷ đăng ký bất cứ lúc nào."
+        },
+        "sharing": {
+          "heading": "4. Chia sẻ dữ liệu",
+          "body": "Khi một yêu cầu thuê được chấp nhận, thông tin liên hệ cần thiết được chia sẻ giữa người thuê và chủ xe để hai bên thực hiện chuyến. Chúng tôi chia sẻ dữ liệu với nhà cung cấp hạ tầng, gửi tin nhắn, email và lưu trữ tệp trong phạm vi cần thiết để vận hành dịch vụ, dưới ràng buộc bảo mật. Chúng tôi cung cấp dữ liệu cho cơ quan nhà nước khi có yêu cầu hợp pháp. Chúng tôi không bán dữ liệu cá nhân."
+        },
+        "masking": {
+          "heading": "5. Hạn chế truy cập nội bộ",
+          "body": "Số điện thoại và email hiển thị ở các màn hình giám sát nội bộ luôn ở dạng che bớt. Nhân sự XePrime chỉ xem được thông tin đầy đủ khi có quyền riêng và có lý do nghiệp vụ, và mỗi lần xem đều được ghi nhật ký kèm người thực hiện và thời điểm."
+        },
+        "retention": {
+          "heading": "6. Thời gian lưu trữ",
+          "body": "Chúng tôi lưu dữ liệu chừng nào tài khoản còn hoạt động và trong thời hạn cần thiết để thực hiện nghĩa vụ pháp lý, kế toán và giải quyết tranh chấp. Hồ sơ chuyến và chứng từ giao nhận được giữ lâu hơn dữ liệu tiếp thị vì chúng là bằng chứng khi có khiếu nại."
+        },
+        "security": {
+          "heading": "7. An toàn dữ liệu",
+          "body": "Kết nối tới XePrime được mã hoá; phiên đăng nhập dùng cookie httpOnly mà JavaScript không đọc được. Mật khẩu và mã OTP được lưu ở dạng băm, không lưu bản gốc. Giấy tờ và tài liệu nhạy cảm được lưu trong kho riêng tư, chỉ truy cập được qua đường dẫn có thời hạn sau khi hệ thống kiểm tra quyền."
+        },
+        "rights": {
+          "heading": "8. Quyền của bạn",
+          "body": "Bạn có quyền được biết, truy cập, chỉnh sửa, yêu cầu xoá dữ liệu, rút lại sự đồng ý và khiếu nại về cách dữ liệu của mình được xử lý. Gửi yêu cầu qua kênh hỗ trợ; chúng tôi phản hồi trong thời hạn luật định. Một số dữ liệu có thể phải giữ lại để thực hiện nghĩa vụ pháp lý, và chúng tôi sẽ nói rõ khi từ chối một phần yêu cầu."
+        },
+        "cookies": {
+          "heading": "9. Cookie",
+          "body": "Chúng tôi dùng cookie để giữ phiên đăng nhập, ghi nhớ ngôn ngữ hiển thị và đo lường mức độ sử dụng nhằm cải thiện sản phẩm. Bạn có thể chặn cookie trong trình duyệt, nhưng khi đó tính năng đăng nhập sẽ không hoạt động."
+        },
+        "changes": {
+          "heading": "10. Cập nhật chính sách",
+          "body": "Khi chính sách thay đổi, bản mới được công bố tại trang này kèm ngày hiệu lực. Thay đổi ảnh hưởng đáng kể tới cách dữ liệu được sử dụng sẽ được thông báo trước."
+        }
+      }
+    },
+    "marketplace-rules": {
+      "title": "Quy chế hoạt động sàn",
+      "summary": "Quy tắc vận hành sàn giao dịch XePrime: ai được tham gia, đăng tin thế nào, xử lý vi phạm và tiếp nhận phản ánh.",
+      "sections": {
+        "purpose": {
+          "heading": "1. Mục đích và đối tượng áp dụng",
+          "body": "Quy chế này công bố cách sàn giao dịch XePrime hoạt động, áp dụng cho đơn vị vận hành sàn, chủ xe và gian hàng đăng tin, và người thuê xe. Quy chế được ban hành theo pháp luật về thương mại điện tử và là một phần không tách rời của Điều khoản sử dụng."
+        },
+        "members": {
+          "heading": "2. Điều kiện tham gia",
+          "body": "Người bán trên sàn phải là cá nhân đủ năng lực hành vi dân sự hoặc tổ chức được thành lập hợp pháp, cung cấp thông tin định danh trung thực và có quyền hợp pháp đối với xe đưa lên sàn. XePrime có quyền yêu cầu bổ sung hồ sơ và từ chối hoặc tạm dừng tư cách thành viên khi hồ sơ không đạt."
+        },
+        "listing": {
+          "heading": "3. Quy trình đăng tin và duyệt",
+          "body": "Xe chỉ hiển thị công khai sau khi hồ sơ gian hàng và hồ sơ xe được XePrime duyệt. Tin đăng phải có ảnh thật của xe, thông tin đúng về đời xe, tình trạng, giá và điều kiện thuê. Tin bị từ chối luôn kèm lý do, và người đăng được sửa rồi gửi duyệt lại."
+        },
+        "prohibited": {
+          "heading": "4. Nội dung và hành vi bị cấm",
+          "body": "Cấm đăng xe không có quyền cho thuê, dùng ảnh của người khác, khai sai giá hoặc tình trạng xe, đăng trùng lặp để chiếm chỗ hiển thị, và mọi hành vi lừa đảo. Cấm dùng nền tảng cho hoạt động trái pháp luật, quấy rối người dùng khác hoặc thu thập dữ liệu người dùng ngoài mục đích thực hiện chuyến."
+        },
+        "ranking": {
+          "heading": "5. Xếp hạng và vị trí hiển thị",
+          "body": "Kết quả tìm kiếm ưu tiên mức độ phù hợp với nhu cầu của khách: địa điểm, thời gian, loại xe, tình trạng lịch, giá, độ đầy đủ hồ sơ và chất lượng phục vụ. Trong nhóm kết quả tương đương, gian hàng thuê bao có thể được hệ số ưu tiên. Mọi vị trí được tài trợ hoặc ưu tiên thương mại đều được gắn nhãn rõ ràng; XePrime không đẩy lên đầu một chiếc xe không phù hợp hoặc chất lượng kém."
+        },
+        "transaction": {
+          "heading": "6. Quy trình giao dịch",
+          "body": "Khách gửi yêu cầu thuê kèm thời gian và nguyện vọng nhận xe; chủ xe hoặc gian hàng xác nhận hoặc từ chối. Đơn được xác nhận sẽ khoá lịch xe và sinh hồ sơ chuyến gồm biên bản giao xe, ảnh hiện trạng và biên bản nhận lại. Giá và chính sách áp dụng cho một đơn được ghi nhận tại thời điểm tạo đơn và không thay đổi theo cấu hình sau đó."
+        },
+        "fees": {
+          "heading": "7. Phí trên sàn",
+          "body": "Sàn thu phí dịch vụ trên chuyến với chủ xe không dùng gói, hoặc phí thuê bao theo số chỗ xe và kỳ hạn với gian hàng. Biểu phí, kỳ hạn và ngày hiệu lực được công bố trước; mọi thay đổi chỉ áp dụng cho đơn phát sinh sau ngày hiệu lực mới. Phí của sàn được hiển thị tách bạch với nghĩa vụ thuế và với các khoản phải trả chủ xe."
+        },
+        "violation": {
+          "heading": "8. Xử lý vi phạm",
+          "body": "Tuỳ mức độ, XePrime áp dụng các biện pháp: nhắc nhở, yêu cầu chỉnh sửa, ẩn tin đăng, hạn chế hiển thị, tạm ngừng gian hàng, hoặc chấm dứt tư cách thành viên. Người bị xử lý được thông báo lý do và có quyền giải trình. Hành vi có dấu hiệu vi phạm pháp luật được chuyển tới cơ quan có thẩm quyền."
+        },
+        "dispute": {
+          "heading": "9. Tiếp nhận phản ánh và giải quyết tranh chấp",
+          "body": "Mọi phản ánh, khiếu nại và tranh chấp được tiếp nhận qua kênh hỗ trợ công bố tại trang Hỗ trợ. Chúng tôi ghi nhận, phân loại và phản hồi theo thứ tự tiếp nhận, ưu tiên sự cố đang diễn ra trong chuyến. XePrime hỗ trợ cung cấp hồ sơ chuyến làm căn cứ; với phần giao dịch không được ghi nhận trên hệ thống, chúng tôi không có dữ liệu để phân xử."
+        },
+        "privacyRef": {
+          "heading": "10. Bảo vệ thông tin cá nhân",
+          "body": "Việc thu thập và xử lý dữ liệu cá nhân của thành viên thực hiện theo Chính sách bảo mật công bố cùng quy chế này. Thành viên không được sử dụng thông tin của người dùng khác ngoài mục đích thực hiện chuyến thuê."
+        }
+      }
+    },
+    "cancellation": {
+      "title": "Chính sách huỷ và hoàn tiền",
+      "summary": "Ai được huỷ, huỷ lúc nào thì mất gì, và tiền được xử lý ra sao.",
+      "sections": {
+        "principle": {
+          "heading": "1. Nguyên tắc chung",
+          "body": "Mốc thời gian và điều kiện huỷ áp dụng cho một đơn được ghi nhận ngay khi đơn được tạo và hiển thị cho cả hai bên trước khi xác nhận. Chính sách thay đổi sau đó không áp dụng ngược cho đơn đã tạo. Mọi mốc thời gian tính theo giờ Việt Nam."
+        },
+        "renter": {
+          "heading": "2. Người thuê huỷ",
+          "body": "Bạn có thể huỷ yêu cầu thuê bất cứ lúc nào trước khi chủ xe xác nhận mà không mất chi phí. Sau khi đơn đã được xác nhận, điều kiện huỷ và phần được hoàn phụ thuộc vào chính sách mà chủ xe đã công bố trên tin đăng và đã được ghi vào đơn. Huỷ sát giờ nhận xe hoặc không đến nhận xe có thể mất toàn bộ khoản đã đặt cọc theo đúng chính sách đó."
+        },
+        "owner": {
+          "heading": "3. Chủ xe huỷ",
+          "body": "Chủ xe chỉ nên huỷ đơn đã xác nhận khi có lý do bất khả kháng, và phải thông báo cho khách sớm nhất có thể qua kênh chat của chuyến. Khi chủ xe huỷ, khách được hoàn lại toàn bộ khoản đã trả cho chuyến đó. Việc huỷ nhiều lần làm giảm uy tín gian hàng và có thể dẫn tới hạn chế hiển thị."
+        },
+        "force": {
+          "heading": "4. Trường hợp bất khả kháng",
+          "body": "Thiên tai, dịch bệnh, lệnh cấm đường, tai nạn xảy ra trước giờ nhận xe hoặc quyết định của cơ quan nhà nước được xem là bất khả kháng. Trong các trường hợp này, hai bên phối hợp dời lịch hoặc huỷ không tính phí; XePrime hỗ trợ xác nhận trên cơ sở bằng chứng do hai bên cung cấp."
+        },
+        "refund": {
+          "heading": "5. Cách hoàn tiền",
+          "body": "Ở giai đoạn hiện tại, tiền thuê được thanh toán trực tiếp giữa người thuê và chủ xe, nên việc hoàn tiền do hai bên thực hiện theo chính sách đã ghi trên đơn. XePrime hỗ trợ bằng hồ sơ chuyến và kênh hỗ trợ, nhưng không thể hoàn khoản tiền mà mình không thu. Khi XePrime mở luồng thu hộ, quy trình hoàn tiền và thời hạn xử lý sẽ được bổ sung vào văn bản này trước khi áp dụng."
+        },
+        "dispute": {
+          "heading": "6. Khi hai bên không thống nhất",
+          "body": "Hãy gửi phản ánh qua trang Hỗ trợ kèm mã chuyến và bằng chứng: tin nhắn trong ứng dụng, biên bản giao nhận và ảnh hiện trạng xe. Chúng tôi đối chiếu với hồ sơ chuyến trên hệ thống và đưa ra kết luận hỗ trợ trong phạm vi dữ liệu mình có."
+        }
+      }
+    }
+  }
+}

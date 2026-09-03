@@ -66,3 +66,34 @@
   background: #fdeaea;
   color: var(--xp-color-error);
 }
+
+/*
+ * Số tiền lớn (`1.234.567.890 ₫`) dài hơn cột 180px của lưới thẻ. Cho xuống dòng thay vì tràn:
+ * cắt đuôi một con số là biến nó thành một con số KHÁC, nên `text-overflow: ellipsis` không
+ * phải lựa chọn ở đây.
+ */
+.value {
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  margin-top: 1px;
+  font-size: 11.5px;
+  color: var(--xp-color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Thẻ dẫn sang một màn khác — dựng bằng `<button>`, nên phải gỡ mặc định của nút. */
+.clickable {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.clickable:hover {
+  border-color: var(--xp-color-border);
+  box-shadow: var(--xp-shadow-md);
+}

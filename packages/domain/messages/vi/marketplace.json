@@ -9,25 +9,21 @@
       "note": "Ứng dụng đang phát triển"
     },
     "columns": {
-      "about": {
-        "title": "Về chúng tôi",
-        "intro": "Giới thiệu",
-        "blog": "Blog",
-        "careers": "Tuyển dụng",
-        "contact": "Liên hệ"
-      },
       "support": {
         "title": "Hỗ trợ",
-        "helpCenter": "Trung tâm trợ giúp",
-        "rentalGuide": "Hướng dẫn thuê xe",
-        "terms": "Điều khoản dịch vụ",
-        "privacy": "Chính sách bảo mật"
+        "helpCenter": "Trung tâm trợ giúp"
+      },
+      "legal": {
+        "title": "Pháp lý",
+        "terms": "Điều khoản sử dụng",
+        "privacy": "Chính sách bảo mật",
+        "marketplaceRules": "Quy chế hoạt động sàn",
+        "cancellation": "Chính sách huỷ và hoàn tiền"
       },
       "hosts": {
         "title": "Dành cho chủ xe",
         "listVehicle": "Đăng xe cho thuê",
-        "manageVehicles": "Quản lý xe",
-        "pricing": "Bảng giá"
+        "manageVehicles": "Quản lý xe"
       }
     }
   },

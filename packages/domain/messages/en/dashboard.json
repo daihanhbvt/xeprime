@@ -7,7 +7,14 @@
     "revenue": "Revenue",
     "overdue": "Overdue returns",
     "overdueValue": "{count, plural, one {# booking} other {# bookings}}",
-    "deposit": "Deposits held"
+    "deposit": "Deposits held",
+    "revenueHint": "This month",
+    "depositHint": "{count, plural, one {# booking holding a deposit} other {# bookings holding a deposit}}"
+  },
+  "receiptRow": {
+    "expenseAmount": "−{amount}",
+    "incomeAria": "Money in {amount}",
+    "expenseAria": "Money out {amount}"
   },
   "panels": {
     "recent": "Recent bookings",

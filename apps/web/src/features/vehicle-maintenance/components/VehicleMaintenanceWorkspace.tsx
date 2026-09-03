@@ -17,7 +17,7 @@ import { TextAreaField } from '@/components/form/TextAreaField';
 import { DateTimeField } from '@/components/form/DateTimeField';
 import { ROUTES } from '@/constants/routes';
 import { usePermissions } from '@/hooks/use-permissions';
-import { getErrorCode, getErrorMessage } from '@/services/api-client';
+import { getErrorCode } from '@/services/api-client';
 import type { VehicleDetail } from '@/features/vehicles/types';
 import { saveMaintenanceProfile } from '../api';
 import { useInvalidateMaintenance, useMaintenanceProfile, useMaintenanceRecords } from '../hooks';

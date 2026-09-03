@@ -1,0 +1,203 @@
+{
+  "draftBanner": {
+    "title": "Draft — not yet reviewed by counsel",
+    "body": "This document describes how the product actually works today, but it has not been reviewed by a lawyer and the operating entity details are still blank. Do not publish it to real users until both are done."
+  },
+  "entity": {
+    "heading": "Operating entity",
+    "body": "XePrime is operated by «enter legal entity name», business registration number «enter tax ID», registered at «enter address». Formal notices should be sent to «enter legal contact email»."
+  },
+  "meta": {
+    "effectiveFrom": "Effective from {date}",
+    "toc": "Contents",
+    "related": "Related documents",
+    "backToHome": "Back to home",
+    "printHint": "You can save or print this page to keep a copy."
+  },
+  "docs": {
+    "terms": {
+      "title": "Terms of Service",
+      "summary": "The rules that apply to everyone on XePrime: renters, individual vehicle owners, and rental shops.",
+      "sections": {
+        "scope": {
+          "heading": "1. Scope",
+          "body": "These terms apply whenever you use the XePrime website, app, or any of our services. Creating an account, listing a vehicle, sending a rental request, or continuing to use the platform means you have read and accepted them. If you do not accept them, please stop using the service."
+        },
+        "role": {
+          "heading": "2. What XePrime does and does not do",
+          "body": "XePrime is a marketplace connecting renters with vehicle owners and rental shops, and a software product for running a rental operation. XePrime does not own vehicles, is not the lessor, and is not a party to any rental contract. The rental contract is formed directly between the renter and the owner; XePrime provides the tools, the trip record, and a support channel."
+        },
+        "account": {
+          "heading": "3. Your account",
+          "body": "You are responsible for the accuracy of your registration details and for everything done through your account. Never share your password or OTP with anyone, including people claiming to be XePrime staff. If you believe your account has been accessed without permission, change your password and tell us immediately."
+        },
+        "owner": {
+          "heading": "4. Obligations of owners and shops",
+          "body": "You may only list vehicles you have the legal right to rent out, with valid documents and honest information about condition, price, and rental conditions. You must keep your availability calendar accurate, respond to requests within a reasonable time, and hand over the vehicle you described. Cancelling confirmed bookings, delivering a vehicle that does not match the listing, or turning a renter away after committing may lead to reduced visibility or suspension."
+        },
+        "renter": {
+          "heading": "5. Obligations of renters",
+          "body": "You must provide valid identity documents and a valid driving licence, use the vehicle lawfully and for its intended purpose, not sublet it, and not use it for prohibited activities. You are responsible for damage, traffic violations, and costs incurred while the vehicle is in your care, as agreed with the owner."
+        },
+        "fees": {
+          "heading": "6. XePrime's fees",
+          "body": "XePrime charges in two ways: a per-trip service fee for owners without a subscription, and a subscription based on vehicle slots and term length for shops. This is what XePrime earns for running the marketplace, support, and fraud prevention — it is not a tax and it is not an insurance premium. Rates, terms, and effective dates are shown before you confirm; a booking that already exists is never re-priced when policy changes later."
+        },
+        "tax": {
+          "heading": "7. Tax",
+          "body": "Tax arising from renting out a vehicle is the owner's or shop's obligation under Vietnamese law. Where the law requires the platform to withhold and remit tax, XePrime will show that amount as its own line, at the actual amount, with its basis stated. XePrime does not label its own fee as tax."
+        },
+        "payment": {
+          "heading": "8. Payment",
+          "body": "Today, rental payments are made directly by the renter to the owner or shop as the two agree; XePrime does not collect the full trip amount on their behalf. If and when XePrime opens a collect-on-behalf flow, its scope, refund handling, and reconciliation will be published in an updated version of this document beforehand. Anything paid outside the system is beyond what XePrime can reconcile."
+        },
+        "offPlatform": {
+          "heading": "9. Dealing directly, off the platform",
+          "body": "Shops may publish their contact details and close deals directly with customers. However, for any part of a transaction not recorded on XePrime we have no data to reconcile, cannot confirm that payment happened, and do not promise refunds or dispute resolution. Please weigh that before agreeing to anything off the platform."
+        },
+        "content": {
+          "heading": "10. Content you post",
+          "body": "You keep your rights in the photos, descriptions, and other content you post, and you grant XePrime the right to use them to display and promote your listing and to operate the service. You confirm that your content does not infringe anyone else's rights and does not misrepresent the vehicle. XePrime may hide or remove content that breaks these rules, and will tell the poster why."
+        },
+        "liability": {
+          "heading": "11. Limits of liability",
+          "body": "XePrime is responsible for operating the platform, for service availability, and for the commitments stated in this document. XePrime is not responsible for the conduct of renters or owners, the actual condition of a vehicle, or losses arising from the rental relationship between the two parties. Nothing here excludes liability that the law does not allow to be excluded."
+        },
+        "suspension": {
+          "heading": "12. Suspension and termination",
+          "body": "XePrime may suspend or terminate access where we find fraud, falsified information, unlawful activity, or a serious breach of these terms. Except in an emergency or where a competent authority requires otherwise, we will state the reason and give you a chance to respond. You may stop using the service and ask us to close your account at any time, once outstanding obligations are settled."
+        },
+        "changes": {
+          "heading": "13. Changes to these terms",
+          "body": "We may update this document as the product or the law changes. New versions are published on this page with an effective date; changes that materially affect your rights will be announced in advance by email or in-app notice. Bookings already created continue under the policy that applied when they were created."
+        },
+        "law": {
+          "heading": "14. Governing law and disputes",
+          "body": "These terms are governed by the laws of Vietnam. We ask both parties to try to resolve matters through XePrime's support channel first. If no agreement is reached, the dispute is to be settled by the competent court under Vietnamese law."
+        }
+      }
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "summary": "What data XePrime collects, what we use it for, who we share it with, and what rights you have.",
+      "sections": {
+        "scope": {
+          "heading": "1. Scope",
+          "body": "This policy explains how XePrime handles personal data belonging to renters, vehicle owners, shop staff, and visitors. It applies to our website, our app, and our support channels."
+        },
+        "collected": {
+          "heading": "2. What we collect",
+          "body": "What you give us: name, phone number, email, profile photo, identity documents and driving licence when you choose to upload them, vehicle details and vehicle documents, message content, and reviews. What use of the service generates: search and booking history, device and browser, IP address, and access times. We do not collect biometric data, and we do not ask for card details on the platform today."
+        },
+        "purpose": {
+          "heading": "3. What we use it for",
+          "body": "We use data to create and protect your account, display listings, process rental requests and trip records, let both sides communicate, provide support and handle disputes, detect fraud, and improve the product. We only send marketing messages with your consent, and you can unsubscribe at any time."
+        },
+        "sharing": {
+          "heading": "4. Sharing",
+          "body": "When a rental request is accepted, the contact details needed to complete the trip are shared between renter and owner. We share data with infrastructure, messaging, email, and file-storage providers only as far as running the service requires, under confidentiality obligations. We disclose data to state authorities on a lawful request. We do not sell personal data."
+        },
+        "masking": {
+          "heading": "5. Internal access limits",
+          "body": "Phone numbers and email addresses shown on internal monitoring screens are always masked. XePrime staff can see the full value only with a specific permission and a business reason, and every such view is logged with who did it and when."
+        },
+        "retention": {
+          "heading": "6. How long we keep it",
+          "body": "We keep data while your account is active and for as long as we need it to meet legal and accounting obligations and to resolve disputes. Trip records and handover evidence are kept longer than marketing data, because they are the evidence if a complaint is raised."
+        },
+        "security": {
+          "heading": "7. Keeping data safe",
+          "body": "Connections to XePrime are encrypted, and your session uses an httpOnly cookie that JavaScript cannot read. Passwords and OTP codes are stored hashed, never in the clear. Identity documents and other sensitive files live in a private store, reachable only through a short-lived link issued after a permission check."
+        },
+        "rights": {
+          "heading": "8. Your rights",
+          "body": "You have the right to be informed, to access, to correct, to request deletion, to withdraw consent, and to complain about how your data is handled. Send your request through our support channel and we will respond within the period the law sets. Some data may have to be retained to meet a legal obligation, and we will say so clearly if we can only partly meet a request."
+        },
+        "cookies": {
+          "heading": "9. Cookies",
+          "body": "We use cookies to keep you signed in, remember your display language, and measure usage so we can improve the product. You can block cookies in your browser, but sign-in will not work if you do."
+        },
+        "changes": {
+          "heading": "10. Changes to this policy",
+          "body": "When this policy changes, the new version is published on this page with an effective date. Changes that materially affect how your data is used will be announced in advance."
+        }
+      }
+    },
+    "marketplace-rules": {
+      "title": "Marketplace Operating Rules",
+      "summary": "How the XePrime marketplace runs: who may join, how listings are approved, how breaches are handled, and how to raise a complaint.",
+      "sections": {
+        "purpose": {
+          "heading": "1. Purpose and who this covers",
+          "body": "These rules set out how the XePrime marketplace operates and apply to the platform operator, to owners and shops that list vehicles, and to renters. They are issued under Vietnamese e-commerce law and form an inseparable part of the Terms of Service."
+        },
+        "members": {
+          "heading": "2. Who may sell",
+          "body": "A seller must be an individual with legal capacity or a lawfully established organisation, must give truthful identifying information, and must hold the legal right to rent out the vehicles they list. XePrime may ask for further documents and may refuse or suspend membership where the file does not meet these requirements."
+        },
+        "listing": {
+          "heading": "3. Listing and approval",
+          "body": "A vehicle only appears publicly after both the shop profile and the vehicle file have been approved by XePrime. A listing must use real photos of the vehicle and give accurate information about model year, condition, price, and rental conditions. A rejected listing always comes with a reason, and the seller can fix it and resubmit."
+        },
+        "prohibited": {
+          "heading": "4. What is not allowed",
+          "body": "You may not list a vehicle you have no right to rent out, use someone else's photos, misstate price or condition, post duplicates to take up search space, or engage in any form of fraud. You may not use the platform for unlawful activity, harass other users, or harvest user data for anything other than completing a trip."
+        },
+        "ranking": {
+          "heading": "5. Ranking and placement",
+          "body": "Search results are ordered by how well a vehicle fits what the customer asked for: location, dates, vehicle type, availability, price, completeness of the listing, and service quality. Within a group of comparable results, subscribing shops may receive a ranking boost. Any sponsored or commercially prioritised placement is clearly labelled; XePrime does not push an unsuitable or low-quality vehicle to the top."
+        },
+        "transaction": {
+          "heading": "6. How a transaction works",
+          "body": "The customer sends a rental request with dates and a preferred pickup arrangement; the owner or shop confirms or declines. A confirmed booking blocks the vehicle's calendar and opens a trip record containing the handover report, condition photos, and the return report. The price and policy applied to a booking are recorded when it is created and do not change with later configuration."
+        },
+        "fees": {
+          "heading": "7. Fees on the marketplace",
+          "body": "The marketplace charges a per-trip service fee to owners without a subscription, or a subscription based on vehicle slots and term length to shops. The fee schedule, terms, and effective dates are published in advance, and any change applies only to bookings created after the new effective date. Marketplace fees are shown separately from tax obligations and from amounts payable to the owner."
+        },
+        "violation": {
+          "heading": "8. Handling breaches",
+          "body": "Depending on severity, XePrime may issue a warning, require a correction, hide a listing, reduce visibility, suspend a shop, or terminate membership. Anyone subject to these measures is told the reason and may respond. Conduct that appears unlawful is referred to the competent authority."
+        },
+        "dispute": {
+          "heading": "9. Complaints and dispute resolution",
+          "body": "Reports, complaints, and disputes are received through the support channel published on the Support page. We log, triage, and respond in the order received, prioritising incidents happening during a live trip. XePrime helps by supplying the trip record as evidence; for any part of a transaction not recorded in the system, we have no data on which to adjudicate."
+        },
+        "privacyRef": {
+          "heading": "10. Personal data",
+          "body": "Collection and processing of members' personal data follows the Privacy Policy published alongside these rules. Members must not use another user's information for anything other than completing a rental."
+        }
+      }
+    },
+    "cancellation": {
+      "title": "Cancellation and Refund Policy",
+      "summary": "Who can cancel, what it costs depending on when, and how money is handled.",
+      "sections": {
+        "principle": {
+          "heading": "1. General principle",
+          "body": "The cancellation deadlines and conditions that apply to a booking are recorded when the booking is created and shown to both sides before it is confirmed. A later policy change never applies retroactively to an existing booking. All deadlines are in Vietnam time."
+        },
+        "renter": {
+          "heading": "2. If the renter cancels",
+          "body": "You can cancel a rental request at no cost any time before the owner confirms it. Once a booking is confirmed, what you can cancel and what you get back depend on the policy the owner published on the listing and that was recorded on the booking. Cancelling close to pickup time, or not turning up, may forfeit the whole deposit under that policy."
+        },
+        "owner": {
+          "heading": "3. If the owner cancels",
+          "body": "Owners should only cancel a confirmed booking for reasons genuinely beyond their control, and must tell the customer as early as possible through the trip's chat. When the owner cancels, the customer gets back everything they paid for that trip. Repeated cancellations damage a shop's standing and may result in reduced visibility."
+        },
+        "force": {
+          "heading": "4. Events beyond either party's control",
+          "body": "Natural disasters, epidemics, road closures, an accident occurring before pickup, or a decision by a state authority count as events beyond control. In these cases the two sides should reschedule or cancel without charge; XePrime will help confirm the situation based on evidence both sides provide."
+        },
+        "refund": {
+          "heading": "5. How refunds work",
+          "body": "Today, rental payments are made directly between renter and owner, so refunds are handled by those two parties under the policy recorded on the booking. XePrime helps with the trip record and the support channel, but cannot refund money it never collected. If XePrime opens a collect-on-behalf flow, the refund process and its time limits will be added to this document before it goes live."
+        },
+        "dispute": {
+          "heading": "6. When the two sides disagree",
+          "body": "Raise it through the Support page with the trip code and your evidence: in-app messages, the handover report, and condition photos. We compare that against the trip record in our system and give a supported conclusion within the limits of the data we hold."
+        }
+      }
+    }
+  }
+}
