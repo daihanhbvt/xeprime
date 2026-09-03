@@ -1,7 +1,8 @@
 import { App } from 'antd';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { renderWithIntl } from '@/i18n/test-utils';
 import { AddMemberModal } from './AddMemberModal';
 
 /**
@@ -26,7 +27,7 @@ vi.mock('@/hooks/use-media-query', () => ({
 
 function renderModal(props: Partial<{ open: boolean; onClose: () => void }> = {}) {
   const onClose = props.onClose ?? vi.fn();
-  const utils = render(
+  const utils = renderWithIntl(
     <App>
       <AddMemberModal open={props.open ?? true} onClose={onClose} />
     </App>,
@@ -104,7 +105,9 @@ describe('AddMemberModal — hành vi hiện tại', () => {
     await waitFor(() => expect(mutation.mutate).toHaveBeenCalled());
     mutation.mutate.mock.calls[0]![1].onError(new Error('Email đã là thành viên'));
 
-    expect(await screen.findByText('Email đã là thành viên')).toBeTruthy();
+    // ADR 0012: message tiếng Việt của backend KHÔNG lên màn hình — lỗi dịch từ MÃ, và một
+    // Error trần không có mã nên rơi về câu chung.
+    expect(await screen.findByText('Đã có lỗi xảy ra. Vui lòng thử lại.')).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
   });
 

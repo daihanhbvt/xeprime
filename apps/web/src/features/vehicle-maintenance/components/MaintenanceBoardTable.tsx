@@ -31,6 +31,8 @@ import type { MaintenanceBoardItem } from '../types';
 import styles from './MaintenanceBoard.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useTranslations } from 'next-intl';
+import { PLAN_FEATURE } from '@xeprime/types';
+import { useFeature } from '@/hooks/use-feature';
 
 /**
  * Bề rộng tối thiểu của bảng: hẹp hơn thì CUỘN NGANG, không nén cột (quy tắc bảng của repo +
@@ -57,6 +59,7 @@ export function maintenanceTabHref(vehicleId: string): string {
 function DueCell({ row }: { row: MaintenanceBoardItem }) {
   const fmt = useAppFormat();
   const tCommon = useTranslations('Common');
+  const t = useTranslations('Maintenance');
   const status = row.dueStatus as MaintenanceDueStatus;
   if (status === MAINTENANCE_DUE_STATUS.UNKNOWN) {
     return <span className={styles.muted}>{tCommon('labels.insufficientData')}</span>;
@@ -119,45 +122,60 @@ export function MaintenanceBoardTable({
   onClearFilters: () => void;
 }) {
   const fmt = useAppFormat();
+  const t = useTranslations('Maintenance');
+  const tCommonShell = useTranslations('ManageCommon');
+  /*
+   * Bảo dưỡng là tính năng của GÓI (ADR 0027). Ở `read_only` các thao tác GHI bị KHOÁ chứ không
+   * bị ẩn — ẩn đi làm bảng trông hỏng, còn khoá kèm lý do thì nói đúng điều đang xảy ra.
+   * "Chi tiết" là đường ĐỌC, không bao giờ khoá: không ai mất quyền xem lịch sử của chính mình.
+   */
+  const { canWrite } = useFeature(PLAN_FEATURE.MAINTENANCE);
+  const writeBlock = canWrite
+    ? {}
+    : { disabled: true, disabledReason: tCommonShell('feature.readOnlyTooltip') };
 
   const router = useRouter();
   const rowActions = (row: MaintenanceBoardItem): RowAction[] => [
     {
       key: 'detail',
-      label: 'Chi tiết',
+      label: t('actions.detail'),
       icon: <EyeOutlined />,
       primary: true,
       onClick: () => router.push(maintenanceTabHref(row.vehicleId)),
     },
     {
       key: 'odometer',
-      label: 'Cập nhật ODO',
+      label: t('actions.updateOdometer'),
       icon: <DashboardOutlined />,
       hidden: !canCorrectOdometer,
+      ...writeBlock,
       onClick: () => actions.onCorrectOdometer(row),
     },
     {
       key: 'schedule',
-      label: row.activeRecord ? 'Sửa lịch' : 'Lên lịch',
+      label: row.activeRecord ? t('actions.editSchedule') : t('actions.schedule'),
       icon: <CalendarOutlined />,
       hidden: !canManage,
+      ...writeBlock,
       onClick: () => actions.onSchedule(row),
     },
     {
       key: 'complete',
-      label: 'Hoàn tất',
+      label: t('actions.complete'),
       icon: <CheckOutlined />,
       hidden: !canManage || !row.activeRecord,
+      ...writeBlock,
       onClick: () => actions.onComplete(row),
     },
     {
       key: 'cancel',
-      label: 'Hủy lịch',
+      label: t('actions.cancelSchedule'),
       icon: <StopOutlined />,
       danger: true,
       hidden: !canManage || !row.activeRecord,
+      ...writeBlock,
       confirm: {
-        title: 'Hủy lịch bảo dưỡng này? Khoảng thời gian sẽ được giải phóng cho đơn thuê.',
+        title: t('actions.cancelScheduleConfirm'),
       },
       onClick: () => actions.onCancel(row),
     },
@@ -166,7 +184,7 @@ export function MaintenanceBoardTable({
   const columns: DataTableColumn<MaintenanceBoardItem>[] = [
     {
       key: 'vehicle',
-      title: 'Xe',
+      title: t('table.columns.vehicle'),
       width: 260,
       render: (_, row) => (
         <Link href={maintenanceTabHref(row.vehicleId)} className={styles.vehicleLink}>
@@ -181,19 +199,19 @@ export function MaintenanceBoardTable({
     },
     {
       key: 'currentKm',
-      title: 'KM hiện tại',
+      title: t('table.columns.currentKm'),
       align: 'right',
       width: 140,
       render: (_, row) =>
         row.currentOdometerKm == null ? (
-          <Tag color={STATUS_COLOR.WARNING}>Thiếu KM</Tag>
+          <Tag color={STATUS_COLOR.WARNING}>{t('table.missingKm')}</Tag>
         ) : (
           <span className={styles.numeric}>{fmt.km(row.currentOdometerKm)}</span>
         ),
     },
     {
       key: 'nextKm',
-      title: 'Mốc tiếp theo',
+      title: t('table.columns.nextDue'),
       align: 'right',
       width: 140,
       render: (_, row) => (
@@ -204,13 +222,13 @@ export function MaintenanceBoardTable({
     },
     {
       key: 'due',
-      title: 'Tình trạng chu kỳ',
+      title: t('table.columns.cycleState'),
       width: 200,
       render: (_, row) => <DueCell row={row} />,
     },
     {
       key: 'dueStatus',
-      title: 'Trạng thái',
+      title: t('table.columns.status'),
       width: 140,
       render: (_, row) => (
         <StatusTag
@@ -222,7 +240,7 @@ export function MaintenanceBoardTable({
     },
     {
       key: 'active',
-      title: 'Lịch đang mở',
+      title: t('table.columns.openSchedule'),
       width: 200,
       render: (_, row) =>
         row.activeRecord ? (
@@ -245,7 +263,7 @@ export function MaintenanceBoardTable({
     },
     {
       key: 'lastCompleted',
-      title: 'Lần gần nhất',
+      title: t('table.columns.lastService'),
       align: 'right',
       width: 130,
       render: (_, row) => (
@@ -259,34 +277,34 @@ export function MaintenanceBoardTable({
 
   return (
     <DataTable<MaintenanceBoardItem>
-      label="Danh sách xe cần bảo dưỡng"
+      label={t('table.label')}
       columns={columns}
       items={items}
       rowKey={(row) => row.vehicleId}
       onRowClick={(row) => router.push(maintenanceTabHref(row.vehicleId))}
       minWidth={MIN_TABLE_WIDTH}
       loading={loading}
-      error={error ? { title: 'Không tải được danh sách bảo dưỡng', onRetry: error.onRetry } : null}
+      error={error ? { title: t('table.loadError'), onRetry: error.onRetry } : null}
       permission={
         permissionDenied
           ? {
               kind: 'forbidden',
-              title: 'Không có quyền xem trung tâm bảo dưỡng',
+              title: t('table.noPermission'),
               missingPermissions: [PERMISSION.VEHICLE_MAINTENANCE_VIEW],
             }
           : null
       }
       filtered={filtered}
       empty={{
-        title: 'Chưa có xe nào trong đội xe',
-        description: 'Thêm xe và nhập số KM để theo dõi lịch bảo dưỡng.',
+        title: t('table.empty'),
+        description: t('table.emptyHint'),
       }}
       noResults={{
-        title: 'Không có xe nào khớp bộ lọc',
-        description: 'Thử bỏ bớt điều kiện lọc để xem thêm kết quả.',
+        title: t('table.noResults'),
+        description: t('table.noResultsHint'),
         action: (
           <button type="button" className={styles.clearButton} onClick={onClearFilters}>
-            Xóa bộ lọc
+            {t('table.clearFilters')}
           </button>
         ),
       }}
@@ -309,6 +327,7 @@ function MaintenanceBoardCard({
   rowActions: RowAction[];
 }) {
   const fmt = useAppFormat();
+  const t = useTranslations('Maintenance');
 
   const status = row.dueStatus as MaintenanceDueStatus;
 
@@ -327,9 +346,9 @@ function MaintenanceBoardCard({
       </p>
       <p className={styles.cardBody}>
         {row.currentOdometerKm == null
-          ? 'Cần cập nhật Kilometer thủ công (chưa có dữ liệu hành trình)'
+          ? t('table.needsManualKm')
           : `${fmt.remainingKm(row.remainingKm)}${
-              row.oilChangeIntervalKm ? ` (Chu kỳ ${fmt.km(row.oilChangeIntervalKm)})` : ''
+              row.oilChangeIntervalKm ? t('table.cycle', { value: fmt.km(row.oilChangeIntervalKm) }) : ''
             }`}
       </p>
       {row.activeRecord ? (

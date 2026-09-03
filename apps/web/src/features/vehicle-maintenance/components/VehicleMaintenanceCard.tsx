@@ -21,6 +21,7 @@ import { useTranslations } from 'next-intl';
  */
 export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
   const tCommon = useTranslations('Common');
+  const t = useTranslations('Maintenance');
   const fmt = useAppFormat();
 
   const permissions = usePermissions();
@@ -33,7 +34,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
 
   if (profile.isLoading) {
     return (
-      <Card title="Bảo dưỡng & Số KM" className={styles.overviewCard}>
+      <Card title={t('card.title')} className={styles.overviewCard}>
         <Skeleton active paragraph={{ rows: 2 }} />
       </Card>
     );
@@ -41,8 +42,8 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
 
   if (profile.isError || !profile.data) {
     return (
-      <Card title="Bảo dưỡng & Số KM" className={styles.overviewCard}>
-        <Alert type="error" showIcon message="Không tải được dữ liệu bảo dưỡng" />
+      <Card title={t('card.title')} className={styles.overviewCard}>
+        <Alert type="error" showIcon message={t('card.loadError')} />
       </Card>
     );
   }
@@ -52,16 +53,16 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
 
   return (
     <Card
-      title="Bảo dưỡng & Số KM"
+      title={t('card.title')}
       className={styles.overviewCard}
-      extra={<Link href={href}>Quản lý</Link>}
+      extra={<Link href={href}>{t('card.manage')}</Link>}
     >
       {dueStatus === MAINTENANCE_DUE_STATUS.OVERDUE ? (
         <Alert
           className={styles.overviewAlert}
           type="error"
           showIcon
-          message={`Quá hạn bảo dưỡng — ${fmt.remainingKm(data.remainingKm)}`}
+          message={t('card.overdue', { value: fmt.remainingKm(data.remainingKm) })}
         />
       ) : null}
       {dueStatus === MAINTENANCE_DUE_STATUS.DUE_SOON ? (
@@ -69,7 +70,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
           className={styles.overviewAlert}
           type="warning"
           showIcon
-          message={`Sắp đến hạn bảo dưỡng — ${fmt.remainingKm(data.remainingKm)}`}
+          message={t('card.dueSoon', { value: fmt.remainingKm(data.remainingKm) })}
         />
       ) : null}
       {data.currentOdometerKm == null ? (
@@ -77,8 +78,8 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
           className={styles.overviewAlert}
           type="warning"
           showIcon
-          message="Chưa có dữ liệu KM"
-          description="Nhập số KM hiện tại để theo dõi được lịch bảo dưỡng."
+          message={t('card.noOdometer')}
+          description={t('card.noOdometerHint')}
         />
       ) : null}
 
@@ -88,12 +89,12 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
         items={[
           {
             key: 'current',
-            label: 'KM hiện tại',
+            label: t('card.currentKm'),
             children: fmt.km(data.currentOdometerKm),
           },
           {
             key: 'next',
-            label: 'Mốc tiếp theo',
+            label: t('card.nextDue'),
             children:
               data.nextMaintenanceKm != null
                 ? fmt.km(data.nextMaintenanceKm)
@@ -101,7 +102,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
           },
           {
             key: 'last',
-            label: 'Thay nhớt gần nhất',
+            label: t('card.lastOilChange'),
             children: data.lastServiceAt
               ? `${fmt.date(`${data.lastServiceAt}T00:00:00.000Z`)}${
                   data.lastServiceKm != null ? ` · ${fmt.km(data.lastServiceKm)}` : ''
@@ -110,7 +111,7 @@ export function VehicleMaintenanceCard({ vehicleId }: { vehicleId: string }) {
           },
           {
             key: 'status',
-            label: 'Tình trạng',
+            label: t('card.condition'),
             children: <StatusTag value={dueStatus} meta={MAINTENANCE_DUE_STATUS_META} group="maintenanceDueStatus" />,
           },
         ]}

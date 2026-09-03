@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Skeleton } from 'antd';
 import { MAINTENANCE_BOARD_FILTER, MAINTENANCE_BOARD_FILTER_LABEL } from '@xeprime/types';
 import { cx } from '@/lib/cx';
@@ -70,6 +71,7 @@ export function MaintenanceBoardTabs({
   canViewHandovers?: boolean;
   onChange: (filter: string) => void;
 }) {
+  const t = useTranslations('Maintenance');
   if (loading && !summary) return <Skeleton.Input active block className={styles.tabsSkeleton} />;
 
   const visibleTabs = TABS.filter(
@@ -77,7 +79,7 @@ export function MaintenanceBoardTabs({
   );
 
   return (
-    <div className={styles.summaryTabs} role="tablist" aria-label="Nhóm việc bảo dưỡng">
+    <div className={styles.summaryTabs} role="tablist" aria-label={t('tabsAria')}>
       {visibleTabs.map((tab) => (
         <button
           key={tab.key}

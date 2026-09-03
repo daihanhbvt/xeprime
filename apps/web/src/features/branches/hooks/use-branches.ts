@@ -2,7 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App } from 'antd';
-import { apiRequest, getErrorMessage, type QueryParams } from '@/services/api-client';
+import { useTranslations } from 'next-intl';
+import { apiRequest, type QueryParams } from '@/services/api-client';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { queryKeys } from '@/services/query-keys';
 import type { Branch, BranchList, CreateBranchInput, UpdateBranchInput } from '../types';
 
@@ -40,22 +42,26 @@ function useInvalidateBranchSurfaces() {
 export function useCreateBranch() {
   const invalidate = useInvalidateBranchSurfaces();
   const { message } = App.useApp();
+  const t = useTranslations('Branches');
+  const errorMessage = useErrorMessage();
   return useMutation({
     mutationFn: async (input: CreateBranchInput): Promise<Branch> => {
       const res = await apiRequest<Branch>('/branches', { method: 'POST', body: input });
       return res.data;
     },
     onSuccess: (branch) => {
-      message.success(`Đã tạo chi nhánh ${branch.name}`);
+      message.success(t('toast.created', { name: branch.name }));
       invalidate();
     },
-    onError: (error) => message.error(getErrorMessage(error)),
+    onError: (error) => message.error(errorMessage(error)),
   });
 }
 
 export function useUpdateBranch() {
   const invalidate = useInvalidateBranchSurfaces();
   const { message } = App.useApp();
+  const t = useTranslations('Branches');
+  const errorMessage = useErrorMessage();
   return useMutation({
     mutationFn: async (input: UpdateBranchInput & { id: string }): Promise<Branch> => {
       const { id, ...body } = input;
@@ -63,10 +69,10 @@ export function useUpdateBranch() {
       return res.data;
     },
     onSuccess: () => {
-      message.success('Đã cập nhật chi nhánh');
+      message.success(t('toast.updated'));
       invalidate();
     },
-    onError: (error) => message.error(getErrorMessage(error)),
+    onError: (error) => message.error(errorMessage(error)),
   });
 }
 
@@ -77,6 +83,8 @@ export function useUpdateBranch() {
 export function useBranchAction() {
   const invalidate = useInvalidateBranchSurfaces();
   const { message } = App.useApp();
+  const t = useTranslations('Branches');
+  const errorMessage = useErrorMessage();
   return useMutation({
     mutationFn: async (input: {
       id: string;
@@ -90,14 +98,15 @@ export function useBranchAction() {
     onSuccess: (_branch, input) => {
       message.success(
         input.action === 'set-default'
-          ? 'Đã đặt làm chi nhánh mặc định'
+          ? t('toast.setDefault')
           : input.action === 'activate'
-            ? 'Đã bật lại chi nhánh'
-            : 'Đã ngừng hoạt động chi nhánh',
+            ? t('toast.activated')
+            : t('toast.deactivated'),
       );
       invalidate();
     },
-    // Lỗi xung đột (còn xe/đơn) mang thông điệp nêu rõ phải xử lý gì — hiện nguyên văn.
-    onError: (error) => message.error(getErrorMessage(error)),
+    // Lỗi xung đột (còn xe/đơn) dịch từ MÃ như mọi lỗi khác (ADR 0012) — `message` của backend
+    // là tiếng Việt và không bao giờ lên màn hình tiếng Anh.
+    onError: (error) => message.error(errorMessage(error)),
   });
 }

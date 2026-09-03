@@ -1,0 +1,43 @@
+{
+  "page": {
+    "title": "Người dùng",
+    "tableLabel": "Danh sách thành viên",
+    "loadError": "Không tải được danh sách thành viên",
+    "empty": "Chưa có thành viên nào",
+    "total": "{count, plural, other {# thành viên}}"
+  },
+  "filters": {
+    "search": "Tìm thành viên",
+    "searchPlaceholder": "Tìm theo tên hoặc email",
+    "role": "Vai trò",
+    "allRoles": "Tất cả vai trò"
+  },
+  "columns": {
+    "member": "Thành viên",
+    "role": "Vai trò",
+    "status": "Trạng thái"
+  },
+  "you": "(bạn)",
+  "roleSelectAria": "Vai trò của {name}",
+  "actions": {
+    "invite": "Thêm thành viên",
+    "remove": "Gỡ thành viên",
+    "removeConfirm": "Gỡ thành viên này?"
+  },
+  "toast": {
+    "roleChanged": "Đã đổi vai trò",
+    "removed": "Đã gỡ thành viên",
+    "added": "Đã thêm thành viên"
+  },
+  "form": {
+    "title": "Thêm thành viên",
+    "email": "Email",
+    "emailPlaceholder": "nhanvien@congty.vn",
+    "role": "Vai trò",
+    "errors": {
+      "emailRequired": "Nhập email",
+      "emailInvalid": "Email không hợp lệ",
+      "roleRequired": "Chọn vai trò"
+    }
+  }
+}

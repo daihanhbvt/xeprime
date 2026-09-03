@@ -1,0 +1,43 @@
+{
+  "page": {
+    "title": "People",
+    "tableLabel": "Member list",
+    "loadError": "Couldn't load the member list",
+    "empty": "No members yet",
+    "total": "{count, plural, one {# member} other {# members}}"
+  },
+  "filters": {
+    "search": "Search members",
+    "searchPlaceholder": "Search by name or email",
+    "role": "Role",
+    "allRoles": "All roles"
+  },
+  "columns": {
+    "member": "Member",
+    "role": "Role",
+    "status": "Status"
+  },
+  "you": "(you)",
+  "roleSelectAria": "Role of {name}",
+  "actions": {
+    "invite": "Add member",
+    "remove": "Remove member",
+    "removeConfirm": "Remove this member?"
+  },
+  "toast": {
+    "roleChanged": "Role updated",
+    "removed": "Member removed",
+    "added": "Member added"
+  },
+  "form": {
+    "title": "Add member",
+    "email": "Email",
+    "emailPlaceholder": "staff@company.com",
+    "role": "Role",
+    "errors": {
+      "emailRequired": "Enter an email",
+      "emailInvalid": "That email isn't valid",
+      "roleRequired": "Choose a role"
+    }
+  }
+}

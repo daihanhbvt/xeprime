@@ -27,6 +27,7 @@ import { OdometerCorrectionDialog } from './OdometerCorrectionDialog';
 import { OdometerHistoryDialog } from './OdometerHistoryDialog';
 import styles from './VehicleMaintenanceWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
+import { useErrorMessage } from '@/i18n/use-error-message';
 import { useTranslations } from 'next-intl';
 
 /**
@@ -41,6 +42,8 @@ import { useTranslations } from 'next-intl';
  * Thiếu dữ liệu để tính mốc thì nói `Chưa đủ dữ liệu` — không bao giờ hiển thị 0 km giả.
  */
 export function VehicleMaintenanceWorkspace({ vehicle }: { vehicle: VehicleDetail }) {
+  const t = useTranslations('Maintenance');
+  const tCommon = useTranslations('Common');
   const permissions = usePermissions();
   const canView = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_VIEW);
   const canManage = permissions.has(PERMISSION.VEHICLE_MAINTENANCE_MANAGE);
@@ -55,8 +58,8 @@ export function VehicleMaintenanceWorkspace({ vehicle }: { vehicle: VehicleDetai
     return (
       <PermissionState
         kind="forbidden"
-        title="Không có quyền xem bảo dưỡng"
-        description="Bạn không có quyền xem thông tin bảo dưỡng và số KM của xe này. Liên hệ chủ gian hàng để được cấp quyền."
+        title={t('workspace.noPermission')}
+        description={t('workspace.noPermissionHint')}
         missingPermissions={[PERMISSION.VEHICLE_MAINTENANCE_VIEW]}
       />
     );
@@ -69,10 +72,10 @@ export function VehicleMaintenanceWorkspace({ vehicle }: { vehicle: VehicleDetai
       <Alert
         type="error"
         showIcon
-        message="Không tải được thông tin bảo dưỡng"
+        message={t('workspace.loadError')}
         description={
           <Button size="small" onClick={() => void profile.refetch()}>
-            Thử lại
+            {tCommon('actions.retry')}
           </Button>
         }
       />
@@ -116,6 +119,8 @@ function MaintenanceTab({
   canViewFiles: boolean;
 }) {
   const tCommon = useTranslations('Common');
+  const t = useTranslations('Maintenance');
+  const errorMessage = useErrorMessage();
   const fmt = useAppFormat();
 
   const { message } = App.useApp();
@@ -171,13 +176,13 @@ function MaintenanceTab({
         notes: values.notes?.trim() || null,
         expectedRowVersion: profile.rowVersion > 0 ? profile.rowVersion : undefined,
       });
-      message.success('Đã lưu cấu hình bảo dưỡng');
+      message.success(t('workspace.profileSaved'));
       invalidate();
     } catch (err) {
       if (getErrorCode(err) === 'CONFLICT') {
-        message.error('Thông tin vừa được người khác cập nhật — tải lại trang trước khi lưu tiếp.');
+        message.error(t('workspace.profileStale'));
       } else {
-        message.error(getErrorMessage(err));
+        message.error(errorMessage(err));
       }
     } finally {
       setSavingProfile(false);
@@ -193,18 +198,18 @@ function MaintenanceTab({
         <Alert
           type="info"
           showIcon
-          message="Chế độ xem — Bạn chỉ có quyền xem bảo dưỡng, không thể chỉnh sửa."
+          message={t('workspace.readOnlyBanner')}
         />
       ) : null}
 
       {/* ── Chỉ số KM hiện tại ── */}
       <Card
         className={styles.card}
-        title="Chỉ số Kilometer hiện tại (Odo)"
+        title={t('workspace.odometerCard')}
         extra={
           canCorrectOdometer ? (
             <Button icon={<EditOutlined />} onClick={() => setCorrectionOpen(true)}>
-              Điều chỉnh thủ công
+              {t('workspace.adjustManually')}
             </Button>
           ) : null
         }
@@ -215,14 +220,14 @@ function MaintenanceTab({
             <p className={styles.odometerMeta}>
               {profile.currentOdometerAt ? (
                 <>
-                  Cập nhật {fmt.dateTime(profile.currentOdometerAt)}
+                  {t('workspace.updatedAt', { at: fmt.dateTime(profile.currentOdometerAt) })}
                   {profile.currentOdometerRefLabel ? ` · ${profile.currentOdometerRefLabel}` : ''}
                   {profile.currentOdometerSource
                     ? ` · ${ODOMETER_SOURCE_LABEL[profile.currentOdometerSource as OdometerSource] ?? profile.currentOdometerSource}`
                     : ''}
                 </>
               ) : (
-                'Chưa ghi nhận số KM nào cho xe này.'
+                t('workspace.noReading')
               )}
             </p>
           </div>
@@ -232,7 +237,7 @@ function MaintenanceTab({
             onClick={() => setHistoryOpen(true)}
             className={styles.historyLink}
           >
-            Lịch sử KM
+            {t('workspace.historyLink')}
           </Button>
         </div>
         {profile.currentOdometerKm == null ? (
@@ -240,8 +245,8 @@ function MaintenanceTab({
             className={styles.inlineAlert}
             type="warning"
             showIcon
-            message="Chưa có dữ liệu KM"
-            description="Nhập số KM hiện tại để tính được mốc bảo dưỡng tiếp theo. KM cũng được cập nhật tự động sau khi hoàn tất trả xe."
+            message={t('workspace.noOdometer')}
+            description={t('workspace.noOdometerHint')}
           />
         ) : null}
       </Card>
@@ -249,7 +254,7 @@ function MaintenanceTab({
       {/* ── Chu kỳ thay nhớt ── */}
       <Card
         className={styles.card}
-        title="Theo dõi Thay nhớt định kỳ"
+        title={t('workspace.oilCard')}
         extra={<StatusTag value={dueStatus} meta={MAINTENANCE_DUE_STATUS_META} group="maintenanceDueStatus" />}
       >
         <Form component={false} layout="vertical" colon={false} disabled={!canManage}>
@@ -258,7 +263,7 @@ function MaintenanceTab({
               <NumberField
                 control={control}
                 name="oilChangeIntervalKm"
-                label="Chu kỳ thay nhớt định kỳ"
+                label={t('workspace.oilInterval')}
                 placeholder="5.000"
                 addonAfter="km"
                 min={1}
@@ -268,7 +273,7 @@ function MaintenanceTab({
               <NumberField
                 control={control}
                 name="lastServiceKm"
-                label="KM thay nhớt lần gần nhất"
+                label={t('workspace.lastServiceKm')}
                 placeholder="40.000"
                 addonAfter="km"
                 min={0}
@@ -278,7 +283,7 @@ function MaintenanceTab({
               <DateTimeField
                 control={control}
                 name="lastServiceAt"
-                label="Ngày thay nhớt gần nhất"
+                label={t('workspace.lastServiceAt')}
                 dateOnly
               />
             </Col>
@@ -288,7 +293,7 @@ function MaintenanceTab({
         <div className={styles.scheduleBlock}>
           <div className={styles.scheduleHead}>
             <span>
-              Mốc bảo dưỡng tiếp theo:{' '}
+              {t('workspace.nextMilestone')}{' '}
               <strong>
                 {profile.nextMaintenanceKm != null
                   ? fmt.km(profile.nextMaintenanceKm)
@@ -316,11 +321,11 @@ function MaintenanceTab({
               type="info"
               showIcon
               message={tCommon('labels.insufficientData')}
-              description="Cần đủ KM hiện tại, chu kỳ và KM lần thay gần nhất mới tính được mốc tiếp theo."
+              description={t('workspace.nextDueHint')}
             />
           )}
           <p className={styles.thresholdNote}>
-            Ngưỡng cảnh báo &ldquo;sắp đến hạn&rdquo; của gian hàng: còn {fmt.km(profile.dueSoonKm)}.
+            {t('workspace.dueSoonThreshold', { value: fmt.km(profile.dueSoonKm) })}
           </p>
         </div>
 
@@ -328,7 +333,7 @@ function MaintenanceTab({
           <TextAreaField
             control={control}
             name="notes"
-            label="Ghi chú kỹ thuật khi thay nhớt"
+            label={t('workspace.oilNotes')}
             rows={2}
             maxLength={2000}
           />
@@ -342,7 +347,7 @@ function MaintenanceTab({
               disabled={!formState.isDirty}
               onClick={() => void handleSubmit(saveConfig)()}
             >
-              Lưu thay đổi
+              {tCommon('actions.saveChanges')}
             </Button>
           </div>
         ) : null}
@@ -351,11 +356,11 @@ function MaintenanceTab({
       {/* ── Lịch sắp tới ── */}
       <Card
         className={styles.card}
-        title="Lịch bảo dưỡng sắp tới"
+        title={t('workspace.upcomingCard')}
         extra={
           canManage ? (
             <Button icon={<PlusOutlined />} onClick={() => setRecordDialog({ mode: 'create' })}>
-              Thêm bảo dưỡng
+              {t('workspace.addRecord')}
             </Button>
           ) : null
         }
@@ -364,17 +369,17 @@ function MaintenanceTab({
           <Alert
             type="error"
             showIcon
-            message="Không tải được danh sách bảo dưỡng"
+            message={t('workspace.recordsLoadError')}
             description={
               <Button size="small" onClick={onRetryRecords}>
-                Thử lại
+                {tCommon('actions.retry')}
               </Button>
             }
           />
         ) : upcoming.length === 0 ? (
           <p className={styles.emptyText}>
-            Chưa có lịch bảo dưỡng nào sắp tới.{' '}
-            <Link href={ROUTES.MANAGE.MAINTENANCE}>Xem trung tâm bảo dưỡng</Link>
+            {t('workspace.upcomingEmpty')}{' '}
+            <Link href={ROUTES.MANAGE.MAINTENANCE}>{t('workspace.boardLink')}</Link>
           </p>
         ) : (
           <List
@@ -393,9 +398,9 @@ function MaintenanceTab({
       </Card>
 
       {/* ── Lịch sử ── */}
-      <Card className={styles.card} title="Lịch sử bảo dưỡng & Sửa chữa">
+      <Card className={styles.card} title={t('workspace.historyCard')}>
         {history.length === 0 ? (
-          <p className={styles.emptyText}>Chưa có lần bảo dưỡng nào được ghi nhận.</p>
+          <p className={styles.emptyText}>{t('workspace.historyEmpty')}</p>
         ) : (
           <List
             dataSource={history}
@@ -452,6 +457,8 @@ function RecordRow({
   onComplete?: () => void;
 }) {
   const fmt = useAppFormat();
+  const t = useTranslations('Maintenance');
+  const tCommon = useTranslations('Common');
 
   const title =
     record.title ||
@@ -480,7 +487,7 @@ function RecordRow({
             <span className={styles.recordCost}>{fmt.money(record.cost)}</span>
           ) : null}
           {canViewFiles && record.attachmentCount > 0 ? (
-            <Tag>{record.attachmentCount} chứng từ</Tag>
+            <Tag>{t('workspace.attachments', { count: record.attachmentCount })}</Tag>
           ) : null}
         </div>
         {record.notes ? <p className={styles.recordNotes}>{record.notes}</p> : null}
@@ -489,12 +496,12 @@ function RecordRow({
         <div className={styles.recordActions}>
           {onComplete ? (
             <Button size="small" type="primary" onClick={onComplete}>
-              Hoàn tất
+              {t('actions.complete')}
             </Button>
           ) : null}
           {onEdit ? (
             <Button size="small" onClick={onEdit}>
-              Chỉnh sửa
+              {tCommon('actions.edit')}
             </Button>
           ) : null}
         </div>

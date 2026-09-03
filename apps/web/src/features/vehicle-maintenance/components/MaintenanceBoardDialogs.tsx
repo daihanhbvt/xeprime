@@ -1,6 +1,7 @@
 'use client';
 
 import { Alert, Skeleton } from 'antd';
+import { useTranslations } from 'next-intl';
 import { useMaintenanceProfile, useMaintenanceRecords } from '../hooks';
 import type { MaintenanceBoardItem } from '../types';
 import { MaintenanceRecordDialog } from './MaintenanceRecordDialog';
@@ -74,12 +75,13 @@ export function MaintenanceBoardDialogs({
 
 /** Giữ khung hộp thoại trong lúc tải dữ liệu đầy đủ — không nháy mở/đóng. */
 function LoadingDialog({ onClose, loading }: { onClose: () => void; loading: boolean }) {
+  const t = useTranslations('Maintenance');
   return (
-    <ResponsiveDialog open title="Đang tải…" size="sm" onClose={onClose} footer={null}>
+    <ResponsiveDialog open title={t('dialog.loading')} size="sm" onClose={onClose} footer={null}>
       {loading ? (
         <Skeleton active paragraph={{ rows: 3 }} />
       ) : (
-        <Alert type="error" showIcon message="Không tải được dữ liệu bảo dưỡng của xe này" />
+        <Alert type="error" showIcon message={t('dialog.loadError')} />
       )}
     </ResponsiveDialog>
   );
