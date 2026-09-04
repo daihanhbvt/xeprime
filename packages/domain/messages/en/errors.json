@@ -67,7 +67,13 @@
     "PROFILE_INCOMPLETE": "Your shop profile is still missing required details, so it cannot be submitted for review.",
     "RECEIPT_BOOKING_VEHICLE_MISMATCH": "The booking you picked does not run the vehicle you picked. Clear one of the two.",
     "BOOKING_REQUEST_EXPIRED": "This request passed its 60-minute response deadline and closed itself.",
-    "BOOKING_NO_SHOW_NOT_ALLOWED": "Can't mark a no-show yet — it is less than 30 minutes past pickup time, or the vehicle was already handed over."
+    "BOOKING_NO_SHOW_NOT_ALLOWED": "Can't mark a no-show yet — it is less than 30 minutes past pickup time, or the vehicle was already handed over.",
+    "INVITE_INVALID": "This invitation does not exist, was already answered, or has been revoked.",
+    "INVITE_EXPIRED": "This invitation has expired. Ask the shop to send a new one.",
+    "INVITE_EMAIL_MISMATCH": "This invitation is for a different email address. Sign in with the address that received it.",
+    "INVITE_ALREADY_MEMBER": "You are already a member of this shop.",
+    "BANK_TX_ALREADY_HANDLED": "This transaction has already been handled. Reload the list to see its current state.",
+    "BANK_TX_TARGET_NOT_PAYABLE": "The selected invoice can no longer accept payment. Ask the shop to issue a new invoice and match against the new code."
   },
   "upload": {
     "imageType": "Only JPG, PNG or WebP images are accepted",
@@ -75,13 +81,7 @@
     "documentType": "Only PDF or JPG, PNG, WebP images are accepted",
     "documentTooLarge": "Files can be at most {maxMb}MB"
   },
-  "INVITE_INVALID": "This invitation does not exist, was already answered, or has been revoked.",
-  "INVITE_EXPIRED": "This invitation has expired. Ask the shop to send a new one.",
-  "INVITE_EMAIL_MISMATCH": "This invitation is for a different email address. Sign in with the address that received it.",
-  "INVITE_ALREADY_MEMBER": "You are already a member of this shop.",
   "field": {
     "invalid": "This value is not valid. Please check it again."
-  },
-  "BANK_TX_ALREADY_HANDLED": "This transaction has already been handled. Reload the list to see its current state.",
-  "BANK_TX_TARGET_NOT_PAYABLE": "The selected invoice can no longer accept payment. Ask the shop to issue a new invoice and match against the new code."
+  }
 }

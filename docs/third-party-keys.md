@@ -24,7 +24,7 @@ thiếu thì phần đó suy giảm có kiểm soát chứ không làm sập app
 | 4 | **Google Maps** (2 key) | Ước lượng quãng đường + phí giao, bản đồ nhúng | Khối bản đồ **ẩn hẳn**, phí giao không hiện | Có, xem 4.3 |
 | 5 | **Google Calendar** | Lớp ngày lễ trên lịch xe | `GET /holidays` trả rỗng | Miễn phí |
 | 6 | **Firebase** | Chat **realtime** | Chat vẫn chạy trên PostgreSQL, chỉ không đẩy tức thì | Miễn phí ở mức này |
-| 7 | **SMTP** | Email đặt lại mật khẩu gửi thật | Email **in ra log** container — vẫn test được | Tuỳ nhà cung cấp |
+| 7 | **SMTP** | Thư mời thành viên + đặt lại mật khẩu gửi thật | Email **in ra log** container — chạy được nhưng KHÔNG đi qua nodemailer, nên lỗi SMTP/TLS/`From` chỉ lộ ở production. Staging nay gửi thật (§7.2); máy dev dùng Mailpit (§7.1) | Miễn phí ở mức pilot |
 | 8 | **Telegram bot** | Cảnh báo sao lưu thất bại | Không ai biết khi backup hỏng | Miễn phí |
 
 **eSMS.vn KHÔNG cần cho staging.** `OTP_MODE=mock` in mã ra log và trả kèm `devCode` trong
@@ -353,24 +353,127 @@ npx firebase-tools deploy --only firestore:rules --project xeprime-staging
 
 ---
 
-## 7. SMTP — tuỳ chọn ở staging
+## 7. SMTP — dùng thật ở CẢ staging và production
 
-Thiếu `SMTP_HOST` thì email **in ra log container**, kể cả link đặt lại mật khẩu kèm token:
+Hai luồng phụ thuộc vào email, và cả hai đều gửi đi một **token nằm trên URL**:
+
+| Luồng | Link |
+| --- | --- |
+| Thư mời tham gia gian hàng | `APP_WEB_URL/invites/<token>` — token 32 byte, DB chỉ giữ SHA-256 |
+| Đặt lại mật khẩu | `APP_WEB_URL/reset-password?token=<token>` — dùng một lần, hạn 1 giờ |
+
+Vì vậy `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` là **bắt buộc ở production**: thiếu thì
+`EmailService` rơi về chế độ in nội dung ra log, tức token đi thẳng vào log — API từ chối boot
+thay vì để chuyện đó xảy ra (`apps/api/src/config/env.schema.ts`).
+
+### 7.1 Máy dev — Mailpit, không cần tài khoản nào
+
+`docker-compose.yml` có sẵn service `mailpit`: một SMTP server chạy local bắt mọi thư thay vì
+chuyển tiếp đi đâu cả.
 
 ```bash
-docker compose -p xeprime-staging -f docker-compose.prod.yml --env-file .env.staging logs -f api
+docker compose up -d mailpit     # đã nằm trong `docker compose up` mặc định
 ```
 
-Đủ để test toàn bộ luồng quên-mật-khẩu mà không cần nhà cung cấp nào. Muốn gửi thật thì Zoho Mail
-(miễn phí cho domain riêng), Google Workspace, hoặc Amazon SES:
+Hộp thư ở **<http://localhost:8025>** — HTML render đúng như người nhận thấy, nút bấm được, nên
+test được cả phần "người được mời bấm vào link" chứ không chỉ phần gửi. `.env` mặc định đã trỏ
+sẵn:
 
-| Loại | Tên | Ghi chú |
+```
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_USER=            # Mailpit không đòi đăng nhập — để trống là ĐÚNG
+SMTP_PASS=
+```
+
+Không có relay nào được cấu hình, và Mailpit không tự chuyển tiếp: lỡ để một địa chỉ thật trong
+`To:` lúc test thì thư vẫn nằm trong hộp này, không tới ai. Thư không được lưu qua lần khởi động
+lại — một hộp thư sống dai là nơi token cũ tích lại.
+
+Muốn quay về kiểu cũ (in ra log, không cần Docker) thì để trống `SMTP_HOST`.
+
+### 7.2 Staging — gửi THẬT, nhưng từ một tên miền con
+
+Quyết định 04/09/2026: staging gửi thư thật như production. Lý do không phải "cho giống" mà là
+**đường mã**: khi `SMTP_HOST` trống, `EmailService` không hề chạm tới nodemailer, nên cả một lớp
+lỗi (xác thực SMTP, TLS, định dạng `From`, thư bị chặn) không thể lộ ra ở staging — nó đợi tới
+production, nơi người dùng thật đang chờ một lời mời.
+
+Đổi lại, staging phải chịu đúng các ràng buộc của thư thật. Ba điều dưới đây là bắt buộc.
+
+**1. Gửi từ `stg.xeprime.vn`, KHÔNG phải `xeprime.vn`.**
+
+Xác minh `stg.xeprime.vn` như một sending domain riêng ở nhà cung cấp (bộ DKIM riêng), rồi đặt:
+
+```
+SMTP_FROM="XePrime STG <no-reply@stg.xeprime.vn>"
+```
+
+Uy tín gửi thư tính theo tên miền. Thư test bị đánh spam, bị bounce, bị người ta bấm "báo cáo"
+— tất cả đổ vào tên miền đứng tên. Dùng chung `xeprime.vn` cho staging là để một lần test hỏng
+kéo theo thư thật của khách vào Junk, và đó là loại hỏng không nhìn thấy ngay.
+
+**2. Đừng để staging gửi tới địa chỉ không tồn tại.**
+
+Seed demo dùng `@xeprime.test` — `.test` là TLD dành riêng, **không bao giờ phân giải**. Mỗi thư
+gửi tới đó là một **hard bounce**. Vài chục cái là nhà cung cấp hạ hạn mức hoặc khoá tài khoản,
+và nó khoá cả đường thư của production nếu dùng chung tài khoản.
+
+Nên trên staging chỉ kích hoạt luồng thư (mời thành viên, quên mật khẩu) với **địa chỉ bạn thật
+sự sở hữu**. Muốn chắc chắn hơn thì tách hẳn tài khoản/API key riêng cho staging, để một sự cố
+danh tiếng không lan sang production.
+
+**3. Vẫn xem được thư khi cần bới.** Nhà cung cấp nào cũng có nhật ký gửi (Resend: *Emails*;
+SES: CloudWatch). Đó là chỗ tra "thư đã đi chưa", thay cho log container trước đây.
+
+### 7.3 Chọn nhà cung cấp (dùng chung cho staging và production)
+
+| Nhà cung cấp | Hợp khi | Lưu ý |
 | --- | --- | --- |
-| Variable | `SMTP_HOST` · `SMTP_PORT` (587) · `SMTP_USER` | |
-| **Secret** | `SMTP_PASS` | |
-| Variable | `SMTP_FROM` | `XePrime STG <no-reply@xeprime.vn>` |
+| **Resend** | Bắt đầu nhanh, giao diện gọn | 3.000 thư/tháng miễn phí; cấu hình DNS có hướng dẫn từng bước |
+| **Amazon SES** | Rẻ nhất khi lượng lớn | Mặc định nằm trong *sandbox* — chỉ gửi được tới địa chỉ đã xác minh cho tới khi mở hạn mức, **xin trước vài ngày** |
+| **Zoho Mail** / **Google Workspace** | Đã có hộp thư cho tên miền | Hạn mức thấp (~500/ngày), hợp giai đoạn pilot |
+
+Dù chọn ai, **ba bản ghi DNS dưới đây là bắt buộc** — thiếu chúng thì thư mời rơi vào spam và cả
+tính năng coi như không tồn tại, dù code chạy đúng:
+
+Bộ ba này khai **cho từng tên miền gửi**, tức làm HAI lần: `stg.xeprime.vn` (staging) và
+`xeprime.vn` (production). Chúng độc lập — DKIM của tên miền này không ký được thư của tên
+miền kia.
+
+| Bản ghi | Đặt ở | Vì sao |
+| --- | --- | --- |
+| **SPF** (`TXT`) | gốc của tên miền gửi (`xeprime.vn`, và `stg.xeprime.vn`) | Khai máy chủ nào được phép gửi thay tên miền. **Mỗi tên miền chỉ được có MỘT** bản ghi SPF — đã có sẵn thì *gộp* `include:` vào bản ghi cũ, thêm bản ghi thứ hai là hỏng cả hai |
+| **DKIM** (`CNAME`/`TXT` theo hướng dẫn nhà cung cấp) | tên miền gửi | Ký số từng thư; Gmail bỏ qua thư không ký từ tên miền lạ |
+| **DMARC** (`TXT`) | `_dmarc.xeprime.vn` · `_dmarc.stg.xeprime.vn` | Bắt đầu bằng `v=DMARC1; p=none; rua=mailto:...` để nhận báo cáo, siết lên `p=quarantine` sau vài tuần khi đã sạch |
+
+Kiểm chứng trước khi tin: gửi một thư tới [mail-tester.com](https://www.mail-tester.com) và soi
+điểm, hoặc mở một thư ở Gmail → *Show original* → cả ba dòng `SPF` `DKIM` `DMARC` phải là **PASS**.
+
+### 7.4 Khai vào GitHub Environment
+
+Hai Environment khai **cùng bộ tên biến, khác giá trị** — khác nhau ở đúng tên miền gửi:
+
+| Loại | Tên | `staging` | `production` |
+| --- | --- | --- | --- |
+| Variable | `SMTP_HOST` | `smtp.resend.com` | `smtp.resend.com` |
+| Variable | `SMTP_PORT` | `587` | `587` |
+| Variable | `SMTP_USER` | `resend` (SES/Zoho thì là chuỗi riêng) | như staging |
+| **Secret** | `SMTP_PASS` | API key **riêng của staging** | API key của production |
+| Variable | `SMTP_FROM` | `XePrime STG <no-reply@stg.xeprime.vn>` | `XePrime <no-reply@xeprime.vn>` |
+| Variable | `APP_WEB_URL` | `https://stg.xeprime.vn` | `https://xeprime.vn` — link trong thư dựng từ đây |
+
+Hai API key riêng, không dùng chung một cái: khi cần thu hồi khoá của staging (lộ, hoặc bị hạ
+hạn mức vì bounce) thì production không bị kéo theo.
 
 Cổng 587 dùng STARTTLS — đúng mặc định của nodemailer, không cần khai thêm.
+
+> ⚠️ `SMTP_FROM` chứa dấu cách và dấu `<>`. File env trên VPS được `source` bằng bash, nên giá
+> trị **phải nằm trong nháy kép** — workflow deploy đã tự bọc, nhưng đừng sửa tay trên VPS
+> (`docs/deployment.md` §9.2).
+>
+> ⚠️ Địa chỉ ở `SMTP_FROM` phải thuộc **đúng tên miền đã ký DKIM**. Gửi `@gmail.com` qua SES là
+> cách chắc chắn nhất để vào spam.
 
 ---
 

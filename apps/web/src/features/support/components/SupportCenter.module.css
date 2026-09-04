@@ -19,6 +19,19 @@
 
 /* Tự xuống hàng theo bề rộng thật thay vì đếm cột: cùng một khai báo chạy đúng ở 360px lẫn
    1440px, không cần media query nào. */
+.legalBody {
+  margin: 0;
+  font-size: var(--xp-font-size-body);
+  line-height: 1.7;
+  color: var(--xp-color-text-secondary);
+}
+
+/* Khoảng cách đã do `gap` của `.section` lo — bỏ lề mặc định của danh sách để khối pháp lý
+   không thưa hơn các khối khác trên cùng trang. */
+.legalLinks {
+  margin-top: 0;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));

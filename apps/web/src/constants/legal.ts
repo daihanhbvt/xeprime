@@ -85,6 +85,8 @@ export const LEGAL_SECTIONS: Readonly<Record<LegalDoc, readonly string[]>> = {
 };
 
 export const legalPath = {
+  /** Trang chủ khu pháp lý — địa chỉ viện dẫn CẢ BỘ bốn văn bản. */
+  index: '/legal',
   doc: (doc: LegalDoc): string => `/legal/${doc}`,
 };
 

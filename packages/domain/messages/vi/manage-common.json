@@ -91,6 +91,10 @@
     "contact": {
       "title": "Chưa tìm thấy câu trả lời?",
       "body": "Liên hệ chủ gian hàng hoặc quản trị viên của bạn để được cấp quyền và hướng dẫn thêm."
+    },
+    "legal": {
+      "title": "Văn bản pháp lý",
+      "body": "Quy chế hoạt động sàn ràng buộc gian hàng của bạn: điều kiện đăng tin, thứ tự hiển thị, phí dịch vụ và cách xử lý tranh chấp. Mở trong tab mới để không mất việc đang làm."
     }
   }
 }

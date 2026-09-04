@@ -50,4 +50,6 @@ firebase-adminsdk-*.json
 XePrime_Project_Tracking.xlsx
 
 # office lock file (~$Book.xlsx)
+
+.uat-artifacts
 ~$*

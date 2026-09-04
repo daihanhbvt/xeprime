@@ -1,0 +1,128 @@
+/* Cùng khổ cột với từng văn bản (`LegalDocumentView.module.css`) — vào ra giữa hai trang không
+   nhảy bố cục. */
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.draft {
+  padding: 12px 14px;
+  border: 1px solid var(--xp-color-warning);
+  border-radius: 10px;
+  background: var(--xp-color-warning-bg);
+}
+
+.draftTitle {
+  display: block;
+  font-size: 13.5px;
+  color: var(--xp-color-text);
+}
+
+.draftBody {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--xp-color-text-secondary);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--xp-color-text);
+}
+
+.subtitle {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--xp-color-text-secondary);
+}
+
+.docs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+/* Cả thẻ là vùng bấm — một tiêu đề link nhỏ xíu giữa thẻ là bẫy trên màn cảm ứng. */
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 12px;
+  background: var(--xp-color-bg-container);
+  transition: border-color 0.15s ease;
+}
+
+.doc:hover {
+  border-color: var(--xp-color-primary);
+}
+
+.docTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--xp-color-text);
+}
+
+.docSummary {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--xp-color-text-secondary);
+}
+
+.docMeta {
+  font-size: 12px;
+  color: var(--xp-color-text-tertiary);
+}
+
+.support,
+.entity {
+  padding-top: 4px;
+}
+
+.supportTitle,
+.entityTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+}
+
+.supportBody,
+.entityBody {
+  margin-top: 6px;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--xp-color-text-secondary);
+}
+
+.supportLink {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 14.5px;
+  color: var(--xp-color-primary);
+}
+
+.supportLink:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .title {
+    font-size: 23px;
+  }
+}

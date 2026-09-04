@@ -134,6 +134,10 @@
   object-fit: contain;
 }
 
+.consent {
+  margin-top: var(--xp-space-lg);
+}
+
 .switch {
   margin-top: var(--xp-space-lg);
   text-align: center;

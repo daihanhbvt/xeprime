@@ -20,15 +20,23 @@ export class EmailService implements OnModuleDestroy {
     const host = this.config.get<string>('SMTP_HOST');
 
     if (host) {
+      const user = this.config.get<string>('SMTP_USER');
+      const pass = this.config.get<string>('SMTP_PASS');
+
       this.transporter = nodemailer.createTransport({
         host,
         port: this.config.get<number>('SMTP_PORT') ?? 587,
-        auth: {
-          user: this.config.getOrThrow<string>('SMTP_USER'),
-          pass: this.config.getOrThrow<string>('SMTP_PASS'),
-        },
+        /*
+         * `auth` chỉ đính khi CÓ ĐỦ user và pass.
+         *
+         * Hộp thư dev (Mailpit) không quảng cáo AUTH; đưa cho nodemailer một cặp rỗng thì nó
+         * vẫn cố đăng nhập và chuyến thư hỏng ở chỗ không ai ngờ tới. Bỏ trống hai biến này là
+         * cách hợp lệ để nói "SMTP không cần đăng nhập", không phải là cấu hình thiếu — mà ở
+         * production thì `env.schema.ts` đã bắt buộc cả hai, nên đường này không nới lỏng gì.
+         */
+        ...(user && pass ? { auth: { user, pass } } : {}),
       });
-      this.logger.log(`Email qua SMTP ${host}`);
+      this.logger.log(`Email qua SMTP ${host}${user ? '' : ' (không đăng nhập)'}`);
     } else {
       this.transporter = null;
       this.logger.warn('Chưa cấu hình SMTP — email sẽ in ra log thay vì gửi thật (dev).');
@@ -41,6 +49,25 @@ export class EmailService implements OnModuleDestroy {
       this.logger.warn(`[EMAIL→${to}] ${subject}\n${textForLog}`);
       return;
     }
+
+    /*
+     * Địa chỉ ở TLD dành riêng KHÔNG BAO GIỜ được gửi ra ngoài — kể cả khi SMTP đã cấu hình.
+     *
+     * Seed demo dùng `@xeprime.test`, và `.test` (RFC 2606/6761) được bảo đảm không phân giải.
+     * Mỗi thư gửi tới đó là một hard bounce; vài chục cái là nhà cung cấp hạ hạn mức hoặc khoá
+     * tài khoản — tức một buổi UAT trên staging đủ để làm hỏng đường thư của production.
+     *
+     * Rơi về in ra log thay vì im lặng bỏ qua: luồng vẫn test được với tài khoản demo y như
+     * trước khi có SMTP, chỉ là không có chuyến thư nào rời máy chủ.
+     */
+    if (isUndeliverableAddress(to)) {
+      this.logger.warn(
+        `[EMAIL→${to}] KHÔNG GỬI (tên miền dành riêng, gửi ra ngoài là hard bounce)\n` +
+          `${subject}\n${textForLog}`,
+      );
+      return;
+    }
+
     await this.transporter.sendMail({ from: this.from, to, subject, html });
   }
 
@@ -95,6 +122,36 @@ export class EmailService implements OnModuleDestroy {
   onModuleDestroy(): void {
     this.transporter?.close();
   }
+}
+
+/**
+ * TLD dành riêng theo RFC 2606 và RFC 6761 — chúng được BẢO ĐẢM không bao giờ phân giải, nên một
+ * địa chỉ nằm ở đây không phải "có thể sai" mà là chắc chắn không tới nơi.
+ *
+ * Danh sách cố định trong mã, không phải env: đây là một sự thật của Internet, không phải một
+ * lựa chọn vận hành. Đưa nó thành cấu hình chỉ tạo thêm một chỗ để khai sai.
+ */
+const UNDELIVERABLE_TLDS = ['test', 'invalid', 'example', 'local', 'localhost'];
+
+/**
+ * RFC 2606 dành riêng cả ba tên miền cấp hai này, không chỉ TLD `.example` — `someone@example.com`
+ * cũng không bao giờ tới nơi.
+ */
+const UNDELIVERABLE_DOMAINS = ['example.com', 'example.net', 'example.org'];
+
+function isUndeliverableAddress(address: string): boolean {
+  const domain = address.trim().toLowerCase().split('@').pop() ?? '';
+  if (!domain) return true;
+
+  // So khớp theo NHÃN, không phải theo chuỗi: `latest.vn` kết thúc bằng "test" nhưng là một tên
+  // miền thật, và chặn nhầm nó nghĩa là một khách hàng không bao giờ nhận được thư nào.
+  const labels = domain.split('.');
+  const tld = labels[labels.length - 1] ?? '';
+
+  return (
+    UNDELIVERABLE_TLDS.includes(tld) ||
+    UNDELIVERABLE_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`))
+  );
 }
 
 function escapeHtml(s: string): string {
