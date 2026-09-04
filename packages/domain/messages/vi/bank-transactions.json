@@ -1,0 +1,59 @@
+{
+  "page": {
+    "title": "Đối soát tiền vào",
+    "subtitle": "Khoản tiền về tài khoản nền tảng chưa khớp được vào hoá đơn nào. Khớp tay hoặc bỏ qua — mọi thao tác đều ghi lại người và lý do.",
+    "tableLabel": "Danh sách giao dịch ngân hàng",
+    "loadError": "Không tải được danh sách giao dịch",
+    "empty": "Không có giao dịch nào chờ xử lý",
+    "total": "{count, plural, other {# giao dịch}}"
+  },
+  "filters": {
+    "status": "Trạng thái khớp",
+    "search": "Tìm giao dịch",
+    "searchPlaceholder": "Nội dung chuyển khoản hoặc mã đối soát"
+  },
+  "columns": {
+    "amount": "Số tiền",
+    "content": "Nội dung chuyển khoản",
+    "code": "Mã rút được",
+    "status": "Trạng thái",
+    "bankTime": "Thời điểm ngân hàng",
+    "handledBy": "Người xử lý"
+  },
+  "detail": {
+    "title": "Chi tiết giao dịch",
+    "loadError": "Không mở được giao dịch này",
+    "providerTx": "Mã giao dịch nhà cung cấp",
+    "matchedInvoice": "Đã khớp vào hoá đơn",
+    "note": "Ghi chú xử lý",
+    "rawTitle": "Dữ liệu gốc từ nhà cung cấp",
+    "rawHint": "Bằng chứng khi có tranh cãi — không chỉnh sửa được.",
+    "handled": "Giao dịch này đã được xử lý."
+  },
+  "suggestions": {
+    "title": "Hoá đơn đang chờ tiền",
+    "hint": "Hệ thống KHÔNG tự khớp theo số tiền — số trùng nhau chỉ được đưa lên đầu để dễ tìm. Chọn đúng hoá đơn rồi ghi lý do.",
+    "empty": "Không có hoá đơn nào đang chờ tiền",
+    "amountMatches": "Khớp đúng số tiền",
+    "remaining": "Còn thiếu {amount}",
+    "choose": "Khớp vào hoá đơn này"
+  },
+  "match": {
+    "title": "Khớp tay vào hoá đơn {code}",
+    "noteLabel": "Lý do / ghi chú",
+    "notePlaceholder": "Vd: khách quên ghi mã, đã gọi xác nhận",
+    "noteRequired": "Nhập lý do khớp tay",
+    "submit": "Xác nhận khớp",
+    "success": "Đã khớp giao dịch vào hoá đơn"
+  },
+  "ignore": {
+    "action": "Bỏ qua giao dịch",
+    "title": "Bỏ qua giao dịch này?",
+    "body": "Dòng vẫn được giữ trong sổ làm bằng chứng, chỉ rời khỏi hàng đợi cần xử lý.",
+    "noteLabel": "Lý do bỏ qua",
+    "notePlaceholder": "Vd: tiền chuyển nhầm, đã hoàn tay",
+    "noteRequired": "Nhập lý do bỏ qua",
+    "submit": "Bỏ qua",
+    "success": "Đã bỏ qua giao dịch"
+  }
+}

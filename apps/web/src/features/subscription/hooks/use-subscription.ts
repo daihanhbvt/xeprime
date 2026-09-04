@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/services/query-keys';
 import {
   fetchInvoices,
+  fetchPaymentInfo,
   fetchMySubscription,
   fetchTenantPlans,
   purchaseSubscription,
@@ -19,6 +20,16 @@ export function useTenantPlans(enabled = true) {
     queryKey: queryKeys.subscription.plans(),
     queryFn: fetchTenantPlans,
     enabled,
+  });
+}
+
+/** Thông tin nhận tiền của nền tảng — đổi khi ops đổi tài khoản, tức gần như không bao giờ. */
+export function usePaymentInfo(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.subscription.paymentInfo(),
+    queryFn: fetchPaymentInfo,
+    enabled,
+    staleTime: 5 * 60_000,
   });
 }
 

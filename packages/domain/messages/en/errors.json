@@ -78,5 +78,10 @@
   "INVITE_INVALID": "This invitation does not exist, was already answered, or has been revoked.",
   "INVITE_EXPIRED": "This invitation has expired. Ask the shop to send a new one.",
   "INVITE_EMAIL_MISMATCH": "This invitation is for a different email address. Sign in with the address that received it.",
-  "INVITE_ALREADY_MEMBER": "You are already a member of this shop."
+  "INVITE_ALREADY_MEMBER": "You are already a member of this shop.",
+  "field": {
+    "invalid": "This value is not valid. Please check it again."
+  },
+  "BANK_TX_ALREADY_HANDLED": "This transaction has already been handled. Reload the list to see its current state.",
+  "BANK_TX_TARGET_NOT_PAYABLE": "The selected invoice can no longer accept payment. Ask the shop to issue a new invoice and match against the new code."
 }

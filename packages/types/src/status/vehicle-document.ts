@@ -28,6 +28,46 @@ export const VEHICLE_DOCUMENT_TYPE_LABEL: Readonly<Record<VehicleDocumentType, s
 };
 
 /**
+ * Danh sách CHỌN SẴN cho giấy tờ loại `other` — thay cho ô gõ tự do khi thêm loại giấy tờ.
+ *
+ * Vì sao là mã chứ không phải chuỗi gợi ý: giá trị chọn được lưu thẳng vào cột `custom_type_name`,
+ * và nếu lưu nhãn tiếng Việt thì (a) cùng một loại giấy tờ sinh ra nhiều cách viết tuỳ người gõ,
+ * (b) giao diện tiếng Anh hiện một cái tên tiếng Việt. Lưu MÃ thì nhãn dịch được ở namespace
+ * `Domain` (`vehicleDocumentPreset`).
+ *
+ * Cột vẫn là chuỗi tự do và ĐÓ LÀ CHỦ Ý: chọn "Khác" thì người dùng tự đặt tên, giá trị lưu là
+ * đúng chữ họ gõ. Khi hiển thị, `domainLabel(group, value, value)` tra mã trước rồi rơi về in
+ * nguyên văn — nên dữ liệu cũ (tên gõ tay từ trước) không cần migrate và vẫn hiện đúng.
+ */
+export const VEHICLE_DOCUMENT_PRESET = {
+  CONTRACT_BADGE: 'contract_badge',
+  TRANSPORT_LICENCE: 'transport_licence',
+  PHYSICAL_DAMAGE_INSURANCE: 'physical_damage_insurance',
+  PASSENGER_INSURANCE: 'passenger_insurance',
+  ROAD_FEE_STAMP: 'road_fee_stamp',
+  GPS_CERTIFICATE: 'gps_certificate',
+  PURCHASE_CONTRACT: 'purchase_contract',
+  AUTHORISATION_LETTER: 'authorisation_letter',
+} as const;
+
+export type VehicleDocumentPreset =
+  (typeof VEHICLE_DOCUMENT_PRESET)[keyof typeof VEHICLE_DOCUMENT_PRESET];
+export const VEHICLE_DOCUMENT_PRESET_VALUES = Object.values(
+  VEHICLE_DOCUMENT_PRESET,
+) as VehicleDocumentPreset[];
+
+export const VEHICLE_DOCUMENT_PRESET_LABEL: Readonly<Record<VehicleDocumentPreset, string>> = {
+  [VEHICLE_DOCUMENT_PRESET.CONTRACT_BADGE]: 'Phù hiệu xe hợp đồng',
+  [VEHICLE_DOCUMENT_PRESET.TRANSPORT_LICENCE]: 'Giấy phép kinh doanh vận tải',
+  [VEHICLE_DOCUMENT_PRESET.PHYSICAL_DAMAGE_INSURANCE]: 'Bảo hiểm vật chất xe (thân vỏ)',
+  [VEHICLE_DOCUMENT_PRESET.PASSENGER_INSURANCE]: 'Bảo hiểm tai nạn người ngồi trên xe',
+  [VEHICLE_DOCUMENT_PRESET.ROAD_FEE_STAMP]: 'Tem thu phí đường bộ',
+  [VEHICLE_DOCUMENT_PRESET.GPS_CERTIFICATE]: 'Chứng nhận thiết bị giám sát hành trình',
+  [VEHICLE_DOCUMENT_PRESET.PURCHASE_CONTRACT]: 'Hợp đồng mua bán / hoá đơn xe',
+  [VEHICLE_DOCUMENT_PRESET.AUTHORISATION_LETTER]: 'Giấy uỷ quyền sử dụng xe',
+};
+
+/**
  * Trạng thái CÔNG VIỆC của một job OCR — dữ liệu bền, lưu ở `vehicle_document_ocr_jobs`.
  * Tách khỏi trạng thái hạn dùng (suy từ `expiresAt`, KHÔNG lưu).
  */

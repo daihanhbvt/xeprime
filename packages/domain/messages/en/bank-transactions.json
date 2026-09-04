@@ -1,0 +1,59 @@
+{
+  "page": {
+    "title": "Incoming payment reconciliation",
+    "subtitle": "Money that reached the platform account but could not be matched to an invoice. Match it manually or skip it — every action records who did it and why.",
+    "tableLabel": "Bank transaction list",
+    "loadError": "Could not load the transaction list",
+    "empty": "No transactions waiting to be handled",
+    "total": "{count, plural, one {# transaction} other {# transactions}}"
+  },
+  "filters": {
+    "status": "Match status",
+    "search": "Find a transaction",
+    "searchPlaceholder": "Transfer description or reference code"
+  },
+  "columns": {
+    "amount": "Amount",
+    "content": "Transfer description",
+    "code": "Extracted code",
+    "status": "Status",
+    "bankTime": "Bank timestamp",
+    "handledBy": "Handled by"
+  },
+  "detail": {
+    "title": "Transaction detail",
+    "loadError": "This transaction could not be opened",
+    "providerTx": "Provider transaction id",
+    "matchedInvoice": "Matched to invoice",
+    "note": "Handling note",
+    "rawTitle": "Raw provider payload",
+    "rawHint": "Evidence in case of a dispute — not editable.",
+    "handled": "This transaction has already been handled."
+  },
+  "suggestions": {
+    "title": "Invoices awaiting payment",
+    "hint": "The system never auto-matches on amount — an exact match is only sorted to the top so you can find it. Pick the right invoice and state your reason.",
+    "empty": "No invoices are awaiting payment",
+    "amountMatches": "Exact amount match",
+    "remaining": "{amount} outstanding",
+    "choose": "Match to this invoice"
+  },
+  "match": {
+    "title": "Manually match to invoice {code}",
+    "noteLabel": "Reason / note",
+    "notePlaceholder": "e.g. customer forgot the code, confirmed by phone",
+    "noteRequired": "Enter a reason for the manual match",
+    "submit": "Confirm match",
+    "success": "Transaction matched to the invoice"
+  },
+  "ignore": {
+    "action": "Skip transaction",
+    "title": "Skip this transaction?",
+    "body": "The row stays in the ledger as evidence; it only leaves the queue of things to handle.",
+    "noteLabel": "Reason for skipping",
+    "notePlaceholder": "e.g. transferred by mistake, refunded manually",
+    "noteRequired": "Enter a reason for skipping",
+    "submit": "Skip",
+    "success": "Transaction skipped"
+  }
+}

@@ -6,6 +6,7 @@ import {
   LONG_TERM_PACKAGE_MONTHS,
   SERVICE_TYPE,
 } from '@xeprime/types';
+import { maxDecimalsTest } from '@xeprime/validators';
 
 /**
  * Schema form chính sách thuê (yup — báo lỗi sớm ngay trên ô nhập; validate thật ở BE:
@@ -34,10 +35,19 @@ const requiredNumber = (message: string) =>
     .default(null)
     .test('required', message, (value) => value != null);
 
+/**
+ * Khoảng cách giao nhận nhận TỐI ĐA 1 chữ số thập phân — khớp
+ * `@IsNumber({ maxDecimalPlaces: 1 })` của `DeliveryTierDto`/`deliveryMaxRadiusKm`. Không có
+ * luật này ở đây thì 1.25 km lọt xuống server và quay về thành một toast chung chung.
+ */
+const KM_DECIMALS = 1;
+const KM_DECIMALS_MESSAGE = `Khoảng cách chỉ nhận tối đa ${KM_DECIMALS} chữ số thập phân`;
+
 export const deliveryTierSchema = yup.object({
   toKm: requiredNumber('Nhập mốc "đến" (km)')
     .moreThan(0, 'Mốc khoảng cách phải lớn hơn 0')
-    .max(500, 'Tối đa 500 km'),
+    .max(500, 'Tối đa 500 km')
+    .test(maxDecimalsTest(KM_DECIMALS, KM_DECIMALS_MESSAGE)),
   fee: optionalMoney('Phí giao nhận'),
 });
 
@@ -95,6 +105,7 @@ export const policyFormSchema = yup.object({
     .default(null)
     .max(500, 'Tối đa 500 km')
     .moreThan(0, 'Giá trị bán kính không thể âm')
+    .test(maxDecimalsTest(KM_DECIMALS, KM_DECIMALS_MESSAGE))
     .when(['deliveryEnabled', '$policyEditable'], {
       is: (enabled: boolean, editable?: boolean) => enabled && editable !== false,
       then: (s) => s.test('required', 'Nhập bán kính hỗ trợ tối đa', (value) => value != null),

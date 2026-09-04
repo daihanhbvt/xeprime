@@ -1,9 +1,10 @@
 'use client';
 
-import { App, Alert, Button, InputNumber, Select, Spin } from 'antd';
+import { App, Button, InputNumber, Select, Spin } from 'antd';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
+  BILLING_MODE,
   SUBSCRIPTION_TERM_MONTHS,
   parsePlanLimits,
   subscriptionTermTotalPreview,
@@ -11,8 +12,8 @@ import {
   type PlanLimitsJson,
   type SubscriptionTermMonths,
 } from '@xeprime/types';
-import { CopyButton } from '@/components/data-display/CopyButton';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { InvoicePaymentPanel } from './InvoicePaymentPanel';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { usePurchaseSubscription, useTenantPlans } from '../hooks/use-subscription';
@@ -41,8 +42,15 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
   /** Hoá đơn vừa tạo — có giá trị là modal đang ở màn "chuyển khoản". */
   const [invoice, setInvoice] = useState<SubscriptionInvoice | null>(null);
 
-  // Chỉ gói bán được (có khoản phải trả) mới hiện ra — gói 0đ là tuyến hoa hồng mặc định.
-  const purchasable = (plans.data ?? []).filter((p) => Number(p.basePriceMonthly) > 0);
+  /*
+   * Lọc theo CHẾ ĐỘ THU PHÍ, không theo phí nền.
+   *
+   * Bản cũ lọc `basePriceMonthly > 0` vì mọi gói bán được đều có phí nền. ADR 0029 gỡ phí nền
+   * (gói pilot 100k/chỗ có nền 0đ, tiền nằm hết ở chỗ xe), nên vị từ đó loại đúng gói đang bán
+   * — không ai mua được gì. `billingMode` mới là thứ phân biệt thật: `package` là gói trả tiền,
+   * `commission` là tuyến mặc định không đi qua hoá đơn.
+   */
+  const purchasable = (plans.data ?? []).filter((p) => p.billingMode === BILLING_MODE.PACKAGE);
   const selected: TenantPlan | undefined = purchasable.find((p) => p.id === planId);
   /*
    * Ba giá trị dẫn xuất dưới đây KHÔNG bọc `useMemo`, có chủ đích.
@@ -64,6 +72,14 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
     const planLimits = plan ? parsePlanLimits(plan.limits) : null;
     setCarSlots(planLimits?.includedCars ?? 0);
     setMotorbikeSlots(planLimits?.includedMotorbikes ?? 0);
+    // Kỳ đang chọn có thể không được gói mới bán (vd 1 tháng với gói pilot) — nhảy về kỳ
+    // nhỏ nhất được bán thay vì giữ một lựa chọn mà server sẽ từ chối.
+    const planTerms = planLimits?.terms.map((t) => t.months) ?? [];
+    setTermMonths((current) => {
+      if (planTerms.length === 0 || planTerms.includes(current)) return current;
+      const smallest = SUBSCRIPTION_TERM_MONTHS.find((m) => planTerms.includes(m));
+      return smallest ?? current;
+    });
   }
 
   /** Không dưới mức gồm sẵn — cùng luật backend nâng lên. */
@@ -77,7 +93,16 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
       ? subscriptionTermTotalPreview(selected.basePriceMonthly, limits, slots, termMonths)
       : null;
 
-  const termOptions = SUBSCRIPTION_TERM_MONTHS.map((months) => {
+  /*
+   * Kỳ hạn lấy từ `limits.terms` của GÓI (ADR 0029: đó là danh sách kỳ được bán, không chỉ là
+   * bảng giảm giá) — gói pilot bán tối thiểu 3 tháng thì lựa chọn 1 tháng không được hiện ra.
+   * Plan cũ chưa khai terms → rơi về bộ kỳ hạn toàn cục. Server vẫn là lớp chặn thật.
+   */
+  const allowedTerms: readonly SubscriptionTermMonths[] = limits?.terms.length
+    ? SUBSCRIPTION_TERM_MONTHS.filter((m) => limits.terms.some((t) => t.months === m))
+    : SUBSCRIPTION_TERM_MONTHS;
+
+  const termOptions = allowedTerms.map((months) => {
     const discount = limits ? termDiscountPercent(limits, months) : 0;
     return {
       value: months,
@@ -114,28 +139,9 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
     >
       {invoice ? (
         <div className={styles.payment}>
-          <Alert type="info" showIcon message={t('payment.intro')} />
-          <dl className={styles.paymentFields}>
-            <div className={styles.paymentRow}>
-              <dt>{t('payment.amount')}</dt>
-              <dd>
-                <b>{fmt.money(invoice.totalAmount)}</b>{' '}
-                <CopyButton value={invoice.totalAmount} label={t('payment.copyAmount')} />
-              </dd>
-            </div>
-            <div className={styles.paymentRow}>
-              <dt>{t('payment.code')}</dt>
-              <dd>
-                <b className={styles.code}>{invoice.code}</b>{' '}
-                <CopyButton value={invoice.code} label={t('payment.copyCode')} />
-              </dd>
-            </div>
-          </dl>
-          {invoice.expiresAt ? (
-            <div className={styles.expires}>
-              {t('payment.expires', { date: fmt.dateTime(invoice.expiresAt) })}
-            </div>
-          ) : null}
+          {/* R2: hướng dẫn chuyển khoản (kèm VietQR khi đã cấu hình) dùng CHUNG với trang
+              "Gói của tôi" — đóng modal rồi vẫn tìm lại được cùng một QR ở đó. */}
+          <InvoicePaymentPanel invoice={invoice} />
           <div className={styles.actions}>
             <Button type="primary" onClick={close}>
               {t('payment.done')}

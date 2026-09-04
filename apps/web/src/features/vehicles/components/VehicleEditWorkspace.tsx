@@ -45,6 +45,7 @@ import { VehicleMaintenanceWorkspace } from '@/features/vehicle-maintenance/comp
 import { VehicleSourceWorkspace } from './VehicleSourceWorkspace';
 import { useActiveBranches } from '@/features/branches/hooks/use-branches';
 import { branchLabel } from '@/features/branches/branch-label';
+import { useApiFieldErrors } from '@/hooks/use-api-field-errors';
 import { usePermissions } from '@/hooks/use-permissions';
 import styles from './VehicleEditWorkspace.module.css';
 import { useAppFormat } from '@/i18n/use-app-format';
@@ -122,6 +123,7 @@ export function VehicleEditWorkspace({
   const fmt = useAppFormat();
   const domainLabel = useDomainLabel();
   const sensitiveLabels = useSensitiveChangeLabels();
+  const applyApiFieldErrors = useApiFieldErrors();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialValues = useMemo(() => vehicleToFormValues(vehicle), [vehicle]);
@@ -141,6 +143,7 @@ export function VehicleEditWorkspace({
     getValues,
     handleSubmit,
     reset,
+    setError,
     setValue,
     trigger,
     formState: { isDirty, errors },
@@ -245,8 +248,21 @@ export function VehicleEditWorkspace({
       reset(vehicleToFormValues(updated));
       setAdvancedOpen(false);
       setConfirmSensitive(false);
-    } catch {
-      // Mutation owner hiển thị lỗi chuẩn hoá; giữ nguyên form để người dùng sửa/thử lại.
+    } catch (err) {
+      /*
+       * Server bắt được thứ yup bỏ lọt → gắn lỗi vào ĐÚNG ô thay vì để lại mỗi toast chung.
+       * Không có lớp này thì một luật chỉ tồn tại ở backend (số chữ số thập phân, độ dài…)
+       * hiện ra dưới dạng "Dữ liệu gửi lên không hợp lệ" trên một form vài chục ô và người
+       * dùng phải tự dò. Mutation owner vẫn hiện thông báo chung như cũ.
+       */
+      const applied = applyApiFieldErrors(err, setError, { fields: activeFields });
+      if (applied.length > 0) {
+        setConfirmSensitive(false);
+        // Lỗi không được nằm khuất sau vùng thu gọn đang đóng — cùng luật với nhánh lỗi yup.
+        const advanced = new Set<string>(ADVANCED_SPEC_FIELDS);
+        if (applied.some((field) => advanced.has(field))) setAdvancedOpen(true);
+      }
+      // Giữ nguyên form để người dùng sửa/thử lại.
     }
   }
 

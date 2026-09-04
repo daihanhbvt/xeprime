@@ -77,9 +77,10 @@ describe('nav — cấu trúc khối', () => {
     expect(pinned).toEqual(['overview', 'support']);
   });
 
-  it('nền tảng: 2 khối, tổng 12 mục lá — cây này KHÔNG bị sắp lại', () => {
+  it('nền tảng: 2 khối, tổng 13 mục lá — cây này KHÔNG bị sắp lại', () => {
     expect(PLATFORM_NAV.map((section) => section.key)).toEqual(['overview', 'platform']);
-    expect(flattenLeaves(PLATFORM_NAV)).toHaveLength(12);
+    // 13 từ R2: thêm "Đối soát tiền vào" (ADR 0022 điều 4 — hàng đợi khớp tay của admin).
+    expect(flattenLeaves(PLATFORM_NAV)).toHaveLength(13);
   });
 
   it('đúng ba mục cha (submenu): đội xe, đơn thuê, tài chính', () => {
@@ -245,10 +246,10 @@ describe('nav — vai trò gian hàng nhìn thấy gì', () => {
 });
 
 describe('nav — vai trò nền tảng nhìn thấy gì', () => {
-  it('platform_admin thấy đủ 12 mục', () => {
+  it('platform_admin thấy đủ 13 mục', () => {
     expect(
       visibleLabels(DEFAULT_PLATFORM_ROLE_PERMISSIONS[PLATFORM_ROLE.PLATFORM_ADMIN], true),
-    ).toHaveLength(12);
+    ).toHaveLength(13);
   });
 
   it('platform_staff chỉ thấy 5 mục đọc, KHÔNG thấy mục quản trị của super admin', () => {

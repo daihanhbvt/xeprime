@@ -1,9 +1,9 @@
 import { createPrismaClient, newId } from '@xeprime/prisma';
 import { API_ERROR_CODE, TENANT_STATUS, VEHICLE_TYPE } from '@xeprime/types';
 import { AuditService } from '../src/modules/audit/audit.service';
-import { BillingService } from '../src/modules/billing/billing.service';
 import { PlatformTenantsService } from '../src/modules/platform-admin/platform-tenants.service';
 import type { PrismaService } from '../src/prisma/prisma.service';
+import { makeBillingService } from './helpers/service-factory';
 
 /**
  * Phase 7 — Quản lý gian hàng nền tảng, chạy trên PostgreSQL THẬT. Kiểm chứng: list + lọc/tìm,
@@ -15,7 +15,7 @@ const asService = prisma as unknown as PrismaService;
 const service = new PlatformTenantsService(
   asService,
   new AuditService(asService),
-  new BillingService(asService, new AuditService(asService)),
+  makeBillingService(asService),
 );
 
 let dbAvailable = false;

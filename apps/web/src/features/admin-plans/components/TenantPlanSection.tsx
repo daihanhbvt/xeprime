@@ -252,7 +252,12 @@ function AssignPlanModal({
     if (!selected || !limits) return null;
     const now = dayjs();
     const starts = currentEndsAt && dayjs(currentEndsAt).isAfter(now) ? dayjs(currentEndsAt) : now;
-    const total = subscriptionTermTotalPreview(selected.basePriceMonthly, limits, slots, termMonths);
+    const total = subscriptionTermTotalPreview(
+      selected.basePriceMonthly,
+      limits,
+      slots,
+      termMonths,
+    );
     return {
       starts,
       ends: dayjs(addCalendarMonthsVn(starts.toDate(), termMonths)),

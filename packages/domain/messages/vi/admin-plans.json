@@ -55,10 +55,8 @@
     "graceDays": "Ân hạn sau hết hạn",
     "graceDaysUnit": "ngày",
     "sectionIncentive": "Giả định kiểm điểm giao",
-    "incentiveIntro": "Hệ thống từ chối gói rẻ hơn tuyến hoa hồng ngay từ quy mô nhỏ hơn số chỗ gồm sẵn — nhập giả định để kiểm chứng.",
     "assumedGmv": "Doanh thu giả định / xe / tháng",
     "assumedCommission": "% hoa hồng tuyến A để so",
-    "incentiveWarning": "Phí nền đang dưới ngưỡng {min} — điểm hoà vốn rơi xuống dưới số chỗ gồm sẵn, gói sẽ bị từ chối khi lưu.",
     "sectionOther": "Giới hạn khác & tính năng",
     "maxMembers": "Số thành viên tối đa",
     "maxBranches": "Số chi nhánh tối đa",
@@ -76,7 +74,8 @@
       "assumedCommissionRequired": "Nhập % hoa hồng để so",
       "integer": "Số nguyên",
       "nonNegative": "Không âm"
-    }
+    },
+    "gmvReferenceNote": "Giả định GMV chỉ còn là THAM KHẢO cho việc định giá (ADR 0029 đã gỡ kiểm điểm giao — phí theo chuyến do khách gánh, không ràng buộc phí nền)."
   },
   "tenant": {
     "title": "Gói dịch vụ",

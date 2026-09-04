@@ -1,11 +1,17 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PERMISSION } from '@xeprime/types';
-import { CurrentTenant, CurrentUser, RequirePermissions, TenantScoped } from '../../common/decorators';
+import {
+  CurrentTenant,
+  CurrentUser,
+  RequirePermissions,
+  TenantScoped,
+} from '../../common/decorators';
 import type { AuthenticatedUser, TenantContext } from '../../common/types/request-context';
 import { BillingService } from './billing.service';
 import {
   MySubscriptionDto,
+  PaymentInfoDto,
   PurchaseSubscriptionDto,
   SubscriptionInvoiceDto,
   SubscriptionInvoicePageDto,
@@ -41,6 +47,16 @@ export class SubscriptionController {
     return this.billing.listPlansForTenant();
   }
 
+  @Get('payment-info')
+  @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
+  @ApiOperation({
+    summary: 'Thông tin nhận chuyển khoản của nền tảng — web dựng VietQR từ đây (ADR 0016 điều 5)',
+  })
+  @ApiOkResponse({ type: PaymentInfoDto })
+  paymentInfo(): PaymentInfoDto {
+    return this.billing.paymentInfo();
+  }
+
   @Get('invoices')
   @RequirePermissions(PERMISSION.SUBSCRIPTION_VIEW)
   @ApiOperation({ summary: 'Lịch sử hoá đơn gói (mới nhất trước)' })
@@ -59,7 +75,8 @@ export class SubscriptionController {
   @HttpCode(HttpStatus.OK)
   @RequirePermissions(PERMISSION.SUBSCRIPTION_PURCHASE)
   @ApiOperation({
-    summary: 'Mua / gia hạn gói — sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4)',
+    summary:
+      'Mua / gia hạn gói — sinh hoá đơn + mã đối soát, gói bật khi tiền về (ADR 0026 điều 4)',
   })
   @ApiOkResponse({ type: SubscriptionInvoiceDto })
   purchase(
