@@ -220,6 +220,14 @@ export const queryKeys = {
   members: {
     all: ['members'] as const,
     list: (params: QueryParams) => ['members', 'list', params] as const,
+    /**
+     * Lời mời nằm DƯỚI `members` chứ không thành nhánh riêng: nhận một lời mời làm đổi cả danh
+     * sách mời lẫn danh sách thành viên, nên một lần `invalidateQueries({ queryKey: members.all })`
+     * phải quét được cả hai. Tách nhánh là để lọt đúng một nửa.
+     */
+    invites: (params: QueryParams) => ['members', 'invites', params] as const,
+    /** Xem trước lời mời — khoá theo token vì đây là dữ liệu của MỘT lời mời cụ thể. */
+    invitePreview: (token: string) => ['members', 'invite-preview', token] as const,
   },
   receipts: {
     all: ['receipts'] as const,

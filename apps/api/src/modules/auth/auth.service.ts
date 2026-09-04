@@ -13,7 +13,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RbacService } from '../rbac/rbac.service';
 import { normalizePhone, toLocalPhone } from '../../common/phone';
 import { currentSubscriptionWhere, resolveTenantFeatures } from '../../common/plan/feature-state';
-import { EmailService } from './email.service';
+import { EmailService } from '../email/email.service';
 import type { CurrentTenantSummaryDto, MeDto } from './dto/auth.dto';
 import type { VerifiedIdentity } from './social/identity';
 

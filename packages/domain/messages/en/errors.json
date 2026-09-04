@@ -74,5 +74,9 @@
     "imageTooLarge": "Images can be at most {maxMb}MB",
     "documentType": "Only PDF or JPG, PNG, WebP images are accepted",
     "documentTooLarge": "Files can be at most {maxMb}MB"
-  }
+  },
+  "INVITE_INVALID": "This invitation does not exist, was already answered, or has been revoked.",
+  "INVITE_EXPIRED": "This invitation has expired. Ask the shop to send a new one.",
+  "INVITE_EMAIL_MISMATCH": "This invitation is for a different email address. Sign in with the address that received it.",
+  "INVITE_ALREADY_MEMBER": "You are already a member of this shop."
 }

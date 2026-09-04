@@ -22,7 +22,8 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { MEMBERS_DEFAULT_LIMIT } from '@/features/members/api';
-import { AddMemberModal } from '@/features/members/components/AddMemberModal';
+import { InviteMemberModal } from '@/features/members/components/InviteMemberModal';
+import { PendingInvitesPanel } from '@/features/members/components/PendingInvitesPanel';
 import { ALL_ROLES, ASSIGNABLE_ROLES, MEMBERSHIP_STATUS_META } from '@/features/members/constants';
 import { useMembers } from '@/features/members/hooks/use-members';
 import {
@@ -47,7 +48,7 @@ export default function MembersPage() {
   // Bộ lọc của trang này là state CỤC BỘ (không nằm trên URL) — giữ nguyên, đưa lên URL là
   // đổi hành vi ngoài phạm vi wave giao diện.
   const [filters, setFilters] = useState<MemberFilters>({});
-  const [addOpen, setAddOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const { data, isError, refetch, isFetching } = useMembers(filters);
   const updateRole = useUpdateMemberRole();
@@ -110,7 +111,7 @@ export default function MembersPage() {
           type="primary"
           icon={<PlusOutlined />}
           disabled={disabled}
-          onClick={() => setAddOpen(true)}
+          onClick={() => setInviteOpen(true)}
         >
           {t('actions.invite')}
         </Button>
@@ -224,7 +225,9 @@ export default function MembersPage() {
         }}
       />
 
-      <AddMemberModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <PendingInvitesPanel />
+
+      <InviteMemberModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
   );
 }

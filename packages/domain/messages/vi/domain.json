@@ -190,6 +190,7 @@
   "inviteStatus": {
     "pending": "Đang chờ",
     "accepted": "Đã tham gia",
+    "declined": "Đã từ chối",
     "expired": "Hết hạn",
     "revoked": "Đã thu hồi"
   },

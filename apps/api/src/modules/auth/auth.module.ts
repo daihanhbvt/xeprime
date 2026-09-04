@@ -2,7 +2,6 @@ import { Global, Module } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { MobileAuthController } from './mobile-auth.controller';
 import { AuthService } from './auth.service';
-import { EmailService } from './email.service';
 import { NativeSessionService } from './native-session.service';
 import { SessionService } from './session.service';
 import { NativeAuthCodeService } from './social/native-auth-code.service';
@@ -30,7 +29,6 @@ import { SocialAuthService } from './social/social-auth.service';
     AuthService,
     SessionService,
     NativeSessionService,
-    EmailService,
     OauthStateService,
     NativeAuthCodeService,
     SocialAuthService,

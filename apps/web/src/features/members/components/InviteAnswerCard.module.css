@@ -1,0 +1,67 @@
+.card {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 28px 20px 56px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--xp-color-text);
+  letter-spacing: -0.01em;
+}
+
+.intro {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--xp-color-text-secondary);
+}
+
+.facts {
+  margin-top: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--xp-color-border-secondary);
+  border-radius: 12px;
+  background: var(--xp-color-bg-container);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14.5px;
+}
+
+.fact dt {
+  color: var(--xp-color-text-tertiary);
+}
+
+.fact dd {
+  font-weight: 600;
+  color: var(--xp-color-text);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.prompt {
+  margin-top: 18px;
+}
+
+.actions {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .actions > :global(.ant-btn) {
+    flex: 1 1 100%;
+  }
+}

@@ -1,0 +1,15 @@
+.section {
+  margin-top: 24px;
+}
+
+.title {
+  margin-bottom: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--xp-color-text);
+}
+
+/* Email dài không được đẩy tràn bảng trên điện thoại. */
+.email {
+  overflow-wrap: anywhere;
+}

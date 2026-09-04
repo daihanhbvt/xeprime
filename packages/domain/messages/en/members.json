@@ -2,12 +2,12 @@
   "page": {
     "title": "People",
     "tableLabel": "Member list",
-    "loadError": "Couldn't load the member list",
+    "loadError": "Could not load the member list",
     "empty": "No members yet",
     "total": "{count, plural, one {# member} other {# members}}"
   },
   "filters": {
-    "search": "Search members",
+    "search": "Find a member",
     "searchPlaceholder": "Search by name or email",
     "role": "Role",
     "allRoles": "All roles"
@@ -18,26 +18,64 @@
     "status": "Status"
   },
   "you": "(you)",
-  "roleSelectAria": "Role of {name}",
+  "roleSelectAria": "Role for {name}",
   "actions": {
-    "invite": "Add member",
+    "invite": "Invite a member",
     "remove": "Remove member",
     "removeConfirm": "Remove this member?"
   },
   "toast": {
     "roleChanged": "Role updated",
     "removed": "Member removed",
-    "added": "Member added"
+    "invited": "Invitation sent",
+    "revoked": "Invitation revoked"
   },
   "form": {
-    "title": "Add member",
+    "title": "Invite a member",
+    "notice": "We will email an invitation to this address. They only join the shop once they accept it themselves.",
     "email": "Email",
     "emailPlaceholder": "staff@company.com",
     "role": "Role",
     "errors": {
       "emailRequired": "Enter an email",
-      "emailInvalid": "That email isn't valid",
-      "roleRequired": "Choose a role"
+      "emailInvalid": "That email is not valid",
+      "roleRequired": "Pick a role"
     }
+  },
+  "invites": {
+    "title": "Pending invitations",
+    "tableLabel": "Invitation list",
+    "loadError": "Could not load the invitation list",
+    "empty": "No invitations are pending",
+    "total": "{count, plural, one {# invitation} other {# invitations}}",
+    "columns": {
+      "email": "Invited email",
+      "role": "Role",
+      "status": "Status",
+      "expiresAt": "Expires",
+      "createdBy": "Invited by"
+    },
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke this invitation? The link in the email stops working immediately."
+  },
+  "invitePage": {
+    "title": "Shop invitation",
+    "intro": "{shop} has invited you to join their shop on XePrime.",
+    "invitedBy": "Invited by {name}",
+    "role": "Role offered",
+    "invitedEmail": "Sent to",
+    "expiresAt": "Expires",
+    "loadError": "This invitation could not be opened",
+    "signInPrompt": "Sign in with the email address that received this invitation to answer it.",
+    "signIn": "Sign in",
+    "accept": "Accept and join",
+    "decline": "Decline",
+    "declineConfirm": "Decline this invitation? The shop will see that you declined.",
+    "accepted": "You have joined {shop}.",
+    "declined": "You declined this invitation.",
+    "goManage": "Go to the management portal",
+    "goHome": "Back to home",
+    "closedTitle": "This invitation is no longer valid",
+    "closedBody": "It has already been answered, revoked, or expired. Ask the shop to send a new one if you still want to join."
   }
 }

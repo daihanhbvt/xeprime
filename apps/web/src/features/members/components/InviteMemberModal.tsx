@@ -1,6 +1,6 @@
 'use client';
 
-import { App } from 'antd';
+import { Alert, App } from 'antd';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -14,19 +14,27 @@ import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
 import { useDomainLabel } from '@/i18n/use-domain-label';
 import { useErrorMessage } from '@/i18n/use-error-message';
 import { ASSIGNABLE_ROLES } from '../constants';
-import { useAddMember } from '../hooks/use-member-mutations';
+import { useCreateInvite } from '../hooks/use-member-mutations';
 
 /**
- * Thêm thành viên theo email (user phải đã có tài khoản — mời-qua-email làm sau, cần SMTP).
+ * GỬI LỜI MỜI vào gian hàng — không phải "thêm thành viên".
+ *
+ * Tên cũ (`AddMemberModal`) mô tả đúng thứ nó từng làm: `POST /members` tạo thẳng một membership
+ * `active` cho một email bất kỳ, và người bị thêm chỉ biết khi đăng nhập lần sau. Endpoint đó đã
+ * bị gỡ; ở đây chỉ gửi thư, và người được mời mới là người quyết định.
+ *
+ * Vì vậy hộp thoại nói rõ điều gì sẽ xảy ra tiếp theo: hiện tại người được mời CHƯA vào gian
+ * hàng. Không nói ra thì người gửi đóng hộp thoại, không thấy ai trong bảng, và tưởng là lỗi.
+ *
  * Remount theo `open` để state form sạch mỗi lần mở.
  */
-export function AddMemberModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function InviteMemberModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useTranslations('Members');
   const tCommon = useTranslations('Common');
   const { message } = App.useApp();
   const domainLabel = useDomainLabel();
   const errorMessage = useErrorMessage();
-  const add = useAddMember();
+  const invite = useCreateInvite();
 
   // Schema dựng TRONG component: câu lỗi phải theo ngôn ngữ của request, mà module scope chạy
   // một lần cho cả tiến trình và sẽ đóng băng ngôn ngữ đầu tiên ở SSR.
@@ -59,11 +67,11 @@ export function AddMemberModal({ open, onClose }: { open: boolean; onClose: () =
   }));
 
   const onSubmit = handleSubmit((values) => {
-    add.mutate(
+    invite.mutate(
       { email: values.email.trim(), roleKey: values.roleKey },
       {
         onSuccess: () => {
-          message.success(t('toast.added'));
+          message.success(t('toast.invited'));
           onClose();
         },
         onError: (err) => message.error(errorMessage(err)),
@@ -77,11 +85,12 @@ export function AddMemberModal({ open, onClose }: { open: boolean; onClose: () =
       open={open}
       onClose={onClose}
       size="sm"
-      okText={tCommon('actions.add')}
+      okText={tCommon('actions.send')}
       onOk={() => void onSubmit()}
-      confirmLoading={add.isPending}
+      confirmLoading={invite.isPending}
     >
       <DialogForm onSubmit={onSubmit} labelWidth="sm">
+        <Alert type="info" showIcon message={t('form.notice')} />
         <TextField
           control={control}
           name="email"
@@ -89,7 +98,12 @@ export function AddMemberModal({ open, onClose }: { open: boolean; onClose: () =
           type="email"
           placeholder={t('form.emailPlaceholder')}
         />
-        <SelectField control={control} name="roleKey" label={t('form.role')} options={roleOptions} />
+        <SelectField
+          control={control}
+          name="roleKey"
+          label={t('form.role')}
+          options={roleOptions}
+        />
       </DialogForm>
     </ResponsiveDialog>
   );
