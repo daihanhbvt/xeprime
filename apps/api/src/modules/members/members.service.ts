@@ -1,5 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { newId, Prisma } from '@xeprime/prisma';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@xeprime/prisma';
 import {
   API_ERROR_CODE,
   MEMBERSHIP_STATUS,
@@ -9,7 +9,6 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import {
-  AddMemberDto,
   MEMBER_DEFAULT_LIMIT,
   MEMBER_MAX_LIMIT,
   MemberDto,
@@ -74,83 +73,6 @@ export class MembersService {
     };
   }
 
-  /** Thêm thành viên theo email. User phải đã có tài khoản (chưa hỗ trợ mời qua email). */
-  async add(tenantId: string, actorUserId: string, dto: AddMemberDto): Promise<MemberDto> {
-    if (dto.roleKey === TENANT_ROLE.SHOP_OWNER) {
-      throw new BadRequestException({
-        code: API_ERROR_CODE.VALIDATION_FAILED,
-        message: 'Không thể gán vai trò chủ gian hàng cho thành viên',
-      });
-    }
-
-    const email = dto.email.trim().toLowerCase();
-    const user = await this.prisma.user.findFirst({
-      where: { email },
-      select: { id: true },
-    });
-    if (!user) {
-      throw new NotFoundException({
-        code: API_ERROR_CODE.NOT_FOUND,
-        message: 'Chưa có tài khoản với email này. Người dùng cần đăng ký trước.',
-      });
-    }
-
-    const existing = await this.prisma.tenantMembership.findUnique({
-      where: { tenantId_userId: { tenantId, userId: user.id } },
-      select: { userId: true, status: true },
-    });
-    if (existing && existing.status !== MEMBERSHIP_STATUS.REMOVED) {
-      throw new ConflictException({
-        code: API_ERROR_CODE.CONFLICT,
-        message: 'Người dùng đã là thành viên của gian hàng',
-      });
-    }
-
-    const row = await this.prisma.$transaction(async (tx) => {
-      // Thành viên từng bị gỡ thì kích hoạt lại bản ghi cũ (unique [tenant,user]).
-      const membership = existing
-        ? await tx.tenantMembership.update({
-            where: { tenantId_userId: { tenantId, userId: user.id } },
-            data: {
-              roleKey: dto.roleKey,
-              status: MEMBERSHIP_STATUS.ACTIVE,
-              invitedBy: actorUserId,
-              joinedAt: new Date(),
-            },
-            select: SELECT,
-          })
-        : await tx.tenantMembership.create({
-            data: {
-              id: newId(),
-              tenantId,
-              userId: user.id,
-              roleKey: dto.roleKey,
-              status: MEMBERSHIP_STATUS.ACTIVE,
-              invitedBy: actorUserId,
-              joinedAt: new Date(),
-            },
-            select: SELECT,
-          });
-
-      await this.audit.record(
-        {
-          tenantId,
-          actorUserId,
-          actorScope: 'tenant',
-          action: 'member.add',
-          targetType: 'tenant_membership',
-          targetId: user.id,
-          after: { roleKey: dto.roleKey },
-        },
-        tx,
-      );
-
-      return membership;
-    });
-
-    return toDto(row);
-  }
-
   async updateRole(
     tenantId: string,
     actorUserId: string,
@@ -203,7 +125,11 @@ export class MembersService {
     return toDto(row);
   }
 
-  async remove(tenantId: string, actorUserId: string, targetUserId: string): Promise<{ userId: string }> {
+  async remove(
+    tenantId: string,
+    actorUserId: string,
+    targetUserId: string,
+  ): Promise<{ userId: string }> {
     if (targetUserId === actorUserId) {
       throw new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,

@@ -74,5 +74,9 @@
     "imageTooLarge": "Ảnh tối đa {maxMb}MB",
     "documentType": "Chỉ nhận PDF hoặc ảnh JPG, PNG, WebP",
     "documentTooLarge": "Tệp tối đa {maxMb}MB"
-  }
+  },
+  "INVITE_INVALID": "Lời mời không tồn tại, đã được xử lý hoặc đã bị thu hồi.",
+  "INVITE_EXPIRED": "Lời mời đã hết hạn. Hãy nhờ gian hàng gửi lại.",
+  "INVITE_EMAIL_MISMATCH": "Lời mời này dành cho một địa chỉ email khác. Hãy đăng nhập bằng email đã nhận thư mời.",
+  "INVITE_ALREADY_MEMBER": "Đã là thành viên của gian hàng này rồi."
 }

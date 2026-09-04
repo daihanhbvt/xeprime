@@ -71,6 +71,28 @@ export const API_ERROR_CODE = {
   /** Đổi code thất bại, `debug_token` không khớp app, hoặc `id_token` không hợp lệ. */
   SOCIAL_EXCHANGE_FAILED: 'SOCIAL_EXCHANGE_FAILED',
 
+  /*
+   * Thư mời vào gian hàng (R1 — thay cho việc thêm thẳng người vào tenant).
+   *
+   * Bốn mã riêng thay vì `NOT_FOUND`/`CONFLICT` chung, vì bốn lối đi tiếp khác hẳn nhau và
+   * người đọc màn hình mời là người NGOÀI gian hàng — họ không có gì để tự suy ra.
+   */
+  /** Token không tồn tại, đã dùng, đã bị thu hồi, hoặc đã bị chính người nhận từ chối. */
+  INVITE_INVALID: 'INVITE_INVALID',
+  /** Còn đúng nhưng quá `expires_at`. Việc cần làm là xin gian hàng gửi lại, không phải thử lại. */
+  INVITE_EXPIRED: 'INVITE_EXPIRED',
+  /**
+   * Đang đăng nhập bằng một tài khoản KHÁC với email được mời.
+   *
+   * Không tự nhận lời mời cho tài khoản đang đăng nhập: link mời đi qua email/chat và có thể
+   * bị chuyển tiếp, nên "ai cầm link thì vào được" là một cách chiếm chỗ trong gian hàng người
+   * khác. `details` mang `{ invitedEmail }` đã che bớt để người dùng biết cần đăng nhập bằng
+   * hộp thư nào mà không lộ nguyên địa chỉ cho người cầm link nhầm.
+   */
+  INVITE_EMAIL_MISMATCH: 'INVITE_EMAIL_MISMATCH',
+  /** Đã là thành viên đang hoạt động của chính gian hàng này — lời mời không còn việc gì để làm. */
+  INVITE_ALREADY_MEMBER: 'INVITE_ALREADY_MEMBER',
+
   // Phân quyền
   FORBIDDEN: 'FORBIDDEN',
   MISSING_PERMISSION: 'MISSING_PERMISSION',

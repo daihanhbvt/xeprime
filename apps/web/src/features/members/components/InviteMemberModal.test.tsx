@@ -3,13 +3,15 @@ import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithIntl } from '@/i18n/test-utils';
-import { AddMemberModal } from './AddMemberModal';
+import { InviteMemberModal } from './InviteMemberModal';
 
 /**
- * Test đặc tả (characterization) viết TRƯỚC khi đổi vỏ overlay sang `ResponsiveDialog`.
- * Mục đích không phải chứng minh component đúng, mà khoá lại HÀNH VI ĐANG CÓ để lần thay vỏ
- * không âm thầm đổi: payload gửi đi, câu thông báo, thời điểm đóng, và việc form có giữ
- * dữ liệu khi đóng rồi mở lại hay không.
+ * Hộp thoại GỬI LỜI MỜI (đổi tên từ `AddMemberModal` ngày 03/09/2026 cùng lúc endpoint
+ * `POST /members` bị gỡ).
+ *
+ * Ngoài payload/thông báo/thời điểm đóng như trước, bộ này khoá thêm MỘT điều mới và quan
+ * trọng hơn cả: hộp thoại phải nói rõ người được mời CHƯA vào gian hàng. Người bấm gửi mà
+ * tưởng đã thêm xong sẽ đi tìm họ trong bảng thành viên và báo là lỗi.
  */
 const mutation = vi.hoisted(() => ({
   mutate: vi.fn(),
@@ -17,7 +19,7 @@ const mutation = vi.hoisted(() => ({
 }));
 
 vi.mock('../hooks/use-member-mutations', () => ({
-  useAddMember: () => mutation,
+  useCreateInvite: () => mutation,
 }));
 
 vi.mock('@/hooks/use-media-query', () => ({
@@ -29,7 +31,7 @@ function renderModal(props: Partial<{ open: boolean; onClose: () => void }> = {}
   const onClose = props.onClose ?? vi.fn();
   const utils = renderWithIntl(
     <App>
-      <AddMemberModal open={props.open ?? true} onClose={onClose} />
+      <InviteMemberModal open={props.open ?? true} onClose={onClose} />
     </App>,
   );
   return { ...utils, onClose };
@@ -46,10 +48,16 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe('AddMemberModal — hành vi hiện tại', () => {
-  it('tiêu đề là "Thêm thành viên"', () => {
+describe('InviteMemberModal — hành vi hiện tại', () => {
+  it('tiêu đề nói MỜI, không phải THÊM', () => {
     renderModal();
-    expect(screen.getByText('Thêm thành viên')).toBeTruthy();
+    expect(screen.getByText('Mời thành viên')).toBeTruthy();
+    expect(screen.queryByText('Thêm thành viên')).toBeNull();
+  });
+
+  it('nói rõ người được mời chưa vào gian hàng cho tới khi họ đồng ý', () => {
+    renderModal();
+    expect(screen.getByText(/chỉ vào gian hàng sau khi họ tự bấm đồng ý/)).toBeTruthy();
   });
 
   it('vai trò mặc định là shop_staff và không cho chọn shop_owner', () => {
@@ -60,7 +68,7 @@ describe('AddMemberModal — hành vi hiện tại', () => {
 
   it('email rỗng thì không gọi mutation', async () => {
     renderModal();
-    fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
     await waitFor(() => expect(screen.getByText('Nhập email')).toBeTruthy());
     expect(mutation.mutate).not.toHaveBeenCalled();
   });
@@ -68,7 +76,7 @@ describe('AddMemberModal — hành vi hiện tại', () => {
   it('email sai định dạng thì không gọi mutation', async () => {
     renderModal();
     fillForm('khong-phai-email');
-    fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
     await waitFor(() => expect(screen.getByText('Email không hợp lệ')).toBeTruthy());
     expect(mutation.mutate).not.toHaveBeenCalled();
   });
@@ -76,7 +84,7 @@ describe('AddMemberModal — hành vi hiện tại', () => {
   it('gửi email đã trim kèm roleKey', async () => {
     renderModal();
     fillForm('  nhanvien@congty.vn  ');
-    fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
 
     await waitFor(() => expect(mutation.mutate).toHaveBeenCalledTimes(1));
     expect(mutation.mutate.mock.calls[0]![0]).toEqual({
@@ -85,22 +93,22 @@ describe('AddMemberModal — hành vi hiện tại', () => {
     });
   });
 
-  it('thành công: báo "Đã thêm thành viên" rồi đóng', async () => {
+  it('thành công: báo đã GỬI LỜI MỜI rồi đóng', async () => {
     const { onClose } = renderModal();
     fillForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
 
     await waitFor(() => expect(mutation.mutate).toHaveBeenCalled());
     mutation.mutate.mock.calls[0]![1].onSuccess();
 
-    expect(await screen.findByText('Đã thêm thành viên')).toBeTruthy();
+    expect(await screen.findByText('Đã gửi lời mời')).toBeTruthy();
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('lỗi: hiện thông báo lỗi và KHÔNG đóng', async () => {
     const { onClose } = renderModal();
     fillForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Thêm' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gửi' }));
 
     await waitFor(() => expect(mutation.mutate).toHaveBeenCalled());
     mutation.mutate.mock.calls[0]![1].onError(new Error('Email đã là thành viên'));
@@ -111,10 +119,10 @@ describe('AddMemberModal — hành vi hiện tại', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('đang gửi thì nút Thêm ở trạng thái loading', () => {
+  it('đang gửi thì nút Gửi ở trạng thái loading', () => {
     mutation.isPending = true;
     renderModal();
-    expect(screen.getByRole('button', { name: /Thêm/ }).className).toContain('ant-btn-loading');
+    expect(screen.getByRole('button', { name: /Gửi/ }).className).toContain('ant-btn-loading');
   });
 
   it('nút Huỷ gọi onClose', () => {
@@ -134,12 +142,12 @@ describe('AddMemberModal — hành vi hiện tại', () => {
 
     rerender(
       <App>
-        <AddMemberModal open={false} onClose={vi.fn()} />
+        <InviteMemberModal open={false} onClose={vi.fn()} />
       </App>,
     );
     rerender(
       <App>
-        <AddMemberModal open onClose={vi.fn()} />
+        <InviteMemberModal open onClose={vi.fn()} />
       </App>,
     );
 

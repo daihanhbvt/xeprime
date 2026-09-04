@@ -190,6 +190,7 @@
   "inviteStatus": {
     "pending": "Pending",
     "accepted": "Joined",
+    "declined": "Declined",
     "expired": "Expired",
     "revoked": "Revoked"
   },

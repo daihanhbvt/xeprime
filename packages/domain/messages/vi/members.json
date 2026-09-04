@@ -20,17 +20,19 @@
   "you": "(bạn)",
   "roleSelectAria": "Vai trò của {name}",
   "actions": {
-    "invite": "Thêm thành viên",
+    "invite": "Mời thành viên",
     "remove": "Gỡ thành viên",
     "removeConfirm": "Gỡ thành viên này?"
   },
   "toast": {
     "roleChanged": "Đã đổi vai trò",
     "removed": "Đã gỡ thành viên",
-    "added": "Đã thêm thành viên"
+    "invited": "Đã gửi lời mời",
+    "revoked": "Đã thu hồi lời mời"
   },
   "form": {
-    "title": "Thêm thành viên",
+    "title": "Mời thành viên",
+    "notice": "Chúng tôi gửi thư mời tới địa chỉ này. Người được mời chỉ vào gian hàng sau khi họ tự bấm đồng ý.",
     "email": "Email",
     "emailPlaceholder": "nhanvien@congty.vn",
     "role": "Vai trò",
@@ -39,5 +41,41 @@
       "emailInvalid": "Email không hợp lệ",
       "roleRequired": "Chọn vai trò"
     }
+  },
+  "invites": {
+    "title": "Lời mời đang chờ",
+    "tableLabel": "Danh sách lời mời",
+    "loadError": "Không tải được danh sách lời mời",
+    "empty": "Không có lời mời nào đang chờ",
+    "total": "{count, plural, other {# lời mời}}",
+    "columns": {
+      "email": "Email được mời",
+      "role": "Vai trò",
+      "status": "Trạng thái",
+      "expiresAt": "Hết hạn",
+      "createdBy": "Người mời"
+    },
+    "revoke": "Thu hồi",
+    "revokeConfirm": "Thu hồi lời mời này? Liên kết trong email sẽ hết giá trị ngay."
+  },
+  "invitePage": {
+    "title": "Lời mời tham gia gian hàng",
+    "intro": "{shop} mời bạn tham gia gian hàng của họ trên XePrime.",
+    "invitedBy": "Người mời: {name}",
+    "role": "Vai trò được mời",
+    "invitedEmail": "Gửi tới",
+    "expiresAt": "Hết hạn",
+    "loadError": "Không mở được lời mời này",
+    "signInPrompt": "Đăng nhập bằng địa chỉ email đã nhận thư mời để trả lời.",
+    "signIn": "Đăng nhập",
+    "accept": "Đồng ý tham gia",
+    "decline": "Từ chối",
+    "declineConfirm": "Từ chối lời mời này? Gian hàng sẽ thấy bạn đã từ chối.",
+    "accepted": "Bạn đã tham gia {shop}.",
+    "declined": "Bạn đã từ chối lời mời này.",
+    "goManage": "Vào cổng quản lý",
+    "goHome": "Về trang chủ",
+    "closedTitle": "Lời mời này không còn hiệu lực",
+    "closedBody": "Lời mời đã được trả lời, đã bị thu hồi hoặc đã hết hạn. Hãy nhờ gian hàng gửi lại nếu bạn vẫn muốn tham gia."
   }
 }

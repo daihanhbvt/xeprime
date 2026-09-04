@@ -3,7 +3,7 @@ import { API_ERROR_CODE, AUTH_PROVIDER, USER_STATUS } from '@xeprime/types';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { RbacService } from '../src/modules/rbac/rbac.service';
 import { AuthService } from '../src/modules/auth/auth.service';
-import { EmailService } from '../src/modules/auth/email.service';
+import { EmailService } from '../src/modules/email/email.service';
 import type { VerifiedIdentity } from '../src/modules/auth/social/identity';
 
 /**
