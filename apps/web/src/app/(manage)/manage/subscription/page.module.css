@@ -85,3 +85,8 @@
   font-family: var(--xp-font-mono, ui-monospace, monospace);
   letter-spacing: 0.5px;
 }
+
+/* Hoá đơn chờ chuyển khoản đứng TRÊN bảng lịch sử — nó là việc cần làm, không phải lịch sử. */
+.pendingCard {
+  margin-bottom: 16px;
+}

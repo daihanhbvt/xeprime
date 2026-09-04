@@ -1,4 +1,9 @@
-import { BadRequestException, INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  BadRequestException,
+  INestApplication,
+  ValidationPipe,
+  type ValidationError,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
@@ -82,6 +87,28 @@ export async function createApp(): Promise<INestApplication> {
  * không thay thế, nên mọi tham số mà Google tự gắn (`iss`, `scope`, `authuser`, `prompt`) đều
  * thành 400. Test khoá điều đó phải dùng chính hàm này, không phải một bản sao.
  */
+/**
+ * Trải `ValidationError` (có thể lồng nhiều tầng qua `@ValidateNested`) thành danh sách phẳng
+ * `{ field, constraints }` với `field` là ĐƯỜNG DẪN chấm: `deliveryTiers.0.toKm`.
+ *
+ * Bản trước chỉ đọc `e.property` của tầng ngoài cùng và bỏ hẳn `children`, nên mọi lỗi bên trong
+ * một mảng lồng đều quay về client dưới dạng `{ field: 'deliveryTiers', constraints: [] }` —
+ * không nói được ô nào sai, mà đó chính là thứ `details` sinh ra để nói. Đường dẫn chấm cũng
+ * đúng cú pháp tên field của react-hook-form, nên form gắn thẳng được lỗi vào ô.
+ */
+function flattenValidationErrors(
+  errors: ValidationError[],
+  parentPath = '',
+): { field: string; constraints: string[] }[] {
+  return errors.flatMap((error) => {
+    const path = parentPath ? `${parentPath}.${error.property}` : error.property;
+    const constraints = Object.values(error.constraints ?? {});
+    const nested = error.children?.length ? flattenValidationErrors(error.children, path) : [];
+    // Một node vừa có ràng buộc của chính nó vừa có con — giữ cả hai, đừng chọn một.
+    return constraints.length > 0 ? [{ field: path, constraints }, ...nested] : nested;
+  });
+}
+
 export function createValidationPipe(): ValidationPipe {
   return new ValidationPipe({
     whitelist: true,
@@ -94,10 +121,7 @@ export function createValidationPipe(): ValidationPipe {
       new BadRequestException({
         code: API_ERROR_CODE.VALIDATION_FAILED,
         message: 'Dữ liệu gửi lên không hợp lệ',
-        details: errors.map((e) => ({
-          field: e.property,
-          constraints: Object.values(e.constraints ?? {}),
-        })),
+        details: flattenValidationErrors(errors),
       }),
   });
 }

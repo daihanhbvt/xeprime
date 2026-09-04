@@ -50,6 +50,11 @@ export const NOTIFICATION_TYPE = {
   SUBSCRIPTION_LAPSED: 'subscription_lapsed',
   /** Tiêu hết lượt miễn phí (ADR 0026 điều 4) — kèm hoá đơn gói sinh sẵn. */
   FREE_TRIPS_EXHAUSTED: 'free_trips_exhausted',
+  /**
+   * Tiền hoá đơn gói đã về đủ và gói ĐÃ MỞ (R2, ADR 0022) — webhook SePay phát, không phải
+   * redirect trình duyệt: khách rời sang app ngân hàng và có thể không bao giờ quay lại trang.
+   */
+  SUBSCRIPTION_ACTIVATED: 'subscription_activated',
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPE)[keyof typeof NOTIFICATION_TYPE];
@@ -147,5 +152,9 @@ export const NOTIFICATION_TYPE_META: Readonly<Record<NotificationType, Notificat
   [NOTIFICATION_TYPE.FREE_TRIPS_EXHAUSTED]: {
     label: 'Hết lượt miễn phí',
     color: STATUS_COLOR.WARNING,
+  },
+  [NOTIFICATION_TYPE.SUBSCRIPTION_ACTIVATED]: {
+    label: 'Gói đã kích hoạt',
+    color: STATUS_COLOR.SUCCESS,
   },
 };

@@ -81,6 +81,7 @@
     "banners": "Home banners",
     "catalog": "Filter catalogue",
     "locations": "Provinces",
-    "audit": "System audit log"
+    "audit": "System audit log",
+    "bankTransactions": "Payment reconciliation"
   }
 }

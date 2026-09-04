@@ -262,6 +262,12 @@ export const queryKeys = {
     all: ['platform-dashboard'] as const,
     summary: () => ['platform-dashboard', 'summary'] as const,
   },
+  /** Sổ giao dịch ngân hàng của nền tảng (R2 — ADR 0022). */
+  bankTransactions: {
+    all: ['bank-transactions'] as const,
+    list: (params: QueryParams) => ['bank-transactions', 'list', params] as const,
+    detail: (id: string) => ['bank-transactions', 'detail', id] as const,
+  },
   platformStaff: {
     all: ['platform-staff'] as const,
     list: (params: QueryParams) => ['platform-staff', 'list', params] as const,
@@ -278,6 +284,8 @@ export const queryKeys = {
     me: () => ['subscription', 'me'] as const,
     plans: () => ['subscription', 'plans'] as const,
     invoices: (page: number) => ['subscription', 'invoices', page] as const,
+    /** Thông tin nhận chuyển khoản của nền tảng — gần như tĩnh, cache dài. */
+    paymentInfo: () => ['subscription', 'payment-info'] as const,
   },
   marketplace: {
     all: ['marketplace'] as const,

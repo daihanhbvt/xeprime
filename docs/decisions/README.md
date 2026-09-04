@@ -34,7 +34,7 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0017](0017-native-bearer-auth.md) | Bearer auth cho native | Accepted |
 | [0018](0018-map-delivery-distance.md) | Khoảng cách giao xe là ước lượng | Accepted |
 | [0019](0019-backend-led-social-oauth.md) | Backend-led OAuth | Accepted |
-| [0020](0020-two-revenue-tracks-one-marketplace.md) | Hai tuyến doanh thu trên một chợ | **Partially superseded bởi 0028** |
+| [0020](0020-two-revenue-tracks-one-marketplace.md) | Hai tuyến doanh thu trên một chợ | **Partially superseded bởi 0028; điều 2 + kiểm điểm giao bởi 0029** |
 | [0021](0021-booking-hold-is-the-commission.md) | Hold bằng commission | **Superseded bởi 0028** |
 | [0022](0022-sepay-customer-money.md) | Một sổ giao dịch ngân hàng cho các khoản vào | Accepted; mở rộng bởi 0028 |
 | [0023](0023-wallet-refund-and-compensation.md) | Ví hoàn/bồi thường cũ | **Superseded bởi 0025/0028** |
@@ -42,7 +42,8 @@ ADR ghi quyết định lâu dài và lý do. Khi có mâu thuẫn, ADR Accepted
 | [0025](0025-shop-escrow-hold-and-payout.md) | Tách tiền giữ hộ và payout | **Partially superseded bởi 0028** |
 | [0026](0026-first-trips-free-then-commission.md) | Hai chuyến đầu miễn phí | **Superseded bởi 0028** |
 | [0027](0027-feature-tiers-basic-owner-vs-shop.md) | Basic Owner và Full Shop capability | Accepted; làm rõ bởi 0028 |
-| [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) | Mô hình hiện hành: hai lựa chọn, phí minh bạch, hold/payout có gate | **Accepted** |
+| [0028](0028-marketplace-subscription-fees-and-custodied-funds.md) | Mô hình hiện hành: hai lựa chọn, phí minh bạch, hold/payout có gate | Accepted; giá pilot cụ thể hoá bởi 0029 |
+| [0029](0029-per-vehicle-flat-pricing-and-customer-side-fees.md) | Giá gói phẳng theo chỗ; phụ phí chuyến phía khách | **Accepted** |
 
 ## Quy tắc thêm ADR
 

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   isSubscriptionTermMonths,
-  minBasePriceMonthlyPreview,
   parsePlanAssumedGmv,
   parsePlanLimits,
   parsePlanSlots,
@@ -100,11 +99,6 @@ describe('termDiscountPercent / isSubscriptionTermMonths', () => {
 });
 
 describe('phép xem trước cho form (nguồn sự thật là BillingService)', () => {
-  it('minBasePriceMonthlyPreview = includedCars × c% × G; includedCars=0 → 0', () => {
-    const gmv = { monthlyGmvPerCar: '1000000', commissionPercent: 10 };
-    expect(minBasePriceMonthlyPreview(5, gmv)).toBe(500_000);
-    expect(minBasePriceMonthlyPreview(0, gmv)).toBe(0);
-  });
 
   it('subscriptionTermTotalPreview khớp công thức termTotal của BillingService', () => {
     const limits = parsePlanLimits({

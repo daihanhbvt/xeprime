@@ -17,6 +17,8 @@ import {
   SERVICE_TYPE_VALUES,
   TENANT_TYPE_VALUES,
   TRANSMISSION_TYPE_VALUES,
+  VEHICLE_DOCUMENT_PRESET_VALUES,
+  VEHICLE_DOCUMENT_TYPE,
   VEHICLE_DOCUMENT_TYPE_VALUES,
   VEHICLE_FEATURE_KEYS,
   VEHICLE_FINANCE_INTEREST_METHOD_VALUES,
@@ -60,6 +62,45 @@ const optionalPositiveInt = (label: string, max: number) =>
     .max(max, `${label} vượt quá giới hạn cho phép`)
     .nullable()
     .default(null);
+/**
+ * Đếm số chữ số thập phân THẬT của một số, kể cả khi nó được viết ở dạng mũ.
+ *
+ * `String(1e-7)` cho `'1e-7'` — tách theo dấu chấm sẽ đếm ra 0 chữ số thập phân và để lọt một
+ * giá trị mà server từ chối. Nhánh mũ ở đây là lý do hàm này không phải một dòng.
+ */
+function countDecimals(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  const [mantissa, exponent] = String(value).split(/e/i);
+  const digits = mantissa?.split('.')[1]?.length ?? 0;
+  return exponent ? Math.max(0, digits - Number(exponent)) : digits;
+}
+
+/**
+ * Luật "tối đa N chữ số thập phân" cho một ô số — dùng làm `.test(maxDecimalsTest(...))`.
+ *
+ * PHẢI khớp `@IsNumber({ maxDecimalPlaces })` của DTO và phần thập phân của cột `Decimal(p, s)`.
+ * Thiếu luật này ở yup thì một giá trị như `1.233` đi lọt tới server, bị trả `VALIDATION_FAILED`,
+ * và người dùng chỉ thấy một toast chung chung không chỉ ra được ô nào sai — đúng lớp lỗi mà
+ * validate phía client sinh ra để chặn.
+ *
+ * Trả về mô tả test (không phải một hàm bọc schema) để `.test()` giữ nguyên kiểu suy ra của
+ * schema: bọc schema bằng một generic làm mất cờ `.defined()`/`.nullable()` và kéo theo lệch
+ * kiểu ở mọi `useForm` dùng nó.
+ */
+export const maxDecimalsTest = (
+  places: number,
+  message: string,
+): { name: string; message: string; test: (value: number | null | undefined) => boolean } => ({
+  name: 'max-decimals',
+  message,
+  test: (value) => value == null || countDecimals(value) <= places,
+});
+
+/**
+ * Thông số đo được (mức tiêu thụ nhiên liệu…): 0–999 với TỐI ĐA 2 chữ số thập phân — khớp
+ * `@IsNumber({ maxDecimalPlaces: 2 })` ở `vehicle.dto.ts` và cột `Decimal(6, 2)`.
+ */
+const METRIC_DECIMALS = 2;
 const optionalMetric = (label: string) =>
   yup
     .number()
@@ -67,6 +108,12 @@ const optionalMetric = (label: string) =>
     .typeError(`${label} phải là số`)
     .min(0, `${label} không được âm`)
     .max(999, `${label} vượt quá giới hạn cho phép`)
+    .test(
+      maxDecimalsTest(
+        METRIC_DECIMALS,
+        `${label} chỉ nhận tối đa ${METRIC_DECIMALS} chữ số thập phân`,
+      ),
+    )
     .nullable()
     .default(null);
 
@@ -345,6 +392,40 @@ export const vehicleDocumentFormSchema = yup.object({
 });
 
 export type VehicleDocumentFormValues = yup.InferType<typeof vehicleDocumentFormSchema>;
+
+/**
+ * Form "Thêm loại giấy tờ" — CHỈ chọn loại (+ tên tự đặt) và đính kèm ảnh/file.
+ *
+ * Cố ý KHÔNG có metadata (biển số, số khung, ngày cấp…): lúc thêm, người dùng đang cầm tờ giấy
+ * chứ chưa đọc nó. Các trường đó nhập sau ở màn chi tiết, hoặc để OCR điền.
+ *
+ * `preset` nhận một mã trong `VEHICLE_DOCUMENT_PRESET`, hoặc `other` nghĩa là "tự đặt tên" —
+ * dùng lại đúng hằng số loại giấy tờ thay vì bịa thêm một sentinel, và nó không thể trùng mã
+ * preset nào.
+ */
+export const vehicleDocumentCreateSchema = yup.object({
+  preset: yup
+    .string()
+    .defined()
+    .default('')
+    .oneOf(
+      [...VEHICLE_DOCUMENT_PRESET_VALUES, VEHICLE_DOCUMENT_TYPE.OTHER, ''],
+      'Chọn loại giấy tờ trong danh sách',
+    )
+    .test('required', 'Chọn loại giấy tờ', (value) => Boolean(value)),
+  customTypeName: yup
+    .string()
+    .trim()
+    .defined()
+    .default('')
+    .max(160, 'Tối đa 160 ký tự')
+    .when('preset', {
+      is: VEHICLE_DOCUMENT_TYPE.OTHER,
+      then: (s) => s.test('required', 'Nhập tên loại giấy tờ', (value) => Boolean(value?.trim())),
+    }),
+});
+
+export type VehicleDocumentCreateValues = yup.InferType<typeof vehicleDocumentCreateSchema>;
 
 // ---------------------------------------------------------------------------
 // Bảo dưỡng & KM (Wave 6) — docs/design/12 §9

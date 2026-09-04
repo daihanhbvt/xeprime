@@ -29,7 +29,9 @@ vi.mock('@/services/upload', () => ({
 }));
 
 const mutation = vi.hoisted(() => ({
-  mutate: vi.fn(),
+  // Trang dùng `mutateAsync` để NÉM lại lỗi API cho wizard gắn vào đúng ô nhập
+  // (`use-api-field-errors`) — mock phải là promise, không phải callback `onSuccess`.
+  mutateAsync: vi.fn(),
   isPending: false,
   isError: false,
   error: undefined as unknown,
@@ -117,7 +119,8 @@ async function goNext(expectedHeading: string) {
 
 beforeEach(() => {
   permissions.allow = true;
-  mutation.mutate.mockReset();
+  mutation.mutateAsync.mockReset();
+  mutation.mutateAsync.mockResolvedValue(createdVehicle);
   mutation.isPending = false;
   mutation.isError = false;
   mutation.error = undefined;
@@ -164,18 +167,17 @@ describe('/manage/vehicles/new — Wave 3 create wizard', () => {
     expect(screen.getByText('Toyota Altis')).toBeTruthy();
     expect(screen.getByText('Trả góp')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Lưu nháp' }));
-    await waitFor(() => expect(mutation.mutate).toHaveBeenCalledTimes(1));
-    expect(mutation.mutate.mock.calls[0]![0]).toMatchObject({
+    await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledTimes(1));
+    expect(mutation.mutateAsync.mock.calls[0]![0]).toMatchObject({
       code: undefined,
       name: 'Toyota Altis',
       sourceType: 'financed',
     });
-    expect(mutation.mutate.mock.calls[0]![0]).not.toHaveProperty('tenantId');
-    expect(mutation.mutate.mock.calls[0]![0]).not.toHaveProperty('publicStatus');
+    expect(mutation.mutateAsync.mock.calls[0]![0]).not.toHaveProperty('tenantId');
+    expect(mutation.mutateAsync.mock.calls[0]![0]).not.toHaveProperty('publicStatus');
   });
 
   it('sau khi lưu nháp hiện success workspace thay vì điều hướng mù', async () => {
-    mutation.mutate.mockImplementation((_body, options) => options.onSuccess(createdVehicle));
     renderPage();
     fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: createdVehicle.name } });
     await goNext('2. Giá thuê & chính sách');

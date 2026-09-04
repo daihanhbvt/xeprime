@@ -75,6 +75,8 @@ export interface ShopSpec {
   fleet: readonly FleetEntry[];
   /** Mã gói thuê bao đang dùng — null = chưa gán gói. */
   planCode: string | null;
+  /** Số chỗ đã mua (ADR 0029 — gói giá phẳng theo chỗ): đặt ≥ đội xe để demo còn thêm xe được. */
+  planSlots?: { car: number; motorbike: number };
   depth: ShopDepth;
   driverCount: number;
   customerCount: number;
@@ -204,7 +206,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
       { model: 'yamaha-exciter', count: 1 },
       { model: 'vinfast-klara', count: 1 },
     ],
-    planCode: 'pro',
+    planCode: 'per-vehicle',
+    planSlots: { car: 35, motorbike: 5 },
     depth: 'full',
     driverCount: 4,
     customerCount: 12,
@@ -279,7 +282,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
       { model: 'honda-vision', count: 1 },
       { model: 'honda-airblade', count: 1 },
     ],
-    planCode: 'standard',
+    planCode: 'per-vehicle',
+    planSlots: { car: 8, motorbike: 2 },
     depth: 'medium',
     driverCount: 2,
     customerCount: 6,
@@ -329,7 +333,8 @@ export const SHOP_SPECS: readonly ShopSpec[] = [
       { model: 'mazda-3', count: 1 },
       { model: 'honda-sh', count: 1 },
     ],
-    planCode: 'standard',
+    planCode: 'per-vehicle',
+    planSlots: { car: 2, motorbike: 1 },
     depth: 'light',
     driverCount: 0,
     customerCount: 3,

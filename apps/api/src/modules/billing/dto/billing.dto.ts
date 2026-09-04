@@ -512,13 +512,34 @@ export class PlanInvoiceLineDto {
   @ApiProperty({ description: 'VND, chuỗi — ADR 0007' }) amount!: string;
 }
 
+/**
+ * Thông tin nhận chuyển khoản của NỀN TẢNG — web dựng ảnh VietQR quicklink từ đây.
+ *
+ * `configured: false` khi nhóm SEPAY_* chưa khai: màn thanh toán rơi về mã + số tiền như
+ * trước R2, không hiện một QR trỏ vào tài khoản rỗng. Đây là thông tin CÔNG KHAI của nền tảng
+ * (in trên mọi lệnh chuyển tiền), không phải PII — trả về nguyên văn là đúng.
+ */
+export class PaymentInfoDto {
+  @ApiProperty({ description: 'Nhóm SEPAY_* đã khai đủ chưa — false thì ba trường dưới là null' })
+  configured!: boolean;
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: 'Mã ngân hàng chuẩn VietQR (vd VCB)',
+  })
+  bankCode!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) accountNumber!: string | null;
+  @ApiPropertyOptional({ type: String, nullable: true }) accountName!: string | null;
+}
+
 export class SubscriptionInvoiceDto {
   @ApiProperty() id!: string;
   @ApiProperty() tenantId!: string;
   @ApiPropertyOptional({
     type: String,
     nullable: true,
-    description: 'NULL tới khi gói được kích hoạt (tiền đã về hoặc admin gán tay — ADR 0026 điều 4)',
+    description:
+      'NULL tới khi gói được kích hoạt (tiền đã về hoặc admin gán tay — ADR 0026 điều 4)',
   })
   subscriptionId!: string | null;
   @ApiProperty({ description: 'Mã đối soát chuyển khoản, tiền tố XPG (ADR 0022 điều 3)' })

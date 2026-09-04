@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   BILLING_MODE,
+  SUBSCRIPTION_INVOICE_STATUS,
   SUBSCRIPTION_INVOICE_STATUS_META,
   type SubscriptionInvoiceStatus,
 } from '@xeprime/types';
@@ -16,6 +17,7 @@ import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { useUrlFilters, positiveIntParam } from '@/hooks/use-url-filters';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useDomainLabel } from '@/i18n/use-domain-label';
+import { InvoicePaymentPanel } from '@/features/subscription/components/InvoicePaymentPanel';
 import { PlanFeatureList } from '@/features/subscription/components/PlanFeatureList';
 import { PurchaseModal } from '@/features/subscription/components/PurchaseModal';
 import {
@@ -43,6 +45,17 @@ export default function SubscriptionPage() {
     page: positiveIntParam(params, 'page') ?? 1,
   }));
   const invoices = useSubscriptionInvoices(filters.page);
+
+  /*
+   * Hoá đơn đang chờ tiền — mỗi tenant chỉ giữ MỘT (purchase void hoá đơn issued cũ trong cùng
+   * transaction) và nó luôn mới nhất, nên tìm trong trang hiện tại là đủ: rời trang 1 thì banner
+   * tự ẩn, quay lại trang 1 là thấy. Đây là đường quay lại QR sau khi đóng modal mua.
+   */
+  const pendingInvoice = invoices.data?.items.find(
+    (inv) =>
+      inv.status === SUBSCRIPTION_INVOICE_STATUS.ISSUED ||
+      inv.status === SUBSCRIPTION_INVOICE_STATUS.PARTIALLY_PAID,
+  );
   const [purchaseOpen, setPurchaseOpen] = useState(false);
 
   const invoiceColumns: DataTableColumn<SubscriptionInvoice>[] = [
@@ -191,6 +204,12 @@ export default function SubscriptionPage() {
         {/* "Nâng cấp được thêm gì" — ADR 0027 §Hệ quả: chỗ bán hàng thật sự của màn này. */}
         <PlanFeatureList onUpgrade={() => setPurchaseOpen(true)} />
       </div>
+
+      {pendingInvoice ? (
+        <Card size="small" className={styles.pendingCard} title={t('payment.pendingTitle')}>
+          <InvoicePaymentPanel invoice={pendingInvoice} />
+        </Card>
+      ) : null}
 
       <h2 className={styles.sectionTitle}>{t('invoices.title')}</h2>
       <DataTable<SubscriptionInvoice>

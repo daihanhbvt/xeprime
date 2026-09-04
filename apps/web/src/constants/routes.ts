@@ -88,6 +88,8 @@ export const ROUTES = {
     ADMIN_AUDIT: '/manage/admin/audit',
     ADMIN_STAFF: '/manage/admin/staff',
     ADMIN_PLANS: '/manage/admin/plans',
+    /** Hàng đợi đối soát tiền vào (R2 — ADR 0022 điều 4): khớp tay khoản không rút được mã. */
+    ADMIN_BANK_TRANSACTIONS: '/manage/admin/bank-transactions',
     ADMIN_CATALOG: '/manage/admin/catalog',
     /** Danh mục hành chính (tỉnh/thành) — dữ liệu dùng chung cho mọi gian hàng. */
     ADMIN_LOCATIONS: '/manage/admin/locations',

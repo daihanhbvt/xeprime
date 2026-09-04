@@ -328,4 +328,47 @@ describe('/manage/vehicles/[id]/edit — Wave 3 tab workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận & Lưu' }));
     await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
   });
+
+  /*
+   * Lỗi có thật từ staging: nhập mức tiêu thụ `1.233` thì Lưu chỉ hiện toast "Dữ liệu gửi lên
+   * không hợp lệ" — không ô nào đỏ, người dùng không biết sai ở đâu (nhập `1.23` lại lưu được).
+   * Cột là `Decimal(6, 2)` và DTO có `maxDecimalPlaces: 2`, nhưng yup thì không, nên giá trị đi
+   * lọt xuống server. Hai test dưới khoá cả hai lớp phòng thủ.
+   */
+  it('mức tiêu thụ quá 2 chữ số thập phân: báo NGAY dưới ô, không gọi API', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: /Thông số kỹ thuật nâng cao/ }));
+    const field = await screen.findByLabelText('Trong đô thị');
+    fireEvent.change(field, { target: { value: '1.233' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+
+    expect(await screen.findByText(/2 chữ số thập phân/)).toBeTruthy();
+    expect(update.mutateAsync).not.toHaveBeenCalled();
+
+    // …và 1.23 thì đi tiếp bình thường.
+    fireEvent.change(field, { target: { value: '1.23' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+  });
+
+  it('server trả lỗi cấp trường: gắn vào ĐÚNG ô và mở vùng thu gọn đang che nó', async () => {
+    const { ApiClientError } = await import('@/services/api-client');
+    update.mutateAsync.mockRejectedValue(
+      new ApiClientError({
+        code: API_ERROR_CODE.VALIDATION_FAILED,
+        message: 'Dữ liệu gửi lên không hợp lệ',
+        status: 400,
+        details: [{ field: 'engineDisplacementCc', constraints: ['must be an integer number'] }],
+      }),
+    );
+    renderPage();
+    fireEvent.change(screen.getByLabelText(/Tên xe/), { target: { value: 'Toyota Vios mới' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }));
+    await waitFor(() => expect(update.mutateAsync).toHaveBeenCalledTimes(1));
+
+    // Vùng "Thông số kỹ thuật nâng cao" đang đóng phải TỰ MỞ — lỗi khuất sau nó là lỗi vô hình.
+    const field = await screen.findByLabelText('Dung tích động cơ (cc)');
+    expect(field.getAttribute('aria-invalid')).toBe('true');
+    expect(await screen.findByText('Giá trị này chưa hợp lệ. Kiểm tra lại giúp bạn nhé.')).toBeTruthy();
+  });
 });
