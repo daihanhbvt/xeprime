@@ -81,6 +81,44 @@ describe('văn bản pháp lý — code và bản dịch phải khớp', () => {
   });
 });
 
+/**
+ * Câu "tiếp tục tức là bạn đồng ý với …" đặt cạnh bốn nút cam kết (đăng nhập/đăng ký, gửi yêu
+ * cầu đặt xe, mua gói, tạo gian hàng). Chúng là con đường vào văn bản pháp lý ở những màn
+ * KHÔNG có chân trang marketplace, nên hai thứ phải khoá lại:
+ *
+ *  1. Thẻ trong câu phải nằm trong bộ thẻ mà `LegalConsentNote` cấp handler — next-intl ném
+ *     lỗi lúc render nếu thiếu, tức là vỡ ngay giữa hộp thoại đặt xe.
+ *  2. Hai ngôn ngữ phải viện dẫn ĐÚNG những văn bản như nhau: bản tiếng Anh nói "Terms" mà bản
+ *     tiếng Việt nói "Quy chế sàn" là hai cam kết khác nhau trên cùng một nút.
+ */
+describe('câu cam kết pháp lý cạnh nút hành động', () => {
+  const KNOWN_TAGS = ['terms', 'privacy', 'rules', 'cancellation'];
+  const PLACES = ['auth', 'booking', 'subscription', 'shop'];
+
+  const consent = (bundle: typeof viLegal) =>
+    (bundle as unknown as { consent: Record<string, string> }).consent;
+
+  const tagsOf = (message: string) =>
+    [...message.matchAll(/<([a-zA-Z]+)>/g)].map((m) => m[1]).sort();
+
+  it.each(PLACES)('%s: có ở cả hai ngôn ngữ và chỉ dùng thẻ đã biết', (place) => {
+    for (const [locale, bundle] of [
+      ['vi', viLegal],
+      ['en', enLegal],
+    ] as const) {
+      const message = consent(bundle)[place];
+      expect(message, `${locale}/legal.json thiếu câu cam kết "${place}"`).toBeTruthy();
+      const tags = tagsOf(message ?? '');
+      expect(tags.length).toBeGreaterThan(0);
+      for (const tag of tags) expect(KNOWN_TAGS).toContain(tag);
+    }
+  });
+
+  it.each(PLACES)('%s: hai ngôn ngữ viện dẫn cùng bộ văn bản', (place) => {
+    expect(tagsOf(consent(enLegal)[place] ?? '')).toEqual(tagsOf(consent(viLegal)[place] ?? ''));
+  });
+});
+
 describe('chân trang — không còn liên kết chết', () => {
   const footerHrefs = FOOTER_COLUMNS.flatMap((col) => col.links.map((l) => l.href));
 

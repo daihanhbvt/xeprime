@@ -16,6 +16,7 @@ import { createElement, type ComponentType } from 'react';
 import { PERMISSION, type Permission } from '@xeprime/types';
 import { ManagePageHeader } from '@/components/layout/ManagePageHeader';
 import { ROUTES } from '@/constants/routes';
+import { LegalDocLinks } from '@/features/legal/components/LegalDocLinks';
 import { usePermissions } from '@/hooks/use-permissions';
 import styles from './SupportCenter.module.css';
 
@@ -151,6 +152,19 @@ export function SupportCenter() {
             children: <p className={styles.answer}>{t(`support.faq.${key}.a`)}</p>,
           }))}
         />
+      </section>
+
+      {/*
+        Cổng quản lý KHÔNG có chân trang marketplace, nên trước đây một chủ gian hàng đang đăng
+        nhập không có đường nào tới quy chế sàn — thứ ràng buộc chính họ. Khối này là đường đó;
+        liên kết mở tab mới để không cắt ngang việc đang làm trong portal.
+      */}
+      <section className={styles.section} aria-labelledby="xp-support-legal">
+        <h2 id="xp-support-legal" className={styles.sectionTitle}>
+          {t('support.legal.title')}
+        </h2>
+        <p className={styles.legalBody}>{t('support.legal.body')}</p>
+        <LegalDocLinks layout="inline" newTab className={styles.legalLinks} />
       </section>
 
       <Card className={styles.contact} size="small">

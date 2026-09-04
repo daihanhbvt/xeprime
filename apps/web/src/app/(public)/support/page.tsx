@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { LEGAL_DOC_VALUES, legalPath } from '@/constants/legal';
+import { legalPath } from '@/constants/legal';
+import { LegalDocLinks } from '@/features/legal/components/LegalDocLinks';
 import styles from './page.module.css';
 
 /**
@@ -94,15 +95,10 @@ export default async function SupportPage() {
           {t('legal.heading')}
         </h2>
         <p className={styles.paragraph}>{t('legal.body')}</p>
-        <ul className={styles.legalLinks}>
-          {LEGAL_DOC_VALUES.map((doc) => (
-            <li key={doc}>
-              <Link href={legalPath.doc(doc)} className={styles.legalLink}>
-                {tLegal(`docs.${doc}.title` as never)}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <LegalDocLinks layout="inline" />
+        <Link href={legalPath.index} className={styles.legalIndexLink}>
+          {tLegal('meta.allDocs')} →
+        </Link>
       </section>
     </div>
   );

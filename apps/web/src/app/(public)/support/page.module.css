@@ -130,20 +130,15 @@
   color: var(--xp-color-text-tertiary);
 }
 
-.legalLinks {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 20px;
+.legalIndexLink {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 13.5px;
+  color: var(--xp-color-text-tertiary);
 }
 
-.legalLink {
-  font-size: 14.5px;
+.legalIndexLink:hover {
   color: var(--xp-color-primary);
-}
-
-.legalLink:hover {
-  text-decoration: underline;
 }
 
 @media (max-width: 600px) {

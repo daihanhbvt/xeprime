@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import {
-  LEGAL_DOC_VALUES,
   LEGAL_EFFECTIVE_FROM,
   LEGAL_SECTIONS,
   legalPath,
   type LegalDoc,
 } from '@/constants/legal';
 import { getAppFormat } from '@/i18n/server-format';
+import { LegalDocLinks } from './LegalDocLinks';
 import styles from './LegalDocumentView.module.css';
 
 /**
@@ -49,6 +49,11 @@ export async function LegalDocumentView({ doc }: { doc: LegalDoc }) {
         <p className={styles.draftBody}>{t('draftBanner.body')}</p>
       </aside>
 
+      {/* Đường lên trên: một văn bản không bao giờ là ngõ cụt — từ đây luôn thấy được cả bộ. */}
+      <Link href={legalPath.index} className={styles.upLink}>
+        ← {t('meta.allDocs')}
+      </Link>
+
       <header className={styles.header}>
         <h1 className={styles.title}>{text(`docs.${doc}.title`)}</h1>
         <p className={styles.summary}>{text(`docs.${doc}.summary`)}</p>
@@ -87,15 +92,7 @@ export async function LegalDocumentView({ doc }: { doc: LegalDoc }) {
       <footer className={styles.footer}>
         <p className={styles.printHint}>{t('meta.printHint')}</p>
         <h2 className={styles.relatedTitle}>{t('meta.related')}</h2>
-        <ul className={styles.related}>
-          {LEGAL_DOC_VALUES.filter((other) => other !== doc).map((other) => (
-            <li key={other}>
-              <Link href={legalPath.doc(other)} className={styles.relatedLink}>
-                {text(`docs.${other}.title`)}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <LegalDocLinks exclude={doc} />
       </footer>
     </article>
   );

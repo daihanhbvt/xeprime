@@ -44,6 +44,12 @@
   overscroll-behavior: contain;
 }
 
+/* Câu cam kết pháp lý cuối bước Xác nhận — canh trái theo nội dung, không canh giữa như
+   trong hộp thoại đăng nhập. */
+.consent {
+  text-align: left;
+}
+
 .stepBody {
   display: flex;
   flex-direction: column;

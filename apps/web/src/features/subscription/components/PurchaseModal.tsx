@@ -13,6 +13,7 @@ import {
   type SubscriptionTermMonths,
 } from '@xeprime/types';
 import { ResponsiveDialog } from '@/components/overlay/ResponsiveDialog';
+import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { InvoicePaymentPanel } from './InvoicePaymentPanel';
 import { useAppFormat } from '@/i18n/use-app-format';
 import { useErrorMessage } from '@/i18n/use-error-message';
@@ -219,6 +220,13 @@ export function PurchaseModal({ open, onClose }: { open: boolean; onClose: () =>
               </div>
             </div>
           ) : null}
+
+          {/*
+            Đây là lần duy nhất gian hàng trả tiền cho XePrime, và quy chế sàn là văn bản quy
+            định phí dịch vụ với thứ tự hiển thị mà họ đang mua. Cổng quản lý không có chân
+            trang marketplace nên nếu không đặt ở đây thì không có đường nào khác.
+          */}
+          <LegalConsentNote place="subscription" className={styles.consent} />
 
           <div className={styles.actions}>
             <Button onClick={close}>{tCommon('actions.close')}</Button>

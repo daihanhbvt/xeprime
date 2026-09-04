@@ -45,6 +45,7 @@ import {
 import { TextField } from '@/components/form/TextField';
 import { ROUTES } from '@/constants/routes';
 import { ChatWithShopButton } from '@/features/chat/components/ChatWithShopButton';
+import { LegalConsentNote } from '@/features/legal/components/LegalConsentNote';
 import { fetchListingDetailClient } from '@/features/marketplace/api';
 import type { PublicListingDetail } from '@/features/marketplace/types';
 import { verifyOtp } from '@/features/phone-verification/api';
@@ -1177,6 +1178,13 @@ export function RequestBookingFlow({
             ) : null}
 
             {priceDetail}
+
+            {/*
+              Bước cuối cùng trước khi gửi yêu cầu là chỗ duy nhất khách còn dừng lại được —
+              và chính sách huỷ/hoàn tiền là văn bản họ sẽ cần đúng lúc chuyến hỏng. Liên kết
+              mở tab mới để không xoá mất biểu mẫu đang điền.
+            */}
+            <LegalConsentNote place="booking" className={styles.consent} />
           </section>
         ) : null}
 

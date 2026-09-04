@@ -274,6 +274,71 @@ if (problems.length === 0) {
   }
 }
 
+// ── 5. Mã lỗi: đúng chỗ và đúng tên ───────────────────────────────────────────
+/*
+ * `useErrorMessage()` tra bảng bằng khoá `code.<MÃ>`. Một câu dịch đặt sai chỗ hoặc gõ sai tên
+ * mã KHÔNG làm gì đổ vỡ — nó im lặng rơi về câu chung "Đã có lỗi xảy ra", đúng vào lúc người
+ * dùng cần biết chuyện gì vừa xảy ra nhất.
+ *
+ * Parity vi↔en không bắt được lớp lỗi này: khi khoá đặt sai ở cả hai ngôn ngữ như nhau thì hai
+ * bó vẫn khớp nhau hoàn hảo. Đó là lý do phải đối chiếu với `API_ERROR_CODE` — nguồn thật của
+ * hợp đồng mã lỗi — chứ không chỉ đối chiếu hai bó với nhau.
+ */
+if (problems.length === 0) {
+  const codesFrom = (file, name) => {
+    const source = read(path.resolve(WEB_ROOT, file)) ?? '';
+    const block = source.match(new RegExp(`${name} = \\{([\\s\\S]*?)\\n\\} as const;`))?.[1] ?? '';
+    return [...block.matchAll(/^\s{2}[A-Z0-9_]+: '([A-Z0-9_]+)'/gm)].map((m) => m[1]);
+  };
+
+  const apiCodes = codesFrom('../../packages/types/src/api.ts', 'API_ERROR_CODE');
+  // Mã phát sinh ở CLIENT (request chưa tới backend) — cố ý không nằm trong API_ERROR_CODE.
+  const clientCodes = codesFrom('../../packages/api-client/src/errors.ts', 'CLIENT_ERROR_CODE');
+
+  if (apiCodes.length === 0 || clientCodes.length === 0) {
+    fail('errors', 'Không đọc được API_ERROR_CODE / CLIENT_ERROR_CODE — regex đã lệch, sửa script.');
+  }
+
+  const knownCodes = new Set([
+    ...apiCodes,
+    ...clientCodes,
+    // Mã do web tự phát tại chỗ, không thuộc bảng nào: `apps/web/src/services/upload.ts`.
+    // Thêm dòng vào đây là hành động có ý thức — mặc định của luật này là "phải có nguồn".
+    'UPLOAD_FAILED',
+  ]);
+
+  const looksLikeCode = (key) => /^[A-Z][A-Z0-9_]*$/.test(key);
+
+  // `bundles` khoá theo NAMESPACE ('Errors'), không theo tên file ('errors') — đọc nhầm thì
+  // vòng lặp dưới im lặng không chạy và cả mục 5 này thành trang trí.
+  if (!bundles[CANONICAL_LOCALE]?.Errors) {
+    fail('errors', "Không tìm thấy namespace 'Errors' trong bó message — sửa script.");
+  }
+
+  for (const locale of locales) {
+    const bundle = bundles[locale]?.Errors;
+    if (!bundle) continue;
+
+    for (const key of Object.keys(bundle)) {
+      if (key !== 'code' && looksLikeCode(key)) {
+        fail(
+          locale,
+          `errors.json: '${key}' nằm ở cấp gốc — mã lỗi phải nằm trong 'code' thì useErrorMessage() mới tra được.`,
+        );
+      }
+    }
+
+    for (const key of Object.keys(bundle.code ?? {})) {
+      if (!knownCodes.has(key)) {
+        fail(
+          locale,
+          `errors.json: 'code.${key}' không có trong API_ERROR_CODE — mã đã bị đổi tên/gõ sai, câu này không bao giờ hiện.`,
+        );
+      }
+    }
+  }
+}
+
 // ── Kết quả ───────────────────────────────────────────────────────────────────
 if (problems.length > 0) {
   const byScope = new Map();
